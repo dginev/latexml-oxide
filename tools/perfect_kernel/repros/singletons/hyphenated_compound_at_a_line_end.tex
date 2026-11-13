@@ -1,0 +1,9 @@
+% witness: geradwp/geradwp ("profit-making"); ~1,034 false misses in 409 docs of the s130 HTML audit
+% oracle:  pdflatex 0 errors; pdftotext drops a real hyphen at a line end: "profit-⏎making" → "profitmaking"
+% expect:  --recall 100 %: a hyphenated compound in the XML text also counts joined (pdf_recall.py COMPOUND,
+%          s3_audit.sh `words … compounds`). A harness repro: the XML always had "profit-making".
+% status:  GREEN (2026-09-30: harness fix; RED on the old pdf_recall.py, 87.5 %, "profitmaking")
+\documentclass{article}
+\begin{document}
+\parbox{2.6cm}{May not use it for any profit-making activity.}
+\end{document}

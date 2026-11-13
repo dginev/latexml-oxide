@@ -1,0 +1,18 @@
+% witness: 1506.04050 (aip-cp.cls `\ProvidesClass{article}`, 5 authors `\author[aff1]{…}`), 1604.08112 (2 authors);
+%          the reviewer's census: 17 of 87,937 sampled papers ship a class declaring article/book/report
+% oracle:  pdflatex 0 errors: "A Paper / M. Bruemmer^aff1, S. Sekula^aff1 / ^aff1 Department of Physics, SMU"
+% engines: rust c400169c19 (77w r1) = the declaration routes to the article binding and reads the copy as its stand-in's,
+%          whose locked `\author` keeps only the last call: one creator (S. Sekula), the affiliation lost, no
+%          diagnostic; rust 529dc1b543 (int37a) = the class read raw: both creators, the affiliation deposited
+% expect:  0 errors, 0 warnings; both authors, the affiliation kept
+% status:  RED (c400169c19) -> GREEN (77w r2: a standard-class derivative is read as a raw class over its binding)
+% preload: ar5iv.sty
+\documentclass{aipcopy}
+\title{A Paper}
+\author[aff1]{M. Bruemmer}
+\author[aff1]{S. Sekula}
+\affil[aff1]{Department of Physics, SMU}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

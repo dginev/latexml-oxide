@@ -1,0 +1,17 @@
+% mechanism: the Info side of the unknown-KeyVals-key report (keyvals.rs SEEN_MISSING, cleared per conversion by
+%   `reset_conversion_state`): amsart's `\subjclass[2000]` passes `scheme` to the 'Frontmatter' keyset, which has no such
+%   key; the Info was the thread's, so a persistent cortex_worker's later amsart paper had none (ST3).
+% witness: ST3 census: 1702.05670, 0805.4073, 2105.06648, 2507.13358 ('scheme'); 2511.20937 ('mark')
+% oracle:  pdflatex 0 `!`: "T", "A", "Text.", "2000 Mathematics Subject Classification. 11S85."
+% engines: rust ST3 base 91b217855c: the Info alone, none converted after another amsart paper on one thread
+% expect:  0 errors, 0 warnings, one `Info:undefined:Encountered unknown KeyVals key 'scheme' … 'Frontmatter'` in each
+%   conversion, the XML the same alone or after another document
+% status:  GREEN (ST3b; guard perfect_kernel_batchst3::a_document_after_another_on_one_thread_is_the_document_alone)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{A}
+\subjclass[2000]{11S85}
+\maketitle
+Text.
+\end{document}

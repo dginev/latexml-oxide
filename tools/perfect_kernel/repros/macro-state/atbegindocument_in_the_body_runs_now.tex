@@ -1,0 +1,13 @@
+% mechanism: latex.ltx fires `begindocument` and `begindocument/end` with `\UseOneTimeHook`
+%   (latex.ltx:9512, :9525), so lthooks marks them used and code added afterwards — `\AtBeginDocument`,
+%   `\AddToHook{begindocument}{…}`, `\AddToHook{begindocument/end}{…}` in the body — runs at once.
+%   `\document` (latex_constructs/sect02.rs) fires them with `\hook_use_once:n` (`hook_use_once_tokens`).
+% witness: 57r review (probe)
+% oracle:  pdflatex 0 errors, "A LateZ B EndZ C OtherZ"
+% engines: rust 57r and perl: "A Z B Z C Z"; rust int160a, int161a, QA47A: "A LateZ B EndZ C OtherZ"
+% expect:  0 errors; <p>A LateZ B EndZ C OtherZ</p>
+% status:  GREEN (found GREEN on int160a by QA46; 57r's `\AfterEndPreamble` done flag still stands)
+\documentclass{article}
+\begin{document}
+A \AtBeginDocument{Late}Z B \AddToHook{begindocument/end}{End}Z C \AddToHook{begindocument}{Other}Z
+\end{document}

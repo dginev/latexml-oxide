@@ -1,0 +1,16 @@
+% witness: 2605.11792 (nlo-shower.sty:802 `\Br[lr]`: `\mathcolor{red}{\left[} … \mathcolor{red}{\right]}`)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; one `\left[`…`\right]` pair, the brackets red, x in the surrounding color
+% mechanism: mathcolor.ltx:20-29 typesets #3 with no group around it and restores the color it found; the binding
+%   wrapped it in `{…}`, so the `\left[` group closed at the first call's `}` ("Attempt to close boxing group" in
+%   {split}). Fixed: xcolor_sty.rs `\mathcolor`.
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsmath,xcolor}
+\begin{document}
+\begin{equation}
+\begin{split}
+a &= \mathcolor{red}{\left[} x \mathcolor{red}{\right]}_{\mathcolor{red}{y}}
+\end{split}
+\end{equation}
+\end{document}

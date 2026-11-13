@@ -1,0 +1,13 @@
+% witness: 57m review: `HyperVerbatim` scans ahead to the next `{` (base_parameter_types.rs, as Perl's does),
+%          so a `\doi` with no braced argument read as a url swallowed the text up to the next group —
+%          " command, then " lost, a later `\section` nested in a `<text>` (57m first cut)
+% oracle:  pdflatex: url.sty's `\Url` takes the next character as its delimiter — a malformed call; the
+%          binding reads one token, as the url-less `\doi[1]` (apacite.sty:1814) does, and loses no text
+% engines: rust 57l: `\doi Semiverbatim` read one token; rust 57m first cut: the text up to `{braced}` lost
+% expect:  0 errors, 0 warnings; "The command, then braced text." whole
+% status:  RED (57m first cut) -> GREEN (57m)
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+The \doi command, then {braced} text.
+\end{document}

@@ -1,0 +1,24 @@
+% witness: every \documentclass{scrbook} paper; ceurart (scrartcl base: 2509.11496, 2506.00694, 2608.23214), atlasdoc
+%          (scrartcl/scrreprt/scrbook base: 2509.01219)
+% oracle:  pdflatex 0 errors, 0 warnings: "1. Intro", "1.1. A", "(1.1)", "1.1.1. B", "Figure 1.1.: F", "A. Proofs", "A.1. Inner";
+%          Perl (OmniBus→article for every KOMA class)
+%          ids S1, S1.E1, S1.SS1, S1.F1 and `<appendix>` A1, A2 (article's; ours are report's and book's)
+% engines: rust 72a r9 = ids after the counter names (chapter1, chapter1.section1, equation1, figure1), the
+%          appendix more sections (ids colliding: chapter1a), and the 2 KOMA Warnings ("`\@startsection' has been
+%          changed", "Unexpected definition of \@sect!")
+% expect:  0 errors, 0 warnings; ids Ch1, Ch1.S1, Ch1.E1, Ch1.S1.SS1, Ch1.F1; the appendix A1 "Appendix A Proofs" (KOMA lettering A), its section A1.S1 "A.1 Inner"
+% status:  RED (72a r9) -> GREEN (72a r10)
+% preload: ar5iv.sty
+\documentclass{scrbook}
+\begin{document}
+\chapter{Intro}
+\section{A}
+Text \ref{eq1} and \ref{sb}.
+\begin{equation}x=1\label{eq1}\end{equation}
+\subsection{B}\label{sb}
+\begin{figure}\caption{F}\end{figure}
+\appendix
+\chapter{Proofs}
+\section{Inner}
+More.
+\end{document}

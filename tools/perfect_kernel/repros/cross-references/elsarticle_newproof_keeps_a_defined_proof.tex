@@ -1,0 +1,15 @@
+% witness: the review's probe el2 on 78n r2 (amsthm loaded before elsarticle's \newproof{proof}); 1304.5109, 2606.18393 (\newproof without amsthm)
+% oracle:  pdflatex 1 error, "LaTeX Error: Command \proof already defined." (elsarticle.cls:1212 \@ynprf's \expandafter\@ifdefinable\csname proof\endcsname); amsthm's proof is kept ("Proof." italic, no number), pf is elsarticle's ("Proof." small caps)
+% engines: rust (78n r2) = no message, \proof redefined as a numbered elsarticle proof; Perl 0.8.8 lets \newproof be \newtheorem
+% expect:  0 errors (the message is an Info, as every "already defined. Or name" message: misc.rs is_typesetting_only_message); amsthm's <proof>, then pf as elsarticle's theorem
+% status:  RED (78n r2) -> GREEN (78n r3, KNOWN_PERL_ERRORS #1080)
+\documentclass{elsarticle}
+\usepackage{amsthm}
+\newtheorem{thm}{Theorem}
+\newproof{proof}{Proof}
+\newproof{pf}{Proof}
+\begin{document}
+\begin{thm} T. \end{thm}
+\begin{proof} P one. \end{proof}
+\begin{pf} P two. \end{pf}
+\end{document}

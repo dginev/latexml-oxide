@@ -1,0 +1,21 @@
+% control (brief 107g, mechanisms 1 and 2): a weak spelling moves no own call: `yhsheng@` under Husheng Yu, no Xiangmin Shen's
+%   "shen" (`own_call_keeps`), though it would own the address were it set after the last author.
+% witness: 2411.01273 (`yhsheng@`), 2609.11148 (`zhonggong.hc@`, no Wang Hong's "hong")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int138a: on Xiangmin Shen; int139a: on Husheng Yu
+% expect:  0 errors; each address on its call's author
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Husheng Yu}
+\email{yhsheng@x.cn}
+\affiliation{Univ X, Town}
+\author{Xiangmin Shen}
+\email{xshen@y.edu}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

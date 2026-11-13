@@ -1,0 +1,22 @@
+% witness: 64k review r3 (finding 1): a class `\author` that opens a group it does not close and queues group-end
+%          work (`\begingroup\aftergroup…`); the guard also runs it with a mode switch (`\begin{minipage}{1cm}`,
+%          which pdflatex rejects in the preamble: engine robustness only)
+% oracle:  pdflatex 0 errors (the `\begingroup` stays open to the end; `\leak` never runs)
+% engines: rust 64k r3 = "LEAKED" typeset in the body (the replay's group closed in the document's reading context
+%          ran its `\aftergroup`); with the minipage, the replay's group stayed open under the mode frame — date,
+%          creator and footnote silently lost, the frontmatter inert for the rest of the document; Perl never replays
+% expect:  0 errors; no "LEAKED"; date, one creator Alice, the footnote
+% status:  RED (64k r3) -> GREEN (64k)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\leak{LEAKED}
+\renewcommand*{\author}[1]{\begingroup\aftergroup\leak\gdef\theauthorname{#1}}
+\makeatother
+\title{A title}
+\date{1 May 2020}
+\author{Alice}
+\begin{document}
+\maketitle
+Text.\footnote{A note.}
+\end{document}

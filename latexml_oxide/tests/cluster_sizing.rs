@@ -89,15 +89,13 @@ mod delimiter_size_nominal_font {
 
   #[test]
   fn sized_delimiters_scale_to_the_nominal_font_size() {
-    // NOTE the expected-error count. `a0poster` currently emits 4
-    // `Error:expected:<variable>` in Rust and ZERO in Perl 0.8.8 on this exact
-    // input — a Rust-only defect in the class binding, unrelated to delimiter
-    // sizing and tracked separately. It is pinned rather than tolerated: when
-    // that bug is fixed this assertion fails, which is the intended prompt to
-    // drop the count back to 0. Do not "fix" this by loosening the check.
+    // `a0poster` used to emit 4 `Error:expected:<variable>` here (its binding's
+    // `\setlength { \paperwidth }{…}` with spaces — Perl skipped them, we did
+    // not); the `Variable` reader now follows tex.web §1211 (batch 54f), so
+    // the pinned count is 0. Keep it pinned, never tolerated.
     let xml = convert_expecting_errors(
       "tests/cluster_regressions/delimiter_size_nominal_font.tex",
-      4,
+      0,
     );
     let got = sizes(&xml);
     for want in ["120%", "160%"] {
@@ -130,12 +128,11 @@ mod delimiter_size_nominal_font {
   #[test]
   fn nominal_font_size_persisted_as_pi_only_when_non_default() {
     use crate::cluster::{convert_expecting_errors, convert_to_xml};
-    // a0poster sets NOMINAL_FONT_SIZE=25 → the PI carries it. The 4 errors are
-    // a0poster's unrelated class-binding defect (pinned by the sibling delimiter
-    // test); tolerate them here — they are orthogonal to the PI.
+    // a0poster sets NOMINAL_FONT_SIZE=25 → the PI carries it (its former 4
+    // `<variable>` errors are gone — see the sibling delimiter test).
     let a0 = convert_expecting_errors(
       "tests/cluster_regressions/delimiter_size_nominal_font.tex",
-      4,
+      0,
     );
     assert!(
       a0.contains("<?latexml nominal-font-size=\"25\"?>"),
@@ -160,21 +157,23 @@ mod image_sizing_characterization {
   //! which format's typeset size moved.
   //!
   //! The same 200x100 figure is saved as PNG, EPS, PDF and SVG and included with
-  //! no graphicx options. Four containers, four answers, because the resolution
+  //! no graphicx options. Four containers, three answers (four until 78z), because the resolution
   //! used to turn a source measurement into a TeX dimension is chosen per format
   //! rather than once:
   //!
   //! | source              | pdflatex   | Perl LaTeXML | here       | implied dpi |
   //! |---------------------|------------|--------------|------------|-------------|
   //! | PNG 200x100 px      | 200.7495pt | 144.54pt     | 144.54pt   | 100         |
-  //! | EPS BBox 200x100 bp | (n/a)      | (no sizer)   | 144.54pt   | 100, on bp  |
+  //! | EPS BBox 200x100 bp | 200.7495pt | (no sizer)   | 200.75pt   | 72 (bp)     |
   //! | PDF 200x100 bp      | 200.7495pt | (no sizer)   | 200.75pt   | 72          |
   //! | SVG viewBox 200x100 | (n/a)      | (no sizer)   | 150.5625pt | 96          |
   //!
   //! The pdflatex and Perl columns were measured on the same fixtures on
   //! 2026-08-04 (Perl 0.8.8 lacks Image::Magick on this host, so it can only size
   //! what `Image::Size` reads — hence "no sizer" for EPS/PDF/SVG; the PNG row is
-  //! exact parity with us). Perl's own convention is the 100 dpi one:
+  //! exact parity with us; the EPS row's pdflatex figure measured 2026-10-22 through
+  //! epstopdf, latex + dvips 200.75pt; until 78z ours read its bp as 100-dpi pixels,
+  //! 144.54pt, DIVERGENCES #886). Perl's own convention is the 100 dpi one:
   //! `Util/Image.pm:37 our $DPI = 100`, with the box derived as `w * 72.27 / $DPI`
   //! (L271) — which is why an unscaled raster typesets 28% smaller than pdflatex
   //! makes it.
@@ -297,9 +296,10 @@ mod image_sizing_characterization {
     ]);
     // 200 px read as 100 dpi.
     assert_eq!(row(&xml, 0), "144.54pt 72.27pt", "PNG");
-    // 200 bp read as if it were 200 px, then as 100 dpi — the BoundingBox unit
-    // is discarded on the way in.
-    assert_eq!(row(&xml, 1), "144.54pt 72.27pt", "EPS");
+    // 200 bp converted as TeX reads a BoundingBox (latex 200.75pt, pdflatex
+    // 200.7495pt). Until 78z: "144.54pt 72.27pt", the bp read as 200 px at 100 dpi
+    // (OXIDIZED_DESIGN_DIVERGENCES #886).
+    assert_eq!(row(&xml, 1), "200.75pt 100.375pt", "EPS");
     // 200 bp converted honestly: 200 * 72.27/72. Exact pdflatex parity.
     assert_eq!(row(&xml, 2), "200.75pt 100.375pt", "PDF");
     // 200 viewBox user units read as CSS px: 200 * 72.27/96.

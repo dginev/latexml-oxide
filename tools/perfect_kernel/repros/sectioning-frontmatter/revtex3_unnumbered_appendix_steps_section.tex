@@ -1,0 +1,28 @@
+% mechanism: aps.sty:280-295 `\@ssect`: after `\appendix` a top-level `\section*` steps the section counter
+%   (`\ifappendixon\if@mainhead\stepcounter{section}`), so its equations are (A1) and the next numbered appendix is B.
+%   The appendix's `\section` is the kernel's `\@@appendix`; revtex3_support wraps its starred form.
+% witness: cond-mat0006498, chao-dyn9906002, gr-qc9803087, hep-th9605027
+% oracle:  pdflatex with REVTeX 3.1: 0 errors; "(1.1a)", "(1.2)", "APPENDIX: APP" (A1), "APPENDIX B: APP2" (B1),
+%   "REFS: [1.1a]", "REFS2: [A1] [B1]"
+% engines: rust 64zd r1: (3), then Appendix A (A1); perl: (1a), (2), 3, A, 4
+% expect:  0 errors; equations (A1) under the unnumbered appendix, appendix B with (B1)
+% status:  RED (64zd r1) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps,eqsecnum]{revtex}
+\begin{document}
+\section{One}
+\begin{mathletters}
+\begin{eqnarray}
+a&=&b\label{m1}\\
+c&=&d
+\end{eqnarray}
+\end{mathletters}
+\begin{equation}e=f\end{equation}
+REFS: [\ref{m1}]
+\appendix
+\section*{App}
+\begin{equation}g=h\label{ap}\end{equation}
+\section{App2}
+\begin{equation}g=h\label{ap2}\end{equation}
+REFS2: [\ref{ap}] [\ref{ap2}]
+\end{document}

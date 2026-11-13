@@ -1,0 +1,28 @@
+% A displaced store (`\def\affiliation#1{\gdef\@affil{\it #1}}`, printed by the class's `\@maketitle`, OD #955) whose
+% last line `$^\ast$Deceased` is requested by `Ann Able$^{1,*}$`: both print ∗, one key (queue_digest.rs
+% `clean_frontmatter_labels`, `one_asterisk`), so the call is not in doubt (frontmatter_stores.rs `displaced_in_doubt`,
+% `requested_as_printed`) and each line is its requesters': Ann Able "1Univ A, Town" and her deceased note, Bob Baker
+% "2Univ B, City". Keyed apart, the call was in doubt and both authors lost every affiliation to the class's text
+% (review rev100a B1).
+% witness: review rev100a probe q/p2c (synthetic)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗, Bob Baker2", "1Univ A, Town", "2Univ B, City", "∗Deceased"
+% engines: rust int127a = Ann Able "1Univ A, Town" and "∗Deceased" as affiliations; rust 100a r1 = no contact on
+%          either name, the three lines the class's text; perl = no raw class load
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town" and a deceased note "∗Deceased"; Bob Baker
+%          "2Univ B, City"; the body holds only "Text."
+% status:  RED (100a r1) -> GREEN (100a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dsmast.cls}
+\ProvidesClass{dsmast}\LoadClass{article}
+\def\affiliation#1{\gdef\@affil{\it #1}}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\@affil\par}\vskip1em}
+\end{filecontents*}
+\documentclass{dsmast}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,*}$, Bob Baker$^{2}$}
+\affiliation{$^1$Univ A, Town\\ $^2$Univ B, City\\ $^\ast$Deceased}
+\maketitle
+Text.
+\end{document}

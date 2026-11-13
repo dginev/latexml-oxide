@@ -1,0 +1,22 @@
+% mechanism: a creator call inside a block carries its keyvals as tokens (the rehearsal's `\lx@fm@obs@creator` reads them as
+%   the API does, `OptionalKeyVals:Frontmatter`; `field_notes::FieldCreator`), and the emitter writes them on Perl's call,
+%   `[role=author,#1]` (Base_Utility.pool.ltxml:586; `emitter::emit::creator_keys`), the reading's labels joining the call's
+% witness: none in dev3 / devh10k past PoS's and JHEP's `\speaker` (`role=` alone: 0910.5686, 1007.2355, 1111.2428, 1111.6944);
+%   ams's `\contrib` inside `\author` is no valid input (amsart.cls:479, `\@wraptoccontribs` undefined)
+% oracle:  pdflatex 0 errors (the document's own fallback of the API prints the name); Ann Able, Bob Baker
+% engines: rust F1 `=2`: Bob Baker `role=editor`, its `name=` lost; ours off: the kernel reader cuts the keyvals at their commas
+% expect:  0 errors, 0 warnings; `=2`: Bob Baker `<creator name="Edited by" role="editor">`
+% status:  RED (F1) -> GREEN (perfect_kernel_batchf1::a_creator_calls_keyvals_are_written)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\providecommand\lx@add@creator[2][]{#2}
+\makeatother
+\begin{document}
+\title{A creator call's keyvals in a block}
+\makeatletter
+\author{Ann Able \and \lx@add@creator[role=editor,name={Edited by},annotations={ed}]{Bob Baker}}
+\makeatother
+\maketitle
+Text.
+\end{document}

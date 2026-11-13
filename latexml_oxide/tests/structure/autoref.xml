@@ -70,7 +70,7 @@
         <toccaption><tag close=" ">1.2</tag>Captionoffigure caption</toccaption>
         <caption><tag close=": ">Figure 1.2</tag>Captionoffigure caption</caption>
       </figure>
-      <para xml:id="Ch1.Sx1.p1">
+      <para xml:id="Ch1.Sx1.p2">
         <equation labels="LABEL:equationlabel" xml:id="Ch1.E1">
           <tags>
             <tag>(1.1)</tag>
@@ -88,7 +88,7 @@
           </Math>
         </equation>
       </para>
-      <para xml:id="Ch1.Sx1.p2">
+      <para xml:id="Ch1.Sx1.p3">
         <enumerate xml:id="Ch1.Sx1.I1">
           <item labels="LABEL:itemlabel" xml:id="Ch1.Sx1.I1.i1">
             <tags>

@@ -1,0 +1,19 @@
+% A correspondence line naming one of the authors ("Corresponding author: Professor Ann Able") between a marked names row
+% and its marked address lines is read as an unmarked institution: every name's affiliation. A distinct shape from the
+% support line (author_support_line_under_marked_names_is_no_affiliation_red): a labelled line that names a person,
+% which a reader may take as a note, a correspondence or a name row; today the same wrong reading.
+% witness: synthetic (77t review; the correspondence case of perfect_kernel_batch77t
+%          `role_and_note_lines_are_no_unmarked_institution`, whose comparison DEL1 discarded — its `=2` red: "reads the
+%          role/note line under the names as an affiliation of Ann Able and Bob Baker")
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1 , Bob Baker2", "Corresponding author: Professor Ann
+%          Able", "1Univ A", "2Univ B"
+% engines: rust int160a (HG1b) = 0 errors, 0 warnings: " Corresponding author: Professor Ann Able" an affiliation of Ann
+%          Able and of Bob Baker
+% expect:  0 errors, 0 warnings; Ann Able Univ A, Bob Baker Univ B; the correspondence line kept, no name's affiliation
+% status:  RED (int160a, HG1b)
+\documentclass{article}
+\begin{document}
+\title{T}\author{Ann Able$^{1}$, Bob Baker$^{2}$\\ Corresponding author: Professor Ann Able\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+Text.
+\end{document}

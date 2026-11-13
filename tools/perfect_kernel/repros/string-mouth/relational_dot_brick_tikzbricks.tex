@@ -1,0 +1,17 @@
+% witness: tikzbricks/tikzbricks-doc (via \brick; doc first error at tikzbricks-doc processing)
+% oracle:  pdflatex 0 errors
+% engines: rust=2 perl=9 (2026-09-03, b54r)
+% expect:  0 errors; output contains one <ltx:picture> for the brick
+% status:  GREEN (b54t, batch 54o — pgfmath integer results)
+% mechanism: \brick -> tikz-3dplot coordinate math feeds a pgfmath value (integer in
+%   real TeX) into an \ifnum/\ifdim comparison; Rust's Number/Dimension param scan
+%   stops before the decimal, leaving a stray "." -> tex_logic.rs:156 compare() sees
+%   "." where a relational token (< = >) is expected. SHARED (Perl fails harder, 9);
+%   surpass-in-scope (pdflatex clean). Doc lever = 88-90 identical errors.
+\documentclass{article}
+\usepackage{tikzbricks}
+\begin{document}
+\begin{tikzpicture}
+\brick[color=blue]{4}{2}
+\end{tikzpicture}
+\end{document}

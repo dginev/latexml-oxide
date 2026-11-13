@@ -1,0 +1,21 @@
+% A sectioning heading inside a balanced abstract closes it (user ruling 2026-10-18: "A \section inside an abstract
+% should close/complete the abstract"): the heading and the text after it are body content, and the `\end{abstract}`
+% that follows is a no-op.
+% witness: 74a open row (b) (1507.08575 scrartcl `\section*{Abstract:}` inside {abstract}; sample papers)
+% oracle:  pdflatex 0 errors: "Abstract / Abstract text. / Keywords / alpha, beta / 1 Introduction / Body."
+% engines: rust 67int26 = 0 errors, the `\section*` kept nested inside ltx:abstract (schema-invalid); Perl 1 error
+%          (`<ltx:section> isn't allowed in <ltx:abstract>`)
+% expect:  0 errors, 0 warnings; ltx:abstract holds only "Abstract text."; an unnumbered section "Keywords" with
+%          "alpha, beta" follows it; then section 1 "Introduction" with "Body."
+% status:  RED (67int26) -> GREEN (int26, ruling 6)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\section*{Keywords}
+alpha, beta
+\end{abstract}
+\section{Introduction}
+Body.
+\end{document}

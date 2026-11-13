@@ -1,0 +1,19 @@
+% mechanism: an unmarked line under a line of one labelled entry goes on with that entry, whatever its words read as
+%   (the old reader's N5, `add_authors_calls_sectioned`'s line appended to the entry above; the reading's
+%   `Resolver::block`, `after_labelled` evidence of a names line only under two or more entries — SYNC row 46's
+%   `$^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics` stays a names row)
+% witness: 2501.04046 (`$^1$The Graduate Center, CUNY\\ Computer Science\\ New York, USA`), hep-ph0511130
+%   (`$^{1}$Institute of …, Ionosphere and\\ Radio Wave Propagation\\ RAS, …`); cs0011034 (two entries above) a residual
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker1", "1 The Graduate Center, CUNY", "Computer Science", "New York, USA"
+% engines: rust NL1 and MV1, the switch on: "Computer Science" a creator with the affiliation "New York, USA"; off: one
+%   affiliation of the three lines
+% expect:  0 errors, 0 warnings; two creators both ways, each "The Graduate Center, CUNY Computer Science New York, USA"
+% status:  RED (NL1, the switch on) -> GREEN (perfect_kernel_batchnl1::a_line_under_one_labelled_entry_continues_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$\\ $^1$The Graduate Center, CUNY\\ Computer Science\\ New York, USA}
+\maketitle
+x
+\end{document}

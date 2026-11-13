@@ -1,0 +1,21 @@
+% witness: beautybook/beautybook-en (beautybook.cls:544 `\draw[gray,dashed,opacity=0.5]` in its `\section` format,
+%          run since 57q); 4,304 warnings over the 3,003-paper A/B (57p); tikz.code.tex:119-137 hands
+%          `\pgfsetdash` the macro `\tikz@dashphase` (`\noexpand` in an `\edef`), and pgfcoregraphicstate.code.tex
+%          `\pgfmathsetlength\pgf@x{#2}` expands it; pgfsys_latexml_def.rs `\pgfsetdash` re-exploded the argument
+%          to characters, so pgfmath read the text `\tikz@dashphase` as a register name
+% oracle:  pdflatex 0 errors; a dashed gray line
+% engines: rust 57p/57t4 0 errors, 1 "Warning:expected:register The control sequence '\tikz@dashphase' is not a
+%          register"; perl 0 errors (raw \pgfsetdash) (RUST-ONLY)
+%          An explicit `dash phase=1pt` was lost the same way (stroke-dashoffset 0.0pt), and so was a pattern
+%          length held in a macro (`\pgfsetdash{{\dl}{2pt}}`: "\dl is not a register", dasharray 0.0pt,2.0pt).
+% expect:  0 errors, 0 warnings; stroke-dasharray kept, the second line's stroke-dashoffset 1.0pt, the third's
+%          stroke-dasharray 3.0pt,2.0pt
+% status:  RED (57t4) -> GREEN (57u)
+\documentclass{article}
+\usepackage{tikz}
+\def\dl{3pt}
+\begin{document}
+\tikz\draw[gray,dashed,opacity=0.5] (0,0)--(1,0);
+\tikz\draw[dash pattern=on 3pt off 2pt, dash phase=1pt] (0,0)--(1,0);
+\begin{tikzpicture}\pgfsetdash{{\dl}{2pt}}{0pt}\draw (0,0)--(1,0);\end{tikzpicture}
+\end{document}

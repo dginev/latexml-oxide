@@ -1,0 +1,23 @@
+% witness: 77a r2 review probes p2/p9
+% oracle:  pdflatex + biber 0 errors: S1Books {knuth}, S1Rest {lamport}, S2All {web, mittelbach}, S2Magazine
+%          {mittelbach}: each list is its own refsection's (biblatex.sty:9827 \blx@tempe)
+% engines: rust 77a r1 printed every refsection under each list, and warned "Type 'book' not found" / "Subtype
+%          'magazine' not found" for the other refsection's flush
+% expect:  clean (0 errors, 0 warnings); four bibliographies with the oracle's keys
+% status:  GREEN (77a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+\begin{refsection}
+A \cite{knuth,lamport}.
+\printbibliography[type=book,title={S1Books}]
+\printbibliography[nottype=book,title={S1Rest}]
+\end{refsection}
+\begin{refsection}
+B \cite{mittelbach,web}.
+\printbibliography[title={S2All}]
+\printbibliography[subtype=magazine,title={S2Magazine}]
+\end{refsection}
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: no name requests a mark, so a script glued to a word is a label only where it opens its line (the
+%   line-opening fallback of `events::lexer::glue_in_word_marks`): the mid-line `${\rm ^2Lab}$` is the formula's text and
+%   the `\affiliation` stays one contact, its author's
+% witness: synthetic (revISO1b S1, probe z2; the fallback's witness 1006.5052)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: one line under Ann Able, "1Dept of Physics, Univ X, 2Lab of Chemistry, Univ Y"
+% engines: rust int160c = 0 errors, 0 warnings, two contacts "Dept of Physics, Univ X" and "Lab of Chemistry, Univ Y";
+%   ISO1b = ISO1c = 0 warnings, one contact holding the line (same owner, no word lost)
+% expect:  0 errors, 0 warnings; Able one affiliation, the whole line
+% status:  GREEN (ISO1b, ISO1c) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{${\rm ^1Dept}$ of Physics, Univ X, ${\rm ^2Lab}$ of Chemistry, Univ Y}
+\maketitle
+Text.
+\end{document}

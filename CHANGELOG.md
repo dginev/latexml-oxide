@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+  - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
+    meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
+    The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
+    and the XSLT step still receives its negation as `noresources`, as
+    `LaTeXML.pm:584` passes it. The CLI flags `--defaultresources` and
+    `--nodefaultresources` are unchanged.
+  - **New `api::convert_to_html_with(tex, &HtmlOptions)`.** `HtmlOptions` holds the
+    settings of the library's HTML entry point, and its `Default` is what
+    `api::convert_to_html(tex)` does, so that function is unchanged. The first
+    setting is `default_resources`; set it to `false` (the `--nodefaultresources`
+    equivalent) to get the page without links to the bundled CSS/JS and with
+    nothing written to the working directory. Construct `HtmlOptions` with
+    `..Default::default()`, so a setting added later leaves callers compiling. The
+    tests use it through `util::test::convert_to_html_page`, so a test run no
+    longer leaves `LaTeXML.css`/`ltx-*.css` in `latexml_oxide/`.
+
+  - **The XSLT recursion cap now applies in the statically linked release
+    binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was
+    written through `dlsym`, which cannot see a global of a statically linked
+    libxslt, so those binaries kept libxslt's default of 3000. A stylesheet that
+    recursed between 1000 and 3000 levels deep now aborts in post-processing, as
+    in Perl and in dynamically linked builds. Guard
+    `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`
@@ -1241,7 +1265,7 @@
     when the strict split skips `_base.rs`, only Token bodies
     survive in the dump.
   - **Historical active gaps from the Apr 26 pivot** are preserved in
-    [`PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md), but
+    [`PERL_LOADFORMAT_AUDIT.md`](docs/archive/PERL_LOADFORMAT_AUDIT.md), but
     must be re-audited before action. Several were superseded by the
     Apr 28-30 dump cleanup and package-loading fixes.
 

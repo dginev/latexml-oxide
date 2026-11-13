@@ -1,0 +1,29 @@
+% witness: 1602.05576, 2405.08158 (ar-1col.cls:341 `\def\affil#1{\par…{\reset@font\affilfont#1\par}…}`, called inside
+%          `\author{}`); review rev94b r2 B1 (its probes `p/b1` f4, f5, font, u3) and N4 (its probe sep)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able,1 Bob Baker2 and Cy Cole3", then the lines "1Univ A, Town;" (italic),
+%          "2Univ B, City" ("Univ B" italic), "3Lab C, Place" ("Lab C" bold, "Place" typewriter), "Body."
+% engines: rust 94b r2 = 0 errors, 0 warnings: the italic group before the first mark lost from its entry; the second
+%          entry cut at its ink, inside the `{\itshape …}` group, no balanced run: no entry cut, today's one contact
+%          "Univ A, Town;Univ B, CityLab C, Place" left on a nameless creator; the `;` dropped from a cut line
+% expect:  0 errors, 0 warnings; each entry cut with the group and the switches its line opens before or after its mark,
+%          and the punctuation it prints at its line's end: Ann Able "Univ A, Town;" (italic), Bob Baker "Univ B, City"
+%          ("Univ B" italic), Cy Cole "Lab C, Place" (bold, typewriter); eager and --streaming the same
+% status:  RED (94b r2) -> GREEN (94b r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\YES{yes}
+\def\chk@key{no}
+\def\affilfont{\small\leftskip2em\rightskip0pt plus1fil}
+\def\affil#1{\par\ifx\chk@key\YES\else\vskip6\p@\fi{\reset@font\affilfont#1\par}\def\chk@key{yes}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker$^2$ and Cy Cole$^3$
+\affil{{\itshape $^1$Univ A, Town;}\\ $^2${\itshape Univ B}, City\\ $^3$\textbf{Lab C}, \texttt{Place}}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: as `marked_thanks_piece_is_written_as_read`, the `\thanks` inside the name's mark formula: each piece read
+%   within the note's argument (a `\thanks` argument is typeset in the footnote, latex.ltx `\thanks` -> `\footnotetext`,
+%   never part of the formula around the command), not widened to that formula, which holds the `\thanks` itself
+% witness: review rck2 (synthetic, int150a's `k2`)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2∗", the footnote "∗1 Univ A; 2 Univ B"
+% engines: off = Ann: Univ A; Bob: Univ B; `=2` (int150a) = both affiliations lost, the note written as two identical
+%   pubnotes, 0 Warnings
+% expect:  0 errors 0 warnings; `=2` as off, no pubnote
+% status:  RED (int150a `=2`) -> GREEN (KEY1d)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2\thanks{$^{1}$Univ A; $^{2}$Univ B}}$}
+\maketitle
+Text.
+\end{document}

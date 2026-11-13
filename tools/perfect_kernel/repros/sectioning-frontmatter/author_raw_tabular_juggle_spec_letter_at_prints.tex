@@ -1,0 +1,17 @@
+% mechanism: the content check's reading of a juggle's printed text: a column spec's `@ ! > < *` are matched by
+%            character code, letter or other, as `\@mkpream`'s `\if` does (`rehearsal::spec_printed`)
+% witness: synthetic, review revI4 finding 2 (probe t4: r13 under `\makeatletter`)
+% shape:   the tie juggle under `\makeatletter`, the reopened tabular's spec `{@{Inst }c}` with a letter `@`
+% oracle:  pdflatex: 0 errors; "A One Inst Dept"
+% engines: rust CK3b `=2`: E=0 W=1, the content-check Warning `Dept` ("Inst", printed and lacking, not counted)
+% expect:  "A One"; at `=2` 1 Warning (the content check), `Dept Inst`
+% status:  RED (CK3b) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, CK3c)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\begin{document}
+\title{T}
+\author{A One \end{tabular}~\begin{tabular}{@{Inst }c} Dept}
+\maketitle
+Text.
+\end{document}

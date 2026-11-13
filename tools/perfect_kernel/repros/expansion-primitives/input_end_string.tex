@@ -1,0 +1,19 @@
+% mechanism: tex.web §471 \string reads its token at `normal` scanner status
+%   (`scanner_status:=normal; get_token`), so at the end of an \input file the token is the
+%   first one after the file (§362). Rust read it as a macro's `Token` argument, which stops at
+%   the file's end (and yielded \relax).
+% witness: SYNC_STATUS "Other `get_token` reads do not cross an input end either"
+% oracle:  pdflatex 0 errors, "B [\foo]" (OT1 prints the backslash as a quote)
+% engines: rust=0 errors, "B [\relaxFOO]" (56jg-rel, 2026-09-25)
+% expect:  0 errors, "B [\foo]"
+% status:  GREEN (56jj: \string reads with read_token_across_input_ends; guard
+%          token_kernel_gaps::string_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_string_in.tex}
+\string
+\end{filecontents*}
+\def\foo{FOO}
+\makeatletter
+\begin{document}
+B [\@@input input_end_string_in.tex \foo]
+\end{document}

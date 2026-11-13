@@ -1,0 +1,36 @@
+% mechanism: a mark with a sub-label (`$^{12A}$`, `$^{12A,12B}$`) against an entry that lists its parts (`$^{12}$ (A)Uni
+%   Twelve A; (B)Uni Twelve B`) is no mark the splitter reads: the mark stays in the name ("B. Baker12A"), and entry 12
+%   goes by its digits (to the names marked 1 and 2). Unsupported: a ruling on sub-labelled entries (the part, or the
+%   whole entry) is deferred (main session 2026-11-01, the difficulty rule; SYNC_STATUS row 97f).
+% witness: 1507.02068, 1512.08197, 2201.02056 (BESIII: `A.~Amoroso$^{48A,48C}$` against `$^{48}$ (A)University of
+%   Turin…; (B)…; (C)INFN…`, 33 names a paper, the entries no name answers on an empty creator)
+% oracle:  pdflatex (TL 2025) 0 errors: "A. Able1 , B. Baker12A , C. Cole12A,12B , D. Dorn3B / (XYZ Collaboration) / 1
+%   Uni One, City / …"
+% engines: rust 97f: four creators, "B. Baker12A", "C. Cole12A,12B", "D. Dorn3B", A. Able given Uni Twelve; perl: one
+%   creator; rust 98e r2: B. Baker and C. Cole the whole Uni Twelve entry, D. Dorn Lab Three, the Uni Two line once on
+%   the block (a sub-lettered mark goes by its number, `parted_label`: review rev98e B1), the marks still in the names
+% expect:  0 errors, 0 warnings; B. Baker and C. Cole Uni Twelve (or its part A / parts A and B), D. Dorn Lab Three
+%   (B), the marks off the names
+% status:  RED (97f) -> partly GREEN (98e r2: the entries; the marks in the names and the part entries open, R6), no
+%   guard (the entry reading is guarded by perfect_kernel_batch98e::a_sub_lettered_mark_goes_by_its_number)
+\documentclass[prd,twocolumn]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+  \begin{small}
+    \begin{center}
+      A.~Able$^{1}$, B.~Baker$^{12A}$, C.~Cole$^{12A,12B}$, D.~Dorn$^{3B}$
+      \\ \vspace{0.2cm} (XYZ Collaboration)\\
+      \vspace{0.2cm} {\it
+        $^{1}$ Uni One, City\\
+        $^{2}$ Uni Two, Town\\
+        $^{3}$ (A)Lab Three A; (B)Lab Three B\\
+        $^{12}$ (A)Uni Twelve A; (B)Uni Twelve B\\ }
+    \end{center}
+    \vspace{0.4cm}
+  \end{small}
+}
+\affiliation{}
+\maketitle
+Text.
+\end{document}

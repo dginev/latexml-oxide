@@ -1,0 +1,20 @@
+% witness: frankenstein/titles (and abbrevs, attrib, lips, moredefs, dialogue, slemph, achicago,
+%   blkcntrl, compsci: the bundle's manuals document their macros with compsci's \cs = \code{...})
+% oracle:  pdflatex (TL 2025) stops: "Command \code already defined" (doc.sty:623 made \code the
+%   identity before compsci.sty:510 \newcommand*\code), no PDF; the shipped PDFs (older doc.sty)
+%   show \Wrapquotes verbatim. Perl 0 errors (skips the doc body).
+% engines: rust (56hh) = Fatal:Stomach:Recursion "Infinite digestion loop" (titles.sty's quote
+%   wrapper, executed by the identity \code, loops in its \futurelet look-ahead)
+% expect:  0 errors; each \cs\X a <ref class="ltx_nolink ltx_Url" font="typewriter">\X</ref>
+% status:  RED (56hh) -> GREEN (56hj)
+% mechanism: a file/compsci.sty/after first-aid hook (latex_constructs_rust_only.rs, the way
+%   latex2e-first-aid-for-external-files.ltx patches packages) restores compsci's own \code.
+\documentclass{ltxdoc}
+\usepackage{attrib,compsci}
+\begin{document}
+\begin{warning}
+commands instead of using a \cs\def-like defining command.  It's OK to
+has been  \cs\let to one of the six \cs\Wrapquotes\meta{XY} macros.
+The user command which is \cs\let to one of the \cs\Wrapquotes commands
+\end{warning}
+\end{document}

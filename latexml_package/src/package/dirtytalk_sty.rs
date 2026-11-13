@@ -43,7 +43,8 @@ LoadDefinitions!({
   def_dirtytalk_symbol_key("leftsub",  "\\dirtytalk@lq")?;
   def_dirtytalk_symbol_key("rightsub", "\\dirtytalk@rq")?;
 
-  ProcessOptions!(keysets => ["dirtytalk"]);
+  // dirtytalk.sty:31 reads its options with `\ProcessKeyvalOptions`: `\@curroptions` stays as it was.
+  ProcessKeyOptions!(keysets => ["dirtytalk"]);
 
   RawTeX!(r"\newcounter{dirtytalk@qdepth}
 \newcommand{\dirtytalk@lsymb}{%

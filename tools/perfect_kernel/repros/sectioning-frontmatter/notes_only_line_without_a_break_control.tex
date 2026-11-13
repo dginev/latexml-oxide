@@ -1,0 +1,15 @@
+% mechanism: control for notes_only_line_after_ieee_names_is_theirs.tex: the same block with the `\\` written as `%`.
+% oracle:  pdflatex 0 errors
+% engines: rust int127a: Ann (Univ A + "∗ Work done at Lab C."), Bob (Univ B), Cat (Univ A); perl not run
+% expect:  0 errors; the creators of the three notes_only_line repros above
+% status:  GREEN (control)
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{Ann Able$^{1,*}$, Bob Baker$^{2}$ and Cat Cole$^{1}$%
+\thanks{$^{1}$Ann Able and Cat Cole are with Univ A, Town.}%
+\thanks{$^{2}$Bob Baker is with Univ B, City.}%
+\thanks{$^{*}$Work done at Lab C.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

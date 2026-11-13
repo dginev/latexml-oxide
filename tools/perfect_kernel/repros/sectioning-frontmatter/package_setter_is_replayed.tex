@@ -1,0 +1,15 @@
+% witness: 2607.24171 (jsty3-author.sty, a package loaded by the document, whose refused `\author` the 64k replay runs:
+%          an erring replay is rolled back since 65e, not skipped)
+% oracle:  pdflatex 0 errors; count 1 (the package's `\author` runs)
+% engines: rust 65a = count 1 (replayed); Perl count 0 (never replays)
+% expect:  0 errors; "Count: 1." (a package's refused setter is replayed, as pdflatex runs it); one creator Alice
+% status:  CONTROL (65e: the replay is not restricted to class setters)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{replaypkg}
+\title{A title}
+\author{Alice}
+\begin{document}
+\maketitle
+Count: \the\value{authcount}.
+\end{document}

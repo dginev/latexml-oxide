@@ -1,0 +1,17 @@
+% A refused class `\author` replay inserts the name into a list before its end sentinel, where another class setter
+% (`\workplace`) inserts as well; the title-page replay takes out only what the `\author` replay inserted (the middle
+% between the old value's common head and tail), so the workplace stays, once (sect05.rs `note_replay_records`,
+% `\lx@replay@records`; 75a review r2 finding 1).
+% oracle:  pdflatex (tpsentinel.cls beside it) 0 errors: "On Widgets / Widget University / A. Author / Body text."
+% engines: rust 67int28 = 0 errors, "A. Author" twice (the creator and a bold body paragraph);
+%          rust 75a r2 (a59de2000b) = 0 errors, "Widget University" lost (the whole list emptied);
+%          perl (OmniBus, the class is not read) = 1 error (\workplace undefined)
+% expect:  0 errors, 0 warnings; "A. Author" once (the creator), "Widget University" once (an italic paragraph)
+% status:  RED (75a r2) -> GREEN (75a r3)
+% preload: ar5iv.sty
+\documentclass{tpsentinel}
+\begin{document}
+\title{On Widgets}\workplace{Widget University}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

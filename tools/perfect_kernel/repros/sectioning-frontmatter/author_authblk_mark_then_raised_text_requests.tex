@@ -1,0 +1,18 @@
+% witness: 77n r5 review — a marked authblk name whose mark a raised text follows, so it stays on `\lx@add@creator`
+%          (review probe k1)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1equal contrib. / 1Univ X"
+% engines: rust int32a = both with Univ X; 77n r5 = Bob Baker with nothing (his mark requested nothing on
+%          `\lx@add@creator`, and the mark-picked Univ X reached Ann only)
+% expect:  0 errors, 0 warnings; 2 creators, both with Univ X, Bob Baker's "1" and "equal contrib." shown
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{1}$\textsuperscript{equal contrib.}}
+\affil{$^1$Univ X}
+\maketitle
+x
+\end{document}

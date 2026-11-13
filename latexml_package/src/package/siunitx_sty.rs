@@ -149,6 +149,20 @@ macro_rules! six_pin {
 /// that the `&str` variant pays.
 fn six_get_sym(key: SymStr) -> Option<Stored> { with_value_sym(key, |v| v.cloned()) }
 
+/// Is siunitx being loaded as its v2 release? siunitx.sty:37-39 `\DeclareRelease{2}{2010-05-23}{siunitx-v2.sty}`,
+/// `\DeclareRelease{v2}{…}` and `\DeclareCurrentRelease{}{2021-05-17}`: the request `\usepackage{siunitx}[=v2]` (or
+/// `[=2]`, or a rollback date before 2021-05-17) picks siunitx-v2.sty (latex.ltx:19172-19280). The request is the
+/// one `\@onefilewithoptions` recorded for the file being loaded (`pkgcls@targetdate` = 1 for a label, `YYYYMMDD`
+/// for a date; latex_constructs/sect05.rs `pkgcls_set_request`).
+fn six_v2_release_requested() -> bool {
+  match lookup_int("pkgcls@targetdate") {
+    1 => with_value("pkgcls@targetlabel", |v| {
+      v.is_some_and(|label| matches!(label.to_string().as_str(), "2" | "v2"))
+    }),
+    date => date > 1 && date < 20210517,
+  }
+}
+
 fn six_get_tokens_sym(key: SymStr) -> Tokens {
   match six_get_sym(key) {
     Some(Stored::Tokens(t)) => t,
@@ -224,17 +238,85 @@ fn six_canonical_key(key: &str) -> &str {
     // Separator between the number and its unit. Witness 2606.13010, whose
     // `\qtyhy` sets `quantity-product = \text{-}` for attributive "10-MHz".
     "quantity-product" => "number-unit-product",
+    // siunitx.sty:8670-8824, v3's names for v2 keys this binding reads: the
+    // v2 key is kept there as a deprecated alias setting the v3 one.
+    "print-unity-mantissa" => "retain-unity-mantissa",
+    "print-zero-exponent" => "retain-zero-exponent",
+    "print-zero-integer" => "add-integer-zero",
+    "drop-uncertainty" => "omit-uncertainty",
+    "bracket-ambiguous-numbers" => "bracket-numbers",
+    // :8817-8824: deprecated in v3 for `drop-zero-decimal`.
+    "zero-decimal-to-integer" => "drop-zero-decimal",
     other => other,
   }
+}
+
+/// siunitx.sty:4956-5013 `locale`: each locale is a `.meta:n` setting three keys
+/// (decimal marker, exponent product, inter-unit product). False for a value that
+/// names no locale (an l3keys error in siunitx).
+fn six_apply_locale(locale: &str) -> bool {
+  let (marker, exponent, inter_unit) = match locale.trim() {
+    "BR" | "FR" | "IT" | "SI" => (",", "\\times", "\\,"),
+    "DE" => (",", "\\cdot", "\\,"),
+    "PL" => (",", "\\cdot", "\\cdot"),
+    "ZA" => (",", "\\times", "\\cdot"),
+    "UK" | "US" => (".", "\\times", "\\,"),
+    _ => return false,
+  };
+  for (key, value) in [
+    ("output-decimal-marker", marker),
+    ("exponent-product", exponent),
+    ("inter-unit-product", inter_unit),
+  ] {
+    let toks = Tokenize!(TeXString::assembled(value.to_string()));
+    assign_value(&format!("SIX_{key}"), Stored::Tokens(toks), None);
+  }
+  true
 }
 
 /// Perl: six_setup — assign all keyvals to SIX_key state values
 fn six_setup(kv: &KeyVals) {
   for (key, value) in kv.get_pairs() {
     let key_str = six_canonical_key(key).to_string();
+    if key_str == "locale" {
+      let locale = value.to_string();
+      if !six_apply_locale(&locale) {
+        // siunitx.sty:4958 `locale .choice:`: l3keys errors on an unknown choice.
+        // (`six_setup` returns no Result, so the record is emitted directly.)
+        emit_record(
+          LogStatus::Error,
+          "unexpected:locale",
+          &s!(
+            "siunitx: the key 'locale' only accepts BR, DE, FR, IT, PL, SI, UK, US or ZA, not '{}'",
+            locale.trim()
+          ),
+        );
+      }
+      continue;
+    }
+    // siunitx.sty:2202-2204 `uncertainty-mode`, and its v2 alias table (:8676-
+    // 8689: `separate-uncertainty = true` is `uncertainty-mode = separate`, `false`
+    // is `compact`). The binding prints `compact`, `compact-marker` and `full` alike.
+    if key_str == "uncertainty-mode" {
+      let separate = value.to_string().trim() == "separate";
+      assign_value(
+        "SIX_separate-uncertainty",
+        Stored::from(if separate { "true" } else { "false" }),
+        None,
+      );
+      continue;
+    }
     match value {
       ArgWrap::Tokens(t) => {
-        if t.is_empty() {
+        // An empty value of a key whose value is a token list (its current one neither `true` nor `false`) is that
+        // empty list: atlaspackage.sty:225-227 `number-unit-product={}` prints no space (2504.05919).
+        let token_list = || {
+          lookup_value(&format!("SIX_{key_str}"))
+            .is_some_and(|current| !matches!(current.to_string().trim(), "" | "true" | "false"))
+        };
+        if t.is_empty() && token_list() {
+          assign_value(&format!("SIX_{key_str}"), Stored::Tokens(Tokens!()), None);
+        } else if t.is_empty() {
           // Bare flag (e.g., "parse-numbers" without "= true") → set "true"
           assign_value(&format!("SIX_{key_str}"), Stored::from("true"), None);
         } else {
@@ -262,8 +344,30 @@ fn six_setup(kv: &KeyVals) {
 }
 
 /// Perl: six_begin_processing — bgroup + apply keyvals + redefine input-protect-tokens
-fn six_begin_processing(kv: Option<&KeyVals>) {
+fn six_begin_processing(kv: Option<&KeyVals>) { six_begin_processing_for_units(kv, None) }
+
+/// The state key holding the options a `\DeclareSIUnit[<options>]\<unit>` declared for `<unit>`.
+fn six_unit_options_key(name: &str) -> String { s!("SIX_unit_options:{name}") }
+
+/// [`six_begin_processing`] for a command with a unit argument, `units`: a unit argument that is one unit macro
+/// applies the options its `\DeclareSIUnit` declared before the command's own (siunitx.sty:6684-6694
+/// `\siunitx_unit_options_apply:n`, on a single token; :9167, :9529 `\qty`, `\SI`). Perl stores the options and
+/// applies none (siunitx.sty.ltxml:1343-1353): atlaspackage.sty:225-227 `\DeclareSIUnit[number-unit-product={}]\percent`
+/// printed "60 %" for pdflatex's "60%" (2504.05919).
+fn six_begin_processing_for_units(kv: Option<&KeyVals>, units: Option<&Tokens>) {
   bgroup();
+  let mut unit = units
+    .into_iter()
+    .flat_map(|units| units.unlist_ref().iter())
+    .filter(|t| t.get_catcode() != Catcode::SPACE);
+  if let (Some(unit), None) = (unit.next(), unit.next())
+    && unit.get_catcode().is_active_or_cs()
+    && let Some(Stored::KeyVals(options)) = lookup_value(&six_unit_options_key(
+      unit.to_string().trim_start_matches('\\'),
+    ))
+  {
+    six_setup(&options);
+  }
   if let Some(kv) = kv {
     six_setup(kv);
   }
@@ -493,10 +597,66 @@ fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   }
 
   if six_match_keys(tokens, &[six_pin!("input-open-uncertainty")]).is_some() {
-    let int = six_match_keys(tokens, &[
+    let mut number = number;
+    let mut int = six_match_keys(tokens, &[
       six_pin!("input-digits"),
       six_pin!("input-symbols"),
     ]);
+    // A decimal marker in the brackets (`4.02(0.52)`, `11.0(1.7)`): siunitx.sty:700-712 `\__siunitx_number_parse_uncert_auxi:N`
+    // → `\__siunitx_number_parse_uncert_marker:` (:752-848) takes the uncertainty as digits in the last places of the
+    // number: its digits without their leading zeros (:690-698), the number's fraction padded with zeros to the
+    // uncertainty's (:832-837) — pdflatex "4.02(52)", "1.08(3)", "11.0(17)". An uncertainty with more integer digits
+    // than the number is no match (:758-760). Perl's parser takes digits only (siunitx.sty.ltxml:243-246,
+    // KNOWN_PERL_ERRORS #941). Witnesses 2311.18489, 2504.14399, 2605.13387; guard
+    // `perfect_kernel_batch71a::siunitx_uncertainty_with_decimal_marker`.
+    if let Some(marker) = six_match_keys(tokens, &[six_pin!("input-decimal-markers")]) {
+      let digits = |t: &Option<Tokens>| -> Vec<Token> {
+        t.as_ref()
+          .map(|t| {
+            t.unlist_ref()
+              .iter()
+              .copied()
+              .filter(|t| t.get_catcode() != Catcode::SPACE)
+              .collect()
+          })
+          .unwrap_or_default()
+      };
+      let int_digits: Vec<Token> = digits(&int)
+        .into_iter()
+        .skip_while(|t| t.text == pin!("0"))
+        .collect();
+      let number_int_len = match &number {
+        SixNumber::Simple { integer, .. } => digits(integer).len(),
+        _ => 0,
+      };
+      if int_digits.len() > number_int_len {
+        tokens.splice(0..0, marker.unlist());
+      } else {
+        let frac = digits(&six_match_keys(tokens, &[
+          six_pin!("input-digits"),
+          six_pin!("input-symbols"),
+        ]));
+        let mut uncertainty = int_digits;
+        uncertainty.extend(frac.iter().copied());
+        let uncertainty: Vec<Token> = uncertainty
+          .into_iter()
+          .skip_while(|t| t.text == pin!("0"))
+          .collect();
+        int = Some(if uncertainty.is_empty() {
+          Tokens::new(vec![T_OTHER!("0")])
+        } else {
+          Tokens::new(uncertainty)
+        });
+        if let SixNumber::Simple { decimal, fraction, .. } = &mut number {
+          let mut places = digits(fraction);
+          if places.len() < frac.len() {
+            places.resize(frac.len(), T_OTHER!("0"));
+            *decimal = Some(decimal.take().unwrap_or_default());
+            *fraction = Some(Tokens::new(places));
+          }
+        }
+      }
+    }
     six_match_keys(tokens, &[six_pin!("input-close-uncertainty")]);
     let uncertainty = SixNumber::simple(None, int, None, None);
     return Some(SixNumber::Operator {
@@ -726,11 +886,122 @@ fn six_postprocess(number: Option<SixNumber>) -> Option<SixNumber> {
   number.map(six_postprocess_aux)
 }
 
-fn six_postprocess_aux(mut number: SixNumber) -> SixNumber {
+/// Which digits of a number a `Simple` part is: v3 pads and drops only the
+/// decimal part of a value (siunitx.sty:1306-1330 `\__siunitx_number_digits:nnnnnnn`
+/// touches #4, not the exponent), and drops a zero decimal only when there is no
+/// uncertainty (:2078-2089).
+#[derive(Clone, Copy, PartialEq)]
+enum SixDigits {
+  /// A value with no uncertainty.
+  Value,
+  /// The value of an `uncertain` operator.
+  UncertainValue,
+  /// An exponent or an uncertainty.
+  Other,
+}
+
+/// Perl `six_compute_separate_uncertainty` (siunitx.sty.ltxml:329-351): the
+/// compact uncertainty of `12.3(4)` as a value of its own, `0.4` — its digits
+/// count from the value's last decimal place. An uncertainty given with a sign
+/// (`12.3 \pm 0.4`) is already separate.
+fn six_compute_separate_uncertainty(value: &SixNumber, uncertainty: &SixNumber) -> SixNumber {
+  let SixNumber::Simple { sign: None, integer, .. } = uncertainty else {
+    return uncertainty.clone();
+  };
+  let mut digits: Vec<Token> = integer
+    .as_ref()
+    .map(|i| i.clone().unlist())
+    .unwrap_or_default();
+  let n = digits.len();
+  let places = value.get_fraction().map_or(0, |f| f.unlist_ref().len());
+  let pm = Some(Tokens::new(vec![T_CS!("\\pm")]));
+  if n <= places {
+    digits.splice(0..0, std::iter::repeat_n(T_OTHER!("0"), places - n));
+    SixNumber::simple(
+      pm,
+      Some(Tokens::new(vec![T_OTHER!("0")])),
+      Some(Tokens::default()),
+      Some(Tokens::new(digits)),
+    )
+  } else {
+    let fraction = digits.split_off(n - places);
+    // An integer value's uncertainty is an integer: `123 ± 45` as siunitx prints
+    // it (Perl returns an empty fraction and prints `123 ± 45.`).
+    let (decimal, fraction) = if fraction.is_empty() {
+      (None, None)
+    } else {
+      (Some(Tokens::default()), Some(Tokens::new(fraction)))
+    };
+    SixNumber::simple(pm, Some(Tokens::new(digits)), decimal, fraction)
+  }
+}
+
+/// Perl `six_compute_relative_uncertainty` (siunitx.sty.ltxml:353-375): the
+/// separate uncertainty of `12.3 \pm 0.4` in compact form, `4`. When it has more
+/// decimals than the value, the value is padded (`12.3 \pm 0.45` → `12.30(45)`).
+fn six_compute_relative_uncertainty(value: &mut SixNumber, uncertainty: &SixNumber) -> SixNumber {
+  let SixNumber::Simple {
+    sign: Some(_),
+    integer,
+    fraction,
+    ..
+  } = uncertainty
+  else {
+    return uncertainty.clone();
+  };
+  let mut digits: Vec<Token> = fraction
+    .as_ref()
+    .map(|f| f.clone().unlist())
+    .unwrap_or_default();
+  let decimals = digits.len();
+  let places = value.get_fraction().map_or(0, |f| f.unlist_ref().len());
+  digits.extend(std::iter::repeat_n(
+    T_OTHER!("0"),
+    places.saturating_sub(decimals),
+  ));
+  if let Some(int) = integer {
+    digits.splice(0..0, int.clone().unlist());
+  }
+  let zeros = digits.iter().take_while(|t| **t == T_OTHER!("0")).count();
+  digits.drain(..zeros);
+  if decimals > places
+    && let SixNumber::Simple {
+      decimal,
+      fraction: value_fraction,
+      ..
+    } = value
+  {
+    let mut padded = value_fraction
+      .take()
+      .map(|f| f.unlist())
+      .unwrap_or_default();
+    padded.extend(std::iter::repeat_n(T_OTHER!("0"), decimals - places));
+    *value_fraction = Some(Tokens::new(padded));
+    if decimal.is_none() {
+      *decimal = Some(Tokens::default());
+    }
+  }
+  SixNumber::simple(None, Some(Tokens::new(digits)), None, None)
+}
+
+fn six_postprocess_aux(number: SixNumber) -> SixNumber {
+  six_postprocess_digits(number, SixDigits::Value)
+}
+
+fn six_postprocess_digits(mut number: SixNumber, role: SixDigits) -> SixNumber {
   match &mut number {
-    SixNumber::Operator { arg1, arg2, .. } => {
-      *arg1 = arg1.take().map(|n| Box::new(six_postprocess_aux(*n)));
-      *arg2 = arg2.take().map(|n| Box::new(six_postprocess_aux(*n)));
+    SixNumber::Operator { operator, arg1, arg2, .. } => {
+      let (role1, role2) = match operator.as_str() {
+        "uncertain" if role == SixDigits::Value => (SixDigits::UncertainValue, SixDigits::Other),
+        "uncertain" | "exponent" => (role, SixDigits::Other),
+        _ => (role, role),
+      };
+      *arg1 = arg1
+        .take()
+        .map(|n| Box::new(six_postprocess_digits(*n, role1)));
+      *arg2 = arg2
+        .take()
+        .map(|n| Box::new(six_postprocess_digits(*n, role2)));
     },
     SixNumber::Simple {
       decimal,
@@ -741,6 +1012,32 @@ fn six_postprocess_aux(mut number: SixNumber) -> SixNumber {
     } => {
       if six_get_bool_sym(six_pin!("add-decimal-zero")) && decimal.is_some() && fraction.is_none() {
         *fraction = Some(Tokens::new(vec![T_OTHER!("0")]));
+      }
+      // siunitx.sty:1000-1001: `drop-zero-decimal` (:2068-2090) drops an
+      // all-zero decimal part, then `minimum-decimal-digits` (:1301-1330) pads
+      // the decimal part with zeros.
+      if role == SixDigits::Value
+        && six_get_bool_sym(six_pin!("drop-zero-decimal"))
+        && fraction
+          .as_ref()
+          .is_some_and(|f| f.unlist_ref().iter().all(|t| *t == T_OTHER!("0")))
+      {
+        *fraction = None;
+        *decimal = None;
+      }
+      if role != SixDigits::Other {
+        let min_decimal: usize = six_get_choice_sym(six_pin!("minimum-decimal-digits"))
+          .parse()
+          .unwrap_or(0);
+        let have = fraction.as_ref().map_or(0, |f| f.unlist_ref().len());
+        if min_decimal > have {
+          let mut padded = fraction.take().map(|f| f.unlist()).unwrap_or_default();
+          padded.extend(std::iter::repeat_n(T_OTHER!("0"), min_decimal - have));
+          *fraction = Some(Tokens::new(padded));
+          if decimal.is_none() {
+            *decimal = Some(Tokens::new(vec![T_OTHER!(".")]));
+          }
+        }
       }
       if six_get_bool_sym(six_pin!("add-integer-zero")) && decimal.is_some() && integer.is_none() {
         *integer = Some(Tokens::new(vec![T_OTHER!("0")]));
@@ -840,8 +1137,9 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
     let mut current = Vec::new();
     for t in expr.unlist_ref() {
       if t.text == pin!(";") {
-        results.push(SixParseResult::Raw(Tokens::new(current)));
-        current = Vec::new();
+        results.push(SixParseResult::Raw(Tokens::new(std::mem::take(
+          &mut current,
+        ))));
       } else {
         current.push(*t);
       }
@@ -1161,20 +1459,32 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
             .map(|n| six_format_number_inner(n, 0))
             .unwrap_or_default();
         }
-        let fa1 = a1
-          .map(|n| six_format_number_inner(n, 0))
-          .unwrap_or_default();
-        let fa2 = a2
-          .map(|n| six_format_number_inner(n, 0))
-          .unwrap_or_default();
+        let (Some(a1), Some(a2)) = (a1, a2) else {
+          return Tokens::default();
+        };
+        // Perl six_format_uncertainnumber (siunitx.sty.ltxml:528-553): the
+        // uncertainty is converted to the requested form first.
         if six_get_bool_sym(six_pin!("separate-uncertainty")) {
-          six_format_infix(Tokens::new(vec![T_CS!("\\pm")]), None, None, vec![fa1, fa2])
+          let mut separate = six_compute_separate_uncertainty(a1, a2);
+          let sign = separate.get_sign().cloned();
+          separate.set_sign(None);
+          six_format_infix(
+            sign.unwrap_or_else(|| Tokens::new(vec![T_CS!("\\pm")])),
+            (bracket > 0).then(|| six_get_tokens_sym(six_pin!("open-bracket"))),
+            (bracket > 0).then(|| six_get_tokens_sym(six_pin!("close-bracket"))),
+            vec![
+              six_format_number_inner(a1, 0),
+              six_format_number_inner(&separate, 0),
+            ],
+          )
         } else {
+          let mut value = a1.clone();
+          let relative = six_compute_relative_uncertainty(&mut value, a2);
           let open = six_get_tokens_sym(six_pin!("output-open-uncertainty"));
           let close = six_get_tokens_sym(six_pin!("output-close-uncertainty"));
-          let mut tks = fa1.unlist();
+          let mut tks = six_format_number_inner(&value, 0).unlist();
           tks.extend(open.unlist());
-          tks.extend(fa2.unlist());
+          tks.extend(six_format_number_inner(&relative, 0).unlist());
           tks.extend(close.unlist());
           Tokens::new(tks)
         }
@@ -1266,6 +1576,20 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
           .map(|n| six_format_number_inner(n, 0))
           .unwrap_or_default();
         let power = i_superscript(&[("operator_meaning", Tokenize!("power"))], base, fa2);
+        // `retain-unity-mantissa = false` (v3 `print-unity-mantissa`): a mantissa
+        // of exactly 1 is not printed, nor its product: `\num{1e3}` is 10³.
+        // Perl leaves the key unhandled (siunitx.sty.ltxml:304).
+        if !six_get_bool_sym(six_pin!("retain-unity-mantissa"))
+          && let Some(SixNumber::Simple {
+            sign: None,
+            integer: Some(int),
+            fraction: None,
+            ..
+          }) = a1
+          && int.to_string() == "1"
+        {
+          return power;
+        }
 
         let has_mantissa = a1.is_some_and(|n| {
           n.get_integer().is_some() || n.get_fraction().is_some() || n.is_operator()
@@ -1465,6 +1789,44 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
   i_dual(&[], content, Tokens::new(list_pres), items).unwrap_or_default()
 }
 
+/// A table cell's material for the SI parser, read with expansion under LaTeX's `\protected@edef` regime up to the
+/// column's `\lx@si@column@end` — or up to a `\relax`, where siunitx's own collector stops (siunitx.sty:5641-5664
+/// `\__siunitx_table_collect_relax:N`, the token `\relax` itself): it is left to run, and the rest of the cell is set
+/// as it comes. siunitx collects without expanding; read with expansion, a `\relax` a macro yields ends it too. csvsimple ends each row's command with one (csvsimple-legacy.sty:289-293 `\csv@body\relax`); read
+/// on, the expansion unrolled its next-line loop without end, the `\read` never run (2108.13640, `PushbackLimit`).
+/// Perl reads to the column's end (`XUntil`, siunitx.sty.ltxml:1414; KPE #474). The read takes `\end` as `\end `, its body: under
+/// this regime `\end` is `\protect\end ` (KPE #1211), and a last row's cell with no `\\` read on past the table to the next one's
+/// column (2505.21533, 2105.06936: E 1 → 113, 0 → 2). siunitx.sty:5647 stops at the token; here its end brings the column's.
+///
+/// A column with a `>{…}` prefix (`>{\centering\arraybackslash}S`) has it between the column's own tokens and the
+/// `\ignorespaces` array.sty's `\insert@column` puts before the cell; siunitx takes it as given, unexpanded
+/// (siunitx.sty:5625 `\__siunitx_table_collect_begin:w #1 \ignorespaces`), so it reaches the cell as leading material
+/// (`\lx@si@column@prefix` marks it, `add_si_column`). Read with expansion, `\arraybackslash`'s `\let\\\tabularnewline`
+/// ran the `\\` inside the cell: the row ended before the cell's content, "Missing { inserted" in every row (2504.01955;
+/// pdflatex 0 errors; KNOWN_PERL_ERRORS #1155), and `\centering`'s `\\` opened every cell with a line break.
+fn read_si_cell() -> Result<Tokens> {
+  let mut prefix = Vec::new();
+  // the marker is the template's own token, pushed back with the column's: looked at in place, as the alignment's
+  // count must not be touched before the cell is read
+  if peek_upcoming_tokens(0, 0, 1).next() == Some(T_CS!("\\lx@si@column@prefix")) {
+    read_token()?;
+    prefix = read_until_token(T_CS!("\\ignorespaces"))?.unlist();
+  }
+  let (cell, stop) = with_unexpandable_protect(|| {
+    with_let(&T_CS!("\\end"), &T_CS!("\\end "), || {
+      read_x_until_any(&[T_CS!("\\lx@si@column@end"), T_CS!("\\relax")])
+    })
+  })?;
+  if stop == Some(T_CS!("\\relax")) {
+    unread_one(T_CS!("\\relax"));
+  }
+  if prefix.is_empty() {
+    return Ok(cell);
+  }
+  prefix.extend(cell.unlist());
+  Ok(Tokens::new(prefix))
+}
+
 /// Perl siunitx.sty.ltxml L1379-1399 `DefColumnType('S'|'s' Optional, …)`: add
 /// an alignment column whose `before`/`after` wrap each cell as
 /// `{ \lx@si@column@prep[kv] <parse> <cell> \lx@si@column@end }`, routing the
@@ -1488,6 +1850,9 @@ fn add_si_column(kv: Option<Tokens>, parse_cs: &str) {
   let after = Tokens!(T_CS!("\\lx@si@column@end"), T_END!());
   with_current_build_template(|template_opt| {
     if let Some(t) = template_opt {
+      if t.has_pending_prefix() {
+        before.push(T_CS!("\\lx@si@column@prefix"));
+      }
       t.add_column(Cell {
         before: Some(Tokens::new(before.clone())),
         after: Some(after.clone()),
@@ -1565,6 +1930,9 @@ fn six_parse_units(defns: Vec<SixUnitDefn>) -> Vec<SixUnit> {
 
   while idx < slots.len() {
     let mut unit = SixUnit::default();
+    // A `\cancel`/`\highlight` after the prefix or unit applies to the NEXT unit (Perl `@save`,
+    // siunitx.sty.ltxml:943-950, :964: `\si{\metre\highlight{blue}\second}` colours the s).
+    let mut save: Vec<SixUnitDefn> = Vec::new();
 
     for role in &[
       "per",
@@ -1599,12 +1967,19 @@ fn six_parse_units(defns: Vec<SixUnitDefn>) -> Vec<SixUnit> {
             if d.name == "highlight" {
               unit.highlight_color = d.color;
             }
+          } else {
+            save.push(d);
           }
           idx += 1;
         } else {
           break;
         }
       }
+    }
+
+    // Perl `unshift(@defns, @save) if @defns`: the saved styles lead the next unit.
+    if idx < slots.len() {
+      slots.splice(idx..idx, save.into_iter().map(Some));
     }
 
     if unit.unit.is_none()
@@ -1658,11 +2033,75 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
     });
   }
 
+  // Perl siunitx.sty.ltxml:976-1000: the qualifier by `qualifier-mode` — a subscript, brackets
+  // or text beside the unit, or (`phrase`/`space`) folded into the unit's presentation with the
+  // prefix, bracketed when the unit carries a power. The binding dropped it (RUST-ONLY).
+  let tokenize_pres = |txt: &str| mouth::tokenize(TeXString::assembled(txt.to_string())).unlist();
+  let mathrm = |inner: Vec<Token>| {
+    let mut t = vec![T_CS!("\\mathrm"), T_BEGIN!()];
+    t.extend(inner);
+    t.push(T_END!());
+    t
+  };
+  let mut prefix_pres: Option<Vec<Token>> = pre_resolved.as_deref().map(tokenize_pres);
+  let mut unit_pres: Option<Vec<Token>> = u_resolved.as_deref().map(tokenize_pres);
+  let mut qualifier: Option<Vec<Token>> = None;
+  if let Some(q) = unit.qualifier.as_ref() {
+    let q_pres = tokenize_pres(&resolve_unit_presentation(&q.presentation));
+    match six_get_choice_sym(six_pin!("qualifier-mode")).as_str() {
+      "subscript" => {
+        let mut t = vec![T_SUB!(), T_BEGIN!()];
+        t.extend(mathrm(q_pres));
+        t.push(T_END!());
+        qualifier = Some(t);
+      },
+      "brackets" => {
+        let mut t = six_get_tokens_sym(six_pin!("open-bracket")).unlist();
+        t.extend(mathrm(q_pres));
+        t.extend(six_get_tokens_sym(six_pin!("close-bracket")).unlist());
+        qualifier = Some(t);
+      },
+      mode @ ("phrase" | "space") => {
+        let sep = if mode == "phrase" {
+          six_get_tokens_sym(six_pin!("qualifier-phrase")).unlist()
+        } else {
+          vec![T_CS!("\\;")]
+        };
+        let mut t = Vec::new();
+        if p.is_some() {
+          t.extend(six_get_tokens_sym(six_pin!("open-bracket")).unlist());
+        }
+        t.extend(prefix_pres.take().unwrap_or_default());
+        t.extend(unit_pres.take().unwrap_or_default());
+        t.extend(sep);
+        t.extend(q_pres);
+        if p.is_some() {
+          t.extend(six_get_tokens_sym(six_pin!("close-bracket")).unlist());
+        }
+        unit_pres = Some(t);
+      },
+      "text" => qualifier = Some(mathrm(q_pres)),
+      _ => qualifier = Some(q_pres),
+    }
+  }
+
   // Build unit name for meaning
   let unit_name = format!(
-    "{}{}",
-    unit.prefix.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
-    unit.unit.as_ref().map(|u| u.name.as_str()).unwrap_or(""),
+    "{}{}{}",
+    if prefix_pres.is_some() {
+      unit.prefix.as_ref().map(|p| p.name.as_str()).unwrap_or("")
+    } else {
+      ""
+    },
+    if unit_pres.is_some() {
+      unit.unit.as_ref().map(|u| u.name.as_str()).unwrap_or("")
+    } else {
+      ""
+    },
+    match (&qualifier, unit.qualifier.as_ref()) {
+      (Some(_), Some(q)) => format!("-{}", q.name),
+      _ => String::new(),
+    },
   );
 
   // Build presentation: \mathrm{resolved prefix + resolved unit}.
@@ -1682,12 +2121,8 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
   // is preserved at the Token level even though both strings happen
   // to be ASCII.
   let mut pres_inner = Vec::new();
-  if let Some(pr) = &pre_resolved {
-    pres_inner.extend(mouth::tokenize(TeXString::assembled(pr.clone())).unlist());
-  }
-  if let Some(ut) = &u_resolved {
-    pres_inner.extend(mouth::tokenize(TeXString::assembled(ut.clone())).unlist());
-  }
+  pres_inner.extend(prefix_pres.unwrap_or_default());
+  pres_inner.extend(unit_pres.unwrap_or_default());
 
   // \lx@unit{name}{\mathrm{presentation}}
   let mut result_tks = vec![T_CS!("\\lx@unit"), T_BEGIN!()];
@@ -1698,6 +2133,7 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
   result_tks.push(T_BEGIN!());
   result_tks.extend(pres_inner);
   result_tks.push(T_END!());
+  result_tks.extend(qualifier.unwrap_or_default());
   result_tks.push(T_END!());
 
   let mut result = Tokens::new(result_tks);
@@ -1715,6 +2151,16 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
 
   if unit.cancel {
     let mut tks = vec![T_CS!("\\cancel"), T_BEGIN!()];
+    tks.extend(result.unlist());
+    tks.push(T_END!());
+    result = Tokens::new(tks);
+  }
+
+  // Perl siunitx.sty.ltxml:1004-1005: `\highlight{colour}` colours the unit.
+  if let Some(color) = unit.highlight_color.as_ref() {
+    let mut tks = vec![T_BEGIN!(), T_CS!("\\color"), T_BEGIN!()];
+    tks.extend(color.clone().unlist());
+    tks.push(T_END!());
     tks.extend(result.unlist());
     tks.push(T_END!());
     result = Tokens::new(tks);
@@ -1762,6 +2208,16 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
   // front to `fraction` in display math, `symbol` otherwise. Without this
   // remap it falls through to the "Unknown siunitx per-mode" catchall.
   // Witness 1811.06895 (`\sisetup{per-mode=symbol-or-fraction}`).
+  // siunitx's `power` / `power-positive-first` (its DEFAULT since v3) are
+  // what our `reciprocal` variants render — per-units as negative exponents,
+  // in order (`six_format_1unit`); they fell to the catchall Error
+  // (quantum-chemistry-bonn.sty:55; SHARED, Perl siunitx.sty.ltxml:1094).
+  // Guard: `perfect_kernel_batch56::siunitx_per_mode_power_renders_reciprocal`.
+  let permode = match permode.as_str() {
+    "power" => "reciprocal".to_string(),
+    "power-positive-first" => "reciprocal-positive-first".to_string(),
+    _ => permode,
+  };
   let permode = if permode == "symbol-or-fraction" {
     let is_display = lookup_font()
       .and_then(|f| f.mathstyle.as_ref().map(|ms| ms.as_ref() == "display"))
@@ -1868,7 +2324,17 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
 /// Perl: six_parse_literalunits — parse literal (non-macro) unit expressions
 fn six_parse_literalunits(expr: &Tokens) -> Tokens {
   let mut result = Vec::new();
-  let mut iter = expr.unlist_ref().iter().copied().peekable();
+  // siunitx.sty:6810-6813 reads a `^` or `_` of any catcode as the script it stands for (`\token_to_str:N ^` → `^`):
+  // under breqn's mathstyle they are "other" in the body (breqn_sty.rs), and `\si{m^2}` still raises its unit.
+  let mut iter = expr
+    .unlist_ref()
+    .iter()
+    .map(|&t| match t.get_catcode() {
+      Catcode::OTHER | Catcode::ACTIVE if t.text == pin!("^") => T_SUPER!(),
+      Catcode::OTHER | Catcode::ACTIVE if t.text == pin!("_") => T_SUB!(),
+      _ => t,
+    })
+    .peekable();
 
   while let Some(t) = iter.next() {
     let tc = t.get_catcode();
@@ -1959,10 +2425,49 @@ fn six_process_units(expr: &Tokens) -> Tokens {
 
 /// Replace \lx@six@unitobject{name} tokens with \mathrm{presentation} tokens.
 /// Must be called while siunitx_macros mapping is active (inside \SI{}{} processing).
+///
+/// A PRE-power (`\square`, `\cubic`, `\raiseto{n}`) raises the item that
+/// FOLLOWS it, as siunitx's literal branch does: `\siunitx_declare_power:NNn`
+/// gives the prefix form `\__siunitx_unit_literal_power:nn {n}` =
+/// `#2 ^ {n}`, taking the next token (or braced group) as `#2`
+/// (siunitx.sty:6633-6641, :6801; `\raiseto`, :6707-6709). Perl emits the
+/// power in place, before its unit (`\mathrm{^{2}}\mathrm{m}`);
+/// `\watt\per(\square\meter\kelvin)` is "W/(m² K)" in pdflatex. A power with
+/// no item to raise — at the end, before a `}`, or before another pre-power —
+/// stays where it was written.
 fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
   let mut result = Vec::new();
   let mut iter = tokens.unlist_ref().iter().copied().peekable();
   let mut had_substitution = false;
+  // The power a pre-power object left for the next item.
+  let mut pending_power: Option<Tokens> = None;
+  // Push one item, raised by the pending pre-power if there is one.
+  let push_item = |result: &mut Vec<Token>, pending: &mut Option<Tokens>, item: Vec<Token>| {
+    match pending.take() {
+      Some(power) => {
+        result.push(T_BEGIN!());
+        result.extend(item);
+        result.push(T_END!());
+        result.push(T_SUPER!());
+        result.push(T_BEGIN!());
+        result.extend(power.unlist());
+        result.push(T_END!());
+      },
+      None => result.extend(item),
+    }
+  };
+  // A pre-power with no item to raise, kept in place (Perl's rendering).
+  let power_in_place = |result: &mut Vec<Token>, pending: &mut Option<Tokens>| {
+    if let Some(power) = pending.take() {
+      result.push(T_CS!("\\mathrm"));
+      result.push(T_BEGIN!());
+      result.push(T_SUPER!());
+      result.push(T_BEGIN!());
+      result.extend(power.unlist());
+      result.push(T_END!());
+      result.push(T_END!());
+    }
+  };
   // Pre-intern the two dispatch CS names so the per-token check is
   // u32 equality (not `t.to_string()` alloc + string compare).
   let unitobject_sym = pin!("\\lx@six@unitobject");
@@ -1975,6 +2480,14 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
           // Decode directly from the arena-borrowed &str — was
           // cloning via `.to_string()` into a temporary String.
           if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
+            if defn.unit_type == "prepower"
+              && let Some(power) = defn.power.clone()
+            {
+              power_in_place(&mut result, &mut pending_power);
+              pending_power = Some(power);
+              had_substitution = true;
+              continue;
+            }
             let pres = defn.presentation;
             if !pres.is_empty() {
               // Mirror Perl L1216 (`siunitx.sty.ltxml`):
@@ -1984,17 +2497,21 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
               // prepower/postpower presentations like `^{3}` (from `\cubic`)
               // bare, which the math digester then sees as a second
               // superscript on the preceding atom (driver: 2304.12803).
-              result.push(T_CS!("\\mathrm"));
-              result.push(T_BEGIN!());
-              result.extend(pres.unlist());
-              result.push(T_END!());
-              had_substitution = true;
-              continue;
+              let mut item = vec![T_CS!("\\mathrm"), T_BEGIN!()];
+              item.extend(pres.unlist());
+              item.push(T_END!());
+              push_item(&mut result, &mut pending_power, item);
             }
+            // A known object with an empty presentation (`\cancel`, a
+            // style) prints nothing in the literal branch (siunitx.sty
+            // :6698-6700; Perl `\mathrm{}`): `\per\cancel{c^2}` is "/c²"
+            // (witness 2602.18218), not "/cancelc²".
+            had_substitution = true;
+            continue;
           }
         }
         // Fallback: emit name as raw text
-        result.extend(ExplodeText!(&name));
+        push_item(&mut result, &mut pending_power, ExplodeText!(&name));
         had_substitution = true;
       }
     } else if t.text == unitobject_arg_sym {
@@ -2003,24 +2520,71 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
         && let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), &name)
         && let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded)
       {
+        if defn.unit_type == "prepower" {
+          // Re-tokenized, as the symbolic path reads the argument.
+          power_in_place(&mut result, &mut pending_power);
+          pending_power = Some(Tokenize!(TeXString::assembled(arg)));
+          had_substitution = true;
+          continue;
+        }
         let pres = defn.presentation;
         if !pres.is_empty() {
           // Perl L1223: `Tokens($pres, T_BEGIN, $data, T_END)` — the
           // presentation here takes the data as its argument (e.g.
           // `\tothe{2}` → `^{2}`). The presentation already supplies
           // its own grouping so we don't add a `\mathrm{...}` wrapper.
-          result.extend(pres.unlist());
-          result.push(T_BEGIN!());
-          result.extend(ExplodeText!(&arg));
-          result.push(T_END!());
+          let mut item = pres.unlist();
+          item.push(T_BEGIN!());
+          item.extend(ExplodeText!(&arg));
+          item.push(T_END!());
+          push_item(&mut result, &mut pending_power, item);
           had_substitution = true;
           continue;
         }
       }
-    } else {
+    } else if pending_power.is_some() && t.get_catcode() == Catcode::SPACE {
+      // `#2` of `\__siunitx_unit_literal_power:nn` skips spaces.
       result.push(t);
+    } else if pending_power.is_some() && t.get_catcode() == Catcode::BEGIN {
+      // A braced group is one `#2`; the unit objects inside it are resolved
+      // like any others (`\square{\kilo\meter}` is km²).
+      let mut inner = Vec::new();
+      let mut level = 1;
+      for t2 in iter.by_ref() {
+        match t2.get_catcode() {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => {
+            level -= 1;
+            if level == 0 {
+              break;
+            }
+          },
+          _ => {},
+        }
+        inner.push(t2);
+      }
+      let mut item = vec![T_BEGIN!()];
+      item.extend(six_resolve_unit_objects(&Tokens::new(inner)).unlist());
+      item.push(T_END!());
+      push_item(&mut result, &mut pending_power, item);
+    } else if pending_power.is_some() && t.get_catcode() == Catcode::END {
+      power_in_place(&mut result, &mut pending_power);
+      result.push(t);
+    } else if pending_power.is_some() && matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+    {
+      // A literal character is upright, as `six_parse_literalunits` sets
+      // it; the raising braces would otherwise hide it from that pass.
+      push_item(&mut result, &mut pending_power, vec![
+        T_CS!("\\mathrm"),
+        T_BEGIN!(),
+        t,
+        T_END!(),
+      ]);
+    } else {
+      push_item(&mut result, &mut pending_power, vec![t]);
     }
   }
+  power_in_place(&mut result, &mut pending_power);
 
   if had_substitution {
     Tokens::new(result)
@@ -2064,18 +2628,25 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
           defn.power = Some(Tokenize!(TeXString::assembled(arg.clone())));
         } else if defn.unit_type == "qualifier" {
           defn.presentation = Tokenize!(TeXString::assembled(arg.clone()));
+        } else if name == "highlight" {
+          // Perl siunitx.sty.ltxml:1373-1374: `\highlight`'s argument is its colour
+          // (`arg => 'color'`).
+          defn.color = Some(Tokenize!(TeXString::assembled(arg.clone())));
         }
         defns.push(defn);
       }
     } else if t.get_catcode() == Catcode::SPACE || t.text == dot_sym {
       iter.next(); // skip spaces and dots (unit product separators)
-    } else if !defns.is_empty() {
-      // Non-unit content after some units found — stop here, use what we have.
-      // Perl handles mixed content (e.g., \pi\per\milli\meter) by parsing units
-      // and passing non-unit content through. We stop at the first unrecognized token.
-      break;
     } else {
-      return None; // No units found yet — fall back to literal
+      // Any other token makes the whole input LITERAL: Perl six_convertUnits
+      // `else { return; }` (siunitx.sty.ltxml:903-927), as siunitx's own test
+      // does (`\__siunitx_unit_if_symbolic:n`, siunitx.sty:6596-6613: symbolic
+      // only when nothing but unit macros is left). Keeping the units read so
+      // far and stopping here dropped the rest: `\watt\per(\square\meter
+      // \kelvin)` came out "W^{-1}" at 0 errors (nomencl sample03.tex:13;
+      // pdflatex "W/(m² K)"). Guard:
+      // `package_leads_56::siunitx_mixed_unit_input_is_literal`.
+      return None;
     }
   }
 
@@ -2120,6 +2691,9 @@ fn read_brace_group_str<I: Iterator<Item = Token>>(
 // interns to a different SymStr, so the old cache entry is simply
 // never looked up again.
 thread_local! {
+  /// The units whose presentation `\lx@six@unitobject@collapsible` is expanding (innermost last).
+  static COLLAPSING_UNITS: std::cell::RefCell<Vec<String>> =
+    const { std::cell::RefCell::new(Vec::new()) };
   static UNIT_DEFN_CACHE: std::cell::RefCell<
     rustc_hash::FxHashMap<::latexml_core::common::arena::SymStr, SixUnitDefn>,
   > = std::cell::RefCell::new(rustc_hash::FxHashMap::default());
@@ -2167,37 +2741,91 @@ fn decode_unit_defn_from_encoded_sym(
   Some(defn)
 }
 
-/// Perl: six_enableUnitMacros — let each unit CS point to its lx@six@ implementation
-pub(crate) fn six_enable_unit_macros(overwrite: bool) {
+/// Each declared unit, prefix, qualifier and power name (`register_unit_macro_name`).
+fn for_each_unit_macro_name(mut f: impl FnMut(&str)) {
   // with_value avoids the Stored::String envelope clone; we only need
   // the inner SymStr stringified for iteration.
   let names_str = with_value("siunitx_macro_names", |v| match v {
     Some(Stored::String(s)) => with(*s, |s| s.to_string()),
     _ => String::new(),
   });
-  for name in names_str.split(',') {
-    if name.is_empty() {
-      continue;
-    }
+  for name in names_str.split(',').filter(|name| !name.is_empty()) {
+    f(name);
+  }
+}
+
+/// Perl: six_enableUnitMacros — let each unit CS point to its lx@six@ implementation
+pub(crate) fn six_enable_unit_macros(overwrite: bool) {
+  for_each_unit_macro_name(|name| {
     let cs = T_CS!(&format!("\\{name}"));
     let impl_cs = T_CS!(&format!("\\lx@six@{name}"));
     if overwrite || !has_meaning(&cs) {
       let_i(&cs, &impl_cs, None);
     }
+  });
+}
+
+/// The `s` column's cell, read with expansion (`read_si_cell`, Perl's `XUntil`) while each unit command still undefined
+/// is `\relax`: the cell's unit names are mapped in afterwards, where the expanding read would take an undefined one for
+/// an error. siunitx's own commands are `\protected` by then (`six_command_create`) and pass through; this covers the
+/// version-1 units declared beside them, which stay undefined outside the read.
+fn read_si_unit_cell() -> Result<Tokens> {
+  push_frame();
+  for_each_unit_macro_name(|name| {
+    let cs = T_CS!(&format!("\\{name}"));
+    if !has_meaning(&cs) {
+      let_i(&cs, &T_CS!("\\relax"), None);
+    }
+  });
+  let cell = read_si_cell();
+  pop_frame()?;
+  cell
+}
+
+/// Register a unit macro name for six_enableUnitMacros, and for `six_command_create` unless it is one of the
+/// version-1 units this binding declares beside siunitx's own (`lx@six@surplus@units`).
+fn register_unit_macro_name(name: &str) {
+  append_name_list("siunitx_macro_names", name);
+  if !lookup_bool("lx@six@surplus@units") {
+    append_name_list("siunitx_command_names", name);
   }
 }
 
-/// Register a unit macro name for six_enableUnitMacros
-fn register_unit_macro_name(name: &str) {
-  let existing = with_value("siunitx_macro_names", |v| {
-    v.map(|s| s.to_string()).unwrap_or_default()
-  });
+fn append_name_list(key: &str, name: &str) {
+  let existing = with_value(key, |v| v.map(|s| s.to_string()).unwrap_or_default());
   let new = if existing.is_empty() {
     name.to_string()
   } else {
     format!("{existing},{name}")
   };
-  assign_value("siunitx_macro_names", Stored::from(new), None);
+  assign_value(key, Stored::from(new), None);
+}
+
+/// siunitx.sty:8369-8378 `\siunitx_command_create:` (`\AtBeginDocument`): each unit, prefix, power and qualifier
+/// siunitx declared whose command the document leaves free (`\cs_if_free:N`, LaTeX's `\@ifundefined`) becomes
+/// `\protected` and means `\ERROR` — an error where it is used outside a unit argument, and a protected macro to an
+/// alignment's look-ahead and an expanding read (an `s` column's cell). The version-1 units declared here beside
+/// siunitx's own stay undefined: `\tikzmath{\yb = .6;}` assigns a variable (2409.01115).
+fn six_command_create() -> Result<()> {
+  let names = with_value("siunitx_command_names", |v| {
+    v.map(|s| s.to_string()).unwrap_or_default()
+  });
+  let relax = T_CS!("\\relax");
+  for name in names.split(',').filter(|name| !name.is_empty()) {
+    let cs = T_CS!(&format!("\\{name}"));
+    if has_meaning(&cs) && !x_equals(&cs, &relax) {
+      continue;
+    }
+    let mut error = Expandable::new(
+      cs,
+      None,
+      Some(ExpansionBody::Tokens(Tokens!(T_CS!("\\ERROR")))),
+      None,
+    )?;
+    error.is_protected = true;
+    install_definition(error, None);
+  }
+  Ok(())
 }
 
 /// Define a macro dynamically (CS, no params, expansion tokens)
@@ -2211,35 +2839,95 @@ fn define_macro_simple(cs: Token, expansion: Tokens) -> Result<()> {
 /// known unit macros, replace them with their stored presentation text.
 /// E.g., \DeclareSIUnit \metre { \meter } → resolve \meter → "m"
 fn resolve_unit_presentation(pres: &Tokens) -> String {
+  resolve_unit_presentation_within(pres, &mut Vec::new())
+}
+
+/// [`resolve_unit_presentation`] inside the units being resolved (`within`). A control sequence after a backquote is
+/// a character code, which TeX reads unexpanded (tex.web §442), and a unit inside its own presentation is itself:
+/// both stay as written (atlaspackage.sty:225-227 `\DeclareSIUnit[number-unit-product={}]\%{\char`\%}`, which
+/// recursed until the stack overflowed; 2504.05919). The text is read again as TeX (`six_format_1unit`), so a
+/// control word kept as written is ended by a space where a letter follows (tex.web §356: a letter would continue
+/// its name): `\char`\a b` is "ab", not `\char`\ab`, and `\textmu m` (`\DeclareSIUnit\um{\textmu m}`, or a
+/// unit `m` resolved after it) is µm, not an undefined `\textmum`.
+fn resolve_unit_presentation_within(pres: &Tokens, within: &mut Vec<String>) -> String {
+  // Append `text`, separated by a space from a control word it would otherwise continue.
+  fn push_text(
+    result: &mut String,
+    ends_control_word: &mut bool,
+    text: &str,
+    is_control_word: bool,
+  ) {
+    if *ends_control_word && text.starts_with(|c: char| c.is_ascii_alphabetic()) {
+      result.push(' ');
+    }
+    result.push_str(text);
+    *ends_control_word = is_control_word || (*ends_control_word && text.is_empty());
+  }
   let mut result = String::new();
+  let mut ends_control_word = false;
+  let mut after_backquote = false;
   for tok in pres.unlist_ref() {
+    let char_code = std::mem::replace(
+      &mut after_backquote,
+      tok.get_catcode() == Catcode::OTHER && tok.to_string() == "`",
+    );
     if tok.get_catcode() == Catcode::CS {
       let cs_name = tok.to_string();
       let unit_name = cs_name.trim_start_matches('\\');
       // Look up in siunitx_macros mapping
-      if let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), unit_name) {
+      if !char_code
+        && !within.iter().any(|name| name == unit_name)
+        && let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), unit_name)
+      {
         let encoded_str = with(encoded, |s| s.to_string());
         let parts: Vec<&str> = encoded_str.splitn(4, '|').collect();
         if parts.len() >= 2 {
           let pres = parts[1];
           // If the presentation itself contains backslashes, try to resolve recursively
-          if pres.contains('\\') {
+          let resolved = if pres.contains('\\') {
             let sub = Tokenize!(TeXString::assembled(pres.to_string()));
-            let sub_resolved = resolve_unit_presentation(&sub);
-            result.push_str(&sub_resolved);
+            within.push(unit_name.to_string());
+            let sub_resolved = resolve_unit_presentation_within(&sub, within);
+            within.pop();
+            sub_resolved
           } else {
-            result.push_str(pres);
-          }
+            pres.to_string()
+          };
+          let is_control_word = ends_with_control_word(&resolved);
+          push_text(
+            &mut result,
+            &mut ends_control_word,
+            &resolved,
+            is_control_word,
+          );
           continue;
         }
       }
       // Not a unit macro — keep as-is
-      result.push_str(&cs_name);
+      let is_control_word =
+        unit_name.chars().all(|c| c.is_ascii_alphabetic()) && !unit_name.is_empty();
+      push_text(
+        &mut result,
+        &mut ends_control_word,
+        &cs_name,
+        is_control_word,
+      );
     } else if tok.get_catcode() != Catcode::SPACE {
-      result.push_str(&tok.to_string());
+      push_text(&mut result, &mut ends_control_word, &tok.to_string(), false);
     }
   }
   result
+}
+
+/// Does `text` (TeX source) end with a control word — a backslash and one or more letters?
+fn ends_with_control_word(text: &str) -> bool {
+  let letters = text.len()
+    - text
+      .trim_end_matches(|c: char| c.is_ascii_alphabetic())
+      .len();
+  letters > 0
+    && text[..text.len() - letters].ends_with('\\')
+    && !text[..text.len() - letters - 1].ends_with('\\')
 }
 
 /// Build expansion tokens: \lx@six@unitobject{name}
@@ -2265,10 +2953,8 @@ fn declare_si_power(cs: &Token, power: &Tokens, kind: &str) -> Result<()> {
     T_CS!(&format!("\\lx@six@{name}")),
     make_unitobject_expansion(&name),
   )?;
-  // Let \cs = \relax if not yet defined (prevents "undefined" errors)
-  if !has_meaning(cs) {
-    let_i(cs, &T_CS!("\\relax"), None);
-  }
+  // The command itself is left alone: siunitx's unit commands mean something only inside a unit argument
+  // (`six_enable_unit_macros`); see `\DeclareSIUnit`.
   Ok(())
 }
 
@@ -2299,6 +2985,10 @@ fn make_collapsible_expansion(name: &str, presentation: &Tokens) -> Tokens {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // siunitx.sty:9115 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
+  // Read before the loads below: a `\RequirePackage` in them records its own (empty) release request.
+  let v2_release = six_v2_release_requested();
   RequirePackage!("expl3");
   RequirePackage!("xcolor");
   RequirePackage!("amstext");
@@ -2312,6 +3002,12 @@ LoadDefinitions!({
   // same reason: `\__siunitx_unit_set_symbolic:Npnn \cancel { ... }`.)
   // Witness: arXiv:2602.18218 `\SI{1}{\milli\electronvolt\per\cancel{c^2}}`.
   RequirePackage!("cancel");
+  // siunitx.sty:5014-5016 `\file_if_exist:nT { translations.sty }
+  // { \RequirePackage { translations } … }` — translations.sty:36 pulls in
+  // etoolbox, which is how a class that loads siunitx early gets
+  // `\AtEndPreamble` (neoschool.cls:1123; was `undefined:\AtEndPreamble`,
+  // Perl 0). Guard: `perfect_kernel_batch53::siunitx_loads_translations`.
+  RequirePackage!("translations");
 
   //======================================================================
   // Boolean SIX options. Perl siunitx.sty.ltxml L38-54:
@@ -2334,6 +3030,12 @@ LoadDefinitions!({
     "add-arc-degree-zero", "add-arc-minute-zero", "add-arc-second-zero",
     "angle-symbol-over-decimal",
     "sticky-per", "prefixes-as-symbols",
+    // siunitx-v2.sty:393-437: the two meta choices (default `true`) that set
+    // the five `detect-*` keys above at once; fonts are modelled structurally,
+    // so accepted and ignored like them. Missing from Perl's list too (an
+    // Info there, a Warn here): `\sisetup{detect-all}` warned in 34 papers of
+    // arXiv 2605 (2605.00471) and 2 of 2606.
+    "detect-all", "detect-none",
   ] {
     DefKeyVal!("SIX", key, "", "true");
   }
@@ -2398,6 +3100,19 @@ LoadDefinitions!({
     // Warn meaningful. Witness 2606.13010 `\sisetup{reset-text-family,
     // unit-font-command}`.
     "reset-text-family", "unit-font-command",
+    // siunitx.sty:5095-5114, the rest of v3's font-matching keys (`\l__siunitx_
+    // print_*`), and :931 `round-pad`, which only acts when rounding (the
+    // rounding keys above are accepted without rounding, as in Perl).
+    "reset-text-series", "reset-text-shape", "reset-math-version",
+    "text-series-to-math", "text-family-to-math", "propagate-math-font",
+    "text-font-command", "text-superscript-command", "text-subscript-command",
+    "round-pad",
+    // v3 keys this binding implements (`six_setup`, `six_postprocess_aux`).
+    "locale", "uncertainty-mode", "minimum-decimal-digits", "drop-zero-decimal",
+    "zero-decimal-to-integer",
+    // v3 names routed to their v2 keys by `six_canonical_key`.
+    "print-unity-mantissa", "print-zero-exponent", "print-zero-integer",
+    "drop-uncertainty", "bracket-ambiguous-numbers",
     // v3 spellings routed to their v2 names by `six_canonical_key`.
     "quantity-product",
   ] {
@@ -2439,7 +3154,14 @@ LoadDefinitions!({
     six_setup(&kv_arg);
   });
 
-  def_macro_noop("\\ProvidesExplFile{}{}{}{}")?;
+  // Perl siunitx.sty.ltxml L110 stubs `\ProvidesExplFile` to NOTHING — but
+  // the real macro (expl3.sty L33-47) ends in `\ExplSyntaxOn`: it is the
+  // switch that puts an expl3 FILE into expl3 syntax. With the empty stub,
+  // every later raw expl3 file (numerica-tables.sty …) read `\cs_new…` as
+  // `\cs` + junk and leaked `#1` to the stomach (latex-via-exemplos, 186
+  // errors; Perl fails identically — Perl-origin, fixed here per the
+  // KNOWN_PERL_ERRORS protocol).
+  DefMacro!("\\ProvidesExplFile{}{}{}{}", "\\ExplSyntaxOn");
 
   //======================================================================
   // \lx@six@initialize
@@ -2482,6 +3204,7 @@ LoadDefinitions!({
     if six_get_bool_sym(six_pin!("free-standing-units")) {
       six_enable_unit_macros(six_get_bool_sym(six_pin!("overwrite-functions")));
     }
+    six_command_create()?;
   });
 
   at_begin_document(TokenizeInternal!(r"\lx@six@initialize"))?;
@@ -2504,6 +3227,19 @@ LoadDefinitions!({
   DefMacro!("\\lx@six@unitobject@collapsible{}{}", sub [args] {
     let name = args[0].to_string();
     let data_toks = args[1].clone().owned_tokens().unwrap_or_default();
+    // A unit whose presentation reaches the unit itself is a literal: atlaspackage.sty:225-227
+    // `\DeclareSIUnit[number-unit-product={}]\%{\char`\%}`, where TeX reads the `\%` after `\char`` unexpanded
+    // (tex.web §442), the chardef, never the unit (2504.05919: the expansion below re-entered this unit's own
+    // collapsing until the stack overflowed).
+    if COLLAPSING_UNITS.with(|units| units.borrow().contains(&name)) {
+      return Ok(make_unitobject_expansion(&name));
+    }
+    COLLAPSING_UNITS.with(|units| units.borrow_mut().push(name.clone()));
+    struct CollapsingGuard;
+    impl Drop for CollapsingGuard {
+      fn drop(&mut self) { COLLAPSING_UNITS.with(|units| { units.borrow_mut().pop(); }); }
+    }
+    let _collapsing = CollapsingGuard;
     // Fully expand the presentation data (not just partially)
     // This resolves the chain: \meter → \lx@six@meter → collapsible{meter}{m} → unitobject{meter}
     let expanded = do_expand(data_toks)?;
@@ -2565,12 +3301,17 @@ LoadDefinitions!({
   // which without `SkipSpaces` causes the DefToken arg to read the
   // space character and the actual CS to be parsed as the body.
   // Driver: 1501.03532 (stage 17 RUST-REGRESSION: \dBm undefined).
-  DefPrimitive!("\\DeclareSIUnit[] SkipSpaces DefToken {}", sub[(_kv, cs, presentation)] {
+  DefPrimitive!("\\DeclareSIUnit OptionalKeyVals:SIX SkipSpaces DefToken {}", sub[(kv, cs, presentation)] {
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
+    // The unit's own options (siunitx.sty:6681-6682 `\siunitx_unit_options_declare:Nn`, local), applied where the
+    // unit is a command's whole unit argument (`six_begin_processing_for_units`).
+    assign_value(&six_unit_options_key(&name), kv.map_or(Stored::None, |kv| Stored::KeyVals(Rc::new(kv))), None);
 
-    // Store in mapping as a simple string encoding (raw presentation)
-    let pres_str = presentation.to_string();
+    // Store in mapping as a simple string encoding (raw presentation), read again as TeX (`decode_unit_defn_from_
+    // encoded_sym`): untexed, so a control word keeps its space before a letter (`\DeclareSIUnit\um{\textmu m}` is
+    // not an undefined `\textmum`; `\char`\a b` is "ab").
+    let pres_str = presentation.clone().untex();
     let encoded = format!("unit|{}", pres_str);
     assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
@@ -2579,10 +3320,14 @@ LoadDefinitions!({
     // Perl L1350-1351: Uses collapsible form to enable alias resolution
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &presentation))?;
 
-    // Let \cs = \relax if not yet defined
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    // The unit's command is not defined here: siunitx keeps a unit to its unit arguments (siunitx.sty:6620-6631
+    // `\__siunitx_unit_set_symbolic:Nnnn` stores it as `\__siunitx_unit_<name>:w`, which `\unit` maps its argument
+    // through), `free-standing-units` defines the commands the document leaves free (`six_enable_unit_macros`), and
+    // `\begin{document}` makes the rest `\protected` `\ERROR` (`six_command_create`). Perl lets an undefined one
+    // `\relax` at once (siunitx.sty.ltxml:1352, KNOWN_PERL_ERRORS #1181), so free-standing units never replaced the
+    // placeholders, and this binding's version-1 units (`\yb`, siunitx-version-1.cfg only) were defined in every
+    // document: tikz's math library, which takes a defined non-macro for a keyword, read 2409.01115's
+    // `\tikzmath{… \yb = .6;}` as the keyword `\yb` (1,001 errors).
   });
 
   // \DeclareSIPrefix [kv] \cs {presentation} {power}
@@ -2595,16 +3340,14 @@ LoadDefinitions!({
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
-    let pres_str = presentation.to_string();
+    let pres_str = presentation.clone().untex();
     let encoded = format!("prefix|{}|{}|10", pres_str, power);
     assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     // Perl L1264: Uses collapsible form for prefix declarations
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &presentation))?;
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    // (the command itself is left alone, as for `\DeclareSIUnit`)
   });
 
   // \DeclareSIPrePower [kv] \cs {power}
@@ -2656,14 +3399,12 @@ LoadDefinitions!({
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
-    let encoded = format!("qualifier|{}", qualifier);
+    let encoded = format!("qualifier|{}", qualifier.clone().untex());
     assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    // (the command itself is left alone, as for `\DeclareSIUnit`)
   });
 
   // \DeclareBinaryPrefix [kv] \cs {presentation} {power}
@@ -2676,14 +3417,12 @@ LoadDefinitions!({
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
-    let encoded = format!("prefix|{}|{}|2", presentation, power);
+    let encoded = format!("prefix|{}|{}|2", presentation.clone().untex(), power);
     assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    // (the command itself is left alone, as for `\DeclareSIUnit`)
   });
 
   //======================================================================
@@ -2867,7 +3606,7 @@ LoadDefinitions!({
   // \si[options]{units}
   DefMacro!("\\si OptionalKeyVals:SIX {}", sub[(kv, units_arg)] {
     let units = units_arg;
-    six_begin_processing(kv.as_ref());
+    six_begin_processing_for_units(kv.as_ref(), Some(&units));
     six_enable_unit_macros(true);
     let funits = six_wrap(six_process_units(&units));
     six_end_processing();
@@ -2892,16 +3631,27 @@ LoadDefinitions!({
   // Witness 2406.20067, 2407.03167. Defined below by Let to \SI after
   // \SI's own DefMacro registration.
 
-  // \SI[options]{number}{units}
-  DefMacro!("\\SI OptionalKeyVals:SIX {}{}", sub[(kv, number_arg, units_arg)] {
+  // \SI[options]{number}[pre-unit]{units}: siunitx.sty:9535 `O{} m o m` prints the pre-unit
+  // before the quantity (`\SI{10}[\$]{\per\kilo\gram}` is "$10 kg⁻¹"); Perl's (L1150) reads no
+  // pre-unit, so its `[…]` was printed as text (KPE #375).
+  DefMacro!("\\SI OptionalKeyVals:SIX {}[]{}", sub[(kv, number_arg, pre_arg, units_arg)] {
     let number = number_arg;
     let units = units_arg;
-    six_begin_processing(kv.as_ref());
+    six_begin_processing_for_units(kv.as_ref(), Some(&units));
     let fnumber = six_format_number(&six_parse_number(&number), 0);
     six_enable_unit_macros(true);
+    // An empty pre-unit, `\SI{7}[]{\metre}`, prints nothing (siunitx's `\IfNoValueF` sees a value,
+    // but its unit is empty).
+    let fpre = pre_arg
+      .filter(|pre| pre.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE))
+      .map(|pre| i_wrap(None, six_process_units(&pre)));
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let funits = i_wrap(None, six_process_units(&units));
-    let result = six_wrap(six_format_infix(times, None, None, vec![fnumber, funits]));
+    let quantity = six_format_infix(times, None, None, vec![fnumber, funits]);
+    let result = six_wrap(match fpre {
+      Some(fpre) => Tokens::new(fpre.unlist().into_iter().chain(quantity.unlist()).collect()),
+      None => quantity,
+    });
     six_end_processing();
     Ok(result)
   });
@@ -2910,7 +3660,7 @@ LoadDefinitions!({
   DefMacro!("\\SIlist OptionalKeyVals:SIX {}{}", sub[(kv, numbers_arg, units_arg)] {
     let numbers = numbers_arg;
     let units = units_arg;
-    six_begin_processing(kv.as_ref());
+    six_begin_processing_for_units(kv.as_ref(), Some(&units));
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("list-units"));
     let items: Vec<Tokens> = six_parse_numbers(&numbers).iter()
@@ -2936,7 +3686,7 @@ LoadDefinitions!({
     let first = first_arg;
     let last = last_arg;
     let units = units_arg;
-    six_begin_processing(kv.as_ref());
+    six_begin_processing_for_units(kv.as_ref(), Some(&units));
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("range-units"));
     let fnumber = six_format_number(&six_parse_number(&first), 0);
@@ -2969,6 +3719,8 @@ LoadDefinitions!({
   // `\qty[ 1 + ... ] \rho` to mis-parse as
   // `\SI[opt-list]{value-only}` and fire siunitx number-parse errors.
   // Witness 2305.09755.
+  // v3's `\qty` is `O{} m m` (siunitx.sty:9163), no pre-unit: as `\SI` it also reads an optional
+  // after the number, a harmless superset (as `\qtyproduct`, `\complexqty` below).
   RawTeX!("\\@ifundefined{qty}{\\let\\qty\\SI}{}");
   Let!("\\qtylist", "\\SIlist");
   Let!("\\qtyrange", "\\SIrange");
@@ -3004,6 +3756,8 @@ LoadDefinitions!({
     Ok(Tokens!())
   });
   DefPrimitive!("\\lx@si@column@end", {});
+  // marks a column's `>{…}` prefix for `read_si_cell`, which takes it away; a no-op wherever else it is met
+  DefPrimitive!("\\lx@si@column@prefix", {});
   // Perl L1414-1451 `\lx@SI@column@parse` (the `S`, number column): read the
   // cell up to `\lx@si@column@end`, peel leading "surrounding material" —
   // spaces, leading non-symbol control sequences (formatting like `\bfseries`,
@@ -3011,9 +3765,14 @@ LoadDefinitions!({
   // number (NO error on leftover, UNLIKE `\num`), then emit
   // `pre + {\color{…}}?six_wrap(result) + post`. A leading `\color` cancels
   // the column's auto-color (Perl L1429).
-  DefMacro!("\\lx@SI@column@parse XUntil:\\lx@si@column@end", sub[args] {
+  // The cell is read with expansion under LaTeX's `\protected@edef` regime
+  // (`read_si_cell`, as `ProtectedXUntil` reads): a raw class's robust size
+  // command stays `\protect\small ` instead of re-expanding `\@setfontsize`
+  // without end (zugferd-invoice.sty:113 `\small\emph{Pos.}&…` in an `S`
+  // column under scrartcl; KPE #178).
+  DefMacro!("\\lx@SI@column@parse", sub[_args] {
     use latexml_core::token::Catcode;
-    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let mut tokens: Vec<Token> = read_si_cell()?.unlist();
     let doparse = six_get_bool_sym(six_pin!("parse-numbers"));
     let mut color = six_get_tokens_sym(six_pin!("color"));
     let mut pre: Vec<Token> = Vec::new();
@@ -3068,11 +3827,21 @@ LoadDefinitions!({
       post.insert(0, T_END!());
     }
     six_end_processing();
-    let mut out: Vec<Token> = pre;
+    // The cell content is emitted as ONE GROUP: LaTeX's column template wraps
+    // every entry in `{…}` (latex.ltx `\@classz`), so an unbraced `\small`
+    // peeled into `pre` is scoped to the cell. Emitted bare under a KOMA
+    // class, `\small` (→ `\@setfontsize`) leaked past the cell and the
+    // font restore re-ran KOMA's `\normalsize` without end (87,713
+    // `\@setfontsize\normalsize` iterations → `PushbackLimit`; zugferd-
+    // invoice.sty:113 `\small\emph{Pos.}&…` in an `S` column, scrartcl).
+    // Guard: `perfect_kernel_batch54::s_column_unbraced_size_command_is_scoped`.
+    let mut out: Vec<Token> = vec![T_BEGIN!()];
+    out.extend(pre);
     if !result.is_empty() {
       out.extend(six_wrap(result).unlist());
     }
     out.extend(post);
+    out.push(T_END!());
     Ok(Tokens::new(out))
   });
   // Perl L1454-1485 `\lx@si@column@parse` (the lowercase `s`, UNIT column):
@@ -3080,9 +3849,9 @@ LoadDefinitions!({
   // as UNITS (`six_convertUnits`/`six_parse_units`/`six_format_units`, via the
   // shared `six_process_units` used by `\si`) rather than as a number. Color
   // wraps the whole cell (Perl L1479-1481: `{\color{c} pre result post }`).
-  DefMacro!("\\lx@si@column@parse XUntil:\\lx@si@column@end", sub[args] {
+  DefMacro!("\\lx@si@column@parse", sub[_args] {
     use latexml_core::token::Catcode;
-    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let mut tokens: Vec<Token> = read_si_unit_cell()?.unlist();
     let color = six_get_tokens_sym(six_pin!("color"));
     let mut pre: Vec<Token> = Vec::new();
     loop {
@@ -3129,13 +3898,58 @@ LoadDefinitions!({
     out.extend(post);
     Ok(Tokens::new(out))
   });
+  // siunitx.sty:9322-9330 (v3) warns at begin-document whenever `\NC@find@S` exists, so an `S` some package or the
+  // document declared BEFORE siunitx loaded is overwritten with the warning too; our load-time `DefColumnType`
+  // replaces it silently, so whether one was there is noted here.
+  let column_s_predeclared = is_defined("\\NC@rewrite@S");
+  // v3 has no `s` column, so an `s` declared before siunitx loaded stays the document's too (`\newcolumntype{s}{l}`
+  // before `\usepackage{siunitx}`: pdflatex sets the cell as text); the Perl-era load-time `s` is declared only where
+  // none exists, or under the `[=v2]` rollback, which re-creates it.
+  let keep_document_s = !v2_release && is_defined("\\NC@rewrite@s");
   // Perl L1379-1399: `S` → number parse, lowercase `s` → unit parse.
   DefColumnType!("S Optional", sub[args] {
     add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@SI@column@parse");
   });
-  DefColumnType!("s Optional", sub[args] {
-    add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@si@column@parse");
-  });
+  if !keep_document_s {
+    DefColumnType!("s Optional", sub[args] {
+      add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@si@column@parse");
+    });
+  }
+  // siunitx owns its column letters at begin-document, declared at load only here (Perl siunitx.sty.ltxml
+  // :1379-1399), so a column package loaded after siunitx (cellspace.sty:174-177 `S`, its default `column=S`) kept
+  // the letter, which in LaTeX it loses to siunitx — 2410.09116's `{llSS}` tables, 74 errors. The load-time
+  // definitions are kept and the release's own begin-document declarations reinstate them:
+  // * v3 (siunitx.sty:9364-9373) maps only `\l__siunitx_column_type_tl` (`table-column-type`, default `S`, :9101)
+  //   through `\__siunitx_declare_column:Nnn` (:9322-9330), which warns "Tabular column type "S" overwritten with
+  //   siunitx definition." when another `S` exists — declared after siunitx or before it. v3 has no `s` column, so
+  //   a document's own `\newcolumntype{s}` (tabularx's `>{\hsize=.5\hsize}X` idiom), declared after siunitx or
+  //   before it, stays the document's.
+  // * the `[=v2]` rollback (siunitx.sty:37-39, siunitx-v2.sty:5624-5625 `\__siunitx_table_rewrite_create:N`)
+  //   re-creates `s` and `S`, without a warning of its own (array.sty:345 warns "Column s is already defined" for
+  //   its `\newcolumntype`, which our `\newcolumntype` never does). Not ported: v2's cellspace special case
+  //   (siunitx-v2.sty:5559-5588), which moves cellspace's column to `C` with the warning "Column type for cellspace
+  //   package moved to 'C'."
+  // `table-column-type` is not a key here. KNOWN_PERL_ERRORS #781. Guards:
+  // `perfect_kernel_batch68f::siunitx_column_wins_over_a_later_cellspace_column`,
+  // `…::siunitx_v3_leaves_a_document_s_column_alone`, `…::siunitx_v3_warns_over_a_column_declared_before_it`,
+  // `…::siunitx_v2_rollback_reinstates_both_columns_silently`, `…::siunitx_v3_keeps_an_s_column_declared_before_it`.
+  RawTeX!(r##"\let\lx@six@column@S\NC@rewrite@S
+\let\lx@six@column@s\NC@rewrite@s
+\def\lx@six@restore@column#1{%
+  \expandafter\let\csname NC@rewrite@#1\expandafter\endcsname\csname lx@six@column@#1\endcsname}
+\def\lx@six@column@overwritten#1{%
+  \PackageWarningNoLine{siunitx}{Tabular column type "#1" overwritten with siunitx definition.}}
+\def\lx@six@redeclare@column#1{%
+  \expandafter\ifx\csname NC@rewrite@#1\expandafter\endcsname\csname lx@six@column@#1\endcsname\else
+    \lx@six@restore@column#1\lx@six@column@overwritten#1%
+  \fi}"##);
+  if v2_release {
+    RawTeX!(r"\AtBeginDocument{\lx@six@restore@column s\lx@six@restore@column S}");
+  } else if column_s_predeclared {
+    RawTeX!(r"\AtBeginDocument{\lx@six@restore@column S\lx@six@column@overwritten S}");
+  } else {
+    RawTeX!(r"\AtBeginDocument{\lx@six@redeclare@column S}");
+  }
 
   //======================================================================
   // Default options
@@ -3494,7 +4308,8 @@ LoadDefinitions!({
   // picm, micm, Sec, mics, cmc, cubiccentimetre, cubicdecimetre, etc.).
   // We always declare them — the names don't conflict with v3's
   // DeclareSIUnit set above, so the cost is just a few extra entries.
-  // Driver: 2007.02084 \cubiccentimetre R=1 → R=0.
+  // Driver: 2007.02084 \cubiccentimetre R=1 → R=0. Their commands are not siunitx's (`six_command_create`).
+  assign_value("lx@six@surplus@units", true, None);
   RawTeX!(r#"
 \DeclareSIUnit \BAR        { \bar }
 \DeclareSIUnit \bbar       { \bar }
@@ -3556,6 +4371,7 @@ LoadDefinitions!({
 \DeclareSIUnit \zeptobarn  { \zepto \barn }
 \DeclareSIUnit \yoctobarn  { \yocto \barn }
 "#);
+  assign_value("lx@six@surplus@units", false, None);
 
   DefMacro!("\\highlight{}", "#1");
   DefMacro!("\\of{}", "(#1)");
@@ -3577,4 +4393,14 @@ LoadDefinitions!({
   // expl3 LETTER set (unlike `_`/`:`), so this restore does not touch the
   // glossary-sensitive codepoint path.
   assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
+  // siunitx v3 expl3 API `\siunitx_number_format:nN {number} \tl` (siunitx.sty
+  // `\siunitx_number_format:nN` — parses and formats the number into the token
+  // list; zugferd.sty:415 rounds invoice amounts with it): the number text
+  // is kept as written (the formatting options are presentation).
+  RawTeX!(
+    r"\ExplSyntaxOn
+\cs_if_exist:NF \siunitx_number_format:nN
+  { \cs_new_protected:Npn \siunitx_number_format:nN #1#2 { \tl_set:Nn #2 {#1} } }
+\ExplSyntaxOff"
+  );
 });

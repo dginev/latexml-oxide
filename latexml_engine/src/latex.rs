@@ -27,20 +27,38 @@ const DEV_DUMPS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/d
 /// overrides, the exe-relative installed layout, the dev-tree path, or
 /// the embedded fallback. Used by `LoadFormat('latex')` to decide
 /// between the dump branch and the base branch.
-fn latex_dump_available() -> bool {
+pub(crate) fn latex_dump_available() -> bool {
+  latex_dump_on_disk()
+    || (!*NODUMP
+      && crate::embedded_dumps::embedded_latex_dump(
+        crate::dump_paths::detect_ambient_texlive_year(),
+      )
+      .is_some())
+}
+
+/// [`latex_dump_available`] short of the embedded dump: one built for this tree, named, installed,
+/// beside the executable or in the source tree.
+pub(crate) fn latex_dump_on_disk() -> bool {
   if *NODUMP {
     return false;
   }
+  let prefer = crate::dump_paths::detect_ambient_texlive_year();
+  if crate::dump_paths::rebuilt_dump("latex").is_some() {
+    return true;
+  }
   if let Some(p) = DUMP_PATH.as_deref()
     && Path::new(p).is_file()
+    && crate::dump_paths::dump_file_matches_tree(Path::new(p), "latex")
   {
     return true;
   }
-  let prefer = crate::dump_paths::detect_ambient_texlive_year();
   if let Some(dir) = DUMP_DIR.as_deref()
     && crate::dump_paths::resolve_versioned_in_dir(Path::new(dir), "latex", prefer).is_some()
   {
     return true;
+  }
+  if crate::dump_paths::dump_dir_only() {
+    return false;
   }
   if let Ok(exe) = std::env::current_exe()
     && let Some(exe_dir) = exe.parent()
@@ -54,10 +72,7 @@ fn latex_dump_available() -> bool {
     }
   }
   let dev = Path::new(DEV_DUMPS_DIR);
-  if dev.is_dir() && crate::dump_paths::resolve_versioned_in_dir(dev, "latex", prefer).is_some() {
-    return true;
-  }
-  crate::embedded_dumps::embedded_latex_dump(prefer).is_some()
+  dev.is_dir() && crate::dump_paths::resolve_versioned_in_dir(dev, "latex", prefer).is_some()
 }
 
 LoadDefinitions!({
@@ -83,7 +98,7 @@ LoadDefinitions!({
   // and silences the diff for everything raw latex.ltx defines.
   // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
   // `prepare_session`, so this branch fires before latex.rs runs.
-  if *INI_MODE {
+  if *INI_MODE || crate::dump_paths::building_format() {
     return Ok(());
   }
 
@@ -115,6 +130,49 @@ LoadDefinitions!({
     InnerPool!(latex_base);
   }
 
+  // ltfilehook's current-file token lists (latex.ltx:19582-19585 `\tl_new:N
+  // \CurrentFile` …, `\tl_set` per file by `\@filehook@set@CurrentFile` and
+  // `\__filehook_file_pop_assign:nnnn`). The dump carries them empty, as Perl's
+  // does (blib latex_dump.pool.ltxml:2716-2719); under NODUMP, or a dump built before
+  // they were dumped, nothing defines them, and packages reading them
+  // (scrlfile-hook, achemso/koma chains, hyperref driver detection:
+  // `\ifx\CurrentFile\CurrentFileUsed`) hit `undefined:\CurrentFile`
+  // (witnesses 2204.03209, 2205.10749, 2311.06870) — as does the dumped
+  // `\__filehook_file_push:` of `latex_constructs`' own `RequirePackage!("textcomp")`
+  // (sect13.rs), so they are made here, before it.
+  // Not in Base: there latex.ltx's `\tl_new:N` found them taken and every
+  // format build logged "Control sequence \CurrentFile already defined".
+  // Guards: `dump_gate_init::current_file_comes_from_latex_not_plain`,
+  // `dump_gate_init::current_file_is_defined_empty_under_latex` (dump) and
+  // `dump_gate_init::nodump_latex_branch_converts_healthily` (NODUMP).
+  for name in [
+    "\\CurrentFile",
+    "\\CurrentFilePath",
+    "\\CurrentFileUsed",
+    "\\CurrentFilePathUsed",
+  ] {
+    if !IsDefined!(&T_CS!(name)) {
+      DefMacro!(T_CS!(name), None, Tokens!());
+    }
+  }
+
+  // latex.ltx:22071-22076: under LuaTeX/XeTeX the format inputs
+  // `load-unicode-data`, lettering every General_Category L/M code point
+  // (load-unicode-data.tex:98-99,134-135). The profile option is a preload,
+  // processed before this format (and its dump, which pins U+0080-U+00FF
+  // OTHER) loads, so the Latin-1 letters are re-lettered here at the seam;
+  // code points >= U+0100 come lazily from `state::lookup_catcode`.
+  // Guard: `perfect_kernel_batch56::non_ascii_letters_are_letters_under_luatex`.
+  if ::latexml_core::state::unicode_engine_profile() {
+    ::latexml_core::state::assign_luatex_latin1_letters();
+  }
+  // The `xetex` profile's inter-character primitives (latexml.sty, iftex_sty.rs
+  // `define_xetex_interchar`): their `\newXeTeXintercharclass` allocator needs the
+  // format's `\e@alloc`/`\newcount`, so it is set up here, once the format is in.
+  if lookup_bool("XETEX_PROFILE") && IsDefined!(&T_CS!("\\lx@xetex@interchar")) {
+    digest(Tokens!(T_CS!("\\lx@xetex@interchar")))?;
+  }
+
   // Format-layering rule: real LaTeX (INITEX-based) never defines plain.tex's
   // tabbing shorthand `\+` (= `\tabalign`), but our latex format is layered
   // on the plain layer (dump record or raw plain.tex), which does. A stray
@@ -128,8 +186,13 @@ LoadDefinitions!({
   // complete" seam (covers both the dump and raw-base branches; skipped in
   // INI_MODE by the early return above, so dump generation is unaffected).
   // Guarded on the body still being plain's bare `\tabalign`, so a user's
-  // own pre-\documentclass `\def\+` survives the lazy pool load.
-  if let Ok(Some(defn)) = lookup_definition(&T_CS!("\\+"))
+  // own pre-\documentclass `\def\+` survives the lazy pool load. Not for an
+  // AMS-TeX document read on this format (`\input amstex`, amsppt's own
+  // `\documentstyle`), whose `\+` is plain's: skipped once it is one, and
+  // undone when it becomes one after this ran (amstex.rs
+  // `enter_amstex_format`; math0103164).
+  if !lookup_bool("lx@amstex@format")
+    && let Ok(Some(defn)) = lookup_definition(&T_CS!("\\+"))
     && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
     && body.len() == 1
     && body
@@ -138,6 +201,7 @@ LoadDefinitions!({
       .is_some_and(|t| t.text == pin!("\\tabalign"))
   {
     remove_meaning_global(&T_CS!("\\+"));
+    assign_value("lx@plain@tabalign@retracted", true, Some(Scope::Global));
   }
 
   InnerPool!(latex_constructs);
@@ -182,4 +246,7 @@ LoadDefinitions!({
   if lookup_meaning(&T_CS!("\\__kernel_sys_everyjob:")).is_some() {
     let _ = raw_tex(r"\csname __kernel_sys_everyjob:\endcsname");
   }
+
+  // The native answer of l3fp's doors, the format complete (the dump does not carry it): OXIDIZED_DESIGN_DIVERGENCES #977.
+  crate::l3fp_native::install()?;
 });

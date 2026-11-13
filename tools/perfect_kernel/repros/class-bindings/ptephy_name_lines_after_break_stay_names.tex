@@ -1,0 +1,16 @@
+% witness: 65e review round 3 (pt2: a ptephy author list that wraps its names with `\\`)
+% oracle:  pdflatex 1 error (the class's `newlogo` graphic, not shipped; ptephy_v1.cls from 2203.01270): all four
+%          names, "A. One1, B. Two2, C. Three1 and D. Four2"
+% engines: rust 65e r2 = C. Three and D. Four a document pubnote (every line after the first `\\` read as a legend)
+% expect:  0 errors; four creators, each with its affiliation; no pubnote
+% status:  RED (65e r2) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{ptephy_v1}
+\begin{document}
+\title{T}
+\author{A.~One$^{1}$, B.~Two$^{2}$,\\ C.~Three$^{1}$ and D.~Four$^{2}$}
+\affil{$^{1}$Univ A \\ $^{2}$Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

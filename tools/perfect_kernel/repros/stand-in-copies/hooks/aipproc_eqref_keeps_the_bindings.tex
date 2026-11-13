@@ -1,0 +1,12 @@
+% witness: aipproc.cls:549-557 `\AtBeginDocument{… \def\eqref#1{…}}` (astro-ph0105128; census 2026-10-17)
+% oracle:  pdflatex 0 errors (the copy's "COPY-EQREF", AIP-EXTRA)
+% engines: rust 67int20b = 1 error (\aipextra undefined: the copy is not read)
+% expect:  0 errors, 0 warnings; AIP-EXTRA; \eqref the binding's (a reference to the equation)
+% status:  RED (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass{aipproc}
+\begin{document}
+\aipextra
+\begin{equation}a=1\label{e}\end{equation}
+See \eqref{e}.
+\end{document}

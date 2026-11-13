@@ -1,0 +1,18 @@
+% witness: re-review of batch 57d (57d3): a box whose content no inline box holds
+% oracle:  pdflatex 0 errors; the bibliography typeset in the box between the two paragraphs
+% engines: rust 57c=0 and 57d final=0: the bibliography is hoisted after the box's place, as its
+%          own <bibliography> in the section, with no paragraph for the box; rust 57d3 (the gate
+%          without the inline-content check) opened the box's <p> first and left
+%          <para><p/></para> before the bibliography; perl=0 (2026-09-27): the bibliography in a
+%          <para class="ltx_parbox"> block (SHARED `ltx:bibliography` placement, not this defect)
+% expect:  0 errors; no empty <para>/<p> before the hoisted bibliography
+% status:  GREEN (57d: the paragraph opens only for content an inline box holds, insert_block_as)
+\documentclass{article}
+\begin{document}
+\section{S}
+Before.
+
+\parbox{\textwidth}{\begin{thebibliography}{9}\bibitem{a} Alpha.\end{thebibliography}}
+
+After.
+\end{document}

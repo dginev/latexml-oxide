@@ -1,0 +1,11 @@
+% witness: 2507.03899 (11 `_` errors), 2409.07012 (23): jmlr.cls's jmlrutils.sty:116-165 `\tableref{tab:a}` is "Table 1"
+%          through `\objectref`; the binding's stand-ins (`\tableref{}` → `#1`) printed the label key as text
+% oracle:  pdflatex 0 errors: "Table 1 and Figure 1 and Section 1." (one label referenced three ways)
+% engines: rust 63s4 = `Error:unexpected:_` (the key `tab:raw_perf` typeset), no name
+% expect:  0 errors, 0 warnings; "Table" with the ref
+% status:  RED (63s4) -> GREEN (63t)
+\documentclass[pmlr]{jmlr}
+\begin{document}
+\begin{table}\caption{Raw}\label{tab:raw_perf}\centering\begin{tabular}{c}a\end{tabular}\end{table}
+\tableref{tab:raw_perf} and \figureref{tab:raw_perf} and \sectionref{tab:raw_perf}.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: cond-mat0701310, 0911.1625 (aipproc: 42 run-336 papers, first error \pacs)
+% oracle:  pdflatex 0 errors (aipproc.cls 2005/11/11 + aipxfm.sty, as shipped): aipxfm.sty:266-269 `\let\pacs\classification`
+% engines: rust 64zc = 1 error (\pacs undefined); Perl the same (aipproc.cls.ltxml defines only \classification)
+% expect:  0 errors; the codes are the document's classification
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass[final]{aipproc}
+\layoutstyle{6x9}
+\begin{document}
+\title{A title}
+\author{A. Author}{address={Somewhere}}
+\begin{abstract}
+Abstract TEXT.
+\end{abstract}
+\maketitle
+\classification{}
+\pacs{71.10.Li, 74.72.-h}
+\keywords{}
+Body TEXT.
+\end{document}

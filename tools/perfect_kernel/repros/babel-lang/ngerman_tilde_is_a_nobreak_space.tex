@@ -1,0 +1,11 @@
+% witness: 59t autoref design (scratch_autoref_rc/tl.tex): under babel ngerman the autoref separator `~` is a plain
+%   space ("Abbildung 1" with U+0020; guard perfect_kernel_batch59::autoref_names_follow_the_babel_language pins it)
+% oracle:  pdflatex 0 errors; `~` is the kernel's unbreakable space (ngerman's shorthands are `"`-only)
+% engines: rust 59t = "A B." with U+0020 under [rawstyles] and ar5iv preloads; without babel U+00A0
+% expect:  0 errors; the paragraph reads "A" U+00A0 "B."
+% status:  RED (open)
+\documentclass{article}
+\usepackage[ngerman]{babel}
+\begin{document}
+A~B.
+\end{document}

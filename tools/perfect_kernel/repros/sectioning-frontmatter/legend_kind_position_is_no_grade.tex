@@ -1,0 +1,21 @@
+% A position at an institute is no membership grade: "Senior Fellow, IAS" stays Bob's affiliation (a grade is one in a
+% society whose grades follow a name: IEEE, ACM, OSA, …); a URL line one author holds is that author's URL contact,
+% and a URL beside an institution stays in the affiliation (106b r1 read any capitals as a society; review rev106b S3,
+% probe a1).
+% witness: 2310.02678, 2505.15137 (a grade line, "Senior Member, IEEE")
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Bell2 and Cat Cole3", "1 Univ A, https://a.edu", "2 Senior Fellow, IAS", "3 https://www.c-lab.org"
+% engines: rust int134b = 0 errors, three affiliations; 106b r1 = Bob's a membership contact
+% expect:  0 errors, 0 warnings; Ann Univ A + URL (affiliation), Bob "Senior Fellow, IAS" (affiliation), Cat a URL contact
+% status:  RED (106b r1) -> GREEN (106b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\title{Link and grade}
+\author{Ann Able$^{1}$, Bob Bell$^{2}$ and Cat Cole$^{3}$\\
+$^{1}$Univ A, \url{https://a.edu}\\
+$^{2}$Senior Fellow, IAS\\
+$^{3}$\url{https://www.c-lab.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

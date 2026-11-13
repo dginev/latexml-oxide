@@ -1,0 +1,14 @@
+% mechanism: a `\thanks` inside ptephy `\name`'s name argument doubles the name and its note ("Ann AbleAnn Able", "Note A." twice);
+%   pdflatex prints "Ann Able†1" once; counted by a Warning (revP3 pre-existing; int159a = P3)
+% witness: synthetic (revP3 probe a6_ptephy_thanks.tex)
+% expect:  each name once, its marks not as name text, each note once
+% status:  RED (int159a, P3)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann Able\thanks{Note A.}}{1} and \name{\fname{Bob} \surname{Baker}}{2,\thanks{Present: Univ Z}}}
+\address{$^1$Univ A, Town\\ $^2$Univ B, City}
+\maketitle
+Text.
+\end{document}

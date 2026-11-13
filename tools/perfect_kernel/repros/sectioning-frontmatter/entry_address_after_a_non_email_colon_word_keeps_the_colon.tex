@@ -1,0 +1,19 @@
+% mechanism: an address after a colon word that is no e-mail label (`Mail:`, `Contact:`, `Correspondence:`) comes out
+%   at a one-sided boundary (a word ending in `:` is not prose), and the separator trim then takes the colon, leaving
+%   the bare word in the affiliation (OD #938; since 95c r3's N1 "mail" is no e-mail label word, so the contact is
+%   named by the class's "Email: ", not the printed word).
+% witness: synthetic (review rev95c_r3 S1, probe p/m1); real sibling 2601.07312 `Correspondence:` loses its colon
+% oracle:  pdflatex 0 errors: "Univ X, Mail: ann@x.org"
+% engines: rust int123a: the line whole; 95c-r2: "Univ X" + contact "Mail: "; 95c-r3: "Univ X, Mail" + contact "Email: "
+% expect:  "Univ X, Mail: ann@x.org" kept whole (or the run out with "Mail:" as its contact's name); 0 errors
+% status:  RED (95c-r3 review S1; SYNC row)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$ Univ X, Mail: ann@x.org \\
+$^2$ Univ Y}
+\maketitle
+Text.
+\end{document}

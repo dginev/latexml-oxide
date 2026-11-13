@@ -1,0 +1,19 @@
+% witness: review 68t probe p5 (2026-10-16)
+% oracle:  pdflatex 0 errors: the cover "Static spacetimes" with a footnote mark 1 ("Supported by X."), "Cover text.",
+%          "See ." (a `\label` in a title has no counter to refer to)
+% engines: rust 68t r1 = 0 errors, the title argument digested twice: `labels="LABEL:tit"` on `ltx:document`, the
+%          `\ref` rendering the title text, a second role-less `ltx:pubnote`; Perl 0.8.8 one `pubnote role="thanks"`
+% expect:  0 errors, 0 warnings; the cover print once, one `ltx:pubnote role="thanks"`, no `labels` on `ltx:document`
+%          (the kernel's copy of the argument owns every side effect: `\label`, `\thanks`, `\footnote`, `\footnotemark`,
+%          `\index` are gobbled in the print, as in the `\maketitle` deposits and the setter replay)
+% status:  RED (68t r1) -> GREEN (68t r2)
+\documentclass{article}
+\def\title#1{\begin{center}{\large #1}\end{center}}
+\begin{document}
+\begin{titlepage}
+\title{Static spacetimes\thanks{Supported by X.}\label{tit}}
+Cover text.
+\end{titlepage}
+\section{Intro}
+See \ref{tit}.
+\end{document}

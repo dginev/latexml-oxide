@@ -1,0 +1,19 @@
+% witness: 2505.09041's shape (an authblk `\author{…\thanks{…}}` read apart from the blocks), the note holding markup
+% oracle:  pdflatex 0 errors: "Craig Rae* and Ann Able1 / 1Univ X / Univ Y", the footnote "Note italic, x+y and the site."
+% engines: off: the note with `<text font="italic">`, the formula and the `<ref href>`; IO1 at =2: "Note italic, x+y and
+%          the site." as its plain text (the call's note written by its text, "call: no piece holds it", 1 Warning)
+% expect:  0 errors, 0 warnings on both switches; Craig's note keeps the italic, the formula and the link
+% status:  RED (IO1, review revG5 3) -> GREEN (IO2: the call's `\thanks` argument written as a note, `emit.rs` `call_note`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Craig Rae\thanks{Note \textit{italic}, $x+y$ and \href{http://x.org}{the site}.}}
+\author{Ann Able$^{1}$}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

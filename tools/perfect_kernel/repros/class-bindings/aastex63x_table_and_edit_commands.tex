@@ -1,0 +1,35 @@
+% witness: 2108.09109, 2210.08658, 2001.00952 (`\suppressAffiliationsfalse`); 2109.04933, 2110.10162
+%          (`\turnoffedittwo`); 2609.30834 (`\turnoffonetrue`); 1910.11401 (`\tablereferences`); 2308.05494
+%          (`\resetapptablenumbers`); 2205.09859 (`\authorcomment`); 2202.09386 (`\currtabletypesize`); 2301.00027
+%          (`\preprinttrue`); 2608.12156 (`\numlinesfalse`); 2306.12805 (`\apjsecfont`); 2307.09521 (`\aspconf`)
+% oracle:  pdflatex with 2107.07519's aastex631.cls: "Note and — and X, Ast. Soc. of the Pac. Conference Series." (the
+%          turned-off author note prints nothing), Table 1 with "References—Ref1", Appendix A; 0 errors
+% engines: rust 67int6 = 12 errors, 0 warnings (undefined `\suppressAffiliationsfalse`, undefined `\turnoffedittwo`,
+%          undefined `\turnoffeditthree`, undefined `\turnoffonetrue`, undefined `\preprinttrue`, undefined
+%          `\numlinesfalse`, undefined `\authorcomment`, undefined `\mdash`, undefined `\apjsecfont`, undefined
+%          `\aspconf`, undefined `\tablereferences`, undefined `\resetapptablenumbers`)
+% expect:  0 errors, 0 warnings; the em dash, the table references note
+% status:  RED (67int6) -> GREEN (68a)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{aastex631}
+\suppressAffiliations\suppressAffiliationsfalse
+\turnoffedittwo\turnoffeditthree\turnoffonetrue
+\preprinttrue\numlinesfalse
+\begin{document}
+\title{T}\author{A}\affiliation{I}
+\begin{abstract}Ab.\end{abstract}
+\section{S}
+Note \authorcomment{1}{check} and \mdash\ and {\apjsecfont X}, \aspconf.
+\begin{deluxetable}{cc}
+\tabletypesize{\scriptsize}
+\tablecaption{Cap}
+\tablehead{\colhead{a} & \colhead{b}}
+\startdata
+1 & 2 \\
+\enddata
+\tablereferences{Ref1}
+\end{deluxetable}
+\appendix
+\section{App}
+\resetapptablenumbers
+\end{document}

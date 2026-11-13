@@ -1,0 +1,21 @@
+% witness: 2605.07373, 2605.08166, 2605.12003 (an elsarticle-num .bbl: `\path` defined only when `\href` is undefined)
+% oracle: arXiv builds them (its injected hyperref loads url.sty, whose `\path` the .bbl then keeps);
+%         pdflatex with \usepackage{hyperref}: 0 errors, "doi:10.1/x" in typewriter
+% engines: rust 67o1 = 1 error (`\path` undefined: 67a supplied `\href` at \begin{document}, so the .bbl skipped
+%          its `\def\path#1{#1}`); 66z (before 67a) = 0
+% expect: 0 Errors; the entry's `\path{doi:10.1/x}` is url.sty's \path (a typewriter `ltx_path` reference)
+% mechanism: ar5iv.sty provide-only hyperref fallback also loads url.sty provide-only (OXIDIZED_DESIGN #588)
+% status: RED (67o1) -> GREEN (67q)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+See \cite{a}.
+\begin{thebibliography}{1}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \def\href#1#2{#2} \def\path#1{#1}\fi
+\bibitem{a} A. Author, J. 1 (2000) 1.
+  {\path{doi:10.1/x}}.
+\end{thebibliography}
+\end{document}

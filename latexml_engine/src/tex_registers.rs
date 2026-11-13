@@ -31,19 +31,19 @@ LoadDefinitions!({
   // \skipdef          c  creates a symbolic name for a \skip register.
   // \muskipdef        c  creates a symbolic name for a \muskip register.
   // \toksdef          c  creates a symbolic name for a \toks register.
-  DefPrimitive!("\\countdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\countdef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\count", Number::new(0).into())
   });
-  DefPrimitive!("\\dimendef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\dimendef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\dimen", Dimension::new(0).into())
   });
-  DefPrimitive!("\\skipdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\skipdef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\skip", Glue::new(0).into())
   });
-  DefPrimitive!("\\muskipdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\muskipdef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\muskip", MuGlue::new(0).into())
   });
-  DefPrimitive!("\\toksdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\toksdef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\toks", Tokens!().into())
   });
 
@@ -95,8 +95,14 @@ LoadDefinitions!({
   // \multiply         c  multiplies a register by an integer.
   // \divide           c  divides a register by an integer.
 
-  DefPrimitive!("\\advance Variable SkipKeyword:by", sub[(var)] {
+  // tex.web §1236-1237 `do_register_command`: a token that is no register is an error and the
+  // command returns there, reading no `by` and no operand — `\divide\relax by 2` typesets "by 2",
+  // as pdflatex (Perl reads on and defines the token a register, KNOWN_PERL_ERRORS #390). So
+  // `by` and the operand are read here, after a valid variable (57ce; repro
+  // expansion-primitives/register_command_on_a_non_register).
+  DefPrimitive!("\\advance Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
+      read_keyword(&["by"])?;
       let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
       if !defn_token_str.is_empty() && defn_token_str != "missing" {
@@ -115,10 +121,19 @@ LoadDefinitions!({
         expire_current_token();
       }
     }
+    // An arithmetic assignment is a prefixed command: the `\afterassignment`
+    // token goes in right after it (tex.web §1211 `done:`, §1269), reached
+    // after §1236 do_register_command even on an error. It stayed pending and fired
+    // at a later assignment; pstricks' raw `\psaddtolength` depends on it
+    // (lsc). Perl never fires it (KNOWN_PERL_ERRORS #257). Guard:
+    // `perfect_kernel_batch56::afterassignment_fires_after_arithmetic`.
+    after_assignment();
   });
 
-  DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[(var,scale)] {
+  DefPrimitive!("\\multiply Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
+      read_keyword(&["by"])?;
+      let scale = read_number()?;
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       match lookup_register_definition(&varname) { Some(defn) => {
@@ -130,14 +145,14 @@ LoadDefinitions!({
           s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", message);
       }}
-    } else {
-      let message = s!("\\multiply expected a Variable argument, but got nothing.");
-      Error!("expected","variable", message);
     }
+    after_assignment(); // tex.web §1269, as for `\advance`
   });
 
-  DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[(var,scale)] {
+  DefPrimitive!("\\divide Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
+      read_keyword(&["by"])?;
+      let scale = read_number()?;
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
@@ -154,23 +169,33 @@ LoadDefinitions!({
           s!("\\divide expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", message);
       }}
-    } else {
-      let message = s!("\\divide expected a Variable argument, but got nothing.");
-      Error!("expected","variable", message);
     }
+    after_assignment(); // tex.web §1269, as for `\advance`
   });
 });
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {
+  // A length register the document allocates (`\newdimen`, `\newskip`): the panel grid rule's
+  // `note_length_allocated`.
+  if matches!(address_type, "\\dimen" | "\\skip") {
+    crate::latex_constructs::note_length_allocated(&cs);
+  }
   // Let w/o AfterAssign
   let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
   assign_meaning(&cs, relax_meaning, None);
+  // tex.web §1224: the optional `=` is read with expansion (§405), as for `\chardef`.
+  read_keyword(&["="])?;
   // define
   let num = read_number()?;
   let address = s!("{address_type}{}", num.value_of());
+  // tex.web §1224 `define`: the shorthand is local unless `\global`, as `\chardef`'s is
+  // (`def_register` installs globally, for bindings). pgfutil-common.tex:611-620's grouped
+  // `\dimendef\rb=5` left a document's `\rb` macro a dimen register (2003.08372: 662
+  // "Missing $", TooManyErrors; Perl's `DefRegisterI` alike). The register keeps its value.
   let options = Some(RegisterOptions {
     address: Some(address),
+    local: true,
     ..RegisterOptions::default()
   });
   def_register(cs, None, init, options)?;

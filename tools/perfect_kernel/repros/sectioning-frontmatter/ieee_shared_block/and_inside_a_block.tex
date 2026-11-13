@@ -1,0 +1,26 @@
+% mechanism: an `\and` at the top level of an `\IEEEauthorblockA` argument that a block macro follows (a brace missing
+%   after the first author's block) starts the next author: pdflatex's `\and` closes the column there. The binding
+%   (`wrap_bare_author_block_text`) closes the argument before that `\and`, reads the rest as top-level blocks and drops
+%   one closing brace after them
+% witness: 2105.06537
+% oracle:  pdflatex 0 errors: two columns "Ann Able / ann@x.edu / Department of A / University A" and
+%   "Bob Baker / bob@y.edu / School of B / University B"
+% engines: rust int130a, 104a: Ann also holds Bob's block, and an affiliation ending in " and "
+% expect:  0 errors, 0 warnings; two creators, each their own block only
+% status:  RED (104a) -> GREEN (104a r2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+  \IEEEauthorblockA{\texttt{ann@x.edu}\\
+    Department of A\\
+    University A\\
+    \and
+    \IEEEauthorblockN{Bob Baker}
+    \IEEEauthorblockA{\texttt{bob@y.edu}\\
+      School of B\\
+      University B}}}
+\maketitle
+Text.
+\end{document}

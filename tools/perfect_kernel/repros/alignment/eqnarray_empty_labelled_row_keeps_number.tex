@@ -1,0 +1,22 @@
+% witness: 1011.4399 (buua/buuf/buui), hep-th9412215 (scalingfreeenergyn2), 1305.3072 (ce, inner row); fidelity audit
+%          round 2 (eqnarray rows holding only `\label`)
+% oracle:  pdflatex 0 errors: "(1)" on the first eqnarray's empty last row, "(2)" on the second's empty middle row;
+%          "See (1) and (2)."
+% engines: rust 63i = both rows dropped with their numbers and labels (Warning:expected:ids Missing Target for Label at
+%          post); Perl alike (latex_constructs.pool.ltxml:2365-2372)
+% expect:  0 errors; the equation labelled last carries (1), the one labelled mid (2); the \refs resolve
+% status:  RED (63i) -> GREEN (63j)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+a &=& b \nonumber\\
+  &\leq& c .\nonumber\\
+\label{last}
+\end{eqnarray}
+\begin{eqnarray}
+d &=& e ,\nonumber\\
+\label{mid}\\
+f &=& g \nonumber
+\end{eqnarray}
+See (\ref{last}) and (\ref{mid}).
+\end{document}

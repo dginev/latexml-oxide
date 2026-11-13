@@ -1,0 +1,14 @@
+% witness: 0712.3213, 1010.3777, 1103.2047 (`\usepackage[color]{showkeys}`, then `\definecolor` with no color package;
+%          showkeys.sty:51-56 `\DeclareOption{color}{\AtEndOfPackage{\RequirePackage{color}…}}`)
+% oracle:  pdflatex 0 errors ("Some red text.")
+% engines: rust 67o1 = 2 errors (`\definecolor`, `\color` undefined: the showkeys binding declares no option); Perl's
+%          showkeys.sty.ltxml is empty (KNOWN_PERL_ERRORS #692)
+% expect:  0 errors, 0 warnings; the text coloured #E60000
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[color]{showkeys}
+\definecolor{myred}{rgb}{0.9,0,0}
+\begin{document}
+Some {\color{myred} red} text.
+\end{document}

@@ -1,0 +1,19 @@
+% witness: 2604.22493 (`\documentclass[a4paper,UKenglish,cleveref,autoref,numberwithinsect]{lipics-v2021}`, keytheorems'
+%   `\newkeytheorem{recorollary}[sibling=corollary,name=Corollary]`)
+% oracle: pdflatex with the witness's lipics-v2021.cls (it ships with the papers, not TL); engine: pdflatex
+% expect: 0 errors, 0 warnings; Theorem 1.1, Corollary 1.2, Theorem 1.3, Corollary 1.4: one sequence numbered within
+%   the section, the last a theorem numbered as a sibling of `corollary`
+% mechanism: lipics-v2021.cls:1119-1236, under `autoref` without `thm-restate` each sibling's counter is an aliascnt
+%   alias of `theorem`; the binding gave every sibling `[theorem]`, so no counter `corollary` existed (Warning, the
+%   last numbered as `theorem`), and ignored `numberwithinsect` (:1126-1128; Theorem 1). Fixed: lipics_cls.rs.
+% status:  GREEN
+\documentclass[a4paper,autoref,numberwithinsect]{lipics-v2021}
+\newtheorem{recorollary}[corollary]{Corollary}
+\begin{document}
+\section{S}
+\begin{theorem}A.\end{theorem}
+\begin{corollary}\label{c1}B.\end{corollary}
+\begin{theorem}C.\end{theorem}
+\begin{recorollary}D.\end{recorollary}
+See \autoref{c1}.
+\end{document}

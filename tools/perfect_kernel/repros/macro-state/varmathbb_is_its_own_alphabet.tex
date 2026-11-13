@@ -1,0 +1,16 @@
+% witness: 1205.4484 (macros.tex:29 amsmath, :90 txfonts, :91 `\renewcommand{\mathbb}{\varmathbb}`); txfonts.sty:920 and
+%          newtxmath.sty:2466-2467 define `\varmathbb` as a blackboard alphabet of their own; the Rust amsmath binding
+%          `\let` it to the `\mathbb` autoload trigger (amsmath.sty defines no `\varmathbb`), so after the user's
+%          `\renewcommand` the two names expanded into each other
+% oracle:  pdflatex 0 errors; blackboard E, R
+% engines: rust 57t4 1 Fatal "Fatal:Timeout:Recursion Infinite expansion loop: a window of 2 token(s)"; perl 1 error
+%          "Error:undefined:\varmathbb" (txfonts.sty.ltxml:18 defines none; PERL-ORIGIN), the Fatal RUST-ONLY
+% expect:  0 errors; E and R are XMToks with font="blackboard"
+% status:  RED (57t4) -> GREEN (57u)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{txfonts}
+\renewcommand{\mathbb}{\varmathbb}
+\begin{document}
+$\mathbb{E} + \mathbb{R}$
+\end{document}

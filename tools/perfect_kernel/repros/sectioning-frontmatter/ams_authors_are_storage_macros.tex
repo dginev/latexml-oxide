@@ -1,0 +1,25 @@
+% witness: 2605.03453 (its `\def\maketitle` prints `\authors` inside a tabular: 1 A/B Error); K13 stage-2 audit
+%          row amsaddr (57h); amsart's `\authors`, `\shortauthors`, `\addresses` are parameterless storage
+%          macros that `\author[#1]{#2}` accumulates (amscls/amsart.cls:459-477); the binding made them
+%          one-argument setters (Perl ams_support.sty.ltxml:82-84; Rust also wrote an `ltx:note`), so
+%          `\authors` read the next token (`\ `, `\end`) as its argument
+%          amsart's `\maketitle` keeps `\and` (57ah review: the kernel's title code cleared it, running the
+%          names together), and an explicit empty short name adds none (`\@ifnotempty`)
+% oracle:  pdflatex 0 errors: "Written by Ann Author and Bob Writer and Cy Empty (short: A. Author and
+%          B. Writer).", a tabular holding the three names, and "Again: …" after the section
+% engines: perl 4 errors, text "Written by (short: ."; rust 57ag 5 errors, the tabular lost
+% expect:  0 errors, 0 warnings; the oracle text
+% status:  RED (57ag) -> GREEN (57ah: storage macros and amsart's `\author` accumulation, ams_support_sty.rs)
+\documentclass{amsart}
+\usepackage{amsaddr}
+\title{Storage}
+\author[A.~Author]{Ann Author}
+\author[B.~Writer]{Bob Writer}
+\author[]{Cy Empty}
+\begin{document}
+\maketitle
+Written by \authors\ (short: \shortauthors).
+\begin{tabular}{c}\authors\end{tabular}
+\section{Next}
+Again: \authors.
+\end{document}

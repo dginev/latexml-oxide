@@ -1,0 +1,22 @@
+% witness: enumitem.sty:977-980 (`list`, `list<\@listdepth>`, `<name>`, `<name><level>` keys in turn), :1597-1612
+%          `\enit@saveset` (`\setlist` replaces, `\setlist*` appends), :573-598 `\enit@labellist` (only a counter
+%          command takes `*`); a `\newlist` name is a list
+% oracle:  pdflatex 0 errors; "1. one ** two + three S1 four" (1., ** bold; + italic)
+% engines: rust 57t4 0 errors, tags "a)" "a)" "+" "S1" (the replaced label kept; `[2]` read as a list name, so
+%          level 2 is not "**"); perl: `\setlist` takes the first name as the list, the rest as levels (same class)
+% expect:  0 errors; item tags "1." (bold), "**" (bold), "+" (italic), "S1"
+% status:  RED (57t4) -> GREEN (57u)
+\documentclass{article}
+\usepackage{enumitem}
+\setlist[enumerate]{label=\alph*)}
+\setlist[enumerate]{font=\bfseries}
+\setlist*[itemize]{label=+}
+\setlist*[itemize]{font=\itshape}
+\setlist[2]{label=**}
+\newlist{steps}{enumerate}{2}
+\setlist[steps]{label=S\arabic*}
+\begin{document}
+\begin{enumerate}\item one \begin{enumerate}\item two\end{enumerate}\end{enumerate}
+\begin{itemize}\item three\end{itemize}
+\begin{steps}\item four\end{steps}
+\end{document}

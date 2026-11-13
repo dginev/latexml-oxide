@@ -1,0 +1,13 @@
+% witness: 1211.0978 (`\publicationdetails`); run 340 ~320 dmtcs-episciences papers' first error
+% oracle:  pdflatex with dmtcs-episciences.cls (1211.0978's :225-236, :483-487): 0 errors; the head
+%   "DMTCS vol. 19:3, 2017, #12"
+% engines: rust 65w = error (`\publicationdetails` undefined)
+% expect:  0 errors; pubnote role=journalref "DMTCS vol. 19:3, 2017, #12"; \naturals a blackboard N
+% status:  RED (65w) -> GREEN (65x)
+\documentclass[final]{dmtcs-episciences}
+\publicationdetails{19}{2017}{3}{12}{4321}
+\title{Counting}
+\begin{document}
+\maketitle
+Let $n\in\naturals$ and $z\in\integers$, $p\in\primes$.
+\end{document}

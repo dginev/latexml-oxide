@@ -1,0 +1,25 @@
+% mechanism: `\lx@add@author`'s readings of a name line (`name_line_span`, author_block/name_text.rs;
+%   OXIDIZED_DESIGN_DIVERGENCES #967) take a creator's content of fewer than three tokens, as the kernel's split hands
+%   on for an author line opened by layout (`\vspace{-2em}\hspace{-25pt}`), as no name line to read: the 106c A/B's
+%   first build indexed it and panicked (Fatal).
+% witness: 2002.03043 (neurips_2020: `\author{%⏎\vspace{-2em}⏎\hspace{-25pt}⏎Goutham Ramakrishnan\thanks{…}⏎\And
+%   \hspace{-30pt}⏎Jordan Henkel\footnotemark[1] …}`), 1307.6590; A/B r106c
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able∗Bob Baker", "Cat Cole Dan Dee"
+% engines: rust int134b: 0 errors, creators "Ann Able" (her footnote mark), "Bob Baker", "Cat Cole Dan Dee"; 106c
+%   first build: Fatal:panic:caught "index out of bounds: the len is 0 but the index is 0"
+% expect:  0 errors, 0 warnings, no Fatal; Ann Able and Bob Baker as int134b reads them
+% status:  RED (106c first build) -> GREEN (106c)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\vspace{-2em}
+\hspace{-25pt}
+Ann Able\footnotemark[1]
+Bob Baker
+\and
+Cat Cole
+Dan Dee}
+\maketitle
+Text.
+\end{document}

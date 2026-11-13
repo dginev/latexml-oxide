@@ -1,0 +1,16 @@
+% witness: zx-calculus/zx-calculus (cryptocode \pseudocode); 3x Error:undefined:\got@maxcolwd
+% oracle: pdflatex
+% engines: pdflatex
+% expect: 0 errors; ltx:equationgroup/alignment for the pseudocode flalign*
+% status:  GREEN (batch 56ae, 2026-09-06: amsmath binding initializes \maxcolumn@widths, amsmath.sty:1896)
+% mechanism: cryptocode \@pc@settowidthofalign (cryptocode.sty:462-470) runs flalign*,
+%   then reads amsmath's \maxcolumn@widths (\global\let\got@maxcolwd\maxcolumn@widths,
+%   guarded \ifmeasuring@\else). Our amsmath binding replaces amsmath.sty so the raw
+%   \let\maxcolumn@widths\@empty (amsmath.sty:1896) never runs -> \maxcolumn@widths
+%   undefined -> \got@maxcolwd \let to undefined -> \dimexpr\got@maxcolwd\relax errors.
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cryptocode}
+\begin{document}
+\[ \pseudocode{a \gets b \\ c \gets d} \]
+\end{document}

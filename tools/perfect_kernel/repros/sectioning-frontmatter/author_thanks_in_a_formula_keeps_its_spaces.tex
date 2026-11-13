@@ -1,0 +1,16 @@
+% mechanism: a note set in a formula is read in text mode, as its content is digested in the document: its words keep
+%            their spaces, and the emitter writes it from its own call
+% witness: 2407.15815 (`Tianming Wei$^{2,3}\thanks{The first two authors contributed equally}$`), 2603.20851
+%          (`Derek F. Wong$^1\thanks{Corresponding Author}$`)
+% oracle:  pdflatex: 0 errors; the footnote "The first two authors contributed equally"
+% engines: rust MV1 `=2`: the note "Thefirsttwoauthorscontributedequally" (Warning "note no argument")
+% expect:  0 errors, 0 warnings; Bob Baker's thanks note "The first two authors contributed equally", as off
+% status:  RED (MV1 =2) -> GREEN (FB2a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}\thanks{The first two authors contributed equally}$ \\ $^{1}$Univ A}
+\maketitle
+Text.
+\end{document}

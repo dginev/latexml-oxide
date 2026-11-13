@@ -1,0 +1,20 @@
+% mechanism: OmniBus's `\bibitem` (Perl OmniBus.cls.ltxml `\@ifnext@n{[\protect\citeauthoryear}…`) loads natbib for an
+%   author-year label and otherwise calls the `\bibitem` it saved: it extends the class's `\bibitem`. Loaded
+%   provide-only for a missing option, it was declined (the name exists), so natbib was autoloaded inside the first
+%   bibitem's tag ("<ltx:tags> isn't allowed in <ltx:tag>"). Marked `extends`, it installs under provide-only too.
+% witness: cond-mat9808262 (`\documentstyle[editedvolume,epsfig]{crckapb}`)
+% oracle:  pdflatex with a myjournalx.sty that loads natbib (an author-year journal option): 0 errors; "Text Able
+%   (1990)."; References with both entries
+% engines: rust 64y (OmniBus whole): 0 errors; rust 64zd before `extends`: 2 errors; perl: 0 errors, refnums
+%   "Able (1990)", "Baker (1991)"
+% expect:  0 errors; bibitems with refnum "Able (1990)" and "Baker (1991)"
+% status:  RED (64zd r1) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[myjournalx]{article}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Able}{1990}]{a} Able, A. 1990, Journal.
+\bibitem[\protect\citeauthoryear{Baker}{1991}]{b} Baker, B. 1991, Journal.
+\end{thebibliography}
+\end{document}

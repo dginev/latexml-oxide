@@ -1,0 +1,22 @@
+% mechanism: svjour3's `\institute{Ann Able \at Univ X}` names its author before `\at`; sv_support drops a piece that
+%   only repeats the queued names (`queue_reading::queued_author_name_prints`), reading the names' tokens — a name a
+%   macro holds prints no word there, so the piece stays in the affiliation. The same fact P5c reads digested for the
+%   placed contacts' surname match (`queued_author_name_keys`); this reader and `queued_author_names_spelled` still
+%   read tokens
+% witness: synthetic (P5c's "one fact, every reader" sweep)
+% oracle:  pdflatex (svjour3.cls and svglov3.clo from 1507.04774, TL 2025) 0 errors: "Ann Able · Bob Baker", the
+%          institutes "Ann Able" "Univ X", "Bob Baker" "Univ Y"
+% engines: rust P5cbase and P5c = Ann Able's affiliation "Ann Able Univ X" (the literal `\author{Ann Able …}`: "Univ X")
+% expect:  0 errors, 0 warnings; Ann Able with the affiliation "Univ X", Bob Baker with "Univ Y", as the literal names
+% status:  RED (P5cbase, P5c)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\newcommand\ann{Ann Able}
+\begin{document}
+\title{T}
+\author{\ann \and Bob Baker}
+\institute{Ann Able \at Univ X \and Bob Baker \at Univ Y}
+\maketitle
+Text.
+\end{document}

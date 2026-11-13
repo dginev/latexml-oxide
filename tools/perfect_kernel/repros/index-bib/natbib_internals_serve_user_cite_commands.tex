@@ -1,0 +1,23 @@
+% witness: 2104.01159 (2020.JoeYuan.JVST.tex:12-18: \citenum over \NAT@citexnum[][]) 2105.06268 (main.tex:135-139: \citepos over \NAT@citetp)
+% oracle: pdflatex (clean, 2 runs); engine: pdflatex
+% expect: 0 errors; both user commands give one ltx:cite each, with the bibref of its key; "AFTERWORDS survive."
+% mechanism: natbib.sty's internals (\NAT@citetp :688, \NAT@citexnum :375) were undefined in the binding, so a
+%   document's own citation commands built on them left their keys as text ("Script _ can only appear in math mode").
+%   Perl the same (natbib.sty.ltxml defines neither). Fixed: natbib_sty.rs `\NAT@citetp`/`\NAT@citexnum` select the
+%   binding's command from natbib's flags (KPE #671).
+% status:  GREEN
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\makeatletter
+\DeclareRobustCommand\citenum{\begingroup\NAT@swatrue\let\NAT@ctype\z@\NAT@parfalse\NAT@citexnum[][]}
+\DeclareRobustCommand\citepos{\begingroup\NAT@swafalse\let\NAT@ctype\z@\NAT@partrue
+  \@ifstar{\NAT@fulltrue\NAT@citetp}{\NAT@fullfalse\NAT@citetp}}
+\makeatother
+\begin{document}
+See [\citenum{gi_2004}] and \citepos{omohundro_2008} thesis.
+\begin{thebibliography}{2}
+\bibitem[Gi(2004)]{gi_2004} F. Gi, J. 1 (2004).
+\bibitem[Omohundro(2008)]{omohundro_2008} S. Omohundro, J. 2 (2008).
+\end{thebibliography}
+After the bibliography, AFTERWORDS survive.
+\end{document}

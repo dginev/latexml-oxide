@@ -1,0 +1,16 @@
+% witness: mhequ/mhequ-example (mhequ-example.tex:39-41 \begin{equ}[onelab]); minimal isolate
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (both: Error:undefined:\BAD during \eqno tag scan)
+% expect:  0 errors; one <ltx:tag> containing (1); \BAD harmless (\let executes in place)
+% status:  GREEN (batch 56ab, 2026-09-06)
+% mechanism: \eqno (TeX_Math.pool.ltxml:1230 = tex_math.rs:1790) gullet-COLLECTS the tag
+%   material via readXToken up to $$, so the \let\BAD\relax is never executed; the next
+%   readXToken expands \BAD while it is still undefined -> Error:undefined:\BAD. tex.web
+%   start_eq_no (§1145) instead DIGESTS the eqno material as an ordinary math list, so the
+%   \let runs at its position and \BAD=\relax is harmless. FIX: digest-until-retract the tag.
+\documentclass{article}
+\begin{document}
+\let\BAD\undefinedxyz
+$$ a \eqno \let\BAD\relax \BAD (1) $$
+After.
+\end{document}

@@ -1,0 +1,18 @@
+% A two-letter local part that is a word of its own entry (`ai@x.org` under "AI Lab") is the entry's mailbox and spells
+% no surname (`email_owners::is_entry_word_mailbox`): the Link chain gives it to the block. Review rev100b S3.
+% witness: (synthetic; the reviewer's p5)
+% oracle:  pdflatex 0 errors: "AI Lab, Univ X, Town", "ai@x.org"
+% engines: rust int127a = 0 errors, the address in the entry text of both; 100b r1 = ai@ to Wei Ai; perl = not run
+% expect:  0 errors, 0 warnings; Wei Ai, Bob Baker: AI Lab, Univ X, Town; the block: ai@x.org
+% status:  RED (100b r1) -> GREEN (100b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Wei Ai}
+\author[1]{Bob Baker}
+\affil[1]{AI Lab, Univ X, Town \\ ai@x.org}
+\maketitle
+Body.
+\end{document}

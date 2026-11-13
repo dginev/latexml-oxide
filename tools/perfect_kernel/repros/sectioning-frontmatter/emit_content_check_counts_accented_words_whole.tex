@@ -1,0 +1,25 @@
+% mechanism: the content check's text of a call no rehearsal read (`ledger::content_text`, `ApiCall::unread`,
+%   `Ledger::unrecorded`) parts its words as an ink's are parted (`resolver::words::printed_words`), reading catcodes and
+%   a control sequence's length only: an accent (a control symbol) or a group inside a word parts nothing, so a word with
+%   an accent is one word (spelled without it; the check takes it for the accented word a placed copy prints)
+% witness: review revRC1 finding 3 (agent_reports/2026-11-08_revRC1_report.md: "Universität München" counted as 4 words,
+%   "at M unchen Universit"); review revRC1r2 finding 1 (a dotless i: `F\'{\i}sica`, `Bras\'\i lia` counted as 4
+%   pieces, "Bras F lia sica"); the IEEEtran shape of 2401.11731
+% oracle:  pdflatex 0 errors; "∗ Universität München, Montréal, Física, Brasília 1", "† Univ Beta"
+% engines: rust =2 under `LATEXML_REHEARSAL_READ_BUDGET=20000` (RC1, b3d4ddc508): the content check's Warning counts 8
+%   pieces, "1 al at e M Montr nchen u Universit"
+% expect:  =2 under that budget: 0 errors, 2 warnings — the budget's, and the content check's 6 lost words
+%   "1 Braslia Fsica Montreal Munchen Universitat" (accents and `\i` unread); a letter command
+%   (`Gro{\ss}e`, a control word) still parts its word: a residual
+% status:  RED (RC1; RC1r2 for the dotless i) -> GREEN (perfect_kernel_batchrc1::an_unread_calls_accented_words_count_whole)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\newcommand\slow{\count255=0 \loop\ifnum\count255<3000 \advance\count255 by 1 \repeat}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}}%
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Universit\"at M{\"u}nchen, Montr\'{e}al, F\'{\i}sica, Bras\'\i lia~1\slow\\
+\IEEEauthorrefmark{2}Univ Beta}}
+\maketitle
+Text.
+\end{document}

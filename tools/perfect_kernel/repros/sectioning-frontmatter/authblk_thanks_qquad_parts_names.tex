@@ -1,0 +1,15 @@
+% mechanism: authblk's `\author` reads a whole argument as one name unless it holds a separator; the kernel's author read parts names at `\qquad`
+% witness: 2610.06709
+% oracle:  pdflatex: 0 errors; three names apart, a footnote each
+% engines: rust int139a: one creator holding the three names, then the three notes; perl (authblk.sty.ltxml:52-55, read): one creator
+% expect:  0 errors; three creators, each with its own note
+% status:  RED (int139a) -> GREEN (108a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Note one.} \qquad Bob Baker\thanks{Note two.} \qquad Cat Cole\thanks{Note three.}}
+\maketitle
+Text.
+\end{document}

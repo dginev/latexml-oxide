@@ -1,0 +1,16 @@
+% witness: mdwtools syntax.sty grammar env (syntax.sty:264-274; newcommand manual's `grammar`)
+% oracle:  pdflatex 0 errors; "[ab] text"
+% engines: rust=1 error (56gn: Missing argument Match:<) / silent `¡ab¿ text` before; perl=n/a
+% expect:  0 errors; <p>[ab] text</p>
+% status:  GREEN (batch 56go)
+% mechanism: tex.web §1090-1091 — a character in vertical mode is backed up and new_graf inserts
+%   \everypar IN FRONT of it, so the hook reads the paragraph's first token with its catcode
+%   already fixed (catcode 12 here, though \everypar makes < active). Rust digested \everypar in
+%   isolation beside the already-absorbed character (stomach.rs fire_everypar).
+\documentclass{article}
+\def\imp<#1>{[#1]}
+\begin{document}
+\catcode`\<=12
+\everypar{\everypar{}\catcode`\<\active\imp}
+<ab> text
+\end{document}

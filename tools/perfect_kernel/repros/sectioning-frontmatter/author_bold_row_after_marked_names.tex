@@ -1,0 +1,12 @@
+% witness: 2307.00040 (neurips; a bold row of symbol-marked names after marked names)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_hf2_s3_unmarked_names_line.md)
+% engines: rust 64b7 = "Bob Baker<break/>Cat Cole†, Dan Dee†" holding Univ B (RUST-ONLY: Perl leaves † a mark)
+% expect:  0 errors; 4 creators: Ann Able (Univ A); Bob Baker (Univ B); Cat Cole (bold, †); Dan Dee (bold, †) — Perl's 4 authors
+% status:  RED (64b7) -> GREEN (64d)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$,\\ \textbf{Cat Cole}$^{\dagger}$, \textbf{Dan Dee}$^{\dagger}$\\ $^{1}$Univ A \quad $^{2}$Univ B}
+\begin{document}
+\maketitle
+x
+\end{document}

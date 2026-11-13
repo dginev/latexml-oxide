@@ -1,0 +1,11 @@
+% witness: hang/hang, hang/sample (both now GREEN under b54t)
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% oracle:  lualatex 0 errors
+% engines: rust=0 perl=n/a (2026-09-03, b54t)
+% expect:  0 errors; \sys_if_engine_luatex:TF TRUE -> polyglossia \directlua branch, no
+%          \newXeTeXintercharclass. R2 already fixed by batch-54 l3sys engine identity.
+% status:  GREEN  (regression guard for the l3sys->polyglossia luatex branch)
+\documentclass{article}
+\usepackage{polyglossia}
+\setmainlanguage{latin}
+\begin{document}Salve\end{document}

@@ -1,0 +1,12 @@
+% witness: 64c review r3 finding 1 (a name whose extension no graphics rule reads, `b.v0.5_x`, beside a bare file of
+%          that name: the sizer measured the bare file; graphics.sty:212-231 appends the extensions first)
+% oracle:  pdflatex 0 errors: bare/b.v0.5_x.eps and bare/fig.eps included
+% engines: rust 64c5 = "bare/b.v0.5_x,bare/b.v0.5_x.eps" (bare first); "bare/fig.eps,bare/fig"
+% expect:  0 errors; candidates "bare/b.v0.5_x.eps,bare/b.v0.5_x" and "bare/fig.eps,bare/fig"
+% status:  RED (64c5) -> GREEN (64c)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[width=3cm]{bare/b.v0.5_x}
+\includegraphics[width=3cm]{bare/fig}
+\end{document}

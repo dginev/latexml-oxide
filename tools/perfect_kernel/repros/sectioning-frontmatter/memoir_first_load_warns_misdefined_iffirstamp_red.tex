@@ -1,0 +1,13 @@
+% witness: synthetic (SVC, the safe side of the \chapter Error boundary: memoir's chapter is pdflatex-clean)
+% oracle:  pdflatex 0 errors, "Chapter 1 Intro"; Perl 0.8.8 1 error (undefined:\memfontenc, no memoir binding)
+% engines: rust int160a1 = 0 errors, 1 warning (misdefined:\@iffirstamp "The conditional \@iffirstamp is being defined
+%          but doesn't start with \if", memoir.cls:5454 `\newif \@iffirstamp`, which TeX accepts)
+% expect:  0 errors, 0 warnings; a `chapter` "Chapter 1 Intro"
+% status:  RED (int160a1, SVC: not this batch's mechanism; pinned as memoir's one Warning by
+%          perfect_kernel_batch72b::a_second_documentclass_keeps_the_first_class_chapters)
+% preload: ar5iv.sty
+\documentclass{memoir}
+\begin{document}
+\chapter{Intro}
+Text.
+\end{document}

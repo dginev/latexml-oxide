@@ -1,0 +1,25 @@
+% `\end{X}` over a `\begingroup` opened inside X: raa.cls:322-349 `\institutename` is `\begin{flushleft}\begingroup
+% … \end{flushleft}\endgroup`. Groups are untyped between `\begingroup` and `\endgroup` (tex.web §1063-1069), so
+% `\end{flushleft}`'s `\endgroup` (latex.ltx:15384-15393) closes the class's group and the class's `\endgroup` closes
+% the environment's. Also in a minipage (a box context).
+% witness: 1404.3644 1304.5354 1508.02561 1509.00139 2004.06992 2110.11117 2306.16795 1604.05586 2003.13998
+%          2102.01352 2511.10805 (raa, raa_twocolumn)
+% oracle:  pdflatex 0 errors: "Institute words here." "Abstract words after." "Institute words here." "Boxed words
+%          after."
+% engines: rust int132a1 = 3 errors, 1 warning (`\end{flushleft} Attempt to end mode internal_vertical` ×2, the
+%          minipage never closed, every later word in the flushleft block); perl = 7 errors, 1 warning (`Attempt to end
+%          mode restricted_horizontal` ×2, Stomach.pm:544-550, then the minipage and the capture blocks)
+% expect:  0 errors, 0 warnings; each "Institute words here." its own left-aligned paragraph, the words after it a
+%          paragraph of their own, not left-aligned (inside the minipage too)
+% status:  RED (int132a1) -> GREEN (98d; guard perfect_kernel_batch98d::end_closes_a_begingroup_opened_inside_the_environment)
+% preload: ar5iv.sty
+% mechanism: stomach.rs end_environment_over_plain_groups: the innermost plain group popped, X's mode and box ended,
+%   X's frame kept as the plain group the class's \endgroup closes.
+\documentclass{article}
+\def\inst{\par\begin{flushleft}\begingroup\parindent=0pt Institute words here.\par\end{flushleft}\endgroup}
+\begin{document}
+\inst
+Abstract words after.
+
+\begin{minipage}{5cm}\inst Boxed words after.\end{minipage}
+\end{document}

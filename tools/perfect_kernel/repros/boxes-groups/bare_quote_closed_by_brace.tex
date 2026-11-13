@@ -1,0 +1,12 @@
+% witness: 2412.14057
+% oracle:  pdflatex 0 errors
+% engines: rust 1 Error:unexpected:} + 1 Warning (64ra) -> 0/0 (64y); Perl 3 Error
+% expect:  0 errors; quote holds 'Quoted words.' and 'After the quote.' follows the quote, outside it
+% status:  RED (base) -> GREEN (64y); guard perfect_kernel_batch64y::bare_quote_closed_by_brace
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Intro.
+
+{\quote Quoted words.} After the quote.
+\end{document}

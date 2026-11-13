@@ -57,6 +57,7 @@ pub mod mathml;
 pub mod open_math;
 pub mod pack;
 pub mod picture_images;
+mod postscript_fonts;
 pub mod scan;
 pub mod schema_docs;
 pub mod split;

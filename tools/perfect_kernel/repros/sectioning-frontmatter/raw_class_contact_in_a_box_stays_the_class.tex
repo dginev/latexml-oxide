@@ -1,0 +1,47 @@
+% witness: ae100prg.cls:185-188 (1303.3004: `\newcommand{\address}[1]{\begin{indented}\item[]\normalsize
+%          #1\end{indented}}`, `\def\email#1{\vspace*{5pt}\address{E-mail: #1}}`); a class's `\def\affil#1{{\small
+%          #1}\\}` in an author tabular; review rev94b r2 B3 (its probes `p/b3` fn, th, it, mp, tab, pb, fbox, quo, cen;
+%          `p/br/tabpre`)
+% oracle:  pdflatex 0 errors: "Univ A, Town", "Text before¹ the title.", the theorem "Theorem 1. Lab T, Place holds.",
+%          the item "E-mail: it@x.org", the minipage "E-mail: mp@x.org", the cells "Lab X, Place" and "Cy Cole" / "Univ
+%          C", the parbox "Lab P, Place", "Lab Q, Place" in a quote, then "A Title", "Ann Able and Bob Baker", the date,
+%          "1 Intro", "Body.", the footnote "¹E-mail: fn@x.org"
+% engines: rust 94b r2 = 0 errors, 0 warnings: every boxed line one more contact of both authors (the footnote empty,
+%          its e-mail Bob Baker's; the theorem "holds."; "Univ C" Ann Able's affiliation), its text gone from the box
+% expect:  0 errors, 0 warnings; a call inside a box, a note, a list item, a theorem, a minipage, a parbox, a quote or
+%          an alignment's cell — each binds a mode of its own — is the class's line where it stands: both authors
+%          `address=Univ A, Town` only, every boxed line in its box; eager and --streaming the same
+% status:  RED (94b r2) -> GREEN (94b r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{inplacebox.cls}
+\ProvidesClass{inplacebox}
+\LoadClass{article}
+\newenvironment{indented}{\begin{list}{}{\leftmargin=2em\itemsep=0pt}}{\end{list}}
+\newcommand{\address}[1]{\begin{indented}\item[]\normalsize #1\end{indented}}
+\def\email#1{\vspace*{5pt}\address{E-mail: #1}}
+\def\affil#1{{\small #1}\\}
+\newtheorem{thm}{Theorem}
+\end{filecontents*}
+\documentclass{inplacebox}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+\address{Univ A, Town}
+Text before\footnote{\email{fn@x.org}} the title.
+\begin{thm}\address{Lab T, Place} holds.\end{thm}
+\begin{itemize}\item \email{it@x.org}\end{itemize}
+\begin{minipage}{5cm}\email{mp@x.org}\end{minipage}
+
+\begin{tabular}{p{5cm}}\address{Lab X, Place}\end{tabular}
+
+\begin{tabular}{c}
+Cy Cole\\
+\affil{Univ C}
+\end{tabular}
+
+\parbox{5cm}{\address{Lab P, Place}}
+\begin{quote}\address{Lab Q, Place}\end{quote}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

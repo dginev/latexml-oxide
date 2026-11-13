@@ -1,0 +1,16 @@
+% witness: 1709.00485 (svjour3 `\institute{G. Wang \and H. Hijazi \at ANU ...}`: a name-only piece shares the next
+%          piece's institute; 63h A/B)
+% oracle:  pdflatex (svjour3.cls) 0 errors: "A. Able · B. Baker" over "Univ A"; "C. Cole" over "Univ B"
+% engines: rust 63g = Univ B on Carl Cole (exact name), Univ A shared, the name-only piece "A. Able" an affiliation of
+%          Carl Cole; 63h = the same, "A. Able" moved to the shared creator (still read as an affiliation)
+% expect:  Ann Able and Bob Baker Univ A, Carl Cole Univ B; no affiliation reading "A. Able"; 0 errors
+% status:  RED (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Carl Cole}
+\institute{A. Able \and B. Baker \at Univ A \and C. Cole \at Univ B}
+\date{}
+\maketitle
+Text.
+\end{document}

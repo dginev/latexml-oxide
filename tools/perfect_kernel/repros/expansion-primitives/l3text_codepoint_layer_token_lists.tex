@@ -1,0 +1,23 @@
+% witness: TL class census 2026-09-24 — letgut (letgut.cls:1049 `\text_titlecase_first:n
+%          { \g__letgut_title_tl }`: accented text held in a token list)
+% oracle:  lualatex 0 errors; [HELLO ÉLAN][Élan De Vie][σας inspé] (the Unicode engines' l3text;
+%          pdflatex agrees on the Latin text, and has no Greek glyphs in its default font)
+% engines: rust (56if routing) = [HELLO élaN][élan De Vie][ςας insp…]: the dump's 8-bit l3text
+%          reads é as a UTF-8 lead byte and takes the next tokens as continuation bytes
+%          (expl3-code.tex:35892-35925); Perl loads the same branch (KPE #243)
+% expect:  0 errors, 0 warnings; <p>[HELLO ÉLAN][Élan De Vie][σας inspé]</p>
+% status:  RED (56if routing) -> GREEN (56if: expl3's Unicode-engine codepoint layer,
+%          latex_constructs_rust_only.rs)
+\documentclass{article}
+\ExplSyntaxOn
+\tl_set:Nn \l_tmpa_tl { hello~élan }
+\tl_set:Nn \l_tmpb_tl { élan~de~vie }
+\tl_set:Nn \l_tmpc_tl { ΣΑΣ~INSPÉ }
+\tl_set:Nx \l_tmpa_tl { \text_uppercase:n { \l_tmpa_tl } }
+\tl_set:Nx \l_tmpb_tl { \text_titlecase_all:n { \l_tmpb_tl } }
+\tl_set:Nx \l_tmpc_tl { \text_lowercase:n { \l_tmpc_tl } }
+\cs_new:Npn \lxa { [\l_tmpa_tl][\l_tmpb_tl][\l_tmpc_tl] }
+\ExplSyntaxOff
+\begin{document}
+\lxa
+\end{document}

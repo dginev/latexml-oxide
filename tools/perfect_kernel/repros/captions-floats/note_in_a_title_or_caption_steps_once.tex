@@ -1,0 +1,15 @@
+% A note in a section title or a caption is one note: the toc copy of the title (`toctitle`) and of
+% the caption (`toccaption`) digests the argument again, so the note steps its counter twice and every
+% later note's number shifts (here A is 3 and B is 6 for pdflatex's 2 and 4); the caption's note also
+% appears twice. The same with endnotes.sty's and enotez's `\endnote`.
+% status:  GREEN (58n)
+% oracle:  pdflatex 0 errors: title note 1, "A2", caption note 3, "B4".
+% engines: rust 58l2: title 1 (+ a hidden copy 2), A 3, caption 4 and 5, B 6.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\section{One\protect\footnote{In title.}}
+A\footnote{After.}
+\begin{table}\caption{Cap\protect\footnote{In caption.}}\end{table}
+B\footnote{Last.}
+\end{document}

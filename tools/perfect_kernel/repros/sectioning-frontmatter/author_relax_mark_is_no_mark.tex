@@ -1,0 +1,13 @@
+% witness: the r7 re-review of batch 77p (finding 12, probe n10; int34a and 77p r10 the same)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" (the \relax mark prints nothing), Univ A under them
+% engines: rust 77p r10 = 0 errors; a creator "Bob BakerUniv A", Ann Able with no affiliation
+% expect:  0 errors, 0 warnings; Univ A on both names
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able\textsuperscript{\relax}, Bob Baker \\ Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

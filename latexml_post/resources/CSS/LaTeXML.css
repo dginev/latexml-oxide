@@ -122,6 +122,15 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_note_name,
 .ltx_contact_name {
     font-style:italic; }
+/* a letter's sender and addressee (g-brief, OXIDIZED_DESIGN_DIVERGENCES #412; witnesses g-brief/beispiel2,
+   cv/ApplicationLetter): the name, each contact block and its label on lines of their own */
+.ltx_creator.ltx_role_sender,
+.ltx_creator.ltx_role_addressee,
+.ltx_role_sender .ltx_personname,
+.ltx_role_sender .ltx_contact,
+.ltx_role_addressee .ltx_contact,
+.ltx_role_sender .ltx_contact_name,
+.ltx_role_addressee .ltx_contact_name { display:block; }
 /*======================================================================
   Para level */
 .ltx_float {
@@ -214,6 +223,7 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_align_right    { text-align:right; }
 .ltx_align_center   { text-align:center; }
 .ltx_align_justify  { text-align:justify; }
+.ltx_align_justified { text-align:justify; }
 .ltx_align_top      { vertical-align:top; }
 .ltx_align_bottom   { vertical-align:bottom; }
 .ltx_align_middle   { vertical-align:middle; }
@@ -307,6 +317,11 @@ li.ltx_item > .ltx_tag {
     text-indent:0em; }
 
 .ltx_item > .ltx_para > .ltx_p { margin-top:0em; margin-bottom:0em; }
+/* A \trivlist: latex.ltx sets \leftmargin and \labelwidth to 0, so it indents nothing at any
+   depth; its label sits at the margin, its first paragraph beside it. */
+ul.ltx_trivlist { padding-left:0; margin-left:0; }
+ul.ltx_trivlist > li.ltx_item > .ltx_tag { margin-left:0; min-width:0; text-align:left; margin-right:0.5em; }
+ul.ltx_trivlist > li.ltx_item > .ltx_tag:empty { display:none; }
 dd.ltx_item { margin-bottom:0.5em; }
 
 /* NOTE: Need to try harder to get runin appearance? */
@@ -334,6 +349,11 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
 /* Indices */
 .ltx_indexlist li { list-style-type:none;  }
 .ltx_indexlist { margin-left:1em; padding-left:1em;}
+/* Glossary sub-entries (makeglossaries' \subglossentry levels) */
+.ltx_glossarylist dt.ltx_glossary_level_1,
+.ltx_glossarylist dt.ltx_glossary_level_1 + dd { padding-left:1.5em; }
+.ltx_glossarylist dt.ltx_glossary_level_2,
+.ltx_glossarylist dt.ltx_glossary_level_2 + dd { padding-left:3em; }
 
 /* Listings */
 .ltx_listing {

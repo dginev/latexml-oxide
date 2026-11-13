@@ -1,0 +1,26 @@
+% `\halign`, `\valign` and `\noalign` find their `{` as §403 `scan_left_brace` does — expanded (a `\protected` macro
+% too), past spaces and `\relax` (tex.web §774 `init_align`: `scan_spec` then `scan_left_brace`; §785 `align_peek`:
+% `scan_left_brace` after `\noalign`). Rust took the next non-space token unexpanded, so a `\relax` before the brace,
+% or a brace reached by expansion, was taken for it: `\halign\relax{` set its preamble's `#` as a cell,
+% `\noalign\relax{` ran the rows into the text after the table. `\halign\relax{` is SHARED (Perl 0.8.8: "Missing
+% \halign box"); the `\noalign` half RUST-ONLY (batch 54 executes the material to its group's end; Perl reads a macro
+% argument). Fixed by the gullet's `read_non_blank_non_relax`/`scan_left_brace` (60g), as `\vadjust` and `\toks`
+% read it (KNOWN_PERL_ERRORS #183). Idioms it fixes: mdwtools' `\halign\expandafter\bgroup` (mathenv.sty:209, :336).
+% status:  GREEN 60j; guard perfect_kernel_batch60::alignment_brace_is_scanned
+% oracle:  pdflatex 0 errors: "juliet" / "x" rule "y" / "kilo" rule "lima" / "mike" / "november" / cell [oscar] "papa" /
+%          "Delta echo."
+% engines: rust 60g4: 33 errors
+% expect:  0 errors; every cell as the oracle, "Delta echo." its own paragraph
+\documentclass{article}
+\begin{document}
+\noindent\halign\relax{#\cr juliet\cr}
+\begin{tabular}{l}x\\\noalign\relax{\hrule}y\end{tabular}
+
+\protected\def\pb{\bgroup}\begin{tabular}{l}kilo\\\noalign\pb\hrule\egroup lima\end{tabular}
+
+\noindent\halign\expandafter{\iffalse}\fi#\cr mike\cr}
+\noindent\halign\expandafter\bgroup#\cr november\cr\egroup
+\begin{tabular}{l}\vbox{\halign\relax{#\cr oscar\cr}}\\ papa\end{tabular}
+
+Delta echo.
+\end{document}

@@ -1,0 +1,23 @@
+% witness: 2608.16854 (`\declaretheorem{corollary, lemma, proposition}[sibling=theorem]`,
+%          `\declaretheorem[style=definition]{definition, example, remark}[sibling=theorem]`: its lemmas and definitions)
+% oracle:  pdflatex 0 errors: "Theorem 1.1. T", "Lemma 1.2. L", "Corollary 1.3. C", "Definition 1.4. D",
+%          "Remark 1.5. R" — thm-kv.sty:333-348 declares each name of the list (`\@for`, spaces stripped) with the
+%          options before and after it
+% engines: rust 78k r1 = {lemma}, {corollary}, {definition}, {remark} undefined (one environment "corollary, lemma");
+%          perl = the same (one name, no trailing options)
+% expect:  0 errors, 0 warnings; the five tags as pdflatex prints them
+% status:  RED (78k r1) -> GREEN (78k r2: thmtools_sty.rs `\declaretheorem[]{}` then `[]`, one declaration per name)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thmtools}
+\declaretheorem[numberwithin=section]{theorem}
+\declaretheorem{corollary, lemma}[sibling=theorem]
+\declaretheorem[style=definition]{definition,remark}[sibling=theorem]
+\begin{document}
+\section{A}
+\begin{theorem}T\end{theorem}
+\begin{lemma}L\end{lemma}
+\begin{corollary}C\end{corollary}
+\begin{definition}D\end{definition}
+\begin{remark}R\end{remark}
+\end{document}

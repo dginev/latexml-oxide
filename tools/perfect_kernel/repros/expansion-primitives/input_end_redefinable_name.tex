@@ -1,0 +1,32 @@
+% mechanism: the name of \let, \def, \futurelet, \chardef, the \countdef family, \read and
+%   \font is tex.web §1215 get_r_token, `repeat get_token until cur_tok<>space_token`: at
+%   `normal` status it crosses the end of an input file (§362) and skips the spaces after it.
+%   Here the parent goes on with a space: `\inp{f} \w` (a macro whose body ends the file name
+%   with its own space) and `\scantokens{\let} \v`. Rust skipped the spaces before the file
+%   end only (SkipSpaces) and then read the name with `Token`: on 56jg-rel the name read
+%   stopped at the file end (\let saw nothing); with 56jj's crossing `Token` alone it took the
+%   parent's space as the name.
+% witness: batch 56jj review
+% oracle:  pdflatex 0 errors, "E [FOO]", "F [ZZ]", "G [FOO]"
+% engines: rust=3 errors (\w, \z undefined, "Expected opening '{'"), "E \w FOO[\w]",
+%          "F \z ZZ[\z]", "G FOO[]" with stray accents after it (56jg-rel, 2026-09-25)
+% expect:  0 errors, pdflatex's text
+% status:  GREEN (56jj: RedefinableToken, gullet.rs read_redefinable_token; guard
+%          token_kernel_gaps::a_definition_name_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_let_bare_in.tex}
+\let
+\end{filecontents*}
+\begin{filecontents*}{input_end_def_bare_in.tex}
+\def
+\end{filecontents*}
+\def\foo{FOO}
+\makeatletter
+\def\inp#1{\@@input #1 }
+\begin{document}
+E \inp{input_end_let_bare_in.tex} \w\foo [\w]
+
+F \inp{input_end_def_bare_in.tex} \z{ZZ}[\z]
+
+G \scantokens{\let} \v\foo [\v]
+\end{document}

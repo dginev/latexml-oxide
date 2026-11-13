@@ -1,0 +1,19 @@
+% LaTeX's \begin{X} is \begingroup\csname X\endcsname (latex.ltx:15346-15362), so an environment the document
+% declared with \newtheorem and then redefined runs the redefinition: \renewenvironment (environ's \RenewEnviron),
+% or a wrapper around the saved start (\let\@lem\lem \def\lem{\@lem\label{lem:wrapped}}).
+% pdflatex: "[START] x [END]", Lemma 1 labelled, "See 1.", 0 errors. Witnesses 2509.20478, 1502.00944.
+\documentclass{article}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lem}{Lemma}
+\renewenvironment{theorem}{[START]}{[END]}
+\makeatletter
+\let\@lem\lem
+\def\lem{\@lem\label{lem:wrapped}}
+\makeatother
+\begin{document}
+\begin{theorem} x \end{theorem}
+
+\begin{lem} Wrapped. \end{lem}
+
+See \ref{lem:wrapped}.
+\end{document}

@@ -1,0 +1,26 @@
+% LaTeX's `{abstract}` takes no optional argument, so pdflatex prints the document's `[Summary]` as the abstract's first
+% words; the kernel's `\begin{abstract}` ends in `\lx@begin@abstract[]` (Perl Base_Utility.pool.ltxml:619, our
+% frontmatter_fields.rs), which reads it from the document's text as the entry's attributes, and "Summary" is lost.
+% The title-page check's second source (title_page_check.rs `never_digested`): of a command the document writes (a
+% name without `@`) an optional argument is LaTeX's, which the title page does not print (`\author[a]`, `\email[url]`);
+% one an internal command reads from the document's text is the document's text, digested by the check, and wanted.
+% elsarticle's binding writes the frontmatter itself: no print run reads it.
+% witness: elsarticle 2104.14704 (`\begin{abstract}[Summary]{…}`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Abstract", "[Summary] Text of the
+%          abstract.", "Body."
+% engines: rust int135e = 0 errors, 0 warnings, "Summary" lost silently; perl = 0 errors, "Summary" lost
+%          (KNOWN_PERL_ERRORS "`\lx@begin@abstract[]` reads the document's `[…]` after `\begin{abstract}`")
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "summary"); the frontmatter unchanged
+% status:  RED (int135e) -> GREEN (106t)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author{Ann Able}
+\begin{abstract}[Summary]
+Text of the abstract.
+\end{abstract}
+\end{frontmatter}
+Body.
+\end{document}

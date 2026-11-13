@@ -1,0 +1,13 @@
+% witness: 63e review r8 finding 2 (a \thanks on the affiliation line under a revtex name; the article form stays a
+%          document-level pubnote, as Perl gives it — html_feedback#6888, cluster_cli title_pubnote_pollution)
+% oracle:  pdflatex 0 errors: "Ann Able / Univ A" with the footnote Grant
+% engines: rust (63e r13) = the thanks a document-level pubnote, away from the author (0 errors, silent); HEAD/Perl
+%          one creator holding the line and the note (revtex4.cls.ltxml `\author` → `\lx@add@author`)
+% expect:  1 creator — Ann Able, affiliation Univ A, the note Grant; 0 errors
+% status:  RED (63e r13) -> GREEN (63e)
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Univ A\thanks{Grant}}
+\maketitle
+\end{document}

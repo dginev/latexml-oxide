@@ -1,0 +1,20 @@
+% witness: 1611.08428 (`\begin{longtab}\begin{longtable}…\end{longtable}\end{longtab}`, aa.cls 2015)
+% oracle:  aa.cls:1430 `\Newassociation{longtab}{Longtab}{\jobname}` (answers.sty) makes {longtab} an environment
+%          that files the table and prints it at the end in one column; pdflatex with the paper's aa.cls here gives
+%          1 error (`longtable not in 1-column mode`, the answers file is not set up in this cut); the table typesets
+% engines: rust 64ze = 4 errors, 65b r2 = 6 (`\longtab{}` = Perl's DefMacro('\longtab{}','') took the `\begin` of
+%          `{longtable}` as its argument); Perl the same shape
+% expect:  0 errors, 0 warnings; one table, caption "Cap", one row a|b
+% status:  RED (65b r2) -> GREEN (65b r3); guard perfect_kernel_batch65::aa_longtab_environment_wraps_its_longtable
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\begin{longtab}
+\begin{longtable}{ll}
+\caption{Cap}\\
+\hline
+a & b \\
+\hline
+\end{longtable}
+\end{longtab}
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: IEEEtran's `\author{\aut}` with `\aut` defined only after it: at `\author` the body takes the plain route
+%   (one `\lx@add@authors` block); read again at the flush it takes the block route, the plain block taken back
+%   (ledger.rs `record_author_body_clear`) and, nameless, none of its items kept (resolver `cleared_blocks`)
+% witness: synthetic (P28m2, sibling of revP28m S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able", "Bob Baker" over "Univ A", "Univ B"
+% engines: int168a and P28m: Ann Able (Univ A, Univ B), Ann Able (Univ A twice), Bob Baker lost, 1 warning;
+%   P28m2: Ann Able (Univ A), Bob Baker (Univ B), 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able (Univ A), Bob Baker (Univ B)
+% status:  RED (int168a, P28m) -> GREEN (P28m2; guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{\aut}
+\newcommand\aut{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\and\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

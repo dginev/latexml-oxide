@@ -1,0 +1,27 @@
+% mechanism: a package's own title page (`{\emph\@affiliation}`, chetnew.sty's) whose names carry spaced marks
+%   (`A.~One\;$^{a,\star}$`) and whose affiliation line opens with `$^a$`: the names' marks and the line's mark are hidden,
+%   with no Warning (AUMK)
+% witness: 2508.08560's shape (the paper shows its name marks ⧫♠♣; this twin hides them on int165a and P4b4f alike)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A. One a,⋆ , B. Two a,†" over "a Some Dept, Some Univ"
+% engines: int165a, int166a, P4b4f: 0 errors, 0 warnings; personnames "A. One", "B. Two", the affiliation " Some Dept,
+%          Some Univ" without its `a`
+% expect:  0 errors, 0 warnings; each name its marks `a,⋆` / `a,†`, the affiliation its `a`, the e-mails their ⋆ / †
+% status:  RED (int165a, P4b4f: the marks hidden, uncounted)
+% moves:   post-merge (AUMK)
+\begin{filecontents*}[overwrite]{titleaffil.sty}
+\newcommand{\affiliation}[1]{\def\@affiliation{#1}}
+\affiliation{}
+\def\maketitle{\begin{titlepage}\begin{center}{\LARGE\@title}\par\bigskip\@author\par\bigskip{\emph\@affiliation}
+\end{center}\end{titlepage}}
+\endinput
+\end{filecontents*}
+\documentclass[12pt]{article}
+\usepackage{titleaffil}
+\begin{document}
+\title{T}
+\author{A.~One\;$^{a,\star}$, B.~Two\;$^{a,\dagger}$}
+\affiliation{$^a$ Some Dept, Some Univ\\
+{\tt \small $^\star$one@a.org, $^\dagger$two@b.org}}
+\maketitle
+x
+\end{document}

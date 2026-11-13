@@ -2,8 +2,8 @@
 //!
 //! Auto-consolidated test binary: each former file is an inline `mod`
 //! below, body preserved verbatim, merged into one link unit for CI
-//! economy. All members are subprocess- or few-conversion tests, so
-//! co-locating them in one process stays far under the RSS fuse.
+//! economy. All members are few-conversion tests, so co-locating them in
+//! one process stays far under the RSS fuse.
 
 mod cluster;
 
@@ -21,17 +21,9 @@ mod fairmeta_frontmatter {
   //! author-annotation plan (arXiv/html_feedback#1396; see
   //! `06_cluster_frontmatter::frontmatter_fairmeta_author_affiliation_1396`).
   //!
-  //! Driven through the BINARY (fresh process, one conversion) rather than the
-  //! in-process `tests/contrib` harness on purpose: loading a
-  //! `LoadClass!("OmniBus")` contrib `.cls` and then `reset_thread_engine`-ing
-  //! between files (as `can_contrib` does) reads a pre-reset `SymStr` from an
-  //! unresettable `pin!` cache and aborts — the documented one-conversion-per-
-  //! thread contract (see `latexml_core::reset_thread_engine`). A fresh process
-  //! per conversion is exactly how production (cortex_worker) runs, so it is both
-  //! faithful and safe. This is why the ~100 other contrib `.cls` bindings carry
-  //! no in-process fixture.
-
-  use std::{path::Path, process::Command};
+  //! Converted in-process, one conversion per fresh thread (`latexml::util::test::convert_with`): the `pin!` cache a
+  //! `LoadClass!("OmniBus")` contrib `.cls` reads is thread-local (arena.rs), so a fresh thread is the one-conversion
+  //! contract `latexml_core::reset_thread_engine` documents — no separate process is needed.
 
   const FAIRMETA_TEX: &str = "\\documentclass{fairmeta}\n\
     \\title{A FAIR Preprint}\n\
@@ -53,42 +45,18 @@ mod fairmeta_frontmatter {
 
   #[test]
   fn fairmeta_frontmatter_is_captured() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    let tex_path = workdir.path().join("fm.tex");
-    std::fs::write(&tex_path, FAIRMETA_TEX).expect("write fm.tex");
-
     // No --preload/--includestyles: the class's tcolorbox[most] raw-loads its
     // library files (and their pgf dependencies) itself — that raw read turns
     // INCLUDE_STYLES on locally, and the hardened load guard (a deferred miss no
     // longer poisons a later load) lets pgfcore load in the nicematrix→tcolorbox
     // require order. Matches pdflatex; no ar5iv config needed.
-    let output = Command::new(bin)
-      .arg("fm.tex")
-      .arg("--dest")
-      .arg("fm.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
-
     // The conversion must be error-clean: the whole point is that the custom
     // frontmatter commands are DEFINED (were Error:undefined before the binding).
+    let (stderr, xml) = latexml::util::test::convert_with(FAIRMETA_TEX, None);
     assert!(
       !stderr.contains("Error:") && !stderr.contains("Fatal:"),
       "expected an error-clean conversion, stderr had errors:\n{stderr}",
     );
-
-    let xml = std::fs::read_to_string(workdir.path().join("fm.xml")).expect("read fm.xml");
 
     // Both authors survive as document creators (the class accumulates authors;
     // \lx@add@author must NOT collapse to the last one).
@@ -154,15 +122,12 @@ mod selfevolagent_frontmatter {
   //!
   //! selfevolagent.cls is a near-identical sibling of fairmeta.cls — the same
   //! class-body `\addtolist`-based frontmatter interface, `Error:undefined`
-  //! without a binding (an unknown `.cls` body is not raw-loaded). See
-  //! `92_fairmeta_frontmatter.rs` for why this is driven through the binary rather
-  //! than the in-process `tests/contrib` harness.
+  //! without a binding (an unknown `.cls` body is not raw-loaded). Converted in-process as
+  //! `fairmeta_frontmatter` explains.
   //!
   //! (The full paper 2508.07407 also hits an unrelated box-loop `Stomach:Recursion`
   //! in its `paradigms.tex` content — a separate, paper-specific issue outside the
   //! frontmatter binding's scope.)
-
-  use std::{path::Path, process::Command};
 
   const TEX: &str = "\\documentclass{selfevolagent}\n\
     \\title{Self-Evolving Agents: A Survey}\n\
@@ -184,33 +149,11 @@ mod selfevolagent_frontmatter {
 
   #[test]
   fn selfevolagent_frontmatter_is_captured() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("s.tex"), TEX).expect("write s.tex");
-
-    let output = Command::new(bin)
-      .arg("s.tex")
-      .arg("--dest")
-      .arg("s.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
+    let (stderr, xml) = latexml::util::test::convert_with(TEX, None);
     assert!(
       !stderr.contains("Error:") && !stderr.contains("Fatal:"),
       "expected an error-clean conversion, stderr had errors:\n{stderr}",
     );
-
-    let xml = std::fs::read_to_string(workdir.path().join("s.xml")).expect("read s.xml");
     for author in ["Ana Lee", "Bo Chen"] {
       assert!(xml.contains(author), "author {author} missing:\n{xml}");
     }
@@ -261,9 +204,7 @@ mod openmoss_frontmatter {
   //! class-body `\addtolist` frontmatter plus an `openmossblue` colour used by the
   //! paper's `\textcolor{openmossblue}` / `\openmossblue{…}`. Without a binding the
   //! commands and colour are `Error:undefined` (an unknown `.cls` body is not
-  //! raw-loaded). See `92_fairmeta_frontmatter.rs` for why this is binary-driven.
-
-  use std::{path::Path, process::Command};
+  //! raw-loaded). Converted in-process as `fairmeta_frontmatter` explains.
 
   const TEX: &str = "\\documentclass{openmoss}\n\
     \\title{World Action Models}\n\
@@ -283,33 +224,11 @@ mod openmoss_frontmatter {
 
   #[test]
   fn openmoss_frontmatter_and_colors() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("o.tex"), TEX).expect("write o.tex");
-
-    let output = Command::new(bin)
-      .arg("o.tex")
-      .arg("--dest")
-      .arg("o.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
+    let (stderr, xml) = latexml::util::test::convert_with(TEX, None);
     assert!(
       !stderr.contains("Error:") && !stderr.contains("Fatal:"),
       "expected an error-clean conversion, stderr had errors:\n{stderr}",
     );
-
-    let xml = std::fs::read_to_string(workdir.path().join("o.xml")).expect("read o.xml");
     assert!(xml.contains("Ann Poe"), "author missing:\n{xml}");
     assert!(
       xml.contains("role=\"affiliation\"") && xml.contains("OpenMOSS"),
@@ -347,9 +266,7 @@ mod agujournal_acronyms {
   //! `{sidewaystable}` from `\RequirePackage{rotating}`. Without the binding
   //! covering these, `\acro`/`{acronyms}`/`{notation}`/`{sidewaystable}` were
   //! `Error:undefined` and the sideways `\caption` leaked ("outside any known
-  //! float"). Binary-driven (`LoadClass!("OmniBus")`; see 92_fairmeta_frontmatter).
-
-  use std::{path::Path, process::Command};
+  //! float").
 
   const TEX: &str = "\\documentclass{agujournal2019}\n\
     \\begin{document}\n\
@@ -370,33 +287,11 @@ mod agujournal_acronyms {
 
   #[test]
   fn agujournal_acronyms_notation_and_sideways() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
-
-    let output = Command::new(bin)
-      .arg("a.tex")
-      .arg("--dest")
-      .arg("a.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
+    let (stderr, xml) = latexml::util::test::convert_with(TEX, None);
     assert!(
       !stderr.contains("Error:") && !stderr.contains("Fatal:"),
       "expected an error-clean conversion, stderr had errors:\n{stderr}",
     );
-
-    let xml = std::fs::read_to_string(workdir.path().join("a.xml")).expect("read a.xml");
     // {acronyms}/{notation} render as description lists carrying their items.
     assert!(
       xml.matches("<description").count() >= 2,
@@ -422,10 +317,7 @@ mod scrartcl_titlehead {
   //! Neither Perl nor upstream LaTeXML binds `\titlehead` (no scrartcl.cls.ltxml),
   //! so both errored + dropped the banner; this is a surpass-Perl content
   //! recovery, a sibling of the existing `\subject`/`\publishers` frontmatter
-  //! notes in `scrartcl_cls.rs`. Binary-driven because scrartcl `LoadClass!`es
-  //! OmniBus (see `92_fairmeta_frontmatter` for why in-process aborts).
-
-  use std::{path::Path, process::Command};
+  //! notes in `scrartcl_cls.rs`.
 
   const TEX: &str = "\\documentclass{scrartcl}\n\
     \\newcommand\\giturl{github.com/example/repo}\n\
@@ -440,33 +332,11 @@ mod scrartcl_titlehead {
 
   #[test]
   fn scrartcl_titlehead_captured() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("s.tex"), TEX).expect("write s.tex");
-
-    let output = Command::new(bin)
-      .arg("s.tex")
-      .arg("--dest")
-      .arg("s.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
+    let (stderr, xml) = latexml::util::test::convert_with(TEX, None);
     assert!(
       !stderr.contains("Error:") && !stderr.contains("Fatal:"),
-      "expected an error-clean conversion (no \\titlehead undefined), stderr:\n{stderr}",
+      "expected an error-clean conversion, stderr had errors:\n{stderr}",
     );
-
-    let xml = std::fs::read_to_string(workdir.path().join("s.xml")).expect("read s.xml");
     assert!(
       xml.contains("role=\"titlehead\""),
       "expected a role=titlehead frontmatter note:\n{xml}"
@@ -596,10 +466,7 @@ mod omnibus_orcid_running_heads {
   //! running heads are presentational. We capture the ORCID (surpass-Perl,
   //! like `scrartcl`'s `\titlehead`) and no-op the running heads. `\orcid`
   //! appears both as `\orcid{id}` (pasj02, 2606.00213) and `\orcid[name]{id}`
-  //! (aas-style), so the binding accepts the leading optional. Binary-driven
-  //! because an unknown `.cls` `LoadClass!`es OmniBus (see 92_fairmeta_frontmatter).
-
-  use std::{path::Path, process::Command};
+  //! (aas-style), so the binding accepts the leading optional.
 
   const TEX: &str = "\\documentclass{someunknownjournal}\n\
     \\lefttitle{Left Running Head}\n\
@@ -614,34 +481,12 @@ mod omnibus_orcid_running_heads {
 
   #[test]
   fn omnibus_captures_orcid_and_drops_running_heads() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
-
-    let output = Command::new(bin)
-      .arg("a.tex")
-      .arg("--dest")
-      .arg("a.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
     // \orcid / \lefttitle / \righttitle must no longer be undefined-errors.
+    let (stderr, xml) = latexml::util::test::convert_with(TEX, None);
     assert!(
       !stderr.contains("Error:") && !stderr.contains("Fatal:"),
       "expected an error-clean conversion, stderr had errors:\n{stderr}",
     );
-
-    let xml = std::fs::read_to_string(workdir.path().join("a.xml")).expect("read a.xml");
     // The ORCID is captured as a real frontmatter contact, not dropped.
     assert!(
       xml.contains("role=\"orcid\"") && xml.contains("orcid.org/0000-0002-2709-7338"),

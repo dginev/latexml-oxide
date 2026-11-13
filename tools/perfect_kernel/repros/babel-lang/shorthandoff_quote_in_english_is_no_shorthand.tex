@@ -1,0 +1,15 @@
+% mechanism: in an English document `"` is no shorthand, so babel's `\shorthandoff{"}` is its "not a shorthand" error
+%   (babel.def:1558, errbabel.def:93-97). babel_sty.rs `report_not_a_shorthand` judges only characters that are neither
+%   active nor of catcode 12 (a catcode-12 character may be a shorthand some language binding deactivated), so `"` passes
+%   silently. Reporting it needs the active languages' shorthand sets.
+% witness: review of 64zf (babel probe)
+% oracle:  pdflatex 1 error (I can't switch '"' on or off--not a shorthand), "A B."
+% engines: rust 64zf = 0 errors; Perl (raw babel) = 1 error
+% expect:  1 error; "A B."
+% status:  RED (64zf review: under-report)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[english]{babel}
+\begin{document}
+A \shorthandoff{"} B.
+\end{document}

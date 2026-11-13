@@ -1,0 +1,17 @@
+% witness: 2609.14733, 2609.03698 (cas-sc, `\small` after `\maketitle`): an email contact whose address sits in an
+%          element of its own (the font wrapper of RED sectioning-frontmatter/frontmatter_digested_in_body_font) got
+%          the HTML link `mailto:` alone, as the stylesheet took the contact's first text node
+%          (LaTeXML-structure-xhtml.xsl, Perl's the same)
+% oracle:  pdflatex 0 errors; the address
+% engines: rust 63t4 = `<a href="mailto:">`
+% expect:  0 errors, 0 warnings; the HTML link `mailto:ab@x.org`
+% status:  RED (63t4) -> GREEN (63t5)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{A. B}
+\ead{ab@x.org}
+\end{frontmatter}
+\small Body.
+\end{document}

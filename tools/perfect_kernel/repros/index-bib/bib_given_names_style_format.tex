@@ -1,0 +1,28 @@
+% A biblatex style's own choice of given-name form: the defaults its .bbx sets, and the name
+% format its bibliography prints. Shared .bib: bib_given_names.bib. The guard also runs
+% style=ieee-alphabetic, style=apa and style=biblatex-cse, and a self-contained case without a
+% style file: `\usepackage[giveninits]{biblatex}` with a document-level `\DeclareNameFormat{author}`
+% that prints `\namepartgiven` (pdflatex + biber: "Castro, Adam-Troy and Morrison, Toni").
+% - ieee is a native style, whose .bbx the binding does not load; its top-level
+%   `\ExecuteBibliographyOptions{giveninits, ...}` (ieee.bbx:26-34) still applies, and so does
+%   ieee's through ieee-alphabetic.bbx:13 `\RequireBibliographyStyle{ieee}`.
+% - apa aliases `default` to its `apaauthor` format (apa.bbx:611-631), which prints
+%   `\namepartgiveni` without testing `\ifgiveninits`.
+% - biblatex-cse sets `giveninits` (biblatex-cse.bbx:37), but its `author` format prints
+%   `\namepartgiven` (:61-68).
+% witness: biblatex-apa/biblatex-apa-test (P3 witness; initials before round 12)
+% oracle:  pdflatex + biber: ieee "A.-T. Castro and T. Morrison, With Unclean Hands. Pub, 2003.";
+%          ieee-alphabetic "[CM03] A.-T. Castro and T. Morrison, …"; apa "Castro, A.-T., &
+%          Morrison, T. (2003). With unclean hands. Pub."; biblatex-cse "Castro, Adam-Troy and
+%          Morrison, Toni. 2003. With unclean hands. Pub."
+% engines: rust (P2) = "Adam-Troy Castro and Toni Morrison" for ieee, ieee-alphabetic and apa,
+%          "A. Castro and T. Morrison" for biblatex-cse; perl has no biblatex binding
+% expect:  0 errors; initials for ieee, ieee-alphabetic and apa, full names for biblatex-cse (HTML)
+% status:  RED (P2/P3) -> GREEN (P2/P3 review)
+\documentclass{article}
+\usepackage[style=ieee]{biblatex}
+\addbibresource{bib_given_names.bib}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}

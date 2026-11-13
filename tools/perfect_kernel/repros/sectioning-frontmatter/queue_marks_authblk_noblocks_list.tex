@@ -1,0 +1,17 @@
+% mechanism: the twin of `queue_marks_flexisym_authblk_noblocks_list` without flexisym: the queue's marks query (Option C
+%   F0/P4a) reading `$^1$` and `$^{2,3}$` as marks, authblk's one `\author` list split at its `\qquad`s
+% witness: 2312.00656's shape (CL162 probe), synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One1 Bob Two2,3 Cy Three1 / 1First Univ 2Second Univ 3Third Univ"
+% engines: int161a, int162a and FMK1 alike: the creators below
+% expect:  0 errors, 0 warnings; Ann One 1 (none) / Bob Two 2,3 (²Second Univ, ³Third Univ: each mark shown, P4c, P4b2b) / Cy Three (none; its authblk-generated 1 RED authblk_labelled_marks_dropped_red) / a
+%   nameless creator (First Univ) — wrong in two places: RED `authblk_noblocks_trailing_note_list_red`
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{article}
+\usepackage[noblocks]{authblk}
+\title{T}
+\author{Ann One$^1$ \qquad Bob Two$^{2,3}$ \qquad Cy Three}
+\affil{First Univ \qquad $^2$Second Univ \qquad $^3$Third Univ}
+\begin{document}
+\maketitle
+Text.
+\end{document}

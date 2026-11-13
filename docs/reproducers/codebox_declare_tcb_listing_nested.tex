@@ -1,0 +1,18 @@
+% Minimal reproducer for tcolorbox listings nested in outer environments
+% (witnessed in codebox.sty:318-351 / codebox-doc-en.tex).
+% LaTeX \lstnewenvironment defines \begin{env}, bare \env, and \endenv.
+% When called from an outer environment, the listing raw-line reader must
+% recognize \end{outer} and unread it for the outer environment closer.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings,xparse}
+\DeclareTCBListing{mycodeaux}{m}{title={Title #1}}
+\NewDocumentEnvironment{mycode}{O{} m}
+  {\mycodeaux{#2}}
+  {\endmycodeaux}
+\begin{document}
+\begin{mycode}{My Title}
+#include <stdio.h>
+int main() { return 0; }
+\end{mycode}
+\end{document}

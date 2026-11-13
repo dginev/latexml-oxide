@@ -1,0 +1,16 @@
+% witness: 1808.09829 (llncs: `\inst{1,\thanks{Corresponding Author: mdmostafakamal.sarker@urv.cat}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Bell2,⋆, and Cat Cole2,⋆⋆", the institutes, the two notes at the foot
+%          (llncs.cls:894 `\def\inst#1{\unskip$^{#1}$}`)
+% engines: rust int126a = Bob Bell without his note; Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; each note on the author it is printed on, each author with the institute of the number
+% status:  RED (int126a) -> GREEN (98b) — perfect_kernel_batch98b::thanks_inside_inst_is_the_authors_note
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1} \and Bob Bell\inst{2,\thanks{Corresponding author: bob@y.edu}} \and Cat
+Cole\inst{2}\fnmsep\thanks{Supported by Z.}}
+\institute{University of X \and University of Y}
+\maketitle
+Text.
+\end{document}

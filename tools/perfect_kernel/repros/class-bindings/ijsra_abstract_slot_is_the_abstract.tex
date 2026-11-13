@@ -1,0 +1,28 @@
+% ijsra.cls keeps its frontmatter in `\def` slots: the document's `\def\abstract{…}` (free of the kernel's lock under this
+% class's binding), which `\IJSRAopening` prints in `{IJSRAabstract}`, its keywords line first (ijsra.cls:417, :475-479). That
+% environment is the kernel's `{abstract}` here, also a document's own second one (ijsra.tex:410).
+% witness: ijsra/ijsra (sweep #150: 1 error, the abstract lost; #149: recall 98.7 %, lost silently).
+% oracle:  lualatex (TL 2025; the class loads fontspec) 0 errors: Printed abstract words., Keywords: one, two; the French pair.
+% engines: perl 3 errors, the text lost (lock on `\abstract`, pool:1136). int140a: 1 error `\endlx@list`.
+% expect:  0 errors; two `<abstract>` holding their words, two `<keywords>` with their names.
+\documentclass{ijsra}
+\def\IJSRAidentifier{\currfilebase}
+\def\authorone{Ann Author}
+\def\maintitle{Main Title}
+\def\shorttitle{\maintitle}
+\def\abstract{Printed abstract words.}
+\def\affilone{Some Place}
+\def\cmail{ann@example.org}
+\def\keywords{one, two}
+\IJSRAopening
+Body text.
+
+\def\keywordname{Mots cles}
+\def\keywords{trois, quatre}
+\foreignlanguage{french}{%
+\begin{IJSRAabstract}
+Mots en francais.
+\end{IJSRAabstract}
+}
+\end{refsection}
+\end{document}

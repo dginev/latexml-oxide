@@ -1,0 +1,18 @@
+% witness: hep-ph9809222 (revtex 3, `\address{{$^1$Moscow … Russia\break $^2$Nuclear Science Division, … \break $^3$…}\break}`:
+%          TL 2025 has no revtex.cls, a harness limit; this is its article twin)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2" over "1 Univ A, Town2 Univ B, City" (the `\break` in the title's
+%          tabular cell sets no line; the marks print)
+% engines: rust 97b = one affiliation "Univ A, Town2Univ B, City" of Ann (the line's cut); 97c's first build read the `2`
+%          as a digit inside a word (`NLP$^2$CT`), the two entries one, and hep-ph9809222's three addresses became one of
+%          every author; Perl not run (the same Base_Utility `\lx@add@authors` line)
+% expect:  0 errors 0 warnings; Ann Able holds "Univ A, Town", Bob Baker "Univ B, City"
+% status:  RED (97b, 97c first build) -> GREEN (97c)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ {$^{1}$Univ A, Town\break
+$^{2}$Univ B, City}}
+\date{}
+\maketitle
+Text.
+\end{document}

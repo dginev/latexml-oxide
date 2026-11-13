@@ -1,0 +1,20 @@
+% witness: storecmd/storecmd-guide (lines 47, 49, 100, 115: `\hx{\def}` with the class amltxdoc
+%   absent, so \hx is undefined and \def names `}` or `,`): 4 "Missing control sequence
+%   inserted" under W17's §1215 check
+% oracle:  pdflatex 6 errors (per \hx{\def}: "Undefined control sequence", "Missing control
+%   sequence inserted", "Missing { inserted"); "A like TEX's while the other one.",
+%   "B as in , and so on." (and "\end occurred inside a group at level 2")
+% engines: rust W17 2 errors, "A like TeX's \hx , and so on." — "while the other one." and
+%          "B as in" lost; 56jm-rel and Perl 1 error, the same loss (2026-09-25)
+% expect:  6 errors; pdflatex's two paragraphs
+% status:  RED (kernel root, latexml_engine UntilBrace / DefPlain; SHARED with Perl)
+% mechanism: after get_r_token puts the `}` back and names \inaccessible, \def scans its
+%   parameter text (tex.web §473-§475 scan_toks): a `}` there is "Missing { inserted" and the
+%   definition ends with an empty body, the `}` consumed (align_state compensated). Rust's
+%   UntilBrace reads on to the next `{`, swallowing text and the second \def.
+\documentclass{article}
+\begin{document}
+A like \TeX's \hx{\def} while the other one.
+
+B as in \hx{\def}, and so on.
+\end{document}

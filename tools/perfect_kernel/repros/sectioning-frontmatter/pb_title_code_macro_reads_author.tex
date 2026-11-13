@@ -1,0 +1,19 @@
+% mechanism: the title code's definitions in force for the author content (OD #983's exclusion,
+%   `title_code_author_definitions`): a macro the title code defines that reads `\@author` reads it where it is used
+% witness: aaai2026.sty:73 `\def\theauthors{\if T\showauthors@on\@author…}` used at :98 inside the `\sbox{\titlearea}`
+%   group defining `\coo`: 2508.00545, 2508.04047, 2508.04749, 2508.05996, 2508.08170 (scratch_PC2 c1)
+% oracle:  pdflatex 0 errors: "Ann Able†", "Bob Baker"
+% engines: rust int155a0: Error:undefined:\coo, `<ERROR>\coo</ERROR>` in Ann's name; perl 1 error (scratch_PC2 c1.perl; KNOWN_PERL_ERRORS #1219)
+% expect:  0 errors, 0 warnings; Ann Able with her † mark, Bob Baker
+% status:  RED (int155a0) -> GREEN (perfect_kernel_batchpb::a_title_code_macro_reading_the_author_defines_its_marks)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\def\theauthors{\@author}%
+  {\def\coo{\textsuperscript{\dag}}\begin{tabular}[t]{c}\theauthors\end{tabular}}}
+\makeatother
+\title{T}
+\author{Ann Able\coo{} \and Bob Baker}
+\begin{document}
+\maketitle
+Body.
+\end{document}

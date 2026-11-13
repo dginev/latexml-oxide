@@ -1,0 +1,26 @@
+% witness: arXiv 2605.00743 (\begin{procedure}[hb]\caption{SetMiniDisk($\mathcal S, \mathcal R$)}),
+%          2605.06384 (\begin{function}\caption{SeqRecEval(${X_\mathrm{init}, A, B}$)})
+% oracle:  pdflatex: "Procedure SetMiniDisk(S, R)" caption, unnumbered; \ref gives the name
+% engines: rust (56ht) = Fatal:Mouth:EoF "File ended while scanning use of a Until:[ argument";
+%          Perl: 14 errors, the caption lost and the listing flattened into text
+% expect:  0 errors; captions "Procedure SetMiniDisk(S, R)" / "Function Empty"; refnum = the name;
+%          \SetMiniDisk declared as a function keyword; the label on the float
+% status:  RED (56ht) -> GREEN (56hu, OXIDIZED_DESIGN #279)
+% mechanism: raw {procedure} opens algocf@algorithm, whose \algocf@setcaption lets \@caption be
+%   \algocf@caption@proc#1[#2]#3 (algorithm2e.sty:2402, :2436) — LaTeX's \@dblarg convention; our
+%   \caption passes no [short], so the [ scan ran to EOF. The binding now defines the
+%   procedure/function envs like {algorithm}, with algorithm2e's procedure caption.
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}\caption{Main}\KwData{y}\end{algorithm}
+\begin{procedure}[hb]
+\caption{SetMiniDisk(S, R)}\label{p:a}
+\KwData{x}
+\end{procedure}
+\begin{function}
+\caption{Empty()}
+\Return{1}
+\end{function}
+We call \SetMiniDisk{a} in Procedure~\ref{p:a}.
+\end{document}

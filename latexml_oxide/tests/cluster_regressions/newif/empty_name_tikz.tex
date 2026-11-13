@@ -1,0 +1,9 @@
+\documentclass{article}
+% `\newif\if西暦` (jsarticle.cls:1927): the kanji is catcode OTHER, so the
+% conditional named is the bare `\if`, which `\newif` lets to `\iffalse`
+% (Perl Package.pm:1220). The tikz load that follows is `\if`-heavy.
+\newif\if
+\usepackage{tikz}
+\begin{document}
+\tikz\draw(0,0)--(1,1);
+\end{document}

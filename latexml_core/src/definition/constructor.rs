@@ -72,6 +72,45 @@ pub fn child_span(d: &Digested) -> Option<Locator> {
   }
 }
 
+/// The TeX group an environment's begin code leaves open for its end code, in tex.web's group codes (§269):
+/// none (`\trivlist`, `\list`: the bare `\X` opens no group at all), a `semi_simple_group` (`\begingroup`, or a
+/// nested `\begin`: setspace's `spacing`, lscape's `landscape`, `multicols`, beamer's blocks), or a box group (a
+/// `\vbox\bgroup`/`\hbox\bgroup`/`\color@hbox`: a float's `\@xfloat`, latex.ltx:17421-17479; `\minipage`, :16310).
+/// §1063 `end_group` against a `semi_simple_group` just unsaves; against a box group it is `off_save`'s "Missing }
+/// inserted" (§1064). `}` against a `semi_simple_group` is §1069 `extra_right_brace` ("Extra }, or forgotten
+/// \endgroup"); against a box group §1068 packages the box, with no error there, and TeX reports the mismatch later.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TexGroup {
+  /// no group of its own
+  #[default]
+  None,
+  /// a `\begingroup` (`semi_simple_group`)
+  SemiSimple,
+  /// a box or colour group
+  Box,
+}
+
+impl TexGroup {
+  /// The name stored on the environment's frame (`lx@env@tex@group`) and in a binding's run-time override.
+  pub fn as_str(self) -> &'static str {
+    match self {
+      TexGroup::None => "none",
+      TexGroup::SemiSimple => "semi_simple",
+      TexGroup::Box => "box",
+    }
+  }
+
+  /// The kind named by [`TexGroup::as_str`]; `None` for anything else.
+  pub fn from_name(name: &str) -> Option<TexGroup> {
+    match name {
+      "none" => Some(TexGroup::None),
+      "semi_simple" => Some(TexGroup::SemiSimple),
+      "box" => Some(TexGroup::Box),
+      _ => None,
+    }
+  }
+}
+
 /// configuration for creating a new Constructor
 #[derive(Clone)]
 pub struct ConstructorOptions {
@@ -106,6 +145,10 @@ pub struct ConstructorOptions {
   pub properties:         PropertiesClosure,
   /// should it capture the body as `#body` (default: false)
   pub capture_body:       bool,
+  /// environment-specific: the TeX group the LaTeX source's begin code leaves open for its end code
+  /// ([`TexGroup`]), which decides whether a plain closer of an enclosing group meeting the environment is a TeX
+  /// error (stomach.rs `close_environment_frame`)
+  pub tex_group:          TexGroup,
   /// specify a font to use, or instructions how to compute which font to use
   pub font:               Option<FontDirective>,
   /// custom code to run as digestion begins
@@ -124,6 +167,10 @@ pub struct ConstructorOptions {
   pub locked:             bool,
   /// alternative (command sequence) name, used for reversion
   pub alias:              Option<String>,
+  /// The constructor is TeX's `\halign` primitive or a binding's stand-in for it ([`Constructor::halign_primitive`]).
+  pub halign_primitive:   bool,
+  /// The XML template its replacement was compiled from, when it is a literal one ([`Constructor::template`]).
+  pub template:           Option<&'static str>,
 }
 impl Default for ConstructorOptions {
   fn default() -> Self {
@@ -142,6 +189,7 @@ impl Default for ConstructorOptions {
       forbid_math:        false,
       properties:         Rc::new(|_whatsit| Ok(SymHashMap::default())),
       capture_body:       false,
+      tex_group:          TexGroup::None,
       font:               None,
       after_digest_begin: vec![],
       before_digest_end:  vec![],
@@ -152,6 +200,8 @@ impl Default for ConstructorOptions {
       alias:              None,
       reversion:          None,
       sizer:              None,
+      halign_primitive:   false,
+      template:           None,
     }
   }
 }
@@ -200,10 +250,24 @@ pub struct Constructor {
   pub after_digest_body: Vec<DigestionClosure>,
   pub reversion:         Option<Reversion>,
   pub alias:             Option<String>,
+  pub origin:            crate::definition::origin::DefinitionOrigin,
+  /// The mode options `def_constructor` compiled into `before_digest` (K13).
+  pub declared_mode:     Option<crate::definition::DeclaredMode>,
+  /// The `font` option `def_constructor` compiled into `before_digest` ([`Definition::declared_font`]).
+  pub font:              Option<FontDirective>,
+  /// TeX's `\halign` primitive (tex_tables.rs) or a binding's stand-in that takes its place (pgfsys-latexml's SVG
+  /// matrix `\lxSVG@halign`): what a document's `\halign` macro ends with when it is run before an alignment the
+  /// bindings build (latexml_engine tex_tables.rs `run_halign_redefinition_prelude`), under whatever name it was saved.
+  pub halign_primitive:  bool,
+  /// The XML template its replacement was compiled from, when it is a literal one (`DefConstructor!` with a string
+  /// replacement); none for a closure replacement or a constructor made at run time. Read by
+  /// [`Definition::replacement_template`].
+  pub template:          Option<&'static str>,
 }
 impl Default for Constructor {
   fn default() -> Self {
     Constructor {
+      origin:            crate::definition::origin::current_origin(),
       cs:                T_CS!("Constructor"),
       nargs:             None,
       paramlist:         None,
@@ -218,6 +282,10 @@ impl Default for Constructor {
       reversion:         None,
       alias:             None,
       sizer:             None,
+      declared_mode:     None,
+      font:              None,
+      halign_primitive:  false,
+      template:          None,
     }
   }
 }
@@ -309,7 +377,19 @@ impl Constructor {
     // let tracing = state!().lookup_value("tracingcommands");
     // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
+    // Where a declared `enter_horizontal` leaves TeX: in a paragraph (unrestricted horizontal
+    // mode) when met in vertical mode, which begins one (tex.web §1091 `new_graf`), or inside a
+    // paragraph already; in a restricted box or math it is a no-op (arXiv 2605.20645's
+    // `\rotatebox{90}{\parbox…}`). A box that is paragraph material may need to open that
+    // paragraph in the document (`insert_block_in_paragraph`, latexml_engine).
+    let in_paragraph = self.declared_mode.is_some_and(|mode| mode.enter_horizontal) && {
+      let mode = lookup_string_from_sym(crate::pin!("MODE"));
+      mode.ends_with("vertical") || mode == "horizontal"
+    };
     let mut result = self.execute_before_digest()?;
+    // After the `before` code: `\lx@finalize@document`'s is what ends the document (1611.05714: an
+    // itemize left open by a `\description` used as a command).
+    let ends_before = crate::stomach::ends_inside_groups();
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
@@ -317,9 +397,12 @@ impl Constructor {
     let ismath = lookup_bool_sym(crate::pin!("IN_MATH"));
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
+    // (and the tokens its length arguments state, where they are kept: `parameter::KEEP_STATED_LENGTHS`)
+    let mut stated: Vec<(usize, Tokens)> = Vec::new();
+    let mut withheld = false;
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       None => Vec::new(),
-      Some(params) => params.read_arguments_and_digest(self)?,
+      Some(params) => params.read_arguments_and_digest(self, &mut stated, &mut withheld)?,
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
@@ -353,6 +436,37 @@ impl Constructor {
         &mode
       }))
     });
+    if in_paragraph {
+      properties.insert("in_paragraph", Stored::Bool(true));
+    }
+    if !stated.is_empty() {
+      let mut lengths: std::collections::VecDeque<Stored> = std::iter::repeat_with(|| Stored::None)
+        .take(args.len())
+        .collect();
+      for (index, tokens) in stated {
+        if let Some(slot) = lengths.get_mut(index) {
+          *slot = Stored::Tokens(tokens);
+        }
+      }
+      properties.insert(
+        crate::parameter::STATED_LENGTHS,
+        Stored::VecDequeStored(lengths),
+      );
+    }
+    if withheld {
+      properties.insert(
+        crate::parameter::STATED_LENGTHS_WITHHELD,
+        Stored::Bool(true),
+      );
+    }
+    // A TeX box's constructor outside math (a declared `restricted_horizontal`): the element it opens is marked for a
+    // frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
+    if self.declared_mode.is_some_and(|mode| mode.restricted_box)
+      && !ismath
+      && crate::document::field_box_marks_live()
+    {
+      properties.insert(crate::document::FIELD_BOX_PROPERTY, Stored::Bool(true));
+    }
     // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
@@ -391,6 +505,32 @@ impl Constructor {
     let mut post = self.execute_after_digest(&mut whatsit)?;
 
     if self.capture_body {
+      // tex.web §679 `append_to_vlist`: a vertical body's interline glue follows the `\baselineskip`, `\lineskip`
+      // and `\lineskiplimit` in force inside it. The body is measured after its group closed, where an enclosing
+      // `\@array`'s zero values reign (a minipage's stacked lines lost their `\lineskip` in a table cell, arXiv
+      // 2605.19065), so they are read here, when the body opens, after its begin code (`\@parboxrestore` for a
+      // minipage). Unlike the box reader, which reads them at the box's end (base_utilities.rs
+      // `predigest_list_in_mode`), a change inside the body (`\small`, `\offinterlineskip`) is not seen: RED
+      // kernel-alignment/captured_body_interline_changed_inside. DIVERGENCES #421. Repro
+      // kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.
+      use crate::common::numeric_ops::NumericOps;
+      // the body's own mode, in force now (the whatsit's `mode` property is the mode it was invoked in)
+      let interline: Vec<(&str, crate::Dimension)> =
+        if lookup_string_from_sym(crate::pin!("MODE")).ends_with("vertical") {
+          [
+            ("baseline", "\\baselineskip"),
+            ("lineskip", "\\lineskip"),
+            ("lineskiplimit", "\\lineskiplimit"),
+          ]
+          .into_iter()
+          .filter_map(|(key, register)| {
+            lookup_register_quiet(register)
+              .map(|value| (key, crate::Dimension::new(value.value_of())))
+          })
+          .collect()
+        } else {
+          Vec::new()
+        };
       let captured = digest_next_body(None)?;
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);
@@ -415,10 +555,21 @@ impl Constructor {
           });
         }
       }
-      whatsit.set_body(post);
-      post = vec![];
+      whatsit.set_body(std::mem::take(&mut post));
+      if let Some(Stored::Digested(body)) = whatsit.properties.get_mut("body") {
+        for (key, value) in interline {
+          body.set_property(key, Stored::Dimension(value));
+        }
+      }
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
       // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
+    }
+    // The document ended inside this construct's arguments or body (`stomach::UNENDED`, OXIDIZED_DESIGN
+    // #542; 1611.05714).
+    if crate::stomach::ends_inside_groups() != ends_before {
+      whatsit
+        .properties
+        .insert(crate::stomach::UNENDED, Stored::Bool(true));
     }
     let post_post = self.execute_after_digest_body(&mut whatsit)?;
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
@@ -432,6 +583,13 @@ impl Constructor {
 }
 
 impl Definition for Constructor {
+  fn declared_mode(&self) -> Option<crate::definition::DeclaredMode> { self.declared_mode }
+  fn declared_font(&self) -> Option<&FontDirective> { self.font.as_ref() }
+  fn replacement_template(&self) -> Option<&'static str> {
+    self
+      .template
+      .filter(|_| self.before_construct.is_empty() && self.after_construct.is_empty())
+  }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }

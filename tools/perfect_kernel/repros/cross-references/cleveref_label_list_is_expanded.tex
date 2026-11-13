@@ -1,0 +1,26 @@
+% witness: 2108.04620 (`\cref{\seq_use:Nn \g_cflist_pending {,}}` in its `cf.` theorem headings: 12 dangling references to
+%          `def:dist:set,def:norm`-style lists as one label)
+% oracle:  pdflatex: cleveref expands the list (`\edef\@tempa{#2}`, cleveref.sty:947) and splits it at its commas —
+%          "Thus (cf. definitions 1 and 3). See definitions 1 and 2. Definitions 1 and 2 differ."
+% engines: rust int99a = the list split before expansion (Perl cleveref.sty.ltxml:42-45 `splitLabels`, KNOWN_PERL_ERRORS
+%          #1180): one reference to `LABEL:def:a,def:c`
+% expect:  0 errors, 0 warnings; each \cref names def:a and def:c / def:a and def:b
+% status:  RED (int99a) -> GREEN (80k: cleveref_sty.rs `split_label_tokens` expands the list)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{cleveref}
+\newtheorem{definition}{Definition}
+\ExplSyntaxOn
+\seq_new:N \g_cflist_seq
+\NewDocumentCommand{\cfadd}{m}{\seq_gput_right:Nn \g_cflist_seq {#1}}
+\NewDocumentCommand{\cfuse}{}{(cf.\ \cref{\seq_use:Nn \g_cflist_seq {,}})}
+\ExplSyntaxOff
+\newcommand{\pair}{def:a,def:b}
+\begin{document}
+\begin{definition}\label{def:a} A.\end{definition}
+\begin{definition}\label{def:b} B.\end{definition}
+\begin{definition}\label{def:c} C.\end{definition}
+\cfadd{def:a}\cfadd{def:c}
+Thus \cfuse. See \cref{\pair}. \Cref{\pair} differ.
+\end{document}

@@ -1,0 +1,31 @@
+% A raw class's `\address` stores its argument for its own title page with code of its own around it, so K11's
+% pure-store test does not take it (rstransa.cls:1154 `\gdef\@address{#1\ifaffbreak\relax\end{splitaddress}\fi}`), and
+% the kernel's `\maketitle` deposit printed the stored lines into the body below the names: every author had no
+% contact. The displaced setter (frontmatter_stores.rs `reroute_displaced_setters`, `route_and_hand_displaced`) records
+% what the call stored, the title page's speculative run finds it printed, each line goes by its leading mark to the
+% authors whose names request it, and the deposit takes the recorded part out of the class's macro (sect05.rs
+% `\lx@replay@records`), so nothing is left in the body.
+% witness: 2607.20672 (rstransa), 2609.39929 (alta), nlin0310001 (eph)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able1 and Bob Baker2", "1Univ A, Town", "2Univ B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, both lines a body paragraph "1Univ A, Town2Univ B, City", no contact;
+%          perl = no raw class load (OmniBus `\address`, OmniBus.cls.ltxml:77-94)
+% expect:  0 errors, 0 warnings; Ann Able holds <contact role="address">1Univ A, Town</contact>, Bob Baker
+%          <contact role="address">2Univ B, City</contact>; the body holds only "Text."
+% status:  RED (99b0) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dsaddr.cls}
+\ProvidesClass{dsaddr}\LoadClass{article}
+\newif\ifds@split
+\newcommand{\address}[1]{\gdef\ds@address{#1\ifds@split\relax\fi}}
+\let\ds@address\empty
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\vskip1em
+  \ifx\ds@address\empty\else{\small\ds@address\par}\fi\end{center}}
+\end{filecontents*}
+\documentclass{dsaddr}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\address{$^{1}$Univ A, Town\\ $^{2}$Univ B, City}
+\maketitle
+Text.
+\end{document}

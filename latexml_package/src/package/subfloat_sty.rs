@@ -1,7 +1,7 @@
 //! subfloat.sty — Subfigure/subtable container environments
 //! Perl: subfloat.sty.ltxml — 100 lines
 use crate::{
-  engine::latex_constructs::{after_float, before_float},
+  engine::latex_constructs::{after_float, before_untyped_float},
   prelude::*,
 };
 
@@ -45,19 +45,19 @@ LoadDefinitions!({
   // (single-level subfigure with manual \subfigure marks) still works
   // with the basic before/after_float hooks added here.
   DefEnvironment!("{subfigures}",
-    "<ltx:figure xml:id='#id' inlist='#inlist'>#tags#body</ltx:figure>",
+    "^^<ltx:figure xml:id='#id' inlist='#inlist'>#tags#body</ltx:figure>",
     before_digest => {
       Let!("\\themainfigure", "\\thefigure");
-      before_float("figure", None);
+      before_untyped_float("figure")?;
     },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
   DefEnvironment!("{subtables}",
-    "<ltx:table xml:id='#id' inlist='#inlist'>#tags#body</ltx:table>",
+    "^^<ltx:table xml:id='#id' inlist='#inlist'>#tags#body</ltx:table>",
     before_digest => {
       Let!("\\themaintable", "\\thetable");
-      before_float("table", None);
+      before_untyped_float("table")?;
     },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"

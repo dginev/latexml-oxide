@@ -1,0 +1,29 @@
+% mechanism: tex.web §1221 \let reads with get_token (`get_r_token` for the name, then `repeat
+%   get_token until cur_cmd<>spacer`, and after an `=` one more, repeated once for a space);
+%   at `normal` status each read crosses the end of an \input file (§362), so a file ending in
+%   `\let\y=` or in `\let` takes the name and the value from the input after it. A space there
+%   is explicit or implicit (cur_cmd=spacer): `\let\c\@sptoken=\b` lets \c to \b.
+% witness: SYNC_STATUS "Other `get_token` reads do not cross an input end either"
+% oracle:  pdflatex 0 errors, "D [FOO]", "E [FOO]", "[macro:->B]"
+% engines: rust=1 error (\w undefined), "BD FOO[]", "E \w FOO[\w]", "[the character =]":
+%          \c took the `=` and the preamble typeset `\b` (56jg-rel, 2026-09-25)
+% expect:  0 errors, "D [FOO]", "E [FOO]", "[macro:->B]"
+% status:  GREEN (56jj: \let reads with read_primitive_token; guard
+%          token_kernel_gaps::let_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_let_in.tex}
+\let\y=
+\end{filecontents*}
+\begin{filecontents*}{input_end_let_name_in.tex}
+\let
+\end{filecontents*}
+\def\foo{FOO}\def\b{B}
+\makeatletter
+\let\c\@sptoken=\b
+\begin{document}
+D \@@input input_end_let_in.tex \foo [\y]
+
+E \@@input input_end_let_name_in.tex \w\foo [\w]
+
+[\meaning\c]
+\end{document}

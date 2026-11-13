@@ -1,0 +1,19 @@
+% mechanism: an IEEEtran grid whose cells a document wrapper prints (`\cell{Name}{Univ}`, `\cell` printing an
+%   `\IEEEauthorblockN`/`\IEEEauthorblockA` pair): the block route read `\cell` and its argument groups as bare text
+%   (ieeetran_cls.rs `wrap_bare_author_block_text`), every creator doubled. Now each call is read as it means before
+%   the route (`blocks_as_printed`), the grid transposed (OXIDIZED_DESIGN_DIVERGENCES #128)
+% witness: synthetic (the sibling of `ieeetran_author_grid_through_a_wrapper`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: row 1 "Ann Able", "Bob Baker"; row 2 "Cy Coe", "Dan Dee"
+% engines: int158a: eight creators (each name twice, Dan Dee given Univ A too), 0 errors; P28: Ann Able, Bob Baker,
+%   Cy Coe, Dan Dee, each with their Univ
+%   int168a: eight creators, as int158a; P28m (P2-8a on int168a): as P28
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B), Cy Coe (Univ C), Dan Dee (Univ D)
+% status:  RED (int158a, int168a) -> GREEN (P28, P28m; guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\newcommand\cell[2]{\IEEEauthorblockN{#1}\IEEEauthorblockA{#2}}
+\title{T}
+\author{\cell{Ann Able}{Univ A}\\ \cell{Cy Coe}{Univ C}\and\cell{Bob Baker}{Univ B}\\ \cell{Dan Dee}{Univ D}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

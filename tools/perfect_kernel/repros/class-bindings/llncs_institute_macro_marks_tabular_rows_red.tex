@@ -1,0 +1,24 @@
+% mechanism: the list cutter (`classify::entry_starts` `lines_starts`): llncs's `\institute` whose lines are the
+%   rows of a `tabular` it opens, marked by a macro (`\affmark`, not unwrapped as the `$^{1}$` twin's rows are): the
+%   lines the environment spans are one, a later start inside it cutting nothing, as no piece may hold half of it
+%   (revP4b4a B1); siblings `center` and `minipage` over lines (owners as the base's), `minipage` around a line (Bob
+%   Baker holds "1 Univ A, 2 Univ B", 1 warning; the base a nameless holder) — synthetic
+% witness: synthetic (revP4b4a probe a5)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1, Bob Baker2, and Cy Cole3" over "1 Univ A /
+%   2 Univ B / 3 Univ C"
+% engines: rust P4b4abase: 0 errors, 1 warning, Ann Able holds all three lines; P4b4a: 1 error (`\endgroup Attempt to
+%   close non-boxing group`), "Univ A" lost
+% expect:  0 errors, every word kept; owners by mark: Ann Able "1 Univ A", Bob Baker "2 Univ B", Cy Cole "3 Univ C"
+% status:  RED (owners: Ann Able holds all three lines, 1 warning counts it) — 0 errors and every word pinned by guard
+%   perfect_kernel_batchc1::queued_marks_read_as_digested (P4b4a3)
+% moves:   post-merge (an environment's rows read as lines whatever marks them; no `\institute{\begin{tabular|minipage}`
+%   in the P4b4a A/B's 943 sources)
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2} \and Cy Cole\affmark{3}}
+\institute{\begin{tabular}{c}\affmark{1} Univ A\\ \affmark{2} Univ B\\ \affmark{3} Univ C\end{tabular}}
+\maketitle
+Body.
+\end{document}

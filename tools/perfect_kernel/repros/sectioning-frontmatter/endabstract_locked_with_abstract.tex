@@ -1,0 +1,19 @@
+% witness: 1702.00108, 2304.05575 (IMjournal.sty:81/83 `\def\abstract{…\begingroup…}` / `\def\endabstract{\par\endgroup…}`;
+%          ~40 of 56 sampled run-336 papers whose source redefines \endabstract)
+% oracle:  pdflatex 0 errors: the bold "Abstract." run-in paragraph, then "Body."
+% engines: rust 64s = 1 Error:unexpected:\endgroup (the kernel's locked \abstract kept, the package's unlocked
+%          \endabstract taken: it closes a group never opened); Perl 0.8.8 0
+% expect:  0 errors; <abstract> holds the sentence, "Body." a paragraph after it (\endabstract is locked against
+%          class and package files with \abstract; a document's own \endabstract stays free: gr-qc9406008's
+%          \beginabstract … \endabstract pair)
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+% files:   endabstract_locked_with_abstract.sty
+\documentclass{article}
+\usepackage{endabstract_locked_with_abstract}
+\begin{document}
+\abstract
+An abstract written with the package's begin and end commands.
+\endabstract
+Body.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: 77n r3 — authblk `\author{Ann Able$^{1,2}$}\author{Bob Baker$^{2}$}` (the r2 review probe a4: the first name
+%          took the list path for its mark's comma, the second `\lx@add@creator`)
+% oracle:  pdflatex 0 errors: "Ann Able1,2 and Bob Baker2 / 1Univ X / 2Univ Y"
+% engines: rust int32a = Ann Able Univ X, Bob Baker Univ X and Univ Y (marks kept); 77n r2 = Ann Able X and Y, Bob Baker
+%          none (his mark kept, requesting nothing)
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with Univ X and Univ Y, Bob Baker with Univ Y (every mark a
+%          request)
+% status:  RED (77n r2) -> GREEN (77n r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2}$}
+\affil{$^1$Univ X}
+\affil{$^2$Univ Y}
+\maketitle
+x
+\end{document}

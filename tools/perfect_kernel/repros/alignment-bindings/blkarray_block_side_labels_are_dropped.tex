@@ -1,0 +1,25 @@
+% blkarray.sty:1998-2003 `\Left{label}{delim}` / `\Right{delim}{label}` in a block's preamble draw a bracket beside the
+% block's rows with a label beside it. The binding drops the delimiters (OXIDIZED_DESIGN_DIVERGENCES #771: the `array`
+% alignment cannot draw a bracket over a sub-region of rows) and their labels with them: "M" and "N" are lost.
+% oracle:  pdflatex 0 errors; prints "M" left of the `\{` and "N" right of the `\}`
+% engines: rust int31a, 77k: no "M", no "N" (0 errors); perl: no blkarray binding (the raw package hangs)
+% expect:  0 errors, 0 warnings; "M" and "N" kept beside the block's rows
+% status:  RED (int31a, 77k)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{blkarray}
+\begin{document}
+\[
+  \begin{blockarray}{rcc}
+    & a & b \\
+    \begin{block}{r(cc)}
+      x & 1 & 2 \\
+      y & 3 & 4 \\
+    \end{block}
+    \begin{block}{r\Left{$M$}{\{}c|c\Right{\}}{$N$}}
+      z & 5 & 6 \\
+    \end{block}
+    w & 7 & 8 \\
+  \end{blockarray}
+\]
+\end{document}

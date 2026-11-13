@@ -15,6 +15,25 @@ use crate::{
   prelude::*,
 };
 
+/// The State key of the glossary entries referenced so far (`\gls`, `\glsadd`; global).
+const GLO_REFERENCED: &str = "lx@glossaries@referenced";
+/// The State key set once a glossary is printed (`\printglossary`; global).
+const GLO_PRINTED: &str = "lx@glossaries@printed";
+
+/// The label an entry's held definition diagnostics answer to (logger.rs `defer_to_label`).
+fn glossary_entry_label(key: &str) -> String { s!("glossary:{key}") }
+
+/// An entry referenced (`\gls`, `\glsadd`): a glossary printed or yet to be prints its definition, whose held
+/// diagnostics are then raised (`\lx@glossaries@newentry`).
+fn glossary_entry_referenced(key: &str) -> Result<()> {
+  if lookup_bool(GLO_PRINTED) {
+    util::logger::note_label_use(&glossary_entry_label(key), "glossary");
+  } else {
+    push_value(GLO_REFERENCED, Stored::from(key.to_string()))?;
+  }
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Pre-define \@gls@removedoption BEFORE glossaries.sty raw-loads.
@@ -50,12 +69,40 @@ LoadDefinitions!({
 
   //======================================================================
   // Perl L26-37: wrap `\@gls@link` in `<ltx:glossaryref>`.
+  // In math the term is typeset by the original alone, beside a location-only
+  // reference (`\lx@glossaries@glsadd`, below) that sits after the formula. The
+  // wrap there was an `XMText` atom of the formula: `alttext` and `tex=` spelled
+  // `\lx@glossaries@gls@link{symbols}{v}{…}` and the term was an
+  // `<mtext>` holding a nested `<math>` (`$\gls{v}=\frac{d\gls{v}}{dt}$`; Perl
+  // identical, with an "XMTok isn't allowed in glossaryref" error;
+  // KNOWN_PERL_ERRORS #276).
   Let!("\\lx@orig@glossaries@gls@link", "\\@gls@link");
   DefMacro!("\\@gls@link[]{}{}",
+    "\\ifmmode\\expandafter\\lx@glossaries@gls@link@math\
+\\else\\expandafter\\lx@glossaries@gls@link@text\\fi[#1]{#2}{#3}");
+  DefMacro!("\\lx@glossaries@gls@link@text[]{}{}",
     "\\lx@glossaries@gls@link{\\csname glo@#2@type\\endcsname}{#2}{\\lx@orig@glossaries@gls@link[#1]{#2}{#3}}");
-  DefConstructor!("\\lx@glossaries@gls@link{}{}{}",
+  DefMacro!("\\lx@glossaries@gls@link@math[]{}{}",
+    "\\lx@glossaries@glsadd{\\csname glo@#2@type\\endcsname}{#2}\\lx@orig@glossaries@gls@link[#1]{#2}{#3}");
+  // glossaries-extra replaces `\@gls@link` with its own
+  // (glossaries-extra.sty:3465 `\def\@gls@link[#1]#2#3`), which dropped this
+  // wrap: no `\gls` of a glossaries-extra document made a reference, so its
+  // `\printglossary` listed nothing (Perl identical). The copy is re-applied
+  // over the new definition once glossaries-extra loads (below).
+  Let!("\\lx@glossaries@wrap@gls@link", "\\@gls@link");
+  // The entry label (arg 2) is only a `key=` string: read it as
+  // ExpandedSemiverbatim, never digested, as `\label` reads its label. A
+  // digested `beat_frequency` raised "_ can only appear in math mode" per entry
+  // (arXiv 2605.01773: 122 underscore labels in a notations glossary, Fatal;
+  // Perl's binding digests it too, glossaries.sty.ltxml:30/:89).
+  DefConstructor!("\\lx@glossaries@gls@link{} ExpandedSemiverbatim {}",
     "<ltx:glossaryref inlist='#list' key='#2'>#3</ltx:glossaryref>",
     enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      if let Some(key) = whatsit.get_arg(2) {
+        glossary_entry_referenced(&key.to_string())?;
+      }
+    },
     properties => sub[args] {
       // Perl: $list = ToString($_[1]); $list = 'main' unless $_[1];
       let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
@@ -64,10 +111,96 @@ LoadDefinitions!({
     });
 
   //======================================================================
+  // `\glsadd[opts]{label}` (glossaries.sty:5280-5292) writes the entry to the
+  // glossary file through `\@@do@wrglossary` (:6299), the writer `\gls` reaches
+  // through `\@gls@link` (:3813 → :6246); `\glsaddall` (:5295) and
+  // `\glsaddallunused` (:5302) call `\glsadd` per entry. makeindex lists every
+  // entry that was written, and `\glsadd` prints no text. Perl wraps only
+  // `\@gls@link` (glossaries.sty.ltxml:26-37), and MakeIndex lists an entry
+  // only when an `ltx:glossaryref` refers to it (MakeIndex.pm:468), so an entry
+  // added by `\glsadd`/`\glsaddall` alone was never listed (ualberta: its whole
+  // Glossary and List of Acronyms, 243 words; Perl identical). The wrap emits a
+  // location-only reference, `show='none'`: CrossRef leaves it empty and the
+  // XSLT renders nothing for it (KNOWN_PERL_ERRORS #276). `\glsadd` is robust
+  // (`\newrobustcmd*`), so the wrap is protected too. The reference is emitted
+  // only for a defined entry; the original raises the undefined-entry error.
+  // In the preamble (`\iflx@glossaries@defer`) the reference is queued with its
+  // list and label EXPANDED — `\glsaddall` passes the loop variable
+  // `\@glo@entry` — and emitted in the first paragraph of the body (below).
+  // In math the reference is placed after the formula (see
+  // `\lx@glossaries@glsadd`): an element inside it was an `XMText` atom of the
+  // formula (`$\glsadd{x}a+b$` parsed as "[] * a + b").
+  // glossaries-extra replaces `\glsadd` with one that calls its `\@glsadd`
+  // (glossaries-extra.sty:3571-3604), as do `\glsaddeach` and `\glsstartrange`
+  // (:3605, :3617), so the wrap moves to `\@glsadd` once it loads, and the
+  // `\@gls@link` wrap is re-applied (above). OXIDIZED_DESIGN_DIVERGENCES #320.
+  Let!("\\lx@orig@glossaries@glsadd", "\\glsadd");
+  DefMacro!("\\glsadd[]{}",
+    "\\ifglsentryexists{#2}{\\lx@glossaries@glsadd@ref{#2}}{}\\lx@orig@glossaries@glsadd[#1]{#2}",
+    protected => true);
+  RawTeX!(r"\def\lx@glossaries@glsadd@ref#1{\iflx@glossaries@defer
+  \edef\lx@glo@add{\noexpand\lx@glossaries@glsadd{\csname glo@#1@type\endcsname}{#1}}%
+  \expandafter\lx@glossaries@pushref\expandafter{\lx@glo@add}%
+  \else\lx@glossaries@glsadd{\csname glo@#1@type\endcsname}{#1}\fi}%
+\def\lx@glossaries@xtr@glsadd#1#2{\ifglsentryexists{#2}{\lx@glossaries@glsadd@ref{#2}}{}%
+  \lx@orig@glossaries@@glsadd{#1}{#2}}%
+\AddToHook{package/glossaries-extra/after}{%
+  \let\lx@orig@glossaries@@glsadd\@glsadd\let\@glsadd\lx@glossaries@xtr@glsadd
+  \let\lx@orig@glossaries@gls@link\@gls@link\let\@gls@link\lx@glossaries@wrap@gls@link}");
+  // The location-only reference. Digested in math (a `\gls` or `\glsadd` in a
+  // formula), it goes where a `^` float puts an element: the nearest enclosing
+  // level that admits it, after the formula (the `p` of inline math). A display
+  // formula's `ltx:equation` admits no bare inline element but admits `ltx:text`,
+  // so there the reference goes in a `ltx:text` of the equation, after the formula,
+  // rather than an `XMText` in it; an entry named only in display math was not
+  // listed (silent-loss inventory #20). It reverts to nothing, so the formula's
+  // `tex=` is the term's.
+  DefConstructor!("\\lx@glossaries@glsadd{} ExpandedSemiverbatim",
+    sub[document, args, props] {
+      let key = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      let attrs = string_map!("inlist" => prop_string!(props, "list"), "key" => key,
+        "show" => "none");
+      if prop_bool!(props, "math") {
+        if let Some(save) = document.float_to_element("ltx:glossaryref", false)? {
+          document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
+          document.set_node(&save);
+        } else if let Some(save) = document.float_to_element("ltx:text", false)? {
+          document.open_element("ltx:text", None, None)?;
+          document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
+          document.close_element("ltx:text")?;
+          document.set_node(&save);
+        }
+      } else {
+        document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
+      }
+    },
+    enter_horizontal => true,
+    reversion => "",
+    after_digest => sub[whatsit] {
+      if let Some(key) = whatsit.get_arg(2) {
+        glossary_entry_referenced(&key.to_string())?;
+      }
+    },
+    properties => sub[args] {
+      let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
+      let list = if list.is_empty() { "main".to_string() } else { list };
+      let math = lookup_string_from_sym(pin!("MODE")).ends_with("math");
+      Ok(stored_map!("list" => list, "math" => math))
+    });
+
+  //======================================================================
   // Perl L40-42: skip over hyperref wrapping; we handle it.
   DefMacro!("\\glsdohyperlink{}{}",   "#2");
   DefMacro!("\\glsdonohyperlink{}{}", "#2");
-  RawTeX!("\\glsdisablehyper");
+  // Only the link half: glossaries.sty:4302-4306 `\glsdisablehyper` also turns the targets off
+  // (`\@glstarget` = `\@secondoftwo`), and glossaries-extra.sty:5204-5210 turns links back on
+  // when `\hyperlink` exists but restores `\@glstarget` only if it still is `\glsdohypertarget`
+  // (:6558) — so every `\glshyperlink` (:5185; nlctuserguide's `\targetorhyperlink`, :2216-2228)
+  // pointed at an anchor `\glstarget` never made. The target choice glossaries.sty itself made
+  // (:4295-4301) is kept. Perl L42 disables both (KNOWN_PERL_ERRORS #392). Witnesses:
+  // glossaries-extra-manual 1,838 dangling idrefs, datatool-user 1,235, glossaries-user 969,
+  // glossariesbegin 44, mfirstuc-manual 32 — every one a destination in the golden PDF.
+  RawTeX!(r"\let\lx@glossaries@glstarget\@glstarget\glsdisablehyper\let\@glstarget\lx@glossaries@glstarget");
 
   // Perl L45: This seems necessary, although it ought to be built in???
   DefMacro!("\\glspostlinkhook", "\\xspace");
@@ -77,32 +210,139 @@ LoadDefinitions!({
   // a structured `<ltx:glossarydefinition>` with one `<ltx:glossaryphrase>`
   // per field. The keys mirror Perl exactly; the closing `}` is required
   // because the hook body is interpreted as a single argument group.
+  // The field macros are copied before the keyvals are digested: they are
+  // digested in key order, `description` first, and a `\gls{…}` inside a
+  // description runs glossaries' `\ifglshasshort`/`\ifglshaslong`
+  // (glossaries.sty:2166-2180), which `\letcs` the same `\@glo@short`/`\@glo@long`
+  // to ANOTHER entry's value (undefined when it has none): "\@glo@short
+  // undefined" and a wrong short form (Talbot's user guides, whose term
+  // descriptions reference abbreviations).
+  //
+  // In the preamble (`\iflx@glossaries@defer`) the call is queued instead, with
+  // the field VALUES, in the `glossaries` token queue (latex_constructs_rust_only.rs
+  // §13), and the queue runs at
+  // `\begin{document}`. LaTeX typesets a field only in `\printglossary`, once
+  // every entry exists, so a field may name an entry defined after it:
+  // `\newacronym{endc}{EN-DC}{E-UTRAN-\gls{nr} …}` before `\newacronym{nr}…`
+  // (arXiv 2605.14032, 2605.21831), nlctuserguide's `\desc{… \idx{exclusion} …}`
+  // before `\gidx{exclusion}` (bib2gls's `.glstex` defines all entries before
+  // anything is typeset). Digested at definition each raised "Glossary entry
+  // `nr' has not been defined" and lost the reference's text. Entries defined
+  // in the body are emitted at once. OXIDIZED_DESIGN_DIVERGENCES #293; guard
+  // `class_census::glossaries_preamble_forward_reference`. (A conversion that
+  // never reaches `\begin{document}` emits no preamble definitions.)
+  // (`\@glo@<field>` suffix, key)
+  const GLO_FIELDS: [(&str, &str); 17] = [
+    ("name", "name"), ("desc", "description"), ("symbol", "symbol"),
+    ("symbolplural", "symbolplural"), ("text", "text"), ("plural", "plural"),
+    ("first", "first"), ("firstplural", "firstplural"), ("sort", "sort"),
+    ("counter", "counter"), ("see", "see"), ("parent", "parent"),
+    ("prefix", "prefix"), ("short", "short"), ("shortpl", "shortplural"),
+    ("long", "long"), ("longpl", "longplural"),
+  ];
+  let snapshot: String = GLO_FIELDS.iter()
+    .map(|(f, _)| format!("\\let\\lx@glo@{f}\\@glo@{f}")).collect();
+  let by_macro: Vec<String> = GLO_FIELDS.iter()
+    .map(|(f, k)| format!("{k}=\\lx@glo@{f}")).collect();
+  let by_value: Vec<String> = GLO_FIELDS.iter()
+    .map(|(f, k)| format!("{k}={{\\unexpanded\\expandafter{{\\@glo@{f}}}}}")).collect();
+  // The references of a preamble `\glsadd` are queued apart and carried into the
+  // first paragraph that opens, through a one-shot `\everypar` that restores the
+  // one it replaced: emitted at the flush, a reference opened a paragraph LaTeX
+  // does not have, an empty `ltx:para` whenever the body starts with vertical
+  // material (`\maketitle`, `\section`), which shifted every later document-level
+  // paragraph id. When no paragraph opens (or the `\everypar` is replaced first),
+  // they are emitted at `\end{document}`. The `\everypar` is restored only
+  // while it still holds just the one-shot: code that added to it meanwhile
+  // (`\everypar\expandafter{\the\everypar\foo}`) keeps its addition, and the
+  // one-shot left in it does nothing once it has fired.
+  RawTeX!(r"\newif\iflx@glossaries@defer
+\global\lx@glossaries@defertrue
+\newif\iflx@glossaries@carry
+\newtoks\lx@glossaries@everypar
+\def\lx@glossaries@push{\lx@queue@gpush{glossaries}}%
+\def\lx@glossaries@pushref{\global\lx@glossaries@carrytrue\lx@queue@gpush{glossaries@refs}}%
+\def\lx@glossaries@flush{\global\lx@glossaries@deferfalse
+  \lx@queue@use{glossaries}\lx@queue@clear{glossaries}%
+  \iflx@glossaries@carry
+    \global\lx@glossaries@everypar\everypar\global\everypar{\lx@glossaries@parrefs}%
+  \fi}%
+\def\lx@glossaries@userefs{\global\lx@glossaries@carryfalse
+  \lx@queue@use{glossaries@refs}\lx@queue@clear{glossaries@refs}}%
+\def\lx@glossaries@parrefs{\iflx@glossaries@carry\expandafter\lx@glossaries@parrefs@fire\fi}%
+\def\lx@glossaries@parrefs@only{\lx@glossaries@parrefs}%
+\def\lx@glossaries@parrefs@fire{\lx@glossaries@userefs
+  \edef\lx@glo@everypar{\the\everypar}%
+  \ifx\lx@glo@everypar\lx@glossaries@parrefs@only
+    \global\everypar\lx@glossaries@everypar\expandafter\the\expandafter\everypar
+  \fi}%
+\AtBeginDocument{\lx@glossaries@flush}%
+\AtEndDocument{\iflx@glossaries@carry\lx@glossaries@userefs\fi}");
+  // The sort key recorded is the entry's own, `\\glo@<label>@sort` (`\\@gls@defsort`): `\\@glo@storeentry` has just
+  // rewritten `\\@glo@sort` with makeindex's quote character before each special one (glossaries.sty:3204-3209,
+  // `\\@gls@checkmkidxchars` :3923; xindy's `\\"` escapes), which makeindex strips again before it compares. Repro
+  // index-bib/glossary_sort_key_is_its_string.
   DefMacro!("\\@newglossaryentryposthook",
-    "\\lx@glossaries@newentry{\\@glo@type}{\\glslabel}{\
-name=\\@glo@name,\
-description=\\@glo@desc,\
-symbol=\\@glo@symbol,\
-symbolplural=\\@glo@symbolplural,\
-text=\\@glo@text,\
-plural=\\@glo@plural,\
-first=\\@glo@first,\
-firstplural=\\@glo@firstplural,\
-sort=\\@glo@sort,\
-counter=\\@glo@counter,\
-see=\\@glo@see,\
-parent=\\@glo@parent,\
-prefix=\\@glo@prefix,\
-short=\\@glo@short,\
-shortplural=\\@glo@shortpl,\
-long=\\@glo@long,\
-longplural=\\@glo@longpl\
-}");
+    "\\expandafter\\let\\expandafter\\@glo@sort\\csname glo@\\@glo@label @sort\\endcsname\
+\\iflx@glossaries@defer\\expandafter\\lx@glossaries@deferentry\
+\\else\\expandafter\\lx@glossaries@postentry\\fi");
+  // The display keys a package adds with `\\glsaddkey` (glossaries.sty:2748, each with its `\\glsentry…`
+  // accessors; glosmathtools.sty:185 `descseclang`, a second-language description its glossary style prints) are
+  // recorded too: each with its default, and an entry's value becomes a phrase when it differs from that default
+  // (`\\ifx` of the two macros). `\\glsaddstoragekey` keys (glossaries.sty:2720-2747) hold data for code and are
+  // never printed (glossaries-extra's `category`/`alias`/`seealso`, :2503-2504, :9845; glosmathtools' `dot`, whose
+  // default `\\glsadd`s), so they stay unrecorded. The user-level command is wrapped: glossaries-extra replaces the
+  // internal `\\@glsaddkey` (glossaries-extra.sty:4771). Perl keeps the fixed key list (glossaries.sty.ltxml:56-82;
+  // KNOWN_PERL_ERRORS #442). Repro index-bib/glossary_user_keys_and_parents.
+  RawTeX!(r"\let\lx@glossaries@userkeys\@empty
+\def\lx@glossaries@addkey#1#2#3{\key@ifundefined{glossentry}{#2}%
+  {\csdef{lx@glo@default@#2}{#3}\appto\lx@glossaries@userkeys{,#2}}{}#1{#2}{#3}}%
+\renewcommand*{\glsaddkey}{\@ifstar{\lx@glossaries@addkey\@sglsaddkey}{\lx@glossaries@addkey\@glsaddkey}}%
+\def\lx@glossaries@userkv{\let\lx@glo@userkv\@empty
+  \@for\lx@glo@k:=\lx@glossaries@userkeys\do{\ifx\lx@glo@k\@empty\else
+    \expandafter\ifx\csname @glo@\lx@glo@k\expandafter\endcsname\csname lx@glo@default@\lx@glo@k\endcsname\else
+      \eappto\lx@glo@userkv{,\lx@glo@k={\expandafter\expandonce\csname @glo@\lx@glo@k\endcsname}}\fi\fi}}");
+  RawTeX!(&s!("\\def\\lx@glossaries@postentry{{{snapshot}\
+\\lx@glossaries@userkv\\expandafter\\lx@glossaries@postentry@\\expandafter{{\\lx@glo@userkv}}}}"));
+  RawTeX!(&s!("\\def\\lx@glossaries@postentry@#1{{\
+\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}#1}}}}", by_macro.join(",")));
+  RawTeX!(&s!("\\def\\lx@glossaries@deferentry{{\\lx@glossaries@userkv\\edef\\lx@glo@entry{{\
+\\noexpand\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}\\unexpanded\\expandafter{{\\lx@glo@userkv}}}}}}\
+\\expandafter\\lx@glossaries@push\\expandafter{{\\lx@glo@entry}}}}", by_value.join(",")));
 
   // Perl L85-97: DefConstructor that emits the structured definition.
   // Iterate the keyvals in sorted-by-key order and insert one
   // `<ltx:glossaryphrase>` per non-empty value (matches Perl's
   // `if ToString($value)` guard).
-  DefConstructor!("\\lx@glossaries@newentry{}{} RequiredKeyVals",
+  // Arg 2, the label `\glslabel`, is ExpandedSemiverbatim (see `\lx@glossaries@gls@link`).
+  // An entry's fields are its stored data, which LaTeX typesets only where the entry is used — in a glossary
+  // `\printglossary` prints, at a `\gls` (glossaries.sty:2341-2346 stores them by `\def`). The
+  // definition is digested here for the glossary list the post-processor builds from it, so the diagnostics of that
+  // digest are held (logger.rs `DiagnosticsHold::defer`) and raised only once a printed glossary holds the entry: a
+  // referenced entry (`glossary_entry_referenced`) and a `\printglossary` (`\lx@printglossary`). An entry never used
+  // raises nothing, as in pdflatex (2104.09252: `name={$J_p_p$}` unused, a "Double subscript" Error; Perl shares it,
+  // KNOWN_PERL_ERRORS #1093; OXIDIZED_DESIGN_DIVERGENCES #859). A use itself typesets the field from its macros and errs there, as pdflatex does.
+  // Repro index-bib/unused_glossary_entry_raises_nothing.
+  DefPrimitive!("\\lx@glossaries@newentry{}{}{}", sub[(list, key, keyvals)] {
+    let key_text = Expand!(key.clone()).to_string();
+    let mut call = vec![T_CS!("\\lx@glossaries@newentry@"), T_BEGIN!()];
+    call.extend(list.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(key.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(keyvals.unlist());
+    call.push(T_END!());
+    let hold = util::logger::DiagnosticsHold::begin();
+    let digested = digest(Tokens::new(call));
+    if hold.errors_raised() + hold.warnings_raised() == 0 {
+      hold.commit();
+    } else if let Some(deferred) = hold.defer() {
+      let id = util::logger::keep_deferred(deferred);
+      util::logger::defer_to_label(&glossary_entry_label(&key_text), "glossary", id);
+    }
+    Ok(vec![digested?])
+  });
+  DefConstructor!("\\lx@glossaries@newentry@{} ExpandedSemiverbatim RequiredKeyVals",
     sub[document, args, _props] {
       let list = args[0].as_ref().map(|d| d.to_string()).unwrap_or_else(|| "main".to_string());
       let key  = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
@@ -117,15 +357,51 @@ longplural=\\@glo@longpl\
           for (role, val) in pairs {
             let val_str = val.to_string();
             if val_str.is_empty() { continue; }
-            // Insert <ltx:glossaryphrase key=key role=role>val</ltx:glossaryphrase>
-            document.open_element("ltx:glossaryphrase",
-              Some(string_map!("key" => key.clone(), "role" => role)), None)?;
-            document.absorb_string(&val_str, &NO_PROPERTIES)?;
+            // Insert <ltx:glossaryphrase key=key role=role>val</ltx:glossaryphrase>.
+            // Perl inserts the DIGESTED value (glossaries.sty.ltxml:96,
+            // `insertElement('ltx:glossaryphrase', $value, …)` after
+            // KeyVals::beDigested), so a `$\alpha$` name is math and an
+            // `\emph` description is emphasis; absorbing `val_str` wrote the
+            // TeX source (`\emph{in}`) as text. The string is the fallback.
+            let digested = kvs.get_value_digested(&role).cloned();
+            // A key outside the fixed fields is a recorded `\\glsaddkey` display key (`\\lx@glossaries@userkv`):
+            // classed, so the glossary list prints it and no other phrase role.
+            let mut attributes = string_map!("key" => key.clone(), "role" => role.clone());
+            if !GLO_FIELDS.iter().any(|(_, field)| *field == role) {
+              attributes.insert("class".to_string(), "ltx_glossary_userkey".to_string());
+            }
+            document.open_element("ltx:glossaryphrase", Some(attributes), None)?;
+            // The `sort` and `parent` values are data, compared as strings (makeindex's sort key, the parent's
+            // label): their source text, not set in the font (OT1 prints the sanitized `\\` and `"` as `“` `”`). Repro
+            // index-bib/glossary_sort_key_is_its_string.
+            match digested {
+              Some(value) if matches!(role.as_str(), "sort" | "parent") => {
+                document.absorb_string(&value.untex()?, &NO_PROPERTIES)?;
+              },
+              Some(value) => document.absorb(&value, None)?,
+              None => {
+                document.absorb_string(&val_str, &NO_PROPERTIES)?;
+              },
+            }
             document.close_element("ltx:glossaryphrase")?;
           }
         }
       document.close_element("ltx:glossarydefinition")?;
-    }
+    },
+    // The fields are the entry's stored data, which LaTeX typesets only where the entry is used (`\gls`, the glossary
+    // `\printglossary` prints): an `&` in one (`\newacronym{cisa}{CISA}{Cybersecurity & Infrastructure Security
+    // Agency}`, never used, 2602.09131) is no alignment tab here but the character, as in an index entry
+    // (sect11.rs `\@index`; ruling 2026-10-10 on stored metadata, OXIDIZED_DESIGN_DIVERGENCES #679). A use still
+    // typesets the field from its macros: `\gls{cisa}` errs as pdflatex does. Perl digests them as text (KNOWN_PERL_ERRORS
+    // #892). Guard `perfect_kernel_batch69a::glossary_entry_ampersand_is_stored_text`.
+    before_digest => {
+      Let!(T_ALIGN!(), T_CS!("\\&"));
+      increment_align_group_count();
+    },
+    after_digest => {
+      decrement_align_group_count();
+    },
+    bounded => true
   );
 
   //======================================================================
@@ -146,13 +422,16 @@ longplural=\\@glo@longpl\
     properties => sub[args] {
       // Perl L113-117 — compute type (default 'main'), title (digest
       // \@glotype@<type>@title), and id (docid + ".glo." + cleaned type).
-      let typ = args[0].as_ref().and_then(|d| {
+      let keyval = |key: &str| args[0].as_ref().and_then(|d| {
         if let DigestedData::KeyVals(ref kvs) = *d.data() {
-          kvs.get_value("type").map(|v| v.to_string())
+          kvs.get_value(key).map(|v| v.revert().unwrap_or_default())
         } else { None }
-      }).unwrap_or_else(|| "main".to_string());
-      let title_cs = s!("\\@glotype@{typ}@title");
-      let title = digest(T_CS!(&*title_cs))
+      });
+      let typ = keyval("type").map(|v| v.to_string()).unwrap_or_else(|| "main".to_string());
+      // glossaries.sty:7546-7548: `title=` sets `\glossarytitle`, which the heading prints instead of the type's
+      // title (:6529-6552; glosmathtools `\printglossary[title=...]`). Perl reads only `type` (SHARED).
+      let title_tokens = keyval("title").unwrap_or_else(|| Tokens!(T_CS!(s!("\\@glotype@{typ}@title"))));
+      let title = digest(title_tokens)
         .map(|d| d.to_string()).unwrap_or_default();
       let docid = lookup_value("thedocument@ID")
         .and_then(|v| match v { Stored::String(s) => Some(to_string(s)), _ => None })
@@ -168,10 +447,23 @@ longplural=\\@glo@longpl\
     after_digest => sub[whatsit] {
       // Perl L114: noteBackmatterElement(<whatsit>, 'ltx:glossary');
       note_backmatter_element(whatsit, "ltx:glossary");
+      // the entries referenced so far (and every later one) are printed: their definitions' held diagnostics are raised
+      if !lookup_bool(GLO_PRINTED) {
+        assign_value(GLO_PRINTED, true, Some(Scope::Global));
+        for key in lookup_vecdeque(GLO_REFERENCED).unwrap_or_default() {
+          util::logger::note_label_use(&glossary_entry_label(&key.to_string()), "glossary");
+        }
+      }
     },
     before_construct => sub[doc, whatsit] {
       // Perl L117: adjustBackmatterElement($_[0], $_[1]);
       adjust_backmatter_element(doc, whatsit)?;
     }
   );
+
+  // glossaries-extra's label-prefix commands are NOT stubbed here: the raw
+  // glossaries-extra-bib2gls.sty (:430-452) defines them, and `\dgls`
+  // (:564-576) resolves a label through the list they build. No-op stubs here
+  // (batch 22) kept that list empty, so every `\dgls`/`\idx` reference of the
+  // Talbot manuals fell back to "??" (nlctuserguide's `\idx` = `\dgls`).
 });

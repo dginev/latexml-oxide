@@ -1,0 +1,24 @@
+% mechanism: llncs.cls:894-896 `\def\inst#1{\unskip$^{#1}$}`, `\def\fnmsep{\unskip$^,$}` (aa.cls:759-760 the same,
+%   `\unskip\hbox{…}`): an `\inst` after a comma takes back the space before it and stands on the name before the
+%   comma, "Ann Able,¹,²⋆ Bob Baker,³,² and Cat Cole¹" — with the space (`Ann Able,⏎\inst{1}`) and without
+%   (`Bob Baker,\inst{3}\fnmsep\inst{2}`); the `\thanks` among them is Ann's too
+% witness: 2401.16957 (`\author{Clara Dehman,⏎\inst{1}\fnmsep…\inst{4}\thanks{Email: …} Mario Centelles,\inst{5}\fnmsep
+%          \inst{6} \and Xavier Vi\~nas…}`: Clara's four affiliations and her e-mail note went to Mario Centelles,
+%          his institutes 5-6 to no one)
+% oracle:  pdflatex 0 errors: "Ann Able,1,2⋆ Bob Baker,3,2 and Cat Cole1", the footnote "⋆ Email: ann@x.org", the
+%          institutes "1 Inst A", "2 Inst B", "3 Inst C"
+% engines: rust int47a = Ann Able bare; Bob Baker with Ann's note and Inst A, Inst B; a nameless creator with Inst C;
+%          perl: the same split at the comma
+% expect:  0 errors, 0 warnings; Ann Able with the note, Inst A and Inst B; Bob Baker with Inst B and Inst C; Cat Cole
+%          with Inst A
+% status:  RED (int47a) -> GREEN (78f)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able,
+\inst{1}\fnmsep\inst{2}\thanks{Email: ann@x.org} Bob Baker,\inst{3}\fnmsep\inst{2} \and Cat Cole\inst{1}}
+\institute{Inst A \and Inst B \and Inst C}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 2609.09550 (jheppub, `\author{Jin Chen$^{a,b}$}\author{and Qiang Jia$^{c}$}`, one `\affiliation{$^{a}$…}`
+%          per line), 1912.12271
+% oracle:  pdflatex (TL 2025, 2609.09550's jheppub.sty): "Ann Ablea,b and Bob Bakerc", "a Univ A, Town A", "b Univ B,
+%          Town B", "c Univ C, Town C"
+% engines: rust 97c = the reading right, not written (jheppub's `written: false`): every affiliation Bob Baker's
+% expect:  0 errors, 0 warnings; jheppub written (brief 97e): Ann Able Univ A + Univ B, Bob Baker Univ C
+% status:  RED (97c) -> GREEN (97e) — perfect_kernel_batch97e::jheppub_family_is_written
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{jheppub}
+\title{T}
+\author{Ann Able$^{a,b}$}
+\author{and Bob Baker$^{c}$}
+\affiliation{$^{a}$Univ A, Town A}
+\affiliation{$^{b}$Univ B, Town B}
+\affiliation{$^{c}$Univ C, Town C}
+\abstract{Ab.}
+\begin{document}
+\maketitle
+Body.
+\end{document}

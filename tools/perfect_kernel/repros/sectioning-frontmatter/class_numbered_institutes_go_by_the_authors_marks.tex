@@ -1,0 +1,17 @@
+% witness: 2405.16615 (preprint.cls, its `\institutename` llncs.cls:870-885's; the class beside is cut down to it)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2", then "1 Univ A" and "2 Univ B" (the class numbers the
+%          `\and` entries of `\institute`)
+% engines: rust 77t base (cf9986651a) = 0 errors: each author holds Univ A and Univ B (the `\@institute` store
+%          annotates every author, `annotate=all`: the entries carry no marks to label them); Perl has no binding for
+%          the class (its `\institute` raw)
+% expect:  0 errors, 0 warnings; Ann Able holds Univ A, Bob Baker Univ B
+% status:  RED (77t base) -> GREEN (77t)
+% preload: ar5iv.sty
+\documentclass{numinst}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\institute{Univ A \and Univ B}
+\maketitle
+Text.
+\end{document}

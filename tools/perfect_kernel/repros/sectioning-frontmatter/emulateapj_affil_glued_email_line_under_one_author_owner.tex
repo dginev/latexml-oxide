@@ -1,0 +1,20 @@
+% mechanism: an e-mail line glued to its label under one author's marked affiliation (defs/frontmatter_api/affiliations.rs,
+%   the address run under an affiliation one author requests): GL1 names the contact by the label ("Email: ", the
+%   address its content), but the run places it on a nameless block creator, where the spaced `Email: zz@x.org` gives it
+%   to Ann (the run reader reads the glued line otherwise than the spaced one; a second mechanism, not GL1's)
+% witness: none in the corpus (synthetic, GL1 caller probe c606)
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "Ann Able^1, Bob Baker^2", "1 Univ A, Town Email:zz@x.org", "2 Univ B, City"
+% engines: rust int157a (d86f58e8e2) = a nameless creator's <contact name="Email: " role="email">Email:zz@x.org</contact>;
+%          rust GL1 = a nameless creator's <contact name="Email: " role="email">zz@x.org</contact>
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, Town and <contact name="Email: " role="email">zz@x.org</contact>;
+%          Bob Baker: Univ B, City
+% status:  RED (GL1: the owner), catalog only
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\affil{$^1$Univ A, Town \\ Email:zz@x.org \\ $^2$Univ B, City}
+\maketitle
+Text.
+\end{document}

@@ -18,7 +18,7 @@ use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
   BoxOps, Digested, DigestedData, Result,
-  binding::content::{fontmap_family_key_sym, fontmap_key_syms, load_font_map, preload_font_map},
+  binding::content::{fontmap_family_key_syms, fontmap_key_syms, load_font_map, preload_font_map},
   common::{
     arena::{self, SymHashMap, SymStr},
     color::{self, Color},
@@ -29,7 +29,18 @@ use crate::{
   state::*,
 };
 
+pub mod coverage;
 pub mod standard_metrics;
+pub mod tfm;
+
+/// The family and encoding `decode_fontname` gives a font name (`None`: not a font name).
+type NamedFontClass = Option<(Option<Cow<'static, str>>, Option<Cow<'static, str>>)>;
+
+thread_local! {
+  /// `NamedFontClass` per font name, for `Font::measuring_tfm`.
+  static NAMED_FONT_CLASS: std::cell::RefCell<HashMap<String, NamedFontClass>> =
+    std::cell::RefCell::new(HashMap::default());
+}
 use standard_metrics::{MetricData, STDMETRICS};
 
 use crate::pin;
@@ -49,7 +60,7 @@ static DEFENCODING: &str = "OT1";
 /// Reads NOMINAL_FONT_SIZE from state, defaulting to 10.0. Perl uses the value
 /// directly as a float (`Common/Font.pm:44`) — the `11pt` class option is
 /// `10.95` (LaTeX's `\@xipt`), so this must NOT truncate via `lookup_int` (#542).
-fn defsize() -> f64 {
+pub fn defsize() -> f64 {
   let v = lookup_float("NOMINAL_FONT_SIZE").map_or(0.0, |f| f.0);
   if v > 0.0 { v } else { 10.0 }
 }
@@ -152,6 +163,12 @@ static FONT_FAMILY: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
     "xylubt" => fontmap!(family => "graphic"),
     "eur"   => fontmap!(family => "serif"),      "eus"   => fontmap!(family => "script"),
     "euf"   => fontmap!(family => "fraktur"),    "euex"  => fontmap!(encoding => "OMX"),
+    // yfonts' families (yfonts.sty `\gothdefault` ygoth, `\swabdefault` yswab,
+    // `\frakdefault` yfrak), which yfonts_sty.rs selects as gothic, schwabacher
+    // and fraktur: a size switch re-selects `\f@family` (dialect.rs), so these
+    // codes must map back. Absent from Perl's %font_family.
+    "ygoth" => fontmap!(family => "gothic"),     "yswab" => fontmap!(family => "schwabacher"),
+    "yfrak" => fontmap!(family => "fraktur"),
     // The following are actually math fonts.
     "ccm"   => fontmap!(family => "serif", shape => "italic"),
     "cmm"   => fontmap!(family => "math", shape => "italic", encoding => "OML"),
@@ -324,13 +341,97 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
 // which is the faithful #2798 source — not a static font-size→baseline map.)
 
 /// Global auxiliary for font family lookup
-pub fn lookup_font_family(code: &str) -> Option<&Font> { FONT_FAMILY.get(code) }
+pub fn lookup_font_family(code: &str) -> Option<&'static Font> { FONT_FAMILY.get(code) }
+
+/// Whether `encoding`'s slots are Unicode code points: `TU`, the encoding of
+/// the Unicode engines (tuenc.def; fonttext.ltx:57-68,93). A slot past the
+/// 8-bit table is then the character itself, and the Latin Modern text fonts
+/// of that format carry the TeX ligatures (tuenc.def:60 `+tlig;`).
+pub fn is_unicode_encoding(encoding: &str) -> bool { encoding == "TU" }
 
 /// Global auxiliary for font series lookup
-pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
+pub fn lookup_font_series(code: &str) -> Option<&'static Font> { FONT_SERIES.get(code) }
 
 /// Global auxiliary for font shape lookup
-pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
+pub fn lookup_font_shape(code: &str) -> Option<&'static Font> { FONT_SHAPE.get(code) }
+
+/// The NFSS family code that selects an abstract font family: the inverse of
+/// [`lookup_font_family`], giving the code LaTeX's own defaults would put in
+/// `\f@family` (`\rmdefault` `cmr`, `\sfdefault` `cmss`, `\ttdefault` `cmtt`,
+/// all locked in sect13.rs; yfonts' `\gothdefault`/`\swabdefault`) or the one
+/// code the table maps to a symbol or display family. `None` for a family no
+/// NFSS code selects — `nullfont`, `graphic`, `math`, and the binding-only
+/// `oldstyle`, `caligraphic`, `italic`, `smallcaps` families: switching to it
+/// leaves `\f@family` alone, as a raw TeX font switch does.
+pub fn nfss_family_code(family: &str) -> Option<&'static str> {
+  match family {
+    "serif" => Some("cmr"),
+    "sansserif" => Some("cmss"),
+    "typewriter" => Some("cmtt"),
+    "script" => Some("pzc"),
+    "symbol" => Some("psy"),
+    "dingbats" => Some("pzd"),
+    "fraktur" => Some("euf"),
+    "gothic" => Some("ygoth"),
+    "schwabacher" => Some("yswab"),
+    "blackboard" => Some("bbm"),
+    _ => None,
+  }
+}
+
+/// The NFSS series code of an abstract series (`\mddefault` `m`,
+/// `\bfdefault` `bx`), inverse of [`lookup_font_series`].
+pub fn nfss_series_code(series: &str) -> Option<&'static str> {
+  match series {
+    "medium" => Some("m"),
+    "bold" => Some("bx"),
+    _ => None,
+  }
+}
+
+/// The NFSS shape code of an abstract shape (`\updefault` `n`, `\itdefault`
+/// `it`, `\sldefault` `sl`, `\scdefault` `sc`), inverse of
+/// [`lookup_font_shape`]. `normal` is the upright shape plain's `\em` switches
+/// back to (plain_base.pool.ltxml:607).
+pub fn nfss_shape_code(shape: &str) -> Option<&'static str> {
+  match shape {
+    "upright" | "normal" => Some("n"),
+    "italic" => Some("it"),
+    "slanted" => Some("sl"),
+    "smallcaps" => Some("sc"),
+    _ => None,
+  }
+}
+
+/// A font size in points as LaTeX writes `\f@size`: `12`, `14.4`, `10.95`
+/// (`\strip@pt`, latex.ltx:12587).
+pub fn format_points(points: f64) -> String {
+  let text = format!("{points:.2}");
+  let text = text.trim_end_matches('0').trim_end_matches('.');
+  text.to_string()
+}
+
+/// The TeX font file of a text font, as `\font` names one: `cmtt10`, `cmbx9`,
+/// and `cmr10` loaded `at 10.95pt` (`Some` second part) for a size with no
+/// file of its own — the Computer Modern font of the family, series and shape
+/// (`None` for a combination with none). LaTeX's OT1 `.fd` files pick the
+/// nearest design size (ot1cmr.fd); this keeps the size or falls back to 10.
+pub fn tex_font_file_name(
+  family: &str,
+  series: &str,
+  shape: &str,
+  points: f64,
+) -> Option<(String, Option<String>)> {
+  let base = lookup_metric_name(family, series, shape)?;
+  Some(if points.fract() == 0.0 {
+    (format!("{base}{points}"), None)
+  } else {
+    (
+      format!("{base}10"),
+      Some(format!("{}pt", format_points(points))),
+    )
+  })
+}
 
 /// Combine family/series/shape lookups into a single Font (Perl lookupTeXFont)
 pub fn lookup_tex_font(fontname: &str, seriescode: &str, shapecode: &str) -> Font {
@@ -386,6 +487,33 @@ pub fn get_metric_for_name(name: &str) -> &'static MetricData {
     .expect("STDMETRICS must contain 'cmr'")
 }
 
+/// The TFM parameters `\font` gives a font of this name, per point of its
+/// size — Perl's `getMetricForName` (Common/Font.pm:551-562): the name's own
+/// metric, else its family at 10pt, else Computer Modern Roman at the name's
+/// size, else cmr10; the size is the name's trailing digits (10 without). This
+/// port's size-less and hand-merged entries (`cmr`, `cmbx`, `cmex`, …) carry
+/// no parameters and are passed over, as Perl has none of them. Perl's Error
+/// on the cmr10 fallback is not ported: it fires for valid fonts (`ecrm1000`).
+pub fn font_parameters_for_name(name: &str) -> &'static [f64] {
+  let base = name.trim_end_matches(|c: char| c.is_ascii_digit());
+  let size = if base.len() < name.len() {
+    &name[base.len()..]
+  } else {
+    "10"
+  };
+  [name, &format!("{base}10"), &format!("cmr{size}"), "cmr10"]
+    .into_iter()
+    .filter_map(|candidate| STDMETRICS.get(candidate))
+    .map(|metric| metric.parameters)
+    .find(|parameters| !parameters.is_empty())
+    .unwrap_or(&[])
+}
+
+/// The most parameters a font's array may grow to: TeX's font memory,
+/// `font_mem_size` in TeX Live's texmf.cnf, whose overflow stops TeX (tex.web
+/// §580, "TeX capacity exceeded, sorry [font memory=8000000]").
+pub const FONT_MEM_SIZE: usize = 8_000_000;
+
 pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>) -> Option<Font> {
   if let Some(cap) = FONT_RE.captures(name) {
     // Perl: my %props = (series => 'medium', shape => 'upright', encoding => 'OT1');
@@ -432,6 +560,16 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
   }
 }
 
+/// The math class of a glyph `\DeclareMathSymbol`'d from the math italic symbol font (`letters`), which decides the
+/// shape a capital Greek letter takes (`Font::specialize_letters`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LettersClass {
+  /// `\mathalpha`, class 7 (variable family): follows a math alphabet in force, else italic, as a Latin letter.
+  Variable,
+  /// `\mathord`, class 0: the math italic whatever the alphabet, as a lowercase Greek letter.
+  Fixed,
+}
+
 /// A data structure containing Font information, but also related textual properties (such as
 /// color)
 ///
@@ -453,6 +591,14 @@ pub struct Font {
   pub mathstyle:     Option<Cow<'static, str>>,
   pub mathstylestep: Option<i32>,
   pub name:          Option<Cow<'static, str>>,
+  /// While a font selected by `\font` (`name`) is in force, the font it replaced: NFSS's
+  /// `\f@encoding`/`\f@family`/`\f@series`/`\f@shape`/`\f@size`, which a `\font` identifier never
+  /// changes (tex.web §1217) and the next font selection returns to (`merge_ref`). Set where a
+  /// `\font` identifier is selected (`content::merge_font_ref`), so it — not `name`, which a box
+  /// font also carries from its `\textfont` — marks a raw font in force. Not part of the font's
+  /// identity (`Hash`, `PartialEq`): it changes nothing until a selection, and the dump does not
+  /// carry it.
+  pub nfss_font:     Option<std::sync::Arc<Font>>,
   pub emph:          Option<bool>,
   pub scripted:      Option<bool>,
   pub fraction:      Option<bool>,
@@ -519,6 +665,31 @@ impl PartialEq for Font {
   }
 }
 impl Eq for Font {}
+impl Font {
+  /// Perl `Font::equals` (Font.pm:333-337): the eleven slots of Perl's font array — family,
+  /// series, shape, size, color, background, opacity, encoding, language, mathstyle and flags — and
+  /// none of the Rust-only fields (`name`, `mathstylestep`, `scale`, …) `PartialEq` also compares,
+  /// which a font merged from a mathchar's fontinfo carries (`$2\mathrm{KL}$`'s digit, whose
+  /// `name` and `OT1` encoding are the fontinfo's). Colors compare by value (OXIDIZED_DESIGN #20);
+  /// unset flags are 0, and an unset encoding is Perl's default `OT1` — Rust's math default leaves
+  /// it unset where Perl's `mathDefault` has `'OT1'` (Font.pm:280-283), so the current font of
+  /// `\mathrm` letters compares equal to a digit's fontinfo font as in Perl. Used by the letters
+  /// and number ligatures (`base_xmath.rs`); witness 2605.31599.
+  pub fn perl_equals(&self, other: &Font) -> bool {
+    self.family == other.family
+      && self.series == other.series
+      && self.shape == other.shape
+      && self.size == other.size
+      && !is_diff_font_color(self.color.as_ref(), other.color.as_ref())
+      && self.bg == other.bg
+      && self.opacity == other.opacity
+      && self.encoding.as_deref().unwrap_or(DEFENCODING)
+        == other.encoding.as_deref().unwrap_or(DEFENCODING)
+      && self.language == other.language
+      && self.mathstyle == other.mathstyle
+      && self.flags.unwrap_or(0) == other.flags.unwrap_or(0)
+  }
+}
 // display is used often for attributes in binding replacements,
 // as in font="#font"
 impl fmt::Display for Font {
@@ -608,6 +779,7 @@ impl Font {
       mathstylestep: None,
       emph:          None,
       name:          None,
+      nfss_font:     None,
       scripted:      None,
       fraction:      None,
       forceseries:   None,
@@ -633,6 +805,7 @@ impl Font {
       mathstylestep: None,
       emph:          None,
       name:          None,
+      nfss_font:     None,
       scripted:      None,
       fraction:      None,
       forceseries:   None,
@@ -758,6 +931,10 @@ impl Font {
       flags:         Some(self.flags.unwrap_or(0) | concrete.flags.unwrap_or(0)),
       mathstylestep: self.mathstylestep.or(concrete.mathstylestep),
       name:          self.name.clone().or_else(|| concrete.name.clone()),
+      nfss_font:     self
+        .nfss_font
+        .clone()
+        .or_else(|| concrete.nfss_font.clone()),
       emph:          self.emph.or(concrete.emph),
       scripted:      self.scripted.or(concrete.scripted),
       fraction:      self.fraction.or(concrete.fraction),
@@ -878,12 +1055,36 @@ impl Font {
   /// from `other` (cheap — Option<Cow<'static,str>> clones are free for
   /// Borrowed variants, and most Font fields are None in typical uses).
   pub fn merge_ref(&self, other: &Font) -> Self {
+    // A font selected by `\font` replaces `cur_font` only (tex.web §1217); the next font
+    // selection — a family, series, shape or encoding declaration, which LaTeX ends with
+    // `\selectfont` (latex.ltx:12576-12579) — starts from NFSS's font again and ends the raw
+    // one. Colour, a bare size and math style keep it. Guard
+    // `perfect_kernel_batch58::raw_font_ends_at_a_font_selection`.
+    if self.nfss_font.is_some()
+      && other.name.is_none()
+      && (other.family.is_some()
+        || other.series.is_some()
+        || other.shape.is_some()
+        || other.encoding.is_some()
+        || other.forcebold.is_some()
+        || other.emph == Some(true))
+    {
+      return self.nfss_restored().merge_ref(other);
+    }
     // Handle forcebold for compatibility (Perl lines 873-874)
     let mut series = other.series.clone();
     let mut force_series = other.forceseries;
     if other.forcebold == Some(true) {
       series = Some(Cow::Borrowed("bold"));
       force_series = Some(true);
+    }
+    // `forcebold` false is the normal math version (`\unboldmath`, `\mathversion{normal}`, latex.ltx:14092-14095,
+    // :10545): the series medium again, no longer forced. Perl's merge ignores it (Font.pm:934-935, KNOWN_PERL_ERRORS
+    // #687), so the bold version stayed to the end of the group (witness 1803.08052, Buras's
+    // `\boldmath\section{…}\unboldmath`). Guard `perfect_kernel_batch78a::unboldmath_restores_the_normal_math_version`.
+    let unbold = other.forcebold == Some(false);
+    if unbold {
+      series = Some(Cow::Borrowed("medium"));
     }
 
     // Build flags from force options
@@ -905,7 +1106,7 @@ impl Font {
     } else {
       other.family.clone()
     };
-    let series = if series.is_none() || (oflags & FLAG_FORCE_SERIES != 0) {
+    let series = if !unbold && (series.is_none() || (oflags & FLAG_FORCE_SERIES != 0)) {
       self.series.clone()
     } else {
       series
@@ -929,6 +1130,9 @@ impl Font {
     let language = other.language.clone().or_else(|| self.language.clone());
     let mut mathstyle = other.mathstyle.clone().or_else(|| self.mathstyle.clone());
     flags |= self.flags.unwrap_or(0);
+    if unbold {
+      flags &= !FLAG_FORCE_SERIES;
+    }
 
     // Dynamic adjustment directives
     if let Some(scale) = other.scale
@@ -994,6 +1198,7 @@ impl Font {
       // Carry over fields that aren't part of Perl's merge:
       mathstylestep: other.mathstylestep.or(self.mathstylestep),
       name: other.name.clone().or_else(|| self.name.clone()),
+      nfss_font: self.nfss_font.clone(),
       emph: None,
       scripted: None,
       fraction: None,
@@ -1036,6 +1241,44 @@ impl Font {
     if text.is_empty() {
       return new; // ?
     }
+    let (deffamily, defseries, defshape) = self.specialize_defaults();
+    if LATIN_LETTER_RE.is_match(text) {
+      // Latin Letter
+      new.specialize_as_latin_letter();
+    } else if GREEK_LETTER_RE.is_match(text) {
+      // Single Greek character?
+      if UPPER_LETTER_RE.is_match(text) {
+        // Uppercase
+        if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
+          new.family = Some(deffamily);
+          if new.shape.is_some() && (new.shape != Some(DEFSHAPE.into())) {
+            new.shape = Some(defshape); // if ANY shape, must be default
+          }
+        }
+      } else {
+        // Lowercase
+        new.specialize_as_lowercase_greek(self, deffamily, defseries);
+      }
+    } else if DIGIT_LETTER_RE.is_match(text) {
+      // Digit
+      if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
+        new.family = Some(deffamily);
+        new.shape = Some(defshape); // defaults, always.
+      }
+    } else {
+      // Other Symbol
+      new.family = Some(deffamily);
+      new.shape = Some(defshape); // defaults, always.
+      if new.series.is_some() && (new.series.as_ref().unwrap() != DEFSERIES) {
+        new.series = Some(defseries);
+      } // defaults, always.
+    }
+    new
+  }
+
+  /// Perl `specialize`'s `$deffamily`, `$defseries`, `$defshape`: the font's own value where its `force*` flag
+  /// holds it, else the default.
+  fn specialize_defaults(&self) -> (Cow<'static, str>, Cow<'static, str>, Cow<'static, str>) {
     let deffamily = if self.forcefamily.unwrap_or(false) {
       self.family.clone().unwrap_or_else(|| DEFFAMILY.into())
     } else {
@@ -1051,47 +1294,59 @@ impl Font {
     } else {
       DEFSHAPE.into()
     };
-    if LATIN_LETTER_RE.is_match(text) {
-      // Latin Letter
-      if new.shape.is_none() && new.family.is_none() {
-        new.shape = Some("italic".into());
-      }
-    } else if GREEK_LETTER_RE.is_match(text) {
-      // Single Greek character?
-      if UPPER_LETTER_RE.is_match(text) {
-        // Uppercase
-        if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
-          new.family = Some(deffamily);
-          if new.shape.is_some() && (new.shape != Some(DEFSHAPE.into())) {
-            new.shape = Some(defshape); // if ANY shape, must be default
-          }
-        }
-      } else {
-        // Lowercase
-        if new.family.is_none() || (new.family.as_deref() != Some(DEFFAMILY)) {
-          new.family = Some(deffamily);
-        }
-        // Perl: $shape = 'italic' if !$shape || !($flags & $FLAG_FORCE_SHAPE);
-        if new.shape.is_none() || !self.forceshape.unwrap_or(false) {
-          new.shape = Some("italic".into());
-        }
-        if new.series.is_some() && (new.series != Some(DEFSERIES.into())) {
-          new.series = Some(defseries);
-        }
-      }
-    } else if DIGIT_LETTER_RE.is_match(text) {
-      // Digit
-      if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
-        new.family = Some(deffamily);
-        new.shape = Some(defshape); // defaults, always.
-      }
-    } else {
-      // Other Symbol
-      new.family = Some(deffamily);
-      new.shape = Some(defshape); // defaults, always.
-      if new.series.is_some() && (new.series.as_ref().unwrap() != DEFSERIES) {
-        new.series = Some(defseries);
-      } // defaults, always.
+    (deffamily, defseries, defshape)
+  }
+
+  /// Perl `specialize`'s Latin-letter rule: italic unless a shape or a family (a math alphabet) is in force.
+  fn specialize_as_latin_letter(&mut self) {
+    if self.shape.is_none() && self.family.is_none() {
+      self.shape = Some("italic".into());
+    }
+  }
+
+  /// Perl `specialize`'s lowercase-Greek rule: the default family, italic unless a forced shape holds, the default
+  /// series unless a forced one holds. `orig` is the font before specialization (its `force*` flags).
+  fn specialize_as_lowercase_greek(
+    &mut self,
+    orig: &Font,
+    deffamily: Cow<'static, str>,
+    defseries: Cow<'static, str>,
+  ) {
+    if self.family.is_none() || (self.family.as_deref() != Some(DEFFAMILY)) {
+      self.family = Some(deffamily);
+    }
+    // Perl: $shape = 'italic' if !$shape || !($flags & $FLAG_FORCE_SHAPE);
+    if self.shape.is_none() || !orig.forceshape.unwrap_or(false) {
+      self.shape = Some("italic".into());
+    }
+    if self.series.is_some() && (self.series != Some(DEFSERIES.into())) {
+      self.series = Some(defseries);
+    }
+  }
+
+  /// `specialize` for a glyph `\DeclareMathSymbol`'d from the math italic symbol font, `letters` (OML `cmm/m/it`,
+  /// fontmath.ltx:60): a capital Greek letter takes the rule of the fontmath.ltx glyphs of the same class, which
+  /// Perl's `specialize` encodes — a `\mathalpha` (class 7, variable family) one the Latin letters' (fontmath.ltx:87-138
+  /// `\DeclareMathSymbol{a}{\mathalpha}{letters}{`a}`): italic unless a math alphabet is in force (`\mathrm`,
+  /// `\mathbf` upright; `\boldmath`, `\boldsymbol`, `\bm` bold italic), as TeX's class 7 takes `\fam` (tex.web
+  /// §1151); a `\mathord` (class 0) one the lowercase Greek letters' (fontmath.ltx:175-203 `\DeclareMathSymbol{\alpha}
+  /// {\mathord}{letters}{"0B}`): italic whatever the alphabet. The capitals follow an alphabet to the same letter
+  /// because OT1, the alphabets' encoding, holds them at OML's slots "00-"0A; lowercase Greek has no OT1 slot (an
+  /// alphabet prints a ligature there), so every other glyph keeps `specialize`'s own rule. llncs.cls:379-389,
+  /// svmult.cls:971-981, svjour3.cls:147-157, fixmath.sty:27-37, amsmath.sty:384-395 (`\varGamma`, class 0).
+  /// Witnesses 2606.09074 (llncs), 2101.03721 (svjour3), 0812.2480 (svmult), 1002.2350 (fixmath), 2508.05134 (newpxmath
+  /// `slantedGreek`), 1701.03426 and 2407.01655 (amsmath `\var…`).
+  pub fn specialize_letters(&self, text: &str, class: LettersClass) -> Self {
+    if !(GREEK_LETTER_RE.is_match(text) && UPPER_LETTER_RE.is_match(text)) {
+      return self.specialize(text);
+    }
+    let mut new = self.clone();
+    match class {
+      LettersClass::Variable => new.specialize_as_latin_letter(),
+      LettersClass::Fixed => {
+        let (deffamily, defseries, _) = self.specialize_defaults();
+        new.specialize_as_lowercase_greek(self, deffamily, defseries);
+      },
     }
     new
   }
@@ -1321,6 +1576,47 @@ impl Font {
     changes
   }
 
+  /// This font with the NFSS font a `\font` identifier replaced (`nfss_font`) back in force: its
+  /// family, series, shape, size and encoding, no `name`.
+  fn nfss_restored(&self) -> Font {
+    let mut base = self.clone();
+    base.name = None;
+    base.nfss_font = None;
+    if let Some(nfss) = &self.nfss_font {
+      base.family = nfss.family.clone();
+      base.series = nfss.series.clone();
+      base.shape = nfss.shape.clone();
+      base.size = nfss.size;
+      base.encoding = nfss.encoding.clone();
+    }
+    base
+  }
+
+  /// The TFM a character of this font is measured from: a font loaded by name (`\font`) whose
+  /// family has no standard metric, while it is still that font's family and encoding (a later
+  /// font selection ends it, `merge_ref`). Fonts with a standard metric keep Perl's metric
+  /// (`get_metric`; KPE #408, witness 2605.02221).
+  pub fn measuring_tfm(&self) -> Option<Rc<tfm::Tfm>> {
+    let name = self.name.as_deref()?;
+    let family = self.family.as_deref().unwrap_or("serif");
+    let series = self.series.as_deref().unwrap_or("medium");
+    let shape = self.shape.as_deref().unwrap_or("upright");
+    if lookup_metric_name(family, series, shape).is_some() {
+      return None;
+    }
+    let named = NAMED_FONT_CLASS.with(|cache| {
+      cache
+        .borrow_mut()
+        .entry(name.to_string())
+        .or_insert_with(|| decode_fontname(name, None, None).map(|f| (f.family, f.encoding)))
+        .clone()
+    })?;
+    if named != (self.family.clone(), self.encoding.clone()) {
+      return None;
+    }
+    tfm::tfm_for(name)
+  }
+
   /// Find a Font Metric corresponding to this font's family_series_shape_size
   /// that contains the given `char`, if given.
   /// Try to find a fallback metric if `char` is not in the current Font.
@@ -1486,7 +1782,9 @@ impl Font {
     // its width as inter-word space and discards height/depth, but getSize honors
     // the full width/height/depth. In Perl the dispatch is on the type of the
     // measured object (a bare-box body, not a List); a single-element slice here
-    // is the faithful analogue (a List-of-one would still be a List in Perl).
+    // is the faithful analogue, since Perl's `List()` returns a lone box of the
+    // list's mode itself (List.pm:41-44). `List::compute_size` floors a
+    // horizontal list's height and depth after it, as `hpack` does.
     if let [single] = boxes
       && !matches!(single.data(), DigestedData::List(_))
     {
@@ -1535,6 +1833,13 @@ impl Font {
       // `tex_box.rs` `{` primitive R2 / OXIDIZED_DESIGN #100 — so no run of loose
       // characters ever reaches here to be mis-counted one-line-per-glyph.)
       for bx in boxes {
+        // A penalty, like glue, makes a top-attached box 0pt high when it comes first (tex.web §1087).
+        if bx.get_property_bool("isPenalty") {
+          if lines.is_empty() && vattach == "top" {
+            lines.push([-1, 0, 0, 0]);
+          }
+          continue;
+        }
         if bx.has_property("isEmpty") {
           continue;
         }
@@ -1562,7 +1867,14 @@ impl Font {
               _ => None,
             })
             .unwrap_or(baseline);
-          lines.extend(self.linebreak_paragraph(&bx.unlist(), w, sub_baseline)?);
+          let items = bx.unlist();
+          if items.is_empty() {
+            // A paragraph's empty line (stomach.rs `end_graf`, `\leavevmode\par`): no height, but a line on the
+            // list, so the next box is a `\baselineskip` below it (tex.web §1096).
+            lines.push([sub_baseline, w, 0, 0]);
+          } else {
+            lines.extend(self.linebreak_paragraph(&items, w, sub_baseline)?);
+          }
           continue;
         }
         // Perl: single box → one line, with baseline (or -1 for vskip/rule).
@@ -1585,7 +1897,10 @@ impl Font {
         } else {
           baseline
         };
-        if w != 0 || h != 0 || d != 0 {
+        // A leading skip or kern sets a top-attached box's height to 0pt even when it is empty (tex.web §1087):
+        // `\vtop{\kern0pt …}`, as `\vspace{0pt}` atop a `[t]` minipage, puts the reference point at the top.
+        let leading_skip = bs == -1 && lines.is_empty() && vattach == "top";
+        if w != 0 || h != 0 || d != 0 || leading_skip {
           lines.push([bs, w, h, d]);
         }
       }
@@ -1630,9 +1945,18 @@ impl Font {
           .collect::<Vec<_>>()
       );
     }
-    let (mut wd, mut ht, mut dp) = Self::compute_boxes_size_stack(&vattach, mathaxis, &lines);
-    // Perl: $wd = $maxwidth if $wd && $maxwidth (set to fill width, unless empty).
-    if wd != 0 && maxwidth != 0 {
+    let skip_option = |key: &str| match options.get(key) {
+      Some(Stored::Dimension(d)) => Some(d.value_of()),
+      Some(Stored::Int(i)) => Some(*i),
+      _ => None,
+    };
+    let interline = (skip_option("lineskip"), skip_option("lineskiplimit"));
+    let (mut wd, mut ht, mut dp) =
+      Self::compute_boxes_size_stack(&vattach, mathaxis, &lines, interline);
+    // Perl: $wd = $maxwidth if $wd && $maxwidth (set to fill width, unless empty). Under `natural_width` the
+    // widest line's own width instead, as varwidth.sty's `\@vwid@measure` re-measures each line.
+    if wd != 0 && maxwidth != 0 && !matches!(options.get("natural_width"), Some(Stored::Bool(true)))
+    {
       wd = maxwidth;
     }
     // Perl: divide up totalheight, if requested.
@@ -1682,7 +2006,9 @@ impl Font {
     let mut queue: std::collections::VecDeque<Digested> = boxes.iter().cloned().collect();
     let mut out: Vec<Digested> = Vec::new();
     while let Some(bx) = queue.pop_front() {
+      // A finished paragraph stays one unit (see `is_finished_paragraph`).
       if matches!(bx.data(), DigestedData::List(_))
+        && !is_finished_paragraph(&bx)
         && bx
           .get_property("mode")
           .map(|v| v.to_string())
@@ -1756,6 +2082,21 @@ impl Font {
         } else {
           prevspace += w as f64;
         }
+      }
+      // A finished paragraph inside the line (see `is_finished_paragraph`) takes lines of its own:
+      // it ends the word before it, and a break follows it; an empty one (a `\par` with nothing
+      // before it, as a tikz node's text opens) makes no line.
+      else if is_finished_paragraph(bx) {
+        if wd != 0.0 || ht != 0 || dp != 0 {
+          words.push([prevspace, wd, ht as f64, dp as f64]);
+        }
+        if h != 0 || d != 0 {
+          words.push([-1.0, w as f64, h as f64, d as f64]);
+        }
+        wd = 0.0;
+        ht = 0;
+        dp = 0;
+        prevspace = -1.0;
       }
       // Perl #2798: an ideographic (CJK) char is itself a word.
       else if bx.get_property_bool("isIdeographic") {
@@ -1844,22 +2185,37 @@ impl Font {
   /// Perl #2798: stack_lines — sum a stack of `[baseline, wd, ht, dp]` lines:
   /// `wd` is the max, inter-line spacing uses each line's `baseline` (`bs < 0` =
   /// no adjustment), and `ht`/`dp` are split per `vattach` (`mathaxis` = size/4).
-  fn compute_boxes_size_stack(vattach: &str, mathaxis: i64, lines: &[[i64; 4]]) -> (i64, i64, i64) {
+  fn compute_boxes_size_stack(
+    vattach: &str,
+    mathaxis: i64,
+    lines: &[[i64; 4]],
+    (lineskip, lineskiplimit): (Option<i64>, Option<i64>),
+  ) -> (i64, i64, i64) {
     let nlines = lines.len();
     if nlines == 0 {
       return (0, 0, 0);
     }
-    if nlines == 1 {
+    // tex.web §1087: a `\vtop` is as high as its first item when that is a box or rule, else 0pt high — a leading
+    // skip, kern or penalty goes into its depth (`\vtop{\vskip5pt\hbox{A}}` is 0pt high, 11.83pt deep).
+    let leading_skip = vattach == "top" && lines[0][0] == -1;
+    if nlines == 1 && !leading_skip {
       let [_bs, w, h, d] = lines[0];
       return (w, h, d);
     }
-    // Perl: $lineskip = lookupDefinition('\lineskip')->valueOf->valueOf
-    let lineskip = lookup_definition(&T_CS!("\\lineskip"))
-      .ok()
-      .flatten()
-      .and_then(|def| def.value_of(Vec::new()))
-      .map(|v| v.value_of())
-      .unwrap_or(0);
+    // Perl: $lineskip = lookupDefinition('\lineskip')->valueOf->valueOf — the box's own when it recorded them.
+    let register = |cs: &str| {
+      lookup_definition(&T_CS!(cs))
+        .ok()
+        .flatten()
+        .and_then(|def| def.value_of(Vec::new()))
+        .map(|v| v.value_of())
+        .unwrap_or(0)
+    };
+    let lineskip = lineskip.unwrap_or_else(|| register("\\lineskip"));
+    // A list that recorded no limit is stacked with LaTeX's 0pt, not the limit in force where it is measured: a
+    // minipage measured inside an `\offinterlineskip` group (`\maxdimen`) lost its interline glue
+    // (OXIDIZED_DESIGN_DIVERGENCES #421).
+    let lineskiplimit = lineskiplimit.unwrap_or(0);
     let mut wd: i64 = 0;
     let mut prevdepth: i64 = -99999;
     let mut th: i64 = 0;
@@ -1867,12 +2223,11 @@ impl Font {
       let [bs, w, h, d] = *line;
       wd = max(w, wd);
       th += h + d;
+      // tex.web §679: `\baselineskip` less the depth above and the height below, `\lineskip` when that is under
+      // `\lineskiplimit`.
       if prevdepth >= 0 && bs >= 0 {
-        if prevdepth + h < bs {
-          th += bs - prevdepth - h;
-        } else {
-          th += lineskip;
-        }
+        let gap = bs - prevdepth - h;
+        th += if gap >= lineskiplimit { gap } else { lineskip };
       }
       // TeX vpack \prevdepth discipline (divergence from Perl #2798 — see
       // the vertical branch above): boxes set prevdepth to their depth;
@@ -1893,6 +2248,7 @@ impl Font {
         let d = lines[nlines - 1][3];
         (th - d, d)
       },
+      _ if leading_skip => (0, th),
       // else (baseline / top): align to baseline of top row.
       _ => {
         let h = lines[0][2];
@@ -2030,7 +2386,7 @@ fn push_fontmap_char(result: &mut String, c: char, _code: u8) {
 }
 
 /// Check if a character is a Unicode combining mark (category Mn).
-fn is_combining_mark(c: char) -> bool {
+pub fn is_combining_mark(c: char) -> bool {
   matches!(c as u32,
     0x0300..=0x036F   // Combining Diacritical Marks
     | 0x1AB0..=0x1AFF // Combining Diacritical Marks Extended
@@ -2066,11 +2422,14 @@ pub fn decode_str(code: u8, encoding_opt: Option<String>, implicit: bool) -> Opt
 /// Look up multi-char override for a given encoding position.
 /// Returns Some(String) if a multi-char override exists.
 fn lookup_multichar_override(code: u8, encoding_opt: Option<&str>) -> Option<String> {
+  let mut font = None;
   let encoding = match encoding_opt {
     Some(enc) if !enc.is_empty() => enc.to_string(),
     _ => {
-      let font = lookup_font();
-      font.and_then(|f| f.get_encoding().map(|e| e.to_string()))?
+      font = lookup_font();
+      font
+        .as_ref()
+        .and_then(|f| f.get_encoding().map(|e| e.to_string()))?
     },
   };
   if encoding.is_empty() {
@@ -2090,13 +2449,34 @@ fn lookup_multichar_override(code: u8, encoding_opt: Option<&str>) -> Option<Str
   // such hazard: `FontDecode` calls `LoadFontMap` first and then indexes one
   // map whose slot already holds the whole string.
   let _ = preload_font_map(&encoding);
-  with_value_sym(fontmap_key_syms(&encoding).multichar, |val_opt| {
+  with_value_sym(decoding_map(&encoding, font.as_deref()).1, |val_opt| {
     if let Some(Stored::HashString(map)) = val_opt {
       map.get(&code.to_string()).cloned()
     } else {
       None
     }
   })
+}
+
+/// The map a font decodes through, and the key of the multichar table that goes with it (Perl `FontDecode`,
+/// Package.pm:2878-2882): its family's own map (`<encoding>_<family>_fontmap`, `OT1_typewriter`, `U_msa`), when one is
+/// declared, with that map's multichar entries (`<encoding>_<family>_fontmap_multichar`), else its encoding's. In Perl a
+/// map slot holds the whole string, so the family's map replaces the encoding's multichar entries too. Perl reads a
+/// family map only after its encoding's map has loaded; here a family map stands on its own, as `font_decode`
+/// (content.rs) already reads it: `U` has no map of its own (u_fontmap.rs), and its families' — `U_msa`, `U_msb`,
+/// `U_eur`, and bbold's `U_blackboard` — are each one font's layout, not the encoding's (bbold_sty.rs;
+/// OXIDIZED_DESIGN_DIVERGENCES #27).
+fn decoding_map(encoding: &str, font: Option<&Font>) -> (Option<Fontmap>, SymStr) {
+  // `load_font_map` preloads; keys are memoized (2026-08-23 audit R6).
+  let map = load_font_map(encoding);
+  if let Some(family) = font.and_then(|font| font.get_family()) {
+    let (family_map_key, family_multichar_key) = fontmap_family_key_syms(encoding, family);
+    let family_map: Option<Fontmap> = with_value_sym(family_map_key, |v| v.and_then(|s| s.into()));
+    if family_map.is_some() {
+      return (family_map, family_multichar_key);
+    }
+  }
+  (map, fontmap_key_syms(encoding).multichar)
 }
 
 pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<char> {
@@ -2129,23 +2509,23 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
     },
   };
 
-  let mut map: Option<Fontmap> = None;
-  if !encoding.is_empty() {
-    // `load_font_map` preloads; keys are memoized (2026-08-23 audit R6).
-    if let Some(encmap) = load_font_map(&encoding) {
-      // OK got some map.
-      map = Some(encmap);
-      if let Some(ref font) = font
-        && let Some(family) = (*font).get_family()
-      {
-        with_value_sym(fontmap_family_key_sym(&encoding, family), |fmap_opt| {
-          if let Some(fmap) = fmap_opt {
-            map = fmap.into(); // Use the family specific map, if any.
-          }
-        });
-      }
-    }
-  }
+  decode_with_map(code, &encoding, font.as_deref(), implicit)
+}
+
+/// Decode a codepoint in `encoding` as `font` draws it: through the font family's own map, when one is declared
+/// (`decoding_map`). Perl `FontDecode($n, $encoding, $font)`, as `decodeMathChar` calls it (Package.pm:2990): the
+/// math character's encoding is the font info's, its family the font's — `\mathbb{R}` under bbold is `U` in the
+/// `blackboard` family, decoded through `U_blackboard` (bbold_sty.rs).
+pub fn decode_in_font(code: u8, encoding: &str, font: &Font, implicit: bool) -> Option<char> {
+  decode_with_map(code, encoding, Some(font), implicit)
+}
+
+fn decode_with_map(code: u8, encoding: &str, font: Option<&Font>, implicit: bool) -> Option<char> {
+  let map = if encoding.is_empty() {
+    None
+  } else {
+    decoding_map(encoding, font).0
+  };
 
   if implicit {
     if let Some(map) = map {
@@ -2192,26 +2572,16 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
   // the "{encoding}_fontmap"-family key strings each call was ~1M allocations
   // on a 1.3 s paper (2026-08-23 audit R6). `load_font_map` preloads, so no
   // separate `preload_font_map` call is needed.
-  let mut map: Option<Fontmap> = None;
-  if !encoding.is_empty()
-    && let Some(encmap) = load_font_map(encoding)
-  {
-    // OK got some map.
-    map = Some(encmap);
-    if let Some(ref font) = font
-      && let Some(family) = (*font).get_family()
-    {
-      with_value_sym(fontmap_family_key_sym(encoding, family), |fmap_opt| {
-        if let Some(fmap) = fmap_opt {
-          map = fmap.into(); // Use the family specific map, if any.
-        }
-      });
-    }
-  }
+  let (map, multichar_key) = if encoding.is_empty() {
+    (None, None)
+  } else {
+    let (map, multichar_key) = decoding_map(encoding, font.as_deref());
+    (map, Some(multichar_key))
+  };
 
   // Load multi-char overrides if available
-  let multichar_map: Option<HashMap<String, String>> = if !encoding.is_empty() {
-    with_value_sym(fontmap_key_syms(encoding).multichar, |val_opt| {
+  let multichar_map: Option<HashMap<String, String>> = if let Some(multichar_key) = multichar_key {
+    with_value_sym(multichar_key, |val_opt| {
       if let Some(Stored::HashString(m)) = val_opt {
         Some(m.clone())
       } else {
@@ -2276,6 +2646,20 @@ pub fn rationalize_font_size(size: &str) -> f64 {
 /// convert size to percent
 pub fn relative_font_size(newsize: f64, oldsize: f64) -> String {
   s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor())
+}
+
+/// A horizontal List with a width is a finished paragraph (`repack_horizontal`), which a text
+/// group holding a `\par` carries into the line it sits in (a tikz `align=center` node's `\\`
+/// lines, a `{\footnotesize …\par …}` block): measured as one unit on lines of its own — neither
+/// opened into the words around it nor run into them (Perl's flat text groups never nest one,
+/// Font.pm:731-746). Witnesses 2605.28170 (a prompt box: 486pt, pdflatex 570, run into one line
+/// 233), 2605.15377, 2605.01547 (a figure 392.53pt wide as pdflatex; 718.6 before 58b).
+fn is_finished_paragraph(bx: &Digested) -> bool {
+  matches!(bx.data(), DigestedData::List(_))
+    && bx.has_property("width")
+    && bx
+      .get_property("mode")
+      .is_some_and(|mode| mode.to_string() == "horizontal")
 }
 
 #[cfg(test)]

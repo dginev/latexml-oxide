@@ -1,0 +1,25 @@
+% A text command re-declared after its composites were declared is plain
+% again; the next `\DeclareTextComposite(Command)` wraps it anew
+% (latex.ltx:9923-9932 tests whether the CURRENT definition is the
+% `\@text@composite` wrapper). Rust wrapped once (its `\<enc>\cs@orig` was
+% the test) and never again. Under the luatex profile greek.ldf and then
+% textalpha.sty both input tuenc-greek.def, so greek-fontenc.def:464
+% re-declares `\TU\LGR@hiatus` a second time and it stayed plain: the
+% uppercase `\>` + grave (→ `\LGR@hiatus` + grave, :466 → `\LGR@accdropped`)
+% printed the grave as ‘.
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: greek-fontenc/hyperref-with-greek (lualatex; `\MakeUppercase{\GreekExtendedI}`
+%          = ΑΑΑΑΑΑΑΑ; Rust W11 before this fix ΑΑ‘ΑΑ’ΑΑΑΑ)
+% oracle:  lualatex 0 errors: [Α] [Α] [‘]
+% engines: rust 56jd = [ἂ] [ἄ] [‘̀]; 56jd+W10 = [Α] [Α] [‘̀]; W11 re-read without re-wrap = [‘Α] [’Α] [‘]
+% expect:  0 errors, 0 warnings; [Α] [Α] [‘]
+% guard:   greek_text::redeclared_text_command_is_rewrapped
+% status:  GREEN (W11, 2026-09-25; was RED once `\input` re-reads)
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage[greek.polutoniko,english]{babel}
+\usepackage[normalize-symbols]{alphabeta}
+\begin{document}
+\selectlanguage{greek}
+[\MakeUppercase{\>`\textalpha}] [\MakeUppercase{\>'\textalpha}] [\`{`}]
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 2609.00047, 2609.00281: cas-common.sty:895-940 `\author[1,2]{…}` marks the affiliations
+%          `\affiliation[1]{…}` (:1252-1266) labels; the binding ignored both, and every affiliation went to the last
+%          author
+% oracle:  pdflatex 0 errors: Ann Able (a, b), Bob Baker (none), Cy Cole (b)
+% engines: rust 63t7 = both affiliations on Cy Cole
+% expect:  0 errors, 0 warnings; each author with the affiliations their marks name, Bob Baker with none
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass[a4paper,fleqn]{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[1,2]{Ann Able}
+\author{Bob Baker}
+\author[2]{Cy Cole}
+\affiliation[1]{organization={Univ A}, country={Xland}}
+\affiliation[2]{organization={Univ B}, country={Yland}}
+\maketitle
+Body.
+\end{document}

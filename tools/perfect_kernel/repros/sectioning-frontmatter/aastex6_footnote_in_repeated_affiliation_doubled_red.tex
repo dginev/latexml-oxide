@@ -1,0 +1,23 @@
+% mechanism: AASTeX (REVTeX underneath) prints two authors' identical `\affiliation{Uni Three\footnote{Visiting.}}` as one
+%   line, its note once; the conversion gives each author the affiliation (right) and writes the note twice, two
+%   document-level `ltx:pubnote`s, no Warning
+% witness: synthetic (found by batch AAS1 writing the sibling shape of aastex6_repeated_affiliations_read_once)
+% oracle:  pdflatex with 2403.06760's own aastex631.cls (TL 2025 ships none) 0 errors: "Dan Dorn and Eve Eng1 /
+%   1 Uni Threea" and at the foot one "a Visiting."
+% engines: rust int169b and AAS1 (byte-identical): Dan Dorn and Eve Eng each "affiliation: Uni Three", and
+%   `<pubnote>Visiting.</pubnote>` twice, 0 warnings
+% expect:  the note once
+% status:  RED (int169b, AAS1)
+% moves:   post-merge
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\author{Dan Dorn}
+\affiliation{Uni Three\footnote{Visiting.}}
+\author{Eve Eng}
+\affiliation{Uni Three\footnote{Visiting.}}
+\begin{abstract}A.\end{abstract}
+\keywords{K}
+\section{Intro}
+Text.
+\end{document}

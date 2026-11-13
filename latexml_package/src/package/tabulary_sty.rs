@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{engine::tex_tables::restore_dollar_outside_alignment, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -16,8 +16,11 @@ LoadDefinitions!({
   DefMacro!("\\endtabulary",
     "\\lx@end@alignment\\@end@tabulary",
     locked => true);
-  DefPrimitive!(T_CS!("\\@end@tabulary"), None, { egroup()?; });
-  DefConstructor!("\\@@tabulary{Dimension}[] Undigested DigestedBody",
+  DefPrimitive!(T_CS!("\\@end@tabulary"), None, {
+    egroup()?;
+    restore_dollar_outside_alignment();
+  });
+  DefConstructor!("\\@@tabulary{Dimension} OptionalPosition Undigested DigestedBody",
     "#4",
     reversion => "\\begin{tabulary}{#1}[#2]{#3}#4\\end{tabulary}",
     before_digest => { bgroup(); },
@@ -25,9 +28,9 @@ LoadDefinitions!({
 
   // Like l,c,r,j, but set like p w/o explicit width...
   DefColumnType!("L", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
+    with_building_template(|template| {
+      template.add_column(Cell {
+        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline"))),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Left),
         ..Cell::default()
@@ -35,9 +38,9 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("C", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
+    with_building_template(|template| {
+      template.add_column(Cell {
+        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline"))),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Center),
         ..Cell::default()
@@ -45,9 +48,9 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("R", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
+    with_building_template(|template| {
+      template.add_column(Cell {
+        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline"))),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Right),
         ..Cell::default()
@@ -55,9 +58,9 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("J", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
+    with_building_template(|template| {
+      template.add_column(Cell {
+        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline"))),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Justify),
         ..Cell::default()

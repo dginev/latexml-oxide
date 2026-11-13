@@ -1,0 +1,14 @@
+% witness: astro-ph0011001 (emulateapj5.sty:386 `\def\keywords`, :394 `\let\subjectheadings=\keywords`; the
+%          aas_support binding's `\let\subjectheadings\keywords`, aas_support_sty.rs:200)
+% oracle:  pdflatex 0 errors ("Subject headings: stars"; TL 2025 has no aastex.cls: validated with an article stand-in)
+% engines: rust 72a r2 = a "Subject headings: stars" paragraph (the copy's alias left in force)
+% expect:  0 errors, 0 warnings; <keywords>stars</keywords>
+% status:  RED (72a r2) -> GREEN (72a r3)
+% preload: ar5iv.sty
+\documentclass{aastex}
+\usepackage{emulateapj5}
+\begin{document}
+\title{T}
+\subjectheadings{stars}
+Text.
+\end{document}

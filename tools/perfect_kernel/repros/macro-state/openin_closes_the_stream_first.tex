@@ -1,0 +1,10 @@
+% witness: 1010.6236 (pinlabel.sty:565 probes the next figure's `.ps` on a stream still open on the previous EPS)
+% oracle:  pdflatex 0 errors: "CLOSED" (tex.web §1275: \openin closes the stream before it opens the new file)
+% engines: rust (63c) = "STALE" (tex_file_io.rs opened only on success); Perl alike (TeX_FileIO.pool.ltxml:52,60)
+% expect:  0 errors; the paragraph reads "CLOSED"
+% status:  GREEN (63d)
+\documentclass{article}
+\begin{document}
+\newread\s \openin\s=example-image.eps \read\s to\x
+\openin\s=nonexistent-file.ps \ifeof\s CLOSED\else STALE\fi
+\end{document}

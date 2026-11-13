@@ -1,0 +1,23 @@
+% mechanism: the frontmatter content check reads an ordinal's suffix (`5\textsuperscript{th}`) as a word apart on one
+%   side and glued on the other, so an affiliation placed as printed (`Univ A, 5<sup>th</sup> floor`) counts "5" lost
+%   and "5th" added; on the unmarked-head route before P4b3, and since P4b3 on the group's route too, where the ordinal
+%   is no mark, so `\author{A$^{1}$}\author{B$^{1}$}\affiliation{$^{1}$Univ A, 5\textsuperscript{th} floor}` is the group's
+% witness: synthetic (P4b3 brief: an ordinal, no mark)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1,2 , Bob Baker2,3 , and Cy Cole / Univ A, 5th
+%          floor / 2Univ B, Town B / 3Univ C, Town C"
+% engines: P4b3base and P4b3: the creators as expected, 2 Warnings (content check: "5" missing, "5th" more often)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, 5th floor", "2 Univ B, Town B"; Bob Baker "2 Univ B, Town B",
+%          "3 Univ C, Town C"; Cy Cole none
+% status:  RED (P4b3base, P4b3: 2 Warnings)
+% moves:   post-merge (the content check's word reading of an ordinal suffix)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2,3}$}
+\author{Cy Cole}
+\affiliation{Univ A, 5\textsuperscript{th} floor\\ $^{2}$Univ B, Town B\\ $^{3}$Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

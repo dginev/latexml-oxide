@@ -1,0 +1,25 @@
+% witness: user ruling 2026-09-27 (57f, option C): the `\captionof`-in-a-box idiom; the
+%          structure/autoref golden (`\begin{minipage}{\linewidth}\captionof{figure}…`)
+% oracle:  pdflatex 0 errors; each box typeset as a captioned figure between the paragraphs
+% engines: perl=0 (2026-09-27): <figure class="ltx_parbox" …> and <figure class="ltx_minipage" …>
+%          (insertBlock's single-node fold, TeX_Box.pool.ltxml:489-492); rust 57f=0 the same.
+%          A box whose whole content is one float opens no paragraph (`one_float`,
+%          base_utilities.rs): the float is a display element the paragraph would only enclose,
+%          and the box contributes only its width, which the float carries
+% expect:  0 errors; each box is its figure: <figure class="ltx_parbox"> / <figure class="ltx_minipage">
+% status:  GREEN (57f)
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+Before.
+
+\parbox{\linewidth}{\captionof{figure}{In a parbox}}
+
+Between.
+
+\begin{minipage}{\linewidth}
+\captionof{figure}{In a minipage}
+\end{minipage}
+
+After.
+\end{document}

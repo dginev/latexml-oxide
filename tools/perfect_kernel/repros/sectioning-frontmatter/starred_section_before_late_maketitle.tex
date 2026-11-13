@@ -1,0 +1,15 @@
+% witness: 64d review r1 finding 2 (synthetic; the census found no paper) — a fallback flush at a starred section digests
+%          the preamble title, which the PDF never prints; the later `\title…\maketitle` is the paper's
+% oracle:  pdflatex 0 errors: "Highlights / Point one. / Final Title / Ann Able / Bob Baker / May 2021 / Abstract"
+% engines: rust 64f3 = Final Title, Ann Able, Bob Baker; 64d1 = "Working Title", Bob Baker dropped (sealed)
+% expect:  0 errors; root title "Final Title"; creators Ann Able, Bob Baker (fallback-flushed frontmatter is provisional)
+% status:  RED (64d1) -> GREEN (64d)
+\documentclass{article}
+\title{Working Title}\author{Ann Able}\date{}
+\begin{document}
+\section*{Highlights} Point one.
+\title{Final Title}\author{Ann Able \and Bob Baker}\date{May 2021}
+\maketitle
+\begin{abstract}Main abstract.\end{abstract}
+\section{Intro} Body.
+\end{document}

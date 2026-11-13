@@ -1,0 +1,27 @@
+% witness: jetpl.cls's `\address{$^1$…\\ $^2$…}` (cond-mat0611585), a class's in-place `\address` the API cuts by its
+%          marks (`plan::cut`); review rev94b r3 B1 (its probe `p/b1` addr, the API's sibling of `p/n1` sw)
+% oracle:  pdflatex 0 errors: "1Univ A, Town", "2Univ B, City" (italic), "3Lab C, Place", "4Lab D, Place" (bold), then
+%          "A Title", "Ann Able,1 Bob Baker,2 Cy Cole,3 Dan Doe4", "Body."
+% engines: rust 94b r3 = 0 errors, 0 warnings: the italic switch at the content's head on no piece; the bold group's
+%          switch on the first piece only (Dan Doe's plain)
+% expect:  0 errors, 0 warnings; each piece in the font in effect where it starts: Ann Able and Bob Baker italic, Cy
+%          Cole and Dan Doe bold; eager and --streaming the same
+% status:  RED (94b r3) -> GREEN (94b r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\address#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker,$^2$ Cy Cole,$^3$ Dan Doe$^4$}
+\address{\itshape $^1$Univ A, Town\\ $^2$Univ B, City}
+\address{{\bfseries $^3$Lab C, Place\\ $^4$Lab D, Place}}
+\maketitle
+Body.
+\end{document}

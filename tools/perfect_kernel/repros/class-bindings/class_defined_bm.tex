@@ -1,0 +1,11 @@
+% witness: 2310.17051, 1803.04839 (interact: 22 run-336 papers), 1308.3116, 2304.11343 (ws-ijmp*: 30) — first error \bm
+% oracle:  pdflatex 0 errors (interact.cls v1.05 shipped by 2310.17051): interact.cls:134-138 defines \bm itself,
+%          `\mathchoice{\mbox{\boldmath$\displaystyle#1$}}…`, without loading bm.sty
+% engines: rust 64zc = 1 error (\bm undefined); Perl raw-loads the shipped class (no interact binding)
+% expect:  0 errors; x bold in the formula
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass{interact}
+\begin{document}
+A vector $\bm{x} + y$.
+\end{document}

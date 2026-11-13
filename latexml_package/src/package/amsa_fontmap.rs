@@ -1,9 +1,11 @@
 //! AMSa font encoding (from amsa.fontmap.ltxml)
 use crate::prelude::*;
 
-LoadDefinitions!({
-  #[rustfmt::skip]
-  DeclareFontMap!("AMSa", mixrc![
+/// The msam glyph table (also served as the `U`-encoding `msa` family map by
+/// `u_fontmap.rs`, for raw `\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}` declarations).
+#[rustfmt::skip]
+pub fn amsa_table() -> Rc<[Option<char>]> {
+  mixrc![
     // 0x00-0x07
     '\u{22A1}', '\u{229E}', '\u{22A0}', '\u{25A1}', '\u{25A0}', '\u{2219}', '\u{25CA}', '\u{29EB}', // slots 6,7: lozenge/blacklozenge (Perl #2845, was 25C7/25C6)
     // 0x08-0x0F
@@ -28,13 +30,17 @@ LoadDefinitions!({
     '\u{2256}', '\u{22DA}', '\u{22DB}', '\u{2A8B}', '\u{2A8C}', '\u{00A5}', '\u{21DB}', '\u{21DA}',
     // 0x58-0x5F
     '\u{2713}', '\u{22BB}', '\u{22BC}', '\u{2A5E}', '\u{2220}', '\u{2221}', '\u{2222}', '\u{221D}',
-    // 0x60-0x67
-    '\u{2323}', '\u{2322}', '\u{22D0}', '\u{22D1}', '\u{22D2}', '\u{22D3}', '\u{22CF}', '\u{22CE}',
+    // 0x60-0x67: msam draws \Cup (amssymb.sty:144 "64) and \Cap (:146 "65); Perl swaps them (KNOWN_PERL_ERRORS #1202)
+    '\u{2323}', '\u{2322}', '\u{22D0}', '\u{22D1}', '\u{22D3}', '\u{22D2}', '\u{22CF}', '\u{22CE}',
     // 0x68-0x6F
     '\u{22CB}', '\u{22CC}', '\u{2AC5}', '\u{2AC6}', '\u{224F}', '\u{224E}', '\u{22D8}', '\u{22D9}',
-    // 0x70-0x77
-    '\u{231C}', '\u{231D}', '\u{00AE}', '\u{24C8}', '\u{22D4}', '\u{2214}', '\u{223D}', '\u{224C}',
+    // 0x70-0x77: 0x77 is \backsimeq ⋍ (amssymb.sty:164); Perl has ≌ U+224C (KNOWN_PERL_ERRORS #1202)
+    '\u{231C}', '\u{231D}', '\u{00AE}', '\u{24C8}', '\u{22D4}', '\u{2214}', '\u{223D}', '\u{22CD}',
     // 0x78-0x7F
     '\u{231E}', '\u{231F}', '\u{2720}', '\u{2201}', '\u{22BA}', '\u{229A}', '\u{229B}', '\u{229D}'
-  ]);
+  ]
+}
+
+LoadDefinitions!({
+  DeclareFontMap!("AMSa", amsa_table());
 });

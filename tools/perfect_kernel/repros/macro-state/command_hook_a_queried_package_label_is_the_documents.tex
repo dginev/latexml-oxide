@@ -1,0 +1,21 @@
+% mechanism: a hook label naming a package or class the document only queried is the document's code (`document_hook_code`,
+%   latex_constructs_rust_only.rs): `\@ifpackagelater` leaves `\ver@<name>.sty` `\relax` (latex.ltx:18409-18411, `\csname`),
+%   which `\@ifl@aded` reads as not loaded, so the test is `state::file_loaded`. `\@ifpackageloaded`/`\@ifclassloaded` are
+%   Perl's `\@ifl@aded` here (latex_constructs.pool.ltxml:946), which leaves no `\relax`: the sibling rows.
+% witness: synthetic (F14, GA2b's F2 extension)
+% oracle:  pdflatex 0 `!`; "A Xb Y0Z1 . / 1 N"; Perl: `\AddToHook` a no-op (latex_base.pool.ltxml:833), 0 errors 0 warnings.
+% engines: rust int167a: 0 errors, 2 warnings, `Info:hook:cmd/emph/before` (the `\relax` read as a load), its X lost uncounted.
+% expect:  0 errors, 3 warnings (`Warning:hook:cmd/emph/before`, `cmd/arabic/before`, `cmd/footnote/before`).
+% status:  GREEN (F14)
+\documentclass{article}
+\makeatletter
+\@ifpackagelater{qafoo}{2020/01/01}{}{}
+\@ifpackageloaded{qabar}{}{}
+\@ifclassloaded{qabaz}{}{}
+\makeatother
+\AddToHook{cmd/emph/before}[qafoo]{X}
+\AddToHook{cmd/arabic/before}[qabar/x]{Y}
+\AddToHook{cmd/footnote/before}[qabaz]{Z}
+\begin{document}
+A \emph{b} \arabic{section}\footnote{N}.
+\end{document}

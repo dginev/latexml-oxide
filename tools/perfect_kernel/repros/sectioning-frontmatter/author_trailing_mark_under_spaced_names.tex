@@ -1,0 +1,18 @@
+% witness: 2109.13296; the r7 re-review of batch 77p (findings 1 and 9)
+% oracle:  pdflatex 0 errors: three names parted by \hspace{0.2in}, Bob Baker marked †; the unmarked institution and
+%          brace list of addresses, then the
+%          institution and the address each marked † after its text
+% engines: rust 77p r10 = 0 errors; "Univ B …†" an affiliation of all three names; bakerbob@ on the shared creator, "†"
+%          in the address
+% expect:  0 errors, 0 warnings; The Univ A on all three (R12), aable@ on Ann Able, ccole@ on Cat Cole; Univ B and
+%          bakerbob@ (without the mark) on
+%          Bob Baker alone
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able\hspace{0.2in} Bob Baker$^{\dagger}$\hspace{0.2in} Cat Cole \vspace{0.1in} \\ The Univ A, City, USA \\ \texttt{\{aable, ccole\}@a.edu} \vspace{0.1in} \\ Univ B, Pittsburgh, PA, USA$^{\dagger}$ \\ \texttt{bakerbob@gmail.com}$^{\dagger}$}
+\begin{document}
+\maketitle
+Text.
+\end{document}

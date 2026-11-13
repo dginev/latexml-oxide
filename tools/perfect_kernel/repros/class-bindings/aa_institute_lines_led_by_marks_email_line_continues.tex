@@ -1,0 +1,19 @@
+% witness: 1507.05963 (aa: `\institute{$^1$… \\ $^2$… \\ $^4$… \\ \email{cessen@phys.au.dk}}`, each line led by its mark,
+%          a closing line of the e-mail alone); astro-ph0405186 (a closing line of text addresses: no split)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1, Bob Baker2, and Cid Cole1,2" / 1 Univ X / 2 Univ Y /
+%          e-mail: ann.able@y.org
+% engines: perl 0.8.8 = 0 errors, the whole institute on Ann Able; rust 92a: one affiliation on a nameless creator;
+%          the shadow the whole institute on the names marked 1 (`api:labelseq`)
+% expect:  0 errors, 0 warnings; the shadow reading: each line its mark's entry, the e-mail line the entry's above it
+%          (Univ Y's), the address Ann Able's (the author it spells, `owner:inner-email owner:spelled`)
+% status:  RED (92a, the shadow) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$ \and Cid Cole$^{1,2}$}
+\institute{$^{1}$Univ X\\ $^{2}$Univ Y\\ \email{ann.able@y.org}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

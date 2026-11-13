@@ -1,0 +1,15 @@
+% witness: sel78c item 4 (latexml_oxide/tests/alignment/colortbls.tex's rainbow \hhline); colortbl.sty:364-369 reads
+%          `>{<code>}` in an \hhline specification as the rules' colour code, not a column
+% oracle:  pdflatex 0 errors, 0 warnings: a red rule over c only
+% engines: rust int43a = a full-width \hline (c and d ruled)
+% expect:  0 errors, 0 warnings; c "t", d no border
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass{article}
+\usepackage{colortbl,hhline}
+\begin{document}
+\begin{tabular}{cc}
+a&b\\
+\hhline{>{\arrayrulecolor{red}}-~}
+c&d\\
+\end{tabular}
+\end{document}

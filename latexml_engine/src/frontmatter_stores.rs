@@ -1,0 +1,8401 @@
+//! K11 — a raw class's title-page STORES reroute to the frontmatter API.
+//!
+//! A class loaded raw keeps its title page in stores: `\newcommand\inst[1]
+//! {\gdef\@inst{#1}}` (ptptex.cls:616), `\long\def\abst#1{\long\gdef\@abst{#1}}`
+//! (jpsj2.cls:841-847), read only by `\@maketitle`, which LaTeXML's locked
+//! `\maketitle` never runs. Perl drops every such store (its ~200 class
+//! bindings — and the generic `OmniBus.cls.ltxml:62-247` table, bypassed
+//! under raw class loading — are its only route); the Rust
+//! `\lx@deposit@maketitle` surpass typeset them as body paragraphs. This
+//! module is OmniBus's table applied after the raw load, keyed on what the
+//! class actually defined — a setter a binding defined is the binding's, even under a raw class
+//! that loads it (`latexml_core::binding::store_setters`): a setter is rerouted only when (a) its NAME is in
+//! the surveyed table (`~/data/pk_agents/w23/frontmatter_stores/`, 655 TL
+//! classes; an explicit synonym table, never a name pattern — `ead` matches
+//! `\setoddhead`, `date` matches `\cref@updatelabeldata`) and (b) its macro
+//! BODY is a pure store of its argument (`#1`, or `#2` of an `[optional]{mandatory}` setter) — a
+//! check on the tokens, never a guess.
+//! Everything else the class defined is left alone, but its contact setters that print their argument as a title-page
+//! line (`reroute_in_place_contact_setters`, after a raw class or package: OXIDIZED_DESIGN_DIVERGENCES #936); the
+//! kernel's own locked `\title`/`\author`/`\date`/`\thanks` are not in the table. A store is handed
+//! to the API as it is set, except one that annotates a creator (an affiliation,
+//! address, e-mail, ORCID) or makes one (an editor, a speaker), which is read at
+//! `\maketitle` where the author list exists. The class's `\@maketitle` is deposited with the handed stores read as
+//! empty (`\lx@deposit@maketitle`, sect05.rs), so it adds only what the
+//! frontmatter does not carry.
+//!
+//! The table's keywords setters reach `\lx@add@keywords` in two more shapes a class gives them (68n), each found
+//! by a check on what the class defined, never a name pattern: a one-argument setter the class defines only for
+//! its abstract's body (`abstract_setter_definitions`: wiley-article.cls:446-489 inside the `\NewEnviron` its
+//! `\abstract` becomes, astlb.cls:199-205 inside the `{pazhabstract}` its `\@maketitle` typesets the abstract in,
+//! mtt.cls:176-181 inside its own `{abstract}`), which the kernel's locked `{abstract}` never runs, so `\keywords`
+//! was undefined (330 of 373 run-353 papers: 1706.00599, 1801.08881, 1202.2889, astro-ph0306137, 1507.06302,
+//! 2103.05801, 1310.0585); and an environment whose begin code only typesets a heading carrying the class's label
+//! (`label_only_begin_code`: paper.cls:621-627 `\def\keywords{\small\paragraph*{\keywordname:}}`), which became a
+//! run-in `<paragraph>` where OmniBus made keywords (OmniBus.cls.ltxml:126-156). OXIDIZED_DESIGN_DIVERGENCES #634.
+//!
+//! Three more shapes of the table's stores (95d): a table name a raw file made a token register that only printed code
+//! prints — in a macro the title page reaches or a page style it selects (`toks_store`: googlecloud.cls's
+//! `\newtoks\correspondingauthor`, printed in its `\fancypagestyle{firststyle}` foot, 2607.06973; OD #939); the table
+//! setters a raw PACKAGE defines, rerouted at its end as a raw class's are, unless a raw class's read loads it
+//! (`reroute_raw_package_stores`: medima.sty's dates under elsarticle, 2307.16262; OD #940); and a table setter that
+//! prints a mark before its pure store (`table_setter_stores`: astlb.cls's `\email`, 1202.2889; OD #941). A raw package's
+//! setter's own `\@<name>` is a store only when code that never runs here reads it
+//! (`ClassReaders::read_where_nothing_runs`: rlj.sty's `\@keywords`, read by an uncalled `\makeCover`, 2605.31044);
+//! a date or classification is named only by a label the code its title page reaches prints, in a branch's `\else` too
+//! (medima.sty's `\finalformhead~\@finalform`), or before the test (`Received: \ifx…\else\@received\fi`), a phrase
+//! ending at a `;` or `,` (pazha2.cls's `…; revised \@revised`), else by its role's default only where that word is
+//! printed right before the store (wiley2sp.cls's `\receivedname`), else unnamed (OD #940).
+//!
+//! The unclaimed-text net (98c, OD #953; FIDELITY_CHARTER §4): any other store the class's title-page code reads that
+//! the document set, that the title page prints and no kept run typeset, is a note of the author block, kept only for
+//! lines of 3 or more words no frontmatter field holds (`net_candidates`, `hand_net_stores`; insert.rs
+//! `keep_unclaimed_net_notes`): copernicus's `\AB@affillist`, read only by its own `\@author` (sect05.rs
+//! `keep_class_author_reader`; 0712.1312), sig-alternate's `\tntoks`, read only by its refused `{abstract}` (1206.6940).
+//! Below that floor (105a) a line of addresses alone is the e-mail contacts of the note's creator (aaskaiid.sty's
+//! `\email@toks`, 2606.27706, 2607.25721), a code's or a date's line is kept, and any other is counted in a Warning
+//! naming its store and words (2103.14934).
+//!
+//! Displaced text (99b, OD #955): a raw file's affiliation or address setter that stores its argument for its title page
+//! among code of its own, which K11's pure-store test leaves (rstransa's `\gdef\@address{#1\ifaffbreak…\fi}`, iau's
+//! numbered `\csname affil\the\affilcount\endcsname`), runs under a meaning recorder recording what it stored
+//! (`reroute_displaced_setters`); at `\maketitle` what the title page prints of it is the creators' contacts, taken out of
+//! the deposit by that record (`route_and_hand_displaced`). An in-place setter with no line break of its own (iopjournal's
+//! `\affil`) is the API's where its call stands as a line (`run_in_contact_setter`). Each line of either is placed by
+//! its leading label (`contact_line_call`).
+use std::collections::VecDeque;
+
+use latexml_core::{
+  binding::store_setters::{
+    STORE_SETTERS, defined_by_a_binding, defined_by_a_raw_file, in_a_raw_class_read,
+  },
+  definition::origin::{DefinitionOrigin, with_origin},
+  document::tag::TagContent,
+};
+use rustc_hash::FxHashSet;
+
+use crate::{
+  base_utilities::{FmArgSeparator, FmSepMeaning, argument_separators},
+  prelude::*,
+};
+
+/// The definers a store is made with: `\gdef\@name{#1}`, `\def`, `\xdef`/`\edef`, LaTeX's `\protected@xdef`, and
+/// `\g@addto@macro\@name{#1}` (an accumulating store).
+const STORE_DEFINERS: &[&str] = &[
+  "\\gdef",
+  "\\def",
+  "\\xdef",
+  "\\edef",
+  "\\protected@xdef",
+  "\\protected@edef",
+  "\\g@addto@macro",
+];
+/// Prefixes and grouping a setter's definitions may carry, which typeset nothing.
+const DEFINITION_FRAME: &[&str] = &[
+  "\\long",
+  "\\global",
+  "\\protected",
+  "\\relax",
+  "\\begingroup",
+  "\\endgroup",
+];
+/// LaTeX's command definers: `\renewcommand{\thanks}[1]{}` (tufte-common.def:612).
+const COMMAND_DEFINERS: &[&str] = &[
+  "\\newcommand",
+  "\\renewcommand",
+  "\\providecommand",
+  "\\DeclareRobustCommand",
+];
+
+/// The control sequences a setter's body stores argument `#<arg>` in, when the body only makes definitions: each a
+/// pure store of the argument (`\gdef\@name{#1}`, any [`STORE_DEFINERS`]) or a side definition — a `\def`-family
+/// definition, a `\let`, a LaTeX `\renewcommand`-family one, in any [`DEFINITION_FRAME`] — that typesets nothing:
+/// tufte-common.def:608-614's `\date` stores `\@date` and also `\protected@xdef`s `\thedate` in a group whose
+/// `\renewcommand{\thanks}[1]{}` swallows a `\thanks`. `None` when the body does anything else (a `\RequirePackage`,
+/// apa6.cls:780 `\journal`; a flag its title page reads, tADR2e.cls:450 `\global\keywordstrue`; any typesetting).
+fn pure_stores(body: &[Token], arg: usize) -> Option<Vec<Token>> {
+  let mut stores = Vec::new();
+  // (a store made inside `\begingroup` … `\endgroup` lasts only when it is global)
+  let (mut depth, mut global) = (0usize, false);
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    if t == T_CS!("\\begingroup") {
+      depth += 1;
+    } else if t == T_CS!("\\endgroup") {
+      depth = depth.checked_sub(1)?;
+    } else if t == T_CS!("\\global") {
+      global = true;
+    }
+    if t.get_catcode() == Catcode::SPACE || cs_in(&t, DEFINITION_FRAME) {
+      i += 1;
+      continue;
+    }
+    let is_global = std::mem::take(&mut global)
+      || t.with_str(|s| {
+        matches!(
+          s,
+          "\\gdef" | "\\xdef" | "\\protected@xdef" | "\\g@addto@macro"
+        )
+      });
+    if t.get_catcode() != Catcode::CS {
+      return None;
+    }
+    if t == T_CS!("\\let") {
+      // `\let\cs = token`
+      let mut k = skip_spaces(body, i + 1);
+      body.get(k).filter(|c| c.get_catcode() == Catcode::CS)?;
+      k = skip_spaces(body, k + 1);
+      if body.get(k) == Some(&T_OTHER!("=")) {
+        k = skip_spaces(body, k + 1);
+      }
+      body.get(k)?;
+      i = k + 1;
+      continue;
+    }
+    if cs_in(&t, COMMAND_DEFINERS) {
+      // `\renewcommand*{\cs}[n][default]{body}` or `\renewcommand\cs…`
+      let mut k = skip_spaces(body, i + 1);
+      if body.get(k) == Some(&T_OTHER!("*")) {
+        k = skip_spaces(body, k + 1);
+      }
+      if body
+        .get(k)
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+      {
+        let past = tokens_group_end(body, k)?;
+        (past == k + 3 && body[k + 1].get_catcode() == Catcode::CS).then_some(())?;
+        k = past;
+      } else {
+        body.get(k).filter(|c| c.get_catcode() == Catcode::CS)?;
+        k += 1;
+      }
+      for _ in 0..2 {
+        k = skip_spaces(body, k);
+        if body.get(k) == Some(&T_OTHER!("[")) {
+          k += body[k..].iter().position(|b| *b == T_OTHER!("]"))? + 1;
+        }
+      }
+      i = tokens_group_end(body, skip_spaces(body, k))?;
+      continue;
+    }
+    if !cs_in(&t, STORE_DEFINERS) {
+      return None;
+    }
+    // `\def\cs<parameter text>{body}`
+    let k = skip_spaces(body, i + 1);
+    let target = *body.get(k).filter(|c| c.get_catcode() == Catcode::CS)?;
+    let mut open = k + 1;
+    while body.get(open).is_some_and(|b| {
+      matches!(
+        b.get_catcode(),
+        Catcode::PARAM | Catcode::ARG | Catcode::OTHER
+      )
+    }) {
+      open += 1;
+    }
+    let past = tokens_group_end(body, open)?;
+    let stored = &body[open + 1..past - 1];
+    if open == k + 1
+      && (depth == 0 || is_global)
+      && stored.len() == 1
+      && stored[0].get_catcode() == Catcode::ARG
+      && stored[0].with_str(|s| s == arg.to_string())
+    {
+      stores.push(target);
+    }
+    i = past;
+  }
+  Some(stores)
+}
+
+/// The store a setter `\name` keeps its argument in, `@affil` for `\@affil`; its own `\@name` unless rule (a) found
+/// another ([`reroute_raw_class_stores`]).
+fn store_of(name: &str) -> String {
+  let store = lookup_string(&s!("lx_store_cs_{name}"));
+  if store.is_empty() {
+    s!("@{name}")
+  } else {
+    store
+  }
+}
+
+/// An argument read whole, not up to a delimiter (`\def\x#1\par{…}` reads `#1` up to `\par`).
+fn undelimited(param: &Parameter) -> bool { !with(param.spec, |spec| spec.contains("Until")) }
+
+/// Does the store's frontmatter API annotate a creator (`\lx@annotate@frontmatter{ltx:creator}…`)?
+/// Such an annotation is placed only on a queued creator.
+fn annotates_a_creator(name: &str) -> bool {
+  STORE_SETTERS.iter().any(|(n, api)| {
+    *n == name
+      && [
+        "\\lx@add@store@affiliations",
+        "\\lx@add@email",
+        "\\lx@add@address",
+        "\\lx@add@orcid",
+      ]
+      .iter()
+      .any(|creator_api| api.starts_with(creator_api))
+  })
+}
+
+/// Does the store's frontmatter API make a creator of its own (an editor, a speaker)? Read with the
+/// creator-annotating stores at `\maketitle`, after them, so their annotations stay the authors'.
+fn creates_a_creator(name: &str) -> bool {
+  STORE_SETTERS.iter().any(|(n, api)| {
+    *n == name
+      && ["\\lx@add@editor", "\\lx@add@creator"]
+        .iter()
+        .any(|c| api.starts_with(c))
+  })
+}
+
+/// A store read at `\maketitle` rather than as it is set.
+fn read_at_maketitle(name: &str) -> bool { annotates_a_creator(name) || creates_a_creator(name) }
+
+/// A setter of one argument: a macro storing `#1`, or an `[optional]{mandatory}` one storing `#2` (bfhlayout.sty:738
+/// `\providecommand*{\institute}[2][]{\def\@institute{#2}}`) — its body, the stored argument's number and the
+/// control sequences its body stores that argument in ([`pure_stores`]).
+fn setter_stores(cs: &Token) -> Result<Option<(Tokens, usize, Vec<Token>)>> {
+  Ok(
+    setter_body(cs)?.and_then(|(body, arg)| {
+      pure_stores(body.unlist_ref(), arg).map(|stores| (body, arg, stores))
+    }),
+  )
+}
+
+/// The body of a one-argument setter ([`setter_stores`]) and the number of the argument it stores.
+fn setter_body(cs: &Token) -> Result<Option<(Tokens, usize)>> {
+  let Some(defn) = lookup_definition(cs)? else {
+    return Ok(None);
+  };
+  let stored_arg = defn.get_parameters().and_then(|p| {
+    let params = p.get_parameters();
+    match params.as_slice() {
+      [only] if !only.optional && undelimited(only) => Some(1),
+      [first, second] if first.optional && !second.optional && undelimited(second) => Some(2),
+      _ => None,
+    }
+  });
+  let (Some(ExpansionBody::Tokens(body)), Some(arg)) = (defn.get_expansion(), stored_arg) else {
+    return Ok(None);
+  };
+  Ok(Some((body.clone(), arg)))
+}
+
+/// [`setter_stores`] of a table setter, which may also print a mark before its pure stores — a mark of the forms a
+/// marked line leads with ([`leading_mark`]: `\textsuperscript{*}`, `$^{*}$`, `\inst{1}`) that does not use the
+/// argument: astlb.cls:78 `\def\email#1{\textsuperscript{*}\gdef\@email{#1}}` (1202.2889; the pazh/astl family's
+/// pazhb, pazhb_eng, pazha2, pazhastl copies), whose store only its `\endabstract`'s `\maketitle` reads, which the
+/// kernel's locked `{abstract}` never runs, so the e-mail was lost (0 errors; Perl gives the paper OmniBus's `\email`).
+/// The rerouted setter keeps the whole body ([`reroute_raw_class_stores`]): the mark still prints where it is called.
+fn table_setter_stores(cs: &Token) -> Result<Option<(Tokens, usize, Vec<Token>)>> {
+  let Some((body, arg)) = setter_body(cs)? else {
+    return Ok(None);
+  };
+  let tokens = body.unlist_ref();
+  let stores = pure_stores(tokens, arg).or_else(|| {
+    let (_, Some(past)) = leading_mark(tokens)? else {
+      return None;
+    };
+    if tokens[..past]
+      .iter()
+      .any(|t| t.get_catcode() == Catcode::ARG)
+    {
+      return None;
+    }
+    pure_stores(&tokens[past..], arg).filter(|stores| !stores.is_empty())
+  });
+  Ok(stores.map(|stores| (body, arg, stores)))
+}
+
+/// The title-page code of the raw class — what its refused `\maketitle` (`\lx@dropped@maketitle`, state.rs) and
+/// its `\@maketitle` run, and every macro a raw file defined that only they call, transitively — and the readers
+/// of each macro: for every macro a raw file defined (`DefinitionOrigin::File`: the class and what it loaded, as
+/// the class ends; the scan is bounded to them), the control sequences it reads ([`reads_of`]). A macro two
+/// title-page macros call is title-page code; one any other macro calls too is not.
+struct ClassReaders {
+  /// The title-page code, by name.
+  title_page:        FxHashSet<SymStr>,
+  /// The title-page code with the class's own kernel fields among its roots (`\@title`, `\@author`, `\@date`, which
+  /// LaTeX's `\@maketitle` prints): [`survey_off_table_stores`].
+  title_page_fields: FxHashSet<SymStr>,
+  /// Every macro a raw file defined that code which never runs here reaches: the title page's roots, the refused
+  /// definitions (`\lx@dropped@<name>`, state.rs: a locked kernel definition the raw file redefined — astlb.cls:176's
+  /// `\endabstract`, whose `\maketitle` and e-mail footnote the kernel's locked `{abstract}` never reaches, 1202.2889)
+  /// and the page styles (`\ps@…`, `\@oddhead`, …, a fancyhdr style: page furniture no conversion sets)
+  /// ([`ClassReaders::read_where_nothing_runs`]).
+  never_runs:        FxHashSet<SymStr>,
+  /// What the class prints: every macro a raw file defined that the title-page roots — of any origin, a binding's
+  /// `\@maketitle` too (titling_sty.rs's, which `\lx@deposit@maketitle` runs) — or the class's page styles (`\ps@…`,
+  /// `\@oddhead`, …) reach, and what those roots read themselves.
+  printed:           FxHashSet<SymStr>,
+  /// For each control sequence, the macros a raw file defined that read it (itself, when it reads itself).
+  readers:           HashMap<SymStr, Vec<SymStr>>,
+}
+
+/// Does `code` step a counter or print a mark — a superscript, math, `\textsuperscript`, a counter's value
+/// (`\the…`)? What makes a separator a class's numbering of its entries ([`ClassReaders::separators_redefined`]).
+fn numbers_or_marks(code: &[Token]) -> bool {
+  code.iter().any(|t| {
+    matches!(t.get_catcode(), Catcode::SUPER | Catcode::MATH)
+      || (t.get_catcode() == Catcode::CS
+        && t.with_str(|s| {
+          matches!(
+            s,
+            "\\stepcounter"
+              | "\\refstepcounter"
+              | "\\addtocounter"
+              | "\\advance"
+              | "\\textsuperscript"
+              | "\\the"
+          ) || s.starts_with("\\the")
+        }))
+  })
+}
+
+/// The definers whose next control sequence is written, not read.
+const WRITERS: &[&str] = &[
+  "\\def",
+  "\\gdef",
+  "\\edef",
+  "\\xdef",
+  "\\protected@xdef",
+  "\\protected@edef",
+  "\\let",
+  "\\g@addto@macro",
+  "\\newcommand",
+  "\\renewcommand",
+  "\\providecommand",
+  "\\DeclareRobustCommand",
+];
+
+/// The control sequences `body` reads: each one not written by a definer before it ([`WRITERS`]), and those named
+/// by characters — `\@ifundefined{@affil}` (apa6.cls:793), `\@nameuse{X}`, `\csname X\endcsname` — as `\X`.
+fn reads_of(body: &[Token]) -> Vec<Token> { reads_of_branches(body, false) }
+
+/// The constant switch `t` is, with the branch it takes: an `\ifX` whose meaning is `\iftrue` or `\iffalse`, as
+/// `\newif` and kvoptions make them, `\iftrue`/`\iffalse` themselves included.
+fn constant_switch(t: &Token) -> Option<bool> {
+  match lookup_meaning(t) {
+    Some(Stored::Conditional(defn)) if defn.cs == T_CS!("\\iftrue") => Some(true),
+    Some(Stored::Conditional(defn)) if defn.cs == T_CS!("\\iffalse") => Some(false),
+    _ => None,
+  }
+}
+
+/// Is `t` a conditional — one that opens a `\fi` level, not `\else`, `\or`, `\fi` or the prefix `\unless`?
+fn opens_a_conditional(t: &Token) -> bool {
+  match lookup_meaning(t) {
+    Some(Stored::Conditional(defn)) => !["\\fi", "\\else", "\\or", "\\unless"]
+      .into_iter()
+      .any(|cs| defn.cs == T_CS!(cs)),
+    _ => false,
+  }
+}
+
+/// The branch an `\if` or `\ifx` at `body[at]` takes when its operands are known without running code, and the index
+/// past them — the fallback of the speculative title-page run (`before_title_page_runs`), which lets TeX decide: `\ifx`
+/// of two tokens that are the same, both undefined, or both parameterless macros of the same body; `\if` of the two
+/// character tokens that the tokens after it give when each parameterless macro a raw file defined is expanded (tex.web
+/// §506) — a class's home-made boolean, sigplanconf.cls:87-90 `\def\@true{TT}`/`\def\@false{FL}`
+/// and :1118 `\if \@copyrightwanted \@copyrightspace \fi` (1603.03011). `None` for anything else.
+fn evaluated_switch(body: &[Token], at: usize) -> Option<(bool, usize)> {
+  let Some(Stored::Conditional(defn)) = lookup_meaning(body.get(at)?) else {
+    return None;
+  };
+  let parameterless = |t: &Token| -> Option<Option<Vec<Token>>> {
+    match lookup_meaning(t) {
+      None => Some(None),
+      Some(Stored::Expandable(d))
+        if d
+          .get_parameters()
+          .is_none_or(|p| p.get_parameters().is_empty()) =>
+      {
+        match d.get_expansion() {
+          None => Some(Some(Vec::new())),
+          Some(ExpansionBody::Tokens(b)) => Some(Some(b.unlist_ref().to_vec())),
+          Some(_) => None,
+        }
+      },
+      _ => None,
+    }
+  };
+  if defn.cs == T_CS!("\\ifx") {
+    let (a, b) = (body.get(at + 1)?, body.get(at + 2)?);
+    if a == b {
+      return Some((true, at + 3));
+    }
+    if a.get_catcode() != Catcode::CS || b.get_catcode() != Catcode::CS {
+      return None;
+    }
+    return Some((parameterless(a)? == parameterless(b)?, at + 3));
+  }
+  if defn.cs != T_CS!("\\if") {
+    return None;
+  }
+  let is_char = |t: &Token| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER);
+  let mut pending: VecDeque<Token> = VecDeque::new();
+  let mut operands: Vec<Token> = Vec::new();
+  let mut next = at + 1;
+  // (a bounded number of expansions: `\def\x{\x}` never gives an operand)
+  let mut expansions = 0;
+  while operands.len() < 2 {
+    let t = match pending.pop_front() {
+      Some(t) => t,
+      None => {
+        let t = *body.get(next)?;
+        next += 1;
+        t
+      },
+    };
+    if is_char(&t) {
+      operands.push(t);
+      continue;
+    }
+    expansions += 1;
+    if t.get_catcode() != Catcode::CS || file_body(&t).is_none() || expansions > 32 {
+      return None;
+    }
+    for t in parameterless(&t)??.into_iter().rev() {
+      pending.push_front(t);
+    }
+  }
+  // (what an expansion leaves after the two operands would be typeset in the branch: not known here)
+  pending.is_empty().then(|| {
+    (
+      operands[0].with_str(|a| operands[1].with_str(|b| a == b)),
+      next,
+    )
+  })
+}
+
+/// Does `t` write the control sequence after it — a definer of [`WRITERS`], or `\newif` — rather than read it?
+fn writes_next(t: &Token) -> bool { cs_in(t, WRITERS) || *t == T_CS!("\\newif") }
+
+/// The positions of `body` that are data rather than code: the name a definer writes ([`writes_next`]), and the
+/// source of a `\let` (`\let\ifX\iftrue`, `\let\a=\b`). A conditional there opens no level.
+fn data_positions(body: &[Token]) -> Vec<bool> {
+  let mut data = vec![false; body.len()];
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    i += 1;
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) || !writes_next(&t) {
+      continue;
+    }
+    let is_let = t == T_CS!("\\let") || t == T_CS!("\\futurelet");
+    // (`\renewcommand{\cs}`: the brace before the written name)
+    let mut written = 0;
+    while i < body.len() && written < if is_let { 2 } else { 1 } {
+      let next = body[i];
+      let skip = matches!(next.get_catcode(), Catcode::BEGIN | Catcode::SPACE)
+        || (is_let
+          && written == 1
+          && next.get_catcode() == Catcode::OTHER
+          && next.with_str(|s| s == "="));
+      if !skip {
+        data[i] = true;
+        written += 1;
+      }
+      i += 1;
+    }
+  }
+  data
+}
+
+/// [`reads_of`]; with `live`, a branch a constant switch does not take is not read ([`constant_switch`], `\unless`
+/// inverting it), and a conditional written as data opens no level ([`data_positions`]): the title page a copy's
+/// switches leave ([`copy_title_page_prints`]).
+fn reads_of_branches(body: &[Token], live: bool) -> Vec<Token> {
+  let named = |from: usize, stop: &dyn Fn(&Token) -> bool| -> Option<(Token, usize)> {
+    let mut name = String::new();
+    let mut k = from;
+    while let Some(t) = body.get(k) {
+      if stop(t) {
+        return Some((T_CS!(&s!("\\{name}")), k + 1));
+      }
+      if !matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+        return None;
+      }
+      t.with_str(|s| name.push_str(s));
+      k += 1;
+    }
+    None
+  };
+  let data = if live {
+    data_positions(body)
+  } else {
+    Vec::new()
+  };
+  let mut out = Vec::new();
+  let mut written = false;
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    i += 1;
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+      // (`\renewcommand{\cs}`: the brace before the written name)
+      written &= t.get_catcode() == Catcode::BEGIN || t.get_catcode() == Catcode::SPACE;
+      continue;
+    }
+    if written {
+      written = false;
+      continue;
+    }
+    if cs_in(&t, WRITERS) {
+      written = true;
+      continue;
+    }
+    if live && !data[i - 1] {
+      // (`\unless\ifX`: the switch after it, inverted)
+      let (switch_at, inverted) = if t == T_CS!("\\unless") {
+        (i, true)
+      } else {
+        (i - 1, false)
+      };
+      let switch = body
+        .get(switch_at)
+        .filter(|_| !data[switch_at])
+        .and_then(|t| {
+          constant_switch(t)
+            .map(|taken| (taken, switch_at + 1))
+            .or_else(|| evaluated_switch(body, switch_at))
+        });
+      if let Some((taken, start)) = switch {
+        // the switch's `\else` and `\fi`, at its own depth
+        let (mut depth, mut else_at, mut fi_at) = (0usize, None, None);
+        for (k, token) in body.iter().enumerate().skip(start) {
+          if data[k] || !matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+            continue;
+          }
+          match lookup_meaning(token) {
+            Some(Stored::Conditional(defn)) if defn.cs == T_CS!("\\fi") => {
+              if depth == 0 {
+                fi_at = Some(k);
+                break;
+              }
+              depth -= 1;
+            },
+            Some(Stored::Conditional(defn)) if defn.cs == T_CS!("\\else") => {
+              if depth == 0 && else_at.is_none() {
+                else_at = Some(k);
+              }
+            },
+            _ if opens_a_conditional(token) => depth += 1,
+            _ => {},
+          }
+        }
+        if let Some(fi_at) = fi_at {
+          let branch = if taken != inverted {
+            &body[start..else_at.unwrap_or(fi_at)]
+          } else {
+            else_at.map_or(&body[fi_at..fi_at], |at| &body[at + 1..fi_at])
+          };
+          out.extend(reads_of_branches(branch, live));
+          i = fi_at + 1;
+          continue;
+        }
+      }
+    }
+    if (t == T_CS!("\\@ifundefined") || t == T_CS!("\\@nameuse"))
+      && body
+        .get(i)
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+      && let Some((cs, past)) = named(i + 1, &|b| b.get_catcode() == Catcode::END)
+    {
+      out.push(t);
+      out.push(cs);
+      i = past;
+      continue;
+    }
+    if t == T_CS!("\\csname")
+      && let Some((cs, past)) = named(i, &|b| *b == T_CS!("\\endcsname"))
+    {
+      out.push(cs);
+      i = past;
+      continue;
+    }
+    out.push(t);
+  }
+  out
+}
+
+/// Is `name` a page style's or a running head's (`\ps@…`, `\@oddhead`, …), which prints as the title page does? Not a
+/// fancyhdr style ([`fancyhdr_page_style`]): its fields are page furniture, whose class defaults the frontmatter does
+/// not take — nbdt-article.cls:292-325's `firstpage` foot prints its `\@jname` default "Neurons, Behavior, Data Analysis
+/// and Theory" only under a `\@paperreceived` the paper leaves empty (2211.12591) —; only a printed token register
+/// reads one ([`ClassReaders::printed_register`]).
+fn page_style_name(name: &str) -> bool {
+  (name.starts_with("\\ps@") && !fancyhdr_page_style(name))
+    || matches!(
+      name,
+      "\\@oddhead" | "\\@evenhead" | "\\@oddfoot" | "\\@evenfoot"
+    )
+}
+
+/// Is `name` (`\ps@<style>`) a page style `\fancypagestyle` made (fancyhdr.sty:710's
+/// `\f@nch@ps@<style>-is-fancyhdr` marker; fancyhdr_sty.rs)?
+fn fancyhdr_page_style(name: &str) -> bool {
+  name.strip_prefix("\\ps@").is_some_and(|style| {
+    lookup_definition(&T_CS!(&s!("\\f@nch@ps@{style}-is-fancyhdr")))
+      .ok()
+      .flatten()
+      .is_some()
+  })
+}
+
+/// Does a stand-in's copy print the store `store` (`\@author`, `\@date`, `\@title`) — on its own title page (the
+/// `\maketitle`/`\@maketitle` it defined, `state::copy_provides_title_pages`) or in a page style a raw file defined, and
+/// every macro they reach that the copy (its own version of a name the binding owns, `copy_provides_overlaid_meaning`)
+/// or another raw file defined, read as `ClassReaders` reads a raw class (`reads_of`: `\csname…\endcsname`,
+/// `\@nameuse`), under the switches it set (a branch of a `\newif`/kvoptions flag that is now false is not printed,
+/// `reads_of_branches`)? A title-page name it reaches with neither a copy's nor a raw file's meaning is the
+/// binding's, which prints the frontmatter: the copy's `\renewcommand\maketitle{\begingroup\@maketitle\endgroup}`.
+/// `None` when no copy defined a title page (the binding's prints the frontmatter). atlasdoc.cls (2019, 1902.05892)
+/// prints `\@date` only in its `\ATLAS@TitleHeader` (:567, under `\ifADOC@datetop`), which its `\maketitle` (:716)
+/// calls only without `cernpreprint`; `\@author` under the title.
+pub fn copy_title_page_prints(store: &Token) -> Option<bool> {
+  let roots = copy_provides_title_pages();
+  let id = roots.first()?.0;
+  let target = store.get_cs_name();
+  let from_a_file = |stored: &Stored| match stored {
+    Stored::Expandable(defn) => defn.get_origin() == DefinitionOrigin::File,
+    _ => false,
+  };
+  let mut work: Vec<(u32, Tokens)> = roots;
+  for (key, stored) in current_meanings_where(from_a_file) {
+    if let Stored::Expandable(defn) = stored
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      && with(key, page_style_name)
+    {
+      work.push((id, body.clone()));
+    }
+  }
+  let mut seen: FxHashSet<SymStr> = FxHashSet::default();
+  while let Some((id, body)) = work.pop() {
+    for cs in reads_of_branches(body.unlist_ref(), true) {
+      let key = cs.get_cs_name();
+      if key == target {
+        return Some(true);
+      }
+      if !seen.insert(key) {
+        continue;
+      }
+      let meaning =
+        copy_provides_overlaid_meaning(id, &cs).or_else(|| lookup_meaning(&cs).filter(from_a_file));
+      match meaning {
+        Some(Stored::Expandable(defn)) => {
+          if let Some(ExpansionBody::Tokens(callee)) = defn.get_expansion() {
+            work.push((id, callee.clone()));
+          }
+        },
+        None if cs == T_CS!("\\maketitle") || cs == T_CS!("\\@maketitle") => return Some(true),
+        _ => {},
+      }
+    }
+  }
+  Some(false)
+}
+
+/// The label a class's title page prints right before a store, as read off its code ([`ClassReaders::label_in`]).
+struct StoreLabel {
+  /// The title-page macro it is in.
+  reader:      String,
+  /// The tokens the label takes up there (balanced; the store itself with them when the label is in the store's group).
+  part:        Tokens,
+  /// The label's text ([`LabelText`]).
+  text:        Tokens,
+  /// Is it in the store's own group, which is the argument of a control sequence (not a font command's)?
+  in_argument: bool,
+}
+
+impl ClassReaders {
+  /// One pass over the raw files' macros builds the caller index; the title page then grows from its roots along the
+  /// callees of each macro it takes in, a macro joining once every other caller of it has (a worklist: each macro's
+  /// callees are visited once, when it joins).
+  fn survey() -> Self {
+    let mut readers: HashMap<SymStr, Vec<SymStr>> = HashMap::default();
+    let mut callees: HashMap<SymStr, Vec<SymStr>> = HashMap::default();
+    let from_a_file = |stored: &Stored| match stored {
+      Stored::Expandable(defn) => defn.get_origin() == DefinitionOrigin::File,
+      _ => false,
+    };
+    for (key, stored) in current_meanings_where(from_a_file) {
+      let Stored::Expandable(defn) = stored else {
+        continue;
+      };
+      let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+        continue;
+      };
+      // (the meaning table's key is the name: a control sequence's when it starts with a backslash)
+      if !with(key, |k| k.starts_with('\\')) {
+        continue;
+      }
+      let caller = key;
+      let body = body.unlist_ref();
+      let mut seen = FxHashSet::default();
+      let called = callees.entry(caller).or_default();
+      for read in reads_of(body) {
+        let callee = read.get_cs_name();
+        if seen.insert(callee) {
+          readers.entry(callee).or_default().push(caller);
+          called.push(callee);
+        }
+      }
+    }
+    const ROOTS: [&str; 3] = [
+      "\\lx@dropped@maketitle",
+      "\\@maketitle",
+      "\\lx@dropped@@maketitle",
+    ];
+    let mut printed: FxHashSet<SymStr> = FxHashSet::default();
+    let mut reached: Vec<SymStr> = Vec::new();
+    for root in ROOTS {
+      let root = T_CS!(root);
+      let name = root.get_cs_name();
+      if callees.contains_key(&name) {
+        reached.push(name);
+      } else if let Some(Stored::Expandable(defn)) = lookup_meaning(&root)
+        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      {
+        for read in reads_of(body.unlist_ref()) {
+          reached.push(read.get_cs_name());
+        }
+      }
+    }
+    // The page styles print too: the running heads and feet a class defines (gGAF2e.cls:1085-1099 `\ps@plain`'s head
+    // prints its `\@jname` default, "Geophysical and Astrophysical Fluid Dynamics": 2304.14584, 2512.18461) — not a
+    // fancyhdr style's fields ([`page_style_name`]).
+    reached.extend(
+      callees
+        .keys()
+        .copied()
+        .filter(|cs| with(*cs, page_style_name)),
+    );
+    while let Some(cs) = reached.pop() {
+      if printed.insert(cs) {
+        reached.extend(callees.get(&cs).into_iter().flatten().copied());
+      }
+    }
+    let grow = |roots: &[&str]| -> FxHashSet<SymStr> {
+      let mut title_page: FxHashSet<SymStr> = FxHashSet::default();
+      let mut joined: Vec<SymStr> = roots
+        .iter()
+        .map(|root| T_CS!(*root).get_cs_name())
+        .filter(|root| callees.contains_key(root) && title_page.insert(*root))
+        .collect();
+      while let Some(cs) = joined.pop() {
+        for callee in callees.get(&cs).into_iter().flatten().copied() {
+          if title_page.contains(&callee) || !callees.contains_key(&callee) {
+            continue;
+          }
+          let mut callers = readers
+            .get(&callee)
+            .into_iter()
+            .flatten()
+            .filter(|caller| **caller != callee)
+            .peekable();
+          if callers.peek().is_some() && callers.all(|caller| title_page.contains(caller)) {
+            title_page.insert(callee);
+            joined.push(callee);
+          }
+        }
+      }
+      title_page
+    };
+    let title_page = grow(&ROOTS);
+    let mut with_fields: Vec<&str> = ROOTS.to_vec();
+    with_fields.extend(KERNEL_FIELDS);
+    let title_page_fields = grow(&with_fields);
+    // Code that never runs here: the title page's roots, the refused definitions (of whatever origin the lock kept them
+    // in: cesj.sty's `\def\maketitle{\cesjmaketitle}`, physics0510010) and the page styles — their heads and feet are
+    // page furniture no conversion sets, and a fancyhdr style's selection runs nothing. Reached, not grown: a macro an
+    // unused variant also calls is still reached (cesj.sty:874's `\institutename`, called by its `\cesjmaketitle` and
+    // the alternative `\cejpmaketitle`).
+    let mut roots: Vec<SymStr> = ROOTS
+      .iter()
+      .map(|root| T_CS!(*root).get_cs_name())
+      .collect();
+    roots.extend(
+      current_meanings_where(|stored| matches!(stored, Stored::Expandable(_)))
+        .into_iter()
+        .map(|(key, _)| key)
+        .filter(|key| with(*key, |name| name.starts_with("\\lx@dropped@"))),
+    );
+    roots.extend(callees.keys().copied().filter(|cs| {
+      with(*cs, |name| {
+        page_style_name(name) || fancyhdr_page_style(name)
+      })
+    }));
+    let mut never_runs: FxHashSet<SymStr> = FxHashSet::default();
+    let mut reached: Vec<SymStr> = Vec::new();
+    for root in roots {
+      if callees.contains_key(&root) {
+        reached.push(root);
+      } else if let Some(Stored::Expandable(defn)) =
+        lookup_meaning(&T_CS!(&with(root, ToString::to_string)))
+        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      {
+        reached.extend(reads_of(body.unlist_ref()).iter().map(Token::get_cs_name));
+      }
+    }
+    while let Some(cs) = reached.pop() {
+      if never_runs.insert(cs) {
+        reached.extend(callees.get(&cs).into_iter().flatten().copied());
+      }
+    }
+    ClassReaders {
+      title_page,
+      title_page_fields,
+      never_runs,
+      printed,
+      readers,
+    }
+  }
+
+  /// Is `store` read where nothing runs here — by a macro that code which never runs reaches
+  /// ([`ClassReaders::never_runs`]: the title page's roots, a refused definition, a page style) —, or by no macro? A raw
+  /// package's setter's own store is rerouted only then (`store_setter_body`): rlj.sty:73's `\@keywords` is read only by
+  /// its `\makeCover`, which 2605.31044 never calls, so it prints nowhere; one only a `\printkeywords` the document
+  /// calls reads, or a body `\printhistory`, or an `\AtEndDocument` hook, prints there. Whether such a macro runs is not
+  /// read off the code: cesj.sty's alternative title page `\cejpmaketitle` (its `CEJP` option's `\maketitle`;
+  /// physics0510010 selects `CESJ`) reads `\@institute` as the refused `\cesjmaketitle` does, and the store is the
+  /// frontmatter's. A store no macro reads is printed, if at all, by code the file ran as it was read (a running head's
+  /// field set at its top level).
+  fn read_where_nothing_runs(&self, store: &Token) -> bool {
+    self
+      .readers
+      .get(&store.get_cs_name())
+      .is_none_or(|readers| readers.iter().any(|cs| self.never_runs.contains(cs)))
+  }
+
+  /// [`ClassReaders::read_only_by_the_title_page`], the class's own kernel fields counted as title-page code.
+  fn read_only_by_the_title_page_or_fields(&self, store: &Token) -> bool {
+    self
+      .readers
+      .get(&store.get_cs_name())
+      .is_some_and(|readers| {
+        !readers.is_empty() && readers.iter().all(|cs| self.title_page_fields.contains(cs))
+      })
+  }
+
+  /// Is `store` read by the title-page code and by nothing else a raw file defined?
+  fn read_only_by_the_title_page(&self, store: &Token) -> bool {
+    self
+      .readers
+      .get(&store.get_cs_name())
+      .is_some_and(|readers| {
+        !readers.is_empty() && readers.iter().all(|cs| self.title_page.contains(cs))
+      })
+  }
+
+  /// Does a macro a raw file defined that is not title-page code read `store` (itself aside, an accumulator reading its
+  /// own value)? The store is then that code's too (K11's rule (a), [`store_setter_body`]): letter.cls:155's `\address`
+  /// for `\opening`, a class's `\signature` printing `\@where` (displaced setters, [`displaced_store_stays_the_classs`]).
+  fn read_by_other_code(&self, store: &Token) -> bool {
+    let name = store.get_cs_name();
+    self.readers.get(&name).is_some_and(|readers| {
+      readers
+        .iter()
+        .any(|cs| *cs != name && !self.title_page.contains(cs))
+    })
+  }
+
+  /// Which of `separators` a title-page macro reading `store` defines anew to number or mark the entry after it
+  /// ([`ClassReaders::title_page_readers`]: a [`WRITERS`] definer before it, braced or not, whose new meaning steps a
+  /// counter or prints a mark, [`numbers_or_marks`]) — `\def\\{\par\stepcounter{inst}$^{\theinst}$}`, as caosp.sty's
+  /// `\institutename` does to `\and` —, so the store's entries are labelled by the class where it prints the store,
+  /// which the kernel's lines do not carry (`displaced_argument_in_doubt`). A separator still a line break (`\let\\
+  /// \newline`, `\def\\{, }`) separates the lines as the kernel's does.
+  fn separators_redefined(&self, store: &Token, separators: &[Token]) -> Vec<Token> {
+    let mut redefined = Vec::new();
+    for body in self.title_page_readers(store) {
+      let body = body.unlist_ref();
+      for (at, t) in body.iter().enumerate() {
+        if !(t.get_catcode() == Catcode::CS && t.with_str(|s| WRITERS.contains(&s))) {
+          continue;
+        }
+        let next = skip_spaces(body, at + 1);
+        let (target, past) = match body.get(next) {
+          Some(open) if open.get_catcode() == Catcode::BEGIN => (body.get(next + 1), next + 2),
+          other => (other, next + 1),
+        };
+        let Some(target) = target.filter(|target| separators.contains(target)) else {
+          continue;
+        };
+        // (its new meaning: a `\let`'s right side, else the group the definition's parameter text leads to)
+        let meaning: Vec<Token> = if *t == T_CS!("\\let") {
+          let k = skip_spaces(body, past);
+          let k = if body.get(k) == Some(&T_OTHER!("=")) {
+            skip_spaces(body, k + 1)
+          } else {
+            k
+          };
+          match body.get(k).map(lookup_meaning) {
+            Some(Some(Stored::Expandable(defn))) => match defn.get_expansion() {
+              Some(ExpansionBody::Tokens(tokens)) => tokens.unlist_ref().to_vec(),
+              _ => Vec::new(),
+            },
+            _ => Vec::new(),
+          }
+        } else {
+          let open = (past..body.len()).find(|&k| body[k].get_catcode() == Catcode::BEGIN);
+          match open.and_then(|open| tokens_group_end(body, open).map(|end| (open, end))) {
+            Some((open, end)) => body[open + 1..end - 1].to_vec(),
+            None => Vec::new(),
+          }
+        };
+        if numbers_or_marks(&meaning) && !redefined.contains(target) {
+          redefined.push(*target);
+        }
+      }
+    }
+    redefined
+  }
+
+  /// The title-page macros that read `store`, with their bodies.
+  fn title_page_readers(&self, store: &Token) -> Vec<Tokens> {
+    let Some(readers) = self.readers.get(&store.get_cs_name()) else {
+      return Vec::new();
+    };
+    readers
+      .iter()
+      .filter(|cs| self.title_page.contains(*cs))
+      .filter_map(
+        |cs| match lookup_meaning(&T_CS!(&with(*cs, |name| name.to_string()))) {
+          Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+            Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+            _ => None,
+          },
+          _ => None,
+        },
+      )
+      .collect()
+  }
+
+  /// The label the title page prints right before `store`, in the same line: in the first title-page macro reading it
+  /// (by name) where the code from the line's start — the macro's start, a `\par`, a `\\`/`\newline` (with its `*`
+  /// and `[<skip>]`), another parameterless value of a raw file's, or the open brace of the store's group — up to the
+  /// store is label material and layout only ([`label_only_begin_code`]): `Resumen: \@resumen`, `\par KW: \@keywords`.
+  /// When the store's own group holds only layout before it (`{\itshape \@abst}`), the line goes on before that group.
+  /// Static, from the code: the label is the class's only when TeX's run of the title page prints its text right before
+  /// the store (`verify_title_page_labels`).
+  fn title_page_label(&self, store: &Token) -> Option<StoreLabel> {
+    self.label_in(store, &self.title_page)
+  }
+
+  /// [`ClassReaders::title_page_label`] in the title-page code `code`: the class's own kernel fields counted
+  /// ([`ClassReaders::title_page_fields`]) for an off-table store (jfpc.cls:176-177 `{\footnotesize\it\sffamily Actes
+  /// JFPC \@lannee}` in its `\def\@title`, 1503.05530).
+  fn label_in(&self, store: &Token, code: &FxHashSet<SymStr>) -> Option<StoreLabel> {
+    let mut readers: Vec<String> = self
+      .readers
+      .get(&store.get_cs_name())?
+      .iter()
+      .filter(|cs| code.contains(*cs))
+      .map(|cs| with(*cs, ToString::to_string))
+      .collect();
+    readers.sort();
+    for reader in readers {
+      let Some(body) = parameterless_body(&T_CS!(&reader)) else {
+        continue;
+      };
+      let body = body.unlist_ref();
+      for (at, t) in body.iter().enumerate() {
+        if t != store
+          || body[..at]
+            .iter()
+            .rev()
+            .find(|b| b.get_catcode() != Catcode::SPACE)
+            .is_some_and(|b| cs_in(b, WRITERS))
+          || in_unprinted_argument(body, at)
+        {
+          continue;
+        }
+        if let Some((start, end, text, in_argument)) = line_label_before(body, at)
+          && Tokens::slice_is_balanced(&body[start..end])
+        {
+          return Some(StoreLabel {
+            reader,
+            part: Tokens::new(body[start..end].to_vec()),
+            text,
+            in_argument,
+          });
+        }
+      }
+    }
+    None
+  }
+
+  /// Is the default name of the date or classification `api` makes (`\lx@date@<role>@name`, `\lx@classification@name`:
+  /// "Received~", "Classification:~") the word a raw file's macro prints right before `store` — its letters, case and a
+  /// trailing colon aside ([`text_right_before`])? Where no label is read ([`labelled_api`]), the role's default stands
+  /// only then (FIDELITY_CHARTER: a role's default stands only where the class prints that label; review rev95d-r2).
+  fn prints_default_name_before(&self, store: &Token, api: &str) -> bool {
+    let default = if api.starts_with("\\lx@add@classification") {
+      T_CS!("\\lx@classification@name")
+    } else {
+      let Some(role) = api
+        .split_once("role=")
+        .and_then(|(_, rest)| rest.split([',', ']']).next())
+      else {
+        return false;
+      };
+      T_CS!(&s!("\\lx@date@{role}@name"))
+    };
+    let Some(word) = parameterless_body(&default).map(|body| {
+      alphanumerics(
+        &body
+          .unlist_ref()
+          .iter()
+          .map(Token::to_string)
+          .collect::<String>(),
+      )
+      .to_lowercase()
+    }) else {
+      return false;
+    };
+    if word.is_empty() {
+      return false;
+    }
+    let Some(readers) = self.readers.get(&store.get_cs_name()) else {
+      return false;
+    };
+    readers.iter().any(|cs| {
+      let Some(body) = parameterless_or_any_body(&T_CS!(&with(*cs, ToString::to_string))) else {
+        return false;
+      };
+      let body = body.unlist_ref();
+      body.iter().enumerate().any(|(at, t)| {
+        if t != store
+          || body[..at]
+            .iter()
+            .rev()
+            .find(|b| b.get_catcode() != Catcode::SPACE)
+            .is_some_and(|b| cs_in(b, WRITERS))
+        {
+          return false;
+        }
+        let text = text_right_before(body, at).to_lowercase();
+        let text =
+          text.trim_end_matches(|c: char| c.is_whitespace() || matches!(c, ':' | ',' | ';'));
+        text.strip_suffix(word.as_str()).is_some_and(|before| {
+          !before
+            .chars()
+            .next_back()
+            .is_some_and(char::is_alphanumeric)
+        })
+      })
+    })
+  }
+
+  /// Does the class print `store` — its title page or a page style ([`ClassReaders::printed`])? A store left at the
+  /// class's default is printed only there, if at all: tlp.cls:697-728's `\@volume`, `\@doi`, `\@journal`
+  /// placeholders ("TLP 1 (1): 1–000, January 20XX") are read by its `\@journal` running head, which the class's own
+  /// `\@j@urnal` switch (:760-764) does not print without its `prodtf` option (1209.2617); lion-msc.cls:200's
+  /// `\@affiliation` default is printed by its `\posttitle` (:244-275), which titling's `\@maketitle` reads; gGAF2e's
+  /// `\@jname` by its `\ps@plain` head.
+  fn read_by_the_title_page(&self, store: &Token) -> bool {
+    let name = store.get_cs_name();
+    self.printed.contains(&name)
+      || self
+        .readers
+        .get(&name)
+        .is_some_and(|readers| readers.iter().any(|cs| self.printed.contains(cs)))
+  }
+
+  /// The page styles the class's title page selects: `\thispagestyle{<name>}` or `\pagestyle{<name>}` in its refused
+  /// `\maketitle` or `\@maketitle` or in any printed macro ([`ClassReaders::printed`]) — googlecloud.cls:197/:216's
+  /// `\maketitle` selects `firststyle` (2607.06973), cmu.cls:261/:285 (2608.26053).
+  fn selected_page_styles(&self) -> FxHashSet<String> {
+    let mut bodies: Vec<Tokens> = [
+      "\\lx@dropped@maketitle",
+      "\\@maketitle",
+      "\\lx@dropped@@maketitle",
+    ]
+    .iter()
+    .filter_map(|root| parameterless_or_any_body(&T_CS!(*root)))
+    .collect();
+    bodies.extend(
+      self
+        .printed
+        .iter()
+        .filter_map(|cs| parameterless_or_any_body(&T_CS!(&with(*cs, ToString::to_string)))),
+    );
+    let mut styles = FxHashSet::default();
+    for body in &bodies {
+      let body = body.unlist_ref();
+      for (k, t) in body.iter().enumerate() {
+        if !cs_in(t, &["\\thispagestyle", "\\pagestyle"]) {
+          continue;
+        }
+        let open = skip_spaces(body, k + 1);
+        if body
+          .get(open)
+          .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+          && let Some(past) = tokens_group_end(body, open)
+        {
+          styles.insert(Tokens::new(body[open + 1..past - 1].to_vec()).to_string());
+        }
+      }
+    }
+    styles
+  }
+
+  /// The label a printed token register ([`toks_store`]) carries, when only printed code reads it
+  /// ([`ClassReaders::printed`], or a fancyhdr page style, [`fancyhdr_page_style`]) and some of it prints the register's value — a `\the\X` that is no conditional's
+  /// operand (`\if\relax\the\X\relax` only tests it: nvidiatechreport.cls's copy in 2507.09850 prints "* Equal
+  /// contribution." instead) — in a macro the title page reaches or a page style it selects
+  /// ([`ClassReaders::selected_page_styles`]): the text printed right before the value in its line
+  /// ([`printed_text_before`]; "Corresponding author(s): " of googlecloud.cls:114, "*" of deepseek.cls:170), empty when
+  /// there is none. `None` when the register is not such a store.
+  fn printed_register(&self, register: &Token) -> Option<Vec<Token>> {
+    let readers = self.readers.get(&register.get_cs_name())?;
+    if readers.is_empty()
+      || !readers
+        .iter()
+        .all(|cs| self.printed.contains(cs) || with(*cs, fancyhdr_page_style))
+    {
+      return None;
+    }
+    let selected = self.selected_page_styles();
+    let mut names: Vec<String> = readers
+      .iter()
+      .map(|cs| with(*cs, ToString::to_string))
+      .collect();
+    names.sort();
+    for name in names {
+      if let Some(style) = name.strip_prefix("\\ps@")
+        && !selected.contains(style)
+      {
+        continue;
+      }
+      let Some(body) = parameterless_or_any_body(&T_CS!(&name)) else {
+        continue;
+      };
+      let body = body.unlist_ref();
+      for (k, t) in body.iter().enumerate() {
+        if *t != T_CS!("\\the") || body.get(skip_spaces(body, k + 1)) != Some(register) {
+          continue;
+        }
+        // (an operand of a conditional's test, `\if\relax\the\X\relax`: not printed)
+        let before: Vec<&Token> = body[..k]
+          .iter()
+          .rev()
+          .filter(|b| b.get_catcode() != Catcode::SPACE)
+          .take(2)
+          .collect();
+        let tested = |b: Option<&&Token>| b.is_some_and(|b| opens_a_conditional(b));
+        if tested(before.first())
+          || (before.first().is_some_and(|b| **b == T_CS!("\\relax")) && tested(before.get(1)))
+        {
+          continue;
+        }
+        return Some(printed_text_before(body, k));
+      }
+    }
+    None
+  }
+
+  /// How the title page prints `store` among the class's printed text, read off its code: is an occurrence glued to
+  /// the class's text ([`glued_to_class_text`]), and which other values share its lines — in the innermost group
+  /// around the store, between the line breaks around it ([`ends_a_line`]: `\par`, `\\`, `\newline`, `\break`,
+  /// `\linebreak`, `\vskip`), each other `\@` macro not one of `carried`. A store printed in one line with a value
+  /// the frontmatter does not carry is part of the class's line and stays with it: tlp.cls:627 `{\affilsize\it
+  /// submitted \@submitted; revised \@revised; accepted \@accepted}`, where `\submitted` is no title-page setter of
+  /// the table — handing on the other two left "submitted 30 November 2010; revised ; accepted" in the body
+  /// (1209.2617); uiucthesis.cls:177 `for the degree of \@degree\ in \@dept\\`. Only printed text is a value (user
+  /// ruling 2026-10-22, OXIDIZED_DESIGN_DIVERGENCES #662), decided by expansion ([`prints_as_a_value`]): a macro whose
+  /// expansion is font, size or shape switches, spacing, rules or nothing ([`prints_text`]) is the line's
+  /// typesetting, as in `{\@addrfont\@address\par}` with `\def\@addrfont{\itshape}` (review 68x r2 probe ka;
+  /// bgteubner, umich-thesis, philosophersimprint). The other values are judged twice: as the class leaves them, when
+  /// it is loaded (`reroute_raw_class_stores`), and with the document's, when `\maketitle` prints the title page
+  /// (`lx_store_line_values_<name>`, [`harvest_stores`]): a store the class leaves empty, `\gdef\@submitted{}`, prints
+  /// the document's `\submitted{1 May 2026}` there, which makes `{\itshape submitted \@submitted; e-mail
+  /// \@email\par}` one line of the class's (review rev79a Q1). A value the line ends before is in another line:
+  /// `\vbox{…\@jinfo\par\@author\par\@address\par}` (probe kb).
+  fn store_lines(&self, store: &Token, carried: &dyn Fn(&Token) -> bool) -> StoreLines {
+    let other = |t: &Token| {
+      t != store
+        && t.get_catcode() == Catcode::CS
+        && t.with_str(|s| s.starts_with("\\@"))
+        && !carried(t)
+    };
+    let mut lines = StoreLines::default();
+    for body in self.title_page_readers(store) {
+      let body = body.unlist_ref();
+      let furniture = running_head_arguments(body);
+      let mut open: Vec<usize> = Vec::new();
+      for (k, t) in body.iter().enumerate() {
+        // (a store a running head prints is in no line of the title page: preprint.cls's `\maketitle`
+        // `\ihead{\@shortauthor:~\@shorttitle}`, 2512.04983, whose short title is the frontmatter's `<toctitle>`)
+        if furniture.iter().any(|(from, to)| (*from..*to).contains(&k)) {
+          continue;
+        }
+        // (a store written, ptptex.cls:110 `\gdef\@abst{}`, is not printed there)
+        let written = || {
+          body[..k]
+            .iter()
+            .rev()
+            .find(|b| b.get_catcode() != Catcode::SPACE)
+            .is_some_and(|b| cs_in(b, WRITERS))
+        };
+        match t.get_catcode() {
+          Catcode::BEGIN => open.push(k),
+          Catcode::END => {
+            open.pop();
+          },
+          _ if t == store && !written() => {
+            if glued_to_class_text(body, k, open.last().copied()) {
+              lines.glued = true;
+            }
+            if let Some(&start) = open.last()
+              && let Some(end) = tokens_group_end(body, start)
+            {
+              let from = body[start..k]
+                .iter()
+                .rposition(ends_a_line)
+                .map_or(start, |b| start + b + 1);
+              let to = body[k + 1..end]
+                .iter()
+                .position(ends_a_line)
+                .map_or(end, |b| k + 1 + b);
+              for value in body[from..to].iter().filter(|t| other(t)) {
+                if !lines.others.contains(value) {
+                  lines.others.push(*value);
+                }
+              }
+            }
+          },
+          _ => {},
+        }
+      }
+    }
+    lines
+  }
+}
+
+/// The spans of `body` that set page furniture — the arguments of LaTeX's marks (`\markboth`, `\markright`,
+/// `\@mkboth`), of fancyhdr's head and foot commands (`\fancyhead[<places>]{…}`, `\lhead{…}`, …), of
+/// scrlayer-scrpage's (`\ihead[<plain>]{…}`, `\ohead*{…}`, …) and of titleps's (`\sethead[…][…][…]{…}{…}{…}`,
+/// `\setfoot*{…}{…}{…}`, titleps.sty:420-433), and the bodies of the head and foot macros a definition there sets
+/// (`{\def\@oddhead{\@shortauthor: \@shorttitle\hfil}}`, `\renewcommand{\@evenfoot}{…}`; ptptex.cls's `\maketitle`
+/// head, review rev79a2 finding 1): the running heads and feet LaTeXML drops, printed on no line of the title page
+/// ([`ClassReaders::store_lines`]), and no text a store there is glued to ([`glued_to_class_text`]).
+fn running_head_arguments(body: &[Token]) -> Vec<(usize, usize)> {
+  const HEADS: &[(&str, usize)] = &[
+    ("\\markboth", 2),
+    ("\\markright", 1),
+    ("\\@mkboth", 2),
+    ("\\fancyhead", 1),
+    ("\\fancyfoot", 1),
+    ("\\fancyhf", 1),
+    ("\\lhead", 1),
+    ("\\chead", 1),
+    ("\\rhead", 1),
+    ("\\lfoot", 1),
+    ("\\cfoot", 1),
+    ("\\rfoot", 1),
+    ("\\ihead", 1),
+    ("\\ohead", 1),
+    ("\\ifoot", 1),
+    ("\\ofoot", 1),
+    ("\\lehead", 1),
+    ("\\cehead", 1),
+    ("\\rehead", 1),
+    ("\\lohead", 1),
+    ("\\cohead", 1),
+    ("\\rohead", 1),
+    ("\\lefoot", 1),
+    ("\\cefoot", 1),
+    ("\\refoot", 1),
+    ("\\lofoot", 1),
+    ("\\cofoot", 1),
+    ("\\rofoot", 1),
+    ("\\sethead", 3),
+    ("\\setfoot", 3),
+  ];
+  let mut spans = Vec::new();
+  for (i, t) in body.iter().enumerate() {
+    if let Some(span) = head_definition_body(body, i) {
+      spans.push(span);
+      continue;
+    }
+    let Some((_, nargs)) = HEADS.iter().find(|(cs, _)| cs_in(t, &[cs])) else {
+      continue;
+    };
+    let mut k = skip_spaces(body, i + 1);
+    if body.get(k) == Some(&T_OTHER!("*")) {
+      k = skip_spaces(body, k + 1);
+    }
+    // The span starts before any optional arguments: titleps's three are the even-page heads, scrlayer-scrpage's
+    // `[<plain>]` and fancyhdr's old `\lhead[<even>]` are printed heads too (fancyhdr's `[<places>]` hold no stores).
+    let start = k;
+    match skip_optional_arguments(body, k) {
+      Some(past) => k = past,
+      None => continue,
+    }
+    for _ in 0..*nargs {
+      match tokens_group_end(body, skip_spaces(body, k)) {
+        Some(past) => k = past,
+        None => break,
+      }
+    }
+    if k > start {
+      spans.push((start, k));
+    }
+  }
+  spans
+}
+
+/// The span of the body a definition at `body[i]` gives LaTeX's head or foot macro (`\@oddhead`, `\@evenhead`,
+/// `\@oddfoot`, `\@evenfoot`): `\def`, `\gdef`, `\edef`, `\xdef` with any parameter text, `\renewcommand` with its
+/// `*`, the name braced or not, and its `[<n>]` ([`running_head_arguments`]).
+fn head_definition_body(body: &[Token], i: usize) -> Option<(usize, usize)> {
+  const HEAD_MACROS: &[&str] = &["\\@oddhead", "\\@evenhead", "\\@oddfoot", "\\@evenfoot"];
+  let t = body.get(i)?;
+  let mut k = skip_spaces(body, i + 1);
+  if cs_in(t, &["\\def", "\\gdef", "\\edef", "\\xdef"]) {
+    if !cs_in(body.get(k)?, HEAD_MACROS) {
+      return None;
+    }
+    // (the parameter text, up to the body's brace)
+    k = k
+      + 1
+      + body[k + 1..]
+        .iter()
+        .position(|b| b.get_catcode() == Catcode::BEGIN)?;
+  } else if cs_in(t, &["\\renewcommand"]) {
+    if body.get(k) == Some(&T_OTHER!("*")) {
+      k = skip_spaces(body, k + 1);
+    }
+    if cs_in(body.get(k)?, HEAD_MACROS) {
+      k += 1;
+    } else if body.get(k)?.get_catcode() == Catcode::BEGIN
+      && body.get(k + 1).is_some_and(|name| cs_in(name, HEAD_MACROS))
+      && body
+        .get(k + 2)
+        .is_some_and(|b| b.get_catcode() == Catcode::END)
+    {
+      k += 3;
+    } else {
+      return None;
+    }
+    k = skip_optional_arguments(body, skip_spaces(body, k))?;
+  } else {
+    return None;
+  }
+  Some((k, tokens_group_end(body, k)?))
+}
+
+/// The index past the optional arguments (`[…]`, each with its braced groups whole) from `body[k]` on, spaces
+/// skipped; `None` when one never closes.
+fn skip_optional_arguments(body: &[Token], mut k: usize) -> Option<usize> {
+  while body.get(k) == Some(&T_OTHER!("[")) {
+    let mut depth = 0usize;
+    let close = body[k + 1..].iter().position(|b| {
+      match b.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+      depth == 0 && *b == T_OTHER!("]")
+    })?;
+    k = skip_spaces(body, k + 1 + close + 1);
+  }
+  Some(k)
+}
+
+/// How the title page prints a store among the class's text ([`ClassReaders::store_lines`]).
+#[derive(Default)]
+struct StoreLines {
+  /// Is an occurrence glued to the class's printed text ([`glued_to_class_text`])?
+  glued:  bool,
+  /// The other `\@` macros in its lines the frontmatter does not carry, values when they print text
+  /// ([`prints_as_a_value`]).
+  others: Vec<Token>,
+}
+
+/// Is the macro `t` a value of a class's line: a parameterless macro of a raw file's or the document's whose expansion
+/// prints text ([`prints_text`]), read with its current meaning — the class's default when the class is loaded, the
+/// document's at `\maketitle`?
+fn prints_as_a_value(t: &Token) -> bool {
+  match lookup_meaning(t) {
+    Some(Stored::Expandable(defn)) => {
+      matches!(
+        defn.get_origin(),
+        DefinitionOrigin::File | DefinitionOrigin::Document
+      ) && defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+        && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(value))
+          if prints_text(value.unlist_ref(), PRINTS_TEXT_DEPTH))
+    },
+    _ => false,
+  }
+}
+
+/// Can the macro `t`, a value of a store's line ([`ClassReaders::store_lines`]) that prints nothing as the class leaves
+/// it, print one when `\maketitle` judges it again ([`prints_as_a_value`])? Only a placeholder the document can fill:
+/// undefined, `\relax` (which LaTeX finds undefined, `\@ifundefined`, `\newcommand`: `\let\@volume\relax`), or a
+/// parameterless macro that expands to nothing (`\gdef\@submitted{}`, `\let\@shortauthor\empty`; review rev79a
+/// Q1) — a store the class never defaulted still waits for `\maketitle`. The line's typesetting code is no
+/// placeholder: a macro with parameters (`\@setfontsize`, `\@ifundefined`), a primitive, a register, or a font
+/// macro (USG.cls:1590 `\smash{\@journalfont\@journal}`, whose `\journal` deferred for it, 2605.00042's pubnote
+/// order; review rev79a2 finding 5).
+fn may_become_a_value(t: &Token) -> bool {
+  match lookup_meaning(t) {
+    None => true,
+    Some(Stored::Expandable(defn)) => {
+      defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+        && match defn.get_expansion() {
+          // (an empty body is none)
+          None => true,
+          Some(ExpansionBody::Tokens(value)) => value.unlist_ref().iter().all(|b| {
+            matches!(
+              b.get_catcode(),
+              Catcode::SPACE | Catcode::BEGIN | Catcode::END
+            ) || cs_in(b, &["\\relax", "\\@empty", "\\empty"])
+          }),
+          _ => false,
+        }
+    },
+    meaning => meaning == lookup_meaning(&TOKEN_RELAX),
+  }
+}
+
+/// Is the occurrence of a store at `body[k]` glued to the class's printed text — the character token right before or
+/// after it a letter or a digit, or a `.`, `/` or `-` inside a word (with a letter, a digit or another of them beyond
+/// it), with no space, glue or line break between? The class's text and the store's then print as one word, which is
+/// one value the frontmatter does not carry, and the line stays the class's: piparticle-final.cls:272 `{DOI:
+/// 10.4279/PIP.\@doi}`, handed on, left "020001" as the paper's DOI (1002.3829, 1012.4507, 1503.03445, 1503.07722,
+/// 1510.06950); ar-1col.cls:335 `https://doi.org/\@doi\endgraf` (1903.12215, 2004.12182, 2603.20393). Not glued: a
+/// sentence's full stop after the store (`\enspace\@ACMCCS.}`, CSML.cls's shape, perfect_kernel_batch75a), a label's
+/// `:` or a bracket (`doi:\@doi`, lms; `(\@pubyear`, mnras), an operand of `\if`, `\ifx` or `\ifcat` (`\if!\@subtitle`,
+/// lipics-v2021, llncs), which TeX compares and does not print, and the first argument of `\href` (`open`, the
+/// innermost group's brace: `\href{mailto:\@email}`, modernposter), a link's target.
+fn glued_to_class_text(body: &[Token], k: usize, open: Option<usize>) -> bool {
+  const CONDITIONALS: &[&str] = &["\\if", "\\ifx", "\\ifcat"];
+  // (`Some(true)`: a letter or a digit; `Some(false)`: a `.`, `/` or `-`)
+  let word_char = |t: Option<&Token>| -> Option<bool> {
+    let t = t?;
+    match t.get_catcode() {
+      Catcode::LETTER => Some(true),
+      Catcode::OTHER => t.with_str(|s| {
+        let mut chars = s.chars();
+        match (chars.next(), chars.next()) {
+          (Some(c), None) if c.is_ascii_digit() => Some(true),
+          (Some('.' | '/' | '-'), None) => Some(false),
+          _ => None,
+        }
+      }),
+      _ => None,
+    }
+  };
+  let before = |j: usize| j.checked_sub(1).map(|i| &body[i]);
+  let glued_before = match word_char(before(k)) {
+    Some(true) => true,
+    Some(false) => word_char(before(k - 1)).is_some(),
+    None => false,
+  } && !in_a_dimension(body, k);
+  let glued_after = match word_char(body.get(k + 1)) {
+    Some(true) => true,
+    Some(false) => word_char(body.get(k + 2)).is_some(),
+    None => false,
+  };
+  let operand = (k >= 1 && cs_in(&body[k - 1], CONDITIONALS))
+    || (k >= 2 && cs_in(&body[k - 2], CONDITIONALS) && body[k - 1].get_catcode() != Catcode::SPACE);
+  let link_target = open.is_some_and(|start| {
+    body[..start]
+      .iter()
+      .rev()
+      .find(|b| b.get_catcode() != Catcode::SPACE)
+      .is_some_and(|b| *b == T_CS!("\\href"))
+  });
+  !operand && !link_target && (glued_before || glued_after)
+}
+
+/// Is `body[k]` in or right after the dimension a skip, kern, penalty or register assignment reads (`\hskip.5em\@kword`,
+/// jps-cp.cls; `\vskip 4ex\@subtitle`, jurabook.cls; `\hangindent 3.8pc\@keywords`, w-art.cls)? Its characters are no
+/// printed text ([`glue_end`]).
+fn in_a_dimension(body: &[Token], k: usize) -> bool {
+  const READS_A_NUMBER: &[&str] = &[
+    "\\penalty",
+    "\\raise",
+    "\\lower",
+    "\\moveleft",
+    "\\moveright",
+  ];
+  let Some(j) = body[..k]
+    .iter()
+    .rposition(|t| t.get_catcode() == Catcode::CS)
+  else {
+    return false;
+  };
+  let t = &body[j];
+  (cs_in(t, GLUE_SETTERS)
+    || cs_in(t, READS_A_NUMBER)
+    || matches!(lookup_meaning(t), Some(Stored::Register(_))))
+    && glue_end(body, j + 1).is_some_and(|end| end >= k)
+}
+
+/// Does `t` end the line TeX prints: `\par` (a blank line in the code is one; `\endgraf` is plain's `\par`), `\\`,
+/// `\newline`, `\break` and `\linebreak`, an alignment's `\cr`, and the primitive `\vskip`, which in horizontal mode
+/// ends the paragraph?
+fn ends_a_line(t: &Token) -> bool {
+  cs_in(t, &[
+    "\\par",
+    "\\endgraf",
+    "\\\\",
+    "\\newline",
+    "\\break",
+    "\\linebreak",
+    "\\cr",
+    "\\crcr",
+    "\\vskip",
+  ])
+}
+
+/// How many macros deep [`prints_text`] reads a value's expansion; past it, a macro counts as printing.
+const PRINTS_TEXT_DEPTH: usize = 6;
+
+/// Spacing, rules and breaks of TeX's and LaTeX's that print no text, taking no argument (besides [`layout`]).
+const SPACING: &[&str] = &[
+  "\\hfil",
+  "\\hfill",
+  "\\hss",
+  "\\vfil",
+  "\\vfill",
+  "\\vss",
+  "\\quad",
+  "\\qquad",
+  "\\enskip",
+  "\\enspace",
+  "\\thinspace",
+  "\\,",
+  "\\ ",
+  "\\/",
+  "\\strut",
+  "\\null",
+  "\\break",
+  "\\endgraf",
+  "\\cr",
+  "\\crcr",
+  "\\protect",
+];
+
+/// Does `code` print text — a character, math, or a command not known to print nothing? What prints nothing is a
+/// space, a group's braces, a font, size or shape switch (a command whose definition carries a font: LaTeX's
+/// `\itshape`, `\large`, and [`layout`]), spacing ([`SPACING`], [`LAYOUT_ARGS`] with their arguments, [`GLUE_SETTERS`]
+/// and a register with their glue), a rule (`\hrule`/`\vrule` with their `height`/`width`/`depth`, LaTeX's
+/// `\rule[<raise>]{<width>}{<height>}`), a line break with its `*` and `[<skip>]`, and a parameterless macro whose
+/// expansion prints nothing, read `depth` macros deep. Only printed text is a value of a class's line (user ruling
+/// 2026-10-22; [`ClassReaders::store_lines`]).
+fn prints_text(code: &[Token], depth: usize) -> bool {
+  let mut k = 0;
+  while k < code.len() {
+    let t = code[k];
+    k += 1;
+    match t.get_catcode() {
+      Catcode::SPACE | Catcode::BEGIN | Catcode::END => continue,
+      Catcode::ACTIVE if t == T_ACTIVE!('~') => continue,
+      Catcode::CS | Catcode::ACTIVE => {},
+      _ => return true,
+    }
+    if cs_in(&t, &["\\\\", "\\newline", "\\linebreak"]) {
+      // `\\*[<skip>]`, `\linebreak[<number>]`
+      k = skip_spaces(code, k);
+      if code.get(k) == Some(&T_OTHER!("*")) {
+        k = skip_spaces(code, k + 1);
+      }
+      if code.get(k) == Some(&T_OTHER!("[")) {
+        match code[k..].iter().position(|b| *b == T_OTHER!("]")) {
+          Some(close) => k += close + 1,
+          None => return true,
+        }
+      }
+      continue;
+    }
+    if layout(&t) || cs_in(&t, SPACING) {
+      continue;
+    }
+    if let Some((_, nargs)) = LAYOUT_ARGS.iter().find(|(cs, _)| cs_in(&t, &[cs])) {
+      k = skip_spaces(code, k);
+      if code.get(k) == Some(&T_OTHER!("*")) {
+        k += 1;
+      }
+      for _ in 0..*nargs {
+        match tokens_group_end(code, skip_spaces(code, k)) {
+          Some(past) => k = past,
+          None => return true,
+        }
+      }
+      continue;
+    }
+    if t == T_CS!("\\rule") {
+      k = skip_spaces(code, k);
+      if code.get(k) == Some(&T_OTHER!("[")) {
+        match code[k..].iter().position(|b| *b == T_OTHER!("]")) {
+          Some(close) => k += close + 1,
+          None => return true,
+        }
+      }
+      for _ in 0..2 {
+        match tokens_group_end(code, skip_spaces(code, k)) {
+          Some(past) => k = past,
+          None => return true,
+        }
+      }
+      continue;
+    }
+    if cs_in(&t, &["\\hrule", "\\vrule"]) {
+      // `\hrule height 0.4pt depth 0pt width \textwidth`
+      loop {
+        let j = skip_spaces(code, k);
+        let keyword = ["height", "width", "depth"].into_iter().find(|keyword| {
+          keyword.chars().enumerate().all(|(n, c)| {
+            code.get(j + n).is_some_and(|b| {
+              b.get_catcode() == Catcode::LETTER && b.with_str(|s| s.len() == 1 && s.starts_with(c))
+            })
+          })
+        });
+        let Some(keyword) = keyword else {
+          break;
+        };
+        match glue_end(code, j + keyword.len()) {
+          Some(past) => k = past,
+          None => return true,
+        }
+      }
+      continue;
+    }
+    if cs_in(&t, GLUE_SETTERS) || matches!(lookup_meaning(&t), Some(Stored::Register(_))) {
+      // (a skip or a register's assignment prints nothing: `\vskip 12\p@`, `\parindent=0pt`; a register read some
+      // other way — a `\chardef`'d character, a count set to a number — counts as printing)
+      match glue_end(code, k) {
+        Some(past) => k = past,
+        None => return true,
+      }
+      continue;
+    }
+    if let Ok(Some(defn)) = lookup_definition(&t)
+      && defn.declared_font().is_some()
+      && defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+    {
+      continue;
+    }
+    match parameterless_body(&t) {
+      Some(expansion) if depth > 0 && !prints_text(expansion.unlist_ref(), depth - 1) => continue,
+      _ => return true,
+    }
+  }
+  false
+}
+
+/// The class's setter `\name`, if it stores its argument for the title page ([`setter_stores`]): in its own
+/// `\@name` (ptptex.cls:616 `\inst` → `\@inst`) — a raw package's, read by code which never runs here or by no
+/// macro ([`ClassReaders::read_where_nothing_runs`]) —, or — rule (a) — in one other `\@X` that only the class's
+/// title-page code reads ([`ClassReaders`]): apa6.cls:760 `\long\def\affiliation#1{\long\def\@affil{#1}}` and :779
+/// `\authornote` → `\@acks`, read only by its `\maketitle` (:1126-1234, :1367-1466, :1571-1707) and the
+/// `\check@author` it calls (:786-795). A store some other class macro reads stays raw: letter.cls:155 `\address`
+/// fills `\fromaddress` for `\opening` (:221-237), afthesis.cls:535 `\addr@ss` its vita (:744-749) (sweep 93:
+/// rerouting those left the readers without their value). A kernel-owned store (`\@date`) is not a class's.
+/// Returns the body, the stored argument's number and the store.
+fn store_setter_body(
+  name: &str,
+  package: bool,
+  readers: &mut Option<ClassReaders>,
+) -> Result<Option<(Tokens, usize, Token)>> {
+  let Some((body, arg, stores)) = table_setter_stores(&T_CS!(&s!("\\{name}")))? else {
+    return Ok(None);
+  };
+  let own = T_CS!(&s!("\\@{name}"));
+  if stores.contains(&own) {
+    // (a raw package's own `\@<name>` only when code that never runs here reads it, or no macro does: rerouted,
+    // rlj.sty:73's `\@keywords`, read only by the `\makeCover` 2605.31044 comments out, was invented, and one a macro
+    // the document calls prints was printed twice, review rev95d B1. A raw class's — and a package's its read loads —
+    // as before: the class's title page reaches its stores along code the survey does not follow, bfhlayout.sty
+    // :743-752's `\@titlefooterleft`, printed by a scrlayer layer of bfhthesis.cls's title page, reads `\@department` and
+    // `\@institute` (DEMO-BFHThesis), and the test lost them; requiring every reader to be title-page code also lost
+    // dmtcs.cls's keywords, printed by its `\@dokeywords` from the refused `\endabstract` and its `\noabstract`, 0905.1102)
+    if package
+      && !readers
+        .get_or_insert_with(ClassReaders::survey)
+        .read_where_nothing_runs(&own)
+    {
+      return Ok(None);
+    }
+    return Ok(Some((body, arg, own)));
+  }
+  let [store] = stores
+    .iter()
+    .filter(|t| t.with_str(|s| s.starts_with("\\@")))
+    .copied()
+    .collect::<Vec<_>>()[..]
+  else {
+    return Ok(None);
+  };
+  let class_owned = match lookup_meaning(&store) {
+    None => true,
+    Some(Stored::Expandable(defn)) => defn.get_origin() == DefinitionOrigin::File,
+    Some(_) => false,
+  };
+  if !class_owned {
+    return Ok(None);
+  }
+  let readers = readers.get_or_insert_with(ClassReaders::survey);
+  Ok(
+    readers
+      .read_only_by_the_title_page(&store)
+      .then_some((body, arg, store)),
+  )
+}
+
+/// A kernel field setter the raw class redefined — tufte-common.def:608-614 `\renewcommand{\date}[1]{\gdef\@date{#1}…
+/// \protected@xdef\thedate{#1}…}` (2603.01440; 25 tufte papers) — is still that field's setter (K11): when it stores
+/// its argument in the field's store among side definitions only ([`pure_stores`]), the class's body stays and the
+/// store is handed to the frontmatter as the kernel's `\date` hands it (sect05.rs), so the side definitions are kept.
+/// The kernel's `\title` and `\author` are locked; `\date` is not, and is not locked for this.
+fn reroute_kernel_field_setters(cls: &str) -> Result<()> {
+  const FIELDS: &[(&str, &str)] = &[(
+    "date",
+    r"\expandafter\lx@add@date@halved\expandafter{\@date}\expandafter\lx@date@after\expandafter{\@date}",
+  )];
+  for (name, handing) in FIELDS {
+    let cs = T_CS!(&s!("\\{name}"));
+    let Some(defn) = lookup_definition(&cs)? else {
+      continue;
+    };
+    if defn.get_origin() != DefinitionOrigin::File {
+      continue;
+    }
+    let Some((body, 1, stores)) = setter_stores(&cs)? else {
+      continue;
+    };
+    if !stores.contains(&T_CS!(&s!("\\@{name}"))) {
+      continue;
+    }
+    let mut body = body.unlist();
+    body.extend(mouth::tokenize_internal(*handing).unlist());
+    DefMacro!(cs, convert_latex_args(1, None)?, Tokens::new(body));
+    Info!(
+      "frontmatter",
+      cls,
+      s!("The raw class's \\{name} keeps its definitions and sets the frontmatter's {name}")
+    );
+  }
+  Ok(())
+}
+
+/// The Frontmatter API's contact setters (OmniBus.cls.ltxml:77-94, the generic class Perl gives a paper whose class has
+/// no binding) and the API call each is when a raw file's own definition of it sets its argument as a title-page line
+/// ([`in_place_contact_setter`]). An address or affiliation printed where it is called stands under the names printed
+/// above it: the authors new since the last such entry (`annotate=run`, `frontmatter_api.rs`), or those its marks
+/// request; an e-mail line goes where the API's evidence puts each of its addresses (the author it spells, …), a
+/// list written out one address each, as a class's address list is (`\lx@split@addresses`, OD #805): 1303.3004's
+/// `\email{rnarayan@…, jmcclintock@…, atchekho@…}` is one address of each of its three authors. `ARG` the line; an
+/// `[optional]{mandatory}` setter's optional argument is read by [`optional_contact`].
+const IN_PLACE_CONTACT_SETTERS: &[(&str, &str)] = &[
+  ("address", "\\lx@add@address[annotate=run]{ARG}"),
+  ("affil", "\\lx@add@affiliation[annotate=run]{ARG}"),
+  ("affiliation", "\\lx@add@affiliation[annotate=run]{ARG}"),
+  ("institute", "\\lx@add@affiliation[annotate=run]{ARG}"),
+  ("email", "\\lx@split@addresses{\\lx@add@email}{ARG}"),
+];
+
+/// What ends a line or a paragraph, or starts a list item (`\begin{indented}\item[]`): a setter whose executed code has
+/// one around its argument sets the argument as a line of its own. (Not an environment's `\begin`/`\end` as such: a
+/// font environment, aptmod.cls:137 `\begin{footnotesize}Email address: #1\end{footnotesize}`, sets no line.)
+const LINE_BREAKS: &[&str] = &[
+  "\\par",
+  "\\endgraf",
+  "\\\\",
+  "\\newline",
+  "\\linebreak",
+  "\\break",
+  "\\vskip",
+  "\\vspace",
+  "\\smallskip",
+  "\\medskip",
+  "\\bigskip",
+  "\\noindent",
+  "\\item",
+  "\\centerline",
+  "\\leftline",
+  "\\rightline",
+  "\\cr",
+  "\\crcr",
+];
+
+/// The control sequences `body` writes — the next control sequence after a definer ([`WRITERS`]), past the
+/// `\expandafter`s of an append (`\expandafter\def\expandafter\@aabuffer\expandafter{\@aabuffer …}`) — each with
+/// whether the text it writes holds argument `#<arg>` (the definer's next group, or `\g@addto@macro`'s second
+/// argument).
+fn written_stores(body: &[Token], arg: Option<usize>) -> Vec<(Token, bool)> {
+  let holds_arg = |text: &[Token]| {
+    arg.is_some_and(|arg| {
+      text
+        .iter()
+        .any(|t| t.get_catcode() == Catcode::ARG && t.with_str(|s| s == arg.to_string()))
+    })
+  };
+  let mut out = Vec::new();
+  for (i, t) in body.iter().enumerate() {
+    if !cs_in(t, WRITERS) || *t == T_CS!("\\let") {
+      continue;
+    }
+    let mut k = skip_spaces(body, i + 1);
+    while body.get(k) == Some(&T_CS!("\\expandafter")) {
+      k = skip_spaces(body, k + 1);
+    }
+    // (`\newcommand{\x}`: the braced name)
+    if body
+      .get(k)
+      .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+    {
+      k = skip_spaces(body, k + 1);
+    }
+    let Some(target) = body.get(k).filter(|b| b.get_catcode() == Catcode::CS) else {
+      continue;
+    };
+    let mut open = k + 1;
+    while open < body.len() && body[open].get_catcode() != Catcode::BEGIN {
+      open += 1;
+    }
+    let written = tokens_group_end(body, open).map_or(&[][..], |past| &body[open..past]);
+    out.push((*target, holds_arg(written)));
+  }
+  out
+}
+
+/// The stores the class's own `\author` — the definition the kernel's locked `\author` refused, kept as
+/// `\lx@dropped@author` (state.rs `install_definition`, sect08.rs's `\newcommand` bail) — writes, itself or through the
+/// macros a raw file defined that it calls (ae100prg.cls:170 `\@ifnextchar[{\@sauthor}{\@fauthor}`).
+fn class_author_stores() -> Vec<Token> {
+  let dropped = T_CS!("\\lx@dropped@author");
+  let mut stores = Vec::new();
+  for name in live_read_order(&[dropped], &[], false) {
+    let cs = with(name, |n| T_CS!(n));
+    let body = match lookup_meaning(&cs) {
+      Some(Stored::Expandable(defn))
+        if cs == dropped || defn.get_origin() == DefinitionOrigin::File =>
+      {
+        match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => body.clone(),
+          _ => continue,
+        }
+      },
+      _ => continue,
+    };
+    stores.extend(
+      written_stores(body.unlist_ref(), None)
+        .into_iter()
+        .map(|(store, _)| store),
+    );
+  }
+  stores
+}
+
+/// The commands whose braced argument is printed where they stand — LaTeX's text faces and boxes, an e-mail link
+/// (ae100prg.cls:185 `\address{E-mail: \mailto{#1}}`), a colour (acl2023.sty:186 `\textcolor{black}{\@corremail}`,
+/// 2506.10896) — with the number of arguments before it they do not print (a link's target, a parbox's width, a colour's
+/// name).
+const PRINTED_ARGUMENTS: &[(&str, usize)] = &[
+  ("\\textbf", 0),
+  ("\\textit", 0),
+  ("\\textsl", 0),
+  ("\\textsc", 0),
+  ("\\textup", 0),
+  ("\\textmd", 0),
+  ("\\textrm", 0),
+  ("\\textsf", 0),
+  ("\\texttt", 0),
+  ("\\textnormal", 0),
+  ("\\emph", 0),
+  ("\\underline", 0),
+  ("\\mbox", 0),
+  ("\\fbox", 0),
+  ("\\centerline", 0),
+  ("\\leftline", 0),
+  ("\\rightline", 0),
+  ("\\mailto", 0),
+  ("\\url", 0),
+  ("\\href", 1),
+  ("\\parbox", 1),
+  ("\\textcolor", 1),
+];
+
+/// The open brace of the group whose close brace is `body[close]`.
+fn group_open(body: &[Token], close: usize) -> Option<usize> {
+  let mut depth = 0usize;
+  for j in (0..=close).rev() {
+    match body[j].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN => {
+        depth = depth.checked_sub(1)?;
+        if depth == 0 {
+          return Some(j);
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
+/// The command a braced group opening at `body[open]` is an argument of ([`PRINTED_ARGUMENTS`],
+/// [`UNPRINTED_ARGUMENTS`]), and whether the command prints it: `(the command's index, printed)` — the place of the group
+/// among the braced arguments right before it (spaces between, an optional `[…]` before the first passed over). `None`
+/// when no such command reads it.
+fn argument_of(body: &[Token], open: usize) -> Option<(usize, bool)> {
+  let mut k = skip_spaces_back(body, open);
+  let mut place = 0usize;
+  while k > 0 && body[k - 1].get_catcode() == Catcode::END {
+    k = skip_spaces_back(body, group_open(body, k - 1)?);
+    place += 1;
+  }
+  if k > 0 && body[k - 1] == T_OTHER!("]") {
+    k = skip_spaces_back(
+      body,
+      body[..k - 1].iter().rposition(|t| *t == T_OTHER!("["))?,
+    );
+  }
+  let command = body[..k]
+    .last()
+    .filter(|t| t.get_catcode() == Catcode::CS)?;
+  if let Some((_, unprinted)) = PRINTED_ARGUMENTS
+    .iter()
+    .find(|(cs, _)| command.with_str(|s| s == *cs))
+  {
+    return (place <= *unprinted).then_some((k - 1, place == *unprinted));
+  }
+  (place == 0 && cs_in(command, UNPRINTED_ARGUMENTS)).then_some((k - 1, false))
+}
+
+/// Is `body[at]` inside an argument a command does not print ([`argument_of`]) — the target of `\href{mailto:\@x}{\@x}`
+/// (acl2023.sty:186, 2506.10896), a `\write`'s text —, at any depth: TeX does not typeset it, so it has no label before
+/// it to read (brief 97b).
+fn in_unprinted_argument(body: &[Token], at: usize) -> bool {
+  let mut depth = 0usize;
+  for j in (0..at).rev() {
+    match body[j].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN if depth > 0 => depth -= 1,
+      Catcode::BEGIN if argument_of(body, j).is_some_and(|(_, printed)| !printed) => return true,
+      _ => {},
+    }
+  }
+  false
+}
+
+/// The primitives that read a braced text without printing it: the log, a write, a mark, a special.
+const UNPRINTED_ARGUMENTS: &[&str] = &[
+  "\\message",
+  "\\errmessage",
+  "\\write",
+  "\\mark",
+  "\\marks",
+  "\\special",
+  "\\showtokens",
+  "\\detokenize",
+  "\\scantokens",
+];
+
+/// The arguments the command `t` reads where it stands, each whether it is optional (`[…]`, read only when one
+/// follows) and whether the command prints it: a face, a box or a link the argument it prints ([`PRINTED_ARGUMENTS`]); a
+/// macro a raw file defined each argument its own code prints ([`prints_argument`], a few levels down: ae100prg.cls:185
+/// `\email` passing `#1` to its `\address`); any other command's arguments, by its parameters (an undefined command one
+/// braced argument), unprinted — it may store them (spr-sola-addons.sty:317 `\add@xtok\adresses@list{…#2…}`,
+/// 2005.09586), make them a footnote (`\thanks{#1}`) or write them to the log ([`UNPRINTED_ARGUMENTS`]). `None` when it
+/// takes none (a switch, a register, a conditional's `\fi`), and `Some` of nothing when its arguments are delimited,
+/// which the token walk cannot follow.
+fn command_arguments(t: &Token, depth: usize) -> Option<Vec<(bool, bool)>> {
+  if let Some((_, unprinted)) = PRINTED_ARGUMENTS
+    .iter()
+    .find(|(cs, _)| t.with_str(|s| s == *cs))
+  {
+    let mut args = vec![(false, false); *unprinted];
+    args.push((false, true));
+    return Some(args);
+  }
+  if cs_in(t, UNPRINTED_ARGUMENTS) {
+    return Some(vec![(false, false)]);
+  }
+  let meaning = lookup_meaning(t);
+  let params = match &meaning {
+    Some(Stored::Expandable(defn)) => defn.get_parameters(),
+    Some(Stored::Primitive(defn)) => defn.get_parameters(),
+    Some(Stored::Constructor(defn)) => defn.get_parameters(),
+    None => return Some(vec![(false, false)]),
+    _ => return None,
+  }
+  .map(|p| p.get_parameters().to_vec())
+  .unwrap_or_default();
+  if params.is_empty() {
+    return None;
+  }
+  let raw_body = match &meaning {
+    Some(Stored::Expandable(defn)) if defn.get_origin() == DefinitionOrigin::File && depth < 4 => {
+      if params.iter().any(|p| !undelimited(p)) {
+        return Some(Vec::new());
+      }
+      match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => Some(executed_code(body.unlist_ref())),
+        _ => None,
+      }
+    },
+    _ => None,
+  };
+  Some(
+    params
+      .iter()
+      .enumerate()
+      .map(|(k, p)| {
+        let printed = raw_body
+          .as_deref()
+          .is_some_and(|code| prints_argument(code, k + 1, depth + 1));
+        (p.optional, printed)
+      })
+      .collect(),
+  )
+}
+
+/// Whether `code` (a body's executed code, [`executed_code`]) prints its argument `#<arg>` where it is called: the
+/// argument stands at its top level or in a plain group (`{\reset@font\affilfont#1\par}`, ar-1col.cls:341; one after a
+/// switch, `{\eaddfnt{\par #1}}`), or in an argument a command prints ([`command_arguments`]).
+fn prints_argument(code: &[Token], arg: usize, depth: usize) -> bool {
+  let is_arg = |t: &Token| t.get_catcode() == Catcode::ARG && t.with_str(|s| s == arg.to_string());
+  // the index past one argument at `k` (a group or one token), spaces before it skipped
+  let past_argument = |k: usize| -> usize {
+    let k = skip_spaces(code, k);
+    tokens_group_end(code, k).unwrap_or((k + 1).min(code.len()))
+  };
+  let mut i = 0;
+  while i < code.len() {
+    let t = code[i];
+    if is_arg(&t) {
+      return true;
+    }
+    if t.get_catcode() == Catcode::BEGIN {
+      let end = tokens_group_end(code, i).unwrap_or(code.len());
+      if prints_argument(&code[i + 1..end.saturating_sub(1).max(i + 1)], arg, depth) {
+        return true;
+      }
+      i = end;
+      continue;
+    }
+    if t.get_catcode() == Catcode::CS
+      && let Some(arguments) = command_arguments(&t, depth)
+    {
+      if arguments.is_empty() {
+        // (delimited arguments: what follows is the command's to read)
+        return false;
+      }
+      let mut k = i + 1;
+      for (optional, printed) in arguments {
+        let at = skip_spaces(code, k);
+        let end = if optional {
+          if code.get(at) != Some(&T_OTHER!("[")) {
+            continue;
+          }
+          code[at..]
+            .iter()
+            .position(|b| *b == T_OTHER!("]"))
+            .map_or(code.len(), |p| at + p + 1)
+        } else {
+          past_argument(k)
+        };
+        if printed && prints_argument(&code[at.min(end)..end], arg, depth) {
+          return true;
+        }
+        k = end;
+      }
+      i = k.max(i + 1);
+      continue;
+    }
+    i += 1;
+  }
+  false
+}
+
+/// Whether the raw file's own `\<name>` is a contact setter of the title page, by its code: a macro of one argument
+/// (or of an optional one and one, setting the second) that sets the argument as a line of its own where it is called
+/// — its executed code ([`executed_code`]) prints the argument there ([`prints_argument`]) beside a line break
+/// ([`LINE_BREAKS`]): ae100prg.cls:188
+/// `\begin{indented}\item[]\normalsize #1\end{indented}`, :185 `\vspace*{5pt}\address{E-mail: …#1…}` (1303.3004),
+/// ar-1col.cls:341 `\par…{\reset@font\affilfont#1\par}` (1602.05576, 2405.08158) — or that appends it to a store the
+/// class's own `\author` writes too ([`class_author_stores`]), the author block its title page prints and the kernel's
+/// `\author` carries: 11lomcon.sty:15-18 `\@aabuffer` (hep-ph0312288), jetpl.cls:286-303 `\@authoraddress`
+/// (cond-mat0611585). Its argument number when it is one, and whether it prints the line where it is called (else it
+/// stores it for the title page). Anything else stays the class's: a mark
+/// (agujournal2019.cls `\def\affil#1{$^{#1}$\ignorespaces}`), an inline face of an address used inside a note or a line
+/// (`\newcommand{\email}[1]{\texttt{#1}}`, `\href{mailto:#1}{#1}`: a run-in setter, [`run_in_contact_setter`], the API's
+/// only where its call stands as a line of its own), a footnote (ecai.cls `\institute` =
+/// `\thanks{#1}`), a store only its own title page reads (K11's; interspeech.cls's `\gdef\@address{#1\\}`;
+/// spr-sola-addons.sty:317's `\add@xtok\adresses@list{…}`, 2005.09586), a `\message` that prints nothing
+/// (dmtcs-episciences.cls), a switch or a dispatcher without the argument (jmlr2e.sty `\def\email{\hfill\small\sc}`,
+/// imsart.sty `\def\address{\@ifnextchar[…}`).
+fn in_place_contact_setter(name: &str) -> Result<Option<(usize, bool)>> {
+  let cs = T_CS!(&s!("\\{name}"));
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&cs) else {
+    return Ok(None);
+  };
+  let arg = defn
+    .get_parameters()
+    .and_then(|p| match p.get_parameters().as_slice() {
+      [only] if !only.optional && undelimited(only) => Some(1),
+      [first, second] if first.optional && !second.optional && undelimited(second) => Some(2),
+      _ => None,
+    });
+  let (Some(ExpansionBody::Tokens(body)), Some(arg)) = (defn.get_expansion(), arg) else {
+    return Ok(None);
+  };
+  let body = body.unlist_ref();
+  let executed = executed_code(body);
+  let sets_a_line =
+    prints_argument(&executed, arg, 0) && executed.iter().any(|t| cs_in(t, LINE_BREAKS));
+  if sets_a_line {
+    return Ok(Some((arg, true)));
+  }
+  // (not the kernel's own `\@author`: the rows a class appends to it are its authors' already, each the rows after
+  // its own `\author` — `\lx@author@flush`, 59d: cjs-rcs-article.cls:361 `\newcommand\affil[1]{\g@addto@macro
+  // \@author{\\#1}}`)
+  let appended: Vec<Token> = written_stores(body, Some(arg))
+    .into_iter()
+    .filter_map(|(store, holds)| holds.then_some(store))
+    .filter(|store| *store != T_CS!("\\@author"))
+    .collect();
+  if appended.is_empty() {
+    return Ok(None);
+  }
+  let author_stores = class_author_stores();
+  Ok(
+    appended
+      .iter()
+      .any(|s| author_stores.contains(s))
+      .then_some((arg, false)),
+  )
+}
+
+/// What sets an argument as a mark or a note rather than a line: a superscript or subscript, a note, a raised box, math.
+const MARK_OR_NOTE: &[&str] = &[
+  "\\textsuperscript",
+  "\\textsubscript",
+  "\\footnote",
+  "\\footnotetext",
+  "\\thanks",
+  "\\marginpar",
+  "\\raisebox",
+  "\\ensuremath",
+  "\\sp",
+  "\\sb",
+];
+
+/// Whether the raw file's own `\<name>` — one of [`IN_PLACE_CONTACT_SETTERS`], of one argument, which
+/// [`in_place_contact_setter`] did not take — prints its argument where it is called as text, with no line break of its
+/// own: iopjournal.cls:108 `\newcommand{\affil}[1]{{\fontsize{8}{10}\selectfont \raggedright \if@anonymous \phantom{#1}
+/// \else #1 \fi}}`, a paragraph of its own by the blank lines the document puts around each call (2608.28486,
+/// 2512.15449, 2602.03759, 2606.14342, 2609.32125). Not a mark — math, a superscript, a note or a raised box anywhere in
+/// its executed code ([`MARK_OR_NOTE`]: agujournal2019.cls's `\def\affil#1{$^{#1}$\ignorespaces}`) — and not a setter
+/// whose code reads past the call (`tail_reads_ahead`). Its call is the API's only as a line of its own in the title
+/// block ([`class_contact_run_in`]).
+fn run_in_contact_setter(name: &str) -> bool {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&T_CS!(&s!("\\{name}"))) else {
+    return false;
+  };
+  if !defn.get_parameters().is_some_and(
+    |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
+  ) {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  let body = body.unlist_ref();
+  let executed = executed_code(body);
+  prints_argument(&executed, 1, 0)
+    && !executed.iter().any(|t| {
+      matches!(
+        t.get_catcode(),
+        Catcode::MATH | Catcode::SUPER | Catcode::SUB
+      ) || cs_in(t, MARK_OR_NOTE)
+    })
+    && !crate::latex_constructs::tail_reads_ahead(body)
+}
+
+/// A rerouted run-in setter's call ([`run_in_contact_setter`]): `api` — its line placed by its leading label,
+/// [`by_its_label`] — where it stands as a line of its own in the title block — between paragraphs at the body's own
+/// level, the authors set and not yet placed ([`title_block_line`]), its line led by no mark no author requests and
+/// holding at most one the names request (`relocate::requested_marks`) —, else `class`; never inside a creator's
+/// own content, where a call printing no line of its own is part of the name's text, nor in the title page's deposit
+/// ([`in_the_title_page_deposit`]).
+fn class_contact_run_in(api: Tokens, class: Tokens) -> Result<Tokens> {
+  if in_the_title_page_deposit() || kernel_and_list(last_group(&class))? {
+    return Ok(class);
+  }
+  let line = last_group(&class);
+  // (a line holding several marks the names request — `\affil{$^1$Univ A, $^2$Univ B}` run in — is no one entry the
+  // run's authors share: the class's line, as before. The API's Cut would cut it (`contact_line_call`), but routing a
+  // run-in line holding several marks is a change of its own, measured on its own population; SYNC row "99b" (e))
+  if !(title_block_line(true)
+    && !leads_with_unrequested_mark(line)?
+    && requested_marks(&Tokens::new(line.to_vec()), "class_contact_run_in")?.held <= 1)
+  {
+    return Ok(class);
+  }
+  by_its_label(api, line)
+}
+
+/// A rerouted setter's call ([`reroute_in_place_contact_setters`]): `api` where the line it sets is a contact of the
+/// author creators, else `class`, the file's own definition (`\lx@class@contact@<name>`). The API's inside a creator's
+/// own content while it digests (`creator_entry_in_progress`: ar-1col's `\affil{$^1$…}` inside `\author{}`,
+/// 1602.05576, 2405.08158; every one of ci2018's `\affil`s in one `\author`, 1805.12376), or while the author creators
+/// it annotates are being set — one stands (`has_author_creators`), and neither has a `\maketitle` placed them
+/// (`author_creators_placed`) nor has the document body sealed them (`frontmatter_entry_sealed`: the paper's authors
+/// came before its first section) — for a setter that prints its line where it is called (`in_place`) only a call that
+/// is a line of its own in the title block: between paragraphs at the document body's own level ([`at_the_body_level`]:
+/// in a group of the body, as an author group's environment is — imsart's `{aug}`, 1301.1466 —, never inside a box, a
+/// note, a list item, a theorem, a minipage, a float, a `\marginpar`, a `\caption` or an alignment's cell, each of
+/// which binds a mode of its own: `\footnote{\email{…}}`, `\begin{thm}\address{…} holds.\end{thm}`, `\item \email{…}`,
+/// `\parbox{5cm}{\address{…}}`, `\begin{tabular}{c}Cy Cole\\ \affil{Univ C}\end{tabular}` — review rev94b r2 B3),
+/// outside any other frontmatter entry digesting (an abstract). Content is never moved out of its sentence, box or
+/// note: such a setter's call inside a paragraph, a box or an abstract (before `\maketitle`, or in a class without one:
+/// "…from the curator, `\email{data@archive.org}`, until 2030.", review rev94b B3; commat.cls's `\address` after the
+/// "Affiliation:" label of its title page's footnote, 2204.02666) is the class's line where it stands, and so is every
+/// rerouted setter the class's own definition calls (`class_bodies_call_class_copies`: ae100prg.cls's `\email` prints
+/// through its `\address` after a `\vspace*`, 1303.3004). So a contact line of a later unit is its text, not the
+/// paper's authors' contact; a file whose names never become creators — osameet2.sty:49 `\let\author\MEETauthor`,
+/// saj.cls's `\authors` (1710.05603, 2110.09949, 2212.09079) — keeps its lines beside the names it prints, not on a
+/// nameless creator; and a line set after `\maketitle` placed the names stays where it prints, as the late frontmatter
+/// path reads such a list right only under a binding that declares the class's mark conventions (cpc-hepnp.cls's
+/// `\address` after `\maketitle`: its `,n)` e-mail marks and typed-number lists, OD #912, task 91c; just.cls's binding
+/// routes the same list).
+///
+/// A line in doubt — a line of its own that leads with a mark no author requests at the call
+/// ([`leads_with_unrequested_mark`]), an in-place setter's optional key no author gave, an optional the API cannot read
+/// ([`optional_contact`]) — is no creator's contact: the class's line, printed where it is called and digested once, no
+/// API call queued for it (review rev94b r3 B2: `\affil{\inst{3}Lab C}` under `Ann\inst{1}` and `Bob\inst{2}` was a
+/// nameless creator's). A call kept in doubt beside its printed line digested the line twice — a counter stepped twice,
+/// a label made twice (review rev94b r6 B1: "Univ B2", "Body 2." where pdflatex prints 1) —, so none is kept: a mark
+/// only a later `\author` requests leaves its line where the class prints it, its author with no contact (the residual
+/// `raw_class_optional_mark_a_later_author_requests`, OXIDIZED_DESIGN_DIVERGENCES #936). A stored setter's call keeps
+/// the API's. The API's line is placed by its leading label ([`by_its_label`]); a call in the title page's deposit is the
+/// class's ([`in_the_title_page_deposit`]).
+fn class_contact(api: Tokens, class: Tokens, in_place: bool) -> Result<Tokens> {
+  if in_the_title_page_deposit() || kernel_and_list(last_group(&class))? {
+    return Ok(class);
+  }
+  if creator_entry_in_progress()
+    || (title_block_line(in_place)
+      && !(in_place && leads_with_unrequested_mark(last_group(&class))?))
+  {
+    by_its_label(api, last_group(&class))
+  } else {
+    Ok(class)
+  }
+}
+
+/// A rerouted setter's API call `api` as [`contact_line_call`] places its line: the template's own call of an address
+/// or an affiliation (`\lx@add@affiliation[annotate=run]{<line>}`, [`IN_PLACE_CONTACT_SETTERS`]) by the line's leading
+/// label — the in-place, stored and run-in routes alike (review rev99b B1: a line under `annotate=run` was every author's
+/// of the run when the frontmatter observer declined) —; any other call (an e-mail list, an optional argument's
+/// `label=` or caption, [`optional_contact`]) as it is.
+fn by_its_label(api: Tokens, line: &[Token]) -> Result<Tokens> {
+  let tokens = api.unlist_ref();
+  let Some(head) = tokens
+    .first()
+    .filter(|head| **head == T_CS!("\\lx@add@affiliation") || **head == T_CS!("\\lx@add@address"))
+  else {
+    return Ok(api);
+  };
+  let mut template =
+    mouth::tokenize_internal(TeXString::assembled(s!("{head}[annotate=run]"))).unlist();
+  template.push(T_BEGIN!());
+  template.extend_from_slice(line);
+  template.push(T_END!());
+  if tokens != template.as_slice() {
+    return Ok(api);
+  }
+  // (one entry only: a call whose lines are each led by a label of their own — jetpl.cls's stored `\address{$^{\#}$ … \\
+  // $^*$ … \\ $^+$ …}`, 0807.3896, which the label of its first line alone gave to the first author — goes as it is,
+  // under its run, review rev94b r3 B1: the frontmatter API's Cut cuts it at the marks the names request
+  // (`cut_marked_contact`, OD #954), each entry its requesters' and one no name requests the block's; a call the Cut
+  // declines is the frontmatter observer's, the font open before each entry kept (`\lx@fm@entry@font`), or whole)
+  if displaced_entries(&Tokens::new(line.to_vec()), None)?.len() > 1 {
+    return Ok(api);
+  }
+  contact_line_call(&head.to_string(), &Tokens::new(line.to_vec()))
+}
+
+/// Whether the class's title page is being deposited (sect05.rs `\lx@deposit@maketitle`, its `\@maketitle` or its
+/// own `\maketitle` replayed): a rerouted setter's call there is one the class's store kept as the document wrote it,
+/// in a call the displaced route left the class's (`displaced_argument_in_doubt`: 2607.25849's `\affiliation{email:
+/// \email{…}\\ …}`), so it is the class's too, printed where its title page prints the store (review rev99b B3).
+fn in_the_title_page_deposit() -> bool { lookup_bool("lx_depositing_frontmatter_fields") }
+
+/// Whether a rerouted setter's call is a line of the authors being set ([`class_contact`]): an author creator stands to
+/// carry it, none placed nor sealed yet, and — for a setter printing its line where it is called — the call stands
+/// between paragraphs at the body's own level, outside any other frontmatter entry digesting.
+fn title_block_line(in_place: bool) -> bool {
+  (!in_place || (at_the_body_level() && !frontmatter_entry_in_progress()))
+    && has_author_creators()
+    && !author_creators_placed()
+    && !frontmatter_entry_sealed("ltx:creator", "author")
+}
+
+/// The content of the last braced group of `tokens`: a rerouted setter's class call's mandatory argument.
+fn last_group(tokens: &Tokens) -> &[Token] {
+  let tokens = tokens.unlist_ref();
+  let Some(close) = tokens.iter().rposition(|t| t.get_catcode() == Catcode::END) else {
+    return &[];
+  };
+  let mut depth = 0usize;
+  for at in (0..=close).rev() {
+    match tokens[at].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN => {
+        depth -= 1;
+        if depth == 0 {
+          return &tokens[at + 1..close];
+        }
+      },
+      _ => {},
+    }
+  }
+  &[]
+}
+
+/// The operand of the printed mark `line` leads with — `\inst{3}`, `\textsuperscript{3}`, `\@textsuperscript{3}`,
+/// `$^{3}$`, `$^3$` —, if it does.
+fn leading_mark_operand(line: &[Token]) -> Option<Vec<Token>> {
+  leading_mark(line).map(|(operand, _)| operand)
+}
+
+/// The printed mark `line` leads with ([`leading_mark_operand`]): its operand, and the index past the mark when it is
+/// whole in `line` (a math mark's closing `$` included), else `None` there.
+fn leading_mark(line: &[Token]) -> Option<(Vec<Token>, Option<usize>)> {
+  let mut at = line
+    .iter()
+    .position(|t| t.get_catcode() != Catcode::SPACE)?;
+  // (a braced argument's content, or the one token, and the index past it)
+  let operand = |at: usize| -> Option<(Vec<Token>, usize)> {
+    let first = line.get(at)?;
+    if first.get_catcode() != Catcode::BEGIN {
+      return Some((vec![*first], at + 1));
+    }
+    let mut depth = 0usize;
+    for (k, t) in line.iter().enumerate().skip(at) {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            return Some((line[at + 1..k].to_vec(), k + 1));
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let first = line[at];
+  if first.get_catcode() == Catcode::CS
+    && first.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript"))
+  {
+    return operand(at + 1).map(|(operand, past)| (operand, Some(past)));
+  }
+  if first.get_catcode() != Catcode::MATH {
+    return None;
+  }
+  at += 1;
+  // (an empty group a script hangs on, `${}^3$`)
+  if line
+    .get(at)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+    && line
+      .get(at + 1)
+      .is_some_and(|t| t.get_catcode() == Catcode::END)
+  {
+    at += 2;
+  }
+  if line.get(at)?.get_catcode() != Catcode::SUPER {
+    return None;
+  }
+  let (operand, past) = operand(at + 1)?;
+  let close = skip_spaces(line, past);
+  let whole = line
+    .get(close)
+    .is_some_and(|t| t.get_catcode() == Catcode::MATH)
+    .then_some(close + 1);
+  Some((operand, whole))
+}
+
+/// Whether a leading mark's `operand` labels its line: what it prints, read by its printed text as the line's label is
+/// (`queue_digest::prints_a_mark`, the reading of `line_mark_label`): a letter or a digit (`$^{a}$`, `\inst{3}`), any
+/// other character (`$^*$`, `$^{+}$`), or whatever symbol a command prints (`$^\dagger$`, `$^{\ddagger}$`, `$^{\#}$`,
+/// `$^\bigstar$`, `$^\clubsuit$`, `\textsuperscript{\textdagger}`) — not spacing alone, nor a command printing nothing
+/// (review rev99b2 F2 and rev100a S1: symbol commands were read as no mark, so `\affil{$^\dagger$Deceased}` or
+/// `\affil{$^\bigstar$Deceased}`, which no name requests, went to every author of the run).
+fn is_a_mark(operand: &[Token]) -> Result<bool> { prints_a_mark(operand) }
+
+/// Whether `line` leads with a printed mark ([`leading_mark_operand`]) whose label no author's name requests at the
+/// call, queued or digested in the flush (`queued_authors_requesting`, `digested_authors_requesting`), the names showing
+/// marks of their own (`authors_show_marks`): a contact line no creator asks for, which the API would give to a creator
+/// of no name (review rev94b r3 B2: orph3's `\address[\inst{3}]{Lab C, Place}`, orph6's `\affil{\inst{3}Lab C, Place}`
+/// under `Ann Able\inst{1} and Bob Baker\inst{2}`), or every author of the run (review rev99b2 F2: `\affil{$^\dagger$
+/// Deceased}` under `Ann Able$^{1}$, Bob Baker$^{2}$`, a control-sequence symbol, [`is_a_mark`]).
+fn leads_with_unrequested_mark(line: &[Token]) -> Result<bool> {
+  let Some(operand) = leading_mark_operand(line) else {
+    return Ok(false);
+  };
+  Ok(
+    authors_show_marks()?
+      && queued_authors_requesting(&operand)?.is_empty()
+      && !digested_authors_requesting(&Tokens::new(operand.clone()).to_string())
+      && is_a_mark(&operand)?
+      && !requested_as_printed(&operand)?,
+  )
+}
+
+/// Whether a name requests the label a leading mark's `operand` prints — read by its printed text, as
+/// [`contact_line_call`] places the line (`line_mark_label`, `names_request_label`), through the one key both sides are
+/// keyed by (`queue_digest::clean_frontmatter_labels`, an asterisk one way however written: `one_asterisk`) —, where the
+/// readers by the operand as written miss a mark spelled otherwise on the name (`\affil{\textsuperscript{\dag}Deceased}`
+/// under `Ann Able$^{1,\dagger}$`; `$^\ast$` under `$^{1,*}$` and `$^*$` under `$^{1,\ast}$`, review rev100a B1): such a
+/// line is its carriers', not in doubt ([`is_a_mark`], review rev99b2 F2).
+fn requested_as_printed(operand: &[Token]) -> Result<bool> {
+  match line_mark_label(&Tokens::new(operand.to_vec()))? {
+    Some(label) => names_request_label(&label),
+    None => Ok(false),
+  }
+}
+
+/// A rerouted `[optional]{mandatory}` setter's call (`\lx@class@contact@optional`): the API call its optional argument
+/// `opt` makes of the line `arg`, by the API's convention — Perl's own bindings pass it as the entry's label
+/// (jheppub.sty.ltxml:35-37 `\affiliation[a]{…}` → `label={a}`, `\author[a]` → `annotations={a}`) or as its caption
+/// (ams_support.sty.ltxml:115 `\address[]{}` → `\lx@add@address[name={#1}]{#2}`) —, then given to [`class_contact`]
+/// as the call without one is. Empty, it is dropped, as OmniBus drops it (OmniBus.cls.ltxml:92). A printed mark (a
+/// superscript, `\textsuperscript`, `\inst`: w-art.cls's `\address[\inst{1}]{…}`, 0910.5837, 1105.1753,
+/// quant-ph0606237) leads the line, read by its marks as any marked line is. A key an `\author[key]` gave its authors
+/// (jheppub-like `\author[a,b]{…}` with `\affiliation[b]{…}`, 2303.16316; stacs.cls's `\address[uniroma]{…}`,
+/// 0902.1737; `lx_author_keys`, `\lx@author@keys`) labels the line for each of those authors (`author:N`); a key the
+/// names' marks print (`\address[a]{…}` under `Ann$^a$`) labels it by that mark. Words no creator requests are its
+/// caption (amsart copies' `\address[Current address]{…}`: "(Current address) Lab C, Place" — smfart, nyjm, birkmult,
+/// birkart, ECACRM). Anything else is in doubt: an in-place setter's call stays the class's own, a stored one's drops
+/// it (review rev94b r1-r2 B2: a caption written for every optional made w-art's marks and jheppub's keys names).
+fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Result<Tokens> {
+  let Some((_, template)) = IN_PLACE_CONTACT_SETTERS.iter().find(|(n, _)| *n == name) else {
+    return Ok(arg);
+  };
+  let opt_tokens: Vec<Token> = opt.unlist();
+  let trimmed: Vec<&Token> = opt_tokens
+    .iter()
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .collect();
+  // (the class's own call, the optional argument braced when it holds a `]`)
+  let class = {
+    let mut tokens = vec![T_CS!(&s!("\\lx@class@contact@{name}")), T_OTHER!("[")];
+    let bracket = opt_tokens.iter().any(|t| *t == T_OTHER!("]"));
+    if bracket {
+      tokens.push(T_BEGIN!());
+    }
+    tokens.extend(opt_tokens.iter().cloned());
+    if bracket {
+      tokens.push(T_END!());
+    }
+    tokens.extend([T_OTHER!("]"), T_BEGIN!()]);
+    tokens.extend(arg.unlist_ref().iter().cloned());
+    tokens.push(T_END!());
+    Tokens::new(tokens)
+  };
+  // (the API call with `options` added to its own, its line `line`)
+  let call = |options: &str, line: Tokens| -> Tokens {
+    let template = if options.is_empty() {
+      template.to_string()
+    } else if template.contains("[annotate=run]") {
+      template.replace("[annotate=run]", &s!("[{options}]"))
+    } else {
+      template.replace("\\lx@add@email}", &s!("\\lx@add@email[{options}]}}"))
+    };
+    let placeholder = T_CS!("\\lx@class@contact@line");
+    let caption = T_CS!("\\lx@class@contact@caption");
+    let mut out = Vec::new();
+    for t in mouth::tokenize_internal(TeXString::assembled(
+      template.replace("ARG", "\\lx@class@contact@line"),
+    ))
+    .unlist()
+    {
+      if t == placeholder {
+        out.extend(line.unlist_ref().iter().cloned());
+      } else if t == caption {
+        out.extend(opt_tokens.iter().cloned());
+      } else {
+        out.push(t);
+      }
+    }
+    Tokens::new(out)
+  };
+  let decide = |api: Tokens| class_contact(api, class.clone(), in_place);
+  if trimmed.is_empty() {
+    return decide(call("", arg));
+  }
+  let mark = trimmed.iter().any(|t| {
+    t.get_catcode() == Catcode::SUPER
+      || (t.get_catcode() == Catcode::CS
+        && t.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript")))
+  });
+  if mark {
+    // (a mark no author requests at the call is in doubt — review rev94b r3 B2: the address it labels a nameless
+    // creator's; an in-place setter's line the class's, printed once, review rev94b r6 B1: [`class_contact`])
+    if leads_with_unrequested_mark(&opt_tokens)? {
+      return if in_place {
+        Ok(class)
+      } else {
+        decide(call("", arg))
+      };
+    }
+    // (an address's line read for its marks as an affiliation's is, `\lx@affiliation@withinst`: the mark labels it and
+    // prints nothing of its own in it)
+    let mut line = opt_tokens.clone();
+    line.extend(arg.unlist_ref().iter().cloned());
+    if template.starts_with("\\lx@add@address") {
+      let mut wrapped = vec![T_CS!("\\lx@affiliation@withinst"), T_BEGIN!()];
+      wrapped.extend(line);
+      wrapped.push(T_END!());
+      line = wrapped;
+    }
+    return decide(call("", Tokens::new(line)));
+  }
+  let plain = trimmed
+    .iter()
+    .all(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) && **t != T_OTHER!("]"));
+  if plain {
+    let text: String = opt_tokens.iter().map(ToString::to_string).collect();
+    let keys: Vec<&str> = text
+      .split(',')
+      .map(str::trim)
+      .filter(|k| !k.is_empty())
+      .collect();
+    // (the authors an `\author[key]` gave each key)
+    let records = lookup_string(AUTHOR_KEYS);
+    let mut authors: Vec<usize> = Vec::new();
+    let mut every_key = !keys.is_empty();
+    for key in &keys {
+      let mut found = false;
+      for record in records.split('\u{1}').filter(|r| !r.is_empty()) {
+        let mut parts = record.split('\u{2}');
+        let (Some(record_keys), Some(from), Some(to)) = (parts.next(), parts.next(), parts.next())
+        else {
+          continue;
+        };
+        if record_keys.split(',').map(str::trim).any(|k| k == *key)
+          && let (Ok(from), Ok(to)) = (from.parse::<usize>(), to.parse::<usize>())
+        {
+          found = true;
+          authors.extend(from + 1..=to);
+        }
+      }
+      every_key &= found;
+    }
+    if every_key && !authors.is_empty() {
+      authors.sort_unstable();
+      authors.dedup();
+      let mut tokens = Vec::new();
+      for n in authors {
+        tokens.extend(call(&s!("label={{author:{n}}}"), arg.clone()).unlist());
+      }
+      return decide(Tokens::new(tokens));
+    }
+    let mut all_requested = !keys.is_empty();
+    for key in &keys {
+      if !queued_authors_requesting_key(key)? && !digested_authors_requesting(key) {
+        all_requested = false;
+        break;
+      }
+    }
+    if all_requested {
+      return decide(call(&s!("label={{{}}}", keys.join(",")), arg));
+    }
+    // (a list of single words, `c, d`, is a key list no creator requests — in doubt, no caption: review rev94b r3 B2b,
+    // `\address[c, d]{…}` was captioned "c, d")
+    let key_list = text.contains(',')
+      && text
+        .split(',')
+        .all(|piece| piece.split_whitespace().count() <= 1);
+    if !key_list
+      && text
+        .split_whitespace()
+        .filter(|w| w.chars().any(char::is_alphabetic))
+        .count()
+        >= 2
+    {
+      // (an address or an affiliation keeps its run, an e-mail the API's own placement)
+      let options = if template.contains("[annotate=run]") {
+        "annotate=run,name={\\lx@class@contact@caption}"
+      } else {
+        "name={\\lx@class@contact@caption}"
+      };
+      return decide(call(options, arg));
+    }
+  }
+  // (in doubt: an in-place setter's line is the class's, printed where it is called and digested once — a key no author
+  // gave, an optional the API cannot read: [`class_contact`] —, a stored setter's call the API's without the optional)
+  if in_place {
+    Ok(class)
+  } else {
+    decide(call("", arg))
+  }
+}
+
+/// The records of the kernel's `\author[key]{…}` calls (`\lx@author@keys`): each its keys (`a,b`), the number of the
+/// author creators standing before it and after it, `\u{2}`-parted, the records `\u{1}`-parted.
+const AUTHOR_KEYS: &str = "lx_author_keys";
+
+/// Whether the digestion stands between paragraphs at the document body's own level: in vertical mode, and no frame
+/// binds a mode of its own (`BOUND_MODE`: the body's is `\begin{document}`'s, bound in no frame of its own,
+/// sect02.rs) — a group of the body binds none (`{\small …}`, an environment that is a group, imsart's `{aug}`); a box,
+/// a note, a list, a theorem, a minipage, a float or an alignment's cell does (`begin_mode`) — or in the box the
+/// authors were set in, still open, no box opened since (`\lx@author@box`): the title block's own box, imsart.sty's
+/// `\open@fm` `\global\setbox\fm@box=\vbox\bgroup` around `{frontmatter}` (1301.1466's `\affiliation` in its
+/// `{aug}`).
+fn at_the_body_level() -> bool {
+  let boxes = mode_frames();
+  matches!(
+    lookup_string("MODE").as_str(),
+    "vertical" | "internal_vertical"
+  ) && (boxes == 0 || lookup_string(AUTHOR_BOX) == author_box())
+}
+
+/// How many frames bind a mode of their own ([`at_the_body_level`]).
+fn mode_frames() -> usize {
+  (0..get_frame_depth())
+    .filter(|&n| is_value_bound("BOUND_MODE", Some(n)))
+    .count()
+}
+
+/// The box the digestion stands in: the serial (`lx@frame@id`, `push_stack_frame`) of the innermost frame binding a
+/// mode of its own ([`mode_frames`]) — the same while that box is open and no box opened inside it, whatever groups
+/// opened or closed in it; another box, even at the same depth (a second minipage), another.
+fn author_box() -> String {
+  (0..get_frame_depth())
+    .find(|&n| is_value_bound("BOUND_MODE", Some(n)))
+    .and_then(|n| value_in_frame("lx@frame@id", n))
+    .map(|id| match id {
+      Stored::Number(n) => n.0.to_string(),
+      other => format!("{other:?}"),
+    })
+    .unwrap_or_default()
+}
+
+/// The box the kernel's last `\author` call stood in ([`author_box`]), recorded globally (`\lx@author@box`): a group
+/// it was called in — imsart's `{aug}`, the kernel's own call — closes before the authors' box does (review rev94b r3:
+/// imsart's `\affiliation` after `\end{aug}` in its `\open@fm` box went to the class); recorded anew at each
+/// `\author`, read only while the authors are being set (`class_contact`).
+const AUTHOR_BOX: &str = "lx_author_box";
+
+/// Each kept class definition (`\lx@class@contact@<name>`) of the rerouted setters `names`, rewritten so that its calls
+/// to another rerouted setter — or to itself — call that setter's class definition while the setter still means the
+/// reroute, else its meaning then (`\lx@class@contact@dispatch@<name>`, one token at the call site, which expands to
+/// that one token: a document's
+/// `\renewcommand{\address}[1]{…Addr: #1…}` is what ae100prg's `\email` prints through — review rev94b r3 S3): a setter run as the class's
+/// prints all of its line where the class prints it, never part of it through the API (ae100prg.cls:185 `\def\email#1
+/// {\vspace*{5pt}\address{E-mail: #1}}`, 1303.3004: its `\address` the class's `\lx@class@contact@address`). Static, at
+/// the reroute: nothing is left in the call's input for the class's own look-ahead to see (a class's
+/// `\def\email#1{\\{\ttfamily #1}\ignorespaces}` skips the spaces after the call, `\@ifnextchar`/`\@ifstar` read the
+/// token after it — review rev94b r2 S3).
+fn class_bodies_call_class_copies(names: &[&str]) {
+  let rerouted: Vec<(Token, Token)> = names
+    .iter()
+    .map(|name| {
+      (
+        T_CS!(&s!("\\{name}")),
+        T_CS!(&s!("\\lx@class@contact@{name}")),
+      )
+    })
+    .collect();
+  for (_, copy) in &rerouted {
+    let Some(Stored::Expandable(defn)) = lookup_meaning(copy) else {
+      continue;
+    };
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      continue;
+    };
+    if !body
+      .unlist_ref()
+      .iter()
+      .any(|t| rerouted.iter().any(|(cs, _)| cs == t))
+    {
+      continue;
+    }
+    let tokens = body.unlist_ref();
+    let mut calls: Vec<Token> = Vec::new();
+    for (k, t) in tokens.iter().enumerate() {
+      match rerouted.iter().position(|(cs, _)| cs == t) {
+        // (an `\ifx` operand compares the class's own definition, as the file's test did: `\ifx\address\relax`)
+        Some(at)
+          if [1, 2]
+            .iter()
+            .any(|back| k >= *back && tokens[k - back] == T_CS!("\\ifx")) =>
+        {
+          calls.push(rerouted[at].1);
+        },
+        // (one token, whatever reads it: `\expandafter\address\expandafter{…}`, `\let\x\address`, `\@ifnextchar[\address`
+        // — review rev94b r4 S2, cexp.cls's `\email`: a braced name after one dispatcher left the class copy's `#1` to
+        // the `\expandafter`)
+        Some(at) => calls.push(T_CS!(&s!("\\lx@class@contact@dispatch@{}", names[at]))),
+        None => calls.push(*t),
+      }
+    }
+    let mut rewritten = (*defn).clone();
+    rewritten.expansion = Some(ExpansionBody::Tokens(Tokens::new(calls)));
+    rewritten.plan = std::cell::OnceCell::new();
+    assign_meaning(
+      copy,
+      Stored::Expandable(Rc::new(rewritten)),
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// After a raw file is read (a class, `\lx@class@loaded@raw`; a package, `\lx@package@loaded@raw`): each Frontmatter
+/// API contact setter it defined (`IN_PLACE_CONTACT_SETTERS`; still its own definition, not a binding's, nor one K11
+/// rerouted as a store) that sets its argument as a title-page line (`in_place_contact_setter`) is the API's, as the
+/// kernel's locked `\author` stays the kernel's against the file's own: the line becomes a contact of the creators,
+/// keyed by its printed marks, and the file's in-place typesetting of it is not kept — in pdflatex it prints under the
+/// names its `\author` printed, which the kernel's `\author` made creators. Beyond Perl, which reads no shipped file and
+/// gives the paper OmniBus's setters. OXIDIZED_DESIGN_DIVERGENCES #936.
+pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
+  // (each decided on the file's own definitions before any is rerouted: ae100prg.cls's `\email` prints through its
+  // `\address`)
+  let mut setters = Vec::new();
+  for (name, api) in IN_PLACE_CONTACT_SETTERS {
+    if !defined_by_a_raw_file(name)? {
+      continue;
+    }
+    if let Some((arg, in_place)) = in_place_contact_setter(name)? {
+      setters.push((*name, *api, arg, in_place, false));
+    } else if run_in_contact_setter(name) {
+      setters.push((*name, *api, 1, true, true));
+    }
+  }
+  let mut rerouted = Vec::new();
+  for (name, api, arg, in_place, run_in) in setters {
+    let (params, api, class_args) = if arg == 2 {
+      (
+        convert_latex_args(2, Some(Tokens::new(Vec::new())))?,
+        s!(
+          "\\lx@class@contact@optional{{{name}}}{{{}}}{{#1}}{{#2}}",
+          u8::from(in_place)
+        ),
+        "[#1]{#2}",
+      )
+    } else {
+      (
+        convert_latex_args(1, None)?,
+        api.replace("ARG", "#1"),
+        "{#1}",
+      )
+    };
+    // (the file's own definition kept, for the calls `\lx@class@contact` gives it; both global, as the file's own
+    // definition was the document's for the rest of the run)
+    let cs = T_CS!(&s!("\\{name}"));
+    Let!(T_CS!(&s!("\\lx@class@contact@{name}")), cs, Scope::Global);
+    // (a setter that prints its line where it is called decides by where the call stands, `\lx@class@contact`; one
+    // that stores it for the title page sets a title-page line wherever it is called, `\lx@class@contact@stored`)
+    let decider = if run_in {
+      "\\lx@class@contact@runin"
+    } else if in_place {
+      "\\lx@class@contact"
+    } else {
+      "\\lx@class@contact@stored"
+    };
+    let body = mouth::tokenize_internal(TeXString::assembled(s!(
+      "{decider}{{{api}}}{{\\lx@class@contact@{name}{class_args}}}"
+    )));
+    // (protected, so that it decides where it is digested: a call inside a class's `\protected@xdef` store stays in
+    // the store as written, never its decision at the store's expansion baked into it — iau.cls:1516's numbered
+    // `\affiliation` store around 2607.25849's inline `\email`, whose API call fired at the deposit and gave the
+    // address to the editors' creator, review rev99b B3)
+    DefMacro!(cs, params, body, scope => Some(Scope::Global), protected => true);
+    // (the reroute's own meaning, which a class body's call is dispatched by: `\lx@class@contact@dispatch@<name>`, one
+    // token where the body called the setter)
+    Let!(
+      T_CS!(&s!("\\lx@class@contact@rerouted@{name}")),
+      cs,
+      Scope::Global
+    );
+    let dispatch = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@class@contact@dispatch{{{name}}}"
+    )));
+    DefMacro!(
+      T_CS!(&s!("\\lx@class@contact@dispatch@{name}")),
+      None,
+      dispatch,
+      scope => Some(Scope::Global)
+    );
+    rerouted.push(name);
+  }
+  class_bodies_call_class_copies(&rerouted);
+  if !rerouted.is_empty() {
+    Info!(
+      "frontmatter",
+      file,
+      s!(
+        "The raw file's contact setters that print a title-page line set the frontmatter's contacts: \\{}",
+        rerouted.join(", \\")
+      )
+    );
+  }
+  Ok(())
+}
+
+/// The in-place API a table setter's call reaches when its store is an affiliation or an address of the creators that
+/// the class's title page prints into the body ([`reroute_displaced_setters`]): its table API's kind
+/// (`STORE_SETTERS`: `\lx@add@store@affiliations`, `\lx@add@address`), each line of it placed as
+/// [`contact_line_call`] places a line.
+fn displaced_api(name: &str) -> Option<&'static str> {
+  let (_, api) = STORE_SETTERS.iter().find(|(n, _)| *n == name)?;
+  if api.starts_with("\\lx@add@store@affiliations") {
+    Some("\\lx@add@affiliation")
+  } else if api.starts_with("\\lx@add@address") {
+    Some("\\lx@add@address")
+  } else {
+    None
+  }
+}
+
+/// The API call (`head`: `\lx@add@affiliation`, `\lx@add@address`) of one contact line of a displaced or run-in setter,
+/// or of an in-place or stored setter's call of one entry (`hand_displaced_stores`, [`by_its_label`]). A line led by a printed label (`leading_line_label`, the shared
+/// reader: a superscript, `\textsuperscript`, a hand-printed number) that a name requests (`names_request_label`) is that
+/// label's — `label={affiliation:<key>}`, the mark keyed by its printed text as the names' requests are
+/// (`line_mark_label`) —, which the kernel pairs with the names requesting it: under `annotate=run` every author of the
+/// run held every line whenever the frontmatter observer declined to re-part them (review rev99b B1: 2512.20289's
+/// `\affil{$^a$…}` and `\affil{$^b$…}` under `$^{1,a}$`, `$^{2,b}$`, `$^{3,a}$`, the observer declining over the ORCID
+/// links; 2609.15125, 2607.25849, 1603.07668, 1704.03333). Marks win (FIDELITY_CHARTER "One placement order", R1). Any
+/// other line — led by no label, by a hand-printed number no name requests (user ruling R2), or by a mark no name
+/// requests by its label (a glued symbol run, `$^{*+}$`, requests `*` and `+` only by the frontmatter observer's parting,
+/// 0807.3896) — goes under the names of its run (`annotate=run`, as [`IN_PLACE_CONTACT_SETTERS`]' lines do), capped at
+/// its own run where a labelled line stands in the kernel's (`run_cap_past_labels`: a labelled contact ends no run,
+/// 2608.19687's `\affil{$^10$…}` reached every author since line 2). A line holding several entries led by marks the
+/// names request (`holds_requested_marked_entries`, the API's Cut decision, its one reader: `\institute{$^{1}$Univ A,
+/// $^{2}$Univ B}` run in, 1812.07638's 64 institutes under 200 names) is the call bare, no label and no run, which the
+/// frontmatter API's Cut (`cut_marked_contact`, OD #954) cuts once into one entry per mark, each its requesting names',
+/// one no name requests the block's (SYNC row "99b" (e)). A line holding several requested marks that the Cut cannot cut
+/// — set in a box or an environment, or not led by one — lands once at the block for the frontmatter observer to read by
+/// its marks (`_unsplit`, the REVTeX binding's fail-safe). The line keeps its printed mark, as the class prints it.
+fn contact_line_call(head: &str, line: &Tokens) -> Result<Tokens> {
+  let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{head}"))).unlist();
+  if holds_requested_marked_entries(line)? {
+    call.push(T_BEGIN!());
+    call.extend(line.unlist_ref().iter().copied());
+    call.push(T_END!());
+    return Ok(Tokens::new(call));
+  }
+  call.push(T_OTHER!("["));
+  if requested_marks(line, "contact_line_call")?.held > 1 {
+    call.extend(mouth::tokenize_internal("label={addresses:block},_unsplit=true").unlist());
+  } else {
+    let (mut legend, mut glyph) = (None, None);
+    let label = match leading_line_label(line) {
+      Some((key, typed, _)) => {
+        let operand = (!typed)
+          .then(|| leading_mark_operand(line.unlist_ref()))
+          .flatten();
+        let (label, printed_glyph) = match &operand {
+          Some(operand) => match line_mark(&Tokens::new(operand.clone()))? {
+            Some((label, glyph)) => (Some(label), Some(glyph)),
+            None => (None, None),
+          },
+          None => (Some(s!("affiliation:{key}")), None),
+        };
+        legend = operand
+          .as_deref()
+          .and_then(|operand| legend_note_kind(operand, printed_glyph.as_deref(), line));
+        glyph = printed_glyph;
+        match label {
+          Some(label) if names_request_label(&label)? => Some(label),
+          _ => None,
+        }
+      },
+      None => None,
+    };
+    // (a legend its symbol labels — `$^*$Author to whom any correspondence should be addressed.` — is a note of the names
+    // carrying the symbol, its mark the symbol as the line prints it: `legend_note_kind`; `line_mark`, `$^\ast$`'s `∗`,
+    // which the label keys `*`)
+    if let (Some(label), Some(kind)) = (&label, legend) {
+      let glyph = glyph
+        .as_deref()
+        .unwrap_or_else(|| label.strip_prefix("affiliation:").unwrap_or(label));
+      let mut note = mouth::tokenize_internal(TeXString::assembled(s!(
+        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=thanks,class={{ltx_note_frontmatter ltx_thanks_{kind}}},label={{"
+      )))
+      .unlist();
+      note.extend(ExplodeText!(label));
+      note.extend(mouth::tokenize_internal("},mark={").unlist());
+      note.extend(ExplodeText!(glyph));
+      note.extend(mouth::tokenize_internal("}]").unlist());
+      note.push(T_BEGIN!());
+      note.extend(line.unlist_ref().iter().copied());
+      note.push(T_END!());
+      return Ok(Tokens::new(note));
+    }
+    match label {
+      // (the label as text, each of its characters as it is: a symbol mark's `#` is no parameter token, a `%` no
+      // comment — `\address{$^{\#}$ Institute …}` under `Klinkhamer $^{\#}$`, 0807.3896)
+      Some(label) => {
+        call.extend(mouth::tokenize_internal("label={").unlist());
+        call.extend(ExplodeText!(&label));
+        call.push(T_END!());
+      },
+      // (capped at the line's own run where a labelled line stands in the kernel's, `run_cap_past_labels`)
+      None => {
+        let role = head.trim_start_matches("\\lx@add@");
+        let run = match run_cap_past_labels(role) {
+          Some(cap) => s!("annotate=run:{cap}"),
+          None => "annotate=run".to_string(),
+        };
+        call.extend(mouth::tokenize_internal(TeXString::assembled(run)).unlist());
+      },
+    }
+  }
+  call.push(T_OTHER!("]"));
+  call.push(T_BEGIN!());
+  call.extend(line.unlist_ref().iter().copied());
+  call.push(T_END!());
+  Ok(Tokens::new(call))
+}
+
+/// Is the raw file's own `\<name>` a setter that stores its argument for the title page without printing it ([`
+/// reroute_displaced_setters`]): a macro of one argument, still the file's own definition (neither K11 nor the in-place
+/// reroute took it), whose executed code ([`executed_code`]) does not print the argument where it is called
+/// ([`prints_argument`]), whose body writes it into a definition ([`written_stores`]: a `\gdef`, `\xdef`, `\g@addto@macro`,
+/// a `\csname`-named one) and whose last command reads nothing after the call (`tail_reads_ahead`)?
+fn displaced_setter(name: &str) -> bool {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&T_CS!(&s!("\\{name}"))) else {
+    return false;
+  };
+  if defn.get_origin() != DefinitionOrigin::File
+    || !defn.get_parameters().is_some_and(
+      |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
+    )
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  let body = body.unlist_ref();
+  !prints_argument(&executed_code(body), 1, 0)
+    && written_stores(body, Some(1))
+      .iter()
+      .any(|(_, holds)| *holds)
+    && !crate::latex_constructs::tail_reads_ahead(body)
+}
+
+/// After a raw class, or a raw package read outside a raw class's read, loaded, and K11 and the in-place reroute had
+/// their pick (apa6.cls's `\affiliation`, a pure store K11 takes at the class's end, after ftnright.sty its read loads;
+/// 1710.02566): each table setter of an
+/// affiliation or an address (`displaced_api`) the file defined that stores its argument for the title page without
+/// printing it (`displaced_setter`) — rstransa.cls:1154 `\gdef\@address{#1\ifaffbreak\relax\end{splitaddress}\fi}`
+/// (2607.20672), alta.cls:58 `\gdef\alta@affiliation{#1}` (2609.39929), eph.cls:325
+/// `\def\epl@institute{\epl@institute@makeup{#1}}` (nlin0310001), iau.cls:1515's numbered `\protected@xdef\csname
+/// affil\the\affilcount\endcsname{#1}` (2510.16758, 2607.25849): a store K11's pure-store test (`pure_stores`, a `\@name`
+/// store) does not take, which the kernel's `\maketitle` deposit (sect05.rs `\lx@deposit@maketitle`) printed into the
+/// body under the names, every author with no contact. The setter runs as the file's own (`\lx@class@displaced@<name>`),
+/// under a meaning recorder (`\lx@displaced@begin`, `\lx@displaced@end`; state.rs `begin_meaning_recorder`, which
+/// nests, unlike an assignment journal: review rev99b B4) that records, of each macro it changed, the
+/// part that holds the call's argument (sect05.rs `assigned_parts_holding`): the class's own record of the value, its
+/// provenance. At `\maketitle` the title page's speculative run decides which of them it prints
+/// (`route_and_hand_displaced`); those are the creators' contacts through the API, and the deposit takes them out of
+/// the class's macros (`\lx@replay@records`), never by their text. OXIDIZED_DESIGN_DIVERGENCES #955.
+pub fn reroute_displaced_setters(file: &str) -> Result<()> {
+  let mut rerouted: Vec<&str> = Vec::new();
+  // (not a setter K11 or the in-place reroute took: theirs, from this file's load or an earlier one's)
+  let k11 = lookup_string("lx_rerouted_stores");
+  for (name, _) in STORE_SETTERS {
+    if displaced_api(name).is_none()
+      || rerouted.contains(name)
+      || k11.split(',').any(|n| n == *name)
+      || lookup_meaning(&T_CS!(&s!("\\lx@class@contact@rerouted@{name}"))).is_some()
+      || defined_by_a_binding(name)?
+    {
+      continue;
+    }
+    if !displaced_setter(name) {
+      continue;
+    }
+    let cs = T_CS!(&s!("\\{name}"));
+    Let!(T_CS!(&s!("\\lx@class@displaced@{name}")), cs, Scope::Global);
+    let body = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@displaced@begin\\lx@class@displaced@{name}{{#1}}\\lx@displaced@end{{{name}}}{{#1}}"
+    )));
+    // (protected, as the rerouted contact setters are: [`reroute_in_place_contact_setters`])
+    DefMacro!(cs, convert_latex_args(1, None)?, body, scope => Some(Scope::Global), protected => true);
+    rerouted.push(name);
+  }
+  if !rerouted.is_empty() {
+    Info!(
+      "frontmatter",
+      file,
+      s!(
+        "The raw file's setters that store an affiliation or address for its title page record what they store: \\{}",
+        rerouted.join(", \\")
+      )
+    );
+  }
+  Ok(())
+}
+
+/// The calls of displaced setters open now (`\lx@displaced@begin` … `\lx@displaced@end`), innermost last: `1` for one
+/// whose meanings a recorder records (`begin_meaning_recorder`), `0` for one in a replay or a deposit, which records
+/// nothing. A state value, so a document that stops inside a call leaves none open to the next one a worker converts
+/// (review rev99b S1).
+const DISPLACED_OPEN: &str = "lx_displaced_open";
+
+/// The state holding the displaced setters' records (`\lx@displaced@end`): each the setter's name, the macro it
+/// changed, the part of it that holds the call's argument, and the argument.
+const DISPLACED_RECORDS: &str = "lx_displaced_records";
+
+/// A displaced setter's record ([`DISPLACED_RECORDS`]).
+struct DisplacedRecord {
+  setter: String,
+  store:  Token,
+  part:   Vec<Token>,
+  arg:    Tokens,
+}
+
+/// The records of the displaced setters' calls whose part still stands in its macro ([`DISPLACED_RECORDS`]): a call
+/// whose value a later call replaced (`\gdef\@address{…}` twice) is no longer printed by anything.
+fn displaced_records() -> Vec<DisplacedRecord> {
+  let Some(Stored::VecDequeStored(records)) = lookup_value(DISPLACED_RECORDS) else {
+    return Vec::new();
+  };
+  let mut out = Vec::new();
+  for record in &records {
+    let Stored::VecDequeStored(fields) = record else {
+      continue;
+    };
+    let (
+      Some(Stored::String(setter)),
+      Some(Stored::String(store)),
+      Some(Stored::Tokens(part)),
+      Some(Stored::Tokens(arg)),
+    ) = (fields.front(), fields.get(1), fields.get(2), fields.get(3))
+    else {
+      continue;
+    };
+    let store = T_CS!(&with(*store, ToString::to_string));
+    let part = part.unlist_ref().to_vec();
+    let stands = parameterless_body(&store).is_some_and(|body| {
+      let body = body.unlist_ref();
+      !part.is_empty()
+        && body.len() >= part.len()
+        && body.windows(part.len()).any(|w| w == part.as_slice())
+    });
+    if stands {
+      out.push(DisplacedRecord {
+        setter: with(*setter, ToString::to_string),
+        store,
+        part,
+        arg: arg.clone(),
+      });
+    }
+  }
+  out
+}
+
+/// `tokens` without its `\label{…}`s: a label in a title-page store has nothing of ours to name (the replay of a class
+/// setter gobbles them, sect05.rs `\lx@replay@inert`), and inside a frontmatter entry it asks for an annotation no
+/// entry answers ("Orphaned frontmatter annotation", review rev98c S3).
+fn without_labels(tokens: &Tokens) -> Tokens {
+  let toks = tokens.unlist_ref();
+  let mut out = Vec::with_capacity(toks.len());
+  let mut i = 0;
+  while i < toks.len() {
+    if toks[i] == T_CS!("\\label") {
+      let k = skip_spaces(toks, i + 1);
+      if let Some(past) = tokens_group_end(toks, k) {
+        i = past;
+        continue;
+      }
+    }
+    out.push(toks[i]);
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
+/// The entries of a displaced setter's argument: its lines (`\\`, `\par`, `relocate::split_top_level_lines`), an entry
+/// starting at each line led by a printed label (`relocate::leading_line_label`, the shared reader: `$^{1}$`,
+/// `\textsuperscript{1}`, `${}^{1}$`, a hand-printed `1)`), an unlabelled line the entry's before it, the unlabelled
+/// lines before the first label one entry — rstransa's `\address{$^{1}$… \\ $^{2}$…}`, each line an author's;
+/// 2607.25849's `\affiliation{email: \email{…}\\ $^1$Argelander-Institut …}` —; the whole argument one entry when no
+/// line leads with a label (one address over two lines). Marks inside one line are the API's to cut.
+fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<Tokens>> {
+  use crate::base_utilities::{leading_line_label, split_top_level_lines};
+  // (an `\and` list the class's title page numbers: entry n labelled n, `class_numbered_institutes` — caosp.sty:519-527's
+  // `\institutename`, astro-ph9805069; review rev99b B2; its `\and`s by meaning, P4d)
+  if let Some(numbered) = class_numbered_institutes(arg, store)? {
+    return Ok(
+      split_tokens(numbered, vec![T_CS!("\\and").into()])
+        .into_iter()
+        .filter(|entry| entry.unlist_ref().iter().any(|t| *t != T_SPACE!()))
+        .collect(),
+    );
+  }
+  let toks = arg.unlist_ref();
+  let lines: Vec<&[Token]> = split_top_level_lines(toks)
+    .into_iter()
+    .filter(|line| line.iter().any(|t| *t != T_SPACE!()))
+    .collect();
+  let labelled = |line: &[Token]| leading_line_label(&Tokens::new(line.to_vec())).is_some();
+  if lines.len() < 2 || !lines.iter().any(|line| labelled(line)) {
+    return Ok(vec![arg.clone()]);
+  }
+  let mut entries: Vec<Vec<Token>> = Vec::new();
+  for line in lines {
+    match entries.last_mut() {
+      Some(entry) if !labelled(line) => {
+        entry.push(T_CS!("\\\\"));
+        entry.extend_from_slice(line);
+      },
+      _ => entries.push(line.to_vec()),
+    }
+  }
+  // (each without the spaces around it: the space after a `\\` is no part of the next entry)
+  Ok(
+    entries
+      .into_iter()
+      .map(|entry| {
+        let start = entry
+          .iter()
+          .position(|t| *t != T_SPACE!())
+          .unwrap_or(entry.len());
+        let end = entry
+          .iter()
+          .rposition(|t| *t != T_SPACE!())
+          .map_or(start, |e| e + 1);
+        Tokens::new(entry[start..end.max(start)].to_vec())
+      })
+      .collect(),
+  )
+}
+
+/// Are the entries of a displaced setter's call in doubt: one leads with a mark ([`is_a_mark`], a control-sequence symbol
+/// too: `$^\dagger$Deceased`, review rev99b2 F2) no author requests — queued, or placed by the `\maketitle` that reads
+/// them (`placed_authors_requesting`) — under names showing marks, as an in-place setter's line in doubt stays the
+/// class's ([`leads_with_unrequested_mark`])?
+fn displaced_in_doubt(entries: &[Tokens]) -> Result<bool> {
+  for entry in entries {
+    if let Some(operand) = leading_mark_operand(entry.unlist_ref())
+      && authors_show_marks()?
+      && queued_authors_requesting(&operand)?.is_empty()
+      && !placed_authors_requesting(&Tokens::new(operand.clone()).to_string())
+      && is_a_mark(&operand)?
+      && !requested_as_printed(&operand)?
+    {
+      return Ok(true);
+    }
+  }
+  Ok(false)
+}
+
+/// The `\and`-family separators a store's line or argument holds at its own level, by meaning — the binding-callable
+/// query (`argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #995, Option C P2-6): a written `\and`, one a macro of the
+/// document's or the class's holds, a `\let` copy, a `\csname and\endcsname`, never one a box, a table or a note of the
+/// line holds — each with what it means where the gate asks. `None` where no rehearsal could read them (a call inside one,
+/// over the queries' allowance, a group left open): the gate then reads the line's spelling, as before P2-6.
+fn and_separators(line: &[Token]) -> Result<Option<Vec<FmArgSeparator>>> {
+  argument_separators(&Tokens::new(line.to_vec()))
+}
+
+/// Does a line hold an `\and`-family separator at its own level ([`and_separators`]), whatever it means where the gate
+/// asks: what it prints is the class's title page's to decide (caosp's numbers, cauinst's `\par`, sifrev's own
+/// `\split@rg`), so a gate reading one keeps the class's text or tries the class's numbering — no name is parted by it.
+/// Unread, a literal `\and` anywhere in the line, the spelling the gates read before P2-6.
+fn holds_and_separators(line: &[Token]) -> Result<bool> {
+  Ok(match and_separators(line)? {
+    Some(separators) => !separators.is_empty(),
+    None => line.contains(&T_CS!("\\and")),
+  })
+}
+
+/// Does a contact line hold an `\and` list the class's title page does not number (`class_numbered_institutes` reads one
+/// that it does): the class's own entry markup, which the kernel's `\and` prints " and " — a call in doubt, the class's
+/// line (`displaced_argument_in_doubt`; [`kernel_and_list`]; review rev99b B2: astro-ph9805069's
+/// four institutes as one contact with "and" written in; sifrev.cls's `\institute`, its own `\split@rg` over `\and`,
+/// 1704.03333). The separators by meaning ([`holds_and_separators`]: held in a macro, a `\let` copy, P2-6).
+fn unnumbered_and_list(line: &[Token], store: Option<&str>) -> Result<bool> {
+  Ok(
+    holds_and_separators(line)?
+      && class_numbered_institutes(&Tokens::new(line.to_vec()), store)?.is_none(),
+  )
+}
+
+/// [`unnumbered_and_list`], for a line a rerouted in-place, stored or run-in setter's call hands the API where it is
+/// called ([`class_contact`], [`class_contact_run_in`]): only where a separator of the line is the kernel's own `\and`
+/// (sect05.rs's constructor, " and ", which invents the word) by its meaning where the setter is called
+/// ([`and_separators`]: `FmSepMeaning::Kernel` — a `\let` copy of it and one a macro holds too, trap T8 of the P2 plan:
+/// the rehearsal reads every `\and` as a separator, so the gate asks what it means) — a class or a binding defining
+/// `\and` for its lines has the API print that (smfart.cls's `\address{Nazi Boni University, … \and Université …}`,
+/// "&", 2508.07946). Unread ([`and_separators`]'s `None`), the spelling and the meaning of `\and` itself, as before P2-6:
+/// a literal `\and` while `\and` is any pool constructor.
+fn kernel_and_list(line: &[Token]) -> Result<bool> {
+  let kernel = match and_separators(line)? {
+    Some(separators) => separators
+      .iter()
+      .any(|separator| separator.meaning == FmSepMeaning::Kernel),
+    None => {
+      line.contains(&T_CS!("\\and"))
+        && matches!(lookup_meaning(&T_CS!("\\and")), Some(Stored::Constructor(defn))
+          if matches!(defn.origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown))
+    },
+  };
+  Ok(kernel && class_numbered_institutes(&Tokens::new(line.to_vec()), None)?.is_none())
+}
+
+/// Does a displaced setter's argument hold the class's own structure, which the API cannot read as an entry's text: a
+/// frontmatter setter of its own (a table name, [`IN_PLACE_CONTACT_SETTERS`]' `\email`, a `\thanks` or `\footnote`:
+/// 2607.25849's `\affiliation{email: \email{…}\\ $^1$…}`; a `\footnotemark[n]` the lines are led by, which pairs them with
+/// the names' own `\footnotemark[n]` — simauth.cls:190's `\address`, 1603.07668, whose two lines went to all three
+/// authors, review rev99b B1), or a macro of the raw files' with parameters other than a
+/// mark the readers read ([`leading_mark`]'s `\inst`, `\textsuperscript`) — cta-author.cls's `\address{\add{1}{…}
+/// \add{2}{…}\email{…}}`, whose entries and marks only its `\add` makes (2307.11112: routed whole, the three authors were
+/// read as one)? Then the call is in doubt and stays the class's text.
+fn displaced_argument_in_doubt(
+  arg: &Tokens,
+  store: Option<&str>,
+  redefined: &[Token],
+) -> Result<bool> {
+  // (the class's own entry separators: an `\and` list its title page does not number — `class_numbered_institutes`
+  // reads one that it does —, whose `\and` the kernel prints " and " (astro-ph9805069's four institutes as one
+  // contact of every author, "and" written three times; sifrev.cls's own `\split@rg`, 1704.03333; review rev99b B2), and
+  // a `\\` or `\par` the title page defines anew where it prints the store (`separators_redefined`))
+  let toks = arg.unlist_ref();
+  if unnumbered_and_list(toks, store)? || redefined.iter().any(|separator| toks.contains(separator))
+  {
+    return Ok(true);
+  }
+  Ok(toks.iter().any(|t| {
+    if t.get_catcode() != Catcode::CS
+      || t.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript"))
+    {
+      return false;
+    }
+    let setter = t.with_cs_name(|n| {
+      let bare = n.trim_start_matches('\\');
+      STORE_SETTERS.iter().any(|(name, _)| *name == bare)
+        || IN_PLACE_CONTACT_SETTERS
+          .iter()
+          .any(|(name, _)| *name == bare)
+        || matches!(
+          n,
+          "\\thanks" | "\\footnote" | "\\footnotetext" | "\\footnotemark"
+        )
+    });
+    setter
+      || matches!(lookup_meaning(t), Some(Stored::Expandable(d))
+        if d.get_origin() == DefinitionOrigin::File
+          && d.get_parameters().is_some_and(|p| !p.get_parameters().is_empty()))
+  }))
+}
+
+/// At `\maketitle` (`\lx@store@defaults`, before K11's stores are handed on — an editor store makes its creator after
+/// the authors' contacts, `harvest_stores` — and before the title-page deposit): the displaced setters' records
+/// ([`displaced_records`]) whose macro the class's whole title page prints, by its speculative sentinel runs
+/// (`sentinel_runs` of `title_page_print_tokens`, the two-sentinel rule's confirming run for a plain value,
+/// [`confirmed_printed`]), are routed ([`route_displaced`]) and handed on ([`hand_displaced_stores`]). Without a run made,
+/// nothing is: the class's text stays where its title page prints it. Once.
+fn route_and_hand_displaced() -> Result<Vec<Digested>> {
+  if lookup_bool("lx_displaced_decided")
+    || lookup_bool("lx_depositing_class_maketitle")
+    || lookup_bool("lx_replaying_class_setter")
+  {
+    return Ok(Vec::new());
+  }
+  let records = displaced_records();
+  if records.is_empty() || !has_author_creators() {
+    return Ok(Vec::new());
+  }
+  assign_value("lx_displaced_decided", true, Some(Scope::Global));
+  let mut stores: Vec<Token> = Vec::new();
+  for record in &records {
+    if !stores.contains(&record.store) {
+      stores.push(record.store);
+    }
+  }
+  use crate::latex_constructs::title_page_print_tokens;
+  let Some((printed, letters)) = sentinel_runs(&stores, &title_page_print_tokens, true, false)?
+  else {
+    return Ok(Vec::new());
+  };
+  let printed = if printed.split(',').any(|name| {
+    stores
+      .iter()
+      .find(|t| t.with_str(|cs| cs == name))
+      .and_then(parameterless_body)
+      .as_ref()
+      .and_then(plain_value_text)
+      .is_some()
+  }) {
+    // (the title-page reading's text, its run with the document's own values)
+    let reading = crate::latex_constructs::title_page_reading::title_page_reading()?;
+    match reading.outcome {
+      crate::latex_constructs::title_page_reading::RunOutcome::Printed => {
+        confirmed_printed(&stores, &printed, &letters, &reading.text)
+      },
+      _ => printed,
+    }
+  } else {
+    printed
+  };
+  DebugFeature!(
+    "frontmatter",
+    "FRONT displaced stores printed by the title page: [{printed}] of {}",
+    stores.len()
+  );
+  route_displaced(records, &printed)?;
+  hand_displaced_stores()
+}
+
+/// Does a displaced setter's store stay the class's by the rules K11 applies to its own stores ([`store_setter_body`],
+/// [`reroute_raw_class_stores`]) — the pure-store test of its body aside, which is what the displaced route loosens: a
+/// macro of the raw files' that is no title-page code reads it ([`ClassReaders::read_by_other_code`]), or the title page
+/// prints it glued to the class's text or in one line with another value the frontmatter does not carry
+/// ([`ClassReaders::store_lines`], judged with the document's values: uiucthesis.cls:177 `for the degree of \@degree\ in
+/// \@dept\\`, zzfmd's `{\@jinfo, \@address\par}`)? A store named by computation (`\csname affil\the\affilcount
+/// \endcsname`) has no static reader, and none of these holds for it.
+fn displaced_store_stays_the_classs(
+  store: &Token,
+  readers: &ClassReaders,
+  carried: &[Token],
+) -> bool {
+  if readers.read_by_other_code(store) {
+    return true;
+  }
+  let lines = readers.store_lines(store, &|t: &Token| carried.contains(t));
+  lines.glued || lines.others.iter().any(prints_as_a_value)
+}
+
+/// The displaced setters' records whose macro the title page prints (`printed`, the names of the printed stores) are
+/// routed ([`route_and_hand_displaced`]) — the deposit and the replay take each part out of its macro
+/// (`lx_replay_records`, sect05.rs `\lx@replay@records`), and [`hand_displaced_stores`] hands each call's argument to
+/// the API — while K11's reader and line rules leave the store to them ([`displaced_store_stays_the_classs`]) and no
+/// entry is in doubt ([`displaced_in_doubt`], [`displaced_argument_in_doubt`]); the rest stay the class's text.
+fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) -> Result<()> {
+  let printed: Vec<&str> = printed.split(',').filter(|n| !n.is_empty()).collect();
+  let mut replay = match lookup_value("lx_replay_records") {
+    Some(Stored::VecDequeStored(records)) => records,
+    _ => VecDeque::new(),
+  };
+  let mut routed = VecDeque::new();
+  let readers = ClassReaders::survey();
+  let mut carried = frontmatter_owned_stores();
+  carried.extend(records.iter().map(|r| r.store));
+  for record in records {
+    if !record.store.with_str(|cs| printed.contains(&cs)) {
+      continue;
+    }
+    if displaced_store_stays_the_classs(&record.store, &readers, &carried) {
+      Info!(
+        "frontmatter",
+        s!("\\{}", record.setter),
+        s!(
+          "\\{} stays the class's: other code of the class reads its store, or its title page prints it in one line with another value",
+          record.setter
+        )
+      );
+      continue;
+    }
+    let store = record.store.with_str(ToString::to_string);
+    // (an `\and`-family separator by meaning, `holds_and_separators`: whether the class's title page numbers the entries)
+    if holds_and_separators(record.arg.unlist_ref())? {
+      note_and_numbering(&record.store)?;
+    }
+    let entries = displaced_entries(&record.arg, Some(&store))?;
+    let redefined = readers.separators_redefined(&record.store, &[T_CS!("\\\\"), T_CS!("\\par")]);
+    if displaced_in_doubt(&entries)?
+      || displaced_argument_in_doubt(&record.arg, Some(&store), &redefined)?
+    {
+      Info!(
+        "frontmatter",
+        s!("\\{}", record.setter),
+        s!(
+          "\\{} leads with a mark no author requests, or holds the class's own entry markup: its line stays where the class's title page prints it",
+          record.setter
+        )
+      );
+      continue;
+    }
+    replay.push_back(Stored::VecDequeStored(VecDeque::from([
+      Stored::String(pin(record.store.with_str(ToString::to_string))),
+      Stored::Tokens(Tokens::new(record.part)),
+    ])));
+    routed.push_back(Stored::VecDequeStored(VecDeque::from([
+      Stored::String(pin(record.setter)),
+      Stored::Tokens(record.arg),
+      Stored::String(pin(store)),
+    ])));
+  }
+  if routed.is_empty() {
+    return Ok(());
+  }
+  assign_value(
+    "lx_replay_records",
+    Stored::VecDequeStored(replay),
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_displaced_routed",
+    Stored::VecDequeStored(routed),
+    Some(Scope::Global),
+  );
+  Ok(())
+}
+
+/// Each routed displaced call ([`route_displaced`]) as the API's contacts of the creators, in the order the document
+/// made them — an entry each ([`displaced_entries`]), through the in-place API of its kind ([`displaced_api`]:
+/// `\lx@add@affiliation`, `\lx@add@address`), each placed by its leading label ([`contact_line_call`]); `\label`s
+/// gobbled ([`without_labels`]). Once.
+fn hand_displaced_stores() -> Result<Vec<Digested>> {
+  let Some(Stored::VecDequeStored(routed)) = lookup_value("lx_displaced_routed") else {
+    return Ok(Vec::new());
+  };
+  assign_value("lx_displaced_routed", Stored::None, Some(Scope::Global));
+  let mut calls: Vec<Token> = Vec::new();
+  for record in &routed {
+    let Stored::VecDequeStored(fields) = record else {
+      continue;
+    };
+    let (Some(Stored::String(setter)), Some(Stored::Tokens(arg))) = (fields.front(), fields.get(1))
+    else {
+      continue;
+    };
+    let setter = with(*setter, ToString::to_string);
+    let Some(api) = displaced_api(&setter) else {
+      continue;
+    };
+    let store = match fields.get(2) {
+      Some(Stored::String(store)) => Some(with(*store, ToString::to_string)),
+      _ => None,
+    };
+    for entry in displaced_entries(&without_labels(arg), store.as_deref())? {
+      calls.extend(contact_line_call(api, &entry)?.unlist());
+    }
+    Info!(
+      "frontmatter",
+      s!("\\{setter}"),
+      s!(
+        "The class's title page prints what \\{setter} stored: the creators' contacts, taken out of the title page's deposit"
+      )
+    );
+  }
+  if calls.is_empty() {
+    return Ok(Vec::new());
+  }
+  Ok(vec![digest_store_calls(calls)?])
+}
+
+/// Reroute every table setter the raw class `cls` defined as a store; a binding's own setter
+/// (acmart.cls's `\copyrightyear`, ported as the class's store) is not the raw class's.
+pub fn reroute_raw_class_stores(cls: &str) -> Result<()> { reroute_raw_file_stores(cls, false) }
+
+/// After a raw package `sty` was read outside a raw class's read (`\lx@package@loaded@raw`; one a raw class loads is
+/// that class's, rerouted at its end with its title page known): the table setters it defined itself
+/// (`defined_by_a_raw_file`), as a raw class's are — medima.sty:300-312 redefines elsarticle's bound `\received`,
+/// `\accepted` (and `\finalform`, `\availableonline`, `\communicated`) as stores only its own refused `\maketitle`
+/// reads, so the paper's "Article history" was lost (2307.16262; jcomp, prletters, ycviu, yjvci, cag, jasr ship the
+/// same shape under elsarticle). The class's other K11 passes (its keywords environments, kernel field setters and
+/// off-table stores) stay the class's.
+pub fn reroute_raw_package_stores(sty: &str) -> Result<()> { reroute_raw_file_stores(sty, true) }
+
+/// [`reroute_raw_class_stores`], or [`reroute_raw_package_stores`] when `package`.
+fn reroute_raw_file_stores(cls: &str, package: bool) -> Result<()> {
+  let mut rerouted: Vec<&str> = Vec::new();
+  let mut readers: Option<ClassReaders> = None;
+  let mut setters = Vec::new();
+  let mut toks: Vec<(&str, Vec<Token>)> = Vec::new();
+  for (name, api) in STORE_SETTERS {
+    if defined_by_a_binding(name)? || (package && !defined_by_a_raw_file(name)?) {
+      continue;
+    }
+    if let Some(label) = toks_store(name, &mut readers)? {
+      toks.push((*name, label));
+      continue;
+    }
+    if let Some(setter) = store_setter_body(name, package, &mut readers)? {
+      setters.push((*name, *api, setter));
+    }
+  }
+  if !toks.is_empty() {
+    let mut known = lookup_string("lx_toks_stores");
+    for (name, label) in &toks {
+      assign_value(
+        &s!("lx_toks_label_{name}"),
+        Stored::Tokens(Tokens::new(label.clone())),
+        Some(Scope::Global),
+      );
+      if !known.split(',').any(|n| n == *name) {
+        if !known.is_empty() {
+          known.push(',');
+        }
+        known.push_str(name);
+      }
+    }
+    assign_value(
+      "lx_toks_stores",
+      Stored::String(pin(known)),
+      Some(Scope::Global),
+    );
+    Info!(
+      "frontmatter",
+      cls,
+      s!(
+        "The raw file's token registers only its printed code prints are the frontmatter's at \\maketitle: \\{}",
+        toks
+          .iter()
+          .map(|(n, _)| *n)
+          .collect::<Vec<_>>()
+          .join(", \\")
+      )
+    );
+  }
+  // What the frontmatter carries: these setters' stores and the kernel's fields, which the deposit nulls.
+  let carried_stores: Vec<Token> = setters
+    .iter()
+    .map(|(_, _, (_, _, store_cs))| *store_cs)
+    .chain(["\\@title", "\\@author", "\\@date", "\\@thanks"].map(|cs| T_CS!(cs)))
+    .collect();
+  let carried = |t: &Token| carried_stores.contains(t);
+  for (name, api, (store, arg, store_cs)) in setters {
+    let readers = readers.get_or_insert_with(ClassReaders::survey);
+    let lines = readers.store_lines(&store_cs, &carried);
+    if lines.glued || lines.others.iter().any(prints_as_a_value) {
+      Info!(
+        "frontmatter",
+        cls,
+        s!(
+          "The raw class's \\{name} stays the class's: its title page prints it in one line with another value"
+        )
+      );
+      continue;
+    }
+    // The other values of its lines print nothing as the class leaves them; `\maketitle` judges them again with the
+    // document's (`harvest_stores`), so a store handed on as it is set waits for it (`lx_store_deferred_<name>`) —
+    // when one of them is a placeholder the document can fill there ([`may_become_a_value`]), not the line's code
+    // (`\@setfontsize`, `\@journalfont`; review rev79a2 finding 5).
+    let others: Vec<Token> = lines
+      .others
+      .into_iter()
+      .filter(may_become_a_value)
+      .collect();
+    let line_values = !others.is_empty();
+    assign_value(
+      &s!("lx_store_line_values_{name}"),
+      Stored::Tokens(Tokens::new(others)),
+      Some(Scope::Global),
+    );
+    if line_values && !read_at_maketitle(name) {
+      assign_value(&s!("lx_store_deferred_{name}"), true, Some(Scope::Global));
+    }
+    // A store the document never set is handed on at `\maketitle` only when the title page prints it.
+    assign_value(
+      &s!("lx_store_title_page_reads_{name}"),
+      readers.read_by_the_title_page(&store_cs),
+      Some(Scope::Global),
+    );
+    assign_value(
+      &s!("lx_store_cs_{name}"),
+      Stored::String(pin(
+        store_cs.with_str(|cs| cs.trim_start_matches('\\').to_string()),
+      )),
+      Some(Scope::Global),
+    );
+    // The setter stores as the class does, so the class's other readers of `\@<name>` (gaceta
+    // checks `\@editor` for its section editor line) keep seeing the value; only `\@maketitle` is
+    // discarded. A store that annotates a creator (an affiliation, address, e-mail, ORCID) or makes
+    // one (an editor, a speaker) is then only recorded: it is read once, at `\maketitle`, where the author list it annotates exists
+    // (`harvest_stores`; set later, it is handed on at once, `\lx@store@late`). Any other store is
+    // handed to its frontmatter API as it is set — keywords set after `\maketitle` for an
+    // abstract that prints them (pittetd.cls:503-527), an abstract at its place in the body —, save
+    // an abstract or keywords the title page names by its label, which `\maketitle` reads too
+    // (`labelled_api`, silent-loss #6a).
+    let (params, arg_ref) = if arg == 2 {
+      (convert_latex_args(2, Some(Tokens::new(Vec::new())))?, "#2")
+    } else {
+      (convert_latex_args(1, None)?, "#1")
+    };
+    // The label the class's title page prints before the store ("Resumen: \@resumen") names the entry, and the deposit
+    // takes it out of the title page with the store (`labelled_api`).
+    let api = labelled_api(name, api, &store_cs, readers);
+    let api = api.as_str();
+    let mut body = store.unlist();
+    let tail = if read_at_maketitle(name) {
+      s!("\\lx@store@set{{{name}}}\\lx@store@late{{{name}}}{{{arg_ref}}}")
+    } else {
+      s!(
+        "\\lx@store@set{{{name}}}\\lx@store@hand{{{name}}}{{{}}}",
+        api.replace("#1", arg_ref)
+      )
+    };
+    body.extend(mouth::tokenize_internal(TeXString::assembled(tail)).unlist());
+    DefMacro!(T_CS!(&s!("\\{name}")), params, Tokens::new(body));
+    rerouted.push(name);
+  }
+  if !package {
+    reroute_keywords_environments(cls, &mut readers)?;
+    reroute_kernel_field_setters(cls)?;
+    survey_off_table_stores(cls, &mut readers)?;
+  }
+  if !rerouted.is_empty() {
+    // A raw class that `\LoadClass`es another raw class reroutes twice: the
+    // list accumulates, so the base class's stores stay captured too.
+    let prior = lookup_string("lx_rerouted_stores");
+    let mut captured: Vec<&str> = prior.split(',').filter(|n| !n.is_empty()).collect();
+    for name in &rerouted {
+      if !captured.contains(name) {
+        captured.push(name);
+      }
+    }
+    // Inside the deposit group a store handed to the frontmatter reads as empty, so a kept
+    // `\@maketitle` never typesets it twice; one not handed on (an affiliation with no author to
+    // carry it: courseoutline.cls:150 `\@department` in a document with no `\author`) stays the
+    // class's to print. One the document never set and the class gives no value before its own
+    // `\maketitle` — an.cls:532 `\ch@ckobl{institute}{Address(es) of author(s) should be given}`
+    // runs in the class's `\maketitle`, which the kernel's replaces — is defined: its undefined
+    // store raised an error that dropped the whole deposit, the paper's `\keywords` line with it
+    // (0 errors; pdflatex prints the line beside the class's placeholder). As `\relax` or `\@empty`,
+    // whichever the title page prints fewer characters under in TeX's runs (`decide_unset_nulls`): `\relax`
+    // where a class tests for the unset store, ptptex.cls:88-104's journal line and "(Received …)"
+    // printed unless `\@ifundefined{@pubinfo}`/`{@recdate}` (hep-th9803240, 1309.6905); `\@empty`
+    // where it tests `\ifx\@institute\@empty` after its own `\maketitle` defaulted it so.
+    DefMacro!("\\lx@captured@stores", sub[_args] {
+      let names = lookup_string("lx_rerouted_stores");
+      let mut nulls: Vec<Token> = Vec::new();
+      for name in names.split(',').filter(|n| !n.is_empty()) {
+        let store = store_of(name);
+        let null = if lookup_bool(&s!("lx_store_handed_{name}")) {
+          s!("\\let\\{store}\\@empty")
+        } else if lookup_bool(&s!("lx_store_unset_empty_{name}")) {
+          s!("\\lx@ifdefined\\{store}\\else\\let\\{store}\\@empty\\fi")
+        } else {
+          s!("\\lx@ifdefined\\{store}\\else\\let\\{store}\\relax\\fi")
+        };
+        nulls.extend(mouth::tokenize_internal(TeXString::assembled(null)).unlist());
+      }
+      Ok(Tokens::new(nulls))
+    });
+    // A store the document never set keeps the class's default (lion-msc.cls:
+    // 196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}`),
+    // which `\@maketitle` typesets; nulled in the deposit, it reached neither
+    // the frontmatter nor the body. The kernel `\maketitle` hands it to the
+    // frontmatter (`\lx@store@defaults` in `\lx@maketitle@body`, sect05.rs),
+    // as pdflatex prints it only there — when the title page prints it
+    // (`lx_store_title_page_reads_<name>`, set above; 1209.2617's tlp placeholders are its running head's).
+    assign_value(
+      "lx_rerouted_stores",
+      Stored::String(pin(captured.join(","))),
+      Some(Scope::Global),
+    );
+    // The class's `\@maketitle` is NOT discarded here: `\lx@deposit@maketitle`
+    // (sect05.rs) digests it with the captured stores nulled and keeps the
+    // result only if it typeset anything — ptptex's (every field captured)
+    // yields nothing and is dropped; bfhthesis's degree/advisor block beside
+    // its captured `\@institution` is kept (sweep 93 lost half of two bfh-ci
+    // manuals' recall to an unconditional discard).
+    Info!(
+      "frontmatter",
+      cls,
+      s!(
+        "Rerouted the raw {}'s title-page stores to the frontmatter API: \\{}",
+        if package { "package" } else { "class" },
+        rerouted.join(", \\")
+      )
+    );
+  }
+  Ok(())
+}
+
+/// The text a class prints right before `body[at]` in its line: the letters, other characters, spaces and ties back to
+/// the line's start — a group's open brace, the body's start, a line break (`\\`, `\par`, `\newline`), a branch's
+/// `\else`/`\fi`/`\or`, a `\relax`, a font or size switch, or a parameterless macro of the class's (its `\footerfont`)
+/// —, without the spaces it starts with; empty when it holds no letter or character, or when what ends it is anything
+/// else (a test's operand, `\ifdim\wd0>0pt *\the\X`).
+fn printed_text_before(body: &[Token], at: usize) -> Vec<Token> {
+  let mut start = at;
+  while start > 0 {
+    let t = body[start - 1];
+    if matches!(
+      t.get_catcode(),
+      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+    ) || t == T_ACTIVE!('~')
+    {
+      start -= 1;
+      continue;
+    }
+    let line_start = t.get_catcode() == Catcode::BEGIN
+      || cs_in(&t, &["\\\\", "\\newline", "\\else", "\\fi", "\\or"])
+      || layout(&t)
+      || (t.get_catcode() == Catcode::CS
+        && parameterless_body(&t).is_some()
+        && matches!(lookup_meaning(&t), Some(Stored::Expandable(ref d)) if d.get_origin() == DefinitionOrigin::File));
+    if !line_start {
+      return Vec::new();
+    }
+    break;
+  }
+  let text: Vec<Token> = body[start..at]
+    .iter()
+    .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+    .map(|t| if *t == T_ACTIVE!('~') { T_SPACE!() } else { *t })
+    .collect();
+  if text
+    .iter()
+    .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+  {
+    text
+  } else {
+    Vec::new()
+  }
+}
+
+/// Is the table name `\<name>` a token register a raw file made (`\newtoks\correspondingauthor`, googlecloud.cls:80,
+/// cmu.cls:113, deepseek.cls:112, nv.cls:180 and 20 more classes of the census: googledeepmind, nvidiatechreport,
+/// berkeley, instadeep, hku, ds, dm, dmml, …), which the document fills by assignment (`\correspondingauthor{…}`) and
+/// which only printed code reads ([`ClassReaders::printed_register`])? Its value is then the frontmatter's at
+/// `\maketitle` (`harvest_stores`), the table's call of it led by the label the class prints before it: the class prints
+/// it only in the foot of the page style its `\maketitle` selects (`\fancypagestyle{firststyle}`, now `\ps@firststyle`,
+/// fancyhdr_sty.rs), page furniture LaTeXML does not set, and it was lost with 0 errors (2607.06973, 2608.26053,
+/// 2604.13010). Beyond Perl, which gives the register no meaning a raw class's copy does not (an undefined
+/// `\correspondingauthor` Error, its value a body paragraph). Returns the label's tokens.
+fn toks_store(name: &str, readers: &mut Option<ClassReaders>) -> Result<Option<Vec<Token>>> {
+  let cs = T_CS!(&s!("\\{name}"));
+  let toks = matches!(lookup_meaning(&cs), Some(Stored::Register(ref r)) if matches!(r.register_type, RegisterType::Tokens));
+  if !toks || !defined_by_a_raw_file(name)? {
+    return Ok(None);
+  }
+  Ok(
+    readers
+      .get_or_insert_with(ClassReaders::survey)
+      .printed_register(&cs),
+  )
+}
+
+/// The value of the token register `\<name>` ([`toks_store`]).
+fn toks_value(name: &str) -> Option<Tokens> {
+  match lookup_register_quiet(&s!("\\{name}")) {
+    Some(RegisterValue::Tokens(value)) => Some(value),
+    _ => None,
+  }
+}
+
+/// The table's call `api` of a date or a classification named `label` (`name={…}`, joining its options:
+/// `\lx@add@classification[scheme=…]{#1}`); an empty `label` gives it no name, not its role's default.
+fn named_call(api: &str, label: &str) -> String {
+  match api.split_once('[') {
+    Some((command, rest)) => s!("{command}[name={{{label}}},{rest}"),
+    None => api.replacen("{#1}", &s!("[name={{{label}}}]{{#1}}"), 1),
+  }
+}
+
+/// The frontmatter call of the store `\<name>` (the table's `api`), named by the label the class's title page prints
+/// right before the store ([`ClassReaders::title_page_label`]) when the entry is one shown under a name: an abstract,
+/// keywords, a classification or a date ("Received~\@received"). rcresumen's `\def\@maketitle{… Resumen: \@resumen}`: the class's abstract is named
+/// "Resumen:", as astlb.cls:200's in-abstract `Key words:` names its keywords (1202.2889). An abstract or keywords store
+/// the title page reads, labelled or not, and a labelled classification, is the class's store, which LaTeX expands
+/// where the class's `\maketitle` prints it: its setter only stores (`lx_store_deferred_<name>`, `\lx@store@hand`) and
+/// `\maketitle` queues the entry from the store (`harvest_stores`), with no clearing of other entries, digested there
+/// with the rest — so a value using a macro or package defined later in the preamble reads as pdflatex reads it (review
+/// probe `early`: "Uses bar and red"), and the document's own `{abstract}`, which clears what is queued, does not remove
+/// it: the class's store and the document's abstract are two elements (OXIDIZED_DESIGN_DIVERGENCES #154), as pdflatex
+/// prints both — "Resumen:" and "Abstract", the document's first when its `{abstract}` comes before `\maketitle`; an
+/// unlabelled `\begin{quote}\itshape\@resumen\end{quote}` too (review probe `d_nolab`; silent-loss #6a). The label's
+/// tokens are recorded for the title-page deposit (`lx_store_label_part_<name>`), which takes them out with the store
+/// when it is handed on (`\lx@store@handed`): the label is the entry's name, not a line of its own before the body —
+/// once `\maketitle`'s run of the title page shows it printed right before the store (`verify_title_page_labels`;
+/// else the entry is unnamed, `lx_store_api_unnamed_<name>`). A date or a classification with no label read has no name
+/// — never its role's default the class does not print. The api of any other store is the table's. Returns the api,
+/// stored for the later calls (`store_api`).
+fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) -> String {
+  // (`_store`: the class's store's entry, which only another of the same store replaces — the document's own abstract
+  // under the same name does not, `frontmatter_clear_same_name`, while the title page prints the store,
+  // `release_unprinted_store_entries`. The store's name, not the setter's: two setters of one store, a class's `\let\keyword
+  // \keywords` or `\let\resumen\abst`, make one entry — review probes `al1`, `al2`)
+  let tag = store.with_str(|cs| cs.trim_start_matches('\\').to_string());
+  let (named, unnamed) = if api.starts_with("\\lx@add@abstract") {
+    (
+      Some(s!(
+        "\\lx@frontmatter@mark{{ltx:abstract}}\\lx@add@frontmatter{{ltx:abstract}}[_store={tag},name={{"
+      )),
+      s!(
+        "\\lx@frontmatter@mark{{ltx:abstract}}\\lx@add@frontmatter{{ltx:abstract}}[_store={tag}]{{#1}}"
+      ),
+    )
+  } else if api.starts_with("\\lx@add@keywords") {
+    (
+      Some(s!(
+        "\\lx@add@frontmatter{{ltx:keywords}}[_store={tag},name={{"
+      )),
+      s!("\\lx@add@frontmatter{{ltx:keywords}}[_store={tag}]{{#1}}"),
+    )
+  } else if api.starts_with("\\lx@add@classification") || api.starts_with("\\lx@add@date") {
+    // (a date's label names it, as a classification's does: `Received~\@received\par`, the deposit takes "Received"
+    // out with the store — it stayed a body paragraph of its own, "Received" over nothing: a raw package's dates under
+    // article, 2307.16262's medima.sty shape, and a raw class's. Unlabelled, it has no name, not the role's default:
+    // medima.sty's final-form date printed as "Received in final form" was named "Revised " (FIDELITY_CHARTER
+    // 2026-10-30, never a role name the class does not print; review rev95d B2) — the defaults stay the bindings'
+    // own calls', revtex4_support's and aipproc's)
+    (None, named_call(api, ""))
+  } else if api.starts_with("\\lx@add@frontmatter{ltx:note}") {
+    // (a note's printed label leads it, as the class prints it (FIDELITY_CHARTER §4) — in its text, as a token
+    // register's note's does (`toks_store`): the schema's `ltx:note` has no `name` (LaTeXML-meta.rnc:27-35).
+    // acl2023.sty:184-187's `\ifx\@corremail\empty\else … Correspondence: \href{mailto:\@corremail}{…\@corremail}\fi`,
+    // whose test leaves the title page with the store, took "Correspondence:" with it, printed nowhere (2506.10896,
+    // brief 97b); unlabelled, the table's call)
+    (None, api.to_string())
+  } else {
+    return api.to_string();
+  };
+  let deferred = |call: &str| {
+    assign_value(
+      &s!("lx_store_api_{name}"),
+      Stored::String(pin(call)),
+      Some(Scope::Global),
+    );
+    assign_value(&s!("lx_store_deferred_{name}"), true, Some(Scope::Global));
+  };
+  // (a date's or a classification's label is read in any code the title page reaches, grown into it or not: jasr.sty's
+  // `\receivedhead~\@received` is in `\elsarthistorybox`, which its `\MaketitleBox` prints, a macro its uncalled
+  // `\pprintMaketitle` calls too, 2311.02753; review rev95d-r2)
+  let label = readers.title_page_label(store).or_else(|| {
+    named
+      .is_none()
+      .then(|| readers.label_in(store, &readers.printed))
+      .flatten()
+  });
+  let Some(StoreLabel {
+    reader,
+    part,
+    text,
+    in_argument,
+  }) = label
+  else {
+    if named.is_some() && readers.read_by_the_title_page(store) {
+      deferred(&unnamed);
+      return unnamed;
+    }
+    if named.is_some() {
+      return api.to_string();
+    }
+    // (no label read: the role's default stands where its word is the text the class prints right before the store —
+    // wiley2sp.cls:296-302's `\receivedname\ignorespaces\@received`, `\def\receivedname{{\normalfont Received:}\ }`,
+    // which the line reader takes for a value (1211.4450, 1306.2559) —, else the date has no name)
+    if readers.prints_default_name_before(store, api) {
+      return api.to_string();
+    }
+    // (the unnamed call, for `\maketitle`'s reads of the store too, `store_api`)
+    assign_value(
+      &s!("lx_store_api_{name}"),
+      Stored::String(pin(unnamed.as_str())),
+      Some(Scope::Global),
+    );
+    return unnamed;
+  };
+  // (the label as printed, without the space before the store)
+  let label = text.to_string().trim_end().to_string();
+  // A date printed inside a parenthesis the label opens — jpsj2.cls's and ptptex.cls's `(Received \@recdate)` — is no
+  // labelled date: "(Received" names nothing, and the deposit would keep the ")" alone. It keeps the role's name.
+  let opens_a_bracket = |label: &str| {
+    let (mut round, mut square) = (0i32, 0i32);
+    for c in label.chars() {
+      match c {
+        '(' => round += 1,
+        ')' => round -= 1,
+        '[' => square += 1,
+        ']' => square -= 1,
+        _ => {},
+      }
+    }
+    round > 0 || square > 0
+  };
+  if api.starts_with("\\lx@add@date") && opens_a_bracket(&label) {
+    return api.to_string();
+  }
+  let call = match named {
+    Some(head) => s!("{head}{label}}}]{{#1}}"),
+    None if api.starts_with("\\lx@add@frontmatter{ltx:note}") => {
+      // (`\space`: the call's text is tokenized up to `#1`, where a trailing source space is no token)
+      api.replacen("{#1}", &s!("{{{label}\\space #1}}"), 1)
+    },
+    None => named_call(api, &label),
+  };
+  assign_value(
+    &s!("lx_store_label_reader_{name}"),
+    Stored::String(pin(reader)),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &s!("lx_store_label_part_{name}"),
+    Stored::Tokens(part),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &s!("lx_store_label_{name}"),
+    Stored::Tokens(text),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &s!("lx_store_label_in_argument_{name}"),
+    in_argument,
+    Some(Scope::Global),
+  );
+  assign_value(
+    &s!("lx_store_api_unnamed_{name}"),
+    Stored::String(pin(unnamed.as_str())),
+    Some(Scope::Global),
+  );
+  deferred(&call);
+  call
+}
+
+/// The store `\<name>` is handed to the frontmatter: the title-page deposit reads it as empty
+/// (`\lx@captured@stores`), and the label its title page prints before it ([`labelled_api`]), now the entry's name,
+/// is taken out with it, once (`note_title_page_part`, read by `\lx@replay@records`).
+fn note_store_handed(name: &str) {
+  assign_value(&s!("lx_store_handed_{name}"), true, Some(Scope::Global));
+  if let Some(Stored::Tokens(part)) = lookup_value(&s!("lx_store_label_part_{name}"))
+    && !lookup_bool(&s!("lx_store_label_noted_{name}"))
+  {
+    assign_value(
+      &s!("lx_store_label_noted_{name}"),
+      true,
+      Some(Scope::Global),
+    );
+    crate::latex_constructs::note_title_page_part(
+      &lookup_string(&s!("lx_store_label_reader_{name}")),
+      part,
+    );
+  }
+}
+
+/// The store `\<name>` set after `\maketitle` read the stores was handed on as it was set (`\lx@store@late`,
+/// `\lx@store@hand`): a harvest re-armed for a superseding `\maketitle` does not hand it again (`lx_stores_late`).
+fn note_store_late(name: &str) {
+  let late = lookup_string("lx_stores_late");
+  if !late.split(',').any(|n| n == name) {
+    let late = if late.is_empty() {
+      name.to_string()
+    } else {
+      s!("{late},{name}")
+    };
+    assign_value(
+      "lx_stores_late",
+      Stored::String(pin(late)),
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// The frontmatter call of the store `\<name>`: the class's label's ([`labelled_api`]) or the table's.
+fn store_api(name: &str) -> Option<String> {
+  let named = lookup_string(&s!("lx_store_api_{name}"));
+  if !named.is_empty() {
+    return Some(named);
+  }
+  STORE_SETTERS
+    .iter()
+    .find(|(n, _)| *n == name)
+    .map(|(_, api)| api.to_string())
+}
+
+/// The kernel's title fields, which LaTeX's `\@maketitle` prints (article.cls:209-229) and the title-page deposit and
+/// replay read as empty (`\lx@deposit@maketitle`, sect05.rs).
+const KERNEL_FIELDS: [&str; 4] = ["\\@title", "\\@author", "\\@date", "\\@thanks"];
+
+/// Silent-loss #5 (a), the generic rule for the class's off-table stores (75a row (a)): a one-argument setter the raw
+/// class defined, not in the table (`STORE_SETTERS`) and not one of its commands with an `@`, whose body is a pure store
+/// of its argument ([`setter_stores`]) in one control sequence of the class's that only its title-page code reads
+/// (rule (a)'s [`ClassReaders::read_only_by_the_title_page`], the class's own `\@title`/`\@author`/`\@date` counted
+/// as title-page code, LaTeX's `\@maketitle` printing them): jfpc.cls:121-132 `\titre`, `\auteurs`,
+/// `\institutions`, `\mels`, read only by its `\def\@title`/`\def\@author` (:176-191; 1503.05530), which the
+/// deposit reads as empty, so the authors were lost; risethesis's cover fields (2208.03566), vmsta's `\fnm`. Each is
+/// recorded with its class default (`lx_offtable_stores`); at `\maketitle` `\lx@store@untypeset` hands on the value
+/// the document gave one whose title-page code did not typeset it.
+fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Result<()> {
+  let from_a_file = |stored: &Stored| match stored {
+    Stored::Expandable(defn) => defn.get_origin() == DefinitionOrigin::File,
+    _ => false,
+  };
+  let mut found: Vec<(String, Token)> = Vec::new();
+  let mut names: Vec<String> = current_meanings_where(from_a_file)
+    .into_iter()
+    .map(|(key, _)| with(key, ToString::to_string))
+    .filter(|name| {
+      name.len() > 1 && name.starts_with('\\') && name[1..].chars().all(|c| c.is_ascii_alphabetic())
+    })
+    .collect();
+  names.sort();
+  let known = lookup_string("lx_offtable_stores");
+  for cs_name in names {
+    let name = &cs_name[1..];
+    if STORE_SETTERS.iter().any(|(n, _)| *n == name)
+      || ["title", "author", "date", "thanks", "maketitle", "and"].contains(&name)
+      || known.split(',').any(|n| n == name)
+    {
+      continue;
+    }
+    let Some((_, _, stores)) = setter_stores(&T_CS!(&cs_name))? else {
+      continue;
+    };
+    let [store] = stores[..] else {
+      continue;
+    };
+    let class_owned = match lookup_meaning(&store) {
+      None => true,
+      Some(Stored::Expandable(defn)) => defn.get_origin() == DefinitionOrigin::File,
+      Some(_) => false,
+    };
+    if !class_owned || store.with_str(|s| KERNEL_FIELDS.contains(&s)) {
+      continue;
+    }
+    let readers = readers.get_or_insert_with(ClassReaders::survey);
+    if readers.read_only_by_the_title_page_or_fields(&store) {
+      found.push((name.to_string(), store));
+    }
+  }
+  if found.is_empty() {
+    return Ok(());
+  }
+  let mut list: Vec<String> = known
+    .split(',')
+    .filter(|n| !n.is_empty())
+    .map(String::from)
+    .collect();
+  for (name, store) in &found {
+    let default = match lookup_meaning(store) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => Stored::Tokens(body.clone()),
+        _ => Stored::Tokens(Tokens::default()),
+      },
+      _ => Stored::Bool(false),
+    };
+    assign_value(
+      &s!("lx_offtable_default_{name}"),
+      default,
+      Some(Scope::Global),
+    );
+    assign_value(
+      &s!("lx_offtable_store_{name}"),
+      Stored::Token(*store),
+      Some(Scope::Global),
+    );
+    if let Some(StoreLabel {
+      part, text: label, in_argument, ..
+    }) = readers
+      .as_ref()
+      .and_then(|r| r.label_in(store, &r.title_page_fields))
+    {
+      assign_value(
+        &s!("lx_offtable_label_in_argument_{name}"),
+        in_argument,
+        Some(Scope::Global),
+      );
+      // (with the space the title page prints between the label and the store, a tie in the note's name, as
+      // acmart_cls.rs:178's `name={Price:~}`: jfpc.cls:177 "Actes JFPC \@lannee", "Actes JFPC 2015")
+      let mut label = label.unlist();
+      let separated = part.unlist_ref().windows(2).any(|pair| {
+        pair[1] == *store
+          && (pair[0].get_catcode() == Catcode::SPACE
+            || pair[0].get_catcode() == Catcode::ACTIVE
+            || pair[0] == T_CS!("\\ "))
+      });
+      if separated
+        && label
+          .last()
+          .is_some_and(|t| t.get_catcode() != Catcode::SPACE)
+      {
+        label.push(T_ACTIVE!('~'));
+      }
+      assign_value(
+        &s!("lx_offtable_label_{name}"),
+        Stored::Tokens(Tokens::new(label)),
+        Some(Scope::Global),
+      );
+    }
+    list.push(name.clone());
+  }
+  // (the stores the class's own `\@author` reads, in its order, for `hand_untypeset_stores`)
+  let author_reads: Vec<String> = file_body(&T_CS!("\\@author"))
+    .map(|body| {
+      let mut reads: Vec<String> = Vec::new();
+      for t in body.unlist_ref() {
+        if found.iter().any(|(_, store)| store == t) {
+          let cs = t.with_str(ToString::to_string);
+          if !reads.contains(&cs) {
+            reads.push(cs);
+          }
+        }
+      }
+      reads
+    })
+    .unwrap_or_default();
+  assign_value(
+    "lx_offtable_author_reads",
+    Stored::String(pin(author_reads.join(","))),
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_offtable_stores",
+    Stored::String(pin(list.join(","))),
+    Some(Scope::Global),
+  );
+  Info!(
+    "frontmatter",
+    cls,
+    s!(
+      "The raw class's title-page stores outside the table, handed on at \\maketitle when its title page does not typeset them: \\{}",
+      found
+        .iter()
+        .map(|(n, _)| n.as_str())
+        .collect::<Vec<_>>()
+        .join(", \\")
+    )
+  );
+  Ok(())
+}
+
+/// `body` without what it stores and does not run (tex.web §473): the parameter and replacement texts of the definitions
+/// it makes (`\def`-family, LaTeX's `\newcommand` family, `\g@addto@macro`), and the page furniture it sets
+/// (`\markboth`, `\markright`, `\@mkboth`; the running heads LaTeXML drops), and what it puts in a box or measures
+/// (`\setbox`, `\sbox`, `\settowidth`, …), which prints only where the box is used: degruyter-journal-a.cls:574-586
+/// `\def\@headlineauthor{\xprint{\@nameshortone}…}` and acmlarge.cls:1021 `\def\@firstfoot{…\@acmVolume…}` (1704.03582,
+/// 1508.03599) print their stores in a running head, not on the title page.
+fn executed_code(body: &[Token]) -> Vec<Token> {
+  const DEFS: &[&str] = &[
+    "\\def",
+    "\\gdef",
+    "\\edef",
+    "\\xdef",
+    "\\protected@edef",
+    "\\protected@xdef",
+  ];
+  const COMMANDS: &[&str] = &[
+    "\\newcommand",
+    "\\renewcommand",
+    "\\providecommand",
+    "\\DeclareRobustCommand",
+  ];
+  // (with the boxes it fills and the material it measures, which print only if used: degruyter-journal-a.cls:620
+  // `\global\setbox\shorttitrun=\hbox{…\@headlinetitle…}`, measured for its running head)
+  const FURNITURE: &[(&str, usize)] = &[
+    ("\\markboth", 2),
+    ("\\markright", 1),
+    ("\\@mkboth", 2),
+    ("\\g@addto@macro", 2),
+    ("\\sbox", 2),
+    ("\\savebox", 2),
+    ("\\settowidth", 2),
+    ("\\settoheight", 2),
+    ("\\settodepth", 2),
+    ("\\settototalheight", 2),
+  ];
+  // the index past one argument at `k`: a group or a single token
+  let argument = |k: usize| -> usize {
+    let k = skip_spaces(body, k);
+    tokens_group_end(body, k).unwrap_or((k + 1).min(body.len()))
+  };
+  let mut out = Vec::with_capacity(body.len());
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    if cs_in(&t, DEFS) {
+      // the definer and its name stay (the name is written, not read); the parameter text and the replacement text go
+      out.push(t);
+      if let Some(name) = body.get(skip_spaces(body, i + 1)) {
+        out.push(*name);
+      }
+      let mut k = i + 1;
+      while k < body.len() && body[k].get_catcode() != Catcode::BEGIN {
+        k += 1;
+      }
+      i = tokens_group_end(body, k).unwrap_or(body.len());
+      continue;
+    }
+    if cs_in(&t, COMMANDS) {
+      let mut k = skip_spaces(body, i + 1);
+      if body.get(k) == Some(&T_OTHER!("*")) {
+        k += 1;
+      }
+      k = argument(k);
+      for _ in 0..2 {
+        let j = skip_spaces(body, k);
+        if body.get(j) == Some(&T_OTHER!("[")) {
+          k = body[j..]
+            .iter()
+            .position(|b| *b == T_OTHER!("]"))
+            .map_or(body.len(), |p| j + p + 1);
+        }
+      }
+      i = argument(k);
+      continue;
+    }
+    if let Some((_, n)) = FURNITURE.iter().find(|(cs, _)| cs_in(&t, &[cs])) {
+      let mut k = i + 1;
+      for _ in 0..*n {
+        k = argument(k);
+        // (`\savebox{\x}[<width>][<pos>]{…}`)
+        while body.get(skip_spaces(body, k)) == Some(&T_OTHER!("[")) {
+          let j = skip_spaces(body, k);
+          k = body[j..]
+            .iter()
+            .position(|b| *b == T_OTHER!("]"))
+            .map_or(body.len(), |p| j + p + 1);
+        }
+      }
+      i = k;
+      continue;
+    }
+    if t == T_CS!("\\setbox") {
+      // `\setbox<register>=\hbox{…}`: up to the box's group, and the group
+      let mut k = i + 1;
+      while k < body.len() && body[k].get_catcode() != Catcode::BEGIN {
+        k += 1;
+      }
+      i = tokens_group_end(body, k).unwrap_or(body.len());
+      continue;
+    }
+    out.push(t);
+    i += 1;
+  }
+  out
+}
+
+/// What the live code (`reads_of_branches`, the switches as they are now) reached from `roots` reads, in the order it
+/// reads it (depth first, each control sequence once), following the macros a raw file defined and never entering
+/// `blocked` (the fields a title-page deposit reads as empty); with `executed`, only the code that runs
+/// ([`executed_code`]).
+fn live_read_order(roots: &[Token], blocked: &[Token], executed: bool) -> Vec<SymStr> {
+  struct Walk<'a> {
+    blocked:  &'a [Token],
+    executed: bool,
+    seen:     FxHashSet<SymStr>,
+    order:    Vec<SymStr>,
+  }
+  impl Walk<'_> {
+    fn visit(&mut self, body: &Tokens, depth: usize) {
+      let code = if self.executed {
+        executed_code(body.unlist_ref())
+      } else {
+        body.unlist_ref().to_vec()
+      };
+      for cs in reads_of_branches(&code, true) {
+        if self.blocked.contains(&cs) || !self.seen.insert(cs.get_cs_name()) {
+          continue;
+        }
+        self.order.push(cs.get_cs_name());
+        if depth < 64
+          && let Some(callee) = file_body(&cs)
+        {
+          self.visit(&callee, depth + 1);
+        }
+      }
+    }
+  }
+  let mut walk = Walk {
+    blocked,
+    executed,
+    seen: FxHashSet::default(),
+    order: Vec::new(),
+  };
+  for root in roots {
+    if blocked.contains(root) || !walk.seen.insert(root.get_cs_name()) {
+      continue;
+    }
+    walk.order.push(root.get_cs_name());
+    let body = if *root == T_CS!(CLASS_AUTHOR_ROOT) {
+      crate::latex_constructs::class_author_reader_body()
+    } else {
+      file_body(root)
+    };
+    if let Some(body) = body {
+      walk.visit(&body, 0);
+    }
+  }
+  walk.order
+}
+
+/// The token body of `cs` when a raw file defined it.
+fn file_body(cs: &Token) -> Option<Tokens> { body_from(cs, &[DefinitionOrigin::File]) }
+
+/// The token body of `cs` when a definition of one of the `origins` made it.
+fn body_from(cs: &Token, origins: &[DefinitionOrigin]) -> Option<Tokens> {
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(defn)) if origins.contains(&defn.get_origin()) => {
+      match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+        _ => None,
+      }
+    },
+    _ => None,
+  }
+}
+
+/// A sentinel value of the speculative title-page runs ([`before_title_page_runs`]), one per store and kind. `Letters`:
+/// `LxSentinel`, its index spelled in the letters `a`–`p`, and `zZ` — in mixed case, so that a class's `\MakeUppercase`
+/// and its `\MakeLowercase` both show (`confirmed_printed`) —, matched lower-cased ([`sentinel_found`]);
+/// `Digits`: its index in the digits `1`–`8` between `9090` and `0909`. No sentinel is part of another of its kind. A
+/// store is printed only when both its sentinels reach the text (`sentinels_printed`): a numeric context consumes the
+/// digits, while TeX's "Missing number" recovery typesets the letters — `\setcounter{page}{\@fp}` (gammas.cls:305,
+/// kluwer.cls:1049; review probe `num`) prints neither value. A test of the value takes its branch with the sentinel's
+/// value, not the document's: `\ifnum\@x<100 No.~\@x\fi` with 7 takes the other branch with the digits (the store
+/// counts as not printed; pdflatex prints "No. 7"), and `\romannumeral\@va` prints neither sentinel (pdflatex: "iii") —
+/// residuals, OXIDIZED_DESIGN_DIVERGENCES #767; a store tested against a word the class prints instead,
+/// `\ifx\@vc\@open OPEN\else\@vc\fi`, is caught by the confirming run with the document's values
+/// ([`confirmed_printed`]).
+#[derive(Clone, Copy)]
+enum Sentinel {
+  Letters,
+  Digits,
+}
+
+fn sentinel(i: usize, kind: Sentinel) -> String {
+  let (base, first) = match kind {
+    Sentinel::Letters => (16, b'a'),
+    Sentinel::Digits => (8, b'1'),
+  };
+  let mut digits = Vec::new();
+  let mut n = i;
+  loop {
+    digits.push(first + (n % base) as u8);
+    n /= base;
+    if n == 0 {
+      break;
+    }
+  }
+  digits.reverse();
+  let index = String::from_utf8_lossy(&digits);
+  match kind {
+    Sentinel::Letters => s!("LxSentinel{index}zZ"),
+    Sentinel::Digits => s!("9090{index}0909"),
+  }
+}
+
+/// The sentinel `i` of `kind` as it is looked for in a run's lower-cased text.
+fn sentinel_found(i: usize, kind: Sentinel) -> String { sentinel(i, kind).to_lowercase() }
+
+/// `\def<store>{<sentinel i>}` for each store, the `i`-th its index; `<store>={<sentinel i>}` for a token register (the
+/// unclaimed-text net's: sig-alternate.cls:1374-1398 `\tntoks`).
+fn sentinel_definitions(stores: &[Token], kind: Sentinel) -> Vec<Token> {
+  let mut defs = Vec::new();
+  for (i, store) in stores.iter().enumerate() {
+    if is_token_register(store) {
+      defs.push(*store);
+      defs.push(T_OTHER!("="));
+    } else {
+      defs.push(T_CS!("\\def"));
+      defs.push(*store);
+    }
+    defs.push(T_BEGIN!());
+    defs.extend(mouth::tokenize_internal(TeXString::assembled(sentinel(i, kind))).unlist());
+    defs.push(T_END!());
+  }
+  defs
+}
+
+/// The stores both of whose sentinels ([`sentinel_definitions`], same order) the two speculative runs of the same
+/// title-page code printed — `letters` and `digits`, their texts —, in the order the first printed them, as a
+/// comma-separated list of their names.
+fn sentinels_printed(stores: &[Token], letters: &str, digits: &str) -> String {
+  let mut found: Vec<(usize, String)> = stores
+    .iter()
+    .enumerate()
+    .filter(|(i, _)| digits.contains(&sentinel(*i, Sentinel::Digits)))
+    .filter_map(|(i, store)| {
+      letters
+        .find(&sentinel_found(i, Sentinel::Letters))
+        .map(|at| (at, store.with_str(ToString::to_string)))
+    })
+    .collect();
+  found.sort();
+  found
+    .into_iter()
+    .map(|(_, name)| name)
+    .collect::<Vec<_>>()
+    .join(",")
+}
+
+/// The stores the title-page code `build` makes (given the sentinel definitions to make before it runs) prints, each
+/// given its sentinel of each kind in two speculative runs ([`sentinels_printed`]; the second only when the first
+/// printed a letters sentinel), with the first run's text in its own case. `None` when a run cannot be made. A run that
+/// ended in a Fatal of its own ([`SpeculativeRun::Aborted`]) printed nothing when `aborted_printed_nothing` — the run of
+/// the whole title page: a store is not handed on on the word of a run that died —, else it is no run either: the
+/// deposit's and the replay's (`None`, so the code walk decides, `walked_title_page_reads`) — a Fatal the sentinel value
+/// alone caused does not stop the real deposit printing the store, which would then be handed on as well.
+fn sentinel_runs(
+  stores: &[Token],
+  build: &dyn Fn(&[Token]) -> Tokens,
+  aborted_printed_nothing: bool,
+  isolated: bool,
+) -> Result<Option<(String, String)>> {
+  use crate::latex_constructs::{SpeculativeRun, title_page_probe_run};
+  let letters = match title_page_probe_run(
+    build(&sentinel_definitions(stores, Sentinel::Letters)),
+    isolated,
+  )? {
+    SpeculativeRun::Printed(text) => text,
+    SpeculativeRun::Aborted if aborted_printed_nothing => {
+      return Ok(Some((String::new(), String::new())));
+    },
+    SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => {
+      return Ok(None);
+    },
+  };
+  let lowered = letters.to_lowercase();
+  if !lowered.contains("lxsentinel") {
+    return Ok(Some((String::new(), letters)));
+  }
+  let digits = match title_page_probe_run(
+    build(&sentinel_definitions(stores, Sentinel::Digits)),
+    isolated,
+  )? {
+    SpeculativeRun::Printed(text) => text,
+    SpeculativeRun::Aborted if aborted_printed_nothing => {
+      return Ok(Some((String::new(), letters)));
+    },
+    SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => {
+      return Ok(None);
+    },
+  };
+  Ok(Some((
+    sentinels_printed(stores, &lowered, &digits),
+    letters,
+  )))
+}
+
+/// How many `\and` entries [`note_and_numbering`] gives the store it tries: three, so the second and third entries' numbers
+/// stand between two sentinels, where no other text of the title page is.
+const AND_NUMBERING_ENTRIES: usize = 3;
+
+/// Whether the class's own title page numbers the `\and` entries of `store` (`\@institute`), recorded once per store as
+/// `lx_and_numbered_<store>` for `affiliations::class_numbered_institutes` — the class's own output as the provenance of
+/// the numbering, as the sentinel runs are of what it prints ([`sentinel_runs`]): one speculative run of the whole title
+/// page ([`title_page_print_tokens`]) with the store set to an `\and` list of letter sentinels ([`sentinel`]), which
+/// numbers them when it printed each entry right after its number in `\and` order ([`printed_after_their_numbers`]) —
+/// sab.cls:404-426's `\institutename`, `\def\and{\par\refstepcounter{inst}…$^{\theinst}$\enspace}` (2308.05831,
+/// 2308.05830; edpsci.cls:327-345, 2501.08874; baaa.cls:590-614, 2206.02830), comsis2.cls:831-836's
+/// `\stepcounter{@inst}` (2207.09249). Only when the queued authors' marks request numbers
+/// (`affiliations::numbered_marks_requested`); nothing is recorded when no run could be made or its text does not hold the entries (the class's
+/// `\institutename` is then read as before).
+pub(crate) fn note_and_numbering(store: &Token) -> Result<()> {
+  use crate::latex_constructs::{SpeculativeRun, title_page_print_tokens, title_page_probe_run};
+  let key = s!("lx_and_numbered_{}", store.with_str(ToString::to_string));
+  if lookup_value(&key).is_some() || !numbered_marks_requested()? {
+    return Ok(());
+  }
+  let mut defs = vec![T_CS!("\\def"), *store, T_BEGIN!()];
+  for i in 0..AND_NUMBERING_ENTRIES {
+    if i > 0 {
+      defs.extend([T_SPACE!(), T_CS!("\\and"), T_SPACE!()]);
+    }
+    defs.extend(
+      mouth::tokenize_internal(TeXString::assembled(sentinel(i, Sentinel::Letters))).unlist(),
+    );
+  }
+  defs.push(T_END!());
+  let SpeculativeRun::Printed(text) = title_page_probe_run(title_page_print_tokens(&defs), false)?
+  else {
+    return Ok(());
+  };
+  let numbered = printed_after_their_numbers(&text.to_lowercase(), AND_NUMBERING_ENTRIES);
+  DebugFeature!(
+    "frontmatter",
+    "FRONT {key}: the title page numbers the store's \\and entries: {numbered:?}"
+  );
+  if let Some(numbered) = numbered {
+    assign_value(&key, Stored::Bool(numbered), Some(Scope::Global));
+  }
+  Ok(())
+}
+
+/// Did a run's lower-cased text print the letter sentinels `0..entries` ([`sentinel_found`]) each right after its number
+/// (`1`, `2`, …, any non-alphanumeric — a space, a `.`, a `)` — between them): the digits ending the text between the
+/// previous sentinel and this one are its number, for the first one the digits before it ending in `1` (the authors'
+/// marks may print right before it, "Cole1,2" then "1")? `None` when the text does not hold them all in order: the run
+/// does not show the store (raa.cls sets its title page in a header box the run's text does not reach, 2003.13998,
+/// 2511.10805), so it says nothing of its numbering.
+fn printed_after_their_numbers(text: &str, entries: usize) -> Option<bool> {
+  let mut from = 0;
+  let mut numbered = true;
+  for i in 0..entries {
+    let found = sentinel_found(i, Sentinel::Letters);
+    let at = text[from..].find(&found).map(|k| from + k)?;
+    let before = text[from..at].trim_end_matches(|c: char| !c.is_alphanumeric());
+    let digits = &before[before.trim_end_matches(|c: char| c.is_ascii_digit()).len()..];
+    let number = (i + 1).to_string();
+    numbered &= digits == number || (i == 0 && digits.ends_with(&number));
+    from = at + found.len();
+  }
+  Some(numbered)
+}
+
+/// A store's value as plain text — characters and spaces only, at least one character —, without its spaces; `None`
+/// for any other value (a macro, an accent, a group), whose printed form is not its tokens.
+fn plain_value_text(value: &Tokens) -> Option<String> {
+  let mut text = String::new();
+  for t in value.unlist_ref() {
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => text.push_str(&t.to_string()),
+      Catcode::SPACE => {},
+      _ => return None,
+    }
+  }
+  (!text.is_empty()).then_some(text)
+}
+
+/// The letters and digits of a text, as the comparisons of source and typeset text read it ([`confirmed_printed`],
+/// [`printed_right_before`]): what TeX typesets of `'`, ``` `` ``` and `''` is ’, “ and ”, of `--` a dash, and the spaces
+/// are the layout's — only the alphanumerics are the same on both sides (`O'Brien`, ``` ``Quoted'' words```; review
+/// probes `q3`, `q4`, `ap`).
+fn alphanumerics(text: &str) -> String { text.chars().filter(|c| c.is_alphanumeric()).collect() }
+
+/// The confirming check of the two-sentinel rule ([`before_title_page_runs`]): of the stores the sentinel runs found
+/// printed (`printed`, names; `letters`, the letters run's text in its own case), those whose value is plain text
+/// ([`plain_value_text`]) stay printed only when its letters and digits ([`alphanumerics`]) are in the title page printed
+/// with the document's own values (`real`) — in their case, unless the run printed the store's mixed-case sentinel in
+/// another case (a class's `\MakeUppercase` or `\MakeLowercase`). A class that tests the value and prints its own word
+/// instead, `\ifx\@vc\@open OPEN\else\@vc\fi` with "open" (review probe `w`), printed the letters sentinel, which is no
+/// "open", but not the value. A value with no letter or digit is not checked.
+fn confirmed_printed(stores: &[Token], printed: &str, letters: &str, real: &str) -> String {
+  let real = alphanumerics(real);
+  let real_lowered = real.to_lowercase();
+  printed
+    .split(',')
+    .filter(|n| !n.is_empty())
+    .filter(|name| {
+      let Some(i) = stores.iter().position(|t| t.with_str(|cs| cs == *name)) else {
+        return true;
+      };
+      let Some(value) = parameterless_body(&stores[i])
+        .as_ref()
+        .and_then(plain_value_text)
+        .map(|text| alphanumerics(&text))
+        .filter(|text| !text.is_empty())
+      else {
+        return true;
+      };
+      if letters.contains(&sentinel(i, Sentinel::Letters)) {
+        real.contains(&value)
+      } else {
+        real_lowered.contains(&value.to_lowercase())
+      }
+    })
+    .collect::<Vec<_>>()
+    .join(",")
+}
+
+/// A label's text ([`LabelText`]) as the title page prints it, lower-cased, its letters and digits only
+/// ([`alphanumerics`]): its characters, and a class macro that is text read as its characters.
+fn label_plain_text(label: &Tokens) -> String {
+  let mut out = String::new();
+  for t in label.unlist_ref() {
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => out.push_str(&t.to_string()),
+      Catcode::CS => {
+        if let Some(body) = parameterless_body(t) {
+          for e in body.unlist_ref() {
+            if matches!(e.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+              out.push_str(&e.to_string());
+            }
+          }
+        }
+      },
+      _ => {},
+    }
+  }
+  alphanumerics(&out).to_lowercase()
+}
+
+/// Does `text` (lower-cased) print `label` ([`label_plain_text`]) right before an occurrence of `sentinel`, its letters
+/// and digits compared ([`alphanumerics`]: the typeset ’ of the class's `Author's keywords:`)?
+fn printed_right_before(text: &str, sentinel: &str, label: &str) -> bool {
+  if label.is_empty() {
+    return false;
+  }
+  let mut from = 0;
+  while let Some(found) = text[from..].find(sentinel) {
+    let at = from + found;
+    if alphanumerics(&text[..at]).ends_with(label) {
+      return true;
+    }
+    from = at + sentinel.len();
+  }
+  false
+}
+
+/// At `\maketitle`, before its stores are handed on (`\lx@store@defaults`): the labels read off the class's code
+/// ([`ClassReaders::title_page_label`] — `lx_store_label_<name>` of a rerouted store, `lx_offtable_label_<name>` of an
+/// off-table one) stay the entries' names only when TeX's output says so: one speculative run of the class's whole
+/// title page (`title_page_print_tokens`), each labelled store given its letters sentinel, must print the label's text
+/// right before the store's sentinel ([`printed_right_before`]). A label the run does not print there is none: the URL
+/// argument's "mailto:" of `\href{mailto:\@vg}{\@vg}`, whose page shows only the address (review probe `ctx3`). Without
+/// a run (none can be made, or it ended in a Fatal of its own), a label in a group that is a control sequence's argument
+/// (`in_argument`) is none either. A rejected label stays in the title page, and the entry is unnamed
+/// (`lx_store_api_unnamed_<name>`). Once per document.
+fn verify_title_page_labels() -> Result<()> {
+  use crate::latex_constructs::{SpeculativeRun, title_page_print_tokens, title_page_probe_run};
+  if lookup_bool("lx_depositing_class_maketitle")
+    || lookup_bool("lx_replaying_class_setter")
+    || lookup_bool("lx_title_page_labels_verified")
+  {
+    return Ok(());
+  }
+  // (whose label: a rerouted setter's name, or an off-table one's; its store; the label's text; in an argument)
+  let mut labelled: Vec<(bool, String, Token, String, bool)> = Vec::new();
+  for name in rerouted_names() {
+    if let Some(Stored::Tokens(label)) = lookup_value(&s!("lx_store_label_{name}")) {
+      let store = T_CS!(&s!("\\{}", store_of(&name)));
+      let in_argument = lookup_bool(&s!("lx_store_label_in_argument_{name}"));
+      labelled.push((true, name, store, label_plain_text(&label), in_argument));
+    }
+  }
+  for name in lookup_string("lx_offtable_stores")
+    .split(',')
+    .filter(|n| !n.is_empty())
+  {
+    if let Some(Stored::Tokens(label)) = lookup_value(&s!("lx_offtable_label_{name}"))
+      && let Some(Stored::Token(store)) = lookup_value(&s!("lx_offtable_store_{name}"))
+    {
+      let in_argument = lookup_bool(&s!("lx_offtable_label_in_argument_{name}"));
+      labelled.push((
+        false,
+        name.to_string(),
+        store,
+        label_plain_text(&label),
+        in_argument,
+      ));
+    }
+  }
+  if labelled.is_empty() {
+    return Ok(());
+  }
+  assign_value("lx_title_page_labels_verified", true, Some(Scope::Global));
+  let mut stores: Vec<Token> = Vec::new();
+  for (_, _, store, ..) in &labelled {
+    if !stores.contains(store) {
+      stores.push(*store);
+    }
+  }
+  let run = title_page_probe_run(
+    title_page_print_tokens(&sentinel_definitions(&stores, Sentinel::Letters)),
+    false,
+  )?;
+  let text = match run {
+    SpeculativeRun::Printed(text) => Some(text.to_lowercase()),
+    SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => None,
+  };
+  for (rerouted, name, store, label, in_argument) in labelled {
+    let kept = match &text {
+      Some(text) => {
+        let i = stores.iter().position(|t| *t == store).unwrap_or_default();
+        printed_right_before(text, &sentinel_found(i, Sentinel::Letters), &label)
+      },
+      None => !in_argument,
+    };
+    DebugFeature!(
+      "frontmatter",
+      "FRONT title-page label of \\{name} ({label}): {}",
+      if kept {
+        "printed right before the store"
+      } else {
+        "not printed there"
+      }
+    );
+    if kept {
+      continue;
+    }
+    if rerouted {
+      let unnamed = lookup_string(&s!("lx_store_api_unnamed_{name}"));
+      if !unnamed.is_empty() {
+        assign_value(
+          &s!("lx_store_api_{name}"),
+          Stored::String(pin(unnamed)),
+          Some(Scope::Global),
+        );
+      }
+      for key in ["lx_store_label_part_", "lx_store_label_"] {
+        assign_value(&s!("{key}{name}"), false, Some(Scope::Global));
+      }
+    } else {
+      assign_value(&s!("lx_offtable_label_{name}"), false, Some(Scope::Global));
+    }
+    Info!(
+      "frontmatter",
+      s!("\\{name}"),
+      s!(
+        "The class's title page does not print the label read before the store of \\{name} right before it: the entry has no name"
+      )
+    );
+  }
+  Ok(())
+}
+
+/// The stores a speculative run recorded (`lx_sentinel_<run>`): their names.
+fn sentinel_list(run: &str) -> Vec<SymStr> {
+  lookup_string(&s!("lx_sentinel_{run}"))
+    .split(',')
+    .filter(|n| !n.is_empty())
+    .map(|n| T_CS!(n).get_cs_name())
+    .collect()
+}
+
+/// The off-table stores ([`survey_off_table_stores`]) the document set — a value no longer the class's default and not
+/// blank —, once per store (two setters of one store, sigplanconf.cls:939-942 `\copyrightDOI` and its `\let`
+/// `\copyrightdoi`: one value): each setter's name, its store and the value.
+fn offtable_candidates() -> Vec<(String, Token, Tokens)> {
+  let mut out: Vec<(String, Token, Tokens)> = Vec::new();
+  for name in lookup_string("lx_offtable_stores")
+    .split(',')
+    .filter(|n| !n.is_empty())
+  {
+    let Some(Stored::Token(store)) = lookup_value(&s!("lx_offtable_store_{name}")) else {
+      continue;
+    };
+    if out.iter().any(|(_, s, _)| *s == store) {
+      continue;
+    }
+    let Some(value) = parameterless_body(&store) else {
+      continue;
+    };
+    let default = match lookup_value(&s!("lx_offtable_default_{name}")) {
+      Some(Stored::Tokens(default)) => Some(default),
+      _ => None,
+    };
+    if is_blank(&value)
+      || default
+        .as_ref()
+        .is_some_and(|d| d.unlist_ref() == value.unlist_ref())
+    {
+      continue;
+    }
+    out.push((name.to_string(), store, value));
+  }
+  out
+}
+
+/// The rerouted stores ([`reroute_raw_class_stores`]): each setter's name.
+fn rerouted_names() -> Vec<String> {
+  lookup_string("lx_rerouted_stores")
+    .split(',')
+    .filter(|n| !n.is_empty())
+    .map(String::from)
+    .collect()
+}
+
+/// Before the title-page deposit and replay of a raw class's title page (`\lx@deposit@maketitle`, sect05.rs), in the
+/// state they meet: what the title page prints is decided by TeX, not read off its code. Each candidate store is given
+/// a sentinel value and the title page is digested speculatively (`title_page_probe_run`: output discarded,
+/// assignments undone, diagnostics discarded), once with letters sentinels and once with digits ones
+/// (`sentinel_runs`); a store both of whose sentinels reach the digested text is printed there (a numeric context —
+/// `\setcounter{page}{\@fp}` — consumes the digits, TeX's recovery typesets the letters). A class's own booleans (sigplanconf.cls:87-90 `\def\@true{TT}`, :1118 `\if \@copyrightwanted
+/// \@copyrightspace \fi`: 1603.03011 `[preprint,nocopyrightspace]`), its `\newif` switches (aiaa-tc.cls:199-200 under
+/// `[handcarry]`), its `\@ifundefined` and `\ifx…\@empty` tests and what it only puts in a box or a running head
+/// (`\setbox`, `\markboth`: 1704.03582, 1508.03599) are then what they are in pdflatex. Three runs:
+/// - the class's whole title page with the document's values (`title_page_print_tokens`), the off-table stores the
+///   document set (`offtable_candidates`) and the rerouted stores handed to the frontmatter as candidates
+///   (`lx_sentinel_printed`): an off-table store is printed there (`hand_untypeset_stores`); a handed one was placed
+///   by this `\maketitle` (#6b, `\lx@store@hand`);
+/// - the deposit and the replay, each as it will run (`title_page_deposit_tokens`, `title_page_replay_tokens`),
+///   the off-table candidates given sentinels (`lx_sentinel_deposit`, `lx_sentinel_replay`): a store either typesets,
+///   when it is kept, is not handed on a second time.
+///
+/// Before them, the value of each rerouted store the document never set that is still undefined
+/// (`decide_unset_nulls`). When no run can be made (a journal is open, or it is over the read budget, TP3), or the
+/// deposit's or the replay's ended in a Fatal of its own (`sentinel_runs`), `lx_sentinel_ran` stays false and the
+/// stores' readers are walked instead (`live_read_order`, `evaluated_switch`). The unclaimed-text net's candidates
+/// (`net_candidates`) join the same runs, after K11's stores (`lx_sentinel_net_printed`, `_deposit`, `_replay`; with the refused begin codes' run,
+/// `net_begin_code_tokens`); a run their sentinels make fail is made again without them, and the net then decides
+/// nothing.
+pub fn before_title_page_runs() -> Result<()> {
+  if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
+    return Ok(());
+  }
+  assign_value("lx_sentinel_ran", false, Some(Scope::Global));
+  assign_value("lx_net_ran", false, Some(Scope::Global));
+  let rerouted = rerouted_names();
+  let offtable = if lookup_bool("lx_offtable_handed") {
+    Vec::new()
+  } else {
+    offtable_candidates()
+  };
+  // (the unclaimed-text net's candidates: [`net_candidates`]; not a macro a displaced setter's call wrote, whose text
+  // the creators' contacts hold, [`route_and_hand_displaced`])
+  let mut net = if lookup_bool("lx_net_handed") {
+    Vec::new()
+  } else {
+    net_candidates()
+  };
+  let displaced: Vec<Token> = displaced_records().into_iter().map(|r| r.store).collect();
+  net.retain(|store| !displaced.contains(store));
+  if rerouted.is_empty() && offtable.is_empty() && net.is_empty() {
+    return Ok(());
+  }
+  if !rerouted.is_empty() || !offtable.is_empty() {
+    decide_unset_nulls(&rerouted)?;
+  }
+  let off_stores: Vec<Token> = offtable.iter().map(|(_, store, _)| *store).collect();
+  let mut stores = off_stores.clone();
+  for name in &rerouted {
+    let store = T_CS!(&s!("\\{}", store_of(name)));
+    if lookup_bool(&s!("lx_store_handed_{name}")) && !stores.contains(&store) {
+      stores.push(store);
+    }
+  }
+  // (K11's runs are made when it has stores; the net's candidates join the same runs, after them)
+  let k11 = !stores.is_empty();
+  if !k11 && net.is_empty() {
+    return Ok(());
+  }
+  let mut all = stores.clone();
+  let mut off_and_net = off_stores.clone();
+  for store in &net {
+    if !all.contains(store) {
+      all.push(*store);
+      off_and_net.push(*store);
+    }
+  }
+  use crate::latex_constructs::{
+    title_page_deposit_tokens, title_page_print_tokens, title_page_replay_tokens,
+  };
+  let no_run = || {
+    Info!(
+      "frontmatter",
+      "\\maketitle",
+      "No speculative run of the class's title page could be made or kept (an assignment journal is open, the run could not be undone, or it was over the read budget): what it prints is read off its code"
+    );
+  };
+  let Some((mut printed, mut letters)) =
+    sentinel_runs(&all, &title_page_print_tokens, true, false)?
+  else {
+    no_run();
+    return Ok(());
+  };
+  // (a run the net's sentinels ended — it printed nothing — is made again for K11's stores alone, as before the net)
+  if k11 && !net.is_empty() && letters.is_empty() {
+    net.clear();
+    all.clone_from(&stores);
+    off_and_net.clone_from(&off_stores);
+    let Some(run) = sentinel_runs(&all, &title_page_print_tokens, true, false)? else {
+      no_run();
+      return Ok(());
+    };
+    (printed, letters) = run;
+  }
+  // (the confirming check with the document's own values: one more run when a store found printed has a plain value)
+  let printed = if printed.split(',').any(|name| {
+    all
+      .iter()
+      .find(|t| t.with_str(|cs| cs == name))
+      .and_then(parameterless_body)
+      .as_ref()
+      .and_then(plain_value_text)
+      .is_some()
+  }) {
+    let reading = crate::latex_constructs::title_page_reading::title_page_reading()?;
+    match reading.outcome {
+      crate::latex_constructs::title_page_reading::RunOutcome::Printed => {
+        confirmed_printed(&all, &printed, &letters, &reading.text)
+      },
+      _ => printed,
+    }
+  } else {
+    printed
+  };
+  DebugFeature!(
+    "frontmatter",
+    "FRONT title-page sentinels: printed [{printed}] of {} candidate stores; the letters run: {letters}",
+    all.len()
+  );
+
+  // (the deposit's and the replay's runs, over K11's off-table stores and the net's candidates; one that cannot be
+  // made or kept with the net's is made again without them, and the net decides nothing)
+  let typeset_runs = |stores: &[Token]| -> Result<Option<(String, String)>> {
+    let (mut deposit, mut replay) = (String::new(), String::new());
+    if stores.is_empty() {
+      return Ok(Some((deposit, replay)));
+    }
+    match sentinel_runs(stores, &title_page_deposit_tokens, false, false)? {
+      Some((list, _)) => deposit = list,
+      None => return Ok(None),
+    }
+    if title_page_replay_tokens(&[]).is_some() {
+      let replay_tokens =
+        |defs: &[Token]| title_page_replay_tokens(defs).unwrap_or_else(|| Tokens::new(Vec::new()));
+      match sentinel_runs(stores, &replay_tokens, false, false)? {
+        Some((list, _)) => replay = list,
+        None => return Ok(None),
+      }
+    }
+    Ok(Some((deposit, replay)))
+  };
+  let (deposit, replay) = match typeset_runs(&off_and_net)? {
+    Some(lists) => lists,
+    None if !net.is_empty() && k11 => {
+      net.clear();
+      match typeset_runs(&off_stores)? {
+        Some(lists) => lists,
+        None => {
+          no_run();
+          return Ok(());
+        },
+      }
+    },
+    None => {
+      no_run();
+      return Ok(());
+    },
+  };
+  // (each list split between K11's stores and the net's)
+  let of = |list: &str, among: &[Token]| -> String {
+    list
+      .split(',')
+      .filter(|name| among.iter().any(|t| t.with_str(|cs| cs == *name)))
+      .collect::<Vec<_>>()
+      .join(",")
+  };
+  if k11 {
+    for (run, list) in [
+      ("printed", of(&printed, &stores)),
+      ("deposit", of(&deposit, &off_stores)),
+      ("replay", of(&replay, &off_stores)),
+    ] {
+      assign_value(
+        &s!("lx_sentinel_{run}"),
+        Stored::String(pin(list)),
+        Some(Scope::Global),
+      );
+    }
+    assign_value("lx_sentinel_ran", true, Some(Scope::Global));
+  }
+  if !net.is_empty() {
+    let net_printed = of(&printed, &net);
+    // (A2: what the refused begin codes of the frontmatter environments print, [`net_begin_code_tokens`] — and the
+    // title page does not —, handed on only when the document opens the environment after this `\maketitle`
+    // ([`hand_net_begin_code_stores`]): the class prints it then, with the values it then has; never opened, or opened
+    // before, nothing printed it there (review rev98c S1))
+    let mut net_begin = String::new();
+    if net_begin_code_tokens(&[]).is_some()
+      && let Some((list, _)) = sentinel_runs(
+        &net,
+        &|defs: &[Token]| net_begin_code_tokens(defs).unwrap_or_default(),
+        false,
+        true,
+      )?
+    {
+      for name in list.split(',').filter(|n| !n.is_empty()) {
+        if !net_printed.split(',').any(|n| n == name) {
+          if !net_begin.is_empty() {
+            net_begin.push(',');
+          }
+          net_begin.push_str(name);
+        }
+      }
+    }
+    assign_value(
+      "lx_sentinel_net_begin",
+      Stored::String(pin(net_begin)),
+      Some(Scope::Global),
+    );
+    for (run, list) in [
+      ("printed", net_printed),
+      ("deposit", of(&deposit, &net)),
+      ("replay", of(&replay, &net)),
+    ] {
+      assign_value(
+        &s!("lx_sentinel_net_{run}"),
+        Stored::String(pin(list)),
+        Some(Scope::Global),
+      );
+    }
+    assign_value("lx_net_ran", true, Some(Scope::Global));
+  }
+  Ok(())
+}
+
+/// The unclaimed-text net (FIDELITY_CHARTER §4 "No printed frontmatter word is lost"; OXIDIZED_DESIGN_DIVERGENCES
+/// #953): the stores a raw class's title page reads that no owner claims — K11's table and off-table stores are
+/// claimed ([`frontmatter_owned_stores`]) — and that only its own title-page code prints. Candidates are stores, never a
+/// run's text, so what a class hard-codes (a letterhead, "Received …", a copyright line) is never one: each control
+/// sequence the class's title-page code reads (`live_read_order` from the roots, the code that runs) — its refused
+/// `\maketitle`, its `\@maketitle`, its own `\@author` the kernel's replaced ([`CLASS_AUTHOR_ROOT`], sect05.rs
+/// `keep_class_author_reader`: copernicus.cls:1329-1352's `\AB@affillist`, 0712.1312, 1401.4706, 1709.00722) and the
+/// begin codes of its refused frontmatter environments (`\lx@dropped@abstract`: sig-alternate.cls:736-790 prints
+/// `\the\tntoks`, 1206.6940, cs0405006) — whose value the document made since the raw file loaded
+/// ([`net_value_changed`]); not the kernel's fields, an internal of ours (`\lx@…`), nor a store holding a claimed one
+/// (the claimed store's sentinel would not reach the run through it). What the title page prints of them is decided by
+/// the sentinel runs ([`before_title_page_runs`]), and what is printed and no kept run typeset becomes a note of the
+/// author block ([`hand_net_stores`]), kept only where it holds words no frontmatter field holds
+/// (`base_utilities::frontmatter::insert`, `keep_unclaimed_net_notes`).
+fn net_candidates() -> Vec<Token> {
+  let mut roots: Vec<Token> = Vec::new();
+  for cs in ["\\lx@dropped@maketitle", "\\@maketitle"] {
+    let root = T_CS!(cs);
+    if file_body(&root).is_some() {
+      roots.push(root);
+    }
+  }
+  if crate::latex_constructs::class_author_reader_body().is_some() {
+    roots.push(T_CS!(CLASS_AUTHOR_ROOT));
+  }
+  roots.extend(net_begin_codes().into_iter().map(|(code, _)| code));
+  if roots.is_empty() {
+    return Vec::new();
+  }
+  let owned = frontmatter_owned_stores();
+  let mut out: Vec<Token> = Vec::new();
+  let reads = live_read_order(&roots, &owned, true);
+  let mut scratch: Option<FxHashSet<SymStr>> = None;
+  DebugFeature!(
+    "frontmatter",
+    "FRONT net roots [{}] read [{}]",
+    roots
+      .iter()
+      .map(ToString::to_string)
+      .collect::<Vec<_>>()
+      .join(","),
+    reads
+      .iter()
+      .map(|r| with(*r, ToString::to_string))
+      .collect::<Vec<_>>()
+      .join(",")
+  );
+  for name in reads {
+    let cs = T_CS!(&with(name, ToString::to_string));
+    // (nor the job's name, a primitive's value the engine sets: core_interface.rs `install_jobname`, raa.cls's
+    // manuscript line, 2110.11117)
+    if owned.contains(&cs)
+      || roots.contains(&cs)
+      || out.contains(&cs)
+      || cs.with_str(|n| n.starts_with("\\lx@") || n == "\\jobname")
+    {
+      continue;
+    }
+    if net_value_changed(&cs, &owned)
+      && net_value(&cs).is_some_and(|value| holds_text(&value))
+      && scratch
+        .get_or_insert_with(stores_raw_code_writes)
+        .contains(&cs.get_cs_name())
+    {
+      out.push(cs);
+    }
+  }
+  DebugFeature!(
+    "frontmatter",
+    "FRONT net candidates: [{}]",
+    out
+      .iter()
+      .map(ToString::to_string)
+      .collect::<Vec<_>>()
+      .join(",")
+  );
+  out
+}
+
+/// The root the net's walk ([`live_read_order`]) reads the class's own `\@author` reader under (sect05.rs
+/// `keep_class_author_reader`), a name with no meaning.
+const CLASS_AUTHOR_ROOT: &str = "\\lx@class@@author";
+
+/// The refused begin codes of the frontmatter environments whose class code the kernel replays (sect05.rs
+/// `replay_class_begin_code`: `{abstract}`), as a raw file defined them, of no parameters: what the class prints
+/// when the document opens one — sig-alternate.cls:736-790's `\insert\footins{…\the\tntoks}`, its title note.
+/// A begin code that collects its body is not run (it reads ahead to its `\end`, which a run of it alone does not
+/// have: [`collects_its_body`]).
+fn net_begin_codes() -> Vec<(Token, &'static str)> {
+  ["abstract"]
+    .into_iter()
+    .map(|env| (T_CS!(&s!("\\lx@dropped@{env}")), env))
+    .filter(|(cs, _)| {
+      matches!(lookup_meaning(cs), Some(Stored::Expandable(ref d))
+        if d.get_origin() == DefinitionOrigin::File
+          && d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
+          && matches!(d.get_expansion(), Some(ExpansionBody::Tokens(_))))
+        && !collects_its_body(cs)
+    })
+    .collect()
+}
+
+/// Does the code of `cs` reach a macro a raw file defined with a delimited parameter — one that reads the input up to a
+/// delimiter (smfart.cls:510 `\@getgenabstext#1\end #2`, nrc1.cls:1558 `\NRC@gather@body#1\end`, wds10.sty:539
+/// `\pickup#1\end#2`), the environment's body up to its `\end`, past a run's own input (2206.03779, 1910.12640)?
+fn collects_its_body(cs: &Token) -> bool {
+  live_read_order(&[*cs], &[], false).into_iter().any(|name| {
+    matches!(lookup_meaning(&T_CS!(&with(name, ToString::to_string))), Some(Stored::Expandable(ref d))
+      if d.get_origin() == DefinitionOrigin::File
+        && d.get_parameters().is_some_and(|p| p.get_parameters().iter().any(|q| !undelimited(q))))
+  })
+}
+
+/// A speculative run of the refused begin codes ([`net_begin_codes`]) after `inject` (the sentinel definitions), with
+/// notes, labels and index entries as the title page's run has them (`title_page_print_tokens`); `None` when there are
+/// none. Their `\insert`s reach the run's text as the title page's do. The run's group is not closed here: a begin code
+/// leaves its own groups open for its end code (frontiersFPHY.cls:520 `\begingroup`), and the run closes what is left
+/// open (`title_page_probe_run`), as the replay of one does (sect05.rs `replay_dropped_class_code`); it reads from
+/// a mouth of its own (`title_page_probe_run`, isolated), so a begin code that collects its body up to its `\end` meets the
+/// end of the run's input, not the document (smfart.cls:506-520; 2206.03779).
+fn net_begin_code_tokens(inject: &[Token]) -> Option<Tokens> {
+  let codes = net_begin_codes();
+  if codes.is_empty() {
+    return None;
+  }
+  let mut run =
+    mouth::tokenize_internal(r"{\let\thanks\@firstofone\let\label\@gobble\let\index\@gobble")
+      .unlist();
+  run.extend_from_slice(inject);
+  // (each with an empty body and its `\end`, which ends nothing here: a begin code collecting its body up to its
+  // `\end` finds it — smfart.cls:506-520 `\@getgenabstext#1\end #2`, 2206.03779 — as pdflatex's empty environment
+  // would give it)
+  run.extend(mouth::tokenize_internal(r"\let\end\@gobble").unlist());
+  for (code, env) in codes {
+    // (in the environment, as `\begin` puts the code there: latex.ltx `\begin` `\def\@currenvir{#1}`)
+    run.extend(mouth::tokenize_internal(r"\def\@currenvir").unlist());
+    run.push(T_BEGIN!());
+    run.extend(ExplodeText!(env));
+    run.push(T_END!());
+    run.push(code);
+    run.push(T_CS!("\\par"));
+    run.push(T_CS!("\\end"));
+    run.push(T_BEGIN!());
+    run.extend(ExplodeText!(env));
+    run.push(T_END!());
+  }
+  Some(Tokens::new(run))
+}
+
+/// Does a store's value hold text of its own — a character the code that runs typesets ([`executed_code`]: not a
+/// definition's body nor a running head's argument)? A value that is only code prints no text of its own: oasics.cls:544
+/// `\titlerunning` stores `{\let\footnote\@gobble\markboth{#1}{#1}}`, a font switch's robust wrapper `\protect\itshape`
+/// (1709.00722, 2206.03779); a sentinel in its place would read as printed. A non-ASCII active character is a
+/// character too: the glyph inputenc maps it to (`Москва` under `[T2A]{fontenc}`, each letter active through
+/// t2aenc.dfu's `\DeclareUnicodeCharacter`; 105a r2), unlike an ASCII one (`~`, a tie).
+fn holds_text(value: &Tokens) -> bool {
+  executed_code(value.unlist_ref())
+    .iter()
+    .any(prints_a_character)
+}
+
+/// Whether a token prints a character of its own: a letter, an other, or a non-ASCII active character (the glyph
+/// inputenc maps it to). One test for what the net reads as a store's text ([`holds_text`]) and as the class's own text
+/// in it ([`net_class_text`]): with the second reading ASCII letters only, a class label set in CJK or Cyrillic
+/// (`\gdef\@xa{作者单位：#1}` after CJKutf8 or `[T2A]{fontenc}`) was text the store holds and not the class's, and was
+/// kept as an unclaimed note (review rev105a2 finding 1).
+fn prints_a_character(t: &Token) -> bool {
+  match t.get_catcode() {
+    Catcode::LETTER | Catcode::OTHER => true,
+    Catcode::ACTIVE => t.with_str(|text| !text.is_ascii()),
+    _ => false,
+  }
+}
+
+/// The stores a setter of a raw file's or of the document's writes — a definition's or a `\let`'s name, a token
+/// register it names, in a macro's body (copernicus.cls's `\affil` `\xdef\AB@affillist{…}`, sig-alternate.cls's
+/// `\titlenote` `\global\tntoks={#1}`) — that no macro of the format's, the pools' or the bindings' writes: theirs are
+/// scratch stores (latex.ltx's `\@tempa`, `\toks@`: smfart.cls's title page reads `\toks@` through
+/// `\uppercasenonmath`, 2206.03779), and a macro the document only defines (`\newcommand\SL{\mathrm{SL}}`, which
+/// 2609.05055's title prints) is a shorthand, no store a setter fills. The net's candidates ([`net_candidates`]).
+fn stores_raw_code_writes() -> FxHashSet<SymStr> {
+  let mut raw: FxHashSet<SymStr> = FxHashSet::default();
+  let mut ours: FxHashSet<SymStr> = FxHashSet::default();
+  for (_, stored) in current_meanings_where(|stored| matches!(stored, Stored::Expandable(_))) {
+    let Stored::Expandable(d) = stored else {
+      continue;
+    };
+    let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+      continue;
+    };
+    let written = if matches!(
+      d.get_origin(),
+      DefinitionOrigin::File | DefinitionOrigin::Document
+    ) {
+      &mut raw
+    } else {
+      &mut ours
+    };
+    let body = body.unlist_ref();
+    for (i, t) in body.iter().enumerate() {
+      if t.get_catcode() != Catcode::CS {
+        continue;
+      }
+      if cs_in(t, definition::expandable::KERNEL_WRITERS_OF_NAMES)
+        && let Some(name) = body.get(i + 1)
+        && name.get_catcode() == Catcode::CS
+      {
+        written.insert(name.get_cs_name());
+      } else if is_token_register(t) {
+        written.insert(t.get_cs_name());
+      }
+    }
+  }
+  raw.retain(|name| !ours.contains(name));
+  raw
+}
+
+/// The value the net hands on of the store `cs`: a parameterless macro's body, a token register's contents.
+fn net_value(cs: &Token) -> Option<Tokens> {
+  if is_token_register(cs) {
+    return cs.with_str(|name| match lookup_register_quiet(name) {
+      Some(RegisterValue::Tokens(value)) => Some(value),
+      _ => None,
+    });
+  }
+  parameterless_body(cs)
+}
+
+/// Did the document make the value of the store `cs` since the raw file that defined it loaded, and is it not blank?
+/// A macro's definition is the document's (`DefinitionOrigin::Document`: a class setter it called, in the preamble
+/// or the body), not one a raw file made (its default; a replayed class setter's store, read as the class's) nor one
+/// the begin-document hooks made (`note_document_hooks`: a class's `\AtBeginDocument{\gdef\@journal{…}}`); a token
+/// register's contents differ from those it had when the last raw file before it loaded (`note_raw_register_defaults`;
+/// empty for one the document allocated). A store whose value holds a store a frontmatter owner claims (`owned`) is not
+/// the net's.
+fn net_value_changed(cs: &Token, owned: &[Token]) -> bool {
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(d)) => {
+      if d.get_origin() != DefinitionOrigin::Document
+        || d
+          .get_parameters()
+          .is_some_and(|p| !p.get_parameters().is_empty())
+      {
+        return false;
+      }
+      let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+        return false;
+      };
+      if is_blank(body) || body.unlist_ref().iter().any(|t| owned.contains(t)) {
+        return false;
+      }
+      let hook_made = cs.with_str(|name| match lookup_value(&s!("lx_net_hook_{name}")) {
+        Some(Stored::Expandable(made)) => Rc::ptr_eq(&made, &d),
+        _ => false,
+      });
+      !hook_made
+    },
+    Some(Stored::Register(r)) if matches!(r.register_type, RegisterType::Tokens) => {
+      let Some(value) = net_value(cs) else {
+        return false;
+      };
+      if is_blank(&value) || value.unlist_ref().iter().any(|t| owned.contains(t)) {
+        return false;
+      }
+      let default = cs.with_str(
+        |name| match lookup_value(&s!("lx_net_toks_default_{name}")) {
+          Some(Stored::Tokens(default)) => default,
+          _ => Tokens::default(),
+        },
+      );
+      default.unlist_ref() != value.unlist_ref()
+    },
+    _ => false,
+  }
+}
+
+/// What [`note_document_hooks`] reads before the begin-document hooks: the Document-origin definitions, by address,
+/// each kept alive with them so no address is reused by a definition made since (review rev98c N1); and the token
+/// registers' contents.
+type HooksBefore = (FxHashSet<usize>, Vec<Stored>, HashMap<SymStr, Tokens>);
+
+thread_local! {
+  /// [`HooksBefore`], from the snapshot before the hooks ran.
+  static NET_HOOKS_BEFORE: std::cell::RefCell<HooksBefore> =
+    std::cell::RefCell::new((FxHashSet::default(), Vec::new(), HashMap::default()));
+}
+
+/// Around the begin-document hooks (sect02.rs `\begin{document}`): before them (`before`), the Document-origin
+/// definitions that exist and the token registers' contents; after them — `\AtBeginDocument`'s, and the
+/// `begindocument/end` hook's, which `\begin{document}` reads after itself (`\lx@net@document@hooks@done`) —, each
+/// definition they made is recorded as the hooks' (`lx_net_hook_<name>`), and each token register they changed has the
+/// contents they left as its raw default (`lx_net_toks_default_<name>`): a class default for the net
+/// (`net_value_changed`), as a class's `\AtBeginDocument{\setjournal{…}}` filling `\jtoks` is (review rev98c S2).
+pub fn note_document_hooks(before: bool) {
+  if !lookup_bool("lx_net_raw_loaded") {
+    return;
+  }
+  let address = |stored: &Stored| match stored {
+    Stored::Expandable(d) => Some(Rc::as_ptr(d).cast::<()>() as usize),
+    _ => None,
+  };
+  let made = current_meanings_where(
+    |stored| matches!(stored, Stored::Expandable(d) if d.get_origin() == DefinitionOrigin::Document),
+  );
+  let registers = current_meanings_where(
+    |stored| matches!(stored, Stored::Register(r) if matches!(r.register_type, RegisterType::Tokens)),
+  );
+  let contents = |key: &SymStr| -> Tokens {
+    with(*key, |name| match lookup_register_quiet(name) {
+      Some(RegisterValue::Tokens(value)) => value,
+      _ => Tokens::default(),
+    })
+  };
+  if before {
+    let set: FxHashSet<usize> = made.iter().filter_map(|(_, m)| address(m)).collect();
+    let kept: Vec<Stored> = made.into_iter().map(|(_, m)| m).collect();
+    let toks: HashMap<SymStr, Tokens> = registers
+      .iter()
+      .map(|(key, _)| (*key, contents(key)))
+      .collect();
+    NET_HOOKS_BEFORE.with(|c| *c.borrow_mut() = (set, kept, toks));
+    return;
+  }
+  let (set, _kept, toks) = NET_HOOKS_BEFORE.with(|c| std::mem::take(&mut *c.borrow_mut()));
+  for (key, meaning) in made {
+    if address(&meaning).is_some_and(|a| !set.contains(&a)) {
+      let name = with(key, ToString::to_string);
+      assign_value(&s!("lx_net_hook_{name}"), meaning, Some(Scope::Global));
+    }
+  }
+  for (key, _) in registers {
+    let now = contents(&key);
+    if toks
+      .get(&key)
+      .is_none_or(|was| was.unlist_ref() != now.unlist_ref())
+    {
+      let name = with(key, ToString::to_string);
+      assign_value(
+        &s!("lx_net_toks_default_{name}"),
+        Stored::Tokens(now),
+        Some(Scope::Global),
+      );
+    }
+  }
+}
+
+/// After a raw class or package loaded: the contents of each token register not yet recorded, its raw default for the
+/// net ([`net_value_changed`]).
+fn note_raw_register_defaults() {
+  assign_value("lx_net_raw_loaded", true, Some(Scope::Global));
+  let registers = current_meanings_where(
+    |stored| matches!(stored, Stored::Register(r) if matches!(r.register_type, RegisterType::Tokens)),
+  );
+  for (key, _) in registers {
+    let name = with(key, ToString::to_string);
+    let record = s!("lx_net_toks_default_{name}");
+    if lookup_value(&record).is_some() {
+      continue;
+    }
+    let value = match lookup_register_quiet(&name) {
+      Some(RegisterValue::Tokens(value)) => value,
+      _ => Tokens::default(),
+    };
+    assign_value(&record, Stored::Tokens(value), Some(Scope::Global));
+  }
+}
+
+/// The text of the class's own code in each of the net's stores `stores` (for `keep_unclaimed_net_notes`, insert.rs:
+/// words the document did not give are not its unclaimed text): the characters of the raw files' macros that name the
+/// store — its setter's own text around the argument, e-jc.sty:100-101 `\def\the@dateline{Submitted:
+/// \ignorespaces#1; Accepted: …\copy@right}` (2410.15356), a language's captions that set it, smfart.cls's
+/// `\def\keywordsname{Key words and phrases}` run by babel's `\selectlanguage` in the document (2206.11835, 2609.17377)
+/// — and of the raw macros the store's value reads, two deep (`\copy@right`'s class default).
+fn net_class_text(stores: &[SymStr]) -> Vec<String> {
+  let letters = |body: &[Token], out: &mut String| {
+    let mut param = false;
+    // (a run of active bytes, one token per byte of a UTF-8 character as CJKutf8 or inputenc reads the class file —
+    // `作` is the three active tokens `ä½\u{9c}` — is read as the character its macros print, so it matches the text the
+    // store prints: review rev105a2 finding 1)
+    let mut bytes: Vec<u8> = Vec::new();
+    // (each valid UTF-8 sequence its character; a byte outside one its own Latin-1 character, as `[latin1]{inputenc}`
+    // reads `é` as one active byte: review rev105a3 finding 2)
+    let flush = |bytes: &mut Vec<u8>, out: &mut String| {
+      let mut rest: &[u8] = bytes;
+      while !rest.is_empty() {
+        match std::str::from_utf8(rest) {
+          Ok(text) => {
+            out.push_str(text);
+            break;
+          },
+          Err(error) => {
+            let (valid, invalid) = rest.split_at(error.valid_up_to());
+            out.push_str(std::str::from_utf8(valid).unwrap_or_default());
+            out.push(char::from(invalid[0]));
+            rest = &invalid[1..];
+          },
+        }
+      }
+      bytes.clear();
+    };
+    for t in body {
+      let byte = (t.get_catcode() == Catcode::ACTIVE)
+        .then(|| {
+          t.with_str(|c| {
+            let mut chars = c.chars();
+            match (chars.next(), chars.next()) {
+              (Some(ch), None) if ('\u{80}'..='\u{ff}').contains(&ch) => Some(ch as u8),
+              _ => None,
+            }
+          })
+        })
+        .flatten();
+      if let Some(byte) = byte
+        && !param
+      {
+        bytes.push(byte);
+        continue;
+      }
+      flush(&mut bytes, out);
+      match t.get_catcode() {
+        Catcode::PARAM => param = true,
+        _ if prints_a_character(t) && !std::mem::take(&mut param) => {
+          t.with_str(|c| out.push_str(c));
+        },
+        _ => {
+          param = false;
+          out.push(' ');
+        },
+      }
+    }
+    flush(&mut bytes, out);
+    out.push(' ');
+  };
+  let setters = current_meanings_where(
+    |stored| matches!(stored, Stored::Expandable(d) if d.get_origin() == DefinitionOrigin::File),
+  );
+  stores
+    .iter()
+    .map(|key| {
+      let store = T_CS!(&with(*key, ToString::to_string));
+      let mut out = String::new();
+      // (each body once: a `\let` or `\futurelet` copy of a setter is the same code — `\@ifnextchar`'s `\@let@token`
+      // holds `\xa` after peeking at it — and its words are the class's text once, not twice: review rev105a3 finding 1)
+      let mut read: Vec<&Vec<Token>> = Vec::new();
+      for (_, setter) in &setters {
+        if let Stored::Expandable(d) = setter
+          && let Some(ExpansionBody::Tokens(body)) = d.get_expansion()
+          && body.unlist_ref().contains(&store)
+          && !read.contains(&body.unlist_ref())
+        {
+          read.push(body.unlist_ref());
+          letters(body.unlist_ref(), &mut out);
+        }
+      }
+      let mut seen: Vec<Token> = Vec::new();
+      let mut reads: Vec<(Token, usize)> = net_value(&store)
+        .map(|v| v.unlist_ref().iter().map(|t| (*t, 0)).collect())
+        .unwrap_or_default();
+      while let Some((t, depth)) = reads.pop() {
+        if t.get_catcode() != Catcode::CS || seen.contains(&t) || depth >= 2 {
+          continue;
+        }
+        seen.push(t);
+        if let Some(body) = file_body(&t) {
+          letters(body.unlist_ref(), &mut out);
+          reads.extend(body.unlist_ref().iter().map(|b| (*b, depth + 1)));
+        }
+      }
+      out
+    })
+    .collect()
+}
+
+/// The net's hand-on at `\maketitle` (`\lx@store@untypeset`, after the title-page deposit and replay): each candidate
+/// ([`net_candidates`]) the title page prints (`lx_sentinel_net_printed`, [`before_title_page_runs`]) that no kept title-page
+/// run typeset (`lx_sentinel_net_deposit`, `lx_sentinel_net_replay`), in the order the title page prints them, as a note of the author
+/// block — `\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=note,label=addresses:block,_net=<name>]{<value>}`, the
+/// shared nameless creator below the authors (OXIDIZED_DESIGN_DIVERGENCES #159) — its value read as the class's code
+/// reads it. Its lines that only repeat what the frontmatter holds are taken out when it is placed
+/// (`keep_unclaimed_net_notes`). Once per document; without a run, nothing (the net decides by TeX's output only).
+fn hand_net_stores() -> Result<Vec<Digested>> {
+  if lookup_bool("lx_net_handed") || !lookup_bool("lx_net_ran") {
+    return Ok(Vec::new());
+  }
+  assign_value("lx_net_handed", true, Some(Scope::Global));
+  let mut typeset: Vec<SymStr> = Vec::new();
+  if lookup_bool("lx_title_page_deposit_kept") {
+    typeset.extend(sentinel_list("net_deposit"));
+  }
+  if lookup_bool("lx_title_page_replay_kept") {
+    typeset.extend(sentinel_list("net_replay"));
+  }
+  let handed: Vec<SymStr> = sentinel_list("net_printed")
+    .into_iter()
+    .filter(|key| !typeset.contains(key))
+    .collect();
+  net_note_calls(handed)
+}
+
+/// When the document opens a frontmatter environment after the `\maketitle` that ran the net (`\lx@abstract@class@setters`,
+/// right after the class's refused begin code is replayed there): the net's candidates only that begin code prints
+/// (`lx_sentinel_net_begin`, [`before_title_page_runs`]), as notes of the author block, their values as they are now
+/// (sig-alternate.cls:736-790's `\the\tntoks` under `{abstract}`: 1206.6940, cs0405006). Once; not after the authors
+/// were sealed. A document that never opens the environment, or opens it before `\maketitle`, prints none of them
+/// (review rev98c S1: noabs, absfirst).
+pub fn hand_net_begin_code_stores() -> Result<()> {
+  if !lookup_bool("lx_net_ran")
+    || lookup_bool("lx_depositing_frontmatter_fields")
+    || lookup_bool("lx_replaying_class_setter")
+    || frontmatter_entry_sealed("ltx:creator", "author")
+  {
+    return Ok(());
+  }
+  let pending = sentinel_list("net_begin");
+  if pending.is_empty() {
+    return Ok(());
+  }
+  assign_value(
+    "lx_sentinel_net_begin",
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
+  // (frontmatter entries queued, no box of their own)
+  let _ = net_note_calls(pending)?;
+  Ok(())
+}
+
+/// The net's notes ([`hand_net_stores`]) of the stores `handed`, digested.
+fn net_note_calls(handed: Vec<SymStr>) -> Result<Vec<Digested>> {
+  let mut calls: Vec<Token> = Vec::new();
+  let class_text = net_class_text(&handed);
+  for (key, class_text) in handed.into_iter().zip(class_text) {
+    let name = with(key, ToString::to_string);
+    let cs = T_CS!(&name);
+    let Some(value) = net_value(&cs) else {
+      continue;
+    };
+    let bare = name.trim_start_matches('\\');
+    assign_value(
+      &s!("lx_net_class_text_{bare}"),
+      Stored::String(pin(class_text)),
+      Some(Scope::Global),
+    );
+    calls.extend(
+      mouth::tokenize_internal(TeXString::assembled(s!(
+        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=note,label=addresses:block,_net={bare}]"
+      )))
+      .unlist(),
+    );
+    calls.push(T_BEGIN!());
+    calls.extend(without_labels(&value).unlist());
+    calls.push(T_END!());
+    Info!(
+      "frontmatter",
+      s!("{name}"),
+      s!(
+        "The class's title page prints {name}, which no frontmatter field holds and no title-page run here typeset: it is handed on as a note of the author block"
+      )
+    );
+  }
+  if calls.is_empty() {
+    return Ok(Vec::new());
+  }
+  Ok(vec![digest_store_calls(calls)?])
+}
+
+/// Silent-loss 77h/23b: the value a rerouted store the document never set, still undefined, takes in the title-page
+/// deposit and replay (`\lx@captured@stores`): the one under which the title page prints fewer characters — a rule over
+/// the text TeX typesets for each candidate in speculative runs of the deposit and replay as they will run
+/// (`title_page_probe_run`). Undefined, it
+/// raised an error that dropped the whole deposit — an.cls:532 `\ch@ckobl{institute}{…}`, which runs in the class's own
+/// `\maketitle` the kernel's replaces, took the paper's "Key words" line with it (row 23b). `\relax` keeps a class's
+/// "is it undefined?" test true: ptptex.cls:88-104 prints its journal line and "(Received …)" unless
+/// `\@ifundefined{@pubinfo}`/`{@recdate}` (hep-th9803240, 1309.6905, 0911.1235, 0708.3877, 0801.2466, 1009.4028,
+/// 1007.1507, cond-mat0411234; jpsj: 0903.1491, 0912.1097, 1101.2977, 1203.5392); `\@empty` keeps an emptiness test
+/// true: `\ifx\@institute\@empty\else Institute: \@institute\fi` after the class's own `\maketitle` defaulted it to
+/// `\@empty`. All `\relax` first, then all `\@empty`: when the title page prints as much text, all stay `\relax`; else
+/// each store alone `\@empty`, kept so when the title page then prints less (a tie keeps `\relax`). Recorded as
+/// `lx_store_unset_empty_<name>`.
+fn decide_unset_nulls(rerouted: &[String]) -> Result<()> {
+  use crate::latex_constructs::{
+    SpeculativeRun, title_page_deposit_tokens, title_page_probe_run, title_page_replay_tokens,
+  };
+  let unset: Vec<&String> = rerouted
+    .iter()
+    .filter(|name| {
+      let key = s!("lx_store_unset_empty_{name}");
+      assign_value(&key, false, Some(Scope::Global));
+      !lookup_bool(&s!("lx_store_handed_{name}"))
+        && lookup_meaning(&T_CS!(&s!("\\{}", store_of(name)))).is_none()
+    })
+    .collect();
+  // (a deposit runs unless `\@maketitle` is the kernel's, or empty)
+  let deposits = !crate::latex_constructs::maketitle_is_kernels()
+    && match lookup_meaning(&T_CS!("\\@maketitle")) {
+      Some(Stored::Expandable(d)) => {
+        matches!(d.get_expansion(), Some(ExpansionBody::Tokens(t)) if !t.is_empty())
+      },
+      _ => true,
+    };
+  let replay = title_page_replay_tokens(&[]);
+  if unset.is_empty() || (!deposits && replay.is_none()) {
+    return Ok(());
+  }
+  // (`None`: no run, or one that ended in a Fatal of its own — which is no "fewer characters": the value that killed
+  // its run is not chosen, `\relax` stays)
+  let ink = || -> Result<Option<usize>> {
+    let mut tokens = title_page_deposit_tokens(&[]).unlist();
+    if let Some(replay) = title_page_replay_tokens(&[]) {
+      tokens.extend(replay.unlist());
+    }
+    Ok(match title_page_probe_run(Tokens::new(tokens), false)? {
+      SpeculativeRun::Printed(text) => Some(text.chars().filter(|c| !c.is_whitespace()).count()),
+      SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => None,
+    })
+  };
+  let Some(base) = ink()? else {
+    return Ok(());
+  };
+  // (all `\@empty` first: when the title page prints as much, no store's value matters)
+  let keys: Vec<String> = unset
+    .iter()
+    .map(|name| s!("lx_store_unset_empty_{name}"))
+    .collect();
+  for key in &keys {
+    assign_value(key, true, Some(Scope::Global));
+  }
+  let all_empty = ink()?;
+  for key in &keys {
+    assign_value(key, false, Some(Scope::Global));
+  }
+  if all_empty.is_none_or(|n| n == base) {
+    return Ok(());
+  }
+  for name in &unset {
+    let key = s!("lx_store_unset_empty_{name}");
+    assign_value(&key, true, Some(Scope::Global));
+    let emptier = ink()?.is_some_and(|n| n < base);
+    assign_value(&key, emptier, Some(Scope::Global));
+    if emptier {
+      Info!(
+        "frontmatter",
+        s!("\\{name}"),
+        s!("The unset store of \\{name} is empty in the title page: undefined it would print more")
+      );
+    }
+  }
+  // (each decided alone: chosen together they are what each was chosen against, unless they interact)
+  Ok(())
+}
+
+/// The stores whose values the frontmatter owns: the kernel's title fields (and their short forms) and the raw class's
+/// stores K11 hands to the frontmatter — the rerouted table setters' (`reroute_raw_class_stores`) and the off-table
+/// ones (`survey_off_table_stores`). A class command run in place after the document body began puts them back as
+/// they were (sect05.rs `sealed_storing_run`, silent-loss #8).
+pub fn frontmatter_owned_stores() -> Vec<Token> {
+  let mut stores: Vec<Token> = KERNEL_FIELDS
+    .iter()
+    .chain(&["\\@shorttitle", "\\@shortauthor"])
+    .map(|cs| T_CS!(*cs))
+    .collect();
+  for name in rerouted_names() {
+    stores.push(T_CS!(&s!("\\{}", store_of(&name))));
+  }
+  for name in lookup_string("lx_offtable_stores")
+    .split(',')
+    .filter(|n| !n.is_empty())
+  {
+    if let Some(Stored::Token(store)) = lookup_value(&s!("lx_offtable_store_{name}")) {
+      stores.push(store);
+    }
+  }
+  stores.dedup();
+  stores
+}
+
+/// Silent-loss #6b: the rerouted stores this `\maketitle` placed — handed to the frontmatter and printed by the class's
+/// title page (`lx_sentinel_printed`, [`before_title_page_runs`]; without a speculative run, read by it:
+/// `lx_store_title_page_reads_<name>`) — whose setter, called again, only re-sets the store (`\lx@store@hand`). A store
+/// the title page does not print stays the later call's: a class abstract's end code `Keywords: \@keywords` prints the
+/// value set after `\maketitle` (review probe `late`).
+fn settle_placed_stores() {
+  for name in rerouted_names() {
+    let placed = title_page_prints_store(&name) && lookup_bool(&s!("lx_store_handed_{name}"));
+    assign_value(&s!("lx_store_placed_{name}"), placed, Some(Scope::Global));
+  }
+}
+
+/// The state naming the store whose frontmatter entries are being queued (`\lx@store@from`): their title-page
+/// provenance (`frontmatter_push`, base_utilities `TITLE_PAGE_ENTRY`: a late abstract's run holding one the title page
+/// may print, [`title_page_may_print`], is not moved, OXIDIZED_DESIGN_DIVERGENCES #903).
+pub const STORE_ENTRY_FROM: &str = "lx_store_entry_from";
+
+/// `\lx@store@from{<name>}`: the entries queued next are handed on from the store `\<name>`; empty, from none.
+fn store_from_tokens(name: &str) -> Vec<Token> {
+  mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@from{{{name}}}"))).unlist()
+}
+
+/// Digest the frontmatter calls of handed-on stores, `\lx@store@from`-bracketed, and clear the provenance after them
+/// however the digestion ended: a call that stopped before its closing `\lx@store@from{}` stamps no later entry.
+fn digest_store_calls(calls: Vec<Token>) -> Result<Digested> {
+  let digested = digest(Tokens::new(calls));
+  assign_value(
+    STORE_ENTRY_FROM,
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
+  digested
+}
+
+/// May the class's title page print the store of `\<name>`, whose entry carries its title-page provenance
+/// (OXIDIZED_DESIGN_DIVERGENCES #903)? Unless the speculative run of the whole title page was made and its sentinel did
+/// not reach it ([`before_title_page_runs`], `lx_sentinel_printed`): a store the class prints elsewhere — dmtcs's
+/// `\keywords` after its abstract, 0905.1102 — is not the title page's; with no run made, it may be.
+pub fn title_page_may_print(name: &str) -> bool {
+  !lookup_bool("lx_sentinel_ran") || {
+    let store = T_CS!(&s!("\\{}", store_of(name))).get_cs_name();
+    sentinel_list("printed").contains(&store)
+  }
+}
+
+/// Does the class's title page print the store of `\<name>`: its sentinel reached the speculative run of the whole title
+/// page (`lx_sentinel_printed`, [`before_title_page_runs`]) — without a run, its code reads it
+/// (`lx_store_title_page_reads_<name>`)?
+fn title_page_prints_store(name: &str) -> bool {
+  if lookup_bool("lx_sentinel_ran") {
+    let store = T_CS!(&s!("\\{}", store_of(name))).get_cs_name();
+    sentinel_list("printed").contains(&store)
+  } else {
+    lookup_bool(&s!("lx_store_title_page_reads_{name}"))
+  }
+}
+
+/// Silent-loss #6a: an abstract or keywords store `\maketitle` handed on is the class's own entry (`_store`,
+/// [`labelled_api`]), which the document's own abstract does not replace, only when the title page prints it
+/// ([`title_page_prints_store`]) — not when its code only reads it: `\hypersetup{pdfsubject={\@abst}}` in `\@maketitle`
+/// beside the document's `{abstract}`, which pdflatex prints once (review probe `md`). Such an entry is an ordinary one
+/// (base_utilities.rs `frontmatter_release_store`), as before the class's title page was consulted.
+fn release_unprinted_store_entries() {
+  for name in rerouted_names() {
+    if lookup_bool(&s!("lx_store_deferred_{name}"))
+      && lookup_bool(&s!("lx_store_handed_{name}"))
+      && !title_page_prints_store(&name)
+    {
+      frontmatter_release_store(&store_of(&name));
+    }
+  }
+}
+
+/// The frontmatter call `api` of the store `\<name>` as an ordinary entry's, without the class's store's tag
+/// ([`labelled_api`]): a value no title page printed — set where no `\maketitle` follows, or after the one that read the
+/// store.
+fn untagged_api(api: &str, name: &str) -> String {
+  let tag = s!("_store={}", store_of(name));
+  api
+    .replacen(&s!("[{tag}]"), "", 1)
+    .replacen(&s!("{tag},"), "", 1)
+}
+
+/// Does the class's own refused `\<field>` (`\lx@dropped@<field>`, state.rs) hand its argument to the setter `\<name>`
+/// (jfpc.cls:122 `\renewcommand{\title}[1]{\titre{#1}}`, :126 `\author` → `\auteurs`)? Then that setter's store is the
+/// class's record of the field.
+fn class_field_setter(field: &str, name: &str) -> bool {
+  let Some(body) = parameterless_or_any_body(&T_CS!(&s!("\\lx@dropped@{field}"))) else {
+    return false;
+  };
+  let body = body.unlist_ref();
+  let setter = T_CS!(&s!("\\{name}"));
+  body.iter().enumerate().any(|(i, t)| {
+    *t == setter && {
+      let k = skip_spaces(body, i + 1);
+      body
+        .get(k)
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+        && body
+          .get(k + 1)
+          .is_some_and(|b| b.get_catcode() == Catcode::ARG)
+        && body
+          .get(k + 2)
+          .is_some_and(|b| b.get_catcode() == Catcode::END)
+    }
+  })
+}
+
+/// The token body of `cs`, whatever its parameters.
+fn parameterless_or_any_body(cs: &Token) -> Option<Tokens> {
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+      _ => None,
+    },
+    _ => None,
+  }
+}
+
+/// [`hand_untypeset_stores`] without a speculative run ([`before_title_page_runs`]): what the class's title page reads,
+/// walked through its live code (the switches as they are, `evaluated_switch`), in reading order — the code of its
+/// refused `\maketitle`, else of LaTeX's, which runs `\@maketitle` and, when the class has none, prints the kernel
+/// fields — and what a kept deposit or replay may have typeset (any code it reaches, a stored definition's too).
+fn walked_title_page_reads() -> (Vec<SymStr>, FxHashSet<SymStr>) {
+  let fields: Vec<Token> = KERNEL_FIELDS.iter().map(|cs| T_CS!(*cs)).collect();
+  let dropped = T_CS!("\\lx@dropped@maketitle");
+  let maketitle = T_CS!("\\@maketitle");
+  let printed_roots: Vec<Token> = if file_body(&dropped).is_some() {
+    vec![dropped]
+  } else if file_body(&maketitle).is_some() {
+    vec![maketitle]
+  } else {
+    fields.clone()
+  };
+  let mut blocked = fields.clone();
+  blocked.extend(["\\thetitle", "\\theauthor", "\\thedate"].map(|cs| T_CS!(cs)));
+  for name in rerouted_names() {
+    if lookup_bool(&s!("lx_store_handed_{name}")) {
+      blocked.push(T_CS!(&s!("\\{}", store_of(&name))));
+    }
+  }
+  let printed = live_read_order(&printed_roots, &[], true);
+  let mut typeset: FxHashSet<SymStr> = FxHashSet::default();
+  if lookup_bool("lx_title_page_deposit_kept") {
+    typeset.extend(live_read_order(&[maketitle], &blocked, false));
+  }
+  if lookup_bool("lx_title_page_replay_kept") {
+    let mut replay_blocked = blocked.clone();
+    replay_blocked.push(maketitle);
+    typeset.extend(live_read_order(&[dropped], &replay_blocked, false));
+  }
+  (printed, typeset)
+}
+
+/// Silent-loss #5 (a). At `\maketitle`, after the title-page deposit and replay (`\lx@store@untypeset`): each off-table
+/// store the document set ([`offtable_candidates`]) that the class's title page prints — its sentinel reached the
+/// speculative run of the whole title page ([`before_title_page_runs`]; without one, [`walked_title_page_reads`]) — and
+/// that no title-page run kept here typeset (its sentinel did not reach the run of the deposit or replay that was kept)
+/// is handed to the frontmatter, in the order the title page prints them, with no visible label of ours (the
+/// meta XSLT shows a note's `@role` as its label, LaTeXML-meta-xhtml.xsl:79-85): a store the class's own refused
+/// `\title` hands its argument to ([`class_field_setter`]) is the document's `ltx:title` when it has none; the store of
+/// the names the class's own `\@author` prints — the one its refused `\author` hands on, else the first store it reads
+/// (`lx_offtable_author_reads`) — its authors when it has none (jfpc.cls:122-126, 176-191: 1503.05530), and a store its
+/// `\@author` prints beside the names rows of their author block (`\lx@add@store@authorblock`), attached to the creators
+/// as any affiliation is, not a note on the document (both are hover popups under the default `ltx_authors_1line`
+/// layout, LaTeXML.css:74-88 and :107-120: the gain is what the rows are, not where they show); a store that only repeats the creators' names is not handed on ([`repeats_creator_names`]:
+/// nowfnt's names-only cover list, 2308.02698); any other an `ltx:pubnote` (Base_Utility.pool.ltxml:634, a note about
+/// the document), its `\and` between authors' blocks a line break (2108.12618), named by the label the title page prints
+/// before it (`lx_offtable_label_<name>`) when it prints one. A run that typeset it keeps it, so nothing is shown
+/// twice; a store the title page prints only under a switch that is off — a `\newif` (aiaa-tc.cls:199-200
+/// `\aiaa@conference` under `[handcarry]`), a class's own boolean (sigplanconf.cls:1118, 1603.03011's "nnnnnnn.nnnnnnn"
+/// placeholder DOI) — or only in a box or a running head is not printed and not handed on. Perl drops them all (no
+/// binding, its `\@maketitle` relaxed, latex_constructs.pool.ltxml:1105). Then the unclaimed-text net's stores, the
+/// ones no owner claims ([`hand_net_stores`]).
+fn hand_untypeset_stores() -> Result<Vec<Digested>> {
+  let mut out = hand_offtable_stores()?;
+  out.extend(hand_net_stores()?);
+  Ok(out)
+}
+
+/// K11's part of [`hand_untypeset_stores`]: its off-table stores.
+fn hand_offtable_stores() -> Result<Vec<Digested>> {
+  if lookup_string("lx_offtable_stores").is_empty() || lookup_bool("lx_offtable_handed") {
+    return Ok(Vec::new());
+  }
+  assign_value("lx_offtable_handed", true, Some(Scope::Global));
+  let candidates = offtable_candidates();
+  if candidates.is_empty() {
+    return Ok(Vec::new());
+  }
+  let (printed, typeset) = if lookup_bool("lx_sentinel_ran") {
+    let mut typeset: FxHashSet<SymStr> = FxHashSet::default();
+    if lookup_bool("lx_title_page_deposit_kept") {
+      typeset.extend(sentinel_list("deposit"));
+    }
+    if lookup_bool("lx_title_page_replay_kept") {
+      typeset.extend(sentinel_list("replay"));
+    }
+    (sentinel_list("printed"), typeset)
+  } else {
+    walked_title_page_reads()
+  };
+  // in the order the title page prints them
+  let mut handed: Vec<(usize, &(String, Token, Tokens))> = candidates
+    .iter()
+    .filter_map(|candidate| {
+      let key = candidate.1.get_cs_name();
+      printed
+        .iter()
+        .position(|cs| *cs == key)
+        .filter(|_| !typeset.contains(&key))
+        .map(|at| (at, candidate))
+    })
+    .collect();
+  handed.sort_by_key(|(at, _)| *at);
+  // The stores the class's own `\@author` reads (`lx_offtable_author_reads`, jfpc.cls:188-191): the one its refused
+  // `\author` hands its argument to ([`class_field_setter`]), else the first, holds the names; the others beside it are
+  // the author block's rows (`\lx@add@store@authorblock`).
+  let author_reads = lookup_string("lx_offtable_author_reads");
+  let author_reads: Vec<&str> = author_reads.split(',').filter(|n| !n.is_empty()).collect();
+  let names_store = candidates
+    .iter()
+    .find(|(name, ..)| class_field_setter("author", name))
+    .map(|(name, ..)| name.as_str())
+    .or_else(|| {
+      author_reads.first().and_then(|store| {
+        candidates
+          .iter()
+          .find(|(_, cs, _)| cs.with_str(|n| n == *store))
+          .map(|(name, ..)| name.as_str())
+      })
+    });
+  let mut has_creator = has_front_matter("ltx:creator");
+  let creator_words = creator_name_words();
+  let mut calls: Vec<Token> = Vec::new();
+  let mut rows: Vec<Token> = Vec::new();
+  for (_, (name, store, value)) in handed {
+    let in_author = store.with_str(|cs| author_reads.contains(&cs));
+    let (head, what) = if class_field_setter("title", name) && !has_front_matter("ltx:title") {
+      (
+        mouth::tokenize_internal(r"\lx@add@title").unlist(),
+        "the document's title",
+      )
+    } else if names_store == Some(name.as_str()) && !has_creator {
+      has_creator = true;
+      (
+        mouth::tokenize_internal(r"\lx@add@authors@adaptive").unlist(),
+        "the document's authors",
+      )
+    } else if in_author
+      && names_store.is_some()
+      && has_creator
+      && !(!matches!(
+        lookup_value(&s!("lx_offtable_label_{name}")),
+        Some(Stored::Tokens(_))
+      ) && repeats_creator_names(value, &creator_words))
+    {
+      // (after the names, which make the creators these rows annotate)
+      rows.extend(
+        mouth::tokenize_internal(TeXString::assembled(s!(
+          "\\lx@add@store@authorblock{{{name}}}"
+        )))
+        .unlist(),
+      );
+      rows.push(T_BEGIN!());
+      if let Some(Stored::Tokens(label)) = lookup_value(&s!("lx_offtable_label_{name}")) {
+        rows.extend(label.unlist());
+      }
+      rows.extend(value.unlist_ref().iter().copied());
+      rows.push(T_END!());
+      Info!(
+        "frontmatter",
+        s!("\\{name}"),
+        s!(
+          "The class's title page prints the store of \\{name} in its author block, which no title-page run here typeset: it is handed on as rows of the authors"
+        )
+      );
+      continue;
+    } else if !matches!(
+      lookup_value(&s!("lx_offtable_label_{name}")),
+      Some(Stored::Tokens(_))
+    ) && repeats_creator_names(value, &creator_words)
+    {
+      Info!(
+        "frontmatter",
+        s!("\\{name}"),
+        s!(
+          "The class's title page prints the store of \\{name}, which only repeats the authors' names: not handed on"
+        )
+      );
+      continue;
+    } else {
+      let mut head = mouth::tokenize_internal(r"\lx@add@frontmatter{ltx:pubnote}").unlist();
+      if let Some(Stored::Tokens(label)) = lookup_value(&s!("lx_offtable_label_{name}")) {
+        head.extend(mouth::tokenize_internal("[name={").unlist());
+        head.extend(label.unlist());
+        head.extend(mouth::tokenize_internal("}]").unlist());
+      }
+      (head, "a note on the document")
+    };
+    // (a note the class's title page printed: its title-page provenance, base_utilities `TITLE_PAGE_ENTRY`)
+    let note = what == "a note on the document";
+    if note {
+      calls.extend(store_from_tokens(name));
+    }
+    calls.extend(head);
+    calls.push(T_BEGIN!());
+    // (in a note, the class's `\and` between authors' blocks — nowfnt.cls:813-818 starts a new block — is a line break
+    // between them: 2108.12618's cover list, which ran "…@gmail.com Matan Gavish")
+    let and = T_CS!("\\and");
+    calls.extend(value.unlist_ref().iter().map(|t| {
+      if *t == and && what == "a note on the document" {
+        T_CS!("\\\\")
+      } else {
+        *t
+      }
+    }));
+    calls.push(T_END!());
+    if note {
+      calls.extend(store_from_tokens(""));
+    }
+    Info!(
+      "frontmatter",
+      s!("\\{name}"),
+      s!(
+        "The class's title page prints the store of \\{name}, which no title-page run here typeset: it is handed on as {what}"
+      )
+    );
+  }
+  calls.extend(rows);
+  if calls.is_empty() {
+    return Ok(Vec::new());
+  }
+  Ok(vec![digest_store_calls(calls)?])
+}
+
+/// The words of each creator's name in the frontmatter (each creator's own digested content, its personname; not the
+/// contacts annotating it), for [`repeats_creator_names`].
+fn creator_name_words() -> Vec<FxHashSet<String>> {
+  let mut out: Vec<FxHashSet<String>> = Vec::new();
+  with_value("frontmatter", |v| {
+    if let Some(Stored::HashTagData(frontmatter)) = v
+      && let Some(creators) = frontmatter.get("ltx:creator")
+    {
+      for creator in creators {
+        let mut text = String::new();
+        for item in &creator.content {
+          if let TagContent::Box(d) = item {
+            ink_text(d, &mut text);
+            text.push(' ');
+          }
+        }
+        let words: FxHashSet<String> = text.split_whitespace().map(String::from).collect();
+        if !words.is_empty() {
+          out.push(words);
+        }
+      }
+    }
+  });
+  out
+}
+
+/// Does the store value `value` only repeat the creators' names — is every line of it (split at `\and`, `\\`,
+/// `\newline` and `\par`, commas and the word "and" between names) plain text, characters and spaces only, each of whose
+/// words is a word of a creator's name,
+/// and does it name every creator (each creator's words are among its words: `creators`, [`creator_name_words`])? A
+/// cover's author list that holds only the names (nowfnt.cls:803-806 `\maintitleauthorlist`, "AUTHORS FOR COVER
+/// PAGE": 2308.02698) is a duplicate of the creators, a print flourish of the cover (the page-furniture ruling); one
+/// that carries more (2108.12618's affiliations and e-mails) is not, nor is one that names some of the authors only — a
+/// role, "Corresponding author: \@corr" with `\corresponding{Bob Jones}` (review probe `corr`; and a store the class
+/// labels is never dropped, `hand_untypeset_stores`). By words, as the creators may hold a name in another order or
+/// split (`\author[1]{Sung, Yoonchang}` gives two creators, SYNC_STATUS row "nowfnt creators").
+fn repeats_creator_names(value: &Tokens, creators: &[FxHashSet<String>]) -> bool {
+  if creators.is_empty() {
+    return false;
+  }
+  let breaks = ["\\and", "\\\\", "\\newline", "\\par"].map(|cs| T_CS!(cs));
+  let mut text = String::new();
+  for t in value.unlist_ref() {
+    match t.get_catcode() {
+      // (the commas between the names)
+      Catcode::OTHER if *t == T_OTHER!(",") => text.push(' '),
+      Catcode::LETTER | Catcode::OTHER => text.push_str(&t.to_string()),
+      Catcode::SPACE | Catcode::ACTIVE => text.push(' '),
+      Catcode::BEGIN | Catcode::END => {},
+      Catcode::CS if breaks.contains(t) => text.push(' '),
+      _ => return false,
+    }
+  }
+  // (and the conjunction before the last, as `\and` is: "Ann Able and Bob Baker")
+  let words: FxHashSet<&str> = text
+    .split_whitespace()
+    .filter(|word| !matches!(*word, "and" | "&"))
+    .collect();
+  !words.is_empty()
+    && words
+      .iter()
+      .all(|word| creators.iter().any(|creator| creator.contains(*word)))
+    && creators
+      .iter()
+      .all(|creator| creator.iter().all(|word| words.contains(word.as_str())))
+}
+
+/// The table's keywords setters: those whose frontmatter API is `\lx@add@keywords`.
+fn keywords_setters() -> impl Iterator<Item = (&'static str, &'static str)> {
+  STORE_SETTERS
+    .iter()
+    .copied()
+    .filter(|(_, api)| api.starts_with("\\lx@add@keywords"))
+}
+
+/// The tokens of `body` from `i` on, spaces skipped.
+fn skip_spaces(body: &[Token], mut i: usize) -> usize {
+  while body
+    .get(i)
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    i += 1;
+  }
+  i
+}
+
+/// How a definition nested in a body makes its command: `\def`, `\gdef`, `\renewcommand` replace a meaning the name
+/// has; `\newcommand` and `\providecommand` keep it (LaTeX's `\newcommand` of a defined name is an error that leaves it,
+/// latex.ltx `\@ifdefinable`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Definer {
+  Replaces,
+  Keeps,
+}
+
+/// Where a definition's body first uses its argument `#1` — as stored in it (`#1`), or doubled in an enclosing
+/// definition's body (`##1`, kept as a parameter token and `1`).
+fn argument_at(body: &[Token]) -> Option<usize> {
+  (0..body.len()).find(|&k| argument_length(body, k).is_some())
+}
+
+/// The number of tokens of a use of `#1` at `body[k]` ([`argument_at`]), if there is one there.
+fn argument_length(body: &[Token], k: usize) -> Option<usize> {
+  let t = body.get(k)?;
+  if t.get_catcode() == Catcode::ARG && t.with_str(|s| s == "1") {
+    return Some(1);
+  }
+  (t.get_catcode() == Catcode::PARAM
+    && body
+      .get(k + 1)
+      .is_some_and(|d| d.get_catcode() != Catcode::PARAM && d.with_str(|s| s == "1")))
+  .then_some(2)
+}
+
+/// A one-argument command `\<name>` that `body` defines — `\def\name#1{`, `\newcommand{\name}[1]{` (with any `##`
+/// doubling and `\long`/`\global` prefix), and nothing that reads a delimited or optional argument: its definer and
+/// its body, as stored (a doubled `##1` kept as a parameter token and `1`) — the first whose body uses its argument
+/// ([`argument_at`]), else the first. A definition that drops or only warns about its argument is not a setter of it
+/// (beilstein.cls:854 `\newcommand{\keywords}[1]{\ClassWarning{beilstein}{Keywords should not be part of …}}` beside
+/// :853's typesetting one, fbithesis.cls:272 `{\fbi@warning{\keywords}}`). `None` when it defines none.
+fn nested_one_arg_definition(body: &[Token], name: &str) -> Option<(Definer, Vec<Token>)> {
+  let target = T_CS!(&s!("\\{name}"));
+  let mut first: Option<(Definer, Vec<Token>)> = None;
+  for (i, t) in body.iter().enumerate() {
+    if t.get_catcode() != Catcode::CS {
+      continue;
+    }
+    let definer = t.with_str(|s| match s {
+      "\\def" | "\\gdef" | "\\edef" | "\\xdef" => Some((true, Definer::Replaces)),
+      "\\renewcommand" | "\\DeclareRobustCommand" => Some((false, Definer::Replaces)),
+      "\\newcommand" | "\\providecommand" => Some((false, Definer::Keeps)),
+      _ => None,
+    });
+    let Some((primitive, definer)) = definer else {
+      continue;
+    };
+    let mut j = skip_spaces(body, i + 1);
+    if primitive {
+      if body.get(j) != Some(&target) {
+        continue;
+      }
+      // the parameter text: `#1` (stored `#`… `1`, a doubled `##1` in a definition's own body)
+      let mut digits: Vec<String> = Vec::new();
+      j += 1;
+      while let Some(p) = body.get(j)
+        && p.get_catcode() != Catcode::BEGIN
+      {
+        match p.get_catcode() {
+          Catcode::PARAM => {},
+          Catcode::ARG | Catcode::OTHER => digits.push(p.with_str(str::to_string)),
+          _ => {
+            digits.push(String::new());
+            break;
+          },
+        }
+        j += 1;
+      }
+      if digits == ["1"]
+        && let Some(past) = tokens_group_end(body, j)
+      {
+        let own = &body[j + 1..past - 1];
+        if argument_at(own).is_some() {
+          return Some((definer, own.to_vec()));
+        }
+        first.get_or_insert_with(|| (definer, own.to_vec()));
+      }
+      continue;
+    }
+    if body.get(j).is_some_and(|b| *b == T_OTHER!("*")) {
+      j = skip_spaces(body, j + 1);
+    }
+    if body.get(j) == Some(&target) {
+      j += 1;
+    } else if body
+      .get(j)
+      .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+      && body.get(skip_spaces(body, j + 1)) == Some(&target)
+    {
+      j = skip_spaces(body, skip_spaces(body, j + 1) + 1);
+      if body.get(j).is_none_or(|b| b.get_catcode() != Catcode::END) {
+        continue;
+      }
+      j += 1;
+    } else {
+      continue;
+    }
+    j = skip_spaces(body, j);
+    let one_arg = [T_OTHER!("["), T_OTHER!("1"), T_OTHER!("]")];
+    if body.get(j..j + 3) == Some(&one_arg[..]) {
+      let k = skip_spaces(body, j + 3);
+      if let Some(past) = tokens_group_end(body, k) {
+        let own = &body[k + 1..past - 1];
+        if argument_at(own).is_some() {
+          return Some((definer, own.to_vec()));
+        }
+        first.get_or_insert_with(|| (definer, own.to_vec()));
+      }
+    }
+  }
+  first
+}
+
+/// The commands a body hands control to: each control sequence; `\begin{X}`/`\end{X}` as `\X`/`\endX`; a
+/// `\csname X\endcsname` of characters as `\X` (environ.sty's `\csname env@X@process\endcsname`); a command whose
+/// redefinition the kernel's lock refused also as the refused definition (`\lx@dropped@X`); and the kernel's locked
+/// `\maketitle` as the class's `\@maketitle`, which it digests (`\lx@deposit@maketitle`, sect05.rs) as LaTeX's
+/// `\maketitle` calls it.
+fn handed_to(body: &[Token], out: &mut Vec<Token>) {
+  let chars_until = |from: usize, stop: &dyn Fn(&Token) -> bool| -> Option<(String, usize)> {
+    let mut name = String::new();
+    let mut k = from;
+    while let Some(t) = body.get(k) {
+      if stop(t) {
+        return Some((name, k + 1));
+      }
+      if !matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+        return None;
+      }
+      t.with_str(|s| name.push_str(s));
+      k += 1;
+    }
+    None
+  };
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    i += 1;
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+      continue;
+    }
+    if (t == T_CS!("\\begin") || t == T_CS!("\\end"))
+      && body
+        .get(i)
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+      && let Some((env, past)) = chars_until(i + 1, &|b| b.get_catcode() == Catcode::END)
+    {
+      let prefix = if t == T_CS!("\\end") { "end" } else { "" };
+      out.push(T_CS!(&s!("\\{prefix}{env}")));
+      i = past;
+      continue;
+    }
+    if t == T_CS!("\\csname")
+      && let Some((cs, past)) = chars_until(i, &|b| *b == T_CS!("\\endcsname"))
+    {
+      out.push(T_CS!(&s!("\\{cs}")));
+      i = past;
+      continue;
+    }
+    out.push(t);
+    let dropped = T_CS!(&t.with_cs_name(|cs| s!("\\lx@dropped@{}", cs.trim_start_matches('\\'))));
+    if lookup_meaning(&dropped).is_some() {
+      out.push(dropped);
+    } else if t == T_CS!("\\maketitle") {
+      out.push(T_CS!("\\@maketitle"));
+    }
+  }
+}
+
+/// The definition of `target` a body makes with `\def`, `\gdef`, `\edef` or `\xdef` (a `\long`/`\global`/
+/// `\protected` prefix kept): the tokens from the prefix through the definition's closing brace, its parameters as
+/// stored (a doubled `##1` is a parameter token and `1`), so digesting them defines `target` as the body would. `None`
+/// when the body makes none, or only one that reads the body's own arguments (it depends on the call), or only one
+/// inside a conditional (`\ifshowfoo\def\foo{…}\fi`: whether the body makes it depends on a test that is not run
+/// here — pdflatex leaves `\foo` undefined when the test is false).
+fn nested_definition_of(body: &[Token], target: Token) -> Option<Vec<Token>> {
+  let mut conditional_depth = 0usize;
+  for (i, t) in body.iter().enumerate() {
+    if t.get_catcode() != Catcode::CS {
+      continue;
+    }
+    match conditional_kind(t) {
+      Some(ConditionalType::If) => {
+        conditional_depth += 1;
+        continue;
+      },
+      Some(ConditionalType::Fi) => {
+        conditional_depth = conditional_depth.saturating_sub(1);
+        continue;
+      },
+      _ => {},
+    }
+    if conditional_depth > 0
+      || !t.with_str(|s| matches!(s, "\\def" | "\\gdef" | "\\edef" | "\\xdef"))
+    {
+      continue;
+    }
+    let j = skip_spaces(body, i + 1);
+    if body.get(j) != Some(&target) {
+      continue;
+    }
+    let mut k = j + 1;
+    while body
+      .get(k)
+      .is_some_and(|p| p.get_catcode() != Catcode::BEGIN)
+    {
+      k += 1;
+    }
+    let Some(past) = tokens_group_end(body, k) else {
+      continue;
+    };
+    if body[j..past]
+      .iter()
+      .any(|p| p.get_catcode() == Catcode::ARG)
+    {
+      continue;
+    }
+    let mut from = i;
+    while from > 0
+      && body[from - 1].with_str(|s| matches!(s, "\\long" | "\\global" | "\\protected"))
+    {
+      from -= 1;
+    }
+    return Some(body[from..past].to_vec());
+  }
+  None
+}
+
+/// Whether `t` opens (`\if…`) or closes (`\fi`) a conditional: by its meaning, or, undefined, by an `\if` name (a
+/// `\newif` switch the class declares later).
+fn conditional_kind(t: &Token) -> Option<ConditionalType> {
+  match lookup_definition(t) {
+    Ok(Some(defn)) => defn.get_conditional_type(),
+    _ => t
+      .with_str(|s| s.starts_with("\\if"))
+      .then_some(ConditionalType::If),
+  }
+}
+
+/// An undefined `token` that an open environment defines for its body in the class's own definition, which the
+/// kernel's environment shadows: a `\<env>` the class (or the document) made, which `\begin{<env>}` never runs when the
+/// kernel's `\begin{<env>}` constructor is defined (sect01.rs), or one the kernel's lock refused (`\lx@dropped@<env>`,
+/// state.rs) — bmcart.cls:712-717 `\def\@figure[#1]{…\def\csentence##1{…}`
+/// (its captions' lead sentence, 2305.08284, 1611.01327, 1909.07026) and :1505-1510 `\def\abstract@fmt[#1]{…
+/// \def\parttitle##1{…}` (its structured abstract's headings, 2007.07886, 1907.07303, 2106.01700): the definition
+/// is made where the call stands, as the class's environment would have made it, and the call retried
+/// ([`latexml_core::binding::kernel_autoload::try_refused_environment_definition`]). Searched: the open environments
+/// innermost first (the kernel's abstract, no environment frame, first inside its body; a frontmatter field's own
+/// setter before them) whose class code never ran (refused, or shadowed by a constructor), each one's definitions and
+/// the commands they hand control to (`handed_to`), only definitions a raw file or the document made, outside any
+/// conditional, at most 64 per environment. An environment whose begin code ran is not searched:
+/// `\newenvironment{myenv}{\ifshowfoo\def\foo{…}\fi}{}` leaves `\foo` undefined in its body, as in pdflatex. Guard:
+/// `perfect_kernel_batch68v::an_environment_whose_code_ran_is_not_searched`. OXIDIZED_DESIGN_DIVERGENCES #647.
+pub fn refused_environment_definition(token: &Token) -> bool {
+  if token.get_catcode() != Catcode::CS || lookup_bool("lx_refused_environment_search") {
+    return false;
+  }
+  let mut envs: Vec<String> = with_stacked_values_sym(pin("current_environment"), |vals| {
+    vals.iter().rev().map(|v| v.to_string()).collect()
+  });
+  if lookup_bool("lx_in_kernel_abstract") {
+    envs.insert(0, "abstract".to_string());
+  }
+  // A frontmatter field's content is typeset by the class where its setter put it: the commands the class's own
+  // setter (refused: `\lx@dropped@author`) and what it hands control to define for the field's text — vmsta.cls:278-283
+  // `\csdef{name@m}{\def\fnm##1{##1}\def\snm##1{##1}…}`, which its `\@@author` applies to each author
+  // (`\author{\inits{Yu.}\fnm{Yuliya}\snm{Mishura}}`: 1508.02842, 1411.4499, 1601.01109).
+  let item = lookup_string("lx_frontmatter_item");
+  if let Some(field) = item.strip_prefix("ltx:") {
+    envs.insert(
+      0,
+      if field == "creator" {
+        "author".to_string()
+      } else {
+        field.to_string()
+      },
+    );
+  }
+  class_body_definition(token, &envs)
+}
+
+/// Define `token` as the first of `envs` (environment or command names) defines it for its body in the class's own
+/// code (`\lx@dropped@<name>` or `\<name>`, and what they hand control to): [`refused_environment_definition`].
+fn class_body_definition(token: &Token, envs: &[String]) -> bool {
+  let mut definition: Option<Vec<Token>> = None;
+  'envs: for env in envs.iter().filter(|e| !e.is_empty()) {
+    // Only code that never ran: the class's definition the kernel's lock refused (`\lx@dropped@<name>`), and its
+    // `\<name>` when a constructor `\begin{<name>}` shadows it (`\begin`, sect01.rs). An environment whose own
+    // `\<name>` began it has made what its body defines; a command it did not make stays undefined, as in pdflatex.
+    let mut queue: VecDeque<Token> = VecDeque::new();
+    let dropped = T_CS!(&s!("\\lx@dropped@{env}"));
+    if lookup_meaning(&dropped).is_some() {
+      queue.push_back(dropped);
+    }
+    if lookup_meaning(&T_CS!(&s!("\\begin{{{env}}}"))).is_some() {
+      queue.push_back(T_CS!(&s!("\\{env}")));
+    }
+    let mut seen: Vec<Token> = Vec::new();
+    let mut next: Vec<Token> = Vec::new();
+    while let Some(cs) = queue.pop_front() {
+      if seen.contains(&cs) || seen.len() >= 64 {
+        continue;
+      }
+      seen.push(cs);
+      let Some(Stored::Expandable(defn)) = lookup_meaning(&cs) else {
+        continue;
+      };
+      if !matches!(
+        defn.get_origin(),
+        DefinitionOrigin::File | DefinitionOrigin::Document
+      ) {
+        continue;
+      }
+      let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+        continue;
+      };
+      let body = body.unlist_ref();
+      if let Some(found) = nested_definition_of(body, *token) {
+        definition = Some(found);
+        break 'envs;
+      }
+      next.clear();
+      handed_to(body, &mut next);
+      queue.extend(next.iter().copied());
+    }
+  }
+  let Some(definition) = definition else {
+    return false;
+  };
+  assign_value("lx_refused_environment_search", true, Some(Scope::Global));
+  let made = with_origin(DefinitionOrigin::File, || digest(Tokens::new(definition)));
+  assign_value("lx_refused_environment_search", false, Some(Scope::Global));
+  made.is_ok() && lookup_meaning(token).is_some()
+}
+
+/// The table's keywords setters that the class's (or the document's) abstract defines for its body and the kernel's
+/// locked `{abstract}` therefore never runs, with their API and definer: a one-argument definition
+/// ([`nested_one_arg_definition`]) in the refused `\abstract` or `\endabstract` (`\lx@dropped@…`, state.rs) or in a
+/// command they hand control to ([`handed_to`]), read only in definitions a raw file or the document made — at most
+/// 512 of them, nearest first — each with its API, definer and the class's own body for it.
+fn abstract_setter_definitions() -> Vec<(&'static str, &'static str, Definer, Vec<Token>)> {
+  let mut found: Vec<(&'static str, &'static str, Definer, Vec<Token>)> = Vec::new();
+  let mut queue: VecDeque<Token> = VecDeque::from([
+    T_CS!("\\lx@dropped@abstract"),
+    T_CS!("\\lx@dropped@endabstract"),
+  ]);
+  if queue.iter().all(|t| lookup_meaning(t).is_none()) {
+    return found;
+  }
+  let mut seen: Vec<Token> = Vec::new();
+  let mut next: Vec<Token> = Vec::new();
+  while let Some(cs) = queue.pop_front() {
+    if seen.contains(&cs) || seen.len() >= 512 {
+      continue;
+    }
+    seen.push(cs);
+    let Some(Stored::Expandable(defn)) = lookup_meaning(&cs) else {
+      continue;
+    };
+    if !matches!(
+      defn.get_origin(),
+      DefinitionOrigin::File | DefinitionOrigin::Document
+    ) {
+      continue;
+    }
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      continue;
+    };
+    let body = body.unlist_ref();
+    for (name, api) in keywords_setters() {
+      // (a setter that typesets its argument wins over one found before that does not)
+      let at = found.iter().position(|(n, ..)| *n == name);
+      if at.is_some_and(|k| argument_at(&found[k].3).is_some()) {
+        continue;
+      }
+      if let Some((definer, own)) = nested_one_arg_definition(body, name) {
+        match at {
+          None => found.push((name, api, definer, own)),
+          Some(k) if argument_at(&own).is_some() => found[k] = (name, api, definer, own),
+          Some(_) => {},
+        }
+      }
+    }
+    next.clear();
+    handed_to(body, &mut next);
+    queue.extend(next.iter().copied());
+  }
+  found
+}
+
+/// LaTeX's font declarations taking no argument: the sizes (latex.ltx `\tiny` … `\Huge`), the NFSS family, series and
+/// shape switches with `\normalfont`, `\em` and `\selectfont`, the LaTeX 2.09 ones (`\rm` … `\tt`) and `\normalcolor`.
+pub(crate) const FONT_DECLARATIONS: &[&str] = &[
+  "\\tiny",
+  "\\scriptsize",
+  "\\footnotesize",
+  "\\small",
+  "\\normalsize",
+  "\\large",
+  "\\Large",
+  "\\LARGE",
+  "\\huge",
+  "\\Huge",
+  "\\normalfont",
+  "\\rmfamily",
+  "\\sffamily",
+  "\\ttfamily",
+  "\\bfseries",
+  "\\mdseries",
+  "\\itshape",
+  "\\upshape",
+  "\\slshape",
+  "\\scshape",
+  "\\sscshape",
+  "\\swshape",
+  "\\ulcshape",
+  "\\em",
+  "\\selectfont",
+  "\\rm",
+  "\\sf",
+  "\\tt",
+  "\\bf",
+  "\\it",
+  "\\sl",
+  "\\sc",
+  "\\normalcolor",
+];
+
+/// Whether `t` means one of [`FONT_DECLARATIONS`] (2508.08560's `\tt`, `\LARGE`; [`means_one_of`]).
+pub(crate) fn font_declaration(t: &Token) -> bool { means_one_of(t, FONT_DECLARATIONS) }
+
+/// Whether `t` means one of the commands `names`: by name, or a `\let` copy of one (`\ifx`'s test, `x_equals`) other
+/// than one of `\relax` (latex.ltx's `\let\normalcolor\relax` until color loads). A copy shares its source's
+/// definition, so a definition of `t`'s own name is no copy and is read by name only.
+pub(crate) fn means_one_of(t: &Token, names: &[&str]) -> bool {
+  cs_in(t, names)
+    || (lookup_meaning(t)
+      .and_then(|m| m.to_definition())
+      .is_some_and(|d| *d.get_cs() != *t)
+      && !x_equals(t, &TOKEN_RELAX)
+      && names.iter().any(|name| x_equals(t, &T_CS!(*name))))
+}
+
+/// Besides [`FONT_DECLARATIONS`], the declarations and spacing that typeset nothing (paragraph shape, breaks), taking
+/// no argument: [`layout`] reads both (also the declarations an author line's separator takes the gap before:
+/// `base_utilities::spaced_name_separators`).
+const LAYOUT: &[&str] = &[
+  "\\noindent",
+  "\\indent",
+  "\\par",
+  "\\ignorespaces",
+  "\\relax",
+  "\\leavevmode",
+  "\\unskip",
+  "\\nobreak",
+  "\\centering",
+  "\\raggedright",
+  "\\raggedleft",
+  "\\bgroup",
+  "\\smallskip",
+  "\\medskip",
+  "\\bigskip",
+];
+/// Whether `t` means a command that typesets nothing and takes no argument: a font declaration or one of [`LAYOUT`].
+pub(crate) fn layout(t: &Token) -> bool { font_declaration(t) || means_one_of(t, LAYOUT) }
+/// Spacing and font commands that typeset nothing, with the number of braced arguments they take (`\vspace*` too).
+const LAYOUT_ARGS: &[(&str, usize)] = &[
+  ("\\fontsize", 2),
+  ("\\fontfamily", 1),
+  ("\\fontseries", 1),
+  ("\\fontshape", 1),
+  ("\\fontencoding", 1),
+  ("\\usefont", 4),
+  ("\\vspace", 1),
+  ("\\addvspace", 1),
+  ("\\hspace", 1),
+];
+/// Glue and dimension parameters (and skips) set or inserted by a glue that follows them: `\rightskip5.5pc`,
+/// `\vskip 12\p@`, `\leftskip2pc\rightskip2pc plus1fill` (pasa.cls:56, tADR2e.cls:85).
+const GLUE_SETTERS: &[&str] = &[
+  "\\leftskip",
+  "\\rightskip",
+  "\\parindent",
+  "\\parskip",
+  "\\vskip",
+  "\\hskip",
+  "\\kern",
+];
+/// Sectioning commands whose (starred) heading carries the label: paper.cls:621 `\paragraph*{\keywordname:}`,
+/// acmconf.cls:340 `\section*{KEYWORDS}`.
+const HEADINGS: &[&str] = &[
+  "\\section",
+  "\\subsection",
+  "\\subsubsection",
+  "\\paragraph",
+  "\\subparagraph",
+];
+/// Font commands whose argument is label text.
+const STYLED: &[&str] = &[
+  "\\textbf", "\\textit", "\\textsc", "\\textsf", "\\emph", "\\textrm",
+];
+
+/// `t` is a control sequence named in `set`: `set.iter().any(|cs| *t == T_CS!(*cs))` (the same predicate as `Token`
+/// equality), read in place, with no symbol interned per entry.
+pub(crate) fn cs_in(t: &Token, set: &[&str]) -> bool {
+  t.get_catcode() == Catcode::CS && t.with_str(|s| set.contains(&s))
+}
+
+/// The expansion of `t` when it is a parameterless macro with a token body.
+fn parameterless_body(t: &Token) -> Option<Tokens> {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(t) else {
+    return None;
+  };
+  if defn
+    .get_parameters()
+    .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return None;
+  }
+  match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+    _ => None,
+  }
+}
+
+/// The index past the glue `body[i..]` starts with — an optional `=`, a sign, a number and a unit (two letters, or a
+/// dimension command as `\p@`), then `plus`/`minus` glue (a `fil` unit there) — or `None` when it is not one.
+fn glue_end(body: &[Token], i: usize) -> Option<usize> {
+  let ch = |k: usize| -> Option<char> {
+    body
+      .get(k)
+      .filter(|t| matches!(t.get_catcode(), Catcode::OTHER | Catcode::LETTER))
+      .and_then(|t| t.with_str(|s| s.chars().next()))
+  };
+  let dimen = |mut k: usize, fil: bool| -> Option<usize> {
+    k = skip_spaces(body, k);
+    while ch(k).is_some_and(|c| c == '-' || c == '+') {
+      k = skip_spaces(body, k + 1);
+    }
+    let digits = k;
+    while ch(k).is_some_and(|c| c.is_ascii_digit() || c == '.' || c == ',') {
+      k += 1;
+    }
+    let had_digits = k > digits;
+    k = skip_spaces(body, k);
+    if let Some(t) = body.get(k)
+      && t.get_catcode() == Catcode::CS
+    {
+      // `12\p@`, `\z@`, `0.5\baselineskip`: a dimension or glue command
+      return matches!(
+        lookup_meaning(t),
+        Some(Stored::Register(_)) | Some(Stored::Expandable(_))
+      )
+      .then_some(k + 1);
+    }
+    if !had_digits {
+      return None;
+    }
+    let unit: String = (k..k + 2).filter_map(ch).collect();
+    const UNITS: &[&str] = &[
+      "pt", "pc", "in", "cm", "mm", "bp", "dd", "cc", "sp", "em", "ex",
+    ];
+    if fil && unit == "fi" && ch(k + 2) == Some('l') {
+      let mut e = k + 3;
+      while ch(e) == Some('l') {
+        e += 1;
+      }
+      return Some(e);
+    }
+    UNITS.contains(&unit.as_str()).then_some(k + 2)
+  };
+  let mut k = skip_spaces(body, i);
+  if ch(k) == Some('=') {
+    k += 1;
+  }
+  k = dimen(k, false)?;
+  for keyword in ["plus", "minus"] {
+    let j = skip_spaces(body, k);
+    let word: String = (j..j + keyword.len()).filter_map(ch).collect();
+    if word == keyword {
+      k = dimen(j + keyword.len(), true)?;
+    }
+  }
+  Some(k)
+}
+
+/// A label's text as it is collected from the class's code: its characters and text macros, the layout around them
+/// dropped — a source space, a horizontal skip or a kern between two pieces (a class macro's too: `\quad`) read as one
+/// space, an explicit space (`\ `, `~`) kept as one — so that neither a font nor a layout command reaches the `name` it
+/// becomes, nor the keywords after it: emsprocart's `{\noindent\bfseries{\keywordname.}\vspace{\z@}}` is "Keywords."
+/// (1202.4161, 1006.0632, 1610.08545), ieice.cls's `{\bfseries key words:\ \ignorespaces}` "key words:" (2002.00666,
+/// 1604.03276, 2509.21881), lni.cls's `\noindent{\bfseries Keywords:}` "Keywords:" (1604.03313). A class macro that is
+/// text stays itself, read when the label is (a language's `\keywordname`).
+#[derive(Default)]
+struct LabelText {
+  text:          Vec<Token>,
+  pending_space: bool,
+}
+
+impl LabelText {
+  /// A space between pieces of the label, if one follows.
+  fn space(&mut self) { self.pending_space |= !self.text.is_empty(); }
+
+  /// A piece of the label's text (a space token: an explicit one).
+  fn push(&mut self, t: Token) {
+    let is_space = t.get_catcode() == Catcode::SPACE;
+    let after_space = self
+      .text
+      .last()
+      .is_some_and(|l| l.get_catcode() == Catcode::SPACE);
+    if self.pending_space && !is_space && !after_space {
+      self.text.push(T_SPACE!());
+    }
+    self.pending_space = false;
+    if is_space && (after_space || self.text.is_empty()) {
+      return;
+    }
+    self.text.push(t);
+  }
+
+  /// Is there text in it: a letter, or a class macro that is text?
+  fn has_text(&self) -> bool {
+    self
+      .text
+      .iter()
+      .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::CS))
+  }
+}
+
+/// Read one item of a label's code from `body[i]` into `out`, returning the index past it: layout that typesets nothing,
+/// or label material, of which its text is kept ([`LabelText`]) — `None` for anything else: an assignment, a definition,
+/// a list, a box, a conditional, math. `depth` bounds the class macros followed.
+fn label_item(body: &[Token], i: usize, depth: usize, out: &mut LabelText) -> Option<usize> {
+  let t = body[i];
+  match t.get_catcode() {
+    Catcode::SPACE => {
+      out.space();
+      return Some(i + 1);
+    },
+    Catcode::LETTER | Catcode::OTHER => {
+      out.push(t);
+      return Some(i + 1);
+    },
+    Catcode::ACTIVE if t == T_ACTIVE!('~') => {
+      out.push(T_SPACE!());
+      return Some(i + 1);
+    },
+    Catcode::BEGIN => {
+      // a group of label material: `{\bfseries Keywords:}`, `{\itshape Some key words}` (biometrika.cls:526)
+      let past = tokens_group_end(body, i)?;
+      label_items(&body[i + 1..past - 1], depth, out)?;
+      return Some(past);
+    },
+    Catcode::CS => {},
+    _ => return None,
+  }
+  if layout(&t) {
+    return Some(i + 1);
+  }
+  if t == T_CS!("\\ ") {
+    out.push(T_SPACE!());
+    return Some(i + 1);
+  }
+  if t == T_CS!("\\/") {
+    return Some(i + 1);
+  }
+  if let Some((cs, nargs)) = LAYOUT_ARGS.iter().find(|(cs, _)| cs_in(&t, &[cs])) {
+    let mut k = skip_spaces(body, i + 1);
+    if body.get(k) == Some(&T_OTHER!("*")) {
+      k += 1;
+    }
+    for _ in 0..*nargs {
+      k = tokens_group_end(body, skip_spaces(body, k))?;
+    }
+    if *cs == "\\hspace" {
+      out.space();
+    }
+    return Some(k);
+  }
+  if cs_in(&t, GLUE_SETTERS) {
+    // (a horizontal skip or a kern between two pieces: one space, `\textbf{Key}\kern3pt\textbf{words}`)
+    if t == T_CS!("\\hskip") || t == T_CS!("\\kern") {
+      out.space();
+    }
+    return glue_end(body, i + 1);
+  }
+  if cs_in(&t, HEADINGS) || cs_in(&t, STYLED) {
+    // a heading's argument is the label, the heading the class's presentation of it; a font command's is label text
+    let mut k = skip_spaces(body, i + 1);
+    if cs_in(&t, HEADINGS) && body.get(k) == Some(&T_OTHER!("*")) {
+      k = skip_spaces(body, k + 1);
+    }
+    let past = tokens_group_end(body, k)?;
+    label_items(&body[k + 1..past - 1], depth, out)?;
+    return Some(past);
+  }
+  // a macro of the class's own: its label text (`\keywordname`, letters only) or its layout (pasa.cls:56
+  // `\def\keywordfont{\small\rightskip5.5pc}`)
+  let expansion = parameterless_body(&t)?;
+  let expansion = expansion.unlist_ref();
+  if !expansion.is_empty()
+    && expansion.iter().all(|e| {
+      matches!(
+        e.get_catcode(),
+        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+      )
+    })
+  {
+    out.push(t);
+    return Some(i + 1);
+  }
+  if depth == 0 {
+    return None;
+  }
+  // (read into the label itself, so that a space it makes stays — `\textbf{Key}\quad\textbf{words}` — and refused
+  // when it typeset text)
+  let typeset = out.text.len();
+  label_items(expansion, depth - 1, out)?;
+  (out.text.len() == typeset).then_some(i + 1)
+}
+
+/// Read every item of a label's code ([`label_item`]), or `None` when one is not label material or layout.
+fn label_items(body: &[Token], depth: usize, out: &mut LabelText) -> Option<()> {
+  let mut k = 0;
+  while k < body.len() {
+    k = label_item(body, k, depth, out)?;
+  }
+  Some(())
+}
+
+/// The class's label in the begin code of a `{keywords}` environment that typesets only a label: the code is layout
+/// that typesets nothing ([`layout`], [`LAYOUT_ARGS`], [`GLUE_SETTERS`], a class macro made of them) around label
+/// material — text, a heading's or font command's argument, a group of them, a class macro that is text — returned as
+/// its text ([`LabelText`]): paper.cls:621 `\small\paragraph*{\keywordname:}`, pasa.cls:101-103
+/// `\noindent\keywordfont\textbf{Keywords: }`, biometrika.cls:525-527, irmaems.cls:1131 `\noindent\small Keywords:`,
+/// ieice.cls:952-954, emsprocart.cls (1202.4161), lni.cls (1604.03313's copy).
+/// Code doing anything else — a flag its title page reads (`\global\keywordstrue`, tADR2e.cls:450), a box it fills
+/// (ar-1col's `\global\setbox\@kwdbox\vbox\bgroup`), a list, a definition (TeX Live's lni.cls:561-565 `\def\and`), a
+/// conditional (TeX Live's emsprocart.cls `\if@twocolumn`) — is not this shape, and the environment stays the class's.
+fn label_only_begin_code(body: &[Token]) -> Option<Tokens> {
+  let mut out = LabelText::default();
+  label_items(body, 2, &mut out)?;
+  // (an explicit space the label ends with is the class's spacing before the keywords, not the label's)
+  while out
+    .text
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    out.text.pop();
+  }
+  out.has_text().then(|| Tokens::new(out.text))
+}
+
+/// The class's label in a keywords setter's body, ahead of its argument: the code before its first `#1`, without the
+/// group or font command the argument is in (`\emph{##1}`, `{\raggedright ##1\par}`), read as
+/// [`label_only_begin_code`] reads a begin code — astlb.cls:200 `\medskip Key words:~~\emph{##1}` "Key words:"
+/// (1202.2889), pazhastl.cls:191 `\medskip\emph{Keywords:}~~##1` "Keywords:" (astro-ph0306137) — or `None` when it
+/// is not that shape: wiley-article.cls:449's `\allcaps[…]{keywords}` (1706.00599), mtt.cls:181's `\item` and
+/// language-chosen `\mtt@keywords` (1310.0585) keep the default name.
+fn label_before_argument(body: &[Token]) -> Option<Tokens> {
+  let prefix = &body[..argument_at(body)?];
+  let mut open: Vec<usize> = Vec::new();
+  for (k, t) in prefix.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => open.push(k),
+      Catcode::END => {
+        open.pop();
+      },
+      _ => {},
+    }
+  }
+  let mut dropped = vec![false; prefix.len()];
+  for &k in &open {
+    dropped[k] = true;
+    let mut p = k;
+    while p > 0 && prefix[p - 1].get_catcode() == Catcode::SPACE {
+      p -= 1;
+    }
+    if p > 0 && (cs_in(&prefix[p - 1], STYLED) || cs_in(&prefix[p - 1], HEADINGS)) {
+      dropped[p - 1] = true;
+    }
+  }
+  let kept: Vec<Token> = prefix
+    .iter()
+    .zip(&dropped)
+    .filter(|(_, d)| !**d)
+    .map(|(t, _)| *t)
+    .collect();
+  label_only_begin_code(&kept)
+}
+
+/// The label in the line before `body[at]` ([`ClassReaders::title_page_label`]; a line starts at a line break, a group's
+/// or an environment's edge, another value, or a branch's `\else`/`\or` — the whole test's start when the branch holds
+/// no label before the store; a phrase, at a `.`, `!`, `?`, `;` or `,`): the start of the label's tokens, the end of
+/// what a deposit takes out with it (past `body[at]` when the label is in the store's own group, else the start of that
+/// group; past the test's `\fi` when the label is before the test), and the label's text.
+fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens, bool)> {
+  let is_value = |t: &Token| {
+    t.get_catcode() == Catcode::CS
+      && matches!(lookup_meaning(t), Some(Stored::Expandable(ref d))
+        if d.get_origin() == DefinitionOrigin::File
+          && d.get_parameters().is_none_or(|p| p.get_parameters().is_empty()))
+      && parameterless_body(t).is_some_and(|b| {
+        !b.unlist_ref().is_empty()
+          && !b.unlist_ref().iter().all(|e| {
+            matches!(
+              e.get_catcode(),
+              Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+            )
+          })
+      })
+  };
+  let mut end = at + 1;
+  let mut k = at;
+  let mut start = 0;
+  let mut after_break = false;
+  // (the label is in the store's own group, which is the argument of a control sequence: `\footnote{KW: \@keywords}`,
+  // `\href{mailto:\@email}{…}`)
+  let mut in_argument = false;
+  // (past the group last skipped, which starts at `k` while it is the item before)
+  let mut group_past: Option<usize> = None;
+  // (the conditional whose branch holds the store alone, the label before it: its opening and the index past its `\fi`)
+  let mut conditional: Option<(usize, usize)> = None;
+  // (the store is printed alone by the commands passed so far, each with what it prints nothing of:
+  // `\href{mailto:\@corremail}{\textcolor{black}{\@corremail}}`, acl2023.sty:186 — the line goes on before them, brief 97b)
+  let mut wrapped = false;
+  // (an implicit `\bgroup` or `\egroup`, `\let` to a brace, opens or closes a group as one does: the store's own group
+  // in `\insert\footins\bgroup\footnotesize Keywords: \@keywords\par\egroup`, 86g r3 review probe i3)
+  let group_catcode = |t: &Token| {
+    if *t == T_CS!("\\bgroup") {
+      Catcode::BEGIN
+    } else if *t == T_CS!("\\egroup") {
+      Catcode::END
+    } else {
+      t.get_catcode()
+    }
+  };
+  while k > 0 {
+    let t = body[k - 1];
+    match group_catcode(&t) {
+      Catcode::END => {
+        // a group before the store: one item of the line
+        group_past = Some(k);
+        let mut depth = 0i32;
+        let mut open = None;
+        for j in (0..k).rev() {
+          match group_catcode(&body[j]) {
+            Catcode::END => depth += 1,
+            Catcode::BEGIN => {
+              depth -= 1;
+              if depth == 0 {
+                open = Some(j);
+                break;
+              }
+            },
+            _ => {},
+          }
+        }
+        k = open?;
+        continue;
+      },
+      Catcode::BEGIN => {
+        // the store's own group: the line goes on before it when the group holds only layout before the store
+        let mut inner = LabelText::default();
+        if (end == at + 1 || wrapped)
+          && label_items(&body[k..end.min(at)], 0, &mut inner).is_some()
+          && !inner.has_text()
+        {
+          end = k - 1;
+          k -= 1;
+          if k > 0 && (cs_in(&body[k - 1], STYLED) || layout(&body[k - 1])) {
+            end = k - 1;
+            k -= 1;
+          } else if let Some((command, true)) = argument_of(body, k) {
+            // (the printed argument of a command that prints nothing else: a link's text, a colour's)
+            end = command;
+            k = command;
+            wrapped = true;
+          }
+          continue;
+        }
+        in_argument = body[..k - 1]
+          .iter()
+          .rev()
+          .find(|b| b.get_catcode() != Catcode::SPACE)
+          .is_some_and(|b| {
+            b.get_catcode() == Catcode::CS && !cs_in(b, STYLED) && !cs_in(b, HEADINGS)
+          });
+        start = k;
+        break;
+      },
+      Catcode::CS
+        if t == T_CS!("\\par")
+          || t == T_CS!("\\\\")
+          || t == T_CS!("\\newline")
+          || t == T_CS!("\\cr") =>
+      {
+        after_break = t != T_CS!("\\par");
+        start = k;
+        break;
+      },
+      // a branch's start starts the line in it: medima.sty:322-347 prints each history date in the `\else` branch of
+      // its emptiness test, `\ifx\@finalform\@empty\relax\else \finalformhead~\@finalform\\ \fi`, the branch printed
+      // exactly when the store has a value (2104.10903, 2307.16262; review rev95d B2) — `\maketitle`'s run of the title
+      // page still checks the label prints right before the store (`verify_title_page_labels`)
+      Catcode::CS if cs_in(&t, &["\\else", "\\or"]) => {
+        // — unless the branch holds no label before the store: then the label is printed before the whole test,
+        // `Received: \ifx\@received\@empty--\else\@received\fi` "Received:", and the test leaves the title page with
+        // it (its `\fi` included), the store's branch being the one printed when the store has a value (review
+        // rev95d-r2)
+        let mut inner = LabelText::default();
+        if conditional.is_none()
+          && label_items(&body[k..end.min(at)], 0, &mut inner).is_some()
+          && !inner.has_text()
+          && let Some((open, past)) = enclosing_conditional(body, k - 1, at)
+        {
+          conditional = Some((open, past));
+          k = open;
+          continue;
+        }
+        start = k;
+        break;
+      },
+      // an environment's begin or end starts the line after it: `\end{center}\noindent Resumen: \@resumen` (review
+      // probes `d_own2`, `d_own3`), `\begin{quote}\itshape\@resumen` (`d_nolab`: no label)
+      Catcode::CS
+        if (t == T_CS!("\\begin") || t == T_CS!("\\end"))
+          && group_past.is_some()
+          && body
+            .get(k)
+            .is_some_and(|b| b.get_catcode() == Catcode::BEGIN) =>
+      {
+        start = group_past.unwrap_or(k);
+        break;
+      },
+      Catcode::CS if is_value(&t) => {
+        start = k;
+        break;
+      },
+      _ => {},
+    }
+    k -= 1;
+  }
+  if after_break {
+    // `\\*[<skip>]`
+    start = skip_spaces(body, start);
+    if body.get(start) == Some(&T_OTHER!("*")) {
+      start = skip_spaces(body, start + 1);
+    }
+    if body.get(start) == Some(&T_OTHER!("[")) {
+      start += body[start..end].iter().position(|b| *b == T_OTHER!("]"))? + 1;
+    }
+  }
+  let mut label_end = if end == at + 1 { at } else { end };
+  if let Some((open, past)) = conditional {
+    label_end = label_end.min(open);
+    end = past;
+  }
+  // The label is the phrase printed right before the store: a sentence before it in the same line stays where it is
+  // (`\footnote{Funded. KW: \@keywords}`, review probe `fnm`: "KW:", the footnote keeps "Funded."), and so does a
+  // clause before a `;` or a `,` — pazha2.cls:166-167's `Received \@submitted; revised \@revised; accepted
+  // \@accepted` names the revised date "revised" (2408.01858, 2607.07582; review rev95d-r2).
+  let mut depth = 0i32;
+  let mut phrase = start;
+  // (where the deposit's part starts: the phrase, or the `;` or `,` joining its clause to the one before, which leaves
+  // with it — the title page keeps no "; ;" of the dates it hands on)
+  let mut part = start;
+  // (a store right after a `;` or `,` has no label of its own: the separator ends the clause before it —
+  // iaus.cls's `{\itshape Proceedings IAU Symposium No. \@volume, \@pubyear}`, 0707.3527)
+  let mut after_separator = false;
+  for j in start..label_end {
+    match body[j].get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      Catcode::OTHER
+        if depth == 0
+          && body[j].with_str(|c| matches!(c, "." | "!" | "?" | ";" | ","))
+          && body
+            .get(j + 1)
+            .is_some_and(|b| b.get_catcode() == Catcode::SPACE) =>
+      {
+        let next = skip_spaces(body, j + 1);
+        let separator = body[j].with_str(|c| matches!(c, ";" | ","));
+        if next < label_end {
+          phrase = next;
+          part = if separator { j } else { next };
+        } else {
+          after_separator = separator;
+        }
+      },
+      _ => {},
+    }
+  }
+  if after_separator {
+    return None;
+  }
+  let label = label_only_begin_code(&body[phrase..label_end])?;
+  Some((part, end, label, in_argument))
+}
+
+/// The text `body` prints right before `body[at]` ([`ClassReaders::prints_default_name_before`]): its characters back
+/// to the first code that is no text — a branch's `\else`, another store, a primitive —, font and layout commands
+/// passed over (a layout command's braced arguments too: `\hspace{1.5mm}`), a brace read as a word's edge, an explicit space (`~`, `\ `) read as one, and a parameterless macro of
+/// a raw file's read as its own characters (wiley2sp.cls:296 `\def\receivedname{{\normalfont Received:}\ }`).
+fn text_right_before(body: &[Token], at: usize) -> String {
+  // (the open brace of the group a close brace at `body[k]` ends)
+  let group_open = |k: usize| -> Option<usize> {
+    let mut depth = 0usize;
+    for j in (0..=k).rev() {
+      match body[j].get_catcode() {
+        Catcode::END => depth += 1,
+        Catcode::BEGIN => {
+          depth -= 1;
+          if depth == 0 {
+            return Some(j);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let mut pieces: Vec<String> = Vec::new();
+  let mut k = at;
+  let mut read = 0;
+  while k > 0 && read < 64 {
+    k -= 1;
+    read += 1;
+    let t = &body[k];
+    match t.get_catcode() {
+      Catcode::SPACE => pieces.push(" ".to_string()),
+      Catcode::LETTER | Catcode::OTHER => pieces.push(t.to_string()),
+      Catcode::ACTIVE if *t == T_ACTIVE!('~') => pieces.push(" ".to_string()),
+      // (a layout command's braced arguments print nothing — rose_v01.cls:259's `\text{Received}\hspace{1.5mm}
+      // \@received`, 0907.2032 —; any other brace bounds a word: `\vskip 2.5mm{\footnotesize Received:` prints "2.5mm"
+      // and "Received:")
+      Catcode::END => {
+        // (the argument groups ending here, back to the command they follow)
+        let mut first = group_open(k);
+        while let Some(o) = first {
+          let b = skip_spaces_back(body, o);
+          if b > 0 && body[b - 1].get_catcode() == Catcode::END {
+            first = group_open(b - 1);
+            continue;
+          }
+          let mut cs = b;
+          if cs > 0 && body[cs - 1] == T_OTHER!("*") {
+            cs -= 1;
+          }
+          if cs > 0
+            && LAYOUT_ARGS
+              .iter()
+              .any(|(name, _)| cs_in(&body[cs - 1], &[name]))
+          {
+            k = cs - 1;
+          }
+          break;
+        }
+        pieces.push(" ".to_string());
+      },
+      Catcode::BEGIN => pieces.push(" ".to_string()),
+      Catcode::CS if *t == T_CS!("\\ ") || *t == T_CS!("\\space") => pieces.push(" ".to_string()),
+      Catcode::CS if layout(t) || cs_in(t, STYLED) => {},
+      Catcode::CS => match lookup_meaning(t) {
+        Some(Stored::Expandable(defn)) if defn.get_origin() == DefinitionOrigin::File => {
+          match parameterless_body(t) {
+            Some(expansion) => pieces.push(
+              expansion
+                .unlist_ref()
+                .iter()
+                .filter(|e| matches!(e.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+                .map(Token::to_string)
+                .collect(),
+            ),
+            None => break,
+          }
+        },
+        _ => break,
+      },
+      _ => break,
+    }
+  }
+  pieces.iter().rev().map(String::as_str).collect()
+}
+
+/// The index of the first of the spaces `body[..i]` ends with (`i` when none).
+fn skip_spaces_back(body: &[Token], mut i: usize) -> usize {
+  while i > 0 && body[i - 1].get_catcode() == Catcode::SPACE {
+    i -= 1;
+  }
+  i
+}
+
+/// The conditional whose `\else` or `\or` is `body[branch]` and whose branch from there holds `body[at]`
+/// ([`line_label_before`]): the index of its opening `\if…` (its `\unless` prefix too) and the index past its `\fi`,
+/// the two in one brace level — `None` when either is not in `body`.
+fn enclosing_conditional(body: &[Token], branch: usize, at: usize) -> Option<(usize, usize)> {
+  let mut depth = 0usize;
+  let mut open = None;
+  for j in (0..branch).rev() {
+    match conditional_kind(&body[j]) {
+      Some(ConditionalType::Fi) => depth += 1,
+      Some(ConditionalType::If) if depth == 0 => {
+        open = Some(j);
+        break;
+      },
+      Some(ConditionalType::If) => depth -= 1,
+      _ => {},
+    }
+  }
+  let mut open = open?;
+  if open > 0
+    && matches!(
+      conditional_kind(&body[open - 1]),
+      Some(ConditionalType::Unless)
+    )
+  {
+    open -= 1;
+  }
+  let mut depth = 0usize;
+  for j in at + 1..body.len() {
+    match conditional_kind(&body[j]) {
+      Some(ConditionalType::If) => depth += 1,
+      Some(ConditionalType::Fi) if depth == 0 => {
+        return Tokens::slice_is_balanced(&body[open..=j]).then_some((open, j + 1));
+      },
+      Some(ConditionalType::Fi) => depth -= 1,
+      _ => {},
+    }
+  }
+  None
+}
+
+/// Does a keywords setter's body only typeset its label and its argument (layout, label material and `#1`, read as
+/// [`label_only_begin_code`] reads a begin code)? Then it typesets nothing the kernel's abstract lacks, and an abstract
+/// kept in place may run it: kwmtt.cls's `\par\noindent{\bfseries Keywords:} \itshape##1`, not mtt.cls:181's `\item`
+/// of the class's own abstract list (1310.0585).
+fn typesets_label_and_argument(body: &[Token]) -> bool {
+  let mut text: Vec<Token> = Vec::with_capacity(body.len());
+  let mut k = 0;
+  while k < body.len() {
+    if let Some(length) = argument_length(body, k) {
+      text.push(T_LETTER!("x"));
+      k += length;
+    } else {
+      text.push(body[k]);
+      k += 1;
+    }
+  }
+  label_only_begin_code(&text).is_some()
+}
+
+/// Is a `{keywords}` environment's begin code environ.sty's `\Collect@Body\X`, whose `\X` stores the collected body
+/// — with the class's own wrapper around it — in one macro that only the title-page code reads ([`ClassReaders`])?
+/// cclayout.sty:71-73 `\long\def\for@cc@keywords#1{\gdef\@keywords@macro{\begin{@abstr}{\cckeywordsname}#1\end
+/// {@abstr}}}` `\newenvironment{keywords}{\Collect@Body\for@cc@keywords}{}`, `\@keywords@macro` read only by its
+/// `\maketitle` (:889-898): the keywords of 1905.07821 and the cc papers reached neither the frontmatter nor the
+/// body. The wrapper is the class's presentation of the keywords, as rule (a)'s title page is.
+fn collects_body_for_the_title_page(begin: &[Token], readers: &mut Option<ClassReaders>) -> bool {
+  let code: Vec<Token> = begin
+    .iter()
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .copied()
+    .collect();
+  let [collect, setter] = code[..] else {
+    return false;
+  };
+  if collect != T_CS!("\\Collect@Body") {
+    return false;
+  }
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&setter) else {
+    return false;
+  };
+  let one_arg = defn.get_parameters().is_some_and(
+    |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
+  );
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  if !one_arg || defn.get_origin() != DefinitionOrigin::File {
+    return false;
+  }
+  let body = body.unlist_ref();
+  let mut i = 0;
+  while body
+    .get(i)
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE || cs_in(t, DEFINITION_FRAME))
+  {
+    i += 1;
+  }
+  if !body.get(i).is_some_and(|t| cs_in(t, STORE_DEFINERS)) {
+    return false;
+  }
+  let k = skip_spaces(body, i + 1);
+  let Some(store) = body
+    .get(k)
+    .copied()
+    .filter(|c| c.get_catcode() == Catcode::CS)
+  else {
+    return false;
+  };
+  let Some(past) = tokens_group_end(body, k + 1) else {
+    return false;
+  };
+  argument_at(&body[k + 2..past - 1]).is_some()
+    && skip_spaces(body, past) == body.len()
+    && readers
+      .get_or_insert_with(ClassReaders::survey)
+      .read_only_by_the_title_page(&store)
+}
+
+/// Reroute each table keywords setter the raw class `cls` defined as a `{keywords}`-like environment whose begin
+/// code only typesets a label ([`label_only_begin_code`]) — `\<name>` taking no argument with its `\end<name>` — to the
+/// frontmatter's keywords, named by the class's label (`\lx@class@keywords`): the environment as
+/// `\lx@begin@keywords[name={label}]` … `\lx@end@keywords`, as mn2e's binding's (mn2e_support_sty.rs), the command
+/// with a braced argument that ends the keywords as `\lx@add@keywords[name={label}]{…}`; the class's own begin and end
+/// code stay for any other use (`\keywords {alpha}, beta`, a bare `\keywords alpha \endkeywords`). A document's own
+/// environment, defined after the class, replaces it.
+fn reroute_keywords_environments(cls: &str, readers: &mut Option<ClassReaders>) -> Result<()> {
+  let mut rerouted: Vec<&str> = Vec::new();
+  for (name, _) in keywords_setters() {
+    if defined_by_a_binding(name)? {
+      continue;
+    }
+    let begin = T_CS!(&s!("\\{name}"));
+    let end = T_CS!(&s!("\\end{name}"));
+    let Some(defn) = lookup_definition(&begin)? else {
+      continue;
+    };
+    if lookup_definition(&end)?.is_none()
+      || defn
+        .get_parameters()
+        .is_some_and(|p| !p.get_parameters().is_empty())
+      || !matches!(defn.get_origin(), DefinitionOrigin::File)
+    {
+      continue;
+    }
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      continue;
+    };
+    let label = match label_only_begin_code(body.unlist_ref()) {
+      Some(label) => Some(label),
+      None if collects_body_for_the_title_page(body.unlist_ref(), readers) => None,
+      None => continue,
+    };
+    // The class's own begin and end code stay, for a bare `\keywords text` (`\lx@class@keywords`) and its
+    // `\endkeywords` (`\lx@class@keywords@end`) outside the environment.
+    for (own, cs) in [
+      ("\\lx@class@keywords@", &begin),
+      ("\\lx@class@keywords@end@", &end),
+    ] {
+      assign_meaning(
+        &T_CS!(&s!("{own}{name}")),
+        lookup_meaning(cs).unwrap_or(Stored::None),
+        Some(Scope::Global),
+      );
+    }
+    if let Some(label) = label {
+      assign_value(
+        &s!("lx_class_keywords_label_{name}"),
+        Stored::Tokens(label),
+        Some(Scope::Global),
+      );
+    }
+    for (cs, reader) in [
+      (begin, "\\lx@class@keywords{"),
+      (end, "\\lx@class@keywords@end{"),
+    ] {
+      let mut call = mouth::tokenize_internal(reader).unlist();
+      call.extend(ExplodeText!(name));
+      call.push(T_END!());
+      DefMacro!(cs, None, Tokens::new(call));
+    }
+    rerouted.push(name);
+  }
+  if !rerouted.is_empty() {
+    Info!(
+      "frontmatter",
+      cls,
+      s!(
+        "Rerouted the raw class's keywords environment to the frontmatter API: {{{}}}",
+        rerouted.join("}, {")
+      )
+    );
+  }
+  Ok(())
+}
+
+/// The call `api` (`\lx@add@keywords{#1}`, the table's) named by the class's `label`, when there is one:
+/// `\lx@add@keywords[name={label}]{#1}` (astlb.cls:200's "Key words:", 1202.2889; paper.cls:621's `\keywordname:`,
+/// synthetic: kwpaper.cls's command forms).
+fn named_keywords_call(api: &str, label: Option<Tokens>) -> Vec<Token> {
+  let Some(label) = label else {
+    return mouth::tokenize_internal(TeXString::assembled(api.to_string())).unlist();
+  };
+  let (command, rest) = api.split_at(api.find(['[', '{']).unwrap_or(api.len()));
+  let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{command}[name={{"))).unlist();
+  call.extend(label.unlist());
+  call.push(T_END!());
+  call.push(T_OTHER!("]"));
+  call.extend(mouth::tokenize_internal(TeXString::assembled(rest.to_string())).unlist());
+  call
+}
+
+/// Does the input go on with a braced group that ends the keywords — `\par`, a blank line, an `\end…` or the end of
+/// the input after it, spaces skipped? Every token read is put back. `\keywords {alpha}, beta, gamma` is not that:
+/// its first group is part of the keywords (synthetic, the review's t3 shape). Nor is a group a `\section`,
+/// `\maketitle` or `\begin{…}` follows: there the class's own code runs, as before 68n.
+fn braced_group_ends_the_keywords() -> Result<bool> {
+  let Some(open) = read_token()? else {
+    return Ok(false);
+  };
+  let mut read = vec![open];
+  let mut ends = false;
+  if open.get_catcode() == Catcode::BEGIN {
+    let (group, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
+    read.extend(group.unlist());
+    if let Some(close) = close {
+      read.push(close);
+      loop {
+        let next = read_token()?;
+        if let Some(t) = next
+          && matches!(t.get_catcode(), Catcode::SPACE | Catcode::COMMENT)
+        {
+          read.push(t);
+          continue;
+        }
+        ends = next.is_none_or(|t| {
+          t == T_CS!("\\par")
+            || (t.get_catcode() == Catcode::CS && t.with_str(|s| s.starts_with("\\end")))
+        });
+        read.extend(next);
+        break;
+      }
+    }
+  }
+  unread(Tokens::new(read));
+  Ok(ends)
+}
+
+/// The calls handing the last `\author` call's tail (`\lx@author@handed`) to the creators it made.
+/// `at_maketitle`: no `\author` call follows, so when this one made every author, all are queued and
+/// the tail's unmarked lines may be placed by the marks (`affiliation_calls`); else they are rows of
+/// this call's creators, as a later author's marks are not yet known.
+/// A tail holding `\and` at its top level (a `\coauthor` appending `\and #1`: jaa.cls, pramana.cls `\addauthor`) goes on
+/// the block with more authors, which LaTeX's `\@maketitle` prints as more columns: what comes before its first `\and`
+/// is rows of this call's creators, the rest one more author block (`\lx@add@authors@append`), split at its `\and`s and
+/// read as the `\author` argument is (RR1 gap 24; witness 2511.15315).
+/// At `\maketitle` with no `\author` call handed, the tail of a binding's `\@author` the setters never stored
+/// ([`seen_author_tail`]: authblk's, 2511.15315).
+/// Either route reads a tail only where the title page in force prints it: at `\maketitle`, as the title-page reading
+/// says (`latex_constructs::title_page_reading`: its run of the page a raw file or the document wrote, else the walk of
+/// it, else the declaration of the binding owning `\author`, `fm_author_tail_declared`), before it (an appending
+/// `\author`'s flush) by the walk and the declaration alone ([`own_title_page_prints_author`]). One that prints only
+/// the title (a document's or a raw class's `\maketitle` or `\@maketitle`) prints neither the names nor the lines
+/// appended (review revFX24 finding 1); a document's addition to LaTeX's `\@maketitle`, or a `\let` copy of it, prints
+/// both (revFX24b, TP1); amsart under a document's `\@maketitle` printing `\@author` prints the tail its own page
+/// would not (FX26's RED, TP1).
+fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
+  // (`under_block`: the binding route's tail, printed under the whole block)
+  let (handed, made, under_block) = match lookup_value("lx_author_handed") {
+    Some(Stored::Tokens(handed)) => (handed, lookup_int("lx_author_made"), false),
+    _ if at_maketitle => match seen_author_tail()? {
+      Some((seen, made)) => (seen, made, true),
+      None => return Ok(Vec::new()),
+    },
+    _ => return Ok(Vec::new()),
+  };
+  let Some(current) = store_value("author")? else {
+    return Ok(Vec::new());
+  };
+  let (handed, current) = (handed.unlist_ref(), current.unlist_ref());
+  if current.len() <= handed.len() || current[..handed.len()] != *handed {
+    return Ok(Vec::new());
+  }
+  let tail = &current[handed.len()..];
+  let printed = if at_maketitle {
+    crate::latex_constructs::title_page_reading::title_page_reading()?.tail_printed()
+  } else {
+    own_title_page_prints_author().or_else(fm_author_tail_declared)
+  };
+  if printed != Some(true) {
+    return Ok(Vec::new());
+  }
+  // (the tail's first top-level `\and`, by spelling as the stores' numbered split is: P26)
+  let and = T_CS!("\\and");
+  let mut depth = 0i32;
+  let mut split = None;
+  for (i, token) in tail.iter().enumerate() {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ if depth == 0 && *token == and => {
+        split = Some(i);
+        break;
+      },
+      _ => {},
+    }
+  }
+  let (rows, more) = match split {
+    Some(i) => (&tail[..i], Some(Tokens::new(tail[i + 1..].to_vec()))),
+    None => (tail, None),
+  };
+  let mut calls = row_calls(Tokens::new(rows.to_vec()), made, at_maketitle, under_block)?;
+  if let Some(more) = more.filter(|more| !is_blank(more)) {
+    calls.extend(Invocation!(T_CS!("\\lx@add@authors@append"), vec![None, Some(more)]).unlist());
+  }
+  Ok(calls)
+}
+
+/// The value of `\@author` when the frontmatter last took an author from a binding's setter that keeps its own list
+/// (`lx_author_seen`, `note_author_seen`), when creators are queued. The tail appended after it is printed under the
+/// whole block: every queued creator's — where the title page in force prints it ([`author_tail_calls`]: authblk's own
+/// `\@author` prints the block, authblk.sty:167-171, llncs's `\@maketitle` prints `\@author`, llncs.cls:1035, as their
+/// bindings declare, `AuthorPage::Block`; not amsart's page, which prints `\authors`, nor elsarticle's `\elsauthors`).
+fn seen_author_tail() -> Result<Option<(Tokens, i64)>> {
+  let Some(Stored::Tokens(seen)) = lookup_value("lx_author_seen") else {
+    return Ok(None);
+  };
+  let creators = queued_creator_count();
+  if creators == 0 {
+    return Ok(None);
+  }
+  Ok(Some((seen, creators as i64)))
+}
+
+/// Does the title page of the file's or the document's own print `\@author`, as the code that runs at `\maketitle`
+/// reads it? A stand-in copy's own title page answers for itself ([`copy_title_page_prints`]). Else the title page a raw
+/// file or the document defined — the refused `\maketitle` (`\lx@dropped@maketitle`), else a `\@maketitle` of the
+/// file's or the document's own — is walked through the live code it reaches (`reads_of_branches`, the switches as they
+/// are; the macros a raw file or the document defined): it prints `\@author` when it reads it, or reaches LaTeX's or a
+/// binding's `\maketitle` or `\@maketitle` by its current meaning (a `\let` copy of the current `\maketitle` the body
+/// calls), or the kernel's marker of LaTeX's own `\@maketitle` (`\lx@kernel@maketitle`: an addition to it or a `\let`
+/// copy of it, revFX24b), which print it (article.cls:247; a binding's title page is the frontmatter's). A copy of
+/// `\@author` is not seen (RED `article_author_tail_printed_through_let_copy_of_author_is_lost_red`). `None` when there
+/// is no such title page: the page is LaTeX's or the binding's (`fm_author_tail_declared`). A raw class's own
+/// `\maketitle` that prints only the title, or a document's `\renewcommand\maketitle`/`\def\@maketitle`, does not
+/// (review revFX24 finding 1; 2511.15315's procdoc2.cls:77 does). The title-page reading's answer where its run cannot
+/// give one (`latex_constructs::title_page_reading`), and the answer before `\maketitle`.
+pub(crate) fn own_title_page_prints_author() -> Option<bool> {
+  if let Some(prints) = copy_title_page_prints(&T_CS!("\\@author")) {
+    return Some(prints);
+  }
+  let own = |cs: &Token| body_from(cs, &[DefinitionOrigin::File, DefinitionOrigin::Document]);
+  let maketitle = T_CS!("\\@maketitle");
+  // (a `\@maketitle` of the file's or the document's own only where it is the page in force: the `\maketitle` that runs
+  // runs it, `own_maketitle`, TP1b)
+  let root = own(&T_CS!("\\lx@dropped@maketitle"))
+    .or_else(|| own(&maketitle).filter(|_| crate::latex_constructs::own_maketitle()))?;
+  let target = T_CS!("\\@author").get_cs_name();
+  // (LaTeX's title page, which prints `\@author`: the kernel's `\maketitle` and `\@maketitle`, and a copy of either)
+  let latex_maketitle = T_CS!("\\maketitle");
+  let title_pages: Vec<Stored> = [latex_maketitle, maketitle]
+    .iter()
+    .filter_map(lookup_meaning)
+    .collect();
+  let is_title_page = |cs: &Token| {
+    lookup_meaning(cs).is_some_and(|meaning| match &meaning {
+      Stored::Expandable(defn) => title_pages
+        .iter()
+        .any(|page| matches!(page, Stored::Expandable(p) if Rc::ptr_eq(p, defn))),
+      _ => false,
+    })
+  };
+  let mut seen: FxHashSet<SymStr> = FxHashSet::default();
+  let mut work = vec![root];
+  while let Some(body) = work.pop() {
+    for cs in reads_of_branches(&executed_code(body.unlist_ref()), true) {
+      let key = cs.get_cs_name();
+      if key == target {
+        return Some(true);
+      }
+      if !seen.insert(key) {
+        continue;
+      }
+      match own(&cs) {
+        Some(callee) => work.push(callee),
+        None if is_title_page(&cs) => return Some(true),
+        // (LaTeX's own `\@maketitle` or the kernel's marker in it, by identity, reached directly, in an addition to it or
+        // in a `\let` copy: the class's page, which the declaration answers for)
+        None if crate::latex_constructs::is_latex_maketitle(&cs) => {
+          return fm_author_tail_declared();
+        },
+        None => {},
+      }
+    }
+  }
+  Some(false)
+}
+
+/// What `\@author` held when the frontmatter last took its authors: the value the kernel's `\author` stored
+/// (`lx_author_handed`), else the value it held as a binding's setter queued them (`lx_author_seen`); what a document
+/// appends to it follows (`\lx@author@tail`, the title-page reading's marks).
+pub(crate) fn author_taken_prefix() -> Option<Tokens> {
+  ["lx_author_handed", "lx_author_seen"]
+    .iter()
+    .find_map(|key| match lookup_value(key) {
+      Some(Stored::Tokens(prefix)) => Some(prefix),
+      _ => None,
+    })
+}
+
+/// Records the value of `\@author` as an author is queued (`queue_front_matter`): the
+/// prefix a binding's `\@author` tail follows (`seen_author_tail`). The kernel `\author`'s own record
+/// (`\lx@author@handed`) clears it.
+pub fn note_author_seen() {
+  let value = match store_value("author") {
+    Ok(Some(value)) => Stored::Tokens(value),
+    _ => Stored::Bool(false),
+  };
+  assign_value("lx_author_seen", value, Some(Scope::Global));
+}
+
+/// The calls handing a tail's rows (no `\and` in them) to the `made` creators of the call it follows (`author_tail_calls`).
+/// `under_block`: the tail a binding's `\@author` prints under the whole block (`seen_author_tail`) is an unmarked address
+/// the block's authors share, the frontmatter API's `\lx@add@affiliation@shared` (author_macros.rs): its e-mail lines
+/// placed as a block's address lines are (one address for each author of the row in their order, else each on the author
+/// it spells, else one contact an address on the block's shared creator: `shared_affiliation_calls`,
+/// `place_address_runs`), its other lines one author-block row of every creator — not the e-mail line a row of every
+/// creator (2511.15315's `\g@addto@macro\@author{\\[0.5em]\small\texttt{…}, …}` under authblk's block: three addresses,
+/// each spelling its author; review revFX24 S2).
+fn row_calls(tail: Tokens, made: i64, at_maketitle: bool, under_block: bool) -> Result<Vec<Token>> {
+  // (a call that made no creator has none to hand its tail to)
+  if made <= 0 || is_blank(&tail) {
+    return Ok(Vec::new());
+  }
+  // (the call queued its block whole, one entry whose creators the emitter makes at the flush, so a count of the call's
+  // queued entries reaches its last name alone: where the call made every queued creator, the tail is every creator's,
+  // Perl's `annotate=all` — `relocateAnnotations`' every parent, Base_Utility.pool.ltxml:520; review revZ4b finding 4)
+  let annotate = if made as usize == queued_creator_count() {
+    s!("all")
+  } else {
+    made.to_string()
+  };
+  let attr = mouth::tokenize_internal(TeXString::assembled(s!(
+    "_store=author,annotate={annotate},role=authorblock"
+  )));
+  if under_block {
+    return Ok(
+      Invocation!(T_CS!("\\lx@add@affiliation@shared"), vec![
+        Some(attr),
+        Some(tail)
+      ])
+      .unlist(),
+    );
+  }
+  let marked = mouth::tokenize_internal(TeXString::assembled(
+    "_store=author,role=authorblock".to_string(),
+  ));
+  let authors_queued = at_maketitle && made as usize == queued_creator_count();
+  affiliation_calls(
+    Some(attr),
+    Some(marked),
+    None,
+    tail,
+    queued_authors_marked()?,
+    authors_queued,
+  )
+}
+
+/// A store value of spaces only.
+fn is_blank(value: &Tokens) -> bool {
+  value
+    .unlist_ref()
+    .iter()
+    .all(|t| t.get_catcode() == Catcode::SPACE)
+}
+
+/// The value of the setter `\<name>`'s store (`\@<name>`, or the one rule (a) found: [`store_of`]): its expansion, when it is a parameterless macro (a
+/// `\newcommand`-defined value carries an empty parameter list, as in `\lx@deposit@maketitle`).
+pub(crate) fn store_value(name: &str) -> Result<Option<Tokens>> {
+  let Some(defn) = lookup_definition(&T_CS!(&s!("\\{}", store_of(name))))? else {
+    return Ok(None);
+  };
+  Ok(match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body))
+      if defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty()) =>
+    {
+      Some(body.clone())
+    },
+    _ => None,
+  })
+}
+
+/// Does the title page print the store of `\<name>` in one line with another value of the class's, as they are now:
+/// one of the other values of its lines the class left printing nothing (`lx_store_line_values_<name>`,
+/// `reroute_raw_class_stores`) prints text ([`prints_as_a_value`])?
+fn prints_in_a_line_with_a_value(name: &str) -> bool {
+  matches!(lookup_value(&s!("lx_store_line_values_{name}")),
+    Some(Stored::Tokens(values)) if values.unlist_ref().iter().any(prints_as_a_value))
+}
+
+/// At `\maketitle` (`\lx@store@defaults`), or at the frontmatter fallback in a document without
+/// one (`at_maketitle` false; again at insertion, a no-op once read): hand the captured stores not yet handed on to their
+/// frontmatter API, once — every creator-annotating or creator-making store the document set (in
+/// the order it set them), every named abstract or keywords store it set (`labelled_api`: the class's store, which
+/// LaTeX expands at `\maketitle`), and, only at `\maketitle` (nothing reads one otherwise), any store left
+/// at its class default that the title page prints (lion-msc.cls:196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes
+/// Laboratory, …}`, which pdflatex prints; not tlp.cls:697-728's running-head placeholders,
+/// `ClassReaders::read_by_the_title_page`). A blank store is skipped. The creator-making stores go
+/// after the annotating ones when there is an author (their annotations stay the authors'), before
+/// them when there is none (an affiliation then annotates the speaker); a creator-annotating store
+/// with no creator at all is not handed on and stays the class's to print.
+pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
+  if lookup_bool("lx_stores_harvested") {
+    return Ok(Vec::new());
+  }
+  let names = lookup_string("lx_rerouted_stores");
+  // (a printed token register, [`toks_store`], is read at `\maketitle` only: its page style is the title page's)
+  let toks = if at_maketitle {
+    lookup_string("lx_toks_stores")
+  } else {
+    String::new()
+  };
+  if names.is_empty() && toks.is_empty() {
+    return Ok(Vec::new());
+  }
+  assign_value("lx_stores_harvested", true, Some(Scope::Global));
+  let captured: Vec<&str> = names.split(',').filter(|n| !n.is_empty()).collect();
+  let set_order = lookup_string("lx_store_set_order");
+  let mut ordered: Vec<&str> = set_order
+    .split(',')
+    .filter(|n| captured.contains(n))
+    .collect();
+  for name in &captured {
+    if !ordered.contains(name) {
+      ordered.push(name);
+    }
+  }
+  // A store set after the last harvest was handed on when it was set (`\lx@store@late`): a harvest
+  // re-armed for a superseding `\maketitle` (`\lx@maketitle@supersede`) does not hand it again.
+  let late = lookup_string("lx_stores_late");
+  ordered.retain(|name| !late.split(',').any(|n| n == *name));
+  assign_value(
+    "lx_stores_late",
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
+  // Without a `\maketitle` nothing reads a class default (pdflatex prints none): only the stores the
+  // document set are handed on.
+  if !at_maketitle {
+    ordered.retain(|name| lookup_bool(&s!("lx_store_set_{name}")));
+  }
+  // An editor or speaker store makes its creator after the authors' annotations are placed; with no
+  // author, before them, so they annotate it.
+  let has_author = has_front_matter("ltx:creator");
+  let makes_creator = ordered.iter().any(|name| {
+    creates_a_creator(name)
+      && store_value(name)
+        .ok()
+        .flatten()
+        .is_some_and(|v| !is_blank(&v))
+  });
+  if has_author {
+    ordered.sort_by_key(|name| creates_a_creator(name));
+  } else {
+    ordered.sort_by_key(|name| !creates_a_creator(name));
+  }
+  let has_creator = has_author || makes_creator;
+  let mut calls: Vec<Token> = Vec::new();
+  // (the stores handed on here: a second setter of one, a class's `\let\keyword\keywords`, hands it on no second time —
+  // review probes `al1`, `al2`)
+  let mut handed: Vec<String> = Vec::new();
+  for name in ordered {
+    let Some(api) = store_api(name) else {
+      continue;
+    };
+    // (without a `\maketitle`, no title page prints the store: an ordinary entry, `untagged_api`)
+    let api = if at_maketitle {
+      api
+    } else {
+      untagged_api(&api, name)
+    };
+    let api = api.as_str();
+    // (a deferred store's value as the setter left it, when the store no longer holds it: a class's own `\maketitle`
+    // that runs — not refused — prints it and clears it, ptp-prep.clo:27-34 `\@abst … \gdef\@abst{}`, before the
+    // fallback reads the stores: 0906.3938, 0907.2968)
+    let recorded = match lookup_value(&s!("lx_store_value_{name}")) {
+      Some(Stored::Tokens(value)) if lookup_bool(&s!("lx_store_deferred_{name}")) => Some(value),
+      _ => None,
+    };
+    let value = match store_value(name)? {
+      Some(value) if !is_blank(&value) => value,
+      current => match recorded.or(current) {
+        Some(value) => value,
+        None => continue,
+      },
+    };
+    if is_blank(&value) {
+      continue;
+    }
+    if annotates_a_creator(name) {
+      if !has_creator {
+        continue;
+      }
+    } else if !creates_a_creator(name)
+      && lookup_bool(&s!("lx_store_set_{name}"))
+      && !lookup_bool(&s!("lx_store_deferred_{name}"))
+    {
+      // handed on when it was set (a named abstract or keywords store only stored, `labelled_api`)
+      continue;
+    }
+    // A class default only the title page prints (`ClassReaders::read_by_the_title_page`).
+    if !lookup_bool(&s!("lx_store_set_{name}"))
+      && !lookup_bool(&s!("lx_store_title_page_reads_{name}"))
+    {
+      continue;
+    }
+    // A store the title page prints in one line with another value of the class's, now that the document has set them
+    // (`ClassReaders::store_lines`): the line stays the class's, which the deposit prints whole, the store un-nulled
+    // (`\lx@captured@stores`) — `{\itshape submitted \@submitted; e-mail \@email\par}` with the document's
+    // `\submitted{1 May 2026}` (review rev79a Q1).
+    if at_maketitle && prints_in_a_line_with_a_value(name) {
+      Info!(
+        "frontmatter",
+        "\\maketitle",
+        s!(
+          "The raw class's \\{name} stays the class's: its title page prints it in one line with another value"
+        )
+      );
+      continue;
+    }
+    let store = store_of(name);
+    if handed.contains(&store) {
+      assign_value(&s!("lx_store_handed_{name}"), true, Some(Scope::Global));
+      continue;
+    }
+    // (an `\and` list of affiliations, its separators by meaning (`holds_and_separators`): whether the class's title
+    // page numbers its entries, which the authors' numeric marks pick — `class_numbered_institutes`, at
+    // `\lx@add@store@affiliations`)
+    if at_maketitle
+      && api.starts_with("\\lx@add@store@affiliations")
+      && holds_and_separators(value.unlist_ref())?
+    {
+      note_and_numbering(&T_CS!(&s!("\\{store}")))?;
+    }
+    handed.push(store);
+    note_store_handed(name);
+    // (what the title page prints of it is the class's title page's, its title-page provenance, base_utilities
+    // `TITLE_PAGE_ENTRY`; a creator and what annotates one are no frontmatter a late abstract's cover can follow)
+    let from = at_maketitle && !annotates_a_creator(name) && !creates_a_creator(name);
+    if from {
+      calls.extend(store_from_tokens(name));
+    }
+    let (before, after) = api.split_once("#1").unwrap_or((api, ""));
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
+    calls.extend(value.unlist());
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
+    if from {
+      calls.extend(store_from_tokens(""));
+    }
+  }
+  // A printed token register the document filled ([`toks_store`]): the table's call of its value, led by the label the
+  // class prints before it.
+  for name in toks.split(',').filter(|n| !n.is_empty()) {
+    let (Some(value), Some(api)) = (toks_value(name), store_api(name)) else {
+      continue;
+    };
+    if is_blank(&value) {
+      continue;
+    }
+    let mut content = match lookup_value(&s!("lx_toks_label_{name}")) {
+      Some(Stored::Tokens(label)) => label.unlist(),
+      _ => Vec::new(),
+    };
+    content.extend(value.unlist());
+    calls.extend(store_from_tokens(name));
+    let (before, after) = api.split_once("#1").unwrap_or((api.as_str(), ""));
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
+    calls.extend(content);
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
+    calls.extend(store_from_tokens(""));
+  }
+  let digested = if calls.is_empty() {
+    Vec::new()
+  } else {
+    vec![digest_store_calls(calls)?]
+  };
+  // (what this `\maketitle` placed, whose setter called again only re-sets the store, is settled once its title page
+  // ran: `settle_placed_stores`)
+  Ok(digested)
+}
+
+LoadDefinitions!({
+  // A class's affiliation-kind store (`\institution`, `\department`, `\institute`, `\inst`, …) is
+  // printed once under the whole author list (bfhlayout.sty:744-754, courseoutline.cls:150), so its
+  // affiliations annotate every creator (`annotate=all`; marker-labelled ones go by their labels
+  // when the authors carry marks).
+  // Each is tagged `_store=<name>`: an empty one (a default that only warns, umich-thesis.cls:71) is
+  // not kept (`insert_frontmatter_entry`).
+  DefMacro!("\\lx@add@store@affiliations{}{}", sub[(name, stuff)] {
+    let name = name.to_string();
+    // (an llncs-style `\institute{A \and B}` the class numbers 1, 2 on its title page: the entries labelled by their
+    // numbers, which the authors' numeric marks — `$^{1}$`, `\inst{1}` — request, `class_numbered_institutes`)
+    // (its e-mail lines whose command prints nothing in place unwrapped, each address the entry's: cjaa.cls's `\email`
+    // setting `\@thanks`, astro-ph0508574, 0911.3853, 0706.3426)
+    let (stuff, numbered) = match class_numbered_institutes(&stuff, Some(&s!("\\{}", store_of(&name))))? {
+      Some(numbered) => (store_unprinted_emails_unwrapped(numbered)?, true),
+      None => (stuff, false),
+    };
+    let attr = mouth::tokenize_internal(TeXString::assembled(s!("_store={name},annotate=all")));
+    let marked = mouth::tokenize_internal(TeXString::assembled(s!("_store={name}")));
+    // Superscript marks label the affiliations only when the authors carry marks to match; else
+    // they are the class's text, and the affiliations annotate every author.
+    Ok(Tokens::new(affiliation_calls(
+      Some(attr),
+      Some(marked),
+      None,
+      stuff,
+      numbered || queued_authors_marked()?,
+      true,
+    )?))
+  });
+  // An off-table store the class's own `\@author` prints beside the names (jfpc.cls:188-191 `\@lesinstitutions`,
+  // `\@lesmels`; 1503.05530): rows of the author block (`role=authorblock`, unlabelled unless the class prints a label
+  // before it), annotating every creator, as an `\author` call's tail is (`author_tail_calls`): the creators' data,
+  // where an `ltx:pubnote` made them a note on the document (`hand_untypeset_stores`; under `ltx_authors_1line` a
+  // creator's contacts are a hover popup too, LaTeXML.css:74-88).
+  DefMacro!("\\lx@add@store@authorblock{}{}", sub[(name, stuff)] {
+    let name = name.to_string();
+    let attr = mouth::tokenize_internal(TeXString::assembled(s!("_store={name},annotate=all,role=authorblock")));
+    let marked = mouth::tokenize_internal(TeXString::assembled(s!("_store={name},role=authorblock")));
+    Ok(Tokens::new(affiliation_calls(
+      Some(attr),
+      Some(marked),
+      None,
+      stuff,
+      queued_authors_marked()?,
+      true,
+    )?))
+  });
+  // The author block: what code appends to `\@author` after `\author` stored it — a template's
+  // `\address`, `\correspondence`, `\email` rows (`\g@addto@macro\@author{\\…}`; hindawi's template,
+  // cjs-rcs-article.cls:361 `\affil`) — is what LaTeX's `\@maketitle` prints with the names
+  // (article.cls:247). The creators carry the names already, so each `\author` call's tail is handed
+  // to the creators that call made, as author-block rows (`role=authorblock`, unlabelled). Perl drops
+  // it (latex_constructs.pool.ltxml:1076-1079, :1099-1107). `\lx@author@handed` (after the creators
+  // are queued) records what `\author` stored and how many creators it made; `\lx@author@flush`
+  // (before a redefined, appending `\author` stores the next) and `\lx@author@tail` (at `\maketitle`)
+  // hand the tail on. Only a tail after exactly what `\author` stored: a class that rebuilds
+  // `\@author` in its own form (revtex's `{{#2}{}}`, acmart) is left alone. A tail holding `\and`
+  // goes on with more authors (`author_tail_calls`, FX24: jaa.cls/pramana.cls `\addauthor`); a binding
+  // whose `\author` stores nothing in `\@author` (authblk) has its tail read at `\maketitle`
+  // (`seen_author_tail`, 2511.15315).
+  DefPrimitive!("\\lx@author@handed", sub[_args] {
+    let stored = store_value("author")?.filter(|stored| !is_blank(stored));
+    match stored {
+      Some(stored) => {
+        let made = queued_creator_count().saturating_sub(lookup_int("lx_author_creators_before") as usize);
+        assign_value("lx_author_handed", Stored::Tokens(stored), Some(Scope::Global));
+        assign_value("lx_author_made", Stored::Int(made as i64), Some(Scope::Global));
+      },
+      None => assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global)),
+    }
+     // (the kernel `\author` stored `\@author`: not a binding's untouched one, `seen_author_tail`)
+    assign_value("lx_author_seen", Stored::Bool(false), Some(Scope::Global));
+  });
+  DefMacro!("\\lx@author@flush", sub[_args] {
+    // Only an appending `\author` (a class redefined it) keeps the earlier authors; the kernel's
+    // replaces them and `\@author` with them, the tail too, as LaTeX does.
+    let calls = if lookup_bool("\\author:redefined") { author_tail_calls(false)? } else { Vec::new() };
+    assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
+    assign_value(
+      "lx_author_creators_before",
+      Stored::Int(queued_creator_count() as i64),
+      Some(Scope::Global),
+    );
+    Ok(Tokens::new(calls))
+  });
+  DefMacro!("\\lx@author@tail", sub[_args] {
+    // (what `\@author` held before a document appended to it, for this `\maketitle`'s title-page readings, which mark
+    // where the appended part begins: its records are cleared here, the check reads after)
+    crate::latex_constructs::title_page_reading::note_author_prefix(author_taken_prefix());
+    let calls = author_tail_calls(true)?;
+    assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
+    assign_value("lx_author_seen", Stored::Bool(false), Some(Scope::Global));
+    Ok(Tokens::new(calls))
+  });
+  // A rerouted setter records that the document set its store, in order.
+  DefPrimitive!("\\lx@store@set{}", sub[(name)] {
+    let name = name.to_string();
+    assign_value(&s!("lx_store_set_{name}"), true, Some(Scope::Global));
+    let order = lookup_string("lx_store_set_order");
+    if !order.split(',').any(|n| n == name) {
+      let order = if order.is_empty() { name } else { s!("{order},{name}") };
+      assign_value("lx_store_set_order", Stored::String(pin(order)), Some(Scope::Global));
+    }
+  });
+  // A store handed to the frontmatter: the deposited `\@maketitle` reads it as empty, and the label its title page
+  // prints before it (`labelled_api`), now the entry's name, is taken out with it.
+  DefPrimitive!("\\lx@store@handed{}", sub[(name)] {
+    note_store_handed(&name.to_string());
+  });
+  // The frontmatter entries queued from here on are handed on from the store `\<name>` (empty: no more), the
+  // title-page provenance (base_utilities `TITLE_PAGE_ENTRY`).
+  DefPrimitive!("\\lx@store@from{}", sub[(name)] {
+    assign_value(STORE_ENTRY_FROM, Stored::String(pin(name.to_string())), Some(Scope::Global));
+  });
+  // A store handed on as it is set (`#2`, its frontmatter call): once the `\maketitle` whose title page printed it has
+  // placed its value (`lx_store_placed_<name>`, `settle_placed_stores`: handed on, and its sentinel reached the
+  // speculative run of the title page), the setter called again only re-sets the store, for what reads it later, and
+  // does not replace the placed entry — the title page printed the first value: a class's `\keywords{alpha, beta}`
+  // before `\maketitle` and `\keywords{gamma}` after it, "KW: alpha, beta" in the PDF (silent-loss #6b; as a `.bbl`'s
+  // re-call of a raw class's `\doi` after the body began, 1710.01977, re-sets only the store under the seal,
+  // `seal_digested_frontmatter`). A store the title page does not print takes the later value (a class abstract's end
+  // code `Keywords: \@keywords`), and one first set after `\maketitle` is still handed on (pittetd.cls:503-527's
+  // abstract prints keywords set there).
+  // A named abstract or keywords store (`labelled_api`) set before `\maketitle` only stores: `\maketitle` hands the
+  // store on (`harvest_stores`); set after it, it is handed on at once, as `\lx@store@late` hands one.
+  DefMacro!("\\lx@store@hand{}{}", sub[(name, call)] {
+    let name = name.to_string();
+    let harvested = lookup_bool("lx_stores_harvested");
+    let deferred = lookup_bool(&s!("lx_store_deferred_{name}"));
+    if deferred && !harvested {
+      // (the value it stores, for a harvest that finds the store cleared, `harvest_stores`)
+      if let Some(value) = store_value(&name)? {
+        assign_value(&s!("lx_store_value_{name}"), Stored::Tokens(value), Some(Scope::Global));
+      }
+      return Ok(Tokens::new(Vec::new()));
+    }
+    if harvested && lookup_bool(&s!("lx_store_placed_{name}")) {
+      Info!(
+        "frontmatter",
+        s!("\\{name}"),
+        s!("\\{name} set again after \\maketitle placed it re-sets the class's store; the frontmatter keeps the title page's value")
+      );
+      return Ok(Tokens::new(Vec::new()));
+    }
+    let mut out = store_from_tokens(&name);
+    out.extend(
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@handed{{{name}}}"))).unlist(),
+    );
+    if deferred {
+      note_store_late(&name);
+      // (the call `\maketitle` settled — named by the class's label only when its title page printed it,
+      // `verify_title_page_labels` —, of the value just stored)
+      // (an ordinary entry: the title page that read the store printed another value, `untagged_api`)
+      if let (Some(api), Some(value)) = (store_api(&name), store_value(&name)?) {
+        let api = untagged_api(&api, &name);
+        let (before, after) = api.split_once("#1").unwrap_or((api.as_str(), ""));
+        out.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
+        out.extend(value.unlist());
+        out.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
+        out.extend(store_from_tokens(""));
+        return Ok(Tokens::new(out));
+      }
+    }
+    out.extend(call.unlist());
+    out.extend(store_from_tokens(""));
+    Ok(Tokens::new(out))
+  });
+  // A creator-annotating or creator-making store set after `\maketitle` read the stores: its value
+  // — the setter's argument, not an accumulated store (`\g@addto@macro`) — is handed on at once.
+  DefMacro!("\\lx@store@late{}{}", sub[(name, value)] {
+    let name = name.to_string();
+    if !lookup_bool("lx_stores_harvested") {
+      return Ok(Tokens::new(Vec::new()));
+    }
+    let Some(api) = store_api(&name) else {
+      return Ok(Tokens::new(Vec::new()));
+    };
+    let api = api.as_str();
+    note_store_late(&name);
+    let mut calls =
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@handed{{{name}}}"))).unlist();
+    let (before, after) = api.split_once("#1").unwrap_or((api, ""));
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
+    calls.extend(value.unlist());
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
+    Ok(Tokens::new(calls))
+  });
+  DefPrimitive!("\\lx@store@untypeset", sub[_args] {
+    if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
+      return Ok(Vec::new());
+    }
+    settle_placed_stores();
+    release_unprinted_store_entries();
+    hand_untypeset_stores()
+  });
+  DefPrimitive!("\\lx@store@defaults", sub[_args] {
+    verify_title_page_labels()?;
+    hand_copy_frontmatter_defaults();
+    // (the displaced setters' calls the title page prints, the authors' contacts before any store makes a creator of
+    // its own: [`route_and_hand_displaced`])
+    let mut harvested = route_and_hand_displaced()?;
+    harvested.extend(harvest_stores(true)?);
+    Ok(harvested)
+  });
+  // The first token of the kernel abstract's body (`\lx@begin@abstract`, base_utilities.rs), in the frame it is
+  // digested in: the table's keywords setters the refused class abstract defines for its body
+  // ([`abstract_setter_definitions`]) are defined there, for the body only, as the frontmatter's keywords named by
+  // the class's label where its code shows one ([`label_before_argument`]: astlb.cls:200 "Key words:", 1202.2889) —
+  // made as the class makes them: a `\def` replaces the document's own `\keywords` there, as in pdflatex, a
+  // `\newcommand` leaves it (1706.00599, 1202.2889, 1310.0585).
+  // An abstract kept in place as a supplement's (after the document body began, `\lx@add@frontmatter@until`) keeps
+  // its keywords in place with it, and the paper's keywords stay the frontmatter's (mtt.cls papers' English and
+  // Ukrainian abstracts at the end: 1310.0585, 1310.0589, 1212.3890): there the setter is the class's own definition
+  // when it only typesets its label and argument ([`typesets_label_and_argument`]), else a paragraph of the class's
+  // label where its code shows one and the keywords — mtt.cls:181's `\item` belongs to the class's own abstract
+  // list, which the kernel's abstract is not, and its language-chosen `\mtt@keywords` cannot be read, so its
+  // keywords have no label in place: never the English default name where pdflatex prints "Ключовi слова:". A
+  // setter that does not typeset its argument (it warns, or drops it) is the class's own definition, as in pdflatex.
+  DefPrimitive!("\\lx@abstract@class@setters", {
+    // The body is the abstract's, for [`refused_environment_definition`]: the kernel's abstract is no environment
+    // frame (`\@currenvir` stays the enclosing one).
+    assign_value("lx_in_kernel_abstract", true, Some(Scope::Local));
+    if lookup_bool("lx_abstract_begun") {
+      assign_value("lx_abstract_begun", false, Some(Scope::Global));
+      assign_value("lx@until@begun", "abstract", Some(Scope::Local));
+    }
+    let in_place = lookup_bool("lx_frontmatter_kept_in_place");
+    let setters = abstract_setter_definitions();
+    // (whether the document defined each before the class's begin code runs: a `\newcommand` there leaves it)
+    let mut defined = Vec::with_capacity(setters.len());
+    for (name, ..) in &setters {
+      defined.push(lookup_definition(&T_CS!(&s!("\\{name}")))?.is_some());
+    }
+    // The class's refused begin code runs here for its effects, held in the abstract's group
+    // (`replay_class_begin_code`, sect05.rs: frontiersFPHY.cls:520 `\let\section\absection`, 1508.06756); the
+    // keywords setters below are the body's.
+    let keep_out: Vec<SymStr> = setters
+      .iter()
+      .map(|(name, ..)| meaning_key(&T_CS!(&s!("\\{name}"))))
+      .collect();
+    // (not for a brace-less `\abstract`: `\lx@abstract@braceless`, sect05.rs)
+    let braceless = lookup_bool("lx_abstract_braceless");
+    if braceless {
+      assign_value("lx_abstract_braceless", false, Some(Scope::Global));
+    } else {
+      crate::latex_constructs::replay_class_begin_code("abstract", &keep_out)?;
+      hand_net_begin_code_stores()?;
+    }
+    for ((name, api, definer, own), defined) in setters.into_iter().zip(defined) {
+      let cs = T_CS!(&s!("\\{name}"));
+      if definer == Definer::Keeps && defined {
+        continue;
+      }
+      let label = label_before_argument(&own);
+      let body = if argument_at(&own).is_none() || (in_place && typesets_label_and_argument(&own)) {
+        own
+      } else if in_place {
+        // (no label when the class's cannot be read: the default name is English where the PDF's need not be)
+        let mut body = mouth::tokenize_internal("\\par").unlist();
+        if let Some(label) = label {
+          body.push(T_BEGIN!());
+          body.extend(label.unlist());
+          body.push(T_END!());
+          body.push(T_SPACE!());
+        }
+        body.extend(mouth::tokenize_internal("#1").unlist());
+        body
+      } else {
+        named_keywords_call(api, label)
+      };
+      DefMacro!(cs, convert_latex_args(1, None)?, Tokens::new(body));
+      Info!(
+        "frontmatter",
+        s!("\\{name}"),
+        s!("The class's abstract defines \\{name} for its body: it sets the abstract's keywords")
+      );
+    }
+  });
+  // A raw class's label-only `{keywords}` (`reroute_keywords_environments`): `\begin{keywords}` … `\end{keywords}`
+  // is the frontmatter's keywords, read up to the end; called as a command, `\keywords{…}` (paper.cls's papers write
+  // both) is the keywords of its argument when that group ends them — `\par`, a blank line or an `\end…` follows it
+  // ([`braced_group_ends_the_keywords`]); any other `\keywords`, whose extent only the class's layout knows
+  // (`\keywords {alpha}, beta, gamma`), runs the class's own begin code (`\lx@class@keywords@<name>`), as before.
+  DefMacro!("\\lx@class@keywords{}", sub[(name)] {
+    let name = name.to_string();
+    let label = match lookup_value(&s!("lx_class_keywords_label_{name}")) {
+      Some(Stored::Tokens(label)) => Some(label),
+      _ => None,
+    };
+    let current = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
+    let api = if current == name {
+      "\\lx@begin@keywords"
+    } else if braced_group_ends_the_keywords()? {
+      "\\lx@add@keywords"
+    } else {
+      return Ok(Tokens!(T_CS!(&s!("\\lx@class@keywords@{name}"))));
+    };
+    Ok(Tokens::new(named_keywords_call(api, label)))
+  });
+  // Its `\end<name>`: in the environment the end of the frontmatter's keywords, else (a bare `\keywords alpha
+  // \endkeywords`) the class's own end code, kept as `\lx@class@keywords@end@<name>` (paper.cls:622 `\par\bigskip`).
+  DefMacro!("\\lx@class@keywords@end{}", sub[(name)] {
+    let name = name.to_string();
+    let current = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
+    Ok(if current == name {
+      Tokens!(T_CS!("\\lx@end@keywords"))
+    } else {
+      Tokens!(T_CS!(&s!("\\lx@class@keywords@end@{name}")))
+    })
+  });
+  // Fired by `input_definitions` after a `.cls` is loaded raw
+  // (latexml_core/src/binding/content.rs).
+  DefPrimitive!("\\lx@class@loaded@raw{}", sub[(cls)] {
+    let cls = cls.to_string();
+    note_raw_register_defaults();
+    crate::latex_constructs::keep_class_author_reader();
+    reroute_raw_class_stores(&cls)?;
+    reroute_in_place_contact_setters(&cls)?;
+    reroute_displaced_setters(&cls)?;
+  });
+  // After the begin-document hooks, the `begindocument/end` one too, which `\begin{document}` reads after itself
+  // (sect02.rs): what they made is a class default for the net ([`note_document_hooks`]).
+  DefPrimitive!("\\lx@net@document@hooks@done", {
+    note_document_hooks(false);
+  });
+  // A displaced setter's call ([`reroute_displaced_setters`]): the file's own setter runs under a meaning recorder, and
+  // what it stored of its argument is recorded ([`DISPLACED_RECORDS`]). The recorder is no assignment journal, which
+  // does not nest: a journal the setter's own code opens — a speculative read of the mark it prints
+  // (`speculative_label_ink`; utarticle.cls:125's `\address` prints `\@makeadmark{\@tempb}`, 1209.6020), a replay —
+  // still opens (review rev99b B4). Not in a speculative run or a replay, whose stores are undone.
+  DefPrimitive!("\\lx@displaced@begin", {
+    let records =
+      !lookup_bool("lx_replaying_class_setter") && !lookup_bool("lx_depositing_class_maketitle");
+    if records {
+      begin_meaning_recorder();
+    }
+    let open = lookup_string(DISPLACED_OPEN);
+    assign_value(
+      DISPLACED_OPEN,
+      Stored::from(s!("{open}{}", u8::from(records))),
+      Some(Scope::Global),
+    );
+  });
+  DefPrimitive!("\\lx@displaced@end{}{}", sub[(name, arg)] {
+    let mut open = lookup_string(DISPLACED_OPEN);
+    let recorded = open.pop() == Some('1');
+    assign_value(DISPLACED_OPEN, Stored::from(open), Some(Scope::Global));
+    if !recorded {
+      DebugFeature!("frontmatter", "FRONT displaced {name}: not recorded");
+      return Ok(Vec::new());
+    }
+    let assigned = end_meaning_recorder();
+    let name = name.to_string();
+    // (an argument of fewer than two letters is no affiliation's or address's text a part could be told by)
+    let letters = arg.unlist_ref().iter().filter(|t| t.get_catcode() == Catcode::LETTER).count();
+    let parts = if letters < 2 {
+      Vec::new()
+    } else {
+      crate::latex_constructs::assigned_parts_holding(&assigned, &arg, &[], true)
+    };
+    DebugFeature!(
+      "frontmatter",
+      "FRONT displaced {name}: assigned [{}], {} part(s)",
+      assigned.iter().map(|(k, _)| with(*k, ToString::to_string)).collect::<Vec<_>>().join(","),
+      parts.len()
+    );
+    if parts.is_empty() {
+      return Ok(Vec::new());
+    }
+    let mut records = match lookup_value(DISPLACED_RECORDS) {
+      Some(Stored::VecDequeStored(records)) => records,
+      _ => VecDeque::new(),
+    };
+    for (key, part) in parts {
+      records.push_back(Stored::VecDequeStored(VecDeque::from([
+        Stored::String(pin(name.trim())),
+        Stored::String(key),
+        Stored::Tokens(Tokens::new(part)),
+        Stored::Tokens(arg.clone()),
+      ])));
+    }
+    assign_value(DISPLACED_RECORDS, Stored::VecDequeStored(records), Some(Scope::Global));
+    Ok(Vec::new())
+  });
+  // A rerouted contact setter's call that prints its line where it is called ([`class_contact`]).
+  DefMacro!("\\lx@class@contact{}{}", sub[(api, class)] {
+    class_contact(api, class, true)
+  }, protected => true);
+  // …and the call of a rerouted setter that stores its line for the title page (11lomcon.sty's `\@aabuffer`, jetpl's
+  // `\@authoraddress`, amsart copies' and stacs.cls's `\addresses`): its class's run prints nothing where it stands, so
+  // where the call stands decides nothing — it is the API's while the authors are being set, wherever it is called
+  // (stacs's `\address[uniroma]{…}` after the kernel's `\author` left the class's third argument "Gianni Franceschini"
+  // as a paragraph, 0902.1737: the class's run stored the address for a title page the kernel's `\maketitle` does not
+  // print, and it was lost)
+  DefMacro!("\\lx@class@contact@stored{}{}", sub[(api, class)] {
+    class_contact(api, class, false)
+  }, protected => true);
+  // …and the call of a rerouted setter that prints its argument with no line break of its own ([`run_in_contact_setter`])
+  DefMacro!("\\lx@class@contact@runin{}{}", sub[(api, class)] {
+    class_contact_run_in(api, class)
+  }, protected => true);
+  // …and the call of a rerouted `[optional]{mandatory}` setter: the setter's name, whether it prints its line where it
+  // is called, its two arguments ([`optional_contact`])
+  DefMacro!("\\lx@class@contact@optional{}{}{}{}", sub[(name, in_place, opt, arg)] {
+    optional_contact(&name.to_string(), in_place.to_string() == "1", opt, arg)
+  }, protected => true);
+  // The kernel's `\author[key]{…}` (sect05.rs): the box the call stands in (`\lx@author@box`, [`at_the_body_level`]),
+  // a contact line set in it the title block's;
+  DefPrimitive!("\\lx@author@box", {
+    let boxed = if mode_frames() > 0 {
+      author_box()
+    } else {
+      String::new()
+    };
+    assign_value(AUTHOR_BOX, Stored::from(boxed), Some(Scope::Global));
+  });
+  // …the number of author creators before the call (`\lx@author@keys@from`), then its keys and that number after it
+  // (`\lx@author@keys`): the authors a rerouted setter's `[key]` names ([`optional_contact`]). A short author
+  // (`\author[B.F. Roukema]{…}`) records as a key too, which only a setter's equal key reads.
+  DefPrimitive!("\\lx@author@keys@from", {
+    // (the records of the authors placed or sealed are no new author's: cleared, review rev94b r3 (a))
+    if author_creators_placed() || frontmatter_entry_sealed("ltx:creator", "author") {
+      assign_value(
+        AUTHOR_KEYS,
+        Stored::from(String::new()),
+        Some(Scope::Global),
+      );
+    }
+    assign_value(
+      "lx_author_keys_from",
+      Stored::Int(author_creator_total()? as i64),
+      Some(Scope::Global),
+    );
+  });
+  DefPrimitive!("\\lx@author@keys{}", sub[(keys)] {
+    let keys = keys.to_string();
+    let keys = keys.trim();
+    let to = author_creator_total()?;
+    let from = usize::try_from(lookup_int("lx_author_keys_from")).unwrap_or(to).min(to);
+    if !keys.is_empty() && to > from {
+      let mut records = lookup_string(AUTHOR_KEYS);
+      if !records.is_empty() {
+        records.push('\u{1}');
+      }
+      records.push_str(&s!("{keys}\u{2}{from}\u{2}{to}"));
+      assign_value(AUTHOR_KEYS, Stored::from(records), Some(Scope::Global));
+    }
+  });
+  // A kept class body's call of a rerouted setter (`class_bodies_call_class_copies`, through the one token
+  // `\lx@class@contact@dispatch@<name>`): the setter's class definition while the setter means the reroute, else what it
+  // means now (a document's redefinition) — one token, nothing left after it for the class's look-ahead.
+  DefMacro!("\\lx@class@contact@dispatch{}", sub[(name)] {
+    let name = name.to_string();
+    let name = name.trim();
+    let cs = T_CS!(&s!("\\{name}"));
+    Ok(if x_equals(&cs, &T_CS!(&s!("\\lx@class@contact@rerouted@{name}"))) {
+      Tokens!(T_CS!(&s!("\\lx@class@contact@{name}")))
+    } else {
+      Tokens!(cs)
+    })
+  });
+  // A cut entry's font (`observer::emitter::plan::entry_font_tokens`): the font changes in effect where the entry's
+  // cut starts in its call's content, registered as the `n`-th — the entry digested under them, as in the call
+  // (review rev94b r3 B1: `\affil{\itshape $^1$Univ A\\ $^2$Univ B}` lost the italic on Univ B).
+  DefPrimitive!("\\lx@fm@entry@font{}", sub[(n)] {
+    if let Some(Stored::Font(font)) = lookup_value(&s!("lx_fm_entry_font_{}", n.to_string().trim())) {
+      merge_font_ref(&font);
+    }
+  });
+  // …and after a `.sty` is loaded raw: its table stores, unless a raw class's read loads it, which reroutes them at
+  // its end (`reroute_raw_package_stores`; 2307.16262's medima.sty), and its contact setters
+  // (`reroute_in_place_contact_setters`; 11lomcon.sty, hep-ph0312288).
+  DefPrimitive!("\\lx@package@loaded@raw{}", sub[(sty)] {
+    let sty = sty.to_string();
+    note_raw_register_defaults();
+    crate::latex_constructs::keep_class_author_reader();
+    if !in_a_raw_class_read() {
+      reroute_raw_package_stores(&sty)?;
+    }
+    reroute_in_place_contact_setters(&sty)?;
+    // (a package a raw class's read loads is that class's, its setters K11's to take first at the class's end)
+    if !in_a_raw_class_read() {
+      reroute_displaced_setters(&sty)?;
+    }
+  });
+});

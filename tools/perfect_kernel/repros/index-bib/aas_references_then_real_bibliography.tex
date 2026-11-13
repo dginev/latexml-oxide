@@ -1,0 +1,22 @@
+% witness: review of 64x round 9: AASTeX's bare \references … \endreferences, then the author's \bibliography
+% oracle:  pdflatex 0 errors (aastex701.cls), prints Able and the .bbl's Zed
+% engines: rust 64zc keeps Zed; 64x bef859dfca dropped it at 0 errors (\references' bibliography setup left
+%          \bibliography a no-op, KPE #594); Perl 0.8.8 Fatal (terminated in the .bbl)
+% expect:  clean; two bibliographies, Able's and the .bbl's with Zed
+% status:  GREEN (64x: \references restores \bibliography and \bibliographystyle after its setup)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\section{Summary}
+Text \citep{z}.
+
+\references
+\reference{a} Able, A. 2011, ApJ.
+\endreferences
+
+\section{Discussion}
+More text.
+
+\bibliographystyle{plain}
+\bibliography{aas_references_then_real_bibliography}
+\end{document}

@@ -1,12 +1,54 @@
 use crate::prelude::*;
 LoadDefinitions!({
+  // amsfonts.sty:59-60: the AMS symbol fonts, whose `\symAMSa`/`\symAMSb` math
+  // groups classes read (imsproc.cls:1655 `\hexnumber@\symAMSb`; class census
+  // 2026-09-24). `\DeclareSymbolFont` defines them (sect08.rs). Not in a plain
+  // document before the format: AMSTeX (`\input amstex` → AmSTeX.pool) requires
+  // this binding there, where `\DeclareSymbolFont` would autoload LaTeX.pool
+  // mid-load and the latex dump would clobber amsmath's `\cases` (Perl never
+  // loads LaTeX there). Witness 1409.5819 (`\cases … \endcases`, run 329). A
+  // LaTeX document preloading amsfonts gets the format here, as before.
+  if !plain_tex_document() || lookup_bool("LaTeX.pool_loaded") {
+    RawTeX!(r"\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareSymbolFont{AMSb}{U}{msb}{m}{n}");
+    // amsfonts.sty:117-138: `\newsymbol\cs <font><class><hex><hex>`, the AMSTeX 1.x way of
+    // declaring a symbol of msam (font 1) or msbm (font 2), obsolete in favour of
+    // `\DeclareMathSymbol` and warned as such (run 340: ~300 papers; witnesses 1302.6049,
+    // 2112.15557). amsfonts makes it `\global\mathchardef\cs"<class><\hexnumber@\symAMSx><hex>`;
+    // the symbol here is the `\DeclareMathSymbol` of the same class, font and slot, which looks
+    // the glyph up in the AMS font maps. Perl's binding lacks it (KNOWN_PERL_ERRORS #632). A
+    // plain TeX document's `\input amssym.def` defines its own (amssym.def:40-43).
+    RawTeX!(
+      r##"\@ifundefined{@obsolete}{\def\@obsolete#1#2#3{\PackageWarning{#1}{%
+    Obsolete command \protect#2; \protect#3 should be used instead}}}{}
+\gdef\newsymbol#1#2#3#4#5{%
+  \@obsolete{amsfonts}\newsymbol\DeclareMathSymbol
+  \@ifdefinable#1{%
+     \ifcase #2 \PackageError{amsfonts}{\Invalid@@\newsymbol}\@ehd
+     \or \DeclareMathSymbol#1{#3}{AMSa}{"#4#5}%
+     \or \DeclareMathSymbol#1{#3}{AMSb}{"#4#5}%
+     \else \PackageError{amsfonts}{\Invalid@@\newsymbol}\@ehd
+     \fi}}"##
+    );
+  }
+  // amsfonts.sty:78-87 (unless stix is loaded) redefines `\widehat#1`, `\widetilde#1` as macros reading their accentee
+  // as an undelimited argument: `\widehat\cba_{\rm CF}` with `\newcommand{\cba}{C_{\mathrm{BA}}}` is the hat over all
+  // of `C_{BA}` (2609.01909), as amsmath's accents; a command reading a mandatory argument (`\widehat\mathbf{x}`, an
+  // amsmath accent: `\widehat\hat z`, which amsfonts does not nest) is read with its own arguments, with a Warning
+  // (OXIDIZED_DESIGN_DIVERGENCES #721; `define_amsfonts_macro_accent`).
+  if !package_loaded("stix") {
+    amsmath_sty::define_amsfonts_macro_accent("widehat")?;
+    amsmath_sty::define_amsfonts_macro_accent("widetilde")?;
+  }
   //
   // See amsfndoc
   //
   DefConstructor!("\\mathbb{}", "#1", bounded => true, require_math => true, scope => Some(Scope::Global),
   font => { family => "blackboard", series => "medium", shape => "upright" });
   DefMacro!("\\Bbb{}", "\\mathbb{#1}");
-  DefMacro!("\\bold{}", "\\mathbb{#1}");
+  // amsfonts.sty:115-116 `\DeclareRobustCommand{\bold}[1]{{\@subst@obsolete{amsfonts}\bold\mathbf{#1}}}`: bold, not
+  // blackboard (Perl amsfonts.sty.ltxml:23 maps it to `\mathbb`, KNOWN_PERL_ERRORS #639), and the paper's
+  // `\renewcommand{\mathbb}{\bold}` looped through it (1611.03179). Guard `perfect_kernel_batch66d::amsfonts_bold_is_mathbf`.
+  DefMacro!("\\bold{}", "\\mathbf{#1}");
   // Also defined in eufrak
   DefConstructor!("\\mathfrak{}", "#1", bounded => true, require_math => true, scope => Some(Scope::Global),
   font => { family => "fraktur", series => "medium", shape => "upright" });

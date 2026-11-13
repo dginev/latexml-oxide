@@ -1,0 +1,24 @@
+% A picture inside a TikZ `align=` node's text: tikz.code.tex:4252-4256 sets each line as `\vbox{\halign{…
+% \unhbox\tikz@align@line@box\unskip\cr}}`, a matrix row and column of `svg:g`s. `\lxSVG@insertpicture` closed one
+% `svg:g` too many: in SVG (pgfsys-latexml.def.ltxml:85 `closeElement('svg:g')`) after its content's
+% `\lxSVG@closescope` had closed its own group, the column around it; in the text's foreignObject (:105 `while
+% (maybeCloseElement('svg:g'))`) every `svg:g` above, the column too. Before 59y the `\hbox` the line was put back
+% as (KNOWN_PERL_ERRORS #434) took the extra close; since 59y splices the line, the column closed early: "Closing tag
+% svg:g whose open descendents do not auto-close", a capture block left in the output (KNOWN_PERL_ERRORS #440).
+% Witnesses: codeanatomy/codeanatomy.usage (0 → 32 errors at 59y), causets/causets_example2 (0 → 6), mercatormap (jing
+% 0 → 2); sweep #136.
+% oracle:  pdflatex 0 errors: "A" over a line, "Top" / a dot, "mid", a square / "End".
+% expect:  0 errors; no `_CaptureBlock_`; each nested picture's group and the text after it in its line's column.
+% status:  GREEN 60d (the scope group closed only if still open, `maybe_close_node`); guard
+%   picture_sizing::nested_picture_in_aligned_node
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node[align=left] {A\\ \tikz\draw (0,0) -- (1,1);};
+\end{tikzpicture}
+
+\begin{tikzpicture}
+\node[align=center] {Top\\ \tikz\fill (0,0) circle (2pt); mid \tikz\draw (0,0) rectangle (3pt,3pt);\\ End};
+\end{tikzpicture}
+\end{document}

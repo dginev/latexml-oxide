@@ -1,0 +1,16 @@
+% witness: g-brief/beispiel, cv/ApplicationLetter (g-brief.cls:54 `\def\emailtext{{\footnotesize e--Mail\/:}}`)
+% oracle:  pdflatex 0 errors; the label prints "e–Mail:" (the `--` ligature)
+% engines: rust 59o = <contact name="e--Mail:" …>: a frontmatter `name=` is the label's untypeset text (to_string),
+%   so no ligature applies; the HTML shows "e--Mail:" (59o review)
+% expect:  0 errors; name="e–Mail:"
+% status:  RED (open; a general frontmatter name= issue)
+\documentclass{g-brief}
+\Name{Otto}
+\EMail{otto@example.com}
+\Adresse{Frau Else}
+\Gruss{G}{1cm}
+\begin{document}
+\begin{g-brief}
+Text.
+\end{g-brief}
+\end{document}

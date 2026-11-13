@@ -1,0 +1,15 @@
+% witness: brief Z1 gaps 1, 2 (2105.07958's `$^{3,}$$^{4,}$$^a$`, 0804.4669's `$\,^{3}$`); each shape with its twin
+% oracle:  pdflatex 0 errors: the names with their marks printed; Dan's and Eve's ³ print as a prescript and as a mark do
+% engines: Perl has no events; ours before Z1 lumps every superscript, a Mark spans only its script
+% expect:  0 errors; each Mark: floating or posted, the formula's or group's span, whether a letter or digit prints after
+%          it there (perfect_kernel_batchz1::marks_say_their_base_and_their_formula)
+% status:  GREEN (Z1)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$\,^{2}$, Cat $\mathrm{Cole}^{3}$, Dan Dow ${}^{4}$He, Eve Ely${}^{5}\mathrm{He}$,
+Fay Fox$\rm ^{a}$, Gil Gray{\rm $^{b}$}, Hal Hunt$^{6,}$$^{7}$, Ivy Ives$^{8}\dagger$, Jon Judd\textsuperscript{9},
+Kim Kerr{\textsuperscript{10}}, Lee Lamb\textbf{\textsuperscript{11}}, Mia Moss$\dagger$, Ned Nash$\dagger x$}
+\maketitle
+Body.
+\end{document}

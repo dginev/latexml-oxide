@@ -1,0 +1,19 @@
+% witness: PASJ's \caption[<number>] (pasj01.cls:906-908 `\@caption@with@option`: the [ argument is the number shown)
+% oracle:  pdflatex 0 errors; "Fig. 1." and "Fig. 1b.", "See 1 and 1b."
+% engines: rust=0 (2026-10-05, 62l3: "Figure 2", <toccaption>1b, \ref to 2)
+% expect:  0 errors; the second caption's tag is 1b and \ref{b} reads 1b
+% status:  RED
+% preload: ar5iv.sty
+\begin{filecontents*}{pasj01.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{pasj01}\LoadClass{article}
+\def\caption{\@ifnextchar[\@caption@with@option\@caption@without@option}
+\def\@caption@with@option[#1]{\protected@edef\@currentlabel{#1}\@makecaption{Fig.~#1}}
+\def\@caption@without@option{\refstepcounter\@captype\@makecaption{Fig.~\thefigure}}
+\long\def\@makecaption#1#2{\par\noindent #1. #2\par}
+\end{filecontents*}
+\documentclass{pasj01}
+\begin{document}
+\begin{figure}\caption{First.}\label{a}\end{figure}
+\begin{figure}\caption[1b]{Second.}\label{b}\end{figure}
+See \ref{a} and \ref{b}.
+\end{document}

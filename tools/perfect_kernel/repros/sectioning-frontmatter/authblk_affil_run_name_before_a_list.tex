@@ -1,0 +1,25 @@
+% mechanism: authblk's unlabelled `\affil` after `\author{Cy Cole}\author{Ann Able, Bob Baker}`: its run is the authors
+%   queued since the last `\affil` (`authblk_sty.rs` `affil_run`, the `\AB@thenote` group, authblk.sty:115-116), counted
+%   in `\author` calls, two here (`annotate=run:2`). The reading parts the list into two names, so a cap counting names
+%   stopped at Ann Able and Bob Baker and gave Cy Cole none, silently; the cap counts calls (`resolver/api.rs`
+%   `record_run`, `calls_from`), so all three are Univ X's and Dee Dunn alone Univ Y's (Option C P2-7: the gate by meaning
+%   sends a macro-held `\and` down the same list path, `authblk_two_macro_held_calls_before_one_affil.tex`)
+% witness: P27 probe t5 (scratch_P27/probes)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Cy Cole and Ann Able, Bob Baker", "Univ X", "Dee Dunn",
+%   "Univ Y"
+% engines: Perl 0.8.8 (authblk.sty.ltxml:52-55, read, not run): the comma list one creator; int158a: Cy Cole (none), Ann
+%   Able (Univ X), Bob Baker (Univ X), Dee Dunn (Univ Y), 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Cy Cole, Ann Able, Bob Baker (each Univ X), Dee Dunn (Univ Y)
+% status:  RED (int158a) -> GREEN (P27; guard perfect_kernel_batchp27::authblk_affil_run_counts_author_calls)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Cy Cole}
+\author{Ann Able, Bob Baker}
+\affil{Univ X}
+\author{Dee Dunn}
+\affil{Univ Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

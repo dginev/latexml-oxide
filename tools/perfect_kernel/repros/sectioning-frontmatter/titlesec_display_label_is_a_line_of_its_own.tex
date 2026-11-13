@@ -1,0 +1,18 @@
+% mechanism: titlesec sets the label in a group of its own in every shape, and `display` sets it
+%   on a line of its own above the title (titlesec.sty:751-753 `{#2\ttl@strut\@@par}\nobreak
+%   \ttl@calc\vspace{#3}` then `#4{#8}`): the label's `\Large` stays in the label, the title takes
+%   the format's `\Huge`, and the before-code `\filleft` aligns it. 57o's composer set the label
+%   ungrouped and inline, `\hspace{#3}` apart.
+% witness: unamth-template tesis (TL doc; PhDthesisPSnPDF.cls:55-63)
+% oracle:  pdflatex 0 errors; "Chapter 1" (Large) on its own line, then "Introduction" (Huge), both right
+% engines: rust 57p: <title class="ltx_align_right" fontsize="144%">Chapter 1Introduction</title>;
+%          57m: "Chapter 1" + the title at 207%, the kernel re-applying the format; perl the same
+% expect:  0 errors; the label, a line break, then the title in the format's size, aligned right
+% status:  GREEN (57q)
+\documentclass{report}
+\usepackage{titlesec}
+\titleformat{\chapter}[display]{\Huge}{\filleft\Large\chaptertitlename\ \thechapter}{0mm}{\filleft}
+\begin{document}
+\chapter{Introduction}
+Text.
+\end{document}

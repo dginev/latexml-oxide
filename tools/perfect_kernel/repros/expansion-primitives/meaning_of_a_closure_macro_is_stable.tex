@@ -1,0 +1,21 @@
+% witness: synthetic (BM Q3.8 probe `meaning`; ACTIONS QA89): the meaning of a macro coded in the host language
+% oracle:  pdflatex 0 `!`: latex.ltx's bodies (`\long macro:#1#2#3->\let \reserved@d =#1…`, `\protected
+%          macro:#1->\UseHook…`), "yes/yes" and "differ"; Perl prints `CODE(0x55…)`, a heap address. Ours answers "no/no" on
+%          purpose: patching the native `\begin` would replace it with its meaning's text (OXIDIZED_DESIGN #183)
+% engines: rust int160c: `macro:#1#2#3->CODE(0x4f8dae7ad30)`, then `CODE(0x2d1f9e7ad30)`: an address per run
+% expect:  0 errors, 0 warnings; the same text on every run, `…->CODE(@ifnextchar)`, `…->CODE(begin)`; etoolbox "no/no" as before;
+%          `\value` and `\arabic` meanings "differ" (as their addresses did)
+% status:  RED -> GREEN (QA89, guard perfect_kernel_batch56::meaning_of_a_closure_macro_is_perls_code_form)
+\documentclass{article}
+\usepackage{etoolbox}
+\begin{document}
+\makeatletter
+\texttt{\meaning\@ifnextchar}
+
+\texttt{\meaning\begin}
+
+\ifpatchable{\begin}{\begingroup}{yes}{no}/\patchcmd{\begin}{\begingroup}{\begingroup}{yes}{no}
+
+\edef\a{\meaning\value}\edef\b{\meaning\arabic}\ifx\a\b same\else differ\fi
+\makeatother
+\end{document}

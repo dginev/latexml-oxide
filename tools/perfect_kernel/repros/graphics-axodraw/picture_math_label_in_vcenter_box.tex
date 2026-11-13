@@ -1,0 +1,16 @@
+% witness: 0809.0800 (axodraw diagrams as `\vcenter{\hbox{\begin{picture}…}}` inside an equation, math labels in
+%          them); 64w review probe nest/n.tex — the same with plain `\put`/`\makebox`
+% oracle:  pdflatex 0 errors: two small diagrams labelled V_1, V_2 in the equation
+% engines: rust 64qb and 64w = the label's `foreignObject` holds a bare `<msub>` with no `<math>` around it (the
+%          browser renders no MathML); Perl not run
+% expect:  0 errors; each label a whole `<math>` element in its `foreignObject`
+% status:  RED (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{equation}
+\vcenter{\hbox{\begin{picture}(40,40)\put(10,10){\makebox(0,0)[l]{$V_1$}}\line(1,0){30}\end{picture}}}
+,
+\vcenter{\hbox{\begin{picture}(40,40)\put(10,10){\makebox(0,0)[l]{$V_2$}}\line(1,0){30}\end{picture}}}
+\end{equation}
+\end{document}

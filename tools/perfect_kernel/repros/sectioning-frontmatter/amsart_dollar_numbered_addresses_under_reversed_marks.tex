@@ -1,0 +1,23 @@
+% mechanism: the upfront grid of amsart_dollar_numbered_addresses_under_shared_marks, where position and the marks
+%   disagree: `\address{$1.$ …}` labels are unread, and 95c's G3 takes the several-address `\email` call out of the
+%   reading's pile (`answer_listed_emails` runs after `Resolver::distribute_upfront`), so the grid fires and gives the
+%   entries by position — Ann Univ X, Bob Univ Y — against the marks (Ann 2, Bob 1). Before 95e the plan declined and
+%   today's held the entries; 95e writes the re-part, and the grid's guess with it.
+% witness: synthetic (rev95e S1, probe p9_reversed); the census's only paper of the shape, 2109.07363, has marks the
+%   grid's positions happen to agree with in part
+% oracle:  pdflatex 0 errors: "ANN ABLE2 & BOB BAKER1", "1. Univ X", "2. Univ Y"
+% engines: rust 95e: Ann {Univ X}, Bob {Univ Y} (both wrong); int123a: Bob {Univ X, Univ Y} (one wrong)
+% expect:  Ann Univ Y, Bob Univ X; ann@ on Ann, bob@ on Bob; 0 errors. Fix: the listed call counts as one contact in
+%   the grid's pile, as in today's (option a), or the `$1.$` label read (option b)
+% status:  RED (catalog, no guard: rev95e S1; synthetic only)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{2} $\&$ Bob Baker\textsuperscript{1}}
+\address{$1.$ Univ X}
+\address{$2.$ Univ Y}
+\email{ann@x.org,\:bob@y.org}
+\maketitle
+Text.
+\end{document}

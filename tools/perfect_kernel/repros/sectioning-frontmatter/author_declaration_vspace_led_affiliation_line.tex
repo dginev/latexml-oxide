@@ -1,0 +1,13 @@
+% witness: 2407.15815 (64d review r3: the unwrapped form of a declaration + spacing lead before the first mark)
+% oracle:  pdflatex 0 errors: "Ann1 and Bob2 / 1Univ A, 2Univ B" (small)
+% engines: rust 64d8 = Bob gets an empty affiliation contact before "Univ B"; the `\small` lost from both
+% expect:  0 errors; Ann (Univ A), Bob (Univ B), no empty contact (Univ B without the `\small`: the KPE #558 residual,
+%          RED author_unwrapped_lead_declarations_style_every_institution)
+% status:  RED (64d8) -> GREEN (64d)
+\documentclass{article}
+\title{T}
+\author{Ann$^{1}$ and Bob$^{2}$ \\ \small \vspace{1mm} $^{1}$Univ A, $^{2}$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

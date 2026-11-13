@@ -1,0 +1,17 @@
+% witness: none (review of 65z); the template idiom `\newcommand{\thetitle}{…}\title{\thetitle}` with titling
+% oracle:  pdflatex 0 errors: titling.sty:245-252 `\protected@xdef\thetitle{#1}` at `\title` takes the paper's
+%          `\thetitle` text once; the date and authors likewise, \and a comma
+% engines: rust 65int7 = Fatal:Timeout (`\maketitle`'s `\global\let\thetitle\@title` made `\thetitle` expand to itself;
+%          Perl titling.sty.ltxml:85 the same, KNOWN_PERL_ERRORS #636)
+% expect:  0 errors; "T=Own Title; A=B. Writer, C. Writer; D=2020." in the body
+% status:  RED (65int7) -> GREEN (65z r2)
+\documentclass{article}
+\usepackage{titling}
+\newcommand{\thetitle}{Own Title}
+\title{\thetitle}
+\author{B. Writer\thanks{Note.} \and C. Writer}
+\date{2020}
+\begin{document}
+\maketitle
+T=\thetitle; A=\theauthor; D=\thedate.
+\end{document}

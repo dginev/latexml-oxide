@@ -1,0 +1,16 @@
+% mechanism: the fail-closed fallback of `events::glues_an_address` (a Name the ink table cannot align: a mark glued into
+%   it) tests the `@` token at or past the Error's end, its span end-exclusive as the ink path's `after`: `…b\foo@x.org`
+%   declines the address as `…b\foo{}@x.org` does — a `{}` decides nothing. The creators and their count are the
+%   reading's without the Error; the address is not (that reading makes up "Baker1b@x.org" from the glued mark alone).
+%   OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: review revERR2c finding 2 (h5; g3 the braced form)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 "Undefined control sequence": "Ann Able" and "Bob Baker1b@x.org"
+% engines: ERR2c: 1 Error, Bob Baker with the made-up e-mail "Baker1b@x.org" (the braced form declined)
+% expect:  1 Error (`\foo`); Ann Able, Bob Baker<sup>1</sup>b<ERROR>\foo</ERROR>@x.org, no contact
+% status:  RED (ERR2c) -> GREEN (DEL5b)
+\documentclass{article}
+\author{Ann Able \and Bob Baker\textsuperscript{1}b\foo@x.org}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

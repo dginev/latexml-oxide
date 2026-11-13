@@ -1,5 +1,5 @@
 //! Process-parallel page rendering for pass B of the post pipeline
-//! (`docs/performance/STREAMING_POST_DESIGN_2026-07-06.md` §6).
+//! (`docs/archive/STREAMING_POST_DESIGN_2026-07-06.md` §6).
 //!
 //! In-process page threads are blocked twice (`ObjectDB` is `!Send`;
 //! libxslt serializes every transform behind a process-wide lock), so the
@@ -132,12 +132,11 @@ pub struct RenderManifest {
   /// The fully-resolved XSLT parameter map (CSS/JS/LATEXML_VERSION/user
   /// overrides), captured after the parent computed it.
   pub xslt_params:               Vec<(String, String)>,
-  pub nodefaultresources:        bool,
+  pub default_resources:         bool,
   /// The resolved stylesheet/resource search paths the parent's `XSLT::new`
   /// received.
   pub searchpaths:               Vec<String>,
   pub is_html_out:               bool,
-  pub svg_fragments:             Vec<(String, String)>,
   pub schemadocs:                bool,
   /// [`latexml_post::extract::Whatsout`] as its canonical CLI tag
   /// (`as_cli`/`from_cli` round-trip).
@@ -604,6 +603,11 @@ fn render_manifest_pages(m: RenderManifest) -> usize {
   });
   let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
+  // Same chain as the in-process renderer (`post.rs`): SVG on the live page
+  // DOM before MathML/XSLT for the HTML formats (Perl `LaTeXML.pm` order).
+  if m.is_html_out {
+    processors.push(Box::new(latexml_post::svg::SVG::new()));
+  }
   if m.pmml {
     let mut presentation = latexml_post::mathml::MathML::new_presentation()
       .with_keep_xmath(m.keep_xmath)
@@ -634,7 +638,7 @@ fn render_manifest_pages(m: RenderManifest) -> usize {
     match latexml_post::xslt::XSLT::new(
       xsl_path,
       params,
-      m.nodefaultresources,
+      !m.default_resources,
       None,
       m.searchpaths.clone(),
     ) {
@@ -643,11 +647,10 @@ fn render_manifest_pages(m: RenderManifest) -> usize {
     }
   }
   let ctx = crate::post::PageRenderCtx {
-    page_opts:     m.page_opts.clone().into(),
-    is_html_out:   m.is_html_out,
-    svg_fragments: m.svg_fragments.clone(),
-    schemadocs:    m.schemadocs,
-    whatsout:      latexml_post::extract::Whatsout::from_cli(&m.whatsout).unwrap_or_default(),
+    page_opts:   m.page_opts.clone().into(),
+    is_html_out: m.is_html_out,
+    schemadocs:  m.schemadocs,
+    whatsout:    latexml_post::extract::Whatsout::from_cli(&m.whatsout).unwrap_or_default(),
   };
   let mut procs = crate::post::PageProcessors {
     crossref,

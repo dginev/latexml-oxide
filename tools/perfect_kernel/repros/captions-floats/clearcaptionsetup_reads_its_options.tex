@@ -1,0 +1,15 @@
+% witness: K13 stage-2 audit (57h): caption3.sty:275-280 `\clearcaptionsetup*[option]{type}`;
+%          subfig.sty:476-479 `\listsubcaptions` tests for a star
+% oracle:  pdflatex 0 errors; "Before." and "After." only
+% engines: rust 57i=0 but "position]subfloat figure Before." and a `*` text panel; perl: same (KPE #316)
+% expect:  0 errors; the first paragraph is "Before."; no text panel in the figure
+% status:  RED (57i) -> GREEN (57j)
+\documentclass{article}
+\usepackage{subfig}
+\clearcaptionsetup[position]{subfloat}
+\clearcaptionsetup*{figure}
+\begin{document}
+Before.
+\begin{figure}\subfloat[A]{x}\listsubcaptions*\caption{C}\end{figure}
+After.
+\end{document}

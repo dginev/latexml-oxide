@@ -1,0 +1,31 @@
+% witness: 1808.08390, 1910.04228, 1108.1913 (mathdesign mdbch.sty:155/157 `\DeclareSymbolFont{\MD@greek@family
+%          upright}{OML}{\MD@greek@family}…`, :261/291/330 `\DeclareMathSymbol{\alpha}{\mathord}{\MD@greek@family}…`);
+%          1501.05180 (preamble.tex:16-17,45 `\DeclareSymbolFont{latex-font⏎msa}`, `{latex-font msa}`);
+%          latex.ltx:13138/13430/13480 `\csname sym#3\endcsname`, `\csname#2/#3/#4/#5\endcsname`
+% oracle:  pdflatex: "α+∆+Ω, a⩽b, a⩽b, x̂, a↠b"; 0 errors
+% engines: rust int117a = 0 errors, α Δ as U+FFFD, Ω as a newline, both ⩽ as "6", x̂'s accent empty, ↠ U+FFFD (each
+%          symbol-font argument read unexpanded; a line end in a name kept as a newline); perl 0.8.8 = 0 errors, all
+%          dropped (KNOWN_PERL_ERRORS #1201)
+% expect:  0 errors, 0 warnings; myalpha α, myDelta Δ, myOmega Ω, myleq ⩽ (family expanded: `U_msa`), mylesq ⩽
+%          (name expanded), myhat's accent ˆ (font expanded), myonto ↠ (a line end in the name is a space)
+% status:  RED (int117a) -> GREEN (89a)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\grfam{letters}
+\def\amsfam{msa}
+\def\opfam{operators}
+\DeclareSymbolFont{lettersupright}{OML}{cmm}{m}{n}
+\DeclareSymbolFont{myams}{U}{\amsfam}{m}{n}
+\DeclareSymbolFont{\amsfam names}{U}{msa}{m}{n}
+\DeclareMathSymbol{\myalpha}{\mathord}{\grfam}{"0B}
+\DeclareMathSymbol{\myDelta}{\mathalpha}{\grfam upright}{"01}
+\DeclareMathSymbol{\myOmega}{\mathalpha}{\grfam upright}{"0A}
+\DeclareMathSymbol{\myleq}{\mathrel}{myams}{"36}
+\DeclareMathSymbol{\mylesq}{\mathrel}{msanames}{"36}
+\DeclareMathAccent{\myhat}{\mathalpha}{\opfam}{"5E}
+\DeclareSymbolFont{latex-font
+msa}{U}{msa}{m}{n}
+\DeclareMathSymbol\myonto\mathrel{latex-font msa}{"10}
+\begin{document}
+$\myalpha+\myDelta+\myOmega$, $a\myleq b$, $a\mylesq b$, $\myhat{x}$, $a\myonto b$
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: graphicx's candidates follow `\Gin@extensions` (latexml_core util/image.rs
+%   `declared_graphics_extensions`; graphics_sty.rs seeds pdftex.def:597-600's list), which grfext's
+%   `\PrependGraphicsExtensions` edits (grfext.sty:170-193: the type removed, then put first). After
+%   `\usepackage{epstopdf}` — which loaded epstopdf-base and its `.eps` already — prepending `.eps` makes
+%   `\includegraphics{q}` beside `q.png` and `q.eps` the eps.
+% files:   q.png = graphics-tikz/trimquad.png, q.eps = package-bindings/eps_as_pdf_two.eps
+% witness: review rev79a finding 3 (Append/Prepend act as in TeX)
+% oracle:  pdflatex: 0 errors; "q 40.14989pt." (the eps)
+% engines: rust int68a: candidates "q.png,q.eps", "q 144.54pt."; 79a r1: "q.eps,q.png", "q 40.15pt."
+% expect:  0 errors, 0 warnings; candidates "q.eps,q.png", "q 40.15pt.", cssstyle "width:4.015em; height:2.007em"
+% status:  RED (int68a) -> GREEN (79a r1, r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\PrependGraphicsExtensions{.eps}
+\begin{document}
+\sbox0{\includegraphics{q}}q \the\wd0.
+\includegraphics{q}
+\end{document}

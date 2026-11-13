@@ -1,0 +1,62 @@
+% mechanism: imsart's `{keyword}[class=…]` blocks of `\kwd` entries are the VTeX classes' shared markup (ims_support's
+%   `vtex_keyword_markup`), locked against imsart.sty's own, which by default sets every block in `\keyword@box` for the
+%   title page; a `class=MSC2020` block is the subject classification, headed by the copy's `\setpkgattr` heading.
+% witness: 2407.13970, 2605.27137 (imsart.sty:2334-2393 of 2605.27137's copy: `\setpkgattr`, the blocks in
+%          `\keyword@box`, `\kwd` adding to `\keywords@list`); here as a minimal stand-in of the shipped file
+% oracle:  pdflatex 0 errors (with 2407.13970's imsart files): "MSC2020 subject classifications: Primary 62F15, 62G15;
+%          secondary 62G20. Keywords and phrases: Gaussian priors, credible sets, Bernstein–von Mises theorem, L2 rates."
+% engines: rust 85a = 0 errors, <keywords>L2 rates, </keywords> (OmniBus's `\kwd`: KNOWN_PERL_ERRORS #1196) and two
+%          <classification scheme="keywords"> of the blocks' leftovers ("[class=MSC2020]"), the codes lost; perl (2026-10-28) 0 errors,
+%          neither element
+% expect:  0 errors, 0 warnings; <keywords name="Keywords and phrases: "> with the four entries in order (the math kept)
+%          and a <classification scheme="MSC2020 subject classifications"> with "Primary 62F15, 62G15; secondary 62G20",
+%          the HTML's heading "MSC2020 subject classifications" (86a r1 showed "MSC")
+% status:  RED (85a) -> GREEN (86a)
+% preload: ar5iv.sty
+\begin{filecontents*}{imsart.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{imsart}
+\LoadClass{article}
+\RequirePackage{imsart}
+\end{filecontents*}
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{imsart}
+\def\sep@key@value#1=#2/?/#3{\setpkgattr{#3}{#1}{#2}}
+\def\do@option@list#1#2{\@for\curr@option:={#2}\do{\expandafter\sep@key@value\curr@option/?/{#1}\relax}}
+\protected\def\setpkgattr#1#2#3{\expandafter\long\expandafter\gdef\csname #1@#2\endcsname{#3}}
+\def\ims@href#1#2{#2}
+\def\msc@url{https://mathscinet.ams.org/mathscinet/msc/msc2020.html}
+\newtoks\keywords@list
+\def\addto@keywords@list#1{\keywords@list=\expandafter{\the\keywords@list#1, }}
+\newbox\keyword@box
+\setpkgattr{keyword}{MSC2020}{\ims@href{\msc@url}{MSC2020 subject classifications}:}
+\setpkgattr{keyword}{KWD}{Keywords and phrases:}
+\gdef\keyword{\@ifnextchar[{\@keyword}{\@keyword[class=KWD]}}
+\gdef\@keyword[#1]{\do@option@list{keyword}{#1}\def\keyword@name{\csname keyword@\keyword@class\endcsname}%
+  \let\kwd@sep\relax
+  \global\setbox\keyword@box=\vbox\bgroup\ifvoid\keyword@box\else\unvbox\keyword@box\fi
+  \noindent{\keyword@name}\space\hskip.1pt}
+\def\endkeyword{\unskip.\par\egroup}
+\def\keyword@fmt{\ifvoid\keyword@box\else\unvbox\keyword@box\fi}
+\def\sep{\unskip\string, }
+\DeclareRobustCommand*\kwd{\@ifnextchar[\@kwd{\@kwd[\kwd@sep]}}
+\def\@kwd[#1]#2{\unskip#1{#2}\addto@keywords@list{#2}\let\kwd@sep\sep}
+\newenvironment{frontmatter}{}{\maketitle}
+\def\maketitle{\keyword@fmt}
+\end{filecontents*}
+\documentclass[preprint]{imsart}
+\begin{document}
+\begin{frontmatter}
+\begin{keyword}[class=MSC2020]
+\kwd[Primary ]{62F15}
+\kwd{62G15}
+\kwd[; secondary ]{62G20}
+\end{keyword}
+\begin{keyword}
+\kwd{Gaussian priors}
+\kwd{credible sets}
+\kwd{Bernstein--von Mises theorem}
+\kwd{$L^2$ rates}
+\end{keyword}
+\end{frontmatter}
+Body.
+\end{document}

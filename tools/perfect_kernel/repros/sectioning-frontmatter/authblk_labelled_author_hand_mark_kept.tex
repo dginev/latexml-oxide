@@ -1,0 +1,19 @@
+% mechanism: authblk's labelled `\author[1]` (`\lx@add@authors@append`, a per-author call with no lines) keeps the mark
+%   its name prints (`per_author_marks`), the label's own mark dropped as Perl drops it; unchanged by P4b2b's list rule
+% witness: synthetic (reviewer revP4b2 q4, the control)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗1 and Bob Baker2", "1Univ A, Town A", "2Univ B, Town B"
+% engines: P4b2 and P4b2b: Ann Able * "Univ A, Town A", Bob Baker "Univ B, Town B"
+% expect:  0 errors, 0 warnings; Ann Able * "Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Ann Able$^{*}$}
+\author[2]{Bob Baker}
+\affil[1]{Univ A, Town A}
+\affil[2]{Univ B, Town B}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

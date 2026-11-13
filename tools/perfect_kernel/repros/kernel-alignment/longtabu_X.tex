@@ -1,0 +1,12 @@
+% witness: \usepackage{tabu,longtable} docs
+% oracle:  pdflatex 0 errors
+% engines: rust=0 pdflatex=0 (2026-09-03, b54x) — GREEN, locks \longtabu->\longtable
+% expect:  0 errors; <ltx:table>/<ltx:tabular> with 4 <ltx:td>
+% status:  GREEN
+\documentclass{article}\usepackage{tabu,longtable}
+\begin{document}
+\begin{longtabu} to \linewidth {X[l]X[r]}
+a & b \\
+c & d \\
+\end{longtabu}
+\end{document}

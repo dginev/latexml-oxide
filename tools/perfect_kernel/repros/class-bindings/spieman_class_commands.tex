@@ -1,0 +1,10 @@
+% witness: 2604.17554, 2604.05004 (`\linkable` in spieman's author footnote), 1408.0407 (`\supscr`); run 340 ~700
+%   spieman papers (the loader gives spieman the spie binding)
+% oracle:  pdflatex with spieman.cls: 0 errors; the address blue and underlined
+% engines: rust 65v = error (`\linkable` undefined)
+% expect:  0 errors; the address text kept
+% status:  RED (65v) -> GREEN (65w)
+\documentclass[12pt]{spieman}
+\begin{document}
+Contact: \linkable{someone@example.org}, x\supscr{a}.
+\end{document}

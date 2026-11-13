@@ -1,0 +1,20 @@
+% witness: 2101.05047 and ~90 of run 336's autart papers with a `$$` in `{pf}`
+% oracle:  pdflatex 0 errors with the paper's autart.cls (autart.cls:537-543: `{pf}` a plain environment, `{pf*}` a macro)
+% engines: rust 64h4 = 4 errors "Script _ can only appear in math mode", 2 warnings (the binding's DefEnvironment boxed
+%          the body in restricted horizontal mode); Perl 2 errors, 1 warning (raw autart.cls beside the file)
+% expect:  0 errors, 0 warnings; each `$$` an `ltx:equation` in its `ltx:proof` ("PROOF.", "Proof of the Lemma.")
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{autart}
+\begin{document}
+\begin{pf}
+Hence
+$$
+\tilde x_c = x_c - \bar x_c,
+$$
+as claimed.
+\end{pf}
+\begin{pf*}{Proof of the Lemma.}
+Then $$y^2 = 0.$$
+\end{pf*}
+\end{document}

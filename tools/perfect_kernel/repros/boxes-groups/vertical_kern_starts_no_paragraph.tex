@@ -1,0 +1,18 @@
+% tex.web §1057 `any_mode(kern): append_kern`: `\kern` is not among the commands that start a paragraph (§1090), so
+% a kern in vertical mode neither starts one nor runs `\everypar`, and adds no text (a typewriter kern opened a
+% whitespace-only paragraph).
+% witness: none (synthesized; fancyvrb `frame=lines` and qtree's `\vneed` put kerns between paragraphs).
+% Guard: perfect_kernel_batch58::vertical_kern_starts_no_paragraph.
+% status:  GREEN (58d)
+% oracle:  pdflatex 0 errors; "[1]" (only the paragraph "[" starts runs `\everypar`).
+% engines: rust 58c: "[4]" and a `<p><text font="typewriter"> </text></p>`.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\newcount\pc
+\begin{document}
+\everypar{\global\advance\pc1 }%
+\hbox{B1}\kern5pt\hbox{B2}\par
+\kern2pt\par
+{\ttfamily\kern2pt\par}
+[\the\pc]
+\end{document}

@@ -1,0 +1,24 @@
+% mechanism: projlib-author.sty:98-139 provides `\institute`/`\address`/`\curraddr`/`\email`, each adding a line under
+%   the author it follows to the `cmd/@author/after` hook, run only where `\@maketitle` prints `\@author`; the kernel's
+%   locked `\maketitle` never ran it, so the lines were lost. The projlib-author binding (latexml_contrib
+%   projlib_author_sty.rs) reads the package raw and gives each provided command the frontmatter call of its kind.
+% witness: 2609.02711 (colorart.cls + ProjLib)
+% oracle:  pdflatex: 0 errors; "Ann Able / First University, Main Street 1, Town / ann@example.org / Bob Baker / Second
+%   Institute, City"
+% engines: rust 67int16: the two authors without address or e-mail; perl: no binding
+% expect:  0 errors, 1 warning (colorist-fancy's `\setlist`, as before); each author with its address, Ann Able's e-mail
+% status:  RED (67int16) -> GREEN (68x)
+% preload: ar5iv.sty
+\documentclass{colorart}
+\usepackage{ProjLib}
+\begin{document}
+\title{The Title}
+\author{Ann Able}
+\address{First University, Main Street 1, Town}
+\email{ann@example.org}
+\author{Bob Baker}
+\address{Second Institute, City}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

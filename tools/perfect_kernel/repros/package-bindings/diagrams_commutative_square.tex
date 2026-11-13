@@ -1,0 +1,26 @@
+% witness: math0001049 (the diagram below, from its section on invariant rings); math-ph0001006, math0003019,
+%          math-ph0007001, math0010298, math0012073, math0102115, math0104065, math0104175 (Paul Taylor's diagrams)
+% oracle:  diagrams.sty/.tex is not in TeX Live; the arXiv PDF of math0001049 shows the 3-row diagram: exact rows
+%          0 -> sigma(Z^r) -> Z^s -> Cl(R) -> 0 over 0 -> U -> Z^s -> Hom(D,K^x) -> 0, the verticals down, =, onto;
+%          the labels as the diagrams manual (v3.97, "Labels") places them: ^ above, _ below, < left, > right
+% engines: rust 66x1 = 2 errors (\newarrow undefined), the diagram replaced by <ERROR>{diagram}</ERROR> (Perl's
+%          ar5iv-bindings diagrams.tex.ltxml); Perl the same
+% expect:  0 errors, 0 warnings; one math array per diagram (datameaning commutative-diagram) of the objects and the
+%          arrows, labels kept as scripts (horizontal) or beside the arrow (vertical); "A ->^f B" inline in text
+% status:  RED (66x1) -> GREEN (67d)
+\documentclass{article}
+\input diagrams
+\newarrow{Equal} =====
+\newarrow{Into} C--->
+\newarrow{Onto} ----{>>}
+\begin{document}
+There is a commutative diagram
+$$
+\begin{diagram}
+0  & \rTo & \sigma(Z^r) & \rTo^{i}_{\cong} & Z^s  & \rTo & Cl(R) & \rTo & 0\\
+   &      & \dTo<{\alpha}  &      & \dEqual &      & \dOnto>{\beta} \\
+0  & \rTo &  U            & \rInto & Z^s  & \rTo & H & \rTo & 0
+\end{diagram}
+$$
+with exact rows, and a map $A \rTo^f B$ in the text.
+\end{document}

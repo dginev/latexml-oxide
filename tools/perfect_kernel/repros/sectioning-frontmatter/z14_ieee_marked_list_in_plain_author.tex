@@ -1,0 +1,22 @@
+% witness: 2603.28168 (17 names of 17 `\and`-columns, `\IEEEauthorblockA{\IEEEauthorrefmark{6} \textit{…}\\ …}`, then a block of addresses), 1405.3507 (`\IEEEauthorblockA{{\IEEEauthorrefmark{1}}Dept,\\ Univ\\ Email: …}`)
+% oracle:  pdflatex 0 errors: the names with their symbols, each list's lines under them
+% engines: Perl: `\IEEEauthorrefmark{1}` leaks `{1}`; ours before Z14: the rehearsal digested the API's private options as text ("Script _ can only appear in math mode" per entry, held), the list uncut, on the last column's name
+% expect:  0 errors, no held error on the block (`\lx@add@affiliation@marked` an in-block affiliation, its options undigested); each entry on the names requesting it, each address its owner's
+%          (perfect_kernel_batchz14::a_marked_list_in_a_plain_author_is_read_digested)
+% status:  GREEN (Z14)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{
+Ann Able\IEEEauthorrefmark{1},
+\and Bob Baker\IEEEauthorrefmark{2},
+\and Cat Cole\textsuperscript{\IEEEauthorrefmark{1},*}\thanks{* Cat Cole is the corresponding author.}\\
+\IEEEauthorblockA{
+\IEEEauthorrefmark{1} \textit{Univ A, Town A}\\
+\IEEEauthorrefmark{2} \textit{Univ B, Town B}
+}\\
+\IEEEauthorblockA{ann.able@a.org, bob.baker@b.org, \\ cat.cole@a.org}
+}
+\maketitle
+Body.
+\end{document}

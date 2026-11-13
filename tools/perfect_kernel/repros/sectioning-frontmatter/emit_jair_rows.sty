@@ -1,0 +1,25 @@
+% The author rows of JAIR's jair.sty (its `\@maketitle`, `\name`, `\email`, `\addr`, `\AND`), a raw style no binding owns: the
+% fixture of emit_net_a_lost_name_spells_its_own_address.tex (1908.02923, 1109.6618).
+\newlength\interauthorskip
+\setlength\interauthorskip{0.08in plus 0.1in minus 0.1in}
+\def\maketitle{\par
+ \begingroup
+   \def\thefootnote{\fnsymbol{footnote}}
+   \def\@makefnmark{\hbox to 0pt{$^{\@thefnmark}$\hss}}
+   \@maketitle \@thanks
+ \endgroup
+\setcounter{footnote}{0}
+ \let\maketitle\relax \let\@maketitle\relax
+ \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@startauthor{\noindent \normalsize\bf}
+\def\@endauthor{}
+\def\@maketitle{\vbox{\hsize\textwidth
+ \linewidth\hsize
+ {\begin{center} \Large\bf \@title \par \end{center}}
+ {\def\and{\unskip\enspace{\rm and}\enspace}%
+  \def\addr{\small\it}%
+  \def\email{\hfill\small\sc}%
+  \def\name{\normalsize\bf}%
+  \def\AND{\@endauthor\rm\hss \vskip \interauthorskip \@startauthor}
+  \@startauthor \@author \@endauthor}
+}}

@@ -1,0 +1,19 @@
+% mechanism: the frontmatter queue's `author:N` positions count names, by the reading's cut at the `\and`-family
+%   separators (`queue_reading.rs` `entry_names`): a whole-list `\author` queued as one entry holds a position a name,
+%   read by every consumer (`queued_author_marks`, `queued_requesters`, `place_address_runs`, ...) and by the resolver
+%   (`Resolver::author_entries`, the block's names recorded in the ledger) — Option C P2-3b, OD #995
+% witness: synthetic (a mark inside the first name's note, a name in a box, three names over two marks)
+% oracle:  pdflatex (-no-shell-escape, TL 2025 has no svjour3.cls: 1107.3809's svjour3.cls and svglov3.clo) 0 errors: "Ann Able1 · Bob Baker2 · Cy Coe1", the note "Note 9 one."
+% engines: int169a (632698e1d8): the three addresses on a nameless creator; P23b: one address a name, the note's mark no request
+% expect:  0 errors, 0 warnings; Ann Able: the note, 1 Univ A, u1@x.org; Bob Baker: 2 Univ B, u2@x.org; Cy Coe: 1 Univ A,
+%   u3@x.org
+% status:  GREEN (P23b; guard perfect_kernel_batchp23b)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\thanks{Note $^{9}$ one.} \and \mbox{Bob Baker}$^{2}$ \and Cy Coe$^{1}$}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{\{u1, u2, u3\}@x.org}}
+\maketitle
+Text.
+\end{document}

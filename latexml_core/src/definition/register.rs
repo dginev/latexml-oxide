@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt, rc::Rc};
+use std::{borrow::Cow, cell::Cell, fmt, rc::Rc};
 
 use libxml::tree::Node;
 
@@ -500,31 +500,37 @@ pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<Arg
 #[derive(Clone)]
 pub struct Register {
   /// the public command sequence for this register
-  pub cs:            Token,
-  /// the internal address for this register
-  pub address:       String,
+  pub cs:                 Token,
+  /// the internal address for this register. Set it before the register's value is first read
+  /// or assigned: `address_sym` caches it interned on first use.
+  pub address:            String,
   /// associated parameters, if any
-  pub parameters:    Option<Parameters>,
+  pub parameters:         Option<Parameters>,
   /// the type of values accepted by this register (Number, Dimension, ...)
-  pub register_type: RegisterType,
+  pub register_type:      RegisterType,
   /// read-only flag (default: false)
-  pub readonly:      bool,
+  pub readonly:           bool,
   /// the current value
-  pub value:         Option<RegisterValue>,
+  pub value:              Option<RegisterValue>,
   /// reader for a value
-  pub getter:        Option<RegisterGetterClosure>,
+  pub getter:             Option<RegisterGetterClosure>,
   /// setter for a value
-  pub setter:        Option<RegisterSetterClosure>,
+  pub setter:             Option<RegisterSetterClosure>,
   /// a default value
-  pub default:       Option<RegisterValue>,
+  pub default:            Option<RegisterValue>,
   /// the unicode corresponding to the \mathchar of `value` (for chardef)
-  pub mathglyph:     Option<char>,
+  pub mathglyph:          Option<char>,
   /// role attribute for math chardef (e.g. "MULOP", "BINOP")
-  pub role:          Option<SymStr>,
+  pub role:               Option<SymStr>,
   /// additional properties for math chardefs (meaning, stretchy, scriptpos, mathstyle, etc.)
-  pub chardef_props: HashMap<Stored>,
+  pub chardef_props:      HashMap<Stored>,
   /// the source point of origin for this register definition
-  pub locator:       Locator,
+  pub locator:            Locator,
+  pub origin:             crate::definition::origin::DefinitionOrigin,
+  /// `address` interned on first use (lazily: the dump reader sets `address` after
+  /// construction), so a register without arguments reads and assigns its value without
+  /// hashing its address each time.
+  pub(crate) address_sym: Cell<Option<SymStr>>,
 }
 impl Default for Register {
   fn default() -> Self {
@@ -532,6 +538,7 @@ impl Default for Register {
       cs:            T_CS!("Register"),
       address:       String::from("Register"),
       locator:       Locator::default(),
+      origin:        crate::definition::origin::current_origin(),
       parameters:    None,
       register_type: RegisterType::Number,
       getter:        None,
@@ -541,6 +548,7 @@ impl Default for Register {
       mathglyph:     None,
       role:          None,
       chardef_props: HashMap::default(),
+      address_sym:   Cell::new(None),
       default:       None,
     }
   }
@@ -588,6 +596,22 @@ impl Definition for Register {
   fn get_alias(&self) -> Option<&String> { None }
 
   fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>) {
+    // A dimen register holds a dimension, a skip register a glue: "When a
+    // glue_val changes to a dimen_val, we use the width component" (tex.web
+    // §429). calc's `\setlength` is `\calc@assign@skip` (calc.sty:86), so it
+    // assigns every length as a skip (:51-53): `\setlength{\unitlength}{2pt}`
+    // under calc left a glue in the dimen register, read as 1pt by the picture
+    // code (arXiv 2605.11190, 2605.05506, 2605.18952, 2605.15276). Before the
+    // setter, so `\wd`/`\ht`/`\dp` and `\pagegoal` get it too.
+    let value = match (self.register_type, value) {
+      (RegisterType::Dimension, RegisterValue::Glue(glue)) => {
+        RegisterValue::Dimension(Dimension::new(glue.value_of()))
+      },
+      (RegisterType::Glue, RegisterValue::Dimension(dimension)) => {
+        RegisterValue::Glue(Glue::new(dimension.value_of()))
+      },
+      (_, value) => value,
+    };
     if matches!(self.register_type, RegisterType::CharDef) {
       let message = self
         .cs
@@ -605,26 +629,17 @@ impl Definition for Register {
         let message = s!("Can't assign to register {}", self.address);
         Warn!("unexpected", self.address, message);
       } else {
-        let loc = if args.is_empty() {
-          Cow::Borrowed(&self.address)
-        } else {
-          // If an arg fails to revert to tokens (e.g. an unexpected Pair
-          // or KV variant), contribute an empty string to the location
-          // key rather than panicking. This keeps register assignment
-          // alive on edge cases where the caller passes an atypical arg.
-          let args_string: String = args
-            .into_iter()
-            .map(|a| {
-              a.as_tokens()
-                .ok()
-                .flatten()
-                .map_or_else(String::new, |tks| tks.to_string())
-            })
-            .collect::<Vec<String>>()
-            .join("");
-          Cow::Owned(format!("{}{args_string}", self.address))
-        };
-        state::assign_value(&loc, value, scope);
+        // If an arg fails to revert to tokens (e.g. an unexpected Pair
+        // or KV variant), contribute an empty string to the location
+        // key rather than panicking. This keeps register assignment
+        // alive on edge cases where the caller passes an atypical arg.
+        let loc = self.value_key(&args, |a| {
+          a.as_tokens()
+            .ok()
+            .flatten()
+            .map_or_else(String::new, |tks| tks.to_string())
+        });
+        state::assign_value_sym(loc, value, scope);
       }
     }
   }
@@ -635,6 +650,21 @@ impl Definition for Register {
     // A dilemma: If the \chardef were in a style file, you're prefer to revert to the $cs
     // but if defined in the document source, better to use \char ###\relax, so it still "works"
     if matches!(self.register_type, RegisterType::CharDef) {
+      // Perl CharDef.pm L52-55: a \chardef from a STYLE/BINDING (or the
+      // dump / engine files, which have no meaningful source) reverts as
+      // its own CS; only a document-source \chardef reverts as
+      // `\char N\relax` so it "still works" standalone. Without this,
+      // restoring `\&`/`\#` as chardefs turned every `tex=` reversion
+      // into `\char 38\relax` (ifthen golden).
+      let local = {
+        let src = arena::with(self.locator.source, |s| s.to_string());
+        !src.is_empty()
+          && !src.contains(".sty")
+          && !src.contains(".ltxml")
+          && !src.contains(".rs")
+          && !src.contains("Anonymous")
+          && !src.contains("literal")
+      };
       let mut props = HashMap::default();
       if let Some(role) = self.role {
         props.insert("role", Stored::String(role));
@@ -688,26 +718,60 @@ impl Definition for Register {
             arena::pin_char(mathglyph),
             None,
             None,
-            Tokens!(
-              T_CS!("\\mathchar"),
-              self.value.as_ref().unwrap().revert()?,
-              T_CS!("\\relax")
-            ),
+            if local {
+              Tokens!(
+                T_CS!("\\mathchar"),
+                self.value.as_ref().unwrap().revert()?,
+                T_CS!("\\relax")
+              )
+            } else {
+              Tokens!(self.cs)
+            },
             props,
           )
         } else {
+          let value = self.value.clone().unwrap().value_of();
+          let glyph = self.chardef_glyph().unwrap_or_else(|| pin!(""));
+          // Perl CharDef.pm L61-62: a TEXT \chardef invoked IN math still
+          // gets its unicode math properties, so the dump's `\&` (CD 38)
+          // in `$\&\&$` carries role/meaning instead of injecting a bare
+          // `&` the math parser reads as an alignment tab. Required for
+          // dropping the plain_constructs `\#`/`\&`/… overrides that
+          // shadowed the dump CharDefs (and with them the numeric value —
+          // `\catcode\#14` read 0; varindex family, misdefined:# cluster).
+          if state::lookup_bool("IN_MATH") {
+            let glyph_char = arena::with(glyph, |g| g.chars().next());
+            if let Some(c) = glyph_char
+              && let Some(info) = crate::common::mathchar::unicode_math_properties(c)
+            {
+              if let Some(role) = info.role
+                && !props.contains_key("role")
+              {
+                props.insert("role", Stored::String(arena::pin(role)));
+              }
+              if let Some(meaning) = info.meaning
+                && !props.contains_key("meaning")
+              {
+                props.insert("meaning", Stored::String(arena::pin(meaning)));
+              }
+            }
+          }
           Tbox::new(
-            font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
-              .unwrap_or_else(|| pin!("")),
+            glyph,
             None,
             None,
-            Tokens!(
-              T_CS!("\\char"),
-              self.value.as_ref().unwrap().revert()?,
-              T_CS!("\\relax")
-            ),
+            if local {
+              Tokens!(
+                T_CS!("\\char"),
+                self.value.as_ref().unwrap().revert()?,
+                T_CS!("\\relax")
+              )
+            } else {
+              Tokens!(self.cs)
+            },
             props,
           )
+          .with_tfm_slot(u32::try_from(value).unwrap_or(u32::MAX))
         },
       )]);
     }
@@ -750,17 +814,8 @@ impl Definition for Register {
     } else if let Some(ref getter) = self.getter {
       getter(args)
     } else {
-      let key = if args.is_empty() {
-        Cow::Borrowed(&self.address)
-      } else {
-        let args_string: String = args
-          .iter()
-          .map(ToString::to_string)
-          .collect::<Vec<String>>()
-          .join("");
-        Cow::Owned(format!("{}{args_string}", self.address))
-      };
-      state::with_value(&key, |v_opt| match v_opt {
+      let key = self.value_key(&args, ToString::to_string);
+      state::with_value_sym(key, |v_opt| match v_opt {
         Some(v) => v.into(),
         None => self.default.clone(),
       })
@@ -770,6 +825,44 @@ impl Definition for Register {
 }
 
 impl Register {
+  /// What a `\chardef` prints here: its math glyph, or its code's glyph in the current font's encoding (as
+  /// `invoke_primitive` digests it); `None` for any other register.
+  pub fn chardef_glyph(&self) -> Option<SymStr> {
+    if !matches!(self.register_type, RegisterType::CharDef) {
+      return None;
+    }
+    if let Some(glyph) = self.mathglyph {
+      return Some(arena::pin_char(glyph));
+    }
+    let value = self.value.clone()?.value_of();
+    font::decode_str(value as u8, None, false)
+  }
+  /// The State key of this register's value for `args` (Perl Register.pm:52-56, the address
+  /// followed by the arguments' text). A number argument (`\count255`) is written as its
+  /// digits directly; any other argument by `text`, the caller's rendering of it.
+  fn value_key(&self, args: &[ArgWrap], text: impl Fn(&ArgWrap) -> String) -> SymStr {
+    if args.is_empty() {
+      if let Some(sym) = self.address_sym.get() {
+        return sym;
+      }
+      let sym = arena::pin(&self.address);
+      self.address_sym.set(Some(sym));
+      return sym;
+    }
+    let mut key = String::with_capacity(self.address.len() + 8);
+    key.push_str(&self.address);
+    for arg in args {
+      match arg {
+        ArgWrap::Number(n) => {
+          use std::fmt::Write;
+          let _ = write!(key, "{}", n.value_of());
+        },
+        other => key.push_str(&text(other)),
+      }
+    }
+    arena::pin(&key)
+  }
+
   /// checks the readonly flag
   pub fn is_readonly(&self) -> bool { self.readonly }
   /// A CharDef is a specialized register;
@@ -789,6 +882,7 @@ impl Register {
       mathglyph,
       role,
       chardef_props: HashMap::default(),
+      address_sym: Cell::new(None),
       register_type: RegisterType::CharDef,
       readonly: true,
       locator: gullet::get_locator(),

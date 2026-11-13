@@ -1,0 +1,22 @@
+% mechanism: in a list a plain `$^1$` leads, a mark on a spacing nucleus is read as the mark it prints
+%   (`relocate::spaced_marks_written`, OXIDIZED_DESIGN_DIVERGENCES #964) — but not one glued to the word before it and
+%   to a letter run after it, `Lab for ${}^{3}$He Physics`: the isotope, the entry's text (review rev104c S2)
+% witness: none (review rev104c probe p8; the 63i isotope `$^{2}$Laboratory for $^{3}$He`; the plain-lead reading's
+%   witness 2106.01286 `INRIA, $\quad ^2$LTCI`)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1 Univ A, Lab for 3He Physics, Town / 2 Univ B, City / 3 Univ C"
+% engines: rust int131a0: Ann "Univ A, Lab for", Cat "3He Physics, Town" and "Univ C"; 104c r1: Cat "He Physics,
+%   Town", the "3" lost
+% expect:  0 errors, 0 warnings; the "3" kept before "He" (the line still parted there, Cat "3He Physics, Town", as
+%   int131a0 parts it: open, SYNC_STATUS row 104c)
+% status:  RED (104c r1) -> GREEN (104c r2) — perfect_kernel_batch104c::an_isotope_nucleus_mark_is_text
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+\author{Cat Cole $^3$}
+\affiliation{$^1$ Univ A, Lab for ${}^{3}$He Physics, Town\\ $^2$ Univ B, City\\ $^3$ Univ C}
+\maketitle
+Text.
+\end{document}

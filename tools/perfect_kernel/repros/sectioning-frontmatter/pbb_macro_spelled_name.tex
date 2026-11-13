@@ -1,0 +1,19 @@
+% mechanism: the decline split's lost-name fail-safe (`emit::split_loses_a_name`, OD #988) reads Perl's raw pieces by
+%   their visible words; a piece printing none (a name a macro spells, `\cat$^{1}$`) is that name's
+%   (`emit::perl_piece_of`), no evidence of a loss, and the marks after it are its creator's (`piece_marks`)
+% witness: review revPB S1 (`probes/a_macro_name.tex`), synthetic; the fail-safe's own witness 1511.09009 keeps 4 names
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2∗, and Cat Cole1", "1 Univ X, Dept Y", "2 Univ Z", "∗Zebra note."
+% engines: rust int155a0: 3 creators (as here); rust PB: 1 creator, the block written whole ("Ann Able 1 , Bob Baker 2 ,
+%   and Cat Cole 1 1 Univ X, Dept Y 2 Univ Z"); perl not run
+% expect:  0 errors, 1 warning (the definition decline's); three creators, each with its affiliation, Bob's note
+% status:  RED (PB) -> GREEN (perfect_kernel_batchpb::a_name_a_macro_spells_is_no_lost_name)
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\newcommand{\cat}{Cat Cole}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\footremember{zz}{Zebra note.}, and \cat$^{1}$\\
+$^{1}$Univ X, Dept Y\\ $^{2}$Univ Z}
+\begin{document}
+\maketitle
+Body.
+\end{document}

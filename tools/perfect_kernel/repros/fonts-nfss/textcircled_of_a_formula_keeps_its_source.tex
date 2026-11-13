@@ -1,0 +1,14 @@
+% \textcircled of a formula circles the formula's text only when it is one run of characters: a formula with a
+% script, a fraction, a root, an accent or a font switch has no text the circle can hold, and a 78l r1 draft
+% dropped its structure — $\frac12$ became a circled 2, $\sqrt{2}$ a circled 2, $q_0$ "q0⃝" (the subscript lost).
+% sect13.rs `typeset_text` now gives up on any whatsit inside a formula, and \textcircled circles the argument's
+% source as int49a and Perl did (ugly but complete, KNOWN_PERL_ERRORS #361).
+% witness: 2508.14614 (\textcircled{$q_0$}); 78l review probe tc.tex
+% oracle:  pdflatex 0 errors; a circled 1/2, a circled root of 2, a circled q-sub-0 and a circled C
+% engines: rust 78l r1 = 0 errors, "②, ②, q0⃝, Ⓒ"; rust int49a and perl "$\frac{1}{2}$⃝, $\sqrt{2}$⃝, $q_{0}$⃝, $C$⃝"
+% expect:  0 errors; "$\frac{1}{2}$⃝, $\sqrt{2}$⃝, $q_{0}$⃝, Ⓒ": no formula structure lost, a plain one circled
+% status:  RED (78l r1) -> GREEN (78l r2)
+\documentclass{article}
+\begin{document}
+\textcircled{$\frac12$}, \textcircled{$\sqrt2$}, \textcircled{$q_0$}, \textcircled{$C$}.
+\end{document}

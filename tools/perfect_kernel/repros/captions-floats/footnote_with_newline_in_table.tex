@@ -1,0 +1,25 @@
+% witness: 2201.11330 (main.tex:461 `\caption{…}\footnote{\% time: … program used by this function.\\ cumulative …}`
+%          in {xltabular}; brk89)
+% oracle:  pdflatex 0 errors: `\@footnotetext` sets the note's text with `\@parboxrestore` (latex.ltx:17663, :16288),
+%          so its `\\` is a line break in a `p` cell too; longtable sets a `\footnote` after `\caption` in the
+%          caption's spanning cell (longtable.sty:476), its mark after the caption text
+% engines: rust int90a = 8 errors in the p cell ("} Attempt to close a group that switched to mode horizontal",
+%          "\@end@tabular …"; "Done." lost) and the longtable caption's note dropped with its row at 0 errors;
+%          Perl's note has no `\\` reset either
+% expect:  0 errors, 0 warnings; both notes, each with its line break; the caption's note in the caption
+% status:  RED (int90a) -> GREEN (79u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\begin{tabular}{p{3cm}}
+a\footnote{first line\\second line} \\
+b
+\end{tabular}
+
+\begin{longtable}{p{3cm}}
+\caption{The caption}\footnote{caption note\\its second line}\\
+c \\
+\end{longtable}
+Done.
+\end{document}

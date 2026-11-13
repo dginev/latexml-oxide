@@ -1,0 +1,16 @@
+% witness: 1806.00093 (EPS figures beside epstopdf's `-eps-converted-to.pdf` conversions; also 1806.00188, 1806.00284,
+%          1806.00370, and the epstopdf-loading EPS-only papers 1804.02991, 2104.01314, 1209.6096, 2210.10273,
+%          1701.08490; 1908.04811's main file is main.tex — IEEECS_confs_LaTeX/bare_conf.tex is a template decoy)
+% oracle:  arXiv's PDF of 1806.00093: Producer "dvips + GPL Ghostscript GIT PRERELEASE 9.22" — latex+dvips, "Mode: DVI."
+%          (side files fig.eps, fig-eps-converted-to.pdf — the guard writes them)
+% engines: rust 65a = "Mode: PDF." (the tree holds a PDF); 65f r1 = "Mode: DVI."; 65f r2 = "Mode: PDF." (took the
+%          conversion as the figure's PDF form)
+% expect:  0 errors; "Mode: DVI." — the included figure is PostScript only; a conversion beside it decides nothing
+% status:  RED (65a, 65f r2) -> GREEN (65f r3)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+Mode: \ifnum\pdfoutput>0 PDF\else DVI\fi.
+
+\includegraphics{fig}
+\end{document}

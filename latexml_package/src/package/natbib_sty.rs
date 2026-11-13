@@ -4,20 +4,86 @@ use crate::prelude::*;
 // Perl natbib.sty.ltxml L379-405: sub setCitationStyle { while (@pairs) { ($key,$value)=... }
 // Unified dispatch: callers may pass flag-only pairs (value=None) from DeclareOption
 // handlers or key=value pairs (value=Some(tokens)) from `\setcitestyle`'s getPairs.
+/// natbib's citation-style options in its declaration order (natbib.sty:238-263), the order `\ProcessOptions` runs
+/// them in, and its ordering options (:267-271).
+const NATBIB_STYLE_OPTIONS: [&str; 15] = [
+  "numbers",
+  "super",
+  "authoryear",
+  "round",
+  "square",
+  "angle",
+  "curly",
+  "comma",
+  "semicolon",
+  "colon",
+  "nobibstyle",
+  "bibstyle",
+  "sort",
+  "compress",
+  "sort&compress",
+];
+
+/// Run natbib's style option `option` as its `\DeclareOption` code does (natbib.sty:238-263), the options its
+/// `\ExecuteOptions` names in their order.
+fn natbib_style_option(option: &str) {
+  match option {
+    "numbers" => {
+      set_citation_style(&[("numbers", None)]);
+      for sub in ["square", "comma", "nobibstyle"] {
+        natbib_style_option(sub);
+      }
+    },
+    "super" => {
+      set_citation_style(&[("super", None)]);
+      assign_value("CITE_OPEN", Stored::Tokens(Tokens!()), None);
+      assign_value("CITE_CLOSE", Stored::Tokens(Tokens!()), None);
+      natbib_style_option("nobibstyle");
+    },
+    "authoryear" => {
+      set_citation_style(&[("authoryear", None)]);
+      for sub in ["round", "semicolon", "bibstyle"] {
+        natbib_style_option(sub);
+      }
+    },
+    "round" | "square" | "angle" | "curly" | "comma" | "semicolon" => {
+      set_citation_style(&[(option, None)]);
+      natbib_style_option("nobibstyle");
+    },
+    "colon" => natbib_style_option("semicolon"),
+    "sort" => assign_value("CITE_SORTCITES", true, None),
+    "compress" => assign_value("CITE_COMPRESS", true, None),
+    "sort&compress" => {
+      natbib_style_option("sort");
+      natbib_style_option("compress");
+    },
+    "nobibstyle" => {
+      Let!("\\bibstyle", "\\@gobble");
+    },
+    "bibstyle" => {
+      Let!("\\bibstyle", "\\@citestyle");
+    },
+    _ => {},
+  }
+}
+
 fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
   for (key, value) in pairs {
     match *key {
       // Perl L384: AssignValue(CITE_STYLE => 'authoryear');
       "authoryear" => {
         assign_value("CITE_STYLE", pin("authoryear"), None);
+        sync_nat_conditionals("authoryear", None);
       },
       // Perl L385:
       "numbers" => {
         assign_value("CITE_STYLE", pin("numbers"), None);
+        sync_nat_conditionals("numbers", None);
       },
       // Perl L386:
       "super" => {
         assign_value("CITE_STYLE", pin("super"), None);
+        sync_nat_conditionals("super", None);
       },
       // Perl L387-388: AssignValue(CITE_OPEN=>T_OTHER('(')); AssignValue(CITE_CLOSE=>T_OTHER(')'));
       "round" => {
@@ -55,9 +121,20 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
       "semicolon" => {
         assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(";")), None);
       },
+      // natbib.sty:315-316: `colon` sets the separator to `;` too (Perl omits it).
+      "colon" => {
+        assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(";")), None);
+      },
       // Perl L398:
       "comma" => {
         assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(",")), None);
+      },
+      // natbib.sty:338-339 `citesep=<sep>` sets `\NAT@sep` (Perl's keys lack it, KNOWN_PERL_ERRORS #1023): acmart.cls:385
+      // `\bibstyle@acmnumeric` sets `citesep={,}`.
+      "citesep" => {
+        if let Some(v) = value {
+          assign_value("CITE_SEPARATOR", Stored::Tokens(v.clone()), None);
+        }
       },
       // Perl L399: AssignValue(CITE_AY_SEPARATOR => $value);
       "aysep" => {
@@ -90,6 +167,20 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
   }
 }
 
+/// natbib.sty:234-245: the `numbers`/`super`/`authoryear` options and `\bibpunct`'s style argument (:290-296) set
+/// `\ifNAT@numbers` and `\ifNAT@super` beside the style, which a bibliography tests (`.bbl` labels written
+/// `\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi`, 1409.8404, 1508.04752, 1604.03470; `\NAT@force@numbers`). The
+/// options and `\setcitestyle` (:320-324) set them locally, `\bibpunct` (:294-297) `\global`ly: `scope`.
+fn sync_nat_conditionals(style: &str, scope: Option<Scope>) {
+  let (numbers, sup) = match style {
+    "numbers" => ("\\iftrue", "\\iffalse"),
+    "super" => ("\\iftrue", "\\iftrue"),
+    _ => ("\\iffalse", "\\iffalse"),
+  };
+  let_definition(&T_CS!("\\ifNAT@numbers"), &T_CS!(numbers), scope);
+  let_definition(&T_CS!("\\ifNAT@super"), &T_CS!(sup), scope);
+}
+
 fn is_some_and_nonempty(opt: &Option<Tokens>) -> bool {
   match opt {
     Some(t) => !t.is_empty(),
@@ -105,9 +196,12 @@ fn cite_close() -> Tokens { lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS) }
 fn cite_ns() -> Tokens { lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS) }
 fn cite_ay() -> Tokens { lookup_tokens("CITE_AY_SEPARATOR").unwrap_or(NO_TOKENS) }
 
-// Helper: handle the [pre][post] optional arg swap (if !post { pre,post = undef,pre })
+// Helper: handle the [pre][post] optional arg swap (natbib.sty.ltxml:113 `if (!$post) { ($pre, $post) = (undef, $pre) }`,
+// then :114-115 an empty one dropped). Only an ABSENT post-note swaps: a Perl Tokens is a true object even when empty,
+// so `\citep[e.g.][]{k}` keeps "e.g." the pre-note, "(e.g. Rigden, 2017)" as natbib.sty prints it (`\NAT@@citetp`,
+// natbib.sty:688-690). The reader gives `[]` as `Some(empty)` (gullet.rs `read_optional`).
 fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, Option<Tokens>) {
-  if !is_some_and_nonempty(&post) {
+  if post.is_none() {
     (None, pre.filter(|t| !t.is_empty()))
   } else {
     (
@@ -117,7 +211,338 @@ fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, 
   }
 }
 
+/// `cs` re-invoked over a natbib citation's arguments as they were read: a present note is `[…]` even when empty, which
+/// natbib's commands tell from an absent one (`swap_pre_post`), and a post-note given without a pre-note has an empty
+/// one before it. `Invocation!` reverts an empty optional argument to nothing, as Perl's `Optional` reversion does
+/// (Base_ParameterTypes.pool.ltxml:55-62): `\citealt[e.g.][]{k}` became `\citet[e.g.]{k}`, its pre-note the post-note
+/// (KNOWN_PERL_ERRORS #868; natbib.sty:702-730 passes both to `\NAT@citetp`). The bindings that delegate to natbib
+/// (apacite's `\cite<pre>[post]`, nmbib's `\citeall`) re-emit their notes through it too.
+pub fn natbib_invocation(
+  cs: &str,
+  star: Option<Tokens>,
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Tokens,
+) -> Tokens {
+  let mut tokens = vec![T_CS!(cs)];
+  if is_some_and_nonempty(&star) {
+    tokens.push(T_OTHER!("*"));
+  }
+  if pre.is_some() || post.is_some() {
+    tokens.push(T_OTHER!("["));
+    tokens.extend(pre.map(|p| p.revert()).unwrap_or_default());
+    tokens.push(T_OTHER!("]"));
+  }
+  if let Some(post) = post {
+    tokens.push(T_OTHER!("["));
+    tokens.extend(post.revert());
+    tokens.push(T_OTHER!("]"));
+  }
+  tokens.push(T_BEGIN!());
+  tokens.extend(keys.revert());
+  tokens.push(T_END!());
+  Tokens::new(tokens)
+}
+
+/// A label piece whose math shifts are balanced within each brace group (see `\NAT@wrout`): a group (or the piece)
+/// left in math is closed before its `}` (or at the piece's end), or, when its last token is that unpaired `$` (a
+/// BibTeX name split as `{Sasaki$}`), the `$` is dropped, so that no `$$` is formed.
+fn balance_math_shifts(piece: Option<Tokens>) -> Option<Tokens> {
+  piece.map(|tokens| {
+    let mut balanced = Vec::with_capacity(tokens.len() + 1);
+    // One parity per open brace group, the piece's own at the bottom.
+    let mut open_math = vec![false];
+    let close = |balanced: &mut Vec<Token>| {
+      if balanced
+        .last()
+        .is_some_and(|t: &Token| t.get_catcode() == Catcode::MATH)
+      {
+        balanced.pop();
+      } else {
+        balanced.push(T_MATH!());
+      }
+    };
+    for token in tokens.unlist() {
+      match token.get_catcode() {
+        Catcode::MATH => *open_math.last_mut().unwrap() ^= true,
+        Catcode::BEGIN => open_math.push(false),
+        Catcode::END if open_math.len() > 1 => {
+          if open_math.pop() == Some(true) {
+            close(&mut balanced);
+          }
+        },
+        _ => {},
+      }
+      balanced.push(token);
+    }
+    if open_math.pop() == Some(true) {
+      close(&mut balanced);
+    }
+    Tokens::new(balanced)
+  })
+}
+
+/// The binding's command for the citation form natbib's flags select (natbib.sty:685-749): `\NAT@ctype` 0 a
+/// citation, 1 the author, 2 the year, 3 the alias; `\ifNAT@par` parenthesised, `\ifNAT@swa` the citation's
+/// bracketed (`p`) form, `\ifNAT@full` the starred one. The saved `\lx@natbib@…` copies are used, so a document's
+/// `\citealp` redefined over `\NAT@citetp` does not call itself. The caller's `\begingroup` is closed after it, as
+/// natbib's formatters close it (:355-362).
+fn cite_by_flags(
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Option<Tokens>,
+) -> Result<Tokens> {
+  let same = |cs: &str, other: &str| {
+    let meaning = lookup_meaning(&T_CS!(cs));
+    meaning.is_some() && meaning == lookup_meaning(&T_CS!(other))
+  };
+  let par = same("\\ifNAT@par", "\\iftrue");
+  let swa = same("\\ifNAT@swa", "\\iftrue");
+  let star = same("\\ifNAT@full", "\\iftrue").then(|| Tokens!(T_OTHER!("*")));
+  let ctype = ["\\z@", "\\@ne", "\\tw@", "\\thr@@"]
+    .iter()
+    .position(|cs| same("\\NAT@ctype", cs))
+    .unwrap_or(0);
+  let (command, star) = match (ctype, par, swa) {
+    (1, ..) => ("\\lx@natbib@citeauthor", star),
+    (2, true, _) => ("\\lx@natbib@citeyearpar", None),
+    (2, false, _) => ("\\lx@natbib@citeyear", None),
+    (3, true, _) => ("\\lx@natbib@citepalias", None),
+    (3, false, _) => ("\\lx@natbib@citetalias", None),
+    (_, true, true) => ("\\lx@natbib@citep", star),
+    (_, true, false) => ("\\lx@natbib@citet", star),
+    (_, false, true) => ("\\lx@natbib@citealp", star),
+    (_, false, false) => ("\\lx@natbib@citealt", star),
+  };
+  let mut result = natbib_invocation(command, star, pre, post, keys.unwrap_or_default()).unlist();
+  result.push(T_CS!("\\endgroup"));
+  Ok(Tokens::new(result))
+}
+
+/// natbib's `\cite` (natbib.sty.ltxml:109-150), `parenthetical` its author-year form: natbib.sty:694-701 makes `\cite` with
+/// an optional argument, even an empty one, `\citep`'s parenthetical citation (`\NAT@cites` keeps `\NAT@swatrue` when
+/// `[` follows), only without one the textual one. Perl (natbib.sty.ltxml:133) tests the notes after dropping empty
+/// ones, so `\cite[]{k}` was textual (KNOWN_PERL_ERRORS #867). A binding whose `\cite` is always parenthetical
+/// (apacite.sty:259-267) asks for that form by name (`\lx@natbib@cite@parenthetical`).
+/// Does the superscript citation carry its postnote inside the superscript, ", ⟨postnote⟩" after the numbers? A
+/// natbib fork's own default: NJDnatbib.sty:366-368's `\NAT@citesuper` (`\textsuperscript{\NAT@@open#1\if*#3*\else,
+/// \NAT@spacechar#3\fi\NAT@@close}`, where natbib.sty:359-362 sets it after), switched on by that fork's binding
+/// (latexml_contrib njdnatbib_sty.rs; the reviewer's probe njd_direct_v2: pdflatex "2, p. 5" raised).
+fn super_postnote_inside() -> bool { lookup_bool("NATBIB_SUPER_POSTNOTE_INSIDE") }
+
+/// natbib.sty:1135-1160 `\NAT@star@cite`, with `\NAT@merge` above zero (the `mcite`, `merge` and `elide` options,
+/// :272-274, at `level` `\@ne`, `\tw@`, `\thr@@`; revtex4-1.cls:7046 and revtex4-2.cls:7067 `\let\NAT@merge\thr@@`): a key
+/// written `*key` in a citation's list is `key`. Perl's natbib binding never merges, and cites the key "*b": "missing
+/// citation" (1808.00247; KNOWN_PERL_ERRORS #1081). Guard `perfect_kernel_batch78n::revtex_merged_citation`. A
+/// residual: natbib also merges the entry into the one before it in the bibliography (`\NAT@b*@key`, :1160, read by its
+/// `\bibitem`, :841-860), so the citation prints the one number "\[1\]"; here the entry stays its own, "\[1, 2\]".
+/// `mcite` and the classes set the level; `merge` and `elide` only raise it (natbib.sty:273-274
+/// `\@ifnum{\NAT@merge<\tw@}{\let\NAT@merge\tw@}{}`), so `[elide,merge]` stays at `elide`'s: `raise_only`.
+pub fn natbib_merge_citations(level: &str, raise_only: bool) -> Result<()> {
+  if raise_only {
+    RawTeX!(&s!(
+      "\\@ifnum{{\\NAT@merge<{level}}}{{\\global\\let\\NAT@merge{level}}}{{}}"
+    ));
+  } else {
+    RawTeX!(&s!("\\global\\let\\NAT@merge{level}"));
+  }
+  if !is_defined("\\lx@natbib@kernel@bibref") {
+    Let!("\\lx@natbib@kernel@bibref", "\\@@bibref", Scope::Global);
+    DefMacro!("\\@@bibref Semiverbatim Semiverbatim {}{}", sub[(show, keys, phrase1, phrase2)] {
+      let merging = !x_equals(&T_CS!("\\NAT@merge"), &T_CS!("\\z@"));
+      let keys = if merging { merged_citation_keys(keys) } else { keys };
+      Ok(Invocation!(T_CS!("\\lx@natbib@kernel@bibref"), vec![show, keys, phrase1, phrase2]))
+    });
+  }
+  Ok(())
+}
+
+/// The keys of a merging citation list, read as natbib.sty:1135-1160 `\NAT@star@cite` reads each one (`\@for` splits the
+/// list at its commas outside braces): a `*` prefix and the `[pre][post]` notes after it dropped. natbib prints the notes
+/// in the entry's bibliography text (`\nat@keyopt@open`, `\nat@keyopt@shut`; not done here, KPE #1081): 1509.05768's
+/// `\cite{[See][and references therein.]pra78}`, 1206.6986's `[][{, Chap.~2.}]Peresbook`.
+fn merged_citation_keys(keys: Tokens) -> Tokens {
+  let is = |t: &Token, c: &str| t.get_catcode() == Catcode::OTHER && t.to_string() == c;
+  let mut pieces: Vec<Vec<Token>> = vec![Vec::new()];
+  let mut depth = 0i32;
+  for token in keys.unlist() {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth == 0 && is(&token, ",") {
+      pieces.push(Vec::new());
+    } else if let Some(piece) = pieces.last_mut() {
+      piece.push(token);
+    }
+  }
+  let mut out = Vec::new();
+  for (index, piece) in pieces.into_iter().enumerate() {
+    let mut key = piece
+      .into_iter()
+      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+      .peekable();
+    if key.peek().is_some_and(|t| is(t, "*")) {
+      key.next();
+    }
+    let mut key: Vec<Token> = key
+      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+      .collect();
+    for _ in 0..2 {
+      if !key.first().is_some_and(|t| is(t, "[")) {
+        break;
+      }
+      let mut depth = 0i32;
+      let close = key.iter().position(|t| {
+        match t.get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => depth -= 1,
+          _ => {},
+        }
+        depth == 0 && is(t, "]")
+      });
+      let Some(close) = close else { break };
+      key.drain(..=close);
+      let spaces = key
+        .iter()
+        .take_while(|t| t.get_catcode() == Catcode::SPACE)
+        .count();
+      key.drain(..spaces);
+    }
+    if index > 0 {
+      out.push(T_OTHER!(","));
+    }
+    out.extend(key);
+  }
+  Tokens::new(out)
+}
+
+fn natbib_cite(
+  star: Option<Tokens>,
+  pre_raw: Option<Tokens>,
+  post_raw: Option<Tokens>,
+  keys: Tokens,
+  parenthetical: bool,
+) -> Result<Tokens> {
+  let style = cite_style();
+  let open = cite_open();
+  let close = cite_close();
+  let ns = cite_ns();
+  let ay = cite_ay();
+
+  let (pre, post) = swap_pre_post(pre_raw, post_raw);
+  let is_star = is_some_and_nonempty(&star);
+  let author = if is_star { "FullAuthors" } else { "Authors" };
+
+  if style == "numbers" {
+    // Invocation(\@@cite, Tokens(Explode('cite')),
+    //   Tokens(open, (pre? (pre, T_SPACE)),
+    //     Invocation(\@@bibref, Tokens(Explode("Number")), keys, undef, undef),
+    //     (post? (ns, T_SPACE, post)), close))
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!("Number")),
+      keys,
+      Tokens!(),
+      Tokens!()
+    ]);
+    let mut body = open.unlist();
+    if let Some(p) = pre {
+      body.extend(p.unlist());
+      body.push(T_SPACE!());
+    }
+    body.extend(bibref.unlist());
+    if let Some(p) = post {
+      body.extend(ns.unlist());
+      body.push(T_SPACE!());
+      body.extend(p.unlist());
+    }
+    body.extend(close.unlist());
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+      Tokens::new(Explode!("cite")),
+      Tokens::new(body)
+    ]))
+  } else if style == "super" {
+    // superscript style
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!("Number")),
+      keys,
+      Tokens!(),
+      Tokens!()
+    ]);
+    let inside = super_postnote_inside();
+    let mut sup = bibref.unlist();
+    if inside && let Some(p) = &post {
+      sup.extend([T_OTHER!(","), T_SPACE!()]);
+      sup.extend(p.clone().unlist());
+    }
+    let sup_arg = Invocation!(T_CS!("\\textsuperscript"), vec![Tokens::new(sup)]);
+    let mut body = Vec::new();
+    if let Some(p) = pre {
+      body.extend(p.unlist());
+      body.push(T_SPACE!());
+    }
+    body.extend(sup_arg.unlist());
+    if let Some(p) = post.filter(|_| !inside) {
+      body.push(T_SPACE!());
+      body.extend(p.unlist());
+    }
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+      Tokens::new(Explode!("cite")),
+      Tokens::new(body)
+    ]))
+  } else {
+    // authoryear
+    if parenthetical {
+      // parenthetical, with its pre/post notes
+      let show = s!("{author}Phrase1Year");
+      let mut ay_space = ay.unlist();
+      ay_space.push(T_SPACE!());
+      let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(ay_space)]);
+      let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+        Tokens::new(Explode!(show)),
+        keys,
+        phrase1,
+        Tokens!()
+      ]);
+      let mut body = open.unlist();
+      if let Some(p) = pre {
+        body.extend(p.unlist());
+        body.push(T_SPACE!());
+      }
+      body.extend(bibref.unlist());
+      if let Some(p) = post {
+        body.extend(ns.unlist());
+        body.push(T_SPACE!());
+        body.extend(p.unlist());
+      }
+      body.extend(close.unlist());
+      Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+        Tokens::new(Explode!("cite")),
+        Tokens::new(body)
+      ]))
+    } else {
+      // textual (default authoryear with no pre/post)
+      let show = s!("{author} Phrase1YearPhrase2");
+      let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![open]);
+      let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![close]);
+      let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+        Tokens::new(Explode!(show)),
+        keys,
+        phrase1,
+        phrase2
+      ]);
+      Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+        Tokens::new(Explode!("cite")),
+        bibref
+      ]))
+    }
+  }
+}
+
 LoadDefinitions!({
+  // natbib.sty:235-236, before the options that set them (`sync_nat_conditionals`).
+  RawTeX!(r"\newif\ifNAT@numbers \NAT@numbersfalse \newif\ifNAT@super \NAT@superfalse");
   //======================================================================
   // 5. Package Options
   DeclareOption!("numbers", {
@@ -167,15 +592,83 @@ LoadDefinitions!({
   DeclareOption!("bibstyle", {
     Let!("\\bibstyle", "\\@citestyle");
   });
-  DeclareOption!("sort", "");
-  DeclareOption!("sort&compress", "");
-  DeclareOption!("compress", "");
+  // natbib.sty:267-271: `sort` orders a citation's numbers, `compress` joins a run of three or more with an en dash
+  // ("[1–3]"); the `ltx:bibref`'s class says so to the post stage, which knows the numbers (sect11.rs
+  // `cite_order_class`, KNOWN_PERL_ERRORS #1072; Perl's no-ops, natbib.sty.ltxml:69-71). Guard
+  // `perfect_kernel_batch78j::natbib_sort_compress_numbers`.
+  // (:267-268 off unless an option says so, a cite.sty loaded before natbib its `sort`, :272-274)
+  AssignValue!("CITE_SORTCITES" => package_loaded("cite"));
+  AssignValue!("CITE_COMPRESS" => false);
+  // (natbib's own order: the keys with no number after the sorted ones, natbib.sty:1185-1200, a cite.sty loaded before
+  // it or not)
+  AssignValue!("CITE_UNSORTED_FIRST" => false);
+  DeclareOption!("sort", {
+    natbib_style_option("sort");
+  });
+  DeclareOption!("sort&compress", {
+    natbib_style_option("sort&compress");
+  });
+  DeclareOption!("compress", {
+    natbib_style_option("compress");
+  });
   DeclareOption!("longnamesfirst", "");
   DeclareOption!("openbib", "");
   DeclareOption!("sectionbib", {
     AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
+    // natbib.sty:266: the option's own mark, which classes test (`\@ifxundefined\NAT@sectionbib`).
+    RawTeX!(r"\def\NAT@sectionbib{on}");
+  });
+  // natbib.sty:154-156: `\@ifxundefined`, which natbib and the classes built on it test with
+  // (iau.cls:4176 `\@ifxundefined\NAT@sectionbib`, read raw: 24 2609 papers, 2609.19274, 2609.22532).
+  RawTeX!(
+    r"\providecommand\@ifxundefined[1]{\ifx#1\@undefined\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}"
+  );
+  // natbib.sty:157-166: its other test and list helpers, which its bibliography interface below is written in.
+  RawTeX!(
+    r"\providecommand\@ifnum[1]{\ifnum#1\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\providecommand\@ifx[1]{\ifx#1\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\providecommand\appdef[2]{\toks@\expandafter{#1}\@temptokena{#2}\edef#1{\the\toks@\the\@temptokena}}"
+  );
+  // natbib.sty:237: entries are merged only under `mcite`/`merge`/`elide` (:272-274) or a class that sets
+  // `\NAT@merge` (revtex4-1.cls:7046, revtex4-2.cls:7067): `natbib_merge_citations`.
+  RawTeX!(r"\let\NAT@merge\z@");
+  DeclareOption!("mcite", {
+    natbib_merge_citations("\\@ne", false)?;
+  });
+  DeclareOption!("merge", {
+    natbib_merge_citations("\\tw@", true)?;
+  });
+  DeclareOption!("elide", {
+    natbib_merge_citations("\\thr@@", true)?;
   });
   DeclareOption!("nonamebreak", "");
+  // The options of a later `\usepackage[…]{natbib}` — a class's, a renamed copy's or the document's, after a binding
+  // loaded natbib where the real class does not yet — take effect as natbib's options do (natbib.sty:238-262: `numbers`
+  // is also `square,comma`, `authoryear` `round,semicolon`, `super` empties the brackets), with an Info
+  // (binding/content.rs `apply_new_options_on_reload`), not dropped: MRM.cls:2441-2442's `[numbers,super]{NJDnatbib}`
+  // after a binding's optionless natbib left 2506.14995 author-year; `\usepackage[numbers,sort&compress]{natbib}` after
+  // the jheppub binding's (2112.14648: "[1, 2]" in its PDF). An option natbib does not set a style with is ignored.
+  AssignValue!("natbib.sty_keyval_setter" => "\\lx@natbib@repeat@options", Scope::Global);
+  // (only after a compiled binding's own early load or for a renamed copy's request; else LaTeX's "Option clash" Error,
+  // the first options kept: binding/content.rs `apply_new_options_on_reload`)
+  AssignValue!("natbib.sty_repeat_clash" => true, Scope::Global);
+  // (in natbib's declaration order, as `\ProcessOptions` runs them, natbib.sty:238-263 — not the order written: under
+  // `[square,authoryear]` authoryear's `bibstyle` runs first and square's `nobibstyle` last, so a later
+  // `\bibliographystyle`'s `\bibstyle@<style>` is gobbled, as in TeX —, each option's own `\ExecuteOptions` in its
+  // order: `numbers` is also `square,comma,nobibstyle`, `authoryear` `round,semicolon,bibstyle`, a bracket or separator
+  // option `nobibstyle`; `nobibstyle`/`bibstyle` let `\bibstyle` to `\@gobble`/`\@citestyle`, which decides whether a
+  // `\bibliographystyle`'s `\bibstyle@<style>` may still change the punctuation — 2506.08967's
+  // `\usepackage[square,numbers]{natbib}` after the neurips binding's early load, then `\bibliographystyle{plainnat}`,
+  // numbered as its first load would be; 2506.05937)
+  DefPrimitive!("\\lx@natbib@repeat@options{}", sub[(list)] {
+    let list = list.to_string();
+    let given: Vec<&str> = list.split(',').map(str::trim).collect();
+    for option in NATBIB_STYLE_OPTIONS {
+      if given.contains(&option) {
+        natbib_style_option(option);
+      }
+    }
+  });
 
   // Perl: setCitationStyle(round => 1, semicolon => 1);
   set_citation_style(&[("round", None), ("semicolon", None)]);
@@ -209,6 +702,11 @@ LoadDefinitions!({
   NewCounter!("NAT@ctr");
   def_macro_noop("\\NAT@set@cites")?;
   def_macro_noop("\\NAT@@setcites")?;
+  // natbib.sty:344-345: split a `key=value` option word (acmart-tagged calls it;
+  // class census 2026-09-24).
+  RawTeX!(
+    r"\def\NAT@find@eq#1=#2\@nil{\def\@tempa{#1}\def\@tempc{#2}}\def\NAT@rem@eq#1={\def\@tempc{#1}}"
+  );
 
   //======================================================================
   // 2.3 Basic Citation Commands
@@ -219,76 +717,19 @@ LoadDefinitions!({
     let pre_raw: Option<Tokens> = it.next().unwrap().into();
     let post_raw: Option<Tokens> = it.next().unwrap().into();
     let keys: Tokens = it.next().unwrap().into();
-
-    let style = cite_style();
-    let open = cite_open();
-    let close = cite_close();
-    let ns = cite_ns();
-    let ay = cite_ay();
-
-    let (pre, post) = swap_pre_post(pre_raw, post_raw);
-    let is_star = is_some_and_nonempty(&star);
-    let author = if is_star { "FullAuthors" } else { "Authors" };
-
-    if style == "numbers" {
-      // Invocation(\@@cite, Tokens(Explode('cite')),
-      //   Tokens(open, (pre? (pre, T_SPACE)),
-      //     Invocation(\@@bibref, Tokens(Explode("Number")), keys, undef, undef),
-      //     (post? (ns, T_SPACE, post)), close))
-      let bibref = Invocation!(T_CS!("\\@@bibref"),
-        vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
-      let mut body = open.unlist();
-      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
-      body.extend(bibref.unlist());
-      if let Some(p) = post {
-        body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
-      }
-      body.extend(close.unlist());
-      Ok(Invocation!(T_CS!("\\@@cite"),
-        vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
-    } else if style == "super" {
-      // superscript style
-      let bibref = Invocation!(T_CS!("\\@@bibref"),
-        vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
-      let sup_arg = Invocation!(T_CS!("\\textsuperscript"), vec![bibref]);
-      let mut body = Vec::new();
-      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
-      body.extend(sup_arg.unlist());
-      if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
-      Ok(Invocation!(T_CS!("\\@@cite"),
-        vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
-    } else {
-      // authoryear
-      if pre.is_some() || post.is_some() {
-        // parenthetical with pre/post
-        let show = s!("{author}Phrase1Year");
-        let mut ay_space = ay.unlist();
-        ay_space.push(T_SPACE!());
-        let phrase1 = Invocation!(T_CS!("\\@@citephrase"),
-          vec![Tokens::new(ay_space)]);
-        let bibref = Invocation!(T_CS!("\\@@bibref"),
-          vec![Tokens::new(Explode!(show)), keys, phrase1, Tokens!()]);
-        let mut body = open.unlist();
-        if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
-        body.extend(bibref.unlist());
-        if let Some(p) = post {
-          body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
-        }
-        body.extend(close.unlist());
-        Ok(Invocation!(T_CS!("\\@@cite"),
-          vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
-      } else {
-        // textual (default authoryear with no pre/post)
-        let show = s!("{author} Phrase1YearPhrase2");
-        let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![open]);
-        let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![close]);
-        let bibref = Invocation!(T_CS!("\\@@bibref"),
-          vec![Tokens::new(Explode!(show)), keys, phrase1, phrase2]);
-        Ok(Invocation!(T_CS!("\\@@cite"),
-          vec![Tokens::new(Explode!("cite")), bibref]))
-      }
-    }
+    let parenthetical = pre_raw.is_some() || post_raw.is_some();
+    natbib_cite(star, pre_raw, post_raw, keys, parenthetical)
   }, locked => true);
+  // `\cite`'s parenthetical form whatever its arguments, for a package whose `\cite` has no textual form (apacite.sty:259-267
+  // `\def\@BBOP{\BBOP}`); the `cite` class is kept, the macro the author wrote.
+  DefMacro!("\\lx@natbib@cite@parenthetical OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let mut it = args.into_iter();
+    let star: Option<Tokens> = it.next().unwrap().into();
+    let pre_raw: Option<Tokens> = it.next().unwrap().into();
+    let post_raw: Option<Tokens> = it.next().unwrap().into();
+    let keys: Tokens = it.next().unwrap().into();
+    natbib_cite(star, pre_raw, post_raw, keys, true)
+  });
 
   //======================================================================
   // \citet
@@ -321,7 +762,7 @@ LoadDefinitions!({
       let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p2_toks)]);
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!(show)), keys, phrase1, phrase2]);
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citet")), bibref]))
     } else if style == "super" {
       let show = s!("{author} Phrase1SuperPhrase2");
@@ -333,7 +774,7 @@ LoadDefinitions!({
       if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citet")), Tokens::new(body)]))
     } else {
       // authoryear
@@ -349,7 +790,7 @@ LoadDefinitions!({
       let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p2_toks)]);
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!(show)), keys, phrase1, phrase2]);
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citet")), bibref]))
     }
   }, locked => true);
@@ -383,7 +824,19 @@ LoadDefinitions!({
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
+        vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
+    } else if style == "super" && super_postnote_inside() && let Some(p) = post {
+      // (a fork whose superscript carries the postnote: `super_postnote_inside`)
+      let bibref = Invocation!(T_CS!("\\@@bibref"),
+        vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
+      let mut sup = bibref.unlist();
+      sup.extend([T_OTHER!(","), T_SPACE!()]);
+      sup.extend(p.unlist());
+      let mut body = Vec::new();
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      body.extend(Invocation!(T_CS!("\\textsuperscript"), vec![Tokens::new(sup)]).unlist());
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     } else if style == "super" {
       let bibref = Invocation!(T_CS!("\\@@bibref"),
@@ -392,7 +845,7 @@ LoadDefinitions!({
       if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
       if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     } else {
       // authoryear
@@ -410,7 +863,7 @@ LoadDefinitions!({
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     }
   }, locked => true);
@@ -425,6 +878,13 @@ LoadDefinitions!({
     Tokens!()
   });
 
+  // natbib.sty:702-730: `\citealt`, `\citealp` and the capitalised forms are their own code over `\NAT@citetp`;
+  // none calls `\citet`/`\citep` by name. Ours build on those bindings through private copies, so a document's
+  // redefinition of a user-level name (`\let\oldcitep\citep \renewcommand{\citep}{\oldcitep*}`, which since D1
+  // owns the name's non-call uses) does not reach them (2606.16139, 2606.30583: keys lost, mode stack broken).
+  Let!("\\lx@natbib@citet", "\\citet");
+  Let!("\\lx@natbib@citep", "\\citep");
+
   // \citealt = \bgroup \@@cite@noparens \citet ... \egroup
   DefMacro!("\\citealt OptionalMatch:* [][] Semiverbatim", sub[args] {
     let mut it = args.into_iter();
@@ -433,9 +893,7 @@ LoadDefinitions!({
     let post: Option<Tokens> = it.next().unwrap().into();
     let keys: Option<Tokens> = it.next().unwrap().into();
     let mut result = vec![T_CS!("\\bgroup"), T_CS!("\\@@cite@noparens")];
-    let citet_inv = Invocation!(T_CS!("\\citet"),
-      vec![star, pre, post, keys]);
-    result.extend(citet_inv.unlist());
+    result.extend(natbib_invocation("\\lx@natbib@citet", star, pre, post, keys.unwrap_or_default()).unlist());
     result.push(T_CS!("\\egroup"));
     Ok(Tokens::new(result))
   });
@@ -448,9 +906,7 @@ LoadDefinitions!({
     let post: Option<Tokens> = it.next().unwrap().into();
     let keys: Option<Tokens> = it.next().unwrap().into();
     let mut result = vec![T_CS!("\\bgroup"), T_CS!("\\@@cite@noparens")];
-    let citep_inv = Invocation!(T_CS!("\\citep"),
-      vec![star, pre, post, keys]);
-    result.extend(citep_inv.unlist());
+    result.extend(natbib_invocation("\\lx@natbib@citep", star, pre, post, keys.unwrap_or_default()).unlist());
     result.push(T_CS!("\\egroup"));
     Ok(Tokens::new(result))
   });
@@ -459,12 +915,16 @@ LoadDefinitions!({
   DefMacro!("\\citenum Semiverbatim", sub[(keys)] {
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citenum")), bibref]))
   });
 
-  // \citetext = \@@cite
-  DefMacro!("\\citetext", "\\@@cite");
+  // natbib.sty:739 `\newcommand\citetext[1]{\NAT@open#1\NAT@close}`: the text in the current citation brackets
+  // (`round`, `square`, `\bibpunct`, `\setcitestyle`). Perl's `\citetext` is the bare `\@@cite` (natbib.sty.ltxml:254),
+  // "see Able et al., 2001" for pdflatex's "(see Able et al., 2001)" (KNOWN_PERL_ERRORS #1058). Witness 1507.01643
+  // (`proposed \citetext{\citealp{jing2002}; \citealp{bowden2013}}`, bracketed in the PDF). Guard
+  // `perfect_kernel_batch78k::natbib_citetext_keeps_its_brackets`.
+  DefMacro!("\\citetext{}", "\\lx@@cite{\\NAT@open #1\\NAT@close}");
 
   // \citeauthor
   DefMacro!("\\citeauthor OptionalMatch:* [][] Semiverbatim", sub[args] {
@@ -485,7 +945,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeauthor")), Tokens::new(body)]))
   });
 
@@ -505,7 +965,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citefullauthor")), Tokens::new(body)]))
   });
 
@@ -525,7 +985,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeyear")), Tokens::new(body)]))
   });
 
@@ -550,16 +1010,18 @@ LoadDefinitions!({
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(close.unlist());
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeyearpar")), Tokens::new(body)]))
   });
 
   //======================================================================
   // 2.5 Forcing Upper Cased Name (SUPPOSED to capitalize first letter)
-  DefMacro!("\\Citet", "\\citet");
-  DefMacro!("\\Citep", "\\citep");
-  DefMacro!("\\Citealt", "\\citealt");
-  DefMacro!("\\Citealp", "\\citealp");
+  Let!("\\lx@natbib@citealt", "\\citealt");
+  Let!("\\lx@natbib@citealp", "\\citealp");
+  DefMacro!("\\Citet", "\\lx@natbib@citet");
+  DefMacro!("\\Citep", "\\lx@natbib@citep");
+  DefMacro!("\\Citealt", "\\lx@natbib@citealt");
+  DefMacro!("\\Citealp", "\\lx@natbib@citealp");
   DefMacro!("\\Citeauthor", "\\citeauthor");
 
   //======================================================================
@@ -590,7 +1052,7 @@ LoadDefinitions!({
     if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
     body.extend(bibref.unlist());
     if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citealias")), Tokens::new(body)]))
   });
 
@@ -618,9 +1080,29 @@ LoadDefinitions!({
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(close.unlist());
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citepalias")), Tokens::new(body)]))
   });
+  Let!("\\lx@natbib@citeauthor", "\\citeauthor");
+  Let!("\\lx@natbib@citeyear", "\\citeyear");
+  Let!("\\lx@natbib@citeyearpar", "\\citeyearpar");
+  Let!("\\lx@natbib@citetalias", "\\citetalias");
+  Let!("\\lx@natbib@citepalias", "\\citepalias");
+
+  // natbib's citation internals, which documents build their own citation commands on: the caller opens a group and
+  // sets the flags `cite_by_flags` reads, then `\NAT@citetp` reads the notes and keys (natbib.sty:688-690) and
+  // `\NAT@citexnum[pre][post]{keys}` is the numeric formatter (:375). Undefined here, each such command was "undefined
+  // `\NAT@citetp`" and its keys typeset as text, a `_` in them "Script _ can only appear in math mode" (2104.01159's
+  // `\citenum` over `\NAT@citexnum[][]`, 2105.06268's `\citepos` over `\NAT@citetp`; Perl the same,
+  // KNOWN_PERL_ERRORS #671). Guard: `perfect_kernel_batch66q::natbib_internals_serve_user_cite_commands`.
+  DefMacro!("\\NAT@citetp [][] Semiverbatim", sub[args] {
+    let mut it = args.into_iter();
+    let pre: Option<Tokens> = it.next().unwrap().into();
+    let post: Option<Tokens> = it.next().unwrap().into();
+    let keys: Option<Tokens> = it.next().unwrap().into();
+    cite_by_flags(pre, post, keys)
+  });
+  Let!("\\NAT@citexnum", "\\NAT@citetp");
 
   //======================================================================
   // 2.9 Selecting Citation Punctuation
@@ -642,20 +1124,55 @@ LoadDefinitions!({
   DefKeyVal!("natbib", "yysep", "");
   DefKeyVal!("natbib", "notesep", "");
 
-  // \setcitestyle — Perl L407-408: DefPrimitive('\setcitestyle RequiredKeyVals:natbib',
-  //   sub { setCitationStyle($_[1]->getPairs); });
-  DefPrimitive!("\\setcitestyle RequiredKeyVals:natbib", sub[(kv)] {
-    // Own each pair so the helper can borrow &str slices safely.
-    let owned: Vec<(String, Option<Tokens>)> = kv
-      .get_pairs()
-      .map(|(k, v)| {
-        let toks = v.as_tokens().ok().flatten().map(|c| c.into_owned());
-        (k.clone(), toks)
+  // \setcitestyle — natbib.sty:303-335 walks its comma list with `\@for`, acts
+  // on the words it knows and does NOTHING for any other. Perl reads it as
+  // `RequiredKeyVals:natbib` (L407-408), whose unknown key is an Info there and
+  // a warning under the Rust Warn promotion: a package option passed here
+  // (`\setcitestyle{numbers,sort&compress}`, 2606.03886) warned. The list is
+  // split as natbib splits it; `<word>=<value>` carries its value.
+  DefPrimitive!("\\setcitestyle{}", sub[(list)] {
+    let owned: Vec<(String, Option<Tokens>)> = split_tokens(list, vec![T_OTHER!(",").into()])
+      .into_iter()
+      .filter_map(|item| {
+        let toks = item.unlist();
+        match toks.iter().position(|t| *t == T_OTHER!("=")) {
+          Some(i) => {
+            let key = Tokens::new(toks[..i].to_vec()).to_string().trim().to_string();
+            Some((key, Some(Tokens::new(toks[i + 1..].to_vec()))))
+          },
+          None => {
+            let key = Tokens::new(toks).to_string().trim().to_string();
+            (!key.is_empty()).then_some((key, None))
+          },
+        }
       })
       .collect();
-    let pairs: Vec<(&str, Option<Tokens>)> =
-      owned.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+    // natbib.sty's `\@for` tests each word against its own list and ignores
+    // any other; Perl's fall-through (natbib.sty.ltxml:402-404) instead resets
+    // the style to authoryear, so `numbers,sort&compress` lost `numbers`.
+    // Only natbib's words reach the style (OXIDIZED_DESIGN #278).
+    const WORDS: [&str; 16] = [
+      "round", "square", "angle", "curly", "semicolon", "colon", "comma", "authoryear",
+      "numbers", "super", "open", "close", "aysep", "yysep", "notesep", "citesep",
+    ];
+    let pairs: Vec<(&str, Option<Tokens>)> = owned
+      .iter()
+      .filter(|(k, _)| WORDS.contains(&k.as_str()))
+      .map(|(k, v)| (k.as_str(), v.clone()))
+      .collect();
     set_citation_style(&pairs);
+    // A class's own `\setcitestyle` that reads the ordering words as the options do (acmart.cls:306-345,
+    // `natbib@setcitestyle@orders`): natbib's own ignores them.
+    if lookup_bool("natbib@setcitestyle@orders") {
+      for (key, _) in &owned {
+        match key.as_str() {
+          "sort" | "compress" | "sort&compress" => natbib_style_option(key),
+          "nosort" => assign_value("CITE_SORTCITES", false, None),
+          "nocompress" => assign_value("CITE_COMPRESS", false, None),
+          _ => {},
+        }
+      }
+    }
   });
 
   // \bibpunct
@@ -684,6 +1201,7 @@ LoadDefinitions!({
         else if style_str == "s" { "super" }
         else { "authoryear" };
       assign_value("CITE_STYLE", pin(cite_style), None);
+      sync_nat_conditionals(cite_style, Some(Scope::Global));
     }
     if let Some(ay) = aysep_arg {
       assign_value("CITE_AY_SEPARATOR", Stored::Tokens(ay), None);
@@ -736,15 +1254,84 @@ LoadDefinitions!({
   Let!("\\bibstyle@unsrtnat", "\\bibstyle@plainnat");
   //======================================================================
   // 2.12 Other Formatting Options
-  DefMacro!("\\bibname", "Bibliography");
-  DefMacro!("\\refname", "References");
+  // natbib.sty:1093-1094 `\providecommand\bibname{Bibliography}` `\providecommand\refname{References}`: a class's
+  // own, set before natbib loads, stands (MRM.cls:3191 `\def\refname{REFERENCES}` after its NJDnatbib, 2506.14995).
+  // Perl defines both outright (natbib.sty.ltxml:451-452; KNOWN_PERL_ERRORS #960).
+  if !has_meaning(&T_CS!("\\bibname")) {
+    DefMacro!("\\bibname", "Bibliography");
+  }
+  if !has_meaning(&T_CS!("\\refname")) {
+    DefMacro!("\\refname", "References");
+  }
   def_macro_noop("\\bibsection")?;
+  // natbib.sty:1089 `\let\bibpreamble\@empty`, typeset by its `thebibliography` after the heading
+  // (:1063-1066): the kernel bibliography's `\lx@bibliography@preamble` (sect11.rs) is it. Perl
+  // defines it empty and never typesets it (natbib.sty.ltxml:454; KPE #325).
   def_macro_noop("\\bibpreamble")?;
+  DefMacro!("\\lx@bibliography@preamble", "\\bibpreamble");
+  // natbib.sty:1090 `\let\bibpostamble\@empty`, run by its `thebibliography` end before `\endlist`
+  // (:1079-1086): the kernel bibliography's `\lx@bibliography@postamble` (sect11.rs).
+  def_macro_noop("\\bibpostamble")?;
+  // `\bibitem@fin` first: the stop the last entry's `\BibitemShut` asked for (natbib.sty:1080) — at the end of a list
+  // only: a bibliography opened for a `\bibitem` outside one (`lx_bibliography_no_list_end`: a lonely `\bibitem` closed
+  // by `\end{document}` or `\end{small}`) has none, and pdflatex prints no stop there. Guards
+  // `perfect_kernel_batch64ze::natbib_lonely_entries_spend_no_stop`,
+  // `perfect_kernel_batch64ze::natbib_lonely_entry_closed_by_its_environment_spends_no_stop`.
+  DefMacro!("\\lx@NAT@bibitem@fin@listend", {
+    Ok(if lookup_bool("lx_bibliography_no_list_end") {
+      assign_value("lx_bibliography_no_list_end", false, Some(Scope::Global));
+      Tokens!(T_CS!("\\let"), T_CS!("\\@bibstop"), T_CS!("\\@undefined"))
+    } else {
+      Tokens!(T_CS!("\\bibitem@fin"))
+    })
+  });
+  DefMacro!(
+    "\\lx@bibliography@postamble",
+    "\\lx@NAT@bibitem@fin@listend\\bibpostamble"
+  );
   def_macro_noop("\\bibfont")?;
   def_macro_noop("\\citenumfont")?;
   DefMacro!("\\bibnumfmt{}", "#1");
   DefRegister!("\\bibhang", Dimension::new(0));
   DefRegister!("\\bibsep", Glue::new(0));
+  // 68b (binding gaps G3): natbib's bibliography-label and list-setup internals, which `.bbl` files and documents
+  // call (natbib.sty:622-645). `\NAT@biblabelnum` (1409.8404, 1508.04752, 1604.03470, 1605.02776, 1607.05855,
+  // 1610.04415: `\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi` in the label), the list setups a document's own
+  // bibliography list runs through `\@bibsetup` (1102.3365, 1103.0594, 1312.5975, 1804.04445, 1911.00031:
+  // `\list{…}{\@bibsetup{#1}…}` in `{theDTbibliography}`), chosen by the style as `\NAT@set@cites` (:658-668)
+  // lets it. `\NAT@force@numbers` (:974-981), which a numeric `.bbl` runs (2508.10404): for an author-year
+  // document it is natbib's error, as pdflatex raises it, and it flips `\ifNAT@numbers` as natbib does (the
+  // citations already made stay author-year).
+  RawTeX!(
+    r"\newcommand\NAT@biblabel[1]{\hfill}
+\newcommand\NAT@biblabelnum[1]{\bibnumfmt{#1}}
+\newcommand\NAT@bibsetnum[1]{\settowidth\labelwidth{\@biblabel{#1}}%
+  \setlength{\leftmargin}{\labelwidth}\addtolength{\leftmargin}{\labelsep}%
+  \setlength{\itemsep}{\bibsep}\setlength{\parsep}{\z@}%
+  \ifNAT@openbib\addtolength{\leftmargin}{\bibindent}\setlength{\itemindent}{-\bibindent}%
+  \setlength{\listparindent}{\itemindent}\setlength{\parsep}{0pt}\fi}
+\newcommand\NAT@bibsetup[1]{\setlength{\leftmargin}{\bibhang}\setlength{\itemindent}{-\leftmargin}%
+  \setlength{\itemsep}{\bibsep}\setlength{\parsep}{\z@}}
+\def\@bibsetup{\ifNAT@numbers\expandafter\NAT@bibsetnum\else\expandafter\NAT@bibsetup\fi}
+\newcommand\NAT@force@numbers{\ifNAT@numbers\else
+  \PackageError{natbib}{Bibliography not compatible with author-year citations.\MessageBreak
+  Press <return> to continue in numerical citation style}{Check the bibliography entries for non-compliant
+  syntax,\MessageBreak or select author-year BibTeX style, e.g. plainnat}\global\NAT@numberstrue\fi}
+\providecommand{\@extra@b@citeb}{}\gdef\@extra@binfo{}"
+  );
+  // The citation punctuation natbib keeps in `\NAT@open`/`\NAT@close`/`\NAT@sep` (:239-260), `\NAT@cmt`,
+  // `\NAT@aysep`, `\NAT@yrsep` (:297-300), which this binding keeps as values; a document's own citation command
+  // typesets them (1906.11206 `\multicitep`: `\NAT@open … \NAT@close`).
+  DefMacro!("\\NAT@open", { cite_open() });
+  DefMacro!("\\NAT@close", { cite_close() });
+  DefMacro!("\\NAT@sep", {
+    lookup_tokens("CITE_SEPARATOR").unwrap_or(NO_TOKENS)
+  });
+  DefMacro!("\\NAT@cmt", { cite_ns() });
+  DefMacro!("\\NAT@aysep", { cite_ay() });
+  DefMacro!("\\NAT@yrsep", {
+    lookup_tokens("CITE_YY_SEPARATOR").unwrap_or(NO_TOKENS)
+  });
 
   //======================================================================
   // 2.13 Automatic Indexing of Citations
@@ -758,10 +1345,20 @@ LoadDefinitions!({
   // via `\newif` (creates `\NAT@superfalse`/`\NAT@supertrue` too).
   // Witness cluster: arXiv:2506.21088 / .21438 (papers calling
   // `\bibpunct` or similar that consult `\ifNAT@super`).
-  RawTeX!("\\newif\\ifNAT@super");
-  RawTeX!("\\newif\\ifNAT@numbers");
+  // (`\ifNAT@super`/`\ifNAT@numbers` are made before the options, which set them.)
   RawTeX!("\\newif\\ifNAT@longnamesfirst");
   RawTeX!("\\newif\\ifNAT@swa");
+  // The rest of natbib.sty's `\newif` surface: @longnames (:284),
+  // @openbib (:264), @par (:603), @full (:683), @stdbst (:964). nmbib.sty
+  // rebuilds natbib's citation formatter on these internals
+  // (`\citeall` :343 → `\NAT@fulltrue`, `\@citeall` :267 `\ifNAT@full`);
+  // an undefined `\ifNAT@full` inside a skipped branch orphaned its `\fi`.
+  // Witness: nmbib/nmbib-sample.
+  RawTeX!("\\newif\\ifNAT@longnames");
+  RawTeX!("\\newif\\ifNAT@openbib");
+  RawTeX!("\\newif\\ifNAT@par");
+  RawTeX!("\\newif\\ifNAT@full");
+  RawTeX!("\\newif\\ifNAT@stdbst");
 
   // 2.17 Long Author List on First Citation
   def_macro_noop("\\shortcites Semiverbatim")?;
@@ -769,13 +1366,23 @@ LoadDefinitions!({
   //======================================================================
   // Bibliography item handling
 
-  // NAT@wrout: format the refnum based on citation style
+  // NAT@wrout: format the refnum based on citation style. Locked: the binding repurposes it as the tag builder, and a
+  // raw class's redefinition — natbib's own job, writing `\bibcite` to the aux (basi.cls:601 drops the serial comma
+  // there) — left every bibitem without its `<tags>` (1109.3388; Perl the same under `rawclasses`, KNOWN_PERL_ERRORS
+  // #484).
   DefMacro!("\\NAT@wrout{}{}{}{} Semiverbatim", sub[args] {
     let mut it = args.into_iter();
-    let number: Option<Tokens> = it.next().unwrap().into();
-    let year: Option<Tokens> = it.next().unwrap().into();
-    let authors: Option<Tokens> = it.next().unwrap().into();
-    let fullauthors: Option<Tokens> = it.next().unwrap().into();
+    // The label is natbib's written copy (natbib.sty:822 `\NAT@wrout` writes it to the .aux; the list never typesets
+    // it), so an unbalanced `$` in a piece opens no formula in TeX. Typeset here as tags, the open math ran past the
+    // `\bibitem` into the bibliography ("`\endgroup` Attempt to close non-boxing group"; 1208.0605's
+    // `{Mantz}, $\, {Ebeling}, \& {Rapetti}`; 1205.3745's and 1508.02141's revtex `\citenamefont {Sasaki$}`): each
+    // piece's math is balanced within its groups, silently (KNOWN_PERL_ERRORS #670). Guard:
+    // `perfect_kernel_batch66o::natbib_unbalanced_dollar_in_label`.
+    let mut piece = || balance_math_shifts(it.next().unwrap().into());
+    let number: Option<Tokens> = piece();
+    let year: Option<Tokens> = piece();
+    let authors: Option<Tokens> = piece();
+    let fullauthors: Option<Tokens> = piece();
     let key: Option<Tokens> = it.next().unwrap().into();
 
     let style = cite_style();
@@ -815,7 +1422,7 @@ LoadDefinitions!({
 
     Ok(Invocation!(T_CS!("\\NAT@@wrout"),
       vec![number, year, authors, fullauthors, refnum, key]))
-  });
+  }, locked => true);
 
   // NAT@@wrout — constructor to produce the ltx:tags
   //
@@ -846,6 +1453,16 @@ LoadDefinitions!({
     before_digest => {
       bgroup();
       Let!(T_ALIGN!(), T_CS!("\\&"));
+      // The label is what natbib.sty:822 `\NAT@wrout` writes to the .aux (`\bibcite`), not typeset by the list: its
+      // `_`/`^` are characters (`tex_math::WRITTEN_COPY`, OXIDIZED_DESIGN #550; KNOWN_PERL_ERRORS #620). Witnesses
+      // 1904.06560, 2205.04819, 2109.10085 (`\bibitem [{MS_()}]`). Guard
+      // `perfect_kernel_batch65m::natbib_label_is_tag_text`.
+      assign_value(latexml_engine::tex_math::WRITTEN_COPY, true, Some(Scope::Local));
+      // TeX writes the label to the .aux and reads it back at a citation (`\bibcite`), where a full compile errs nowhere
+      // (pdflatex run three times on `\bibitem[{$\hat\mathbf{x}$}(2000)]`: 0 errors): the label's two
+      // copies (authors, refnum) give no OXIDIZED_DESIGN_DIVERGENCES #721 Warning (`tex_math::REREAD_COPY`), TeX's own
+      // count.
+      assign_value(latexml_engine::tex_math::REREAD_COPY, true, Some(Scope::Local));
     },
     after_digest => sub[_whatsit] {
       // Soft egroup: pop_stack_frame directly, bypassing the standard
@@ -867,7 +1484,7 @@ LoadDefinitions!({
     let key: Tokens = it.next().unwrap().into();
 
     let mut tokens = label.clone().unlist();
-    let number: Option<Tokens> = None;
+    let mut number: Option<Tokens> = None;
     let mut year: Option<Tokens> = None;
     let mut authors: Option<Tokens> = None;
     let mut fullauthors: Option<Tokens> = None;
@@ -911,55 +1528,21 @@ LoadDefinitions!({
     }
 
     if bare {
-      // If the label contains "complex" CSes (e.g. `\cite`, `\href`) that
-      // expand into Constructor invocations whose parameter readers
-      // would drain the wrapping `do_expand` gullet hunting for absent
-      // arguments, the resulting `readBalanced ran out of input`
-      // diagnostic is spurious — extracting an author/year out of such
-      // a cite-bearing label is meaningless anyway. Skip the expansion
-      // and just walk the raw label tokens for the `(year)` pattern.
-      // Perl on the same input is silent (`natbib.sty.ltxml:564`'s
-      // `Expand` runs the macros differently for these cases). Driver:
-      // 2404.06289 `\bibitem [{...\cite{a}...}]{key}`.
-      // Text-encoding *symbol* commands (`\i`, `\j`, `\ss`, `\oe`, …) must
-      // ALSO be kept un-expanded, for a different reason: under `\usepackage
-      // [T1]{fontenc}` (here via mathptmx) the LaTeX kernel redefines them to
-      // the `\@changed@cmd` dispatcher `\<enc>-cmd <cs> \<enc><cs>` (e.g. `\i`
-      // → `\T1-cmd \i \T1\i`). The dispatcher's typeset branch re-injects the
-      // original CS through `\csname\cf@encoding\string#1\endcsname`, which
-      // under FULL `Expand!` re-expands forever (PushbackLimit / box-list
-      // runaway). Accented author names — `M{\'\i}guez`, `Pati{\~n}o`,
-      // `M\"uller` — are exactly where this bites in a natbib label. Perl's
-      // `Expand` (natbib.sty.ltxml:564) happens to terminate on these; ours
-      // does not. The `(year)` we look for is always a *literal* `(` in
-      // natbib/BibTeX output, so walking the raw label is sufficient — no
-      // expansion needed. Witness 2111.00584 (revtex4-1 + mathptmx,
-      // `\bibitem[{\citenamefont{...}\ \emph{et~al.}(2009)...\citenamefont
-      // {M{\'\i}guez}}]{porteiro2009}`).
-      let has_text_symbol = label.unlist_ref().iter().any(|t| {
-        if t.get_catcode() != Catcode::CS { return false; }
-        matches!(t.to_string().as_str(),
-          "\\i" | "\\j" | "\\l" | "\\L" | "\\o" | "\\O"
-          | "\\aa" | "\\AA" | "\\ss" | "\\ae" | "\\AE" | "\\oe" | "\\OE"
-          | "\\dh" | "\\DH" | "\\dj" | "\\DJ" | "\\th" | "\\TH"
-          | "\\ng" | "\\NG"
-        )
-      });
-      let has_complex_cs = label.unlist_ref().iter().any(|t| {
-        if t.get_catcode() != Catcode::CS { return false; }
-        let n = t.to_string();
-        matches!(n.as_str(),
-          "\\cite" | "\\citet" | "\\citep" | "\\citeauthor" | "\\citeyear"
-          | "\\href" | "\\hyperref" | "\\url" | "\\nolinkurl"
-          | "\\BibitemOpen" | "\\BibitemShut" | "\\bibinfo" | "\\bibfield"
-        )
-      });
-      let expanded = if has_complex_cs || has_text_symbol {
-        label
-      } else {
-        Expand!(label)
-      };
-      let exp_tokens = expanded.unlist();
+      // A bare label is split UNEXPANDED at its literal `(year)`, as natbib's
+      // `\NAT@bare#1(#2)#3(@)#4\@nil#5` (natbib.sty:811, via `\@lbibitem` :827) splits it by
+      // delimited-parameter matching. Perl expands it first
+      // (`natbib.sty.ltxml:564` `Expand($label)`, KNOWN_PERL_ERRORS #252),
+      // which descends into whatever the label's commands are made of:
+      //   - `\cite`/`\href`/`\bibinfo` constructors drained the expansion
+      //     gullet hunting for absent arguments (2404.06289);
+      //   - a T1 text symbol `\i` (`\T1-cmd \i \T1\i`) re-expanded itself
+      //     forever (2111.00584, revtex4-1 + mathptmx, `M{\'\i}guez`);
+      //   - `\textcommabelow` (latex.ltx:10097-10100) became its `\ooalign{…\hbox{…
+      //     \selectfont,}}` body, whose `,` the author split then cut through
+      //     (PushbackLimit: 2605.08338 `Mari{\textcommabelow s}`, 2605.21804
+      //     `M\u{a}lina\textcommabelow{s}`).
+      // The pieces are digested by `\NAT@wrout` later, as natbib typesets them.
+      let exp_tokens = label.unlist();
       let mut author_toks = Vec::new();
       let mut year_toks = Vec::new();
       let mut rest_idx = 0;
@@ -984,6 +1567,21 @@ LoadDefinitions!({
           }
           year_toks.push(*t);
         }
+      } else if matches!(cite_style().as_str(), "numbers" | "super")
+        && !author_toks.is_empty()
+        && !author_toks
+          .windows(2)
+          .any(|pair| pair[0] == T_OTHER!(",") && pair[1].get_catcode() == Catcode::SPACE)
+      {
+        // A label with no `(year)` and no `, ` is natbib's number itself (natbib.sty:811-817: `\NAT@bare` hands it
+        // to `\NAT@apalk` (:1005-1012), which writes it as the number when no `, <year>` follows): numbers mode prints
+        // `\bibitem[Knu84]{k}` as "[Knu84]", in the list and at a citation, where the entry counter printed "[5]".
+        // Its author-year split is Perl's (natbib.sty.ltxml:576-581), kept in the author-year modes. Guard
+        // `perfect_kernel_batch78j::natbib_numbers_prints_a_label_given`; witness 2608.05327 ("[21]" → "[FNW23]"). The whole
+        // label is the number, not the full authors too (a `\citet{k}` printed "Knu84 [Knu84]",
+        // natbib's "(author?) [Knu84]"; it now prints the number as for any entry without authors).
+        number = Some(Tokens::new(std::mem::take(&mut author_toks)));
+        rest_idx = exp_tokens.len();
       } else {
         // No paren — try splitting digits from end
         while !author_toks.is_empty() {
@@ -1022,10 +1620,90 @@ LoadDefinitions!({
            fullauthors.or_else(empty), Some(key)]))
   });
 
-  // \lx@nat@bibitem — natbib's version of \bibitem
+  // natbib.sty:880-958: the entry interface the `apsrev`/`apsrev4-1` (REVTeX) styles write into a `.bbl` —
+  // `\BibitemOpen <fields>\BibitemShut{Stop|NoStop}` around each entry, `\bibinfo{<field>}{<text>}`,
+  // `\bibfield{<field>}{<text>}`. The styles also `\providecommand` them in the `.bbl` preamble (apsrev4-1.bst:
+  // 3367-3420), which a bibliography pasted into the `.tex` without that preamble lacks: natbib's are the ones
+  // pdflatex then uses (1008.0439, revtex4-1; acmart and elsarticle load natbib too). `\BibitemShut` only records
+  // the stop; `\bibitem@fin` puts it at the start of the next entry (`\@lbibitem` below, natbib.sty:864) or at the
+  // list's end (`\lx@bibliography@postamble`, natbib.sty:1080), so it ends the entry it belongs to. The entry
+  // merging behind `\NAT@merge` (natbib's `mcite`/`merge`/`elide`, REVTeX 4.1/4.2's `elide`: `natbib_merge_citations`)
+  // is kept as written: `\bibfield` elides a field repeated within an entry, never across two, as every `\bibitem`
+  // starts an entry (`\NAT@bibitem@init`; the merging of an entry into the one before is not done, KPE #1081).
+  RawTeX!(
+    r"\def\bibitem@fin{\@ifxundefined\@bibstop{}{\csname bibitem@\@bibstop\endcsname}}
+\def\NAT@bibitem@init{\let\@bibstop\@undefined}
+\def\NAT@bibitem@cont{\let\bibitem@Stop\bibitemContinue\let\bibitem@NoStop\bibitemContinue}
+\def\BibitemOpen{\bibitemOpen}
+\def\BibitemShut#1{\def\@bibstop{#1}\let\bibitem@Stop\bibitemStop\let\bibitem@NoStop\bibitemNoStop
+ \@ifx{\bibitemShut\relax}{\let\@bibitemShut\@empty}{\expandafter\def\expandafter\@bibitemShut\expandafter{\bibitemShut}}}
+\def\@bibitemShut{}
+\def\bibitemStop{\@bibitemShut}
+\def\bibitemNoStop{\@ifx{\@empty\@bibitemShut}{.\spacefactor\@mmm\space}{\@bibitemShut}}
+\def\bibitemContinue{\@ifx{\@empty\@bibitemShut}{;\spacefactor\@mmm\space}{\@bibitemShut}}
+\mathchardef\@mmm=3000
+\let\bibitemOpen\relax
+\let\bibitemShut\relax
+\def\bibfield{\@ifnum{\NAT@merge>\tw@}{\@bibfield}{\@secondoftwo}}
+\def\@bibfield#1#2{\begingroup\let\Doi\@gobble\let\bibinfo\relax\let\restore@protect\@empty
+ \protected@edef\@tempa{#2}\aftergroup\def\aftergroup\@tempa\expandafter\endgroup\expandafter{\@tempa}%
+ \expandafter\@ifx\expandafter{\csname @bib#1\endcsname\@tempa}{\expandafter\let\expandafter\@tempa\csname @bib@X#1\endcsname}%
+ {\expandafter\let\csname @bib#1\endcsname\@tempa\expandafter\let\expandafter\@tempa\csname @bib@Y#1\endcsname}%
+ \@ifx{\@tempa\relax}{\let\@tempa\@firstofone}{}\@tempa{#2}}
+\def\bibinfo#1{\expandafter\let\expandafter\@tempa\csname bibinfo@X@#1\endcsname\@ifx{\@tempa\relax}{\@firstofone}{\@tempa}}
+\def\@bib@Xauthor#1{\let\@bib@Xjournal\@gobble}
+\def\@bib@Xjournal#1{\begingroup\let\bibinfo@X@journal\@bib@Z@journal#1\endgroup}
+\def\@bibibid@#1{\textit{ibid}.}
+\appdef\NAT@bibitem@init{\let\@bibauthor\@empty\let\@bibjournal\@empty\let\@bib@Z@journal\@bibibid@}"
+  );
+
+  // \lx@nat@bibitem — natbib's version of \bibitem (Perl natbib.sty.ltxml:489-493), opening
+  // the bibliography first when none is open, as the kernel's `\bibitem` does (Perl
+  // latex_constructs.pool.ltxml:4074-4076, sect11.rs): Perl's natbib `\bibitem` lacks that
+  // guard, so a `\bibitem` list written in an `{enumerate}` errored (quant-ph9706037,
+  // 1708.06608, 2003.07967, hep-ph0212045) where pdflatex prints it.
   DefMacro!("\\lx@nat@bibitem",
-    "\\reset@natbib@cites\\refstepcounter{@bibitem}\\@ifnextchar[{\\@lbibitem}{\\@lbibitem[]}",
+    "\\if@lx@inbibliography\\lx@NAT@bibitem@check{in}\\else\\lx@NAT@bibitem@check{}\\fi\\reset@natbib@cites\\refstepcounter{@bibitem}\\@ifnextchar[{\\@lbibitem}{\\@lbibitem[]}",
     locked => true);
+  // A `\bibitem` in no list is LaTeX's "Lonely \item" (latex.ltx:16041-16043, the default `\makelabel`): reported in
+  // Perl's category, `malformed:ltx:bibitem` (its natbib `\bibitem` is unguarded), once per `\bibitem`, and still opened
+  // into a bibliography, whose later `\bibitem`s are as lonely (repro index-bib/natbib_bibitem_in_document_body;
+  // 1108.2593's `\bibitem`s after aa's `{acknowledgements}`; in `{small}`, a minipage, an author's environment just as
+  // well). In no list means no itemization bound (`begin_itemize`: the lists, `\list`, `\trivlist`) and no environment
+  // latex.ltx builds on `\trivlist`/`\list` that LaTeXML lays out without one (center, flushleft, flushright, quote,
+  // quotation, verse). In a list, an `\item` of that very list before it keeps the `\bibitem` in place, one item among the
+  // list's (pdflatex: `1. A`, `[1] V`, `2. B`), whose later `\item`s a bibliography opened here would take as its entries
+  // (Perl's natbib path; cond-mat0003103, RED repro index-bib/natbib_bibitem_among_list_items, SYNC K21: the
+  // bibliography leaving the list element while the list's TeX group stays open). 1411.7266 is clean only because its
+  // class's `\acknowledgments` (CS18.sty) leaves a trivlist open around its `{references}`: the `\bibitem`s are in a list,
+  // with no `\item` of it before them in that environment, and open the bibliography.
+  DefMacro!("\\lx@NAT@bibitem@check{}", sub[(where_)] {
+    let in_bibliography = where_.to_string() == "in";
+    let in_list = !lookup_string("itemcounter").is_empty();
+    let env = lookup_string("current_environment");
+    // (nor are the entries after a heading inside the author's `{thebibliography}` in the body: they are the list's,
+    // sect11.rs `\lx@bibliography@sectioned`)
+    let body = !in_list
+      && !lookup_bool("lx_bibliography_sectioned")
+      && !matches!(env.as_str(), "center" | "flushleft" | "flushright" | "quote" | "quotation" | "verse");
+    if body && (!in_bibliography || lookup_bool("lx_bibliography_lonely")) {
+      Error!("malformed", "ltx:bibitem",
+        "\\bibitem outside any list (LaTeX: Lonely \\item--perhaps a missing list environment); opening a bibliography");
+    }
+    let among_items = in_list
+      && lookup_string("itemization_environment") == env
+      && lookup_int("itemization_items") > 0;
+    Ok(if in_bibliography || among_items {
+      Tokens!()
+    } else {
+      let mut toks = vec![T_CS!("\\expandafter"), T_CS!("\\lx@mung@bibliography"), T_CS!("\\expandafter"),
+        T_BEGIN!(), T_CS!("\\@currenvir"), T_END!()];
+      if body {
+        toks.push(T_CS!("\\lx@bibliography@lonely"));
+      }
+      Tokens::new(toks)
+    })
+  });
   Let!("\\bibitem", "\\lx@nat@bibitem");
 
   // RawTeX for citeauthoryear, astroncite, citename, harvarditem, NAT@ifcmd etc.
@@ -1056,8 +1734,7 @@ LoadDefinitions!({
   );
 
   // \reset@natbib@cites
-  DefPrimitive!("\\reset@natbib@cites", None,
-  after_digest => {
+  DefPrimitive!("\\reset@natbib@cites", {
     Let!("\\citeauthoryear", "\\natbib@citeauthoryear");
     Let!("\\astroncite", "\\natbib@astroncite");
     Let!("\\citename", "\\natbib@citename");
@@ -1070,7 +1747,7 @@ LoadDefinitions!({
   // keys like `DBLP:conf/nips/incontext_AgarwalSZBRCZAA24` are common in
   // arXiv `.bbl` files (witnesses: 2509.20805 / 2510.00068 / 2510.00632).
   // Without semiverbatim, the `_` retains catcode SUB, and after macro
-  // substitution the SUB token leaks into the post-`\@@lbibitem`
+  // substitution the SUB token leaks into the post-`\lx@NAT@lbibitem`
   // `\newblock` text stream — Stomach then errors with
   // `Error:unexpected:_ Script _ can only appear in math mode`.
   // Perl's natbib.sty.ltxml:638 uses `[]{}` and gets away with it because
@@ -1078,13 +1755,27 @@ LoadDefinitions!({
   // default; Rust's `{}` arg type preserves the source catcodes faithfully.
   // 54 occurrences of `Error:unexpected:_` in Stage-16 v5 cluster here.
   DefMacro!("\\@lbibitem[] Semiverbatim",
-    "\\@@lbibitem{#2}\\lx@NAT@parselabel{#1}{#2}\\newblock",
+    "\\bibitem@fin\\lx@NAT@labelled{#1}\\lx@NAT@lbibitem{#2}\\NAT@bibitem@init\\lx@NAT@parselabel{#1}{#2}\\newblock",
     locked => true);
+  // Whether the entry carries the author's label (`\bibitem[Baker(2001)]{}`), for `\lx@NAT@lbibitem`'s `_labelled`: a
+  // printed entry however empty, as under the kernel (sect11.rs `is_phantom_entry`).
+  DefMacro!("\\lx@NAT@labelled{}", sub[(label)] {
+    let labelled = !label.to_string().trim().is_empty();
+    assign_value("lx_NAT_bibitem_labelled", labelled, Some(Scope::Global));
+    Ok(Tokens!())
+  });
 
-  // \@@lbibitem — constructor opening the bibitem element
-  DefConstructor!("\\@@lbibitem Semiverbatim",
-  "<ltx:bibitem key='#key' xml:id='#id'>",
+  // The constructor opening the bibitem element. Perl's name, `\@@lbibitem` (natbib.sty.ltxml:640-643), is none the
+  // real natbib defines, and citeref.sty:96 `\def\@@lbibitem[#1]#2#3\par` takes it for its own `\bibitem`, so the
+  // binding's entry read a `[` that was not there (2309.05436, 58 errors; KNOWN_PERL_ERRORS #918): a binding-private
+  // `\lx@` name. Guard: `perfect_kernel_batch70a::natbib_entry_constructor_is_binding_private`.
+  DefConstructor!("\\lx@NAT@lbibitem Semiverbatim",
+  "<ltx:bibitem key='#key' xml:id='#id' _labelled='#labelled'>",
   after_digest => sub[whatsit] {
+    if lookup_bool("lx_NAT_bibitem_labelled") {
+      assign_value("lx_NAT_bibitem_labelled", false, Some(Scope::Global));
+      whatsit.set_property("labelled", "true");
+    }
     let key_str = whatsit.get_arg(1).map(|a| {
       clean_bib_key(&a.to_string())
     }).unwrap_or_default();
@@ -1126,6 +1817,17 @@ LoadDefinitions!({
   Let!("\\citeasnoun", "\\cite");
 
   DefMacro!("\\natexlab{}", "#1");
+
+  // natbib.sty:1111-1115: the hyperref hooks natbib's citations and bibliography run, provided empty
+  // (`\hyper@natlinkbreak` its first argument) for hyperref to replace (hyperref_sty.rs defines them
+  // as links). Packages extend them: kotexutf.sty:233-234 (`\usepackage{kotex}` with natbib)
+  // `\expandafter\def\expandafter\hyper@natlinkend\expandafter{\hyper@natlinkend …}`, bibentry.sty:65-66
+  // its `\hyper@natanchorstart`. Run 340: 176 first errors (witnesses 2508.13812, 2508.10710, 2103.13674).
+  RawTeX!(
+    r"\providecommand\hyper@natanchorstart[1]{}\providecommand\hyper@natanchorend{}
+\providecommand\hyper@natlinkstart[1]{}\providecommand\hyper@natlinkend{}
+\providecommand\hyper@natlinkbreak[2]{#1}"
+  );
 });
 
 // Helper: peel a brace-delimited argument from a token list

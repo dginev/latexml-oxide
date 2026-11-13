@@ -1,0 +1,21 @@
+% witness: 2609.20563 (`\newtcblisting[auto counter]`; `\newtcblisting`/`\newtcbinputlisting` boxes, the binding's listings: tcblistingscore_code_tex.rs)
+% oracle:  pdflatex 0 errors; "See 1 and 1." (newlabel ex:a {1}, fl:a {1})
+% engines: rust (int47a) = "See 2 and 2." (labels on the listings' first lines, the section's number); Perl 0.8.8 "2 and 2", 3 errors
+% expect:  0 errors; ex:a, fl:a on the first listing lines with refnum 1; `\ref`s print "1 and 1"
+% status:  GREEN (78g)
+\documentclass{article}
+\begin{filecontents*}[overwrite]{tcb-listing-code.txt}
+x = 1
+\end{filecontents*}
+\usepackage[listings]{tcolorbox}
+\newtcblisting[auto counter]{ex}[2][]{title={Example \thetcbcounter: #2},listing only,#1}
+\newtcbinputlisting[auto counter]{\examplefile}[2][]{listing file={#2},title={File \thetcbcounter},listing only,#1}
+\begin{document}
+\section{One}
+\section{Two}
+\begin{ex}[label=ex:a]{Alpha}
+a = 1
+\end{ex}
+\examplefile[label=fl:a]{tcb-listing-code.txt}
+See \ref{ex:a} and \ref{fl:a}.
+\end{document}

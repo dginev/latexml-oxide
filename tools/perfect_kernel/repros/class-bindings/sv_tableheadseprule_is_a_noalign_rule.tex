@@ -1,0 +1,20 @@
+% witness: astro-ph0609697 (svjour2.cls:1032 `\newcommand{\tableheadseprule}{\noalign{\hrule height.375mm}}`)
+% oracle:  pdflatex with the paper's svjour2.cls (clean)
+% engines: rust 67int22 = 1 error ("\noalign cannot be used here": the binding's bare `\hrule` in a row); Perl = 1
+%          (sv_support.sty.ltxml:143, KNOWN_PERL_ERRORS #967)
+% expect:  0 errors, 0 warnings; a two-row tabular
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{svjour2}
+\begin{document}
+\begin{table}
+\caption{Counts}
+\begin{tabular}{lll}
+\hline\noalign{\smallskip}
+A & B & C \\[2pt]
+\tableheadseprule\noalign{\smallskip}
+0.0 & 1865 & 1965 \\
+\noalign{\smallskip}\hline
+\end{tabular}
+\end{table}
+\end{document}

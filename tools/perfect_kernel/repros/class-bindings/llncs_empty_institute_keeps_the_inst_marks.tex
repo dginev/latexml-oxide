@@ -1,0 +1,17 @@
+% mechanism: an empty `\institute{}` is no institute (the split of nothing, as before 85b): the `\inst` marks it answers
+%   no one stay shown on the names, as pdflatex prints them.
+% witness: 2407.13764 (`Qianqian Wang\inst{1,2}*` … over an `\institute{}`, the affiliations written in `\author`)
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker2"
+% engines: rust int114a = the same as expected; perl = no marks shown
+% expect:  0 errors, 0 warnings; the names "Ann Able1", "Bob Baker2" (marks in `<sup>`), no contact, no nameless creator
+% status:  GREEN (int114a, pinned by 85b; an 85b draft made an empty contact that answered the marks)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

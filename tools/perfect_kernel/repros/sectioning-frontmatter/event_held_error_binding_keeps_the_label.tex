@@ -1,0 +1,18 @@
+% witness: brief Z1 gap 9: 2201.04449's `\corref{corresponding_author}`: the observer's request constructor digests the
+%          label, `_` in text mode, the one held error of its block; the printing twin holds none
+% oracle:  pdflatex 0 errors (elsarticle stores the label)
+% engines: Perl has no events; ours: the document 0 errors, the rehearsal holds 1 (the observer's own, whose fix is Z17's)
+% expect:  0 errors; the first block's Mark marked, its rehearsal's error "Script _", the second block clean
+%          (perfect_kernel_batchz1::a_held_error_of_the_rehearsal_alone_marks_its_mark)
+% status:  GREEN (Z1)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able\corref{cor_one}}
+\author{Bob Baker\corref{cortwo}}
+\cortext[cor_one]{Corresponding.}
+\cortext[cortwo]{Also corresponding.}
+\end{frontmatter}
+Body.
+\end{document}

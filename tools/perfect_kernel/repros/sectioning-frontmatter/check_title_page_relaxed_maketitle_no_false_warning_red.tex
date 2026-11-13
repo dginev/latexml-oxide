@@ -1,0 +1,25 @@
+% RED (review rev107d S1, synthetic only): elsarticle's `\end{frontmatter}` trigger (batch 107d) notes the title page's
+%   print even when the document has `\let\maketitle\relax` and no title page prints: the check then counts the
+%   "2010 mathematics subject classification primary secondary" words as lost — a false Warning.
+% witness: none (synthetic; pop107d's 8 relaxed/emptied `\maketitle`s are all in stray class files)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1. Intro Text." — no title page
+% engines: rust int139a1: 0 warnings; 107d: 1 Warning:frontmatter:unclaimed
+% expect:  0 warnings (no print noted where `\maketitle` does not run)
+% status:  RED (107d)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\makeatletter
+\newcommand{\subjclass}[2][2010]{%
+  \let\@oldtitle\@title
+  \gdef\@title{\@oldtitle\footnotetext{#1 \emph{Mathematics subject classification.} #2}}}
+\makeatother
+\let\maketitle\relax
+\begin{document}
+\begin{frontmatter}
+\title{Linear extensions}
+\author{Waldemar Sieg}
+\subjclass{Primary: 26A15; Secondary: 26A21.}
+\end{frontmatter}
+\section{Intro}
+Text.
+\end{document}

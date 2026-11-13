@@ -1,0 +1,14 @@
+% witness: 57m review: apacite.sty:1519 `\let\Bem\emph` is the form a modern `.bbl` reaches (`\Bem{#2}`,
+%          through the formatting macros); a pre-2012 apacite.bst `.bbl` writes the declaration
+%          `{\Bem Journal}` (theapa.sty:69 `\let\Bem\itshape`; witness 2304.11127 ships theapa.sty). The
+%          binding's `\Bem` is `\emph` before a brace and `\em` otherwise (OXIDIZED_DESIGN_DIVERGENCES #342)
+% oracle:  pdflatex with apacite: "Command" italic; `{\Bem Declared words}` italicizes only "D" (`\emph`
+%          grabs one token) — the declaration the old `.bbl` was written for italicizes both words
+% engines: rust 57l: `\Bem` = `\em` only, a toggle: "Command b" italic, "Declared words" upright
+% expect:  0 errors, 0 warnings; <emph>Command</emph>, "Declared words" italic, "e" upright
+% status:  GREEN (57m)
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+A \Bem{Command} b {\Bem Declared words} c \Bem{} e.
+\end{document}

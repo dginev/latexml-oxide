@@ -1,0 +1,14 @@
+% witness: 2408.07575, 2501.12471, 2602.03829, 2609.08425, 2609.19994 (WileyNJDv5.cls:377 `\usepackage{lettersp}`
+%          before :6820's algorithms; LETTERSP.STY:3-12 keeps an existing `\Comment` as its own)
+% oracle:  pdflatex 0 errors ("FIRST LS", then algorithmicx's `\Comment` in the algorithm)
+% engines: rust 72a r1 = 24 Errors (lettersp loaded after algpseudocode by the copy's read: its documentation ran as
+%          text); Perl: lettersp never loaded (OmniBus), `\letterspace` undefined
+%          WileyNJDv5.cls:5071's `\received` (2609.19994) replaced OmniBus's dated frontmatter (OmniBus is `Fallback`)
+% expect:  0 errors, 0 warnings; "FIRST LS"; <ltx:date role="received">Date X</ltx:date>
+% status:  RED (72a r1) -> GREEN (72a r2)
+% preload: ar5iv.sty
+\documentclass{WileyNJDv5}
+\received{Date X}
+\begin{document}
+\lsorder{} \letterspace
+\end{document}

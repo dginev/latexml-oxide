@@ -1,0 +1,24 @@
+% mechanism: an `\ead` printed under the address `$^2$ Univ B` (iopart.cls:363) is one of the authors requesting 2,
+%   Ann Able's or Bob Baker's: Cat Cole, the one marked as the corresponding author, requests 1 and `*` only, so the
+%   address stays the author block's (`marked_corresponding_author` among the mark's authors, `_marks`)
+% witness: 2407.14305, 2311.07087 (an `\ead` between the addresses); rev78f2 probe i2
+% oracle:  pdflatex (the shortened iopart.cls beside this repro, from 2311.12551) 0 errors: "Ann Able2, Bob Baker2 and
+%          Cat Cole1,∗", "1 Univ A, Town", "2 Univ B, City", "E-mail: zq77@x.org", "∗ Author to whom any
+%          correspondence should be addressed."
+% engines: rust 78f r2 = zq77@ Cat Cole's; int47a and perl: Cat Cole's, the last author's
+% expect:  0 errors, 0 warnings; zq77@ the author block's
+% status:  RED (78f r2) -> GREEN (78f r3)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{2}$, Bob Baker$^{2}$ and Cat Cole$^{1,*}$}
+\address{$^1$ Univ A, Town}
+\address{$^2$ Univ B, City}
+\ead{zq77@x.org}
+\address{$^*$ Author to whom any correspondence should be addressed.}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

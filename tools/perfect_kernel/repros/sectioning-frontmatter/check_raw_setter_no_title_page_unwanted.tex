@@ -1,0 +1,16 @@
+% A raw class's setter was given text and the document makes no title page: nothing prints the store, so the third source
+% wants none of it (title_page_check.rs `digest_raw_setter_calls` runs at a title page only).
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Body text.", no "Lunar"
+% engines: rust int139c = 0 errors, 0 warnings; perl = 0 errors
+% expect:  0 errors, 0 warnings
+% status:  GREEN (negative)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{storecls.cls}
+\LoadClass{article}
+\def\address#1{\gdef\@address{#1}}
+\end{filecontents*}
+\documentclass{storecls}
+\address{Lunar Institute}
+\begin{document}
+Body text.
+\end{document}

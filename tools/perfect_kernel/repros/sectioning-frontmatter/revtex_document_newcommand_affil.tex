@@ -1,0 +1,20 @@
+% mechanism: revtex4_support's \affil (Perl revtex4_support.sty.ltxml:49) is the binding's own: no REVTeX 4 class
+%   defines it, so a document's \newcommand{\affil}{...} is pdflatex's, and \affiliation{\affil} prints it. The binding
+%   defines it as a guess (DefinitionOrigin::Fallback), which the document's definition replaces.
+% witness: 1104.4073 (\newcommand{\affil}{Center for Nanophotonics, ...}); 1907.12838, 1908.05079 (main.tex:44)
+% oracle:  pdflatex 0 errors: "Martin Frimmer / Center for Nanophotonics, FOM Institute, Amsterdam"
+% engines: rust int116a = 0 errors, the affiliation empty (Info: ignoring the \newcommand); perl = two empty
+%          affiliations, 1 error (Missing argument for \affil, KNOWN_PERL_ERRORS #1199)
+% expect:  0 errors, 0 warnings; the creator's affiliation is the document's \affil
+% status:  RED (int116a) -> GREEN (86c)
+% preload: ar5iv.sty
+\documentclass[aps,prl,reprint,superscriptaddress]{revtex4-1}
+\newcommand{\affil}{Center for Nanophotonics, FOM Institute, Amsterdam}
+\begin{document}
+\title{Spontaneous emission}
+\author{Martin Frimmer}
+\affiliation{\affil}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

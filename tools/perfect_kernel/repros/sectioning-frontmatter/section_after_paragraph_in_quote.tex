@@ -1,0 +1,22 @@
+% mechanism: a display unit (`\part`..`\subsubsection`) later in a quote whose run-in `\paragraph` opened an
+%   `ltx:inline-sectional-block` closes the quote, as one before the run-in heading does (Document
+%   `holds_in_quote_block`, OXIDIZED_DESIGN_DIVERGENCES #678): the block, which the model lets hold a section, is not
+%   the section's place
+% witness: 2110.03376, 1905.08876 (`\paragraph` and `\section` units in the same quote)
+% oracle:  pdflatex 0 errors: "1 Intro", "Body text before the quote.", indented "Lead text in the quote.", "Base case:
+%   Run-in text in the quote.", "2 Later", "Section text.", then "After the quote." at full width
+% engines: rust 67int17b = Error:malformed:ltx:paragraph, then the section nested in the quote; without the check
+%   (69a r3 draft) the section went into the inline block, in section 1's quote
+% expect:  0 errors; the quote (in section 1) holds the lead text and the paragraph's block; section 2 follows section 1
+%   and holds "Section text." and "After the quote."
+% status:  RED (67int17b) -> GREEN (69a r3)
+% preload: ar5iv.sty
+\documentclass{article}\begin{document}\section{Intro}
+Body text before the quote.
+\begin{quote}Lead text in the quote.
+\paragraph{Base case:} Run-in text in the quote.
+\section{Later}
+Section text.
+\end{quote}
+After the quote.
+\end{document}

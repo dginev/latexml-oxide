@@ -1,0 +1,18 @@
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+Every stroke below changes the graphics state, so pgfsys opens and closes a
+transient scope around it.
+
+\begin{tikzpicture}
+\foreach \i in {1,...,1000} {
+  \draw[line width=0.\i pt, opacity=0.\i] (0,\i/500) -- (1,\i/500);
+}
+\end{tikzpicture}
+
+\begin{tikzpicture}
+\foreach \i in {1,...,1000} {
+  \fill[opacity=0.\i] (\i/500,0) circle (0.01);
+}
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,20 @@
+% A raw class's editor store makes its creator after the authors' store annotations are placed, so
+% an affiliation store (printed under the authors) annotates the authors, not the editor.
+% witness: none (synthetic; K11 stores read at `\maketitle`).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Anton", "Inst", "Ed: Eddie".
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rceditor.cls}
+\ProvidesClass{rceditor}
+\LoadClass{article}
+\newcommand*\editor[1]{\gdef\@editor{#1}}
+\newcommand*\institution[1]{\gdef\@institution{#1}}
+\def\@editor{}\def\@institution{}
+\def\@maketitle{\@title\par\@author\par\@institution\par Ed: \@editor}
+\end{filecontents*}
+\documentclass{rceditor}
+\title{T}\author{Anton}\editor{Eddie}\institution{Inst}
+\begin{document}
+\maketitle
+Text.
+\end{document}

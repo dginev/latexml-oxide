@@ -1,0 +1,21 @@
+% The horizontal space a name sets right before its own mark is the name's, no separator: `\hspace*{2mm}$^{\rm a,b}$,`
+% after a name and its `\thanks` (the `\quad` the space reads as parted ", Sergei Blinnikov" off as an affiliation
+% line); and a mark's `\rm` is no part of its label (Perl's `s/\\rm//g`, Base_Utility.pool.ltxml:365), so `$^{\rm a,b}$`
+% requests the lines `${\rm ^a}$` and `${\rm ^b}$` label.
+% witness: 0905.3658 (this author block, shortened); 1312.1414 (`\hspace*{1.3mm}$^{,\ddag}$` before `\enskip`)
+% oracle:  pdflatex 0 errors; "Oleg Lychkovskiy* a,b, Sergei Blinnikov a,c", then the three marked institutes
+% engines: perl 2 creators, Oleg with Institutes A and B, Sergei with A and C; rust int50a 1 creator, contacts ", Sergei
+%          Blinnikov", an empty one and all three institutes (with `\hspace` gone: Oleg only B, Sergei only C, a third
+%          creator with A — the label "\rma")
+% expect:  0 errors, 0 warnings; two creators, Oleg with Institutes A and B, Sergei with A and C
+% status:  RED (int50a) -> GREEN (78m: rows.rs `space_before_own_mark`, queue_digest.rs `\rm` strip)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Oleg Lychkovskiy\thanks{e-mail: o@x.ru}\hspace*{2mm}$^{\rm a,b}$, Sergei Blinnikov\hspace*{2mm}$^{\rm a,c}$
+\\ ${\rm ^a}$ {\small\it Institute A}\\
+${\rm ^b}$ {\small\it Institute B}\\
+${\rm ^c}$ {\small\it Institute C}}
+\maketitle
+\end{document}

@@ -1,0 +1,22 @@
+% witness: 0910.4848 (the C9 refusal, sect05.rs `delimiter_reads_ahead`; this repro is its false-refusal side)
+% oracle:  pdflatex 0 errors, the abstract "Abstract emph text." with "emph" bold, then "Body."
+% engines: rust 77r (r1) = "emph" italic: the code was refused for `\strip@prefix`'s `>` (produced by `\meaning`,
+%          inside an `\edef` body) and for `\pickup` as `\let`'s value; int32a refused it for the `\let` tail
+% expect:  0 errors, 0 warnings; "emph" bold
+% status:  GREEN (batch 77r r2: only the code's own calls, outside braces and definition operands, are judged)
+\documentclass{article}
+\begin{filecontents*}[overwrite]{defops.sty}
+\long\def\pickup#1\end#2{#1\end{#2}}
+\def\abstract{\let\emph\textbf\edef\x{\expandafter\strip@prefix\meaning\pickupx}%
+  \renewcommand\pickupx{\pickup}\let\savedpickup\pickup}
+\def\pickupx{}
+\def\endabstract{}
+\end{filecontents*}
+\usepackage{defops}
+\begin{document}
+\title{T}\author{A}
+\begin{abstract}
+Abstract \emph{emph} text.
+\end{abstract}
+Body.
+\end{document}

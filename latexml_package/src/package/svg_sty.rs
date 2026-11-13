@@ -1,10 +1,18 @@
-use crate::prelude::*;
+use latexml_core::util::image::image_candidates;
+
+use crate::{
+  package::standalone_sty::{top_level_items, unbraced},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: svg.sty.ltxml
   RequirePackage!("graphicx");
-  RequirePackage!("subfig");
+  // Not subfig: svg.sty loads iftex, scrbase, pdftexcmds, trimspaces, graphicx, shellesc (svg.sty:66-73)
+  // and xcolor/transparent on demand (:337-352). Perl's `RequirePackage('subfig')` (svg.sty.ltxml:19)
+  // put subfig beside subcaption, and which `\ContinuedFloat` was in force then depended on load
+  // order (witness 2605.17685; KPE #322).
   RequirePackage!("xcolor");
   RequirePackage!("transparent");
   RequirePackage!("import");
@@ -24,6 +32,28 @@ LoadDefinitions!({
   DefKeyVal!("Gin", "pdflatex", "");
   DefKeyVal!("Gin", "pdftops",  "");
   DefKeyVal!("Gin", "convert",  "");
+  // svg.sty:328-683 (`\DefineFamilyKey{SVG}`, `\FamilyBoolKey{SVG}{inkscapelatex}`): how Inkscape converts the SVG for
+  // TeX; no effect on the graphic here, but options `\setsvg`/`\svgsetup` give every `\includesvg`.
+  DefKeyVal!("Gin", "inkscapelatex",    "", "true");
+  DefKeyVal!("Gin", "inkscapeversion",  "");
+  DefKeyVal!("Gin", "inkscapeexe",      "");
+  DefKeyVal!("Gin", "inkscapeopt",      "");
+  DefKeyVal!("Gin", "inkscapeformat",   "");
+  DefKeyVal!("Gin", "inkscapearea",     "");
+  DefKeyVal!("Gin", "inkscapedpi",      "");
+  DefKeyVal!("Gin", "inkscapedensity",  "");
+  DefKeyVal!("Gin", "inkscapepath",     "");
+  DefKeyVal!("Gin", "inkscapename",     "");
+  DefKeyVal!("Gin", "svgextension",     "");
+  DefKeyVal!("Gin", "extension",        "");
+  DefKeyVal!("Gin", "ext",              "");
+  DefKeyVal!("Gin", "apptex",           "");
+  DefKeyVal!("Gin", "lastpage",         "", "true");
+  DefKeyVal!("Gin", "distort",          "", "true");
+  DefKeyVal!("Gin", "latex",            "", "true");
+  DefKeyVal!("Gin", "tex",              "", "true");
+  DefKeyVal!("Gin", "usexcolor",        "", "true");
+  DefKeyVal!("Gin", "usetransparent",   "", "true");
 
   // svgpath — code callback that pushes onto GRAPHICSPATHS.
   // Perl: DefKeyVal('Gin', 'svgpath', '', '', code => sub {
@@ -40,8 +70,7 @@ LoadDefinitions!({
     for opt in opts.iter() {
       let opt_str = opt.to_string();
       if let Some(val) = opt_str.strip_prefix("svgpath=") {
-        let canonical = pathname::canonical(val.trim());
-        let absolute = pathname::absolute(&canonical);
+        let absolute = svg_search_path(val.trim());
         // PushValue appends to back of the VecDeque (Perl PushValue semantics).
         let _ = push_value(
           "GRAPHICSPATHS",
@@ -52,8 +81,139 @@ LoadDefinitions!({
   }
 
   def_macro_noop("\\lx@svg@options")?;
-  DefMacro!("\\setsvg{}", "\\gdef\\lx@svg@options{#1}");
+  // svg.sty:810-811: `\setsvg` and `\svgsetup` (2401.10458, 2402.15627, 2504.02263, 2505.19061, 2512.15659) add to
+  // the options every `\includesvg` takes, as `\FamilyOptions` does.
+  DefMacro!("\\setsvg{}",
+    "\\xdef\\lx@svg@options{\\unexpanded\\expandafter{\\lx@svg@options},\\unexpanded{#1}}");
+  DefMacro!("\\svgsetup{}",
+    "\\xdef\\lx@svg@options{\\unexpanded\\expandafter{\\lx@svg@options},\\unexpanded{#1}}");
+  // svg.sty:814-823 `\svgpath{{a/}{b/}}`, or a bare `\svgpath{a/}` it wraps in braces: where SVG files are found,
+  // pushed onto GRAPHICSPATHS as the `svgpath=` option is (2402.15627 `\svgpath{{svg/}}`). The argument is read as
+  // written, as `\graphicspath`'s is: a macro in it is not expanded.
+  DefPrimitive!("\\svgpath{}", sub[(paths)] {
+    let tokens = paths.unlist();
+    let grouped = tokens.iter().find(|t| **t != T_SPACE!()).is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+    let mut found: Vec<String> = Vec::new();
+    if grouped {
+      let (mut depth, mut current) = (0usize, String::new());
+      for t in &tokens {
+        match t.get_catcode() {
+          Catcode::BEGIN => {
+            if depth > 0 {
+              current.push('{');
+            }
+            depth += 1;
+          },
+          Catcode::END => {
+            depth = depth.saturating_sub(1);
+            if depth == 0 {
+              found.push(std::mem::take(&mut current));
+            } else {
+              current.push('}');
+            }
+          },
+          _ if depth > 0 => current.push_str(&t.to_string()),
+          _ => {},
+        }
+      }
+    } else {
+      found.push(Tokens::new(tokens).to_string());
+    }
+    for path in found.iter().map(|p| p.trim()).filter(|p| !p.is_empty()) {
+      let _ = push_value("GRAPHICSPATHS", Stored::String(pin(svg_search_path(path))));
+    }
+  });
 
-  // Note that various sizing & rescaling are not yet supported by Post::Graphics
-  DefMacro!("\\includesvg[]{}", "\\includegraphics[\\lx@svg@options,#1]{#2}");
+  // Note that various sizing & rescaling are not yet supported by Post::Graphics. The options given by `\setsvg` /
+  // `\svgsetup` are expanded before `\includegraphics` reads them: its keys are read unexpanded (keyvals.rs, as TeX's
+  // keyval does), and `\lx@svg@options` as a key was no option at all (2401.10458).
+  DefMacro!("\\includesvg[]{}",
+    "\\expandafter\\lx@svg@includegraphics\\expandafter{\\lx@svg@options}{#1}{#2}");
+  DefMacro!("\\lx@svg@includegraphics{}{}{}", "\\includegraphics[#1,#2]{#3}");
+  // svg.sty:876-935 `\includeinkscape[opts]{file}`: an Inkscape export, `x.pdf_tex` or `x.pdf` (`.eps`, `.ps`,
+  // `.png`; `.pdf` when none is named). Under `inkscapelatex` (the default, svg.sty:542) svg.sty:1018-1060
+  // `\svg@@input` inputs the export's LaTeX overlay `<x.pdf>_tex` — the picture of the export's text, which places
+  // the graphic itself by `\includegraphics`, patched (:1348-1394) to include svg's own file whatever the overlay names
+  // — at the requested `width` (:1355-1370 sets `\unitlength`; here the overlay's `\svgwidth`) or `scale` (the picture
+  // scaled: the overlay's own `\svgscale` branch needs calc's `\real`, which svg.sty never reaches).
+  // Otherwise, or with no overlay, the export as `\includesvg` includes it. Handing `x.pdf_tex` to the image
+  // converter lost the figure with "failed to convert" (2402.04829 ×14, 2310.03515 ×6). Guard:
+  // `perfect_kernel_batch70a::includeinkscape_inputs_the_overlay`.
+  DefMacro!("\\includeinkscape[]{}", sub[(opts, file)] {
+    let name = file.to_string();
+    let name = name.trim();
+    let keys = s!("{},{}", Expand!(T_CS!("\\lx@svg@options")), opts.as_ref().map(|o| o.to_string()).unwrap_or_default());
+    let value = |key: &str| {
+      top_level_items(&keys)
+        .iter()
+        .filter_map(|item| item.split_once('='))
+        .filter(|(k, _)| k.trim() == key)
+        .map(|(_, v)| unbraced(v).to_string())
+        .next_back()
+    };
+    let latex = value("inkscapelatex").is_none_or(|v| v.trim() != "false");
+    let file_name = name.rsplit('/').next().unwrap_or(name);
+    let extension = file_name.rfind('.').map(|at| file_name[at + 1..].to_ascii_lowercase());
+    let export = match extension.as_deref() {
+      Some(ext) if ext.ends_with("_tex") => Some(name.trim_end_matches("_tex").to_string()),
+      Some("pdf" | "eps" | "ps" | "png") => latex.then(|| name.to_string()),
+      None => latex.then(|| s!("{name}.pdf")),
+      Some(_) => None,
+    };
+    let overlay = export.as_ref().and_then(|export| {
+      let overlay = s!("{export}_tex");
+      let overlay_name = overlay.rsplit('/').next().unwrap_or(&overlay).to_string();
+      image_candidates(&overlay)
+        .split(',')
+        .find(|found| !found.is_empty() && found.rsplit('/').next() == Some(overlay_name.as_str()))
+        .map(str::to_string)
+        .or_else(|| find_file(&overlay, None).map(|_| overlay.clone()))
+    });
+    let (Some(export), Some(overlay)) = (export, overlay) else {
+      let mut out = TokenizeInternal!(r"\expandafter\lx@svg@includegraphics\expandafter{\lx@svg@options}").unlist();
+      out.push(T_BEGIN!());
+      out.extend(opts.map(|o| o.unlist()).unwrap_or_default());
+      out.push(T_END!());
+      out.push(T_BEGIN!());
+      out.extend(file.unlist());
+      out.push(T_END!());
+      return Ok(Tokens::new(out));
+    };
+    let mut out = TokenizeInternal!(r"\begingroup").unlist();
+    let width = value("width").filter(|w| !w.trim().is_empty());
+    let scale = value("scale").filter(|s| !s.trim().is_empty() && width.is_none());
+    if let Some(width) = width {
+      out.extend(mouth::tokenize_internal(TeXString::assembled(s!(r"\def\svgwidth{{{width}}}"))).unlist());
+    } else if let Some(scale) = &scale {
+      out.extend(mouth::tokenize_internal(TeXString::assembled(s!(r"\scalebox{{{scale}}}"))).unlist());
+      out.push(T_BEGIN!());
+    }
+    out.extend(TokenizeInternal!(r"\let\lx@svg@inkscape@graphic\includegraphics\def\includegraphics").unlist());
+    out.extend([T_BEGIN!(), T_CS!("\\lx@svg@inkscape@include"), T_BEGIN!()]);
+    out.extend(ExplodeText!(export));
+    out.extend([T_END!(), T_END!(), T_CS!("\\input"), T_BEGIN!()]);
+    out.extend(ExplodeText!(overlay));
+    out.push(T_END!());
+    if scale.is_some() {
+      out.push(T_END!());
+    }
+    out.extend(TokenizeInternal!(r"\endgroup").unlist());
+    Ok(Tokens::new(out))
+  });
+  // svg.sty:1383-1394 `\svg@includegraphics@patched[opts]{name}`: the overlay's graphic is svg's own export file.
+  DefMacro!("\\lx@svg@inkscape@include{}[]{}", "\\lx@svg@inkscape@graphic[#2]{#1}");
 });
+
+/// Where a path of the svg package's search path is: relative to the paper's source directory, as `\graphicspath`'s
+/// paths are (Perl svg.sty.ltxml:42-44 `pathname_absolute(…, SOURCEDIRECTORY)`); the process's directory is no root.
+fn svg_search_path(path: &str) -> String {
+  let canonical = pathname::canonical(path.trim_matches('"'));
+  let root = with_value("SOURCEDIRECTORY", |v| {
+    v.map(|s| s.to_string()).unwrap_or_default()
+  });
+  if root.is_empty() || canonical.starts_with('/') {
+    canonical
+  } else {
+    s!("{root}/{canonical}")
+  }
+}

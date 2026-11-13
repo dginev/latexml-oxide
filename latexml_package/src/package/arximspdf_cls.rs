@@ -15,7 +15,12 @@
 //! `ltx:bib-*` vocabulary is schema-valid only inside `ltx:bibentry` (the BibTeX
 //! path), NOT inside `bibblock` — so the `\b*` field macros are PASSTHROUGH text
 //! (readable + schema-valid), not mapped to `ltx:bib-*`.
-use crate::prelude::*;
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
+use crate::{
+  prelude::*,
+  shipped_class::{class_code_contains, shipped_class_text},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -28,13 +33,17 @@ LoadDefinitions!({
     "onecolumn","twocolumn","leqno","fleqn","twoside","oneside",
     "number","nameyear","noMRlinks","MSNbibl","citesort","dvips","pdftex",
     "autosecdot","noautosecdot","xxtheorem","nohyperref",
-    "normalfloat","secfloat","chapfloat","rotating",
+    "normalfloat","secfloat","chapfloat",
     "normaleqn","seceqn","chapeqn","normalthm","secthm","chapthm",
   ] { DeclareOption!(opt, None); }
+  // arximspdf.cls:164 `\DeclareOption{rotating}{\AtEndOfClass{\RequirePackage[…]{rotating}}}`, the floats
+  // `\sidewaystable`/`\sidewaysfigure` the class lets at `\begin{document}` (:1838-1848; 1304.4448, 1104.3398); the
+  // rotation is print-only.
+  DeclareOption!("rotating", "\\AtEndOfClass{\\RequirePackage{rotating}}");
   DeclareOption!(None, { Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?; });
   ProcessOptions!();
 
-  load_class_with_options("article", Tokens!())?;
+  LoadClass!("article", withoptions => true);
 
   RequirePackage!("amssymb");
   // NB: arximspdf does NOT load amsmath — it defines \tfrac/\dfrac/\operatorname/
@@ -58,58 +67,45 @@ LoadDefinitions!({
   DefMacro!("\\zs{}",  "#1");
   DefMacro!("\\zss{}", "#1");
   DefMacro!("\\eqntext{}", "#1");
-  Let!("\\bolds", "\\boldsymbol");
-
-  // ---- structured bibliography (passthrough) -------------------------------
-  // Entry environments: transparent (swallow the optional [type] arg, pass body).
-  for env in [
-    "barticle","bbook","bincollection","binproceedings","binbook","bproceedings",
-    "btechreport","bmanual","bmastersthesis","bphdthesis","bbooklet",
-    "bunpublished","bmisc","bchapter",
-  ] {
-    def_macro_noop(&format!("\\{env}[]"))?;
-    def_macro_noop(&format!("\\end{env}"))?;
-  }
-  // Field markup macros: emit their content as text.
-  for m in [
-    "bauthor","beditor","bsnm","bfnm","binits","bparticle","bsuffix",
-    "btitle","bjournal","bbooktitle","bseries","bvolume","byear","bpages",
-    "bedition","bpublisher","baddress","blocation","borganization","binstitution",
-    "bschool","btype","bnumber","bchapter","bhowpublished","bnote","banumber",
-    "bisbn","betal",
-  ] {
-    def_macro_identity(&format!("\\{m}{{}}"))?;
-  }
-  DefMacro!("\\AND", "and ");
-  def_macro_noop("\\bptok{}")?;
-  def_macro_noop("\\bptnote{}")?;
-  def_macro_noop("\\bid{}")?;          // keyval mr=/doi=… — drop (matches class display)
-  DefMacro!("\\bmrnumber{}", "\\MR{#1}");
-  DefMacro!("\\MR{}", "MR#1");         // MathReviews id, as text
-  def_macro_noop("\\endbibitem")?;
+  // The structured `\b*` bibliography, `{pf}` proofs with `\qed`, `\tablewidth` table notes and `\bolds`: the
+  // markup the VTeX IMS classes share (ims_support_sty.rs).
+  RequirePackage!("ims_support");
 
   // ---- misc list / sectioning / theorems the class adds --------------------
   DefEnvironment!("{longlist}[]", "<ltx:enumerate>#body</ltx:enumerate>",
     mode => "internal_vertical");
-  DefMacro!("\\newproclaim", "\\newtheorem");
-  // arximspdf predefines a Theorem env and proof env(s) (L1405/1430-1435).
+  // arximspdf predefines a Theorem env (L1405), with its starred twin as every `\newtheorem` (vtexthm's, in
+  // ims_support with `\newproclaim`; `{hy*}` 1107.3284); its proof envs are in ims_support.
   RawTeX!(r"\newtheorem{thm}{Theorem}");
-  RawTeX!(r"\newenvironment{pf}{\begin{proof}}{\end{proof}}");
-  RawTeX!(r"\newenvironment{pf*}[1]{\begin{proof}[#1]}{\end{proof}}");
-
   // ---- frontmatter (standard LaTeXML frontmatter API; metadata preserved) --
   // Standardize the IMS scaffolding onto the article frontmatter flow: the
   // {frontmatter}/{aug}/{keyword} blocks are TRANSPARENT wrappers (no special
   // mode), and the IMS metadata macros route to the same \lx@add@* sinks
   // article/acmart use, so creators/title/keywords/pubnotes are emitted into the
   // document frontmatter.
-  DefEnvironment!("{frontmatter}", "#body");
+  // `{frontmatter}` a plain group, as OmniBus's (omnibus_cls.rs): a DefEnvironment boxes its body in restricted
+  // horizontal mode, where a `$$` in the abstract is no display (TeX_Math.pool.ltxml:65).
+  Let!("\\frontmatter", "\\@empty");
+  Let!("\\endfrontmatter", "\\@empty");
   DefEnvironment!("{aug}", "#body");
-  // {keyword} collects MANY \kwd into one keywords list: \lx@add@keywords alone
-  // CLEARS on each call (keeps only the last), so use the collecting
-  // \lx@begin@keywords/\lx@end@keywords form and let each \kwd emit its text.
-  DefMacro!("\\keyword[]", "\\lx@begin@keywords");
-  DefMacro!("\\endkeyword", "\\lx@end@keywords");
+  // `{keyword}[class=…]` and `\kwd` are the VTeX classes' shared markup (ims_support_sty.rs): arximspdf's entries
+  // are joined by ", " (arximspdf.cls:2438 of 1107.3284's copy), under its headings "Key words and phrases." and "AMS
+  // 2000 subject classifications." (:2408-2409; arxstspdf.cls:2356-2357 of 0903.0664's copy end them with ":"). The
+  // collecting `\lx@begin@keywords` started afresh at each block, so a paper's AMS block was lost to the keywords that
+  // follow it (1107.3284, 1309.4864).
+  let shipped = match shipped_class_text("arximspdf")? {
+    Some(text) => Some(text),
+    None => shipped_class_text("arxstspdf")?,
+  };
+  let colon = shipped
+    .as_deref()
+    .is_some_and(|text| class_code_contains(text, "{KWD}{Key words and phrases:}"));
+  RawTeX!(r"\def\sep{\unskip, }");
+  if colon {
+    RawTeX!(r"\setattribute{keyword}{KWD}{Key words and phrases:}\setattribute{keyword}{AMS}{AMS 2000 subject classifications:}");
+  } else {
+    RawTeX!(r"\setattribute{keyword}{KWD}{Key words and phrases.}\setattribute{keyword}{AMS}{AMS 2000 subject classifications.}");
+  }
   // Author-name parts used inside \author{...}: pass their content through.
   for m in ["fnms","snm","inits","degs","roles","suffix"] {
     def_macro_identity(&format!("\\{m}{{}}"))?;
@@ -120,10 +116,11 @@ LoadDefinitions!({
   DefMacro!("\\address[]{}", "\\lx@add@contact[role=address]{#2}");
   DefMacro!("\\email{}", "\\lx@add@contact[role=email,name={e-mail: }]{#1}");
   DefMacro!("\\ead[]{}", "\\lx@add@contact[role=email,name={e-mail: }]{#2}");
-  DefMacro!("\\kwd[]{}", "#2, ");   // emit into the collecting {keyword} block
-  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
-  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
-  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=number]{#1}");
+  // As the class prints them (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): arximspdf.cls:1911-1912 (math0702702's copy) sets the
+  // journal's name alone, then "Vol. V, No. N" (:366 and :383 the labels); :1913 "DOI: ", the role's.
+  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
+  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume,name={Vol.~}]{#1}");
+  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=number,name={No.~}]{#1}");
   DefMacro!("\\pubyear{}", "\\lx@add@date[role=publication]{#1}");
   DefMacro!("\\doi{}", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");
@@ -139,12 +136,17 @@ LoadDefinitions!({
   DefMacro!("\\runauthor{}", "");
   for m in ["corref{}","docsubty{}","thankstext[]{}{}","thanksref[]{}",
             "thanksmark[]{}","thankslabel[]{}","firstpage{}","lastpage{}",
-            "referstodoi{}","relateddoi[]{}{}","printead","printead*",
+            "referstodoi{}","relateddoi[]{}{}",
             "printaddress{}","printaddressnum{}","printaddresses",
             "pdftitle{}","pdfauthor{}","pdfsubject{}","pdfkeywords{}",
             "sdatatype{}","sfilename{}","slink[]{}","thesuppdoi{}"] {
     def_macro_noop(&format!("\\{m}"))?;
   }
+  // `\printead*[text]{e1,e2}` prints the addresses `\ead[label=e1]` recorded (arximspdf.cls:599-603); `\ead`
+  // already adds each as a contact, so the reprint goes. A `"printead*"` entry in the list above was the
+  // prototype `\printead` + a literal `*`, which replaced the plain one: every `\printead{e1}` raised
+  // "Missing argument Match" (30 aoas/aos/sts papers of run 329: 1107.4843, 1011.3351, 1205.6055).
+  def_macro_noop("\\printead OptionalMatch:* []{}")?;
   DefEnvironment!("{supplement}[]", "#body");
 
   // ---- misc stubs ----------------------------------------------------------
@@ -152,4 +154,50 @@ LoadDefinitions!({
   DefMacro!("\\endlocaldefs", "\\makeatother");
   for cs in ["HPROOF","PROOF","CRC","psdraft","psfull"] { def_macro_noop(&format!("\\{cs}"))?; }
   def_macro_noop("\\vtexed{}")?;
+
+  // The URL, attribute and script helpers of the arximspdf.cls versions (`\doiurl`, `\arxivurl`, `\surl`,
+  // `\setattribute`, `\tsup`, …) are the VTeX classes' shared markup (ims_support_sty.rs).
+  // What both classes define and papers call (run 347: 42 arxstspdf and 13 arximspdf papers; line numbers from
+  // 0808.2902's arxstspdf.cls and 0704.1778's arximspdf.cls), a copy without one leaving it to the paper
+  // (`DefinitionOrigin::Fallback`):
+  // - `\ccline{2-3,4-5}` (arxstspdf :1167-1169, arximspdf :1202-1204), a `\cline` for each range (33 papers: 1010.0304,
+  //   1010.5040, 1011.1079);
+  // - `\bhline` and its siblings `\thline`, `\fhline`, `\lhline` (arxstspdf :1828-1832), a table's rules spaced
+  //   around, `\bhline`'s thicker: `\hline`s;
+  // - `\freefootnotetext[mark]{text}` (arxstspdf :1917, arximspdf :1908), a footnote under the given mark, an empty one
+  //   for an unmarked note (1011.1160 "This conversation was conducted in spring 2008.", 1009.1507's disclaimer);
+  // - `\relateddois[label]{key}{text}` (1008.4373's arxstspdf.cls :2106-2115; 43 of the 68 copies, 99 of 371), a
+  //   title note naming the articles related to this one, its `\relateddoi{label}{doi}` each a link to the DOI
+  //   (1410.0163, 1301.7161, 1210.0385 "Discussed in …");
+  // - `\shref{url}{text}` (arxstspdf :3021-3024), a link whose text breaks at its `\\`s;
+  // - arximspdf's :2530-2531 `\write@toc@ignorecontentsline`/`\write@toc@restorecontentsline` (1205.5627) and
+  //   :2585-2601 `\maxcsec{…}`, `\maxcsubsec`, `\maxcsubsubsec`, the contents' number widths (1103.4825, 1309.3728); its
+  //   :533-540 `\setvaluelist`/`\getitemvalue` (1203.0565) are ims_support's, shared with arxbj.
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\ccline{}", sub[(ranges)] {
+      let ranges: Tokens = ranges;
+      let mut out: Vec<Token> = Vec::new();
+      for range in ranges.to_string().split(',') {
+        let range = range.trim();
+        if !range.is_empty() {
+          out.extend(mouth::tokenize_internal(TeXString::assembled(s!("\\cline{{{range}}}"))).unlist());
+        }
+      }
+      Ok(Tokens::new(out))
+    });
+    RawTeX!(r"\def\thline{\hline}\def\fhline{\hline}\def\bhline{\hline}\def\lhline{\hline}
+\def\freefootnotetext[#1]{\footnotetext[#1]}
+\@ifundefined{doi@base}{\def\doi@base{http://dx.doi.org/}}{}
+\def\relateddois{\@ifnextchar[{\lx@ims@relateddois}{\lx@ims@relateddois[]}}
+\def\lx@ims@relateddois[#1]#2#3{\lx@add@frontmatter{ltx:note}[role=relateddois]{\def\relateddoi##1##2{\href{\doi@base##2}{##2}}#3}}
+\DeclareRobustCommand\shref[2]{\href{#1}{\let\\\relax#2}}
+\def\write@toc@ignorecontentsline{\addtocontents{toc}{\protect\ignorecontentsline}}
+\def\write@toc@restorecontentsline{\addtocontents{toc}{\protect\restorecontentsline}}
+\def\maxcsec#1{}\def\maxcsubsec#1{}\def\maxcsubsubsec#1{}");
+  }
 });
+
+/// arxstspdf.cls is arximspdf.cls (its `\doiurl`/`\arxivurl`, arxstspdf.cls:2902-2975, are the arximspdf copies' too;
+/// 4 and 6 papers of run 329 had them undefined: 0903.0664).
+pub fn load_arxstspdf_definitions() -> Result<()> { load_definitions() }

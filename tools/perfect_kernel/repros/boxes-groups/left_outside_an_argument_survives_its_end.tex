@@ -1,0 +1,15 @@
+% witness: 2605.02768 (SYK-HT-arxiv.tex:568 `\log(\cosh(\beta\lambda\over 2))`), sandbox 2605 regression C5
+% oracle:  pdflatex 0 errors (physics.sty \trigbraces sets `(#1)` as `\left(#1\right)`, #1 a `{…}` group that bounds the `\over`)
+% engines: rust 65d..66e = 1 error ("Extra \right."), 3 warnings ("Missing \right. inserted" at the argument's end, 2 "Missing idref on ltx:XMRef"): the end
+%          of the binding's `\lx@xmarg` argument, digested from a mouth of its own, closed the OUTER `\left(` group the binding opened around it;
+%          65c and perl 0
+% mechanism: stomach.rs `close_left_group_at_input_end` closes only a `\left` group opened in the input that ran out (the reading
+%          context the `\left` was read in, `gullet::reading_context`, recorded by `\lx@math@left@group`); OXIDIZED_DESIGN_DIVERGENCES #530
+% expect:  0 errors, 0 warnings; the XMDual's presentation holds the FRACOP a/2 between `(` and `)`
+% preload: ar5iv.sty
+% status:  GREEN (66g)
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+$\cosh(a\over 2)$
+\end{document}

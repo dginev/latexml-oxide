@@ -1,0 +1,17 @@
+% A format-2 biber .bbl (biblatex 3.0-3.7: \sortlist, names as positional parts
+% {family}{familyi}{given}{giveni}{prefix}{prefixi}{suffix}{suffixi}) reads as a format-3 one:
+% prefixed and suffixed names, "and others" (\true{moreauthor}), a date range rejoined from its
+% parts, a pages range list (\bibrangedash, \bibrangessep) and a \verb doi.
+% witness: reviewer probe (round 12, W6-B); hand-written in biber 2.x's format-2 shape
+% oracle:  the .bib it stands for: author = {van der Berg, Pieter and King, Jr., Martin Luther and
+%          others}, date = {1999-05-06/1999-05-08}, pages = {1--10, 15}, doi = {10.1000/old_1}
+% engines: rust (56iy) = the ar5iv-shape \bibitem: no doi, pages as printed by the rebuilder
+% expect:  0 errors; the entry's fields as its .bib gives them (HTML)
+% status:  GREEN (round 12, W6-B)
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_bbl_format2_absent.bib}
+\begin{document}
+\cite{a1}
+\printbibliography
+\end{document}

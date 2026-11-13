@@ -1,0 +1,14 @@
+% witness: the rev77t2 re-review (finding 3, probe L11)
+% oracle:  pdflatex 0 errors: "Ann Able¹ and Bob Baker²" over "University of X", then the institutes "1 Inst A", "2 Inst B"
+% engines: rust 77t r2 = 0 errors; University of X on both names, Inst A and Inst B on no one (the row rule ran on an
+%          `\inst` list); base Ann Able Inst A, Bob Baker Inst B, "University of X" a creator (residual)
+% expect:  0 errors, 0 warnings; Ann Able holds Inst A, Bob Baker Inst B
+% status:  RED (77t r2) -> GREEN (int44 follow-up; the "University of X" creator a SYNC residual)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}\\ University of X}
+\institute{Inst A \and Inst B}
+\maketitle
+Text.
+\end{document}

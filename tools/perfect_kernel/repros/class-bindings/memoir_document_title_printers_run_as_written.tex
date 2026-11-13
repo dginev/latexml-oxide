@@ -1,0 +1,22 @@
+% A document's own list title printers run as written (memoir.cls:7107, :7116 `\print<ext>title`): an empty one prints no
+% title, one that is `\chapter*{#1}` starts a chapter; the list follows untitled. memoir's default printer is the
+% binding's: the kernel list titled by it.
+% witness: 2212.04510, 2604.21972 (`\renewcommand{\printtoctitle}[1]{}` under the document's own heading), 2505.14933
+%          (`\renewcommand{\printtoctitle}[1]{\chapter*{#1}}`)
+% oracle:  pdflatex 0 `!`: "Table of Contents" listing "1 Intro" (no "Contents"), a chapter "List of Figures" listing
+%          "1.1 A figure".
+% engines: rust int170a E=0 W=1, no `<TOC>`, an empty `<chapter>` "List of Figures".
+% expect:  an untitled `<TOC lists="toc">` in the "Table of Contents" section; a `<chapter>` "List of Figures" holding an
+%          untitled `<TOC lists="lof">`; W=1 the raw load's `misdefined:\@iffirstamp`.
+% status:  RED (int170a) -> GREEN (MEM1)
+\documentclass{memoir}
+\renewcommand{\printtoctitle}[1]{}
+\renewcommand{\printloftitle}[1]{\chapter*{#1}}
+\begin{document}
+\section*{Table of Contents}
+\tableofcontents*
+\listoffigures*
+\chapter{Intro}
+Text.
+\begin{figure}\caption{A figure}\end{figure}
+\end{document}

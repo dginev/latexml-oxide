@@ -1,0 +1,20 @@
+% mechanism: IEEEtran journal blocks held whole in a document macro (`\author{\aut}`), each name with its
+%   `\IEEEmembership` grade: the macro, holding names blocks, is read as it prints before the route (ieeetran_cls.rs
+%   `blocks_as_printed`, P2-8a), and each grade is then the reading's contact of the name it follows (`\lx@IEEE@grade`,
+%   P5a, OXIDIZED_DESIGN_DIVERGENCES #1016) — the two composed by the P28m merge
+% witness: synthetic (the grade sibling of `ieeetran_author_grid_in_a_macro`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Member, IEEE" over "Univ A", "Bob Baker, Fellow,
+%   IEEE" over "Univ B"
+% engines: int168a: Ann Able (Univ A, Univ B, Member, IEEE), Ann Able again (Univ A twice, Member, IEEE) — Bob Baker
+%   and his grade lost —, 0 errors, 1 warning; P28m: Ann Able (Member, IEEE; Univ A), Bob Baker (Fellow, IEEE; Univ B)
+% expect:  0 errors, 0 warnings; creators Ann Able (membership Member, IEEE; Univ A), Bob Baker (membership Fellow,
+%   IEEE; Univ B)
+% status:  RED (int168a) -> GREEN (P28m; guard perfect_kernel_batchp28)
+\documentclass[journal]{IEEEtran}
+\newcommand\aut{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}}\IEEEauthorblockA{Univ A}\and\IEEEauthorblockN{Bob Baker,~\IEEEmembership{Fellow,~IEEE}}\IEEEauthorblockA{Univ B}}
+\title{T}
+\author{\aut}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 1601.01675 1603.05188 1710.09738 1710.09924 1803.06921 (IEEEtran4PSCC.cls :4793-4804 \thanksto; 185 papers)
+% oracle:  pdflatex with the IEEEtran4PSCC.cls 1710.09738 ships: 0 errors; an unmarked footnote "This work is funded by Z."
+% engines: rust 68d = 1 error (undefined \thanksto), 1 warning (no IEEEtran4PSCC binding); Perl 1 error (the same)
+% expect:  0 errors, 1 warning (no IEEEtran4PSCC binding: IEEEtran serves it); <pubnote role="thanks">This work is funded by Z.</pubnote> in the frontmatter
+% status:  RED (68d) -> GREEN (67x)
+% preload: ar5iv.sty
+\documentclass{IEEEtran4PSCC}
+\begin{document}
+\title{A Title}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ}}
+\maketitle
+\begin{abstract}
+The abstract.
+\end{abstract}
+\thanksto{This work is funded by Z.}
+\section{Intro}
+Text.
+\end{document}

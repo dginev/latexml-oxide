@@ -1,20 +1,14 @@
 ---
 name: perl-port
 description: >
-  Faithfully translate, fix, or ROOT-CAUSE a LaTeXML binding (macro / primitive /
-  constructor / column type / package) from the Perl source to Rust — including
-  why an existing binding still diverges from Perl or real LaTeX when it already
-  looks faithful to the `.pool` (LaTeXML's `.pool`/`.ltxml` is a reimplementation
-  that sometimes SIMPLIFIES the kernel — check `latex.ltx`/`<pkg>.sty` and
-  `tex.web`, not just LaTeXML). Use whenever you write, change, or debug
-  engine/package code that mirrors Perl LaTeXML — porting a `.pool` entry, binding
-  a package, aligning a definition to Perl semantics, or chasing a structural /
-  mode / paragraph-break divergence to its root. Enforces "read the Perl (and
-  kernel) source first" and the divergence policy. Invoke for "port \foo",
-  "translate this .pool entry", "bind package X", "make Y match Perl", "why does
-  Rust differ from Perl on \foo", "this construct is malformed / renders wrong vs
-  LaTeX", "a primitive isn't firing", "root-cause this parity divergence",
-  "/perl-port".
+  Faithfully translate, fix, or root-cause a LaTeXML binding (macro / primitive /
+  constructor / column type / package) from the Perl source to Rust, including
+  why a binding that looks faithful to the `.pool` still diverges (LaTeXML's
+  `.pool`/`.ltxml` sometimes simplifies the kernel — check `latex.ltx`,
+  `<pkg>.sty`, `tex.web` too). Use whenever you write, change, or debug engine or
+  package code that mirrors Perl LaTeXML: porting an entry, binding a package,
+  aligning a definition to Perl, or chasing a structural / mode / paragraph-break
+  divergence to its root. Enforces read-the-source-first and the divergence policy.
 ---
 
 > The Perl code is the **ground truth**. This is a translation project: preserve
@@ -63,6 +57,28 @@ WISDOM #38):
   real gate (e.g. `hmode+vskip: head_for_vmode` — `\vskip` ends a paragraph only
   *in horizontal mode*), which tells you which state must be true upstream.
 
+- **Where Perl approximates TeX, follow TeX in both.** BM (Bruce Miller, LaTeXML's author, Q&A 2026-11-05): Perl
+  "seldom (if ever?)" traded fidelity for speed; it "may more often be lost due to not understanding what TeX really is
+  doing", or to not finding readable code that does it. Fix toward TeX, record the divergence in
+  `OXIDIZED_DESIGN_DIVERGENCES.md`, and add the Perl side to the upstream patch list
+  (`~/data/pk_agents/main/bruce_qa/ACTIONS.md` QA80; "We take patches!").
+
+### 1c — The shape of a binding (BM's priorities)
+
+1. Its interface matches the package's definitions (arguments, mode, the internal macros other packages read), and the
+   output is reasonable.
+2. Definitions that carry semantics become specific elements (constructors), or an annotation (`class`, `role`).
+3. Reversion gives user-level macros and their arguments, never `\lx@` internals.
+4. A lock is the last resort, against redefinitions that bypass the semantic macro; `\let` in a group and wrapping
+   patches (`\pretocmd`, `\apptocmd`, `\g@addto@macro`) still take effect.
+
+The ideal binding loads the real package and overrides only the macros that carry semantics; with no semantics, the raw
+package alone. Where TeX reads irregularly (`\hbox` takes `\bgroup`; one argument changes how the next is read), mirror
+TeX's reading — only where TeX's reading requires it — with a user-facing macro expanding to an internal `\lx@…`
+constructor, the alias kept so reversion shows the user-level name (the general macro-face design is after the merge).
+Use the definers wherever they fit.
+Comments stay short: one or two lines, plus the Perl line range and witness ids.
+
 ## 2 — Find the Rust home: `docs/parity/ORGANIZATION.md`
 
 It maps each Perl `.pool.ltxml` → `latexml_engine/src/<file>.rs` (38 of 40 are
@@ -107,9 +123,9 @@ approval, add the entry to `OXIDIZED_DESIGN.md` in the same change.
 
 ## 6 — Validate, then ship
 
-- `cargo test --tests --no-fail-fast` (true count; baseline ~1467/0 — see
-  `perf-check` for the RSS-fuse `MemoryBudget` cascade gotcha). New `.tex`/`.xml`
-  fixture ⇒ `cargo clean` first so the plugin rediscovers it.
+- `cargo nextest run --workspace` green (the current tally lives in
+  `docs/SYNC_STATUS.md`). New `.tex`/`.xml` fixture ⇒ `cargo clean` first so the
+  plugin rediscovers it.
 - `cargo +nightly clippy --workspace --all-targets -- -D warnings` and
   `cargo +nightly fmt --all` — the pre-push hook enforces both (it does NOT run
   tests, so run them yourself).

@@ -1,0 +1,17 @@
+% witness: run 340 elsarticle papers (`\fnmark` 4 of 35 sampled, `\cormark` 3, `\nonumnote` 3)
+% oracle:  pdflatex with TL 2025 elsarticle.cls (:153-176): 0 errors; the author marked * and 1, the notes below
+% engines: rust 65w = errors (each undefined; Perl's elsarticle binding lacks them)
+% expect:  0 errors; the corresponding-author and footnote texts as the author's notes; the unnumbered note
+% status:  RED (65w) -> GREEN (65x)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author{Ann Able\cormark[1]\fnmark[2,3]}
+\cortext[1]{Corresponding author.}
+\fntext[2]{Now elsewhere.}
+\fntext[3]{Also here.}
+\nonumnote{Supported by a grant.}
+\end{frontmatter}
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% witness: 2605.30274 (ACL `\author{…$^1$~~ …\\ $^1$…\\ \texttt{\{…\}@stu.hit.edu.cn}\\ … \texttt{\{…\}@huawei.com}}`; 77n r6
+%          candidate A/B)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1 / Cat Cole2 Dan Dorn1 / 1Univ X / 2Univ Y / {ann,bob}@x.edu /
+%          {cat}@y.com"
+% engines: rust int32a and 77n r5 = the first e-mail line on the first creator, the second on the second (the contact grid
+%          redistributor); 77n r6 candidate = both on the second (the grid waited for the pending affiliations)
+% expect:  0 errors, 0 warnings; 4 creators (names parted by spacing alone, `~~`, are apart since batch 77p): Ann Able
+%          (Univ X, ann@x.edu), Bob Baker (Univ X, bob@x.edu), Cat Cole (Univ Y, {cat}@y.com), Dan Dorn (Univ X) —
+%          pending contacts of another role than the pile's leave the grid to run
+% status:  RED (77n r6 candidate) -> GREEN (77n r6: 2 creators, the spacing-parted names one each) -> GREEN (77p)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$~~
+  Bob Baker$^1$~~\\
+  \textbf{Cat Cole}$^2$~~
+  \textbf{Dan Dorn}$^1$~~\\
+  $^1$Univ X\\
+  $^2$Univ Y \\
+  \texttt{\{ann,bob\}@x.edu}\\
+  \texttt{\{cat\}@y.com}}
+\maketitle
+x
+\end{document}

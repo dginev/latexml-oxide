@@ -1,0 +1,12 @@
+% witness: the r8 re-review of batch 77p (finding 7, probe s3)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡, Cat Cole†; "Univ A †"; "Univ B ‡"
+% engines: rust int38 (77p r11) = 0 errors; Univ A and Univ B on every name, and mark-only affiliations "†" and "‡"
+% expect:  0 errors, 0 warnings; Univ A on Ann Able and Cat Cole, Univ B on Bob Baker, no mark-only affiliation
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \quad Cat Cole$^{\dagger}$ \\ Univ A $^{\dagger}$ \\ Univ B $^{\ddagger}$}
+\begin{document}
+\maketitle
+Text.
+\end{document}

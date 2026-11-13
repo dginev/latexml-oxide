@@ -1,0 +1,20 @@
+% mechanism: REVTeX 4.1/4.2 read an `\email` address with `_` made other (revtex4-2.cls:2399-2404) and set it with
+%   `\href`, which without hyperref is `\@href`, the address in the current font (:1980; revtex4-1.cls:1959-1961);
+%   hyperref's `\href` sets it in the current font too. In the roman OT1 font 0x5F is the dot accent: pdflatex prints
+%   "ann˙able@a.edu", as did Perl and Rust (Perl TeX_Fonts.pool.ltxml:214). By the user's ruling (2026-10-11) the
+%   address is the author's: `\lx@address@textfont` keeps the roman font and sets it in the ASCII encoding.
+% witness: 9 run-336 revtex4-2 and 3 revtex4-1 OT1 papers with a `_` in an `\email`, 7 sampled months
+% oracle:  pdflatex 0 errors; "ann˙able@a.edu" in CMR8 (intentional divergence: we keep the author's '_')
+% engines: rust 64u: "ann˙able@a.edu"; perl: the same
+% expect:  the address as typed, "ann_able@a.edu", in the roman font (no font change)
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4-2}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\email{ann_able@a.edu}
+\affiliation{University of A}
+\maketitle
+Text.
+\end{document}

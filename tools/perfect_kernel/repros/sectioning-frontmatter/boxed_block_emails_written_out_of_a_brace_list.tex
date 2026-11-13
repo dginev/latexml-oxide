@@ -1,0 +1,21 @@
+% mechanism: a boxed author block (a `tabular` in `\author`) whose e-mail row writes a brace list: the frontmatter
+%   observer reads each address out of it (`\{ann,cat\}@a.edu` is ann@a.edu and cat@a.edu) and gives it to the name it
+%   spells; the writer's re-part had no form for an e-mail item and declined, and the old reader's one creator holding
+%   the whole `tabular` shipped. Fix: `Made::Email` (observer/emitter/plan.rs, repart.rs `item_source`, apply.rs `make`),
+%   the address in its row's fonts (`block_address_tokens`); a domain the list prints once is no word added. OD #958.
+% witness: 2609.39183, 2507.07465, 2107.12423, 2603.10436, 2608.20401 (SYNC_STATUS M1)
+% oracle:  pdflatex 0 errors; three rows: names, "1Univ A 2Univ B", the addresses in typewriter
+% engines: rust int127a: one creator holding the tabular; perl the same
+% expect:  0 errors; Ann (Univ A, ann@a.edu), Bob (Univ B, bob@b.edu), Cat (Univ A, cat@a.edu), each e-mail typewriter
+% status:  GREEN (100c)
+\documentclass{article}
+\title{T}
+\author{\begin{tabular}{c}
+Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{1}$ \\
+$^{1}$Univ A \quad $^{2}$Univ B \\
+\texttt{\{ann,cat\}@a.edu, bob@b.edu}
+\end{tabular}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

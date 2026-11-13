@@ -1,0 +1,17 @@
+% mechanism: an address's e-mail label in any language is what its line prints before the address's run, one word or two and a
+%   colon (`resolver::words::printed_email_label`, by place, beside `address_runs`' English label words): the contact's `name`,
+%   written as printed, and its words written, so no word is lost and no note doubles the address
+% witness: review revZ4br2 (`probes/l8.tex`, `l5.tex`); the guard's rows: `Correo electr\'onico:`, `Courriel :`
+% oracle:  pdflatex 0 errors; Ann Able; Univ A; "Correo electrónico: ann@a.org"
+% engines: rust Z4br2 (int145a), the switch on: `name="Email: "`, the kernel's, and a note "Correo electrónico: ann@a.org"
+%   beside the contact (the address twice), a Warning "Correo electrónico"
+% expect:  0 errors, 0 warnings; the switch on: one e-mail contact, `name="Correo electrónico: "`, no note
+% status:  RED (int145a) -> GREEN (perfect_kernel_batchn1::an_email_label_in_any_language_is_written_as_printed)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \\ Univ A \\ Correo electr\'onico: ann@a.org}
+\maketitle
+Body.
+\end{document}

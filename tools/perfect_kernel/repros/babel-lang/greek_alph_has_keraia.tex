@@ -1,0 +1,12 @@
+% babel greek's `\@alph` (greek.ldf:463-469 `\greek@alph`) writes a Greek numeral with its keraia: a level-2
+% `enumerate` label is "(αʹ)". LaTeXML prints "(α)", the letter without the numeral sign.
+% status:  RED (2026-10-03)
+% oracle:  pdflatex 0 errors: "1. α" / "(αʹ) β"
+% engines: rust 60s: "(α)"; 60q5 (OT1 tags): "(a)"
+% expect:  0 errors; the level-2 label "(αʹ)"
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[english,greek]{babel}
+\begin{document}
+\begin{enumerate}\item a\begin{enumerate}\item b\end{enumerate}\end{enumerate}
+\end{document}

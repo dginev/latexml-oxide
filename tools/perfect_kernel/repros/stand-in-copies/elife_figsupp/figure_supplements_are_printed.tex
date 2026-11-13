@@ -1,0 +1,19 @@
+% witness: 2311.00616 (elife.cls:392-416 `\figsupp` writes each supplement's caption and graphic to the `suppinfo`
+%          stream, :456-461 `\AtEndDocument` inputs it: ~1,000 words of supplement captions)
+% oracle:  pdflatex 0 errors (in the figure: "Figure 1—figure supplement 1. Short one.", "Figure 1—figure supplement 2.
+%          Long two."; at the end: "GRAPHIC ONE Figure 1—figure supplement 1. Long one. Source data", "GRAPHIC TWO
+%          Figure 1—figure supplement 2. Long two.")
+% engines: rust int23 (288e861078) = the copy's `\AtEndDocument` is not registered: the long captions and graphics
+%          are lost
+% expect:  0 errors, 0 warnings; the elife binding prints the supplements where elife.cls prints them
+% status:  RED (int23 288e861078) -> GREEN (int23 fix2)
+% preload: ar5iv.sty
+\documentclass{elife}
+\begin{document}
+\begin{figure}
+\caption{Main.}
+\figsupp[Short one.]{Long one. \figsuppdata{Source data}}{GRAPHIC ONE}
+\figsupp{Long two.}{GRAPHIC TWO}
+\end{figure}
+Body text.
+\end{document}

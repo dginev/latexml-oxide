@@ -1,0 +1,27 @@
+% mechanism: AASTeX 6.x is REVTeX 4.1 underneath (aastex62.cls:278-292): consecutive `\author` calls are one group, and
+%   every `\affiliation` after them, before the next `\author`, is each one's (`annotate=run`, aas_support_sty.rs
+%   `\affiliation` = revtex4_support_sty.rs `group_or_marked_affiliation`). AASTeX 7 never shares a run
+%   (aastex701.cls:7370 `\affil@error` stops on an author without an affiliation).
+% witness: 2403.06760 (aastex631, Super-Kamiokande: "K. Ieki 1, 46", 4 creators had lost 46); 1804.01623 (C. G.
+%   Tinney 12, 13); 2001.01892 (aastex62, five authors over two `\affil`s); dev giant-list census M3 (job tmp
+%   giant/rep/aasA.tex, giant/scan2.py)
+% oracle:  pdflatex with 2403.06760's own aastex631.cls (TL 2025 ships none) 0 errors: "Ann Able 1, 2, Bob Baker 1, 2
+%   and Cat Cole 1 / 1 Uni One / 2 Uni Two"
+% engines: rust 97d: Ann Able Uni One only (`annotate=new`); perl: Ann Able none, Bob Baker both
+%   (aas_support.sty.ltxml:118, the last author's)
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each Uni One and Uni Two, Cat Cole Uni One
+% status:  RED (97d) -> GREEN (97f)
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Uni One}
+\affiliation{Uni Two}
+\author{Cat Cole}
+\affiliation{Uni One}
+\begin{abstract}A.\end{abstract}
+\keywords{K}
+\section{Intro}
+Text.
+\end{document}

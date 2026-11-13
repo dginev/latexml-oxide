@@ -1,0 +1,16 @@
+% witness: 1608.08273, 1807.11932, 1909.11399 (`\mathop{\mathpalette\varlim@{\leftarrowfill@\scriptstyle}}\nmlimits@`
+%          in a paper's own inverse/direct limit; amsopn.sty:92-97 `\varlim@`)
+% oracle:  pdflatex 0 errors ("lim←" and "lim→" with the arrow under lim)
+% engines: rust 67o1 = 2 errors (`\varlim@` undefined: the amsopn binding defines \varprojlim without it); Perl's
+%          amsopn.sty.ltxml the same (KNOWN_PERL_ERRORS #696)
+% expect:  0 errors, 0 warnings; the two limits as \varprojlim and \varinjlim render
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\makeatletter
+\newcommand{\invlim}{\mathop{\mathpalette\varlim@{\leftarrowfill@\scriptstyle}}\nmlimits@}
+\newcommand{\dirlim}{\mathop{\mathpalette\varlim@{\rightarrowfill@\scriptstyle}}\nmlimits@}
+\makeatother
+\begin{document}
+$\invlim_n A_n$ and $\dirlim_n B_n$ and $\varprojlim_n C_n$.
+\end{document}

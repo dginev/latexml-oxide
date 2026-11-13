@@ -1,0 +1,18 @@
+% witness: aguplus/aguplus (aguplus.tex:729-733; the \multicolumn{1}{c}{} at :731)
+% oracle: pdflatex aguplus.tex -> 0 errors
+% engines: latexml_oxide.b56z --preload='[rawstyles,rawclasses]latexml.sty'
+% expect: tabular with a centered \multicolumn cell; 0 Error/Fatal
+% status: GREEN (batch 56aa, 2026-09-06)
+% mechanism: under [rawstyles] agupp.sty:599 raw-\def\multicolumn = latex.ltx's
+%   \multicolumn -> \@mkpream{#2} (latex.ltx:16632); \@mkpream runs \@classz/\@acol
+%   (:16641,:16643). Those are \let-target-only CSes (only \let in \array :16550 /
+%   \@tabular :16560). Our native \@tabular (sect10.rs:269) and Perl's constructor
+%   \tabular do NOT perform those \let, so \@classz/\@acol are undefined. The raw
+%   \def clobbers the native \multicolumn binding (Let!, sect10.rs:350, UNLOCKED).
+\documentclass[twoside,agupp]{aguplus}
+\begin{document}
+\begin{tabular}{l@{~$\Rightarrow$~}l}
+a & b\\
+\multicolumn{1}{c}{} & c\\
+\end{tabular}
+\end{document}

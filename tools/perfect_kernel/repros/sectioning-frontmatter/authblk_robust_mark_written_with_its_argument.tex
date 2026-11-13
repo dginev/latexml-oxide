@@ -1,0 +1,18 @@
+% mechanism: a name's kept mark whose call is a robust command (`\DeclareRobustCommand*`, its meaning the parameterless
+%   `\protect \mk␣`) is written with its argument (`content::arguments_end` reads the inner `\mk␣`'s parameters); cut
+%   from its `{2}`, the `\ifcase` read the next token as its number. The shape of icrc2009.cls's `\IEEEauthorrefmark`
+% witness: 0912.0896 (icrc2009.cls), 2609.25589 (ieee-ojvt.cls); this synthetic shape: PMK1
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee∗ , Bob Ray∗ and Cy Dee†", "∗Univ of X", "†Univ of Y"
+% engines: int164a: 0 errors, 1 warning (Missing number); Cy Dee "∗ ⁣ †" (a ∗ invented); PMK1: Cy Dee †
+% expect:  0 errors, 0 warnings; Ann Lee ∗ and Bob Ray ∗ "∗ Univ of X", Cy Dee † "† Univ of Y"
+% status:  RED (int164a) -> GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{article}
+\usepackage{authblk}
+\DeclareRobustCommand*{\mk}[1]{\raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{\ifcase#1\or *\or \dagger\else c\fi}}}}
+\begin{document}
+\title{T}
+\author{Ann Lee\mk{1}, Bob Ray\mk{1} and Cy Dee\mk{2}}
+\affil{\mk{1}Univ of X}
+\affil{\mk{2}Univ of Y}
+\maketitle
+\end{document}

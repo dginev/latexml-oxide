@@ -1,0 +1,23 @@
+% mechanism: a class a binding reads raw is a raw class to K11 (68x): `input_definitions` fires the title-page store
+%   reroutes at the end of the class load for the class the binding read (latexml_contrib lni_cls.rs reads lni.cls),
+%   the binding's own `\author`/`\affil` staying its own. lni.cls's `\subtitle` stores `\@subtitle`, which only its
+%   refused `\maketitle` reads. Before 68u r3 the binding's read fired nothing (a bold "A Subtitle" paragraph);
+%   68u r3 called K11 from four bindings by hand; 68x makes it one rule.
+% witness: 2608.21389 (10 lni papers)
+% oracle:  pdflatex: 0 errors; "The Title" over "A Subtitle", then "Ann Able1"
+% engines: rust 68u r2: no <subtitle>; perl: no binding (the class raw is not read)
+% expect:  0 errors; <subtitle>A Subtitle</subtitle>, the author with its affiliation
+% status:  RED (68u r2) -> GREEN (68u r3, by hand) -> GREEN (68x, one rule)
+% preload: ar5iv.sty
+\documentclass[english]{lni}
+\begin{document}
+\title{The Title}
+\subtitle{A Subtitle}
+\author[1]{Ann Able}{ann@example.org}{}
+\affil[1]{First University}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

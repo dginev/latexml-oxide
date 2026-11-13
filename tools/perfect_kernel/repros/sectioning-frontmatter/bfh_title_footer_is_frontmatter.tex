@@ -1,0 +1,18 @@
+% bfhlayout.sty prints \department, \institute (\titlefooterleft, bfhlayout.sty:735-753) and
+% \titlefooterright (:755-756) only in the title page's scrlayer footer, a page style LaTeXML never
+% typesets. The binding (bfhlayout_sty.rs) makes them frontmatter notes at \maketitle (user ruling
+% 2026-10-03: the department is frontmatter). The three warnings are the class's own (KOMA's
+% \@startsection notices under LaTeXML; bfhfonts' pdfLaTeX note, which pdflatex prints too).
+% witness: bfh-ci DEMO-BFHFactsheet, DEMO-BFHProjektProposal (89.3 -> 92.0 / 91.4 %). Guard:
+%   perfect_kernel_batch61::bfh_title_footer_is_frontmatter.
+% oracle:  pdflatex 0 errors: the title page foot "Applied Physics Unit ... Project Homepage".
+%          perl: raw class, the foot dropped (SHARED).
+% engines: rust 61m1: 0 errors; <note role="department"> and <note role="titlefooter">.
+\documentclass{bfhpub}
+\begin{document}
+\title{Report Title}
+\department{Applied Physics Unit}
+\titlefooterright{Project Homepage}
+\maketitle
+Body text.
+\end{document}

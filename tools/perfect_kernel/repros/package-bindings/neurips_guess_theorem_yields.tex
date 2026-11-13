@@ -1,0 +1,18 @@
+% The neurips binding's `\AtBeginDocument` theorem set (guessed: the shipped neurips_2024.sty declares none) is no
+% declaration of the document's: the author's `\newtheorem{lemma}{Lemma}`, `\newtheorem{remark}{Observation}` in the
+% body replace the guessed {lemma}, {remark} (both on theorem's counter, within section).
+% witness: review of batch 77v r2 (probe rev77v2/neur.tex)
+% oracle:  pdflatex (article; neurips_2024.sty is not in TL 2025 and declares no theorems) 0 errors; "Lemma 1 B",
+%          "Observation 1 R"
+% engines: rust 77v2-rel (f30e7bb268): "Lemma 1.1", "Remark 1.2"; 77v-rel: as expected
+% expect:  0 errors, 0 warnings; "Lemma 1", "Observation 1"
+% status:  RED -> GREEN (77v r3; guard perfect_kernel_batch77v::neurips_guess_yields_to_document_newtheorem)
+\documentclass{article}
+\usepackage{neurips_2024}
+\begin{document}
+\section{One}
+\newtheorem{lemma}{Lemma}
+\newtheorem{remark}{Observation}
+\begin{lemma}B\end{lemma}
+\begin{remark}R\end{remark}
+\end{document}

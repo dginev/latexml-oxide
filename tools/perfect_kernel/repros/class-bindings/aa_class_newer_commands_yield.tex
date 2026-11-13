@@ -1,0 +1,16 @@
+% witness: 1201.4282 (aa.cls v7.0: no `\arxiv`, no `\etalname`; 14 of 139 sampled copies lack `\arxiv`, 13
+%          `\etalname`); 1604.01307, 1809.05581, 2509.20613 (v8.2-v9.4's `\arxiv`, :2058-2062); the reviewer's repro
+%          rev68a/t/aa/a1 (a paper's own `\newcommand\arxiv`)
+% oracle:  pdflatex with 1201.4282's aa.cls: "Text MyJPB, ARX(1234.5678), EA."; 0 errors
+% engines: rust 68a r1 = 0 errors, "arXiv:1234.5678", "et al." (the binding's v9.1 `\arxiv` and `\etalname` kept over
+%          the paper's, an Info each); rust 67int6 = "ARX(1234.5678)"
+% expect:  0 errors, 0 warnings; the paper's own definitions print
+% status:  RED (68a r1) -> GREEN (68a r2)
+% preload: ar5iv.sty
+\documentclass{aa}
+\newcommand\jpb{MyJPB}
+\newcommand\arxiv[1]{ARX(#1)}
+\newcommand\etalname{EA}
+\begin{document}
+Text \jpb, \arxiv{1234.5678}, \etalname.
+\end{document}

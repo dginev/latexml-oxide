@@ -1,0 +1,31 @@
+% witness: imsart.sty:943 `\def\open@fm{\global\setbox\fm@box=\vbox\bgroup…}` around `{frontmatter}`, :987
+%          `\newenvironment{aug}{}{\smart@par}`, :1028 `\def\affiliation#1{\smart@par…\vskip\affiliation@skip\bgroup
+%          \affiliation@size #1\par\egroup}` (1301.1466); review rev94b r3 (its probe `p/ims/out`)
+% oracle:  pdflatex 0 errors: "Univ A, Town" (the stand-in's frontmatter box), "Body." (its `\author` stores the names)
+% engines: rust 94b r3 = 0 errors, 0 warnings: the box the authors were set in was recorded in the group of the
+%          kernel's call, gone at the call's end: the `\affiliation` the class's line in the body, no contact
+% expect:  0 errors, 0 warnings; the authors' box recorded globally by its frame's serial (`frontmatter_stores.rs`
+%          `author_box`): an `\affiliation` after `\end{aug}`, still in the frontmatter's box, is the API's — Ann Able's
+%          and Bob Baker's (`annotate=run`); eager and --streaming the same
+% status:  RED (94b r3) -> GREEN (94b r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{imsfm.sty}
+\ProvidesPackage{imsfm}
+\newbox\fm@box
+\def\open@fm{\global\setbox\fm@box=\vbox\bgroup\hsize=\textwidth}
+\def\close@fm{\par\egroup\unvbox\fm@box}
+\newenvironment{frontmatter}{\open@fm\ignorespaces}{\close@fm}
+\def\smart@par{\ifhmode\par\fi}
+\newenvironment{aug}{}{\smart@par}
+\def\affiliation#1{\smart@par\vskip6\p@\bgroup\footnotesize\itshape #1\par\egroup}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{imsfm}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\begin{aug}\author{Ann Able and Bob Baker}\end{aug}
+\affiliation{Univ A, Town}
+\end{frontmatter}
+Body.
+\end{document}

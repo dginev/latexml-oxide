@@ -18,6 +18,7 @@ impl Object for Number {
   fn be_digested(self) -> Result<Digested> { Ok(Digested::from(RegisterValue::Number(self))) }
 }
 impl NumericOps for Number {
+  fn arith_ceiling() -> i64 { crate::common::numeric_ops::MAX_INTEGER }
   fn new(number: i64) -> Self { Number(number) }
   fn new_f64(number: f64) -> Self { Number(number.trunc() as i64) }
   fn value_of(self) -> i64 { self.0 }

@@ -1,0 +1,23 @@
+% mechanism: `\hyperref{url}{category}{name}{text}` reads the text as Semiverbatim
+%   (Perl hyperref.sty.ltxml:219 `\hyperref@@iv` with four Semiverbatim parameters), and a
+%   Semiverbatim argument is fully expanded before it is digested (Parameter.pm:122-131):
+%   `\textbf` -> `\fontseries` -> `\edef\f@series{...}` with `\f@series` expanded to `m`, a
+%   definition named `m` (tex.web §1215, since 56jp). Real hyperref (hyperref.sty:4825-4832)
+%   reads three arguments and typesets the text as ordinary material; the link is the URL with
+%   the anchor `\ifx\\#2\\\else#2.\fi#3` (:4827). The Rust port also left the URL out ("#X.").
+% witness: univie-ling/univie-ling (7 errors), fixdif/fixdif-zh-cn (2 of 7)
+% oracle:  pdflatex 0 errors: "A Manual B" (Manual bold, a link to univie-ling-expose.pdf),
+%          "C x2 text D" (a link to doc.pdf#section.intro)
+% engines: rust (56js) = 1 error "T_LETTER[m] cannot be a definition's name",
+%          <ref href="#X.">Manual</ref> (not bold); perl = 0 errors,
+%          <ref href="univie-ling-expose.pdf#X.">Manual</ref> (not bold), and "$x^2$" as text
+% expect:  0 errors, 0 warnings; <ref font="bold" href="univie-ling-expose.pdf">Manual</ref>,
+%          <ref href="doc.pdf#section.intro"> holding the math
+% status:  RED (56jw) -> GREEN (56jw)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+A \hyperref{univie-ling-expose.pdf}{}{}{\textbf{Manual}} B
+
+C \hyperref{doc.pdf}{section}{intro}{$x^2$ text} D
+\end{document}

@@ -1,0 +1,33 @@
+% A file that ends inside a macro argument is a runaway at tex.web's `matching` status (§389-391
+% `macro_call`): TeX reports "File ended while scanning use of \foo", inserts `\par` with
+% `long_state:=outer_call` (§339), and `macro_call` then abandons the call (§392 "Report a runaway
+% argument and abort"): the macro and its argument are dropped, and the enclosing input goes on.
+% Undelimited (`\foo{abc`, `\foo` alone) and delimited (`\bar abc`, `\bar a{bc`) alike.
+% witness: batch 56ja residual (SYNC_STATUS "Balanced reads other than definitions ...")
+% oracle:  pdflatex 4 errors ("File ended while scanning use of \foo" ×2, "... of \bar" ×2),
+%          prints "A B C D E"
+% engines: rust=2 errors ("readBalanced ran out" for the two groups, none for `\bar abc` and
+%          `\foo`), prints "A [abc]B <>abc C <>abc D []E": the macro ran on the partial or an
+%          empty argument (56ja-rel, 2026-09-25)
+% expect:  4 errors "File ended while scanning use of"; "A B C D E"
+% status:  GREEN (W9: ScannerStatus::Matching, argument_runaway → read_macro_arguments None;
+%          guard scanner_status::a_file_ending_inside_a_macro_argument_drops_the_call)
+\documentclass{article}
+\def\foo#1{[#1]}
+\def\bar#1.{<#1>}
+\begin{filecontents*}{file_end_matching_group.tex}
+\foo{abc
+\end{filecontents*}
+\begin{filecontents*}{file_end_matching_delimited.tex}
+\bar abc
+\end{filecontents*}
+\begin{filecontents*}{file_end_matching_delimited_group.tex}
+\bar a{bc
+\end{filecontents*}
+\begin{filecontents*}{file_end_matching_token.tex}
+\foo
+\end{filecontents*}
+\begin{document}
+A \input file_end_matching_group.tex B \input file_end_matching_delimited.tex C
+\input file_end_matching_delimited_group.tex D \input file_end_matching_token.tex E
+\end{document}

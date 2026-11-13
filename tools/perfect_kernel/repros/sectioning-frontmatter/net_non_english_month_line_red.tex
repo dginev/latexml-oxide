@@ -1,0 +1,26 @@
+% mechanism: (RED, deferred) a date's line below the unclaimed-text net's floor in another language — `mars 2021` — is
+%   not read as a date (insert.rs `date_word` knows English months alone), so it is counted and not kept, where
+%   "March 2021" is the net's note line.
+% witness: review rev105a S4
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "mars 2021", "Text."
+% engines: rust 105a r2 = 0 errors, 1 warning (frontmatter:unclaimed, \@xa "mars 2021"), no note; perl = 0 errors (the
+%   raw class is not loaded: OmniBus), lost
+% expect:  0 errors, 1 warning (frontmatter:unclaimed, kept); <ltx:note role="note">mars 2021</ltx:note>
+% engines: int159a (ST1): "mars 2021" kept as the creator's <note role="note">, 0 warnings (the expect's Warning not raised; nothing lost). The English sibling net_shaped_store_below_the_floor_is_kept also gives 0 W today. Right but not as the expect says: RED until the main session rules whether a kept net line warns
+% status:  RED (105a r2) — deferred (SYNC row "105a"); no guard
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netmonth.cls}
+\ProvidesClass{netmonth}\LoadClass{article}
+\def\@anames{}\def\@xa{}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\xa[1]{\gdef\@xa{\ignorespaces#1}}
+\renewcommand\@author{\@anames\\\@xa}
+\end{filecontents*}
+\documentclass{netmonth}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\xa{mars 2021}
+\maketitle
+Text.
+\end{document}

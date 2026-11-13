@@ -1,16 +1,62 @@
 //! TeX Debugging
 //!
 //! Core TeX Implementation for LaTeXML
-static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> =
-  Lazy::new(|| Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap());
+static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(
+    r"^\\(?:(?:un)?expanded|detokenize|(?:lx@)?directlua|(?:lx@)?luaescapestring|primitive)$",
+  )
+  .unwrap()
+});
+/// Expandable primitives that the kernel implements as closure-backed macros:
+/// `\meaning` names them, as tex.web §296 `print_meaning` does (`print_cmd_chr`),
+/// while the definition is still the kernel's closure (a `\def\string{…}` is a
+/// macro). Perl prints `macro:#1#2->CODE(0x…)`, a heap address.
+static EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^\\(?:expandafter|noexpand|string|meaning)$").unwrap());
+/// TeX primitives the kernel implements as macros of its own (tex_math.rs `\over` family, `\overline`,
+/// `\underline`): `\meaning` prints the primitive's name, as tex.web §296 `print_meaning` does for the primitive (and
+/// LaTeX leaves these primitive, but `\underline`, whose `\@@underline` copy is), while the definition is still
+/// LaTeXML's (its origin survives a `\let`, so `\let\@@over\over` reads `\over`; a document's or file's
+/// redefinition is a macro again). amsgen's `\@saveprimitive` (amsgen.sty:27, amsmath.sty:397, and the copies classes
+/// embed: asl.cls:327 — 1005.4193, 1803.03483, 1111.1504) compares `\meaning\over` with `\string\over`; a macro meaning
+/// failed it with "Unable to properly define \@@over; primitive \over no longer primitive", and the class's `\frac`
+/// built on the unsaved `\@@over` lost its fraction (KNOWN_PERL_ERRORS #985). Perl TeX_Debugging.pool.ltxml:125-127
+/// keeps this list for `\expanded`/`\unexpanded`/`\detokenize` ("could be extended further").
+static KERNEL_PRIMITIVE_STANDINS_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(
+    r"^\\(?:over|atop|above|overwithdelims|atopwithdelims|abovewithdelims|overline|underline)$",
+  )
+  .unwrap()
+});
 static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
 static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
+
+/// The parameter text of a delimited parameter as TeX prints it (tex.web
+/// §262 `print_cs`): every control word is followed by a space, so
+/// `\def\x#1\foo#2{…}` shows `macro:#1\foo #2->…`. The delimiter tokens
+/// live in `param.extra`; rendering them with `writable_tokens` (the one
+/// print_cs-faithful path, shared with `\detokenize` and the expansion body)
+/// keeps a `\meaning`-driven parser aligned — expkv-cs.tex:996-1001
+/// `\ekvc@extract@mark@` delimits on `<space>#` and its aggregate keys ran
+/// away without the space (expkv-bundle 13 errors; Perl omits it too).
+/// Guard: `perfect_kernel_batch56::meaning_prints_delimiter_control_words_with_a_space`.
+fn delimiter_text(param: &::latexml_core::parameter::Parameter, spec: &str) -> String {
+  if let Some(tks) = param.extra.first()
+    && !tks.is_empty()
+  {
+    writable_tokens(tks)
+  } else {
+    LEAD_W_COLON_RE.replace(spec, "").to_string()
+  }
+}
 
 // TODO: Rethink the numeric juggling here to make sense in our low-level proglang.
 static TRACE_MACROS: u8 = 0x1;
 static TRACE_COMMANDS: u8 = 0x2;
 static _TRACE_ALL: u8 = 0x3; // MACROS | COMMANDS
 static _TRACE_PROFILE: u8 = 0x4;
+
+use latexml_core::definition::closure_body_meaning;
 
 use crate::prelude::*;
 
@@ -31,11 +77,25 @@ LoadDefinitions!({
   // \pausing          pi if positive, the program halts after every line is read from the input
   // file and waits for a response from the user.
 
-  // These are no-ops; Basically, LaTeXML runs in scrollmode
-  DefPrimitive!(T_CS!("\\errorstopmode"), None, None);
-  DefPrimitive!(T_CS!("\\scrollmode"), None, None);
-  DefPrimitive!(T_CS!("\\nonstopmode"), None, None);
-  DefPrimitive!(T_CS!("\\batchmode"), None, None);
+  // tex.web §71 `interaction` (batch=0, nonstop=1, scroll=2, errorstop=3) is a
+  // global, not an eqtb entry (§1265 `new_interaction`). LaTeXML has no
+  // terminal, so the modes only matter where tex.web consults them: §484 makes a
+  // `\read` from the terminal FATAL below scroll mode — the halt idiom of
+  // iftex.sty:51 `\IFTEX@Require` and expl3's `\__msg_fatal_exit:`
+  // (`\batchmode\read -1 to …`). Absent = above nonstop (tex.web §1758 starts in errorstop; a terminal-less
+  // run can only ever prompt into EOF, so scroll/errorstop both stay no-ops). KNOWN_PERL_ERRORS #213, DIVERGENCES #220.
+  DefPrimitive!(T_CS!("\\errorstopmode"), None, {
+    AssignValue!("INTERACTION_MODE", Number::new(3), Some(Scope::Global));
+  });
+  DefPrimitive!(T_CS!("\\scrollmode"), None, {
+    AssignValue!("INTERACTION_MODE", Number::new(2), Some(Scope::Global));
+  });
+  DefPrimitive!(T_CS!("\\nonstopmode"), None, {
+    AssignValue!("INTERACTION_MODE", Number::new(1), Some(Scope::Global));
+  });
+  DefPrimitive!(T_CS!("\\batchmode"), None, {
+    AssignValue!("INTERACTION_MODE", Number::new(0), Some(Scope::Global));
+  });
   DefRegister!("\\pausing", Number!(0));
 
   //======================================================================
@@ -55,15 +115,36 @@ LoadDefinitions!({
   // stderr. `NoteLog!` is the faithful vehicle; the old `if current_verbosity() > -1
   // { Note!(...) }` both echoed to stderr (Perl does not) and dropped `\message`
   // from the log under `--quiet` (the #763 log-floor bug).
-  DefPrimitive!("\\message{}", sub [(message)] {
-    NoteLog!(writable_tokens(&do_expand(message)?));
+  //
+  // The text is tex.web §1279 `scan_toks(false, true)`: the `{` is found by
+  // expanding (`\message\expandafter{\foo}`), the text is expanded as it is
+  // read (`\the` once, `\protected` macros kept), and a file that ends inside
+  // it is a runaway, "File ended while scanning text of \message" (§338-339).
+  // Perl reads a `{}` argument and expands it after (TeX_Debugging.pool.ltxml:65).
+  DefPrimitive!("\\message XGeneralText", sub [(message)] {
+    NoteLog!(writable_tokens(&message));
   });
 
   DefRegister!("\\errhelp", Tokens!());
-  DefPrimitive!("\\errmessage{}", sub[(args)] {
-    let message = Expand!(args);
-    let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
-    Note!(s!("{}: {}", message, help));
+  // tex.web §1283/§23571: `\errmessage` runs `error`, so it COUNTS — 100 of
+  // them are a fatal stop (§1887-1890). Perl TeX_Debugging.pool.ltxml:71-74
+  // only `Note`s it (KPE #195), which let expl3's `\msg_error` (`\tex_errmessage:D`,
+  // expl3-code.tex:349) loop unbounded: csvsimple-l3's `sort by=` head read
+  // repeats a missing-file error forever (90,508 times to TokenLimit) where
+  // pdflatex aborts at 100. Counting it lets the consecutive-error breaker
+  // (`MAX_CONSECUTIVE_ERRORS`) end the loop with a partial document. Guard:
+  // `perfect_kernel_batch56::errmessage_counts_toward_the_error_breaker`.
+  // Its text is `\message`'s, `scan_toks(false, true)` (§1279 `issue_message`).
+  // The help is shown as it stands, tex.web §1283 `token_show(err_help)`, unexpanded: t4enc.def:36-39's `\m`
+  // keeps `\m #1` in it, which Perl's `Expand(\the\errhelp)` (TeX_Debugging.pool.ltxml:73) called again for ever
+  // (2405.01972, `\m{y}` in T4: Fatal PushbackLimit).
+  DefPrimitive!("\\errmessage XGeneralText", sub[(message)] {
+    let help = match lookup_register("\\errhelp", Vec::new())? {
+      Some(RegisterValue::Tokens(help)) => help.to_string(),
+      _ => String::new(),
+    };
+    let text = if help.trim().is_empty() { message.to_string() } else { s!("{message}: {help}") };
+    Error!("errmessage", "\\errmessage", text);
   });
   DefRegister!("\\errorcontextlines", Number!(5));
 
@@ -73,8 +154,20 @@ LoadDefinitions!({
   // \meaning          c  adds characters describing a token to the output stream.
   // Not sure about this yet...
   // NOTE: Lots of back-and-forth mangle with definition vs cs; don't do that!
-  DefMacro!("\\meaning Token", sub[(token)] {
+  // The token is read at `normal` scanner status (tex.web §471, as for
+  // `\string`): at a file's end it is the first token of the enclosing input.
+  DefMacro!(T_CS!("\\meaning"), None, {
+    let token = read_token_across_input_ends()?.unwrap_or_else(|| T_CS!("\\relax"));
     let mut meaning = String::from("undefined");
+    // A `\noexpand` marker (the `\special_relax` family) is tex.web §358's
+    // `relax` variant with chr `no_expand_flag`, and `print_meaning` shows it
+    // as `\relax` (§266 `print_cmd_chr(relax, …)`) — never the marker's own
+    // name, which Perl prints (divergence #238).
+    let token = if token.is_noexpand_family() {
+      T_CS!("\\relax")
+    } else {
+      token
+    };
     if let Some(definition) = if token == T_ALIGN!() {
       Some(Stored::Token(token))
     } else {
@@ -103,25 +196,50 @@ LoadDefinitions!({
           return Ok(Tokens::new(Explode!(meaning)));
         }
       }
-      let definition : Stored = match definition {
-        Stored::Primitive(primitive) =>
-          Stored::Token(primitive.get_cs_or_alias().into_owned()),
-        Stored::Constructor(constructor) =>
-          Stored::Token(constructor.get_cs_or_alias().into_owned()),
-        Stored::Conditional(cond) =>
-          Stored::Token(cond.get_cs_or_alias().into_owned()),
-        other => other
+      let definition: Stored = match definition {
+        Stored::Primitive(primitive) => {
+          let cs = primitive.get_cs_or_alias();
+          if cs.with_str(|s| s == "\\special_relax") {
+            // A `\let` alias of a `\noexpand` marker holds the `relax`
+            // variant itself (tex.web §1221 `define(p, relax, no_expand_flag)`),
+            // whose meaning prints as `\relax` (§266), not the marker's name.
+            Stored::Token(T_CS!("\\relax"))
+          } else if cs.with_str(|s| s == "\\lx@directlua") || token.to_string() == "\\directlua" {
+            Stored::Token(T_CS!("\\directlua"))
+          } else if cs.with_str(|s| s == "\\lx@luaescapestring")
+            || token.to_string() == "\\luaescapestring"
+          {
+            Stored::Token(T_CS!("\\luaescapestring"))
+          } else {
+            Stored::Token(cs.into_owned())
+          }
+        },
+        Stored::Constructor(constructor) => {
+          Stored::Token(constructor.get_cs_or_alias().into_owned())
+        },
+        Stored::Conditional(cond) => Stored::Token(cond.get_cs_or_alias().into_owned()),
+        // `DefMath` atoms are constructors in Perl, so they take the same
+        // reduction; the catch-all rendered them as `Stored[??]`, which
+        // `\meaning`-sniffing packages (tikzlibrarymath.code.tex:22-46
+        // `\tikz@math@@getmeaning`) then misparse. Witness: sunpath.
+        Stored::MathPrimitive(m) => Stored::Token(m.get_cs_or_alias().into_owned()),
+        other => other,
       };
 
       // Now that we've tried to obtain an expandable definition, do the TeX dance:
       match definition {
         Stored::Token(t) => {
           let cc = t.get_catcode();
-          let text = if cc == Catcode::SPACE {
+          let mut text = if cc == Catcode::SPACE {
             String::from(" ")
           } else {
             t.to_string()
           };
+          if text == "\\lx@directlua" {
+            text = String::from("\\directlua");
+          } else if text == "\\lx@luaescapestring" {
+            text = String::from("\\luaescapestring");
+          }
           meaning = String::from(cc.meaning());
           if !meaning.is_empty() {
             meaning.push(' ');
@@ -143,10 +261,7 @@ LoadDefinitions!({
             // always yields `\char`, including for `\mathchardef`. Our
             // `Register` *does* carry a decoded `mathglyph`, so branching on it
             // would silently diverge from Perl; emit `\char` unconditionally.
-            let value = register
-              .value
-              .clone()
-              .map_or(0, NumericOps::value_of);
+            let value = register.value.clone().map_or(0, NumericOps::value_of);
             // The literal `"` is load-bearing: packages recover the character
             // value by splitting \meaning on it with a delimited argument
             // (bxcoloremoji.sty's `\def\bxce@do#1"#2\relax`). Without it the
@@ -161,15 +276,37 @@ LoadDefinitions!({
           // short-circuit some troublesome discrepancies with TeX, which end up macros on our end,
           // but \meaning expects as primitives in the CTAN ecosystem.
           let cs = expandable.get_cs_or_alias().to_string();
+          let cs_token = token.to_string();
+          let kernel_closure = matches!(expandable.expansion, Some(ExpansionBody::Closure(_)));
+          let shown_as_primitive = |name: &str| {
+            EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(name)
+              || (kernel_closure && EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING.is_match(name))
+          };
+          // (LaTeX's own `\underline` is a robust macro, latex.ltx:16369, and only its `\@@underline` copy, :16368, is
+          // the primitive: the name itself keeps its macro meaning)
+          if expandable.origin.is_latexml_owned()
+            && KERNEL_PRIMITIVE_STANDINS_FOR_MEANING.is_match(&cs)
+            && !(cs == "\\underline" && cs_token == "\\underline")
+          {
+            return Ok(Tokens::new(ExplodeChars!(cs)));
+          }
           // These exceptions could be extended further, as we add more .sty/.cls support
-          if EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(&cs) {
-            return Ok(Tokens::new(Explode!(cs)));
+          if shown_as_primitive(&cs) || shown_as_primitive(&cs_token) {
+            let mut canonical = if shown_as_primitive(&cs_token) {
+              cs_token
+            } else {
+              cs
+            };
+            if let Some(stripped) = canonical.strip_prefix("\\lx@") {
+              canonical = format!("\\{stripped}");
+            }
+            return Ok(Tokens::new(ExplodeChars!(canonical)));
           }
           let params = match expandable.get_parameters() {
             Some(ps) => ps.get_parameters(),
-            None => Vec::new()
+            None => Vec::new(),
           };
-          let mut spec_parts : Vec<SymStr> = Vec::new();
+          let mut spec_parts: Vec<SymStr> = Vec::new();
           let mut p_trailer = "";
           // params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
           let mut arg_index = 0;
@@ -183,32 +320,41 @@ LoadDefinitions!({
               "RequireBrace" => {
                 // tex's \meaning prints out the required braces for "\def\a#{}" variants
                 p_trailer = "{";
-                p_spec    = pin!("{");
+                p_spec = pin!("{");
               },
               "UntilBrace" => {
+                // `\def\b#1#{…}`: TeX's `macro:#1{->…{` (tex.web §473-476), the brace after the parameter too
                 p_trailer = "{";
-                arg_index+=1;
-                p_spec = pin(
-                  with(p_spec, |p_str| format!("#{arg_index}{p_str}")));
-              }
+                arg_index += 1;
+                p_spec = pin(s!("#{arg_index}{{"));
+              },
               other if other.starts_with("Match:") => {
                 // just match, don't increment arg index
-                p_spec = pin(LEAD_W_COLON_RE.replace(other,""));
+                p_spec = pin(delimiter_text(param, other));
               },
               other if UNTIL_SPEC.is_match(other) => {
                 // implied argument at this slot
-                p_spec = pin(LEAD_W_COLON_RE.replace(other,""));
-                arg_index +=1 ;
-                p_spec = pin(
-                  with(p_spec, |p_str| s!("#{arg_index}{p_str}")));
+                let delim = delimiter_text(param, other);
+                arg_index += 1;
+                p_spec = pin(s!("#{arg_index}{delim}"));
+                // A `#{` delimiter's brace ends the replacement text too (tex.web §476; `parse_def_parameters`).
+                if param
+                  .extra
+                  .first()
+                  .and_then(|tks| tks.unlist_ref().last())
+                  .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+                {
+                  p_trailer = "{";
+                }
               },
-              _other => { // regular parameter, increment
-              // skip the latexml-only requirement params, but only here,
-              // since Match also have "novalue" set.
+              _other => {
+                // regular parameter, increment
+                // skip the latexml-only requirement params, but only here,
+                // since Match also have "novalue" set.
                 if param.novalue {
                   continue_flag = true;
                 } else {
-                  arg_index+=1;
+                  arg_index += 1;
                   // ALL parameters — including optional ones — render as a
                   // plain `#N`, matching Perl `\meaning`. Perl's `\meaning`
                   // reflects LaTeXML's internal *parameter count*, not TeX
@@ -234,41 +380,45 @@ LoadDefinitions!({
                   // text and zero errors.
                   p_spec = pin(s!("#{arg_index}"));
                 }
-              }
+              },
             }
             if !continue_flag {
               spec_parts.push(p_spec);
             }
           }
-          let mut spec : String = join(&spec_parts,"");
-          spec = spec.replace("{}","");
-          spec = spec.replace("Token","");
+          let mut spec: String = join(&spec_parts, "");
+          spec = spec.replace("{}", "");
+          spec = spec.replace("Token", "");
 
+          // The prefixes print through `print_esc`, so in `\escapechar` (tex.web §1295; `print_meaning` §296): ltcmdhooks
+          // reads them with `\escapechar` set to `/` (latex.ltx:7011-7016, `\__hook_make_prefixes:w`).
+          let esc = escapechar();
           let mut prefixes = String::new();
-          if expandable.is_protected {
-            prefixes.push_str("\\protected");
-          }
-          if expandable.is_long {
-            prefixes.push_str("\\long");
-          }
-          if expandable.is_outer {
-            prefixes.push_str("\\outer");
+          for (set, name) in [
+            (expandable.is_protected, "protected"),
+            (expandable.is_long, "long"),
+            (expandable.is_outer, "outer"),
+          ] {
+            if set {
+              prefixes.push_str(&esc);
+              prefixes.push_str(name);
+            }
           }
           if !prefixes.is_empty() {
             prefixes.push(' ');
           }
           let expansion = match expandable.get_expansion() {
             None => String::new(),
-            // TODO: How to print closures? This follows Perl's raw pointer format
-            Some(ExpansionBody::Closure(exp)) => format!("CODE({:p})", Rc::as_ptr(exp)),
-            Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks)
+            // Perl's `CODE(0x…)`, the name for the address (QA89; cnltx_en).
+            Some(ExpansionBody::Closure(_)) => closure_body_meaning(&expandable.get_cs_name()),
+            Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks),
           };
           meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");
         },
         e => {
           // Handle other Stored variants gracefully (e.g., Register, Constructor, etc.)
           meaning = format!("{e}");
-        }
+        },
       }
     }
     ExplodeChars!(meaning)
@@ -290,7 +440,8 @@ LoadDefinitions!({
     let lhs = if arg.get_catcode() == Catcode::CS {
       s!("{arg}=")
     } else { String::new() };
-    let stuff = Invocation!(T_CS!("\\meaning"), vec![arg]);
+    // `\meaning` reads its token itself (no parameter to revert it into).
+    let stuff = Tokens!(T_CS!("\\meaning"), arg);
     let rhs = writable_tokens(&Expand!(stuff));
     Note!(s!("> {lhs}{rhs}\n{}", get_locator()));
   });
@@ -332,11 +483,15 @@ LoadDefinitions!({
   //
   AssignValue!("tracingmacros"   => Number!(0));
   AssignValue!("tracingcommands" => Number!(0));
+  // Perl TeX_Debugging.pool.ltxml:214-225 stores the Number itself, which the getter's `LookupValue` hands back: an
+  // integer stored here failed the getter's Number lookup, so after a `\tracingmacros 0` every `\the\tracingmacros`
+  // read nothing ("no auto-cast of Stored to Number", then "Missing number": arabtex's aedpatch.sty:29-30
+  // `\edef\tr@ce@n{\nxp\tracingmacros \the\tracingmacros}`, 2609.25833).
   DefRegister!("\\tracingmacros", Number!(0),
   getter => { LookupNumber!("tracingmacros") },
   setter => sub[value,scope,_args] {
     let v = value.value_of();
-    AssignValue!("tracingmacros" => v, scope);
+    AssignValue!("tracingmacros" => Number!(v), scope);
     let p : u8 = lookup_int("TRACING") as u8;
     AssignValue!("TRACING" => if v > 0 { p | TRACE_MACROS  } else { p & !TRACE_MACROS });
   });
@@ -344,7 +499,7 @@ LoadDefinitions!({
   getter => { LookupNumber!("tracingcommands") },
   setter => sub[value,scope,_args] {
     let v = value.value_of();
-    AssignValue!("tracingcommands" => v, scope);
+    AssignValue!("tracingcommands" => Number!(v), scope);
     let p : u8 = lookup_int("TRACING") as u8;
     AssignValue!("TRACING" => if v > 0 { p | TRACE_COMMANDS  } else { p & !TRACE_COMMANDS });
   });

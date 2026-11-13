@@ -1,0 +1,27 @@
+% An `\author` after a `\maketitle` leaves `\thanks` as the document has it: its own `\thanks` defined
+% after the title (`\def\thanks#1{[#1]}`) is used in body text, inline. A first cut (59e round 3)
+% restored the kernel `\thanks` for the rest of the document, and the note moved into the title block
+% as a `<pubnote>`.
+% witness: none (review of 59e, probe p4).
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors: "Text. More text[Bracket note] after."
+% expect:  0 errors, 0 warnings; the note inline in its paragraph.
+\begin{filecontents*}[overwrite]{lxaddr.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxaddr}
+\LoadClass{article}
+\def\address#1{\gdef\@address{#1}}
+\def\email#1{\gdef\@email{#1}}
+\let\@address\@empty
+\renewcommand\maketitle{\par{\centering\@title\par\@author\par\@address\par\@email\par}}
+\end{filecontents*}
+\documentclass{lxaddr}
+\begin{document}
+\title{T0}\author{Max M}\maketitle
+Text.
+\def\thanks#1{[#1]}
+\author{Bob B}
+More text\thanks{Bracket note} after.
+\section{S}
+Body.
+\end{document}

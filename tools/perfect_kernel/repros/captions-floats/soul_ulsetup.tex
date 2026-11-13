@@ -1,0 +1,8 @@
+% status: GREEN
+% SHARED: soul-ori.sty:824 \def\SOUL@ulsetup{...} (the \textul underline setup;
+% :832 \DeclareRobustCommand*\textul{\SOUL@ulsetup\SOUL@}). Rust soul_sty.rs
+% reimplements \textul as a Constructor (soul_sty.rs:107) and omits the low-level
+% \SOUL@ulsetup; Perl soul.sty.ltxml also omits it (0 refs). A doc poking
+% \SOUL@ulsetup directly (xmltex manual) fails. Witness otherformats/xmltex manual.
+\documentclass{article}\usepackage{soul}
+\begin{document}\makeatletter\SOUL@ulsetup\makeatother x\end{document}

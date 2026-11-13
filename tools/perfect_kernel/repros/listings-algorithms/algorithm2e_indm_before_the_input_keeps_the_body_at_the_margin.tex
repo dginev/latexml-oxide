@@ -1,0 +1,23 @@
+% witness: 2102.06989 (r1 set its 13 body lines one level in), 1412.1462, 2106.03753, 2508.14614; found by rev78r probe e4b
+% oracle:  pdflatex 0 errors; Input/Output at x=128.4 (a level out), "Zbody;" "for" "Vend;" at the margin 148.7,
+%          "Wloop;" a level in 164.1 (algorithm2e.sty:1626-1629, `\advance\leftskip` by -/+\algoskipindent)
+% engines: rust int54a = the same levels (\Indp/\Indm ignored); 78r r1 = the body one level in (\Indm popped nothing,
+%          \Indp pushed a level); Perl = int54a (the raw \leftskip, which no listing line reads)
+% expect:  0 errors, 0 warnings; Input/Output and the body at the margin, the loop body a level in
+% status:  RED (78r r1) -> GREEN (78r r2, KNOWN_PERL_ERRORS #1107)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[ruled,vlined]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+\Indm\Indmm
+\KwIn{Xin}
+\KwOut{Yout}
+\Indp\Indpp
+Zbody\;
+\For{$i$}{
+  Wloop\;
+}
+Vend\;
+\end{algorithm}
+\end{document}

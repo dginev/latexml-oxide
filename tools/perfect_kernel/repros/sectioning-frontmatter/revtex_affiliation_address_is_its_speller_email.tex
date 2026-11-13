@@ -1,0 +1,22 @@
+% mechanism: an address revtex's `\affiliation` prints in its text (`…, email: aable@y.edu, …`), the entry two authors
+%   share, is the e-mail of the author it spells; the affiliation keeps its other words, the label word going with the
+%   address (`Resolver::take_out_entry_addresses`).
+% witness: cond-mat0607219 (`\affiliation{Department of Electrical Engineering, …, FAX: 951-827-2425, email:
+%   rlake@ee.ucr.edu, Jan. 4, 2005, …}`)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" over "Dept X, Univ Y, Ph: 123, email: aable@y.edu, City"
+% engines: rust 94b-r7: the address inside the affiliation of both; perl: the same
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each "Dept X, Univ Y, Ph: 123, City", Ann Able aable@y.edu
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Dept X, Univ Y, Ph: 123, email: aable@y.edu, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,14 @@
+% witness: arXiv 2002.09653 (matching.tex:1141, `\set{…}[v \neq v_{2n+1} \concatenation \sequence{1}]`)
+% oracle:  pdflatex 0 errors; "{a | (1)}"
+% engines: rust (int110m) = Fatal Mouth:EoF "File ended while scanning use of a Until:\NOT argument": `\sequence`
+%          expanded inside ifthen's `\xdef` of the outer test and ran its own `\ifthenelse` there
+% expect:  0 errors; the formula {a | (1)}
+% status:  RED (int110m) -> GREEN (82c)
+\documentclass{article}
+\usepackage{ifthen}
+\usepackage{xargs}
+\newcommandx{\sequence}[2][2 = undefined]{\ifthenelse{\equal{#2}{undefined}}{(#1)}{(#1)_{#2}}}
+\newcommandx{\set}[2][2 = undefined]{\ifthenelse{\equal{#2}{undefined}}{\{ #1 \}}{\{ #1 \mid #2 \}}}
+\begin{document}
+$\set{a}[\sequence{1}]$
+\end{document}

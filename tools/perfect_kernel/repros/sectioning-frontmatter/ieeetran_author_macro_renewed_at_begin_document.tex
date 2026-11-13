@@ -1,0 +1,18 @@
+% mechanism: IEEEtran's `\author{\aut}` with `\aut` renewed in `\AtBeginDocument`: read again at the flush, as
+%   `\maketitle` expands `\@author` (ieeetran_cls.rs `\lx@IEEE@author@reread`; the sibling of
+%   ieeetran_author_macro_renewed_after_author)
+% witness: synthetic (revP28m S1's `\AtBeginDocument` sibling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Cy Coe" over "Univ C"
+% engines: int168a: Cy Coe (Univ C) twice, 1 warning; P28m: Ann Able (Univ A), Bob Baker (Univ B), 0 warnings;
+%   P28m2: Cy Coe (Univ C), 0 warnings
+% expect:  0 errors, 0 warnings; Cy Coe (Univ C)
+% status:  RED (int168a, P28m) -> GREEN (P28m2; guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\newcommand\aut{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\and\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}
+\title{T}
+\author{\aut}
+\AtBeginDocument{\renewcommand\aut{\IEEEauthorblockN{Cy Coe}\IEEEauthorblockA{Univ C}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

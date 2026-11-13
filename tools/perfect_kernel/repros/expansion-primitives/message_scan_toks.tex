@@ -1,0 +1,25 @@
+% mechanism: tex.web §1279 issue_message (\message, \errmessage), §1101 make_mark (\mark, eTeX's
+%   \marks) and §1354 (\special) read their text with scan_toks(false,true): scan_left_brace
+%   finds the `{` expanding (§403-404, `\message\expandafter{\foo}`), and the text is expanded
+%   as it is read. The control, frhyphex.tex:13 `\expandafter\message\else\expandafter\wlog\fi{…}`,
+%   worked before and after. Rust (\message, \errmessage, \mark as in Perl; \special against
+%   Perl's XGeneralText, TeX_FileIO.pool.ltxml:177) read a `{}` argument:
+%   `\message\expandafter{\foo}` logged nothing and typeset "hi", the others alike.
+% witness: batch 56jj (\message\expandafter{\foo})
+% oracle:  pdflatex 1 error ("! hi." from \errmessage), "AB C D E F G"; log "hi frhyphex", the
+%          special "hi"
+% engines: rust=1 error (an empty \errmessage), "AhiB C hiD hiE hiF G": each took \expandafter
+%          as its argument and `{\foo}` was typeset; \marks (GeneralText) already hunted its
+%          brace expanding (56jg-rel, 2026-09-25)
+% expect:  1 error (Error:errmessage "hi"), "AB C D E F G", log lines "hi" and "frhyphex"
+% status:  GREEN (56jj: XGeneralText; guard token_kernel_gaps::message_finds_its_brace_expanding)
+\documentclass{article}
+\def\foo{hi}
+\begin{document}
+A\message\expandafter{\foo}B
+\iftrue\expandafter\message\else\expandafter\wlog\fi{frhyphex}C
+\special\expandafter{\foo}D
+\errmessage\expandafter{\foo}E
+\mark\expandafter{\foo}F
+\marks3\expandafter{\foo}G
+\end{document}

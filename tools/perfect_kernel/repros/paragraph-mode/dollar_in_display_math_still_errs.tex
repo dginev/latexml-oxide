@@ -1,0 +1,16 @@
+% witness: control for dollar_in_hbox_math_is_text_{fleqn_display,proof_accents} (rc_struct3 E1)
+% oracle:  pdflatex 4 errors ("Display math should end with $$", "Missing $ inserted", per display): without `fleqn`
+%   amsmath's `{equation*}` is `$$…$$` (amsmath.sty:2794 `\mathdisplay`, `\dollardollar@begin`), and a primitive `$$`
+%   stays one (tex.web §1197); likewise fleqn.clo's `\[` (fleqn.clo:9-17) opens a group inside its `\hbox{$`, so a
+%   `$` there errs too (rc_struct3 control E_dollar_text_fleqn_clo)
+% engines: rust 67int18b = 4, perl = 4
+% expect:  4 errors "Missing $ closing display math" (two per display)
+% status:  CONTROL
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation*}
+f(s) \subset (b,\infty)$ for some $\delta\ge0.
+\end{equation*}
+$$ a $ with $ b $$
+\end{document}

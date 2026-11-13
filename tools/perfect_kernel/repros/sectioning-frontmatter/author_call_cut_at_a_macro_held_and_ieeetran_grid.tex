@@ -1,0 +1,16 @@
+% mechanism: an IEEEtran conference grid whose column separator is a macro (`\newcommand\nx{\and}` between two
+%   `\IEEEauthorblockN`/`\IEEEauthorblockA` pairs): the binding hands each block's name and lines to the API, each
+%   affiliation its own author's
+% witness: bindsplit probe ie1 (int143b: Ann's contacts ended in "and")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "Univ A", "Bob Baker" over "Univ B"
+% engines: int156a (MB1): Ann Able (Univ A), Bob Baker (Univ B)
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B)
+% status:  GREEN (int156a, before OC1; guard perfect_kernel_batchoc1)
+\documentclass[conference]{IEEEtran}
+\newcommand\nx{\and}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\nx\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 65n probe s1 (the `\begingroup` twin of dollar_closes_open_script_group, 2007.11971)
+% oracle:  pdflatex 1 error ("Missing \endgroup inserted" at the `$`: tex.web §1193 `mmode+math_shift` + §1065
+%          `off_save` for a semi_simple_group), the formula ends at its `$`; pdftotext "Let ab c. / After."
+% engines: rust 65int2: 0 errors, 2 warnings (the deferred "Missing } inserted"; the open group at \end{document}); the
+%          formula ran on (Math tex "ab$c.\par After.\par"), "After." duplicated as text
+% expect:  1 error "Missing \endgroup inserted"; Math tex "ab"; " c." and "After." as text
+% preload: ar5iv.sty
+% status:  GREEN (65n: stomach.rs `off_save_closer`, tex_math.rs `end_math_or_defer`; OXIDIZED_DESIGN #553; guard
+%          perfect_kernel_batch65n::math_shift_closes_a_group_opened_in_the_formula)
+\documentclass{article}
+\begin{document}
+Let $a \begingroup b$ c.
+
+After.
+\end{document}

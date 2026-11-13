@@ -1,0 +1,52 @@
+% A BESIII-shaped block (elsarticle: `\begin{small}` names, the collaboration, `{\it $^{1}$ … \\ $^{a}$ … }`) under
+% multi-digit numbering with sub-lettered marks (`B.~Baker$^{10a}$`, `D.~Dee$^{12b}$`), one name written with a space
+% before its tie (`N.~B. ~Li$^{11}$`): the space and the tie are one word space of the name (the lexer), so the
+% reading parts the names as without the space and keeps the block's sub-lettered marks; the `$^{a}$` legend after
+% `\vspace` inside the line's two wrappers leads its line (`marker_leads`), never an author.
+% witness: 1202.2048 (BESIII: `Lei~Li$^{1}$, N.~B. ~Li$^{22}$`; review rev107b B2, probe s11)
+% oracle:  pdflatex 0 errors: "A. Able1 , B. Baker10a , C. Cole2 , D. Dee12b , Lei Li1 , N. B. Li11 , Q. J. Li1",
+%          "(X Collaboration)", the 12 institutes, "a also at Inst Alpha, Moscow", "b on leave from Inst Beta, Kiev"
+% engines: rust 107b r1 = a creator named "also at Inst Alpha, Moscow", B. Baker and D. Dee without their
+%          institutes and legends, the b legend on the nameless creator, 0 errors (silent: the reading read "Lei Li, N.
+%          B. Li" one name written surname first and declined the block); Perl one creator
+% expect:  0 errors, 0 warnings; as the control without the space (author_besiii_sub_lettered_marks_tie_control):
+%          seven creators, B. Baker Univ N10 and the a legend, D. Dee Univ N12 and the b legend, the institutes no name
+%          requests on the block's nameless creator
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass[preprint,11pt]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{
+\begin{small}
+A.~Able$^{1}$, B.~Baker$^{10a}$, C.~Cole$^{2}$, D.~Dee$^{12b}$, Lei~Li$^{1}$, N.~B. ~Li$^{11}$, Q.~J.~Li$^{1}$
+\\
+\vspace{0.2cm}
+(X Collaboration)\\
+\vspace{0.2cm} {\it
+$^{1}$ Univ N1, City\\
+$^{2}$ Univ N2, City\\
+$^{3}$ Univ N3, City\\
+$^{4}$ Univ N4, City\\
+$^{5}$ Univ N5, City\\
+$^{6}$ Univ N6, City\\
+$^{7}$ Univ N7, City\\
+$^{8}$ Univ N8, City\\
+$^{9}$ Univ N9, City\\
+$^{10}$ Univ N10, City\\
+$^{11}$ Univ N11, City\\
+$^{12}$ Univ N12, City\\
+\vspace{0.2cm}
+$^{a}$ also at Inst Alpha, Moscow\\
+$^{b}$ on leave from Inst Beta, Kiev\\
+\vspace{7cm}
+}
+\end{small}
+}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Body.
+\end{document}

@@ -2,23 +2,160 @@
 //! Perl: algorithm2e.sty.ltxml — complex package with custom line management
 use crate::prelude::*;
 
+/// The `\Indp`/`\Indm` offset in levels (`\lx@algo@indentoffset`, algorithm2e.sty:1626-1629's `\leftskip`).
+fn algo_indent_offset() -> i64 {
+  match LookupRegister!("\\lx@algo@indentoffset") {
+    RegisterValue::Number(n) => n.0,
+    _ => 0,
+  }
+}
+
+/// `\Indp` (`1`) and `\Indm` (`-1`): the offset moves by a level, locally as `\advance\leftskip` does.
+fn shift_algo_indent_offset(by: i64) -> Result<()> {
+  let offset = algo_indent_offset() + by;
+  assign_register(
+    "\\lx@algo@indentoffset",
+    RegisterValue::Number(Number::new(offset)),
+    None,
+    vec![],
+  )
+}
+
+/// The levels a line ends with: the open blocks' (`\lx@algo@indentation`, one token a level), then a positive
+/// `\Indp`/`\Indm` offset's plain levels after their rules (a block's rule is `\moveright`ed, which `\leftskip` does not
+/// move, algorithm2e.sty:1780), or a negative one's removing the innermost; none at the least.
+fn algo_line_indentation() -> Vec<Token> {
+  let mut levels = match LookupRegister!("\\lx@algo@indentation") {
+    RegisterValue::Tokens(toks) => toks.unlist(),
+    _ => Vec::new(),
+  };
+  let offset = algo_indent_offset();
+  if offset >= 0 {
+    levels.extend((0..offset).map(|_| T_CS!("\\lx@algo@indent")));
+  } else {
+    let keep = levels
+      .len()
+      .saturating_sub(usize::try_from(-offset).unwrap_or(usize::MAX));
+    levels.truncate(keep);
+  }
+  levels
+}
+
 /// Does an `<ltx:listingline>` hold real content, or only its line-number
 /// `<ltx:tags>` and indentation `<ltx:rule>`s? A blank line produced by the
 /// `\lx@strippar` block terminator (three `\lx@algo@parx`) still carries the
 /// prepended indentation rules (`\lx@prepend@indentation`) and, because
 /// `\the\everypar` fires at endline, a stolen line-number tag — but no actual
 /// statement. Neither the number tag nor the indentation rules count as content,
-/// so such a line is dropped; a real line always has text or a non-rule element
-/// beyond them.
+/// so such a line is dropped; a real line always has text or another element
+/// beyond them — a rule the statement draws (`\hrule`, `\rule{\linewidth}{0.8pt}`;
+/// 2301.00241, 2412.09565) is content, only the indentation's `\lx@algo@rule` is not.
 fn listingline_has_content(line: &Node) -> bool {
   line.get_child_nodes().iter().any(|c| match c.get_type() {
     Some(NodeType::ElementNode) => {
       let name = c.get_name();
-      name != "tags" && name != "rule"
+      let indentation = name == "rule"
+        && c.get_attribute("width").as_deref() == Some("1px")
+        && c.get_attribute("height").as_deref() == Some("100%");
+      name != "tags" && !indentation
     },
     Some(NodeType::TextNode) => !c.get_content().trim().is_empty(),
     _ => false,
   })
+}
+
+/// Whether a closed line goes: it holds no content ([`listingline_has_content`]) and no `\label` names it.
+fn droppable_line(line: &Node) -> bool {
+  !line.has_attribute("labels") && !listingline_has_content(line)
+}
+
+/// Inline wrappers a line split reaches through — exactly the auto-closing ones, so closing the line closes them: a
+/// font switch's `ltx:text`, also the `_noautoclose` one an `\hbox`/`\colorbox` opens, which
+/// `\lx@prepend@indentation@` climbs out of (1911.01815, 1903.04631). A statement inside `\href` (`ltx:ref`, which
+/// does not auto-close) breaks inside the link instead.
+const LINE_INLINE_WRAPPERS: [&str; 2] = ["ltx:text", "ltx:emph"];
+
+/// Where the algorithm's line machinery stands: no open `ltx:listingline` at all (algorithm2e statements outside
+/// any listing), a line it can split, or a line it cannot reach.
+enum LineReach {
+  NoLine,
+  Line,
+  Barred,
+}
+
+/// A line is reachable only through inline wrappers and through the wrappers the document opened itself directly in
+/// the line (`_autoopened`: the `ltx:inline-block` bridging a list into the listingline, the `ltx:p` resuming after
+/// it). Anything else — a list item, an equation, a minipage or `\vbox`, a table cell, a footnote, a capture block —
+/// bars it: a `\\` or block macro there breaks that box's text (2004.03005, 1709.07249, 1410.4772).
+///
+/// The nearest listing bounds the walk: between the lines of a listing nested in a line (an `{algorithmic}` whose
+/// `\STATE` holds an algorithm2e `\For{…}{…}`, 2301.04312, 1904.07272, 2302.08012) a line opens in that listing, as
+/// TeX sets the block's body as more paragraphs of the inner list; walking on to the outer line barred it, and the body
+/// fell into the listing as bare text and breaks.
+fn line_reach(document: &Document) -> LineReach {
+  let mut chain: Vec<Node> = Vec::new();
+  let mut node = Some(document.get_node().clone());
+  let opened = |e: &Node| e.has_attribute("_autoopened");
+  let reachable = |chain: &[Node]| {
+    chain.iter().enumerate().all(|(k, e)| {
+      document::with_node_qname(e, |q| LINE_INLINE_WRAPPERS.contains(&q))
+        || (opened(e) && chain[k + 1..].iter().all(opened))
+    })
+  };
+  while let Some(n) = node {
+    if n.get_type() == Some(NodeType::ElementNode) {
+      if document::with_node_qname(&n, |q| q == "ltx:listingline") {
+        return if reachable(&chain) {
+          LineReach::Line
+        } else {
+          LineReach::Barred
+        };
+      }
+      if document::with_node_qname(&n, |q| q == "ltx:listing") {
+        return if reachable(&chain) {
+          LineReach::NoLine
+        } else {
+          LineReach::Barred
+        };
+      }
+      chain.push(n.clone());
+    }
+    node = n.get_parent();
+  }
+  LineReach::NoLine
+}
+
+/// `\lx@algo@@endline`: close the line (dropping it when empty); behind a barrier, a `<ltx:break/>` when
+/// `break_barred`; with no line, nothing.
+fn end_line(document: &mut Document, break_barred: bool) -> Result<()> {
+  match line_reach(document) {
+    // No listing (a caption's `\\`, 1412.0600): the break the kernel's `\\` makes there.
+    LineReach::NoLine => {
+      if break_barred
+        && !document.is_openable("ltx:listingline")
+        && !document.is_openable("ltx:listing")
+        && document.is_openable("ltx:break")
+      {
+        document.insert_element("ltx:break", Vec::new(), None)?;
+      }
+      return Ok(());
+    },
+    LineReach::Barred => {
+      if break_barred {
+        document.insert_element("ltx:break", Vec::new(), None)?;
+      }
+      return Ok(());
+    },
+    LineReach::Line => {},
+  }
+  document.close_element("ltx:listingline")?;
+  if let Some(line) = document.get_node().get_last_child()
+    && document::get_node_qname(&line) == pin!("ltx:listingline")
+    && droppable_line(&line)
+  {
+    document.remove_node(line);
+  }
+  Ok(())
 }
 
 /// Renumber the algorithm's numbered listinglines sequentially from 1, matching
@@ -26,7 +163,7 @@ fn listingline_has_content(line: &Node) -> bool {
 /// content-start `\everypar` hook, which fires `\nl` (steps `AlgoLine`). The count
 /// drifts off `1..N` for two reasons: `\lx@strippar`'s block terminator and other
 /// structural `\nl` fires over-step the counter, and empty listinglines that were
-/// numbered then dropped (see `\lx@algo@@endline`) leave a gap. This
+/// numbered then dropped (by `\lx@algo@@endline`, or by their listing when it closes) leave a gap. This
 /// construction-time pass rewrites the SURVIVING numeric line-number tags to
 /// `1..N` in document order — algorithm2e always numbers off the sequential
 /// `AlgoLine` counter (auto via `linesnumbered`, or manual via `\nl`/`\lnl`), so
@@ -44,8 +181,38 @@ fn renumber_algo_lines(document: &mut Document) {
   else {
     return;
   };
-  // Collect the numeric number-tag nodes in document order.
-  let mut numeric_tags: Vec<Node> = Vec::new();
+  // Overprint-collapse, FIRST-wins (batch 56eo, OXIDIZED_DESIGN #241): a line
+  // that fires numbering more than once — `\LinesNumbered` (auto `\nl` at
+  // content-start) PLUS an explicit `\nl` — accrues multiple `<ltx:tags>`, which
+  // the listingline model forbids (`tags?`, LaTeXML-block.rnc:189). Real
+  // algorithm2e `\llap`/`\rlap`-overprints the numbers (algorithm2e.sty:1647/1654)
+  // so only one is visible; keep the FIRST `<tags>` per line and remove the rest.
+  // First, not last: the listingline model requires tags first and 56eh's endline
+  // indentation-prepend seats the leading (first-fired) tags at child 0 (before
+  // the `<rule>`), so a later tags sits AFTER the rule; the visible NUMBER is
+  // corrected by the renumber-to-1..N below. Known limitation: an explicit
+  // `\nlset{custom}` coinciding with the auto `\nl` on one line loses the custom
+  // reference to the sequential number — real algorithm2e garbles that too
+  // (both overprint at the same kern), and keep-last would be schema-invalid.
+  // Done here (post-construct, stable DOM) — NOT in `\algocf@printnl@i`, where
+  // the rapid double-fire's mid-construction cursor state makes an in-place
+  // remove corrupt the tree. Perl keeps them all (SHARED schema bug); surpass.
+  for line in listing.get_child_elements() {
+    if document::get_node_qname(&line) != pin!("ltx:listingline") {
+      continue;
+    }
+    let tags: Vec<Node> = line
+      .get_child_elements()
+      .into_iter()
+      .filter(|c| document::get_node_qname(c) == pin!("ltx:tags"))
+      .collect();
+    for stale in tags.iter().skip(1) {
+      document.remove_node(stale.clone());
+    }
+  }
+  // Collect the numeric number-tag nodes in document order: the printed (role-less) ones, each with the reference forms
+  // its line took from its step (`\algocf@printnl@i`), which name the same number.
+  let mut numeric_tags: Vec<(Node, Vec<Node>)> = Vec::new();
   for line in listing.get_child_elements() {
     if document::get_node_qname(&line) != pin!("ltx:listingline") {
       continue;
@@ -54,11 +221,14 @@ fn renumber_algo_lines(document: &mut Document) {
       if document::get_node_qname(&tags) != pin!("ltx:tags") {
         continue;
       }
-      for tag in tags.get_child_elements() {
-        if document::get_node_qname(&tag) == pin!("ltx:tag")
-          && tag.get_content().trim().parse::<i64>().is_ok()
-        {
-          numeric_tags.push(tag);
+      let (printed, forms): (Vec<Node>, Vec<Node>) = tags
+        .get_child_elements()
+        .into_iter()
+        .filter(|tag| document::get_node_qname(tag) == pin!("ltx:tag"))
+        .partition(|tag| !tag.has_attribute("role"));
+      for tag in printed {
+        if tag.get_content().trim().parse::<i64>().is_ok() {
+          numeric_tags.push((tag, forms.clone()));
         }
       }
     }
@@ -67,12 +237,51 @@ fn renumber_algo_lines(document: &mut Document) {
   let already_sequential = numeric_tags
     .iter()
     .enumerate()
-    .all(|(i, t)| t.get_content().trim() == (i + 1).to_string());
+    .all(|(i, (t, _))| t.get_content().trim() == (i + 1).to_string());
   if already_sequential {
     return;
   }
-  for (i, tag) in numeric_tags.into_iter().enumerate() {
-    set_number_tag_text(&tag, &(i + 1).to_string());
+  for (i, (tag, forms)) in numeric_tags.into_iter().enumerate() {
+    let old = tag.get_content().trim().to_string();
+    let new = (i + 1).to_string();
+    set_number_tag_text(&tag, &new);
+    // A reference form prints the line's number as the line does (`\theAlgoLine`), so it is renumbered with it.
+    for form in forms {
+      replace_number_in_form(&form, &old, &new);
+    }
+  }
+}
+
+/// The number `old` a line's reference form (`<ltx:tag role="refnum">3</ltx:tag>`, a cleveref form's "line 3") prints,
+/// as the form's last word, made `new` ([`renumber_algo_lines`]).
+fn replace_number_in_form(form: &Node, old: &str, new: &str) {
+  // (the form's last text, past any empty element after it: autoref's "line 3" ends in an empty `ltx:text`)
+  fn last_text(node: &Node) -> Option<Node> {
+    let mut child = node.get_last_child();
+    while let Some(current) = child {
+      match current.get_type() {
+        Some(NodeType::TextNode) if !current.get_content().trim().is_empty() => {
+          return Some(current);
+        },
+        Some(NodeType::ElementNode) => {
+          if let Some(text) = last_text(&current) {
+            return Some(text);
+          }
+        },
+        _ => {},
+      }
+      child = current.get_prev_sibling();
+    }
+    None
+  }
+  let Some(mut target) = last_text(form) else {
+    return;
+  };
+  let text = target.get_content();
+  if let Some(head) = text.strip_suffix(old)
+    && (head.is_empty() || head.ends_with(|c: char| c.is_whitespace() || c == '\u{a0}'))
+  {
+    let _ = target.set_content(&format!("{head}{new}"));
   }
 }
 
@@ -97,9 +306,28 @@ fn set_number_tag_text(tag: &Node, n: &str) {
   let _ = target.set_content(n);
 }
 
+/// `\KwSty{\@algocf@endoption{<end>}}`: a block's end keyword as algorithm2e.sty prints it (:1868; v5.00 :1532).
+fn algocf_end_keyword(end: Tokens) -> Vec<Token> {
+  let mut out = Tokens!(
+    T_CS!("\\KwSty"),
+    T_BEGIN!(),
+    T_CS!("\\@algocf@endoption"),
+    T_BEGIN!()
+  )
+  .unlist();
+  out.extend(end.unlist());
+  out.extend([T_END!(), T_END!()]);
+  out
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
-  RequirePackage!("float");
+  // No `RequirePackage!("float")` (Perl algorithm2e.sty.ltxml:37): algorithm2e.sty loads no float package — its float is
+  // its own `\@float{algocf}` (:2487-2488) — and float's binding, loaded here, replaced the interface floatrow.sty
+  // carries (floatrow.sty:34 marks float loaded): its no-op `\float@end` left every restyled float's box open, whether
+  // floatrow came before algorithm2e or after it (its `\newcommand`s then refused; `\endgroup` errors, witnesses
+  // 1811.04370, 2007.08784, 1609.05867, 1910.09976, 1807.05059; OXIDIZED_DESIGN_DIVERGENCES #580). The float frames and the top
+  // caption below are float_sty.rs's Rust helpers, which need no load.
 
   // Load the raw algorithm2e.sty for all its internal definitions
   InputDefinitions!("algorithm2e", extension => Some("sty".into()), noltxml => true);
@@ -111,6 +339,20 @@ LoadDefinitions!({
   DefMacro!("\\fnum@algorithm", "\\algorithmcfname\\nobreakspace\\thealgorithm");
   DefMacro!("\\fnum@font@algorithm", "\\bf");
   DefMacro!("\\ext@algorithm", "loa");
+  // algorithm2e makes its algorithms' captions itself (`\algocf@makecaption`, algorithm2e.sty:2287-2318), not through
+  // `\@makecaption`, so caption's settings reach none of them: under acmart's `\captionsetup{labelfont={sf, small},…}`
+  // the PDF's "Algorithm 1: …" keeps algorithm2e's fonts (1908.06049, 2205.14076; caption_sty.rs `caption_format_tokens`).
+  // Guard `perfect_kernel_batch78y::algorithm2e_caption_is_not_caption_s`.
+  AssignValue!("lx@caption@own@algorithm" => true, Scope::Global);
+  // algorithm2e.sty:2285-2289 `\algocf@captiontext`: "Algorithm 1: text", the label closed by `\algocf@typo` (a space
+  // under the `french` option, :1154) and `\algocf@capseparator` (":", `\SetAlgoCaptionSeparator`), then
+  // `\nobreakspace`. Perl's binding defines none, so its label closes with the tag's space ("Algorithm 1 text";
+  // KNOWN_PERL_ERRORS #1140).
+  // A type float.sty made first keeps its own (algorithm.sty's `\newfloat{algorithm}` beside `[algo2e]`, whose
+  // captions caption formats: caption_sty.rs `caption_format_tokens`). Guards
+  // `perfect_kernel_batch78y::{algorithm2e_caption_is_not_caption_s, algorithm2e_caption_closes_with_its_separator}`.
+  RawTeX!(r"\@ifundefined{format@title@algorithm}{\long\def\format@title@algorithm#1{%
+\lx@tag[][\algocf@typo\algocf@capseparator\space]{\lx@fnum@@{algorithm}}#1}}{}");
 
   // {algorithm}, {algorithm*}, {algorithm2e}, {algorithm2e*} environments.
   // Perl algorithm2e.sty.ltxml L62-64 loops a FULL `DefEnvironment` over each
@@ -128,19 +370,21 @@ LoadDefinitions!({
   // 2002.09766 (`\usepackage{algorithm,algorithmic}` + `[algo2e]{algorithm2e}`,
   // `\begin{algorithm*}`). Same 40-line body for every name → local macro.
   macro_rules! def_algo2e_env {
-    ($name:literal) => {
+    ($name:literal $(, $setup:literal)?) => {
       DefEnvironment!($name,
         "<ltx:float xml:id='#id' class='ltx_algorithm'>#tags<ltx:listing class='ltx_lst_numbers_left'><ltx:listingline>#body</ltx:listingline></ltx:listing></ltx:float>",
         mode => "internal_vertical",
+        // The begin code opens a TeX group of its own: algorithm2e.sty:2487-2488 `\@float{algocf}`.
+        tex_group => { TexGroup::Box },
         before_digest => {
           use crate::engine::latex_constructs::before_float;
           // Perl L73-86: mirror full beforeDigest sequence.
           DigestIf!(T_CS!("\\@ResetCounterIfNeeded"))?;
-          DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
           Let!("\\par", "\\lx@algo@par");
           Let!("\\parbox", "\\lx@algo@parbox");
-          Let!("\\\\", "\\lx@algo@par");
+          Let!("\\\\", "\\lx@algo@cr");
           Let!("\\strut", "\\lx@algo@strut");
+          Let!("\\lx@algo@afterlist", "\\lx@algo@listend");
           // \BlankLine stays the raw algorithm2e.sty `\vskip 1ex` (NOT overridden).
           // Perl's algorithm2e.sty.ltxml does NOT redefine \BlankLine either, and
           // Perl's body output leaks "1ex" as a listingline's text — so the earlier
@@ -156,7 +400,7 @@ LoadDefinitions!({
           // All variants share the SAME float counter ("algorithm"), matching
           // Perl (its loop body always calls beginItemize/RefStepCounter on
           // "algorithm").
-          before_float("algorithm", None);
+          before_float("algorithm", None)?;
           // SURPASS over Perl (SHARED bug). `before_float` / Perl `beforeFloat`
           // (latex_constructs.rs `before_float_ex`, Perl latex_constructs.pool
           // L3376) re-lets `\\`→`\lx@newline` as a tabular-in-float guard (Perl
@@ -169,7 +413,24 @@ LoadDefinitions!({
           // assert it after before_float. Safe: a nested tabular/array rebinds `\\`
           // locally (`\@tabularcr`), shadowing this. Witness arXiv 2002.09766
           // Algorithm 1 (`\For{…}{ …\\ …\;\\ }`). KNOWN_PERL_ERRORS #109.
-          Let!("\\\\", "\\lx@algo@par");
+          Let!("\\\\", "\\lx@algo@cr");
+          // {procedure}/{function}: their own caption (see `\lx@algocf@proccaption`).
+          $( DigestIf!(T_CS!($setup))?; )?
+          // algorithm2e.sty:2560-2561 `\@algocf@init`'s `\refstepcounter{algocfline}` makes `\@currentlabel` the
+          // algorithm's in its group, so a `\label` before the first line's number does not name the previous
+          // algorithm's last line, whose `\gdef\@currentlabel` is global (`\lx@refstep@global`): it names the
+          // algorithm, as before (2010.00626's `alg:F_cycle`, PDF 2).
+          forget_raw_refstep();
+        },
+        // A floating algorithm starts at the body size (`\@floatboxreset`, `reset_float_box`);
+        // `[H]` exactly is a minipage (algorithm2e.sty:2661-2666, :2689 `\equal{#1}{H}`) and resets nothing.
+        after_digest_begin => sub[whatsit] {
+          let placement = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
+          if placement.trim() != "H" {
+            crate::engine::latex_constructs::reset_float_box()?;
+          }
+          // (after the float's `\everypar{}`, as `\algocf@start` runs inside `\@float`, algorithm2e.sty:2487-2488)
+          DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
         },
         after_digest => sub[whatsit] {
           use crate::engine::latex_constructs::after_float;
@@ -225,7 +486,143 @@ LoadDefinitions!({
   def_algo2e_env!("{algorithm2e}[]");
   def_algo2e_env!("{algorithm2e*}[]");
 
-  DefMacro!("\\lx@algo@parbox[]{}{}", "#3");
+  // {procedure}/{function} and their starred forms (algorithm2e.sty:2786-2830)
+  // are the same listing float with `algocf@procenvironment` set. The raw
+  // environments open `algocf@algorithm`, whose `\algocf@setcaption` lets
+  // `\@caption` be `\algocf@caption@proc#1[#2]#3` (:2402, :2436) — LaTeX's
+  // `\@dblarg` calling convention, which our `\caption` does not follow, so the
+  // `[` scan ran to the end of the document (arXiv 2605.00743, 2605.06384:
+  // `Fatal:Mouth:EoF`; Perl reaches the same scan and loses the caption and the
+  // listing structure). Bound like `{algorithm}`, the caption is algorithm2e's
+  // own procedure caption. OXIDIZED_DESIGN #279.
+  def_algo2e_env!("{procedure}[]", "\\lx@algocf@procsetup@proc");
+  def_algo2e_env!("{procedure*}[]", "\\lx@algocf@procsetup@proc");
+  def_algo2e_env!("{function}[]", "\\lx@algocf@procsetup@func");
+  def_algo2e_env!("{function*}[]", "\\lx@algocf@procsetup@func");
+  RawTeX!(r"\def\lx@algocf@procsetup@proc{\setboolean{algocf@procenvironment}{true}%
+  \setboolean{algocf@func}{false}\def\algocf@procname{\@algocf@procname}%
+  \let\caption\lx@algocf@proccaption}
+\def\lx@algocf@procsetup@func{\setboolean{algocf@procenvironment}{true}%
+  \setboolean{algocf@func}{true}\def\algocf@procname{\@algocf@funcname}%
+  \let\caption\lx@algocf@proccaption}");
+  // An unnumbered procedure is referenced by its name (algorithm2e.sty:2418
+  // `\gdef\@currentlabel{\algocf@captname#3@}`): the float gets an id and a
+  // refnum tag holding the name, where `\@@add@caption@counters` would step the
+  // counter.
+  DefPrimitive!("\\lx@algocf@proc@counters{}", sub[(name)] {
+    let props = ref_step_id("algorithm")?;
+    let tags = digest(Invocation!(r"\lx@tags{\lx@tag@intags[refnum]{#1}}", vec![Some(name)]))?;
+    assign_value("algorithm_tags", tags, Some(Scope::Global));
+    assign_value("algorithm_id", props.get("id"), Some(Scope::Global));
+  });
+  // `\caption{Name(args)rest}` in a procedure: algorithm2e.sty:2402-2425
+  // `\algocf@caption@proc` declares `\Name` as a function keyword (`\SetKwFunction`,
+  // unless `nokwfunc`) and captions with `\algocf@captionproctext` (:2775-2785) —
+  // "Procedure Name(args)rest", the parentheses dropped when args is empty. Only a
+  // `procnumbered` procedure takes a number; otherwise the float counter is left
+  // alone (:2415 undoes the `\refstepcounter`). The split is :2771-2773's
+  // `#1(#2)#3@`; a caption with no `(` is all name.
+  DefMacro!("\\lx@algocf@proccaption[]{}",
+    r"\@ifnextchar\label{\lx@algocf@proccaption@postlabel{#2}}{\lx@algocf@proccaption@{#2}}");
+  // cleveref's `\label[type]{key}` after a procedure's caption: the optional type is read (`\lx@label@type`), the key
+  // is the label — as `\@caption@postlabel` does (the mechanism of 2404.11739; OXIDIZED_DESIGN #552). Guard
+  // `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
+  DefMacro!("\\lx@algocf@proccaption@postlabel{} SkipMatch:\\label [] Semiverbatim", sub[(caption, ty, key)] {
+    let mut tokens = vec![T_CS!("\\lx@algocf@proccaption@"), T_BEGIN!()];
+    tokens.extend(caption.unlist());
+    tokens.extend(engine::latex_constructs::typed_label(T_CS!("\\label"), ty, key));
+    tokens.push(T_END!());
+    Tokens::new(tokens)
+  });
+  DefMacro!("\\lx@algocf@proccaption@{}", sub[(long)] {
+    let toks = long.unlist();
+    let mut labels = Vec::new();
+    let mut in_label = 0; // tokens of a `\label{…}` still to move: 1 = its argument
+    let mut name = Vec::new();
+    let mut args = Vec::new();
+    let mut rest = Vec::new();
+    let mut part = 0; // 0 = name, 1 = args, 2 = rest
+    let mut depth = 0i32;
+    for t in toks {
+      let cc = t.get_catcode();
+      // A `\label` (and the type cleveref's `\label[type]` gave it, `\lx@label@type`) goes to the caption's end, out
+      // of the name and arguments.
+      if in_label > 0 {
+        labels.push(t);
+        if cc == Catcode::BEGIN {
+          in_label += 1;
+        } else if cc == Catcode::END {
+          in_label -= 1;
+          if in_label == 1 {
+            in_label = 0;
+          }
+        }
+        continue;
+      }
+      if depth == 0 && (t == T_CS!("\\label") || t == T_CS!("\\lx@label@type")) {
+        labels.push(t);
+        in_label = 1;
+        continue;
+      }
+      if cc == Catcode::BEGIN {
+        depth += 1;
+      } else if cc == Catcode::END {
+        depth -= 1;
+      } else if depth == 0 && part == 0 && t == T_OTHER!("(") {
+        part = 1;
+        continue;
+      } else if depth == 0 && part == 1 && t == T_OTHER!(")") {
+        part = 2;
+        continue;
+      }
+      match part {
+        0 => name.push(t),
+        1 => args.push(t),
+        _ => rest.push(t),
+      }
+    }
+    let mut text = TokenizeInternal!(r"\ProcNameSty{\ProcNameFnt ").unlist();
+    text.extend(name.iter().cloned());
+    text.push(T_END!());
+    if !args.is_empty() {
+      text.extend(TokenizeInternal!(r"\ProcNameSty{\ProcNameFnt(}\ProcArgSty{\ProcArgFnt ").unlist());
+      text.extend(args);
+      text.extend(TokenizeInternal!(r"}\ProcNameSty{\ProcNameFnt)}").unlist());
+    }
+    text.extend(rest);
+    text.extend(labels);
+    // The procedure's toc copy is digested with notes and `\label` neutralized (DIVERGENCES #399;
+    // 2605.15775).
+    Ok(Invocation!(
+      r"\lx@donecaptiontrue\ifthenelse{\boolean{algocf@nokwfunc}}{}{\SetKwFunction{#1}{#1}}%
+\ifthenelse{\boolean{algocf@procnumbered}}{\@@add@caption@counters
+  \@@toccaption{{\lx@toc@copy@neutralize\lx@reread@copy\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator\nobreakspace#1}}%
+  \lx@@caption{{\ProcSty{\ProcFnt\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator}\nobreakspace#2}}}%
+{\lx@algocf@proc@counters{#1}\@@toccaption{{\lx@toc@copy@neutralize\lx@reread@copy\algocf@procname\nobreakspace#1}}%
+  \lx@@caption{{\ProcSty{\ProcFnt\algocf@procname}\nobreakspace#2}}}",
+      vec![Some(Tokens::new(name)), Some(Tokens::new(text))]
+    ))
+  });
+
+  // A `\parbox` in a listing keeps only its text, so its `\\`, `\par` and list ends break the box's line, not the
+  // algorithm's (`\fbox{\parbox{3cm}{first\\second}}` printed "firstsecond" once a restricted-mode `\par` ended no
+  // line).
+  DefMacro!("\\lx@algo@parbox[]{}{}",
+    "\\begingroup\\let\\\\\\lx@newline\\let\\par\\lx@algo@boxbreak\\let\\lx@algo@afterlist\\lx@algo@closelistbox #3\\endgroup");
+  DefConstructor!("\\lx@algo@boxbreak", "<ltx:break/>");
+  // A list in such a box sits in the `ltx:inline-block` the document opened for it; its end closes that block, so the
+  // box's text after it (and the line's) follows beside it, not under the list.
+  DefConstructor!("\\lx@algo@closelistbox", sub[document] {
+    let mut node = document.get_node().clone();
+    if node.get_type() == Some(NodeType::TextNode)
+      && let Some(parent) = node.get_parent()
+    {
+      node = parent;
+    }
+    if document::with_node_qname(&node, |q| q == "ltx:inline-block") && node.has_attribute("_autoopened") {
+      document.maybe_close_node(&node)?;
+    }
+  });
   def_macro_noop("\\lx@algo@strut SkipMatch:\\par")?;
   def_macro_noop("\\@marker{}")?;
 
@@ -264,9 +661,22 @@ LoadDefinitions!({
   // (INTERNAL_PAR unset) still take the full line machinery. Witness 1510.02728.
   DefConditional!("\\if@lx@algo@internalpar SkipSpaces",
     { matches!(lookup_value("INTERNAL_PAR"), Some(Stored::Bool(true))) });
+  // A `\par` in restricted horizontal mode does nothing (tex.web §1094 `par_end`, §1096 `end_graf` acts in
+  // unrestricted `hmode` only), so an algorithm2e comment's closing `\par` inside a box ends no line: `\tcp` in
+  // `\text{}` (2010.03983), `\mbox{fluid\par update}`. Nor does one in math: `{algomathdisplay}`'s
+  // `\@endalgocfline` (algorithm2e.sty:2615) prints its `;` in the display, and a caption's `$a\\b$` (2507.17199,
+  // 2602.19085) breaks no line. Perl splits the line there (KNOWN_PERL_ERRORS #471).
+  DefConditional!("\\if@lx@algo@restricted SkipSpaces", {
+    let mode = lookup_string_from_sym(pin!("MODE"));
+    mode == "restricted_horizontal" || mode.ends_with("math")
+  });
   // Par management — Perl L113-116
   DefMacro!("\\lx@algo@par",
-    "\\if@lx@algo@internalpar\\lx@normal@par\\else\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}\\fi");
+    "\\if@lx@algo@restricted\\else\\if@lx@algo@internalpar\\lx@normal@par\\else\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}\\fi\\fi");
+  // Where a `\par` ends no line (math, restricted horizontal mode — a caption's text), `\\` is the kernel's line
+  // break, as outside an algorithm: a caption's `$a\\b$` (2507.17199) and `first\\second` (1412.0600).
+  DefMacro!("\\lx@algo@cr",
+    "\\if@lx@algo@restricted\\expandafter\\lx@newline\\else\\expandafter\\lx@algo@par\\fi");
   DefMacro!("\\lx@algo@parx",
     "\\lx@algo@newpar{PARx}{\\lx@algo@endline\\lx@algo@startline}");
   DefMacro!("\\lx@algo@parb",
@@ -274,7 +684,57 @@ LoadDefinitions!({
 
   // Block and group macros
   DefMacro!("\\algocf@group{}", "#1");
-  DefMacro!("\\algocf@@@block{}{}", "#1 #2\\lx@algo@parb");
+  // algorithm2e.sty:1868 `\algocf@@@block[3]`: the body, then the end keyword as `\KwSty{\@algocf@endoption{#2}}`
+  // (shortend's `\@firstword`, :1890-1893, the default by :1485's `\ExecuteOptions{…,shortend}`, prints a bold "end";
+  // longend the whole "end if"; noend nothing) and the side comment `#3` after it, a space before it. Perl's
+  // two-argument form (algorithm2e.sty.ltxml:153) printed `#2` plain and whole ("end if" for pdflatex's bold "end"), its
+  // `{#3}` left over (KNOWN_PERL_ERRORS #1056). The line ends only after an end keyword (`\strut\par`, here
+  // `\lx@algo@parb`): an empty `#2` leaves ` #3` open on the line after the body, as :1868's `{ #3\relax}` does.
+  // A `#3` that is only `\relax` (the `{##4\relax}` of `\eIf`, `\For`: :2169-2179) is no comment: TeX's space before it
+  // is the line's last glue, which the line break removes (tex.web §816), so no space is kept; only a trailing `\relax`
+  // is stripped from a real comment. Witness 1810.03652 (6 "end for", 1 "end while"); line witnesses 1911.01815,
+  // 1903.04631. Guards `perfect_kernel_batch78k::algorithm2e_block_end_*`.
+  //
+  // A paper may ship its own algorithm2e.sty, which `InputDefinitions!` above reads in place of TeX Live's. Release 5.00
+  // (2013/01/06, its :1532-1534) and the releases before 5.1 define `\algocf@@@block`, `\algocf@@block` and
+  // `\algocf@block` with TWO arguments (no side comment; callers `\algocf@block{##1}{#8}`): there the body, then, for a
+  // non-empty `#2` only, `\KwSty{\@algocf@endoption{#2}}\strut\par`. The three-argument form would read the token after
+  // the call as its `#3` and scramble the listing, so the arity of the loaded definition picks the form. Witnesses
+  // (shipping v5.00 or earlier): 1402.6889, 1406.0089, 1410.1699, 1410.6122, 1502.02887, 1507.00513, 1507.00980,
+  // 1511.03137, 1511.05741, 1805.07253, 2208.10273. Guard `perfect_kernel_batch78k::algorithm2e_v500_two_argument_block_*`.
+  let two_argument_block = lookup_definition(&T_CS!("\\algocf@@@block"))?
+    .is_some_and(|definition| definition.get_num_args() == 2);
+  if two_argument_block {
+    DefMacro!("\\algocf@@@block{}{}", sub[(body, end)] {
+      let mut out = body.unlist();
+      if !end.is_empty() {
+        out.extend(algocf_end_keyword(end));
+        out.push(T_CS!("\\lx@algo@parb"));
+      }
+      Ok(Tokens::new(out))
+    });
+  } else {
+    DefMacro!("\\algocf@@@block{}{}{}", sub[(body, end, side)] {
+      let mut side = side.unlist();
+      if side.last() == Some(&T_CS!("\\relax")) {
+        side.pop();
+      }
+      let side_blank = side.iter().all(|t| t.get_catcode() == Catcode::SPACE);
+      let mut out = body.unlist();
+      let ends_line = !end.is_empty();
+      if ends_line {
+        out.extend(algocf_end_keyword(end));
+      }
+      if !side_blank {
+        out.push(T_SPACE!());
+        out.extend(side);
+      }
+      if ends_line {
+        out.push(T_CS!("\\lx@algo@parb"));
+      }
+      Ok(Tokens::new(out))
+    });
+  }
   // The block body `#1` is wrapped in `\lx@strippar{#1}`, matching Perl
   // (algorithm2e.sty.ltxml `\algocf@Vline`/`\algocf@Vsline`/`\algocf@Noline`).
   // `\lx@strippar` appends `\lx@algo@parx\lx@algo@parx\lx@algo@parx` so the block
@@ -286,9 +746,22 @@ LoadDefinitions!({
   // vertical rule then dangles past the block. The previous port dropped the
   // `\lx@strippar` wrap. Any phantom empty listingline the trailing pars create
   // is removed by the blank-line drop in `\lx@algo@@endline` + the renumber pass.
-  DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation");
-  DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation");
-  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@strippar{#1}");
+  // Locked: they are the block structure of the listing, and a document's
+  // redefinition only restyles the drawn rule. arXiv 2605.20533 renews
+  // `\algocf@Vline`/`\algocf@Vsline` with raw `\hbox{\vrule\vtop{…}}` code for
+  // algorithm2e releases before 2017/07/19 (its `\@ifpackagelater` branch, taken
+  // since 56ia compares the installed 2017/07/18 date); digested inside a
+  // listing line that box code closed the capture block twice (8×
+  // `_CaptureBlock_ … isn't open`, a capture bug Perl shares when the renewal
+  // runs).
+  DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@algo@block{#1}", locked => true);
+  DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@algo@block{#1}", locked => true);
+  // algorithm2e.sty:1851-1860: a `noline` block sets its body in a box of its own (`\algocf@push` inside the box,
+  // `\algocf@pop{\skiprule}` after it), so the line after the block is at the block's level again: the level pushed
+  // is popped as `\algocf@Vline`'s is. Perl's algorithm2e.sty.ltxml:120 never pops it, so every later line went one
+  // level deeper per block (KNOWN_PERL_ERRORS #1062, OXIDIZED_DESIGN_DIVERGENCES #852). Witness 1410.4452 (`noline`,
+  // its listing indented as its PDF); guard `perfect_kernel_batch78o::algorithm2e_noline_block_pops_its_indentation`.
+  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@algo@block{#1}", locked => true);
 
   // Semicolon handling
   DefMacro!("\\algocf@endline", sub[_args] {
@@ -343,6 +816,41 @@ LoadDefinitions!({
   DefMacro!("\\lx@algo@indentline", "\\hskip\\skiprule\\lx@algo@rule\\hskip\\skiptext");
   DefConstructor!("\\lx@algo@rule", "<ltx:rule width='1px' height='100%'/>");
 
+  // algorithm2e.sty:1626-1629 `\Indp`/`\Indm` are `\advance\leftskip by \algoskipindent` (`\skiprule` + `\skiptext` +
+  // 0.4pt, :1621-1623) and by `-\algoskipindent`: the lines a paragraph ends after them are set one level in or out,
+  // without a rule, until the group they were made in ends — a block's (its body is set in `\hbox{\vtop{…}}`,
+  // :1826-1860), or the algorithm's. Here a signed offset in levels (`\lx@algo@indentoffset`, assigned locally as
+  // `\leftskip` is), apart from the blocks' stack (`\lx@algo@indentation`): a block saves it when it opens and
+  // restores it when it closes (`\lx@algo@block`), and a line takes `blocks + offset` levels at its end
+  // (`\lx@prepend@indentation`), at least none. The blocks' rules stay where the blocks put them (`\moveright` ignores
+  // `\leftskip`, :1780), so a positive offset is plain levels after them and a negative one drops the innermost. Perl's
+  // binding leaves the raw `\leftskip` arithmetic, which a listing line never reads: the lines stayed at the block's
+  // level (KNOWN_PERL_ERRORS #1107). Witnesses 2102.06989, 1412.1462, 2106.03753, 2508.14614 (the flush-left
+  // `\Indm\Indmm \KwIn{…} \KwOut{…} \Indp\Indpp` idiom: the body at the margin, as their PDFs) and 1903.06418 (a
+  // balanced `\Indp`…`\Indm`). `\Indpp`/`\Indmm` (0.5em) and `\Indentp` stay raw `\leftskip` arithmetic, which a line
+  // never reads. Guards `perfect_kernel_batch78r::{algorithm2e_indp_indm_indent_the_lines_between,
+  // algorithm2e_indm_before_the_input_keeps_the_body_at_the_margin, algorithm2e_indm_in_a_block_ends_with_the_block}`.
+  DefRegister!("\\lx@algo@indentoffset" => Number(0));
+  DefPrimitive!("\\Indp", {
+    shift_algo_indent_offset(1)?;
+  });
+  DefPrimitive!("\\Indm", {
+    shift_algo_indent_offset(-1)?;
+  });
+  // A block's body: the offset it opens with, restored when it closes (the block's group).
+  DefMacro!("\\lx@algo@block{}", sub[args] {
+    let mut out = vec![T_CS!("\\lx@strippar"), T_BEGIN!()];
+    out.extend(args[0].clone().unlist());
+    out.extend([T_END!(), T_CS!("\\lx@algo@pop@indentation"), T_CS!("\\lx@algo@restore@indentoffset"), T_BEGIN!()]);
+    out.extend(Explode!(algo_indent_offset().to_string()));
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  }, locked => true);
+  DefPrimitive!("\\lx@algo@restore@indentoffset{}", sub[(offset)] {
+    let offset = offset.to_string().trim().parse::<i64>().unwrap_or(0);
+    assign_register("\\lx@algo@indentoffset", RegisterValue::Number(Number::new(offset)), None, vec![])?;
+  }, locked => true);
+
   // Register for tracking indentation — Perl L156-163
   DefRegister!("\\lx@algo@indentation" => Tokens!());
   DefMacro!("\\lx@algo@push@indentation{}", "\\expandafter\\lx@algo@indentation\\expandafter{\\the\\lx@algo@indentation#1}");
@@ -367,10 +875,50 @@ LoadDefinitions!({
   // to open a NESTED listingline → "ltx:listingline isn't allowed in
   // <ltx:listingline>" error cascade. algorithmicx_sty does the same close at
   // its endlist; this is the symmetric guard for algorithm2e.
-  DefConstructor!("\\lx@algo@@startline", "<ltx:listingline xml:id='#id'>",
-    before_construct => sub[document] {
-      document.maybe_close_element("ltx:listingline")?;
-    });
+  //
+  // The line machinery runs only where it reaches a line (KNOWN_PERL_ERRORS #471, shared with Perl):
+  // * behind a list item, an equation or a paragraph box (`\\` or `\ForEach` in an `\item`; 2004.03005, 1709.07249)
+  //   the split is a `<ltx:break/>` there, and startline / the indentation prepend do nothing;
+  // * with no listing at all — `[algo2e]` renames the environment to `{algorithm2e}`, so algorithm.sty's
+  //   `\newfloat{algorithm}` (or jmlr.cls:127's) holds statements in a plain float (2004.01608, 2406.10356) — startline
+  //   opens an auto-closing `<ltx:listing>`, endline and the prepend do nothing, and the float's end closes them.
+  DefConstructor!("\\lx@algo@@startline", sub[document, _args, props] {
+    match line_reach(document) {
+      LineReach::Barred => return Ok(()),
+      LineReach::Line => { document.maybe_close_element("ltx:listingline")?; },
+      // No listing where one cannot open (a caption): nothing.
+      LineReach::NoLine if !document.is_openable("ltx:listingline")
+        && !document.is_openable("ltx:listing") => return Ok(()),
+      LineReach::NoLine => {},
+    }
+    if !document.is_openable("ltx:listingline") {
+      document.open_element(
+        "ltx:listing",
+        Some(string_map!("class" => "ltx_lst_numbers_left", "_autoclose" => "1")),
+        None,
+      )?;
+    }
+    let mut attributes = string_map!("_algo_line" => "1");
+    if let Some(id) = props.get("id") {
+      attributes.insert("xml:id".to_string(), id.to_string());
+    }
+    document.open_element("ltx:listingline", Some(attributes), None)?;
+  });
+  // The float's end (or the listing's) closes a line still open in an auto-opened listing.
+  Tag!("ltx:listingline", auto_close => true);
+  // A line startline opened that closed with no statement is no line: TeX opens a line only at its first content
+  // (`\par` then the next `\item` prints none), so whoever closed it — endline, the listing's or float's end, the
+  // `{algorithmic}` line it is nested in (`\STATE …\\` before `\FOR`, 2402.07867, 2301.10369, 2508.15260,
+  // 2507.00889) — its listing drops it when the listing closes, unless a `\label` names it. (Not when the line itself
+  // closes: freed there, it ended the close walk of an ancestor — `\end{algorithm}` of `[algo2e]`'s plain float
+  // closing from an empty line skipped the float's own close hooks.)
+  Tag!("ltx:listing", after_close => sub[document, node] {
+    for line in node.get_child_elements() {
+      if line.has_attribute("_algo_line") && droppable_line(&line) {
+        document.remove_node(line);
+      }
+    }
+  });
   // Line numbering: `linesnumbered` overrides `\everypar`→`\algocf@everypar`→`\nl`
   // inside the listing (steps `AlgoLine`, calls `\algocf@printnl`; raw L1399/L1659).
   // The ENGINE fires `\the\everypar` at CONTENT-START (each line's vmode→hmode entry,
@@ -387,15 +935,9 @@ LoadDefinitions!({
   // content (only `<ltx:tags>` / indentation `<ltx:rule>`s) — `\lx@strippar`'s empty
   // `\lx@algo@parx` block-terminator lines. Witnesses arXiv:2602.20153
   // (`\Comment*[r]`), arXiv:2512.24601 (html_feedback #6080/#6236).
-  DefConstructor!("\\lx@algo@@endline", sub[document] {
-    document.close_element("ltx:listingline")?;
-    if let Some(line) = document.get_node().get_last_child()
-      && document::get_node_qname(&line) == pin!("ltx:listingline")
-      && !listingline_has_content(&line)
-    {
-      document.remove_node(line);
-    }
-  });
+  DefConstructor!("\\lx@algo@@endline", sub[document] { end_line(document, true)?; });
+  // A list's end ends the line it sits in; behind a barrier (a list nested in an item) it does nothing.
+  DefConstructor!("\\lx@algo@@endlistline", sub[document] { end_line(document, false)?; });
   // Gentle vmode reset at the line seam: resume internal_vertical WITHOUT firing a
   // `\par` (which would re-enter the line machinery), so the next line's first box is
   // a fresh vmode→hmode entry that the engine's `\everypar` hook numbers.
@@ -426,18 +968,41 @@ LoadDefinitions!({
   // opens when a listing is wrapped in `\colorbox{…}{…}`) so the following
   // `\lx@algo@@endline` closes cleanly. Witnesses 1911.01815, 1903.04631
   // (algorithm2e inside `\colorbox`/`\hbox`).
-  DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
+  // The line's levels: the open blocks' and the `\Indp`/`\Indm` offset's (`algo_line_indentation`).
+  DefMacro!("\\lx@prepend@indentation", sub[_args] {
+    let mut out = vec![T_CS!("\\lx@prepend@indentation@"), T_BEGIN!()];
+    out.extend(algo_line_indentation());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
   DefConstructor!("\\lx@prepend@indentation@{}", sub[document, args] {
+    if !matches!(line_reach(document), LineReach::Line) {
+      return Ok(());
+    }
     document.float_to_element("ltx:tags", false)?;
     let mut line = document.get_node().clone();
     let mut saved: Vec<Node> = line.get_child_nodes();
     for child in saved.iter_mut() {
       child.unlink();
     }
+    // A numbered line already carries its `<ltx:tags>` first (prepended at
+    // content-start by \algocf@printnl@i). The listingline model requires tags
+    // to stay FIRST (LaTeXML-block.rnc:189), so re-attach a leading tags before
+    // the indentation and drop the `<rule>` AFTER it — never in front. (Perl
+    // prepends the tags at endline, AFTER this indentation prepend, so tags win
+    // first position there; ours fire earlier, so a naive re-prepend would bury
+    // them behind the rule — the schema violation this repairs, algorithm2e
+    // manual 221 jing lines.) RUST-ONLY parity fix.
+    let lead_tags = saved
+      .first()
+      .is_some_and(|first| document::with_node_qname(first, |q| q == "ltx:tags"));
+    if lead_tags {
+      line.add_child(&mut saved[0])?;
+    }
     if let Some(indent) = args.first().and_then(|a| a.as_ref()) {
       document.absorb(indent, None)?;
     }
-    for child in saved.iter_mut() {
+    for child in saved.iter_mut().skip(usize::from(lead_tags)) {
       line.add_child(child)?;
     }
   });
@@ -454,10 +1019,14 @@ LoadDefinitions!({
   // `floatToElement('ltx:tags')` to climb OUT of that `<ltx:text>` up to the
   // enclosing `<ltx:listingline>` (which can contain tags), emits the tags
   // there, then leaves the cursor restored so following content flows on. This
-  // is the same float used by `\lx@prepend@indentation@` above. We restore the
-  // saved node (rather than Perl's manual childNode remove/re-append prepend)
-  // so the KwInput label's content keeps its wrapper. Witness 2104.02680
-  // (`\SetKwInput{KwInit}{\nl initialize}`).
+  // is the same float used by `\lx@prepend@indentation@` above. We do Perl's
+  // childNode detach/re-append prepend (algorithm2e.sty.ltxml:210-221) so the
+  // `<ltx:tags>` is the listingline's FIRST child even when a leading block-close
+  // `}` marker or KwInput label wrapper is already placed (the model requires tags
+  // first, LaTeXML-block.rnc:189; opening tags at the cursor landed them AFTER such
+  // content — algorithm2e_exgeneric2's `\Else` block-close, 5 jing lines). We ALSO
+  // restore the saved node so the KwInput label's content keeps its wrapper.
+  // Witness 2104.02680 (`\SetKwInput{KwInit}{\nl initialize}`).
   //
   // The printed number is wrapped in `\NlSty` — real algorithm2e.sty L1638/L1644:
   // `\NlSty{#1}` = `\textnormal{\textbf{\relsize{-2}#1}}` — so it renders uniform
@@ -470,18 +1039,76 @@ LoadDefinitions!({
   // instead — we chose content-start timing, so we restore the real-sty wrap.)
   // Matches the pdflatex golden. Guard: `cluster_algorithm2e_uniform_line_number_font`.
   // Split into a macro (wraps `\NlSty` before digestion) feeding the constructor.
-  DefMacro!("\\algocf@printnl{}", "\\algocf@printnl@i{\\NlSty{#1}}");
-  DefConstructor!("\\algocf@printnl@i{}", sub[document, args] {
+  // (`\lx@refstep@global`: `\nl`'s `\gdef\@currentlabel{\theAlgoLine}`, algorithm2e.sty:1663, :1659, keeps the
+  // line's step for a label after the line's group, `\While{c}{\label{x} …}`; 1602.05866)
+  DefMacro!("\\algocf@printnl{}", "\\lx@refstep@global\\algocf@printnl@i{\\NlSty{#1}}");
+  // The line is the object `\nl`'s step numbers (`\refstepcounter{AlgoLine}\gdef\@currentlabel{\theAlgoLine}`,
+  // algorithm2e.sty:1662-1667): it is recorded as the step's (`Document::note_raw_refstep_object`), so that a `\label`
+  // after the number — in the line, or after its `\;` and at the start of a block until the next number — names the
+  // line and gives it the step's reference forms (`Document::take_raw_refstep_number`), as `\ref` prints
+  // `\theAlgoLine` in pdflatex. Perl's line has no refnum, and the label named the algorithm (2406.05437's `step1`: PDF
+  // 14, ours 1; KNOWN_PERL_ERRORS #1129, OXIDIZED_DESIGN_DIVERGENCES #877). Guard
+  // `perfect_kernel_batch78t::algorithm2e_line_label_names_the_line`.
+  DefConstructor!("\\algocf@printnl@i{}", sub[document, args, props] {
+    // A line behind a list item takes no number: `\@item` empties `\everypar`, so pdflatex numbers no line there,
+    // and floating the tags out landed them on the item (2001.00288, 1804.09120).
+    if !matches!(line_reach(document), LineReach::Line) {
+      return Ok(());
+    }
     let num = args.first().and_then(|a| a.as_ref());
     let savenode = document.float_to_element("ltx:tags", false)?;
+    // Detach the listingline's current children, open the tags into the now-empty
+    // line as its FIRST child, then re-append the saved children (Perl's true
+    // prepend) — so the number tags precede any leading block-close `}` marker.
+    let mut line = document.get_node().clone();
+    let mut saved: Vec<Node> = line.get_child_nodes();
+    for child in saved.iter_mut() {
+      child.unlink();
+    }
     document.open_element("ltx:tags", None, None)?;
     match num {
       Some(n) => { document.insert_element("ltx:tag", vec![n], None)?; },
       None => { document.insert_element("ltx:tag", Vec::new(), None)?; },
     }
     document.close_element("ltx:tags")?;
+    for child in saved.iter_mut() {
+      line.add_child(child)?;
+    }
+    if let Some(Stored::Int(serial)) = props.get("raw_refstep_serial") {
+      document.note_raw_refstep_object(*serial, &line);
+    }
     if let Some(sn) = savenode { document.set_node(&sn); }
+  },
+  properties => {
+    match current_raw_refstep() {
+      Some(step) => stored_map!("raw_refstep_serial" => Stored::Int(step.serial)),
+      None => stored_map!(),
+    }
   });
+  // With hyperref, `\nl` and `\enl` step `AlgoLine` with `\stepcounter` and make `\@currentlabel` the number in
+  // `\algocf@nl@sethref` (algorithm2e.sty:1657-1660, :1665, :1676): that is the step `\refstepcounter` records
+  // (`\lx@refstepcounter@label`), when the number is `\theAlgoLine` (not `\nlset`'s own text).
+  RawTeX!(r"\@ifundefined{algocf@nl@sethref}{}{\let\lx@algocf@nl@sethref\algocf@nl@sethref
+\def\algocf@nl@sethref#1{\lx@algocf@nl@sethref{#1}\def\lx@algocf@tempa{#1}\def\lx@algocf@tempb{\theAlgoLine}%
+\ifx\lx@algocf@tempa\lx@algocf@tempb\lx@refstepcounter@label{AlgoLine}\fi}}");
+
+  // A list ends its paragraph (latex.ltx `\@endparenv`), so the text after it is a new algorithm2e line; inside the
+  // list the line sat behind its barrier, where its `\par`s only broke lines (`line_reach`; 1709.07249, 2203.03384).
+  // `\relax` outside an algorithm2e listing; the display lists (latex, paralist's compact/aspara) — not the in-paragraph
+  // ones.
+  DefMacro!("\\lx@algo@listend",
+    "\\lx@algo@newpar{PAR}{\\lx@prepend@indentation\\lx@algo@@endlistline\\lx@algo@leave@hmode\\lx@algo@startline}");
+  RawTeX!(r"\let\lx@algo@afterlist\relax
+\AddToHook{env/itemize/after}{\lx@algo@afterlist}
+\AddToHook{env/enumerate/after}{\lx@algo@afterlist}
+\AddToHook{env/description/after}{\lx@algo@afterlist}
+\AddToHook{env/list/after}{\lx@algo@afterlist}
+\AddToHook{env/compactitem/after}{\lx@algo@afterlist}
+\AddToHook{env/compactenum/after}{\lx@algo@afterlist}
+\AddToHook{env/compactdesc/after}{\lx@algo@afterlist}
+\AddToHook{env/asparaitem/after}{\lx@algo@afterlist}
+\AddToHook{env/asparaenum/after}{\lx@algo@afterlist}
+\AddToHook{env/asparadesc/after}{\lx@algo@afterlist}");
 
   // Strip trailing pars — Perl L141-145
   DefMacro!("\\lx@strippar{}", "#1\\lx@algo@parx\\lx@algo@parx\\lx@algo@parx");

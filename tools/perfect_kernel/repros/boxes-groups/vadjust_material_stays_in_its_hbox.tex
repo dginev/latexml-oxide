@@ -1,0 +1,23 @@
+% `\vadjust` material in a restricted horizontal box stays in its list and prints nothing (tex.web §655 migrates it
+% only when the packer is handed an adjust list), and an alignment's cells hand theirs to the alignment, which sets it
+% after the row (§796, §799) even inside a box. Since 60e the box reader (`\hbox`, `\mbox`, `\sbox`, `\makebox`,
+% `\fbox`, `\raisebox`, lrbox) and the calc/pgfmath measuring boxes drop it (stomach.rs `in_unadjusted_hbox`), but the
+% boxes LaTeX builds through other bindings do not: `\phantom`/`\hphantom` (latex.ltx `\makeph@nt`), amsmath's
+% `\text` (`mode => "restricted_horizontal"` constructors), graphicx's `\resizebox`/`\scalebox` (`\Gscale@box`) and
+% `\underline` (`$\@@underline{\hbox…}$`) print theirs as paragraphs; and a tabular inside a box loses its cells'
+% material, which the box drops with its own (review 60e r4 findings 1-2; KNOWN_PERL_ERRORS #441).
+% status:  RED (open; Perl-shared)
+% oracle:  pdflatex 0 errors: "Alpha Foxtrot." / "Golf x = Hotel Juliet." / "Kilo Lima November Papa." / "Quebec Romeo
+%          Tango." / "Uniform [Victor / Whiskey / Xray] Yankee."; no Charlie, Echo, India, Mike, Oscar or Sierra
+% engines: rust 60e: Charlie, Echo, India, Mike, Oscar, Sierra each a paragraph after their line's; no Whiskey; Perl
+%          0.8.8 alike, run into the next paragraph ("CharlieEchoGolf"), Whiskey after the paragraph
+% expect:  0 errors; none of Charlie, Echo, India, Mike, Oscar, Sierra; Whiskey after Victor's row in the tabular
+\documentclass{article}
+\usepackage{graphicx,amsmath}
+\begin{document}
+\noindent Alpha \phantom{Bravo\vadjust{\noindent Charlie}} \hphantom{Delta\vadjust{\noindent Echo}} Foxtrot.\par
+\noindent Golf $x=\text{Hotel\vadjust{\noindent India}}$ Juliet.\par
+\noindent Kilo \resizebox{2cm}{!}{Lima\vadjust{\noindent Mike}} \scalebox{2}{November\vadjust{\noindent Oscar}} Papa.\par
+\noindent Quebec \underline{Romeo\vadjust{\noindent Sierra}} Tango.\par
+\noindent Uniform \mbox{\begin{tabular}{l}Victor\vadjust{\noindent Whiskey}\\ Xray\end{tabular}} Yankee.\par
+\end{document}

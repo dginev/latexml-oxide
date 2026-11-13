@@ -1,0 +1,8 @@
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{biblatex_fullcite_family.bib}
+\defbibnote{consulted}{Works consulted, with \emph{one} entry.}
+\begin{document}
+See \cite{just22}.
+\printbibliography[heading=bibintoc, title={Primary Sources}, prenote=consulted]
+\end{document}

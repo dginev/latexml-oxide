@@ -1,0 +1,16 @@
+% mechanism: as kernel_author_line_spaced_names_request_in_formula_marks, a plain mark (`$^{2}$Lab`) opening the line and
+%   an in-formula one (`${\rm ^{1}Dept}$`) mid-line
+% witness: synthetic (revISO1b B1, probe kx7)
+% oracle:  pdflatex (TL 2025 article) 0 errors: "Ann Able1 Bob Baker2 / 2Lab of Chemistry, Univ Y, 1Dept of Physics, Univ X"
+% engines: rust int160c = 0 errors, 0 warnings, Able "Dept of Physics, Univ X", Baker "Lab of Chemistry, Univ Y"; ISO1b =
+%   0 warnings, Able none, Baker the whole line (silent)
+% expect:  0 errors, 0 warnings; Able "¹Dept of Physics, Univ X"; Baker "Lab of Chemistry, Univ Y"
+% status:  GREEN (ISO1c) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ Bob Baker$^{2}$\\ $^{2}$Lab of Chemistry, Univ Y, ${\rm ^{1}Dept}$ of Physics, Univ X}
+\maketitle
+Text.
+\end{document}

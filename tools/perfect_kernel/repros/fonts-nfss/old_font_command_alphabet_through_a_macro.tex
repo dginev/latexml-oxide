@@ -1,0 +1,21 @@
+% witness: review of 67r (B1, probe r5): an old font command whose maths alphabet is reached through a macro
+%          (`\newcommand\Bbbx{\mathbb}`, a robust `\DeclareRobustCommand\Bbby{\mathbb}`, a `\let` copy)
+% oracle: pdflatex 0 errors; every R and Z blackboard (`\U/msb/m/n/10` in \showbox), the c italic
+% engines: rust 67o1 = R blackboard, Z italic (`\Bbbx` read the R as its argument); rust 67r round 1 = R and Z
+%          italic, `tex="{\mathbb{}RZ}"` (the macro ran as TeX's `#2\relax` but our `\mathbb` read the `\relax`)
+% expect: 0 Errors, 0 Warnings; R and Z blackboard in each group, reverting as the old command; c italic
+% mechanism: latex.ltx:14312-14321 `\@fontswitch` lets `\math@bgroup` to `\relax`, so in maths any alphabet `#2`
+%            expands to is a switch to the end of the group
+% status: RED (67r r1) -> GREEN (67r r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsfonts}
+\newcommand\Bbbx{\mathbb}
+\DeclareRobustCommand\Bbby{\mathbb}
+\let\Bbbz\mathbb
+\DeclareOldFontCommand{\bbx}{\normalfont}{\Bbbx}
+\DeclareOldFontCommand{\bby}{\normalfont}{\Bbby}
+\DeclareOldFontCommand{\bbz}{\normalfont}{\Bbbz}
+\begin{document}
+${\bbx RZ}c$ ${\bby RZ}c$ ${\bbz RZ}c$
+\end{document}

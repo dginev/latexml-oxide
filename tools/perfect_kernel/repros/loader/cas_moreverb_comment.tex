@@ -1,0 +1,14 @@
+% witness: 2506.19439: cas-common.sty:1500 loads moreverb (and so verbatim's `{comment}`) and :2264 wrapfig; the binding
+%          loaded neither
+% oracle:  pdflatex 0 errors: "x y"
+% engines: rust 63t7 = `Error:unexpected:&` (the comment typeset as text)
+% expect:  0 errors, 0 warnings; "x" and "y", the comment dropped
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass[a4paper,fleqn]{cas-sc}
+\begin{document}
+x
+\begin{comment}
+Writing - review & editing.
+\end{comment}
+y
+\end{document}

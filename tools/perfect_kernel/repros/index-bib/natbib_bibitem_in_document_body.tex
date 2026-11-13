@@ -1,0 +1,19 @@
+% witness: 1108.2593 (aa: the \bibitem's after `\begin{acknowledgements}…\end{acknowledgements}`, in no list); leak3 of the
+%          64x review
+% oracle:  pdflatex 2 errors: "Lonely \item--perhaps a missing list environment", one per \bibitem
+% engines: rust 64zc = 2 Error:malformed:ltx:bibitem (in <ltx:p>); Perl 0.8.8 the same
+% expect:  2 Error:malformed:ltx:bibitem ("\bibitem outside any list", LaTeX's Lonely \item), and the two entries in a
+%          <bibliography> (the recovery)
+% status:  ERRORS KEPT (64x: reported as Perl and pdflatex report them; the structure recovered)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+\section{Steps}
+\section{Summary}
+Text \citep{a}.
+
+\bibitem[Able(2011)]{a} Able, A. 2011, ApJ.
+
+\bibitem[Baker(2012)]{b} Baker, B. 2012, ApJ.
+\end{document}

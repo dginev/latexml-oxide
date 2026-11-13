@@ -1,0 +1,12 @@
+% pgfmath's `width("…")`, `height("…")`, `depth("…")` measure the typeset text (pgf's SIZER; Perl
+% pgfmath.code.tex.ltxml:523-537): wheelchart's `value=width("\WCvarC")` sized every slice 0.
+% witness: wheelchart manual (l3fp (0)/(0) errors, 501 then TooManyErrors).
+% status:  GREEN (59b)
+% oracle:  pdflatex 0 errors: "[13.05559][6.83331][1.94444]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\def\X{Ab}\pgfmathparse{width("\X")}[\pgfmathresult]\pgfmathparse{height("Ag")}[\pgfmathresult]%
+\pgfmathparse{depth("Ag")}[\pgfmathresult]
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 1808.08417's svmult.cls:482 (`\backmatter` `\let\appendix=\bppendix`, the book appendix, :715-732, which
+%          resets the chapter and section counters)
+% oracle:  pdflatex (with that svmult.cls) 0 errors: "1 First", then ".1 Proofs"
+% engines: rust 78a r2 = ".1"; perl = ".2" (no reset)
+% expect:  0 errors, 0 warnings; the back-matter appendix's section ".1"
+% status:  GREEN (78a r3)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\chapter{Intro}
+\section{First}
+Text.
+\backmatter
+\appendix
+\section{Proofs}
+P.
+\end{document}

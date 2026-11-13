@@ -1,0 +1,18 @@
+% mechanism: tex.web §1221 \futurelet reads its name and two tokens with get_token; at `normal`
+%   status each read crosses the end of an \input file (§362), so a file ending in
+%   `\futurelet\z` lets \z to the second token after the file and puts both back.
+% witness: SYNC_STATUS "Other `get_token` reads do not cross an input end either"
+% oracle:  pdflatex 0 errors, "F FOO[FOO]"
+% engines: rust=0 errors, "F FOO[]" (56jg-rel, 2026-09-25)
+% expect:  0 errors, "F FOO[FOO]"
+% status:  GREEN (56jj: the `Token` parameter reads with read_primitive_token; guard
+%          token_kernel_gaps::futurelet_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_futurelet_in.tex}
+\futurelet\z
+\end{filecontents*}
+\def\foo{FOO}
+\makeatletter
+\begin{document}
+F \@@input input_end_futurelet_in.tex \relax\foo [\z]
+\end{document}

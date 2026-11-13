@@ -1,0 +1,17 @@
+% A brace-less `\abstract` under a class whose `{abstract}` begin code rebinds `\section` (frontiersFPHY.cls:520): the
+% begin code is not replayed (it has no extent without its end code), so the next `\section` ends the abstract.
+% witness: none in the corpus (74a review finding 2; Frontiers/bioinfo papers use `\begin{abstract}`)
+% oracle:  pdflatex (absfront.cls beside it) 0 errors: "ABSTRACT / Plain abstract text. / Introduction Body." (the
+%          `\section` a run-in label: in TeX the brace-less form never ends)
+% engines: rust 67int25 = 0 errors, 2 warnings, an empty <document/>
+% expect:  0 errors; the abstract "Plain abstract text.", then section 1 "Introduction" with "Body."
+% status:  RED (67int25) -> GREEN (int25 review fixes)
+% preload: ar5iv.sty
+\documentclass{absfront}
+\begin{document}
+\abstract
+Plain abstract text.
+
+\section{Introduction}
+Body.
+\end{document}

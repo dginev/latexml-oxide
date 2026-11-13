@@ -1,67 +1,77 @@
 use crate::prelude::*;
 
-/// The prefix of a raw body line up to its first *unescaped* `%` — comment.sty
-/// reads its body with `%` active as a TeX comment, so an `\end{name}` sitting
-/// behind a `%` (e.g. `% […] \end{comment}`) does NOT close the environment.
-/// `%` and `\` are ASCII, so byte scanning is UTF-8-safe (the cut index always
-/// lands on a char boundary).
-fn strip_tex_comment(line: &str) -> &str {
-  let bytes = line.as_bytes();
-  for i in 0..bytes.len() {
-    if bytes[i] == b'%' {
-      let mut bs = 0;
-      while i > bs && bytes[i - 1 - bs] == b'\\' {
-        bs += 1;
-      }
-      if bs % 2 == 0 {
-        return &line[..i];
-      }
-    }
-  }
-  line
-}
-
 LoadDefinitions!({
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
   let define_excluded: PrimitiveClosure = Rc::new(|mut args: Vec<ArgWrap>| {
     let name = args.remove(0).owned_tokens().unwrap();
-    let begin_mark = s!("\\begin{{{name}}}");
+    let name_str = name.to_string();
+    let begin_mark = format!("\\begin{{{name_str}}}");
+    let begin_mark_let = begin_mark.clone();
+    let name_clone = name_str.clone();
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => {
-      // Detect `\end{name}` MID-LINE (allowing spaces, `\end {name}`), but only
-      // in the code part of the line — an `\end` hidden behind a `%` comment
-      // does NOT close the environment (comment.sty reads its body with `%`
-      // active). Perl comment.sty.ltxml L30 matched only a whole line,
-      // `/^\s*\Q$endmark\E\s*$/`, and our prior port did the same
-      // (`line.trim() == end_mark`), so a comment ending `…text.\end{name}`
-      // overran to EOF and silently swallowed everything after it — a document's
-      // bibliography included. Surpass-Perl divergence (OXIDIZED_DESIGN #133):
-      // both LaTeXML engines lose it, and pdflatex keeps it for the witness
-      // arXiv:2606.11493 (`\begin{comment}…\(G(h_1)=0\).\end{comment}` swallowed
-      // a 31-`\bibitem` thebibliography). The `%`-guard keeps the tokenize
-      // `comment` fixture's `% […] \end{Excluded}` from closing early. Guard
-      // `comment_midline_end_keeps_bibliography`.
-      let end_re = Regex::new(&format!("\\\\end\\s*\\{{{name}\\}}")).unwrap();
+      // comment.sty:186-193 reads the body LINE by line with every special
+      // made innocent and compares each whole line against `\end{name}`
+      // (`\ProcessCommentLine#1^^M{\def\test{#1}\csarg\ifx{End…Test}\test`):
+      // only a line that IS `\end{name}` ends the comment — TeX's line
+      // reader strips trailing spaces (tex.web §362), so `\end{name}   ` does,
+      // while a trailing `%` (innocent, so literal), text
+      // before it, or text after it do not, and the comment then runs to the
+      // end of the file where pdflatex stops with "File ended while scanning
+      // use of \next" (verified on each shape, 2026-09-05). The earlier
+      // mid-line detection (OXIDIZED_DESIGN #133, since retracted) showed
+      // MORE than pdflatex; we now report TeX's error at EOF instead.
+      // An end line indented by spaces or tabs ends it too, as Perl's `/^\s*\Q$endmark\E\s*$/` does
+      // (comment.sty.ltxml:30), where pdflatex runs on to the end of the file: a TAB indent ended it in LaTeX until
+      // 2024-11, which put TAB in `\dospecials`, and the acmart papers that indent `\end{CCSXML}` lost their whole body
+      // to it (2401.14656, 2405.12964, 2411.10188, 2501.06699, 2504.19287; user ruling 2026-10-09: accept both).
+      // The terminator is handed to the CURRENT `\end` macro (K3, #199).
+      // Guards: `00_tokenize::comment_test` (golden), `06_cluster_bibliography::
+      // comment_midline_end_runs_to_eof_like_pdflatex`,
+      // `perfect_kernel_gemini::comment_self_terminating_hands_to_end`.
+      let end_line = format!("\\end{{{name_clone}}}");
       let mut nlines = 0;
+      let mut ended = false;
       read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
       while let Some(line) = read_raw_line() {
-        let code = strip_tex_comment(&line);
-        if let Some(m) = end_re.find(code) {
-          // comment.sty expects `\end{name}` at the line's end; trailing content
-          // on that line is dropped, as verbatim.sty's `\verbatim@` does too.
-          if !code[m.end()..].trim().is_empty() {
-            Info!("unexpected", "stuff",
-              s!("Characters dropped after '\\end{{{name}}}'"));
-          }
+        if line.trim() == end_line {
+          let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+          end_tokens.extend(ExplodeText!(&name_clone));
+          end_tokens.push(T_END!());
+          unread_expansion(Tokens::new(end_tokens));
+          ended = true;
           break;
         }
         nlines += 1;
       }
-      note_progress(&s!("[Skipped {name} ({nlines} lines)]"));
+      if !ended {
+        Error!("unexpected", "EOF",
+          s!("File ended while scanning use of \\next (no whole-line \\end{{{name_clone}}} closes this {name_clone})"));
+      }
+      note_progress(&s!("[Skipped {name_clone} ({nlines} lines)]"));
       Ok(Vec::new())
     });
+    DefMacro!(T_CS!(format!("\\end{{{name_str}}}")), None, Tokens!());
+    // (an empty name, `\excludecomment{}` or `\includecomment{}` written by mistake — 2508.09827:687 — names no command
+    // of the document, comment.sty's being `\csname\endcsname`: `\<name>` would be read as `\\`, every later line break
+    // reading the rest of its line raw, and `\end<name>` would be `\end`)
+    if !name_str.is_empty() {
+      DefMacro!(T_CS!(format!("\\end{name_str}")), None, Tokens!());
+    }
+    // comment.sty's own name for the environment (`\csarg\def{#1}`, comment.sty:241-248): a kernel-style `\begin`
+    // that looks up only `\<name>` — arabtex's alatex.sty:113 — finds it, where Perl's binding (only `\begin{<name>}`)
+    // left "Environment comment undefined" and typeset the comment (KNOWN_PERL_ERRORS #1148; 2104.08110's commented-out
+    // figure, 4 missing images).
+    // Guard: `perfect_kernel_batch79k::a_comment_under_a_kernel_begin_is_skipped`.
+    if !name_str.is_empty() {
+      let_i(
+        &T_CS!(format!("\\{name_str}")),
+        &T_CS!(begin_mark_let),
+        None,
+      );
+    }
     Ok(Vec::new())
   });
 
@@ -96,6 +106,20 @@ LoadDefinitions!({
       None,
       Tokens::new(after_tokens)
     );
+    // comment.sty's own names (`\csarg\def{#1}`, comment.sty:234-240), as for an excluded comment above, and none for
+    // an empty name
+    if !name.is_empty() {
+      let_i(
+        &T_CS!(s!("\\{name}")),
+        &T_CS!(s!("\\begin{{{name}}}")),
+        None,
+      );
+      let_i(
+        &T_CS!(s!("\\end{name}")),
+        &T_CS!(s!("\\end{{{name}}}")),
+        None,
+      );
+    }
     Ok(Vec::new())
   }));
 
@@ -107,6 +131,52 @@ LoadDefinitions!({
     Some(PrimitiveBody::Closure(define_excluded))
   );
   DefPrimitive!("\\specialcomment{}{}{}", Some(define_included));
-  DefPrimitive!("\\processcomment{}{}{}{}", None);
   DefMacro!("\\csarg{}{}", r"\expandafter#1\csname#2\endcsname");
+  // comment.sty's own machinery (:170-233, :283-289), for what builds a comment type of its own on it (lwarp.sty:1349-1363
+  // `\CommentEndDef`, `\ProcessComment`, `\SetUpCutFile`: tikz-trackschematic and its snippets), and the two types the
+  // binding leaves to it, as the file has them (:266-272 `\generalcomment`, `\processcomment`; Perl's binding has none of
+  // this, "\CommentEndDef undefined"). `\excludecomment`, `\includecomment`, `\specialcomment` stay the binding's.
+  RawTeX!(
+    r"\def\makeinnocent#1{\catcode`#1=12 }
+\newwrite\CommentStream
+\def\DefaultCutFileName{\def\CommentCutFile{comment.cut}}
+\DefaultCutFileName
+\def\ProcessComment#1{\def\CurrentComment{#1}%
+  \begingroup
+  \let\do\makeinnocent \dospecials
+  \makeinnocent\^^L%
+  \endlinechar`\^^M\relax \catcode`\^^M=12\relax \xComment}
+{\catcode`\^^M=12 \endlinechar=-1 %
+ \gdef\xComment#1^^M{\ProcessCommentLine}
+ \gdef\ProcessCommentLine#1^^M{\def\test{#1}
+      \csarg\ifx{End\CurrentComment Test}\test
+          \edef\next{\endgroup\noexpand\EndOfComment{\CurrentComment}}%
+      \else \ThisComment{#1}\let\next\ProcessCommentLine
+      \fi \next}
+}
+\def\SetUpCutFile{\immediate\openout\CommentStream=\CommentCutFile
+  \PrepareCutFile}
+\def\PrepareCutFile{}
+\long\def\WriteCommentLine#1{\immediate\write\CommentStream{\unexpanded{#1}}}
+\let\ThisComment\WriteCommentLine
+\def\ProcessCutFile{\message{Straight input of \CommentCutFile.}%
+  \input{\CommentCutFile}\relax}
+\def\CloseAndInputCutFile{\FinalizeCutFile
+  \immediate\closeout\CommentStream
+  \ProcessCutFile}
+\def\FinalizeCutFile{}
+\long\def\generalcomment#1#2#3{\message{General comment '#1'}%
+  \csarg\def{#1}{\endgroup #2 \relax \SetUpCutFile \ProcessComment{#1}}%
+  \csarg\def{After#1Comment}{\CloseAndInputCutFile #3}%
+  \CommentEndDef{#1}}
+\long\def\processcomment#1#2#3#4{\message{Lines-Processing comment '#1'}%
+  \csarg\def{#1}{\endgroup \SetUpCutFile #2\relax
+    \ProcessComment{#1}}%
+  \csarg\def{After#1Comment}{#3\CloseAndInputCutFile #4}%
+  \CommentEndDef{#1}}
+\def\EndOfComment#1{\csname After#1Comment\endcsname
+  \begingroup\def\@currenvir{#1}\end{#1}}
+\def\CommentEndDef#1{{\escapechar=-1\relax
+  \csarg\xdef{End#1Test}{\string\\end\string\{#1\string\}}}}"
+  );
 });

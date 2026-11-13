@@ -1,0 +1,25 @@
+% witness: review r1 of 65c (probe v1); the base 64ze already right, 65c r1 printed "References" twice
+% mechanism: an environment that captures no body (`\newenvironment{myenv}{\small}{}`) left open at `\end{document}`
+%   leaves the bare-`\bibitem` `ltx:bibliography` open; its close-time hooks (the heading absorption,
+%   sect11.rs) run only when `ltx:document` closes. `\lx@finalize@document` defers that close to the end of
+%   the build when groups or environments were abandoned (core_interface.rs `close_abandoned_document`), so
+%   every still-open element closes with it, hooks included.
+% oracle:  pdflatex 7 errors (the bare `\bibitem`s' "Lonely \item" and "\begin{myenv} ... ended by \end{document}"):
+%          ill-formed on purpose; "Text. References A ref. B ref." -- one heading
+% engines: rust 64ze = 0 errors, one `References` (the bibliography title); 65c r1 = the heading paragraph kept as
+%          well (hooks skipped); 65c r2 = as 64ze; Perl = 0 errors
+% expect:  0 errors, 1 warning; `ltx:bibliography` with `<title>References</title>`, no bold "References" paragraph
+% status:  GREEN (65c r2; guard perfect_kernel_batch65c::abandoned_document_close_runs_bibliography_hooks)
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{myenv}{\small}{}
+\begin{document}
+\begin{myenv}
+Text.
+
+\noindent{\bf References}
+
+\bibitem{a} A ref.
+
+\bibitem{b} B ref.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 1412.0919, 2509.20301, 1606.05562, 2508.13749 (`\newcommand{\vast}{\bBigg@{4}}`),
+%          2103.12630 (`\renewcommand{\big}{\bBigg@\@ne}`, `\newcommand{\biggg}{\bBigg@\thr@@}`);
+%          amsmath.sty:721-739
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 = 3 errors (`\bBigg@` undefined); Perl lacks it too (KNOWN_PERL_ERRORS #630)
+% expect:  0 errors; `\bBigg@\tw@(` is `\bigg(` (fontsize 210%), `\bBigg@{4}(` larger (410%)
+% status:  RED (65int2) -> GREEN (65s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand{\vast}{\bBigg@{4}}
+\newcommand{\twice}{\bBigg@\tw@}
+\makeatother
+\begin{document}
+\[ \vast( x \vast) = \twice[ y \twice] = \bigg[ y \bigg] \]
+\end{document}

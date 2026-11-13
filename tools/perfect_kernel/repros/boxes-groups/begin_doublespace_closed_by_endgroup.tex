@@ -1,0 +1,14 @@
+% witness: review 64y round 3 (s3)
+% oracle:  pdflatex 1 error (the \endgroup closes doublespace's \begingroup, setspace.sty:542-547; \begin's group stays open: \begin{doublespace} ended by \end{document})
+% engines: rust 64w 1E+1W, 64y r3 1E+1W, 64y 1E+1W (the Warning is the open \begingroup at \end{document}, as in TeX); Perl 1E
+% expect:  1 Error
+% status:  GREEN (64y); guard perfect_kernel_batch64y::begin_doublespace_closed_by_endgroup_is_an_error
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{setspace,lscape,multicol}
+\begin{document}
+Intro.
+
+\begingroup\begin{doublespace} Text.\endgroup After.
+
+Closing text.
+\end{document}

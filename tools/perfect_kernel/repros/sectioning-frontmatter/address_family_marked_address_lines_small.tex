@@ -1,0 +1,17 @@
+% A sibling of the marked address lines (catalog only, the same code path as `address_family_marked_address_lines`).
+% witness: 1901.09107 (control)
+% oracle:  pdflatex 0 errors: as the control
+% engines: rust int127a = right through the writer
+% expect:  0 errors, 0 warnings; as the control
+% status:  GREEN (int127a) -> GREEN (100b), catalog only
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^1$ \\
+$^1$Univ A \quad $^2$Univ B \\
+{\tt\small $^1$\{aable, ccole\}@a.edu} \\
+{\tt\small $^2$bbaker@b.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

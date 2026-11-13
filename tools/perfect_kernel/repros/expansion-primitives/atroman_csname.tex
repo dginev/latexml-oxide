@@ -1,0 +1,17 @@
+% witness: texmate/texmate2manual (texmate.sty:546,557; \csname chessdiag\@roman\@diagramsbuilt\endcsname)
+% oracle: pdflatex (0 errors), same-host Perl latexml (0 errors, prints ROMANOK)
+% engines: pdflatex, latexml (Perl), latexml_oxide.sweep62
+% expect: S:ROMANOK: R:ROMANOK:   (\csname chessdiag i \endcsname -> \chessdiagiii)
+% status: GREEN (batch 56av, 2026-09-09)
+% mechanism: \@roman is a number-scanning DefMacro closure (sect08.rs:1439) not the
+%   expandable token macro \romannumeral#1 (latex.ltx:10207 / Perl dump latex_dump.pool.ltxml:3649).
+%   Number-scan closures are non-expandable inside \csname, so \@roman<count> leaks its
+%   register into the name -> tex.web csname scan (§372-374) stops early.
+\documentclass{article}
+\makeatletter
+\newcount\mycount \mycount=3
+\expandafter\def\csname chessdiagiii\endcsname{ROMANOK}
+\begin{document}
+S:\csname chessdiag\@roman\mycount\endcsname:
+R:\csname chessdiag\@roman\the\mycount\endcsname:
+\end{document}

@@ -1,0 +1,14 @@
+% witness: review 64y round 1 (m10_once: the at-most-once marker)
+% oracle:  pdflatex 0 errors (\endthm never runs in TeX)
+% engines: rust 64ra 1E+1W, 64y 1E+1W; Perl 1E
+% expect:  exactly 1 Error and termination: the recovery inserts \endthm (now \relax) once, then falls back to the Error
+% status:  GREEN (64y; guard against a loop); guard perfect_kernel_batch64y::redefined_end_recovers_once
+% preload: ar5iv.sty
+\documentclass{article}\newtheorem{thm}{Theorem}
+\begin{document}
+Intro.
+
+{\thm Thm text\let\endthm\relax} After.
+
+Next.
+\end{document}

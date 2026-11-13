@@ -1,0 +1,15 @@
+% mechanism: risk: mnras's comma row of mark-led names over affiliation lines
+% witness: synthetic (MLN v8)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 Ann Able, 2 Bob Baker", "1 Inst A", "2 Inst B"
+% engines: int169a (54ccc986ef) and MLN1: the same
+% expect:  0 errors, 0 warnings; Ann Able: Inst A; Bob Baker: Inst B
+% status:  GREEN (both)
+% preload: ar5iv.sty
+\documentclass{mnras}
+\begin{document}
+\title{T}
+\author{$^{1}$Ann Able, $^{2}$Bob Baker\\
+$^{1}$Inst A\\ $^{2}$Inst B}
+\maketitle
+Text.
+\end{document}

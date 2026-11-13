@@ -1,0 +1,16 @@
+% mechanism: a repeat flush emits only what is new (State mappings, as `num_<tag>`), an item on an earlier creator by Perl's `author:N`
+% witness: 458 papers in dev3 repeat a flush; S0's `call: another flush's`
+% oracle:  pdflatex 0 errors; Ann Able, Bob Baker
+% engines: rust S0: text items; perl: no such step
+% expect:  0 errors, 0 warnings; the last `\\author` replaces, as Perl
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able\\ Univ A}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\author{Bob Baker\\ Univ B}
+\maketitle
+\end{document}

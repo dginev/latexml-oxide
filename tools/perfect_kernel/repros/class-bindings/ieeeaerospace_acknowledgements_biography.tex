@@ -1,0 +1,20 @@
+% witness: 2601.06000, 2601.00238, 2603.17229 (IEEEAerospaceCLS, 2026 template: 16 run-336 papers, first error
+%          \acknowledgements, then \thebiography and {biographywithpic})
+% oracle:  pdflatex 0 errors (IEEEAerospaceCLS.cls shipped by 2601.06000): "Acknowledgements" and "Biography" headings
+%          (:267-272, :403-408), the biography's name in bold beside its photo (:541-549)
+% engines: rust 64zc = 3 errors (all three undefined; the binding had only the US spelling \acknowledgments)
+% expect:  0 errors; two unnumbered sections, the biography a float of class biography with the name in bold
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass[twocolumn,letterpaper]{IEEEAerospaceCLS}
+\usepackage{graphicx}
+\begin{document}
+\section{Intro}
+Body TEXT.
+\acknowledgements
+Thanks TEXT.
+\thebiography
+\begin{biographywithpic}{Ann Author}{example-image}
+Bio TEXT.
+\end{biographywithpic}
+\end{document}

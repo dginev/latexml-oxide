@@ -1,0 +1,15 @@
+% mechanism: hyperref.sty:790-798 `\pdfstringdefDisableCommands` = `\begingroup\makeatletter
+%   \HyPsd@DisableCommands`, which appends its argument to `\pdfstringdefPreHook` for bookmark
+%   strings: never typeset. Perl's 0-argument no-op (hyperref.sty.ltxml:403) left the group to run
+%   in place under the document's catcodes: `\@gobble` without `\makeatletter` is `\@` + "gobble".
+% witness: K13 stage-2 audit (57h) hyperref row; 36 of 3,003 A/B papers call it
+% oracle:  pdflatex 0 errors, "Body."
+% engines: rust 57p and perl: 0 errors, <p>gobbleBody.</p>
+% expect:  0 errors; <p>Body.</p>
+% status:  GREEN (57r)
+\documentclass{article}
+\usepackage{hyperref}
+\pdfstringdefDisableCommands{\let\cite\@gobble}
+\begin{document}
+Body.
+\end{document}

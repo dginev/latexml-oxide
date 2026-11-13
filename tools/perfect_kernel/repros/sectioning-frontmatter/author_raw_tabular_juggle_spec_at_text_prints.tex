@@ -1,0 +1,18 @@
+% mechanism: the content check's reading of a juggle's printed text: a tabular's column spec prints nothing but the
+%            text it places — `@{…}` between columns (`rehearsal::past_tabular_call`, `spec_printed`); its column
+%            letters and a `p{3cm}` width print nothing
+% witness: synthetic, review revI3 finding 1 (probes r13 `{@{Inst }c}`, r7 `{c@{ and }c}`)
+% shape:   the tie juggle, the reopened tabular's spec `{@{Inst }p{3cm}@{ and }c}`
+% oracle:  pdflatex: 0 errors; "A One Inst Dept and Lab"
+% engines: rust CK3 `=2`: E=0 W=3, the content-check Warning `Lab` ("and", printed and lacking, not counted)
+% expect:  "A One Dept", affiliation "Inst"; at `=2` 3 Warnings (two spans' markup, the content check), `and Lab`
+% status:  RED (CK3) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, CK3b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
+\title{T}
+\author{A One \end{tabular}~\begin{tabular}{@{Inst }p{3cm}@{ and }c} Dept & Lab}
+\maketitle
+Text.
+\end{document}

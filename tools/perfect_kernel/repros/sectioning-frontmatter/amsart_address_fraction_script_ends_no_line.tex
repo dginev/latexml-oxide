@@ -1,0 +1,17 @@
+% mechanism: a two-dimensional layout is one printed item (`observer::marks::row_layout`, Perl `Post/MathML.pm`
+%   `Apply:FRACOP:?` mfrac L1609): the script under the bar of `$\frac{a}{b^{1}}$` is no script the formula ends on, so
+%   the writer's view keys "Lab a b 1 Lab" whole, as the observer's lexer does, and the address is cut at its marks
+% witness: review 90a r3 probe AFg10 (90a r3 descended into the fraction, read `OnBase{"ab"}`, dropped the "1" from the
+%   key and declined: "reading [Creator(0)], written []", Baker got the merged address)
+% oracle:  pdflatex (TL 2025 amsart) 0 errors: "ANN ABLE1 , BOB BAKER2" / "Text." / "1 Lab a/b1 Lab, 2 Lbb a/b1 Lbb"
+% engines: rust int118a, 90a r2: writer `written`; 90a r3: declined, Able no contact; 90a r4: as int118a
+% expect:  0 errors, 0 warnings; writer `written`; Able: 1 Lab a b 1 Lab; Baker: 2 Lbb a b 1 Lbb
+% status:  GREEN (int118a, 90a; perfect_kernel_batch90a::a_script_inside_a_two_dimensional_layout_ends_no_line)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}\address{$^{1}$Lab $\frac{a}{b^{1}}$ Lab\\ $^{2}$Lbb $\frac{a}{b^{1}}$ Lbb}
+\maketitle
+Text.
+\end{document}

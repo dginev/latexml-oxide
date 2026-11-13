@@ -1,0 +1,29 @@
+% mechanism: a cas-sc/cas-dc group of TWO OR MORE unlabelled `\affiliation`s (or `\address`es) under no marked author:
+%   each is its run's, the authors since the entry before it, read by authoring order as elsarticle reads an unlabelled
+%   `\address` (`annotate=run`, elsart_support_core_sty.rs `\lx@els@shared`); the class prints one entry list under
+%   the row of names, so the PDF cannot decide (main-session decision, brief 104d r2 B1). `cas_labelled_entry` declares
+%   `_share=authors,annotate=run`; `shared_row::share_row_contacts` shares such an entry only when it is the only one
+%   (OXIDIZED_DESIGN_DIVERGENCES #901). The one-entry case: cas_unlabelled_affiliation_is_every_authors
+% witness: 2202.06096 (`\author{Yajing Liu}\address{Research Center …}\author{Zhengya Sun}\author{Wensheng Zhang}
+%   \address{University of Chinese Academy of Sciences …}`; review rev104d B1)
+% oracle:  pdflatex (TL 2025 cas-dc.cls) 0 errors: "Ann Able, Bob Baker and Cat Cole" / "Univ A, Town, Land" /
+%   "Univ B, City, Land"
+% engines: rust int130a: Univ A on Ann Able, Univ B on Cat Cole alone, Bob Baker none; 104d r1: every author both;
+%   perl: OmniBus's `\affiliation`, the keys as text
+% expect:  0 errors, 0 warnings; Ann Able holds Univ A; Bob Baker and Cat Cole hold Univ B
+% status:  RED (int130a, 104d r1) -> GREEN (104d r2)
+% preload: ar5iv.sty
+\documentclass{cas-dc}
+\begin{document}
+\shorttitle{T}
+\shortauthors{A. Able et al.}
+\title[mode=title]{T}
+\author{Ann Able}
+\affiliation{organization={Univ A}, city={Town}, country={Land}}
+\author{Bob Baker}
+\author{Cat Cole}
+\affiliation{organization={Univ B}, city={City}, country={Land}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,30 @@
+% witness: 2106.14831, 2402.17000 (autart.cls:568-577 defines {algorithm}; the paper loads algpseudocode only)
+% oracle:  pdflatex (clean) with this cut of the class (autart.cls:568-577 verbatim)
+% engines: rust 67k1 = 1 error ({algorithm} undefined: autart_cls.rs lacked the class's float)
+% expect:  0 errors, 0 warnings; one {algorithm} float, caption tagged "Algorithm 1", 2 listing lines
+% status:  RED (67k1) -> GREEN (67l); guard perfect_kernel_batch67l::autart_defines_its_algorithm_float
+\begin{filecontents*}[overwrite]{autart.cls}
+\ProvidesClass{autart}
+\LoadClass{article}
+\long\def\@makealgocaption#1#2{\vskip 2ex \small
+  \hbox to \hsize{\parbox[t]{\hsize}{{\bfseries #1.} #2}}}
+\newcounter{algorithm}
+\def\thealgorithm{\@arabic\c@algorithm}
+\def\fps@algorithm{tbp}
+\def\ftype@algorithm{4}
+\def\ext@algorithm{lof}
+\def\fnum@algorithm{Algorithm \thealgorithm}
+\def\algorithm{\let\@makecaption\@makealgocaption\@float{algorithm}}
+\let\endalgorithm\end@float
+\end{filecontents*}
+\documentclass{autart}
+\usepackage[noend]{algpseudocode}
+\begin{document}
+\begin{algorithm}
+\caption{Sum}
+\begin{algorithmic}[1]
+\State $x \gets 0$
+\State $y \gets 1$
+\end{algorithmic}
+\end{algorithm}
+\end{document}

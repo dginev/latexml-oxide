@@ -1,0 +1,13 @@
+% witness: K13 stage-2 audit row todonotes `\listoftodos` (57h; 1,181 A/B papers load todonotes, none writes
+%          the optional); `\listoftodos[1][\@todonotes@todolistname]` (todonotes.sty:323) reads the list's
+%          heading; the binding (Perl todonotes.sty.ltxml:38) read nothing, so "[My Notes]" was printed
+% oracle:  pdflatex 0 errors: a "My Notes" heading and the (empty) list, then "C."
+% engines: perl = rust 57ag, 0 errors: "[My Notes] C."
+% expect:  0 errors, 0 warnings; no "[My Notes]" text (the list is not built, as in Perl)
+% status:  RED (57ag) -> GREEN (57ah: `\listoftodos[]`, todonotes_sty.rs)
+\documentclass{article}
+\usepackage{todonotes}
+\begin{document}
+\listoftodos[My Notes]
+C.
+\end{document}

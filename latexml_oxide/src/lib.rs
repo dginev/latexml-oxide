@@ -7,8 +7,11 @@ extern crate latexml_package;
 
 pub mod api;
 pub mod bib_session;
+#[cfg(feature = "test-utils")]
+pub mod conformance;
 pub mod converter;
 pub mod core_interface;
+pub mod format_dumps;
 pub mod identity;
 pub mod ini_tex;
 pub mod lsp_server;
@@ -16,6 +19,8 @@ pub mod main_tex;
 pub mod multidoc;
 pub mod post;
 pub mod render_workers;
+pub mod source_date;
+pub mod streaming_restart;
 pub mod util;
 
 /// Load the embedded LaTeXML schema (compile-time) into the runtime

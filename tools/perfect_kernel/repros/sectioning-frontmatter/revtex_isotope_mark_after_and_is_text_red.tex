@@ -1,0 +1,22 @@
+% mechanism: an isotope's nucleus `${}^{3}$He` after the word "and", where an author requests mark 3: the conjunction
+%   rule (`relocate::spaced_marks_written`'s `glued_before`, review rev104c2 F1) reads every "and" before a nucleus
+%   mark as a separator, so the isotope's number labels a new entry and the line parts there, "and" and the digit lost
+%   (OXIDIZED_DESIGN_DIVERGENCES #964; review rev104c3 finding 1). Without a mark-3 author the line stays whole.
+% witness: none (review rev104c3 probe i2; i3 without a `$^3$` author stays whole on every binary)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1 Dept of Physics and 3He Lab, Univ X / 2 Lab Y / 3 Inst Z"
+% engines: rust int131a0 and 104c r3: Ann "Dept of Physics", Cat "He Lab, Univ X" + "Inst Z"; 104c r2: Ann "Dept of
+%   Physics and 3He Lab, Univ X", Cat "Inst Z"
+% expect:  0 errors, 0 warnings; Ann "Dept of Physics and 3He Lab, Univ X", Bob "Lab Y", Cat "Inst Z" (a letter run
+%   glued after the mark keeps it the isotope, after "and" too)
+% status:  RED (104c r3) — open, SYNC_STATUS row 104c; no guard
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+\author{Cat Cole $^3$}
+\affiliation{${}^1$Dept of Physics and ${}^{3}$He Lab, Univ X\\ ${}^2$Lab Y\\ ${}^3$Inst Z}
+\maketitle
+Text.
+\end{document}

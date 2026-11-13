@@ -1,0 +1,21 @@
+% mechanism: thcc.sty:81-91 `\def\th@ccproof{… \def\@begintheorem##1##2{\item[\hskip\labelsep\theorem@headerfont
+%   ##1.\ \ ]…}}`: the ccproof theorem style drops the number, and ccproof.sty:41-44 declares cc's `{proof}`
+%   (`\newtheorem{pr@@f}{\the\prooftitle}`) under it. The theorem.sty binding does not run a raw `\th@<style>`'s
+%   `\@begintheorem`, so every proof is "Proof 1", "Proof 2" (a numbered theorem). Not the frontmatter mechanism of
+%   68u r2; open.
+% witness: 1905.07821 (14 cc papers)
+% oracle:  pdflatex: 0 errors; "Proof. Trivial." (no number)
+% engines: rust 68u r2: a theorem tagged "Proof 1"; perl: not run
+% expect:  0 errors; an unnumbered proof titled "Proof."
+% status:  RED (68u r2)
+% preload: ar5iv.sty
+\documentclass{cc}
+\title{The Title}
+\author{Ann Author}
+\begin{document}
+\maketitle
+Text.
+\begin{proof}
+Trivial.
+\end{proof}
+\end{document}

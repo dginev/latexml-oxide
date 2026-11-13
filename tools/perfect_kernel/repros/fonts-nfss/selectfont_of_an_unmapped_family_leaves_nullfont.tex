@@ -1,0 +1,20 @@
+% `\selectfont` leaves `\nullfont` also for a family the font table does not map: `\usepackage[default]{opensans}` sets
+% `\familydefault` to `opensans-LF` (with an `.fd`, which LaTeXML does not read); pgf's node code `\selectfont`s it from
+% its picture's `\nullfont` (pgfcorescopes.code.tex:244, :748-755), and the text was dropped, silently, with no diagnostic.
+% pgf's next `\nullfont` keeps text at picture level dropped. A node's own `font=` (an unmapped family, an encoding-named
+% family) keeps its text.
+% witness: prerex/chart (recall 100 % -> 51 %, every cell of a chart); reach: tikz + a `[default]` font package.
+% oracle:  pdflatex (TL 2025) 0 errors: Hello, Direct, Dings in nodes; "stray" not printed (the picture's nullfont).
+% engines: perl keeps the words (no `\nullfont` drop). int140a: a node without its own `font=` empty (Hello lost), 0 errors.
+% expect:  0 errors; Hello, Direct and Dings kept in foreignObjects; stray dropped.
+\documentclass{article}
+\usepackage{tikz}
+\renewcommand*{\familydefault}{opensans-LF}
+\begin{document}
+\begin{tikzpicture}
+stray
+\node {Hello};
+\node[font=\fontfamily{unmapped-LF}\selectfont] at (0,1) {Direct};
+\node[font=\usefont{U}{pzd}{m}{n}] at (0,2) {Dings};
+\end{tikzpicture}
+\end{document}

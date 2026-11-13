@@ -1,0 +1,15 @@
+% witness: 2606.06323 (siunitx + etextools: `\fi` not in a conditional, then "Expected opening '{'"; that second error is
+%   etextools + translations, RED loader/etextools_translations_begin_document)
+% oracle: pdflatex (clean, SLASH=12); engine: pdflatex
+% expect: 0 errors; "SLASH=12" (the catcode of `/` right after the load, etextools' own end-of-package restore done)
+% mechanism: etextools.sty:35-56 sets `_` to 11 (`/` to 8, ^^a7 to 7) for its own code and restores them in its own
+%   `\AtEndOfPackage` (:55). The loader's expl3 scope-exit cleanup fired `\ExplSyntaxOff` on `_`=letter alone, and the
+%   restore was not in effect after the load (`/` stayed 8; siunitx's `\AtBeginDocument` code then failed). Fixed: content.rs gates the cleanup on expl3's own flag
+%   `\l__kernel_expl_bool` (expl3-code.tex:242-272).
+% status:  GREEN
+\documentclass{article}
+\usepackage{etextools}
+\edef\slashcatcode{\the\catcode`\/}
+\begin{document}
+SLASH=\slashcatcode
+\end{document}

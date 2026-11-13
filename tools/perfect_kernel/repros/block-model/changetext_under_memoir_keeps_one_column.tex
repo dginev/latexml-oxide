@@ -1,0 +1,15 @@
+% witness: 57l review: memoir's own `\changetext` ends with its `\ch@ngetext` (memoir.cls:11237-11245),
+%          which halves `\columnwidth` under `\if@twocolumn`; the binding loads memoir.cls raw, so in
+%          LaTeXML's one column `\linewidth` was halved (the 57k changepage stub had made `\changetext`
+%          a no-op under memoir)
+% oracle:  pdflatex 0 errors (two columns: \linewidth half the new \textwidth); LaTeXML sets one column,
+%          `\columnwidth` = `\textwidth`
+% engines: rust 57l first cut: "Width 243.72636pt" (halved)
+% expect:  0 errors; \linewidth equal to the changed \textwidth (memoir's own `\@iffirstamp` warning stays)
+% status:  RED (57l first cut) -> GREEN (57l)
+\documentclass[twocolumn]{memoir}
+\usepackage{changepage}
+\begin{document}
+\changetext{}{1cm}{}{}{}
+Width \the\linewidth\ and \the\textwidth.
+\end{document}

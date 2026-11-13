@@ -1,0 +1,13 @@
+% witness: K13 stage-2 audit row relsize `\mathlarger`/`\mathsmaller` (57h; 158 A/B papers load relsize, 8-9 write
+%          them, 17-24 calls); the real macros read their atom, gather the `\limits`/`\nolimits` and scripts
+%          after it and size only that, in a group (relsize.sty:263-310); the binding (Perl
+%          relsize.sty.ltxml:45-46) is the open declaration `\relsize{±1}`, so the size ran on over the rest
+% oracle:  pdflatex: only the ∑ (and its script) larger, only b smaller
+% engines: perl = rust 57ai2: x, +, y at 120%, c at 83%
+% expect:  0 errors, 0 warnings; ∑ 120% with its script, b 83%, the rest unsized; the parse unchanged
+% status:  RED (57ai2) -> GREEN (57aj: relsize's atom collector, relsize_sty.rs)
+\documentclass{article}
+\usepackage{relsize}
+\begin{document}
+$\mathlarger{\sum}_{i} x_i + y$ and $a \mathsmaller{b} c$.
+\end{document}

@@ -1,0 +1,22 @@
+% witness: arXiv 2605.20598 (\subimport{}{packages_and_functions.for_preamble.tex} loads hyperref
+%          → etoolbox; the main file's biblatex then finds etoolbox "loaded" but \newbool gone)
+% oracle:  pdflatex 0 errors: import.sty:65-92 runs the \input at the caller's level (no group)
+% engines: rust (56ht) = Error:undefined:\mymac, \newbool, \booltrue (the paper: Fatal:TooManyErrors);
+%          Perl: the same group (import.sty.ltxml L44-47), \mymac undefined
+% expect:  0 errors; <p>MACRO Y</p>
+% status:  RED (56ht) -> GREEN (56hu, OXIDIZED_DESIGN #280)
+% mechanism: the binding wrapped the imported input in {…}; every definition the file made
+%   was popped at the }, while package loaded-flags are global. The input now runs ungrouped,
+%   the search paths saved before and restored after it.
+\begin{filecontents*}{lxsubmacs.tex}
+\newcommand{\mymac}{MACRO}
+\usepackage{hyperref}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{import}
+\subimport{}{lxsubmacs.tex}
+\usepackage{biblatex}
+\newbool{foo}\booltrue{foo}
+\begin{document}
+\mymac{} \ifbool{foo}{Y}{N}
+\end{document}

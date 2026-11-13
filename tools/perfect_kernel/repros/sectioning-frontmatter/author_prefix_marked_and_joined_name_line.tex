@@ -1,0 +1,12 @@
+% witness: 63e review r11 R3 (b1: a later line of two names marked before them, joined by "and")
+% oracle:  pdflatex 0 errors: "^1Ann Able, ^2Bob Baker" / "^1Cat Cole and ^2Dan Dunn" / "^1Univ A" / "^2Univ B"
+% engines: rust (63d, 63e) = "Cat Cole and" reads as no name, both names affiliations (0 errors, silent); Perl no
+%          creator at all (Base_Utility.pool.ltxml:708)
+% expect:  4 creators — Ann and Cat (Univ A), Bob and Dan (Univ B); 0 errors
+% status:  RED (open; OD #459: a marked part keeps its joining "and", which no name ends with)
+\documentclass{article}
+\author{$^{1}$Ann Able, $^{2}$Bob Baker\\ $^{1}$Cat Cole and $^{2}$Dan Dunn\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

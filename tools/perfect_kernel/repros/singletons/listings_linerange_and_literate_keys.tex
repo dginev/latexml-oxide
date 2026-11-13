@@ -1,0 +1,35 @@
+% witness: arXiv/html_feedback #6950 (2601.09829 figures 5, 11, 13, A1: \lstinputlisting[linerange=...] renders the
+%   whole file) and #6486 (2305.00594 section 4: literate={\\Real}... never applied)
+% oracle:  pdflatex 0 errors; "x : R → y", then L2 L3 L6, then M4
+% engines: rust 59s = "x : \Real → y", L1-L7, M1-M5. linerange (RUST-ONLY): the line test reads only
+%   firstline/lastline (listings_sty.rs lst_linetest; Perl listings.sty.ltxml:1270-1272 reads linerange;
+%   listings.sty:1412-1450 \lst@GLI@: a-b, a-, -b, N). literate (PERL-ORIGIN): the key is the tokens' text, so
+%   {\\Real} is the string "\\Real"; listings maps each token to its character (\lst@CArgX listings.sty:1134,
+%   \lst@MakeActive@ :139-166), so \\ is one backslash
+% expect:  0 errors; listinglines "x : <Math \mathbb{R}> → y" | L2 L3 L6 | M4
+% status:  RED (59s) -> GREEN (59t)
+\documentclass{article}
+\usepackage{amssymb}
+\usepackage{listings}
+\lstset{literate={\\Real}{{$\mathbb{R}$}}1 {->}{{$\to$}}2}
+\begin{document}
+\begin{lstlisting}
+x : \Real -> y
+\end{lstlisting}
+\begin{lstlisting}[linerange={2-3,6-6}]
+L1
+L2
+L3
+L4
+L5
+L6
+L7
+\end{lstlisting}
+\begin{lstlisting}[linerange={4}]
+M1
+M2
+M3
+M4
+M5
+\end{lstlisting}
+\end{document}

@@ -1,0 +1,24 @@
+% witness: math0409234 (hha.cls:77-166; 3 of run 336's papers), 0805.3030 (jhrs, 2), quant-ph0412067 (jcm, 2) — the
+%          older Foundation Compositio classes: one-argument \address/\email/\homepage, "Key words and phrases:",
+%          "2000 Mathematics Subject Classification:", \submitted printed as "(communicated by …)"
+% oracle:  pdflatex 0 errors (this excerpt keeps hha.cls's frontmatter commands)
+% engines: rust 64h = Error "\email with no \author" + "\address with no \author" (the kernel lock refused the class's
+%          \author); keywords, MSC and \submitted lost; Perl the same under --includestyles
+% expect:  0 errors; the author's email, homepage and address as contacts; keywords and MSC labelled as the class
+%          prints them; the communicating editor a publication note (side file hha.cls — the guard writes it)
+% status:  RED (64h) -> GREEN (64k)
+% preload: ar5iv.sty
+\documentclass{hha}
+\title{A title}
+\author{Ann Author}
+\email{ann@uni.edu}
+\homepage{http://uni.edu/ann}
+\address{Dept. of Mathematics, Uni A}
+\keywords{homotopy, spectra}
+\classification{55P42}
+\submitted{C. Editor}
+\received{1 May 2004}
+\begin{document}
+\maketitle
+Text.
+\end{document}

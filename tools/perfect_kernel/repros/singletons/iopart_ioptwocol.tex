@@ -1,0 +1,13 @@
+% witness: 1004.1944, 1704.06471, 2012.05676, 2406.14105, 2212.07640 (`\ioptwocol`, iopart.cls:1095-1097)
+% oracle:  pdflatex (the witness's iopart.cls, TL 2025) 0 errors: title, then "1. Intro / Text." in two columns
+% engines: rust 64h4 = 1 error (\ioptwocol undefined); perl 0.8.8 = 1 error
+% expect:  0 errors; the section "Intro" holds the paragraph "Text."
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass[10pt]{iopart}
+\begin{document}
+\title{T}
+\ioptwocol
+\section{Intro}
+Text.
+\end{document}

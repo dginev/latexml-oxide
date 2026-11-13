@@ -1,0 +1,26 @@
+% mechanism: `invoke_token` (stomach.rs) pushes each token it invokes onto the Stomach's `token_stack` and pops it only
+%   on a normal exit; a recovered Fatal (`digest_internal`'s Err arm, the streaming loop's resource stop) kept the
+%   stack, so after a `Stomach:Recursion` Fatal (the stack at `MAXSTACK`) the build's next digestion failed its first
+%   push with a second Fatal and the build stopped early. Perl's `hardYankProcessing` empties it for every Fatal
+%   (Common/Error.pm:329)
+% witness: 2410.07647, 2105.02599 (the second, ghost Fatal on both sides)
+% oracle:  pdflatex (TL 2025) "! TeX capacity exceeded, sorry [grouping levels=255]." — a robustness guard: the input
+%   is invalid on purpose, its recovery is ours
+% engines: rust int131a: 2 Fatals, "build stopped early", the creator lost; perl: not run
+% expect:  exactly 1 Fatal (Stomach:Recursion), no "build stopped early"; "Before text." kept; Ann Author with Univ A
+% status:  CONTROL (pdflatex rejects it); RED (int131a) -> GREEN (131fix) —
+%   perfect_kernel_batch131fix::a_recovered_fatal_leaves_no_token_stack_behind
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\def\deep{{\deep}}
+\title{T}
+\author[a]{Ann Author}
+\affil[a]{Univ A}
+\date{\deep}
+\begin{document}
+Before text.
+
+\maketitle
+Body text.
+\end{document}

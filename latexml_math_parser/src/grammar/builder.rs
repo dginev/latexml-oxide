@@ -13,6 +13,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   default_registry!();
   // Tokens, to be used in rules directly
   token!(atom ~ "ATOM");
+  // A fraction or root of numbers (util.rs, `is_numeric_constant`): an ATOM to the actions, a number to
+  // `numeric_monomial` (57cj.1 review: an `atom` lead refused every other ATOM's twin).
+  token!(numeric_atom ~ "ATOM_NUMBER");
   token!(unknown ~ "UNKNOWN");
   token!(id ~ "ID");
   // M4: Specialized tokens for "d" that could be differential operators.
@@ -31,13 +34,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // enumerating the `list_apply` alternatives that the pragma
   // would only reject post-hoc. See docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
   token!(wide_punct ~ "WIDE_PUNCT");
-  token!(addop ~ "ADDOP");
-  token!(mulop ~ "MULOP");
-  // The `/` divide-MULOP specifically (vs `\times`/`\cdot`/etc.). Used to scope
-  // the bare-bigop fraction rule (`\partial/\partial t`) to division only, so it
-  // does NOT fire on `\partial \times B` (which Perl keeps as a flat product).
-  token!(divide = "MULOP:divide");
-  token!(relop ~ "RELOP");
+  // A comma alone, not a `\quad` hint (`PUNCT:quad`): the #37 hole's list separator.
+  token!(comma = "PUNCT:,");
+  // The ellipsis IDs (`\ldots`, `\hdots` and `...` lex as `ldots`; `\dots` and amsmath's variants):
+  // the #18 chain goes on across them and no other ID.
+  token!(ldots_id = "ID:ldots");
+  token!(dots_id = "ID:dots");
+  token!(dotsc_id = "ID:dotsc");
+  token!(dotsb_id = "ID:dotsb");
+  token!(dotsm_id = "ID:dotsm");
+  token!(dotsi_id = "ID:dotsi");
+  token!(dotso_id = "ID:dotso");
+  token!(addop_t ~ "ADDOP");
+  token!(mulop_t ~ "MULOP");
+  token!(relop_t ~ "RELOP");
   token!(elideop ~ "ELIDEOP");
   token!(langle_rel = "RELOP:less-than");
   token!(langle_open = "OPEN:langle");
@@ -51,8 +61,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // single `VERTBAR:|` for `||x||`). Used by the `\|x\|` norm rule below.
   token!(doublevertbar = "VERTBAR:||");
   // `\left|...\right|` produces VERTBAR tokens tagged `stretchy="true"`.
-  // The lexer (util.rs) further distinguishes those emitted by `\@left`
-  // from those emitted by `\@right` via the `lx@side` property set in
+  // The lexer (util.rs) further distinguishes those emitted by `\lx@delim@left`
+  // from those emitted by `\lx@delim@right` via the `lx@side` property set in
   // the respective constructors (tex_math.rs). Side-distinct lexemes
   // (LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR) eliminate
   // combinatorial pairing ambiguity for the kerned-stack norm idioms
@@ -63,31 +73,64 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(left_stretchy_vertbar ~ "LEFT_STRETCHY_VERTBAR");
   token!(right_stretchy_vertbar ~ "RIGHT_STRETCHY_VERTBAR");
   // Fallback for stretchy bars that arrived without a side tag
-  // (legacy DOM input, or a code path that bypassed `\@left`/`\@right`).
+  // (legacy DOM input, or a code path that bypassed `\lx@delim@left`/`\lx@delim@right`).
   // The lexer in util.rs emits this when `role_side` is absent.
   // Rules that legitimately accept any side (eval_at) enumerate both
   // alternatives explicitly rather than relying on a union token —
   // the Marpa tree builder doesn't roll up alternation-of-tokens cleanly.
   token!(undirected_stretchy_vertbar ~ "STRETCHY_VERTBAR");
+  // A single stretchy bar, not a `\left\|` double one (`LEFT_STRETCHY_VERTBAR:||`, util.rs): the
+  // kerned stacks (`stretchy_norm_fenced`) are made of single bars only — `\left|\!\left\|A\right\|
+  // \!\right|` is |‖A‖|, as Perl, never a merged glyph that drops two bars (57am review round 7).
+  token!(left_stretchy_single_bar = "LEFT_STRETCHY_VERTBAR:|");
+  token!(right_stretchy_single_bar = "RIGHT_STRETCHY_VERTBAR:|");
   token!(close_pipe = "CLOSE:|");
   token!(middle_bar = "MIDDLE:|");
   token!(middle_parallel = "MIDDLE:parallel-to");
   token!(midbar = [vertbar middle_bar middle_parallel]);
+  // amsmath's `\lvert` and `\rvert` are an OPEN and a CLOSE (amsmath.sty.ltxml:1150-1152), lexed
+  // `OTHER_OPEN:lvert` / `OTHER_CLOSE:rvert` (util.rs): a group's delimiters, and a ket's opening and a bra's
+  // closing bar (`ket_bar`, `bra_bar`, 57bt).
+  token!(lvert_open = "OTHER_OPEN:lvert");
+  token!(rvert_close = "OTHER_CLOSE:rvert");
   token!(lbrace = "OPEN:{");
   token!(rbrace = "CLOSE:}");
   token!(lparen = "OPEN:(");
   token!(rparen = "CLOSE:)");
   token!(lbracket = "OPEN:[");
+  // A group holding only integrals (`util::integral_operator_group`): its OPEN
+  token!(intop_group_open ~ "INTOP_GROUP_OPEN");
   token!(rbracket = "CLOSE:]");
   token!(relop_equals = "RELOP:equals");
   token!(metarelop ~ "METARELOP");
+  token!(colon_metarelop = "METARELOP:colon");
   token!(modifierop ~ "MODIFIEROP");
   token!(modifier ~ "MODIFIER");
-  token!(arrow ~ "ARROW");
-  token!(binop ~ "BINOP");
+  token!(arrow_t ~ "ARROW");
+  token!(binop_t ~ "BINOP");
   token!(postfix ~ "POSTFIX");
   token!(function ~ "FUNCTION");
-  token!(opfunction ~ "OPFUNCTION");
+  token!(plain_opfunction ~ "OPFUNCTION");
+  // An expectation or probability, an OPFUNCTION of its own lexeme category
+  // (`parser::type_expectation_lexemes`): `opfunction` below takes it with the others, the
+  // operator nests take none (57cd).
+  token!(expectation_e = "EXPECTATION:\u{1D53C}");
+  token!(expectation_p = "EXPECTATION:\u{2119}");
+  // … and one that also reads as the letter it was lexed as (`expectation_letter`, M3): the letter retry's
+  // spelling, for a formula no typed stream parses (`parser::spell_letter_readings`).
+  token!(expectation_e_letter = "EXPECTATION:\u{1D53C}.letter");
+  token!(expectation_p_letter = "EXPECTATION:\u{2119}.letter");
+  // The OPFUNCTIONs whose scripts are limits — TeX's `\mathop` without `\nolimits` (plain.tex:1073-1074,
+  // :1083-1084), LaTeXML's `scriptpos => \&doScriptpos` (math_common.pool.ltxml:742, :759-764) — and the
+  // named `argmin`/`argmax` and the expectation, which bind a variable as they do: their subscript binds it
+  // (`limits_opfunction`, `bound_application`, 57cg; `semantics::binds_its_subscript` reads the same
+  // lexemes). `\log_a`, `\exp_p` are `\nolimits` (plain.tex:1054, :1082): a base, a parameter.
+  token!(maximum_opfunction = "OPFUNCTION:maximum");
+  token!(minimum_opfunction = "OPFUNCTION:minimum");
+  token!(gcd_opfunction = "OPFUNCTION:gcd");
+  token!(pr_opfunction = "OPFUNCTION:Pr");
+  token!(argmin_opfunction = "OPFUNCTION:argmin");
+  token!(argmax_opfunction = "OPFUNCTION:argmax");
   token!(trigfunction ~ "TRIGFUNCTION");
   token!(applyop ~ "APPLYOP");
   token!(composeop ~ "COMPOSEOP");
@@ -123,6 +166,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(end_arrow ~ "end_ARROW");
 
   rules!(
+      // The operators, each extended below with its decorating scripts (`addOpDecoration`).
+      relop = relop_t;
+      arrow = arrow_t;
+      addop = addop_t;
+      mulop = mulop_t;
+      binop = binop_t;
+      // An OPFUNCTION: a named one or an expectation or probability (the actions read both as
+      // OPFUNCTIONs, `semantics::operator_category`). An operator nests over a named one only
+      // (`plain_opfunction`), and takes an expectation's application (`expectation_application`):
+      // one derivation, no refused nest (57cd review).
+      expectation_head = expectation_e | expectation_p | expectation_e_letter | expectation_p_letter;
+      opfunction = plain_opfunction | expectation_head;
+      // (a nonterminal: a token group of exact-text tokens does not roll up in the ASF builder)
+      limits_opfunction = maximum_opfunction | minimum_opfunction | gcd_opfunction | pr_opfunction
+        | argmin_opfunction | argmax_opfunction | expectation_e | expectation_e_letter;
       // Factors
       // opfunction/function/trigfunction are NOT factors — they require arguments.
       // Standalone usage is handled at the term level (term += function | ...).
@@ -131,7 +189,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
       // M4: diffunk/diffid are added as factor_base alternatives so "d" tokens
       // can appear anywhere unknown/id appear. The diffop rule only uses diffunk/diffid.
-      factor_base = unknown | number | id | atom | array | diffunk | diffid;
+      // An expectation or probability also reads as the letter it was lexed as (M3, user directive
+      // 2026-09-30: an unparsed variant of a lexeme is a grammatical category of its own, the foundation
+      // intentionally ambiguous and disambiguated by pruning): `expectation_letter`, which its action
+      // presents as the UNKNOWN lexeme the lexer gave it (`expectation_as_letter`), a factor as any
+      // letter is. It survives only where no reading takes it as an operator (the soft prune
+      // `ExpectationLettersAreFallbacks`, first at the root, and per glade in the ASF traverser):
+      // `\sin\mathbb{E}\sum_i X_i` sine@(E)·∑…, `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i`
+      // (57cf review), one expectation at a time: `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y). Only the
+      // letter retry's stream spells it (`expectation_e_letter`, parser.rs `spell_letter_readings`: a formula no
+      // typed stream parses; offered everywhere, the twin doubled the tree iterator's trees per expectation), and a
+      // letter's group application is none of its readings: the expectation's own (the token keeps its role, so
+      // the markup is the same).
+      expectation_letter = expectation_e_letter => expectation_as_letter
+        | expectation_p_letter => expectation_as_letter;
+      factor_base = unknown | number | id | atom | numeric_atom | array | diffunk | diffid | expectation_letter;
       // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
       // Also handle unmatched delimiters for cases-like patterns.
       // Perf: `open` is now narrowed to OTHER_OPEN (non-paren/bracket/brace), so
@@ -160,31 +232,43 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // pushes the constraint upstream into the grammar: bare
       // OPFUNCTION cannot anchor an invisible-times chain on the LEFT.
       // To keep legitimate trailing-OPFUNCTION cases (`c \not`,
-      // `a b \not`, ...), the `tight_term += tight_term opfunction =>
-      // apply_invisible_times` rule below admits OPFUNCTION as a
-      // chain-terminating RIGHT operand. OPFUNCTION as the head of an
+      // `a b \not`, ...), `bare_opfunction_term` (below, 57cb) admits
+      // OPFUNCTION as a product-terminating RIGHT operand, a term no
+      // factor follows. OPFUNCTION as the head of an
       // applied form (`\log x`, `\sin x`) enters via `applied_func`
-      // (prefix_apply) and via the `tight_term += opfunction tight_term`
-      // and `tight_term += opfunction factor` rules further below.
-      factor = factor_base | function | fenced_array;
+      // (`opfunction group_factor`, a group; `opfunction op_bare_item|op_bare_arg`, Perl's
+      // bare argument, after `op_bare_arg`).
+      // An ellipsis stands among juxtaposed factors and as a MulOp/BinOp operand (user ruling
+      // 2026-09-29: `\cdots` keeps ELIDEOP, divergence #3, with product rules): `a_1a_2\cdots a_n`,
+      // `a\times\cdots\times b`, `x_{i_1\cdots i_k}`, as Perl's `\cdots` (an ID, math_common.pool.ltxml:479)
+      // does (57bs; ~1,035 formulas in 236 A/B papers were unparsed). Not a `factor_base`: a limit-from and a
+      // differential take no ellipsis, a trig bare argument only as its first item (`trig_arg`, 57cj.12); an
+      // OPFUNCTION's or operator's bare argument does (`op_bare_item`, 57bx).
+      factor = factor_base | function | fenced_array | elideop;
       // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
       // A "left-only term": on the left behaves as a term (for comma lists),
       // on the right terminates at the addop (like expression-level postfix).
       limit_from_term = factor_base addop => limit_from_apply;
       // Terms
-      // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
-      any_bigop = bigop | sumop | intop | limitop | diffop;
-      // Adjacent bigops compose like higher-order functions:
-      // \int\iint => integral(double-integral), itself a compound operator
-      composed_bigop = any_bigop any_bigop => prefix_apply
-        | any_bigop composed_bigop => prefix_apply;
+      // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP (MathGrammar:717). A differential operator
+      // takes one factor (`diffop_application`, divergence #374), the others a term (`bigop_application`).
+      summation_bigop = bigop | sumop | intop | limitop;
+      any_bigop = summation_bigop | diffop;
+      // Adjacent bigops apply in turn, as Perl's `Factor : preScripted['bigop'] addOpArgs`
+      // (MathGrammar:292) does: `\partial\partial f` is ∂@(∂@(f)) through `diffop_operand`
+      // (a Rust-only `composed_bigop` gave (∂@∂)@(f); golden
+      // tests/parse/bigop_operands.tex#stacked_bigops_apply_in_turn).
 
       // Compound operators: OPERATOR composed with functions/other operators (right-recursive)
-      // D sin => Apply(D, sin), D D sin => Apply(D, Apply(D, sin))
-      // Must end with a function/trigfunction (no bare operator-only compounds)
+      // D sin => Apply(D, sin), D D sin => Apply(D, Apply(D, sin)), and D D => Apply(D, D):
+      // Perl `nestOperators` (MathGrammar:663-671) nests operators until a function, and
+      // `recApply` (MathParser.pm:1313-1315) applies each to the rest — `\nabla\nabla f` is
+      // (∇@∇)@(f).
       compound_operator = operator trigfunction => prefix_apply
         | operator function => prefix_apply
-        | operator opfunction => prefix_apply
+        // (an expectation or probability is none: `\nabla\mathbb{E}[X]` applies ∇ to 𝔼's application)
+        | operator plain_opfunction => prefix_apply
+        | operator operator => prefix_apply
         | operator compound_operator => prefix_apply;
 
       // tight_term includes single factors (for left-recursive chaining)
@@ -192,17 +276,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // The `\log x` → `log*x` issue is handled by semantic pruning in
       // apply_invisible_times, not at the grammar level.
       tight_term = factor
-        | tight_term factor => apply_invisible_times
-        // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
-        | tight_term postfix => apply_postfix
+        | tight_term factor => factor_product
         // Note: FUNCTION does NOT absorb bare args — only parens or APPLYOP.
         // `fga` = f*g*a, but `f(a)` = f@(a). OPFUNCTION absorbs: `Fga` = F@(g*a).
         // FUNCTION only chains via opfunction's factor status or APPLYOP.
         // trigfunction uses trigbarearg via applied_func (absorbs MulOp chains)
         // NOTE: bigop rules moved to += section (after `term` is defined) so they
         // can absorb full term (mulop chains like x² * dx), not just tight_term.
-        | composed_bigop tight_term => prefix_apply
-        | operator factor => prefix_apply
+        // An operator applied to its argument is `op_application`, below.
         | factor_base applyop tight_term => prefix_apply_applyop
         // Perl: FUNCTION/OPFUNCTION/TRIGFUNCTION + explicit APPLYOP + argument
         // Handles \lxDeclare-annotated tokens: f⁡(x) where ⁡ is APPLYOP
@@ -214,22 +295,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // applications chain with invisible times.
       // e.g. \sin x \cos y => sin(x) * cos(y)
       //
-      // IMPORTANT — TRIGFUNCTION ARGUMENT SCOPING AMBIGUITY:
-      // Perl's trigBarearg absorbs MulOp chains: \sin\pi\times x => sin(π×x).
-      // We deliberately DO NOT implement this absorption. The expression
-      // sin(π)×x vs sin(π×x) is a *legitimate semantic ambiguity* that cannot
-      // be resolved purely by grammar structure. Both parses are valid:
-      //   sin(π)×x = 0×x (evaluating sin at π)
-      //   sin(π×x) = sin of the product
-      // Perl's Parse::RecDescent picks the "absorb" interpretation heuristically.
-      //
-      // FUTURE WORK: To match Perl's output, implement *targeted semantic pruning*
-      // in the parse tree selection phase (semantics/tree.rs) that uses context
-      // cues to prefer one interpretation:
-      //   - If the MulOp is invisible (⁢), prefer absorption (sin 2x → sin(2x))
-      //   - If the MulOp is explicit (×,·), either interpretation is valid
-      //   - If the argument is a known constant (π, e), standalone may be preferred
-      // This is a semantic-level decision, not a grammar-level one.
+      // A trig function's bare argument is `trig_arg` (below): Perl's greedy `trigBarearg`
+      // (MathGrammar:340-357), MulOp chains included (`\sin x\cdot y` sin@(x·y)), ended only by
+      // explicit space or a differential `d` (#367).
       // applied_func and tight_term augmentations moved below trig_arg definition
 
       // Composed functions: f∘g, sin∘cos — these can then be applied as functions
@@ -264,14 +332,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator applyop term => prefix_apply_applyop;
 
 
+
       // Allow standalone functions/trigfunctions/opfunctions/operators as terms
       // This is needed for (f*g)(x) where f and g are FUNCTION tokens
       // opfunction here allows standalone \operatorname{R} to parse
-      // operator as term enables D - 1 (subtraction), D + G (addition)
-      term += function | trigfunction | opfunction | composed_term | operator;
-      // Allow elideop (\cdots) as a term for chains like y + i + \cdots + y_n
-      // Perl treats cdots as a regular term in addition chains
-      term += elideop;
+      // an operator as a term, `D - 1`, `D + G`, is `bare_op_term` (below)
+      term += function | trigfunction | opfunction | composed_term;
+      // (An ellipsis in a sum, `y + i + \cdots + y_n`, is a term through `factor`.)
 
       // Higher-order operator terms: functions as standalone objects multiplied by factors
       // `2\sin` = `2 * sin`, `2\sin\cos` = `2 * sin * cos`
@@ -279,11 +346,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // function application: `2\sin x` = `2 * sin(x)` (not `(2*sin) * x`)
       tight_opterm = factor function => apply_invisible_times
         | factor trigfunction => apply_invisible_times
-        | factor opfunction => apply_invisible_times
-        // Consecutive functions multiply: fgh → f·g·h (Perl Factor moreFactors)
+        // Consecutive functions multiply: fgh → f·g·h (Perl Factor moreFactors); a bare OPFUNCTION after
+        // a factor is `bare_opfunction_term` (57cb)
         | function function => apply_invisible_times
         | function trigfunction => apply_invisible_times
-        | function opfunction => apply_invisible_times
         | tight_opterm function => apply_invisible_times
         | tight_opterm trigfunction => apply_invisible_times
         | tight_opterm opfunction => apply_invisible_times;
@@ -293,8 +359,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       expression = term
         | expression addop term => infix_apply_nary
         | expression addop term elideop => infix_apply_and_elide
-        | addop tight_term => prefix_apply
-        | factor addop => postfix_apply
+        // Perl MathGrammar:246 `SignedTerm : AddOp Term`: the sign takes a whole term — a mulop
+        // chain (`-a/b`, `x^{-1/2}`) or a bigop application (`-J\sum_{ij}…`, `-\int f`). A
+        // `tight_term` left those with no derivation (RUST-ONLY; golden
+        // tests/parse/bigop_operands.tex#signed_term_is_a_whole_term).
+        | addop term => prefix_apply
+        // A trailing sign, `0+`, `a^2+` (a factor is an expression: one rule, 57bi)
         | expression addop => postfix_apply
         // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
         // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
@@ -308,10 +378,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // Parenthesized modifier expressions: x(>0) → annotated(x, Fence(>0))
         | expression lparen relop expression rparen => annotated_fenced_modifier
         | expression lparen modifierop expression rparen => annotated_fenced_modifier
+        // Perl's `relop` includes the arrows (MathGrammar:713 `ARROW addOpDecoration`), which this
+        // grammar keeps apart: `\mathrm{prob}(\rightarrow j^*)` is annotated(prob, absent → j^*)
+        // (2605.13374 S2.E12; golden
+        // tests/parse/decorated_relations.tex#arrow_operand_in_parentheses_parses).
+        | expression lparen arrow expression rparen => annotated_fenced_modifier
         // Perl MathGrammar L223: PUNCT? OPEN relop Expression CLOSE
         // Semicolon annotation: a;(<e) → annotated(a, absent < e)
         | expression punct lparen relop expression rparen => annotated_punct_fenced_modifier
-        | expression punct lparen modifierop expression rparen => annotated_punct_fenced_modifier;
+        | expression punct lparen modifierop expression rparen => annotated_punct_fenced_modifier
+        | expression punct lparen arrow expression rparen => annotated_punct_fenced_modifier;
 
       // Formula
       // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
@@ -321,6 +397,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
       formula_list = expression punct expression => formula_list_apply
         | formula_list punct expression => formula_list_apply;
+      // A colon list between delimiters — an index `[G:H]`, a range `[1:t]`, a ratio `(x:y:z)`, a
+      // projective point `[x_0:\dots:x_n]` — is a `list`, as `(a:b)` is (#366; Perl `delimited-[]@(a colon b)`,
+      // a metarelation, MathGrammar:69, :118-125). Bracket items are expressions (`[k+1:d]`); paren items
+      // are terms, three or more (two is `lparen formula metarelop expression rparen`): a sum between
+      // colons in parens is a double contraction, `(\nabla x:\nabla y-\nabla z:\nabla w)` (2605.21445,
+      // 2605.01156, 2605.09779), no list (57bm; 2605.14715, 2605.08808, 2605.01646, 2605.25087, 2605.00473).
+      colon_list = expression colon_metarelop expression => list_apply
+        | colon_list colon_metarelop expression => list_apply;
+      // A paren item may carry a sign (`(1:-1:0)`, Perl `SignedTerm`, MathGrammar:246), not a sum.
+      colon_item = term | addop term => prefix_apply;
+      colon_pair = colon_item colon_metarelop colon_item => list_apply;
+      colon_terms = colon_pair colon_metarelop colon_item => list_apply
+        | colon_terms colon_metarelop colon_item => list_apply;
 
       // ASF migration item 5 (Option A semantics, 2026-05-19, user-
       // articulated): `modified_term` is a `tight_term` carrying ONE
@@ -385,6 +474,22 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Without this the whole formula died: Perl parsed 7 of 8 such shapes,
       // we parsed 0 of 8. Witness: arXiv 2605.17646 (`f(\cdot)`, `S(\cdot)`).
       placeholder = mulop | addop | binop | relop;
+      // The argument slot a pair of bars holds (`bare_abs`, divergence #355): a product's operator.
+      bar_placeholder = mulop | binop;
+      // A single bar that divides a conditional, closes a bra or opens a ket. Perl re-roles a
+      // `\left|`/`\right|` a VERTBAR (DELIMITER_MAP, TeX_Math.pool.ltxml:754, :813-816) and its bar
+      // terminal ignores the side (MathGrammar:797), so a stretchy bar divides as `|` does:
+      // `P\left(\left.A\right|B,C\right)` (a `\right|` after `\left.`), `\left\{x\left|x>0\right.\right\}`
+      // (a `\left|` before `\right.`); a `\right|` closes a bra (`\left\langle\Psi\right|`), a `\left|`
+      // opens a ket (`\left|\Psi\right\rangle`). Witnesses 2605.11264, 2605.20326.
+      divider_bar = singlevertbar | right_stretchy_single_bar | left_stretchy_single_bar;
+      // amsmath's `\rvert` closes a bra and its `\lvert` opens a ket, as a bar does: `\lvert\psi\rangle` ket@(ψ),
+      // `\langle\psi\rvert H\lvert\psi\rangle` quantum-operator-product@(ψ, H, ψ), `\langle\phi\rvert\psi\rangle`
+      // (57bt; 2605.02211, ~49 formulas; Perl reads an OPEN/CLOSE group, `delimited-|⟩@(psi)`, and leaves the operator
+      // product unparsed, amsmath.sty.ltxml:1150). No conditional's divider.
+      bra_bar = singlevertbar | right_stretchy_single_bar | rvert_close;
+      ket_bar = singlevertbar | left_stretchy_single_bar | lvert_open;
+      braket_bar = divider_bar | rvert_close;
       // Comma list carrying AT LEAST ONE placeholder. The "≥1" shape is
       // deliberate: an all-`expression` list is already `formula_list`, so
       // admitting it here too would duplicate every ordinary `(a,b)` parse and
@@ -401,6 +506,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | langle_rel relop_equals => two_part_relop_combine
         | rangle_rel relop_equals => two_part_relop_combine;
 
+      bare_operator_operand = addop | mulop | binop;
       formula = expression
         | formula relop expression => infix_relation
         | formula two_part_relop expression => infix_relation
@@ -415,6 +521,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // 5000-tree-cap equations). Parenthesized lists `(x,y)` remain single
         // expressions via `lparen formula_list rparen => fenced`.
         | formula relop => postfix_relop
+        // A bare operator as the right side, `a=\pm`, `x=\bot`, `x\to-` (Perl `Expression : AnyOp
+        // ...anyOpIsolator`, MathGrammar:204-206; 57bj, RED-drain survey P10, 2605.03453, 2605.01293).
+        // One derivation each; unlike Perl's isolator (end, PUNCT or CLOSE only) a relation may follow,
+        // `x=\bot\le y` x = bottom <= y (Perl unparsed; 57bj review).
+        | formula relop bare_operator_operand => infix_relation
+        | formula arrow bare_operator_operand => infix_relation
         // Perl moreRelations: `relop moreRelations` — consecutive relops chain without intervening terms
         // e.g. `A ∈ ∞ ∋` → the ∈ absorbs ∞, then ∋ appends to the chain (no absent)
         | formula relop relop => consecutive_relop_chain
@@ -451,8 +563,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // formula fell to ltx_math_unparsed.
         | statement metarelop => postfix_relop
         | metarelop formula => prefix_metarelop_apply
-        | any_bigop | composed_bigop
-        | operator | compound_operator
+        | operator
         | function | trigfunction
         // Bare operators can form comma-separated lists: +,-,×
         | addop | mulop | binop | relop | arrow
@@ -475,7 +586,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | statements wide_punct statement => list_apply
         // Perl MathGrammar L129: endPunct includes PERIOD. Period creates formulae, not list.
         | statements period statement => formulae_apply
-        // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
+        // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t. The condition holds events
+        // only (`Y\mid X=x`); a relation that is no event relates the whole conditional instead
+        // (`conditional_formula`, after `relation_pairs`; 57cc, divergence #377).
         | statement vertbar statements => vertbar_modifier
         // Comma-LIST left of the bar: `a,b | c` → conditional(list@(a,b), c).
         // Explicit `statements punct statement vertbar …` shape (NOT a generalized
@@ -505,145 +618,148 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | statement wide_punct statement => formulae_apply
         | formulae wide_punct statement => formulae_apply;
 
+      // The #37 hole: two relations, then a plain item (`x=0, y=1, z`, `x_i\ge0,\ i=1,\ldots,n`). Only
+      // relations build the pairs and only a plain expression follows, so a comma list of anything
+      // else, or of relations only, gets no new derivation (57bv review: a `formulae` left side, built
+      // from any comma prefix and refused in its action, gave a plain list one tree per comma). A
+      // comma only (a WIDE_PUNCT comma too): a `\quad`-list reads as fragments already.
+      relation_formula = formula relop expression => infix_relation
+        | formula two_part_relop expression => infix_relation
+        | formula arrow expression => infix_relation;
+      relation_pairs = relation_formula comma relation_formula => formulae_apply
+        | relation_formula wide_punct relation_formula => formulae_apply
+        | relation_pairs comma relation_formula => formulae_apply
+        | relation_pairs wide_punct relation_formula => formulae_apply;
+      statements += relation_pairs comma expression => formulae_then_item_apply
+        | relation_pairs wide_punct expression => formulae_then_item_apply;
+
+      // A bare bar binds the expression before it and the bar-free run after it — Perl's `moreFactors :
+      // evalAtOp ExpressionsNoBars` (MathGrammar:261-268) binds the term, `a+b|c` a+(b|c); the
+      // expression is the conditioned, `W_t-W_s\mid\mathcal F_s` — whose relations are events, what is
+      // given (`=`, `<`, `∈`, `⊂`, …; `Y\mid X=x` stays the statement-level `statement vertbar
+      // statements`); any other relation after it relates the whole conditional (user ruling
+      // 2026-09-29): `y|x\sim N(0,1)` is conditional@(y, x) ∼ N@(0, 1), `\theta|y\propto p(y|\theta)`,
+      // `WT\mid W=w\sim\mathrm{Gamma}(a,b)`, where the statement-level bar took the relation into the
+      // condition (57cc; 2605.03594, 2605.05396, 2605.13128, 2605.19519, 2605.03152). The readings
+      // complement each other — `vertbar_modifier` refuses a condition holding a non-event,
+      // `conditional_relation` an event relation — one derivation each. Not a `formula`: fences and
+      // set-builders keep their own bar (`P(A|B=b)`, `\{x\mid x>0\}`).
+      // The conditioned is an expression: `W_t-W_s\mid\mathcal F_s\sim\mathcal N(0,t-s)` (57cc review).
+      conditional_head = expression vertbar expression => vertbar_modifier
+        | expression vertbar formula_list => conditional_over_a_list
+        | expression vertbar relation_formula => vertbar_modifier
+        | expression vertbar relation_pairs => vertbar_modifier;
+      conditional_formula = conditional_head relop expression => conditional_relation
+        | conditional_head two_part_relop expression => conditional_relation
+        | conditional_head arrow expression => conditional_relation
+        // a conditional on each side: `x|y\sim z|w` (x|y) ∼ (z|w), `3\mid n^2\Rightarrow 3\mid n`,
+        // `a\mid(m+n)\to a\mid m` (2605.29001), `A\mathop{\perp}^d_{\mathcal G}B\mid C\implies…` (2605.16620), as Perl
+        | conditional_head relop conditional_head => conditional_relation
+        | conditional_head arrow conditional_head => conditional_relation
+        // and the chain goes on as a formula's does (`X_n\mid\mathcal F\sim\mu_n\to\mu`)
+        | conditional_formula relop expression => infix_relation
+        | conditional_formula two_part_relop expression => infix_relation
+        | conditional_formula arrow expression => infix_relation;
+      statement += conditional_formula
+        // a METARELOP is never an event (`\Gamma\mid\Delta\vdash e:\tau`, `a\mid b\iff a\le b`,
+        // `0\mid n\leftrightarrow n=0` 2605.29001); a statement, so no relation extends it a second way
+        | conditional_head metarelop formula => infix_relation
+        | conditional_head metarelop conditional_head => infix_relation;
+      relation_formula += conditional_formula;
+
       // Extensions, now that we have more category variables defined
-      fenced_factor = lbrace expression rbrace    => fenced
-             | lbracket expression rbracket       => fenced
+      // A group — Perl's `OPEN … CLOSE` (`addEasyArgs`, MathGrammar:571-576) and the fences
+      // built like it — what a function applies to; the bar pairs are `bare_abs`. Its content is
+      // Perl's `Argument`, an expression a relation may extend (:581-587), whatever the delimiters:
+      // `\{x\in A\}` set@(x ∈ A), `\Pr[X=1]` Pr@(X = 1) (57bb; were unparsed, 2605.01547; golden
+      // tests/parse/fenced_lists.tex, "A function takes the arguments between any delimiters").
+      // A Dirac label — a bra's, ket's, inner product's or operator product's part — is what a delimited group
+      // holds, a formula or a comma list (Perl `ketExpression : Formulae`, MathGrammar:401-404): `|n,l\rangle`
+      // ket@(list@(n, l)), `|m=-1\rangle` ket@(m = − 1), `|F=1,m_F=1\rangle` ket@(formulae@(…)), a group
+      // presentation `\langle a,b|a^{-1}ba=b^n\rangle` (57bt; 2605.08402, 2605.07372, 2605.11552, 2605.03441; ~120
+      // formulas in ~30 papers of the 57bp7 output were unparsed). A plain `<`/`>` relation is no label's, as Perl's
+      // `$forbidLRAngle` (:402, :707-708; `semantics::holds_plain_angle_relation`): `\langle p_\alpha\mid\alpha<\gamma\rangle`
+      // (2605.09161, an ordinal-indexed sequence) stays unparsed. The plain `<…|…>` shapes keep `expression`.
+      dirac_label = formula | formula_list;
+      operand_group = lbrace formula rbrace    => fenced
+             | lbracket formula rbracket          => fenced
              | lparen formula rparen              => fenced
              // METARELOP inside parens: f(a:b), f(a↔b) — colon/arrow as relation in fenced
              | lparen formula metarelop expression rparen => fence
-             // Parenthesized comma-separated lists: (a,b,c), (a+b, c+d), (1+, 0+, 1-, 0-)
-             // Perf (Fix 3): `lparen term_list rparen` was duplicate with
-             // `lparen formula_list rparen` for non-relational content (both produce
-             // identical `list@(...)` trees). Dropped; formula_list covers
-             // (a,b,c), (a+b,c+d), and (0+,1-) via `factor addop => postfix_apply`
-             // which produces limit-from XM matching limit_from_apply semantics.
-             | lparen formula_list rparen        => fenced
-             // Bracketed and braced comma-separated lists: [a,b,c], {a,b,c}
-             | lbracket formula_list rbracket    => fenced
-             | lbrace formula_list rbrace        => fenced
-             // Angle brackets as delimiters: <x,y> for inner products, etc.
-             // Old typesetting conventions used < > instead of \langle \rangle.
-             // Uses term_list (comma-separated terms) to avoid matching complex
-             // nested expressions. Only fires when content has commas.
-             | langle_rel term_list rangle_rel => fenced
              // Angle-bracket fencing with \langle/\rangle (distinct from parentheses)
              // Now that langle_open/rangle_close are NOT remapped to lparen/rparen,
              // we need explicit rules for angle-bracket fenced expressions.
              // M8: removed `langle_open expression rangle_close` — subsumed by formula
              // (every expression is a formula; keeping both creates 2x ambiguity)
              | langle_open formula rangle_close => fenced
-             | langle_open term_list rangle_close => fenced
-             | langle_open formula_list rangle_close => fenced
              | langle_open formula metarelop expression rangle_close => fence
-             // Perf/design: interval rules moved out of fenced_factor into
-             // term (see `tight_term += interval_term` below). Math convention:
-             // an interval `(a,b)` is a named mathematical object — a set of
-             // numbers — not a grouping mechanism like `(a+b)`. Treating it as
-             // a term instead of fenced_factor has a clean consequence:
-             // function application `f(x,y)` takes a fenced_factor, so the
-             // interval interpretation of `(x,y)` is pruned naturally; the
-             // list interpretation (from `lparen formula_list rparen`) wins.
              // QM bra-ket uses langle_open/rangle_close (specific ⟨⟩ tokens),
              // avoiding ambiguity with relational < > (langle_rel/rangle_rel).
              // Conditional probability uses lparen/rparen (specific () tokens),
              // avoiding ambiguity with ket (which requires rangle_close).
              //
-             // Perl MathGrammar L294: || exp || → norm (must be before |exp| → abs-val)
-             // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
-             | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
-             // `\|x\|` / `\Vert x\Vert`: the doubled bar arrives as a single
-             // `VERTBAR:||` token (not two `|`), so it forms `|| expr ||` —
-             // the standard norm notation. Without this it was unparsed; Perl
-             // parses it to norm@(x). (Subscripted `\|x\|_p` then parses via
-             // fenced_factor + POSTSUBSCRIPT.)
-             | doublevertbar expression doublevertbar => double_norm_fenced
-             | singlevertbar expression singlevertbar => fenced
-             // Kerned-stack norm / operator-norm from `\left|\kern\left|...`
-             // (community idioms: \vertii, \vertiii, \Vert, \tnorm, …).
-             // The lexer in util.rs distinguishes bars emitted by `\@left`
-             // (LEFT_STRETCHY_VERTBAR) from those emitted by `\@right`
-             // (RIGHT_STRETCHY_VERTBAR) via the `lx@side` property set in
-             // those constructors (tex_math.rs:\@left and :\@right). This
-             // pre-distinction collapses what would be a combinatorial
-             // pairing of identical stretchy bars into a single ungrammatical
-             // shape — the parser never enumerates `right-...-left` invalid
-             // pairings. The actions still verify the negative-rpadding
-             // (\kern) signal as a side condition so that two intentionally
-             // separate `\left|...\right|\left|...\right|` fences aren't
-             // accidentally merged. Task #263. Witness arXiv:2211.13044 §S4.Ex17.
-             | left_stretchy_vertbar left_stretchy_vertbar left_stretchy_vertbar expression
-                 right_stretchy_vertbar right_stretchy_vertbar right_stretchy_vertbar
-                 => stretchy_triple_norm_fenced
-             | left_stretchy_vertbar left_stretchy_vertbar expression
-                 right_stretchy_vertbar right_stretchy_vertbar
-                 => stretchy_norm_fenced
-             // Balanced modulus: `\left| expr \right|` (stretchy bars).
-             // The lexer (util.rs) tags `\left/\right`-paired bars as
-             // LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR so we don't
-             // enumerate every alternative pairing of bare `|`s. With this
-             // rule, `\left|f\right|^k` unambiguously pairs the two stretchy
-             // bars regardless of surrounding parens / scripts.
-             | left_stretchy_vertbar expression right_stretchy_vertbar => fenced
+             // The bar pairs — `|x|`, `\|x\|`, `\left|x\right|` and the norms — are `bare_abs`,
+             // below.
              // Dirac ket: |label⟩ — VERTBAR as opening, CLOSE:rangle as closing
              // Restricted to rangle_close (⟩) to avoid ambiguity with conditional
              // probability (x|y) where ) is a generic CLOSE but not rangle.
              // Perl MathGrammar uses RANGLE specifically, not generic CLOSE.
-             // Ket labels: expressions, arrows, operators, relops, etc.
-             | singlevertbar expression rangle_close => qm_ket
-             | singlevertbar arrow rangle_close => qm_ket
-             | singlevertbar metarelop rangle_close => qm_ket
-             | singlevertbar operator rangle_close => qm_ket
-             | singlevertbar any_bigop rangle_close => qm_ket
-             | singlevertbar mulop rangle_close => qm_ket
-             | singlevertbar addop rangle_close => qm_ket
-             | singlevertbar relop rangle_close => qm_ket
-             | singlevertbar modifierop rangle_close => qm_ket
+             // Ket labels: a formula or a list (`dirac_label`), or a bare arrow, operator, relop, etc.
+             | ket_bar dirac_label rangle_close => qm_ket
+             | ket_bar arrow rangle_close => qm_ket
+             | ket_bar metarelop rangle_close => qm_ket
+             | ket_bar operator rangle_close => qm_ket
+             | ket_bar any_bigop rangle_close => qm_ket
+             | ket_bar mulop rangle_close => qm_ket
+             | ket_bar addop rangle_close => qm_ket
+             | ket_bar relop rangle_close => qm_ket
+             | ket_bar modifierop rangle_close => qm_ket
              // Dirac bra: ⟨label| — OPEN:langle as opening, VERTBAR as closing
              // Restricted to langle_open to avoid ambiguity with parens.
-             | langle_open expression singlevertbar => qm_bra
-             | langle_open arrow singlevertbar => qm_bra
-             | langle_open metarelop singlevertbar => qm_bra
-             | langle_open operator singlevertbar => qm_bra
+             | langle_open dirac_label bra_bar => qm_bra
+             | langle_open arrow bra_bar => qm_bra
+             | langle_open metarelop bra_bar => qm_bra
+             | langle_open operator bra_bar => qm_bra
              // Braket: ⟨a|b⟩ → inner-product@(a, b)
-             | langle_open expression singlevertbar expression rangle_close => qm_braket
-             // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b)
-             | langle_open expression singlevertbar expression singlevertbar expression rangle_close => qm_bracket
+             | langle_open dirac_label braket_bar dirac_label rangle_close => qm_braket
+             // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b); with sided bars the middle may
+             // hold bar pairs, where Perl's `ketExpression` forbids bars (divergence #356)
+             | langle_open dirac_label bra_bar dirac_label ket_bar dirac_label rangle_close => qm_bracket
              // Same Dirac shapes when the divider is a stretchy `\middle|`
              // (`MIDDLE:|`) — the ubiquitous physics form
              // `\left\langle a \middle| b \right\rangle`. Perl matches `|` and
              // `\middle|` with one terminal (MathGrammar L10084); here we add the
              // MIDDLE:| variants explicitly. (Mixed |/\middle| dividers are not
              // attempted — authors are consistent within a braket.)
-             | langle_open expression middle_bar expression rangle_close => qm_braket
-             | langle_open expression middle_bar expression middle_bar expression rangle_close => qm_bracket
+             | langle_open dirac_label middle_bar dirac_label rangle_close => qm_braket
+             | langle_open dirac_label middle_bar dirac_label middle_bar dirac_label rangle_close => qm_bracket
              // Same Dirac shapes with plain ASCII `<` `>` (langle_rel/rangle_rel
              // — RELOP-classed angles) — physicists commonly write `<a|f|b>` even
              // outside `\langle/\rangle` macros. Semantics match the
              // `\langle…\rangle` forms above so downstream MathML sees a single
-             // inner-product / quantum-operator-product Apply.
-             | langle_rel expression singlevertbar expression rangle_rel => qm_braket
-             | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => qm_bracket
-             // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
-             | lbrace term punct term rbrace => fence
-             | lbrace term punct term punct term rbrace => fence
-             // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
-             | lbrace formula singlevertbar formula rbrace => fence
-             | lbrace formula middle_bar formula rbrace => fence
-             | lbrace formula metarelop formula rbrace => fence
+             // inner-product / quantum-operator-product Apply, a factor on either side too (`c_m^*<m|H|n>c_n`).
+             // Not where the `<` continues an inequality (`refute_an_inequality_bracket`): `\mathbb{P}(m<S<m+\delta\mid
+             // S>m)` is P@(conditional@(m < S < m + δ, S > m)) (57bt; 2605.17504).
+             | langle_rel expression singlevertbar expression rangle_rel => ascii_qm_braket
+             | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => ascii_qm_bracket
              // Conditional probability: p(a|b) — safe now that ket uses rangle_close
              // (not generic close), so |y) no longer matches ket pattern.
-             // NOTE: formula_list variants (x,y|z) don't work due to Marpa limitation:
-             // formula_list completion doesn't propagate to singlevertbar continuation.
-             // Perl handles this via recursive descent context. Tracked as known limitation.
-             | lparen formula singlevertbar formula rparen => fence
-             | lparen formula_list singlevertbar formula rparen => fence
-             | lparen formula singlevertbar formula_list rparen => fence
+             | lparen formula divider_bar formula rparen => fence
+             | lparen formula_list divider_bar formula rparen => fence
+             | lparen formula divider_bar formula_list rparen => fence
+             // A list on both sides: the joint given several, `p(x,y|z,w)` (57bh; divergence #364)
+             | lparen formula_list divider_bar formula_list rparen => fence
              // Bracketed conditional `[a|b]` / `E[X|Y]` (conditional expectation).
              // Perl: delimited-[]@(conditional@(a,b)). Unlike (a|b)/{a|b}, the bare
              // a|b conditional isn't an `expression`, so [a|b] had no fence rule
              // and fell to ltx_math_unparsed (though [(a|b)] worked). `singlevertbar`
              // also covers `\mid` (canonicalized VERTBAR:mid → VERTBAR:|).
-             | lbracket formula singlevertbar formula rbracket => bracket_conditional
+             | lbracket formula divider_bar formula rbracket => bracket_conditional
+             // … with a list on either side, `E[Y\mid A=1,X]`, `\Pr[X=1,Y=1|Z=0]` (57bh; RED-drain survey
+             // P4, 2605.05890)
+             | lbracket formula divider_bar formula_list rbracket => bracket_conditional
+             | lbracket formula_list divider_bar formula rbracket => bracket_conditional
+             | lbracket formula_list divider_bar formula_list rbracket => bracket_conditional
              // \middle separator: \left(a\middle|b\right) → fenced with separator
              // MIDDLE tokens are author-explicit (unlike bare |), so unambiguous.
              // `open`/`close` now only match generic delimiters (OTHER_OPEN/OTHER_CLOSE),
@@ -658,14 +774,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // Generic OPEN/CLOSE delimiters: \lfloor...\rfloor, \lceil...\rceil, etc.
              // Perl MathGrammar: OPEN Expression CLOSE → Fence
              | open expression close => fenced
-             // Fenced singleton bigops/operators: (\int), (\Delta), (\sum)
-             // Perl allows bigops/operators as factors; here we only allow them fenced.
-             | lparen any_bigop rparen => fenced
-             | lparen composed_bigop rparen => fenced
-             | lparen operator rparen => fenced
-             | lparen compound_operator rparen => fenced
-             | open any_bigop close => fenced
-             | open operator close => fenced
+             // (A fenced bare operator — (\nabla), \lfloor\nabla\rfloor — is a formula since
+             // `term += bare_op_term`; 57bi removed the `lparen operator rparen` twins.)
              // Fenced bare-operator placeholders: (\cdot), [\cdot], \langle\cdot,\cdot\rangle,
              // (+), (=), (\times), f(\cdot,x). See `placeholder` above for why
              // these are admitted only when fenced.
@@ -673,7 +783,57 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbracket placeholder rbracket => fenced
              | lbrace placeholder rbrace => fenced
              | langle_open placeholder rangle_close => fenced
-             | open placeholder close => fenced
+             | open placeholder close => fenced;
+      // A group's one operand — a formula, a relation, a conditional, a Dirac shape, a floor or ceiling,
+      // one placeholder — against a list-like group (comma, colon and angle lists, set-builders, placeholder
+      // lists, empty groups): a postfix after an OPFUNCTION's, trig function's or operator's group goes into
+      // its operand, `\log(n-k)!` log@((n−k)!), `\log\lfloor n/2\rfloor!` log@((⌊n/2⌋)!), but takes a
+      // list's application whole, `\max(a,b)!` (max@(a, b))! (user ruling 2026-09-29; `postfixed_operand_group`,
+      // `list_application`, below). Together they are `group_factor`.
+      // Parenthesized comma-separated lists: (a,b,c), (a+b, c+d), (1+, 0+, 1-, 0-)
+      // Perf (Fix 3): `lparen term_list rparen` was duplicate with
+      // `lparen formula_list rparen` for non-relational content (both produce
+      // identical `list@(...)` trees). Dropped; formula_list covers
+      // (a,b,c), (a+b,c+d), and (0+,1-) via `expression addop => postfix_apply`
+      // which produces limit-from XM matching limit_from_apply semantics.
+      // Perf/design: interval rules moved out of fenced_factor into term (see
+      // `tight_term += interval_term` below): function application `f(x,y)` takes a fenced_factor,
+      // so the interval derivation of `(x,y)` is pruned there and the list one (this rule) wins. A
+      // balanced `(a,b)` elsewhere has both derivations; its name is not theirs but the slot's, given
+      // after the parse (`rename_fenced_lists`, #371).
+      list_group = lparen formula_list rparen        => fenced
+             // Bracketed and braced comma-separated lists: [a,b,c], {a,b,c}
+             | lbracket formula_list rbracket    => fenced
+             | lbrace formula_list rbrace        => fenced
+             // Colon lists: `[a:b]`, `[x_0:x_1:\dots:x_n]`, `(x:y:z)` (57bm, above)
+             | lbracket colon_list rbracket      => fenced
+             | lparen colon_terms rparen         => fenced
+             // Angle brackets as delimiters: <x,y> for inner products, etc.
+             // Old typesetting conventions used < > instead of \langle \rangle.
+             // Uses term_list (comma-separated terms) to avoid matching complex
+             // nested expressions. Only fires when content has commas. Not where the `<` and the `>`
+             // stand as relations, between operands (`angle_signs_are_relations`, 57bt): `c_1<c_D,c_2>c_D` is
+             // formulae@(c_1 < c_D, c_2 > c_D), as Perl (2605.04340, 2605.12157, 2605.19552).
+             | langle_rel term_list rangle_rel => ascii_angle_fenced
+             // (a `term_list` is a `formula_list`: one rule, 57bi)
+             | langle_open formula_list rangle_close => fenced
+             // (Comma-separated items in braces, {a,b} and {a,b,c}, are `lbrace formula_list rbrace`,
+             // Perl's Fence through `fenced`; 57bi removed the `lbrace term punct term…` twins.)
+             // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
+             | lbrace formula divider_bar formula rbrace => fence
+             | lbrace formula middle_bar formula rbrace => fence
+             | lbrace formula metarelop formula rbrace => fence
+             // … whose element or condition is a list (Perl `FormulaNOBar suchThatOp Formulae`,
+             // MathGrammar:487-491): `\{x,y|z\}`, `\{x : a<1, b<2\}`, `\{[a,b]:a\in A,b\in B\}`
+             // (57bh; RED-drain survey P6, 2605.24529, 2605.08004). Only a colon makes it a set-builder
+             // (`fence`): another metarelation is a set of one relation, `\{\Gamma\vdash A,B\}`
+             // set@(Gamma proves list@(A, B)) (57bk; 57bh review).
+             | lbrace formula_list divider_bar formula rbrace => fence
+             | lbrace formula divider_bar formula_list rbrace => fence
+             | lbrace formula_list divider_bar formula_list rbrace => fence
+             | lbrace formula metarelop formula_list rbrace => fence
+             | lbrace formula_list metarelop formula rbrace => fence
+             | lbrace formula_list metarelop formula_list rbrace => fence
              | lparen placeholder_list rparen => fenced
              | lbracket placeholder_list rbracket => fenced
              | lbrace placeholder_list rbrace => fenced
@@ -684,7 +844,66 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbracket rbracket => empty_fenced
              | lbrace rbrace => empty_fenced
              | langle_open rangle_close => empty_fenced
-             | open close => empty_fenced;
+             | open close => balanced_empty_fenced;
+      group_factor = operand_group | list_group;
+      // Perl `aBarearg` (MathGrammar:323-331): the bar pairs, which an operator's or OPFUNCTION's
+      // bare argument takes as an item, never as its group — `VERTBAR absExpression VERTBAR`
+      // (:329-330; `\|` and `\left|…\right|`, `\left\|…\right\|` are VERTBARs too, `\lvert` an
+      // OPEN), and the norms of four bars, merged or kerned (divergence #353: `\nabla u||v||` is
+      // ∇@(u·‖v‖), as `\nabla u\|v\|`). A fence of its own, not a filtered group: every rejected
+      // reading was a tree of its own on the tree-iterator route, multiplying across a sum of
+      // operator terms (`\log\|x\|+\log\|y\|+…`).
+      //
+      // Perl MathGrammar L294: || exp || → norm (must be before |exp| → abs-val)
+      // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
+      bare_abs = singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
+        // `\|x\|` / `\Vert x\Vert`: the doubled bar arrives as a single
+        // `VERTBAR:||` token (not two `|`), so it forms `|| expr ||` —
+        // the standard norm notation. Without this it was unparsed; Perl
+        // parses it to norm@(x). (Subscripted `\|x\|_p` then parses via
+        // fenced_factor + POSTSUBSCRIPT.)
+        | doublevertbar expression doublevertbar => double_norm_fenced
+        | singlevertbar expression singlevertbar => fenced
+        // Kerned-stack norm / operator-norm from `\left|\kern\left|...`
+        // (community idioms: \vertii, \vertiii, \Vert, \tnorm, …).
+        // The lexer in util.rs distinguishes bars emitted by `\lx@delim@left`
+        // (LEFT_STRETCHY_VERTBAR) from those emitted by `\lx@delim@right`
+        // (RIGHT_STRETCHY_VERTBAR) via the `lx@side` property set in
+        // those constructors (tex_math.rs:\lx@delim@left and :\lx@delim@right). This
+        // pre-distinction collapses what would be a combinatorial
+        // pairing of identical stretchy bars into a single ungrammatical
+        // shape — the parser never enumerates `right-...-left` invalid
+        // pairings. The actions still verify the negative-rpadding
+        // (\kern) signal as a side condition so that two intentionally
+        // separate `\left|...\right|\left|...\right|` fences aren't
+        // accidentally merged. Task #263. Witness arXiv:2211.13044 §S4.Ex17.
+        | left_stretchy_single_bar left_stretchy_single_bar left_stretchy_single_bar expression
+            right_stretchy_single_bar right_stretchy_single_bar right_stretchy_single_bar
+            => stretchy_triple_norm_fenced
+        | left_stretchy_single_bar left_stretchy_single_bar expression
+            right_stretchy_single_bar right_stretchy_single_bar
+            => stretchy_norm_fenced
+        // … and around a placeholder (#355): `\vertii{\cdot}` is norm@(·), `\vertiii{\cdot}`
+        // operator-norm@(·), not nested bars around it (57am review round 8).
+        | left_stretchy_single_bar left_stretchy_single_bar left_stretchy_single_bar bar_placeholder
+            right_stretchy_single_bar right_stretchy_single_bar right_stretchy_single_bar
+            => stretchy_triple_norm_fenced
+        | left_stretchy_single_bar left_stretchy_single_bar bar_placeholder
+            right_stretchy_single_bar right_stretchy_single_bar
+            => stretchy_norm_fenced
+        // Balanced modulus: `\left| expr \right|` (stretchy bars), and `\left\| expr \right\|`.
+        // The lexer (util.rs) tags `\left/\right`-paired bars as
+        // LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR so we don't
+        // enumerate every alternative pairing of bare `|`s. With this
+        // rule, `\left|f\right|^k` unambiguously pairs the two stretchy
+        // bars regardless of surrounding parens / scripts.
+        | left_stretchy_vertbar expression right_stretchy_vertbar => fenced
+        // A placeholder between `\left`/`\right` bars, the norm or absolute value of an argument
+        // slot: `\left\|\cdot\right\|_\infty` (divergence #355; Perl leaves it unparsed). Sided
+        // bars only: between plain ones, `|x|\cdot|y|` would offer a `|\cdot|` of its own. A MulOp or
+        // BinOp slot (`\cdot`, `\bullet`): no `|+|`, `|=|`.
+        | left_stretchy_vertbar bar_placeholder right_stretchy_vertbar => fenced;
+      fenced_factor = group_factor | bare_abs;
       factor += fenced_factor;
 
       // Perl: addTrigFunArgs → trigBarearg → aTrigBarearg moreTrigBareargs
@@ -698,106 +917,115 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `function fenced_factor` remains — distinct from `function factor`, which is
       // intentionally NOT a production (FUNCTION requires parens for application:
       // `f(x)` = f@(x), but `f x` = f*x, per Perl's FUNCTION vs OPFUNCTION distinction).
-      // Perf (grammar pruning): trig_arg uses `factor_base` (bare factors only),
-      // NOT `factor` (which includes fenced_factor). This prevents the double-path
-      // ambiguity where `\sin(x)` matched BOTH:
-      //   - `applied_func = trigfunction trig_arg` (via `trig_arg = factor` → fenced_factor) → prefix_apply
-      //   - `applied_func = trigfunction lparen formula rparen` → apply_delimited
-      // giving 2 interpretations per trig+paren. Two trig+paren pairs in one formula
-      // produced 4× ambiguity multiplier. By excluding fenced_factor from trig_arg,
-      // parenthesized trig applications go through apply_delimited (the semantically
-      // preferred XMDual form) only.
+      // Perf (grammar pruning): trig_arg uses `factor_base` (bare factors only), NOT `factor`
+      // (which includes fenced_factor): a trig function's group is `trig_factor_arg` (below, 57bg),
+      // one derivation per application.
       // Function application paths (function fenced_factor) remain so \sin f(x)
       // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
+      // (a letter's application to a group, not across explicit space: `\cos\phi\,(1-x)` cos@(φ)·(1−x), #367)
+      // An ellipsis opens a trig argument, as it opens an OPFUNCTION's (`op_bare_base`) — `\ldots` a `factor_base` ID,
+      // `\cdots` an ELIDEOP (divergence #3): `\cos\cdots x` cos@(⋯·x), `\sin\cos\cdots` sin@(cos@(⋯)), `f(\sin\cdots)`, as
+      // Perl's `aTrigBarearg` ATOM_OR_ID (MathGrammar:340-356; 57cj.11 review; Rust-only unparsed before, latent, no corpus
+      // witness), a run of them as Perl's IDs do (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review), and the argument
+      // goes on after it as after any first item (`trig_argument_juxtaposition`; its twin cos@(⋯)·x is refused,
+      // `leaves_a_trig_bare_argument`). Only first: after an item the ellipsis ends the argument
+      // (`\cos\theta_1\cdots\cos\theta_n`). One run whatever the macros: `trig_ellipses` derives a run of ELIDEOPs,
+      // `trig_mixed_ellipses` one that holds an ellipsis ID before an ELIDEOP and ends in an ELIDEOP (`trig_ellipsis_ids`:
+      // such a run ending in an ID instead) — the whole argument (`\cos\ldots\cdots` cos@(…·⋯)); an item after such a
+      // run goes on as after an ELIDEOP run between two items (`trig_elided`, below: the IDs are `trig_arg`'s bare
+      // items, 57cj.17 — a mixed run `trig_arg` could go on too gave every ID before an ELIDEOP a second derivation, which
+      // `trig_elided` refused: `\sin\ldots\cdots\ldots\cdots\ldots\cdots\ldots\cdots x` 19 trees) — one derivation
+      // per run, and every run `is_an_ellipsis_run` accepts is one argument: `\sin\ldots\cdots x` sin@(…·⋯·x),
+      // `\sin\ldots\ldots\cdots x` sin@(…·…·⋯·x), `\sin\cdots\ldots\cdots\ldots x` sin@(⋯·…·⋯·…·x), as Perl's (57cj.13 and
+      // 57cj.14 reviews; 57cj.14 derived one leading ID only, so an ID before a later ELIDEOP left no tree). Left-recursive
+      // pairs, so the product stays flat (`apply_invisible_times` tucks a right factor into a left product).
+      // The ellipsis IDs as one symbol (a nonterminal: a token group of exact-text tokens does not
+      // roll up in the ASF builder).
+      ellipsis_id = ldots_id | dots_id | dotsc_id | dotsb_id | dotsm_id | dotsi_id | dotso_id;
+      // (not across explicit space, which ends the argument: `\sin\cdots\,\cdots` sin@(⋯)·⋯, `\sin\ldots\,\ldots\cdots`)
+      trig_ellipsis_ids = ellipsis_id
+        | trig_ellipsis_ids ellipsis_id => trig_argument_juxtaposition;
+      trig_ellipses = elideop
+        | trig_ellipses elideop => trig_argument_juxtaposition;
+      trig_mixed_ellipses = trig_ellipsis_ids elideop => trig_argument_juxtaposition
+        | trig_mixed_ellipses elideop => trig_argument_juxtaposition;
+      trig_ellipsis_ids += trig_ellipses ellipsis_id => trig_argument_juxtaposition
+        | trig_mixed_ellipses ellipsis_id => trig_argument_juxtaposition;
       trig_arg = factor_base
-        | unknown fenced_factor => speculative_prefix_apply
-        | diffunk fenced_factor => speculative_prefix_apply
+        | trig_ellipses
+        | unknown group_factor => trig_letter_application
+        | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply
-        // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
-        // Allows: \sin\det A → sin(det(A)). FUNCTION doesn't absorb bare args.
-        | opfunction factor => prefix_apply
+        // (an OPFUNCTION's application: `trig_function_item`, below, as any OPFUNCTION's)
         // trig_arg chains only through factor_base on the RHS. Previous approach
         // chained through full `factor` causing \sin(x) + (y) to ambiguously
         // parse as sin((x)+(y)).
-        | trig_arg mulop factor_base => infix_apply_nary
-        | trig_arg binop factor_base => infix_apply_nary
-        | trig_arg factor_base => apply_invisible_times;
+        | trig_arg mulop factor_base => trig_argument_across_an_operator
+        // explicit space ends the argument (#367): `\sin\theta\,d\theta` is sin@(θ)·dθ
+        | trig_arg factor_base => trig_argument_juxtaposition;
 
       // applied_func: FUNCTION only absorbs fenced args (parens), not bare args.
       // OPFUNCTION and TRIGFUNCTION absorb bare args (Perl distinction).
       // Perl: `fga` = f*g*a (FUNCTION), `Fga` = F@(g*a) (OPFUNCTION)
-      applied_func = function fenced_factor => prefix_apply
-        | trigfunction trig_arg => prefix_apply
-        | opfunction tight_term => prefix_apply
-        // Cascading OPFUNCTION pair: `GH` parses as `G@(H)`. Required
-        // because OPFUNCTION is no longer in `factor` (see comment at
-        // the `factor` definition), so bare H cannot be a tight_term
-        // via the `factor → tight_term` base case — the cascade path
-        // `tight_term += opfunction tight_term` below would otherwise
-        // dead-end on the tail. Earlier this rule was removed
-        // (commit ffcafc33e) because it doubled enumeration when bare
-        // OPFUNCTION was admitted as a factor; with that admission gone,
-        // this is the sole path and no longer competes.
-        | opfunction opfunction => prefix_apply
-        // Delimited function application: f(x), f[x], F(x), \sin(x) etc.
-        // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
-        //        presentation=Apply(f, XMWrap(open, args, close))).
-        // These are in applied_func so delimited calls participate in chaining:
-        // f(a) g(b) → f@(a) * g@(b) via tight_term applied_func => apply_invisible_times
-        //
-        // Targeted Task #10 mitigation (2026-05-19): the `opfunction
-        // lbracket formula rbracket` and (sibling cleanup) `function
-        // lbracket formula rbracket` rules were ambiguous with
-        // `applied_func = (op|)function (tight_term|fenced_factor) =>
-        // prefix_apply`. `[formula]` reduces to `fenced_factor` via
-        // `lbracket expression rbracket => fenced`, and any expression
-        // is also a formula, so the same input matched two rules.
-        // HYBRID's Tree-iter (capped) lands on `prefix_apply`. ASF's
-        // Cartesian-product enumeration ALSO fires `apply_delimited`
-        // — and that body eagerly XMRefs its `func` operand via
-        // `create_xmrefs` → `Document::generate_id`, bumping
-        // `_ID_counter_` for a tree that's then pruned. The wasted
-        // xml:id slot shifts surviving lexemes' IDs by +1 (witness:
-        // `physics_test` under `LATEXML_MARPA_ASF_ONLY=1`).
-        //
-        // Removed:
-        // - `opfunction lbracket formula rbracket => apply_delimited`
-        // - `function lbracket formula rbracket => apply_delimited`
-        //
-        // Both convergent on `prefix_apply` (via `function
-        // fenced_factor`, `opfunction tight_term`).
-        //
-        // KEPT:
-        // - `function lparen formula rparen => apply_delimited`
-        //   `opfunction lparen formula rparen => apply_delimited` —
-        //   `f(x)` / `\sin(x)` is the canonical function-call notation;
-        //   the XMDual cross-reference shape is the intended semantic.
-        // - `trigfunction lbracket formula rbracket => apply_delimited`
-        //   `trigfunction lparen formula rparen => apply_delimited` —
-        //   `trig_arg` deliberately EXCLUDES `fenced_factor` (see the
-        //   `trig_arg` comment), so there's no `prefix_apply` path for
-        //   trig+`[…]` / trig+`(…)` — `apply_delimited` is the only
-        //   rule covering these cases.
-        | function lparen formula rparen => apply_delimited
-        | opfunction lparen formula rparen => apply_delimited
-        | trigfunction lparen formula rparen => apply_delimited
-        | trigfunction lbracket formula rbracket => apply_delimited;
+      // A function's application (`group_application`) is a factor a postfix can take
+      // (`postfix_operand`, 57bw); a trig function's or operator's bare or one-operand application is
+      // not — its argument takes the postfix, as factorial is ill-defined on the reals a trig function
+      // returns (user ruling 2026-09-29): `\sin x!` sin@(x!) (`trig_postfixed`, below), as an
+      // OPFUNCTION's does (`\log n!` log@(n!), `op_bare_base += bare_postfixed`); an application to a
+      // list takes it whole (`list_application`).
+      group_application = function fenced_factor => prefix_apply;
+      trig_application = trigfunction trig_arg => trig_bare_application
+        | trigfunction trig_mixed_ellipses => prefix_apply;
+      // Perl `addOpFunArgs` (MathGrammar:553-558): an OPFUNCTION applies to a group first
+      // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
+      // log@(a)·∇@(b); its bare argument (`opfunction op_bare_arg`, after `op_bare_arg`)
+      // takes no group. Every OPFUNCTION's application, to a group or bare, is an
+      // `opfunction_application`: what a bound head's argument takes after its first item
+      // (`bound_item`, after `op_bare_arg`; 57cg).
+      // (the applications to a group, a bare head or a first item: `opfunction_item_application`; to a bare chain,
+      // `opfunction op_bare_arg`, below — a trig function's argument takes one ending before a trig function,
+      // `trig_opfunction_bare_application`, 57cj.10)
+      // (an application that closes whatever follows — to a group, a bare function head, a postfixed group — is an
+      // `opfunction_closed_application`, which a trig function's argument shares, `trig_opfunction_item_application`)
+      opfunction_closed_application = opfunction group_factor => prefix_apply;
+      opfunction_item_application = opfunction_closed_application;
+      opfunction_application = opfunction_item_application;
+      applied_func = group_application
+        | trig_application
+        | opfunction_application;
+      // Delimited function application — f(x), f[x], \max\{a,b\} — goes through `prefix_apply`
+      // over `fenced_factor`/`group_factor`, which builds Perl's `ApplyDelimited` Dual
+      // (MathParser.pm:1291-1299; `addEasyArgs`, MathGrammar:571-576) and spreads a list. The
+      // `function|opfunction lparen formula rparen => apply_delimited` twins built the same tree a
+      // second time, doubling the trees per application (57bi: `\log(x)\log(y)` 6 trees → 2).
+      // Being applied_funcs, applications chain: f(a) g(b) → f@(a) * g@(b) (`tight_term
+      // applied_func => apply_invisible_times`).
+      // (A trig function's group is `trig_factor_arg`, below.)
       // Standalone applied functions are also tight_terms
       tight_term += applied_func;
       // Function application results can chain with invisible times (Perl moreFactors)
       tight_term += tight_term applied_func => apply_invisible_times;
 
-      // Intervals are math objects (`(0,1)`, `[a,b]`, etc.), not grouping
+      // Intervals are math objects (`[a,b]`, `(a,b]`, etc.), not grouping
       // constructs. Moved out of fenced_factor so function application
       // (`f(x,y)`) naturally prunes the interval interpretation in favor
-      // of the list interpretation via `lparen formula_list rparen`.
+      // of the list interpretation via `lparen formula_list rparen`. A balanced paren
+      // pair is named after the parse by the slot it fills: a vector unless a set
+      // relation asks for a set (`rename_fenced_lists`, divergence #371).
       // Placed at tight_term level so intervals participate in invisible
       // multiplication (`2(a,b)` = `2 * (a,b)`) but not in `f(...)` apply.
-      interval_term = lparen term punct term rparen      => interval
-        | lparen term punct term rbracket    => interval
-        | lbracket term punct term rbracket  => interval
-        | lbracket term punct term rparen  => interval
-        | rbracket term punct term lbracket => interval;
+      // A half-open (or French open) interval's endpoints are expressions, as Perl's
+      // `factorOpenExpr` reads `Expression (PUNCT Expression)(s)` before any close (MathGrammar:472-475):
+      // `x\in(-1,0]`, `t\in[0,T+1)`, `(-\infty,0]` (57bj; RED-drain survey P7, 2605.31172, 2605.01053,
+      // 2605.03240). Open: a scripted half-open interval (`(0,1]^n`) and one after a factor (`2(a,b]`).
+      // Its unbalanced delimiters have no other derivation; a balanced pair is also a
+      // `formula_list` group, so it keeps `term` endpoints (one derivation each).
+      balanced_interval = lparen term punct term rparen => interval
+        | lbracket term punct term rbracket => interval;
+      unbalanced_interval = lparen expression punct expression rbracket => interval
+        | lbracket expression punct expression rparen => interval
+        | rbracket expression punct expression lbracket => interval;
+      interval_term = balanced_interval | unbalanced_interval;
       tight_term += interval_term;
 
       // UNKNOWN followed by fenced args => function application (Perl: doubtArgs/maybeArgs)
@@ -805,46 +1033,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
       // NOTE: ID tokens are multiplicative atoms — NEVER prefix-apply. Only UNKNOWN
       // tokens get speculative function application. ID always uses invisible-times.
-      tight_term += unknown fenced_factor => speculative_prefix_apply
-        | diffunk fenced_factor => speculative_prefix_apply;
-      // Perf: `tight_term += function fenced_factor => prefix_apply` removed.
-      // It duplicated the applied_func path (function fenced_factor => prefix_apply)
-      // and competed with apply_delimited (function lparen formula rparen =>
-      // apply_delimited) for `f(x)` cases, adding ambiguity with no benefit.
-      // OPFUNCTION bare arg absorption (Perl: addOpArgs barearg + moreargs)
-      // \log 2x^2 => log@(2*x^2). These tight_term rules serve as priority
-      // boosters that ensure cascading opfunction application (FGHa → F@(G@(H@(a))))
-      // wins over `F@(G) * H@(a)`. Removing the direct `tight_term += opfunction
-      // tight_term` rule (even after removing `applied_func = opfunction opfunction`
-      // in commit ffcafc33e) still breaks FGHa — the `applied_func = opfunction
-      // tight_term` + `tight_term += applied_func` lifting path does NOT preserve
-      // Marpa's cascade-over-invisible-times preference. The direct self-recursive
-      // rule is required.
-      tight_term += opfunction tight_term => prefix_apply;
-      tight_term += opfunction factor => prefix_apply;
-      // OPFUNCTION as the RIGHT operand of an implicit-times chain
-      // (`c \not`, `a b \not`, the trailing-OPFUNCTION cases in
-      // tests/math/not.tex and the recognizer_trailing_opfunction
-      // unit test). Replaces the `tight_term factor` path that used
-      // to admit OPFUNCTION via `factor → opfunction` — the LEFT
-      // restriction was the whole point of dropping OPFUNCTION from
-      // `factor` (see comment at the `factor` definition above).
-      // LEFT is `tight_term`, which can no longer derive a bare
-      // OPFUNCTION via the base case, so the pragma's
-      // "left-is-OPFUNCTION" case is unreachable through this rule.
-      tight_term += tight_term opfunction => apply_invisible_times;
-      // Perf: removed `opfunction fenced_factor => prefix_apply` — `factor` already
-      // includes fenced_factor, so this rule was a duplicate that caused Marpa to
-      // enumerate the same tree twice for every `\sin(x)` (OPFUNCTION) form.
-      // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi).
-      // Note: `factor` is used here (not factor_base) to support scripted args
-      // like \sin a^2 (scripted_factor_r1 is in factor but not factor_base).
-      // Narrowing to factor_base breaks \sin a^2 = sin(a^2) parses.
-      tight_term += trigfunction factor => prefix_apply;
-      // compound_operator (e.g. D∇, D sin) followed by a single factor: ∇ log x => (∇@log)@(x)
-      // More targeted than the previous `compound_operator tight_term` — absorbs only one factor,
-      // not an entire invisible-times chain. Covers fenced_factor too (since factor += fenced_factor).
-      tight_term += compound_operator factor => prefix_apply;
+      tight_term += unknown group_factor => speculative_prefix_apply
+        | diffunk group_factor => speculative_prefix_apply;
+      // Perf: `tight_term += function fenced_factor => prefix_apply` removed: it duplicated the
+      // applied_func path (function fenced_factor => prefix_apply).
+      // (A trig function's scripted or fenced argument is `trig_factor_arg`, below: an `applied_func`,
+      // so it can follow another factor.)
+      // A compound operator (`D\nabla`, `D\sin`), applied or not, is `op_application` /
+      // `bare_op_term`, below: `\nabla\log x` is (∇@log)@(x).
       // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
       // Semantic action checks text is literally "d" and INTOP context.
       // At factor level so it can appear as right operand of invisible_times.
@@ -878,6 +1074,31 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       postsuperarg = start_postsuperscript statements end_postsuperscript => faux_wrap
         | start_postsuperscript formula_list end_postsuperscript => faux_wrap
         | start_postsuperscript script_op end_postsuperscript => faux_wrap;
+      // An integral's differential `d` takes a post-scripted variable as it takes a bare one (`diffop_apply`,
+      // above), Perl's `diffd ATOM_OR_ID addScripts[$item[2]]` (MathGrammar:643-647): `\int f\,dx_1`
+      // differential-d@(x₁), `\int f\,dt'`, `\int f\,d\hat{x}_1`, `\int dx_1\cdots dx_n` (57cj.20, SYNC (16); were
+      // f·d·x₁: the rule took an unscripted variable only; 2605.28900, 2605.18724, 2605.08899, 2605.21884). The scripts are the variable's
+      // (`differential_variable`: Perl `addScripts`, MathGrammar:419-423, over a bare `factor_base` — no prescript,
+      // no fence, `d(x_1)` is no differential), and a subscripted `d` is no differential letter (`\int f\,d_1x`
+      // f·d₁·x). A differential's power before its variable is the volume element, `\int d^3x\,f` (d³)@(x), as a
+      // bound differential's (`\rmd^3x`, iopart; physics `\dd[3]x`), where Perl's IntFactor has no scripted `diffd`
+      // and reads d³·x (`raised_differential_d`, divergence #395, 57cj.20; 2605.29990, 2605.21314, 2605.23046).
+      differential_variable = factor_base postsuperarg => postfix_script
+        | factor_base postsubarg => postfix_script
+        | differential_variable postsuperarg => postfix_script
+        | differential_variable postsubarg => postfix_script;
+      // … and a letter's application to one group, the variable taking its argument: `dU(z)` d(U(z)), `\mathrm dX(s)`
+      // d(X(s)), `dX_t(\omega)`, `\mathrm dH(u)[\psi]` d(H(u))·[ψ] (57cj.23, the merge review; were d(U)·z, the group split off)
+      applied_differential_variable = unknown group_factor => speculative_prefix_apply
+        | differential_variable group_factor => speculative_prefix_apply;
+      raised_differential_d = diffunk postsuperarg => differential_d_power
+        | diffid postsuperarg => differential_d_power;
+      factor += diffunk differential_variable => diffop_apply
+        | diffid differential_variable => diffop_apply
+        | diffunk applied_differential_variable => diffop_apply
+        | diffid applied_differential_variable => diffop_apply
+        | raised_differential_d factor_base => differential_power_apply
+        | raised_differential_d differential_variable => differential_power_apply;
       // Bigop-specific script args — separated tokens to reduce earley chart competition
       bigopsubarg = start_bigopsub statements end_bigopsub => faux_wrap
         | start_bigopsub formula_list end_bigopsub => faux_wrap
@@ -889,43 +1110,108 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | start_floatsubscript script_op end_floatsubscript => faux_wrap;
       floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap
         | start_floatsuperscript script_op end_floatsuperscript => faux_wrap;
-      // Scripted infix operators: x \times_i^2 y — operator with decorating scripts
-      scripted_mulop = mulop postsubarg => postfix_script
-        | mulop postsuperarg => postfix_script
-        | mulop postsubarg postsuperarg => postfix_script
-        | mulop postsuperarg postsubarg => postfix_script;
-      // Add scripted mulop as infix operator at term level
-      term += tight_term scripted_mulop tight_term => infix_apply_nary;
-      // Ket with scripted operator label: |\times_{i}^{2}⟩ → ket@(scripted_mulop)
-      fenced_factor += singlevertbar scripted_mulop rangle_close => qm_ket;
+      // Perl's operator pseudo-terminals take decorating scripts (MathGrammar:681-712):
+      // `relop : RELOP addOpDecoration | ARROW addOpDecoration`, `AddOp : ADDOP|BINOP
+      // addOpDecoration`, `MulOp : MULOP|BINOP addOpDecoration`, where `addOpDecoration` is any
+      // run of POSTSUPERSCRIPT/POSTSUBSCRIPT, each applied by `DecorateOperator` (MathParser.pm:
+      // 1649-1654: the scripted operator keeps the operator's role). So every rule that reads an
+      // operator reads a decorated one too: `a\leq_k b`, `a\to_n b`, `a+_k b`, `A\cup_i B`,
+      // `x\times_i^2 y`. METARELOP stays bare, as Perl's AnyOp. Golden
+      // tests/parse/decorated_relations.tex#scripted_relop_is_decorated (arXiv 2605.03594,
+      // 2605.28533, 2605.20841).
+      relop += relop postsubarg => decorate_operator
+        | relop postsuperarg => decorate_operator;
+      arrow += arrow postsubarg => decorate_operator
+        | arrow postsuperarg => decorate_operator;
+      addop += addop postsubarg => decorate_operator
+        | addop postsuperarg => decorate_operator;
+      mulop += mulop postsubarg => decorate_operator
+        | mulop postsuperarg => decorate_operator;
+      binop += binop postsubarg => decorate_operator
+        | binop postsuperarg => decorate_operator;
 
       // Scripted FUNCTION with fenced args: f'(a), f^2(a), f_n(x)
       scripted_function = function postsuperarg => postfix_script
         | function postsubarg => postfix_script
         | function postsubarg postsuperarg => postfix_script
         | function postsuperarg postsubarg => postfix_script;
-      // All scripted function application rules go through applied_func only.
-      // Perf: removed `scripted_function fenced_factor => prefix_apply` duplicate.
-      // `f^2(x)` goes through apply_delimited (XMDual) only. Two such scripted
-      // function calls in one formula no longer multiply ambiguity.
-      applied_func += scripted_function lparen formula rparen => apply_delimited;
+      // All scripted function application rules go through applied_func only, one rule each (two
+      // such calls in one formula multiplied ambiguity). A scripted function takes a group as a bare
+      // one does (Perl `preScripted['FUNCTION'] addArgs`, MathGrammar:323-325, :543-548: any OPEN,
+      // not bars): `f_n(x,y)`, `f_n\{a,b\}` parse, and `prefix_apply` lifts the application (57bf).
+      group_application += scripted_function group_factor => prefix_apply;
 
       // Scripted OPFUNCTION with bare/fenced args: \log_e a, \det_S x
       scripted_opfunction = opfunction postsuperarg => postfix_script
         | opfunction postsubarg => postfix_script
         | opfunction postsubarg postsuperarg => postfix_script
         | opfunction postsuperarg postsubarg => postfix_script;
-      applied_func += scripted_opfunction tight_term => prefix_apply;
-      // Perf: removed duplicate `scripted_opfunction fenced_factor => prefix_apply`.
-      // `scripted_opfunction tight_term` already covers fenced_factor via factor += fenced_factor
-      // (and tight_term includes factor via multiple paths). The fenced case ALSO has
-      // `scripted_opfunction lparen formula rparen => apply_delimited` below (preferred XMDual).
-      applied_func += scripted_opfunction lparen formula rparen => apply_delimited;
+      // A closed group holding only integrals is an integral operator (user ruling 2026-10-01; the lexer's
+      // `INTOP_GROUP_OPEN`, `util::integral_operator_group`): applied to the integrand after it, as an INTOP is —
+      // `\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,\mathrm d\theta` [∫_G+∑∫](f(θ)·dθ) (2605.15451),
+      // `\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)f(z)\,\mathrm dz` (2605.02925); was the
+      // group's product with the integrand
+      integral_operator_group = intop_group_open expression rbracket => fenced
+        | intop_group_open expression rparen => fenced
+        | intop_group_open expression rbrace => fenced;
+      summation_bigop += integral_operator_group;
+      // A scripted OPFUNCTION applies as a bare one (`addOpFunArgs`): to a group, or to a bare
+      // argument (`scripted_opfunction op_bare_arg`, after `op_bare_arg`).
+      opfunction_closed_application += scripted_opfunction group_factor => prefix_apply;
+      // OPFUNCTION as the RIGHT operand of an implicit-times chain (`c \not`, `a b \not`, the
+      // trailing-OPFUNCTION cases in tests/math/not.tex and the recognizer_trailing_opfunction unit
+      // test): OPFUNCTION is no `factor` (see the `factor` definition), so no chain starts at it; a
+      // product ending in one is followed only by what the function does not take (a big operator's or
+      // an operator's application, `\tfrac12\log\det(\Sigma)`).
+      // A bare OPFUNCTION, alone or ending a product, is a term (as `bare_op_term` is for an operator):
+      // what it would take is its argument, so no factor follows it in a product, and juxtaposed
+      // OPFUNCTIONs are separate factors — `\log x\log y` log@(x)·log@(y), `\log^3\omega\log y`
+      // (2605.16034), `\nabla x\log y` (2605.11994) (user ruling 2026-09-29; the
+      // product `tight_term opfunction` let every junction be split and refused, 2^(n−1) trees).
+      opfunction_head = opfunction | scripted_opfunction;
+      term += scripted_opfunction;
+      bare_opfunction_term = tight_term opfunction_head => apply_invisible_times;
+      term += bare_opfunction_term
+        | term mulop bare_opfunction_term => infix_apply_nary
+        | term binop bare_opfunction_term => infix_apply_nary
+        // and after a MulOp or BinOp the bare head alone: `a\cdot\log^2`, `\log\circ\exp` (57cb review)
+        | term mulop opfunction_head => infix_apply_nary
+        | term binop opfunction_head => infix_apply_nary;
+      // Divergence #351 (OXIDIZED_DESIGN_DIVERGENCES): an OPFUNCTION applied to a group takes the
+      // scripts after it — `\log(n)^2` is (log@(n))², `\operatorname{Var}(X)_k` (Var@(X))_k,
+      // `\max(a,b)^2` (max@(a,b))² — where Perl's `addEasyArgs` application ends the Factor and the
+      // script has no base (unparsed; the old `opfunction tight_term` read log@(n²); 2605.24357,
+      // 2605.01408). Not a TRIGFUNCTION: `\sin(x)^2` stays sin@(x²) (`trig_arg`).
+      // Only an unscripted head: a scripted one (`\min_w(y-w)^2`, `\max_i(\lambda_s)_i`) reads
+      // as a limit, its operand the scripted group — min_w@((y−w)²) — as `\sup_i(a_i)^2` does
+      // (`scripted_group_apply`, after the scripted factors; 2605.04340, 2605.23087, 2605.19263).
+      // The `apply_delimited` alternative is the only derivation of a paren group holding a fenced
+      // modifier (`\log(\to x)^2`, `\log(>0)^2`: `group_apply` refuses `is_fenced_modifier_dual`),
+      // and a twin of `group_apply` for every other group (four `\log(x)^2` still enumerate 31
+      // trees; 57bi review). Its eager `create_xmrefs` spends an xml:id on a tree the ASF may prune
+      // (`physics_test` under `LATEXML_MARPA_ASF_ONLY=1`). Follow-up: let `group_apply` take a
+      // paren-fenced modifier and drop it.
+      opfunction_group_application = opfunction group_factor => group_apply
+        | opfunction lparen formula rparen => apply_delimited;
+      scripted_opfunction_application = opfunction_group_application postsuperarg => postfix_script
+        | opfunction_group_application postsubarg => postfix_script
+        | opfunction_group_application postsubarg postsuperarg => postfix_script
+        | opfunction_group_application postsuperarg postsubarg => postfix_script;
+      tight_term += scripted_opfunction_application;
+      tight_term += tight_term scripted_opfunction_application => apply_invisible_times;
+      // An interval whose close does not balance its open (`interval_term`: `(0,1]`, `[a,b)`) is
+      // no OPFUNCTION's argument — `addEasyArgs` needs a `balancedClose` (MathGrammar:571-576) —
+      // but the factor after the bare function (`addOpFunArgs`' `{ $arg[0] }`, :557): `\log(0,1]`
+      // is log·(0,1], `\max[a,b)` max·[a,b), as Perl (golden
+      // tests/parse/opfunction_arguments.tex#function_before_an_unbalanced_interval_multiplies).
+      function_times_interval = opfunction interval_term => apply_invisible_times
+        | scripted_opfunction interval_term => apply_invisible_times;
+      tight_term += function_times_interval;
+      tight_term += tight_term function_times_interval => apply_invisible_times;
 
       // Scripted OPERATOR applied to an operand: `\nabla^2 \phi` (Laplacian),
-      // `\nabla_x f`, `\nabla^2(f)`. Mirrors the unscripted `operator factor =>
-      // prefix_apply` (tight_term, line ~201) plus the scripted_opfunction
-      // pattern above. Without it, a superscripted/subscripted OPERATOR applied
+      // `\nabla_x f`, `\nabla^2(f)`, through `op_application` below, as the unscripted
+      // operator is. Without it, a superscripted/subscripted OPERATOR applied
       // to an argument was unparsed (→ ltx_math_unparsed); Perl parses
       // `\nabla^2 \phi` to `(nabla ^ 2)@(phi)`. (`\partial^2 f` already worked —
       // `\partial` is a DIFFOP/any_bigop with its own scripted path.)
@@ -933,27 +1219,41 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | operator postsubarg => postfix_script
         | operator postsubarg postsuperarg => postfix_script
         | operator postsuperarg postsubarg => postfix_script;
-      applied_func += scripted_operator factor => prefix_apply;
-      applied_func += scripted_operator lparen formula rparen => apply_delimited;
-      factor += scripted_operator;
+      // Not a `factor`: a scripted operator with no argument is a `bare_op_term` (below).
+      // Perl `OPERATOR addScripts nestOperators` (MathGrammar:312-313, :663-671): a scripted
+      // operator nests over a following function as the unscripted `compound_operator` does —
+      // `\nabla_x\log p(y)` is ((∇_x)@(log))@(p) · y.
+      compound_operator += scripted_operator trigfunction => prefix_apply
+        | scripted_operator function => prefix_apply
+        | scripted_operator plain_opfunction => prefix_apply
+        | scripted_operator compound_operator => prefix_apply;
 
       // Scripted TRIGFUNCTION: \sin^2 x, \cos_n x
       scripted_trigfunction = trigfunction postsuperarg => postfix_script
         | trigfunction postsubarg => postfix_script
         | trigfunction postsubarg postsuperarg => postfix_script
         | trigfunction postsuperarg postsubarg => postfix_script;
-      applied_func += scripted_trigfunction tight_term => prefix_apply;
-      // Perf (grammar disambiguation): removed duplicate
-      //   `scripted_trigfunction fenced_factor => prefix_apply`
-      // Fenced scripted-trig calls (\sin^{2}(x)) go through apply_delimited
-      // (the XMDual form). Previously BOTH paths produced trees, giving
-      // 4× multiplier when two such calls appeared in a formula
-      // (e.g. \sin^2(x) + \cos^2(x) was 46 parses).
-      applied_func += scripted_trigfunction lparen formula rparen => apply_delimited;
+      // (A scripted trig function takes the bare one's arguments, `trig_arg` and `trig_factor_arg`,
+      // below: Perl `preScripted['TRIGFUNCTION'] addTrigFunArgs`, MathGrammar:284, :430-433, 57bo.)
+
 
       // standalone top-level variants of floating scripts:
       floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;
       floatsuperscript = start_floatsuperscript expression end_floatsuperscript => standalone_script;
+      // A script whose argument is one float script alone, `F^{{}^{\prime}}`, `H_{{}_{\mathrm I}}`: Perl
+      // parses a one-node script argument as is (MathParser.pm:680-681); a float followed by more
+      // (`x^{{}^{\prime}\prime}`) stays unparsed, as in Perl (57bj; RED-drain survey P3, 2605.21192,
+      // 2605.04817, 2605.18286).
+      lone_float_script = floatsuperscript | floatsubscript
+        | start_floatsuperscript script_op end_floatsuperscript => standalone_script
+        | start_floatsubscript script_op end_floatsubscript => standalone_script
+        // … or a bare `+`, `-`, `*` (`x^{{}^{*}}`, Perl `A ^ ^ast * B`)
+        | start_floatsuperscript bare_operator_operand end_floatsuperscript => standalone_script
+        | start_floatsubscript bare_operator_operand end_floatsubscript => standalone_script;
+      postsuperarg += start_postsuperscript lone_float_script end_postsuperscript => faux_wrap;
+      postsubarg += start_postsubscript lone_float_script end_postsubscript => faux_wrap;
+      bigopsuparg += start_bigopsup lone_float_script end_bigopsup => faux_wrap;
+      bigopsubarg += start_bigopsub lone_float_script end_bigopsub => faux_wrap;
       // Scripted factors -- avoid adding ambiguity in the left-right order of collection
       // first ALL left (=float), then right (=post).
       scripted_factor_l11 = floatsuperarg factor_base => prefix_script
@@ -978,13 +1278,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
       // Note: any_bigop is NOT included here — bigops get scripts via scripted_bigop,
       // not scripted_factor. This ensures bigop_application can absorb arguments.
+      // (A scripted OPFUNCTION is `scripted_opfunction`, no scripted factor: as a factor it continued a
+      // bare argument, `\log x\log_2 y`, 57cb.)
       scripted_factor_r11 = factor_base postsuperarg => postfix_script
-        | opfunction postsuperarg => postfix_script
         | scripted_factor_l1 postsuperarg => postfix_script
         | scripted_factor_l2 postsuperarg => postfix_script
         | fenced_factor postsuperarg => postfix_script;
       scripted_factor_r12 = factor_base postsubarg => postfix_script
-        | opfunction postsubarg => postfix_script
         | scripted_factor_l1 postsubarg => postfix_script
         | scripted_factor_l2 postsubarg => postfix_script
         | fenced_factor postsubarg => postfix_script;
@@ -1010,12 +1310,601 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_factor_r2 postsubarg => postfix_script;
       factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
+      // Perl's trig application is one Factor whatever it takes (`preScripted['TRIGFUNCTION']
+      // addTrigFunArgs`, MathGrammar:284, :562-567: `addEasyArgs` for any delimiters, :571-576, or a
+      // `trigBarearg`, :340-356), so it follows other factors (`Term : Factor moreFactors`, :249-264):
+      // `\cos\{x\}\sin\{y\}`, `2\sin\theta_i`, `r\cos\theta_i\sin\phi_j` (57bg; were unparsed:
+      // `tight_term += trigfunction factor` could start a product but not continue one; 2605.20503,
+      // 2605.09037, 2605.11904). `trig_arg` keeps the bare chains (`\sin 2x`).
+      trig_factor_arg = function | fenced_array | fenced_factor | scripted_opfunction
+        | scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
+      trig_application += trigfunction trig_factor_arg => prefix_apply;
+      // A scripted atom, identifier, unknown or number is a `trigBarearg` item too (Perl `aTrigBarearg`,
+      // MathGrammar:341-348: `preScripted['ATOM_OR_ID']`, `NUMBER addScripts`), anywhere in the chain:
+      // `\cos 2\theta_i` cos@(2·θ_i), `\sin\omega_0 t` sin@(ω₀·t) (57bo; were cos@(2)·θ_i and unparsed,
+      // 2605.08634, 2605.22136, 2605.02925, 2605.05470). A scripted first item heads only a chain; alone
+      // it is `trig_factor_arg` (one derivation each).
+      trig_scripted_item = scripted_factor_l1 => trig_bare_argument_item
+        | scripted_factor_l2 => trig_bare_argument_item
+        | scripted_factor_r1 => trig_bare_argument_item
+        | scripted_factor_r2 => trig_bare_argument_item;
+      trig_chain_item = factor_base | trig_scripted_item;
+      trig_arg += trig_arg trig_scripted_item => trig_argument_juxtaposition
+        | trig_arg mulop trig_scripted_item => trig_chain_across_an_operator
+        | trig_scripted_item trig_chain_item => trig_argument_juxtaposition
+        | trig_scripted_item mulop trig_chain_item => trig_chain_across_an_operator;
+      // A scripted trig function takes the bare one's arguments (Perl `preScripted['TRIGFUNCTION']
+      // addTrigFunArgs`, MathGrammar:284, :430-433): `\sin^2x\cos^2y` (sin²)@(x)·(cos²)@(y), not
+      // (sin²)@(x·(cos²)@(y)) — `scripted_trigfunction tight_term` took any product (57bo; 2605.01844,
+      // 2605.28758, 2605.17056, 2605.25849).
+      trig_application += scripted_trigfunction trig_arg => trig_bare_application
+        | scripted_trigfunction trig_mixed_ellipses => prefix_apply
+        | scripted_trigfunction trig_factor_arg => prefix_apply;
+
       // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
       // Must come after scripted_factor_r1/r2 are defined (forward reference not allowed).
       prescripted_factor_post_r += postsuperarg scripted_factor_r1 => prefix_script_pre
         | postsuperarg scripted_factor_r2 => prefix_script_pre;
       prescripted_factor_post_l += postsubarg scripted_factor_r1 => prefix_script_pre
         | postsubarg scripted_factor_r2 => prefix_script_pre;
+
+      // Perl `OPERATOR addScripts nestOperators addOpFunArgs` is a Factor (MathGrammar:312-313):
+      // the operator, scripted or nested (`compound_operator`), applies to what `addOpFunArgs`
+      // reads (:553-558) — a parenthesized group, or `APPLYOP(?) barearg`: one `aBarearg`, or a
+      // chain of them joined by juxtaposition or a MulOp, left-associative (`moreBareargs`,
+      // :321-337). So `\nabla u\cdot v` is ∇@(u·v), `\nabla uv\cdot w` ∇@((u v)·w),
+      // `\nabla_\theta\log\max_i p_i` ((∇_θ)@(log))@(max_i@(p_i)), and an operator applies mid-term
+      // too: `\eta\nabla L(\theta)` is η·∇@(L)·θ, `k\nabla T` k·∇@(T) (optimisation and PDE
+      // papers, 2605.19037, 2605.06657, 2605.25194, 2605.02202; golden
+      // tests/parse/operator_application.tex#operator_takes_a_bare_argument).
+      // `aBarearg` (:323-331) is a factor with no fence but `|…|`, no operator or big operator, no
+      // speculative `f(x)`: `bare_argument_item` keeps those; `operator_bare_apply` takes no
+      // operator and leaves a leading function or operator to an open nest; the narrower parses
+      // are pruned in `apply_invisible_times` / `infix_apply_nary` (`leaves_a_bare_argument`,
+      // `operator_takes`).
+      // `nestOperators` (:663-671) nests operators until a function, scripted ones too (`OPERATOR
+      // addScripts`, `FUNCTION addScripts`), and `recApply` (MathParser.pm:1313-1315) applies each
+      // to the rest: `\nabla_x f^2` is (∇_x)@(f²), `\nabla_x\sin^2 x` ((∇_x)@(sin²))@(x),
+      // `\nabla_x\nabla_y u` ((∇_x)@(∇_y))@(u) (golden
+      // tests/parse/operator_application.tex#operator_nests_over_an_operator).
+      scripted_plain_opfunction = plain_opfunction postsuperarg => postfix_script
+        | plain_opfunction postsubarg => postfix_script
+        | plain_opfunction postsubarg postsuperarg => postfix_script
+        | plain_opfunction postsuperarg postsubarg => postfix_script;
+      compound_operator += operator scripted_function => prefix_apply
+        | operator scripted_plain_opfunction => prefix_apply
+        | operator scripted_trigfunction => prefix_apply
+        | operator scripted_operator => prefix_apply
+        | scripted_operator scripted_function => prefix_apply
+        | scripted_operator scripted_plain_opfunction => prefix_apply
+        | scripted_operator scripted_trigfunction => prefix_apply
+        | scripted_operator operator => prefix_apply
+        | scripted_operator scripted_operator => prefix_apply;
+      // A scripted OPFUNCTION before a scripted group reads it as a limit's operand (divergence
+      // #351): `\min_w(y-w)^2` is min_w@((y−w)²), `\min_j(y_j)_{j=1}^n` min_j@(((y_j)_{j=1})^n).
+      scripted_group = fenced_factor postsuperarg => postfix_script
+        | fenced_factor postsubarg => postfix_script
+        | scripted_group postsuperarg => postfix_script
+        | scripted_group postsubarg => postfix_script;
+      opfunction_closed_application += scripted_opfunction scripted_group => scripted_group_apply;
+      // `preScripted['UNKNOWN'] doubtArgs` (:327) as divergence #18 reads it (OXIDIZED_DESIGN_MATH):
+      // an unknown applies to its group, alone or in a chain — `\operatorname{minimize} f(x)` is
+      // minimize@(f@(x)), `\nabla f(x)` ∇@(f@(x)).
+      speculative_item = unknown group_factor => speculative_prefix_apply
+        | diffunk group_factor => speculative_prefix_apply;
+      // A letter applied after an application (#18 applies it at the start of a product): after a
+      // group its function closed nothing suggests a monomial — `P(A|B)P(B|C,D)`, `\Gamma(s)\zeta(s)`,
+      // `\log(x)f(y)` (57bl; 1,607 formulas / 373 papers read `X@(…) * g * y`, 2605.09849, 2605.08899,
+      // 2605.05133). A juxtaposed coefficient before a letter (`\lambda g(x)`, `2x(1+x)`) stays the
+      // open #18 ruling (RED repro application_after_a_leading_factor). Only the left side of a
+      // letter's application, so no tree gets two derivations; the fenced-letters pragma picks it.
+      // The product that would leave the letter and its group separate factors is refused at once
+      // (`factor_product`), mirroring these rules exactly: each chain of L letters otherwise also
+      // stopped after any k, (L+1) readings per chain multiplying across a formula (57bl review: five
+      // chains of three, 1,024 trees and 855 MB).
+      delimited_application = function fenced_factor => prefix_apply
+        | opfunction group_factor => prefix_apply
+        | scripted_opfunction group_factor => prefix_apply
+        | trigfunction fenced_factor => prefix_apply
+        | scripted_trigfunction fenced_factor => prefix_apply;
+      // The letter takes a group in parentheses or brackets only, as at the start of a product: a
+      // brace, bar, floor or angle group after it multiplies (`U(t)H|\psi\rangle` H·ket, 57bn).
+      // (`ellipsis_id`, the ellipsis IDs as one symbol, is defined before `trig_ellipses`.)
+      application_before_a_letter = speculative_item => letter_application_to_a_group
+        | delimited_application
+        | tight_term delimited_application => apply_invisible_times
+        | application_before_a_letter speculative_item => letter_after_an_application_apply
+        // An ellipsis is transparent to the chain (57bv): a letter after it reads as it would with
+        // the ellipsis removed — `g(1)g(2)\cdots g(n)` g@(1)·g@(2)·⋯·g@(n), `\cdots g(n)` ⋯·g@(n),
+        // `a\cdots g(n)` a product still (after a coefficient). `\ldots`/`\dots` are IDs, `\cdots`
+        // an ELIDEOP; only those (`f(x)\infty g(y)` stays a product).
+        | elideop => ellipsis_opens_an_application_chain
+        | ellipsis_id => ellipsis_opens_an_application_chain
+        | application_before_a_letter elideop => ellipsis_after_an_application
+        | application_before_a_letter ellipsis_id => ellipsis_after_an_application;
+      tight_term += application_before_a_letter speculative_item => letter_after_an_application_apply;
+      op_bare_base = factor_base
+        | function
+        | speculative_item
+        // An ellipsis is a bare item, Perl's `\cdots` an ID (`aBarearg`'s ATOM_OR_ID, MathGrammar:323-331):
+        // `\max_{m}|a||b|\cdots|c|` is max_m@(|a|·|b|·⋯·|c|) (57bx, 2605.23673).
+        | elideop
+        // An OPFUNCTION's group application with its scripts (divergence #351): `\log\exp(x)^2` is
+        // log@((exp@(x))²).
+        | scripted_opfunction_application => bare_argument_item
+        // A trig function applied to a scripted argument or a group is an `applied_func` (57bg):
+        // `\max_i\sin\theta_i` is max_i@(sin@(θ_i)) (2605.05043), `\max_j\cos(t,r_j)` max_j@(cos@(t, r_j)),
+        // `\sum_i\ln\cosh(\cdot)` (2605.06229, 2605.08116, 2605.31371) — through `applied_func` below.
+        | bare_abs
+        | scripted_factor_l1 => bare_argument_item
+        | scripted_factor_l2 => bare_argument_item
+        | scripted_factor_r1 => bare_argument_item
+        | scripted_factor_r2 => bare_argument_item;
+      // (every item but a function's application is an `op_bare_base`, which a trig function's argument shares:
+      // `trig_op_bare_item`)
+      op_bare_item = op_bare_base
+        | applied_func => bare_argument_item;
+      // A bare function in a bare argument (Perl `aBarearg`'s OPFUNCTION/TRIGFUNCTION with no
+      // argument of its own, :324-325): the whole argument (`\log\exp`), or the chain's last item
+      // — before a bare item it would take it: `\max_A\tfrac12\log\det(B)` is
+      // max_A@(½·log)·det(B), as Perl.
+      // The argument's first item may be a function (`op_bare_item`: `\log\log x`, `\log\max_i p_i`,
+      // `\arg\min_w`); a later one may not be an OPFUNCTION (`op_bare_next`): juxtaposed OPFUNCTIONs are
+      // separate factors, `\log x\log y` log@(x)·log@(y), `\max_x f(x)\log y` max_x@(f@(x))·log@(y) (a bound
+      // head's argument takes one that mentions its variable, `bound_application`, 57cg) — an operator's
+      // argument too, `\nabla x\log y` ∇@(x)·log@(y) (user rulings 2026-09-29; Perl's greedy
+      // `barearg`, MathGrammar:553-558, reads log@(x·log@(y)); divergence #376). A trig function still
+      // continues it (`\max_j 2\sin\frac{…}{2}`). An ellipsis stays inside only between two items
+      // (`op_bare_elided`): `\log x\cdots y` log@(x·⋯·y), `\log x_1\cdots\log x_n` log(x_1)·⋯·log(x_n),
+      // `\nabla u\cdots` ∇@(u)·⋯ — a run of them too, whatever the macros (`\log x\cdots\cdots y` log@(x·⋯·⋯·y),
+      // `\log\ldots\ldots\cdots x`; 57cj.14 review, divergence #376) and however joined (`\log x\cdot\cdots\cdot\cdots\cdot y`
+      // log@(x·⋯·⋯·y); 57cj.15 review).
+      bare_function_head = opfunction | scripted_opfunction | trigfunction | scripted_trigfunction;
+      next_bare_function_head = trigfunction | scripted_trigfunction;
+      // (`op_bare_plain_next`: every later item but a trig function's application)
+      op_bare_plain_next = factor_base
+        | function
+        | speculative_item
+        | bare_abs
+        | scripted_factor_l1 => bare_argument_item
+        | scripted_factor_l2 => bare_argument_item
+        | scripted_factor_r1 => bare_argument_item
+        | scripted_factor_r2 => bare_argument_item
+        | group_application => bare_argument_item;
+      // a trig function's application continues it (`\log x\sin y` log@(x·sin@(y)), as Perl)
+      op_bare_next = op_bare_plain_next
+        | trig_application => bare_argument_item;
+      op_bare_arg = op_bare_item op_bare_next => apply_invisible_times
+        | op_bare_item mulop op_bare_next => infix_apply_nary
+        | op_bare_item binop op_bare_next => infix_apply_nary
+        | op_bare_arg op_bare_next => apply_invisible_times
+        | op_bare_arg mulop op_bare_next => infix_apply_nary
+        | op_bare_arg binop op_bare_next => infix_apply_nary
+        | op_bare_item next_bare_function_head => apply_invisible_times
+        | op_bare_arg next_bare_function_head => apply_invisible_times;
+      op_bare_elided = op_bare_item elideop => apply_invisible_times
+        | op_bare_arg elideop => apply_invisible_times
+        // (a run of them: `\log x\cdots\cdots y` log@(x·⋯·⋯·y), an ID after one a bare item, `op_bare_next`)
+        | op_bare_elided elideop => apply_invisible_times
+        // (… joined by a MulOp or BinOp too: `\log x\cdot\cdots\cdot\cdots\cdot y` log@(x·⋯·⋯·y), 57cj.15 review)
+        | op_bare_elided mulop elideop => infix_apply_nary
+        | op_bare_elided binop elideop => infix_apply_nary
+        | op_bare_item mulop elideop => infix_apply_nary
+        | op_bare_item binop elideop => infix_apply_nary
+        | op_bare_arg mulop elideop => infix_apply_nary
+        | op_bare_arg binop elideop => infix_apply_nary;
+      op_bare_arg += op_bare_elided op_bare_next => apply_invisible_times
+        | op_bare_elided mulop op_bare_next => infix_apply_nary
+        | op_bare_elided binop op_bare_next => infix_apply_nary;
+      // In a trig function's argument an OPFUNCTION's bare chain takes no trig function after its first item, as
+      // juxtaposed trig functions are separate factors (`\sin\log x\cos y` sin@(log x)·cos y): the chain is built
+      // without one, so no tree derives log@(x·cos y) to refuse it — per site those refusals multiplied, `\sin\log
+      // x\cos y+\cos\log x\sin y` 25 trees (57cj.9 review; `parse_tree_count_limits`).
+      // … and nested (57cj.10 review): the chain's first item is a `trig_op_bare_item`, whose OPFUNCTION's application
+      // is built the same way (`trig_opfunction_item_application`, below), so `\sin\log\log x\cos y` derives no
+      // log@(x·cos y) either (7 trees → 3, the 3 of `\sin\log\log x` alone; four sites 3,182 → 81).
+      trig_op_bare_item = op_bare_base;
+      trig_op_bare_arg = trig_op_bare_item op_bare_plain_next => apply_invisible_times
+        | trig_op_bare_item mulop op_bare_plain_next => trig_chain_across_an_operator
+        | trig_op_bare_arg op_bare_plain_next => apply_invisible_times
+        | trig_op_bare_arg mulop op_bare_plain_next => trig_chain_across_an_operator;
+      trig_op_bare_elided = trig_op_bare_item elideop => apply_invisible_times
+        | trig_op_bare_arg elideop => apply_invisible_times
+        | trig_op_bare_elided elideop => apply_invisible_times
+        | trig_op_bare_elided mulop elideop => trig_chain_across_an_operator
+        | trig_op_bare_item mulop elideop => trig_chain_across_an_operator
+        | trig_op_bare_arg mulop elideop => trig_chain_across_an_operator;
+      trig_op_bare_arg += trig_op_bare_elided op_bare_plain_next => apply_invisible_times
+        | trig_op_bare_elided mulop op_bare_plain_next => trig_chain_across_an_operator;
+      // Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558) for an OPFUNCTION, bare or
+      // scripted: the greedy chain of bare arguments an operator takes — `\log x y` is log@(x y),
+      // `\max_i a_i b_i` max_i@(a_i b_i) (2605.10282, 2605.30776, 2605.24123, 2605.00332; golden
+      // tests/parse/opfunction_arguments.tex#opfunction_argument_ends_at_its_group). A bare
+      // function as the whole argument: `\log\exp` is log@(exp); `\log\exp x` log@(exp@(x)) (`\det`
+      // is a LIMITOP, a big operator, whose application a function before it takes: `\log\det A` is
+      // log@(det@(A)), where Perl reads log·det@(A) — divergence #390, `function_takes_a_limit_operator`).
+      opfunction_closed_application += opfunction bare_function_head => operator_bare_apply
+        | scripted_opfunction bare_function_head => operator_bare_apply;
+      opfunction_item_application += opfunction op_bare_item => operator_bare_apply
+        | scripted_opfunction op_bare_item => operator_bare_apply;
+      opfunction_application += opfunction op_bare_arg => operator_bare_apply
+        | scripted_opfunction op_bare_arg => operator_bare_apply;
+      op_head = operator | scripted_operator | compound_operator;
+      op_application = op_head factor => operator_bare_apply
+        // Divergence #18 in a single bare argument as in a chain: `\nabla f(x)` is ∇@(f@(x)).
+        | op_head speculative_item => operator_bare_apply
+        // Only a nest takes one applied function (an operator nests over it instead):
+        // `\nabla\log\max_i p_i` is (∇@log)@(max_i@(p_i)).
+        | compound_operator applied_func => operator_bare_apply
+        | op_head op_bare_arg => operator_bare_apply;
+      // … except an expectation's, which the operator takes applied (it nests over none,
+      // `plain_opfunction`): `\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]` (∇_x)@(𝔼@(…))
+      // (2605.00941), `\operatorname*{argmax}_\theta\mathbb{E}(X_\theta)` (2605.03240). Its own terminal, so no
+      // other function's application gets a second derivation (`\nabla_\theta\log p_\theta(x)`). The
+      // applications an OPFUNCTION's are: a group with its scripts, `\nabla\mathbb{E}[X]^2` ∇@((𝔼@(X))²)
+      // (divergence #351); a scripted head's group or scripted group, `\nabla_\theta\mathbb{E}_x[f]^\top`
+      // (`scripted_group_apply`); a bare argument; a postfixed group's operand (below). The
+      // application ends the operator's argument: `\alpha_t\nabla^\top_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}` is
+      // α_t·∇@(𝔼@(x | x_t))·Σ_t⁻¹ (2605.20593).
+      scripted_expectation = expectation_head postsuperarg => postfix_script
+        | expectation_head postsubarg => postfix_script
+        | expectation_head postsubarg postsuperarg => postfix_script
+        | expectation_head postsuperarg postsubarg => postfix_script;
+      expectation_group_application = expectation_head group_factor => group_apply;
+      expectation_scripted_application = expectation_group_application postsuperarg => postfix_script
+        | expectation_group_application postsubarg => postfix_script
+        | expectation_group_application postsubarg postsuperarg => postfix_script
+        | expectation_group_application postsuperarg postsubarg => postfix_script;
+      expectation_application = expectation_group_application
+        | expectation_scripted_application
+        | scripted_expectation group_factor => prefix_apply
+        | scripted_expectation scripted_group => scripted_group_apply
+        | expectation_head op_bare_item => operator_bare_apply
+        | expectation_head op_bare_arg => operator_bare_apply
+        | scripted_expectation op_bare_item => operator_bare_apply
+        | scripted_expectation op_bare_arg => operator_bare_apply;
+      // … and a postfixed scripted group application, as an OPFUNCTION's (`opfunction_bare_postfixed`):
+      // `\nabla\mathbb{E}[X]^{2}!` ∇@((𝔼@(X))²!) (57cd review)
+      expectation_postfixed = expectation_scripted_application postfix => apply_postfix
+        | expectation_postfixed postfix => apply_postfix
+        | expectation_postfixed postsuperarg => postfix_script
+        | expectation_postfixed postsubarg => postfix_script;
+      expectation_application += expectation_postfixed;
+      // The operator, or a nest of operators only, takes it (an operator's nest over a function takes
+      // it as a bare argument, `compound_operator applied_func`: `\nabla\log\mathbb{E}[X]`
+      // (∇@log)@(𝔼@(X))), so no head reaches it twice (57cd review: a refused closed nest per site).
+      operator_nest = operator operator => prefix_apply
+        | operator scripted_operator => prefix_apply
+        | scripted_operator operator => prefix_apply
+        | scripted_operator scripted_operator => prefix_apply
+        | operator operator_nest => prefix_apply
+        | scripted_operator operator_nest => prefix_apply;
+      open_op_head = operator | scripted_operator | operator_nest;
+      op_application += open_op_head expectation_application => prefix_apply;
+      // A scripted operator's scope follows its bound variable (user ruling 2026-09-30): the bare
+      // argument of a head whose subscript binds a variable — `\max_i`, `\min_{\mu\in\mathbb R}`,
+      // `\arg\max_\theta`, `\operatorname*{argmin}_w` (`semantics::bound_variables`) — takes a later
+      // OPFUNCTION's application that mentions one free (`bound_argument_extends`), and the product
+      // that would leave it outside is refused (`leaves_a_bare_argument`, `bound_head_takes`):
+      // `\max_i a_i\log b_i` max_i@(a_i·log@(b_i)), `\min_{\mu\in\mathbb R}\tau\mathbb{E}_z\phi((z-\mu)/\tau)+\mu`
+      // min_μ@(τ·𝔼_z@(φ(…)))+μ (2605.02116), `\min_{\eta>0}\eta\ln\eta` (2605.18694),
+      // `\max_{\gamma\in H}4n\exp(-\gamma^2)` (2605.26653), `\max_{S\ni M}e\ln|S|` (2605.09953) — Perl's
+      // greedy `barearg` (MathGrammar:321-337, :553-558), which #376 had split. With no free mention
+      // the argument ends as before: `\max_x f(x)\log y` max_x@(f@(x))·log@(y),
+      // `\max_{k\notin\{i,j\}}\frac{\pi_k}{\pi_d}\exp(-\kappa)` (2605.06831), `\max_{z\in A}|f(z)|\max_{z\in A}|g(z)|`
+      // (2605.24231: the second max binds its own z). After such an item the argument goes on as a
+      // bare one does (`op_bare_next`). An extended application is an item too (`bound_item +=
+      // bound_application`): the innermost head binding a mentioned variable takes it,
+      // `\max_i a_i\max_j b_{ij}\log c_j` max_i@(a_i·max_j@(b_ij·log@(c_j))). Only a head whose scripts
+      // are limits (`limits_opfunction`, a starred operator name) with a subscript heads one, from a start
+      // of its own (`limits_bare_application`) apart from its plain application (`scripted_opfunction
+      // op_bare_arg`), so a tree with no item is derived once: k OPFUNCTIONs after such a head's argument
+      // are k+1 derivations (`\max_i a_i\log b_i\log c_i\log d_i` 4, one kept); a nolimits or unscripted
+      // head adds none (`\log_2 x\log_2 y\log_2 z`, `\log x\log y\log z` 1, #376); limits heads in a row
+      // compound (Catalan: three 5, four 14), separate sites multiply (n terms each with a head and a later
+      // OPFUNCTION: 2^n, mentioned or not), and a subscripted operator (`limits_operator_head`, any `operator
+      // postsubarg`) pays a refused twin (`\nabla_x f(x)\log x` 2 → 3; #380).
+      limits_opfunction_head = limits_opfunction postsubarg => postfix_script
+        | limits_opfunction postsubarg postsuperarg => postfix_script
+        | limits_opfunction postsuperarg postsubarg => postfix_script;
+      limits_bare_application = limits_opfunction_head op_bare_item => operator_bare_apply
+        | limits_opfunction_head op_bare_arg => operator_bare_apply;
+      // (an operator's name is its own text, `\operatorname*{arg\,min}`, so any subscripted one heads
+      // it and `semantics::binds_its_subscript` asks for its `scriptpos`: amsopn.sty.ltxml:23-29, :50-53)
+      limits_operator_head = operator postsubarg => postfix_script
+        | operator postsubarg postsuperarg => postfix_script
+        | operator postsuperarg postsubarg => postfix_script;
+      // (no `expectation_application`: an expectation's application ends an operator's argument, 57cd)
+      limits_operator_application = limits_operator_head factor => operator_bare_apply
+        | limits_operator_head speculative_item => operator_bare_apply
+        | limits_operator_head op_bare_arg => operator_bare_apply;
+      bound_item = opfunction_application | scripted_opfunction_application;
+      bound_next = bound_item | op_bare_next;
+      bound_join = mulop | binop;
+      bound_application = limits_bare_application bound_item => bound_argument_extends
+        | limits_bare_application bound_join bound_item => bound_argument_extends
+        | bound_application bound_next => bound_argument_extends
+        | bound_application bound_join bound_next => bound_argument_extends;
+      bound_item += bound_application;
+      applied_func += bound_application;
+      // A trig function's argument takes an OPFUNCTION's application as an OPFUNCTION's argument does, Perl's
+      // `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs` (MathGrammar:341-343): a plain or scripted head, a group
+      // or a bare argument, a bound head's extension — `\sin\log_2 x` sin@(log₂(x)), `\sin\log 2x` sin@(log(2x)),
+      // `\sin\log\log x`, `\sin\max_i x_i` (57cj.8 review; Rust-only unparsed before, `\sin\log_2(x)` misread
+      // sin@(log₂)·x; the old item was `opfunction factor`, one unscripted head on one factor) — its bare argument ending
+      // where the trig argument ends (`trig_function_item`: `\sin\log u\,v` sin@(log u)·v). A LIMITOP is no OPFUNCTION
+      // (`\det`, `\sup`): a function before one takes its application as a big operator's (divergence #390).
+      trig_opfunction_bare_application = opfunction trig_op_bare_arg => operator_bare_apply
+        | scripted_opfunction trig_op_bare_arg => operator_bare_apply;
+      trig_opfunction_item_application = opfunction_closed_application
+        | opfunction trig_op_bare_item => operator_bare_apply
+        | scripted_opfunction trig_op_bare_item => operator_bare_apply;
+      trig_op_bare_item += group_application => bare_argument_item
+        | trig_application => bare_argument_item
+        | trig_opfunction_item_application => bare_argument_item
+        | trig_opfunction_bare_application => bare_argument_item
+        | bound_application => bare_argument_item;
+      trig_arg += trig_opfunction_item_application => trig_function_item
+        | trig_opfunction_bare_application => trig_function_item
+        | bound_application => trig_function_item
+        // (a group application takes its scripts, divergence #351: `\sin\log(x)^2` sin@((log(x))²))
+        | scripted_opfunction_application => trig_function_item;
+      bound_operator_application = limits_operator_application bound_item => bound_argument_extends
+        | limits_operator_application bound_join bound_item => bound_argument_extends
+        | bound_operator_application bound_next => bound_argument_extends
+        | bound_operator_application bound_join bound_next => bound_argument_extends;
+      op_application += bound_operator_application;
+      // An operator applied to a group applies to the next group too, `D(a)(b)` (D@(a))@(b) (Perl
+      // `nestOperators`' OPEN branch then `addOpFunArgs` → `addEasyArgs`, MathGrammar:312-313,
+      // :553-558, :669-671; Perl's own golden t/parse/operators.xml; 57bl, 40 `\nabla(…)(…)` formulas
+      // in 9 papers, 2605.01526, 2605.01702, 2605.25503). Bare and scripted operators only: a nest
+      // ending at a function takes one group (`\nabla\log(p)(q)`, as Perl).
+      operator_group_application = operator group_factor => operator_bare_apply
+        | scripted_operator group_factor => operator_bare_apply;
+      op_application += operator_group_application group_factor => operator_application_apply;
+      // … and a letter after it is applied, as after any application (57bl ruling).
+      application_before_a_letter += operator_group_application
+        | tight_term operator_group_application => apply_invisible_times
+        // after a function or a closed nest, which take no operator (below): `\log\nabla(u)g(y)` is
+        // log·∇@(u)·g@(y) (57bn; was unparsed since 57bl, the refused product its only reading)
+        | opfunction_head operator_group_application => apply_invisible_times;
+      tight_term += op_application;
+      tight_term += tight_term op_application => apply_invisible_times;
+      // A bare OPFUNCTION takes no operator (`aBarearg` has none) and multiplies it: `\log\nabla f`
+      // is log·∇@(f), as Perl (`addOpFunArgs` returns the bare function, `moreFactors` goes on).
+      // (`opfunction_head`: the scripted head too, no factor since 57cb.)
+      tight_term += opfunction_head op_application => apply_invisible_times;
+      // A trig function takes no operator either (`aTrigBarearg` has none): `\sin\nabla(a-b)` is
+      // sin·∇@(a−b), `a\sin\nabla u` a·sin·∇@(u), `\sin^2\nabla u` sin²·∇@(u), as Perl (57bo; were
+      // unparsed or (sin²)@(∇@(u))). Built as the flat product `function_times_bigop` builds: the
+      // left-function pruning of `apply_invisible_times` would refute the only reading.
+      trig_head = trigfunction | scripted_trigfunction;
+      tight_term += trig_head op_application => function_times_bigop
+        | tight_term trig_head op_application => function_times_bigop;
+      // … and a letter after the operator's application to a group is applied, as after an
+      // OPFUNCTION's (57bn): `\sin\nabla(u)g(y)` sin·∇@(u)·g@(y) (57bo review; was unparsed).
+      application_before_a_letter += trig_head operator_group_application => function_times_bigop;
+      // An operator taking no argument is a Factor too (`addOpFunArgs`' `{ $arg[0]; }`), bare,
+      // scripted or a nest, alone or after other factors — `a\nabla`, `2\nabla\log`, `\mu\nabla^2`,
+      // `(u\cdot\nabla)u`, `\nabla\times\nabla\times u` — followed only by what it does not take: a
+      // MulOp or the end, an operator's application after a closed nest (`\nabla\log\nabla^2 u` is
+      // ∇@(log)·(∇²)@(u)), a big operator (below: `\nabla_x\log\int f` is (∇_x)@(log)·∫f; a limit-type one the nest takes,
+      // `\nabla_x\log\det(A)` ((∇_x)@(log))@(det(A)), divergence #390, 2605.03984, 2605.24401, 2605.25592, 2605.14289). It is no `tight_term`,
+      // so no factor follows it: what the operator takes is its argument, not a product to prune
+      // (repro math-parse/operator_terms_in_a_long_sum). Only an open nest before an operator is
+      // still split and pruned (`tight_term op_head`, `bare_op_term op_head`: `\nabla\nabla` is
+      // ∇@∇, not ∇·∇).
+      bare_op_term = op_head
+        | tight_term op_head => apply_invisible_times
+        // after a closed nest: `\nabla\log\nabla^2` is ∇@(log)·∇² (an open one nests instead)
+        | bare_op_term op_head => apply_invisible_times
+        // after a function, which takes no operator (`aBarearg`): `\log\nabla^2` is log·∇²
+        | opfunction_head op_head => apply_invisible_times
+        | bare_opfunction_term op_head => apply_invisible_times
+        | trigfunction op_head => apply_invisible_times;
+      // A POSTFIX takes the factor before it, never the product it ends (Perl `addScripts`,
+      // MathGrammar:419-424, after every Factor head): `2n!` 2·n!, `k!(n-k)!` k!·(n−k)!, an
+      // operator's head `a\nabla^2!` a·(∇²)!; and scripts follow it, as `addScripts` loops on
+      // (`n!^2` (n!)², `k!^{-1}`). Was `tight_term postfix`: the product's factorial, `(2·n)!`
+      // (57bw; ~640 formulas / 91 papers of the 57bs A/B, 2605.03853, 2605.00042, 2605.13710).
+      // Beyond Perl, whose `addScripts` runs before a head's arguments (MathGrammar:545-558): a
+      // function's application to its group takes it too, `f(x)!` (f@(x))! (Perl f·x!;
+      // OXIDIZED_DESIGN_MATH #18). An OPFUNCTION's, trig function's or operator's argument takes it
+      // instead, bare or a group's one operand: `\log n!` log@(n!), `\log(n-k)!` log@((n−k)!) (57bw
+      // review; Perl unparsed), `\sin x!` sin@(x!), `\nabla f!` ∇@(f!) (57ca). One derivation each:
+      // their applications are no `postfix_operand`, and a letter's application to a postfixed group
+      // (`letter_postfixed`) stands only where #18 applies a letter.
+      // An application to a list-like group takes the postfix whole: `\max(a,b)!` (max@(a, b))!,
+      // `\sin(a,b)!`, `\nabla(a,b)!` (`list_group`); a one-operand group is the argument's
+      // (`postfixed_operand_group`, below).
+      list_application = opfunction list_group => prefix_apply
+        | scripted_opfunction list_group => prefix_apply
+        | trig_head list_group => prefix_apply
+        | op_head list_group => operator_bare_apply
+        | operator_group_application list_group => operator_application_apply;
+      postfix_operand = factor
+        | scripted_opfunction
+        | group_application
+        | list_application
+        | scripted_opfunction_application
+        | op_head
+        | interval_term;
+      postfixed = postfix_operand postfix => apply_postfix
+        | postfixed postfix => apply_postfix
+        | postfixed postsuperarg => postfix_script
+        | postfixed postsubarg => postfix_script;
+      tight_term += postfixed
+        | tight_term postfixed => factor_product;
+      // A bare argument's postfixed item (Perl `aBarearg` with its scripts): only what a bare
+      // argument holds, so no group reaches `op_bare_item` to be refused there (57bw review). Three
+      // kinds, as each argument takes its own: a bare item (a trig function's and an operator's
+      // argument too), a function's application (an OPFUNCTION's bare argument only), bars.
+      bare_postfix_operand = factor_base
+        | scripted_factor_l1
+        | scripted_factor_l2
+        | scripted_factor_r1
+        | scripted_factor_r2;
+      bare_postfixed = bare_postfix_operand postfix => apply_postfix
+        | bare_postfixed postfix => apply_postfix
+        | bare_postfixed postsuperarg => postfix_script
+        | bare_postfixed postsubarg => postfix_script;
+      function_postfix_operand = function | group_application;
+      function_postfixed = function_postfix_operand postfix => apply_postfix
+        | function_postfixed postfix => apply_postfix
+        | function_postfixed postsuperarg => postfix_script
+        | function_postfixed postsubarg => postfix_script;
+      // (an OPFUNCTION's application only leads a bare argument, 57cb)
+      opfunction_bare_postfixed = scripted_opfunction_application postfix => apply_postfix
+        | opfunction_bare_postfixed postfix => apply_postfix
+        | opfunction_bare_postfixed postsuperarg => postfix_script
+        | opfunction_bare_postfixed postsubarg => postfix_script;
+      bar_postfixed = bare_abs postfix => apply_postfix
+        | bar_postfixed postfix => apply_postfix
+        | bar_postfixed postsuperarg => postfix_script
+        | bar_postfixed postsubarg => postfix_script;
+      op_bare_base += bare_postfixed => bare_argument_item
+        | function_postfixed => bare_argument_item
+        | opfunction_bare_postfixed => bare_argument_item
+        | bar_postfixed => bare_argument_item;
+      op_bare_plain_next += bare_postfixed => bare_argument_item
+        | function_postfixed => bare_argument_item
+        | bar_postfixed => bare_argument_item;
+      postfixed_operand_group = operand_group postfix => apply_postfix
+        | postfixed_operand_group postfix => apply_postfix
+        | postfixed_operand_group postsuperarg => postfix_script
+        | postfixed_operand_group postsubarg => postfix_script;
+      opfunction_closed_application += opfunction postfixed_operand_group => operator_bare_apply
+        | scripted_opfunction postfixed_operand_group => operator_bare_apply;
+      // (after an operator, `\nabla\mathbb{E}(X)!` ∇@(𝔼@(X!)), as `\mathbb{E}(X)!` 𝔼@(X!))
+      expectation_application += expectation_head postfixed_operand_group => operator_bare_apply
+        | scripted_expectation postfixed_operand_group => operator_bare_apply;
+      // #18 applies a letter to its postfixed group first in a product, after another application
+      // (57bl) and in a bare argument — `x(n+1)!` (x@(n+1))!, `f(n)g(n)!` f@(n)·(g@(n))!,
+      // `\log f(x)!` log@((f@(x))!) — and after a coefficient not, as without the postfix:
+      // `2n(n-1)!` 2·n·(n−1)! (the open #18 coefficient question; 57bw review).
+      letter_postfixed = speculative_item postfix => apply_postfix
+        | letter_postfixed postfix => apply_postfix
+        | letter_postfixed postsuperarg => postfix_script
+        | letter_postfixed postsubarg => postfix_script;
+      tight_term += letter_postfixed
+        | application_before_a_letter letter_postfixed => letter_after_an_application_apply;
+      op_bare_base += letter_postfixed => bare_argument_item;
+      op_bare_plain_next += letter_postfixed => bare_argument_item;
+      // A trig function's and an operator's argument take the postfix (user ruling 2026-09-29:
+      // factorial is ill-defined on the reals a trig function returns, so it was meant on the
+      // argument): `\sin x!` sin@(x!), `\sin(n)!` sin@(n!), `2\sin x!` 2·sin@(x!), `\nabla f!` ∇@(f!),
+      // `\nabla^2 u!` (∇²)@(u!), as Perl's `aTrigBarearg`/`aBarearg` take `addScripts` (MathGrammar:
+      // 341-357, :321-337, :419-424); an item the argument already takes, with its postfix. A
+      // function's own application keeps it: `f(x)!` (f@(x))!.
+      trig_postfixed = trig_chain_item postfix => apply_postfix
+        | trig_postfixed postfix => apply_postfix
+        | trig_postfixed postsuperarg => postfix_script
+        | trig_postfixed postsubarg => postfix_script;
+      // (an OPFUNCTION's postfixed argument through `opfunction_application`, `trig_function_item`; a letter's group
+      // not across the space that ends the argument, `\cos\phi\,(1-x)!` cos@(φ)·(1−x)!, 57cj.8 review)
+      trig_arg += trig_postfixed
+        | letter_postfixed => trig_letter_postfixed
+        | trig_arg trig_postfixed => trig_argument_juxtaposition
+        | trig_arg mulop trig_postfixed => trig_chain_across_an_operator
+        | trig_scripted_item trig_postfixed => trig_argument_juxtaposition
+        | trig_scripted_item mulop trig_postfixed => trig_chain_across_an_operator;
+      // An ELIDEOP run between two items stays inside a trig argument, as an OPFUNCTION's (`op_bare_elided`) and as
+      // an ellipsis ID does (`\sin x\ldots y` sin@(x·…·y)): `\sin x\cdots y` sin@(x·⋯·y), `\sin^2 x\cdots y`,
+      // `\sin a_i\cdots y`, `\sin x\cdot\cdots\cdot y`, `\sin x\cdots\cdots y`, `\sin x\ldots\cdots y`, as Perl (57cj.16
+      // review; m19 read sin@(x)·⋯·y — the reading depended on the macro). Not after a run that opens the argument
+      // (`trig_ellipses` derives it), nor across what ends the argument (`trig_argument_elision`, `ends_trig_argument`:
+      // a space, a `d`, a symbol of another type); a trig function's application after the run is a new factor
+      // (`\cos\theta_1\cdots\cos\theta_n`, divergence #3) and a trailing run leaves (`\sin x\cdots` sin@(x)·⋯, user
+      // ruling 2026-09-29) — the run continues only to an item `trig_arg` chains, `semantics::leaves_a_bare_argument`
+      // refusing the twin that leaves it outside. Not after an argument ending in an OPFUNCTION's bare application, whose
+      // own chain the run goes on (`trig_op_bare_elided`) or leaves, nor after a run that opens it: `trig_elidable_arg`
+      // is `trig_arg`'s alternatives but those — `trig_ellipses`, an OPFUNCTION's bare application or one before a big
+      // operator or an operator, a bound head's — so no tree derives sin@(log@(x)·⋯·y) beside sin@(log@(x·⋯·y)) to refuse
+      // it (`\sin\log x\cdots y` keeps 2 trees, 4 at two sites). A second nonterminal, not a layer under `trig_arg`:
+      // one more AND-node per trig argument pushed ellipsis formulas past the ASF's bocage limit
+      // (`HYBRID_AND_NODE_LIMIT`), whose Tree-iterator fallback counts every combination (`\sin x\ldots\ldots y` twice:
+      // 7 trees → 16, an `ambiguous_math` warning).
+      trig_elidable_arg = factor_base
+        | unknown group_factor => trig_letter_application
+        | diffunk group_factor => trig_letter_application
+        | function fenced_factor => prefix_apply
+        | trig_arg mulop factor_base => trig_argument_across_an_operator
+        | trig_arg factor_base => trig_argument_juxtaposition
+        | trig_arg trig_scripted_item => trig_argument_juxtaposition
+        | trig_arg mulop trig_scripted_item => trig_chain_across_an_operator
+        | trig_scripted_item trig_chain_item => trig_argument_juxtaposition
+        | trig_scripted_item mulop trig_chain_item => trig_chain_across_an_operator
+        // (an application that closes, to a group: `\sin\log(x)\cdots y` sin@(log(x)·⋯·y))
+        | opfunction_closed_application => trig_function_item
+        | scripted_opfunction_application => trig_function_item
+        | trig_postfixed
+        | letter_postfixed => trig_letter_postfixed
+        | trig_arg trig_postfixed => trig_argument_juxtaposition
+        | trig_arg mulop trig_postfixed => trig_chain_across_an_operator
+        | trig_scripted_item trig_postfixed => trig_argument_juxtaposition
+        | trig_scripted_item mulop trig_postfixed => trig_chain_across_an_operator;
+      trig_elided = trig_elidable_arg elideop => trig_argument_elision
+        | trig_elidable_arg mulop elideop => trig_argument_elision
+        // (a run of ELIDEOPs opening the argument, juxtaposed, is `trig_ellipses`' own; joined by a MulOp,
+        // `\sin\cdots\cdot\cdots\cdot y` sin@(⋯·⋯·y), as Perl)
+        | trig_ellipses mulop elideop => trig_argument_elision
+        | trig_scripted_item elideop => trig_argument_elision
+        | trig_scripted_item mulop elideop => trig_argument_elision
+        | trig_elided elideop => trig_argument_elision
+        | trig_elided mulop elideop => trig_argument_elision;
+      trig_elided_arg = trig_elided trig_chain_item => trig_argument_elision
+        | trig_elided mulop trig_chain_item => trig_argument_elision
+        | trig_elided trig_postfixed => trig_argument_elision
+        | trig_elided mulop trig_postfixed => trig_argument_elision;
+      trig_arg += trig_elided_arg;
+      trig_elidable_arg += trig_elided_arg;
+      // … a lone postfixed group or bars, no chain after them (as `trig_factor_arg` itself)
+      trig_factor_arg += postfixed_operand_group | bar_postfixed;
+      op_application += op_head bare_postfixed => operator_bare_apply
+        | op_head bar_postfixed => operator_bare_apply
+        | op_head letter_postfixed => operator_bare_apply
+        | op_head postfixed_operand_group => operator_bare_apply
+        | operator_group_application postfixed_operand_group => operator_application_apply;
+      limits_operator_application += limits_operator_head bare_postfixed => operator_bare_apply
+        | limits_operator_head bar_postfixed => operator_bare_apply
+        | limits_operator_head letter_postfixed => operator_bare_apply;
+      // A postfix after a bare function head: `\log\nabla^{2}!` log·(∇²)!, `\sin\nabla^2!`,
+      // `\log(0,1]!` log·((0,1])!, `\log_2(0,1]!`, `c\log!` c·log!, as Perl (whose `addScripts` takes the
+      // head's factorial; RED repro math-parse/postfix_after_a_bare_function_head); after another factor
+      // the head ends a `bare_opfunction_term`.
+      op_head_postfixed = op_head postfix => apply_postfix
+        | op_head_postfixed postfix => apply_postfix
+        | op_head_postfixed postsuperarg => postfix_script
+        | op_head_postfixed postsubarg => postfix_script;
+      opfunction_postfixed = opfunction postfix => apply_postfix
+        | opfunction_postfixed postfix => apply_postfix
+        | opfunction_postfixed postsuperarg => postfix_script
+        | opfunction_postfixed postsubarg => postfix_script;
+      // (an unbalanced one: a balanced pair is a list the function applies to, `\max(a,b)!`)
+      interval_postfixed = unbalanced_interval postfix => apply_postfix
+        | interval_postfixed postfix => apply_postfix
+        | interval_postfixed postsuperarg => postfix_script
+        | interval_postfixed postsubarg => postfix_script;
+      tight_term += opfunction op_head_postfixed => function_times_bigop
+        | scripted_opfunction op_head_postfixed => function_times_bigop
+        | trigfunction op_head_postfixed => function_times_bigop
+        | opfunction interval_postfixed => function_times_bigop
+        | scripted_opfunction interval_postfixed => function_times_bigop
+        | tight_term opfunction_postfixed => apply_invisible_times
+        // after a factor, one product (`function_times_bigop` flattens the factors before the head):
+        // `a\log\nabla^{2}!` a·log·(∇²)!
+        | tight_term opfunction_head op_head_postfixed => function_times_bigop
+        | tight_term opfunction_head interval_postfixed => function_times_bigop;
+      term += opfunction_postfixed;
+      // (Evaluation bars apply to an operator's head as to any factor, `evalAtOp`: `eval_operand`, below.)
+      term += bare_op_term
+        | term mulop bare_op_term => infix_apply_nary
+        | term binop bare_op_term => infix_apply_nary;
+      tight_term += bare_op_term op_application => apply_invisible_times;
+      tight_term += bare_opfunction_term op_application => apply_invisible_times;
+      // (and a letter after its application to a group is applied, as after an OPFUNCTION's, above)
+      application_before_a_letter += bare_op_term operator_group_application => apply_invisible_times;
+      application_before_a_letter += bare_opfunction_term operator_group_application => apply_invisible_times;
 
       // Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
       // These are bigops with post-scripts that still act as prefix operators.
@@ -1024,15 +1913,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Use bigop-specific script tokens when available (from lexer),
       // fall back to generic POSTSUBSCRIPT/POSTSUPERSCRIPT for compatibility
       // Single-script bigop: one sub or one super
-      scripted_bigop_r1 = any_bigop bigopsuparg => postfix_script
-        | any_bigop bigopsubarg => postfix_script
-        | any_bigop postsuperarg => postfix_script
-        | any_bigop postsubarg => postfix_script;
+      scripted_bigop_r1 = summation_bigop bigopsuparg => postfix_script
+        | summation_bigop bigopsubarg => postfix_script
+        | summation_bigop postsuperarg => postfix_script
+        | summation_bigop postsubarg => postfix_script;
       scripted_bigop = scripted_bigop_r1
         | scripted_bigop_r1 bigopsuparg => postfix_script
         | scripted_bigop_r1 bigopsubarg => postfix_script
         | scripted_bigop_r1 postsuperarg => postfix_script
         | scripted_bigop_r1 postsubarg => postfix_script;
+      // … and a differential operator's, `\partial_x`, `\partial^2_{xy}`, `\partial_x^\alpha`
+      scripted_diffop_r1 = diffop bigopsuparg => postfix_script
+        | diffop bigopsubarg => postfix_script
+        | diffop postsuperarg => postfix_script
+        | diffop postsubarg => postfix_script;
+      scripted_diffop = scripted_diffop_r1
+        | scripted_diffop_r1 bigopsuparg => postfix_script
+        | scripted_diffop_r1 bigopsubarg => postfix_script
+        | scripted_diffop_r1 postsuperarg => postfix_script
+        | scripted_diffop_r1 postsubarg => postfix_script;
       // Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
       // moreOpArgFactors chains factors with MulOp or invisible times.
       //
@@ -1041,92 +1940,300 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // - bigop_application is lifted to term level, so inner bigops are terms
       // M2 investigation: restricting to tight_term breaks nested bigops (calculus test).
       // The semantic pruning already handles the ∑ a + b case correctly.
-      bigop_application = any_bigop term => prefix_apply
-        | scripted_bigop term => prefix_apply
-        | composed_bigop term => prefix_apply;
+      bigop_application = summation_bigop term => prefix_apply
+        | scripted_bigop term => prefix_apply;
+      // A bigop is an operand of its own when no term follows it — Perl MathGrammar:292
+      // `Factor : preScripted['bigop'] addOpArgs`, whose `addOpArgs` (:605-609; `addIntOpArgs`
+      // :626-630) applies the bigop to a following Factor and otherwise yields it bare (`{ $arg[0]; }`).
+      // A term is only ever followed by an operator, punctuation, a closer or `(`+relop, never by
+      // a factor, so the bare reading never competes with an application: `\var + y` is
+      // `variation + y`, `\var + \dd x` a sum, `y + \var`, `\var = 0`, `\partial_\mu + A_\mu`,
+      // `a \var + b` all parse (RUST-ONLY: a bigop could only apply, or stand alone as a whole
+      // statement, fenced singleton or left of `/`). This also covers Leibniz notation
+      // `\partial/\partial t` (Perl `partial-differential / partial-differential@(t)`), which had
+      // its own `/`-only rule — `\partial \times B` stays a flat product. Repro:
+      // tools/perfect_kernel/repros/math-parse/diffop_before_addop_is_an_operand.tex.
+      bigop_operand = bigop_application | any_bigop | scripted_bigop | scripted_diffop;
+      // An operator takes an expectation's application to the big operator after it, at the big
+      // operator's term level, whose operand runs over the term (57cf; it nests over no expectation,
+      // `plain_opfunction`): `\nabla_\theta\mathbb{E}_x\sum_i f_i` (∇_θ)@(𝔼_x@(∑…)),
+      // `\nabla_\theta\mathbb{E}_{x\sim\mathcal{D}}\int\pi_\theta(y\mid x)\cdot\frac{…}{…}dy` (2605.09853). (A
+      // tight-term form split the operand at every factor: `\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt` 21
+      // trees and a warning; 57cf review.) Alone, 𝔼 before a big operator is the product the actions
+      // read (below).
+      expectation_before_a_big_operator = expectation_head | scripted_expectation;
+      operator_expectation_big_operator =
+        open_op_head expectation_before_a_big_operator bigop_operand => operator_takes_an_expectation_s_big_operator;
+      // … and over a chain of expectations, each taking the rest (user ruling 2026-10-01, the M3 open question 2):
+      // `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` ∇(𝔼_x(𝔼_y(∑ Y_i))), was ∇@(𝔼_x@(E_y·∑…)), the letter
+      expectation_chain_big_operator = expectation_before_a_big_operator bigop_operand => prefix_apply
+        | expectation_before_a_big_operator expectation_chain_big_operator => prefix_apply;
+      operator_expectation_big_operator += open_op_head expectation_before_a_big_operator expectation_chain_big_operator
+        => operator_takes_an_expectation_s_big_operator;
+      juxtaposed_term = operator_expectation_big_operator
+        | tight_term operator_expectation_big_operator => apply_invisible_times;
       // Lift bigop_application to term level (not expression level).
       // This avoids exponential Marpa ambiguity when ADDOP precedes BIGOP
       // (e.g. a+\neg b). At term level, `term addop expression` handles
       // `a + \neg b` with a single derivation path.
       // On its LEFT, invisible_times still works: 2∫ x dx via tight_term rules.
       // On its RIGHT, addop/relop follow naturally: ∫ x dx + y → ∫(x*dx) + y.
-      term += bigop_application;
+      term += bigop_operand;
       // Bigop after invisible times: 1/2∫ f dx → (1/2)*∫(f*dx)
       // Perl: Factor moreFactors handles consecutive factors via InvisibleTimes.
       // Since bigop_application is at term level (not tight_term), juxtaposition
-      // between a tight_term and a bigop_application needs an explicit rule.
-      term += tight_term bigop_application => apply_invisible_times;
-      // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx)
-      term += term mulop bigop_application => infix_apply_nary;
-      // BARE bigop as the LEFT operand of a binary mul-op: `\partial/\partial t`
-      // (Leibniz partial-derivative notation, pervasive in physics) → Perl
-      // `partial-differential / partial-differential@(t)`. A bigop normally MUST
-      // apply (`bigop_application = any_bigop term`), so a bigop directly followed
-      // by `/` had no rule → `ltx_math_unparsed` (Rust-only; Perl treats `\partial`
-      // as a bare factor). This rule fires ONLY when a DIVIDE-mulop (`/`)
-      // IMMEDIATELY follows the bigop — where `bigop_application` cannot match (the
-      // next token is an operator, not a term) — so it adds no competing parse for
-      // the normal `\partial t` apply case. Scoped to `divide` (NOT all `mulop`):
-      // scoping to `mulop` regressed `\partial \times B` (Perl keeps it a flat
-      // product), so restrict to `/`. See SYNC_STATUS math-coverage notes.
-      term += any_bigop divide term => infix_apply;
-      // Scripted bigops can also appear as standalone statements
-      statement += scripted_bigop;
+      // between a tight_term and a bigop_application needs an explicit rule. An expectation before
+      // the big operator takes it, alone, after the coefficients of its bare argument or as a
+      // function's whole bare argument (user ruling 2026-09-30,
+      // `expectation_takes_the_big_operator`): `\mathbb{E}\frac1n\sum_{i=1}^n[X_i]` 𝔼@((1/n)·∑…)
+      // (2605.02116), `\eta\mathbb{E}_x\gamma\sum_a` η·𝔼_x@(γ·∑…) (2605.06977),
+      // `\max_\pi\mathbb{E}_\tau\sum_t` max_π@(𝔼_τ@(∑…)) (2605.11975). These products are the
+      // shapes' only derivations (to them the lexeme is an OPFUNCTION), so the actions read them:
+      // no rule and no refused tree is added (`parse_tree_count_limits`).
+      juxtaposed_term += tight_term bigop_operand => product_before_a_big_operator;
+      juxtaposed_term += bare_op_term bigop_operand => product_before_a_big_operator;
+      juxtaposed_term += bare_opfunction_term bigop_operand => product_before_a_big_operator;
+      // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
+      // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
+      // `\log\int f` log * ∫f, `\nabla\int f` nabla * ∫f (witnesses 2605.02116, 2605.05081;
+      // golden tests/parse/bigop_operands.tex#function_before_a_bigop_is_a_factor), and so is one
+      // mid-term, after the factors before it (`2\sin\int f` is 2 * sin * ∫f, `x\nabla\int f` x *
+      // nabla * ∫f; golden tests/parse/bigop_operands.tex#function_before_a_bigop_mid_term). A
+      // `tight_term` on the left, not a `term`: `∫f \sin ∫g` would otherwise have two derivations.
+      // Mid-term, an OPFUNCTION, bare or scripted, is not a `function_factor`: it is derivable
+      // there already (`bare_opfunction_term bigop_operand`, 57cb), so `\alpha\max_\theta\sum_i\ell_i`
+      // and `a\log\int f` are one derivation each (`parse_tree_count_limits`).
+      // An operator before a bigop is a `bare_op_term` (above), alone or mid-term.
+      function_factor = function | trigfunction | opfunction
+        | scripted_function | scripted_trigfunction | scripted_opfunction;
+      midterm_function_factor = function | trigfunction
+        | scripted_function | scripted_trigfunction;
+      // (A bare expectation takes it, above: `\mathbb{E}\sum_i X_i` 𝔼@(∑…), `\mathbb{E}\sup_g\int
+      // g\,d\mu`, 2605.03300.)
+      juxtaposed_term += function_factor bigop_operand => function_before_a_big_operator
+        | tight_term midterm_function_factor bigop_operand => function_times_bigop;
+      // A product or an operator's application that ends in a big operator's application is a term of its own — the big
+      // operator takes a term, so no `tight_term` derives it — and the right operand of a MulOp or BinOp, as a `tight_term`
+      // is (user ruling 2026-10-01, the large-MULOP plan's step C2; SYNC (18)): `a\cdot b\sum_i c_i` (a·b)·∑c_i, as Perl,
+      // `a\otimes b\sum_i c_i` a⊗(b·∑c_i) (Q11, #396), `a\boxast 2b\sum_i c_i` ⧆(a, 2b·∑c_i) (#393) — unparsed before; the
+      // operator takes what its own rules give it (`infix_apply_nary`). Witnesses 2605.27877 `\gamma\cdot\frac1M\sum_i`,
+      // 2605.01923 `\sqrt{N\sqrt T}\cdot\frac1N\sum_i`, 2605.20541 `2\theta^{2H}\cdot 2\int_0^\infty`, 2605.29990
+      // `+1/2\int d^4y`.
+      term += juxtaposed_term
+        | term mulop juxtaposed_term => infix_apply_nary
+        | term binop juxtaposed_term => infix_apply_nary;
+      // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t); a BINOP is a MulOp
+      // (MathGrammar:688): `a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)), unparsed before 57cj.19.2
+      term += term mulop bigop_operand => infix_apply_nary
+        | term binop bigop_operand => infix_apply_nary;
+
+      // Divergence #374 (user ruling 2026-09-29): a differential operator takes the one factor after it —
+      // `\partial_x u\cdot v` (∂_x u)·v, `\partial\Omega\times(0,T]` (∂Ω)×(0,T], `g^{\mu\nu}\partial_\mu\varphi
+      // \partial_\nu\varphi` a product of two derivatives (2605.03741, 2605.08634, 2605.24774, 2605.00580,
+      // 2605.00105, 2605.29990) — where Perl's `bigop` (MathGrammar:717) takes every factor after it
+      // (`preScripted['bigop'] addOpArgs`, :292, :605-618; KNOWN_PERL_ERRORS #387). The factor is one Perl
+      // Factor (:275-313): a factor, a letter's application (#18), a function's or an operator's, another
+      // differential operator's (`\partial\partial f`), a postfixed factor, an unbalanced interval — a big
+      // operator's application it takes at term level (`diffop_term`, below). The application is a finished factor
+      // (`differential_operator_apply`, `Meta::differential`), as a differential `d x` is; an operator keeps
+      // Perl's greedy bare argument (`\nabla u\cdot v` ∇@(u·v), `op_application`), and a Leibniz quotient
+      // `\partial F/\partial T` is one derivative (`leibniz_quotient`).
+      diffop_head = diffop | scripted_diffop;
+      diffop_operand = factor | speculative_item | letter_postfixed | applied_func | op_application
+        | postfixed | unbalanced_interval;
+      diffop_application = diffop_head diffop_operand => differential_operator_apply;
+      diffop_operand += diffop_application;
+      // A derivative takes a divergence or a curl whole (user ruling 2026-10-01): an operator's head joined by `\cdot`
+      // or `\times` to the one factor after it is one factor — `\partial_t\nabla\cdot u` ∂_t(∇·u), `\partial_t\nabla\times
+      // E` ∂_t(∇×E), was (∂_t∇)·u (divergence #374; `divergence_or_curl`)
+      divergence_operand = op_head mulop diffop_operand => divergence_or_curl;
+      diffop_operand += divergence_operand;
+      // An expectation's bare argument takes the derivatives after its items too, where an OPFUNCTION's ends at one (user
+      // ruling 2026-10-01: `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` 𝔼(∂_θ log p·∂_θ log p^⊤), the Fisher
+      // information; was E·∂_θ log p·∂_θ log p^⊤, the letter; `\log\partial_x u\,\partial_y v` stays log@(∂_x u)·∂_y v)
+      expectation_bare_arg = op_bare_item diffop_application => apply_invisible_times
+        | op_bare_arg diffop_application => apply_invisible_times
+        | expectation_bare_arg diffop_application => apply_invisible_times
+        | expectation_bare_arg op_bare_next => apply_invisible_times
+        // (across a MulOp too, as an OPFUNCTION's chain goes on: `\mathbb{E}\partial_x u\cdot\partial_y v` 𝔼(∂_x u·∂_y v))
+        | op_bare_item mulop diffop_application => infix_apply_nary
+        | op_bare_arg mulop diffop_application => infix_apply_nary
+        | expectation_bare_arg mulop diffop_application => infix_apply_nary
+        | expectation_bare_arg mulop op_bare_next => infix_apply_nary;
+      expectation_application += expectation_head expectation_bare_arg => operator_bare_apply
+        | scripted_expectation expectation_bare_arg => operator_bare_apply;
+      // (standing alone, as any OPFUNCTION's application: `opfunction op_bare_arg`)
+      opfunction_application += expectation_head expectation_bare_arg => operator_bare_apply
+        | scripted_expectation expectation_bare_arg => operator_bare_apply;
+      // A number and the factors juxtaposed after it are one operand (57cj review; latent, no corpus witness):
+      // `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as Perl's greedy `bigop`
+      // reads them — up to an integral's differential and a derivative after a factor of its own
+      // (`numeric_monomial_product`: `\int\partial_t\frac12|u|^2\,dx` ∫(∂_t(½|u|²)·dx), `\partial_x 2u\,\partial_y v`;
+      // a derivative right after the number joins it, `\partial_x 2\,\partial_y u` ∂_x(2·∂_y u)); the product that
+      // differentiates the number alone is ranked below it (`DifferentiatedNumbersTakeTheirFactors`, counted per site;
+      // a bare operator after the monomial is none it takes, `\partial_x 2u\,\nabla\cdot v` (∂_x(2u)·∇)·v; 57cj.3–57cj.5 reviews).
+      // … a number raised to a constant power leads one too (`\partial_x 2^3u` ∂_x(2³u), `\partial_x\sqrt2^3u`; 57cj.8
+      // review, latent, its probes; another power is no lead, `numeric_power`)
+      numeric_power = number postsuperarg => numeric_power_script
+        | numeric_atom postsuperarg => numeric_power_script;
+      numeric_monomial = number tight_term => numeric_monomial_product
+        | numeric_atom tight_term => numeric_monomial_product
+        | numeric_power tight_term => numeric_monomial_product;
+      // … and a constant group raised to a constant power (`\partial_x(2\pi)^{-3}u` ∂_x((2π)⁻³·u), 57cj.9 review): a
+      // group a number leads, so no other scripted group after a derivative adds a refused tree (`\partial_{x_i}(\nabla
+      // u)^T` — a `group_factor` lead added two `ambiguous_math` warnings in the 9,420 corpus ∂ formulas)
+      numeric_group = lparen numeric_monomial rparen => fenced;
+      numeric_power += numeric_group postsuperarg => numeric_power_script;
+      diffop_operand += numeric_monomial;
+      // A factor of a product; an operator's, an OPFUNCTION's or a trig function's bare argument takes it
+      // (below, 57cj review: `\nabla\partial_x u` ∇@(∂_x u), `\sin\partial_x u` sin@(∂_x u) — ∇ keeps its
+      // greedy bare argument, Perl's `aBarearg` has no DIFFOP), a FUNCTION does not (`f\partial_x u` f·∂_x u).
+      plain_function_factor = function | scripted_function;
+      tight_term += diffop_application
+        | tight_term diffop_application => apply_invisible_times
+        | plain_function_factor diffop_application => function_times_bigop
+        | tight_term plain_function_factor diffop_application => function_times_bigop;
+      op_application += op_head diffop_application => operator_bare_apply;
+      op_bare_base += diffop_application;
+      trig_arg += diffop_application => trig_derivative_item;
+      trig_elidable_arg += diffop_application => trig_derivative_item;
+      // … and a letter after its application to a group, or to an application that ends in one, is
+      // applied, as after any application (57bl): `\partial_{11}l(F(x),Y)f(x)` ∂_11(l(F(x), Y))·f@(x)
+      // (2605.00581), `\partial^\rho G(x-y)c(y)`; nested (57cj review): `\partial_x\partial_y f(x)g(x)`
+      // ∂_x(∂_y(f(x)))·g(x), `\int d^4x\,\partial_a\partial^a G(0)G(0)` (2605.29990).
+      diffop_group_application = diffop_head speculative_item => differential_operator_apply
+        | diffop_head delimited_application => differential_operator_apply
+        | diffop_head group_factor => differential_operator_apply
+        | diffop_head diffop_group_application => differential_operator_apply;
+      application_before_a_letter += diffop_group_application
+        | tight_term diffop_group_application => apply_invisible_times
+        | plain_function_factor diffop_group_application => function_times_bigop
+        | tight_term plain_function_factor diffop_group_application => function_times_bigop;
+      // What no factor follows a differential operator takes as a term, where Perl's `bigop` takes it
+      // (MathGrammar:292, :605-618) and a factor-level operand would let the factors after it split the
+      // integrand (57cj review: `\partial_t\int u(y)v(y)w(y)\,dy` 42 trees): a big operator's application
+      // (`\partial_t\int_\Omega u\,dx` ∂_t(∫…)), a function before one (`\partial\log\sum_i x_i` ∂(log(∑…)), Q7,
+      // `\partial_y\log\int_{\mathcal X}\rho(z,y)\,\mu(dz)`, 2605.30560), a bare operator (`\partial_t\nabla\cdot u`
+      // (∂_t∇)·u, as `\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y`
+      // (∂_x)@(∂_y), `\Box=\partial_\mu\partial^\mu`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi`; 2605.12948,
+      // 2605.21314, 2605.22252, 2605.26285, 2605.27600, 2605.28314, 2605.29990).
+      function_before_a_big_operand = function_factor bigop_operand => function_before_a_big_operator;
+      // A trig function's argument takes an OPFUNCTION before a big operator, as Perl's `aTrigBarearg` takes the
+      // OPFUNCTION's `addOpFunArgs` (57cj.9 review; Rust-only unparsed before): a limit-type operator's application the
+      // OPFUNCTION takes (`\sin\log\det A` sin@(log@(det A)), divergence #390), a sum's or an integral's too since
+      // 57cj.22 (user ruling Q7: `\sin\log\sum_i x_i` sin@(log@(∑…)), as `\log\sum_i x_i` is log@(∑…)).
+      // (a plain OPFUNCTION: an expectation before a big operator has its own route, `expectation_takes_the_big_operator`)
+      // (a big operator's application: a differential operator is no big operator there, `\sin\log\partial_x u`
+      // sin@(log(∂_x u)))
+      trig_arg += plain_opfunction bigop_application => function_before_a_big_operator
+        | scripted_plain_opfunction bigop_application => function_before_a_big_operator;
+      // … and before an operator's application, which it multiplies as it does outside (`\log\nabla u` log·∇u, as
+      // Perl): `\sin\log\nabla u` sin@(log·∇u) (Rust-only unparsed before; Perl sin@(log)·∇u).
+      trig_arg += plain_opfunction op_application => function_times_bigop
+        | scripted_plain_opfunction op_application => function_times_bigop;
+      // A trig function's argument may be another trig function's application, which it composes: `\sin\cos x`
+      // sin@(cos@(x)), `\cos\sin x+1`, `\sin^2\cos x`, `\sin\cos x\cos y` sin@(cos@(x))·cos@(y) — and, as an OPFUNCTION,
+      // one before a big operator (`\sin\cos\det A` sin@(cos@(det A)), divergence #390; `\sin\cos\sum_i x_i`
+      // sin@(cos·∑…)) (57cj.10 review; Rust-only unparsed before). Perl, whose `aTrigBarearg` has no TRIGFUNCTION
+      // (MathGrammar:340-356), multiplies them: sine·cosine@(x) (divergence #367). The inner application is the whole
+      // argument: the chain after it is the inner one's (`\sin\cos x y` sin@(cos@(x·y))), so it is no `trig_arg`.
+      trig_composed_arg = trig_application
+        | trigfunction bigop_application => function_before_a_big_operator
+        | scripted_trigfunction bigop_application => function_before_a_big_operator
+        | trigfunction op_application => function_times_bigop
+        | scripted_trigfunction op_application => function_times_bigop;
+      trig_application += trigfunction trig_composed_arg => prefix_apply
+        | scripted_trigfunction trig_composed_arg => prefix_apply;
+      // … and a bare function (`\partial I(x;\mu)/\partial\operatorname{\mu}`, 2605.29136). An ellipsis between two
+      // differential operators is inside the chain (`\partial_i\ldots\partial_j u` ∂_i(…·∂_j u), `D^\alpha=
+      // \partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}` ∂_1^{α_1}(⋯·∂_n^{α_n}), as Perl; 2605.25633
+      // `\partial^{\bm\alpha}=\partial^{\alpha_1}\cdots\partial^{\alpha_r}`, 2605.08672; the product that
+      // differentiates the ellipsis alone is refused, `apply_invisible_times`).
+      elided_diffop_chain = elideop diffop_head => apply_invisible_times
+        | ellipsis_id diffop_head => apply_invisible_times;
+      elided_diffop_application = elideop diffop_application => apply_invisible_times
+        | ellipsis_id diffop_application => apply_invisible_times;
+      diffop_operand += elided_diffop_application;
+      // … and a number before a big operator or a function before one, with the factors between (57cj.1,
+      // 57cj.2 reviews; latent, the reviews' probes): `\partial_w\frac12\sum_i(y_i-wx_i)^2` ∂_w(½·∑…),
+      // `\partial_t\frac12\int_\Omega|u|^2\,dx`, `\partial_\theta\frac12\log\sum_i e^{x_i}` ∂_θ(½·log(∑…)).
+      numeric_big_operand = number bigop_operand => numeric_monomial_product
+        | numeric_atom bigop_operand => numeric_monomial_product
+        | numeric_monomial bigop_operand => apply_invisible_times
+        | number function_before_a_big_operand => numeric_monomial_product
+        | numeric_atom function_before_a_big_operand => numeric_monomial_product
+        | numeric_monomial function_before_a_big_operand => apply_invisible_times;
+      diffop_term_operand = diffop_head | op_head | bigop_application | function_before_a_big_operand
+        | function_factor | elided_diffop_chain | numeric_big_operand;
+      diffop_term = diffop_head diffop_term_operand => differential_operator_apply
+        | diffop_head diffop_term => differential_operator_apply;
+      bigop_operand += diffop_term;
 
       // Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
       // Handles patterns like {}_a^b\sum_c^d x where floating scripts
       // attach as pre-scripts to the following operator.
       // Perl's parse_kludgeScripts_rec: FLOAT + POST pairs from same {} base
       // both become pre-scripts (POST gets forced 'pre' position without _wasfloat).
-      prescripted_bigop_inner = scripted_bigop | scripted_bigop_r1 | any_bigop;
+      // (a pre-scripted differential operator still takes a term, as Perl's `bigop`; no witness)
+      prescripted_bigop_inner = scripted_bigop | scripted_diffop | any_bigop;
       // FLOAT script wrapping a bigop as pre-script
       // Perl: preScripted['bigop'] / preScripted['INTOP']
-      prescripted_bigop = floatsuperarg prescripted_bigop_inner => prefix_script
-        | floatsubarg prescripted_bigop_inner => prefix_script
-        // Recursive: chain multiple floating scripts before bigop
-        | floatsuperarg prescripted_bigop => prefix_script
-        | floatsubarg prescripted_bigop => prefix_script;
-      // POST script used as pre-script (forced 'pre', no _wasfloat).
-      // Only used INSIDE prescripted_bigop (always FLOAT-wrapped outside),
-      // so they can't incorrectly match bare post-scripts as pre-scripts.
-      // Perl: parse_kludgeScripts_rec calls NewScript($base, $y, 'pre') for POST
-      // scripts that follow a FLOAT from the same empty {} base.
-      prescripted_bigop += postsuperarg prescripted_bigop_inner => prefix_script_pre
-        | postsubarg prescripted_bigop_inner => prefix_script_pre
-        | postsuperarg prescripted_bigop => prefix_script_pre
-        | postsubarg prescripted_bigop => prefix_script_pre;
-      tight_term += prescripted_bigop tight_term => prefix_apply;
-      tight_term += prescripted_bigop factor => prefix_apply;
-      statement += prescripted_bigop;
+      // The rest of the chain after its leading FLOAT script: more FLOAT scripts, or POST
+      // scripts used as pre-scripts (forced 'pre', no _wasfloat — Perl
+      // parse_kludgeScripts_rec's NewScript($base, $y, 'pre') for a POST script that
+      // follows a FLOAT from the same empty {} base). Only a FLOAT script may START the
+      // chain: a POST script there is the preceding base's own (`\|f\|_2\int g` is
+      // norm_2 * ∫g, not norm * (_2 ∫)g; witnesses 2605.05081, 2605.00581; golden
+      // tests/parse/bigop_operands.tex#base_script_is_not_a_bigop_prescript).
+      prescripted_bigop_tail = prescripted_bigop_inner
+        | floatsuperarg prescripted_bigop_tail => prefix_script
+        | floatsubarg prescripted_bigop_tail => prefix_script
+        | postsuperarg prescripted_bigop_tail => prefix_script_pre
+        | postsubarg prescripted_bigop_tail => prefix_script_pre;
+      prescripted_bigop = floatsuperarg prescripted_bigop_tail => prefix_script
+        | floatsubarg prescripted_bigop_tail => prefix_script;
+      // A pre-scripted bigop is a bigop like any other (Perl MathGrammar:292
+      // `Factor : preScripted['bigop'] addOpArgs`): it applies to the term after it, a
+      // following bigop included (`{}^a\sum\sum b`), and is an operand of its own
+      // (`{}^a\sum + b`, the bare statement). Golden:
+      // tests/parse/bigop_operands.tex#prescripted_bigop_is_an_operand.
+      bigop_application += prescripted_bigop term => prefix_apply;
+      bigop_operand += prescripted_bigop;
 
       // Perl MathGrammar L259-260: moreFactors: evalAtOp maybeEvalAt
       // "evaluated at" — a|_{x=0}, f(x)|_{x=0}^{x=1}, \left.xyz\right|_{0}^{2}
       // evalAtOp: VERTBAR:| (standalone pipe) — CLOSE:| from \right| handled separately
-      tight_term += tight_term singlevertbar postsubarg => eval_at
-        | tight_term singlevertbar postsubarg postsuperarg => eval_at
-        | tight_term singlevertbar postsuperarg postsubarg => eval_at
+      // What an evaluation bar evaluates: a tight term, or a bare function or operator head, alone or
+      // ending a product (57cb review: `\log^2|_{x=0}`, `\left.\max_i\right|_{i=1}`, `a\log^2|_{x=0}`,
+      // `\sin^2|_0^\pi`, `\left.\nabla^2\right|_{x=0}`, `\partial_x|_0`, as Perl; a scripted OPFUNCTION is no
+      // factor since 57cb, and a bare trig or operator head took only `\nabla^2|_{x=0}` before).
+      eval_operand = tight_term | opfunction_head | bare_opfunction_term | trig_head | bare_op_term
+        | tight_term trig_head => apply_invisible_times;
+      tight_term += eval_operand singlevertbar postsubarg => eval_at
+        | eval_operand singlevertbar postsubarg postsuperarg => eval_at
+        | eval_operand singlevertbar postsuperarg postsubarg => eval_at
         // CLOSE:| from \right| also triggers eval-at
-        | tight_term close_pipe postsubarg => eval_at
-        | tight_term close_pipe postsubarg postsuperarg => eval_at
-        | tight_term close_pipe postsuperarg postsubarg => eval_at
+        | eval_operand close_pipe postsubarg => eval_at
+        | eval_operand close_pipe postsubarg postsuperarg => eval_at
+        | eval_operand close_pipe postsuperarg postsubarg => eval_at
         // \left.expr\right|_… — the closing \right| is stretchy VERTBAR
         // tagged RIGHT_STRETCHY_VERTBAR by the lexer (util.rs) via the
-        // `role_side="right"` property set in `\@right` (tex_math.rs).
+        // `role_side="right"` property set in `\lx@delim@right` (tex_math.rs).
         // The `\left.` null-delimiter doesn't appear in the lexeme
         // stream, so the resulting shape is `tight_term RIGHT_STRETCHY_VERTBAR
         // postsubarg`. The undirected variant covers legacy DOM input
-        // or code paths that bypassed `\@right`.
-        | tight_term right_stretchy_vertbar postsubarg => eval_at
-        | tight_term right_stretchy_vertbar postsubarg postsuperarg => eval_at
-        | tight_term right_stretchy_vertbar postsuperarg postsubarg => eval_at
-        | tight_term undirected_stretchy_vertbar postsubarg => eval_at
-        | tight_term undirected_stretchy_vertbar postsubarg postsuperarg => eval_at
-        | tight_term undirected_stretchy_vertbar postsuperarg postsubarg => eval_at;
+        // or code paths that bypassed `\lx@delim@right`.
+        | eval_operand right_stretchy_vertbar postsubarg => eval_at
+        | eval_operand right_stretchy_vertbar postsubarg postsuperarg => eval_at
+        | eval_operand right_stretchy_vertbar postsuperarg postsubarg => eval_at
+        | eval_operand undirected_stretchy_vertbar postsubarg => eval_at
+        | eval_operand undirected_stretchy_vertbar postsubarg postsuperarg => eval_at
+        | eval_operand undirected_stretchy_vertbar postsuperarg postsubarg => eval_at;
 
       anyop = addop | mulop | binop | relop | arrow | metarelop
         | bigop | sumop | intop
         | limitop | diffop | vertbar | supop
-        | modifierop | composed_bigop | operator | compound_operator;
+        | modifierop | operator | compound_operator;
 
       anyscript = floatsuperscript | floatsubscript
         // Standalone floating script pairs (no base: {}^c_d or {}_d^c)
@@ -1136,9 +2243,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
       // Operators that CANNOT start a valid expression — leading orphans
       // from tabular fragments where LHS is on a preceding row.
-      // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
-      // These already have valid prefix interpretations inside expressions.
-      orphan_op = mulop | binop | diffop | supop | modifierop;
+      // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop/diffop.
+      // These already have valid prefix interpretations inside expressions (a bare
+      // diffop is an operand, `bigop_operand`, so `\var = 0` has one reading).
+      orphan_op = mulop | binop | supop | modifierop;
       // Perf (Fix 2): `formula_list` removed from `anything` alternatives.
       // formula_list is L3-internal (a fenced body), not L0. `statements`
       // covers bare top-level comma-separated items via `list_apply` with

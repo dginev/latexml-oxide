@@ -1,0 +1,18 @@
+% mechanism: authblk's `\author[n]` names: a name led by `\LaTeX` lost the logo (util_text.rs `printed_own_text`).
+% witness: synthetic (LOGO1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "LATEX Project1 and Ann Smith2", "1 The TEX Users Group",
+%          "2 LATEX 2ε Office"
+% engines: rust int171a base 0 E 1 W: <personname>Project</personname> and the content check's "excess" LaTeX
+% expect:  0 E, 0 W; the logo element and " Project" with its affiliation, Ann Smith with hers
+% status:  RED -> GREEN (LOGO1)
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{\LaTeX\ Project}
+\author[2]{Ann Smith}
+\affil[1]{The \TeX\ Users Group}
+\affil[2]{\LaTeXe\ Office}
+\maketitle
+Body.
+\end{document}

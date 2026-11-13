@@ -1,0 +1,16 @@
+% ltxdockit's `\rcsid{$Id: … $}` writes `\ltd@setdate{Y}{M}{D}{h}{m}` to the aux (ltxdockit.cls:116-118), and the next
+% run sets `\year`, `\month`, `\day`, `\time` from it (:129-137), so `\rcstoday` (= `\today`) prints the revision's
+% date. The contrib binding defines the RCS values in the same run, skipping the aux round trip, but left out
+% `\ltd@setdate`: the title page's date was the conversion day (G3 slice 4 R3: etoolbox-DE "3. Januar 2011").
+% RUST-ONLY (Perl has no ltxdockit binding: 3 undefined errors).
+% status:  GREEN 60m; guard perfect_kernel_batch60::ltxdockit_rcsid_sets_the_date
+% oracle:  pdflatex (two passes), 0 errors: "Version 2.1" / "January 3, 2011"
+% engines: rust 60j4: `<date role="creation">` the conversion day
+% expect:  0 errors; `<date role="creation">January 3, 2011</date>`
+\documentclass{ltxdockit}
+\rcsid{$Id: x.tex,v 2.1 2011/01/03 19:14:10 lehman stable $}
+\titlepage{title={T},subtitle={S},author={A},email={a@b.c},revision={\rcsrevision},date={\rcstoday}}
+\begin{document}
+\printtitlepage
+Body.
+\end{document}

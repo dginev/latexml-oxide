@@ -1,0 +1,22 @@
+% witness: 2302.02310 (its WileyNJDv5.cls:6274-6335: `plain` and WBstyleone with italic bodies, :6377
+%          `\theoremstyle{WBstylethree}` left current), 2405.03603, 2511.08532
+% oracle:  pdflatex with 2302.02310's WileyNJDv5.cls (and its LETTERSP.STY): 5 errors before and in \maketitle
+%          (etex's \reserveinserts, the class's \zz option parser: TL 2025 harness limits); "Thm 1. A paper theorem.
+%          PThm 1 A plain theorem. Lemma 1. A class lemma.", bodies ptmr8t (upright), ptmri8t, ptmri8t (italic)
+% engines: rust 67w = Thm and PThm italic (amsthm's `plain`), Lemma upright (WileyNJD-v2's WBstyleone)
+% expect:  0 errors, 0 warnings; Thm's body upright, PThm's and Lemma's italic
+% status:  RED (67w) -> GREEN (67w r2)
+% preload: ar5iv.sty
+\documentclass[AMA,Times1COL]{WileyNJDv5}
+\newtheorem{thm}{Thm}
+\theoremstyle{plain}
+\newtheorem{pthm}{PThm}
+\begin{document}
+\title{Theorem styles}
+\author{Ann Author}
+\maketitle
+\section{Intro}
+\begin{thm}A paper theorem.\end{thm}
+\begin{pthm}A plain theorem.\end{pthm}
+\begin{lemma}A class lemma.\end{lemma}
+\end{document}

@@ -1,0 +1,21 @@
+% witness: review rev78x3 finding 3 (probe p1.tex F10: REVTeX's floats are centred, every `\\` in them `\@centercr`,
+%          so the `\hspace` after it begins a paragraph and TeX keeps it)
+% oracle:  pdflatex 0 errors (\columnwidth 246pt): two rows, 1 | 3 (the second keeps the `\hspace{-0.05\columnwidth}`)
+% engines: rust int68a = 1 | 2 | 1; 78x r3 = 1 | 2 | 1; Perl 0.8.8 = 1 | 2 | 1
+% expect:  0 errors, 0 warnings; one `ltx:break`, three panels after it
+% status:  RED (78x r3) -> GREEN (78x r4: the REVTeX bindings declare their floats centred,
+%          `declare_panel_floats_centred`)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\begin{document}
+Text.
+\begin{figure}
+\includegraphics[width=0.3\columnwidth]{example-image}\\
+\hspace{-0.05\columnwidth}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}
+\caption{A centred float's line break.}
+\end{figure}
+\end{document}

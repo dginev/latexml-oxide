@@ -1,0 +1,27 @@
+% A document's copy of authblk's own `\affil` code (the JOSS template, paper_joss.tex:162-182: a `\renewcommand{\affil}
+% [2][]` that differs from authblk.sty:148-167 only in typography) is refused by the binding's lock and replayed for
+% its side effects: the affiliations stay the binding's contacts (OXIDIZED_DESIGN_DIVERGENCES #959).
+% witness: 2504.08081, 2310.11002, 2107.08407, 2507.13341
+% oracle:  pdflatex 0 errors: "Ann Able1,2", then "1 Astrophysics Group, …", "2 Kavli Institute …"
+% engines: rust int129a = 0 errors, 0 warnings; Ann Able alone, both affiliations lost; perl = 6-8 Errors (\AB@authors, \AB@las, \AB@au@str undefined), both lost
+% expect:  0 errors, 0 warnings; Ann Able with her two affiliations, in order, as no_copy_control.tex
+% status:  RED (int129a) -> GREEN (102a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\makeatletter
+\renewcommand{\affil}[2][]{\newaffiltrue\let\AB@blk@and\AB@pand
+  \if\relax#1\relax\def\AB@note{\AB@thenote}\else\def\AB@note{#1}\setcounter{Maxaffil}{0}\fi
+  \begingroup\let\protect\@unexpandable@protect
+  \@temptokena=\expandafter{\AB@authors}%
+  {\def\\{\protect\\\protect\Affilfont}\xdef\AB@temp{#2}}%
+  \xdef\AB@authors{\the\@temptokena\AB@las\AB@au@str\protect\\[\affilsep]\protect\Affilfont\AB@temp}%
+  \gdef\AB@las{}\gdef\AB@au@str{}%
+  {\def\\{, \ignorespaces}\xdef\AB@temp{#2}}%
+  \@temptokena=\expandafter{\AB@affillist}%
+  \xdef\AB@affillist{\the\@temptokena\AB@affilsep\AB@affilnote{\AB@note}\protect\Affilfont\AB@temp}%
+  \endgroup\let\AB@affilsep\AB@affilsepx}
+\makeatother
+\title{A Title}\author[1,2]{Ann Able}
+\affil[1]{Astrophysics Group, Cavendish Laboratory, Cambridge}\affil[2]{Kavli Institute for Cosmology, Cambridge}
+\begin{document}\maketitle Body text.\end{document}

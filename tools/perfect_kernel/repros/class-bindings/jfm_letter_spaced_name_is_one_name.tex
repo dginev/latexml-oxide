@@ -1,0 +1,18 @@
+% witness: 1510.04254 (jfm_modified, `P\ls H\ls I\ls L\ls I\ls P\ls P\ls E\ns H.\ns T\ls R\ls I\ls N\ls H`), 1403.3574,
+%          astro-ph0406083 (jfm): jfm.cls:1024-1025 `\ls` `\kern.15em`, `\ns` `\kern.5em` — the letter-spaced name's
+%          word space
+% oracle:  pdflatex (TL 2025, 1403.3574's jfm.cls): "A N N A. A B L E1 A N D C Y C O L E2"
+% engines: rust 97c = two creators, unwritten; 97e r1 = the reading split each name at its `\ns` (three creators
+%          written, "C Y" and "C O L E2")
+% expect:  0 errors, 0 warnings; the reading's names today's, the writer's outcome `same`
+% status:  RED (97e r1) -> GREEN (97e) — perfect_kernel_batch97e::a_letter_spaced_name_is_one_name
+% preload: ar5iv.sty
+\documentclass{jfm}
+\title{T}
+\author{A\ls N\ls N\ns A.\ns A\ls B\ls L\ls E$^{1}$
+\and C\ls Y\ns C\ls O\ls L\ls E$^{2}$}
+\affiliation{$^1$Univ A, Town A\\[\affilskip] $^2$Univ B, Town B}
+\begin{document}
+\maketitle
+Body.
+\end{document}

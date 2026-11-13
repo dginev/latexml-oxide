@@ -1,0 +1,13 @@
+% witness: ndsu-thesis-2022/ndsu-example, NDSU-Thesis-Extended (`\usepackage[figure,table]{totalcount}` after xcolor); 2605.00310, 2605.28926 (the repeat load, OD #43)
+% oracle:  pdflatex (TL 2025) 0 errors: "Before. no tables after.", the cell maroon on `\cellcolor` of the repeat load's `table`, `dvipsnames`.
+% engines: int141a: 1 error, `\iftotaltables` undefined: xcolor's durable `\ds@table` took totalcount's option.
+% expect:  0 errors, totalcount's rerun Warning; the paragraph whole
+% status:  GREEN
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage[figure,table]{totalcount}
+\usepackage[table,dvipsnames]{xcolor}
+\begin{document}
+Before. \iftotaltables tables \else no tables \fi after.
+\begin{tabular}{l}\cellcolor{Maroon}Cell\end{tabular}
+\end{document}

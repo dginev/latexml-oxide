@@ -1,0 +1,12 @@
+% witness: synthetic (m5study e2: a group-local value of `\section`)
+% oracle: pdflatex clean (TL 2025, 0 errors); PDF text: 1 Intro See Sec. 1. 2 Next
+% engines: rust base 64w-rel (8542e1b1a5; the lock code is unchanged through 72cefe8821) E/F/W=0/0/0; 64zb E/F/W=0/0/0; Perl refuses every :locked redefinition (State.pm:502-517)
+% expect: as today under D1 (ruling 4): `\section` reads its argument downstream (\@startsection), so its lock stays absolute; pdflatex prints "See Sec. 1."
+% status: RED (base) -> RED, deferred (D1 step 2, ruling 4)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section{Intro}
+{\def\section{Sec.}See \section~1.}
+\section{Next}
+\end{document}

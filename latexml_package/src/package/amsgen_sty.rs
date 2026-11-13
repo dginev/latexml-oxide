@@ -1,5 +1,10 @@
 use crate::prelude::*;
 LoadDefinitions!({
+  // Perl amsgen.sty.ltxml:19. amsgen.sty:27-38 saves a primitive only while `\meaning` gives its own name, else
+  // "Unable to properly define \@@atop; primitive \atop no longer primitive"; the kernel's `\over` family and
+  // `\overline` read so (tex_debugging.rs, KNOWN_PERL_ERRORS #985), but not every name a raw file saves: amsmath-iop.sty
+  // (0706.4029's) saves `\eqno` and `\leqno`, macros here, primitives in pdflatex (2 false errors with the check). So
+  // the plain `\let` stays; amsmath's `\binom` no longer reads `\@@atop` (amsmath_sty.rs). SYNC_STATUS 77q.
   DefMacro!("\\@saveprimitive{}{}", "\\let#2#1");
 
   Let!("\\@xp", "\\expandafter");
@@ -23,8 +28,26 @@ LoadDefinitions!({
   DefMacro!("\\boxz@", "\\box\\z@");
   DefMacro!("\\relaxnext@", "\\let\\@let@token\\relax");
 
-  // Do we need to worry about the skip space issues...?
-  Let!("\\new@ifnextchar", "\\@ifnextchar");
+  // Perl (amsgen.sty.ltxml:42 "Do we need to worry about the skip space
+  // issues...?") Lets this to `\@ifnextchar`, which SKIPS spaces; the real
+  // `\new@ifnextchar` (amsgen.sty:54-62) does not — that is its whole point.
+  // bibleref.sty:969 `\bibleverse{Psalm} (Einzahl)` then took the `(` after
+  // the space as its `(chapter:verse)` opener and `\@bibleverse(#1:` scanned
+  // to the end of the document (en/de-bibleref-german, 12 `Until::` misses
+  // each, sweep 28). KNOWN_PERL_ERRORS #113. Guard:
+  // `perfect_kernel_batch51::new_ifnextchar_keeps_space`.
+  TeX!(
+    r"
+  \long\def\new@ifnextchar#1#2#3{%
+    \let\reserved@d= #1%
+    \def\reserved@a{#2}\def\reserved@b{#3}%
+    \futurelet\@let@token\new@ifnch
+  }
+  \def\new@ifnch{%
+    \ifx\@let@token\reserved@d \let\reserved@b\reserved@a \fi
+    \reserved@b
+  }"
+  );
   // \@ifstar already in LaTeX.pool
   DefRegister!("\\ex@" => Dimension::from_str("1pt")?);
   // Just fake it...

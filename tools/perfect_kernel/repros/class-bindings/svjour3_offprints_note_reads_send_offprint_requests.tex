@@ -1,0 +1,22 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4, "A frontmatter note reads as the class prints it"):
+%          svjour3's and svjour's `\offprints{…}` (1902.07328, 0901.1015; 249 census papers of class svjour3 or svjour
+%          call `\offprints`)
+% oracle:  pdflatex with 1902.07328's svjour3.cls (:371-374, its svglov3.clo): 0 errors; the title-page footnote
+%          "Send offprint requests to: O. Kochukhov, E-mail: oleg@x.se"; with 0901.1015's svjour.cls (:327-330, as
+%          `\documentclass[epj]{svjour}`, its svepj.clo) the same, "e-mail: oleg@x.se"
+% engines: rust b4c8392 = the pubnote named "Preprint: " (the role default, `\lx@pubnote@preprint@name`); Perl the
+%          same (sv_support.sty.ltxml:77, role=preprint, no name)
+% expect:  0 errors, 0 warnings; the pubnote named "Send offprint requests to: ", role preprint, holding
+%          "O. Kochukhov, " (the e-mail is the author's contact, SYNC 92e row)
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{O. Kochukhov}
+\offprints{O. Kochukhov, \email{oleg@x.se}}
+\institute{Uppsala University}
+\maketitle
+\section{S}
+Text.
+\end{document}

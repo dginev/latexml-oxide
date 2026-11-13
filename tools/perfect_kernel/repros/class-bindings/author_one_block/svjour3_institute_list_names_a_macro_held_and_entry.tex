@@ -1,0 +1,32 @@
+% mechanism: sv_support's whole author list is one `\lx@add@author@split` call (Option C P2-1b, OD #993); the queue's name
+%   reader parts it at each separator's own tokens (`queue_reading.rs` `entry_names`, `argument_separators`'
+%   `ArgSeparator::span`, OD #995): a macro holding only the `\and` (`\newcommand\sep{\and}`) parts the entry as a
+%   written `\and` does, agreeing with the reading's cut, so the `\institute` list names both queued authors and is
+%   the authors' list (`queued_author_names_spelled`, sv_support_sty.rs's list gate)
+% witness: synthetic (revP24 check 5; 2312.14898's list shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2312.14898's svjour3.cls and svglov3.clo) 0 errors: "Ann Able · Bob
+%          Baker"; the institute footnote "Ann Able / E-mail: ann@x.edu / Bob Baker / E-mail: bob@x.edu / University of X"
+% engines: int158a (P21b's `position`, which gave a macro no position): the entry one name, the gate not met, both
+%          addresses and the list on Bob Baker; P24b = each author's own address, the list on the block's nameless
+%          creator (#159)
+% expect:  0 errors, 0 warnings; Ann Able (ann@x.edu), Bob Baker (bob@x.edu), the nameless creator (University of X)
+% status:  RED (int158a) -> GREEN (P24b) — perfect_kernel_batchp24b::sv_institute_list_reads_an_entry_parted_at_a_macro_held_and
+% preload: ar5iv.sty
+\documentclass[smallextended]{svjour3}
+\newcommand\sep{\and}
+\begin{document}
+\title{T}
+\author{Ann Able \sep Bob Baker}
+\institute{
+    \begin{itemize}
+        \item[] Ann Able \\
+                \email{ann@x.edu} \\
+        \item[] Bob Baker \\
+                \email{bob@x.edu} \\
+        \at
+        \item[] University of X
+    \end{itemize}
+}
+\maketitle
+Text.
+\end{document}

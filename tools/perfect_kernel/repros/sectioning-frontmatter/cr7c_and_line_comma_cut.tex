@@ -1,0 +1,16 @@
+% mechanism: in a declined block's marks branch, a line of no mark that starts an author at `\and` is a names line, cut
+%   at its commas as one is (`fallback::perl_author_calls`)
+% witness: synthetic; review revS5CR7b S3
+% oracle:  pdflatex 0 errors: "Ann Able^1∗", "Bob Baker, Carl Cole", "^1 Univ X", "∗ Zebra note."
+% engines: rust CR7b: two creators, Ann Able and "Bob Baker, Carl Cole"; perl 0 errors: "Ann AbleBob Baker, Carl Cole"
+%   cut at its comma (Perl's marks branch cuts only a marked author line)
+% expect:  0 errors, 1 warning (the decline's); Ann Able (the note, Univ X), Bob Baker, Carl Cole
+% status:  RED (CR7b) -> GREEN (perfect_kernel_batchcr7::a_line_started_at_and_is_cut_at_its_commas)
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1}$\footremember{zz}{Zebra note.} \and Bob Baker, Carl Cole\\ $^{1}$Univ X}
+\begin{document}
+\maketitle
+Body.
+\end{document}

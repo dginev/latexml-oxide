@@ -1,0 +1,22 @@
+% Controls of the line route and the frontmatter observer (`queue_digest::legend_note_kind`, `resolver::is_legend_text`,
+% and the line readers' `classify_thanks(..) == "note"` tests): a symbol-led line of the kernel's `\author` block naming
+% an institution with a project role's words stays its carrier's affiliation — "Project Lead Institute, Univ D", "Core
+% Contributor Network, Paris", "Senior Author Program, Acme Corp" (`classify_thanks` reads a role only where every piece
+% of the text is a legend: `role_contribution`, `entry_legend_kind`, review rev103c S1).
+% witness: synthetic (review rev103c probe d)
+% oracle:  pdflatex 0 errors: "Ann Able† Bob Baker‡ Cat Cole∗", "†Project Lead Institute, Univ D", "‡Core Contributor
+%          Network, Paris", "∗Senior Author Program, Acme Corp"
+% engines: rust int130a = each line its carrier's affiliation; rust 103c r1 = each its carrier's contribution note
+% expect:  0 errors, 0 warnings; each author holds the one affiliation of their mark, no note
+% status:  GREEN (int130a), RED (103c r1) -> GREEN (103c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \quad Cat Cole$^{*}$\\
+$^{\dagger}$Project Lead Institute, Univ D\\
+$^{\ddagger}$Core Contributor Network, Paris\\
+$^{*}$Senior Author Program, Acme Corp}
+\maketitle
+Text.
+\end{document}

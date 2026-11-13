@@ -1,0 +1,13 @@
+% witness: 2602.03799, 2602.05679, 2602.06599 (`\doi{SUFFIX}` in the preamble, aamas.cls 2026)
+% oracle:  pdflatex with 2602.10598's aamas.cls: the ACM reference line ends "https://doi.org/10.65109/SEHD8631"; 0 errors
+% engines: rust 67int6 = 1 errors, 0 warnings (undefined `\doi`)
+% expect:  0 errors, 0 warnings; the DOI pubnote 10.65109/SEHD8631
+% status:  RED (67int6) -> GREEN (68a)
+% preload: ar5iv.sty
+\documentclass[sigconf]{aamas}
+\doi{SEHD8631}
+\begin{document}
+\title{T}\author{A}\affiliation{\institution{I}\country{C}}
+\maketitle
+Body.
+\end{document}

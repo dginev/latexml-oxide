@@ -1,0 +1,16 @@
+% witness: cmpj2.sty:323 (TL 2025's, its default `droid` option: `\RequirePackage{txfonts}` then
+%          `\re@DeclareMathSymbol{\varkappa}…`), cmpj3.sty:364; synthetic
+% oracle:  pdflatex (TL 2025) 0 errors: "κ text." (txfonts.sty:140 defines `\re@DeclareMathSymbol`)
+% engines: CMPJ1 and int164a: 1 Error "undefined \re@DeclareMathSymbol" (the txfonts binding does not define it)
+% expect:  0 errors; `$\varkappa$` a math token
+% status:  RED
+% moves:   post-merge (txfonts binding)
+\documentclass{article}
+\usepackage{amssymb}
+\usepackage{txfonts}
+\makeatletter
+\re@DeclareMathSymbol{\varkappa}{\mathord}{AMSb}{123}
+\makeatother
+\begin{document}
+$\varkappa$ text.
+\end{document}

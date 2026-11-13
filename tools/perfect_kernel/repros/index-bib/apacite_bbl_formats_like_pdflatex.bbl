@@ -1,0 +1,461 @@
+\begin{thebibliography}{}
+
+\bibitem [\protect \citeauthoryear {%
+{\bibcorporate{American Psychological Association}}%
+}{%
+{\bibcorporate{American Psychological Association}}%
+}{%
+{\protect \APACyear {2010}}%
+}]{%
+apa2010}
+\APACinsertmetastar {%
+apa2010}%
+\begin{APACrefauthors}%
+{\bibcorporate{American Psychological Association}}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{2010}.
+\newblock
+\APACrefbtitle {Publication Manual} {Publication manual}\ (\PrintOrdinal{6}\
+  \BEd).
+\newblock
+\APACaddressPublisherEqAuth{Washington, DC}{{\bibcorporate{American
+  Psychological Association}}}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+\APACciteatitle {Anonymous article title}}{%
+\APACciteatitle {Anonymous article title}}{%
+{\protect \APACyear {1990}}%
+}]{%
+anon1990}
+\APACinsertmetastar {%
+anon1990}%
+{\BBOQ}\APACrefatitle {Anonymous article title} {Anonymous article
+  title}.{\BBCQ}
+\newblock
+\APACrefYearMonthDay{1990}{}{}.
+\newblock
+\APACjournalVolNumPages{Anon Journal}{3}{}{1--2}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Black%
+}{%
+Black%
+}{%
+{\protect \APACyear {2005}}%
+}]{%
+black2005}
+\APACinsertmetastar {%
+black2005}%
+\begin{APACrefauthors}%
+Black, D.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2005}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A chapter} {A chapter}.{\BBCQ}
+\newblock
+\BIn{} E.~Editor\ (\BED), \APACrefbtitle {Collected Works} {Collected works}\
+  (\BPGS\ 10--30).
+\newblock
+\APACaddressPublisher{London}{Pub House}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Blue%
+}{%
+Blue%
+}{%
+{\protect \APACyear {2012}}%
+}]{%
+blue2012}
+\APACinsertmetastar {%
+blue2012}%
+\begin{APACrefauthors}%
+Blue, F.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{2012}.
+\unskip\
+\newblock
+\APACrefbtitle {A dissertation} {A dissertation}\ \APACtypeAddressSchool
+  {\BUPhD}{}{}.
+\unskip\
+\newblock
+\APACaddressSchool {Paris}{University of Somewhere}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Brown%
+, Green%
+\BCBL {}\ \BBA {} White%
+}{%
+Brown%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {1999}}%
+}]{%
+brown1999}
+\APACinsertmetastar {%
+brown1999}%
+\begin{APACrefauthors}%
+Brown, A.%
+, Green, B.%
+\BCBL {}\ \BBA {} White, C.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{1999}.
+\newblock
+\APACrefbtitle {The Big Book} {The big book}\ (\PrintOrdinal{2}\ \BEd,
+  \BVOL~1).
+\newblock
+\APACaddressPublisher{New York}{Academic Press}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Coder%
+}{%
+Coder%
+}{%
+{\protect \APACyear {2018}}%
+}]{%
+soft2018}
+\APACinsertmetastar {%
+soft2018}%
+\begin{APACrefauthors}%
+Coder, H.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2018}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Some software} {Some software}{\BBCQ}\
+  [\bibcomputersoftwaremanual].
+\newblock
+\begin{APACrefURL} \url{http://example.org} \end{APACrefURL}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Dupont%
+}{%
+Dupont%
+}{%
+{\protect \APACyear {2000}}%
+}]{%
+foreign2000}
+\APACinsertmetastar {%
+foreign2000}%
+\begin{APACrefauthors}%
+Dupont, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2000}{{\APACmonth{06}}}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Une etude} {Une etude}{\BBCQ}\ \APACrefaetitle {A study}
+  {A study}.
+\newblock
+\APACjournalVolNumPages{Revue}{4}{}{7--9}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Gray%
+}{%
+Gray%
+}{%
+{\protect \APACyear {2010}}%
+}]{%
+gray2010}
+\APACinsertmetastar {%
+gray2010}%
+\begin{APACrefauthors}%
+Gray, E.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2010}{}{}.
+\newblock
+\APACrefbtitle {Report on reports} {Report on reports}\ \APACbVolEdTR{}{\BTR{}\
+  \BNUM~42}.
+\newblock
+\APACaddressInstitution{Boston}{Institute of Things}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+James%
+}{%
+James%
+}{%
+{\protect \APACyear {1890/1998}}%
+}]{%
+reprintb1998}
+\APACinsertmetastar {%
+reprintb1998}%
+\begin{APACrefauthors}%
+James, W.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{1998}.
+\newblock
+\APACrefbtitle {Principles} {Principles}.
+\newblock
+\APACaddressPublisher{New York}{Dover}.
+\newblock
+\APACorigbooknote{1890}{\APACorigED {E.~Editor}}{\APACrefbtitle {The Principles
+  of Psychology} {The principles of psychology}} {} {\BVOL~1} {\BPGS\ 5--9}
+  {Boston} {Holt} {}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Kim%
+}{%
+Kim%
+}{%
+{\protect \APACyear {{\protect \BIP {}}}}%
+{\protect \APACexlab {{\protect \BCntIP {1}}}}}]{%
+kim-ipa}
+\APACinsertmetastar {%
+kim-ipa}%
+\begin{APACrefauthors}%
+Kim, L.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{{\protect \BIP {}}{\protect \BCntIP {1}}}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {First forthcoming paper} {First forthcoming
+  paper}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Future Journal}{}{}{}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Kim%
+}{%
+Kim%
+}{%
+{\protect \APACyear {{\protect \BIP {}}}}%
+{\protect \APACexlab {{\protect \BCntIP {2}}}}}]{%
+kim-ipb}
+\APACinsertmetastar {%
+kim-ipb}%
+\begin{APACrefauthors}%
+Kim, L.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{{\protect \BIP {}}{\protect \BCntIP {2}}}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Second forthcoming paper} {Second forthcoming
+  paper}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Future Journal}{}{}{}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Nobody%
+}{%
+Nobody%
+}{%
+{\protect \APACyear {{\protect \bibnodate {}}}}%
+}]{%
+nodate}
+\APACinsertmetastar {%
+nodate}%
+\begin{APACrefauthors}%
+Nobody, K.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{{\protect \bibnodate {}}}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Undated work} {Undated work}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Some Journal}{}{}{}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Oldman%
+}{%
+Oldman%
+}{%
+{\protect \APACyear {1901/1950}}%
+}]{%
+old1950}
+\APACinsertmetastar {%
+old1950}%
+\begin{APACrefauthors}%
+Oldman, I.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{1950}.
+\newblock
+\APACrefbtitle {Old Classic} {Old classic}.
+\newblock
+\APACaddressPublisher{Berlin}{Verlag}.
+\newblock
+\APACorigyearnote{1901}{A note}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+One%
+\ \protect \BOthers {.}}{%
+One%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2020}}%
+}]{%
+many2020}
+\APACinsertmetastar {%
+many2020}%
+\begin{APACrefauthors}%
+One, A.%
+, Two, B.%
+, Three, C.%
+, Four, D.%
+, Five, E.%
+, Six, F.%
+\BDBL {}Eight, H.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2020}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Many authors} {Many authors}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Big Science}{1}{}{5}.
+\newblock
+\begin{APACrefDOI} \doi{10.1000/xyz123} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Smith%
+\ \BBA {} Doe%
+}{%
+Smith%
+\ \BBA {} Doe%
+}{%
+{\protect \APACyear {2001}}%
+{\protect \APACexlab {{\protect \BCnt {1}}}}}]{%
+smith2001b}
+\APACinsertmetastar {%
+smith2001b}%
+\begin{APACrefauthors}%
+Smith, J\BPBI K.%
+\BCBT {}\ \BBA {} Doe, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2001{\protect \BCnt {1}}}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Another study of things} {Another study of
+  things}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Journal of Studies}{13}{}{1--9}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Smith%
+\ \BBA {} Doe%
+}{%
+Smith%
+\ \BBA {} Doe%
+}{%
+{\protect \APACyear {2001}}%
+{\protect \APACexlab {{\protect \BCnt {2}}}}}]{%
+smith2001}
+\APACinsertmetastar {%
+smith2001}%
+\begin{APACrefauthors}%
+Smith, J\BPBI K.%
+\BCBT {}\ \BBA {} Doe, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2001{\protect \BCnt {2}}}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A study of things} {A study of things}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Journal of Studies}{12}{3}{45--67}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Speaker%
+}{%
+Speaker%
+}{%
+{\protect \APACyear {2019}}%
+}]{%
+conf2019}
+\APACinsertmetastar {%
+conf2019}%
+\begin{APACrefauthors}%
+Speaker, L.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2019}{June}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A talk} {A talk}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {Proceedings of the Conference} {Proceedings of the
+  conference}\ (\BPGS\ 100--110).
+\newblock
+\APACaddressPublisher{Chicago}{}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Tech%
+}{%
+Tech%
+}{%
+{\protect \APACyear {2003}}%
+}]{%
+intr2003}
+\APACinsertmetastar {%
+intr2003}%
+\begin{APACrefauthors}%
+Tech, T.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2003}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A chapter in a report} {A chapter in a report}.{\BBCQ}
+\newblock
+\BIn{} B.~Boss\ (\BED), \APACrefbtitle {Big Report} {Big report}\
+  \APACbVolEdTRpgs {} {\BTR{}\ \BNUM~7} {\BPGS\ 11--22}.
+\newblock
+\APACaddressInstitution{Denver}{Lab}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Webber%
+}{%
+Webber%
+}{%
+{\protect \APACyear {2015}}%
+}]{%
+web2015}
+\APACinsertmetastar {%
+web2015}%
+\begin{APACrefauthors}%
+Webber, G.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2015}{}{}.
+\newblock
+\APACrefbtitle {A web page.} {A web page.}
+\newblock
+\begin{APACrefURL} [{March 3, 2016}]\url{http://example.com/page}
+  \end{APACrefURL}
+\PrintBackRefs{\CurrentBib}
+
+\end{thebibliography}

@@ -1,0 +1,25 @@
+% mechanism: an `\email` list after `\correspondingauthor{X, Y}` is placed address by address, each by the name it
+%   spells (aas_support_sty.rs `\lx@aas@email@corresp`: one address takes the correspondent's `fuzzy:` label, a list
+%   of several goes through the plain `\lx@add@email`, as any `\email`'s)
+% witness: 2511.09481 (aastex7: `\correspondingauthor{Lile Wang, Shenzhen Xu}\email{lilew@pku.edu.cn,
+%   xushenzhen@pku.edu.cn}`; batch 104d L3)
+% oracle:  pdflatex (TL 2025 aastex701.cls) 0 errors: "Corresponding author: Ann Able, Bob Baker" / "aable@a.edu,
+%   bbaker@b.edu"
+% engines: rust int130a: the whole list on both authors (on the last alone in 2511.09481); perl: the list on Bob Baker
+% expect:  0 errors, 0 warnings; Ann Able holds aable@a.edu and Bob Baker bbaker@b.edu, each the correspondent contact
+% status:  RED (int130a) -> GREEN (104d)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A, Town}
+\email{aable@a.edu}
+\author{Bob Baker}
+\affiliation{Univ B, City}
+\email{bbaker@b.edu}
+\correspondingauthor{Ann Able, Bob Baker}
+\email{aable@a.edu, bbaker@b.edu}
+\begin{abstract}Abs.\end{abstract}
+Text.
+\end{document}

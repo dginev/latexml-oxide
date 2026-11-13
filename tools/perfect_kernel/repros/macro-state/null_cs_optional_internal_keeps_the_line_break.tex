@@ -1,0 +1,14 @@
+% mechanism: latex.ltx:1252/1255 `\@xargdef` names a command's optional-argument internal `\csname\string#1\endcsname`,
+%   and `\string` of the null control sequence prints `\csname\endcsname` (tex.web §263): the internal is
+%   `\\csname\endcsname`. `define_optional_internal` (sect08.rs, batch 66b) named it `"\\" + "\"`, which is `\\`, so the
+%   declaration replaced the line break (Perl clean)
+% witness: 2410.07647 (changes' `\csname\Changes@commandname\endcsname`, its `\Changes@commandname` undefined in our binding)
+% oracle:  pdflatex (TL 2025) 0 errors: "A" / "B, and y here."
+% engines: rust int131a: `\\` prints "x"; perl: 0 errors, the break kept
+% expect:  0 errors, 0 warnings; <p>A<break/>B, and y here.</p>
+% status:  RED (int131a) -> GREEN (131fix) — perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break
+\documentclass{article}
+\expandafter\newcommand\expandafter{\csname\endcsname}[1][x]{{#1}}
+\begin{document}
+A\\B, and \csname\endcsname[y] here.
+\end{document}

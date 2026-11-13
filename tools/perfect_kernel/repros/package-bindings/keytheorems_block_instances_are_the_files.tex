@@ -1,0 +1,23 @@
+% The latex-lab block binding declares the `block` instances latex-lab-testphase-block.sty:1362-1411 does:
+% keytheorems.sty:3330, :3348 edit `theoremblock-0` and `listblock-1` for a theorem with margins.
+% witness: keytheorems/keytheorems-doc (4 errors at sweep #150).
+% oracle:  pdflatex (TL 2025) 0 errors; the three theorems print.
+% engines: perl 1 error 1 Fatal. int140a: "The instance 'theoremblock-0' of type 'block' is not defined": 2 errors.
+% expect:  0 errors; a `theorem` holding the statement; each file's instance edits cleanly.
+\DocumentMetadata{lang=en-US}
+\documentclass{article}
+\usepackage{keytheorems}
+\newkeytheorem{theorem}[leftmargin=1cm,rightmargin=1cm]
+\ExplSyntaxOn
+\clist_map_inline:nn
+  {
+    displayblock-6, verbatimblock-0, verbatimblock-6, quoteblock-1, quoteblock-6, quotationblock-1, quotationblock-6,
+    theoremblock-0, theoremblock-2, listblock-1, listblock-6
+  }
+  { \EditInstance{block}{#1}{right-margin=0pt} }
+\ExplSyntaxOff
+\begin{document}
+\begin{theorem}
+There are infinitely many primes.
+\end{theorem}
+\end{document}

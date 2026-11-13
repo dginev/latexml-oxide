@@ -642,14 +642,25 @@ mod tests {
 
   use super::*;
 
-  fn temp_dir(label: &str) -> PathBuf {
+  /// A test's scratch directory, removed when the test ends (they filled `/tmp`'s inodes).
+  struct TempDir(PathBuf);
+  impl std::ops::Deref for TempDir {
+    type Target = Path;
+
+    fn deref(&self) -> &Path { &self.0 }
+  }
+  impl Drop for TempDir {
+    fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); }
+  }
+
+  fn temp_dir(label: &str) -> TempDir {
     let nanos = std::time::SystemTime::now()
       .duration_since(std::time::UNIX_EPOCH)
       .map(|d| d.as_nanos())
       .unwrap_or(0);
     let p = std::env::temp_dir().join(format!("gcache-{label}-{nanos}"));
     fs::create_dir_all(&p).unwrap();
-    p
+    TempDir(p)
   }
 
   fn write_bytes(path: &Path, bytes: &[u8]) {
@@ -677,7 +688,13 @@ mod tests {
   static SHARED_DIR: OnceLock<PathBuf> = OnceLock::new();
   fn shared_cache_dir() -> &'static Path {
     SHARED_DIR.get_or_init(|| {
-      let dir = temp_dir("shared");
+      // Lives as long as the process (a `static`), so not a removed-on-drop `TempDir`.
+      let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+      let dir = std::env::temp_dir().join(format!("gcache-shared-{nanos}"));
+      fs::create_dir_all(&dir).unwrap();
       let _lock = crate::test_env::env_lock()
         .lock()
         .unwrap_or_else(|e| e.into_inner());

@@ -1,0 +1,20 @@
+% mechanism: without calc, `\widthof` is undefined, and pgf's parse expands its argument before it `\let`s calc's
+%   names (pgfmathparser.code.tex:54, :124-130), so TL 2025's pgf errs on `2*\widthof{xx}` (an undefined control
+%   sequence, then `xx` read as a function) and prints 0. Ours raises one Error (undefined `\widthof`), then
+%   evaluates calc's meaning anyway (2 × the width of "xx"); Perl evaluates it silently (revDTL1g finding 1, pN; the
+%   calc-loaded twin is pgfmath_calc_names_err_in_tex_red). For the error-boundary batch EB1: the Error side.
+% witness: synthetic
+% oracle:  pdflatex 4 `!` (2 "Undefined control sequence", 2 "PGF Math Error: Unknown function `xx'"), [0] [0];
+%          Perl 0 E, 0 W, [10.56] [10.56]
+% engines: rust DTL1g, int162a: [21.11121] [21.11121], 1 error (Error:undefined:\widthof, for the first parse only),
+%          0 warnings
+% expect:  pgf's values and a counted Error per parse
+% status:  RED (DTL1g, int162a)
+% moves:   EB1 makes it a row of `perfect_kernel_error_boundary` (Error side).
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{2*\widthof{xx}}[\pgfmathresult]
+
+\pgfmathsetmacro\m{2*\widthof{xx}}[\m]
+\end{document}

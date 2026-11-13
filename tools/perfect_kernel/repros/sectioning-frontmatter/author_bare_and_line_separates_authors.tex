@@ -1,0 +1,12 @@
+% witness: cond-mat9705101 (article; an "and" line between blank \\ \\ lines separates two name+address blocks; its `Plech\' a\v{c}`, a space after the accent)
+% oracle:  pdflatex 0 errors: two stacked name+address blocks with "and" between
+% engines: rust (63d) = ONE creator Johnston; "and", "P. Plechac" and Oxford as his affiliations, 0 errors; Perl alike
+% expect:  2 creators, Johnston (Heriot-Watt) and Plechac (Oxford); 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{article}
+\author{ {\it D.A. Johnston}\\ Dept. of Mathematics\\ Heriot-Watt University\\ \\
+and\\ \\ {\it P. Plech\' a\v{c}}\\ Mathematical Institute\\ Oxford}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

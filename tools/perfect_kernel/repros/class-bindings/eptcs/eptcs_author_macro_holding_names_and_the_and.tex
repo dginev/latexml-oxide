@@ -1,0 +1,21 @@
+% mechanism: an eptcs `\author` whose names and the `\and` between them are one macro (`\aut`), then an `\institute`:
+%   the class prints "Ann Able" and "Bob Baker" side by side, "Univ X" under Bob Baker's column only. The separator's
+%   tokens print names too (`ArgSeparator::span` is `None`), so the binding cuts no cell there (`eptcs_cls.rs` `cells`,
+%   OXIDIZED_DESIGN_DIVERGENCES #991 (8)); the reading cuts the names at the rehearsed `Sep(And)` (#993), the institute
+%   the column's under it.
+% witness: P24's probe (the span rule of the separator query, #995)
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" beside "Bob Baker", "Univ
+%   X" under "Bob Baker"
+% engines: perl has no eptcs binding (OmniBus); int157a: Ann Able, Bob Baker (Univ X), 2 warnings
+% expect:  0 errors, 2 warnings (the emitter writes each name of the macro's expansion by its text, which its events
+%   don't spell: P3, as SEP1's macro row); Ann Able, Bob Baker (Univ X)
+% status:  GREEN (int157a, pinned; guard perfect_kernel_batchp24)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\newcommand\aut{Ann Able \and Bob Baker}
+\title{T}
+\author{\aut \institute{Univ X}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

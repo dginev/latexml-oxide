@@ -1,0 +1,34 @@
+% mechanism: emit.rs `declaration_reads_past` / field_notes.rs `note_call_read`: a raw class's `\received` inside
+%   `\author` (`\def\received#1{\gdef\@received{#1}}`, read by the class's `\@maketitle` after `\@author`) is a
+%   declaration the emitter replays as far as its call read, no decline: each name its marked affiliation, the date
+%   the source's (OD #988; GRP1)
+% witness: 0809.5152 (tMOP2e.cls:423, 5 creators), 1110.6375 (11), 0906.2789 (cJAS2e.cls:432, 459-463); the class
+%   below is tMOP2e.cls:422-424 and its `\@maketitle` cut down, written by the repro (a preamble `\def` meets no raw
+%   class store)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able a , Bob Baker a∗∗ and Cy Cole b", "a Univ A",
+%   "b Univ B", "(12 May 2008)", the footnote "∗∗ Corresponding author. Email: bob@a.edu"
+% engines: CAU1: declined, 3 warnings ("can't replay a definition of its author block", the date lost, "may 2008"
+%   unclaimed): 1 creator holding the whole block, the class's default date; LOGO1: 3 creators, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able: Univ A; Bob Baker: the thanks note, Univ A; Cy Cole: Univ B; date 12 May 2008
+% status:  RED (CAU1) -> GREEN (GRP1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{tfrecv.cls}
+\LoadClass{article}
+\def\author#1{\gdef\@author{#1}}
+\def\received#1{\gdef\@received{#1}}
+\gdef\@received{Received 00 Month 200x}
+\def\@maketitle{\newpage\null\vskip 2em
+  \begin{center}{\LARGE\@title\par}\vskip 1em
+  {\large\@author\par}\vskip 1em
+  {\itshape(\@received)\par}\end{center}\par\vskip 1.5em}
+\end{filecontents*}
+\documentclass{tfrecv}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$, Bob Baker$^{a}$$^{\ast}$\thanks{$^\ast$Corresponding author. Email: bob@a.edu} and Cy Cole$^{b}$\\
+\vspace{3pt} $^{a}${\em{Univ A}}\\
+\vspace{3pt} $^{b}${\em{Univ B}}\\
+\vspace{3pt}\received{12 May 2008}}
+\maketitle
+Hi.
+\end{document}

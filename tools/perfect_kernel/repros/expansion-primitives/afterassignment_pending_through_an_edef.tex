@@ -1,0 +1,24 @@
+% witness: yquant/yquant-doc (:2504-2521, `\protected@csxappto` of a node `$\ket\psi$`: `\protect` stuck, then "Attempt to end mode", 501 errors and a Fatal on `\end{yquant*}`)
+% oracle:  pdflatex (TL 2025) 0 errors: "AFTER" printed, P=\relax after the `\protected@edef`, the circuit whole.
+% engines: int141a: the `\afterassignment` token written into the body (`\meaning\y` ends in `\typeout`, `\x` in `\let\protect\@@protect`), no "AFTER", `\protect` stuck. Perl the same.
+% expect:  0 errors; both `\typeout`s; the node's Math
+% status:  GREEN
+\documentclass{article}
+\usepackage{braket}
+\usepackage[compat=newest]{yquant}
+\makeatletter
+\newcommand\pr{\let\z\protect\typeout{P=\meaning\z}}
+\makeatother
+\begin{document}
+\makeatletter
+\protected@edef\x{\ket{y}}
+\pr
+\afterassignment\typeout\edef\y{\ket{z}}{AFTER}
+\makeatother
+\begin{tikzpicture}
+   \begin{yquant*}
+      \node[anchor=east] at (0,0) {$\ket{x}$};
+   \end{yquant*}
+\end{tikzpicture}
+Word.
+\end{document}

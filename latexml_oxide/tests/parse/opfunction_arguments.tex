@@ -1,0 +1,263 @@
+% Functions and OPFUNCTIONs (log, sin, exp, declared FUNCTIONs) and their arguments: where a bare
+% argument ends, a group application with scripts, and what an unknown symbol applies to.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/opfunction_argument_ends_at_its_group
+% witness: 57ak A/B Perl sample (root-causer): 2605.10282 S4.E52 `\mathrm{trace}(\operatorname{Cov}_{P_\phi}(T(X))\nabla^2_\theta\psi(\theta^*)^{-1})`,
+%          2605.30776 A1.E23 `-\log p(a|s;\theta)^{Q_\phi(s,a)}`, 2605.24123 A1.Ex37Xa `\operatorname{E}\{…\}`,
+%          2605.00332 S4.E28X `\exp(p)\nabla u`; Perl's OPFUNCTION takes `addOpFunArgs` (MathGrammar:283, :553-558):
+%          a parenthesized argument first (`addEasyArgs`, :571-576), else a bare argument chain (`barearg`,
+%          :321-337) whose items are never a group (`aBarearg` has no OPEN) — the chain OPERATOR takes since 57ak;
+%          Rust's `opfunction tight_term => prefix_apply` (grammar/builder.rs) takes a term that starts with a
+%          group and runs on past it (57ak made an operator application such a term), and a pragma keeps
+%          `\log x y` to one factor
+% oracle:  Perl 0 errors: `logarithm@(a) * nabla@(b)`, `Cov@(T * X) * (nabla ^ 2)@(psi)`, `E@(a) * E@(b)`,
+%          `logarithm@(p) * x ^ 2`, `exponential@(p) * nabla@(u)`, `logarithm@(a) * b`, `logarithm@(x * y)`,
+%          `sine@(a) * nabla@(b)`, `logarithm@(a) + b`
+% engines: rust 57al1 `logarithm@(a * nabla@(b))`, `Cov@(T@(X) * (nabla ^ 2)@(psi))`, `E@(a * E@(b))`,
+%          `logarithm@(p * x ^ 2)`, `exponential@(p * nabla@(u))`, `logarithm@(a) * b`, `logarithm@(x) * y`,
+%          `sine@(a) * nabla@(b)`, `logarithm@(a) + b` (57aj2: the 1st and 5th unparsed, `Cov@(T@(X)) * nabla ^ 2 * psi`;
+%          `T@(X)` for Perl's `T * X` is OXIDIZED_DESIGN #18) (RUST-ONLY)
+%          57am, the greedy chain: Perl `logarithm@(x cdot y)`, `(logarithm _ 2)@(x * y)`, `(maximum _ i)@(a _ i * b _ i)`,
+%          `(maximum _ i)@(a _ i cdot b _ i)`, `exponential@(x * y)`, `a * logarithm@(b * c)`, `tr@(A * B)`,
+%          `logarithm * determinant@(A)` (Perl's own reading; rust 57al: one factor each; since 57cj.9 logarithm@(determinant@(A)),
+%          a function taking a limit-type operator's application, divergence #390, KNOWN_PERL_ERRORS #400)
+% expect:  0 errors; each OPFUNCTION's argument as Perl's (modulo #18)
+% Perl: an OPFUNCTION takes `addOpFunArgs` (MathGrammar:553-576), a group first
+\section{A function's argument ends at its group}
+$\log(a)\nabla b$ $\operatorname{Cov}(T(X))\nabla^{2}\psi$ $\operatorname{E}(a)\operatorname{E}(b)$ $\log p(x)^{2}$
+$\exp(p)\nabla u$ $\log(a)b$ $\log x y$ $\sin(a)\nabla b$ $\log(a)+b$
+$\log x\cdot y$ $\log_2 x y$ $\max_i a_i b_i$ $\max_i a_i\cdot b_i$ $\exp x y$ $a\log b c$ $\operatorname{tr} AB$ $\log\det A$
+
+% formerly repro math-parse/opfunction_group_application_takes_its_scripts
+% witness: 57am review (reviewer's opscr probe set: 351 of 359 corpus formulas in 112 of the 3,003 A/B papers, e.g.
+%          2605.24357 `\lambda^{2}\log(|\mathcal{A}|)^{2}`, 2605.01408 `\operatorname{IF}(\mathcal{A})_{\mathcal{F}}`); Perl's
+%          `addEasyArgs` (MathGrammar:571-576) ends the OPFUNCTION's Factor at the group's close, the script after it has
+%          no base and the formula is unparsed; Rust before 57am read `\log(n)^2` as log@(n²) (`opfunction tight_term`)
+% oracle:  pdflatex 0 errors; perl: every formula `ltx_math_unparsed`
+% expect:  0 errors; divergence #351: the group application takes the scripts — (log@(|A|))², (IF@(A))_F, (max@(a,b))²,
+%          (exp@(x))_i, λ²·(log@(|A|))²; a scripted head reads as a limit, its operand the scripted group, however many
+%          scripts — min_w@((y−w)²), min_j@(((y_j)_{j=1})^n) (57am review: 2605.04340, 2605.23087, 2605.19263); a bar
+%          pair is no such group but an `aBarearg` (:330), so `\log|z|^{2}dz` is log@(|z|²·dz) and `\log|a|_{L}|b|_{L}`
+%          log@(|a|_L·|b|_L), as Perl and 57al (57am review round 3) — in a `split` row too, whose bars read through
+%          XMRefs (the fence marks itself, `Meta::bar_fence`; 2605.19263 A1.E27.m1, 2605.31596 S7.E13.m1); a norm written
+%          `||x||` is one too (divergence #353: min_x@((‖Ax−b‖_2)²), as 57al; Perl min_x·(‖Ax−b‖_2)²), never |(|x|)|
+%          (57am review round 5); `\lvert…\rvert` is an OPEN/CLOSE pair, a group as in Perl: (log@(|x|))², log@(|x|)·y
+\section{A function's group application takes its scripts}
+$\log(|A|)^{2}$ $1+\lambda^{2}\log(|A|)^{2}$ $\operatorname{IF}(A)_{F}=\operatorname{IF}(A_{F})$ $(\operatorname{IF}(A)_{F})^{0}$
+$\max(a,b)^{2}$ $\exp(x)_{i}$ $O(\log(n)^{2})$
+$\min_{w}(y-w)^{2}$ $\min_{j}(y_{j})_{j=1}^{n}$
+$\log|z|^{2}\,dz$ $\log|a|_{L}|b|_{L}$
+\[\begin{split}\min_{w}\|y-Xw\|_{2}^{2}&=c\end{split}\]
+\[\begin{split}\log|z|^{2}\,dz&=c\end{split}\]
+$\min_{x}||Ax-b||_{2}^{2}$ $\log||x||_{2}^{2}$ $\arg\min_{w}||y-Xw||^{2}$ $\log\lvert x\rvert^{2}$ $\log\lvert x\rvert\,y$ $\max_{i}|z_{i}|\,|w_{i}|$
+\[\begin{split}\max_{i}|z_{i}|\,|w_{i}|&=c\end{split}\]
+\[\begin{split}\log\lvert x\rvert^{2}&=c\end{split}\]
+
+% formerly repro math-parse/trig_function_applies_to_its_group_in_a_bare_argument
+% witness: 57am3 A/B (newly unparsed, ~20 formulas): 2605.06229 S3.Ex5.m1 `\max_{j}\cos(\mathbf{t},\mathbf{r}_{j})`,
+%          2605.08116 A2.E10.m3 `\max_{t^{\star}\in y^{\star}}\cos(\mathbf{h}_{t},…)`, 2605.31371 A6.p6.m5 `\sum_{i}\ln\cosh(\cdot)`,
+%          2605.30311 A5.Ex1.m1, 2605.11742 S4.SS1.p5.m11; 57am's bare argument (`op_bare_item`, grammar/builder.rs) had no
+%          trig function applied to a group — the top level has `tight_term += trigfunction factor`, which 57am's removed
+%          `opfunction tight_term` reached — so the only tree was max@(cos)·(t, r_j), which the greedy prune rejects
+% oracle:  Perl 0 errors: `(maximum _ j)@(cosine@(t, r))`, `maximum@(cosine@(t, r))`,
+%          `(sum _ i)@(natural-logarithm@(hyperbolic-cosine@(cdot)))`, `(maximum _ j)@(cosine@(t))`
+% engines: rust 57am3 the first three `ltx_math_unparsed`; 57al2 Perl's
+% expect:  0 errors; the trig function takes its group inside the bare argument, as Perl
+\section{A trig function applies to its group in a bare argument}
+$\max_{j}\cos(t,r)$ $\max\cos(t,r)$ $\sum_{i}\ln\cosh(\cdot)$ $\max_{j}\cos(t)$
+
+% formerly repro math-parse/unknown_applies_to_its_group_in_a_bare_argument
+% witness: 57am review (the #18 decision reached a bare argument only inside a chain: `\nabla f(x)\cdot d` ∇@(f@(x)·d) but
+%          `\eta\nabla f(x)` η·∇@(f)·x, `a\log f(x)` a·log@(f)·x); Perl's `aBarearg` is `preScripted['UNKNOWN'] doubtArgs`
+%          (MathGrammar:327) and `doubtArgs` leaves the `(`: Perl `nabla@(f) * x`, `logarithm@(f) * x`; divergence #18
+%          (OXIDIZED_DESIGN_MATH) applies an unknown to its group everywhere, a bare argument included
+% oracle:  pdflatex 0 errors; perl `nabla@(f) * x`, `eta * nabla@(f) * x`, `logarithm@(f) * x`, `a * logarithm@(f) * x`,
+%          `nabla@(f) * x ^ T * d`
+% engines: rust 57al2 as Perl but `\log f(x)` logarithm@(f@(x)) (the old `opfunction tight_term`)
+% expect:  0 errors; #18 in every bare argument: ∇@(f@(x)), η·∇@(f@(x)), log@(f@(x)), a·log@(f@(x)), η·∇@(L@(θ)); a scripted
+%          group stays outside (∇@(f)·x^T·d, as `f(x)^2` is f·x²)
+% divergence: #18 (an unknown applied to its group in every bare argument; a scripted group stays outside)
+\section{An unknown applies to its group in a bare argument}
+$\nabla f(x)$ $\eta\nabla f(x)$ $\log f(x)$ $a\log f(x)$ $\eta\nabla L(\theta)$ $\nabla f(x)^{T}d$
+
+% formerly repro math-parse/function_before_an_unbalanced_interval_multiplies
+% witness: 57am R3 planning (root-causer): `\max[a,b)` unparsed on 57am3 (57al2 `maximum@(closed-open-interval@(a, b))`);
+%          57am removed `opfunction tight_term`, and `interval_term` (grammar/builder.rs) is no `fenced_factor`, so
+%          an OPFUNCTION before a half-open interval had no derivation. Perl's `addEasyArgs` takes only a
+%          `balancedClose` (MathGrammar:571-576), `addOpFunArgs` then returns the bare function (:553-558) and
+%          `factorOpenExpr` (:473-481, any CLOSE) makes the interval the next factor
+% oracle:  Perl 0 errors: `maximum * closed-open-interval@(a, b)`, `logarithm * open-closed-interval@(0, 1)`,
+%          `exponential * closed-open-interval@(a, b) * x`, `maximum * open-closed-interval@(a, b) + 1`,
+%          `a * logarithm * open-closed-interval@(0, 1)`, `logarithm@(a, b)`, `supremum@(open-closed-interval@(a, b))`
+% expect:  0 errors; the function multiplies an unbalanced interval, as Perl; a balanced group is still its argument
+\section{A function before an unbalanced interval multiplies it}
+$\max[a,b)$ $\log(0,1]$ $\exp[a,b)x$ $\max(a,b]+1$ $a\log(0,1]$ $\log(a,b)$ $\sup(a,b]$
+
+
+% Rust-only addition to parse/standalone_modifiers.tex (64a013b0a2; ASF migration item 5, modified_term)
+% a comma-list of single-relation modifiers as a function's argument: P@(formulae@(x = 0, y < 0)) — a paren list
+% holding a relation is one Formulae item (57bk; Perl `P * formulae@(x = 0, y < 0)`, #18 applies the unknown)
+\section{Comma-list of relation modifiers as arguments}
+$ P(x = 0, y < 0) $
+
+% witness: 57cb (user rulings 2026-09-29); 2605.16034 `\log^3\omega\log y` (51 formulas), `\log G/\log n`,
+%          2605.11994 `\nabla x\log y`, 2605.02116 / 2605.27137 / 2605.06977 / 2605.02768 `\log\mathbb E_{y'}\exp(…)`
+% Juxtaposed OPFUNCTIONs are separate factors: a bare argument's later items take no OPFUNCTION —
+% "logarithm@(x) * logarithm@(y) * logarithm@(z)", one derivation where Perl's greedy `barearg`
+% (MathGrammar:553-558) reads log@(x·log@(y·log@(z))) among 14 trees (divergence #376; since 57cg a limits head's
+% argument takes one that mentions its bound variable, `\max_i a_i\log b_i`, below); an operator's too,
+% "nabla@(x) * logarithm@(y)"; an ellipsis stays inside only between two items ("logarithm@(x * cdots * y)",
+% `\nabla u\cdots` ∇@(u)·⋯). A function first in the argument still nests: `\log\log x`, `\max_x\log p(x)`,
+% `\arg\min_w`, `\log\exp(x)^2`. A blackboard 𝔼 or ℙ is an OPFUNCTION, expectation or probability: "E@(X)",
+% `\log\mathbb E_{y'}\exp(x)` log@((E _ y')@(exponential@(x))).
+\section{Juxtaposed operator functions are separate factors}
+$\log x\log y\log z$ $\ln x\ln(1+x)$ $\max_i a_i\log b_i$ $\sum_i\log x_i\log y_i$ $\log x_1\cdots\log x_n$
+$\log G/\log n$ $\log^3\omega\log y$ $\exp x\exp y$ $a\log x\log y$ $\log x\cdot\log y$ $\nabla x\log y$
+$\log x\cdots y$ $\log\log x$ $\max_x\log p(x)$ $\min\max f$ $\arg\min_w\|y-Xw\|^2$ $\log\exp(x)^2$
+$\mathbb{E}X$ $\mathbb{E}[X|Y]$ $\mathbb{E}_{x\sim p}[f(x)]$ $\mathbb{P}(A)$ $\tau\log\mathbb{E}_{y'}\exp(x)$ $x\in\mathbb{E}^3$
+
+% 57cb review: a trig function's application still continues the argument; a bare head after a MulOp or
+% BinOp; an ID ellipsis ends no argument, as `\cdots`; a numeric power names a space
+% (projective/Euclidean), no expectation or probability.
+$\log x\sin y$ $\max_j 2\sin\frac{\theta}{2}$ $\nabla u\sin v$ $\log x\sin^2 y$ $\log x\cdot\sin y$
+$a\cdot\log^2$ $x/\log_2$ $\log\circ\exp$ $\mathbb{P}^1\times\mathbb{P}^1$ $\mathbb{P}^n\times\mathbb{P}^m\to X$
+$\mathbb{E}\times\mathbb{E}$ $\mathbb{P}^2\#\overline{\mathbb{P}^2}$ $2\mathbb{E}X$
+$\log x_1\ldots\log x_n$ $\nabla u\ldots$ $\log x\ldots y$ $\log x\,\log y\ldots$
+
+% 57cb review, rounds 2-3: an evaluation bar evaluates a bare or scripted function or operator head (`eval_operand`), as
+% Perl; the glyphs
+% 𝔼/ℙ type as `\mathbb{E}`/`\mathbb{P}` do, a numeric power among any of the scripts naming a space; an ID ellipsis
+% leaves the argument under a script or postfix too. Residuals (divergence #376): `\mathbb{E}^2[X]` stays a letter
+% times the group; a scripted 𝔼 before a scripted group takes the script inside, `\mathbb{E}_x[X]^2` (#351).
+$\log^2|_{x=0}$ $\ln^2|_1^e$ $\left.\log^2\right|_{x=0}$ $\max_i|_{i=1}$ $\mathbb{E}_x|_{x=0}$ $a\log^2|_{x=0}$ $\log|_{x=0}$
+$\sin|_0$ $\sin^2|_0^\pi$ $a\sin|_0$ $\left.\sin\right|_0^\pi$ $\left.\nabla^2\right|_{x=0}$ $\nabla^2|^1_0$ $a\nabla|_0$ $x\log|_0^1$
+$ℙ^{2}(\mathbb{C})$ $𝔼X$ $𝔼[X]$ $\mathbb{P}_{\mathbb{C}}^2(V)$ $\mathbb{P}_k^1 X$
+$\log x\ldots!$ $\log x_{1}\ldots_{n}$ $\nabla u\ldots_{n}$ $\log\ldots$
+$\mathbb{E}^2[X]$ $\mathbb{E}_x[X]^2$ $\mathbb{E}[X]^2$
+
+% 57cd (the 57cb train A/B): an operator takes an expectation's application whole and nests over none —
+% `\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]` (2605.00941), `\operatorname*{argmax}_\theta\mathbb{E}(X_\theta)`
+% (2605.03240); the application ends its argument (`\alpha_t\nabla^\top_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}`, 2605.20593);
+% a closed nest takes it as a bare argument; an expectation with nothing to take is a name.
+$\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]$ $\operatorname*{argmax}_\theta\mathbb{E}(X_\theta)$ $\nabla\mathbb{E}X$
+$\nabla\mathbb{E}_x f$ $\nabla\log_2 x$ $\alpha_t\nabla^{\top}_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}$ $\nabla\mathbb{E}[X]Y$
+$\nabla\log\mathbb{E}[X]$ $\nabla\nabla\mathbb{E}[X]$ $\nabla\mathbb{E}[X]^2$ $\nabla_\theta\mathbb{E}[f]^{\top}$ $\nabla\mathbb{E}(X)!$
+$\nabla\mathbb{E}_x[f]^2Y$ $\nabla\mathbb{E}|X|$ $\nabla\mathbb{E}X^2Y$ $\nabla\mathbb{E}$ $\nabla\mathbb{E}=0$ $\mathbb{E}^{T}(X)$
+% (57cd review) one derivation per site, no refused nest; a closed nest's argument goes on; before an operator 𝔼 is a
+% name; a big operator it takes (57cf, after an operator too: `\nabla\mathbb{E}\int f` ∇@(𝔼@(∫f))), not a derivative
+% (its bare argument would end at the first, 57cj.2 review)
+$\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]$ $\nabla\log\mathbb{E}[X]Y$ $\nabla\sin\mathbb{E}[X]Y$
+$\nabla\mathbb{E}\int f$ $\nabla\mathbb{E}\det A$ $\nabla\mathbb{E}\partial_t u$ $\nabla\mathbb{E}\nabla f$ $\mathbb{E}\sum_i X_i$
+$\nabla\log\mathbb{E}[X]+\nabla\log\mathbb{E}[Y]+\nabla\log\mathbb{E}[Z]$ $\nabla\mathbb{E}[X]^{2}!$ $\int u\,d\mathbb{P}_x(\omega)$
+% ℙ is an operator only where applied (user ruling 2026-09-30: `\mathbb{P}^{-1}\mathbb{Q}` 2605.04101,
+% `\mathbb{P}_{1,1}\mathbb{P}_{1,2}` and `\mathbb{P}_1^\intercal\mathbb{P}_1` 2605.01199, `\mathbb{P}\text{-a.s.}` 2605.20593);
+% a measure after an integral's differential is its variable (`\mathrm{d}\mathbb{P}(\omega)`, 2605.24620); 𝔼 after d or ∂ stays one.
+$\int_\Omega u(\omega)\,\mathrm{d}\mathbb{P}(\omega)$ $\int f\,d\mathbb{P}$ $d\,\mathbb{P}(A)$ $d\,\mathbb{E}[X]$ $\partial\mathbb{E}[L]$
+$\mathbb{P}\text{-a.s.}$ $\vec A=\mathbb{P}^{-1}\mathbb{Q}$ $-\mathbb{P}_{1,1}\mathbb{P}_{1,2}$ $(\mathbb{P}_1^\intercal\mathbb{P}_1\odot\beta)$
+$\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}$ $\mathbb{P}(A)$ $\mathbb{P}_x[\tau<\infty]$ $\mathbb{P}\left(A\right)$ $\mathbb{P}X$
+$\mathbb{E}_u\mathbb{E}_\xi[f]$
+% An alignment cell's unbalanced fences get TeX's null delimiter and 𝔼 stays typed (its letter reading is pruned
+% where the operator reading survives, M3): `\frac{1}{n}\mathbb{E}(X^{T}` (2605.13768), `\mathbb{E}\Big[…\Big|…\Big]\leq\Big(6^{i}\mathbb{E}\Big[…`
+% (2605.07939), `\leq2\mathbb{E}\|d_{t,z}\|^{2}+8\Bigg(` (2605.09094), `-\mathbb{E}_{c,x^{w},x^{l}\sim\mathcal{D}}\log\sigma(`
+% (2605.21123), `+L_{G}^{2}\mathbb{E}\Big[\int_{0}^{h}…\Big]\Big)` (2605.24070).
+$\frac{1}{n}\mathbb{E}(X^{T}$ $\mathbb{E}\Big[X\Big|Y\Big]\leq\Big(6\mathbb{E}\Big[Z\Big|Y\Big]$ $\leq2\mathbb{E}\|d_{t}\|^{2}+8\Bigg(\frac{u}{T(t)}$
+$-\mathbb{E}_{c\sim\mathcal{D}}\log\sigma($ $+L^{2}\mathbb{E}\Big[\int_{0}^{h}|W_{r}|^{2}\mathrm{d}r\Big]\Big)$
+
+% user ruling 2026-09-30 ("follow the mathematical meaning"): an expectation takes the summation-like big operator
+% after it (`semantics::expectation_takes_the_big_operator`) — alone, `\mathbb{E}_{x\sim\rho}\sum_{a}` (2605.06977 A3.Ex64.m2),
+% `\varepsilon\mathbb{E}\int_{0}^{T}` (2605.13204 S2.Ex6.m1), `\mathbb{E}\sup_{g}\int` (2605.03300 S3.E17.m2),
+% `\mathbb{E}\prod_{s=1}^{4}` (2605.22025 A3.Ex75.m1), `\mathbb{E}_{t}\inf_{z}` (2605.07165 S3.Ex134.m2); after its bare
+% argument's coefficients, `\mathbb{E}_{\{…\}}\frac{1}{n}\sum_{i=1}^{n}[…]` (2605.02116 A3.Ex163.m2), `\eta\mathbb{E}_{x\sim\rho}
+% \gamma\sum_{a}` (2605.06977 A3.Ex74.m1); as a function's whole bare argument, `\max_{\pi}\mathbb{E}_{\tau\sim\pi}\sum_{t}`
+% (2605.11975 S6.E24.m1), `\min_{\theta,\alpha}\mathbb{E}\sum_{h}` (2605.11742 S4.E12X.m1), `\Tr\mathbb{E}\prod` (2605.02768
+% S1.Ex1.m1). Another OPFUNCTION kept Perl's product, in the argument too (`\mathbb{E}_{z_j}\min_{\mu}\frac{\tau}{m}\sum_{j}`,
+% 2605.02116 A5.Ex283.m1), until 57cj.23 (user ruling 2026-10-01c: it takes the big operator after its coefficients too). As they read: a group closes the expectation, a sum ends the big operator, a MulOp is no
+% juxtaposition, a DIFFOP no summation (the expectation's bare argument takes the derivative since 57cj.22, user ruling
+% 2026-10-01: `\mathbb{E}X_t\,\partial_t f` 𝔼(X_t·∂_t f)), an unapplied ℙ a letter; `\log\sum` takes the sum since 57cj.22
+% (user ruling Q7, log(∑…)), `\min_\theta\frac1n\sum` too since 57cj.23 (user ruling 2026-10-01c, min_θ((1/n)·∑…)).
+% perl: `E * (1 / n) * (sum _ i)@(X _ i)` (\mathbb{E} an UNKNOWN; divergence: surpass by ruling)
+$\mathbb{E}\sum_{i}X_{i}$ $\mathbb{E}\frac{1}{n}\sum_{i=1}^{n}[X_{i}]$ $\mathbb{E}\,2\sum_{i}X_{i}$ $\mathbb{E}_{x\sim p}\sum_{t}\gamma^{t}r_{t}$
+$\eta\mathbb{E}_{x\sim\rho}\gamma\sum_{a}r_{a}$ $\mathbb{E}_{x}\int f\,d\mu$ $\varepsilon\mathbb{E}\int_{0}^{T}|u(s)|^{2}\,ds$
+$\mathbb{E}\sup_{g}\int g\,d\mu$ $\mathbb{E}\prod_{i}X_{i}$ $\mathbb{E}_{t}\inf_{z}\left\{\phi(z)+z^{2}\right\}$ $\mathbb{E}\det(A)$
+$-\mathbb{E}\frac{1}{n}\sum_{i}X_{i}$ $\frac{1}{n}\mathbb{E}\sum_{i}X_{i}$ $\mathbb{E}X\sum_{i}Y_{i}$ $\sum_{i}\mathbb{E}\sum_{j}X_{ij}$
+$\mathbb{E}\sum_{i}X_{i}\leq\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\sum_{i}X_{i}\cdot c$ $\mathbb{E}\frac{1}{n}\sum_{i}X_{i}\cdot c$ $\mathbb{E}\sum_{i}X_{i}+c$
+$\max_{\pi}\mathbb{E}_{\tau}\sum_{t}r_{t}$ $\nabla_{\theta}\mathbb{E}_{x}\sum_{i}f_{i}$ $\nabla\mathbb{E}\frac{1}{n}\sum_{i}X_{i}$ $\log\mathbb{E}\sum_{i}X_{i}$ $\operatorname{Tr}\mathbb{E}\prod_{i}H_{i}$ $\mathbb{E}_{x}\mathbb{E}_{y}\sum_{i}X_{i}$
+$\mathbb{E}\log\sum_{i}X_{i}$ $\mathbb{E}_{z_{j}}\min_{\mu}\frac{\tau}{m}\sum_{j}\phi_{j}$
+$\mathbb{E}[X]\sum_{i}Y_{i}$ $\mathbb{E}X\cdot\sum_{i}Y_{i}$ $\mathbb{E}X_{t}\,\partial_{t}f$ $\log\sum_{i}x_{i}$ $\min_{\theta}\frac{1}{n}\sum_{i}\ell_{i}$
+$\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\left[\sum_{i}X_{i}\right]^{2}$ $\mathbb{P}\sum_{i}X_{i}$
+% the big operator's operand runs over the product after it, the bare argument being its application; an argument
+% between delimiters ends there (57cf review): `\mathbb{E}\sup_{g}\int g\circ T\,d(\tilde\mu-\mu)` (2605.03300 S3.E17.m3)
+$\mathbb{E}\sup_{g}\int g\circ T\,d\mu$ $\mathbb{E}\int g\circ T\,d\mu$ $\log(\sum_{i}x_{i})\cdot c$ $\mathbb{E}[\sum_{i}X_{i}]\cdot c$ $\nabla(\sum_{i}u_{i})\cdot v$
+% (57cf review) after an operator the operand runs over the term; where the grammar has no reading for the expectation
+% it is the letter Perl reads (`expectation_letter`, M3; the untyped retry before); after a MulOp an expectation takes the
+% big operator after it as after juxtaposition (57cj.22.C2, `juxtaposed_term`): `\log x\cdot\mathbb{E}\sum_i X_i`
+% log@(x)·𝔼@(∑…), as `\log x\cdot\mathbb{E}X` log@(x)·𝔼@(X) (was log@(x·E)·∑…, the letter), and the rows like it:
+% `\nabla f\cdot\mathbb{E}\sum_i X_i` ∇@(f)·𝔼@(∑…), `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i` log@(x)·𝔼@(ℙ(A)·∑…)
+$\nabla\mathbb{E}\sum_i X_iYZ$ $\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt$ $\sin\mathbb{E}\sum_i X_i$ $\nabla\log\mathbb{E}\sum_i X_i$
+$\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i$ $\log x\cdot\mathbb{E}\sum_i X_i$ $\nabla f\cdot\mathbb{E}\sum_i X_i$ $\nabla\mathbb{E}(\to x)$
+
+
+% witness: 57cg (user ruling 2026-09-30, "a scripted operator's scope follows its bound variable"); the 57cd A/B's class
+%          R6 (41 formulas / 6 papers): 2605.02116 A5.Ex275.m1 `\min_{\mu\in\mathbb{R}}\tau\mathbb{E}_{\mathbf{z}}\phi((f(\mathbf{z})-\mu)/\tau)+\mu`
+%          and 28 more (A5.SS2.p9.m1 `\operatorname*{arg\,min}_{\mu\in\mathbb{R}}…`), 2605.26653 A2.E20Xa
+%          `\max_{\bm{\gamma}\in H}4n\exp(…\bm{\gamma}^{(-1/2)})`, 2605.18694 `\min_{\eta>0}\eta\ln\eta`, 2605.09953
+%          `\max_{S\ni\mathcal{M}_{r,1}}e\ln|S|…`; the 57cd sample also 2605.17033 `\min_{1\le i\le N}2\arccos(…q_i…)`,
+%          2605.25633 `\max_{1\le j\le N}\frac{…}{…}\exp(2\xi_j^2)`; no mention, still split: 2605.06831
+%          `\max_{k\notin\{i,j\}}\frac{\pi_k}{\pi_d}\exp(-\kappa)`, 2605.24602 `\max_t\|…\|_2\mathbb{E}_{\bm\epsilon}[…]`, 2605.24231
+%          `\max_{z\in A}|f(z)|\max_{z\in A}|g(z)|` (the second max binds its own z)
+% oracle:  Perl 0 errors: its greedy `barearg` (MathGrammar:321-337, :553-558) takes every later OPFUNCTION, mentioned or not
+% expect:  0 errors; a limits head's bare argument (`\max`, `\min`, `\gcd`, `\Pr`, `argmin`/`argmax`, 𝔼, a starred operator name) takes a later
+%          OPFUNCTION's application that mentions its bound variable free — "(maximum _ i)@(a _ i * logarithm@(b _ i))",
+%          "(minimum _ (mu element-of R))@(tau * (E _ z)@(phi@((z - mu) / tau))) + mu" — the innermost head binding a
+%          mentioned variable takes it; no mention, a nolimits head (`\log_a`, `\exp_p`), `\nabla_x`, an unscripted
+%          head: separate factors, as #376; a big operator (`\lim`, `\sup`) takes its whole operand, as before
+% residual (#380): the scope ends at the first later OPFUNCTION that does not mention the variable — `\max_i a_i\log c\log b_i`
+%          is max_i@(a_i)·log c·log b_i, its last b_i outside the binder (the scope should reach the last mention)
+% divergence: #380 (amends #376: a limits head's bound variable)
+\section{A scripted operator's scope follows its bound variable}
+$\max_i a_i\log b_i$ $\max_x f(x)\log y$ $\min_{\mu}\tau\mathbb{E}_z\phi((f-\mu)/\tau)+\mu$ $\max_\gamma 4n\exp(-\gamma^2)$
+$\min_{\mu\in\mathbb{R}}\tau\mathbb{E}_{z}\phi((z-\mu)/\tau)+\mu$ $\operatorname*{argmin}_{\mu\in\mathbb{R}}\tau\mathbb{E}_{z}\phi((z-\mu)/\tau)+\mu$
+$\max_{\boldsymbol{\gamma}\in H}4n\exp(-c\boldsymbol{\gamma}^{2})$ $\min_{\eta>0}\eta\ln\eta$ $\max_{S\ni M}e\ln|S|$
+$\max_{1\le i\le n}2\arccos(q_i)$ $\max_{k\notin\{i,j\}}\frac{\pi_k}{\pi_d}\exp(-\kappa)$ $\max_{z\in A}f(z)\max_{z\in A}g(z)$
+$\max_{i}x_i\log x_i\log\log x_i$ $\max_i a_i\log b_i\log c$ $\max_i a_i\log c\log b_i$ $\max_i a_i\log b_i c_i$
+$\max_i a_i\log(b_i)c_i$ $\max_i a_i\cdot\log b_i$ $\max_{i,j}a_{ij}\log b_j$ $\max_{x'}f(x')\log x'$ $\max_{j\le i}a_j\log b_i$
+$\max_i a_i\max_j b_j$ $\max_i a_i\max_j b_{ij}$ $\max_i a_i\max_j b_{ij}\log c_j$ $\max_i\min_j a_{ij}\log b_j$
+$\max_i\min_j a_{ij}\log b_i$ $\arg\max_\theta p_\theta\log q_\theta$ $\operatorname*{argmin}_{w}L(w)\log w$
+$\min_x f(x)+\min_y g(y)$ $\lim_{n\to\infty}a_n\log n$ $\sup_{t}\|x_t\|\log t$ $\log_a b\cdot\log_b a$ $\log_2 x\log_2 y$
+$\nabla_x f(x)\log x$ $\operatorname{rank}_K A\log K$ $\mathbb{E}_x f(x)\log g(x)$ $\operatorname{argmin}_w L(w)\log w$
+$\mathbb{E}_{y\sim p}\tau\log\mathbb{E}_{y'}\exp(y\cdot y')$ $\mathbb{E}_x f(x)\log g(y)$
+$\operatorname*{argmin}_w a_w\cdot\max_i b_{iw}\cdot\log c_i$ $\operatorname*{argmin}_w a_w\max_i b_{iw}\log c_i$
+$\max_{a\le x\le b}f(x)\log x$ $\max_{1\le i<j\le n}a_{ij}\log b_j$ $\max_{i\ne j}a_{ij}\log b_i$
+% (57cg.1 review) only an inequality chain binds its interior; the chain's ends are no variables; the letter reading
+% of an expectation keeps a ket (57ch review)
+$\max_{x\in A\subset B}f(x)\log x$ $\max_{a\le x\le b}f(x)\log a$ $\sin\mathbb{E}\sum_i X_i|0\rangle$
+
+% M3 (user directive 2026-09-30: an unparsed variant of a lexeme is a grammatical category, the foundation intentionally
+% ambiguous and disambiguated by pruning): an expectation's letter reading is the grammar's (`expectation_letter`),
+% kept only where no reading takes it as an operator, one expectation at a time — the untyped retry (57cf.1–57ch.1) read
+% every expectation of the formula a letter: `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` E·Y, `\log x\cdot\mathbb{E}\sum_i X_i=
+% \mathbb{E}X` E·X for 𝔼@(Y), 𝔼@(X)
+$\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y$ $\log x\cdot\mathbb{E}\sum_i X_i=\mathbb{E}X$ $\sin\mathbb{E}\sum_i X_i+\mathbb{P}(A)$
+$\nabla\log\mathbb{E}\sum_i X_i\cdot\mathbb{P}(A)$ $\mathbb{E}[Y]+\sin\mathbb{E}\sum_i X_i$
+% (M3 review) the letter reading is the retry's, for every expectation (M3's lexer offer lost these parses; the ℙ row
+% above spells `ℙ.letter` in the retry). Residuals — these rows pin today's retry readings (divergence #379):
+% `\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)` (∇_θ)@(E_x)·log(∑…) (log takes the sum since 57cj.22, Q7), intended
+% (∇_θ)@(𝔼_x@(log ∑…));
+% `\sin\nabla\mathbb{E}\sum_i X_i` sine·∇@(E)·∑… (`\sin\mathbb{E}_x f(x)` sin@(𝔼_x@(f(x))) since 57cj.9, a trig argument taking
+% an OPFUNCTION's application);
+% `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i` log@(x·E)·P@(A)·∑…, intended log(x)·𝔼@(ℙ(A)·∑…);
+% `\cos\mathbb{E}\mathbb{E}\sum_i X_i` cos@(E@(E))·∑…, intended cos@(𝔼@(𝔼@(∑…))) (𝔼 before ∑ takes the sum)
+$\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)$ $\sin\mathbb{E}_x f(x)$ $\nabla\mathbb{E}_x(X)^2!$ $\sin\nabla\mathbb{E}\sum_i X_i$
+$\mathbb{P}(\le t)$ $\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i$ $\cos\mathbb{E}\mathbb{E}\sum_i X_i$
+% witness: user ruling 2026-10-01 (item 2 of the 57cj.21 list; the M3 open question 2): build the expectation-chain route —
+%          `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` ∇(𝔼_x(𝔼_y(∑ Y_i))) (was ∇@(𝔼_x@(E_y·∑…)), the letter retry's); latent in the
+%          3,003 A/B papers
+% expect:  0 errors; each expectation of the chain takes the rest (`expectation_chain_big_operator`)
+\section{An operator takes a chain of expectations}
+$\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i$ $\nabla\mathbb{E}\mathbb{E}\sum_i Y_i$ $\nabla_\theta\mathbb{E}_x\mathbb{E}_y\mathbb{E}_z\sum_i Y_i$
+$\nabla\mathbb{E}_x\mathbb{E}_y\int f\,dy$ $\nabla\mathbb{E}_x\mathbb{E}_y X$ $\cos\mathbb{E}\mathbb{E}\sum_i X_i$ $\nabla\mathbb{E}_x\sum_i Y_i$
+
+\end{document}

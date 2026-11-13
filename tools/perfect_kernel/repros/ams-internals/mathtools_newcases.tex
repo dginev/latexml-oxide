@@ -1,0 +1,14 @@
+% witness: 2604.21785, 2103.12049; run 340: `\newcases` the first error of 93 papers
+% oracle:  pdflatex with mathtools.sty (:1015-1024): 0 errors; a cases with { on the left and } on the right, text conditions
+% engines: rust 65x = error (`\newcases` undefined)
+% expect:  0 errors; a cases construct with both delimiters, the conditions as text; a second (rcases-style,
+%          `{.}{\rbrace}`) with only the right brace and math conditions
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage{mathtools}
+\newcases{lrcases}{\quad}{$\displaystyle##$\hfil}{##\hfil}{\lbrace}{\rbrace}
+\newcases{mrcases}{\quad}{$##$\hfil}{$##$\hfil}{.}{\rbrace}
+\begin{document}
+\[ f = \begin{lrcases} 1 & if $x>0$ \\ 0 & otherwise \end{lrcases} \]
+\[ \begin{mrcases} a & x>0 \\ b & x<0 \end{mrcases} = g \]
+\end{document}

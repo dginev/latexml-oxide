@@ -1,0 +1,151 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nyt/global//global/global/global}
+    \entry{rev}{review}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=37649bb4d7e0dd2c12655bea52ec9485}{%
+           family={Author},
+           familyi={A\bibinitperiod},
+           given={Ann},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{fullhash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{fullhashraw}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{bibnamehash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{authorbibnamehash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{authornamehash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{authorfullhash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{authorfullhashraw}{37649bb4d7e0dd2c12655bea52ec9485}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Atlantic Monthly}
+      \field{month}{4}
+      \field{title}{Review of Things}
+      \field{year}{2000}
+      \field{dateera}{ce}
+      \field{pages}{12\bibrangedash 14}
+      \range{pages}{3}
+    \endentry
+      \entry{cus}{customa}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=37649bb4d7e0dd2c12655bea52ec9485}{%
+           family={Author},
+           familyi={A\bibinitperiod},
+           given={Ann},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{fullhash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{fullhashraw}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{bibnamehash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{authorbibnamehash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{authornamehash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{authorfullhash}{37649bb4d7e0dd2c12655bea52ec9485}
+      \strng{authorfullhashraw}{37649bb4d7e0dd2c12655bea52ec9485}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Atlantic Monthly}
+      \field{month}{4}
+      \field{title}{Custom Thing}
+      \field{year}{2000}
+      \field{dateera}{ce}
+      \field{pages}{12\bibrangedash 14}
+      \range{pages}{3}
+    \endentry
+    \entry{sw}{software}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=d94d78e691a8defd2a04cf1c54abb7c0}{%
+           family={Borenstein},
+           familyi={B\bibinitperiod},
+           given={Mary},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=65c6577710a7502b69cc800b13f5cf20}{%
+           family={Hedges},
+           familyi={H\bibinitperiod},
+           given={Larry},
+           giveni={L\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Biostat}%
+      }
+      \strng{namehash}{3c02222bcf9f6b29bc7001d9d2f69e0c}
+      \strng{fullhash}{3c02222bcf9f6b29bc7001d9d2f69e0c}
+      \strng{fullhashraw}{3c02222bcf9f6b29bc7001d9d2f69e0c}
+      \strng{bibnamehash}{3c02222bcf9f6b29bc7001d9d2f69e0c}
+      \strng{authorbibnamehash}{3c02222bcf9f6b29bc7001d9d2f69e0c}
+      \strng{authornamehash}{3c02222bcf9f6b29bc7001d9d2f69e0c}
+      \strng{authorfullhash}{3c02222bcf9f6b29bc7001d9d2f69e0c}
+      \strng{authorfullhashraw}{3c02222bcf9f6b29bc7001d9d2f69e0c}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Meta Analysis}
+      \field{year}{2014}
+      \field{dateera}{ce}
+    \endentry
+    \entry{bib}{bookinbook}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=3aa3cde8444ac980b28ba1f1af3aaeb4}{%
+           family={Plato},
+           familyi={P\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Hackett}%
+      }
+      \strng{namehash}{3aa3cde8444ac980b28ba1f1af3aaeb4}
+      \strng{fullhash}{3aa3cde8444ac980b28ba1f1af3aaeb4}
+      \strng{fullhashraw}{3aa3cde8444ac980b28ba1f1af3aaeb4}
+      \strng{bibnamehash}{3aa3cde8444ac980b28ba1f1af3aaeb4}
+      \strng{authorbibnamehash}{3aa3cde8444ac980b28ba1f1af3aaeb4}
+      \strng{authornamehash}{3aa3cde8444ac980b28ba1f1af3aaeb4}
+      \strng{authorfullhash}{3aa3cde8444ac980b28ba1f1af3aaeb4}
+      \strng{authorfullhashraw}{3aa3cde8444ac980b28ba1f1af3aaeb4}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Complete Works}
+      \field{title}{Timaeus}
+      \field{year}{1997}
+      \field{dateera}{ce}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

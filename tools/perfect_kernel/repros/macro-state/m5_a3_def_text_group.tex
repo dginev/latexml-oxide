@@ -1,0 +1,11 @@
+% witness: synthetic (m5study a3: a group-local value of a locked name)
+% oracle: pdflatex clean; PDF text: Value: local. After: a and b. 1 
+% engines: rust base 64w-rel (8542e1b1a5; the lock code is unchanged through 72cefe8821) E/F/W=0/0/0; 64zb E/F/W=0/0/0; Perl refuses every :locked redefinition (State.pm:502-517), log m5study/perl/a3_def_text_group.perl.log
+% expect: D1 (locked bindings own their calls): the uses without an argument take the document's definition, as in pdflatex; calls keep the binding
+% status: RED (base) -> GREEN (64zb)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+{\def\text{local}Value: \text.} After: $a\text{ and }b$.
+\end{document}

@@ -1,0 +1,30 @@
+% witness: 0708.4409, 0709.3642, 0811.2675, cs0404055, 0802.0646 (`{pf*}`); 1202.0185, 0711.4590
+%          (`\cty`, `\cny`); 0812.4577 (`\@journal`); 0907.1629 (`\@blstr`); astro-ph0103363 (`\output@glob@notes`)
+% oracle:  pdflatex with 0712.3870's elsart.cls v2.20: 0 errors ("Univ, Paris, France"; "In J. Test. [1]"; "PROOF.
+%          Plain."; "Proof of the claim A boxed proof" and the display; v2.18's `\author` errs under TL 2025)
+% engines: rust 67u2 = 7 errors ({pf} needs amsthm's {@proof}, {pf*} undefined, the internals undefined); Perl 7
+%          errors, the same (KNOWN_PERL_ERRORS #724)
+% expect:  0 errors, 0 warnings; two <ltx:proof>s, the second titled by its argument, its display math kept
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass{elsart}
+\journal{J. Test}
+\makeatletter
+\newcommand\showjournal{In \@journal. [\@blstr]}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{Proofs}
+\author{A. Author}
+\address{Univ, \cty{Paris}, \cny{France}}
+\end{frontmatter}
+\makeatletter\output@glob@notes\makeatother
+\showjournal
+\begin{pf}
+Plain.
+\end{pf}
+\begin{pf*}{Proof of the claim}
+A boxed proof
+$$x^2$$
+\end{pf*}
+\end{document}

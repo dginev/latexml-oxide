@@ -1,0 +1,32 @@
+% The unclaimed-text net's exclusions (frontmatter_stores.rs `net_value_changed`, `executed_code`; insert.rs
+% `keep_unclaimed_net_notes`): of the stores a raw class's own `\@author` prints, one that only repeats the authors'
+% names (every content word claimed by the creators) is no note — nor, made by a pure one-argument setter
+% (`\gdef\@names{#1}`, K11's off-table store), rows of the author block (`hand_offtable_stores`); one still at its class
+% default (a letterhead, `\@jtitle`) and one the class's `\AtBeginDocument` set (`\@jvol`) are no candidates; a store
+% printed only in a running head (`\markboth{\@rh}{\@rh}`) is not read. pdflatex prints all but the running head (no
+% page style shows it), and the frontmatter holds the names; nothing of it is unclaimed document text.
+% witness: none (synthetic: the 98c brief's negative guard); the boilerplate risk of the net's candidate rule
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able Bob Baker", "Journal of Boilerplate Studies", "Volume One Hundred
+%          Twelve", "Ann Able and Bob Baker", "Text."
+% engines: rust 98c0 = 0 errors, 0 warnings, no note; perl = 0 errors, no note
+% expect:  0 errors, 0 warnings; no <ltx:note>
+% status:  GREEN (98c, negative guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netneg.cls}
+\ProvidesClass{netneg}\LoadClass{article}
+\def\@anames{}\def\@names{}\def\@rh{}\def\@jtitle{Journal of Boilerplate Studies}\def\@jvol{}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\names[1]{\gdef\@names{\ignorespaces#1}}
+\newcommand\runninghead[1]{\gdef\@rh{#1}}
+\AtBeginDocument{\gdef\@jvol{Volume One Hundred Twelve}}
+\renewcommand\@author{\@anames\\\@jtitle\\\@jvol\\\@names\markboth{\@rh}{\@rh}}
+\end{filecontents*}
+\documentclass{netneg}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker}
+\names{Ann Able and Bob Baker}
+\runninghead{Running Heads Print Nowhere Here}
+\maketitle
+Text.
+\end{document}

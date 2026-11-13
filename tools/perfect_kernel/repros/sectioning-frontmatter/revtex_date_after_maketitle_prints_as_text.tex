@@ -1,0 +1,25 @@
+% mechanism: REVTeX's `\date` stays a setter after `\maketitle` (revtex4.cls:4603 `\renewcommand*\date[2][\Dated@name]
+%   {\def\@date{#1#2}}`; revtex4-1, revtex4-2 alike), so pdflatex prints a second `\date` nowhere; ours keeps the
+%   kernel's relaxed `\date`, whose argument prints as body text: text the paper does not repeat is kept
+%   (FIDELITY_CHARTER §2; the main session's ruling on RB1c), and a paper that re-enables `\maketitle` for a second
+%   block prints that block's date (2606.04868), which a silent setter would lose (revtex4_cls.rs
+%   `switch_off_author_block_after_maketitle`)
+% witness: 2111.12484, 1207.6709, 1205.3951 (a supplement's date as body text); 2606.04868 (the re-enabled block)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / A. / Text. More."
+% engines: rust int159a, RB1, RB1c: 0 errors, 0 warnings; the body paragraph "Text. May 5 More."
+% expect:  0 errors, 0 warnings; the body paragraph "Text. May 5 More."
+% status:  GREEN
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\date{May 5}
+\maketitle
+More.
+\end{document}

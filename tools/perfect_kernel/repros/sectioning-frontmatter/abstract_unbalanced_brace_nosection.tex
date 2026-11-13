@@ -1,0 +1,17 @@
+% witness: screenplay-pkg/screenplay-pkg (screenplay-pkg.tex:67) — pure §1335 variant
+% oracle:  pdflatex 0 errors ("(\end occurred inside a group at level 1)")
+% engines: rust=3 perl=? (2026-09-06)
+% expect:  0 errors; <ltx:abstract> present containing the body text
+% status:  GREEN (batch 56z, 2026-09-06)
+% mechanism: same as abstract_unbalanced_brace_screenplay but with NO following
+%   sectioning command, so the \@startsection@hook cannot terminate the scan — the
+%   until-reader must close the runaway \abstract{ group at input-end (tex.web §1335
+%   final_cleanup). Exercises the graceful-unwind fix in isolation.
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\date{}
+\maketitle
+\abstract{\begin{quote}Abstract body, no closing brace, no section.
+\end{quote}
+Trailing text still inside the runaway group.
+\end{document}

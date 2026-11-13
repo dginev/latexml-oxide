@@ -1,0 +1,17 @@
+% witness: synthetic (authblk under IEEEtran: 1803.04687, 2202.10869's class; a grade inside `\affil`)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE1 and Bob Baker, Fellow, IEEE2", "1 Univ A, IEEE Region 8", "2 Univ B"
+% engines: rust P5abase = both names' grades; "IEEE Region 8" dropped silently ("Univ A,"); rust P5a = "IEEE Region 8"
+%          Ann's membership
+% expect:  0 errors, 0 warnings; both names' grades; "Univ A, IEEE Region 8" Ann's affiliation
+% status:  RED (P5a) -> GREEN (P5a2)
+\documentclass[journal]{IEEEtran}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann~Able,~\IEEEmembership{Member,~IEEE}}
+\author[2]{Bob~Baker,~\IEEEmembership{Fellow,~IEEE}}
+\affil[1]{Univ A, \IEEEmembership{IEEE Region 8}}
+\affil[2]{Univ B}
+\maketitle
+Body.
+\end{document}

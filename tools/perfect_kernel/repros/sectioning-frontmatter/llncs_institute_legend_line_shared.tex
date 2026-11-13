@@ -1,0 +1,15 @@
+% witness: dev20k 2603.18089, 2608.22772, 2207.13038, 2609.31726, 1905.07852
+% oracle:  pdflatex 0 errors: "Ann Able* , Bob Baker* , and Cy Cole" over the unnumbered institute "Univ A, Town" and
+%          "* Equal contribution"
+% engines: rust 97b = Ann and Bob hold only the legend note, "Univ A, Town" Cy Cole's alone (the legend line's mark sent
+%          the institute down shape (c), `\lx@llncs@institute@sup`, whose split dropped the sole institute's
+%          `_share=authors`); Perl the whole institute, legend included, on Ann alone
+% expect:  0 errors 0 warnings; each of the three holds "Univ A, Town", the two starred names the legend note
+% status:  RED (97b) -> GREEN (97c)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{*} \and Bob Baker\textsuperscript{*} \and Cy Cole}
+\institute{Univ A, Town \\ \textsuperscript{*}Equal contribution}
+\maketitle
+\end{document}

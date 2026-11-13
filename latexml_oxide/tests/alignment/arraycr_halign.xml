@@ -50,7 +50,7 @@
         <tag>(2)</tag>
         <tag role="refnum">2</tag>
       </tags>
-      <text class="ltx_markedasmath"><Math mode="inline" tex="\left[\vbox{\vbox{\vbox{\halign{\hfil$\scriptstyle#$\hfil&amp;&amp;\hfil$#$\hfil\cr&amp;a&amp;b\\&#10;1&amp;x&amp;y\\&#10;}}}}\right]" text="delimited-[]@(Array[[, a, b], [1, x, y]])" xml:id="S0.E2.m1.m1">
+      <text class="ltx_markedasmath"><Math mode="inline" tex="\left[\vbox{\vbox{\halign{\hfil$\scriptstyle#$\hfil&amp;&amp;\hfil$#$\hfil\cr&amp;a&amp;b\\&#10;1&amp;x&amp;y\\&#10;}}}\right]" text="delimited-[]@(Array[[, a, b], [1, x, y]])" xml:id="S0.E2.m1.m1">
           <XMath>
             <XMDual>
               <XMApp>

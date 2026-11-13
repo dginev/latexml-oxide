@@ -1,0 +1,23 @@
+% RED (review revRB1d S2): a repeated REVTeX block naming someone new whose words all print elsewhere ("Ann Baker",
+%   "Univ Y, Town") is switched off with no Warning: the content check holds words, not names, across every entry
+%   (ledger.rs record_switched_off_call; OD #1003). RB1c (round 2) warned "Town Univ Y".
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Bob Baker / Univ Y, City / Text. / 2 / More."
+% engines: rust int160b and RB1d: creators Ann Able (Univ X, Town), Bob Baker (Univ Y, City), 0 warnings.
+% expect:  the loss counted: a Warning naming "Ann Baker" (a gobbled \author held as a whole name)
+% status:  RED
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\affiliation{Univ Y, City}
+\maketitle
+Text.
+\clearpage
+\author{Ann Baker}
+\affiliation{Univ Y, Town}
+\maketitle
+More.
+\end{document}

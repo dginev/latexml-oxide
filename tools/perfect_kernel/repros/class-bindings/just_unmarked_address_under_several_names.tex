@@ -1,0 +1,35 @@
+% witness: 1101.0224 (six names, `\quad` separators, one `\email`, then after `\maketitle` one `\address` with no mark),
+%          0904.1329 (two names, the first marked `$^{1}$`, one unmarked `\address`), both cpc-hepnp.cls; the shape
+%          under just.cls, the same class (`\ProvidesClass{cpc-hepnp}`, just.cls:11; 1603.03230, 1511.03783);
+%          just.cls:100-105, 173-181 (`\email`, `\address`, cut here to those definitions)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker Cy Cole" on one line, "Center for Theory, Univ A, Town, Country"
+%          centred under all three, the footnote "1)0 E-mail: ann@x.org" (0 the stand-in's footnote mark)
+% engines: rust int119a = 0 errors, 0 warnings: the class read raw, the address a body paragraph, the e-mail lost;
+%          91a r1 = the address Cy Cole's alone (review rev91a B1)
+% expect:  0 errors, 0 warnings; the address an affiliation of each of the three names, Ann Able her e-mail
+% status:  RED (int119a; 91a r1) -> GREEN (91a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{just.cls}
+\ProvidesClass{cpc-hepnp}
+\LoadClass{article}
+\newcounter{email}
+\setcounter{email}{1}
+\newcommand{\email}[1]{\protected@xdef\@thanks{\@thanks
+  \protect\footnotetext[0]{\hspace*{-8pt}\arabic{email})\,{E-mail:\,}#1}}\stepcounter{email}}
+\newcommand{\emails}[1]{\footnotetext[0]{\hspace*{-8pt}\arabic{email})\,{E-mail:\,}#1}\stepcounter{email}}
+\renewcommand\maketitle{\par\begingroup\newpage\@maketitle\@thanks\endgroup
+  \setcounter{footnote}{0}\global\let\thanks\relax\global\let\maketitle\relax
+  \global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@title\@empty}
+\renewcommand\@maketitle{\begin{center}\let\footnote\thanks{\Large\bf\@title\par}%
+  {\normalsize\lineskip .5em\vskip 4mm\begin{tabular}[t]{c}\normalsize\@author\end{tabular}}\end{center}}
+\newcommand{\address}[1]{\vspace*{0mm}
+  \begin{center}\vskip -5mm\begin{center}{\footnotesize #1}\end{center}\end{center}}
+\end{filecontents*}
+\documentclass{just}
+\begin{document}
+\title{A Title}
+\author{Ann Able\email{ann@x.org} \quad Bob Baker \quad Cy Cole}
+\maketitle
+\address{Center for Theory, Univ A, Town, Country}
+Body.
+\end{document}

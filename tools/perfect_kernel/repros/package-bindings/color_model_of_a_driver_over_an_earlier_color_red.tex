@@ -1,0 +1,13 @@
+% RED. A driver's model redefining a colour keeps the earlier colour silently (color_sty.rs `\definecolor`'s driver branch).
+% witness: the review of M2 r2 (`driver_earlier`). Pre-existing.
+% oracle:  pdflatex (TL 2025) paints 0.5 grey.
+% engines: int140a and M2 r2 keep #FF0000, E=0 W=0, Info only.
+% expect:  0 errors, 1 Warning:color_model:mymodel, or the colour read from the driver.
+\documentclass{article}
+\usepackage{color}
+\makeatletter\def\color@mymodel#1#2{\c@lor@arg{#2}\edef#1{#2 g #2 G}}\makeatother
+\definecolor{x}{rgb}{1,0,0}
+\definecolor{x}{mymodel}{.5}
+\begin{document}
+A \textcolor{x}{one}.
+\end{document}

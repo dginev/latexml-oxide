@@ -1,0 +1,16 @@
+% witness: base/source2e (ltmath.dtx v1.2i `\changes{…}{Use \cs{protected} for \cs{\bslash}
+%          variant (gh/548)}`: the \protected@edef writes `\cs{\}`, whose re-read `\}` leaves the
+%          `{` open; the golden change history has no such entry)
+% oracle:  pdflatex + makeindex -s gglo.ist, 0 errors: "Change History v1.3 General: Kept entry 1"
+%          (makeindex rejects the unbalanced entry)
+% engines: rust (56js before the fix) = 2 errors (Gullet->readBalanced ran out of input) per entry
+% expect:  0 errors, 1 warning (Warning:malformed:indexentry, Perl pool:4332-4336)
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: an entry whose groups do not balance is discarded, as Perl and makeindex do.
+\documentclass{ltxdoc}
+\RecordChanges
+\begin{document}
+Text.\changes{v1.2i}{2021/04/20}{Use \cs{protected} for \cs{\bslash} variant}
+\changes{v1.3}{2021/05/01}{Kept entry}
+\PrintChanges
+\end{document}

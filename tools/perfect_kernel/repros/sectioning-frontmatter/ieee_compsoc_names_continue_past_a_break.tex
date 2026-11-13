@@ -1,0 +1,24 @@
+% witness: 2408.01902 (IEEEtran journal compsoc: `\author{Meng~Wu, Mingyu~Yan,~\IEEEmembership{Member,~IEEE},
+%          Wenming~Li, \\ Xiaochun~Ye, Dongrui~Fan,~\IEEEmembership{…}, and~Yuan~Xie,~\IEEEmembership{…}%
+%          \IEEEcompsocitemizethanks{…}}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Member, IEEE, Cat Cole," over "Dan Doe, Eve Elm, Senior Member,
+%          IEEE, and Fay Fox, Fellow, IEEE"
+% engines: rust 63m1 = 3 authors, the second line an affiliation of each (", ," where its grades were); Perl one
+%          author holding both lines
+% expect:  0 errors; 6 authors, the second line's grades membership contacts of Eve Elm and Fay Fox
+% status:  RED (63m1) -> GREEN (63m)
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able,
+        Bob~Baker,~\IEEEmembership{Member,~IEEE},
+        Cat~Cole, \\
+        Dan~Doe,
+        Eve~Elm,~\IEEEmembership{Senior~Member,~IEEE},
+        and~Fay~Fox,~\IEEEmembership{Fellow,~IEEE}%
+\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem A. Able, B. Baker and C. Cole are with Univ A.
+\IEEEcompsocthanksitem F. Fox is with Univ B.}}
+\IEEEtitleabstractindextext{\begin{abstract}The abstract.\end{abstract}}
+\maketitle
+Body.
+\end{document}

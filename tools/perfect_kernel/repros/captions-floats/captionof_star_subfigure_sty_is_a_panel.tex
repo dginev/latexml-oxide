@@ -1,0 +1,24 @@
+% witness: 2605.30420 (`\captionsetup{labelformat=empty}` before each hosted `\captionof{subfigure}`; review r2 findings 1-2)
+% oracle:  pdflatex 0 errors: "First" (no label), "(b) SubA", "Figure 1: Whole", "Star", "(a): Whole2", "End text."
+% engines: rust 77s r2 = 1 error ("The environment {subfigure*} is not defined", a visible `{subfigure*}` node), the
+%          hosted panel "(a) First" with its label; Perl = 47 errors (egin{subfigure} calls subfigure.sty's command:
+%          "0.subfigureFirst", "(c) Whole") and the same undefined {subfigure*}
+% expect:  0 errors, 0 warnings; the panel caption "First" with no label, the starred caption "Star" in a panel;
+%          the second figure's caption stays "Figure 2: Whole2" (ours keeps the float's own type in a float)
+% status:  RED (77s r2) -> GREEN (77s r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\begin{minipage}{.4\textwidth}AAA\captionsetup{labelformat=empty}\captionof{subfigure}{First}\end{minipage}
+\subfigure[SubA]{XXX}
+\caption{Whole}
+\end{figure}
+\begin{figure}
+\captionof*{subfigure}{Star}
+\caption{Whole2}
+\end{figure}
+End text.
+\end{document}

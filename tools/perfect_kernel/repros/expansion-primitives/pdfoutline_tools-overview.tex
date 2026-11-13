@@ -1,0 +1,11 @@
+% witness: tools/tools-overview (tools-overview.tex:94)
+% oracle:  pdflatex 0 errors (\pdfoutline is a pdfTeX primitive; writes a PDF bookmark, no typeset output)
+% engines: rust=1 perl=1 (2026-09-03)  <- SHARED: Perl pdfTeX.pool.ltxml:179 only comments \pdfoutline
+% expect:  0 errors; body 'Body text.' present, no 'attr'/'user' junk text in output
+% status:  GREEN (b54t, batch 54o)
+% mechanism: \pdfoutline <attr spec> <action spec> [count N] <general text> — pdfTeX primitive, undefined in Rust engine
+\documentclass{article}
+\begin{document}
+\pdfoutline attr {/C[0 0 1]} user {<< /S/GoToR /F(x.pdf) >>} {[Section 1]}\relax
+Body text.
+\end{document}

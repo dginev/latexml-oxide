@@ -1,0 +1,12 @@
+% witness: 1907.03916 (`\includegraphics[width=\textwidth]{"Figure_2".jpg}`, 5 figures), 2005.11727 (6)
+% oracle:  pdflatex 0 errors, `<use ip_plot.pdf>`: graphics.sty's `\Gin@getbase` tests the name with `\IfFileExists`,
+%          whose `\set@curr@file` drops every `"` (`\unquote@name`, latex.ltx:9654-9666)
+% engines: rust int79a = no candidates, `ltx_missing_image` (only quotes around the whole name were stripped)
+% expect:  0 errors, 0 warnings; the graphic's candidates name ip_plot.pdf
+% status:  RED (int79a) -> GREEN (79g)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics{"ip_plot".pdf}
+\end{document}

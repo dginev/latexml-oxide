@@ -1,0 +1,18 @@
+% witness: 2408.09583 (main.tex:105 `\import{chapters/}{chapters}`, chapters/chapters.tex:7-14
+%          `\import{introduction}{introduction}` … — each chapter's directory beside its same-named file; its
+%          `\statement` macro reads `\subimport{}{statements/x.tex}`)
+% oracle:  pdflatex 0 errors: "1 Introduction", "The introduction text.", "Back in the chapters file.", "See Section 1."
+%          — import.sty:49 resets `\import@path`, :82-88 inputs `intro/intro` with `\input@path` = {intro/}{importnest/},
+%          and the enclosing entry finds importnest/intro/intro.tex
+% engines: rust int94b = the directory importnest/intro read as the file ("Is a directory"), the section and its
+%          label lost, the reference dangling (Perl import.sty.ltxml:44 `\input{#3}` and Pathname.pm's directory match)
+% expect:  0 errors, 0 warnings; the section, its text, its `\subimport{}{parts/part.tex}` part, the text after it, the
+%          reference resolved
+% status:  RED (int94b) -> GREEN (80c: import_sty.rs follows import.sty's `\import@path`, pathname.rs skips directories)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{import}
+\begin{document}
+\import{importnest/}{chapters}
+See Section~\ref{sec:intro}.
+\end{document}

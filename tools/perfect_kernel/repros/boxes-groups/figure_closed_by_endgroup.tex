@@ -1,0 +1,14 @@
+% witness: cond-mat9211014 cond-mat9607130 2106.02397 (figure/\@float closed by \endgroup)
+% oracle:  pdflatex 7 errors (\@xfloat's \color@vbox still open: Missing } inserted, latex.ltx:17479)
+% engines: rust 64ra 1E+1W -> 64y r1 0E -> 64y 1E 0W; Perl 3E
+% expect:  1 Error; the figure ends before 'After fig.'
+% status:  GREEN (64y r2); guard perfect_kernel_batch64y::figure_closed_by_endgroup_is_an_error
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsthm}\newtheorem{thm}{Theorem}
+\begin{document}
+Intro.
+
+\begin{figure} Fig text. \caption{Cap} \endgroup After fig.
+
+Next para.
+\end{document}

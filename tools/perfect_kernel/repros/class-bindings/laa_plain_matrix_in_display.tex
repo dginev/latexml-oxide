@@ -1,0 +1,17 @@
+% witness: astro-ph9609122, astro-ph9809009, astro-ph9503122, astro-ph0002500, astro-ph9901229, astro-ph9610167
+%          (`\documentstyle{l-aa}`; plain `\matrix{…\cr}` in a display)
+% oracle:  pdflatex 0 errors (with the shipped l-aa.sty, which loads no amsmath)
+% engines: rust 65a = 5 errors (the l-aa binding loads aa, aa amsmath, whose environment-only `\matrix` opened an
+%          alignment nothing closed: "Unbalanced \right", "\@startsection Attempt to end mode display_math"); 64w 0;
+%          Perl 0 (OmniBus, no l-aa binding)
+% expect:  0 errors; the equation's XMath holds one XMArray
+% status:  RED (65a) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentstyle{l-aa}
+\begin{document}
+\begin{equation}
+x=\left(\matrix{a & b\cr c & d\cr}\right).
+\end{equation}
+\section{Next}
+Text $a_1$.
+\end{document}

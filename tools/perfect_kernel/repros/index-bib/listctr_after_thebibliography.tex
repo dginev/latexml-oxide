@@ -1,0 +1,23 @@
+% mechanism: `thebibliography` runs `\usecounter{enumiv}` (article.cls:573, latex.ltx:16048), which names the list's
+%   counter in `\@listctr`; asl.cls composes each entry's number from it (`\addtocounter{\@listctr}{1}\the\value
+%   {\@listctr}`, asl.cls:5926-5927, its `\@bib@item` label :5658-5665). Ours and Perl's bibliography never named it.
+% witness: 1005.4193, 0705.0395 (asl.cls; 28 and 43 Errors once GA1 made an undefined `\c@` the error it is)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [1] First entry. [2] Second entry.
+% engines: perl 3 errors (Error:undefined:\c@, 2 × Error:unexpected:\the\c@), 5 warnings, [[0]]; rust int163a 0 errors,
+%   3 warnings (Counter '' was not defined; assuming 0), [[0]]; GA1d0 (GA1 alone) 3 errors, 5 warnings, [[0]]
+% expect:  0 errors, 0 warnings; [[1]]First entry. [[2]]Second entry. (the label staying in the entry's text is the
+%   separate item_label_in_thebibliography_is_the_entry_tag_red)
+% status:  RED (int163a, GA1d0) -> GREEN (GA1d)
+\documentclass{article}
+\makeatletter
+\def\composelist{\addtocounter{\@listctr}{1}\the\value{\@listctr}}
+\def\@wrap@list#1{[#1]}
+\def\bibritem#1{\item[\@wrap@list{\composelist}]\ignorespaces}
+\makeatother
+\begin{document}
+Text.
+\begin{thebibliography}{9}
+\bibritem{a} First entry.
+\bibritem{b} Second entry.
+\end{thebibliography}
+\end{document}

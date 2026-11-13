@@ -1,0 +1,14 @@
+% witness: astro-ph0701731, astro-ph0312263 (mn2e.cls v2.2 :1210-1216 `usedcolumn`: `\newcolumntype{d}[1]{D{.}{.}{#1}}`,
+%          `.` and `,`; Perl mn2e_support.sty.ltxml:18-19 only loads dcolumn)
+% oracle:  pdflatex with astro-ph0701731's mn2e.cls: 0 errors; "A 1.5 / B 22.25" aligned on the point
+% engines: rust 67int17b = 2 errors, 4 warnings (Unrecognized tabular template, Stray alignment "&"); Perl the same
+% expect:  0 errors, 0 warnings; the second column aligned on "."
+% status:  RED (67int17b) -> GREEN (68y)
+% preload: ar5iv.sty
+\documentclass[usedcolumn]{mn2e}
+\begin{document}
+\begin{tabular}{rd{2.1}}
+A & 1.5 \\
+B & 22.25 \\
+\end{tabular}
+\end{document}

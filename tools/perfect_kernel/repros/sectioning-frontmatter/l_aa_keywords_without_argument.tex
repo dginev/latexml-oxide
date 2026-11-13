@@ -1,0 +1,27 @@
+% mechanism: l-aa.sty:648 `\def\keywords{\par\vspace{12pt}\noindent{\bf Key words: }}` takes no argument: the
+%   keywords are a `{keywords}` environment's body or the text after `\keywords` to the paragraph's end. The aa
+%   binding's one-argument `\keywords` read its first letter ("C"), the rest a body paragraph.
+% witness: astro-ph9609156, astro-ph9704023, astro-ph9803302 (environment, 25 papers); astro-ph0001079,
+%   astro-ph9508023 (text, 2 papers)
+% oracle:  pdflatex (with l-aa.sty v3.0 from astro-ph9601070) 0 errors; "Key words: Cosmology: theory; dark matter"
+% engines: rust 64u round 1: keywords "C"; base: the whole text, as an OmniBus classification
+% expect:  0 errors; one `<keywords>` with the whole text, no body paragraph of it
+% status:  RED (64u round 1) -> GREEN (64u)
+% preload: ar5iv.sty
+\documentstyle{l-aa}
+\begin{document}
+\thesaurus{12(12.03.4)}
+\title{Clustering}
+\author{A. Ann}
+\institute{X Univ}
+\maketitle
+\begin{abstract}
+We study clustering.
+\end{abstract}
+\begin{keywords}
+Cosmology: theory; dark matter
+
+\end{keywords}
+\section{Introduction}
+Text.
+\end{document}

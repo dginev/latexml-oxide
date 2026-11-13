@@ -1,0 +1,24 @@
+% mechanism: a binding's marked list (`\lx@add@affiliation@marked`, the cutter `affiliations::entry_calls`) whose e-mail
+%   line carries a mark per address, some inside a brace group of addresses (`$\{${\it\IEEEauthorrefmark{2}bob\_two,
+%   \IEEEauthorrefmark{3}cy\_three}$\}$@x`): a line printing only addresses (P6d: `resolver::prints_only_addresses` on
+%   its reading, formerly `line_addresses` on its tokens) is read by its tokens, not cut at its digested starts, its
+%   addresses placed by their marks
+% witness: 1506.02349 (int166a: the four e-mails cut into fragments `{`, `bob_two`, `} @sutd.edu.sg` on the wrong owners)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One*, Bob Two†, Cy Three‡" over "*Univ A / †‡Univ B /
+%          Emails: *ann_one@ntu.edu.sg, {†bob_two, ‡cy_three}@sutd.edu.sg"
+% engines: int165a: as expected; int166a (P4b4a): Ann "Emails: * ann_one @ntu.edu.sg, {", Bob "bob_two", Cy "† bob_two,
+%          ‡ cy_three } @sutd.edu.sg" as affiliations, W=3
+% expect:  0 errors, 0 warnings; Ann One "* Univ A" + ann_one@ntu.edu.sg, Bob Two "† ‡ Univ B" + bob_two@sutd.edu.sg,
+%          Cy Three "† ‡ Univ B" + cy_three@sutd.edu.sg
+% status:  RED (int166a) -> GREEN (P4b4f; guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann One\IEEEauthorrefmark{1}, Bob Two\IEEEauthorrefmark{2}, Cy Three\IEEEauthorrefmark{3}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A\\
+\IEEEauthorrefmark{2}\IEEEauthorrefmark{3}Univ B\\
+Emails: {\it\IEEEauthorrefmark{1}ann\_one}@ntu.edu.sg,
+$\{${\it\IEEEauthorrefmark{2}bob\_two, \IEEEauthorrefmark{3}cy\_three}$\}$@sutd.edu.sg}}
+\maketitle
+x
+\end{document}

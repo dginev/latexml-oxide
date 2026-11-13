@@ -1,0 +1,24 @@
+% witness: aa.cls v9 (shipped by the papers) loads its linenoaa.sty, whose :45-50 renews {multline}/{multline*} on
+%          amsmath.sty:2535 `\start@multline` and :2623/:2630 `\lendmultline@`/`\rendmultline@` once amsmath is
+%          loaded (2606.12741 2605.25644 2606.23815 2606.30286)
+% oracle:  pdflatex 0 errors; "a+b = c1 (1)", "d+e = f2", "See (1)."
+% engines: rust (CAU1) 4 errors (`\start@multline`, `\rendmultline@` undefined, 2 scripts outside math); perl 9 errors
+% expect:  0 errors 0 warnings; the XML byte-identical to the same document without the renewals
+% status:  RED (CAU1) -> GREEN (SBX1)
+\documentclass{article}
+\usepackage{amsmath,lineno}
+\makeatletter
+\renewenvironment{multline}{\linenomathNonumbers\start@multline\st@rredfalse}{%
+  \iftagsleft@ \@xp\lendmultline@ \else \@xp\rendmultline@ \fi
+  \endlinenomath\ignorespacesafterend}
+\renewenvironment{multline*}{\linenomath\start@multline\st@rredtrue}{\endmultline\endlinenomath}
+\makeatother
+\begin{document}
+\begin{multline}\label{m}
+a+b \\ = c_1
+\end{multline}
+\begin{multline*}
+d+e \\ = f_2
+\end{multline*}
+See \eqref{m}.
+\end{document}

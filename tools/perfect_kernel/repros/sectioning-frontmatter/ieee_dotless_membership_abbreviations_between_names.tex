@@ -1,0 +1,18 @@
+% IEEEtran `\IEEEauthorblockN` with dotless grade abbreviations as list pieces (`\textit{SMIEEE}`, `\textit{FIEEE}`):
+% each is a grade of the name before it, not a name, so the line reads as names.
+% witness: 1906.01719 (`\IEEEauthorblockN{Krishan K. Tiwari$^1$, \textit{SMIEEE}, Eckhard Grass$^{1,2}$, John S.
+%          Thompson$^4$, \textit{FIEEE},\\ and Rolf Kraemer$^{1,3}$ }`)
+% oracle:  pdflatex 0 errors: "Ann Able1 , SMIEEE, Bob Baker1,2 , Cat Cole2 , FIEEE,", "and Dan Dee1", the two
+%          affiliations
+% engines: rust int138a = one creator "Ann Able, SMIEEE, Bob Baker, Cat Cole, FIEEE, and Dan Dee",
+%          Error:frontmatter:merged_creators; Perl one creator
+% expect:  0 errors, 0 warnings; four creators, Ann Able's SMIEEE and Cat Cole's FIEEE their membership contacts
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^1$, \textit{SMIEEE}, Bob Baker$^{1,2}$, Cat Cole$^2$, \textit{FIEEE},\\ and Dan Dee$^{1}$ }\\
+	\IEEEauthorblockA{$^1$University of Alpha, Alphaville\\$^2$University of Beta, Betatown}}
+\maketitle
+\end{document}

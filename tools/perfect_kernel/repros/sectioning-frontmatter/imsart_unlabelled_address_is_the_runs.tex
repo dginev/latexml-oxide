@@ -1,0 +1,34 @@
+% mechanism: imsart.sty's unlabelled `\address` inside `{aug}` belongs to every author since the last one (imsart.sty:1021
+%   resets `\author@fmt@init` there), so `\author{A}\and\author{B}\address{Univ AB}` prints the address under both. The
+%   binding's in-frontmatter unlabelled `\address` is `annotate=run`, as the sty binding's `\affiliation` (latexml_contrib
+%   imsart_cls.rs `\lx@imsart@address@run`), on the class and the sty path alike. OXIDIZED_DESIGN_DIVERGENCES #986
+% witness: review revCR3b finding 3 (probe i8, with 1301.1466's imsart.sty); here as a minimal stand-in of imsart.sty
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" / "Univ AB" / "Body."
+% engines: CR3b: Bob Baker alone holds the address (the API's default owner, the last author)
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each: email, then address "Univ AB"
+% status:  RED (CR3b) -> GREEN (CR4; guard perfect_kernel_batchcr4::imsart_unlabelled_address_is_the_runs)
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesFile{imsart.sty}[2012/01/01 IMS article style, shortened and modified]
+\DeclareRobustCommand\ead[2][label= ,email]{}
+\newenvironment{aug}{}{\par}
+\newenvironment{frontmatter}{\begin{center}}{\end{center}}
+\def\and{\unskip~and~}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\bgroup\def\fnms##1{##1}\def\snm##1{##1}#2\egroup}
+\def\address{\@ifnextchar[{\address@fmt}{\address@fmt[]}}
+\def\address@fmt[#1]#2{\par #2\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{imsart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\begin{aug}
+\author{\fnms{Ann} \snm{Able}\ead[label=e1]{ann@x.edu}}
+\and
+\author{\fnms{Bob} \snm{Baker}\ead[label=e2]{bob@y.org}}
+\address{Univ AB}
+\end{aug}
+\end{frontmatter}
+Body.
+\end{document}

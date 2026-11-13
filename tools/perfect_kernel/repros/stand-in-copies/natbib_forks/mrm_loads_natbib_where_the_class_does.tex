@@ -1,0 +1,16 @@
+% witness: 2506.14995 (MRM.cls:2441-2442 `\usepackage[numbers,super]{NJDnatbib}` under its AMA option, :3191
+%          `\def\refname{REFERENCES}`; its PDF: superscript numbers, "REFERENCES"); 2509.13644 (the MRM binding)
+% oracle:  2506.14995's PDF (pdflatex on this fake class and v2/NJDnatbib.sty, which has no natbib code: "1" and
+%          "[1]" labels, a "REFERENCES" heading)
+% engines: rust 72a r4 = author-year "(?)"-style natbib (the binding loaded natbib optionless before the class's
+%          copy asked for numbers,super), "References" (the copy's \refname declined)
+% expect:  0 errors, 0 warnings; the superscript cite, the postnote inside it; "REFERENCES"; bib.bib1
+% status:  RED (72a r4) -> GREEN (72a r5)
+% preload: ar5iv.sty
+\documentclass[AMA]{MRM}
+\begin{document}
+Text \cite{a} and \cite[p.~5]{a}.
+\begin{thebibliography}{1}
+\bibitem{a} X.~An. A title. 2021.
+\end{thebibliography}
+\end{document}

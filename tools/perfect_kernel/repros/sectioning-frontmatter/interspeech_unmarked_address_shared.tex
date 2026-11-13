@@ -1,0 +1,18 @@
+% witness: 2401.07506, 2406.04791 (10 authors, one address): an `\address` block without marks is the affiliation of all
+%          the authors (Interspeech2024.cls:265 prints it under them)
+% oracle:  pdflatex 0 errors (2406.11727's Interspeech2024.cls): "Ada Byron, Bo Li, Cy Dee", "Department A", "University A, City A"
+% engines: rust 63v4 = an address note of no one; 63w11 = the affiliation on Cy Dee alone
+% expect:  0 errors, 0 warnings; the affiliation on each of the three authors
+% status:  RED (63w11) -> GREEN (63w)
+\documentclass{Interspeech2024}
+\interspeechcameraready
+\title{T}
+\name{Ada}{Byron}
+\name{Bo}{Li}
+\name{Cy}{Dee}
+\address{Department A \\ University A, City A}
+\email{ada@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

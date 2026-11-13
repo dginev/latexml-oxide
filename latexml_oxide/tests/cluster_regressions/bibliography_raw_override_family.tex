@@ -1,0 +1,11 @@
+\documentclass{article}
+\makeatletter
+\def\bibliography#1{%
+  \if@filesw\immediate\write\@auxout{\string\bibdata{#1}}\fi
+  \@input{\jobname.bbl}}
+\makeatother
+\begin{document}
+Text \cite{abnt1}.
+\bibliographystyle{plain}
+\bibliography{abntex2cite_family}
+\end{document}

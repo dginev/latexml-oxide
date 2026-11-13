@@ -1,0 +1,21 @@
+% witness: astro-ph0105133 (emulateapj, `\author{Yu-Qing Lou \altaffilmark{1,\hbox{ }2}, \ \ Chi Yuan
+%          \altaffilmark{2}}`): a control word inside an `\altaffilmark` list prints nothing of the mark
+% oracle:  pdflatex (TL 2025 emulateapj.cls): "Ann Able1, 2, Bob Baker2", "1 Uni One and", "2 Uni Two"
+% engines: rust 97f = Ann Able "Uni One", "Uni Two"; int126a = Ann Able "Uni One" alone (the observer requested
+%          `altaffil:1`, `altaffil:\hbox`, `2` — split at the space, where the binding's `relocate::mark_key` drops the
+%          control word — review rev126a B3); siblings `1,~2`, `1,\,2`, `1, 2` and llncs `\inst{1,\hbox{ }2}` right on
+%          both
+% expect:  0 errors, 0 warnings; Ann Able "Uni One", "Uni Two"; Bob Baker "Uni Two"; the requests `altaffil:1`,
+%          `altaffil:2`
+% status:  RED (int126a) -> GREEN (98a) — perfect_kernel_batch98a::a_control_word_in_an_altaffilmark_list_is_no_label
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1,\hbox{ }2}, Bob Baker\altaffilmark{2}}
+\affil{$^1$Uni One}
+\affil{$^2$Uni Two}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

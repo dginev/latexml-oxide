@@ -1,0 +1,33 @@
+% mechanism: a line under the names of an unmarked block (the names' own lines: aastex's `\altaffilmark`s answered by
+%   `\altaffiltext`) that names a collaboration — in brackets a name opening with "The" and no institution's word, or
+%   one ending in a collaboration word — is a contact on the names of its `\and` group, not every name's affiliation
+%   (`collaboration_line`, `Collaborations`, author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946). Sibling
+%   on the same path (the guard's): article `Ann Able\\ for the ATLAS Collaboration \and Bob Baker\\ Univ B` — Ann
+%   Able's alone, Bob Baker's group none.
+% witness: 1511.01102 (aastex, `… B.~A.~Weaver\altaffilmark{15} \\ (The Nearby Supernova Factory)}`: every one of its
+%   44 names' affiliation since 82r); OPEN_ROWS.md design row on group-level labels
+% oracle:  pdflatex with the paper's own aastex.cls (not in TL 2025) 0 errors: "A. Able,1 B. Baker,2 C. Cole1" over
+%   "(The Nearby Supernova Factory)", the notes "1 Univ A", "2 Univ B"
+% engines: rust 97b: three creators, each with the affiliation "(The Nearby Supernova Factory)" and its altaffiliation;
+%   perl: not run
+% expect:  0 errors, 0 warnings; three creators, each with `<contact role="collaboration">(The Nearby Supernova
+%   Factory)</contact>` and the altaffiliation its mark names
+% status:  RED (97b) -> GREEN (97d)
+% preload: ar5iv.sty
+\documentclass[preprint]{aastex}
+\begin{document}
+\title{T}
+\author{
+    A.~Able,\altaffilmark{1}
+    B.~Baker,\altaffilmark{2}
+    C.~Cole\altaffilmark{1} \\
+    (The Nearby Supernova Factory)
+}
+\altaffiltext{1}{Univ A}
+\altaffiltext{2}{Univ B}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

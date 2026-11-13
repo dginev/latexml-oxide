@@ -1,0 +1,15 @@
+% mechanism: latex.ltx:15966/:15979 `\item` = `\@item[\@itemlabel]`, which boxes `\makelabel{#1}`: a list whose setup
+%   redefines `\makelabel` formats its default labels too. Our `\list@item` applies `\makelabel` only to an `\item[…]`
+%   label (Perl RefStepItemCounter, latex_constructs.pool.ltxml:1381), so the default label is printed bare.
+% witness: synthetic (found by ML1 beside QA45).
+% oracle:  pdflatex 0 errors: "(1) five".
+% engines: rust int160a and ML1: "1"; Perl 0.8.8 "1" (its `\fnum@<ctr>` is `{#1}`, pool:1643).
+% expect:  0 errors, 0 warnings; the tag "(1)".
+% status:  RED (ML1)
+\documentclass{article}
+\newcounter{c}
+\begin{document}
+\begin{list}{\arabic{c}}{\usecounter{c}\def\makelabel#1{(#1)}}
+\item five
+\end{list}
+\end{document}

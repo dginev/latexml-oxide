@@ -1,0 +1,16 @@
+% mechanism: with `[algo2e]` algorithm2e's float is `{algorithm2e}`, and `{algorithm}` algorithm.sty's float.sty float
+%   (`\newfloat{algorithm}`, ruled), whose captions caption makes in its `ruled` style (caption.sty:904-908,
+%   `labelsep=space`): "Algorithm 1 text" (caption_sty.rs `caption_format_tokens`: a float.sty type is caption's, even
+%   one algorithm2e marks as its own).
+% witness: 2204.02306, 1812.03871, 2408.08621 (78y r1: "</tag> Leakage Removal", a stray space before the text)
+% oracle:  pdflatex 0 errors; "Algorithm 1 Leakage Removal"
+% engines: rust int65a: "Algorithm 1" closed by " "; 78y r1: the same with a space before the text
+% expect:  0 errors, 0 warnings; "Algorithm 1" closed by " ", the text right after it
+% status:  RED (78y r1) -> GREEN (78y r2)
+\documentclass{article}
+\usepackage{caption}
+\usepackage{algorithm}
+\usepackage[algo2e,ruled,vlined]{algorithm2e}
+\begin{document}
+\begin{algorithm}[h]\caption{Leakage Removal}x\end{algorithm}
+\end{document}

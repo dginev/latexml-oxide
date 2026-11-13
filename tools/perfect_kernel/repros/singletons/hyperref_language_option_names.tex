@@ -1,0 +1,15 @@
+% witness: review r1 of 59t: a language given to hyperref itself (`\usepackage[ngerman]{hyperref}`,
+%   `\hypersetup{ngerman}`) is a `Hyp` key defined by `\HyLang@DeclareLang` (hyperref.sty:3120-3180) and processed
+%   by `\ProcessKeyvalOptions{Hyp}` (:4066); `vietnamese`/`vietnam` are void options of their own (:3181-3195;
+%   `\documentclass[vietnamese]` + babel: pdflatex "mục 1; Hình 1")
+% oracle:  pdflatex 0 errors; "See Abschnitt 1."
+% engines: rust 59t = "See section 1.": the binding's option loop reads only `key=value` options and never sets the
+%   `Hyp` language keys (RUST-ONLY, as 59s)
+% expect:  0 errors; the section's autoref tag reads "Abschnitt" U+00A0 "1"
+% status:  RED (open)
+\documentclass{article}
+\usepackage[ngerman]{hyperref}
+\begin{document}
+\section{S}\label{s}
+See \autoref{s}.
+\end{document}

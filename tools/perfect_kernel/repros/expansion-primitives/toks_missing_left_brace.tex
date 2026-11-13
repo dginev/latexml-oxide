@@ -1,0 +1,13 @@
+% mechanism: after `\toks0=` TeX requires a left brace (tex.web §1226, §403 scan_left_brace):
+%   `\toks0=x` is "Missing { inserted", after which TeX absorbs up to the next `}` (here the
+%   rest of the file: "File ended while scanning text of \toks", an emergency stop). Rust
+%   keeps Perl's recovery (Gullet.pm:824-842 readTokensValue): the token is the value.
+% witness: batch 56jj review
+% oracle:  pdflatex 4 errors ("Missing { inserted", the runaway, the emergency stop), no output
+% engines: rust=0 errors, "[x]" (56jg-rel, 2026-09-25)
+% expect:  1 error "Missing { inserted", "[x]"
+% status:  GREEN (56jj: read_tokens_value; guard token_kernel_gaps::a_token_list_without_a_brace)
+\documentclass{article}
+\begin{document}
+\toks0=x[\the\toks0]
+\end{document}

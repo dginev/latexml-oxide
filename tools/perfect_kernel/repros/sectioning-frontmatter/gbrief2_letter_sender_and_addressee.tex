@@ -1,0 +1,20 @@
+% witness: g-brief/beispiel2 (g-brief2.cls: the sender's blocks in `\ps@firstpage`'s `\@oddfoot`, :332-426; the
+%   recipient in `\@oddhead`, :310-330 — a page style LaTeXML never typesets), cv/ApplicationLetter
+% oracle:  pdflatex 0 errors; the letterhead prints the sender's name and address, phone and internet blocks, and the
+%   recipient's address
+% engines: rust 59n = 0 errors, none of it in the XML (Wiesenacker, raffzahn@, Mittellos absent); Perl with raw classes
+%   the same (SHARED)
+% expect:  0 errors; <creator role="sender"> (personname + labelled contacts) and <creator role="addressee">
+% status:  RED (59n) -> GREEN (59o: g_brief2_cls.rs, OXIDIZED_DESIGN_DIVERGENCES #412; user ruling 2026-10-01)
+\documentclass{g-brief2}
+\Name{Otto Raffzahn}
+\AdressZeileA{Wiesenacker 25a}
+\TelefonZeileA{+49 000 0000000}
+\InternetZeileA{raffzahn@example.com}
+\Gruss{Mit freundlichen Gr\"u\ss{}en}{1cm}
+\Adresse{Frau\\Else Mittellos}
+\begin{document}
+\begin{g-brief}
+Text.
+\end{g-brief}
+\end{document}

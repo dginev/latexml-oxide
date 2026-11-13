@@ -1,0 +1,22 @@
+% witness: contract/contract-example-en, -de (contract.sty:978 \scr@ifundefinedorrelax{labelformat},
+%          :748-749 \refstepcounter{par}/{sentence} in \contract@everypar)
+% oracle:  pdflatex 0 errors
+% engines: rust=3 perl=(masked) (2026-09-03, b54o) — SHARED (KPE #160)
+% expect:  0 errors; a numbered clause with its <ltx:tag>s, no bare \the
+% status:  GREEN (b54r, batch 54n)
+% guard:   perfect_kernel_batch54::labelformat_is_a_kernel_macro
+% mechanism: latex.ltx:14978 \labelformat is a KERNEL macro since 2019-10-01; missing
+%   in both engines, contract.sty took its pre-2019 fallback \p@sentence=\expandafter
+%   \p@@sentence, whose one-token grab of \thesentence's expansion (\arabic) orphans
+%   {sentence} -> "You can't use } after \the". The typerefnum formatter also handed an
+%   argument-taking \p@<ctr> the token \lx@the@@ instead of \the<ctr> (latex.ltx:14976
+%   shape); both formatters now share \lx@p@the@@.
+% preload: [rawstyles,rawclasses]latexml.sty
+\documentclass{scrartcl}
+\usepackage{contract}
+\begin{document}
+\begin{contract}
+\Clause[title={Foo}]
+Body paragraph triggers the clause everypar.
+\end{contract}
+\end{document}

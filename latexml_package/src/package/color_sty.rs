@@ -1,16 +1,45 @@
-use latexml_core::common::{
-  color::{self, Color, color_from_model_spec},
-  error::emit_error,
+use latexml_core::{
+  common::{
+    color::{self, Color, color_from_model_spec, is_core_model},
+    error::emit_error,
+  },
+  definition::ExpansionBody,
 };
 
 use crate::prelude::*;
+
+/// Perl-faithful spec trim (color.sty.ltxml ParseColor L36-39): strip ONE
+/// balanced outer `{…}` pair — only when the spec both starts with `{` AND
+/// ends with `}` — then whitespace. The former `trim_matches('{','}')`
+/// stripped any number of braces from EITHER end independently, so a color
+/// NAME whose mangled form ends in `}` (T1 active `é` → `…\lx@applyaccent…{e}`,
+/// witness couleurs-fr-doc `xFuchsiaFoncé`) lost its tail at LOOKUP while the
+/// DEFINE side stored it intact — a define/lookup key asymmetry. Both sides
+/// must be the same pure function of the name tokens.
+pub(crate) fn trim_color_spec(spec: &str) -> &str {
+  let spec = spec.trim();
+  if spec.len() >= 2 && spec.starts_with('{') && spec.ends_with('}') {
+    spec[1..spec.len() - 1].trim()
+  } else {
+    spec
+  }
+}
 
 /// Parse a color from an optional model name and a spec string.
 /// If model is given, constructs the Color directly.
 /// If no model, looks up the named color from state.
 /// Perl: ParseColor($model, $spec) in color.sty.ltxml
 pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
-  let spec = spec.trim().trim_matches(|c| c == '{' || c == '}').trim();
+  let spec = trim_color_spec(spec);
+  // Under xcolor, a model is xcolor's to read (xcolor.sty.ltxml ParseXColor): its
+  // derived models (`HTML`, `RGB`, `Gray`, …) are no unknown model here (nicematrix
+  // `\cellcolor[HTML]{…}` in a `\CodeBefore`: the nicematrix manual, 64zf review probe col/nm.tex).
+  if let Some(model) = model
+    && !model.trim().is_empty()
+    && package_loaded("xcolor")
+  {
+    return xcolor_sty::parse_xcolor(Some(model), spec, None);
+  }
   if let Some(model) = model {
     let model_lc = model.to_lowercase();
     if model_lc == "named" {
@@ -27,7 +56,7 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
       // Perl reaches the same end-state (it loads dvipsnam for this paper);
       // witness 2005.01533 (revtex4-2 → hyperref preloads color →
       // `\definecolor{red}{named}{Red}` → `named_Red` undefined).
-      if lookup_value(&format!("color_{key}")).is_none() {
+      if lookup_value(&color_key(&key)).is_none() {
         let _ = input_definitions("dvipsnam", InputDefinitionOptions {
           extension: Some(Cow::Borrowed("def")),
           noerror: true,
@@ -36,9 +65,108 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
       }
       return lookup_color_obj(&key);
     }
+    // color.sty.ltxml:44 `Color($model, …)`, whose constructor reports a model
+    // that is neither core nor derived (Color.pm:59-61); the recovery is Black,
+    // as LaTeX's "Undefined color model" leaves the current color alone. A package's
+    // driver model is known (`driver_color_model`): the alternate its binding gives,
+    // else no colour, said by a Warning.
+    if driver_color_model(model) {
+      let spec_tokens = mouth::tokenize_internal(TeXString::assembled(spec.to_string()));
+      if let Ok(Some((alternate, alternate_spec))) = driver_alternate_color(model, &spec_tokens) {
+        return parse_color(Some(&alternate), &alternate_spec);
+      }
+      report_unconverted_model(model.trim());
+    } else if !is_core_model(&model_lc) {
+      report_unrecognized_model(&model_lc);
+    }
     color_from_model_spec(&model_lc, spec)
   } else {
     lookup_color_obj(spec)
+  }
+}
+
+/// Is `model` none of LaTeXML's colour models but one a package's driver code defines, `\color@<model>` (color.sty:118's
+/// test of a model, `\@ifundefined{color@#2}`; spotcolor.sty:71)?
+fn driver_color_model(model: &str) -> bool {
+  let model_lc = model.trim().to_lowercase();
+  !model_lc.is_empty()
+    && model_lc != "named"
+    && !is_core_model(&model_lc)
+    && !package_loaded("xcolor")
+    && has_meaning(&T_CS!(s!("\\color@{}", model.trim())))
+}
+
+/// The alternate colour, as a model and a spec, that a driver model's binding gives for `spec`: its
+/// `\lx@color@alternate@<model>{<spec>}` expands to `{<model>}{<spec>}`, or to nothing when it has none (the
+/// spotcolor binding: the CMYK of the spot colour's `\AddSpotColor`, spotcolor.sty:31-41).
+fn driver_alternate_color(model: &str, spec: &Tokens) -> Result<Option<(String, String)>> {
+  let alternate = T_CS!(s!("\\lx@color@alternate@{}", model.trim()));
+  if !has_meaning(&alternate) {
+    return Ok(None);
+  }
+  let mut call = vec![alternate, T_BEGIN!()];
+  call.extend(spec.unlist_ref().iter().copied());
+  call.push(T_END!());
+  let expanded = do_expand(Tokens::new(call))?;
+  let mut groups: Vec<String> = Vec::new();
+  let (mut depth, mut group) = (0usize, String::new());
+  for t in expanded.unlist_ref() {
+    match t.get_catcode() {
+      Catcode::BEGIN => {
+        if depth > 0 {
+          group.push('{');
+        }
+        depth += 1;
+      },
+      Catcode::END => {
+        depth = depth.saturating_sub(1);
+        if depth == 0 {
+          groups.push(std::mem::take(&mut group));
+        } else {
+          group.push('}');
+        }
+      },
+      _ if depth > 0 => t.with_str(|s| group.push_str(s)),
+      _ => {},
+    }
+  }
+  Ok(match groups.as_slice() {
+    [model, spec] if !model.trim().is_empty() => {
+      Some((model.trim().to_string(), spec.trim().to_string()))
+    },
+    _ => None,
+  })
+}
+
+/// Perl Color.pm:61 `Error('unexpected', $model, undef, "Unrecognized color
+/// model '$model'")`, raised by `Color::new` for a model that is neither core
+/// nor registered by `DefColorModel`.
+pub(crate) fn report_unrecognized_model(model: &str) {
+  // `emit_error` (no `Error!`: the callers return a `Color`), with the locator.
+  emit_error(
+    "unexpected",
+    model,
+    &latexml_core::generate_message!(format!("Unrecognized color model '{model}'")),
+  );
+}
+
+/// A model raw code defines (xcolor's `\XC@mod@<model>`, xcolor.sty:565; color's `\color@<model>`, color.sty:118) is
+/// known, as pdflatex takes it, and LaTeXML has no conversion for it: colorspace.sty's `\definecolorspace` models
+/// (:316, :325, :335, :346) and its `&spot` (:59), whose tint transforms only the PDF driver computes. The words stay
+/// and the colour is lost (the recovery is black), so say so: one counted `Warning:color_model:<model>` per model, in
+/// a global state value, so a repeat in a title or a heading stays quiet and a rehearsal's rollback takes it back with
+/// its record. KNOWN_PERL_ERRORS #958. Perl errs on every use (Color.pm:59-61).
+pub(crate) fn report_unconverted_model(model: &str) {
+  let reported = s!("color_model_reported_{model}");
+  if !lookup_bool(&reported) {
+    assign_value(&reported, true, Some(Scope::Global));
+    Warn!(
+      "color_model",
+      model,
+      s!(
+        "The color model '{model}' is defined by raw code and has no conversion here; its colors are not rendered (black)"
+      )
+    );
   }
 }
 
@@ -85,12 +213,16 @@ fn try_color_algebra(name: &str) -> Option<Color> {
 /// Used as the recursive base case from `try_color_algebra` to avoid
 /// infinite descent when neither half of a `!` expression is a base
 /// named color.
+/// The state key of a named color (one spelling per name: `Tokens`' Display
+/// is the token→string boundary that normalizes it).
+pub fn color_key(name: &str) -> String { s!("color_{}", name.trim()) }
+
 fn lookup_color_obj_no_algebra(name: &str) -> Color {
   let name = name.trim();
   if name.is_empty() {
     return color::BLACK;
   }
-  let key = s!("color_{name}");
+  let key = color_key(name);
   match lookup_value(&key) {
     Some(Stored::String(sym)) => {
       let stored_str = with(sym, |s| s.to_string());
@@ -115,7 +247,7 @@ pub fn lookup_color_obj(name: &str) -> Color {
   if let Some(mixed) = try_color_algebra(name) {
     return mixed;
   }
-  let key = s!("color_{name}");
+  let key = color_key(name);
   match lookup_value(&key) {
     Some(Stored::String(sym)) => {
       let stored_str = with(sym, |s| s.to_string());
@@ -157,6 +289,48 @@ pub fn lookup_color_obj(name: &str) -> Color {
           }
         }
       }
+      // Raw-interop fallback: real xcolor stores colors as
+      // `\csname\string\color@<name>\endcsname` → `\xcolor@{}{}{<model>}{<spec>}`,
+      // and raw packages create colors by defining that macro DIRECTLY —
+      // ydoc-desc.sty L22-24 defines `\color@none` = `\xcolor@{}{}{}{}` (an
+      // intentionally EMPTY color, so `\colorlet{cls}{none}` "uncolors")
+      // — the `wisdom_latexml_reimpl_internal_name_mismatch` shape. Read the
+      // raw storage before assuming Black (5-bundle `'none'` cluster,
+      // macros2e/ydoc family; real pdflatex is clean on these docs).
+      let storage_cs = T_CS!(s!("\\\\color@{name}"));
+      // The REPLACEMENT TEXT, not an expansion: `\xcolor@` is a real macro
+      // (xcolor.sty:603 `\def\xcolor@#1#2#3#4{#2}`, the "type" slot), so
+      // `do_expand` collapsed the payload to `#2` = "" and the textual guard
+      // below fell through to "Can't find color named 'none'" (iodhbwm 147
+      // errors, ydoc-desc.sty:22; Perl identical). Guard:
+      // `perfect_kernel_batch54::xcolor_storage_macro_is_read_as_a_body`.
+      if let Ok(Some(defn)) = lookup_definition(&storage_cs)
+        && let Some(ExpansionBody::Tokens(payload)) = defn.get_expansion()
+      {
+        // Payload shape: `\xcolor@ {}{}{<model>}{<spec>}` — grab the last
+        // two braced groups textually.
+        let text = payload.to_string();
+        let parts: Vec<&str> = text.split('{').collect();
+        if parts.len() >= 5 {
+          let model = parts[parts.len() - 2].trim_end_matches('}').trim();
+          let spec = parts[parts.len() - 1].trim_end_matches('}').trim();
+          if model.is_empty() && spec.is_empty() {
+            // Empty color = "no color": inherit (render as default ink),
+            // silently — matching real xcolor's behavior for this storage.
+            return color::BLACK;
+          }
+          // A model raw code defined is read as any other: colorspace.sty:78's spot colours are stored
+          // `\xcolor@{}{/&<name> cs …}{&spot}{1}` (a `\definespotcolor` in a group leaves only that behind), and
+          // their colour is lost with a Warning, not silently (`report_unconverted_model`). Any other model keeps this
+          // read: a payload saying `named` would come back here through `lookup_color_obj`, and one no code defined
+          // (`{foo}{1}`) has its PDF literal for pdflatex and no Error (the review of M2 r2's `rawstore`).
+          return if model != "named" && is_defined_token(&T_CS!(s!("\\XC@mod@{model}"))) {
+            xcolor_sty::parse_xcolor(Some(model), spec, None)
+          } else {
+            color_from_model_spec(model, spec)
+          };
+        }
+      }
       // Perl color.sty.ltxml L50-53:
       //   AssignValue('color_'.$spec => Black);
       //   Error('unexpected', $spec, $STATE->getStomach,
@@ -167,7 +341,7 @@ pub fn lookup_color_obj(name: &str) -> Color {
       // because that macro is return-based (`Fatal!` at threshold) and
       // `lookup_color_obj` returns `Color`, not `Result<Color>`.
       assign_value(
-        &s!("color_{name}"),
+        &color_key(name),
         Stored::String(pin(color::BLACK.to_stored())),
         None,
       );
@@ -186,6 +360,11 @@ pub fn lookup_color_obj(name: &str) -> Color {
 pub fn lookup_color(name: &str) -> String { lookup_color_obj(name).to_attribute() }
 
 LoadDefinitions!({
+  // color.sty:26 `\newif\ifcolors@ \colors@true` (the `monochrome` option
+  // clears it): raw packages test it (beamer themes under the luatex profile:
+  // neoschool, beamerthemeCelestia). The binding stands in for color.sty.
+  RawTeX!(r"\newif\ifcolors@ \colors@true");
+
   //======================================================================
   // Ignorable options (mostly drivers)
   for option in &[
@@ -253,6 +432,33 @@ LoadDefinitions!({
     let name_str = name_expanded.to_string();
     let model_str = model_expanded.to_string();
     let spec_str = spec_expanded.to_string();
+    // color.sty:117-122 accepts any model whose driver macro `\color@<model>` exists, as a package defines one for its
+    // own model (spotcolor.sty:71 `\color@spotcolor`): such a colour is the driver's, which LaTeXML does not render, so
+    // the name keeps the colour it had (ieeeaccess.cls:131 `\definecolor{accessblue}{spotcolor}{PANTONE3015C,1.0}` after
+    // the binding's CMYK `accessblue`; 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467). Perl
+    // Color.pm:61 errs (KNOWN_PERL_ERRORS #958).
+    if driver_color_model(&model_str) {
+      if has_value(&color_key(&name_str)) {
+        Info!("color", model_str, s!("Color {name_str} of the driver's model '{model_str}' is not rendered; its earlier definition stands"));
+      } else {
+        // (a name defined first here: the driver's alternate where its binding gives one, else black, which loses it)
+        let color = match driver_alternate_color(&model_str, &spec_expanded)? {
+          Some((model, spec)) => {
+            Info!("color", model_str, s!("Color {name_str} of the driver's model '{model_str}' is not rendered; defined as its alternate {model} {spec}"));
+            parse_color(Some(&model), &spec)
+          },
+          None => {
+            report_unconverted_model(model_str.trim());
+            color::BLACK
+          },
+        };
+        def_color(&name_str, &color, None)?;
+      }
+      let reversion_tokens = Invocation!("\\definecolor",
+        vec![Some(name_expanded), Some(model_expanded), Some(spec_expanded)]);
+      return Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
+        reversion_tokens, SymHashMap::default()))]);
+    }
     // Use parse_color to handle all models including "named" lookups
     let color = parse_color(Some(&model_str), &spec_str);
     def_color(&name_str, &color, None)?;
@@ -324,6 +530,14 @@ LoadDefinitions!({
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
       reversion_tokens, SymHashMap::default()))])
   });
+  // xcolor.sty:762-763 `\color` = `\@ifnextchar[\@undeclaredcolor\@declaredcolor`:
+  // the named-color branch `\@declaredcolor#1` (:792) and the modelled branch
+  // `\@undeclaredcolor[#1]#2` (:764) are called DIRECTLY by fancyqr.sty:20-22
+  // (`\@declaredcolor{tl!50!br}`); both engines bind `\color` monolithically
+  // and lacked them (KPE #177). Guard:
+  // `perfect_kernel_batch54::color_switch_branches_are_defined`.
+  DefMacro!("\\@declaredcolor{}", "\\color{#1}");
+  DefMacro!("\\@undeclaredcolor[]{}", "\\color[#1]{#2}");
 
   // \pagecolor[model]{spec}
   // Perl: returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
@@ -341,6 +555,14 @@ LoadDefinitions!({
       reversion_tokens, SymHashMap::default()))])
   });
 
+  // color.sty:110-112 `\protected\def\nopagecolor{\@ifundefined{no@page@color}
+  // {\PackageInfo{color}{nopagecolor not supported}}{\no@page@color}}` — a driver
+  // capability (pdftex.def:141 `\no@page@color` = `\global\GPT@pagecolorfalse`):
+  // page-level paint only, nothing to carry into the document. Perl has no binding
+  // (color.sty.ltxml); xcolor inherits it. Witness: ffslides-doc.
+  // Guard: `perfect_kernel_batch56::beamer_transitions_and_nopagecolor_are_noops`.
+  def_macro_noop("\\nopagecolor")?;
+
   // \normalcolor — restores color from preamble
   DefPrimitive!("\\normalcolor", {
     let color = match lookup_value("preambleTextcolor") {
@@ -353,26 +575,43 @@ LoadDefinitions!({
     merge_font(fontmap!(color => color));
   });
 
-  // \textcolor[model]{spec}{text}
+  // \textcolor[model]{spec}{text}; color.sty:104 `\@textcolor` is
+  // `\protect\leavevmode{\color#1{#2}#3}`: the paragraph starts before the colour
+  // group, so `\everypar` material stays uncoloured and a leading `\hbox` is in
+  // horizontal mode (Perl color.sty.ltxml has no `\leavevmode`).
   DefMacro!(
     "\\textcolor[]{}{}",
-    "{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}"
+    "\\leavevmode{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}"
   );
 
-  // \colorbox[model]{spec}{text}
+  // \colorbox[model]{spec}{text}; color.sty:163-164 `\color@b@x` opens with
+  // `\leavevmode`, so the box starts the paragraph (Perl color.sty.ltxml:105 is the
+  // bare `\hbox`, which does not, and the space after it was dropped; arXiv
+  // 2605.21713 appendix_a.tex:186).
   DefMacro!(
     "\\colorbox[]{}{}",
-    "\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
+    "\\leavevmode\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
   );
 
-  // \fcolorbox[model]{framespec}{bgspec}{text}
-  DefConstructor!("\\fcolorbox[]{}{} Undigested",
+  // \fcolorbox[model]{framespec}{bgspec}{text} — the two color names are read
+  // undigested and expanded to strings (batch 56at, the xcolor twin; Perl
+  // color.sty.ltxml:108 digests them and errors on a `_` in a name). It starts the
+  // paragraph as color.sty's `\color@b@x` does (163-164 `\leavevmode`), like the
+  // xcolor twin, and its body is the `\hbox`'s: restricted horizontal, not Perl's
+  // `internal_vertical`, which split the paragraph around it (KPE #336, #293).
+  DefConstructor!("\\fcolorbox[] Undigested Undigested Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
-    mode => "internal_vertical",
+    mode => "restricted_horizontal", enter_horizontal => true,
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
-      let fspec_str = whatsit.get_arg(2).map(|f| f.to_string()).unwrap_or_default();
-      let bspec_str = whatsit.get_arg(3).map(|b| b.to_string()).unwrap_or_default();
+      let fspec_str = match whatsit.get_arg(2) {
+        Some(f) => do_expand(f.revert()?)?.to_string(),
+        None => String::new(),
+      };
+      let bspec_str = match whatsit.get_arg(3) {
+        Some(b) => do_expand(b.revert()?)?.to_string(),
+        None => String::new(),
+      };
       let text_tokens = whatsit.get_arg(4).map(|t| t.revert()).transpose()?;
 
       let framecolor = parse_color(model_str.as_deref(), &fspec_str);
@@ -413,6 +652,13 @@ LoadDefinitions!({
   DefMacro!("\\color@hbox", "\\hbox\\bgroup\\color@begingroup");
   DefMacro!("\\color@vbox", "\\vbox\\bgroup\\color@begingroup");
   DefMacro!("\\color@endbox", "\\color@endgroup\\egroup");
+  // color.sty:155-156 (xcolor.sty:886-887 the same): a block of the current colour the size of a box, set before
+  // it — what `\colorbox` lays under its text, and what textpos.sty:328-331 lays under a coloured `{textblock}`
+  // (`\textblockcolour`; 2305.15117, 2206.12186, 2407.11064, adsphd.cls). Perl's color.sty.ltxml lacks it
+  // (KNOWN_PERL_ERRORS #849).
+  RawTeX!(
+    r"\def\color@block#1#2#3{{\set@color\rlap{\ifcolors@\vrule\@width#1\@height#2\@depth#3\fi}}}"
+  );
 
   //========================
   // Default defined colors — Perl L136-145 runs these through RawTeX as

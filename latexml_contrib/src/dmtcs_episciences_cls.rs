@@ -16,7 +16,13 @@ LoadDefinitions!({
   // dmtcs-specific setters below are defined AFTER and override OmniBus.
   // Witness 1904.12329 (`\received{}`/`\revised{}`/`\acknowledgements`).
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // dmtcs-episciences.cls loads no amsmath (1904.05533's, 2209.09223's copies): amsmath's commands for papers that use
+  // them unloaded, its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");
@@ -64,4 +70,24 @@ LoadDefinitions!({
   // \keywords{text} — L311: stores keywords (`\gdef\@keywords{#1}`).
   // Preserve as frontmatter keywords.
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  // dmtcs-episciences.cls (1211.0978's copy :225-236, as 115 of 120 sampled):
+  // `\publicationdetails{volume}{year}{issue}{number}{id}` sets the first page's head, "DMTCS vol. <volume>:<issue>,
+  // <year>, #<number>", linked to the volume's page, and the copyright line with its license (:231-235): the reference
+  // and the license, as pubnotes. (Under the
+  // class's `ojs` option a four-argument form (:56-70) replaces it; no sampled paper passes `ojs`.) The number sets of
+  // the class, :483-487. Run 340: 113 of 120 sampled papers call `\publicationdetails` (~320 first errors; 1211.0978).
+  // The id (#5) is only the head's link target, no printed text: the binding's declared drop, so the title-page check
+  // wants none of it (OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
+  DefMacro!(
+    "\\publicationdetails{}{}{}{}{}",
+    "\\lx@add@pubnote[role=journalref]{DMTCS vol. #1:#3, #2, \\##4}\
+     \\lx@add@copyright{#2 by the author(s)}\
+     \\lx@add@pubnote[role=license]{Distributed under a Creative Commons Attribution 4.0 International License}",
+    drops => [5]
+  );
+  RawTeX!(
+    r"\newcommand{\reals}{\ensuremath{\mathbb R}}\newcommand{\rationals}{\ensuremath{\mathbb Q}}
+\newcommand{\naturals}{\ensuremath{\mathbb N}}\newcommand{\integers}{\ensuremath{\mathbb Z}}
+\newcommand{\complexes}{\ensuremath{\mathbb C}}\newcommand{\primes}{\ensuremath{\mathbb P}}"
+  );
 });

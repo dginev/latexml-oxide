@@ -1,0 +1,13 @@
+% mechanism: `\setcounter`/`\addtocounter` of an undefined counter go to `\@nocounterr` without
+%   reading the value (latex.ltx:10115-10122 `\@ifundefined{c@#1}{\@nocounterr{#1}}{…#2…}`), so
+%   nothing of it is typeset; the braced read had handed its rest back.
+% witness: batch 56jr merge review (F4)
+% oracle:  pdflatex 2 errors (No counter 'nosuch' defined): "AB C"
+% engines: rust (56jm) = "AB C" (the rest dropped with everything else); the first 56jr cut "AxB xC"
+% expect:  0 errors (Rust warns); "AB C"
+% status:  GREEN (56jr)
+\documentclass{article}
+\def\foo{x}
+\begin{document}
+A\setcounter{nosuch}{3\foo}B \addtocounter{nosuch}{1\foo}C
+\end{document}

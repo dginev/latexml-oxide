@@ -1,0 +1,22 @@
+% acmart's `\author{Ann Able}\author{Bob Baker}\affiliation{…}\email{able@x.org}\email{baker@x.org}`: the two names share
+% one block (acmart prints both names, the affiliation, then the two addresses), so each address is the name's it spells,
+% not the last author's by position (`place::shared_block_email_labels`; the queue's respell, the reading writing no
+% acmart flush).
+% witness: 2310.06444 (x4), 2601.17008, 1907.07581, 2504.00797 (CL169)
+% oracle:  pdflatex 0 errors: "Ann Able", "Bob Baker", "X Univ", "able@x.org", "baker@x.org"
+% engines: rust int168a = right (the DOM respell); rust int169a = both addresses on Bob Baker
+% expect:  0 errors, 0 warnings; able@x.org on Ann Able, baker@x.org on Bob Baker, the affiliation on both
+% status:  GREEN (P6e2)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{\institution{X Univ}\city{C}\country{D}}
+\email{able@x.org}
+\email{baker@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}

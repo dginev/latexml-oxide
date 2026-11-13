@@ -1,0 +1,24 @@
+% mechanism: a membership grade an author writes after the name's comma (`Cat Cole\textsuperscript{1},
+%   \textit{Fellow, IEEE}`; unbraced `Bob Baker, Member, OSA`) is the author's `membership` contact, the one IEEEtran's
+%   `\IEEEmembership` makes of the grade it prints, no part of the name (`\lx@add@author`'s `membership_read_out`,
+%   author_block/name_text.rs `written_membership_out`; OXIDIZED_DESIGN_DIVERGENCES #967); the marks and notes after the
+%   grade stay the name's.
+% witness: 2107.05093 (IEEEtran, `Pei-Yung Hsiao\textsuperscript{3}, \textit{Member, IEEE}, and Li-Chen
+%   Fu\textsuperscript{1}, \textit{Fellow, IEEE} \\ \IEEEauthorblockA{…}`); census132 row 10 (NAMETAIL)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Member, OSA, and Cat Cole1 , Fellow, IEEE",
+%   "1 Univ X", "2 Univ Y", the unmarked footnote "Funded."
+% engines: rust int134b: personnames "Bob Baker, Member, OSA", "Cat Cole, Fellow, IEEE"; perl: the grades creators of
+%   their own ("Member, IEEE", "Fellow, IEEE")
+% expect:  0 errors, 0 warnings; three creators, Bob Baker's and Cat Cole's grades their membership contacts, each
+%   author's affiliation by its mark, Cat Cole's note after her grade
+% status:  RED (int134b) -> GREEN (106c)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2}, Member, OSA, and Cat Cole\textsuperscript{1}, \textit{Fellow, IEEE}\thanks{Funded.} \\
+\IEEEauthorblockA{\textsuperscript{1}Univ X\\
+\textsuperscript{2}Univ Y}}
+\maketitle
+Text.
+\end{document}

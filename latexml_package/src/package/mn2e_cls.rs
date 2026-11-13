@@ -1,4 +1,6 @@
-use crate::prelude::*;
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
+use crate::{prelude::*, shipped_class::shipped_class_text};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -15,9 +17,13 @@ LoadDefinitions!({
   DeclareOption!("usenatbib", {
     AssignValue!("@usenatbib" => 1i64);
   });
-  DeclareOption!("usedcolum", {
-    AssignValue!("@usedcolum" => 1i64);
-  });
+  // `usedcolumn`, which mn2e_support reads as `@usedcolumn`; Perl mn2e.cls.ltxml:24 declares `usedcolum` (KNOWN_PERL_ERRORS
+  // #500). The misspelling is kept as an alias.
+  for option in ["usedcolumn", "usedcolum"] {
+    DeclareOption!(option, {
+      AssignValue!("@usedcolumn" => 1i64);
+    });
+  }
   DeclareOption!("usegraphicx", {
     AssignValue!("@usegraphicx" => 1i64);
   });
@@ -31,6 +37,207 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
+  declare_mn_page();
   RequirePackage!("mn2e_support");
+  // mn2e.cls:1370, after its natbib load (:1201-1203): the reference list prints no label, `\def\@biblabel#1{}`
+  // (with natbib or without), as mnras.cls:1636 (mnras_cls.rs). Without natbib a
+  // `\bibitem[\protect\citeauthoryear{…}{…}]` label is then typeset only by a `\cite` (sect11.rs `\lx@bibitem`;
+  // 0812.1037, 1105.2318, 1306.6339). Perl's mn2e.cls.ltxml leaves the kernel's `[#1]`.
+  RawTeX!(r"\def\@biblabel#1{}");
+  // mn2e.cls:1372-1378: without `usenatbib` (natbib makes its own) the class allocates `\bibhang` = 2em, which a
+  // shipped natbib copy may only set (1003.3017's natbib_vw.sty:440-441 comments out its `\newlength{\bibhang}`;
+  // repro index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited, pdflatex and Perl 0 errors).
+  if lookup_int("@usenatbib") == 0 {
+    RawTeX!(r"\newlength{\bibhang}\setlength{\bibhang}{2em}");
+  }
+  // mn2e.cls (2001/02/06 v2.2) :1210-1216, as mnras.cls :1349-1354 (mnras_cls.rs): with `usedcolumn`, the class's
+  // column types on dcolumn's `D` (mn2e_support loads dcolumn). Perl's mn2e_support.sty.ltxml:18-19 only loads
+  // dcolumn, so a `d{2.1}` column was unknown and its cells' `&` stray (astro-ph0701731, astro-ph0312263;
+  // KNOWN_PERL_ERRORS #877). Guard: `perfect_kernel_batch68y::mn2e_usedcolumn_column_types`.
+  if lookup_int("@usedcolumn") != 0 {
+    RawTeX!(r"\newcolumntype{d}[1]{D{.}{.}{#1}}\newcolumntype{.}{D{.}{.}{-1}}\newcolumntype{,}{D{,}{,}{2}}");
+  }
+  // mn2e.cls copies with the one "2001/02/06 v2.2" stamp differ in the journal abbreviations `.bbl`s from the
+  // astronomy `.bst`s write (`\apj`, `\mnras`): the common 1574-line copy defines none, a 1695-line one
+  // `\def\apj{ApJ}%` and the rest of the AAS set (0804.2668; 92 of the run-336 papers whose first error was one ship
+  // it), the 1696-line one the same set on `\ref@jnl` (0711.3034, mn2e.cls:1575-1686). So they follow the copy the
+  // paper ships: its own definition lines of those names, none when it has none (a document's own
+  // `\newcommand{\apjl}{ApJL}` then stands, 0901.1150); with no (readable) copy shipped, the 1696-line set as a fallback a
+  // document's own definition replaces.
+  match shipped_class_text("mn2e")? {
+    Some(text) => {
+      let lines = shipped_journal_abbreviations(&text);
+      if !lines.is_empty() {
+        RawTeX!(&lines);
+      }
+    },
+    None => {
+      let _fallback = OriginGuard::new(DefinitionOrigin::Fallback);
+      RawTeX!(MN2E_JOURNAL_ABBREVIATIONS);
+    },
+  }
 });
+
+/// The journal abbreviations of the 1696-line mn2e.cls v2.2 (mn2e.cls:1575-1686), as written there.
+const MN2E_JOURNAL_ABBREVIATIONS: &str = r"\let\jnl@style=\rmfamily
+\def\ref@jnl#1{{\jnl@style#1}}
+\newcommand\aj{\ref@jnl{AJ}}
+\newcommand\actaa{\ref@jnl{Acta Astron.}}
+\newcommand\araa{\ref@jnl{ARA\&A}}
+\newcommand\apj{\ref@jnl{ApJ}}
+\newcommand\apjl{\ref@jnl{ApJ}}
+\newcommand\apjs{\ref@jnl{ApJS}}
+\newcommand\ao{\ref@jnl{Appl.~Opt.}}
+\newcommand\apss{\ref@jnl{Ap\&SS}}
+\newcommand\aap{\ref@jnl{A\&A}}
+\newcommand\aapr{\ref@jnl{A\&A~Rev.}}
+\newcommand\aaps{\ref@jnl{A\&AS}}
+\newcommand\azh{\ref@jnl{AZh}}
+\newcommand\baas{\ref@jnl{BAAS}}
+\newcommand\caa{\ref@jnl{Chinese Astron. Astrophys.}}
+\newcommand\cjaa{\ref@jnl{Chinese J. Astron. Astrophys.}}
+\newcommand\icarus{\ref@jnl{Icarus}}
+\newcommand\jcap{\ref@jnl{J. Cosmology Astropart. Phys.}}
+\newcommand\jrasc{\ref@jnl{JRASC}}
+\newcommand\memras{\ref@jnl{MmRAS}}
+\newcommand\mnras{\ref@jnl{MNRAS}}
+\newcommand\na{\ref@jnl{New A}}
+\newcommand\nar{\ref@jnl{New A Rev.}}
+\newcommand\pra{\ref@jnl{Phys.~Rev.~A}}
+\newcommand\prb{\ref@jnl{Phys.~Rev.~B}}
+\newcommand\prc{\ref@jnl{Phys.~Rev.~C}}
+\newcommand\prd{\ref@jnl{Phys.~Rev.~D}}
+\newcommand\pre{\ref@jnl{Phys.~Rev.~E}}
+\newcommand\prl{\ref@jnl{Phys.~Rev.~Lett.}}
+\newcommand\pasa{\ref@jnl{PASA}}
+\newcommand\pasp{\ref@jnl{PASP}}
+\newcommand\pasj{\ref@jnl{PASJ}}
+\newcommand\qjras{\ref@jnl{QJRAS}}
+\newcommand\rmxaa{\ref@jnl{Rev. Mexicana Astron. Astrofis.}}
+\newcommand\skytel{\ref@jnl{S\&T}}
+\newcommand\solphys{\ref@jnl{Sol.~Phys.}}
+\newcommand\sovast{\ref@jnl{Soviet~Ast.}}
+\newcommand\ssr{\ref@jnl{Space~Sci.~Rev.}}
+\newcommand\zap{\ref@jnl{ZAp}}
+\newcommand\nat{\ref@jnl{Nature}}
+\newcommand\iaucirc{\ref@jnl{IAU~Circ.}}
+\newcommand\aplett{\ref@jnl{Astrophys.~Lett.}}
+\newcommand\apspr{\ref@jnl{Astrophys.~Space~Phys.~Res.}}
+\newcommand\bain{\ref@jnl{Bull.~Astron.~Inst.~Netherlands}}
+\newcommand\fcp{\ref@jnl{Fund.~Cosmic~Phys.}}
+\newcommand\gca{\ref@jnl{Geochim.~Cosmochim.~Acta}}
+\newcommand\grl{\ref@jnl{Geophys.~Res.~Lett.}}
+\newcommand\jcp{\ref@jnl{J.~Chem.~Phys.}}
+\newcommand\jgr{\ref@jnl{J.~Geophys.~Res.}}
+\newcommand\jqsrt{\ref@jnl{J.~Quant.~Spec.~Radiat.~Transf.}}
+\newcommand\memsai{\ref@jnl{Mem.~Soc.~Astron.~Italiana}}
+\newcommand\nphysa{\ref@jnl{Nucl.~Phys.~A}}
+\newcommand\physrep{\ref@jnl{Phys.~Rep.}}
+\newcommand\physscr{\ref@jnl{Phys.~Scr}}
+\newcommand\planss{\ref@jnl{Planet.~Space~Sci.}}
+\newcommand\procspie{\ref@jnl{Proc.~SPIE}}
+\let\astap=\aap
+\let\apjlett=\apjl
+\let\apjsupp=\apjs
+\let\applopt=\ao";
+
+/// The lines of a shipped mn2e.cls that define the journal abbreviations (the names of
+/// [`MN2E_JOURNAL_ABBREVIATIONS`]), each as the copy writes it — one-line definitions, braces balanced — preceded by the
+/// one-line definitions of the internal (`@`) macros they are built on, which copies name differently (`\ref@jnl` and
+/// its `\jnl@style`, 0711.3034; `\reff@jnl`, 1209.3072). A line filter, not TeX: the bytes are read as Latin-1; lines
+/// between a line-leading `\iffalse` and `\fi` are skipped; a definition is taken only whole on its line (a multi-line
+/// one is left out), and a line is taken whole (a second definition on it comes along); a `%`-commented line is not a
+/// definition.
+fn shipped_journal_abbreviations(text: &str) -> String {
+  static NAME_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\\(?:newcommand|def|let)\\([A-Za-z@]+)").unwrap());
+  let name_rx = &*NAME_RX;
+  let wanted: Vec<String> = name_rx
+    .captures_iter(MN2E_JOURNAL_ABBREVIATIONS)
+    .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
+    .filter(|name| !name.contains('@'))
+    .collect();
+  static LINE_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^\\(?:newcommand\*?|def|let)\s*\\([A-Za-z@]+)").unwrap()
+  });
+  let line_rx = &*LINE_RX;
+  static INTERNAL_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\\([A-Za-z]*@[A-Za-z@]*)").unwrap());
+  let internal_rx = &*INTERNAL_RX;
+  // Each one-line definition in the copy, by the name it defines.
+  let mut in_iffalse = false;
+  let definitions: Vec<(String, &str)> = text
+    .lines()
+    .map(str::trim)
+    .filter(|line| {
+      if line.starts_with("\\iffalse") {
+        in_iffalse = true;
+      } else if in_iffalse && line.starts_with("\\fi") {
+        in_iffalse = false;
+        return false;
+      }
+      !in_iffalse
+    })
+    .filter_map(|line| {
+      let name = line_rx.captures(line)?.get(1)?.as_str().to_string();
+      let bare = line.replace("\\{", "").replace("\\}", "");
+      (bare.matches('{').count() == bare.matches('}').count()).then_some((name, line))
+    })
+    .collect();
+  let mut lines: Vec<&str> = Vec::new();
+  let mut helpers: Vec<&str> = Vec::new();
+  for (name, line) in &definitions {
+    if wanted.contains(name) {
+      lines.push(line);
+    }
+  }
+  // The internal macros those lines use, and the ones theirs use.
+  let mut used: Vec<String> = Vec::new();
+  let mut pending: Vec<String> = lines
+    .iter()
+    .flat_map(|line| {
+      internal_rx
+        .captures_iter(line)
+        .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
+    })
+    .collect();
+  while let Some(name) = pending.pop() {
+    if used.contains(&name) {
+      continue;
+    }
+    if let Some((_, line)) = definitions.iter().find(|(defined, _)| *defined == name) {
+      helpers.insert(0, line);
+      pending.extend(
+        internal_rx
+          .captures_iter(line)
+          .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
+          .filter(|used_name| *used_name != name),
+      );
+    }
+    used.push(name);
+  }
+  let mut out = String::new();
+  for line in helpers.into_iter().chain(lines) {
+    out.push_str(line);
+    out.push('\n');
+  }
+  out
+}
+
+/// The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) of mn2e.cls and
+/// mn.cls (mn.sty), as pdflatex gives it: 504pt (42pc) in two 240pt columns 2pc apart (mn2e.cls:15-22, :470-484;
+/// mn.sty:73-79, :895-903), one column under `onecolumn` or `referee` (`\ds@referee`, mn2e.cls:57-60, whose text is
+/// 39pc = 468pt), the options as given. The registers' 345pt read as the page set a `figure` against 345pt and a
+/// `figure*` against the same line (review rev79c2 finding 1).
+pub(crate) fn declare_mn_page() {
+  let referee = given_class_options()
+    .iter()
+    .any(|option| option == "referee");
+  let text = if referee { 468.0 } else { 504.0 };
+  let twocolumn = !matches!(
+    last_class_option(&["onecolumn", "twocolumn", "referee"]),
+    Some("onecolumn" | "referee")
+  );
+  declare_panel_page((text - 24.0) / 2.0, text, twocolumn);
+}

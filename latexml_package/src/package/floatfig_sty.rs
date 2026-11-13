@@ -66,8 +66,10 @@ LoadDefinitions!({
   // after_digest (needs live `\@captype`). See floatflt_sty.rs for full details.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:figure>",
+    // The begin code opens a TeX group of its own: a float box, as floatflt.sty:88 `\vbox\bgroup`.
+    tex_group => { TexGroup::Box },
     before_digest => {
-      engine::latex_constructs::before_float("figure", None);
+      engine::latex_constructs::before_float("figure", None)?;
     },
     after_digest_begin => sub[whatsit] {
       whatsit.set_property("float", floatfig_float_direction(whatsit));
@@ -93,7 +95,8 @@ LoadDefinitions!({
   DefRegister!("\\nosuccesstryfig", Number(0));
   // Perl L64: figgutter default is 1pc, not 0pt.
   DefRegister!("\\figgutter", Dimension::from_str("1pc")?);
-  DefRegister!("\\htdone",      Number(0));
+  // floatflt.sty:35 `\newdimen\htdone` (Perl: `Number(0)`).
+  DefRegister!("\\htdone",      Dimension(0));
   DefRegister!("\\pageht",      Dimension(0));
   DefRegister!("\\startpageht", Dimension(0));
   DefRegister!("\\floatfltwidth", Dimension(0));
@@ -109,4 +112,8 @@ LoadDefinitions!({
   RawTeX!("\\newif\\ifpageafterfig  \\pageafterfigfalse");
   RawTeX!("\\newif\\ifoddpages");
   RawTeX!("\\newif\\ifoutput");
+  // As floatflt.sty:22-23, its successor (floatfig.sty is not in TL): `\DeclareOption*{\OptionNotUsed}\ProcessOptions`;
+  // its options take effect, and its handlers do not outlive it (content.rs `process_options_by`).
+  DeclareOption!(None, {});
+  ProcessOptions!();
 });

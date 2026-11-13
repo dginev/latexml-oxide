@@ -1,0 +1,10 @@
+% witness: synthetic (revRG1b P2)
+% oracle:  pdflatex 0 errors: N1=4.30554pt, D1=0.0pt (LaTeX's `\par`, `\para_end:` latex.ltx:9088-9092,
+%          `\unskip`s the group's space first, so the `\noindent` paragraph is null, tex.web §1096)
+% engines: rust rg1c = int162a = rg1b: N1=12.0pt (an empty line above x; the end_graf residual, stomach.rs)
+% expect:  0 errors; N1=4.30554pt, D1=0.0pt
+% status:  RED. moves: post-merge
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\noindent{ }\par x}N1=\the\ht0, D1=\the\dp0.
+\end{document}

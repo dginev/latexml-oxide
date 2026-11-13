@@ -1,0 +1,24 @@
+% witness: review of 68z (probe p4; not a regression: 67int17b the same)
+% oracle:  pdflatex 0 errors; "<x|>" b1, "<S>" b2, "<x|>" b3: the \@ifnextchar/\@ifstar macro stops TeX's cell-head
+%          look-ahead at its \futurelet (tex.web §785), so its last argument is the cell's v-part, not the "&"
+% expect:  as pdflatex: each macro's output whole in the first cell, b1/b2 alone in the second
+% engines: rust 68z "<x|" then "> b1", "<S" then "> b2" (the look-ahead expands \@ifnextchar's closure and the
+%          argument read takes the "&"); the \DeclareRobustCommand row is right; Perl the same
+% status:  RED (KNOWN_PERL_ERRORS #880 residual; SYNC "Perfect-kernel RED repros"): the general fix stops the look-ahead
+%          at every closure that peeks by \futurelet, with an opt-out for the bindings that TeX heads by \noalign
+%          (booktabs' \cmidrule, \toprule)
+\documentclass{article}
+\makeatletter
+\def\nx{\@ifnextchar[{\nxa}{\nxa[d]}}
+\def\nxa[#1]#2{<#1|#2>}
+\def\st{\@ifstar{\sta}{\sta}}
+\def\sta#1{<S#1>}
+\DeclareRobustCommand\rb[2][R]{<#1|#2>}
+\makeatother
+\begin{document}
+\begin{tabular}{cc}
+\nx[x]  & b1 \\
+\st*  & b2 \\
+\rb[x]  & b3 \\
+\end{tabular}
+\end{document}

@@ -1,0 +1,30 @@
+% witness: 2405.16051 (`\author[3\authfn{2}]{Raul Ramos-Pollán}` under `\affil[1,2,4]{…}`, `\affil[3]{…}`);
+%          2202.05736 (`\author[1\thanks{\tt{Kamil.Sommer@rub.de}}]{Kamil David Sommer}`), 2410.10922
+%          (`\author[2\thanks{Equal contribution; …}]{…Hanlin Gu}`); 2605.12855 (`\affil[*]{Equal senior author
+%          contribution.}` under `\author[a]{Harini Veeraraghavan*}`)
+% oracle:  pdflatex (TL 2025): "Ann Able1, Bob Baker*2, Cid Cole*1, and Dee Dunn3†", "1Univ X", "2Univ Y", "3Univ Z",
+%          "*Equal contribution."
+% engines: rust int124a = Dee Dunn's `3\fn{2}` parted into its characters (`ruling1:parted`): the command's letters
+%          labels, its argument's `2` a request of Univ Y (2405.16051: Raul Ramos-Pollán given `\affil[1,2,4]` too, once
+%          written); 95b r1's fix that never parted such a label lost `1\thanks{…}`'s `1` (2202.05736, 2410.10922)
+% expect:  0 errors, 0 warnings; a call's label as its source spells it is what it spells before its first command
+%          (`3`): Dee Dunn Univ Z alone; the starred entry the starred names' affiliation (FIDELITY_CHARTER §4 ruling 2,
+%          "affiliation or legend alike"); written
+% status:  RED (int124a) -> GREEN (95b) — perfect_kernel_batch95b::a_label_spelled_with_a_command_is_read_to_it
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\newcommand{\fn}[1]{\textsuperscript{\dag}}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker*}
+\author[1]{Cid Cole*}
+\author[3\fn{2}]{Dee Dunn}
+\affil[1]{Univ X}
+\affil[2]{Univ Y}
+\affil[3]{Univ Z}
+\affil[*]{Equal contribution.}
+\maketitle
+Text.
+\end{document}

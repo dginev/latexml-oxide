@@ -1,0 +1,19 @@
+% IEEEtran's `\IEEEauthorblockA{… Italy\\ Email: [ann.able, bob.baker, cat.cole]@a.it}`: a list of local parts in
+% square brackets before the shared domain is read as a braced list is, so the line leaves the affiliation and each
+% address is its spelled author's e-mail (107c).
+% witness: 2405.17925 (`Email: [i.iudice, d.pascarella, g.corraro, g.cuciniello]@cira.it`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cat Cole", "Univ A, Town, Italy",
+%          "Email: [ann.able, bob.baker, cat.cole]@a.it"
+% engines: rust int139a0 = the line glued into the affiliation of every author
+% expect:  0 errors, 0 warnings; each author Univ A, Town, Italy + their own e-mail, named "Email: "
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker and Cat Cole}
+\IEEEauthorblockA{Univ A, Town, Italy\\
+Email: [ann.able, bob.baker, cat.cole]@a.it}}
+\maketitle
+Text.
+\end{document}

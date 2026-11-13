@@ -1,0 +1,19 @@
+% mechanism: the decline split's fail-safe — a name the reading found that no creator of Perl's split holds: the block is
+%   written whole, as the base did (`emit`'s `split_owns_falsely`)
+% witness: 1511.09009 (aaai.sty: `Yi Zhang\footremember{yi} \\, Yanghua Xiao\footremember{yh} \\, …`, each `\\` the
+%   macro's second argument, one printed line of four names); int154a's split lost "Seung-won Hwang, Wei Wang"
+% oracle:  pdflatex 0 errors: "Ann Able∗, Bob Baker†, Carl Cole‡", "Univ X", "Univ Y"
+% engines: rust int155a0: one creator "Ann Able, Bob Baker", ‡ printed †, "Carl Cole" lost (W 4, counted); perl not run
+%   (on 1511.09009 its comma cut makes 14 creators, 5 errors)
+% expect:  0 errors, 1 warning (the decline's, written whole); one creator holding every name and every note
+% status:  RED (int155a0) -> GREEN (perfect_kernel_batchpb::a_split_losing_a_name_keeps_the_block_whole)
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\newcommand{\footrecall}[1]{\footnotemark[\value{#1}]}
+\begin{document}
+\title{T}
+\author{Ann Able\footremember{aa} \\, Bob Baker\footremember{bb} \\, Carl Cole\footremember{cc} \\ \\
+\footrecall{aa}\footrecall{bb} Univ X \\ \footrecall{cc} Univ Y}
+\maketitle
+Body.
+\end{document}

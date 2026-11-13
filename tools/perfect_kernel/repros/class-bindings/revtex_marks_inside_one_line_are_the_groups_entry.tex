@@ -1,0 +1,21 @@
+% mechanism: the fail-safe of REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::requested_mark_lines`) fires only for a block of two or more lines led by requested labels: one line
+%   holding marks inside its text, printed once under both names, is the group's one entry — a copy on each author
+%   (FIDELITY_CHARTER: an affiliation printed for several authors is a copy on each), as 97b and 98a give it.
+% witness: review rev98e S2 (gp2; 98e made it a nameless block)
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "Ann Able1 and Bob Baker2 / Joint Institute, 1 Univ A and 2 Univ B,
+%   City"
+% engines: rust 98e: the names none, the block (a nameless creator) the line; 97b, 98a: a copy on each
+% expect:  0 errors, 0 warnings; each author the line
+% status:  RED (98e) -> GREEN (98e r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\affiliation{Joint Institute, \textsuperscript{1}Univ A and \textsuperscript{2}Univ B, City}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

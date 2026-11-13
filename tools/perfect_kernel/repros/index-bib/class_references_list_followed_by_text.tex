@@ -1,0 +1,19 @@
+% witness: synthetic (64p review round 2), the {references} shape of astro-ph0002202 / gr-qc0207046 (ajour, cjour)
+%          with text and a float after the list
+% oracle:  pdflatex 0 errors; References [1] [2], then "After the references, more text." and the figure
+% engines: rust 64qb = 4 errors; rust 64p first cut = 0 errors, the text inside the last entry's bibblock, the figure
+%          inside the bibliography; rust 64p = 0; Perl 0.8.8 --includestyles = out of memory
+%          (8 GB cap, ~53 s: the loop)
+% expect:  the bibliography closed at \end{references}: the paragraph and the figure follow it
+% status:  RED (64qb) -> GREEN (64p)
+% preload: ar5iv.sty
+\documentclass{bibrefs}
+\begin{document}
+Text \cite{a}.
+\begin{references}
+\bibitem{a} A. Author, Title A.
+\bibitem{b} B. Author, Title B.
+\end{references}
+After the references, more text.
+\begin{figure}[h]\centering A figure.\caption{After.}\end{figure}
+\end{document}

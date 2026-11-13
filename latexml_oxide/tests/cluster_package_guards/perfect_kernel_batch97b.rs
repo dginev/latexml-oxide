@@ -1,0 +1,102 @@
+//! Red/green guards for batch 97b: a take-out removes what it read — the item's value and the label it took — and
+//! nothing else TeX prints (OXIDIZED_DESIGN_DIVERGENCES #944). aa's `\mail` is labelled as the paper's copy of aa.cls
+//! prints it (aa_support_sty.rs), and the writer's take-out of an entry it empties keeps the entry's own label
+//! (emitter/plan.rs `holder_label`) or gives the entry back when no contact would carry it (writer/mod.rs
+//! `give_back_entries`); a K11 store's label is read before its printed occurrence, not inside an argument TeX does not
+//! typeset (frontmatter_stores.rs `in_unprinted_argument`, `argument_of`), and leads a note's text; a names line split
+//! by its marks keeps the separators it prints in `before` (names_split.rs `with_printed_separators`), and a piece
+//! that is an address and no name is no marked name. Each guard converts its repro under
+//! `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and `--streaming`, asserts the same XML
+//! both ways, the exact Error and Warning counts, and the frontmatter whole.
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch89a::cli_conversion,
+};
+
+macro_rules! repro {
+  ($name:literal) => {
+    include_str!(concat!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+      $name,
+      ".tex"
+    ))
+  };
+}
+
+/// The XML with every whitespace run collapsed to one space.
+fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join(" ") }
+
+/// Converts `tex` from the binary eager and `--streaming`, checks each has `errors` Errors and no Warning and both give
+/// the same XML, and returns the log and the document from its `<title>` to its end, squashed.
+#[track_caller]
+fn both_ways(tex: &str, errors: usize) -> (String, String) {
+  let (log, eager) = cli_conversion(tex, false);
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (errors, 0),
+    "{log}"
+  );
+  let (streamed_log, streamed) = cli_conversion(tex, true);
+  assert_eq!(
+    (error_count(&streamed_log), warning_count(&streamed_log)),
+    (errors, 0),
+    "{streamed_log}"
+  );
+  assert_eq!(eager, streamed);
+  let xml = squash(&eager);
+  let start = xml.find("<title>").unwrap_or(0);
+  let end = xml[start..]
+    .find("</document>")
+    .map_or(xml.len(), |end| start + end);
+  (log, xml[start..end].trim_end().to_string())
+}
+
+/// aa's `\mail{x}` under a copy of aa.cls that prints it ("Correspondence to: x", v4.03-v7.0) is one e-mail contact
+/// named by the class's label, where 95c's take-out of the address entry named it "Email: " and printed
+/// "Correspondence" nowhere (the writer keeps the emptied entry's own label, `holder_label`), the label's italic on no
+/// item after it (`\mailname`'s group), its colon the copy's ("Correspondence to: ", MB2, review revMB1 P2); under a
+/// copy that only
+/// stores it (v8 on, which prints neither), the binding gives it no label (`name={}`: no `\mailname`, no italic) and the
+/// contact has the class's e-mail default, as before. Witnesses 1005.3784, 0805.1001, 1102.1556 (printing); 2007.14739,
+/// 2012.11607, 2606.29508 (storing).
+#[test]
+fn aa_mail_is_labelled_as_its_copy_prints_it() {
+  let (_, xml) = both_ways(repro!("aa_mail_printing_copy_keeps_its_label"), 0);
+  assert_eq!(
+    xml,
+    r#"<title>T</title> <creator role="author"> <personname>A. Smith</personname> <contact name="Affiliation: " role="affiliation">Univ. X, Y</contact> <contact name="Correspondence to: " role="email">smith@x.org</contact> </creator> <date role="creation">Received 2010</date> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"#
+  );
+  let (_, xml) = both_ways(repro!("aa_mail_storing_copy_has_no_label"), 0);
+  assert_eq!(
+    xml,
+    r#"<title>T</title> <creator role="author"> <personname>A. Smith</personname> <contact name="Affiliation: " role="affiliation">Univ. X, Y</contact> <contact name="Email: " role="email">smith@x.org</contact> </creator> <date role="creation">Received 2010</date> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"#
+  );
+}
+
+/// A raw package's e-mail store printed as `Correspondence: \href{mailto:\@x}{\@x}` in its emptiness test's `\else`
+/// branch: the label read before the link's text — not its target, which TeX does not typeset — leads the note's text,
+/// where the test's take-out had printed "Correspondence" nowhere; the same through `\textcolor{black}{…}` round the
+/// link's text (2506.10896's acl2023.sty:186) and with the store printed bare. Without a label the note is the table's
+/// unnamed one.
+#[test]
+fn note_store_label_is_read_before_its_printed_occurrence() {
+  let tex = repro!("raw_package_note_label_before_a_link_names_it");
+  let labelled = r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> </creator> <note role="email" xml:id="id1">Correspondence: ann@x.org</note> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#;
+  assert_eq!(both_ways(tex, 0).1, labelled);
+  let link = r"\href{mailto:\@corremail}{\@corremail}";
+  let coloured = tex.replace(
+    link,
+    r"\href{mailto:\@corremail}{\textcolor{black}{\@corremail}}",
+  );
+  assert_ne!(coloured, tex);
+  assert_eq!(both_ways(&coloured, 0).1, labelled);
+  let bare = tex.replace(link, r"\@corremail");
+  assert_ne!(bare, tex);
+  assert_eq!(both_ways(&bare, 0).1, labelled);
+  let unlabelled = tex.replace(r"\itshape Correspondence: \href", r"\itshape \href");
+  assert_ne!(unlabelled, tex);
+  assert_eq!(
+    both_ways(&unlabelled, 0).1,
+    labelled.replace("Correspondence: ann@x.org", "ann@x.org")
+  );
+}

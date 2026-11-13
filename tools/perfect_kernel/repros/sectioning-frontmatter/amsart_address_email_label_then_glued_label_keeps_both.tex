@@ -1,0 +1,23 @@
+% mechanism: a second e-mail label glued to the address behind a first, spaced one (defs/frontmatter_api/kind.rs, the
+%   `(Some((label, rest)), name)` arm, whose `email_line_label` splits the glued label behind the first one too,
+%   `joined_line_label`): the second label joins after the first, so `\address{Univ A, Town\\ E-mail:
+%   Email:zz@x.org}` is the contact `zz@x.org` named "E-mail: Email: ", every printed label word in printed order, as
+%   the spaced `E-mail: Email: zz@x.org` gives. GL1 round 0 wrote the inner name after the outer one, which won: the
+%   printed "E-mail:" was lost (review revGL1 B1)
+% witness: none in the corpus (synthetic, review revGL1 B1, probe a_nest; the glued shape's witnesses hep-ph9606235,
+%          astro-ph0001190, hep-ph0411269, 2206.00543)
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "ANN ABLE", "Text.", "Univ A, Town, E-mail: Email:zz@x.org"
+% engines: rust int157a (d86f58e8e2) = <contact name="E-mail: " role="email">Email:zz@x.org</contact>; rust GL1
+%          (e24e610cb4) = <contact name="Email: " role="email">zz@x.org</contact>, "E-mail:" lost
+% expect:  0 errors, 0 warnings; Ann Able: the address "Univ A, Town" and <contact name="E-mail: Email: "
+%          role="email">zz@x.org</contact>
+% status:  RED (GL1) -> GREEN (GL1b) — perfect_kernel_batchgl1::second_glued_label_joins_the_line_label
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ A, Town\\ E-mail: Email:zz@x.org}
+\maketitle
+Text.
+\end{document}

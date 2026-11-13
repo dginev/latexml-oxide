@@ -1,0 +1,14 @@
+% an amsrefs database: \bibselect reads the records that start with \bib
+\bib{A}{article}{
+  author={Gel\cprime fand, I.},
+  title={Cited},
+  journal={J},
+  year={1950},
+}
+
+\bib{B}{article}{
+  author={Other, O.},
+  title={Not cited},
+  journal={K},
+  year={1951},
+}

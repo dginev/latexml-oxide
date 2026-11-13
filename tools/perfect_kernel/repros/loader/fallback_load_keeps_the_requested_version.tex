@@ -1,0 +1,19 @@
+% witness: TL class census 2026-09-24 — iaria, iaria-lite, langscibook, letgut (floatrow.sty:39-45
+%          \RequirePackage{caption3} then \@ifpackagelater{caption3}{2007/04/11 v3.0q}; our loader
+%          serves caption3 by falling back to the caption binding)
+% oracle:  pdflatex 0 errors; [T] (caption3.sty's own version)
+% engines: rust (56ia before this fix) = [F] + "floatrow Error: … need at least version
+%          `2007/04/11 v3.0q' of package caption" + \floatsetup undefined: \ver@caption3.sty was
+%          never defined
+% expect:  0 errors; <p>[T]</p>
+% status:  RED (56ia pre) -> GREEN (56ia)
+% mechanism: latex.ltx:18484-18486 \@pr@videpackage lets \ver@<requested file> to the loaded
+%   file's version; the versioned-package fallback now does the same.
+\documentclass{article}
+\RequirePackage{caption3}
+\makeatletter
+\edef\a{\@ifpackagelater{caption3}{2007/04/11 v3.0q}{T}{F}}
+\makeatother
+\begin{document}
+[\a]
+\end{document}

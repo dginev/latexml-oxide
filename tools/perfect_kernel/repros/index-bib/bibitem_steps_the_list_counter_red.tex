@@ -1,0 +1,22 @@
+% mechanism: the kernel's `\bibitem{key}` is `\item` (latex.ltx:17750 `\@bibitem`), which steps `\@listctr` (enumiv,
+%   :16024) under `\@nmbrlisttrue`; ours steps only `@bibitem` (as Perl's `\lx@bibitem`, latex_constructs.pool.ltxml:
+%   4104), so enumiv stays 0 and an entry reading its number gets 0. A `\bibitem[label]` and an `\item[label]` must
+%   not step it (`\@lbibitem`'s `\item[…]`), which the asl shape (listctr_after_thebibliography) relies on.
+% witness: synthetic (GA1d sibling sweep)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [1] First 1. [2] Second 2.
+% engines: perl 3 errors (Error:undefined:\c@, 2 × Error:unexpected:\the\c@), "First 0."; rust int163a 0 errors,
+%   1 warning (Counter '' was not defined), "First 0."; GA1d 0 errors, 0 warnings, "First 0." / "Second 0."
+% expect:  0 errors, 0 warnings; First 1. Second 2.
+% status:  RED (int163a, GA1d)
+% moves:   post-merge, with the bibliography's `\@nmbrlisttrue` (GA1e left it out: a raw `\@trivlist` would number from
+%   the unstepped enumiv, raw_trivlist_in_thebibliography_invents_no_number)
+\documentclass{article}
+\makeatletter
+\def\cur{\the\value{\@listctr}}
+\makeatother
+\begin{document}
+\begin{thebibliography}{9}
+\bibitem{a} First \cur.
+\bibitem{b} Second \cur.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,15 @@
+% witness: hep-ph0509118 (`\Text(230,35)[]{\large $i g \gamma^\mu P_L$ (ingoing $f$ or outgoing $F$)}`, an axodraw
+%          label; the same with a plain `\put` and `\makebox(0,0)`): a picture label mixing text and math
+% oracle:  pdflatex 0 errors: one line "igγ^μ P_L (ingoing f or outgoing F)" centred on (230,35)
+% engines: rust 64w = XML right (the `ltx:g class="makebox"` holds the text and three `Math`, in order); the SVG
+%          leaves the words as bare text of the `svg:g` and puts each `Math` in its own `foreignObject` at the
+%          label's origin, so the formulas overprint the words; Perl not run
+% expect:  0 errors; the label's text and formulas laid out as one line (one `foreignObject` for the label)
+% status:  RED (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{picture}(300,60)(0,0)
+\put(230,35){\makebox(0,0)[]{\large $i g \gamma^\mu P_L$ (ingoing $f$ or outgoing $F$)}}
+\end{picture}
+\end{document}

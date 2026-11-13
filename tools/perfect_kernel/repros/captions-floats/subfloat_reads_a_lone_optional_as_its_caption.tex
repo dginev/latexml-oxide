@@ -1,0 +1,22 @@
+% witness: 57l (svg no longer loads subfig, so `\subfloat` after subcaption is subcaption's own —
+%          fixture svg_subfloat_2563 lost its caption); KPE #323
+% oracle:  pdflatex 0 errors; "(a) One", "(b) Two", "Figure 1: Main"; "(a) Tab one", "Table 1: Tabs";
+%          the List of Figures lists "1 Main" (subcaption.sty:278-291: a lone optional is the caption,
+%          `\subcaptionbox{#1}`; two are `\subcaptionbox[{#1}]{#2}`; the sub-float follows `\@captype`)
+% engines: perl: panel (a) uncaptioned (`\subfloat[][]{}` takes the caption from the SECOND optional,
+%          subcaption.sty.ltxml:104), the table's panel a subfigure; rust 57n: the same, and the list
+%          entry set as `inlist` on the ENCLOSING figure, which left the List of Figures
+% expect:  0 errors; (a) "One" and (b) "Two" in figure 1, whose inlist stays "lof"; a subtable "Tab one"
+% status:  RED (57n) -> GREEN (57l)
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\subfloat[One]{A}\subfloat[List][Two]{B}
+\caption{Main}
+\end{figure}
+\begin{table}
+\subfloat[Tab one]{X}
+\caption{Tabs}
+\end{table}
+\end{document}

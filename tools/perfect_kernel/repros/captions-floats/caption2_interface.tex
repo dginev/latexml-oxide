@@ -1,0 +1,44 @@
+% witness: math0601389, 1307.4815, 1911.03646, 2507.04618 (~843 run-336 papers whose first error is `\captionstyle`;
+%          caption2 loaded directly or by w-art.cls, SCGE/scpma, POWFI, rmf-d)
+% oracle:  pdflatex 0 errors: "Figure 1. A caption" (delimiter `.`), "Figure 2 Two" (delimiter `\enskip` as
+%          w-art.cls:3091, then the `\space` separator), "Figure 3.<5pt> Three", "Table 1~~~Numbers" (delimiter `~~~`, no separator)
+% engines: rust 64h4 = 6 Error:undefined (\captionstyle, \setcaptionmargin, \newcaptionstyle, \renewcaptionstyle,
+%          \usecaptionstyle, \onelinecaptionsfalse); Perl 0.8.8 the same 6 (caption2 falls back to caption.sty.ltxml)
+% expect:  caption2.sty:46-142 parameters and style registry, :179-229 options (layout, taken); :147 the label's
+%          `\captionlabeldelim\captionlabelsep` close the caption tag (". ", en space + space, "." + en space +
+%          space, three no-break spaces): an `\hskip` in an attribute is its spaces (Perl TeX_Glue.pool.ltxml:85 attributeForm)
+% status:  RED (64h4) -> GREEN (64qb)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[nooneline,small,bf]{caption2}
+\captionstyle{center}
+\renewcommand{\captionlabeldelim}{.}
+\renewcommand{\captionfont}{\small\it}
+\setcaptionmargin{1cm}
+\newcaptionstyle{mine}{\usecaptionstyle{hang}}
+\renewcaptionstyle{mine}{\usecaptionstyle{center}}
+\onelinecaptionsfalse
+\begin{document}
+\begin{figure}[h]
+\centering
+\fbox{Picture}
+\caption{A caption}
+\label{fig:a}
+\end{figure}
+\begin{figure}[h]
+\renewcommand*{\captionlabeldelim}{\enskip}
+\fbox{Second}
+\caption{Two}
+\end{figure}
+\begin{figure}[h]
+\renewcommand*{\captionlabeldelim}{.\hskip5pt}
+\fbox{Third}
+\caption{Three}
+\end{figure}
+\begin{table}[h]
+\renewcommand{\captionlabeldelim}{~~~}\renewcommand{\captionlabelsep}{}
+\caption{Numbers}
+\begin{tabular}{c}1\end{tabular}
+\end{table}
+See Figure~\ref{fig:a}.
+\end{document}

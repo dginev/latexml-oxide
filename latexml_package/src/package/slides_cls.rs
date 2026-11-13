@@ -26,7 +26,8 @@ LoadDefinitions!( {
   }
 
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
-  DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  // `\input{fleqn.clo}` (fleqn_sty.rs `fleqn_clo`).
+  DeclareOption!("fleqn", sub { fleqn_sty::fleqn_clo()?; });
 
   ProcessOptions!();
 
@@ -57,16 +58,18 @@ LoadDefinitions!( {
   Let!("\\@topfil", "\\vfil");
   Let!("\\@botfil", "\\vfil");
 
-  DefConstructor!("\\addtime Number", "<ltx:note>add time #1</ltx:note>");
-  DefConstructor!("\\settime Number", "<ltx:note>set time #1</ltx:note>");
+  DefConstructor!("\\addtime Number", "<ltx:note>add time #1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
+  DefConstructor!("\\settime Number", "<ltx:note>set time #1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
   // Hmm... should be saving the color and restoring upon visible.
   // CSS3 has an opacity property (0--1)
   DefPrimitive!("\\invisible", None, font => {opacity => "0" });
   DefPrimitive!("\\visible",   None, font => {opacity => "1" });
 
-  // \showfont — debug helper, no-op in Rust
-  DefPrimitive!("\\showfont", None);
+  // Perl slides.cls.ltxml:82-85: a Note of the current font, no box.
+  DefPrimitive!("\\showfont", {
+    Note!(s!("FONT IS: {}", lookup_font().map(|f| f.stringify()).unwrap_or_default()));
+  });
 
   RequirePackage!("color");
   def_macro_noop("\\blackandwhite")?;
@@ -142,4 +145,10 @@ LoadDefinitions!( {
   DefPrimitive!("\\LARGE",        None, font => {size => 17.28 });
   DefPrimitive!("\\huge",         None, font => {size => 20.74 });
   DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
+  // size10.clo:54 (every `size*.clo`): `\normalsize` is EXECUTED right after
+  // the size commands are defined, which is what sets `\@currsize` to the size
+  // command itself (latex.ltx:14107 `\let\@currsize#1` via `\@setfontsize`;
+  // our size switch lets it in dialect.rs). `\ifx\@currsize\normalsize` then
+  // holds from the start (ltugboat's `\SMC` cascade, latex-doc-ptr; Gemini L5).
+  Digest!("\\normalsize")?;
 });

@@ -130,19 +130,26 @@ pub fn ensure_libxml_init() { libxml::init_parser(); }
 /// already been serialized to owned data and nothing will read a
 /// pre-reset symbol again. The test harness satisfies this (each test
 /// serializes to owned `String`s, then resets before its thread exits).
-/// It does **not** reclaim libxml2's process-global C state (parser
-/// dictionaries) — that residual (~24 MB/test) is left as-is rather than
-/// risk the global `xmlCleanupParser`.
+/// What it does **not** reclaim (measured 2026-09-19, heaptrack + the
+/// glibc-allocator test binary): the `#[thread_local]` `MODEL`, `GULLET`,
+/// `STOMACH`, the token constants and the fresh interner — ~37 MB of RUST
+/// state leaked per fresh test thread (attribute statics run no destructor;
+/// it counts on glibc only because test binaries link no mimalloc) — and
+/// kpathsea's ls-R/cnf hash tables, 8.6 MB of C heap allocated once per
+/// process. The libxml2 document tree itself is fully freed. A persistent
+/// worker (`cortex_worker`) reuses its thread and pays neither per paper.
 ///
-/// THREAD-LIFECYCLE CONTRACT (PR_READINESS review): several SymStr-holding
-/// statics are NOT reset here — `pin!` call-site OnceCells (no registry;
-/// unresettable by design), gullet `DEFERRED_COMMANDS`, dump-reader
-/// `CURRENT_LOAD_CTX`, package-local caches. They are safe only because no
-/// thread READS a pre-reset SymStr after `arena::reset()`: libtest runs one
-/// test per thread, and the persistent cortex_worker never resets. Any
-/// future daemon/thread-pool that resets AND reuses a thread resurrects the
-/// phantom-symbol-aliasing bug class (see the REPORT-map fix, 7b64a48ad1)
-/// in an unfixable form — redesign the pin! cache before doing that.
+/// THREAD-LIFECYCLE CONTRACT (PR_READINESS review): `arena::reset()` clears the
+/// `pin!` call-site caches (each registers on its first pin) and the ASCII
+/// char-pin cache, so those re-pin after a reset. Other SymStr-holding statics are
+/// NOT reset here — the `#[thread_local]` token constants (`TOKEN_BEGIN`, …,
+/// token.rs), gullet `DEFERRED_COMMANDS`, dump-reader `CURRENT_LOAD_CTX`,
+/// package-local caches. They are safe only because no thread READS such a
+/// pre-reset SymStr after `arena::reset()`: the persistent cortex_worker never
+/// resets, and the render/api workers reset just before their thread exits.
+/// Any future daemon/thread-pool that resets AND reuses a thread must reset
+/// those too, or it resurrects the phantom-symbol-aliasing bug class (see the
+/// REPORT-map fix, 7b64a48ad1).
 pub fn reset_thread_engine() {
   state::reset_thread_state();
   common::arena::reset();
@@ -155,6 +162,37 @@ pub fn reset_thread_engine() {
   // same stale-alias hazard as the REPORT maps; clear them with the arena.
   token::reset_noexpand_family_memo();
   binding::content::reset_fontmap_key_memo();
+  reset_conversion_state();
+}
+
+/// Forgets what one conversion leaves on its thread for the next, as Perl builds a fresh State per document
+/// (LaTeXML.pm:232): a persistent `cortex_worker` converts its papers on one thread. Called at each conversion's start
+/// ([`initialize_report`]) and by [`reset_thread_engine`]. Not every per-conversion reset: the gullet's, the math
+/// parser's, the telemetry's and the rescued boxes' are in `Core::initialize_singletons`, the engine crate's (the fm
+/// reading, the title-page check, the pdfTeX random generators) in `Converter::initialize_session`; a stack a guard
+/// pops on unwinding needs none.
+pub fn reset_conversion_state() {
+  // The deferred diagnostics and the unknown KeyVals keys reported (each reported once per conversion, ST3).
+  util::logger::reset_deferred_diagnostics();
+  keyvals::reset_unknown_keys_reported();
+  // A speculative scope's log muting (`SuppressLogOutputGuard`) ends with the conversion.
+  reset_suppress_log_output();
+  // Lookups memoized per conversion: a cwd-relative kpsewhich miss, an image's size, a font's metrics.
+  util::pathname::clear_kpsewhich_memo();
+  util::image::clear_image_size_memo();
+  common::font::tfm::reset_tfm_cache();
+  // The frontmatter fields' provenance (OXIDIZED_DESIGN #715), the files read raw and the stand-in copies'
+  // provides-modes (#731).
+  document::reset_field_provenance();
+  binding::content::reset_raw_read_paths();
+  definition::origin::reset_copy_provides();
+  // A planned `\lx@refstepcounter` step a panic unwound past (`take_pending_step` never ran) would type the next
+  // paper's first step on that counter.
+  binding::counter::dialect::reset_refstep_state();
+  // A predecessor's spent "Mouth is unexpectedly already closed" budget made the next paper's first one a Fatal.
+  gullet::reset_mouth_closed_errors();
+  binding::content::reset_subfile_package_load();
+  binding::kernel_autoload::reset_undefined_fallback();
 }
 
 pub use crate::common::error::*;
@@ -209,6 +247,15 @@ pub struct CoreOptions {
   pub input_encoding:   Option<String>,
   /// a list of package names to preload before processing start
   pub preload:          Option<Vec<String>>,
+}
+
+/// A size property as a Dimension: a Dimension itself, a Glue's natural size, and a MuGlue/MuDimension in scaled
+/// points at the current font size (TeX's `math_kern`, tex.web §717); `None` for anything else.
+pub fn stored_dimension(s: Option<&Stored>) -> Option<Dimension> {
+  match s? {
+    Stored::Number(_) => None,
+    value => value.into(),
+  }
 }
 
 impl Core {
@@ -289,6 +336,11 @@ pub trait BoxOps: Object {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self.get_properties_mut().insert(key, value.into());
   }
+  /// [`BoxOps::set_property`] for a memo — a value the box can compute again — which a box busy elsewhere (being
+  /// absorbed) does without, where Perl's plain hash store (Box.pm:294-296) always lands.
+  fn set_memo_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    self.set_property(key, value);
+  }
   /// get a single named property (with special "isSpace" check)
   fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     self.with_properties(|props| {
@@ -365,72 +417,46 @@ pub trait BoxOps: Object {
       return Ok(Some(RegisterValue::Dimension(w)));
     }
 
-    // Convert MuGlue/MuDimension widths to pt (1mu = font_size/18). `\the\wd`
-    // is a dimension query — the result must be Dimension-typed. Without
-    // this conversion `\hbox{\,}` width came back as `MuGlue(3mu)` and
-    // formatted as `3.0pt` (raw mu treated as pt) instead of `1.66663pt`.
-    // Order of ops (div by 18 then mul by fs) matches Perl integer
-    // truncation: see `mu_to_pt_value` in store.rs.
-    fn coerce_mu(val: &Stored) -> Option<RegisterValue> {
-      match val {
-        Stored::MuGlue(g) => {
-          let fs = state::lookup_font()
-            .and_then(|f| f.get_size())
-            .unwrap_or(10.0);
-          let muwidth = (fs * common::numeric_ops::UNITY_F64 / 18.0) as i64;
-          let pt_scaled =
-            (g.value_of() as f64 * muwidth as f64 / common::numeric_ops::UNITY_F64).trunc();
-          Some(RegisterValue::Dimension(Dimension::new(pt_scaled as i64)))
-        },
-        Stored::MuDimension(d) => {
-          let fs = state::lookup_font()
-            .and_then(|f| f.get_size())
-            .unwrap_or(10.0);
-          let pt_scaled = (d.value_of() / 18) as f64 * fs;
-          Some(RegisterValue::Dimension(Dimension::new(pt_scaled as i64)))
-        },
-        _ => val.into(),
-      }
-    }
-    Ok(match self.get_property("width") {
-      Some(val) => coerce_mu(&val),
-      None => match self.get_property("cached_width") {
-        Some(val) => coerce_mu(&val),
-        None => Some(RegisterValue::Dimension(Dimension::default())),
+    // A declared width that is no dimension (a String attribute: diagbox, `\rotate[f]`) falls through; a mu width is
+    // read in pt (`\hbox{\,}` 1.66663pt).
+    let declared =
+      |key: &str| stored_dimension(self.get_property(key).as_deref()).map(RegisterValue::Dimension);
+    Ok(
+      match declared("width").or_else(|| declared("cached_width")) {
+        Some(width) => Some(width),
+        None => Some(RegisterValue::Dimension(
+          self.compute_size(options.unwrap_or_default())?.0,
+        )),
       },
-    })
+    )
   }
   /// sets a "height" property value, for sizing
   fn set_height<T: Into<Stored>>(&mut self, width: T) { self.set_property("height", width); }
   /// gets the "height" property value, if any.
   /// Checks "height", then "cached_height", then computes from font if needed.
   fn get_height(&self) -> Option<RegisterValue> {
-    match self.get_property("height") {
-      Some(val) => (&*val).into(),
-      None => match self.get_property("cached_height") {
-        Some(val) => (&*val).into(),
-        None => match self.compute_size(HashMap::default()) {
-          Ok((_, h, _)) => Some(RegisterValue::Dimension(h)),
-          _ => Some(RegisterValue::Dimension(Dimension::default())),
-        },
-      },
-    }
+    let declared =
+      |key: &str| stored_dimension(self.get_property(key).as_deref()).map(RegisterValue::Dimension);
+    declared("height")
+      .or_else(|| declared("cached_height"))
+      .or_else(|| match self.compute_size(HashMap::default()) {
+        Ok((_, h, _)) => Some(RegisterValue::Dimension(h)),
+        _ => Some(RegisterValue::Dimension(Dimension::default())),
+      })
   }
   /// sets a "depth" property value, for sizing
   fn set_depth<T: Into<Stored>>(&mut self, width: T) { self.set_property("depth", width); }
   /// gets the "depth" property value, if any.
   /// Checks "depth", then "cached_depth", then computes from font if needed.
   fn get_depth(&self) -> Option<RegisterValue> {
-    match self.get_property("depth") {
-      Some(val) => (&*val).into(),
-      None => match self.get_property("cached_depth") {
-        Some(val) => (&*val).into(),
-        None => match self.compute_size(HashMap::default()) {
-          Ok((_, _, d)) => Some(RegisterValue::Dimension(d)),
-          _ => Some(RegisterValue::Dimension(Dimension::default())),
-        },
-      },
-    }
+    let declared =
+      |key: &str| stored_dimension(self.get_property(key).as_deref()).map(RegisterValue::Dimension);
+    declared("depth")
+      .or_else(|| declared("cached_depth"))
+      .or_else(|| match self.compute_size(HashMap::default()) {
+        Ok((_, _, d)) => Some(RegisterValue::Dimension(d)),
+        _ => Some(RegisterValue::Dimension(Dimension::default())),
+      })
   }
   /// gets the box size as a triple of (width, height, depth)
   /// the generic implementation is immutable and will recompute the size on each call
@@ -447,20 +473,26 @@ pub trait BoxOps: Object {
     Dimension,
   )> {
     // TODO: Reintroduce caching?
-    if !(self.has_property("cached_width")
+    // The size just computed stands in for a memo the box could not keep (`set_memo_property`: busy elsewhere).
+    let computed = if !(self.has_property("cached_width")
       && self.has_property("cached_height")
       && self.has_property("cached_depth"))
     {
-      self.compute_size_and_cache(options.unwrap_or_default())?;
-    }
+      Some(self.compute_size_and_cache(options.unwrap_or_default())?)
+    } else {
+      None
+    };
+    let computed_width = computed.map(|c| Stored::from(c.0));
+    let computed_height = computed.map(|c| Stored::from(c.1));
+    let computed_depth = computed.map(|c| Stored::from(c.2));
     self.with_properties(|props| {
       let (width, height, depth, cached_width, cached_height, cached_depth) = (
         props.get("width"),
         props.get("height"),
         props.get("depth"),
-        props.get("cached_width"),
-        props.get("cached_height"),
-        props.get("cached_depth"),
+        props.get("cached_width").or(computed_width.as_ref()),
+        props.get("cached_height").or(computed_height.as_ref()),
+        props.get("cached_depth").or(computed_depth.as_ref()),
       );
 
       // eprintln!("SIZE of {} {}", std::any::type_name::<Self>(), self.get_string()?);
@@ -471,55 +503,37 @@ pub trait BoxOps: Object {
       // _showsize($$props{width} || $$props{cached_width}, $$props{height}
       // || $$props{cached_height}, $$props{depth} || $$props{cached_depth})     . "\n   Of " .
       // ToString($self)) if $LaTeXML::DEBUG{size};
-      // Helper: extract a Dimension from a Stored value.
-      // Handles Dimension directly, plus Glue/MuGlue/MuDimension by extracting the base value.
-      // MuGlue/MuDimension values are in scaled mu (1mu = font_size/18);
-      // convert to scaled pt using the current font size.
-      fn stored_to_dim(s: Option<&Stored>) -> Option<Dimension> {
-        match s {
-          Some(Stored::Dimension(d)) => Some(*d),
-          Some(Stored::Glue(g)) => Some(Dimension::new(g.value_of())),
-          Some(Stored::MuGlue(g)) => {
-            // Convert mu to pt: 1mu = font_size / 18
-            let fs = state::lookup_font()
-              .and_then(|f| f.get_size())
-              .unwrap_or(10.0);
-            let muwidth = (fs * common::numeric_ops::UNITY_F64 / 18.0) as i64;
-            let pt_scaled =
-              (g.value_of() as f64 * muwidth as f64 / common::numeric_ops::UNITY_F64).trunc();
-            Some(Dimension::new(pt_scaled as i64))
-          },
-          Some(Stored::MuDimension(d)) => {
-            let fs = state::lookup_font()
-              .and_then(|f| f.get_size())
-              .unwrap_or(10.0);
-            let mu_val = d.value_of() as f64;
-            let pt_scaled = mu_val * fs / 18.0;
-            Some(Dimension::new(pt_scaled as i64))
-          },
-          _ => None,
-        }
-      }
       Ok((
-        stored_to_dim(width).unwrap_or_else(|| stored_to_dim(cached_width).unwrap_or_default()),
-        stored_to_dim(height).unwrap_or_else(|| stored_to_dim(cached_height).unwrap_or_default()),
-        stored_to_dim(depth).unwrap_or_else(|| stored_to_dim(cached_depth).unwrap_or_default()),
-        stored_to_dim(cached_width).unwrap_or_else(|| stored_to_dim(width).unwrap_or_default()),
-        stored_to_dim(cached_height).unwrap_or_else(|| stored_to_dim(height).unwrap_or_default()),
-        stored_to_dim(cached_depth).unwrap_or_else(|| stored_to_dim(depth).unwrap_or_default()),
+        stored_dimension(width)
+          .unwrap_or_else(|| stored_dimension(cached_width).unwrap_or_default()),
+        stored_dimension(height)
+          .unwrap_or_else(|| stored_dimension(cached_height).unwrap_or_default()),
+        stored_dimension(depth)
+          .unwrap_or_else(|| stored_dimension(cached_depth).unwrap_or_default()),
+        stored_dimension(cached_width)
+          .unwrap_or_else(|| stored_dimension(width).unwrap_or_default()),
+        stored_dimension(cached_height)
+          .unwrap_or_else(|| stored_dimension(height).unwrap_or_default()),
+        stored_dimension(cached_depth)
+          .unwrap_or_else(|| stored_dimension(depth).unwrap_or_default()),
       ))
     })
   }
 
-  /// computes and caches (via named properties) the size of a box-like object.
-  /// Perl #2798 (S5, padding slice): after computing the size, add any requested
-  /// `pad{top,bottom,left,right}` to the computed dimensions. This is the SAFE
-  /// part of `computeSizeStore` — additive and inert until the app layer sets a
-  /// `pad*` property (display math `\abovedisplayskip`/`\belowdisplayskip`,
-  /// `\overline`/`\underline` 2pt, items/equations). The riskier requested-vs-
-  /// computed merge + full-spec bypass + `isEmpty` are deliberately NOT included
-  /// here — a mechanical port of those regressed (Rust boxes don't use
-  /// width/height/depth uniformly as "requested box size"); see SYNC_STATUS U2.
+  /// computes and caches (via named properties) the size of a box-like object,
+  /// Perl's `computeSizeStore` (Box.pm:266-297). A box whose size is completely
+  /// specified keeps that size, and its contents are not measured (:275-281):
+  /// width, height and depth all given, a space's width, or a vertical space's
+  /// height or depth. A pgf picture declares its size, and sizing a box that
+  /// holds one walked every drawing box of it (pgf-spectraPreviewDataLSE, 56kq).
+  /// Perl #2798 (S5, padding slice): the size then takes any requested
+  /// `pad{top,bottom,left,right}` (display math
+  /// `\abovedisplayskip`/`\belowdisplayskip`, `\overline`/`\underline` 2pt,
+  /// items/equations). Not ported: a partly specified size keeping its given
+  /// parts over the computed ones, and `isEmpty` — a mechanical port of those
+  /// regressed (Rust boxes don't use width/height/depth uniformly as "requested
+  /// box size"; `docs/archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md`, U2 and
+  /// slice S5); tracked with K18 in `docs/SYNC_STATUS.md`.
   fn compute_size_and_cache(
     &mut self,
     mut options: HashMap<Stored>,
@@ -541,7 +555,21 @@ pub trait BoxOps: Object {
       }
     }
 
-    let (mut w, mut h, mut d) = self.compute_size(options.clone())?;
+    let requested = |key: &str| stored_dimension(options.get(key));
+    let flag =
+      |key: &str| self.with_properties(|props| matches!(props.get(key), Some(Stored::Bool(true))));
+    let (is_space, is_vertical_space) = (flag("isSpace"), flag("isVerticalSpace"));
+    let (mut w, mut h, mut d) = match (requested("width"), requested("height"), requested("depth"))
+    {
+      (Some(w), Some(h), Some(d)) => (w, h, d),
+      (Some(w), h, d) if is_space => (w, h.unwrap_or_default(), d.unwrap_or_default()),
+      (w, h, d) if (h.is_some() || d.is_some()) && is_vertical_space => (
+        w.unwrap_or_default(),
+        h.unwrap_or_default(),
+        d.unwrap_or_default(),
+      ),
+      _ => self.compute_size(options.clone())?,
+    };
     // Perl: add requested padding to the computed size.
     fn pad_sp(s: Option<&Stored>) -> i64 {
       match s {
@@ -567,14 +595,16 @@ pub trait BoxOps: Object {
       d = Dimension::new(d.value_of() + padb);
     }
 
+    // A memo: a box sized while it is being absorbed (an auto-closed `ltx:picture` measuring the `{picture}` whose
+    // body closed it, 1111.1991) is sized again when asked (`set_memo_property`).
     if !self.has_property("cached_width") {
-      self.set_property("cached_width", w);
+      self.set_memo_property("cached_width", w);
     }
     if !self.has_property("cached_height") {
-      self.set_property("cached_height", h);
+      self.set_memo_property("cached_height", h);
     }
     if !self.has_property("cached_depth") {
-      self.set_property("cached_depth", d);
+      self.set_memo_property("cached_depth", d);
     }
     Ok((w, h, d))
   }

@@ -1,0 +1,19 @@
+% witness: abntex2/abntex2cite (abntex2cite.tex:1367 \autopageref{chapter-opcoes-estilo})
+% oracle:  pdflatex 0 errors (verified 2026-09-03)
+% engines: rust=1 perl=? (2026-09-03) -- SHARED (Perl hyperref.sty.ltxml defines
+%          \autoref L367 but NOT \autopageref; grep confirms it is absent)
+% expect:  0 errors; \autopageref{sec:x} yields an <ltx:ref> (page reference)
+% status:  GREEN (b54t, batch 54o)
+% mechanism: hyperref.sty:8183 \DeclareRobustCommand*{\autopageref} (page-number
+%   ref, star=nolink) is a real hyperref command; the Rust hyperref binding
+%   (hyperref_sty.rs, a LoadDefinitions emulation that does NOT raw-load
+%   hyperref.sty) omits it, so \autopageref is undefined. Same class of gap:
+%   \hyper@makecurrent (ucalgmthesis), \hyper@normalise (biblatex),
+%   \hyper@linkstart/\hyper@linkend/\@baseurl (cms-* docs).
+%   Fix site = latexml_package/src/package/hyperref_sty.rs.
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\section{X}\label{sec:x}
+See \autopageref{sec:x} and \autoref{sec:x}.
+\end{document}

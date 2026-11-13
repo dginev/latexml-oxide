@@ -1,0 +1,23 @@
+% witness: rev78a probe (book.cls:520-524 `\appendix` `\setcounter{section}{0}`; after `\backmatter` no chapter step
+%          resets the sections, :296-299); 2207.05520 (book, `\backmatter\appendix\chapter*{…}`)
+% oracle:  pdflatex 0 errors: "Afterword" and "1.2 Notes", then the appendix chapter "Extra" unnumbered and ".1 Proofs"
+% engines: rust 78a r1 = ".3 Proofs" (the section count ran on); int40c and perl number the back matter
+%          (KNOWN_PERL_ERRORS #1016)
+% expect:  0 errors, 0 warnings; "Afterword", "1.2 Notes", "Extra", ".1 Proofs"
+% status:  GREEN (78a r2)
+% preload: ar5iv.sty
+\documentclass{book}
+\begin{document}
+\mainmatter
+\chapter{Intro}
+\section{Sec}
+I.
+\backmatter
+\chapter{Afterword}
+\section{Notes}
+A.
+\appendix
+\chapter{Extra}
+\section{Proofs}
+P.
+\end{document}

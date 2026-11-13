@@ -1,0 +1,17 @@
+% witness: 63h review r2 finding 3 (elsarticle `\address[a]`, `\address[b]` that no author cites; synthetic)
+% oracle:  pdflatex (elsarticle.cls) 0 errors: "Ann Able, Bob Baker"; "a Univ A", "b Univ B" (no author marked)
+% engines: rust 63g = both shared; 63h r2 = paired by position; Perl warns and drops them
+% expect:  both shared on the trailing creator (lettered labels are no numbering to pair by); 0 errors
+% status:  RED (63h r2) -> GREEN (63h)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\address[a]{Univ A}
+\address[b]{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\end{frontmatter}
+Body.
+\end{document}

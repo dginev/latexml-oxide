@@ -1,0 +1,14 @@
+% witness: the r8 re-review of batch 77p (finding 2, probes u1, u3, u4; int34a the same, 77p r10 URL contacts)
+% oracle:  pdflatex 0 errors: two author columns, then three link columns printing "Model Card", "Paper Website" and
+%          "Hugging Face Demo"
+% engines: rust int38 (77p r11) = 0 errors; three creators named "Model Card", "Paper Website", "Hugging Face Demo"
+% expect:  0 errors, 0 warnings; two authors, the three links URL contacts of the block's shared creator
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Univ A \and Bob Baker \\ Univ B \and \href{https://x.org/card}{Model Card} \and \href{https://x.org/p}{Paper Website} \and \href{https://huggingface.co/x}{Hugging Face Demo}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

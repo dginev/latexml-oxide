@@ -1,0 +1,24 @@
+% mechanism: `insert::respell_emails` picks the author an e-mail call moves to by the names as printed; base letters
+%   only keep an address on the author it spells so (brief 95c r2 B1): Anna Smith's own `\ead{muller@x.de}` spells
+%   Jörg Müller only by base letters, so it stays on her.
+% witness: the charter example (#420); 2410.00275
+% oracle:  pdflatex 0 errors: "Anna Smith, Jörg Müller" (with no `\journal` the class sets no e-mail footnote on the
+%   page: `\ead` stores the address, elsarticle.cls:215-219)
+% engines: rust 95c: muller@x.de moved onto Jörg Müller; rust int123a: on Anna Smith; perl: on Anna Smith
+% expect:  0 errors, 0 warnings; Anna Smith muller@x.de; Jörg Müller jm@y.de
+% status:  RED (95c) -> GREEN (95c-r2)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Anna Smith}
+\ead{muller@x.de}
+\author{J\"org M\"uller}
+\ead{jm@y.de}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Text.
+\end{document}

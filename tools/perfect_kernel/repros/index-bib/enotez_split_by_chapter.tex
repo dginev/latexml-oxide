@@ -1,0 +1,21 @@
+% enotez's `split=chapter` lists each chapter's notes once, whatever sections it has, and
+% `reset=true` restarts the numbering per chapter (enotez.sty:884-905 prepends to `\chapter`,
+% which LaTeXML keeps locked; the binding compares the chapter at each note).
+% witness: none (synthetic; enotez_en.tex split option).
+% status:  GREEN (58l)
+% oracle:  pdflatex (2 runs) 0 errors: marks 1 2 3 | 1; Notes: "Notes for chapter 1": 1. 2. 3. ;
+%          "Notes for chapter 2": 1.
+% expect:  0 errors, 0 warnings.
+\documentclass{book}
+\usepackage{enotez}
+\setenotez{split=chapter,reset=true}
+\begin{document}
+\chapter{One}
+\section{A}
+Alpha\endnote{First.} beta\endnote{Second.}
+\section{B}
+Gamma\endnote{Third.}
+\chapter{Two}
+Delta\endnote{Fourth.}
+\printendnotes
+\end{document}

@@ -1,0 +1,17 @@
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: hang/hang (hang.tex:5 \setotherlanguage{latin}); also hang/sample
+% oracle:  lualatex 0 errors (pdflatex: polyglossia is XeTeX/LuaTeX-only)
+% engines: rust=RED perl=? (2026-09-03)
+% expect:  0 errors; body has one <ltx:p> containing "latin"
+% status:  GREEN (batch 54m, 2026-09-03)
+% guard:   perfect_kernel_batch54::ifundefined_does_not_define_the_name (+ l3sys_engine_identity_under_luatex_profile)
+% mechanism: polyglossia gloss-latin.ldf:125 \sys_if_engine_luatex:TF answers
+%   FALSE under [luatex] (expl3 l3sys computed \c_sys_engine_str=pdftex at
+%   format-build time, before the profile defined \luatexversion) -> XeTeX
+%   branch -> \newXeTeXintercharclass undefined (expl3-code.tex:7846).
+\documentclass{article}
+\usepackage{polyglossia}
+\setotherlanguage{latin}
+\begin{document}
+\textlatin{latin} text
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 57l+57m train A/B: 2605.03599, 2605.07504 (pnas-new). pnas-new.cls:422 `\newcommand{\doi}[1]{\def\@doi{#1}}`
+%          stores the DOI for the page footer (:268, 369-370); the binding (pnas_new_cls.rs) loads OmniBus and
+%          defines no `\doi`, and since 57m OmniBus's reads its argument verbatim as a url (KNOWN_PERL_ERRORS
+%          #326), so `\doi{\url{…}}` printed "\urlwww.pnas.org/…"
+% oracle:  pdflatex (with the paper's pnas-new.cls) 0 errors: the DOI url in the footer; perl: 0 errors, OmniBus's
+%          `\doi{}` digests the argument
+% engines: rust 57m: <ref href="https://doi.org/\urlwww.pnas…">\urlwww.pnas.org/…</ref>
+% expect:  0 errors; the DOI a frontmatter note holding the url; a bibliography `\doi` (pnas-new.bst:116-121) meets
+%          the same setter and prints nothing
+% status:  RED (57m) -> GREEN (57p)
+\documentclass{pnas-new}
+\usepackage{url}
+\begin{document}
+\title{T}
+\doi{\url{www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX}}
+\maketitle
+Text \cite{k}.
+\begin{thebibliography}{1}
+\bibitem{k} A. Author, Title. \doi{10.1000/xyz}
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,25 @@
+% witness: SYNC_STATUS row 121; the 85a r1 review's r1 (finding 5), r12: a row of names parted by space under an
+%          author's lines, with no gap, styling, note or mark before it (`Ann Able \\ Univ A \\ Bob Baker~~~~Cat Cole \\
+%          Univ B`), or a cue-less name under a row's line (`Ann Able \quad Bob Baker \quad \\ Univ A \\ Cat Cole \\
+%          Univ C`), stays the lines of the authors above: no signal tells it from a place (the cue-less residual,
+%          OD #900)
+% oracle:  pdflatex 0 errors: one centred column per group
+% engines: rust int114a = r1 as now, r12 "Univ A" a creator; rust 85a r2, r3, r4 = "Bob Baker Cat Cole" a line of Ann
+%          Able, "Cat Cole" and Univ C lines of Ann Able and Bob Baker
+% expect:  0 errors, 0 warnings; the six creators, each with its own lines
+% status:  RED (int114a, 85a r3, 85a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+Univ A \\
+Bob Baker~~~~Cat Cole \\
+Univ B
+\and Dan Dorn \quad Eve Eads \quad \\
+Univ A \\
+Fay Fox \\
+Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

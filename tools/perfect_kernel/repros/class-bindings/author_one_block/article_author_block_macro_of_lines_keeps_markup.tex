@@ -1,0 +1,29 @@
+% mechanism: reading.rs `unfold_held_names` (OD #1018): CVPR's `\author{\authorBlock}`, a document macro holding the
+%   names parted by `\qquad`, their `\textsuperscript` marks, a `\thanks`, the affiliation lines and a `{\tt\small …}`
+%   e-mail: read with the expansion in its place, the names cut at their gaps, the note's bold and the e-mail's font kept,
+%   as the inline twin. Before, the names by their text (six Warnings)
+% witness: 2504.00496 (its `\authorBlock`), 2502.20316, 2503.19295, 2308.04468 (AUT0's census)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Jingbo Lu1 Mu Li2 Shuhang Gu1∗", "1 University of
+%   Electronic Science", "2 Harbin Institute of Technology", "gu@gmail.com"
+% engines: int167a: 0 errors, 6 warnings (the names, "a name its events don't spell"); the inline twin: 0 errors, 0
+%   warnings
+% expect:  0 errors, 0 warnings; the inline twin's creators: Jingbo Lu (University of Electronic Science), Mu Li (Harbin
+%   Institute of Technology), Shuhang Gu (note "Corresponding **author**.", University of Electronic Science, e-mail
+%   gu@gmail.com in typewriter)
+% status:  RED (int167a) -> GREEN (AUT1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\authorBlock{
+    Jingbo Lu\textsuperscript{1} \qquad
+    Mu Li\textsuperscript{2} \qquad
+    Shuhang Gu\textsuperscript{1}\thanks{Corresponding \textbf{author}.}\\
+    \textsuperscript{1} University of Electronic Science \\
+    \textsuperscript{2} Harbin Institute of Technology
+    \\
+    {\tt\small gu@gmail.com}}
+\begin{document}
+\title{T}
+\author{\authorBlock}
+\maketitle
+Text.
+\end{document}

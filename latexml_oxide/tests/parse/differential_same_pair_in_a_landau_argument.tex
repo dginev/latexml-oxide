@@ -1,0 +1,10 @@
+% A `d<var>` that is a differential elsewhere in its formula stays one inside an order symbol's argument (user ruling
+% 2026-10-02, Q-D: the same `d<var>` reads the same within a formula); a dimension in a Landau argument stays a letter.
+% witness: 2605.00265 (`\mathcal L(\phi,\phi+d\phi)=\dots+o(\|d\phi\|^2)`)
+% expect:  0 errors; every `d\phi` of the first formula a differential; `O(dk^3)` letters
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\mathcal{L}(\phi,\phi+d\phi)=\frac{1}{2}\rho''(0)\Big((d\psi)^2+(d\theta)^2\Big)+o\!\left(\|d\phi\|^2\right)$
+$T=O(dk^3)$
+\end{document}

@@ -1,0 +1,34 @@
+% witness: egpeirce/egpeirce-doc, srdp-mathematik, egameps, lsc, dsptricks/dspTricksManual
+%   (every `\psline`/`\psframe`/`\pscircle`/… of a {pspicture})
+% oracle:  pdflatex 0 errors; draws the arrowed line, the square, the circle,
+%   the triangle and the dot, and a 0.05cm (1.42pt) line for `linewidth=0.05`
+% engines: rust(56ir)=0 errors but an EMPTY <picture> and `.5` leaked as text;
+%   perl=0 errors, the objects drawn (2026-09-25)
+% expect:  0 errors, 0 warnings; one <ltx:line>/<ltx:rect>/<ltx:circle>/
+%   <ltx:polygon>/<ltx:dots> per object with Perl's attributes, coordinates
+%   and radii in px (the picture's unit), stroke width in pt
+% status:  GREEN (w1-pstricks, P1)
+% mechanism: pstricks_sty.rs gobbled every drawing object's `(x,y)` tuples as
+%   a no-op ("DVI-only"), and `\pscircle … OptionalPair {}` read `{0.5}`'s
+%   `0` only. Perl pstricks_support.sty.ltxml:661-821 builds each object with
+%   `DefPSConstructor`: `\cmd*[<params>]` → `{\psset{<params>}\cmd@*`, the
+%   constructor reading `Arrows`/`PSCoordList`/`ZeroPSCoord {PSDimension}`
+%   and, after digestion, the line/fill parameters (`psDefaultParameters`)
+%   before closing the group. The parameters come from the RAW `\psset`
+%   storage (\pslinewidth, \pslinecolor, \pslinestyle, \psk@fillstylename,
+%   \psfillcolor, \psk@dash). `linewidth=0.05` runs `\pssetlength
+%   \pslinewidth{0.05}` (pstricks.tex:1078): the raw `\pssetlength` reads a
+%   bare number in \psunit; Perl's `Let('\pssetlength','\setlength')` (:650)
+%   made it 0.05pt with two "Illegal unit" warnings.
+\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+\begin{pspicture}(0,0)(4,3)
+\psline{->}(0,0)(2,1)
+\psframe(0,0)(1,1)
+\pscircle[linewidth=1pt](1,1){0.5}
+\pspolygon(0,0)(1,0)(1,1)
+\psdot(2,2)
+\psline[linewidth=0.05,linecolor=red](0,1)(1,2)
+\end{pspicture}
+\end{document}

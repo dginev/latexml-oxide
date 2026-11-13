@@ -1,0 +1,17 @@
+% witness: 1902.09345 (`\renewcommand{\theequation}{Equation S\arabic{equation}}`, `\renewcommand{\p@equation}
+%          {\gobblesomeargs}`, a robust nine-argument command keeping the ninth)
+% oracle:  pdflatex 0 errors; "(Equation S1)", "(Equation S2)", "See S1." (`\protected@edef\@currentlabel{\csname
+%          p@equation\expandafter\endcsname\csname theequation\endcsname}`, latex.ltx:14963-14964)
+% engines: rust 77s = 8 errors (the form typed unexpanded read `\csname theequation\endcsname`'s letters and past the
+%          tag), the first equation lost from the witness; 77u 0 errors, refnum "S1"; Perl the form typed unexpanded
+% expect:  0 errors, 0 warnings; the equations' refnum tags "S1", "S2"
+% status:  GREEN (77u, base_utilities.rs `\lx@@p@the@@`, OXIDIZED_DESIGN_DIVERGENCES #778)
+\documentclass{article}\makeatletter
+\renewcommand{\theequation}{Equation S\arabic{equation}}
+\DeclareRobustCommand{\gobblesomeargs}[9]{#9}
+\renewcommand{\p@equation}{\gobblesomeargs}\makeatother
+\begin{document}
+\begin{equation} x \label{a}\end{equation}
+\begin{equation} y \end{equation}
+See \ref{a}.
+\end{document}

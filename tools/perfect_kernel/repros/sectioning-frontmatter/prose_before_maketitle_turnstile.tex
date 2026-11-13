@@ -1,0 +1,15 @@
+% witness: turnstile/turnstile_article, turnstile_artigo (prose before \maketitle); logo/cover controls; 56 s112 docs with <title> after body content
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-23)   <- before 56gf: current-point placement, <title> after <para> (SHARED)
+% expect:  0 errors; <title> leads, then "Some prose before the title." and "Body text." as two paras
+% status:  GREEN (56gf 2026-09-23; was RED on the schema axis)
+% mechanism: user-approved surpass — visible body content before the flush does not hold the
+%   frontmatter back; it goes to the head and the content follows in order; the flush ends
+%   the interrupted paragraph (\maketitle opens with \par). OXIDIZED_DESIGN #262.
+\documentclass{article}
+\title{The Title}\author{An Author}\date{Spring}
+\begin{document}
+Some prose before the title.
+\maketitle
+Body text.
+\end{document}

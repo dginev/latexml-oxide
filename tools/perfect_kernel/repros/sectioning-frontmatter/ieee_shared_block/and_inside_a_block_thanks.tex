@@ -1,0 +1,25 @@
+% mechanism: `and_inside_a_block` with a `\thanks` before the first author's block (the paper's own shape): the note
+%   the document's, the two authors apart
+% witness: 2105.06537
+% oracle:  pdflatex 0 errors: two columns "Ann Able / ann@x.edu / Department of A / University A" and
+%   "Bob Baker / bob@y.edu / School of B / University B" (conference mode locks `\thanks` out)
+% engines: rust int130a: apart, Ann's affiliation ending in " and "; 104a: Ann also holds Bob's block
+% expect:  0 errors, 0 warnings; two creators, each their own block only; the note the document's thanks
+% status:  RED (104a) -> GREEN (104a r2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+  \thanks{Ann is supported by a fellowship.}
+  \IEEEauthorblockA{\texttt{ann@x.edu}\\
+    Department of A\\
+    University A\\
+    \and
+    \IEEEauthorblockN{Bob Baker}
+    \IEEEauthorblockA{\texttt{bob@y.edu}\\
+      School of B\\
+      University B}}}
+\maketitle
+Text.
+\end{document}

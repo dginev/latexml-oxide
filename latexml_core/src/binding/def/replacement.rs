@@ -684,6 +684,13 @@ fn exec_ops(
   props: &SymHashMap<Stored>,
   savenode: &mut Option<Node>,
 ) -> Result<()> {
+  // Elements this replacement opened itself: their closing tag closes only
+  // what is still open — content the element could not hold (a tcolorbox in
+  // a `{picture}`, a `\subsection` in a beamer `{block}`) auto-closed it
+  // already, and Perl's blunt `closeElement` then reported "isn't open"
+  // (pagelayout, xebaposter, beamertheme-mirage). A genuine mismatch is
+  // caught by the environment-name check before the closing tag runs.
+  let mut opened_here: Vec<&str> = Vec::new();
   for op in ops {
     match op {
       ReplacementOp::OpenElement {
@@ -694,6 +701,9 @@ fn exec_ops(
       } => {
         if let Some(fk) = float {
           *savenode = document.float_to_element(qname, matches!(fk, FloatKind::Double))?;
+        }
+        if !*self_closing {
+          opened_here.push(qname.as_str());
         }
         let av = eval_avpairs(attrs, args, props)?;
         if av.is_empty() {
@@ -722,7 +732,11 @@ fn exec_ops(
         }
       },
       ReplacementOp::CloseElement { qname } => {
-        document.close_element(qname)?;
+        if opened_here.contains(&qname.as_str()) {
+          document.close_element_if_open(qname)?;
+        } else {
+          document.close_element(qname)?;
+        }
       },
       ReplacementOp::ProcessingInstruction { qname, attrs } => {
         let av = eval_avpairs(attrs, args, props)?;

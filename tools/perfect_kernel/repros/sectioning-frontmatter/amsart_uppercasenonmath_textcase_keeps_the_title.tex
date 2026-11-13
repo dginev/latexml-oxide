@@ -1,0 +1,24 @@
+% witness: Gemini round 13, Q1 side finding: amsart.cls:427-430 switches `\uppercasenonmath` to
+%          `\altucnm` at `\begin{document}` when `\MakeTextUppercase` is defined (textcase loaded);
+%          `\altucnm#1` is `\MakeTextUppercase{\toks@{#1}}\edef#1{\the\toks@}`. The binding ports
+%          `\uppercasenonmath` (ams_support_sty.rs `amsart_uppercase_nonmath`) but not the switch:
+%          `\MakeTextUppercase` is always defined here (latex_base.rs, Perl latex_base.pool.ltxml:852,
+%          `\uppercase`), and textcase's (`\MakeUppercase`) runs `\toks@{…}` inside its own group, so
+%          the assignment is lost and `\edef#1{\the\toks@}` empties the macro. Below: the class's
+%          `\altucnm` defined in the document and called directly.
+% oracle:  pdflatex 0 errors: "T: TITLE x HERE."
+% engines: rust 57bn + round-13 Q1 and perl (same host): 0 errors, "T: ." (the title emptied); SHARED
+% expect:  0 errors; "T: TITLE x HERE." with the math left as is
+% status:  RED (Gemini round 13, Q1 side finding)
+\documentclass{amsart}
+\usepackage{textcase}
+\makeatletter
+\def\altucnm#1{%
+  \MakeTextUppercase{\toks@{#1}}%
+  \edef#1{\the\toks@}%
+}
+\makeatother
+\begin{document}
+\makeatletter\def\x{Title $x$ here}\altucnm\x\makeatother
+T: \x.
+\end{document}

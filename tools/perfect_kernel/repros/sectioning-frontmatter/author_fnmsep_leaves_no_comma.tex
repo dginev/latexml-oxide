@@ -1,0 +1,14 @@
+% witness: astro-ph0001054 (aa), astro-ph0611016 (an); fidelity audit round 2 (llncs here: the same `\fnmsep`, and in
+%          TeX Live)
+% oracle:  pdflatex 0 errors: "U. Hopp^{1,⋆} and D. Engels^{2,⋆⋆}", footnote "Fellow^, of X"
+% engines: rust 63k = Hopp's name ends in a stray superscript "," (his marks became a link and a note); Perl alike
+% expect:  0 errors; "U. Hopp" with his thanks note and affiliation A, "D. Engels" with B and his note, whose own
+%          `\fnmsep` (not before a mark) is still a comma (63l review: a `\fnmsep` in a nested note once looped)
+% status:  RED (63k) -> GREEN (63l)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{U.~Hopp\inst{1}\fnmsep\thanks{Visiting astronomer} \and D.~Engels\inst{2}\fnmsep\thanks{Fellow\fnmsep{} of X}}
+\institute{A \and B}
+\maketitle
+\end{document}

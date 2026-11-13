@@ -1,0 +1,18 @@
+% mechanism: (not handled) a brace list of local parts on an e-mail line written inside llncs's `\author`, under the
+%   names (`\author{… Bob Baker\\ University of Somewhere\\ \email{\{able,baker\}@x.edu}}`): the author block's e-mail
+%   line reader parts it at its comma inside the braces, giving "{able" and "baker}@x.edu", both on Bob Baker.
+% witness: 1609.01220 (`Martin Hofmann \email{\{christoph.senjak,hofmann\}@…}`, an `\email` glued to the last name);
+%   the 85b round-1 probes q1/q4; open question C (an 85a-area batch, the author-block e-mail lines)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "University of Somewhere" and "{able,baker}@x.edu"
+% engines: rust 85b r2 = "University of Somewhere" on both; e-mails "{able" and "baker}@x.edu" on Bob Baker
+% expect:  0 errors, 0 warnings; the line on both; able@x.edu Ann Able's, baker@x.edu Bob Baker's
+% status:  RED (85b r2): the author-line e-mail reader splits inside the printed braces; not the institute's path
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker\\ University of Somewhere\\ \email{\{able,baker\}@x.edu}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

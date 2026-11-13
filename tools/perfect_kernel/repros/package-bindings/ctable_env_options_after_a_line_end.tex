@@ -1,0 +1,16 @@
+% witness: 1706.01884 (`\begin{ctable}` + a line end + `[caption=…,label=T:EIG_…]`: 12 tables, every `\ref` to them dangling)
+% oracle:  pdflatex 0 errors: "Table 1: Results" and "Table 1." — ctable.sty:206 `\newcommand{\ctable}[4][]` looks for
+%          its options with `\@ifnextchar[`, which skips the line end's space
+% engines: rust int94c = 2 errors ("Extra alignment tab", "\noalign cannot be used here"), no caption, no label: the
+%          native binding's `OptionalKeyVals` stopped at the space and read `[` as the column spec (Perl raw-loads
+%          ctable.sty and has no such binding)
+% expect:  0 errors, 0 warnings; a table captioned "Results" labelled T:res, and the \ref to it
+% status:  RED (int94c) -> GREEN (80d: ctable_sty.rs `\ctable SkipSpaces OptionalKeyVals:CT`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{ctable}
+\begin{document}
+\begin{ctable}
+[caption={Results},label={T:res}]{cc}{}{\FL a & b \LL}\end{ctable}
+Table~\ref{T:res}.
+\end{document}

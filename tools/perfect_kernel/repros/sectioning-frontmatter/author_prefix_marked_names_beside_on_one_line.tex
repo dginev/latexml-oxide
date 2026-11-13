@@ -1,0 +1,12 @@
+% witness: 63e review r8 finding 1 (a1: the article \author, names marked before them on one printed line)
+% oracle:  pdflatex 0 errors: "^1Ann Able  ^1Bob Baker  ^2Cat Cole" over "^1Univ A", "^2Univ B"
+% engines: rust (63d, 63e r13) = Ann Able with "Bob Baker", "Cat Cole" among her affiliations (0 errors, silent);
+%          Perl no creator at all (Base_Utility.pool.ltxml:708 `$p < 8`: every line an affiliation)
+% expect:  3 creators — Ann (Univ A), Bob (Univ A), Cat (Univ B), linked by their marks; 0 errors
+% status:  RED (63e r13) -> GREEN (63e)
+\documentclass{article}
+\author{$^{1}$Ann Able \quad $^{1}$Bob Baker \quad $^{2}$Cat Cole\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

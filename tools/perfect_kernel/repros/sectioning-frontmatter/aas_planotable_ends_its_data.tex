@@ -1,0 +1,25 @@
+% mechanism: AASTeX 3's `{planotable}` (aaspptwo.sty:252-256) ends its data itself, `\endplanotable` closing the
+%   tabular, so a paper writes no `\enddata`. The aas binding made `\endplanotable` deluxetable's end, which leaves the
+%   data's alignment open: "Attempt to end mode internal_vertical" and the rest of the document swallowed. It now ends
+%   open data first (`\iflx@deluxetable@data`).
+% witness: astro-ph9502038 (3020 → 1106 words once aaspptwo reached the aas binding; base read it through OmniBus)
+% oracle:  pdflatex with a shipped aaspptwo.sty: 0 errors; Table 1 "Lines" with its rows; "After the table."
+% engines: rust 64zd-base (aaspptwo missing, OmniBus whole): 0 errors; rust 64zd r4 (aaspptwo → aas): 6 errors, the
+%   text after the table lost; perl: 9 errors, the text kept
+% expect:  0 errors; the table with both rows; the paragraph after it
+% status:  RED (64zd r4) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aaspptwo]{article}
+\def\doublebox!#1!#2!{\hbox{$\vcenter{%
+  \tabskip0em\halign{\strut##\hfil\cr #1\cr #2\cr}}$}}
+\begin{document}
+Before.
+\begin{planotable}{ll}
+\tablecaption{Lines}
+\tablehead{\colhead{A}& \colhead{B}}
+\startdata
+1 & 2 \nl
+3 & \doublebox!x!y!
+\end{planotable}
+After the table.
+\end{document}

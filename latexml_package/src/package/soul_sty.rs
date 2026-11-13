@@ -24,6 +24,13 @@ use crate::{
 // same `\lx@soul@letterspaced`, the state must also be keyed under the alias.
 // In Perl `Let` naturally preserves closure identity, so this step is implicit.
 
+/// soul.sty:263/348: the scanner sets a `\\` in its argument as a forced line break (`\unskip\nobreak\hfil\break`),
+/// never the end of an alignment row; the soul commands digest their argument with `\\` `\let` to `\newline`, local to
+/// the command's group (`bounded`). Perl's constructors digest `\\` as it stands, so in a `p{}` cell
+/// (`\hl{line one \\ line two}`) it ended the row inside the group: "Attempt to close a group that switched to mode
+/// horizontal", the rest of the table lost (2310.07652, 2406.17962; pdflatex 0 errors; KNOWN_PERL_ERRORS #1153).
+fn soul_line_breaks() { let_i(&T_CS!("\\\\"), &T_CS!("\\newline"), None); }
+
 LoadDefinitions!({
   // Perl: soul.sty.ltxml
   // Space-Out and UnderLine package
@@ -34,8 +41,14 @@ LoadDefinitions!({
   // 1,   beforeDigest => sub { Digest($font); });
   // We store spacing + font per CS in state. The generic constructor reads them
   // via get_current_token() which preserves the original CS name through Let resolution.
-  DefPrimitive!("\\sodef Token {} {Dimension}{Dimension}{Dimension}",
+  // The three spacings are skips (soul-ori.sty:652-660, `\hskip`/`\spaceskip`;
+  // soul's own `\resetso` passes `.65em\@plus.08em\@minus.06em`, :668-669): a
+  // `{Dimension}` would put the `plus`/`minus` back in the input (OXIDIZED_DESIGN
+  // #317). The letter spacing is its natural width.
+  DefPrimitive!("\\sodef Token {} {Glue}{Glue}{Glue}",
   sub[(cs, font, letterspace, _innerspace, _outerspace)] {
+    let letterspace: Glue = letterspace;
+    let letterspace = Dimension::new(letterspace.value_of());
     let cs_name = cs.to_string();
     let px = letterspace.px_value(Some(2));
     let spacing_key = s!("soul_spacing_{cs_name}");
@@ -58,6 +71,7 @@ LoadDefinitions!({
   enter_horizontal => true,
   bounded => true,
   before_digest => {
+    soul_line_breaks();
     // Look up and digest font tokens for the original CS
     if let Some(token) = get_current_token() {
       let cs_name = token.with_cs_name(|n| n.to_string());
@@ -92,7 +106,10 @@ LoadDefinitions!({
   RawTeX!("\\sodef\\textcaps{\\capsfont}{0.28em}{0.37em}{.37em}");
 
   // Ignorable caps customization
-  def_macro_noop("\\capsdef {} {Dimension}{Dimension}{Dimension}")?;
+  // soul-ori.sty:697-700 `\capsdef#1#2#3#4#5`: a font match, the font commands
+  // (`{\scshape}`) and three skips. With a `{Dimension}` for the font commands
+  // they were put back in the input and switched the font (OXIDIZED_DESIGN #317).
+  def_macro_noop("\\capsdef {}{}{Glue}{Glue}{Glue}")?;
   def_macro_noop("\\capssave{}")?;
   def_macro_noop("\\capsselect{}")?;
   def_macro_noop("\\capsreset")?;
@@ -107,10 +124,11 @@ LoadDefinitions!({
   DefConstructor!("\\textul{}",
   "<ltx:text framed='underline' framecolor='#framecolor' _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true, bounded => true, sizer => "#1",
+  before_digest => { soul_line_breaks(); },
   properties => sub[_args] {
     let mut soul_color: Option<String> = None;
     // Perl getSOULcolor: only when color.sty is loaded.
-    if (lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded"))
+    if package_loaded("color")
       && let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
         let color_name = to_string(color_sym);
         soul_color = Some(lookup_color(&color_name));
@@ -123,16 +141,23 @@ LoadDefinitions!({
 
   // Customizing underlines
   DefPrimitive!("\\setulcolor{}", sub[(color_arg)] {
-    let color_str = color_arg.to_string();
+    // Real soul resolves the stored name through `\color` at use time, which
+    // EXPANDS a macro-valued name: europasscv.cls:560 `\setulcolor
+    // {\ecv@textcolor}` ("Can't find color named '\ecv@textcolor'"; Perl
+    // soul.sty.ltxml:75 stores `ToString` unexpanded too, KPE #173). Guard:
+    // `perfect_kernel_batch54::soul_color_setters_expand_a_macro_name`.
+    let color_str = do_expand(color_arg)?.to_string();
     // Perl L75 `AssignValue(soul_ul_color => …)` — no scope arg → LOCAL (reverts
     // with the enclosing group), NOT global. See \sethlcolor note below.
     assign_value("soul_ul_color", color_str, None);
     Ok(())
   });
-  def_macro_noop("\\setul{Dimension}{Dimension}")?;
+  // soul-ori.sty:833-836 `\setul#1#2` only `\def`s its two arguments (scanned later, by `\SOUL@ulpreamble`): read as
+  // `{Dimension}` (Perl soul.sty.ltxml:77), `\setul{red}{2pt}` scanned "red" as a length and typeset "ed" (2605.19108).
+  def_macro_noop("\\setul{}{}")?;
   def_macro_noop("\\resetul")?;
   def_macro_noop("\\setuldepth{}")?;
-  def_macro_noop("\\setuloverlap{Dimension}")?;
+  def_macro_noop("\\setuloverlap{}")?; // soul-ori.sty:822 only `\def`s it, as `\setul`
 
   // Strike-out (with optional strike color from \setstcolor)
   // Perl L86-91: framecolor property is a sub that calls getSOULcolor (L61-65
@@ -141,14 +166,16 @@ LoadDefinitions!({
   DefConstructor!("\\textst{}",
   "<ltx:text cssstyle='#cssstyle' _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true,
+  bounded => true,
+  before_digest => { soul_line_breaks(); },
   after_digest => sub[whatsit] {
     let mut css = String::from("text-decoration:line-through;");
     // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
     // Perl L64: `if (my $color = ToString(LookupValue($name)))` — stringify at read time.
-    if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
+    if package_loaded("color") {
       let color_name = match lookup_value("soul_strike_color") {
         Some(Stored::String(sym)) => to_string(sym),
-        Some(Stored::Tokens(ts)) => ts.to_string(),
+        Some(Stored::Tokens(ts)) => do_expand(ts)?.to_string(),
         _ => String::new(),
       };
       if !color_name.is_empty() {
@@ -179,14 +206,15 @@ LoadDefinitions!({
   enter_horizontal => true,
   bounded => true,
   before_digest => {
+    soul_line_breaks();
     // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
     // Perl L64: `ToString(LookupValue($name))` — stringify at read time,
     // supporting either a raw-Tokens entry (from `\sethlcolor`) or the
     // initial string 'yellow' assignment (L103).
-    if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
+    if package_loaded("color") {
       let color_name = match lookup_value("soul_hl_color") {
         Some(Stored::String(sym)) => to_string(sym),
-        Some(Stored::Tokens(ts)) => ts.to_string(),
+        Some(Stored::Tokens(ts)) => do_expand(ts)?.to_string(),
         _ => String::new(),
       };
       if !color_name.is_empty() {
@@ -239,9 +267,46 @@ LoadDefinitions!({
   Let!("\\st", "\\textst");
   Let!("\\hl", "\\texthl");
 
+  // soul-ori's scanner surface (soul-ori.sty:114-115, 131-160, 545, 557-567).
+  // Packages that bypass the public API drive the scanner directly:
+  // highlightx.sty:193 / proofread.sty:74 run `\SOUL@setup`, redefine the
+  // per-token hooks (`\SOUL@preamble` = a tikz overlay, `\SOUL@everyhyphen`
+  // with `\SOUL@setkern\SOUL@hyphkern`…) and hand the text to `\SOUL@`.
+  // The binding has no character-by-character scanner, so the hooks are the
+  // redefinable macros they are (reset by `\SOUL@setup` exactly as :557-566)
+  // and `\SOUL@` degrades to setting its argument (a braced group or one
+  // token, `\SOUL@expand`'s `\ifcat\bgroup` test) as plain text — the hooks'
+  // box measurements have no meaning without the scan. Perl also lacks them
+  // (`\SOUL@setup` undefined: highlightx-doc, proofread; KPE #167). Guard:
+  // `perfect_kernel_batch54::soul_scanner_surface_is_defined`.
+  RawTeX!(
+    r"\newdimen\SOUL@charkern
+\newdimen\SOUL@hyphkern
+\let\SOUL@sethyphenchar\relax
+\def\SOUL@setkern#1{\ifdim#1=\z@\else\kern#1\fi}
+\def\SOUL@setup{%
+    \let\SOUL@preamble\relax
+    \let\SOUL@postamble\relax
+    \let\SOUL@everytoken\relax
+    \let\SOUL@everysyllable\relax
+    \def\SOUL@everyspace##1{##1\space}%
+    \let\SOUL@everyhyphen\relax
+    \def\SOUL@everyexhyphen##1{##1}%
+    \let\SOUL@everylowerthan\relax
+}
+\SOUL@setup
+\def\SOUL@{\futurelet\SOUL@@\SOUL@expand}
+\def\SOUL@expand{\ifcat\bgroup\noexpand\SOUL@@\expandafter\SOUL@start\else\expandafter\SOUL@start@one\fi}
+\long\def\SOUL@start#1{{#1}}
+\def\SOUL@start@one#1{{#1}}"
+  );
+
   // Ignorable commands
   DefMacro!("\\soulomit{}", "#1");
   def_macro_noop("\\soulaccent{}")?;
   def_macro_noop("\\soulregister{}{}")?;
   Let!("\\soulfont", "\\soulregister");
+  // soul-ori.sty:824 `\SOUL@ulsetup` — the underline setup a document may
+  // call directly; `\textul` here is a constructor, so a no-op (soul-ori).
+  def_macro_noop("\\SOUL@ulsetup")?;
 });

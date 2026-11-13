@@ -1,0 +1,23 @@
+% mechanism: a block whose reading holds every name it prints and no place for other ink keeps its reading, the ink kept as a note
+%   of the author block in one counted Warning (`resolver::words::check_blocks`, `emitter::emit::emit_commands`); the whole-block
+%   creator, Perl's `\lx@add@author` of the block (Base_Utility.pool.ltxml:693), only where the names themselves fail (an ink on
+%   the names' line lost, a name's word written more often than it prints)
+% witness: 2605.16481 (`\texttt{yiliu.li@outlook}`, no address the reading reads), 2607.28418 (a link's anchor printing two
+%   addresses, `\href{mailto:email@domain}{…}`); the guard's rows: this file, the link, a third name after the lost line
+% oracle:  pdflatex 0 errors; Ann Able, Bob Baker; Univ A; ann.able@outlook, bob@b.edu
+% engines: rust int144a, the switch on: "ann.able@outlook" in no creator, its words named in a Warning; Z4b: the block written
+%   whole, one creator (3 → 1 on 2605.16481, 7 → 1 on 2607.28418)
+% expect:  0 errors, 1 warning; the switch on: Ann Able and Bob Baker as off, bob@b.edu Bob's, "ann.able@outlook" a note of the
+%   author block
+% status:  RED (int144a, Z4b) -> GREEN (perfect_kernel_batchz4b::a_block_losing_other_ink_keeps_its_reading)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \quad Bob Baker$^{1}$ \\
+$^{1}$Univ A \\
+\texttt{ann.able@outlook}, \texttt{bob@b.edu}}
+\maketitle
+Body.
+\end{document}

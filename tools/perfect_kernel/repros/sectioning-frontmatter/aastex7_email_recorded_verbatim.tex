@@ -1,0 +1,27 @@
+% witness: 2608.05283 (`\email{omri.nitzan@...}`), 2608.21320 (empty `\email{}` placeholders); aastex701.cls:13330-13353
+% oracle:  pdflatex 0 errors: no address printed but Ann Able's ann2@z.org (after `\cofirstauthor`, a footnote)
+% engines: rust 64f3 = an email contact for every address, an empty one for `\email{}`; Perl the same
+% expect:  0 errors; Jane Doe = rdf schema:email "first_last~x@x.org" exactly (no trailing space: 2608.13718's
+%          `\email{koberg@cfa.harvard.edu }`); John Roe = no rdf, no contact; Ann Able =
+%          rdf schema:email ann@z.org + one email contact ann2@z.org (`\cofirstauthor`; aastex701.cls stops on an author
+%          with no recorded address, so the footnote address comes second)
+% status:  RED (64f3) -> GREEN (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe}
+\affiliation{Univ A}
+\email{first_last~x@x.org }
+\author{John Roe}
+\affiliation{Univ B}
+\email{}
+\author{Ann Able}
+\affiliation{Univ C}
+\email{ann@z.org}
+\cofirstauthor
+\email{ann2@z.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

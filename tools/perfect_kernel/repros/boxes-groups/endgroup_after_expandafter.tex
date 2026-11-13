@@ -1,0 +1,14 @@
+% witness: review 64y round 1 (\expandafter\endgroup)
+% oracle:  pdflatex 0 errors
+% engines: rust 64ra 2E+1W -> 64y 0/0; Perl 4E
+% expect:  0 errors; theorem and center end at the \endgroup
+% status:  GREEN (64y); guard perfect_kernel_batch64y::endgroup_after_expandafter
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsthm}\newtheorem{thm}{Theorem}
+\begin{document}
+Intro.
+
+\begingroup\thm Thm text\expandafter\endgroup\relax After thm.
+
+\begin{center} Cent \expandafter\endgroup\relax After cent.
+\end{document}

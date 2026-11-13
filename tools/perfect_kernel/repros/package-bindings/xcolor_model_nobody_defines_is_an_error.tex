@@ -1,0 +1,11 @@
+% The other side of `xcolor_model_raw_code_defines_is_known`: a model nothing defines stays the Error it is in pdflatex
+% ("Undefined color model") and Perl (Color.pm:59-61), also after a test `\@ifundefined` left its name `\relax`.
+% oracle:  pdflatex (TL 2025) "Package xcolor Error: Undefined color model `nosuchmodel'" and its recovery's "Extra }".
+% engines: perl and int140a: 1 error "Unrecognized color model 'nosuchmodel'".
+% expect:  1 error; the word kept.
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\makeatletter\@ifundefined{XC@mod@nosuchmodel}{}{}\makeatother
+{\color[nosuchmodel]{0.5} word}
+\end{document}

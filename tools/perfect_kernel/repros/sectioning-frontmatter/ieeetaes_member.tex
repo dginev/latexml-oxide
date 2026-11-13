@@ -1,0 +1,17 @@
+% witness: 2403.15966 (IEEEtaes `\member{Student Member, IEEE}` after an `\author`, and empty `\editor{}`,
+%          `\supplementary{}`: IEEEtaes.cls:4882, :3455-3456; undefined in Perl's and Rust's IEEEtran-based binding)
+% oracle:  pdflatex 0 errors (IEEEtaes.cls): "SHASHWAT JAIN, Student Member, IEEE"
+% engines: rust 63n = 3 undefined (`\member`, `\editor`, `\supplementary`); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; the author with the membership contact "Student Member, IEEE"; the editor note
+%          "Recommended by X." (printed in the title footnote, IEEEtaes.cls:3427); no note for the empty `\supplementary{}`
+% status:  RED (63n) -> GREEN (63o)
+\documentclass{IEEEtaes}
+\begin{document}
+\title{A Title}
+\author{SHASHWAT JAIN}
+\member{Student Member, IEEE}
+\editor{Recommended by X.}
+\supplementary{}
+\maketitle
+Text.
+\end{document}

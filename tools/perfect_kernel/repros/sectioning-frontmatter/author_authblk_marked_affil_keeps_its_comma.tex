@@ -1,0 +1,20 @@
+% witness: 77n r3 — a mark-led authblk `\affil` whose first line ends in a comma before a line continuing it (1507.08653
+%          "Université Laval,\\ pavillon …"; the r2 review finding 3), and one closing with a comma
+% oracle:  pdflatex 0 errors: "Ann1 and Bob2 / 1Univ X, / Dept Y / 2Univ Z,"
+% engines: rust int32a = Ann "Univ X, Dept Y", Bob both affiliations; 77n r2 = "Univ X" + break + "Dept Y", "Univ Z"
+%          (the commas dropped)
+% expect:  0 errors, 0 warnings; 2 creators, Ann with "Univ X," + break + "Dept Y", Bob with "Univ Z," (the commas
+%          pdflatex prints)
+% status:  RED (77n r2) -> GREEN (77n r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^{1}$}
+\author{Bob$^{2}$}
+\affil{$^1$Univ X, \\ Dept Y}
+\affil{$^2$Univ Z,}
+\maketitle
+x
+\end{document}

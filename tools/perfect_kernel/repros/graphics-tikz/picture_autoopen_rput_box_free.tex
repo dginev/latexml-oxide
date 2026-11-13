@@ -1,0 +1,18 @@
+% An \rput outside a pspicture auto-opens an ltx:picture sized from its node's box. Perl splits the
+% placement into \rput@start (opens <ltx:g>; box-free `[] BracketedPSAngle PSCoord` arguments) and
+% \put@end{body} (writes the body, closes the g) (pstricks_support.sty.ltxml:879-891), so the
+% picture's box is the placement's (nothing) plus the " y" written into the picture; the body lands
+% in the non-auto-opened g and is not added. The Rust \lx@ps@put took the body as its own `{}`
+% argument and measured "Hello". A [refpoint] is Perl's digested `[]` (its `pos`), and is measured.
+% witness: pst-flags-doc (517 auto-opened pictures from \rput), egameps (162); W12 2026-09-25
+% oracle:  same-host Perl latexmlc: height="8.65" width="11.92"; with [bl]: height="12.3" width="23.45"
+% engines: rust (56je) = height="12.3" width="43.05" (both); no pos="bl"
+% expect:  0 errors; the two pictures sized as in Perl; <g pos="bl" ...>
+% status:  GREEN (56jo, W12; guard node_box_append::rput_places_without_measuring_its_body)
+\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+x \rput(1,1){Hello} y
+
+x \rput[bl](1,1){Hello} y
+\end{document}

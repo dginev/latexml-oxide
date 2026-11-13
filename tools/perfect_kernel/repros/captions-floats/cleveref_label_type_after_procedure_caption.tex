@@ -1,0 +1,18 @@
+% witness: review probe of 2404.11739's mechanism (algorithm2e's procedure caption moves a trailing `\label`)
+% oracle:  pdflatex 0 errors: "Procedure Proc", and "See Procedure -." (cleveref's `\label[type]` names the type)
+% engines: rust 65m round 1 = 1 Error:unexpected:_ (`\lx@algocf@proccaption@postlabel` read `[` as the label:
+%          labels="LABEL:[", the key typeset)
+% expect:  0 errors; <float labels="LABEL:alg:a_b">, no "procedure]" text
+% status:  RED (65m r1) -> GREEN (65m r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\usepackage{cleveref}
+\crefname{procedure}{Procedure}{Procedures}
+\begin{document}
+\begin{procedure}
+\caption{Proc()}\label[procedure]{alg:a_b}
+x\;
+\end{procedure}
+See \cref{alg:a_b}.
+\end{document}

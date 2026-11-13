@@ -1,0 +1,10 @@
+\documentclass{article}
+\renewcommand\familydefault{\sfdefault}
+\begin{filecontents}{fd_sans.bib}
+@book{a, author={Alpha Author}, title={Sans Title}, publisher={P}, year={2001}}
+\end{filecontents}
+\begin{document}
+Text \cite{a}.
+\bibliography{fd_sans}
+\bibliographystyle{plain}
+\end{document}

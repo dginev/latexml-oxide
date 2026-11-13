@@ -1,0 +1,13 @@
+% A lone upright `d` is an operator — a derivative's numerator, the exterior derivative named or squared, defined —
+% never a scalar use of the token: the document's lone `\rho\,\mathrm dV` stays a differential (user ruling 2026-10-01d:
+% operator uses by context; e: the upright `d` never a scalar is a differential). A lone italic `d` is the default
+% letter: `\int f\,dx\le d^2n` (differential_italic_lone_needs_its_pair). The 57cj.23.6 review.
+% witness: none (review probes p_opq, p_opq_sl, p_ext, p_dd, p_def).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; `\mathrm dt`, `\mathrm dV` differentials
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\frac{\mathrm d}{\mathrm dt}E=0$ $\mathrm d/\mathrm dt\,E=0$ $\mathrm d^2=0$ $\mathrm d=\sum_i e_i\partial_i$
+where $\mathrm d$ is the exterior derivative, and $\rho\,\mathrm dV$.
+\end{document}

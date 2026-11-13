@@ -7,16 +7,56 @@
 //! content as frontmatter notes.
 //!
 //! Witness: 2306.12455 (ws-ijgmmp.cls), 2306.15982 (ws-ijmpd.cls).
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // Some copies load amsmath (ws-procs9x6.cls 78 of 90 copies in a 1/20 arXiv sample, ws-ijmpa.cls :1087
+  // `\usepackage{amsfonts,amssymb,amsmath}` in 1912.08245's), the older ones none (nucl-th0206027's ws-procs9x6,
+  // quant-ph0607049's ws-ijmpb: their `\pmatrix{…}` is Plain TeX's in pdflatex, no "Old form" error). The paper's copy
+  // decides; without one, no amsmath of the class's (`amsmath_sty::require_amsmath_beyond_original`; KNOWN_PERL_ERRORS
+  // #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
+  // ws-ijmpe.cls:226-230 (ws-ijmpcs.cls:155, ws-mpla.cls:147, ws-rv9x6.cls:160 the same): `\def\bm#1{\mathchoice
+  // {\mbox{\boldmath$#1$}}…}`, bold math the class defines itself, its argument in a box — 1308.3116, 2304.11343,
+  // hep-ph0401137 (ws-procs9x6). A `\left` without its `\right` in the argument (`\bm{\left\langle} x
+  // \bm{\right\rangle}`) is TeX's error at the box's end; it is set at the outer level with a Warning, as bm.sty
+  // would set it (bm_sty.rs `define_grouped_bm`, OXIDIZED_DESIGN #544).
+  bm_sty::define_grouped_bm()?;
+  // The figure packages the ws journal and proceedings classes input (ws-ijmpa.cls:551-555, ws-ijmpe.cls:658-662,
+  // ws-procs9x6.cls:614-618 `\InputIfFileExists{psfig.sty}…{epsfsafe.tex}…{epsfig.sty}…{epsf.sty}`; psfig.sty and
+  // epsfsafe.tex are not in TeX Live, so epsfig's `\psfig` serves), so `\psfig`, `\epsfig` and `\epsfbox` need no
+  // package of the paper's own (run 340 ~650 papers; witnesses 0709.0836, 1310.3924, 0709.3996). A class version that
+  // inputs none of them (ws-mpla.cls of 2508.15289) gets them too: one binding serves the family's union.
+  RequirePackage!("epsfig");
+  RequirePackage!("epsf");
+  // ws-mpla.cls:277-282 (ws-ijmpa.cls:288 the same) `\pub{received}{revised}`: the publication history under the
+  // author block, the template's "Received (Day Month Year)" kept as the paper gives it (run 340 ~500 papers;
+  // witnesses 2508.15289, gr-qc0206056, astro-ph0505113). An empty argument (`\pub{}{}`) makes no note.
+  DefMacro!(
+    "\\pub{}{}",
+    "\\if\\relax\\detokenize{#1}\\relax\\else\\lx@add@pubnote[role=received]{#1}\\fi\
+     \\if\\relax\\detokenize{#2}\\relax\\else\\lx@add@pubnote[role=revised]{#2}\\fi"
+  );
+  // ws-ijmpa.cls:152 (ws-ijmpe.cls:1184, ws-procs9x6.cls:348) `\cdash`: a raised en dash, as in "C\cdash H".
+  DefMacro!("\\cdash", "\\ensuremath{^{\\hbox{--}}}");
+  // ws-mpla.cls:451-482 the class's lists: `{alphlist}`, `{arabiclist}` and `{romanlist}` are numbered (a), (1), (i)
+  // lists with their second level, `{itemlist}` a bulleted one (its enumerate takes `\labelitemi` for every label).
+  RawTeX!(
+    r"\newenvironment{alphlist}{\def\theenumi{\alph{enumi}}\def\theenumii{\roman{enumii}}\def\labelenumi{(\theenumi)}\def\labelenumii{(\theenumii)}\begin{enumerate}}{\end{enumerate}}
+\newenvironment{romanlist}{\def\theenumi{\roman{enumi}}\def\theenumii{\alph{enumii}}\def\labelenumi{(\theenumi)}\def\labelenumii{(\theenumii)}\begin{enumerate}}{\end{enumerate}}
+\@ifundefined{arabiclist}{\newenvironment{arabiclist}{\def\theenumi{\arabic{enumi}}\def\theenumii{\alph{enumii}}\def\labelenumi{(\theenumi)}\def\labelenumii{(\theenumii)}\begin{enumerate}}{\end{enumerate}}}{}
+\newenvironment{itemlist}{\begin{itemize}}{\end{itemize}}"
+  );
 
   // \catchline{vol}{issue}{year}{pageStart}{pageEnd} — bibliographic
   // running-header metadata. Preserve as frontmatter note.
@@ -81,4 +121,47 @@ LoadDefinitions!({
   // citation; the bare-vs-bracketed number is a post-processing nuance). Accepts
   // comma-separated keys like \cite. Witness 2306.15982 (ws-ijmpd).
   DefMacro!("\\refcite{}", "\\cite{#1}");
+
+  // ws-procs9x6.cls:721-731, ws-ijmpa.cls:685-694 (every ws class, the lengths differing; ws-ijmpb.cls:653-658 in
+  // cond-mat0509290's copy; ws-rv9x6.cls:618-620 an `\hline` for `\Hline`): the table rules. `\Hline` is a
+  // double-weight `\hline`; the others add a rule (or `\crule`'s argument, a `\cline`) between rows that are empty and
+  // of negative height, which the alignment drops, so each is the rule it draws. Witness 0704.0076 (ws-ijmpa).
+  RawTeX!(
+    r"\def\Hline{\noalign{\ifnum0=`}\fi\hrule \@height 2\arrayrulewidth \futurelet\@tempa\@xhline}
+\def\toprule{\Hline\\[-6.5pt]}
+\def\colrule{\\[-7pt]\hline\\[-6pt]}
+\def\TMcolrule{\\[-9.5pt]\hline\\[-9.5pt]}
+\def\botrule{\\[-7pt]\Hline}
+\def\crule#1{\\[-7pt]#1\\[-6pt]}"
+  );
+  // The table and title-block commands every WS class defines (ws-ijmpe.cls v1.0 as 0711.3504 ships it, ws-procs9x6.cls
+  // v1.2u as 0704.0369 does, ws-procs961x669.cls v1.5r 1605.04791's, ws-rv9x6.cls 0706.1148's), papers ship-
+  // relying on them (run 347: 46 ws-procs9x6 / ws-procs961x669 / ws-ijmpe papers): ws-ijmpe :58-59, :69-71 the fonts
+  // `\titlefont`, `\authorfont`, `\tablefont`, `\tabnotefont` (`\title{\titlefont{…}}`, 1111.6854); :740-751 the
+  // table note `{tabnote}` (`[heading]`, "Note" by default: "Note: …" under the table; 0711.3504, 0704.0369, 1605.04791;
+  // the procs classes :714-719 the same text), :754-763 `{tabfootnote}` with its `\tabmark{a}` marks (0712.0330,
+  // 1404.6651, 1403.1664), the table's box layout their own; :334-340 `{otherinfo}`, a centred line under the authors
+  // (0811.0496's "Published in: …"); :951 (ws-procs9x6 :389) `\citelow`, `\cite` set on the line instead of raised
+  // (1302.0454, hep-ph0301130); :667 (ws-procs9x6 :651) `\figurebox{height}{width}{file}`, the figure's EPS from
+  // `\ArtDir`, or an empty frame for a figure to come (nucl-th0412108, astro-ph0210021). A class of the family that
+  // lacks one leaves it to the document (`DefinitionOrigin::Fallback`).
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\def\titlefont{\fontsize{10}{13}\bfseries\boldmath\selectfont\centering{}}
+\def\authorfont{\footnotesize}
+\def\tablefont{\footnotesize}
+\def\tabnotefont{\footnotesize}
+\def\tabnotehead{Note}
+\def\tabsourcehead{Source}
+\newenvironment{tabnote}{\par\tabnotefont\@ifnextchar[{\@tabnote}{\@tabnote[\tabnotehead]}}{\par}
+\def\@tabnote[#1]{\noindent\def\@Tempa{#1}\ifx\@Tempa\@empty\else{\it#1}:\ \ignorespaces\fi}
+\newenvironment{tabfootnote}{\par\tabnotefont}{\par}
+\def\tabmark#1{\noindent\hbox{\normalsize$\m@th^{#1}$}\ignorespaces}
+\newenvironment{otherinfo}{\authorfont\begin{center}}{\end{center}}
+\def\citelow{\cite}
+\def\ArtDir{\jobname/}
+\def\figurebox#1#2#3{\def\arg{#3}\ifx\arg\empty{\hfill\vbox{\hsize#2\hrule\hbox to #2{\vrule\hfill\vbox to #1{\hsize#2\vfill}\vrule}\hrule}\hfill}\else\hbox to \hsize{\hfill\epsfbox{\ArtDir#3.eps}\hfill}\fi}"
+    );
+  }
 });

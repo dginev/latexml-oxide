@@ -1,0 +1,16 @@
+% mechanism: as kernel_author_line_spaced_names_request_in_formula_marks, the labels in the other order: the line opens
+%   with the second name's `${\rm ^2Lab}$`, the first name's `${\rm ^1Dept}$` follows mid-line
+% witness: synthetic (revISO1b B1, probe kx2)
+% oracle:  pdflatex (TL 2025 article) 0 errors: "Ann Able1 Bob Baker2 / 2Lab of Chemistry, Univ Y, 1Dept of Physics, Univ X"
+% engines: rust int160c = 0 errors, 0 warnings, Able "Dept of Physics, Univ X", Baker "Lab of Chemistry, Univ Y"; ISO1b =
+%   0 warnings, Able none, Baker the whole line (silent)
+% expect:  0 errors, 0 warnings; Able "¹Dept of Physics, Univ X"; Baker "²Lab of Chemistry, Univ Y"
+% status:  GREEN (ISO1c) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ Bob Baker$^{2}$\\ ${\rm ^2Lab}$ of Chemistry, Univ Y, ${\rm ^1Dept}$ of Physics, Univ X}
+\maketitle
+Text.
+\end{document}

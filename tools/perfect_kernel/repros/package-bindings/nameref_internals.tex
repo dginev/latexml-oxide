@@ -1,0 +1,16 @@
+% witness: 2404.09236, 2503.18999, 2511.11546 (\T@nameref), 1310.1737, 1805.08920, 1910.09092 (\strip@period, 17 papers), 2511.17271 (\label@hook)
+% oracle:  pdflatex 0 errors; "See Intro and Intro."
+% engines: rust 67int10 = undefined \strip@period/\@@@, \T@nameref, \@namerefstar, \label@hook; perl = the same (KNOWN_PERL_ERRORS #821)
+% expect:  0 errors, 0 warnings; two title references to s:intro, the starred one ltx_nolink
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::nameref_internals_defined
+\documentclass{article}
+\usepackage{nameref}
+\makeatletter
+\newcommand\stripped{\expandafter\strip@period\@currentlabelname\relax.\relax\@@@}
+\newcommand\hooked{\label@hook}
+\DeclareRobustCommand*{\mynameref}{\@ifstar\@namerefstar\T@nameref}
+\makeatother
+\begin{document}
+\section{Intro}\label{s:intro}
+See \mynameref{s:intro} and \mynameref*{s:intro}.\hooked
+\end{document}

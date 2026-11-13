@@ -1,0 +1,20 @@
+% mechanism: a `\thanks` whose text opens with `\label` (OD #928 round 9, Known residual P5; KNOWN_PERL_ERRORS #1204):
+%   inside a frontmatter item `\label` is `\lx@set@frontmatter@label` (Perl Base_Utility.pool.ltxml:330, :565), so the
+%   note is an annotation labelled LABEL:fn1 that no entry requests. Perl warns "Orphaned frontmatter annotation
+%   couldn't find target for label=LABEL:fn1" and drops "Funded."; we keep it, on a nameless creator after the two
+%   authors, not on Ann Able, whose `\thanks` it is.
+% witness: review rev94a r8 pl/p02
+% oracle:  pdflatex 0 errors: "Ann Able⋆1 and Bob Baker2 / ⋆ Funded. / 1 Univ X / 2 Univ Y"
+% engines: rust 94b r4, 94a r8, r9: Ann Able Univ X, Bob Baker Univ Y, a nameless creator holding the note "Funded.";
+%   perl: the note dropped, 1 Warning
+% expect:  0 errors, 0 warnings; the note "Funded." Ann Able's
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able\thanks{\protect\label{fn1}Funded.}\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\maketitle
+Body.
+\end{document}

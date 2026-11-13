@@ -1,0 +1,28 @@
+% witness: 1805.00151 1805.02797 1811.10132 1908.05569 1910.06140 (\confheader calls \ps@headings); 2202.10460 2202.12377 2203.08603 2204.11491 (a \newmaketitle copying \@IEEEcompsoconly, \@IEEEcompsocconfonly, \@IEEEnormalsizeunitybaselineskip, \@IEEEaftertitletext); 1208.3665 2103.13318 (\sublargesize); 2007.01482 2106.14760 (\IEEEbibitemsep); 1605.01233 1702.07429 (\thesectiondis); 1510.02032 (\@ifmtarg); 2006.13598 (\IEEEnoauxwrite); 2601.10876 (\IEEEquantizevspace); 2507.18515 2606.21831 (\@IEEEauthorblockNstyle); cs0701047 (LaTeXenumerate)
+% oracle:  pdflatex 0 errors; "Title again", "Big", "full", "I.", "x", "one", "Quantized"
+% engines: rust 68d = 16 errors (undefined), 4 warnings; Perl 16 errors (the same macros undefined)
+% expect:  0 errors 0 warnings; the texts in the body, the section display number "I."
+% status:  RED (68d) -> GREEN (67x)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\makeatletter
+\let\old@ps@headings\ps@headings
+\let\old@ps@IEEEtitlepagestyle\ps@IEEEtitlepagestyle
+\def\confheader#1{\def\ps@IEEEtitlepagestyle{\old@ps@IEEEtitlepagestyle\def\@oddhead{#1}}\ps@headings}
+\makeatother
+\confheader{Accepted at X}
+\begin{document}
+\title{A Title}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ}}
+\maketitle
+\makeatletter
+{\Huge\@IEEEcompsoconly{\sffamily}\@IEEEcompsocconfonly{\vskip 2\@IEEEnormalsizeunitybaselineskip}Title again\@IEEEaftertitletext\par}
+{\@IEEEauthorblockNstyle\sublargesize Big\par}
+\@ifmtarg{x}{empty}{full}\par
+\IEEEquantizevspace{Quantized}[\IEEEquantizedisabletitlecmds]{0pt}[-\topskip]{\baselineskip}{\@IEEENORMtitlevspace}{\@IEEEMINtitlevspace}
+\setlength{\itemsep}{\IEEEbibitemsep}
+\makeatother
+\section{One}
+\thesectiondis\ \IEEEnoauxwrite{x}
+\begin{LaTeXenumerate}\item one\end{LaTeXenumerate}
+\end{document}

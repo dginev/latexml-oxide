@@ -1,0 +1,20 @@
+% mechanism: a link whose text is the binding's e-mail call (`\href{mailto:…}{\email{…}}`) is that call, the link
+%   printing what the call prints: its address the e-mail contact, as without the link (the rehearsal's
+%   `\lx@fm@obs@href` walks such a link's text).
+% witness: 1004.3134 (`\thanks{… E-mail: \href{mailto:samuel.mimram@cea.fr}{\email{samuel.mimram@cea.fr}}. …}`)
+% oracle:  pdflatex 0 errors; "Ann Able*" with the note "Univ X, Town. E-mail: ann.able@x.edu. Funded by Y."
+% engines: rust Z18e = the address lost (the link's ink printed nothing in the rehearsal); int154x = Ann Able's e-mail
+% expect:  0 errors, 0 warnings; ann.able@x.edu Ann Able's e-mail, the note's other words kept
+% status:  RED (Z18e) -> GREEN (Z18g)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{hyperref}
+\begin{document}
+\title{A Title}
+\author{Ann Able\thanks{Univ X, Town. E-mail:
+\href{mailto:ann.able@x.edu}{\email{ann.able@x.edu}}. Funded by Y.}}
+\institute{Univ X}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

@@ -1,0 +1,57 @@
+% mechanism: an imsart `{keyword}` block on a supplement's own title page (a second `{frontmatter}` after the body began)
+%   goes through `vtex_keyword_markup`'s `\lx@add@frontmatter@until`, which finds the frontmatter sealed and keeps the
+%   entries in place (`Info:frontmatter:sealed ltx:keywords … kept in place`) — but as bare text run into the next
+%   paragraph, the block's heading lost. pdflatex sets the block's heading and entries on a line of their own. The same
+%   sealed path drops an OmniBus `{keyword}` after a `\section*` (no corpus paper has either shape). Fix: the in-place
+%   fallback emits the block's heading and content as a block of its own.
+% witness: the 86a r2 re-review's S1 (probe S2); no corpus paper
+% oracle:  pdflatex 0 errors; "Keywords and phrases: gamma, delta." on its own line, then "More."
+% engines: rust 85a = gamma, delta lost; 86a = <p>gamma, delta More.</p>, no heading
+% expect:  0 errors, 0 warnings; "Keywords and phrases:" with "gamma, delta" as a block of its own, before "More."
+% status:  RED (86a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}{imsart.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{imsart}
+\LoadClass{article}
+\RequirePackage{imsart}
+\end{filecontents*}
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{imsart}
+\def\sep@key@value#1=#2/?/#3{\setpkgattr{#3}{#1}{#2}}
+\def\do@option@list#1#2{\@for\curr@option:={#2}\do{\expandafter\sep@key@value\curr@option/?/{#1}\relax}}
+\protected\def\setpkgattr#1#2#3{\expandafter\long\expandafter\gdef\csname #1@#2\endcsname{#3}}
+\def\ims@href#1#2{#2}
+\def\msc@url{https://mathscinet.ams.org/mathscinet/msc/msc2020.html}
+\newtoks\keywords@list
+\def\addto@keywords@list#1{\keywords@list=\expandafter{\the\keywords@list#1, }}
+\newbox\keyword@box
+\setpkgattr{keyword}{MSC2020}{\ims@href{\msc@url}{MSC2020 subject classifications}:}
+\setpkgattr{keyword}{KWD}{Keywords and phrases:}
+\gdef\keyword{\@ifnextchar[{\@keyword}{\@keyword[class=KWD]}}
+\gdef\@keyword[#1]{\do@option@list{keyword}{#1}\def\keyword@name{\csname keyword@\keyword@class\endcsname}%
+  \let\kwd@sep\relax
+  \global\setbox\keyword@box=\vbox\bgroup\ifvoid\keyword@box\else\unvbox\keyword@box\fi
+  \noindent{\keyword@name}\space\hskip.1pt}
+\def\endkeyword{\unskip.\par\egroup}
+\def\keyword@fmt{\ifvoid\keyword@box\else\unvbox\keyword@box\fi}
+\def\sep{\unskip\string, }
+\DeclareRobustCommand*\kwd{\@ifnextchar[\@kwd{\@kwd[\kwd@sep]}}
+\def\@kwd[#1]#2{\unskip#1{#2}\addto@keywords@list{#2}\let\kwd@sep\sep}
+\newenvironment{frontmatter}{}{\maketitle}
+\def\maketitle{\keyword@fmt}
+\end{filecontents*}
+\documentclass{imsart}
+\makeatletter
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\begin{keyword}\kwd{alpha}\kwd{beta}\end{keyword}
+\end{frontmatter}
+Body.
+\section*{Supplement}
+\begin{frontmatter}
+\title{Supplement to T}
+\begin{keyword}\kwd{gamma}\kwd{delta}\end{keyword}
+\end{frontmatter}
+More.
+\end{document}

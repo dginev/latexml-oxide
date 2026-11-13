@@ -1,0 +1,28 @@
+% witness: thumbs/thumbs-example (thumbs-example.tex:390, \thumbnewcolumn)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=2 (2026-09-06)  [SHARED: Perl also emits the error]
+% expect:  0 errors; body text present
+% status:  GREEN (batch 56z, 2026-09-06)
+% mechanism: thumbs is a page-shipout state machine. \addthumb sets
+%   \gdef\th@mbtoprint{1} (thumbs.sty:725); the \AtBeginShipout handler resets
+%   \gdef\th@mbtoprint{0} (thumbs.sty:1151); \thumbnewcolumn errors when
+%   \th@mbtoprint is still 1 (thumbs.sty:573). LaTeXML never ships out pages:
+%   \newpage -> \lx@newpage constructor (latex_constructs.pool.ltxml:4578 /
+%   TeX_Page.pool.ltxml:55), no \shipout, so the raw-loaded atbegshi.sty
+%   \AtBeginShipout hooks never fire and the reset never happens. After the
+%   first \addthumb the flag stays 1, so the later \thumbnewcolumn errors.
+%   Perl identical (no shipout) => SHARED. General "packages keyed on page
+%   breaks" family: no safe kernel rule (reset is buried in per-page drawing
+%   code); faithful fix = a thumbs no-op binding (page-edge tabs are
+%   meaningless in reflowable HTML, like geometry/fancyhdr).
+\documentclass[twoside]{article}
+\usepackage{thumbs}
+\begin{document}
+\section{A}
+\addthumb{F mark}{\Huge F}{magenta}{black}
+Some text.
+\newpage
+\thumbnewcolumn
+\addthumb{New column}{\Huge NC}{magenta}{black}
+There.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4: "keep every note with the label the class prints, which
+%          here is none"; the role kept as `ltx_role_<role>`), the 92e audit: a title's `\thanks` read "Thanks: X"
+% oracle:  pdflatex (TL 2025, article): 0 errors; "A Study∗" and the footnote "∗Funded by NSF grant 123." — no label
+% engines: rust 3a90791 = <pubnote name="Thanks: " role="thanks">; Perl the same (getFrontmatterName's role default)
+% expect:  0 errors, 0 warnings; <pubnote role="thanks">Funded by NSF grant 123.</pubnote>, no name; the HTML span
+%          `ltx_pubnote ltx_role_thanks` with no `ltx_note_name`
+% status:  RED (3a90791) -> GREEN (92g)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Study\thanks{Funded by NSF grant 123.}}
+\author{Ann Able}
+\maketitle
+Text.
+\end{document}

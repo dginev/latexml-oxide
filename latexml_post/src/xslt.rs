@@ -30,40 +30,12 @@ fn set_xslt_max_depth() {
   static SET_MAX_DEPTH: std::sync::Once = std::sync::Once::new();
   SET_MAX_DEPTH.call_once(|| {
     // SAFETY: `xsltMaxDepth` is libxslt's process-global recursion cap
-    // (a plain C `int`). The libxslt crate exposes no safe setter. `Once`
-    // guarantees a single writer; libxslt only ever READS this value (when
-    // creating each transform context), so there is no data race with
-    // concurrent transforms.
-    //
-    // PORTABILITY: resolved via `dlsym` rather than the crate's
-    // `libxslt::bindings::xsltMaxDepth` extern static. Those pregenerated
-    // (bindgen-on-Linux) bindings pin the raw ELF symbol name with
-    // `#[link_name = "\u{1}xsltMaxDepth"]`, which fails to LINK on Mach-O
-    // where the C symbol is `_xsltMaxDepth` (macOS probe 2026-06-07 — the
-    // sole undefined symbol in the whole workspace link; see
-    // docs/PORTABILITY_MACOS_PROBE_2026-06-07.md). `dlsym` applies the
-    // platform's own C-symbol decoration, so it works on ELF and Mach-O
-    // alike. If the symbol is ever absent (NULL), we skip the write:
-    // libxslt's built-in default cap of 3000 still bounds recursion.
-    #[cfg(unix)]
+    // (a plain C `int`, declared below with its C type). The libxslt crate
+    // exposes no safe setter. `Once` guarantees a single writer; libxslt only
+    // ever READS this value (when creating each transform context), so there
+    // is no data race with concurrent transforms.
+    #[cfg(any(unix, windows))]
     unsafe {
-      let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
-      if !sym.is_null() {
-        *(sym as *mut std::os::raw::c_int) = 1000;
-      }
-    }
-    // Windows (MSVC): no dlsym/RTLD_DEFAULT, and `libc` is a cfg(unix)-only
-    // dependency of this crate — but none of that machinery is needed. The
-    // vcpkg-static libxslt is linked into this very image, and x64 COFF C
-    // symbols carry no decoration, so a direct extern declaration links
-    // (GetProcAddress would NOT work here: it only sees DLL exports, not
-    // statically linked globals). See WINDOWS_COMPATIBILITY_PLAN Phase 2.3.
-    #[cfg(windows)]
-    unsafe {
-      #[allow(non_upper_case_globals)]
-      unsafe extern "C" {
-        static mut xsltMaxDepth: std::os::raw::c_int;
-      }
       xsltMaxDepth = 1000;
     }
     // Any other platform: skip the write; libxslt's built-in default cap
@@ -71,48 +43,153 @@ fn set_xslt_max_depth() {
   });
 }
 
-/// Windows twin of the unix dlsym read-back below: the write must land in
-/// the linked-in libxslt's global. Reads the same extern static the setter
-/// writes — both resolve to the one `xsltMaxDepth` in the image.
-#[cfg(all(test, windows))]
+// libxslt's recursion cap (`XSLTPUBVAR int xsltMaxDepth`), declared here rather
+// than taken from the crate's `libxslt::bindings::xsltMaxDepth`. Those
+// pregenerated (bindgen-on-Linux) bindings pin the raw ELF symbol name with
+// `#[link_name = "\u{1}xsltMaxDepth"]`, which fails to LINK on Mach-O where the
+// C symbol is `_xsltMaxDepth` (macOS probe 2026-06-07 — the sole undefined
+// symbol in the whole workspace link; see
+// docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md, WISDOM #56). A plain
+// declaration gets the platform's own C-symbol decoration from rustc on ELF and
+// Mach-O, dynamic or static, and on x64 COFF for the static vcpkg libxslt we
+// link there (a DLL's data would need a `dllimport`, `#[link(kind = "dylib")]`);
+// the libxslt crate's build script already puts the library on the link line.
+//
+// The reference is resolved at LINK time. The runtime lookup it replaces on
+// unix, `dlsym(RTLD_DEFAULT, "xsltMaxDepth")`, only searches DYNAMIC symbol
+// tables, so it silently skipped the write — leaving libxslt's 3000 — whenever
+// the symbol was not in one: libxslt linked statically (the `LIBXSLT_STATIC`
+// release binary, where the executable does not export the global), or not
+// loaded at all (the `latexml_post` unit-test binary with dependencies at
+// opt-level 1, whose live code has no other libxslt reference, so the linker's
+// `--as-needed` dropped the library). A static libxslt 1.1.42 (the release
+// build's, tools/build_static_libxml.sh) linked into a C program: `dlsym` NULL,
+// the linked global 3000. `GetProcAddress` fails on Windows' static vcpkg
+// libxslt for the same reason (WINDOWS_COMPATIBILITY_PLAN Phase 2.3).
+#[cfg(any(unix, windows))]
+#[allow(non_upper_case_globals)]
+unsafe extern "C" {
+  static mut xsltMaxDepth: std::os::raw::c_int;
+}
+
+#[cfg(all(test, any(unix, windows)))]
 mod max_depth_tests {
+  use crate::{
+    document::{PostDocument, PostDocumentOptions},
+    processor::Processor,
+  };
+
+  /// The write lands in the global libxslt reads: after `set_xslt_max_depth`
+  /// it holds Perl's value (1000), not libxslt's compiled-in 3000.
   #[test]
   fn extern_static_sets_perl_parity_cap() {
     super::set_xslt_max_depth();
-    // SAFETY: single-threaded read of the process-global int after the
-    // Once-guarded write; the extern declaration matches libxslt's C type.
-    let val = unsafe {
-      #[allow(non_upper_case_globals)]
-      unsafe extern "C" {
-        static xsltMaxDepth: std::os::raw::c_int;
-      }
-      xsltMaxDepth
-    };
+    // SAFETY: a by-value read of the process-global int after the Once-guarded
+    // write; the declaration matches libxslt's C type.
+    let val = unsafe { super::xsltMaxDepth };
     assert_eq!(val, 1000);
   }
-}
 
-#[cfg(all(test, unix))]
-mod max_depth_tests {
-  /// The dlsym write must actually land: after `set_xslt_max_depth`,
-  /// reading the global back through the same runtime resolution path
-  /// must yield Perl's value (1000). Guards both the symbol lookup
-  /// (platform decoration) and the write.
-  #[test]
-  fn dlsym_sets_perl_parity_cap() {
-    super::set_xslt_max_depth();
-    // SAFETY: `dlsym(RTLD_DEFAULT, "xsltMaxDepth")` returns the address of
-    // libxslt's process-global `int` recursion cap, valid for the lifetime of
-    // the loaded libxslt (linked into this test binary). We assert non-null
-    // before dereferencing, and the `*const c_int` cast matches the symbol's C
-    // type; the read is on a single thread (`set_xslt_max_depth` already ran).
-    let val = unsafe {
-      let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
-      assert!(!sym.is_null(), "xsltMaxDepth not resolvable via dlsym");
-      *(sym as *const std::os::raw::c_int)
-    };
-    assert_eq!(val, 1000);
+  /// A named template that calls itself `$n` times, applied through the
+  /// production `XSLT::process` path (which sets the cap under `XSLT_LOCK`).
+  /// libxslt spends two depth units per level of this template (measured:
+  /// `xsltproc --maxdepth 1000` aborts from n = 499, the default 3000 from
+  /// n = 1499).
+  fn apply_recursion(n: u32) -> bool {
+    const RECURSION_XSL: &str = r#"<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:param name="n" select="0"/>
+  <xsl:template match="/">
+    <out><xsl:call-template name="down"><xsl:with-param name="k" select="$n"/></xsl:call-template></out>
+  </xsl:template>
+  <xsl:template name="down">
+    <xsl:param name="k"/>
+    <xsl:if test="$k &gt; 0">
+      <xsl:call-template name="down"><xsl:with-param name="k" select="$k - 1"/></xsl:call-template>
+    </xsl:if>
+  </xsl:template>
+</xsl:stylesheet>
+"#;
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = dir.path().join("recursion.xsl");
+    std::fs::write(&xsl, RECURSION_XSL).expect("write recursion.xsl");
+    let mut params = rustc_hash::FxHashMap::default();
+    params.insert("n".to_string(), n.to_string());
+    let mut xslt =
+      super::XSLT::new(xsl.to_str().unwrap(), params, true, None, vec![]).expect("XSLT processor");
+    let doc =
+      PostDocument::new_from_string("<a/>", PostDocumentOptions::default()).expect("parse <a/>");
+    xslt.process(doc, vec![]).is_ok()
   }
+
+  /// End to end: a transform recursing past Perl's cap but within libxslt's
+  /// default aborts, so the cap is the one libxslt applies; a shallower one
+  /// completes, so the abort is the cap and not the stylesheet.
+  #[test]
+  fn transform_aborts_past_perls_recursion_depth() {
+    assert!(
+      apply_recursion(400),
+      "a 400-level recursion (800 of 1000 depth units) must transform"
+    );
+    let (completed, libxslt_says) = with_fd2_captured(|| apply_recursion(700));
+    assert!(
+      !completed,
+      "a 700-level recursion (1400 depth units) must abort at Perl's cap of 1000, \
+       not run on to libxslt's default of 3000"
+    );
+    if let Some(said) = libxslt_says {
+      assert!(
+        said.contains("potential infinite template recursion"),
+        "{said}"
+      );
+    }
+  }
+
+  /// Run `f` with file descriptor 2 pointed at a temporary file, and return what
+  /// was written there: libxslt reports the aborted recursion (and its template
+  /// stack) with C `fprintf(stderr, …)`, below any Rust output capture, so without
+  /// this the report would reach the terminal of whoever runs the suite.
+  #[cfg(unix)]
+  fn with_fd2_captured<T>(f: impl FnOnce() -> T) -> (T, Option<String>) {
+    use std::{
+      io::{Read, Seek},
+      os::fd::AsRawFd,
+    };
+    /// Points fd 2 back at its saved copy when dropped — on a panic in `f` too.
+    struct Restore(std::ffi::c_int);
+    impl Drop for Restore {
+      fn drop(&mut self) {
+        // SAFETY: `self.0` is the `dup(2)` taken below, still open.
+        unsafe {
+          libc::dup2(self.0, 2);
+          libc::close(self.0);
+        }
+      }
+    }
+    let mut sink = tempfile::tempfile().expect("tempfile");
+    // SAFETY: plain descriptor calls on fd 2 and descriptors this function owns.
+    let saved = unsafe { libc::dup(2) };
+    assert!(saved >= 0, "dup(2)");
+    let restore = Restore(saved);
+    assert!(
+      unsafe { libc::dup2(sink.as_raw_fd(), 2) } >= 0,
+      "dup2 onto fd 2"
+    );
+    let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+    drop(restore);
+    let mut text = String::new();
+    sink.rewind().expect("rewind");
+    sink.read_to_string(&mut text).expect("read captured fd 2");
+    match out {
+      Ok(out) => (out, Some(text)),
+      Err(panic) => {
+        // The panic message went to the captured fd 2: show it before unwinding on.
+        eprint!("{text}");
+        std::panic::resume_unwind(panic)
+      },
+    }
+  }
+  #[cfg(not(unix))]
+  fn with_fd2_captured<T>(f: impl FnOnce() -> T) -> (T, Option<String>) { (f(), None) }
 }
 
 /// Resource type information.

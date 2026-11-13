@@ -1,11 +1,42 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
+
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// revtex: `\affiliation` after a run of `\author`s is every author of the run without one (revtex4-2.cls's group
+/// rule; Perl revtex4_support.sty.ltxml `annotate=new`) — declared by this binding at the call, `annotate=new`, which
+/// the resolver's `api:annotate:new` honours. (Its title marks, revtex4-2.cls:3040-3043 `\frontmatter@thefootnote`,
+/// are `\@fnsymbol` by default — :5976-5978 `\@booleanfalse\altaffilletter@sw` after :3043's default — and `\@alph`
+/// under `altaffilletter`; this binding declares no title hook, so the kernel's fallback is the default's.) Reaches a
+/// binding only while its `\author` at the call is still this binding's (the key is `ledger::author_binding`): revtex4,
+/// revtex4-1, revtex4-2. Not the aastex classes: they load `aas_support` after revtex4, whose `\author` takes the
+/// ownership, so they resolve to the kernel's conventions (1005.0770, 1910.05363, 2604.19097).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "revtex",
+  binding: "revtex4_support.sty",
+  // (the S2b pilot: 0.4 % unclassified, a seeded classified sample 39 of 39 right — SYNC "FM S2a.2" r9)
+  cite: "revtex4_support_sty.rs `\\affiliation`: `\\lx@add@affiliation[annotate=new]` (Perl \
+         revtex4_support.sty.ltxml); 0911.0568",
+  ..FM_KERNEL_CONVENTIONS
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: revtex4_support.sty.ltxml — 433 lines
   // Support macros for RevTeX4 class (APS journals)
 
   RequirePackage!("hyperref");
+  // The real revtex4-1/4-2.cls never load hyperref, they only test for it (revtex4-2.cls:476); Perl preloads it here
+  // (revtex4_support.sty.ltxml:23), so a document's own `\usepackage{hyperref}` did nothing — and phfnote's
+  // `hyperrefdefs=defer` (phfnote.sty:829-860), which `\let`s `\hypersetup` to a deferred copy expecting that later
+  // load to restore it, then re-added its `\AtBeginDocument` code for ever from inside the hook (KNOWN_PERL_ERRORS
+  // #997; 2207.13707, 2403.04828, 2508.03993, 2508.03994, 2601.20155). The preload stays, for the documents that use
+  // hyperref's commands without loading it, but marked unloaded so the document's own load runs the binding again
+  // (the `amsmath` precedent of aa_cls.rs, Perl aa.cls.ltxml:57), and `\@ifpackageloaded{hyperref}` is false.
+  unmark_loaded("hyperref.sty");
   RequirePackage!("natbib");
   RequirePackage!("revsymb");
   RequirePackage!("url");
@@ -25,6 +56,11 @@ LoadDefinitions!({
   // LaTeX does — so we must provide its expected infrastructure.)
   // Witness: 1904.07479 (AIAA.cls). Format-version probing (\IfFormatAtLeastTF)
   // is omitted — not needed for the switch semantics.
+  // revtex4.cls:4476, revtex4-1.cls:2378, revtex4-2.cls:2399 `\sanitize@url`: `%`, `~` and `_` read as other
+  // characters, so an address keeps them. Classes and styles built on revtex call it for their own address
+  // commands: JASA.cls, ujp.sty, cej.cls (witnesses 2006.04679, 1702.04290, 1510.07897, 1309.5259,
+  // 2508.01050, 2103.00255).
+  TeX!(r"\def\sanitize@url{\@makeother\%\@makeother\~\@makeother\_}");
   TeX!(r"\long\def\true@sw#1#2{#1}%
 \long\def\false@sw#1#2{#2}%
 \def\@boolean#1#2{\long\def#1{#2\expandafter\true@sw\else\expandafter\false@sw\fi}}%
@@ -47,28 +83,108 @@ LoadDefinitions!({
 \@boole@def\@ifodd#1{\ifodd#1}%");
 
   // 4.3 Title/Author (Perl PR #2767)
+  // 68t: a call inside the document's `{titlepage}` also runs a refused printing `\title` there (sect05.rs
+  // `titlepage_class_call`; gr-qc9404034 under `\documentstyle{revtex}`).
+  // The class's refused `\title` runs first for its side effects, as under the kernel's (sect05.rs `\title`,
+  // OXIDIZED_DESIGN #482: the cvpr template's `\thetitle`; no witness of this binding's own).
   DefMacro!("\\title[]{}",
-    "\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}");
+    "\\lx@titlepage@class@call{title}{#1}{#2}{\\lx@replay@class@setter{title}{#1}{#2}\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}");
 
   // \author[labels]{name}   One \author per author
   // If labels given, the corresponding affiliation from \affil is attached
   // otherwise, \author should be followed by \affiliation
-  DefMacro!("\\author[]{}",    "\\lx@add@author[annotations={#1}]{#2}");
-  DefMacro!("\\affiliation{}", "\\lx@add@affiliation[annotate=new]{#1}");
-  DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=new]{}");
-  DefMacro!("\\affil OptionalSemiverbatim {}",
-    "\\lx@add@affiliation[annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
-  // \address provides an address to the previous \author
-  DefMacro!("\\address{}", "\\lx@add@address[annotate=new]{#1}");
+  // `\author{Brent Preston and Eric Poisson}` names two (gr-qc0606093): the article `\author`'s parse, each author
+  // with the labels (Perl revtex4_support makes it one author; 63e).
+  // `\lx@author@after` (sect05.rs): what a package appends to `\author` (titling's `\theauthor`) runs here too.
+  DefMacro!("\\author[]{}",    "\\lx@add@authors@append[annotations={#1}]{#2}\\lx@author@after{#2}");
+  // An `\affiliation` that starts with a letter or number mark (all `\author{Name$^{a}$}`s first, then `$^{a}$`-marked
+  // lines: 2011.01984, 2301.08449) is labelled by its marks under marked authors, and goes to the authors showing them
+  // (relocate_annotations); any other is revtex's group rule, every author of the group before it (`annotate=run`: the
+  // run of authors with none yet, and each further line before a new author the same run's — revtex4-2.cls
+  // `\move@AU\move@AF`; Perl's `annotate=new`, Base_Utility.pool.ltxml:521, gave a group's second line to its last
+  // author only, KNOWN_PERL_ERRORS #1190, 1303.7097): a superscript inside the line (`Laboratory for $^{3}$He`) or a
+  // symbol (`$^{\dagger}$`) is no mark, and an interleaved `\author{A$^{1}$}\affiliation{$^{1}$…}` group keeps the
+  // group rule, exact there (63i review).
+  // (a one-mark line the group takes is declared so at the call, `_grouped=true`, which the frontmatter observer's
+  // reading honours: today's run, not the marks — FM S2b, 63i review r2; a line holding several marked entries is a
+  // marked list, cut by its marks however today's places it, and so are the lines of names given after an affiliation
+  // that came before the first `\author`: 2209.05548's empty `\affiliation{}`, 2510.16137, 2412.01183)
+  DefMacro!("\\affiliation{}", sub[(content)] { group_or_marked_affiliation(content, "run") });
+  // revtex4-1.cls:2147-2250, the internals of `\affiliation` (`\move@AU\move@AF\begingroup … \@affiliation`,
+  // :2206-2211): `\move@AU`/`\move@AF` file the pending authors and affiliations, which the frontmatter API attaches
+  // at once, and `\@affiliation{…}` (:2213) closes the group and records the affiliation. A class that redefines
+  // `\affiliation` with them keeps its affiliations: openjournal.cls:433-437, read raw on revtex4-1 (33 2609 papers,
+  // 2609.05602, 2609.07025).
+  def_macro_noop("\\move@AU")?;
+  def_macro_noop("\\move@AF")?;
+  DefMacro!("\\@affiliation{}", "\\endgroup\\lx@add@affiliation[annotate=run]{#1}");
+  DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=run]{}");
+  // `\affil` is the binding's own (Perl revtex4_support.sty.ltxml:49): none of revtex4.cls, revtex4-1.cls or
+  // revtex4-2.cls defines it, so a document's `\newcommand{\affil}{Center for Nanophotonics, …}` (1104.4073; 1907.12838,
+  // 1908.05079) is the one pdflatex takes, and `\affiliation{\affil}` prints it. A guess the document's definition
+  // replaces (`is_definable_latex`, as aa_cls.rs's `\psj`); Perl ignores the `\newcommand` and reads `\affil}` with a
+  // missing argument (KNOWN_PERL_ERRORS #1199). Guard `perfect_kernel_batch86c::a_revtex_document_defines_its_own_affil`.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\affil OptionalSemiverbatim {}",
+      "\\lx@add@affiliation[annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
+  }
+  // revtex4-2.cls:7519 (revtex4.cls:5964, revtex4-1.cls:7498): the obsolete `\address` becomes `\affiliation`, its
+  // mark-led lines going to the names showing their marks (Perl's `\lx@add@address` had no mark path, 0806.3762),
+  // as `\altaddress` becomes `\altaffiliation` below.
+  RawTeX!(r"\def\address{\replace@command\address\affiliation}");
   // These add contacts to most recent author
   // The optional arguments here are a sort of prefix to the footnote. (NOT label)
-  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@email[name={#1}]{#2}");
-  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{#2}");
-  DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
+  // REVTeX 4.1/4.2 set the address with `\href`, without hyperref `\@href`: in the current font
+  // (revtex4-1.cls:1959-1961, 2383-2391), its `_` as typed (revtex4_cls.rs sets REVTeX 4.0's in typewriter type;
+  // 2301.03570, 2301.03067)
+  // revtex4-1.cls:2383-2392 (revtex4.cls:4481-4491, revtex4-2.cls:2404-2413): `\email` is `\begingroup\sanitize@url
+  // \@email{#1}`, so the address is read with `%` other, as typed (`UrlSemiverbatim`):
+  // `\homepage{http://www.nhn.ou.edu/%7Emilton}` (0712.3811) is the address, where a `%` comment swallowed the rest
+  // of the document, every `\label` with it (KNOWN_PERL_ERRORS #1149). One call `\email[]{}`, as an author-block line
+  // reads it (`perfect_kernel_batch64::email_command_option_on_author_line`).
+  // (an e-mail is printed in the front matter's footnotes, revtex4-2.cls:2404-2413 `\@email` into `\frontmatter@footnote`:
+  // after the affiliations under the names, whenever it is queued — its print zone the footer's, `_zone=footer`,
+  // OXIDIZED_DESIGN_DIVERGENCES #954; 2312.02779)
+  DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim",    "\\lx@add@email[name={#1},_zone=footer]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  // `\@email{label}{address}` closes the class's group. A class that re-dresses `\email` over them (cej.cls:88
+  // `\renewcommand*\email[1][E-mail: ]{\begingroup\sanitize@url\@email{#1}}`; 0710.1022, 1201.4230 and 5 more) left
+  // the group open without them, `%` other to the end of the document.
+  DefMacro!("\\@email{} Semiverbatim",    "\\endgroup\\lx@add@email[name={#1},_zone=footer]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\thanks[Default:\\lx@contact@thanks@name]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
+  // revtex4-2.cls:2472-2493 (revtex4.cls, revtex4-1.cls alike): the front-matter footnote under `\thanks` and the
+  // `\author`'s optional notes, a mark shared by identical texts; documents call it for a note on several authors
+  // (`\newcommand{\equalcontrib}{\frontmatter@footnote{…contributed equally…}}`, 2605.04155). Each author keeps it.
+  DefMacro!("\\frontmatter@footnote{}",  "\\lx@add@contact[role=thanks]{#1}");
+  // revtex4-2.cls:3040-3043 (revtex4-1.cls:3019-3022, revtex4.cls:5020-5022): the front matter's footnote marks — the
+  // footnote counter's symbols (`\@fnsymbol`), its letters (`\@alph`) under `altaffilletter` — declared as the title
+  // block's (`latex_constructs::TITLE_THEFOOTNOTE`): the marks the notes of the authors, the title and the date show, as
+  // the PDF prints them, and the ones the frontmatter observer labels, so an affiliation the authors' footnote symbols
+  // mark finds its names (`\author{Ann\footnote{…}}` "Ann∗", `\affiliation{$^{\ast,\ddagger}$Univ A}`: 1608.06509).
+  DefMacro!("\\frontmatter@thefootnote", sub[_args] {
+    let style = if lookup_bool("revtex@altaffilletter") { "\\@alph" } else { "\\@fnsymbol" };
+    Ok(Tokens!(T_CS!(style), T_BEGIN!(), T_CS!("\\csname"), T_LETTER!("c"), T_OTHER!("@"), T_CS!("\\@mpfn"), T_CS!("\\endcsname"), T_END!()))
+  });
+  Let!("\\lx@title@thefootnote", "\\frontmatter@thefootnote");
+  // revtex4-2.cls:2120/2160/2236 `\@AF@join{note}`: the join every `\email`, `\homepage`, `\thanks` and
+  // `\altaffiliation` ends in (:2404-2421), dispatched to the title, author or affiliation last given. A class that
+  // re-dresses `\@email` calls it directly (JASA.cls:1232-1238 `\def\@email#1#2{\endgroup\@AF@join{#1\href{mailto:#2}
+  // {#2}}}`; 2605.18495, 2605.23416: `\@AF@join` undefined). The note goes where our `\thanks` puts its notes, on the
+  // last author, whatever revtex's dispatch would join it to, and as a thanks note even when it holds an email: the
+  // content and its link are kept.
+  DefMacro!("\\@AF@join{}",              "\\lx@add@contact[role=thanks]{#1}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");
-  DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
+  // revtex4-2.cls:2420 `\newcommand*\altaffiliation[2][]{\@AF@join{#1#2}}` (revtex4-1.cls, revtex4.cls alike): the
+  // author's own note, joined to the author last given as `\email` and `\thanks` are — not one of the group's
+  // affiliations `\affiliation` files (`\move@AU\move@AF`), so it neither reaches the authors before it nor ends the
+  // group's run: role `altaffiliation`, as aastex's binding has it. Perl's `annotate=new,role=affiliation`
+  // (revtex4_support.sty.ltxml:61) cost the author before it the group's affiliation (cond-mat0209262; 78 of 5,934
+  // revtex papers write an `\altaffiliation` inside a group).
+  DefMacro!("\\altaffiliation[Default:\\lx@contact@altaffiliation@name]{}", "\\lx@add@contact[role=altaffiliation,name={#1}]{#2}");
 
   def_macro_noop("\\firstname")?;
   DefConstructor!("\\surname{}", "#1", enter_horizontal => true);
@@ -78,7 +194,45 @@ LoadDefinitions!({
 
   DefMacro!("\\pacs{}",     "\\lx@add@classification[scheme=pacs,name={PACS:~}]{#1}");
   DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // `\preprint` stores the number for the title page, which prints it or not by the class family's rule, so the branch
+  // is chosen before the argument is read (`preprint_printed`). A printed number is Perl's
+  // `\lx@add@pubnote[role=preprint]{#1}` (revtex4_support.sty.ltxml:71), its argument read as TeX reads it (`$`, `~`
+  // are math and a tie, as on the page: "Fe$_{2}$YZ", "DESY~11--210"; a text `_` errs as in pdflatex). One the class
+  // does not print is metadata, an `ltx:rdf` identifier per `\\`-separated number (user rulings 2026-10-06,
+  // 2026-10-09: a display the class toggles off is not shown, and what it keeps unprinted is RDFa), read as written
+  // and set in the identity encoding (`\lx@address@textfont`), so its `_` stays as typed: Perl's digestion raised
+  // "Script _" on `DMRG_Sampled_Variance` (1205.1463, 1207.6705, 1912.04576, 2110.00437, 2408.13616;
+  // KNOWN_PERL_ERRORS #990, OXIDIZED_DESIGN_DIVERGENCES #770). REVTeX 3 decides it in TeX (revtex3_support_sty.rs).
+  DefMacro!("\\preprint", sub[_args] {
+    Ok(Tokens!(if preprint_printed() {
+      T_CS!("\\lx@revtex@preprint@printed")
+    } else {
+      T_CS!("\\lx@revtex@preprint@identifier")
+    }))
+  });
+  // (printed at the first page's top right, its numbers alone, aps4-2.rtx:250-264 `\produce@preprints`: no label,
+  // FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921)
+  DefMacro!("\\lx@revtex@preprint@printed{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
+  // The numbers are the argument's `\\`-separated items at its top level: a `\\` in a group or an environment
+  // (`\parbox{2in}{A-1\\B-2}`, a `{flushright}` block in a `{minipage}`, FERMILAB's layout) belongs to it.
+  DefMacro!("\\lx@revtex@preprint@identifier Semiverbatim", sub[(number)] {
+    let number = number.unlist();
+    let mut out: Vec<Token> = Vec::new();
+    for item in split_top_level_lines(&number) {
+      let start = item.iter().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
+      let end = item.len() - item.iter().rev().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
+      if start >= end {
+        continue;
+      }
+      out.extend(
+        mouth::tokenize_internal("\\lx@add@frontmatter{ltx:rdf}[property=dcterms:identifier]{\\lx@address@textfont").unlist(),
+      );
+      out.push(T_BEGIN!());
+      out.extend(item[start..end].iter().copied());
+      out.extend([T_END!(), T_END!()]);
+    }
+    Ok(Tokens::new(out))
+  });
 
   // Extra
   def_macro_noop("\\blankaffiliation")?;
@@ -90,8 +244,11 @@ LoadDefinitions!({
   DefMacro!("\\published[]{}", "\\lx@add@date[role=published]{#2}");
 
   // 5.3 Widetext
-  def_macro_noop("\\widetext")?;
-  def_macro_noop("\\endwidetext")?;
+  // A wide passage is set in one column (ltxgrid's `\onecolumngrid` inside it, revtex4-2.cls:7440-7460): the page a
+  // float's panels are set in rows against follows (the panel grid rule, `set_panel_page_twocolumn`; 2504.20901's
+  // appendix figures in `{widetext}`).
+  DefMacro!("\\widetext", "\\lx@panel@page@push@onecolumn");
+  DefMacro!("\\endwidetext", "\\lx@panel@page@pop");
   def_macro_noop("\\narrowtext")?;
   def_macro_noop("\\endnarrowtext")?;
   def_macro_noop("\\mediumtext")?;
@@ -103,7 +260,7 @@ LoadDefinitions!({
   // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
   // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
-    properties => { Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?)) });
+    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\acknowledgmentsname"))?)) });
   // Tolerant close — see omnibus_cls.rs commentary on the
   // \begin{acknowledgments} ... \bibliography ... \end{acknowledgments}
   // pattern that auto-closes the env via \bibliography opening
@@ -121,18 +278,38 @@ LoadDefinitions!({
 
   // Section numbering style
   DefMacro!("\\thesection", "\\Roman{section}");
+  // revtex4.cls:5367, revtex4-1.cls:6759, revtex4-2.cls:6780 and REVTeX 3's aps.sty:636 number tables in capital
+  // Roman, "TABLE I"; the caption names stay Perl's "Figure"/"Table" (user ruling 2026-10-21, 18). Perl's binding
+  // (revtex4_support.sty.ltxml:111) sets only `\thesection`: KNOWN_PERL_ERRORS #1077. 0708.2630, 0902.4794,
+  // 1911.02024, cond-mat9610218, cond-mat0408054. Guard `perfect_kernel_batch78n::revtex_tables_are_roman`.
+  DefMacro!("\\thetable", "\\Roman{table}");
 
   // Grid / column macros
   DefMacro!("\\thepagegrid", "one");
-  def_macro_noop("\\onecolumngrid")?;
-  def_macro_noop("\\twocolumngrid")?;
-  def_macro_noop("\\restorecolumngrid")?;
+  // (a one-column region of a declared two-column page, the panel grid rule: `set_panel_page_twocolumn`)
+  DefMacro!("\\onecolumngrid", "\\lx@panel@page@onecolumn");
+  DefMacro!("\\twocolumngrid", "\\lx@panel@page@twocolumn");
+  DefMacro!("\\restorecolumngrid", "\\lx@panel@page@restore");
   // revtex4-1.cls L4388: \do@columngrid{layout}{N}. Layout-only.
   // Witness 2406.02666 (revtex4-1 with explicit \onecolumngrid call
   // before our stub binding loads).
   def_macro_noop("\\do@columngrid{}{}")?;
+  // revtex4-2.cls:7424 `\close@column@grid` ends the current column grid before
+  // a page break; layout-only. A paper's own `\balancecolsandclearpage`
+  // (`\close@column@grid\clearpage\twocolumngrid`) calls it: arXiv 2605.07942.
+  def_macro_noop("\\close@column@grid")?;
+  // ltxgrid.sty:1403-1418 (revtex4.cls, revtex4-1.cls, revtex4-2.cls:4496-4510): `\onecolumngrid@push` switches to one
+  // column for a `figure*`/`table*` and `\onecolumngrid@pop` restores the grid — layout only, as `\onecolumngrid`.
+  // Papers bracket their wide floats with them (`\makeatletter\onecolumngrid@push\makeatother\begin{table*}`; run-347
+  // inventory 16 + 28 papers; 2311.06373, 2104.14555, 2004.00671, 2206.03658).
+  def_macro_noop("\\onecolumngrid@push")?;
+  def_macro_noop("\\onecolumngrid@pop")?;
+  // ltxgrid.sty:1713 `\set@vsize`, the page's text height — layout only.
+  def_macro_noop("\\set@vsize")?;
   def_primitive_noop("\\twocolumn")?;
-  DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
+  // The angle is a decimal (graphics.sty:445-452 → trig.sty:55 `\dimen@=#1\p@`):
+  // a `{Number}` put the `.5` of `{22.5}` back in the input (OXIDIZED_DESIGN #317).
+  DefConstructor!("\\rotatebox{Float}{}", "#2", enter_horizontal => true);
   def_macro_noop("\\pagesofar")?;
 
   // Endnotes — Perl revtex4_support.sty.ltxml L120-149.
@@ -143,18 +320,21 @@ LoadDefinitions!({
   NewCounter!("endnote");
   DefConstructor!("\\endnote[]{}", "<ltx:note role='endnote' mark='#mark' xml:id='#id'>#tags#2</ltx:note>",
     mode => "internal_vertical",
+    sizer => sub[whatsit] { note_size_in_line(whatsit) },
     before_digest => { neutralize_font(); },
     properties => sub[args] {
       make_note_tags("endnote", args[0].as_ref(), None)
     });
   DefConstructor!("\\endnotemark[]", "<ltx:note role='endnotemark' mark='#mark' xml:id='#id'>#tags</ltx:note>",
     mode => "restricted_horizontal", enter_horizontal => true,
+    sizer => sub[whatsit] { note_size_in_line(whatsit) },
     before_digest => { neutralize_font(); },
     properties => sub[args] {
       make_note_tags("endnote", args[0].as_ref(), None)
     });
   DefConstructor!("\\endnotetext[]{}", "<ltx:note role='endnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
     mode => "internal_vertical",
+    sizer => sub[_whatsit] { Ok(out_of_line_size()) },
     before_digest => { neutralize_font(); },
     properties => sub[args] {
       // Perl L143-149: mark = arg1 OR Digest(\theendnote). (No RefStepCounter.)
@@ -172,11 +352,26 @@ LoadDefinitions!({
   // Perl L161-162 passes `locked => 1` so RevTeX's \text isn't silently
   // replaced by amsmath's \text (which would miss the restricted_hmode
   // treatment RevTeX relies on for inline-text-in-math spacing).
+  // revtex4-2.cls:7547-7560 `\REV@text` sets `#1` in `\hbox{{…}}` (math) or `\mbox{#1}` (text): its argument is
+  // digested inside box braces, so the alignment count is raised for it, as amstext_sty.rs `\text`
+  // (KNOWN_PERL_ERRORS #931).
   DefConstructor!("\\text{}", "<ltx:text _noautoclose='true'>#1</ltx:text>",
-    mode => "restricted_horizontal", locked => true);
+    mode => "restricted_horizontal", locked => true,
+    before_digest => { increment_align_group_count(); },
+    after_digest => { decrement_align_group_count(); });
+  // revtex4-2.cls:7547-7585 (revtex4.cls:5992, revtex4-1.cls:7526): REVTeX's `\text` is `\REV@text`, which apsrev's
+  // `.bbl` notes write out (`$t'=R(t)\protect \REV@text { mod } 1$`; 2202.11665, 2107.02243, 1407.5317).
+  Let!("\\REV@text", "\\text");
 
-  // RevTeX3 bold math (obsolete in RevTeX4) — Perl L165-171
-  DefConstructor!("\\bm{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
+  // RevTeX3 bold math (obsolete in RevTeX4) — Perl L165-171. RevTeX 4.x's own `\bm` (revtex4-2.cls:7573-7586,
+  // revtex4-1.cls:7552-7565, revtex4.cls:6018-6032) asks for bm.sty ("To use \bm, please load the bm package!"),
+  // drops its first argument and leaves later ones in a `\relax{…}` group; Perl keeps a bold `\bm`, its argument in a
+  // group: a `\left` without its `\right` there is set at the outer level with a Warning (bm_sty.rs
+  // `define_grouped_bm`, OXIDIZED_DESIGN #544).
+  // REVTeX 4.1/4.2 define it at load (revtex4-1.cls:7565, revtex4-2.cls:7586 `\let\bm\REV@bm`), so a preamble's
+  // `\newcommand{\bm}` errs "Command \bm already defined", as here; REVTeX 4.0 provides it at `\begin{document}`
+  // (revtex4_cls.rs `defer_bm_to_begin_document`; KNOWN_PERL_ERRORS #965).
+  bm_sty::define_grouped_bm()?;
   // Perl L166-168: `locked => 1` keeps \bbox bold-wrapped even when a
   // user or co-loaded package redefines it.
   DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true,
@@ -212,7 +407,9 @@ LoadDefinitions!({
   // equivalents so .bbl files referencing them resolve cleanly.
   // Witness 2412.13042 (revtex4-2 + main.bbl using \rev@citealp).
   Let!("\\rev@citealp",     "\\citealp");
-  Let!("\\rev@citealpnum",  "\\citealpnum");
+  // revtex4-1.cls:6939-6945 (revtex4-2.cls:6961): `\citealp` with `\@cite` let to `\NAT@citenum`, the bare number
+  // — natbib's `\citenum`; there is no `\citealpnum`. Witnesses 1002.2610, 1511.04077, 1903.06404 (their .bbl).
+  Let!("\\rev@citealpnum",  "\\citenum");
   Let!("\\rev@citet",       "\\citet");
   Let!("\\rev@citenum",     "\\citenum");
   Let!("\\rev@citemark",    "\\citenum");
@@ -417,6 +614,556 @@ LoadDefinitions!({
 
   // Environment manipulation — Perl L425-430
   DefMacro!("\\replace@command{}{}", "\\global\\let#1#2 #1");
+  // ltxutil.sty:97-102 (revtex4.cls, revtex4-1.cls, revtex4-2.cls:102-107) `\let@environment{<new>}{<old>}`, which a
+  // document or a class built on REVTeX calls before it defines it itself (1101.2683, 1204.0239 `\let@environment
+  // {abstract}{itp@abstract}`; 1510.05418, 1502.05917, 1510.09145; run-347 inventory 17 + 2 papers). Perl lacks it
+  // (KNOWN_PERL_ERRORS #722).
+  RawTeX!(r"\def\let@environment#1#2{%
+ \expandafter\let
+ \csname#1\expandafter\endcsname\csname#2\endcsname
+ \expandafter\let
+ \csname end#1\expandafter\endcsname\csname end#2\endcsname
+}");
+  // revtex4-2.cls:7459-7460 (revtex4.cls, revtex4-1.cls alike): the rule boxes `{widetext}` sets above and below a
+  // wide passage, which a document's own variant fills (2101.04636 `{nobotrulewidetext}`, 2202.08908, 2506.16974).
+  RawTeX!(r"\newbox\widetext@top\newbox\widetext@bot");
+  // aps4-2.rtx:212-214 (aps4-1.rtx:182-184, revtex4's aps.rtx:158-160) and revtex4-2.cls:3079: the APS title's spacing
+  // and font, which a document's second title block reuses (2006.03287 `\frontmatter@title@format Supplementary
+  // Information: \ourtitle`; 2210.03153, 2101.08363, 2605.30425).
+  RawTeX!(r"\def\frontmatter@title@above{\addvspace{6\p@}}%
+\def\frontmatter@title@format{\large\bfseries\centering\parskip\z@skip}%
+\def\frontmatter@title@below{}%
+\def\frontmatter@finalspace{\addvspace{18\p@}}");
+  // revtex4-2.cls:7520 (revtex4.cls:5965, revtex4-1.cls:7499): the obsolete `\altaddress` becomes `\altaffiliation`
+  // (1509.02329, 1503.07039, 2109.03348).
+  RawTeX!(r"\def\altaddress{\replace@command\altaddress\altaffiliation}");
+  // revtex4-2.cls:6676 (revtex4.cls:5269, revtex4-1.cls:6655): the equation number's prefix, empty unless `eqsecnum`.
+  RawTeX!(r"\def\theequation@prefix{}");
+  // revtex4-2.cls:6283-6308 (revtex4-1.cls, revtex4.cls:4087-4105): the address-grouping switches and the option
+  // macros that set them, which a style built on REVTeX calls (2402.07499 ljm.sty:304-305 `\@ifxundefined
+  // \groupauthors@sw{\clo@groupedaddress}{}`; 2012.06334, 2206.05563, 2410.06749). The frontmatter API places the
+  // affiliations; the switches set nothing here.
+  RawTeX!(r"\def\clo@groupedaddress{%
+ \@booleantrue\groupauthors@sw
+ \@booleantrue\@affils@sw
+ \@booleanfalse\runinaddress@sw
+}%
+\def\clo@unsortedaddress{%
+ \@booleantrue\groupauthors@sw
+ \@booleanfalse\@affils@sw
+ \@booleanfalse\runinaddress@sw
+}%
+\def\clo@runinaddress{%
+ \@booleantrue\groupauthors@sw
+ \@booleantrue\@affils@sw
+ \@booleantrue\runinaddress@sw
+}%
+\def\clo@superscriptaddress{%
+ \@booleanfalse\groupauthors@sw
+ \@booleantrue\@affils@sw
+ \@booleanfalse\runinaddress@sw
+}");
   def_macro_noop("\\replace@environment{}{}")?;
   def_macro_noop("\\glet@environment{}{}")?;
 });
+
+/// The REVTeX 3 option handlers this binding defines (Perl L372-393), for a `\documentstyle[aps,…]{revtex}` to consume.
+/// A revtex4/4-1/4-2 class has processed its options before it loads this binding, so it lets them to `\relax`, as
+/// latex.ltx's `\@process@pti@ns` (:18593-18594) leaves the handlers it declared: otherwise a later package's
+/// undeclared `[draft]` ran revtex's no-op instead of its `\default@ds` (content.rs `process_options_by`).
+pub(crate) fn retire_option_handlers() {
+  for option in [
+    "preprint",
+    "twoside",
+    "draft",
+    "amsfonts",
+    "amssymb",
+    "titlepage",
+    "twocolumn",
+    "tighten",
+    "floats",
+    "eqsecnum",
+    "pra",
+    "prb",
+    "prc",
+    "prd",
+    "pre",
+    "prl",
+    "josaa",
+    "josab",
+    "aplop",
+    "manuscript",
+    "11pt",
+    "12pt",
+    "aps",
+    "osa",
+  ] {
+    let_i(&T_CS!(&s!("\\ds@{option}")), &T_RELAX!(), None);
+  }
+}
+
+/// REVTeX 4.1/4.2's two copies of float.sty's `\newfloat` (revtex4-1.cls:3980-4021, revtex4-2.cls:4001-4042):
+/// `\newfloat@float`, float.sty's own, for the `\document@inithook` test that float.sty is loaded unpatched, and
+/// `\newfloat@ltx`, the repair the hook lets `\newfloat` to (revtex4-2.cls:4043-4056). A preamble that needs the
+/// repair before `\begin{document}`, where algorithm.sty's `\newfloat{algorithm}` runs, lets it itself
+/// (`\usepackage{float}\let\newfloat\newfloat@ltx\usepackage{algorithm}`: all 25 papers of the run-349 `\newfloat`
+/// sample; 2210.07980, 2210.08566, 2210.07097, 2402.00653, 2002.07183), and found it undefined here, which left
+/// `\newfloat` and `{algorithm}` undefined (KNOWN_PERL_ERRORS #683). Both copies set up a float through float.sty's
+/// machinery (`\floatplacement`, `\restylefloat`), which this port has as float_sty.rs's `\newfloat`; without
+/// float.sty loaded they fail, as in TeX. REVTeX 4.0 has neither (revtex4.cls); AASTeX 6+ has both (aastex_cls.rs).
+pub(crate) fn define_float_repair() -> Result<()> {
+  DefMacro!(
+    "\\newfloat@float{}{}{}",
+    "\\@ifnextchar[{\\lx@float@newfloat{#1}{#2}{#3}}{\\lx@float@newfloat{#1}{#2}{#3}[]}"
+  );
+  DefMacro!(
+    "\\newfloat@ltx{}{}{}",
+    "\\@ifnextchar[{\\lx@float@newfloat{#1}{#2}{#3}}{\\lx@float@newfloat{#1}{#2}{#3}[]}"
+  );
+  Ok(())
+}
+
+/// The bibliography style REVTeX writes when the document names none:
+/// `\bibliographystyle{\@bibstyle}` at the end of the document
+/// (revtex4-1.cls:7113-7120, revtex4-2.cls:7134-7141), `\@bibstyle` set by the
+/// society's `.rtx` — `apsrev\substyle@post` (aps4-1.rtx:630, aps4-2.rtx:667;
+/// REVTeX 4.0's apsrev.bst), `aipauth`/`aipnum\substyle@post` by citation style
+/// (aip4-1.rtx:617-640). Recorded for the `.bib` reader only (pre_bibtex.rs
+/// `new_from_gullet` reads the style's `MACRO`s: apsrev's `prl`, `jan`, …), not
+/// as `BIBSTYLE`, which also decides the bibliography's numbering. `post` is the
+/// version's `\substyle@post` ("4-1", "4-2", or "" for REVTeX 4.0). Witness
+/// 2603.22119 (revtex4-1, no `\bibliographystyle`).
+pub(crate) fn record_implicit_bibstyle(post: &str) {
+  let authoryear = lookup_string("revtex_cite_style") == "authoryear";
+  let style = match lookup_string("revtex_society").as_str() {
+    "" | "aps" => s!("apsrev{post}"),
+    "aip" if authoryear => s!("aipauth{post}"),
+    "aip" => s!("aipnum{post}"),
+    _ => return,
+  };
+  assign_value("lx@implicit@bibstyle", pin(style), Some(Scope::Global));
+}
+
+/// The REVTeX 4.1/4.2 internals documents call (revtex4-1.cls, revtex4-2.cls; REVTeX 4.0 has none of them), for the two
+/// class bindings:
+/// - :1965-1967 / :1986-1991 `\doi{<doi>}`, the DOI link the APS `.bbl`s and documents write (2010.08759, 1805.10530,
+///   2109.10305, 2302.01688; run-347 inventory 101 revtex4-2 papers), and `\doibase`, its resolver, which documents and
+///   `.bbl`s put before a DOI in `\href` (2301.10789 `\href {\doibase 10.1007/…}`; 26 papers). `\@sanitize@url` makes
+///   URL characters other before the argument is read: `HyperVerbatim` does so, `%` included (2006.12945
+///   `\doi{…%2F…}`, a PushbackLimit Fatal as `Semiverbatim`; 2403.08476, 2112.03925 `_`). The resolver is
+///   `https://doi.org/` (revtex4-2.cls:1988; 4.1's `http://dx.doi.org/` redirects there). `\@sanitize@url` (:1989)
+///   is the class's; `\@@startlink{<url>}`…`\@@endlink` (:1990-2009) open and close the link, which the class makes
+///   live when hyperref is loaded (:1992-2009 `\hypertext@enable@ltx`, from `\document@inithook`), as this binding
+///   always loads it: an `<ltx:ref>` around the text between them (1211.1037's own `\Doi`, 87 links, whose URLs had
+///   stood as text only by the undefined-command recovery).
+/// - ltxgrid.sty:506-513 `\onecolumn@grid@setup`/`\twocolumn@grid@setup`, the column grid's insert setup (2609.36113,
+///   2606.16884, 2609.15324, 2609.38318) — layout only.
+/// - ltxutil.sty:418-421 `\prep@math@patch` over `\prepdef` (a no-op here), ltxutil.sty:612 `\ltx@footnote@pop`
+///   (`\@empty`), revtex4-2.cls:5845 `\setup@hook` (`\@empty`), :6746 `\setfloatlink`.
+/// - :6283-6285 the address switches' defaults.
+pub(crate) fn define_revtex41_internals() -> Result<()> {
+  DefMacro!("\\doi HyperVerbatim", "doi:\\href{https://doi.org/#1}{#1}");
+  DefMacro!("\\doibase", "https://doi.org/");
+  RawTeX!(
+    r"\providecommand \@sanitize@url[0]{\chardef\cat@space\the\catcode`\ \@sanitize\catcode`\ \cat@space}%
+\def\prep@math@patch{%
+ \prepdef\equation{\prep@math}%
+ \prepdef\eqnarray{\prep@math}%
+}%
+\let\ltx@footnote@pop\@empty
+\let\setup@hook\@empty
+\def\setfloatlink{\def\float@link}%
+\@booleanfalse\runinaddress@sw
+\@booleantrue\@affils@sw
+\@booleanfalse\groupauthors@sw"
+  );
+  def_macro_noop("\\onecolumn@grid@setup")?;
+  def_macro_noop("\\twocolumn@grid@setup")?;
+  DefConstructor!("\\@@startlink HyperVerbatim", "<ltx:ref href='#href'>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let url = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("href" => clean_url(&url)))
+  });
+  DefConstructor!("\\@@endlink", sub[document, _args] {
+    document.maybe_close_element("ltx:ref")?;
+  });
+  Ok(())
+}
+
+/// REVTeX 4's section and equation numbers, set by the class after its options (revtex4-2.cls:6528-6576
+/// `\secnums@rtx`/`\secnums@arabic` run from `\setup@hook` at :7678, revtex4-1.cls:6507-6555 the same; revtex4.cls:5163-5172
+/// at load, :6055-6064 its `secnumarabic`), which Perl's binding reduces to `\thesection` (revtex4_support.sty.ltxml:111;
+/// KNOWN_PERL_ERRORS #1027):
+/// - APS (and AIP, SOR, the class's default): "I", "A", "1", "a", a `\ref` chaining them with thin spaces through
+///   `\p@<level>` ("I A 1"); the `rmp` journal with periods (apsrmp4-2.rtx:124-148, apsrmp4-1.rtx:115-139, revtex4's
+///   rmp.rtx:113-122: "I.A.1"); REVTeX 4.2's `aapm` society in the numbers themselves (aapm4-2.rtx:290-314: "I.A.1");
+///   `secnumarabic` "I.1", "I.1.1" in 4.1/4.2 (its `\thesection` stays `\Roman`), "1.1" in 4.0 (`\arabic`).
+/// - `\setcounter{secnumdepth}{4}` (revtex4-2.cls:6677, revtex4-1.cls:6656, revtex4.cls:5273): paragraphs numbered.
+///   The society's journal hook, run after it, unnumbers them: PRL's `\c@secnumdepth=-\maxdimen` (aps4-2.rtx:587
+///   `\rtx@apsprl`, run from `\@process@journal` at revtex4-2.cls:7671; aps4-1.rtx:564; revtex4's aps.rtx:517 at
+///   `\AtEndOfClass`): its headings carry no number, a `\ref` to one prints nothing, and the appendix steps no section,
+///   so its equations go on counting ("(16)", the empty `\Alph{0}` their prefix; 1508.03506's PDF). The journal is the
+///   one the class selects ([`selected_journal`]). AIP Conference Proceedings' `\setcounter{secnumdepth}{0}`
+///   (aip4-2.rtx:1181) never runs: its `\ifx\@journal\jnl@cp` (:1016) is read when the society file loads (:7670),
+///   before the journal option is (:7671), so `cp` papers are numbered (pdflatex). No other society file sets either
+///   (aapm4-2.rtx, sor4-2.rtx, aip4-1.rtx: only their `{theindex}`).
+/// - The heading prints `\csname the#1\endcsname.` (aps4-2.rtx:288 `\@seccntformat`, aps4-1.rtx:258, aip4-2.rtx:375,
+///   sor4-2.rtx:338, revtex4's aps.rtx:231; apsrmp and aapm with `\hskip0.5em`): the heading tags' `\fnum@<level>`
+///   (base_utilities.rs `\lx@fnum@@`), the refnum staying the `\ref` form.
+/// - `\theequation` is `\theequation@prefix\arabic{equation}` (revtex4-2.cls:6672-6676), the prefix `\arabic{section}.`
+///   with equations reset per section under `eqsecnum` (:6057-6064).
+/// - `\appendix` (revtex4-2.cls:7372-7387, revtex4-1.cls:7351-7366, revtex4.cls:5814-5829) numbers the appendices'
+///   subsections `\arabic`, their subsubsections `\alph`, and their equations within each appendix ("A1"); `\appendix*`
+///   leaves the appendix unnumbered ("A." for its equations). The heading "Appendix A" is the appendix type's tag
+///   (aps4-2.rtx:479 `\@appendixcntformat`).
+///
+/// Guards `perfect_kernel_batch78d::revtex_sections_number_as_the_class`; `perfect_kernel_batch64::aastex_sections_arabic`
+/// (AASTeX's own numbers stay).
+pub(crate) fn define_section_numbers(post: &str) -> Result<()> {
+  // A class built on REVTeX that sets its own (aastex_cls.rs, which emulateapj_cls.rs loads).
+  if lookup_bool("lx@revtex@sections@by@class") {
+    return Ok(());
+  }
+  let revtex4_0 = post.is_empty();
+  let opt = |name: &str| lookup_bool(&s!("revtex@opt@{name}"));
+  let (society, journal) = selected_journal(post)?;
+  let (rmp, aapm, arabic) = (
+    society == "aps" && journal == "rmp",
+    society == "aapm",
+    opt("secnumarabic"),
+  );
+  let mut tex =
+    String::from(r"\def\thepart{\Roman{part}}\def\thesection{\Roman{section}}\def\p@section{}");
+  if aapm && !rmp {
+    tex.push_str(
+      r"\def\thesubsection{\thesection.\Alph{subsection}}\def\p@subsection{}%
+\def\thesubsubsection{\thesubsection.\arabic{subsubsection}}\def\p@subsubsection{}%
+\def\theparagraph{\thesubsubsection.\alph{paragraph}}\def\p@paragraph{}%
+\def\thesubparagraph{\theparagraph.\arabic{subparagraph}}\def\p@subparagraph{}",
+    );
+  } else {
+    let sep = if rmp { "." } else { r"\," };
+    tex.push_str(&s!(
+      r"\def\thesubsection{{\Alph{{subsection}}}}\def\p@subsection{{\thesection{sep}}}%
+\def\thesubsubsection{{\arabic{{subsubsection}}}}\def\p@subsubsection{{\thesection{sep}\thesubsection{sep}}}%
+\def\theparagraph{{\alph{{paragraph}}}}\def\p@paragraph{{\thesection{sep}\thesubsection{sep}\thesubsubsection{sep}}}%
+\def\thesubparagraph{{\arabic{{subparagraph}}}}%
+\def\p@subparagraph{{\thesection{sep}\thesubsection{sep}\thesubsubsection{sep}\theparagraph{sep}}}"
+    ));
+  }
+  if arabic && revtex4_0 {
+    tex.push_str(
+      r"\def\p@section{}\def\thesection{\arabic{section}}\def\p@subsection{}%
+\def\thesubsection{\thesection.\arabic{subsection}}\def\p@subsubsection{}%
+\def\thesubsubsection{\thesubsection.\arabic{subsubsection}}",
+    );
+  } else if arabic {
+    tex.push_str(
+      r"\def\thesubsection{\thesection.\arabic{subsection}}\def\p@subsection{}%
+\def\thesubsubsection{\thesubsection.\arabic{subsubsection}}\def\p@subsubsection{}%
+\def\theparagraph{\thesubsubsection.\arabic{paragraph}}\def\p@paragraph{}%
+\def\thesubparagraph{\theparagraph.\arabic{subparagraph}}\def\p@subparagraph{}",
+    );
+  }
+  tex.push_str(
+    r"\setcounter{secnumdepth}{4}%
+\def\fnum@section{\thesection.}\def\fnum@subsection{\thesubsection.}\def\fnum@subsubsection{\thesubsubsection.}%
+\def\fnum@paragraph{\theparagraph.}\def\fnum@subparagraph{\thesubparagraph.}%
+\def\theequation{\theequation@prefix\arabic{equation}}%
+\def\appendix{\par\@appendix\setcounter{subsection}\z@\setcounter{subsubsection}\z@
+ \def\thesubsection{\arabic{subsection}}\def\thesubsubsection{\alph{subsubsection}}%
+ \@addtoreset{equation}{section}\def\theequation@prefix{\thesection}%
+ \@ifstar{\def\thesection{\unskip}\def\theequation@prefix{A.}}{}}",
+  );
+  if opt("eqsecnum") {
+    tex.push_str(r"\@addtoreset{equation}{section}\def\theequation@prefix{\arabic{section}.}");
+  }
+  if society == "aps" && journal == "prl" {
+    tex.push_str(r"\c@secnumdepth=-\maxdimen");
+  }
+  RawTeX!(&tex);
+  Ok(())
+}
+
+/// The society and journal a REVTeX class selects from its options, `post` its `\substyle@post` ("4-2", "4-1", or ""
+/// for REVTeX 4.0). REVTeX 4.1/4.2 read the options in the order given: the first naming a society file
+/// (`<society><post>.rtx`) is the society (revtex4-2.cls:6220-6230 `\@parse@class@options@society`, `aps` without one,
+/// :7670), the first naming one of its journals (`\change@journal`, :6094-6104; aps4-2.rtx, aip4-2.rtx `\DeclareOption`s)
+/// the journal. REVTeX 4.0 processes them in declaration order, each `\def\@journal` replacing the last
+/// (revtex4.cls:4010-4023, :4160 `\ProcessOptions\relax`), `aps` and `osa` emptying it.
+pub(crate) fn selected_journal(post: &str) -> Result<(String, String)> {
+  let given = crate::shipped_class::class_options()?;
+  let named = |option: &str| given.iter().any(|g| g == option);
+  if post.is_empty() {
+    // The declaration order, `aps` and `osa` emptying the journal, the `osa` ones changing the society.
+    let declared: Vec<&str> = "aps pra prb prc prd pre prl prstab rmp osa osameet opex tops josa"
+      .split_whitespace()
+      .collect();
+    let last = declared
+      .iter()
+      .enumerate()
+      .rfind(|(_, option)| named(option));
+    return Ok(match last {
+      Some((at, option)) => (
+        (if at < 9 { "aps" } else { "osa" }).to_string(),
+        (if matches!(*option, "aps" | "osa") {
+          ""
+        } else {
+          option
+        })
+        .to_string(),
+      ),
+      None => ("aps".to_string(), String::new()),
+    });
+  }
+  let societies = if post == "4-1" {
+    "aps aip apsrmp"
+  } else {
+    "aps aip aapm sor apsrmp"
+  };
+  let society = given
+    .iter()
+    .find(|g| {
+      societies
+        .split_whitespace()
+        .any(|society| society == g.as_str())
+    })
+    .map_or("aps", String::as_str)
+    .to_string();
+  let journals = match (post, society.as_str()) {
+    ("4-1", "aps") => "pra prb prc prd pre prl prstab prstper rmp",
+    ("4-1", "aip") => "jcp pop rsi jap apl cha pof bmf rse jmp",
+    (_, "aps") => {
+      "pra prb prc prd pre prl prab prper rmp prx prapplied prmaterials prfluids physrev"
+    },
+    (_, "aip") => "jcp pop rsi jap apl apm cha pof bmf rse jmp adv sd jor cp",
+    _ => "",
+  };
+  let journal = given
+    .iter()
+    .find(|g| {
+      journals
+        .split_whitespace()
+        .any(|journal| journal == g.as_str())
+    })
+    .cloned()
+    .unwrap_or_default();
+  Ok((society, journal))
+}
+
+/// REVTeX 4.0 provides `\bm` at `\begin{document}`, only while it is still undefined (revtex4.cls:6030-6032
+/// `\appdef\class@inithook{…\@ifxundefined\bm{\let\bm\REV@bm}{}…}`, run from `\class@documenthook` at
+/// `\AtBeginDocument`, :213-215; `\@ifxundefined` counts a `\relax` as defined), so a preamble's own
+/// `\newcommand{\bm}{\bibitem}` (nucl-th0307033) stands; defined at load, the binding's took it away (Perl
+/// revtex4_support.sty.ltxml:167 the same, KNOWN_PERL_ERRORS #965). REVTeX 4.1/4.2 define it at load. Guards:
+/// `perfect_kernel_batch73a::{revtex_bm_is_provided_at_begin_document, revtex41_bm_is_defined_at_load}`.
+pub fn defer_bm_to_begin_document() -> Result<()> {
+  RawTeX!(
+    r"\let\lx@revtex@bm\bm\let\bm\@undefined\AtBeginDocument{\@ifxundefined\bm{\let\bm\lx@revtex@bm}{}}"
+  );
+  Ok(())
+}
+
+/// Whether the REVTeX 4 class prints a `\preprint` called now: its title page prints the stored numbers under
+/// `\preprint@sw` (aps4-1.rtx:216-221 `\ps@titlepage`, aip, aapm, sor alike; revtex4's aps.rtx:195, :208-209).
+/// - REVTeX 4.0 (`revtex@preprint@v4.0`, revtex4_cls.rs): `preprintnumbers`/`nopreprintnumbers` set the switch
+///   (revtex4.cls:3891-3892) and the `preprint` style forces it on after them (class init hook, :3811-3812); the store
+///   is emptied once at load (:4618-4619), so a preamble call is printed too.
+/// - REVTeX 4.1/4.2: an unset switch follows the `preprint` style (revtex4-2.cls:5927-5930, revtex4-1.cls alike), and
+///   `\frontmatter@init` empties the store at the document's start (revtex4-1.cls:2094, :2517-2519), so a preamble
+///   call is never printed.
+fn preprint_printed() -> bool {
+  let style = lookup_bool("revtex@preprintsty");
+  let numbers = match lookup_value("revtex@preprintnumbers") {
+    Some(Stored::Bool(numbers)) => Some(numbers),
+    _ => None,
+  };
+  if lookup_bool("revtex@preprint@v4.0") {
+    style || numbers == Some(true)
+  } else {
+    !lookup_bool("inPreamble") && numbers.unwrap_or(style)
+  }
+}
+
+/// An affiliation block's unmarked first entry and the lines after it that marks lead, when its marks are all on those
+/// lines (`Univ A, Nagoya \\ $^2$Univ B \\ $^3$Inst C`): the entry's lines up to the first top-level line a mark leads,
+/// and the rest, from that line; `None` when no top-level line after the first is led by a mark, the head holds a mark,
+/// the head prints nothing, or the rest is not marked lines alone ([`marks_lead_every_line`]) — then the fail-safe of
+/// [`group_or_marked_affiliation`] holds the whole block.
+fn unmarked_head_over_marked_lines(content: &Tokens) -> Result<Option<(Tokens, Tokens)>> {
+  let v = content.unlist_ref();
+  let mut depth = 0usize;
+  for (i, t) in v.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if depth == 0 && t.defined_as(&T_CS!("\\\\")) => {
+        // (the spaces before the `\\` no text of the entry's)
+        let end = v[..i]
+          .iter()
+          .rposition(|t| *t != T_SPACE!())
+          .map_or(0, |e| e + 1);
+        let head = Tokens::new(v[..end].to_vec());
+        let tail = Tokens::new(v[i + 1..].to_vec());
+        if !leads_with_label(&tail, "unmarked_head_over_marked_lines")? {
+          continue;
+        }
+        return Ok(
+          (marks_lead_every_line(&tail)?
+            && !prints_marks(&head, "unmarked_head_over_marked_lines")?
+            && head
+              .unlist_ref()
+              .iter()
+              .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)))
+          .then_some((head, tail)),
+        );
+      },
+      _ => {},
+    }
+  }
+  Ok(None)
+}
+
+/// Whether `tail`, the marked rest of an affiliation block after its unmarked first entry, is lines the marked reader
+/// reads whole ([`unmarked_head_over_marked_lines`]): every top-level line, a blank one aside, opens with a mark, no
+/// environment stands in it and no mark is set in a box beside words, as digested — `$^{2}$Univ B\\
+/// \parbox{\linewidth}{$^{3}$Inst C\\ $^{4}$Lab D}` is not, its boxed lines no cut reads (review rev107e finding 2: Inst
+/// C and Lab D one entry, the head on a nameless creator); `\textbf{$^{2}$}Univ B` is.
+fn marks_lead_every_line(tail: &Tokens) -> Result<bool> {
+  let v = tail.unlist_ref();
+  if v.iter().any(|t| *t == T_CS!("\\begin")) {
+    return Ok(false);
+  }
+  // (no mark in a box beside words, as digested: `marks_as_printed`; unread, the cut reads none)
+  match marks_as_printed(tail, "marks_lead_every_line")? {
+    Some(marks) if marks.iter().all(|mark| mark.own_level) => {},
+    _ => return Ok(false),
+  }
+  for line in split_top_level_lines(v) {
+    if line.iter().all(|t| *t == T_SPACE!()) {
+      continue;
+    }
+    if !leads_with_label(&Tokens::new(line.to_vec()), "marks_lead_every_line")? {
+      return Ok(false);
+    }
+  }
+  Ok(true)
+}
+
+/// REVTeX's `\affiliation{…}` call: a mark-led line no group shares goes to the authors showing its
+/// marks (`\lx@add@affiliation@marked`), any other to the group before it (`annotate=<annotate>`, REVTeX's `run`),
+/// declared `_grouped=true` to the frontmatter observer when one mark is the group's. AASTeX's `\affiliation`/`\affil`
+/// is the same call (aas_support_sty.rs: aastex6x is REVTeX 4.1 underneath, aastex62.cls:278-292), `annotate=new`
+/// under `$^{N}$` names. A line led by a macro standing for a mark under names carrying such macros goes by its mark,
+/// or to the block (hep-ph0301204, below). Lines set with one-argument line wrappers are those lines
+/// (`relocate::wrapped_lines_as_lines`: `\address{\centerline{$^{1}$Univ A}\centerline{$^{2}$Univ B}}`, hep-ex0409040,
+/// hep-ex0612013), and a block holding several labels the names request whose lines are not read so lands once at the
+/// block, never a copy on each author of the group (below).
+pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Result<Tokens> {
+  // (a one-argument line wrapper is a line: the D0 lists' `\address{\centerline{$^{1}$Universidad de Buenos Aires…}
+  // \centerline{$^{2}$LAFEX…}…}`, 75 institutes under ~600 names `V.M.~Abazov,$^{33}$`, read as one unlabelled
+  // block and copied onto every author by the group rule — 9.45 MB of XML, 377,251 words, hep-ex0409040; hep-ex0612013)
+  let content = wrapped_lines_as_lines(&content).unwrap_or(content);
+  // (a mark spelled otherwise is the mark it prints, as the shared reader of a line's leading label reads it,
+  // `relocate::spaced_mark_at` — on a spacing nucleus, in `\( … \)`, in a box of its own: `${\,\!}^1$Department of
+  // Applied Mathematics and Statistics\\ and ${\,\!}^2$Department of Physics \& Astronomy, \\ The Johns Hopkins
+  // University` read as `$^1$` lines, each author their departments — 2112.13115, where the fail-safe below had sent both departments unread to
+  // the block; `\mbox{${\ }^{1}$} Department of Physics …`, 0807.4407; review rev98e S2)
+  let content = spaced_marks_as_marks(&content).unwrap_or(content);
+  // (a line led by a macro standing for a mark, `\address{\MSU Moscow …}` with `\edef\MSU{$^{1}$ }`, under names
+  // carrying such macros: no group's (user ruling R1, 2026-11-01: marks win) — labelled by its mark, the macro off the
+  // line; the block's, once, where a mark leads a name (written after the comma, `M.~Osipenko,\MSU …`, so the comma
+  // split put each on the next name: hep-ph0301204, 213 names given all 38 addresses by the group rule, 8,094
+  // affiliations; `relocate::run_names_macro_marks`)
+  if let Some((key, rest)) = leading_macro_mark(&content)
+    && let (true, leading) = run_names_macro_marks()
+  {
+    let label = if leading {
+      s!("addresses:block")
+    } else {
+      s!("affiliation:{key}")
+    };
+    let keyvals = mouth::tokenize_internal(TeXString::assembled(s!("label={{{label}}}")));
+    return Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+      Some(keyvals),
+      Some(rest)
+    ]));
+  }
+  // (the block's marks read once, for every question below: `marks_as_printed`)
+  let printed = marks_as_printed(&content, "group_or_marked_affiliation")?;
+  let marked = match &printed {
+    Some(marks) => marks.iter().any(|mark| mark.leads),
+    None => leads_with_label(&content, "group_or_marked_affiliation")?,
+  };
+  // (the fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4: a block of two or more lines led by
+  // labels the names request that this reader cannot cut into those lines — set in a box or an environment,
+  // `\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}` (a one-column tabular's rows are lines the reader
+  // reads, `wrapped_lines_as_lines`: 0911.3234's `\begin{tabular}{c}…`, batch 104c) — is no one entry a
+  // group shares: it lands once at the block, `addresses:block` (OD #159), never a copy on each author
+  // of the group; declared `_unsplit=true`, so the frontmatter observer still reads its lines by their own marks. Marks
+  // inside one line's text, `Joint Institute, \textsuperscript{1}Univ A and \textsuperscript{2}Univ B, City` printed once
+  // under both names, are no such block: the group's entry, a copy on each, as the PDF prints it for both; review rev98e
+  // S2)
+  // (two or more marks open lines, else no fail-safe: the names read only then)
+  let lines_led = printed.as_deref().is_none_or(|marks| {
+    marks
+      .iter()
+      .filter(|mark| mark.line_first && !mark.labels.is_empty())
+      .count()
+      > 1
+  });
+  let requested = if !marked && lines_led && run_names_show_a_mark()? {
+    Some(requested_marks_of(&content, printed.as_deref())?)
+  } else {
+    None
+  };
+  if let Some(requested) = requested.filter(|r| r.held > 1 && r.lines > 1) {
+    // (an unmarked first entry over lines its marks lead, `\affiliation{Institute of Materials …, Japan \\ $^2$Waseda
+    // Research Institute …\\ $^3$Toyota …}` under `Imoto$^{1,2}$, Imada$^{2,3}$ and Oshiyama`: the first entry is the
+    // one mark the names request that no line prints — superscriptaddress numbers it 1 and prints the number once, after
+    // the call's last name — so it is the names' showing that mark, the marked lines after it the names' showing
+    // theirs; 2109.01501, 1903.07834, whose whole block went to a nameless creator. Only where exactly one such mark is
+    // requested and the marked lines are the block's own top-level lines: else the fail-safe below. The last name
+    // revtex prints the number on, when it shows no mark of its own, is not read here: it holds none of the block, as
+    // before)
+    if let Some((head, tail)) = unmarked_head_over_marked_lines(&content)?
+      && let [label] = requested.unprinted.as_slice()
+    {
+      let mut calls = Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+        Some(mouth::tokenize_internal(TeXString::assembled(s!(
+          "label={{affiliation:{label}}}"
+        )))),
+        Some(head)
+      ])
+      .unlist();
+      calls.extend(group_or_marked_affiliation(tail, annotate)?.unlist());
+      return Ok(Tokens::new(calls));
+    }
+    let keyvals = mouth::tokenize_internal("label={addresses:block},_unsplit=true");
+    return Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+      Some(keyvals),
+      Some(content)
+    ]));
+  }
+  let marks = if marked {
+    content_mark_labels_of(&content, printed.as_deref())
+  } else {
+    Vec::new()
+  };
+  let grouped = marked && queued_group_shares_the_mark(&marks)?;
+  let declared_grouped = grouped && marks.len() == 1 && interleaved_group_shares_the_mark(&marks)?;
+  let attr = Some(mouth::tokenize_internal(TeXString::assembled(
+    if declared_grouped {
+      s!("annotate={annotate},_grouped=true")
+    } else {
+      s!("annotate={annotate}")
+    },
+  )));
+  let cs = if marked && !grouped {
+    T_CS!("\\lx@add@affiliation@marked")
+  } else {
+    T_CS!("\\lx@add@affiliation")
+  };
+  Ok(Invocation!(cs, vec![attr, Some(content)]))
+}

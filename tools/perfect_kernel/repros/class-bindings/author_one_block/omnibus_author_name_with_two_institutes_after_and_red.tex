@@ -1,0 +1,20 @@
+% mechanism: the reading's per-contact ownership in a column after an `\and` (not `shared_column`, P2-1d): with two
+%   contact calls on one name, the first contact goes to the name before the `\and` and only the second to the
+%   column's own name, where pdflatex prints both under that name. Under OmniBus (inst_support_sty.rs `\author`, one
+%   block since P2-1) identical on int157a; revP21d finding 2
+% witness: synthetic (revP21d probe; siblings to check with a fix: three contacts, a contact after a `\thanks`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, `article` for the missing class; the `\providecommand`s set each
+%          contact under its name) 0 errors: Ann Able | Bob Baker over Univ B over Univ C
+% engines: int157a and P21d: Ann Able [Univ B], Bob Baker [Univ C], 0 errors, 1 warning (the missing class binding)
+% expect:  0 errors, 1 warning; creators Ann Able; Bob Baker (affiliations Univ B, Univ C)
+% status:  RED (int157a and P21d)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\providecommand\institute[1]{\\#1}
+\providecommand\address[1]{\\#1}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker\institute{Univ B}\institute{Univ C}}
+\maketitle
+Text.
+\end{document}

@@ -16,8 +16,7 @@ LoadDefinitions!({
   // \lastkern         iq is 0.0 pt or the last kern on the current list.
 
   // \kern is heavily used by xy.
-  // Note that \kern should add vertical spacing in vertical modes!
-  // Perl: TeX_Kern.pool.ltxml L31-52
+  // Perl: TeX_Kern.pool.ltxml L31-52 (no enterHorizontal: Perl gives `\kern` no mode switch)
   DefConstructor!("\\kern Dimension", sub[document,args, props] {
     let length : Dimension = if let DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
       args[0].as_ref().unwrap().data() {
@@ -55,52 +54,55 @@ LoadDefinitions!({
         Some(Stored::Font(f)) => Some(Rc::clone(f)),
         _ => None,
       };
-      let spaces = super::tex_glue::dimension_to_spaces(length, font.as_deref());
-      document.absorb_string(&spaces, &SymHashMap::default())?;
-    }
-  },
-  enter_horizontal => true,
-  properties => sub[args] {
-    unref!(args => length);
-    Ok(stored_map!("width" => length, "isSpace" => true, "isKern" => true))
-  });
-
-  // Remove kern, if last on LIST
-  DefPrimitive!("\\unkern", {
-    let mut comments = Vec::new();
-    // Scan past any Comment boxes
-    while let Some(last_box) = pop_box_list() {
-      if matches!(last_box.data(), DigestedData::Comment(_)) {
-        comments.push(last_box);
-      } else {
-        if !last_box.get_property_bool("isKern") {
-          push_box_list(last_box);
-        }
-        break;
+      // A vertical kern separates blocks: its spaces go only where Perl's `openText` keeps
+      // whitespace. `open_text` also keeps a typewriter space anywhere (verbatim indentation),
+      // which would open a whitespace-only paragraph for `{\ttfamily\kern2pt\par}`.
+      let vertical = props.get("isVerticalSpace") == Some(&Stored::Bool(true));
+      if !(vertical && document.drops_whitespace_here()) {
+        let spaces = super::tex_glue::dimension_to_spaces(length, font.as_deref());
+        document.absorb_string(&spaces, &SymHashMap::default())?;
       }
     }
-    let comments_rev_iter = comments.into_iter().rev();
-    for comment in comments_rev_iter {
-      push_box_list(comment);
+  },
+  // tex.web §1057 `any_mode(kern): append_kern`: `\kern` adds a kern to the current list in every
+  // mode and starts no paragraph (§1090); in vertical mode it is vertical space, stacked like a
+  // `\vskip` (§1061), with its height read by `\lastkern` (§424). Guards
+  // `perfect_kernel_batch58::{vertical_kern_is_vertical_space, vertical_kern_starts_no_paragraph}`.
+  // The size is stored as a `Dimension`, as Perl stores `width => $length` and reads it for an
+  // `isSpace` box (Box.pm:276-281); the digested register value is no size the box measurer
+  // reads, and a horizontal kern measured 0 wide. Guard
+  // `perfect_kernel_batch58::horizontal_kern_has_its_width`.
+  properties => sub[args] {
+    let size = args[0].as_ref().and_then(|d| d.get_dimension()).unwrap_or_default();
+    if lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
+      Ok(stored_map!("height" => size, "width" => Dimension::default(),
+        "depth" => Dimension::default(), "isSpace" => true, "isKern" => true,
+        "isVerticalSpace" => true, "isBreak" => true))
+    } else {
+      Ok(stored_map!("width" => size, "isSpace" => true, "isKern" => true))
+    }
+  });
+
+  // Remove kern, if last on LIST — never below the paragraph's start (tex.web §1105, `peek_own_box`).
+  DefPrimitive!("\\unkern", {
+    if peek_own_box().is_some_and(|item| item.get_property_bool("isKern")) {
+      pop_own_box();
     }
   });
   // Get kern, if last on LIST
   DefRegister!("\\lastkern" => Dimension::new(0), readonly => true,
   getter => {
-    with_box_list(|stomach_box_list| {
+    with_own_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
-        if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
+        if !is_list_tail_transparent(box_in_list) {
           if box_in_list.get_property_bool("isKern") {
-            let width_stored = box_in_list.get_property("width").unwrap();
+            // A vertical kern's size is its height (tex.web §424).
+            let vertical = box_in_list.get_property_bool("isVerticalSpace");
+            let key = if vertical { "height" } else { "width" };
+            let width_stored = box_in_list.get_property(key).unwrap();
             match &*width_stored {
               Stored::Dimension(width_d) => return *width_d,
-              Stored::Digested(d) => {
-                if let DigestedData::RegisterValue(RegisterValue::Dimension(dim)) = d.data() {
-                  return *dim;
-                }
-                return Dimension::new(0);
-              }
               _ => return Dimension::new(0),
             }
           } else {
@@ -150,15 +152,7 @@ LoadDefinitions!({
     },
     // Perl: sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); }
     sizer => sub[whatsit] {
-      let y_val = -(whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0));
-      if let Some(content) = whatsit.get_arg(2) {
-        let (w, h, d) = content.compute_size(Default::default())?;
-        let new_h = Dimension::new((h.value_of() + y_val).max(0));
-        let new_d = Dimension::new((d.value_of() - y_val).max(0));
-        Ok((w, new_h, new_d))
-      } else {
-        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
-      }
+      raised_sizer(whatsit.get_arg(2), -(whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0)))
     },
     enter_horizontal => true,
     after_digest => sub[whatsit] {
@@ -198,15 +192,7 @@ LoadDefinitions!({
   // Perl: sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); }
   // Adjusts reported height/depth by the raise amount so \ht/\dp reflect the shift.
   sizer => sub[whatsit] {
-    let y_val = whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0);
-    if let Some(content) = whatsit.get_arg(2) {
-      let (w, h, d) = content.compute_size(Default::default())?;
-      let new_h = Dimension::new((h.value_of() + y_val).max(0));
-      let new_d = Dimension::new((d.value_of() - y_val).max(0));
-      Ok((w, new_h, new_d))
-    } else {
-      Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
-    }
+    raised_sizer(whatsit.get_arg(2), whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0))
   },
   enter_horizontal => true,
   after_digest => sub[whatsit] {
@@ -243,3 +229,24 @@ LoadDefinitions!({
     }
   });
 });
+
+/// Perl `raisedSizer` (TeX_Kern.pool.ltxml:86-92): the size of `content` raised
+/// by `y` sp, its height and depth shifted and floored at 0 (tex.web §1076:
+/// `\raise` shifts the box; the enclosing list sees the moved extent).
+/// `\raise`, `\lower` and `\raisebox` share it.
+pub fn raised_sizer(
+  content: Option<&Digested>,
+  y: i64,
+) -> Result<(Dimension, Dimension, Dimension)> {
+  match content {
+    Some(content) => {
+      let (w, h, d) = content.compute_size(Default::default())?;
+      Ok((
+        w,
+        Dimension::new((h.value_of() + y).max(0)),
+        Dimension::new((d.value_of() - y).max(0)),
+      ))
+    },
+    None => Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0))),
+  }
+}

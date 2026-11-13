@@ -1,0 +1,13 @@
+% witness: 2606.26479-like; the r5 re-review of batch 77p (probe u38); user ruling R12 2026-10-20
+% oracle:  pdflatex 0 errors: two marked names, their institutions, a linked "LaunchSafe Research" under the block
+% engines: rust 77p r9 = 0 errors; "LaunchSafe Research" an affiliation of the shared creator
+% expect:  0 errors, 0 warnings; the linked institution, unmarked under a marked block, an affiliation of both names
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\ $^1$Univ A \\ $^2$Univ B \\ \href{https://launchsafe.com}{\textbf{LaunchSafe Research}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

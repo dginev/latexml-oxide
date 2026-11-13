@@ -1,0 +1,19 @@
+% mechanism: AASTeX's `{references}` (aaspp4.sty:207 `\subsection*{REFERENCES}`) is a titled bibliography; Perl's
+%   aas_support `\references` gives `<ltx:title>#title</ltx:title>` and the bib/cite-style attributes
+%   (aas_support.sty.ltxml:289-293). The Rust port emitted a bare `<ltx:bibliography>`, hidden while OmniBus (loaded for
+%   a missing option such as `tighten`, `flushrt`) replaced `\references`; provide-only OmniBus no longer does.
+% witness: astro-ph9708112, astro-ph9510040, astro-ph9906163, astro-ph9508007, astro-ph9903479, astro-ph9702235
+% oracle:  pdflatex with aaspp4.sty (astro-ph9701025): 0 errors; "REFERENCES" over the list
+% engines: rust 64y: a bibliography with no title; perl: citestyle="authoryear" and the title "References"
+% expect:  0 errors; the bibliography with the title References
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[11pt,aaspp4]{article}
+\begin{document}
+\author{Ann Able}
+\affil{Univ X}
+Text \markcite{a}.
+\begin{references}
+\reference{a} Able, A. 1990, ApJ, 1, 1
+\end{references}
+\end{document}

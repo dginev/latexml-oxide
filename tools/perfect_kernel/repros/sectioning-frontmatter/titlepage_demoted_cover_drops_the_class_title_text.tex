@@ -1,0 +1,18 @@
+% witness: review 68t probe p9 (2026-10-16); the demoted-cover shape (#257) of a refused printing `\title`
+% oracle:  pdflatex 0 errors: "Preprint 253.", then the cover "Cover Static axisymmetric spacetimes text."
+% engines: rust 68t r1 = 0 errors, 2 visible titles: the titlepage stands after body text, so it is demoted to
+%          `para.ltx_titlepage` and the document `ltx:title` is displayed, but the print is bare text in the cover's
+%          open `ltx:p` and the round-1 end mark tagged elements only; Perl 0.8.8 shows the `ltx:title` only
+% expect:  0 errors, 0 warnings; `para.ltx_titlepage` reads "Cover text." (the title text between the cover-title marks
+%          dropped), the document `ltx:title` is the one visible title
+% status:  RED (68t r1) -> GREEN (68t r2)
+\documentclass{article}
+\def\title#1{#1}
+\begin{document}
+Preprint 253.
+\begin{titlepage}
+Cover \title{Static axisymmetric spacetimes} text.
+\end{titlepage}
+\section{Intro}
+Text.
+\end{document}

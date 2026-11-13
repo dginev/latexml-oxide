@@ -1,0 +1,13 @@
+% A pgfmath expression is expanded and turned into a string before it is parsed (Perl
+% `ToString(Expand($tokens))`, pgfmath.code.tex.ltxml:328): a control word followed by a letter
+% loses its separating space (`\selectfont Ab` becomes `\selectfontAb`), so a quoted string
+% holding formatted text is re-read wrong — `width("\textbf{Ab}")` measures undefined macros.
+% witness: none (probe).
+% status:  RED
+% oracle:  pdflatex 0 errors: "[15.08325]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\def\Y{\textbf{Ab}}\pgfmathparse{width("\Y")}[\pgfmathresult]
+\end{document}

@@ -1,0 +1,25 @@
+% REVTeX author block (gr-qc0207058): `Ann Bee$^{*a),b)}$, C. Dee$^{**a)}$` over the a)/b) lines and two mark-led e-mail
+% lines, `$*$ email: abee@x.org` and `$**$ email: cx@x.org, c\_dee@y.org`. The mark leading a line is the e-mail's key
+% (user ruling R1, marks win; every asterisk form one key, user ruling 2026-11-02): `cx@`, which spells no one, is
+% C. Dee's, whose name carries `∗∗` — not the order step's Ann Bee (review rev106a B1; OD #966).
+% witness: gr-qc0207058 (revtex4)
+% oracle:  pdflatex 0 errors: "Ann Bee∗a),b), C. Dee∗∗a)", "a) Univ X, West Bengal,", "∗ email: abee@x.org",
+%          "∗∗ email: cx@x.org , c_dee@y.org"
+% engines: rust 106a r1 = cx@x.org on Ann Bee (the mark read as a space, the order step); int133a = both lines an
+%          affiliation of both authors
+% expect:  0 errors, 0 warnings; Ann Bee: the three a)/b) lines, e-mail abee@x.org; C. Dee: the three lines, e-mails
+%          cx@x.org and c_dee@y.org; each e-mail named "email: "
+\documentclass{revtex4}
+\begin{document}
+\title{T}
+\author{
+Ann Bee$^{*a),b)}$, C. Dee$^{**a)}$\\
+a) Univ X, West Bengal,\\
+India, Pin.-741235 \\
+b) IUCAA, Pune 411 007, India \\
+$*$  email: abee@x.org\\
+$**$ email: cx@x.org
+, c\_dee@y.org}
+\maketitle
+Hello.
+\end{document}

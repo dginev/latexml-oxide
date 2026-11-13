@@ -1,0 +1,29 @@
+% witness: arXiv A/B corpus (user 2026-10-02: autoref names; shared-counter theorems 2605.01034, 2605.28533,
+%   2605.30447); scratch_autoref_rc/g1.tex
+% oracle:  pdflatex 0 errors; "P1: Fig. 1; Fig. 1a; Lemma 1; Theorem 1; Theorem 2." — the claim, numbered with
+%   [theorem], is a "Theorem" in pdflatex; here its own \claimautorefname names it "Claim 2" (target-time names,
+%   OXIDIZED_DESIGN_DIVERGENCES #418)
+% engines: rust 59s = "P1: Figure 1; 1a; 1; 1." — subcaption gives a subfigure no autoref name (caption3.sty:1790-1792
+%   `\subfigureautorefname` = `\figureautorefname`; RUST-ONLY binding gap); the binding forces \HyLang@english at load (hyperref_sty.rs, Perl
+%   hyperref.sty.ltxml:685-686 "For now..."), where hyperref.sty:8293-8312 only \providecommand*s the names; the
+%   name chain stops at \<type>autorefname, where \HyRef@testreftype (hyperref.sty:8236-8278) also tries \<type>name
+%   and the anchor's counter (a [theorem]-numbered proposition is "Theorem") (PERL-ORIGIN)
+% expect:  0 errors; autoref tags "Fig. 1", "Fig. 1a", "Lemma 1", "Theorem 1", "Claim 2"
+% status:  RED (59s) -> GREEN (59t)
+\documentclass{article}
+\newcommand\figureautorefname{Fig.}
+\usepackage{hyperref}
+\usepackage{subcaption}
+\newcommand\lemmaname{Lemma}
+\newtheorem{lemma}{\lemmaname}
+\newtheorem{theorem}{Theorem}
+\newtheorem{prop}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newcommand\claimautorefname{Claim}
+\begin{document}
+\begin{figure}\begin{subfigure}{.4\linewidth}\caption{S}\label{sf}\end{subfigure}\caption{C}\label{f}\end{figure}
+\begin{lemma}\label{l}A\end{lemma}
+\begin{prop}\label{p}B\end{prop}
+\begin{claim}\label{c}C\end{claim}
+P1: \autoref{f}; \autoref{sf}; \autoref{l}; \autoref{p}; \autoref{c}.
+\end{document}

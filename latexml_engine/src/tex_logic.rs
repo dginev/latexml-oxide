@@ -41,7 +41,7 @@ LoadDefinitions!({
   DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
     left.get_charcode() == right.get_charcode()
   });
-  DefConditional!("\\ifx Token Token", sub[(left,right)] { x_equals(&left, &right) });
+  DefConditional!("\\ifx NormalToken NormalToken", sub[(left,right)] { x_equals(&left, &right) });
   DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
     left.get_catcode() == right.get_catcode()
   });
@@ -107,13 +107,11 @@ LoadDefinitions!({
     let mode = lookup_string_from_sym(pin!("MODE"));
     mode.ends_with("horizontal")
   });
-  DefConditional!("\\ifinner", {
-    let mode = lookup_string_from_sym(pin!("MODE"));
-    matches!(
-      mode.as_str(),
-      "restricted_horizontal" | "internal_vertical" | "math"
-    )
-  });
+  // tex.web §211: inner = a box or non-display-math interior. The frame-bound
+  // `INNER_BOX` flag (stomach.rs `begin_mode_opt`) carries that sign; the
+  // former mode-string test read the document body's `internal_vertical`
+  // galley as inner (Perl TeX_Logic.pool:127 identical).
+  DefConditional!("\\ifinner", { lookup_bool_sym(pin!("INNER_BOX")) });
   // Perl: LookupValue('MODE') =~ /math$/
   DefConditional!("\\ifmmode", {
     let mode = lookup_string_from_sym(pin!("MODE"));

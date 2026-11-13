@@ -1,0 +1,34 @@
+% A raw class's stores only its own `\@author` prints, in scripts other than Latin: a Chinese affiliation line (one run
+% of ideographs, no spaces) and a Cyrillic word. The net counted ASCII letter runs alone (insert.rs
+% `net_content_words`), so both lines held no word and went with no Warning; a Cyrillic letter under `[T2A]{fontenc}`
+% is an active character (t2aenc.dfu's `\DeclareUnicodeCharacter`), so the store held no text either
+% (frontmatter_stores.rs `holds_text`). Now a run of any script's letters is a word and each Han ideograph one of its
+% own: the Chinese line clears the floor of 3 and is the net's note line, with its Warning; `Москва`, one word, is
+% counted and not kept.
+% witness: 2206.01007 (SCIS2020cn.cls `\address` "北京师范大学天文系，100875，北京"), 2601.14329 (physics_report.sty
+%          `\institude` "1)北京航空航天大学 物理学院，北京"); review rev105a S1 probe `cyr`
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "北京师范大学天文系", "Москва", "Text."
+% engines: rust 105a r1 = 0 errors, 0 warnings, both lines lost silently; perl = 0 errors (the raw class is not loaded:
+%          OmniBus), both lost
+% expect:  0 errors, 2 warnings (frontmatter:unclaimed: \@xa kept, \@xb "москва");
+%          <ltx:note role="note">北京师范大学天文系</ltx:note>
+% status:  RED (105a r1) -> GREEN (105a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netscript.cls}
+\ProvidesClass{netscript}\LoadClass{article}
+\def\@anames{}\def\@xa{}\def\@xb{}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\xa[1]{\gdef\@xa{\ignorespaces#1}}
+\newcommand\xb[1]{\gdef\@xb{\ignorespaces#1}}
+\renewcommand\@author{\@anames\\\@xa\\\@xb}
+\end{filecontents*}
+\documentclass{netscript}
+\usepackage[T2A]{fontenc}\usepackage[utf8]{inputenc}\usepackage{CJKutf8}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\xa{\begin{CJK}{UTF8}{gbsn}北京师范大学天文系\end{CJK}}
+\xb{Москва}
+\maketitle
+Text.
+\end{document}

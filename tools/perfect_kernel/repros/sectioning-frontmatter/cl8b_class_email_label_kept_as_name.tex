@@ -1,0 +1,21 @@
+% mechanism: a class's own `\email` (a raw file's or the document's meaning, no binding's) printing a label before its
+%   address keeps that label as the contact's `name` at =2, read from the digested ink of the class's command on the
+%   address (`rehearsal::own_email_properties`); never the generic "Email: ". In a `\thanks` (Ann) and on a line (Bob).
+% witness: 2603.18265 (jpp.cls:1433 `\def\email#1{Email address for correspondence: #1}`, `\corresp{\email{…}}`); 2310.05678,
+%   1805.11102, 1705.00517, 2401.17126, 2110.10346, 2608.21737
+% oracle:  pdflatex 0 errors: "Ann Able∗, Bob Bee / Univ B / Email address for correspondence: bob@bee.org";
+%   footnote "∗ Email address for correspondence: ann@able.org"
+% engines: off Ann's note whole; int153z =2 `name="Email: "` with the label dropped (Warning unclaimed "address correspondence");
+%   CL8b =2 `name="Email address for correspondence: "`
+% expect:  0 errors; 0 warnings; both contacts named by the printed label
+\documentclass{article}
+\makeatletter
+\def\email#1{Email address for correspondence: #1}
+\def\corresp#1{\unskip\thanks{#1}}
+\makeatother
+\title{Title}
+\author{Ann Able\corresp{\email{ann@able.org}}, Bob Bee\\ Univ B\\ \email{bob@bee.org}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 2006.04679, 1702.04290, 1510.07897, 1309.5259, 2508.01050, 2103.00255 (JASA.cls, ujp.sty, cej.cls call
+%          revtex's `\sanitize@url`, revtex4-1.cls:2378, revtex4-2.cls:2399)
+% oracle:  pdflatex 0 errors ("Mail: a_b%c")
+% engines: rust 65int2 = 1 error (`\sanitize@url` undefined)
+% expect:  0 errors, 0 warnings; the paragraph "Mail: a_b%c"
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\makeatletter
+\newcommand\mymail{\begingroup\sanitize@url\my@mail}
+\def\my@mail#1{\texttt{#1}\endgroup}
+\makeatother
+\begin{document}
+Mail: \mymail{a_b%c}
+\end{document}

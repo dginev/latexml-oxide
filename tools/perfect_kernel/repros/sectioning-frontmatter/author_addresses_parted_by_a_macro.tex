@@ -1,0 +1,14 @@
+% witness: 2410.07147 (`vn72@cornell.edu\nsone sj597@cornell.edu\nsone {llee@cs.cornell.edu}`: no space token between
+%          the addresses, the spacing macro's own; 63m7 read the line as no email list and welded it onto the names)
+% oracle:  pdflatex 0 errors: "Ann Able^1 Bob Baker^1" / "^1 Univ. A" / "able@a.edu  baker@a.edu"
+% engines: rust 63m7 = the addresses in Bob Baker's name; HEAD (63l) and Perl keep the line as one email contact
+% expect:  0 errors; 2 authors with "Univ. A"; the address line one email contact
+% status:  RED (63m7) -> GREEN (63m)
+\documentclass{article}
+\newcommand\sep{\quad}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{1}$\\ $^{1}$Univ.\ A\\ able@a.edu\sep baker@a.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

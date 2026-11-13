@@ -1,0 +1,15 @@
+% mechanism: no separator: authblk keeps one name; two notes are one person's
+% witness: none (a row of the table)
+% oracle:  pdflatex: 0 errors
+% engines: rust int139a: one creator with both notes; perl (authblk.sty.ltxml:52-55, read): one creator
+% expect:  0 errors; one creator with both notes
+% status:  GREEN (int139a) = GREEN (108a): a row that must not change
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Note one.}\thanks{Note two.}}
+\maketitle
+Text.
+\end{document}

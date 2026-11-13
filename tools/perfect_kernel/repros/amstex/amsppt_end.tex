@@ -1,0 +1,17 @@
+% witness: 1505.02369, 1901.01055, 2410.05768, math-ph9812020, q-alg9510020 (~350 run-336 papers)
+% oracle:  amstex (AMS-TeX format) 0 errors; pdflatex n/a (plain AMS-TeX)
+% engines: rust 64s = 1 Error:unexpected:\endgroup (amsppt is read LaTeX, converter.rs compile_route, so `\end` was
+%          LaTeX's \end{<env>}); Perl 0.8.8 0 (reads it plain: \end = \lx@end@document, plain_constructs.pool.ltxml:284)
+% expect:  0 errors; <title>A title</title> and one paragraph "Some text."
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+% engine:  amstex
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title A title\endtitle
+\endtopmatter
+
+Some text.
+
+\end

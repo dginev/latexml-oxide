@@ -1,0 +1,18 @@
+% witness: 2011.06919 (\def\bal#1\eal{\begin{align}{#1}\end{align}}), 2211.06952, 1909.04856 (\def\begali#1{\begin{align}{#1}\end{align}}),
+%          2101.06401 (\begin{align*}{%...}\end{align*}); amsmath's \collect@@body#1\end#2 (amsmath.sty:1424) strips the one
+%          enclosing group of a delimited argument (tex.web §400)
+% oracle:  pdflatex 0 errors (the same rows as without the braces)
+% expect:  0 errors; each environment as without the braces; a group not followed by \end keeps its braces
+% status:  GREEN (batch 68z, perfect_kernel_batch68z::braced_amsmath_body_loses_its_group); before 68z: 3 Errors (Stray alignment "&")
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}{a &= b \nonumber\\ &= c}\end{align}
+\begin{gather*}{x \\ y}\end{gather*}
+\begin{alignat}{2}{a &= b & c &= d}\end{alignat}
+\begin{multline*}{a+b\\ +c}\end{multline*}
+\begin{multline}{a+b\\ +c}\end{multline}
+\begin{equation}\begin{split}{a &= b\\ &= c}\end{split}\end{equation}
+\begin{flalign*}{a &= b}\end{flalign*}
+\begin{align*}{a}+b &= c\end{align*}
+\end{document}

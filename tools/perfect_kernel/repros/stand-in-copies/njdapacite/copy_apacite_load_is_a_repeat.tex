@@ -1,0 +1,13 @@
+% witness: 2606.10545, 2602.12288 (WileyNJDv5.cls:6067 `\usepackage[apaciteclassic]{NJDapacite}`; NJDapacite.sty is
+%          apacite.sty of 2013, :587-987 the `\if@APAC@natbib@emu` branch with :931 `\newif\ifciteindex`, :1878-1900
+%          the `\AtBeginDocument` block with `\let\ifBR@verbose\iffalse\let\fi\fi`)
+% oracle:  pdflatex 0 errors ("Text.")
+% engines: rust int23 (288e861078) = 3 Errors ("Attempt to close a group": the copy's NJDapacite read raw after the
+%          binding's apacite, whose natbib makes `\ifciteindex` a conditional to the skip)
+% expect:  0 errors, 0 warnings; "Text."
+% status:  RED (int23 288e861078) -> GREEN (int23 fix2)
+% preload: ar5iv.sty
+\documentclass[APA]{WileyNJDv5}
+\begin{document}
+Text.
+\end{document}

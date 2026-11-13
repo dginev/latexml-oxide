@@ -1,0 +1,24 @@
+% mechanism: llncs.cls:875 `\institutename` redefines `\and` itself, so every `\and` its list runs numbers an institute,
+%   one inside `\email{…}` too. P23's dispatch (`llncs_cls.rs` `\lx@llncs@institute@dispatch`) reads the list's `\and`s
+%   through the separator query, which records none inside a contact call's argument (`separators.rs`
+%   `argument_separators_at_every_level`): one piece, no separator, so the list takes the sole-institute shape (b) and
+%   each author gets the institute and one e-mail, a pairing the PDF does not print. Fix: count a literal `\and` outside
+%   `\thanks` as a third condition of the gate, or record separators inside contact arguments (review revP23 finding 1).
+% witness: none (0 of 699 llncs papers changed; review revP23 probe q2u)
+% oracle:  pdflatex (TL 2025, llncs, -no-shell-escape) 0 errors: "1 Univ A, Town A a@x.org / 2 b@y.org" (two numbered
+%   institutes, no `\inst` on either author)
+% engines: rust int160a1 (1f3949ecad): 0 E 0 W; Ann Able, Bob Baker, and a nameless creator (the block's) holding
+%   "Univ A, Town A", a@x.org, b@y.org — right; rust P23 (af921042cd): 0 E 0 W; Ann Able: Univ A, Town A + a@x.org;
+%   Bob Baker: Univ A, Town A + b@y.org — an invented pairing
+% expect:  0 errors, 0 warnings; the two numbered institutes the block's ("Univ A, Town A" with a@x.org; b@y.org), as
+%   int160a1 gives them
+% status:  RED (P23, introduced; synthetic only, no corpus reach — catalogued at integration of bundle int160a)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, Town A \email{a@x.org \and b@y.org}}
+\maketitle
+Text.
+\end{document}

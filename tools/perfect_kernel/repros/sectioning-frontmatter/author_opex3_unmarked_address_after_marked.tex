@@ -1,0 +1,17 @@
+% witness: 77n r5 review — opex3 `\address{Univ Z}` after mark-picked addresses, every author answered (review probe o04)
+% oracle:  opex3.sty is not in TeX Live (no pdflatex run)
+% engines: rust int32a = Univ Z on both; 77n r5 = Univ Z on Bob only (the label-answered break on the last author)
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with Univ Z and Univ X, Bob Baker with Univ Z and Univ Y
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{opex3}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{$^1$Univ X}
+\address{$^2$Univ Y}
+\address{Univ Z}
+\maketitle
+x
+\end{document}

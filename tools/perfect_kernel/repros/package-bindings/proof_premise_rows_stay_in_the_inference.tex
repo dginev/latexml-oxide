@@ -1,0 +1,16 @@
+% witness: run-367 E->F C5: 2011.13396
+% oracle:  pdflatex 0 errors: proof.sty's premises are its own `\halign` (proof.sty:164-167), where amsmath's `\\` ends
+%          a row of premises
+% engines: rust int32a = 7 errors (the `\\` reached the `{align*}`), perl = 0 errors with the display dropped
+%          (KNOWN_PERL_ERRORS #995)
+% expect:  0 errors, 0 warnings; `infer@(C, Array[[A], [B]])`, then "After."
+% status:  RED (int32a) -> GREEN (77q: proof_sty.rs `\lx@proof@split@and` rows)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,proof}
+\begin{document}
+\begin{align*}
+\infer[r]{C}{A & \\ B}
+\end{align*}
+After.
+\end{document}

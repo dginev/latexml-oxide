@@ -1,0 +1,14 @@
+% witness: the 77y review (finding 4, probes d1, d2)
+% oracle:  pdflatex 0 errors: two \and columns: Ann Able over Univ A over her homepage link "annable"; Bob Baker over
+%          his homepage link "bobbaker"
+% engines: rust 77y r1 = 0 errors; each link an affiliation (its text spells its domain); int38b URL contacts
+% expect:  0 errors, 0 warnings; two authors, each homepage link a URL contact of its author
+% status:  RED (77y r1) -> GREEN (77y r2)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Univ A \\ \href{https://www.annable.com}{annable} \and Bob Baker \\ \href{https://www.bobbaker.org}{bobbaker}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

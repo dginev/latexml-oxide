@@ -1,0 +1,19 @@
+% mechanism: calc reports a token it cannot parse after a term — calc.sty:144-160
+%   `\calc@post@scan`, :281-284 `\calc@error` "`x' invalid at this point" — and consumes it.
+%   The binding dropped the tail silently (and `\hspace`'s `{Dimension}` never reached calc).
+% witness: batch 56jm review (SYNC_STATUS "Tokens after a {Dimension}/{Glue} argument's scan")
+% oracle:  pdflatex 3 errors (Package calc Error: `x' invalid at this point), x not typeset;
+%          "A!B", "!G", "!Y" (calc's `!` end sentinel is typeset in its error recovery; not modelled)
+% engines: rust (before 56jr) = 0 errors, x silently dropped; perl the same. After: "A B", "G", "Y"
+% expect:  3 errors, 0 warnings
+% status:  RED (56jr) -> GREEN (56jr)
+\documentclass{article}
+\usepackage{calc}
+\def\foo{x}
+\begin{document}
+A\hspace{1em\foo}B
+
+\setlength{\parindent}{2pt\foo}G
+
+\newcounter{cc}\setcounter{cc}{5\foo}Y
+\end{document}

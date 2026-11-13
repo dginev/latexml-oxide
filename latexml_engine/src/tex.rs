@@ -55,9 +55,7 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
       // expansion. Witness 2310.13684. Skip the clear+load and just
       // re-emit cs_for_closure, which by now has the real meaning the
       // already-loaded package installed.
-      let pkg_loaded_key = s!("{}.sty_loaded", pkg_name);
-      let pkg_raw_key = s!("{}.sty_raw_loaded", pkg_name);
-      if lookup_bool(&pkg_loaded_key) || lookup_bool(&pkg_raw_key) {
+      if load_recorded(&s!("{}.sty", pkg_name)) {
         // The re-emit above is only progress when the CS that FIRED this
         // closure is a *different* one that was `\let` to the trigger — the
         // `\varmathbb`/2310.13684 case the comment describes. If the firing CS
@@ -85,28 +83,7 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
         }
         return Ok(Tokens::new(vec![cs_for_closure]));
       }
-      // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
-      // 'global'). Removes the autoload trigger globally.
-      assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
-      // Snapshot the calling frame's MEANING keys before the package load.
-      // Anything new the package installs at the calling frame is then
-      // hoisted to GLOBAL so it survives `\end{X}`'s pop_frame.
-      //
-      // Without this, autoload-triggered package loads from inside a body
-      // group (e.g. amsmath autoload via `\subequations` inside an
-      // environment group at depth>=1) install ALL of the package's CSes
-      // at the calling frame; those CSes vanish when the group exits, so
-      // a sibling autoload trigger (e.g. `\align` later in the body)
-      // fires, finds no real binding, and clears+re-emits → undefined CS
-      // → 10000-error MaxLimit cascade. Observed in 1711.11576 + cluster.
-      //
-      // The single-trigger `let_i(\trigger, \trigger, Global)` from the
-      // earlier round-17 fix is subsumed by the delta-hoist (since the
-      // trigger CS is itself a meaning-key newly-installed by the package
-      // load). (1711.11576: cleanly converts post-fix.)
-      let pre_keys = snapshot_top_frame_meaning_keys();
-      require_package(&pkg_name, RequireOptions::default())?;
-      hoist_top_frame_meaning_delta(&pre_keys);
+      fire_autoload(&cs_for_closure, &pkg_name)?;
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
@@ -135,7 +112,80 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     Stored::String(pin(package)),
     Some(Scope::Global),
   );
+  // Also snapshot the trigger's own definition identity. The `:autoload`
+  // flag alone goes STALE when something other than the package load
+  // redefines the CS — the KERNEL DUMP does exactly that for
+  // `\ProvidesExplPackage`/`\ProvidesExplClass`/`\ExplSyntaxOn` (defined
+  // both here pre-dump as triggers and by latex.ltx itself). Readers
+  // (`\lx@ifundefined`) treat the CS as an unfired trigger only while it
+  // still HOLDS this definition (Rc identity), so a dump-provided real
+  // definition reads as DEFINED. Witness: updatemarks-nums.sty's
+  // `\@ifundefined{ProvidesExplPackage}{\RequirePackage{expl3}}` (a
+  // single-branch call) wrongly took the "undefined" branch and swallowed
+  // the following `\ProvidesExplPackage` as the phantom second branch —
+  // expl3 catcodes never turned on, 89 cascade errors (21-doc
+  // `unexpected:_` cluster).
+  if let Some(trigger_meaning) = lookup_meaning(&cs_tok) {
+    assign_value(
+      &s!("{cs_name}:autoload_trigger"),
+      trigger_meaning,
+      Some(Scope::Global),
+    );
+  }
   Ok(())
+}
+
+/// Fire the autoload trigger `cs` of `package` (`def_autoload`): the trigger cleared, the package loaded.
+pub fn fire_autoload(cs: &Token, package: &str) -> Result<()> {
+  use latexml_core::common::store::Stored;
+  // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
+  // 'global'). Removes the autoload trigger globally.
+  assign_meaning(cs, Stored::None, Some(Scope::Global));
+
+  // Snapshot the calling frame's MEANING keys before the package load.
+  // Anything new the package installs at the calling frame is then
+  // hoisted to GLOBAL so it survives `\end{X}`'s pop_frame.
+  //
+  // Without this, autoload-triggered package loads from inside a body
+  // group (e.g. amsmath autoload via `\subequations` inside an
+  // environment group at depth>=1) install ALL of the package's CSes
+  // at the calling frame; those CSes vanish when the group exits, so
+  // a sibling autoload trigger (e.g. `\align` later in the body)
+  // fires, finds no real binding, and clears+re-emits → undefined CS
+  // → 10000-error MaxLimit cascade. Observed in 1711.11576 + cluster.
+  //
+  // The single-trigger `let_i(\trigger, \trigger, Global)` from the
+  // earlier round-17 fix is subsumed by the delta-hoist (since the
+  // trigger CS is itself a meaning-key newly-installed by the package
+  // load). (1711.11576: cleanly converts post-fix.)
+  let pre_keys = snapshot_top_frame_keys();
+  require_package(package, RequireOptions::default())?;
+  hoist_top_frame_package_load(&pre_keys);
+  Ok(())
+}
+
+/// The package of `cs` while it is an unfired `def_autoload` trigger of a `.sty`: it still holds the trigger's
+/// definition and the package has not loaded.
+pub fn unfired_autoload_package(cs: &Token) -> Option<String> {
+  use latexml_core::common::store::Stored;
+  if !cs.get_catcode().is_active_or_cs() {
+    return None;
+  }
+  let name = cs.to_string();
+  let Some(Stored::String(package)) = lookup_value(&s!("{name}:autoload")) else {
+    return None;
+  };
+  let package = with(package, |p| p.to_string());
+  if load_recorded(&s!("{package}.sty")) {
+    return None;
+  }
+  let holds_trigger = match lookup_value(&s!("{name}:autoload_trigger")) {
+    Some(Stored::Expandable(trigger)) => {
+      matches!(lookup_meaning(cs), Some(Stored::Expandable(current)) if Rc::ptr_eq(&current, &trigger))
+    },
+    _ => false,
+  };
+  holds_trigger.then_some(package)
 }
 
 /// Variant of `def_autoload` that loads a `.pool` (engine-level
@@ -155,12 +205,12 @@ fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
       assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
-      let pre_keys = snapshot_top_frame_meaning_keys();
+      let pre_keys = snapshot_top_frame_keys();
       input_definitions(&pool_name, InputDefinitionOptions {
         extension: Some(Cow::Borrowed("pool")),
         ..InputDefinitionOptions::default()
       })?;
-      hoist_top_frame_meaning_delta(&pre_keys);
+      hoist_top_frame_package_load(&pre_keys);
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
@@ -215,26 +265,13 @@ LoadDefinitions!({
   // (witness 2305.08034), were retired into that mechanism. What the eager
   // triggers still buy over it: they fire on a legitimate *use*, before any
   // error is raised, and without consulting the dump.
-  for ltxtrigger in [
-    "\\documentclass",
-    "\\newcommand",
-    "\\renewcommand",
-    "\\newenvironment",
-    "\\renewenvironment",
-    "\\NeedsTeXFormat",
-    "\\ProvidesPackage",
-    "\\RequirePackage",
-    "\\ProvidesFile",
-    "\\makeatletter",
-    "\\makeatother",
-    "\\begin",
-    "\\listfiles",
-    "\\nofiles",
-    "\\typeout",
-    "\\PassOptionsToPackage",
-  ]
-  .iter()
-  {
+  //
+  // A plain TeX document holds them undefined, so generic-format probes see plain TeX; a use loads the format
+  // through `latex_kernel::autoload_latex_kernel` (OXIDIZED_DESIGN_DIVERGENCES #536).
+  for ltxtrigger in &crate::latex_kernel::LATEX_TRIGGERS {
+    if plain_tex_document() {
+      continue;
+    }
     DefMacro!(T_CS!(ltxtrigger), None, {
       Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(ltxtrigger))
     });
@@ -246,12 +283,19 @@ LoadDefinitions!({
   // defines loads the format and retries, instead of becoming `<ltx:ERROR/>`.
   // See `latex_kernel` for the oracle's rationale and the no-dump branch.
   binding::kernel_autoload::set_hook(crate::latex_kernel::autoload_latex_kernel);
+  binding::kernel_autoload::set_refused_environment_hook(
+    crate::frontmatter_stores::refused_environment_definition,
+  );
 
   // Perl TeX.pool.ltxml L42-48: expl3 triggers
   for ltx3trigger in [
     "\\ExplSyntaxOn",
     "\\ProvidesExplClass",
     "\\ProvidesExplPackage",
+    // Missing from Perl TeX.pool.ltxml L42-48 too: an expl3 FILE loaded
+    // before any package/class trigger (e.g. `\input{x}` of an
+    // ProvidesExplFile source) must also pull expl3.
+    "\\ProvidesExplFile",
   ] {
     def_autoload(ltx3trigger, "expl3")?;
   }
@@ -266,7 +310,11 @@ LoadDefinitions!({
   def_autoload("\\subequations", "amsmath")?;
   def_autoload("\\multline", "amsmath")?;
   def_autoload("\\curraddr", "ams_support")?;
-  def_autoload("\\subjclass", "ams_support")?;
+  // NOT `\subjclass`: it is amsart-only in LaTeX and packages probe it to
+  // detect an AMS class (projlib-author.sty:38 `\cs_if_exist:NT \subjclass
+  // {\endinput}`) — an ambient autoload stub answered "defined" and the
+  // probe aborted the package (homework: `\projlib_author_if_content_empty:nT`
+  // undefined). Guard: `perfect_kernel_batch54::autoload_stubs_do_not_satisfy_class_probes`.
 
   // LaTeX2HTML-era papers use the html.sty CSes without an explicit
   // `\usepackage{html}` because in the original LaTeX2HTML toolchain
@@ -321,15 +369,17 @@ LoadDefinitions!({
     def_autoload_pool(amstrigger, "AmSTeX")?;
   }
 
-  // File bookkeeping (Perl TeX.pool.ltxml, needed before LaTeX.pool loads)
-  DefMacro!(
-    "\\@pushfilename",
-    r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}"
-  );
-  DefMacro!(
-    "\\@popfilename",
-    r"\expandafter\@p@pfilename\@currnamestack\@nil"
-  );
+  // File bookkeeping. Perl's TeX.pool defines NONE of `\@pushfilename` /
+  // `\@popfilename`: before the LaTeX format arrives, package loads push and pop
+  // with LaTeXML's own `\lx@pushfilename` / `\lx@popfilename` (Package.pm:2578
+  // `$pushpop` is false), and latex.ltx's hook-label-aware pair (L18363/L18375)
+  // takes over with the dump. A Rust-only `\@pushfilename` alias here made
+  // `$pushpop` true from the start, so a load that itself brought in the format
+  // (a `--preload` package, expl3's `LoadPool!("LaTeX")`) pushed WITHOUT a hook
+  // label and popped WITH the dump's `\__hook_curr_name_pop:` → "Extra
+  // \PopDefaultHookLabel" twice on every `[luatex]` run. `\@p@pfilename` and the
+  // stack stay (latex.ltx overwrites them). Guard:
+  // `perfect_kernel_batch56::preload_that_pulls_in_the_format_pops_with_the_native_stack`.
   DefMacro!(
     "\\@p@pfilename {}{}{} Until:\\@nil",
     r"\gdef\@currname{#1}%
@@ -369,7 +419,7 @@ LoadDefinitions!({
   // `prepare_session`, so this branch fires before tex.rs runs in init mode.
   // Mirrors Perl `Core.pm::iniTeX` default `mode='Base'`, which loads only
   // `Base.pool` (no LoadFormat) before `DumpFile`.
-  if !*INI_MODE {
+  if !*INI_MODE && !crate::dump_paths::building_format() {
     // Perl `LoadFormat('plain')` strict split (mirrors latex.rs):
     //   if dump available: bootstrap → dump → constructs (NO base)
     //   else:              bootstrap → base → constructs (NO dump)

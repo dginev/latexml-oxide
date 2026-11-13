@@ -1,0 +1,19 @@
+% witness: unicodefonttable/unicodefonttable-samples (unicodefonttable-samples.tex:63, range-end=1FFFF)
+% oracle:  lualatex 0 errors (24-page PDF; ~6500 glyph cells across 5 tables)
+% engines: rust=Fatal(MemoryBudget, ~262k cells) perl=Fatal(too_many_errors, \tex_iffontchar:D undefined) (2026-09-06)
+% expect:  0 errors; glyph-cell count reflects font COVERAGE not range:
+%          for range 0-00FF over "Latin Modern Sans", rows U+0000-001F and
+%          U+0080-009F (C0/C1 controls, absent from the font) are SKIPPED,
+%          so #(row-title cells) < 16 and no "U+0000 - 000F" title appears.
+% status:  GREEN (batch 56x, 2026-09-06)
+%          \iffontchar returns true for every code point -> cell per slot)
+% mechanism: \__fmuft_if_uchar_exists:n = \tex_iffontchar:D\tex_font:D #1
+%          (unicodefonttable.sty:463) -> our \iffontchar (etex.rs:539) always
+%          TRUE -> \__fmuft_handle_slot: typesets a cell for every code point.
+\documentclass{article}
+\usepackage{fontspec}
+\setmainfont{Latin Modern Sans}
+\usepackage{unicodefonttable}
+\begin{document}
+\displayfonttable[range-start=0000,range-end=00FF]{Latin Modern Sans}
+\end{document}

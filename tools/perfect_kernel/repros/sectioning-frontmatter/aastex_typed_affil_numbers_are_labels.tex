@@ -1,0 +1,22 @@
+% mechanism: a hand-printed number leading an `\affil` line (`1 Uni One`, `2) Uni Two`) is a label wherever the names
+%   request numbers (user ruling R2, 2026-11-01): under AASTeX 5's `\altaffilmark{N}` names the line goes to the names
+%   requesting N (aas_support_sty.rs `\affiliation`: `relocate::leading_line_label`, `queued_name_marks`, declared
+%   `\lx@add@affiliation[label={altaffil:N}]`), the number off the line.
+% witness: 1810.01941 (aastex, `A.L. Longinotti\altaffilmark{1,14}, …` over `\affil{1 Instituto Nacional …}`: 97f r1
+%   gave every author all 14 lines, 39 -> 364 affiliations; 97d each author line 1, the last all 14), astro-ph0108212
+%   (`\affil{\scriptsize 2) Osservatorio …}`), 0909.0058; review rev97cd F1
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1, Bob Baker1 and Cat Cole1,2 / 1 Uni One and / 2 Uni Two"
+% engines: rust 97f r1: each author both lines; rust 97d: Ann Able and Bob Baker "1 Uni One", Cat Cole both; perl: Cat
+%   Cole both, the others none (aas_support.sty.ltxml:118, the last author's)
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker Uni One, Cat Cole Uni One and Uni Two
+% status:  RED (97f r1) -> GREEN (97f r2)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1}, Bob Baker\altaffilmark{1} and Cat Cole\altaffilmark{1,2}}
+\affil{1 Uni One}
+\affil{2 Uni Two}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

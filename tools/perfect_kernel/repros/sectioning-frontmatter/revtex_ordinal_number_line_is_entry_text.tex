@@ -1,0 +1,21 @@
+% mechanism: a number set in math at a line's start is a mark (`relocate::math_number_mark_at`, OXIDIZED_DESIGN_DIVERGENCES
+%   #964) only when no ordinal suffix is glued to it: `$3$rd floor` is the entry's text, the line its entry's (review
+%   rev104c S1)
+% witness: none (review rev104c probe p1; the 104c reading's witnesses 0708.2552, 0909.5340 write `$1$ Gazi …`,
+%   `$1$Department …`)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1 Univ A, Town / 3rd floor, Physics Bldg / 2 Univ B, City / 3 Univ C"
+% engines: rust int131a0: Ann "Univ A, Town 3rd floor, Physics Bldg"; 104c r1: Cat "rd floor, Physics Bldg" and
+%   "Univ C", the "3" lost
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town 3rd floor, Physics Bldg", Bob "Univ B, City", Cat "Univ C"
+% status:  RED (104c r1) -> GREEN (104c r2) — perfect_kernel_batch104c::an_ordinal_number_is_no_mark
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+\author{Cat Cole $^3$}
+\affiliation{$^1$ Univ A, Town\\ $3$rd floor, Physics Bldg\\ $^2$ Univ B, City\\ $^3$ Univ C}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: `$1$St Floor` (a rare way to write "1st") under `$1$`-led lines: the Saint rule (`relocate::
+%   ordinal_suffix_at`, an uppercase `St` before a space and a capital is "Saint", review rev104c2 F3) reads the digit
+%   as a math-number mark, so Ann gets "St Floor, Bldg C" as a contact of its own and the printed "1" is lost
+%   (OXIDIZED_DESIGN_DIVERGENCES #964; review rev104c3 finding 2). `$1$St~Andrews` (a tie) is not read as Saint
+%   (finding 5).
+% witness: none (review rev104c3 probe s4)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1 Univ A / 1St Floor, Bldg C / 2Univ B"
+% engines: rust int131a0: the whole block on both authors; 104c r2: Ann "Univ A 1 St Floor, Bldg C", Bob "Univ B";
+%   104c r3: Ann "Univ A" + "St Floor, Bldg C", Bob "Univ B"
+% expect:  0 errors, 0 warnings; Ann "Univ A" and "1St Floor, Bldg C" (the digit kept), Bob "Univ B"
+% status:  RED (104c r3) — open, catalog only (one digit, a rare spelling), SYNC_STATUS row 104c; no guard. Uncounted
+%   (CT1ar): the `$1$` heads a line of its own, as a label repeated on a second line of its entries does
+%   (author_prefix_marked_company_affiliation_repeated_mark_line), so CT1ar's count, which reads a mark glued to an
+%   entry's text, cannot see it; the loss is the mark reading of `$1$` (a math number, no superscript) — moves: post-merge
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+
+\affiliation{$1$ Univ A\\ $1$St Floor, Bldg C\\ $2$Univ B}
+\maketitle
+Text.
+\end{document}

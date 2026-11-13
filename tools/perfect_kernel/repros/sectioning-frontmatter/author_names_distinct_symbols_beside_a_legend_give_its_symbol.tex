@@ -1,0 +1,21 @@
+% mechanism: a run of distinct symbols in a name's mark formula requests each symbol, and the legend's is taken from
+%   it (OD #928 round 9, OD #927; `apply::show_legend_mark`, `repeated_symbols`): `$^{1,*\spadesuit}$` under a
+%   `$^{*}$Corresponding author` legend gives the ∗ to the note's mark and keeps "1♠" in the name (2606.15609's
+%   `$^{*\spadesuit}$` requests each symbol). The other half of the rule a repeated symbol is no part of
+%   (`author_names_repeated_symbol_beside_a_legend_is_its_own_mark`: `$^{1,**}$` stays whole). Known residual of the
+%   compound-mark class (SYNC_STATUS): the comma between 1 and ∗♠ goes with the ∗.
+% witness: 2606.15609; review rev94a r8 P1 sibling (94a r9 s02)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗♠ and Bob Baker1 / 1Univ X / ∗Corresponding author"
+% engines: rust 94a r8, r9: Ann Able `<sup>1♠</sup>`, the note mark=∗; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able `<sup>1♠</sup>`, Univ X and the note mark=∗ "Corresponding author"; Bob Baker
+%   `<sup>1</sup>`, Univ X; eager and --streaming the same
+% status:  GREEN (94a r7; pinned 94a r9)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,*\spadesuit}$ and Bob Baker$^{1}$}
+\affiliation{$^1$Univ X\\ $^{*}$Corresponding author}
+\maketitle
+Body.
+\end{document}

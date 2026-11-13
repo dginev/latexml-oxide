@@ -1,0 +1,21 @@
+% mechanism: `\input epsf` inside a group, again in a later group (the InstantTeX figure idiom: `\epsfloaded` is set
+%   locally, so each figure re-inputs epsf.tex). TeX re-reads the file each time; Rust's `\input` answers with the epsf
+%   binding, whose load-once flag is global while its definitions are local to the first group, so the second group
+%   finds `\epsfbox` undefined. Masked while OmniBus (which requires epsf) loaded over `\documentstyle[aps]{revtex}`;
+%   exposed by 64zd, where `aps` is REVTeX's own option.
+% witness: cond-mat9610182 (9 InstantTeX figures)
+% oracle:  pdflatex (with an x.eps): 0 errors; epsf.tex input in both groups
+% engines: rust 64y: 0 errors (OmniBus had loaded epsf globally); rust 64zd: 1 error (`\epsfbox` undefined)
+% expect:  0 errors
+% status:  RED (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps]{revtex}
+\begin{document}
+A {\ifx\epsfloaded Y\else\input epsf \fi
+\let\epsfloaded=Y
+\centerline{\epsfxsize 1in\epsfbox{x.eps}}}
+
+B {\ifx\epsfloaded Y\else\input epsf \fi
+\let\epsfloaded=Y
+\centerline{\epsfxsize 1in\epsfbox{x.eps}}}
+\end{document}

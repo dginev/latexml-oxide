@@ -1,0 +1,18 @@
+% mechanism: `\item` reads `\@itemlabel` when it runs (latex.ltx:15966), so a label redefined between items, or
+%   `\@itemlabel` itself redefined (globally or inside a group), labels the items after it (OD #180, ML1).
+% witness: synthetic (revML1 finding 2b).
+% oracle:  pdflatex 0 errors: "A h1", "B h2", "B h3", "• h4", "x h5", "P h6", "Q h7", "R h8", "S h9", "R h10".
+% engines: rust int160b and Perl 0.8.8: "P" on h7 and "R" on h9 (the label stored at `\list`).
+% expect:  0 errors, 0 warnings; the labels as in the PDF.
+% Guard: perfect_kernel_batch56::list_labels_come_from_itemlabel.
+% status:  RED (int160b) -> GREEN (ML1)
+\documentclass{article}
+\newcommand\mylab{A}
+\begin{document}
+\begin{list}{\mylab}{}\item h1 \renewcommand\mylab{B}\item h2 \item h3\end{list}
+\begin{itemize}\item h4 \renewcommand\labelitemi{x}\item h5\end{itemize}
+\makeatletter
+\begin{list}{P}{}\item h6 \def\@itemlabel{Q}\item h7\end{list}
+\begin{list}{R}{}\item h8 {\def\@itemlabel{S}\item h9} \item h10\end{list}
+\makeatother
+\end{document}

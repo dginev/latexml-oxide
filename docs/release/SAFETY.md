@@ -36,8 +36,10 @@ see that section below.
 
 Reconciled **2026-07-20**: the project contains **50 `unsafe {}` blocks +
 5 `unsafe impl Send/Sync` + 0 `unsafe fn` = 55 sites** (was 48+5+0=53 on
-2026-06-24). The delta: `latexml_post/src/xslt.rs` now has **4** blocks, not the
-2 §F claims (the `dlsym` write and the parity read-back are two blocks each), and
+2026-06-24). The delta: `latexml_post/src/xslt.rs` had **4** blocks, not the
+2 §F claims (the `dlsym` write and the parity read-back were two blocks each, unix
+and windows; since 2026-09-26 one link-time `extern` static serves both, so it is
+back to the 2 §F describes), and
 `latexml_core/src/runtime_bindings_reentrancy_model.rs` is a new file not covered
 by any category below — it is the re-entrancy model/proof harness mirroring
 category H. NB the recipe below also matches the word `unsafe` inside comments
@@ -144,9 +146,11 @@ and a plain `Child::kill()` does not reap those.
 
 ### F. libxslt/libxml global config via FFI (2 sites)
 
-`latexml_post/src/xslt.rs` — a `Once`-guarded `dlsym` write to libxslt's
+`latexml_post/src/xslt.rs` — a `Once`-guarded write to libxslt's
 process-global `xsltMaxDepth` recursion cap (`= 1000`, a faithful port of Perl
-`XML::LibXSLT->max_depth(1000)`), plus a `dlsym` read-back in a parity test.
+`XML::LibXSLT->max_depth(1000)`) through a plain `unsafe extern "C"` static
+declaration (resolved at link time; WISDOM #56 says why not the crate's binding
+or `dlsym`), plus a read-back in a parity test.
 The `libxslt` crate exposes no safe setter; libxslt only READS the value (when
 building each transform context), so the single guarded write cannot race a
 transform. Hardens the post-processor against stack-overflow/OOM on

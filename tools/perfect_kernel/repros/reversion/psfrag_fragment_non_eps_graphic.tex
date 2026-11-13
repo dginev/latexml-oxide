@@ -1,0 +1,12 @@
+% witness: synthetic (PSF1 safe side: psfrag places its fragments only where an EPS is included, psfrag.sty:46-62
+%          `\Ginclude@eps`/`\epsfbox`; a PNG graphic (pdflatex) never reaches them, so nothing is lost)
+% oracle:  pdflatex -no-shell-escape, 0 `!`, mwe's example-image.png, no replacement
+% engines: rust int166a = a plain `<graphics>`, 0 errors, 0 warnings
+% expect:  the plain `<graphics>`, 0 errors, 0 warnings
+% status:  GREEN (PSF1)
+\documentclass{article}
+\usepackage{graphicx,psfrag}
+\psfrag{A}{$\alpha$}
+\begin{document}
+\includegraphics{example-image.png}
+\end{document}

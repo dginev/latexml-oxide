@@ -1,0 +1,11 @@
+% witness: 1406.5453 1605.05104 (listings.sty:1941 \newcommand\lstinline[1][] is \@protected@testopt; ifthen.sty:101-110 evaluates \equal in an \xdef)
+% oracle:  pdflatex 0 errors; prints "full"
+% engines: rust 66l = 2 errors (\endgroup); Perl 0
+% expect:  0 errors; <p>full</p>
+% status:  RED (66l) -> GREEN (66m)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,listings,ifthen}
+\begin{document}
+\ifthenelse{\equal{\lstinline|N|}{}}{empty}{full}
+\end{document}

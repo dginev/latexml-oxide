@@ -1,5 +1,5 @@
 use base64::Engine as _;
-use latexml_core::common::error::emit_warn;
+use latexml_core::common::error::{emit_error, emit_warn};
 
 use crate::prelude::*;
 
@@ -71,6 +71,26 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
   })
 }
 
+/// A tcolorbox listing box's begin-line arguments, read off `rest` (the `\begin` line after
+/// `\begin{env}`) into their stand-ins by `tcolorbox_sty::tcb_grab_begin_line`, and the box's
+/// options, parked by `\lxtcblistingmode`, resolved again with them. A `!`-leading optional is read
+/// only at column 0 of `rest` (xparse `!O`: no space skipping; keytheorems-doc's
+/// `\NewTCBListing{keythmscode}{ !O{} }` with `[withpreamble]`), every other one after spaces
+/// (jsonparse-doc's `{ s o }` with `[key:storein]`). The parked options are taken exactly once, whether or not an argument follows:
+/// a stale value must not re-resolve a later listing environment.
+/// Guards: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`,
+/// `perfect_kernel_batch59::tcb_listing_begin_line_edge_cases`.
+fn tcb_begin_line_arguments(environment: &str, rest: Option<&str>) {
+  let pending = lookup_value("tcb_pending_mode_opts");
+  AssignValue!("tcb_pending_mode_opts" => Stored::None);
+  if let Some(Stored::Tokens(pending)) = pending
+    && let Some(rest) = rest
+    && tcolorbox_sty::tcb_grab_begin_line(environment, rest)
+  {
+    let _ = tcolorbox_sty::tcb_resolve_listing_mode(pending);
+  }
+}
+
 /// Perl: listingsReadRawLines — read raw lines until \end{$environment}
 ///
 /// OXIDIZED_DESIGN #61: the terminator is matched ANYWHERE in the line, not
@@ -89,21 +109,137 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
 /// the terminator becomes the last line, and the text AFTER is unread, exactly
 /// as Perl already does for the trailing part.
 pub fn listings_read_raw_lines(environment: &str) -> String {
+  listings_read_raw_lines_with_outer(environment, None)
+}
+
+pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&str>) -> String {
   let mut lines = Vec::new();
-  read_raw_line(); // Ignore 1st line (following \begin{...})
-  let end_re = Regex::new(&format!("\\\\end\\{{{}\\}}", regex::escape(environment))).unwrap();
-  while let Some(line) = read_raw_line() {
+  // Ignore the remainder of the `\begin{...}` line — real listings drops it —
+  // UNLESS the pushback holds a non-space token. An optional-argument probe
+  // (`\lstnewenvironment{x}[1][]` → `[Default:]` → `read_non_space`) crosses
+  // the newline after `\begin{x}` and unreads the body's first NON-SPACE
+  // character; `read_raw_line` then returns pushback + line remainder = the
+  // body's REAL first line, and discarding it swallowed line 1 of every such
+  // environment (Perl 0.8.8 shares the bug — same-host verified; ~148 TL doc
+  // manuals define example environments this way). Space-only pushback (the
+  // built-in lstlisting's `if_next` probe unreads the end-of-line SPACE) still
+  // means the first raw line is `\begin`-line leftover. OXIDIZED_DESIGN #162.
+  //
+  // That first line is taken from COLUMN 0 of the mouth's line, not as
+  // pushback + remainder: the probe's tokenization had dropped the
+  // indentation and every catcode-9 character, so under `\DocInput` (doc.sty
+  // `\MakePercentIgnore`) line 1 came back without its `% ` prefix while lines
+  // 2+ kept it, and `gobble=2` (lstdoc/forest-doc.sty:32) then ate two real
+  // characters of line 1 while the write-file tee re-input lines whose `%`
+  // commented out `\end{forest}` (forest-doc: 501 `readBalanced ran out of
+  // input` → Fatal). Guard:
+  // `perfect_kernel_batch56::forest_docinput_lstenv_writefile_gobbles_doc_percent`.
+  let begin = format!("\\begin{{{environment}}}");
+  // The listing's END already read as tokens: its body was tokenized ahead as a
+  // macro argument (`\parbox{3cm}{\begin{lstlisting}…\end{lstlisting}}`), so no
+  // line holds it any more and listings' line scan cannot find its end — TeX
+  // runs out ("Argument of \lst@next has an extra }", listings.sty:2142-2147
+  // dropping the begin line's text). The body is lost, so this is an Error.
+  let end = format!("\\end{{{environment}}}");
+  if pushback_text().contains(&end) {
+    emit_error(
+      "expected",
+      &end,
+      &latexml_core::generate_message!(format!(
+        "{end} was read ahead with the listing's body as a macro argument; listings reads its body \
+         line by line, so the body is lost"
+      )),
+    );
+  }
+  let mut first_line = if pushback_holds_nonspace() {
+    // A begin-line argument the environment's mapping could not consume
+    // leaves non-space pushback while the mouth is STILL on the `\begin`
+    // line; that line is not content — re-inputting it re-entered the
+    // environment without bound (tutodoc, simplebnf, istgame: MemoryBudget
+    // fatal, sweep #41). Guard:
+    // `perfect_kernel_batch56::tcb_listing_unmapped_begin_line_args_are_absorbed`.
+    // (Its arguments still reach a tcolorbox listing box: `{ o s }` + `\begin{env}*`.)
+    let line = read_raw_current_line_from_start();
+    let rest = line
+      .as_deref()
+      .and_then(|l| l.trim_start().strip_prefix(begin.as_str()));
+    tcb_begin_line_arguments(environment, rest);
+    line.filter(|l| !l.trim_start().starts_with(&begin))
+  } else {
+    // leftover of the \begin line — not content, EXCEPT a tcolorbox listing
+    // box's arguments written after `\begin{env}`.
+    let leftover = read_raw_line();
+    // A tcolorbox listing box reads its arguments from that line; anything else
+    // there is dropped, with listings' own warning (listings.sty:2142-2145
+    // `\lstenv@DroppedWarning`).
+    let tcb_line = matches!(
+      lookup_value("tcb_pending_mode_opts"),
+      Some(Stored::Tokens(_))
+    );
+    tcb_begin_line_arguments(environment, leftover.as_deref());
+    // An optional argument after a space (`\begin{lstlisting} [frame=single]`) is
+    // still the options to listings (`\@ifnextchar[` skips the space), so no text
+    // is dropped there; this reader leaves them in the line, unread (1606.07935).
+    let options_after_space = leftover
+      .as_deref()
+      .is_some_and(|l| l.starts_with(char::is_whitespace) && l.trim_start().starts_with('['));
+    // A `%` comment is not dropped text (TeX discards it reading the line): only
+    // what precedes it counts (`\begin{lstlisting}[language=C] % note`, review probe
+    // lst1). The line after a begin-line comment is KEPT as the listing's first line,
+    // where pdflatex drops it with this warning (content first; OXIDIZED_DESIGN #521).
+    if !tcb_line
+      && !options_after_space
+      && leftover
+        .as_deref()
+        .is_some_and(|l| !strip_tex_comment(l).trim().is_empty())
+    {
+      Warn!(
+        "latex",
+        "(Listings)",
+        "Package Listings Warning: Text dropped after begin of listing"
+      );
+    }
+    None
+  };
+  let mut end_patterns = vec![
+    format!(r"\\end\{{{}\}}", regex::escape(environment)),
+    format!(r"\\end{}", regex::escape(environment)),
+  ];
+  if let Some(outer) = outer_env
+    && !outer.is_empty()
+    && outer != environment
+  {
+    end_patterns.push(format!(r"\\end\{{{}\}}", regex::escape(outer)));
+  }
+  let end_re = Regex::new(&end_patterns.join("|")).unwrap();
+  while let Some(line) = first_line.take().or_else(read_raw_line) {
     if let Some(m) = end_re.find(&line) {
+      let matched_str = m.as_str();
+      let is_outer = outer_env.is_some_and(|outer| matched_str == format!(r"\end{{{outer}}}"));
       // Whitespace-only text before the terminator is the ordinary
       // `\end{lstlisting}`-on-its-own-line case: contributes no listing line.
       let before = &line[..m.start()];
       if !before.trim().is_empty() {
         lines.push(before.to_string());
       }
-      let rest = line[m.end()..].to_string();
-      if !rest.is_empty() {
-        unread(Tokenize!(TeXString::assembled(rest)));
-        unread(Tokens::new(vec![T_CR!()]));
+      if is_outer {
+        let rest = line[m.start()..].to_string();
+        if rest.trim().is_empty() {
+          unread_one(T_CR!());
+        } else if !restore_raw_line_rest(&rest)
+          && let Ok(mouth) = Mouth::new(&rest, None)
+        {
+          open_mouth(mouth, true);
+        }
+      } else {
+        let rest = line[m.end()..].to_string();
+        if rest.trim().is_empty() {
+          unread_one(T_CR!());
+        } else if !restore_raw_line_rest(&rest)
+          && let Ok(mouth) = Mouth::new(&rest, None)
+        {
+          open_mouth(mouth, true);
+        }
       }
       break;
     }
@@ -143,26 +279,33 @@ fn read_balanced_group(tokens: &[Token], pos: &mut usize) -> Vec<Token> {
   result
 }
 
-/// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
+/// Perl: TokenizeBalanced — the TeX an escape holds (`escapechar`, `escapeinside`, `mathescape`, `texcl`), its groups
+/// balanced. listings executes it as TeX where it stands (lstmisc.sty `\lst@DefEsc`), reading it then, so a command
+/// in it may change the catcodes of what follows (`%B(col\verb._.idx(j))%`, 1106.5908: tokenized at once, the `_` was a
+/// subscript, "Script _ can only appear in math mode"). So the text is kept and read by a mouth of its own when the
+/// listing is digested (`\lx@lst@escape`), the balancing braces Perl adds put around it. Guard
+/// `perfect_kernel_batch73b::listings_escape_is_read_where_it_runs`.
 fn tokenize_balanced(text: &str) -> Vec<Token> {
-  let tokens = mouth::tokenize(TeXString::assembled(text.to_string()));
-  let mut toks: Vec<Token> = tokens.unlist();
   let mut level: i32 = 0;
-  for t in &toks {
+  let mut opened: i32 = 0;
+  for t in mouth::tokenize(TeXString::assembled(text.to_string())).unlist() {
     match t.get_catcode() {
       Catcode::BEGIN => level += 1,
       Catcode::END => level -= 1,
       _ => {},
     }
+    opened = opened.min(level);
   }
-  while level > 0 {
-    toks.push(T_END!());
-    level -= 1;
-  }
-  while level < 0 {
-    toks.insert(0, T_BEGIN!());
-    level += 1;
-  }
+  let open = usize::try_from(-opened).unwrap_or(0);
+  let close = usize::try_from(level - opened).unwrap_or(0);
+  let balanced = s!("{}{text}{}", "{".repeat(open), "}".repeat(close));
+  // The conversion's count (a State value, as the escapes it names).
+  let id = lookup_int("lx@lst@escapes") + 1;
+  assign_value("lx@lst@escapes", Stored::Int(id), Some(Scope::Global));
+  assign_value(&s!("lx@lst@escape@{id}"), balanced, Some(Scope::Global));
+  let mut toks = vec![T_CS!("\\lx@lst@escape"), T_BEGIN!()];
+  toks.extend(Explode!(id));
+  toks.push(T_END!());
   toks
 }
 
@@ -170,14 +313,28 @@ fn tokenize_balanced(text: &str) -> Vec<Token> {
 /// Handles mathescape: within $...$, content is read with normal catcodes
 /// and preserved as TeX (backslashes intact). Outside math, CS tokens have \ stripped.
 /// Returns UnTeX'd string representation.
+///
+/// Also returns whether the gullet counted the closing delimiter into the alignment ledger: a pre-tokenized `}` (an
+/// argument re-read, `\text{\lstinline{x}}`) keeps its END catcode and `read_token` counted it, a `}` read under the
+/// verbatim catcodes is OTHER and was not (see [`settle_verbatim_brace_ledger`]).
 pub fn listings_read_raw_string(
   until: Option<&Token>,
   saved_catcodes: &[(char, Catcode)],
-) -> String {
+) -> (String, bool) {
   let mathescape = lst_get_boolean("mathescape");
   let mut inmath = false;
   let mut tokens: Vec<Token> = Vec::new();
 
+  // A `{`-delimited inline listing (`\lstinline{…}`) ends at the BALANCED
+  // `}`: listings.sty:1968 `\lst@InlineG` tracks nesting, so
+  // `\lstinline{\renewcommand{\fnindent}{1.25em}}` (coolfn, tikz-shields
+  // `\mintinline{tex}{\usepackage[…]{…}}`) keeps its inner groups. Perl's
+  // reader stops at the first `}` (listings.sty.ltxml:281 "does NOT balance
+  // groups") and the trailing real `}` leaked to the stomach. A character
+  // delimiter (`|…|`) still matches its first occurrence.
+  let brace_delimited = until.is_some_and(|t| t.text == pin!("}"));
+  let mut depth: usize = 0;
+  let mut close_counted = false;
   while let Ok(Some(token)) = read_token() {
     if let Some(until_tok) = until {
       // Perl `listings.sty.ltxml:291` matches by string only —
@@ -188,7 +345,14 @@ pub fn listings_read_raw_string(
       // trigger and the body greedily consumes input. Match on
       // interned text identity alone, mirroring Perl.
       if token.text == until_tok.text {
-        break;
+        if brace_delimited && depth > 0 && !inmath {
+          depth -= 1;
+        } else {
+          close_counted = token.get_catcode() == Catcode::END;
+          break;
+        }
+      } else if brace_delimited && !inmath && token.text == pin!("{") {
+        depth += 1;
       }
     }
     // Check for mathescape $ toggle. Perl `listings.sty.ltxml:292-293`:
@@ -217,12 +381,7 @@ pub fn listings_read_raw_string(
       // In verbatim listing context, \end should appear as literal characters \ e n d
       let name = token.to_string();
       for c in name.chars() {
-        tokens.push(Token {
-          text: pin_char(c),
-          code: Catcode::OTHER,
-          #[cfg(feature = "token-locators")]
-          loc: 0,
-        });
+        tokens.push(CharToken!(c));
       }
     } else {
       tokens.push(token);
@@ -249,12 +408,54 @@ pub fn listings_read_raw_string(
     }
   }
   result.truncate(result.trim_end().len());
-  result
+  (result, close_counted)
+}
+
+/// Keeps a verbatim brace delimiter out of the alignment ledger. `read_token` counted the opening `{` into
+/// `align_group_count` (Gullet.pm:421); the raw reader consumes the matching `}`, which the gullet counted only when it
+/// was pre-tokenized (END catcode; a `}` read under the verbatim catcodes is OTHER). Retract the `{` exactly when its
+/// `}` went uncounted, so the inline listing leaves the ledger as it found it with every delimiter: retracting it
+/// unconditionally left `\text{\lstinline{x}}` in an `align*` cell at −1, and the row's `\\` was never recognised
+/// (2609.04372, 29962).
+pub fn settle_verbatim_brace_ledger(init: Option<&Token>, close_counted: bool) {
+  if init.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) && !close_counted {
+    decrement_align_group_count();
+  }
 }
 
 /// Perl: listingsReadRawFile — read entire file contents as string.
-fn listings_read_raw_file(file: &str) -> Option<String> {
-  let filename = file.to_string();
+///
+/// A file that is nowhere, or that cannot be opened, is Perl's
+/// `Error('I/O', $filename, …, "Can't read listings file '$filename'", $!)`
+/// (listings.sty.ltxml:322-334); real listings stops with "Package Listings
+/// Error: File `x(.ext)' not found" (listings.sty:2074-2086; its `\read\m@ne`
+/// at :2090 is an Emergency stop in nonstop mode), and tcolorbox's
+/// `\tcbinputlisting` reaches it through `\lstinputlisting`
+/// (tcblistings.code.tex:42-53). It was a warning (crossreftools-doc:
+/// `labelstuff.tex`, `addcontentslineforlistoflabels.tex`, which the package
+/// does not ship). Guard: `package_leads_56::missing_listing_file_is_an_io_error`.
+pub fn listings_read_raw_file(file: &str) -> Result<Option<String>> {
+  // TeX's file name skips the blanks before it and ends at the first one after it (tex.web §526), so
+  // `\lstinputlisting{⏎ examples/simple-correct.c⏎ }` reads `examples/simple-correct.c` (2511.21509; pdflatex
+  // finds it). Perl keeps the end-of-line spaces in the name and cannot find the file.
+  let filename = file.trim().to_string();
+  // A file that exists only in the session's virtual file store — written by
+  // `\write` emulations such as tcolorbox's `\tcbverbatimwrite` (the
+  // `tcblisting` body goes to `\jobname.listing`, tcblistingscore.code.tex
+  // :275-282, and `\lstinputlisting` reads it back, tcblistings.code.tex
+  // :42-53), `filecontents`, or `\VerbatimOut` — is read from there, as
+  // `\input`/`\openin` already do (content.rs). `find_file` returned the bare
+  // key for such a file and the disk read came back empty, so every
+  // `listing only` box (sim-os-menus' terminal windows; ~33 low-recall
+  // manuals round-trip a listing file) rendered an EMPTY listing at 0
+  // errors — Perl, with no virtual store, reports "Can't read listings file".
+  if let Some(text) = vfs_read(&filename) {
+    return Ok(Some(if text.contains('\r') {
+      text.replace("\r\n", "\n").replace('\r', "\n")
+    } else {
+      text
+    }));
+  }
   // Perl #2818 (41bd31e8): FindFile(..., noltxml => 1) — when reading a raw file
   // for a listing (\lstinputlisting), never substitute an .ltxml binding for the
   // real source text (Rust spells `noltxml` as `forbid_ltxml`).
@@ -265,6 +466,17 @@ fn listings_read_raw_file(file: &str) -> Option<String> {
       ..Default::default()
     }),
   ) {
+    // `find_file` resolves an extensionless name to the virtual store's key
+    // (`snip` → `snip.tex`, content.rs `find_file_aux`), which only the store
+    // can read: tutodoc's `\tdoclatexinput{examples-…}` listings (a
+    // `filecontents` file, read by `\inputminted`) came out empty.
+    if let Some(text) = vfs_read(&path) {
+      return Ok(Some(if text.contains('\r') {
+        text.replace("\r\n", "\n").replace('\r', "\n")
+      } else {
+        text
+      }));
+    }
     // Normalize line terminators to bare LF.
     //
     // DIVERGENCE (OXIDIZED_DESIGN #69) — Perl slurps the file verbatim, so a
@@ -284,20 +496,40 @@ fn listings_read_raw_file(file: &str) -> Option<String> {
     // (measured: 9 green vs 69 black glyph groups), while BOTH LaTeXML engines
     // paint the whole snippet green — Perl identically, so this is a shared
     // upstream bug we are fixing rather than a Rust regression.
-    std::fs::read_to_string(&path).ok().map(|text| {
-      if text.contains('\r') {
-        text.replace("\r\n", "\n").replace('\r', "\n")
-      } else {
-        text
-      }
-    })
+    //
+    // The bytes are decoded by `decode_input_bytes`, the Mouth's reader for a
+    // file with no declared encoding (UTF-8, else each line's Latin-1 image;
+    // Perl slurps the bytes undecoded). A declared 8-bit input encoding
+    // (cp1251, cp1252) is not applied here. `read_to_string` refused a
+    // non-UTF-8 file outright, and a latin1 source came out an EMPTY listing
+    // with no diagnostic. Guard:
+    // `package_leads_56::latin1_listing_file_is_read`.
+    match std::fs::read(&path) {
+      Ok(bytes) => {
+        let text = mouth::decode_input_bytes(&bytes);
+        Ok(Some(if text.contains('\r') {
+          text.replace("\r\n", "\n").replace('\r', "\n")
+        } else {
+          text
+        }))
+      },
+      Err(err) => {
+        Error!(
+          "I/O",
+          filename,
+          format!("Can't read listings file '{filename}'"),
+          err.to_string()
+        );
+        Ok(None)
+      },
+    }
   } else {
-    emit_warn(
-      "missing_file",
-      "listings",
-      &format!("Can't read listings file '{filename}'"),
+    Error!(
+      "I/O",
+      filename,
+      format!("Can't read listings file '{filename}'")
     );
-    None
+    Ok(None)
   }
 }
 
@@ -349,7 +581,9 @@ fn lst_split(stuff: &Option<Tokens>) -> Vec<String> {
         .map(|t| t.to_string())
         .unwrap_or_default();
       // Strip TeX comments: %...\n
-      let comment_re = Regex::new(r"%.*?\n\s*").unwrap();
+      static COMMENT_RE: std::sync::LazyLock<Regex> =
+        std::sync::LazyLock::new(|| Regex::new(r"%.*?\n\s*").unwrap());
+      let comment_re = &*COMMENT_RE;
       s = comment_re.replace_all(&s, "").to_string();
       // Strip whitespace
       s = s.replace(char::is_whitespace, "");
@@ -438,6 +672,137 @@ fn lst_get_literal(value: &str) -> String {
 /// Perl: lstGetBoolean — get boolean from LST@key state.
 fn lst_get_boolean(value: &str) -> bool { lst_get_literal(value) == "true" }
 
+/// The skip a listing length key gives (`aboveskip=\medskipamount`, its default, listings.sty:1735-1736), read as
+/// `\vspace\lst@aboveskip` reads it (listings.sty:1765); its natural size, none when the key is empty.
+fn lst_skip(key: &str) -> Result<Dimension> {
+  let value = lst_get_tokens(key);
+  if value.is_empty() {
+    return Ok(Dimension::new(0));
+  }
+  let glue = reading_from_mouth(Mouth::new("", None)?, move || {
+    unread(value);
+    read_glue()
+  })?;
+  Ok(Dimension::new(glue.value_of()))
+}
+
+/// A display listing's size as TeX sets it: each source line a line of its own (`\lst@NewLine`,
+/// listings.sty:703-705) a strut high, so one `\baselineskip` whatever its glyphs (lstmisc.sty:1630, :1648), a line
+/// broken under `breaklines` (lstmisc.sty:1308-1320) as many as its width needs, between `aboveskip` and `belowskip`
+/// (listings.sty:1765, :1818); `\linewidth` wide (lstmisc.sty:1285-1286), no depth. Without it the body was measured
+/// as one horizontal list, one line, so a tcolorbox (or any measuring box) around a listing was a line high (HF1:
+/// 230 of 290 boxed listings in 37 html_feedback papers; 2406.06469, 2604.25850, 2601.23265, 2402.10176, 2311.11482,
+/// 2402.07204). Perl has no sizer either and sets every box of the body as a line (Whatsit.pm:252-255,
+/// Font.pm:667-682), far too tall. OXIDIZED_DESIGN_DIVERGENCES #462.
+fn lst_block_size(whatsit: &Whatsit) -> Result<(Dimension, Dimension, Dimension)> {
+  let dimension = |key: &str| match whatsit.get_property(key).as_deref() {
+    Some(Stored::Dimension(d)) => d.value_of(),
+    _ => 0,
+  };
+  let breaklines = matches!(
+    whatsit.get_property("lst_breaklines").as_deref(),
+    Some(Stored::Bool(true))
+  );
+  // The body's boxes in order, lists opened, and a whatsit holding line markers opened too: a string or comment
+  // class group (`\@listingGroup{cls}{…}`) stays open across the lines it spans.
+  let mut boxes = Vec::new();
+  let mut pending = whatsit
+    .get_arg(2)
+    .map(|body| body.unlist())
+    .unwrap_or_default();
+  pending.reverse();
+  while let Some(item) = pending.pop() {
+    match item.data() {
+      DigestedData::List(_) => pending.extend(item.unlist().into_iter().rev()),
+      DigestedData::Whatsit(w) if !is_line_marker(&item) && has_line_marker(&item) => {
+        // (only the arguments with lines, not the class name)
+        let args: Vec<Digested> = w
+          .borrow()
+          .args
+          .iter()
+          .flatten()
+          .filter(|arg| has_line_marker(arg))
+          .flat_map(|arg| arg.unlist())
+          .collect();
+        pending.extend(args.into_iter().rev());
+      },
+      _ => boxes.push(item),
+    }
+  }
+  // the control sequence of a whatsit item, and a dimension property of it
+  let whatsit_cs = |item: &Digested| match item.data() {
+    DigestedData::Whatsit(w) => Some(w.borrow().get_definition().get_cs_name().into_owned()),
+    _ => None,
+  };
+  let metric = |item: &Digested, key: &str| match item.data() {
+    DigestedData::Whatsit(w) => match w.borrow().get_property(key).as_deref() {
+      Some(Stored::Dimension(d)) => d.value_of(),
+      _ => 0,
+    },
+    _ => 0,
+  };
+  let font = whatsit.get_font()?.or_else(lookup_font).unwrap_or_default();
+  let (mut height, mut width) = (0, 0);
+  let mut line: Option<(i64, i64, Vec<Digested>)> = None;
+  for item in boxes {
+    match whatsit_cs(&item).as_deref() {
+      Some("\\@lst@startline") => {
+        line = Some((
+          metric(&item, "lst_baselineskip"),
+          metric(&item, "lst_linewidth"),
+          Vec::new(),
+        ));
+      },
+      Some("\\@lst@endline") => {
+        let Some((baselineskip, linewidth, content)) = line.take() else {
+          continue;
+        };
+        let mut lines = 1;
+        if breaklines && linewidth > 0 {
+          let mut options = SymHashMap::default();
+          options.insert("mode", Stored::String(pin!("restricted_horizontal")));
+          let (w, ..) = font.compute_boxes_size(&content, options)?;
+          lines = lines.max((w.value_of() + linewidth - 1) / linewidth);
+        }
+        height += lines * baselineskip;
+        width = width.max(linewidth);
+      },
+      _ => {
+        if let Some((_, _, content)) = line.as_mut() {
+          content.push(item);
+        }
+      },
+    }
+  }
+  let skips = dimension("lst_aboveskip") + dimension("lst_belowskip");
+  Ok((
+    Dimension::new(width),
+    Dimension::new((skips + height).max(0)),
+    Dimension::new(0),
+  ))
+}
+
+/// Whether `item` is a line marker of a listing (`\@lst@startline`, `\@lst@endline`).
+fn is_line_marker(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Whatsit(w) => {
+      let name = w.borrow().get_definition().get_cs_name().into_owned();
+      name == "\\@lst@startline" || name == "\\@lst@endline"
+    },
+    _ => false,
+  }
+}
+
+/// Whether a line marker is in `item`: it, or one in its lists and whatsit arguments.
+fn has_line_marker(item: &Digested) -> bool {
+  is_line_marker(item)
+    || match item.data() {
+      DigestedData::List(_) => item.unlist().iter().any(has_line_marker),
+      DigestedData::Whatsit(w) => w.borrow().args.iter().flatten().any(has_line_marker),
+      _ => false,
+    }
+}
+
 /// Perl: lstGetNumber — get numeric value from LST@key state.
 fn lst_get_number(value: &str) -> i64 {
   let key = s!("LST@{value}");
@@ -450,7 +815,7 @@ fn lst_get_number(value: &str) -> i64 {
 }
 
 /// Perl: lstGetTokens — get tokens from LST@key state.
-fn lst_get_tokens(value: &str) -> Tokens {
+pub(crate) fn lst_get_tokens(value: &str) -> Tokens {
   let key = s!("LST@{value}");
   match lookup_value(&key) {
     Some(Stored::Tokens(t)) => lst_un_group(Some(t)).unwrap_or(Tokens!()),
@@ -481,42 +846,87 @@ fn lst_push_value_locally(list: &str, values: Vec<Token>) {
   assign_value(key, Stored::Tokens(Tokens::new(combined)), None);
 }
 
+/// `escapechar` and `escapeinside` set the one `\lst@DefEsc` (lstmisc.sty:
+/// 336-347): either key first drops the escape delimiter the other (or an
+/// inherited `\lstset`) installed, then installs its own, if any. `next` is
+/// the new delimiter's key, empty when the key clears the escape.
+fn lst_set_defesc(next: &str) {
+  if let Some(Stored::String(prev)) = lookup_value("LST_DEFESC_CURRENT") {
+    let prev = to_string(prev);
+    if prev != next {
+      for k in ["open", "close", "class", "escape"] {
+        assign_value(&s!("LST_DELIM@{prev}@{k}"), Stored::None, None);
+      }
+      if let Some(Stored::Tokens(keys)) = lookup_value("LST_DELIM_KEYS") {
+        let kept: Vec<Token> = keys
+          .unlist_ref()
+          .iter()
+          .filter(|t| t.to_string() != prev)
+          .copied()
+          .collect();
+        assign_value("LST_DELIM_KEYS", Stored::Tokens(Tokens::new(kept)), None);
+      }
+    }
+  }
+  assign_value(
+    "LST_DEFESC_CURRENT",
+    if next.is_empty() {
+      Stored::None
+    } else {
+      Stored::String(pin(next))
+    },
+    None,
+  );
+}
+
 /// Perl: lstSetClassStyle — define properties of a styling class.
 fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &str)>) {
   let map_key = "LST_CLASSES";
   // Get or create the class entry
   if let Some(style_toks) = &style {
     let stylestring = style_toks.to_string().trim().to_string();
-    if stylestring.ends_with("style") || {
-      let re = Regex::new(r"style\d*$").unwrap();
-      re.is_match(&stylestring)
-    } {
+    // A style names another class's style only as a bare word, as listings' families do
+    // (lstmisc.sty:667 `\lst@InstallFamily k{keywords}{keywordstyle}\bfseries{keywordstyle}`); a control
+    // sequence is markup that runs, whatever its name ends in: `identifierstyle=\idstyle` (1907.13012) was taken
+    // for a class `\ids` and never ran (KPE #1169).
+    if !stylestring.contains('\\') && Regex::new(r"style\d*$").unwrap().is_match(&stylestring) {
       // If names a style, convert into indirect class reference
       let classref = Regex::new(r"style(\d*)$")
         .unwrap()
         .replace(&stylestring, "s$1")
         .to_string();
-      // remove explicit styling (begin)
+      // remove explicit styling, both ends: an `end` left from an earlier markup style closed groups no `begin`
+      // opened ("Attempt to close boxing group" after every token; KPE #1169)
       let begin_key = s!("{map_key}@{class}@begin");
       assign_value(&begin_key, Stored::None, None);
+      let end_key = s!("{map_key}@{class}@end");
+      assign_value(&end_key, Stored::None, None);
       // add indirect to class
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::String(pin(&classref)), None);
     } else {
-      // Otherwise, it's presumably TeX styling.
-      // Perl #2819: wrap the styling in a brace group —
-      //   begin => Tokens($style, T_BEGIN); end => T_END
-      // so a multi-token style (e.g. `\bfseries\underbar`) applies to the whole
-      // class content as a group, not just the first token. The matching T_END
-      // is collected by `lst_class_end` (which now walks the full class chain).
+      // Otherwise, it's presumably TeX styling, applied as listings.sty:579-585
+      // `\lst@OutputToken` does: `{\lst@thestyle{…output…}}`. The inner brace
+      // group is the argument of a style whose last macro takes one
+      // (`\bfseries\underbar`, Perl #2819 `Tokens($style, T_BEGIN)`); the outer
+      // one closes a group the style itself opens: the btHL idiom
+      // `\begin{btHighlight}\bgroup\aftergroup\bt@HL@endenv` is closed by the
+      // `}` after the argument, which ends the highlight box (2006.16205,
+      // 2104.08012; Perl's `begin` lacks the outer `{`, KPE #1166). The matching
+      // `}}` is collected by `lst_class_end` (which walks the full class chain).
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::None, None);
       let begin_key = s!("{map_key}@{class}@begin");
-      let mut begin_toks = style_toks.unlist_ref().clone();
+      let mut begin_toks = vec![T_BEGIN!()];
+      begin_toks.extend(style_toks.unlist_ref().iter().copied());
       begin_toks.push(T_BEGIN!());
       assign_value(&begin_key, Stored::Tokens(Tokens::new(begin_toks)), None);
       let end_key = s!("{map_key}@{class}@end");
-      assign_value(&end_key, Stored::Tokens(Tokens::new(vec![T_END!()])), None);
+      assign_value(
+        &end_key,
+        Stored::Tokens(Tokens::new(vec![T_END!(), T_END!()])),
+        None,
+      );
     }
   }
   // Set cssclass based on class name
@@ -777,7 +1187,9 @@ fn lst_add_delimiter(
 
     // Perl: process $style parameter to determine base class name
     // "commentstyle" → "comments", "stringstyle" → "strings", etc.
-    let style_re = Regex::new(r"style(\d*)$").unwrap();
+    static STYLE_RE: std::sync::LazyLock<Regex> =
+      std::sync::LazyLock::new(|| Regex::new(r"style(\d*)$").unwrap());
+    let style_re = &*STYLE_RE;
     let base_class = if style_re.is_match(style) {
       style_re.replace(style, "s$1").to_string()
     } else {
@@ -817,34 +1229,32 @@ fn lst_add_delimiter(
     // Register this delimiter in the delimiter list
     lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&open_str)]);
 
-    // Perl L593-607: lstSetClassStyle with openTeX/closeTeX.
-    // If style is TeX markup (not a style name), prepend it to open tokens.
+    // Perl listings.sty.ltxml:596-611: lstSetClassStyle with openTeX/closeTeX.
+    // If style is TeX markup (not a style name), it opens the class as listings.sty:579-585 applies a style,
+    // `{\lst@thestyle{…}}` (`lst_set_class_style`): `{<style>{` before the open delimiter, `}}` after the close one,
+    // so the style's last macro may take the delimited text as its argument and a group the style opens is closed
+    // after it (the btHL idiom, `moredelim=**[is][\btHL]{`}{`}`; 2006.16205, 2104.08012). Perl prepends the bare style
+    // (`Tokens($styleTeX->unlist, $open)`), KPE #1166.
     let style_is_markup =
       !style_re.is_match(style) && !style.is_empty() && style != "None" && style.contains('\\'); // TeX markup contains backslash
-    let style_tokens = if style_is_markup {
-      mouth::tokenize_internal(TeXString::assembled(style.to_string()))
-    } else {
-      Tokens!()
-    };
-    let open_tex = if invisible {
-      if style_is_markup {
-        style_tokens
-      } else {
-        Tokens!()
-      }
-    } else if style_is_markup {
-      // Perl: Tokens($styleTeX->unlist, $open)
-      let mut toks = style_tokens.unlist();
-      toks.push(T_OTHER!(&open_str));
-      Tokens::new(toks)
-    } else {
-      Tokens::new(vec![T_OTHER!(&open_str)])
-    };
-    let close_tex = if invisible || close_str.is_empty() {
-      Tokens!()
-    } else {
-      Tokens::new(vec![T_OTHER!(&close_str)])
-    };
+    let mut open_toks = Vec::new();
+    if style_is_markup {
+      open_toks.push(T_BEGIN!());
+      open_toks.extend(mouth::tokenize_internal(TeXString::assembled(style.to_string())).unlist());
+      open_toks.push(T_BEGIN!());
+    }
+    if !invisible {
+      open_toks.push(T_OTHER!(&open_str));
+    }
+    let open_tex = Tokens::new(open_toks);
+    let mut close_toks = Vec::new();
+    if !invisible && !close_str.is_empty() {
+      close_toks.push(T_OTHER!(&close_str));
+    }
+    if style_is_markup {
+      close_toks.extend([T_END!(), T_END!()]);
+    }
+    let close_tex = Tokens::new(close_toks);
 
     // Set parent class (Perl: class => $oldclass)
     let class_key = s!("LST_CLASSES@{class}@class");
@@ -1087,13 +1497,67 @@ struct LstContext {
   literate:       Vec<(String, Tokens, bool)>,
   #[allow(dead_code)]
   literate_re:    Option<Regex>,
-  firstline:      i64,
-  lastline:       i64,
+  /// The line intervals shown ([`lst_line_intervals`]).
+  lines:          Vec<(i64, i64)>,
 }
 
-/// Perl: linetest closure — checks if a line number should be included based on firstline/lastline.
+/// Perl: linetest closure — is the line in one of the intervals shown?
 fn lst_linetest(ctx: &LstContext) -> bool {
-  ctx.firstline <= ctx.linenum && ctx.linenum <= ctx.lastline
+  ctx
+    .lines
+    .iter()
+    .any(|&(first, last)| first <= ctx.linenum && ctx.linenum <= last)
+}
+
+/// The line intervals a listing shows (listings.sty:1412-1460, `\lst@GLI@`; Perl listings.sty.ltxml:1270-1272):
+/// each `linerange` item `a-b`, `a-` (to the end), `-b` (from the first line) or `N` (that line); without one,
+/// `firstline`-`lastline`. `\lstinputlisting[linerange=...]` showed the whole file (2601.09829, html_feedback #6950).
+/// A marker item (`rangeprefix`, non-numeric) selects lines by their text, which is not modelled: the listing shows
+/// whole, as before. Not modelled either: listings walks the intervals in order and only skips forward
+/// (listings.sty:1564-1572), so `{5-6,2-3}` shows 5-7 where this shows the union; the `[interrange]` text between
+/// intervals is not printed; and listings' PreSet hook (:1403-1408) clears `linerange` for each listing, so a global
+/// `\lstset{linerange=...}` does not carry over as it does here. The shown lines are numbered by their source
+/// line, not consecutively (RED singletons/listings_linerange_numbers_are_consecutive).
+fn lst_line_intervals() -> Vec<(i64, i64)> {
+  const LAST: i64 = 9_999_999;
+  let range = lst_get_literal("linerange");
+  // `\lstKV@OptArg[]{#1}`: an optional `[interrange]` comes first.
+  let range = match range.trim().strip_prefix('[') {
+    Some(rest) => rest.split_once(']').map_or("", |(_, items)| items),
+    None => range.trim(),
+  };
+  let number = |text: &str| text.trim().parse::<i64>().ok();
+  let mut lines = Vec::new();
+  for item in range
+    .split(',')
+    .map(str::trim)
+    .filter(|item| !item.is_empty())
+  {
+    let interval = match item.split_once('-') {
+      None => number(item).map(|n| (n, n)),
+      Some((first, last)) => {
+        let first = if first.trim().is_empty() {
+          Some(1)
+        } else {
+          number(first)
+        };
+        let last = if last.trim().is_empty() {
+          Some(LAST)
+        } else {
+          number(last)
+        };
+        first.zip(last)
+      },
+    };
+    match interval {
+      Some(interval) => lines.push(interval),
+      None => return vec![(1, LAST)],
+    }
+  }
+  if lines.is_empty() {
+    lines.push((lst_get_number("firstline"), lst_get_number("lastline")));
+  }
+  lines
 }
 
 /// Perl: lstProcess — main entry point for processing listing text.
@@ -1164,7 +1628,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   {
     all_delim_keys.push("$".to_string());
   }
-  // Perl listings.sty.ltxml:1283
+  // Perl listings.sty.ltxml:1288
   //   local $LaTeXML::DELIM_RE = join('|', map { $$delimiters{$_}{open} } sort keys %$delimiters);
   // The lexical sort matters: leftmost-first regex alternation means short
   // prefixes that sort before longer ones win, e.g. `<` (XML tag) is matched
@@ -1177,13 +1641,19 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     let open_key = s!("LST_DELIM@{key}@open");
     if let Some(Stored::String(open_sym)) = lookup_value(&open_key) {
       let open_re = with(open_sym, |s| s.to_string());
-      delim_opens.push(open_re.clone());
       let escape_key = s!("LST_DELIM@{key}@escape");
       if matches!(lookup_value(&escape_key), Some(Stored::Bool(true))) {
         escape_opens.push(open_re);
+      } else {
+        delim_opens.push(open_re);
       }
     }
   }
+  // An escape is tried before the other delimiters: listings chains each delimiter onto the meaning its first character
+  // had (lstmisc.sty `\lst@DefDelimB`), and the escape (`\lst@DefEsc`, installed last) is tested first, so
+  // `escapeinside={\#*}{*}` under Python's `#` comments escapes `#*\label{line:degree}*` (2104.08012; pdflatex resolves
+  // `line \ref{line:degree}`), where the lexical order took `#` for a comment and printed the `\label` (KPE #1167).
+  let delim_opens: Vec<String> = escape_opens.iter().cloned().chain(delim_opens).collect();
   let delim_re = if delim_opens.is_empty() {
     None
   } else {
@@ -1239,8 +1709,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     case_sensitive,
     literate: build_literate_entries(),
     literate_re: build_literate_re(false),
-    firstline: lst_get_number("firstline"),
-    lastline: lst_get_number("lastline"),
+    lines: lst_line_intervals(),
   };
 
   // Add preamble tokens
@@ -1263,10 +1732,16 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   }
 
   if mode != "inline" {
-    ctx.lsttokens.extend(invoke(T_CS!("\\setcounter"), vec![
-      Tokens!(T_OTHER!("lstnumber")),
-      Tokens::new(ExplodeText!(&ctx.linenum.to_string())),
-    ]));
+    // Register-level like real listings (`\global\c@lstnumber\lst@firstnumber`,
+    // listings.sty L1516) — NOT user-level `\setcounter`, which counter
+    // packages wrap (xassoccnt.sty L2553 → its expl3 body runs away into the
+    // following `\@lst@startline` at construction time; 518 malformed errors
+    // on xassoccnt_doc). Sibling of the `\lx@lst@stepnumber` newline emitter.
+    ctx
+      .lsttokens
+      .extend(invoke(T_CS!("\\lx@lst@setnumber"), vec![Tokens::new(
+        ExplodeText!(&ctx.linenum.to_string()),
+      )]));
     lst_process_start_line(&mut ctx);
   }
 
@@ -1397,8 +1872,12 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
   let _ = outer_class;
   let mut prev_listing = String::new();
   // Precompile static regexes
-  let newline_re = Regex::new(r"^\s*?\n").unwrap();
-  let space_re = Regex::new(r"^[\t ]+").unwrap();
+  static NEWLINE_RE: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"^\s*?\n").unwrap());
+  let newline_re = &*NEWLINE_RE;
+  static SPACE_RE: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"^[\t ]+").unwrap());
+  let space_re = &*SPACE_RE;
 
   while !ctx.listing.is_empty() {
     // Loop guard — must make progress on every step
@@ -1697,9 +2176,38 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
 
       ctx.lsttokens.extend(pre_tokens);
       if let Some(cname) = classname {
+        // listings.sty:481 and :579-585: the token being output is in `\lst@token` (its length in `\lst@length`)
+        // while its style runs, and `\lst@ResetToken` empties both after it. A style that reads the token
+        // (`\expandafter\id@style\the\lst@token\relax`, 1907.13012's identifier colours) found it empty, so its
+        // `\relax`-delimited argument ran past the token's group ("Attempt to close boxing group").
+        let length = word.chars().count().to_string();
+        ctx.lsttokens.push(T_CS!("\\lst@token"));
+        ctx.lsttokens.push(T_BEGIN!());
+        ctx.lsttokens.extend(word.chars().map(|c| {
+          let s = c.to_string();
+          if c.is_alphabetic() {
+            T_LETTER!(&s)
+          } else {
+            T_OTHER!(&s)
+          }
+        }));
+        ctx.lsttokens.push(T_END!());
+        ctx.lsttokens.push(T_CS!("\\lst@length"));
+        ctx
+          .lsttokens
+          .extend(length.chars().map(|c| T_OTHER!(&c.to_string())));
+        ctx.lsttokens.push(T_CS!("\\relax"));
         ctx.lsttokens.extend(lst_class_begin(&cname));
         ctx.lsttokens.extend(styled_tokens);
         ctx.lsttokens.extend(lst_class_end(&cname));
+        ctx.lsttokens.extend([
+          T_CS!("\\lst@token"),
+          T_BEGIN!(),
+          T_END!(),
+          T_CS!("\\lst@length"),
+          T_OTHER!("0"),
+          T_CS!("\\relax"),
+        ]);
       } else {
         // Perl: outerclass branch — emit identifier tokens without their own
         // class wrap; they live inside the enclosing delim's wrapper.
@@ -1713,13 +2221,13 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
       ctx.listing = ctx.listing[m.end()..].to_string();
       if ctx.mode != "inline" {
         lst_process_end_line(ctx);
-        if let Ok(inv) = (|| -> Result<Tokens> {
-          Ok(Invocation!(T_CS!("\\stepcounter"), vec![T_OTHER!(
-            "lstnumber"
-          )]))
-        })() {
-          ctx.lsttokens.extend(inv.unlist());
-        }
+        // Emit the LOCKED internal step (defined in LoadDefinitions below),
+        // not user-level \stepcounter: real listings advances \c@lstnumber
+        // at the internals level, so a package wrapping \stepcounter
+        // (assoccnt.sty L69 wraps it for associated counters) must NOT see
+        // line stepping — its raw wrapper expanding inside the listing
+        // constructor leaked #PCDATA into <ltx:listing> (assoccnt manual).
+        ctx.lsttokens.push(T_CS!("\\lx@lst@stepnumber"));
         ctx.linenum += 1;
         ctx.colnum = 0;
         // Perl: while ($listing ne '' && !&$linetest($linenum)) { skip lines }
@@ -1730,20 +2238,17 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
           } else {
             ctx.listing = String::new();
           }
-          if let Ok(inv) = (|| -> Result<Tokens> {
-            Ok(Invocation!(T_CS!("\\stepcounter"), vec![T_OTHER!(
-              "lstnumber"
-            )]))
-          })() {
-            ctx.lsttokens.extend(inv.unlist());
-          }
+          ctx.lsttokens.push(T_CS!("\\lx@lst@stepnumber"));
           ctx.linenum += 1;
         }
         // Handle gobble
         let gobble = lst_get_number("gobble");
         for _ in 0..gobble {
-          if !ctx.listing.is_empty() {
-            ctx.listing = ctx.listing[1..].to_string();
+          // Drop one CHARACTER, not one byte: a multibyte first char (`本`,
+          // texproposal) made `[1..]` panic on a non-char boundary — the one
+          // caught worker panic of sweep s108.
+          if let Some(c) = ctx.listing.chars().next() {
+            ctx.listing = ctx.listing[c.len_utf8()..].to_string();
           }
         }
         lst_process_start_line(ctx);
@@ -1858,15 +2363,135 @@ pub fn lst_process_block_with(
   if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
     trailer.extend(post.unlist());
   }
-  trailer.push(T_END!()); // balance bgroup from the caller
+  // Close the listing's group with the align-neutral implicit closer of the
+  // caller's boxing `bgroup()` (tcolorbox `\dispExample`, `\lx@lstenv@body`'s
+  // caller). `\begin{lstlisting}` and `\lstinputlisting` instead EMIT
+  // `\begingroup` as their first token and leave no frame behind at expansion
+  // time (`lst_group_opener` + `lst_process_display_scoped`, whose closer is
+  // `\endgroup`) — tex.web §785
+  // `align_peek` expands a cell's first token BEFORE the row and cell frames
+  // exist, so a frame pushed during expansion (the former `bgroup()`) sat
+  // under the `p{}` cell's box frame and the box's own `}` closed the wrong
+  // group ("`\endgroup` Attempt to close non-boxing group", "`\@@tabular`
+  // Attempt to end mode"; pfdicons-doc:996, tikzcodeblocks-documentation:679,
+  // shipunov; Perl identical, pdflatex clean). A `}` TOKEN here was also
+  // wrong: §347 moves `align_state` only for catcode-1/2 characters. Guard:
+  // `perfect_kernel_batch54::block_listing_in_a_paragraph_cell`.
+  trailer.push(T_CS!("\\lx@hidden@egroup"));
 
   (body_tokens, trailer)
+}
+
+/// The display listing's group opener, emitted as TOKENS so the group is
+/// opened at digestion, in stream order (listings.sty `\lst@Init` under the
+/// environment's `\begingroup`): `\bgroup\lx@lst@activate{env}[<keys>]`.
+/// The primitive re-activates the listing keys inside that group for the
+/// digestion-time consumers (`\lstname`, styles, `LISTINGS_POSTAMBLE`).
+/// Run a captured example body the way the real packages do — written to a
+/// temp file and `\input` back (tcolorbox.sty:2811-2820 `\tcbwritetemp`/
+/// `\tcbusetemp`, showexpl.sty:208 `\SX@put@code@result`): `\input`
+/// re-tokenizes character by character, so a mid-body catcode change
+/// (`\ExplSyntaxOn`, `\makeatletter`, `\verb`) applies to what follows.
+/// Eagerly `Tokenize!`-ing the body froze the outer regime (csvsimple-l3:
+/// `\tl_new:N` split at a subscript `_`). Returns the `\input{…}` tokens.
+pub fn lst_run_body_via_input(env: &str, text: &str) -> Result<Tokens> {
+  // The conversion's count (a State value): the name reaches the log ("Processing content lx-LTXexample-1.tmp"), and a
+  // worker's next paper counted on from the last's (revST3b).
+  let n = lookup_int("lx@lst@bodies") + 1;
+  assign_value("lx@lst@bodies", Stored::Int(n), Some(Scope::Global));
+  let name = format!("lx-{env}-{n}.tmp");
+  ::latexml_core::binding::virtual_files::vfs_store(&name, text);
+  // Built by hand: `Invocation!` consults `\input`'s parameter list, which
+  // reads its own argument, and would drop the braced name.
+  let mut inv = vec![T_CS!("\\input"), T_BEGIN!()];
+  inv.extend(ExplodeText!(&name));
+  inv.push(T_END!());
+  Ok(Tokens::new(inv))
+}
+
+pub fn lst_group_opener(env: &str, kv: Option<&KeyVals>) -> Result<Vec<Token>> {
+  let mut out = vec![
+    T_CS!("\\begingroup"),
+    T_CS!("\\lx@lst@activate"),
+    T_BEGIN!(),
+  ];
+  out.extend(ExplodeText!(env));
+  out.push(T_END!());
+  if let Some(kv) = kv {
+    let body = kv.revert()?;
+    if !body.is_empty() {
+      out.push(T_OTHER!("["));
+      out.extend(body.unlist());
+      out.push(T_OTHER!("]"));
+    }
+  }
+  Ok(out)
+}
+
+/// [`lst_process_display`] for a caller whose group is the `\begingroup`
+/// token `lst_group_opener` emitted: the trailer's closer is `\endgroup`.
+pub fn lst_process_display_scoped(name: Option<Tokens>, text: &str) -> Vec<Token> {
+  lst_scoped(lst_process_display(name, text))
+}
+
+/// Re-close a display produced by [`lst_process_display`] /
+/// [`lst_process_display_with`] for a `\begingroup`-token caller: the boxing
+/// closer `\lx@hidden@egroup` becomes `\endgroup`.
+pub fn lst_scoped(mut result: Vec<Token>) -> Vec<Token> {
+  result.pop(); // the boxing closer `\lx@hidden@egroup`
+  result.push(T_CS!("\\endgroup"));
+  result
 }
 
 /// Perl: lstProcessDisplay — generate full display listing with optional caption/title.
 pub fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   let processed = lst_process("block", text).unlist();
   lst_process_display_with(name, text, processed)
+}
+
+/// A tcolorbox listing box's phantom code (`hypertarget`, `label`, `step`, `index`;
+/// `tcb_resolve_listing_mode`) runs inside the box at its start, as tcolorbox runs it
+/// (tcolorbox.sty:1154-1161): here at the start of the listing's first line, after its
+/// `\@lst@startline{…}` — a `listing` holds only lines, and a line has the id a `\label` names
+/// (before the listing it opened a paragraph of its own and labelled the element before). An empty
+/// listing gets one empty, unnumbered line for it — tcolorbox still draws the box and runs the code
+/// in it, and a `listing` holds nothing else — so its anchor, `step` and `label` still happen.
+fn with_tcb_phantom(mut processed: Vec<Token>) -> Vec<Token> {
+  let Some(Stored::Tokens(phantom)) = lookup_value("tcb_pending_phantom") else {
+    return processed;
+  };
+  AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
+  // (its `label` names the box's step, which the listing's start forgot: `\lx@lst@renote@raw@refstep`)
+  let phantom = Tokens::new(
+    std::iter::once(T_CS!("\\lx@lst@renote@raw@refstep"))
+      .chain(phantom.unlist())
+      .collect(),
+  );
+  let Some(start) = processed
+    .iter()
+    .position(|t| *t == T_CS!("\\@lst@startline"))
+  else {
+    let mut line = vec![T_CS!("\\@lst@startline"), T_BEGIN!(), T_END!()];
+    line.extend(phantom.unlist());
+    line.push(T_CS!("\\@lst@endline"));
+    processed.splice(0..0, line);
+    return processed;
+  };
+  let mut depth = 0usize;
+  for at in start + 1..processed.len() {
+    match processed[at].get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth = depth.saturating_sub(1);
+        if depth == 0 {
+          processed.splice(at + 1..at + 1, phantom.unlist());
+          break;
+        }
+      },
+      _ => {},
+    }
+  }
+  processed
 }
 
 /// Like [`lst_process_display`], but the block body tokens are supplied by the
@@ -1878,19 +2503,87 @@ pub fn lst_process_display_with(
   text: &str,
   processed: Vec<Token>,
 ) -> Vec<Token> {
+  // Perl listings.sty.ltxml:170-178 (`%lstFilenameRPL`): re-encode certain characters of the name
+  // (typewriter-like, but not the typewriter font), `_` → `\textunderscore`, `$` → `\textdollar`.
+  // Digested as they come, a file name's `_` other char was font-decoded through OT1, whose slot
+  // 0x5F is the dot accent: `dataname="lstu˙x.txt"` (guard
+  // `perfect_kernel_gemini::listings_name_keeps_its_underscore`).
+  let name = name.map(|n| {
+    Tokens::new(
+      n.unlist()
+        .into_iter()
+        .map(|t| {
+          if t.text == pin!("_") {
+            T_CS!("\\textunderscore")
+          } else if t.text == pin!("$") {
+            T_CS!("\\textdollar")
+          } else {
+            t
+          }
+        })
+        .collect(),
+    )
+  });
+  let processed = with_tcb_phantom(processed);
   let (mut body, trailer) = lst_process_block_with(name.clone(), text, processed);
 
+  // `nolol` (listings.sty:1409-1411; `\lstKV@SetIf` reads the value's first letter) keeps the listing
+  // out of the list of listings: `\lst@MakeCaption` (:1644-1656) writes the `lol` entry — the caption,
+  // or the bare name of a named listing — only without it. Perl ignores the key
+  // (listings.sty.ltxml:889 `# Ignorable`), so every named listing is a `lol` float whose toc caption
+  // is its name: tcolorbox's read-back of its box body, `\lstinputlisting[nolol]{\jobname.listing}`
+  // (tcblistings.code.tex:39/:45), put a `<toccaption>` "<job>.listing" in every raw `{tcblisting}`
+  // box (2512.18601, 2606.05464, 2606.27251, 2607.12625; KNOWN_PERL_ERRORS #988). Guard
+  // `perfect_kernel_batch77m::raw_tcblisting_read_back_is_not_listed`.
+  let nolol = lst_get_literal("nolol").trim().starts_with(['t', 'T']);
+  // A gobbled `\lst@MakeCaption` (listings.sty:1635-1663) makes no caption, title or `lol` entry at
+  // all: tcolorbox's `listing remove caption` (tcblistings.code.tex:31-33, on by default) around its
+  // read-back of a raw box, or — for the binding's listing environments, which run no such group — the
+  // box's resolved setting (`tcolorbox_sty::tcb_store_pending_title`). Its box title is then the only
+  // one: 2409.11413's `\lstset{title=\lstname}` emptied every box's "Listing N: …" title.
+  // Guard `perfect_kernel_batch77m::tcb_box_title_replaces_the_listings_title`.
+  let gobbled = matches!(
+    (lookup_meaning(&T_CS!("\\lst@MakeCaption")), lookup_meaning(&T_CS!("\\@gobble"))),
+    (Some(a), Some(b)) if a == b
+  );
+  let tcb_remove_caption = lookup_bool("tcb_pending_remove_caption");
+  AssignValue!("tcb_pending_remove_caption" => false, Scope::Global);
+  let no_caption = gobbled || tcb_remove_caption;
+  let nolol = nolol || no_caption;
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
   if let Some(ref n) = name
     && !n.is_empty()
+    && !nolol
   {
     assign_value("LST@toctitle", Stored::from(n.clone()), None);
   }
 
   // Check for caption/title/toctitle — Perl lines 183-193
-  let caption_tokens = lst_get_tokens("caption");
-  let title_tokens = lst_get_tokens("title");
-  let toctitle_tokens = lst_get_tokens("toctitle");
+  let (caption_tokens, mut title_tokens) = if no_caption {
+    (Tokens!(), Tokens!())
+  } else {
+    (lst_get_tokens("caption"), lst_get_tokens("title"))
+  };
+  // A tcolorbox listing box's title (`tcolorbox_sty::tcb_store_pending_title`), the listing's own when
+  // it has none: the box prints it above the listing, in its title bar (tcolorbox.sty:162-163
+  // `\tcbtitle`), whatever listings' `captionpos` says — the box gobbles `\lst@MakeCaption`, so
+  // `captionpos` never reaches it (2409.11413 setup.tex:86 `\lstset{captionpos=b}`: its 13 box titles
+  // went below the code; 2402.13846 headers/lqa/listing.tex:35; 2508.16690 and 2301.07825 set it for
+  // plain listings only, which keep it). Guard
+  // `perfect_kernel_batch77m::tcb_box_title_stays_above_under_captionpos_b`.
+  let mut title_from_tcb = false;
+  if let Some(Stored::Tokens(tcb_title)) = lookup_value("tcb_pending_title") {
+    AssignValue!("tcb_pending_title" => Stored::None, Scope::Global);
+    if title_tokens.is_empty() {
+      title_tokens = tcb_title;
+      title_from_tcb = true;
+    }
+  }
+  let toctitle_tokens = if no_caption {
+    Tokens!()
+  } else {
+    lst_get_tokens("toctitle")
+  };
   let label_tokens = lst_get_tokens("label");
 
   let mut numbered = false;
@@ -1922,26 +2615,55 @@ pub fn lst_process_display_with(
     } else {
       body.extend(caption);
     }
-  } else if !title_tokens.is_empty() {
-    has_caption = true;
-    let title_inv = invoke(T_CS!("\\lstlisting@maketitle"), vec![title_tokens]);
-    body.extend(title_inv);
-  } else if !toctitle_tokens.is_empty() {
-    // Perl line 192-193: toctitle without caption/title
-    has_caption = true;
-    let toctitle_inv = invoke(T_CS!("\\lstlisting@maketoctitle"), vec![toctitle_tokens]);
-    body.extend(toctitle_inv);
+  } else {
+    // A title (or a bare toc title) goes where `captionpos` puts it, as the caption does (Perl
+    // listings.sty.ltxml:199-203 places whichever of the three it made; listings.sty:1658
+    // `\lst@IfSubstring #1\lst@captionpos` prints the title at the top by default).
+    let made = if !title_tokens.is_empty() {
+      Some(invoke(T_CS!("\\lstlisting@maketitle"), vec![title_tokens]))
+    } else if !toctitle_tokens.is_empty() {
+      // Perl line 192-193: toctitle without caption/title
+      Some(invoke(T_CS!("\\lstlisting@maketoctitle"), vec![
+        toctitle_tokens,
+      ]))
+    } else {
+      None
+    };
+    if let Some(made) = made {
+      has_caption = true;
+      if title_from_tcb || lst_get_literal("captionpos") == "t" {
+        let mut new_body = made;
+        new_body.extend(body);
+        body = new_body;
+      } else {
+        body.extend(made);
+      }
+    }
   }
 
+  // listings.sty:1641 writes a literal `\label{\lst@label}`. Perl builds
+  // `Invocation(\label, label)` (listings.sty.ltxml:196-198), which reverts
+  // the label against `\label`'s CURRENT parameters: under cleveref `\label`
+  // is `\lx@cleverref@label[]` (cleveref_sty.rs), so the label went into the
+  // `[]`, was lost, and the real `\label` then read the caption's expansion
+  // as its argument (ualberta, unbtex-example).
+  // KNOWN_PERL_ERRORS #285. Guard:
+  // `sweep125_roots::listings_label_under_cleveref`.
   if !label_tokens.is_empty() {
-    let label_inv = invoke(T_CS!("\\label"), vec![label_tokens]);
-    let mut new_body = label_inv;
+    let mut new_body = vec![T_CS!("\\label"), T_BEGIN!()];
+    new_body.extend(label_tokens.unlist());
+    new_body.push(T_END!());
     new_body.extend(body);
     body = new_body;
   }
 
-  body.extend(trailer);
-
+  // The trailer (the `\lstnewenvironment` end code + the `}` balancing the
+  // caller's bgroup) runs AFTER the `{…}` display wrapper below — at the
+  // environment's group level, as listings' `\newenvironment` does — so a
+  // mode-switching begin/end pair (`\mdframed`…`\endmdframed`, cnltx's
+  // `sourcecode`, `\begin{minipage}`…) meets its own frame, not the wrapper's
+  // `{` ("Attempt to end mode internal_vertical" ×900 in cnltx_en; Perl
+  // listings.sty.ltxml:205-212 puts it inside).
   let mut result = Vec::new();
   if numbered || has_caption {
     result.push(T_CS!("\\par"));
@@ -1961,7 +2683,11 @@ pub fn lst_process_display_with(
 
   let name_nonempty = name.as_ref().is_some_and(|n| !n.is_empty());
 
-  if numbered || name_nonempty {
+  if numbered && nolol {
+    result.extend(invoke(T_CS!("\\lx@listings@unlisted"), vec![Tokens::new(
+      body,
+    )]));
+  } else if numbered || (name_nonempty && !nolol) {
     result.extend(invoke(T_CS!("\\@listings"), vec![Tokens::new(body)]));
   } else if has_caption {
     result.extend(invoke(T_CS!("\\@@listings"), vec![Tokens::new(body)]));
@@ -1970,12 +2696,24 @@ pub fn lst_process_display_with(
   }
 
   result.push(T_END!());
+  result.extend(trailer);
   result
 }
 
 /// Perl: lstExtractColor — extract color from a TeX command by digesting it.
 fn lst_extract_color(cmd: &Tokens) -> Option<String> {
   if cmd.is_empty() {
+    return None;
+  }
+  // listings stores the value and executes it at listing time; digesting it
+  // here (Perl listings.sty.ltxml:945-953 `lstExtractColor`) errors when the
+  // colour command is not defined YET (callouts: `\lstset{backgroundcolor=
+  // \color{cyan!10}}` before tikz pulls xcolor in). Leave it unset then.
+  if cmd
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::CS && lookup_definition(t).ok().flatten().is_none())
+  {
     return None;
   }
   bgroup();
@@ -1993,6 +2731,31 @@ fn lst_extract_color(cmd: &Tokens) -> Option<String> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Real listings.sty L93-95 boolean plumbing — raw add-on styles
+  // (lstfiracode, matlab-prettifier, showexpl, asciilist) call these
+  // internals directly; without them their `\ifx…\lst@true…\fi` chains
+  // desync and cascade `Extra \else` / `unexpected \fi` (rbt-mathnotes 96
+  // errs). The `wisdom_latexml_reimpl_internal_name_mismatch` shape.
+  DefMacro!("\\lst@true", None, r"\let\lst@if\iftrue");
+  DefMacro!("\\lst@false", None, r"\let\lst@if\iffalse");
+  Let!("\\lst@if", "\\iffalse");
+  // listings.sty:28-41 `\lst@InputCatcodes`/`\lst@RestoreCatcodes` set and restore
+  // the catcodes of listings' own file reader, which this binding replaces (dtk.cls
+  // :551/:570 calls them around a UTF-8 workaround; class census 2026-09-24).
+  def_macro_noop("\\lst@InputCatcodes")?;
+  def_macro_noop("\\lst@RestoreCatcodes")?;
+  // listings.sty:1742 `\let\lst@ifdisplaystyle\iffalse` (flipped by the
+  // `DisplayStyle` hook, :1740-1741, which this binding does not run). A style
+  // may test it, e.g. `basicstyle=\ttfamily\lst@ifdisplaystyle\scriptsize\else\fi`
+  // (arXiv 2605.12091: undefined, so every listing raised its `\else` and `\fi`,
+  // `Fatal:TooManyErrors`; Perl's binding lacks it too).
+  Let!("\\lst@ifdisplaystyle", "\\iffalse");
+  // listings.sty:908 `\lst@CCPutMacro{<class>}{<char>}{<code>}…\@empty\z@\@empty`
+  // (character-class conversion table) and the per-character hooks
+  // `\lst@ProcessOther`/`\lst@ttfamily` an add-on `\lstnewenvironment`
+  // invokes directly (lstfiracode) — no character-conversion model here.
+  RawTeX!(r"\def\lst@CCPutMacro#1\@empty\z@\@empty{}
+\def\lst@ProcessOther#1#2{}\def\lst@ttfamily#1#2{}");
   //======================================================================
   // Region 1: Preamble (Perl lines 1-33)
   //======================================================================
@@ -2046,26 +2809,26 @@ LoadDefinitions!({
   def_macro_noop("\\lst@InstallFamily{}{}{}{}{}")?;
   def_macro_noop("\\lst@InstallFamily@{}{}{}{}{}{}{}{}")?;
 
-  // listings aspect machinery — `\lst@RequireAspects{<aspect-name>}`
+  // listings aspect machinery — `\lst@RequireAspects{<aspect-list>}`
   // is listings's plug-in loader for optional behaviour like
   // `writefile` (loaded by `showexpl.sty` to capture rendered code
-  // for re-display). We don't expand aspects (they're typesetting
-  // concerns — actual code rendering goes via our listings model,
-  // not via aspect-mediated file I/O), so the require call is a no-op.
-  // Witness: arXiv:1604.00381 / 1706.09226 (`\usepackage{showexpl}`
-  // calls `\lst@RequireAspects{writefile}` at load time → cascade
-  // of `Error:undefined:\lst@RequireAspects` + `\lstKV@OptArg` +
-  // `\lst@EndWriteFile` + downstream `\SX@put@code@result` from
-  // showexpl. Adding the no-op breaks the cascade.
-  def_macro_noop("\\lst@RequireAspects{}")?;
+  // for re-display). Most aspects are typesetting concerns our listings
+  // model renders natively, so requiring them does nothing; `writefile`
+  // is the one whose commands exist only once it is required
+  // (lstmisc.sty:30 `\lst@BeginAspect{writefile}`), so it defines them
+  // (`require_listings_aspects`). Witness: arXiv:1604.00381 / 1706.09226
+  // (`\usepackage{showexpl}` calls `\lst@RequireAspects{writefile}` at
+  // load time → cascade of `Error:undefined:\lst@RequireAspects` +
+  // `\lstKV@OptArg` + `\lst@EndWriteFile` + downstream
+  // `\SX@put@code@result` from showexpl).
+  DefPrimitive!("\\lst@RequireAspects{}", sub[(aspects)] {
+    require_listings_aspects(&do_expand(aspects)?.to_string());
+  });
   // `\lstKV@OptArg` is a keyval helper used by aspect modules. The
   // listings binding doesn't expose listings's key parser; this no-op
   // matches the same content-preserving philosophy as the aspects.
   // Signature from lstmisc.sty: `\lstKV@OptArg[default]{arg}{body}`.
   def_macro_noop("\\lstKV@OptArg[]{}{}")?;
-  // writefile aspect entry points — stubbed as no-ops since we
-  // don't capture/re-include code-listings via file I/O.
-  def_macro_noop("\\lst@EndWriteFile")?;
 
   // Initialize state values
   assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
@@ -2082,8 +2845,13 @@ LoadDefinitions!({
     lst_activate(Some(&kv));
   });
 
-  // \lstinline — inline listing
-  DefMacro!("\\lstinline", "\\leavevmode\\lx@lstinline");
+  // \lstinline — inline listing. Robust, as listings.sty:1941 `\newcommand\lstinline[1][]` is
+  // (`\@protected@testopt`): an `\edef`/`\xdef` under `\@unexpandable@protect` keeps it unexpanded —
+  // ifthen's `\ifthenelse{\equal{\lstinline|N|}{}}` evaluates its test in one (ifthen.sty:101-110),
+  // where expanding it opened the inline listing's group inside the `\xdef` and the `\endgroup`
+  // after it met that group (witnesses 1406.5453, 1605.05104). Perl's is an expandable macro
+  // (listings.sty.ltxml:54).
+  DefMacro!("\\lstinline", "\\leavevmode\\lx@lstinline", protected => true);
   DefMacro!("\\lx@lstinline OptionalKeyVals:LST", sub[(kv)] {
     bgroup();
     lst_activate(kv.as_ref());
@@ -2099,6 +2867,18 @@ LoadDefinitions!({
     let until = init.as_ref().map(|t| {
       if t.get_catcode() == Catcode::BEGIN { T_END!() } else { *t }
     });
+    // Alignment-ledger transparency: the `{` delimiter's `}` is consumed by
+    // the raw reader below, so `settle_verbatim_brace_ledger` retracts the
+    // gullet's count of it after the read. Together with the
+    // `\lx@hidden@egroup` closer (instead of a raw `T_END`, which the gullet
+    // would count as −1 without a matching +1 from the direct `bgroup()`)
+    // the inline listing leaves the ledger untouched for EVERY delimiter.
+    // Otherwise `\lstinline|…|` inside a `p{}` cell left the count at −1 and
+    // the row's `\\` was never recognised (bibleref-parse.tex L172: 28-error
+    // unclosed-tabular cascade; `\verb` already used the hidden pair). Perl
+    // listings.sty.ltxml:55-68 shares the leak. Guards:
+    // `perfect_kernel_batch54::lstinline_pipe_in_p_column`,
+    // `perfect_kernel_batch61::lstinline_in_text_in_align_cell`.
     // Switch to verbatim catcodes BEFORE reading the body, so e.g.
     // `\lstinline![ %rcx { 0 } ] = ... ->!` reads its `%` as OTHER
     // rather than as a comment-trigger that drops the rest of the
@@ -2126,8 +2906,9 @@ LoadDefinitions!({
     for c in verbatim_chars {
       assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
     }
-    let body = listings_read_raw_string(until.as_ref(), &saved_catcodes);
+    let (body, close_counted) = listings_read_raw_string(until.as_ref(), &saved_catcodes);
     pop_frame()?;
+    settle_verbatim_brace_ledger(init.as_ref(), close_counted);
     let mut result = Vec::new();
     if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
       result.extend(pre.unlist());
@@ -2136,7 +2917,7 @@ LoadDefinitions!({
     if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
       result.extend(post.unlist());
     }
-    result.push(T_END!()); // balance bgroup
+    result.push(T_CS!("\\lx@hidden@egroup")); // balance bgroup, align-neutral (see above)
     Ok(Tokens::new(result))
   });
 
@@ -2204,7 +2985,7 @@ LoadDefinitions!({
         let kv = args.into_iter().next().unwrap_or_default();
         bgroup();
         assign_value("current_environment", Stored::String(pin("lstlisting")), None);
-        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
+        def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled("lstlisting".into())), None)?;
         let text = listings_read_raw_lines("lstinline");
         let _ = &kv; // lstActivate placeholder
         // Perl #2824: mark inline (local to the bgroup) so frame/bg are skipped.
@@ -2217,11 +2998,17 @@ LoadDefinitions!({
         if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
           result.extend(post.unlist());
         }
-        result.push(T_END!()); // balance bgroup
+        result.push(T_CS!("\\lx@hidden@egroup")); // balance bgroup, align-neutral (as \lx@lstinline)
+        let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+        end_tokens.extend(ExplodeText!("lstinline"));
+        end_tokens.push(T_END!());
+        unread_expansion(Tokens::new(end_tokens));
         Ok(Tokens::new(result))
       }
     )));
     def_macro(cs, params, expansion, None)?;
+    DefMacro!(T_CS!("\\end{lstinline}"), None, Tokens!());
+    DefMacro!(T_CS!("\\endlstinline"), None, Tokens!());
   }
 
   // \begin{lstlisting} — block listing environment
@@ -2231,47 +3018,180 @@ LoadDefinitions!({
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
         let kv: Option<KeyVals> = args.into_iter().next().unwrap_or_default().into();
+        // The keys are activated in a frame of the EXPANSION only (they steer
+        // how the raw lines are processed), popped before the expansion
+        // returns; the digested listing re-activates them inside its own
+        // `\bgroup` (see `lst_process_display`'s trailer note).
         bgroup();
         assign_value("current_environment", Stored::String(pin("lstlisting")), None);
-        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
+        def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled("lstlisting".into())), None)?;
         // Activate key-value options (language, style, etc.)
         lst_activate(kv.as_ref());
         let text = listings_read_raw_lines("lstlisting");
+        if !lst_writefile_tee(&text) {
+          egroup()?;
+          return Ok(Tokens!());
+        }
         let name = lst_get_tokens("name");
         let name_opt = if name.is_empty() { None } else { Some(name) };
-        let result = lst_process_display(name_opt, &text);
-        Ok(Tokens::new(result))
+        let result = lst_process_display_scoped(name_opt, &text);
+        egroup()?;
+        let mut out = lst_group_opener("lstlisting", kv.as_ref())?;
+        out.extend(result);
+        let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+        end_tokens.extend(ExplodeText!("lstlisting"));
+        end_tokens.push(T_END!());
+        unread_expansion(Tokens::new(end_tokens));
+        Ok(Tokens::new(out))
       }
     )));
     def_macro(cs, params, expansion, None)?;
+    DefMacro!(T_CS!("\\end{lstlisting}"), None, Tokens!());
+    DefMacro!(T_CS!("\\endlstlisting"), None, Tokens!());
   }
 
-  // \lstinputlisting — read listing from file
+  // Digestion-time key activation for a display listing (see
+  // `lst_group_opener`): runs inside the `\bgroup` the opener emitted.
+  DefPrimitive!("\\lx@lst@activate {} OptionalKeyVals:LST", sub[args] {
+    let env = args.first().cloned().unwrap_or_default().to_string();
+    let kv: Option<KeyVals> = args.get(1).cloned().unwrap_or_default().into();
+    assign_value("current_environment", Stored::String(pin(&env)), None);
+    def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled(env)), None)?;
+    lst_activate(kv.as_ref());
+    Ok(())
+  });
+
+  // \lstinputlisting — read listing from file. The name is EXPANDED like
+  // real listings' `\lst@InputListing` → `\input` does (Perl's binding
+  // :124 reads it Semiverbatim): tcblistingscore.code.tex:25 hands
+  // `\tcbuselistinglisting` the unexpanded `\kvtcb@listingfile`
+  // (= `\jobname.listing`). Guard:
+  // `perfect_kernel_batch56::raw_tcblisting_environment_round_trips_its_listing_file`.
   DefMacro!("\\lstinputlisting OptionalKeyVals:LST Semiverbatim", sub[(kv, file)] {
-    let filename = file.to_string();
-    let text = listings_read_raw_file(&filename).unwrap_or_default();
+    let filename = Expand!(file).to_string();
+    let text = listings_read_raw_file(&filename)?.unwrap_or_default();
     bgroup();
     lst_activate(kv.as_ref());
     let mut name = lst_get_tokens("name");
     if name.is_empty() {
       name = Tokens::new(ExplodeText!(&filename));
     }
-    let result = lst_process_display(Some(name), &text);
-    Ok(Tokens::new(result))
+    let result = lst_process_display_scoped(Some(name), &text);
+    egroup()?;
+    let mut out = lst_group_opener("lstinputlisting", kv.as_ref())?;
+    out.extend(result);
+    Ok(Tokens::new(out))
   });
 
   // Counters
-  NewCounter!("lstlisting", "document", idprefix => "LST");
+  // listings.sty:1604-1609 declares `lstlisting` `\AtBeginDocument`, in its hook's place (label `listings`, before a
+  // document's own hooks): until then `\@ifundefined{c@lstlisting}` is true, so a preamble's tocloft
+  // `\newlistentry{lstlisting}{lol}{0}` has no "previously defined" error to raise (tocloft.sty:820-833). Under a
+  // `\globaldefs\@ne`, that error's display `\protect` stayed for good and `\end`, `\normalfont`, `\ref` printed as text:
+  // 2405.15073. Perl's binding declares it at load (listings.sty.ltxml:133), KPE #1217.
+  // Guard: `perfect_kernel_batchm3::the_lstlisting_counter_waits_for_begin_document`.
+  DefPrimitive!("\\lx@lst@declare@counter", sub[_args] {
+    NewCounter!("lstlisting", "document", idprefix => "LST");
+    Ok(())
+  });
+  RawTeX!(r"\AtBeginDocument[listings]{\lx@lst@declare@counter\gdef\thelstlisting{\arabic{lstlisting}}}");
   DefMacro!("\\ext@lstlisting", "lol");
   NewCounter!("lstnumber");
   DefMacro!("\\thelstnumber", "\\arabic{lstnumber}");
-  DefMacro!("\\thelstlisting", "\\arabic{lstlisting}");
+  // lstmisc.sty:1236-1239 (`labels` aspect): a listing line's hyperref anchor
+  // name, set `\AtBeginDocument` — `\lst@neglisting` (listings.sty:1693, the
+  // count of uncaptioned listings) or, for a captioned listing, `\theHlstlisting`,
+  // then `.\thelstnumber`. The binding keeps captions natively and never sets
+  // `\lst@@caption` (and must not define it: `\lst@@<key>` names the binding's
+  // key handlers, so an `\@empty` one hijacked the `caption` key), so the
+  // uncaptioned branch is the definition. SASnRdisplay.sty:265-275
+  // `\SnRHrefNumber` expands it once to prefix a series name (SASnRdisplay:
+  // `undefined:\theHlstnumber`; Perl listings.sty.ltxml lacks it too). Guard:
+  // `binding_singletons_56::listings_the_h_lstnumber_is_defined`.
+  DefMacro!("\\lst@neglisting", "\\z@");
+  at_begin_document(TokenizeInternal!(r"\def\theHlstnumber{\lst@neglisting.\thelstnumber}"))?;
+
+  // listings.sty:320 `\let\lst@UserCommand\gdef` — the definer listings'
+  // own `\lst@…` user-command declarations and third-party patches use
+  // (`\lst@UserCommand\lstrenewenvironment#1#2#{…}`, tagpdfdocu-patches.sty:65).
+  // The binding reimplements listings, so without it the raw patch's
+  // `#1#2#` PARAM tokens leaked into digestion (tagpdf manual: 7×
+  // "should never reach Stomach" + 6 undefined). Perl listings.sty.ltxml
+  // omits it too. `\lst@XConvert#1\@nil` (listings.sty:211, the char-case
+  // conversion the patch runs first) exists only to consume its delimiter,
+  // and `\lstnewenvironment@` (:2xx) is a GOBBLE, not the real definer:
+  // letting that patch's redefinition succeed would rebind lstlisting to
+  // latex-lab's unimplemented `blockenv` template (tagpdf manual). Guards:
+  // `perfect_kernel_batch54::lst_usercommand_is_gdef`,
+  // `perfect_kernel_batch54::singleton_internal_surface`.
+  Let!("\\lst@UserCommand", "\\gdef");
+  // listings.sty:2267 \lst@TestEOLChar tests whether #1 is an EOL character;
+  // tagpdfdocu-patches.sty calls it when hooking \lstlisting.
+  RawTeX!(r"\def\lst@XConvert#1\@nil{}\def\lst@TestEOLChar#1{}\long\def\lstnewenvironment@#1#2#3{}");
+  // listings.sty:291 \let\lstloadaspects\lst@RequireAspects
+  Let!("\\lstloadaspects", "\\lst@RequireAspects");
+
+  // listings' internals that documents' literate replacements, styles and patches read (the binding
+  // reimplements listings, so none ran before):
+  // - listings.sty:24-26 `\lst@CheckVersion{<version>}{<code>}`, which runs `<code>` unless listings is
+  //   that version (the shipped lstpatch.sty for 1.3 skips itself: `\lst@CheckVersion{1.3}{… \endinput}`;
+  //   run 340: 81 first errors, witnesses 2103.02487, 1310.1056, 2008.00343), `\lst@version` (:26, TL 2025's 1.11a);
+  // - :405-414, :458-459 `\lst@mode` (a count) and the modes `\lst@nomode`, `\lst@Pmode`, `\lst@GPmode`
+  //   (chardefs 0, 1, 2), which a literate replacement tests to color only outside strings and comments
+  //   (`\ifnum\lst@mode=\lst@Pmode\relax{\color{…}#1}\else#1\fi`; run 340: 42 first errors, witnesses
+  //   2508.14132, 2508.16318, 1811.09592) — never `\lst@Pmode` here, so the replacement's text as written;
+  // - :481 `\lst@token` (toks) and `\lst@length`, the current token, which keyword styles rewrite
+  //   (`\uppercase\expandafter{\expandafter\lst@token\expandafter{\the\lst@token}}`; run 340: 17 first errors,
+  //   witnesses 2004.05517, 2209.11103, 2109.02379) — empty: the binding styles the token itself;
+  // - :993-997 `\lst@SaveOutputDef{<charcode>}\cs`, the output of a character in a listing, saved for a
+  //   replacement to print (`\lst@SaveOutputDef{`_}\underscore@prolog`; run 340: 50 first errors, witnesses
+  //   2508.15166, 2407.20413, 2411.16111): the character itself.
+  RawTeX!(r"\def\lst@version{1.11a}
+\def\lst@CheckVersion#1{\edef\reserved@a{#1}\ifx\lst@version\reserved@a\expandafter\@gobble\else\expandafter\@firstofone\fi}
+\newcount\lst@mode \chardef\lst@nomode=0 \chardef\lst@Pmode=1 \chardef\lst@GPmode=2 \lst@mode=\lst@nomode
+\newtoks\lst@token \newcount\lst@length
+\def\lst@SaveOutputDef#1#2{\begingroup\lccode`\~=#1\relax\lowercase{\endgroup\edef#2{\string~}}}");
+  // More of listings' internals that literate replacements, styles and add-on packages call (G3 binding gaps, run 340
+  // inventory), each as the binding's model makes it — no mode stack, no output boxes, every token output by the
+  // binding itself:
+  // - :431-449 `\lst@InterruptModes`/`\lst@ReenterModes`, which leave and re-enter the current modes around an escape:
+  //   no mode is ever entered here (`\lst@mode` stays `\lst@nomode`, above), so there is nothing to leave or re-enter;
+  // - :770-772 `\lst@PrintToken` and :561-570 `\lst@CalcLostSpaceAndOutput`, which output the pending token or box:
+  //   nothing is pending (`\lst@token` is empty, above);
+  // - :793-794 `\lst@whitespacetrue`/`false` (a literate `{->}{{$\to$\lst@whitespacefalse}}1`, 2012.14984,
+  //   2206.00658) and :1697-1698 `\lst@boxtrue`/`false` (2504.10323), their switches;
+  // - :1599 `\lst@label` (`\@empty` outside a listing, as the PreSet hook leaves it: the binding keeps the `label`
+  //   key itself; 2505.04744's fancyvrb `formatcom` tests it), :1735 `\lst@aboveskip` (the key's default
+  //   `\medskipamount`; 2608.14263), lstmisc.sty:1755 `\lst@frametextsep` (3pt) and :532 `\lst@width` (a dimen, zero
+  //   outside a listing; 1704.06338's dbk_verbatim.sty reads both);
+  // - lstmisc.sty:1880-1907 `\lst@FVConvert<text>\@nil`, which appends a fancyvrb line to `\lst@arg` as listings
+  //   input, and :1743/:1802 `\lst@Init`/`\lst@DeInit`, which open and close a listing's group: here the line is
+  //   appended as it is and the listing is that group. mmacells.sty:619-636 builds its inline cells from them and the
+  //   hooks below (`\lsthk@PreSet\lstset{…}\lsthk@TextStyle\lst@Init\relax…\lst@DeInit`, as `\lstinline`,
+  //   :1944-1945; 1705.02863, 1712.09863, 1806.04503, 2012.00279, 2012.07851 — 9 errors per paper).
+  RawTeX!(r"\def\lst@InterruptModes{}\def\lst@ReenterModes{}\def\lst@PrintToken{}\def\lst@CalcLostSpaceAndOutput{}
+\def\lst@whitespacetrue{\global\let\lst@ifwhitespace\iftrue}\def\lst@whitespacefalse{\global\let\lst@ifwhitespace\iffalse}
+\lst@whitespacetrue
+\def\lst@boxtrue{\let\lst@ifbox\iftrue}\def\lst@boxfalse{\let\lst@ifbox\iffalse}\lst@boxfalse
+\let\lst@label\@empty \def\lst@aboveskip{\medskipamount}\def\lst@frametextsep{3pt}\newdimen\lst@width
+\def\lst@FVConvert#1\@nil{\expandafter\def\expandafter\lst@arg\expandafter{\lst@arg#1}}\let\lst@arg\@empty
+\def\lst@Init#1{\begingroup}\def\lst@DeInit{\endgroup}");
 
   // \lstnewenvironment — define new listing environments
   // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })
   // Creates \begin{name} macro that digests start code (with arg substitution),
   // then reads raw lines and processes the listing display.
-  DefPrimitive!("\\lstnewenvironment {}[Number][] DefPlain DefPlain", sub[(name, n_arg, opt_arg, start_code, end_code)] {
+  // Standard LaTeX and listings.sty:2204-2207 also define the bare \name and \endname
+  // (e.g. codebox.sty:347 \codeviewaux / \endcodeviewaux within an outer environment).
+  // The two codes are read as `{}` and packed here rather than as Perl's
+  // `DefPlain`: listings.sty:2194-2198 reads them as macro ARGUMENTS
+  // (`\lstnewenvironment@`), not as definition bodies, so a file that ends
+  // inside one is not tex.web's "File ended while scanning definition" (whose
+  // recovery `}` would let the end code read on into the enclosing file); it
+  // keeps the stop at the file's end (scanner_status, batch W9).
+  DefPrimitive!("\\lstnewenvironment {}[Number][] {} {}", sub[(name, n_arg, opt_arg, start_code, end_code)] {
+    let start_code = start_code.pack_parameters()?;
+    let end_code = end_code.pack_parameters()?;
     let env_name = name.to_string();
     let n: usize = n_arg.value_of() as usize;
     // Build parameter spec matching Perl's convertLaTeXArgs($n, $opt).
@@ -2295,20 +3215,51 @@ LoadDefinitions!({
       for _ in 0..n { param_spec.push_str("{}"); }
     }
     let cs = T_CS!(s!("\\begin{{{env_name}}}"));
+    let cs_bare = T_CS!(s!("\\{env_name}"));
     let params = if param_spec.is_empty() {
       None
     } else {
       parse_parameters(&param_spec, &cs, true)?
     };
+    let params_bare = if param_spec.is_empty() {
+      None
+    } else {
+      parse_parameters(&param_spec, &cs_bare, true)?
+    };
     // Move start_code / end_code / env_name directly into the closure
     // capture — none are used outside, so three setup-time clones are
     // avoided per `\lstnewenvironment` definition.
-    let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+    // The begin macro returns TOKENS that run in the main stream — `{`,
+    // `\lx@setcurrenvir`, the substituted start code, then
+    // `\lx@lstenv@body{name}{outer}{end code}` — instead of digesting the start
+    // code in an isolated mouth (Perl listings.sty.ltxml `Digest($start…)`).
+    // A mode-switching start code (`\mdframed`, `\begin{minipage}`, cnltx's
+    // `sourcecode` frame) is a constructor whose body must extend over the
+    // listing that follows; digested in isolation it closed empty (the
+    // frame element vanished) and its end code then met the display
+    // wrapper's `{` ("Attempt to end mode internal_vertical" ×900 in
+    // cnltx_en, chemnum, pixelart, modiagram, tasks). `\lx@lstenv@body`
+    // captures the raw lines only after the start code has run, so
+    // `\lstset` keys in it still govern the display, and it pushes the
+    // postamble locally inside the `{` group.
+    // Two entry points, one discriminator. The BARE `\name` (tcolorbox's
+    // `\DeclareTCBListing` invoked inside a `\NewDocumentEnvironment` wrapper,
+    // codebox.sty:347) terminates at the ENCLOSING environment's `\end{outer}` —
+    // listings.sty:2211-2215 `\lstenv@endstring` compares against `\@currenvir`,
+    // which the bare form never changed. The magic `\begin{name}` form IS its own
+    // `\@currenvir`, so it terminates only at `\end{name}`/`\endname` and a literal
+    // `\end{document}` inside the listing is verbatim content (pdflatex prints it).
+    // `sect01.rs` does not run `\lx@setcurrenvir` before this closure on the magic
+    // branch, so `current_environment` still names the enclosing environment there;
+    // reading it for `\begin{name}` truncated a top-level listing (and the rest of
+    // the document) at `\end{document}`. Guard:
+    // `perfect_kernel_batch56::lstnewenvironment_begin_form_keeps_literal_end_document`.
+    let build_expansion = |is_bare: bool| -> Option<ExpansionBody> {
+    let closure_env_name = env_name.clone();
+    let start_code = start_code.clone();
+    let end_code = end_code.clone();
+    Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
-        bgroup();
-        assign_value("current_environment", Stored::String(pin(&env_name)), None);
-        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!(&env_name)), None)?;
-        // Convert expansion args to format for substitute_parameters
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
           .map(|a| match a {
             ArgWrap::None => None,
@@ -2317,45 +3268,182 @@ LoadDefinitions!({
             other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
           })
           .collect();
-        // Perl: lstPushValueLocally(LISTINGS_POSTAMBLE => $end->substituteParameters(@args))
-        if !end_code.is_empty() {
-          let end_subst = end_code.substitute_parameters(&sub_args);
-          lst_push_value_locally("LISTINGS_POSTAMBLE", end_subst.unlist());
-        }
-        // Perl: Digest($start->substituteParameters(@args))
-        // This executes \lstset{...} which activates language, styles, etc.
+        let outer_env: Option<String> = if !is_bare { None } else { lookup_value("current_environment").and_then(|v| {
+          if let Stored::String(s) = v {
+            let str_val = with(s, |s| s.to_string());
+            if str_val != closure_env_name && !str_val.is_empty() {
+              Some(str_val)
+            } else {
+              None
+            }
+          } else {
+            None
+          }
+        }) };
+        // The environment's group is the `\begingroup` TOKEN (as
+        // `\begin{lstlisting}`, `lst_group_opener`) and `\lx@lstenv@body`
+        // closes it with `\endgroup`. A `{` here with 54x's
+        // `\lx@hidden@egroup` closer left align_state +1 per listing, so in a
+        // tabular the `&` after a listings cell was never a column end
+        // (lexref: ltxdockit's `ltxcode` cells, sweep-37 regression). Guard:
+        // `perfect_kernel_batch54::listings_environment_cell_ends_at_the_tab`.
+        let mut out = vec![T_CS!("\\begingroup")];
+        out.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokens::new(ExplodeText!(&closure_env_name))]).unlist());
         if !start_code.is_empty() {
-          let start_subst = start_code.substitute_parameters(&sub_args);
-          let _digested = digest(start_subst)?;
+          out.extend(start_code.substitute_parameters(&sub_args).unlist());
         }
-        let text = listings_read_raw_lines(&env_name);
-        let name = lst_get_tokens("name");
-        let name_opt = if name.is_empty() { None } else { Some(name) };
-        let result = lst_process_display(name_opt, &text);
-        Ok(Tokens::new(result))
+        let end_subst = if end_code.is_empty() {
+          Tokens::new(Vec::new())
+        } else {
+          end_code.substitute_parameters(&sub_args)
+        };
+        let outer_str = outer_env.unwrap_or_default();
+        out.extend(Invocation!(T_CS!("\\lx@lstenv@body"),
+          vec![
+            Tokens::new(ExplodeText!(&closure_env_name)),
+            Tokens::new(ExplodeText!(&outer_str)),
+            end_subst
+          ]).unlist());
+        Ok(Tokens::new(out))
       }
-    )));
-    def_macro(cs, params, expansion, None)?;
+    )))
+    };
+    def_macro(cs_bare, params_bare, build_expansion(true), None)?;
+    def_macro(cs, params, build_expansion(false), None)?;
+    let end_cs = T_CS!(s!("\\end{{{env_name}}}"));
+    let end_bare_cs = T_CS!(s!("\\end{env_name}"));
+    def_macro(
+      end_cs,
+      None,
+      ExpansionBody::Tokens(Tokens::new(Vec::new())),
+      None,
+    )?;
+    def_macro(
+      end_bare_cs,
+      None,
+      ExpansionBody::Tokens(Tokens::new(Vec::new())),
+      None,
+    )?;
+  });
+
+  // Second half of `\lstnewenvironment`'s begin: runs after the start code,
+  // inside the `{` group the begin macro opened. Reads the raw listing body,
+  // records the end code as the postamble (locally — undone at the `}`),
+  // and emits the display followed by that postamble and the closing `}`.
+  DefMacro!("\\lx@lstenv@body{}{}{}", sub[(name, outer, end_code)] {
+    let env_name = name.to_string();
+    let outer_str = outer.to_string();
+    let outer_opt = if outer_str.is_empty() { None } else { Some(outer_str.as_str()) };
+    let post: Vec<Token> = if end_code.is_empty() { Vec::new() } else { end_code.unlist() };
+    // The END code is emitted as plain trailing tokens (below), NOT armed as
+    // the shared `LISTINGS_POSTAMBLE`: every listing display re-reads that
+    // slot as its trailer, so an end code that itself displays a listing
+    // (exsheets-listings.sty:89-112 `lstquestion` = `\lst@EndWriteFile
+    // \begin{question}…\lstinputlisting{\jobname-exN.lst}…`) re-emitted the end
+    // code from inside the nested display, opening a new question per turn
+    // until `Fatal:Stomach:Recursion` (exsheets_en, sweep 39; pdflatex clean,
+    // Perl escapes only because it never writes the round-trip file).
+    // Guard: `perfect_kernel_batch56::lstnewenvironment_end_code_with_a_listing_does_not_recurse`.
+    let text = listings_read_raw_lines_with_outer(&env_name, outer_opt);
+    // The flag is the environment's own: `\lxtcblistingmode` sets it in a tcolorbox box's start code,
+    // and it is taken here — before a diverted body returns below — so a later plain
+    // `\lstnewenvironment` (no tcolorbox mode) does not execute its body as well
+    // (`\newtcblisting{demo}{}` then `\lstnewenvironment{plain}{}{}`: the plain body was typeset a
+    // second time as text). Guards
+    // `perfect_kernel_batch77m::{plain_lstnewenvironment_after_a_tcb_box_does_not_run_its_body,
+    // plain_lstnewenvironment_after_a_diverted_tcb_box_does_not_run_its_body}`.
+    let execute = lookup_bool("LISTINGS_EXECUTE_BODY");
+    AssignValue!("LISTINGS_EXECUTE_BODY" => false, Scope::Global);
+    if !lst_writefile_tee(&text) {
+      // A body diverted to a file (`\lst@BeginWriteFile`, lstmisc.sty:30-70)
+      // is not displayed, but the environment still owes its END code: the
+      // showexpl/pst-exa idiom opens `\setbox\@tempboxa=\hbox\bgroup` in the
+      // start code and closes it with `\lst@EndWriteFile\egroup
+      // \SX@put@code@result` in the end code (pst-exa.sty:163-170). Dropping
+      // it left the `\hbox` open and lost the read-back result (pst-exa-doc).
+      // Guard: `perfect_kernel_batch56::lstnewenvironment_writefile_runs_the_end_code`.
+      // A tcolorbox box still runs its text part (`listing and text`): only the listing is diverted
+      // (pdflatex prints the box's text, no code).
+      let mut out = if execute {
+        lst_run_body_via_input(&env_name, &text)?.unlist()
+      } else {
+        Vec::new()
+      };
+      out.extend(post);
+      out.push(T_CS!("\\endgroup"));
+      return Ok(Tokens::new(out));
+    }
+    let lname = lst_get_tokens("name");
+    let name_opt = if lname.is_empty() { None } else { Some(lname) };
+    let mut out = lst_process_display_scoped(name_opt, &text);
+    if !post.is_empty() {
+      let closer = out.pop();
+      out.extend(post);
+      out.extend(closer);
+    }
+    // tcolorbox listings default to `listing and text` (tcblistingscore
+    // .code.tex:429 → :205 `\tcbuselistingtext` = `\input{\kvtcb@listingfile}`,
+    // :25): the body is displayed AND executed. `\lxtcblistingmode` sets the
+    // flag from the resolved options; the execution runs after the display
+    // and its postamble, inside the environment's group (postit's PostItNote
+    // pictures never ran, so their `remember picture` coordinates were
+    // "No shape named"). Guard:
+    // `perfect_kernel_batch56::tcblisting_listing_and_text_executes_the_body`.
+    // The execution runs inside the environment's group, like the real
+    // `\tcbuselistingtext` inside its box: local definitions stay local,
+    // `\global` ones (pgf's `remember picture` node registrations, postit)
+    // escape as in TeX.
+    // (the execute flag, taken above)
+    if execute {
+      let closer = out.pop();
+      // tcolorbox's resolved `before lower*`/`after lower*` wrapper around the
+      // executed part (`tikz lower`, tcolorbox.sty:712); empty for every other
+      // box, absent without tcolorbox.
+      let wrapped = lookup_meaning(&T_CS!("\\lx@tcb@execbefore")).is_some();
+      if wrapped {
+        out.push(T_CS!("\\lx@tcb@execbefore"));
+      }
+      out.extend(lst_run_body_via_input(&env_name, &text)?.unlist());
+      if wrapped {
+        out.push(T_CS!("\\lx@tcb@execafter"));
+      }
+      out.extend(closer);
+    }
+    if outer_opt.is_none() {
+      let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+      end_tokens.extend(ExplodeText!(&env_name));
+      end_tokens.push(T_END!());
+      unread_expansion(Tokens::new(end_tokens));
+    }
+    Ok(Tokens::new(out))
   });
 
   //======================================================================
   // Region 3: Display processing constructors (Perl lines 155-271)
   //======================================================================
 
-  // Caption macros
+  // Caption macros. The list entry is the `[short]`, or the caption without one, chosen as the kernel's
+  // `\@caption@@@` does (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
+  // listings.sty:1675 `\def\lst@makecaption{\def\@captype{lstlisting}\@makecaption}`: the caption is the class's
+  // `\@makecaption`'s (`\lx@makecaption`, latex_constructs_rust_only.rs: "Listing 1: text", amsart's and IEEEtran's
+  // "Listing 1. text"), and caption's when caption is loaded, which formats listings' captions as a float's
+  // (`\lx@format@caption@@`, caption_sty.rs; caption.sty supports listings), where Perl's binding keeps
+  // "Listing 1: text" for every class (listings.sty.ltxml:221-227). Guards
+  // `perfect_kernel_batch78y::{ieeetran_listings_caption_takes_the_figure_format, caption_settings_reach_a_listing}`.
   DefMacro!("\\lstlisting@makecaption[]{}",
     "\\def\\@captype{lstlisting}\
      \\@@add@caption@counters\
-     \\@@toccaption{\\lx@format@toctitle@@{lstlisting}{\\ifx.#1.#2\\else#1\\fi}}\
-     \\@@caption{\\lx@format@title@@{lstlisting}{#2}}");
+     \\@@toccaption{\\lx@format@toctitle@@{lstlisting}{\\lx@toc@copy@text{#1}{#2}}}\
+     \\lx@@caption{\\lx@format@caption@@{lstlisting}{#2}}");
   DefMacro!("\\fnum@lstlisting", "\\lstlistingname\\nobreakspace\\thelstlisting");
-  DefMacro!("\\format@title@lstlisting{}", "\\lx@tag[][: ]{\\fnum@lstlisting}#1");
-  DefMacro!("\\lstlisting@maketitle{}", "\\@@toccaption{#1}\\@@caption{#1}");
-  DefMacro!("\\lstlisting@maketoctitle{}", "\\@@toccaption{#1}");
+  DefMacro!("\\format@title@lstlisting{}", "\\lx@makecaption{lstlisting}{#1}");
+  // The toc copy is digested with notes and `\label` neutralized (DIVERGENCES #399; 2605.15775).
+  DefMacro!("\\lstlisting@maketitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize\\lx@reread@copy#1}}\\lx@@caption{#1}");
+  DefMacro!("\\lstlisting@maketoctitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize#1}}");
   DefMacro!("\\lstlistingname", "Listing");
   DefMacro!("\\lstlistlistingname", "Listings");
   def_macro_noop("\\thename")?;
-  DefMacro!("\\lstnumbertyperefname", "line");
+  DefMacro!("\\lstnumbertyperefname", "\\lx@latin@name{line}");
   def_macro_noop("\\lst@HRefStepCounter{}")?;
   // \lstname — placeholder for the current listing's filename (set inside
   // lstlisting/lstinputlisting bodies via the runtime \def\lstname{...}
@@ -2364,21 +3452,42 @@ LoadDefinitions!({
   // contexts before any listing has been opened. Driver: 1903.02915 R=1 → R=0.
   def_macro_noop("\\lstname")?;
 
-  // Inline listing constructor
+  // Inline listing constructor. A listing's characters are boxed column by column (listings' default
+  // `columns=fixed`), so no TeX ligature forms in its code: `cout << x`, `a -- b` print as typed (pdflatex), where the
+  // roman default `basicstyle` would otherwise ligate them to « and – (`_noligatures`, document.rs
+  // `apply_text_ligatures`; on the listing lines below too). `columns=flexible` would ligate; not modelled. Guard
+  // `perfect_kernel_batch60::listing_code_is_not_ligatured`.
   DefConstructor!("\\@listings@inline {}",
-    "<ltx:text class='ltx_lstlisting' _noautoclose='1'>#1</ltx:text>",
+    "<ltx:text class='ltx_lstlisting' _noautoclose='1' _noligatures='1'>#1</ltx:text>",
     enter_horizontal => true,
     reversion => "\\lstinline{#1}");
 
-  // Numbered float form
+  // Numbered float form. `^^` float-up as the kernel floats (KPE #190): a
+  // `\lstinputlisting` (always a `lol` float, Perl listings.sty.ltxml:131)
+  // inside `quote` escapes to the nearest float-bearing container (bashful:
+  // minipage > quote > listing).
   DefConstructor!("\\@listings {}",
-    "<ltx:float inlist='lol' xml:id='#id' class='ltx_lstlisting'>\
+    "^^<ltx:float inlist='lol' xml:id='#id' class='ltx_lstlisting'>\
      #tags\
      #1\
      </ltx:float>",
     mode => "internal_vertical",
     before_digest => {
-      engine::latex_constructs::before_float("lstlisting", None);
+      engine::latex_constructs::before_untyped_float("lstlisting")?;
+    },
+    after_digest => sub[whatsit] {
+      engine::latex_constructs::after_float(whatsit);
+    });
+  // The numbered form of a `nolol` listing: numbered, in no list (`lst_process_display_with`
+  // chooses it while the listing's keys are in force; KNOWN_PERL_ERRORS #988).
+  DefConstructor!("\\lx@listings@unlisted {}",
+    "^^<ltx:float xml:id='#id' class='ltx_lstlisting'>\
+     #tags\
+     #1\
+     </ltx:float>",
+    mode => "internal_vertical",
+    before_digest => {
+      engine::latex_constructs::before_untyped_float("lstlisting")?;
     },
     after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
@@ -2386,7 +3495,7 @@ LoadDefinitions!({
 
   // Unnumbered float form (with caption)
   DefConstructor!("\\@@listings {}",
-    "<ltx:float xml:id='#id' class='ltx_lstlisting'>\
+    "^^<ltx:float xml:id='#id' class='ltx_lstlisting'>\
      #tags\
      #1\
      </ltx:float>",
@@ -2395,7 +3504,7 @@ LoadDefinitions!({
       RefStepID!("lstlisting")?
     },
     before_digest => {
-      engine::latex_constructs::before_float("lstlisting", None);
+      engine::latex_constructs::before_untyped_float("lstlisting")?;
     },
     after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
@@ -2411,10 +3520,19 @@ LoadDefinitions!({
   // observable XML identical. Intentional afterDigest → properties
   // kind-translation so the count-diff audit (Perl 3 vs Rust 2
   // `after_digest`) is a documented false positive.
+  // A listing starts: listings makes `\@currentlabel` its line number's (lstmisc.sty:1228 `\lst@Init`, and
+  // `\refstepcounter{lstnumber}` per line, :1225), so a `\label` in it names no raw step made before it
+  // (`forget_raw_refstep`; a `\refstepcounter{problem}` then an unnumbered `lstlisting` with `(*\label{ln1}*)`
+  // named the problem, 41; pdflatex the line's 2, which an unnumbered `ltx:listingline` does not carry —
+  // OXIDIZED_DESIGN_DIVERGENCES #813). A tcolorbox listing box notes its own step again where its phantom code runs
+  // (`with_tcb_phantom`, `\lx@lst@renote@raw@refstep`; 2609.20563).
   DefConstructor!("\\@@listings@block {} {} {}",
     "<ltx:listing class='ltx_lstlisting' data='#lstdata' datamimetype='#lstmime' \
      dataencoding='#lstenc' dataname='#3'>#2</ltx:listing>",
     mode => "internal_vertical",
+    before_digest => {
+      forget_raw_refstep();
+    },
     properties => sub[args] {
       // Try multiple indices to find the counter
       let c = args.iter()
@@ -2430,16 +3548,29 @@ LoadDefinitions!({
         .map(|v| v.to_string())
         .unwrap_or_default();
       let encoded = base64::engine::general_purpose::STANDARD.encode(text.as_bytes());
-      Ok(stored_map!("lstdata" => Stored::String(pin(&encoded)),
+      let mut props = stored_map!("lstdata" => Stored::String(pin(&encoded)),
         "lstmime" => Stored::String(pin("text/plain")),
-        "lstenc" => Stored::String(pin("base64"))))
-    });
+        "lstenc" => Stored::String(pin("base64")));
+      // The listing's own settings, for its size ([`lst_block_size`]), read while they are in force.
+      props.insert("lst_aboveskip", Stored::Dimension(lst_skip("aboveskip")?));
+      props.insert("lst_belowskip", Stored::Dimension(lst_skip("belowskip")?));
+      props.insert("lst_breaklines", Stored::Bool(lst_get_boolean("breaklines")));
+      Ok(props)
+    },
+    sizer => sub[whatsit] { lst_block_size(whatsit) });
+
+  // The box's step, which the listing's start forgot (`forget_raw_refstep`), named by the label of a tcolorbox listing
+  // box's phantom code (`with_tcb_phantom`): tcolorbox runs that code in the box before the listing
+  // (tcolorbox.sty:1154-1161, :1925).
+  DefPrimitive!("\\lx@lst@renote@raw@refstep", {
+    renote_forgotten_raw_refstep();
+  });
 
   // List of listings
   DefConstructor!("\\lstlistoflistings",
     "<ltx:TOC lists='lol' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
-      let name_toks = DigestIf!(T_CS!("\\lstlistlistingname"))?;
+      let name_toks = digest_in_group_if(T_CS!("\\lstlistlistingname"))?;
       stored_map!("name" => name_toks)
     });
 
@@ -2450,9 +3581,18 @@ LoadDefinitions!({
   // 4.3 Space and placement
   DefKeyVal!("LST", "float", "");
   DefKeyVal!("LST", "floatplacement", "");
-  DefKeyVal!("LST", "aboveskip", "Dimension");
-  DefKeyVal!("LST", "belowskip", "Dimension");
-  DefKeyVal!("LST", "lineskip", "Dimension");
+  // listings stores every length key as a MACRO, not a dimen
+  // (lstmisc.sty:1193 `\lst@Key{numbersep}{10pt}{\def\lst@numbersep{#1}}`,
+  // likewise aboveskip/belowskip/lineskip/linewidth/x*margin/break*/frame*/
+  // rulesep), so `numbersep=\dimexpr-5pt+\addnumbersep\relax` may name a
+  // macro defined only LATER (abntexto-uece.tex:402/406). Perl's
+  // `DefKeyVal('LST','numbersep','Dimension')` (listings.sty.ltxml:875) evaluates
+  // at \lstset time — SHARED failure; pdflatex is clean. Nothing reads these
+  // keys as dimensions, so store the tokens as listings does.
+  // Guard: `perfect_kernel_batch56::listings_length_keys_are_lazy`.
+  DefKeyVal!("LST", "aboveskip", "");
+  DefKeyVal!("LST", "belowskip", "");
+  DefKeyVal!("LST", "lineskip", "");
   DefKeyVal!("LST", "boxpos", "");
 
   // 4.4 Printed range
@@ -2507,7 +3647,7 @@ LoadDefinitions!({
   DefKeyVal!("LST", "stepnumber", "Number");
   DefKeyVal!("LST", "numberfirstline", "", "true");
   DefKeyVal!("LST", "numberstyle", "");
-  DefKeyVal!("LST", "numbersep", "Dimension");
+  DefKeyVal!("LST", "numbersep", "");
   DefKeyVal!("LST", "numberblanklines", "", "true");
   DefKeyVal!("LST", "firstnumber", "");
   DefKeyVal!("LST", "name", "Semiverbatim");
@@ -2518,18 +3658,79 @@ LoadDefinitions!({
   DefKeyVal!("LST", "label", "Semiverbatim");
   DefKeyVal!("LST", "nolol", "", "true");
   DefKeyVal!("LST", "captionpos", "");
-  DefKeyVal!("LST", "abovecaptionskip", "Dimension");
-  DefKeyVal!("LST", "belowcaptionskip", "Dimension");
+  DefKeyVal!("LST", "abovecaptionskip", "");
+  DefKeyVal!("LST", "belowcaptionskip", "");
 
   // 4.10 Margins and line shape
-  DefKeyVal!("LST", "linewidth", "Dimension");
-  DefKeyVal!("LST", "xleftmargin", "Dimension");
-  DefKeyVal!("LST", "xrightmargin", "Dimension");
+  DefKeyVal!("LST", "linewidth", "");
+  DefKeyVal!("LST", "xleftmargin", "");
+  DefKeyVal!("LST", "xrightmargin", "");
+  // Real \lst@Key{xleftmargin} stores the value as \lst@xleftmargin; raw
+  // styles read it directly (bohr/cntformats family, 8 bundles). Default 0pt.
+  RawTeX!(r"\def\lst@xleftmargin{0pt}\def\lst@xrightmargin{0pt}");
+  // Internal line-number step for the display constructor stream — locked so
+  // user-level \stepcounter wrappers can't intercept it (see the emitter in
+  // lst_process_display's newline handling).
+  DefPrimitive!(T_CS!("\\lx@lst@stepnumber"), None, {
+    let _ = step_counter("lstnumber", true);
+  }, locked => true);
+  // Its initializer twin (listings.sty L1516 `\global\c@lstnumber=…`), emitted
+  // at the head of every block listing by `lst_process`.
+  DefPrimitive!("\\lx@lst@setnumber{Number}", sub[(n)] {
+    SetCounter!("lstnumber", n);
+  }, locked => true);
+
+  // listings write-file aspect (lstmisc.sty L30-70): `\lst@BeginWriteFile
+  // {file}` / `\lst@BeginAlsoWriteFile{file}` tee the NEXT listing bodies
+  // into <file> until `\lst@EndWriteFile`. The real implementation hooks the
+  // token-scanner (`\lst@Append`); ours tees the captured raw text at
+  // display time (see the lstlisting/lstnewenvironment capture sites).
+  // Consumers write the example then `\input` it back to EXECUTE it —
+  // cnltx-example.sty L702-718 (`\cnltx@source@input@start{\jobname.tmp}`),
+  // the bohr/cnltx manual family (32 docs, `\endmdframed` cascade rooted in
+  // `undefined:\lst@BeginAlsoWriteFile`).
+  // `\lst@WFBegin` (lstmisc.sty L60-64) runs `\immediate\openout\lst@WF=#2`
+  // unless `\lst@WFifopen` — every FRESH begin truncates the file, and only
+  // the listings within one begin/end span accumulate. forest-doc.sty:59
+  // re-begins `\jobname.tmp` per example; without the truncation a frozen
+  // `\usepackage[linguistics]{forest}` line was re-`\input` 440× (witness:
+  // forest-doc, 1001 errors + TooManyErrors).
+  // The aspect's commands are installed under their listings names only when
+  // the aspect is required (`require_listings_aspects`): without it real
+  // listings leaves `\lst@BeginWriteFile` undefined, and so do we (pst-exa-doc
+  // relies on showexpl having required it).
+  DefPrimitive!("\\lx@lst@BeginWriteFile{}", sub[(file)] {
+    let f = do_expand(file)?.to_string();
+    lst_writefile_open(f.trim());
+    assign_value("LST@WF@also", Stored::from(false), Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@lst@BeginAlsoWriteFile{}", sub[(file)] {
+    let f = do_expand(file)?.to_string();
+    lst_writefile_open(f.trim());
+    assign_value("LST@WF@also", Stored::from(true), Some(Scope::Global));
+  });
+  DefPrimitive!(T_CS!("\\lx@lst@EndWriteFile"), None, {
+    assign_value("LST@WF@file", Stored::String(pin("")), Some(Scope::Global));
+  });
+  // Catcode-robust aliases for injection into GENERATED env start/end code
+  // that gets tokenized under DOCUMENT catcodes (tcolorbox
+  // tcb_listing_startend): at a document-level `\newtcblisting` call `@` is
+  // OTHER, which would split `\lst@BeginAlsoWriteFile` into `\lst` + text
+  // (witness: doc-level `use counter`/`listing file` min-repro). The tee is
+  // our tcolorbox binding's own, so it needs no aspect.
+  DefMacro!("\\lxlstbeginwritefile{}", "\\lx@lst@BeginAlsoWriteFile{#1}");
+  DefMacro!("\\lxlstendwritefile", "\\lx@lst@EndWriteFile");
+  // listings.sty:2294-2309: a package option names an aspect to load
+  // (`\RequirePackage[writefile]{listings}`, lstdoc.sty:14); `!<aspect>` drops one.
+  DeclareOption!(None, {
+    require_listings_aspects(&Expand!(T_CS!("\\CurrentOption")).to_string());
+  });
+  ProcessOptions!();
   DefKeyVal!("LST", "resetmargins", "");
   DefKeyVal!("LST", "breaklines", "", "true");
   DefKeyVal!("LST", "prebreak", "");
   DefKeyVal!("LST", "postbreak", "");
-  DefKeyVal!("LST", "breakindent", "Dimension");
+  DefKeyVal!("LST", "breakindent", "");
   DefKeyVal!("LST", "breakautoindent", "", "true");
   DefKeyVal!("LST", "breakatwhitespace", "", "true");
   DefKeyVal!("LST", "tabs", "");
@@ -2543,13 +3744,13 @@ LoadDefinitions!({
   // 4.11 Frames
   DefKeyVal!("LST", "frame", "");
   DefKeyVal!("LST", "framearound", "");
-  DefKeyVal!("LST", "framesep", "Dimension");
-  DefKeyVal!("LST", "rulesep", "Dimension");
-  DefKeyVal!("LST", "framerule", "Dimension");
-  DefKeyVal!("LST", "framexleftmargin", "Dimension");
-  DefKeyVal!("LST", "framexrightmargin", "Dimension");
-  DefKeyVal!("LST", "framextopmargin", "Dimension");
-  DefKeyVal!("LST", "framexbottommargin", "Dimension");
+  DefKeyVal!("LST", "framesep", "");
+  DefKeyVal!("LST", "rulesep", "");
+  DefKeyVal!("LST", "framerule", "");
+  DefKeyVal!("LST", "framexleftmargin", "");
+  DefKeyVal!("LST", "framexrightmargin", "");
+  DefKeyVal!("LST", "framextopmargin", "");
+  DefKeyVal!("LST", "framexbottommargin", "");
   DefKeyVal!("LST", "backgroundcolor", "");
   DefKeyVal!("LST", "rulecolor", "");
   DefKeyVal!("LST", "fillcolor", "");
@@ -2674,8 +3875,18 @@ LoadDefinitions!({
   //======================================================================
 
   DefConstructor!("\\@lst@startline{}",
-    "<ltx:listingline xml:id='#id'>#1",
-    properties => { RefStepID!("lstnumber")? });
+    "<ltx:listingline xml:id='#id' _noligatures='1'>#1",
+    properties => {
+      let mut props = RefStepID!("lstnumber")?;
+      // The line's metrics where they are in force, after the listing's `basicstyle` (`\footnotesize` makes
+      // `\baselineskip` 9.5pt), for the block's size ([`lst_block_size`]).
+      for (key, register) in [("lst_baselineskip", "\\baselineskip"), ("lst_linewidth", "\\linewidth")] {
+        if let Ok(Some(value)) = lookup_register(register, Vec::new()) {
+          props.insert(key, Stored::Dimension(Dimension::new(value.value_of())));
+        }
+      }
+      props
+    });
   DefConstructor!("\\@lst@endline", "</ltx:listingline>");
   DefConstructor!("\\@lst@linenumber{}",
     "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>");
@@ -3023,12 +4234,17 @@ LoadDefinitions!({
       stored_map!("frame" => Stored::String(pin(&frame)))
     });
 
-  // Background color handler
+  // Background color handler. listings stores the colour command and runs it
+  // when a listing is drawn (listings.sty `\lst@bkgcolor`, `\lst@rulecolor`), so
+  // the tokens are kept here and resolved by `lst_extract_color` at the listing:
+  // a class may name a colour it defines later in the preamble (easybase.sty:
+  // 2419 `rulecolor = \color{ctex@frame}` under `\lstset{style=…}`, :2439 defines
+  // it; easybook, TeX Live class census 2026-09-24). Perl digests at `\lstset`
+  // time (listings.sty.ltxml:945-953) and errs alike.
   DefPrimitive!("\\lst@@backgroundcolor Until:\\end", sub [args] {
     let cmd_toks = args[0].clone().owned_tokens().unwrap_or(Tokens!());
-    let color = lst_extract_color(&cmd_toks);
-    if let Some(c) = color {
-      assign_value("LISTINGS_BACKGROUND", Stored::String(pin(&c)), Some(Scope::Global));
+    if !cmd_toks.is_empty() {
+      assign_value("LISTINGS_BACKGROUND", Stored::Tokens(cmd_toks), Some(Scope::Global));
     }
     lst_push_value_locally("LISTINGS_PREAMBLE_BEFORE", vec![T_CS!("\\lst@@@set@background")]);
   });
@@ -3042,8 +4258,9 @@ LoadDefinitions!({
     // when an inline listing runs first — so a following block listing still
     // renders its background, matching Perl.
     if lookup_value("LISTINGS_INLINE").is_none() {
-      if let Some(Stored::String(bg)) = lookup_value("LISTINGS_BACKGROUND")
-        && let Some(c) = with(bg, common::color::Color::from_stored) {
+      if let Some(Stored::Tokens(cmd)) = lookup_value("LISTINGS_BACKGROUND")
+        && let Some(bg) = lst_extract_color(&cmd)
+        && let Some(c) = common::color::Color::from_stored(&bg) {
           merge_font(Font { bg: Some(c), ..Font::default() });
         }
       // Clear after use so subsequent listings don't inherit
@@ -3054,9 +4271,8 @@ LoadDefinitions!({
   // Rule color handler
   DefPrimitive!("\\lst@@rulecolor Until:\\end", sub [args] {
     let cmd_toks = args[0].clone().owned_tokens().unwrap_or(Tokens!());
-    let color = lst_extract_color(&cmd_toks);
-    if let Some(c) = color {
-      assign_value("LISTINGS_RULECOLOR", Stored::String(pin(&c)), None);
+    if !cmd_toks.is_empty() {
+      assign_value("LISTINGS_RULECOLOR", Stored::Tokens(cmd_toks), None);
     }
     lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@rulecolor")]);
   });
@@ -3072,7 +4288,10 @@ LoadDefinitions!({
       }
     },
     properties => {
-      let color = lookup_value("LISTINGS_RULECOLOR").map(|v| v.to_string()).unwrap_or_default();
+      let color = match lookup_value("LISTINGS_RULECOLOR") {
+        Some(Stored::Tokens(cmd)) => lst_extract_color(&cmd).unwrap_or_default(),
+        _ => String::new(),
+      };
       stored_map!("color" => Stored::String(pin(&color)))
     });
 
@@ -3095,10 +4314,13 @@ LoadDefinitions!({
     Tokens!()
   });
 
-  // texcl handler
+  // texcl handler; Perl listings.sty.ltxml:1047-1056 sets the comment classes' `eval` on `true` and deletes it
+  // otherwise, so `texcl=false` turns an inherited `texcl` off (minted's bodies, minted_sty.rs).
   DefMacro!("\\lst@@texcl Until:\\end", sub [args] {
     if args[0].eq_text("true") {
       assign_value("LST_CLASSES@comments@eval", Stored::Bool(true), None);
+    } else {
+      assign_value("LST_CLASSES@comments@eval", Stored::None, None);
     }
     Tokens!()
   });
@@ -3128,8 +4350,32 @@ LoadDefinitions!({
   });
 
   // escapechar handler
+  // An escape's TeX, read where the listing digests it (`tokenize_balanced`).
+  DefPrimitive!("\\lx@lst@escape{}", sub[(id)] {
+    if let Some(text) = lookup_value(&s!("lx@lst@escape@{}", id.to_string())) {
+      let text = text.to_string();
+      if !text.is_empty() {
+        // The text is one input of its own, not a line of the file: no `\endlinechar` after it, the current one
+        // restored once it is read (the restore waits in the enclosing mouth).
+        let endline = lookup_register("\\endlinechar", Vec::new())?.map_or(13, |value| value.value_of());
+        let mut restore = vec![T_CS!("\\endlinechar")];
+        restore.extend(Explode!(endline));
+        restore.push(T_CS!("\\relax"));
+        unread_vec(restore);
+        assign_register("\\endlinechar", Number::new(-1).into(), Some(Scope::Local), Vec::new())?;
+        open_mouth_with(Mouth::new(&text, None)?, true, BalancedBoundary::Opaque);
+      }
+    }
+  });
   DefMacro!("\\lst@@escapechar Until:\\end", sub [args] {
     let esc = lst_deslash(&args[0].to_string());
+    // `escapechar={}` CLEARS an inherited escape (listings' `\lst@@escapechar`
+    // re-lets the delimiter table; `\lstinputlisting[escapechar={}]` after a
+    // `\lstset{escapechar=*}` otherwise kept `*` live and executed a
+    // `\typeout{* Missing: \PAX@file}` as LaTeX — newpax, `\PAX` undefined).
+    // Perl's listings.sty.ltxml:1069 has the same latent gap (SHARED).
+    // Guard: `perfect_kernel_batch56::listings_escapechar_empty_clears`.
+    lst_set_defesc(&esc);
     if !esc.is_empty() {
       let esc_re = regex::escape(&esc);
       assign_value(&s!("LST_DELIM@{esc}@open"), Stored::String(pin(&esc_re)), None);
@@ -3146,11 +4392,21 @@ LoadDefinitions!({
   });
 
   // escapeinside handler
-  DefMacro!("\\lst@@escapeinside Until:\\end", "\\ifx.#1.\\else\\lst@@escapeinside@#1\\end\\fi");
+  // `escapeinside={}{}` (or an empty value) clears the escape, as listings'
+  // `\let\lst@DefEsc\@empty` does before it installs a non-empty pair
+  // (lstmisc.sty:343-347). codeanatomy.lstlisting's `\inputlisting`
+  // (`escapeinside={}{}`) otherwise kept the preamble's `!…!` escape live, ran
+  // the file's `!…!` spans as LaTeX and emptied its listing. Perl's
+  // listings.sty.ltxml:1080-1088 has the same gap (SHARED).
+  // Guard: `perfect_kernel_batch56::listings_escapeinside_empty_clears`.
+  DefMacro!("\\lst@@escapeinside Until:\\end",
+    "\\ifx.#1.\\lst@@escapeinside@{}{}\\end\\else\\lst@@escapeinside@#1\\end\\fi");
   DefMacro!("\\lst@@escapeinside@ {} {} Until:\\end", sub [args] {
     let esc1 = lst_deslash(&args[0].to_string());
     let esc2 = lst_deslash(&args[1].to_string());
-    if !esc1.is_empty() && !esc2.is_empty() {
+    let installs = !esc1.is_empty() && !esc2.is_empty();
+    lst_set_defesc(if installs { &esc1 } else { "" });
+    if installs {
       assign_value(&s!("LST_DELIM@{esc1}@open"), Stored::String(pin(regex::escape(&esc1))), None);
       assign_value(&s!("LST_DELIM@{esc1}@close"), Stored::String(pin(regex::escape(&esc2))), None);
       assign_value(&s!("LST_DELIM@{esc1}@class"), Stored::String(pin("evaluate")), None);
@@ -3210,7 +4466,10 @@ LoadDefinitions!({
           i += 1;
         }
       }
-      let pattern_str: String = pattern.iter().map(|t| t.to_string()).collect();
+      // Each token stands for its character (`\lst@CArgX`, listings.sty:1134; `\lst@MakeActive@` :139-166): a control
+      // symbol `\\` is one backslash, so `literate={\\Real}...` matches the source's `\Real` (2305.00594,
+      // html_feedback #6486; Perl took the tokens' text, `\\Real`, and never matched).
+      let pattern_str: String = pattern.iter().map(|t| lst_deslash(&t.to_string())).collect();
       if !pattern_str.is_empty() {
         // Store as individual entries keyed by pattern
         let key = s!("LST_LIT@{pattern_str}");
@@ -3291,8 +4550,14 @@ LoadDefinitions!({
  ndkeywordstyle=keywordstyle,texcsstyle=keywordstyle,directivestyle=keywordstyle
 }"##);
 
-  // Load language configuration files
+  // Load language configuration files. listings.sty:2315-2316 inputs BOTH
+  // `listings.cfg` and the user's `lstlocal.cfg` (`\InputIfFileExists`);
+  // Perl (listings.sty.ltxml:1609) and this binding read only the first, so
+  // a document shipping its own `lstlocal.cfg` (labyrinth: `\pkgname`,
+  // `\meta`, the `{code}` environment) lost every definition in it.
+  // Guard: `perfect_kernel_batch56::listings_reads_lstlocal_cfg`.
   InputDefinitions!("listings", extension => Some(Cow::Borrowed("cfg")));
+  RawTeX!(r"\InputIfFileExists{lstlocal.cfg}{}{}");
 
   // Internal macros used by sibling bindings (e.g. cleveref) AND by the
   // lang-file raw loads below (lstlang3.sty in particular calls
@@ -3300,8 +4565,22 @@ LoadDefinitions!({
   // loop so the raw .sty files don't error on undefined `\lst@AddToHook`.
   // Driver: 2001.11875 (lstlang3.sty raw-load `\lst@AddToHook` undefined).
   DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
-  def_macro_noop("\\lst@AddToHook{}{}")?;
-  def_macro_noop("\\lst@AddToHookExe{}{}")?;
+  // listings.sty:354-363 `\lst@AddToHook{<name>}{<code>}` (and `…Exe`, `…AtTop`, :356 — 1904.01009) adds `<code>` to the
+  // hook macro `\lsthk@<name>`, creating it first. The binding runs none of listings' hooks, so the code is dropped,
+  // but the hook is created as listings creates it, and the hooks listings.sty itself creates (its `\lst@AddToHook{…}`
+  // inits) exist: `\lstinline`'s `\lsthk@PreSet\lstset{…}\lsthk@TextStyle` (:1944-1945), which mmacells.sty:634-636
+  // calls directly (1705.02863).
+  DefMacro!("\\lst@AddToHook{}{}", "\\@ifundefined{lsthk@#1}{\\expandafter\\gdef\\csname lsthk@#1\\endcsname{}}{}");
+  // listings.sty:355-362 `\lst@AddToHookExe` also runs `<code>` at once (`\begingroup\globaldefs\@ne\lst@temp
+  // \endgroup`); here it is not executed, only dropped like the hook's (unchanged from 67int10).
+  Let!("\\lst@AddToHookExe", "\\lst@AddToHook");
+  Let!("\\lst@AddToHookAtTop", "\\lst@AddToHook");
+  for hook in ["InitVars", "Init", "TextStyle", "InitVarsBOL", "SelectCharTable", "PreSet", "SetLanguage", "EndGroup",
+    "PreInit", "PostOutput", "OutputBox", "EveryLine", "EmptyStyle", "EOL", "DeInit", "OutputOther", "Output",
+    "OnNewLine", "OnEmptyLine", "ModeTrue", "InitVarsEOL", "InitBOL", "FontAdjust", "ExitVars", "EveryPar",
+    "DisplayStyle"] {
+    def_macro_noop(&format!("\\lsthk@{hook}"))?;
+  }
   DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
   DefMacro!("\\@lst", "lst");
 
@@ -3325,7 +4604,7 @@ LoadDefinitions!({
 /// Perl: lstActivate — process a set of keyvals, dispatching to \lst@@ handlers.
 /// Iterates over pairs, looks up \lst@@KEY macros, digests them for effect,
 /// and stores LST@KEY => value in state.
-fn lst_activate(kv: Option<&KeyVals>) {
+pub(crate) fn lst_activate(kv: Option<&KeyVals>) {
   let kv = match kv {
     Some(kv) => kv,
     None => return,
@@ -3426,4 +4705,88 @@ fn lst_activate_language(language: &str, dialect: Option<&str>) {
       _ => {},
     }
   }
+}
+
+/// `\lst@WFBegin`'s `\immediate\openout` (lstmisc.sty L60-64): arm `file` as
+/// the write-file target and truncate it unless a target is already open
+/// (`\lst@WFifopen`, cleared by `\lst@EndWriteFile`).
+fn lst_writefile_open(file: &str) {
+  // `\openout` names an extension-less file `<name>.tex` (`output_file_name`).
+  let file = output_file_name(file);
+  let open = matches!(lookup_value("LST@WF@file"),
+    Some(Stored::String(sym)) if with(sym, |s| !s.is_empty()));
+  if !open {
+    vfs_store(&file, "");
+  }
+  assign_value(
+    "LST@WF@file",
+    Stored::String(pin(&file)),
+    Some(Scope::Global),
+  );
+}
+
+/// `line` up to its first unescaped `%` while `%` is a comment character (tex.web
+/// §347: catcode 14 ends the line; `\%` is a control symbol). Under doc.sty's
+/// `\MakePercentIgnore` (`\DocInput`) `%` is ignored, not a comment: the line is kept.
+fn strip_tex_comment(line: &str) -> &str {
+  if lookup_catcode('%') != Some(Catcode::COMMENT) {
+    return line;
+  }
+  let mut escaped = false;
+  for (at, c) in line.char_indices() {
+    if c == '%' && !escaped {
+      return &line[..at];
+    }
+    escaped = !escaped && c == '\\';
+  }
+  line
+}
+
+/// `\lst@RequireAspects{<list>}` (listings.sty:289-291): load the named
+/// aspects. Only `writefile` has commands of its own here (lstmisc.sty:30-74
+/// `\lst@BeginAspect{writefile}` … `\lst@EndAspect`), installed globally as
+/// an aspect's definitions are.
+pub(crate) fn require_listings_aspects(aspects: &str) {
+  if aspects
+    .split(',')
+    .any(|aspect| aspect.trim() == "writefile")
+  {
+    for (name, internal) in [
+      ("\\lst@BeginWriteFile", "\\lx@lst@BeginWriteFile"),
+      ("\\lst@BeginAlsoWriteFile", "\\lx@lst@BeginAlsoWriteFile"),
+      ("\\lst@EndWriteFile", "\\lx@lst@EndWriteFile"),
+    ] {
+      Let!(T_CS!(name), T_CS!(internal), Scope::Global);
+    }
+  }
+}
+
+/// Write-file tee (lstmisc.sty aspect): when `\lst@BeginWriteFile`/
+/// `\lst@BeginAlsoWriteFile` armed a target, append the captured listing
+/// text to it. Returns false when the listing should NOT also display
+/// (`\lst@BeginWriteFile`, the `\@gobble` output-box variant).
+fn lst_writefile_tee(text: &str) -> bool {
+  let file = match lookup_value("LST@WF@file") {
+    Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+    _ => String::new(),
+  };
+  if file.is_empty() {
+    return true;
+  }
+  // Virtual store only — `\input`-back consumers (cnltx, incgraph) resolve
+  // the written example via the VFS (find_file consults it first). A disk
+  // write here landed in the process CWD, not the destination directory
+  // (repo-root leakage from test runs). Appends within one begin/end span
+  // (`\lst@WFAppend`); `lst_writefile_open` truncates on each fresh begin.
+  // Real listings tees through `\lst@Append` (lstmisc.sty:47-64), AFTER the
+  // per-line `gobble` was applied, so the written file holds the gobbled
+  // text — what `\lst@sampleInput` (lstdoc.sty:187-192) re-inputs as code.
+  let gobble = lst_get_number("gobble").max(0) as usize;
+  let mut mirrored = vfs_read(&file).unwrap_or_default();
+  for line in text.split('\n') {
+    mirrored.extend(line.chars().skip(gobble));
+    mirrored.push('\n');
+  }
+  vfs_store(&file, &mirrored);
+  lookup_bool("LST@WF@also")
 }

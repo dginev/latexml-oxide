@@ -1,0 +1,16 @@
+% witness: rev78c finding 1; 1602.00134 ([font=footnotesize,labelfont=bf]{caption} after subcaption: 80 %, bold labels);
+%          50/1,057 subcaption papers load caption with font= after it. caption3.sty:416-429 runs a repeat
+%          \usepackage[opts]{caption}'s options (\caption@ExecuteOptions); subcaption's caption load is the first one
+% oracle:  pdflatex 0 errors: "Figure 1. Schematic." label bold, caption \f@size 9 (MAIN=9)
+% engines: rust 78c r1 = the repeat load's options dropped: "Figure 1: Schematic.", no size, label not bold
+% expect:  0 errors; caption fontsize 90%, a bold tag "Figure 1" closed by ". "
+% status:  RED (78c r1) -> GREEN (78c r2)
+\documentclass{article}
+\usepackage[font=footnotesize]{subcaption}
+\usepackage[font=small,labelfont=bf,labelsep=period]{caption}
+\begin{document}
+\begin{figure}
+A
+\caption{Schematic.}
+\end{figure}
+\end{document}

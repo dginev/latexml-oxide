@@ -1,0 +1,18 @@
+% mechanism: jheppub sets each `\emailAdd` in typewriter type (jheppub.sty:127-131 `\href{mailto:#1}{\tt #1}`).
+% witness: 2301.03278
+% oracle:  pdflatex (jheppub.sty from 1601.00006) 0 errors; "ann_able@a.edu" in CMTT10
+% engines: rust 64u: "ann˙able@a.edu" in roman; perl: the same
+% expect:  "ann_able@a.edu" in typewriter type
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{jheppub}
+\title{Title}
+\author{Ann Able}
+\affiliation{University of A}
+\emailAdd{ann\string_able@a.edu}
+\abstract{A.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

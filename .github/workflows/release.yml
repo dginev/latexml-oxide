@@ -670,11 +670,21 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip.sha256
           if-no-files-found: error
 
+  # The full Windows suite, every `perfect_kernel_*` guard required (DG
+  # 2026-11-13): no Windows build is published from a tree that fails there.
+  # CI.yml runs Linux and macOS on every change, but Windows runs in full only
+  # here and on a manual dispatch, where the guards are optional to pass. It
+  # runs beside the build legs; only the publishing `release` job waits on it.
+  windows-ci:
+    uses: ./.github/workflows/windows-ci-manual-trigger.yml
+    with:
+      require_guards: true
+
   release:
     name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    needs: [dumps, notices, build-macos, build-macos-intel, build-linux-arm64, build-windows]
+    needs: [dumps, notices, build-macos, build-macos-intel, build-linux-arm64, build-windows, windows-ci]
 
     steps:
       - uses: actions/checkout@v6

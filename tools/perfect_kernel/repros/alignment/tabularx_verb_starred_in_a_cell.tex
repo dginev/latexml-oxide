@@ -1,0 +1,14 @@
+% witness: 2404.06128, 2309.04295 (tabularx's `\TX@verb`)
+% oracle:  pdflatex 0 errors: "x+y and a␣b" in the X cell; "q r" after the table, the kernel's `\verb` again
+% engines: rust GA4base = the same; GA4 the same (tabularx's binding lets `\verb` to its `\TX@verb`)
+% expect:  0 errors; both verbatims in the cell, the visible space kept
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tabularx}
+\begin{document}
+\begin{tabularx}{\linewidth}{lX}
+A & \verb|x+y| and \verb*|a b| \\
+\end{tabularx}
+After \verb|q r| TEXT.
+\end{document}

@@ -81,24 +81,51 @@ LoadDefinitions!({
 
   // Empty lines still get an \item, but they're followed by \nointerlineskip!
   // We do NOT want to generate a listingline in those cases.
-  DefMacro!(
-    "\\lx@algorithmicx@item[]",
-    "\\@ifnextchar\\nointerlineskip{}{\\lx@algorithmicx@@item}"
+  // An `\item[label]` line shows its label, unnumbered: the line number is only the list's default label (`\ALG@step`,
+  // algorithmicx.sty:88), which a given one replaces. algpseudocode.sty:78 `\Require` is `\item[\algorithmicrequire]`
+  // (Perl and earlier Rust numbered "Require:" lines 1, 2, …), and algorithmicx.sty:632 `\Statex` `\item[]`, a line
+  // with no number at all (63j). The label goes braced to its own constructor, so a `]` in it stays and the numbered
+  // `\lx@algorithmicx@@item` reads no argument from the line's text (`\Statex [Phase one] begins`).
+  DefMacro!("\\lx@algorithmicx@item[]", sub[(label)] {
+    let mut out = mouth::tokenize_internal("\\@ifnextchar\\nointerlineskip{}").unlist();
+    out.push(T_BEGIN!());
+    match label {
+      Some(label) => {
+        out.push(T_CS!("\\lx@algorithmicx@@item@label"));
+        out.push(T_BEGIN!());
+        out.extend(label.unlist());
+        out.push(T_END!());
+      },
+      None => out.push(T_CS!("\\lx@algorithmicx@@item")),
+    }
+    out.push(T_CS!("\\lx@algorithmicx@item@hook"));
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+  // What a package adds to each line an `\item` opens, labelled or not (algpseudocodex: its pending boxes,
+  // latexml_contrib `algpseudocodex_sty.rs`); a package redefining `\lx@algorithmicx@item` itself lost the label (63j).
+  DefMacro!("\\lx@algorithmicx@item@hook", "");
+  DefConstructor!(
+    "\\lx@algorithmicx@labeltags{}",
+    "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>"
   );
 
-  // This imitates \item; just opens the ltx:listingline, but somebody's got to close it.
-  DefConstructor!("\\lx@algorithmicx@@item",
-    "<ltx:listingline xml:id='#id' itemsep='#itemsep'>#tags",
+  // algpseudocodex.sty:185 wraps each code line in a `varwidth` box that only
+  // the NEXT `\State`/`\If`… ends (`\algpx@endCodeCommand`, :781-797);
+  // `\Statex` = `\item[]` (algorithmicx.sty:632) has no such hook, so in TeX
+  // its text is set INSIDE the previous line's box (pdflatex clean). When the
+  // line cannot be closed because that box is still open, the item is a line
+  // break within the open `ltx:listingline` rather than a nested one
+  // (`<ltx:listingline>` isn't allowed in `<ltx:p>`; algpseudocodex manual,
+  // coloredtheorem). Guard: `perfect_kernel_batch54::statex_continues_the_open_line_box`.
+  DefConstructor!("\\lx@algorithmicx@@item", sub[document, _args, props] {
+    open_algorithmicx_line(document, props)?;
+  },
     properties => sub[_args] {
-      // Perl: my $step = Digest(T_BEGIN, T_CS('\ALG@step'), T_END);
       let step = Digest!(Tokens::new(vec![
         T_BEGIN!(), T_CS!("\\ALG@step"), T_END!()
       ]))?;
-      // Perl: my $id = Digest(T_CS('\theALG@line@ID'));
       let id = Digest!(Tokens::new(vec![T_CS!("\\theALG@line@ID")]))?;
-      // Perl: my $tags = Digest(T_BEGIN,
-      //   T_CS('\def'), T_CS('\fnum@ALG@line'), T_BEGIN, Tokens(Revert($step)), T_END,
-      //   Invocation(T_CS('\lx@make@tags'), T_OTHER('ALG@line')), T_END);
       let step_revert = step.revert()?;
       let invocation = Invocation!("\\lx@make@tags", vec![Some(Tokens::new(vec![T_OTHER!("ALG@line")]))]);
       let mut tag_tokens = vec![T_BEGIN!(), T_CS!("\\def"), T_CS!("\\fnum@ALG@line"), T_BEGIN!()];
@@ -107,11 +134,24 @@ LoadDefinitions!({
       tag_tokens.extend(invocation.unlist());
       tag_tokens.push(T_END!());
       let tags = Digest!(Tokens::new(tag_tokens))?;
-
       Ok(stored_map!("id" => id, "tags" => tags))
-    },
-    before_construct => sub[document] {
-      document.maybe_close_element("ltx:listingline")?;
+    }
+  );
+  // The line an `\item[label]` opens: tagged by its label, or untagged for an empty one, the counter unstepped.
+  DefConstructor!("\\lx@algorithmicx@@item@label Undigested", sub[document, _args, props] {
+    open_algorithmicx_line(document, props)?;
+  },
+    properties => sub[args] {
+      let id = Digest!(Tokens::new(vec![T_CS!("\\theALG@line@ID")]))?;
+      let label = match args.first() {
+        Some(Some(label)) => Some(label.revert()?).filter(|label| !label.unlist_ref().is_empty()),
+        _ => None,
+      };
+      Ok(match label {
+        Some(label) => stored_map!("id" => id,
+          "tags" => Digest!(Invocation!("\\lx@algorithmicx@labeltags", vec![Some(label)]))?),
+        None => stored_map!("id" => id),
+      })
     }
   );
 
@@ -131,3 +171,45 @@ LoadDefinitions!({
   def_macro_noop("\\ALG@g{}")?;
   def_macro_noop("\\endALG@g")?;
 });
+
+/// Open the `ltx:listingline` of an algorithmicx `\item`, with its id and tags, or — inside a line still open
+/// (algpseudocodex's `varwidth` box, see `\lx@algorithmicx@@item`) — break that line.
+///
+/// The nearest listing bounds the walk, as algorithm2e's `line_reach` does: in a listing nested in a line (an
+/// `{algorithmic}` inside an algorithm2e float's line or inside another `{algorithmic}`'s `\State`) a line opens in
+/// that listing; walking on to the outer line put breaks and bare text in the inner listing (112 TooManyErrors papers
+/// of run 336: 1203.4481, 2410.01553, 2510.14887, 1604.06452).
+fn open_algorithmicx_line(document: &mut Document, props: &SymHashMap<Stored>) -> Result<()> {
+  let open_line = document.maybe_close_element("ltx:listingline")?.is_none() && {
+    let mut n = Some(document.get_node().clone());
+    let mut found = false;
+    while let Some(node) = n {
+      let qname = document::get_node_qname(&node);
+      if qname == pin!("ltx:listingline") {
+        found = true;
+        break;
+      }
+      if qname == pin!("ltx:listing") {
+        break;
+      }
+      n = node.get_parent();
+    }
+    found
+  };
+  if open_line {
+    document.insert_element("ltx:break", Vec::new(), None)?;
+  } else {
+    let mut attrs: HashMap<String, String> = HashMap::default();
+    if let Some(id) = props.get("id") {
+      attrs.insert("xml:id".into(), id.to_string());
+    }
+    document.open_element("ltx:listingline", Some(attrs), None)?;
+    if let Some(tags) = props.get("tags") {
+      let digested: Option<Digested> = tags.into();
+      if let Some(ref d) = digested {
+        document.absorb(d, None)?;
+      }
+    }
+  }
+  Ok(())
+}

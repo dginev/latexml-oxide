@@ -1,0 +1,21 @@
+% A raw class's store left at its class default reaches the frontmatter only through `\maketitle`,
+% which reads it: in a document without `\maketitle` nothing prints the placeholder (pdflatex), so
+% none is handed on — only the stores the document set.
+% witness: none (synthetic; review probe of the K11 store timing).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Text without maketitle." only.
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcnomaketitle.cls}
+\ProvidesClass{rcnomaketitle}
+\LoadClass{article}
+\newcommand*\keywords[1]{\gdef\@keywords{#1}}
+\newcommand*\institution[1]{\gdef\@institution{#1}}
+\newcommand*\received[1]{\gdef\@received{#1}}
+\def\@keywords{Placeholder KW}\def\@institution{Default Inst}\def\@received{Default Rec}
+\def\@maketitle{\@title\par\@author\par\@institution\par Keywords: \@keywords\par\@received}
+\end{filecontents*}
+\documentclass{rcnomaketitle}
+\title{T}\author{Anton}
+\begin{document}
+Text without maketitle.
+\end{document}

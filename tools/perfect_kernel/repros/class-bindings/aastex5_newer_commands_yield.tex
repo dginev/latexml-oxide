@@ -1,0 +1,22 @@
+% witness: 1001.0026 (AASTeX 5.2 aastex.cls: no `\mdash`, `\tabcaption`, `\BeforeBegin`, `\authorcomment`,
+%          `\apjsecfont`, `\onecolfootnote`, `\tablereferences`, `\resetapptablenumbers`; aastex62.cls and later
+%          define them, aastex631.cls :7141, :1609-1611, :581, :5843-5850 in 2107.07519's copy)
+% oracle:  pdflatex with 1001.0026's aastex.cls: "A–B, CAP(c), BB(x,y), AC(1,n), SF, FN(f), TR(t), RA."; 0 errors
+% engines: rust 68a r1 = 0 errors, 0 warnings, "A—B, , , (Author note 1: n), , [footnote], , ." (the paper's 8
+%          `\newcommand`s ignored as redefinitions of the binding's 6.x commands, an Info each)
+% expect:  0 errors, 0 warnings; the paper's own definitions print
+% status:  RED (68a r1) -> GREEN (68a r2)
+% preload: ar5iv.sty
+\documentclass{aastex}
+\newcommand\mdash{--}
+\newcommand\tabcaption[1]{CAP(#1)}
+\newcommand\BeforeBegin[2]{BB(#1,#2)}
+\newcommand\authorcomment[2]{AC(#1,#2)}
+\newcommand\apjsecfont{SF}
+\newcommand\onecolfootnote[1]{FN(#1)}
+\newcommand\tablereferences[1]{TR(#1)}
+\newcommand\resetapptablenumbers{RA}
+\begin{document}
+A\mdash B, \tabcaption{c}, \BeforeBegin{x}{y}, \authorcomment{1}{n}, \apjsecfont, \onecolfootnote{f},
+\tablereferences{t}, \resetapptablenumbers.
+\end{document}

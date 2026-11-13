@@ -1,0 +1,19 @@
+% witness: 1811.05243, 1812.02463, 2403.14668, 2501.11467 (`\email{\{a,b\}@x}` in an `\institute` entry); 1907.06944
+%          (the domain inside the braces, `\{blaz.skrlj,senja.pollak@ijs.si\}`); 2001.09649 (`stefan.ciobaca@` for the
+%          digested "Ștefan Ciobâcă")
+% oracle:  pdflatex: "Ann Able1 , Ştefan Ciobâcă1 , and Cid Cole2", "1 Univ X {ann.able,stefan.ciobaca,info}@x.org",
+%          "2 Univ Y {cid.cole,lab@y.org}"
+% engines: perl 0.8.8 = 0 errors, each group whole on every carrier of its entry; rust 92b = the same XML, the shadow
+%          writing out the first group (Ştefan Ciobâcă's address unspelled, the block's) and the second kept whole
+% expect:  0 errors, 0 warnings; each group written out (ruling 3, `ruling3:written-out`), each address to the author it
+%          spells, accents read as the base letters, the rest the block's; the writer writes it (`WriteOut`, OD #923)
+% status:  RED (92b) -> GREEN (92c) — perfect_kernel_batch92c::an_email_group_is_written_out_to_its_spellers
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and \c{S}tefan Ciob\^{a}c\u{a}\inst{1} \and Cid Cole\inst{2}}
+\institute{Univ X\\ \email{\{ann.able,stefan.ciobaca,info\}@x.org} \and Univ Y\\ \email{\{cid.cole,lab@y.org\}}}
+\maketitle
+Text.
+\end{document}

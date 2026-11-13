@@ -1,0 +1,14 @@
+% witness: synthetic (67ps integrated review finding 5): the theorem.sty binding borrows amsthm, which loads amsgen
+% oracle:  pdflatex 0 errors, "State: amsgen not loaded, amsthm not loaded."
+% engines: rust a03442572a = "amsgen loaded, amsthm not loaded"; perl = "amsgen loaded, amsthm loaded"
+% expect:  0 errors, 0 warnings; "State: amsgen not loaded, amsthm not loaded."
+% status:  RED (a03442572a) -> GREEN (67ps); guard perfect_kernel_batch67ps::borrow_leaves_what_it_loaded_unloaded
+\documentclass{article}
+\usepackage{theorem}
+\makeatletter
+\@ifpackageloaded{amsgen}{\def\a{amsgen loaded}}{\def\a{amsgen not loaded}}
+\@ifpackageloaded{amsthm}{\def\b{amsthm loaded}}{\def\b{amsthm not loaded}}
+\makeatother
+\begin{document}
+State: \a, \b.
+\end{document}

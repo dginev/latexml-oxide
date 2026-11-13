@@ -1,0 +1,19 @@
+% mechanism: a declined block split into one creator per name the reading read: each name keeps its own Perl label
+%   (`author:N`), so an item the reading gave the names (revtex's `\affiliation` after `\author{Ann … and Bob}`) goes to
+%   each, and a later block's items to its own creators (the labels after the split's)
+% witness: synthetic (the owner labels of `emitter::emit`'s creators loop); the declined shape of 1404.5602, 2503.21719
+% oracle:  pdflatex 0 errors: "Ann Ablea and Bob Baker / Univ A", "Cat Cole / Univ C", "a Zebra note."
+% engines: rust int154u: "Ann Able and Bob Baker" (Univ A), Cat Cole (Univ C); perl 0 errors, the same two
+% expect:  0 errors, 1 warning; Ann (note, Univ A), Bob (Univ A), Cat (Univ C)
+% status:  RED (int154u) -> GREEN (perfect_kernel_batchcr7::a_split_gives_each_name_its_items)
+\documentclass{revtex4-1}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\begin{document}
+\title{T}
+\author{Ann Able\footremember{zz}{Zebra note.} and Bob Baker}
+\affiliation{Univ A}
+\author{Cat Cole}
+\affiliation{Univ C}
+\maketitle
+Body.
+\end{document}

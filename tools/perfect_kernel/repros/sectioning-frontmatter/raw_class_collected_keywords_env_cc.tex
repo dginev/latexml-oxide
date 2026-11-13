@@ -1,0 +1,27 @@
+% mechanism: a raw class's `{keywords}` environment whose begin code is environ.sty's `\Collect@Body\X`, where `\X`
+%   stores the collected body in a macro only the title page reads (frontmatter_stores.rs
+%   `collects_body_for_the_title_page`): cclayout.sty:71-73 `\long\def\for@cc@keywords#1{\gdef\@keywords@macro{\begin
+%   {@abstr}{\cckeywordsname}#1\end{@abstr}}}` `\newenvironment{keywords}{\Collect@Body\for@cc@keywords}{}`, read
+%   only by its `\maketitle` (:889-898) — becomes the frontmatter's keywords (68n's `reroute_keywords_environments`).
+%   Under the rawclasses lever the keywords were lost.
+% witness: 1905.07821 (cc.cls)
+% oracle:  pdflatex: 0 errors, the class's warnings "Who is the contact author?" and "Missing submission/received
+%   date."; "Abstract. Abs. / Keywords. alpha, beta"
+% engines: rust 68u r1: the keywords lost; perl: the class raw too, lost
+% expect:  0 errors; the keywords "alpha, beta"
+% status:  RED (68u r1) -> GREEN (68u r2); the `{subject}` classification (:76-81) and the unnumbered ccproof style
+%   (cc_proof_style_unnumbered_thcc.tex) stay open
+% preload: ar5iv.sty
+\documentclass{cc}
+\title{The Title}
+\author{Ann Author\\ Some University}
+\begin{abstract}
+Abs.
+\end{abstract}
+\begin{keywords}
+alpha, beta
+\end{keywords}
+\begin{document}
+\maketitle
+Text.
+\end{document}

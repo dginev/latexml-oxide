@@ -1,0 +1,13 @@
+% ntheorem.sty:808-814 `\@renewtheorem`: `\renewtheorem` of a name no theorem has raises "Theorem keyword #1
+% undefined" (`\@ifundefined{#1}{\PackageError…}`), then declares it as `\newtheorem` would.
+% witness: review of batch 77v r2 (finding 5, probe rev77v2/nthm.tex)
+% oracle:  pdflatex 1 error ("Package ntheorem Error: Theorem keyword Rem undefined."); "Remark 1 a"
+% engines: rust 77v2-rel (f30e7bb268): 0 errors; "Remark 1"
+% expect:  1 error (the keyword's), 0 warnings; "Remark 1"
+% status:  RED -> GREEN (77v r3; guard perfect_kernel_batch77v::ntheorem_renewtheorem_of_undefined_errs)
+\documentclass{article}
+\usepackage{ntheorem}
+\begin{document}
+\renewtheorem{Rem}{Remark}
+\begin{Rem}a\end{Rem}
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: a `\\[2mm]` between `\IEEEauthorblockN` and the shared `\IEEEauthorblockA` is a line break with its
+%   length, layout as the blank line (blank_line.tex): its `[2mm]` read as text, it was wrapped into an affiliation
+%   block printing nothing
+% witness: the blank-line shape's sibling (1401.2118, 1705.03529)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cy Cole / (2mm) / University of X, City / Email: {ann, bob, cy}@x.edu"
+% engines: rust int131a: Ann, Bob e-mail only, Cy the affiliation
+% expect:  0 errors, 0 warnings; each author University of X, City and their own e-mail
+% status:  RED (int131a) -> GREEN (104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker and Cy Cole}\\[2mm]
+\IEEEauthorblockA{University of X, City\\
+Email: \{ann, bob, cy\}@x.edu}}
+\maketitle
+Text.
+\end{document}

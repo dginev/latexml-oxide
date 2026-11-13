@@ -1,0 +1,17 @@
+% mechanism: an option revtex.sty does not declare and that is a style file (`epsf`) still loads as a package, as
+%   latex.tex's `\@options` inputs `<option>.sty` (here `\compat@loadpackages`, Perl
+%   latex_constructs.pool.ltxml:137-153); with `aps` declared, nothing is missing and OmniBus is not loaded.
+% witness: census: 7,392 of 29,730 REVTeX 3 papers pass `epsf`
+% oracle:  pdflatex with REVTeX 3.1: 0 errors; "Univ X, City" under the author; "Text 56.9055pt."
+% engines: rust 64y: OmniBus loaded (for `aps`), Ann Able with the address; perl: the same
+% expect:  0 errors; `\epsfxsize` defined; Ann Able with the address; no OmniBus
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps,epsf]{revtex}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ X, City}
+\maketitle
+Text \epsfxsize=2cm \the\epsfxsize.
+\end{document}

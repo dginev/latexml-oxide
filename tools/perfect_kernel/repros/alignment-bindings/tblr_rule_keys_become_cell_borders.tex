@@ -1,0 +1,27 @@
+% mechanism: tabularray's rule keys (tabularray.sty:1957-2290: `hlines`/`vlines`, `hline{<i>}`/`vline{<j>}` with
+%   `{<index>}{<cross>}{<style>}` values, a rowspec's `|`) are drawn as the cells' `border` letters the kernel's
+%   `\hline` and `|` give (`tblr_rule_borders`, OXIDIZED_DESIGN_DIVERGENCES #855); `text=` and white rules draw none
+% witness: census 78p_tblr (56 papers: 2309.02033 `hline{5} = {2-4}{}`, 2405.19659 `vline{2-3} = {1}{}`, 2206.04438
+%   `rowspec={|QQ| |QQQ|}`, 2308.16907 `hlines = {white}`)
+% oracle:  pdflatex 0 errors: T1 rules over and under, a rule under b and c only; T2 a double top rule, a rule after a
+%   in row 1 only; T3 a boxed grid from the rowspec and colspec; T4 vertical rules only
+% engines: rust int52a = 0 errors, no border on any cell (Perl raw-loads tabularray)
+% expect:  0 errors; T1 row 2 cells 2-3 `b t`, T2 cell 1 `r tt`, T3 `b l t`/`b r t` on row 2, T4 `l r`/`r`
+% status:  RED (int52a) -> GREEN (78p)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{colspec={ccc},hline{1,Z}={1pt},hline{2}={2-3}{solid}}
+a & b & c \\ d & e & f
+\end{tblr}
+\begin{tblr}{colspec={ccc},vline{2}={1}{solid},hline{1}={1}{-}{},hline{1}={2}{-}{}}
+a & b & c \\ d & e & f \\
+\end{tblr}
+\begin{tblr}{rowspec={|Q|Q|},colspec={|cc|}}
+a & b \\ c & d \\
+\end{tblr}
+\begin{tblr}{hlines={white},vlines,hline{2}={text={}}}
+a & b \\ c & d \\
+\end{tblr}
+\end{document}

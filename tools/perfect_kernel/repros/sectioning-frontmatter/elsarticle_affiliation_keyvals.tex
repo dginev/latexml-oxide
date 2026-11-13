@@ -1,0 +1,25 @@
+% witness: 2609.01851 (`citysep={}`), and the cas papers of sectioning-frontmatter/cas_affiliation_keyvals:
+%          elsarticle.cls:387-440 (cas-common.sty:1118-1160 the same) prints each `stm/affiliation` value with its
+%          separator, an unknown key's value or own text; Perl's PR #2767 parser joins the known values with ", " and drops
+%          the rest
+% oracle:  pdflatex 0 errors: "School of CS, Guangzhou University, 1 Main St, Guang Zhou 510006, Guangdong, China",
+%          "Plain Univ Some City Country", "ARTORG Center, University of Bern, Bern, Switzerland", "Dept X Org Y, Z"
+% engines: rust 63t7 and Perl 0.8.8 = "…, Guang Zhou, 510006, …", an empty affiliation, "Bern, Switzerland", "Org Y, Z"
+% expect:  0 errors, 0 warnings; the four affiliations as the PDF prints them, each with its author — but the plain
+%          one as written, its commas kept (OXIDIZED_DESIGN_DIVERGENCES #472)
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[1]{A. B}
+\author[2]{C. D}
+\author[3]{E. F}
+\author[4]{G. H}
+\affiliation[1]{organization={School of CS, Guangzhou University}, addressline={1 Main St}, city={Guang Zhou}, citysep={}, postcode={510006}, state={Guangdong}, country={China}}
+\affiliation[2]{Plain Univ, Some City, Country}
+\affiliation[3]{{ARTORG Center,}, {University of Bern,},city={Bern},country={Switzerland}}
+\affiliation[4]{department={Dept X}, organization={Org Y}, country={Z}}
+\end{frontmatter}
+Body.
+\end{document}

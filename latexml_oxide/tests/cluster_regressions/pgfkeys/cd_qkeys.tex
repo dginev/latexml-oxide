@@ -1,0 +1,9 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+\pgfkeys{/a/.cd, x/.code={[ax:#1]}, /b/.cd, x/.code={[bx:#1]}}
+\pgfqkeys{/a}{x=1}\pgfqkeys{/b}{x=2}
+\pgfkeys{/a/.cd, x=3, /b/x=4, x=5}
+\pgfkeysalso{/b/x=6}
+\pgfkeys{/pk/.unknown/.code={[unknown \pgfkeyscurrentname:#1]}}\pgfkeys{/pk/.cd, nokey=7}
+\end{document}

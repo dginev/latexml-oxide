@@ -1063,7 +1063,7 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::gullet::read_until(&mouth::tokenize_internal(TeXString::assembled(
         delim.to_string(),
       )))
-      .map(|t| t.untex())
+      .map(|t| t.unwrap_or_default().untex())
       .map_err(rhai_err)
     },
   );
@@ -1101,10 +1101,13 @@ pub(super) fn make_engine() -> Engine {
       .map_err(rhai_err)
     },
   );
+  // A script binding's `LoadClass` makes the "has chapters" step after the load, as a compiled binding's `LoadClass!`
+  // (OXIDIZED_DESIGN #179, `settle_chapter_after_class_load`).
   engine.register_fn(
     "LoadClass",
     |name: &str| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::binding::content::load_class(name, Vec::new(), Tokens::default())
+        .and_then(|()| latexml_engine::latex_constructs::settle_chapter_after_class_load())
         .map_err(rhai_err)
     },
   );
@@ -1116,6 +1119,7 @@ pub(super) fn make_engine() -> Engine {
         options.into_iter().map(dynamic_to_string).collect(),
         Tokens::default(),
       )
+      .and_then(|()| latexml_engine::latex_constructs::settle_chapter_after_class_load())
       .map_err(rhai_err)
     },
   );
@@ -1203,7 +1207,13 @@ pub(super) fn make_engine() -> Engine {
     let mut options = latexml_core::document::tag::TagOptions::default();
     for (key, val) in opts {
       match key.as_str() {
-        "autoOpen" => options.auto_open = val.as_bool().ok(),
+        "autoOpen" => {
+          options.auto_open = val
+            .as_bool()
+            .map(Into::into)
+            .or_else(|_| val.as_float().map(Into::into))
+            .ok()
+        },
         "autoClose" => options.auto_close = val.as_bool().ok(),
         _ => {},
       }

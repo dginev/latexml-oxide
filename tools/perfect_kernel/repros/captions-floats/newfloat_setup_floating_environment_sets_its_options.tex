@@ -1,0 +1,18 @@
+% mechanism: newfloat.sty:304-306 `\SetupFloatingEnvironment{type}{options}` sets an existing type's options: `name`
+%   (`\newfloat@setname`), `listname`, `within` (the counter reset and `\the<type>`), `fileext`, `placement`, ….
+%   newfloat_sty.rs had Perl's `\SetupFloatingEnvironment OptionalKeyVals {}`, a second declaration reading the type
+%   from the options' place: "name=Prog" printed as a paragraph and the name unchanged.
+% witness: 2306.12224, 2405.15425, 2411.16612 ("List."), 2507.09840, 2510.09447 ("Listagem"), minted papers whose
+%   minted no-op (minted_sty.rs) stood in for it; review rev78s2 finding 4 (probe sf)
+% oracle:  pdflatex 0 errors; "1 S", "Prog 1.1: Code one."
+% engines: perl: "name=Prog" printed, "Listing 1" (KNOWN_PERL_ERRORS #1138); rust int61a: the same
+% expect:  0 errors, 0 warnings; the listing's tag "Prog 1.1" and its caption, no stray text
+% status:  GREEN (78v)
+\documentclass{article}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment{listing}
+\SetupFloatingEnvironment{listing}{name=Prog,within=section,listname={All programs}}
+\begin{document}
+\section{S}
+\begin{listing}[h]Y\caption{Code one.}\end{listing}
+\end{document}

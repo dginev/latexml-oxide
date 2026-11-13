@@ -1,0 +1,26 @@
+% witness: re-review of 68z round 2 (probe e1); hep-ph0607130 (`\newcommand{\nn}{\nonumber}`, carried)
+% oracle:  pdflatex 0 errors; the six \lefteqn LHS flush left over their rows (the row-end forms below), the seventh
+%          (`\hskip 1cm y^2 &=&`) overprinting its cell with y^2 a script
+% expect:  0 errors; the look-ahead passes braces, \relax, \protect (a robust command's inner macro), \strut,
+%          \vphantom{…} and \hskip/\kern with their glue, follows the macros it starts and tests the cell end first
+%          (`\def\eq{&=&}`): rows 1-6 the one left-aligned span (65o), row 7 latex.ltx:15800's \rlap in the cell's math
+% status:  GREEN (batch 68z round 3, perfect_kernel_batch68z::every_lefteqn_cell_end_form_is_the_whole_cell); 68z
+%          round 2 put rows 3-6 in the right-aligned math cell and erred "Script ^" on row 7 (as 67int17b)
+\documentclass{article}
+\def\nn{\nonumber}
+\let\ln\nonumber
+\DeclareRobustCommand\rn{\nonumber}
+\def\eq{&=&}
+\def\rnn{\relax\nonumber}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{AAA+BBB+CCC} \label{x1} \\ &=& b1 \\
+\lefteqn{DDD+EEE} \ln \\ &=& b2 \\
+\lefteqn{FFF+GGG} \rn \\ &=& b3 \\
+\lefteqn{HHH+III} \eq b4 \\
+\lefteqn{JJJ+KKK} {\nonumber} \\ &=& b5 \\
+\lefteqn{LLL+MMM} \rnn \\ &=& b6 \\
+\lefteqn{OOO} \relax\strut\vphantom{X}\kern 2pt\hskip 1em plus 1fil \\ &=& b7 \\
+\lefteqn{NNN} \hskip 1cm y^2 &=& b8
+\end{eqnarray}
+\end{document}

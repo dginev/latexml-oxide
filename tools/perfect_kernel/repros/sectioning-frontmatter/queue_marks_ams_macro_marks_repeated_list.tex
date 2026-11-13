@@ -1,0 +1,22 @@
+% mechanism: the Cut's uncut copies give way by the queue's printed-text requests (`place_uncut_copies` reads
+%   `queued_requesters`; review revF0 B1): amsart's two-entry `\address` list after each name, the marks printed by
+%   document macros. The second copy is cut and the first gives way to it: each name holds its own entry, once.
+%   F0 printed the same creators with an extra Warning (the uncut copy kept, its words counted missing).
+% witness: synthetic (review revF0 probe d1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", the address list
+%          "1 Univ A, Town A, 2 Univ B, Town B" printed twice
+% engines: int160c: the creators below, W=0; F0: the same creators, W=1; perl: not compared
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  RED (F0, the Warning) -> GREEN (P4d step 0; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{amsart}
+\newcommand\ua{\textsuperscript{1}}
+\newcommand\ub{\textsuperscript{2}}
+\begin{document}
+\title{T}
+\author{Ann Able\ua}
+\address{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\author{Bob Baker\ub}
+\address{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\maketitle
+Body.
+\end{document}

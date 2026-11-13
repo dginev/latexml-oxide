@@ -1,0 +1,177 @@
+% Big operators (sums, integrals, partial derivatives) as operands of a product:
+% what a big operator applies to, and what may stand before it.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/stacked_bigops_apply_in_turn (57w review)
+% witness: 57w review; Perl MathGrammar:292 `Factor : preScripted['bigop'] addOpArgs` applies each bigop to the
+%          Factor after it, so `\partial\partial f` is ∂@(∂@(f)); latexml_math_parser/src/grammar/builder.rs
+%          `composed_bigop` (no Perl counterpart) composes the two bigops first
+% oracle:  pdflatex 0 errors
+% engines: rust 57w 0 errors, `(partial-differential@(partial-differential))@(f)`; perl 0 errors,
+%          `partial-differential@(partial-differential@(f))` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; text="partial-differential@(partial-differential@(f))"
+% Perl MathGrammar:292 `Factor : preScripted['bigop'] addOpArgs`: each bigop applies to the Factor after it,
+% partial-differential@(partial-differential@(f)); the Rust-only `composed_bigop` composed the two first.
+\section{Stacked big operators apply in turn}
+\[ \partial\partial f \]
+
+% formerly repro math-parse/prescripted_bigop_is_an_operand (57w review)
+% witness: 57w review; Perl MathGrammar:292 `Factor : preScripted['bigop'] addOpArgs` — a pre-scripted bigop
+%          is an operand like any bigop; latexml_math_parser/src/grammar/builder.rs `bigop_operand` omits
+%          `prescripted_bigop`, so it has no derivation before an addop
+% oracle:  pdflatex 0 errors
+% engines: rust 57w 0 errors, 1 unparsed_math warning, ltx_math_unparsed; perl 0 errors, "^ a sum + b"
+%          (RUST-ONLY)
+% expect:  0 errors, 0 warnings; both parse: "^ a sum + b", "(^ a sum)@(sum@(b))" (Perl's texts)
+% Perl MathGrammar:292 `Factor : preScripted['bigop'] addOpArgs`: a pre-scripted bigop is an operand like any
+% bigop, "^ a sum + b", "(^ a sum)@(sum@(b))".
+\section{A pre-scripted big operator is an operand}
+\[ {}^a\sum + b \]
+\[ {}^a\sum\sum b \]
+
+% formerly repro math-parse/base_script_is_not_a_bigop_prescript
+% witness: 57x review (2605.05081 `\|\Delta Y\|_{\infty}\sum…`, 2605.26008, 2605.00581 `2M\|h\|^3\int_0^1…`,
+%          2605.12025); latexml_math_parser/src/grammar/builder.rs let a POST script start a `prescripted_bigop`,
+%          so once 57x made pre-scripted bigops operands, the base's own script became the bigop's pre-script;
+%          Perl's preScripted['bigop'] (MathGrammar:292) takes only an empty-base FLOAT script
+% oracle:  pdflatex 0 errors
+% engines: rust 57x2 `norm@(f) * (_ 2 integral)@(g)` (the norm loses its subscript, silently); rust 57w3 and perl
+%          `(norm@(f)) _ 2 * integral@(g)` (RUST-ONLY, 57x regression before landing)
+% expect:  0 errors, 0 warnings; text="(norm@(f)) _ 2 * integral@(g)" and
+%          "(norm@(h)) ^ 3 * ((integral _ 0) ^ 1)@(f * differential-d@(t))"
+% Perl MathGrammar:292 preScripted['bigop'] takes only an empty-base FLOAT script, so the norm keeps its script:
+% "(norm@(f)) _ 2 * integral@(g)".
+\section{A base's script is not a big operator's pre-script}
+\[ \|f\|_2\int g \]
+\[ \|h\|^3\int_0^1 f\,dt \]
+
+% formerly repro math-parse/function_before_a_bigop_is_a_factor
+% witness: 57x review (2605.02116 ×7, 2605.31369 ×5, 2605.05081 ×3, 2605.03300, 2605.12111; ~365 Math in 172 of
+%          the 3,003 A/B papers); Perl's `Factor moreFactors` reads a function or operator, scripted or not,
+%          before a bigop as a factor of its own; latexml_math_parser/src/grammar/builder.rs had no such rule
+%          (57w3 parsed `\min_\theta\sum` only by stealing θ as ∑'s pre-subscript)
+% oracle:  pdflatex 0 errors
+% engines: rust 57x2 ltx_math_unparsed + unparsed_math warnings; perl "minimum _ theta * ((sum _ (i = 1)) ^
+%          n)@(ell _ i)", "logarithm * integral@(f)", "nabla * integral@(f)" (RUST-ONLY)
+% expect:  0 errors, 0 warnings; Perl's texts
+% Perl `Factor moreFactors` reads a function or operator, scripted or not, before a bigop as a factor of its own:
+% "minimum _ theta * ((sum _ (i = 1)) ^ n)@(ell _ i)", "logarithm * integral@(f)", "nabla * integral@(f)".
+\section{A function before a big operator is a factor}
+\[ \min_\theta\sum_{i=1}^n\ell_i \]
+\[ \log\int f \]
+\[ \nabla\int f \]
+
+% formerly repro math-parse/function_before_a_bigop_mid_term (57x review)
+% witness: 57x review; latexml_math_parser/src/grammar/builder.rs `function_factor bigop_operand` covers a
+%          function or operator that STARTS a term; Perl's `Factor moreFactors` takes one anywhere in a product
+% oracle:  pdflatex 0 errors
+% engines: rust 57x3 ltx_math_unparsed; perl `2 * sine * integral@(f)`, `x * nabla * integral@(f)` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; Perl's texts (`2 * x * sine * integral@(f)` one product; the fenced `(2x)` a factor)
+% Perl `Factor moreFactors` takes such a factor anywhere in a product, flattened by `ApplyNary` (MathParser.pm:1497-1517):
+% `2 * sine * integral@(f)`, `x * nabla * integral@(f)`; `2 * x * sine * integral@(f)` one product, the fenced `(2x)` a factor.
+\section{A function before a big operator in mid-product}
+\[ 2\sin\int f \]
+\[ x\nabla\int f \]
+\[ 2x\sin\int f \]
+\[ (2x)\sin\int f \]
+
+% formerly repro math-parse/signed_term_is_a_whole_term (57v root-causer)
+% witness: 57v root-causer; Perl MathGrammar:246 `SignedTerm : AddOp Term`: the sign takes a whole Term (a MulOp
+%          chain, a bigop application); latexml_math_parser/src/grammar/builder.rs `addop tight_term` does not, so
+%          `-a/b`, `x^{-1/2}`, `E=-J\sum…` had no derivation
+% oracle:  pdflatex 0 errors
+% engines: rust 57u4 0 errors, 0 warnings, every formula ltx_math_unparsed (silently); perl 0 errors, "- a / b",
+%          "x ^ (- 1 / 2) + e ^ (- x / 2)", "E = - J * (sum _ (i * j))@(…)", "S = - integral@(f)" (RUST-ONLY)
+% expect:  0 errors, 0 warnings; no ltx_math_unparsed; `-a/b` is minus applied to the quotient
+% Perl MathGrammar:246 `SignedTerm : AddOp Term`: the sign takes a whole Term (a MulOp chain, a bigop
+% application): "- a / b", "x ^ (- 1 / 2) + e ^ (- x / 2)", "S = - integral@(f)".
+\section{A sign takes a whole term}
+\[ -a/b \]
+\[ x^{-1/2} + e^{-x/2} \]
+\[ E = -J\sum_{ij} s_i s_j \]
+\[ S = -\int f \]
+
+% witness: 2605.26205 A0.E28X.m1, 2605.02840 Ch4.E13.m2, 2605.21308 A1.E9.m3, 2605.26781 S2.E5.m1, 2605.23265,
+%          2605.01925 S12.E2.m1 (57bx; the 57bv A/B's root-causer: 628 formulas / 216 papers read the narrow shape)
+% cause:   `pragma_bigop_prefer_wider_absorption` looked at the product's own factors only; after a coefficient
+%          (`c\sum…`, `\frac12\sum…`, `1/\sum…`) the big operator ends a factor, so the narrow reading passed
+% Perl `addOpArgs`/`moreOpArgFactors` (MathGrammar:605-617) take every factor after the big operator, whatever stands
+% before it: `c * (sum _ beta)@(z _ beta tensor-product e _ beta)`. A sum, a sign or a fenced group still ends it.
+\section{A big operator after a coefficient takes the factors after it}
+\[ c\sum_\beta z_\beta\otimes e_\beta \]
+\[ \frac12\sum_i a_i\otimes b_i \]
+\[ x\cdot\sum_i a_i\otimes b \]
+\[ c\sum_i a_i\cdot b \]
+\[ 1/\sum_i a_i\cdot b \]
+\[ \max_S\sum_j 1/N^j \]
+\[ c\sum_i a_i + b \]
+\[ (c\sum_i a_i)\otimes b \]
+\[ -\sum_i a_i\otimes b \]
+\[ c\sum_i a_i\sum_j b_j\otimes e \]
+\[ c\int_0^1 f(x)\,dx\,g \]
+% A differential operator is no big operator here: it takes one factor (divergence #374, user ruling 2026-09-29;
+% 2605.15405, 2605.03741, 2605.08634; KNOWN_PERL_ERRORS #387, where Perl's greedy `bigop` reads ∂@(F/∂@(T)) and
+% ∂@(Ω·(0,T])), and a Leibniz quotient is one derivative after a coefficient —
+% "h * (partial-differential@(f _ A) / partial-differential@(p _ j))", "T * (partial-differential@(F) /
+% partial-differential@(T))", "partial-differential@(Omega) * open-closed-interval@(0, T)". More rows in
+% tests/parse/integrals_and_differentials.tex.
+\[ h\,\partial f_{A}/\partial p_{j} \]
+\[ T\,\partial F/\partial T \]
+\[ \partial\Omega\times(0,T] \]
+
+% (57cj.8 review) A function before a limit-type operator takes its application (surpass, divergence #390; Perl
+% logarithm * determinant@(A), KNOWN_PERL_ERRORS #400): `\log\det\Sigma` log@(det Σ), 243 formulas in 55 of the
+% 3,003 A/B papers (2605.00130, 2605.02883, 2605.26554, 2605.03984, 2605.24401, 2605.25592, 2605.14289); a sum's and an
+% integral's too since 57cj.22 (user ruling Q7: `\log\sum_i x_i` log(∑…), `\min_\theta\sum_{i=1}^n\ell_i` min_θ(∑…), `\log\int f`)
+\section{A function takes a limit-type operator's application}
+$\log\det A$ $\log\det\Sigma^{-1}$ $\sin\det A$ $\cos\sup_t u$ $\sin\lim u$ $\sin\dim V$ $\log\inf_x u$ $\log\det(\Sigma)$
+$\frac12\log\det(2\pi e\Sigma)$ $\log\det A+B$ $a\log\det A$ $2\sin\det A$ $\sin\partial_x\det A$ $\log\det A\,B$
+$\log\sum_i x_i$ $\log\max_i x_i$ $\log\liminf_n a_n$ $\mathbb{E}\log\det\Sigma$ $\log{\det}_{\epsilon}\,\left(-\nabla^{2}+m^{2}\right)$
+
+% (57cj.9 review) … through a function's bare application to a bare function, recursively (`\log\log\det A`
+% log@(log@(det A)), `\min_\theta\log\det\Sigma_\theta` min_θ@(log@(det Σ_θ)); 2605.14289 `\log\exp\sup_x f`); not a word that
+% qualifies the operator — `\arg\inf f(\theta)` keeps Perl's product (one arg-inf is meant; 2605.30648, 2605.16560),
+% `\operatorname{ess}\sup` too, and `\arg\min_x f(x)` reads arg@(min…) (older; SYNC row); the A/B's witnesses
+% (max-before-sup 2605.02556, 2605.05081, 2605.28059; 2605.28932); across a trig argument's end the operand keeps Perl's
+% product (`\sin\det A\,y`)
+$\min_\theta\log\det\Sigma_\theta$ $\max_i\log\det A_i$ $\log\log\det A$ $\exp\log\det A$ $\log\max_i\det A_i$ $\log\exp\sup_x f$
+$\theta^{*}\in\arg\inf f(\theta)$ $T_{X}:=\arg\inf_{t\in\mathbb{R}}\{d_{X}(t)\}$ $\arg\min_x f(x)$ $\operatorname{ess}\sup_x|f(x)|$
+$\|F\|_{H^{\infty}(S_{\Theta};N)}:=\max_{j\in\{0,\ldots,N\}}\sup_{z\in\overline{S_{\Theta}}}(1+|z|)^{j}|F^{(j)}(z)|<\infty$
+$C_{q}\max_{|\beta|=m-1}\sup_{x,v}(1+|v|)^{q}|\partial_{x,v}^{\beta}g_{t}|$ $\gamma^{\dagger}(J)=\max_{\ell\in\{1,2,3\}}\sup_{z\in\mathbb{R}^{+}}|\xi_{\ell}(z,J)|$
+$\Phi(u)=\operatorname{Im}\lim_{\varepsilon\to 0}\int_{-\infty}^{u}he^{\varepsilon s+i\omega s}ds$
+$\sin\det A\,y$ $\cos\sup_t u\,v$ $\sin\lim_n a_n\,b$
+
+% (57cj.10 review) `\arg` qualifies only an infimum or a supremum; before any other limit-type operator the word is a
+% function and takes its application (`\arg\det M_q` argument@(det M_q), the strong-CP phase); a qualifier is judged at
+% the head right before the operator, so an arg-min's argument takes one (`\arg\min_x\log\det\Sigma_x`
+% argument@(min_x@(log@(det Σ_x)))). (57cj.11 review) `\operatorname{ess}` qualifies every limit-type operator, never a
+% function of a value: `\operatorname{ess}\lim_n f_n`, `\operatorname{ess}\det A` keep Perl's product; before a minimum or
+% a maximum (OPFUNCTIONs) it applies, as `\arg` does and as Perl (`\operatorname{ess}\max_x f` ess@(max_x f); the one
+% ess-max operator is unmodelled, SYNC)
+$\bar\theta=\theta-\arg\det M_q$ $\arg\det U$ $\exp(i\arg\det U)$ $\arg\lim_{z\to0}f(z)$ $\arg\limsup_n f_n$ $\operatorname{ess}\det A$
+$\log\arg\det U$ $\arg\min_x\log\det\Sigma_x$ $\arg\max_i\log\det A_i$ $\arg\sup_t u(t)$ $\operatorname{ess}\inf_x f$
+$\operatorname{ess}\limsup_{n\to\infty}f_n$ $\operatorname{ess}\lim_n f_n$ $\operatorname{ess}\lim_{x\to a}f(x)$ $\operatorname{ess}\dim V$
+$\operatorname{ess}^2\det A$ $\operatorname{ess}\lim_{t\to\infty}\sup_x f(t,x)$ $\sin\operatorname{ess}\det A$ $\operatorname{ess}\max_x f$
+% (57cj.12 review) `\operatorname{arg}` spells `\arg` and qualifies as it does: `\operatorname{arg}\sup_x f` arg·sup_x f, as
+% `\arg\sup_x f` and Perl (was arg@(sup_x f)); before any other limit-type operator it applies (`\operatorname{arg}\det U`)
+$\operatorname{arg}\sup_x f$ $\operatorname{arg}\inf_x f(x)$ $\operatorname{arg}\det U$
+
+% witness: user ruling Q7 (2026-10-01; the 57cj.10 review's question 7): every function — an OPFUNCTION, a trig function,
+%          an operator's nest over one — before a summation-like operator (∑ ∏ ∫ ⋃) takes it with its operand, revisiting
+%          #390's "a sum stays Perl's product": `\log\sum_i x_i` log(∑ x_i), `\sin\log\sum_i x_i` sin(log(∑ x_i)); 61 `\log`
+%          and 15 `\min`/`\max` right before an integral or a sum in the 3,003 A/B papers' `tex=` (2605.05133, 2605.30325, 2605.31599,
+%          2605.03750, 2605.09119)
+% oracle:  Perl logarithm * (sum _ i)@(x _ i) (`Factor moreFactors`, MathGrammar:258)
+% expect:  0 errors; the function's application to the big operator's, after the coefficients of the function's bare argument
+%          too (user ruling 2026-10-01c: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)∑…); a trig function's only after constants,
+%          an angle being no coefficient), down an operator's nest (`\nabla_x\log\sum` ∇_x(log(∑…)), 57cj.23); a FUNCTION letter
+%          stays a product (`f\sum_i x_i`)
+\section{A function takes a summation-like operator's application}
+$\log\sum_i x_i$ $\sin\log\sum_i x_i$ $\sin\cos\sum_i x_i$ $\exp\int_0^t a(s)\,ds$ $\log\int e^{-V}\,dx$ $\max_\theta\sum_i\ell_i$
+$\log\prod_i p_i$ $2\log\sum_i x_i$ $a\log\sum_i x_i$ $\log\sum_i x_i+c$ $\frac12\log\sum_i e^{x_i}$ $\nabla_x\log\sum_i e^{x_i}$
+$\log\sum_i x_i\cdot c$ $\exp\sum_i x_i\cdot\sum_j y_j$ $\log\bigcup_i A_i$ $\operatorname{Tr}\sum_i A_i$ $\min_{\theta}\frac{1}{n}\sum_{i}\ell_{i}$ $f\sum_i x_i$
+$\nabla\nabla\log\sum_i p_i$ $\nabla_x\log\det(A)$ $\max_\theta\frac12\int f$ $\log x\sum_i y_i$ $\sin 2\sum_i x_i$ $\sin\theta\sum_l P_l$ $\log 2\det A$
+
+\end{document}

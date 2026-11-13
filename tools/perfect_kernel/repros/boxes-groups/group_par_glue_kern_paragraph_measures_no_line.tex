@@ -1,0 +1,39 @@
+% witness: synthetic (revRG1b B1: RG1b's run-off rule counted only space characters as blank, so a group that added
+%          only glue or a kern kept a paragraph of its own, measured as a second line)
+% oracle:  pdflatex 0 errors: H1-H3, H6-H14 =4.30554pt, D=0.0pt (one line "x": glue, kerns and penalties give it no
+%          height or depth; tex.web §816 deletes a final glue); H4=16.30554pt, D4=1.94444pt (x, then y); H5=8.5pt,
+%          D5=3.5pt (a p-cell)
+% engines: rust rg1b = H1, H2, H3, H7 16.30554pt; H4 28.30554pt; H5 12.7pt+7.7pt; H6 D6 12.0pt; H8-H14 = pdflatex
+%          (`\hfill`, `\,`, `\hspace`, `\hspace*`, `\nobreak\hskip0pt`, `\phantom{}`, `\penalty`); int162a = pdflatex
+% expect:  0 errors, 0 warnings; the oracle's values
+% status:  RED (rg1b) -> GREEN (RG1c)
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{x{\quad\par}}H1=\the\ht0, D1=\the\dp0.
+
+\setbox0\vbox{x{\hskip1cm\par}}H2=\the\ht0, D2=\the\dp0.
+
+\setbox0\vbox{x{\kern1pt\par}}H3=\the\ht0, D3=\the\dp0.
+
+\setbox0\vbox{x{\quad\par}y}H4=\the\ht0, D4=\the\dp0.
+
+\setbox0\hbox{\begin{tabular}{p{3cm}}x{\quad\par}\end{tabular}}H5=\the\ht0, D5=\the\dp0.
+
+\setbox0\hbox{\begin{minipage}[t]{3cm}x{\hskip1cm\par}\end{minipage}}H6=\the\ht0, D6=\the\dp0.
+
+\setbox0\vbox{x{\quad\kern1pt\hskip2pt \penalty0\par}}H7=\the\ht0, D7=\the\dp0.
+
+\setbox0\vbox{x{\hfill\par}}H8=\the\ht0, D8=\the\dp0.
+
+\setbox0\vbox{x{\,\par}}H9=\the\ht0, D9=\the\dp0.
+
+\setbox0\vbox{x{\hspace{1cm}\par}}H10=\the\ht0, D10=\the\dp0.
+
+\setbox0\vbox{x{\hspace*{1cm}\par}}H11=\the\ht0, D11=\the\dp0.
+
+\setbox0\vbox{x{\nobreak\hskip0pt\par}}H12=\the\ht0, D12=\the\dp0.
+
+\setbox0\vbox{x{\phantom{}\par}}H13=\the\ht0, D13=\the\dp0.
+
+\setbox0\vbox{x{\penalty0\par}}H14=\the\ht0, D14=\the\dp0.
+\end{document}

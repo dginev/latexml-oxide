@@ -1,0 +1,23 @@
+% witness: cs0501064 0704.1833 cs0610078 cond-mat0207222 (\centerfigcaptionstrue); cs0504030 0805.0012 quant-ph0703150 0705.3677 (\useRomanappendicesfalse); 2009.04715 (\nocalcleftmargintrue); 0705.1682 0705.3677 0705.1922 (\@IEEEtunefonts)
+% oracle:  pdflatex with the V1.6b IEEEtran.cls 0710.3817 ships: 0 errors; "Appendix A", "Proof" list item "alpha"
+% engines: rust 68d = 4 errors (undefined); Perl 4 errors (the same)
+% expect:  0 errors 0 warnings; the appendix numbered A
+% status:  RED (68d) -> GREEN (67x)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\centerfigcaptionstrue
+\makeatletter
+\def\@IEEEinterspaceratioB{0.31}
+\@IEEEtunefonts
+\makeatother
+\begin{document}
+\title{A Title}
+\maketitle
+\begin{itemize}[\nocalcleftmargintrue\leftmargin=12pt]
+\item alpha
+\end{itemize}
+\useRomanappendicesfalse
+\appendices
+\section{Proof}
+Text.
+\end{document}

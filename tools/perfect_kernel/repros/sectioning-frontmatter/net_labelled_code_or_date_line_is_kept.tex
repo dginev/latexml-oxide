@@ -1,0 +1,38 @@
+% A raw class's stores only its own `\@author` prints, each a line below the unclaimed-text net's floor led by a label
+% word: a dateline's ("Received: 2021", "Accepted 2021") before a year, a classification's ("MSC 2020:") before a code.
+% The label is no code's or date's word, so the lines went, counted. Now a dateline label (received, accepted, revised,
+% published, submitted) before a date's word, and an MSC/PACS label on a line that prints a code, are kept with it as
+% the net's note line, with its Warning (insert.rs `leading_label`). A leading word of no such list is none: "ICML 2021"
+% is counted and not kept, its words named in printed order.
+% witness: review rev105a S4 probes `recd2021`, `acc`, `msc2020`, `icml`; the label shapes: tADR2e `\received`
+%          (2312.02510), ourlematema `\MSC` (1909.06690)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Received: 2021", "Accepted 2021", "MSC 2020: 05C12", "ICML 2021",
+%          "Text."
+% engines: rust 105a r1 = 0 errors, 4 warnings, all four lines lost; perl = 0 errors (the raw class is not loaded:
+%          OmniBus), all lost
+% expect:  0 errors, 4 warnings (frontmatter:unclaimed: \@xa, \@xb, \@xc kept; \@xd "icml 2021");
+%          <ltx:note role="note">Received: 2021</ltx:note>, <ltx:note role="note">Accepted 2021</ltx:note>,
+%          <ltx:note role="note">MSC 2020: 05C12</ltx:note>
+% status:  RED (105a r1) -> GREEN (105a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netlabel.cls}
+\ProvidesClass{netlabel}\LoadClass{article}
+\def\@anames{}\def\@xa{}\def\@xb{}\def\@xc{}\def\@xd{}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\xa[1]{\gdef\@xa{\ignorespaces#1}}
+\newcommand\xb[1]{\gdef\@xb{\ignorespaces#1}}
+\newcommand\xc[1]{\gdef\@xc{\ignorespaces#1}}
+\newcommand\xd[1]{\gdef\@xd{\ignorespaces#1}}
+\renewcommand\@author{\@anames\\\@xa\\\@xb\\\@xc\\\@xd}
+\end{filecontents*}
+\documentclass{netlabel}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\xa{Received: 2021}
+\xb{Accepted 2021}
+\xc{MSC 2020: 05C12}
+\xd{ICML 2021}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: alg-geom9505028, alg-geom9606011, 2310.08131, q-alg9505010, q-alg9507011 (\input amsppt1 + \abstract{…})
+% oracle:  pdftex 0 errors; amsppt1.tex:52-57 \let\ab@\abstract \long\def\abstract#1{\ab@#1\endabstract}
+% engines: rust 66b1 = Fatal:Document:Malformed (the shim refused by the LaTeX kernel's \abstract lock; Until:\endabstract read past \document); perl 4E 0F
+% expect:  0 errors; an abstract "We shall investigate flips." and the body
+% status:  GREEN (66d)
+\input amstex
+\documentstyle{amsppt}
+\input amsppt1
+\topmatter
+\title A title\endtitle
+\abstract{We shall investigate flips.}
+\endtopmatter
+\document
+Body text.
+\enddocument

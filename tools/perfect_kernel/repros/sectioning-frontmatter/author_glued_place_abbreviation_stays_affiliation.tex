@@ -1,0 +1,11 @@
+% witness: 63f review (b1: a glued place abbreviation on the line under an unfinished names list)
+% oracle:  pdflatex 0 errors: "Ivan Petrov, Oleg Sidorov," over "St.Petersburg"
+% engines: rust (63f r1) = a creator "St.Petersburg" (glued initials read as a name); HEAD Oleg Sidorov's affiliation
+% expect:  2 creators, St.Petersburg Oleg Sidorov's affiliation; 0 errors
+% status:  RED (63f r1) -> GREEN (63f: St., Mt., Ft. are no initials)
+\documentclass{article}
+\author{Ivan Petrov, Oleg Sidorov,\\ St.Petersburg}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

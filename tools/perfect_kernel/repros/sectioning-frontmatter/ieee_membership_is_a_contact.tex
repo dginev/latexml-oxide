@@ -1,0 +1,15 @@
+% witness: 2306.15457, 2201.01230, 2408.09035 (`Yong Man Ro,~\IEEEmembership{Senior Member,~IEEE}`); 2508.00603
+%          (`\author{A, B, \IEEEmembership{...}, and C}`, once a phantom creator); 2408.00327 (the list's comma inside
+%          the grade: `Chen,~\IEEEmembership{Member,~IEEE,} Yuan-Hao~Chang`); fidelity audit round 2
+% oracle:  pdflatex 0 errors: "Yun-Chih Chen, Member, IEEE, Yuan-Hao Chang, Fellow, IEEE, Hong Joo Lee and Yong Man
+%          Ro, Senior Member, IEEE"
+% engines: rust 63k = the grade dropped (Perl IEEEtran.cls.ltxml:143 '')
+% expect:  0 errors; four creators, three with their unlabelled membership contact, no trailing comma in a grade
+% status:  RED (63k) -> GREEN (63l)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Yun-Chih~Chen,~\IEEEmembership{Member,~IEEE,} Yuan-Hao~Chang,~\IEEEmembership{Fellow,~IEEE,}
+  Hong Joo Lee and Yong Man Ro,~\IEEEmembership{Senior Member,~IEEE}}
+\maketitle
+\end{document}

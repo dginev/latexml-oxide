@@ -1,0 +1,30 @@
+% mechanism: the control of revtex_block_line_no_name_requests_goes_to_the_block: every label of the group answered
+%   (emitter/plan.rs `cut_block_lines`), each line to the names its marks name.
+% witness: 2007.02542's shape with every label requested; review revab126 (p7, p8)
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "A. One1 , B. Two2,a , C. Three3,b / (X Collaboration) / 1 Alpha
+%   University, Beijing / 2 Beta Institute, Rome / 3 Gamma Lab, Paris / a Also at Delta College, Oslo / b Also at Eps
+%   College, Bergen"
+% engines: rust 98a: each author its lines; perl: one creator
+% expect:  0 errors, 0 warnings; each author the lines its marks name (C. Three Eps College too)
+% status:  GREEN (98a)
+% preload: ar5iv.sty
+\documentclass[aps,prd,superscriptaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+		\begin{center}
+	A.~One$^{1}$, B.~Two$^{2,a}$, C.~Three$^{3,b}$
+	\\
+		\vspace{0.2cm}
+		(X Collaboration)\\
+		\vspace{0.2cm} {\it
+	$^{1}$ Alpha University, Beijing\\$^{2}$ Beta Institute, Rome\\$^{3}$ Gamma Lab, Paris\\
+		\vspace{0.2cm}
+		$^{a}$ Also at Delta College, Oslo\\$^{b}$ Also at Eps College, Bergen\\
+		}\end{center}
+		\vspace{0.4cm}
+}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

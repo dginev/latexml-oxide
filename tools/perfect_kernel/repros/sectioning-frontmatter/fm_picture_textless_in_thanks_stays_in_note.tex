@@ -1,0 +1,18 @@
+% witness: CR5's textless TikZ (`\href{https://orcid.org/…}{\protect\tikz\fill …;}` beside the name, `\thanks{Zebra
+%          University \protect\tikz\draw (0,0)--(1,0);}`)
+% oracle:  pdflatex prints both drawings (rc=1: a TikZ-in-`\thanks` error; the content prints)
+% engines: rust int154t = the note "Zebra University M 0 0 L 39.37 0fill:none" (the drawing's SVG path data as text), 1
+%          warning ("note no argument"); Perl 0.8.8 = 0 errors, both pictures kept
+% expect:  0 errors, 0 warnings; the ORCID logo in its link, the note "Zebra University" holding its picture whole
+%          (the `;` and `}` the note's last box leaves unread grown into its span)
+% status:  RED (int154t) -> GREEN (CR8) — perfect_kernel_batchcr8::textless_picture_in_thanks_stays_in_the_note
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able\href{https://orcid.org/0000-0001}{\protect\tikz\fill (0,0) circle (2pt);}\thanks{Zebra University \protect\tikz\draw (0,0)--(1,0);}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

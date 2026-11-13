@@ -1,0 +1,13 @@
+% witness: macros2e/macros2e (macros2e.tex:10)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-23, before 56gd)
+% expect:  0 errors; "x_y" is a <verbatim>
+% status:  GREEN (56gd 2026-09-23; was RED)
+% mechanism: newverbs_sty.rs lacked newverbs.sty:112-137 (\MakeSpecialShortVerb,
+%   the optional-argument \MakeShortVerb); ported verbatim.
+\documentclass{article}
+\usepackage{newverbs}
+\MakeSpecialShortVerb\qverb\"
+\begin{document}
+Use "x_y" here.
+\end{document}

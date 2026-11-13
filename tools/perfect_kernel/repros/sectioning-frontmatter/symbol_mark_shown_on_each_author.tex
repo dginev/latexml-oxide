@@ -1,0 +1,11 @@
+% witness: 65e review round 3 (s1); 1807.01584, 1805.02699 (symbol marks nothing answers, now shown)
+% oracle:  pdflatex 0 errors: "Ann Able†∗ and Bob Baker†" (the `\thanks` mark aside)
+% engines: rust 65e r2 = † on Bob only (an author holding any note hid all of its unanswered symbol marks); 65a none
+% expect:  0 errors; both names show †; Ann's thanks note kept
+% status:  RED (65e r2) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dag}$\thanks{Corresponding author.} \and Bob Baker$^{\dag}$}
+\begin{document}\maketitle
+Text.\end{document}

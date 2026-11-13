@@ -1,0 +1,22 @@
+% witness: 2506.20360 (aa: `\institute{… China\\ \email{guolianglv@sina.com};{chunhuazhu@sina.cn}}` under `\inst{1}`
+%          and `\inst{1*}` authors); review rev92c B3's consequence
+% oracle:  pdflatex with 2210.16066's aa.cls: "Ann Able1, Bob Baker1∗, and Cid Cole1∗", then "Univ X, City" and
+%          "e-mail: bob@x.org;cid@x.org" unnumbered
+% engines: perl 0.8.8 = 0 errors; rust int122w = Univ X on Ann Able only (`1*` matched no entry); int122y (92c) = every
+%          author's, the address text glued to the institute ("Univ X, City, cid@x.org"); 92c r2 before the reading's
+%          row lines = Bob Baker and Cid Cole without the institute (today's row parts `{cid@x.org}` out, the reading
+%          kept it in the institute's text: they differed, the writer declined)
+% expect:  0 errors, 0 warnings; a sole institute's later line printing addresses alone is an e-mail line of the row in
+%          the reading as in today's (`shared_row::row_email_calls`): each address the author it spells, the institute
+%          every author's (`\inst{1*}` read as its marks, ruling1:parted)
+% status:  RED (92c r2 step) -> GREEN (92c r2) — perfect_kernel_batch92c::aa_sole_institute_is_the_rows
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1*} \and Cid Cole\inst{1*}}
+\institute{Univ X, City\\ \email{bob@x.org};{cid@x.org}}
+\abstract{X}
+\maketitle
+Text.
+\end{document}

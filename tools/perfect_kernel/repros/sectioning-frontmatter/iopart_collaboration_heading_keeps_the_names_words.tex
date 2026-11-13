@@ -1,0 +1,26 @@
+% mechanism: a heading's collaboration contact, made in each name's content (`Collaborations::author`,
+%   author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946), goes after the name's words and before its notes
+%   (`heading_place`), and its call is no name text (`visible_name_text` reads no `\lx@add@contact`): a reader that
+%   places a later address by the names' words (iopart's `\ead`, `\lx@add@contact@placed[owner=sequence]`) still spells
+%   the name. Review rev97cd r2 (found by its A/B).
+% witness: 1612.09318 (iopart, `\author{ACME Collaboration: J~Baron$^1$, …, A~D~West$^3$, E~P~West$^1$}` then
+%   `\ead{awest@physics.harvard.edu}`: with the contact before the name, or its words run into the name's
+%   ("WestXYZ"), the address went to a nameless creator); 1204.5689 (`G.~Antchev\footnote{INRNE-BAS…}` under `for the
+%   TOTEM Collaboration:`: the collaboration before the note)
+% oracle:  pdflatex (TL 2025) with 1612.09318's iopart.cls: 0 errors; "XYZ Collaboration: J Baron1 , A D West2 , E P
+%   West1", "1 Univ A, 2 Univ B", "E-mail: awest@x.edu"
+% engines: rust 97d r2 (pre-fix): the e-mail on a nameless creator; rust 97d r1: on A D West (the heading's contact
+%   after every creator's); perl: not run
+% expect:  0 errors, 0 warnings; three creators each with the XYZ Collaboration contact and the institute its mark
+%   names, the e-mail on A D West
+% status:  RED (97d r2 pre-fix) -> GREEN (97d r2)
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{XYZ Collaboration: J~Baron$^1$, A~D~West$^2$, E~P~West$^1$}
+\address{$^1$Univ A, $^2$Univ B}
+\ead{awest@x.edu}
+\maketitle
+Body.
+\end{document}

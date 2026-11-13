@@ -1,0 +1,22 @@
+% mechanism: a legend ends at `\:` before an address or at the paragraph break; the observer's reader keeps the lines under it in the note (`resolver/blocks.rs`, legend entry and continued lines; the address sits in a `ref`, so the 106a take-out misses it)
+% witness: 2605.10201 (review rev108a S3)
+% oracle:  pdflatex: 0 errors; legends, then the contact and the website
+% engines: rust 108a: both in the † note on Bob Baker
+% expect:  0 errors; † note "Corresponding author"; the address a contact, the website a URL
+% status:  RED (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able}$^{1\ast}$ \: \textbf{Bob Baker}$^{2\dagger}$
+
+\normalsize $^1$Univ X \quad $^2$Univ Y
+
+$^{\ast}$ Equal contribution \: ${^\dagger}$ Corresponding author \: Contact email: \href{ann@x.org}{ann@x.org}
+
+Website: \href{https://x.org/}{https://x.org/}
+}
+\maketitle
+Text.
+\end{document}

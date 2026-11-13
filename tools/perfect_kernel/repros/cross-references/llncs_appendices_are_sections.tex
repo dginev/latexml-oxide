@@ -1,0 +1,27 @@
+% witness: arXiv 2609.39362, 2303.08726 ("0.A" where the PDF prints "A")
+% oracle:  pdflatex 0 errors with llncs.cls (TL 2025 v2.26, :51 article's \appendix); "See 1, 1, 1, 1, 2, 2.1, 2, 3, A, 4, A.1, 2, 2, B, 5, 3."
+% engines: rust (int53a) = "See 1, 1, 1, 1, 2, 2.1, 2, 3, 0.A, 4, 0.A.1, 2, 2, 0.B, 5, 3."; Perl 0.8.8 the same, "Appendix 0.A" (latex_constructs.pool.ltxml:689-692)
+% expect:  0 errors; appendix sections A, A.1, B (not 0.A), ids A1, A2
+% status:  RED (int53a) -> GREEN (78q, KNOWN_PERL_ERRORS #1099)
+\documentclass{llncs}
+\usepackage{graphicx}
+\begin{document}
+\section{A}\label{sA}
+\begin{equation}a\label{e1}\end{equation}
+\begin{figure}[t]\caption{F1}\label{f1}\end{figure}
+\begin{table}[t]\caption{T1}\label{t1}\end{table}
+\section{B}\label{sB}
+\subsection{C}\label{sC}
+\begin{equation}b\label{e2}\end{equation}
+\begin{eqnarray}c&=&d\label{e3}\end{eqnarray}
+\appendix
+\section{D}\label{sD}
+\begin{equation}x\label{e4}\end{equation}
+\subsection{E}\label{sE}
+\begin{figure}[t]\caption{F2}\label{f2}\end{figure}
+\begin{table}[t]\caption{T2}\label{t2}\end{table}
+\section{G}\label{sG}
+\begin{equation}y\label{e5}\end{equation}
+\begin{figure}[t]\caption{F3}\label{f3}\end{figure}
+See \ref{sA}, \ref{e1}, \ref{f1}, \ref{t1}, \ref{sB}, \ref{sC}, \ref{e2}, \ref{e3}, \ref{sD}, \ref{e4}, \ref{sE}, \ref{f2}, \ref{t2}, \ref{sG}, \ref{e5}, \ref{f3}.
+\end{document}

@@ -20,6 +20,18 @@ static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
 #[inline]
 fn charcode_to_char(n: i64) -> char { char::from_u32(n as u32).unwrap_or((n as u8) as char) }
 
+/// The width of `\ `: the font's interword space (tex.web §1041-1043 `ex_space`), measured as a typed space is. In
+/// math it stays Perl's 0.5em, the padding the math serializer writes: TeX takes the text font's space there too, but
+/// a math font measures a space as nothing.
+pub(crate) fn control_space_width() -> Result<Dimension> {
+  if lookup_bool_sym(pin!("IN_MATH")) {
+    return Dimension::from_str("0.5em");
+  }
+  Ok(lookup_font().map_or_else(Dimension::default, |font| {
+    font.compute_string_size(" ", SymHashMap::default()).0
+  }))
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Character Family of primitive control sequences
@@ -30,6 +42,9 @@ LoadDefinitions!({
   // \char           c  provides access to one of the 256 characters in a font.
   //----------------------------------------------------------------------
   // Perl: $_[0]->enterHorizontal; Box(' ', ...isSpace => 1, width => '0.5em')
+  //
+  // `\ ` appends the font's interword glue (tex.web §1041-1043 `ex_space`), not Perl's fixed 0.5em:
+  // `a\ \the\lastskip` gives 3.33333pt at 10pt (guard `box_primitives::unskip_horizontal_glue`, DIVERGENCES #422).
   DefPrimitive!("\\ ", {
     enter_horizontal();
     Tbox::new(
@@ -37,8 +52,7 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\ ")),
-      stored_map!("name" => "space", "isSpace" => true,
-      "width" => Dimension::from_str("0.5em")?),
+      stored_map!("name" => "space", "isSpace" => true, "isSkip" => true, "width" => control_space_width()?),
     )
   });
 
@@ -71,16 +85,27 @@ LoadDefinitions!({
     // `<enc>_<family>_fontmap` only on the branch that looked the font up
     // itself (Perl assigns `$font` solely inside `if (!$encoding)`), so an
     // explicit encoding costs `\ttfamily\char11` its `OT1_typewriter` ↑.
-    let decoded = u8::try_from(number.value_of())
-      .ok()
-      .and_then(|code| font::decode_str(code, None, false))
-      .unwrap_or_else(|| pin!(""));
+    // Under the `luatex`/`xetex` profiles the engine is Unicode: `\char"0329` is the
+    // code point itself (tuenc.def:108 `\add@unicode@accent` appends the
+    // combining mark that way; tipauni). pdfTeX-model stays 8-bit.
+    let value = number.value_of();
+    let decoded = if value > 255 && unicode_engine_profile() {
+      char::from_u32(value as u32).map(pin_char).unwrap_or_else(|| pin!(""))
+    } else {
+      u8::try_from(value)
+        .ok()
+        .and_then(|code| font::decode_str(code, None, false))
+        .unwrap_or_else(|| pin!(""))
+    };
+    // A raw `\font`'s slot is measured from its TFM (`Tbox::with_tfm_slot`).
+    let slot = u32::try_from(value).unwrap_or(u32::MAX);
     Tbox::new(
      decoded,
      None,
      None,
      Tokens!(T_CS!("\\char"), number_tks, T_RELAX!()),
      SymHashMap::default())
+    .with_tfm_slot(slot)
   });
 
   // No `mode => "text"`: Perl's `DefAccent` Primitive (TeX_Character.pool.ltxml
@@ -127,10 +152,16 @@ LoadDefinitions!({
 
   // Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
-  DefPrimitive!("\\chardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
+  // tex.web §1224: `\relax` first, then `scan_optional_equals` (§405), which reads
+  // the `=` with EXPANSION: catoptions.sty:215/1756 `\chardef\cpt@optionstacklimit
+  // \reserved@a` with `\reserved@a` = `=4\relax` set the limit to 0 when the `=` was
+  // matched unexpanded (cv4tw, arabic-book; class census 2026-09-24). The same holds
+  // for `\mathchardef` and the `\countdef` family (`shorthand_def`).
+  DefPrimitive!("\\chardef RedefinableToken SkipSpaces", sub[(newcs)] {
     // Let w/o AfterAssignment
     let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, relax_meaning, None);
+    read_keyword(&["="])?;
     let value = read_number()?;
     install_definition(
       Register::new_chardef(newcs, Some(value.into()), None, None), None);
@@ -172,17 +203,22 @@ LoadDefinitions!({
   // suggests all characters except spaces are returned in category code Other, i.e. Explode()
   // Mirrors Perl: CS → explode with escape char; SPACE → keep as space; ESCAPE/COMMENT/INVALID →
   // empty; all other catcodes → T_OTHER with same text.
-  DefMacro!("\\string Token", sub[(token)] {
-    // A live \special_relax-family token (a \noexpand marker already in the
-    // stream) must NOT stringify its raw internal name — that leaks the 0x01
-    // separator byte (illegal in XML 1.0) into document text. Print the name
-    // Perl prints for its equivalent representation: \special_relax.
-    // (Real TeX would print the SHADOWED name; both engines share this
-    // cosmetic divergence — see PR_READINESS cluster A.)
-    let token = if token.is_noexpand_family() {
-      T_CS!("\\special_relax")
-    } else {
-      token
+  //
+  // tex.web §471 reads the token at `normal` scanner status (`scanner_status:=
+  // normal; get_token`), so at a file's end it is the first token of the
+  // enclosing input: `read_token_across_input_ends`, as `\noexpand` reads.
+  DefMacro!(T_CS!("\\string"), None, {
+    let token = read_token_across_input_ends()?.unwrap_or_else(|| T_CS!("\\relax"));
+    // A live \special_relax-family token is TeX's `\noexpand` marker (tex.web
+    // §358: cmd `relax`, chr `no_expand_flag`, with `cur_cs` = the shadowed
+    // control sequence), and `\string` prints `cur_cs`'s name (§472
+    // `sprint_cs(cur_cs)`) — the SHADOWED name; the bare marker (no shadow)
+    // prints as `\relax`, the command it is a variant of (§266). Perl prints
+    // its internal `\special_relax` for both (divergence #238).
+    let token = match token.noexpand_shadowed() {
+      Some(shadowed) => shadowed,
+      None if token.is_noexpand_family() => T_CS!("\\relax"),
+      None => token,
     };
     match token.code {
       Catcode::CS => {
@@ -191,10 +227,10 @@ LoadDefinitions!({
           s = escapechar() + &s[1..];
         }
         Explode!(s)
-      }
+      },
       Catcode::SPACE => vec![token],
       Catcode::ESCAPE | Catcode::COMMENT | Catcode::INVALID => vec![],
-      _ => vec![Token { text: token.text, code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 }],
+      _ => vec![token.as_other()],
     }
   });
 
@@ -268,9 +304,13 @@ pub fn apply_accent(
 ) -> Result<Tbox> {
   let letter_box = digest(letter)?;
   let locator = letter_box.get_locator();
-  let font = letter_box.get_font()?.map(|f| Rc::new((*f).clone()));
-
   let mut string: String = letter_box.to_string();
+  // The accent is set in the current font; an empty letter (`\~{}`) has none of its own, so it is that font's
+  // (cmtt's 0x7E is `~`): a typewriter address's `http://a.edu/\~{}ann` keeps its `~` in the run (1601.03451).
+  let font = match letter_box.get_font()? {
+    Some(f) if !string.trim().is_empty() => Some(Rc::new((*f).clone())),
+    _ => lookup_font().map(|f| Rc::new((*f).clone())),
+  };
   // Perl: only replace dotless i/j with dotted for over-accents.
   // Over-accents are those placed above the letter (combiner range U+0300–U+0315 approx.).
   // Below accents (cedilla U+0327, dot-below U+0323, macron-below U+0331, comma-below U+0326)

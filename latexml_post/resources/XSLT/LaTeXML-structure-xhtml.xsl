@@ -372,7 +372,11 @@
   <xsl:template match="ltx:title">
     <xsl:param name="context"/>
     <!-- Skip title, if the parent has a titlepage, or if writing a cv! -->
-    <xsl:if test="not(parent::*/child::ltx:titlepage)">
+    <!-- Only a titlepage with ink stands for the title: an empty one (`\begin{titlepage}\vspace*{2cm}\end{titlepage}`
+         before `\maketitle`) prints nothing, and the title stays (OXIDIZED_DESIGN #761); nor does one continuing the title
+         block, the cover lines printed after the title and before a late abstract (`ltx_titlepage_continued`,
+         OXIDIZED_DESIGN_DIVERGENCES #903). -->
+    <xsl:if test="not(parent::*/child::ltx:titlepage[not(contains(concat(' ',@class,' '),' ltx_titlepage_continued '))][normalize-space(.) or descendant::*[local-name()='graphics' or local-name()='picture' or local-name()='Math' or local-name()='svg']])">
       <xsl:text>&#x0A;</xsl:text>
       <!-- In html5, could have wrapped in hgroup, but that was deprecated -->
       <xsl:call-template name="maketitle">
@@ -551,7 +555,9 @@
     <xsl:apply-templates/>
   </xsl:template>
 
-  <xsl:template match="ltx:pubnote[@role='doi']" mode="inner">
+  <!-- A DOI given as text links it; one holding markup (pnas-new's `\doi{\url{…}}`) is rendered
+       as any pubnote, not wrapped in a second anchor. -->
+  <xsl:template match="ltx:pubnote[@role='doi'][not(*)]" mode="inner">
     <xsl:param name="context"/>
     <xsl:element name="a" namespace="{$html_ns}">
       <xsl:attribute name="href"><xsl:value-of select="concat('https://doi.org/',text())"/></xsl:attribute>
@@ -635,7 +641,74 @@
     </div>
   </xsl:template>
 
+  <!-- A letter's sender and addressee (the g-brief classes, OXIDIZED_DESIGN_DIVERGENCES #412; witnesses
+       g-brief/beispiel2, cv/ApplicationLetter): rendered in place as a block, the name and then each contact, its
+       label (the class's, when it prints one) apart from the value (see LaTeXML.css). -->
+  <xsl:template match="ltx:creator[@role='sender' or @role='addressee']">
+    <xsl:param name="context"/>
+    <xsl:text>&#x0A;</xsl:text>
+    <xsl:element name="div" namespace="{$html_ns}">
+      <xsl:call-template name="add_id"/>
+      <xsl:call-template name="add_attributes"/>
+      <xsl:apply-templates select="ltx:personname">
+        <xsl:with-param name="context" select="$context"/>
+      </xsl:apply-templates>
+      <xsl:apply-templates select="ltx:contact" mode="letter">
+        <xsl:with-param name="context" select="$context"/>
+      </xsl:apply-templates>
+      <xsl:text>&#x0A;</xsl:text>
+    </xsl:element>
+  </xsl:template>
+
+  <!-- A contact of a letter's sender or addressee: as ltx:contact, with a separator after its label (the classes'
+       labels, "Telefon:", end without one). -->
+  <xsl:template match="ltx:contact" mode="letter">
+    <xsl:param name="context"/>
+    <xsl:text>&#x0A;</xsl:text>
+    <xsl:element name="span" namespace="{$html_ns}">
+      <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
+      <xsl:call-template name="add_id"/>
+      <xsl:call-template name="add_attributes"/>
+      <xsl:apply-templates select="." mode="begin">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+      <xsl:if test="@name">
+        <xsl:element name="span" namespace="{$html_ns}">
+          <xsl:attribute name="class">ltx_contact_name</xsl:attribute>
+          <xsl:value-of select="@name"/>
+        </xsl:element>
+        <xsl:text> </xsl:text>
+      </xsl:if>
+      <xsl:apply-templates select="." mode="inner">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+      <xsl:apply-templates select="." mode="end">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+    </xsl:element>
+  </xsl:template>
+
   <xsl:template match="ltx:creator"/>
+
+  <!-- Authors without a title (exam-n's `\author`, which its class prints as a comment; brandeis-problemset,
+       harnon-cv; OXIDIZED_DESIGN_DIVERGENCES #434): no title template runs to render them, so the first author renders
+       the author block in place. -->
+  <xsl:template match="ltx:creator[@role='author'][not(../ltx:title)][not(parent::ltx:sidebar)]
+                       [not(preceding-sibling::ltx:creator[@role='author'])]">
+    <xsl:param name="context"/>
+    <xsl:call-template name="authors">
+      <xsl:with-param name="context" select="$context"/>
+    </xsl:call-template>
+  </xsl:template>
+
+  <!-- latexml-oxide (OXIDIZED_DESIGN #479): an author with metadata (ltx:rdf children, e.g. an AASTeX 7 address the
+       PDF does not print) is the RDFa subject of it, a schema:Person. A mode of its own, so that a format without RDFa
+       (LaTeXML-epub3.xsl) can drop it with the ltx:rdf. -->
+  <xsl:template match="ltx:creator" mode="rdfa-subject">
+    <xsl:if test="ltx:rdf and not(@typeof)">
+      <xsl:attribute name="typeof">schema:Person</xsl:attribute>
+    </xsl:if>
+  </xsl:template>
 
   <!-- Format an author 'inline' as part of an author block -->
   <xsl:template match="ltx:creator[@role='author']" mode="intitle">
@@ -652,6 +725,7 @@
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
       <xsl:call-template name="add_id"/>
       <xsl:call-template name="add_attributes"/>
+      <xsl:apply-templates select="." mode="rdfa-subject"/>
       <xsl:apply-templates select="." mode="begin">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
@@ -686,6 +760,10 @@
            (ltx_thanks_*) ride on the note's @class. author_notes below selects only
            ltx:contact, so there is no double-render. -->
       <xsl:apply-templates select="ltx:note">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+      <!-- the author's metadata: hidden RDFa spans (span.ltx_rdf), OXIDIZED_DESIGN #479 -->
+      <xsl:apply-templates select="ltx:rdf">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
       <xsl:if test="ltx:contact[not(@role='orcid')]">
@@ -788,12 +866,41 @@
     <xsl:apply-templates/>
   </xsl:template>
 
+  <!-- The address a contact links to: its own text, or, when the address sits in an element of its own (a font
+       change, \texttt), the first text inside it. Perl takes text() alone, so such a contact linked to `mailto:`
+       alone. An address held in typewriter runs, split by a character set in another font (a typewriter address's
+       `$\sim$`, 1601.02576), is all of its text, not the one character between the runs. (A nested run's font is only
+       its change from the run around it, so an italic or bold run inside the address is still the address.) -->
+  <xsl:template name="contact-address">
+    <xsl:choose>
+      <xsl:when test="* and not(*[not(self::ltx:text[contains(@font,'typewriter')])])">
+        <xsl:value-of select="normalize-space(.)"/>
+      </xsl:when>
+      <xsl:when test="text()[normalize-space()]">
+        <xsl:value-of select="normalize-space(text()[normalize-space()][1])"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="normalize-space((.//text()[normalize-space()])[1])"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
   <xsl:template match="ltx:contact[@role='email']" mode="inner">
     <xsl:param name="context"/>
-    <xsl:element name="a" namespace="{$html_ns}">
-      <xsl:attribute name="href"><xsl:value-of select="concat('mailto:',text())"/></xsl:attribute>
-      <xsl:apply-templates/>
-    </xsl:element>
+    <xsl:choose>
+      <xsl:when test=".//ltx:ref"> <!--Already formatted as link?-->
+        <xsl:apply-templates/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:element name="a" namespace="{$html_ns}">
+          <xsl:attribute name="href">
+            <xsl:text>mailto:</xsl:text>
+            <xsl:call-template name="contact-address"/>
+          </xsl:attribute>
+          <xsl:apply-templates/>
+        </xsl:element>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template match="ltx:contact[@role='orcid']" mode="inner">
@@ -805,7 +912,8 @@
       <xsl:otherwise>
         <xsl:element name="a" namespace="{$html_ns}">
           <xsl:attribute name="href">
-            <xsl:value-of select="concat('https://orcid.org/',text())"/>
+            <xsl:text>https://orcid.org/</xsl:text>
+            <xsl:call-template name="contact-address"/>
           </xsl:attribute>
           <xsl:apply-templates/>
         </xsl:element>
@@ -815,10 +923,17 @@
 
   <xsl:template match="ltx:contact[@role='url']" mode="inner">
     <xsl:param name="context"/>
-    <xsl:element name="a" namespace="{$html_ns}">
-      <xsl:attribute name="href"><xsl:value-of select="text()"/></xsl:attribute>
-      <xsl:apply-templates/>
-    </xsl:element>
+    <xsl:choose>
+      <xsl:when test=".//ltx:ref"> <!--Already formatted as link?-->
+        <xsl:apply-templates/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:element name="a" namespace="{$html_ns}">
+          <xsl:attribute name="href"><xsl:call-template name="contact-address"/></xsl:attribute>
+          <xsl:apply-templates/>
+        </xsl:element>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <!-- If we want to deduce style & children, we could set this up as a parameter option -->

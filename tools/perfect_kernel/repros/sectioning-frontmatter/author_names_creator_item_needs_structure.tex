@@ -1,0 +1,24 @@
+% mechanism: the writer's re-part (OD #928, review rev94a r3): a creator of today's becomes an item of another creator
+%   only on structural evidence — the reading's item answers a mark, is a labelled line or row, or came from an API
+%   call (`repart::structural`); an item the classify helpers read from its words alone (`classify:institution`,
+%   `repart::by_words`) is no such evidence: the writer gives the creator back (`repart::concede`) and
+%   today's creators stay. 94a r3 gave Bob Baker to
+%   Ann Able as her affiliation ("Observatory" an institution word). Siblings on the same path: `on behalf of the
+%   IceCube Neutrino Observatory`, `for the Jefferson Lab Hall A Experiment`, `, Bob Baker for the Max Planck
+%   Institute`, `and the LIGO team of Caltech`, `and the Fermi-LAT Collaboration members at SLAC` (review r3 probes
+%   p24-p26, p34, p35); `the PE11 team of {\it Kepler} WG\#1` (author_names_team_of_stays_a_creator.tex); article
+%   `John Smith, University of Toronto` (two creators, as 93a: the cost of the doubt).
+% witness: review rev94a r3 probe s/p11_observ
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker for the Pierre Auger Observatory"
+% engines: rust 93a: Ann Able / Bob Baker for the Pierre Auger Observatory, two creators; rust 94a r3: Ann Able,
+%   affiliation "Bob Baker for the Pierre Auger Observatory"; perl: not run
+% expect:  0 errors, 0 warnings; two creators, Ann Able and Bob Baker for the Pierre Auger Observatory, as today's
+% status:  RED (94a r3) -> GREEN (94a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker for the Pierre Auger Observatory}
+\maketitle
+Body.
+\end{document}

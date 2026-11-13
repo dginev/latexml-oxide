@@ -1,0 +1,19 @@
+% witness: 1802.05913 (98 `\subref`s dangling), 2304.09615 (10)
+% oracle:  pdflatex 0 errors: "See (a) and b of Figure 1." — subfig.sty:524-557 writes `sub@<label>` beside
+%          `<label>` (the sub-float number alone) and `\subref` (:558-563) refers to it
+% engines: rust int94c = `\ref{sub@fig:l}` (subfig.sty.ltxml:93-94 shares it): no element carries `sub@…`, every
+%          `\subref` dangles
+% expect:  0 errors, 0 warnings; both `\subref`s refer to the sub-floats' own labels (rendered "1a", "1b": the
+%          sub-float's refnum, as subcaption's `\subref` shows)
+% status:  RED (int94c) -> GREEN (80d: subfig_sty.rs `\sf@subref`/`\sf@@subref` = `\ref{#1}`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfig}
+\begin{document}
+\begin{figure}
+\subfloat[Left]{\label{fig:l}L}
+\subfloat[Right]{\label{fig:r}R}
+\caption{Pair}\label{fig:pair}
+\end{figure}
+See \subref{fig:l} and \subref*{fig:r} of Figure~\ref{fig:pair}.
+\end{document}

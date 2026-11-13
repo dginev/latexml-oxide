@@ -25,10 +25,127 @@
 //! The file ends with a **retraction record**: the MathSciNet `\cprime` transliteration family was
 //! briefly always-on here and was removed 2026-07-27. The comment is kept because it carries the
 //! witnesses and the reasoning — do not re-add the family.
-use crate::prelude::*;
+use latexml_core::{
+  definition::origin::DefinitionOrigin,
+  document::{can_auto_close, can_contain},
+  state::file_loaded,
+};
 
-#[rustfmt::skip]
+use crate::{
+  latex_constructs::{begin_environment_by_macro, end_environment_by_macro},
+  prelude::*,
+};
+
+// The expl3 PDF/tagging API names this pool stubs as no-ops (`\tagpdfsetup`,
+// `\tag_struct_begin:n`, `\pdffile_embed_file:nnn`, `\pdfdict_*`,
+// `\pdfmeta_xmp_*` …) are declared again by tagpdf-base.sty:30-60 and
+// pdfmanagement.sty with `\cs_new_protected`/`\NewDocumentCommand`. No
+// retraction is needed before those raw loads: the stubs carry
+// `DefinitionOrigin::Pool` (K1 provenance), so the declarators' overrides
+// below (`\lx@if@pooldefined`) let `\cs_new` replace them quietly and let
+// ltcmd keep them quietly. Guard:
+// `perfect_kernel_batch56::tagpdf_base_redeclares_the_stubbed_api_cleanly`.
 LoadDefinitions!({
+  // Pushed by `begin_itemize` onto a list environment's `afterGroup` with the depth it saved:
+  // restores `\@listdepth` at the list's end (the `\endlist` half of latex.ltx:15913). A restore,
+  // not a decrement: a binding list closed by the kernel `\endlist` (nih/denselists'
+  // `{Enumerate}{\Onumerate}{\endlist}`) has already decremented it.
+  DefMacro!("\\lx@listdepth@restore", r"\global\@listdepth");
+
+  // A LaTeX display — `\[`, `{displaymath}` (latex.ltx:15734 `\def\displaymath{\[}`), `{equation}`, `{equation*}`
+  // (sect07.rs) — runs `\lx@mathdisplay@hook` where it begins, inside the display's group: empty for latex.ltx's
+  // displays, which are `$$`; amsmath's when its `\mathdisplay` sets them in an `\hbox{$…$}` under `\if@fleqn`
+  // (amsmath_sty.rs; tex_math.rs `\lx@math@in@hbox`). A primitive `$$` does not run it. `\[` (sect07.rs) is Perl's
+  // (latex_constructs.pool.ltxml:2070) followed by the hook. Guard
+  // `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
+  DefMacro!("\\lx@mathdisplay@hook", "");
+  // `{equation}` runs `\lx@equation@hook`, the display hook unless a class sets `{equation}` apart: fleqn.clo:92-103
+  // sets it as `\hb@xt@\linewidth\bgroup $\m@th\displaystyle\hskip\mathindent`, so an author's `$` in it ends that
+  // math and starts text in the box (fleqn_sty.rs `math_displays_in_hbox`), where its `\[` (:50-73) opens a `\bgroup`
+  // after the `$`, which an author's `$` meets as TeX's "Missing } inserted". amsmath, redefining `{equation}`, sets it
+  // back (amsmath_sty.rs). Guard `perfect_kernel_batch73b::dollar_in_a_fleqn_clo_display_is_text`.
+  DefMacro!("\\lx@equation@hook", "\\lx@mathdisplay@hook");
+
+  // The register LaTeX's paragraph hook runs: latex.ltx:9070 `\newtoks\everypar` and :9072-9077
+  // put `\the\toks<number>` in `\g__para_standard_everypar_tl`, so the hook names the user list by
+  // the register allocated here, whatever `\everypar` means later. A package that redefines
+  // `\everypar` (rlbicig.sty:62-64 `\def\everypar#1{\oldeverypar{…#1}}`, witness: montex manual) or
+  // lets it to another register leaves this one in place; `stomach.rs` fires it at a paragraph start. Guards:
+  // `perfect_kernel_batch58::{everypar_redefined_by_a_package_still_fires,
+  // everypar_let_to_another_register_keeps_the_list,
+  // everypar_chained_in_the_preamble_survives_the_document}`.
+  Let!("\\lx@para@everypar", "\\everypar");
+
+  // A toc copy — a heading's `toctitle`, a caption's `toccaption` — stands in for the moving argument
+  // LaTeX writes to the .toc/.lof and does not typeset at the heading (`\addcontentsline` →
+  // `\protected@write`, latex.ltx:17351-17362; the caption typesets `#3` once, :17401-17412), so a
+  // note in it neither steps its counter nor makes a note: digested again, a heading's
+  // `\protect\footnote` took two numbers and a caption's appeared twice, shifting every later note
+  // (2605.15775 marks 1 then 3). The kernel's own neutralization of that write, `\label`, `\index`,
+  // `\glossary` (:17359-17361), applies as well. Guard
+  // `perfect_kernel_batch58::note_in_a_title_or_caption_steps_once`.
+  DefMacro!("\\lx@note@gobble[]{}[]{}", "");
+  DefMacro!("\\lx@notemark@gobble[]{}[]", "");
+  DefMacro!("\\lx@notetext@gobble OptionalSemiverbatim {} [] {}", "");
+  // latex.ltx:17354-17355's `\@gobble@om` (`+o+m`) and `\@gobble@som` (`s+o+m`), as plain macros:
+  // the ltcmd expandable grabbers left a constructor's argument with an open frame
+  // (`\label[algorithm]{…}`, cleveref, after a caption: 2605.13648).
+  DefMacro!("\\lx@gobble@om[]{}", "");
+  DefMacro!("\\lx@gobble@som OptionalMatch:* [] {}", "");
+  // The copy is text TeX writes and does not typeset there, so a `_` or `^` in a caption's `[short_x]` or a heading's
+  // `[sec_a]` is its character (`tex_math::WRITTEN_COPY`, OXIDIZED_DESIGN #550; 1303.1693, 1206.2108,
+  // astro-ph0412052, hep-lat9812022). Guard `perfect_kernel_batch65m::short_forms_are_list_text`.
+  DefPrimitive!("\\lx@written@copy", {
+    assign_value(crate::tex_math::WRITTEN_COPY, true, Some(Scope::Local));
+  });
+  // The text of a caption's toc copy (`\@caption@@@`, longtable's and listings' captions): the `[short]`, or the caption
+  // where it is empty (`\caption[]{…}`) or the caption itself (`\@dblarg`'s copy, latex.ltx:17391-17400 — a `[short]`
+  // the same as the caption reads alike). The caption is then re-read, typeset where it stands (`\lx@reread@copy`): a
+  // Warning for one source occurrence is given there only (OXIDIZED_DESIGN_DIVERGENCES #721; guard
+  // `perfect_kernel_batch71a::undelimited_argument_warning_once_per_occurrence`). Chosen by the tokens, without
+  // expanding either (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
+  DefMacro!("\\lx@toc@copy@text{}{}", sub[(short, caption)] {
+    if short.is_empty() || short == caption {
+      let mut tokens = vec![T_CS!("\\lx@reread@copy")];
+      tokens.extend(caption.unlist());
+      Tokens::new(tokens)
+    } else {
+      short
+    }
+  });
+  DefMacro!(
+    "\\lx@toc@copy@neutralize",
+    r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\lx@caption@postlabel\@gobble\let\lx@label@type\@gobble\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
+  );
+
+  // The class's `\@makecaption{<label>}{<text>}` for a caption of type `#1`: latex.ltx's "Figure 1: text" (the
+  // `\sbox\@tempboxa{#1: #2}` of `\@makecaption`, the format of the kernel's figure and table, sect09.rs). A
+  // `\@float` of any other type is made by it too — newfloat's types (newfloat_sty.rs), listings' `\lst@makecaption`
+  // (listings.sty:1675) — so a class whose `\@makecaption` is its own redefines this, its figure's and table's
+  // formats with it (amsart's ". ", ams_support_sty.rs `ams_class_caption_format`; IEEEtran's "Fig. 1." and "TABLE I"
+  // above, ieeetran_cls.rs). float.sty's own styles make their captions themselves (float_sty.rs), and caption, when
+  // loaded, its own (acmart's: sigplan's minted `listing` "Listing 1.", 1807.03757). Guards
+  // `perfect_kernel_batch78y::{ieeetran_*, amsart_newfloat_caption_takes_the_class_format}`.
+  DefMacro!("\\lx@makecaption{}{}", r"\lx@tag[][: ]{\lx@fnum@@{#1}}#2");
+
+  //======================================================================
+  // 0. The part internals `\@part[#1]#2` / `\@spart#1` — the sectioning hook
+  //
+  // article.cls:273-294 dispatches `\part` through `\secdef\@part\@spart`,
+  // KOMA-Script through `\SecDef\@part\@spart` (scrartcl.cls:4884) with its own
+  // typesetting `\@part` = `\scr@@startpart` (:4069-4071). `\part` itself stays
+  // unlocked (Perl latex_constructs.pool.ltxml:558, sect04.rs — exam.cls:3303's
+  // `\def\part` is a question part, not sectioning), so KOMA's `\part` replaced
+  // ours and typeset `<p><text font="sansserif bold">Part I</text></p>`: no
+  // `ltx:part` in glossaries-user, hvfloat, cnltx-doc manuals, ClassicThesis …
+  // (Axis 2b, semantic_coverage.py: `\part` 59.5 %). These internals are the
+  // sectioning hook, locked as `\section` is: a class's layout redefinition is
+  // dropped and a part dispatched through them is an `ltx:part`. Guard:
+  // `perfect_kernel_batch56::koma_part_is_a_part`.
+  //======================================================================
+  DefMacro!("\\@part[]{}", "\\lx@startsection{part}{-1}{}{}{}{}[#1]{#2}", locked => true);
+  DefMacro!("\\@spart{}", "\\lx@startsection{part}{-1}{}{}{}{}*{#1}", locked => true);
+
   //======================================================================
   // 1. Modern LaTeX kernel — `\If…AtLeast/LoadedTF` family
   //
@@ -37,18 +154,21 @@ LoadDefinitions!({
   // entries that don't actually replay because we filter same-target
   // aliases in `dump_writer`. Re-establish here post-dump.
   //======================================================================
-  Let!("\\IfPackageLoadedTF",  r"\@ifpackageloaded");
-  Let!("\\IfClassLoadedTF",    r"\@ifclassloaded");
+  Let!("\\IfPackageLoadedTF", r"\@ifpackageloaded");
+  Let!("\\IfClassLoadedTF", r"\@ifclassloaded");
   Let!("\\IfPackageAtLeastTF", r"\@ifpackagelater");
-  Let!("\\IfClassAtLeastTF",   r"\@ifclasslater");
-  // \IfFormatAtLeastTF{<date>}{<true>}{<false>}: alias to
-  // `\@ifl@t@r@released` — but that name isn't captured by the dump,
-  // so the Let creates a dangling alias and downstream usage errors
-  // (witness 2408.03197 — greek-fontenc.def probes the macro).
-  // Define directly as a 3-arg gobble that always takes the "true"
-  // branch (we don't model format dates). Witness 2408.03197, 2408.04893.
-  DefMacro!("\\IfFormatAtLeastTF{}{}{}", "#2");
-  Let!("\\IfFileAtLeastTF",    r"\@ifl@t@r");
+  Let!("\\IfClassAtLeastTF", r"\@ifclasslater");
+  // \IfFormatAtLeastTF is deliberately NOT redefined here. latex.ltx L18405
+  // defines it as `\@ifl@t@r\fmtversion`, and both halves survive the dump
+  // (`\@ifl@t@r` + `\@parse@version@`, `\fmtversion` = the real per-TL-year
+  // date, issue #739). The former always-true 3-arg stub (kept for witness
+  // 2408.03197 / 2408.04893, greek-fontenc.def probing the macro, back when
+  // the Let to `\@ifl@t@r@released` dangled) answered YES to any date, so
+  // KOMA's `\IfLTXAtLeastTF{<KOMA year+2>/…}` (scrartcl.cls L2028-2035 via
+  // scrbase.sty L127) warned "Your are using a KOMA-Script version, that has
+  // not been tested with LaTeX version" on every KOMA document. Guard:
+  // `perfect_kernel_batch53::ifformatatleast_compares_real_fmtversion`.
+  Let!("\\IfFileAtLeastTF", r"\@ifl@t@r");
 
   // \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS
   // for legacy 8-bit-encoding compat (used by papers that pre-date the
@@ -67,7 +187,248 @@ LoadDefinitions!({
   // undefined CS so this stub is in place by the time it is expanded.
   // The kvopts inside are PDF-only and semantically irrelevant for XML
   // output — gobble the brace group. Witness 2305.08034.
-  def_macro_noop("\\DocumentMetadata{}")?;
+  // Absorb the metadata keyvals but FLIP the kernel's declared flag
+  // (latex.ltx L9167/L9173: `\IfDocumentMetadataTF` starts as
+  // `\@secondoftwo`, `\DocumentMetadata` lets it to `\@firstoftwo`) —
+  // classes guard on it (`\NeedsDocumentMetadata`, ltx-talk.cls L32:
+  // "This file needs \DocumentMetadata" ×12 docs).
+  // Real `\DocumentMetadata` ALWAYS `\RequirePackage{latex-lab-testphase-latest}`
+  // (documentmetadata-support.ltx:72), which always `\RequirePackage{tagpdf}`
+  // (latex-lab-testphase-latest.sty:39) — the `tagging=` key only toggles
+  // activation, not loading. So load our tagpdf binding here too: its
+  // role-namespace props are document content (the tagpdf manual iterates
+  // `\g__tag_role_NS_pdf_prop`, tagpdf.tex:2163; on an undefined prop
+  // `\prop_map_inline:cn` loses its `\prg_break_point:Nn` and the trailing
+  // `\prop_map_break:` runs to EOF — 39-byte XML + Fatal). Guard:
+  // `perfect_kernel_batch54::documentmetadata_loads_tagpdf`.
+  // `latex-lab-testphase-latest.sty:43,47` (via documentmetadata-support
+  // .ltx:72) also loads the block and minipage testphase modules, whose
+  // template types/instances and tagging sockets raw classes edit and use
+  // (ltx-talk.cls:1860 `\EditInstance{item}{basic}`, tagpdfdocu-patches
+  // .sty:127,146): bound in latex_lab_testphase_{block,minipage}_sty.rs.
+  // documentmetadata-support.ltx:39 first loads pdfmanagement-testphase (and
+  // :62-68 its backend layer). That layer writes PDF objects and stays absorbed
+  // here (the stubbed l3pdf API above), but packages test its version
+  // (zugferd.sty:101 `\IfPackageAtLeastTF{pdfmanagement-testphase}{2024/09/13}
+  // {}{…too old}`; zugferd DEMOs, sweep 120), so its `\ver@` records the
+  // installed file's `\ProvidesExplPackage` date.
+  // "A stand-in's copy provides" (OXIDIZED_DESIGN_DIVERGENCES #731; `state::note_copy_provides_assignment`): the scope
+  // markers around the `\AtEndOfClass`/`\AtEndOfPackage` code a stand-in's copy registers (`state::copy_provides_wrap`),
+  // which runs at the end of its load under the copy's provides-mode (aa.cls:71's `{abstract}` keeps the binding's),
+  // and the stand-in for lthooks' `\AddToHook code` while the copy is read (`state::swap_copy_provides_hook_seam`):
+  // the document-time code it registers is not registered (`state::copy_provides_defers`; aastex7.cls:459's
+  // `\AddToHook{enddocument}`, 2504.00922).
+  DefPrimitive!("\\lx@copy@provides@begin{}", sub[(id)] {
+    let id = id.to_string().trim().parse::<u32>().unwrap_or(0);
+    definition::origin::enter_copy_provides(id);
+  });
+  DefPrimitive!("\\lx@copy@provides@end", {
+    definition::origin::leave_copy_provides();
+  });
+  DefMacro!("\\lx@copy@provides@AddToHook{}{}{}", sub[(_hook, _label, _code)] {
+    copy_provides_defers("\\AddToHook");
+    Tokens!()
+  });
+  DefPrimitive!("\\lx@record@provided{}", sub[(file)] {
+    let file = file.to_string();
+    let ver_cs = T_CS!(s!("\\ver@{file}"));
+    if lookup_definition(&ver_cs)?.is_none()
+      && let Some(version) = provides_version_of(&file)
+    {
+      DefMacro!(ver_cs, None, Tokenize!(TeXString::assembled(version)),
+        scope => Some(Scope::Global));
+    }
+  });
+  DefMacro!(
+    "\\DocumentMetadata{}",
+    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\lx@record@provided{pdfmanagement-testphase.sty}\\RequirePackage{tagpdf}\\RequirePackage{latex-lab-testphase-minipage}\\RequirePackage{latex-lab-testphase-block}"
+  );
+  // `\DocumentMetadata{tagging=on}` activates the kernel's latex-lab
+  // tagging project, whose user surface (`\tagpdfsetup` etc.) exists
+  // WITHOUT tagpdf.sty ever loading (tagpdf manuals; tex-vpat). Our XML is
+  // the accessible structure — absorb here at kernel level, mirroring the
+  // tagpdf_sty.rs binding.
+  def_macro_noop("\\tagpdfsetup{}")?;
+  // pdfmanagement's l3pdffile/l3pdfdict user surface (pdfmanagement.ltx:3389
+  // `\pdffile_embed_file:nnn` writes an fstream + filespec object; the
+  // `\pdfdict_*` family edits named PDF dictionaries): PDF/A associated-file
+  // structure with no XML meaning, and nothing reads the objects back
+  // (tagpdf's ex-AF-file.tex:29-32). Absorbed as consume-and-drop; the names
+  // are formed with `\csname` because a `DefMacro!` body is tokenized under
+  // standard catcodes. Guard: `perfect_kernel_batch54::pdffile_and_pdfdict_are_absorbed`.
+  for (cs, params) in [
+    ("pdffile_embed_file:nnn", "{}{}{}"),
+    ("pdffile_embed_file:nnnN", "{}{}{} Token"),
+    ("pdffile_embed_stream:nnN", "{}{} Token"),
+    ("pdfdict_new:n", "{}"),
+    ("pdfdict_put:nnn", "{}{}{}"),
+    ("pdfdict_gput:nnn", "{}{}{}"),
+    ("pdfdict_remove:nn", "{}{}"),
+    ("pdfdict_gremove:nn", "{}{}"),
+    ("pdfmeta_xmp_xmlns_new:nn", "{}{}"),
+    ("pdfmeta_xmp_schema_new:nnn", "{}{}{}"),
+    ("pdfmeta_xmp_property_new:nnnnn", "{}{}{}{}{}"),
+    ("pdfmeta_xmp_add:n", "{}"),
+    ("pdfmeta_xmp_add_declaration:n", "{}"),
+    ("pdfmeta_xmp_add_declaration:nnnnn", "{}{}{}{}{}"),
+  ] {
+    def_macro_noop(&s!("\\{cs} {params}"))?;
+  }
+  // tagpdf.sty `\tagtool{<keyvals>}` (per-structure tagging tweaks) and
+  // latex-lab-testphase-block's `\DebugBlocksOn/Off` (debug output for the
+  // block tagging code) — both PDF-structure-only, like `\tagpdfsetup`.
+  // Witness: tagpdf manual (tagpdf.tex:18,127).
+  def_macro_noop("\\tagtool{}")?;
+  def_macro_noop("\\DebugBlocksOn")?;
+  def_macro_noop("\\DebugBlocksOff")?;
+  def_macro_noop("\\tagstructbegin{}")?;
+  def_macro_noop("\\tagstructend")?;
+  def_macro_noop("\\tagmcbegin{}")?;
+  def_macro_noop("\\tagmcend")?;
+  // The expl3 layer of the same API — classes written for the tagging
+  // project call these directly (ltx-talk.cls uses struct/mc pairs,
+  // suspend/resume, tool, get).
+  def_macro_noop("\\tag_struct_begin:n{}")?;
+  def_macro_noop("\\tag_struct_end:")?;
+  def_macro_noop("\\tag_mc_begin:n{}")?;
+  def_macro_noop("\\tag_mc_end:")?;
+  def_macro_noop("\\tag_suspend:n{}")?;
+  def_macro_noop("\\tag_resume:n{}")?;
+  def_macro_noop("\\tag_tool:n{}")?;
+  def_macro_noop("\\tag_get:n{}")?;
+  // pdfmanagement.ltx:320 `\pdfmanagement_add:nnn {dict}{key}{value}` and :336
+  // its variants (`nne,nee,eee,nnx,nxx,xxx`): PDF catalog/dictionary entries;
+  // zugferd.sty:279/283 adds the ZUGFeRD `/AF` array. `\pdf_object_ref:n`
+  // expands to the l3backend `\__pdf_backend_object_ref:n`, which no PDF
+  // backend defines here — consumed too.
+  for v in ["nnn", "nne", "nee", "eee", "nnx", "nxx", "xxx"] {
+    def_macro_noop(&s!("\\pdfmanagement_add:{v}{{}}{{}}{{}}"))?;
+  }
+  def_macro_noop("\\__pdf_backend_object_ref:n{}")?;
+
+  // Unicode-engine math-code primitives (LuaTeX/XeTeX; LuaTeX manual §7.3).
+  // Raw font-setup files probe-and-set them when the engine claims Unicode
+  // support (fontsetup's fspdefault.tex under unicode-math; keytheorems/
+  // elpres manuals — sweep-16 tail, 4 bundles). Assignments are engine
+  // font-table bookkeeping with no XML meaning: absorb the full assignment
+  // syntax faithfully so the token stream stays balanced.
+  //
+  // Defined HERE (post-dump), NOT in pdftex.rs (pre-format): latex.ltx
+  // PROBES `\ifx\Umathcode\@undefined` to pick the TU/Unicode branch
+  // (L14662), so a pre-format definition makes the FORMAT BUILD masquerade
+  // as a Unicode engine — the dump then bakes `\UnicodeEncodingName`=TU and
+  // babel-greek raw-loads tuenc-greek.def instead of LGR (greek_test).
+  // Same probe-safety class as the \directlua prohibition
+  // (project_lua_bridge_directive).
+  //   \Umathcode <num>[=]<class><fam><ucode>  /  \Umathchardef <cs>[=]<c><f><u>
+  // (e-)pTeX's input-encoding primitive (`\epTeXinputencoding utf8`, ptex
+  // manual §e-pTeX: reads a file-name-like keyword — `utf8`/`euc`/`sjis`/
+  // `jis`/`ascii`). It exists ONLY under the pTeX input processor, so a class
+  // invoking it (jlreq.cls:494, after `\NeedsTeXFormat{LaTeX2e}` at :7 and a
+  // runtime engine guess in jlreq-helpers.sty:377-388) declares exactly what
+  // `\NeedsTeXFormat{pLaTeX2e}` declares for jsarticle: kanji join control
+  // words (`PTEX_PROFILE`, K12 — `state::is_ptex_kanji_letter`). Without it
+  // `\def\西暦{\西暦true}` (jlreq.cls:6446) tokenizes as the control SYMBOL
+  // `\西` delimited by the catcode-12 `暦`, a self-referential delimited macro
+  // that spins to `Fatal:Timeout:PushbackLimit` at `\jlreqsetup{year_style=
+  // seireki}` (:6780) — SHARED with Perl, which hangs without a cap. Not an
+  // engine-detection probe (those stay PARKED, see `\directlua`); the
+  // encoding itself is a byte-mouth concern (K10) and needs nothing here.
+  // Witnesses asternote, hideanswer-doc, inlinelabel, jpnedumathsymbols-doc.
+  DefPrimitive!("\\epTeXinputencoding TeXFileName", sub[(_encoding)] {
+    if !lookup_bool("PTEX_PROFILE") {
+      AssignValue!("PTEX_PROFILE" => true, Scope::Global);
+    }
+    allocate_ptex_format_registers()?;
+  });
+  DefPrimitive!("\\Umathcode Number SkipKeyword:= Number Number Number", sub[(_a,_b,_c,_d)] {});
+  DefPrimitive!("\\Umathchardef DefToken SkipSpaces SkipKeyword:= Number Number Number", sub[(cs,_c,_f,_u)] {
+    let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+  });
+  DefPrimitive!("\\Umathcharnumdef DefToken SkipSpaces SkipKeyword:= Number", sub[(cs,_n)] {
+    let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+  });
+  DefPrimitive!("\\Udelcode Number SkipKeyword:= Number Number", sub[(_a,_b,_c)] {});
+  // The siblings mathfont.sty reaches under the luatex profile (LuaTeX manual
+  // §7.3; mathfont-symbol-list, the mathfont examples):
+  //   \Udelimiter <class><fam><char>  — typesets the char (:2818-2838)
+  //   \Uradical <fam><char>{radicand}  — a radical (:2857) → `\sqrt`
+  //   \Umathcodenum <char>             — internal integer (:2924) → `0`
+  //   \mathnolimitsmode=<int>          — parameter (:1405)
+  //   \scantextokens                    — `\scantokens` variant (:670)
+  DefConstructor!(
+    "\\Udelimiter Number Number Number",
+    "?#glyph(?#isMath(<ltx:XMTok role='#role' ?#name(name='#name') \
+     ?#stretchy(stretchy='#stretchy')>#glyph</ltx:XMTok>)(#glyph))",
+    sizer => "#glyph",
+    after_digest => sub[whatsit] {
+      let class = whatsit.get_arg(1).unwrap().value_of();
+      let _fam = whatsit.get_arg(2).unwrap().value_of();
+      let code = whatsit.get_arg(3).unwrap().value_of();
+      if let Some(ch) = char::from_u32(code as u32) {
+        whatsit.set_property("glyph", ch);
+        if let Some(f) = lookup_font() {
+          whatsit.set_property("font", f.specialize(&ch.to_string()));
+        }
+        let role = match class {
+          0 => if ch == '|' || ch == '\u{2016}' { "VERTBAR" } else { "ORD" },
+          1 => "OP",
+          2 => "BINOP",
+          3 => "RELOP",
+          4 => "OPEN",
+          5 => "CLOSE",
+          6 => "PUNCT",
+          _ => "ORD",
+        };
+        whatsit.set_property("role", role);
+        whatsit.set_property("stretchy", "true");
+      }
+      Ok(Vec::new())
+    }
+  );
+  DefMacro!("\\Uradical Number Number", "\\sqrt");
+  // `\Umathcodenum <char>` is an internal integer (LuaTeX manual §7.3), so
+  // `\the\Umathcodenum"2F` must read it as a register, not expand it to a
+  // literal `0` that leaves `\the0` behind (fixdif.sty:38 under unicode-math;
+  // physics2, physics2-legacy). Mirrors `\mathcode` (tex_math.rs); the value
+  // is 0 (no Unicode math classes here) and assignments are absorbed. Guard:
+  // `perfect_kernel_batch56::umathcodenum_is_an_internal_integer`.
+  DefRegister!("\\Umathcodenum Number", Number::new(0),
+    getter => sub[args] {
+      let _ = args;
+      Number::new(0)
+    },
+    setter => sub[value, scope, args] {
+      let _ = (value, scope, args);
+    }
+  );
+  DefRegister!("\\mathnolimitsmode" => Number::new(0));
+  // `\mathitalicsmode` is likewise a LuaTeX integer parameter (LuaTeX manual
+  // §7.3; expl3-code.tex:996 `\__kernel_primitive:NN \mathitalicsmode`), set
+  // by lualatex classes (homework, jwjournal). Not an engine-detection probe.
+  // Guard: `perfect_kernel_batch56::mathitalicsmode_is_a_register`.
+  DefRegister!("\\mathitalicsmode" => Number::new(0));
+  Let!("\\scantextokens", "\\scantokens");
+
+  // `\tex_Uchar:D` (with `\Uchar`) belongs to the luatex profile of
+  // latexml.sty; `\Ucharcat` is the deliberate pdftex.rs exception.
+  Let!("\\tex_Ucharcat:D", "\\Ucharcat");
+
+  // ctex-engine-luatex.def declares these via `newluacmd` (Lua `token.set_lua`),
+  // which external texlua cannot insert into the engine's symbol table.
+  // In XML conversion, font metric and shape alternate adjustments are no-ops.
+  def_macro_noop("\\ctex_ltj_add_kyenc:n {}")?;
+  DefMacro!("\\ctex_ltj_is_kenc:n {}", "\\in@false");
+  DefMacro!("\\ctex_ltj_patch_external_font:n {}", "#1");
+  def_macro_noop("\\ctex_ltj_set_alt_font:nnnn {}{}{}{}")?;
+  def_macro_noop("\\ctex_ltj_clear_alt_font:n {}")?;
+  def_macro_noop("\\ctex_ltj_pickup_alt_font:nn {}{}")?;
+  def_macro_noop("\\__ctex_ltj_pickup_alt_font:Nn {}{}")?;
+  def_macro_noop("\\__ctex_ltj_if_alt_set:nT {}{}")?;
+  DefMacro!("\\ctex_ltj_zero_globaldefs:", "\\globaldefs=0\\relax");
+  def_macro_noop("\\ctex_update_kanjisize:")?;
+  def_macro_noop("\\fontspec_gset_family:Nnn DefToken {}{}")?;
+  def_macro_noop("\\fontspec_set_family:Nnn DefToken {}{}")?;
 
   //======================================================================
   // 2. LaTeXML-internal helpers
@@ -86,13 +447,31 @@ LoadDefinitions!({
   // stays undefined. Re-declare here so they're always available
   // regardless of dump completeness. Witness: 2512.06027 (and ~2 v6
   // papers) — textcomp.sty raw-load calls \@gobble at L74 and crashes.
-  DefMacro!("\\@gobble{}",          None);
-  DefMacro!("\\@gobbletwo{}{}",     None);
+  DefMacro!("\\@gobble{}", None);
+  DefMacro!("\\@gobbletwo{}{}", None);
   DefMacro!("\\@gobblefour{}{}{}{}", None);
+
+  // The registers a `\setlength` operand is assigned to when a package has
+  // redefined `\setlength` (`read_through_redefined_setlength`, parameter.rs),
+  // as latex.ltx assigns `\sp@ce@skip` (`\@hspace` 9425, `\@vspace@calcify` 9254)
+  // and `\@tempdima` (`\@imakebox` 16101 and the other boxes): their own, so that
+  // no document register is overwritten. A dimen's scan stops before `plus`,
+  // which then stays in the input as it does in TeX. OXIDIZED_DESIGN #325.
+  DefRegister!("\\lx@braced@skip" => Glue!("0pt"));
+  DefRegister!("\\lx@braced@dimen" => Dimension!("0pt"));
+
+  // latex.ltx's `\@begin@tempboxa` bindings (16088-16093), made in the group
+  // `within_tempboxa` (parameter.rs) opens around a box command's size
+  // arguments once `\@tempboxa` holds the box: `\width` etc. measure it, as
+  // internal dimensions (`2\width` is exact to the sp).
+  DefMacro!(
+    "\\lx@tempboxa@sizes",
+    r"\def\width{\wd\@tempboxa}\def\height{\ht\@tempboxa}\def\depth{\dp\@tempboxa}\let\totalheight\@ovri\totalheight\height\advance\totalheight\depth"
+  );
 
   // LaTeXML aliases for the file-loaded predicates.
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
-  Let!("\\ltx@ifclassloaded",   r"\@ifclassloaded");
+  Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
 
   // `\*` — invisible-times (U+2062, MULOP). Perl `TeX.pool.ltxml:7124`:
   //   DefMathI('\*', undef, "\x{2062}", role=>'MULOP', name=>'', meaning=>'times');
@@ -121,7 +500,7 @@ LoadDefinitions!({
   DefRegister!("\\@bls"          => Dimension!("12pt"));
   DefRegister!("\\@maxlistdepth" => Number::new(6));
 
-  // \tracingstacklevels / \@nil / \@expl@str@if@eq@@nnTF moved to
+  // \tracingstacklevels / \@expl@str@if@eq@@nnTF moved to
   // latex_bootstrap.rs — must be defined BEFORE the dump loads (the
   // dump's latexrelease replay probes them).
   //
@@ -135,18 +514,170 @@ LoadDefinitions!({
   // partway but the cascade has many tendrils — defer to a focused
   // IncludeInRelease refactor.
 
-  // List formatting macros from article.cls / report.cls / book.cls.
-  // No-ops because LaTeXML handles list formatting via CSS.
-  def_macro_noop("\\@listi")?;
-  def_macro_noop("\\@listii")?;
-  def_macro_noop("\\@listiii")?;
-  def_macro_noop("\\@listiv")?;
-  def_macro_noop("\\@listv")?;
-  def_macro_noop("\\@listvi")?;
+  // List parameters, from size10.clo:216-249: bodies as the real ones, though LaTeXML's lists never run them (CSS
+  // formats them). An empty one breaks a class's non-robust `\normalsize` (`\let\@listi\@listI`, size10.clo:53) expanded
+  // in a `\protected@xdef`: `\let` takes the next letter for its name, "Missing control sequence" and the letter lost
+  // (esapub2005.cls's `\affil{\normalsize Campus…}` through authblk, printed "ampus", 2310.07393). Perl leaves them
+  // undefined, which stay in the expansion.
+  DefMacro!(
+    "\\@listi",
+    "\\leftmargin\\leftmargini\\parsep 4\\p@ \\@plus2\\p@ \\@minus\\p@\\topsep 8\\p@ \\@plus2\\p@ \\@minus4\\p@\\itemsep4\\p@ \\@plus2\\p@ \\@minus\\p@"
+  );
+  DefMacro!(
+    "\\@listii",
+    "\\leftmargin\\leftmarginii\\labelwidth\\leftmarginii\\advance\\labelwidth-\\labelsep\\topsep 4\\p@ \\@plus2\\p@ \\@minus\\p@\\parsep 2\\p@ \\@plus\\p@ \\@minus\\p@\\itemsep\\parsep"
+  );
+  DefMacro!(
+    "\\@listiii",
+    "\\leftmargin\\leftmarginiii\\labelwidth\\leftmarginiii\\advance\\labelwidth-\\labelsep\\topsep 2\\p@ \\@plus\\p@ \\@minus\\p@\\parsep\\z@\\partopsep\\p@ \\@plus\\z@ \\@minus\\p@\\itemsep\\topsep"
+  );
+  DefMacro!(
+    "\\@listiv",
+    "\\leftmargin\\leftmarginiv\\labelwidth\\leftmarginiv\\advance\\labelwidth-\\labelsep"
+  );
+  DefMacro!(
+    "\\@listv",
+    "\\leftmargin\\leftmarginv\\labelwidth\\leftmarginv\\advance\\labelwidth-\\labelsep"
+  );
+  DefMacro!(
+    "\\@listvi",
+    "\\leftmargin\\leftmarginvi\\labelwidth\\leftmarginvi\\advance\\labelwidth-\\labelsep"
+  );
+  // size1x.clo:220 `\let\@listI\@listi` — the pristine copy that a class's
+  // size commands restore (`\let\@listi\@listI`, size10.clo:53,
+  // tufte-common.def:374). Witness: tikz-network manual (tufte-book raw).
+  Let!("\\@listI", "\\@listi");
+  // `\strutbox` (latex.ltx:12596-12599, rebuilt by `\set@fontsize` from
+  // `\baselineskip`): box registers do not survive the dump and our size
+  // commands are primitives, so give the 10pt default here — `.7`/`.3` of
+  // the 12pt `\baselineskip`. Left void, every `\strut`-based height was 0
+  // (fillwith stacked ~200 line coffins instead of ~50 → TokenLimit).
+  RawTeX!(r"\setbox\strutbox\hbox{\vrule\@height.7\baselineskip\@depth.3\baselineskip\@width\z@}");
+
+  // expl3 `\tl_set_rescan:Nnn` core (expl3-code.tex:3758-3790): real eTeX
+  // sets `\everyeof` to a marker, `\scantokens` the string, and lets
+  // `\__tl_rescan:NNw #1#2#3 <marker>` capture EVERYTHING the pseudo-file
+  // yielded as a delimited argument — PARAM tokens included — before
+  // `\group_end:` and `#1 #2 {#3}`. Our `\scantokens` cannot insert the
+  // `\everyeof` payload (wiring it loops the l3doc family — settled dead-end,
+  // PLANS P15 / etex.rs), so the delimited scan ran to the pseudo-file end,
+  // `read_until` unread the collected tokens and a rescanned macro MEANING
+  // (`\cs_meaning:N` → `\long macro:#1#2#3->…`) leaked its `#`s into
+  // digestion: substances.sty:452 `\tl_set_rescan:Nnx … {\cs_meaning:N #1}`
+  // (substances manual, 720 `misdefined:#`). Perl identical (eTeX.pool
+  // `\everyeof` unused; Gullet.pm:683 unread-on-miss). Do the rescan
+  // atomically instead: tokenize the string under the CURRENT (group-local,
+  // caller-configured) catcodes exactly as the pseudo-file would, and hand
+  // the tokens to the unchanged `\__tl_rescan:NNw` protocol with the
+  // marker appended — no mouth, no EOF, nothing for a nested scan to cross.
+  // `\prg_do_nothing:` stays in front: `\tl_set:No` o-expands it away.
+  // The dispatcher's own rule (:3782-3790): content without the
+  // `\newlinechar` character is single-line and rescans under
+  // `\endlinechar=-1` (no trailing end-of-line token) — a local assignment
+  // inside the caller's group, as in expl3.
+  DefMacro!("\\__tl_set_rescan:nNN {} Token Token", sub[(content, setter, target)] {
+    let text = writable_tokens(&content);
+    let register_int = |cs: &str| -> i64 {
+      lookup_definition(&T_CS!(cs)).ok().flatten()
+        .and_then(|d| d.value_of(Vec::new()))
+        .map(|v| v.value_of()).unwrap_or(-1)
+    };
+    let newline = register_int("\\newlinechar");
+    let multi = (0..=255).contains(&newline) && text.contains(newline as u8 as char);
+    if !multi {
+      assign_register("\\endlinechar", RegisterValue::Number(Number::new(-1)), None, Vec::new())?;
+    }
+    let mut mouth = Mouth::new(&text, None)?;
+    let mut toks = vec![T_CS!("\\__tl_rescan:NNw"), setter, target, T_CS!("\\prg_do_nothing:")];
+    while let Some(t) = mouth.read_token() {
+      if t.get_catcode() != Catcode::COMMENT {
+        toks.push(t);
+      }
+    }
+    toks.extend(do_expand(T_CS!("\\c__tl_rescan_marker_tl"))?.unlist());
+    Tokens::new(toks)
+  });
 
   //======================================================================
   // 4. Misc Rust-side stubs
   //======================================================================
+  // `\reinstall@nfss@defs` — latex.ltx:12489-12511, run at `\begin{document}`
+  // from `\@kernel@after@begindocument@before` (:12513-12514, :9471): in the
+  // body the shape switches are `\protected` macros, no longer the preamble's
+  // `\DeclareRobustCommand` wrappers (sect13.rs), so an `\edef` keeps
+  // `\itshape` itself. The four bound switches keep sect13.rs's bodies;
+  // `\ulcshape`, `\swshape`, `\sscshape` are latex.ltx's. The begin-document
+  // constructor (sect02.rs) runs it where latex.ltx runs the kernel hook;
+  // latexrelease.sty:15609 can `\let` it to `\relax`. Perl keeps the preamble
+  // definitions. `\init@series@setup` (latex.ltx:13902-13920), the hook's other
+  // half, runs after it (sect02.rs): the bound `\bfseries`/`\mdseries` do not
+  // read its `\bfseries@rm` family, but its `\reset@font` (the document's
+  // `\familydefault`, sect13.rs `\normalfont`) ends a preamble
+  // `\itshape\bfseries`, which pdflatex's body does not carry (Perl does;
+  // OXIDIZED_DESIGN_DIVERGENCES #315 addendum, #779).
+  // Guards: `rtoken_patchcmd::body_shape_switches_are_protected`,
+  // `perfect_kernel_batch77u::preamble_font_switch_does_not_reach_the_body`.
+  DefMacro!(
+    "\\reinstall@nfss@defs",
+    r"\protected\def\upshape{\not@math@alphabet@@{\updefault}\fontshape{\updefault}\selectfont}%
+\protected\def\slshape{\not@math@alphabet@@{\sldefault}\fontshape{\sldefault}\selectfont}%
+\protected\def\scshape{\not@math@alphabet@@{\scdefault}\fontshape{\scdefault}\selectfont}%
+\protected\def\itshape{\not@math@alphabet@@{\itdefault}\fontshape{\itdefault}\selectfont}%
+\protected\def\ulcshape{\not@math@alphabet\ulcshape\relax\fontshape{ulc}\selectfont}%
+\protected\def\swshape{\not@math@alphabet\swshape\relax\fontshape\swdefault\selectfont}%
+\protected\def\sscshape{\not@math@alphabet\sscshape\relax\fontshape\sscdefault\selectfont}"
+  );
+
+  // `\__hook_patch_command:Nnn` (latex.ltx:6888), which applies a `cmd/<name>/<hook>` hook from `\begin{document}`
+  // on: the kernel patches a macro; a binding (a constructor or primitive of ours; a locked macro, a Rust-bodied one, one
+  // reading LaTeXML's argument types) takes no patch until the macro faces, so its hook does not run: a Warning for the
+  // document's code, an Info for a class's or package's (as their redefinitions of a locked command, `state.rs`).
+  Let!("\\lx@hook@patch@command", "\\__hook_patch_command:Nnn");
+  DefMacro!("\\__hook_patch_command:Nnn Token {} {}", sub[(cs, name, hook)] {
+    let meaning = lookup_meaning(&cs);
+    let binding = cs.with_str(is_name_locked)
+      || match &meaning {
+        Some(Stored::Expandable(m)) => {
+          !matches!(m.get_expansion(), Some(ExpansionBody::Tokens(_)))
+            || m.get_parameters().is_some_and(|ps| {
+              ps.get_parameters().iter().any(|p| {
+                !with(p.name, |n| matches!(n, "Plain" | "Until" | "UntilBrace" | "Match" | "RequireBrace"))
+              })
+            })
+        },
+        // no macro to patch, whoever declared it (`\newtheorem`'s `\thm` is the document's)
+        Some(Stored::Constructor(_) | Stored::Primitive(_) | Stored::MathPrimitive(_)) => true,
+        _ => false,
+      };
+    if binding {
+      let hook = s!("cmd/{}/{}", name.to_string(), hook.to_string());
+      let origin = match &meaning {
+        Some(Stored::Expandable(m)) => m.origin,
+        Some(Stored::Constructor(c)) => c.origin,
+        Some(Stored::Primitive(p)) => p.origin,
+        _ => DefinitionOrigin::Unknown,
+      };
+      let command = if origin.is_latexml_owned() {
+        s!("LaTeXML's binding of {}", cs.to_string())
+      } else {
+        cs.to_string()
+      };
+      let message = s!("{command} takes no generic hook; its code does not run");
+      if document_hook_code(&hook) {
+        Warn!("hook", hook, message);
+      } else {
+        Info!("hook", hook, message);
+      }
+      return Ok(Tokens!());
+    }
+    let mut call = vec![T_CS!("\\lx@hook@patch@command"), cs, T_BEGIN!()];
+    call.extend(name.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(hook.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  }, protected => true);
+
   // `\@latexbug` — kernel macro used to mark would-be bug reports.
   // No-op stub.
   def_macro_noop("\\@latexbug")?;
@@ -195,15 +726,16 @@ LoadDefinitions!({
   //======================================================================
   // 6. Modern LaTeX (2015+) extras
   //======================================================================
-  // `\extrafloats{N}` — request N extra float slots (no-op in LaTeXML).
-  DefPrimitive!("\\extrafloats{}", None);
+  // `\extrafloats{N}` — request N extra float slots (no-op in LaTeXML): no box, as latex.ltx's macro leaves none.
+  DefPrimitive!("\\extrafloats{}", {});
 
   // `\wlog{...}` — write to log only (no-op in LaTeXML).
   def_macro_noop("\\wlog{}")?;
 
   // `\Gin@driver` — pre-defined empty so graphics.sty doesn't error
-  // when loaded from disk (LaTeXML doesn't run a Backend driver).
-  // Not in Perl source; pure Rust hotfix.
+  // when loaded from disk (LaTeXML doesn't run a Backend driver); Perl
+  // latex_constructs.pool.ltxml:4976 defines it empty too. The graphics
+  // binding gives it the driver file graphics.cfg would (graphics_sty.rs).
   def_macro_noop("\\Gin@driver")?;
 
   // `\@tabacckludge` simplified body — Perl-faithful body lives in
@@ -228,11 +760,11 @@ LoadDefinitions!({
   // already gets them from latex_base.rs. Either way, definitions
   // are Perl-faithful values.
   //======================================================================
-  DefMacro!("\\appendixname",   "Appendix");
+  DefMacro!("\\appendixname", "Appendix");
   DefMacro!("\\appendixesname", "Appendixes");
-  DefMacro!("\\contentsname",   "Contents");
+  DefMacro!("\\contentsname", "Contents");
   DefMacro!("\\listfigurename", "List of Figures");
-  DefMacro!("\\listtablename",  "List of Tables");
+  DefMacro!("\\listtablename", "List of Tables");
 
   // C.5.1 page registers (Perl latex_base L309-311) — same dump-path
   // coverage rationale.
@@ -247,12 +779,14 @@ LoadDefinitions!({
   DefMacro!("\\thefootnote", "\\arabic{footnote}");
   NewCounter!("mpfootnote");
   DefMacro!("\\thempfn", "\\thefootnote");
-  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  // A minipage's notes are lettered in italics, latex.ltx:17638 (Perl latex_base.pool.ltxml:272 `\arabic`, unused
+  // there: its minipage numbers its notes as the page's; KNOWN_PERL_ERRORS #1049)
+  DefMacro!("\\thempfootnote", "{\\itshape\\@alph\\c@mpfootnote}");
   DefRegister!("\\footnotesep" => Dimension::new(0));
 
   // C.4.4 / C.5.1 NewCounters (Perl latex_base L300, L312) — dump-path
-  // coverage. \@startsection's SetCounter to 3 (in latex_constructs.rs)
-  // requires the counter to exist beforehand.
+  // coverage: the counters exist before any class sets them, at 0 as
+  // Perl's and latex.ltx:17332 leave `secnumdepth` until a class does (68u).
   NewCounter!("tocdepth");
   NewCounter!("secnumdepth");
 
@@ -289,6 +823,27 @@ LoadDefinitions!({
   // this one specifically).
   DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
 
+  // Catcode range helpers: ctablestack.sty:18 `\@setrangecatcode{lo}{hi}{cc}` is a
+  // plain `\catcode` loop over [lo, hi] (luatexbase.sty:51 `\let\SetCatcodeRange
+  // \@setrangecatcode`, luacode.sty:138 `\let\SetCatcodeRange\setcatcoderange`,
+  // thumbpdf.sty:576). Observable catcode semantics, so it is the real loop, not
+  // an absorbed stub. Guard: `perfect_kernel_batch56::luatex_catcoderange_and_listings_aspects`.
+  DefPrimitive!("\\@setrangecatcode {Number}{Number}{Number}", sub[(lo, hi, cc)] {
+    let lo = lo.value_of();
+    let hi = hi.value_of();
+    let code: Catcode = From::from(cc.value_of() as u8);
+    if lo <= hi {
+      for n in lo..=hi {
+        if let Some(ch) = char::from_u32(n as u32) {
+          assign_catcode(ch, code, None);
+        }
+      }
+    }
+    Ok(Vec::new())
+  });
+  Let!("\\SetCatcodeRange", "\\@setrangecatcode");
+  Let!("\\setcatcoderange", "\\@setrangecatcode");
+
   //======================================================================
   // 7. Rust helper used by `\newlength` (latex_constructs.rs)
   //======================================================================
@@ -321,16 +876,21 @@ LoadDefinitions!({
   // protected => true prevents read_x_token(fully_expand=false) from
   // expanding this (needed for lx_change_case_tokens to preserve
   // \ensuremath{} content unchanged).
-  DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if lookup_bool_sym(pin!("IN_MATH")) {
-      stuff.unlist()
-    } else {
-      let mut result = vec![T_MATH!()];
-      result.extend(stuff.unlist());
-      result.push(T_MATH!());
-      result
-    }
-  }, protected => true);
+  //
+  // Its body is the kernel's `\ensuremath ` (latex.ltx:15801-15806): no parameter, each branch reading its own
+  // argument. A one-step expansion is then TeX's, where a parameter would take the group's `}`: xstring's `\StrExpand[2]`
+  // of a lone `\ensuremath` (membranecomputing:509). `\@ensuredmath`'s `\relax` (latex.ltx:15807) keeps an EMPTY
+  // argument from producing adjacent `$$`, which the mouth reads as a display-math shift (polynom.sty:1656-1687 Horner
+  // scheme: an empty p-column cell fed to `\ensuremath{##}` inside `\@startpbox` opened a display frame in a text box —
+  // 26 "Missing $ inserted", polydemo). Perl's latex_constructs.pool.ltxml:2076-2080 reads `{}` and omits the `\relax`
+  // (SHARED, worse there; KPE #1212); pdflatex clean.
+  // Guards: `perfect_kernel_batch56::ensuremath_empty_argument_in_text_box`,
+  // `perfect_kernel_batchm3::ensuremath_expanded_one_step_alone_in_a_macro`.
+  DefMacro!(
+    "\\@ensuremath",
+    r"\ifmmode\expandafter\@firstofone\else\expandafter\@ensuredmath\fi",
+    protected => true
+  );
 
   //======================================================================
   // 8. {filecontents}/{filecontents*} environments — Rust impl
@@ -340,7 +900,31 @@ LoadDefinitions!({
   // and caches the content for later \input. Helper fn defined here so
   // the migration is self-contained.
   //======================================================================
-  fn cache_filecontents(end_marker: &str, header_star: bool) -> Result<()> {
+  fn cache_filecontents(header_star: bool) -> Result<()> {
+    // latex.ltx:19047 `\edef\E{\@backslashchar end\string{\@currenvir\string}}`:
+    // the capture ends at `\end{<current environment>}`, NOT at a fixed
+    // `\end{filecontents}`. A wrapper environment that runs the bare command
+    // (latexdemo.sty:97-101 `\csname filecontents*\endcsname` inside
+    // `DefineCode`; democodetools, codedescribe, revtex's ltxdocext.sty) ends
+    // its capture at ITS OWN `\end{DefineCode}`; the fixed marker never
+    // matched and the rest of the document was swallowed silently
+    // (latex4wp: 63% of the manual, sweep 75 S3). Perl binds only
+    // `\begin{filecontents*}`, so it errors on the bare command instead.
+    let currenvir = lookup_value("current_environment")
+      .map(|v| v.to_string())
+      .unwrap_or_default();
+    let end_marker = if currenvir.is_empty() {
+      // Bare command outside any environment: latex.ltx would look for
+      // `\end{document}`; keep the historical marker so a hand-written
+      // `\filecontents{f}…\end{filecontents}` at the top level still closes.
+      if header_star {
+        "\\end{filecontents*}".to_string()
+      } else {
+        "\\end{filecontents}".to_string()
+      }
+    } else {
+      format!("\\end{{{currenvir}}}")
+    };
     skip_spaces()?;
     // Real LaTeX `\filecontents` `\edef`s the filename argument, so
     // `\begin{filecontents}{\jobname-acro.tex}` writes — and a later
@@ -352,47 +936,122 @@ LoadDefinitions!({
     // entries it defines (glossaries acronyms, etc.) undefined. Witness
     // 1905.05350 (`\begin{filecontents}{\jobname-acro.tex}` …
     // `\loadglsentries[\acronymtype]{\jobname-acro}`).
+    // filecontents 2019+ takes a leading optional (`[overwrite, nosearch,
+    // noheader]{file}` — algxpar-doc L18); without skipping it the CACHE KEY
+    // became "[" and the payload was lost. Absorb it before the filename.
+    let opts = read_optional(None)?;
+    skip_spaces()?;
     let filename_toks = read_arg(ExpansionLevel::Full)?;
     let filename = filename_toks.to_string();
-    // Perl latex_constructs L4316-4353: header comments match Perl's
-    // three-line preamble. The \jobname line is synthesized as `\jobname`
-    // (unexpanded literal) rather than the digested jobname — our tests
-    // don't exercise a specific date and we don't want to leak
-    // compile-time state into the dump-like content cache.
-    let mut lines: Vec<String> = vec![
-      format!("%% LaTeX2e file `{filename}'"),
-      if header_star {
-        "%% generated by the `filecontents*' environment".to_string()
-      } else {
-        "%% generated by the `filecontents' environment".to_string()
-      },
-      "%% from source `\\jobname' on YYYY/MM/DD.".to_string(),
-    ];
-    if !header_star { lines.push("%%".to_string()); }
+    // latex.ltx `filecontents` options: `noheader` (and the starred form)
+    // write no `%%` header — a data file read back by `\read`/`\ior_get`
+    // (a CSV for `\ior_map_inline`) must not start with comment lines that
+    // read as empty rows. `overwrite`/`force`/`nosearch`/`nowarn` are
+    // no-ops for the cache.
+    // latex.ltx:18956-18967 `\filec@ntents@opt`: the bracket is a comma list
+    // and each key is matched EXACTLY (`\filec@ntents@noheader`), never by
+    // substring.
+    let has_option = |key: &str| {
+      opts
+        .as_ref()
+        .is_some_and(|o| o.to_string().split(',').any(|k| k.trim() == key))
+    };
+    let noheader = header_star || has_option("noheader");
+    // latex.ltx:18990-19004 `\filec@ntents`: unless `force`/`overwrite` (`\@fileswfalse`, :18967-18968), a file
+    // `\openin` finds — anywhere on the search path, or in the current directory only under `nosearch` (:18970) —
+    // is kept: "File `name' already exists on the system. Not generating it from this source", the environment's
+    // lines read and dropped. Writing it shadowed the `name.tex` a paper ships beside the document (KNOWN_PERL_ERRORS
+    // #279 residual). Guard `perfect_kernel_batch77s::filecontents_keeps_a_file_on_disk`.
+    let keep_existing = !has_option("force")
+      && !has_option("overwrite")
+      && filecontents_target_exists(&filename, has_option("nosearch"));
+    let mut lines: Vec<String> = Vec::new();
+    if !noheader {
+      lines.push(format!("%% LaTeX2e file `{filename}'"));
+      lines.push("%% generated by the `filecontents' environment".to_string());
+      lines.push("%% from source `\\jobname' on YYYY/MM/DD.".to_string());
+      lines.push("%%".to_string());
+    }
     // Discard remainder of \begin{filecontents} line
     read_raw_line();
-    // Read raw lines until end marker
-    loop {
-      match read_raw_line() {
-        Some(line) if !line.contains(end_marker) => lines.push(line),
-        _ => break,
+    // latex.ltx:19047-19066 `\reserved@b ##1\E##2\E##3\relax`: each line is split at `\end{<currenvir>}` wherever it
+    // stands; the text before it is written as the file's last line ("Writing text `…' before \end{…} as last line"),
+    // the text after it ignored ("Ignoring text `…' after \end{…}"). A whole-line match (fancyvrb's rule, the former
+    // `capture_raw_lines_until`) never saw `\end{tikzpicture}\end{filecontents*}` or `\end{filecontents}{b.tex}`, and
+    // captured the rest of the document (Fatal `Document:Malformed`: 1909.03404, 2311.02007, 2503.03764). A prefix of
+    // spaces only is not written (LaTeX writes it, a blank last line). OXIDIZED_DESIGN #572; guard
+    // `perfect_kernel_batch66d::filecontents_ends_mid_line`.
+    while let Some(line) = read_raw_line() {
+      let Some(at) = line.find(end_marker.as_str()) else {
+        lines.push(line);
+        continue;
+      };
+      let (before, after) = (&line[..at], line[at + end_marker.len()..].trim_end());
+      if !before.trim().is_empty() {
+        Warn!(
+          "unexpected",
+          "filecontents",
+          s!("Writing text `{before}' before {end_marker} as last line of {filename}")
+        );
+        lines.push(before.to_string());
       }
+      if !after.is_empty() {
+        Warn!(
+          "unexpected",
+          "filecontents",
+          s!("Ignoring text `{after}' after {end_marker}")
+        );
+      }
+      break;
+    }
+    if keep_existing {
+      let place = if has_option("nosearch") {
+        "in current directory"
+      } else {
+        "exists on the system"
+      };
+      Info!(
+        "note",
+        "filecontents",
+        s!("File `{filename}' already {place}. Not generating it from this source")
+      );
+      return Ok(());
     }
     let n = lines.len();
-    let content = lines.join("\n");
-    Info!("note", "filecontents", s!("Cached filecontents for {filename} ({n} lines)"));
-    assign_value(&s!("{filename}_contents"), Stored::from(content), Some(Scope::Global));
+    Info!(
+      "note",
+      "filecontents",
+      s!("Cached filecontents for {filename} ({n} lines)")
+    );
+    // latex.ltx:18998/:19023 writes through `\immediate\openout`, which names
+    // an extension-less file `<name>.tex` (`output_file_name`, tex.web §1374):
+    // latexdemo's `{filecontents*}{democode}` is `democode.tex` to its own
+    // `\IfFileExists{democode.tex}` (latex4wp). The header keeps the name as
+    // given, as LaTeX's `\@curr@file` does.
+    vfs_store(&output_file_name(&filename), &lines.join("\n"));
     Ok(())
   }
-  // The \filecontents primitive reads filename + raw lines until \end{filecontents}.
-  // When called via \begin{filecontents}, \begin opens a group first, so we manually
-  // close the group after caching, matching the \end that was consumed.
+  /// Does `\openin` find the file a `{filecontents}` names (latex.ltx:18993-18995 `\openin\@inputcheck\q@curr@file`)?
+  /// A file `\openin` can read: a virtual one an earlier `{filecontents}`/`\openout` wrote, or one on disk — not a
+  /// binding answering for an absent file. `nosearch` looks in the document's own directories only.
+  fn filecontents_target_exists(filename: &str, nosearch: bool) -> bool {
+    let options = FindFileOptions {
+      search_paths_only: nosearch,
+      ..FindFileOptions::default()
+    };
+    find_file(filename, Some(options))
+      .is_some_and(|path| vfs_exists(&path) || std::path::Path::new(&path).is_file())
+  }
+  // The \filecontents primitive reads filename + raw lines until
+  // `\end{<current environment>}`. The `\begin` of that environment (its own
+  // name, or a wrapper's) opened a group, and its `\end` was consumed by the
+  // capture, so the group is closed here in its place.
   DefPrimitive!("\\filecontents", {
-    cache_filecontents("\\end{filecontents}", false)?;
+    cache_filecontents(false)?;
     endgroup()?;
   });
   DefPrimitive!("\\lx@filecontents@star", {
-    cache_filecontents("\\end{filecontents*}", true)?;
+    cache_filecontents(true)?;
     endgroup()?;
   });
   assign_meaning(
@@ -407,7 +1066,7 @@ LoadDefinitions!({
     Some(Scope::Global),
   );
 
-    //======================================================================
+  //======================================================================
   // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — REMOVED from the
   // always-on set 2026-07-27 (maintainer decision). They belong to
   // `mathscinet.sty`, which defines them (`mathscinet_sty.rs`), and a
@@ -428,4 +1087,620 @@ LoadDefinitions!({
   // 2605.11579 (17 uses) is covered by its `@preamble` and is unaffected.
   // See OXIDIZED_DESIGN #78 and `docs/parity/BIBLIOGRAPHY_WORKLIST.md`.
   //======================================================================
+
+  //======================================================================
+  // 9. The class-level sectioning workers a raw class or document reaches
+  // through `\secdef` (KNOWN_PERL_ERRORS #141). latex.ltx defines none of
+  // `\@part`/`\@spart`/`\@chapter`/`\@schapter` — article.cls:281-311 and
+  // book.cls:439-475 do — and the bindings that replace those classes never
+  // did, so a document that re-`\newcommand`s `\part`/`\chapter` the way the
+  // classes write them (`\secdef\@part\@spart`: source3body.tex:96/119 in
+  // interface3 + source3, then `\newcounter{chapter}` and its own `\chapter`)
+  // errored `undefined:\@part` + one `undefined:\chapter` per chapter (2 → 101
+  // errors, fatal). The kernel `\@sect` (latex.ltx:16205; Perl latex_base
+  // stubs it to nothing) is the same shape one level down. All route to our
+  // `\@startsection` dispatcher with the `[toc]{title}` / `*{title}` tail it
+  // reads — `\lx@startsection`, its own name, since a raw `\@startsection` calls these back (sect04.rs).
+  // `\@ssect` cannot be given (it never sees the heading's name).
+  // Guard: `perfect_kernel_batch54::secdef_part_and_chapter_workers_exist`.
+  //======================================================================
+  TeX!(
+    r"
+    \def\@part[#1]#2{\lx@startsection{part}{-1}{}{}{}{}[#1]{#2}}
+    \def\@spart#1{\lx@startsection{part}{-1}{}{}{}{}*{#1}}
+    \def\@chapter[#1]#2{\lx@startsection{chapter}{0}{}{}{}{}[#1]{#2}}
+    \def\@schapter#1{\lx@startsection{chapter}{0}{}{}{}{}*{#1}}
+    \def\@sect#1#2#3#4#5#6[#7]#8{\lx@startsection{#1}{#2}{#3}{#4}{#5}{#6}[#7]{#8}}
+    "
+  );
+
+  //======================================================================
+  // 10. Distinct packages whose names END IN A DIGIT and would otherwise be
+  // taken for a versioned spelling of a bound package by the glued-suffix
+  // fallback (content.rs `find_file_fallback`, Perl Package.pm:2178-2229:
+  // `physics2` → `physics`, `fontawesome7` → `fontawesome`) and so loaded the
+  // WRONG binding — `undefined:\usephysicsmodule`, every `\ab`/`\bra`/`\ket`
+  // of the physics2 module family (physics2 manuals, whatsnote; Perl too).
+  // `INTERPRETABLE_SOURCES` skips the fallback and raw-loads the real file
+  // (the mechanism xparse-2020-10-01.sty / filehook-2020.sty already use).
+  // physics2 is a self-contained expl3 package that interprets cleanly.
+  // Guard: `perfect_kernel_batch54::physics2_is_not_a_version_of_physics`.
+  //======================================================================
+  // The l3 / ltcmd declarators' "already defined" checks vs the LaTeX pool's
+  // class-level pre-definitions. Real LaTeX keeps `\section`, `\figurename`,
+  // `\thepage`, `{figure}`… in article.cls (:302, :458, :355-358), not in
+  // latex.ltx, so a standalone class (ltx-talk.cls:158 `\cs_new:Npn \thepage`,
+  // :1016-1033 `\NewDocumentEnvironment{figure/table}`, :1574-1580
+  // `\NewDocumentCommand \section…`, :1641/:2023) finds them FREE. Our pool
+  // pre-defines all of them for class-less robustness (Perl too), so
+  // expl3-code.tex:2031 `\__kernel_chk_if_free_cs:N`, latex.ltx:4820
+  // `\NewDocumentCommand` and :4872 `\__cmd_new_env:nnnn` raised 24 counted
+  // `\errmessage`s per ltx-talk manual (×10, all pdflatex-clean; RUST-ONLY —
+  // Perl never gets past the class's `\NeedsDocumentMetadata`). Perl's own
+  // `\newcommand`/`\newenvironment` sidestep the same collision through
+  // `isDefinableLaTeX` ("Ignoring redefinition"); this is that leniency for
+  // the l3 declarators: when the existing definition is LaTeXML's own
+  // (`DefinitionOrigin::is_latexml_owned`), the error is dropped and each
+  // declarator keeps its post-error shape — `\cs_new` still `\cs_gset`s
+  // (the raw `\thepage` replaces the pool's), ltcmd keeps the existing
+  // command/environment (the pool's `<ltx:figure>`/`<ltx:section>`
+  // constructors survive). Definitions with a real file locator (a genuine
+  // double declaration, which pdflatex reports too) still error.
+  // Guards: `perfect_kernel_batch56::{l3_cs_new_over_a_pool_definition_is_quiet,
+  // ltcmd_declarators_keep_pool_constructors_quietly}`.
+  DefMacro!("\\lx@if@pooldefined{}{}{}", sub[(name, if_tks, else_tks)] {
+    let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
+    // K1 provenance (`latexml_core::definition::origin`): ours = dump, pool,
+    // binding or format; a raw file's or the document's own definition is not.
+    let pool = lookup_definition(&cs)?.is_some_and(|prev| prev.get_origin().is_latexml_owned());
+    Ok(if pool { if_tks } else { else_tks })
+  });
+  // A fallback's guess (`DefinitionOrigin::Fallback`: OmniBus, a class binding's command of an older release), a kernel
+  // stub (`DefinitionOrigin::Stub`: `\shorttitle`, `\equalcontrib`, sect05.rs) and a borrowed package's definition
+  // (`DefinitionOrigin::Borrowed`) yield to the document's own `\NewDocumentCommand`/`\NewDocumentEnvironment`, as
+  // they yield to its `\newcommand` and `\newenvironment` (`state::is_fallback_meaning`): 2509.10728's own
+  // `\NewDocumentEnvironment{nomenclature}` over elsarticle v1.21's `{nomenclature}` (elsarticle_cls.rs) kept the guess
+  // and lost the paper's entry layout; a `\NewDocumentCommand{\shorttitle}` kept the stub silently.
+  DefMacro!("\\lx@if@fallbackdefined{}{}{}", sub[(name, if_tks, else_tks)] {
+    let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
+    Ok(if is_fallback_meaning(&cs) { if_tks } else { else_tks })
+  });
+  // The size half of `\selectfont`'s font choice (latex.ltx:12576-12578,
+  // `\curr@fontshape/\f@size`), run from `\set@fontsize`'s `\size@update`
+  // (sect13.rs; OXIDIZED_DESIGN_DIVERGENCES #288): the current font takes
+  // `\f@size` points.
+  DefPrimitive!("\\lx@fontsize@merge", {
+    let size = Expand!(T_CS!("\\f@size")).to_string();
+    if let Ok(points) = size.trim().parse::<f64>()
+      && points > 0.0
+    {
+      MergeFont!(size => points);
+    }
+  });
+
+  // A class's `\normalsize` is its body size: `\@setfontsize\normalsize…` run
+  // in the preamble (size11.clo, KOMA's scrsize11pt.clo) makes that size the
+  // nominal one that output font sizes are measured against, as a0poster's
+  // binding does with `NOMINAL_FONT_SIZE` (a0poster_cls.rs). Without it every
+  // paragraph of an 11pt raw class read `fontsize="110%"` once `\fontsize`
+  // took effect (OXIDIZED_DESIGN_DIVERGENCES #288).
+  DefPrimitive!("\\lx@nominal@fontsize{}", sub[(size_cs)] {
+    if lookup_bool("inPreamble") && size_cs.to_string().trim() == "\\normalsize" {
+      let size = Expand!(T_CS!("\\f@size")).to_string();
+      if let Ok(points) = size.trim().parse::<f64>()
+        && points > 0.0
+      {
+        AssignValue!("NOMINAL_FONT_SIZE", Float(points));
+      }
+    }
+  });
+
+  // `\ClassNote`/`\PackageNote` (latex.ltx:8897-8912) are infos that the
+  // kernel shows on the terminal: their text reads "Class/Package <name>
+  // Info:", and they go through `\GenericWarning` only so that TeX prints them
+  // there. Our logger ranks a message by the primitive it goes through, so a
+  // note counted as a warning: typearea's "DIV calculation for classic
+  // typearea" (typearea.sty:1416, `\@ifundefined{PackageNote}{\PackageInfo}
+  // {\PackageNote}`) in 68 TeX Live manuals, sweep #121. Perl defines neither,
+  // so that fallback reached `\PackageInfo` there. The NoLine forms are the
+  // kernel's, restated for the no-dump branch, whose base lacks `\ClassNoteNoLine`.
+  RawTeX!(
+    r"\def\ClassNote#1#2{\GenericInfo{(#1) \space\space\@spaces\@spaces}{Class #1 Info: #2}}
+\def\PackageNote#1#2{\GenericInfo{(#1) \@spaces\@spaces\@spaces}{Package #1 Info: #2}}
+\def\ClassNoteNoLine#1#2{\ClassNote{#1}{#2\@gobble}}
+\def\PackageNoteNoLine#1#2{\PackageNote{#1}{#2\@gobble}}"
+  );
+  // Begin-document backend loader, see sect02.rs `\document`: expl3.ltx:130's
+  // guard, then blank auto-select in PDF output or `dvips` in DVI output.
+  // `\sys_if_output_pdf:` does not exist before the first `\sys_load_backend:n`
+  // (`\sys_finalize:` creates it), so the gate reads `\pdfoutput` directly.
+  RawTeX!(
+    r"\ExplSyntaxOn
+\cs_if_exist:NT \sys_load_backend:n
+  {
+    \cs_gset_protected:Npn \lx@sys@load@backend
+      {
+        \str_if_exist:NF \c_sys_backend_str
+          {
+            \ifnum \pdfoutput > 0
+              \sys_load_backend:n { }
+            \else
+              \sys_load_backend:n { dvips }
+            \fi
+          }
+      }
+  }
+\ExplSyntaxOff"
+  );
+  RawTeX!(
+    r"\ExplSyntaxOn
+\cs_if_exist:NT \__kernel_chk_if_free_cs:N
+  {
+    \cs_gset_protected:Npn \__kernel_chk_if_free_cs:N #1
+      {
+        \cs_if_free:NF #1
+          {
+            \lx@if@pooldefined { \cs_to_str:N #1 } { }
+              {
+                \msg_error:nnee { kernel } { command-already-defined }
+                  { \token_to_str:N #1 } { \token_to_meaning:N #1 }
+              }
+          }
+      }
+  }
+\cs_if_exist:NT \__cmd_declare_cmd:Nnn
+  {
+    \cs_gset_protected:Npn \NewDocumentCommand #1#2#3
+      {
+        \__cmd_check_definable:nNT {#1} \NewDocumentCommand
+          {
+            \cs_if_exist:NTF #1
+              {
+                \lx@if@fallbackdefined { \cs_to_str:N #1 }
+                  { \__cmd_declare_cmd:Nnn #1 {#2} {#3} }
+                  {
+                    \lx@if@pooldefined { \cs_to_str:N #1 } { }
+                      {
+                        \msg_error:nnxx { cmd } { already-defined }
+                          { \use:nnn \token_to_str:N #1 { } }
+                          { \token_to_str:N \NewDocumentCommand }
+                      }
+                  }
+              }
+              { \__cmd_declare_cmd:Nnn #1 {#2} {#3} }
+          }
+      }
+  }
+\cs_if_exist:NT \__cmd_new_env:nnnn
+  {
+    \cs_gset_protected:Npn \__cmd_new_env:nnnn #1
+      {
+        \cs_if_exist:cTF {#1}
+          {
+            \lx@if@fallbackdefined {#1}
+              { \__cmd_declare_env:nnnn {#1} }
+              {
+                \lx@if@pooldefined {#1} { }
+                  { \msg_error:nnx { cmd } { env-already-defined } {#1} }
+                \use_none:nnn
+              }
+          }
+          {
+            \cs_if_exist:cTF { end #1 }
+              {
+                \msg_error:nnx { cmd } { env-end-already-defined } {#1}
+                \use_none:nnn
+              }
+              { \__cmd_declare_env:nnnn {#1} }
+          }
+      }
+  }
+\ExplSyntaxOff"
+  );
+
+  // expl3's Unicode-engine codepoint layer (the `\sys_if_engine_opentype:TF`
+  // true branches of expl3-code.tex). The format's l3unicode and l3text are
+  // the pdfTeX build, which reads a character above "7F as a UTF-8 byte:
+  // `\__text_codepoint_process:nN` (:35892-35925) takes the tokens after it as
+  // continuation bytes, and `\codepoint_generate:nn` (:35031) answers with
+  // byte tokens. Our tokens are whole code points, as in XeTeX and LuaTeX, so
+  // l3text case changes lost their way on accented text. A trailing `É`
+  // swallowed the recursion quarks and never finished: letgut's
+  // `\text_lowercase:n {INSPÉ}` (letgut.cls:1711; TeX Live class census
+  // 2026-09-24). A medial one left the letters after it uncased (`élan` →
+  // `élaN`). Perl loads the same 8-bit branch (KPE #243). The Unicode engines'
+  // definitions are installed in its place:
+  // - `\c_max_char_int` (:7376) is "10FFFF, so `\char_generate:nn` builds any
+  //   code point (through `\tex_Ucharcat:D`, which the dump's
+  //   `\__char_generate_aux:nnw` already uses);
+  // - `\codepoint_generate:nn` (:34994-35002) answers with one token;
+  // - `\__text_codepoint_process:nN`, `\__text_codepoint_compare:nNn` and
+  //   `\__text_codepoint_from_chars:Nw` (:35894, :35931-35938) read one token
+  //   as one code point;
+  // - `\__text_change_case_catcode:nn` (:36929) and `\__codepoint_to_nfd:n`
+  //   (:35171) take the character's own catcode;
+  // - a capital sigma lowercases to the medial `σ` before any letter
+  //   (`\__text_change_case_lower_sigma:nnnnN`, :36829-36840): XeTeX's letters
+  //   are catcode 11 and pdfTeX's UTF-8 bytes are active above "80, while ours
+  //   are catcode 12, so a catcode-12 character above "80 counts as well
+  //   (`ΣΑΣ` → `σας`, not `ςας`).
+  // The block runs at group level 0, so the local `\prg_set_conditional:Npnn`
+  // is global here (`\prg_gset_conditional:Npnn` is newer than TeX Live
+  // 2025's expl3). `\codepoint_str_generate:n` stays the 8-bit one: it only builds the keys of
+  // the SpecialCasing tables, written with it when the format was made and
+  // read with it now (`ß` → `SS`).
+  RawTeX!(
+    r#"\ExplSyntaxOn
+\cs_if_exist:NT \__text_codepoint_process:nN
+  {
+    \cs_undefine:N \c_max_char_int
+    \int_const:Nn \c_max_char_int { "10FFFF }
+    \cs_gset:Npn \codepoint_generate:nn #1#2
+      {
+        \int_compare:nNnTF {#1} = { `\  }
+          { ~ }
+          {
+            \__kernel_exp_not:w \exp_after:wN \exp_after:wN \exp_after:wN
+              { \char_generate:nn {#1} {#2} }
+          }
+      }
+    \cs_gset:Npn \__text_codepoint_process:nN #1#2 { #1 {#2} }
+    \prg_set_conditional:Npnn \__text_codepoint_compare:nNn #1#2#3 { TF , p }
+      {
+        \int_compare:nNnTF {`#1} #2 {#3}
+          \prg_return_true: \prg_return_false:
+      }
+    \cs_gset:Npn \__text_codepoint_from_chars:Nw #1 {`#1}
+    \cs_gset:Npn \__text_change_case_catcode:nn #1#2 { \__text_char_catcode:N #1 }
+    \cs_gset:Npn \__codepoint_to_nfd:n #1
+      { \__codepoint_to_nfd:nn {#1} { \char_value_catcode:n {#1} } }
+    \cs_gset:Npn \__text_change_case_lower_sigma:nnnnN #1#2#3#4#5
+      {
+        \bool_lazy_or:nnTF
+          { \token_if_letter_p:N #5 }
+          {
+            \bool_lazy_and_p:nn
+              {
+                \bool_lazy_or_p:nn
+                  { \token_if_active_p:N #5 } { \token_if_other_p:N #5 }
+              }
+              { \int_compare_p:nNn {`#5} > { "80 } }
+          }
+          { \codepoint_generate:nn { "03C3 } { \__text_char_catcode:N #1 } }
+          { \codepoint_generate:nn { "03C2 } { \__text_char_catcode:N #1 } }
+        \__text_change_case_loop:nnnw {#2} {#3} {#4} #5
+      }
+  }
+\ExplSyntaxOff"#
+  );
+
+  for name in [
+    "physics2.sty",
+    "phy-ab.sty",
+    "phy-braket.sty",
+    "phy-ab.braket.sty",
+    "phy-diagmat.sty",
+    "phy-doubleprod.sty",
+    "phy-xmat.sty",
+    "phy-ab.legacy.sty",
+    "phy-bm-um.legacy.sty",
+    "phy-nabla.legacy.sty",
+    "phy-op.legacy.sty",
+    "phy-qtext.legacy.sty",
+    "fontawesome7.sty",
+  ] {
+    AssignMapping!("INTERPRETABLE_SOURCES", name => 1);
+  }
+
+  //======================================================================
+  // 11. First aid for external packages, the way the kernel's own
+  // latex2e-first-aid-for-external-files.ltx patches them: a
+  // `file/<name>/after` hook, so the file still loads raw and a manual that
+  // `\DocInput`s it still reads it as content.
+  //
+  // compsci.sty:510-514 defines `\code` (verbatim typewriter through url's
+  // `\Url`) with `\newcommand*`, but modern doc.sty:623 already made `\code`
+  // the identity (`\@ifundefined{code}{\def\code#1{#1}}{}`): pdflatex stops
+  // with "Command \code already defined", Perl and Rust skip it with an Info.
+  // The frankenstein manuals then EXECUTE the macros they document —
+  // `\cs\Wrapquotes` = `\code{\Wrapquotes}` ran titles.sty's quote wrapper,
+  // whose look-ahead looped (`Fatal:Stomach:Recursion`, titles); abbrevs,
+  // attrib, lips, moredefs … errored or lost their text. Their PDFs, built
+  // before doc.sty took `\code`, show the names verbatim. Surpass;
+  // OXIDIZED_DESIGN #276. Guard `perfect_kernel_batch56::compsci_code_is_verbatim`.
+  //======================================================================
+  RawTeX!(
+    r"\AddToHook{file/compsci.sty/after}[latexml]{\def\code{\begingroup\urlstyle{ttnobreak}\Url}}"
+  );
+
+  //======================================================================
+  // 12. `\textcommabelow` is the combining comma below, as Perl's own
+  // latin10.def.ltxml:22 models it. The kernel default (latex.ltx:10097-10100)
+  // is an `\ooalign` that overprints a raised `,`: a two-row `<tabular>` in
+  // the XML, so a Romanian `Mari\textcommabelow{s}` (BibTeX's usual spelling
+  // of ș) read "Maris,". Surpass; OXIDIZED_DESIGN_DIVERGENCES #291 (arXiv
+  // 2605.08338, 2605.21804). Guard
+  // `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.
+  //======================================================================
+  DefAccent!("\\textcommabelow", '\u{0326}', ",", below => true);
+
+  //======================================================================
+  // 13. Token queues. `\lx@queue@gpush{<name>}{<tokens>}` appends the tokens to a
+  // queue held in the State; `\lx@queue@use{<name>}` expands to everything queued,
+  // in order, and leaves the queue as it is; `\lx@queue@clear{<name>}` empties it.
+  // The TeX idiom `\xdef\q{\unexpanded\expandafter{\q}<new>}` (and `\g@addto@macro`)
+  // re-reads the whole list at every append: quadratic. 2,000 glossary entries
+  // queued that way took 30.6 s, 6 s without the queue (glossaries_sty.rs's
+  // preamble definitions, nlctuserguide_sty.rs's entry records).
+  //======================================================================
+  DefPrimitive!("\\lx@queue@gpush{}{}", sub[(name, toks)] {
+    push_value(&s!("lx@queue@{}", name.to_string()), Stored::Tokens(toks))?;
+  });
+  DefMacro!("\\lx@queue@use{}", sub[(name)] {
+    let mut queued = Vec::new();
+    if let Some(queue) = lookup_vecdeque(&s!("lx@queue@{}", name.to_string())) {
+      for item in queue {
+        if let Stored::Tokens(toks) = item {
+          queued.extend(toks.unlist());
+        }
+      }
+    }
+    Ok(Tokens::new(queued))
+  });
+  DefPrimitive!("\\lx@queue@clear{}", sub[(name)] {
+    assign_value(&s!("lx@queue@{}", name.to_string()),
+      Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
+  });
+
+  // latex.ltx:15394 `\@checkend`, for `\end{name}` of an environment defined
+  // by macros (mod.rs `end_environment_by_macro`, latex.ltx:15386-15391):
+  // `\begin{X}` ended by `\end{name}` is LaTeX's error (`\@badend`). Neither
+  // Perl's `\end` (latex_constructs.pool.ltxml:216) nor ours ran it; the
+  // mismatch surfaced only as the mode-frame Error of the `\endgroup` that
+  // follows, which now ends a `\begin{X}` frame (stomach.rs
+  // `close_environment_frame`). Checked on the frames, as that `\endgroup`
+  // will meet them, and on `\@currenvir`, as `\@checkend` reads it: bare `\Y`
+  // frames above are skipped because a bare `\Y` never sets `\@currenvir` (only
+  // `\begin` does, latex.ltx:15349) — even one whose begin code opens a group
+  // (`\figure`), which its own recovery reports; the first `\begin{X}` frame
+  // below must be `name`'s.
+  DefPrimitive!("\\lx@checkend{}", sub[(env)] {
+    let name = env.to_string();
+    let depth = get_frame_depth();
+    let mut frame = 0;
+    while frame < depth && is_value_bound("lx@env@bare@end", Some(frame)) {
+      frame += 1;
+    }
+    // TeX's own condition too: `\@currenvir` names another environment. A frame
+    // misaligned by a binding while `\@currenvir` agrees (an `@atbegin` hook's
+    // `\begin{samepage}` above a theorem, 2001.02707) is no LaTeX error.
+    let currenvir = Expand!(Tokens::new(vec![T_CS!("\\@currenvir")])).to_string();
+    if frame < depth
+      && currenvir != name
+      && is_value_bound("lx@env@begin@end", Some(frame))
+      && let Some(Stored::Token(end)) = value_in_frame("lx@env@begin@end", frame)
+      && end != T_CS!(s!("\\end{{{name}}}"))
+    {
+      // latex.ltx `\@badend`: "\begin{X} on input line N ended by \end{Y}".
+      let open = end.to_string().replacen("\\end", "\\begin", 1);
+      let line = match value_in_frame("groupInitiatorLocator", frame) {
+        Some(Stored::Locator(loc)) if loc.from_line > 0 => s!(" on input line {}", loc.from_line),
+        _ => String::new(),
+      };
+      Error!(
+        "unexpected",
+        s!("\\end{{{name}}}"),
+        s!("{open}{line} ended by \\end{{{name}}}")
+      );
+    }
+  });
+
+  //======================================================================
+  // 14. The makeindex stand-in. A LaTeX document prints its index and its
+  // change history by `\input`ting what makeindex made of the `.idx`/`.glo`
+  // entries, `\jobname.ind` and `\jobname.gls` (doc.sty:624 `\PrintIndex`,
+  // :680 `\PrintChanges`; makeidx.sty:48, imakeidx.sty:339 — all through
+  // `\@input@`). No makeindex runs here, so the file is missing and nothing
+  // was typeset: doc.sty's Change History and index prologue were lost from
+  // every doc-based TeX Live manual. When the file is missing but the
+  // document had its entries written (`\makeindex`/`\makeglossary` allocated
+  // the stream), `\@input@` digests what the makeindex style writes AROUND
+  // the entries — gind.ist/gglo.ist's preamble `\begin{theindex}` /
+  // `\begin{theglossary}` and their postamble — and leaves the entries to
+  // the post-processor: an `<ltx:index lists="…">` that MakeIndex fills from
+  // the marks of that list (`idx` from `\index`, `glo` from `\glossary`).
+  // The environment runs as LaTeX's `\begin` runs it: a package's own
+  // `\theindex` (doc.sty:570-581 and hypdoc.sty:184-212 — the prologue and
+  // the columns) when one replaced ours; otherwise our `{theindex}`
+  // constructor, whose `ltx:index` is itself the placeholder, as for
+  // makeidx's `\printindex`. Beyond Perl: OXIDIZED_DESIGN_DIVERGENCES #318,
+  // KNOWN_PERL_ERRORS #281. Guard: `cluster_package_guards::doc_changes_index`.
+  //======================================================================
+  DefMacro!("\\lx@makeindex@output{}", sub[(file)] {
+    let requested = ::latexml_core::gullet::expand_as_csname_text(file.clone())?.to_string();
+    let jobname = Expand!(T_CS!("\\jobname")).to_string();
+    let output = if requested == s!("{jobname}.ind") {
+      Some(("theindex", "idx", "\\@indexfile"))
+    } else if requested == s!("{jobname}.gls") {
+      Some(("theglossary", "glo", "\\@glossaryfile"))
+    } else {
+      None
+    };
+    let standin = output.filter(|(env, _, stream)| {
+      is_defined_token(&T_CS!(*stream)) && is_defined_token(&T_CS!(s!("\\{env}")))
+    });
+    let Some((env, list, _)) = standin else {
+      // latex.ltx `\@input@`'s own missing-file branch.
+      let mut no_file = vec![T_CS!("\\typeout"), T_BEGIN!()];
+      no_file.extend(ExplodeText!("No file "));
+      no_file.extend(file.unlist());
+      no_file.push(T_OTHER!("."));
+      no_file.push(T_END!());
+      return Ok(Tokens::new(no_file));
+    };
+    // The list is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
+    resolve_deferred_prints(Some(list))?;
+    let env_cs = T_CS!(s!("\\{env}"));
+    let replaced = lookup_definition(&env_cs)
+      .ok()
+      .flatten()
+      .is_some_and(|defn| defn.is_expandable());
+    let mut out = Vec::new();
+    if is_defined(&s!("\\begin{{{env}}}")) && !replaced {
+      for cs in ["\\begin", "\\end"] {
+        out.push(T_CS!(cs));
+        out.push(T_BEGIN!());
+        out.extend(ExplodeText!(env));
+        out.push(T_END!());
+      }
+    } else {
+      // The list follows the environment rather than filling it: the
+      // environment is the package's page layout for makeindex's `\item`s —
+      // doc.sty's multicols, makeglos.sty:10-12's `description` (where an
+      // `ltx:index` is not allowed) — and MakeIndex renders the entries as
+      // an `ltx:indexlist` of its own, after the prologue the environment
+      // typeset.
+      out.extend(begin_environment_by_macro(env, Tokens::new(ExplodeText!(env)))?);
+      out.extend(end_environment_by_macro(env));
+      // `\end`'s epilogue (latex.ltx:15393).
+      out.extend([
+        T_CS!("\\if@ignore"),
+        T_CS!("\\@ignorefalse"),
+        T_CS!("\\ignorespaces"),
+        T_CS!("\\fi"),
+      ]);
+      // makeindex's postamble ends the list with a blank line (gind.ist,
+      // gglo.ist `postamble "\n\n \\end{…}\n"`): the paragraph an environment
+      // left open ends before the list.
+      out.push(T_CS!("\\par"));
+      out.push(T_CS!("\\lx@makeindex@list"));
+      out.push(T_BEGIN!());
+      out.extend(ExplodeText!(list));
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
+  });
+  // The list placeholder after a package's own index environment: an empty
+  // `ltx:index` MakeIndex fills from the marks of list #1. It stays where the
+  // environment left off (after the prologue, in the section the prologue
+  // opened) — no backmatter relocation. Where an `ltx:index` cannot stand
+  // there, not even by closing the open paragraph — the file input from an
+  // `\item` or a tabular cell — it goes after the list or table, into the
+  // nearest element that admits it: the schema has no index inside an item or
+  // a cell (our `{theindex}` errs `malformed` there too).
+  DefConstructor!("\\lx@makeindex@list{}", sub[document, _args, props] {
+    let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+    attrs.insert("xml:id".to_string(), prop_string!(props, "id"));
+    attrs.insert("lists".to_string(), prop_string!(props, "list"));
+    let mut node = document.get_element();
+    let mut blocked = None;
+    while let Some(n) = node {
+      if can_contain(&n, "ltx:index") {
+        break;
+      }
+      if !can_auto_close(&n) {
+        blocked = Some(n);
+        break;
+      }
+      node = n.get_parent();
+    }
+    match blocked {
+      None => {
+        document.insert_element("ltx:index", Vec::new(), Some(attrs))?;
+      },
+      Some(blocker) => {
+        let mut host = blocker.get_parent();
+        while let Some(h) = host.as_ref().filter(|h| !can_contain(h, "ltx:index")) {
+          host = h.get_parent();
+        }
+        if let Some(mut host) = host {
+          let mut index = document.open_element_at(&mut host, "ltx:index", Some(attrs), None)?;
+          document.close_element_at(&mut index)?;
+        }
+      },
+    }
+  },
+    properties => sub[args] {
+      let list = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let docid = Expand!(T_CS!("\\thedocument@ID")).to_string();
+      let id = if docid.is_empty() { list.clone() } else { s!("{docid}.{list}") };
+      Ok(stored_map!("id" => id, "list" => list))
+    },
+    sizer => 0
+  );
+
+  // 15. latex.ltx:16753 `\def\sp@n{\span\omit\advance\@multicnt\m@ne}` (from the dump), the step of `\multispan`
+  // (:16749-16752) and so of every raw-loaded `\multicolumn`, spans with the frozen `\span` `\lx@span` (user ruling
+  // 2026-10-11): a document's `\renewcommand{\span}{\operatorname{span}}` keeps its column spans; `\lx@span@check`
+  // reports the clash once (tex_tables.rs). Witness: none among the 219 A/B'd `\span` redefiners (IEEEtran's
+  // `\IEEEeqnarraymulticol`, defined in 1111.3160, is the nearest shape; the paper never calls it). Guard:
+  // `perfect_kernel_batch65::multispan_spans_with_the_frozen_span`.
+  DefMacro!(
+    "\\sp@n",
+    r"\lx@span@check\lx@span\omit\advance\@multicnt\m@ne"
+  );
 });
+
+/// The pTeX formats' own registers, allocated where a document declares pTeX (`\NeedsTeXFormat{pLaTeX2e}`, or
+/// `\epTeXinputencoding` as jlreq.cls:493 does): plcore.ltx:127-137 `\newdimen`s the kanji metrics `\Cht`, `\Cdp`,
+/// `\Cwd`, `\Cvs`, `\Chs`, their lowercase twins and `\cHT`, which the classes set without allocating them
+/// (jsarticle.cls:771-775, jlreq.cls:1306-1310). Missing, `\setlength\Cvs{\baselineskip}` typeset its value as TeX
+/// would (`\Cvs \baselineskip\relax`), assigning `\baselineskip` a missing number, 0, and jsarticle.cls:876's
+/// `\divide\textheight\baselineskip` divided by zero (sweep #148: 30 pLaTeX manuals). A register already defined is
+/// kept, as bxjsarticle.cls:1102-1106 `\ifx\Cht\@undefined \newdimen\Cht \fi` keeps it.
+pub(crate) fn allocate_ptex_format_registers() -> Result<()> {
+  for name in [
+    "\\Cht", "\\cht", "\\Cdp", "\\cdp", "\\Cwd", "\\cwd", "\\Cvs", "\\cvs", "\\Chs", "\\chs",
+    "\\cHT",
+  ] {
+    let cs = T_CS!(name);
+    if lookup_definition(&cs)?.is_none() {
+      DefRegister!(cs, None, Dimension::new(0), allocate => "\\dimen");
+    }
+  }
+  Ok(())
+}
+
+/// Is the document's code on `hook`? lthooks labels code by its owner (latex.ltx:5208 `\__hook_currname_or_default:`): the
+/// document's is `top-level` (:5364-5369) or a label naming no loaded class or package; `\AddToHookNext`'s carries no
+/// label (:6340), counted as the document's; a hook added in the body patches at once, before its code is stored
+/// (`\__hook_cmd_begindocument_code:` is gone, :6870).
+fn document_hook_code(hook: &str) -> bool {
+  let body = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
+    Some(Stored::Expandable(m)) => match m.get_expansion() {
+      Some(ExpansionBody::Tokens(t)) => Some(t.clone()),
+      _ => None,
+    },
+    _ => None,
+  };
+  if lookup_meaning(&T_CS!("\\__hook_cmd_begindocument_code:")).is_none()
+    || ["toplevel", "next"]
+      .iter()
+      .any(|code| body(&s!("\\__hook_{code} {hook}")).is_some_and(|t| !t.is_empty()))
+  {
+    return true;
+  }
+  // l3prop's `\s__prop \__prop_pair:wn <label> \s__prop {<code>}` (l3prop)
+  let Some(prop) = body(&s!("\\g__hook_{hook}_code_prop")) else {
+    return false;
+  };
+  let (pair, mark) = (T_CS!("\\__prop_pair:wn"), T_CS!("\\s__prop"));
+  let tokens = prop.unlist();
+  let mut rest = &tokens[..];
+  while let Some(at) = rest.iter().position(|t| *t == pair) {
+    rest = &rest[at + 1..];
+    let end = rest.iter().position(|t| *t == mark).unwrap_or(rest.len());
+    let label: String = rest[..end].iter().map(ToString::to_string).collect();
+    let owner = label.split('/').next().unwrap_or_default();
+    // (`state::file_loaded`: a `\@ifpackagelater` query's `\relax` `\ver@` is no load, F14)
+    if owner == "top-level"
+      || [".sty", ".cls"]
+        .iter()
+        .all(|ext| !file_loaded(&s!("{owner}{ext}")))
+    {
+      return true;
+    }
+    rest = &rest[end..];
+  }
+  false
+}

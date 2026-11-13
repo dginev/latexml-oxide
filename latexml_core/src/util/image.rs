@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use crate::{
   BoxOps,
   common::{dimension::Dimension, numeric_ops::NumericOps, store::Stored},
+  definition::{Definition, ExpansionBody},
   state,
   whatsit::Whatsit,
 };
@@ -24,8 +25,16 @@ use crate::{
 /// GRAPHICSPATHS + SEARCHPATHS + SOURCEDIRECTORY. Paths are returned
 /// relative to SOURCEDIRECTORY when possible, matching the Perl
 /// `pathname_relative($_, $base)` post-filter.
-pub fn image_candidates(path: &str) -> String {
-  let path = path.trim().trim_matches('"');
+pub fn image_candidates(path: &str) -> String { image_candidates_with(path, true) }
+
+/// [`image_candidates`]; `fallbacks` says whether a name the search directories do not hold is asked of kpsewhich and,
+/// with a graphics extension, retried under its base name (off for that retry itself).
+fn image_candidates_with(path: &str, fallbacks: bool) -> String {
+  // `\IfFileExists` looks a name up unquoted: `\set@curr@file`'s `\unquote@name` drops every `"` (latex.ltx:9654-9666),
+  // so graphics.sty's `\Gin@getbase` finds `{"Figure_1".jpg}` as `Figure_1.jpg` (1907.03916, 2005.11727), as it finds a
+  // name quoted whole.
+  let unquoted = path.replace('"', "");
+  let path = unquoted.trim();
   if path.is_empty() {
     return String::new();
   }
@@ -35,79 +44,139 @@ pub fn image_candidates(path: &str) -> String {
   if !source_dir.is_empty() {
     search_dirs.push(source_dir.clone());
   }
+  // Then each `\input@path` entry (a directory relative to the source): graphics.sty's `\Gin@getbase` tests every
+  // name with `\IfFileExists` (graphics.sty:211-231), whose `\@iffileonpath` looks it up under each `\input@path`
+  // entry (latex.ltx:9698), so pdflatex finds a `\includegraphics{502f01a.eps}` in `graphics/` under
+  // `\def\input@path{{style/}{graphics/}{}}` (1112.0840's `arxiv-general.cfg`, 8 figures). After the directories above,
+  // so a name they hold keeps its first candidate.
+  for entry in crate::binding::content::input_path_entries() {
+    let entry = entry.trim().trim_matches('"');
+    if entry.is_empty() {
+      continue;
+    }
+    let dir = if Path::new(entry).is_absolute() || source_dir.is_empty() {
+      entry.to_string()
+    } else {
+      PathBuf::from(&source_dir)
+        .join(entry)
+        .to_string_lossy()
+        .to_string()
+    };
+    if !search_dirs.contains(&dir) {
+      search_dirs.push(dir);
+    }
+  }
   if search_dirs.is_empty() {
     search_dirs.push(".".to_string());
   }
 
-  let mut candidates: Vec<String> = Vec::new();
-  let path_obj = Path::new(path);
-  let has_extension = path_obj.extension().is_some();
+  // Perl `pathname_findall($path, types => ['*'], paths => …)` (Pathname.pm:325-371): in each search directory, the
+  // files named as the image (its whole name, a dotted `b.v0.5_x` too) or that name with one more extension
+  // (`^name\.\w+$`), case-insensitive matches only when no exact one exists. Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES
+  // #477), as pdflatex takes them: a name whose extension has a graphics rule (`has_graphics_rule`) that names a file in
+  // some directory is that file alone (`\Gin@getbase` tries the name over every `\input@path` entry before appending
+  // any extension, graphics.sty:211-231 — Perl lists a `c.eps.png` beside `c.eps` too, and post would render it), or
+  // failing that the file of that name in another case (kpathsea's `fig.pdf` for `fig.PDF`); any other name —
+  // extensionless, or with an extension no rule reads, `b.v0.5_x`, `c.EPS` — lists its `name.ext` files before a bare
+  // file of that name, which pdflatex takes only when no extended one exists (graphics.sty:205-231); only files are
+  // candidates (Perl's list defers `-f`, Pathname.pm:391, and names a directory too).
+  let has_extension = Path::new(path).extension().is_some();
   let source_path = if source_dir.is_empty() {
     None
   } else {
     Some(PathBuf::from(&source_dir))
   };
+  // (a path naming no file, `..` or `/`, matches nothing here and goes on to kpsewhich below)
+  let name = Path::new(path)
+    .file_name()
+    .map(|s| s.to_string_lossy().to_string())
+    .unwrap_or_default();
+  let name_lower = name.to_lowercase();
+  // TeX tries each `\input@path` entry glued to the name as written (latex.ltx `\InputIfFileExists` over
+  // `\input@path`), so `plots/` and `/example_1/a.pdf` are `plots//example_1/a.pdf`; a leading `/` that names no
+  // file is read under each directory as TeX reads it (2409.13454's `\folder` = `/example_1/`), where joining an
+  // absolute path would drop the directory (Perl searches only the name's own directory, Pathname.pm:328-329; #477).
+  // The source directory and `SEARCHPATHS` count as such directories too, beyond pdflatex (which fails on the name
+  // without a `\graphicspath`), as post's own fallback already glued it (latexml_post graphics.rs).
+  let relative_name = match path.strip_prefix('/') {
+    Some(rest) if !Path::new(path).exists() => rest,
+    _ => path,
+  };
 
-  for dir in &search_dirs {
-    // Strip surrounding double-quotes from the search directory, symmetric to
-    // the `path.trim_matches('"')` above. A quoted `\graphicspath{{"./dir"}}`
-    // (or `\svgpath` / `--graphicspaths`) otherwise joins to a `"…"` path that
-    // never resolves. See OXIDIZED_DESIGN #55.
-    let dir = dir.trim().trim_matches('"');
-    let base = PathBuf::from(dir).join(path);
-    if has_extension {
-      if base.exists() {
-        // Perl relativizes every hit to SOURCEDIRECTORY via pathname_relative
-        // (→ File::Spec->abs2rel), which emits a `../…` path for a graphic in a
-        // SIBLING directory (issue #698: `\subimport*{../gfx_asset/}` reaching a
-        // sideways tree). See `pathname::relative`, which now matches Perl (it
-        // used to leak the absolute path on a non-descendant hit).
-        let rel = match &source_path {
-          Some(sp) => {
-            crate::util::pathname::relative(&base.to_string_lossy(), &sp.to_string_lossy())
-          },
-          None => base.to_string_lossy().to_string(),
-        };
-        candidates.push(rel);
+  let found = search_dirs
+    .iter()
+    .filter(|_| !name.is_empty())
+    .flat_map(|dir| {
+      // Strip surrounding double-quotes from the search directory, symmetric to
+      // the `path.trim_matches('"')` above. A quoted `\graphicspath{{"./dir"}}`
+      // (or `\svgpath` / `--graphicspaths`) otherwise joins to a `"…"` path that
+      // never resolves. See OXIDIZED_DESIGN #55.
+      let dir = dir.trim().trim_matches('"');
+      let base = PathBuf::from(dir).join(relative_name);
+      let parent = base
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+      std::fs::read_dir(parent).into_iter().flatten().flatten()
+    })
+    .filter_map(|entry| {
+      // the name first, so that only an entry named as the image costs a `stat`
+      let fname = entry.file_name().to_string_lossy().to_string();
+      image_file_name_match(&fname, &name, &name_lower)?;
+      let full = entry.path();
+      if !full.is_file() {
+        return None;
       }
+      // Perl relativizes every hit to SOURCEDIRECTORY via pathname_relative
+      // (→ File::Spec->abs2rel), which emits a `../…` path for a graphic in a
+      // SIBLING directory (issue #698: `\subimport*{../gfx_asset/}` reaching a
+      // sideways tree). See `pathname::relative`, which now matches Perl (it
+      // used to leak the absolute path on a non-descendant hit).
+      let rel = match &source_path {
+        Some(sp) => crate::util::pathname::relative(&full.to_string_lossy(), &sp.to_string_lossy()),
+        None => full.to_string_lossy().to_string(),
+      };
+      Some((fname, rel))
+    });
+  let ImageCandidateLists {
+    exact_names,
+    extended_names,
+    mut nocase_exact_names,
+    nocase_candidates,
+  } = image_candidate_lists(found, &name);
+  let graphics_name = has_graphics_rule(&name);
+  let mut candidates: Vec<String> = if graphics_name && !exact_names.is_empty() {
+    exact_names
+  } else if graphics_name && !nocase_exact_names.is_empty() {
+    std::mem::take(&mut nocase_exact_names)
+  } else {
+    extended_names.into_iter().chain(exact_names).collect()
+  };
+  if candidates.is_empty() {
+    candidates = if graphics_name {
+      nocase_exact_names
+        .into_iter()
+        .chain(nocase_candidates)
+        .collect()
     } else {
-      // Search for path with any extension
-      let parent = base.parent().unwrap_or_else(|| Path::new("."));
-      let stem = base
-        .file_name()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_default();
-      if let Ok(entries) = std::fs::read_dir(parent) {
-        for entry in entries.flatten() {
-          let fname = entry.file_name().to_string_lossy().to_string();
-          if let Some(dot_pos) = fname.find('.')
-            && fname[..dot_pos] == stem
-          {
-            let full = entry.path();
-            // Sibling-directory relativization (issue #698) — see the
-            // extension branch above: pathname::relative (abs2rel semantics).
-            let rel = match &source_path {
-              Some(sp) => {
-                crate::util::pathname::relative(&full.to_string_lossy(), &sp.to_string_lossy())
-              },
-              None => full.to_string_lossy().to_string(),
-            };
-            candidates.push(rel);
-          }
-        }
-      }
-    }
+      nocase_candidates
+        .into_iter()
+        .chain(nocase_exact_names)
+        .collect()
+    };
   }
 
   // Perl image_candidates (Util/Image.pm L49-53): when the search-dir lookup
-  // finds nothing AND the name is extensionless, consult kpsewhich for
-  // `<path>.png` / `<path>.pdf` — this resolves TeX Live system images such as
+  // finds nothing, consult kpsewhich for `<path>.png` / `<path>.pdf` (Perl
+  // whatever the name's extension; here unless it is a graphics extension, for
+  // which the as-is query below is the one that can hit, #230) — this resolves
+  // TeX Live system images such as
   // `example-image-a` (whose real file is a .pdf). Crucially, kpsewhich returns
   // ONLY files that actually exist, so a missing image yields no candidate. The
   // earlier Rust port instead SYNTHESIZED `<path>.png` unconditionally, so a
   // missing extensionless image got a bogus `candidates="missing.png"` (Perl
   // emits none) and `example-image-a` got the wrong `.png` instead of its `.pdf`.
-  if candidates.is_empty() && !has_extension {
+  if fallbacks && candidates.is_empty() && !has_graphics_extension(&name) {
     let png = format!("{path}.png");
     let pdf = format!("{path}.pdf");
     if let Some(found) = crate::util::pathname::kpsewhich(&[&png, &pdf]) {
@@ -124,6 +193,57 @@ pub fn image_candidates(path: &str) -> String {
     }
   }
 
+  // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #230): a name WITH an extension
+  // that the search paths do not hold is asked of kpsewhich as-is. Perl (and
+  // the branch above) consults kpsewhich only with `.png`/`.pdf` appended
+  // (Util/Image.pm:49-53), so a package-shipped asset
+  // referenced by its full name — `\includegraphics[page=N]
+  // {openmoji-color-all.pdf}` and the other icon galleries, 97.8 % of the
+  // corpus's lost figures (~27,700) — never resolved although kpsewhich finds
+  // it in the texmf tree. Guard: `cluster_package_guards::graphics_kpsewhich::
+  // extensioned_texmf_graphic_is_a_candidate`.
+  if fallbacks
+    && candidates.is_empty()
+    && has_extension
+    && let Some(found) = crate::util::pathname::kpsewhich(&[path])
+  {
+    let rel = match &source_path {
+      Some(sp) => crate::util::pathname::relative(&found, &sp.to_string_lossy()),
+      None => found,
+    };
+    candidates.push(rel);
+  }
+
+  // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #882): a name with a graphics extension that names no file anywhere
+  // (`\includegraphics{recomb.eps}` where the author ran epstopdf and shipped only `recomb.pdf`) is retried under its
+  // base name, its files of a graphics type the candidates, as post's `find_graphic_file` (latexml_post graphics.rs)
+  // already finds the image: so the digestion-time sizer reads the real file and a sub-figure panel has its width
+  // (1408.2843 Fig 1-2, 1503.04804 Fig 3; KNOWN_PERL_ERRORS #1137, where Perl's Image.pm:43-56 and post both lose it). A
+  // requested file that exists, on the search paths or in the texmf tree, is found above and stays the only one.
+  if fallbacks
+    && candidates.is_empty()
+    && has_graphics_extension(&name)
+    && path.ends_with(&name)
+    && let Some(stem) = Path::new(&name)
+      .file_stem()
+      .map(|s| s.to_string_lossy().to_string())
+    && !stem.is_empty()
+  {
+    let base = format!("{}{stem}", &path[..path.len() - name.len()]);
+    candidates = image_candidates_with(&base, false)
+      .split(',')
+      .filter(|found| {
+        let found_name = found.rsplit('/').next().unwrap_or(found);
+        has_graphics_extension(found_name)
+          && Path::new(found_name)
+            .file_stem()
+            .is_some_and(|s| s.to_string_lossy().eq_ignore_ascii_case(&stem))
+      })
+      .map(str::to_string)
+      .collect();
+    in_graphics_type_order(&mut candidates);
+  }
+
   // Deduplicate while preserving order
   let mut seen = rustc_hash::FxHashSet::default();
   candidates.retain(|c| seen.insert(c.clone()));
@@ -136,6 +256,219 @@ pub fn image_candidates(path: &str) -> String {
   // back to the raw path here, emitting `candidates="missing.png"` where Perl
   // emits no candidates at all. Return empty to match.
   candidates.join(",")
+}
+
+/// The files one image search found, by how each matches the image's name ([`image_candidate_lists`]).
+#[derive(Debug, Default, PartialEq)]
+struct ImageCandidateLists {
+  /// The name itself.
+  exact_names:        Vec<String>,
+  /// The name and one more extension (`fig` → `fig.pdf`).
+  extended_names:     Vec<String>,
+  /// The name itself in another case.
+  nocase_exact_names: Vec<String>,
+  /// The name and one more extension, in another case.
+  nocase_candidates:  Vec<String>,
+}
+
+/// The image `name`'s candidates among `found`: each a directory entry's file name and the path to list it under,
+/// the search directories in their search order, each directory's entries in whatever order it lists them. Each
+/// list comes out in TeX's order ([`in_graphics_type_order`]: by type, then search directory, then name), not the
+/// directory's. Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #883): Perl's `pathname_findall` returns `readdir`'s order
+/// within a directory (Pathname.pm:350-371), which the filesystem decides, and the leading directory's hits first
+/// (Pathname.pm:375); an extensionless `\includegraphics{fig}` beside `fig.png` and `fig.pdf` listed them in an order
+/// that differed from one host to the next, and the first readable one is the one the digestion-time sizer reads
+/// (det354 4b; witness 2011.14197, whose `fig3..6.eps,.pdf` are now `.pdf,.eps`). Type before directory is TeX's
+/// order: graphics.sty:206-224 runs `\@for\Gin@temp:=\Gin@extensions` outermost, the path search inside
+/// `\IfFileExists`.
+fn image_candidate_lists(
+  found: impl IntoIterator<Item = (String, String)>,
+  name: &str,
+) -> ImageCandidateLists {
+  let name_lower = name.to_lowercase();
+  let mut lists = ImageCandidateLists::default();
+  for (fname, rel) in found {
+    let Some(exact) = image_file_name_match(&fname, name, &name_lower) else {
+      continue;
+    };
+    if !exact && fname.to_lowercase() == name_lower {
+      lists.nocase_exact_names.push(rel);
+    } else if !exact {
+      lists.nocase_candidates.push(rel);
+    } else if fname == name {
+      lists.exact_names.push(rel);
+    } else {
+      lists.extended_names.push(rel);
+    }
+  }
+  for list in [
+    &mut lists.exact_names,
+    &mut lists.extended_names,
+    &mut lists.nocase_exact_names,
+    &mut lists.nocase_candidates,
+  ] {
+    in_graphics_type_order(list);
+  }
+  lists
+}
+
+/// Whether `name` ends in an extension pdftex.def has a graphics rule for (`\Gin@rule@.<ext>`, pdftex.def:601-612,
+/// case as written): graphics.sty:211-231 then takes the name as given before appending any extension, so
+/// `\includegraphics{c.eps}` names that file and not a `c.eps.png` beside it, while `c.EPS` (no rule) tries the
+/// appended extensions first.
+fn has_graphics_rule(name: &str) -> bool {
+  const RULED_EXTENSIONS: [&str; 12] = [
+    "jpg", "jpeg", "JPG", "JPEG", "jb2", "jbig2", "png", "PNG", "mps", "pdf", "PDF", "eps",
+  ];
+  Path::new(name)
+    .extension()
+    .is_some_and(|ext| RULED_EXTENSIONS.iter().any(|r| ext == *r))
+}
+
+/// The extensions a graphics driver reads, in the order a name without one tries them: pdftex.def's `\Gin@extensions`
+/// (`.pdf,.png,.jpg,.mps,.jpeg,.jbig2,.jb2`, then their uppercase `.PDF,…,.JB2`, pdftex.def:597-600), then `.eps`
+/// (epstopdf-base.sty:498-505 appends it), dvips.def's `.ps` and the formats post converts. Written lowercase, the first
+/// [`GIN_EXTENSIONS`] pdftex.def's; [`graphics_type_rank`] places the other-case variants.
+const GRAPHICS_EXTENSIONS: [&str; 14] = [
+  "pdf", "png", "jpg", "mps", "jpeg", "jbig2", "jb2", "eps", "ps", "svg", "gif", "tif", "tiff",
+  "bmp",
+];
+
+/// How many of [`GRAPHICS_EXTENSIONS`] are pdftex.def's lowercase `\Gin@extensions` (pdftex.def:597-598).
+const GIN_EXTENSIONS: usize = 7;
+
+/// Whether `name` ends in an extension a graphics driver reads ([`GRAPHICS_EXTENSIONS`]), case aside — the names
+/// kpsewhich is not asked for with `.png`/`.pdf` appended.
+fn has_graphics_extension(name: &str) -> bool {
+  graphics_type_rank(name) < 4 * GRAPHICS_EXTENSIONS.len()
+}
+
+/// `candidates` in TeX's order, not the directory's: by type ([`graphics_type_rank`]: pdftex.def's
+/// `\Gin@extensions` order, pdftex.def:597-600), then by search directory (each type is looked for along the
+/// `\graphicspath`/`\input@path` entries in turn, latex.ltx:9698 `\@iffileonpath`, so
+/// `\graphicspath{{new/}{figs/}}` takes `new/plot.pdf` before `figs/plot.pdf`; the directories in the order the
+/// search listed their hits), then by name within one directory. One difference stays: LaTeX's `\IfFileExists`
+/// tries the bare name in the working directory first (latex.ltx:1095-1102), where `search_dirs` lists the source
+/// directory last (review rev78v3 finding 2; a SYNC row). The base-name retry's hits were listed as `read_dir` gave
+/// them, so 0907.3747 had `nuebar.pdf,nuebar.ps` beside `nuebar_limit.ps,nuebar_limit.pdf`, and the sizer reads the
+/// first readable one (review rev78v finding 3; rev78v2 finding 2, where a tie-break by full path put `figs/`
+/// first).
+fn in_graphics_type_order(candidates: &mut [String]) {
+  let declared = declared_graphics_extensions();
+  let directory = |found: &str| {
+    found
+      .rsplit_once('/')
+      .map_or("", |(dir, _)| dir)
+      .to_string()
+  };
+  let mut directories: Vec<String> = Vec::new();
+  for found in candidates.iter() {
+    let dir = directory(found);
+    if !directories.contains(&dir) {
+      directories.push(dir);
+    }
+  }
+  candidates.sort_by_cached_key(|found| {
+    let found_name = found.rsplit('/').next().unwrap_or(found);
+    let dir = directory(found);
+    (
+      declared_rank(found_name, &declared),
+      graphics_type_rank(found_name),
+      directories.iter().position(|d| *d == dir),
+      found_name.to_string(),
+    )
+  });
+}
+
+/// The extensions `\Gin@extensions` lists, in order, each as written with its dot (`.eps`): the driver's, which
+/// graphics_sty.rs seeds as pdftex.def:597-600 and epstopdf-base's `.eps` set it ([`GRAPHICS_EXTENSIONS`]' order), as
+/// the document declared them (graphics.sty:116-117 `\DeclareGraphicsExtensions`) or edited them (grfext's
+/// `\AppendGraphicsExtensions`, `\PrependGraphicsExtensions`, `\RemoveGraphicsExtensions`); empty without the
+/// graphics binding, and then the driver's order stands ([`graphics_type_rank`]).
+fn declared_graphics_extensions() -> Vec<String> {
+  let Some(Stored::Expandable(defn)) = state::lookup_meaning(&crate::T_CS!("\\Gin@extensions"))
+  else {
+    return Vec::new();
+  };
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return Vec::new();
+  };
+  body
+    .to_string()
+    .split(',')
+    .map(|ext| ext.trim().to_string())
+    .filter(|ext| ext.starts_with('.') && ext.len() > 1)
+    .collect()
+}
+
+/// The place of `name`'s extension among the `declared` ones ([`declared_graphics_extensions`]), its case aside: TeX
+/// tries a name without an extension with each of `\Gin@extensions` in turn (graphics.sty:206-224), so after
+/// `\DeclareGraphicsExtensions{.pdf,.eps,.png}` a `fig` beside `fig.png` and `fig.eps` is `fig.eps` (2107.02597's
+/// gnuplot figures); and kpathsea finds each name as written, then in another case (TL's `texmf_casefold_search=1`),
+/// so a `.png` entry finds `nsfnet.PNG` before the `.eps` the driver appends at `\begin{document}` (1608.05172, whose
+/// pdflatex log reads `<./img/nsfnet.PNG>` beside `img/nsfnet.eps`; review rev79a2 finding 2): the place, then
+/// `false` for the entry's own case before `true` for another. An extension it does not declare comes after them
+/// (TeX does not try it). All equal when nothing was declared.
+fn declared_rank(name: &str, declared: &[String]) -> (usize, bool) {
+  declared
+    .iter()
+    .enumerate()
+    .find_map(|(place, ext)| {
+      let start = name
+        .len()
+        .checked_sub(ext.len())
+        .filter(|start| *start > 0)?;
+      let tail = name.get(start..)?;
+      tail
+        .eq_ignore_ascii_case(ext)
+        .then(|| (place, tail != ext.as_str()))
+    })
+    .unwrap_or((declared.len(), false))
+}
+
+/// The place of `name`'s extension in the order pdftex tries them: pdftex.def's `\Gin@extensions` lowercase, then in
+/// another case (`.PDF`, as it lists `.PDF,.PNG,…` after them, pdftex.def:597-600), then the rest of
+/// [`GRAPHICS_EXTENSIONS`] (`.eps` first, which epstopdf-base appends) lowercase, then in another case; past all four
+/// for any other extension.
+fn graphics_type_rank(name: &str) -> usize {
+  let n = GRAPHICS_EXTENSIONS.len();
+  let Some(ext) = Path::new(name).extension().map(|e| e.to_string_lossy()) else {
+    return 4 * n;
+  };
+  let Some(index) = GRAPHICS_EXTENSIONS
+    .iter()
+    .position(|g| ext.eq_ignore_ascii_case(g))
+  else {
+    return 4 * n;
+  };
+  let other_case = GRAPHICS_EXTENSIONS[index] != ext;
+  match (index < GIN_EXTENSIONS, other_case) {
+    (true, false) => index,
+    (true, true) => n + index,
+    (false, false) => 2 * n + index,
+    (false, true) => 3 * n + index,
+  }
+}
+
+/// Whether the directory entry `entry` is the image `name`: the name itself or the name and one extension of word
+/// characters (`fig` → `fig.pdf`, not `fig.old.pdf`; `b.v0.5_x` → `b.v0.5_x.pdf`), as Perl's `candidate_pathnames`
+/// matches with types `['*']` (Pathname.pm:350-371): `Some(true)` exactly, `Some(false)` only ignoring case
+/// (`name_lower` the name lowercased).
+fn image_file_name_match(entry: &str, name: &str, name_lower: &str) -> Option<bool> {
+  let matches = |entry: &str, name: &str| {
+    entry == name
+      || entry
+        .strip_prefix(name)
+        .and_then(|rest| rest.strip_prefix('.'))
+        .is_some_and(|ext| !ext.is_empty() && ext.chars().all(|c| c.is_alphanumeric() || c == '_'))
+  };
+  if matches(entry, name) {
+    Some(true)
+  } else if matches(&entry.to_lowercase(), name_lower) {
+    Some(false)
+  } else {
+    None
+  }
 }
 
 /// One graphicx transformation, as compiled from the option string.
@@ -423,6 +756,158 @@ pub fn apply_graphicx_ops(
   (w.max(0.0), h.max(0.0))
 }
 
+/// The pixel rectangle a `trim`/`viewport` op keeps of a `w`×`h` raster, as
+/// `(x, y, width, height)` from its top-left corner; `None` when the box keeps
+/// the whole image or no pixel of it. Port of Perl `image_graphicx_complex`'s
+/// trim/clip arm (`Util/Image.pm` L400-418): TeX measures the box from the
+/// lower-left corner and ImageMagick from the upper-left, and the box is
+/// clamped to the image, never padded. `px_per_bp` is the raster's own
+/// resolution over 72 (DIVERGENCES #337: Perl divides by 72.27 and reads the
+/// resolution without its unit).
+pub fn graphicx_crop_rect(
+  w: u32,
+  h: u32,
+  op: &GraphicxOp,
+  px_per_bp: f64,
+) -> Option<(u32, u32, u32, u32)> {
+  let (wf, hf) = (w as f64, h as f64);
+  // A length in pt reaches here as bp through 72/72.27, so a whole number of
+  // pixels can land a hair off it (`100.375pt` is 100.00000000000001bp):
+  // snap within a millionth before rounding, or the box gains a pixel row.
+  let floor = |v: f64| (v + 1e-6).floor();
+  let ceil = |v: f64| (v - 1e-6).ceil();
+  let (x0, y0, ww, hh) = match *op {
+    // Amounts to trim: left, bottom, right, top.
+    GraphicxOp::Trim { l, b, r, t } => (
+      floor(l * px_per_bp),
+      floor(t * px_per_bp),
+      ceil(wf - (l + r) * px_per_bp),
+      ceil(hf - (t + b) * px_per_bp),
+    ),
+    // The box itself: lower-left and upper-right corners.
+    GraphicxOp::Clip { l, b, r, t } => (
+      floor(l * px_per_bp),
+      floor(hf - t * px_per_bp),
+      ceil((r - l) * px_per_bp),
+      ceil((t - b) * px_per_bp),
+    ),
+    _ => return None,
+  };
+  if !(x0 > 0.0 || y0 > 0.0 || x0 + ww < wf || y0 + hh < hf) {
+    return None;
+  }
+  let (x, y) = (x0.max(0.0), y0.max(0.0));
+  let cw = (ww + x0.min(0.0)).min(wf - x);
+  let ch = (hh + y0.min(0.0)).min(hf - y);
+  (cw >= 1.0 && ch >= 1.0).then_some((x as u32, y as u32, cw as u32, ch as u32))
+}
+
+/// A raster's own resolution in dots per inch, `(x, y)`, as pdfTeX reads it
+/// to size an image: a PNG's `pHYs` chunk (unit 1 is per metre), rounded to
+/// whole dpi, or a JPEG's JFIF `APP0` density (unit 1 per inch; 2 per
+/// centimetre, truncated to whole dpi) — pdflatex measures an 11811 px/m PNG
+/// at 300 dpi and a 118 px/cm JPEG at 299. `None` when the file states none,
+/// or only an aspect ratio (unit 0): pdfTeX then takes 72 dpi, its default
+/// `\pdfimageresolution`. Reads the head only: both come before the pixels.
+pub fn raster_resolution_dpi(path: &str) -> Option<(f64, f64)> {
+  use std::io::Read;
+  let mut bytes = Vec::new();
+  std::fs::File::open(path)
+    .ok()?
+    .take(1 << 18)
+    .read_to_end(&mut bytes)
+    .ok()?;
+  if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+    // Chunks: length, type, data, CRC; `pHYs` precedes the first `IDAT`.
+    let mut at = 8;
+    while at + 8 <= bytes.len() {
+      let len = u32::from_be_bytes(bytes[at..at + 4].try_into().ok()?) as usize;
+      let kind = &bytes[at + 4..at + 8];
+      let data = bytes.get(at + 8..at + 8 + len)?;
+      match kind {
+        b"pHYs" if len == 9 && data[8] == 1 => {
+          let x = u32::from_be_bytes(data[0..4].try_into().ok()?) as f64;
+          let y = u32::from_be_bytes(data[4..8].try_into().ok()?) as f64;
+          return (x > 0.0 && y > 0.0).then_some(((x * 0.0254).round(), (y * 0.0254).round()));
+        },
+        b"IDAT" | b"IEND" => return None,
+        _ => at += 12 + len,
+      }
+    }
+    None
+  } else if bytes.starts_with(&[0xFF, 0xD8]) {
+    // Marker segments after SOI; JFIF's APP0 comes before the frame.
+    let mut at = 2;
+    while at + 4 <= bytes.len() && bytes[at] == 0xFF {
+      let marker = bytes[at + 1];
+      let len = u16::from_be_bytes([bytes[at + 2], bytes[at + 3]]) as usize;
+      let data = bytes.get(at + 4..at + 2 + len)?;
+      if marker == 0xE0 && data.len() >= 12 && data.starts_with(b"JFIF\0") {
+        let x = u16::from_be_bytes([data[8], data[9]]) as f64;
+        let y = u16::from_be_bytes([data[10], data[11]]) as f64;
+        let (x, y) = match data[7] {
+          1 => (x, y),
+          2 => ((x * 2.54).trunc(), (y * 2.54).trunc()),
+          _ => return None,
+        };
+        return (x > 0.0 && y > 0.0).then_some((x, y));
+      }
+      let frame = (0xC0..=0xCF).contains(&marker) && ![0xC4, 0xC8, 0xCC].contains(&marker);
+      if marker == 0xDA || frame {
+        return None;
+      }
+      at += 2 + len;
+    }
+    None
+  } else {
+    None
+  }
+}
+
+/// A graphic's natural size as its file gives it: a raster's in pixels, a vector's (EPS/PS, PDF, SVG) a physical length
+/// in pt.
+enum Natural {
+  Pixels(f64, f64),
+  Points(f64, f64),
+}
+
+/// The natural size of the graphic file at `path`, read by its content, not its name (`None` when no reader sizes it).
+fn natural_size(path: &Path) -> Option<Natural> {
+  match read_image_size(path) {
+    Some(ImageSize::Pixels(w, h)) if w > 0 && h > 0 => Some(Natural::Pixels(w as f64, h as f64)),
+    // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #886): an EPS/PS BoundingBox is bp, as TeX reads it (graphics.sty
+    // `\Gread@eps`; pdflatex through epstopdf), not pixels at `DPI` — Perl's Util/Image.pm:271 `$w * 72.27 / $dpi`
+    // made a 40bp figure 28.908pt where latex makes it 40.15pt, and a `\psfig` panel row (OD #876) 72.27/100 of
+    // its width (1106.2745 Figs 1-2, 7, 8, 10).
+    Some(ImageSize::PostScriptBp(w, h)) => Some(Natural::Points(bp_to_pt(w), bp_to_pt(h))),
+    // Not a raster or PostScript file (or one without a size): emulate pdfTeX and read the natural size from the
+    // file itself. pdfTeX's built-in reader takes a PDF's CropBox (its default) or MediaBox, and an SVG's viewBox —
+    // with NO external tool. (Perl-LaTeXML instead shells out to ImageMagick precisely because Image::Size can't
+    // read PDF; even then it forces `pdf:use-cropbox` to match pdfTeX. So the faithful, self-contained move is
+    // pdfTeX's, not Perl's.) `natural_size_pt` shares the same CropBox→MediaBox reader as
+    // `LaTeXML::Post::Graphics`.
+    _ => natural_size_pt(path).map(|(w, h)| Natural::Points(w, h)),
+  }
+}
+
+/// The natural size of the first of `candidates` (comma-joined, resolved against `source_dir`) whose size can be read,
+/// whatever its type: the candidates come in TeX's order (`in_graphics_type_order`, pdftex.def's `\Gin@extensions`),
+/// so beside `fig.pdf` an extensionless `fig`'s size is the `.pdf`'s, as pdflatex reads it, not a `fig.ps`'s further
+/// down the list, and beside `q.eps` a `q.png` before it is the graphic; Perl's sizer stops at the first candidate it
+/// can read too (Util/Image.pm:259-272, `return … if $w`). The box (`image_graphicx_sizer`) and the natural `cssstyle`
+/// (`natural_display_size_pt_of_candidates`) both read this one, so the `cssstyle` is the size pdflatex prints the
+/// graphic at (review rev78z finding 1). Post may render another candidate — it picks by desirability
+/// (latexml_post/src/graphics.rs:321-371) —, at that size: 2107.02597's 640x480 png at its eps's 36.135em x 25.294em,
+/// about 7 % out of proportion (a SYNC row).
+fn first_natural_size(candidates: &str, source_dir: &str) -> Option<Natural> {
+  candidates.split(',').find_map(|candidate| {
+    let candidate = candidate.trim();
+    (!candidate.is_empty())
+      .then(|| natural_size(&resolve_candidate(candidate, source_dir)))
+      .flatten()
+  })
+}
+
 /// Perl: `image_graphicx_sizer($whatsit)` (Util::Image L259-272).
 ///
 /// Reads image dimensions from `candidates`, applies the `options` string
@@ -442,53 +927,13 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
     .map(|c| c.to_string())
     .unwrap_or_default();
 
-  // Try to read actual image dimensions from file
-  let mut img_w: f64 = 0.0;
-  let mut img_h: f64 = 0.0;
+  // The first candidate whose size can be read decides, whatever its type (`first_natural_size`).
   let source_dir = state::lookup_string("SOURCEDIRECTORY");
-  for candidate in candidates.split(',') {
-    let candidate = candidate.trim();
-    if candidate.is_empty() {
-      continue;
-    }
-    let full_path = if Path::new(candidate).is_absolute() {
-      PathBuf::from(candidate)
-    } else if !source_dir.is_empty() {
-      PathBuf::from(&source_dir).join(candidate)
-    } else {
-      PathBuf::from(candidate)
-    };
-    if let Some((w, h)) = read_image_dimensions(&full_path) {
-      img_w = w as f64;
-      img_h = h as f64;
-      break;
-    }
-  }
+  let natural = first_natural_size(&candidates, &source_dir);
 
-  if img_w <= 0.0 || img_h <= 0.0 {
-    // The raster readers (PNG/JPEG/EPS, like Perl's `imgsize`) couldn't measure
-    // the asset. Before giving up, emulate pdfTeX: read the natural size from the
-    // file itself. pdfTeX's built-in reader takes a PDF's CropBox (its default)
-    // or MediaBox, and an SVG's viewBox — with NO external tool. (Perl-LaTeXML
-    // instead shells out to ImageMagick precisely because Image::Size can't read
-    // PDF; even then it forces `pdf:use-cropbox` to match pdfTeX. So the faithful,
-    // self-contained move is pdfTeX's, not Perl's.) `natural_size_pt` shares the
-    // same CropBox→MediaBox reader as `LaTeXML::Post::Graphics`.
-    //
-    // Whatever we decide, we MUST set `cached_width`: without it, `compute_size`
-    // falls through to summing the whatsit's ARGUMENT boxes — and one of them is
-    // the Semiverbatim *filename* — so a bare `arrange_panels` would wrap figure
-    // rows by path length (arXiv:2409.16471 fig 2: 12 uniform 0.245\textwidth
-    // panels split 3/3/2/3/1 by filename, not 3 rows of 4).
-    let source_dir = state::lookup_string("SOURCEDIRECTORY");
-    let natural = candidates.split(',').find_map(|candidate| {
-      let candidate = candidate.trim();
-      if candidate.is_empty() {
-        return None;
-      }
-      natural_size_pt(&resolve_candidate(candidate, &source_dir))
-    });
-    if let Some((nw_pt, nh_pt)) = natural {
+  let (img_w, img_h) = match natural {
+    Some(Natural::Pixels(w, h)) => (w, h),
+    Some(Natural::Points(nw_pt, nh_pt)) => {
       // pdfTeX/graphics.sty box sizing in pt (verified against `\the\wd` under
       // pdflatex): with an explicit `width=`, the box width IS the request and
       // the natural size only fills in the height via the aspect ratio.
@@ -497,29 +942,37 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
       whatsit.set_property("cached_height", Stored::Dimension(bh));
       whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
       return;
-    }
-    // Last resort — a PDF whose page box is buried in a compressed object stream
-    // (where pdfTeX's full parser would still succeed but our byte reader can't),
-    // or an unreadable SVG. Honor an EXPLICIT `width=`/`height=` request (the
-    // display size LaTeXML already emits), else 0 (Perl-without-ImageMagick
-    // parity). Still set `cached_width` so the filename is never summed.
-    let mut ew: Option<Dimension> = None;
-    let mut eh: Option<Dimension> = None;
-    for opt in options.split(',') {
-      let opt = opt.trim();
-      if let Some(val) = opt.strip_prefix("width=") {
-        ew = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
-      } else if let Some(val) = opt.strip_prefix("height=") {
-        eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
-      } else if let Some(val) = opt.strip_prefix("totalheight=") {
-        eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+    },
+    None => {
+      // Whatever we decide, we MUST set `cached_width`: without it, `compute_size`
+      // falls through to summing the whatsit's ARGUMENT boxes — and one of them is
+      // the Semiverbatim *filename* — so a bare `arrange_panels` would wrap figure
+      // rows by path length (arXiv:2409.16471 fig 2: 12 uniform 0.245\textwidth
+      // panels split 3/3/2/3/1 by filename, not 3 rows of 4).
+      //
+      // Last resort — a PDF whose page box is buried in a compressed object stream
+      // (where pdfTeX's full parser would still succeed but our byte reader can't),
+      // or an unreadable SVG. Honor an EXPLICIT `width=`/`height=` request (the
+      // display size LaTeXML already emits), else 0 (Perl-without-ImageMagick
+      // parity). Still set `cached_width` so the filename is never summed.
+      let mut ew: Option<Dimension> = None;
+      let mut eh: Option<Dimension> = None;
+      for opt in options.split(',') {
+        let opt = opt.trim();
+        if let Some(val) = opt.strip_prefix("width=") {
+          ew = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+        } else if let Some(val) = opt.strip_prefix("height=") {
+          eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+        } else if let Some(val) = opt.strip_prefix("totalheight=") {
+          eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+        }
       }
-    }
-    whatsit.set_property("cached_width", Stored::Dimension(ew.unwrap_or_default()));
-    whatsit.set_property("cached_height", Stored::Dimension(eh.unwrap_or_default()));
-    whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
-    return;
-  }
+      whatsit.set_property("cached_width", Stored::Dimension(ew.unwrap_or_default()));
+      whatsit.set_property("cached_height", Stored::Dimension(eh.unwrap_or_default()));
+      whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
+      return;
+    },
+  };
 
   // Apply graphicx options (height, width, scale, keepaspectratio)
   // Perl: image_graphicx_size applies parsed transformations
@@ -590,13 +1043,68 @@ fn open_file_resilient(path: &Path) -> Option<std::fs::File> {
 }
 
 /// Read image dimensions (width, height) in pixels from a file.
-/// Supports PNG, JPEG, and EPS (PostScript BoundingBox).
+/// Supports PNG, JPEG, and EPS (PostScript BoundingBox, its bp rounded to whole units).
 ///
 /// This is a narrow replacement for `Image::Size::imgsize` (Perl
 /// `image_size` at Util::Image L86-97). Only a few formats are needed
 /// for typical arXiv graphics inclusions — anything else returns `None`
 /// so the caller skips sizing (mirroring Perl's `return unless $w`).
 pub fn read_image_dimensions(path: &Path) -> Option<(u32, u32)> {
+  read_image_size(path).map(|size| match size {
+    ImageSize::Pixels(w, h) => (w, h),
+    ImageSize::PostScriptBp(w, h) => (w.round() as u32, h.round() as u32),
+  })
+}
+
+/// What [`read_image_size`] measures: a raster's pixel count, or a PostScript file's bounding box in bp — a physical
+/// size, which needs no resolution.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ImageSize {
+  /// A PNG's or JPEG's width and height in pixels.
+  Pixels(u32, u32),
+  /// An EPS/PS file's `%%BoundingBox` width and height in bp ([`read_postscript_size_bp`]).
+  PostScriptBp(f64, f64),
+}
+
+/// The size of a PNG, JPEG or EPS/PS file, sniffed from its header ([`ImageSize`]), read once per path and conversion.
+pub fn read_image_size(path: &Path) -> Option<ImageSize> {
+  IMAGE_DIMENSIONS_MEMO.with(|m| {
+    if let Some(hit) = m.borrow().get(path) {
+      return *hit;
+    }
+    let value = read_image_size_uncached(path);
+    m.borrow_mut().insert(path.to_path_buf(), value);
+    value
+  })
+}
+
+// Per-thread memos of the on-disk size reads, keyed by path and cleared per
+// conversion (`clear_image_size_memo`, beside the kpsewhich memo). pdfTeX
+// reads an image file's box ONCE and shares the XObject across every
+// `\includegraphics` of it (`page=N` selects a page of the read resource);
+// without the memo every inclusion re-read the file — hwemoji's manual
+// includes its 6.7 MB, 3,677-page `hwemoji-assets.pdf` ~7,800 times through
+// `\hwemoji@insert` (hwemoji.sty:11), three reads each, and timed out at
+// 420 s once #230 let the asset resolve (2 s before). Guard:
+// `cluster_package_guards::graphics_asset_memo::repeated_inclusions_of_one_asset_read_it_once`.
+type SizeMemo<T> = std::cell::RefCell<rustc_hash::FxHashMap<PathBuf, Option<T>>>;
+std::thread_local! {
+  static IMAGE_DIMENSIONS_MEMO: SizeMemo<ImageSize> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+  static PDF_PAGE_BOX_MEMO: SizeMemo<[f64; 4]> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+/// Clear the per-thread image size memos. Called at the start of every
+/// conversion, beside `clear_kpsewhich_memo`: a long-lived worker thread
+/// converts many papers, and a file may change between them.
+pub fn clear_image_size_memo() {
+  IMAGE_DIMENSIONS_MEMO.with(|m| m.borrow_mut().clear());
+  PDF_PAGE_BOX_MEMO.with(|m| m.borrow_mut().clear());
+  PDF_PAGE_COUNT_MEMO.with(|m| m.borrow_mut().clear());
+}
+
+fn read_image_size_uncached(path: &Path) -> Option<ImageSize> {
   use std::io::Read;
   let mut file = open_file_resilient(path)?;
   let mut header = [0u8; 32];
@@ -606,91 +1114,40 @@ pub fn read_image_dimensions(path: &Path) -> Option<(u32, u32)> {
   if &header[0..8] == b"\x89PNG\r\n\x1a\n" {
     let width = u32::from_be_bytes([header[16], header[17], header[18], header[19]]);
     let height = u32::from_be_bytes([header[20], header[21], header[22], header[23]]);
-    return Some((width, height));
+    return Some(ImageSize::Pixels(width, height));
   }
 
-  // JPEG: look for SOF marker
+  // JPEG: the frame header (SOF) gives the size; walk the segments to it,
+  // seeking past each one rather than reading the file.
   if header[0] == 0xFF && header[1] == 0xD8 {
-    // Read the full file for JPEG parsing
-    let mut data = header.to_vec();
-    file.read_to_end(&mut data).ok()?;
-    let mut i = 2;
-    while i + 9 < data.len() {
-      if data[i] != 0xFF {
-        break;
-      }
-      let marker = data[i + 1];
-      // SOF markers: 0xC0-0xCF (except 0xC4 DHT, 0xC8 JPG, 0xCC DAC)
-      if (0xC0..=0xCF).contains(&marker) && marker != 0xC4 && marker != 0xC8 && marker != 0xCC {
-        let height = u16::from_be_bytes([data[i + 5], data[i + 6]]) as u32;
-        let width = u16::from_be_bytes([data[i + 7], data[i + 8]]) as u32;
-        return Some((width, height));
-      }
-      let len = u16::from_be_bytes([data[i + 2], data[i + 3]]) as usize;
-      i += 2 + len;
-    }
+    return read_jpeg_frame_size(&mut file).map(|(w, h)| ImageSize::Pixels(w, h));
   }
 
-  // EPS: PostScript BoundingBox comment. Perl: LaTeXML::Util::Image reads
-  // the leading `%%BoundingBox: llx lly urx ury` (values in bp, 1bp=1/72").
-  // `%%HiResBoundingBox:` is preferred when present (float precision). We
-  // read the first ~8KB since BoundingBox can be deferred (`(atend)` form
-  // is also valid but would require scanning the tail; skip that).
+  // EPS: PostScript BoundingBox comment, in bp (1bp = 1/72").
   if (header[0] == b'%' && (header[1] == b'!' || header[1] == b'%'))
-    || (header.starts_with(b"\xc5\xd0\xd3\xc6"))
+    || header.starts_with(b"\xc5\xd0\xd3\xc6")
   // EPS with binary preview header
   {
-    let mut data = header.to_vec();
-    // Read up to 32KB — BoundingBox typically in first few hundred bytes
-    let mut extra = [0u8; 32768];
-    let n = file.read(&mut extra).ok().unwrap_or(0);
-    data.extend_from_slice(&extra[..n]);
-    // If DOS EPSI binary preview: first 4 bytes are C5 D0 D3 C6, next 4
-    // little-endian is offset to the PostScript section. Skip to it.
-    let text_start = if data.starts_with(b"\xc5\xd0\xd3\xc6") && data.len() >= 8 {
-      u32::from_le_bytes([data[4], data[5], data[6], data[7]]) as usize
-    } else {
-      0
-    };
-    let text = std::str::from_utf8(data.get(text_start..)?).ok()?;
-    // Prefer HiResBoundingBox (float) over BoundingBox (int).
-    let mut found: Option<(f64, f64, f64, f64)> = None;
-    for line in text.lines() {
-      let trimmed = line.trim_start();
-      let rest = if let Some(r) = trimmed.strip_prefix("%%HiResBoundingBox:") {
-        // HiRes wins — take and stop searching.
-        parse_bbox(r).inspect(|&b| {
-          found = Some(b);
-        })
-      } else if found.is_none() {
-        trimmed
-          .strip_prefix("%%BoundingBox:")
-          .and_then(parse_bbox)
-          .inspect(|&b| {
-            found = Some(b);
-          })
-      } else {
-        None
-      };
-      if rest.is_some() && trimmed.starts_with("%%HiResBoundingBox:") {
-        break;
-      }
-    }
-    if let Some((llx, lly, urx, ury)) = found {
-      let w = (urx - llx).max(0.0);
-      let h = (ury - lly).max(0.0);
-      if w > 0.0 && h > 0.0 {
-        // EPS BoundingBox is in bp (1bp = 1/72"). Return as pixels at the
-        // same bp-per-pixel rate the caller expects (it divides by dppt =
-        // dpi/72.27 downstream). Using 1:1 means callers get bp-sized
-        // pixels, consistent with Perl's `image_size` returning bp for
-        // EPS (LaTeXML::Util::Image::image_size L45-L60).
-        return Some((w.round() as u32, h.round() as u32));
-      }
-    }
+    let (w, h) = read_postscript_size_bp(path)?;
+    return Some(ImageSize::PostScriptBp(w, h));
   }
 
   None
+}
+
+/// A PostScript file's size in bp, as TeX reads it: the `%%BoundingBox`, graphics.sty's `\Gread@eps` reading
+/// (`\Gread@BBox`, graphics.sty:52, read at :365-399; the `hiresbb` option, :56-57, aside) and epstopdf's, which
+/// pdflatex then reads as the page; a
+/// `%%HiResBoundingBox` only when there is no `%%BoundingBox` (where TeX finds no size at all), as post reads the file
+/// (latexml_post graphics.rs `read_postscript_bounding_box_full`). `None` for an empty box. Until 78z the high-resolution
+/// box came first, rounded: a file with `%%BoundingBox: 0 0 200 100` and `%%HiResBoundingBox: 0.4 0.3 199.3 99.4` was
+/// 199bp x 99bp where latex and pdflatex make it 200.75pt x 100.375pt; hep-ex0703011's `eeggmet.eps` carries a stale
+/// full-page `%%HiResBoundingBox` (612x792) beside its 540x522 `%%BoundingBox`.
+pub fn read_postscript_size_bp(path: &Path) -> Option<(f64, f64)> {
+  let boxes = read_postscript_boxes(path)?;
+  let (llx, lly, urx, ury) = boxes.bounding_box.or(boxes.hires_bounding_box)?;
+  let (w, h) = ((urx - llx).max(0.0), (ury - lly).max(0.0));
+  (w > 0.0 && h > 0.0).then_some((w, h))
 }
 
 /// Parse `"llx lly urx ury"` from a BoundingBox comment body.
@@ -701,6 +1158,168 @@ pub fn parse_bbox(rest: &str) -> Option<(f64, f64, f64, f64)> {
   let urx = it.next()?.parse::<f64>().ok()?;
   let ury = it.next()?.parse::<f64>().ok()?;
   Some((llx, lly, urx, ury))
+}
+
+/// The DSC bounding-box comments of a PostScript file (Adobe DSC 3.0:
+/// `%%BoundingBox:`, `%%HiResBoundingBox:`, `(atend)`), as `(llx, lly, urx, ury)`
+/// in bp.
+///
+/// A comment line is ASCII, but its neighbours need not be text: a Latin-1
+/// `%%Title`, a binary preview, a multi-byte character cut at the window's
+/// edge. So the file is scanned as bytes, in lines ending at CR, LF or CRLF.
+/// Only the header window (the first 32 KB, `PS_COMMENT_WINDOW`) is read, and
+/// the trailer window too when the box is deferred with `(atend)`. The first
+/// `%%BoundingBox:` line decides, as in graphics.sty (`\Gread@eps`, 391-399)
+/// and epstopdf; after `(atend)` the trailer's last box wins, as DSC and
+/// graphics.sty read it. Comments inside an embedded document
+/// (`%%BeginDocument` .. `%%EndDocument`) are its own, not the file's, and are
+/// skipped. A DOS EPS binary header (`C5 D0 D3 C6`, then the PostScript
+/// section's offset and length, little-endian) is followed to its PostScript
+/// section. pdflatex (through epstopdf) sizes a Latin-1, a CR-only, an
+/// `(atend)` and a DOS EPS alike; repro `graphics-tikz/eps_bounding_box_bytes.tex`.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct PostScriptBoxes {
+  pub bounding_box:       Option<(f64, f64, f64, f64)>,
+  pub hires_bounding_box: Option<(f64, f64, f64, f64)>,
+}
+
+/// How much of a PostScript file's head (and, for `(atend)`, its tail) is read.
+const PS_COMMENT_WINDOW: u64 = 32 * 1024;
+
+/// See [`PostScriptBoxes`]; `None` when the file cannot be read.
+pub fn read_postscript_boxes(path: &Path) -> Option<PostScriptBoxes> {
+  use std::io::{Read, Seek, SeekFrom};
+  let mut file = open_file_resilient(path)?;
+  let file_len = file.metadata().ok()?.len();
+  let mut dos = [0u8; 12];
+  let dos_len = file.read(&mut dos).ok()?;
+  let (start, end) = if dos_len == 12 && dos.starts_with(b"\xc5\xd0\xd3\xc6") {
+    let offset = u64::from(u32::from_le_bytes([dos[4], dos[5], dos[6], dos[7]]));
+    let length = u64::from(u32::from_le_bytes([dos[8], dos[9], dos[10], dos[11]]));
+    (
+      offset.min(file_len),
+      offset.saturating_add(length).min(file_len),
+    )
+  } else {
+    (0, file_len)
+  };
+  let mut window = |from: u64, to: u64| -> Option<Vec<u8>> {
+    file.seek(SeekFrom::Start(from)).ok()?;
+    let mut bytes = Vec::new();
+    (&mut file).take(to - from).read_to_end(&mut bytes).ok()?;
+    Some(bytes)
+  };
+  let mut boxes = PostScriptBoxes::default();
+  let mut atend = false;
+  let mut seen_box = false;
+  let mut depth = 0usize;
+  for line in dsc_lines(&window(start, (start + PS_COMMENT_WINDOW).min(end))?) {
+    if line.starts_with(b"%%BeginDocument") {
+      depth += 1;
+      continue;
+    }
+    if line.starts_with(b"%%EndDocument") {
+      depth = depth.saturating_sub(1);
+      continue;
+    }
+    if depth > 0 {
+      continue;
+    }
+    if let Some(rest) = line.strip_prefix(b"%%BoundingBox:") {
+      // A line that reads as no box is passed over (epstopdf's value match).
+      if !seen_box {
+        if rest.trim_ascii() == b"(atend)" {
+          seen_box = true;
+          atend = true;
+        } else if let Some(bbox) = parse_bbox_bytes(rest) {
+          seen_box = true;
+          boxes.bounding_box = Some(bbox);
+        }
+      }
+    } else if let Some(rest) = line.strip_prefix(b"%%HiResBoundingBox:")
+      && boxes.hires_bounding_box.is_none()
+    {
+      boxes.hires_bounding_box = parse_bbox_bytes(rest);
+    }
+  }
+  if atend {
+    // The trailer is at the file's top level: read backwards, an
+    // `%%EndDocument` opening an embedded document, its `%%BeginDocument`
+    // closing it.
+    let tail = window(end.saturating_sub(PS_COMMENT_WINDOW).max(start), end)?;
+    let mut depth = 0usize;
+    for line in dsc_lines(&tail).collect::<Vec<_>>().into_iter().rev() {
+      if line.starts_with(b"%%EndDocument") {
+        depth += 1;
+      } else if line.starts_with(b"%%BeginDocument") {
+        depth = depth.saturating_sub(1);
+      } else if depth == 0
+        && let Some(rest) = line.strip_prefix(b"%%BoundingBox:")
+        && let Some(bbox) = parse_bbox_bytes(rest)
+      {
+        boxes.bounding_box = Some(bbox);
+        break;
+      }
+    }
+  }
+  Some(boxes)
+}
+
+/// The lines of `bytes`, split at CR or LF, leading blanks trimmed.
+fn dsc_lines(bytes: &[u8]) -> impl Iterator<Item = &[u8]> {
+  bytes
+    .split(|&b| b == b'\n' || b == b'\r')
+    .map(<[u8]>::trim_ascii_start)
+}
+
+fn parse_bbox_bytes(rest: &[u8]) -> Option<(f64, f64, f64, f64)> {
+  parse_bbox(std::str::from_utf8(rest.trim_ascii()).ok()?)
+}
+
+/// The size of a JPEG's first frame, `(width, height)` in pixels, from its SOF
+/// segment (ITU T.81 B.2.2: `FFCn`, length, precision, height, width). The
+/// segments before it are skipped by their lengths; the entropy-coded data
+/// after SOS (`FFDA`) is never read.
+fn read_jpeg_frame_size(file: &mut std::fs::File) -> Option<(u32, u32)> {
+  use std::io::{BufReader, Read, Seek, SeekFrom};
+  let mut reader = BufReader::new(file);
+  reader.seek(SeekFrom::Start(2)).ok()?;
+  let mut byte = [0u8; 1];
+  loop {
+    reader.read_exact(&mut byte).ok()?;
+    if byte[0] != 0xFF {
+      return None;
+    }
+    // Fill bytes: any number of FF before the marker code.
+    let marker = loop {
+      reader.read_exact(&mut byte).ok()?;
+      if byte[0] != 0xFF {
+        break byte[0];
+      }
+    };
+    match marker {
+      // Stand-alone markers carry no length.
+      0x01 | 0xD0..=0xD7 => continue,
+      // SOS or EOI before any frame: no size.
+      0xDA | 0xD9 => return None,
+      _ => {},
+    }
+    let mut length = [0u8; 2];
+    reader.read_exact(&mut length).ok()?;
+    let length = i64::from(u16::from_be_bytes(length));
+    // SOF markers: 0xC0-0xCF (except 0xC4 DHT, 0xC8 JPG, 0xCC DAC)
+    if (0xC0..=0xCF).contains(&marker) && !matches!(marker, 0xC4 | 0xC8 | 0xCC) {
+      let mut frame = [0u8; 5];
+      reader.read_exact(&mut frame).ok()?;
+      let height = u32::from(u16::from_be_bytes([frame[1], frame[2]]));
+      let width = u32::from(u16::from_be_bytes([frame[3], frame[4]]));
+      return Some((width, height));
+    }
+    if length < 2 {
+      return None;
+    }
+    reader.seek_relative(length - 2).ok()?;
+  }
 }
 
 /// Resolve an `image_candidates` entry to a filesystem path, relative to the
@@ -736,42 +1355,35 @@ fn bp_to_pt(bp: f64) -> f64 { bp * 72.27 / 72.0 }
 /// formats — a pixel count is not a physical size without a DPI — and when the
 /// geometry can't be recovered.
 ///
-/// This is deliberately NOT `image_graphicx_sizer`'s `cached_width`: that runs
-/// EPS/raster dimensions through a device-DPI round-trip (`×72.27/DPI`), which is
-/// right for the box model's device-pixel sizing but wrong as a physical length.
+/// For a vector format this is the natural size `image_graphicx_sizer` gives the
+/// box (since 78z an EPS/PS one too, OXIDIZED_DESIGN_DIVERGENCES #886), read by
+/// the same reader (`natural_size`, by the file's content); for a raster it is
+/// `None`, where the sizer's `cached_width` runs the pixels through a device-DPI
+/// round-trip (`×72.27/DPI`, Perl's rule, #337), which is not a physical length.
 /// This function is the size a browser should reproduce, used for the
-/// font-relative (`em`) sizing of natural-size figure inclusions (#562).
-/// Extension-gated so each format is read exactly once; pure Rust, no external
-/// tool.
+/// font-relative (`em`) sizing of natural-size figure inclusions (#562). Pure
+/// Rust, no external tool.
 pub fn natural_display_size_pt(path: &Path) -> Option<(f64, f64)> {
-  let ext = path
-    .extension()
-    .and_then(|e| e.to_str())
-    .map(|e| e.to_ascii_lowercase());
-  match ext.as_deref() {
-    Some("pdf") => read_pdf_page_box(path).map(|(w, h)| (bp_to_pt(w), bp_to_pt(h))),
-    // read_image_dimensions returns an EPS/PS BoundingBox 1:1 in bp.
-    Some("eps" | "ps" | "epsi" | "epsf") => read_image_dimensions(path)
-      .filter(|&(w, h)| w > 0 && h > 0)
-      .map(|(w, h)| (bp_to_pt(w as f64), bp_to_pt(h as f64))),
-    Some("svg" | "svgz") => read_svg_size_pt(path),
-    _ => None,
+  match natural_size(path)? {
+    Natural::Points(w, h) => Some((w, h)),
+    Natural::Pixels(..) => None,
   }
 }
 
-/// [`natural_display_size_pt`] over a comma-joined `candidates` string (the
-/// `<ltx:graphics candidates=…>` attribute), resolving each candidate against
-/// `source_dir` and returning the first that yields a size.
+/// [`natural_display_size_pt`] of the candidate the box is sized from: the first
+/// of a comma-joined `candidates` string (the `<ltx:graphics candidates=…>`
+/// attribute, resolved against `source_dir`) that any reader sizes
+/// (`first_natural_size`), `None` when that one is a raster — so a `q.png`
+/// before a `q.eps` gives no `em` size, as any raster does, rather than the
+/// eps's size for the png pdflatex prints (review rev78z finding 1).
 pub fn natural_display_size_pt_of_candidates(
   candidates: &str,
   source_dir: &str,
 ) -> Option<(f64, f64)> {
-  candidates.split(',').find_map(|c| {
-    let c = c.trim();
-    (!c.is_empty())
-      .then(|| natural_display_size_pt(&resolve_candidate(c, source_dir)))
-      .flatten()
-  })
+  match first_natural_size(candidates, source_dir)? {
+    Natural::Points(w, h) => Some((w, h)),
+    Natural::Pixels(..) => None,
+  }
 }
 
 /// pt (f64) → `Dimension` (scaled points).
@@ -812,17 +1424,137 @@ fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
 /// single-page, the first box is the page's own (or the `/Pages` node's, which
 /// it inherits).
 pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
-  let bytes = read_file_resilient(path)?;
-  if byte_find(&bytes, b"/CropBox").is_some() || byte_find(&bytes, b"/MediaBox").is_some() {
-    let content = String::from_utf8_lossy(&bytes);
-    if let Some(box_) =
-      parse_pdf_box(&content, "/CropBox").or_else(|| parse_pdf_box(&content, "/MediaBox"))
-    {
-      return Some(box_);
+  read_pdf_page_box_corners(path).map(|[x0, y0, x1, y1]| ((x1 - x0).abs(), (y1 - y0).abs()))
+}
+
+/// The page box [`read_pdf_page_box`] reads, as its corners `[llx, lly, urx, ury]` in bp —
+/// what pdfTeX's `\pdfximagebbox` reports for an image (pdftex.web `pdf_ximage_bbox`).
+pub fn read_pdf_page_box_corners(path: &Path) -> Option<[f64; 4]> {
+  PDF_PAGE_BOX_MEMO.with(|m| {
+    if let Some(hit) = m.borrow().get(path) {
+      return *hit;
     }
+    let value = read_pdf_page_box_uncached(path);
+    m.borrow_mut().insert(path.to_path_buf(), value);
+    value
+  })
+}
+
+fn read_pdf_page_box_uncached(path: &Path) -> Option<[f64; 4]> {
+  let bytes = read_file_resilient(path)?;
+  if let Some(box_) =
+    parse_pdf_box(&bytes, b"/CropBox").or_else(|| parse_pdf_box(&bytes, b"/MediaBox"))
+  {
+    return Some(box_);
   }
   let inflated = inflate_object_streams(&bytes)?;
-  parse_pdf_box(&inflated, "/CropBox").or_else(|| parse_pdf_box(&inflated, "/MediaBox"))
+  parse_pdf_box(&inflated, b"/CropBox").or_else(|| parse_pdf_box(&inflated, b"/MediaBox"))
+}
+
+/// The page count of a PDF, as pdfTeX's `\pdflastximagepages` reports it
+/// after `\pdfximage`: the root `/Type /Pages` node's `/Count`. Without a
+/// full parser, the root is the `/Pages` dictionary with the LARGEST `/Count`
+/// (intermediate nodes count only their subtree); raw bytes first, then the
+/// inflated object streams (PDF 1.5+, see [`read_pdf_page_box`]). A PDF with
+/// no `/Pages` dictionary at all falls back to counting `/Type /Page` objects.
+pub fn read_pdf_page_count(path: &Path) -> Option<u32> {
+  PDF_PAGE_COUNT_MEMO.with(|m| {
+    if let Some(hit) = m.borrow().get(path) {
+      return *hit;
+    }
+    let value = read_pdf_page_count_uncached(path);
+    m.borrow_mut().insert(path.to_path_buf(), value);
+    value
+  })
+}
+
+std::thread_local! {
+  static PDF_PAGE_COUNT_MEMO: SizeMemo<u32> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+fn read_pdf_page_count_uncached(path: &Path) -> Option<u32> {
+  let bytes = read_file_resilient(path)?;
+  if let Some(n) = max_pages_count(&bytes) {
+    return Some(n);
+  }
+  let inflated = inflate_object_streams(&bytes);
+  if let Some(content) = inflated.as_deref()
+    && let Some(n) = max_pages_count(content)
+  {
+    return Some(n);
+  }
+  let pages = count_page_objects(&bytes) + inflated.as_deref().map_or(0, count_page_objects);
+  if pages > 0 { Some(pages) } else { None }
+}
+
+/// The largest `/Count N` of a `/Type /Pages` dictionary. From each
+/// `/Type /Pages` (with or without the space) scan forward to the `/Count` at
+/// the dictionary's own brace depth — a nested `/Resources << … >>` before it
+/// must not end the search — stopping at the dictionary's closing `>>`.
+fn max_pages_count(content: &[u8]) -> Option<u32> {
+  let mut best: Option<u32> = None;
+  for key in [&b"/Type /Pages"[..], b"/Type/Pages"] {
+    for at in memchr::memmem::find_iter(content, key) {
+      let start = at + key.len();
+      let mut depth = 0i32;
+      let mut i = start;
+      while i < content.len() {
+        let rest = &content[i..];
+        if rest.starts_with(b"<<") {
+          depth += 1;
+          i += 2;
+          continue;
+        }
+        if rest.starts_with(b">>") {
+          if depth == 0 {
+            break;
+          }
+          depth -= 1;
+          i += 2;
+          continue;
+        }
+        if depth == 0 && rest.starts_with(b"/Count") {
+          if let Some(n) = leading_u32(trim_start_pdf_whitespace(&rest[6..])) {
+            best = Some(best.map_or(n, |b| b.max(n)));
+          }
+          break;
+        }
+        i += 1;
+      }
+    }
+  }
+  best
+}
+
+fn count_page_objects(content: &[u8]) -> u32 {
+  let mut n = 0;
+  for key in [&b"/Type /Page"[..], b"/Type/Page"] {
+    for at in memchr::memmem::find_iter(content, key) {
+      // `/Page` followed by a delimiter, not `/Pages`.
+      if content.get(at + key.len()) != Some(&b's') {
+        n += 1;
+      }
+    }
+  }
+  n
+}
+
+/// PDF's white-space characters: NUL, HT, LF, FF, CR and SP (ISO 32000-1
+/// §7.2.2, Table 1). They separate an array's numbers; nothing else does — a
+/// non-ASCII space next to a digit (a UTF-8 NBSP) is not one, where the earlier
+/// reading of a UTF-8 copy split on any Unicode white space.
+fn is_pdf_whitespace(b: u8) -> bool { matches!(b, 0 | b'\t' | b'\n' | 0x0c | b'\r' | b' ') }
+
+fn trim_start_pdf_whitespace(bytes: &[u8]) -> &[u8] {
+  let skip = bytes.iter().take_while(|&&b| is_pdf_whitespace(b)).count();
+  &bytes[skip..]
+}
+
+/// The run of ASCII digits `bytes` opens with, as a `u32`.
+fn leading_u32(bytes: &[u8]) -> Option<u32> {
+  let len = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
+  std::str::from_utf8(&bytes[..len]).ok()?.parse().ok()
 }
 
 /// Concatenate the inflated contents of every `/Type /ObjStm` in `bytes`.
@@ -837,7 +1569,7 @@ pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
 /// script, Cairo or matplotlib use for object streams), and only the first
 /// [`MAX_OBJSTM_SCAN`] of them, so a pathological file cannot turn a size probe
 /// into an unbounded decompression.
-fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
+fn inflate_object_streams(bytes: &[u8]) -> Option<Vec<u8>> {
   use std::io::Read;
 
   /// Enough for any real document; a figure PDF has one or two.
@@ -846,7 +1578,7 @@ fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
   /// figure. A page dictionary is a few hundred bytes.
   const MAX_INFLATED: u64 = 8 << 20;
 
-  let mut out = String::new();
+  let mut out = Vec::new();
   let mut from = 0;
   let mut seen = 0;
   while seen < MAX_OBJSTM_SCAN {
@@ -860,7 +1592,12 @@ fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
     let Some(rel) = byte_find(&bytes[at..], b"stream") else {
       continue;
     };
-    let dict = &bytes[at..at + rel];
+    // The stream's dictionary runs from its object header (`N G obj`) to `stream`, its keys in any order: an
+    // Illustrator PDF writes `/Filter /FlateDecode` before `/Type /ObjStm` (1904.12947's Whitehead.pdf, whose page
+    // box, page count and natural size were unreadable).
+    let window = at.saturating_sub(1024);
+    let dict_start = memchr::memmem::rfind(&bytes[window..at], b"obj").map_or(at, |p| window + p);
+    let dict = &bytes[dict_start..at + rel];
     if byte_find(dict, b"/FlateDecode").is_none() {
       continue;
     }
@@ -884,31 +1621,40 @@ fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
       // error is only fatal when nothing at all came out.
       continue;
     }
-    out.push_str(&String::from_utf8_lossy(&buf));
-    out.push('\n');
+    out.extend_from_slice(&buf);
+    out.push(b'\n');
   }
   (!out.is_empty()).then_some(out)
 }
 
 /// Parse `TOKEN [ llx lly urx ury ]` from PDF content, returning `(w, h)`.
-fn parse_pdf_box(content: &str, token: &str) -> Option<(f64, f64)> {
-  let start = content.find(token)? + token.len();
+///
+/// The PDF's bytes are searched as they are. The key, the brackets and the
+/// numbers are ASCII, which a lossy UTF-8 copy keeps in the same order, so the
+/// same box is found; the separators are PDF's own white space
+/// ([`is_pdf_whitespace`]). Making that copy of a whole figure PDF cost, in
+/// release instructions with `--preload=ar5iv.sty`, 18.7 % of arXiv
+/// 2605.13583's conversion, 14.5 % of 2605.09543's and 8.0 % of 2605.08504's.
+fn parse_pdf_box(content: &[u8], token: &[u8]) -> Option<[f64; 4]> {
+  let start = byte_find(content, token)? + token.len();
   let rest = &content[start..];
-  let lb = rest.find('[')?;
-  let rb = rest[lb..].find(']')? + lb;
+  let lb = memchr::memchr(b'[', rest)?;
+  let rb = memchr::memchr(b']', &rest[lb..])? + lb;
   let mut it = rest[lb + 1..rb]
-    .split_whitespace()
-    .filter_map(|s| s.parse::<f64>().ok());
-  let (x0, y0, x1, y1) = (it.next()?, it.next()?, it.next()?, it.next()?);
-  Some(((x1 - x0).abs(), (y1 - y0).abs()))
+    .split(|&b| is_pdf_whitespace(b))
+    .filter(|s| !s.is_empty())
+    .filter_map(|s| std::str::from_utf8(s).ok()?.parse::<f64>().ok());
+  let [x0, y0, x1, y1] = [it.next()?, it.next()?, it.next()?, it.next()?];
+  // A PDF rectangle may name any two opposite corners (ISO 32000-1 §7.9.5); read as lower left, upper right.
+  Some([x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1)])
 }
 
-/// Byte-level substring search — avoids a UTF-8 conversion for the fast-fail.
+/// Byte-level substring search.
 fn byte_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
   if needle.is_empty() || needle.len() > haystack.len() {
     return None;
   }
-  haystack.windows(needle.len()).position(|w| w == needle)
+  memchr::memmem::find(haystack, needle)
 }
 
 /// Natural SVG size in pt, from the root `<svg>` element: the root
@@ -1092,6 +1838,150 @@ fn is_exponent(tail: &str) -> bool {
 
 /// CSS px (1/96") → TeX pt (1/72.27").
 fn px_to_pt(px: f64) -> f64 { px * 72.27 / 96.0 }
+
+#[cfg(test)]
+mod candidate_order_tests {
+  use super::*;
+
+  /// The base-name retry's hits from one directory, listed by it in either order, come out in one: by type in
+  /// `\Gin@extensions` order, its uppercase extensions after its lowercase ones (`x.jpg` before `x.PNG`, `x.pdf` before
+  /// `x.PDF`, pdftex.def:597-600), then `.eps` (appended by epstopdf-base) and the other types, a type of no graphics
+  /// rule last (0907.3747's `nuebar_limit.ps,nuebar_limit.pdf`).
+  #[test]
+  fn retry_hits_are_in_graphics_type_order_whatever_the_directory_order() {
+    let expected = [
+      "nuebar.pdf",
+      "nuebar.jpg",
+      "nuebar.PDF",
+      "nuebar.PNG",
+      "nuebar.eps",
+      "nuebar.ps",
+      "nuebar.EPS",
+      "nuebar.xyz",
+    ];
+    for listed in [
+      [
+        "nuebar.ps",
+        "nuebar.xyz",
+        "nuebar.PDF",
+        "nuebar.eps",
+        "nuebar.pdf",
+        "nuebar.PNG",
+        "nuebar.jpg",
+        "nuebar.EPS",
+      ],
+      [
+        "nuebar.PNG",
+        "nuebar.jpg",
+        "nuebar.eps",
+        "nuebar.pdf",
+        "nuebar.xyz",
+        "nuebar.PDF",
+        "nuebar.EPS",
+        "nuebar.ps",
+      ],
+    ] {
+      let mut candidates: Vec<String> = listed.iter().map(|c| c.to_string()).collect();
+      in_graphics_type_order(&mut candidates);
+      assert_eq!(candidates, expected);
+    }
+  }
+
+  /// An extensionless name's candidates come out in one order whatever order each directory lists its entries in:
+  /// the same entries of `a/` and `b/` (searched in that order), fed as listed, reversed and rotated within each
+  /// directory, give one set of lists, each by type, then search directory (det354 4b, review rev78w finding 1: the
+  /// conversion guard `includegraphics_extensionless_candidates_in_type_order` passes on an ext4 `/tmp` without the
+  /// sort; witness 2011.14197's `fig3.eps,fig3.pdf`).
+  #[test]
+  fn extensionless_candidates_in_one_order_whatever_the_directory_lists() {
+    let directory = |dir: &str, names: &[&str]| -> Vec<(String, String)> {
+      names
+        .iter()
+        .map(|n| (n.to_string(), format!("{dir}/{n}")))
+        .collect()
+    };
+    let a = [
+      "fig.eps",
+      "fig",
+      "notes.txt",
+      "fig.PDF",
+      "fig.pdf",
+      "Fig.png",
+      "fig.ps",
+      "FIG",
+      "fig.old.pdf",
+    ];
+    let b = ["fig.png", "fig.eps", "fig", "fig.pdf"];
+    let reversed =
+      |names: &[&'static str]| -> Vec<&'static str> { names.iter().rev().copied().collect() };
+    let rotated = |names: &[&'static str], by: usize| -> Vec<&'static str> {
+      let mut names = names.to_vec();
+      let by = by % names.len();
+      names.rotate_left(by);
+      names
+    };
+    let expected = ImageCandidateLists {
+      exact_names:        vec!["a/fig".to_string(), "b/fig".to_string()],
+      extended_names:     [
+        "a/fig.pdf",
+        "b/fig.pdf",
+        "b/fig.png",
+        "a/fig.PDF",
+        "a/fig.eps",
+        "b/fig.eps",
+        "a/fig.ps",
+      ]
+      .map(String::from)
+      .to_vec(),
+      nocase_exact_names: vec!["a/FIG".to_string()],
+      nocase_candidates:  vec!["a/Fig.png".to_string()],
+    };
+    let listings: Vec<(Vec<&str>, Vec<&str>)> = vec![
+      (a.to_vec(), b.to_vec()),
+      (reversed(&a), reversed(&b)),
+      (rotated(&a, 3), rotated(&b, 1)),
+      (rotated(&a, 7), rotated(&b, 2)),
+    ];
+    for (listed_a, listed_b) in listings {
+      let found = directory("a", &listed_a)
+        .into_iter()
+        .chain(directory("b", &listed_b));
+      assert_eq!(
+        image_candidate_lists(found, "fig"),
+        expected,
+        "a/ listed {listed_a:?}, b/ listed {listed_b:?}"
+      );
+    }
+  }
+
+  /// Hits of one type in several search directories keep the directories' search order (the order the search
+  /// listed them), not their names' (`\graphicspath{{new/}{figs/}}`: `new/plot.pdf` first, as pdftex reads it; review
+  /// rev78v2 finding 2); a better type in a later directory still comes first.
+  #[test]
+  fn retry_hits_of_one_type_keep_the_search_directory_order() {
+    for (listed, expected) in [
+      (["new/plot.eps", "new/plot.pdf", "figs/plot.pdf"], [
+        "new/plot.pdf",
+        "figs/plot.pdf",
+        "new/plot.eps",
+      ]),
+      (["figs/plot.pdf", "new/plot.eps", "new/plot.pdf"], [
+        "figs/plot.pdf",
+        "new/plot.pdf",
+        "new/plot.eps",
+      ]),
+      (["b/nuebar.ps", "a/nuebar.eps", "b/nuebar.eps"], [
+        "b/nuebar.eps",
+        "a/nuebar.eps",
+        "b/nuebar.ps",
+      ]),
+    ] {
+      let mut candidates: Vec<String> = listed.iter().map(|c| c.to_string()).collect();
+      in_graphics_type_order(&mut candidates);
+      assert_eq!(candidates, expected);
+    }
+  }
+}
 
 #[cfg(test)]
 mod svg_geometry_tests {
@@ -1325,9 +2215,10 @@ mod svg_geometry_tests {
 /// Characterization tests for the engine-side image sizing pipeline.
 ///
 /// **These pin behaviour, not correctness.** Several of the numbers below are
-/// known to disagree with pdflatex — an EPS BoundingBox is read as pixels, a
-/// PNG is assumed to be 100 dpi, an SVG 96 dpi, and a box is quantized to whole
-/// device pixels. They are recorded exactly as they are today so that the
+/// known to disagree with pdflatex — a PNG is assumed to be 100 dpi (Perl's
+/// rule, DIVERGENCES #337), an SVG 96 dpi, and a raster box is quantized to whole
+/// device pixels. An EPS BoundingBox was read as pixels too until 78z; it is bp
+/// now, as TeX reads it (DIVERGENCES #886). They are recorded exactly as they are today so that the
 /// planned unification of the sizing pipeline (one probe, one resolution
 /// policy, one graphicx algebra) has to declare every change it makes instead
 /// of drifting silently. When a value here changes, that is a decision, and the
@@ -1339,14 +2230,28 @@ mod svg_geometry_tests {
 /// | source              | pdflatex   | Perl LaTeXML | here       |
 /// |---------------------|------------|--------------|------------|
 /// | PNG 200x100 px      | 200.7495pt | 144.54pt     | 144.54pt   |
-/// | EPS BBox 200x100 bp | -          | (no sizer)   | 144.54pt   |
+/// | EPS BBox 200x100 bp | 200.7495pt | (no sizer)   | 200.75pt   |
 /// | PDF 200x100 bp      | 200.7495pt | (no sizer)   | 200.75pt   |
 /// | SVG viewBox 200x100 | -          | (no sizer)   | 150.5625pt |
 #[cfg(test)]
 mod sizing_characterization_tests {
   use super::*;
 
-  fn fixture(name: &str, bytes: &[u8]) -> PathBuf {
+  /// A fixture file in the temp directory, removed when dropped: each one used to stay behind, thousands of
+  /// `lxsize-*` files per run of the suite.
+  struct Fixture(PathBuf);
+
+  impl std::ops::Deref for Fixture {
+    type Target = Path;
+
+    fn deref(&self) -> &Path { &self.0 }
+  }
+
+  impl Drop for Fixture {
+    fn drop(&mut self) { let _ = std::fs::remove_file(&self.0); }
+  }
+
+  fn fixture(name: &str, bytes: &[u8]) -> Fixture {
     // A per-call sequence makes every fixture path unique. Two tests reused the
     // same `name` ("m.pdf"), so keying only on pid+name let them race on one temp
     // file when run in parallel: whichever wrote last won, and the other test's
@@ -1357,7 +2262,7 @@ mod sizing_characterization_tests {
     let seq = SEQ.fetch_add(1, Ordering::Relaxed);
     let path = std::env::temp_dir().join(format!("lxsize-{}-{seq}-{name}", std::process::id()));
     std::fs::write(&path, bytes).expect("write fixture");
-    path
+    Fixture(path)
   }
 
   fn io_err(kind: std::io::ErrorKind) -> std::io::Error { std::io::Error::from(kind) }
@@ -1454,10 +2359,144 @@ mod sizing_characterization_tests {
 
   // ── layer 1: what each format probe returns, and in which unit ────────
 
+  /// The DSC comments are read as bytes, in CR/LF lines, in a head window and,
+  /// for `(atend)`, a tail window; a DOS EPS header is followed to its
+  /// PostScript section. Each shape lost its box before (strict UTF-8 over the
+  /// whole window, `str::lines`, no tail, no seek past the first 32 KB).
+  #[test]
+  fn postscript_boxes_are_read_as_bytes() {
+    let bbox = Some((0.0, 0.0, 144.0, 72.0));
+    let latin1 = fixture(
+      "latin1.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%Title: caf\xe9\n%%BoundingBox: 0 0 144 72\n%%EndComments\n",
+    );
+    assert_eq!(
+      read_postscript_boxes(&latin1).unwrap().bounding_box,
+      bbox,
+      "Latin-1 title"
+    );
+    assert_eq!(
+      read_image_dimensions(&latin1),
+      Some((144, 72)),
+      "Latin-1 title"
+    );
+
+    let cr = fixture(
+      "cr.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\r%%BoundingBox: 0 0 144 72\r%%EndComments\r",
+    );
+    assert_eq!(read_image_dimensions(&cr), Some((144, 72)), "CR line ends");
+
+    // The trailer lies past the head window; an embedded document's box before
+    // it does not count (the trailer's, the last, wins).
+    let mut atend = b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: (atend)\n%%EndComments\n".to_vec();
+    atend
+      .extend_from_slice(b"%%BeginDocument: inner.eps\n%%BoundingBox: 0 0 10 10\n%%EndDocument\n");
+    atend.extend(std::iter::repeat_n(b"% filler\n".as_slice(), 5000).flatten());
+    atend.extend_from_slice(b"%%Trailer\n%%BoundingBox: 0 0 144 72\n%%EOF\n");
+    let atend = fixture("atend.eps", &atend);
+    assert_eq!(
+      read_postscript_boxes(&atend).unwrap().bounding_box,
+      bbox,
+      "(atend) trailer"
+    );
+
+    // Within one window: the trailer's box is the last at the top level; the
+    // embedded document's own trailer, earlier in the tail, does not count.
+    let two_trailers = fixture(
+      "two_trailers.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: (atend)\n%%EndComments\n\
+        %%BeginDocument: inner.eps\n%%BoundingBox: (atend)\n%%Trailer\n%%BoundingBox: 0 0 10 10\n\
+        %%EndDocument\n%%Trailer\n%%BoundingBox: 0 0 144 72\n%%EOF\n",
+    );
+    assert_eq!(
+      read_postscript_boxes(&two_trailers).unwrap().bounding_box,
+      bbox,
+      "outer trailer"
+    );
+
+    // The first box decides: an embedded document's `(atend)` or HiRes box is its
+    // own (graphics.sty `\Gread@eps`, epstopdf keep the first real box).
+    let embedded = fixture(
+      "embedded.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 144 72\n%%EndComments\n\
+        %%BeginDocument: inner.eps\n%%BoundingBox: (atend)\n%%HiResBoundingBox: 0 0 10 10\n\
+        %%Trailer\n%%BoundingBox: 0 0 10 10\n%%EndDocument\n",
+    );
+    let bad_first = fixture(
+      "bad_first.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: none\n%%BoundingBox: 0 0 144 72\n",
+    );
+    assert_eq!(
+      read_postscript_boxes(&bad_first).unwrap().bounding_box,
+      bbox,
+      "unreadable first"
+    );
+    let boxes = read_postscript_boxes(&embedded).unwrap();
+    assert_eq!(
+      (boxes.bounding_box, boxes.hires_bounding_box),
+      (bbox, None),
+      "embedded"
+    );
+    assert_eq!(
+      read_image_dimensions(&embedded),
+      Some((144, 72)),
+      "embedded"
+    );
+
+    // A DOS EPS whose preview comes first, putting the PostScript past 32 KB.
+    let ps = b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 144 72\n%%EndComments\n";
+    let preview = vec![0xFFu8; 40_000];
+    let ps_offset = 30 + preview.len() as u32;
+    let mut dos = b"\xc5\xd0\xd3\xc6".to_vec();
+    for field in [ps_offset, ps.len() as u32, 0, 0, 30, preview.len() as u32] {
+      dos.extend_from_slice(&field.to_le_bytes());
+    }
+    dos.extend_from_slice(&[0xFF, 0xFF]);
+    dos.extend_from_slice(&preview);
+    dos.extend_from_slice(ps);
+    let dos = fixture("dos.eps", &dos);
+    assert_eq!(
+      read_image_dimensions(&dos),
+      Some((144, 72)),
+      "DOS EPS header"
+    );
+  }
+
+  /// The JPEG reader seeks from segment to segment to the frame header, past
+  /// application segments and fill bytes, and never reads the scan data.
+  #[test]
+  fn jpeg_frame_size_skips_segments() {
+    let mut jpg = vec![0xFF, 0xD8];
+    // APP1 of 60,000 bytes (an Exif thumbnail), then a fill byte before SOF2.
+    jpg.extend_from_slice(&[0xFF, 0xE1]);
+    jpg.extend_from_slice(&60_000u16.to_be_bytes());
+    jpg.extend(std::iter::repeat_n(0u8, 60_000 - 2));
+    jpg.extend_from_slice(&[0xFF, 0xFF, 0xC2, 0x00, 0x11, 0x08]);
+    jpg.extend_from_slice(&480u16.to_be_bytes());
+    jpg.extend_from_slice(&640u16.to_be_bytes());
+    jpg.extend_from_slice(&[
+      0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01, 0xFF, 0xD9,
+    ]);
+    assert_eq!(
+      read_image_dimensions(&fixture("app1.jpg", &jpg)),
+      Some((640, 480))
+    );
+    // Scan data before any frame: no size.
+    let no_frame = [0xFF, 0xD8, 0xFF, 0xDA, 0x00, 0x02, 0x12, 0x34, 0xFF, 0xD9];
+    let mut no_frame = no_frame.to_vec();
+    no_frame.extend_from_slice(&[0u8; 32]);
+    assert_eq!(
+      read_image_dimensions(&fixture("noframe.jpg", &no_frame)),
+      None
+    );
+  }
+
   /// PNG and JPEG report true device pixels; EPS reports **bp** through the
-  /// same `(u32, u32)` channel. Nothing in the type distinguishes them, which
-  /// is the defect the unification is meant to remove — pinned here so the
-  /// removal is visible.
+  /// same `(u32, u32)` channel. `read_image_size` tells them apart
+  /// (`ImageSize::Pixels` / `ImageSize::PostScriptBp`, 78z), which is what the
+  /// digestion-time sizer reads; this projection is pinned so its callers'
+  /// numbers stay visible.
   #[test]
   fn read_image_dimensions_returns_pixels_for_raster_and_bp_for_eps() {
     let png = fixture("dims.png", &png_header(200, 100));
@@ -1477,7 +2516,8 @@ mod sizing_characterization_tests {
       "EPS bp-as-px"
     );
 
-    // HiResBoundingBox wins over BoundingBox when both are present.
+    // The BoundingBox decides when both are present, as graphics.sty's `\Gread@eps` and epstopdf read it (latex and
+    // pdflatex 200.75pt x 100.375pt); until 78z the HiResBoundingBox won, rounded, (200, 99).
     let hires = fixture(
       "hires.eps",
       b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n\
@@ -1485,8 +2525,21 @@ mod sizing_characterization_tests {
     );
     assert_eq!(
       read_image_dimensions(&hires),
-      Some((200, 99)),
-      "HiRes wins, rounded"
+      Some((200, 100)),
+      "the BoundingBox wins"
+    );
+    assert_eq!(
+      read_image_size(&hires),
+      Some(ImageSize::PostScriptBp(200.0, 100.0))
+    );
+    // Only without a BoundingBox does the HiResBoundingBox size the file, unrounded.
+    let hires_only = fixture(
+      "hires_only.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%HiResBoundingBox: 0 0 199.5 99.4\n%%EndComments\n",
+    );
+    assert_eq!(
+      read_image_size(&hires_only),
+      Some(ImageSize::PostScriptBp(199.5, 99.4))
     );
 
     // Formats this reader does not know stay `None` — that is what routes a
@@ -1528,6 +2581,12 @@ mod sizing_characterization_tests {
     // Non-zero origin: the box is the extent, not the corner.
     let offset = fixture("o.pdf", b"%PDF-1.4\n<< /MediaBox [10 20 210 120] >>\n");
     assert_eq!(read_pdf_page_box(&offset), Some((200.0, 100.0)));
+    // Opposite corners in either order name the same rectangle: `\pdfximagebbox` reports lower left, upper right.
+    let flipped = fixture("f.pdf", b"%PDF-1.4\n<< /MediaBox [210 120 10 20] >>\n");
+    assert_eq!(
+      read_pdf_page_box_corners(&flipped),
+      Some([10.0, 20.0, 210.0, 120.0])
+    );
 
     // A real object stream: the box exists only as deflated bytes.
     let objstm = fixture(
@@ -1543,12 +2602,77 @@ mod sizing_characterization_tests {
     );
     assert_eq!(read_pdf_page_box(&cropped), Some((200.0, 100.0)));
 
+    // The stream dictionary's keys in another order (`/Filter` before `/Type`, as Illustrator writes them).
+    let filter_first = {
+      use std::io::Write;
+      let mut enc = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+      enc
+        .write_all(b"13 0 <</CropBox[0.0 0.0 108.056 52.537]/Type/Page>>")
+        .expect("deflate");
+      let mut pdf = Vec::from(
+        &b"%PDF-1.6\r82 0 obj\r<</Filter/FlateDecode/First 5/Length 60/N 1/Type/ObjStm>>stream\r\n"
+          [..],
+      );
+      pdf.extend_from_slice(&enc.finish().expect("finish"));
+      pdf.extend_from_slice(b"\r\nendstream\rendobj\r");
+      fixture("hf.pdf", &pdf)
+    };
+    assert_eq!(
+      read_pdf_page_box_corners(&filter_first),
+      Some([0.0, 0.0, 108.056, 52.537])
+    );
+
     // Nothing readable anywhere: an object stream we cannot inflate.
     let opaque = fixture(
       "ho.pdf",
       b"%PDF-1.5\n<< /Type /ObjStm /N 12 /Filter /FlateDecode >>\nstream\nnot-zlib\nendstream\n",
     );
     assert_eq!(read_pdf_page_box(&opaque), None);
+  }
+
+  /// The size and page-count probes search the PDF's bytes, which need not be
+  /// UTF-8 (binary comment line, text strings in a dictionary). A byte that is
+  /// not UTF-8 inside the `/Pages` dictionary, before its `/Count`: the count
+  /// scan sliced a lossy UTF-8 copy of the file at every byte index and
+  /// panicked inside the U+FFFD that byte had become.
+  #[test]
+  fn pdf_probes_read_through_non_utf8_bytes() {
+    let pages = fixture(
+      "p8.pdf",
+      b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n<< /Type /Pages /Title (\xE9t\xE9) /Count 3 >>\n",
+    );
+    assert_eq!(read_pdf_page_count(&pages), Some(3));
+
+    // The box's numbers may be separated by any PDF white space, here FF and HT.
+    let boxed = fixture(
+      "b8.pdf",
+      b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n<< /Title (\xE9) /MediaBox [0\x0c0 200\t100] >>\n",
+    );
+    assert_eq!(read_pdf_page_box(&boxed), Some((200.0, 100.0)));
+
+    // The same through an object stream, and a token that is not UTF-8 in the box.
+    let streamed = fixture(
+      "s8.pdf",
+      &objstm_pdf(b"2 0 << /Type /Pages /T (\xE9) /Count 4 >>"),
+    );
+    assert_eq!(read_pdf_page_count(&streamed), Some(4));
+    let odd = fixture("o8.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 \xFF 200 100] >>\n");
+    assert_eq!(read_pdf_page_box(&odd), Some((200.0, 100.0)));
+    // NUL is PDF white space; a UTF-8 NBSP between digits is not.
+    let nul = fixture("n8.pdf", b"%PDF-1.4\n<< /MediaBox [0\x000 200 100] >>\n");
+    assert_eq!(read_pdf_page_box(&nul), Some((200.0, 100.0)));
+    let nbsp = fixture(
+      "nb8.pdf",
+      b"%PDF-1.4\n<< /MediaBox [0 0 200\xC2\xA0100 50] >>\n",
+    );
+    assert_eq!(read_pdf_page_box(&nbsp), None);
+
+    // No `/Pages` dictionary: the `/Type /Page` objects are counted, not `/Pages`.
+    let loose = fixture(
+      "l8.pdf",
+      b"%PDF-1.4\n<< /Type /Page /T (\xFF) >>\n<< /Type/Page >>\n<< /Type /Pagesx >>\n",
+    );
+    assert_eq!(read_pdf_page_count(&loose), Some(2));
   }
 
   /// `natural_size_pt` is the only place a file-read number is actually
@@ -1706,11 +2830,12 @@ mod sizing_characterization_tests {
   /// What each surprising row records:
   ///
   /// * **Four resolutions.** With no options the same figure is 144.54pt as a
-  ///   PNG or EPS (100 dpi), 200.75pt as a PDF (72 dpi, i.e. bp), 150.5625pt as
-  ///   an SVG (96 dpi, CSS px), and 0 as a PDF whose page box sits in an object
-  ///   stream. pdflatex says 200.7495pt for the PNG and the PDF alike.
-  /// * **Two algebras.** PNG/EPS take the px-space branch, PDF/SVG the pt-space
-  ///   `graphicx_box_pt` fallback. They answer `width=100pt` differently:
+  ///   PNG (100 dpi), 200.75pt as a PDF or EPS (bp; the EPS was 144.54pt, read
+  ///   as 100 dpi pixels, until 78z), 150.5625pt as an SVG (96 dpi, CSS px), and
+  ///   0 as a PDF whose page box sits in an object stream. pdflatex says
+  ///   200.7495pt for the PNG, the EPS and the PDF alike.
+  /// * **Two algebras.** PNG takes the px-space branch, PDF/EPS/SVG the pt-space
+  ///   `graphicx_box_pt` one. They answer `width=100pt` differently:
   ///   99.7326 vs 100.0, because the px branch quantizes the box to a whole
   ///   device pixel (100pt -> 99.6265bp -> 137.848 px -> ceil 138 -> 99.7326pt).
   /// * **A single dimension always preserves aspect**, on both branches, as
@@ -1740,7 +2865,7 @@ mod sizing_characterization_tests {
     // (source, options, expected width pt, expected height pt)
     #[rustfmt::skip]
     let matrix: &[(&str, &str, f64, f64)] = &[
-      // px-space branch: raster pixels, and an EPS BoundingBox read as pixels.
+      // px-space branch: raster pixels.
       ("png", "",                                 144.5400,  72.2700),
       ("png", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
       ("png", "width=100pt",                       99.7326,  49.8663),
@@ -1749,15 +2874,16 @@ mod sizing_characterization_tests {
       ("png", "width=100pt,height=80pt",           99.7326,  80.2197),
       ("png", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
       ("png", "angle=90",                          72.2700, 144.5400),
-      ("eps", "",                                 144.5400,  72.2700),
-      ("eps", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
-      ("eps", "width=100pt",                       99.7326,  49.8663),
-      ("eps", "scale=0.5",                         72.2700,  36.1350),
-      ("eps", "height=25pt,keepaspectratio=true",  49.8663,  25.2945),
-      ("eps", "width=100pt,height=80pt",           99.7326,  80.2197),
+      // pt-space branch: the vector formats, no quantization — an EPS BoundingBox
+      // in bp (78z; it was read as pixels, 144.54pt for the natural size).
+      ("eps", "",                                 200.7500, 100.3750),
+      ("eps", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
+      ("eps", "width=100pt",                      100.0000,  50.0000),
+      ("eps", "scale=0.5",                        100.3750,  50.1875),
+      ("eps", "height=25pt,keepaspectratio=true",  50.0000,  25.0000),
+      ("eps", "width=100pt,height=80pt",          100.0000,  80.0000),
       ("eps", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
-      ("eps", "angle=90",                          72.2700, 144.5400),
-      // pt-space branch: the `natural_size_pt` fallback, no quantization.
+      ("eps", "angle=90",                         100.3750, 200.7500),
       ("pdf", "",                                 200.7500, 100.3750),
       ("pdf", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
       ("pdf", "width=100pt",                      100.0000,  50.0000),
@@ -1813,5 +2939,94 @@ mod sizing_characterization_tests {
       matrix.len(),
       deltas.join("\n")
     );
+  }
+
+  /// Perl `image_graphicx_complex`'s trim/clip arm (`Util/Image.pm` L400-418),
+  /// on a 200×100 raster at 72 dpi (1 px = 1 bp): `trim=100 0 0 50` keeps the
+  /// bottom-right quadrant and `viewport=0 0 100 50` the bottom-left one, as
+  /// pdflatex shows them; a box over the whole image crops nothing.
+  #[test]
+  fn graphicx_crop_rect_follows_perl_trim_and_viewport() {
+    let trim = GraphicxOp::Trim {
+      l: 100.0,
+      b: 0.0,
+      r: 0.0,
+      t: 50.0,
+    };
+    assert_eq!(
+      graphicx_crop_rect(200, 100, &trim, 1.0),
+      Some((100, 50, 100, 50))
+    );
+    let viewport = GraphicxOp::Clip {
+      l: 0.0,
+      b: 0.0,
+      r: 100.0,
+      t: 50.0,
+    };
+    assert_eq!(
+      graphicx_crop_rect(200, 100, &viewport, 1.0),
+      Some((0, 50, 100, 50))
+    );
+    let nothing = GraphicxOp::Trim { l: 0.0, b: 0.0, r: 0.0, t: 0.0 };
+    assert_eq!(graphicx_crop_rect(200, 100, &nothing, 1.0), None);
+    // A viewport reaching past the image is clamped, never padded.
+    let past = GraphicxOp::Clip {
+      l: -20.0,
+      b: 0.0,
+      r: 50.0,
+      t: 100.0,
+    };
+    assert_eq!(
+      graphicx_crop_rect(200, 100, &past, 1.0),
+      Some((0, 0, 50, 100))
+    );
+    // 2510.17772 Fig 7: `trim=90 30 50 50` on a 3000×1500 raster at 300 dpi.
+    let witness = GraphicxOp::Trim {
+      l: 90.0,
+      b: 30.0,
+      r: 50.0,
+      t: 50.0,
+    };
+    assert_eq!(
+      graphicx_crop_rect(3000, 1500, &witness, 300.0 / 72.0),
+      Some((375, 208, 2417, 1167))
+    );
+  }
+
+  /// A PNG's `pHYs` counts per metre, a JFIF density per inch or centimetre,
+  /// rounded and truncated to whole dpi as pdfTeX takes them; an aspect-only
+  /// density (unit 0) states no resolution.
+  #[test]
+  fn raster_resolution_reads_png_and_jfif_units() {
+    let dir = std::env::temp_dir().join(format!("raster_dpi_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut png = png_header(10, 10)[..33].to_vec();
+    png.extend_from_slice(&9u32.to_be_bytes());
+    png.extend_from_slice(b"pHYs");
+    png.extend_from_slice(&11811u32.to_be_bytes());
+    png.extend_from_slice(&11811u32.to_be_bytes());
+    png.extend_from_slice(&[1, 0, 0, 0, 0]); // unit, CRC
+    let png_path = dir.join("r.png");
+    std::fs::write(&png_path, &png).unwrap();
+    assert_eq!(
+      raster_resolution_dpi(png_path.to_str().unwrap()),
+      Some((300.0, 300.0))
+    );
+    let jfif = |unit: u8| {
+      let mut v = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
+      v.extend_from_slice(b"JFIF\0\x01\x02");
+      v.push(unit);
+      v.extend_from_slice(&[0x00, 0x76, 0x00, 0x76, 0, 0]); // 118 × 118
+      v
+    };
+    let jpg_path = dir.join("r.jpg");
+    std::fs::write(&jpg_path, jfif(2)).unwrap();
+    assert_eq!(
+      raster_resolution_dpi(jpg_path.to_str().unwrap()),
+      Some((299.0, 299.0))
+    );
+    std::fs::write(&jpg_path, jfif(0)).unwrap();
+    assert_eq!(raster_resolution_dpi(jpg_path.to_str().unwrap()), None);
+    std::fs::remove_dir_all(&dir).ok();
   }
 }

@@ -1,0 +1,18 @@
+% witness: synthetic (review revSBX1, id BRKC); a breakable tcolorbox inside a minipage, which TeX does not break
+% oracle:  pdflatex 1 `!` (Dimension too large at \end{minipage}: the box is one box there too)
+% engines: rust CAU1 4 errors; SBX1 0 errors 1 warning ("in the breakable box", the downgrade where TeX errs)
+% expect:  an Error as TeX's (the downgrade only where tcbbreakable would really break the box); all 40 lines kept
+% status:  RED (SBX1)
+% moves:   post-merge
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\newcommand\tall{Line \rule{1pt}{450pt}\par}
+\newcommand\ten{\tall\tall\tall\tall\tall\tall\tall\tall\tall\tall}
+\begin{document}
+\begin{minipage}{\textwidth}
+\begin{tcolorbox}[breakable,title=Prompt]
+\ten\ten\ten\ten
+\end{tcolorbox}
+\end{minipage}
+After.
+\end{document}

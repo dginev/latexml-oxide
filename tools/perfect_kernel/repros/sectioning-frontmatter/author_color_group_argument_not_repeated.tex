@@ -1,0 +1,14 @@
+% witness: 64d review r4 finding 2 (synthetic; at HEAD 64f3 too) — an argument-taking declaration's brace groups are
+%          taken past its arguments: `\color{red}{$^1$Univ A}` is read as an opening declaration and repeated
+% oracle:  pdflatex 0 errors: "1Univ A, 2Univ B" (Univ A red)
+% engines: rust 64f3/64d = Ann "Univ A" and "Univ A²Univ B" (duplicated), Bob none
+% expect:  0 errors; Ann (Univ A, red), Bob (Univ B); `\color` takes its own arguments only (opening_declarations)
+% status:  RED (64d)
+\documentclass{article}
+\usepackage{xcolor}
+\title{T}
+\author{Ann$^{1}$ and Bob$^{2}$ \\ {\color{red}{$^1$Univ A}, $^2$Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

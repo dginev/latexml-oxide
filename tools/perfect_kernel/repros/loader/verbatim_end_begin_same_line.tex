@@ -1,0 +1,17 @@
+% witness: review of 63v: the rest of a `\end{verbatim}` line is reopened as an input of its own
+%          (latex_constructs/mod.rs `{verbatim}` reader), which has ended when a listing begun on it asks for its next
+%          line, so the listing's body is typeset as text — the case 63v fixed for listings' own `\end` line
+% oracle:  pdflatex 0 errors: "v_1", "z", "e f", "After."
+% engines: rust 63v4 (and 63u5) = `Error:unexpected:_`, `e_f` as text
+% expect:  0 errors, 0 warnings; the verbatim and the listing
+% status:  RED (63v4)
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\begin{verbatim}
+v_1
+\end{verbatim} z \begin{lstlisting}
+e_f
+\end{lstlisting}
+After.
+\end{document}

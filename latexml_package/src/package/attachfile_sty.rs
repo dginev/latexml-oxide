@@ -53,6 +53,10 @@ LoadDefinitions!({
   RequirePackage!("ifpdf");
   RequirePackage!("calc");
   RequirePackage!("color");
+  // attachfile.sty:40 `\RequirePackageWithOptions{hyperref}`, which Perl's binding
+  // (L19-22) omits (KPE #368): a document that loads only attachfile writes
+  // `\href`/`\autoref`.
+  require_package_with_options("hyperref")?;
   // Perl L24-27: \attachfilesetup accumulates global keyval options
   DefMacro!("\\lx@attachfile@options", None);
   DefPrimitive!("\\attachfilesetup {}", sub[(opts)] {

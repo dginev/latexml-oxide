@@ -1,0 +1,19 @@
+% witness: W17 review (reviewer probe p10): Scientific Word \FRAME under babel
+% oracle:  Perl 0 errors (tcilatex.tex.ltxml:369-389); tcilatex.tex is not in TeX Live
+% engines: rust W17 before this fix: 4 errors, "T_OTHER["] cannot be a definition's name", then
+%          `;` `:` `'` (2026-09-25)
+% expect:  0 errors, 0 warnings; Perl's <figure>, its caption "A caption" (Scientific Word's
+%          \Qcb caption form)
+% status:  GREEN (56jp, W17: tcilatex_tex.rs \makeactives group; guard
+%          rtoken_patchcmd::tcilatex_frame_under_babel_defines_active_punctuation)
+% mechanism: \FRAME runs \activesoff when babel is loaded; \activesoff redefines the ACTIVE
+%   " ; : ' ~, so tcilatex defines it inside \bgroup\makeactives…\egroup. The binding defined it
+%   at normal catcodes, and tex.web §1215 rejects `\def"`.
+\documentclass{article}
+\usepackage[english]{babel}
+\input{tcilatex}
+\begin{document}
+Before.
+\FRAME{ftbpF}{2in}{1in}{0pt}{\Qcb{A caption}}{\Qlb{fig1}}{figx.eps}{\special{language "Scientific Word";type "GRAPHIC"}}
+After.
+\end{document}

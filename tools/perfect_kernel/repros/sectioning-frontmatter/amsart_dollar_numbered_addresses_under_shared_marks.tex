@@ -1,0 +1,28 @@
+% mechanism: amsart `\address{$1.$ …}` entries under names whose marks request them (`\textsuperscript{1,2}` on two
+%   names): the reading does not read the `$1.$` formula as the entry's label, so the marks stay unanswered and the
+%   upfront grid (`Resolver::distribute_upfront`, today's `distribute_upfront_contacts`) gives the entries one per
+%   author by position — Ann Univ X, Bob Univ Y, Cat Univ Z — against the marks. The grid fires only because 95c's G3
+%   took the several-address `\email` call out of the pile (`answer_listed_emails` runs after the grid): today's pile,
+%   three addresses and the one e-mail, is no grid. And the unspelled `bbb@y.org` is the call's author's
+%   (`owner:call`), not Bob Baker's by the list's order.
+% witness: 2109.07363 (`Jinsong Liu\textsuperscript{1,2} $\&$ Fei Tao\textsuperscript{1,2} $\&$ Huaying
+%   Wei\textsuperscript{3}`, `\address{$1.$ …}` ×3, `ferrytau@` spelling no one); written since 95e
+% oracle:  pdflatex 0 errors: "ANN ABLE1,2 & BOB BAKER1,2 & CAT COLE3", "1. Univ X", "2. Univ Y", "3. Univ Z",
+%   "Email address: ann@x.org, bbb@y.org, cat@z.org"
+% engines: rust 95e: Ann {Univ X, ann@}, Bob {Univ Y}, Cat {Univ Z, bbb@, cat@}; int123a: every address and the
+%   e-mail whole on Cat Cole
+% expect:  Ann and Bob each Univ X and Univ Y, Cat Univ Z; ann@ on Ann, cat@ on Cat, bbb@ on Bob (order) or the
+%   call's author; 0 errors
+% status:  RED (catalog, no guard: 95e report's open questions; outside 95e's mechanism)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1,2} $\&$ Bob Baker\textsuperscript{1,2} $\&$ Cat Cole\textsuperscript{3}}
+\address{$1.$ Univ X}
+\address{$2.$ Univ Y}
+\address{$3.$ Univ Z}
+\email{ann@x.org,\:bbb@y.org,\:cat@z.org}
+\maketitle
+Text.
+\end{document}

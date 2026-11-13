@@ -1,0 +1,18 @@
+% mechanism: a call after a name reads across `\and` (`\nm{Ann L.}` defines `\lastnm{#1}` and prints `#2` = the `\and`): the
+%   reading gives the call's argument and the separator to the next name, and the later `\lastnm` reads before the
+%   declaration is replayed
+% witness: synthetic (revGRP1 P1, GRP1 sibling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee and Bob Ray (with Ann L.)"
+% engines: CAU1, GRP1: 1 error (`\lastnm` undefined), 1 warning; creators "Ann Lee", "Ann L. and Bob Ray (with \lastnm)"
+% expect:  0 errors; creators Ann Lee, Bob Ray (with Ann L.) — no word of the call's argument in Bob's name
+% status:  RED (CAU1, GRP1)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\nm[2]{\gdef\lastnm{#1}#2}
+\begin{document}
+\title{T}
+\author{Ann Lee\nm{Ann L.}\and Bob Ray (with \lastnm)}
+\maketitle
+Hi.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: latex.ltx's `\itemize`/`\enumerate` advance `\@itemdepth`/`\@enumdepth` (latex.ltx
+%   list setup, `\advance\@itemdepth\@ne`) and open a `\list`, which advances `\@listdepth`
+%   (latex.ltx:15852). The bindings keep their own level values (`@itemlevel`, `enumlevel`) and
+%   never touch the registers: a package reading `\@listdepth` (enumitem's `list<depth>` keys,
+%   enumitem.sty:977-978; custom list macros) sees 0 at every depth.
+% witness: 57s (probe while planning enumitem's `\setlist`; shared with Perl)
+% oracle:  pdflatex 0 errors; "a[1]", "b[2][1]", "c[3][2]", after the lists "d[0][0][0]"
+% engines: rust 57r2 and perl: "a[0]", "b[0][0]", "c[0][0]"
+% expect:  0 errors; the registers as pdflatex has them
+% status:  RED (57s) -> GREEN (57u)
+\documentclass{article}
+\begin{document}
+\makeatletter
+\begin{itemize}\item a[\the\@listdepth] \begin{enumerate}\item b[\the\@listdepth][\the\@enumdepth]
+\begin{itemize}\item c[\the\@listdepth][\the\@itemdepth]\end{itemize}\end{enumerate}\end{itemize}
+d[\the\@listdepth][\the\@itemdepth][\the\@enumdepth]
+\makeatother
+\end{document}

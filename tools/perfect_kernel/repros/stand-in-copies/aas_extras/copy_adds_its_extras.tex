@@ -1,0 +1,13 @@
+% witness: 1309.5950 (aas_macros.sty:94-97 `\kms`, `\lya`, `\lyb`, `\lyc`), 1805.06442 (`\prx`), 2001.05519 (`\cac`),
+%          1406.5372 (`\epsscale`, `\plotone`); census 2026-10-17 work/repro
+% oracle:  pdflatex 0 errors ("Speed 5 km s−1 in AJ-COPY.")
+% engines: rust 67int20b = 1 error (\kms undefined: the binding stands in, the copy is never read); Perl 1 error the
+%          same (Package.pm:2113-2133 prefers the .ltxml)
+% expect:  0 errors, 0 warnings; "Speed 5 km s−1 in AJ." (the extra from the copy, `\aj` the binding's)
+% status:  RED (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{aas_macros}
+\begin{document}
+Speed 5\kms{} in \aj.
+\end{document}

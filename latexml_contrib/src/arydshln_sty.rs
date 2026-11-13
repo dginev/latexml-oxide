@@ -6,35 +6,74 @@ LoadDefinitions!({
     "arydshln.sty",
     "arydshln.sty is only minimally stubbed and will not be interpreted raw."
   );
-  // TODO: Extend the internal Alignment machinery to facilitate a dashed bottom border directive
-  Let!("\\hdashline", "\\hline");
-  Let!("\\cdashline", "\\cline");
+  // TODO (deferred, still open): extend the Alignment machinery with a dashed
+  // bottom-border directive; `\hdashline` draws a solid `border="t"` until then.
+  // The dashed rules take an optional `[<dash>/<gap>]` (arydshln.sty:432-438
+  // `\adl@hdashline` → `\@ifnextchar[`, :459-462 `\cdashline#1` likewise,
+  // :482-483 `\firsthdashline`/`\lasthdashline`); drawn as plain rules here,
+  // so the spec is read and dropped. As `\let`s of `\hline`/`\cline` (Perl
+  // arydshln.sty.ltxml:18-19, KNOWN_PERL_ERRORS #291) the `[2pt/2pt]` was left
+  // as text in the next row's first cell (arXiv 2605.19920).
+  DefMacro!("\\hdashline[]", "\\hline");
+  DefMacro!("\\cdashline{}[]", "\\cline{#1}");
   // ar5iv-bindings/bindings/arydshln.sty.ltxml L21-24: ':' column type adds a
   // dashed right-border marker via the between-column slot. The \vrule gets
   // decorated by \@ADDCLASS{ltx_border_r_dashed}\relax so CSS renders a
   // dashed vertical rule.
   DefColumnType!(":", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_between_column(vec![
-        T_CS!("\\vrule"),
-        T_CS!("\\@ADDCLASS"),
-        T_BEGIN!(),
-        T_OTHER!("ltx_border_r_dashed"),
-        T_END!(),
-        T_CS!("\\relax"),
-      ]);
+    with_building_template(|template| {
+      template.add_between_column(dashed_rule_between_columns());
     });
   });
-  Let!("\\firsthdashline", "\\firsthline");
-  Let!("\\lasthdashline", "\\lasthline");
+  // `;{<dash>/<gap>}` is `:` with its own dash pattern (arydshln.sty:198/236
+  // map `;` to `\adl@argarraydashrule`, :270-273, whose `\adl@classvfordash`
+  // takes the next template item, a group or a token, as the spec, :287-288).
+  // Undefined, the template reader stripped the spec's braces and read
+  // `2pt/2pt` as columns (`p{t}` twice, calc then erroring on `t` as pdflatex
+  // would on such a column: 2605.19920 9 errors).
+  DefColumnType!(";{}", sub[(_dash_gap)] {
+    with_building_template(|template| {
+      template.add_between_column(dashed_rule_between_columns());
+    });
+  });
+  // arydshln defines the first/last dashed rules only when array was loaded
+  // first (arydshln.sty:66-68, :481-491); otherwise they stay undefined, and
+  // the author's own command is the one reported.
+  if lookup_meaning(&T_CS!("\\firsthline")).is_some() {
+    DefMacro!("\\firsthdashline[]", "\\firsthline");
+    DefMacro!("\\lasthdashline[]", "\\lasthline");
+  }
+  // arydshln.sty:697-729 the shorthand environments `{Array}`, `{Tabular}`, `{Tabular*}` (and `{Longtable}` when
+  // longtable came first) are its tables with the dashed lines active, defined unless one of the names is taken
+  // (then a warning, :716-729). Here every table draws the dashed lines, so each is the plain environment
+  // (witnesses 2502.17812 `{Tabular}`, 2306.04970 `{Array}`: 5 and 1 errors before, 0 after).
+  RawTeX!(
+    r"\begingroup\def\@notdefinable{\gdef\adl@notdefinable{}}%
+\@ifdefinable\Array\relax\@ifdefinable\Tabular\relax\expandafter\@ifdefinable\csname Tabular*\endcsname\relax
+\ifx\longtable\undefined\else\@ifdefinable\Longtable\relax\fi\endgroup
+\ifx\adl@notdefinable\undefined
+  \def\Array{\begin{array}}\def\endArray{\end{array}}%
+  \def\Tabular{\begin{tabular}}\def\endTabular{\end{tabular}}%
+  \expandafter\def\csname Tabular*\endcsname{\begin{tabular*}}\expandafter\def\csname endTabular*\endcsname{\end{tabular*}}%
+  \ifx\longtable\undefined\else\def\Longtable{\begin{longtable}}\def\endLongtable{\end{longtable}}\fi
+\else
+  \PackageWarning{arydshln}{Array/Tabular/Longtable are not defined because\MessageBreak one of them has been defined}%
+\fi"
+  );
   DefRegister!("\\dashlinedash" => Dimension!("4pt"));
   DefRegister!("\\dashlinegap" => Dimension!("4pt"));
   Let!("\\hdashlinewidth", "\\dashlinedash");
   Let!("\\hdashlinegap", "\\dashlinegap");
   def_macro_noop("\\ADLactivate")?;
-  def_macro_noop("\\ADLdrawingmode")?;
+  // `\def\ADLdrawingmode#1` (arydshln.sty:677) reads its mode number (K13 stage-2 finding).
+  def_macro_noop("\\ADLdrawingmode{}")?;
   def_macro_noop("\\ADLinactivate")?;
-  def_macro_noop("\\ADLnoshorthanded")?;
+  // arydshln.sty:731-740 `\ADLnoshorthanded` undefines the shorthands.
+  RawTeX!(
+    r"\def\ADLnoshorthanded{\let\Array\relax\let\Tabular\relax\expandafter\let\csname Tabular*\endcsname\relax
+\let\endArray\relax\let\endTabular\relax\expandafter\let\csname endTabular*\endcsname\relax
+\ifx\longtable\undefined\else\let\Longtable\relax\let\endLongtable\relax\fi}"
+  );
   def_macro_noop("\\ADLnullwide")?;
   def_macro_noop("\\ADLnullwidehline")?;
   def_macro_noop("\\ADLsomewide")?;
@@ -68,3 +107,17 @@ LoadDefinitions!({
   def_macro_noop("\\nodashgapcolor")?;
   def_macro_noop("\\xleaders")?;
 });
+
+/// The between-column material of arydshln's dashed column rules (`:` and
+/// `;{..}`): a `\vrule` classed `ltx_border_r_dashed`, which the stylesheet
+/// draws dashed (ar5iv-bindings arydshln.sty.ltxml:21-24).
+fn dashed_rule_between_columns() -> Vec<Token> {
+  vec![
+    T_CS!("\\vrule"),
+    T_CS!("\\@ADDCLASS"),
+    T_BEGIN!(),
+    T_OTHER!("ltx_border_r_dashed"),
+    T_END!(),
+    T_CS!("\\relax"),
+  ]
+}

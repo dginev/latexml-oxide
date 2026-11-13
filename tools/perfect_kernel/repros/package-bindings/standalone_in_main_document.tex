@@ -1,0 +1,22 @@
+% witness: 1310.0809, 2010.10238 (\ifstandalone, 11 papers), 1905.04614, 1910.10882 (\standaloneconfig, 17), 2208.05046 (\onlyifstandalone, \IfStandalone), 2310.18279 ({standalone}), 2505.21582 (\standaloneenv in an \input sub-file)
+% oracle:  pdflatex 0 errors; "Main. Main again. Kept. Sub body."
+% engines: rust 67int9 = undefined \standaloneconfig, \ifstandalone, \onlyifstandalone, \IfStandalone, {standalone}, \standaloneenv; perl = the same (KNOWN_PERL_ERRORS #806)
+% expect:  0 errors, 0 warnings; "Main. Main again. Kept. Sub body."
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::standalone_in_main_document
+\documentclass{article}
+\begin{filecontents*}{lxsasub.tex}
+\documentclass[tikz]{standalone}
+\standaloneenv{tikzpicture}
+\begin{document}
+Sub body.
+\end{document}
+\end{filecontents*}
+\usepackage{standalone}
+\standaloneconfig{mode=tex}
+\begin{document}
+\ifstandalone Alone.\else Main.\fi
+\onlyifstandalone{Hidden.}
+\IfStandalone{Alone.}{Main again.}
+\begin{standalone}Kept.\end{standalone}
+\input{lxsasub}
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: an svjour3 `\institute` whose lead line names the correspondents (`\Letter Corresponding author: A, B
+%   \at \email{…} \at \email{…}`) followed by institutes numbered by hand (`1\hspace{1em} Univ A\\ 2\hspace{1em}
+%   Univ B`): a typed number is no mark by design, so the whole block goes to the correspondents and the other authors
+%   get none — in silence (0 Warnings). Mechanism 2 of study IV0 (104c residual), the typed-number sibling
+% witness: 2106.12864 (`\Letter Corresponding author: Guangming Zhu, Liang Zhang, and Syed Afaq Ali Shah \at
+%   \email{gmzhu@…} … \\ \\ 1\hspace{1em} School of Computer Science …\\ 2\hspace{1em} …`, 14 authors, 11 with none)
+% oracle:  pdflatex (svjour3.cls from 2106.12864) 0 errors: "Ann Able1 · Bob Baker1 · Cat Cole2", the institute
+%   "B Corresponding author: Bob Baker / E-mail: bob@a.edu / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust int159a and IV1: Bob holds the e-mail and the whole block "🖂Corresponding author: Bob Baker 1 Univ A,
+%   Town 2 Univ B, City"; Ann and Cat no affiliation; 0 Warnings
+% expect:  Ann and Bob "Univ A, Town", Cat "Univ B, City" (the typed numbers as the marks the names print); or a
+%   counting Warning for the misplacement
+% status:  RED (int159a, IV1) — below the reach bar; deferred with the 104c row; no guard
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\usepackage{marvosym}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^1$ \and Cat Cole$^2$}
+\institute{\Letter Corresponding author: Bob Baker \at \email{bob@a.edu} \\ \\
+  1\hspace{1em} Univ A, Town\\
+  2\hspace{1em} Univ B, City}
+\maketitle
+Text.
+\end{document}

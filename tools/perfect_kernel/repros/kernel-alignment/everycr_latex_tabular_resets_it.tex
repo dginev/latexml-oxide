@@ -1,0 +1,18 @@
+% witness: none (latex.ltx:631 `\ialign` = `\everycr{}\tabskip\z@skip\halign`, :16573 `\@array` starts with it; the
+%          bound `tabular` runs no `\everycr`, the `\halign` after it does)
+% oracle:  pdflatex 0 errors; "rows: 2" (the tabular's rows count none; the `\halign`'s preamble and row count 2)
+% engines: rust int40c = "rows: 0"; perl alike (KNOWN_PERL_ERRORS #1019); 78b = "rows: 2"
+% expect:  0 errors; "rows: 2"; the tabular's two rows unruled
+% status:  GREEN (78b; guard perfect_kernel_batch78b::a_latex_tabular_runs_no_everycr)
+\documentclass{article}
+\newcount\rows
+\begin{document}
+\everycr{\noalign{\global\advance\rows by 1 }}
+\begin{tabular}{l}
+a\\
+b
+\end{tabular}
+\halign{#\cr c\cr}
+\everycr{}
+rows: \the\rows
+\end{document}

@@ -1,0 +1,29 @@
+% A token register a raw class fills from its own `\AtBeginDocument` hook holds the class's text, not the document's: the
+% net (OD #953) recorded register defaults only when the raw files loaded, and the begin-document hooks' snapshot read
+% macros only, so the class's journal line became a note. The hooks' snapshot (frontmatter_stores.rs
+% `note_document_hooks`, after `begindocument/end` too: `\lx@net@document@hooks@done`) records the contents a hook left
+% in each register as its default (review rev98c S2).
+% witness: (synthetic; the negative of 1206.6940's register shape)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Abstract", "An abstract.", footnote "Journal of Boilerplate
+%          Studies, Volume Twelve" (the class's own text)
+% engines: rust 98c = 0 errors, 1 warning (frontmatter:unclaimed, \jtoks); perl = no raw class load
+% expect:  0 errors, 0 warnings; no ltx:note
+% status:  RED (98c) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netht2.cls}
+\ProvidesClass{netht2}\LoadClass{article}
+\newtoks\jtoks
+\def\setjournal#1{\global\jtoks={#1}}
+\AtBeginDocument{\setjournal{Journal of Boilerplate Studies, Volume Twelve}}
+\renewenvironment{abstract}{\insert\footins{\footnotesize\the\jtoks\par}\section*{Abstract}}{\par}
+\end{filecontents*}
+\documentclass{netht2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+\begin{abstract}
+An abstract.
+\end{abstract}
+Text.
+\end{document}

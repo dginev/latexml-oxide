@@ -1,0 +1,14 @@
+% mechanism: etoolbox's `\patchcmd` patches text (etoolbox.sty:1358-1374): the macro's `\meaning` and the search and
+%   replacement `\detokenize`d, every control word followed by a space, then rescanned; the binding spliced `untex`
+%   text, which spaces a control word only before a letter beside it, so `\mid` before `s` became `\mids`
+% witness: 2011.13897 (`\def\prArg{#1}\patchcmd{\prArg}{|}{\mid}{}{}` on `o_t|s_t`)
+% oracle:  pdflatex 0 errors: "p(ot | st)"
+% engines: rust int52a = Error:undefined:\mids; Perl 0.8.8 the same (KNOWN_PERL_ERRORS #1091)
+% expect:  0 errors; the formula's tex `p(o_{t}\mid s_{t})`
+% status:  RED (int52a) -> GREEN (78p)
+\documentclass{article}
+\usepackage{etoolbox}
+\newcommand{\pr}[1]{\def\prArg{#1}\patchcmd{\prArg}{|}{\mid}{}{}p(\prArg)}
+\begin{document}
+$\pr{o_t|s_t}$
+\end{document}

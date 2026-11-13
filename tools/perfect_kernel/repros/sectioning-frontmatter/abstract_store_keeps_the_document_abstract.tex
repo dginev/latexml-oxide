@@ -1,0 +1,29 @@
+% A raw class's abstract store (`\resumen`) printed by its title page ("Resumen: \@resumen") and the document's own
+% `{abstract}` are both kept: the class's label names its abstract "Resumen:" and it is read at `\maketitle`, where
+% LaTeX expands the store (`labelled_api`, `harvest_stores`, frontmatter_stores.rs), so the document's `{abstract}`,
+% which clears the abstracts queued before it, does not remove it, and an entry under another name is another element
+% (OXIDIZED_DESIGN_DIVERGENCES #154): the document's abstract first, as pdflatex prints it before `\maketitle`.
+% witness: none (synthetic; review probe of the K11 store timing; silent-loss inventory #6a).
+% oracle:  pdflatex 0 errors: "English abstract." and "Resumen: Spanish abstract."
+% engines: rust 58m-67int35: only the document's abstract, "Spanish abstract." lost, an orphan "Resumen:" before
+%          "Text."
+%          rust 77i r2: both, the class's first (digested where it was set).
+% expect:  0 errors, 0 warnings; both abstracts, the document's first, the class's named "Resumen:"; no "Resumen:" in
+%          the body.
+% status:  RED (67int35) -> GREEN (77i)
+\begin{filecontents*}[overwrite]{rcresumen.cls}
+\ProvidesClass{rcresumen}
+\LoadClass{article}
+\newcommand*\resumen[1]{\gdef\@resumen{#1}}
+\def\@resumen{}
+\def\@maketitle{\@title\par\@author\par Resumen: \@resumen}
+\end{filecontents*}
+\documentclass{rcresumen}
+\title{T}\author{Anton}\resumen{Spanish abstract.}
+\begin{document}
+\begin{abstract}
+English abstract.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

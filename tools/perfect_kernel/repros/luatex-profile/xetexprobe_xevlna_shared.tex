@@ -1,0 +1,11 @@
+% witness: cnbwp-manual-en/cs (residue38: \XeTeXinterchartokenstate)
+% oracle: xelatex (xevlna is tex/xelatex/ pkg, no engine probe) -- lualatex MISLABEL
+% engines: xelatex only (bidi/xevlna/xepersian family)
+% expect (Perl+Rust): Error:undefined:\XeTeXinterchartokenstate  = SHARED
+% status: RED (SHARED; would fail real lualatex too -> needs [xetex] profile decision)
+% mechanism: xevlna.sty:22 \XeTeXinterchartokenstate 1 UNCONDITIONAL; Perl defines no XeTeX prims
+\documentclass{article}
+\usepackage{xevlna}
+\begin{document}
+Test.
+\end{document}

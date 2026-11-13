@@ -1,7 +1,22 @@
+use latexml_core::parameter::{Parameter, Parameters};
+
 use crate::prelude::*;
 
 mod declare;
 use declare::*;
+
+/// `\luadef` slots whose Lua function scans its own operand from the input
+/// (`token.scan_glue()` …). The bridge cannot run the slot, so the command reads
+/// that operand and absorbs it: an intent with no XML meaning, as
+/// `docs/perfect_kernel/LUA_REBINDING.md`'s absorb tier describes. As a bare
+/// no-op, the operand stayed in the input as text. luatexja-core.sty:408-421
+/// `\ltjsetkanjiskip`/`\ltjsetxkanjiskip` (inter-character glue): jlreq.cls:1227-
+/// 1249 runs them from `\size@update` on every size change, so each
+/// `\selectfont` typeset "0pt plus 0.25minus 0pt" (kksymbols-doc, gckanbun-doc).
+const LUA_SLOT_OPERANDS: &[(&str, &str)] = &[
+  ("\\ltjsetkanjiskip", "Glue"),
+  ("\\ltjsetxkanjiskip", "Glue"),
+];
 
 LoadDefinitions!({
   // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
@@ -20,6 +35,16 @@ LoadDefinitions!({
   });
   DeclareOption!("nocomments", {
     AssignValue!("INCLUDE_COMMENTS" => false, Scope::Global);
+  });
+  // RUST-ONLY: the class caption fonts knob, off by default (caption_sty.rs `CLASS_CAPTION_FONTS`; user ruling
+  // 2026-10-22). Read as the class loads, so set ahead of it: `--preload=[classcaptionfonts]latexml.sty`, or under ar5iv
+  // `--preload=[classcaptionfonts]ar5iv.sty`, which passes it here with its own options (ar5iv_sty.rs; a second
+  // latexml.sty preload beside ar5iv.sty's sets no knob or loses ar5iv's options, caption_sty.rs).
+  DeclareOption!("classcaptionfonts", {
+    AssignValue!(caption_sty::CLASS_CAPTION_FONTS => true, Scope::Global);
+  });
+  DeclareOption!("noclasscaptionfonts", {
+    AssignValue!(caption_sty::CLASS_CAPTION_FONTS => false, Scope::Global);
   });
 
   // 'nobibtex': used for arXiv-like build harnesses where only ".bbl" is available
@@ -122,6 +147,500 @@ LoadDefinitions!({
     AssignValue!("INCLUDE_CLASSES" => false, Scope::Global);
   });
 
+  // Opt-in LuaTeX profile (user decision 2026-08-31, perfect-kernel
+  // mission): `\usepackage[luatex]{latexml}` declares the DOCUMENT as
+  // LuaLaTeX-authored. Engine-detection probes flip to LuaTeX and the
+  // `\directlua` escape becomes available under its REAL name (elsewhere
+  // deliberately absent — it is the detection probe babel & friends use).
+  // The default engine identity (pdfTeX-model) is untouched without this
+  // option. Rust-only option; divergence documented as OXIDIZED_DESIGN #168.
+  DeclareOption!("luatex", {
+    AssignValue!("LUATEX_PROFILE" => true, Scope::Global);
+    // load-unicode-data.tex:134-135 letters Latin-1 at FORMAT time; the format
+    // (and its dump, which pins U+0080-U+00FF OTHER) loads at `\documentclass`,
+    // AFTER this preload option, so `latex.rs` re-letters them at the kernel
+    // seam when the profile is on. This call covers a mid-document
+    // `\usepackage[luatex]{latexml}` (format already loaded).
+    assign_luatex_latin1_letters();
+    RawTeX!(
+      r"\let\iftutex\iftrue \let\ifluatex\iftrue \let\ifpdftex\iffalse \let\ifLuaTeX\iftrue \let\ifPDFTeX\iffalse"
+    );
+    RawTeX!(r"\let\directlua\lx@directlua \let\luaescapestring\lx@luaescapestring");
+    // Unicode-engine primitives (LuaTeX manual §2.1 / §2.4): `\Uchar <n>`
+    // expands to the character with category 12 (10 for a space); `\primitive
+    // <cs>` delegates to the token. pdfTeX has neither (`\ifdefined\Uchar` is
+    // a Unicode-engine probe), so they exist only in this profile. Guards:
+    // `perfect_kernel_batch55::uchar_primitive_and_expl3_alias` (luatex),
+    // `perfect_kernel_batch56::unicode_engine_primitives_stay_undefined_under_pdftex`.
+    define_uchar()?;
+    DefMacro!("\\primitive Token", sub[(token)] { Ok(Tokens::new(vec![token])) });
+    // LuaTeX manual §2.8.3 `\csstring`: like `\string` but without the escape
+    // character (`\csstring\\` is a lone catcode-12 `\`; abntexto-uece.tex:49
+    // `\edef\bslash{\csstring\\}`). Same token cases as tex_character.rs
+    // `\string`. Guard: `perfect_kernel_batch56::luatex_csstring_primitive`.
+    DefMacro!("\\csstring Token", sub[(token)] {
+      let token = if token.is_noexpand_family() { T_CS!("\\special_relax") } else { token };
+      match token.code {
+        Catcode::CS => {
+          let s = token.to_string();
+          Explode!(s.strip_prefix('\\').unwrap_or(&s).to_string())
+        }
+        Catcode::SPACE => vec![token],
+        Catcode::ESCAPE | Catcode::COMMENT | Catcode::INVALID => vec![],
+        _ => vec![token.as_other()],
+      }
+    });
+    RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
+    // LuaTeX primitive `\glet` (luatex-enhancements.tex:991: equivalent to
+    // `\protected\def\glet{\global\let}`) — functional, not an engine probe.
+    // apa.cbx:645-646 uses it inside `\ifdef\luatexversion{…}` (biblatex-apa
+    // test doc). Guard: `perfect_kernel_batch56::luatex_profile_defines_glet`.
+    RawTeX!(r"\protected\def\glet{\global\let}");
+    // expl3-code.tex:985-986 aliases `\tex_luatexrevision:D`/`\tex_luatexversion:D`
+    // to the primitives at FORMAT time, when they did not exist here; lua-widow-
+    // control.sty:153 `\int_compare:nNnTF { \tex_luatexversion:D } > { 200 }`
+    // (homework-demo-*, jwjournal-demo-cn). `\tex_directlua:D` stays undefined
+    // on purpose (engine-detection probe, see `project_lua_bridge_directive`).
+    // Guard: `perfect_kernel_batch56::luatex_profile_aliases_expl3_version_primitives`.
+    RawTeX!(
+      r"\expandafter\let\csname tex_luatexversion:D\endcsname\luatexversion \expandafter\let\csname tex_luatexrevision:D\endcsname\luatexrevision"
+    );
+    // l3sys froze its engine identity at FORMAT-build time (expl3-code.tex:7846-7861:
+    // `\str_const:Ne \c_sys_engine_str {\cs_if_exist:NT \tex_luatexversion:D {luatex} …}`
+    // and one `\__sys_const:nn {sys_if_engine_<e>}` per engine), when
+    // `\luatexversion` did not exist yet, so `\sys_if_engine_luatex:TF` stayed FALSE
+    // under this profile and polyglossia's gloss-latin.ldf:125 took its XeTeX branch
+    // (`\newXeTeXintercharclass` ×12; hang, sample). Re-derive the constants the
+    // way :7860 does, with the engine now known; `\c_sys_engine_exec_str` (:7868-7884)
+    // and `\c_sys_engine_format_str` (:7886-7916, LaTeX2e format) follow.
+    // Guard: `perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`.
+    set_l3sys_engine("luatex", "lualatex")?;
+    // The lualatex FORMAT surface: latex.ltx:107-110 enables the LuaTeX
+    // extra primitives and :896-1058 (= ltluatex.dtx `2ekernel`) defines the
+    // allocators every LuaTeX-branch package assumes — luaotfload.sty:38
+    // `\input ltluatex` (a plain \input, bypassing the binding registry),
+    // luacolor.sty:161-166 `\setattribute`, tuenc.def:77 `\newprotectedluacmd`,
+    // babel's `\prehyphenchar`. Without them the first such name was the
+    // first error of 17 lualatex-oracle manuals (sunpath ×2, highlightx,
+    // creationboites, tkz-bernoulli, tabularray-abnt, asmeconf, minted-code,
+    // abntexto ×2, homework-jp, DEMO-BFHSciPoster, beamer-amurmaple,
+    // mathfont-symbol-list, greek-fontenc ×2, biblatex-german-legal).
+    // Guard: `perfect_kernel_batch54::ltluatex_format_surface_under_luatex_profile`.
+    //
+    // Primitives (LuaTeX manual §3.4 attributes, §3.5 catcode tables, §5.2
+    // hyphenation): `\attributedef` allocates into a private `\attribute`
+    // bank (NOT `\count`: attributes 0,1,2… would alias the page registers);
+    // the catcode-table switches scan their <number> and do nothing (catcode
+    // tables are engine state with no XML meaning); `\luadef` binds a Lua
+    // function slot the bridge cannot run → the command is a no-op, or absorbs
+    // the operand its function scans (`LUA_SLOT_OPERANDS`).
+    DefPrimitive!("\\attributedef SkipSpaces Token SkipSpaces", sub[(cs)] {
+      shorthand_def(cs, "\\attribute", Number::new(0).into())
+    });
+    DefPrimitive!("\\initcatcodetable Number", sub[(_n)] {});
+    DefPrimitive!("\\savecatcodetable Number", sub[(_n)] {});
+    DefPrimitive!("\\catcodetable Number", sub[(_n)] {});
+    DefMacro!("\\luafunction Number", sub[(_n)] {
+      Ok(Tokens!())
+    });
+    DefMacro!("\\luafunctioncall Number", sub[(_n)] {
+      Ok(Tokens!())
+    });
+    DefPrimitive!("\\luadef SkipSpaces Token SkipSpaces SkipKeyword:= Number", sub[(cs, _n)] {
+      clear_prefixes();
+      let cs_str = cs.to_string();
+      if cs_str.contains("time@measure") {
+        // Defined as 1-arg noop in RawTeX
+      } else if cs_str.contains("getparam@one") {
+        let _ = def_macro(
+          cs,
+          Some(Parameters::new(vec![Parameter::new("Plain", "{}", None)?])),
+          ExpansionBody::Tokens(Tokens!(T_CS!("\\z@"))),
+          None,
+        );
+      } else if let Some((_, operand)) =
+        LUA_SLOT_OPERANDS.iter().find(|(name, _)| *name == cs_str)
+      {
+        let _ = def_macro(
+          cs,
+          Some(Parameters::new(vec![Parameter::new(*operand, *operand, None)?])),
+          ExpansionBody::Tokens(Tokens!()),
+          None,
+        );
+      } else {
+        let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+      }
+    });
+    // LuaTeX manual §8: the PDF backend primitives that accompany
+    // `\directlua` — `\pdfvariable <name>` (a token-list/int variable:
+    // multimedia.sty:30 `\edef\beamer@pdfpageattr{\pdfvariable pageattr}`),
+    // `\pdfextension <name>…`, `\pdffeedback <name>`. The name keyword is
+    // consumed; the value is empty (hitszbeamer, vocaltract).
+    DefMacro!(T_CS!("\\pdfvariable"), None, {
+      let _ = read_keyword(&[
+        "pageattr",
+        "pagesattr",
+        "pageresources",
+        "compresslevel",
+        "objcompresslevel",
+        "decimaldigits",
+        "gentounicode",
+        "horigin",
+        "vorigin",
+        "linkmargin",
+        "destmargin",
+        "threadmargin",
+        "xformmargin",
+        "pkresolution",
+        "pkfixeddpi",
+        "inclusionerrorlevel",
+        "ignoreunknownimages",
+        "gamma",
+        "imageapplygamma",
+        "imagegamma",
+        "imagehicolor",
+        "imageaddfilename",
+        "uniqueresname",
+        "majorversion",
+        "minorversion",
+        "pagebox",
+        "inclusioncopyfonts",
+        "recorderfilename",
+        "suppressoptionalinfo",
+        "omitcidset",
+        "omitcharset",
+        "omitinfodict",
+        "omitmediabox",
+        "omitprocset",
+        "fontattr",
+        "info",
+        "catalog",
+        "names",
+        "trailer",
+        "trailerid",
+        "xformattr",
+        "xformresources",
+        "retval",
+        "lastlink",
+        "lastannot",
+        "lastobj",
+        "lastxform",
+        "lastximage",
+        "lastximagepages",
+      ])?;
+      Vec::new()
+    });
+    // `\pdffeedback creationdate` is the job's PDF date string, as pdfTeX's
+    // `\pdfcreationdate` (luatex85.sty:62 `\xdef\pdfcreationdate{\pdffeedback
+    // creationdate}`; novel-pdfx.sty parses it by its `D:`; novel, TeX Live
+    // class census 2026-09-24). The other queries read 0.
+    DefMacro!(T_CS!("\\pdffeedback"), None, {
+      let keyword = read_keyword(&[
+        "lastlink",
+        "lastannot",
+        "lastobj",
+        "lastxform",
+        "lastximage",
+        "lastximagepages",
+        "retval",
+        "colorstackinit",
+        "creationdate",
+        "fontname",
+        "fontobjnum",
+        "fontsize",
+        "pageref",
+        "xformname",
+        "ximagebbox",
+        "version",
+        "revision",
+      ])?;
+      if keyword.as_deref() == Some("creationdate") {
+        return latexml_engine::pdftex::pdf_creation_date();
+      }
+      Ok(Tokens!(T_OTHER!("0")))
+    });
+    // LuaTeX's names for pdfTeX's position primitives (LuaTeX manual §15.3:
+    // `\savepos`, `\lastxpos`, `\lastypos`); luatex85.sty maps the `\pdf…`
+    // names back onto them. novel-TextMacros.sty:268-276 calls `\savepos` as the
+    // primitive (TeX Live class census 2026-09-24).
+    Let!("\\savepos", "\\pdfsavepos");
+    Let!("\\lastxpos", "\\pdflastxpos");
+    Let!("\\lastypos", "\\pdflastypos");
+    DefPrimitive!("\\pdfextension Token", sub[(_name)] {});
+    DefRegister!("\\prehyphenchar"     => Number::new(0));
+    DefRegister!("\\posthyphenchar"    => Number::new(0));
+    DefRegister!("\\preexhyphenchar"   => Number::new(0));
+    DefRegister!("\\postexhyphenchar"  => Number::new(0));
+    DefRegister!("\\hyphenationbounds" => Number::new(0));
+    // latex.ltx:896-1058 verbatim, minus the UnicodeData.txt letter-catcode
+    // loop (:946-996, a catcode-table fill) and the two `\directlua` calls
+    // (:1038 `lua.name[…]`, :1056 `require("ltluatex")`). The four kernel
+    // tables are `\chardef`'d directly: this option runs at preload time,
+    // before the LaTeX pool defines `\e@alloc`.
+    RawTeX!(
+      r#"\ifx\e@alloc@attribute@count\@undefined
+  \countdef\e@alloc@attribute@count=258
+  \e@alloc@attribute@count=\z@
+\fi
+\def\newattribute#1{%
+  \e@alloc\attribute\attributedef
+    \e@alloc@attribute@count\m@ne\e@alloc@top#1%
+}
+\def\setattribute#1#2{#1=\numexpr#2\relax}
+\def\unsetattribute#1{#1=-"7FFFFFFF\relax}
+\ifx\e@alloc@ccodetable@count\@undefined
+  \countdef\e@alloc@ccodetable@count=259
+  \e@alloc@ccodetable@count=\z@
+\fi
+\def\newcatcodetable#1{%
+  \e@alloc\catcodetable\chardef
+    \e@alloc@ccodetable@count\m@ne{"8000}#1%
+  \initcatcodetable\allocationnumber
+}
+\chardef\catcodetable@initex=1
+\chardef\catcodetable@string=2
+\chardef\catcodetable@latex=3
+\chardef\catcodetable@atletter=4
+\e@alloc@ccodetable@count=4
+\let\CatcodeTableLaTeX\catcodetable@latex
+\let\CatcodeTableLaTeXAtLetter\catcodetable@atletter
+\chardef\CatcodeTableExpl=5
+\let\catcodetable@expl\CatcodeTableExpl
+\def\ltj@@start@time@measure#1{}
+\def\ltj@@stop@time@measure#1{}
+\newdimen\ltj@dimen@zw \ltj@dimen@zw=10pt
+\newdimen\ltj@dimen@zh \ltj@dimen@zh=10pt
+\def\zw{\ltj@dimen@zw}
+\def\zh{\ltj@dimen@zh}
+\def\ltj@zw{\ltj@dimen@zw}
+\def\ltj@zh{\ltj@dimen@zh}
+\def\ltjgetparameter#1{\z@}
+\def\ltjsetparameter#1{}
+\AddToHook{package/luatexja-core/after}{%
+  \ltj@dimen@zw=10pt
+  \ltj@dimen@zh=10pt
+  \def\zw{\ltj@dimen@zw}%
+  \def\zh{\ltj@dimen@zh}%
+  \def\ltj@zw{\ltj@dimen@zw}%
+  \def\ltj@zh{\ltj@dimen@zh}%
+  \def\ltjgetparameter##1{\z@}%
+  \def\ltjsetparameter##1{}%
+}
+\AddToHook{package/lltjfont/after}{%
+  \DeclareRobustCommand\fontfamily[1]{\edef\f@family{##1}}%
+}
+\NewDocumentCommand\LuaULNewUnderlineType{ s +m }{0}
+\NewDocumentCommand\LuaULSetUnderline{ m }{}
+\NewDocumentCommand\LuaULResetUnderline{ s }{}
+\AddToHook{package/lua-ul/after}{%
+  \RenewDocumentCommand\newunderlinetype{ E{*}{{}} m O{} +m }{\protected\def#2{}}%
+}
+\ifx\e@alloc@luafunction@count\@undefined
+  \countdef\e@alloc@luafunction@count=260
+  \e@alloc@luafunction@count=\z@
+\fi
+\def\newluafunction{%
+  \e@alloc\luafunction\e@alloc@chardef
+    \e@alloc@luafunction@count\m@ne\e@alloc@top
+}
+\def\newluacmd{%
+  \e@alloc\luafunction\luadef
+    \e@alloc@luafunction@count\m@ne\e@alloc@top
+}
+\def\newprotectedluacmd{%
+  \e@alloc\luafunction{\protected\luadef}
+    \e@alloc@luafunction@count\m@ne\e@alloc@top
+}
+\ifx\e@alloc@whatsit@count\@undefined
+  \countdef\e@alloc@whatsit@count=261
+  \e@alloc@whatsit@count=\z@
+\fi
+\def\newwhatsit#1{%
+  \e@alloc\whatsit\e@alloc@chardef
+    \e@alloc@whatsit@count\m@ne\e@alloc@top#1%
+}
+\ifx\e@alloc@bytecode@count\@undefined
+  \countdef\e@alloc@bytecode@count=262
+  \e@alloc@bytecode@count=\z@
+\fi
+\def\newluabytecode#1{%
+  \e@alloc\luabytecode\e@alloc@chardef
+    \e@alloc@bytecode@count\m@ne\e@alloc@top#1%
+}
+\ifx\e@alloc@luachunk@count\@undefined
+  \countdef\e@alloc@luachunk@count=263
+  \e@alloc@luachunk@count=\z@
+\fi
+\def\newluachunkname#1{%
+  \e@alloc\luachunk\e@alloc@chardef
+    \e@alloc@luachunk@count\m@ne\e@alloc@top#1%
+}
+\def\now@and@everyjob#1{%
+  \everyjob\expandafter{\the\everyjob
+    #1%
+  }%
+  #1%
+}
+\attributedef\attributezero=0 "#
+    );
+    // The LuaTeX parameter surface documents commonly poke once they take
+    // the LuaTeX branch (LuaTeX manual §2.6/§3): line-breaking and error-
+    // suppression knobs — engine tuning with no XML-content meaning.
+    DefRegister!("\\hyphenationmin"       => Number::new(-1));
+    DefRegister!("\\outputmode"           => Number::new(1));
+    DefRegister!("\\suppresslongerror"    => Number::new(0));
+    DefRegister!("\\suppressoutererror"   => Number::new(0));
+    DefRegister!("\\suppressmathparerror" => Number::new(0));
+    DefRegister!("\\luacopyinputnodes"    => Number::new(0));
+    DefRegister!("\\matheqnogapstep"      => Number::new(1000));
+    DefRegister!("\\breakafterdirmode"    => Number::new(0));
+    // `\matheqdirmode` (LuaTeX manual §6, math direction of equations):
+    // minim-math.tex:19 sets it (lettrine-demo-arabic). Guard:
+    // `perfect_kernel_batch54::luatex_profile_defines_matheqdirmode`.
+    DefRegister!("\\matheqdirmode"        => Number::new(0));
+    // `\pagewidth`/`\pageheight` (LuaTeX manual §4.3, the page dimensions
+    // pdfTeX calls `\pdfpagewidth`): incgraph.sty reads them under LuaTeX.
+    DefRegister!("\\pagewidth"            => Dimension!("614.295pt"));
+    DefRegister!("\\pageheight"           => Dimension!("794.96999pt"));
+    // luapstricks: under this profile pstricks.tex (L443-471) takes its
+    // LuaTeX branch, routing `\pstverb`/`\pstVerb`/`\pstheader`/
+    // `\c@lor@to@ps` through tokens that luapstricks.lua creates via
+    // `token.set_lua` (L4212/4255/4259/4300) — a node-layer module our
+    // bridge cannot run. Absorb the 4-token surface (optional keywords up
+    // to the brace group; `\luaPSTbox` voids the box it scans). Raw
+    // pstricks.sty loads dominate, so these live HERE, not in the
+    // pstricks_tex binding. Sweep-11: 13 oracle-clean docs, 8 with
+    // `\luaPST` as sole error — witnesses bardiag/bardiag1, psgo/psgomanual.
+    DefMacro!("\\luaPST UntilBrace {}", "");
+    DefMacro!("\\luaPSTheader UntilBrace {}", "");
+    DefMacro!("\\luaPSTcolor UntilBrace {}", "");
+    RawTeX!(r"\def\luaPSTbox{\setbox\voidb@x}");
+    // XeTeX/LuaTeX: `\suppressfontnotfounderror=1` silences font-not-found.
+    // Written by luatexja-preset.sty:501, iffont.sty:45-73, and
+    // fontspec-luatex.sty:486. Engine knob, no XML meaning — but it must be
+    // a REGISTER: a macro stub would leave the trailing `=1` to typeset.
+    DefRegister!("\\suppressfontnotfounderror" => Number::new(0));
+    // Direction primitives (LuaTeX §6): `\textdir TLT` etc. are PRIMITIVES
+    // whose argument is read by luatex's `scan_direction` — ONE expanded
+    // token that is itself a direction primitive (the internal form
+    // `\pagedir\bodydir`, `\mathdir\the\bodydir` once `\the` expands), else
+    // exactly three letters (`TLT`, `TRT`, `LTL`, `RTT`). The earlier
+    // three-parameter gobblers (`\def\pagedir#1#2#3{}`) modelled the letter
+    // form only: babel.sty:1163-1165 registers `\AtBeginDocument
+    // {\pagedir\bodydir}` under `\bbl@engine=1`, and the gobbler reached
+    // across the next hook chunks and ate babel.def:2262's leading
+    // `\DeclareTextCompositeCommand`, leaving its four arguments
+    // `{\"}{OT1}{a}{\bbl@umlauta{a}}` to typeset as the junk first paragraph
+    // `¨OT1aä` before `\maketitle` in every luatex-profile babel manual (S2
+    // cluster A, 98 docs; Perl's babel binding never reaches the code).
+    // TLT (left-to-right) is the only direction this engine models → absorb
+    // the argument, emit nothing. Guard:
+    // `cluster_package_guards::luatex_profile::direction_primitive_scans_one_internal_direction_token`.
+    DefPrimitive!("\\pagedir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\bodydir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\pardir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\textdir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\mathdir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\linedir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    // They are internal quantities too: `\the\bodydir` is the current
+    // direction (`\mathdir\the\bodydir`, luatexbase/babel), always TLT here.
+    for cs in [
+      "\\pagedir",
+      "\\bodydir",
+      "\\pardir",
+      "\\textdir",
+      "\\mathdir",
+      "\\linedir",
+    ] {
+      assign_value(
+        &s!("the_value_{cs}"),
+        Stored::String(pin_static("TLT")),
+        Some(Scope::Global),
+      );
+    }
+    // Format parity: the lualatex FORMAT ships hyphenation patterns, so
+    // `\bbl@luapatterns` is already defined when babel.def loads. That makes
+    // babel.def L1135 skip the patterns-only first `\input luababel.def`
+    // (which `\endinput`s at L195, and whose loaded-flag would suppress the
+    // real second input at babel.def L2285) — so the single in-document
+    // load runs luababel's Lua API part (L196+, `Babel.locale_props` &co).
+    // Patterns are engine hyphenation state with no XML meaning → no-op
+    // body. Guard: cluster_package_guards::luatex_babel_api.
+    DefMacro!("\\bbl@luapatterns{}{}", "");
+    // expl3-code.tex:34944-34966 replaces the `\lua_*` functions with
+    // "LuaTeX engine not in use" errors when the FORMAT is built on a non-Lua
+    // engine — our dump — so under this profile they stayed stubs (polyglossia's
+    // gloss-latin path: `\lua_load_module:n` → a counted `\errmessage`). Rebind
+    // to the bridge: `\lua_now`/`\lua_escape` mirror `\directlua`/
+    // `\luaescapestring` (expl3-code.tex:34917-34935), the shipout hooks and
+    // module loading are absorbed (no document meaning; the bridge cannot
+    // `require` TeX-side Lua modules). Guard:
+    // `perfect_kernel_batch56::lua_functions_are_live_under_the_luatex_profile`.
+    RawTeX!(
+      r"\ExplSyntaxOn
+\cs_gset:Npn \lua_now:n #1 { \directlua{#1} }
+\cs_gset:Npn \lua_now:e #1 { \directlua{#1} }
+\cs_gset:Npn \lua_escape:n #1 { \luaescapestring{#1} }
+\cs_gset:Npn \lua_escape:e #1 { \luaescapestring{#1} }
+\cs_gset_protected:Npn \lua_shipout_e:n #1 { }
+\cs_gset_protected:Npn \lua_shipout:n #1 { }
+\cs_gset_protected:Npn \lua_load_module:n #1 { }
+\ExplSyntaxOff"
+    );
+    install_unicode_format_encoding()?;
+  });
+
+  // Opt-in XeTeX profile, the counterpart of `luatex` for XeLaTeX-authored
+  // documents (the TL-manual sweeps pass it when the document's oracle is a clean
+  // xelatex run, `run_doc.sh`). The default persona already passes iftex's
+  // `\RequireXeTeX` (#220 update); what it cannot pass is an engine test on
+  // l3sys, frozen at format-build time to pdftex (expl3-code.tex:7846-7861):
+  // fduthesis.cls:69-71 and njuthesis.cls:62-63 `\sys_if_engine_xetex:F{\msg_fatal…}`,
+  // exam-zh.cls:22, and fontspec's gate inlined in xtufte-common.def:20-24 (class
+  // census 2026-09-24). Under this profile the engine reads as XeTeX everywhere:
+  // iftex, l3sys, `\XeTeXversion`, the inter-character primitives, `\Uchar` and
+  // the Unicode letter catcodes of the XeTeX format. fontspec, unicode-math and
+  // xeCJK stay bindings, so the raw XeTeX font backends are never reached.
+  // Rust-only option; OXIDIZED_DESIGN #283.
+  DeclareOption!("xetex", {
+    AssignValue!("XETEX_PROFILE" => true, Scope::Global);
+    assign_luatex_latin1_letters();
+    RawTeX!(
+      r"\let\iftutex\iftrue \let\ifxetex\iftrue \let\ifXeTeX\iftrue \let\ifpdftex\iffalse \let\ifPDFTeX\iffalse"
+    );
+    define_uchar()?;
+    // XeTeX's version primitives (xetex.web: `\XeTeXversion` an integer, `\XeTeXrevision`
+    // expanding to the revision string); l3sys and iftex probe them.
+    DefRegister!("\\XeTeXversion" => Number::new(0), readonly => true);
+    RawTeX!(r"\def\XeTeXrevision{.999997}");
+    // XeTeX spells pdfTeX's `\pdfstrcmp` as `\strcmp` (expl3-code.tex:141-143
+    // lets the one to the other); documents call it by that name
+    // (cdcmd-test.tex:42-55, input by cdcmd-cn.tex:144).
+    RawTeX!(r"\let\strcmp\pdfstrcmp");
+    iftex_sty::define_xetex_interchar()?;
+    set_l3sys_engine("xetex", "xelatex")?;
+    // After `\XeTeXrevision`: tuenc.def:49 takes its XeTeX branch on it.
+    install_unicode_format_encoding()?;
+  });
+
   // Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate
   // a TRACING bitmap via TRACE_ALL / TRACE_PROFILE constants. Rust hasn't
   // wired the bitmap constants (no TRACE_ALL/TRACE_PROFILE symbols in the
@@ -192,17 +711,13 @@ LoadDefinitions!({
   if let Some(v) = lookup_value("KV@LTXML@iflimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
-      assign_value("if_limit", Stored::from(limit as i64), Some(Scope::Global));
+      set_if_limit(limit as i64);
     }
   }
   if let Some(v) = lookup_value("KV@LTXML@absorblimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
-      assign_value(
-        "absorb_limit",
-        Stored::from(limit as i64),
-        Some(Scope::Global),
-      );
+      set_absorb_limit(limit as i64);
     }
   }
   if let Some(v) = lookup_value("KV@LTXML@pushbacklimit") {
@@ -309,9 +824,15 @@ LoadDefinitions!({
       .and_then(|k| k.get_value("media"))
       .map(|v| v.to_string())
       .unwrap_or_default();
+    // `content=` is the resource inline (Package.pm:3164 `insertElement('ltx:resource', $options{content}, …)`):
+    // 2606.12996's `\lxRequireResource[type=text/css,content={…}]{}` style rules
+    let content = kv.as_ref()
+      .and_then(|k| k.get_value("content"))
+      .map(|v| v.to_string())
+      .unwrap_or_default();
     require_resource(
       Resource {
-        name, mimetype, media, content: String::new(),
+        name, mimetype, media, content,
       });
     Ok(Vec::new())
   });
@@ -392,6 +913,7 @@ LoadDefinitions!({
     // compile_replacement). Capture them (undigested) as an owned local so the
     // keyvals borrow is released before the whatsit is mutated below.
     let mut replace_tks_opt: Option<Tokens> = None;
+    let mut scope_key: Option<String> = None;
     let mut nowrap_flag = false;
     let mut tag_digested: Option<Digested> = None;
     let mut description_digested: Option<Digested> = None;
@@ -410,16 +932,32 @@ LoadDefinitions!({
         // boxes; the term Math is then subject to the declaration rewrites).
         tag_digested = kv.get_value_digested("tag").cloned();
         description_digested = kv.get_value_digested("description").cloned();
-        if let Some(v) = hash.get("role") { role = v.clone(); }
-        if let Some(v) = hash.get("name") { name_val = v.clone(); }
-        if let Some(v) = hash.get("meaning") { meaning = v.clone(); }
+        // The identifier keys from their source tokens when plain (letters, digits, punctuation): digested after
+        // `neutralize_font`, whose font keeps the document's encoding, babel greek's LGR read `ADDOP` back as
+        // `ΑΔΔΟΠ`. A value built from macros keeps its digested text (Perl's).
+        let identifier = |key: &str| {
+          kv.get_value(key)
+            .and_then(|value| value.revert().ok())
+            .filter(|tokens| {
+              let plain = |t: &Token| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER);
+              tokens.unlist_ref().iter().all(plain)
+            })
+            .map(|tokens| tokens.to_string())
+            .or_else(|| hash.get(key).cloned())
+        };
+        if let Some(v) = identifier("role") { role = v; }
+        if let Some(v) = identifier("name") { name_val = v; }
+        if let Some(v) = identifier("meaning") { meaning = v; }
         if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.clone(); }
         if let Some(v) = hash.get("description") { has_description = true; description_text = v.clone(); }
-        // Store scope option for rewrite rule creation in afterConstruct
-        if let Some(v) = hash.get("scope") {
-          whatsit.set_property("scope_opt", Stored::from(v.clone()));
-        }
+        if let Some(v) = identifier("scope") { scope_key = Some(v); }
       }
+    // Perl: scope => getDeclarationScope($kv), resolved here, where the unit the declaration
+    // stands in is the current one.
+    let scope = get_declaration_scope(scope_key.as_deref())?.unwrap_or_default();
+    if !scope.is_empty() {
+      whatsit.set_property("scope", Stored::from(scope.clone()));
+    }
     if let Some(replace_tks) = replace_tks_opt {
       whatsit.set_property("replace_tokens", Stored::Tokens(replace_tks));
     }
@@ -467,13 +1005,9 @@ LoadDefinitions!({
 
     // Register in the LATEXML_DECLARATIONS fast-path table (declare.rs).
     if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
-      let scope_opt_val = whatsit
-        .get_property("scope_opt")
-        .map(|v| v.to_string())
-        .unwrap_or_default();
       record_declaration_lines(
         &body_text, &role, &name_val, &meaning, &decl_id,
-        match_font.as_deref(), &scope_opt_val)?;
+        match_font.as_deref(), &scope)?;
     }
   },
   after_construct => sub[document, whatsit] {
@@ -511,8 +1045,9 @@ LoadDefinitions!({
     let has_annotation =
       !role.is_empty() || !name_val.is_empty() || !meaning.is_empty() || !decl_id.is_empty();
     if !body_text.is_empty() && (has_annotation || replace_tokens.is_some()) {
-      let scope_val = whatsit.get_property("scope_opt").map(|v| v.to_string()).unwrap_or_default();
-      let rewrite_scope = get_declaration_scope(document, &scope_val, &decl_id);
+      let rewrite_scope = whatsit
+        .get_property("scope")
+        .map(|scope| Scope::Named(pin(scope.to_string())));
       create_declaration_rewrite(
         rewrite_scope,
         role,
@@ -811,4 +1346,202 @@ LoadDefinitions!({
   DefEnvironment!("{lxFooter}",
     "<ltx:inline-logical-block class='ltx_page_footer'>#body</ltx:inline-logical-block>",
     before_digest => { AssignValue!("inPreamble" => false); });
+
+  // In dvips backend mode (the DVI persona), `\__graphics_backend_get_pagecount:n`
+  // is l3graphics' generic `\__graphics_get_pagecount:n`, which pipes
+  // `extractbb -O` (expl3-code.tex:33334-33350) — shell escape is off here, so
+  // it failed with "Cannot run piped system commands" (notebeamer-demo). The
+  // hook answers with what the pdfTeX backend itself does (l3backend-pdftex
+  // `\__graphics_backend_get_pagecount:n`: `\pdfximage` then
+  // `\pdflastximagepages`), which our `\pdfximage` primitive fills from the
+  // PDF's `/Pages /Count` (batch 56ap; before that a constant 1, l3's own
+  // fallback, expl3-code.tex:33348); the caller guards a double definition
+  // with `\int_if_exist:cF` (:33320).
+  // Written with `\csname` names, not `\ExplSyntaxOn`: latexml.sty's body runs
+  // while the format is still loading (wisdom_preload_before_format_dump), and
+  // an `\ExplSyntaxOn` here pulled a raw expl3.sty whose backend selection
+  // loaded l3backend-dvips.def at preload time — a later `\pdfoutput=1` /
+  // `\sys_load_backend:n{pdftex}` then hit "Backend configuration already set"
+  // (`backend_load_follows_pdfoutput_and_prior_choice`).
+  // ONE `#`: `\AddToHook` stores its code verbatim and runs it at top level (no
+  // enclosing `\def` halves the hashes), so `##1` made the body read `##1` and
+  // the constant came out as `c__graphics_#1_pages_int`; the caller's `\tl_set:Nv`
+  // readback then met an undefined variable — l3msg's expandable "bad-variable"
+  // error (notebeamer-demo; `\??? Match:?`, the `\???` sentinel of
+  // expl3-code.tex:11596-11606). Guard
+  // `perfect_kernel_gemini::notebeamer_pagecount_dvips_fallback`.
+  // A plain TeX document gets no LaTeX format (`state::plain_tex_document`): the hook is expl3's, which plain TeX never
+  // loads, and registering it autoloads LaTeX.pool, whose `\end` broke the document's own (stopped full-arXiv run 329:
+  // 0911.4241, hep-th9310069).
+  if !plain_tex_document() {
+    RawTeX!(
+      r"\AddToHook{file/l3backend-dvips.def/after}{%
+  \protected\long\expandafter\def\csname __graphics_backend_get_pagecount:n\endcsname#1{%
+    \pdfximage{#1}\csname int_const:cn\endcsname{c__graphics_#1_pages_int}{\pdflastximagepages}}%
+}"
+    );
+  }
 });
+
+/// LuaTeX `scan_direction`: the argument of a direction primitive is one
+/// expanded token — a direction primitive itself (the internal form,
+/// `\pagedir\bodydir`) — or a three-letter keyword (`TLT`, `TRT`, `LTL`,
+/// `RTT`); leading spaces are skipped as `scan_keyword` does. Nothing is kept:
+/// TLT is the only direction this engine models.
+fn scan_direction() -> Result<()> {
+  const DIRECTION_PRIMITIVES: [&str; 6] = [
+    "\\pagedir",
+    "\\bodydir",
+    "\\pardir",
+    "\\textdir",
+    "\\mathdir",
+    "\\linedir",
+  ];
+  let mut first = None;
+  while let Some(t) = read_x_token(None, false, None)? {
+    if t.get_catcode() == Catcode::SPACE {
+      continue;
+    }
+    first = Some(t);
+    break;
+  }
+  let Some(first) = first else {
+    return Ok(());
+  };
+  if first.get_catcode() == Catcode::CS && first.with_str(|s| DIRECTION_PRIMITIVES.contains(&s)) {
+    return Ok(());
+  }
+  // The keyword form: `first` is its first letter; take the remaining two.
+  // `scan_keyword` matches letters by character, not catcode (`\the\bodydir`
+  // expands to OTHER-catcode `TLT`).
+  let is_keyword_char = |t: &Token| {
+    matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+      && t.with_str(|s| s.chars().all(|c| c.is_ascii_alphabetic()))
+  };
+  if !is_keyword_char(&first) {
+    unread(Tokens::new(vec![first]));
+    return Ok(());
+  }
+  for _ in 0..2 {
+    match read_x_token(None, false, None)? {
+      Some(t) if is_keyword_char(&t) => {},
+      Some(t) => {
+        unread(Tokens::new(vec![t]));
+        break;
+      },
+      None => break,
+    }
+  }
+  Ok(())
+}
+
+/// fonttext.ltx:57-68,93: a Unicode-engine format (LuaTeX or XeTeX) inputs
+/// tuenc.def (which declares the `TU` encoding, `\UnicodeEncodingName`),
+/// substitutes Latin Modern for it and makes TU `\encodingdefault`; the TU
+/// fontmap (`tu_fontmap.rs`) then decodes text and `\char` as Unicode. The
+/// pdflatex-shaped format has none of that, so xunicode-addon.sty:59-113
+/// (`\cs_if_exist:NTF \UnicodeEncodingName`, then the `\T@TU` check) raised
+/// `Encoding scheme "TU" unknown` (codebox-doc-en ×3, an `\errmessage` counted
+/// since batch 56g), and nlctuserguide's `\marg` printed its `\char` braces
+/// through OT1 (glossaries-user, lualatex: "\name–first-name˝").
+///
+/// Called from the profile's option body, not the `latex.rs` seam: the LaTeX
+/// pool loads while latexml.sty pulls in expl3, BEFORE the option body, so the
+/// seam would see neither `\newprotectedluacmd` (tuenc.def:77, which the
+/// `luatex` option defines first) nor the constructs' `\encodingdefault`.
+/// Idempotent on a second `\usepackage[luatex]{latexml}`. Guards:
+/// `perfect_kernel_batch56::tu_encoding_is_declared_under_luatex`,
+/// `unicode_format_encoding::*`.
+pub(crate) fn install_unicode_format_encoding() -> Result<()> {
+  RawTeX!(
+    r"\expandafter\ifx\csname T@TU\endcsname\relax
+  \input{tuenc.def}\fontencoding{TU}\def\@fontenc@load@list{\@elt{TU}}%
+  \DeclareFontSubstitution{TU}{lmr}{m}{n}\LoadFontDefinitionFile{TU}{lmr}%
+  \renewcommand\encodingdefault{TU}%
+\fi"
+  );
+  // tuenc.def:106-121 `\DeclareUnicodeAccent{\cs}[{enc}]{code}` (tipauni.sty
+  // :349+ `\DeclareUnicodeAccent{\textsyllabic}{TU}{"0329}`): the accent
+  // appends `\char code` to its argument (NBSP base when empty). Re-asserted
+  // AFTER the tuenc.def load above, whose own version declares for the `TU`
+  // encoding only; declared as the encoding DEFAULT instead, the accent also
+  // serves a document that selects another encoding (`\usepackage[T1]{fontenc}`),
+  // where LaTeX would report it unavailable.
+  RawTeX!(
+    r#"\def\add@unicode@accent#1#2{\if\relax\detokenize{#2}\relax^^a0\else#2\fi\char#1\relax}
+\def\DeclareUnicodeAccent#1#2{\edef\reserved@a{#2}\def\reserved@b{TU}%
+  \ifx\reserved@a\reserved@b\expandafter\lx@DeclareUnicodeAccent@iii\else\expandafter\lx@DeclareUnicodeAccent@ii\fi{#1}{#2}}
+\def\lx@DeclareUnicodeAccent@iii#1#2#3{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#3}}}
+\def\lx@DeclareUnicodeAccent@ii#1#2{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#2}}}"#
+  );
+  Ok(())
+}
+
+/// `\Uchar <n>` (LuaTeX manual §2.1; XeTeX has it too): expands to the character
+/// with category 12 (10 for a space). pdfTeX has none (`\ifdefined\Uchar` is a
+/// Unicode-engine probe), so only the `luatex`/`xetex` profiles define it.
+/// Guards: `perfect_kernel_batch55::uchar_primitive_and_expl3_alias` (luatex),
+/// `perfect_kernel_batch56::unicode_engine_primitives_stay_undefined_under_pdftex`.
+fn define_uchar() -> Result<()> {
+  DefMacro!(T_CS!("\\Uchar"), None, {
+    let charcode = read_number()?.value_of();
+    match char::from_u32(charcode as u32) {
+      Some(' ') => vec![CharToken!(' ', Catcode::SPACE)],
+      Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
+      None => Vec::new(),
+    }
+  });
+  Let!("\\tex_Uchar:D", "\\Uchar");
+  Ok(())
+}
+
+/// l3sys froze its engine identity at FORMAT-build time (expl3-code.tex:7846-7861:
+/// `\str_const:Ne \c_sys_engine_str {…}` and one `\__sys_const:nn
+/// {sys_if_engine_<e>}` per engine), under our pdfTeX-model format. A Unicode-engine
+/// profile re-derives the constants the way :7860 does, with `engine` known;
+/// `\c_sys_engine_exec_str` (:7868-7884) and `\c_sys_engine_format_str`
+/// (:7886-7916, LaTeX2e format) follow. Without it polyglossia's
+/// gloss-latin.ldf:125 took its XeTeX branch under `luatex` (`\newXeTeXintercharclass`
+/// ×12; hang, sample), and fduthesis/fontspec's `\sys_if_engine_xetex:F` halted
+/// under `xetex`. Both profiles are OpenType engines: `\sys_if_engine_opentype`
+/// (:7863-7865, `\cs_if_exist_p:N \tex_Umathcode:D`) holds once `\tex_Umathcode:D`
+/// names the primitive, as the format would have aliased it; without it l3doc.cls:436-453
+/// took its T1 + lmodern branch (`^` decoded through T1: broydensolve, joinbox, ltx-talk,
+/// precattl, saveenv). Guards:
+/// `perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`,
+/// `perfect_kernel_batch61::unicode_profiles_are_opentype_engines`.
+fn set_l3sys_engine(engine: &str, format: &str) -> Result<()> {
+  let others: Vec<&str> = ["pdftex", "ptex", "uptex", "xetex", "luatex"]
+    .into_iter()
+    .filter(|e| *e != engine)
+    .collect();
+  let others = others
+    .iter()
+    .map(|e| s!("{{ {e} }}"))
+    .collect::<Vec<_>>()
+    .join(" ");
+  let tex = s!(
+    r"\ExplSyntaxOn
+        \tl_gset:Nn \c_sys_engine_str {{ {engine} }}
+        \tl_map_inline:nn {{ {others} }}
+          {{
+            \cs_gset_eq:cN {{ sys_if_engine_ #1 :T }}  \use_none:n
+            \cs_gset_eq:cN {{ sys_if_engine_ #1 :F }}  \use:n
+            \cs_gset_eq:cN {{ sys_if_engine_ #1 :TF }} \use_ii:nn
+            \cs_gset_eq:cN {{ sys_if_engine_ #1 _p: }} \c_false_bool
+          }}
+        \cs_gset_eq:cN {{ sys_if_engine_{engine} :T }}  \use:n
+        \cs_gset_eq:cN {{ sys_if_engine_{engine} :F }}  \use_none:n
+        \cs_gset_eq:cN {{ sys_if_engine_{engine} :TF }} \use_i:nn
+        \cs_gset_eq:cN {{ sys_if_engine_{engine} _p: }} \c_true_bool
+        \cs_gset_eq:NN \tex_Umathcode:D \Umathcode
+        \cs_gset_eq:NN \sys_if_engine_opentype:T  \use:n
+        \cs_gset_eq:NN \sys_if_engine_opentype:F  \use_none:n
+        \cs_gset_eq:NN \sys_if_engine_opentype:TF \use_i:nn
+        \cs_gset_eq:NN \sys_if_engine_opentype_p: \c_true_bool
+        \tl_gset:Nn \c_sys_engine_exec_str {{ {engine} }}
+        \tl_gset:Nn \c_sys_engine_format_str {{ {format} }}
+        \ExplSyntaxOff"
+  );
+  ::latexml_core::stomach::raw_tex(&tex)
+}

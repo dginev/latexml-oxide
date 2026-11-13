@@ -1,0 +1,12 @@
+% witness: 1904.02630, 2008.03410, 2008.01842 (titling's `\thetitle` before `\maketitle`; run 340: 62 first errors)
+% oracle:  pdflatex 0 errors; "The Title" printed in the body
+% engines: rust 65int7 = 1 error (`\thetitle` undefined)
+% expect:  0 errors; a paragraph "Title: The Title" (the \thanks dropped)
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{titling}
+\title{The Title\thanks{Note.}}
+\author{An Author}
+\begin{document}
+Title: \thetitle
+\end{document}

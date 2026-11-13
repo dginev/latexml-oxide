@@ -1,0 +1,20 @@
+% witness: brief Z1 gap 6: 2506.18556, 2507.12222 (AASTeX 7's `\email` prints only with `[show]`: aastex701.cls:13341-13353)
+% oracle:  pdflatex 0 errors: Ann's address printed in the title footnote, Bob's nowhere
+% engines: Perl displays both (KNOWN_PERL_ERRORS #559); ours before Z1 records no event of Bob's
+% expect:  0 errors; Ann's `\email[show]` is a printing API call; Bob's a Contact with `unprinted`, as the XML's `ltx:rdf`
+%          (perfect_kernel_batchz1::a_contact_that_prints_nothing_says_so)
+% status:  GREEN (Z1)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{Univ A}
+\email[show]{ann@a.org}
+\author{Bob Baker}
+\affiliation{Univ B}
+\email{bob@b.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

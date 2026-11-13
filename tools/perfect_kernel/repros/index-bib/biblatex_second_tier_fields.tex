@@ -1,0 +1,23 @@
+% biblatex's second-tier fields reach the bibliography: maintitle (its multi-volume host, mvbook),
+% booksubtitle (the book host), issuetitle (the journal's issue), eventtitle/venue/eventdate
+% (the event), editora with editoratype. Shared .bib: biblatex_second_tier_fields.bib.
+% witness: biblatex-chicago/cms-trad-sample, cms-dates-sample, cms-notes-sample, biblatex-fiwi ×4,
+%          biblatex-apa/biblatex-apa-test (~305-636 words over 19-31 manuals, sweep 123 HTML)
+% oracle:  pdflatex + biber: "In: Collected Alpha Works. Volume Name. Bravo Subtitle. Town: Pub,
+%          2001." / "Hotel Collected Papers. Golf Letters. Comp. by Karl Kilo. Pub, 2004." /
+%          "Mike Quarterly (2006): November Issue." / "In: Journal Name (2003): Foxtrot Special
+%          Issue." / "In: Proceedings Book. Delta Symposium (Echo City, May 6, 2002). 2002." /
+%          "India Lecture". Juliet Festival (Lima Hall, June 7, 2005)." (biblatex standard.bbx:211/
+%          260/309/311/578/710, biblatex.def:2999-3017/3173-3185/3230-3240)
+% engines: rust (56ir) = none of them printed: the .bib reader (bibtex.rs) filed them as unprinted
+%          ltx:bib-data; perl has no biblatex binding. HTML recall vs the oracle PDF 39.1 % (with P2).
+% expect:  0 errors; every field reaches its entry's bibblocks (HTML); recall 95.7 % (missing only
+%          biblatex's "Comp." string and the long-form date "June")
+% status:  RED (56ir) -> GREEN (P3, round 12)
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_second_tier_fields.bib}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}

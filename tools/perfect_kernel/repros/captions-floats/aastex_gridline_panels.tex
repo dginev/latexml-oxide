@@ -1,0 +1,18 @@
+% witness: 2609.21324 (aastex701 Fig 2), 2512.02147 (aastex63), 2505.20669 (Figs A1/A2), 2103.00374 — `\gridline` rows
+%          of `\fig` panels (aastex701.cls:12314-12342 `\gridline#1` = `\hbox to\hsize{#1}`, `\fig` an unnumbered panel)
+% oracle:  pdflatex 0 errors: four panels in two rows, sub-captions (a)-(d), one "Figure 1"
+% engines: rust 64c7 = the figure holds its caption only, every panel lost (aas_support `\gridline{}` read as nothing);
+%          Perl the same (aas_support.sty.ltxml:208)
+% expect:  0 errors; four child ltx:figure panels (graphics + caption), a break between the rows, one Figure 1
+% status:  RED (64c7) -> GREEN (64e)
+\documentclass{aastex701}
+\begin{document}
+\begin{figure*}
+\gridline{\fig{figs/a.eps}{0.4\textwidth}{(a) left}
+          \fig{figs/a.eps}{0.4\textwidth}{(b) right}}
+\gridline{\leftfig{figs/a.eps}{0.3\textwidth}{(c)}
+          \rightfig{figs/a.eps}{0.3\textwidth}{(d)}}
+\caption{Four panels in two rows.}\label{f:grid}
+\end{figure*}
+See Figure~\ref{f:grid}.
+\end{document}

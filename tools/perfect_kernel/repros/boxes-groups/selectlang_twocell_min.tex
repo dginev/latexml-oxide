@@ -1,0 +1,19 @@
+% witness: uantwerpendocs/uantwerpenexam-example2 (uantwerpenexam.cls:426) -- SHRUNK
+% oracle:  pdflatex 0 errors
+% engines: rust=5 perl=3 (2026-09-03)
+% expect:  0 errors; two <ltx:td> cells render
+% status:  GREEN (b54w, batch 54p)
+% mechanism: same as selectlang_in_cell_uantwerpen; minipage NOT required -- the sole
+%   trigger is babel \selectlanguage inside a NON-first tabular cell (the \aftergroup
+%   \bbl@pop@language firing at cell-group close on the \lx@begin@alignment frame).
+%   \selectlanguage in the first cell only (single row) is CLEAN; it needs the cell
+%   boundary (& then \selectlanguage) to expose the frame desync.
+\documentclass{article}
+\usepackage[dutch,english]{babel}
+\begin{document}
+\begin{tabular}{cc}%
+\selectlanguage{english}A%
+&
+\selectlanguage{dutch}B%
+\end{tabular}
+\end{document}

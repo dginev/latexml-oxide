@@ -1,0 +1,18 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `=2`) counts nothing where every
+%   printed word is placed once: an entry several creators share counts once (one printed `\affiliation` under two authors),
+%   an ORCID link's logo prints no word its target doesn't hold, a separator's `and` is no author's word
+% witness: 2103.04797 (revtex's shared `\affiliation`), 2607.00684 (`\orcidlink{…}` beside each name)
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker1,2*"; "1 Univ A, Town", "ann@a.org", "2 Univ B, City"
+% engines: rust int146a, the switch on: no Warning
+% expect:  the switch on: 0 errors, 0 warnings; Ann Able an affiliation and an e-mail, Bob Baker a note and two affiliations
+% status:  GREEN (perfect_kernel_batchn2::a_clean_block_counts_nothing)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{orcidlink}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\orcidlink{0000-0001-2345-6789} \and Bob Baker\inst{1,2}\thanks{Corresponding author.}}
+\institute{Univ A, Town\\ \email{ann@a.org} \and Univ B, City}
+\maketitle
+Body.
+\end{document}

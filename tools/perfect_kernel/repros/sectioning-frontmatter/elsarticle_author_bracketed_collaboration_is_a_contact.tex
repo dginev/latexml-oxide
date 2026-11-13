@@ -1,0 +1,23 @@
+% mechanism: an author call printing only a bracketed collaboration after the names (`(for the XYZ Collaboration)`) is
+%   their collaboration contact, as "on behalf of" is: the reading reads the framing from the digested line
+%   (`resolver::lines::frames_the_names`: brackets, dashes, "for", "on behalf of", "representing"); a dashed one
+%   (`-- XYZ Collaboration --`, hep-ph0502212's framing) is the guard's row. OXIDIZED_DESIGN_DIVERGENCES #967.
+% witness: synthetic (the framing `collaboration_core` reads: hep-ph0502212's dashes, 1511.01102's brackets)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able, Bob Baker", "Univ X", "(for the XYZ Collaboration)"
+% engines: rust P5bbase: a third creator "(for the XYZ Collaboration)" (`-- XYZ Collaboration --`: a third creator "XYZ
+%   Collaboration", its dashes lost); perl: a third creator
+% expect:  0 errors, 0 warnings; two creators, each with the address and the collaboration "(for the XYZ
+%   Collaboration)" (perfect_kernel_batchp5b::a_framed_collaboration_call_is_the_names_contact)
+% status:  RED (P5bbase) -> GREEN (P5b)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\address{Univ X}
+\author{(for the XYZ Collaboration)}
+\end{frontmatter}
+Text.
+\end{document}

@@ -1,0 +1,14 @@
+% combine.cls:31-50 reads `colclass=<class>` from the class options before `\ProcessOptions`, so every other option
+% (:105 `\DeclareOption*`) is passed to that class; Rust read it in `\DeclareOption*`, in turn, so `11pt` before it
+% went to article.
+% witness: review of batch 77v (probe rev77v/cb1.tex)
+% oracle:  pdflatex "amsart takes 11pt: yes. article: no."
+% engines: rust (77v-rel) "amsart takes 11pt: no. article: yes."
+% expect:  "amsart takes 11pt: yes. article: no."; 0 errors
+% status:  RED -> GREEN (77v r2; guard perfect_kernel_batch77v::combine_colclass_gets_the_class_options)
+\documentclass[11pt,colclass=amsart]{combine}
+\begin{document}
+\makeatletter
+amsart takes 11pt: \@ifclasswith{amsart}{11pt}{yes}{no}. article: \@ifclasswith{article}{11pt}{yes}{no}.
+\makeatother
+\end{document}

@@ -1,0 +1,23 @@
+% witness: review of 68z (nit 4: the \multicolumn omit count outlived its cell)
+% oracle:  pdflatex 3 errors on the misplaced \multicolumn (Misplaced \omit, then 2 undefined \@classz); the \omit cells
+%          are text holding the inline formulas y^2 and w^2, 0 errors there
+% expect:  the misplaced \multicolumn's errors only; the count of a \multicolumn's \omits is the alignment's and is
+%          cleared at the cell's end (tex_tables.rs MULTICOLUMN_OMITS), so a later \omit cell of the same or a later
+%          amsmath alignment is still boxed as text
+% status:  GREEN (batch 68z round 2, perfect_kernel_batch68z::a_misplaced_multicolumn_leaves_later_omit_cells_text);
+%          67int17b 3 errors (both formulas "Script ^"), 68z round 1 2 (the y^2 cell)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation}
+\begin{aligned}
+a &= b \multicolumn{2}{l}{c} \\
+&x &\omit $y^2$ & z
+\end{aligned}
+\end{equation}
+\begin{equation}
+\begin{aligned}
+&u &\omit $w^2$ & v
+\end{aligned}
+\end{equation}
+\end{document}

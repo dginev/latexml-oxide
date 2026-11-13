@@ -1,0 +1,19 @@
+% authblk `\affil[2]{Univ Y\authorcr Emails: $^1$zz@x.org, $^2$qq@y.org}` under `\author[1]{Ann Bee}`,
+% `\author[2]{Carl Dee}`: each address is led by its own number, the mark a name requests (authblk's `[1]`, read off
+% the name as its request): `zz@`, which spells no one, is Ann Bee's though only Carl Dee carries the entry — marks win
+% over the only-carrier step (user ruling R1; review rev106a B1; OD #966).
+% witness: 1706.04764, 2505.11901 (`$^1$a@x, $^2$b@y` lines, each address spelled there)
+% oracle:  pdflatex 0 errors: "Ann Bee1 and Carl Dee2", "1Univ X", "2Univ Y", "Emails: 1zz@x.org, 2qq@y.org"
+% engines: rust 106a r1 = both addresses Carl Dee's (the only carrier); int133a = the line in Univ Y's text
+% expect:  0 errors, 0 warnings; Ann Bee: Univ X, e-mail zz@x.org; Carl Dee: Univ Y, e-mail qq@y.org; named "Emails: "
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Ann Bee}
+\author[2]{Carl Dee}
+\affil[1]{Univ X}
+\affil[2]{Univ Y\authorcr Emails: $^1$zz@x.org, $^2$qq@y.org}
+\begin{document}
+\maketitle
+Hello.
+\end{document}

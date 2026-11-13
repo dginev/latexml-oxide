@@ -1,0 +1,14 @@
+% mechanism: `compile_route` (latexml_oxide/src/converter.rs, CLASS_IN_USE) reads a followed `\input` file's
+%   `\def\documentstyle{…}` as a USE of `\documentstyle`, so a plain TeX paper whose macro package redefines it
+%   (mtexsis.tex:1857 `\def\documentstyle{\LaTeXwarning}`) is routed as LaTeX: the LaTeX format is preloaded and
+%   LaTeX's `\line` (the picture object) replaces plain's `\hbox to\hsize`. The routing is the bug; the 64zf
+%   `\line` Warning only shows it. The cue should match `\documentstyle` used, not defined.
+% witness: hep-lat9301012 (`\input mtexsis`; 3 `Warning:unexpected:\line`, 64zf A/B)
+% oracle:  tex (plain) 0 errors, "Left Right" across the line
+% engines: rust 64zf = routed LaTeX, 1 Warning:unexpected:\line; Perl n/a (Perl has no compile route)
+% expect:  0 errors, 0 warnings; a plain \hsize-wide "Left Right"
+% status:  RED (64zf: filed for the routing, compile_route CLASS_IN_USE)
+% preload: ar5iv.sty
+\input plain_input_defining_documentstyle_routes_plain.def
+\line{Left\hfil Right}
+\bye

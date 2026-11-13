@@ -1,0 +1,17 @@
+% A `\quad` in a group of its own (`{\quad}`) is a `\quad`: it parts the names and the marked institutions alike.
+% witness: 2609.03563 (`Byeongjun Park$^{1}${\quad} Byung-Hoon Kim$^{1,2,*}${\quad} … \\ $^{1}$EverEx{\quad}$^{2}$Yonsei
+%          University{\quad}…`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1,2 Cat Cole3", then "1 Univ A 2 Univ B 3 Univ C"
+% engines: rust int111d = one creator "Ann Able Bob Baker Cat Cole2,3" with one affiliation "Univ A 2Univ B 3Univ C",
+%          0 errors (silent); Perl one creator with "Univ A Univ B Univ C"
+% expect:  0 errors, 0 warnings; three creators, each with the universities its marks name
+% status:  RED (int111d) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}${\quad} Bob Baker$^{1,2}${\quad} Cat Cole$^{3}$ \\
+$^{1}$Univ A{\quad}$^{2}$Univ B{\quad}$^{3}$Univ C}
+\maketitle
+x
+\end{document}

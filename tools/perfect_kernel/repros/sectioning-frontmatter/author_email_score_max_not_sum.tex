@@ -1,0 +1,15 @@
+% witness: 2602.07835 (`khan.muhammad@ieee.org` under Khan Muhammad and Muhammad Haris Khan; the 77p r5 re-review's
+%          probe k3)
+% oracle:  pdflatex 0 errors: the address under both names
+% engines: rust 77p r5 = 0 errors; the address Muhammad Haris Khan's, his "khan" + "muhammad" + "khanmuhammad" (24)
+%          outscoring Khan Muhammad's "muhammad" + "khan" (12): one spelling counted twice; int34a Khan Muhammad's
+% expect:  0 errors, 0 warnings; a name scores the better of its words apart and a joined spelling: 12 and 12, the tie
+%          to the surname's spelling, Khan Muhammad
+% status:  RED (77p r5) -> GREEN (77p r6)
+\documentclass{article}
+\title{T}
+\author{Khan Muhammad$^{1}$, Muhammad Haris Khan$^{1}$\\ $^1$MBZUAI\\ {\tt\small khan.muhammad@ieee.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

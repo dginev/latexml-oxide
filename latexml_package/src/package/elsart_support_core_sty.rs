@@ -3,60 +3,80 @@
 //! Shared by elsart.cls and elsarticle.cls
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): the kernel's reading,
+/// written (97e, OD #948), for the `\author[keys]{…}` of elsarticle, elsart and the classes keeping this binding's
+/// (entics, arxbj; not autart, which loads OmniBus and its own `\address`, autart_cls.rs, and only this binding's keyword
+/// markup): their title prints its notes in the body's arabic `\thefootnote` (elsarticle.cls:819, :836
+/// `\gdef\thefootnote{\arabic{footnote}}`, no `\@fnsymbol` in its `\maketitle`; elsart.cls v2.18 :1107-1108
+/// `\xarabic{footnote}` for the authors' notes), so `M.~Pesce-Rollins\footnotemark[1]` shows "1", not the kernel's "∗";
+/// and an `\address[key]`/`\affiliation[key]` key is never printed — the class prints the entry's place, `\theaffn`
+/// (elsarticle.cls:656-662), `\theaddress` (elsart.cls :1135-1164) —, so no footnote's mark answers it (`keyed_labels`;
+/// 1108.0201's `\address[*]{current address}`, which pdflatex prints "bb current address" and no author requests); the
+/// authors' keys do, and a mark typed by hand, as keys in order spell the places printed (0907.5014). Not handled (rare):
+/// old elsart's proofing switch prints the key itself (`\if@Elproofing \def\@eltag{#4}`, elsart.cls v2.12 :1026), where
+/// `keyed_labels` is wrong
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "elsart",
+  binding: "elsart_support_core.sty",
+  title_marks: FmTitleMarks::Body,
+  keyed_labels: true,
+  // (elsarticle's title page prints `\elsauthors`, never `\@author`, a setter of its own there: elsarticle.cls:247-288,
+  // :805, :848 — a document's tail on `\@author` prints nowhere, FX27b; not old elsart.cls's, unverified)
+  title_page: FmTitlePageDecl {
+    author: FmAuthorPage::Own(&["elsarticle.cls"]),
+    // (its `\maketitle` never runs `\@maketitle`, `\elsarticleprelims\pprintMaketitle` and its journal variants:
+    // elsarticle.cls:918-989; a document's own prints nowhere, TP1b)
+    maketitle_runs: &[(
+      "elsarticle.cls",
+      FmMaketitleRuns::Never,
+      "elsarticle.cls:918-989",
+    )],
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
+  cite: "elsarticle.cls:656-662, :819, :836; elsart.cls v2.18 :1107-1108, :1135-1164; OD #948 (1108.0201)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Frontmatter environment (Perl PR #2767)
   DefPrimitive!(T_CS!("\\begin{frontmatter}"), None, None);
   DefPrimitive!(T_CS!("\\end{frontmatter}"), None, None);
+  // The environment's begin macro, which `\newenvironment{frontmatter}{}{\maketitle}` (elsarticle.cls:1303) defines
+  // empty: a bare `\frontmatter` before `\maketitle` is a no-op (1111.1604, 2007.04268, 1309.1731), as OmniBus's.
+  Let!("\\frontmatter", "\\@empty");
 
   // \author[mark]{name}
   // One \author per author! possibly with a mark to connect to affiliation
   // It either should be followed by \affiliation,
   // or both should get matching marks
+  // (elsarticle prints the argument as written, so a name list in one `\author{Ann Able, Bob Baker}` is several people:
+  // read as the per-author classes read theirs, each name given the marks; Perl's elsart_support_core.sty.ltxml:35-36
+  // makes one creator. 2511.07560, 2401.02456)
   DefMacro!("\\author OptionalSemiverbatim {}",
-    "\\lx@add@creator[role=author,annotations={#1}]{#2}");
+    "\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@add@authors@append[annotations={#1}]{#2}");
 
+  // (elsarticle puts an `\address` into the author list after the authors before it, elsarticle.cls:665-668, and an
+  // `\affiliation` into the address list after all of them, :647-653; with no labels to link them, an unlabelled one is
+  // read by authoring order: the run of authors with none yet, `annotate=run` as `\lx@els@shared` chooses (2609.06522,
+  // 2609.07632). Once an author is labelled, an unlabelled one names no author — `corresponding author={…}`,
+  // 2609.07780 — and stays the last's, as in Perl; a labelled one is found by its label, which `annotate` leaves alone)
+  DefMacro!("\\lx@els@shared",
+    "\\ifdefined\\lx@els@labelled\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi");
   DefMacro!("\\address OptionalSemiverbatim {}",
-    "\\lx@add@contact[label={#1},role=address]{#2}");
+    "\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}{\\lx@add@contact[label={#1},role=address,annotate=run]}{#2}");
   // \affiliation[label]{text-OR-keyvals} !!  (Perl PR #2767)
   DefMacro!("\\affiliation OptionalSemiverbatim {}",
-    "\\lx@add@contact[label={#1},role=affiliation]{\\lx@els@parse@affiliation{#2}{#2}}");
+    "\\lx@els@shared{\\lx@add@contact[label={#1},role=affiliation]}\
+     {\\lx@add@contact[label={#1},role=affiliation,annotate=run]}{\\lx@els@parse@affiliation{#2}}");
 
-  // Detect if affiliation is just text, or keyvals; if latter, format into text.
-  DefMacro!("\\lx@els@parse@affiliation {} RequiredKeyVals", sub[(raw, data)] {
-    let pairs: Vec<(String, ArgWrap)> = data.get_pairs().cloned().collect();
-    // 1 key, novalue: No Keyvals at all!
-    if pairs.len() <= 1
-      && pairs.first().is_none_or(|(_, v)| matches!(v, ArgWrap::None))
-    {
-      Ok(raw)
-    } else {
-      let mut affil: Vec<Token> = Vec::new();
-      for (key, value) in pairs {
-        if matches!(key.as_str(),
-          "o" | "or" | "organization"
-          | "a" | "ad" | "addressline"
-          | "c" | "ci" | "city"
-          | "p" | "pc" | "postcode"
-          | "s" | "st" | "state"
-          | "country")
-        {
-          if !affil.is_empty() {
-            affil.push(T_OTHER!(","));
-            affil.push(T_SPACE!());
-          }
-          match value {
-            ArgWrap::Tokens(tks) => affil.extend(tks.unlist()),
-            ArgWrap::None => {},
-            other => affil.extend(other.revert()?.unlist()),
-          }
-        }
-      }
-      Ok(Tokens::new(affil))
-    }
-  });
+  // The affiliation as the class prints it from its `stm/affiliation` keys ([`stm_affiliation`]).
+  DefMacro!("\\lx@els@parse@affiliation {}", sub[(raw)] { stm_affiliation(raw, true) });
   // Redefine to account for the label, which we ignore for now!
-  DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>");
+  DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
   // Is this significantly different?
   // Perl elsart_support_core.sty.ltxml: body is `\author{#1}` but in
@@ -96,20 +116,32 @@ LoadDefinitions!({
   def_macro_noop("\\runauthor{}")?;
   def_macro_noop("\\runtitle{}")?;
   DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
-  // \ead[label]{email} provides email address for the preceding \author (no marks used)
+  // \ead[label]{email} provides email address for the preceding \author (no marks used), set in typewriter type
+  // (elsarticle.cls:215-219 `{\ttfamily\expandafter\strip@prefix\meaning\@@tmp}`, :232-235 a `[url]`'s;
+  // 1601.03650 `vuongbv_56@…`)
   DefMacro!("\\ead Optional:email Semiverbatim",
-    "\\lx@add@contact[role=#1]{#2}");
+    "\\lx@add@contact[role=#1]{\\lx@address@urlfont{#2}}");
   DefMacro!("\\sep", "\\unskip,\\space");
   DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");
   DefMacro!("\\revised{}", "\\lx@add@date[role=revised]{#1}");
   DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted]{#1}");
   DefMacro!("\\communicated{}", "\\lx@add@date[role=communicated]{#1}");
-  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // No label, as elsart.cls prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (quant-ph0004056's copy): :1165-1168 the
+  // dedication centred in italics, :1131 the article's type, :1080-1081 and :1203 the volume in "Article published in
+  // J V (year) pages", the issue stored, not printed (elsarticle.cls defines none of the four). `\journal` below keeps
+  // the role's label: what the class prints around it depends on the version (SYNC_STATUS, the 92e row).
+  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
   DefMacro!("\\presented{}", "\\lx@add@date[role=presented]{#1}");
-  DefMacro!("\\articletype{}", "\\lx@add@pubnote[role=type]{#1}");
-  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=issue]{#1}");
-  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
-  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  DefMacro!("\\articletype{}", "\\lx@add@pubnote[role=type,name={}]{#1}");
+  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=issue,name={}]{#1}");
+  // elsarticle.cls:1301-1302 (TL v3.4c; elsart.cls v2.18:1215 alike): `\journal` stores the journal's name in
+  // `\@journal`, empty until set (elsarticle.cls:1302 `\let\@journal\@empty`, after :32's "Elsevier Ltd" served its
+  // `\ProvidesClass` line; elsart.cls keeps its publisher, v2.18:28 "Elsevier Science", which elsart_cls.rs sets), which
+  // the class's first-page footer prints ("Preprint submitted to \@journal") and papers' own footers and title code read (run-347 inventory: 48 elsarticle papers, 32 with a copy of their own, 13 elsart;
+  // 1212.6083, 1007.3192, 0812.4577): the frontmatter keeps it as a note, the store as the class keeps it.
+  RawTeX!(r"\let\@journal\@empty");
+  DefMacro!("\\journal{}", "\\gdef\\@journal{#1}\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume,name={}]{#1}");
   DefMacro!("\\pubyear{}", "\\lx@add@date[role=publication]{#1}");
   def_macro_noop("\\FullCopyrightText")?;
   DefMacro!("\\copyear{}", "\\lx@add@copyrightyear{#1}");
@@ -145,7 +177,258 @@ LoadDefinitions!({
   // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
   // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
 
-  // Keywords — Perl L130-153
+  // Keywords — Perl L130-153 (`define_keyword_markup`, which autart.cls's binding shares: autart.cls carries
+  // elsart.cls's `{keyword}`, autart.cls:1248-1258 of 1106.2518's copy).
+  define_keyword_markup()?;
+
+  // Document structure — Perl L158-163
+  DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
+  DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
+
+  // Per-section equation numbering — Perl L161-163.
+  // Emit `\@addtoreset{equation}{section}` + per-section
+  // `\theequation` when the `seceqn` class option is active.
+  if lookup_bool("@seceqn") {
+    RawTeX!(r"\@addtoreset{equation}{section}");
+    DefMacro!("\\theequation", "\\thesection.\\arabic{equation}");
+  }
+
+  // Theorems — Perl elsart_support_core.sty.ltxml L200-204: `{thm}` is elsart.cls's, declared by elsart_support_sty.rs;
+  // elsarticle.cls has none (its own `\newdefinition` :1154, `\newproof` :1200), so an elsarticle preamble's
+  // `\newcommand{\thm}` stands (2212.01438; Perl gives elsarticle the `{thm}` too, KNOWN_PERL_ERRORS #965).
+  Let!("\\newdefinition", "\\newtheorem");
+  Let!("\\newproof", "\\newtheorem");
+
+  // Registers — Perl L180-183
+  DefRegister!("\\eqnarraycolsep" => Dimension!("1pt"));
+  DefRegister!("\\eqnbaselineskip" => Glue!("14pt"));
+  DefRegister!("\\eqnlineskip" => Glue!("2pt"));
+  DefRegister!("\\eqntopsep" => Glue!("12pt"));
+
+  // Figures — Perl L186-191
+  def_macro_noop("\\printfigures{}")?;
+  def_macro_noop("\\printtables{}")?;
+  def_macro_noop("\\MARK{}")?;
+  def_macro_noop("\\mpfootnotemark")?;
+
+  // Perl elsart_support_core.sty.ltxml L189:
+  //   DefMacro('\note{}', "<ltx:note>#1</ltx:note>");    # ?
+  // This is a *DefMacro* (token expansion), NOT a DefConstructor — so the
+  // body tokenises to LITERAL TEXT (`<`, `>` are catcode-OTHER): `\note{X}`
+  // expands to the characters `<ltx:note>` + X + `</ltx:note>`, NOT a real
+  // <ltx:note> element. Perl's own `# ?` flags it as questionable, but it is
+  // the ground truth and crucially is ERROR-FREE: a block argument such as
+  // `\note{\begin{remark}…\end{remark}}` (a `\newtheorem`-based environment)
+  // renders the remark as a normal <ltx:theorem> bracketed by stray literal
+  // text, with no content-model violation. Porting it as a DefConstructor
+  // (real <ltx:note>) instead made `ltx:theorem isn't allowed in <ltx:note>`
+  // — papers that wrap a theorem-like env in `\note{…}` (common with a
+  // user `\newcommand\note[1]{…}` that LaTeX/Perl *ignore* because elsart
+  // already defined `\note`) then failed. Match Perl: use DefMacro.
+  // Witness 2006.06087 (elsarticle, `\note{\begin{remark}…}`): 1 error → 0.
+  DefMacro!("\\note{}", "<ltx:note>#1</ltx:note>");
+
+  // Float environment
+  DefEnvironment!("{esmark}",  "#body");
+  def_macro_noop("\\figmark{}{}")?;
+  def_macro_noop("\\tabmark{}{}")?;
+
+  // \qed (proof end-of-proof marker). Previously only in elsart_support
+  // (NOT loaded by elsarticle.cls — only by elsart.cls), so plain
+  // elsarticle papers using \qed got `Error:undefined:\qed`. Move the
+  // def here so all elsart_*-loading classes (elsarticle + elsart)
+  // have it. Witness 2306.02411 (elsarticle Pfaffian paper).
+  DefMacro!("\\qed", "\\ltx@qed");
+  // Sized as elsart.cls:457's `$\Box$` and TL elsarticle.cls:1238 `\hbox{}\hfill$\Box$` (`\Box` from latexsym — lasy10
+  // "32, 0.747225 × 0.444446 em — or amssymb — msam10 `\square`, .777781 × .675 em: a glyph box of comparable size), so
+  // a cell or `\mbox` holding only it is not dropped as empty (Perl Alignment.pm:458-470). Synthetic: 1905.10621's
+  // cells keep amsthm's `\qed` (krudces.sty:188 loads amsthm after the class), sized by `openbox_size`.
+  DefConstructor!("\\ltx@qed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    enter_horizontal => true,
+    reversion => "\\qed",
+    sizer => sub[whatsit] {
+      Ok(engine::latex_constructs::symbol_box_size(
+        whatsit,
+        0.747225,
+        0.444446,
+        engine::latex_constructs::FontUnit::Em,
+      ))
+    });
+});
+
+/// The separator slots of the `stm/affiliation` keys, in [`stm_affiliation`]'s order.
+const STM_ORGANIZATION: usize = 0;
+const STM_ADDRESS_LINE: usize = 1;
+const STM_CITY: usize = 2;
+const STM_POSTAL_CODE: usize = 3;
+const STM_STATE: usize = 4;
+const STM_COUNTRY: usize = 5;
+
+/// `\affiliation`'s argument printed as elsarticle.cls:387-440 and cas-common.sty:1118-1160 print their
+/// `stm/affiliation` keys (the value commands at elsarticle.cls:330-356, cas-common.sty:1061-1090): `organization`
+/// (`o`, `or`, and in elsarticle `organisation`), `addressline` (`a`, `ad`), `city` (`c`, `ci`), `postcode` (`p`,
+/// `pc`) and `state` (`s`, `st`) as the value, its separator — `,` unless `<key>sep` (`op`, `ap`, `cp`, `pp`, `sp`,
+/// `orp`, …) gave another — and a space; `country` (`cy`) as the value and its own separator (`cyp`, none by
+/// default); a key the set does not know as its value, or, given none, its own text, and a space. So
+/// `organization={X}, city={Y}, citysep={}, postcode={1}` is "X, Y 1" (2609.01851), and a braced `{ARTORG Center,}`
+/// part is kept (2609.04891). Three departures from the PDF (OXIDIZED_DESIGN_DIVERGENCES #472): an argument with no
+/// key at all (`Univ, City, Country`) is kept as written, its commas with it, where the class reads each part as an
+/// unknown key and drops them; the separator the class leaves after a last part that is not a country ("Univ A,") is
+/// not kept; a key's own text is typeset, not printed as its string. Perl (PR #2767) joined the known values with
+/// ", " and dropped the rest (KNOWN_PERL_ERRORS #545). `elsarticle` selects that class's set, which cas-common lacks
+/// two keys of (`organisation`, `oraganisationsep`).
+pub fn stm_affiliation(raw: Tokens, elsarticle: bool) -> Result<Tokens> {
+  let items = top_level_items(raw.unlist_ref(), ',');
+  if items
+    .iter()
+    .all(|item| top_level_items(item, '=').len() < 2)
+  {
+    return Ok(raw);
+  }
+  // `\__reset_affiliation:` (cas-common.sty:1164-1172) before each `\affiliation`
+  let mut separators: [Vec<Token>; 6] = [
+    vec![T_OTHER!(",")],
+    vec![T_OTHER!(",")],
+    vec![T_OTHER!(",")],
+    vec![T_OTHER!(",")],
+    vec![T_OTHER!(",")],
+    Vec::new(),
+  ];
+  // Each value is set down with its separator's macro (`\ca_aff_city[\l_city_punc_tl]{…}`), which the class expands
+  // only when it assembles the affiliation (cas-common.sty:1262 `\csxdef`): a `citysep={}` after the `city` still
+  // applies. So the parts are kept with their separator slot, and the separators read at the end.
+  let mut parts: Vec<(Vec<Token>, Option<usize>)> = Vec::new();
+  for item in items {
+    let (key, value) = match top_level_items(&item, '=').as_slice() {
+      [key] => (unbraced(key), None),
+      [key, value @ ..] => (unbraced(key), Some(unbraced(&value.join(&T_OTHER!("="))))),
+      [] => continue,
+    };
+    if key.is_empty() && value.is_none() {
+      continue;
+    }
+    let name = Tokens::new(key.clone()).to_string();
+    let separator_key = match name.as_str() {
+      "op" | "oraganizationsep" | "orp" => Some(STM_ORGANIZATION),
+      "oraganisationsep" if elsarticle => Some(STM_ORGANIZATION),
+      "ap" | "addresslinesep" | "adp" => Some(STM_ADDRESS_LINE),
+      "cp" | "citysep" | "cip" => Some(STM_CITY),
+      "pp" | "postcodesep" | "pcp" => Some(STM_POSTAL_CODE),
+      "sp" | "statesep" | "stp" => Some(STM_STATE),
+      "cyp" => Some(STM_COUNTRY),
+      _ => None,
+    };
+    if let Some(slot) = separator_key {
+      separators[slot] = value.unwrap_or_default();
+      continue;
+    }
+    let value_key = match name.as_str() {
+      "o" | "or" | "organization" => Some(STM_ORGANIZATION),
+      "organisation" if elsarticle => Some(STM_ORGANIZATION),
+      "a" | "ad" | "addressline" => Some(STM_ADDRESS_LINE),
+      "c" | "ci" | "city" => Some(STM_CITY),
+      "p" | "pc" | "postcode" => Some(STM_POSTAL_CODE),
+      "s" | "st" | "state" => Some(STM_STATE),
+      "cy" | "country" => Some(STM_COUNTRY),
+      _ => None,
+    };
+    match value_key {
+      Some(slot) => parts.push((value.unwrap_or_default(), Some(slot))),
+      // the unknown key's value, or its own text (`\l_keys_key_tl`)
+      None => parts.push((value.filter(|v| !v.is_empty()).unwrap_or(key), None)),
+    }
+  }
+  // A separator separates: none follows a last part that is not the country, where the class, expecting a `country`
+  // there, prints one with nothing after it ("Univ A," for a lone `organization`); the country's own (`cyp`) stays.
+  let mut out: Vec<Token> = Vec::new();
+  let count = parts.len();
+  for (i, (value, slot)) in parts.into_iter().enumerate() {
+    out.extend(value);
+    if i + 1 == count && slot != Some(STM_COUNTRY) {
+      break;
+    }
+    if let Some(slot) = slot {
+      out.extend(separators[slot].iter().copied());
+    }
+    if slot != Some(STM_COUNTRY) {
+      out.push(T_SPACE!());
+    }
+  }
+  while out
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    out.pop();
+  }
+  Ok(Tokens::new(out))
+}
+
+/// `tokens` split at each brace-depth-0 character `c`, each part without its surrounding spaces.
+fn top_level_items(tokens: &[Token], c: char) -> Vec<Vec<Token>> {
+  let delimiter = pin(c.to_string());
+  let mut parts: Vec<Vec<Token>> = vec![Vec::new()];
+  let mut depth: i32 = 0;
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      Catcode::OTHER if depth == 0 && t.text == delimiter => {
+        parts.push(Vec::new());
+        continue;
+      },
+      _ => {},
+    }
+    parts.last_mut().unwrap().push(*t);
+  }
+  parts.into_iter().map(|part| trimmed(&part)).collect()
+}
+
+/// `tokens` without leading or trailing spaces.
+fn trimmed(tokens: &[Token]) -> Vec<Token> {
+  let start = tokens
+    .iter()
+    .position(|t| t.get_catcode() != Catcode::SPACE)
+    .unwrap_or(tokens.len());
+  let end = tokens
+    .iter()
+    .rposition(|t| t.get_catcode() != Catcode::SPACE)
+    .map_or(start, |e| e + 1);
+  tokens[start..end].to_vec()
+}
+
+/// `tokens` trimmed, and without the braces of a group that is all of it (`{ARTORG Center,}`), as the key-value
+/// parser strips one level.
+fn unbraced(tokens: &[Token]) -> Vec<Token> {
+  let tokens = trimmed(tokens);
+  if tokens.len() >= 2
+    && tokens[0].get_catcode() == Catcode::BEGIN
+    && tokens[tokens.len() - 1].get_catcode() == Catcode::END
+  {
+    // the first brace must close at the very end
+    let mut depth = 0;
+    for (i, t) in tokens.iter().enumerate() {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 && i + 1 < tokens.len() {
+            return tokens;
+          }
+        },
+        _ => {},
+      }
+    }
+    return tokens[1..tokens.len() - 1].to_vec();
+  }
+  tokens
+}
+
+/// elsart.cls's `{keyword}` markup: the keywords, then the `\PACS`, `\MSC`, `\JEL` and `\UK` classifications that
+/// cut them, `\sep` between the entries (Perl elsart_support_core.sty.ltxml:130-153). autart.cls carries elsart.cls's
+/// (autart.cls:1248-1258 of 1106.2518's copy), so its binding defines the same (autart_cls.rs).
+#[rustfmt::skip]
+pub fn define_keyword_markup() -> Result<()> {
   // keyword environment and macros with XUntil pattern
   // Perl L135-152: \begin{keyword}/\end{keyword} use DefMacroI with begingroup/endgroup,
   // NOT DefEnvironment!, to properly scope the XUntil delimiter reading.
@@ -265,79 +548,5 @@ LoadDefinitions!({
   DefMacro!("\\@MSC{} XUntil:\\@keyword@cut", "\\lx@add@classification[scheme={#1 MSC},name={MSC:~}]{#2}");
   DefMacro!("\\@JEL XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=JEL,name={JEL:~}]{#1}");
   DefMacro!("\\@UK XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=UK,name={UK:~}]{#1}");
-
-  // Document structure — Perl L158-163
-  DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
-  DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
-
-  // Per-section equation numbering — Perl L161-163.
-  // Emit `\@addtoreset{equation}{section}` + per-section
-  // `\theequation` when the `seceqn` class option is active.
-  if lookup_bool("@seceqn") {
-    RawTeX!(r"\@addtoreset{equation}{section}");
-    DefMacro!("\\theequation", "\\thesection.\\arabic{equation}");
-  }
-
-  // Theorems — Perl elsart_support_core.sty.ltxml L168-175.
-  // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
-  // class option):
-  //   if @seceqn:  `\newtheorem{thm}{Theorem}[section] \@addtoreset{thm}{section}`
-  //   else      :  `\newtheorem{thm}{Theorem}`
-  // Then aliases `\newdefinition` and `\newproof` to `\newtheorem`
-  // (elsdoc §7).
-  // The base `\newtheorem{thm}` declaration was missing in the prior
-  // Rust port — every `\begin{thm}` in elsart papers reported
-  // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
-  if lookup_bool("@seceqn") {
-    RawTeX!(r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}");
-  } else {
-    RawTeX!(r"\newtheorem{thm}{Theorem}");
-  }
-  Let!("\\newdefinition", "\\newtheorem");
-  Let!("\\newproof", "\\newtheorem");
-
-  // Registers — Perl L180-183
-  DefRegister!("\\eqnarraycolsep" => Dimension!("1pt"));
-  DefRegister!("\\eqnbaselineskip" => Glue!("14pt"));
-  DefRegister!("\\eqnlineskip" => Glue!("2pt"));
-  DefRegister!("\\eqntopsep" => Glue!("12pt"));
-
-  // Figures — Perl L186-191
-  def_macro_noop("\\printfigures{}")?;
-  def_macro_noop("\\printtables{}")?;
-  def_macro_noop("\\MARK{}")?;
-  def_macro_noop("\\mpfootnotemark")?;
-
-  // Perl elsart_support_core.sty.ltxml L189:
-  //   DefMacro('\note{}', "<ltx:note>#1</ltx:note>");    # ?
-  // This is a *DefMacro* (token expansion), NOT a DefConstructor — so the
-  // body tokenises to LITERAL TEXT (`<`, `>` are catcode-OTHER): `\note{X}`
-  // expands to the characters `<ltx:note>` + X + `</ltx:note>`, NOT a real
-  // <ltx:note> element. Perl's own `# ?` flags it as questionable, but it is
-  // the ground truth and crucially is ERROR-FREE: a block argument such as
-  // `\note{\begin{remark}…\end{remark}}` (a `\newtheorem`-based environment)
-  // renders the remark as a normal <ltx:theorem> bracketed by stray literal
-  // text, with no content-model violation. Porting it as a DefConstructor
-  // (real <ltx:note>) instead made `ltx:theorem isn't allowed in <ltx:note>`
-  // — papers that wrap a theorem-like env in `\note{…}` (common with a
-  // user `\newcommand\note[1]{…}` that LaTeX/Perl *ignore* because elsart
-  // already defined `\note`) then failed. Match Perl: use DefMacro.
-  // Witness 2006.06087 (elsarticle, `\note{\begin{remark}…}`): 1 error → 0.
-  DefMacro!("\\note{}", "<ltx:note>#1</ltx:note>");
-
-  // Float environment
-  DefEnvironment!("{esmark}",  "#body");
-  def_macro_noop("\\figmark{}{}")?;
-  def_macro_noop("\\tabmark{}{}")?;
-
-  // \qed (proof end-of-proof marker). Previously only in elsart_support
-  // (NOT loaded by elsarticle.cls — only by elsart.cls), so plain
-  // elsarticle papers using \qed got `Error:undefined:\qed`. Move the
-  // def here so all elsart_*-loading classes (elsarticle + elsart)
-  // have it. Witness 2306.02411 (elsarticle Pfaffian paper).
-  DefMacro!("\\qed", "\\ltx@qed");
-  DefConstructor!("\\ltx@qed",
-    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
-    enter_horizontal => true,
-    reversion => "\\qed");
-});
+  Ok(())
+}

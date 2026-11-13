@@ -12,10 +12,35 @@
 //!
 //! Witness: 2501.13802, 2501.14238, 2501.16855, 2501.17381, 2502.01404,
 //! 2502.02753, 2502.06743 — all `Error:undefined:\sep`.
-use latexml_package::prelude::*;
+//!
+//! The base class is the one ceurart.cls loads, scrartcl (OXIDIZED_DESIGN_DIVERGENCES #736): the paper's copy, read
+//! after the binding, finds it loaded, so its own `\LoadClass{scrartcl}` is a repeat and its KOMA calls
+//! (`\KOMAoptions{DIV=10}`, :63-68) meet KOMA (2509.11496, 2608.23214, 2310.02658, 2505.16276). OmniBus, the base
+//! this binding had before, is provided over it ([`provide_over_base_class`]): its `{keywords}` environment and the
+//! frontmatter setters scrartcl leaves undefined.
+use latexml_package::{package::omnibus_cls::provide_over_base_class, prelude::*};
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  // ceurart.cls:50-62: its own options (the layout and review switches) and every other option passed to scrartcl,
+  // with `a4paper,twoside=false`, then `\LoadClass{scrartcl}`.
+  for option in [
+    "twocolumn",
+    "hf",
+    "singleblind",
+    "doubleblind",
+    "longmktitle",
+    "final",
+    "review",
+  ] {
+    DeclareOption!(option, None);
+  }
+  DeclareOption!(None, {
+    Digest!("\\PassOptionsToClass{\\CurrentOption}{scrartcl}")?;
+  });
+  Digest!("\\PassOptionsToClass{a4paper,twoside=false}{scrartcl}")?;
+  ProcessOptions!();
+  LoadClass!("scrartcl");
+  provide_over_base_class()?;
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("hyperref");
@@ -26,6 +51,12 @@ LoadDefinitions!({
   RequirePackage!("makecell");
   RequirePackage!("multirow");
   RequirePackage!("array");
+  // ceurart.cls:88 `\RequirePackage{booktabs,makecell,multirow,array,colortbl,dcolumn,stfloats}` (every sampled copy):
+  // papers shade cells with `\cellcolor` without loading colortbl (23 of run 353 with it undefined: 2212.08130,
+  // 2212.10039, 2303.14461).
+  RequirePackage!("colortbl");
+  RequirePackage!("dcolumn");
+  RequirePackage!("stfloats");
   RequirePackage!("xspace");
   RequirePackage!("calc");
   RequirePackage!("natbib");
@@ -63,21 +94,24 @@ LoadDefinitions!({
   DefMacro!("\\cormark[]", "\\textsuperscript{*#1}");
   DefMacro!("\\corref[]", "\\textsuperscript{*#1}");
 
-  // Affiliation / address — route the user-visible text to a
-  // ltx:note (allowed at document/frontmatter level; ltx:contact is
-  // not). The semantic role is captured in the role attribute so a
-  // downstream processor can still recognize an affiliation/address.
-  DefMacro!(
-    "\\affiliation[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
-  DefMacro!(
-    "\\address[]{}[]",
-    "\\@add@frontmatter{ltx:note}[role=address]{#2}"
-  );
+  // Affiliation / address: ceurart.cls:1477 `\address[label]{text}[keys]` is
+  // the affiliation of the authors whose `\author[labels]` name that label.
+  // Routed as Perl routes aas affiliations (aas_support.sty.ltxml:118
+  // `\lx@add@affiliation`), with the label matched against the creators'
+  // annotations (the elsarticle mechanism, elsart_support_core.sty.ltxml:38-42),
+  // so each lands as a `<contact role="affiliation">` inside its `<creator>`
+  // instead of a document-level `<note>` (witness arXiv 2511.11770). Guard:
+  // `binding_singletons_56::ceurart_contacts_attach_to_creators`.
+  DefMacro!("\\affiliation[]{}", "\\lx@add@affiliation[label={#1}]{#2}");
+  DefMacro!("\\address[]{}[]", "\\lx@add@affiliation[label={#1}]{#2}");
 
-  // Email-address-of-author. Preserved as a ltx:note.
-  DefMacro!("\\ead[]{}", "\\@add@frontmatter{ltx:note}[role=email]{#2}");
+  // ceurart.cls:640-643 `\ead[opt]{addr}`: an email of the preceding author,
+  // or its URL when an option is given (`\@uad`). Perl
+  // aas_support.sty.ltxml:122 `\lx@add@email` (witness arXiv 2511.11770).
+  DefMacro!(
+    "\\ead[] Semiverbatim",
+    "\\if\\relax\\detokenize{#1}\\relax\\lx@add@email{#2}\\else\\lx@add@url{#2}\\fi"
+  );
   def_macro_noop("\\eadsep")?;
   def_macro_noop("\\eadauthor")?;
 
@@ -95,8 +129,8 @@ LoadDefinitions!({
   RequirePackage!("keyval");
   RawTeX!(
     r"\define@key{lx@ceur@au}{orcid}{\lx@add@orcid{#1}}%
-\define@key{lx@ceur@au}{email}{\@add@frontmatter{ltx:note}[role=email]{#1}}%
-\define@key{lx@ceur@au}{url}{\@add@frontmatter{ltx:note}[role=url]{#1}}%
+\define@key{lx@ceur@au}{email}{\lx@add@email{#1}}%
+\define@key{lx@ceur@au}{url}{\lx@add@url{#1}}%
 \define@key{lx@ceur@au}{twitter}{\@add@frontmatter{ltx:note}[role=twitter]{#1}}%
 \define@key{lx@ceur@au}{facebook}{\@add@frontmatter{ltx:note}[role=facebook]{#1}}%
 \define@key{lx@ceur@au}{linkedin}{\@add@frontmatter{ltx:note}[role=linkedin]{#1}}%
@@ -119,14 +153,11 @@ LoadDefinitions!({
   // [role=orcid]` → clickable orcid.org link + logo icon (vs a dagger note).
   // The contact attaches to the most-recent creator. html_feedback#6571.
   DefMacro!("\\orcidauthor{}{}", "\\lx@add@orcid{#2}");
-  DefMacro!(
-    "\\urlauthor{}{}",
-    "\\@add@frontmatter{ltx:note}[role=url]{#2}"
-  );
-  DefMacro!(
-    "\\emailauthor{}{}",
-    "\\@add@frontmatter{ltx:note}[role=email]{#2}"
-  );
+  // ceurart.cls:665/689 `\urlauthor{url}{name}` / `\emailauthor{email}{name}`
+  // (written to the .aux by `\ead`): the address is #1 (witness arXiv
+  // 2511.11770).
+  DefMacro!("\\urlauthor{}{}", "\\lx@add@url{#1}");
+  DefMacro!("\\emailauthor{}{}", "\\lx@add@email{#1}");
   DefMacro!(
     "\\creditauthor{}{}",
     "\\@add@frontmatter{ltx:note}[role=credit]{#2}"
@@ -149,6 +180,30 @@ LoadDefinitions!({
 
   // Subtitle — emit as a creator / extra-title fragment.
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+  // ceurart.cls:381-500 `\title[mode=<mode>]{…}`: every call adds a line to the title block (`\g_ceur_title_seq`, printed
+  // in order by `\@title`), styled by its mode — `title` (the default, `O{mode = title}`), `sub`, `alt`, `trans`,
+  // `transsub`, `ascii` — and `\subtitle{…}` is `\title[mode=sub]{…}` (:500). The optional argument is that key list,
+  // never a short title. The main title is the `title` one; a `sub` call is the subtitle, a translated one a note, as
+  // acmart's `\translatedtitle`/`\translatedsubtitle` (acmart_cls.rs). Under the kernel `\title` (locked; the copy's
+  // `\RenewDocumentCommand\title` is refused) a `\title[mode=sub]{…}` replaced the main title (19 of the 112 ceurart
+  // papers of 2506+2509: 2509.11496, 2509.11492).
+  Let!("\\lx@ceur@title", "\\title");
+  DefMacro!("\\title[]{}", sub[(keys, text)] {
+    let mode = keys.as_ref().and_then(|keys| ceur_title_mode(&keys.to_string()));
+    let head = match mode.as_deref() {
+      Some("sub") => "\\@add@frontmatter{ltx:subtitle}",
+      Some("transsub") => "\\@add@frontmatter{ltx:note}[role=translatedsubtitle]",
+      Some("trans") => "\\@add@frontmatter{ltx:note}[role=translatedtitle]",
+      Some("alt") => "\\@add@frontmatter{ltx:note}[role=alternativetitle]",
+      Some("ascii") => "\\@add@frontmatter{ltx:note}[role=asciititle]",
+      _ => "\\lx@ceur@title",
+    };
+    let mut out = TokenizeInternal!(head).unlist();
+    out.push(T_BEGIN!());
+    out.extend(text.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  }, locked => true);
 
   // CEUR-WS conference metadata. These DO carry author content (event
   // name, date, location, etc.) — preserve as ltx:note frontmatter.
@@ -195,3 +250,11 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=volume]{#1}"
   );
 });
+
+/// The `mode` key of a ceurart `\title[<keys>]` (ceurart.cls:381-382, a `.choice:`), trimmed; `None` without one.
+fn ceur_title_mode(keys: &str) -> Option<String> {
+  keys.split(',').find_map(|pair| {
+    let (key, value) = pair.split_once('=')?;
+    (key.trim() == "mode").then(|| value.trim().to_string())
+  })
+}

@@ -1,0 +1,52 @@
+% mechanism: REVTeX 2.1 (revtex.sty v2.1, APS 1991; not in TeX Live, its source embedded in hep-lat9302012.tex) gives
+%   the title as a `{title}` environment and each author group's institution as an `{instit}` environment after its
+%   `\author` (:1340-1389), the received date as `\receipt` (:1391), and `\nonum` for an unnumbered heading
+%   (:1057-1072, here with a `\narrowtext` between them, cond-mat9303008). `{instit}` was undefined, `\begin{title}`
+%   read as `\title` with its first token as the title ("I", cond-mat9311041). revtex3_support now has them: the
+%   title, the affiliation of the authors before it (REVTeX 4's `\affiliation`), a received date, the starred heading.
+%   The `[version2,aps]{revtex}` form (cond-mat9408057) is clean; the `[preprint,revtex]{aps}` form also warns
+%   `missing_file:aps`, as Perl does.
+% witness: hep-ph9301226, cond-mat9408057, cond-mat9311041, hep-lat9402019, hep-lat9205015 (750 run-336 papers,
+%   first error `{instit}`)
+% oracle:  pdflatex, this body under `\documentstyle[preprint,revtex]{aps}` (the form the 2.1 files cut from
+%   hep-lat9302012.tex take): 0 errors; the title on two lines, each author over its institution, "(Received October
+%   1992)", "I. INTRODUCTION", "ACKNOWLEDGMENTS" unnumbered
+% engines: rust 64k: 3 errors ({instit}, \receipt, \nonum undefined), the title a first token, no affiliations;
+%   perl: the same 3 errors
+% expect:  0 errors; the whole title; each author with the institution after its `\author`; the received date; the
+%   acknowledgments heading unnumbered
+% status:  RED (base) -> GREEN (64u)
+% preload: ar5iv.sty
+\documentstyle[version2,aps]{revtex}
+\begin{document}
+\draft
+\preprint{MSUTH 92/03}
+\begin{title}
+The effects of a strongly interacting Higgs sector\\
+on scattering
+\end{title}
+\author{A. Abbasabadi}
+\begin{instit}
+Physical Sciences Department\\
+Ferris State University, Big Rapids, Michigan 49307
+\end{instit}
+\author{David Bowser-Chao}
+\begin{instit}
+Center for Particle Physics, University of Texas, Austin, Texas 78712
+\end{instit}
+\receipt{October 1992}
+\begin{abstract}
+We study the effects of a strongly interacting Higgs sector.
+\end{abstract}
+\pacs{PACS numbers: 13.85.Qk, 14.80.Er}
+\narrowtext
+\section{Introduction}
+The Higgs sector.
+\nonum
+\narrowtext
+\section{Acknowledgments}
+We thank the DOE.
+\begin{references}
+\bibitem{a} A. Author, Phys. Rev. D {\bf 1}, 1 (1990).
+\end{references}
+\end{document}

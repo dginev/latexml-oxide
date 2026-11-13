@@ -1,0 +1,14 @@
+% witness: 2609.37343 (`Nicolò Barbieri,$^{23}$` with `$^{2}$University of Ferrara`, `$^{3}$SEEDS`), seen in the 62zp A/B
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker23", "1 Univ A", "2 Univ B", "3 Univ C"
+% engines: rust (62zp) = 0 errors: Bob Baker holds no affiliation and Univ B and Univ C sit on a creator with no name
+%          (the mark `23` labels `affiliation:23`, which no affiliation sets); Perl 0.8.8 gives Bob Baker Univ B and
+%          drops "Univ C"
+% expect:  0 errors; with no affiliation labelled `23` and each of its digits labelling one, Bob Baker's creator holds
+%          Univ B and Univ C, and no creator is nameless
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}\author{Ann Able$^{1}$, Bob Baker$^{23}$\\ $^1$Univ A\\ $^2$Univ B\\ $^3$Univ C}
+\maketitle
+Text.
+\end{document}

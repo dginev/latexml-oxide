@@ -1,0 +1,18 @@
+% witness: 1405.3507 (`\IEEEauthorblockA{{\IEEEauthorrefmark{1}}Mobile Communications Department,\\ Eurecom Institute, …\\ Email: samah.ghanem@eurecom.fr;}`, the mark in a group of its own, an entry a block)
+% oracle:  pdflatex 0 errors: both names with their symbols; each block its three lines
+% engines: Perl leaks `{1}`; ours before Z14: "1Mobile Communications Department,Eurecom…" an affiliation of both names
+% expect:  0 errors, no held error; each entry its name's, its address taken out as an e-mail (perfect_kernel_batchz14::a_marked_list_in_a_plain_author_is_read_digested)
+% status:  GREEN (Z14)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{
+Ann Able\IEEEauthorrefmark{1},
+Bob Baker\IEEEauthorrefmark{2},\\
+\IEEEauthorblockA{{\IEEEauthorrefmark{1}}Dept X,\\ Univ X, Town X\\ Email: ann@x.org;}\\
+\vspace{0.2cm}
+\IEEEauthorblockA{{\IEEEauthorrefmark{2}}Dept Y,\\ Univ Y, Town Y\\ Email: bob@y.org}
+}
+\maketitle
+Body.
+\end{document}

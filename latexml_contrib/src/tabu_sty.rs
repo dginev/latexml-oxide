@@ -9,11 +9,170 @@ LoadDefinitions!({
   RequirePackage!("array");
   RequirePackage!("varwidth");
   RequirePackage!("longtable");
-  DefMacro!("\\tabu", "\\tabular");
-  DefMacro!("\\endtabu", "\\endtabular");
-  DefMacro!("\\longtabu", "\\longtable");
+  RequirePackage!("tabularx"); // tabu's `X` columns (tabu.sty:6-8 grammar)
+  // tabu.sty:2376-2381 `\tabu@latextwoe` (run by `\tabu@AtBeginDocument`, :2517/:2553): the one-step expansion of each
+  // command plus `\arraybackslash`, so `\\` after it ends the row (2210.07016, 2403.07615, 2112.12027).
+  RawTeX!(
+    r"\def\tabu@latextwoe{%
+\def\tabu@temp##1##2##3{{\toks@\expandafter{##2##3}\xdef##1{\the\toks@}}}%
+\tabu@temp\tabu@centering\centering\arraybackslash
+\tabu@temp\tabu@raggedleft\raggedleft\arraybackslash
+\tabu@temp\tabu@raggedright\raggedright\arraybackslash}
+\AtBeginDocument{\tabu@latextwoe}"
+  );
+  // tabu.sty:2389-2391 `\tabu@trivlist` (`\tabu@init` :705): in a tabu, every list lets `\\` back to `\@normalcr`, so a
+  // list in a centred cell keeps its line breaks; it adds to the kernel's `\lx@trivlist@hook`, our `\@trivlist` being locked.
+  RawTeX!(
+    r"\def\tabu@normalcrbackslash{\let\\\@normalcr}
+\def\tabu@trivlist{\expandafter\def\expandafter\lx@trivlist@hook\expandafter{%
+\expandafter\tabu@normalcrbackslash\lx@trivlist@hook}}"
+  );
+  // tabu.sty:907-911 tabu's private `|` takes a line style, `|[1pt]` (`\tabu@rewritevline[#1]`); the rule is kept, its
+  // width, dash and colour not modelled (1907.07986, 1909.02301, 1810.00307, 2112.10477, 2002.01722, 2006.01316,
+  // 1705.07086).
+  Let!("\\lx@tabu@NC@vline", "\\NC@rewrite@|");
+  DefMacro!("\\lx@tabu@vline[]", "\\lx@tabu@NC@vline");
+  // tabu.sty:620/624, 630/634: `{tabu*}`/`{longtabu*}` (2112.12027); the rescan of their body (`\tabuscantokenstrue`) is
+  // not modelled.
+  DefMacro!(T_CS!("\\tabu*"), None, "\\tabu");
+  DefMacro!(T_CS!("\\endtabu*"), None, "\\endtabu");
+  DefMacro!(T_CS!("\\longtabu*"), None, "\\longtabu");
+  DefMacro!(T_CS!("\\endlongtabu*"), None, "\\endlongtabu");
+  // tabu.sty:6-8: `\begin{tabu} to <dimen>{cols}` / `spread <dimen>{cols}` /
+  // `{cols}`. Mapping straight to `\tabular` read the `t` of `to` as the
+  // column spec and spilled `o 0.25\linewidth{X[1,$]rr}` into the body — the
+  // `$` opened inline math and the whole alignment cascaded (brandeis-
+  // problemset example.tex:228, 41 errors; Perl raw-loads tabu.sty and dies).
+  // `to <w>` is `\tabularx{<w>}`; the plain and `spread` forms target
+  // `\linewidth` (spread's natural-width delta is not modeled).
+  // tabu.sty:616-618: in math mode `{tabu}` is an `array` (`\def\tabu@{\array}\def\endtabu{\endarray}`), its cells
+  // math: `$\begin{tabu}{c|c} (u,v) & \pi(u,v)\end{tabu}$` (2010.06598; the text tabular's cells erred "Script ^").
+  // A target is read and not modelled. Guard `perfect_kernel_batch68z::tabu_in_math_is_an_array`.
+  DefMacro!("\\tabu", "\\lx@tabu@start");
+  DefPrimitive!("\\lx@tabu@start", {
+    tabu_init()?;
+    let target = match read_keyword(&["to", "spread"])? {
+      Some(_) => {
+        let dim = read_dimension()?;
+        Tokens::new(ExplodeText!(dim.to_string()))
+      },
+      None => Tokens!(T_CS!("\\linewidth")),
+    };
+    if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
+      let_i(&T_CS!("\\endtabu"), &T_CS!("\\endarray"), None);
+      unread(Tokens!(T_CS!("\\array")));
+    } else {
+      let mut toks = vec![T_CS!("\\tabularx"), T_BEGIN!()];
+      toks.extend(target.unlist());
+      toks.push(T_END!());
+      unread(Tokens::new(toks));
+    }
+  });
+  DefMacro!("\\endtabu", "\\endtabularx");
+  // tabu.sty:1058-1083 `X[<coef>,<align>,<$>,<p|m|b>]`: the bracket carries a
+  // width coefficient (not modelled), an alignment letter, `$` for a MATH
+  // column (`\tabu@Xm@th`, :1066 — the cell is wrapped in `$…$`, :1081/1083)
+  // and a vertical attachment. tabularx's plain `X` dropped the bracket as
+  // "Unrecognized tabular template", so `X[1,$]` cells digested `P_1` in text
+  // mode ("Script _ can only appear in math mode", brandeis-problemset
+  // example.tex:228, 5 per table). Guard:
+  // `perfect_kernel_batch54::tabu_math_x_column`.
+  DefColumnType!("X []", sub[(opt)] {
+    let mut align = Align::Justify;
+    let mut vattach: Option<String> = None;
+    let mut math = false;
+    if let Some(opt) = opt {
+      for tok in opt.unlist() {
+        match tok.to_string().as_str() {
+          "$" => math = true,
+          "l" => align = Align::Left,
+          "c" => align = Align::Center,
+          "r" => align = Align::Right,
+          "j" => align = Align::Justify,
+          "p" => vattach = Some("top".to_string()),
+          "m" => vattach = Some("middle".to_string()),
+          "b" => vattach = Some("bottom".to_string()),
+          _ => {},
+        }
+      }
+    }
+    let (before, after) = if math {
+      (Tokens!(T_CS!("\\lx@begin@inline@math")), Tokens!(T_CS!("\\lx@end@inline@math")))
+    } else {
+      // tabu.sty:874-876 `\\vtop \\@startpbox`: the cell's interline values are the document's (KNOWN_PERL_ERRORS #445)
+      (Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline")), Tokens!(T_END!()))
+    };
+    with_building_template(|template| {
+      template.add_column(Cell {
+        before: Some(before),
+        after: Some(after),
+        align: Some(align),
+        vattach,
+        ..Cell::default()
+      })
+    });
+  });
+  // `\begin{tabu} to <w>` runs through `\tabularx`, which lets `\NC@rewrite@X` to `\lx@tabularx@X` before the preamble
+  // is read (KNOWN_PERL_ERRORS #463); that is tabu's `X` now (a bare `X` is tabularx's column).
+  Let!("\\lx@tabularx@X", "\\NC@rewrite@X");
+  DefMacro!("\\longtabu", "\\lx@longtabu@start");
+  DefPrimitive!("\\lx@longtabu@start", {
+    tabu_init()?;
+    if read_keyword(&["to", "spread"])?.is_some() {
+      let _ = read_dimension()?;
+    }
+    unread(Tokens!(T_CS!("\\longtable")));
+  });
   DefMacro!("\\endlongtabu", "\\endlongtable");
   // stubs
+  // The remaining documented user surface (tabu.pdf §2.3-2.5): `\everyrow
+  // {<tokens>}` (tabu.sty:1080, inter-row rule tokens), `\rowfont[pos]{font}`
+  // (:1123, a per-row font) — both presentational, gobbled like
+  // `\taburulecolor`; `\extrarowsep` (:232) is an assignment syntax over
+  // `\extrarowheight`/`\extrarowdepth`: `\extrarowsep=<d>` sets both,
+  // `\extrarowsep^=<d>` / `_=<d>` one of them, `\extrarowsep=^<d>_<d>` both
+  // separately — performed as those register assignments. Witnesses
+  // amnestyreport, coloring, europasscv, exam-randomizechoices, ftc-notebook,
+  // sduthesis. Guard: `perfect_kernel_batch54::tabu_row_surface_is_covered`.
+  def_macro_noop("\\everyrow{}")?;
+  def_macro_noop("\\rowfont[]{}")?;
+  DefRegister!("\\extrarowdepth" => Dimension::new(0)); // tabu.sty:97 `\newdimen`
+  DefMacro!("\\extrarowsep", sub[_args] {
+    let eq = Tokens!(T_OTHER!("="));
+    let up = Tokens!(T_SUPER!());
+    let down = Tokens!(T_SUB!());
+    let set = |reg: &str, d: &Dimension, out: &mut Vec<Token>| {
+      out.push(T_CS!(reg));
+      out.push(T_OTHER!("="));
+      out.extend(ExplodeText!(&d.to_string()));
+      out.push(T_CS!("\\relax"));
+    };
+    let reg_of = |sel: &Tokens| if *sel == up { "\\extrarowheight" } else { "\\extrarowdepth" };
+    let mut out: Vec<Token> = Vec::new();
+    // `\extrarowsep=<d>` | `^=<d>` | `_=<d>` | `=^<d>_<d>` | `=_<d>^<d>`
+    let _ = read_match(&[&eq])?;
+    let mut sel = read_match(&[&up, &down])?;
+    let _ = read_match(&[&eq])?;
+    if sel.is_none() {
+      sel = read_match(&[&up, &down])?;
+    }
+    match sel {
+      None => {
+        let d = read_dimension()?;
+        set("\\extrarowheight", &d, &mut out);
+        set("\\extrarowdepth", &d, &mut out);
+      },
+      Some(first) => {
+        let d = read_dimension()?;
+        set(reg_of(&first), &d, &mut out);
+        while let Some(next) = read_match(&[&up, &down])? {
+          let d = read_dimension()?;
+          set(reg_of(&next), &d, &mut out);
+        }
+      },
+    }
+    Ok(Tokens::new(out))
+  });
   def_macro_noop("\\savetabu{}")?;
   def_macro_noop("\\usetabu{}")?;
   def_macro_noop("\\preamble{}")?;
@@ -28,3 +187,18 @@ LoadDefinitions!({
   DefRegister!("\\abovetabulinesep" => Dimension::new(0));
   DefRegister!("\\belowtabulinesep" => Dimension::new(0));
 });
+
+/// The lets of tabu.sty:705-708 (`\tabu@init`, from `\tabu@setup` :687, for every tabu and longtabu) and :907's private
+/// `|` (`\tabu@privatecolumns`, :1132), local to the environment.
+fn tabu_init() -> Result<()> {
+  for (cs, to) in [
+    ("\\centering", "\\tabu@centering"),
+    ("\\raggedright", "\\tabu@raggedright"),
+    ("\\raggedleft", "\\tabu@raggedleft"),
+    ("\\NC@rewrite@|", "\\lx@tabu@vline"),
+  ] {
+    let_i(&T_CS!(cs), &T_CS!(to), None);
+  }
+  Digest!("\\tabu@trivlist")?;
+  Ok(())
+}

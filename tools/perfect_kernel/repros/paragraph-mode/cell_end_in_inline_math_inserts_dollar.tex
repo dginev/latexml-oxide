@@ -1,0 +1,18 @@
+% witness: 65d review r5 probes a4 and a21; 65n probe s13 (a cell's formula missing its `$`)
+% oracle:  pdflatex 4 errors ("Extra }, or forgotten $" twice, "Missing $ inserted" at the `&` — tex.web §1046-1047
+%          `mmode+endv` — and "Missing } inserted"); pdftotext "p x q / r s t / Second para."
+% engines: rust 65int2: 2 errors ("Missing $ inserted" at the `}`, "Attempt to close boxing group"); the first cell "p"
+%          lost
+% expect:  2 errors ("Extra }, or forgotten $", "Missing $ inserted"); the cells p, x (a formula), q, r, s, t
+% preload: ar5iv.sty
+% status:  RED (65n: the §1069 deletion, §1046-1047 and the §1193 `off_save` apply to formulas outside alignments only —
+%          a cell's `$` may be its template's (`align*`'s `$\displaystyle…$`), and math9805003's undefined `{Sb}` in an
+%          `align*`, whose template `$` closed the environment's `\begingroup`, lost the whole alignment; an author's
+%          formula in a cell needs its `$` told from the template's. A 65n draft that inserted `$` at the cell's end
+%          gave the expected shape here. OXIDIZED_DESIGN #553, SYNC_STATUS row MS)
+\documentclass{article}
+\begin{document}
+\begin{tabular}{ccc} p & $x} & q \\ r & s & t \end{tabular}
+
+Second para.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 79e brief (packages: newtxmath.sty:246-247 `uprightGreek`/`slantedGreek`, :1015-1039; arXiv 2508.05134,
+%          newpxmath `slantedGreek`); probes
+%          scratch_79e/g/{ntx,ntx0,lncsntx}
+% oracle:  pdflatex 0 errors; \showbox under llncs + newtxmath (default uprightGreek): $\Omega$ U/ntxmia (the upright
+%          capital of lettersA), over llncs.cls's italic one
+% engines: rust int75 = upright (no capital Greek was italic); a llncs-only declaration would leave it italic. Perl
+%          0.8.8: upright
+% expect:  0 errors, 0 warnings; MathML Ω(normal)
+% status:  GREEN (79e)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{newtxmath}
+\begin{document}
+$\Omega$
+\end{document}

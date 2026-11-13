@@ -1,0 +1,32 @@
+% mechanism: `\usepackage{opex3}` (OSA Optics Express; with ol2, osajnl, osajnl2 not in TeX Live, often not shipped)
+%   under article left `\address`, `\email`, `\ocis` undefined; a shipped copy, read raw, typesets the title,
+%   names and addresses into the text (opex3.sty:17-41), so no title or authors. The OSA journal style binding
+%   routes them to the frontmatter API: `\address` an affiliation list marked by the names' `$^n$`, `\ocis` the
+%   OCIS classification, the journal abbreviations (:237-273) defined; an email line is the email of the author whose
+%   mark it carries.
+% witness: 1006.2188, 0901.2165 (this frontmatter), 0901.2997, 0901.2793 (759 run-336 papers, first error `\address`)
+% oracle:  pdflatex (with opex3.sty v1.0 from 0901.2165) 0 errors; "T. Kotani1, S. Lacour1,2 and P. Tuthill2", the
+%   two addresses, "OCIS codes: (350.1260) …", "1. A. Author, Opt. Lett. 30, 1 (2005)."
+% engines: rust 64k: 4 errors (\address, \email, \ocis, \ol undefined); perl: the same 4
+% expect:  0 errors; each author with the addresses of its marks; the `*`-marked email line Lacour's email contact
+%   ("Corresponding author:" its name: `$^{1,2*}$` marks 1, 2 and *); the OCIS codes a classification
+% status:  RED (base) -> GREEN (64u)
+% preload: ar5iv.sty
+\documentclass[10pt,letterpaper]{article}
+\usepackage{opex3}
+\begin{document}
+\title{Pupil remapping for high contrast astronomy}
+\author{T. Kotani$^1$, S. Lacour$^{1,2*}$ and P. Tuthill$^2$}
+\address{$^1$LESIA, Observatoire de Paris, Meudon, France\\
+$^2$School of Physics, Sydney University, NSW 2006, Australia}
+\email{$^*$Corresponding author: sylvestre.lacour@obspm.fr}
+\begin{abstract}
+We present a laboratory experiment.
+\end{abstract}
+\ocis{(350.1260) Astronomical optics; (060.2430) Fibers, single-mode.}
+\section{Introduction}
+Text cites~\cite{r1}.
+\begin{thebibliography}{10}
+\bibitem{r1} A. Author, \ol \textbf{30}, 1 (2005).
+\end{thebibliography}
+\end{document}

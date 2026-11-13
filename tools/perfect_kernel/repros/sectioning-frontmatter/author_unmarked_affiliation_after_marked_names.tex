@@ -1,0 +1,16 @@
+% witness: negative for HF2 S3 (a place line, not names, after marked names)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_hf2_s3_unmarked_names_line.md)
+% engines: rust 64b7 = the same
+% expect:  0 errors; Ann Able (sup 1) and Bob Baker each holding "Department of Physics, University of Somewhere",
+%          Bob Baker Univ B too (user ruling R12 2026-10-20: an unmarked institution line under a marked block is each
+%          of its names'; 64d-77t base: "Bob Baker<break/>Department of Physics, …", the Perl-identical weld)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: as the expect; the affiliation's text keeps a leading space (" Department
+%          of Physics…", whitespace only)
+% status:  GUARD (64d) -> changed (77t) -> GREEN (HG1; perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\\ Department of Physics, University of Somewhere\\ $^{2}$Univ B}
+\begin{document}
+\maketitle
+x
+\end{document}

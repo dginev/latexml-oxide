@@ -1,0 +1,13 @@
+% witness: 0711.1871, 0806.0754, 1012.3355 (`\PoS`); run 340 ~360 PoS papers' first error
+% oracle:  pdflatex with PoS.cls (0711.1871's :1395): 0 errors; the identifier as the page watermark
+% engines: rust 65w = error (`\PoS` undefined)
+% expect:  0 errors; one pubnote role=pubid with the identifier
+% status:  RED (65w) -> GREEN (65x)
+\documentclass{PoS}
+\title{A Lattice Study}
+\ShortTitle{Lattice}
+\PoS{PoS(LAT2009)123}
+\begin{document}
+\maketitle
+Text.
+\end{document}

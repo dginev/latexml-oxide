@@ -1,0 +1,42 @@
+% witness: 1304.2934, 1601.05128, 1912.08145 (`\for{toc}`/`\except{toc}`); 1512.02361, 2303.07306, 2201.00740
+%          (`\abstractbox`); 2105.14892, 2312.03234 (`\bibliofont`); 2004.14791, 1805.00244 (`\@tocwriteb`); 2503.14638
+%          (`\l@figure`); 2510.22858 (`\@keywords`, `\@subjclass`); 2403.17965 (`\copyrightyear`)
+% oracle:  pdflatex 0 errors ("Stores []."; "Abstract. Before the title." under the title; "1. The long title";
+%          "Body [0000] small."; "Acknowledgements. After the title." where it ends)
+% engines: rust 67u2 = 11 errors, 1 warning (each command undefined; the box never set); Perl 11 errors, the same eight
+%          commands undefined
+%          (KNOWN_PERL_ERRORS #721)
+% expect:  0 errors, 0 warnings; the long title only; both boxed texts kept
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\makeatletter
+\newenvironment{abstracts}[1][\abstractname]{%
+  \global\setbox\abstractbox=\vtop \bgroup
+    \normalfont\Small
+    \list{}{\labelwidth\z@ \leftmargin3pc \rightmargin\leftmargin
+      \listparindent\normalparindent \itemindent\z@ \parsep\z@ \@plus\p@}%
+    \item[\hskip\labelsep\scshape#1.]%
+}{%
+  \endlist\egroup
+  \ifx\@setabstract\relax \@setabstracta \fi
+}
+\newcommand\printkw{\ifx\@keywords\@empty\else[\@keywords]\fi\ifx\@subjclass\@empty\else[\@subjclass]\fi}
+\let\lx@test@lfig\l@figure
+\newcommand\tocline[1]{\let\@secnumber\@empty\@tocwriteb\tocsection{section}{#1}}
+\makeatother
+\begin{document}
+\title{Internals}
+\author{A. Author}
+Stores [\printkw].
+\begin{abstracts}
+Before the title.
+\end{abstracts}
+\maketitle
+\section{\for{toc}{Short}\except{toc}{The long title}}
+Body [\copyrightyear] {\bibliofont small}.
+\tocline{Extra}
+\begin{abstracts}[Acknowledgements]
+After the title.
+\end{abstracts}
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 2507.22485 (authblk, `\author[1,2]{\href{https://orcid.org/…}{\usebox{\orcid}\hspace{1mm}Nils~Bochow\thanks{\texttt{contact@…}}}}`)
+% oracle:  pdflatex (hyperref, authblk) 0 errors: "Ann Able*1", the note at the foot, Univ A
+% engines: Perl: a name with a link; ours before Z14: the reading's link text "Ann Ableann@a.org", no name, the block's
+% expect:  0 errors; the creator its name, ORCID, note and affiliation (perfect_kernel_batchz14::a_note_inside_a_link_is_an_event_of_its_own)
+% status:  GREEN (Z14)
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author[1]{\href{https://orcid.org/0000-0003-4578-5780}{Ann~Able\thanks{\texttt{ann@a.org}}}}
+\affil[1]{Univ A, Town A}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,13 @@
+% witness: mdframed/mdframed-example-{default,pstricks,texsx,tikz} (ltxmdf.cls:46)
+% oracle:  pdflatex FAILS TOO -> 28 errors, first: "! Undefined control sequence \pdftex_if_engine:TF"
+% engines: rust=fails perl=fails pdflatex=fails (2026-09-04)
+% expect:  SHARED failure; \pdftex_if_engine:TF removed from l3kernel (now \sys_if_engine_pdftex:TF)
+% status:  CONTROL (out of scope: broken class in TL2025, pdflatex rejects identically)
+\documentclass{article}
+\usepackage{expl3}
+\ExplSyntaxOn
+\pdftex_if_engine:TF { \typeout{PDF} }{ \typeout{OTHER} }
+\ExplSyntaxOff
+\begin{document}
+Hi.
+\end{document}

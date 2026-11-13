@@ -1,0 +1,29 @@
+% mechanism: unknown (not root-caused; P21c, trial rule 5): a `{CJK*}` in the `\corrauth` author's own name, after the
+%   call, writes the corresponding contact twice — whether aa splits the list by spelling or not, and with or without
+%   P21c's paragraph rule (events/mod.rs `paragraph_is_no_group`), which only gives the second copy its `name` too
+% witness: none on the corpus (2608.21138's shape with the `{CJK*}` moved into the `\corrauth` author's name)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2608.21138's aa.cls, lineno.sty, linenoaa.sty) 0 errors: "Ann M. Able1⋆
+%          (贾彬), Bob Baker1, 2 , and Cid Cole2", footnote "Corresponding author: ann@x.edu"
+% engines: rust int158a = two contacts on Ann M. Able, `name="Corresponding author: "` and none, 1 Warning (the content
+%          check: "ann@x.edu" placed more often than printed); P21c = two contacts, both with the `name`, 1 Warning
+% expect:  0 errors, 0 warnings; Ann M. Able (贾彬) (one corresponding "Corresponding author: " ann@x.edu, University of
+%          X), Bob Baker (University of X, University of Y), Cid Cole (University of Y)
+% status:  RED (int158a, P21c) — catalog, no guard
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{CJKutf8}
+\begin{document}
+\title{T}
+\author{
+         Ann~M.~Able \inst{\ref{X}}\corrauth{ann@x.edu} (\begin{CJK*}{UTF8}{gbsn}贾彬\end{CJK*})
+    \and Bob Baker \inst{\ref{X},\ref{Y}}
+    \and Cid Cole\inst{\ref{Y}}
+}
+\institute{
+             University of X\label{X}
+        \and University of Y\label{Y}
+}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

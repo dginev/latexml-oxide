@@ -1,0 +1,16 @@
+% witness: 1909.01874 (`\documentclass[journal]{IEEEtran}`, `\IEEEpeerreviewmaketitle` before `\title`)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able, Member, IEEE" — IEEEtran.cls:4920-4932 defines
+%          `\IEEEpeerreviewmaketitle` as `\relax` unless the peerreview option is given
+% engines: rust int126a = no title and no creator (`\IEEEpeerreviewmaketitle` let to `\maketitle`, which flushed the
+%          frontmatter before the title was given); Perl 0.8.8 the same (IEEEtran.cls.ltxml:135)
+% expect:  0 errors, 0 warnings; the title, and Ann Able with her grade
+% status:  RED (int126a) -> GREEN (98b) — perfect_kernel_batch98b::peerreviewmaketitle_outside_peerreview_is_relax
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\IEEEpeerreviewmaketitle
+\title{A Title}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE}}
+\maketitle
+Text.
+\end{document}

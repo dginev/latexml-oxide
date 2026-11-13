@@ -1,0 +1,20 @@
+% witness: 1205.5755, 1404.7349, 2606.29796, 2609.04133 (jcappub, `\author{…$^{1,2}$}` with one `\affiliation` of
+%          marked lines; the dev20k aff_missing census, F1); 1509.06963 (the same shape, declined: its last two lines'
+%          marks are `\textit`, no cut the writer explains — today's kept); census repro devaff/rep/fin/j3.tex
+% oracle:  pdflatex (TL 2025, 1509.06963's jcappub.sty): "Ann Able1 , Bob Baker2", "1 Univ A, Town A", "2 Univ B, Town B"
+% engines: rust 97c = the reading right, not written (jcappub's `written: false`): both lines one affiliation of Bob
+%          Baker's
+% expect:  0 errors, 0 warnings; jcappub written (brief 97e): Ann Able Univ A, Bob Baker Univ B
+% status:  RED (97c) -> GREEN (97e) — perfect_kernel_batch97e::jcappub_is_written
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{jcappub}
+\title{T}
+\author{Ann Able$^{1}$,}
+\author{Bob Baker$^{2}$}
+\affiliation{$^1$Univ A, Town A\\ $^2$Univ B, Town B}
+\abstract{Ab.}
+\begin{document}
+\maketitle
+Body.
+\end{document}

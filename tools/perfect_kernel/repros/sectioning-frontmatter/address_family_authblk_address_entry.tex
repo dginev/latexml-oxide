@@ -1,0 +1,21 @@
+% An authblk entry of addresses alone (`\affil[ ]{\texttt{\{…\}@x}}`, shape B): the entry stays as their carrier,
+% empty, and is dropped; each address goes to the author it spells.
+% witness: 2602.21641, 2307.02047
+% oracle:  pdflatex 0 errors: "Univ A", then the brace list
+% engines: rust int127a = 0 errors; the brace list an affiliation of the last author; perl = the same
+% expect:  0 errors, 0 warnings; each author: "Univ A", then own e-mail; no affiliation of addresses
+% status:  RED (int127a) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\author{Cat Cole}
+\affil{Univ A}
+\affil[ ]{\texttt{\{aable, bbaker, ccole\}@a.edu}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

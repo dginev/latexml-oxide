@@ -1,0 +1,13 @@
+% mechanism: notes_only_line_after_the_names_is_theirs.tex past `\\*[2pt]` and a spacer `\\`, its notes `\footnote`s parted
+%   by a tie: the break, its star and option, and the spacer all go.
+% oracle:  pdflatex 0 errors; footnotes "∗1 Univ A, Town.", "†2 Univ B, City."
+% engines: rust int127a: two document pubnotes; perl the same, Bob named "Bob Baker*[2pt]"
+% expect:  0 errors; Ann: note-role contact "Univ A, Town."; Bob: "Univ B, City."; no document pubnote
+% status:  GREEN (100c)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\*[2pt] \\ \footnote{$^{1}$Univ A, Town.}~\footnote{$^{2}$Univ B, City.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

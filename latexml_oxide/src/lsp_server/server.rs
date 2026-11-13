@@ -131,6 +131,7 @@ impl Server {
 
     let opts = make_config(uri);
     let mut converter = Converter::from_config(opts.clone());
+    converter.note_main_source(&format!("literal:{text}"));
     if let Err(e) = converter.prepare_session(&opts) {
       return ConvertOutput::error(format!("Fatal: prepare_session failed: {e}"));
     }

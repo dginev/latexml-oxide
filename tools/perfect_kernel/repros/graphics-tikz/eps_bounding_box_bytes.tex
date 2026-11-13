@@ -1,0 +1,20 @@
+% witness: review of batch 56ka (image.rs EPS probe); fixtures eps_bbox_*.eps beside this file
+% oracle:  pdflatex (epstopdf) sizes all four 144bp x 72bp; Perl sizes EPS only through ImageMagick (none on this host)
+% engines: rust 56kj: eps_bbox_latin1.eps and eps_bbox_cr.eps are unsized (a Latin-1 `%%Title` byte fails the strict
+%          UTF-8 decode of the whole 32 KB window; a CR-only file is one line); atend and plain are sized
+%          (`cssstyle="width:14.454em; height:7.227em"`). A trailer or a DOS EPS PostScript section past the first
+%          32 KB is lost too, and an embedded document's box could win: `image::sizing_characterization_tests`
+% expect:  all four <graphics> sized 14.454em x 7.227em, 0 errors
+% status:  RED -> GREEN (56kk, guard perfect_kernel_batch56::eps_bounding_boxes_are_read_as_bytes: one byte-level
+%          DSC scanner, image::read_postscript_boxes)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics{eps_bbox_latin1.eps}
+
+\includegraphics{eps_bbox_cr.eps}
+
+\includegraphics{eps_bbox_atend.eps}
+
+\includegraphics{eps_bbox_plain.eps}
+\end{document}

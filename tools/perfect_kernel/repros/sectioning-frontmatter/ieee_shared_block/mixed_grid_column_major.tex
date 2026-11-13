@@ -1,0 +1,18 @@
+% mechanism: an `\and`×`\\` grid with a cell naming no author (`\\ \IEEEauthorblockA{Bob's Lab}` under Bob) is left
+%   in its columns (`transpose_ieee_author_grid`), so the creators come out column-major; the owners are right
+% witness: synthetic (2605.15804's guard on the transpose)
+% oracle:  pdflatex 0 errors: row-major "Ann Able Univ A | Bob Baker Univ B" over "Cy Cole Univ C | Bob's Lab"
+% engines: rust int130a: Ann, Bob, Cy with Bob's Lab on Cy; 104a: Ann, Cy, Bob, Bob's Lab on Bob
+% expect:  creators Ann, Bob, Cy in reading order, Bob's Lab Bob's
+% status:  RED (104a; SYNC row 104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\\
+\IEEEauthorblockN{Cy Cole}\IEEEauthorblockA{Univ C}
+\and \IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}\\
+\IEEEauthorblockA{Bob's Lab}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: a document's `\renewcommand\and{ \& }` in lipics-v2021's affiliations slot: lipics_cls.rs `split_on_and`
+%   cuts by spelling, but lipics-v2021.cls:758 defines `\and` globally (`\def\and{\newline}`), so the renewal
+%   prints (revP25 finding 1)
+% witness: synthetic (revP25; no census paper of the class renews `\and`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1805.03253's lipics-v2021.cls) 0 errors: "Ann Able", one line "Uni X &
+%   Inst Y"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creator Ann Able with two affiliations "Uni
+%   X", "Inst Y": the "&" lost silently; perl not run
+% expect:  0 errors, 0 warnings; creator Ann Able with one affiliation "Uni X & Inst Y"
+% status:  RED (int158a; RR1 gap 23)
+% preload: ar5iv.sty
+\documentclass{lipics-v2021}
+\renewcommand\and{ \& }
+\title{T}
+\author{Ann Able}{Uni X \and Inst Y}{}{}{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: pdfcomment.sty:25, 1332-1350 loads xkeyval, etoolbox, refcount, ifthen, calc, marginnote,
+%   ifpdf, ifluatex (and hyperref); a document can rely on them. The binding loaded xkeyval,
+%   hyperref and marginnote only, so calc's `\linewidth-2\fboxsep` was a plain length: since 56jr its
+%   rest `-2\fboxsep` is typeset ("-2" and a Missing number), and `\ifthenelse` is undefined.
+% witness: TL manual dataref-doc (6 -> 58 warnings in 56jr; dataref-doc.tex:120
+%   `\begin{minipage}{#1-2\fboxsep}`, pdfcomment its only loader of calc)
+% oracle:  pdflatex 0 errors: "A", "B", "C"; the minipage 339pt (345pt - 2 x 3pt)
+% engines: rust 56jr = 2 errors, 2 warnings, "-2A"
+% expect:  0 errors, 0 warnings
+% status:  RED (56ju) -> GREEN (56ju)
+\documentclass{article}
+\usepackage{pdfcomment}
+\begin{document}
+\begin{minipage}{\linewidth-2\fboxsep}A\end{minipage}B
+
+\ifthenelse{\equal{x}{x}}{C}{D}
+\end{document}

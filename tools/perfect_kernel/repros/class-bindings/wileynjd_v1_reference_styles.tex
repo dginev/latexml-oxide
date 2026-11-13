@@ -1,0 +1,18 @@
+% witness: 1511.08547 (its WileyNJD-v1.cls:33-43, the reference-style flags only the options set; :1104-1106,
+%          :1850-1851, :2498-2499, :3080-3081, :3684-3685 each amsrefs load inside its `\if@…refstyle`), 1707.00398,
+%          1709.02675 (every v1 witness gives one of APA, AMS, ACS, AMA, VANCOUVER)
+% oracle:  pdflatex with 1511.08547's WileyNJD-v1.cls: 3 errors (its \zz option parser, a TL 2025 harness limit);
+%          "amsrefs not loaded; apacite not loaded."
+% engines: rust 67w = "amsrefs loaded" (the binding loaded it for any v1 paper)
+% expect:  0 errors, 0 warnings; neither package loaded
+% status:  RED (67w) -> GREEN (67w r2)
+% preload: ar5iv.sty
+\documentclass{WileyNJD-v1}
+\makeatletter
+\begin{document}
+\title{No reference style}
+\author{Ann Author}
+\maketitle
+\section{Intro}
+amsrefs \@ifpackageloaded{amsrefs}{loaded}{not loaded}; apacite \@ifpackageloaded{apacite}{loaded}{not loaded}.
+\end{document}

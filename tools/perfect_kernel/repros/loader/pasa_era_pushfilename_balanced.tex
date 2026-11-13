@@ -1,0 +1,17 @@
+% A shipped class (pasa.cls:45-52) redefines `\@pushfilename` with the LaTeX2e kernel's pre-2020 body and calls it
+% bare; every package loaded after it (its own `\usepackage{graphicx}` first, then the document's) pairs that push with
+% latex.ltx's 2020-10 `\@popfilename`, which also pops the default hook label and the file path. The pasa binding
+% (pasa_cls.rs) reads the class with the pop of the same era and restores the kernel's push and pop after it.
+% oracle:  pdflatex (TL 2025, this pasa.cls beside it) stops: "LaTeX hooks Error: Extra \PopDefaultHookLabel" ×3,
+%          "File ended while scanning use of \@p@pfilepath@aux" ×3, Emergency stop (the class is clean on the LaTeX of its
+%          era, which prints "Body text.")
+% engines: rust 67int29 = 12 errors ("Extra \PopDefaultHookLabel" per load); witnesses 1307.3127 etc. 13-39 errors
+%          each; rust 77c = 0 errors here and on the 13 witnesses, word counts unchanged
+% expect:  0 errors, 0 warnings; "Body text." kept
+% status:  RED (67int29) -> GREEN (77c)
+% preload: ar5iv.sty
+\documentclass{pasa}
+\usepackage{amsmath}
+\begin{document}
+Body text.
+\end{document}

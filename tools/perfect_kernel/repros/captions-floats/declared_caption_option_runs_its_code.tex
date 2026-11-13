@@ -1,0 +1,22 @@
+% witness: K13 stage-2 audit row caption `\DeclareCaptionOption(*)` (57h; 2,338 A/B papers load caption, none
+%          declares one); caption3 loads keyval (:209) and its star only undefines the key at the end of the
+%          declaring package (:221-236), and `\captionsetup` sets the keys (:244-259); the binding loaded no
+%          keyval, its star branch gobbled its own helper (the key name and code became text), and
+%          `\captionsetup` stored the keys without running them
+% oracle:  pdflatex 0 errors: "Values: yes, bee. Typed: unset." (a typed `\captionsetup[figure]` only stores
+%          its keys for that type, caption3.sty:252-262; 57aj review: sjtuthesis.cls:730-735's
+%          `\captionsetup[bi-second]{bi-second}` renamed every figure)
+% engines: perl 2 errors (`\myA`, `\myB` undefined: keys not run); rust 57ai2 3 errors
+%          (`Error:undefined:\define@key`), text "captionmya[yes] myb Values: \myA, \myB."
+% expect:  0 errors, 0 warnings; the oracle text
+% status:  RED (57ai2) -> GREEN (57aj: keyval, the star, declared keys run, caption_sty.rs)
+\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionOption{mya}[yes]{\def\myA{#1}}
+\DeclareCaptionOption*{myb}{\def\myB{#1}}
+\captionsetup{mya,myb=bee}
+\DeclareCaptionOption{typed}{\def\myT{#1}}\def\myT{unset}
+\captionsetup[figure]{typed=FIG}
+\begin{document}
+Values: \myA, \myB. Typed: \myT.
+\end{document}

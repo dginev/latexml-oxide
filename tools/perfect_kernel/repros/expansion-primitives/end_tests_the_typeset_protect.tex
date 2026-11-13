@@ -1,0 +1,23 @@
+% witness: 2405.15073's mechanism (KPE #1211): latex.ltx:15365-15380 tests `\ifx\protect\@typeset@protect`, `\end ` (:15382) is the body, and one expansion typesetting is the body's (siunitx's `S` cell, 2505.21533, 2105.06936)
+% oracle:  pdflatex (TL 2025) 0 errors: R1 = \end {myenv}; R3, R4 as the guard lists; "[open:A:close]", B, the table.
+% engines: M3: only `\@unexpandable@protect` and `\noexpand` kept it, so R1 ran the environment's end in a `\typeout`. Perl has no such test.
+% expect:  0 errors; R1, R3, R4; the two environments and the table whole
+% status:  GREEN
+\documentclass{article}
+\usepackage{siunitx}
+\newenvironment{myenv}{[open:}{:close]}
+\makeatletter
+\begin{document}
+\typeout{R1 = \end{myenv}}
+\protected@edef\x{\end{myenv}}\typeout{R3 = \meaning\x}
+\edef\y{\noexpand\end{myenv}}\typeout{R4 = \meaning\y}
+\begingroup\let\protect\@firstofone\begin{myenv}A\end{myenv}\endgroup
+
+\begingroup\let\protect\@empty\begin{center}B\end{center}\endgroup
+\makeatother
+
+\begin{tabular}{lS}
+a & 1.5 \\
+b & \bfseries 2.5
+\end{tabular}
+\end{document}

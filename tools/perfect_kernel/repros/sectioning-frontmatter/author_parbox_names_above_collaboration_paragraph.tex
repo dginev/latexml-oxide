@@ -1,0 +1,32 @@
+% A `\parbox` around the names, their collaboration's paragraph under them (`\begin{center}…\end{center}`), then a
+% `\\` and a second `\parbox` of marked affiliation lines: each box's lines are the block's lines, read as written.
+% witness: 2311.03613 (mnras: `\author[DES Collaboration]{\parbox{\textwidth}{\Large V.~Carruba,$^{1,2}$ … and
+%          P.~Wiseman$^{38}$ \begin{center} (DES Collaboration) \end{center}} \vspace{0.4cm} \\ \parbox{\textwidth}{$^{1}$
+%          …\\ …}}`, 55 names); 2401.12049 (the same DES paragraph under five names)
+% oracle:  pdflatex 0 errors: "A. Able,1,2 B. C. Baker,2 C. Cole,1 and D. Dee2", "(XYZ Collaboration)", "1 University
+%          of Alpha", "2 University of Beta"
+% engines: rust int138a = one creator holding the four names in an inline-block, its marks hoisted after it, both
+%          universities, 0 errors (silent); Perl one creator too
+% expect:  0 errors, 0 warnings; four creators, each with the collaboration and the universities its marks name
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass{mnras}
+\begin{document}
+\title{T}
+\author{
+\parbox{\textwidth}{
+\Large
+A.~Able,$^{1,2}$
+B.~C.~Baker,$^{2}$
+C.~Cole,$^{1}$
+and D.~Dee$^{2}$
+\begin{center} (XYZ Collaboration) \end{center}
+}
+\vspace{0.4cm}
+\\
+\parbox{\textwidth}{
+$^{1}$ University of Alpha\\
+$^{2}$ University of Beta
+}}
+\maketitle
+\end{document}

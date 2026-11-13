@@ -1,0 +1,19 @@
+% mechanism: a link line under every name printing an institution is every name's affiliation, not the block's URL
+%   (`resolver/blocks.rs` block links, `classify::href_prints_an_institution` = the old rule's
+%   `author_block::link_prints_an_institution`, `dispatch.rs` `LinkOwner::Block`; user ruling R12 2026-10-20)
+% witness: review revFB2a finding 3, probe pH5 (no corpus witness; the r6 re-review's x9, x10 shape)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker / Univ A / Google"
+% engines: off: Univ A and Google (its link) affiliations of both; FB2a `=2`: a nameless block creator holding "url: Google";
+%   MV1 `=2`: a url on both
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker, each with the affiliations Univ A and Google (its `\href`), as off
+% status:  RED (FB2a, `=2`) -> GREEN (perfect_kernel_batchfb2a::a_link_printing_an_institution_is_every_names)
+\documentclass{article}
+\usepackage{hyperref}
+
+\title{T}
+\author{Ann Able, Bob Baker \\ Univ A \\ \href{https://www.google.com}{Google}}
+\begin{document}
+\maketitle
+
+Body.
+\end{document}

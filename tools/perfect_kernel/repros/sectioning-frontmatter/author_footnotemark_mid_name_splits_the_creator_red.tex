@@ -1,0 +1,15 @@
+% mechanism: a `\footnotemark` inside a name (`Ann\footnotemark[1] Able`) splits it into two creators, "Ann" and "Able"
+%   (revFN1, pre-existing on int159a2 and FN1b alike); pdflatex prints one author "Ann¹ Able"
+% witness: synthetic (revFN1 probe b_mid)
+% expect:  one creator Ann Able, the note beside the name
+% status:  RED (int159a2, FN1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann\footnotemark[1] Able \and \textbf{Bob Baker\footnotemark[2]} \and \href{http://x.org}{Cy Cole}\footnotemark[3]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}\footnotetext[2]{Note B.}\footnotetext[3]{Note C.}
+Body.
+\end{document}

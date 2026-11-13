@@ -24,18 +24,18 @@ LoadDefinitions!({
     "\\@ifstar{\\lx@bibunits@setglobal\\std@cite}{\\lx@bibunits@resetglobal\\std@cite}"
   );
 
-  // Perl: sets CITE_UNIT to "bibliography buN" if not global
-  DefPrimitive!("\\lx@bibunits@setglobal", None,
-  after_digest => {
-    if !lookup_bool("CITE_UNIT_GLOBAL") {
+  // Perl: sets CITE_UNIT to "bibliography buN" if not global — but only inside a unit: outside one
+  // `\cite` is the kernel's (bibunits.sty: only `\bibunit` lets it to `\bu@cite`), so it keeps the
+  // list it had outside units (none: the main list). KNOWN_PERL_ERRORS #1223.
+  DefPrimitive!("\\lx@bibunits@setglobal", {
+    if !lookup_bool("CITE_UNIT_GLOBAL") && in_bibunit() {
       let unit = Digest!("\\bu@unitname")?.to_string();
       assign_value("CITE_UNIT", pin(s!("bibliography {unit}")), None);
     }
   });
-  // Perl: sets CITE_UNIT to "buN" if not global
-  DefPrimitive!("\\lx@bibunits@resetglobal", None,
-  after_digest => {
-    if !lookup_bool("CITE_UNIT_GLOBAL") {
+  // Perl: sets CITE_UNIT to "buN" if not global; inside a unit only, as above.
+  DefPrimitive!("\\lx@bibunits@resetglobal", {
+    if !lookup_bool("CITE_UNIT_GLOBAL") && in_bibunit() {
       let unit = Digest!("\\bu@unitname")?.to_string();
       assign_value("CITE_UNIT", pin(&unit), None);
     }
@@ -70,22 +70,13 @@ LoadDefinitions!({
         AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => bme_val);
       }
     } else {
-      assign_value("CITE_UNIT", Stored::None, None);
+      end_bibunit();
     }
   });
   DefMacro!("\\@bibunit", "\\lx@startbibunit\\old@bibunit");
 
-  // Perl: startBibunit() — increment counter and set CITE_UNIT
-  DefPrimitive!("\\lx@startbibunit", None,
-  after_digest => {
-    Digest!("\\global\\advance\\@bibunitauxcnt1")?;
-    let unit = Digest!("\\bu@unitname")?.to_string();
-    let cite_unit = if lookup_bool("CITE_UNIT_GLOBAL") {
-      s!("bibliography {unit}")
-    } else {
-      unit
-    };
-    assign_value("CITE_UNIT", pin(&cite_unit), None);
+  DefPrimitive!("\\lx@startbibunit", {
+    start_bibunit()?;
   });
 
   // Perl bibunits.sty.ltxml L72-76: {bibunit}[] env has afterDigestBegin
@@ -106,16 +97,21 @@ LoadDefinitions!({
     if !style.is_empty() {
       engine::latex_constructs::set_bibstyle(&style);
     }
-    // startBibunit() equivalent: step counter + set CITE_UNIT.
-    Digest!("\\global\\advance\\@bibunitauxcnt1")?;
-    let unit = Digest!("\\bu@unitname")?.to_string();
-    let cite_unit = if lookup_bool("CITE_UNIT_GLOBAL") {
-      s!("bibliography {unit}")
-    } else {
-      unit
-    };
-    assign_value("CITE_UNIT", pin(&cite_unit), None);
-  });
+    start_bibunit()?;
+  },
+  before_digest_end => { end_bibunit(); },
+  // `{bibunit}` wraps block-level bibliography content — and, via apxproof
+  // (default `bibliography=separate`), whole deferred appendix bodies — so it
+  // is a vertical block. Without a vertical BOUND_MODE, `$$…$$` inside the
+  // wrapped body is not recognized as display math (`tex_math.rs` mirror of
+  // `TeX_Math.pool.ltxml:65`: `$$` consumed only when BOUND_MODE ends in
+  // "vertical"): the second `$` closes the first as empty inline math and the
+  // body lands in text mode, so the equation renders as `<ltx:p>` text (a
+  // semantic-markup loss) and subscripts error `unexpected:_`. Same fix as
+  // `{center}`/`{flushleft}` (sect06.rs) and `{figure}` (sect09.rs). Surpasses
+  // Perl (`bibunits.sty.ltxml:72` has no `mode =>`, sharing the bug); witnesses:
+  // apxproof papers, e.g. 2605.02787 (5 `unexpected:_` → 0, display math restored).
+  mode => "internal_vertical");
 
   // Perl: `\putbib[]` -> `\lx@bibliography[\bu@unitname]{...}`, i.e. the `.bib`
   // route only. But the real package inputs the per-unit `.bbl`
@@ -130,9 +126,20 @@ LoadDefinitions!({
   // witnesses 2606.04416, 2605.21570, 2605.26693.
   DefMacro!(
     "\\putbib[]",
-    "\\lx@bibunits@ifusebbl{\\input{\\bu@unitname.bbl}}\
+    "\\lx@bibunits@startorrelax\\lx@bibunits@ifusebbl{\\input{\\bu@unitname.bbl}}\
      {\\lx@bibliography[\\bu@unitname]{\\if.#1.\\bu@bibdata\\else#1\\fi}}"
   );
+  // bibunits.sty `\@putbib` starts with `\@startbibunitorrelax`, undefined before the first unit opens (`\bibunit`),
+  // so TeX errs on a `\putbib` outside every unit; Perl is silent.
+  DefPrimitive!("\\lx@bibunits@startorrelax", sub[_args] {
+    if !has_meaning(&T_CS!("\\@startbibunitorrelax")) {
+      Error!(
+        "undefined",
+        "\\@startbibunitorrelax",
+        "bibunits' \\putbib outside every unit: TeX stops on the undefined \\@startbibunitorrelax"
+      );
+    }
+  });
 
   // Takes the `.bbl` clause when `<bibunitname>.bbl` is on disk, else the
   // `.bib` clause. Mirrors `\lx@ifusebbl` (`latex_constructs.rs`), which does
@@ -153,10 +160,47 @@ LoadDefinitions!({
     assign_value("ORIG_BIBUNIT", orig, None);
   }
   DefMacro!("\\bibliography", "\\lx@reset@bibunit\\bu@orig@bibliography");
-  DefPrimitive!("\\lx@reset@bibunit", None,
-  after_digest => {
+  DefPrimitive!("\\lx@reset@bibunit", {
     if let Some(orig) = lookup_value("ORIG_BIBUNIT") {
       assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(orig));
     }
   });
 });
+
+/// Perl `startBibunit`: step the counter and stamp `CITE_UNIT`. The unit opens globally, as
+/// bibunits.sty's `\bibunit` does `\global\let\cite\bu@cite`, whatever group it starts in.
+fn start_bibunit() -> Result<()> {
+  Digest!("\\global\\advance\\@bibunitauxcnt1")?;
+  let unit = Digest!("\\bu@unitname")?.to_string();
+  let cite_unit = if lookup_bool("CITE_UNIT_GLOBAL") {
+    s!("bibliography {unit}")
+  } else {
+    unit
+  };
+  if !in_bibunit() {
+    let outside = lookup_value("CITE_UNIT").unwrap_or(Stored::None);
+    assign_value("BIBUNIT_OUTSIDE_CITE_UNIT", outside, Some(Scope::Global));
+  }
+  assign_value("CITE_UNIT", pin(&cite_unit), Some(Scope::Global));
+  assign_value("BIBUNIT_OPEN", Stored::from(true), Some(Scope::Global));
+  // bibunits.sty `\@startbibunit`: the unit's `\putbib` and every later one read `\relax`.
+  let_i(
+    &T_CS!("\\@startbibunitorrelax"),
+    &T_CS!("\\relax"),
+    Some(Scope::Global),
+  );
+  Ok(())
+}
+
+/// bibunits.sty `\endbibunit` (`\end{bibunit}`, an argless `\bibliographyunit`): `\cite` is
+/// `\std@cite` again, globally, so a cite goes where it did before the unit (main, or chapterbib's).
+fn end_bibunit() {
+  if in_bibunit() {
+    let outside = lookup_value("BIBUNIT_OUTSIDE_CITE_UNIT").unwrap_or(Stored::None);
+    assign_value("CITE_UNIT", outside, Some(Scope::Global));
+    assign_value("BIBUNIT_OPEN", Stored::None, Some(Scope::Global));
+  }
+}
+
+/// A unit is open: bibunits.sty's `\cite` is `\bu@cite` between `\bibunit` and `\endbibunit`.
+fn in_bibunit() -> bool { lookup_bool("BIBUNIT_OPEN") }

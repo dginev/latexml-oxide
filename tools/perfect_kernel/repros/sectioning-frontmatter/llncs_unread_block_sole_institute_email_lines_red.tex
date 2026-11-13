@@ -1,0 +1,19 @@
+% mechanism: llncs's sole `\institute` (`_share=authors`, OD #901) under an author block no rehearsal read (over budget,
+%   a rehearsal Fatal, out of positions): `emit_commands` returns false and, since P27b, nothing shapes the queue — the
+%   institute's e-mail lines stay in it as its ink (`, ` and the `\\` break), where the old split cut them out
+% witness: synthetic (revP27b); run with LATEXML_REHEARSAL_READ_BUDGET=1 to reach the unread-block path
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker", "Univ X, City",
+%   "able@x.edu, baker@x.edu"
+% engines: int159a1: affiliation "Univ X, City", two e-mail contacts; P27b: affiliation "Univ X, City <break/>, ",
+%   the same two e-mail contacts; both 0 E, 2 W
+% expect:  affiliation "Univ X, City" (the e-mail lines not left as separator residue in the institute)
+% status:  RED (P27b; catalogued at integration, int159a)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ X, City \\ \email{able@x.edu}, \email{baker@x.edu}}
+\maketitle
+Text.
+\end{document}

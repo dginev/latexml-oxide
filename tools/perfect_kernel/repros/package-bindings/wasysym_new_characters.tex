@@ -1,0 +1,10 @@
+% witness: 1001.4255, 1103.0853, 1907.07487 (\wasyparagraph 42 papers, \euro 12, \Paragraph, \longs)
+% oracle:  pdflatex 0 errors; wasysym.dtx:181-211 shows \wasyparagraph/\Paragraph as the wasy section sign
+% engines: rust 67int6 = 5 undefined; perl = the same (KNOWN_PERL_ERRORS #762)
+% expect:  0 errors, 0 warnings; "§ 1, § 2, 5 €, ſ, ⌘."
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::wasysym_new_characters
+\documentclass{article}
+\usepackage{wasysym}
+\begin{document}
+\wasyparagraph~1, \Paragraph~2, 5\,\euro, \longs, \applecmd.
+\end{document}

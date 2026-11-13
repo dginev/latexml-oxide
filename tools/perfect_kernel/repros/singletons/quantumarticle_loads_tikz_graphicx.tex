@@ -1,0 +1,15 @@
+% witness: 2110.03913 (`\includegraphics` with no `\usepackage{graphicx}`; 61 quantumarticle papers in run 336)
+% oracle:  pdflatex (quantumarticle, TL 2025) 0 errors: the image, then "Text." (quantumarticle.cls:1266-1279 loads
+%          xstring and tikz at `\begin{document}`; tikz brings graphicx, pgfcore.sty:10)
+% engines: rust 64h4 = 1 error (\includegraphics undefined); perl 0.8.8 = 1 error
+% expect:  0 errors; one <graphics> of example-image-a; "Text."
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass[a4paper,onecolumn]{quantumarticle}
+\pdfoutput=1
+\usepackage{hyperref}
+\begin{document}
+\includegraphics[width=2cm]{example-image-a}
+
+Text.
+\end{document}

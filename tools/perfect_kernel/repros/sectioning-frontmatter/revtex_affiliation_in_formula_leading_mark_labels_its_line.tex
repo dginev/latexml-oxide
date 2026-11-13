@@ -1,0 +1,19 @@
+% mechanism: a script opening its line is its label, a letter printed after it in its formula or not: `${\rm ^1Dept}$ of …`
+%   stays the mark that parts the line (the lexer's `glue_in_word_marks`: the names request 1 and 2; with no name
+%   requesting marks, a script opening its line)
+% witness: 1006.5052 (`\address{\it $ {\rm ^2Solid}$ State …}`, revtex4; ISO1's A/B: a first cut read it as text and gave
+%   the line to the wrong author)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1Dept of Physics, Univ X / 2Lab of Chemistry, Univ Y"
+% engines: rust int160c = ISO1 (XML identical) = 0 errors, 0 warnings: Able "¹Dept of Physics, Univ X", Baker "²Lab of
+%   Chemistry, Univ Y" (the script kept in its formula, the line parted at it)
+% expect:  0 errors, 0 warnings; Able "Dept of Physics, Univ X"; Baker "Lab of Chemistry, Univ Y"
+% status:  GREEN (int160c, ISO1, ISO1b) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{${\rm ^1Dept}$ of Physics, Univ X\\ ${\rm ^2Lab}$ of Chemistry, Univ Y}
+\maketitle
+Text.
+\end{document}

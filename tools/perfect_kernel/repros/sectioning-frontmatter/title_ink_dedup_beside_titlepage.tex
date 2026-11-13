@@ -1,0 +1,20 @@
+% A `{titlepage}` that does not carry the title, and a centered display copy of the unprinted `\title` after it,
+% before the first section. The document has a titlepage, so the XSLT hides the structured `<ltx:title>` (the
+% `ltx:title` template's `not(parent::*/child::ltx:titlepage)`, LaTeXML-structure-xhtml.xsl; Perl's copy :358-359):
+% dropping the centered copy as redundant title ink (arXiv/html_feedback#6924, OXIDIZED_DESIGN #146, witness
+% 2608.10928) left the HTML with no visible title. The same rule as title_ink_dedup_in_titlepage (1304.0681,
+% 1503.03277), for a copy outside the cover.
+% status:  RED (67int13: the Info `title_ink_dedup` fires and the centered "Beside The Cover" is removed) → GREEN
+%          (68s round 2).
+% oracle:  pdflatex 0 errors: page 1 "Lab Report 9"; page 2 "Beside The Cover", "1 Intro x".
+% expect:  0 errors, 0 warnings; no `title_ink_dedup` Info; the centered paragraph "Beside The Cover" stays.
+\documentclass{article}
+\title{Beside The Cover}
+\begin{document}
+\begin{titlepage}
+\begin{center}{\large Lab Report 9\par}\end{center}
+\end{titlepage}
+\begin{center}{\Huge Beside The Cover}\end{center}
+\section{Intro}
+x
+\end{document}

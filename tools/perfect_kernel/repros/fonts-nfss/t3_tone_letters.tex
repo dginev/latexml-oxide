@@ -1,0 +1,12 @@
+% witness: tipaman §6 "Tone letters" (`\usepackage[tone]{tipa}` inputs tone.sty)
+% oracle:  pdflatex 0 errors; tone.sty:13-58 draws each contour from the tone-letter parts (T3 128-145) and the stem
+%          (191): Unicode's Chao tone letters ˥˦˧˨˩ (stem right), ꜒꜓꜔꜕꜖ (stem left, `\rtone`)
+% engines: rust int36a = empty raised boxes; 77x the tone letters; Perl 4 Errors (`\tone`
+%          undefined: no tipa.sty)
+% expect:  0 errors, 0 warnings; "Tones ˥˩, ˧˥, ꜖꜒ and ˧."
+% status:  GREEN (77x, tone_sty.rs)
+\documentclass{article}
+\usepackage[tone]{tipa}
+\begin{document}
+Tones \tone{51}, \tone{35}, \rtone{15} and \stone{3}.
+\end{document}

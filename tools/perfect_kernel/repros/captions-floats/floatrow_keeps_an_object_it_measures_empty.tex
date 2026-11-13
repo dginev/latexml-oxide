@@ -1,0 +1,18 @@
+% floatrow drops a floatbox's object when it measures 0pt tall and deep (floatrow.sty:366-369: `\FBo@frame` becomes
+% `\@gobble`), which in TeX only an empty object does. A `pspicture` measured 0pt (its size only in string attributes;
+% Perl the same), so once 58i captured the caption apart from the object, floatrow dropped it (frsample10: 26 → 14
+% pictures, a `\footnotetext` lost). It now has its declared size (DIVERGENCES #397).
+% witness: none (synthesized; floatrow's frsample10/11/12; the 58i review).
+% Guard: perfect_kernel_batch58::floatrow_keeps_an_object_it_measures_empty.
+% status:  GREEN (58i)
+% oracle:  latex (DVI; pdflatex cannot run pstricks) 0 errors; the line, then "Figure 1: CapX".
+% engines: rust 58i first cut: the caption only.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{pstricks}
+\usepackage{floatrow}
+\begin{document}
+\begin{figure}
+\ffigbox{\caption{CapX}}{\begin{pspicture}(0,0)(10,10)\psline(0,0)(5,5)\end{pspicture}}
+\end{figure}
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: caption's full load after caption's kernel alone (floatrow.sty:39 `\RequirePackage{caption3}`) is
+%   caption's first in TeX, so it lets `\@makecaption` then (`\lx@caption@full@load`: subcaption, subfig, a repeat
+%   `\usepackage[<options>]{caption}`); a `cmd/@makecaption` hook patches it under babel-spanish.
+% witness: synthetic (CAP1; the asmeconf witnesses' shape, 2401.04032, after floatrow)
+% oracle:  pdflatex 0 `!`, "Figura 1: Una figura."; Perl 0 errors (`\AddToHook` a no-op).
+% engines: rust int163a: 1 Error "Generic hooks cannot be added to '\@makecaption'"; CAP1: 0.
+% expect:  0 errors, 0 warnings; caption "Figura 1: " + "Una figura."
+% status:  GREEN (CAP1)
+\documentclass{article}
+\usepackage[spanish]{babel}
+\usepackage{floatrow}
+\usepackage{subcaption}
+\AddToHook{cmd/@makecaption/before}{\small}
+\begin{document}
+\begin{figure}
+\centering X
+\caption{Una figura.}
+\end{figure}
+\end{document}

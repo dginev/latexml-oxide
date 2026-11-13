@@ -1,0 +1,26 @@
+% mechanism: pgf's number and control-sequence operands (pgfmathparser.code.tex:426-600), which our grammar stopped
+%   on and returned the partial value silently: `0bp` (a unit before the `0b` binary prefix), a space inside a number
+%   (`-4 .5`), `\dimexpr` and its e-TeX siblings read as TeX reads them; either case of base prefix; octal after a `0`;
+%   a count or an expression takes the place of a number before it (`2\myc` is `\myc`), a dimension scales it.
+% witness: 1106.3771, 1104.5553, 1503.00895 (`0bp`); 1711.06128, 2206.04438 (`\dimexpr`); 1612.03043 (`-4 .5`)
+% oracle:  pdflatex 0 `!`: [1.0u][2.0u][-4.5-] / [5-][31-][9.0-][150.0-][2.0u] /
+%          [8.0u][4.0u][4.0u][12-][13.0-][4.0-] / [4-][4-][12.0u][6.0u]
+% engines: rust int162a (b7acabe304): [0.0-][0.0u][-4.0-] / [0-][0.0-][11.0-][1-][2-] /
+%          [10.0u][0.0u][0.0u][0.0u][0.0u][0.0u] / [4.0u][8.0u][12.0u][6.0u], 0 errors, 0 warnings
+% expect:  the pdflatex values, 0 errors, 0 warnings
+% status:  GREEN (PGR1)
+\documentclass{article}
+\usepackage{pgf}
+\newcount\myc \myc=4
+\newdimen\mydim \mydim=3pt
+\def\u{\ifpgfmathunitsdeclared u\else -\fi}
+\def\t#1{\pgfmathparse{#1}[\pgfmathresult\u]}
+\begin{document}
+\t{0bp+1pt}\t{\dimexpr 10pt-8pt}\t{-4 .5}
+
+\t{0B101}\t{0x 1F}\t{010+1}\t{1 .5e 2}\t{2 p t}
+
+\t{10pt+\dimexpr-4\dimexpr0.5pt}\t{(\dimexpr 1pt+1pt)*2}\t{0.5\glueexpr 4pt plus 1pt\relax}\t{\numexpr 3*4}\t{\numexpr 3*4\relax+1}\t{\muexpr 3mu\relax+1}
+
+\t{\myc}\t{2\myc}\t{\myc\mydim}\t{2\mydim}
+\end{document}

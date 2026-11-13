@@ -1,0 +1,21 @@
+% mechanism: a REVTeX `\affiliation{…\footnote{Corresponding author e-mail: Email: zz@…}}` with two spaced labels: the
+%   footnote stays a `<pubnote>` and no contact is made (the glued twin is GREEN:
+%   revtex_affiliation_footnote_email_label_then_glued_label_keeps_both.tex; revGL1b pre-existing)
+% witness: synthetic (revGL1b; the note label's witness cond-mat0202268)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able", "Univ Aa", footnote "a Corresponding author
+%   e-mail: Email: zz@x.org"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; Ann Able with Univ A only; a document
+%   `<pubnote>Corresponding author e-mail: Email: zz@x.org</pubnote>`, no contact; perl not run
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, the note "Corresponding author" and an e-mail contact zz@x.org
+%   named "e-mail: Email: "
+% status:  RED (int158a; RR1 gap 16)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A\footnote{Corresponding author e-mail: Email: zz@x.org}}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}

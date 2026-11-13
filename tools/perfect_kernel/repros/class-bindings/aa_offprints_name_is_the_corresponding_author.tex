@@ -1,0 +1,19 @@
+% witness: 0903.3512 (`\offprints{O. Kochukhov, \email{oleg@fysast.uu.se}}` under `\author{O. Kochukhov\inst{1}
+%          \and …}`); main-session decision on 92a r1 question a
+% oracle:  pdflatex with 1707.06238's aa.cls: "Send offprint requests to: O. Kochukhov, e-mail: oleg@x.se"
+% engines: perl 0.8.8 = 0 errors, oleg@x.se on D. Shulyak; rust 90a = 0 errors, today's XML oleg@x.se on the last author by position
+%          (D. Shulyak), the shadow without it; rust 92a r1 = the shadow's block (the address spells no one)
+% expect:  0 errors, 0 warnings; the shadow gives oleg@x.se to O. Kochukhov, the name the note prints before it the
+%          corresponding-author designation (owner:corresponding api:note-name)
+% status:  RED (92a r1) -> GREEN (92a r2)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{O. Kochukhov\inst{1} \and D. Shulyak\inst{2}}
+\offprints{O. Kochukhov, \email{oleg@x.se}}
+\institute{Univ X \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

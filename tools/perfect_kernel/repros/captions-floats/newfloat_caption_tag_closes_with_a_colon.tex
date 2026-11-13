@@ -1,0 +1,16 @@
+% witness: 2411.16612 (minted's `[newfloat]` listings `close=" "` beside its tables' `close=": "`)
+% oracle:  pdflatex 0 errors; "Table 1: T.", "Listing 1: Code.", "See 1 and 1."
+% engines: rust (int57a) = 0 errors, <tag close=" ">Listing 1</tag>; perl = the same (newfloat.sty.ltxml
+%          defines no \format@title@<type>)
+% expect:  0 errors; <caption><tag close=": ">Listing 1</tag>Code.</caption>
+% mechanism: newfloat.sty's type is a kernel float, captioned by the kernel's \@makecaption "#1: #2"; newfloat_sty.rs
+%   defines \format@title@<type> as sect09.rs's \format@title@figure. KPE #1124.
+% status:  GREEN (78s r2)
+\documentclass{article}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[fileext=lol]{listing}
+\begin{document}
+\begin{table}[h]T\caption{T.}\label{t}\end{table}
+\begin{listing}[h]int x;\caption{Code.}\label{l}\end{listing}
+See \ref{t} and \ref{l}.
+\end{document}

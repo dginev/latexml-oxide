@@ -1,0 +1,20 @@
+% mechanism: the native `\__fp_parse:n` returns its tokens as a list through the ordinary path of a macro call
+%   (`invoke_expansion`), which `inherit_field_prov` stamps: a printed `\@title` holding an fp expression is told from the
+%   body as with the raw macro. The control twin of `title_printed_through_expandafter`.
+% witness: review revP1's lesson for batch P2, no arXiv paper
+% oracle:  pdflatex: 0 errors; prints "Value 2.5 of it" once, then "Body text."
+% engines: rust: raw and native byte-identical
+% expect:  0 errors; one `<title>` with the value, no paragraph repeating it
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\NewDocumentCommand \val { m } { \fp_eval:n {#1} }
+\ExplSyntaxOff
+\title{Value \val{1+1.5} of it}
+\author{A. Author}
+\begin{document}
+\makeatletter
+{\Large\bf \@title\par}
+\makeatother
+Body text.
+\end{document}

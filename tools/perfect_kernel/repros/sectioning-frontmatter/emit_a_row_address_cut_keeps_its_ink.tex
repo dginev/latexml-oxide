@@ -1,0 +1,20 @@
+% mechanism: a row line's address spelling one of the row is that one's e-mail; the emitter cuts the line's rest from its
+%   tokens, ending at the address's own first token less the spaces, separators, commands and bracket opening it, a bracket it
+%   leaves open closed by its own token after the address (`emitter::repart::prefix_tokens`); every address must end the line
+%   (`Resolver::block`'s `own_ink`), and a mark before it is its ink; `=2` only
+% witness: review revLO2 2, 3 and base (`scratch_revLO2/p/q_tel.tex`, `q_brk.tex`, `q_two2.tex`, `q_mark.tex`); the row
+%   line's shape 2203.10777
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker"; Univ A; Present address: Dept X, Dresden, Germany (Tel. 351 463,
+%   bob.baker@a.org)
+% engines: rust off: Bob the e-mail, both "Present address: Dept X, Dresden, Germany (Tel. 351 463)"; LO2 `=2`: both
+%   "… (Tel. 351 463" (the shortest letter match)
+% expect:  0 errors, 0 warnings; `=2` creators as with the switch off
+% status:  RED (LO2) -> GREEN (perfect_kernel_batchlo2::a_row_address_cut_keeps_its_ink)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker\\ Univ A\\ Present address: Dept X, Dresden, Germany (Tel. 351 463, bob.baker@a.org)}
+\maketitle
+Text.
+\end{document}

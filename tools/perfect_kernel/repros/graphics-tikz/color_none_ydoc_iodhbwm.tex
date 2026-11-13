@@ -1,0 +1,21 @@
+% witness: iodhbwm/iodhbwm (via ydoc-desc.sty:22 + :108; iodhbwm loads ydoc through skdoc/tcolorbox)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03); real doc rust=147
+% expect:  0 errors; body <ltx:text> for "hello" carries NO color= attr (none = no-op color)
+% status:  GREEN (b54t, batch 54o)
+% mechanism: ydoc-desc.sty:22 defines \color@none = \xcolor@{}{}{}{} (an intentionally EMPTY
+%   xcolor color, stored as \csname\string\color@none\endcsname). \colorlet{cls}{none} (:108)
+%   looks up color 'none'. Rust color_sty.rs:185-203 has a raw-interop fallback that reads
+%   \color@none, but it uses do_expand() (color_sty.rs:187) which FULLY expands through
+%   \xcolor@ (defined xcolor_sty.rs:586 as \def\xcolor@#1#2#3#4{#2}, returns empty #2) → the
+%   payload collapses to "" → the `parts.len() >= 5` textual guard (color_sty.rs:193) fails →
+%   falls through to "Can't find color named 'none'; assuming Black" (color_sty.rs:218-222).
+\documentclass{article}
+\usepackage{xcolor}
+\makeatletter
+\expandafter\def\csname\string\color@none\endcsname{\xcolor@ {}{}{}{}}
+\makeatother
+\colorlet{cls}{none}
+\begin{document}
+\textcolor{cls}{hello}
+\end{document}

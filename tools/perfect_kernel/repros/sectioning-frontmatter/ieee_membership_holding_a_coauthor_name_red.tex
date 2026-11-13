@@ -1,0 +1,21 @@
+% mechanism: a co-author's name written INSIDE `\IEEEmembership{…}` (after `\footnote,`): since P5a the grade's whole
+%   argument is the membership contact of the name before it, so "Cy Three" sits inside Bob Two's contact; the base
+%   split three creators by the accident of the `\footnote,` (without it both binaries merge alike) but lost "IEEE
+%   Member", counted. pdflatex sets the name inside the italic membership text.
+% witness: 2507.19818 (`Longchao~Da*\footnote,~\IEEEmembership{Member,~IEEE, Hua~Wei, Member,~IEEE}`; CL167)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One*, Bob Two* Member, IEEE, Cy Three, Member, IEEE"
+% engines: rust int166a: 3 creators, 1 W ("2 words … missing: IEEE Member"); rust int167a: 2 creators, Bob Two's
+%          membership "Member, IEEE, Cy Three, Member, IEEE", 0 W
+% expect:  3 creators — Cy Three a person with his own "Member, IEEE"; no word lost
+% status:  RED (CL167, int167a) — moves: post-merge (IEGNM)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~One*,
+        Bob~Two*\footnote,~\IEEEmembership{Member,~IEEE, Cy~Three, Member,~IEEE}
+\thanks{First note.}
+\thanks{$^*$Second note.}
+}
+\maketitle
+Body.
+\end{document}

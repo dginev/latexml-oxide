@@ -1,0 +1,18 @@
+% `\author{\input{author_grid_enc.tex}}` whose file opens with `\inputencoding{utf8}`: read as its content, as any
+% sole `\input` file (`sole_input_file`) — the refusal of a file holding `\input` matches the command whole, not the
+% `\input` that `\inputencoding` begins with.
+% witness: synthetic (review rev107b N3; the sole-`\input` reading of 2609.38746)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2", "1 University of Alpha", "2 University of Beta"
+% engines: rust 107b r1 = one creator holding both names and both lines, 1 merged_creators Error; Perl one creator
+% expect:  0 errors, 0 warnings; two creators, each the university its mark names
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
+\title{T}
+\author{%
+  \input{author_grid_enc.tex}
+}
+\maketitle
+\end{document}

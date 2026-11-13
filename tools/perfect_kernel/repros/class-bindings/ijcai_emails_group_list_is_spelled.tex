@@ -1,0 +1,29 @@
+% mechanism: RED (no guard, batch 104d L5): ijcai's `\emails` line with a TeX group of local parts before one domain,
+%   `{aable, bbaker}@a.edu` (printed "aable, bbaker@a.edu", no braces), is read as no list (`email_addresses`
+%   drops the group's braces and refuses a bare word before an address) and goes whole to one author by order;
+%   reading an unprinted group closed right before `@` as a list would also change the settled reading of
+%   `\email{{a,b}@x}` (2206.10050, a shared contact's block's) — left for a ruling (SYNC_STATUS frontmatter row 104d)
+% witness: 2403.12370 (`{chisu, ffaye.hao, jason-c.zhang}@polyu.edu.hk`), 2311.12521 (`{keshav.ramani,
+%   daniel.borrajo}@jpmchase.com`); census129 §6 (ii)
+% oracle:  pdflatex with 2403.12370's ijcai24.sty: 0 errors; "Ann Able 1 , Bob Baker 1 and Cat Cole 2" / "aable,
+%   bbaker@a.edu, ccole@b.edu"
+% engines: rust int130a and 104d: "aable, bbaker@a.edu" on Bob Baker, ccole@b.edu on Cat Cole
+% expect:  0 errors, 0 warnings; aable@a.edu Ann Able's, bbaker@a.edu Bob Baker's, ccole@b.edu Cat Cole's
+% status:  RED (int130a, 104d)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{ijcai24}
+\title{T}
+\author{Ann Able$^1$\and Bob Baker$^1$\And Cat Cole$^2$\\
+\affiliations
+$^1$Univ A\\
+$^2$Univ B\\
+\emails
+{aable, bbaker}@a.edu,
+ccole@b.edu
+}
+\begin{document}
+\maketitle
+\begin{abstract}Abs.\end{abstract}
+Text.
+\end{document}

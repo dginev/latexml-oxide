@@ -1,0 +1,20 @@
+% witness: 2111.06645 (sigma.cls:20-21 `\LoadClass[fleqn,11pt,twoside]{article}`, `\PassOptionsToPackage{fleqn}{amsmath}`)
+% oracle:  pdflatex with this cut of the class (clean): amsmath's fleqn `\[…\]` is `\hbox{$\displaystyle…$}`, so the
+%          `$ and~$` in it is text between two formulas
+% engines: rust 67int22 = 2 errors ("Missing $ closing display math": the binding dropped `fleqn`); Perl: OmniBus
+% expect:  0 errors, 0 warnings
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sigma.cls}
+\ProvidesClass{sigma}
+\LoadClass[fleqn,11pt,twoside]{article}
+\PassOptionsToPackage{fleqn}{amsmath}
+\RequirePackage{amsmath}
+\end{filecontents*}
+\documentclass{sigma}
+\begin{document}
+where
+\[x=X-\hbar$ and~${h^*=h/(cx+d)}.\]
+
+Next.
+\end{document}

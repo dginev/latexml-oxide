@@ -1,0 +1,17 @@
+% witness: 1604.04618 (kpfonts.sty:568, :1028 `\neq` at `U/jkpsyc` 44); review 89b r1 finding 1, probe p2
+% oracle:  pdflatex: "x and ≠1 and a ≠ b." (pdftotext reads ≠ as ","), 0 errors
+% engines: rust 89b r1 = 0 errors, 0 warnings with `a � b` printed: the first digestion of \neq, the counter's
+%          `\theconsta` under `\refstepcounter`'s discarded diagnostics hold, set the once-per-font key and lost its
+%          Warning; rust 89a = 0 warnings, `,` printed; perl 0.8.8 = 0 warnings, \neq dropped silently
+% expect:  0 errors, 1 warning (U/jkpsyc naming \neq), raised where `a\neq b` is printed; \neq U+FFFD there; the same
+%          eager and `--streaming` (OXIDIZED_DESIGN_DIVERGENCES #27)
+% status:  RED (89b r1) -> GREEN (89b round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareSymbolFont{symbolsC}{U}{jkpsyc}{m}{n}
+\let\neq\undefined\DeclareMathSymbol{\neq}{\mathrel}{symbolsC}{44}
+\newcounter{consta}
+\renewcommand{\theconsta}{{\neq_{\arabic{consta}}}}
+\begin{document}
+$\refstepcounter{consta}\label{c1}x$ and $\ref{c1}$ and $a\neq b$.
+\end{document}

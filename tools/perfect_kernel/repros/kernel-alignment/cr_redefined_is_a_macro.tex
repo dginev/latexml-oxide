@@ -1,0 +1,17 @@
+% witness: plain.tex `\bordermatrix` (`\def\cr{\crcr\noalign{\kern2\p@\global\let\cr\endline}}` in its `\ialign`)
+% oracle:  pdflatex 0 errors: rows "a b z" and "c d e" — the macro `\cr` expands to `&z\primcr`, a third cell and the
+%          row end (tex.web §342/§789: a column end is a tab_mark/car_ret command code, which `\def` replaces)
+% engines: rust 64ze = 4 errors + 1 warning (the macro `\cr` matched the current meaning of `\cr`, so it ended the
+%          row unexpanded and the cells read on into the text); Perl 0.8.8 4 errors (Gullet.pm:266-277)
+% expect:  0 errors, 0 warnings; two rows of three cells, a|b|z and c|d|e
+% status:  RED (64ze) -> GREEN (65b); guard perfect_kernel_batch65::redefined_cr_is_a_macro_not_a_row_end
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\let\primcr\cr
+\def\cr{&z\primcr}
+\halign{#\quad&#\quad&#\primcr
+a&b\cr
+c&d&e\primcr}
+\let\cr\primcr
+\end{document}

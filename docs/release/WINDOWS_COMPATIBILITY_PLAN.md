@@ -183,7 +183,7 @@ cold run for a fair Linux-vs-Windows benchmark.
   ("libkpathsea: an undisclosed static LGPL-2.1 link"). `RELEASING.md` cites the
   same discharge.
 - [x] **expl3 / TL2026 `latex.ltx` dump gate — DONE 2026-07-23.** Was: 137
-  raw-load expl3-catcode-gap errors (`EXPL3_CATCODE_GAP_2026-06-08.md`)
+  raw-load expl3-catcode-gap errors (`../archive/EXPL3_CATCODE_GAP_2026-06-08.md`)
   blocking 2026 from the release dump window. The two expl3 fixes landed
   2026-07-20 closed it; re-measured inside the real
   `ghcr.io/tkw1536/texlive-docker:2026` under the verbatim release gate:

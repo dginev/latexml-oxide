@@ -1,0 +1,18 @@
+% witness: 0812.1037, 1105.2318, 1306.6339, 1805.00040 (projection 67int23b: `undefined:\citeauthoryear`, 19 of 3,000)
+% oracle:  pdflatex (2 passes) 1 error (\citeauthoryear undefined, from the \cite)
+%          mnras.cls:1636 `\def\@biblabel#1{}`: the list prints no label; `\@lbibitem` writes it to the .aux as
+%          `\bibcite{key}{label}`, and only a `\cite` of the key expands `\b@key` (latex.ltx:6197-6206, 6233-6237)
+% engines: rust 67int23b: 1 Error, plus a display tag `[…]` the PDF does not print; Perl alike (latex_constructs.pool.ltxml:4096-4102 digests the
+%          label at `\bibitem`)
+% expect:  1 error; entry a keeps its autoref and refnum tags (the citation text), entry b (uncited) has none
+% status:  RED (67int23b) -> GREEN (70c); OXIDIZED_DESIGN_DIVERGENCES #750
+% preload: ar5iv.sty
+\documentclass{mnras}
+\begin{document}
+\title{T}\author{A}\maketitle
+Text \cite{a}.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Abbott et al.}{2017}]{a} Abbott B., 2017, ApJ
+\bibitem[\protect\citeauthoryear{Baker}{2001}]{b} Baker C., 2001, MNRAS
+\end{thebibliography}
+\end{document}

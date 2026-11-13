@@ -1,0 +1,16 @@
+% witness: synthetic (m5study e1: a document-level `\def\abstract#1`, the shape of apa7.cls:785)
+% oracle: pdflatex clean (TL 2025, 0 errors); PDF text: Abstract. We study widgets. Body.
+% engines: rust base 64w-rel (8542e1b1a5; the lock code is unchanged through 72cefe8821) E/F/W=0/0/0; 64zb E/F/W=0/0/0; Perl refuses every :locked redefinition (State.pm:502-517)
+% expect: as today under D1: every use is a braced call (or the binding reads downstream / takes no argument), so the binding keeps the semantic element; byte-identical to base
+% status: GREEN (base) -> GREEN (64zb), unchanged
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\abstract#1{\gdef\@myabstract{#1}}
+\def\showabs{\par\noindent\textbf{Abstract.} \@myabstract\par}
+\makeatother
+\begin{document}
+\abstract{We study widgets.}
+\showabs
+Body.
+\end{document}

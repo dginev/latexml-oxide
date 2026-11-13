@@ -1,0 +1,21 @@
+% witness: scrlttr2copy/letter-copy-test (scrlttr2.cls:5053; via DIN.lco chain)
+% oracle:  pdflatex 0 errors
+% engines: rust=1err perl=0 (2026-09-06)
+% expect:  0 errors; document body contains text "OK"
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: latex_constructs/sect09.rs:287 `def_primitive_noop("\flushbottom")`
+%   (a duplicate of Perl's latex_base.pool C.9 block, which belongs in latex_base
+%   ONLY) runs AFTER the dump in the dump branch and clobbers the dump's expandable
+%   robust `\flushbottom` (latex.2025.dump.txt:2780/:14958) back to a primitive.
+%   scrlttr2 then does `\g@addto@macro\flushbottom{...}`; our RAW latex.ltx
+%   `\g@addto@macro` (sect05.rs:542, `\expandafter{#1#2}`) cannot expand the
+%   primitive, so it captures `\flushbottom` literally -> self-recursive body.
+%   Perl is clean: its float block is only in latex_base.pool (skipped in the dump
+%   branch) AND AddToMacro (Package.pm:2540) guards non-expandable targets.
+\documentclass{article}
+\makeatletter
+\g@addto@macro\flushbottom{\relax}
+\makeatother
+\begin{document}
+\flushbottom OK
+\end{document}

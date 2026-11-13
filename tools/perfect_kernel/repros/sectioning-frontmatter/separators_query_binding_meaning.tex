@@ -1,0 +1,20 @@
+% mechanism: the binding-callable separator query (`observer/separators.rs` `argument_separators`, `\lx@fm@separators`;
+%   OD #995, Option C P2-0) names a binding's own `\and` `binding`: aas_support's `\and` (`aas_support_sty.rs`
+%   `DefPrimitive!("\\and", None)`, loaded for aastex701) is neither the kernel separator nor a raw file's, so a gate
+%   reads what its binding says it means
+% witness: synthetic (the P2 plan's query: a binding-made meaning, `DefinitionOrigin::is_binding_made`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: `\lx@fm@separators` provided as its argument printed, the
+%   lines "Ann Able" and "Bob Baker" (the class's `\and` outside its title block; aastex701.cls:2805 `\let\and
+%   \frontmatter@and` is its title block's)
+% engines: Perl 0.8.8: no such query (not run); base int157a (a8826e189a): `\lx@fm@separators` undefined, the
+%   provided print; P20: B1[binding]
+% expect:  0 errors, 0 warnings; the line reads B1[binding]
+% status:  GREEN (P20; guard perfect_kernel_batchp20::the_separator_query_reads_a_binding_meaning)
+\documentclass{aastex701}
+\makeatletter
+\providecommand\lx@fm@separators[1]{#1}
+\newcommand\sep[1]{[\lx@fm@separators{#1}]}
+\makeatother
+\begin{document}
+B1\sep{Ann Able \and Bob Baker}
+\end{document}

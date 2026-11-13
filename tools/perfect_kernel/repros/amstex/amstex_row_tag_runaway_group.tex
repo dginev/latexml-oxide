@@ -1,0 +1,14 @@
+% witness: synthetic (66e r4 review: r3 read the rest of the display and every later paragraph into the tag, or to the file's end)
+% oracle:  pdftex (\input amstex) 3 errors: "Paragraph ended before \align  was complete", "Missing $ inserted", "Display math should end with $$"; the align is dropped (amstex.tex:667/:687 \align reads its body as a non-\long argument)
+% engines: rust 66e r3 = 1 error ("File ended while scanning use of \tag" when no `}` follows), the later paragraphs and \enddocument read into the tag; r4 = 1 error ("Paragraph ended before \tag was complete") at the next \par; 66d6 = 3 errors (\let\tag\eqno); perl \let\tag\eqno too
+% expect:  1 error ("Missing } inserted before the row's end in \tag": the scan stops at the \\ inside the tag's group, tex.web §1126-1127); row 1 tagged "(5)" with a=b, row 2 c=d untagged; both later paragraphs kept; the document ends normally (OXIDIZED_DESIGN_DIVERGENCES #575)
+% status:  GREEN (66e r5)
+\input amstex
+\input amsppt.sty
+\document
+$$\align a&=b\tag{5\\ c&=d\endalign$$
+
+Later {para}graph.
+
+Last paragraph.
+\enddocument

@@ -1,0 +1,20 @@
+% witness: review of batch 62zg (2609.33998's teaser shape, twice)
+% oracle:  pdflatex 0 errors: "(a) One.", "Figure 1: First.", then "Figure 2: Second." with `\ref{b}` = "2a"
+% engines: rust 62zg: the second group's sub-figure carries refnum "1a" (id `S0.F1.sf1`) — the figure counter it reads
+%          has not yet stepped for "Figure 2" (it steps at the `\caption` after the sub-captions); pdflatex writes the
+%          label at shipout, after the step. The first group reads "0a"; perl not compared
+% expect:  0 errors; the second group's sub-figure has `<tag role="refnum">2a</tag>`
+% status:  RED (filed from the 62zg review)
+\documentclass{article}
+\usepackage{caption,subcaption}
+\begin{document}
+\begin{center}\captionsetup{type=figure}
+\begin{minipage}[t]{0.3\textwidth}A\subcaption{One.}\label{a}\end{minipage}%
+\caption{First.}
+\end{center}
+\begin{center}\captionsetup{type=figure}
+\begin{minipage}[t]{0.3\textwidth}B\subcaption{Two.}\label{b}\end{minipage}%
+\caption{Second.}
+\end{center}
+See \ref{a} and \ref{b}.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: the shape of the svmult copies (astro-ph0005332, physics0102085: svmult.cls `\LoadClass[twoside]{article}`)
+%          with a shipped class between the copy and article; 72a review r7 NIT 8 (copy → shipped mybase.cls →
+%          `\LoadClass{scrartcl}` under an article binding)
+% oracle:  pdflatex 0 errors, 0 warnings: "1 Intro", "Text SV MB."
+% engines: Perl never reads the copy (svmult.cls.ltxml:34 `LoadClass('book')`); rust int23 base = mybase.cls's
+%          `\LoadClass{article}` loaded article over the binding's book (two classes: the class slot read only
+%          mybase.cls's own, empty, class load)
+% expect:  0 errors, 0 warnings; the class slot's Info (the binding's book stands for mybase.cls's
+%          `\LoadClass{article}`, OXIDIZED_DESIGN_DIVERGENCES #736); the section whole, "Text SV MB."
+% status:  RED (int23 base) -> GREEN (int23 fix)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\section{Intro}
+Text \svextra\ \mbextra.
+\end{document}

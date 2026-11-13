@@ -1,0 +1,15 @@
+% An "Email:" line under a marked entry, one address per carrier (control): the spelled one, then the other by order.
+% witness: astro-ph0512555 (control)
+% oracle:  pdflatex 0 errors: "$^1$Univ A, Town;", "Email:aable@a.edu, office@a.edu", "$^2$Univ B, City"
+% engines: rust int127a = 0 errors, right through the writer
+% expect:  0 errors, 0 warnings; Ann: aable@; Bob: office@
+% status:  GREEN (int127a, by the writer) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$, Cat Cole$^{2}$}
+\affil{$^1$Univ A, Town; \\ Email:aable@a.edu, office@a.edu \\ $^2$Univ B, City}
+\maketitle
+Text.
+\end{document}

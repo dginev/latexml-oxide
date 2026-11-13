@@ -1,0 +1,14 @@
+% witness: K13 stage-2 audit (57h): the real `\orcidlinkX` is `\href{…}{…}` (orcidlink.sty:69), whose
+%          `\hyper@linkurl` begins with `\leavevmode` (hpdftex.def:411); the binding did not
+% oracle:  pdflatex 0 errors; "Before." then one paragraph: the iD link, a space, "text after."
+% engines: rust 57h=0: the link built in vertical mode drops the space after it (`</ref>text after.`);
+%          perl: same binding shape (orcidlink.sty.ltxml:23-29, SHARED)
+% expect:  0 errors; `</ref> text after.` in the paragraph the link starts
+% status:  RED (57h) -> GREEN (57i: `\orcidlinkX` begins with `\leavevmode`, DIVERGENCES #340)
+\documentclass{article}
+\usepackage{orcidlink}
+\begin{document}
+Before.
+
+\orcidlink{0000-0002-1825-0097} text after.
+\end{document}

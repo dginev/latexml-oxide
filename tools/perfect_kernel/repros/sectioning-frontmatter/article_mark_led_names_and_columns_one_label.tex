@@ -1,0 +1,16 @@
+% mechanism: `$^1$Ann Able \and $^1$Bob Baker`, nothing setting label 1: the second column is a name, not the first's
+%   affiliation
+% witness: synthetic
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 1 / Ann Able Bob Baker"
+% engines: int169a (54ccc986ef): Ann Able with the affiliation "Bob Baker"
+% expect:  0 errors, 1 warning (the safety net: label 1 unanswered, its text kept in the names "Ann Able 1", "Bob Baker
+%   1"); two creators
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able \and $^1$Bob Baker}
+\maketitle
+Text.
+\end{document}

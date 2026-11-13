@@ -1,0 +1,83 @@
+# Perfect-kernel topical repro corpus
+
+Minimal, self-contained `.tex` reproductions of perfect-kernel failures, grouped
+by the *mechanism* they exercise (not by package), so one topic can be worked
+to green at a time and re-checked as a unit. Run a topic with
+`tools/perfect_kernel/repros.sh <topic>`; see `repros.sh --help`.
+
+This directory is deliberately outside `latexml_oxide/tests/` — a `.tex` under a
+fixture root without a golden `.xml` silently passes. A repro that turns green
+gets a real guard test (`cluster_package_guards/`, module `perfect_kernel_batchNN`)
+and STAYS here as a topic regression check — except a green `math-parse/` repro
+whose guard only asserts whole `<Math>` elements: it moves into a grouped golden
+pair `latexml_oxide/tests/parse/<phenomenon>.tex` + `.xml` (one `\section` per
+former repro, headed `% formerly repro math-parse/<name>`), its guard retires, and
+`perfect_kernel_batch57::parse_groups_are_warning_free` (list the group there) keeps it free of
+warnings. A guard that keeps an override, a warning count or HTML/MathML keeps its
+repro here, unless it converts its grouped golden file itself and pins that file's
+warnings by count (`tests/parse/sampled_readings.tex`, whose rows must enumerate more
+than ten readings: `perfect_kernel_batch57::sampled_readings_match_asf`).
+
+## File conventions
+
+One repro per file, ≤ ~20 lines, `article` class unless the class is the subject,
+raw-load preload assumed (`[rawstyles,rawclasses]latexml.sty`; add
+`% preload: [luatex,rawstyles,rawclasses]latexml.sty` for a LuaTeX-oracle doc).
+The header comment block is machine-read by `repros.sh`:
+
+```latex
+% witness: numerica/numerica (numerica.tex:898)     <- corpus doc + line
+% oracle:  pdflatex 0 errors                        <- the ground truth
+% engines: rust=6 perl=6 (2026-09-03)               <- last measured
+% expect:  0 errors; cell Math contains XMTok 0.125 <- 0 errors + ONE structural check
+% status:  RED                                      <- RED | GREEN | CONTROL
+```
+
+`CONTROL` marks a shape that pdflatex ALSO rejects (e.g. `${$b$}$`); it must
+keep producing an error and documents the boundary of the mechanism.
+
+Name files `<mechanism>_<witness>.tex`; a topic `NOTES.md` holds the root-cause
+summary per repro (mechanism with `file:line` into latex.ltx / the `.sty` /
+tex.web / Perl, classification RUST-ONLY / SHARED / PERL-ORIGIN, fix site,
+dead ends) — conclusions only, the play-by-play stays in the agent transcript.
+
+## Topics
+
+| Topic | Mechanism |
+|---|---|
+| `list-structure` | list containers and what may stand in them before/between `\item`s — auto-opened items (OXIDIZED_DESIGN #261) |
+| `alignment` | `&`/`\\`/`\cr` handling, the per-cell hidden `$` pairing (`\lx@dollar@in@mathmode`), `\halign` templates, column types |
+| `boxes-groups` | a box/group opened in one macro and closed in another (`\hbox\bgroup…\egroup`, ulem word boxes, `\begingroup`/`\endgroup` across mode frames), mode-frame errors |
+| `index` | `\index` entry writing/expansion (`\protected@write`), makeindex-round-trip packages, `\edef`+`\write` of mode-dependent conditionals |
+| `string-mouth` | tokens re-read from a string (`SanitizedVerbatim`, `\scantokens`, `\write`+`\input`, pre-tokenized bodies): lost catcodes, invented EOFs, conditionals cut at a mouth boundary |
+| `sectioning-frontmatter` | `\@startsection` seam, `\maketitle`/`\@maketitle`, class-owned `\section`, sectioning inside lists/items |
+| `luatex-profile` | LuaTeX-oracle docs under `[luatex]`: engine probes, `\directlua` bridge, Unicode text commands |
+| `block-model` | schema content models: what a container admits, and where an inadmissible child goes (quote → `para`/`logical-block`/`sectional-block`, OXIDIZED_DESIGN #271; `Meta.class` out of math text, #272) |
+| `expl3` | l3 kernel behaviour under raw load: regex, keys, hooks, `\mode_if_math`, file boundaries |
+| `streaming` | streaming-mode bookkeeping (yields, spills, `node_boxes` sweeps); run with `--streaming`, as `repros.sh` runs eager only |
+| `kernel-alignment` | kernel `\halign`/`\noalign` behaviour: periodic and non-periodic templates, `\omit`, `\noalign` placement and brace hacks, `\everycr`, longtable page breaks, ragged rows |
+| `alignment-ledger` | the per-cell ledger: the hidden `$` pairing and brace groups in a cell, `\\`/`\arraycr` read inside a cell, `&` reached through `\expandafter` |
+| `alignment-bindings` | package-level tables (nicematrix `\CodeBefore`/`\CodeAfter`/cell nodes, tabularray, ltablex, listings in a `p` column) |
+| `captions-floats` | `\caption` and floats: captions outside or inside boxes, rotated and side floats, subcaptions, class-owned float environments |
+| `expansion-primitives` | expansion and assignment primitives: `\everyeof`/`\endinput`/`\noexpand` at input ends, `\afterassignment`, `\ifnum` lookahead, `\csname`, dimension scanning, hooks |
+| `parameter-conditional` | macro parameter delimiters and conditionals: delimiter mismatches, `\ifx`/`\fi` balance across boxes, conditionals read in style parameters |
+| `macro-state` | definitions and state that outlive (or fail to reach) their scope: catcodes leaking through `\input`, hook order, allocated registers, `\patchcmd` bodies, scoped knowledge |
+| `unicode-catcodes` | bytes and catcodes: the byte mouth for 8-bit encodings (T1, cp1251, UTF-8 lead bytes), `\DeclareUnicodeCharacter`, font encodings in force |
+| `fonts-nfss` | NFSS state: the preloaded encoding, `\fontsize`/`\selectfont`, a raw class's nominal `\normalsize`, `\f@family`/`\f@series`/`\f@shape` following every text font switch, `\the\font` |
+| `loader` | package and class loading: options passed and kept, versions, `\AtEndOfPackage`/hooks, file-name stacks, bindings that call a class's internals, raw loading vs binding |
+| `babel-lang` | babel/polyglossia/language options and shorthands under the pdflatex/lualatex oracle |
+| `backend-persona` | the engine persona: `\ifpdf`/`\pdfoutput`, pdfTeX/XeTeX/LuaTeX primitives, backend selection, engine-only packages |
+| `beamer-stubs` | beamer frames, overlays and mode specs, with the stubs beamer's bindings stand on |
+| `index-bib` | bibliographies and citations: `.bib` field formatting, biblatex/biber `.bbl`, bibliography styles |
+| `graphics-tikz` | drawing: picture, pstricks, TikZ/pgf keys and nodes, SVG conversion, graphics inclusion |
+| `graphics-axodraw` | axodraw v1 Feynman diagrams (the native binding of its PostScript procedures) and the picture labels they place |
+| `math-parse` | the math parser: its grammar (signs, bigop operands, fences), cells' punctuation, math ligatures, unparsed-math reporting; green shapes live in `latexml_oxide/tests/parse/` (grouped golden pairs) |
+| `amstex` | AMS-TeX documents (`\input amstex`, `\documentstyle{amsppt}`) read under the LaTeX route: plain's `\end`, amstex.tex's own definitions (oracle: the `amstex` format) |
+| `class-bindings` | names a class (or a package it loads) defines that its binding must own: the K22 census of shipped class copies against run-336 first errors |
+| `package-bindings` | commands and internals a package's real `.sty` defines that its binding must own, because papers (or the raw code they load) call them: run-340 first-error "undefined" names |
+| `paragraph-mode` | mode changes at paragraph boundaries: tex.web §1046-1047 `\par`/`\end{X}` in inline math ("Missing $ inserted"), the formula's end around a stray `}` |
+| `singletons` | one-off package defects whose mechanism has no topic of its own |
+| `stub-dependencies` | a stub binding (a package not interpreted raw) loads what the real package loads, option-driven loads included, and defines its public names; class bindings likewise for their classes |
+| `stand-in-copies` | a stand-in binding followed by the paper's copy of its file, which only provides: extras, owned names kept, scratch logic, nested loads, deferred hooks (OXIDIZED_DESIGN_DIVERGENCES #731) |
+| `cross-references` | `\label`/`\ref`: the object a label names and the number `\ref` prints — a label after a raw `\refstepcounter` (tcolorbox boxes, a `\put`) names the box the step numbers (OXIDIZED_DESIGN_DIVERGENCES #813) |
+| `reversion` | what a definer reverts to in `tex=`: the user-level macro, never a `\lx@…` internal — a Perl `sub { }` body leaves no box, an undef body's box reverts its arguments, an internal constructor carries its macro's `alias` |

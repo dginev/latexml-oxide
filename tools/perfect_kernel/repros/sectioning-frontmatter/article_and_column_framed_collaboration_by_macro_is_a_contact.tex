@@ -1,0 +1,18 @@
+% mechanism: an `\and` column printing only a collaboration framed for the names before it, through a document macro
+%   printing "on behalf of", is their collaboration contact (`resolver::lines::frames_the_names`); the same under an
+%   unknown class (OmniBus) is the guard's row. OXIDIZED_DESIGN_DIVERGENCES #967.
+% witness: synthetic (segaudit col1's macro in the kernel's `\and` list)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able", "Bob Baker", "on behalf of the XYZ Collaboration" (three columns)
+% engines: rust P5bbase: the same as P5b (the reading's `speaks_for`); perl: a third creator
+% expect:  0 errors, 0 warnings; two creators, each with the collaboration contact
+%   (perfect_kernel_batchp5b::a_framed_collaboration_call_is_the_names_contact)
+% status:  GREEN (P5bbase) -> GREEN (P5b)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\obo{on behalf of}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and \obo{} the XYZ Collaboration}
+\maketitle
+Text.
+\end{document}

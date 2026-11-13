@@ -22,6 +22,21 @@ LoadDefinitions!({
 
   def_macro_noop("\\AC@placelabel{}")?;
 
+  // acronym.sty:44-84: the options set their switches; `smaller` also loads relsize, whose `\textsmaller` sets the
+  // short forms (`\acsfont`) and whose `\smaller` the document may use itself (1806.02261's `\acro{\smaller KLD}`).
+  DeclareOption!("footnote", "\\AC@footnotetrue");
+  DeclareOption!("nohyperlinks", "\\AC@nohyperlinkstrue");
+  DeclareOption!("printonlyused", "\\AC@printonlyusedtrue");
+  DeclareOption!("withpage", "\\AC@withpagetrue");
+  DeclareOption!("smaller", "\\AC@smallertrue");
+  DeclareOption!("dua", "\\AC@duatrue");
+  DeclareOption!("nolist", "\\AC@nolisttrue\\AC@nohyperlinkstrue");
+  for option in ["printonlyreused", "nolinebreak", "noacroprefix"] {
+    DeclareOption!(option, None);
+  }
+  ProcessOptions!();
+  RawTeX!(r"\ifAC@smaller\RequirePackage{relsize}\def\acsfont#1{\textsmaller{#1}}\fi");
+
   //======================================================================
   // Whether an acronym is used or not
   DefPrimitive!("\\lx@AC@used{}", sub[(id)] {
@@ -55,7 +70,10 @@ LoadDefinitions!({
   // cycle 91: a bare `\ac{ABC}` between paragraphs at top level
   // emits <ltx:glossaryref> outside any <ltx:p>, producing a
   // structurally invalid block-level glossaryref node.
-  DefConstructor!("\\lx@acronym Undigested {}{}{}",
+  // An acronym's key is a name (acronym.sty builds `\csname fn@#1\endcsname` from it), never typeset, so the
+  // constructors read it Semiverbatim: `\acro{gcc_phat}[GCC-PHAT]{…}` raised "Script _ can only appear in math mode"
+  // where pdflatex is silent (2003.05548, 2603.23723; Perl acronym.sty.ltxml:60, :164, :177, :197 digests it).
+  DefConstructor!("\\lx@acronym Undigested Semiverbatim {}{}",
     "<ltx:glossaryref key='#2' inlist='#3' show='#4'/>",
     mode => "text", enter_horizontal => true,
     reversion => "#1{#2}"
@@ -122,6 +140,16 @@ LoadDefinitions!({
     "{\\itshape\\AC@acl{#1} }(\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi)"
   );
 
+  // Italicized long plural (short plural), acronym.sty:741-753.
+  DefMacro!(
+    "\\acfip OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acfipa"
+  );
+  DefMacro!(
+    "\\acfipa{}",
+    "{\\itshape\\AC@aclp{#1} }(\\ifAC@starred\\acsp*{#1}\\else\\acsp{#1}\\fi)"
+  );
+
   // Auto form
   DefMacro!(
     "\\ac OptionalMatch:*",
@@ -132,11 +160,11 @@ LoadDefinitions!({
     "\\lx@AC@if{#1}{\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi}{\\ifAC@starred\\acf*{#1}\\else\\acf{#1}\\fi}"
   );
 
-  // Capital-first auto form. `\Ac` is officially from `acro`, but
-  // papers commonly mix the two and use \Ac while loading `acronym`.
-  // Degrade to \ac (lower form) — losing the capitalize-first
-  // semantic but preserving content. Witness 2402.03202 (`\Ac`),
-  // 2509.12083 (`\Acf`).
+  // Capital-first forms. acronym.sty (v1.50) defines `\Acl` (:470), `\Acf` (:566), `\Ac` (:598), `\Aclp` (:655),
+  // `\Acfp` (:665), `\Acp` (:697), `\Acfi` (:721), `\Acfip` (:743), `\Aclu` (:772), `\AC@Acl` (:452) and `\AC@Aclp`
+  // (:414) capitalising the first letter; the binding lets each to its lower-case form, losing the capital (Perl's binding defines none;
+  // KNOWN_PERL_ERRORS #490). Witnesses 2402.03202 (`\Ac`), 2509.12083 (`\Acf`), 2609.00863 and
+  // 2406.11493 (`\Acp`, 62t).
   //
   // PERL-FAITHFUL: defer the aliases to `\AtBeginDocument` and guard
   // each with `\@ifundefined`. Pre-defining at binding-load time
@@ -154,7 +182,12 @@ LoadDefinitions!({
        \\@ifundefined{Acf}{\\let\\Acf\\acf}{}\
        \\@ifundefined{Acl}{\\let\\Acl\\acl}{}\
        \\@ifundefined{Acs}{\\let\\Acs\\acs}{}\
-       \\@ifundefined{Acfi}{\\let\\Acfi\\acfi}{}}",
+       \\@ifundefined{Acfi}{\\let\\Acfi\\acfi}{}\
+       \\@ifundefined{Acp}{\\let\\Acp\\acp}{}\
+       \\@ifundefined{Aclp}{\\let\\Aclp\\aclp}{}\
+       \\@ifundefined{Acfp}{\\let\\Acfp\\acfp}{}\
+       \\@ifundefined{Aclu}{\\let\\Aclu\\aclu}{}\
+       \\@ifundefined{Acfip}{\\let\\Acfip\\acfip}{}}",
   )?;
 
   // Indefinite article form
@@ -165,6 +198,33 @@ LoadDefinitions!({
   DefMacro!(
     "\\Iac OptionalMatch:*",
     "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@Iac"
+  );
+  // acronym.sty:624-637 `\@iaci{<acronym>}`, the indefinite article `\iac`/`\Iac` put before the acronym:
+  // the one `\acrodefindefinite`/`\newacroindefinite` gave it (`\fn@<acronym>@IL` before the long form,
+  // the first use or under `dua`; `\fn@<acronym>@IS` once used), else "a"; `\@firstupper@maybe` (:212-218)
+  // capitalizes it under `\ifAC@upper`. :208-211 `\@firstupper{<text>}` capitalizes the first character
+  // of its expansion (xstring's `\StrSplit`), as `\Iac` uses it. Perl's binding calls both and defines
+  // neither (acronym.sty.ltxml:103-118, the definition commented out). Run 340: `\@iaci` 110, `\@firstupper`
+  // 11 first errors (witnesses 1904.05584, 2406.06101, 2406.05175, 2407.19212, 1708.09121, 2411.15479).
+  DefConditional!("\\ifAC@upper");
+  DefMacro!("\\lx@AC@ifused{}{}{}", sub[(id, used, unused)] {
+    let key = s!("ACROUSED@{}", id.to_string());
+    Ok(if with_value(&key, |v| v.is_some()) { used } else { unused })
+  });
+  RawTeX!(
+    r"\newcommand*{\@iaci}[1]{\ifcsname fn@#1@IL\endcsname%
+\ifAC@dua\@firstupper@maybe{\csname fn@#1@IL\endcsname}%
+\else\lx@AC@ifused{#1}{\csname fn@#1@IS\endcsname}{\@firstupper@maybe{\csname fn@#1@IL\endcsname}}\fi%
+\else a\fi}
+\newcommand{\@firstupper@maybe}{\ifAC@upper\expandafter\@firstupper\else\expandafter\@firstofone\fi}
+\newcommand{\@firstupper}[1]{\begingroup\protected@edef\lx@AC@tmp{#1}\expandafter\lx@AC@firstupper\lx@AC@tmp\@empty\@nil}
+\def\lx@AC@firstupper#1#2\@nil{\endgroup\MakeUppercase{#1}#2}"
+  );
+  // acronym.sty:127 `\AtBeginDocument{\providecommand\texorpdfstring[2]{#1}}` — the package's own
+  // `\texorpdfstring`, which papers loading acronym without hyperref call (run 340: 17 first errors,
+  // witnesses 2508.18123, 2406.15258, 2303.16307).
+  RawTeX!(
+    r"\AtBeginDocument{\providecommand\texorpdfstring[2]{#1}\providecommand\pdfstringdefDisableCommands[1]{}}"
   );
   DefMacro!(
     "\\@iac{}",
@@ -259,7 +319,7 @@ LoadDefinitions!({
     "\\lx@acro@@@item{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}"
   );
   DefConstructor!(
-    "\\lx@acro@@@item{}{}{}{}{}",
+    "\\lx@acro@@@item Semiverbatim {}{}{}{}",
     "<ltx:glossaryentry inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='label'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase role='short'>#4</ltx:glossaryphrase>\
@@ -280,7 +340,7 @@ LoadDefinitions!({
     "\\lx@acro@@@def{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}"
   );
   DefConstructor!(
-    "\\lx@acro@@@def{}{}{}{}{}",
+    "\\lx@acro@@@def Semiverbatim {}{}{}{}",
     "<ltx:glossarydefinition inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='label'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase role='short'>#4</ltx:glossaryphrase>\
@@ -293,7 +353,10 @@ LoadDefinitions!({
   });
 
   Let!("\\newacro", "\\acrodef");
-  Let!("\\acro", "\\acrodef");
+  // `\acro` is the acronym environment's (acronym.sty:254 `\providecommand*{\acro}{\AC@acro}` in `\acronym`, its
+  // group), undefined outside it as in pdflatex: Perl's `\acro` = `\acrodef` here (acronym.sty.ltxml:189) took the
+  // tokens after an outside `\acro{\smaller KLD}` for its long form, in a display's superscript (1806.02261: the
+  // IEEEeqnarray rows broken, four labels lost). KNOWN_PERL_ERRORS #1176.
 
   // Non-standard definite articles
   DefMacro!(
@@ -302,15 +365,17 @@ LoadDefinitions!({
   );
   // ^ float-up: glossarydefinition floats out of glossarylist to glossary
   DefConstructor!(
-    "\\lx@@acro@phrase{}{}{}",
+    "\\lx@@acro@phrase Semiverbatim {}{}",
     "^ <ltx:glossarydefinition inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='#2'>#3</ltx:glossaryphrase>\
      </ltx:glossarydefinition>"
   );
 
+  // The indefinite articles are also `\fn@<acronym>@IS`/`@IL`, which `\@iaci` reads: acronym.sty:348-351
+  // `\newacroindefinite` defines them, `\acrodefindefinite` (:352-356) through the .aux (one pass here).
   DefMacro!(
     "\\acrodefindefinite{}{}{}",
-    "\\lx@acro@phrase{#1}{short-indefinite}{#2}\\lx@acro@phrase{#1}{long-indefinite}{#3}"
+    "\\expandafter\\gdef\\csname fn@#1@IS\\endcsname{#2}\\expandafter\\gdef\\csname fn@#1@IL\\endcsname{#3}\\lx@acro@phrase{#1}{short-indefinite}{#2}\\lx@acro@phrase{#1}{long-indefinite}{#3}"
   );
   Let!("\\acroindefinite", "\\acrodefindefinite");
   Let!("\\newacroindefinite", "\\acrodefindefinite");
@@ -322,4 +387,21 @@ LoadDefinitions!({
   );
   Let!("\\acroplural", "\\acrodefplural");
   Let!("\\newacroplural", "\\acrodefplural");
+
+  // acronym.sty gives these commands their starred forms with suffix.sty's `\WithSuffix` (acronym.sty:596-…), which
+  // redefines each one `\protected\def` (suffix.sty:53): they pass an expanding read whole. siunitx's `S` cell
+  // `\protected@edef`s its text (siunitx.sty:5730-5741), and `\ac{MAE}` there expanded its star test and `\newif`
+  // switch: "Missing `\fi`", the table left open (witness 2607.15705). The capital forms are let to these at
+  // `\begin{document}` (above) and keep the flag. Guard
+  // `perfect_kernel_batch80a::acronym_commands_pass_a_siunitx_column_whole`.
+  for name in [
+    "ac", "Ac", "acf", "Acf", "acfi", "Acfi", "acfip", "Acfip", "acfp", "Acfp", "acl", "Acl",
+    "aclp", "Aclp", "aclu", "Aclu", "acp", "Acp", "acs", "acsp", "acsu", "iac", "Iac",
+  ] {
+    if let Some(Stored::Expandable(definition)) = lookup_meaning(&T_CS!(&format!("\\{name}"))) {
+      let mut definition = (*definition).clone();
+      definition.is_protected = true;
+      install_definition(definition, None);
+    }
+  }
 });

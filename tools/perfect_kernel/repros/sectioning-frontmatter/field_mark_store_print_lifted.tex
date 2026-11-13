@@ -1,0 +1,23 @@
+% A document without `\maketitle` that typesets the kernel's stores itself (`{\Large\bf \@title\par}`, `\@author`): the
+% title-print study's bucket P2 (lrec's `\maketitleabstract` 2402.14614, 1603.09631; 1605.00182 `\centerline{\Large\bf
+% {\noindent\@title}}`; puthesis 1503.06457). The kernel `\title`/`\author` stamp the stored tokens with their field
+% (`\lx@field@mark`, out-of-band provenance; frontmatter model M3 stage S1, OXIDIZED_DESIGN #715), so the print is the field's ink by
+% construction and the frontmatter placement lifts it: the structured `<ltx:title>`/`<ltx:creator>` are the header.
+% status:  RED (67int19b: the title copy goes only by the text-matching dedup, Info `title_ink_dedup`; the author's
+%          printed line stays beside its `<ltx:creator>`, shown twice) → GREEN (fms1: both prints lifted by their provenance,
+%          Info `field_ink` ×2, no `title_ink_dedup`).
+% oracle:  pdflatex 0 errors: "A Printed Store Title", "Ann Author", "1 Intro Text." (each once).
+% expect:  0 errors, 0 warnings; `<title>` and one `<creator>` before the section, no body copy of either.
+\documentclass{article}
+\makeatletter
+\title{A Printed Store Title}
+\author{Ann Author}
+\begin{document}
+\begin{center}
+{\Large\bf \@title\par}
+\vskip 1em
+{\large \@author\par}
+\end{center}
+\section{Intro}
+Text.
+\end{document}

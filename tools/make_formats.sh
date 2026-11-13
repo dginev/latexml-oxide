@@ -13,16 +13,17 @@
 #
 # Call this once after checkout, after any TeX Live upgrade, or before
 # running the test suite when matching a specific texlive is required
-# (e.g. in CI). The Rust build does NOT embed the dump — it is read
-# from disk at runtime (see latexml_package/build.rs), so regenerating
-# requires no rebuild.
+# (e.g. in CI). A binary run from the source tree reads the new dumps
+# from resources/dumps/ at once; `latexml_engine/build.rs` also embeds
+# them, so rebuild (`cargo build`) for a self-contained binary.
 #
 # Usage:
-#   tools/make_formats.sh           # release build, latex.ltx
-#   PROFILE=debug tools/make_formats.sh   # debug build (faster compile)
+#   tools/make_formats.sh                  # debug build (default)
+#   PROFILE=release tools/make_formats.sh  # optimized build
 #
 # Env:
-#   PROFILE              release (default) | debug
+#   PROFILE              debug (default) | release | ci
+#   CARGO_TARGET_DIR     honoured (the binary is looked up under it)
 #   LATEXML_DUMP_DIR     optional override — where to write the dump
 #                        (default: resources/dumps/)
 
@@ -47,7 +48,7 @@ esac
 # `plain.dump.txt` instead of `plain.YYYY.dump.txt` (pre-year-stamping naming),
 # silently shipping dumps the runtime can't find. cargo is near-instant when
 # nothing changed, so building unconditionally costs nothing.
-BIN="target/$PROFILE/latexml_oxide"
+BIN="${CARGO_TARGET_DIR:-target}/$PROFILE/latexml_oxide"
 echo "[make_formats] building latexml_oxide ($PROFILE)..."
 cargo build $CARGO_PROFILE_FLAG --bin latexml_oxide
 
@@ -81,11 +82,53 @@ if [ -z "$TL_YEAR" ]; then
   exit 3
 fi
 
+# Pin the binary's kpathsea to the SAME TeX Live the year was detected from.
+# The binary prefers a linked (in-process) libkpathsea, which anchors on its
+# compile-time distro tree — on a dual-TL host (vendor TL on PATH + distro TL
+# in /usr/share/texlive) the year above says e.g. "2025" while latex.ltx /
+# expl3-code.tex silently raw-load from the OLDER distro tree. That schism
+# shipped a latex.2025.dump.txt whose expl3 was dated 2024-01-22 (TL2023
+# vintage) while TL2025 ships 2025-11-06 — every post-2024 kernel API
+# (\prop_gput_if_not_in:Nnn, tagging sockets, \IfPackageLoadedF, …) came out
+# undefined (caught 2026-08-31 by the perfect-kernel corpus baseline).
+# kpathsea honors TEXMF* env overrides in-process, so derive them from the
+# ambient kpsewhich's own root when it has a texmf-dist.
+TL_ROOT="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null)"
+if [ -n "$TL_ROOT" ] && [ -d "$TL_ROOT/texmf-dist" ]; then
+  export TEXMFROOT="$TL_ROOT"
+  export TEXMFDIST="$TL_ROOT/texmf-dist"
+  export TEXMFCNF="$TL_ROOT/texmf-dist/web2c"
+  echo "[make_formats] pinned TEXMFROOT=$TL_ROOT (dual-TL guard)"
+fi
+
+# CLAUDE.md parity rule 4: both inits must log ZERO errors, as Perl's do. The
+# init's diagnostics are suppressed unless LATEXML_INIT_DEBUG=1 (ini_tex.rs), so
+# each init runs with it and its ANSI-stripped log is gated exactly as
+# release-dumps.yml does. CI runs this script whenever the engine sources
+# change (the dump-cache key), which is when an init regression can appear:
+# batch 56g's `\errmessage` → Error made `--init=latex.ltx` log 6 errors that
+# went unnoticed from 2026-07-20 until the release gate.
+run_init() {
+  local init="$1" log
+  log="$(mktemp)"
+  LATEXML_INIT_DEBUG=1 "$BIN" --init="$init" >"$log" 2>&1
+  local status=$?
+  local errors
+  errors=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -acE '^(Error|Fatal):' || true)
+  if [ "$status" -ne 0 ] || [ "$errors" -ne 0 ]; then
+    echo "[make_formats] --init=$init: exit=$status errors=$errors" >&2
+    sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -aE '^(Error|Fatal):' | head -20 >&2
+    rm -f "$log"
+    exit 4
+  fi
+  rm -f "$log"
+}
+
 echo "[make_formats] generating plain.${TL_YEAR}.dump.txt (--init=plain.tex)..."
-"$BIN" --init=plain.tex
+run_init plain.tex
 
 echo "[make_formats] generating latex.${TL_YEAR}.dump.txt (--init=latex.ltx)..."
-"$BIN" --init=latex.ltx
+run_init latex.ltx
 
 if [ -n "${LATEXML_DUMP_DIR:-}" ]; then
   mkdir -p "$LATEXML_DUMP_DIR"

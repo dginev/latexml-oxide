@@ -27,6 +27,12 @@ impl Object for Float {
   fn stringify(&self) -> String { s!("Float[{}]", self.0) }
   fn be_digested(self) -> Result<crate::Digested> {
     // Float can be digested as a text box containing its string representation
+    // TODO: Perl's Float digests to itself (Common/Object.pm:156 `beDigested`),
+    // a value that is no box and measures nothing; this text box measures its
+    // digits. That needs a `RegisterValue::Float` (own batch), and would make
+    // the explicit sizers of the `{Float}` picture constructors unnecessary
+    // (latex_constructs/sect13.rs: `\lx@pic@line` and `\vector` `sizer => 0`,
+    // `\circle` `sizer => "#1"`, `\oval` `sizer => "#3"`).
     let s = self.to_string();
     Ok(
       crate::Tbox::new(

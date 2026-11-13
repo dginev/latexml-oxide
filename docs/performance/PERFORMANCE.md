@@ -168,118 +168,437 @@ rate (the math lever). Max RSS 1,692 MB.
 
 ## Open levers
 
-The phase bands above set priority. Current open work:
+The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, xslt 13.2%, graphics 8.9%, mathml 4.5%) and recent raw-kernel sweeps set the active priorities:
 
-### P0 — eager `Debug!` diagnostics on the text-absorption path — ✅ LANDED 2026-08-23
+> **2026-09-03 source reconciliation:** the ranked static findings and
+> implementation handoff are in
+> [`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md).
+> The first isolated change is the discarded XMDual serialization; the audit
+> also covers its document-wide `idref` scan, the core-to-post output buffer,
+> pass-2 per-segment cloning, the whole-DOM split fallback, retained state
+> capacity, alternate-format XSLT, and file lookup. Runtime impact is unmeasured
+> unless the entry names an existing profile; keep static cost models separate
+> from measured percentages.
 
-Found and fixed the same day as the audit (see Audit log — full evidence
-there). `Debug!` (`error.rs`) and `generate_message!` built all their strings —
-including `gullet::get_location()` and, at the `open_text` /
-`open_text_internal` / `close_element` sites, a full `node_to_string` subtree
-serialization — **before** any verbosity check; `emit_record` then discarded
-them. Now gated on `debug_record_enabled()` (`max_level() >= Debug` and not
-suppressed), with the Debug `note_status` tally preserved unconditionally, so
-status counts are identical at every verbosity.
+### P1 — XMDual pruning: discarded serialization, then repeated global lookup
 
-**Measured** (same branch also carries the audit's R3/R5/R6 mechanical fixes:
-`is_noexpand_family` per-symbol memo, `generate_id` parent-chain walk,
-`collect_walk_matches` sibling iteration, fontmap-key memoization, probe-only
-`:locked` gate via non-interning `arena::get`, 13 redundant-clone fixes;
-interleaved best-of-3, idle box, HTML byte-identical on all four A/B
-witnesses): `2304.10050` (build/text-bound) **6.21 → 2.71 s (−56%)** — the
-band was quadratic-flavored (each insert re-serialized the growing subtree),
-so removal beats the ~26% profile share; `2408.08292` (typical math paper)
-8.66 → 7.74 s (−11%); `2405.14114` (200M-token digest runaway) 20.5 → 20.1 s
-(−2%). 82-paper regression-corpus sweep, same harness/box/day: **229.3 →
-200.0 s (−12.8%)**, zero exit-status changes, sum max-RSS flat (+1.3%,
-two ±≤60 MB movers, rest noise).
+* **Current reality:** the discarded `node_to_string(&dual)` in
+  `Document::prune_xmduals` is gone (batch 68p, byte-identical, within noise).
+  `collapse_xmdual` still evaluates `//*[@idref='<dualid>']` from the document for
+  each collapsed dual.
+* **Cost shape:** definite serialization/allocation waste, followed by a
+  worst-case `O(collapsed_duals * document_nodes)` reference-repair loop. The
+  delta has not yet been measured.
+* **Next:** build one `idref -> nodes` index and update its buckets when ids
+  move. See audit F2 for edge cases and witnesses.
 
-### P1 — math_parse (17% of wall, 17% over-parse) — the top remaining lever
+### P2 — Complete streaming across the core-to-post boundary
 
-Every math-heavy witness is now `math_parse`-bound (the `build` quadratic was
-fixed — see Closed). The over-parse rate is the lever; see **Principle 4**,
-[`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](../math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)
-(current measured and-node counts + ranked levers) and
-[`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md).
+* **Current reality:** fragmented core conversion and the two-pass streaming
+  split front-end are implemented. However, `ConversionResponse.result` still
+  materializes complete core XML as a `String`; TeX-to-HTML passes that string
+  to post, which may immediately spill it to disk. Pass 2 also clones the
+  conversion-global font map and rewrite rules per segment and constructs an
+  unused XML scaffold per fragment.
+* **Fix:** add a writer/file-backed conversion API while retaining the current
+  string API as a compatibility wrapper. Hand the CLI's file directly to post.
+  Independently, share immutable pass-2 data, use fragment-local overlays, make
+  rewrite diagnostics lazy, and construct fragment fields without `Self::new()`.
+* **Boundary:** this attacks very-large-document RSS and segmented pass-2 CPU;
+  it is not expected to move ordinary-paper medians. See audit F3/F4.
 
-**LANDED 2026-06-30 — differential-`d` lexer gating (output-neutral).** The lexer
-emitted `XDIFFUNK`/`XDIFFID` (the diffop-competing branch) for *every* `d`
-unconditionally; outside integrals the `diffop_apply` action always prunes it, so
-Marpa built a ~71-and-node branch per `d<var>` only to reject it. `util.rs`
-`node_to_grammar_lexemes_from` now downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when
-the formula has no `INTOP` (same predicate `diffop_apply` uses, over the same node
-list) — byte-identical output, removes the over-parse on every non-integral `d`
-(`\frac{dx}{dt}`, `d`-as-variable, `d`-subscripts). High volume (differentials are
-everywhere). Step 2 (a dedicated in-integral `DIFFOP_D` terminal so `∫(x·d·x)` is
-never built, pulling `\int … f(x)\,dx` off the legacy fallback) is the follow-up.
+### P3 — math_parse (19.2% of wall, 17% over-parse)
 
-Remaining open hot patterns (fresh 2026-06-30 measurements; the old
-`MATH_AMBIGUITY_AUDIT` claims are **stale** — `\Pi^N(p,q,r)` and simple bare
-`|x|≤|y|` are now *unambiguous*):
-- **`f(x,y)` apply-vs-multiply** — the dominant residual; parens alone create the
-  ambiguity (`f(x)` = 112 and-nodes vs `fx` unambiguous). NB — **superseded 2026-07-20: this is an
-  INTENTIONAL divergence, not a latent regression.** `speculative_prefix_apply`
-  (semantics.rs) indeed no longer checks the `MATHPARSER_SPECULATE` flag, so the
-  speculative apply is always on — but the toward-Perl flip was implemented and
-  verified against same-host Perl on 2026-07-02 and then **reverted on explicit
-  user review**; `f(x)`→application is divergence #18 (`OXIDIZED_DESIGN_MATH.md`
-  §18: do not re-attempt without a fresh user decision). The parity check this
-  note asks for has already been done.
-- **Bare `|x|` with ambiguous inner content** — e.g. `|v(x)| ≤ |v(x')|` (625
-  and-nodes, legacy fallback): bar-pairing × inner apply-ambiguity. A balanced-pair
-  **pre-lexer** pass (peer of the `STRETCHY_VERTBAR` hint) targets the pairing
-  factor. Lower priority — the *simple* modulus inequality is already unambiguous.
-- **Integrals** now the largest volume driver (`\int_0^1 f(x)\,dx` = 523 and-nodes,
-  on the legacy fallback path); Step 2 of the differential lever above is the fix.
+Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the primary lever; see **Principle 4**, [`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](../archive/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md) and [`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md).
 
-The architectural floor for a 2385–5000-formula paper is ~4 ms/formula
-(marpa-C-bound: ~25% of self-time is the marpa-C engine, out of scope). 1–2 s
-there needs the over-parse lever, not deeper marpa work. Audit with
-`LATEXML_PARSE_AUDIT=1` / `LATEXML_MATH_AMBIGUITY_AUDIT=1` /
-`LATEXML_MARPA_ASF_AUDIT=1`.
+* **Landed 2026-06-30 — differential-`d` lexer gating:** Downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when the formula has no `INTOP`, removing over-parse on every non-integral `d` (`\frac{dx}{dt}`, subscripts).
+* **Landed 2026-10-07 — byte classes as single terminals (marpa-asf 0.4.0):** the grammar is scannerless over the serialized lexemes (`ROLE:content:index `, 18 bytes on average), and marpa-asf compiled `lex_char` (`inverse_string_set`, 252 bytes) and `digit` as an alternative rule per member byte, so every earleme where a class was predicted carried one Earley item per byte. A class is now one terminal, offered with each scanned byte that it holds; `BocageStats` counts a class token as the two nodes the byte rules made, so `HYBRID_AND_NODE_LIMIT` routes every formula as before (large-bocage audit lines identical). Recognizer alone: 2609.30034's 3,502 inputs 25.7 → 12.7 G instructions. Whole conversions: 440 random 2609 papers −11.4% instructions (−0.6 … −19.4% per paper, math-heavy most), 439 byte-identical, the 440th (2609.14580) completing where it timed out.
+* **Settled intentional divergence:** `f(x,y)` apply-vs-multiply is intentional divergence #18 (`OXIDIZED_DESIGN_MATH.md` §18; do not re-attempt toward-Perl reverts without explicit user sign-off).
+* **Open hot patterns:**
+  - **Integrals (largest volume driver):** Step 2 of differential gating — a dedicated in-integral `DIFFOP_D` terminal so `∫(x·d·x)` is never built, pulling `\int … f(x)\,dx` off the legacy fallback path.
+  - **Bare `|x|` with ambiguous inner content:** e.g. `|v(x)| ≤ |v(x')|` (625 and-nodes): balanced-pair pre-lexer pass targeting the pairing factor.
+  - **`f(x)` over-parse (112 and-nodes; `h(x)=f(x)g(x)` 394):** output settled (#18), but the multiply parse is still built then pruned; a recognition-time UNKNOWN-before-`(` hint keeps the output (the `FencedLettersAreFunctionArguments` pragma is load-bearing). Stale comment `grammar/builder.rs:804-806`: `speculative_prefix_apply` (semantics.rs:1622) never checks MATHPARSER_SPECULATE. Integral figures: `\int_0^1 x\,dx` 432; `\int_0^1 f(x)\,dx` 523 and `\int_a^b…=G(b)-G(a)` 887 hit the legacy fallback.
+  - **Content-addressed formula memoization (BP-5):** Hash normalized formula token stream to reuse parse→XMDual→MathML across identical formulae in tables and matrices.
 
-### P1 — graphics (36.5%) — largely CLOSED, two open traps
+### P4 — Internal TeX counters in `State` (`if_count` / `if_limit`) — LANDED (batch 56db, 2026-09-18)
 
-In-doc dedup, persistent disk cache, vector-SVG fast path, vector-PDF
-auto-detect all landed (see "Graphics — completed"), and the
-extensionless-kpathsea-lookup memo landed 2026-07-02 (Principle 5).
-Remaining: tikz-cd/xy/pgf **native** rendering cost (NOT external
-`gs`/`convert` — these render in-Rust and show up as digest+math+build on
-the formula count; see "tikz-cd cluster").
+* **Was:** `Conditional::invoke` called `assign_value_sym::<i64>` with `Scope::Global`, walking every undo frame and performing per-frame hashbrown `remove_entry` (2.4% self-time on digest witnesses), plus the per-assignment `\globaldefs` probe.
+* **Fix:** `if_count`/`if_limit` and `absorb_count`/`absorb_limit` are typed `State` fields (`next_if_id()`, `if_limit()`, `next_absorb_id()`, `absorb_limit()`); the general mechanism is *a Perl plain global, or a Value only ever assigned `'global'` and never dumped, becomes a typed State scalar*. `tracingcommands` is excluded: it is a group-scoped count register (TeX_Debugging.pool.ltxml:213-225), so it must keep the Value table. picC −4.4 % instructions.
 
-### FxHash libxml node-cache (measured ~28–30%, biggest single win) — SHIPS, pending upstream cleanup
+### P5 — tikz-cd / pgf native digest volume & `Tokens` allocation
 
-The `rust-libxml` fork's `xmlNodePtr → Node` cache is probed on EVERY
-`Node::wrap`; swapping its std SipHash `RandomState` for a dependency-free
-FxHash pointer hasher cut wall on every node-heavy phase by **~28–30%**
-(`1510.03361` 19.6→14.1 s; `1805.03265` tikz-cd 22.4→15.7 s). Output-identical
-(map never iterated; pointer keys non-adversarial so HashDoS is moot).
-**✅ CLOSED 2026-07-20 — the cleanup below is DONE.** The FxHash node cache landed
-upstream and now ships in the **published `libxml 0.3.16`**: every crate declares
-`libxml = "0.3.16"` from the registry, and the only `[patch.crates-io]` in the root
-`Cargo.toml` is commented out and is for `marpa-asf`. (Historically it shipped via
-a *committed* patch pointing at `KWARC/rust-libxml` branch `perf-improvements`,
-with "land the PR, publish 0.3.15, bump the dep, drop the patch" as the remaining
-supply-chain task — all of that has happened.) (The
-marpa FxHash already ships via the marpa git dep tracking `main`.)
+* **Current Reality:** tikz-cd and pgf emit thousands of small math formulae (one per cell/arrow/label — up to 6,800+ in a single document). Cost is formula count × (digest + math_parse + build), NOT external graphics.
+* **Levers:** (1) reduce per-cell formula count in bindings; (2) lazy `Tokens::Debug`; (3) return `Option<SymStr>` from `lookup_value*` to drop `Cow::Borrowed`; (4) pgfplots `\addplot table` direct Rust bypass.
+* *Note on SmallVec:* SmallVec-backed `Tokens` was tried and regressed (struct bloat); do not retry without shrinking `Token` below 8 bytes.
 
-### tikz-cd / pgf digest backlog
+### P6 — Large-document fallback and retained-state memory
 
-tikz-cd emits thousands of small math formulae (one per cell/arrow/label —
-6825 from one doc); cost is the formula count × (digest + math_parse + build),
-NOT external graphics. Levers (compounding): (1) reduce the per-cell formula
-count in the binding; (2) the pgf digest hot path — lazy `Tokens::Debug`,
-`Option<SymStr>` from `lookup_value*` to drop the `Cow::Borrowed`, a pgfplots
-`\addplot table` Rust bypass; (3+4) fold into math_parse/build above.
-SmallVec-backed `Tokens` was tried and **regressed** (struct bloat) — do not
-retry without first shrinking `Token` below 8 bytes. The per-token cycle-guard
-floor for graphics packages is raised to `CYCLE_GUARD_ACTIVATE_GRAPHICS = 150 M`
-(pgf/tikz/xy bindings call `raise_cycle_guard_activate` at load) so healthy
-100–155 M-token graphics streams don't pay the guard.
+* **Whole-DOM split fallback:** `Split::process_pages` repeatedly removes and
+  inserts at the front of `Vec`s and runs two ancestor XPath queries per page.
+  The streaming front-end avoids this only when its input, destination, union,
+  and size gate are eligible. Linearize the eager fallback with a deque/owned
+  iterator and direct parent walks (audit F5).
+* **State templates:** `STD_STATE` and `STY_STATE` retain the same 131,072-slot
+  meaning-table reservation used to absorb the active state's dump. Give the
+  templates a lean capacity profile and avoid constructing default maps that
+  `State::new` immediately replaces (audit F6).
+* **Hard constraint:** retain libxml2 for dynamic `DefRewrite` XPath. The
+  fragmented architecture is the implemented solution to the measured DOM
+  floor; wholesale DOM replacement remains a settled non-lever.
+
+
+### P7 — Thermal & Concurrency Budget Limits (`docs/THERMALS.md`)
+
+* **Current Reality:** On dev laptops (Intel hybrid P/E-core CPUs, e.g. i7-12800H), sustained multi-job execution pins temperatures at 95–96 °C with severe CPU clock throttling. Running sweeps alongside tests causes 100% swap exhaustion and hundreds of throttle events per second.
+* **Operational Limits:**
+  - Standalone sweeps/benchmarks: `JOBS=6..8` maximum (`JOBS=6` is quiet; `JOBS=8` throttles mildly).
+  - Sweeps alongside other tasks: `JOBS=4` maximum.
+  - Memory ceiling: Keep `JOBS × --max-memory <= 24 GB` to preserve headroom for rust-analyzer (~4 GB) and OS buffers.
+
+### P9 — Frontmatter pipeline (audit [`FRONTMATTER_PERF_AUDIT_2026-10-31.md`](../archive/FRONTMATTER_PERF_AUDIT_2026-10-31.md))
+
+The frontmatter costs 0.68–1.05 % of a median conversion and 0.5–0.9 % of fleet CPU, linear in creators. It is 40.9 % of a
+975-author conversion (2103.04797). Levers, each output-neutral and measured alone:
+- **Two quadratics:** `relocate_annotations` `held()` (`relocate.rs:335-339`, 3.7 % at 975) and `queued_author_count`
+  (`queue_digest.rs:827-834`).
+- **One shared index for the post-insertion passes:** today they make ≈12 relative XPath queries per creator. The
+  self-check Warnings (96a) ride the same index.
+- **Typed keys:** `font_key` (`events/mod.rs:622`) and `policy.rs:142`. Also `get_frontmatter_name` digested once per role.
+- **Keyval digestion per API call:** 5.9 % at 975.
+- **The API content digested once:** the lexer reads the real digestion's boxes, not a rehearsal's (7.6 % at 975). It is
+  gated on identical readings.
+
+**The observer writes nothing on 17 of the 18 measured papers.** Its cost is the ceiling for coordinating its phases:
+16.0 % at 975 creators, ≈0.05 % fleet-wide.
+
+### P10 — XPath compiled-expression cache (engine-wide) — LANDED (libxml 0.3.23)
+
+`XPath::findnodes` (`latexml_core/src/common/xml.rs`) reached rust-libxml's `node_evaluate` → `xmlXPathNodeEval`,
+which compiles the expression on every call: a document makes 15k–32k calls of only 57–63 distinct expressions. The
+cache cannot live in latexml-oxide alone (rust-libxml keeps `Node::wrap` and `Object`'s document private), so
+rust-libxml 0.3.23 adds `xpath::Expression` + `Context::*_compiled` (KWARC/rust-libxml#223), and core `XPath` and
+`PostDocument` keep a table of compiled expressions (`compiled_xpath`, cap `COMPILED_XPATH_LIMIT` = 1,024; a
+non-compiling expression keeps its string evaluation and its Error; open nit (rev96x): nothing is cached for it, so
+each call compiles it twice and libxml2 prints its stderr line twice (`\lxRDFa[ancestor::ltx:section[]…`: 2 → 4 lines,
+same Errors, same XML) — cache the failure (`Result<Expression, XPathError>` under the cap) and return it). Measured alone (perf stat instructions:u vs
+`95c-rel`, 18 audit docs): −0.86 % mean (−0.51 … −1.32 %), XML byte-identical. Measured and NOT taken: post's per-call
+`XPathContext` (61 per document — no lever); `get_nodes_as_vec` upgrading the document once per result set (+0.005 %,
+noise).
+
+### P11 — `_font` attribute traffic (engine-wide; sized, perf453c) — option 1 LANDED (libxml 0.3.23)
+
+All traffic of the private `_font` attribute cost **3.17 % of instructions pooled** over 16 docs (1.09 % on
+1910.01256 … 7.17 % on 2005.08745; 3.78 M calls): libxml2 `xmlGet/Has/SetProp` 1.23 % exact, rust-libxml's
+CString/String/xmlFree wrapper 0.87, the font-id parse 0.50 and format 0.17, `Font::to_hashable` on every set 0.39,
+the rest ≤0.12 each. Hot callers: `get_node_font` from `open_text` 1.94 %, `set_node_font` from
+`open_element_at_with_box` 0.62 %. Options, cleanest first:
+1. **LANDED**: keep the attribute, read it in place behind `get_node_font`/`has_node_font`/`get_node_language`
+   (`Node::with_attribute(c"_font", str::parse::<u64>)`, rust-libxml#223) — alone −1.18 % mean (−0.52 … −2.49 %);
+2. the font id in libxml2's `xmlNode._private` (unused by rust-libxml) behind the Perl-shaped methods, with an explicit
+   font copy at the 12 raw attribute-copy sites and at the streaming spill — ≈2.5 %, output at risk at any missed site;
+   it would also take the `_private` slot P12's NodeMap lever wants;
+3. a pointer-keyed side map — rejected (stale entries on node free/reuse, the `node_boxes` history).
+Dead code: `font_match_xpaths` (`common/font.rs:2335-2356`); stale comment `document.rs:1812-1813`.
+
+**P10 + P11 + rust-libxml 0.3.23's wrapper work (#224, #226), as shipped** (perf stat instructions:u, release build
+with libxml 0.3.23 from crates.io vs `tip2` on 0.3.22, the 18 audit docs of `perf453b`): **−4.75 % summed, −4.64 %
+mean (−3.12 … −6.24 %), XML byte-identical on all 18**; the wrapper work alone −2.83 % summed against the #223 code.
+
+### P12 — rust-libxml wrapper layer after 0.3.23 (sized 2026-10-31 on `int123a-bench`, 6 docs)
+
+The wrapper layer (Rust-side conversions, allocations and node bookkeeping around libxml2) cost ≈6.5 % pooled before
+0.3.23; 0.3.23 took the parts inside the crate without an API change (names and short values through a 128-byte stack
+copy, single-text values read in place, a `str::from_utf8` fast path, child lists sized once, `get_child_elements`
+wrapping elements only). Left, each with its basis (exact call counts × gdb-stepped instructions per call):
+* `get_properties` callers that read only names or a count — `namespace_prefixes_in_use` (`document.rs` ~:8744,
+  0.51 %), `finalize_rec` (~:1218, 0.51 %; `_`-prefixed names and the count), `append_tree` (~:8171, 0.45 %),
+  `serialize_into` (~:2696, 0.24 %): ≈1.9 % with a borrowed attribute walk — a latexml-side change, needing an additive
+  rust-libxml visitor (no public-API break).
+* `get_name` behind `get_node_qname` (`common/model.rs:723`) and `collect_named` (`latexml_math_parser/src/util.rs:946`):
+  0.72 % of String copies, 2.56 M calls — a borrowed name read (additive API) on the latexml side.
+* `Node::_wrap`'s `NodeMap` probe + `Rc` clone on every traversal step (5.27 M hits, 0.48 %): a `_private` back-pointer
+  would remove the probe, but collides with P11 option 2 — design decision, not taken.
+* `_autoopened` presence tests (`document.rs` ~:3540, ~:3584, `get_attribute("_autoopened").is_some()`) copy the value
+  into a `String` only to test it exists: 2.93 M calls, 0.79 % with the wrapper (perf453c basis); `has_attribute` is
+  allocation-free on 0.3.23 — a one-lever run, measured alone.
+* `set_property` 2.14 % is libxml2's own `xmlSetNsProp` (frees and re-creates the text child): no wrapper lever.
+Method: call counts by hardware breakpoints on each wrapper function's out-of-line entry (`perf stat -e
+mem:ADDR:x`, ASLR off) cross-checked against an `LD_PRELOAD` count of libxml2's property calls, instructions per call
+by gdb single-stepping 150–200 calls, attribution by in-process stack sampling — sampled shares under-count high-IPC
+code on AMD (skid), so the figures are counts × stepped instructions.
+
+### P8 — Lower-frequency global scans and lookup allocation
+
+* **Logger stderr writes:** each emitted record costs 2-3 unbuffered `write_all` system calls on stderr (`latexml_core/src/util/logger.rs:449-453`; the `flush()`es at `:307`/`:454` are no-ops on unbuffered stderr) — the lever if render logging must get cheaper: one write per record, or a buffered stderr (review `../archive/CODE_REVIEW_2026-08-03.md`, whose flush attribution this corrects).
+* **JATS/TEI:** both alternate stylesheets match paragraphs with
+  `preceding::ltx:section`, a potential per-paragraph document scan. Establish
+  intended scope, replace with a structural/keyed test, and require
+  byte-identical output on scaling fixtures (audit F8).
+* **File fallback:** the fallback regexes are `Lazy` now (`content.rs`); lookup
+  still clones search paths and scans freshly materialized binding registries
+  twice. Use a borrowed path view and prebuilt exact plus lowercase indexes after
+  collecting miss-count telemetry (audit F9).
+
 
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-11-13 — the AASTeX many-author regression (batch AAS1)
+
+Basis: FMPERF (2026-11-13) measured 1710.09320 (aastex61, 1,108 authors) +13.3 % and 1901.01540 (aastex62, 1,202) +14.4 %
+`instructions:u` against the 2026-10-31 audit tip (82adbc1802), the frontmatter alone +1.9 / +2.2 G. Frame-pointer
+profiles of both binaries (`kit/perf_profile.sh`, `EVENT=instructions:u PERIOD=3000017`; the default period throttles on
+this host) put the growth in `digest_front_matter`: the reading's rehearsals (`read_at_flush`, 0.96 G on 1901.01540, of
+it the API calls' 0.67 G, 1,427 `\affiliation` calls over 228 contents), the emitter (`emit_commands`, 0.53 G, diffuse) and
+the entries' digestion (+0.33 G over the audit's, `begin_frontmatter_entry_digestion`'s scan the one frame that grew).
+Median of 3 interleaved, release, `--preload=ar5iv.sty --nocomments`; each lever against the step before; XML
+byte-identical on all five at every step.
+
+| Lever | 1710.09320 | 1901.01540 | 2103.04797 | 2005.08745 | 1507.02068 |
+|---|---|---|---|---|---|
+| L1 an API call's character-only content rehearsed once per reading (`rehearsal.rs` `rehearse_call`; L2 widens the rule, today's) | −4.36 % | −3.58 % | 0.00 % | +0.02 % | 0.00 % |
+| L2 any content whose first run left nothing behind (no diagnostic, conditional, footnote step, definition, environment, queued entry, open group) | −1.15 % | −1.30 % | −6.41 % | +0.03 % | −0.01 % |
+| L3 the title-page check's queued records indexed by content (length and hash), not length (`title_page_check.rs` `content_keys`) | +0.01 % | −0.44 % | −0.70 % | −0.11 % | 0.00 % |
+| **cumulative** (int169b → AAS1, G) | 10.986 → 10.390 | 13.555 → 12.842 | 7.694 → 7.153 | 12.429 → 12.422 | 5.492 → 5.493 |
+
+Against the audit tip the two AASTeX papers stand at +7.3 % (9.686 → 10.390 G) and +8.3 % (11.859 → 12.842 G). The rest
+of the gap, by the profile after L2 (1901.01540): the author blocks' rehearsals (≈0.33 G, every name distinct; of a
+rehearsal's fixed cost `install_event_bindings` ≈63 K instructions), `emit_commands` (≈0.53 G, no frame above 0.3 %),
+and the entries' digestion (+0.3 G over the audit's, diffuse). Dead end: hashing every candidate content of an invocation
+apart (one slice per `{`) was quadratic in a long `\author` command (1507.02068 +0.93 %); the keys fold from the end.
+
+### 2026-11-06 — a native answer for l3fp's doors (pk/P2)
+
+Basis: `perf stat -e instructions:u`, release, `[rawstyles,rawclasses,luatex]latexml.sty` for the `b*` rows (`kit/probe.sh`, `PERF=1`), `run_doc.sh` for the manuals (`kit/perf_docs.sh`), XML byte-identical to base P1 on every row.
+`\__fp_parse_operand:Nw` at the shape only `\__fp_parse:n` and `\__fp_parse_o:n` (expl3-code.tex:17313-17339) give it answers with exactly what its run leaves, or runs as defined (OXIDIZED_DESIGN_DIVERGENCES #977). The doors themselves stay macros: that costs 16.7 K instructions a call against a hook on the door (first form, ledger row `P2`), for `\meaning`, `\exp_args:No` and a user's redefinition to stay the format's.
+
+| Document | P1 instructions | a hook on the door | this form | wall, P1 → this (mostly idle cores) |
+|---|---:|---:|---:|---:|
+| `b1_fp1000` | 69.24 G | 1.64 G | **1.71 G, -97.5 %** | |
+| `pgf-interference-en` | 2,155 G | 425 G | **428.6 G, -80.1 %** | 150.2 → 33.6 s |
+| `pgf-interference-de` | 2,158 G | 427 G | **429.4 G, -80.1 %** | 151.0 → 33.5 s |
+
+The install and the watch, under `ar5iv.sty`, P1 → this: an empty article 895.93 → 896.14 M (+0.02 %), an article with amsmath 1,081.43 → 1,081.56 M (+0.01 %), `b0_empty` 3,471.7 → 3,469.7 M; `b5_fill1000` no change.
+
+The watch runs per assignment on every paper, and only the same binary on against off shows it (`LATEXML_L3FP_NATIVE=1` against `=0`, as the environment's size moves the count): `b5_fill1000`, 439 K assignments looked at, +16.1 M (+0.14 %) under `ar5iv.sty` and +14.3 M (+0.12 %) under the docs' preload; `hello` +0.02 %. Against P1 the same document reads +0.02 % and -0.09 %, so a build's layout masks it. Of the 16 M, about 12 M is the test (28 instructions an assignment, 1,000,000 `\def`s: 51.8 → 38.9 on against off, with the guard-free read of a name's second and third bytes in `arena::first_bytes`; before it, +21.7 M and +20.9 M) and the rest is one allocation moving the heap: the install's single assignment alone is +13 M, a leaked block of its size alone +7 M. Dead ends, each measured on the empty article: a set of the watched names made at the install, 1.8 M for its scan of the meaning table; a name test on every meaning assignment, 1.1 M, nearly all of it the preload's bindings, so only a document's, a raw file's or a format file's assignment is looked at; a test of its own for the native call on every macro call, 0.27 % of `b0_empty`, so it shares `yields_calls`' (`SpecialCall`); its function pointer in `Expandable`, 0.33 M over 24,000 records, so it is held once.
+
+What is left of `pgf-interference` is its `\fill` and `\colorlet` per pixel. Census (a call is one door): the TeX Live manuals, 971,116 calls in 346 documents, 94.3 % native; a seeded 2,000 arXiv papers using `siunitx`, `xfp`, `l3draw` or `\fp`, 28,171 calls in 52 papers (`ar5iv.sty`'s siunitx binding does not reach l3fp), 97.6 % native in the first form. Top fallbacks on the manuals, each only speed left on the table: `\exp_after:wN` by way of `\exp_args:*` and `\seq_item:Nn` (22.6k), `\arabic` (5.3k), `\box_wd:N` in a `\dim_ratio:nn` (4k), `\pgfkeysvalueof` (5.7k), conditionals `\if_int_compare:w`, `\if:w` (4.4k), `\the` of `\numexpr` (2k), `rand` (1.4k), `em` and `ex` (1.1k). No manual changes an l3fp name. `kit/l3fp_census.py` over logs of `LATEXML_L3FP_TRACE=1` names them with a sample argument.
+
+### 2026-11-06 — interpreter hot paths, the pk/P1 levers
+
+Basis: `perf stat -e instructions:u`, release, the TikZ audit's benchmarks (`~/data/pk_agents/main/tikz_perf/audit/`) under `[rawstyles,rawclasses,luatex]latexml.sty`, XML byte-identical to the base on every row (`kit/perf_lever.sh`, ledger `~/data/pk_agents/main/perf_ledger.tsv`). `b0_empty` loads `pgf-interference` and `pgfplots` and typesets nothing; "article" is a plain article with amsmath under `ar5iv.sty`.
+
+| Lever | fp1000 | fill1000 | addplot500 | b0_empty |
+|---|---:|---:|---:|---:|
+| Base `d6e175bacb` | 88.94 G | 14.85 G | 31.82 G | 5.19 G |
+| P1a a token read tests only what is due at this count (`Gullet::full_read_at`) | -15.8 % | -11.4 % | -14.4 % | -6.7 % |
+| P1d `Error` boxed, so a `Result` costs a pointer | -0.7 % | -0.15 % | -0.4 % | 0 |
+| P1e a line works out its location only if it warns; `\def` formats no side keys | 0 | -3.8 % | -4.5 % | -13.4 % |
+| P1g the `\noexpand` test inlined, its slow paths cold | -2.4 % | -2.1 % | -2.2 % | -0.9 % |
+| P1h `read_token`'s usual token apart from its rare cases | -1.3 % | -0.8 % | -0.9 % | -0.5 % |
+| P1i an argument's read apart from its rare cases; arguments read in place | -3.1 % | -1.3 % | -1.5 % | -0.6 % |
+| P1l `read_x_token`'s rare paths apart | -0.5 % | -0.1 % | -0.2 % | 0 |
+| P1m regex literals compiled once (`find_file_fallback`: three per lookup) | -0.2 % | -0.9 % | -0.9 % | -4.7 % |
+| **All** | **69.31 G, -22.1 %** | **12.01 G, -19.1 %** | **24.54 G, -22.9 %** | **3.92 G, -24.5 %** |
+
+The article: 1.169 G → 1.080 G, -7.6 %. pgf-interference-en/-de: over 180 s on idle SMT siblings → 154 s with P1a and the since reverted P1b, on cores shared with bundle checks. The base's drift since 59q (`1be2a69de7`), the reason they had crossed the ceiling: fp1000 +6.2 %, fill1000 +12 %, addplot500 +12.8 %, by many small steps (`kit/perf_bisect.sh`, `kit/perf_bisect.py`); the largest single one, `ae89a0a8b0` +4.4 % with `ee3c2c6d9e` -2.5 % after it, is the frontmatter stamp on stored tokens.
+
+**What pays, and why (machine code read with `kit/perf_frames.py`):**
+- Work that can't be due. A read tested the token limit, the deadline's period, the cycle guard's window and the debug ring for every token, about 72 instructions; each depends only on the count, so one comparison against a precomputed count stands in for them all.
+- Eager work for a rare branch: a formatted location with a regex per input line for an Info that almost never fires, three `format!`s per `\def`, three regex compilations per file lookup.
+- **Hot/cold splitting, for functions called per token or per expansion.** The prologue is paid per call. `noexpand_shadowed` rejected a letter behind six pushes; the test is inline at the call sites now. A slow path inline also decides what LLVM will inline: `#[thread_local]` in place of `thread_local!` removed a state check from `is_noexpand_family` and still lost 1.4 %, because the memo's resize code, no longer behind a closure, grew it from 304 to 506 bytes and `noexpand_shadowed`'s inlined test became a call and a second prologue. Keep the slow path out of line and the fast one gains (P1g).
+
+**Dead ends, measured, with why:**
+- `\expandafter` expanding its token straight onto the input (tex.web §368), not returning a list: -0.3 %, -0.3 %, -0.7 %, and it changed output, so it was reverted. `invoke_expansion` stamps an expansion's list with the field provenance a raw `\@title` print is told by (`inherit_field_prov`), and with no list the title stayed in the body as well, silently. Guards `perfect_kernel_batchp1`. Other readers of that list are `keyvals.rs:533`, `xkeyval_sty.rs:130` and `latex_constructs/mod.rs:1828`, which consume it, not unread it.
+- A pool of macro-argument token buffers: +0.06 %, +0.2 %, +0.5 %. Under mimalloc a pop and push cost what an allocation does; allocation isn't where a macro call's time goes.
+- Splitting `read_balanced_with_close`, 11.6 KB with a 344-byte frame: -0.15 %, -0.17 %, -0.05 %. Its prologue is per group and its time per token, on the loop's lines. A hot/cold split doesn't reach a loop.
+- A bulk read of unexpanded arguments off the pushback: -0.16 %, +0.08 %, -0.65 %, and +0.46 % loading pgf. Runs between braces average 2.3-2.8 tokens and 30-53 % are empty, so the setup per run eats the savings.
+
+**`-Zplt=yes` (`.cargo/config.toml`).** 515 K of the binary's 1.04 M call sites loaded their target from the GOT and called through memory, though the target is in the same binary. The flag makes them direct calls. Median of 7 interleaved runs on one core with an idle SMT sibling (`kit/perf_ab_cycles.sh`), same tree, XML identical: cycles fp1000 22.27 G → 21.88 G (-1.75 %), fill1000 4.446 G → 4.379 G (-1.50 %), addplot500 8.423 G → 8.235 G (-2.24 %), a plain article -0.36 %, inside its 1.5-1.8 % spread. Instructions -0.07 to -0.22 %, so this is the indirect call's cost and not less work. It doesn't show in `instructions:u`, and a loaded machine hides it: the first attempt read 8-29 % spreads.
+
+**Against pdflatex, where this leaves us** (task-clock, median of 3 on one quiet core, `ar5iv.sty`, P1 without `-Zplt`; pdflatex writes its PDF too): loading pgf and pgfplots 269 → 295 ms, 1.10×; fill1000 518 → 852 ms, 1.64×; addplot500 638 → 1,665 ms, 2.61×; fp1000 1,515 → 4,358 ms, 2.88×. With the load subtracted: 2.2×, 3.7×, 3.3×. So the goal "pgf/TikZ as fast as pdflatex" isn't met on token-heavy loops. After P1 the interpreter's profile is flat: on fp1000 `read_x_token`, the largest self entry at 12.85 %, has no instruction above 3.3 %; on fill1000 and addplot500 every string-formatting site is under 0.5 %, and every lookup entry under 2 %. The next large gains are native layers for what a document actually loops in.
+
+**Next:** the l3fp loop is a native evaluator's job, not the interpreter's (`pk/P2`). Then pgfplots' arithmetic: addplot500 is the furthest from pdflatex of what stays interpreted.
+
+**The last regression, the title-page check (`pk/R1`).** Of the 50 manuals that slowed between sweeps #149 and #151 (`~/data/pk_agents/main/perf_corpus/regressed/table.txt`, `kit/perf_docs.sh`: 36.94 T at #149, 40.07 T at int141a, 32.09 T on P1), one stayed above #149 on P1: uantwerpenexam-example2, 224.9 G at #149, 203 G before the check, 295 G at 106s (`b16791f753`), 385 G at 108b (`8c3e0b1308`), 322.2 G on P1. `speculative_run` was 47 % of it: `\extrainfo` (100 lines, a raw setter's store, printed by the class's `\maketitle`) was digested by the output, by the print check (22.1 %) and by the third source (24.9 %), 164 million reads a run, as each `\selectlanguage` in it runs the class's `\captionsenglish` or `\captionsdutch`, which reads the language's `.data` file again, a `\regex_match` and a `\prop_gput` per line (`uantwerpenexam.cls:84,:99-104`).
+- **A budget, all of the fix.** No run of the check's reads more than 8 M tokens, three such per conversion (`gullet::read_budget`, `check_run_budget`, about a second each): 322.7 G with no budget (`LATEXML_CHECK_READ_BUDGET=0`), 176.9 G with 4 M, 178.9 G with 8 M, by `perf_docs.sh`, the XML byte-identical. So that manual's `\extrainfo` and its title page go unchecked, both named in a `Warning:frontmatter:check_budget`. The worst a document can ask of the check is 24 M reads, about 11 G. On 299 raw-class papers a run reads 487,915 at most, and 1,826,755 all of a paper's; none is stopped, nor any of `popZ01`'s 1,873.
+- **Settled: nothing the check wants is skipped.** Leaving an argument to the print's run when the print holds most of the words it spells took 322.2 G to 247.7 G with no budget and nothing once the budget fires (the print and `\extrainfo` both stop at it), and -0.03 to -0.9 % on six other witnesses, the watch's gain included. It lost a word uncounted, a `\thanks` behind a macro (`check_store_thanks_by_alias_is_counted`), and was a spelling read in the frontmatter: removed (OD #953 "R1"). Reducing this manual's check further needs a way to know a run's text without a second digestion (the plan's "digest once").
+- **The watch.** `Expandable::may_be_watched` tests inline what the two call watches can see, so a package's macro no longer takes their cold path: -0.2 % jwjournal-demo-en, -0.46 % Scrabble-doc-fr, against P1. They stay on to the end in a document with no `\maketitle`, and against no watch still cost 1.0 % and 0.2 %: the calls they record.
+- **The 50 again** (`kit/perf_docs.sh`, s149, P1, R1): 36.94 T, 32.09 T, 31.88 T. uantwerpenexam-example2 0.80× of #149; none above #149 but SASnRdisplay, 1.04×, which is work the document asks for: bisected to 79z (`8eb3ead38d`, +2.4 %, a listings markup style opens its own group) and 80b (`50eebcc647`, +2.1 %, a listings style that is a macro runs, with the token in `\lst@token`), both 2026-10-24. Its one Warning more, an `\ifx` open at `\end{document}`, isn't the check's either and isn't root-caused.
+
+### 2026-10-31 — frontmatter overhead levers (batch 96p)
+
+Basis: the read-only perf audit perf453 (2026-10-31: frontmatter 0.68–1.05 % of a median conversion, 3.5–15.6 % on
+many-author papers, every stage linear or better up to 592 creators) and its 15 documents — many-author 2005.08745,
+2402.17260, 1707.07081, 2409.19633, 2407.00879, hep-ex0508047, 2201.11593, 1205.2739, 2603.24341, 2006.14918; median
+2005.03240, 2504.05250, 1601.01776, 1004.1370, 1812.02463. Measured with `perf stat -e instructions:u` (call graphs do
+not work on this host: Zen 5 has no LBR and the binary no frame pointers), release, `--preload=ar5iv.sty --nocomments`,
+median of 3 interleaved runs per document on its own core; each lever against the build before it (one lever per run).
+Noise floor (base against an identical build): ±0.1 % per document. Every lever leaves the output byte-identical on the
+15 documents eager and `--streaming`; the 3,000-paper frontmatter sample (`fm_scorer/sample.txt`; 2,922 convert, 78
+have no main file) was compared once cumulatively after L3 and again on the final commit, L5 alone on the documents.
+
+| Lever | Removed | many-author: mean / max gain | median: mean / max | audit upper bound |
+|---|---|---|---|---|
+| L1 typed font key (`observer/events/mod.rs` `FontKey`) | a `format!("{:?}/{:?}/{:?}/{:?}")` String per text box the event lexer walks, and its clones per name run: the key is the box's `Rc<Font>`, compared by family, series, shape and size | 0.57 % / 1.76 % (1707.07081) | 0.01 % / 0.03 % (noise) | 0.19 % / 0.90 % (`font_key`'s own frames; the key's clones and comparisons in the lexer were outside it) |
+| L2 marks recorded by name where they are made (core `Document::insert_mark` / `made_mark`, `made_field_marks`) | the whole-document scans for the cover-title marks (`settle_cover_title_ink`, `drop_cover_title_ink`), the field marks (`settle_field_marks`, `field_ink_runs`) and the abstract markers (`remove_frontmatter_marks`) in a document none of that name was made in: 15/15 documents make no cover-title and no field mark, 1/15 (1812.02463) no abstract marker | 0.02 % / 0.07 % (within noise) | 0.04 % / 0.05 % (within noise) | 0.05–0.65 %, 0.18–0.51 % median — a bound in wall time (gdb time samples of all three scans), not instructions: the walks are memory-bound, so their instruction gain stays inside the noise floor (the end-of-document abstract-marker scan is not skipped, below) |
+| L3 post-insertion passes read on demand (`frontmatter/relocate.rs` `HeldAnnotations`, `insert.rs` `show_unanswered_marks`) | `relocate_annotations`' test of an unlabelled annotation against every author's children, once per annotation (annotations × authors × children, each child's text built): each author's values of a kind are read once, again only after the author changed; every author's shown marks (two XPath queries each), read only when an institute labelled by a mark asks; `show_unanswered_marks`' four XPath queries per creator (its personname, its superscripts twice, its `_answers`), read only when a request no entry answers reaches them | 0.18 % / 0.46 % (1707.07081; 2409.19633 0.41 %, 2005.08745 0.29 %) | 0.02 % / 0.03 % | 0.20–1.79 % for all post-insertion passes, the writer's 0–0.74 % included |
+| L5 the ledger's queued-author count under the census only (`observer/ledger.rs` `authors_queued`) | `queued_author_count` (a walk of the whole frontmatter queue) at every `\author` call the ledger records, quadratic in the authors; the dump is its only reader and is written under `LATEXML_FM_SHADOW=1` only (DEL4: the count and the census deleted) | 0.02 % / 0.09 % | 0.00 % (noise) | 0.37 % at ~1,000 authors (perf453b) |
+| **cumulative** (82adbc1802 → L3) | | **0.73 % / 2.28 %** (1707.07081; 2409.19633 1.11 %, 2603.24341 1.00 %) | **0.05 % / 0.08 %** | |
+
+On the bounds audit's many-author tail (perf453b: 2103.04797, 975 creators, revtex4-1; 1901.01540, 1,202, aastex62;
+1710.09320, 1,108, aastex61) L1–L3 together save 6.03 %, 0.53 % and 0.50 %, and L5 0.47 %, 0.44 %, 0.44 % more; the
+outputs byte-identical.
+
+**Measured, not taken:**
+- The end-of-document abstract-marker scan (`remove_frontmatter_marks`, sect02.rs `\lx@finalize@document`) when the
+  flush's sweep removed every marker made before it (14/15 documents): a marker made while the insertion point is in a
+  detached subtree (the core has such points, `insert_element`'s hep-th0201062, 1009.0637) and reattached later would
+  be missed. Recording the marker nodes instead is unsafe: `remove_node` frees the subtree and a held handle dangles.
+- L4, keyvals digested per frontmatter call (`frontmatter_api.rs` `\lx@add@frontmatter@now` `be_digested()` 0.42 %
+  [max 0.82 %], `\lx@annotate@frontmatter@now` 0.35 % [1.32 %]): each call's keyvals are digested once, at its `@now`;
+  the queueing primitive reads them undigested (`queue.rs` `queue_front_matter`). Repeats are distinct calls with the
+  same keyvals: revtex queues a run's shared `\affiliation` once per author of the run (1707.07081: 194 of its 702
+  digestions are one affiliation's `role={affiliation},annotate={run}`; 2103.04797: 2,138, 91 of them `\Fermi`'s),
+  each its own annotation, content digested per author. The cost per call (~0.2 M instructions on 2103.04797) is
+  Perl's `KeyVals::beDigested` ported: the `\setkeys` expansion (`set_keys_expansion`, its `\def`s of the xkeyval
+  internals and each key's code, assignments that persist) digested, then each value. Not redundant; reusing a digestion
+  across calls would skip those assignments. Left.
+- `queue_digest.rs` `get_frontmatter_name` (0.09 % [0.43 %]; ~1.0 % self time at ~1,000 authors, perf453b) digests
+  `\lx@<tag>@<role>@name` per call. A cache keyed by the name macro's meaning is not exact: the bindings' bodies end in
+  an active `~` (`Affiliation:~`) whose meaning, and what that expands to, is not the name macro's, and the text a
+  digestion gives depends on the font encoding (OT1's `<`). Exact needs the meanings of every token the expansion
+  reaches and the encoding in the key; left for the frontmatter re-architecture.
+- `observer/policy.rs` `declarations_key` (a `format!` per `policy_for` lookup, ~0.05 %): an interned key needs a
+  state-value lookup by symbol and a per-conversion memo cleared with `arena::reset`; not worth it at that size.
+- A shared post-insertion index (creators in order → personname, contacts, notes, marks; label → nodes; `SymStr`
+  keys) for every pass: the passes move, clone, rename and remove what it would index (coalesce, distribute, relocate,
+  respell, show, drop, the writer), so each mutation has to go through it; `HeldAnnotations` (L3) is its shape for one
+  pass (read once, re-read for the creator a change touched). The next stage.
+- The rehearsal's second digestion of the author block (`observer/shadow.rs` → `rehearsal.rs`, perf453): mean 1.26 %,
+  max 3.11 % on multi-author revtex, ≤ 0.11 % on median papers. The real digestion and DOM absorb are construction.
+- The rest of the insertion chain (`coalesce_empty_creators`, `distribute_upfront_contacts`, `answered_labels`,
+  `drop_empty_contacts`, `flag_merged_creators`): one or two whole-document queries each, and one query per creator
+  in `coalesce_empty_creators` and `flag_merged_creators` whose answer each uses; ≤ 0.10 % of a conversion apiece in the
+  audit's samples.
+
+### 2026-10-16 — pre-rerun tactical pass + memory-fuse audit (batch 68p)
+
+The memory-fuse change the audit proposed (address space against `RLIMIT_AS`) is PARKED, a settled
+dead-end: it turns a crash into a named Fatal (both final, retried alike) and cost 0804.1983's
+completion (9/9 → 4/9 runs) — `STABILITY_WITNESSES.md` Cluster K. The audit's dominant OOM loop
+(`semantic`'s `\lastbox` peel) is fixed in the kernel instead (68q, `\unvbox` splices, §1110).
+
+Basis: the read-only study `~/data/pk_agents/main/agent_reports/2026-10-16_perf_ram_study.md`
+(`perf` is blocked on this host, `perf_event_paranoid=4`: gdb stack samples, `telemetry.json`
+phases, wall/CPU/max RSS from `wait4`). Measured 67int10b-rel vs the batch, release, `--preload=ar5iv.sty
+--nocomments`, A and B back to back on one idle core; every output `cmp`-identical (minus the
+generator lines). One mechanism per commit:
+
+| Lever | Witness | before → after |
+|---|---|---|
+| ObjectDB `Entry::push_new`: a set of the list's Display strings beside the Vec (was a scan formatting every item, O(n²)) | 1702.06564 (html) | 176.1 → 59.7 s; post_scan 109.0 → 0.7 s |
+| Title-ink dedup: one preorder walk to the first `ltx:section` (was `//ltx:p[…][not(preceding::ltx:section)…]` at every sectioning command, Principle 6) | 2208.14314, 2108.10297 | 134.2 → 14.0 s (build 123.0 → 2.8), 151.8 → 37.1 s (build 118.7 → 6.9) |
+| Math-parse dedup: `XM: Hash` (consistent with its `Eq`) indexes the kept trees (was `Vec::contains`, deep `eq` against every kept tree) | 1509.06364 (29,183 parses), 1203.5809 | 156.7 → 9.5 s, 37.8 → 25.3 s (math_parse 27.2 → 15.2) |
+| Root namespace declarations: one walk for every prefix (was one recursion per prefix with a child `Vec` per node) | 8 ordinary gen80 papers × 3, xml | CPU 73.9 → 69.3 s (−6.2 %); gen80 80/80 xml + html identical |
+| `prune_xmduals`' discarded `node_to_string` (audit F1) | 2304.10050, 1702.06564, 3 more | within noise |
+
+Max RSS unchanged within 1 % on every witness. Random check: 98 pop67o papers (`shuf
+--random-source=<(yes 68)`), all five levers, 24-way: out.html byte-identical, exit codes equal, CPU
+323.5 → 286.8 s (−11 %, concurrent, indicative only).
+
+**Not attempted** (the study's (d) list, binding): the `Rewrite::apply_clause` retry (fix the
+rust-libxml subtree-namespace cause instead); a C-allocator swap (closed 2026-10-07); Rc-shared `XM`
+subtrees for the math-parse spikes; lowering `ASF_SECOND_CHANCE_ALTERNATIVES` (changes output); F3
+file-backed core→post; F6; the startup `kpsewhich` spawn; digest runaways and tikzscale (correctness);
+Token under 8 bytes (P5).
+
+### 2026-10-07 — random 2609 sample profile (pre-rerun perf pass)
+
+Basis: 40 random 2609 papers (`shuf --random-source=<(yes 62)`), bench binary, `perf stat instructions:u`, and frame-pointer call graphs (`RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Zthreads=8 -Zunstable-options -Cforce-frame-pointers=yes" CARGO_TARGET_DIR=<separate dir> cargo build --profile bench --bin latexml_oxide`, the first three flags restating `.cargo/config.toml` since `RUSTFLAGS` replaces it; then `perf record --call-graph fp`; DWARF unwinding gives empty stacks). A new binary run against the vendor TL builds a format dump into `~/.cache/latexml-oxide/formats/` on its first run (OXIDIZED_DESIGN_DIVERGENCES #449): warm it before measuring, or one paper reads 3 → 212 G instructions.
+
+- **Math parse = 39.1% of instructions** (`--nomathparse`: 727.9 → 443.3 G); 67% on 2609.30034 (1,818 formulas). Within it the libmarpa recognizer dominated (`marpa_r_earleme_complete` + `postdot_items_create` + `bv_scan` ≈ 16% of all self samples) → byte-class terminals (P3).
+- **12 mixed papers, inclusive:** math parse 27.9%, digestion (`stomach::digest`) 21%, package loading (`load_definitions`) 27%, post-processing 10% (XSLT 8.7%), `xmlXPathEval` 5.9% spread over many call sites (largest `Rewrite::apply_clause` 1.9% on a math-heavy paper; `cleanup_unreferenced_xmtok_ids`, `set_rdfa_prefixes`, CrossRef ~1% each), graphics converters (mutool, pdftocairo) ~10% of cycles in child processes.
+- glibc malloc ~11.5% of self samples: allocator swap measured, no gain (closed levers).
+
+### 2026-09-03 — read-only algorithm and memory audit
+
+Audited the current working tree against the performance, large-document,
+streaming, startup, telemetry, and thermal documentation. No code was changed
+and no fresh measurements were taken. The ranked findings, cost models,
+implementation boundaries, validation matrix, stale-doc reconciliation, and
+resume checklist are recorded in
+[`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md).
+
+The immediate next patch is deliberately narrow: remove the unused
+`Document::prune_xmduals` subtree serialization and run a same-session,
+byte-identical A/B. Keep the subsequent one-pass `idref` index separate. The
+largest architectural residual is that fragmented core output is still
+materialized as a document-sized `String` before the CLI hands it to post.
+
+### 2026-09-03 — Wave 15 / Batch 54 & WebAssembly audit pass: interner hygiene, macro cycle fast-fail, and thermal budgeting
+
+Investigation during the Wave 15 / Batch 54r sweep series (`perfect_kernel` branch) and the Stage 4 WebAssembly compatibility audit (see [`WASM_COMPATIBILITY_AUDIT_2026-09-03.md`](../release/WASM_COMPATIBILITY_AUDIT_2026-09-03.md)):
+
+1. **`SymHashMap` negative-probe interner pollution — already resolved:**
+   The candidate was valid, but the current source already probes with
+   `arena::get` before map lookup. Keep this as provenance, not open work.
+2. **Macro-cycle fast-fail — already resolved:**
+   Duty-cycled gullet/stomach guards are present, and the source-scaled token
+   backstop now defaults to 4 billion. The older 1-billion/current-reality text
+   was stale; do not implement a second independent ring.
+3. **C-FFI decoupling of `marpa-asf` from `latexml_core`:**
+   Audited `latexml_core/src/common/error.rs`: `marpa-asf` was pulled into core solely for `impl From<marpa::error::Error> for Error`. Relocating this to `latexml_math_parser` frees `latexml_core`, `latexml_engine`, and `latexml_package` from compiling C Marpa code.
+4. **Codehigh LuaTeX O(n²) parser timeout (Batch 54k):**
+   `codehigh` package documentation was spinning indefinitely in its Lua parser emulation; falling back to plain verbatim for this path brought the document from 180s timeout to <1s (`86e764fda4`).
+5. **Host thermal throttling & memory budget (`docs/THERMALS.md`):**
+   Documented host limits on Intel hybrid i7-12800H: running `sweep.sh` (xargs -P 10, up to 6 GB each) concurrently with `cargo nextest -j 8` causes 100% swap fill (8 GB) and severe thermal throttling (700+ throttle events/5s at 96 °C). Established hard operational rules: `JOBS=6..8` alone, `JOBS=4` alongside other tasks; `JOBS × --max-memory <= 24 GB`.
+
+### 2026-10-01 — TikZ/l3fp expansion levers (batch 59a)
+
+Basis: `perf stat -e instructions:u` (load-robust) on the audit's benchmark documents under
+`~/data/pk_agents/main/tikz_perf/audit/` (`b1_fp1000` an l3fp pixel loop as in
+pgf-interference, `b3_addplot500` one 500-sample `\addplot`, `b5_fill1000` 1,000 TikZ
+`\fill`), release builds, `[rawstyles,rawclasses,luatex]`; output XML byte-identical.
+Starting point (58q5): pgf-interference-en 220 s, -de 212 s against lualatex 68/67 s;
+~25 ns per gullet token read against TeX's 5-7 ns.
+
+| lever | fp1000 | addplot500 | fill1000 |
+|---|---|---|---|
+| L3 typed `State::if_stack` (Perl edits the Value in place) | −0.3 % | −2.9 % | −2.2 % |
+| L5 `CharToken!` through `pin_char` | −1.9 % | −0.3 % | −0.5 % |
+| `pin!` caches registered and cleared by `arena::reset` (correctness) + L7 `Optional` by symbol | −0.3 % | −0.2 % | −0.2 % |
+| L2a number scan keeps the token in hand (tex.web §440/§448), digits accumulated | −11.9 % | −1.1 % | −1.3 % |
+| L4 register keys: interned address, numeric arguments written directly | 0 % | −0.4 % | −0.4 % |
+| L4b `has_tex_prefixes` pre-pinned + empty-map fast path | 0 % | −2.4 % | −2.2 % |
+| **cumulative** | **−14.1 %** | **−7.0 %** | **−6.7 %** |
+
+Batch 59c (L1, part 1): `Parameter` caches its `OptionalMatch`/`Until` name kind; `substitute_parameters`
+drops its body pre-scan — fp1000 −1.6 %, addplot500 −1.2 %, fill1000 −1.0 %. With 59a-59c and the 59b
+wheelchart fixes the three TikZ timeouts are under the 180 s ceiling (release, three at once):
+pgf-interference-en/-de 220/212 → 166/166 s, wheelchart 210 s Fatal → 118 s (lualatex 68/67/52 s).
+
+Batch 59q (L1, part 2, and an L7 item), measured against 59o5 on the same basis:
+- a macro body goes onto the input with its arguments substituted, without building the expansion list
+  (`Definition::invoke_onto_input`; `Tokens::substitution_plan`, the body's literal runs and parameter slots
+  as tex.web §390 stores `out_param`s, built once per definition; `gullet::unread_substituted` pushes the
+  pieces in reverse) — fp1000 −5.3 %, addplot500 −2.5 %, fill1000 −2.0 %;
+- `ExpandDepthGuard::enter`'s Fatal moved out of line (`#[cold]`): its message formatting had kept `enter`
+  from inlining into every `read_x_token`, a 152-byte frame per read — fp1000 −2.7 %, addplot500 −1.0 %,
+  fill1000 −0.6 %.
+Cumulative fp1000 90.85 G → 83.77 G instructions (−7.8 %), output byte-identical; pgf-interference-en
+164.5 → 156.6 s wall (release, run side by side on separate cores; output byte-identical). Argument reading
+(`read_parameter_list`/`read_with`/`read_balanced`, ~12 % of fp1000) is the remaining L1 share: a pstack
+buffer needs a reader API that writes into the caller's buffer.
+
+Settled dead ends: an arena-generation check in `pin!` (+4.75 % on fp1000 — `pin!` is too
+hot for a second thread-local load); `read_unit` testing internal quantities first plus a
+`read_keyword` fast reject (0 %, reverted). Remaining ranked levers (audit report
+`~/data/pk_agents/main/agent_reports/2026-10-01_tikz_perf_audit.md`): L1 a TeX `macro_call`
+path (pstack argument buffer, substitution straight onto the pushback; est. −12..17 %),
+L6 TeX-shaped `\expandafter`; structurally, token lists read by reference
+(tex.web `begin_token_list`) — a Gullet-model change awaiting a ruling.
 
 ### 2026-08-23 — pre-0.7.6 diagnostic-only audit: eager-Debug! band + ranked backlog
 
@@ -288,8 +607,9 @@ Idle-box pass at `80999906da` (release build with symbols; 82-paper
 lbr` on three phase-distinct witnesses, dhat allocation pass, clippy perf
 sweep). **Diagnostic only — no code changed.** No regression since 2026-07-29:
 `2405.14114` reproduces its post-guard wall (21.1 vs 21.45 s), and none of the
-248 commits since added hot-path code (XSLT still zero per-node `//` /
-`preceding::` scans). Healthy-paper RSS p50 285 MB / max ~1 GB — normal-path
+248 commits since added hot-path code (the default HTML5 XSLT still had zero
+per-node `//` / `preceding::` scans; JATS/TEI were outside that audit).
+Healthy-paper RSS p50 285 MB / max ~1 GB — normal-path
 memory is fine. Ranked findings, all output-neutral by construction:
 
 1. **Eager `Debug!` diagnostics — the headline (now Open levers P0).** On
@@ -309,8 +629,8 @@ memory is fine. Ranked findings, all output-neutral by construction:
    undo frame + per-frame hashbrown `remove_entry` (2.39% self on
    `2405.14114`), plus the per-assignment `\globaldefs` probe
    (`state.rs:841`). Faithful Perl semantics; the typed-`State`-field
-   translation for LaTeXML-internal counters is the fix — still needs the
-   dump-filter + `if_stack` review flagged 2026-07-29.
+   translation for LaTeXML-internal counters is the fix. Done: `if_count`
+   (`State::if_count`) and, in 59a, the `if_stack` itself (`State::if_stack`).
 3. **`is_noexpand_family` string probe** — still 1.99% self on the digest
    witness; intern-time flag bit (SymStr-indexed bitvec) remains the fix.
 4. **libxml2 on glibc malloc ≈ 11.3% self** on `2408.08292` (Rust side is on
@@ -421,13 +741,13 @@ name (all-`???` annotation) on this box — use perf instead.
 - `assign_internal` Global-scope undo-frame walk (~4% incl. hashbrown
   `remove_entry` 1.85%) is faithful Perl State semantics (Perl also
   Global-assigns `if_count` per conditional) — a typed `State` field for
-  LaTeXML-internal counters would be the "meaningful Rust types" translation,
-  but needs dump-filter + `if_stack` review before attempting.
+  LaTeXML-internal counters would be the "meaningful Rust types" translation
+  (done for `if_count` and, in 59a, `if_stack`).
 
 ### 2026-07-06 — CrossRef O(n²)→O(n) on very-large split docs
 
 Post-processing the 40 201-page `index.xml` witness (see
-`docs/performance/STREAMING_POST_DESIGN_2026-07-06.md`) was dominated by **CrossRef at
+`docs/archive/STREAMING_POST_DESIGN_2026-07-06.md`) was dominated by **CrossRef at
 40 min 47 s = 95 % of a 42 min 50 s run**. `CrossRef::process` runs once per
 split page, and two per-page passes scanned *global* state — a latent
 quadratic exposed only once split fires at 40 k-page scale (huge docs used to
@@ -530,44 +850,49 @@ output-neutral (suite green).
 
 One-line outcomes; detail in `git log` + commit messages.
 
+- **Byte-class terminals in the Marpa math grammar — FIXED (2026-10-07, marpa-asf 0.4.0).** See P3. Settled with it: the recognizer cost is per earleme, not per token boundary (padding the index digits costs ~50k instructions per byte, more than the average byte), so shortening role names or feeding one terminal per lexeme are the remaining levers there (the latter an interface change: semantics read lexeme text).
+- **C-library allocator (glibc → mimalloc for libxml2/libmarpa) — NO GAIN, closed (2026-10-07).** glibc malloc/free is ~11.5% of self samples (libxml2 attribute strings, XPath node sets), but `LD_PRELOAD=libmimalloc.so.3` cut instructions only 2.6–3% while cycles rose 5% and task-clock 12% on 2609.30034.
+- **`SymHashMap` negative string probes — FIXED in the 2026-09-03 source snapshot.**
+  `get`/`get_mut`/`contains_key`/`remove` resolve with non-interning
+  `arena::get`, so misses do not grow the thread-local arena. No isolated A/B
+  was recorded; retain the invariant and its unit coverage.
+- **Eager `Debug!` diagnostics on text-absorption path — FIXED (`80999906da`, 2026-08-23).**
+  `Debug!` and `generate_message!` built debug strings and serialized XML subtrees via `node_to_string` before checking verbosity gates. Gating on `debug_record_enabled()` cut `2304.10050` from **6.21 → 2.71 s (−56%)**, and 82-paper sweep from **229.3 → 200.0 s (−12.8%)**, with byte-identical output.
+- **FxHash libxml node-cache — FIXED & SHIPPED (2026-07-20).**
+  Replaced std SipHash `RandomState` in `rust-libxml`'s `xmlNodePtr → Node` wrapper cache with a dependency-free FxHash pointer hasher. Wall time on node-heavy phases dropped by **~28–30%** (`1510.03361` 19.6→14.1 s; `1805.03265` tikz-cd 22.4→15.7 s). Published in **`libxml 0.3.16`** on crates.io.
+- **DOM traversal mechanics — FIXED (2026-08-23).**
+  `collect_walk_matches` sibling traversal (`get_first_child` / `get_next_sibling`) eliminated per-recursion-level `Vec<Node>` allocations (~2.4% self-time). `generate_id` parent-chain walk replaced per-call XPath `ancestor::*[@xml:id][1]` evaluation.
+- **`is_noexpand_family` and fontmap memos — FIXED (2026-08-23).**
+  Arena-indexed symbol vector memos eliminated string scanning on token meaning lookups and font mapping.
+  A symbol's index is its arena *byte offset*, so the `is_noexpand_family` memo covers only the first 64 MiB of the
+  arena (batch 56kg, WISDOM #86); unbounded it grew with the arena, to 1.5 GB after a long pgf path.
+- **UTF-8 SIMD fastpath on `.cls`/`.sty` scan — FIXED (2026-08-18).**
+  Replaced grapheme-aware lossy decode with byte-range scan, cutting ~3% CPU during package dependency scans.
+- **Graphics pipeline (36.5% → 8.9% wall) — FIXED.**
+  In-doc coalescing (`48fd96ac75`), persistent disk cache, vector-SVG fast path (`fig8.pdf` 32.4→0.3 s, ~130×), vector-PDF auto-detect, and worker count bounding (8 workers max).
+- **Codehigh LuaTeX O(n²) parser timeout — FIXED (Batch 54k, `86e764fda4`, 2026-09-02).**
+  Degraded unsupported codehigh LuaTeX tokenizer path to plain verbatim, eliminating multi-minute timeouts across documentation sweeps.
+- **One-Borrow Gullet Checkpoint & Duty-Cycled Cycle Guard — FIXED (2026-07-29).**
+  Merged 3 RefCell borrows into 1 in gullet token reading; duty-cycled active cycle guard (2,048 of every 16,384 tokens) cut 2405.14114 by −10.1%.
+- **CrossRef O(n²) → O(n) on 40k split docs — FIXED (`4ec2587993`, 2026-07-06).**
+  Restored page-node walk in `fill_in_frags` and memoized sibling index in `fill_in_relations`; dropped CrossRef on 40,201-page split doc from 40m47s to 6.1s (18.6× whole-run speedup).
 - **`build` phase quadratic — FIXED (`335b6b83`, ~20×).** `math0605199`
-  44.9 s → 2.1 s. Root cause: a single-`ltx:text`-child merge called
-  `record_node_ids(node)` *inside* a per-grandchild move loop → O(G²) XPath
-  `descendant-or-self::*[@xml:id]` re-scans; hoisted to one post-loop call.
-  Runs in every conversion → broad latent win. (Earlier 7-site
-  `get_child_nodes().is_empty()` → `get_first_child().is_some()` O(1)-emptiness
-  sweep also landed.) Build is now linear (~0.8 ms/formula); the build-side
-  sweep is exhausted.
+  44.9 s → 2.1 s. Hoisted `record_node_ids` out of grandchild move loop; build is now linear (~0.8 ms/formula).
 - **P1 digest + build (pure-Rust hot path) — CLOSED 2026-05-19.** Residual
   digest cost is structural to TeX semantics, not a translation accident. perf
-  floor is the `state.meaning` SwissTable double-probe (read_x_token decides
-  whether to expand; invoke_token decides how to invoke — each probes once).
-  Combining them = an API change on a gullet API that mirrors TeX by design —
-  **out of scope** (user directive 2026-05-19: don't change the gullet API for
-  perf without a big ergonomics win). Landed body-only wins: `Catcode::name_sym`
-  / `has_meaning` (8 sites) / `Token::pin_cs_name`.
+  floor is the `state.meaning` SwissTable double-probe.
 - **dhat allocation sweep — DONE (faithful, output byte-identical).** Cut
-  multi-GB of *churn* (allocator pressure / RSS, matters for the fleet) but
-  only ~1–2% single-process wall (digest/math_parse are CPU-bound, not
-  alloc-bound). Landed: `serialize_aux` → single growing buffer; serialize attr
-  loop reuses `get_attributes()`; `get_tag_action_list` borrows tag hashes;
-  `fixedformat`/`get_node_qname` in-place writes; `read_until`/`read_tokens`/
-  `List::revert` pre-sizing. Deferred architectural items (token-list COW, AST
-  arena, `Font::relative_to` keys) need explicit sign-off (no-redesign-away-
-  from-Perl constraint) — they ARE the Perl expansion/parse data model.
+  multi-GB of *churn* (allocator pressure / RSS) via `serialize_aux` growing buffer,
+  tag action list borrowing, and in-place `fixedformat`/`get_node_qname`.
 - **XSLT deep-DOM copy + max-depth — DONE.** `dup()` → `Rc clone()`
-  (−120–130 MB/paper); `xsltMaxDepth = 1000` (faithful Perl port, graceful
-  abort vs OOM). See STABILITY_WITNESSES Cluster A.
+  (−120–130 MB/paper); `xsltMaxDepth = 1000` graceful abort vs OOM.
 - **PGO / `target-cpu` (v3/native) — NO GAIN, closed.** maxperf is already at
-  the fat-LTO + CGU1 ceiling; engine isn't SIMD-amenable (branchy
-  catcode/macro dispatch). Keep portable `x86-64`. Tooling deleted. (Memory
-  `pgo-isa-no-gain-2026-06-21`.)
+  the fat-LTO + CGU1 ceiling; engine isn't SIMD-amenable (branchy catcode/macro dispatch).
 - **Startup dump-parse lever (~50 ms of ~161 ms floor) — declined** as too
-  small for release-critical risk; amortized to noise on long papers anyway.
-  (`archive/STARTUP_COST_ANALYSIS_2026-06-21.md`.)
+  small for release-critical risk; amortized to noise on long papers.
 - **`build-std` (panic_abort) — PARKED.** −0.11 MB (0.2%); `.eh_frame` is from
-  the static C deps (mimalloc/libmarpa/zstd), which `-Z build-std` doesn't
-  touch. Not worth the nightly fragility.
+  static C deps (mimalloc/libmarpa/zstd).
+
 
 ---
 
@@ -580,7 +905,11 @@ One recognizer pass → one bocage; routing branches on
 - `metric == 1` (unambiguous, 60–87% of corpus formulae) → ordinary
   `Tree::next()` + `Actions::get_tree`; skips ASF entirely.
 - `metric ≥ 2`, and-node count ≤ `HYBRID_AND_NODE_LIMIT` (default 500) → ASF
-  traversal (`MathTraverser`), one post-order pass with subtree sharing.
+  traversal (`MathTraverser`), one post-order pass with subtree sharing. The count
+  is in byte-rule units: marpa-asf ≥ 0.4 counts a byte-class token (`lex_char`,
+  `digit`) as the two nodes the per-byte alternative rules made, so the cap routes
+  every formula as before byte classes became terminals. Do not "simplify" that
+  normalization away: it moves the cap (3 readings changed in 440 papers without it).
 - `metric ≥ 2`, bocage exceeds the cap → libmarpa Tree iterator on the same
   bocage with the six legacy convergence caps. Sidesteps the ASF allocation
   cliff.
@@ -606,7 +935,8 @@ n=98 both-OK, zero OOM; the cap fixed 19 OOMs the no-cap hybrid produced).
 `Symch.factorings` +72 MB RAM for ~0 gain (closed). Total Rust-side micro-opt
 ~6%; HYBRID-routing delivered the ~37% for LEGACY parity. The residual
 ASF→LEGACY gap is structural (glade bookkeeping) — further wins are in
-libmarpa C-side bocage walking (out of scope).
+libmarpa C-side bocage walking (out of scope). On the recognizer side, byte classes
+as terminals (marpa-asf 0.4.0, P3) halved the recognizer.
 
 ---
 
@@ -772,3 +1102,449 @@ the STREAMING_CORE_DESIGN "PERF CONSOLIDATION" entry).
   discarded-enumeration pile to prune. MathParse's measured 41% ≈ 1.55 ms per
   formula of recognition + tree build + semantics + FFI: constant-factor
   levers only, no ≥40% single technique in the current architecture.
+
+## Slow-call audit (perfect-kernel corpus) — user directive 2026-09-05
+
+A conversion that takes more than about a minute must be **justified** by its
+output: a large, highly structured, content-preserving XML/HTML. Anything else
+is a performance root, and a long run that ends in a fatal with no output is
+the worst case (time spent, nothing delivered).
+
+Tool: `tools/perfect_kernel/slow_calls.sh <sweep_dir> [threshold_secs=60]` —
+one row per slow document with the source size, the XML size, structure counts
+(sections, `<Math>`, `<tabular>`, `<figure>`, `<picture>`/`<svg>`), the KB/s
+rate and a verdict: `JUSTIFIED` (≥ 25 KB of XML per second, or ≥ 2 MB of
+XML), `TIMEOUT` (killed at the cap), else `SUSPECT`. Run it after every sweep
+and carry the SUSPECT/TIMEOUT rows into the LEDGER's sweep row as a perf
+cluster (root-caused like any other: witness, mechanism, one lever per run).
+
+Sweep #41 baseline (batch 56i release, 300 s cap): 65 calls over 60 s —
+17 justified (source3 18 MB at 75 KB/s, circuitikzmanual 12.8 MB at 116 KB/s,
+unicodefonttable 15.9 MB at 229 KB/s …), 14 timeouts (tzplot, tutodoc ×2 —
+fixed in 56j — spreadtab ×2, pgf-periodictable, pgf-interference ×2,
+latexsheet-esmx, kaytannollista-latexia, jpneduenumerate, chemobabel ×2,
+bibleref-parse), 34 suspect, of which 21 ran 60–270 s and then died with a
+0-byte XML (tikz-network 271 s, wtref-ja 242 s, pgf-spectraPreviewDataLSE
+241 s, wheelchart 207 s, glossaries-extra-manual 155 s, datatool-user 144 s,
+glossaries-user 144 s, tcolorbox 101 s, Explications_ScratchX 100 s, istgame
+88 s, xebaposter, lie-hasse, handout, quran ×2, texnegar ×3, polyglossia,
+tikz-among-us, latexbangla, expkv-bundle) and 13 delivered small outputs
+slowly (platexcheat ×4 at ~265 s for 250 KB, tabularray 216 s for 1.9 MB,
+rulercompass 103 s for 81 KB, tilings, graph35, functional, spath3,
+tkz-grapheur-exemples). The 0-byte-fatal group is the first target: those
+runs are pure waste.
+
+## OPEN PROGRAM 2026-09-18 — pgf/TikZ throughput: reach pdflatex speed (user directive; the first profile below was UNSYMBOLIZED and proves nothing about flatness)
+
+`tikz-network.tex` (170 TikZ pictures, 0 errors) is the perfect-kernel corpus's
+largest sanctioned slow call at ~222 s under the sweep; pdflatex needs 34 s for
+the same manual (the intrinsic-cost oracle), so latexml-oxide runs at ~6× native
+on real pgf expansion (every `\Vertex` fires ~10 `\tikzset` + `\ifthenelse` +
+pgfkeys + a pgf scope, tikz-network.sty:407-520). `perf record` over the full run
+(root-causer `~/data/pk_agents/w23/regr85/tikz-network-perf/`, `perf_top40_*`):
+Rust engine 84 % self time with **no symbol above 0.7 %** (token inner loop —
+`read_cs_name_inner`, `Mouth::open`, `read_dimension`), libxml2 0.08 %, no math
+(pictures emit `svg:g`). Not quadratic, not clone churn, not the parser — a diffuse
+constant factor; the only engine-wide gains are the sub-1 % token-throughput
+items above. The one measurable band, kpsewhich subprocesses at 8–15 %, appears
+ONLY when `TEXMF*` is left unpinned (the dual-TL guard, pathname.rs:184, then
+forks `kpsewhich` per candidate list — 108 of them always-missing `*.rhai`
+binding probes); the sweep pins it (`run_doc.sh:42-46`), so the 222 s is already
+the fast path. zx-calculus (191 s) and tkz-grapheur (187 s) are the same family.
+**Reopened the same day (user: "We can be as fast").** The "flat profile" was taken on
+the stripped `--release` binary — every Rust frame was a hex address, so the
+0.7 % ceiling per symbol is an artifact of missing symbols, not evidence of a
+diffuse cost. Program: (1) `cargo build --profile bench` (symbols) in its own
+`CARGO_TARGET_DIR`; (2) `perf record --call-graph lbr` on one heavy picture
+(`~/data/pk_agents/w23/regr85/tikz-network-perf/picC.tex`) and on the manual,
+`perf report --no-inline` ranked by self time; (3) one lever per run with
+pre-registered bars: tikz-network wall (222 s → target 34 s), picC wall, a
+non-TikZ control (a 200-page text manual) unchanged, `perf stat` instructions.
+Suspects to rank: token interning/arena pins per `\csname`, `Tokens` clones in
+`\pgfmath`/`\pgfkeys` expansion, the pushback/mouth structure, per-token state
+lookups (catcode, meaning), `check_timeout` cadence, definition dispatch, the
+SVG driver's path building. Tracked in `docs/perfect_kernel/PLANS.md` item 7.
+
+**Symbolized profile (2026-09-18, `~/data/pk_agents/w23/perf_pgf/NOTES.md`).**
+picC (one heavy picture): 887 M token reads, 35.8 ns and 632 instructions per
+token, IPC 3.17; pdflatex runs 6.07× fewer instructions on the same input — a
+document-model constant factor, linear in pictures. Top self time on the manual:
+`read_internal_token_checked` 9.9 %, `read_x_token` 5.5 %, `read_balanced_with_close`
+4.8 %, `read_arguments` 3.1 %, `substitute_parameters` 3.1 %, `Parameter::read`
+2.6 %, `assign_internal` 2.4 % — and a **14 % inclusive `getenv` band**:
+`Parameters::read_arguments`/`read_arguments_and_digest` called
+`std::env::var("LXML_TRACE_ARGS")` on EVERY macro/primitive/constructor
+invocation (the environment lock plus a byte scan of `environ`, longer under the
+`TEXMF*` pin). The stripped profile had shown it only as ambient libc.
+
+**Lever 1 landed (batch 56da): the trace switch read once** (`Lazy<Option<String>>`,
+parameter.rs — gullet.rs's `TRACE_GROUP_END` idiom). Bars, picC under a loaded
+host (`perf stat` instructions are load-independent): 559.5 G → 497.8 G
+instructions (−11.0 %), wall 37.9 s → 33.3 s (−12.2 %), XML byte-identical;
+tikz-network's manual to be read off sweep 89.
+
+**Lever A landed (batch 56db): `if_count`/`if_limit` are typed `State` fields**
+(P4; `State::if_count`, `next_if_id()`/`if_limit()`/`set_if_limit()`). Every
+`\if…` paid a Value lookup, an `assign_internal(Global)` — the `\globaldefs`
+probe plus the undo-frame walk with a hashbrown `remove_entry` per open group —
+and a second, always-missing Value lookup for the limit. Perl assigns `if_count`
+`'global'` (Conditional.pm:62) and keeps `$LaTeXML::IF_LIMIT` as a plain global,
+so the typed scalars are the same counter; both keys were already dump-skipped.
+Bar ≤ 487 G, measured picC 497.8 G → 475.7 G instructions (−4.4 %, `perf stat`,
+XML byte-identical, 0 errors).
+
+**Lever B measured and reverted (2026-09-18)**: `noexpand_shadowed` early-out
+through the memoized `is_noexpand_family` plus settling the memo at the
+producer — picC 475.7 G → 477.4 G instructions (+0.35 %): for the ~all
+non-family CS tokens the thread-local memo probe costs more than the
+`with_str` prefix scan it replaced; the producer-time memo has no measurable
+effect. Correct (reviewed) but not a win; only the B3 shape (a family bit in
+`Token`'s padding byte, set at construction) can remove the probe — deferred
+with P5.
+
+**Lever C landed (batch 56de): one borrow per scanned brace.** Every `{`/`}`
+(tex.web §358 `incr`/`decr(align_state)`) paid a `locals!()` borrow for the
+trace's `before` value, a `locals_mut!()` for the bump, and a call into
+`trace_align_state` that dereferenced the off-by-default switch — now one
+`shift_align_group_count` borrow, the trace read behind the switch. Bar ≤ 468 G,
+measured picC 475.7 G → 467.4 G (−1.7 %), XML byte-identical. Not taken: gating
+the mutation on `has_reading_alignment()` — the count stack is also pushed
+without a reading alignment (`gullet.rs:2524`, the unit test at
+`local_assignments.rs:333`), so the symmetric-skip argument does not hold as
+stated; revisit only with a tex.web §774-shaped `push_alignment` model.
+
+**Lever D landed (batch 56df): `substitute_parameters` sized to template +
+arguments.** The result `Vec` was sized to the template alone, so every
+argument-bearing expansion regrew; now the template length plus the sum of the
+present arguments' lengths (exact for the single-use body, one regrow for a
+reused argument), and a body naming no parameter (`\@gobble`, `\use_none:n`)
+keeps the template-only size so an empty result stays allocation-free (the
+reviewer's catch: the unguarded bound gave every gobble a malloc/free pair).
+Bar ≤ 472 G, measured picC 467.4 G → 465.2 G (−0.5 %, the bar missed by 0.3
+points; landed as a byte-identical net positive).
+
+**Lever E landed (batch 56dg): no String per number read.** `read_normal_integer`
+stringified every token it read (`Token::to_string()` = arena `with_str` +
+`fmt::write` + a heap String) to test for a decimal digit, then dropped the
+String on the common internal-quantity path (`\pgf@x`, a count register); now a
+non-allocating `with_str` digit peek, the String built only in the decimal arm
+(tex.web §440-448 `scan_int` inspects codes, never text). Bar ≤ 458 G, measured
+picC 465.2 G → 459.6 G (−1.2 %, bar missed by 0.35 points; byte-identical).
+
+**Round 2 profile (2026-09-18, `~/data/pk_agents/w23/perf_pgf/round2/NOTES.md`,
+on the lever-D binary):** 887,136,902 token reads per picC — unchanged by every
+lever (they cut cost per token, never the count); document-to-package token ratio
+≈ 1:3,000,000, so the cost is the pgf interpreter's macro bodies; pgfmath is
+already a native f64 binding. Self-time bands: token I/O ≈ 32 %
+(`read_internal_token_checked` 12.5 %, `read_x_token` 6.4 %,
+`read_balanced_with_close` 5.7 %), argument read + substitution ≈ 14 %, meaning
+resolution ≈ 8-9 % (every CS resolves twice: `read_x_token` then
+`stomach::invoke_token`, tex.web §340-341 resolves once), allocator ≈ 7 %,
+dispatch ≈ 6 %. Ranked next: (G) resolve each token's meaning once — a
+one-slot resolved-definition cache from `read_x_token` to `invoke_token`,
+invalidated on meaning assignment; HIGH value, HIGH risk; bar ≤ 452 G. (F) the
+no-expand probe as an unchecked per-symbol bitset (`#[thread_local]
+UnsafeCell<Vec<u8>>`) — the naive memo route is lever B's dead end, the residual
+is the `RefCell` borrow; the per-Token pad-byte bit is REJECTED (Token is Copy,
+rebuilt by `T_CS!` and dump replay, so a family-named token off the producer
+would misroute in `meaning_key`); MED risk, ≈1.5-2 %. (I) `unread_expansion`'s
+manual reverse-push loop as one `extend` — verify LLVM has not fused it; < 0.5 %.
+
+**Lever G measured and reverted (2026-09-18, design
+`~/data/pk_agents/w23/perf_pgf/leverG/NOTES.md`)**: the second meaning
+resolution costs only 0.72 % of cycles (`lookup_digestable_definition` under
+`invoke_token`; the round-2 2-3 % estimate was wrong), and carrying the
+resolved `Stored` from `read_x_token` to `invoke_token` on the stack — the
+low-risk shape, no cache, no invalidation — measured picC 459.6 G → 466.9 G
+(+1.6 %): the `Stored` clone on the read side costs more than the hashbrown
+probe it saves (`invoke_token` cloned only `entry.front()`; the read-side
+clone runs inside `with_meaning`'s borrow). Dead end; the thread-local-slot
+shape was ruled out in the design for a larger invalidation surface with
+the same clone.
+
+Cumulative on picC since the program opened: 559.5 G → 459.6 G instructions
+(−17.9 %); 4.97× pdflatex's 92.4 G (was 6.07×).
+
+**Direction (user, 2026-09-18):** gains must be algorithmic and strategic;
+the gullet, stomach, mouth and document stay ergonomic and idiomatic — no
+caches of resolved state, carried meanings, scratch buffers or unsafe cells
+(levers B and G, both reverted, were that shape and both measured worse).
+The allocator study (`~/data/pk_agents/w23/perf_pgf/alloc/NOTES.md`) confirms
+the residual there is ≈ 8 % of cycles, ~5 % of it values that escape (Perl
+returns them too) and ≤ 2 % scratch-buffer micro-levers — not pursued.
+
+**Where picC's tokens actually go (`~/data/pk_agents/w23/perf_pgf/token_budget/NOTES.md`,
+pdflatex `\tracingmacros` as the oracle, 43.3 M expansions on the one picture):
+97.65 % expl3 — datatool v3's CSV parser, which tikz-network's `\Vertices`/`\Edges`
+re-run per row (`\DTLloaddb` re-parses the file on every call, `\DTLforeach` re-walks
+the db per row, datatool re-types every field each pass); pgf's own layers are
+< 2 % (pgfmath 0.6 %, already native; tikz frontend 0.03 %). Rust and pdflatex
+expand the same raw bodies the same number of times (SHARED cost; 20.5 token
+reads per expansion). So "the pgf case" is the expl3/datatool case, and the
+strategic lever is a native datatool database layer — `\DTLloaddb` (CSV → rows,
+cached by file), `\DTLforeach`/`\DTLforeachkeyinrow`, `\DTLifeq`, the row getters —
+scoped to the used slice, the rest forwarded raw; bar picC ≤ ~30 M token reads.
+General expl3 levers that help every expl3-heavy manual: native `\tl_map_function`
+/ `\__tl_range_*` (33.8 % of the expl3 expansions) and `\int_eval:n` /
+`\int_compare:nNnTF` (27 %). l3regex native is a settled dead end (removed
+2026-06-20).
+
+**Corpus weight (`~/data/pk_agents/w23/perf_pgf/token_budget2/NOTES.md`, the
+same tally on the other slow manuals and over all 2,374 logs):** tikz-network's
+datatool shape is a narrow outlier (21 manuals, 10 % of the pgf wall). The
+dominant pattern is the style-heavy tikz diagram, and there the budget is
+**pgfkeys dispatch** — zx-calculus 74-79 % of expansions (`\pgfkeyscurrentkey`,
+`\pgfkeys@splitter`, `\pgfkeys@spdef`, `\pgfkeys@parse@main`, `\pgfkeys@ifcsname`);
+pgfplots/pgf-interference are l3fp (64 %); tabularray is pure l3 tl/prop. 827
+manuals load `pgfkeys.code.tex` = 6,057 s = **69 % of the corpus wall** (tcolorbox's
+option system is pgfkeys too); estimate 1,500-2,500 s (17-29 %) removable.
+pgfmath is already native on both sides; pgfkeys runs 100 % raw in Rust
+(`pgfkeys_sty.rs`, a 7-line shim) and in Perl, whose own native engine
+(`pgfkeys.code.tex.ltxml:40-544`) is disabled as "not quite right or complete".
+**The strategic lever is a native pgfkeys dispatch, Perl-anchored, with the key
+tree kept in the raw `\csname` storage so every package that pokes it keeps
+working and a raw fallback for the long tail** — design in
+`~/data/pk_agents/w23/perf_pgf/pgfkeys_native/NOTES.md`, MEASURED on the Rust
+side (bench binary, body-present vs body-absent): the style-heavy ZX circuit is
+57.9 % body instructions and a 40-box tcolorbox document 61.6 %, of which the
+per-node option dispatch alone is 35 % of a conversion (300 styled nodes with
+vs without a 9-key style list: 15.18 G vs 9.85 G). Shape: the
+`pgfmath_code_tex.rs` pattern — load the whole raw `pgfkeys.code.tex`, then
+override only the hot entry points natively on the SAME `\pgfk@<key>` csname
+storage (`\pgfkeys@ifcsname`, `\pgfkeysifdefined`, `\pgfkeysgetvalue`,
+`\pgfkeysvalueof`, `\pgfkeyssetvalue`, `\pgfkeyslet` first: slice 0, XML cannot
+change; then the `\pgfkeys{}`/`\pgfkeysalso{}`/`\pgfqkeys{}{}` parse+dispatch loop
+over `.code`/`.style`/`.default`/`.initial`/`.cd`/store keys with a three-probe raw
+fallback — `\ifpgfkeysfilteringisactive`, `\ifpgfkeys@syntax@handlers`,
+`\pgfkeys@case@three` rebound — and per-key unknown → raw `\pgfkeys@unknown`:
+slice 1; `\pgfkeysdef` family: slice 2). Handlers stay raw (they are keys under
+`/handlers/`; the native path invokes their `.@cmd`), so this is strictly more
+complete than Perl's abandoned engine (its stubbed filtering/family/syntax
+handlers, `pgfkeys.code.tex.ltxml:170/463/522`, run real TeX here). TDD: an
+ON/OFF switch and ten ≤15-line fixtures requiring byte-identical core XML; bars
+zx_full 25.42 G, tcb_full 18.23 G, keys_heavy 15.18 G, picC unchanged.
+
+**Slice 0 landed (batch 56dk): the eight leaf accessors native**
+(`pgfkeys_code_tex.rs`: `\pgfkeys@ifcsname`, `\pgfkeysifdefined`,
+`\pgfkeysifassignable`, `\pgfkeysgetvalue`, `\pgfkeyslet`, `\pgfkeyssetvalue`,
+`\pgfkeysaddvalue`, `\pgfkeysvalueof`; the raw file loads whole first; values
+stored verbatim, parameter-free and unpacked; `\pgfkeysvalueof` `\relax`-defines
+an undefined name as `\csname` does — the differential harness caught that one).
+Measured, byte-identical XML: zx_full 25.51 G → 23.28 G (−8.7 %), tcb_full
+18.31 G → 17.59 G (−3.9 %), keys_heavy 15.23 G → 14.74 G (−3.2 %), picC unchanged
+(datatool-bound tripwire). Five fixtures under
+`latexml_oxide/tests/cluster_regressions/pgfkeys/` run ON and OFF: the
+`LATEXML_PGFKEYS_NATIVE=0` switch (read once at binding load, a development
+differential like `LATEXML_POST_STREAM_SPLIT`) keeps the raw accessors, and
+the guard requires byte-identical core XML both ways. The review of slice 0
+found two more divergences the first fixtures did not reach — `\pgfkeysvalueof`
+on an undefined key is the raw file's `\pgfkeys@relax`, never a `\csname`
+definition of the key (:193-194), and `\pgfkeysaddvalue` assigns locally
+(:125-135) — both fixed and pinned by the extended accessors fixture.
+
+**Slice 1 landed (batch 56dl, corrected in 56dn): the parse-and-dispatch loop
+native.** `\pgfkeys{}`, `\pgfkeysalso{}` and `\pgfqkeys{}{}` are macros (as in
+the raw file, :320/:589/:607 — a `}` where their list should be is refused like
+any macro argument) expanding to internal primitives that put the list FLAT into
+the stream as `<items>,\pgfkeys@mainstop` and run one step; the step is a
+locked primitive under the raw macro's own name, `\pgfkeys@parse`: it reads one
+item up to its top-level `,` (`\pgfkeys@@normal#1,`), resolves it —
+`\pgfkeys@unpack`'s key/value split and `\pgfkeys@spdef` space stripping, the
+default-path prefix, `\pgfkeyscurrentkey`/`RAW`/`name` and `\pgfkeys@pathtoks`,
+the `.@def` default and `\pgfkeysvaluerequired`, cases one/two/three and
+`\pgfkeys@unknown`, first-char syntax handlers — and puts back
+`\iftrue\iftrue <handler tokens> \fi\fi \pgfkeys@parse` (one `\fi` after an empty key). Every token a handler can see is
+raw's: the handler body runs in the main loop, where it may open a box or a
+group that later stream tokens close (zx-calculus's `/tikz/on layer/.code=
+{\pgfonlayer{#1}\begingroup\aftergroup\endpgfonlayer\aftergroup\endgroup}`,
+tikzlibraryzx-calculus.code.tex:2415 — a nested `digest` of the body hit the
+end of its mouth inside the `\hbox`, zx_full 0 → 29 errors); a handler that
+scans forward sees the real remaining keys (robust-externalize's placeholder
+re-scan swept a Rust-side continuation token into a key name, sweep #95
+14 → 204 errors); a handler that over-grabs one token takes the inert `\fi`
+`\pgfkeys@unpack` leaves (:382-388), not the continuation (the same manual's
+`\robExtArgumentList` m-grab, sty:4230, made `/robExt/\lx@pgfkeys@set{@}parse`
+and a recursion Fatal). Two earlier shapes were measured and dropped: a braced
+`{rest}` argument re-read per item (tcb_full +7 %) and a thread-local slot table
+(faithful to nothing a handler can scan). `run_handler` lets `\pgfkeys@code` to
+`\relax` when the handler is absent (`\pgfkeysgetvalue`, :175 — a rawstyles pgf
+load reaches `\pgfkeys{/pgf/.is family}` before the handlers exist,
+pgfsys.code.tex:19; scsnowman-sample 318 → 1,001 errors + Fatal, chuushaku
+423 → 994 without it); `\pgfkeys@spdef` strips EVERY leading space as the raw
+chain does in this engine (parameter-text-initial space matched against the
+run; Perl identical; neoschool's `\newtcolorbox` `, #1` + indented `[`);
+filtering (`\ifpgfkeysfilteringisactive`) and a reconfigured case-three
+dispatch hand the rest of the list to the raw step body
+(`\futurelet\pgfkeys@possiblerelax\pgfkeys@parse@main`, :326), re-checked at
+every step. Slice 0's `\pgfkeysvalueof` also learned to keep the raw
+`\csname…\endcsname` shape (:194): the stored macro is reached in TWO expansion
+steps, which circuitikz's `\unexpandedvalueof` (circuitikz-1.7.2-body.tex:987-998)
+counts with a triple `\expandafter` — the one-step native handed its checker
+the value's first token and the circuitikz manual a stray `\fi` (sweep #94).
+Measured, byte-identical XML ON/OFF (56dn, the raw-stream shape; the slot-table
+cut of 56dl read 10.62/13.25/11.90 G — the `\iftrue\iftrue…\fi\fi` and the macro
+entry points cost 2-6 %, the price of a stream a handler can scan): zx_full 23.28 G →
+**11.29 G (−51.5 %)**, tcb_full 17.59 G → **13.57 G (−22.9 %)**, keys_heavy
+14.74 G → **12.10 G (−17.9 %)**, picC 459.6 → 457.6 G (datatool-bound); the
+zx-calculus manual 150 → 73 s, the circuitikz manual 74 → 59 s. Cumulative for
+the two slices: zx_full −56 %, tcb_full −26 %, keys_heavy −21 %. Fourteen fixtures now run
+ON and OFF (`LATEXML_PGFKEYS_TRACE=1` prints one line per dispatched key, the
+bisection aid). **Slice 2 landed (batch 56dp): the definition handlers native.** `.code`,
+`.style`, `.initial`, `.default` and `.cd` (pgfkeys.code.tex:772, :826, :842,
+:852, :994) and `\pgfkeysdef` under them (:648-652) run in Rust and store
+exactly what the raw handlers store — `\pgfk@<key>/.@cmd` a `\long` macro with
+the parameter text `#1\pgfeov` and a parameter-packed body, `/.@body` the code
+verbatim (what `.append style`/`.add code`/`.show code` read back), `.style` as
+`.code=\pgfkeysalso{…}` with the nested item's `\pgfkeyscurrentkey`/`name`/
+`value` left behind as the raw handler leaves them, the handler's `#1\pgfeov`
+argument as `\pgfkeyscurrentvalue` expanded once with one outer group stripped.
+A native handler runs only while the handler key still holds the raw file's
+definition (a `\let` snapshot `\lx@pgfkeys@raw@<h>` taken at load), so a
+package that redefines `/handlers/.code` gets its own. Byte-identical ON/OFF:
+zx_full 11.29 → **9.98 G (−11.6 %)**, tcb_full 13.57 → 13.39 G (−1.3 %),
+keys_heavy and picC unchanged — the definition-phase lever the histogram
+predicted (72 % of zx's dispatches, 23 % of tcb_full's, 4 % of the tcolorbox
+manual's); the tcolorbox manual converts identically both ways. Cumulative for
+the three slices: zx_full 25.51 → 9.98 G (−61 %), tcb_full 18.31 → 13.39 G
+(−27 %), keys_heavy 15.23 → 12.09 G (−21 %). Fifteen fixtures run ON and OFF.
+
+**The non-pgfkeys floor, profiled (2026-09-18, `~/data/pk_agents/w23/perf_pgf/tikzcore/`).**
+keys_light (300 tikz nodes, no keys) runs at 8.47 G / 628 ms against pdflatex's
+394 ms — about 1.1× at steady state once the one-time kpathsea directory scan
+(~30 % of that small run) is set aside: pure TikZ is at parity, because
+pdflatex's heaviest per-node layer, pgfmath (46 % of its expansions), is native
+here (`pgfmath_code_tex.rs`), pgfsys is native, and the raw residual (pgfcore
+soft-path 11 %, tikz@ frontend 3 %) is a fraction of an already-fast
+conversion — there is no tikz-core lever. picC (457 G, 5.55× pdflatex) and the
+tikz-network manual (2,784 G, 161 s vs 29 s, 5.48×) have self-time profiles
+indistinguishable from each other and from a pure token interpreter (42 % token
+I/O, 15 % argument reading, 13 % meaning resolution, native pgf 0.0 %, document
+0.05 %): they are datatool v3, which splits every CSV line with l3regex
+(`datatool.sty:10761-10817`, `\__regex_build_new_state:` 3,630× per two-row
+`\Vertices`; 327,113 expansions per call, 60 % expl3 primitives, the public
+`\DTL*` 0.1 %) and then walks rows with `\DTLforeach`/`\DTLifeq` cascades
+(tikz-network.sty:793-817, :969-997). Perl ships no datatool binding and is as
+slow. NEXT levers, ranked: (1) a native datatool CSV load that bypasses the
+l3regex split and populates the identical DB store the getters read (`\DTLread`
+:12227/:12799 → `\__datatool_load_csv:` :10817; field order, `#`/catcodes in
+fields, numeric detection `\@dtl@checknumerical`; HIGH risk, on/off harness on
+picC with `count(svg:g)==83`), (2) native `\DTLforeach`/`\DTLforeachkeyinrow`/
+`\DTLifeq` over that store (MED); together they are the whole picC/tnman gap.
+Porting l3regex natively is the settled dead end above. **Lever (1) landed as batch
+56dt** (`datatool_sty.rs`, the design below, byte-identical registers to pdflatex on
+17 probe CSVs): picC 458.2 → 423.4 G (−7.6 %), the tikz-network manual 180.6 →
+165.5 s (−8.3 %) — the load is ~8 % of the document. **Lever (2) landed as batch
+56du**: the walk itself is cheap; 95 % of a `\Vertices` call was `\DTLifeq`
+(~20 per row, ~216 M instructions each: `\DTLifnumerical` ×2 through l3fp/l3regex
+and two `\text_purify` passes). Native `\DTLifeq`/`\DTLifstringeq` (fp equality
+when both operands parse as numbers, else the expanded string forms, folded
+under `*`) with the loop left raw: picC 458.1 → **16.3 G (−96 %)**, 28.2 → 1.1 s;
+the tikz-network manual 190.7 → **25.0 s** (on/off in one run), pdflatex 34.5 s on
+the same host — the directive's headline document is past parity. The raw numeric branch in this engine was also
+wrong (`\DTLifeq{5}{5.0}` false); the native follows pdflatex.
+
+**The remaining slow calls, profiled (2026-09-19, `~/data/pk_agents/w23/perf_pgf/slow2/`).**
+With tikz-network at pdflatex speed, the eight SUSPECT calls over 60 s were
+profiled against pdflatex on the same host: pgf-spectra (90 s) runs at 0.77×
+pdflatex's 118 s, tabularray (109 s) against a pdflatex that never finishes
+(stuck at page 48 after 21 minutes), circularglyphs 1.4×, tilings 3.4× (62 s vs
+18 s, inline), rulercompass and l3kernel source3 without a fair baseline here.
+Every profile is the generic token interpreter (`read_internal_token_checked`
+8-14 % on top everywhere, token I/O 21-64 %, argument reading 3-12 %, meaning
+resolution 7-13 %); pgfmath, pgfsys and pgfkeys natives are cold, and no native
+leaf remains — the hot code is the raw pgf-core drawing pipeline itself
+(tilings: 63,100 key dispatches, 60 % `.try`, are under 0.5 % of its 1.7 G token
+reads). A native `.try` (pgfkeys.code.tex:1024) is faithful and general but
+worth under 0.5 % of wall — declined as a perf lever. The two real problems are
+blowups, not per-token cost: pgf-PeriodicTable 344 s at 24.8 GB RSS building
+282,289 `svg:g` (53 redraws × 118 cells; document/libxml self-time under 0.5 %,
+the memory is the retained DOM) and wheelchart timing out at 400 s and 10 GB.
+Wheelchart is settled (2026-09-19, DIFFICULT_CASES §D11): multiline `arc data`
+under `arc around text` (wheelchart.sty:2938-3105, a per-line `text along path`
+decoration walk whose arc-split step degenerates) spins every engine — pdflatex
+produces no PDF in 120 s on a 10-line repro and sticks at page 20/56 on the
+manual, Perl aborts on 100 l3fp errors in 9 s — and the 10 GB is transient
+interpreter working set, not DOM or a leak; the regex at :2347-2351 is ~5 % of
+self-time. The periodic table is settled by three batches (LEDGER 56dv-56dx): the
+picture-end streaming seam plus the resident-wrapper spill bound the box tree,
+a fused eager run restarts under `--streaming` from the CLI, and `remove_node`
+now frees what it removes (the libxml fork left every removed subtree as an
+orphan — ~5-6 MB per tikz picture, eager and streaming alike, a corpus-wide
+memory lever). The manual streams to completion at the 6 GB ceiling (0 fatals,
+3,326 pictures, 379 s); under the eager sweep's 420 s cap the fuse-then-restart
+sequence still runs long, which is the residual for that one witness. Beyond them the next
+general lever is the token itself (`Token` under 8 bytes and the allocator, P5),
+which reaches every TikZ, pgf and expl3 document and is HARD.
+
+**Native datatool load — the design (2026-09-18, `~/data/pk_agents/w23/perf_pgf/datatool/`).**
+A loaded database is four global registers plus per-key indices, and every
+reader is a delimited-macro consumer of them (datatool.sty): `\dtldb@<name>`
+(toks, one row body per row: `\db@row@elt@w \db@row@id@w<id>\db@row@id@end@
+[\db@col@id@w<i>\db@col@id@end@ \db@col@elt@w<val>\db@col@elt@end@ …]*
+\db@row@id@w<id>… \db@row@elt@end@`, :3493/:3516, written :12473, read by
+`\@dtl@foreachrow` :6843), `\dtlkeys@<name>` (toks, one column body per column:
+`\db@plist@elt@w …col id, key, type, header… \db@plist@elt@end@`, :3465,
+written :12336, read by `\dtlforeachkey` :6932), `\dtlrows@<name>` and
+`\dtlcols@<name>` (ints, :3543-3544), and `\dtl@ci@<name>@<key>` (the column
+index of a key, :12347). So a native load that writes byte-identical register
+contents is transparent to every getter, and datatool's own DBTEX-v3 reload
+(`\@dtl@reconstruct@data` :12073-12093) is the template: one `gset` of each
+toks register, two int sets, one `\csgdef` per key. Measured on picC's 8-row
+CSV ×200: the raw `\DTLloaddb` 0.807 s per load, the same database built by
+`\DTLnewrow`/`\DTLnewdbentry` 0.637 s — the per-entry store's concat-middle
+(:4791) is O(cols²) per row, so a native split that feeds `\DTLnewdbentry`
+would win only 21 %; the lever must write the store directly. Parse rules to
+reproduce byte-exact: separator `,`/delimiter `"` (:12267/:175), split keeping
+spaces then rejoining a separator inside a quoted field (:12730/:12740),
+doubled-delimiter unescape (:10800/:10811), surrounding-space trim (:181/:12759),
+`csv-content=tex` (tikz-network's default: fields keep document catcodes) vs
+`literal` (the six-case `\regex_replace_case_all` + `\tl_set_rescan`,
+:12359-12378) vs `no-parse`, `\__datatool_parse:`/`\DTLdatumtype` column typing
+(:12541, even under `convert-numbers=false`), blank lines ignored (:12401),
+`omitlines`, `noheader`/`headers=`/`keys=` (:12292-12350). Harness:
+`LATEXML_DATATOOL_NATIVE=0`, byte-identical XML on picC (`count(//svg:g)==83`)
+and a datatool-user sample, plus `\DTLdbLog` (:12822) register dumps identical
+on/off; fixtures `fix3.csv` (quoted embedded comma, numeric column, `#` in a
+field, a blank line, `omitlines=1`). Perl has no datatool binding (parity-neutral).
+
+The profile of the slice-1 binary (`~/data/pk_agents/w23/perf_pgf/slice2/`)
+shows the residual is generic gullet macro machinery serving the RAW handler
+bodies plus allocator churn; the dispatch histograms
+(`LATEXML_PGFKEYS_TRACE=1`) put the definition handlers at 72 % of zx_full's
+16,556 dispatches (`.code` 6,008, `.style` 4,891 — each `.style` a nested
+`\pgfkeys{…/.code=\pgfkeysalso{#1}}`), ~50 % of a pgfplots example, 23 % of
+tcb_full, and only 4 % of the tcolorbox manual, whose 2.39 M dispatches are 79 %
+case one (USE) and 13 % `.try`. Ranked: (1) native `\pgfkeysdef` (:648) with
+native `.code` (:772) and `.style` (:826) — the `/.@cmd` macro is `\long` with
+parameter text `#1\pgfeov` and a PARAMETER-PACKED body, `/.@body` holds the
+value verbatim (:651) and later `.append style`/`.add code`/`.show code`
+(:783/:806/:837) read it, `.style` skips the nested `\pgfkeys`; keep
+`\pgfkeysedef` (:653) raw first (the `\edef` timing seam); (2) `\pgfkeysdefargs`
+(:675) / `\pgfkeysdefnargs` (:727) for the `n args` forms (three slots,
+`/.@args` = `{pattern}\pgfeov`, the `/.@@body` indirection :753); (3) `.initial`/
+`.default`/`.cd` as thin natives over `\pgfkeyssetvalue`/`\pgfkeysdefaultpath`;
+(4) `.append style`/`.add code` deferred. For USE-heavy documents `.try` (:1024, a
+full re-dispatch under `\ifpgfkeyssuccess`) is a natural slice 3, and the tikz
+path-construction/`\pgfmath`/node-box floor (keys_heavy: 8.6 of 12.1 G is not
+pgfkeys at all) outranks every remaining pgfkeys slice. Not lever inputs: chemobabel
+(parked, LuaTeX-ja), lie-hasse (runaway TokenLimit after a mode-frame error —
+separate bug), wheelchart (MemoryBudget runaway), l3kernel/source3 (memory). Settled dead ends: SmallVec-backed `Tokens` (blocked by
+`Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`
+scratch (both a public `Tokens` API change), lowering `read_balanced`'s cap 16
+(net-neutral), LBR call graphs (unsupported on this PMU; use `--call-graph fp`),
+and a full `perf report` call graph on the 610 MB bench binary (> 5 min symbol
+load; use `-g none` flat self). Beyond these, closing the 6× needs fewer tokens
+per picture (pgf binding emitting less) — the harder program.
+
+## Many-author blocks: the names read once (C1, 2026-11-06)
+
+Each contact of an author block read every queued name again (`queued_author_marks`, `queued_name_marks`,
+`requesting_authors`), so the block's cost was names × contacts. `frontmatter/queue_reading.rs` reads each entry once and
+keeps the reading in the state beside the queue (it is read again when a name's command changes meaning, forgotten when the
+queue loses entries). `instructions:u`, `int142a-rel` → `C1-rel`, XML byte-identical: 2103.04797 (975 authors) 11.30 G → 8.14 G
+(−28.0 %); 1901.01540 (1,202) 32.16 G → 14.23 G (−55.7 %); 2005.08745 (592, labelled: the Cut left them at once) 12.69 G →
+12.70 G (+0.05 %); `hello.tex` 1.0810 G → 1.0812 G (+0.02 %); `b5_fill1000.tex` 11.563 G → 11.562 G. Generated blocks, 600
+names: 300 marked `\affiliation`s 21.6 G → 4.4 G, the 20-entry list repeated after every name 175.3 G → 8.0 G. Left, both
+synthetic-only so far: `relocate::for_run_names` per `\affiliation` after a long run (9.9 % of the 300 marked calls under
+aastex631), `frontmatter_api::cut::place_uncut_copies`'s queue walk per repeated list (15 % of the repeated list, its copies'
+`printed_marks_as_marks` reading the queue's marks). Guard `perfect_kernel_batchc1`.

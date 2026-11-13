@@ -1,0 +1,22 @@
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `ClassReaders::store_lines`,
+%   `running_head_arguments`). A store a running head prints is in no line of the title page: zzfmg.cls's
+%   `\markboth{\@shortauthor: \@shorttitle}{…}` in its `\@maketitle` puts the short title beside the document's short
+%   author, a value of the class's when `\maketitle` judges the line again (79a r2) — but in the head, page furniture
+%   LaTeXML drops, so `\shorttitle` is the frontmatter's `<toctitle>`. The same with fancyhdr's and scrlayer-scrpage's
+%   head commands (preprint.cls `\ihead{\@shortauthor:~\@shorttitle}`, 2512.04983).
+% witness: 2512.04983 (preprint.cls)
+% oracle:  pdflatex: 0 errors; "The Title" / "An Author"; the running head "Author: A Short Title" (page 2 on)
+% engines: rust int68a, 79a r1: <toctitle>A Short Title</toctitle>; 79a r2 before `running_head_arguments`: no toctitle
+% expect:  0 errors, 0 warnings; <toctitle>A Short Title</toctitle>
+% status:  GREEN (int68a, 79a r1); RED in 79a r2's first build -> GREEN (79a r2)
+% preload: ar5iv.sty
+\documentclass{zzfmg}
+\title{The Title}\author{An Author}
+\shorttitle{A Short Title}
+\shortauthor{Author}
+\begin{document}
+\maketitle
+Body text.
+\newpage
+More text.
+\end{document}

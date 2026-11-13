@@ -1,0 +1,13 @@
+% witness: synthetic (found by RV1: `\mark` in math)
+% also:    `\pdfsetmatrix GeneralText` (pdftex.rs:730): `$\pdfsetmatrix{1 0 0 1}k$` → tex="\pdfsetmatrix 1 0 0 1k"; `\marks3{y}` → `\marks 3yb` (= Perl) (revRV1)
+% oracle:  pdflatex 0 errors; Perl's `\mark{}` (TeX_Marks.pool.ltxml:30) reverts tex="a\mark{x}b"
+% engines: rust RV1 = tex="a\mark xb": tex_marks.rs reads `\mark XGeneralText` (tex.web §1101 `scan_toks`), and the
+%          GeneralText/XGeneralText parameter types (base_parameter_types.rs, as Perl Base_ParameterTypes.pool:67-76)
+%          revert without the braces TeX's <general text> requires; Perl's `\marks Number GeneralText` shares it
+% expect:  0 errors, 0 warnings; tex="a\mark{x}b"
+% status:  RED (RV1)
+% moves:   post-merge (a parameter type's reversion, not RV1's definer bodies)
+\documentclass{article}
+\begin{document}
+$a\mark{x}b$
+\end{document}

@@ -1,0 +1,12 @@
+% witness: 1112.3972 (`\index{API!#1}` in `\api{…}` with `_` names, no `\printindex`, no `\makeindex`)
+% oracle:  pdflatex (clean): latex.ltx:17713-17726 writes the entry `\@sanitize`d to the `.idx`; nothing is typeset
+%          without `\printindex` and makeindex's `.ind`
+% engines: rust 67int22 = 1 error (the entry digested: `_`); Perl = 1 (pool `\index` digests every phrase)
+% expect:  0 errors, 0 warnings; no `<indexmark>` (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #738)
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeindex
+\begin{document}
+Use \texttt{SELF\_HEALING}\index{API!SELF_HEALING} policy.
+\end{document}

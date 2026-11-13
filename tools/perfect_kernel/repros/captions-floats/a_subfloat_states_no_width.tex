@@ -1,0 +1,32 @@
+% witness: 2602.06569 S4.F1/F2, 1902.05392 S3.F3 (autart `[twocolumn]`, 42pc text, subcaption `\subfloat`s in a
+%          `figure*`); review rev78x finding 1
+% oracle:  pdflatex 0 errors, 0 overfull; Figure 1 one row of three; Figure 2 (a column of 247pt) two lines, one
+%          4.5cm sub-float each
+% engines: rust int67a = Figure 1 one row of three panels; 78x r1 = the first `\subfloat` 0 wide against the real
+%          column, out of the panel list (no `ltx_figure_panel`); int69b and 78x r4 = Figure 2 one row of two (r4: the
+%          `{subfigure}`'s binding-given width unevaluable, the base's line; review rev78x4 finding 3); Perl 0.8.8 one
+%          panel per row
+% expect:  0 errors, 0 warnings; five `ltx_figure_panel` sub-figures; no `ltx:break` in Figure 1, one in Figure 2
+% status:  RED (78x r1; Figure 2 78x r4) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: the binding's
+%          `{\columnwidth}` is no width the source states, `\lx@panel@unstated`; Figure 2 78x r5: nor an unknown one,
+%          `STATED_LENGTHS_WITHHELD`)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\setlength{\textwidth}{42pc}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure*}[t]
+\centering
+\subfloat[\label{fig:a}]{\includegraphics[width=0.23\textwidth]{example-image}}\hspace{0.1cm}
+\subfloat[\label{fig:b}]{\includegraphics[width=0.23\textwidth]{example-image}}\hspace{0.1cm}
+\subfloat[\label{fig:c}]{\includegraphics[width=0.23\textwidth]{example-image}}
+\caption{Three sub-floats.}
+\end{figure*}
+\begin{figure}[t]
+\centering
+\subfloat[\label{fig:d}]{\includegraphics[width=4.5cm]{example-image}}\hfill
+\subfloat[\label{fig:e}]{\includegraphics[width=4.5cm]{example-image}}
+\caption{Two sub-floats of 4.5cm.}
+\end{figure}
+\end{document}

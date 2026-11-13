@@ -1,0 +1,21 @@
+% mechanism: the e-mail contacts made of an entry's addresses are named by the label word the cut took, as an e-mail
+%   line's label names its contacts (the API's `named_email_calls`: "E-mail: "; the class's "Email: " only without
+%   one — brief 95c r2 B5), and several for one owner come out in print order (S1).
+% witness: 1911.11406 (two lines `E-mail: …`; `shirazu…@` before `…@yahoo.com`)
+% oracle:  pdflatex 0 errors: "1 Univ X, E-mail: zed.able@x.org, quux.able@y.org", "2 Univ Y, bob@y.org"
+% engines: rust 95c: named "Email: ", quux.able@y.org before zed.able@x.org (key order); rust int123a: both lines whole in the
+%   affiliations; perl: the same
+% expect:  0 errors, 0 warnings; Ann Able "Univ X", "E-mail: " zed.able@x.org then "E-mail: " quux.able@y.org (both
+%   spelling her; batch 100b: two addresses no one spells are no one carrier's, OD #956, so the synthetic spells her as
+%   the witness's `mr\_oboudi@…` do); Bob Baker "Univ Y", "Email: " bob@y.org
+% status:  RED (95c) -> GREEN (95c-r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$ Univ X, E-mail: zed.able@x.org, quux.able@y.org \\
+$^2$ Univ Y, bob@y.org}
+\maketitle
+Text.
+\end{document}

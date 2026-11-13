@@ -78,7 +78,16 @@ LoadDefinitions!({
   def_macro_noop("\\scrplain@odd@left@foot")?;
   def_macro_noop("\\scrplain@odd@middle@foot")?;
   def_macro_noop("\\scrplain@odd@right@foot")?;
+  // The page styles: `\ps@scrheadings`/`\ps@scrplain` make `scrplain` the plain
+  // style and run their layout layer `\ps@@…`, which sets running heads and
+  // feet — no XML form, so empty here. `\pagestyle{scrheadings}` runs them
+  // since batch 56hz (latex.ltx:18297); the missing layers were then undefined
+  // (l2picfaq, oscola, stanli, mdframed examples and ~15 other KOMA manuals,
+  // sweep 120).
   DefMacro!("\\ps@scrheadings", "\\let\\ps@plain\\ps@scrplain\\ps@@scrheadings");
+  DefMacro!("\\ps@scrplain", "\\let\\ps@plain\\ps@scrplain\\ps@@scrplain");
+  def_macro_noop("\\ps@@scrheadings")?;
+  def_macro_noop("\\ps@@scrplain")?;
   def_macro_noop("\\scrheadings@even@left@head")?;
   def_macro_noop("\\scrheadings@even@middle@head")?;
   def_macro_noop("\\scrheadings@even@right@head")?;

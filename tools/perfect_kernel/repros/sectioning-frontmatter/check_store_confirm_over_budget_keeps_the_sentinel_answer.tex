@@ -1,0 +1,30 @@
+% mechanism: the stores' confirming check (frontmatter_stores.rs `confirmed_printed`) reads the title-page reading's text
+%   (TP1, OXIDIZED_DESIGN_DIVERGENCES #953); over the check's read budget the reading has none, and the sentinel runs'
+%   answer stands unconfirmed — no unbudgeted run (the budget keeps heavy title pages bounded). That answer errs toward
+%   "printed": a store the page may print stays carried (here `\@series`, which rcdflt's page tests against its default
+%   and does not print), so no source word the PDF may print is dropped; what goes unchecked is said by the check's
+%   Warning (TP1b decision)
+% witness: synthetic (review revTP1 S2, bud2/conf.tex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Anton / Pages: 1–10", no series line
+% engines: int160a0, TP1, TP1b with no budget: 0 errors, 1 warning (frontmatter:unclaimed_store "lecture notes volume",
+%   which pdflatex does not print either); LATEXML_CHECK_READ_BUDGET=1: 0 errors, 1 warning (frontmatter:check_budget),
+%   the same XML (sentinels "printed [\@series,\@pages]" on TP1 and TP1b, "[\@pages]" on int160a0, unbudgeted); perl not run
+% expect:  the XML the one no budget writes; 0 errors and 1 warning at each budget
+% status:  GREEN (TP1b; guard perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{rcdflt.cls}
+\ProvidesClass{rcdflt}
+\LoadClass{article}
+\def\@defseries{Lecture Notes Volume}\def\@series{}\newcommand{\series}[1]{\def\@series{#1}}
+\def\@pages{}\newcommand{\pages}[1]{\def\@pages{#1}}
+\def\@maketitle{\begin{center}{\Large\@title\par}\@author\par\end{center}
+ \ifx\@series\@defseries\else\noindent Series: \@series\par\fi
+ \noindent Pages: \@pages\par}
+\end{filecontents*}
+\documentclass{rcdflt}
+\title{T}\author{Anton}
+\series{Lecture Notes Volume}\pages{1--10}
+\begin{document}
+\maketitle
+Body.
+\end{document}

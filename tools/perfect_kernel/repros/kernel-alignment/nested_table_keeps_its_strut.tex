@@ -1,0 +1,14 @@
+% `\@array` builds the row strut from `\strutbox` (latex.ltx:16567-16570) before it zeroes `\baselineskip`
+% (:16580), so a table nested in an l cell, where `\baselineskip` is zero, keeps its rows' height. 60l reads the strut
+% from `\strutbox` (tex_tables.rs `array_strut`); from `\baselineskip`, as Perl's `alignmentBindings`, the nested
+% rows would have no height (review 60l r1 finding 5).
+% status:  GREEN 60l; guard perfect_kernel_batch60::nested_table_keeps_its_strut
+% oracle:  pdflatex 0 errors: "nested 14.5pt/9.5pt; outer 14.5pt/9.5pt."
+% engines: rust 60m: same
+% expect:  0 errors; the same two sizes
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{\begin{tabular}{c}\begin{tabular}{c}a\\b\end{tabular}\end{tabular}}
+\setbox2\hbox{\begin{tabular}{c}a\\b\end{tabular}}
+\noindent nested \the\ht0/\the\dp0; outer \the\ht2/\the\dp2.
+\end{document}

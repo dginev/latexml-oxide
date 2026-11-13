@@ -1,0 +1,22 @@
+% mechanism: the list cutter (`classify::entry_starts` `starts_inside_environment`): a start inside an environment the
+%   list opens cuts nothing, so the line of marked institutions a `minipage` holds goes whole to a nameless creator
+%   instead of each mark's author
+% witness: synthetic (revP4b4a2 B3 probe f1_minipage_oneline_macro)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A, 2 Univ B"
+% engines: rust P4b4abase and P4b4a4: 0 errors, 0 warnings, the minipage once ("1 Univ A, 2 Univ B") on a nameless
+%   third creator, Ann Able and Bob Baker without affiliations
+% expect:  0 errors, 0 warnings, every word once; owners by mark: Ann Able "1 Univ A", Bob Baker "2 Univ B"
+% status:  RED (P4b4abase, P4b4a4: the owners; no word lost); the base's reading (no word twice) pinned by the GREEN
+%   sibling llncs_institute_minipage_one_line_marks_whole_list.tex, guard
+%   perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% moves:   post-merge (P4OWN: a box's marked line cut inside the box, each piece its mark's author's)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2}}
+\institute{\begin{minipage}{\linewidth}\affmark{1} Univ A, \affmark{2} Univ B\end{minipage}}
+\maketitle
+Body.
+\end{document}

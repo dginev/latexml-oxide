@@ -1,0 +1,18 @@
+% witness: utexasthesis (its `\maketitle` body opens a `center` that the emptied fields' errors leave unclosed: the
+%   replay raises 4 errors and is discarded); 19 TL classes replay and discard alike (jsbook, ryethesis, ucthesis, …)
+% oracle:  pdflatex 0 errors; the title page, then chapter 1 with "Body text here."
+% engines: rust 59p = 0 errors, chapter 1 intact, 1 warning "Attempt to end document with open groups" (the discarded
+%   replay's `center` stays open to `\end{document}`)
+% expect:  0 errors, 0 warnings
+% status:  RED (open). Closing a discarded replay's groups (tried in 59p) is a dead end: oegatb.cls:160-176 leaves
+%   `spacing` open on purpose for `\AtEndDocument{\EndTextFormat}` — closed early, `\end{document}` raised 2 errors and
+%   the body lost its `\footnotesize`. A fix must tell an error's leftover group from a class's deliberate one.
+\documentclass{utexasthesis}
+\title{The Title}\author{An Author}
+\graduationdate{May}{2020}
+\supervisor{Prof. Supervisor}
+\begin{document}
+\maketitle
+\chapter{Intro}
+Body text \emph{here}.
+\end{document}

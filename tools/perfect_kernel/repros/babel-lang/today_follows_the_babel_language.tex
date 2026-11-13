@@ -1,0 +1,19 @@
+% `\today` follows the babel language: German, ngerman and French printed the English date (Perl
+% prints the German date after `\selectlanguage{german}`, its babel reporting the options unknown), while Spanish, Italian, Dutch and British were right: LaTeXML maps
+% the German and French `.ldf` files for bindings whose `\date<lang>` was an empty stub (babel's own
+% `locale/invalid/babel-ngerman.tex` lookup is not the cause: pdflatex reads it too). The bindings
+% now define the dates as germanb.ldf:124-130, ngermanb.ldf:107-113 and french.ldf:332-345 do.
+% status:  GREEN (58p)
+% oracle:  pdflatex 0 errors: "1. Oktober 2026" / "1. Oktober 2026" / "1er octobre 2026".
+% engines: rust 58k3: "October 1, 2026" for all three.
+% expect:  0 errors, 1 warning (babel's "The name 'german' … old 1901 variant", pdflatex too).
+\documentclass{article}
+\usepackage[french,german,ngerman]{babel}
+\day=1 \month=10 \year=2026
+\begin{document}
+\today
+
+\selectlanguage{german}\today
+
+\selectlanguage{french}\today
+\end{document}

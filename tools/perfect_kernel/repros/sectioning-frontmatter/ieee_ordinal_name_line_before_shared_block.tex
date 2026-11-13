@@ -1,0 +1,21 @@
+% mechanism: a bare run before the block's `\IEEEauthorblockA` led by an ordinal (`3\textsuperscript{rd}`, the
+%   template's name lines) is a names block (ieeetran_cls.rs `wrap_bare_author_block_text`, `leads_with_ordinal`)
+% witness: 1806.11431 (the name read as an affiliation that took the authors, the real block Bob's alone, 2 Warnings)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1st Ann Able 2nd Bob Baker", "3rdCy Cole", "School of Technology", …
+% engines: int162a: "3 rd Cy Cole" Bob's affiliation, cy@ nameless; int163a, P4b2: the same, the School block Bob's alone, 2 W
+% expect:  0 errors, 0 warnings; three creators, the School block and its e-mail on each (the "2 nd" on Ann's name: the
+%   in-block ordinal split, ieee_shared_block/ordinal_names)
+% status:  RED (P4b2 5e4324996e) -> GREEN (P4cR2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{1\textsuperscript{st} Ann Able  2\textsuperscript{nd}  Bob Baker} 3\textsuperscript{rd}Cy Cole
+\IEEEauthorblockA{\textit{School of Technology} \\
+\textit{University of X}\\
+Town, Country \\
+ann@x.edu, bob@x.edu, cy@x.edu}
+}
+\maketitle
+Body.
+\end{document}

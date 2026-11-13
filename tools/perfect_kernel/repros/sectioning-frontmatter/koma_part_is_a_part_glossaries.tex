@@ -1,0 +1,17 @@
+% witness: glossaries/glossaries-user (scrbook), hvfloat/doublefullpage2s1c (scrartcl), cnltx/cnltx_en,
+%   exsheets_en, leadsheets_en (cnltx-doc on KOMA), classicthesis/ClassicThesis, datatool-user,
+%   glossaries-extra-manual (Axis 2b: semantic_coverage.py `\part` 59.5 % on s114)
+% oracle:  pdflatex 0 errors; Perl (OmniBus→article, never loads KOMA raw) gives <ltx:part>
+% engines: rust (s114) = <p><text font="sansserif bold">Part I</text></p>, no ltx:part, 0 errors
+% expect:  0 errors; <part> whose title is "Part I Alpha", the section inside it
+% status:  GREEN (batch 56gq)
+% mechanism: `\part` is unlocked (Perl latex_constructs.pool.ltxml:558; exam's \part is a question
+%   part), so KOMA's \@namedef{part}{\scr@startpart{part}} replaced it and typeset directly. KOMA still
+%   dispatches through \SecDef\@part\@spart (scrartcl.cls:4884) with its own \@part; the kernel now
+%   defines \@part/\@spart LOCKED (latex_constructs_rust_only.rs) → \@startsection{part}.
+\documentclass{scrartcl}
+\begin{document}
+\part{Alpha}
+\section{Beta}
+Text.
+\end{document}

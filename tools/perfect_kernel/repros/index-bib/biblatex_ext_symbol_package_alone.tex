@@ -1,0 +1,16 @@
+% witness: biblatex-ext.tex:3927 ("If used as stand-alone packages"): the open-access symbol packages work without
+%   biblatex
+% oracle:  pdflatex 0 errors; natbib's bibliography printed, the symbol drawn
+% engines: rust 59k3 = 1 error (`\oasymbol` undefined) and no bibliography: the add-on re-ran the biblatex binding,
+%   which lets `\bibliography` be `\addbibresource`; rust 59l1 = 0 errors, still no bibliography (the overlay fell
+%   back to the binding when `\ver@biblatex.sty` was undefined, a fallback only biblatex-cv needs)
+% expect:  0 errors; `<bibliography bibstyle="plainnat" …>`; `\oasymbol` defined
+% status:  RED (59l1) -> GREEN (59l2: the fallback only for an overlay that loads biblatex itself)
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{biblatex-ext-oasymb-pict2e}
+\begin{document}
+Text. Symbol: \ifdefined\oasymbol defined\else undefined\fi.
+\bibliographystyle{plainnat}
+\bibliography{biblatex-examples}
+\end{document}

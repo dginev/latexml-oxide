@@ -1,0 +1,17 @@
+% babel greek makes `~` a shorthand while POLYTONIC Greek is the language (greek.ldf:576-578 `\bbl@greek@tilde`, the
+% perispomeni); monotonic Greek keeps the tie, and leaving Greek restores it. greek.ldf is raw-loaded and does this; a
+% copy in the binding set it for any Greek and saved the tie twice (the hook runs from `\select@language` and its `\bbl@switch`), so it kept the Greek meaning: every later tie printed ῀ (`a῀b`, `section῀2`, `Table῀1`; autoref names `subsubsection῀6.3.1` in
+% greek-fontenc alphabeta-doc). Found by the 60r root-cause (RUST-ONLY; Perl and pdflatex restore it).
+% status:  RED (2026-10-03) -> GREEN (60t); guard perfect_kernel_batch60::greek_tilde_is_polytonic_and_restored
+% oracle:  pdflatex 0 errors: "ξ a b" (the tie)
+% engines: rust 60q5 and 60s3: "ξ" then "a῀b"; Perl: "a b"
+% expect:  0 errors; `a~b` after the switch back is `a b` (babel's system `~`, `\leavevmode\nobreak\ `: a space)
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[greek,english]{babel}
+\begin{document}
+\selectlanguage{greek}
+x
+\selectlanguage{english}
+a~b
+\end{document}

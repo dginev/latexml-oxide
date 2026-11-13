@@ -1,0 +1,24 @@
+% witness: 2610.12827 (arXiv html_feedback, HF14): aero.cls keeps its title page in l3keys variables set by `\ADsetup`
+%          (aero.cls:97-118), printed only by its own `\maketitle` (:128-148), which the kernel's locked one refuses
+% oracle:  pdflatex 0 errors: the title, "Ann Able (✉), and Bob Baker", the address, "✉ ann.able@univa.edu", Abstract,
+%          Keywords "Alpha · Beta"
+% engines: rust int33a = 0 errors; title "1 Intro" (no ltx:title), 0 creators, 0 abstracts, the replayed class
+%          `\maketitle` as body paragraphs; Perl `\ADsetup` undefined (no binding)
+% expect:  0 errors, 0 warnings; ltx:title, creators "Ann Able" (Univ A, the e-mail, which the class's `\cor` mark
+%          requests: no "(✉)" in the name, 77p r3) and "Bob Baker" (Univ A), ltx:abstract, ltx:keywords "Alpha · Beta",
+%          the abstract text once
+% status:  RED (int33a) -> GREEN (77p)
+\documentclass{aero}
+\ADsetup{
+title    = {Adaptive Nodes for Trajectories},
+author   = {Ann Able \cor{}, and Bob Baker},
+address  = {Univ A, City, Country},
+email    = {ann.able@univa.edu},
+abstract = {This is the abstract.},
+keywords = {Alpha \sep Beta \\},
+}
+\begin{document}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

@@ -1,0 +1,19 @@
+% witness: 63i review r2 finding 2 (revtex interleaved `\textsuperscript` marks, an unmarked author in the group; synthetic)
+% oracle:  pdflatex (revtex4-2) 0 errors: "Ann Able^1, Bob Baker, Cat Cole^2"; "^1 Univ A", "^2 Univ B"
+% engines: rust 63h = Univ A on Ann and Bob, Univ B on Cat; 63i r2 = Bob bare
+% expect:  as 63h; 0 errors
+% status:  RED (63i r2) -> GREEN (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1}}
+\author{Bob Baker}
+\affiliation{\textsuperscript{1}Univ A}
+\author{Cat Cole\textsuperscript{2}}
+\affiliation{\textsuperscript{2}Univ B}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

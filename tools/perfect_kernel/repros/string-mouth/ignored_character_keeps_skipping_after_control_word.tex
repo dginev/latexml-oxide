@@ -1,0 +1,17 @@
+% witness: 2006.14937 (with KNOWN_PERL_ERRORS #1178: expl3's `\str_if_eq:nnTF { \foo ~ } { \foo }`)
+% oracle:  pdflatex: after a control word the tokenizer skips blanks (state S), and an ignored character leaves the
+%          state as it is (tex.web §344 `any_state_plus(ignore)`): under `\ExplSyntaxOn` the space of `\foo ~` is
+%          ignored and the `~` (a spacer) after it skipped — "A:18. B:EQ. C:8."
+% engines: rust int98a = the ignored character ended the skip (Perl Mouth.pm:338 skips CC_SPACE only,
+%          KNOWN_PERL_ERRORS #1177): the `~` became a space token, "A:19. B:NE."
+% expect:  0 errors, 0 warnings; "A:18. B:EQ. C:8."
+% status:  RED (int98a) -> GREEN (80j: mouth.rs state S skips IGNORE too)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\ExplSyntaxOn
+A:\str_count:n {\__regex_branch:n ~}.
+B:\str_if_eq:nnTF { \foo ~ } { \foo } {EQ} {NE}.
+C:\str_count:n {\foo~bar}.
+\ExplSyntaxOff
+\end{document}

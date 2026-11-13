@@ -1,0 +1,30 @@
+% witness: 2203.01270 (1669 names marked `$^{n}$`, one authblk-TI `\affil{…}` of 288 `$^{n}$`-led lines)
+% oracle:  pdflatex 0 errors (with the shipped ptephy_v1.cls, authblk-TI.sty, preprint_v1.clo)
+% engines: rust 65a = 0 errors, each creator holding the whole list (64qa: an unmarked `\affil` is every name's since
+%          the last; 2203.01270: 83 MB of XML, 6.9 GB, 357 s); 64p 0 errors, the list the last creator's
+% expect:  0 errors; One: University One; Two: University Two and Three; Three: University Three
+% status:  RED (65a) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass[preprint]{ptephy_v1}
+\begin{document}
+\title{A title}
+\author{
+A.~One$^{1}$,
+B.~Two$^{2,3}$,
+and
+C.~Three$^{3}$
+}\affil{
+$^{1}$University One, City One
+\\
+$^{2}$University Two, City Two
+\\
+$^{3}$University Three, City Three
+\\
+}
+\begin{abstract}
+Text.
+\end{abstract}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: W17 review of gullet.rs read_redefinable_token (tex.web §1215 + §358)
+% oracle:  pdflatex 0 errors, "A [X] [BAR] []"
+% engines: rust 2 errors (\foo, \baz undefined), "A [\foo] [\baz] []" (56ji-rel and W17 before
+%          this fix, 2026-09-25)
+% expect:  0 errors; <p>A [X] [BAR] []</p>
+% status:  GREEN (56jp, W17: gullet.rs read_redefinable_token; guard
+%          rtoken_patchcmd::noexpand_marked_name_is_its_control_sequence)
+% mechanism: `\expandafter\def\noexpand\foo` — \noexpand leaves the dont_expand marker, and
+%   §358 get_next sets cur_cs to the marked \foo, so get_r_token names \foo. Rust's marker is a
+%   `\special_relax` family token (a control sequence), which the definition took as its name.
+\documentclass{article}
+\def\bar{BAR}
+\begin{document}
+\expandafter\def\noexpand\foo{X}\expandafter\let\noexpand\baz=\bar
+A [\foo] [\baz] [\noexpand\bar]
+\end{document}

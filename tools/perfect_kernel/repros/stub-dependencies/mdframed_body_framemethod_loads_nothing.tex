@@ -1,0 +1,14 @@
+% witness: mdframed.sty:154-169 + latex.ltx:18628 `\@onlypreamble\RequirePackage` (reviewer probe 65k body.tex): a
+%          `framemethod=tikz` set in the body cannot load tikz
+% oracle:  pdflatex errs on purpose: "Can be used only in preamble" (tikz is not loaded: `\typeout` of the test gives
+%          "no tikz"), then mdframed's re-read of md-frame-1.mdf cascades (153 errors in all)
+% engines: rust 65k round 1 = 0 errors, tikz not loaded, silent
+% expect:  0 errors; 1 Warning (mdframed missing_file); 1 Info naming framemethod; paragraph "no tikz"
+% status:  GREEN (65k round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mdframed}
+\begin{document}
+\mdfsetup{framemethod=tikz}
+\makeatletter\@ifundefined{tikzpicture}{no tikz}{tikz}\makeatother
+\end{document}

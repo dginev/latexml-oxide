@@ -1,0 +1,19 @@
+% witness: 65d review r5 (`$x}$ text after.`; round 5's general deletion fixed it, narrowed in round 6 pending §1047)
+% oracle:  pdflatex 1 error ("Extra }, or forgotten $", the `}` deleted); pdftotext "Before x text after. / After para.
+%          / z final."
+% engines: rust 65a and 65d (round 6): the `}` inserts `$` ("Missing $ inserted" + "Attempt to close a group that
+%          switched to mode horizontal", 2 errors), and the closing `$` opens a formula that runs on — "text after.",
+%          "After para." set as math, `$z$` inverted
+% expect:  1 error; Math tex "x"; "text after.", "After para." and "$z$ final." as pdflatex
+% preload: ar5iv.sty
+% status:  GREEN (65n: tex.web §1069 `extra_right_brace` — the `}` meeting the formula's math shift is deleted, Error
+%          "Extra }, or forgotten $"; stomach.rs `digest_next_body`; OXIDIZED_DESIGN #553; guard
+%          perfect_kernel_batch65n::stray_brace_in_a_formula_is_deleted)
+\documentclass{article}
+\begin{document}
+Before $x}$ text after.
+
+After para.
+
+$z$ final.
+\end{document}

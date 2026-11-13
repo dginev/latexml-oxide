@@ -1,0 +1,25 @@
+% mechanism: a row a class appends to `\@author` after an `\author` call that names several people (`\affil` appending
+%   `\\#1`) is handed to every creator that call made (frontmatter_stores.rs `author_tail_calls`, `row_calls`,
+%   `annotate=all`); LaTeX's `\@maketitle` sets each `\and` part in a column of its own (article.cls:247), so the row
+%   prints under the last name only. Pre-existing (59d); found by FX24 (sibling probe s4), not fixed there
+% witness: synthetic (the 59d shape: cjs-rcs-article.cls:361 `\affil`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two columns "Alice A | Carol C", "Inst X" under Carol C alone
+% engines: int158a (`latexml_oxide.int158a-rel`) and FX24: 0 errors, 0 warnings; Alice A (Inst X), Carol C (Inst X):
+%   the row on both; perl not run
+% expect:  0 errors, 0 warnings; Alice A, Carol C (Inst X)
+% status:  RED (int158a, FX24)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lxauthrow.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxauthrow}
+\LoadClass{article}
+\newcommand\affil[1]{\g@addto@macro\@author{\\#1}}
+\end{filecontents*}
+\documentclass{lxauthrow}
+\begin{document}
+\title{T}
+\author{Alice A \and Carol C}
+\affil{Inst X}
+\maketitle
+Body.
+\end{document}

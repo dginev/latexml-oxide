@@ -28,17 +28,15 @@
         <p>And it can hold multiple paragraphs.</p>
       </para>
     </logical-block>
-    <sectional-block cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle">
-      <para xml:id="S1.p4">
-        <p>And even stuff in multiple Paragraphs.</p>
+    <para xml:id="S1.p4">
+      <p>And even stuff in multiple Paragraphs.</p>
+    </para>
+    <paragraph cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle" inlist="toc" xml:id="S1.SS0.SSS0.Px1">
+      <title>Does this work?</title>
+      <para xml:id="S1.SS0.SSS0.Px1.p1">
+        <p>But not in LaTeXML!</p>
       </para>
-      <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px1">
-        <title>Does this work?</title>
-        <para xml:id="S1.SS0.SSS0.Px1.p1">
-          <p>But not in LaTeXML!</p>
-        </para>
-      </paragraph>
-    </sectional-block>
+    </paragraph>
   </section>
   <section inlist="toc" xml:id="S2">
     <tags>
@@ -72,8 +70,7 @@ ending sharply at the margin.</p>
       <p>This is with a left bar, like a changebar?</p>
     </para>
     <para cssstyle="padding:0.0pt;border-width:2.0pt" framecolor="#8080BF" framed="rectangle" xml:id="S2.p7">
-      <p><text backgroundcolor="#8080BF" color="#FFFFFF" cssstyle="display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt">A Titled Frame</text>
-This is a titled frame.</p>
+      <p><text backgroundcolor="#8080BF" color="#FFFFFF" cssstyle="display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt">A Titled Frame</text>This is a titled frame.</p>
     </para>
     <logical-block cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle">
       <para xml:id="S2.p8">

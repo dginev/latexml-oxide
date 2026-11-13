@@ -1,0 +1,14 @@
+% revtex4's `\address` is `\affiliation` (revtex4-2.cls:7519, revtex4-1.cls:7498, revtex4.cls:5964
+% `\def\address{\replace@command\address\affiliation}`): mark-led lines go to the names showing their marks. pdflatex:
+% "Gia Dvali^{a,b}, Oriol Pujolas^{b} and Michele Redi^{c}" over the three marked lines. Red: `\address` was Perl's
+% `\lx@add@address`, no mark path — every line every name's under the group rule. Witness 0806.3762.
+\documentclass[aps,prd]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Gia Dvali$^{a,b}$, Oriol Pujolas$^b$ and Michele Redi$^c$}
+\address{$^a$CERN, Theory Division, Geneva}
+\address{$^b$CCPP, New York University, New York}
+\address{$^c$ITPP, EPFL, Lausanne}
+\maketitle
+Text.
+\end{document}

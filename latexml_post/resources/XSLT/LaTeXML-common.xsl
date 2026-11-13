@@ -601,14 +601,24 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
-    <xsl:if test="@depth"  >
+    <xsl:if test="@depth and not(@yoffset)">
       <xsl:value-of select="concat('vertical-align:',f:negate(@depth),';')"/>
     </xsl:if>
     <xsl:if test="@xoffset">
       <xsl:value-of select="concat('position:relative; left:',@xoffset,';')"/>
     </xsl:if>
     <xsl:if test="@yoffset">
-      <xsl:value-of select="concat('position:relative; bottom:',@yoffset,';')"/>
+      <xsl:choose>
+        <!-- A box given its height or depth (\raisebox{y}[h][d]), and an overlay shifted sideways too (\lx@tweaked):
+             the content is shifted without the line growing. -->
+        <xsl:when test="@height or @depth or @xoffset">
+          <xsl:value-of select="concat('position:relative; bottom:',@yoffset,';')"/>
+        </xsl:when>
+        <!-- TeX's \raise: the box moves and the line grows to hold it. -->
+        <xsl:otherwise>
+          <xsl:value-of select="concat('vertical-align:',@yoffset,';')"/>
+        </xsl:otherwise>
+      </xsl:choose>
     </xsl:if>
     <xsl:if test="@color">
       <xsl:value-of select="concat('--ltx-fg-color:',@color,';')"/>
@@ -625,6 +635,23 @@
     <xsl:if test="@opacity"><xsl:value-of select="concat('opacity:',@opacity,';')"/></xsl:if>
     <xsl:if test="@framecolor">
       <xsl:value-of select="concat('--ltx-border-color:',@framecolor,';')"/>
+    </xsl:if>
+    <!-- (latexml-oxide) a float's panel grid (OXIDIZED_DESIGN_DIVERGENCES #887): its rows and columns, its line as a
+         fraction of the running-text column and its widest row's fill, for the CSS of the flex rows and cells inside
+         it, which inherit them; a panel's width and span go on its flex cell (LaTeXML-para-xhtml.xsl build_subfigure).
+         Each only for a numeric value (number(x) = number(x) is false for NaN), written as the number, never the
+         attribute's text. -->
+    <xsl:if test="number(@panelrows) = number(@panelrows)">
+      <xsl:value-of select="concat('--ltx-panel-rows:',number(@panelrows),';')"/>
+    </xsl:if>
+    <xsl:if test="number(@panelcols) = number(@panelcols)">
+      <xsl:value-of select="concat('--ltx-panel-cols:',number(@panelcols),';')"/>
+    </xsl:if>
+    <xsl:if test="number(@panelline) = number(@panelline)">
+      <xsl:value-of select="concat('--ltx-panel-line:',number(@panelline),';')"/>
+    </xsl:if>
+    <xsl:if test="number(@panelfill) = number(@panelfill)">
+      <xsl:value-of select="concat('--ltx-panel-fill:',number(@panelfill),';')"/>
     </xsl:if>
     <xsl:if test="@cssstyle"><xsl:value-of select="concat(@cssstyle,';')"/></xsl:if>
   </xsl:template>

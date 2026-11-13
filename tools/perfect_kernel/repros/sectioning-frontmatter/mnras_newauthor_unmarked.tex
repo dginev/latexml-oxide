@@ -1,0 +1,12 @@
+% witness: review of 63y: mnras `\newauthor` in an unmarked author block (mnras.cls:1072-1079: a new row of the same
+%          author tabular; the addresses after all the rows)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker / Cat Cole" over "Univ A"
+% engines: rust 63y4 (`\newauthor` as `\and`) = Univ A on Cat Cole only; 63x8 = Ann Able, one creator "Bob Baker Cat Cole"
+% expect:  0 errors; three creators, each with Univ A
+% status:  RED (63y4) -> GREEN (63y)
+\documentclass{mnras}
+\title{T}\author[A. Able]{Ann Able, Bob Baker \newauthor Cat Cole\\ Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

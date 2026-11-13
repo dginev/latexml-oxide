@@ -1,0 +1,19 @@
+% witness: none (review r2 finding 8: cleveref.sty:1309 tests the singular alone)
+% oracle:  pdflatex 0 errors: "See notes 1 and 2, 1, 1 and 2 and memo 1."
+% engines: rust 77s r1 = the derived plural capitalised on its own ("Notes 1 and 2")
+% expect:  0 errors, 0 warnings; note's creftypepluralcap "notes", memo's creftype "memo" and no plural tags
+% status:  RED (77s r1) -> GREEN (77s r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{cleveref}
+\crefname{note}{}{notes}
+\Crefname{memo}{Memo}{}
+\newtheorem{note}{Note}
+\newtheorem{memo}{Memo}
+\begin{document}
+\begin{note}\label{n:a}A.\end{note}
+\begin{note}\label{n:b}B.\end{note}
+\begin{memo}\label{m:a}C.\end{memo}
+\begin{memo}\label{m:b}D.\end{memo}
+See \Cref{n:a,n:b}, \cref{n:a}, \cref{m:a,m:b} and \cref{m:a}.
+\end{document}

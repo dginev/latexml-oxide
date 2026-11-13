@@ -1,0 +1,15 @@
+% witness: K13 stage-2 audit (57h): titlesec.sty:1088-1095 `\titleline*[align]{material}`; the
+%          titlesec manual's own example (titlesec.tex:1779-1793, `[c]` in two of its titles)
+% oracle:  pdflatex 0 errors; the title "1 Intro"
+% engines: rust 57i=0 but `<title>[c]1   [c]Intro</title>`; perl: same (KPE #317)
+% expect:  0 errors; the title "1   Intro"
+% status:  RED (57i) -> GREEN (57j)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[block]
+  {\large\titleline*[c]{\titlerule*[.6pc]{\tiny\textbullet}}\normalfont}
+  {\thesection}{1em}{}
+\begin{document}
+\section{Intro}
+Body text.
+\end{document}

@@ -4,6 +4,17 @@ use crate::{engine::latex_constructs::*, prelude::*};
 LoadDefinitions!({
   // Perl: thmtools.sty.ltxml
 
+  // thmtools.sty:26-41 passes its case options to thm-kv, whose `\thmt@modifycase` (thm-kv.sty:30-42, `uppercase`
+  // by default) prefixes the environment name when `\declaretheorem` gives no `name=` (thm-kv.sty:359
+  // `\thmt@setthmname{\thmt@modifycase #1}`): `\MakeUppercase` takes only the first token, so `{defn}` is
+  // headed "Defn". This binding stands in for thm-kv's `\declaretheorem`, so it declares the options here.
+  RawTeX!(r"\gdef\thmt@modifycase{\protect\MakeUppercase}");
+  DeclareOption!("lowercase", r"\gdef\thmt@modifycase{\protect\MakeLowercase}");
+  DeclareOption!("uppercase", r"\gdef\thmt@modifycase{\protect\MakeUppercase}");
+  DeclareOption!("anycase", r"\gdef\thmt@modifycase{}");
+  DeclareOption!("debug", None);
+  ProcessOptions!();
+
   // Dependencies: raw TeX sub-packages (thm-kv.sty, thm-restate.sty) expect
   // kvsetkeys and keyval to be loaded. The raw thmtools.sty loads these via
   // thm-kv.sty, but our binding replaces raw thmtools.sty so the chain breaks.
@@ -15,6 +26,45 @@ LoadDefinitions!({
   // so we don't have to (and must NOT) define `restatable` ourselves —
   // see the note below where the native DefEnvironment was removed.
   RequirePackage!("thm-restate");
+  // thm-patch.sty (the first of those three), which this binding stands in for: its hook commands
+  // `\addtotheorem{pre,post}{head,foot}hook[<env>]{<code>}` (thm-patch.sty:164-176) gather code into
+  // `\thmt@<env>@<point>hook`, which its wrapper of each theorem runs around the head and the end
+  // (thm-patch.sty:33-62, 130-142). The raw file re-wraps `\newtheorem` and every theorem with parseargs, over the native
+  // theorems here, so the native theorem runs the hooks gathered here (latex_constructs `theorem_hooks`): the head
+  // hooks after its head, inside it, the foot hooks before its end code. Papers write `\addtotheorempostheadhook[thm]{\crefalias{thmlisti}{thm}}`
+  // so an `enumerate` item in a theorem is referenced as the theorem's (49 amsart and 20 article papers in run 353 with
+  // the command undefined, Perl's binding lacks it too, KNOWN_PERL_ERRORS #695; witnesses 1710.06939, 1712.09887,
+  // 1801.10129). The `generic` hooks (no `[<env>]`) run in every theorem; thm-patch.sty:146-149's generic pre-head hook
+  // steps a dummy counter for its own references, left out here.
+  RawTeX!(r"\providecommand\g@prependto@macro[2]{\begingroup\toks@\expandafter{#1}\toks\tw@{#2}%
+\xdef#1{\the\toks\tw@\the\toks@}\endgroup}
+\def\thmt@generic@preheadhook{}\def\thmt@generic@postheadhook{}
+\def\thmt@generic@prefoothook{}\def\thmt@generic@postfoothook{}
+\def\thmt@hookenv#1{\@ifundefined{thmt@#1@preheadhook}{%
+\global\@namedef{thmt@#1@preheadhook}{}\global\@namedef{thmt@#1@postheadhook}{}%
+\global\@namedef{thmt@#1@prefoothook}{}\global\@namedef{thmt@#1@postfoothook}{}}{}}
+\newcommand\addtotheorempreheadhook[1][generic]{\thmt@hookenv{#1}%
+\expandafter\g@addto@macro\csname thmt@#1@preheadhook\endcsname}
+\newcommand\addtotheorempostheadhook[1][generic]{\thmt@hookenv{#1}%
+\expandafter\g@addto@macro\csname thmt@#1@postheadhook\endcsname}
+\newcommand\addtotheoremprefoothook[1][generic]{\thmt@hookenv{#1}%
+\expandafter\g@prependto@macro\csname thmt@#1@prefoothook\endcsname}
+\newcommand\addtotheorempostfoothook[1][generic]{\thmt@hookenv{#1}%
+\expandafter\g@prependto@macro\csname thmt@#1@postfoothook\endcsname}");
+  // thm-patch.sty:178-217: when amsthm's `proof` exists at this point (`\ifx\proof\endproof\else`), thm-patch wraps
+  // it too, running only the `[proof]` hooks (its generic-hook calls there are commented out): the head hooks around
+  // the head, the pre-foot hook before the end code, the post-foot hook after it. The binding's `proof` (amsthm_sty.rs
+  // `\@proof`, `\end@proof`) runs them under this flag: the head hooks after its title, inside it; the pre-foot hook
+  // before the QED mark; the post-foot hook after the proof closes. A proof defined after thmtools is not wrapped.
+  if has_meaning(&T_CS!("\\proof")) {
+    RawTeX!(r"\def\thmt@proof@preheadhook{}\def\thmt@proof@postheadhook{}
+\def\thmt@proof@prefoothook{}\def\thmt@proof@postfoothook{}");
+    AssignValue!("thmt@proof@hooks" => true, Some(Scope::Global));
+  }
+  // This binding is thm-patch: a later `\usepackage{thm-patch}` (or thm-listof's, thm-autoref's) must not read the raw
+  // file over it, whose `\newcommand\addtotheorem…hook` collide with the ones above and whose parseargs wrappers
+  // replace the native theorems.
+  mark_loaded("thm-patch.sty");
 
   // Internal registers and macros needed by thm-restate.sty and thm-kv.sty
   // which load as raw TeX and expect these from thmtools internals.
@@ -22,6 +72,12 @@ LoadDefinitions!({
   DefMacro!("\\thmt@thmuse@families", "thm@track@keys");
   def_macro_noop("\\thmt@mkignoringkeyhandler{}")?;
   def_macro_noop("\\thmt@thmuse@iskvtrue")?;
+  // thm-kv.sty:434-437: a theorem's optional argument may be thmtools' keys — `label=`, `name=`, `continues=` — which
+  // the native theorem reads (latex_constructs `thmtools_use_keys`); `\thmcontinues` (:503-509) is the note
+  // `continues=` gives, as the package provides it.
+  AssignValue!("thmtools_thmuse_keys" => true, Some(Scope::Global));
+  RawTeX!(r"\providecommand\thmcontinues[1]{\ifcsname hyperref\endcsname\hyperref[#1]{continuing}\else
+continuing\fi\ from p.\,\pageref{#1}}");
 
   // Set savable theorem parameters
   set_savable_theorem_parameters(vec![
@@ -30,9 +86,41 @@ LoadDefinitions!({
     "\\thm@styling", "\\thm@headstyling",
   ]);
 
-  // \declaretheorem [keyvals] {name}
-  // Perl: DefPrimitive('\declaretheorem OptionalKeyVals {}', sub { ... })
-  DefPrimitive!("\\declaretheorem OptionalKeyVals {}", sub[(kv, thmset)] {
+  // \declaretheorem [keyvals] {name, ...} [keyvals]: thm-kv.sty:333-348 reads a trailing optional argument too and
+  // declares each name of the comma list (`\@for`, spaces stripped) with the options `#1,#3`. Perl
+  // (thmtools.sty.ltxml) takes one name and no trailing options, so `\declaretheorem{corollary, lemma,
+  // proposition}[sibling=theorem]` declared one environment "corollary, lemma, proposition" and left `{lemma}`
+  // undefined (witness 2608.16854; KNOWN_PERL_ERRORS #1061). Guard
+  // `perfect_kernel_batch78k::thmtools_declaretheorem_declares_each_listed_name`.
+  DefMacro!("\\declaretheorem[]{}",
+    "\\@ifnextchar[{\\lx@thmt@declaretheorem@i{#1}{#2}}{\\lx@thmt@declaretheorem@i{#1}{#2}[]}");
+  DefMacro!("\\lx@thmt@declaretheorem@i{}{}[]", sub[(first, names, last)] {
+    let mut options = first.unwrap_or_default().unlist();
+    let last = last.unwrap_or_default().unlist();
+    if !options.is_empty() && !last.is_empty() {
+      options.push(T_OTHER!(","));
+    }
+    options.extend(last);
+    let comma = T_OTHER!(",");
+    let mut out = Vec::new();
+    for name in names.unlist().split(|t| *t == comma) {
+      let name: Vec<Token> = name.iter().skip_while(|t| t.get_catcode() == Catcode::SPACE).cloned().collect();
+      let end = name.iter().rposition(|t| t.get_catcode() != Catcode::SPACE).map_or(0, |i| i + 1);
+      if end == 0 {
+        continue;
+      }
+      out.push(T_CS!("\\lx@thmt@declaretheorem"));
+      out.push(T_OTHER!("["));
+      out.extend(options.iter().cloned());
+      out.push(T_OTHER!("]"));
+      out.push(T_BEGIN!());
+      out.extend(name[..end].iter().cloned());
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
+  });
+  // Perl: DefPrimitive('\declaretheorem OptionalKeyVals {}', sub { ... }), one name.
+  DefPrimitive!("\\lx@thmt@declaretheorem OptionalKeyVals {}", sub[(kv, thmset)] {
     let name = thmset.to_string();
 
     // Activate any requested style
@@ -71,21 +159,43 @@ LoadDefinitions!({
       }
     }
 
-    // Read title/name/heading for theorem type
+    // Read title/name/heading for theorem type; without one the name is the environment's, case-modified
+    // (thm-kv.sty:359 `\thmt@setthmname{\thmt@modifycase #1}`; Perl thmtools.sty.ltxml:80-82 `\MakeUppercase`
+    // alone). Witness 1505.04294 (`\declaretheorem[style=mystyle,…]{definition}`: 90 theorems headed "1.1", "1.2"
+    // where the PDF prints "Definition 1.1"). Guard `perfect_kernel_batch78k::thmtools_unnamed_theorem_*`.
     let type_tokens: Option<Tokens> = kv.as_ref()
       .and_then(|k| {
         k.get_value("title")
           .or_else(|| k.get_value("name"))
           .or_else(|| k.get_value("heading"))
       })
-      .map(|v| v.revert().unwrap_or_default());
+      .map(|v| v.revert().unwrap_or_default())
+      .or_else(|| {
+        let mut name = vec![T_CS!("\\thmt@modifycase")];
+        name.extend(thmset.clone().unlist());
+        Some(Tokens::new(name))
+      });
 
-    // Read numbered key
-    let numbered_str = kv.as_ref()
-      .and_then(|k| k.get_value("numbered"))
-      .map(|v| v.to_string())
-      .unwrap_or_default();
-    let flag = if numbered_str == "no" { Some(Tokens!()) } else { None };
+    // Read the numbered keys in their order, the last one deciding: `numbered=no` and the value-less `unnumbered` and
+    // `starred` (thm-kv.sty:241-242, `\thmt@isnumberedfalse`) declare an unnumbered theorem, `numbered=yes` a numbered
+    // one (:248-262). Perl reads `numbered=no` alone (thmtools.sty.ltxml:84-85), so `[style=myproof, unnumbered]{proof}`
+    // was headed "Proof 1" … "Proof 161" where pdflatex prints "Proof" (witnesses 2311.15711, 1706.08429;
+    // KNOWN_PERL_ERRORS #1061).
+    // Guard `perfect_kernel_batch78k::thmtools_unnumbered_and_starred_declare_unnumbered_theorems`.
+    let mut unnumbered = false;
+    if let Some(k) = kv.as_ref() {
+      for (key, value) in k.get_pairs() {
+        match key.as_str() {
+          "unnumbered" | "starred" => unnumbered = true,
+          "numbered" => {
+            let value = value.to_string();
+            unnumbered = value.trim() == "no";
+          },
+          _ => {},
+        }
+      }
+    }
+    let flag = if unnumbered { Some(Tokens!()) } else { None };
 
     // Read sibling/numberlike/sharenumber
     let other: Option<Tokens> = kv.as_ref()
@@ -185,7 +295,7 @@ LoadDefinitions!({
   DefConstructor!("\\listoftheorems[]",
     "<ltx:TOC lists='#lists' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => sub[_args] {
-      let title = Stored::from(Digest!(T_CS!("\\listtheoremname"))?);
+      let title = Stored::from(digest_in_group(T_CS!("\\listtheoremname"))?);
       let lists = String::from("thm");
       Ok(stored_map!("name" => title, "lists" => lists))
     });

@@ -1,0 +1,26 @@
+% witness: 2104.15079, 2204.11994, 2206.08262 (`\vol`); 2306.17210 (`\boxedtext`); 2309.05250 (`\secsize`)
+% oracle:  pdflatex with TL 2025's oup-authoring-template.cls (clean; :1054 `\vol`, :1117-1119 `\boxedtext`)
+% engines: rust 68d2 = 3 errors (undefined `\vol`, `\boxedtext`, `\secsize`)
+% expect:  0 errors, 0 warnings; the volume and the boxed statement as frontmatter notes
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass[unnumsec,webpdf,contemporary,large]{oup-authoring-template}
+\begin{document}
+\journaltitle{Journal}
+\DOI{DOI}
+\copyrightyear{2025}
+\pubyear{2025}
+\vol{12}
+\access{Advance Access Publication Date: Day Month Year}
+\appnotes{Paper}
+\firstpage{1}
+\title[Short]{A Title}
+\author[1]{Ann Author}
+\address[1]{\orgname{Some University}}
+\abstract{The abstract.}
+\boxedtext{\begin{itemize}\item One point.\end{itemize}}
+\keywords{one, two}
+\maketitle
+\section{One}
+{\secsize Heading font} text.
+\end{document}

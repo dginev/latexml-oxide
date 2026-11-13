@@ -1,0 +1,21 @@
+% witness: 2609.34643 S3.SS3.fig1 (a 0.27\textwidth wrapfigure: its rows against the page's line, a picture and its
+%          pagination wrapped in one block)
+% oracle:  pdflatex 0 errors (the wrapfigure's \hsize 0.3\textwidth: its two 0.25\textwidth graphics two rows)
+% engines: rust int68a = two rows (Perl's rule at the float's \hsize); 78x r2 = one row (the page's 345pt line, the
+%          wrap width the binding sets after it); Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; one `ltx:break` in the figure, two panels
+% status:  RED (78x r2) -> GREEN (78x r3: a float whose binding sets its own \hsize keeps it as its line)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\begin{document}
+\begin{wrapfigure}{r}{0.3\textwidth}
+\includegraphics[width=0.25\textwidth]{example-image}\hfill
+\includegraphics[width=0.25\textwidth]{example-image}
+\caption{Two panels in a wrapfigure.}
+\end{wrapfigure}
+Text beside the figure. Text beside the figure. Text beside the figure. Text beside the figure.
+
+More text.
+\end{document}

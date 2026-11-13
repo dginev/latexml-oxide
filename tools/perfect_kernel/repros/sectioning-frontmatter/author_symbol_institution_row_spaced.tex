@@ -1,0 +1,14 @@
+% witness: the r7 re-review of batch 77p (finding 12, probes g2, x13; int34a and 77p r10 the same)
+% oracle:  pdflatex 0 errors: the row of marked names, then the two symbol-labelled institutions on one line parted by
+%          \qquad
+% engines: rust 77p r10 = 0 errors; a creator named "‡Univ B", "†Univ A" an affiliation of Cat Cole alone
+% expect:  0 errors, 0 warnings; Univ A on Ann Able and Cat Cole, Univ B on Bob Baker; three creators
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \quad Cat Cole$^{\dagger}$ \\ $^{\dagger}$Univ A \qquad $^{\ddagger}$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

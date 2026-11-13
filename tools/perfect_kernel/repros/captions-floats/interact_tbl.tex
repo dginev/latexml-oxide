@@ -1,0 +1,12 @@
+% witness: 2312.11500, 2501.02233 (interact `\tbl{caption}{body}`, undefined; interact.cls:493-499 sets the caption,
+%          then the body, as ws_journal_cls.rs's `\tbl`)
+% oracle:  pdflatex 0 errors (interact.cls): "Table 1. IMO definitions." over the tabular
+% engines: rust 63n = `undefined:\tbl`; Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; a table captioned "IMO definitions." holding the tabular
+% status:  RED (63n) -> GREEN (63o)
+\documentclass{interact}
+\begin{document}
+\begin{table}
+\tbl{IMO definitions.}{\begin{tabular}{cc}a & b\\\end{tabular}}
+\end{table}
+\end{document}

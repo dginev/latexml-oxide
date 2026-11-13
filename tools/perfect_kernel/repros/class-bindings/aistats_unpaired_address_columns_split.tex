@@ -1,0 +1,33 @@
+% mechanism: an `\aistatsaddress` whose columns are not the names' (here 2 for 3 names; also one after other material,
+%   `\vspace`, `\newcommand`) is not paired: each column is its own affiliation of the row's authors
+%   (`\lx@add@affiliation@shared`), not one affiliation "Univ A & Univ B" with the column break read as `&`; and the
+%   names are rebuilt from their columns, `\ANDD` (a new row, aistats2027.sty:321) a column break like `\And`.
+% witness: 77o review probes a_mismatch, a_addrfirst, a_noaddr; 1302.5348 (aistats2e: `\newcommand{\UMDAddress}`
+%   between the setters)
+% oracle:  pdflatex 0 errors; "A Title / Ann Able Bob Baker / Cat Cole / Univ A Univ B"
+% engines: rust 77o r1: 0 errors, "Univ A &Univ B" on everyone, and `\ANDD` an undefined error inside one name "Bob
+%   Baker \ANDD Cat Cole" when no address follows; perl: no aistats binding
+% expect:  0 errors; 3 creators, each with the two affiliations Univ A and Univ B
+% status:  RED (77o r1) -> GREEN (77o r2)
+\begin{filecontents*}{aistats2027.sty}
+\ProvidesPackage{aistats2027}
+\DeclareOption{accepted}{\renewcommand{\statePaper}{\acceptedPaper}}
+\newcommand{\statePaper}{0}\newcommand{\acceptedPaper}{1}
+\ProcessOptions\relax
+\long\def\aistatstitle#1{{\centering{\Large\bfseries #1\par}}\vskip 0.25in}
+\def\ANDD{\end{tabular}\par\begin{tabular}[t]{c}}
+\long\def\aistatsauthor#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}\bfseries Anonymous Author\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}\bfseries}\begin{tabular}[t]{c}\bfseries #1\end{tabular}}\fi\par}
+\long\def\aistatsaddress#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}Anonymous Institution\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}}\begin{tabular}[t]{c}#1\end{tabular}}\fi\par}
+\end{filecontents*}
+\documentclass[twoside]{article}
+\usepackage[accepted]{aistats2027}
+\begin{document}
+\twocolumn[\aistatstitle{A Title}
+
+\aistatsauthor{Ann Able \And Bob Baker \ANDD Cat Cole}
+
+\aistatsaddress{Univ A \And Univ B}]
+\section{Intro} Body.
+\end{document}

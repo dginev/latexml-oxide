@@ -1,0 +1,18 @@
+% mechanism: a node whose text box has no `text width` gets the foreignObject of the box inside it (the content's
+%          measured size), not of the node text box whose `\ht` tikz or the user declared.
+% witness: synthetic (DTL1a)
+% oracle:  pdflatex 0 errors; node text boxes 10.55559pt x 20pt + 0pt (1) and 10.55559pt x 20pt + 0pt (2)
+% engines: rust int160b, DTL1a: both foreignObjects 14.61x9.61 (the measured 6.94444pt); perl 0 errors: 1 14.61x9.61,
+%          2 has no foreignObject
+% expect:  0 errors; both foreignObjects 14.61x27.67 (20pt high)
+% status:  RED
+\documentclass{article}
+\usepackage{tikz}
+\newsavebox\mybox
+\begin{document}
+\sbox\mybox{ab}\ht\mybox=20pt
+\begin{tikzpicture}
+\node[draw,text height=20pt] at (0,0) {ab};
+\node[draw] at (3,0) {\usebox\mybox};
+\end{tikzpicture}
+\end{document}

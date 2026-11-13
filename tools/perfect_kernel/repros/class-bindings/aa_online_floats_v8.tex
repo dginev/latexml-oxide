@@ -1,0 +1,23 @@
+% witness: 1403.1122 (`\onlfig{…}`), 1505.04356 (`\onllongtab{…}`); aa.cls v8.1-8.3 (24 of 98 sampled copies)
+% oracle:  pdflatex with 1403.1122's aa.cls v8.1 (:1366-1395): 0 errors; each online float numbered as it comes
+% engines: rust 65w r1 = Fatal (the float taken for the older form's number N; the words lost)
+% expect:  0 errors; Figure 1, Figure 3 in the text; after them (\AtEndDocument) the online Figure 2 with both
+%   paragraphs, Table 1, the long Table 2
+% status:  RED (65w r1) -> GREEN (65w r2)
+\documentclass{aa}
+\usepackage{longtable}
+\begin{document}
+\begin{figure}\caption{Before.}\end{figure}
+\onlfig{
+\begin{figure}
+\centering
+Online body.
+
+Second paragraph.
+\caption{Online figure.}
+\end{figure}
+}
+\begin{figure}\caption{After.}\end{figure}
+\onltab{\begin{table}\caption{Online table.}\end{table}}
+\onllongtab{\begin{longtable}{l}\caption{Long online.}\\ cell\\ \end{longtable}}
+\end{document}

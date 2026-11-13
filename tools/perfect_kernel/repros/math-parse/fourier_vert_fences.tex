@@ -1,0 +1,10 @@
+% witness: 1708.05248 (`\VERT x \VERT`, fourier's triple-bar norm)
+% oracle:  pdflatex 0 errors; ⦀x⦀ as a fenced norm
+% engines: rust 65y = 0 errors, Warning:unparsed_math VERTBAR_UNKNOWN_VERTBAR (the parser pairs `|` and `‖` fences only)
+% expect:  0 errors, 0 warnings; ⦀ x ⦀ parsed as a fenced expression
+% status:  RED (math parked, user directive 2026-10-02)
+\documentclass{article}
+\usepackage{fourier}
+\begin{document}
+$\VERT x \VERT$
+\end{document}

@@ -1,0 +1,21 @@
+% witness: none in the corpus (review probe rev78g lst.tex; the listing start that tcolorbox listing boxes, 2609.20563, run inside)
+% oracle:  pdflatex 0 errors; "See 2 and 1." (newlabel ln:a {2}: listings steps `lstnumber` per line, lstmisc.sty:1225, and makes `\@currentlabel` the line's at :1228 even unnumbered, not the problem's 41; ln:b {1})
+% engines: rust (int47a) = "See 2 and 1." (ln:a on its line, the section's number); 78g r1 "See 41 and 1." (the problem's step); Perl 0.8.8 the section's
+% expect:  0 errors; ln:a on its unnumbered line, the section's "2" (the line carries no number, OXIDIZED_DESIGN_DIVERGENCES #813 residual); ln:b the line's "1"
+% status:  GREEN (78g r2; ln:a residual: pdflatex 2)
+\documentclass{article}
+\usepackage{listings}
+\newcounter{problem}\setcounter{problem}{40}
+\begin{document}
+\section{One}
+\section{Two}
+\refstepcounter{problem}Problem \theproblem.
+\begin{lstlisting}[escapeinside={(*}{*)}]
+a b
+c d (*\label{ln:a}*)
+\end{lstlisting}
+\begin{lstlisting}[numbers=left,escapeinside={(*}{*)}]
+e f (*\label{ln:b}*)
+\end{lstlisting}
+See \ref{ln:a} and \ref{ln:b}.
+\end{document}

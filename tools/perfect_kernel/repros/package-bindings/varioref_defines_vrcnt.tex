@@ -1,0 +1,16 @@
+% mechanism: varioref.sty:803 `\newcounter{vrcnt}`, which cleveref's varioref support steps and reads
+%   (cleveref.sty:2386-2388 `\global\advance\c@vrcnt\@ne`, `\the\c@vrcnt`); the binding lacked it (Perl's too).
+% witness: 1602.00476, 2409.11413, 2505.14566 (varioref + cleveref; +6, +126, +56 Errors on `\c@vrcnt` once GA1 made an
+%   undefined `\c@` the error it is)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: Count: 1, 1.
+% engines: rust int163a 0 errors, 1 warning (Counter 'vrcnt' was not defined; assuming 0); GA1d2 (GA1 alone) 3 errors, 2 warnings
+% expect:  0 errors, 0 warnings; Count: 1, 1.
+% status:  RED (int163a, GA1d2) -> GREEN (GA1d)
+\documentclass{article}
+\usepackage{varioref}
+\begin{document}
+\makeatletter
+\global\advance\c@vrcnt\@ne
+Count: \the\c@vrcnt, \arabic{vrcnt}.
+\makeatother
+\end{document}

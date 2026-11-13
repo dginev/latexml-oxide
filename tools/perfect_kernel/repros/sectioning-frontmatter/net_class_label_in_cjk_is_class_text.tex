@@ -1,0 +1,30 @@
+% A raw class that loads CJKutf8 before its store setters sets its own label in Chinese around the author's argument
+% (`\gdef\@xa{作者单位：#1}`), and only its own `\@author` prints the store. Under CJKutf8 the class file's characters
+% are read one active token per UTF-8 byte (`作` is `ä½\u{9c}`), so the net's reading of the class's own text
+% (frontmatter_stores.rs `net_class_text`) did not match the printed label; with `holds_text` reading non-ASCII active
+% characters as text (105a r2), the label and the author's repeated name were kept as an unclaimed note with a Warning.
+% Now one character test serves both readers (`prints_a_character`) and a run of active bytes is read as the UTF-8
+% character its macros print: the label is the class's text, the name the author's, and the line repeats what is kept.
+% witness: synthetic (review rev105a2 finding 1, probe `cjkclass`; the Cyrillic twin `cyrclass2` under `[T2A]{fontenc}`)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "作者单位：Ann Able", "Text."
+% engines: rust 105a r2 = 0 errors, 1 warning (frontmatter:unclaimed \@xa), <note>作者单位：Ann Able</note>; perl not run
+% expect:  0 errors, 0 warnings; no note
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netprobe.cls}
+\ProvidesClass{netprobe}\LoadClass{article}
+\RequirePackage{CJKutf8}
+\def\@anames{}\def\@xa{}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\xa[1]{\gdef\@xa{作者单位：#1}}
+\renewcommand\@author{\@anames\\\@xa}
+\end{filecontents*}
+\documentclass{netprobe}
+\begin{document}
+\begin{CJK*}{UTF8}{gbsn}
+\title{A Title}
+\author{Ann Able}
+\xa{Ann Able}
+\maketitle
+Text.
+\end{CJK*}
+\end{document}

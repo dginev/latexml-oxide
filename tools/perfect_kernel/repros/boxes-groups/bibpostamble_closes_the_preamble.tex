@@ -1,0 +1,19 @@
+% witness: 2009.08029 (natbib \bibpreamble=\begin{multicols}{2}, \bibpostamble=\end{multicols})
+% oracle:  pdflatex 0 errors (natbib.sty:1063-1086 runs \bibpreamble after the heading and \bibpostamble before \endlist)
+% engines: rust 64w 1E+1W (multicols open at \end{thebibliography}) -> 64y 0/0; Perl 0E
+% expect:  0 errors 0 warnings; the bibliography is whole (its two pagination marks sit together before <biblist>: the column change is pagination, not content, the same as 64w)
+% status:  RED (base) -> GREEN (64y r3); guard perfect_kernel_batch64y::bibpostamble_closes_the_preamble
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{multicol}
+\renewcommand{\bibpreamble}{\begin{multicols}{2}}
+\renewcommand{\bibpostamble}{\end{multicols}}
+\begin{document}
+Text \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[A(2000)]{a} A. Author, A paper.
+\bibitem[B(2001)]{b} B. Author, Another paper.
+\end{thebibliography}
+After.
+\end{document}

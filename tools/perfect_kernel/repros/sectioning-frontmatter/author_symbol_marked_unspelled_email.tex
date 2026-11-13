@@ -1,0 +1,12 @@
+% witness: the r8 re-review of batch 77p (finding 6, probes s10, t4); main-session decision 3 on the 77p r11 questions
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡; "†Univ A ‡Univ B"; "†zq77@x.edu"
+% engines: rust int38 (77p r11) = 0 errors; "†zq77@x.edu" an e-mail of the shared creator, its mark kept
+% expect:  0 errors, 0 warnings; zq77@x.edu, without its mark, the e-mail of Ann Able, the name carrying †
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ $^\dagger$zq77@x.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

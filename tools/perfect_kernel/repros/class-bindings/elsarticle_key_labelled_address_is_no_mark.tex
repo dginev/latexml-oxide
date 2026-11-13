@@ -1,0 +1,29 @@
+% witness: 1108.0201 (elsarticle 2009/09/17 v1.2, `\author[6]{M.~Pesce-Rollins\footnotemark[1]}` and
+%          `\address[*]{current address}`, no `\author[*]`: 97e r1 gave her the line — the kernel's `\fnsymbol` "∗"
+%          matched the key `*`)
+% oracle:  pdflatex (TL 2025 elsarticle.cls, two passes): "Ann Ablea, Bob Baker1b, Cy Colea", then "a Univ A, Town A",
+%          "b Univ B, Town B", "c current address" — the keys never print (`\theaffn`, elsarticle.cls:656-662), the
+%          `\footnotemark[1]` prints "1" (no `\@fnsymbol` in the class's `\maketitle`)
+% engines: rust 97c = "current address" the block's; 97e r1 = Bob Baker's second address (the "∗" read off the
+%          rehearsal's kernel marks). A hand-typed `\author[a]{Cy Cole$^{*}$}` is RED: today's and the reading give Cy
+%          Cole the line (a hand mark is read against the key), pdflatex prints "c" (SYNC row "97e r2 residuals")
+% expect:  0 errors, 0 warnings; each author its key's address (Cy Cole's by the "a" typed by hand, the place the
+%          class prints: 0907.5014's shape), the footnote mark read "1" and answering no key, "current address" the
+%          block's
+% status:  RED (97e r1) -> GREEN (97e r2) — perfect_kernel_batch97e::an_elsarticle_key_answers_no_footnote_mark
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\title{T}
+\author[a]{Ann Able}
+\author[b]{Bob Baker\footnotemark[1]}
+\author{Cy Cole$^{a}$}
+\address[a]{Univ A, Town A}
+\address[b]{Univ B, Town B}
+\address[*]{current address}
+\begin{abstract}
+Some abstract.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

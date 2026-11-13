@@ -1,0 +1,15 @@
+% witness: arXiv 2605.24117 (+4 more ByteDance Seed papers)
+% oracle:  pdflatex 0 errors; Perl completes
+% engines: rust (56hs) = wall-clock timeout (no diagnostic: the binding looped)
+% expect:  0 errors; the author is a creator (<personname>Alice…)
+% status:  RED (56hs) -> GREEN (56ht)
+% mechanism: bytedance_seed_cls.rs defined \author[]{} as \author{#2} — itself. It is
+%   \lx@add@creator[role=author,annotations={#1}]{#2} now, and the binding requires the
+%   class's own package set (bytedance_seed.cls).
+\documentclass{bytedance_seed}
+\title{T}
+\author[1]{Alice\textsuperscript{1*}}
+\begin{document}
+\maketitle
+x
+\end{document}

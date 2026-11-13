@@ -1,0 +1,22 @@
+% witness: kksymbols/kksymbols-doc (kksymbols-doc.tex:31-34); gckanbun/gckanbun-doc (:118-122)
+% oracle:  lualatex 0 errors
+% engine:  lualatex
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% engines: rust=0 perl=fatal(pTeX under pdfTeX identity) (2026-09-23)   <- before 56gg: 2 bare <p> under <document>
+% expect:  0 errors; no <p> directly under <document>
+% status:  GREEN (56gg 2026-09-23; was RED on the schema axis)
+% mechanism: jlreq's \maketitle opens a titlepage inside the document's {titlepage};
+%   \unwind@titlepage (sect05.rs) unwrapped its children with no model check (Perl
+%   unwrapNodes); they are now wrapped in the element the model auto-opens (<para>).
+\documentclass[luatex,fontsize=10pt,paper=b5]{jlreq}
+\title{\texttt{KKsymbols} Package Documentation}
+\author{Kosei Kawaguchi}
+\date{Version 1.1.1}
+\begin{document}
+\begin{titlepage}
+  \maketitle
+\end{titlepage}
+\newpage
+\section{Acknowledgements}
+Hello.
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: RED catalog (no guard). An address a parenthesised tag follows (`e-mail: ann@a.org (AA)`) is at no list
+%   boundary (brief 95c r2 B2: the tag's opening parenthesis is no list end), so it stays in the entry as today's
+%   prints it — the fail-safe; 95c took it out and left `Univ A, City A (AA)`. Reading a tag as the address's would
+%   place it (and its tag) on the author it names.
+% witness: 0811.1419 (`E-mail: zhanghuamaths@163.com(H. Zhang)`, 95c's e-mail given back); 1312.1871, 2310.16880
+%   (aa's `\institute{…, Belgium \email{cazorla@…}}`, class-bindings/aa_sole_institute_inline_email_is_its_authors);
+%   perfect_kernel_batch92c::aa_sole_institute_reads_as_llncss
+% oracle:  pdflatex 0 errors: "1 Univ A, City A e-mail: ann@a.org (AA)", "2 Univ B, Town"
+% engines: rust 95c-r2: Ann Able's affiliation "Univ A, City A e-mail: ann@a.org (AA)" whole, no e-mail; rust 95c:
+%   "Univ A, City A (AA)" and ann@a.org; rust int123a: whole; perl: whole
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, City A", ann@a.org (AA's)
+% status:  RED (95c-r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$ Univ A, City A e-mail: ann@a.org (AA) \\
+$^2$ Univ B, Town}
+\maketitle
+Text.
+\end{document}

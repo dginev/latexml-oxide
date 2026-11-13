@@ -1,0 +1,33 @@
+% witness: review 73a r2 finding 2 (probes tc_lrtdlx, tc_lrtdlx7); 2204.03327 (aastex631 `{longrotatetable}`)
+% oracle:  pdflatex (TL 2025 aastex701.cls, clean): "Table 1." with no text (the deluxetable empties the store at its
+%          start, :11303-11304, and a long table prints its caption always, :11575), "See Table ??."; "Table 2. Caption
+%          inside.", "See Table 2."
+% engines: rust 73a r2 = the outer caption a body paragraph (`ltx_caption` text), its label on `<document>`, the tables
+%          miscounted; Perl = 1 error (the `\caption` outside any float)
+% expect:  0 errors, 0 warnings; Table 1 captioned with the kept outer caption (numbered: the PDF numbers it), its
+%          label the table's; Table 2 "Caption inside."; no caption paragraph (OXIDIZED_DESIGN_DIVERGENCES #739)
+% status:  RED (73a r2) -> GREEN (73a r3)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\begin{longrotatetable}
+\tablecaption{Caption outside the deluxetable.\label{tx}}
+\begin{deluxetable*}{cc}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable*}
+\end{longrotatetable}
+See Table~\ref{tx}.
+\begin{longrotatetable}
+\begin{deluxetable*}{cc}
+\tablecaption{Caption inside.\label{ty}}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable*}
+\end{longrotatetable}
+See Table~\ref{ty}.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: suanpan-l3/suanpan-l3 (9,480 of 9,481 jing lines; coffins drawn once, placed with \box_use:N = \copy),
+%          thuaslogos/thuaslogos-doc-english, thuaslogos-doc-dutch (4 each; copies nested in one picture)
+% oracle:  pdflatex 0 errors; PDF has no ids, so a \copy of a picture is harmless there
+% expect:  0 errors, schema-valid: the second copy's clip path and shading are renamed (pgfcp1 → pgfcp1a, pgfsh2 → pgfsh2a)
+%          together with the references to them (`url(#…)`), the first copy keeps its ids
+% status:  GREEN (57cl: record_svg_ids; was RED on 57ck3: jing `ID "pgfcp1" has already been defined`; Perl the same, KPE #391)
+% mechanism: TeX's \copy duplicates the node list and its whatsits verbatim (tex.web:20952); the pgf driver fixes the
+%   svg object id at digestion (pgfsys-latexml.def.ltxml:346-352, :678-714), so each copy writes the same id
+\documentclass{article}
+\usepackage{tikz}
+\newsavebox\bead
+\sbox\bead{\begin{tikzpicture}\shade[ball color=red] (0,0) circle (1);\end{tikzpicture}}
+\begin{document}
+\usebox\bead\usebox\bead
+
+\begin{tikzpicture}\node{\usebox\bead};\node at (3,0) {\usebox\bead};\end{tikzpicture}
+\end{document}

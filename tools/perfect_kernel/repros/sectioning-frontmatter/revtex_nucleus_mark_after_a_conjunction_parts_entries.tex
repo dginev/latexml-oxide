@@ -1,0 +1,18 @@
+% mechanism: a mark on a spacing nucleus after a conjunction, `Univ X, and ${}^2$Lab Y`, labels its entry as one after a
+%   comma does: the word "and" (or `\&`) before it is glue, not the word an isotope is glued to
+%   (`relocate::spaced_marks_written`'s `in_word`, OXIDIZED_DESIGN_DIVERGENCES #964; review rev104c2 F1)
+% witness: none (review rev104c2 probe q11; the isotope rule's probe rev104c p8, the plain-lead witness 2106.01286)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1Univ X, and 2Lab Y" / "1Univ X and 2Lab Y & 3Inst Z"
+% engines: rust int131a0 and 104c r1: Ann "Univ X", Bob "Lab Y"; 104c r2: Ann "Univ X, and 2Lab Y", Bob none
+% expect:  0 errors, 0 warnings; each author its own entry
+% status:  RED (104c r2) -> GREEN (104c r3) — perfect_kernel_batch104c::a_conjunction_before_a_nucleus_mark_parts_entries
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+\affiliation{${}^1$Univ X, and ${}^2$Lab Y}
+\maketitle
+Text.
+\end{document}

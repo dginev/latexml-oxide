@@ -1,0 +1,19 @@
+% mechanism: the frontmatter API's Cut (OXIDIZED_DESIGN_DIVERGENCES #954, #964): one-argument commands set side by side
+%   whose arguments marks lead are lines of the list (`relocate::side_by_side_wrapper_lines`, read by
+%   `wrapped_lines_as_lines`): acmart's `\institution{$^1$Univ A}\institution{$^2$Univ B}` is two entries, each its own
+%   `\institution`, the address part after them (`\country{X}`) every entry's (`shared_closing_parts`)
+% witness: 2006.16977 (`\affiliation{\institution{$^1$Department of Computer Science, Rutgers …}\institution{$^2$Gaoling
+%   School …}}`, census129 cluster 4, repro I `acm2`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cat Cole1 / 1 Univ A / 2 Univ B / X"
+% engines: rust int131a0: every author "1Univ A, 2Univ B, X"; perl: acmart.cls.ltxml:91 one contact, every author's
+% expect:  0 errors, 0 warnings; Ann and Cat "1Univ A, X", Bob "2Univ B, X"
+% status:  RED (int131a0) -> GREEN (104c) — perfect_kernel_batch104c::institutions_side_by_side_are_entries
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{1}$}
+\affiliation{\institution{$^1$Univ A}\institution{$^2$Univ B}\country{X}}
+\maketitle
+Text.
+\end{document}

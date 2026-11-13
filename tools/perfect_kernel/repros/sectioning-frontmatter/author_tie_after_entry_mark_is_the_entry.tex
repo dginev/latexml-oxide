@@ -1,0 +1,22 @@
+% A tie or a control space right after an affiliation entry's mark is that entry's (`$^2$~Univ B`), so the separating
+% space before the mark parts two entries; only a separating run after the mark — a separating space, or two or more
+% spacing commands (OXIDIZED_DESIGN #52(o)) — or a comma, `;`, "and", a line break or the end make the space before it
+% the name's own (`Oleg L.\hspace*{2mm}$^{\rm a,b}$, Sergei B.`, 0905.3658, guard
+% `author_space_before_own_mark_is_the_name`).
+% witness: synthetic (78m review); 2606.01993 (`~~$^\dagger$~Corresponding Author. \\ \hspace*{1.8em}$^{1}$~Nanjing
+%          University. ~~$^{2}$~…`) and 2402.19080 (`$^\dagger$~\emph{ETH Zürich} \qquad \qquad $^\ddagger$~…`), the
+%          shape in the corpus, unchanged
+% oracle:  pdflatex 0 errors; "Ann Able^1, Bob Baker^2, Cat Cole^3", then "1 Univ A  2 Univ B  3 Univ C"
+% engines: perl three creators, each with its university; rust int50a the same; rust 78m r1 Ann with "Univ A² Univ B³
+%          Univ C", Bob and Cat with none, their marks in the names
+% expect:  0 errors, 0 warnings; three creators, each with its own university
+% status:  RED (78m r1) -> GREEN (78m r2: rows.rs `space_before_own_mark` reads the spacing after the marks)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole\textsuperscript{3}\\
+$^1$~Univ A\quad$^2$~Univ B\quad\textsuperscript{3}\ Univ C}
+\maketitle
+x
+\end{document}

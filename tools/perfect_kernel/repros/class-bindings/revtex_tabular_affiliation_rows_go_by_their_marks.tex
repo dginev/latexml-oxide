@@ -1,0 +1,28 @@
+% mechanism: REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`) reads the rows of a one-column
+%   `tabular` that is the whole `\affiliation` as its lines (`relocate::wrapped_lines_as_lines` → `tabular_rows`, batch
+%   104c, OXIDIZED_DESIGN_DIVERGENCES #964): each row led by a requested label its names' entry
+% witness: 0911.3234 (`\affiliation{\begin{tabular}{c} $^{1}$B2 Institute … \\ $^{2}$State Key Laboratory …
+%   \end{tabular}}`: 98e r1 once on the block, 98a the whole on each); 2606.28962 (the IEEEtran blockA shape)
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust 98a: the whole on each; 98e r1 .. int131a0: once at the block (the fail-safe: rows not read as lines);
+%   104c: each author its row
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town", Bob "Univ B, City"
+% status:  GREEN (98e) for the fail-safe -> GREEN (104c) per author — perfect_kernel_batch104c::
+%   tabular_rows_are_marked_entries (was revtex_tabular_affiliation_lines_land_once under perfect_kernel_batch98e::
+%   an_unsplit_labelled_address_block_lands_once_at_the_block; the 98e deferral of the per-author cut, "a box or table
+%   of numbered lines contradicts REVTeX's one-institution assumption", superseded by brief 104c's "a tabular's rows are
+%   lines"; the `\parbox` block keeps the fail-safe)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\affiliation{\begin{tabular}{c}
+$^{1}$Univ A, Town \\
+$^{2}$Univ B, City
+\end{tabular}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

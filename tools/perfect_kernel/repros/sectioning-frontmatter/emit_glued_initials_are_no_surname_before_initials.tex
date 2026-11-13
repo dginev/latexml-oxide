@@ -1,0 +1,18 @@
+% mechanism: initials after a comma join the name before only after a bare surname (`Santucho, V.`); a word of glued
+%   initials and a surname (`P.A.Vshivtseva`) is read through its initials (`unglued_initials`, as `name_shaped` reads it),
+%   so `P.A.Vshivtseva$^{a}$, E.T.\, Einiev` stays two names (`lines.rs` reversed initials, a rule of the reading alone)
+% witness: 2409.13569 (`P.A.Vshivtseva$^{a,b}$, E.T.\, Einiev$^{c}$`)
+% oracle:  pdflatex 0 errors: "M.O. Astashenkova, P.A.Vshivtsevaa, E.T. Einievb", "aUniv A", "bUniv B"
+% engines: rust MV1, the switch on: "P.A.Vshivtseva a , E.T. Einiev" one creator, Error:frontmatter:merged_creators; off:
+%   three creators
+% expect:  0 errors, 0 warnings; three creators both ways
+% status:  RED (MV1, the switch on) -> GREEN (perfect_kernel_batchnl1::glued_initials_are_no_surname_before_initials)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{M.O.\, Astashenkov$^{a}$, P.A.Vshivtseva$^{a}$, E.T.\, Einiev$^{b}$ \\
+$^{a}$Univ A \\ $^{b}$Univ B}
+\maketitle
+x
+\end{document}

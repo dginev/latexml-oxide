@@ -1,0 +1,11 @@
+% witness: hep-ph9210212, hep-th0703274: a plain TeX paper whose macro does `\input #1`
+% oracle:  pdftex 0 errors
+% engines: rust 64g = routed to LaTeX (compile_route leaned on the `#` name), `\chapter` ignored as a locked
+%          redefinition, Error:undefined:\thechapter; Perl 0 errors (plain)
+% expect:  0 errors; read as plain TeX, no ltx:chapter
+% status:  RED (64g) -> GREEN (64h)
+\def\chapter#1{\par{\bf #1}\par}
+\def\inputrefs#1{\input #1 }
+\chapter{Intro}
+Text.
+\bye

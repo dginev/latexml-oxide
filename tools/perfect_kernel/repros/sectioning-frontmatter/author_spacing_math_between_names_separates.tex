@@ -1,0 +1,25 @@
+% A math group that holds only spacing between two names — `$\qquad$` — is that spacing, a separator as `\qquad`
+% written outside math is (Base_Utility.pool.ltxml:679-682 `@authorsplits`/`@authoraffilsplits`), and so is an
+% `\enskip` (latex.ltx `\hskip.5em\relax`) right after a mark, as `\hspace` is (OXIDIZED_DESIGN #52; elsewhere one
+% `\enskip` stays inside a name, `author_enskip_in_name_and_after_note.tex`).
+% witness: 1602.04504 (`Michael J. Wilber$^{1,2}$ $\qquad$ Vitaly Shmatikov$^{1,2}$ $\qquad$ Serge Belongie$^{1,2}$`:
+%          one creator holding the three names); 1312.1414 (names parted by `\enskip`)
+% oracle:  pdflatex 0 errors; "Ann Able^{1,2}   Bob Baker^{1}   Cat Cole^{2}", then "1 Univ A  2 Univ B"
+% engines: perl one creator "Ann Able Bob Baker Cat Cole" (the math is no separator); rust int50a the same
+% expect:  0 errors, 0 warnings; three creators, Ann with both universities, Bob with A, Cat with B
+% status:  RED (int50a) -> GREEN (78m: rows.rs `spacing_math_unwrapped`)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+Ann Able$^{1,2}$
+$\qquad$
+Bob Baker$^{1}$
+\enskip
+Cat Cole$^{2}$\\
+\\
+$^1$ Univ A\quad$^2$ Univ B
+}
+\maketitle
+\end{document}

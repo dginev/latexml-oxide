@@ -1,0 +1,22 @@
+% mechanism: the API Cut's decision on the digested marks (Option C P4b2, `requested_entry_labels`) reads a list each of
+%   whose entries a document macro holds, its mark first (`\newcommand\InstA{$^{1}$Univ A, Town A}`): the cheap gate
+%   before the rehearsal (`may_open_with_mark`) reads through a parameterless macro's body to its first token, which
+%   may print a mark, so the list is read; a macro whose body opens with a letter (2103.04797's `\Amsterdam`) is not
+% witness: synthetic (P4b2; the marked sibling of 2103.04797's `\affiliation{\Amsterdam}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2",
+%          "1 Univ A, Town A, 2 Univ B, Town B"
+% engines: P4b and P4b2: the creators below, byte-identical (the Cut left the list whole, the observer read it by its
+%          marks); P4b4a: the Cut cuts it (its cutter reads the entries' starts as digested), the creators byte-identical
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  GREEN (catalog, no guard: the output does not tell the gate's reading apart until P4b4's cutter)
+\documentclass{amsart}
+\newcommand\InstA{$^{1}$Univ A, Town A}
+\newcommand\InstB{$^{2}$Univ B, Town B}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\address{\InstA\\ \InstB}
+\maketitle
+Body.
+\end{document}

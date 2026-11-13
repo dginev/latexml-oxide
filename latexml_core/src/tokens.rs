@@ -1,5 +1,10 @@
 //! Token List constructors.
-use std::{borrow::Cow, collections::VecDeque, fmt::Display, rc::Rc};
+use std::{
+  borrow::Cow,
+  collections::VecDeque,
+  fmt::{Display, Write as _},
+  rc::Rc,
+};
 
 #[cfg(feature = "codegen")]
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
@@ -24,6 +29,16 @@ use crate::{
   stomach,
   token::*,
 };
+
+/// One piece of a macro body's [`Tokens::substitution_plan`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BodyPiece {
+  /// The body's own tokens `[start, end)`.
+  Run(u32, u32),
+  /// Parameter `#n` (1-based, as written; `0` or any `n` above the arguments read substitutes nothing, as
+  /// [`Tokens::substitute_parameters`] does).
+  Parameter(usize),
+}
 
 /// If untex is requested to add line-breaks, this is the line length it will allow
 pub const UNTEX_LINELENGTH: usize = 78;
@@ -151,7 +166,26 @@ impl From<Token> for Option<Cow<'static, Tokens>> {
 impl Display for Tokens {
   /// to_string is used often, and for more keyword-like reasons,
   /// NOT for creating valid TeX (use revert or UnTeX for that!)
+  ///
+  /// This is THE token-list → Rust-string boundary (Perl `ToString`). Under
+  /// the pdfTeX byte mouth (KERNEL_CAPABILITIES K10) a non-ASCII name has two
+  /// token spellings — the bytes and the character the octet readers emit —
+  /// that pdfTeX never distinguishes; every Rust-side key derived here (colour
+  /// names, key-value keys, labels) gets the one decoded spelling
+  /// (`mouth::decode_byte_mouth_runs`), so the bindings need no per-site
+  /// normalization. Text runs reach the document as single-character boxes
+  /// and are reassembled there (`Document::open_text_internal`); `\csname`
+  /// builds its name in the gullet (`read_cs_name_inner`).
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    if crate::state::lookup_bool_sym(crate::pin!("PDFTEX_BYTE_MOUTH")) {
+      let mut s = String::new();
+      for t in &self.0 {
+        if t.code != Catcode::COMMENT {
+          write!(s, "{t}")?;
+        }
+      }
+      return f.write_str(&crate::mouth::decode_byte_mouth_runs(&s));
+    }
     for t in &self.0 {
       if t.code != Catcode::COMMENT {
         write!(f, "{t}")?;
@@ -488,9 +522,12 @@ impl Tokens {
     )
   }
   /// Checks if any BEGIN/END code groups are correctly nested and closed
-  pub fn is_balanced(&self) -> bool {
+  pub fn is_balanced(&self) -> bool { Tokens::slice_is_balanced(&self.0) }
+
+  /// [`Tokens::is_balanced`] of a token slice.
+  pub fn slice_is_balanced(tokens: &[Token]) -> bool {
     let mut level = 0;
-    for t in &self.0 {
+    for t in tokens {
       level += match t.get_catcode() {
         Catcode::BEGIN => 1,
         Catcode::END => -1,
@@ -505,14 +542,51 @@ impl Tokens {
     level == 0
   }
 
+  /// The body as `macro_call` substitutes it (tex.web §390: a macro's body is stored with each `#n` as an
+  /// `out_param` token carrying `n`): runs of the body's own tokens and the parameters between them, in order.
+  /// Computed once per definition ([`crate::definition::expandable::Expandable`]), so a call copies runs
+  /// instead of testing every token and parsing every parameter's number.
+  pub fn substitution_plan(&self) -> Box<[BodyPiece]> {
+    let mut plan = Vec::new();
+    let mut start = 0;
+    for (at, token) in self.0.iter().enumerate() {
+      if token.get_catcode() == Catcode::ARG {
+        if start < at {
+          plan.push(BodyPiece::Run(start as u32, at as u32));
+        }
+        let index = token.with_str(|ts| ts.parse::<usize>().unwrap_or(0));
+        plan.push(BodyPiece::Parameter(index));
+        start = at + 1;
+      }
+    }
+    if start < self.0.len() {
+      plan.push(BodyPiece::Run(start as u32, self.0.len() as u32));
+    }
+    plan.into_boxed_slice()
+  }
+
   // NOTE: Assumes each arg either undef or also Tokens
   // Using inline accessors on those assumptions
   /// substitutes the parameters (ARG catcode) in a Tokens list for concrete arguments
   pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
-    // Pre-size: the substituted result is at least as long as the
-    // template. Expansion bodies can be thousands of tokens in the
-    // expl3 kernel; pre-allocation skips the first several Vec doublings.
-    let mut result = Vec::with_capacity(self.0.len());
+    // Pre-size to the template plus every present argument once: for the
+    // common single-use body that is the result's length plus the parameter
+    // tokens it replaces, so the push/extend loop below never regrows (a
+    // template-only size regrew on every argument-bearing expansion;
+    // expansion bodies can be thousands of tokens in the expl3 kernel). An
+    // empty body (`\@gobble`, `\use_none:n`) returns before any allocation; a
+    // non-empty one reserves for every present argument without scanning the
+    // body for parameters, so one that names none over-reserves, harmlessly:
+    // the hot caller (`Expandable::invoke`) only gets here for a body that has one.
+    if self.0.is_empty() {
+      return Tokens::new(Vec::new());
+    }
+    let args_len: usize = args
+      .iter()
+      .flatten()
+      .map(|arg| arg.as_ref().unlist_ref().len())
+      .sum();
+    let mut result = Vec::with_capacity(self.0.len() + args_len);
     for token in self.0.iter() {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
@@ -659,19 +733,35 @@ impl Tokens {
     // `VecDeque::from(Vec)` reuses the Vec's heap buffer directly (no
     // second allocation), unlike `into_iter().collect()` which copies.
     let mut toks: VecDeque<Token> = VecDeque::from(self.unlist());
-    while let Some(t) = toks.pop_front() {
+    // tex.web resolves tokens by MEANING during macro-definition scanning
+    // (get_next assigns cur_cmd=mac_param for a CS `\let` to a catcode-6
+    // `#`), so an IMPLICIT parameter token participates in `#1`/`##`
+    // pairing exactly like a literal `#`. Generated code relies on it:
+    // ctexart.cls L1194 `\cs_new_protected:Npn \__ctex_patch_toc_width:n
+    // \c_parameter_token 1 { … \c_parameter_token 1 … }` (docstrip writes
+    // the CS spelling to survive catcode changes) — without this, the CS
+    // leaks literally into hook names → `\csname __hook package/#…` errors
+    // across the 50-doc ctex family.
+    let is_param_tok = |t: &Token| {
+      t.get_catcode() == Catcode::PARAM
+        || (t.get_catcode().is_active_or_cs()
+          && crate::state::with_meaning(t, |m| {
+            matches!(m, Some(crate::common::store::Stored::Token(l))
+                        if l.get_catcode() == Catcode::PARAM)
+          }))
+    };
+    while let Some(mut t) = toks.pop_front() {
+      if t.get_catcode() != Catcode::PARAM && is_param_tok(&t) {
+        t = T_PARAM!();
+      }
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
         let next_t = toks.pop_front();
         let next_cc = next_t.as_ref().map(|t| t.get_catcode());
         if next_cc == Some(Catcode::OTHER) {
           // only group clear match token cases
-          rescanned.push(Token {
-            text: next_t.unwrap().get_sym(),
-            code: Catcode::ARG,
-            #[cfg(feature = "token-locators")]
-            loc: 0,
-          });
-        } else if next_cc == Some(Catcode::PARAM) {
+          rescanned.push(Token!(sym next_t.unwrap().get_sym(), Catcode::ARG));
+        } else if next_cc == Some(Catcode::PARAM) || next_t.as_ref().map(is_param_tok) == Some(true)
+        {
           rescanned.push(t);
         } else {
           // A PARAM (`#`) followed by neither a digit nor another `#` is, in
@@ -695,8 +785,10 @@ impl Tokens {
           Info!(
             "misdefined",
             "expansion",
-            "Lone # (catcode PARAM) preserved as alignment/template marker. In expansion {}",
-            Tokens::new(toks.clone().into_iter().collect()).to_string()
+            &s!(
+              "Lone # (catcode PARAM) preserved as alignment/template marker. In expansion {}",
+              Tokens::new(toks.clone().into_iter().collect()).to_string()
+            )
           );
           rescanned.push(t);
           if let Some(nt) = next_t {
@@ -843,6 +935,7 @@ impl ToTokens for Token {
         Token {
           text: latexml_core::common::arena::pin_static(#text),
           code: #code,
+          prov: 0,
           // Emitted into the consumer crate; the cfg resolves there (the feature
           // propagates from latexml_oxide). See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
           #[cfg(feature = "token-locators")]
@@ -858,22 +951,52 @@ mod tests {
   use super::*;
   use crate::common::arena;
 
-  fn letter_tok(s: &str) -> Token {
-    Token {
-      text: arena::pin(s),
-      code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
+  /// A body's substitution plan is its runs and parameters in order (a repeated parameter twice, an out-of-range
+  /// one kept as written), and substituting through it gives `substitute_parameters`' list.
+  #[test]
+  fn substitution_plan_reproduces_substitute_parameters() {
+    let body = Tokens::new(vec![
+      T_LETTER!("a"),
+      T_ARG!(1),
+      T_LETTER!("b"),
+      T_ARG!(2),
+      T_ARG!(1),
+      T_ARG!(3),
+      T_LETTER!("c"),
+    ]);
+    let plan = body.substitution_plan();
+    assert_eq!(&*plan, &[
+      BodyPiece::Run(0, 1),
+      BodyPiece::Parameter(1),
+      BodyPiece::Run(2, 3),
+      BodyPiece::Parameter(2),
+      BodyPiece::Parameter(1),
+      BodyPiece::Parameter(3),
+      BodyPiece::Run(6, 7),
+    ]);
+    let one = Tokens::new(vec![T_LETTER!("x"), T_LETTER!("y")]);
+    let two = Tokens::new(vec![T_LETTER!("z")]);
+    let args = [&one, &two];
+    let mut via_plan = Vec::new();
+    for piece in plan.iter() {
+      match *piece {
+        BodyPiece::Run(start, end) => {
+          via_plan.extend_from_slice(&body.unlist_ref()[start as usize..end as usize])
+        },
+        BodyPiece::Parameter(n) => {
+          if let Some(arg) = n.checked_sub(1).and_then(|i| args.get(i)) {
+            via_plan.extend_from_slice(arg.unlist_ref());
+          }
+        },
+      }
     }
-  }
-
-  fn comment_tok(s: &str) -> Token {
-    Token {
-      text: arena::pin(s),
-      code: Catcode::COMMENT,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
-    }
+    let substituted = body.substitute_parameters(
+      &args
+        .iter()
+        .map(|a| Some(Cow::Borrowed(*a)))
+        .collect::<Vec<_>>(),
+    );
+    assert_eq!(&via_plan, substituted.unlist_ref());
   }
 
   #[test]
@@ -885,7 +1008,7 @@ mod tests {
 
   #[test]
   fn tokens_new_preserves_order() {
-    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
+    let t = Tokens::new(vec![T_LETTER!("a"), T_LETTER!("b"), T_LETTER!("c")]);
     assert_eq!(t.len(), 3);
     let list = t.unlist();
     let texts: Vec<String> = list.iter().map(|t| arena::to_string(t.text)).collect();
@@ -894,7 +1017,7 @@ mod tests {
 
   #[test]
   fn tokens_unlist_ref_does_not_consume() {
-    let t = Tokens::new(vec![letter_tok("a")]);
+    let t = Tokens::new(vec![T_LETTER!("a")]);
     let r = t.unlist_ref();
     assert_eq!(r.len(), 1);
     // t is still usable after unlist_ref.
@@ -903,7 +1026,7 @@ mod tests {
 
   #[test]
   fn tokens_stringify_format() {
-    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b")]);
+    let t = Tokens::new(vec![T_LETTER!("a"), T_LETTER!("b")]);
     let s = t.stringify();
     assert!(s.starts_with("Tokens["), "got {s:?}");
     assert!(s.ends_with(']'));
@@ -914,22 +1037,22 @@ mod tests {
   #[test]
   fn tokens_equals_ignores_comments_and_markers() {
     // equals() filters out COMMENT and MARKER tokens before comparing.
-    let a = Tokens::new(vec![letter_tok("x"), comment_tok("%"), letter_tok("y")]);
-    let b = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    let a = Tokens::new(vec![T_LETTER!("x"), T_COMMENT!("%"), T_LETTER!("y")]);
+    let b = Tokens::new(vec![T_LETTER!("x"), T_LETTER!("y")]);
     assert!(a.equals(b), "comments should be ignored in equals()");
   }
 
   #[test]
   fn tokens_equals_different_content() {
-    let a = Tokens::new(vec![letter_tok("x")]);
-    let b = Tokens::new(vec![letter_tok("y")]);
+    let a = Tokens::new(vec![T_LETTER!("x")]);
+    let b = Tokens::new(vec![T_LETTER!("y")]);
     assert!(!a.equals(b));
   }
 
   #[test]
   fn tokens_equals_different_lengths() {
-    let a = Tokens::new(vec![letter_tok("x")]);
-    let b = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    let a = Tokens::new(vec![T_LETTER!("x")]);
+    let b = Tokens::new(vec![T_LETTER!("x"), T_LETTER!("y")]);
     assert!(!a.equals(b));
   }
 
@@ -942,13 +1065,13 @@ mod tests {
 
   #[test]
   fn tokens_unwrap_self_identity() {
-    let t = Tokens::new(vec![letter_tok("x")]);
+    let t = Tokens::new(vec![T_LETTER!("x")]);
     assert_eq!(t.unwrap().len(), 1);
   }
 
   #[test]
   fn tokens_revert_returns_vec() {
-    let t = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    let t = Tokens::new(vec![T_LETTER!("x"), T_LETTER!("y")]);
     let v = t.revert();
     assert_eq!(v.len(), 2);
   }
@@ -956,7 +1079,7 @@ mod tests {
   #[test]
   fn tokens_display_joins_content() {
     // Display on Tokens concatenates each token's Display.
-    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
+    let t = Tokens::new(vec![T_LETTER!("a"), T_LETTER!("b"), T_LETTER!("c")]);
     let s = format!("{t}");
     assert_eq!(s, "abc");
   }

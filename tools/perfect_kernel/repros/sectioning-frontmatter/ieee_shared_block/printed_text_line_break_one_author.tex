@@ -1,0 +1,18 @@
+% mechanism: printed text between `\IEEEauthorblockN` and `\IEEEauthorblockA` is wrapped into an affiliation block
+%   without the line break it ends with (ieeetran_cls.rs `wrap_bare_author_block_text`): kept, the affiliation ended in
+%   an empty line (`School X<break/>`)
+% witness: 2605.15804 (one column of it)
+% oracle:  pdflatex 0 errors: "Ann Able / School X / Dept Y / City"
+% engines: rust int131a: "School X<break/>"
+% expect:  0 errors, 0 warnings; Ann Able School X, then Dept Y City; no affiliation ends in a break
+% status:  RED (int131a) -> GREEN (104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\textit{School X}\\
+\IEEEauthorblockA{Dept Y\\ City}}
+\maketitle
+Text.
+\end{document}

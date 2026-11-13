@@ -1,0 +1,19 @@
+% mechanism: the API Cut's cost gate (`may_open_with_mark`) on bodies printing nothing: one of only braces
+%   (`\newcommand\y{{}}`) and one two macros deep (`\def\x{\empty}`), read on to the list's first mark, rehearsed and cut
+%   (revP4b2 S1: the gate stopped at `\y`'s empty group, the list then left to the observer)
+% witness: synthetic (P4b2b; reviewer revP4b2 S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE1 AND BOB BAKER2", "1 Univ A, Town A, 2 Univ B, Town B"
+% engines: P4b2: the creators below, the list not cut (the observer read it); P4b2b: the same creators, the list cut once
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 2 "2 Univ B, Town B"; one cut
+% status:  GREEN (guard perfect_kernel_batchc1::api_cut_gate_reads_past_empty_bodies)
+\documentclass{amsart}
+\def\x{\empty}
+\newcommand\y{{}}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\address{\y\x $^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\maketitle
+Text.
+\end{document}

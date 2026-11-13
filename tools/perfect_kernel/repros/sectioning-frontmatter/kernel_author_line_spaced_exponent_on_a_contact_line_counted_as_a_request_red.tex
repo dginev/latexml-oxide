@@ -1,0 +1,15 @@
+% mechanism: the sibling of kernel_author_line_exponent_on_a_contact_line_counted_as_a_request with a space before the exponent (`10 m $^{3}$`)
+% witness: synthetic (revISO1c S1 sibling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / Lab of 10 m 3 Tanks, 3He Center"
+% engines: rust 9d38af1d10 = P4c: 0 E, 1 W; both authors "Lab of 10 m Tanks, He Center"
+% expect:  0 errors; both authors "Lab of 10 m ³ Tanks, ³He Center"
+% status:  RED (9d38af1d10, P4c)
+% moves:   as kernel_author_line_exponent_on_a_contact_line_counted_as_a_request
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ Lab of 10 m $^{3}$ Tanks, ${\rm ^{3}He}$ Center}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,14 @@
+% witness: review of 59s (textpos's default relative mode); same root as the \vadjust design B1
+%   (agent_reports/2026-10-02_vadjust_textpos_design.md)
+% oracle:  pdflatex 0 errors; "Middle words trailing words." with "Hmode block beta." below the line
+% engines: rust 59s = `<p>Middle words trailing words.</p>` — the block is lost: textpos puts a block written in
+%   horizontal mode under the line with `\vadjust{\box0}` (textpos.sty:383-385), and the `\vadjust` material is
+%   dropped (tex.web §1099-1100 builds it at once; rust replays tokens at `\par`, Perl TeX_Paragraph.pool.ltxml:32
+%   alike, and its scope is local). A block between paragraphs (vertical mode, :378-382) is kept.
+% expect:  0 errors; "Hmode block beta." kept, after the paragraph's text
+% status:  RED (open)
+\documentclass{article}
+\usepackage{textpos}
+\begin{document}
+Middle words \begin{textblock*}{3cm}(5cm,6cm)Hmode block beta.\end{textblock*} trailing words.
+\end{document}

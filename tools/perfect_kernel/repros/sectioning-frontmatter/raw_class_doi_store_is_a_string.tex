@@ -1,0 +1,15 @@
+% witness: 1610.03579 (sig-alternate-05-2015 `\doi{…}` in the preamble), 1710.01977 (its .bbl calls `\doi` again)
+% oracle:  pdflatex 0 errors: the class only stores the DOI (`\def\@doi{#1}`) and prints it with `\url`
+% engines: rust 65i = 1 Error:unexpected:_ (the K11 reroute, store_setters.rs:67, digested it as pubnote text);
+%          Perl 0.8.8 = 1
+% expect:  0 errors; <pubnote role="doi">10.475/123_4</pubnote>
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{raw_class_doi_store_is_a_string}
+\doi{10.475/123_4}
+\title{T}
+\author{A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,10 @@
+% A `d<var>` the document integrates over elsewhere is a differential standing alone (user ruling 2026-10-01e:
+% document differential evidence), even where the `d` token is also a scalar elsewhere.
+% witness: 2605.16486, 2605.28925 (standalone `\mathrm dS`, `\mathrm d\mu`)
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; `\mathrm{d}S` a differential, `\mathrm{d}t` (a step here) a letter
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\int_\Sigma f\,\mathrm{d}S$ $\mathrm{d}S$ $\sqrt{\mathrm{d}t}$ $\mathrm{d}t$
+\end{document}

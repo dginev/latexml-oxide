@@ -1,0 +1,17 @@
+% witness: sibling of 2404.13552 and CR5's textless TikZ: a drawing alone, `\tikz…;`, beside the name in `\author`
+% oracle:  pdflatex 0 errors: "Ann Able" and the dot
+% engines: rust int154t = a nameless second creator holding an empty picture, 1 error (the rewritten `\tikz…` without
+%          its `;`: "Giving up on this path. Did you forget a semicolon?") and 1 warning (path data "words" missing);
+%          Perl 0.8.8 = 3 errors (its split of the `\author` argument)
+% expect:  0 errors, 0 warnings; one creator "Ann Able", then a note holding the drawing whole (no text: keyed by
+%          its place), its `;` read with it
+% status:  RED (int154t) -> GREEN (CR8) — perfect_kernel_batchcr8::textless_picture_in_author_is_a_note
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\title{T}
+\author{Ann Able \tikz\fill (0,0) circle (2pt);}
+\begin{document}
+\maketitle
+Body.
+\end{document}

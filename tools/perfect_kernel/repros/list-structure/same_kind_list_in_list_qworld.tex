@@ -1,0 +1,19 @@
+% witness: qworld/qworld (qworld.tex:519, iitem \iiitem under ltjsarticle)
+% oracle:  pdflatex "Something's wrong--perhaps a missing \item" (CONTROL for the error; structure is the target)
+% engines: rust=0 perl=0 (2026-09-23)   <- schema-invalid before 56gd: <itemize> in <itemize>
+% expect:  0 errors; <itemize><item><para><itemize><item>Inner.
+% status:  GREEN (56gd 2026-09-23; was RED on the schema axis)
+% mechanism: the indirect model skips a same-tag route (Perl Document.pm:206
+%   `$tag ne $kid`); find_insertion_point's bridge table (document.rs) opens
+%   item -> para for a list arriving directly in a list of its own kind.
+%   In qworld the empty \Pseudo@item of iitem.sty is lost because
+%   ltjsarticle.cls:1412 redefines the kernel \@item (raw class) — SHARED.
+\documentclass{article}
+\begin{document}
+\begin{itemize}
+\begin{itemize}
+\item Inner.
+\end{itemize}
+\item Outer.
+\end{itemize}
+\end{document}

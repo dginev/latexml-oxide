@@ -1,0 +1,25 @@
+% witness: review rev78x2 finding 4 (`[conference,compsoc]{IEEEtran}`: the binding declared 252.945pt (compsoc's journal column))
+% oracle:  pdflatex 0 errors, 0 overfull (\showthe in a float: 243.91125pt column, 505.89pt text (IEEEtran.cls:1785-1787); letter paper less 1.5in, \columnsep 0.25in): Figure 1 two
+%          rows (2 x 122pt), Figure 2 one row (2 x 121.5pt)
+% engines: rust int68a = one row each (Perl's 345pt line); 78x r2 = one row each (the declared 252.945pt (compsoc's journal column));
+%          Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; one `ltx:break` in Figure 1, none in Figure 2
+% status:  RED (78x r2) -> GREEN (78x r3: the class binding declares the page its options give, `declare_panel_page`)
+% preload: ar5iv.sty
+\documentclass[conference,compsoc]{IEEEtran}
+\usepackage{graphicx}
+\begin{document}
+\title{T}
+\maketitle
+Text.
+\begin{figure}
+\includegraphics[width=122pt]{example-image}\hfill
+\includegraphics[width=122pt]{example-image}
+\caption{Two 122pt panels.}
+\end{figure}
+\begin{figure}
+\includegraphics[width=121.5pt]{example-image}\hfill
+\includegraphics[width=121.5pt]{example-image}
+\caption{Two 121.5pt panels.}
+\end{figure}
+\end{document}

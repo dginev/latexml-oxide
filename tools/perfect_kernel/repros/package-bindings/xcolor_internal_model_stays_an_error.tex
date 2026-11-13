@@ -1,0 +1,10 @@
+% xcolor.sty's own `natural` (`\XC@mod@natural`, :140) is no model raw code gives: pdflatex errs, so does the binding.
+% witness: the review of M2 r2 (`model_nat`).
+% oracle:  pdflatex (TL 2025) errors on `\textcolor[natural]`.
+% engines: int140a 1 Error. M2 r2 a Warning.
+% expect:  1 error, 0 warnings, `word` kept.
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+A \textcolor[natural]{.5}{word} B.
+\end{document}

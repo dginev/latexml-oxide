@@ -1,0 +1,12 @@
+% witness: 63e review r1 finding 2 (an all-capitals name read as a society acronym rejoined the name before it)
+% oracle:  pdflatex 0 errors: "WEI LI^1, HONG ZHANG^2"
+% engines: rust (63e r1) = ONE personname "WEI LI, HONG ZHANG"; rust 63d and Perl two
+% expect:  2 creators, each with its institute; 0 errors
+% status:  RED (63e r1) -> GREEN (63e)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{WEI LI\inst{1}, HONG ZHANG\inst{2}}
+\institute{Univ A \and Univ B}
+\maketitle
+\end{document}

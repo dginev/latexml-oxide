@@ -1,0 +1,13 @@
+% RED. A `\colorbox` in a model the binding can't convert gets the recovery black behind black text, so the words are
+% unreadable in HTML. Whether to emit no background instead needs a ruling; no arXiv paper reaches it.
+% witness: colorspace/colorspace's 6 swatches are `\phantom`s, so no real text there. Pre-existing.
+% oracle:  pdflatex (TL 2025) paints the spot tint behind the words.
+% engines: int140a and M2 r2 backgroundcolor="#000000".
+% expect:  words readable: no background, or the colour.
+\documentclass{article}
+\usepackage{colorspace}
+\definespotcolor{foo}{BarTone 555 GN}{.8,.2,.5,.3}
+\definecolorspace{fooshaded}{mixed}{foo,black}
+\begin{document}
+\colorbox[fooshaded]{.5,.5}{Boxed.}
+\end{document}

@@ -140,6 +140,7 @@ fn choose_kpaths(
   new_in_process: impl FnOnce() -> Result<Kpaths, &'static str>,
   new_subprocess: impl Fn() -> Result<Kpaths, &'static str>,
   can_resolve: impl FnOnce(&Kpaths) -> bool,
+  same_tree_as_ambient: impl FnOnce(&Kpaths) -> bool,
 ) -> (Option<Kpaths>, KpathseaBackend, &'static str) {
   // MiKTeX stores its file database in an MPM `fndb` that a statically-linked
   // libkpathsea cannot read (MiKTeX ships no `ls-R`), so the in-process backend
@@ -166,6 +167,30 @@ fn choose_kpaths(
         Some(kpse),
         KpathseaBackend::InProcess,
         "linked libkpathsea resolves no host files, and no kpsewhich to fall back to",
+      ),
+    },
+    // Dual-TL guard: the linked library anchors on its COMPILE-TIME distro
+    // tree, while dump-year detection follows the PATH `kpsewhich`
+    // (SELFAUTOPARENT). On a host with both (vendor TL on PATH + distro TL in
+    // /usr/share/texlive) the two silently disagree — raw kernel sources
+    // (latex.ltx / expl3-code.tex / every .sty) then come from a DIFFERENT
+    // TeX Live than the one the embedded dump was labeled and built for
+    // (caught 2026-08-31: a "2025" dump carrying TL2023 expl3, and
+    // `\g__pdf_backend_object_int already defined` clashes when the fresh
+    // dump met the old tree). File resolution must agree with the ambient
+    // kpsewhich, so fall back to the subprocess backend, which follows PATH.
+    // TEXMF* env overrides re-anchor the linked lib, so a pinned environment
+    // (tools/make_formats.sh, perfect-kernel harness) keeps the fast path.
+    Ok(kpse) if kpse.is_in_process() && !same_tree_as_ambient(&kpse) => match new_subprocess() {
+      Ok(subprocess) => (
+        Some(subprocess),
+        KpathseaBackend::Subprocess,
+        "linked libkpathsea anchors a different TeX tree than the PATH kpsewhich",
+      ),
+      Err(_) => (
+        Some(kpse),
+        KpathseaBackend::InProcess,
+        "linked libkpathsea anchors a different TeX tree, and no kpsewhich to fall back to",
       ),
     },
     Ok(kpse) if kpse.is_in_process() => (Some(kpse), KpathseaBackend::InProcess, "linked"),
@@ -196,6 +221,17 @@ fn choose_kpaths(
 /// the choice for [`kpathsea_backend`].
 #[cfg(feature = "kpathsea")]
 fn select_kpaths() -> Option<Kpaths> {
+  // Re-anchor the linked libkpathsea to the ambient TeX Live tree before
+  // construction if TEXMFROOT is not already set. In-process libkpathsea checks
+  // $TEXMFROOT in texmf.cnf, avoiding a fallback to the slow subprocess backend
+  // on dual-TL hosts (e.g. system libkpathsea in /usr/share/texlive vs vendor TL on PATH).
+  if env::var_os("TEXMFROOT").is_none()
+    && let Some(root) = ambient_texlive_root()
+  {
+    unsafe {
+      env::set_var("TEXMFROOT", root);
+    }
+  }
   let (kpse, backend, why) = choose_kpaths(
     ambient_kpsewhich_version(),
     Kpaths::new,
@@ -203,9 +239,48 @@ fn select_kpaths() -> Option<Kpaths> {
     // `cmr10.tfm` is present in every TeX distribution, and the probe returns
     // `None` fast on MiKTeX — no directory walk.
     |kpse| kpse.find_file("cmr10.tfm").is_some(),
+    // Dual-TL agreement probe: when the ambient kpsewhich names a real
+    // year-rooted TeX Live (SELFAUTOPARENT with a texmf-dist), the linked
+    // library must resolve the kernel from under it. `latex.ltx` is the
+    // signature file — it is what the dump-year label is about. Hosts where
+    // SELFAUTOPARENT is unusable (Debian: /usr; Homebrew Cellar; MiKTeX)
+    // yield `None` and the check is a no-op.
+    |kpse| match ambient_texlive_root() {
+      None => true,
+      Some(root) => kpse
+        .find_file("latex.ltx")
+        .is_none_or(|p| p.starts_with(root)),
+    },
   );
   let _ = BACKEND.set((backend, why));
   kpse
+}
+
+/// The ambient `kpsewhich -var-value=SELFAUTOPARENT`, memoized, validated to
+/// be a directory containing `texmf-dist` (i.e. a real TeX Live root —
+/// Debian's `/usr` and other yearless layouts return `None`). Shared by the
+/// kpathsea backend agreement probe above; `latexml_engine::dump_paths` keys
+/// its dump-year detection off the same variable.
+#[cfg(feature = "kpathsea")]
+fn ambient_texlive_root() -> Option<&'static str> {
+  static ROOT: OnceLock<Option<String>> = OnceLock::new();
+  ROOT
+    .get_or_init(|| {
+      let out = std::process::Command::new("kpsewhich")
+        .args(["-var-value=SELFAUTOPARENT"])
+        .output()
+        .ok()?;
+      if !out.status.success() {
+        return None;
+      }
+      let root = String::from_utf8(out.stdout).ok()?.trim().to_string();
+      if !root.is_empty() && Path::new(&root).join("texmf-dist").is_dir() {
+        Some(root)
+      } else {
+        None
+      }
+    })
+    .as_deref()
 }
 
 /// The ambient `kpsewhich --version` banner (full stdout), memoized for the
@@ -253,8 +328,9 @@ pub fn ambient_kpsewhich_version() -> Option<&'static str> {
 /// every subsequent real lookup hits the post-init fast path.
 ///
 /// **Concurrency:** safe to invoke on a background thread spawned at
-/// process start. `KPSE` is process-global (`Lazy<Mutex<…>>`), so the
-/// init done on a background thread is visible to the main thread.
+/// process start **only after [`init_kpathsea`] has run on the spawning
+/// thread** — see there. `KPSE` is process-global (`Lazy<Mutex<…>>`), so
+/// the init done on a background thread is visible to the main thread.
 /// The Mutex briefly serializes the prewarm against the main thread's
 /// first real lookup, but dump load + arg parsing take >50 ms before
 /// digest reaches its first package resolution, by which point the
@@ -307,6 +383,42 @@ pub fn prewarm_kpathsea() {
 /// proc-macro build, which never resolves TeX files).
 #[cfg(not(feature = "kpathsea"))]
 pub fn prewarm_kpathsea() {}
+
+/// Construct the process-wide kpathsea handle NOW, on the calling thread,
+/// before any other thread exists that might read the environment.
+///
+/// `Kpaths::new` runs libkpathsea's `kpathsea_set_program_name`, which
+/// `putenv`s `SELFAUTOLOC`/`SELFAUTODIR`/`SELFAUTOPARENT`/
+/// `SELFAUTOGRANDPARENT` (progname.c). glibc's `putenv` of a new name
+/// reallocates the `environ` array and frees the old one; a concurrent
+/// `getenv` on another thread — `std::env::var`, chrono's `TZ` read inside
+/// `localtime_r`, the logger's `NO_COLOR` probe — walks the freed array.
+/// That is undefined behaviour with no lock to take: glibc's `getenv` is
+/// lock-free by contract, so the only sound ordering is "all `putenv`
+/// before any second thread". The CLI used to run this construction on
+/// the prewarm thread while the worker thread parsed options: sweep #35
+/// (release build, 2374 docs) caught one general-protection fault in
+/// `getenv+0x56` (`traps: latexml_oxide.s[1711120] general protection
+/// fault … in libc.so.6`, pstool/pstool at 1.1 s, unreproducible in 9
+/// reruns — a race, not a document).
+///
+/// Cost: ~0.1 ms for the construction plus the two memoized `kpsewhich`
+/// probes (`--version`, `-var-value=SELFAUTOPARENT`) that pick the
+/// backend. The expensive part of kpathsea start-up — `kpathsea_init_db`
+/// on the first lookup — is read-only with respect to the environment and
+/// stays on the [`prewarm_kpathsea`] background thread.
+#[cfg(feature = "kpathsea")]
+pub fn init_kpathsea() {
+  // Forces the `Lazy` (= `select_kpaths()`); the guard is released at once.
+  drop(
+    KPSE
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner),
+  );
+}
+
+#[cfg(not(feature = "kpathsea"))]
+pub fn init_kpathsea() {}
 
 // Perl: $pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|
 static CANONICAL_URL_RE: Lazy<Regex> =
@@ -723,9 +835,12 @@ pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
   }
   let paths = candidate_pathnames(pathname, options);
   // Pass 1: strict-case existence check (the fast path; matches Perl's
-  // `$local_file =~ m/$regex/` strict regex).
+  // `$local_file =~ m/$regex/` strict regex). A directory is no candidate: kpathsea's `READABLE` (`!S_ISDIR`) never
+  // takes one, so `\input{intro}` beside a directory `intro/` looks further (2408.09583's
+  // `chapters/introduction/introduction.tex`, where `chapters/introduction` was read as the file and its chapter
+  // lost; Perl's `candidate_pathnames` takes any matching directory entry, KPE #1171).
   for path in &paths {
-    if Path::new(path).exists() {
+    if is_readable_file(path) {
       return Some(path.clone());
     }
   }
@@ -749,12 +864,19 @@ pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
     for entry in entries.flatten() {
       if let Some(name) = entry.file_name().to_str()
         && name.eq_ignore_ascii_case(target)
+        && !entry.path().is_dir()
       {
         return entry.path().to_str().map(String::from);
       }
     }
   }
   None
+}
+
+/// A path TeX could open as a file: it exists and is not a directory (kpathsea's `READABLE`).
+pub fn is_readable_file(path: &str) -> bool {
+  let p = Path::new(path);
+  p.exists() && !p.is_dir()
 }
 
 /// transform to a canonical file name, via `Path::file_name`
@@ -893,7 +1015,7 @@ std::thread_local! {
 }
 
 /// Clear the per-thread kpsewhich memo. Called at the start of every
-/// conversion (prepare_session): the persistent (non-harness) cortex_worker
+/// conversion (`reset_conversion_state`, at `initialize_report`): the persistent (non-harness) cortex_worker
 /// runs many papers per thread, and a cached cwd-relative MISS from paper A
 /// (kpathsea's path spec includes `.`) would wrongly persist into paper B
 /// (PR_READINESS should-fix 12).
@@ -989,6 +1111,21 @@ fn find_first_via(kpse: &Kpaths, candidates: &[&str]) -> Option<String> {
     if let Ok(Some(path)) = result {
       return Some(path);
     }
+    // Extension-guessed lookup missed. The ENGINE's `\input`/`\openin`
+    // always search the TEX format (TEXINPUTS includes `texmf-dist/tex//`),
+    // regardless of extension — the guess-from-filename is a kpsewhich-CLI
+    // convenience, not engine behavior. Retry with the explicit TEX format
+    // so e.g. pgfornament's `\@@input vectorian46.pgf` resolves
+    // (tex/generic/pgfornament/vectorian/; plain `kpsewhich` misses it,
+    // `kpsewhich -format=tex` finds it). Perl reaches the same files via
+    // its ls-R basename cache (Pathname.pm build_kpse_cache). Witness:
+    // pgfornament/ornaments (291 missing_file errors) + pgfornament-han.
+    let retry = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+      kpse.find_file_with_format(candidate, kpathsea::formats::TEX)
+    }));
+    if let Ok(Some(path)) = retry {
+      return Some(path);
+    }
   }
   None
 }
@@ -1070,8 +1207,13 @@ mod tests {
 
     #[test]
     fn no_constructible_backend_reports_unavailable() {
-      let (kpse, backend, why) =
-        choose_kpaths(None, || Err("no lib"), || Err("no kpsewhich"), |_| true);
+      let (kpse, backend, why) = choose_kpaths(
+        None,
+        || Err("no lib"),
+        || Err("no kpsewhich"),
+        |_| true,
+        |_| true,
+      );
       assert!(kpse.is_none());
       assert_eq!(backend, KpathseaBackend::Unavailable);
       assert!(
@@ -1093,6 +1235,7 @@ mod tests {
         || Err("libkpathsea did not initialize"),
         Kpaths::new_subprocess,
         |_| true,
+        |_| true,
       );
       assert!(kpse.is_some(), "must not give up while a kpsewhich exists");
       assert_eq!(backend, KpathseaBackend::Subprocess);
@@ -1108,6 +1251,7 @@ mod tests {
         || panic!("the in-process backend must not be constructed on a MiKTeX host"),
         Kpaths::new_subprocess,
         |_| true,
+        |_| true,
       );
       assert!(kpse.is_some());
       assert_eq!(backend, KpathseaBackend::Subprocess);
@@ -1121,9 +1265,37 @@ mod tests {
       if primary.is_in_process() {
         return; // this branch only fires for an in-process primary
       }
-      let (kpse, backend, _) = choose_kpaths(None, Kpaths::new, Kpaths::new_subprocess, |_| false);
+      let (kpse, backend, _) = choose_kpaths(
+        None,
+        Kpaths::new,
+        Kpaths::new_subprocess,
+        |_| false,
+        |_| true,
+      );
       assert!(kpse.is_some());
       assert_eq!(backend, KpathseaBackend::Subprocess);
+    }
+
+    /// Dual-TL guard: an in-process backend that anchors a DIFFERENT TeX tree
+    /// than the ambient kpsewhich is abandoned for the subprocess one, so
+    /// file resolution always agrees with dump-year detection (both follow
+    /// PATH). See the 2026-08-31 "2025-dump with TL2023 expl3" incident.
+    #[test]
+    fn ambient_tree_mismatch_falls_back_to_subprocess() {
+      let Some(primary) = subprocess() else { return };
+      if primary.is_in_process() {
+        return; // this branch only fires for an in-process primary
+      }
+      let (kpse, backend, why) = choose_kpaths(
+        None,
+        Kpaths::new,
+        Kpaths::new_subprocess,
+        |_| true,
+        |_| false,
+      );
+      assert!(kpse.is_some());
+      assert_eq!(backend, KpathseaBackend::Subprocess);
+      assert!(why.contains("different TeX tree"), "why = {why}");
     }
   }
 

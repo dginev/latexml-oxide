@@ -1,0 +1,1230 @@
+//! `latex_constructs` section 6: C.6 Displayed Paragraphs
+//!
+//! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
+//! definitions run in the original order from `super::load_definitions`.
+
+use super::*;
+
+/// What an `\endtrivlist` ends, decided in its `before_digest`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum EndtrivlistOwner {
+  /// Nothing of its own: an `\endtrivlist` whose trivlist is already ended (0908.0398's `\cqfd`).
+  Stray,
+  /// A `\@trivlist` (`\lx@list`) mode frame, just popped.
+  Frame,
+  /// A `\trivlist` begun in this group.
+  Trivlist,
+}
+
+thread_local! {
+  /// `\endtrivlist`: what `before_digest` ended — handed to the constructor's `properties`, which run after a
+  /// popped frame is gone.
+  static ENDTRIVLIST_OWNER: std::cell::Cell<EndtrivlistOwner> =
+    const { std::cell::Cell::new(EndtrivlistOwner::Stray) };
+}
+
+/// The open `\trivlist`s, innermost last: the group level each began at, with the list state `begin_itemize` bound
+/// over (a global value stack; see `\trivlist`).
+const OPEN_TRIVLISTS: &str = "open_trivlists";
+/// What `begin_itemize` binds: the values that decide where the next list nests, the meanings it lets (`\item`,
+/// `\par`, `\@listctr`) and the `\itemsep` it sets.
+const TRIVLIST_SAVED_VALUES: [&str; 4] = [
+  "itemcounter",
+  "itemization_level",
+  "@itemlevel",
+  "itemization_items",
+];
+const TRIVLIST_SAVED_MEANINGS: [&str; 3] = ["\\item", "\\par", "\\@listctr"];
+const TRIVLIST_SAVED_REGISTERS: [&str; 1] = ["\\itemsep"];
+
+/// The group level the innermost open `\trivlist` began at.
+fn innermost_trivlist_group_level() -> Option<usize> {
+  with_value(OPEN_TRIVLISTS, |v| match v {
+    Some(Stored::VecDequeStored(open)) => match open.back() {
+      Some(Stored::HashStored(saved)) => match saved.get("group_level") {
+        Some(Stored::Int(level)) => usize::try_from(*level).ok(),
+        _ => None,
+      },
+      _ => None,
+    },
+    _ => None,
+  })
+}
+
+/// Records a `\trivlist` begun at group level `level`, with the list state it is about to bind over.
+fn save_list_state(level: usize) -> Result<()> {
+  drop_trivlists_deeper_than(level)?;
+  let mut values = SymHashMap::default();
+  for key in TRIVLIST_SAVED_VALUES {
+    values.insert(key, lookup_value(key).unwrap_or(Stored::None));
+  }
+  let mut meanings = SymHashMap::default();
+  for cs in TRIVLIST_SAVED_MEANINGS {
+    meanings.insert(cs, lookup_meaning(&T_CS!(cs)).unwrap_or(Stored::None));
+  }
+  let mut registers = SymHashMap::default();
+  for cs in TRIVLIST_SAVED_REGISTERS {
+    if let Some(value) = lookup_register(cs, Vec::new())? {
+      registers.insert(cs, Stored::from(value));
+    }
+  }
+  let mut saved = SymHashMap::default();
+  saved.insert("group_level", Stored::Int(level as i64));
+  saved.insert("values", Stored::HashStored(values));
+  saved.insert("meanings", Stored::HashStored(meanings));
+  saved.insert("registers", Stored::HashStored(registers));
+  push_value(OPEN_TRIVLISTS, Stored::HashStored(saved))
+}
+
+/// Puts back, in the current group, the list state a `\trivlist` recorded (an undefined meaning stays undefined).
+fn restore_list_state(saved: SymHashMap<Stored>) -> Result<()> {
+  for (part, entries) in saved {
+    let Stored::HashStored(entries) = entries else {
+      continue;
+    };
+    for (key, value) in entries {
+      let name = with(key, |k| k.to_string());
+      if part == pin!("values") {
+        assign_value(&name, value, None);
+      } else if part == pin!("meanings") {
+        assign_meaning(&T_CS!(name), value, None);
+      } else if part == pin!("registers") {
+        let register = match value {
+          Stored::Glue(glue) => RegisterValue::Glue(glue),
+          Stored::Dimension(dimension) => RegisterValue::Dimension(dimension),
+          Stored::Number(number) => RegisterValue::Number(number),
+          _ => continue,
+        };
+        assign_register(&name, register, None, Vec::new())?;
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Forgets the trivlists recorded deeper than group level `level`: their groups have ended (and their state with
+/// them), whether or not their `\aftergroup` closer ran (an abandoned group drops it, stomach.rs
+/// `until_terminal_inside_group`).
+fn drop_trivlists_deeper_than(level: usize) -> Result<()> {
+  while innermost_trivlist_group_level().is_some_and(|d| d > level) {
+    pop_value(OPEN_TRIVLISTS)?;
+  }
+  Ok(())
+}
+
+/// Ends, at digestion, every trivlist begun at group level `level`: forgets them and puts back the list state the
+/// outermost of them bound over.
+fn end_trivlists_of_group(level: usize) -> Result<()> {
+  drop_trivlists_deeper_than(level)?;
+  let mut outermost = None;
+  while innermost_trivlist_group_level() == Some(level) {
+    outermost = pop_value(OPEN_TRIVLISTS)?;
+  }
+  if let Some(Stored::HashStored(saved)) = outermost {
+    restore_list_state(saved)?;
+  }
+  Ok(())
+}
+
+fn prop_group_level(props: &SymHashMap<Stored>) -> usize {
+  props
+    .get("group_level")
+    .map(|d| d.to_string())
+    .and_then(|d| d.parse().ok())
+    .unwrap_or(0)
+}
+
+#[rustfmt::skip]
+pub(crate) fn load() -> Result<()> {
+  // ======================================================================
+  // C.6 Displayed Paragraphs
+  // ======================================================================
+
+  // `mode => "internal_vertical"`: LaTeX's `{center}`/`{flushleft}`/
+  // `{flushright}` open a trivlist (vertical structure); the body's
+  // `\par` switches into horizontal for paragraph text but BOUND_MODE
+  // stays vertical so display-math recognition (`tex_math.rs:447`
+  // mirror of `TeX_Math.pool.ltxml:65`: `$$` only consumed when
+  // BOUND_MODE ends with "vertical") works inside the body. Perl
+  // `latex_constructs.pool.ltxml:1262-1264` doesn't set `mode =>`
+  // — anticipates an upstream Perl PR fleshing out the `mode =>`
+  // machinery. Without this, papers using `\begin{center}$$X$$
+  // \end{center}` lose the display math, the second `$` reads as
+  // closing the first inline, and array content lands inside
+  // `<ltx:p>` triggering schema violations. Driver: astro-ph0203201
+  // (table*+center+$$+array).
+  // `{center}`, `{flushleft}` and `{flushright}` are `\trivlist` and `\centering`, `\raggedright`, `\raggedleft`
+  // (latex.ltx:15415-15432), which let `\\` be `\@centercr`, a line break: in them `\\` is the kernel's newline
+  // (`\@normalcr`, as a parbox's), whatever the document made it (`\def\\ml{m_L}`, hep-ph9607435: "Missing argument
+  // Match:ml" per `\\`). Guard `perfect_kernel_batch73b::centering_rebinds_the_line_break`.
+  DefEnvironment!("{center}", sub[document, _args, props] {
+    document.maybe_close_element("ltx:p")?; // this starts a new vertical block
+    // aligning will take care of \\\\ "rows"
+    aligning_environment("center", "ltx_centering", document, props)?;
+    Ok(())
+  }, mode => "internal_vertical",
+  before_digest => { Let!("\\\\", "\\@normalcr"); });
+  // HOWEVER, define a plain \center to act like \centering (?)
+  DefMacro!("\\center", "\\centering");
+  def_macro_noop("\\endcenter")?;
+  // Perl latex_constructs.pool.ltxml L1208-1213: flushleft → aligningEnvironment(
+  // 'left', 'ltx_align_left'); flushright → ('right', 'ltx_align_right'). The
+  // earlier Rust port passed "center" as the align value for BOTH (a copy-paste
+  // from {center} above), so flushleft/flushright produced `align="center"`
+  // instead of `align="left"`/`align="right"`.
+  DefEnvironment!("{flushleft}", sub[document, _args, props] {
+    document.maybe_close_element("ltx:p")?; // this starts a new vertical block
+    aligning_environment("left", "ltx_align_left", document, props)?;
+    Ok(())
+  }, mode => "internal_vertical",
+  before_digest => { Let!("\\\\", "\\@normalcr"); });
+  DefEnvironment!("{flushright}", sub[document, _args, props] {
+    document.maybe_close_element("ltx:p")?; // this starts a new vertical block
+    aligning_environment("right", "ltx_align_right", document, props)?;
+    Ok(())
+  }, mode => "internal_vertical",
+  before_digest => { Let!("\\\\", "\\@normalcr"); });
+  // Perl latex_constructs.pool.ltxml L1316-1318: "Redefine these so they work
+  // both as environments, and as single commands". The bare `\flushleft` /
+  // `\flushright` commands (without matching `\end...`) are used as
+  // declarations — they should NOT push a group frame + enter
+  // restricted_horizontal, since that would leak mode when the enclosing
+  // group (e.g. `table*`) closes.
+  //
+  // `\begin{flushleft}` / `\end{flushleft}` go through a separate environment
+  // constructor and are unaffected by these Let aliases.
+  //
+  // Fixes sandbox papers 0705.2808 and 0707.4170 (mode mismatch at
+  // `\end{table*}` when document uses `\flushleft` as a command inside the
+  // float body).
+
+  // # These add an operation to be carried out on the current node & following siblings, when the
+  // current group ends. # These operators will add alignment (class) attributes to each "line" in
+  // the current block. #DefPrimitiveI('\centering',   undef, sub {
+  // UnshiftValue(beforeAfterGroup=>T_CS('\@add@centering')); }); # NOTE: THere's a problem here.
+  // The current method seems to work right for these operators # appearing within the typical
+  // environments.  HOWEVER, it doesn't work for a simple \bgroup or \begingroup!!! # (they don't
+  // create a node! or even a whatsit!)
+  // Perl: setupAligningContext saves [node, node.lastChild] to ALIGNING_NODE.
+  // applyAligningContext then only applies class to children AFTER the saved lastChild.
+  // `\centering`/`\raggedright`/`\raggedleft` are MACROS in latex.ltx
+  // (`\def\centering{\let\\\@centercr …}`, :16419-16433) — expandable — over
+  // constructor cores. That matters for expl3's V-type expansion:
+  // `\__exp_eval_register:N` (expl3-code.tex:2507-2517) tells a register
+  // from a macro with `\exp_after:wN\if_meaning:w\exp_not:N #1 #1`, so a
+  // NON-expandable `\let\raggedsignature=\centering` (DIN.lco:130) was taken
+  // for a register and `\the`'d — scrlttr2.cls:5095 `\tl_if_in:nVTF {…}
+  // \raggedsignature` in `\closing`: "You can't use \raggedsignature after
+  // \the" (bfh-ci letter, SFSesim, makelabels ×2, scrlttr2copy; Perl's
+  // constructors fail identically, pool:1237-1240).
+  // Each lets `\\` be the kernel's newline first, as latex.ltx's `\let\\\@centercr` (`{center}` above; hep-ph9607435).
+  DefMacro!("\\centering", "\\let\\\\\\@normalcr\\lx@do@centering");
+  DefMacro!("\\raggedright", "\\let\\\\\\@normalcr\\lx@do@raggedright");
+  DefMacro!("\\raggedleft", "\\let\\\\\\@normalcr\\lx@do@raggedleft");
+  // Each reverts to the user's macro, as Perl's constructors of that name (pool:1237-1240; 1312.5886, 2008.09739,
+  // 2107.14385).
+  DefConstructor!("\\lx@do@centering", sub[doc,_args] {
+    setup_aligning_context(doc);
+  },
+  before_digest => {
+    unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
+  },
+  alias => "\\centering");
+  // Perl: latex_constructs.pool.ltxml lines 1299-1302
+  DefConstructor!("\\lx@do@raggedright", sub[doc,_args] {
+    setup_aligning_context(doc);
+  },
+    before_digest => {
+      unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@raggedright")]);
+    },
+    alias => "\\raggedright");
+  DefConstructor!("\\lx@do@raggedleft", sub[doc,_args] {
+    setup_aligning_context(doc);
+  },
+    before_digest => {
+      unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@raggedleft")]);
+    },
+    alias => "\\raggedleft");
+
+  DefConstructor!("\\@add@centering", sub[document] {
+    apply_aligning_context(document, "center", "ltx_centering")?;
+  });
+  // Note that \raggedright is essentially align left (undef align, just class)
+  DefConstructor!("\\@add@raggedright", sub[document] {
+    apply_aligning_context(document, "", "ltx_align_left")?;
+  });
+  DefConstructor!("\\@add@raggedleft", sub[document] {
+    apply_aligning_context(document, "", "ltx_align_right")?;
+  });
+  DefConstructor!("\\@add@flushright", sub[document] {
+    let node_opt = lookup_value("ALIGNING_NODE");
+    if let Some(Stored::Node(node)) = node_opt {
+      for mut child in node.get_child_elements() {
+        set_align_or_class(document, &mut child, "right", "ltx_align_right")?;
+      }
+    }
+  });
+  DefConstructor!("\\@add@flushleft", sub[document] {
+    let node_opt = lookup_value("ALIGNING_NODE");
+    if let Some(Stored::Node(node)) = node_opt {
+      for mut child in node.get_child_elements() {
+        set_align_or_class(document, &mut child, "left", "ltx_align_left")?;
+      }
+    }
+  });
+
+  // Perl latex_constructs.pool.ltxml L1317-1318: Redefine so `\flushleft` /
+  // `\flushright` work both as environments AND as single commands.
+  // As a command (no matching `\end...`), the bare CS acts like
+  // `\raggedright` / `\raggedleft` — a declaration that applies via
+  // beforeAfterGroup rather than opening a restricted_horizontal group
+  // frame. `\begin{flushleft}` / `\end{flushleft}` still go through the
+  // environment constructors and are unaffected.
+  Let!("\\flushright", "\\raggedleft");
+  Let!("\\flushleft", "\\raggedright");
+  // …and their `\end…` partners are no-ops: the declarations open no frame,
+  // while the kernel `\endflushleft` (latex.ltx `\endtrivlist`) would end a
+  // list that was never begun — comment.sty's doc `noverb` env
+  // (comment.tex:12-18 `\flushleft`…`\endflushleft`) and bidicode.sty:195/198
+  // `BDef` (tram-doc): "Attempt to end mode internal_vertical". Perl aliases
+  // only the openers (pool:1257-1258). `\begin{flushleft}` keeps its own
+  // environment constructor.
+  Let!("\\endflushright", "\\relax");
+  Let!("\\endflushleft", "\\relax");
+
+  // Perl: Let('\@block@cr', '\lx@newline');  # Obsolete, but in case still used
+  Let!("\\@block@cr", "\\lx@newline");
+  // Perl `<ltx:quote>#body</ltx:quote>` (and `role='verse'`), its end acting on the quote it opened
+  // (`quote_environment`).
+  // Each is a `\list` in latex.ltx, so it runs `\@trivlist`'s additions (`\lx@trivlist@hook`, below).
+  DefEnvironment!("{quote}", sub[document, _args, props] {
+    quote_environment(document, props, None)
+  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
+  DefEnvironment!("{quotation}", sub[document, _args, props] {
+    quote_environment(document, props, None)
+  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
+  DefEnvironment!("{verse}", sub[document, _args, props] {
+    quote_environment(document, props, Some("verse"))
+  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
+
+  //======================================================================
+  // C.6.2 List-Making environments
+  //======================================================================
+  Tag!("ltx:item",        auto_close => true, auto_open => true);
+  Tag!("ltx:inline-item", auto_close => true, auto_open => true);
+
+  // These are for the (not quite legit) case where \item appears outside
+  // of an itemize, enumerate, etc, environment.
+  // DefCon('\item[]',
+  //   "<ltx:item>?&defined(#1)(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)");
+  // DefCon('\subitem[]',
+  //   "<ltx:item>?&defined(#1)(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)");
+  // DefCon('\subsubitem[]',
+  //   "<ltx:item>?&defined(#1)(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)");
+
+  // Or maybe best just to do \par ?
+  DefMacro!("\\item[]", "\\par");
+  DefMacro!("\\subitem[]", "\\par");
+  DefMacro!("\\subsubitem[]", "\\par");
+
+  AssignValue!("@itemlevel" => 0, Some(Scope::Global));
+  AssignValue!("enumlevel"  => 0, Some(Scope::Global));
+  AssignValue!("@desclevel" => 0, Some(Scope::Global));
+  // protection against lower-level code...
+  DefConditional!("\\if@noitemarg");
+  DefMacro!("\\@item", "\\item"); // Hopefully no circles...
+  def_macro_noop("\\@itemlabel")?; // Maybe needs to be same as \item will be using?
+
+  // These counters are ONLY used for id's of ALL the various itemize, enumerate, etc elements
+  // Only create the 1st level (so that binding style can start numbering 'within' appropriately)
+  // Additional ones created by need.
+  NewCounter!("@itemizei",   "section",      idprefix => "I");
+
+  // Perl latex_constructs.pool L1450-1455 (CURRENT upstream — the old port
+  // here implemented a pre-#2798 constructor that closed ltx:p/ltx:para at
+  // construction time and never issued a real \par):
+  //   DefMacro('\preitem@par', sub {
+  //     return ((LookupValue('itemization_items') || 0) > 0
+  //       ? (T_CS('\par'), Invocation(T_CS('\vskip'), T_CS('\itemsep')),
+  //                        Invocation(T_CS('\vskip'), T_CS('\parsep')))
+  //       : ()); });
+  // Between items a REAL \par runs in the live context — repacking the
+  // previous item's text into a width-carrying horizontal List (so the
+  // sizer line-breaks it as a paragraph, not one long line) — followed by
+  // the inter-item glue. Nothing before the FIRST item, which also covers
+  // the 2004.07710 trivlist-in-itemize case the old constructor guarded:
+  // with no \par, the freshly opened <ltx:itemize> wrapper stays open.
+  // (\par itself closes ltx:p/ltx:para at construction.) Without this,
+  // itemize inside a measured \vbox under-sized by ~2 lines per item and
+  // tcolorbox frames clipped their content (2605.02240).
+  DefMacro!("\\preitem@par", sub[_args] {
+    if lookup_int("itemization_items") > 0 {
+      Ok(Tokens!(
+        T_CS!("\\par"),
+        T_CS!("\\vskip"), T_CS!("\\itemsep"),
+        T_CS!("\\vskip"), T_CS!("\\parsep")
+      ))
+    } else {
+      Ok(Tokens::default())
+    }
+  });
+
+  // Perl: latex_constructs.pool.ltxml L1560
+  DefMacro!("\\@mklab{}", "\\hfil #1");
+
+  // id, but NO refnum (et.al) attributes on itemize \\item ...
+  // unless the optional tag argument was given!
+  // We"ll make the <ltx:tag> from either the optional arg, or from \\labelitemi..
+  DefMacro!("\\itemize@item", "\\preitem@par\\itemize@item@");
+  DefConstructor!("\\itemize@item@ OptionalUndigested",
+    "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
+    properties => sub[args] {
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
+      ref_step_item_counter(undigested) });
+  DefConstructor!("\\inline@itemize@item OptionalUndigested",
+    "<ltx:inline-item xml:id='#id'>#tags",
+    properties => sub[args] {
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
+      ref_step_item_counter(undigested) });
+
+  DefMacro!("\\enumerate@item", "\\preitem@par\\enumerate@item@");
+  DefConstructor!("\\enumerate@item@ OptionalUndigested",
+    "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
+    properties => sub[args] {
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
+      let mut props = ref_step_item_counter(undigested)?;
+      // (not in Perl: the value an untagged item stepped its counter to, which a frontmatter entry cut per item sets
+      // again, `emit::list_item_tokens`)
+      if undigested.is_none() {
+        let ctr = counter_for_type(&lookup_string("itemcounter"));
+        props.insert("counter_value", Stored::Int(counter_value(&ctr)?.value_of()));
+      }
+      Ok(props) });
+  DefConstructor!("\\inline@enumerate@item OptionalUndigested",
+    "<ltx:inline-item xml:id='#id'>#tags",
+    properties => sub[args] {
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
+      ref_step_item_counter(undigested) });
+
+  DefMacro!("\\description@item", "\\preitem@par\\description@item@");
+  DefConstructor!("\\description@item@ OptionalUndigested",
+    "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
+    properties => sub[args] {
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
+      ref_step_item_counter(undigested) });
+  DefConstructor!("\\inline@description@item OptionalUndigested",
+    "<ltx:inline-item xml:id='#id'>#tags",
+    properties => sub[args] {
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
+      ref_step_item_counter(undigested) });
+
+  // NOTE: no before_digest_end \par on list environments — Perl has none.
+  // An isolated Digest(\par) repacks an EMPTY temp box list and resets MODE
+  // to the bound vertical mode, DEFUSING the env-end
+  // leave_horizontal_internal repack; item text then stays as bare char
+  // boxes and the vertical sizer stacks each one as a 12pt line (952pt for
+  // a 16-word item — witness 2605.02240's 12000pt-tall tcolorbox frames).
+  // endMode does the repacking, exactly like Perl (Stomach.pm endMode L553).
+  // latex.ltx:15859 `\list` does `\let\makelabel\@mklab` and itemize /
+  // enumerate (:16072/:16061) `\def\makelabel##1{…}` locally, so a document's
+  // GLOBAL `\makelabel` (a 2-argument figure-label helper,
+  // mathfont-user-guide.tex:85) never sees the item labels. LaTeXML's
+  // `\fnum@@itemi` = `{\makelabel{\label@itemi}}` called the user's macro
+  // (Perl too: "\textbullet should not appear between \csname and
+  // \endcsname"). Guard: `perfect_kernel_batch54::global_makelabel_does_not_reach_list_items`.
+  DefEnvironment!("{itemize}",
+    "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+    before_digest => { def_macro_identity("\\makelabel{}")?; },
+    properties => { BeginItemize!("itemize", "@item") },
+    locked => true,
+    mode => "internal_vertical"
+  );
+  DefEnvironment!("{enumerate}",
+    "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
+    before_digest => { def_macro_identity("\\makelabel{}")?; },
+    properties => { BeginItemize!("enumerate", "enum") },
+    locked => true,
+    mode => "internal_vertical"
+  );
+  DefEnvironment!("{description}",
+    "<ltx:description  xml:id='#id'>#body</ltx:description>",
+    before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
+    properties => { BeginItemize!("description", "@desc") },
+    locked => true,
+    mode => "internal_vertical"
+  );
+
+  def_macro_identity("\\makelabel{}")?;
+  //----------------------------------------------------------------------
+  // Basic itemize bits
+  // Fake counter for itemize to give id's to ltx:item.
+  NewCounter!("@itemi",   "", idwithin => "@itemizei", idprefix => "i");
+  NewCounter!("@itemii",  "", idwithin => "@itemi",    idprefix => "i");
+  NewCounter!("@itemiii", "", idwithin => "@itemii",   idprefix => "i");
+  NewCounter!("@itemiv",  "", idwithin => "@itemiii",  idprefix => "i");
+  NewCounter!("@itemv",   "", idwithin => "@itemiv",   idprefix => "i");
+  NewCounter!("@itemvi",  "", idwithin => "@itemv",    idprefix => "i");
+  // These are empty to make the "refnum" go away.
+  def_macro_noop("\\the@itemi")?;
+  def_macro_noop("\\the@itemii")?;
+  def_macro_noop("\\the@itemiii")?;
+  def_macro_noop("\\the@itemiv")?;
+  def_macro_noop("\\the@itemv")?;
+  def_macro_noop("\\the@itemvi")?;
+
+  // Formatted item tags.
+  // Really should be in the class file, but already was here.
+  DefMacro!("\\labelitemi", "\\textbullet");
+  DefMacro!("\\labelitemii", "\\normalfont\\bfseries \\textendash");
+  DefMacro!("\\labelitemiii", "\\textasteriskcentered");
+  DefMacro!("\\labelitemiv", "\\textperiodcentered");
+
+  // Make the fake counters point to the real labels
+  DefMacro!("\\label@itemi", "\\labelitemi");
+  DefMacro!("\\label@itemii", "\\labelitemii");
+  DefMacro!("\\label@itemiii", "\\labelitemiii");
+  DefMacro!("\\label@itemiv", "\\labelitemiv");
+
+  // These hookup latexml"s tagging to normal latex"s \labelitemi...
+  DefMacro!("\\fnum@@itemi", r"{\makelabel{\label@itemi}}");
+  DefMacro!("\\fnum@@itemii", r"{\makelabel{\label@itemii}}");
+  DefMacro!("\\fnum@@itemiii", r"{\makelabel{\label@itemiii}}");
+  DefMacro!("\\fnum@@itemiv", r"{\makelabel{\label@itemiv}}");
+
+  DefMacro!("\\lx@poormans@ordinal{}", sub[(ctr)] {
+    let mut ctr_str      = CounterValue!(&ctr.to_string()).value_of().to_string();
+    let last_char = ctr_str.chars().last().unwrap_or('.');
+    if last_char.is_ascii_digit() {
+      ctr_str.push_str(PM_ORDINAL_SUFFICES[last_char.to_digit(10).unwrap() as usize]);
+    }
+    T_OTHER!(ctr_str)
+  });
+  DefMacro!("\\itemtyperefname", "\\lx@latin@name{item}");
+  DefMacro!("\\itemcontext", "\\space in \\@listcontext");
+  def_macro_noop("\\itemcontext")?;
+  // Probably would help to give a bit more context for the ii & higher?
+  DefMacro!(
+    "\\typerefnum@@itemi",
+    "\\lx@poormans@ordinal{@itemi} \\itemtyperefname \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@@itemii",
+    "\\lx@poormans@ordinal{@itemii} \\itemtyperefname \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@@itemiii",
+    "\\lx@poormans@ordinal{@itemiii} \\itemtyperefname \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@@itemiv",
+    "\\lx@poormans@ordinal{@itemiv} \\itemtyperefname \\itemcontext"
+  );
+  //----------------------------------------------------------------------
+  // Basic enumeration bits
+
+  // Class file should have
+  //  NewCounter for enumi,...,
+  //  define \labelenumi,... and probably \p@enumii...
+  NewCounter!("enumi",   "", idwithin => "@itemizei", idprefix => "i");
+  NewCounter!("enumii",  "", idwithin => "enumi",     idprefix => "i");
+  NewCounter!("enumiii", "", idwithin => "enumii",    idprefix => "i");
+  NewCounter!("enumiv",  "", idwithin => "enumiii",   idprefix => "i");
+  NewCounter!("enumv",   "", idwithin => "enumiv",    idprefix => "i"); // A couple of extra
+  NewCounter!("enumvi",  "", idwithin => "enumv",     idprefix => "i");
+
+  // How the refnums look... (probably should be in class file, but already here)
+  DefMacro!("\\p@enumii", "\\theenumi");
+  DefMacro!("\\p@enumiii", "\\theenumi(\\theenumii)");
+  DefMacro!("\\p@enumiv", "\\p@enumii\\theenumiii");
+
+  // Formatting of item tags (probably should be in the class file, but already here)
+  DefMacro!("\\labelenumi", "\\theenumi.");
+  DefMacro!("\\labelenumii", "(\\theenumii)");
+  DefMacro!("\\labelenumiii", "\\theenumiii.");
+  DefMacro!("\\labelenumiv", "\\theenumiv.");
+
+  // These hookup latexml"s tagging to normal latex"s \labelenummi...
+  DefMacro!("\\fnum@enumi", "{\\makelabel{\\labelenumi}}");
+  DefMacro!("\\fnum@enumii", "{\\makelabel{\\labelenumii}}");
+  DefMacro!("\\fnum@enumiii", "{\\makelabel{\\labelenumiii}}");
+  DefMacro!("\\fnum@enumiv", "{\\makelabel{\\labelenumiv}}");
+
+  // These define the typerefnum form, for out-of-context \ref's
+  DefMacro!("\\enumtyperefname", "\\lx@latin@name{item}");
+  DefMacro!(
+    "\\typerefnum@enumi",
+    "\\enumtyperefname~\\p@enumi\\theenumi \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@enumii",
+    "\\enumtyperefname~\\p@enumii\\theenumii \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@enumiii",
+    "\\enumtyperefname~\\p@enumiii\\theenumiii \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@enumiv",
+    "\\enumtyperefname~\\p@enumiv\\theenumiv \\itemcontext"
+  );
+
+  //----------------------------------------------------------------------
+  // Basic description list bits
+  // Fake counter for itemize to give id"s to ltx:item.
+  NewCounter!("@desci",   "", idwithin => "@itemizei", idprefix => "i");
+  NewCounter!("@descii",  "", idwithin => "@desci",    idprefix => "i");
+  NewCounter!("@desciii", "", idwithin => "@descii",   idprefix => "i");
+  NewCounter!("@desciv",  "", idwithin => "@desciii",  idprefix => "i");
+  NewCounter!("@descv",   "", idwithin => "@desciv",   idprefix => "i");
+  NewCounter!("@descvi",  "", idwithin => "@descv",    idprefix => "i");
+  // No refnum"s here, either
+  def_macro_noop("\\the@desci")?;
+  def_macro_noop("\\the@descii")?;
+  def_macro_noop("\\the@desciii")?;
+  def_macro_noop("\\the@desciv")?;
+  def_macro_noop("\\the@descv")?;
+  def_macro_noop("\\the@descvi")?;
+  // These hookup latexml"s numbering to normal latex"s
+  // Umm.... but they"re not normally used, since \item usually gets an argument!
+  DefMacro!("\\descriptionlabel{}", "\\normalfont\\bfseries #1");
+  DefMacro!("\\fnum@@desci", "{\\descriptionlabel{}}");
+  DefMacro!("\\fnum@@descii", "{\\descriptionlabel{}}");
+  DefMacro!("\\fnum@@desciii", "{\\descriptionlabel{}}");
+  DefMacro!("\\fnum@@desciv", "{\\descriptionlabel{}}");
+
+  DefMacro!("\\desctyperefname", "\\lx@latin@name{item}");
+
+  // Blech
+  for lvl in &[
+    "@itemi", "@itemii", "@itemiii", "@itemiv", "@itemv", "@itemvi",
+  ] {
+    DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\itemtyperefname"));
+  }
+  for lvl in &["enumi", "enumii", "enumiii", "enumiv"] {
+    DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\enumtyperefname"));
+  }
+  for lvl in &[
+    "@desci", "@descii", "@desciii", "@desciv", "@descv", "@descvi",
+  ] {
+    DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\desctyperefname"));
+  }
+
+  //======================================================================
+  // C.6.3 The list and trivlist environments.
+  //======================================================================
+  // Generic lists are given a way to format the item label, and presumably
+  // a counter.
+
+  DefConditional!("\\if@nmbrlist");
+  def_macro_noop("\\@listctr")?;
+  // latex.ltx:16048 verbatim: `\usecounter` is counter-only. Perl
+  // (latex_constructs.pool.ltxml:1642) made it the "start a list" hook —
+  // `beginItemize('list', …)`, whose `Let('\item' => '\list@item')` clobbers
+  // a raw package's own `\let\item\Bitem` (fancybox.sty:251; `\Benumerate`
+  // = `\Blist` + `\usecounter{\@enumctr}`, .sty:316, an `\halign` list whose
+  // items are `\cr`/`&`) into the `<ltx:item>` constructor: three nested
+  // `<item>`s inside one `<td>` (fancybox-doc.tex:542, 3 schema errors;
+  // Perl-origin, though Perl's own fancybox binding never reaches the raw
+  // code). The list-start moved to `\@trivlist`, where latex.ltx:15862 puts
+  // it (`\lx@trivlist@setup` below reads `\@listctr`). OXIDIZED_DESIGN #254;
+  // guards `perfect_kernel_batch56::{raw_halign_list_keeps_its_own_item,
+  // list_setup_counter_value_survives_into_the_items}` and
+  // tests/structure/itemize.tex.
+  DefMacro!(
+    "\\usecounter{}",
+    r"\@nmbrlisttrue\def\@listctr{#1}\setcounter{#1}\z@"
+  );
+
+  // `\@listdepth` accounting mirrors latex.ltx:15852 (`\list` … `\global
+  // \advance\@listdepth\@ne`) and :15913 (`\endlist` … `\global\advance
+  // \@listdepth\m@ne`). The closer's decrement is load-bearing even though the
+  // native list never consults the depth: a raw class that redefines `\list`
+  // alone (memoir.cls:4580 is latex.ltx's `\list` verbatim, with the `>5 →
+  // \@toodeep` check) keeps our `\endlist`, so without the decrement the depth
+  // climbed monotonically and every list after the sixth raised "Too deeply
+  // nested" (memman: 88 errors from `adjustwidth`, memoir.cls:11268). Perl
+  // (latex_constructs.pool.ltxml:1644/1651) shares the leak. Guard:
+  // `perfect_kernel_batch54::endlist_decrements_listdepth`.
+  // latex.ltx:15848 `\list#1#2{… #2 … \@trivlist}` (numbered-ness there is
+  // `\if@nmbrlist`, :15860/:16024; the `\let\@listctr\@empty` proxy is Perl's,
+  // latex_constructs.pool.ltxml:1650) —
+  // the setup body runs first (a numbered list's `\usecounter` binds
+  // `\@listctr`), then `\@trivlist` starts the itemization (56fo; Perl
+  // called `\usecounter{}` itself for the unnumbered case and let the numbered
+  // case's `\usecounter` start the list from inside `#2`).
+  // The label is kept in `\@itemlabel` (latex.ltx:15858), which `\@trivlist` makes the items' label below.
+  DefMacro!(
+    r"\list{}{}",
+    r"\global\advance\@listdepth\@ne\def\@itemlabel{#1}\let\@listctr\@empty\@nmbrlistfalse#2\@trivlist"
+  );
+  DefMacro!("\\endlist", r"\global\advance\@listdepth\m@ne\endlx@list");
+
+  // Start an anonymous list (often misused)
+  DefConstructor!("\\lx@list",
+    "<ltx:itemize>",
+    before_digest => {
+      begin_mode("internal_vertical")?;
+      // Name the frame, so `\endtrivlist` (latex.ltx:15913 `\endlist` =
+      // `\endtrivlist`; a raw `\@trivlist` … `\endtrivlist` pair) can tell
+      // the list's own mode frame from an enclosing one.
+      assign_value("groupInitiator", Stored::Token(T_CS!("\\lx@list")), None);
+      // The list opens no TeX group (latex.ltx `\list`/`\@trivlist`), so this frame is LaTeXML's alone: a `}` or
+      // `\endgroup` meeting it ends the list first, as for a bare `\X` (stomach.rs `close_environment_frame`, an Info),
+      // and then its own group — `\def\refs{\list{}{…}}` closed only by `\end{refs}`'s `\endgroup` (iopconf.sty:283
+      // `\references`, astro-ph9806019; jT.cls:170 `resume`, 0902.3464) or INFORMS's `\Trivlist` ended by its own
+      // `\endTrivlist` copy (2106.10067) swallowed the rest of the document into the last item. `\endlx@list`, not
+      // `\endlist`: a group's end does not undo `\list`'s global `\@listdepth` step in LaTeX either. Guard:
+      // `perfect_kernel_batch66x::list_closed_by_its_environments_group`.
+      assign_frame_value("lx@env@bare@end", T_CS!("\\endlx@list"));
+      // The environment the list is opened in (a class's `\chapthebibliography` = `\section*` + `\list` + `\item[]`,
+      // cargese.cls:1859-1890): a `\bibitem` in that environment closes this list before it opens the kernel's
+      // bibliography (sect11.rs `\lx@mung@bibliography`).
+      let currenvir = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
+      assign_frame_value("lx@list@currenvir", currenvir);
+    });
+  // Close the anonymous list if we're still within one.
+  //
+  // Perl (latex_constructs.pool.ltxml:1647-1653): `\lx@list` =
+  // beginMode('internal_vertical'), `\endlx@list` = endMode('internal_vertical')
+  // — symmetric MODE frames, so `\endlist` also closes a list opened by a
+  // `{enumerate}`/`{itemize}` environment's begin macro (`mode =>
+  // "internal_vertical"` above): nih/denselists.sty:10,16 `\let\Onumerate
+  // \enumerate`, `\newenvironment{Enumerate}{\Onumerate\Nospacing}{\endlist}`
+  // (example-biosketch, polydemo; RUST-ONLY, Perl clean). A bgroup/egroup
+  // pair keyed on groupInitiator (batches 51/54) could not pop that frame,
+  // so `\end{Enumerate}`'s `\endgroup` cascaded. `end_mode` keeps Perl's
+  // Stomach.pm:524-531 shape when the top frame is not the list's own: it
+  // Errors "Attempt to end mode" and does NOT pop — which is what protected
+  // memoir.cls:4580's raw `\list` (latex.ltx's, ending in `\@trivlist`, no
+  // group) paired with our `\endlist` (memman 144→1001, biblatex-oxref ×4,
+  // verbatimcopy, dlfltxb; sweep 28), now served by OXIDIZED_DESIGN #180.
+  // Guards: `perfect_kernel_batch51::endlist_without_lx_list_frame`,
+  // `perfect_kernel_batch54::endlist_decrements_listdepth`,
+  // `perfect_kernel_batch56::endlist_closes_an_enumerate_opened_by_its_begin_macro`.
+  //
+  // With no list open — no `internal_vertical` mode frame anywhere on the stack — `\endlist` is latex.ltx:15915-15930
+  // `\endtrivlist`'s paragraph and skip bookkeeping only, which TeX does without a diagnostic: a class repeating
+  // `{thebibliography}`'s end code at load (siuro210301.cls:995-1000, lt6-proc.cls:988-994 via the blank lines that
+  // make `\newenvironment`'s #3 `\par`), or a `{proof}` whose end code calls `\endlist` (0710.0460: 30 Errors). An
+  // open mode frame below an unrelated top frame keeps the error-without-pop above. Guard:
+  // `perfect_kernel_batch69b::endlist_with_no_list_open_does_nothing`.
+  DefConstructor!("\\endlx@list", sub[document] {
+  document.maybe_close_element("ltx:itemize")?; },
+  before_digest => {
+    if internal_vertical_mode_frame_open() {
+      end_mode("internal_vertical")?;
+    }
+  });
+
+  DefConstructor!("\\list@item OptionalUndigested",
+    "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
+    properties => sub[args] {
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
+      ref_step_item_counter(undigested) }
+  );
+
+  // Perl latex_constructs.pool.ltxml L1720-1726:
+  //   DefConstructor('\trivlist', "<ltx:itemize _autoclose='1'>", mode=>internal_vertical, …);
+  //   DefConstructor('\endtrivlist', sub { maybeCloseElement('ltx:itemize') }, beforeDigest=>Digest('\par'));
+  // The `\endtrivlist` is an *idempotent* closer of the list its opener owns
+  // (two owners, see the constructor: a `\@trivlist`/`\lx@list` frame, or a
+  // `\trivlist` begun in its group) — a no-op when that list is
+  // already closed. That matters when user code
+  // calls `\endtrivlist` directly (e.g. arxiv 0908.0398's `\cqfd → …\endtrivlist`),
+  // then `\end{proof}` closes the outer trivlist, then `\end{proof}`'s own
+  // `\endproof → \endtrivlist` fires again. Perl swallows the double-close;
+  // Rust's previous DefEnvironment emitted a strict env-frame closer that
+  // errored on the second call.
+  // latex.ltx:15903-15913: `\trivlist` opens no group of its own: an environment's begin code calls it inside
+  // `\begin`'s group, `\item` stays bound until `\end…` ends that group, and `\par` inside the list (a blank line
+  // before the first `\item`, csquotes' `{quotesample}`) does not end it. Perl's constructor
+  // (latex_constructs.pool.ltxml:1720-1726) began the itemization inside its own mode frame, which ended with the
+  // constructor: an empty `<ltx:itemize/>`, the label dropped, the text outside (KNOWN_PERL_ERRORS #456: webquiz.tex:49-51
+  // `heading`; `\trivlist\item[Proof.]` in 17 of 3,003 arXiv papers, 2605.27137, 2605.10491, 2605.16086). Here the
+  // itemization begins in the current group (`\lx@trivlist@open` has no mode frame) after the paragraph it interrupts
+  // ends (latex.ltx:15873-15877 `\@trivlist`), into Perl's `<ltx:itemize _autoclose='1'>`, which a `\par` does not
+  // end (`\lx@normal@par`) and structural closes do. `\endtrivlist` ends the innermost trivlist begun in its own group
+  // and puts back the list state the trivlist bound over (a bare pair, `\pf…\epf`, has no group to unbind it);
+  // `\aftergroup` closes any whose group has ended unclosed (doc.sty's `\@doc@env` begins one per name and ends one).
+  // The list is classed `ltx_trivlist`: latex.ltx's `\leftmargin\z@` and `\labelwidth\z@`, so LaTeXML.css indents
+  // none of them however deeply they nest (doc.sty's `{macro}`: 20 deep in source2e).
+  // OXIDIZED_DESIGN #435. Guards `perfect_kernel_batch61::{trivlist_item_keeps_its_label,
+  // trivlist_environment_keeps_its_list, trivlist_par_before_the_first_item, verbatim_trivlist_ends_with_the_verbatim,
+  // trivlist_cases_end_cleanly}`.
+  DefMacro!("\\trivlist", "\\lx@trivlist@open\\aftergroup\\lx@trivlist@close");
+  DefConstructor!("\\lx@trivlist@open", "<ltx:itemize xml:id='#id' class='ltx_trivlist' _autoclose='1' _trivlist='#group_level'>",
+    before_digest => { leave_horizontal()?; },
+    properties => {
+      let level = get_frame_depth();
+      save_list_state(level)?;
+      let mut props = begin_itemize("trivlist", None, BeginItemizeOptions::default())?;
+      props.insert("group_level", Stored::from(level.to_string()));
+      Ok(props)
+    });
+  // After a group ends: the trivlists begun in it and left open are closed (their state went with the group).
+  DefConstructor!("\\lx@trivlist@close", sub[document, _args, props] {
+    close_trivlists_from(document, prop_group_level(props) + 1)?;
+  },
+    properties => {
+      let level = get_frame_depth();
+      drop_trivlists_deeper_than(level)?;
+      Ok(stored_map!("group_level" => Stored::from(level.to_string())))
+    });
+  // A sectioning command ends the trivlists begun in its group (`\@startsection`, sect04.rs): an unended
+  // `\trivlist\item[Proof.]` closes before the heading, and the lists after it nest as before it.
+  DefMacro!("\\lx@trivlist@end@group", sub[_args] {
+    Ok(if innermost_trivlist_group_level().is_some_and(|d| d >= get_frame_depth()) {
+      Tokens!(T_CS!("\\lx@trivlist@end@group@"))
+    } else {
+      Tokens::default()
+    })
+  });
+  DefConstructor!("\\lx@trivlist@end@group@", sub[document, _args, props] {
+    close_trivlists_from(document, prop_group_level(props))?;
+  },
+    properties => {
+      let level = get_frame_depth();
+      end_trivlists_of_group(level)?;
+      Ok(stored_map!("group_level" => Stored::from(level.to_string())))
+    });
+  DefConstructor!("\\endtrivlist",
+    sub[document, _args, props] {
+      // Close only the list this `\endtrivlist` owns — never an enclosing
+      // `\list` itemize: latex.ltx pairs `\endtrivlist` with the innermost
+      // `\trivlist`. Two owners: a `\@trivlist`-opened list (its `\lx@list`
+      // mode frame was just popped in `before_digest`), or a `\trivlist`
+      // begun in this group. A trivlist nested in a `\list` item
+      // whose first token is `\par` (cnltx-example.sty:628-651
+      // `\trivlist\item\relax\par…`) had its itemize auto-closed by that
+      // `\par`, and the plain `maybe_close_element` then climbed to the OUTER
+      // list and closed it — every later `\item` landed in the section
+      // (schule, source2e; Perl identical, pdflatex clean). Batch 56be.
+      match props.get("owner").map(|o| o.to_string()).as_deref() {
+        Some("frame") => {
+          document.maybe_close_element("ltx:itemize")?;
+        },
+        Some("trivlist") => {
+          close_innermost_trivlist(document, prop_group_level(props))?;
+        },
+        _ => {},
+      }
+    },
+    before_digest => {
+      Digest!("\\par")?;
+      // A list opened through `\@trivlist` (OXIDIZED_DESIGN #180 below) owns
+      // an `\lx@list` frame; `\endtrivlist` is its kernel closer
+      // (latex.ltx:15913 `\endlist` → `\endtrivlist`; 0802.2207
+      // `mathtrivlist` pairs `\@trivlist` with `\endtrivlist` directly).
+      // A `\trivlist` begun inside that frame's group is ended first; the
+      // `\lx@list` frame is a MODE frame (Perl's beginMode), closed as one.
+      let level = get_frame_depth();
+      drop_trivlists_deeper_than(level)?;
+      let owner = if innermost_trivlist_group_level() == Some(level) {
+        if let Some(Stored::HashStored(saved)) = pop_value(OPEN_TRIVLISTS)? {
+          restore_list_state(saved)?;
+        }
+        EndtrivlistOwner::Trivlist
+      } else if is_value_bound("groupInitiator", Some(0))
+        && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"))
+      {
+        end_mode("internal_vertical")?;
+        EndtrivlistOwner::Frame
+      } else {
+        EndtrivlistOwner::Stray
+      };
+      ENDTRIVLIST_OWNER.with(|c| c.set(owner));
+    },
+    properties => {
+      let owner = match ENDTRIVLIST_OWNER.with(|c| c.get()) {
+        EndtrivlistOwner::Frame => "frame",
+        EndtrivlistOwner::Trivlist => "trivlist",
+        EndtrivlistOwner::Stray => "",
+      };
+      Ok(stored_map!("owner" => Stored::from(owner), "group_level" => Stored::from(get_frame_depth().to_string())))
+    }
+  );
+
+  // OXIDIZED_DESIGN #180 (PLANS P38): `\@trivlist` is the shared list opener.
+  // latex.ltx:15848/15871/15903 — `\list` and `\trivlist` both end in
+  // `\@trivlist`, and `\endlist` is `\endtrivlist`. Perl neutralizes it
+  // (`DefMacro('\@trivlist', '\relax', locked => 1)`, pool:1732), so a raw
+  // class or package that redefines `\list` alone (memoir.cls:4580 =
+  // latex.ltx's `\list` verbatim; memoir's `adjustwidth` = `\begin{list}`,
+  // used by digiconfigs/memman/memexsupp/MemoirChapStyles; autolist.sty:37-109
+  // `\Sublist`) opened no list at all while OUR `\endlist`/`\endlx@list`
+  // still expected the `\lx@list` frame — "Attempt to end mode
+  // internal_vertical" on every such list (28 docs, sweep 30). Now
+  // `\@trivlist` starts the itemization (unless the list's setup already
+  // ran `\usecounter`, which binds `itemcounter` in this frame) and opens
+  // `\lx@list`. The kernel body's `\@noitemerr` paths are not reproduced
+  // (a bare `\@trivlist` before any `\item` is fine).
+  // The counter is whatever `\list`'s setup body bound in `\@listctr`
+  // (latex.ltx:16048 `\usecounter`), with the VALUE that body left — the
+  // real `\usecounter` already zeroed it and a following `\setcounter` may
+  // have moved it (a continued list), so `begin_itemize` is told to start
+  // from that value instead of resetting (`start` = value + 1, the option's
+  // "first item gets" convention).
+  // A counter that an ENCLOSING list (at any depth) already numbers with — inherited, because a raw
+  // `\list` (memoir.cls:4580, latex.ltx verbatim) never rebinds `\@listctr`
+  // and `adjustwidth` (memoir.cls:11267) is `\begin{list}` nested in an
+  // itemize/description; or reused on purpose, jmlrutils.sty:408
+  // `{enumerate*}` = `\def\@listctr{enumi}` for continuous numbering — must
+  // NOT start a numbered list on it: `begin_itemize` builds
+  // `\the<ctr>@ID` relative to the new list's id, which is relative to the
+  // outer `\the<ctr>@ID` — a self-referential pair that expands forever
+  // (`Fatal:Timeout:PushbackLimit`: memman, dlfltxbcodetips, pmlr-sample in
+  // s109; batch 56fs). Perl's `\list` (latex_constructs.pool.ltxml:1643)
+  // skips its list-start whenever the setup body left a counter bound and
+  // its `\@trivlist` is `\relax`, so an inherited counter never reaches
+  // `beginItemize` there. Guards
+  // `list_inheriting_the_outer_counter_starts_an_unnumbered_list`,
+  // `list_reusing_the_outer_counter_does_not_loop`.
+  DefPrimitive!("\\lx@trivlist@setup", {
+    if !is_value_bound("itemcounter", Some(0)) {
+      let counter = Expand!(Tokens!(T_CS!("\\@listctr"))).to_string();
+      // Numbering this list with `counter` would define `\the<counter>@ID`
+      // relative to the enclosing list's `\the<itemcounter>@ID`; if that
+      // chain already leads back to `\the<counter>@ID` — the counter is the
+      // enclosing list's own, or an ancestor's (three nested `enumerate*`
+      // reach `enumi` through the middle, unnumbered level:
+      // pmlr-sample.tex:619) — the pair would be self-referential.
+      let outer = lookup_string("itemcounter");
+      // Numbered only under `\@nmbrlisttrue`, which latex.ltx's `\item` tests (:16024): a raw `\list{}{}` inside
+      // `thebibliography` (memoir.cls:4580) keeps `\@listctr` = enumiv, but its items are not numbered.
+      let numbered = x_equals(&T_CS!("\\if@nmbrlist"), &T_CS!("\\iftrue"));
+      if counter.is_empty()
+        || !numbered
+        || (!outer.is_empty() && list_id_chain_reaches(&outer, &counter)?)
+      {
+        begin_itemize("list", None, BeginItemizeOptions::default())?;
+      } else {
+        let current = counter_value(&counter)?;
+        begin_itemize("list", Some(&counter), BeginItemizeOptions {
+          nolevel: true,
+          start: Some(Number(current.0 + 1)),
+          ..BeginItemizeOptions::default() })?;
+      }
+    }
+  });
+  // Locked, as Perl's `DefMacro('\@trivlist', '\relax', locked => 1)` (latex_constructs.pool.ltxml:1673; D1, "a
+  // locked binding owns its calls"): the ACM 1.8 family (vldb.cls:1118, sig-alternate*.cls, acm_proc_article-sp.cls,
+  // acmtrans2m.cls) re-`\def`s latex.ltx's `\@trivlist` for its spacing, so `\list` never opened `\lx@list` and
+  // `\endlist` erred "Attempt to end mode internal_vertical" (rc_struct3 L1, est. 252 papers; 1212.6177, 1710.00867).
+  // Guard: `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`.
+  // An item without `[…]` prints `\@itemlabel`, read at each `\item` (latex.ltx:15966; memoir.cls:4580; OD #180;
+  // tests/structure/itemize.tex, fonts/ding.tex). Guard `perfect_kernel_batch56::list_labels_come_from_itemlabel`.
+  // What a package adds to `\@trivlist` it adds here (tabu.sty:2390 `\tabu@trivlist`); `begin_itemize` runs it, as do
+  // the constructors of environments that are lists in TeX (quote, theorem, proof, thebibliography).
+  DefMacro!("\\lx@trivlist@hook", "");
+  DefMacro!(
+    "\\@trivlist",
+    r"\lx@trivlist@setup\lx@list\expandafter\def\csname fnum@\@listctr\endcsname{\@itemlabel}",
+    locked => true
+  );
+  DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
+  DefConstructor!("\\trivlist@item@ OptionalUndigested",
+    "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
+    // At least an empty tag! ?
+    // Each item is stepped as an unnumbered list item (its id, so a mark inside has an anchor; two items of one
+    // trivlist no longer share one).
+    properties => sub[args] {
+      let mut props = ref_step_item_counter(Some(&Tokens::new(Vec::new())))?;
+      if let Some(ref arg) = args[0]
+        && let DigestedData::Postponed(tag_tokens) = arg.data()
+      {
+        // The label is typeset as written (latex.ltx `\@item` → `\makelabel{#1}`), never expanded first: Perl's
+        // full `Expand` (latex_constructs.pool.ltxml:1669-1672) left the raw kernel `\textbf`'s font commands a
+        // nameless `\def` ("Missing control sequence inserted"; webquiz.tex:50 `\item[\hskip\labelsep\textbf{#1}]`).
+        // It is set in a group, as latex.ltx sets it in a box (latex.ltx:16028 `\sbox\@tempboxa{\makelabel{#1}}`): a
+        // font or colour switch or a local `\def` in it (`\item[\scshape Proof.]`) ends with the label, never reaching
+        // the item's text, while a `\gdef` or a counter step persists (2605.27137, 2605.03300).
+        let mut label = vec![T_BEGIN!()];
+        label.extend(tag_tokens.clone().unlist());
+        label.push(T_END!());
+        props.insert("tag", digest(Tokens::new(label))?.into());
+      }
+      Ok(props)
+    }
+  );
+
+  // Perl latex_constructs.pool L1675-1679: these five carry REAL default
+  // glue (LaTeX's list spacing); zeroing them under-measured every list
+  // (begin_itemize's padtop/padbottom = \topsep+\parskip+\partopsep) and
+  // clipped tcolorbox frames drawn from the estimates (2605.02240).
+  DefRegister!("\\topsep"             => Glue!("8pt plus 2pt minus 4pt"));
+  DefRegister!("\\partopsep"          => Glue!("2pt plus 1pt minus 1pt"));
+  DefRegister!("\\lx@default@itemsep" => Glue!("4pt plus 2pt minus 1pt"));
+  DefRegister!("\\itemsep"            => Glue!("4pt plus 2pt minus 1pt"));
+  DefRegister!("\\parsep"             => Glue!("4pt plus 2pt minus 1pt"));
+  DefRegister!("\\@topsep"            => Glue::new(0));
+  DefRegister!("\\@topsepadd"         => Glue::new(0));
+  DefRegister!("\\@outerparskip"      => Glue::new(0));
+  DefRegister!("\\leftmargin"         => Dimension::new(0));
+  DefRegister!("\\rightmargin"        => Dimension::new(0));
+  DefRegister!("\\listparindent"      => Dimension::new(0));
+  DefRegister!("\\itemindent"         => Dimension::new(0));
+  DefRegister!("\\labelwidth"         => Dimension::new(0));
+  DefRegister!("\\labelsep"           => Dimension::new(0));
+  DefRegister!("\\@totalleftmargin"   => Dimension::new(0));
+  DefRegister!("\\leftmargini"        => Dimension::new(0));
+  DefRegister!("\\leftmarginii"       => Dimension::new(0));
+  DefRegister!("\\leftmarginiii"      => Dimension::new(0));
+  DefRegister!("\\leftmarginiv"       => Dimension::new(0));
+  DefRegister!("\\leftmarginv"        => Dimension::new(0));
+  DefRegister!("\\leftmarginvi"       => Dimension::new(0));
+  DefRegister!("\\@listdepth"         => Number::new(0));
+  DefRegister!("\\@itempenalty"       => Number::new(0));
+  DefRegister!("\\@beginparpenalty"   => Number::new(0));
+  DefRegister!("\\@endparpenalty"     => Number::new(0));
+  DefRegister!("\\labelwidthi"        => Dimension::new(0));
+  DefRegister!("\\labelwidthii"       => Dimension::new(0));
+  DefRegister!("\\labelwidthiii"      => Dimension::new(0));
+  DefRegister!("\\labelwidthiv"       => Dimension::new(0));
+  DefRegister!("\\labelwidthv"        => Dimension::new(0));
+  DefRegister!("\\labelwidthvi"       => Dimension::new(0));
+
+  DefRegister!("\\@itemdepth" => Number::new(0));
+  // \@maxlistdepth and the \@listi..vi family are not in Perl
+  // latex_*.pool.ltxml — they live in `latex_constructs_rust_only.rs`
+  // (loads last). Identical-body duplicates removed from here.
+
+  //======================================================================
+  // C.6.4 Verbatim
+  //======================================================================
+  // NOTE: how's the best way to get verbatim material through?
+  // DefEnvironment!("{verbatim}", "<ltx:verbatim>#body</ltx:verbatim>");
+  // DefEnvironment!("{verbatim*}", "<ltx:verbatim>#body</ltx:verbatim>");
+
+  DefMacro!(
+    "\\@verbatim",
+    r"\par\aftergroup\lx@end@verbatim\lx@@verbatim"
+  ); // Close enough?
+  // Perl latex_constructs.pool.ltxml L1774-1782: enterHorizontal => 1 + beforeDigest.
+  DefConstructor!("\\lx@@verbatim", "<ltx:verbatim font='#font'>",
+  enter_horizontal => true,
+  before_digest => {
+    begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
+    merge_font(fontmap!(family => "typewriter", series => "medium", shape => "upright"));
+    assign_catcode(' ', Catcode::ACTIVE, None);  // Do NOT (necessarily) skip spaces after \verb!!!
+    Let!(&T_ACTIVE!(' '), T_SPACE!());
+    // latex.ltx:15455 `\obeylines`: each line end is active, a newline of the verbatim text, so a blank line is no
+    // `\par` — spverbatim's `\spv@xverbatim#1\end{spverbatim}` (not `\long`) met one at the first blank line ("Paragraph
+    // ended before \@xverbatim was complete", 107 of run 336's papers since §392's check, 62h; Perl's stand-in,
+    // latex_constructs.pool.ltxml:1713-1722, lacks it too: KNOWN_PERL_ERRORS #562).
+    assign_catcode('\r', Catcode::ACTIVE, None);
+    Let!(&T_ACTIVE!('\r'), T_CS!("\\lx@verbatim@newline"));
+  });
+  // The verbatim text's newline, as `after_digest_verbatim` ends each line of `{verbatim}`.
+  DefPrimitive!("\\lx@verbatim@newline", {
+    Tbox::new(pin!("\n"), None, None, Tokens!(T_CS!("\\lx@verbatim@newline")), SymHashMap::default())
+  });
+  DefConstructor!(r"\lx@end@verbatim", "</ltx:verbatim>",
+    before_digest => { end_semiverbatim()?; });
+
+  // verbatim is a bit of special case;
+  // It looks like an environment, but it only ends with an explicit "\end{verbatim}" on it's own line.
+  // So, we'll end up doing things more manually.
+  // We're going to sidestep the Gullet for inputting,
+  // and also the usual environment capture.
+  DefConstructor!(T_CS!("\\begin{verbatim}"), None,
+    "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
+    before_digest => { before_digest_verbatim() }
+    after_digest => sub[whatsit] { after_digest_verbatim(false, whatsit)?; },
+    before_construct => sub[document, _whatsit] {
+      document.maybe_close_element("ltx:p")?; }
+  );
+  DefConstructor!(T_CS!("\\begin{verbatim*}"), None,
+    "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
+    before_digest => { before_digest_verbatim() }
+    after_digest => sub[whatsit] { after_digest_verbatim(true, whatsit)?; },
+    before_construct => sub[document, _whatsit] {
+      document.maybe_close_element("ltx:p")?; }
+  );
+  // The terminator is re-executed through the current `\end` macro
+  // (`after_digest_verbatim`, latex.ltx:15438 `\@xverbatim`); these fused
+  // ends make the kernel `\end` a no-op for it, since the constructor has
+  // already closed its group and emitted `</ltx:verbatim>`.
+  DefMacro!(T_CS!("\\end{verbatim}"), None, Tokens!());
+  DefMacro!(T_CS!("\\end{verbatim*}"), None, Tokens!());
+
+  // Perl latex_constructs.pool.ltxml L1847 — re-let `\nobreakspace`
+  // to LaTeXML's `\lx@nobreakspace` (= NBSP `\u{00A0}`). Required HERE
+  // (not just plain_base.rs) so the override survives `LoadFormat`'s
+  // dump path: the dump captures latex.ltx's
+  // `\nobreakspace → \protect\nobreakspace<sp>` chain which decays to a
+  // regular space + `\leavevmode\nobreak\<sp>`. Without this Let, the
+  // hyperref autoref wrapping `\sectionautorefname\nobreakspace\thesection`
+  // produced `section 1` (regular space) instead of `section\u{00A0}1`.
+  Let!("\\nobreakspace", "\\lx@nobreakspace");
+
+  DefPrimitive!("\\@vobeyspaces", {
+    AssignCatcode!(' ', Catcode::ACTIVE);
+    Let!(&T_ACTIVE!(' '), T_CS!("\\nobreakspace"));
+  });
+  DefMacro!("\\@xobeysp", "\\nobreakspace");
+
+  // WARNING: Need to be careful about what catcodes are active here
+  // And clearly separate expansion from digestion
+  //
+  // The verb group closes through `\verb@egroup`, as latex.ltx:15492/15501 has
+  // the closing delimiter do: a package that wraps `\verb` puts its own closing
+  // code there. accessibility.sty:1566-1577 opens `\begin{PDFInlineObjInText}`
+  // in `\verb` and ends it in `\verb@egroup`; with our group closed directly
+  // that environment leaked (arXiv 2606.00334, `\verb` in a tagged tabular
+  // cell: 35 errors once PDF output activated the tagging). Perl's `\verb`
+  // (latex_constructs.pool.ltxml:1797-1829) closes directly too. The default is
+  // the kernel's (latex.ltx:15501): it also clears `\verb@balance@group`, which
+  // syntax.sty's `\readupto` (:144-156) arms with `\aftergroup` and disarms
+  // through `\verb@egroup`; a MACRO, as packages append to it
+  // (`\g@addto@macro`, newverbs.sty:58).
+  DefMacro!("\\verb@egroup", "\\global\\let\\verb@balance@group\\@empty\\lx@hidden@egroup");
+  DefMacro!("\\verb", { verb_group(false)? });
+
+  DefPrimitive!("\\lx@use@visiblespace", {
+    // Do NOT (necessarily) skip spaces after \verb!!!
+    assign_catcode(' ', Catcode::ACTIVE, None);
+    // Visible space
+    Let!(&T_ACTIVE!(' '), T_OTHER!("\u{2423}"));
+  });
+
+  // Arrange to digest the body in text mode, to keep (eg) "_" from turning to "\_"
+  DefMacro!(
+    "\\@internal@verb{}{}{}",
+    r"\ifmmode\@internal@math@verb{#1}{#2}{#3}\else\@internal@text@verb{#1}{#2}{#3}\fi"
+  );
+  // `encoding => "ASCII"` (OXIDIZED_DESIGN #144, issue #723): `\verb`'s body is
+  // literal catcode-12 text, so under T1 a `~`/`^` would decode to Bruce Miller's
+  // accent glyphs U+02DC/U+02C6 (#2435). Verbatim wants them ASCII; the identity
+  // `ASCII` fontmap keeps `~`/`^` literal while `typewriter` still styles the run.
+  DefConstructor!("\\@internal@math@verb{} Undigested {}",
+    "<ltx:XMTok font='#font'>#3</ltx:XMTok>",
+    mode      => "text",
+    enter_horizontal => true,
+    font      => { family => "typewriter", series => "medium", shape => "upright", encoding => "ASCII" },
+    reversion => "\\verb#1#2#3#2");
+  DefConstructor!("\\@internal@text@verb{} Undigested {}",
+    "<ltx:verbatim font='#font'>#3</ltx:verbatim>",
+    font            => { family => "typewriter", series => "medium", shape => "upright", encoding => "ASCII" },
+    enter_horizontal => true,
+    before_construct => sub[doc,_whatsit] {
+      if !document::can_contain(doc.get_element().as_ref().unwrap(), "#PCDATA") {
+        doc.open_element("ltx:p", None, None)?;
+      }
+    },
+    reversion => "\\verb#1#2#3#2");
+
+  // Actually, latex sets catcode to 13 ... is this close enough?
+  DefPrimitive!("\\obeycr", {
+    AssignValue!("PRESERVE_NEWLINES", 1);
+  });
+  DefPrimitive!("\\restorecr", {
+    AssignValue!("PRESERVE_NEWLINES", 0);
+  });
+  DefMacro!(T_CS!("\\normalsfcodes"), None, Tokens!());
+
+  Ok(())
+}
+
+/// Closes the innermost open `\trivlist` list begun at group level `level` or deeper (the one an `\endtrivlist` ends).
+fn close_innermost_trivlist(document: &mut Document, level: usize) -> Result<()> {
+  let mut node = Some(document.get_node().clone());
+  while let Some(n) = node {
+    if n
+      .get_attribute("_trivlist")
+      .and_then(|d| d.parse::<usize>().ok())
+      .is_some_and(|d| d >= level)
+    {
+      return document.maybe_close_node(&n);
+    }
+    node = n.get_parent();
+  }
+  Ok(())
+}
+
+/// Closes every open trivlist (`_trivlist`, the group level it began at) begun at group level `level` or deeper, the
+/// outermost first so its descendants close with it: their groups have ended (`\lx@trivlist@close`, run by
+/// `\aftergroup`), or a sectioning command ends them (`\lx@trivlist@end@group`).
+fn close_trivlists_from(document: &mut Document, level: usize) -> Result<()> {
+  let mut outermost: Option<Node> = None;
+  let mut node = Some(document.get_node().clone());
+  while let Some(n) = node {
+    if let Some(d) = n
+      .get_attribute("_trivlist")
+      .and_then(|d| d.parse::<usize>().ok())
+      && d >= level
+    {
+      outermost = Some(n.clone());
+    }
+    node = n.get_parent();
+  }
+  if let Some(list) = outermost {
+    document.maybe_close_node(&list)?;
+  }
+  Ok(())
+}
+
+/// `{quote}`, `{quotation}`, `{verse}`: Perl's `<ltx:quote>#body</ltx:quote>` (`role='verse'` for a verse,
+/// latex_constructs.pool.ltxml), whose end acts on the quote it opened. A bibliography or a sectioning unit in the body
+/// closes the quote (`Document::close_quotes_blocking`, OXIDIZED_DESIGN_DIVERGENCES #677, #678); the end then closes
+/// no other quote (one around it stays open: probe b_qsq, a `{quote}` in a `{quotation}`), only the paragraph
+/// the body's tail is in, as TeX's `\endlist` ends it (latex.ltx `\@endparenv`), so the text after the environment is
+/// a paragraph of its own (probe b_quote_text). A run-in `\paragraph`/`\subparagraph` leaves the quote open (an
+/// `ltx:inline-sectional-block` in it, closed here). Witnesses 2203.09193 1504.06728 (a bibliography in a quote, a
+/// verse), 0712.1985 (`\section*` in a `{quotation}`), 2607.27159 (`\paragraph` in a quote). Guards
+/// `perfect_kernel_batch69a::{bibliography_in_a_quote_keeps_the_tail_paragraph,
+/// bibliography_in_a_nested_quote_keeps_the_outer_quote, paragraph_in_a_quote_stays_in_it}`.
+fn quote_environment(
+  document: &mut Document,
+  props: &SymHashMap<Stored>,
+  role: Option<&str>,
+) -> Result<()> {
+  // The template's open: no attributes, no font (`<ltx:quote>`); with one, the whatsit's font.
+  let quote = match role {
+    None => document.open_element("ltx:quote", None, None)?,
+    Some(role) => {
+      let attrs: HashMap<String, String> = string_map!("role" => role);
+      let font = match props.get("font") {
+        Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+        Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None)?)),
+        _ => None,
+      };
+      document.open_element("ltx:quote", Some(attrs), font.as_deref())?
+    },
+  };
+  if let Some(Stored::Digested(body)) = props.get("body") {
+    document.absorb(body, None)?;
+  }
+  // `close_quotes_blocking` may have removed the quote (closed and left empty, then freed): the freed handle is
+  // blanked (libxml's `free_subtree` neutralizes every wrapper into the subtree), so it is neither the current node
+  // nor has children, and `is_open` is false — the quote counts as closed, as it is.
+  if document.is_open(&quote) {
+    document.close_element_if_open("ltx:quote")?;
+  } else {
+    // The tail's paragraph text: the innermost `ltx:p` reached through elements that auto-close.
+    let mut node = Some(document.get_node().clone());
+    while let Some(current) = node {
+      if current.get_type() == Some(NodeType::ElementNode) {
+        if document::get_node_qname(&current) == pin!("ltx:p") {
+          document.close_node_internal(&current)?;
+          break;
+        }
+        if !document::can_auto_close(&current) {
+          break;
+        }
+      }
+      node = current.get_parent();
+    }
+  }
+  Ok(())
+}
+
+/// Whether a stack frame binds the `internal_vertical` mode (`begin_mode`), the mode `\lx@list` and the list
+/// environments open: with none, `\endlx@list` has no list to end.
+fn internal_vertical_mode_frame_open() -> bool {
+  (0..get_frame_depth()).any(|n| {
+    is_value_bound("BOUND_MODE", Some(n))
+      && value_in_frame("BOUND_MODE", n)
+        .is_some_and(|mode| String::from(&mode) == "internal_vertical")
+  })
+}

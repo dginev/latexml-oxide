@@ -1,0 +1,21 @@
+% mechanism: an e-mail address printed inside an affiliation entry (in its text, a list sharing the domain or after a
+%   label word) is an e-mail contact of the author it spells, else of the entry's only carrier (FIDELITY_CHARTER §4);
+%   the entry keeps the rest of its words (`Resolver::take_out_entry_addresses`, the writer's `Op::CutAddresses`).
+% witness: 0810.2791 (`$^1$ Dipartimento…, Italy (saro,borgani,tornator@oats.inaf.it)`, mn2e: reading only),
+%   1909.06145 (`…, France - e-mail: julien@obs-besancon.fr`, aa)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cid Cole2" over "1 Univ X, City (aable,bbaker@x.org)" and
+%   "2 Univ Y, Town - e-mail: zed@y.edu"
+% engines: rust 94b-r7: the addresses inside each affiliation, copied on every carrier; perl: the same, unmarked
+% expect:  0 errors, 0 warnings; Ann Able Univ X, City + aable@x.org; Bob Baker Univ X, City + bbaker@x.org; Cid
+%   Cole Univ Y, Town + zed@y.edu (its only carrier)
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$, Cid Cole$^2$ \\
+$^1$ Univ X, City (aable,bbaker@x.org) \\
+$^2$ Univ Y, Town - e-mail: zed@y.edu}
+\maketitle
+Text.
+\end{document}

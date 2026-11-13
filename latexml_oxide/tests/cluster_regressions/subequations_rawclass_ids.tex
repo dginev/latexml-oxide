@@ -1,0 +1,17 @@
+\documentclass[seceq]{ptptex}
+\begin{document}
+\section{Sec}
+\makeatletter
+F:\expandafter\meaning\csname theequation@ID\endcsname.
+\makeatother
+\begin{subequations}
+\label{eq:1}
+\begin{equation}
+\alpha=1 \label{eq:1a}
+\end{equation}
+\begin{eqnarray}
+\gamma &=& 2 \\
+\delta &=& 3
+\end{eqnarray}
+\end{subequations}
+\end{document}

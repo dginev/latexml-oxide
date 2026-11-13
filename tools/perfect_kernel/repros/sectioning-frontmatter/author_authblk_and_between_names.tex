@@ -1,0 +1,18 @@
+% witness: 77n S5 — authblk's unlabelled `\author` holding two names parted by "and", each with its mark and ORCID
+%          link: `\author{Ajay Chandra$^{1}$\orcidlink{0000-0003-3690-1890} and Harprit
+%          Singh$^2$\orcidlink{0000-0002-9991-8393}}` (2405.16615, preprint.cls)
+% oracle:  pdflatex 0 errors: "Ann Able1[iD] and Bob Baker2[iD]"
+% engines: rust int31a = one creator "Ann Able and Bob Baker" (+1 Error:frontmatter:merged_creators): authblk's
+%          `\author` split only a list holding `\and` or a comma; Perl keeps it one author (authblk.sty.ltxml)
+% expect:  0 errors, 0 warnings; 2 creators, each with its own ORCID link and mark
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{orcidlink}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\orcidlink{0000-0003-3690-1890} and Bob Baker$^2$\orcidlink{0000-0002-9991-8393}}
+\maketitle
+x
+\end{document}

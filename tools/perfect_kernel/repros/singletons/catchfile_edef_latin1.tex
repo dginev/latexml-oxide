@@ -1,0 +1,20 @@
+% witness: none in the corpus; the \CatchFileEdef reader (catchfile_sty.rs
+%   open_caught_file) on a non-UTF-8 disk file
+% oracle:  pdflatex 0 errors; [café][café ]
+% engines: rust=0 (56ir-rel2, 2026-09-25): [caf�][caf� ]; pk/w3-bindings:
+%   [café][caf�] — \CatchFileDef reads the bytes, \CatchFileEdef garbles them
+% expect:  0 errors; [café][café ]
+% status:  GREEN (batch 56ix, guard noexpand_input_ends::catchfile_edef_reads_the_file_bytes)
+% mechanism: \CatchFileEdef's \xdef must cross the file's end (catchfile.sty:257
+%   \everyeof{\noexpand}). Before batch 56ix the kernel's \noexpand could not, so
+%   the binding read a disk file into a String (from_utf8_lossy turned the latin1
+%   byte into U+FFFD); since then it opens the same file mouth as \CatchFileDef.
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\usepackage{catchfile}
+\begin{document}
+\CatchFileDef\cafedef{catchfile_edef_latin1.txt}{\endlinechar=-1 }%
+\CatchFileEdef\cafeedef{catchfile_edef_latin1.txt}{}%
+[\cafedef][\cafeedef]
+\end{document}

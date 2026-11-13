@@ -1,0 +1,15 @@
+% mechanism: `\newcommand\au[2]{#1\footnotemark[#2]}` in `\author` writes the first name and its note twice (P3 fixes only the glued
+%   last name); counted by a Warning (revP3 pre-existing)
+% witness: synthetic (revP3 probe b3_article_fnsym_macro.tex)
+% expect:  each name once, its marks not as name text, each note once
+% status:  RED (int159a, P3)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\au[2]{#1\footnotemark[#2]}
+\begin{document}
+\title{T}
+\author{\au{Ann Able}{1} \and \au{Bob Baker}{2}}
+\maketitle
+\footnotetext[1]{Univ X}\footnotetext[2]{Univ Y}
+Text.
+\end{document}

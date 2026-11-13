@@ -1,0 +1,18 @@
+% witness: review probe of 2404.11739's mechanism (caption.sty's `\captionof` moves a trailing `\label`)
+% oracle:  pdflatex 0 errors: "Table 1: T", and "See Appendix Table 1." (cleveref's `\label[type]` names the type)
+% engines: rust 65m round 1 = 1 Error:unexpected:_ (`\@captionof@postlabel` read `[` as the label:
+%          labels="LABEL:[", the key typeset)
+% expect:  0 errors; <table labels="LABEL:tab:a_b">, no "appendixtable]" text
+% status:  RED (65m r1) -> GREEN (65m r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{caption}
+\usepackage{cleveref}
+\crefname{appendixtable}{Appendix Table}{Appendix Tables}
+\begin{document}
+\begin{center}
+\captionof{table}{T}\label[appendixtable]{tab:a_b}
+x
+\end{center}
+See \cref{tab:a_b}.
+\end{document}

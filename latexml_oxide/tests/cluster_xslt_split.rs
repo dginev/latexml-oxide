@@ -108,6 +108,7 @@ mod xslt_head_keywords {
   #[test]
   fn head_keywords_distinct_sorted() {
     const DOC: &str = "\\documentclass{article}\n\
+                       \\usepackage{makeidx}\n\
                        \\begin{document}\n\
                        \\section{S}\n\
                        Text\\index{banana} more\\index{apple} and\\index{banana} \
@@ -1439,5 +1440,140 @@ mod urlstyle {
       err.contains("bogus") || err.to_lowercase().contains("invalid"),
       "error should name the bad value:\n{err}"
     );
+  }
+}
+
+/// Batch 56bz: `<ltx:picture>` is converted to SVG on the live page DOM by
+/// `latexml_post::svg::SVG` before MathML/XSLT (Perl's chain order,
+/// `LaTeXML.pm` Graphics → SVG → MathML → XSLT), not by a regex over the
+/// serialized XML spliced into the XSLT's placeholder span after the fact. The
+/// regex path truncated an outer picture at its first NESTED `</picture>` and
+/// had no `foreignObject` branch for `<block>`/`<p>`/`<inline-block>` children
+/// (`SVG.pm:148` `convertNode`'s else-branch), so every text label after a
+/// nested picture and every `\parbox`/`minipage` inside a picture vanished
+/// between the core XML and the HTML: pagelayout ×3, ticket ×2, vocaltract,
+/// bookcover-example2 and latex-refsheet/header-graph went from 100% to 0-11%
+/// PDF-text recall at post. The assertions cover the WHOLE rendered `<svg>`:
+/// the nested picture's group and path, then the label after it. The outer
+/// `<svg>` carries the picture's own valid attributes (`fill`/`stroke`, as
+/// `SVG.pm::ProcessSVG`'s `copy_valid_attributes`).
+mod picture_svg_on_the_live_dom {
+  use std::{path::Path, process::Command};
+
+  fn run(cwd: &Path, args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(args)
+      .current_dir(cwd)
+      .output()
+      .expect("spawn latexml_oxide")
+  }
+
+  fn html_of(name: &str, tex: &str) -> String {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join(format!("{name}.tex")), tex).unwrap();
+    let out = run(work.path(), &[
+      &format!("{name}.tex"),
+      "--dest",
+      &format!("{name}.html"),
+    ]);
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    assert!(
+      out.status.success(),
+      "conversion failed (status {:?}):\n{stderr}",
+      out.status.code()
+    );
+    let diagnostic = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+    assert!(!stderr.lines().any(|l| diagnostic.is_match(l)), "{stderr}");
+    std::fs::read_to_string(work.path().join(format!("{name}.html"))).expect("read html")
+  }
+
+  /// A text label placed AFTER a nested picture survives, black (Perl's font
+  /// stack `{ fill => 'black' }`, SVG.pm:82: the picture's `fill="none"` is
+  /// inherited, and the label was invisible), and the nested picture is a plain
+  /// group in the enclosing picture's y-up space: its rule at y=0 is the outer
+  /// picture's bottom. Perl flips it about its mid-height (`SVG.pm:191-197`
+  /// `convertPicture`); OXIDIZED_DESIGN_DIVERGENCES #414.
+  #[test]
+  fn label_after_a_nested_picture_renders_in_the_svg() {
+    let html = html_of(
+      "nested",
+      "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\
+       \\begin{picture}(200,100)\n\
+       \\put(0,0){\\begin{picture}(50,50)\\put(0,0){\\line(1,0){50}}\\end{picture}}\n\
+       \\put(100,50){\\makebox(0,0){VISIBLETEXTLABEL}}\n\
+       \\end{picture}\n\\end{document}\n",
+    );
+    let expected = concat!(
+      r##"<svg fill="none" height="132.84" overflow="visible" stroke="none" version="1.1" width="265.67">"##,
+      r##"<g transform="translate(0,132.84) scale(1,-1)">"##,
+      r##"<g transform="translate(0,0)"><g>"##,
+      r##"<g transform="translate(0,0)">"##,
+      r##"<path style="--ltx-stroke-color:#000000;" d="M 0,0 69.19,0" stroke="#000000" stroke-width="0.4"></path>"##,
+      r##"</g></g></g>"##,
+      r##"<g transform="translate(138.37,69.19)"><g class="makebox" transform="translate(-71.3,-4.73)">"##,
+      r##"<text style="--ltx-fill-color:black;" fill="black" transform="scale(1,-1)" x="0" y="0">VISIBLETEXTLABEL</text>"##,
+      r##"</g></g></g></svg>"##,
+    );
+    assert!(html.contains(expected), "{html}");
+  }
+
+  /// A `\parbox` inside a picture is wrapped in `<foreignObject>` with the
+  /// XSLT's container spans (`SVG.pm:148-183` `convertNode` else-branch), and
+  /// sized from the containing `<g>`'s `innerheight`/`innerdepth` (the parbox
+  /// carries no height of its own): height 17.14 px, y-offset 27.63 = height +
+  /// depth — Perl's 17.85 / 28.78 at its 100 dpi basis. Since 56eq (#243) the
+  /// `\parbox` capture in the picture `<g>` is a schema-valid `<inline-block>`
+  /// (an LR-box), so the foreignObject holds `<span class="ltx_inline-block">`
+  /// (was Perl's schema-invalid `<block>`/`<div class="ltx_block">`); the
+  /// foreignObject dimensions and position are unchanged (render-faithful).
+  #[test]
+  fn parbox_inside_a_picture_renders_as_a_foreign_object() {
+    let html = html_of(
+      "parbox",
+      "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\
+       \\begin{picture}(200,100)\n\
+       \\put(0,0){\\parbox{100pt}{PARBOXVISIBLEWORD inside picture}}\n\
+       \\end{picture}\n\\end{document}\n",
+    );
+    let expected = concat!(
+      r##"<svg fill="none" height="132.84" overflow="visible" stroke="none" version="1.1" width="265.67">"##,
+      r##"<g transform="translate(0,132.84) scale(1,-1)"><g transform="translate(0,0)">"##,
+      r##"<g transform="translate(0,27.63) scale(1,-1)">"##,
+      r##"<foreignObject height="17.14" overflow="visible" width="132.84">"##,
+      r##"<span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content">"##,
+      "\n",
+      r##"<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:100.0pt;">"##,
+      "\n",
+      r##"<span class="ltx_p">PARBOXVISIBLEWORD inside picture</span>"##,
+      "\n",
+      r##"</span></span></span></foreignObject></g></g></g></svg>"##,
+    );
+    assert!(html.contains(expected), "{html}");
+  }
+
+  /// 59p: a tikzpicture `\put` in a picture keeps its orientation. Its `svg:svg`
+  /// (y-down) is flipped back once inside the enclosing picture's y-up space and
+  /// stays SVG; Perl wraps it in a flipped `foreignObject` on top of the nested
+  /// picture's own flip, and it came out upside-down (uantwerpenexam's title page,
+  /// a tikzpicture in eso-pic's page picture). Repro
+  /// graphics-tikz/picture_put_tikzpicture_keeps_orientation (pdflatex: HIGH over
+  /// the rule, TIKZHIGH over TIKZLOW); OXIDIZED_DESIGN_DIVERGENCES #414.
+  #[test]
+  fn tikzpicture_in_a_picture_keeps_its_orientation() {
+    let html = html_of(
+      "tikzput",
+      include_str!(
+        "../../tools/perfect_kernel/repros/graphics-tikz/picture_put_tikzpicture_keeps_orientation.tex"
+      ),
+    );
+    let expected = concat!(
+      r##"<g transform="translate(0,0)"><g><g transform="translate(0,0)">"##,
+      r##"<path style="--ltx-stroke-color:#000000;" d="M 0,0 69.19,0" stroke="#000000" stroke-width="0.4"></path></g>"##,
+      r##"<g transform="translate(0,55.35)">"##,
+      r##"<text style="--ltx-fill-color:black;" fill="black" transform="scale(1,-1)" x="0" y="0">HIGH</text></g></g></g>"##,
+      r##"<g transform="translate(138.37,0)"><g transform="translate(0,58.60) scale(1,-1)">"##,
+      r##"<svg height="58.6" overflow="visible" version="1.1" viewBox="0 0 80.04 58.6" width="80.04">"##,
+    );
+    assert!(html.contains(expected), "{html}");
   }
 }

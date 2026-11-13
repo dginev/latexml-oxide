@@ -1,0 +1,74 @@
+% oasics.cls:556-636 (lipics-v2016.cls:557-637, dagman.cls:642-722 the same): authblk loaded, then its \author,
+% \affil and \@author copied over the binding's (1709.00722, 2503.02336, 1701.09007). Fixture of class_copy.tex.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{abcopy}
+\LoadClass{article}
+\RequirePackage{authblk}
+\renewcommand*\AB@affilnote[1]{\protect\item[#1]}
+\setlength\affilsep{\baselineskip}
+\newcommand\AB@authrunning{}
+\renewcommand\author[2][]%
+      {\ifnewaffil\addtocounter{affil}{1}%
+       \edef\AB@thenote{\arabic{affil}}\fi
+      \if\relax#1\relax\def\AB@note{\AB@thenote}\else\def\AB@note{#1}%
+        \setcounter{Maxaffil}{0}\fi
+      \ifnum\value{authors}>1\relax
+      \@namedef{@sep\number\c@authors}{\Authsep}\fi
+      \addtocounter{authors}{1}%
+      \begingroup
+          \let\protect\@unexpandable@protect \let\and\AB@pand
+          \def\thanks{\protect\thanks}\def\footnote{\protect\footnote}%
+         \@temptokena=\expandafter{\AB@authors}%
+         {\def\\{\protect\\[\@affilsep]\protect\Affilfont
+              \protect\AB@resetsep}%
+              \xdef\AB@author{\AB@blk@and#2}%
+       \ifnewaffil\gdef\AB@las{}\gdef\AB@lasx{\protect\Authand}\gdef\AB@as{}%
+           \xdef\AB@authors{\the\@temptokena\AB@blk@and}%
+       \else
+          \xdef\AB@authors{\the\@temptokena\AB@as\AB@au@str}%
+          \global\let\AB@las\AB@lasx\gdef\AB@lasx{\protect\Authands}%
+          \gdef\AB@as{\Authsep}%
+       \fi
+       \gdef\AB@au@str{#2}}%
+         \@temptokena=\expandafter{\AB@authlist}%
+         \let\\=\authorcr
+         \xdef\AB@authlist{\the\@temptokena
+           \protect\@nameuse{@sep\number\c@authors}%
+           \protect\Authfont#2\AB@authnote{\AB@note}}%
+         \@temptokena=\expandafter{\AB@authrunning}%
+         \let\\=\authorcr
+         \xdef\AB@authrunning{\the\@temptokena
+           \protect\@nameuse{@sep\number\c@authors}#2}%
+      \endgroup
+      \ifnum\value{authors}>2\relax
+      \@namedef{@sep\number\c@authors}{\Authands}\fi
+      \newaffilfalse
+}
+\renewcommand\affil[2][]%
+   {\newaffiltrue\let\AB@blk@and\AB@pand
+      \if\relax#1\relax\def\AB@note{\AB@thenote}\else\def\AB@note{#1}%
+        \setcounter{Maxaffil}{0}\fi
+      \begingroup
+        \let\protect\@unexpandable@protect
+        \def\thanks{\protect\thanks}\def\footnote{\protect\footnote}%
+        \@temptokena=\expandafter{\AB@authors}%
+        {\def\\{\protect\\\protect\Affilfont}\xdef\AB@temp{#2}}%
+         \xdef\AB@authors{\the\@temptokena\AB@las\AB@au@str
+         \protect\\[\affilsep]\protect\Affilfont\AB@temp}%
+         \gdef\AB@las{}\gdef\AB@au@str{}%
+        {\xdef\AB@temp{#2}}%
+        \@temptokena=\expandafter{\AB@affillist}%
+        \xdef\AB@affillist{\the\@temptokena \AB@affilsep
+          \AB@affilnote{\AB@note}\protect\Affilfont\AB@temp}%
+      \endgroup
+       \let\AB@affilsep\AB@affilsepx}
+\renewcommand\@author{\ifx\AB@affillist\AB@empty\AB@authrunning\else
+      \ifnum\value{affil}>\value{Maxaffil}\def\rlap##1{##1}%
+    \AB@authlist\\[\affilsep]
+    \labelwidth1.5em\labelsep\z@\leftmargini\labelwidth
+    \edef\@enumctr{enumi}%
+    \list\theenumi{\usecounter\@enumctr\def\makelabel##1{\rlap{##1}\hss}}%
+      \AB@affillist
+    \endlist
+    \else  \AB@authors\fi\fi}
+\endinput

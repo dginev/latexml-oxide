@@ -1,0 +1,84 @@
+% A document template that calls `\caption` writes the List of Tables line itself (an empty `caption-lot`
+% then leaves the table listed), through a macro it calls too, a `\let` copy, `\csname caption\endcsname` or
+% `\captionof{table}`; `\caption*` writes none, also when the star follows a macro ending in `\caption`, nor
+% does `\captionof{figure}` (a List of Figures line) or `\csname caption \endcsname` (another name). The binding
+% keeps a document template's code and looks for `\caption` in it, and in the macros it calls, when the table
+% is typeset. A `caption` template is reached through a head that uses it (tabularray's own, or a document head
+% calling `\UseTblrTemplate{caption}`); under an empty head it writes nothing (review 6: a template reaching
+% `\caption` through `\mycap` was unlisted; review 7: the `\let`, `\csname`, `\captionof` shapes unlisted,
+% the empty head's caption template listed; review 8: Usecap unlisted, Capfig and Spacecs listed).
+% witness: 57cp review 6 (t4.tex, t5.tex), review 7 (e1.tex, e7.tex), review 8 (e8.tex), review 9 (p1.tex: a macro
+% met deep in a chain first, a `\captionof` whose `{table}` follows the macro ending in it). Guard: perfect_kernel_batch57::tabularray_template_calling_caption_is_listed.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; List of Tables: 1 Nested macro, 3 Plain, 4 Letcap, 5 Csname, 6 Captionof,
+%          11 Usecap, 12 Deepfirst, 13 Cofmacro; List of Figures: 1 Capfig; "Refs 1 2 3 4 5 6 7 8 9 10 11 12 13".
+% engines: rust 57cp6: Nested macro unlisted; 57cp7: Letcap, Csname, Captionof unlisted, Trailstar and Headempty
+%          listed; 57cp8: Usecap unlisted, Capfig and Spacecs listed; 57cp9: Deepfirst, Cofmacro unlisted.
+% expect:  0 errors, 0 warnings; Star one printed as the kernel's tagged caption (a document template's output
+%          is not modelled, divergence #384).
+\documentclass{article}
+\usepackage{tabularray,caption}
+\ExplSyntaxOn
+\newcommand\mycap{\caption{\InsertTblrText{caption}}}
+\ExplSyntaxOff
+\NewTblrTheme{viamacro}{\DefTblrTemplate{firsthead}{default}{\addtocounter{table}{-1}\captionsetup{type=table}\mycap}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\let\capb\caption
+\def\capx{\caption}
+\def\pre{\addtocounter{table}{-1}\captionsetup{type=table}}
+\NewTblrTheme{letcap}{\DefTblrTemplate{firsthead}{default}{\pre\capb{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{csname}{\DefTblrTemplate{firsthead}{default}{\pre\csname caption\endcsname{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{capof}{\DefTblrTemplate{firsthead}{default}{\addtocounter{table}{-1}\captionof{table}{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{trailstar}{\DefTblrTemplate{firsthead}{default}{\captionsetup{type=table}\capx*{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{headempty}{\SetTblrTemplate{head}{empty}%
+  \DeclareTblrTemplate{caption}{default}{\pre\caption{\InsertTblrText{caption}}}\SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{capfig}{\DefTblrTemplate{firsthead}{default}{\captionof{figure}{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{spacecs}{\DefTblrTemplate{firsthead}{default}{\csname caption \endcsname{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{usecap}{\DefTblrTemplate{firsthead}{default}{\UseTblrTemplate{caption}{default}}%
+  \DeclareTblrTemplate{caption}{default}{\pre\caption{\InsertTblrText{caption}}}\SetTblrTemplate{caption-lot}{empty}}
+\def\ya{\yb}\def\yb{\yc}\def\yc{\xx}\def\xx{\yy}\def\yy{\caption}
+\def\cof{\captionof}
+\NewTblrTheme{deepfirst}{\DefTblrTemplate{firsthead}{default}{\iffalse\ya\fi\pre\xx{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{cofmacro}{\DefTblrTemplate{firsthead}{default}{\pre\cof{table}{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{starred}{\DefTblrTemplate{firsthead}{default}{\captionsetup{type=table}\caption*{\InsertTblrText{caption}}}%
+  \SetTblrTemplate{caption-lot}{empty}}
+\begin{document}
+\listoftables
+\listoffigures
+
+\begin{talltblr}[theme=viamacro, caption={Nested macro}, label={t:a}]{ll} A & B \\ \end{talltblr}
+
+\begin{talltblr}[theme=starred, caption={Star one}, label={t:s}]{ll} C & D \\ \end{talltblr}
+
+\begin{talltblr}[caption={Plain}, label={t:p}]{ll} E & F \\ \end{talltblr}
+
+\begin{talltblr}[theme=letcap, caption={Letcap}, label={t:l}]{ll} G & H \\ \end{talltblr}
+
+\begin{talltblr}[theme=csname, caption={Csname}, label={t:c}]{ll} I & J \\ \end{talltblr}
+
+\begin{talltblr}[theme=capof, caption={Captionof}, label={t:o}]{ll} K & L \\ \end{talltblr}
+
+\begin{talltblr}[theme=trailstar, caption={Trailstar}, label={t:t}]{ll} M & N \\ \end{talltblr}
+
+\begin{talltblr}[theme=headempty, caption={Headempty}, label={t:h}]{ll} O & P \\ \end{talltblr}
+
+\begin{talltblr}[theme=capfig, caption={Capfig}, label={t:f}]{ll} Q & R \\ \end{talltblr}
+
+\begin{talltblr}[theme=spacecs, caption={Spacecs}, label={t:x}]{ll} S & T \\ \end{talltblr}
+
+\begin{talltblr}[theme=usecap, caption={Usecap}, label={t:u}]{ll} U & V \\ \end{talltblr}
+
+\begin{talltblr}[theme=deepfirst, caption={Deepfirst}, label={t:d}]{ll} W & X \\ \end{talltblr}
+
+\begin{talltblr}[theme=cofmacro, caption={Cofmacro}, label={t:m}]{ll} Y & Z \\ \end{talltblr}
+
+Refs \ref{t:a} \ref{t:s} \ref{t:p} \ref{t:l} \ref{t:c} \ref{t:o} \ref{t:t} \ref{t:h} \ref{t:f} \ref{t:x} \ref{t:u} \ref{t:d} \ref{t:m}.
+\end{document}

@@ -1,0 +1,10 @@
+% witness: 2604.04150, 2508.00245; run 340: `\celsius` the first error of 214 papers
+% oracle:  pdflatex with gensymb.sty (:38/:64 `\celsius`): 0 errors; ℃ in text and math
+% engines: rust 65x = error (`\celsius` undefined: Perl's binding spells it `\celcius`, KNOWN_PERL_ERRORS #635)
+% expect:  0 errors; ℃ in text and in math
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage{gensymb}
+\begin{document}
+At 20\,\celsius{} or $T=4\,\celsius$.
+\end{document}

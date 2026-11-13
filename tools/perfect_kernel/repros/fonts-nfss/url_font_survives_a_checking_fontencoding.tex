@@ -1,0 +1,26 @@
+% witness: qworld (ltjsarticle + luatex: 7 "Encoding scheme `ASCII' unknown", "ASCII" leaked into each \url);
+%   sweep s134: 33 errors in 11 docs, every one loading luatexja's lltjfont.sty
+% oracle:  pdflatex 0 errors; url.sty's \UrlFont is \ttfamily (url.sty, Perl url.sty.ltxml:28-32)
+% engines: rust (59i) = 1 error per \url and per \verbatim@font: the binding's \UrlFont and \verbatim@font
+%   select LaTeXML's private ASCII font map through the PUBLIC \fontencoding, which luatexja
+%   (lltjfont.sty:549-551/573-574) re-installs as the kernel's checking one (latex.ltx:10490-10492)
+% expect:  0 errors; `~`/`^` stay ASCII in the url and the verbatim text (under T1, where the encoding
+%   decodes them to U+02DC/U+02C6 unless the ASCII map is selected)
+% status:  RED (59i) -> GREEN (59j)
+% mechanism: url_sty.rs \UrlFont, sect13.rs \verbatim@font: \lx@fontencoding{ASCII} (the digest primitive,
+%   tex_fonts.rs; Perl TeX_Fonts.pool.ltxml:169), which a redefined \fontencoding does not reach
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\makeatletter
+\DeclareRobustCommand\fontencoding[1]{%
+  \expandafter\ifx\csname T@#1\endcsname\relax
+    \@latex@error{Encoding scheme `#1' unknown}\@eha
+  \else\edef\f@encoding{#1}\fi}
+\newcommand\vfont[1]{{\verbatim@font #1}}
+\makeatother
+\begin{document}
+A \url{https://ctan.org/pkg/q~orld} B
+
+C \vfont{x\string~y\string^z} D
+\end{document}

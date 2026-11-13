@@ -1,0 +1,12 @@
+% witness: 1810.02483 (`\DeclareGraphicsExtensions{.pdf,.png,.pdf_tex}`)
+% oracle:  pdflatex (clean): graphics.sty:116-117 records the list in `\Gin@extensions`
+% engines: rust 67int22 = 1 error (the list digested: `_`); Perl = 1 (graphics.sty.ltxml:306, KNOWN_PERL_ERRORS #966)
+% expect:  0 errors, 0 warnings; the paragraph "Text."
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\DeclareGraphicsExtensions{.pdf,.png,.pdf_tex}
+\begin{document}
+Text.
+\end{document}

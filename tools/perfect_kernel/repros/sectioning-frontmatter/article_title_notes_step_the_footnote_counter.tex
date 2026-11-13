@@ -1,0 +1,18 @@
+% witness: 2201.11183 (`\author[1]{Zhenan Fan\footnote{…}}`, `\newcommand\CoAuthorMark{\footnotemark[\arabic{footnote}]}`,
+%          `\author[2]{Huang Fang\protect\CoAuthorMark}`; PDF "Zhenan Fan∗1, Huang Fang∗2"), 2111.13260 (cvpr, the same
+%          `\CoAuthorMark`; PDF "Suhani Vora1 *, Noha Radwan1 *")
+% oracle:  pdflatex 0 errors: "A∗ B∗ C† D†", notes "∗ fone" "† tthree", "Body1" with note "1 bodyone" — article.cls
+%          :241 `\let\footnote\thanks` in `\maketitle`, latex.ltx:17215 `\thanks` = `\footnotemark` + the text (a step of
+%          the footnote counter), :17678-17682 `\footnotemark[<n>]` is `\thefootnote` at <n>; the counter reset after
+%          the title (article.cls:223)
+% engines: rust 78o r1 = 0 errors, B's and D's marks "" (the title's notes stepped nothing: `\@fnsymbol` of 0);
+%          int52a and perl "0", "0" (the `[<n>]` printed as given; KNOWN_PERL_ERRORS #1060)
+% expect:  0 errors, 0 warnings; B's mark "∗", D's "†", the body's "1 bodyone"
+% status:  GREEN (78o r2)
+\documentclass{article}
+\title{T}
+\author{A\footnote{fone} \and B\footnotemark[\arabic{footnote}] \and C\thanks{tthree} \and D\footnotemark[\arabic{footnote}]}
+\begin{document}
+\maketitle
+Body\footnote{bodyone}.
+\end{document}

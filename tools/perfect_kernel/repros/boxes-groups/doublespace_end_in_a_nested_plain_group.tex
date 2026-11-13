@@ -1,0 +1,22 @@
+% mechanism: `\begin{quote}\doublespace A. \begingroup\enddoublespace\endgroup C.\end{quote}`: in TeX
+%   `\enddoublespace`'s `\endgroup` (setspace.sty:516-523) closes the author's `\begingroup`, and the author's
+%   `\endgroup` then closes the switch's (setspace.sty:542-547): the groups pair off and `\end{quote}` is clean.
+%   setspace_sty.rs closes a switch only by an `\end…` in the switch's own group; one met in a nested group closes
+%   nothing, so the quote's end still reports the switch. That errs toward flagging (OXIDIZED_DESIGN #520). Same
+%   false positive: two nested plain groups (review 6 probe h5, pdflatex 0, ours 1), a switch closed in its own plain
+%   group and an `\enddoublespace` in a second one (h9, pdflatex 0, ours 1), and the same inside an `\item` of an
+%   itemize in a quote (h7, pdflatex 1, ours 2).
+% witness: review 4 of 64zf (probe r9); review 6 probes h5, h7, h9
+% oracle:  pdflatex 0 errors
+% engines: rust 64zf = 1 error ("\end{quote} closes \doublespace's \begingroup …"); Perl = 4 errors
+%   ("\enddoublespace Attempt to end mode restricted_horizontal", "\end{quote} Attempt to end mode internal_vertical",
+%   two ltx:document/ltx:quote malformed) + 2 warnings
+% expect:  0 errors; the quote "A. C." and "D." kept
+% status:  RED (64zf review 6: over-report, errs toward flagging by decision)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{setspace}
+\begin{document}
+\begin{quote}\doublespace A. \begingroup\enddoublespace\endgroup C.\end{quote}
+D.
+\end{document}

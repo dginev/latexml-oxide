@@ -1,0 +1,17 @@
+% witness: run-367 E->F C5: 2205.02142
+% oracle:  pdflatex 0 errors: in a tikz-cd cell `&` is active (`\pgfmatrixnextcell`, tikz.code.tex:4064-4068), and
+%          proof.sty's `\halign` (proof.sty:164-167) still separates the premises at it
+% engines: rust int32a = 44 errors (the active `&` ended the tikz-cd cell), perl = 2 ("Stray alignment &")
+% expect:  0 errors, 0 warnings; the cell holds `infer@(C, a and b)`
+% status:  RED (int32a) -> GREEN (77q: proof_sty.rs `split_premises`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,proof,tikz}
+\usetikzlibrary{cd}
+\begin{document}
+\begin{tikzcd}
+A & \vcenter{\infer{C}{a & b}} \ar[l] \\
+ P & Q
+\end{tikzcd}
+After.
+\end{document}

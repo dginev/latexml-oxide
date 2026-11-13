@@ -1,0 +1,22 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4, "A frontmatter note reads as the class prints it"), the
+%          92e audit of the notes a binding labels by its role: the 2016-2019 LIPIcs classes' `\DOI` (13 census papers)
+% oracle:  pdflatex with 1507.00980's lipics.cls (its cc-by.pdf, lipics-logo-bw.pdf; :391-393 `\doiHeading\doi{\@DOI}`, :637,
+%          :642; 1802.08756's copy the same lines): 0 errors; "Digital Object Identifier 10.4230/LIPIcs.X.2018.1" after the abstract
+% engines: rust b4c8392 = the pubnote named "DOI: " (the role default, `\lx@pubnote@doi@name`); Perl the same
+%          (no binding)
+% expect:  0 errors, 0 warnings; the pubnote named "Digital Object Identifier ", role doi, holding "10.4230/LIPIcs.X.2018.1"
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{lipics}
+\title{T}
+\author[1]{A. Able}
+\affil[1]{Univ A}
+\DOI{10.4230/LIPIcs.X.2018.1}
+\begin{document}
+\maketitle
+\begin{abstract}
+An abstract.
+\end{abstract}
+\section{S}
+Text.
+\end{document}

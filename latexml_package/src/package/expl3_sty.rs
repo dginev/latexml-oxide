@@ -19,9 +19,9 @@ use crate::prelude::*;
 /// string and never reach the tokenizer.
 ///
 /// We cannot delegate to `\ExplSyntaxOn`/`\ExplSyntaxOff` here: our expl3
-/// kernel's `\ExplSyntaxOff` is incomplete (the reason xparse_sty.rs and
-/// siunitx_sty.rs hardcode a `~`/`:`/`_` restore after their raw loads —
-/// docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md). Instead this
+/// kernel's `\ExplSyntaxOff` is incomplete (the reason xparse_sty.rs, l3keys2e_sty.rs and
+/// mhsetup_sty.rs restore the syntax catcodes after their raw loads, `with_expl_syntax_restored` —
+/// docs/archive/EXPL3_CATCODE_GAP_2026-06-08.md). Instead this
 /// saves the ambient catcodes of `:`/`_`, installs the expl3 LETTER regime for
 /// the duration, and restores the saved values — including on the error path,
 /// so a failing chunk cannot leak the LETTER regime into the document.
@@ -37,6 +37,37 @@ fn with_expl_catcodes<T>(body: impl FnOnce() -> Result<T>) -> Result<T> {
   for ((c, _), cc) in EXPL_LETTERS.into_iter().zip(saved) {
     assign_catcode(c, cc, Some(Scope::Global));
   }
+  result
+}
+
+/// The characters whose catcodes `\ExplSyntaxOn` changes (the ones `\ExplSyntaxOff` restores, expl3-code.tex:247-261),
+/// each with the `unwrap_or` fallback used when no saved value is found.
+const EXPL_SYNTAX_CHARS: [(char, Catcode); 8] = [
+  ('\t', Catcode::SPACE),
+  (' ', Catcode::SPACE),
+  ('"', Catcode::OTHER),
+  (':', Catcode::OTHER),
+  ('^', Catcode::SUPER),
+  ('_', Catcode::SUB),
+  ('|', Catcode::OTHER),
+  ('~', Catcode::ACTIVE),
+];
+
+/// Run the raw load of an expl3-syntax file and give the catcodes and `\endlinechar` it changes back the values they
+/// had before it, as `\ExplSyntaxOff` restores what `\ExplSyntaxOn` saved (expl3-code.tex:247-261) — our kernel's
+/// `\ExplSyntaxOff` is incomplete (docs/archive/EXPL3_CATCODE_GAP_2026-06-08.md). A document's own catcode survives
+/// the load: gb4e's active `_` (`\catcode`\_=13`) stayed active in pdflatex where a fixed `_`=SUB reset after
+/// tikzmark's xparse load made every later `_` a subscript in text (2408.09634). Shared by expl3_sty.rs,
+/// xparse_sty.rs, l3keys2e_sty.rs and mhsetup_sty.rs.
+pub(crate) fn with_expl_syntax_restored<T>(load: impl FnOnce() -> Result<T>) -> Result<T> {
+  let saved = EXPL_SYNTAX_CHARS.map(|(c, dflt)| lookup_catcode(c).unwrap_or(dflt));
+  let endlinechar =
+    lookup_register("\\endlinechar", Vec::new())?.map_or(13, |value| value.value_of());
+  let result = load();
+  for ((c, _), cc) in EXPL_SYNTAX_CHARS.into_iter().zip(saved) {
+    assign_catcode(c, cc, Some(Scope::Global));
+  }
+  raw_tex(&s!("\\endlinechar={endlinechar}\\relax"))?;
   result
 }
 
@@ -77,19 +108,31 @@ LoadDefinitions!({
   // reach the conversion verdict. Dump mode short-circuits the re-load
   // (`raw_load_will_run == false`), so this is scoped strictly to the degraded
   // fallback; canvas/parity always run on the dump.
-  use latexml_core::common::error::{REPORT, set_suppress_log_output};
-  let report_snapshot = raw_load_will_run.then(|| REPORT.borrow().clone());
-  let prev_suppress = raw_load_will_run.then(|| set_suppress_log_output(true));
-
-  let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
-    noltxml => true, extension => Some(Cow::Borrowed("sty"))));
-
-  if let Some(snapshot) = report_snapshot {
-    *REPORT.borrow_mut() = snapshot;
+  // Perl `local $LaTeXML::IGNORE_ERRORS = 1`: the scope drops each record
+  // WHOLE (line and count together), so the log can never show `Error:` lines
+  // the summary does not count. (It used to snapshot/restore the counts while
+  // the unconditional Error/Fatal lines still reached the log — a log/status
+  // inconsistency, diagnostics audit 2026-09-20.)
+  // The `undefined`/`unexpected` tallies are direct `note_status` calls gated
+  // by the state-level suppressors (as the dump build sets them, ini_tex.rs),
+  // so those ride along: a summary naming an undefined macro with no
+  // `Error:undefined:` line is the very inconsistency this scope exists to
+  // prevent.
+  use latexml_core::common::error::IgnoreDiagnosticsScope;
+  let ignore_scope = raw_load_will_run.then(IgnoreDiagnosticsScope::new);
+  if raw_load_will_run {
+    assign_value("SUPPRESS_UNDEFINED_ERRORS", true, None);
+    assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
   }
-  if let Some(prev) = prev_suppress {
-    set_suppress_log_output(prev);
+
+  let _ = with_expl_syntax_restored(|| Ok(input_definitions("expl3", NewDefault!(InputDefinitionOptions,
+    noltxml => true, extension => Some(Cow::Borrowed("sty"))))));
+
+  if raw_load_will_run {
+    assign_value("SUPPRESS_UNDEFINED_ERRORS", false, None);
+    assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, None);
   }
+  drop(ignore_scope);
 
   // Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty
   // (line 101, 112, 218, 222) calls `\__kernel_msg_info:nnxx { xparse }
@@ -157,25 +200,6 @@ LoadDefinitions!({
     Ok(Tokenize!(TeXString::assembled(format!("{{{}}}{{}}{{}}", result_cp))))
   });
 
-  // `\c_sys_jobname_str` is one of the system-info constants bound by
-  // `\g__sys_everyjob_tl` at job start (via `\everyjob`), which our engine
-  // never fires (matching Perl's gap). When packages like `duckuments.sty`
-  // then do
-  //   `\str_if_eq_p:Vn \c_sys_jobname_str { example-image-duck }`
-  // the V-expansion triggers `\if_int_compare:w` cascades on Rust
-  // (Perl emits one undefined error and recovers; Rust's recovery
-  // re-fires per scan, surfacing 21+ relational-token cascades).
-  //
-  // A plain `\Let` alias to `\jobname`, rather than the full `\str_const:Ne`
-  // machinery — those expl3 constructors themselves require a working
-  // `\c_sys_jobname_str` at definition time. The sibling date/time int
-  // constants need NO such patch-up: they are already defined, with live
-  // values, by the time a package body runs (see the NOTE below).
-  //
-  // Driver: 2406.14142 (duckuments cascade, 21 errors → 4 expected
-  // (matching Perl's residual undefined-CS count)).
-  Let!("\\c_sys_jobname_str", "\\jobname");
-
   // expl3 historical-alias: `\hbox_unpack_clear:N` was deprecated
   // around 2018 in favor of `\hbox_unpack_drop:N` (both call `\unhbox`
   // — read out the box's contents AND clear/drop the box itself).
@@ -196,11 +220,13 @@ LoadDefinitions!({
   //
   //  * They ARE defined, at package-load time and with live values — probing
   //    `\number\csname c_sys_year_int\endcsname` right after `\usepackage{xparse}`
-  //    gives the real year, and `c_sys_minute_int` advances between runs. Only
-  //    `\c_sys_jobname_str` needed the `Let!` above. (That is the dump path. On
-  //    the `LATEXML_NODUMP=1` raw-load branch they come back undefined — but the
-  //    block did not define them there either, so nothing changed; that branch
-  //    dies earlier anyway, on the expl3-code codepoint group.)
+  //    gives the real year, and `c_sys_minute_int` advances between runs —
+  //    `latex.rs` fires `\__kernel_sys_everyjob:` at the end of the format load,
+  //    which also sets `\c_sys_jobname_str` from `\tex_jobname:D` (the `Let!` this
+  //    binding once carried for it, driver 2406.14142, went in 57aa: the
+  //    witness converts byte-identically without it). The raw-load branch
+  //    (`LATEXML_NODUMP=1`) defines them the same way (probed 57aa: year, shell
+  //    escape and job name all set, 0 errors).
   //  * The block never actually ran. Written as raw TeX, it was tokenized with
   //    the AMBIENT catcodes, and after the expl3 load the document regime has
   //    `_` = SUB — so `\edef\c_sys_minute_int{0}` parsed as `\edef\c` with
@@ -227,17 +253,7 @@ LoadDefinitions!({
   // on its original cascade witness 2406.14142 (21 errors -> 0) and the
   // expl3/regex_match + expl3/regex_native test fixtures. (Shim in git history.)
 
-  assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-  assign_catcode('_', Catcode::SUB, Some(Scope::Global));
-  // Also restore `~` to ACTIVE (13). `\usepackage{expl3}` in real LaTeX
-  // leaves expl3 syntax OFF — `~` back to its document catcode (13/active),
-  // not the expl3 `~`=10 (SPACE). Our raw expl3-code.tex load leaves `~` at
-  // 10 because Rust's `\ExplSyntaxOff` is incomplete; the `:`/`_` restores
-  // above already turn expl3-letters off, but `~` was missed. Without this, a
-  // LATER `\usepackage[english]{babel}` runs `\initiate@active@char{~}` with
-  // `~` at catcode 10 → an `expected:<relationaltoken>` cascade. Minimal
-  // repro `\usepackage{expl3}\usepackage[english]{babel}` (2 errors → 0).
-  // `~` is not an expl3 LETTER char (unlike `:`/`_`), so this is glossary-safe.
-  // Complements the per-package restore in xparse_sty.rs / siunitx_sty.rs.
-  assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
+  // The raw load's catcodes are restored by `with_expl_syntax_restored` above (`:`/`_` back from expl3's LETTER, `~`
+  // back from its SPACE: a later `\usepackage[english]{babel}` ran `\initiate@active@char{~}` with `~` at catcode
+  // 10, an `expected:<relationaltoken>` cascade; minimal repro `\usepackage{expl3}\usepackage[english]{babel}`).
 });

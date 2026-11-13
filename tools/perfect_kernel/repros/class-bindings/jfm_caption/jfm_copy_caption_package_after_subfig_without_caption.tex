@@ -1,0 +1,16 @@
+% witness: the rev78a3 re-review (finding 1, probe sfgf_cap); no corpus witness
+% oracle:  pdflatex 0 errors; "Figure 1: Schematic." and "Table 1: Values." upright (caption, loaded by the document after
+%          subfig's `caption3`, replaces the class's `\@makecaption`)
+% engines: rust 78a r3 = <tag close=". "> in small caps (subfig's `caption3` loads the caption binding as its stand-in,
+%          which marks `\lx@caption@kernel@only`; the document's own `\usepackage{caption}` does not run it again, so the
+%          mark stays); int40c and 78a r2 = <tag close=": "> upright
+% expect:  0 errors, 0 warnings; <tag close=": "> upright
+% status:  RED (78a r3; OD #784 residual)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\usepackage[caption=false]{subfig}
+\usepackage{caption}
+\begin{document}
+\begin{figure}\subfloat[Left.]{A}\caption{Schematic.}\end{figure}
+\begin{table}\caption{Values.}\end{table}
+\end{document}

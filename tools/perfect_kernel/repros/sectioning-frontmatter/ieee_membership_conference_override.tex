@@ -1,0 +1,13 @@
+% witness: synthetic (63l review: IEEEtran.cls:6278-6288 `\IEEEoverridecommandlockouts`, in the IEEE conference
+%          template, lets `\IEEEmembership` print in conference mode)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE" over "Univ"
+% engines: rust 63k = the grade dropped; Perl alike
+% expect:  0 errors; Ann Able with the membership contact "Member, IEEE"
+% status:  RED (63k) -> GREEN (63l)
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}}\IEEEauthorblockA{Univ}}
+\maketitle
+\end{document}

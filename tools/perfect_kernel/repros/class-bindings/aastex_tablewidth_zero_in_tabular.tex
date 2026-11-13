@@ -1,0 +1,19 @@
+% witness: 1805.09353 (`\begin{tabular}{…}\tablewidth{0pt}\hline\hline`, aastex62.cls)
+% oracle:  pdflatex 0 errors with the paper's aastex62.cls: :1849-1858 `\def\tablewidth#1{\ifdim#1=\z@ \else …\fi}`
+%          expands to nothing for 0pt, so both `\hline`s are `\noalign`s of the first row
+% engines: rust 64ze = 1 error, 65b r2 = 2 (the binding's `\pt@width=#1\relax`, deluxetable.sty.ltxml:70, is an
+%          assignment that opened a cell, so the `\hline`s were misplaced); Perl the same assignment
+% expect:  0 errors, 0 warnings; one row a|b with a double top rule (`border="b tt"`)
+% status:  RED (65b r2) -> GREEN (65b r3); guard perfect_kernel_batch65::tablewidth_zero_is_expandable
+% preload: ar5iv.sty
+\documentclass{aastex62}
+\begin{document}
+\begin{table}
+\begin{tabular}{lr}
+\tablewidth{0pt}
+\hline\hline
+a & b \\
+\hline
+\end{tabular}
+\end{table}
+\end{document}

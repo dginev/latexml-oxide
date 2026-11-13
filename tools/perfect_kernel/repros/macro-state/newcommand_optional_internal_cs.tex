@@ -1,0 +1,18 @@
+% witness: 1510.00296, 1704.01336, 1207.2066, 2003.00661 (bcp.cls:151-153 \abtitle), 2210.02246 (cmfne.cls:460,483)
+% oracle:  pdflatex 0 errors: "T[New developments] S[New developments] T[Long] S[Short] (a/b)"
+% engines: rust 65int8 = \@abtitle undefined, then Fatal:Stomach:Recursion via \uppercasenonmath (bcp); here "[a]b"
+% expect:  0 errors; the amsart idiom \edef\X{\@dblarg\csname\string\X\endcsname} reaches \newcommand's internal \\X
+% status:  GREEN (66b)
+\documentclass{article}
+\makeatletter
+\newcommand{\abtitle}[2][]{\gdef\@abtitle{#2}\gdef\@abshort{#1}}
+\edef\abtitle{\noexpand\@dblarg\expandafter\noexpand\csname\string\abtitle\endcsname}
+\newcommand{\foo}[2][d]{(#1/#2)}
+\makeatother
+\begin{document}
+\abtitle{New developments}
+\makeatletter T[\@abtitle] S[\@abshort]\makeatother
+\abtitle[Short]{Long}
+\makeatletter T[\@abtitle] S[\@abshort]\makeatother
+\csname\string\foo\endcsname[a]{b}
+\end{document}

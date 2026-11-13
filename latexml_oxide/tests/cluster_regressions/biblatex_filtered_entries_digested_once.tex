@@ -1,0 +1,15 @@
+% witness: 77a r3 review probe e1
+% oracle:  pdflatex + biber: 2 errors (boomA, boomB: the two books' titles, typeset once); References [1] goossens
+%          [2] knuth; "Also [3, 2, 1, 4]."
+% engines: rust 77a r3 4 errors (the hidden list of unprinted entries digested every entry again); Perl ar5iv
+%          binding ignores the filter (KNOWN_PERL_ERRORS #983)
+% expect:  errors 2 (the two \PackageError of the .bbl titles, on purpose); the oracle's list
+% status:  GREEN (77a r4: the hidden list holds only the entries no list printed)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Also \cite{lamport,knuth,goossens,mittelbach}.
+\printbibliography[type=book]
+\end{document}

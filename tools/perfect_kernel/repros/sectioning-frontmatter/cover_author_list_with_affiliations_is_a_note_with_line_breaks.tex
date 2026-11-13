@@ -1,0 +1,22 @@
+% A raw class's cover author list that carries more than the names (2108.12618's affiliations and e-mails, which reach
+% the document nowhere else) is handed on as a note, its `\and` between the authors' blocks a line break
+% (`hand_untypeset_stores`, frontmatter_stores.rs), so an e-mail does not run into the next author's name.
+% witness: 2108.12618 (nowfnt: "…mkokotov@gmail.com Matan Gavish" in 77i r2).
+% oracle:  pdflatex 1 error (the deliberate `\undefinedthing`, as nowfnt's replay raised errors): two author blocks.
+% engines: rust 77i r2: `<pubnote>Ann Smith <break/>Univ A Bob Jones <break/>Univ B</pubnote>`.
+% expect:  0 errors, 0 warnings; `<pubnote>Ann Smith<break/>Univ A<break/>Bob Jones<break/>Univ B</pubnote>`.
+% status:  RED (77i r2) -> GREEN (77i r3)
+\begin{filecontents*}[overwrite]{rccover.cls}
+\ProvidesClass{rccover}
+\LoadClass{article}
+\def\@coverauthors{}
+\newcommand{\coverauthors}[1]{\def\@coverauthors{#1}}
+\def\@maketitle{\undefinedthing\@title\par\@author\par{\def\and{\par}\bfseries\@coverauthors\par}}
+\end{filecontents*}
+\documentclass{rccover}
+\title{T}\author{Ann Smith \and Bob Jones}
+\coverauthors{Ann Smith \\ Univ A \and Bob Jones \\ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

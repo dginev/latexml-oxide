@@ -1,0 +1,14 @@
+% witness: the r6 re-review of batch 77p (finding 1, probe y7)
+% oracle:  pdflatex 0 errors: the row of names, the two symbol-labelled institutions, "Equal contribution" centred under the row
+% engines: rust 77p r9 = 0 errors; "Equal contribution" an affiliation of Bob Baker, the carrier of the line above
+% expect:  0 errors, 0 warnings; Univ A on Ann Able and Cat Cole, Univ B on Bob Baker; "Equal contribution" the block's (the
+%          shared creator), on no name
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\dagger}$ \ \ \ \ Bob Baker$^{\ddagger}$ \ \ \ \ Cat Cole$^{\dagger}$ \\ $^\dagger$ Univ A \\ $^\ddagger$ Univ B \\ Equal contribution}
+\begin{document}
+\maketitle
+Text.
+\end{document}

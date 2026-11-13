@@ -91,10 +91,33 @@ pub fn pin_static(text: &'static str) -> SymStr {
   with_arena_mut(|arena| arena.get_or_intern_static(text))
 }
 
+/// The [`pin!`] call sites that cached a symbol on this thread: [`reset`]
+/// replaces the arena and clears each, so a cached symbol never indexes the
+/// replaced arena. A site registers on its first (cold) pin, so the hot path
+/// stays one thread-local load.
+#[thread_local]
+static PINNED_SITES: RefCell<Vec<&'static std::thread::LocalKey<Cell<Option<SymStr>>>>> =
+  RefCell::new(Vec::new());
+
+/// A [`pin!`] call site's first pin after a [`reset`] (the cold path): pin the
+/// literal, cache it in the site and register the site for the next reset.
+#[doc(hidden)]
+#[cold]
+#[inline(never)]
+pub fn pin_site(
+  site: &'static std::thread::LocalKey<Cell<Option<SymStr>>>,
+  text: &'static str,
+) -> SymStr {
+  let sym = pin_static(text);
+  site.with(|c| c.set(Some(sym)));
+  PINNED_SITES.borrow_mut().push(site);
+  sym
+}
+
 /// Call-site-cached interning for string literals — the first call on
-/// a thread pins the literal via `pin_static`, later calls return the
-/// cached `SymStr` directly (thread-local `OnceCell` load, no arena
-/// access). Use this from hot state-key lookup sites so you can keep
+/// a thread (after an arena [`reset`]) pins the literal via `pin_static`,
+/// later calls return the cached `SymStr` directly (a thread-local load,
+/// no arena access). Use this from hot state-key lookup sites so you can keep
 /// writing string literals at the call site and still skip the per-call
 /// `pin()` hash probe:
 ///
@@ -102,9 +125,10 @@ pub fn pin_static(text: &'static str) -> SymStr {
 /// if state::lookup_bool_sym(pin!("groupNonBoxing")) { ... }
 /// ```
 ///
-/// Each call site gets its own thread-local cache (no global registry,
-/// no dedicated pub-static constant per key), so there is no ergonomic
-/// cost beyond typing the macro name.
+/// Each call site gets its own thread-local cache (no dedicated pub-static
+/// constant per key), so there is no ergonomic cost beyond typing the macro
+/// name; a site registers in `PINNED_SITES` on its first pin so that
+/// [`reset`] can clear it.
 ///
 /// Note: the macro `pin!` and the runtime-string function
 /// `arena::pin(s)` share a name but occupy different namespaces in
@@ -114,10 +138,13 @@ pub fn pin_static(text: &'static str) -> SymStr {
 macro_rules! pin {
   ($s:literal) => {{
     std::thread_local! {
-      static CACHED: std::cell::OnceCell<$crate::common::arena::SymStr>
-        = const { std::cell::OnceCell::new() };
+      static CACHED: std::cell::Cell<Option<$crate::common::arena::SymStr>> =
+        const { std::cell::Cell::new(None) };
     }
-    CACHED.with(|c| *c.get_or_init(|| $crate::common::arena::pin_static($s)))
+    match CACHED.with(std::cell::Cell::get) {
+      Some(sym) => sym,
+      None => $crate::common::arena::pin_site(&CACHED, $s),
+    }
   }};
 }
 
@@ -140,9 +167,23 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr { with_arena_mut(|arena| arena.get_
 /// with one probe-key twin per defined control sequence (2026-08-23 audit R6).
 pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> { with_arena_mut(|arena| arena.get(text)) }
 
+/// The buffer [`get_suffixed`] spells its key in. Freed by [`reset`], as a `#[thread_local]` has no destructor.
+#[thread_local]
+static SUFFIXED_KEY: RefCell<String> = RefCell::new(String::new());
+
+/// [`get`] of `name` with `suffix` appended, without formatting a string: every definition asks this of its side keys
+/// (`"{cs}:locked"`, `"{cs}:error@stub"`), and almost none of them exists.
+pub fn get_suffixed(name: &str, suffix: &str) -> Option<SymStr> {
+  let mut key = SUFFIXED_KEY.borrow_mut();
+  key.clear();
+  key.push_str(name);
+  key.push_str(suffix);
+  get(key.as_str())
+}
+
 /// ASCII char-pin cache: every unique ASCII byte resolves to a single
-/// SymStr for the lifetime of the thread (arena is append-only, syms
-/// never change). Cache entries use `u32::MAX` as the "not yet pinned"
+/// SymStr for the lifetime of the thread's arena (append-only between
+/// [`reset`]s, which clears the cache with it). Cache entries use `u32::MAX` as the "not yet pinned"
 /// sentinel — all valid interner offsets are strictly below that.
 /// Called from `lookup_catcode` / `assign_catcode` on every token,
 /// so the RefCell + hashmap overhead on `pin` is a measurable cost
@@ -197,6 +238,16 @@ where FnR: FnOnce(&str) -> R {
     let s = unsafe { arena.resolve_unchecked(sym) };
     caller(s)
   })
+}
+
+/// The first `N` bytes of `sym`'s text, if it has as many: a read only, so without the borrow and guard of [`with`], for
+/// a test by name on a hot path.
+#[inline]
+pub fn first_bytes<const N: usize>(sym: SymStr) -> Option<[u8; N]> {
+  // SAFETY: as [`with`]'s on the text. The pointer is this thread's interner, whose borrower, if any, is further up this
+  // stack (as [`with_arena_mut`]'s re-entrant call), and nothing here writes.
+  let text = unsafe { (*ARENA.as_ptr()).resolve_unchecked(sym) };
+  text.as_bytes().first_chunk().copied()
 }
 
 pub fn with2<R, FnR>(sym1: SymStr, sym2: SymStr, caller: FnR) -> R
@@ -267,6 +318,16 @@ pub fn reset() {
     *arena =
       StringInterner::with_capacity_and_hasher(131_072, BuildHasherDefault::<FxHasher>::default());
   });
+  // The cached symbols index the replaced arena: a character or literal first
+  // pinned mid-document would otherwise resolve to another string in the next
+  // conversion on this thread.
+  for cached in &ASCII_CHAR_SYM {
+    cached.set(u32::MAX);
+  }
+  for site in PINNED_SITES.borrow_mut().drain(..) {
+    site.with(|c| c.set(None));
+  }
+  *SUFFIXED_KEY.borrow_mut() = String::new();
 }
 
 /// Eagerly initialize this thread's `#[thread_local]` `ARENA` Lazy.
@@ -287,6 +348,25 @@ pub(crate) fn force_init() { Lazy::force(&ARENA); }
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn pin_literal_cache_follows_an_arena_reset() {
+    fn cached() -> SymStr { pin!("a literal pinned at a call site") }
+    assert_eq!(to_string(cached()), "a literal pinned at a call site");
+    reset();
+    // A string interned first in the new arena takes the slot the literal had.
+    pin("another string");
+    assert_eq!(to_string(cached()), "a literal pinned at a call site");
+  }
+
+  #[test]
+  fn pin_char_cache_follows_an_arena_reset() {
+    assert_eq!(to_string(pin_char('~')), "~");
+    reset();
+    // A string interned first in the new arena takes the slot `~` had.
+    pin("not a tilde");
+    assert_eq!(to_string(pin_char('~')), "~");
+  }
 
   #[test]
   fn pin_dedups_equal_strings() {

@@ -1,0 +1,16 @@
+% mechanism: a declaration of the block whose span holds a macro reading past it (`\footremember`: a note, then a
+%   definition) can't be replayed (`emitter::emit::declaration_reads_past`); the block is written as Perl's
+%   `\lx@add@authors` splits it (Base_Utility.pool.ltxml:713-719), its pieces digested in order
+% witness: 1404.5602 (4→1), 2503.21719 (3→1), 0809.5152 (5→1), 1110.6375 (11→1), 0906.2789, 2404.18592 (2→1)
+% oracle:  pdflatex 0 errors: "Ann Able∗  Bob Baker", note "∗ Zebra University."
+% engines: rust int154u: 0 errors, 1 warning, one creator "Ann Able and Bob Baker"; perl 0 errors, two creators
+% expect:  0 errors, 1 warning (the decline, naming Perl's split); Ann Able with her note, Bob Baker
+% status:  RED (int154u) -> GREEN (perfect_kernel_batchcr7::a_definition_decline_writes_the_block_as_perl_splits_it)
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able\footremember{zz}{Zebra University.} \and Bob Baker}
+\begin{document}
+\maketitle
+Body.
+\end{document}

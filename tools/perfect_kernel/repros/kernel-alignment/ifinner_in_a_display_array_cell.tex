@@ -1,0 +1,14 @@
+% An array cell's math is a formula of its own, set in the cell's box (array.sty's template `$…$`), so `\ifinner` is
+% true in it, in a display's array too (tex.web §1138-1145: a formula begun in restricted horizontal mode is not a
+% display); `\ifmmode` is false at a cell's first token, which TeX expands looking for `\omit` before it inserts the
+% template (tex.web §785-791). We report `\ifinner` false in a display's array cell, so pstricks sets a box there in
+% `\displaystyle` where pdflatex uses `\textstyle` (KNOWN_PERL_ERRORS #989's `\lx@ps@mathflag`; review probe q3 of 77k).
+% oracle:  pdflatex 0 errors: "T", "aI" (inline array), "aI" (display array)
+% engines: rust 77k "T", "aI", "aD"; perl "I", "aI", "aD"
+% expect:  0 errors, 0 warnings; the display's cell reads "aI"
+% status:  RED (77k)
+\documentclass{article}
+\begin{document}
+$\begin{array}{cc} \ifmmode\ifinner I\else D\fi\else T\fi & a\ifmmode\ifinner I\else D\fi\else T\fi \end{array}$
+\[\begin{array}{c} a\ifmmode\ifinner I\else D\fi\else T\fi \end{array}\]
+\end{document}

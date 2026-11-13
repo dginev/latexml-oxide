@@ -1,0 +1,22 @@
+% mechanism: an eptcs `\author` opening with a one-column `tabular` (a name over its e-mail), then `\and` glued to
+%   its `\end{tabular}` (no space), then a name with an `\institute` under it: the class's `\and` opens a column, so
+%   "Univ B" is Bob Baker's alone. The `\end{tabular}` makes no box, so the separator's box covers it (core
+%   `token::field_cover_pending_merge`); the binding cuts its cells at a separator's own tokens
+%   (`eptcs_cls.rs` `cells`, `argument_separators`' `ArgSeparator::span`, OXIDIZED_DESIGN_DIVERGENCES #991, #995),
+%   which leave out the `\end{tabular}` closing the table right before it (the rehearsal's environment steps)
+% witness: revP24's probe x_cent (B1); the table shape 1407.7928
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "ann@a.edu", beside
+%   it "Bob Baker" over "Univ B"
+% engines: perl has no eptcs binding (OmniBus); int157a: Ann Able (ann@a.edu), Bob Baker (Univ B); P24: the separator's
+%   span ran from the `\end`, off a unit start, so `cells` dropped the cut: Ann Able (ann@a.edu, Univ B), Bob Baker
+%   (Univ B), 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able (ann@a.edu), Bob Baker (Univ B)
+% status:  RED (P24) -> GREEN (P24b; guard perfect_kernel_batchp24b)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\title{T}
+\author{\begin{tabular}{c}Ann Able\\ \texttt{ann@a.edu}\end{tabular}\and Bob Baker\institute{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

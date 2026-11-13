@@ -1,0 +1,13 @@
+% witness: the r6 re-review of batch 77p (finding 3, probes x6, w28)
+% oracle:  pdflatex 0 errors: a row of two names over their two institutions, then a column with Cat Cole over Univ C
+% engines: rust 77p r9 = 0 errors; Univ A on Cat Cole too, who carries the dagger in another column
+% expect:  0 errors, 0 warnings; Univ A on Ann Able, Univ B on Bob Baker, Univ C on Cat Cole alone
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\dagger}$ \ \ \ \ Bob Baker$^{\ddagger}$ \\ $^\dagger$ Univ A \ \ \ \ $^\ddagger$ Univ B \and Cat Cole$^{\dagger}$ \\ $^\dagger$ Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

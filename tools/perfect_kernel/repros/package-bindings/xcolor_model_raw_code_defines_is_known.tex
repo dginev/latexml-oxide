@@ -1,0 +1,21 @@
+% xcolor knows a model by `\XC@mod@<model>` (xcolor.sty:565 `\@ifundefined{XC@mod@…}`). colorspace.sty's `\spc@mix@*` define it
+% for `\definecolorspace`'s models, so naming one in `\definecolor`, `\color[…]`, `\textcolor[…]` or `\colorbox[…]` is no
+% error. Only the PDF driver can compute its tint transform: here the colour is lost (the recovery black), one counted
+% Warning for the model. A spot colour by name keeps its CMYK alternate, no Warning.
+% witness: colorspace/colorspace (8 errors at sweep #150, all this).
+% oracle:  pdflatex (TL 2025) 0 errors: Before shaded and after. Third. Boxed. Spot. It paints
+%          /&BarTone#20555#20GN&Black cs 1 0 scn.
+% engines: perl (blib, TL 2025, this file) with --includestyles: 6 errors, none on the model (colorspace.sty read raw fails first:
+%          "Unknown spot color", 2 Missing argument, \@@ undefined), no `Before` in the output; without it: 11 errors, no binding for
+%          colorspace, 4 "Unrecognized color model" and their 4 "Color is not in valid model" (Color.pm:59-61, Derived.pm:33).
+%          int140a: 4 "Unrecognized color model". M2: 0 errors, 0 warnings: no error and no colour.
+% expect:  0 errors, 1 Warning:color_model:fooshaded; every word kept; `Spot.` keeps color #008033.
+\documentclass{article}
+\usepackage{colorspace}
+\definespotcolor{foo}{BarTone 555 GN}{.8,.2,.5,.3}
+\definecolorspace{fooshaded}{mixed}{foo,black}
+\definecolor{sfoo}{fooshaded}{1,0}
+\begin{document}
+Before {\color{sfoo} shaded} and {\color[fooshaded]{0.5,0.5} after}. \textcolor[fooshaded]{0.2,0.5}{Third.}
+\colorbox[fooshaded]{0.2,0.5}{Boxed.} \textcolor{foo}{Spot.}
+\end{document}

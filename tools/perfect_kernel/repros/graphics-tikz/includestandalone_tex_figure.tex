@@ -1,0 +1,24 @@
+% witness: 2412.12317, 2505.19304, 2608.05283, 2504.17583, 2406.02722 (`\includestandalone[…]{fig}` where only fig.tex
+%          ships: html_feedback HF12, 11 papers, ~95 figures) — standalone.sty:211 makes `tex` the default mode, so
+%          pdflatex inputs the sub-file (L1014-1093, gincltex.sty:45-67)
+% oracle:  pdflatex 0 errors: the TikZ line in the figure, scaled to half the line width
+% engines: rust 63o = `<graphics candidates="…_sub.tex">`, nothing rendered (the figure lost, 0 errors); Perl 0.8.8
+%          `Error:undefined:\includestandalone`
+% expect:  0 errors, 0 warnings; the figure holds a `<picture>` and no `<graphics>`
+% status:  RED (63o) -> GREEN (63p)
+\begin{filecontents*}{includestandalone_tex_figure_sub.tex}
+\documentclass{standalone}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}\draw (0,0)--(1,1);\end{tikzpicture}
+\end{document}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{standalone}
+\begin{document}
+\begin{figure}\centering
+\includestandalone[width=0.5\linewidth]{includestandalone_tex_figure_sub}
+\caption{A standalone figure.}
+\end{figure}
+\end{document}

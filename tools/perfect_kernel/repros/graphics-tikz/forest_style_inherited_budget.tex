@@ -1,0 +1,40 @@
+% witness: none (delta review 4 of P6: a key replayed from `for tree` must pay for its value)
+% oracle:  pdflatex FATAL "TeX capacity exceeded, sorry [main memory size=5000000]"
+% engines: 52ea71368a (a replayed key paid 1 unit; every node deep-copied the inherited keylists):
+%          0 errors, each of the 249 descendants kept a copy of the 524,288-token value on the
+%          recursion path (~0.5 GB RSS here; the same shape up to `v19`, 4.2M tokens, was killed
+%          at the 8 GB cap)
+% expect:  1 error (Error:misdefined:q, "ran out of the keylist work budget"), a few levels down;
+%          finishes at once; the tree is still emitted with its 250 nested nodes
+% status:  GREEN
+% mechanism: `v0`…`v15` double the value 16 times (8 → 524,288 tokens) and `v15` puts it in a
+%   `for tree={q={…}}`, which every descendant replays (forest.sty:5592). The binding keeps
+%   the inherited keylists on one stack shared by the tree (no copy per node) and charges a
+%   replayed key its value's tokens at every node, so the pool (1000000 units plus 10000 per
+%   node) runs out a few levels below the root.
+\documentclass{article}
+\usepackage{forest}
+\forestset{
+  v0/.style={v1={#1#1}},
+  v1/.style={v2={#1#1}},
+  v2/.style={v3={#1#1}},
+  v3/.style={v4={#1#1}},
+  v4/.style={v5={#1#1}},
+  v5/.style={v6={#1#1}},
+  v6/.style={v7={#1#1}},
+  v7/.style={v8={#1#1}},
+  v8/.style={v9={#1#1}},
+  v9/.style={v10={#1#1}},
+  v10/.style={v11={#1#1}},
+  v11/.style={v12={#1#1}},
+  v12/.style={v13={#1#1}},
+  v13/.style={v14={#1#1}},
+  v14/.style={v15={#1#1}},
+  v15/.style={for tree={q={#1}}}}
+\begin{document}
+\begin{forest}
+[x, v0={xxxxxxxx}
+  [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x [x 
+  ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+\end{forest}
+\end{document}

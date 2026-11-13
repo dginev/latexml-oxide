@@ -6,11 +6,17 @@
 # NOT part of required CI yet (Phase 4 promotes this into CI.yml once the
 # job is stably green).
 #
-# TWO jobs, two triggers:
+# TWO jobs, three triggers:
 #
-#   `test`  — the full build + suite. MANUAL (`workflow_dispatch`) still: it
-#             installs TeX Live and runs every test, which is ~an hour of
-#             wall-clock, so it stays deliberate.
+#   `test`  — the full build + suite: MANUAL (`workflow_dispatch`), and called
+#             by release.yml (`workflow_call`) before anything is published.
+#             It installs TeX Live and runs every test, so it stays deliberate.
+#             The suite runs in two parts (DG 2026-11-13). `required` (every
+#             test but the `perfect_kernel_*` guards, 3 shards) must pass. The
+#             `perfect_kernel_*` guards (8 shards) run in full, but a
+#             dispatch run is green with them failing (`continue-on-error`).
+#             A release calls with `require_guards: true`: there every guard
+#             must pass, so no broken Windows build is published.
 #   `check` — a COMPILE ONLY (`cargo check`), fired automatically when a file
 #             carrying `#[cfg(windows)]` code changes, plus weekly.
 #
@@ -43,6 +49,16 @@
 #   * `ci` profile (no LTO — release-profile LTO costs ~2 min per test exe)
 on:
   workflow_dispatch:
+    inputs:
+      require_guards:
+        description: 'Fail the run when a perfect_kernel_* guard fails'
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      require_guards:
+        type: boolean
+        default: true
   pull_request:
     # Every file that carries `#[cfg(windows)]`/`windows_sys` code, plus the
     # manifests that pin the Windows crates. Keep this list in step with
@@ -62,17 +78,43 @@ on:
 
 name: Windows CI
 
+# Not `github.workflow`: called from release.yml that names the CALLER, and a
+# group shared with the caller would cancel or deadlock it.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: windows-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
-    # Full suite stays deliberate — dispatch only.
-    if: github.event_name == 'workflow_dispatch'
-    name: build + test (x86_64-pc-windows-msvc)
+    # Full suite stays deliberate: a dispatch, or a release's call. Under a
+    # call `github.event_name` is the caller's (`push` of a tag), so the
+    # call is told apart by its input, which other triggers do not set.
+    if: github.event_name == 'workflow_dispatch' || inputs.require_guards
+    # Sharded under nextest like the Linux/macOS legs (CIP0, 2026-11-13): one
+    # `cargo test` job projected ≥ 2 h of test alone against its 120-min
+    # timeout. Each shard pays the fixed cost (vcpkg, TeX Live, dumps,
+    # build) — that fixed cost has no measurement yet: the first dispatch
+    # run is the measurement.
+    name: build + test (x86_64-pc-windows-msvc, ${{ matrix.part }} ${{ matrix.shard }}/${{ matrix.of }})
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
+    # The guards' shards are optional to pass unless the caller requires them.
+    continue-on-error: ${{ matrix.part == 'guards' && !inputs.require_guards }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { part: required, shard: 1, of: 3 }
+          - { part: required, shard: 2, of: 3 }
+          - { part: required, shard: 3, of: 3 }
+          - { part: guards, shard: 1, of: 8 }
+          - { part: guards, shard: 2, of: 8 }
+          - { part: guards, shard: 3, of: 8 }
+          - { part: guards, shard: 4, of: 8 }
+          - { part: guards, shard: 5, of: 8 }
+          - { part: guards, shard: 6, of: 8 }
+          - { part: guards, shard: 7, of: 8 }
+          - { part: guards, shard: 8, of: 8 }
     env:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
@@ -135,7 +177,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         shell: pwsh
@@ -143,16 +185,20 @@ jobs:
           PROFILE: ci
         run: tools/make_formats.ps1
 
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
       - name: build test binaries
-        run: cargo test --profile ci --tests --workspace --no-run
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --no-run
       - name: run tests
-        run: cargo test --profile ci --tests --workspace -- --test-threads=2
+        # `hash:` assigns each test by its own name, so a filter and a
+        # partition compose: every guard lands in exactly one guards shard.
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace -E '${{ matrix.part == 'guards' && 'test(/^perfect_kernel_/)' || 'not test(/^perfect_kernel_/)' }}' --partition hash:${{ matrix.shard }}/${{ matrix.of }}
 
   # COMPILE ONLY. No TeX Live, no dumps, no tests — just enough to prove the
   # Windows arms still typecheck against the crates we pin. This is the job
   # that would have caught 0.7.5-rc4's `GLOBAL_MEMORY_STATUS_EX` in its PR.
   check:
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
     name: cargo check (x86_64-pc-windows-msvc)
     runs-on: windows-latest
     timeout-minutes: 45

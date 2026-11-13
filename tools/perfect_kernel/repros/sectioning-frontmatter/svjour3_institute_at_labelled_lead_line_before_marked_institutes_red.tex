@@ -1,0 +1,24 @@
+% mechanism: the frontmatter API's Cut (`affiliations::requested_entry_marks`): an svjour3 `\institute` whose first piece
+%   is an owner line (`\Letter Name \at \email{…}`) followed by `\at`-labelled marked institutes (`\at {$^1$} Univ A
+%   \at {$^2$} Univ B`) takes the labelled path (`fuzzy:Name`): both institutes go to the named owner, the marks
+%   uncut, and the authors requesting mark 1 get none — in silence (0 Warnings). Mechanism 2 of study IV0, the 104c
+%   residual's labelled sibling
+% witness: 2211.05963 (`\institute{\Letter Zhifeng Wang \at \email{zfwang@ccnu.edu.cn} \\ \at {$^1$} Hubei Key
+%   Laboratory … \at {$^2$} School of Educational Information Technology …}`, four mark-1 authors)
+% oracle:  pdflatex (svjour3.cls from 2211.05963) 0 errors: "Ann Able1 · Bob Baker2 · Cat Cole1", the institute
+%   "B Bob Baker / E-mail: bob@b.edu / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust int159a and IV1: Bob holds the e-mail and both institutes "1 Univ A, Town" and "2 Univ B, City"; Ann
+%   and Cat no affiliation; 0 Warnings; perl: the institute block whole on one author
+% expect:  Ann and Cat "Univ A, Town", Bob "Univ B, City" and the e-mail; or a counting Warning for the misplacement
+% status:  RED (int159a, IV1) — below the reach bar (IV0: 2-3 of 5 `\institute{\Letter` census hits); deferred with
+%   the 104c row; no guard
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\usepackage{marvosym}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^2$ \and Cat Cole$^1$}
+\institute{\Letter Bob Baker \at \email{bob@b.edu} \\ \at {$^1$} Univ A, Town \at {$^2$} Univ B, City}
+\maketitle
+Text.
+\end{document}

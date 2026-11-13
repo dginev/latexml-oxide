@@ -1,0 +1,17 @@
+% witness: review probe of 68w (a `\paragraph` and its text between two entries of `{thebibliography}`)
+% oracle:  pdflatex 0 errors: "References", [1] A, "Note. An aside inside the list.", [2] B (one list, one heading)
+% engines: rust 68w r1 = a second bibliography titled "References" (invented) with its own TOC entry
+% expect:  0 errors; the bibliography bib "References" with entry 1; the paragraph; a continuation biba with entry 2,
+%          no title and no TOC entry
+% status:  FIXED (68w r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section{Intro}
+Text \cite{a,b}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, J. 1.
+\paragraph{Note.} An aside inside the list.
+\bibitem{b} B. Author, J. 2.
+\end{thebibliography}
+\end{document}

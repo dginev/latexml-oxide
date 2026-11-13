@@ -1,0 +1,24 @@
+% witness: 1707.06238, 1302.1442 (the `\ref`-list mark, here in a written family; review rev92a_r1 S1, B3)
+% oracle:  pdflatex: amsart's `\label` in `\address` steps no counter, so the marks print empty; the addresses print
+%          in call order (University X, University Y, University Z), each after its `\email`
+% engines: perl 0.8.8 = 0 errors, 4 warnings, every address lost; rust 90a = 0 errors, Ann Able without
+%          University X (on a nameless creator), Bob Baker with University Y only
+% expect:  0 errors, 0 warnings; written: Ann Able University X and Y, Bob Baker University Y and Z, Cid Cole
+%          University Z — every key of a mark a request, comma-separated or touching
+% status:  RED (90a; 92a r1 for the touching keys) -> GREEN (92a r2)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{A title}
+\author{Ann Able\textsuperscript{\ref{a1},\ref{a2}}}
+\address{\label{a1}University X, Town}
+\email{ann@x.org}
+\author{Bob Baker\textsuperscript{\ref{a2}\ref{a3}}}
+\address{\label{a2}University Y, City}
+\email{bob@y.org}
+\author{Cid Cole\textsuperscript{\ref{a3}}}
+\address{\label{a3}University Z, Village}
+\email{cid@z.org}
+\maketitle
+Text.
+\end{document}

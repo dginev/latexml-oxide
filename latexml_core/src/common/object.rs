@@ -35,6 +35,12 @@ pub trait Object {
   /// reporting, box creation), use the free fn `gullet::get_locator()`.
   fn get_locator(&self) -> Option<Locator> { None }
 
+  /// Who made this definition (K1 provenance, `definition::origin`). The
+  /// default is `Unknown`, which counts as LaTeXML's own.
+  fn get_origin(&self) -> crate::definition::origin::DefinitionOrigin {
+    crate::definition::origin::DefinitionOrigin::Unknown
+  }
+
   /// each concrete object needs to provide its own path back to tokens
   fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(vec![])) }
 }

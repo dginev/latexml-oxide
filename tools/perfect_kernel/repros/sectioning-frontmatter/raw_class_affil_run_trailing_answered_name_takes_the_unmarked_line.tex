@@ -1,0 +1,28 @@
+% mechanism: an unlabelled in-place affiliation's run walk starts at a trailing name a mark answers (OD #928 round 9,
+%   Known residual P3; today's API `frontmatter_api.rs` `reached_unanswered`, the observer's `Resolver::record_run`):
+%   `ANN ABLE$^1$ and BOB BAKER and CID COLE$^1$ \affil{$^1$Univ A} \affil{Univ B}` gives Univ B to BOB BAKER and to
+%   CID COLE, whose 1 Univ A answers, and puts it before CID COLE's Univ A (out of print order). The walk's premise
+%   ("when the last author is answered, every author of the run is") does not hold when an unmarked name stands
+%   between answered ones. Sibling: authblk's `\author{Ann Able$^{1}$}\author{Bob Baker}\author{Cid
+%   Cole$^{1}$}\affil{$^1$Univ A}\affil{Univ B}` (review z14), the same reading.
+% witness: review rev94a r8 u/u04, z/z14
+% oracle:  pdflatex 0 errors: "ANN ABLE1 and BOB BAKER and CID COLE1, 1 Univ A / , Univ B"
+% engines: rust 94a r8, r9: ANN ABLE Univ A, BOB BAKER Univ B, CID COLE Univ B then Univ A; perl: not run
+% expect:  0 errors, 0 warnings; ANN ABLE Univ A, BOB BAKER Univ B, CID COLE Univ A
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilsinauthor.cls}
+\ProvidesClass{affilsinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\author#1{\gdef\@author{#1}}
+\def\affil#1{\gdef\@affil{#1}\ifx\@affil\@empty\else{\reset@font\affilfont\unskip,\ #1\vphantom{gy}\endgraf}\fi}\affil{}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilsinauthor}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE$^1$ and BOB BAKER and CID COLE$^1$ \affil{$^1$Univ A} \affil{Univ B}}
+\maketitle
+Body.
+\end{document}

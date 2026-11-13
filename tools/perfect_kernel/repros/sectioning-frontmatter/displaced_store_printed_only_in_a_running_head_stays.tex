@@ -1,0 +1,26 @@
+% The displaced setter's negative (frontmatter_stores.rs `route_and_hand_displaced`): a store the class's title page
+% prints only in a running head (`\markright`, page furniture no conversion sets) is not printed by its speculative run,
+% so the call is no contact and nothing moves — as K11 hands on no store printed only in a box or a running head.
+% witness: (synthetic; the negative of 2607.20672's store shape)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Text." — the address nowhere (the mark goes to a running head,
+%          and `\maketitle`'s page is `\thispagestyle{plain}`)
+% engines: rust 99b0 = 0 errors, 0 warnings, no contact; perl = no raw class load
+% expect:  0 errors, 0 warnings; Ann Able with no contact; the body holds only "Text."
+% status:  GREEN (99b0) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dsrun.cls}
+\ProvidesClass{dsrun}\LoadClass{article}
+\newcommand{\address}[1]{\gdef\ds@address{#1\relax}}
+\let\ds@address\empty
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}%
+  \markright{\ds@address}}
+\pagestyle{myheadings}
+\end{filecontents*}
+\documentclass{dsrun}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Town}
+\maketitle
+Text.
+\end{document}

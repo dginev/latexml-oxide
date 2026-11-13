@@ -1,0 +1,19 @@
+% status: RED (56jy review)
+% oracle: Perl (the trim is Perl's, TeX_Paragraph.pool.ltxml:184-196 `s/\s+$//` on the last text node)
+% engines: perl "<p>U+2006</p>", "<p></p>", "A U+2006", "A"; rust "<p/>", "<p/>", "A ", "A " (56jy)
+% expect: 0 errors; the four items' text as Perl's
+% Both engines trim only the paragraph's last text node; the nodes differ. Perl appends the
+% space after a formula with XML::LibXML appendChild (Document.pm:1148-1153), which never
+% merges, and the formula's own text with appendTextNode (Document.pm:2123, :2133), which
+% merges into the text before it. Rust's add_child (xmlAddChild) merges the following space
+% (document.rs ~:2835) and replace_node_as_tree keeps the formula's text a node of its own
+% (~:6187). Cosmetic: whitespace at a paragraph's end.
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\item $\,$ 
+\item $\,$\par
+\item A $\,$ 
+\item A $\,$\par
+\end{enumerate}
+\end{document}

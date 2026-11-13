@@ -1,0 +1,18 @@
+% A user-declared pgfmath function returns its result in the form its body leaves it (an integer
+% `\pgfmathresult` stays an integer) and receives an integer-form argument as an integer, so a
+% `?:`, `ifthenelse` or `\ifnum` on its result behaves as in pgf.
+% witness: none (probe; review of 59b).
+% status:  GREEN (59b)
+% oracle:  lualatex 0 errors: "[1][1][1.0][7][6.0]YES".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{pgf}
+\pgfmathdeclarefunction{pos}{1}{\pgfmathparse{#1>0}}
+\pgfmathdeclarefunction{one}{0}{\def\pgfmathresult{1}}
+\pgfmathdeclarefunction{idf}{1}{\edef\pgfmathresult{#1}}
+\begin{document}
+\pgfmathparse{1>0?pos(3):0}[\pgfmathresult]\pgfmathparse{1>0?one:0}[\pgfmathresult]%
+\pgfmathparse{one+0}[\pgfmathresult]\pgfmathparse{idf(7)}[\pgfmathresult]%
+\pgfmathparse{idf(2*3)}[\pgfmathresult]%
+\pgfmathsetmacro\n{pos(3)}\ifnum\n=1 YES\else NO\fi
+\end{document}

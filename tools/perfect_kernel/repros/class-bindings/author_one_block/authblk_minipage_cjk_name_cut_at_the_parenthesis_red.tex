@@ -1,0 +1,21 @@
+% mechanism: an authblk `\author[1]{\begin{minipage}…}` holding "Ann Able
+%   (\begin{CJK*}…\end{CJK*}){\textsuperscript{1}}\endgraf\texttt{…}": the name is cut at "(" and the CJK
+%   part dropped (the reading of a box's paragraphs, lex_with_inks; revP21e pre-existing, the same on
+%   int157a). Without the `[1]` the name is the whole minipage, "Ann Able ( 张嘉) 1 ann@x.org", 0 warnings
+% witness: synthetic (revP21e; the CJK name shape is 2608.21138's)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able (张嘉)1", "ann@x.org", "1 Univ X"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("1 words the author blocks print are missing
+%   from the placed frontmatter: 张嘉"); creator "Ann Able (" with e-mail ann@x.org and Univ X; perl not run
+% expect:  0 errors, 0 warnings; creator "Ann Able (张嘉)" with e-mail ann@x.org and Univ X
+% status:  RED (int158a; RR1 gap 11)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{CJKutf8}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{\begin{minipage}{0.8\textwidth}\centering Ann Able (\begin{CJK*}{UTF8}{gbsn}张嘉\end{CJK*}){\textsuperscript{1}}\endgraf \texttt{ann@x.org}\end{minipage}}
+\affil[1]{Univ X}
+\maketitle
+Text.
+\end{document}

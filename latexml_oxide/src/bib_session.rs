@@ -11,6 +11,8 @@
 //! depending on `latexml_oxide` would be a cycle. `latexml_post` declares the
 //! hook, this module fills it in — see [`install`].
 
+use std::rc::Rc;
+
 use latexml_core::{
   Core, CoreOptions,
   binding::content::{InputDefinitionOptions, input_definitions},
@@ -150,11 +152,23 @@ fn ensure_session(request: &BibConversionRequest) -> Result<()> {
     // and Perl's preload reconstruction is exactly right here.
     let mut preloads = vec![s!("TeX.pool"), s!("BibTeX.pool")];
     preloads.extend(request.preloads.iter().cloned());
+    // Perl's `convertBibliography` (MakeBibliography.pm:180-235) spins a FULL
+    // converter — `get_converter` + `prepare_session` (`includestyles=1`) —
+    // so the pools and the document's class resolve through the bindings.
+    // `Core::new` resets the State, which starts with NO binding dispatch
+    // (`State::new` → `bindings_dispatch: None`): without the chain that
+    // `Converter::initialize_session` installs, `input_definitions` finds
+    // neither `TeX.pool` nor `BibTeX.pool`, the kernel never bootstraps, the
+    // preloaded class is read raw against an empty state (100 errors →
+    // TooManyErrors) and the bibliography comes back empty. Witness: TeX Live
+    // aomart/aomsample, `--whatsin=xml … --sourcedirectory=<bundle>`.
     let mut core = Core::new(CoreOptions {
       preload: Some(request.preloads.clone()),
       search_paths: Some(request.search_paths.clone()),
+      include_styles: Some(true),
       ..CoreOptions::default()
     });
+    crate::converter::install_default_binding_chain(Some(Rc::new(latexml_contrib::dispatch)));
     core.initialize_singletons(preloads)
   }
 }
@@ -233,6 +247,24 @@ fn convert(request: &BibConversionRequest) -> Option<PostDocument> {
     // ready and before any entry is digested.
     provide_url_command()?;
     latexml_core::stomach::digest(latexml_core::mouth::tokenize(BBL_STANDARD_FALLBACKS))?;
+    // The entries are digested in the DOCUMENT's default font. Perl's fresh
+    // per-`.bib` state (Core.pm:39) starts at the default font; the live
+    // session here inherits whatever NFSS state the body left — abntexto's
+    // doc-point `\ttfamily` (leaked through an unbounded `\hyperlink`) made
+    // every field a `<text font="typewriter">` wrapper that broke the
+    // `<bibentry>` nesting: 99 `#PCDATA isn't allowed in <ltx:bibentry>`.
+    // `\normalfont` here keeps every live definition (the point of the
+    // monolithic pass) and only normalizes the typographic state. Guard:
+    // `06_cluster_bibliography::bib_entries_digest_in_the_default_font`. The defaults are those in force where
+    // `\bibliography` stands (`lx@bibliography@normalfont`, recorded by sect11.rs `\lx@bibliography`), not at the
+    // document's end: cmpj3's `\ukrainianpart` after the bibliography makes the rest sans, while pdflatex's
+    // bibliography stays serif (2603.23615; OXIDIZED_DESIGN_DIVERGENCES #779). Guard
+    // `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`.
+    let normalfont = match latexml_core::state::lookup_value("lx@bibliography@normalfont") {
+      Some(latexml_core::state::Stored::Tokens(tokens)) => tokens,
+      _ => latexml_core::mouth::tokenize(r"\normalfont"),
+    };
+    latexml_core::stomach::digest(normalfont)?;
 
     // Digest only what the document cites — a `.bib` is a library, and
     // `bibtex(1)` reads the `.aux`'s `\citation` records rather than the whole

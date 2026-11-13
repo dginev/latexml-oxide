@@ -1,0 +1,20 @@
+% witness: 0807.4720 (amsart: `\thanks{… \author{…}\address{…}\email{…}}`, the second author born while the flush digests the pubnote)
+% oracle:  pdflatex 0 errors: ANN ABLE AND BOB BAKER; Univ A, Email address: ann@a.org; Univ B, Email address: bob@b.org; Supported by X.
+% engines: Perl and off: Ann (Univ A, ann@a.org), Bob (Univ B, bob@b.org); ours =2 before TA1: Bob twice, his address lost, his e-mail on Ann, 0 errors
+% expect:  0 errors; at =2 Ann with Univ A and ann@a.org only, Bob once with Univ B and bob@b.org
+% status:  GREEN (IO3b: the rehearsal leaves an event for the note's creator call, `\lx@fm@obs@add` → `EventKind::ApiCall`
+%          "ltx:creator"; no reading answers such a note's contacts and its pubnote item is digested as Perl's, each contact
+%          the newest creator's. Guard `perfect_kernel_batchio3b::a_note_making_a_creator_is_digested_as_perls`)
+\documentclass{amsart}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A}
+\email{ann@a.org}
+\thanks{Supported by X.
+\author{Bob Baker}
+\address{Univ B}
+\email{bob@b.org}}
+\maketitle
+x
+\end{document}

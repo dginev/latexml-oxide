@@ -1,0 +1,23 @@
+% The separator and rule rows of an {IEEEeqnarray} (IEEEtrantools.sty:1566-1690, IEEEtran.cls:3247-3360) are rows of
+% the equation group: pdflatex numbers every row (1)-(7), the rule rows draw their rules. Ours rearranges the rows into
+% equations that keep only their math (rearrange_eqnarray, as {eqnarray*}'s `\multispan{3}\leaders\hrule…` row): E1, E5
+% and E7 are equations with a number and no rule, the separator rows E3 and E6 (empty) are removed with their numbers,
+% so the visible numbering jumps (2)->(4), (5)->(7). Starred / \IEEEnonumber rule rows lose their rules the same way.
+% In an {IEEEeqnarraybox} (an array) the same rows are rule rows (class-bindings/ieeetran_eqnarray_rule_rows).
+% witness: 67x review probes a, c, n (no A/B paper: the 32 with rule rows use them in an {IEEEeqnarraybox})
+% oracle:  pdflatex 0 errors; rule / a = b + c (2) / blank (3) / d = e (4) / rule, blank, rule, numbers (1)-(7)
+% engines: rust 67x = 0 errors, equations E1 E2 E4 E5 E7 (E1 E5 E7 tag-only, no rule); Perl: rule rows undefined (#710)
+% expect:  0 errors 0 warnings; 7 numbered rows, the rule rows holding a leader rule
+% status:  RED (open)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\begin{IEEEeqnarray}{rCl}
+\IEEEeqnarrayrulerow\\
+a & = & b+c\\
+\IEEEeqnarrayseprow[3pt]\\
+d & = & e\\
+\IEEEeqnarraydblrulerow
+\end{IEEEeqnarray}
+Text after.
+\end{document}

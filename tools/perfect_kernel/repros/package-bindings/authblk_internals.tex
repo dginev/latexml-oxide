@@ -1,0 +1,27 @@
+% witness: 2103.17238, 1904.03969, 2406.11632 (an `\email` built from authblk's `\affil` code reads `\AB@las`;
+%   run 340: 163 first errors)
+% oracle:  pdflatex 0 errors; authors, affiliations and the email under the title
+% engines: rust 65int7 = 4 errors (`\AB@las` and the state after it undefined)
+% expect:  0 errors; two creators, Ann Able and Bob Baker, the affiliation One University
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{authblk}
+\makeatletter
+\newcommand\email[2][]{\newaffiltrue\let\AB@blk@and\AB@pand
+  \if\relax#1\relax\def\AB@note{\AB@thenote}\else\def\AB@note{\relax}\setcounter{Maxaffil}{0}\fi
+  \begingroup\let\protect\@unexpandable@protect
+  \@temptokena=\expandafter{\AB@authors}%
+  {\def\\{\protect\\\protect\Affilfont}\xdef\AB@temp{#2}}%
+  \xdef\AB@authors{\the\@temptokena\AB@las\AB@au@str\protect\\[\affilsep]\protect\Affilfont\AB@temp}%
+  \gdef\AB@las{}\gdef\AB@au@str{}%
+  \endgroup\let\AB@affilsep\AB@affilsepx}
+\makeatother
+\title{Title}
+\author[1]{Ann Able}
+\author[1]{Bob Baker}
+\affil[1]{One University}
+\email{ann@one.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

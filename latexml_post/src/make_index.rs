@@ -6,6 +6,7 @@
 //! Supports permuted indexes, splitting by initial, see-also references,
 //! range-style page references, and glossary entry formatting.
 
+use latexml_core::common::cleaners::clean_class_name;
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 use unicode_normalization::UnicodeNormalization;
@@ -15,6 +16,31 @@ use crate::{
   object_db::{ObjectDB, Value},
   processor::{ProcessResult, Processor},
 };
+
+/// The list an `ltx:indexmark` without `inlist` belongs to, and the list an
+/// `ltx:index` without `lists` collects: `\index` writes `\jobname.idx`
+/// (Perl MakeIndex.pm:77 `$defaultlistname`).
+pub const DEFAULT_INDEX_LIST: &str = "idx";
+
+/// The ObjectDB key of an index entry: `INDEX:<phrase keys>` in the default
+/// list (Perl's key, unchanged), `INDEX@<list>:<phrase keys>` in another —
+/// one entry per list, as `GLOSSARY:<list>:<key>`.
+pub fn index_db_key(list: &str, phrase_keys: &[String]) -> String {
+  if list == DEFAULT_INDEX_LIST {
+    format!("INDEX:{}", phrase_keys.join(":"))
+  } else {
+    format!("INDEX@{list}:{}", phrase_keys.join(":"))
+  }
+}
+
+/// The list of an index-entry key, and its phrase keys joined by `:` —
+/// the inverse of [`index_db_key`]; None for any other key.
+fn index_db_list(key: &str) -> Option<(&str, &str)> {
+  if let Some(phrases) = key.strip_prefix("INDEX:") {
+    return Some((DEFAULT_INDEX_LIST, phrases));
+  }
+  key.strip_prefix("INDEX@")?.split_once(':')
+}
 
 /// A see/see-also cross reference extracted from an `ltx:indexsee` node.
 #[derive(Debug)]
@@ -71,8 +97,13 @@ impl IndexTree {
 
 /// A glossary entry ready for rendering.
 struct GlossaryEntry {
+  /// The entry's key, and its parent's when it is listed under one (glossaries' `parent=`).
+  key:       String,
+  parent:    Option<String>,
   initial:   String,
   sort_key:  String,
+  /// The makeindex group heading of the entry's initial (nomencl's `\nomgroup`), empty when there is none.
+  group:     Vec<NodeData>,
   formatted: NodeData,
 }
 
@@ -96,15 +127,25 @@ impl MakeIndex {
     }
   }
 
-  /// Build the index tree from ObjectDB INDEX:* entries.
+  /// Build the index tree from the ObjectDB entries of `lists` (the
+  /// `ltx:index` element's `lists`).
   ///
-  /// Port of `MakeIndex::build_tree`.
-  fn build_tree(&self, index_id: &str) -> Option<(IndexTree, HashMap<String, String>)> {
+  /// Port of `MakeIndex::build_tree`. Perl names the list but builds only
+  /// `idx` ("Eventually customizable for different indices?",
+  /// MakeIndex.pm:78), and its :89 test compares the scanned `inlist` HASH
+  /// with `idx`, so a mark with any list is skipped. Every `ltx:index` here
+  /// collects its own lists: the `.gls` stand-in's `glo` change history
+  /// beside the `idx` index (OXIDIZED_DESIGN_DIVERGENCES #318).
+  fn build_tree(
+    &self,
+    index_id: &str,
+    lists: &[&str],
+  ) -> Option<(IndexTree, HashMap<String, String>)> {
     let keys: Vec<String> = self
       .db
       .get_keys()
       .into_iter()
-      .filter(|k| k.starts_with("INDEX:"))
+      .filter(|k| index_db_list(k).is_some_and(|(list, _)| lists.contains(&list)))
       .cloned()
       .collect();
     if keys.is_empty() {
@@ -146,9 +187,8 @@ impl MakeIndex {
           }
         }
         if phrase_refs.is_empty() {
-          phrase_refs = key
-            .strip_prefix("INDEX:")
-            .unwrap_or("")
+          phrase_refs = index_db_list(key)
+            .map_or("", |(_, phrases)| phrases)
             .split(':')
             .filter(|s| !s.is_empty())
             .map(|s| PhraseRef {
@@ -510,39 +550,75 @@ impl MakeIndex {
   /// Get glossary entries from the ObjectDB.
   ///
   /// Port of `MakeIndex::getGlossaryEntries`.
-  fn get_glossary_entries(&mut self, lists: &str, glossary_id: &str) -> Vec<GlossaryEntry> {
+  /// `list_unreferenced`: a nomenclature (`<ltx:glossary role="nomenclature">`,
+  /// the nomencl binding) lists EVERY definition — its entries are written
+  /// lines that makeindex prints whole (nomencl.sty:227-245), with no
+  /// `\gls`-style reference; a glossary lists only the referenced ones
+  /// (Perl MakeIndex.pm:468 `next unless $refs && %{$refs}`).
+  fn get_glossary_entries(
+    &mut self,
+    lists: &str,
+    glossary_id: &str,
+    list_unreferenced: bool,
+  ) -> Vec<GlossaryEntry> {
     let list_set: rustc_hash::FxHashSet<&str> = lists.split(',').collect();
     let mut entries = Vec::new();
 
-    // Clone the keys up-front so we can do mutable `lookup_mut` writes
-    // inside the loop (registering `id` so CrossRef can resolve refs).
-    let keys: Vec<String> = self.db.get_keys().into_iter().cloned().collect();
-    for db_key in &keys {
-      let db_key = db_key.as_str();
-      if !db_key.starts_with("GLOSSARY:") {
-        continue;
-      }
+    // The definitions in this glossary's lists, by key (the first list that has one), and the ones listed: those
+    // referenced in any of the lists (Perl MakeIndex.pm:468 `next unless $refs && %{$refs}`), or every one of a
+    // nomenclature.
+    let mut defined: HashMap<String, String> = HashMap::default();
+    let mut pending: Vec<String> = Vec::new();
+    let mut db_keys: Vec<String> = self.db.get_keys().into_iter().cloned().collect();
+    db_keys.sort();
+    for db_key in db_keys {
       let parts: Vec<&str> = db_key.splitn(3, ':').collect();
-      if parts.len() < 3 {
+      if parts.len() < 3 || parts[0] != "GLOSSARY" || !list_set.contains(parts[1]) {
         continue;
       }
-      let list = parts[1];
-      let key = parts[2];
-      if !list_set.contains(list) {
+      let key = parts[2].to_string();
+      let referenced = self
+        .db
+        .lookup(&db_key)
+        .and_then(|entry| entry.get_value("referrers"))
+        .is_some_and(|v| v.is_truthy());
+      if referenced || list_unreferenced {
+        pending.push(key.clone());
+      }
+      defined.entry(key).or_insert(db_key);
+    }
+    // makeglossaries lists the parent of every listed entry, its children under it (a `parent=` key, glossaries'
+    // `\subglossentry`), so a heading no `\gls` references is listed for its children: glosmathtools' "Latin
+    // symbols (Symboles latins)". Perl lists the referenced entries only, flat (KNOWN_PERL_ERRORS #442). A parent
+    // defined in another glossary is not listed (makeindex lists it in the child's glossary, its index key built
+    // from the parent's, glossaries.sty:3226-3236): the child is listed at the top level.
+    let mut included: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
+    while let Some(key) = pending.pop() {
+      if !included.insert(key.clone()) {
         continue;
       }
-
+      if let Some(parent) = self.glossary_parent(&defined[&key])
+        && defined.contains_key(&parent)
+      {
+        pending.push(parent);
+      }
+    }
+    let mut included: Vec<String> = included.into_iter().collect();
+    included.sort();
+    for key in &included {
+      let key = key.as_str();
+      let db_key = defined[key].as_str();
+      let parent = self
+        .glossary_parent(db_key)
+        .filter(|parent| parent != key && defined.contains_key(parent));
       if let Some(entry) = self.db.lookup(db_key) {
-        // Check if it has referrers
-        let has_refs = entry
-          .get_value("referrers")
-          .map(|v| v.is_truthy())
-          .unwrap_or(false);
-        if !has_refs {
-          continue;
-        }
-
-        let sort_key = entry.get_string("phrase:sort").unwrap_or(key).to_string();
+        // The sort phrase's text content is the sort key (Perl MakeIndex.pm:471
+        // `getValue('phrase:sort') || $key`); the phrase itself is now a node.
+        let sort_key = entry
+          .get_value("phrase:sort")
+          .map(Value::as_string)
+          .filter(|s| !s.is_empty())
+          .unwrap_or_else(|| key.to_string());
         let initial = sort_key
           .chars()
           .next()
@@ -550,15 +626,68 @@ impl MakeIndex {
           .map(|c| c.to_uppercase().to_string())
           .unwrap_or_else(|| "*".to_string());
         let id = format!("{}.{}", glossary_id, key);
-        let term = entry.get_string("phrase:name").unwrap_or(key).to_string();
-        let desc = entry
-          .get_string("phrase:description")
-          .unwrap_or("")
-          .to_string();
+        // Perl MakeIndex.pm:477-480: the label and definition are CLONES of
+        // the stored phrase nodes' trimmed children, so math and styled
+        // text survive (a nomenclature symbol is math).
+        let phrase_children = |role: &str, default: &str| -> Vec<NodeData> {
+          match entry.get_value(role) {
+            Some(Value::Xml(node)) => trimmed_child_nodes(node),
+            Some(other) => vec![NodeData::Text(other.as_string())],
+            None => vec![NodeData::Text(default.to_string())],
+          }
+        };
+        let term = phrase_children("phrase:name", key);
+        let group = match entry.get_value("phrase:group") {
+          Some(Value::Xml(node)) => trimmed_child_nodes(node),
+          _ => Vec::new(),
+        };
+        let mut desc = phrase_children("phrase:description", "");
+        // nomencl's `nomentbl` entries carry `unit` and `note` columns
+        // (nomencl.sty:228-235, the binding's `unit`/`note` phrases). The list
+        // renders only a label and a definition, so they follow the
+        // description as classed text (`ltx_glossary_unit`/`_note`) rather than
+        // being dropped. Surpass (Perl has no nomencl list at all);
+        // OXIDIZED_DESIGN #234. The display keys a package adds (`\glsaddkey`: glosmathtools' `descseclang`),
+        // phrases the glossaries binding classes `ltx_glossary_userkey`, follow after them, sorted, in the same way.
+        let mut roles: Vec<&str> = entry
+          .attributes()
+          .filter_map(|attribute| attribute.strip_prefix("phrase:"))
+          .filter(|role| !matches!(*role, "unit" | "note"))
+          .filter(|role| {
+            matches!(entry.get_value(&format!("phrase:{role}")), Some(Value::Xml(node))
+            if node.get_attribute("class").is_some_and(|class| {
+              class.split_whitespace().any(|class| class == "ltx_glossary_userkey")
+            }))
+          })
+          .collect();
+        roles.sort();
+        roles.dedup();
+        for role in ["unit", "note"].into_iter().chain(roles) {
+          if let Some(value) = entry.get_value(&format!("phrase:{role}")) {
+            let children = match value {
+              Value::Xml(node) => trimmed_child_nodes(node),
+              other => vec![NodeData::Text(other.as_string())],
+            };
+            if !children.is_empty() {
+              desc.push(NodeData::Text(" ".to_string()));
+              desc.push(NodeData::Element {
+                tag: "ltx:text".to_string(),
+                attributes: Some(HashMap::from_iter([(
+                  "class".to_string(),
+                  format!("ltx_glossary_{}", clean_class_name(role)),
+                )])),
+                children,
+              });
+            }
+          }
+        }
 
         entries.push(GlossaryEntry {
+          key: key.to_string(),
+          parent,
           initial,
           sort_key,
+          group,
           formatted: NodeData::Element {
             tag:        "ltx:glossaryentry".to_string(),
             attributes: Some(HashMap::from_iter([
@@ -581,7 +710,7 @@ impl MakeIndex {
                   ("role".to_string(), "label".to_string()),
                   ("key".to_string(), key.to_string()),
                 ])),
-                children:   vec![NodeData::Text(term)],
+                children:   term,
               },
               NodeData::Element {
                 tag:        "ltx:glossaryphrase".to_string(),
@@ -589,7 +718,7 @@ impl MakeIndex {
                   "role".to_string(),
                   "definition".to_string(),
                 )])),
-                children:   vec![NodeData::Text(desc)],
+                children:   desc,
               },
             ],
           },
@@ -607,20 +736,100 @@ impl MakeIndex {
     // aware case-insensitive sort. For ASCII-Latin (which covers the
     // test fixture and the vast majority of glossary entries), lowercase
     // comparison matches the expected order: "Cabbage" sorts beside
-    // "cabbage" rather than before all lowercase letters.
+    // "cabbage" rather than before all lowercase letters. Each level is sorted, a child follows its parent
+    // (makeglossaries' `\subglossentry`), classed by its depth (`ltx_glossary_level_<n>`; the schema nests no list
+    // in an entry).
     entries.sort_by_key(|a| a.sort_key.to_lowercase());
-    entries
+    let mut ordered = Vec::with_capacity(entries.len());
+    let mut by_parent: HashMap<Option<String>, Vec<GlossaryEntry>> = HashMap::default();
+    for entry in entries {
+      by_parent
+        .entry(entry.parent.clone())
+        .or_default()
+        .push(entry);
+    }
+    place_glossary_children(None, 0, &mut by_parent, &mut ordered);
+    // An entry whose parent chain never reaches the top level (a cycle) keeps the flat order.
+    let mut unplaced: Vec<GlossaryEntry> = by_parent.into_values().flatten().collect();
+    unplaced.sort_by_key(|a| a.sort_key.to_lowercase());
+    ordered.append(&mut unplaced);
+    ordered
+  }
+
+  /// The key of a glossary definition's parent (glossaries' `parent=` key), if any.
+  fn glossary_parent(&self, db_key: &str) -> Option<String> {
+    self
+      .db
+      .lookup(db_key)
+      .and_then(|entry| entry.get_value("phrase:parent"))
+      .map(Value::as_string)
+      .map(|parent| parent.trim().to_string())
+      .filter(|parent| !parent.is_empty())
   }
 
   /// Generate a glossary list.
   ///
   /// Port of `MakeIndex::makeGlossaryList`.
+  ///
+  /// A top-level entry that opens a new initial and carries a group heading is preceded by the heading, as
+  /// makeindex's `lethead_flag` writes `\nomgroup{<letter>}` (nomencl.ist:36-38) before each letter's entries and
+  /// nomencl's `stdsubgroups` sets it as a label (nomencl.sty:247-272): "Latin letters", "Greek letters".
   fn make_glossary_list(&self, entries: &[GlossaryEntry]) -> NodeData {
-    NodeData::Element {
-      tag:        "ltx:glossarylist".to_string(),
-      attributes: None,
-      children:   entries.iter().map(|e| e.formatted.clone()).collect(),
+    let mut children = Vec::with_capacity(entries.len());
+    let mut last_initial: Option<&str> = None;
+    for entry in entries {
+      if entry.parent.is_none() {
+        if !entry.group.is_empty() && last_initial != Some(entry.initial.as_str()) {
+          children.push(NodeData::Element {
+            tag:        "ltx:glossaryentry".to_string(),
+            attributes: Some(HashMap::from_iter([(
+              "class".to_string(),
+              "ltx_glossary_group".to_string(),
+            )])),
+            children:   vec![NodeData::Element {
+              tag:        "ltx:glossaryphrase".to_string(),
+              attributes: Some(HashMap::from_iter([(
+                "role".to_string(),
+                "label".to_string(),
+              )])),
+              children:   entry.group.clone(),
+            }],
+          });
+        }
+        last_initial = Some(entry.initial.as_str());
+      }
+      children.push(entry.formatted.clone());
     }
+    NodeData::Element {
+      tag: "ltx:glossarylist".to_string(),
+      attributes: None,
+      children,
+    }
+  }
+}
+
+/// Move the entries under `parent` (each level sorted) from `by_parent` to `ordered`, each followed by its own
+/// children; a child's `glossaryentry` is classed `ltx_glossary_level_<depth>`.
+fn place_glossary_children(
+  parent: Option<&str>,
+  depth: usize,
+  by_parent: &mut HashMap<Option<String>, Vec<GlossaryEntry>>,
+  ordered: &mut Vec<GlossaryEntry>,
+) {
+  let Some(children) = by_parent.remove(&parent.map(str::to_string)) else {
+    return;
+  };
+  for mut entry in children {
+    if depth > 0
+      && let NodeData::Element {
+        attributes: Some(attributes), ..
+      } = &mut entry.formatted
+    {
+      attributes.insert("class".to_string(), format!("ltx_glossary_level_{depth}"));
+    }
+    let key = entry.key.clone();
+    ordered.push(entry);
+    place_glossary_children(Some(&key), depth + 1, by_parent, ordered);
   }
 }
 
@@ -640,7 +849,11 @@ impl Processor for MakeIndex {
       let id = crate::document::get_xml_id(node).unwrap_or_default();
 
       if tag == "ltx:index" {
-        if let Some((tree, all_phrases)) = self.build_tree(&id) {
+        let lists = node
+          .get_attribute("lists")
+          .unwrap_or_else(|| DEFAULT_INDEX_LIST.to_string());
+        let lists: Vec<&str> = lists.split_whitespace().collect();
+        if let Some((tree, all_phrases)) = self.build_tree(&id, &lists) {
           if let Some(index_list) = self.make_index_list(&all_phrases, &tree, &[]) {
             let mut node_mut = node.clone();
             doc.add_nodes(&mut node_mut, &[index_list]);
@@ -652,7 +865,8 @@ impl Processor for MakeIndex {
         let lists = node
           .get_attribute("lists")
           .unwrap_or_else(|| "glossary".to_string());
-        let entries = self.get_glossary_entries(&lists, &id);
+        let list_unreferenced = node.get_attribute("role").as_deref() == Some("nomenclature");
+        let entries = self.get_glossary_entries(&lists, &id, list_unreferenced);
         if !entries.is_empty() {
           let glist = self.make_glossary_list(&entries);
           let mut node_mut = node.clone();

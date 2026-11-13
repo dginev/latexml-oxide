@@ -1,0 +1,11 @@
+% witness: 63e review r4 finding 4 (`\\ and\\ SISSA, Trieste, Italy` after a plain name and affiliation)
+% oracle:  pdflatex 0 errors: one author over "Dept. of Physics, Univ. X", "and", "SISSA, Trieste, Italy"
+% engines: rust (63e r5) = an author "SISSA, Trieste, Italy"; Perl one author
+% expect:  1 creator with the three lines as affiliations; 0 errors
+% status:  RED (63e r5) -> GREEN (63e)
+\documentclass{article}
+\author{John Smith\\ Dept.\ of Physics, Univ.\ X\\ and\\ SISSA, Trieste, Italy}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

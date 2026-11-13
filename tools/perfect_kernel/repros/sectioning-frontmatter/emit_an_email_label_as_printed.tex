@@ -1,0 +1,20 @@
+% mechanism: an address the block prints after its label word is named by it as printed (`name=`), the label an address run's
+%   on its line (`resolver::words::printed_email_label`, `address_runs`), and its words written; a label the emit doesn't write
+%   is a lost word, counted
+% witness: 1412.5940 (PoS's raw `\email`, `E-mail: \email{…}`), 1612.08209, 1812.02252, 1907.01311, 1005.2532, 0802.3384;
+%   the guard's rows: a list's label on each of its addresses (`Emails:`, 2511.22090), `E-mail address:` and `email` without a
+%   colon (1209.0869), in parentheses (1405.3793)
+% oracle:  pdflatex 0 errors; Ann Able, Bob Baker; Univ A; Univ B; "E-mail: ann@a.org"
+% engines: rust int144am, the switch on: `name="Email: "`, the kernel's, a Warning "E mail"; Z4b: the kernel's, no Warning
+% expect:  0 errors, 0 warnings; off and the switch on alike: `name="E-mail: "`
+% status:  RED (int144am, Z4b) -> GREEN (perfect_kernel_batchz4b::an_email_label_is_written_as_printed)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\newcommand\email[1]{{\tt\href{mailto:#1}{#1}}}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\\ $^{1}$Univ A; $^{2}$Univ B\\ E-mail: \email{ann@a.org}}
+\maketitle
+Body.
+\end{document}

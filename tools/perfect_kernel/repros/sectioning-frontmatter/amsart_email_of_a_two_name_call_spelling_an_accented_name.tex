@@ -1,0 +1,21 @@
+% mechanism: one amsart `\author{A and B}` call holding two `\email` calls: both are placed by the call's position on
+%   its last name, and today's respell moves an address to the author it spells by the names as printed only —
+%   `mathiae@` spells Mathiä by its base letters alone, so it stays on Thiel (FIDELITY_CHARTER §4 #420's base-letter
+%   rule, measured brief 95c r3: base-letter targets only for a several-name call would fix it; not taken).
+% witness: 2112.10604 (`\author{Dario Mathi\"a and Ulrich Thiel}`, `\email{mathiae@…}`, `\email{thiel@…}`)
+% oracle:  pdflatex 0 errors: "DARIO MATHIÄ AND ULRICH THIEL"; "Email address: mathiae@x.de", "Email address:
+%   thiel@x.de" under the one address
+% engines: rust int123a, 95c-r3: both e-mails on Ulrich Thiel; perl: not run
+% expect:  mathiae@x.de on Dario Mathiä, thiel@x.de on Ulrich Thiel; 0 errors
+% status:  RED (95c-r3; respell candidate (b) of brief 95c r3, not adopted: SYNC row)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Dario Mathi\"a and Ulrich Thiel}
+\address{Univ X}
+\email{mathiae@x.de}
+\email{thiel@x.de}
+\maketitle
+Text.
+\end{document}

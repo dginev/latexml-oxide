@@ -1,0 +1,12 @@
+% witness: synthetic (66e r6 review: the display form of the `\tag{5 … \enddocument` stop shape, here without a tag)
+% oracle:  pdftex (\input amstex, \input amsppt.sty) this file: 2 errors ("Missing $ inserted", "Display math should end with $$"); the display ends before `\enddocument`
+% engines: rust 66e r6 = 1 error (malformed: closing ltx:document over the open display) and the display's tex= swallows `\enddocument` (tex="a=b\enddocument")
+% expect:  the display's Math holds `a=b` only; `\enddocument` ends the document, not the formula
+% status:  RED (66e review r6 nit 2; before 66e too, not a \tag mechanism)
+\input amstex
+\input amsppt.sty
+\document
+Text before.
+$$
+a=b
+\enddocument

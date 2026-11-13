@@ -1,0 +1,24 @@
+% witness: 2602.13503 (icml2026, `\icmlkeywords{Machine Learning, ICML}` shown as a keywords block)
+% oracle:  pdflatex (icml2026.sty from 2602.13503, TL 2025) 0 errors: no keywords printed; PDF Keywords "Machine Learning, ICML"
+%          (every icml20xx.sty: `\hypersetup{pdfkeywords={#1}}` only)
+% engines: rust 64f3 = `<keywords name="Keywords: ">Machine Learning, ICML</keywords>` (Perl the same: `\lx@add@keywords`)
+% expect:  0 errors; no `<keywords>`; `<rdf property="dcterms:subject" content="Machine Learning, ICML" about="">` (ruling
+%          2026-10-09: metadata-only keywords become RDFa)
+% status:  RED (64f3) -> GREEN (64d)
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage[accepted]{icml2026}
+\begin{document}
+\twocolumn[
+\icmltitle{A Title}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.org}
+\icmlkeywords{Machine Learning, ICML}
+\vskip 0.3in
+]
+\printAffiliationsAndNotice{}
+Body text.
+\end{document}

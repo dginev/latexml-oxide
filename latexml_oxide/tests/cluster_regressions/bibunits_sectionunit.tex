@@ -1,0 +1,22 @@
+% mechanism: bibunits — `\bibliographyunit[\section]`: a `\cite` before the first `\section` or after an argless
+%   `\bibliographyunit` is outside every unit (bibunits.sty: `\cite` is `\std@cite` there), so it carries no unit
+%   list; a cite in a section keeps `bu1`. KNOWN_PERL_ERRORS #1223.
+% witness: synthetic (BM Q2.7's sibling on the `\lx@startbibunit` path)
+% oracle:  pdflatex + bibtex (main, bu1): 0 errors; `Intro [2]`, `After [1]`; unit References [1] Zimmer, main [1] Miller
+%   [2] Smith (the section's cite stays [?] after 4 runs: the unit's `\bibcite`s are never read back here)
+% engines: rust int160c: `Intro` cite inlist="bu0", `After` inlist="bu1"; perl: the same
+% expect:  0 errors; the section's cite inlist="bu1", the others no inlist; every cite links
+% status:  RED (int160c) -> GREEN (BU1)
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+\bibliographyunit[\section]
+Intro \cite{Smith2020}.
+\section{One}
+In one \cite{zeta}.
+\putbib[bibunits_refs]
+\bibliographyunit
+After \cite{mid}.
+\bibliographystyle{plain}
+\bibliography{bibunits_refs}
+\end{document}

@@ -1,0 +1,21 @@
+% `\write` of the stamped store (ualberta's aux line) writes the field as pdflatex does: the field provenance is out of
+% band (`Token::prov`, OXIDIZED_DESIGN #715), so the file read back holds the plain title, `\typeout` and
+% `\message{\meaning\@title}` print it, and `\detokenize` gives its characters alone.
+% status:  GREEN at 67int19b (no stamp) → GREEN (fms1), guarding the out-of-band provenance.
+% oracle:  pdflatex 0 errors: "Read back: Written Title Detok: Written Title.", "1 Intro Text."; the .ttl file
+%          "Written Title"; the log "TITLE=Written Title" and "macro:->Written Title".
+% expect:  0 errors, 0 warnings; "Read back: Written Title Detok: Written Title."; no mark name in the log or the XML.
+\documentclass{article}
+\makeatletter
+\title{Written Title}
+\begin{document}
+\newwrite\tout
+\immediate\openout\tout=\jobname.ttl
+\immediate\write\tout{\@title}
+\immediate\closeout\tout
+\typeout{TITLE=\@title}
+\message{\meaning\@title}
+Read back: \input{\jobname.ttl} Detok: \detokenize\expandafter{\@title}.
+\section{Intro}
+Text.
+\end{document}

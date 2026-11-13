@@ -1,0 +1,12 @@
+% mechanism: a note macro's local `\def\lab` (depth 0 of the field) ends with the author's tabular cell at the next
+%   `\and` (latex.ltx `\and`), so the next author's `\ifdefined\lab` reads no definition of it: the read scan stops
+%   there (`emit::printing_read_later`), no decline
+% witness: synthetic (the local sibling of author_note_macro_defines_what_a_later_author_reads)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One ∗", "Bob Two"; ∗ Lab Alpha.
+% engines: rust e6a6c93a18 as expected (1 warning: the note's plain text); FNR1 declined (1 warning, the decline)
+% expect:  0 errors, 1 warning (the note's plain text); Ann One with the note, Bob Two
+% status:  RED (FNR1) -> GREEN (perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand{\footremember}[2]{ \footnote{#2} \def\lab{#1} }
+\title{T}\author{Ann One\footremember{a}{Lab Alpha.} \and Bob Two\ifdefined\lab\fi}
+\begin{document}\maketitle Body.\end{document}

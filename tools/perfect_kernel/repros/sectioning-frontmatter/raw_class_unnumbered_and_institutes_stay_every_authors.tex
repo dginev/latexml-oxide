@@ -1,0 +1,29 @@
+% Control for batch 104b: a raw class's `\institute{A \and B}` store whose title page prints its `\and` entries
+% unnumbered (`\def\and{\unskip; \ignorespaces}`): the speculative run shows no number before the entries
+% (frontmatter_stores.rs `note_and_numbering` records false), so the store stays every author's, as before, though the
+% names carry numeric `\inst` marks.
+% witness: none (synthetic control)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 and Cy Cole1", "Univ A, Town; Univ B, City"
+% engines: rust int131a = rust 104b = every author both institutes, marks kept, 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; every author "Univ A, Town" and "Univ B, City"
+% status:  GREEN (control)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{plaininst.cls}
+\ProvidesClass{plaininst}\LoadClass{article}
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par\begingroup\parindent=0pt
+ \def\and{\unskip; \ignorespaces}%
+ \small\@institute\par\endgroup}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\ignorespaces\@author\par}\vskip6pt
+  \institutename}
+\end{filecontents*}
+\documentclass{plaininst}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} and Cy Cole\inst{1}}
+\institute{Univ A, Town \and Univ B, City}
+\maketitle
+Text.
+\end{document}

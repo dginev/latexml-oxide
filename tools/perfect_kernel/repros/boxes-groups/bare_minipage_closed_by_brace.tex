@@ -1,0 +1,14 @@
+% witness: review 64y round 1
+% oracle:  pdflatex 4 errors (the } ends minipage's own box group)
+% engines: rust 64ra 1E+1W -> 64y r1 0E -> 64y 1E 0W; Perl 3E
+% expect:  1 Error; minipage ends before 'After mini.'
+% status:  GREEN (64y r2); guard perfect_kernel_batch64y::bare_minipage_closed_by_brace_is_an_error
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsthm}\newtheorem{thm}{Theorem}
+\begin{document}
+Intro.
+
+{\minipage{3cm} Mini text.} After mini.
+
+Next para.
+\end{document}

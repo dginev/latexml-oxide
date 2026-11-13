@@ -17,7 +17,7 @@ use latexml_core::common::{Config, OutputFormat};
 /// crosses into the conversion thread — the `Rc` is built on the far side.
 pub type DispatchFn = fn(&str) -> Option<latexml_core::common::error::Result<()>>;
 
-/// One conversion in a fresh thread. Returns (xml, error_count).
+/// One conversion in a fresh thread. Returns (xml, its `Error:` + `Fatal:` count).
 pub fn convert(source: &str, streaming: Option<usize>) -> (String, usize) {
   convert_with(source, streaming, latexml_contrib::dispatch)
 }
@@ -30,6 +30,17 @@ pub fn convert_with(
   source: &str,
   streaming: Option<usize>,
   dispatch: DispatchFn,
+) -> (String, usize) {
+  convert_preloaded(source, streaming, dispatch, None)
+}
+
+/// [`convert_with`], with `preload` (the CLI's `--preload`): ar5iv.sty, under which a document's own raw class is
+/// loaded (without it the class falls back to OmniBus, its title page and stores unread).
+pub fn convert_preloaded(
+  source: &str,
+  streaming: Option<usize>,
+  dispatch: DispatchFn,
+  preload: Option<Vec<String>>,
 ) -> (String, usize) {
   let source = source.to_string();
   std::thread::Builder::new()
@@ -47,14 +58,16 @@ pub fn convert_with(
         // divergence (witness omnibus_natbib_bbl_sideload: 101 errors, an
         // empty eager doc, a partial streamed one).
         extra_bindings_dispatch: Some(std::rc::Rc::new(dispatch)),
+        preload,
         ..Config::default()
       };
       let mut c = Converter::from_config(cfg);
       c.initialize_session().expect("initialize");
       let r = c.convert(source.clone());
+      // Errors and Fatals both: a swept fixture must convert cleanly.
       let outcome = (
         r.result.unwrap_or_default(),
-        latexml::util::test::error_count(&r.log),
+        latexml::util::test::error_count(&r.log) + r.log.matches("Fatal:").count(),
       );
       // Free this thread's engine before it exits: `#[thread_local]` statics
       // run no destructors, so WITHOUT this every conversion leaks its engine
@@ -82,11 +95,112 @@ pub fn sweep_dir_shard(dir: &str, shard: usize, nshards: usize) {
   sweep_dir_shard_with(dir, shard, nshards, latexml_contrib::dispatch)
 }
 
+/// Fixtures that should be excluded from the generic streaming sweep.
+///
+/// These fall into two categories:
+/// 1. Intentional error fixtures designed to verify compiler error handling,
+///    diagnostic recovery, or `makeError` markers in dedicated unit tests
+///    (e.g., `INTENTIONALLY_FAILING` or `convert_expecting_errors`). Running
+///    them here spams stderr with expected errors and tests nothing about
+///    streaming equivalence.
+/// 2. Fixtures requiring non-default CLI flags or custom preloads (such as
+///    `--includestyles` or `ar5iv.sty`) not provided by the generic streaming
+///    sweep runner, causing intentional undefined macros/classes if run plain.
+const EXCLUDED_FIXTURES: &[&str] = &[
+  // tests/structure: intentional error fixture for makeError (<ltx:ERROR class='undefined'>)
+  "undefined_env.tex",
+  // tests/digestion: deliberate malformed read content in exists.data (unbalanced brace)
+  "io.tex",
+  // tests/expansion: deliberate self-recursion error (\def\cs{\protect\cs})
+  "protect_self_ref.tex",
+  // tests/cluster_regressions: intentional EOF truncation error while scanning \url
+  "url_eof_no_panic.tex",
+  // tests/cluster_regressions: intentional unknown mathversion error
+  "mathversion_unknown_version_errors.tex",
+  // tests/cluster_regressions: needs ar5iv.sty's localrawclasses to raw-load subdirdispatch/localjournal.cls
+  "subdir_cls_rawloaded.tex",
+  // tests/cluster_regressions: requires --includestyles / ar5iv.sty preload for subdirdispatch
+  "subdir_sty_not_shadowed.tex",
+  // tests/cluster_regressions: intentional runaway `comment` environment (no whole-line
+  // \end{comment}), asserted by 06_cluster_bibliography's comment_midline_end_runs_to_eof_like_pdflatex
+  "comment_midline_end.tex",
+  // tests/cluster_regressions: raw-class frontmatter stores, converted by their guards under
+  // `[rawstyles,rawclasses]latexml.sty`; plain, the class falls back to OmniBus (\recdate,
+  // \pubinfo undefined)
+  "jpsj2_stores_frontmatter.tex",
+  "ptptex_inst_store_frontmatter.tex",
+  // tests/cluster_regressions: biblatex's own errors on purpose, pinned by 06_cluster_bibliography's
+  // biblatex_category_declaration_errors and biblatex_repeated_filter_keys_and
+  "biblatex_category_errors.tex",
+  "biblatex_filter_repeated_keys.tex",
+  // tests/cluster_regressions: `\PackageError`s in `.bbl` titles on purpose, counted by 06_cluster_bibliography's
+  // biblatex_hidden_list_holds_only_unprinted_entries and biblatex_category_list_builds_only_selected_entries
+  "biblatex_filtered_entries_digested_once.tex",
+  "biblatex_filtered_out_entries_errors.tex",
+  "biblatex_category_list_digests_selected.tex",
+];
+
+/// Fixtures whose streamed output differs from the eager one by a documented divergence — the one exception besides
+/// OXIDIZED_DESIGN_DIVERGENCES #456 (`114_streaming_structure`) to the `--streaming` byte-identity, keyed by the
+/// fixture's directory and name: each is converted both ways, both conversions error-free, and the outputs are compared
+/// with the divergent elements stripped; a test of its own asserts the divergence. `verb_in_index.tex`: an `\index`
+/// entry of an index never printed is typeset in a streamed conversion only, whose fragment yield digests the pending
+/// entries as Perl does (OXIDIZED_DESIGN_DIVERGENCES #738; asserted by
+/// `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries`): its outputs are compared
+/// without their `<indexmark>`s. `biblatex_category_filter_timing.tex`: a list filtered by a category is decided once
+/// the document is digested, which a streamed conversion does at a fragment's yield — before a later `\addtocategory` (OXIDIZED_DESIGN
+/// _DIVERGENCES #762; asserted by `114_streaming_cluster_regressions::streaming_builds_a_category_list_when_absorbed`):
+/// its outputs are compared without their `<bibliography>`s. `biblatex_category_lists_in_newrefsection.tex` is the same
+/// divergence: its `\addtocategory` follows the first refsection's category lists.
+pub const STREAMING_DIVERGENT_FIXTURES: &[(&str, &str)] = &[
+  ("cluster_regressions/verb_in_index.tex", "indexmark"),
+  (
+    "cluster_regressions/biblatex_category_filter_timing.tex",
+    "bibliography",
+  ),
+  (
+    "cluster_regressions/biblatex_category_lists_in_newrefsection.tex",
+    "bibliography",
+  ),
+];
+
+/// `xml` without its `<element …>…</element>` (and `<element …/>`) occurrences, and without the blank lines the
+/// pretty-printed ones leave.
+fn strip_element(xml: &str, element: &str) -> String {
+  let open = format!("<{element}");
+  let close = format!("</{element}>");
+  let mut out = String::with_capacity(xml.len());
+  let mut rest = xml;
+  while let Some(start) = rest.find(&open) {
+    out.push_str(&rest[..start]);
+    let tail = &rest[start..];
+    let head_end = tail.find('>').map_or(tail.len(), |i| i + 1);
+    let end = if tail[..head_end].ends_with("/>") {
+      head_end
+    } else {
+      tail.find(&close).map_or(tail.len(), |i| i + close.len())
+    };
+    rest = &tail[end..];
+  }
+  out.push_str(rest);
+  out
+    .lines()
+    .filter(|line| !line.trim().is_empty())
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
 pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: DispatchFn) {
   let mut fixtures: Vec<_> = std::fs::read_dir(dir)
     .unwrap_or_else(|e| panic!("cannot read {dir}: {e}"))
     .filter_map(|e| e.ok().map(|e| e.path()))
-    .filter(|p| p.extension().is_some_and(|x| x == "tex"))
+    .filter(|p| {
+      p.extension().is_some_and(|x| x == "tex")
+        && p
+          .file_name()
+          .and_then(|n| n.to_str())
+          .is_none_or(|name| !EXCLUDED_FIXTURES.contains(&name))
+    })
     .collect();
   fixtures.sort();
   assert!(
@@ -101,12 +215,41 @@ pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: D
     let src = path.to_string_lossy().into_owned();
     let (eager_xml, eager_errs) = convert_with(&src, None, dispatch);
     let (streamed_xml, streamed_errs) = convert_with(&src, Some(3), dispatch);
+    // A swept fixture converts cleanly: an error means it is degraded here (a missing dispatcher
+    // or preload), and a degraded fixture proves nothing about streaming. Intentional-error
+    // fixtures are excluded above, and asserted by their own tests.
+    if eager_errs != 0 {
+      divergent.push(format!(
+        "{src}: {eager_errs} error(s) in the eager conversion (exclude it, or give the sweep its dispatcher/preload)"
+      ));
+      continue;
+    }
     if eager_errs != streamed_errs {
       divergent.push(format!(
         "{src}: error count diverges (eager {eager_errs}, streamed {streamed_errs})"
       ));
       continue;
     }
+    let key = path
+      .iter()
+      .rev()
+      .take(2)
+      .collect::<Vec<_>>()
+      .into_iter()
+      .rev()
+      .map(|part| part.to_string_lossy())
+      .collect::<Vec<_>>()
+      .join("/");
+    let (eager_xml, streamed_xml) = match STREAMING_DIVERGENT_FIXTURES
+      .iter()
+      .find(|(fixture, _)| *fixture == key)
+    {
+      Some((_, element)) => (
+        strip_element(&eager_xml, element),
+        strip_element(&streamed_xml, element),
+      ),
+      None => (eager_xml, streamed_xml),
+    };
     if eager_xml != streamed_xml {
       let byte = eager_xml
         .bytes()

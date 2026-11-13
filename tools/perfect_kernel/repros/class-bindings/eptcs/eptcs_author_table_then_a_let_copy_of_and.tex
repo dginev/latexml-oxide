@@ -1,0 +1,26 @@
+% mechanism: an eptcs `\author` opening with a `tabular` of names, then a `\let` copy of `\and` (`\let\nx\and`), then a
+%   name with an `\institute` under it: "Cy Cole" and "Univ C" are a column of their own beside the table. The binding
+%   cuts its cells where the separators are by meaning (`eptcs_cls.rs` `cells`, `argument_separators`,
+%   OXIDIZED_DESIGN_DIVERGENCES #991, #995); the split by spelling it replaces cut here too (`split_tokens` matches an
+%   alias of `\and`'s own definition).
+% witness: P24's probe (the table route of SEP1's `\let` probe); the table shape 1407.7928
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "ann@a.edu", "Bob
+%   Baker" over "bob@b.edu", "Cy Cole" over "Univ C" in a column beside them
+% engines: perl has no eptcs binding (OmniBus); int157a: Ann Able (ann@a.edu), Bob Baker (bob@b.edu), Cy Cole (Univ C)
+% expect:  0 errors, 0 warnings; Ann Able (ann@a.edu), Bob Baker (bob@b.edu), Cy Cole (Univ C)
+% status:  GREEN (int157a, pinned; guard perfect_kernel_batchp24)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\let\nx\and
+\title{T}
+\author{\begin{tabular}{c@{\qquad}c}
+Ann Able & Bob Baker\\
+\texttt{ann@a.edu} & \texttt{bob@b.edu}
+\end{tabular}
+\nx
+Cy Cole
+\institute{Univ C}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

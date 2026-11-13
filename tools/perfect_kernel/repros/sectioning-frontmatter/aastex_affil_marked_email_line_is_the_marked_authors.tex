@@ -1,0 +1,23 @@
+% mechanism: an `\affil` line holding a mark and an e-mail (`\affil{$^*$ Email: bbaker@uni.edu}`) is the e-mail of the
+%   author its mark or its address names, no affiliation of the authors: an affiliation entry labelled by its mark
+%   (aas_support_sty.rs `\affiliation`), its address line the Kind step's (`kind_entry_addresses`), placed by the Link
+%   step (`entry_address_owners`; OD #992 — 97f r2's `placed_email_line_calls` deleted, Z18l).
+% witness: 1808.01089 (aastex, `Yang Gao\altaffilmark{2, 3, *}` … `\affil{$^*$ Email: gaoyang25@mail.sysu.edu.cn}`: 97f
+%   r1 an affiliation of all three, 97d of the last author); review rev97cd F3
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 and Bob Baker2,* / 1 Uni One / 2 Uni Two / * Email:
+%   bbaker@uni.edu"
+% engines: rust 97f r1: every author each line; rust 97d: Ann Able Uni One, Bob Baker all three; perl: Bob Baker all
+% expect:  0 errors, 0 warnings; Ann Able Uni One, Bob Baker Uni Two and bbaker@uni.edu (name "Email: ")
+% status:  RED (97f r1) -> GREEN (97f r2)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1}}
+\author{Bob Baker\altaffilmark{2,*}}
+\affil{$^1$ Uni One}
+\affil{$^2$ Uni Two}
+\affil{$^*$ Email: bbaker@uni.edu}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

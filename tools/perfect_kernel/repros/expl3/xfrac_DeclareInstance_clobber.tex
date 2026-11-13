@@ -1,0 +1,14 @@
+% witness: schulmathematik/schulmathematik (1), substances/substances_en (50); tightest: this file
+% oracle: pdflatex xfrac_DeclareInstance_clobber.tex -> exit 0, 0 template errors
+% engines: pdflatex (clean); Perl LaTeXML has no xfrac binding (SHARED-clean for this repro)
+% expect: 0 errors; tasks 'alphabetize' instance resolves; <ltx:itemize> emitted
+% status: GREEN (batch 56ay, 2026-09-09)
+% mechanism: latexml_package/src/package/xfrac_sty.rs:22 DefMacro!("\\DeclareInstance{}{}{}{}", None)
+%            no-ops the SHARED kernel \DeclareInstance (latex.ltx:8671); every xtemplate
+%            instance declared after xfrac/chemmacros/chemformula loads silently vanishes.
+\documentclass{article}
+\usepackage{xfrac}   % loads xfrac_sty.rs binding -> \DeclareInstance := 4-arg no-op
+\usepackage{tasks}   % \DeclareInstance{tasks}{alphabetize}{default}{} now a no-op
+\begin{document}
+\begin{tasks}(2)\task A\task B\end{tasks}
+\end{document}

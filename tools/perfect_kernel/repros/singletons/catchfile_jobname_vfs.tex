@@ -1,0 +1,37 @@
+% witness: makron (arXiv 1611.01359, makron.sty:61
+%   \CatchFileEdef\tmp{\jobname.runs}{\endlinechar=-1\relax}); arXiv 2210.08043
+% oracle:  pdflatex 0 errors; [43][42 ][AFOOB ]
+% engines: rust=0 (56ir-rel2, 2026-09-25) — structural: [1][][ ], three
+%   missing_file warnings and a Missing number
+% expect:  0 errors, 0 warnings; [43][42 ][AFOOB ]
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% control: catchfile_missing_file_control.tex (the package error)
+% mechanism: catchfile.sty:224-238 \CatchFile@CheckFileExists goes through
+%   \IfFileExists, which expands the name (latex.ltx \set@curr@file), so
+%   \jobname.runs names the filecontents file; the binding searched for the
+%   literal `\jobname .runs'. \CatchFileEdef (:251-261) reads the file as
+%   \input does, so a filecontents (in-memory) file is found too, and the
+%   \space after the name is \input's file-name terminator (tex.web §526), not
+%   content.
+\documentclass{article}
+\usepackage{catchfile}
+\begin{filecontents*}{\jobname.runs}
+42
+\end{filecontents*}
+\begin{filecontents*}{\jobname.defs}
+A\foo B
+\end{filecontents*}
+\def\foo{FOO}
+\newcounter{run}
+\IfFileExists{\jobname.runs}{%
+  \begingroup
+  \CatchFileEdef\tmp{\jobname.runs}{\endlinechar=-1\relax}%
+  \setcounter{run}{\tmp}%
+  \endgroup
+}{}
+\stepcounter{run}
+\begin{document}
+\CatchFileDef\runs{\jobname.runs}{}%
+\CatchFileEdef\defs{\jobname.defs}{}%
+[\therun][\detokenize\expandafter{\runs}][\detokenize\expandafter{\defs}]
+\end{document}

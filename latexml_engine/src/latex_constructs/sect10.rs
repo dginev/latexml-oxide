@@ -1,0 +1,641 @@
+//! `latex_constructs` section 10: C.10 Lining It Up in Columns
+//!
+//! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
+//! definitions run in the original order from `super::load_definitions`.
+
+use super::*;
+
+#[rustfmt::skip]
+pub(crate) fn load() -> Result<()> {
+  // ======================================================================
+  // C.10 Lining It Up in Columns
+  // ======================================================================
+
+  //======================================================================
+  // C.10.1 The tabbing Environment
+  // Perl: latex_constructs.pool.ltxml lines 3554-3651
+  //======================================================================
+
+  DefRegister!("\\tabbingsep" => Dimension::new(0));
+
+  // Main entry: \tabbing → \par\@tabbing@bindings\@@tabbing\lx@begin@alignment
+  DefMacro!(
+    "\\tabbing",
+    "\\par\\@tabbing@bindings\\@@tabbing\\lx@begin@alignment"
+  );
+  DefMacro!("\\endtabbing", "\\lx@end@alignment\\@end@tabbing\\par");
+
+  DefPrimitive!("\\@end@tabbing", sub [_args] {
+    egroup()?;
+  });
+
+  DefConstructor!("\\@@tabbing SkipSpaces DigestedBody", "#1",
+    reversion => "\\begin{tabbing}#1\\end{tabbing}",
+    before_digest => sub {
+      bgroup();
+    },
+    mode => "internal_vertical"
+  );
+
+  // Wrapper macros that expand to marker + & (column separator)
+  DefMacro!("\\@tabbing@tabset", "\\@tabbing@tabset@marker&");
+  DefMacro!("\\@tabbing@nexttab", "\\@tabbing@nexttab@marker&");
+  // `\\[<skip>]` in tabbing: latex.ltx:16465-16467 hands it to `\@vspace@calcify`
+  // (:9254), a `\setlength` of the skip `\sp@ce@skip` (OXIDIZED_DESIGN #317).
+  DefMacro!(
+    "\\@tabbing@newline OptionalMatch:* [Glue]",
+    "\\@tabbing@newline@marker\\cr"
+  );
+  DefMacro!(
+    "\\@tabbing@kill",
+    "\\@tabbing@kill@marker\\cr\\@tabbing@start@tabs"
+  );
+
+  // Marker constructors
+  DefConstructor!("\\@tabbing@tabset@marker", "",
+    reversion => "\\=",
+    properties => { Ok(stored_map!("alignmentSkippable" => true)) }
+  );
+  DefConstructor!("\\@tabbing@nexttab@marker", "",
+    reversion => "\\>",
+    properties => { Ok(stored_map!("alignmentSkippable" => true)) }
+  );
+  DefConstructor!("\\@tabbing@newline@marker", "",
+    reversion => "\\\\"
+  );
+  DefConstructor!("\\@tabbing@kill@marker", "",
+    reversion => "\\kill",
+    after_digest => sub [_whatsit] {
+      // Perl: LookupValue('Alignment')->removeRow
+      if let Some(alignment_stored) = lookup_alignment()
+        && let Some(alignment_cell) = alignment_stored.alignment_cell() {
+          alignment_cell.borrow_mut().remove_row();
+        }
+    },
+    properties => { Ok(stored_map!("alignmentSkippable" => true)) }
+  );
+
+  // Tab tracking
+  assign_value(
+    "tabbing_start_tabs",
+    Stored::Tokens(Tokens!()),
+    Some(Scope::Global),
+  );
+
+  DefMacro!("\\@tabbing@start@tabs", sub [_args] {
+    match lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
+      toks
+    } _ => {
+      Tokens!()
+    }}
+  });
+
+  // \+ increments tab start by adding \> to tabbing_start_tabs
+  DefPrimitive!("\\@tabbing@increment", sub [_args] {
+    let mut tabs = match lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
+      toks.unlist()
+    } _ => {
+      Vec::new()
+    }};
+    tabs.push(T_CS!("\\>"));
+    assign_value(
+      "tabbing_start_tabs",
+      Stored::Tokens(Tokens::new(tabs)),
+      Some(Scope::Global),
+    );
+  });
+
+  // \- decrements tab start by removing first element from tabbing_start_tabs
+  DefPrimitive!("\\@tabbing@decrement", sub [_args] {
+    let tabs = match lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
+      let mut v = toks.unlist();
+      if !v.is_empty() {
+        v.remove(0);
+      }
+      v
+    } _ => {
+      Vec::new()
+    }};
+    assign_value(
+      "tabbing_start_tabs",
+      Stored::Tokens(Tokens::new(tabs)),
+      Some(Scope::Global),
+    );
+  });
+
+  // Stubs for unimplemented features (matching Perl)
+  DefPrimitive!("\\@tabbing@untab", sub [_args] { /* NOT HANDLED — see Perl note */ });
+  DefPrimitive!("\\@tabbing@flushright", sub [_args] { /* NOT HANDLED */ });
+  DefPrimitive!("\\@tabbing@hfil", sub [_args] { /* NOT HANDLED */ });
+  DefPrimitive!("\\@tabbing@pushtabs", sub [_args] { /* NOT HANDLED */ });
+  DefPrimitive!("\\@tabbing@poptabs", sub [_args] { /* NOT HANDLED */ });
+
+  // Accent redirect: \a{x} → \@tabbing@x (looks up the accent by name)
+  // A saved copy exists only for the accents tabbing rebinds (`'`, `` ` ``,
+  // `=`, `<`, `>`); every other accent (`\"`, `\.`, `\^`, `\~`, `\u`, `\v`,
+  // `\H`, `\c`, …) is the encoding-level command itself, as latex.ltx:10005
+  // `\@tabacckludge` reaches it (`\csname\string#1\endcsname`).
+  DefMacro!("\\@tabbing@accent{}", sub [args] {
+    let accent = args[0].to_string();
+    let saved = T_CS!(&format!("\\@tabbing@{accent}"));
+    if is_defined_token(&saved) {
+      Tokens::new(vec![saved])
+    } else {
+      Tokens::new(vec![T_CS!(&format!("\\{accent}"))])
+    }
+  });
+
+  // Default definitions for \pushtabs/\poptabs/\kill (outside tabbing)
+  def_macro_noop("\\pushtabs")?;
+  def_macro_noop("\\poptabs")?;
+  def_macro_noop("\\kill")?;
+
+  // The binding primitive that sets up the alignment
+  DefPrimitive!("\\@tabbing@bindings", sub [_args] {
+    tabbing_bindings()?;
+  });
+
+  // Internals of tabbing for program.sty compatibility
+  DefMacro!(
+    "\\@startfield",
+    "\\global\\setbox\\@curfield\\hbox\\bgroup\\color@begingroup"
+  );
+  DefMacro!("\\@stopfield", "\\color@endgroup\\egroup");
+  DefMacro!(
+    "\\@contfield",
+    "\\global\\setbox\\@curfield\\hbox\\bgroup\\color@begingroup\\unhbox\\@curfield"
+  );
+  DefMacro!(
+    "\\@addfield",
+    "\\global\\setbox\\@curline\\hbox{\\unhbox\\@curline\\unhbox\\@curfield}"
+  );
+
+  DefRegister!("\\lx@arstrut", Dimension!("0pt"));
+  DefRegister!("\\lx@default@tabcolsep", Dimension!("6pt"));
+  DefRegister!("\\tabcolsep", Dimension!("6pt"));
+  DefMacro!("\\arraystretch", None, T_OTHER!("1"));
+  Let!("\\@tabularcr", "\\lx@alignment@newline");
+  // Same retraction for the kernel's ARRAY row separator. Perl only retracts
+  // `\@tabularcr` because it never loads `latex.ltx`, so `\@arraycr` is simply
+  // undefined there; our kernel dump DOES carry the real
+  // `\@arraycr`/`\@xarraycr` (latex.ltx L16583-16585), and its raw TeX body is
+  // incompatible with LaTeXML's alignment model. It balances TeX's `align_state`
+  // with the classic `${\ifnum0=`}\fi … \ifnum0=`{\fi}${}\cr` brace/`$` trick,
+  // which only works when `\cr` is scanned by a real `\halign`; digesting it
+  // instead re-opens an inline-math frame that the alignment's column-after
+  // template then cannot balance. Any macro that does the documented
+  // `\let\\\@arraycr` inside its own `\halign`/`\ialign` (the `\bordermatrix`
+  // idiom — witness `\kbordermatrix`, arXiv:2605.23849) therefore leaked a
+  // math-mode frame: `Error:unexpected:\halign Attempt to close a group that
+  // switched to mode math`, cascading into a runaway that hit the token limit
+  // after ~25-107s, where same-host Perl completes in 0.4s.
+  // `\lx@alignment@newline` IS the faithful model of `\\` in an alignment (it
+  // reads the same `*` and `[dim]` arguments `\@arraycr`/`\@argarraycr` do), so
+  // aliasing the entry point retracts the whole chain, exactly as for
+  // `\@tabularcr`. See docs/archive/known_crashes/kbordermatrix_halign_math/.
+  Let!("\\@arraycr", "\\lx@alignment@newline");
+  // The CONTINUATION macros too (latex.ltx:16585-16594): `\@xarraycr` =
+  // `\@ifnextchar[\@argarraycr{\ifnum0=`{\fi}${}\cr}` and `\@argarraycr[#1]`
+  // = `\ifnum0=`{\fi}${}\ifdim…` carry the CLOSING half of `\@arraycr`'s
+  // `${` trick; `\@xtabularcr`/`\@argtabularcr` the `{` half. A package that
+  // reaches them directly — tablists.sty's `\TeXr@arraycr` opens with
+  // `\iffalse{\fi` (no `$`) inside its own raw `\halign` and dispatches to
+  // `\@xarraycr` — leaves the `$` unpaired, and LaTeXML digests it as an
+  // inline-math OPEN that the row's `\cr` then cannot balance ("`\org@halign`
+  // Attempt to close a group that switched to mode math"; tablists-rus 101,
+  // Perl 12; KPE #174). The real spacing macros `\@xargarraycr`/`\@yargarraycr`
+  // (:16600/:16602) are `$`-free and stay. The brace half stays too, as the alignment count needs it (tex.web §442: a
+  // character constant's brace does not count, a skipped one does): the array pair in array.sty:256-258's form
+  // `\ifnum0=`{}\fi`, which takes back the `\iffalse{\fi` of the opener (tablists.sty:158) without closing a group;
+  // the tabular pair as latex.ltx:16592-16594 has it, `\ifnum0=`{\fi}`, whose `}` closes the opener's `{` (:16591).
+  // Without it the count stayed +1 to the row's `\cr`, which then reached the stomach ("Missing } inserted", tex.web
+  // §1127 `align_error`). Guard:
+  // `perfect_kernel_batch54::array_continuation_macros_carry_no_math_shift`.
+  DefMacro!("\\@xarraycr", "\\@ifnextchar[\\@argarraycr{\\ifnum0=`{}\\fi\\cr}");
+  DefMacro!(
+    "\\@argarraycr[]",
+    "\\ifnum0=`{}\\fi\\ifdim #1>\\z@ \\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
+  );
+  DefMacro!("\\@xtabularcr", "\\@ifnextchar[\\@argtabularcr{\\ifnum0=`{\\fi}\\cr}");
+  DefMacro!(
+    "\\@argtabularcr[]",
+    "\\ifnum0=`{\\fi}\\ifdim #1>\\z@ \\unskip\\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
+  );
+  if !has_value("GUESS_TABULAR_HEADERS") {
+    AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
+  }
+
+  // Keyvals are for attributes for the alignment.
+  // Typical keys are width, vattach,...
+  DefKeyVal!("tabular", "width", "Dimension");
+  // `vattach` is passed internally by `\tabular[]{}` expansion below
+  // (`[vattach=#1]\@@tabular...`) but Perl latex_constructs.pool.ltxml
+  // also leaves it unregistered (Info-level pass-through). Rust-only
+  // divergence paired with `21e730e71e` Info→Warn promotion: register
+  // it so the internal usage doesn't trip the unknown-key Warn path.
+  DefKeyVal!("tabular", "vattach", "");
+  DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
+    sub[(template, attributes_opt)] {
+    let attrs_stored = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
+    let mut attrs = HashMap::default();
+    for (k,v) in attrs_stored {
+      attrs.insert(k, v.to_string());
+    }
+    if let Some(va) = attrs.get("vattach") {
+      attrs.insert(String::from("vattach"), translate_attachment(va).to_string());
+    }
+
+    AssignValue!("lx@raw@array@open" => false);
+    tabular_bindings(template, SymHashMap::default(), attrs)?;
+  });
+
+  def_macro_noop("\\@tabular@before")?;
+  def_macro_noop("\\@tabular@after")?;
+  def_macro_noop("\\@tabular@row@before")?;
+  def_macro_noop("\\@tabular@row@after")?;
+  def_macro_noop("\\@tabular@column@before")?;
+  def_macro_noop("\\@tabular@column@after")?;
+
+  // The Core alignment support is in LaTeXML::Core::Alignment and in TeX.ltxml
+  // In LaTeX kernel (latex.ltx:16541), \tabular is a parameterless macro that delegates
+  // to \@tabular. When expl3 or packages patch \tabular via \tl_put_left:Nn \tabular
+  // (\exp_after\def\exp_after\tabular...), expanding \tabular must NOT trigger argument
+  // scanning or alignment mode switches.
+  // latex.ltx:16560 `\@tabular` is PARAMETERLESS and its body carries a literal
+  // `$`: `\leavevmode\hbox\bgroup$\let\@acol\@tabacol…\@tabarray`; `[pos]{cols}`
+  // are read downstream. babel's bidi layer patches exactly that shape —
+  // luababel.def:1895 `\bbl@replace\@tabular{$}{$\def\bbl@insidemath{0}…}`
+  // `\expandafter`-expands `\@tabular` and rescans the body for `$`. An
+  // arg-taking `\@tabular[]{}` grabbed the `$` and `\bbl@nil` as its arguments,
+  // so the `$`-delimited scan never balanced (Until:$ at EOF, or the TokenLimit
+  // runaway of lettrine-demo-arabic and every `\babelprovide` bidi document).
+  // So: parameterless, the `$` present for patching and eaten by
+  // `\lx@tabular@eatmath` (never a math shift here), the arguments read by
+  // `\lx@@tabular@args`; a patch's inserted `\def`s run in between. Guard:
+  // `perfect_kernel_batch56::at_tabular_is_parameterless_with_a_patchable_math_shift`.
+  DefMacro!("\\@tabular", r"\lx@tabular@eatmath$\lx@@tabular@args", locked => true);
+  DefPrimitive!("\\lx@tabular@eatmath Token", sub[(_math_shift)] { Ok(Vec::new()) });
+  DefMacro!("\\lx@@tabular@args[]{}",
+    r"\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\lx@begin@alignment\@tabular@before",
+    locked => true);
+  // The delegator stays LOCKED like Perl's `\tabular[]{}` (latex_constructs
+  // .pool.ltxml:3666-3671, both entry points locked): a class that `\def`s BOTH
+  // `\tabular` and `\endtabular` (jpsj2.cls:652,657 wraps a raw `$\halign$` in
+  // an inner `center`) must have both dropped, not just the end — the 55u split
+  // unlocked this half and the unclosed inner `center` leaked (jpsj injpsj2, 0→11).
+  // jlreq.cls:5890's `\tl_put_left:Nn \tabular` still x-expands a parameterless
+  // macro; its `\cs_set` is dropped by the lock exactly as in Perl. Guard:
+  // `perfect_kernel_batch56::tabular_delegator_is_locked_with_endtabular`.
+  DefMacro!("\\tabular", "\\@tabular", locked => true);
+  // latex.ltx:16554 `\def\endtabular{\crcr\egroup\egroup $\egroup}`: the
+  // trailing `$\egroup` closes the `\hbox\bgroup$` scaffold `\@tabular`
+  // (:16560) opened. The constructor path opens none (`\lx@tabular@eatmath`
+  // above), so the unwind is keyed on `\@array@bindings` having opened the
+  // array (`lx@raw@array@open`, scoped to the scaffold group). Witness
+  // aguplus planotable (`\pt@tabular` … `\endtabular`): the inline-math and
+  // hbox frames stayed open → `\pt@endfloat`/`\endgroup` mode errors.
+  DefMacro!("\\endtabular", r"\@tabular@after\lx@end@alignment\@end@tabular\lx@raw@array@close",
+    locked => true);
+  DefPrimitive!("\\@end@tabular", {
+    egroup()?;
+    restore_dollar_outside_alignment();
+  });
+  DefMacro!("\\lx@raw@array@close", {
+    if lookup_bool("lx@raw@array@open") {
+      Tokens!(T_MATH!(), T_CS!("\\egroup"))
+    } else {
+      Tokens!()
+    }
+  });
+  // Perl latex_constructs.pool.ltxml L3735-3746: mode => 'restricted_horizontal',
+  //   enterHorizontal => 1. Perl's `[]` is an `OptionalPosition` here (and on `\@@tabular@`, `\@@array`): read the
+  //   same, but no text on the page (base_parameter_types.rs, base_utilities.rs `shown_arguments`).
+  DefConstructor!("\\@@tabular OptionalPosition Undigested DigestedBody",
+    "#3",
+    reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
+    before_digest => { bgroup(); },
+    sizer        => "#3",
+    after_digest  => sub[whatsit] {
+      // A tabular is a VERTICAL structure (like `\halign`, tex_tables.rs:312):
+      // mark the result box `internal_vertical` so a containing `\vbox`/`\vtop`'s
+      // paragraph repack (`repack_horizontal`) SKIPS it per-item rather than
+      // wrapping it to `\hsize`. Without this the box defaults to the `mode=>text`
+      // (horizontal-family) digestion mode and a `\vtop{\begin{tabular}…}` mis-
+      // measures at full `\hsize` (sizes_test 37→469.75pt). [DIAG part c]
+      whatsit.set_property("mode", Stored::from("internal_vertical"));
+      if let Some(alignment) = lookup_alignment()
+        && let DigestedData::Alignment(data) = alignment.data() {
+          let attachment = if let Some(arg) = whatsit.get_arg(1) { translate_attachment(arg) }
+          else { translate_attachment(String::new()) };
+          let mut data_lock = data.borrow_mut();
+          let attributes = data_lock.get_xml_attributes_mut();
+          attributes.insert(String::from("vattach"), attachment.to_string());
+        }
+    },
+    locked => true,
+    mode   => "text",
+    enter_horizontal => true);
+
+  DefMacro!(
+    "\\csname tabular*\\endcsname{Dimension}[]{}",
+    r"\@tabular@bindings{#3}[width=#1,vattach=#2]\@@tabular@{#1}[#2]{#3}\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\csname endtabular*\\endcsname",
+    r"\lx@end@alignment\@end@tabular@"
+  );
+  // Perl latex_constructs.pool.ltxml L3753-3757: mode => 'restricted_horizontal',
+  //   enterHorizontal => 1.
+  DefConstructor!("\\@@tabular@{Dimension} OptionalPosition Undigested DigestedBody",
+    "#4",
+    before_digest => { bgroup(); },
+    reversion    => r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*}",
+    mode         => "text",
+    enter_horizontal => true);
+  DefPrimitive!("\\@end@tabular@", {
+    egroup()?;
+    restore_dollar_outside_alignment();
+  });
+  // Perl: Let('\multicolumn', '\lx@alignment@multicolumn');
+  Let!("\\multicolumn", "\\lx@alignment@multicolumn");
+  // LOCKED like `\tabular`/`\endtabular` (:282/:291): a raw package that
+  // re-`\def`s latex.ltx's `\multicolumn` (agupp.sty:599 = latex.ltx:16603's
+  // `\multispan…\@mkpream{#2}…`) would run `\@mkpream`, which EXECUTES
+  // `\@classz`/`\@acol` (latex.ltx:16641/16643) — `\let`-targets only
+  // `\array`/`\@tabular`'s raw scaffolds bind (:16550/:16560), never the
+  // constructor path — and typeset the cell outside the alignment model
+  // (aguplus.tex:731 `undefined:\@classz`+`\@acol`; Perl identical, its
+  // `\multicolumn` is unlocked at latex_constructs.pool.ltxml:3702 — SURPASS).
+  // Binding-level redefinitions (colortbl) load unlocked and still win. Guard:
+  // `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+  // The lock protects that interface of three arguments (state.rs `another_interface`): a package's
+  // `\multicolumn` of another arity is a command of its own, not a copy (sltables.sty:193, the sltables-doc-en
+  // manual, as Perl keeps it). Guard: `perfect_kernel_batchm1::a_package_multicolumn_of_another_arity_is_its_own`.
+  AssignValue!("\\multicolumn:locked" => true, Some(Scope::Global));
+  AssignValue!("\\multicolumn:locked@arity" => 3i64, Some(Scope::Global));
+
+  // A weird bit that sometimes gets invoked by Cargo Cult programmers...
+  // to \noalign in the defn of \hline! Bizarre! (see latex.ltx)
+  // However, the really weird thing is the way this provides the } to close the argument
+  DefMacro!("\\@xhline", r"\ifnum0=`{\fi}");
+
+  // The rule's constructor is private: latex.ltx's `\cline#1{\@cline#1\@nil}` (:16737) calls `\@cline#1-#2\@nil` (:16738), and
+  // a raw redefinition with that signature (array.sty, colortbl.sty, an author's `\def\@cline#1-#2\@nil`, 1902.04834)
+  // read past the end of the file looking for `\@nil` (Perl's `\@cline{}`, latex_constructs.pool.ltxml:3709-3710, alike).
+  DefMacro!("\\cline{}", r"\noalign{\lx@cline{#1}}");
+  DefConstructor!("\\lx@cline{}", "",
+    after_digest => sub[whatsit] {
+      let cols = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
+      let mut cols_vec = Vec::new();
+      let cols_chars = cols.chars();
+      let mut from : Option<usize> = None;
+      let mut num = String::new();
+      for c_next in cols_chars {
+        match c_next {
+          ',' => if !num.is_empty() {
+            let this_num = num.parse::<usize>().unwrap();
+            if let Some(from_num) = from {
+              for num_in_range in from_num..=this_num {
+                cols_vec.push(num_in_range);
+              }
+            } else {
+              cols_vec.push(this_num);
+            }
+            from = None;
+            num.clear();
+          },
+          '-' => {
+            // `\cline{-3}` (no leading number) is malformed but appears in
+            // the wild; treat it as `\cline{1-3}` rather than panicking.
+            from = Some(num.parse::<usize>().unwrap_or(1));
+            num.clear();
+          }
+          c if c.is_ascii_digit() => num.push(c_next),
+          _ => break
+        }
+      }
+      if !num.is_empty() {
+        let this_num = num.parse::<usize>().unwrap();
+        if let Some(from_num) = from {
+          for num_in_range in from_num..=this_num {
+            cols_vec.push(num_in_range);
+          }
+        } else {
+          cols_vec.push(this_num);
+        }
+      }
+      if let Some(alignment_stored) = crate::tex_tables::alignment_to_rule() {
+        alignment_stored.alignment_cell().unwrap().borrow_mut()
+          .add_line("t", cols_vec);
+      }
+    },
+    sizer      => 0, alias => "\\cline",
+    // properties => { "isHorizontalRule" => true }
+  );
+
+  DefConstructor!("\\vline", "",
+    properties => sub[_args] {
+      Ok(stored_map!("isVerticalRule" => true))
+    },
+    sizer      => 0,
+  );
+  DefRegister!("\\lx@default@arraycolsep", Dimension!("5pt"));
+  DefRegister!("\\arraycolsep", Dimension!("5pt"));
+  DefRegister!("\\arrayrulewidth", Dimension!("0.4pt"));
+  DefRegister!("\\doublerulesep", Dimension!("2pt"));
+  // array.sty L184 allocates `\extrarowheight` as a dimension register
+  // that controls per-row vertical pad-extra. Papers commonly use
+  // `\setlength\extrarowheight{3pt}` without explicit
+  // `\usepackage{array}`. Perl LaTeXML's array.sty.ltxml L18 defines
+  // it too; our binding does as well, but only when array.sty itself
+  // is required. Define here at engine level so it's always available.
+  // Witness 2205.01473 (ifacconf.cls + \setlength\extrarowheight).
+  DefRegister!("\\extrarowheight", Dimension!("0pt"));
+  def_macro_noop("\\extracolsep{}")?;
+
+  // latex.ltx:16645-16665 `\@arrayclassz` / `\@tabclassz`: the class-z
+  // preamble builders `\array` (:16550) and `\@tabular` (:16561) `\let\@classz`
+  // to. LaTeXML reads the template itself (never runs `\@mkpream`), so the
+  // bodies are inert — but the MEANING of `\@classz` is how latex.ltx says
+  // whether the cells are math (`\@arrayclassz` wraps `\@sharp` in `$…$`) or
+  // text (`\@tabclassz` does not), and `\@array@bindings` keys on it below.
+  RawTeX!(r"\def\@arrayclassz{\ifcase \@lastchclass \@acolampacol \or \@ampacol \or
+   \or \or \@addamp \or
+   \@acolampacol \or \@firstampfalse \@acol \fi
+\edef\@preamble{\@preamble
+  \ifcase \@chnum
+     \hfil$\relax\@sharp$\hfil \or $\relax\@sharp$\hfil
+    \or \hfil$\relax\@sharp$\fi}}
+\def\@tabclassz{\ifcase\@lastchclass \@acolampacol \or \@ampacol \or \or \or
+    \@addamp \or \@acolampacol \or \@firstampfalse\@acol \fi
+  \edef\@preamble{\@preamble
+    \ifcase \@chnum \hfil\ignorespaces\@sharp\unskip\hfil
+      \or \ignorespaces\@sharp\unskip\hfil
+      \or \hfil\hskip\z@ \ignorespaces\@sharp\unskip\fi}}");
+
+  // Array and similar environments
+  // Perl: latex_constructs.pool.ltxml lines 3792-3809
+  DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[(pos, template)] {
+    // A raw `\hbox\bgroup$…\@tabarray` scaffold (latex.ltx:16560 `\@tabular`,
+    // copied by deluxetable-style classes: aguplus.cls:305 `\pt@tabular`,
+    // sgame, mdwtab, fcolumn, plarray) closes with `\endtabular`'s trailing
+    // `$\egroup` (:16554); the constructor `\tabular` opens no scaffold.
+    // Record which one opened the array so `\endtabular` unwinds the right
+    // frames (`\lx@raw@array@close`); `\@tabular@bindings` clears it.
+    AssignValue!("lx@raw@array@open" => true);
+    // Cell mode follows `\@classz` (latex.ltx:16550 `\array` → `\@arrayclassz`
+    // = `$\@sharp$` math cells; :16561 `\@tabular` → `\@tabclassz` = text
+    // cells). Forcing math here re-let `$` to `\lx@dollar@in@mathmode` inside
+    // a deluxetable's text cells, so `$45^\circ$` opened a TEXT box and
+    // `^\circ` fell outside math (aguplus planotable ×6 "Script ^", pdflatex
+    // clean; Perl 8-10). Guard:
+    // `perfect_kernel_batch56::tabarray_cell_mode_follows_classz`.
+    if x_equals(&T_CS!("\\@classz"), &T_CS!("\\@tabclassz")) {
+      let mut attrs = HashMap::default();
+      attrs.insert(String::from("vattach"), array_attachment(pos.as_ref()));
+      tabular_bindings(template, SymHashMap::default(), attrs)?;
+      return Ok(Vec::new());
+    }
+    math_array_bindings(pos.as_ref(), template, true)?;
+  });
+
+  // latex.ltx:16550 `\array` `\let\@classz\@arrayclassz` (math cells).
+  // Outside math the array is a formula of its own: TeX sets each cell as `$\relax\@sharp$` (`\@arrayclassz` above),
+  // so the cells are math wherever the array is; LaTeXML's math cells need math mode, so `\array` opens an inline
+  // formula and `\endarray` closes it (Perl reads the cells as text — "Script _ can only appear in math mode",
+  // "<ltx:XMArray> isn't allowed in <ltx:p>", KNOWN_PERL_ERRORS #677; 1611.02392 `bnfarray` in a tabular cell).
+  // Guard: `perfect_kernel_batch66y::array_in_text_has_math_cells`.
+  // A `[c]` array (latex.ltx `\@array`'s `\vcenter`) in text is TeX's "Missing $ inserted" too; a `[t]`/`[b]` one
+  // (`\vtop`/`\vbox`) is clean. Every array setup resets the close in its own group (`\@array` below), so an inner
+  // array never inherits an outer text array's.
+  Let!("\\lx@array@text@close", "\\relax");
+  DefMacro!(
+    "\\lx@array@text@open{}",
+    r"\ifmmode\let\lx@array@text@close\relax\else\lx@array@vcenter@check{#1}\lx@begin@inline@math\let\lx@array@text@close\lx@end@inline@math\fi"
+  );
+  DefPrimitive!("\\lx@array@vcenter@check{}", sub[(pos)] {
+    let pos = pos.to_string();
+    if !matches!(pos.trim(), "t" | "b") {
+      Error!(
+        "expected",
+        "$",
+        "Missing $ inserted",
+        "An array outside math is centred with \\vcenter, which only math can hold; it is set as a formula of its own."
+      );
+    }
+  });
+  DefMacro!(
+    "\\array[]{}",
+    r"\lx@array@text@open{#1}\let\@classz\@arrayclassz\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\endarray",
+    None,
+    r"\lx@end@alignment\@end@array\lx@array@text@close"
+  );
+  DefPrimitive!("\\@end@array", {
+    egroup()?;
+    restore_dollar_outside_alignment();
+  });
+  DefConstructor!("\\@@array OptionalPosition Undigested DigestedBody",
+    "#3",
+    before_digest => { bgroup(); },
+    reversion    => r"\begin{array}[#1]{#2}#3\end{array}");
+
+  // latex.ltx `\def\@tabarray{\m@th\@ifnextchar[\@array{\@array[c]}}` — the
+  // full array setup (`\@array`, the internal behind LaTeXML's `\array`), so a
+  // package that builds its own array on `\@tabarray` (t-angles.sty:491
+  // `\def\array{…\@tabarray}`) gets `\@array@bindings` and
+  // `\lx@begin@alignment`. The former `\m@th\@@array[c]` (Perl
+  // latex_constructs.pool:3765 identical) opened `\@@array`'s boxing group
+  // but never started the alignment, so nested in an outer array cell under
+  // a `\begingroup` the outer cell's `egroup` met the non-boxing frame
+  // ("`\lx@begin@alignment` Attempt to close boxing group"; t-angles/t-manual
+  // 101 errors, pdflatex clean). Guard:
+  // `perfect_kernel_batch54::tabarray_is_the_full_array_setup`.
+  // `\@array` is the latex.ltx INTERNAL the kernel's own callers use (a
+  // package may redefine the user `\array` on top of `\@tabarray`, as
+  // t-angles does — routing through `\array` would recurse).
+  // The box the array lives in follows `\@classz` too: `\@tabclassz` cells
+  // are text, so the container is the tabular one (`\@@tabular`, mode
+  // restricted_horizontal — the `\vcenter` of latex.ltx:16565 leaves the
+  // enclosing math); `\@arrayclassz` keeps `\@@array` (math cells).
+  DefMacro!(
+    "\\@array[]{}",
+    r"\let\lx@array@text@close\relax\@array@bindings[#1]{#2}\ifx\@classz\@tabclassz\expandafter\@@tabular\else\expandafter\@@array\fi[#1]{#2}\lx@begin@alignment"
+  );
+  DefMacro!("\\@tabarray", r"\m@th\@ifnextchar[\@array{\@array[c]}");
+
+  Ok(())
+}
+
+/// The `vattach` of an array or tabular positioned `[pos]` (Perl latex_constructs.pool.ltxml:3792-3809).
+fn array_attachment(pos: Option<&Tokens>) -> String {
+  pos
+    .map(|a| translate_attachment(a.to_string()))
+    .unwrap_or_else(|| translate_attachment(""))
+    .to_string()
+}
+
+/// The math-cell alignment `\@array@bindings` opens (Perl latex_constructs.pool.ltxml:3792-3809) for a template its
+/// caller built: `\array`'s from its column letters, IEEEtrantools' `\IEEEeqnarraybox` from the IEEEtrantools column
+/// types (`ieeetrantools_sty.rs`).
+/// `omit_is_text`: the cells' math is their template's `$` (latex.ltx `\@arrayclassz` `$\relax\@sharp$`), so an
+/// `\omit`ted cell is text (tex.web §789; tex_tables.rs `omit_cell_is_text`).
+pub fn math_array_bindings(
+  pos: Option<&Tokens>,
+  template: Template,
+  omit_is_text: bool,
+) -> Result<()> {
+  let mut attrs = HashMap::default();
+  attrs.insert(String::from("vattach"), array_attachment(pos));
+  attrs.insert(String::from("role"), String::from("ARRAY"));
+  // Determine column and row separations, if non default
+  let colsep = lookup_dimension("\\arraycolsep");
+  if let Some(sep) = colsep
+    && sep.value_of()
+      != lookup_dimension("\\lx@default@arraycolsep")
+        .unwrap_or_default()
+        .value_of()
+  {
+    attrs.insert(String::from("colsep"), sep.to_attribute());
+  }
+  let astr = do_expand(T_CS!("\\arraystretch"))?.to_string();
+  if astr != "1"
+    && let Ok(astr_f) = astr.parse::<f64>()
+    && astr_f != 1.0
+  {
+    let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
+    attrs.insert(String::from("rowsep"), rowsep.to_attribute());
+  }
+  let mut properties = SymHashMap::default();
+  if array_zeroes_interline() {
+    properties.insert("zero_interline", Stored::Bool(true));
+  }
+  if let Some(strut) = array_strut() {
+    properties.insert("strut", strut);
+  }
+  // latex.ltx `\@arrayclassz`: each cell is `$\relax\@sharp$`, its math the template's, so an `\omit`ted cell is
+  // text (tex.web §789; tex_tables.rs `omit_cell_is_text`). Rust-only key: LaTeXML's array cells are math by the
+  // alignment's mode.
+  if omit_is_text {
+    properties.insert("math_cells_template", Stored::Bool(true));
+  }
+  alignment_bindings(template, String::from("math"), properties, attrs);
+  // Perl: if display math, switch to text mathstyle
+  if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
+    MergeFont!(mathstyle => "text");
+  }
+  Let!("\\\\", "\\lx@alignment@newline");
+  // latex.ltx:16576 `\let\tabularnewline\\` in `\@array` — for `array` as
+  // for `tabular` (the text binding does it). Without it a column template
+  // that re-lets `\\` after opening a box (tabvar.sty:118 `>{\begin{varwidth}
+  // …\let\\=\TVtabularnewline $}` with `\TVtabularnewline` → `\tabularnewline`)
+  // got latex.ltx's top-level `\relax`, the row break vanished inside the
+  // last cell's box and every later `&` was an "Extra alignment tab" (tabvar
+  // demo ×80; KPE #192). Guard:
+  // `perfect_kernel_batch54::math_array_lets_tabularnewline_to_the_row_break`.
+  Let!("\\tabularnewline", "\\\\");
+  Let!("\\lx@intercol", "\\lx@math@intercol");
+  Ok(())
+}

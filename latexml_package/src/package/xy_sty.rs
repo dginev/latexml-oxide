@@ -8,7 +8,7 @@ LoadDefinitions!({
 
   // xy-pic healthily expands 100M+ tokens (measured: math0402448 ~100M), far
   // above the default 20M cycle-guard floor — lift it so the healthy stream skips
-  // the per-token loop-fingerprint cost. 400M token_limit stays the hard backstop;
+  // the per-token loop-fingerprint cost. 1G token_limit stays the hard backstop;
   // reset per-conversion in initialize_gullet.
   raise_cycle_guard_activate(CYCLE_GUARD_ACTIVATE_GRAPHICS);
 
@@ -110,6 +110,23 @@ LoadDefinitions!({
     // probe and \input, which the binding's input path doesn't fully
     // honor), so features like `\xygraph` end up undefined despite
     // `\usepackage[all,tips]{xy}`. Witness 2311.05789.
+    let mark_xy_feature_loaded = |feature: &str| -> Result<()> {
+      let tex = format!(
+        r"\def\xyoption@@{{{feature}}}\edef\xyoption@@{{\codeof\xyoption@@}}%
+\expandafter\let\expandafter\next@\csname xy\xyoption@@ version\endcsname
+\expandafter\let\csname xy\xyoption@@ loaded\endcsname=\next@
+\runxywith@"
+      );
+      let _ = ::latexml_core::stomach::raw_tex(&tex);
+      if feature == "curve" {
+        let _ = ::latexml_core::stomach::raw_tex(concat!(
+          r"\let\curve@check=\relax",
+          r"\def\curve{\@ifnextchar\bgroup{\lx@xy@curve@arg}{}}",
+          r"\def\lx@xy@curve@arg#1{}",
+        ));
+      }
+      Ok(())
+    };
     let feature_files: &[&str] = match option_s.as_str() {
       "all" => &["curve","frame","cmtip","line","rotate","color","matrix","arrow","graph"],
       "graph" | "matrix" | "arrow" | "curve" | "frame" | "cmtip"
@@ -132,6 +149,15 @@ LoadDefinitions!({
         if single == "matrix" {
           def_macro_noop("\\CompileMatrices")?;
         }
+        mark_xy_feature_loaded(single)?;
+        // The frame feature's driver support needs curves: under pdflatex the pdf driver's frame file does
+        // `\xyrequire{curve}` (xypdf-fr.tex:60), so `\usepackage{xypic}` (xyv2.tex:154 `\xyrequire{frame}`)
+        // has curved arrows `\ar@/^/[r]` and their `\crvi` (xycurve.tex:69, xyarrow.tex:517-519). Our latexml
+        // driver supports frames in its place (xylatexml_tex.rs `\xyaddsupport{frame}`), so it requires curve
+        // the same way. Witnesses 2604.10154, 1207.7025, 2004.14742.
+        if single == "frame" {
+          return Ok(Tokens!(T_CS!("\\xyrequire"), T_BEGIN!(), Explode!("curve"), T_END!()));
+        }
         return Ok(Tokens!());
       },
       _ => &[][..],
@@ -145,6 +171,7 @@ LoadDefinitions!({
           noltxml: true,
           ..Default::default()
         });
+        mark_xy_feature_loaded(name)?;
       }
       if loads_matrix {
         // See note above: neutralize `\CompileMatrices` after xymatrix.tex.
@@ -360,7 +387,10 @@ LoadDefinitions!({
   if !is_defined("\\lx@xy@original") {
     Let!("\\lx@xy@original", "\\xy");
     Let!("\\end@lx@xy@original", "\\endxy");
-    DefMacro!("\\xy", "\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
+    // (opening with `\relax`, as `\endxy` does: at an `\xymatrix` cell head the alignment's peek stops there and the
+    // conditional runs inside the cell; expanded by the peek, its conditional was lost before its `\else` — 1109.4916,
+    // 1611.07444, conditional-limit Fatals)
+    DefMacro!("\\xy", "\\relax\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
     DefMacro!("\\endxy", "\\relax\\lx@xy@capturerange\\end@lx@xy@original");
   }
 
@@ -396,6 +426,16 @@ LoadDefinitions!({
   DeclareOption!("10pt", "\\xywithoption{tips}{\\def\\tipsize@@{10}}");
   DeclareOption!("11pt", "\\xywithoption{tips}{\\def\\tipsize@@{11}}");
   DeclareOption!("12pt", "\\xywithoption{tips}{\\def\\tipsize@@{12}}");
+  DeclareOption!("all", "\\xyoption{all}");
+  DeclareOption!("curve", "\\xyoption{curve}");
+  DeclareOption!("arrow", "\\xyoption{arrow}");
+  DeclareOption!("matrix", "\\xyoption{matrix}");
+  DeclareOption!("frame", "\\xyoption{frame}");
+  DeclareOption!("graph", "\\xyoption{graph}");
+  DeclareOption!("tips", "\\xyoption{tips}");
+  DeclareOption!("line", "\\xyoption{line}");
+  DeclareOption!("rotate", "\\xyoption{rotate}");
+  DeclareOption!("color", "\\xyoption{color}");
 
   // Catch-all: DeclareOption(undef, ...)
   // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');

@@ -1,0 +1,26 @@
+% mechanism: a package's own title page (`{\emph\@affiliation}`, chetnew.sty's, written here by `filecontents*`) read
+%   by the frontmatter observer: the e-mail line's `{\tt \small ...}` lead carried onto every marked address cut from
+%   it (`sets_font`, `frontmatter_stores::FONT_DECLARATIONS`)
+% witness: 2508.08560 (int166a: the second e-mail without `font="typewriter"`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: both e-mails in typewriter
+% engines: int165a: as expected; int166a (P4b4a): two@b.org `fontsize="90%"` without the typewriter font
+% expect:  0 errors, 0 warnings; A. One and B. Two "Some Dept, Some Univ", each its e-mail in `font="typewriter"
+%          fontsize="90%"`
+% status:  RED (int166a) -> GREEN (P4b4f; guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+\begin{filecontents*}[overwrite]{titleaffil.sty}
+\newcommand{\affiliation}[1]{\def\@affiliation{#1}}
+\affiliation{}
+\def\maketitle{\begin{titlepage}\begin{center}{\LARGE\@title}\par\bigskip\@author\par\bigskip{\emph\@affiliation}
+\end{center}\end{titlepage}}
+\endinput
+\end{filecontents*}
+\documentclass[12pt]{article}
+\usepackage{titleaffil}
+\begin{document}
+\title{T}
+\author{A.~One\;$^{a,\star}$, B.~Two\;$^{a,\dagger}$}
+\affiliation{$^a$ Some Dept, Some Univ\\
+{\tt \small $^\star$one@a.org, $^\dagger$two@b.org}}
+\maketitle
+x
+\end{document}

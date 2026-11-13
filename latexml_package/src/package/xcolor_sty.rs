@@ -2,7 +2,12 @@ use latexml_core::common::color::{
   BLACK, Color, WHITE, color_from_model_spec, from_model_components,
 };
 
-use crate::{package::color_sty::lookup_color_obj, prelude::*};
+use crate::{
+  package::color_sty::{
+    lookup_color_obj, report_unconverted_model, report_unrecognized_model, trim_color_spec,
+  },
+  prelude::*,
+};
 
 /// Perl: sub delta { my ($v, $n) = @_; ($v <= ($n+1)/2 ? $v/($n+1) : ($v+1)/($n+1)) }
 fn delta(v: f64, n: f64) -> f64 {
@@ -94,6 +99,15 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
         delta(comps.get(2).copied().unwrap_or(0.0), m),
       )
     },
+    // xcolor.sty.ltxml:131-142: `\rangetHsb`'s tuned hue to hsb's.
+    "tHsb" => {
+      let h_range = 360.0; // default \rangeHsb
+      Color::Hsb(
+        thsb_to_hsb(comps.first().copied().unwrap_or(0.0), h_range) / h_range,
+        comps.get(1).copied().unwrap_or(0.0),
+        comps.get(2).copied().unwrap_or(0.0),
+      )
+    },
     "Gray" => {
       let n = 15.0;
       Color::Gray(delta(comps.first().copied().unwrap_or(0.0), n))
@@ -122,7 +136,22 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
       };
       Color::Hsb(h / 6.0, 1.0, bb).to_rgb()
     },
-    _ => color_from_model_spec(model, spec),
+    _ => {
+      // A model neither core nor one of xcolor.sty.ltxml's `DefColorModel`s (:85-168: RGB HTML Hsb HSB tHsb Gray wave) is
+      // Perl's Color.pm:61 Error, unless raw code defined it, as xcolor.sty:565 tests a model
+      // (`\@ifundefined{XC@mod@<model>}`): colorspace.sty's `\spc@mix@*` set `\XC@mod@<name>` for its
+      // `\definecolorspace` models and :59 `\XC@mod@&spot` (the colorspace manual; Perl errs, KNOWN_PERL_ERRORS #958).
+      // That one is known, and its colour is lost: a counted Warning, the recovery black. xcolor.sty's own `natural`,
+      // `ignore` and `ps` (:140, :564, :1131) are its internals, on which pdflatex errs too: they stay the Error.
+      if !matches!(model, "natural" | "ignore" | "ps")
+        && is_defined_token(&T_CS!(s!("\\XC@mod@{model}")))
+      {
+        report_unconverted_model(model);
+      } else {
+        report_unrecognized_model(model);
+      }
+      color_from_model_spec(model, spec)
+    },
   }
 }
 
@@ -204,21 +233,22 @@ fn decode_color(expression: &str) -> Color {
     lookup_color_obj(stripped_name)
   };
 
-  // Apply blend from state
-  let full_mix = match lookup_value("color_blend") {
-    Some(Stored::String(blend_sym)) => with(blend_sym, |blend| {
-      if !blend.is_empty() {
-        format!("{}{}", mix_part, blend)
-      } else {
-        mix_part.clone()
-      }
-    }),
-    _ => mix_part,
-  };
-
   // Apply mix expressions: !pct!name...
-  if !full_mix.is_empty() {
-    color = apply_mix_expr(color, &full_mix);
+  if !mix_part.is_empty() {
+    color = apply_mix_expr(color, &mix_part);
+  }
+  // Then the `\blendcolors` blend (xcolor.sty `\XC@blendcolors`: the blend is
+  // a mix applied to the RESOLVED color). Perl (xcolor.sty.ltxml:337) string-
+  // concatenated it onto the local mix — `black!75` + `!60!white` became
+  // `black!75!60!white`, "mix with color 60" (iodhbwm via ydoc-desc.sty:125;
+  // SHARED, pdflatex clean). Guard:
+  // `perfect_kernel_batch56::xcolor_blend_applies_after_the_local_mix`.
+  let blend = match lookup_value("color_blend") {
+    Some(Stored::String(blend_sym)) => with(blend_sym, |b| b.to_string()),
+    _ => String::new(),
+  };
+  if !blend.is_empty() {
+    color = apply_mix_expr(color, &blend);
   }
 
   // Perl L343: complement applied AFTER mix, not before
@@ -423,7 +453,7 @@ fn thsb_to_hsb(h: f64, h_range: f64) -> f64 {
 
 /// Step the color series
 fn step_color_series(name: &str, n: usize) {
-  let color_key = s!("color_{name}");
+  let color_key = color_sty::color_key(name);
   let step_key = s!("color_series_{name}_step");
   if let (Some(Stored::String(c_sym)), Some(Stored::String(s_sym))) =
     (lookup_value(&color_key), lookup_value(&step_key))
@@ -463,13 +493,38 @@ fn index_color_series(name: &str, p: usize) -> Color {
   }
 }
 
+/// xcolor.sty:104-120 `\XC@edef`/`\XC@mdef`: a colour name, model or
+/// expression is expanded with each of its separators (`! : - + ; " >`, and a
+/// model list's `/`) that is currently active standing for itself. A table that makes `!` an active `\itshape`
+/// (`\catcode`!=13 \def!{\itshape}`) otherwise expands `red!100!black` into
+/// font switches (arXiv 2605.30133: 101 "Can't find color named", Fatal; Perl's
+/// binding expands unprotected too, xcolor.sty.ltxml:561).
+fn xc_expand<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
+  let active: Vec<char> = ['!', ':', '-', '+', ';', '"', '>', '/']
+    .into_iter()
+    .filter(|&c| lookup_catcode(c) == Some(Catcode::ACTIVE))
+    .collect();
+  if active.is_empty() {
+    return do_expand(tokens);
+  }
+  push_frame();
+  for c in active {
+    let_i(&T_ACTIVE!(c), &T_OTHER!(c.to_string().as_str()), None);
+  }
+  let expanded = do_expand(tokens);
+  pop_frame()?;
+  expanded
+}
+
 /// Perl xcolor.sty.ltxml L403-409: if the optional `[type]` argument
-/// equals "ps", emit an Info and return false so the caller skips the
-/// definition. Otherwise return true. Non-"ps" types (empty, "named",
-/// "ful", ...) all pass through.
+/// equals "ps", emit an Info and return false. `\colorlet`/`\definecolorset`
+/// then skip the definition as Perl does; `\XC@definecolor`/`\providecolor`
+/// instead register the model-white fallback real xcolor keeps
+/// (xcolor.sty:531-533). Non-"ps" types (empty, "named", "ful", ...) all
+/// pass through.
 fn check_no_postscript(type_opt: Option<Tokens>, macro_name: &str) -> Result<bool> {
   if let Some(t) = type_opt {
-    let s = do_expand(t)?.to_string();
+    let s = xc_expand(t)?.to_string();
     if s == "ps" {
       Info!(
         "ignored",
@@ -482,9 +537,29 @@ fn check_no_postscript(type_opt: Option<Tokens>, macro_name: &str) -> Result<boo
   Ok(true)
 }
 
+/// xcolor.sty:535-537 — when a non-`natural` target model is selected
+/// (`\ifconvertcolorsD`), a color being DEFINED is converted to
+/// `\XC@tgt@mod{<its model>}` before it is stored. `\XC@tgt@mod` is the
+/// identity for `natural` and a constant otherwise (xcolor.sty:141/145), so
+/// expanding it on the color's own model yields the model to store. See the
+/// `\selectcolormodel` definition for the pgf witness.
+fn convert_to_target_model(color: Color) -> Result<Color> {
+  if if_condition(&T_CS!("\\ifconvertcolorsD"))? != Some(true) {
+    return Ok(color);
+  }
+  let target = do_expand(mouth::tokenize_internal(TeXString::assembled(s!(
+    "\\XC@tgt@mod{{{}}}",
+    color.model()
+  ))))?
+  .to_string();
+  Ok(color.convert(target.trim()))
+}
+
 /// Perl: ParseXColor($models, $specs, $tomodel)
-fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Color {
-  let specs = specs.trim().trim_matches(|c| c == '{' || c == '}').trim();
+pub(crate) fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Color {
+  // Perl ParseXColor (xcolor.sty.ltxml L218-241) has NO entry trim at all;
+  // keep only whitespace normalization here.
+  let specs = specs.trim();
   let color = if let Some(models_str) = models {
     let models_str = models_str.trim();
     if models_str.is_empty() {
@@ -519,10 +594,8 @@ fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Col
       }
       // Choose first model (target model matching is TODO)
       let model = model_list[0].trim();
-      let spec = spec_list[0]
-        .trim()
-        .trim_matches(|c| c == '{' || c == '}')
-        .trim();
+      // Perl L240-242: balanced-pair trim only (see trim_color_spec).
+      let spec = trim_color_spec(spec_list[0]);
       let mut c = if model == "named" {
         lookup_color_obj(spec)
       } else {
@@ -554,6 +627,15 @@ LoadDefinitions!({
   DefConditional!("\\ifmaskcolors");
   DefConditional!("\\ifxglobal@");
   RawTeX!("\\globalcolorsfalse\\definecolorstrue");
+  // Announce package version for \@ifpackagelater checks (e.g. pstricks.sty:156)
+  RawTeX!(r"\ProvidesPackage{xcolor}[2024/09/29 v3.02 LaTeX color extensions (UK)]");
+  // xcolor.sty:168 `\let\XC@@names\relax` (and `\XC@names`): the name-list
+  // hook that `xcolor-patches-tmp-ltx.sty:83` (raw-loaded by pdfmanagement's
+  // `package/xcolor/after` first-aid hook) calls last. Witness doc-use-newpax.
+  RawTeX!("\\let\\XC@names\\relax\\let\\XC@@names\\relax");
+  // xcolor.sty:603 — the stored-colour selector `\XC@typ@` below tests
+  // against and expands (iodhbwm, newpax; Perl's binding omits it too).
+  RawTeX!("\\def\\xcolor@#1#2#3#4{#2}");
 
   // Real xcolor is a STANDALONE color package: for
   // `\documentclass[dvipsnames]{article}` + `\usepackage{xcolor}`, pdflatex
@@ -572,7 +654,13 @@ LoadDefinitions!({
   // still loads. Witness: 2405.04517 (`\documentclass[dvipsnames]{article}`,
   // 912 × `unexpected:OliveGreen` → 0; ar5iv #503/#495/#474).
   assign_value("xcolor_driving", true, Some(Scope::Global));
+  // Nor may color's options processing leave `\@curroptions` where pdflatex, loading no color.sty, has the previous
+  // package's (xcolor's own keeps it, `ProcessKeyOptions!` below).
+  let curroptions = lookup_meaning(&T_CS!("\\@curroptions"));
   RequirePackage!("color");
+  if let Some(meaning) = curroptions {
+    assign_meaning(&T_CS!("\\@curroptions"), meaning, None);
+  }
   assign_value("xcolor_driving", false, Some(Scope::Global));
 
   // xcolor.sty L1035: \def\@ifundefinedcolor#1{\@ifundefined{\@backslashchar color@#1}}
@@ -583,17 +671,47 @@ LoadDefinitions!({
   // Witnesses 2405.19976, 2406.12553.
   DefMacro!("\\@ifundefinedcolor{}", "\\@firstoftwo");
 
-  // xcolor.sty L815: `\InputIfFileExists{mathcolor.ltx}` — pulls in
-  // `\mathcolor[<model>]{<color>}{<expr>}`, a math-mode color wrap.
-  // The raw .ltx isn't on Rust's load path, so authors writing
-  // `\mathcolor{red}{x+y}` hit Error:undefined. Stub directly as the
-  // group form `{\color{<color>} <expr>}` (semantically identical in
-  // math). Witness 2402.00349.
-  DefMacro!("\\mathcolor[]{}{}", "{\\color[#1]{#2}#3}");
+  // xcolor.sty:819 `\InputIfFileExists{mathcolor.ltx}` — pulls in
+  // `\mathcolor[<model>]{<color>}{<expr>}`, a math-mode color wrap
+  // (witness 2402.00349: Error:undefined without it). mathcolor.ltx:20-29
+  // pushes the current color (`\g__mathcolor_seq`), sets the new one,
+  // typesets #3 with NO group around it, and restores the color it found
+  // (`\seq_gpop:NN … \current@color` + `\reset@color`), so a `\left` in #3
+  // pairs with a `\right` in another call (nlo-shower.sty:802
+  // `\mathcolor{red}{\left[}…\mathcolor{red}{\right]}`, 2605.11792: a group
+  // here made it "Attempt to close boxing group"). The scripts that follow
+  // take the surrounding color, as `\__mathcolor_handle_scripts:Nw` sets the
+  // pushed one on them (mathcolor.ltx:71-72). The restore is by TeX group,
+  // LaTeX's by the driver's color stack: a `\left` in one call and its
+  // `\right` outside one leave the text after `\right` in the new color.
+  DefMacro!(
+    "\\mathcolor[]{}{}",
+    "\\lx@mathcolor@push\\color[#1]{#2}#3\\lx@mathcolor@pop"
+  );
+  DefPrimitive!("\\lx@mathcolor@push", {
+    let current = lookup_font()
+      .and_then(|font| font.get_color().map(Color::to_stored))
+      .unwrap_or_default();
+    push_value("lx@mathcolor@stack", Stored::String(pin(current)))?;
+  });
+  DefPrimitive!("\\lx@mathcolor@pop", {
+    let saved = match pop_value("lx@mathcolor@stack")? {
+      Some(Stored::String(sym)) => with(sym, Color::from_stored),
+      _ => None,
+    };
+    let color = saved.unwrap_or(BLACK);
+    def_color(".", &color, None)?;
+    merge_font(fontmap!(color => color));
+  });
 
+  // Target-model options — xcolor.sty:149-153 declares one option per core /
+  // extended model whose code is `\selectcolormodel{<model>}` (below).
+  for model in &["natural", "rgb", "cmy", "cmyk", "hsb", "gray", "RGB", "HTML", "HSB", "Gray"] {
+    let select = Tokenize!(TeXString::assembled(s!("\\selectcolormodel{{{model}}}")));
+    DeclareOption!(*model, select);
+  }
   // Ignorable options
   for option in &[
-    "natural", "rgb", "cmy", "cmyk", "hsb", "gray", "RGB", "HTML", "HSB", "Gray",
     "monochrome", "showerrors", "hideerrors", "fixpdftex", "prologue", "epilogue",
     "noprologue", "kernelfbox", "xcdraw", "noxcdraw", "fixinclude",
     "dviwindo", "oztex", "xdvi", "usenames",
@@ -601,23 +719,27 @@ LoadDefinitions!({
     DeclareOption!(option, None);
   }
 
-  // Loading sets of names
+  // Loading sets of names. xcolor reads the names file whether or not it was read before (xcolor.sty:193
+  // `\XC@declarenames`, an `\input`, not a package load): a `color` loaded first by the paper or its class
+  // (lipics-v2021's `\RequirePackage{color}`, then xcolor at `\begin{document}`) has read `dvipsnam.def` for a global
+  // `dvipsnames` into its own names, and the load-dedup left xcolor without them ("Can't find color named
+  // 'RoyalBlue'", 2407.14159; pdflatex 0 errors).
   for option in &["dvipsnames", "dvipsnames*"] {
     DeclareOption!(*option, {
-      InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+      InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
     });
   }
   DeclareOption!("svgnames", {
-    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("svgnames*", {
-    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("x11names", {
-    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("x11names*", {
-    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   // table option — loads colortbl
   DeclareOption!("table", {
@@ -631,11 +753,15 @@ LoadDefinitions!({
   DefRegister!("\\tracingcolors", Number!(0));
   DefMacro!("\\XC@tracing", "0");
 
-  // Current color
-  {
-    let black = BLACK;
-    assign_value("color_.", Stored::String(pin(black.to_stored())), Some(Scope::Global));
-  }
+  // Current color. xcolor.sty L1461 ends its load with `\color{black}`, whose
+  // `\XC@display` (L1010) materializes `\color@.` — so in real LaTeX the
+  // current-color CS exists from document start. pgf's `/tikz/.unknown`
+  // handler probes `\csname\string\color@.\endcsname` (pgfutil-latex.def
+  // L52) for the bare `.` "current color" key (twoxtwogame.sty L493
+  // `row player color=.` → `\draw[…,.,]`, 417 "I do not know the key
+  // '/tikz/.'" errors), so define it here, not only on the first explicit
+  // `\color{…}`. Perl leaves it undefined until then (SHARED failure).
+  def_color(".", &BLACK, Some(Scope::Global))?;
 
   // Color model ranges
   DefMacro!("\\rangeRGB", "255");
@@ -646,9 +772,36 @@ LoadDefinitions!({
   DefMacro!("\\adjustUCRBG", "1,1,1,1");
   DefMacro!("\\paperquality", "1");
 
-  // Selecting color model (stubs)
-  def_macro_noop("\\selectcolormodel{}")?;
-  DefMacro!("\\XC@tgt@mod {}", "#1");
+  // Selecting the target color model — xcolor.sty:137-150 verbatim. A
+  // non-`natural` target sets `\ifconvertcolorsD` so every `\definecolor`
+  // (and `\colorlet`/`\providecolor`, which share the definition path) is
+  // converted to `\XC@tgt@mod{<model>}` BEFORE it is stored (xcolor.sty:535-537,
+  // `convert_to_target_model` below); `\extractcolorspec` then reports the
+  // target model. Perl stubs this as a no-op (its colors are opaque objects, so
+  // the model only surfaces through `\extractcolorspec`). pgf's stroke/fill
+  // setters accept only rgb/cmy/cmyk/gray (`\pgfsys@color@<model>@stroke`,
+  // pgfsys-common-pdf.def:58-61; pgfcoregraphicstate.code.tex:133-137 errors
+  // "Unsupported color model" otherwise), so tikzlings-doc.tex:36
+  // `\selectcolormodel{rgb}` is exactly what lets tikzlings-bears.sty:124
+  // `\definecolor{bear@bright}{hsb}{…}` reach pgf as rgb — pdflatex-probed:
+  // the same document WITHOUT `\selectcolormodel{rgb}` errors in pdflatex too.
+  // Witness tikzlings-doc (29× "Unsupported color model `hsb'", sweep 28).
+  // Guard: `perfect_kernel_batch52::selectcolormodel_converts_definecolor`.
+  // `\c@lor@error` is color.sty:41-42.
+  TeX!(r"
+  \def\c@lor@error#1{\@latex@error{Undefined color #1}\@ehd}
+  \def\selectcolormodel#1{\@ifundefined{XC@mod@#1}%
+    {\c@lor@error{target model `#1'}}%
+    {\expandafter\ifx\csname XC@mod@#1\endcsname\XC@mod@natural
+       \def\XC@tgt@mod##1{##1}\convertcolorsDfalse\convertcolorsUfalse
+     \else\expandafter\ifx\csname XC@mod@#1\endcsname\XC@mod@named
+       \c@lor@error{target model `#1'}%
+     \else
+       \edef\XC@tgt@mod##1{#1}\convertcolorsDtrue\convertcolorsUtrue
+     \fi\fi}}
+  \@tfor\@@tmp:={Hsb}{tHsb}{ignore}{named}{ps}{wave}{natural}{rgb}{cmy}{cmyk}{hsb}{gray}{RGB}{HTML}{HSB}{Gray}\do
+    {\expandafter\edef\csname XC@mod@\@@tmp\endcsname{\@@tmp}}
+  \def\XC@tgt@mod#1{#1}\convertcolorsDfalse\convertcolorsUfalse");
   def_macro_noop("\\substitutecolormodel{}{}")?;
 
   // \xglobal@list and \xglobal mechanism
@@ -685,18 +838,58 @@ LoadDefinitions!({
   });
 
   // \definecolor[type]{name}{model_list}{spec_list}
-  // Perl: DefMacro('\definecolor[]{}{}{}', '\XC@definecolor[#1]{#2}[\colornameprefix]{#3}{#4}');
-  DefMacro!("\\definecolor[]{}{}{}", "\\XC@definecolor[#1]{#2}[\\colornameprefix]{#3}{#4}");
+  // Perl: DefMacro('\definecolor[]{}{}{}', '\XC@definecolor[#1]{#2}[\colornameprefix]{#3}{#4}').
+  // xcolor.sty:519-522 reads an optional `[prefix]` after the name (`\XC@definec@lor[#1]#2[#3]#4#5`,
+  // default `\colornameprefix`); Perl's binding read its `[` as the model. `\preparecolor`,
+  // `\xdefinecolor` and `\DefineNamedColor` are `\definecolor`'s.
+  DefMacro!("\\definecolor[]{}[Default:\\colornameprefix]{}{}", "\\XC@definecolor[#1]{#2}[#3]{#4}{#5}");
 
   // Perl: DefPrimitive('\XC@definecolor[]{}[]{}{}', sub { ... });
   DefPrimitive!("\\XC@definecolor[]{}[]{}{}", sub[(type_opt, name, _prefix, models, specs)] {
-    if !check_no_postscript(type_opt, "\\XC@definecolor")? { return Ok(Vec::new()); }
-    let name_str = do_expand(name)?.to_string();
-    let models_str = do_expand(models)?.to_string();
-    let specs_str = do_expand(specs)?.to_string();
-    let color = parse_xcolor(Some(&models_str), &specs_str, None);
+    let is_ps = !check_no_postscript(type_opt, "\\XC@definecolor")?;
+    let name_str = xc_expand(name)?.to_string();
+    // xcolor.sty:531-533: a `ps` color still REGISTERS — its driver spec is
+    // the raw PostScript, and its ordinary color value is the model's white
+    // (`\XC@clr@<model>@white`, :510-516 — white in every model). Perl's
+    // binding drops the definition altogether, so `\color{lambda}` later
+    // errors 101× → Fatal (xcolor/xcolor2 figure 5, xcolor2.tex:143/134;
+    // KNOWN_PERL_ERRORS #111).
+    let mut bridge_specs = None;
+    let color = if is_ps {
+      WHITE
+    } else {
+      let models_str = xc_expand(models)?.to_string();
+      let specs_str = xc_expand(specs)?.to_string();
+      let color = convert_to_target_model(parse_xcolor(Some(&models_str), &specs_str, None))?;
+      bridge_specs = Some((models_str, specs_str));
+      color
+    };
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
+    // Under `\DocumentMetadata`, pdfmanagement-firstaid's xcolor-patches-tmp-
+    // ltx.sty:56 appends `\color_set:nnn{name}{model}{spec}` to every
+    // `\definecolor`, so raw l3color code (`\color_select:n{alert}`,
+    // ltx-talk.cls:201 after :212 `\DeclareColor`) finds the color; without
+    // the bridge it raised "Unknown color" (SHARED, pdflatex clean with
+    // `\DocumentMetadata`). Mirror the bridge when the kernel flag is set.
+    // Guard: `perfect_kernel_batch56::xcolor_definecolor_bridges_to_l3color_under_documentmetadata`.
+    if let Some((models_str, specs_str)) = bridge_specs
+      && lookup_meaning(&T_CS!("\\IfDocumentMetadataTF")) == lookup_meaning(&T_CS!("\\@firstoftwo"))
+      && lookup_meaning(&T_CS!("\\color_set:nnn")).is_some()
+    {
+      let model = models_str.split('/').next().unwrap_or("").trim().to_string();
+      let spec = specs_str.split('/').next().unwrap_or("").trim().to_string();
+      let mut inv = vec![T_CS!("\\color_set:nnn"), T_BEGIN!()];
+      inv.extend(ExplodeText!(&name_str));
+      inv.push(T_END!());
+      inv.push(T_BEGIN!());
+      inv.extend(ExplodeText!(&model));
+      inv.push(T_END!());
+      inv.push(T_BEGIN!());
+      inv.extend(ExplodeText!(&spec));
+      inv.push(T_END!());
+      let _ = digest(Tokens::new(inv));
+    }
     assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
@@ -709,16 +902,22 @@ LoadDefinitions!({
   // {#3}{#4}, a 2-layer alias that ultimately calls the providecolor
   // primitive. Rust collapses directly to the primitive (WISDOM #40 —
   // direct-call simplification of an expand-to-alias indirection).
-  DefPrimitive!("\\providecolor[]{}{}{}", sub[(type_opt, name, models, specs)] {
-    if !check_no_postscript(type_opt, "\\XC@providecolor")? { return Ok(Vec::new()); }
-    let name_str = do_expand(name)?.to_string();
-    let key = s!("color_{name_str}");
+  // xcolor.sty:594-597: an optional `[prefix]` after the name, as `\definecolor`'s (unused here).
+  DefPrimitive!("\\providecolor[]{}[]{}{}", sub[(type_opt, name, _prefix, models, specs)] {
+    let is_ps = !check_no_postscript(type_opt, "\\XC@providecolor")?;
+    let name_str = xc_expand(name)?.to_string();
+    let key = color_sty::color_key(&name_str);
     if with_value(&key, |v| v.is_some()) {
       return Ok(Vec::new()); // Already defined
     }
-    let models_str = do_expand(models)?.to_string();
-    let specs_str = do_expand(specs)?.to_string();
-    let color = parse_xcolor(Some(&models_str), &specs_str, None);
+    // `ps` → model white, as in \XC@definecolor above (xcolor.sty:531-533).
+    let color = if is_ps {
+      WHITE
+    } else {
+      let models_str = xc_expand(models)?.to_string();
+      let specs_str = xc_expand(specs)?.to_string();
+      convert_to_target_model(parse_xcolor(Some(&models_str), &specs_str, None))?
+    };
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
     assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
@@ -732,10 +931,12 @@ LoadDefinitions!({
   // Perl: DefPrimitive('\colorlet[]{}[]{}', sub { ... ParseXColor(undef, $colordesc, $tomodel) ... })
   DefPrimitive!("\\colorlet[]{}[]{}", sub[(type_opt, name, tomodel_opt, colordesc)] {
     if !check_no_postscript(type_opt, "\\colorlet")? { return Ok(Vec::new()); }
-    let name_str = do_expand(name)?.to_string();
-    let colordesc_str = do_expand(colordesc)?.to_string();
-    let tomodel_str = tomodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let color = parse_xcolor(None, &colordesc_str, tomodel_str.as_deref());
+    let name_str = xc_expand(name)?.to_string();
+    let colordesc_str = xc_expand(colordesc)?.to_string();
+    let tomodel_str = tomodel_opt.and_then(|m| xc_expand(m).ok()).map(|t| t.to_string());
+    // xcolor.sty:625-628: a `\colorlet` that is not a plain alias re-enters
+    // `\XC@definecolor`, so the target-model conversion applies here too.
+    let color = convert_to_target_model(parse_xcolor(None, &colordesc_str, tomodel_str.as_deref()))?;
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
     assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
@@ -745,10 +946,10 @@ LoadDefinitions!({
   // \definecolorset[type]{model_list}{head}{tail}{set_spec}
   DefPrimitive!("\\definecolorset[]{}{}{}{}", sub[(type_opt, models, head, tail, specset)] {
     if !check_no_postscript(type_opt, "\\definecolorset")? { return Ok(Vec::new()); }
-    let models_str = do_expand(models)?.to_string();
-    let head_str = do_expand(head)?.to_string();
-    let tail_str = do_expand(tail)?.to_string();
-    let specset_str = do_expand(specset)?.to_string();
+    let models_str = xc_expand(models)?.to_string();
+    let head_str = xc_expand(head)?.to_string();
+    let tail_str = xc_expand(tail)?.to_string();
+    let specset_str = xc_expand(specset)?.to_string();
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     for spec in specset_str.split(';') {
       let spec = spec.trim();
@@ -769,10 +970,10 @@ LoadDefinitions!({
   // \providecolorset
   DefPrimitive!("\\providecolorset[]{}{}{}{}", sub[(type_opt, models, head, tail, specset)] {
     if !check_no_postscript(type_opt, "\\providecolorset")? { return Ok(Vec::new()); }
-    let models_str = do_expand(models)?.to_string();
-    let head_str = do_expand(head)?.to_string();
-    let tail_str = do_expand(tail)?.to_string();
-    let specset_str = do_expand(specset)?.to_string();
+    let models_str = xc_expand(models)?.to_string();
+    let head_str = xc_expand(head)?.to_string();
+    let tail_str = xc_expand(tail)?.to_string();
+    let specset_str = xc_expand(specset)?.to_string();
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     for spec in specset_str.split(';') {
       let spec = spec.trim();
@@ -780,7 +981,7 @@ LoadDefinitions!({
         let name = spec[..comma_pos].trim();
         let specs = spec[comma_pos+1..].trim();
         let full_name = s!("{head_str}{name}{tail_str}");
-        let key = s!("color_{full_name}");
+        let key = color_sty::color_key(&full_name);
         if with_value(&key, |v| v.is_some()) { continue; }
         let color = parse_xcolor(Some(&models_str), specs, None);
         def_color(&full_name, &color, scope)?;
@@ -792,14 +993,14 @@ LoadDefinitions!({
 
   // \definecolors{name_pairs}
   DefPrimitive!("\\definecolors{}", sub[(idpairs)] {
-    let pairs_str = do_expand(idpairs)?.to_string();
+    let pairs_str = xc_expand(idpairs)?.to_string();
     define_colors_impl(&pairs_str, false)?;
     Ok(Vec::new())
   });
 
   // \providecolors{name_pairs}
   DefPrimitive!("\\providecolors{}", sub[(idpairs)] {
-    let pairs_str = do_expand(idpairs)?.to_string();
+    let pairs_str = xc_expand(idpairs)?.to_string();
     define_colors_impl(&pairs_str, true)?;
     Ok(Vec::new())
   });
@@ -861,11 +1062,11 @@ LoadDefinitions!({
   DefPrimitive!("\\color[]{}", sub[(model_opt, spec)] {
     let model_str = model_opt
       .and_then(|m| {
-        let expanded = do_expand(m).ok()?;
+        let expanded = xc_expand(m).ok()?;
         let s = expanded.to_string();
         if s.is_empty() { None } else { Some(s) }
       });
-    let spec_str = do_expand(spec)?.to_string();
+    let spec_str = xc_expand(spec)?.to_string();
     let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
     // Set current color
     def_color(".", &color, None)?;
@@ -907,8 +1108,8 @@ LoadDefinitions!({
 
   // \pagecolor[model]{spec}
   DefPrimitive!("\\pagecolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let spec_str = do_expand(spec)?.to_string();
+    let model_str = model_opt.and_then(|m| xc_expand(m).ok()).map(|t| t.to_string());
+    let spec_str = xc_expand(spec)?.to_string();
     let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
     merge_font(fontmap!(bg => color));
     // Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
@@ -933,7 +1134,7 @@ LoadDefinitions!({
 
   // \blendcolors and \blendcolors*
   DefPrimitive!("\\blendcolors OptionalMatch:* {}", sub[(star, mix)] {
-    let mix_str = do_expand(mix)?.to_string();
+    let mix_str = xc_expand(mix)?.to_string();
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     let new_blend = if star.is_some() {
       // Starred: append to existing blend
@@ -970,13 +1171,13 @@ LoadDefinitions!({
   // Perl 0 errors).
   DefPrimitive!("\\definecolorseries{}{}{}[]{}[]{}",
                 sub[(name, model, method, bmodel_opt, bspec, smodel_opt, sspec)] {
-    let name_str = do_expand(name)?.to_string();
-    let model_str = do_expand(model)?.to_string();
-    let method_str = do_expand(method)?.to_string();
-    let bspec_str = do_expand(bspec)?.to_string();
-    let sspec_str = do_expand(sspec)?.to_string();
-    let bmodel_str = bmodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let smodel_str = smodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+    let name_str = xc_expand(name)?.to_string();
+    let model_str = xc_expand(model)?.to_string();
+    let method_str = xc_expand(method)?.to_string();
+    let bspec_str = xc_expand(bspec)?.to_string();
+    let sspec_str = xc_expand(sspec)?.to_string();
+    let bmodel_str = bmodel_opt.and_then(|m| xc_expand(m).ok()).map(|t| t.to_string());
+    let smodel_str = smodel_opt.and_then(|m| xc_expand(m).ok()).map(|t| t.to_string());
 
     let base = parse_xcolor(bmodel_str.as_deref(), &bspec_str, Some(&model_str));
     // Perl L658-660: 'step'/'grad' use Color($model, split(/,/, ToString($sspec)))
@@ -1000,8 +1201,8 @@ LoadDefinitions!({
   // \resetcolorseries[div]{name}
   // reset/initialize the color series <name> for <div> steps.
   DefPrimitive!("\\resetcolorseries[]{}", sub[(div_opt, name)] {
-    let name_str = do_expand(name)?.to_string();
-    let div_str = div_opt.and_then(|d| do_expand(d).ok()).map(|t| t.to_string())
+    let name_str = xc_expand(name)?.to_string();
+    let div_str = div_opt.and_then(|d| xc_expand(d).ok()).map(|t| t.to_string())
       .unwrap_or_else(|| "16".to_string());
     let div: f64 = div_str.parse().unwrap_or(16.0);
 
@@ -1121,13 +1322,13 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\lshiftnum {}", sub[(num)] {
-    let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
+    let n: f64 = xc_expand(num)?.to_string().parse().unwrap_or(0.0);
     let result = (10.0 * n) as i64;
     Ok(mouth::tokenize_internal(TeXString::assembled(result.to_string())))
   });
 
   DefMacro!("\\llshiftnum {}", sub[(num)] {
-    let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
+    let n: f64 = xc_expand(num)?.to_string().parse().unwrap_or(0.0);
     let result = (100.0 * n) as i64;
     Ok(mouth::tokenize_internal(TeXString::assembled(result.to_string())))
   });
@@ -1138,7 +1339,7 @@ LoadDefinitions!({
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
       if let Some(defn) = lookup_register_definition(&varname) {
-        let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
+        let n: f64 = xc_expand(num)?.to_string().parse().unwrap_or(0.0);
         // Perl: setValue((10 * num) . 'pt') — stores as dimension string
         let dim = Dimension::from_str(&s!("{}pt", 10.0 * n))?;
         defn.set_value(RegisterValue::Dimension(dim), None, inner);
@@ -1151,7 +1352,7 @@ LoadDefinitions!({
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
       if let Some(defn) = lookup_register_definition(&varname) {
-        let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
+        let n: f64 = xc_expand(num)?.to_string().parse().unwrap_or(0.0);
         // Perl: setValue((100 * num) . 'pt') — stores as dimension string
         let dim = Dimension::from_str(&s!("{}pt", 100.0 * n))?;
         defn.set_value(RegisterValue::Dimension(dim), None, inner);
@@ -1161,25 +1362,41 @@ LoadDefinitions!({
   });
 
   // \fcolorbox — xcolor version with ParseXColor.
-  // Perl xcolor.sty.ltxml has `mode=>'internal_vertical',
-  // enterHorizontal=>1`. enter_horizontal triggers an implicit
-  // horizontal-mode entry when invoked from the document's outer
-  // vertical mode (e.g. `\fcolorbox{red}{yellow}{important}` between
-  // paragraphs at top level), so the framed <ltx:text> opens inside
-  // a paragraph instead of as a stray block-level child.
-  DefConstructor!("\\fcolorbox[]{}{} Undigested",
+  // Perl xcolor.sty.ltxml has `mode=>'internal_vertical', enterHorizontal=>1`; the box is an
+  // `\hbox` (xcolor.sty:827-829 `\color@b@x`), so its body is restricted horizontal: in
+  // `internal_vertical` it split the running paragraph and lost the spaces around it (KPE #336,
+  // #293). enter_horizontal still opens a paragraph for a box between paragraphs.
+  // The frame and background specs are color NAMES (xcolor's name grammar
+  // `[a-zA-Z0-9@*_.']`, xcolor.sty `\XC@edef`/`\extractcolorspec`), read here
+  // undigested and expanded to a string like `\color`/`\extractcolorspec` do.
+  // Perl's `{}` (xcolor.sty.ltxml:878) DIGESTS them in text mode, so a name
+  // with `_` (hobete_doc `Hohenheim_glow_lightblue`) raised "Script _ can only
+  // appear in math mode" before the spec was ever parsed — SHARED, surpassed
+  // (batch 56at; the `\color` primitive expands, never digests, its spec).
+  // xcolor.sty:822-826 `\fcolorbox#1#{\color@fbox{#1}}`, `\color@fbox#1#2#3#{…}`: the background
+  // takes its own `[model]` after the frame's spec, else the frame's (`\@ifxempty{#3}{\color#1}
+  // {\color#3}`; xcolor.dtx `\fcolorbox[gray]{0.5}[wave]{580}{test}`). Perl's `[]{}{} Undigested`
+  // (xcolor.sty.ltxml:878) read `[` as the background colour.
+  DefConstructor!("\\fcolorbox[] Undigested [] Undigested Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
-    mode => "internal_vertical", enter_horizontal => true,
+    mode => "restricted_horizontal", enter_horizontal => true,
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
-      let fspec_str = whatsit.get_arg(2).map(|f| f.to_string()).unwrap_or_default();
-      let bspec_str = whatsit.get_arg(3).map(|b| b.to_string()).unwrap_or_default();
-      let text_tokens = whatsit.get_arg(4).map(|t| t.revert()).transpose()?;
+      let fspec_str = match whatsit.get_arg(2) {
+        Some(f) => xc_expand(f.revert()?)?.to_string(),
+        None => String::new(),
+      };
+      let bmodel_str = whatsit.get_arg(3).map(|m| m.to_string()).or_else(|| model_str.clone());
+      let bspec_str = match whatsit.get_arg(4) {
+        Some(b) => xc_expand(b.revert()?)?.to_string(),
+        None => String::new(),
+      };
+      let text_tokens = whatsit.get_arg(5).map(|t| t.revert()).transpose()?;
 
       let framecolor = parse_xcolor(model_str.as_deref(), &fspec_str, None);
       whatsit.set_property("framecolor", Stored::String(pin(framecolor.to_attribute())));
 
-      let bgcolor = parse_xcolor(model_str.as_deref(), &bspec_str, None);
+      let bgcolor = parse_xcolor(bmodel_str.as_deref(), &bspec_str, None);
       merge_font(fontmap!(bg => bgcolor));
 
       if let Some(tokens) = text_tokens {
@@ -1191,7 +1408,7 @@ LoadDefinitions!({
 
   // \extractcolorspec{color}{cmd}
   DefPrimitive!("\\extractcolorspec{}{}", sub[(colordesc, cmd)] {
-    let color_str = do_expand(colordesc)?.to_string();
+    let color_str = xc_expand(colordesc)?.to_string();
     let cmd_str = cmd.to_string();
     let color = parse_xcolor(None, &color_str, None);
     let model = color.model();
@@ -1203,14 +1420,20 @@ LoadDefinitions!({
 
   // \extractcolorspecs{color}{modelcmd}{speccmd}
   DefPrimitive!("\\extractcolorspecs{}{}{}", sub[(colordesc, modelcmd, speccmd)] {
-    let color_str = do_expand(colordesc)?.to_string();
+    let color_str = xc_expand(colordesc)?.to_string();
     let modelcmd_str = modelcmd.to_string();
     let speccmd_str = speccmd.to_string();
     let color = parse_xcolor(None, &color_str, None);
     let model = color.model();
     let comps: Vec<String> = color.components().iter().map(|c| format!("{}", fixedpt(*c))).collect();
     def_macro(T_CS!(modelcmd_str), None, Some(ExpansionBody::from(model)), None)?;
-    let spec_val = s!("{{{}}}", comps.join(","));
+    // xcolor.sty:1033-1036 `\extractcolorspecs` stores the BARE spec
+    // (`0.5,0.2,0.1`), unlike the singular `\extractcolorspec`, which stores
+    // `{model}{spec}`. Perl xcolor.sty.ltxml:808 wraps the plural spec in
+    // braces too, so `\definecolor{x}{\mod}{\spec}` on a re-extracted color
+    // fails to parse (pgfPT.colorSchemes.info, KNOWN_PERL_ERRORS #117). Guard:
+    // `perfect_kernel_batch52::extractcolorspecs_plural_is_unbraced`.
+    let spec_val = comps.join(",");
     def_macro(T_CS!(speccmd_str), None, Some(ExpansionBody::from(spec_val.as_str())), None)?;
     Ok(())
   });
@@ -1219,9 +1442,9 @@ LoadDefinitions!({
   // Perl: converts color from one model to another, storing result in \cmd
   // Extended models (HTML, RGB, Hsb, HSB, Gray) use their native ranges.
   DefPrimitive!("\\convertcolorspec{}{}{}{}", sub[(fmodel, spec, tomodel, cmd)] {
-    let model_str = do_expand(fmodel)?.to_string();
-    let spec_str = do_expand(spec)?.to_string();
-    let tomodel_str = do_expand(tomodel)?.to_string();
+    let model_str = xc_expand(fmodel)?.to_string();
+    let spec_str = xc_expand(spec)?.to_string();
+    let tomodel_str = xc_expand(tomodel)?.to_string();
     let cmd_str = cmd.to_string();
     let color = parse_xcolor(Some(&model_str), &spec_str, None);
     // Perl: convert to target model and get components in target range
@@ -1262,8 +1485,8 @@ LoadDefinitions!({
 
   DefPrimitive!("\\rowcolors OptionalMatch:* []{Number}{}{}", sub[(_star, commands, first, oddcolor, evencolor)] {
     let first_val = first.value_of();
-    let odd_str = do_expand(oddcolor)?.to_string();
-    let even_str = do_expand(evencolor)?.to_string();
+    let odd_str = xc_expand(oddcolor)?.to_string();
+    let even_str = xc_expand(evencolor)?.to_string();
     // Perl L731-732: DefMacroI('\@xcolor@row@after', undef, $commands);
     //               DefMacroI('\@xcolor@tabular@before', undef, $commands);
     let cmd_toks = Tokens::new(commands.map(|t| t.revert()).unwrap_or_default());
@@ -1314,16 +1537,26 @@ LoadDefinitions!({
       }
     },
     after_digest => sub[whatsit] {
+      // Read row number from state (set by start_row before digest) instead of
+      // borrowing the alignment, which is already mutably borrowed during start_row.
+      let n = lookup_value("alignmentRowNumber")
+        .and_then(|v| match v {
+          Stored::Int(i) => Some(i as usize),
+          Stored::Number(num) => Some(num.value_of() as usize),
+          _ => None,
+        })
+        .unwrap_or(0);
+      // colortbl.sty:261 `\@rowc@lors`: under a `\rowcolors` every row steps colortbl's count `\rownum`
+      // (`\global\advance\rownum\@ne`, from the `\global\rownum=\z@` of :238), so a row reads its own number
+      // (`\number\rownum`, `\therownum`), as the binding's macro gives it where `\rownum` is no count.
+      if lookup_value("tabular_row_color_first").is_some()
+        && let Some(rownum) = lookup_definition(&T_CS!("\\rownum"))?
+        && rownum.is_register()
+      {
+        let n = i64::try_from(n).unwrap_or(i64::MAX);
+        rownum.set_value(RegisterValue::Number(Number::new(n)), Some(Scope::Global), Vec::new());
+      }
       if if_condition(&T_CS!("\\if@rowcolors"))?.unwrap_or(false) {
-        // Read row number from state (set by start_row before digest) instead of
-        // borrowing the alignment, which is already mutably borrowed during start_row.
-        let n = lookup_value("alignmentRowNumber")
-          .and_then(|v| match v {
-            Stored::Int(i) => Some(i as usize),
-            Stored::Number(num) => Some(num.value_of() as usize),
-            _ => None,
-          })
-          .unwrap_or(0);
         let first = match lookup_value("tabular_row_color_first") {
           Some(Stored::Number(num)) => num.value_of() as usize,
           _ => 1,
@@ -1368,9 +1601,12 @@ LoadDefinitions!({
     properties => { Ok(stored_map!("alignmentSkippable" => true)) });
   RawTeX!(r"\let\@tabular@row@before@xcolor\lx@tabular@row@before@xcolor");
 
-  // Perl xcolor L744-748: \rownum returns current row number from alignment
+  // Perl xcolor L744-748: \rownum returns current row number from alignment. Kept as `\lx@xcolor@rownum`, which
+  // `\rownum` is let to unless colortbl's count is already there: xcolor.sty defines no `\rownum` (colortbl.sty:269-274
+  // does), so the colortbl binding knows this macro for the binding's own and allocates its count in its place
+  // (`[table]`, any load order).
   def_macro(
-    T_CS!("\\rownum"),
+    T_CS!("\\lx@xcolor@rownum"),
     None,
     Some(ExpansionBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
       match lookup_alignment() { Some(alignment) => {
@@ -1378,9 +1614,7 @@ LoadDefinitions!({
           let row_num = cell.borrow().current_row_number();
           let num_str = row_num.to_string();
           let toks: Vec<Token> = num_str.chars().map(|c| {
-            Token { text: pin_char(c), code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
-    }
+            CharToken!(c)
           }).collect();
           Ok(Tokens::new(toks))
         } else {
@@ -1392,12 +1626,15 @@ LoadDefinitions!({
     }))),
     None,
   )?;
+  if !has_meaning(&T_CS!("\\rownum")) {
+    Let!("\\rownum", "\\lx@xcolor@rownum");
+  }
 
   // \rowcolor — only define stub if colortbl not loaded
   if !has_meaning(&T_CS!("\\rowcolor")) {
     DefPrimitive!("\\rowcolor[]{}", sub[(model_opt, spec)] {
-      let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-      let spec_str = do_expand(spec)?.to_string();
+      let model_str = model_opt.and_then(|m| xc_expand(m).ok()).map(|t| t.to_string());
+      let spec_str = xc_expand(spec)?.to_string();
       let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
       merge_font(fontmap!(bg => color));
       Ok(Vec::new())
@@ -1409,8 +1646,8 @@ LoadDefinitions!({
   // xcolor's stub only sets font background, missing td attribute propagation.
   if !has_meaning(&T_CS!("\\columncolor")) {
     DefPrimitive!("\\columncolor[]{}", sub[(model_opt, spec)] {
-      let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-      let spec_str = do_expand(spec)?.to_string();
+      let model_str = model_opt.and_then(|m| xc_expand(m).ok()).map(|t| t.to_string());
+      let spec_str = xc_expand(spec)?.to_string();
       let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
       merge_font(fontmap!(bg => color));
       Ok(Vec::new())
@@ -1463,8 +1700,35 @@ LoadDefinitions!({
 \def\@@ifxempty#1#2\XC@@
  {\ifx#1\@@ifxempty
   \expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\def\XC@getcolor#1#2{\XC@getc@lor#1\XC@@#2}
+\def\XC@getc@lor#1#2\XC@@#3{\ifx#1\xcolor@\def#3{#1#2}\else\ifx#1[\XC@getcolor@lxmodel#1#2\XC@@#3\else\extractcolorspec{#1#2}\XC@@lxtmp\expandafter\XC@getcolor@lx\XC@@lxtmp#3\fi\fi}
+\def\XC@getcolor@lxmodel[#1]#2\XC@@#3{\edef#3{\noexpand\xcolor@{}{#2}{#1}{#2}}}
+\def\XC@getcolor@lx#1#2#3{\edef#3{\noexpand\xcolor@{}{#2}{#1}{#2}}}
+\def\XC@undeclaredcolor#1#2{\color[#1]{#2}}
+\def\XC@usecolor#1{}
+\let\pst@getcolor\XC@getcolor
+\let\pst@usecolor\XC@usecolor
 "##);
 
+  // xcolor's internal colour API, with THIS binding's colour model behind it
+  // xcolor.sty:1373-1390 dispatches on the FIRST token of the argument: an
+  // `\xcolor@` token is a resolved spec (kept), a leading `[` is a
+  // model-prefixed `[model]{spec}` (parsed directly, `\@undeclaredcolor`), and
+  // only a bare name goes through the declared-colour lookup. Batch 56al: the
+  // `[` case had been handed to `\extractcolorspec` as a colour NAME
+  // (pst-3dplot.tex:245 `SegmentColor={[cmyk]{0.2,0.6,1,0}}` via pstricks.sty:155
+  // `\let\pst@getcolor\XC@getcolor`; witness neoschool-fr).
+  // (xcolor.sty:1373-1396 `\XC@getcolor{spec}\cs` leaves `\cs` =
+  // `\xcolor@{}{<driver>}{<model>}{<spec>}` = `\XC@current@color`, produced
+  // by :786 `\XC@undeclaredcolor{model}{spec}`, which also SETS the colour;
+  // `\XC@usecolor` emits driver code). Announcing an xcolor version
+  // (`\ProvidesPackage` above) means supplying this contract: lua-ul.sty:82-100
+  // switches to it whenever `\XC@getcolor` exists (`\XC@getcolor{#1}\l_tmpa_tl`,
+  // strips the leading `\xcolor@{}{drv}`, later `\XC@undeclaredcolor{model}{spec}`)
+  // — a `\XC@getcolor` with a private shape and no `\XC@undeclaredcolor` broke
+  // every lua-ul document (gckanbun kanshi/whole-vert samples, sweep 50); pstricks
+  // aliases `\pst@getcolor` to it (pstricks.sty:150-156). Guard:
+  // `perfect_kernel_batch56::xcolor_internal_api_matches_the_real_contract`.
   // XC@strip@comma, XC@replace, XC@type
   RawTeX!(r##"
 \def\XC@strip@comma#1,#2%
@@ -1548,18 +1812,40 @@ LoadDefinitions!({
 "##);
 
   //========================
-  ProcessOptions!();
+  // xcolor.sty:265 reads its options with `\ProcessKeyOptions`: `\@curroptions` stays as it was.
+  ProcessKeyOptions!();
 
   // Real xcolor v3.02+ (TL2024) processes options as PERSISTENT l3 keys, so
   // `\usepackage{xcolor}` followed by `\usepackage[table]{xcolor}` raises no
   // option clash — the repeat load processes the new `table` key and loads
   // colortbl (`table .code = {\AddToHook{package/xcolor/after}
-  // {\RequirePackage{colortbl}}}`). Classic `\ds@table` is cleared to \relax
-  // by ProcessOptions, so re-assert a durable handler: the loader's
-  // repeat-load recovery (input_definitions, OXIDIZED_DESIGN #43) digests
-  // surviving `\ds@<opt>` handlers for options the first load didn't have.
+  // {\RequirePackage{colortbl}}}`). The keys are xcolor's alone, so the handler keeps
+  // a name of its own, `\lx@repeat@xcolor@<opt>`, which the loader's repeat-load recovery
+  // (`apply_repeat_options`, OXIDIZED_DESIGN #43) digests for options the first load
+  // didn't have; a `\ds@table` would be any later package's option `table`, its
+  // `\DeclareOption*` never run (ndsu-thesis-2022's `\usepackage[figure,table]{totalcount}`,
+  // `\iftotaltables` undefined; guard `perfect_kernel_batchm3::a_repeat_option_of_xcolor_is_xcolors_alone`).
   // Witness 2605.00310 (\cellcolor via `[table]` on a second \usepackage).
-  DefMacro!("\\ds@table", "\\RequirePackage{colortbl}");
+  DefMacro!("\\lx@repeat@xcolor@table", "\\RequirePackage{colortbl}");
+  // Likewise the colour-name sets (xcolor.sty:171-193 `\XC@declarenames`: each
+  // is a key whose code inputs its `.def` after the load, first or repeated).
+  // `\usepackage[dvipsnames]{xcolor}` after tcolorbox had loaded xcolor dropped
+  // the option, so tikz's `\fill[Maroon]` found no `\color@Maroon`
+  // (arXiv 2605.28926: `/tikz/Maroon` unknown key, Fatal; Perl the same).
+  DefPrimitive!("\\lx@xcolor@names{}", sub[(file)] {
+    let file = file.to_string();
+    InputDefinitions!(&file, extension => Some(Cow::Borrowed("def")));
+  });
+  for (option, file) in [
+    ("dvipsnames", "dvipsnam"), ("dvipsnames*", "dvipsnam"),
+    ("svgnames", "svgnam"), ("svgnames*", "svgnam"),
+    ("x11names", "x11nam"), ("x11names*", "x11nam"),
+  ] {
+    let mut body = vec![T_CS!("\\lx@xcolor@names"), T_BEGIN!()];
+    body.extend(ExplodeText!(file));
+    body.push(T_END!());
+    def_macro(T_CS!(s!("\\lx@repeat@xcolor@{option}")), None, Tokens::new(body), None)?;
+  }
 });
 
 /// Perl: sub defineColors — define colors from "name=from,name=from,..." pairs
@@ -1575,14 +1861,14 @@ fn define_colors_impl(id_pairs: &str, if_undef: bool) -> Result<()> {
       (pair, pair)
     };
     if if_undef {
-      let key = s!("color_{name}");
+      let key = color_sty::color_key(name);
       if with_value(&key, |v| v.is_some()) {
         continue;
       }
     }
-    let from_key = s!("color_{from}");
+    let from_key = color_sty::color_key(from);
     if let Some(stored) = lookup_value(&from_key) {
-      assign_value(&s!("color_{name}"), stored, None);
+      assign_value(&color_sty::color_key(name), stored, None);
       // Also copy the \color@name macro via Let
       let from_cs = T_CS!(s!("\\color@{from}"));
       let to_cs = T_CS!(s!("\\color@{name}"));

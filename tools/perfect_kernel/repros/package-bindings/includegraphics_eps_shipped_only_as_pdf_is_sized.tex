@@ -1,0 +1,37 @@
+% mechanism: `\includegraphics{eps_as_pdf_one.eps}` where the author ran epstopdf and shipped only `eps_as_pdf_one.pdf`:
+%   `image_candidates` (util/image.rs, Perl Util/Image.pm:43-56) searched `eps_as_pdf_one.eps.*` and `eps_as_pdf_one.eps`
+%   only, so the graphic had no candidates and `image_graphicx_sizer` no size (a sub-figure panel measured 0 wide). Now a
+%   name with a graphics extension that names no file is retried under its base name with any graphics type, the rule
+%   post's `find_graphic_file` (latexml_post graphics.rs) already applies, so the sizer reads `eps_as_pdf_one.pdf`
+%   (200bp x 100bp; `scale=0.5`, 100bp = 100.375pt wide). A requested file that exists (`eps_as_pdf_two.eps`, beside an
+%   `eps_as_pdf_two.pdf`) stays the only candidate. The retry's hits are listed in a fixed type order (pdftex.def's
+%   `\Gin@extensions` first, its uppercase after its lowercase, then `.eps`, dvips's and post's types; then by search
+%   directory, then by name within one directory, review rev78v2 findings 2-3), not the directory's: `eps_as_pdf_three`
+%   and `eps_as_pdf_four` ship a `.pdf` and a `.ps`, written in opposite orders (a tmpfs lists them newest first), and
+%   both list the `.pdf` first, which the sizer reads (review rev78v finding 3; 0907.3747's `nuebar.pdf,nuebar.ps`
+%   beside `nuebar_limit.ps,nuebar_limit.pdf`). The search-directory order: repro
+%   includegraphics_eps_retry_keeps_the_graphicspath_order.
+% witness: 1408.2843 Fig 1-2 (`recomb.eps` → `recomb.pdf`), 1503.04804 Fig 3 (`pnt_pwpt_*.eps` → `.pdf`);
+%   KNOWN_PERL_ERRORS #1137; OXIDIZED_DESIGN_DIVERGENCES #882
+% oracle:  pdflatex (TL 2025): "File `eps_as_pdf_one-eps-converted-to.pdf' not found" (its epstopdf converts to a new
+%   name); arXiv's pdflatex of the time read `eps_as_pdf_one.pdf` (the witnesses' PDFs show the figures)
+% engines: perl: no candidates, no size, and post loses the image (KNOWN_PERL_ERRORS #1137); rust int61a: no
+%   candidates, the box 0pt wide (post finds the .pdf)
+% expect:  0 errors, 0 warnings; candidates="eps_as_pdf_one.pdf", "width 100.375pt"; candidates="eps_as_pdf_two.eps";
+%   candidates="eps_as_pdf_three.pdf,eps_as_pdf_three.ps" and "eps_as_pdf_four.pdf,eps_as_pdf_four.ps"
+% files:   eps_as_pdf_one.pdf (a page box 200bp x 100bp), eps_as_pdf_two.eps, eps_as_pdf_two.pdf beside this file; the
+%   guard writes eps_as_pdf_three.pdf + .ps and eps_as_pdf_four.ps + .pdf (copies of eps_as_pdf_one.pdf and
+%   eps_as_pdf_two.eps) in those orders
+% status:  GREEN (78v r2)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\sbox0{\includegraphics[scale=0.5]{eps_as_pdf_one.eps}}width \the\wd0.
+\begin{figure}
+\includegraphics[scale=0.5]{eps_as_pdf_one.eps}
+\includegraphics{eps_as_pdf_two.eps}
+\includegraphics{eps_as_pdf_three.eps}
+\includegraphics{eps_as_pdf_four.eps}
+\caption{C.}
+\end{figure}
+\end{document}

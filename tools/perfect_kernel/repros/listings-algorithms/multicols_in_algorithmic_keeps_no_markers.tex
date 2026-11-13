@@ -1,0 +1,28 @@
+% mechanism: `{multicols}` marks its start and end with `ltx:pagination` (multicol.sty.ltxml:21-30), which an
+%   `ltx:listing` cannot hold or auto-close: inside `algorithmic` the marker was an error. The markers are page layout,
+%   made only where a pagination can go (multicol_sty.rs `pagination_insertable`)
+% witness: 1708.03274 (`\begin{multicols*}{2}` ... `\columnbreak` inside `algorithmic`), 1405.5689 (`\newpage` as the
+%   break); 38 papers of run 336
+% oracle:  pdflatex 0 errors: the three lines in two columns
+% engines: rust int52a = Error:malformed:ltx:pagination; Perl 0.8.8 the same (KNOWN_PERL_ERRORS #1094)
+% expect:  0 errors; three listing lines, no pagination
+% status:  RED (int52a) -> GREEN (78p)
+\documentclass{article}
+\usepackage{multicol}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\begin{document}
+\begin{algorithm}
+\begin{algorithmic}[1]
+\begin{multicols*}{2}
+\STATE a
+\STATE b
+
+\columnbreak
+
+\STATE c
+\end{multicols*}
+\end{algorithmic}
+\caption{A}
+\end{algorithm}
+\end{document}

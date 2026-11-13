@@ -1,0 +1,18 @@
+% witness: 2606.20943 (quantumdust.cls:278-286, \LoadClass{amsart})
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors, no "Unknown edition" warning; \@classname typesets amsart
+% mechanism: amsart.cls:58-60 \@classname and :781-789 \subjclassname@<year>, read by classes built on amsart; our
+%   AMS support (and Perl's) defined neither: Error:undefined:\@classname. Fixed: \@classname in amsart_cls.rs
+%   (and amsproc/amsbook), the editions in ams_support_sty.rs.
+% status:  GREEN
+\documentclass{amsart}
+\makeatletter
+\renewcommand*\subjclass[2][2012]{\def\@subjclass{#2}%
+  \@ifundefined{subjclassname@#1}{\ClassWarning{\@classname}{Unknown edition (#1)}}%
+  {\@xp\let\@xp\subjclassname\csname subjclassname@#1\endcsname}}
+\makeatother
+\begin{document}
+\title{T}\subjclass[2020]{81P45}
+\maketitle
+Text. \makeatletter Class: \@classname.\makeatother
+\end{document}

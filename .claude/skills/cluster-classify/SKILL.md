@@ -54,8 +54,9 @@ Run all four in order. Skipping step 3 is the canonical mistake.
 Steps 2–4 are a fan-out: each cluster's sampling and interpretation is
 independent until the SYNC_STATUS write-up. When step 1's tally yields
 3 or more clusters worth sampling, orchestrate them with the
-**Workflow tool** instead of sampling serially — this skill's
-instruction counts as the user's opt-in to multi-agent orchestration.
+**Workflow tool** instead of sampling serially. The Workflow tool needs the
+user's opt-in: a user-typed `/cluster-classify` supplies it; if you reached
+this skill on your own, sample serially or ask before fanning out.
 
 Shape (hybrid: scout inline, then pipeline):
 
@@ -85,7 +86,7 @@ Shape (hybrid: scout inline, then pipeline):
 Concurrency caution: every sample agent runs Perl+Rust conversions.
 The workflow pool cap (~10 concurrent) is the throttle — do not add
 parallelism inside the sample stage, and respect the per-paper
-RAM-guard discipline (memory `feedback_sandbox_ram_guard`).
+RAM-guard discipline (memory `feedback_sandbox_run_discipline` § feedback_sandbox_ram_guard).
 
 ## Step 1 — tally first-error classes
 

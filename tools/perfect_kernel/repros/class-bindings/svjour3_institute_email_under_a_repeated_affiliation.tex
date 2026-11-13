@@ -1,0 +1,30 @@
+% svjour3's `\institute{Ann One \at First Inst, UK\\ \email{ann@one.uk} \and …}` under an `\author` line that prints the same
+% affiliation by a mark: the institute's entry is the author line's affiliation again, written once, and the e-mail it
+% holds is its own contact on Ann, not lost with the entry's second copy.
+% witness: 2111.06447 (`\institute{Sibo Cheng \at Data Science Instituite, …, UK\\ \email{sibo.cheng@imperial.ac.uk} \and …}`)
+% oracle:  pdflatex (TL 2025, 2111.06447's svjour3.cls) 0 errors: "Ann One1 , Bob Two2", "1 First Inst, UK",
+%          "2 Second Inst, France", and in the institute footnote "Ann One", "First Inst, UK", "E-mail: ann@one.uk",
+%          "Bob Two", "Third Lab, France"
+% engines: rust FX5base =2 = Ann's e-mail missing (the content check counts it); off = held (Ann's e-mail contact);
+%          perl = not run
+% expect:  0 errors; off 0 warnings; =2 1 warning (the content check: "First Inst, UK" prints twice, held once); Ann: the
+%          affiliation First Inst, UK and the e-mail ann@one.uk; Bob: Second Inst, France and Third Lab, France
+% status:  RED (FX5base =2) -> GREEN (FX5) — perfect_kernel_batchfx5::an_institute_email_under_a_repeated_affiliation_is_kept
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann One$^{1}$, Bob Two$^{2}$ \\
+        \small $^{1}$ First Inst, UK \\
+        \small $^{2}$ Second Inst, France
+}
+\institute{Ann One \at
+First Inst, UK\\
+              \email{ann@one.uk}
+           \and
+           Bob Two \at
+              Third Lab, France
+}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,42 @@
+% witness: review rev78x3 finding 2 (probe p2.tex F2-F4: a width read through a `\newdimen` register or an
+%          `\addtolength` register cannot be evaluated at the real geometry, and its float fell back to the registers'
+%          345pt line where base set its rows against the geometry's text width, OXIDIZED_DESIGN_DIVERGENCES #99)
+% oracle:  pdflatex 0 errors, 0 overfull (\textwidth 452.97pt): Figures 1-3 one row of four (4 x 3.8cm = 432.6pt;
+%          3 x 108.71pt + 3.8cm = 434.3pt)
+% engines: rust int68a = one row each (the geometry's \Gm@tw); 78x r3 = 3+1 each (the 345pt \hsize); Perl 0.8.8 = 3+1
+%          each
+% expect:  0 errors, 0 warnings; Figures 1-3 no `ltx:break`, four panels each
+% status:  RED (78x r3) -> GREEN (78x r4: a float whose widths cannot be evaluated is arranged as before the rule, at
+%          the geometry's text width)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{graphicx}
+\newdimen\figw
+\figw=3.8cm
+\newlength\figv
+\setlength\figv{3cm}\addtolength\figv{0.8cm}
+\begin{document}
+Text.
+\begin{figure}
+\includegraphics[width=\figw]{example-image}\hfill
+\includegraphics[width=3.8cm]{example-image}\hfill
+\includegraphics[width=3.8cm]{example-image}\hfill
+\includegraphics[width=3.8cm]{example-image}
+\caption{A dimen register.}
+\end{figure}
+\begin{figure}
+\includegraphics[width=\figv]{example-image}\hfill
+\includegraphics[width=\figv]{example-image}\hfill
+\includegraphics[width=\figv]{example-image}\hfill
+\includegraphics[width=\figv]{example-image}
+\caption{An addtolength register.}
+\end{figure}
+\begin{figure}
+\includegraphics[width=0.24\textwidth]{example-image}\hfill
+\includegraphics[width=0.24\textwidth]{example-image}\hfill
+\includegraphics[width=0.24\textwidth]{example-image}\hfill
+\includegraphics[width=\figv]{example-image}
+\caption{Relative widths and an addtolength register.}
+\end{figure}
+\end{document}

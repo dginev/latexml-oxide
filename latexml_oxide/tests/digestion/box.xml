@@ -145,14 +145,10 @@ Once? Once.</p>
   </para>
   <para xml:id="p16">
     <p>combined vbox: <inline-block framed="rectangle" vattach="bottom">
-        <block vattach="bottom">
-          <p vattach="bottom">1cm Box</p>
-          <p vattach="bottom">2cm Box</p>
-        </block>
-        <block vattach="bottom">
-          <p vattach="bottom">1cm Box</p>
-          <p vattach="bottom">2cm Box</p>
-        </block>
+        <p>1cm Box</p>
+        <p>2cm Box</p>
+        <p>1cm Box</p>
+        <p>2cm Box</p>
       </inline-block></p>
   </para>
   <para xml:id="p17">

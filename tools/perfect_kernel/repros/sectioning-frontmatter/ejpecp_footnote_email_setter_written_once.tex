@@ -1,0 +1,24 @@
+% mechanism: a frontmatter setter inside an author block's note (ejpecp's `\EMAIL`, `\@add@frontmatter{ltx:note}
+%   [role=email]{#1}`, in `\footnote{…}`) runs once in the rehearsal, which queues its entry for the emitter to write
+%   (emit.rs `recover_queued`); the emitter writes the note from its argument too, whose digestion ran the setter again — a
+%   second `<note role="email">`. Since P21 (OD #993) OmniBus's `\author` (inst_support) is one block, so a note followed
+%   by a space or an `\and` is written from its argument; the old per-piece split trimmed the space and the note was
+%   written as its text. The setter's entry is now written only by the recovery
+% witness: 1406.5876 (`\AUTHORS{Rick Durrett\footnote{Duke University \EMAIL{rtd@math.duke.edu}} }`), 1904.07135's last
+%          author
+% oracle:  pdflatex (TL 2025's ejpecp.cls, -no-shell-escape) 0 errors: "Ann Able*", footnote "*Univ X E-mail: ann@x.org"
+% engines: rust int157a = contact "Univ X" by its text (1 Warning), one e-mail note; P21e = contact "Univ X", two e-mail
+%          notes
+% expect:  0 errors, 0 warnings; Ann Able (note "Univ X"), exactly one `<note role="email">ann@x.org</note>`
+% status:  RED (P21e) -> GREEN (EJ1)
+% preload: ar5iv.sty
+\documentclass[EJP]{ejpecp}
+\TITLE{T}
+\DOI{vVOL-PID}
+\AUTHORS{%
+  Ann Able\footnote{Univ X
+    \EMAIL{ann@x.org}} }
+\begin{document}
+\maketitle
+Text.
+\end{document}

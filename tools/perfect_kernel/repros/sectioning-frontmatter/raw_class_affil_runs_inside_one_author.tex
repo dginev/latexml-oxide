@@ -1,0 +1,34 @@
+% mechanism: an in-block `annotate=run` annotation is every name of its run's (OD #928, main session 94a r6 item 8;
+%   `lines.rs` names line, `Resolver::record_run`): a raw class's `\affil` printed in place inside `\author`, rerouted
+%   to `\lx@add@affiliation[annotate=run]`, after a run of names joined by "and" — pdflatex prints it under the run, and
+%   today's API attaches it to the run; the reading gave it to the name beside it alone, and the re-part of today's
+%   merged names ("BOB BAKERCID COLE") wrote the run's first names with none.
+% witness: 1805.12376 (ci2018.cls: `\author{JORGE RAMIREZ and EVGENY KRIVOSHEEV \affil{University of Trento} MARCOS
+%   BAEZ and FABIO CASATI \affil{…} BOUALEM BENATALLAH \affil{…}}`)
+% oracle:  pdflatex 0 errors: "ANN ABLE and BOB BAKER, Univ A / CID COLE and DAN DOE, Univ B and Univ C / EVE EGAN,
+%   Univ D"
+% engines: rust 94b r2: ANN ABLE and CID COLE no affiliation; perl: not run
+% expect:  0 errors, 0 warnings; ANN ABLE Univ A, BOB BAKER Univ A, CID COLE and DAN DOE "Univ B and Univ C", EVE EGAN
+%   Univ D; eager and --streaming the same
+% status:  RED (94b r2) -> GREEN (94a r6)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilsinauthor.cls}
+\ProvidesClass{affilsinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\author#1{\gdef\@author{#1}}
+\def\affil#1{\gdef\@affil{#1}\ifx\@affil\@empty\else{\reset@font\affilfont\unskip,\ #1\vphantom{gy}\endgraf}\fi}\affil{}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilsinauthor}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE and BOB BAKER \affil{Univ A}
+CID COLE and DAN DOE
+\affil{Univ B and Univ C}
+EVE EGAN
+\affil{Univ D}
+}
+\maketitle
+Body.
+\end{document}

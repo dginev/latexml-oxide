@@ -1,7 +1,9 @@
 //! Shared helper: discard an environment body by reading tokens up to
 //! matching `\end{kind}`. Mirrors the Perl `discard_env_body` closures
 //! used in ar5iv-bindings/nicematrix / forest / diagrams / pb-diagram
-//! stub packages.
+//! stub packages. Here the users are pb-diagram's stub and the body readers
+//! of forest and animate; Paul Taylor's `diagrams` is a native binding
+//! (diagrams_tex.rs, OXIDIZED_DESIGN_DIVERGENCES #589).
 //!
 //! Perl reference (identical across those stubs):
 //! ```perl
@@ -21,24 +23,55 @@
 //!   return; }
 //! ```
 
-use std::cell::RefCell;
-
 use latexml_package::prelude::*;
 use rustc_hash::FxHashSet as HashSet;
 
-thread_local! {
-  /// One error per kind per conversion run, matching Perl's
-  /// `our $reported{$kind}` cache inside each stub package.
-  static REPORTED: RefCell<HashSet<String>> = RefCell::new(HashSet::default());
+/// One error per kind per conversion run, matching Perl's `our $reported{$kind}` cache inside each stub package. A rollback
+/// puts it back with the diagnostic it discards: a rehearsal's report left the document's own unsaid.
+static REPORTED: DocumentState<HashSet<String>> = DocumentState::new("discard_env_reported");
+
+/// Read the raw (unexpanded) tokens of the current environment body up to
+/// the first `\end{kind}`, which is consumed and not returned; an `\end` of
+/// another environment inside the body is kept. The one mechanism behind
+/// every binding that captures or discards a body wholesale (forest's bracket
+/// parser, animate's frame discard, the stub discards below) — batch 56bc.
+/// `read_balanced(…, false, false)`: the `{` after `\end` was just consumed,
+/// so the balanced read starts inside it (Perl's argless `readBalanced`).
+pub fn read_env_body_tokens(kind: &str) -> Result<Vec<Token>> {
+  let end_delim = Tokens!(T_CS!("\\end"));
+  let mut body: Vec<Token> = Vec::new();
+  loop {
+    if let Some(toks) = read_until(&end_delim)? {
+      body.extend(toks.unlist());
+    }
+    let Some(open) = read_token()? else {
+      break; // end of input
+    };
+    let env = read_balanced(ExpansionLevel::Off, false, false)?;
+    if env.to_string() == kind {
+      break;
+    }
+    body.push(T_CS!("\\end"));
+    body.push(open);
+    body.extend(env.unlist());
+    body.push(T_END!());
+  }
+  Ok(body)
 }
 
-/// Read and discard tokens up to and including a matching `\end{kind}`.
-/// Emits a one-time `Error("undefined", "{kind}", ...)` on the first
-/// invocation per `kind`.
+/// Read and discard the body up to and including the matching `\end{kind}`,
+/// with a one-time stub warning per `kind`.
 pub fn discard_env_body(kind: &str, source: &str) -> Result<()> {
   bgroup();
-  let first_time = REPORTED.with(|cell| {
-    let mut set = cell.borrow_mut();
+  report_stub_once(kind, source)?;
+  let _body = read_env_body_tokens(kind)?;
+  egroup()?;
+  Ok(())
+}
+
+/// The one-per-kind stub diagnostic shared by the discard helpers.
+fn report_stub_once(kind: &str, source: &str) -> Result<()> {
+  let first_time = REPORTED.update(|set| {
     if set.contains(kind) {
       false
     } else {
@@ -52,22 +85,23 @@ pub fn discard_env_body(kind: &str, source: &str) -> Result<()> {
       "{} has no support in {}, this is a stub binding.",
       kind, source
     );
-    Error!("undefined", &obj, msg);
+    // A Warn, not an Error: the body IS discarded cleanly, and the ar5iv
+    // binding's Error (forest.sty.ltxml:37-38) was the only diagnostic of
+    // forest-quickstart, fragoli_doc and milsymb (pdflatex clean; sweep #41).
+    // Guard: `perfect_kernel_batch56::forest_stub_is_a_warning`.
+    Warn!("undefined", &obj, msg);
   }
-  let end_delim = Tokens!(T_CS!("\\end"));
-  loop {
-    let _upto_end = read_until(&end_delim)?;
-    let _drop_open = read_token()?;
-    // require_open=false because `_drop_open` just consumed the `{` —
-    // read_balanced should read the inside, not a second `{`. Mirrors
-    // Perl's argless `$gullet->readBalanced` which assumes the `{` is
-    // already open. Driver: 2402.09676 + nicematrix stub cascaded
-    // "Expected opening '{'" because of the spurious require_open.
-    let env = read_balanced(ExpansionLevel::Off, false, false)?;
-    if env.to_string() == kind {
-      break;
-    }
-  }
+  Ok(())
+}
+
+/// Discard the body of the BARE-CS environment form `\<kind> … \end<kind>`
+/// (what `\NewDocumentEnvironment` defines alongside `\begin{<kind>}`):
+/// raw, non-expanding scan up to the `end_cs` token, sharing the
+/// one-per-kind stub report with [`discard_env_body`].
+pub fn discard_body_until_cs(kind: &str, end_cs: &str, source: &str) -> Result<()> {
+  bgroup();
+  report_stub_once(kind, source)?;
+  let _body = read_until(&Tokens!(T_CS!(end_cs)))?;
   egroup()?;
   Ok(())
 }

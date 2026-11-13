@@ -1,0 +1,21 @@
+% mechanism: RED catalog (no guard). An address group after a word that is no e-mail label (`* Contact:
+%   \{aable, bbaker\}@x.edu`) ends its line, a list boundary (brief 95c r2 B2), so the group comes out as two spelled
+%   e-mails; the word is no label word (S4), so it stays the entry's, a fragment (`* Contact`) — content kept, the
+%   affiliation printing a label of nothing. The open question on contact labels decides whether such a word names the
+%   e-mail contacts or stays.
+% witness: 2606.28166 (sectioning-frontmatter/author_symbol_row_group_wrapped_line, the r7 re-review of batch 77p);
+%   perfect_kernel_batch77p::symbol_row_group_wrapped_line_goes_by_its_marks pins the fragment; 2601.07312,
+%   2605.25179, 2506.03659 (`\textbf{Correspondence:} …` leaves `Correspondence`)
+% oracle:  pdflatex 0 errors: "Ann Able ∗ Bob Baker ∗", "∗ Contact: {aable, bbaker}@x.edu"
+% engines: rust 95c-r2 (and 95c): the line "∗ Contact" on both, aable@x.edu Ann Able's, bbaker@x.edu Bob Baker's; rust
+%   int123a: the whole line an affiliation of both; perl: the same
+% expect:  0 errors, 0 warnings; Ann Able aable@x.edu, Bob Baker bbaker@x.edu, no affiliation printing "Contact" alone
+% status:  RED (95c-r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\,$^{*}$ \quad Bob Baker\,$^{*}$ \\[2pt] {\small $^{*}$\,Contact: \texttt{\{aable, bbaker\}@x.edu}}}
+\maketitle
+Text.
+\end{document}

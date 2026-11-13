@@ -130,6 +130,26 @@ LoadDefinitions!({
       && babel_support_sty::babel_language_to_iso(&main)
          == babel_support_sty::babel_language_to_iso(&pkg_last)
       && babel_support_sty::babel_language_to_iso(&main).is_some();
+    // A bare `\usepackage{babel}` whose language is a CLASS option
+    // (`\documentclass[ngerman]{scrlttr2}`, letter-copy-test): `\opt@babel.sty`
+    // is empty. babel took the main language from the class options
+    // (TL 2025 babel.sty:4197-4245) and loaded it last, prepending it to `\bbl@loaded`
+    // (:4129-4133); that `.ldf` is our binding, which never runs `\main@language`,
+    // so `\bbl@main@language` kept the english default: the document got
+    // `xml:lang="en"`, English captions, and blindtext's English text.
+    let loaded_first = if pkg_last.is_empty() {
+      // babel.sty:4129 `\let\bbl@loaded\@empty`: always defined here.
+      do_expand(T_CS!("\\bbl@loaded"))
+        .map(|t| t.to_string())
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .find(|s| is_lang_candidate(s) && babel_support_sty::babel_language_to_iso(s).is_some())
+        .unwrap_or_default()
+        .to_string()
+    } else {
+      String::new()
+    };
     let lang = if let Some(m) = main_kv {
       m
     } else if same_alias_class {
@@ -137,6 +157,8 @@ LoadDefinitions!({
       main
     } else if !pkg_last.is_empty() {
       pkg_last
+    } else if !loaded_first.is_empty() {
+      loaded_first
     } else if main != "nil" && !main.is_empty() {
       main
     } else {
@@ -153,6 +175,19 @@ LoadDefinitions!({
     def_macro(T_CS!("\\bbl@main@language"), None,
       Tokens!(Explode!(lang.clone())),
       Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }))?;
+    // babel.sty L1136-1142 (\main@language) → L828 (\bbl@patterns):
+    // real babel assigns `\language=\l@<main>` DURING package load, so a
+    // preamble `\iflanguage{english}{..}{..}` under `[italian]` takes the
+    // FALSE branch (\language=\l@italian ≠ \l@english=0). We never set
+    // \language, so every non-English doc mis-branched preamble language
+    // tests (toptesi topfront manuals: 34 undefined-CS errors from an
+    // \iflanguage{english} block real LaTeX skips). Allocate \l@<lang> if
+    // missing, then assign.
+    unread(Tokenize!(TeXString::assembled(s!(
+      "\\ifcsname l@{lang}\\endcsname\\else\
+       \\expandafter\\newlanguage\\csname l@{lang}\\endcsname\\fi\
+       \\language=\\csname l@{lang}\\endcsname\\relax"
+    ))));
   });
   // Run mainlang at load time so DOCUMENT_LANGUAGE is set before
   // \begin{document} opens (and base_schema's after_open reads it).
@@ -217,28 +252,108 @@ LoadDefinitions!({
   // local `\catcode`. Still correct for the defensive-call witness
   // arXiv:1912.08056 (`\def\diag{\shorthandoff{;:!?}…}`) — catcode 12 is the
   // intended effect, no error.
-  fn shorthand_set_catcode(chars: Tokens, cc: Catcode) {
-    for tok in chars.unlist() {
-      if tok.get_catcode() == Catcode::SPACE {
-        continue;
-      }
-      let single = tok.with_str(|s| {
-        let mut it = s.chars();
-        match (it.next(), it.next()) {
-          (Some(c), None) => Some(c),
-          _ => None,
-        }
-      });
-      if let Some(c) = single {
-        assign_catcode(c, cc, Some(Scope::Local));
-      }
+  /// The single characters of a `\shorthandoff`/`\shorthandon` argument.
+  fn shorthand_chars(chars: Tokens) -> Vec<char> {
+    chars
+      .unlist()
+      .into_iter()
+      .filter(|tok| tok.get_catcode() != Catcode::SPACE)
+      .filter_map(|tok| {
+        tok.with_str(|s| {
+          let mut it = s.chars();
+          match (it.next(), it.next()) {
+            (Some(c), None) => Some(c),
+            _ => None,
+          }
+        })
+      })
+      .collect()
+  }
+  /// A meaning that is there and is not `\relax` (a `\csname` built once leaves `\relax`).
+  fn is_set(cs: &Token) -> bool {
+    match lookup_meaning(cs) {
+      None => false,
+      Some(meaning) => lookup_meaning(&T_CS!("\\relax")).is_none_or(|relax| meaning != relax),
     }
   }
-  DefPrimitive!("\\shorthandoff{}", sub[(chars)] {
-    shorthand_set_catcode(chars, Catcode::OTHER);
+  // babel switches only its shorthands (babel.sty:1437-1440 `\bbl@ifunset{bbl@active@…}` — any
+  // other character is "not a shorthand", unchanged): off, an active character becomes other
+  // (catcode 12); on, a character with an active meaning becomes active again. Demoting every
+  // character broke `^` (a superscript, catcode 7) after `\shorthandoff*{~^}` (babel.dtx:3786-3794).
+  // babel's "not a shorthand" error (babel.def:1558, errbabel.def:93-97) is raised for a character
+  // that cannot be one: in the body, where our language bindings have made their shorthands active,
+  // one that is neither active nor of catcode 12 (a shorthand our bindings deactivated, or one a
+  // language switch turned off, is 12) and has no babel record (`\bbl@oricat@<c>`), such as `^`.
+  // In the preamble the bindings' shorthands are not active yet, so no character is judged there.
+  // Repro babel-lang/shorthandoff_star_reads_the_star (babel.dtx:3786-3794's `\shorthandoff*{~^}`);
+  // RED babel-lang/shorthandoff_quote_in_english_is_no_shorthand (a catcode-12 non-shorthand passes).
+  fn shorthand_off(chars: Tokens) -> Result<()> {
+    for c in shorthand_chars(chars) {
+      if lookup_catcode(c) == Some(Catcode::ACTIVE) {
+        assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+      } else {
+        report_not_a_shorthand(c)?;
+      }
+    }
+    Ok(())
+  }
+  /// errbabel.def:93-97 `not-a-shorthand-b`, through `\PackageError{babel}` (the
+  /// `latex:(babel)` diagnostic of make_message, as Perl's raw babel reports it).
+  fn report_not_a_shorthand(c: char) -> Result<()> {
+    let cs = T_CS!(s!("\\bbl@oricat@{c}"));
+    if lookup_bool("inPreamble")
+      || matches!(lookup_catcode(c), Some(Catcode::OTHER) | Some(Catcode::ACTIVE))
+      || is_set(&cs)
+    {
+      return Ok(());
+    }
+    Error!(
+      "latex",
+      "(babel)",
+      s!(
+        "Package babel Error: I can't switch '{c}' on or off--not a shorthand\nThis character is not a shorthand. Maybe you made\na typing mistake? I will ignore your instruction."
+      )
+    );
+    Ok(())
+  }
+  // babel.sty:1428-1430 `\shorthandoff` is `\@ifstar{\bbl@shorthandoff\tw@}{\bbl@shorthandoff\z@}`:
+  // the starred form restores each character's original catcode and meaning, as babel recorded
+  // them when it made the character active (`\bbl@oricat@<c>`, `\bbl@oridef@<c>`, :1449-1454,
+  // :1210). A shorthand our language bindings activated has no such record; its original catcode
+  // is LaTeX's 12 (`:;!?"`). Read without the star, `*` was the argument and `{:}` typeset.
+  DefPrimitive!("\\shorthandoff OptionalMatch:* {}", sub[(star, chars)] {
+    if star.is_none() {
+      shorthand_off(chars)?;
+      return Ok(Vec::new());
+    }
+    let mut restore: Vec<Token> = Vec::new();
+    for c in shorthand_chars(chars) {
+      let oricat = T_CS!(s!("\\bbl@oricat@{c}"));
+      if is_set(&oricat) {
+        restore.push(oricat);
+        let oridef = T_CS!(s!("\\bbl@oridef@{c}"));
+        if is_set(&oridef) {
+          restore.push(oridef);
+        }
+      } else if lookup_catcode(c) == Some(Catcode::ACTIVE) {
+        assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+      } else {
+        report_not_a_shorthand(c)?;
+      }
+    }
+    if !restore.is_empty() {
+      // The records are `\catcode…\relax` and `\let…` assignments: run them as TeX.
+      let _ = digest(Tokens::new(restore))?;
+    }
   });
   DefPrimitive!("\\shorthandon{}", sub[(chars)] {
-    shorthand_set_catcode(chars, Catcode::ACTIVE);
+    for c in shorthand_chars(chars) {
+      if lookup_meaning(&T_ACTIVE!(c)).is_some() {
+        assign_catcode(c, Catcode::ACTIVE, Some(Scope::Local));
+      } else {
+        report_not_a_shorthand(c)?;
+      }
+    }
   });
 
 });

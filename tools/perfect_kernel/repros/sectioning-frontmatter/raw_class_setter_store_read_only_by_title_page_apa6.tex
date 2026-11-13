@@ -1,0 +1,26 @@
+% mechanism: rule (a) of K11 (frontmatter_stores.rs `store_setter_body`): a raw class's table setter whose body is a
+%   pure store of its argument into a macro of another name is the frontmatter's when only the class's title-page
+%   code reads that macro — apa6.cls:760 `\long\def\affiliation#1{\long\def\@affil{#1}}` and :779
+%   `\long\def\authornote#1{\long\def\@acks{#1}}`, read only by its `\maketitle` (man mode :1126-1234) and the
+%   `\check@author` it calls (:786-795). Under the rawclasses lever both were lost (the kernel refuses the class's
+%   `\maketitle`); OmniBus kept the affiliation only.
+% witness: 1710.08171, 1705.02935 (apa6), 2003.11668 (apa.cls:443, the same store); 99 of 188 apa/apa6 papers set an
+%   affiliation, 68 an author note
+% oracle:  pdflatex: 0 errors; "The Title / Ann Author / Some University / Author Note / Correspondence to Ann Author,
+%   Some University." on the title page, "Abs." and "Keywords: alpha, beta" on the abstract page
+% engines: rust 68u r1: no affiliation, no author note; perl: the class raw too, both lost (no apa6 binding)
+% expect:  0 errors; Ann Author with the affiliation; the author note a frontmatter note; the keywords
+% status:  RED (68u r1) -> GREEN (68u r2)
+% preload: ar5iv.sty
+\documentclass[man]{apa6}
+\title{The Title}
+\shorttitle{Short}
+\author{Ann Author}
+\affiliation{Some University}
+\authornote{Correspondence to Ann Author, Some University.}
+\abstract{Abs.}
+\keywords{alpha, beta}
+\begin{document}
+\maketitle
+Text.
+\end{document}

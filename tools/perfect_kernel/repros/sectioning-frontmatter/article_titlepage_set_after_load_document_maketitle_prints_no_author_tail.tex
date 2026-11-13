@@ -1,0 +1,20 @@
+% mechanism: article reads its `\if@titlepage` once, at its load, to define its `\maketitle` (article.cls:169); a
+%   document setting `\@titlepagetrue` after it changes no `\maketitle`, which still runs the document's title-only
+%   `\@maketitle`: the value is the class's after its options (`declare_fnsymbol_title_block`, `class_titlepage_key`),
+%   not the one at `\maketitle` (TP1c, OXIDIZED_DESIGN_DIVERGENCES #953)
+% witness: synthetic (TP1c, the reading's time)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title / Body." (no authors)
+% engines: int160a0: Alice A, 1 warning "… bob"; TP1b, TP1c: Alice A, 0 warnings; perl not run
+% expect:  one creator Alice A, 0 errors, 0 warnings, no `frontmatter:annotated`
+% status:  GREEN (TP1b, TP1c). Guard perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter\@titlepagetrue\makeatother
+\makeatletter\def\@maketitle{\begin{center}{\Large\@title}\end{center}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

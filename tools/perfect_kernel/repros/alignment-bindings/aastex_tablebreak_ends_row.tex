@@ -1,0 +1,21 @@
+% witness: astro-ph0604363, 1811.07447 (~38 run-336 deluxetable papers with a stray `&` after `\tablebreak`; rc_struct M6)
+% oracle:  pdflatex 0 errors: four rows x/1, y/2, [Fe/H]/3, w/4 (`\\[-11pt]` overlaps rows y and [Fe/H] on the page)
+% engines: rust 64h4 = 1 Error:unexpected:& (`\tablebreak` defined empty: rows y and [Fe/H] merge); Perl 0.8.8 the
+%          same 1 (deluxetable.sty.ltxml:94 overrides its :89 `\\[0pt]` with nothing)
+% expect:  aastex701.cls:12652 `\newcommand\tablebreak{\\[-11pt]\noalign{\break}}` ends the row; its explicit `[…]`
+%          keeps the `[`-led next row a row
+% status:  RED (64h4) -> GREEN (64qb)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\begin{deluxetable}{lc}
+\tablecaption{T}
+\tablehead{\colhead{a} & \colhead{b}}
+\startdata
+x & 1 \\
+y & 2 \tablebreak
+[Fe/H] & 3 \\
+w & 4
+\enddata
+\end{deluxetable}
+\end{document}

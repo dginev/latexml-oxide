@@ -1,0 +1,22 @@
+% witness: 77n S4 — ieeeaccess's names set in capitals inside one `\uppercase{…}`, grades among them:
+%          `\uppercase{K. Liu\authorrefmark{2}, J. Chen\authorrefmark{2}, \IEEEmembership{Senior, IEEE} R.C. de
+%          Lamare\authorrefmark{3}, \IEEEmembership{Senior, IEEE}, S. Rahardja\authorrefmark{2},} \IEEEmembership{Fellow,
+%          IEEE}` (2209.12464)
+% oracle:  pdflatex 0 errors: "ANN ABLE*, BOB BAKER†, CAT COLE†, SENIOR, IEEE DAN DORN‡, SENIOR, IEEE, EVE ESS†,
+%          Fellow, IEEE"
+% engines: rust int31a = "ANN ABLE" and one creator "BOB BAKER, CAT COLE, DAN DORN, , EVE ESS" with marks "2,3"
+%          (+1 Error:frontmatter:merged_creators); Perl merges alike
+% expect:  0 errors, 0 warnings; 5 creators in capitals, each with its own mark, Cat Cole's and Dan Dorn's grade
+%          (as TeX prints it, in capitals) and Eve Ess's their membership contacts
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\uppercase{Ann Able}\IEEEauthorrefmark{1},
+\uppercase{Bob Baker\IEEEauthorrefmark{2}, Cat Cole\IEEEauthorrefmark{2}, \IEEEmembership{Senior, IEEE}
+Dan Dorn\IEEEauthorrefmark{3}, \IEEEmembership{Senior, IEEE}, Eve Ess\IEEEauthorrefmark{2},}
+\IEEEmembership{Fellow, IEEE}}
+\maketitle
+x
+\end{document}

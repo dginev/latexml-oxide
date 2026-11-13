@@ -1,0 +1,28 @@
+% witness: 1409.5623, 1708.07559, 1709.03450 (`\p@ConfYear`); 1710.04867, 1311.0119 (`\shortcite`); 1102.4258
+%          (`\CCScat`); 2604.14791 (`\EuroVisTutorialEditors`); 2404.02634 (`\copyrightTextTitPag`); 2004.07964
+%          (`\PaperL2P`); 2509.17755 (`\ArxivPaper`): egpubl.cls is not in TeX Live, papers ship it
+% oracle:  pdflatex with 2604.14791's egpubl.cls (v3.x, which has `\EuroVisTutorialEditors`; v4.0 dropped it): 0 errors
+%          ("Year (2025)"; "see [Jon90]"; "I.3.3 [Computer
+%          Graphics]: Picture/Image Generation—Line and curve generation"; the copyright line on the title page)
+% engines: rust 67u2 = 5 errors (each command undefined); Perl 6 errors (no egpubl binding)
+% expect:  0 errors, 0 warnings; the editors and the copyright line in the frontmatter, the CCS line as text
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass{egpubl}
+\usepackage{hyperref}
+\ConfYear{2025}
+\EuroVisTutorialEditors{T. Editor}
+\copyrightTextTitPag{\copyright\ 2025 The Authors.}
+\makeatletter
+\newcommand\showyear{Year (\p@ConfYear)}
+\makeatother
+\title{Eurographics}
+\author{A. Author}
+\begin{document}
+\maketitle
+\showyear; see \shortcite{jon}.
+\CCScat{Computer Graphics}{I.3.3}{Picture/Image Generation}{Line and curve generation}
+\begin{thebibliography}{Jon90}
+\bibitem[Jon90]{jon} A. Jones. A paper. 1990.
+\end{thebibliography}
+\end{document}

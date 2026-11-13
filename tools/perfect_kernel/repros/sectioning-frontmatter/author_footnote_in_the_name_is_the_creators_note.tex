@@ -1,0 +1,16 @@
+% mechanism: `\footnote{…}` written in `\author`: the frontmatter item binds `\footnote` to `\lx@add@note`
+%   (queue_digest.rs `digest_frontmatter_item`), so the note is a `role="note"` contact of the creator, never in the
+%   name; the already-right sibling of `author_footnotemark_note_is_the_creators_beside_the_name.tex` (OD #1001)
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ Bob Baker", footnote "∗ Note A."
+% engines: int159a2: 0 errors, 0 warnings; Ann Able with `<contact name="Note: " role="note">Note A.</contact>`
+% expect:  the same
+% status:  GREEN (int159a2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\footnote{Note A.} \and Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

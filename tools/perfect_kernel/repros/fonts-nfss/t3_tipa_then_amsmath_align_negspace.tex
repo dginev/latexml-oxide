@@ -1,0 +1,16 @@
+% witness: 2603.03017 (`\!\!` at the start of an align row; tipa.sty then amsmath.sty)
+% oracle:  pdflatex 0 errors; amsmath.sty:155-175 re-declares `\,` `\!` `\:` `\;` after tipa.sty:429-458 made `\!`
+%          `\;` `\:` T3 text accents, so in math they are the spacing commands again
+% engines: rust int36a = 0 errors; 77x r1 = 5 Errors (`\!` read the next token as an accent argument); Perl 1 Error
+%          (`\@defaultenc` undefined in its fontenc binding; tipa.sty read raw is not reached), the formulas as here
+% expect:  0 errors, 0 warnings; the align row and the inline formulas with their spacing hints
+% status:  GREEN (77x r2, amsmath_sty.rs re-asserts the kernel spacing commands)
+\documentclass{article}
+\usepackage{tipa}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}
+  \!\!x &\leq \! y
+\end{align}
+Inline $a\!b$, $a\;b$, $a\:b$ and $a\,b$.
+\end{document}

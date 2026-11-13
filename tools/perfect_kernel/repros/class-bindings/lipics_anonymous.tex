@@ -1,0 +1,13 @@
+% witness: lipics-v2021.cls:192, :791-794, :809 (the `anonymous` option: "Anonymous author", "Anonymous affiliation")
+% oracle:  pdflatex (with the shipped lipics-v2021.cls) 0 errors: "Anonymous author", "Anonymous affiliation"
+% engines: rust 67int15 = 1 Error:unexpected:_ and the real name and affiliation printed; Perl 0.8.8 no binding
+% expect:  0 errors; one creator "Anonymous author" with the affiliation "Anonymous affiliation", nothing else of it
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass[a4paper,UKenglish,anonymous]{lipics-v2021}
+\title{T}
+\author{Ann Author}{Uni X}{ann_author@x.at}{}{Grant}
+\begin{document}
+\maketitle
+Body.
+\end{document}

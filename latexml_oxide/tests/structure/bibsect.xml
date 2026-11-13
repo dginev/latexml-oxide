@@ -36,7 +36,7 @@
       <title>References</title>
     </bibliography>
   </section>
-  <bibliography bibstyle="alpha" citestyle="AY" files="lit" inlist="toc" xml:id="bibb">
+  <bibliography bibstyle="alpha" citestyle="AY" files="lit" inlist="toc" sort="true" xml:id="bibb">
     <title>References</title>
   </bibliography>
 </document>

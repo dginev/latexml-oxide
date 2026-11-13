@@ -1,0 +1,13 @@
+% A `\footnotemark` in a heading pairs with the `\footnotetext` after it: the heading's toc copy
+% stepped the counter a second time, so the text took the next number and stayed an unpaired
+% `footnotetext` note.
+% status:  GREEN (58n)
+% oracle:  pdflatex 0 errors: heading mark 1, its text "1 Text.", then "A2".
+% engines: rust mg58l: the mark 1 and the text 2 unpaired (`footnotemark`, `footnotetext`), A 3.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\section{Two\protect\footnotemark}
+\footnotetext{Text.}
+A\footnote{After.}
+\end{document}

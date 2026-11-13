@@ -548,6 +548,7 @@ fn run_body_child(
       preload: make_config(uri).preload.unwrap_or_default(),
     };
     latexml_core::util::logger::bind_log();
+    crate::converter::note_format_build_failure();
 
     // Open the body as a *named* in-memory mouth (same path as the preamble)
     // so its locators are stampable user sources sharing tag 0. The
@@ -654,6 +655,7 @@ impl Server {
 
       let opts = make_config(uri);
       let mut converter = Converter::from_config(opts.clone());
+      converter.note_main_source(&format!("literal:{text}"));
       if converter.prepare_session(&opts).is_err() {
         return WarmResult::Done(self.convert_in_process(uri, text));
       }

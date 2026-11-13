@@ -1,0 +1,13 @@
+% A run's ligatures reach only that run (KNOWN_PERL_ERRORS #438): `!`` in T2A is no ligature (`!‘`), in T1 it is ¡.
+% A `\label` moves the insertion point away from the open text and back; since moving it closes the text node (Perl
+% `setNode`, 60s), the return must ligate only what follows, not the T2A run again under T1's rules.
+% status:  GREEN 60s; guard perfect_kernel_batch60::ligatures_stay_in_their_run_across_a_label
+% oracle:  pdflatex 0 errors: "a!‘x"
+% engines: rust 60q5: "a!‘x"; 60s6 (setNode close without the ligated length): "a¡x"
+% expect:  0 errors; "a!‘x"
+\documentclass{article}
+\usepackage[T2A,T1]{fontenc}
+\begin{document}
+\section{S}
+{\fontencoding{T2A}\selectfont a!`\label{s}\fontencoding{T1}\selectfont x}
+\end{document}

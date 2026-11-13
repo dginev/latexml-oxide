@@ -1,0 +1,21 @@
+% witness: 1803.04687, 2208.04191 (IEEEtran + authblk: `Abrar~H.~Abdulnabi,~\IEEEmembership{Student~Member,~IEEE},
+%          … and~Gang~Wang,~\IEEEmembership{Senior~Member,~IEEE}\thanks{…}`), 2505.19506 (IEEEtaes, which loads authblk),
+%          2506.05637 (IEEEoj, the same), 2202.10869 (the last grade on the line after its name, `and~Jussi
+%          Haapola,\\~\IEEEmembership{Member,~IEEE,}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Student Member, IEEE, Bob Bell, Senior Member, IEEE, and Cat Cole,", "Fellow,
+%          IEEE,", the note at the foot
+% engines: rust int126a = three creators, no grade (authblk's `\author` replaced IEEEtran's, so the grades reached
+%          `\lx@IEEE@membership@drop`); Perl 0.8.8 = no grade (IEEEtran.cls.ltxml:143 drops every one)
+% expect:  0 errors, 0 warnings; each author with its own grade as a membership contact, the note on the last
+% status:  RED (int126a) -> GREEN (98b) — perfect_kernel_batch98b::authblk_author_reads_ieee_grades
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann~Able,~\IEEEmembership{Student~Member,~IEEE}, Bob~Bell,~\IEEEmembership{Senior~Member,~IEEE},
+        and~Cat~Cole,\\~\IEEEmembership{Fellow,~IEEE,}%
+\thanks{A. Able, B. Bell and C. Cole are with the University of X.}}
+\maketitle
+Text.
+\end{document}

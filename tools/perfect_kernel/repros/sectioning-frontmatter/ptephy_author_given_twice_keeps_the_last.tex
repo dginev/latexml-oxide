@@ -1,0 +1,19 @@
+% witness: 1412.6580 (ptephy.cls:427 `\def\author#1{\gdef\@author{#1}}`: a second `\author` replaces the first); the
+%          ptephy_v1 sibling stacks (authblk-TI, `perfect_kernel_batch64qa::ptephy_v1_authblk_interleaved`)
+% oracle:  pdflatex with 1412.6580's ptephy.cls (a stand-in for the logo `newlogo`, TL 2025) 0 errors: "Bob Baker2" /
+%          1 Univ A / 2 Univ B — the first call's name not printed, both affiliations listed
+% engines: perl 0.8.8 = (no ptephy binding: OmniBus) one creator "\nameBob Baker2"; rust 92a: Ann Able and Bob Baker
+%          (the binding's kernel author was inst_support's, which stacks)
+% expect:  0 errors, 0 warnings; Bob Baker only, with Univ B; Univ A, which no printed name requests, the block's
+% status:  RED (92a) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann Able}{1}}
+\author{\name{Bob Baker}{2}}
+\address{\affil{1}{Univ A}\affil{2}{Univ B}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

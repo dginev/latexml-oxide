@@ -1,0 +1,19 @@
+% witness: 1008.0439 (revtex4-1, apsrev4-1 entries pasted without the .bbl preamble that \providecommand-s them;
+%          ~150 run-336 papers: revtex4-1/4/4-2, acmart, elsarticle — first error \BibitemOpen, \bibfield, \bibinfo)
+% oracle:  pdflatex 0 errors: "[1] First note." and "[2] J. A. Soules, Am. J. Phys. 58, 1195 (1990)." (natbib.sty:880-958)
+% engines: rust 64zc = 3 errors (\BibitemOpen, \BibitemShut, \bibfield undefined); Perl the same (no natbib binding defines them)
+% expect:  0 errors; each bibblock ends with the stop its \BibitemShut{NoStop} asked for
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass[aps,pre]{revtex4-1}
+\begin{document}
+Text \cite{Note1,Soules}.
+\begin{thebibliography}{2}
+\bibitem [{Note1()}]{Note1}%
+  \BibitemOpen
+  \bibinfo {note} {First note}\BibitemShut {NoStop}%
+\bibitem [{Soules(1990)}]{Soules}%
+  \BibitemOpen
+  \bibfield {author} {\bibinfo {author} {J.~A. Soules}},\ \bibinfo {journal} {Am. J. Phys.}\ \textbf {\bibinfo {volume} {58}},\ \bibinfo {pages} {1195} (\bibinfo {year} {1990})\BibitemShut {NoStop}%
+\end{thebibliography}
+\end{document}

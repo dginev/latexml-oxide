@@ -1,0 +1,21 @@
+% witness: 1306.3810, 1801.03251 (`\name{D.~Tomono}{8, \thanks{Present Address: …}}`); 1401.4647 (`\address{…
+%          \email{a@x}, {\dag}b@y, {\ddag}c@z}`), 1304.7885 (`${}^\ast$\!\! {\rm E-mail: …}` after its `\affil`)
+% oracle:  pdflatex (1412.6580's ptephy.cls and a stand-in for its logo graphic `newlogo`, TL 2025) 0 errors: "Ann
+%          Able^{1,*} and Bob Baker^{2,†,†}" (the thanks' own mark † too) over the affiliations and "*E-mail:
+%          ann@example.org, †bob@example.org"; footnote "† Present address: Lab C"
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; Ann with Univ A and her email (the `\ast` author's, ptephy.cls:1318), Bob with Lab B, his
+%          thanks note and the `\dag`-led email of the list after the `\affil`s
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{1,\ast} and \name{Bob Baker}{2,\dag, \thanks{Present address: Lab C}}}
+\address{\affil{1}{Univ A, Tokyo}
+\affil{2}{Lab B, Kyoto}
+\email{ann@example.org}, {\dag}bob@example.org}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% control for OXIDIZED_DESIGN_DIVERGENCES #750 (witness 1105.2318's family): an article `\bibitem[N]{key}`
+% oracle:  pdflatex (2 passes) 0 errors: "[1] Abbott…", "[2] Baker…"; the citation "[1]"
+% engines: rust 67int23b: 0 errors, both entries with a refnum tag; Perl alike
+% expect:  0 errors; both labels printed ("[1]", "[2]"), the citation "[1]"; only the cited entry has the refnum tag
+%          (TeX's `\b@key`, which only a `\cite` prints)
+% status:  GREEN (70c)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{9}
+\bibitem[1]{a} Abbott B., 2017, ApJ
+\bibitem[2]{b} Baker C., 2001, MNRAS
+\end{thebibliography}
+\end{document}

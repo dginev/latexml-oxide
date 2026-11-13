@@ -1,0 +1,20 @@
+% witness: review of 73b (finding 3); 2206.08980, 2508.21533 (rc_struct6 row 6)
+% oracle:  pdflatex 0 errors, "Figure 1", "Table 1", "Table 2": each `\captionof` outside a float is
+%   `\setcaptiontype*{<type>}\caption` (caption.sty:389-391), so the second leaves `\@captype` = table
+% engines: rust 67int23b = 1 ("Use of \caption outside any known float"); 73b round 1 = 0 but "Figure 2" (the second
+%   `\captionof` kept the first one's type); perl = 1
+% expect:  0 errors; Figure 1, Table 1, Table 2
+% status:  RED (73b r1) -> GREEN (73b r2: caption_sty.rs `\lx@caption@of@set@after` tests `lx@in@float`)
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\noindent\rule{2cm}{1cm}
+\captionof{figure}{First caption.}
+
+\noindent\rule{2cm}{1cm}
+\captionof{table}{Second caption.}
+
+\begin{minipage}{\columnwidth}
+\caption{Third caption.}
+\end{minipage}
+\end{document}

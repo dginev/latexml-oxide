@@ -1,0 +1,14 @@
+% GREEN (brief 107g, mechanism 5): as author_wrapper_over_plain_lines_stays_one_entry.tex, a group of a font switch.
+% witness: 2404.17162 (the shape as written)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 2 `Missing` errors, inherent to the witness's shape (`\\` in a group in article's
+%   tabular `\@author`); it prints the four lines
+% engines: int138a: one affiliation each; int139a: four each
+% expect:  0 errors; each author one affiliation
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker\\
+{\small Department of Mathematics,\\ Central University,\\ Thiruvarur 610005,\\ India.}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,23 @@
+% witness: arXiv 2605.21425 (elsarticle; the paper's \mat underline macro:
+%          \mathpalette\mat@{#1} → \advance\dimen@ -2\mat@dimen{#1}, \mat@dimen = \fontdimen8 \ifx…\fi 3)
+% oracle:  pdflatex 0 errors (tex.web §577 scan_font_ident: get_x_token, skipping blanks)
+% engines: rust (56hu) = 4× "\else not in a conditional" + 4× \fi (the paper: 1001 errors, Fatal);
+%          Perl: the same (FontToken reads the identifier unexpanded)
+% expect:  0 errors; the underlined sigma kept
+% status:  RED (56hu) -> GREEN (56hv, KNOWN_PERL_ERRORS #231)
+% mechanism: \fontdimen's font identifier was read unexpanded, so `\ifx` was taken as the font
+%   and the conditional's \else/\fi were orphaned. It is read with expansion now.
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand{\mat}[1]{{\mathpalette\mat@{#1}}}
+\newcommand{\mat@}[2]{\begingroup\sbox\z@{$\m@th#1\underline{#2}$}%
+  \dimen@=\dp\z@ \advance\dimen@ -2\mat@dimen{#1}\dp\z@=\dimen@
+  \sbox\z@{$\m@th\underline{\box\z@}$}\box\z@\endgroup}
+\newcommand\mat@dimen[1]{\fontdimen8
+  \ifx#1\displaystyle\textfont\else\ifx#1\textstyle\textfont\else
+  \ifx#1\scriptstyle\scriptfont\else\scriptscriptfont\fi\fi\fi 3}
+\makeatother
+\begin{document}
+$\mat{\sigma}$
+\end{document}

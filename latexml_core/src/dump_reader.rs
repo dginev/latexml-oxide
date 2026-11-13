@@ -133,6 +133,17 @@ fn current_dump_locator() -> crate::common::locator::Locator {
 }
 
 fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, String> {
+  // K1 provenance: dump-restored definitions carry the dump's origin.
+  let plain_dump = source_name == "<embedded:plain>"
+    || Path::new(source_name)
+      .file_name()
+      .and_then(|f| f.to_str())
+      .is_some_and(|f| f.starts_with("plain."));
+  let _origin = crate::definition::origin::OriginGuard::new(if plain_dump {
+    crate::definition::origin::DefinitionOrigin::Plain
+  } else {
+    crate::definition::origin::DefinitionOrigin::LatexDump
+  });
   let mut count = 0;
   let mut skipped = 0;
   let mut errors = 0;
@@ -251,7 +262,8 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
   let data = it.next().unwrap_or("");
 
   match table {
-    // V: Value entries (registers, fontdimen, font metadata).
+    // V: Value entries (registers, font metadata; a legacy per-slot
+    // `fontdimen_fontinfo_*_N` record goes into its font's array).
     // Add-only policy: only loads if key has no existing value.
     //
     // Skip MAX_ERRORS: it was set to 1_000_000 in `ini_tex.rs` during
@@ -262,11 +274,9 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // default cap. Filter at read time so existing dumps are clean.
     "V" if key == "MAX_ERRORS" => Ok(false),
     "V" => load_value(key, data),
-    // IA: consolidated expl3 intarray (one record per (font, size); dump_writer
-    // collapses ~17k V-records into one IA). Body is `<len>\t<rle>` where rle
-    // is a comma-list of `v` or `v*n` runs. Expansion assigns the same V
-    // entries that the per-slot records would have, so the runtime state
-    // post-replay is identical.
+    // IA: a font's parameter array (`\fontdimen`; expl3 keeps its intarrays
+    // there), one record per font. Body is `<len>\t<rle>` where rle is a
+    // comma-list of `v` or `vxn` runs; it loads as the font's whole array.
     "IA" => load_intarray(key, data),
     // M: Meaning entries (Expandable, Let-alias, Register, etc.).
     //
@@ -307,9 +317,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
 /// V entries to unconditionally skip (runtime state, never useful from dump).
 const SKIP_VALUE_KEYS: &[&str] = &[
   "INTERPRETING_DEFINITIONS",
-  "if_count",
-  "absorb_count",
-  "if_stack",
+  "if_stack", // a typed `State` field since 59a; kept for dumps written before it
   "INCLUDE_COMMENTS",
   "INCLUDE_STYLES",
   "INPUT_ENCODING",
@@ -357,6 +365,18 @@ const SKIP_VALUE_CONTAINS: &[&str] = &[
 /// Uses add-only policy: only loads if the key does not already have a value.
 /// This ensures compiled engine state takes priority over dump state.
 fn load_value(key: &str, data: &str) -> Result<bool, String> {
+  // A font parameter slot written as its own record (a dump from before the
+  // arrays, or a sparse one): into the font's array, as `IA` loads it.
+  if let Some((font_key, p)) = key
+    .rsplit_once('_')
+    .filter(|(font_key, _)| font_key.starts_with("fontdimen_fontinfo_"))
+    .and_then(|(font_key, p)| Some((font_key, p.parse::<usize>().ok()?)))
+    && let Some(sp) = data
+      .strip_prefix("D\t")
+      .and_then(|sp| sp.parse::<i64>().ok())
+  {
+    return Ok(state::set_font_parameter(font_key, p, sp));
+  }
   // Skip unconditional keys
   for skip in SKIP_VALUE_KEYS {
     if key == *skip {
@@ -490,12 +510,13 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
   Ok(true)
 }
 
-/// Expand an `IA` (intarray) record into the per-slot Dimension V entries
-/// that the runtime expects. Format: key = `<prefix>` (e.g.
-/// `fontdimen_fontinfo_cmr10 at 15sp`), data = `<len>\t<rle>`. RLE tokens
-/// are comma-separated; each is either `<v>` (one entry) or `<v>x<n>`
-/// (n consecutive entries of value v). Slots are written at indices
-/// 1..=len. Mismatched RLE-length vs declared len is an error.
+/// Load an `IA` (intarray) record: a font's parameter array (`\fontdimen1`..,
+/// in sp; expl3 keeps its intarrays there), stored whole under its key, as
+/// Perl keeps `$$fontinfo{data}` (TeX_Fonts.pool.ltxml:131-146). Format: key =
+/// `fontdimen_<font>` (e.g. `fontdimen_fontinfo_cmr10 at 15sp`), data =
+/// `<len>\t<rle>`. RLE tokens are comma-separated; each is either `<v>` (one
+/// entry) or `<v>x<n>` (n consecutive entries of value v). Mismatched
+/// RLE-length vs declared len is an error.
 fn load_intarray(key: &str, data: &str) -> Result<bool, String> {
   let mut it = data.splitn(2, '\t');
   let len_s = it.next().unwrap_or("");
@@ -510,15 +531,12 @@ fn load_intarray(key: &str, data: &str) -> Result<bool, String> {
       values.len()
     ));
   }
-  for (i, val) in values.into_iter().enumerate() {
-    let slot_key = format!("{}_{}", key, i + 1);
-    state::assign_internal(
-      TableName::Value,
-      arena::pin(&slot_key),
-      Stored::Dimension(crate::common::dimension::Dimension(val)),
-      Some(Scope::Global),
-    );
-  }
+  state::assign_internal(
+    TableName::Value,
+    arena::pin(key),
+    Stored::FontDimens(std::rc::Rc::new(std::cell::RefCell::new(values))),
+    Some(Scope::Global),
+  );
   Ok(true)
 }
 
@@ -561,12 +579,7 @@ fn rle_decode_i64(s: &str) -> Result<Vec<i64>, String> {
 /// - Skip all "public" macros that could be invoked during normal expansion and might reference
 ///   hooks/primitives not supported by our engine
 fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
-  let cs_tok = Token {
-    text: arena::pin(key),
-    code: Catcode::CS,
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  };
+  let cs_tok = T_CS!(key);
 
   // Perl `I(...)` parity (`Core/Dumper.pm` L67): every dumped Meaning
   // entry maps to `assign_internal($STATE, 'meaning', $cs, $def,
@@ -608,21 +621,20 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
 
       // eparts[0] is the alias-cs from the dump (Perl-side: the cs of
       // the Definition object that this entry was let-aliased from).
+      // A `\let` copy still sharing its cs's definition is a `PA` row
+      // (`dump_writer::write_dump`, Perl's `Lt`) and never reaches here —
+      // `\exp_not:n` is `PA \unexpanded`, the very definition. An E row
+      // with a differing alias is a by-value copy: its cs was redefined
+      // after the `\let` (77 in the 2025 LaTeX dump, none of them a copy
+      // of a deferred command).
       //
       // We propagate the alias ONLY when the target is a known deferred
-      // command (`\unexpanded`, `\the`, `\detokenize`, `\showthe`) — that
-      // narrow case is what makes `\exp_not:n {…}` inside `\edef` bodies
-      // correctly skip re-expansion (Perl `Gullet.pm:505`'s DEFERRED
-      // path), preserving `\__seq_item:n {…}` inside `\seq_gpush:Nn`'s
-      // `\unexpanded`-wrapped body. Without this, the seq stack stays
-      // empty after push, leading to `extra-pop-label` and the
-      // `\q_no_value` recursion cascade during `\@pushfilename`.
-      //
-      // We DON'T propagate alias for the ~1k other Lt-aliased entries
-      // (e.g. `\bool_if_exist:NTF` → `\cs_if_exist:NTF`) — those would
+      // command (`\unexpanded`, `\the`, `\detokenize`, `\showthe`), so
+      // such a copy still skips re-expansion inside `\edef` bodies
+      // (Perl `Gullet.pm:505`'s DEFERRED path). Any other alias would
       // change `defn.get_cs_name()`'s return value, which feeds into
-      // many lookup paths and triggers infinite-loop regressions in
-      // `\@nil` handling, etc. Keep blast radius tight.
+      // many lookup paths and triggered infinite-loop regressions in
+      // `\@nil` handling. Keep blast radius tight.
       const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
       let alias_decoded = url_decode(alias_field);
       let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());
@@ -697,6 +709,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let expansion_body = Tokens::from(expansion).into();
       match Expandable::new(cs_tok, paramlist, Some(expansion_body), options) {
         Ok(mut exp) => {
+          exp.checks_par = flags.contains('T');
           // Perl #aaacdba2: stamp dump-loaded definitions with a
           // nominal Locator pointing at the dump file + line. Helps
           // diagnostics attribute errors to the dump source rather
@@ -790,12 +803,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       if target_cs_raw == key {
         return Ok(false);
       }
-      let target_tok = Token {
-        text: arena::pin(&target_cs_raw),
-        code: Catcode::CS,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      };
+      let target_tok = T_CS!(&target_cs_raw);
       // Perl `Lt()` (`Core/Dumper.pm` L69-72):
       //   sub Lt { my $d = State::lookupDefinition($STATE, T_CS($_[1]));
       //            State::assign_internal($STATE,'meaning',$_[0],$d,'global'); }
@@ -947,12 +955,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // regex VM through `\__tl_analysis_a_store:`. See
       // project_expl3_regex_vm_engine.md item #2.
       if reg.parameters.is_none() && reg.address != key {
-        let address_tok = Token {
-          text: arena::pin(&reg.address),
-          code: Catcode::CS,
-          #[cfg(feature = "token-locators")]
-          loc: 0,
-        };
+        let address_tok = T_CS!(&reg.address);
         if let Some(base_defn) = state::lookup_register_definition(&address_tok)
           && let Some(params) = base_defn.parameters.clone()
         {
@@ -1149,12 +1152,7 @@ fn parse_token(s: &str) -> Result<Token, String> {
   } else {
     arena::pin(text)
   };
-  Ok(Token {
-    text: text_sym,
-    code: Catcode::from(cc),
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  })
+  Ok(Token!(sym text_sym, Catcode::from(cc)))
 }
 
 /// Parse comma-separated token list
@@ -1409,32 +1407,12 @@ mod tests {
   // --- IA load → state assignment tests ---
 
   #[test]
-  fn ia_load_writes_per_slot_values() {
-    // Use a unique prefix so the test doesn't collide with the engine's
-    // ambient state (other tests may have populated fontdimen_* keys).
-    let prefix = "ia_test_prefix";
-    let content = format!("IA\t{}\t3\t10,20x2\n", prefix);
-    load_from_str(&content).unwrap();
-
-    use crate::{
-      common::{dimension::Dimension, store::Stored},
-      state,
-    };
-
-    assert_eq!(
-      state::lookup_value(&format!("{}_1", prefix)),
-      Some(Stored::Dimension(Dimension(10)))
-    );
-    assert_eq!(
-      state::lookup_value(&format!("{}_2", prefix)),
-      Some(Stored::Dimension(Dimension(20)))
-    );
-    assert_eq!(
-      state::lookup_value(&format!("{}_3", prefix)),
-      Some(Stored::Dimension(Dimension(20)))
-    );
-    // One past the end should NOT be set by the IA record.
-    assert_eq!(state::lookup_value(&format!("{}_4", prefix)), None);
+  fn ia_load_stores_the_font_parameter_array() {
+    // A key of its own, so that no other test's font parameters collide.
+    let key = "fontdimen_fontinfo_ia_test at 1sp";
+    load_from_str(&format!("IA\t{key}\t3\t10,20x2\n")).unwrap();
+    let params: Vec<_> = (1..=4).map(|p| state::font_parameter(key, p)).collect();
+    assert_eq!(params, [Some(10), Some(20), Some(20), None]);
   }
 
   #[test]
@@ -1471,5 +1449,37 @@ mod tests {
       state::lookup_value(&format!("{}_2", prefix)),
       Some(Stored::Dimension(Dimension(222)))
     );
+  }
+
+  #[test]
+  fn v_record_font_parameter_slot_loads_into_the_font_array() {
+    // A dump from before the arrays wrote a sparse font (expl3's `\intarray_new`
+    // sets slots 1-8 and the last) one V record per slot.
+    let key = "fontdimen_fontinfo_v_test at 1sp";
+    let content = format!("V\t{key}_1\tD\t0\nV\t{key}_30\tD\t7\n");
+    load_from_str(&content).unwrap();
+    assert_eq!(state::font_parameter(key, 1), Some(0));
+    assert_eq!(state::font_parameter(key, 30), Some(7));
+    // A font without an array gets one; growth is zeros (tex.web §580).
+    assert_eq!(state::font_parameter(key, 29), Some(0));
+    assert_eq!(state::lookup_value(&format!("{key}_30")), None);
+  }
+
+  #[test]
+  fn v_record_not_a_font_parameter_slot_stays_a_value() {
+    use crate::common::{dimension::Dimension, store::Stored};
+    // No `fontinfo_` font, a non-numeric or an empty slot: plain values.
+    for key in [
+      "fontdimen_cmr10_15",
+      "fontdimen_fontinfo_v_test2 at 1sp_abc",
+      "fontdimen_fontinfo_v_test3 at 1sp_",
+    ] {
+      load_from_str(&format!("V\t{key}\tD\t9\n")).unwrap();
+      assert_eq!(
+        state::lookup_value(key),
+        Some(Stored::Dimension(Dimension(9))),
+        "{key}"
+      );
+    }
   }
 }

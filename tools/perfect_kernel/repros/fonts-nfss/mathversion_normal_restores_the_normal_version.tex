@@ -1,0 +1,10 @@
+% witness: reviewer probe for batch 66f (sbx341/review/p/mv1.tex)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; x bold, y not bold (no font="bold" on y), z bold
+% mechanism: latex.ltx:10545-10554 \mathversion{normal} selects the normal math version again; ours keeps the bold
+%   math font after \mathversion{bold}.
+% status:  RED
+\documentclass{article}
+\begin{document}
+\mathversion{bold}$x$ \mathversion{normal}$y$ \mathversion{bold}$z$
+\end{document}

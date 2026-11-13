@@ -1,0 +1,19 @@
+% witness: 77n r4 review probes c10, c11, c5 — an unlabelled authblk `\affil` after a mark-picked one, a marked author
+%          before an unmarked one
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker / 1Univ X / Univ Y"
+% engines: rust int32a = Ann Able with Univ X, Bob Baker with Univ X and Univ Y; 77n r4 = Ann Able with Univ Y and
+%          Univ X, Bob Baker with Univ Y
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with Univ X (her mark's), Bob Baker with Univ Y
+% status:  RED (77n r4) -> GREEN (77n r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

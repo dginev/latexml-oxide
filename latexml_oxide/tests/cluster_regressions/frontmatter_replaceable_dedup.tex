@@ -1,10 +1,13 @@
-% Guard: replaceable frontmatter tags (title/subtitle/date/abstract/keywords) keep
-% only ONE entry — a later one REPLACES the earlier — while non-replaceable creators
-% accumulate. Ports upstream %ReplaceableFrontmatterTags; the vendored Perl pushed
-% unconditionally, so a re-added title/abstract kept BOTH (duplicate frontmatter).
+% Guard: a re-added title (subtitle/toctitle/date) keeps only ONE entry — a later one
+% REPLACES the earlier — while creators accumulate, and so do abstracts: a second
+% {abstract} digested in place is printed where it stands (pdflatex prints both, the
+% vendored Perl keeps both). Upstream added %ReplaceableFrontmatterTags (bb048fc1, #2573)
+% and removed it (23f3acfa, #2767); we keep it for titles, dates and keywords (which
+% bindings re-add as their list grows), not for abstracts.
 % OXIDIZED_DESIGN #154. Witnesses arXiv 2002.09766 (appendix re-\icmltitle duplicated
-% <title>), 2511.21969 (nested {abstract}). Uses \lx@add@frontmatter@now directly so
-% the double-add is deterministic (class \maketitle is once-only).
+% <title>), 2511.21969 (nested {abstract}), 1006.5288 (amsart: the second abstract
+% replaced the first, losing its keywords and MSC). Uses \lx@add@frontmatter@now
+% directly so the double-add is deterministic (class \maketitle is once-only).
 \documentclass{article}
 \makeatletter
 \begin{document}

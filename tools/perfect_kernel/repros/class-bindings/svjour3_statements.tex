@@ -1,0 +1,20 @@
+% witness: 1907.12906 (`\lastand`); 2307.15129, 2411.13175, 2001.01655 (`{funding}`, `{dataavailability}`, `{conflict}`)
+% oracle:  pdflatex with 2411.13175's svjour3.cls: "Silvia Chiappa · Bob Builder and Ulrich Paquet", "Funding This work…",
+%          "Data Availability The data…", "Conflict of interest The authors declare none."; 0 errors
+% engines: rust 67int10 = 4 errors (undefined `\lastand`, `{funding}`, `{dataavailability}`, `{conflict}`)
+% expect:  0 errors, 0 warnings; three authors, the statements under their bold headings
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{A Journal Paper}
+\author{Silvia Chiappa \and Bob Builder \lastand Ulrich Paquet}
+\institute{Somewhere University}
+\maketitle
+\begin{abstract}An abstract.\end{abstract}
+\section{Introduction}
+Text.
+\begin{funding}This work was funded by a grant.\end{funding}
+\begin{dataavailability}The data are available on request.\end{dataavailability}
+\begin{conflict}The authors declare none.\end{conflict}
+\end{document}

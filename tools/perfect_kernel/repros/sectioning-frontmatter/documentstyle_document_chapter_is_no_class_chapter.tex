@@ -1,0 +1,19 @@
+% witness: 72b review r3 finding 1 (probe rev72b/r3/d209u): a LaTeX 2.09 document's own `\newcounter{chapter}` +
+%          `\def\chapter` under `\documentstyle{article}`; the kernel's lock refuses the `\def` (`\chapter:redefined`)
+% oracle:  pdflatex 0 errors; "Part 1: Intro" (the document's `\section*`), the appendix section "A X"
+% engines: rust 72b r3 = "Appendix 1.A" (the refusal read as the class's chapters, tested on every read); 72b r2
+%          "Appendix A"
+% expect:  0 errors, 0 warnings; an `appendix` "Appendix A X" (article's answer, stored where the 2.09 class load ends)
+% status:  RED (72b r3) -> GREEN (72b r4: OXIDIZED_DESIGN #179, `\chapter:stored`)
+% preload: ar5iv.sty
+\documentstyle{article}
+\newcounter{chapter}
+\def\chapter#1{\refstepcounter{chapter}\section*{Part \thechapter: #1}}
+\begin{document}
+\chapter{Intro}
+\section{S}
+Text.
+\appendix
+\section{X}
+More.
+\end{document}

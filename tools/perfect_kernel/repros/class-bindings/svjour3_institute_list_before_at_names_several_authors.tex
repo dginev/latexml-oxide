@@ -1,0 +1,22 @@
+% witness: 2312.14898 (`\institute{\begin{itemize}\item[\Letter] {Wendkûuni C. Ouédraogo} \\ \email{…} \\ \item[]
+%          {Laura Plein} \\ \email{…} \\ … \item[] {Tegawend\'e F. Bissyand\'e} \\ \email{…} \\ \at
+%          \item[\textsuperscript{1}] SnT Centre, … \end{itemize}}`, seven names before the one `\at`)
+% oracle:  pdflatex (TL 2025, 2007.09912's svjour3.cls) 0 errors: "Ann Able1 · Bob Baker2", and in the institute
+%          footnote "∗ Ann Able", "E-mail: ann@x.edu", "Bob Baker", "E-mail: bob@y.edu", "1 University of X",
+%          "2 University of Y"
+% engines: rust int126a = the list on Bob Baker alone (its `fuzzy:` label read by its last surname; 3 Errors); rust
+%          98b = the same, the names line kept in it and Bob's address twice (1 Error, 1 Warning); Perl 0.8.8 = the
+%          list on the label's owner
+% expect:  0 errors, 0 warnings; each author with its own address, the list shared below them (the block's nameless
+%          creator, #159): a list whose items spell two or more queued names whole names no one
+%          (`queued_author_names_spelled`; names a comma or "and" parts, no list's, stay each their own owner)
+% status:  RED (int126a, 98b) -> GREEN (98b r2) — perfect_kernel_batch98b::svjour3_list_before_at_is_structure
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{\begin{itemize}\item[$\ast$] Ann Able \\ \email{ann@x.edu} \item[] Bob Baker \\ \email{bob@y.edu} \at \item[1] University of X \item[2] University of Y \end{itemize}}
+\maketitle
+Text.
+\end{document}

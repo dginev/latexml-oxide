@@ -1,0 +1,17 @@
+% mechanism: a call that defines globally and then prints its argument (`\gdef\lastnm{#1}#1`, plain or robust): the
+%   declaration is not replayed before the later name that reads it, so `\lastnm` is undefined there
+% witness: synthetic (revGRP1 P2, GRP1 sibling; the robust twin is scratch p4)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee1 and Bob Ray2 (with Ann Lee)"
+% engines: CAU1, GRP1: 1 error (`\lastnm` undefined), 2 warnings; creators "Ann Lee1", "Bob Ray2 (with \lastnm)"
+% expect:  0 errors; creators Ann Lee 1, Bob Ray 2 (with Ann Lee)
+% status:  RED (CAU1, GRP1)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\nm[1]{\gdef\lastnm{#1}#1}
+\begin{document}
+\title{T}
+\author{\nm{Ann Lee}$^{1}$ \and Bob Ray$^{2}$ (with \lastnm)}
+\maketitle
+Hi.
+\end{document}

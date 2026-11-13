@@ -1,0 +1,32 @@
+% witness: 0906.4121 (envcountsect, `\spn@wtheorem{fact}`: "Fact 3.1"), 1003.2851; 2303.08726, 2306.07698
+%          (envcountsame); the 68a llncs guard (envcountsame: "Fact 2", "Assumption 3")
+% oracle:  pdflatex with TL 2025 llncs.cls v2.26 (the theorem set alike in every shipped copy, v2.2-v2.26): Theorem 1,
+%          Lemma 2 | 1 Theorem 3, Lemma 4, Definition 5, Fact 6, MyY 1, Claim | 2 Theorem 7, Corollary 8, Remark 9,
+%          Fact 10; Ref 1, 7; 0 errors
+% engines: rust 026cf18f87 = 0 errors, the same numbers under every option: Theorem 0.1, Lemma 1 | 1 Theorem 1.1, Lemma
+%          2, Definition 1, ... | 2 Theorem 2.1, Corollary 1, Remark 1, with Fact 1.2, Fact 2.2 (`{theorem}` within the
+%          section, every other env its own counter); Perl's llncs.cls.ltxml the same numbers, 2 errors (undefined
+%          `\spn@wtheorem`, `{fact}`), KNOWN_PERL_ERRORS #743
+% expect:  0 errors, 0 warnings; the oracle's numbers, in the tags and the refs
+% status:  RED (026cf18f87) -> GREEN (68g)
+% preload: ar5iv.sty
+\documentclass[envcountsame]{llncs}
+\spnewtheorem{myy}{MyY}{\bfseries}{\itshape}
+\makeatletter\spn@wtheorem{fact}{Fact}{\bfseries}{\itshape}\makeatother
+\begin{document}
+\begin{theorem}a\label{t1}\end{theorem}
+\begin{lemma}b\end{lemma}
+\section{One}
+\begin{theorem}c\end{theorem}
+\begin{lemma}d\end{lemma}
+\begin{definition}e\end{definition}
+\begin{fact}f\end{fact}
+\begin{myy}i\end{myy}
+\begin{claim}j\end{claim}
+\section{Two}
+\begin{theorem}k\label{t2}\end{theorem}
+\begin{corollary}l\end{corollary}
+\begin{remark}m\end{remark}
+\begin{fact}n\end{fact}
+Ref \ref{t1}, \ref{t2}.
+\end{document}

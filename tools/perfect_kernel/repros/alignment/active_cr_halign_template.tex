@@ -1,0 +1,19 @@
+% witness: amp3 (generalized; same root as metre/demo, floatrow-rus site A)
+% oracle: pdflatex
+% engines: pdflatex 0 / Perl 0 (both DROP the table) / ours 0 (drops table)
+% expect: a 2x2 ltx:tabular; today ours+Perl emit an EMPTY <document>
+% status: GREEN (batch 56bb, 2026-09-09)
+% mechanism: parse_halign_template's is_implicit_cr/align (tex_tables.rs:1597,1618)
+%   reject Catcode::ACTIVE, so the active `~`=\cr template terminator is missed
+%   and the halign preamble runs away to EOF. tex.web §783 tests cur_cmd not cc.
+\documentclass{article}
+\begin{document}
+\catcode`\~=\active
+\let~=\cr
+\setbox0=\vbox{\halign{#\hfil&#\hfil~
+aaa&bbb~
+ccc&ddd~
+}}
+\box0
+\par XYZ
+\end{document}

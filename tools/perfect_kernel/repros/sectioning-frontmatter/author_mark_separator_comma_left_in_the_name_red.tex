@@ -1,0 +1,15 @@
+% mechanism: a `$^,$` printed between two of a name's marks stays at the name's end after FN1's lift:
+%   `<personname>Bob Baker<sup>,</sup></personname>` (pinned today in
+%   perfect_kernel_batchne2::a_mark_after_its_names_note_stays_with_it; revFN1 NIT 2)
+% witness: synthetic
+% expect:  the separator comma with the marks it separates, not alone in the name
+% status:  RED (FN1b; catalogued at integration, int160a)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \and Bob Baker\footnotemark[1]$^,$\footnotemark[2]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}\footnotetext[2]{Note B.}
+Body.
+\end{document}

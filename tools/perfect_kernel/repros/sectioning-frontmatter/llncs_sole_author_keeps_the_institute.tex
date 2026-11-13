@@ -1,0 +1,13 @@
+% witness: 63h review r1 (llncs, one author, one `\institute` without `\inst`)
+% oracle:  pdflatex (llncs.cls) 0 errors: "Ann Able" over "Univ A", "ann@a.org"
+% engines: rust 63g = a trailing name-less creator holds the institute and e-mail (OXIDIZED_DESIGN #159); Perl = on Ann Able
+% expect:  Ann Able keeps her affiliation and e-mail; no name-less creator; 0 errors
+% status:  RED (63g) -> GREEN (63h)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\institute{Univ A \\ \email{ann@a.org}}
+\maketitle
+Text.
+\end{document}

@@ -24,7 +24,10 @@
 
 use std::{path::Path, time::SystemTime};
 
-use latexml_core::state;
+use latexml_core::{
+  binding::virtual_files::{vfs_remove, vfs_store},
+  state,
+};
 use rustc_hash::FxHashMap;
 
 /// One open editor buffer.
@@ -90,21 +93,13 @@ pub(crate) fn overlay_apply(
       .map(|b| base_counts.get(b).copied().unwrap_or(0) > 1)
       .unwrap_or(true);
     for key in buffer_keys(path, project_dir, ambiguous) {
-      state::assign_value(
-        &format!("{key}_contents"),
-        buf.text.clone(),
-        Some(state::Scope::Global),
-      );
+      vfs_store(&key, &buf.text);
       live.push(key);
     }
   }
   for old in previous_keys {
     if !live.iter().any(|k| k == old) {
-      state::assign_value(
-        &format!("{old}_contents"),
-        String::new(),
-        Some(state::Scope::Global),
-      );
+      vfs_remove(old);
     }
   }
   live

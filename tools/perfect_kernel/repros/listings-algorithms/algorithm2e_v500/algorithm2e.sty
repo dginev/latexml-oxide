@@ -1,0 +1,16 @@
+% A stand-in for algorithm2e.sty release 5.00 (2013/01/06), written from scratch for the guard
+% perfect_kernel_batch78k::algorithm2e_v500_two_argument_block_*: only the shape of v5.00's block macros (its
+% :1532-1534 take two arguments, the body and the end keyword; no side comment) and what they print.
+\ProvidesPackage{algorithm2e}[2013/01/06 v5.00 algorithms environments (stand-in)]
+\newlength{\skiprule}\newlength{\skiptext}\setlength{\skiptext}{1em}
+\newcommand{\KwSty}[1]{\textbf{#1}}
+\newcommand{\@algocf@endoption}[1]{#1}
+\newcommand{\algocf@@@block}[2]{#1\ifx\relax#2\relax\else\KwSty{\@algocf@endoption{#2}}\strut\par\fi}
+\newcommand{\algocf@@block}[2]{\algocf@@@block{\strut\algocf@Vsline{#1}}{#2}}% v5.00 :1574, its default lined
+\newcommand{\algocf@block}[2]{\algocf@@block{#1}{#2}}
+\newcommand{\algocf@Vsline}[1]{\strut\par{\advance\leftskip\skiptext #1\par}}
+\newcommand{\@endalgocfline}{;}
+\newcommand{\@endalgoln}{\@endalgocfline\par}
+\newcommand{\Loop}[1]{\KwSty{loop}\algocf@block{#1}{end loop}}
+\newcommand{\Body}[1]{\KwSty{body}\algocf@block{#1}{}}
+\newenvironment{algorithm}{\par\let\;\@endalgoln}{\par}

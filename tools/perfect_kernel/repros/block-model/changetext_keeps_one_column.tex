@@ -1,0 +1,14 @@
+% witness: 57l review: `\changetext`/`\changepage` end with `\ch@ngetext` (changepage.sty:80-88,
+%          chngpage.sty:79-88), which halves `\columnwidth` for two columns; loaded raw under the binding it
+%          halved `\linewidth` in LaTeXML's one column (every later `width=\linewidth` graphic at ~54 %)
+% oracle:  pdflatex 0 errors (two columns: \linewidth half the new \textwidth); LaTeXML sets one column,
+%          `\columnwidth` = `\textwidth`
+% engines: rust 57l first cut: "Width 186.72637pt" (halved)
+% expect:  0 errors, 0 warnings; \linewidth equal to the changed \textwidth (345pt + 1cm)
+% status:  RED (57l first cut) -> GREEN (57l)
+\documentclass[twocolumn]{article}
+\usepackage{changepage}
+\begin{document}
+\changetext{}{1cm}{}{}{}
+Width \the\linewidth\ and \the\textwidth.
+\end{document}

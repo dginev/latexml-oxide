@@ -1,0 +1,21 @@
+% witness: numerica/numerica (also mhchem, tablists-rus) — the reduced kernel bug
+% oracle:  pdflatex 0 errors (typesets "a = 1 + 2")
+% engines: rust=7 perl=? (b54t 2026-09-03); pdflatex=0
+% expect:  0 errors; <ltx:equationgroup> present, cell shows 1 + 2 (no stray & / Z)
+% status:  GREEN (b54w, batch 54p)
+% mechanism: \exp_after:wN {\use_none:nn ...} — \expandafter's saved brace tok1={ is
+%   ledger-retracted (retract_scanned_braces, tex_macro.rs:190) BEFORE the one-step
+%   expansion of tok2 (\use_none:nn, line 193 defn.invoke(true)) reads its argument &.
+%   So & is read at align_group_count 0 and misfires handle_template. tex.web S368
+%   (tex.web:7699-7703) does get_token tok1, EXPAND tok2, THEN back_input tok1 (S325,
+%   tex.web:7028-7030) — the brace's align_state must persist across tok2's expansion.
+%   This is the exact idiom l3fp/l3regex use inside numerica's \eval slash path.
+\documentclass{article}\usepackage{amsmath}
+\ExplSyntaxOn
+\newcommand\doit{\exp_after:wN { \use_none:nn & Z } }
+\ExplSyntaxOff
+\begin{document}
+\begin{align*}
+a &= 1 \doit + 2
+\end{align*}
+\end{document}

@@ -1,0 +1,22 @@
+% witness: synthetic (1212.6367's `\addresses` with a group opened in one item and closed in the next)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. One1 , B. Two2"; "1 First Institute, Lviv, Ukraine", "2 Second
+%          Institute, Kyiv, Ukraine", both bold
+% engines: CMPJ1: the whole list on both names, 1 Warning ("places an entry holding 2 label targets (la, lb) whole");
+%          CMPJ2: each item on its name as its text — no item's tokens a balanced run (`emit::list_item_tokens`) — its
+%          number, bold and label lost, counted: 2 Warnings "writes … as its plain text, its markup lost: a list item cut
+%          without its list"
+% expect:  0 errors, 0 warnings; each item on its name, bold, keeping its number and `labels=`
+% status:  RED (counted)
+% moves:   post-merge
+\documentclass{article}
+\usepackage[cm]{cmpj2}
+\title{A title}
+\author{A. One\refaddr{la}, B. Two\refaddr{lb}}
+\addresses{
+\addr{la} {\bfseries First Institute, Lviv, Ukraine
+\addr{lb} Second Institute, Kyiv, Ukraine}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

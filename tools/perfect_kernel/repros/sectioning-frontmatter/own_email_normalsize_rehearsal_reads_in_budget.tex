@@ -1,0 +1,30 @@
+% mechanism: a class's own e-mail command (`EmailMeaning::Own`) is rehearsed as `\lx@fm@obs@email@own`, its argument
+%   read unexpanded (`UnexpandedSemiverbatim`): Semiverbatim's pre-expansion of a class's font-size command,
+%   `\renewcommand{\normalsize}{\@setfontsize\normalsize\@ixpt{10.5\p@}}`, inside the argument missed its delimiter and
+%   ran away, so the rehearsal spent its read budget on a two-author block and wrote it whole — the missed-`\@nnil`
+%   family, not the block's length (OXIDIZED_DESIGN_DIVERGENCES #983 (6); review revPC3 finding 1). The class is stood
+%   in for by its two definitions in the preamble (vldb-modify.cls:335 `\def\email#1{{{\eaddfnt{\vskip 4pt#1}}}}`,
+%   :662-663), the `\vskip` dropped for article's `c` column
+% witness: 1810.03464 (vldb-modify.cls, `\email{\normalsize penggao@berkeley.edu\; xusheng.xiao@case.edu}`: 1 -> 7
+%   creators)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Peng Gao1 Xusheng Xiao2 / 1UC Berkeley 2Case Western Reserve
+%   University / penggao@berkeley.edu xusheng.xiao@case.edu"
+% engines: rust int155a2 = 2 warnings (`frontmatter:rehearsal_budget`, more than 8,000,000 reads; the block written
+%   whole, one creator)
+% expect:  0 errors, 0 warnings; Peng Gao: UC Berkeley, penggao@berkeley.edu; Xusheng Xiao: Case Western Reserve
+%   University, xusheng.xiao@case.edu
+% status:  RED (int155a2) -> GREEN (PC3, int155a4)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand{\normalsize}{\@setfontsize\normalsize\@ixpt{10.5\p@}}
+\def\email#1{{\small#1}}
+\makeatother
+\begin{document}
+\title{T}
+\author{Peng Gao$^1$\; Xusheng Xiao$^2$\\
+  $^1$UC Berkeley\; $^2$Case Western Reserve University\\
+  \email{\normalsize penggao@berkeley.edu\; xusheng.xiao@case.edu}}
+\maketitle
+Text.
+\end{document}

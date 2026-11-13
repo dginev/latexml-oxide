@@ -1,0 +1,14 @@
+% mechanism: the ties around a row's space and a comma ending the row are no text of an address (`without_row_spacing`)
+% witness: 2610.06195 (`\texttt{…} ~\quad~~ \texttt{…}`), 2505.05785 (`\texttt{simon.zl@…}, \\`)
+% oracle:  pdflatex: 0 errors; two names, "ann@x.org bob@y.org,"
+% engines: rust 108a r3's first build: `ann@x.org ˜`, `˜˜ bob@y.org,`; int139c: `bob@y.org` a creator
+% expect:  0 errors; each name its address in typewriter, no tie and no comma
+% status:  RED -> GREEN (108a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\quad Bob Baker\\ \texttt{ann@x.org} ~\quad~~ \texttt{bob@y.org},}
+\maketitle
+Text.
+\end{document}

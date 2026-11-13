@@ -1,0 +1,22 @@
+% witness: 2601.10843, 2602.04048 (eqndefns-left.sty:217-219)
+% oracle: pdflatex (1 Error: "Missing $$ inserted", from this shortened end code); engine: pdflatex
+% expect: no Fatal; one equationgroup holding "a = b" and "c = d", numbered (1); "Text." after it (pdflatex prints all)
+% mechanism: amsmath.sty:1724 `\start@align` is the low-level start `{alignat}` calls, opening an \halign that the real
+%   `\endalign`'s first `\egroup` closes, which eqndefns-left's end code (`\math@cr\black@\totwidth@\egroup\egroup`)
+%   relies on. Ours expands to `\alignat`, so the document's re-dressed `{alignat}` calls itself (Fatal
+%   Stomach:Recursion). Starting the binding's own begin code instead (66h r1, reverted on review) only flipped the Fatal
+%   to an Error with the document as truncated (an empty <document/>; 2601.10843 306 Errors): the binding's alignment
+%   closes only through `\lx@end@alignment\end@amsalign`, and `\black@` (amsmath.sty:1364)/`\totwidth@` (:1316) are
+%   undefined. Needs `\start@align` to open the alignment in a group whose `\egroup` ends it.
+% status:  RED
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newbox\getwdalignbox
+\renewenvironment{alignat}{\setbox\getwdalignbox\vbox\bgroup\start@align\z@\st@rredfalse}
+  {\math@cr\black@\totwidth@\egroup\egroup\unvbox\getwdalignbox}
+\makeatother
+\begin{document}
+\begin{alignat}{2} a &= b & c &= d \end{alignat}
+Text.
+\end{document}

@@ -3,17 +3,50 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // jmlr.cls:46: a paper can rely on its calc (OXIDIZED_DESIGN #317).
+  RequirePackage!("calc");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
-  // Do NOT eager-load xcolor (Perl ships no jmlr binding → OmniBus, no
-  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
-  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
-  // "Unrecognized tabular template" → "Extra alignment tab". The document
-  // loads xcolor with its own options; `\color`/`\definecolor` stay
-  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
+  // (jmlr.cls:150 `\RequirePackage{natbib}`: the class's own load, so a document's `\usepackage[numbers]{natbib}` is
+  // LaTeX's "Option clash", its options dropped — binding/content.rs `apply_new_options_on_reload`)
+  AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+  // jmlr.cls:150-154 `\RequirePackage{graphicx}`, `{url}`, `\PassOptionsToPackage{x11names}{xcolor}`
+  // `\RequirePackage{xcolor}`: papers colour with `\textcolor`/`\definecolor` without loading xcolor (21 of run 353
+  // with them undefined: 1902.03035, 2010.02010, 2107.03212). Perl, with no binding, loads it through OmniBus's scan of
+  // the class (Package.pm:2776-2813). It was once left out because a document's later `\usepackage[table]{xcolor}` was
+  // then a no-op; a repeat load now applies its new options (content.rs `apply_new_options_on_reload`, xcolor_sty.rs
+  // `\ds@table`, witness 2605.00310).
+  RequirePackage!("graphicx");
+  RequirePackage!("url");
+  RequirePackage!("xcolor", options => vec![s!("x11names")]);
+  // jmlr.cls:155-156 — the class's algorithm floats; without them
+  // `{algorithm2e}` is undefined and its `\caption` cascades to "outside any
+  // known float" (pmlr-sample). Guard:
+  // `perfect_kernel_batch54::class_stubs_require_their_float_packages`.
+  RequirePackage!("algorithm2e", options => vec!["algo2e".to_string(), "ruled".to_string()]);
+  // jmlr.cls:246-247 — title helpers (pmlr-sample's `\title{…\titlebreak…}`).
+  RawTeX!(r"\newcommand*{\titlebreak}{\newline}\newcommand*{\titletag}[1]{}");
+  // jmlr.cls loads jmlrutils.sty (raw-loadable here): `\subfigure`/`\subtable`,
+  // `\subfigref`/`\subtabref`, `\includeteximage`, `\jmlrminsubcaptionwidth`,
+  // the `\floatconts` family, `enumerate*` (pmlr-sample). Guard:
+  // `perfect_kernel_batch54::jmlr_has_the_jmlrutils_surface`.
+  RequirePackage!("jmlrutils");
+  // jmlr.cls:743-745 `\artchapter` (`\ClassError{jmlr}{Chapters not permitted in articles}`) with `\let\chapter
+  // \artchapter`, and :950-959 `\jmlrbookcommands`' `\bookchapter`: the class has a `\chapter`, so a package's
+  // `\@ifundefined{chapter}` takes the chapter branch, as in TeX (OXIDIZED_DESIGN #179 (a)). An article's call, which
+  // TeX refuses with the class's error, is LaTeXML's chapter with that error's text as its one Warning (OD #734, the
+  // OD #721 precedent). The class's chapter counter (:732) is made at the call, as the stand-in's
+  // (`kernel_chapter_with_warning` marks it; `has_chapter_counter` ignores it), so the class's appendix is lettered by
+  // section, as jmlr.cls:720-729 `\artappendix` (`\let\appendix\artappendix`): "Appendix A", not "Appendix 1.A".
+  DefMacro!("\\chapter", {
+    kernel_chapter_with_warning(
+      "latex",
+      "Class jmlr Error: Chapters not permitted in articles; LaTeXML's \\chapter is used",
+    )
+  });
 
   // Author block. jmlr.cls L259/374-449:
   //   \author[short]{ \Name{N1} \Email{E1} \\ \Name{N2} \Email{E2}
@@ -37,13 +70,24 @@ LoadDefinitions!({
   // Digest the structured body in a group so the row separators (\\, \and, \AND)
   // collapse to spaces; a sentinel is appended so a trailing \addr can capture
   // the (shared) affiliation up to it.
+  // `\addr` scans to the sentinel only inside that group; elsewhere it is
+  // jmlr.cls:344's empty `\newcommand{\addr}{}` (:337 gives it meaning only
+  // while the author block is typeset). An `\addr` outside the block — a class
+  // wrapper such as `\coltauthor` left undefined — ran to the end of the
+  // document (arXiv 2605.25859, `Fatal:Mouth:EoF`).
   DefMacro!(
     "\\lx@jmlr@structauthor{}",
-    "\\begingroup\\def\\\\{ }\\def\\and{ }\\def\\AND{ }#1\\lx@jmlr@endaddr\\endgroup"
+    "\\begingroup\\def\\\\{ }\\def\\and{ }\\def\\AND{ }\\let\\addr\\lx@jmlr@addr#1\\lx@jmlr@endaddr\\endgroup"
   );
   DefMacro!("\\Name[]{}", "\\lx@add@creator[role=author]{#2}");
-  DefMacro!("\\Email{}", "\\lx@add@email{#1}");
-  DefMacro!("\\addr Until:\\lx@jmlr@endaddr", "\\lx@add@affiliation{#1}");
+  // jmlr.cls:447 `{\@email #1}`, the address in the current family's small capitals; the binding keeps the current
+  // font, not the small capitals (2101.03309)
+  DefMacro!("\\Email{}", "\\lx@add@email{\\lx@address@textfont{#1}}");
+  DefMacro!(
+    "\\lx@jmlr@addr Until:\\lx@jmlr@endaddr",
+    "\\lx@add@affiliation{#1}"
+  );
+  def_macro_noop("\\addr")?;
   def_macro_noop("\\lx@jmlr@endaddr")?;
   // jmlr.cls \nametag{tag} appends a marker (typically a \thanks) next to an
   // author name inside \Name{... \nametag{\thanks{...}}}. Render its content
@@ -56,13 +100,14 @@ LoadDefinitions!({
     "\\IncludeName{}{}",
     "\\@add@frontmatter{ltx:note}[role=name]{#1 #2}"
   );
-  DefMacro!("\\And", " ");
-  // \acks{text} — JMLR Acknowledgments-and-Disclosure-of-Funding
-  // section. Author body; emit as structural ltx:acknowledgements
-  // (matches jmlr2e \acks treatment from commit 78bd49f1e2).
+  // (a space; a `" "` string body would tokenize as an empty line, `\par`: KNOWN_PERL_ERRORS #984)
+  DefMacro!(T_CS!("\\And"), None, Tokens!(T_SPACE!()));
+  // jmlr.cls:595 `\newcommand{\acks}[1]{\section*{Acknowledgments}#1}`: the acknowledgments under the heading the
+  // class prints (the binding wrote the slug "acknowledgments-disclosure-of-funding", which the XSLT printed). Guard
+  // `perfect_kernel_batch78c::jmlr_acknowledgements_carry_the_printed_heading`.
   DefConstructor!(
     "\\acks{}",
-    "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>"
+    "<ltx:acknowledgements name='Acknowledgments'>#1</ltx:acknowledgements>"
   );
   DefMacro!("\\clearauthor{}", "\\author{#1}");
 
@@ -74,6 +119,16 @@ LoadDefinitions!({
   DefMacro!(
     "\\jmlrvolume{}",
     "\\@add@frontmatter{ltx:note}[role=volume]{#1}"
+  );
+  // jmlr.cls:551-556: the issue and the page range, printed with the volume in the title footnote (`\@titlefoot`,
+  // :492-521; witness 2605.20066, nesy2026.cls:41).
+  DefMacro!(
+    "\\jmlrissue{}",
+    "\\@add@frontmatter{ltx:note}[role=issue]{#1}"
+  );
+  DefMacro!(
+    "\\jmlrpages{}",
+    "\\@add@frontmatter{ltx:note}[role=pages]{#1}"
   );
   // JMLR frontmatter — preserve author-typed metadata as ltx:note so
   // it reaches the XML (content-preserving). Year/page/workshop/dates
@@ -116,22 +171,21 @@ LoadDefinitions!({
   );
 
   // jmlrcombine helpers used in tables / floats.
-  DefMacro!("\\floatconts{}{}{}", "#3");
-  DefMacro!("\\tableref{}", "#1");
-  DefMacro!("\\figureref{}", "#1");
-  DefMacro!("\\algorithmref{}", "#1");
-  // jmlrutils.sty L86-140: reference helpers. Stub as the LaTeX
-  // \ref expansion so cross-refs still resolve. Witness 2409.07012.
-  DefMacro!("\\sectionref{}", "\\ref{#1}");
-  DefMacro!("\\appendixref{}", "\\ref{#1}");
-  DefMacro!("\\equationref{}", "(\\ref{#1})");
-  DefMacro!("\\theoremref{}", "\\ref{#1}");
-  DefMacro!("\\lemmaref{}", "\\ref{#1}");
-  DefMacro!("\\corollaryref{}", "\\ref{#1}");
-  DefMacro!("\\propositionref{}", "\\ref{#1}");
-  DefMacro!("\\definitionref{}", "\\ref{#1}");
-  DefMacro!("\\exampleref{}", "\\ref{#1}");
-  DefMacro!("\\remarkref{}", "\\ref{#1}");
+  // jmlrutils.sty:166-185: `\floatconts{label}{caption}{contents}` dispatches
+  // on `\@captype` — tables caption first, figures contents first,
+  // algorithms between rules. The former `#3` body dropped the caption.
+  RawTeX!(
+    r"\newcommand{\floatconts}[3]{\@ifundefined{\@captype conts}{\tableconts{#1}{#2}{#3}}{\csname\@captype conts\endcsname{#1}{#2}{#3}}}
+\providecommand{\tableconts}[3]{#2\label{#1}\vskip\baselineskip{\centering #3\par}}
+\newcommand{\figureconts}[3]{{\centering #3\par}\vskip\baselineskip#2\label{#1}}
+\newcommand{\algocfconts}[3]{\jmlralgorule\par\smallskip#2\label{#1}\jmlralgorule\par\smallskip#3\jmlralgorule}
+\providecommand{\jmlralgorule}{\noindent\rule{\linewidth}{0.4pt}}"
+  );
+  // jmlrutils.sty:116-165 (read above) defines the reference helpers: `\tableref{tab:a}` is "Table 1" through
+  // `\objectref`, a list "Tables 1 and 2". Stand-ins here (`\tableref{}` → `#1`) printed the label key as text
+  // (2507.03899: "tab:raw_perf", its `_` an error) and lost the name. jmlrutils has no `\propositionref`, so none
+  // here either: a stand-in overrode the author's own `\newcommand{\propositionref}`. Witness 2409.07012
+  // (`\sectionref`).
 
   // jmlrutils theorem-style configuration helpers (gobble silently —
   // we don't replicate the punctuation/spacing). Witness: 2502.19625
@@ -155,5 +209,44 @@ LoadDefinitions!({
 \newtheorem{definition}[theorem]{Definition}
 \newtheorem{example}[theorem]{Example}
 \newtheorem{remark}[theorem]{Remark}"
+  );
+  // jmlr.cls:593-594 table struts (pmlr-sample).
+  DefMacro!("\\abovestrut{}", "\\rule[0in]{0in}{#1}\\ignorespaces");
+  DefMacro!("\\belowstrut{}", "\\rule[-#1]{0in}{#1}\\ignorespaces");
+  // The ML4H copy of jmlr.cls (:83-142; 2609.00435, 02754, 12277, 12365, 13062, 13454, 18134, 24877) adds its track
+  // machinery: `\mlhtrack{proceedings|findings|demo|perspective}` and the `\ifmlh…` switches a paper tests. Its
+  // `\AtBeginDocument` "no track" error banner (:131-141) is left out, so a plain jmlr paper is unaffected; the empty
+  // track sets `\@jmlrproceedings`, which this binding does not otherwise define.
+  RawTeX!(
+    r"\newif\ifmlhproceedings\newif\ifmlhfindings\newif\ifmlhdemo\newif\ifmlhperspective\newif\ifmlhunspecified
+\newif\ifmlhanonymous\newif\ifmlhneedsstatements\newif\ifmlhneedspmlr\newif\ifmlh@trackset
+\newcommand*{\mlhtrackname}{\textcolor{red}{[no track set]}}
+\newcommand*{\mlhpagelimit}{\textbf{[no track set]}}
+\newcommand*{\mlhtrack}[1]{\mlh@tracksettrue
+  \def\mlh@@arg{#1}\def\mlh@@empty{}%
+  \def\mlh@@proc{proceedings}\def\mlh@@find{findings}\def\mlh@@demo{demo}\def\mlh@@persp{perspective}%
+  \ifx\mlh@@arg\mlh@@empty
+    \mlhunspecifiedtrue
+    \renewcommand*{\mlhtrackname}{Unspecified Track}\renewcommand*{\mlhpagelimit}{unknown page limit}%
+    \def\@jmlrproceedings{{\color{red}\bfseries ML4H 2026: please specify the submission track}}%
+  \else\ifx\mlh@@arg\mlh@@proc
+    \mlhproceedingstrue \mlhanonymoustrue \mlhneedsstatementstrue \mlhneedspmlrtrue
+    \renewcommand*{\mlhtrackname}{Proceedings Track}%
+    \renewcommand*{\mlhpagelimit}{up to 8 pages at submission (excluding references and appendices). If your submission is accepted, you will be allowed 1 additional content page for the camera-ready version}%
+  \else\ifx\mlh@@arg\mlh@@find
+    \mlhfindingstrue \mlhanonymoustrue \mlhneedsstatementstrue
+    \renewcommand*{\mlhtrackname}{Findings Track}%
+    \renewcommand*{\mlhpagelimit}{up to 4 pages at submission (excluding references and appendices). Additional information not critical for understanding the work can be included in an appendix without penalty}%
+  \else\ifx\mlh@@arg\mlh@@demo
+    \mlhdemotrue
+    \renewcommand*{\mlhtrackname}{Demo Track}%
+    \renewcommand*{\mlhpagelimit}{up to 2 pages at submission (excluding references and appendices)}%
+  \else\ifx\mlh@@arg\mlh@@persp
+    \mlhperspectivetrue \mlhneedspmlrtrue
+    \renewcommand*{\mlhtrackname}{Perspective Track}\renewcommand*{\mlhpagelimit}{no fixed page limit}%
+  \else
+    \ClassError{jmlr}{Unknown ML4H track '#1'.\MessageBreak Use one of: proceedings, findings, demo, perspective}{}%
+    \mlh@tracksetfalse
+  \fi\fi\fi\fi\fi}"
   );
 });

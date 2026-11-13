@@ -1,0 +1,14 @@
+% witness: scrlttr2copy/letter-copy-test (recall 20.7: English blindtext for a German letter),
+%   colortbl-DE (86.2 → 98.8), ~36 French/German manuals with \documentclass[<lang>] + bare babel
+% oracle:  pdflatex 0 errors; German blindtext "Dies hier ist ein Blindtext …"
+% engines: rust (56hc) = English blindtext, xml:lang="en"; perl = Latin lorem ipsum (no extras)
+% expect:  0 errors; <document … xml:lang="de">; first paragraph "Dies hier ist ein Blindtext"
+% status:  GREEN (batch 56hd)
+% mechanism: babel_sty.rs \lx@babel@activate@mainlang fell back to english when \opt@babel.sty is
+%   empty; babel prepends the main (last-loaded) language to \bbl@loaded (babel.sty:4130-4132).
+\documentclass[ngerman]{article}
+\usepackage{babel}
+\usepackage{blindtext}
+\begin{document}
+\blindtext
+\end{document}

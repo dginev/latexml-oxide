@@ -1,0 +1,19 @@
+% acmart's copyright statement is frontmatter: `\setcopyright{<mode>}` selects the owner and
+% permission texts acmart prints in the first-page footnote at `\maketitle` (acmart.cls:1956-2200,
+% :2264-2296); the binding stored the mode's keyword ("rightsretained") as the copyright date, and a
+% year without a holder read ", 2020" (Perl alike).
+% witness: 2605.02222, 2605.03623, 2605.11901; the anonymous-acm manual.
+% status:  GREEN (58q)
+% oracle:  pdflatex 0 errors: "© 2020 Copyright held by the owner/author(s)." and the
+%          rightsretained permission text.
+% expect:  0 errors, 0 warnings.
+\documentclass[sigconf]{acmart}
+\setcopyright{rightsretained}
+\copyrightyear{2020}
+\begin{document}
+\title{T}
+\author{A. Author}
+\affiliation{\institution{U}\country{X}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: the rev98b review's probe pb6, synthetic; the line-break sibling of
+%          author_block_institution_after_and_spacer_line (pb1)
+% oracle:  pdflatex 0 errors: "Ann Able" in one column, "University of X" one line lower in the next
+% engines: rust int126a, 98b = a creator "University of X" (the empty piece skipped, the institution read as the
+%          block's names line); Perl 0.8.8 = the empty piece an empty name, its line coalesced onto Ann Able
+% expect:  0 errors, 0 warnings; Ann Able holding University of X
+% status:  RED (int126a, 98b) -> GREEN (98b r2) — perfect_kernel_batch98b::institution_after_and_and_a_break_is_no_name
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \and \\ University of X}
+\maketitle
+Text.
+\end{document}
