@@ -94,7 +94,8 @@ fn made_by(origin: DefinitionOrigin) -> SepMeaning {
 const KERNEL_SEPARATOR: &str = "\\and";
 
 /// Whether `definition` is [`KERNEL_SEPARATOR`]'s (a `\let` copy's too: its own cs) — a whatsit of it prints no text
-/// (`util_text::printed_own_text`).
+/// (`util_text::printed_own_text`). It reads the cs alone, so a binding's `\and` constructor counts too (`meaning_of`
+/// adds the origin).
 pub(in crate::base_utilities) fn is_kernel_separator(definition: &dyn Definition) -> bool {
   *definition.get_cs() == T_CS!(KERNEL_SEPARATOR)
 }

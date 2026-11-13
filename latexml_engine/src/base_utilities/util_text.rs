@@ -259,8 +259,8 @@ pub fn typesets_content(d: &Digested) -> bool {
         // A tabular or `\halign` keeps its rows in its `alignment` property (tex_tables.rs): a class's `\maketitle`
         // that is only a table typesets it (simplecv's header, brandeis-problemset's title table; dropped since 59p).
         || printed_properties(&w).iter().any(typesets_content)
-        // (a math character, its `glyph`: `\mathchar`)
-        || printed_own_text(&w).is_some()
+        // (a math character, its `glyph`: `\mathchar`; a constant template's text is `template_prints_text`'s)
+        || printed_glyph(&w).is_some()
         || w
           .get_args()
           .iter()
@@ -941,17 +941,22 @@ const VERBATIM_PRINTERS: &[(&str, &[bool])] = &[
 /// (TeX_Math.pool.ltxml:576-580; flexisym's digits, 2312.00656's `$^{2,3}$`), else a constant template's text
 /// ([`template_text`]: `\LaTeX`, `\TeX` — amsldoc's `\author{…, \LaTeX\ Project}` printed "Project").
 pub(crate) fn printed_own_text(w: &Whatsit) -> Option<String> {
+  printed_glyph(w).or_else(|| {
+    let definition = w.get_definition();
+    // (the kernel's `\and` is latex.ltx's column break, no text: its " and " is the XML's, Perl's
+    // `DefConstructor('\and', ' and ')` (LaTeX.pool), never the page's — fx25's title page print)
+    if is_kernel_separator(definition.as_ref()) {
+      return None;
+    }
+    definition.replacement_template().and_then(template_text)
+  })
+}
+
+/// A math character's `glyph` ([`printed_own_text`]), when it is not blank.
+fn printed_glyph(w: &Whatsit) -> Option<String> {
   match w.get_property("glyph").as_deref() {
     Some(Stored::String(glyph)) => Some(to_string(*glyph)).filter(|g| !g.trim().is_empty()),
-    _ => {
-      let definition = w.get_definition();
-      // (the kernel's `\and` is latex.ltx's column break, no text: its " and " is the XML's, Perl's
-      // `DefConstructor('\and', ' and ')` (LaTeX.pool), never the page's — fx25's title page print)
-      if is_kernel_separator(definition.as_ref()) {
-        return None;
-      }
-      definition.replacement_template().and_then(template_text)
-    },
+    _ => None,
   }
 }
 
