@@ -160,34 +160,160 @@ fn a_star_after_an_inst_mark_is_the_names_text() {
   }
 }
 
-/// An e-mail line under a raw class's numbered `\institute` entry that two names request goes back into the entry
-/// without the class's own e-mail command (`classify::raw_email_unwrapped`), whose Kind step takes its addresses out and
-/// whose Link step gives each the author it spells (OD #956): cjaa.cls's `\email` sets its address in `\@thanks` and
-/// prints nowhere in the entry (astro-ph0508574, 0911.3853's shape). Red on P23b (49b1490df2): no e-mail, three
-/// Warnings. Distinct from the rows above: the raw store route (`class_numbered_institutes`), no binding's list.
+/// An e-mail line under an affiliation entry two names request goes back into the entry without its e-mail command only
+/// under a class's numbered `\institute` store (decided at its call on the store's lines,
+/// `classify::store_unprinted_emails_unwrapped`), and only where that command, digested with the meaning TeX runs, prints
+/// nothing in place: cjaa.cls's `\email` sets its addresses in `\@thanks`
+/// (astro-ph0508574, 0911.3853, 0706.3426), a class's `\footnote`, a document macro's `\@thanks`; the Kind step takes
+/// them out and the Link step gives each the author it spells (OD #956). A print in place keeps the line whole, as on
+/// P23b. Rows, each a distinct path: the rerouted class setter printing nowhere (red on P23b: no e-mail, 3 Warnings), in
+/// a note (red on P23b), in place with prose (red on P23c 093cd11411: the prose dropped, 0 Warnings), the document's
+/// renewal printing in place (red on P23c: the label dropped), a document macro printing nowhere (red on P23b); and a
+/// binding's list (aa, IEEEtran), no numbered store, with a document macro printing in place (red on P23c: "Corresponding
+/// authors'", the label and the font dropped, 0 Warnings — review revP23c B1); the cutter's two `email_line_calls`
+/// branches reading the bare line as the wrapped one (one address one requester, a run in author order: byte-identical
+/// P23b-P23e), and a word printed in place before a note (red on P23d: "Contact" dropped, 0 Warnings). `contact`: the
+/// pattern each row's contacts (or notes) open with, and how many.
 #[test]
 fn a_raw_class_store_email_line_goes_to_the_authors_it_spells() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/raw_class_numbered_institute_email_each_address_its_author.tex"
-  );
-  let (log, xml) = latexml::util::test::convert_files_with(tex, &[], Some("ar5iv.sty"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(
-    creators(&xml),
+  macro_rules! store {
+    ($name:literal) => {
+      include_str!(concat!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+        $name,
+        ".tex"
+      ))
+    };
+  }
+  let pair = |wei: &str, dan: &str| {
     rows(&[
       &[
         "Wei Gao",
         "affiliation=Univ A, Town",
-        "email=whgao@x.org",
+        wei,
         "affiliation=Univ B",
       ],
       &[
         "Dan Wei",
         "affiliation=Univ A, Town",
-        "email=dwei@x.org",
+        dan,
         "affiliation=Univ B",
       ],
-    ]),
-    "{xml}"
-  );
+    ])
+  };
+  let plain = pair("email=whgao@x.org", "email=dwei@x.org");
+  let listed = |mark: &str, other: &str| {
+    let affiliation = format!("affiliation={mark} Univ A, Town Corresponding authors’");
+    rows(&[
+      &[
+        &format!("Ann Able{}", if mark == "*" { " *" } else { "" }),
+        &affiliation,
+        "email=ann@x.org",
+      ],
+      &[
+        &format!("Bob Best{}", if mark == "*" { " *" } else { "" }),
+        &affiliation,
+        "email=bob@y.org",
+      ],
+      &[
+        &format!("Carl Cole{}", if mark == "*" { " †" } else { "" }),
+        &format!("affiliation={other} Univ B"),
+      ],
+    ])
+  };
+  let typewriter = "<contact name=\"e-mails: \" role=\"email\"><text font=\"typewriter\"";
+  let email = "<contact name=\"Email:\u{a0}\" role=\"email\">";
+  for (name, tex, counts, expected, (contact, contacts)) in [
+    (
+      "class setter, \\@thanks",
+      store!("raw_class_numbered_institute_email_each_address_its_author"),
+      (0, 0),
+      plain.clone(),
+      (email, 2),
+    ),
+    (
+      "class setter, a note",
+      store!("raw_class_numbered_institute_email_note_each_address_its_author"),
+      (0, 0),
+      plain.clone(),
+      (email, 2),
+    ),
+    (
+      "class setter, in place with prose",
+      store!("raw_class_numbered_institute_in_place_email_prose_kept"),
+      (0, 2),
+      pair(
+        "email=Corresponding authors, e-mail: whgao@x.org",
+        "email=Corresponding authors, e-mail: dwei@x.org",
+      ),
+      (
+        r#"role="email">Corresponding authors, e-mail: <text font="typewriter""#,
+        2,
+      ),
+    ),
+    (
+      "document's renewal, in place",
+      store!("raw_class_numbered_institute_renewed_email_in_place_kept"),
+      (0, 2),
+      pair("email=E-mail: whgao@x.org", "email=E-mail: dwei@x.org"),
+      (r#"role="email">E-mail: <text font="typewriter""#, 2),
+    ),
+    (
+      "document macro, \\@thanks",
+      store!("raw_class_numbered_institute_document_email_macro_unprinted"),
+      (0, 1),
+      plain.clone(),
+      (email, 2),
+    ),
+    (
+      "aa list, document macro in place",
+      repro!("aa_marked_list_document_email_macro_line_kept_whole"),
+      (0, 0),
+      listed("1", "2"),
+      (typewriter, 2),
+    ),
+    (
+      "IEEEtran list, document macro in place",
+      repro!("ieeetran_marked_list_document_email_macro_line_kept_whole"),
+      (0, 0),
+      listed("*", "†"),
+      (typewriter, 2),
+    ),
+    (
+      "class setter, \\@thanks, one address one requester",
+      store!("raw_class_numbered_institute_email_one_address_one_requester"),
+      (0, 0),
+      rows(&[
+        &["Wei Gao", "affiliation=Univ A, Town", "email=whgao@x.org"],
+        &["Dan Wei", "affiliation=Univ B"],
+      ]),
+      (email, 1),
+    ),
+    (
+      "class setter, \\@thanks, a run in author order",
+      store!("raw_class_numbered_institute_email_run_in_author_order"),
+      (0, 0),
+      rows(&[
+        &["Wei Gao", "affiliation=Univ A, Town", "email=whgao@x.org"],
+        &["Dan Wei", "affiliation=Univ B", "email=dwei@x.org"],
+      ]),
+      (email, 2),
+    ),
+    (
+      "class setter, a word in place and a note",
+      store!("raw_class_numbered_institute_email_prose_in_place_note_kept_whole"),
+      (0, 1),
+      pair("email=Contact", "email=Contact"),
+      ("@x.org</pubnote>", 2),
+    ),
+  ] {
+    let (log, xml) = latexml::util::test::convert_files_with(tex, &[], Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      counts,
+      "{name}: {log}"
+    );
+    assert_eq!(creators(&xml), expected, "{name}: {xml}");
+    assert_eq!(xml.matches(contact).count(), contacts, "{name}: {xml}");
+  }
 }

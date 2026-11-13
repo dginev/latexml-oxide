@@ -1,14 +1,15 @@
 % mechanism: an e-mail line under a raw class's numbered `\institute` store entry (`class_numbered_institutes`, the
-%   store route) that is not one address of the one author requesting it goes back into the entry (`place_address_runs`)
-%   without the raw class's e-mail command (`classify::raw_email_unwrapped`): the addresses it prints, which the entry's
-%   Kind step takes out and its Link step places, each address the author it spells (OD #956). Left wrapped, the raw
-%   `\email` (here cjaa's, setting `\@thanks`) printed nowhere and the addresses were lost, counted
-% witness: astro-ph0508574, 0911.3853 (P23b's step 1 with the kernel's list parted); the class below is cjaa.cls:295-365
+%   store route) is read without the raw class's e-mail command, whose meaning, digested, prints nothing in place
+%   (decided at the store's call, `classify::store_unprinted_emails_unwrapped`); not one address of the one author
+%   requesting the entry, it goes back into the entry: the addresses, which the entry's Kind step takes out and its
+%   Link step places, each address the author it spells (OD #956). Left wrapped, the raw `\email` (here cjaa's, setting
+%   `\@thanks`) printed nowhere and the addresses were lost, counted
+% witness: astro-ph0508574, 0911.3853, 0706.3426 (P23b's step 1 with the kernel's list parted); the class below is cjaa.cls:295-365
 %   cut down (its `\email` a footnote of `\@thanks`)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Wei Gao1,2 , Dan Wei1,2", "1 Univ A, Town", "2 Univ B", the
 %   footnote "⋆ E-mail: whgao@x.org, dwei@x.org"
 % engines: int169a (632698e1d8) and P23b: no e-mail in the XML; 3 warnings (the plain text, the content check, unclaimed
-%   words). P23c: as expected
+%   words). P23c, P23d: as expected
 % expect:  0 errors, 0 warnings; Wei Gao: Univ A, Town, whgao@x.org, Univ B; Dan Wei: Univ A, Town, dwei@x.org, Univ B
 % status:  GREEN (P23c; guard perfect_kernel_batchp23b::a_raw_class_store_email_line_goes_to_the_authors_it_spells)
 % preload: ar5iv.sty

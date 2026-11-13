@@ -35226,15 +35226,25 @@ against int169a) +0.38 % (2103.04797), +0.14 % (1901.01540), XML identical. Guar
 emitter keeps a kept name's `\inst` request only where the reading made it this name's (`RCreator::class_requests`, the
 resolver's `class_requests` moved onto the creator, read by `answer_pending`, `share_unpicked` and the emitter alike);
 read per block, a `*` printed after Ann's `\inst{1,2}` matched Bob's `\inst{1*}` and was shown again as "∗" beside the
-"*" her name keeps (2407.13764's shape under aa and OmniBus). (2) *A raw class's e-mail command in a store's run.* An
-e-mail line under a numbered store entry (`class_numbered_institutes`) that is not one address of the one author
-requesting it goes back into the entry without the class's own e-mail command (`classify::raw_email_unwrapped`: a
-whole-line wrapper whose meaning is a raw file's or the document's), so the entry's Kind step takes its addresses out
-and its Link step gives each the author it spells (#956); left wrapped, cjaa.cls's `\email` (its address set in
-`\@thanks`) printed nowhere and the addresses were lost, counted. A raw command printing its label in place (mem.cls's
-`{e-mail: \tt#1}`) loses that label and font to the contacts' default name (RED
-`raw_class_in_place_email_label_under_numbered_institute_red`). A/B against P23b (`49b1490df2`) on P23b's 2,630 papers
-and 164 raw classes with `\institute` and `\inst`: 0 changed (both readings matter once a list holds several names).
+"*" her name keeps (2407.13764's shape under aa and OmniBus). (2) *An e-mail command printing nowhere in a numbered store's run.* A
+class's numbered store (`class_numbered_institutes`) is read without the e-mail command of a line of addresses where
+that command, digested with the meaning TeX runs (a raw file's rerouted setter's own, #936), prints nothing in place —
+its addresses in `\@thanks`, a note, nowhere (the speculative run's text outside its notes, `queue_digest::printed_ink`;
+`Contact\footnote{#1}` prints its "Contact" in place, so its line stays whole). The store's
+call decides it, on the store's lines (`\lx@add@store@affiliations`, `classify::store_unprinted_emails_unwrapped`): no
+flag reaches the cutter, whose address-line readers read a raw command's line and its addresses alike
+(`email_line_calls` sets a raw command's address as written, `email_command_address`). Such a line under an entry, not
+one address of the one author requesting it, goes back into the entry, so the entry's Kind step takes its addresses
+out and its Link step gives each the author it spells (#956); left wrapped, cjaa.cls's `\email` (its address set in
+`\@thanks`) printed nowhere and the addresses were lost, counted (astro-ph0508574, 0706.3426). A command printing in
+place (mem.cls's `{e-mail: \tt#1}`, a document macro with prose) keeps the line whole, every word kept and the label
+placed twice, counted (RED `raw_class_in_place_email_label_under_numbered_institute_red`); a binding's call makes its
+contacts where it stands. A binding's list (aa, IEEEtran) is never unwrapped. A/B against P23b (`49b1490df2`) on
+P23b's 2,630 papers and 164 raw classes with `\institute` and `\inst`: 0 changed; narrowed (P23d) against P23c on 923
+(the review's 769 `\and` lists with marks, notes or e-mail commands, the 164, 13 cjaa/mem witnesses): 1 changed,
+0911.3853's mem.cls line whole again (its printed "e-mail:" and typewriter kept in the contact, one Warning more).
+Decided at the store's call (P23e, no flag threaded into the cutter): the same 923 against P23c, the same 1 changed,
+byte-identical to P23d's; 2103.04797 −0.03 % instructions, XML identical.
 (3) *The kernel `\author`'s list holds a position a name* (`entry_pieces` reads `\lx@add@authors@adaptive`'s entries as
 `\lx@add@author@split`'s): a raw class's numbered store with an e-mail line of one address a name after its last entry
 gives each author one, in order (the block's before). Two readers follow: `author_creator_total` (the `\lx@author@keys`
@@ -35242,7 +35252,7 @@ ranges an `\author[key]` records) counts positions (`queued_author_positions`), 
 whenever the reading reads (a replayed class setter's read is kept by the queue's reading; a replay or a rehearsal queues
 no block, so none is found for its entries) — review revP23b's two findings. A/B against D1+D2 (`5096ce95c6`) on P23b's
 2,630 papers, 448 kernel `\author` lists (article, amsart, revtex, report, amsproc; `\and`, an e-mail, `\thanks` or
-marks) and 141 raw classes alike: 1 changed, astro-ph0508574 better (W.H. Gao's e-mail after the institute it is printed
+marks) and 141 raw classes alike: 2 changed, astro-ph0508574 better (W.H. Gao's e-mail after the institute it is printed
 under), 2210.01917 a 180 s timeout on both alone (noise). Guard row `kernel list, raw class store` of
 `a_whole_list_entry_holds_a_position_a_name` (repro `class-bindings/author_one_block/kernel_raw_class_email_line_one_address_a_name.tex`). llncs's marked list stays
 cut at the call: as one block a row (cut at its `\\`s only, its `\and`s the reading's) a row of names each led by its
@@ -35251,7 +35261,8 @@ the guarded `llncs_inst_leading_marks_keep_their_names` lost) — the same readi
 base (RED `class-bindings/author_one_block/aa_leading_inst_marks_names_read_as_affiliations_red.tex`, int169a too) and as
 the whole list's names row after `\and \\` (1902.08498, 2605.10631). Guards `perfect_kernel_batchp23b::{a_star_after_an_inst_mark_is_the_names_text,
 a_raw_class_store_email_line_goes_to_the_authors_it_spells}` (repros `class-bindings/author_one_block/{aa,omnibus}_star_after_inst_mark_stays_the_names_text.tex`,
-`sectioning-frontmatter/raw_class_numbered_institute_email_each_address_its_author.tex`).
+`class-bindings/author_one_block/{aa,ieeetran}_marked_list_document_email_macro_line_kept_whole.tex`,
+`sectioning-frontmatter/raw_class_numbered_institute_{email_each_address_its_author,email_note_each_address_its_author,in_place_email_prose_kept,renewed_email_in_place_kept,document_email_macro_unprinted,email_one_address_one_requester,email_run_in_author_order,email_prose_in_place_note_kept_whole}.tex`).
 
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 

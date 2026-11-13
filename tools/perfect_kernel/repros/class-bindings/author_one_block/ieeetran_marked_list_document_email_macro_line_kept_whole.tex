@@ -1,0 +1,21 @@
+% mechanism: a document macro printing an e-mail line in place behind prose, under an `\IEEEauthorblockA` entry two
+%   names request: a binding's marked list, no numbered store, so the line goes back into the entry whole
+%   (only a class's numbered store's call unwraps its lines, `\lx@add@store@affiliations`, P23e)
+% witness: synthetic (review revP23c B1, probe d2h)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "∗ Univ A, Town", "Corresponding authors’ e-mails: ann@x.org,
+%   bob@y.org", "† Univ B"
+% engines: P23b: as expected; P23c (093cd11411): "Corresponding authors’", the label and the font dropped, 0 warnings;
+%   P23d: as expected
+% expect:  0 errors, 0 warnings; Ann Able and Bob Best: "* Univ A, Town Corresponding authors’", an e-mail contact named
+%   "e-mails: " in typewriter; Carl Cole: "† Univ B"
+% status:  GREEN (P23d; guard perfect_kernel_batchp23b::a_raw_class_store_email_line_goes_to_the_authors_it_spells)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\newcommand{\emails}[1]{Corresponding authors' e-mails: \texttt{#1}}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Best\IEEEauthorrefmark{1}, Carl Cole\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Town\\ \emails{ann@x.org, bob@y.org}\\ \IEEEauthorrefmark{2}Univ B}}
+\maketitle
+Text.
+\end{document}

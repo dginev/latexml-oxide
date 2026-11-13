@@ -582,7 +582,7 @@ fn place_address_runs(
           let continuation: Vec<Token> = run
             .lines
             .into_iter()
-            .flat_map(|(d, line)| d.into_iter().chain(raw_email_unwrapped(line).unlist()))
+            .flat_map(|(delimiter, line)| delimiter.into_iter().chain(line.unlist()))
             .collect();
           entries[entry].splice(at..at, continuation);
         }

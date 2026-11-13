@@ -1,14 +1,17 @@
 % mechanism: a raw class's e-mail command that prints its address in place behind a label (mem.cls:253 `\def\email#1{{e-mail:
-%   \tt#1}}`) in a line under a numbered `\institute` store entry two names request: the line goes back into the entry
-%   unwrapped (`classify::raw_email_unwrapped`), each address the author it spells, but the label "e-mail:" the class
-%   prints and its typewriter font are not carried onto the contacts (their `name` the role's default "Email: "). The
-%   label read as the class prints it is the rehearsal's (`rehearsal.rs` `own_email_properties`), not readable at the call
+%   \tt#1}}`) or prose (`{Corresponding authors, e-mail: \tt#1}`, review revP23c d2e) in a line under a numbered
+%   `\institute` store entry two names request: the line goes back into the entry whole (its meaning prints the
+%   addresses in place, `classify::unprinted_email_unwrapped`), each address the author it spells, but the label is not
+%   the contacts' `name`: it stays in each contact's text beside its address, so "e-mail" is placed twice. The label read
+%   as the class prints it is the rehearsal's (`rehearsal.rs` `own_email_properties`), not readable at the call
 % witness: synthetic (0911.3853's mem.cls `\email`, one address there)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1 Univ A, Town", "e-mail: whgao@x.org, dwei@x.org", "2 Univ B"
-% engines: P23b: each address its author, the contact text "e-mail: whgao@x.org" in typewriter, 2 warnings (the plain
-%   text, "e mail" placed twice); P23c: each address its author, name "Email: ", no font, 0 warnings
+% engines: P23b, P23d and P23e: each address its author, the contact text "e-mail: whgao@x.org" in typewriter, 2 warnings (the
+%   plain text, "e mail" placed twice: no word lost, the double counted); P23c (093cd11411): name "Email: ", the label
+%   and the font dropped (with prose, the prose too), 0 warnings: a silent loss, which P23d no longer makes
 % expect:  0 errors, 0 warnings; Wei Gao: whgao@x.org, Dan Wei: dwei@x.org, each contact named "e-mail:" in typewriter
-% status:  RED (P23c): catalog only, no guard
+% status:  RED (P23d): catalog only, no guard (the prose shape's output is pinned by the guard row
+%   raw_class_numbered_institute_in_place_email_prose_kept)
 % moves:   post-merge
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{cjaainst.cls}

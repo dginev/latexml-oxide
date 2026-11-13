@@ -405,6 +405,11 @@ pub(in crate::base_utilities) struct PrintedLabel {
   pub text:             String,
   /// What it prints outside its pictures, each picture a label separator.
   pub outside_pictures: String,
+  /// What it prints where it stands, when asked for ([`printed_ink`]): outside its notes (`\lx@note…`, set at the
+  /// page's foot).
+  pub outside_notes:    Option<String>,
+  /// How many notes the character being written stands in.
+  notes:                usize,
 }
 
 impl PrintedLabel {
@@ -413,6 +418,11 @@ impl PrintedLabel {
     self.text.push(c);
     if !in_picture {
       self.outside_pictures.push(c);
+    }
+    if self.notes == 0
+      && let Some(outside) = self.outside_notes.as_mut()
+    {
+      outside.push(c);
     }
   }
 }
@@ -507,7 +517,7 @@ pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Optio
     return Ok(None);
   }
   READING_LABEL.with(|r| r.set(true));
-  let printed = speculative_label_ink(Tokens::new(tokens.to_vec()));
+  let printed = speculative_label_ink(Tokens::new(tokens.to_vec()), PrintedLabel::default());
   READING_LABEL.with(|r| r.set(false));
   let printed = printed?;
   DebugFeature!(
@@ -519,8 +529,9 @@ pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Optio
   Ok(
     printed
       .map(|p| PrintedLabel {
-        text:             p.text.trim().to_string(),
+        text: p.text.trim().to_string(),
         outside_pictures: p.outside_pictures.trim().to_string(),
+        ..PrintedLabel::default()
       })
       .filter(|p| !p.text.is_empty()),
   )
@@ -543,13 +554,22 @@ pub(in crate::base_utilities) fn ink_prints_text(ink: &Tokens) -> Result<Option<
       t.get_catcode() == Catcode::LETTER || t.with_str(|s| s.chars().any(char::is_alphanumeric))
     })));
   }
+  Ok(printed_ink(ink)?.map(|ink| ink.outside_pictures.chars().any(char::is_alphanumeric)))
+}
+
+/// `ink` digested in a speculative run of its own as [`ink_prints_text`] reads it (spacing a comma); `None` when it cannot
+/// be read or while a label is read.
+pub(in crate::base_utilities) fn printed_ink(ink: &Tokens) -> Result<Option<PrintedLabel>> {
   if reading_label() {
     return Ok(None);
   }
   READING_LABEL.with(|r| r.set(true));
-  let printed = speculative_label_ink(ink.clone());
+  let printed = speculative_label_ink(ink.clone(), PrintedLabel {
+    outside_notes: Some(String::new()),
+    ..PrintedLabel::default()
+  });
   READING_LABEL.with(|r| r.set(false));
-  Ok(printed?.map(|p| p.outside_pictures.chars().any(char::is_alphanumeric)))
+  printed
 }
 
 thread_local! {
@@ -568,8 +588,8 @@ pub(in crate::base_utilities) fn reading_label() -> bool {
 /// own, as sect05.rs `title_page_probe_run` runs a title page): nothing of it stays — its assignments undone, its
 /// diagnostics discarded, an argument read past its end (`\altaffilmark` handed `\let`) reading nothing of the
 /// document's. `None` when no journal opens, the run is not undone, or it raised an error (a resource Fatal, or one
-/// that could not be undone, propagates: Fatal stays Fatal).
-fn speculative_label_ink(tokens: Tokens) -> Result<Option<PrintedLabel>> {
+/// that could not be undone, propagates: Fatal stays Fatal). `ink` is where it is written (what it asks for).
+fn speculative_label_ink(tokens: Tokens, ink: PrintedLabel) -> Result<Option<PrintedLabel>> {
   let Some(journal) = begin_assignment_journal() else {
     return Ok(None);
   };
@@ -604,7 +624,7 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<PrintedLabel>> {
   });
   stomach_mark.restore();
   let printed = result.as_ref().ok().map(|digested| {
-    let mut printed = PrintedLabel::default();
+    let mut printed = ink;
     label_ink(digested, &mut printed, false);
     printed
   });
@@ -687,6 +707,8 @@ fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
         return;
       }
       let start = out.text.len();
+      let note = cs.starts_with("\\lx@note");
+      out.notes += usize::from(note);
       for a in &printed_properties(&w) {
         label_ink(a, out, in_picture);
       }
@@ -713,6 +735,7 @@ fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
           out.push(c, in_picture);
         }
       }
+      out.notes -= usize::from(note);
     },
     _ => {},
   }
