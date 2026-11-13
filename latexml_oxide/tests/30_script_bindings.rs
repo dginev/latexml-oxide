@@ -1627,9 +1627,12 @@ fn a_rewrite_scope_names_its_unit() {
 /// #792: a Rhai `Fatal()` prints ONE `Fatal:` line (Perl `Fatal` logs once, then dies), wherever it is
 /// raised: at a binding's top level, inside a body, by `Error()` past MAX_ERRORS, or in a binding another
 /// binding loads. Each row: the `.sty.rhai` files, the document body, the message the one line carries.
+/// (row name, the `.sty.rhai` files, the document body, the message the one `Fatal:` line names)
+type FatalRow<'a> = (&'a str, &'a [(&'a str, &'a str)], &'a str, &'a str);
+
 #[test]
 fn a_rhai_fatal_is_logged_once() {
-  let rows: &[(&str, &[(&str, &str)], &str, &str)] = &[
+  let rows: &[FatalRow] = &[
     (
       "top level",
       &[(
