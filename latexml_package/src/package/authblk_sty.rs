@@ -191,7 +191,7 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
   }
 }
 
-/// Whether a per-author class's author argument names several authors ([`author_call`]'s list branch, the marks
+/// Whether a per-author class's author argument names several authors (`author_call`'s list branch, the marks
 /// aside): a comma, the word "and" or a kernel `\and` between names, a separator the kernel's author read parts at.
 /// Shared with the meta-class binding (latexml_contrib `meta_class.rs`, 2605.17829).
 pub fn author_names_a_list(author: &Tokens) -> Result<bool> {
