@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **`--xsltparameter` takes Perl's `name:value`, and a malformed one is an error** (#803).
+    `--xsltparameter=FOO:bar` was silently ignored; it now sets `$FOO`, as in Perl's
+    `latexmlc`/`latexmlpost` (a `\w+` name, then `:`). `name=value` keeps working (it also
+    carries `{uri}name` names). A value with neither form stops the run with a usage error
+    (exit 2), as `latexmlpost` does; the library entry point logs an Error. Guard
+    `xsltparameter_tests` (in the binary's unit tests).
+
   - **A `--stylesheet` on disk is used, even when it is named like a built-in one** (#806).
     `--stylesheet=./LaTeXML-html5.xsl` loaded the embedded copy instead of the local file,
     because the embedded stylesheets were matched by file name alone. A path that names an

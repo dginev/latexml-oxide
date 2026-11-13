@@ -29,6 +29,14 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: dhat::Alloc = dhat::Alloc;
 
+/// `--xsltparameter` is checked as it is read, as bin/latexmlpost L354-356 fails on a malformed one (#803).
+fn xslt_parameter_arg(param: &str) -> Result<String, String> {
+  match latexml::post::parse_xslt_parameter(param) {
+    Some(_) => Ok(param.to_string()),
+    None => Err("not in recognized format: 'name:value' (or 'name=value')".to_string()),
+  }
+}
+
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
 #[command(name = "latexml_oxide", version = latexml::identity::VERSION_WITH_REVISION, about)]
@@ -422,8 +430,8 @@ struct Cli {
   #[arg(long, value_name = "DIR")]
   sourcedirectory: Option<String>,
 
-  /// Additional XSLT parameters (repeatable, key=value)
-  #[arg(long = "xsltparameter", value_name = "KEY=VALUE")]
+  /// Additional XSLT parameters (repeatable; Perl's name:value, or name=value)
+  #[arg(long = "xsltparameter", value_name = "NAME:VALUE", value_parser = xslt_parameter_arg)]
   xslt_parameters: Vec<String>,
 
   // === Dev/internal flags ===
@@ -2424,5 +2432,40 @@ mod boolean_flag_last_wins_tests {
 
     // --hackplane1 forces plane1 on even against a later --noplane1 (Perl MathML.pm L70).
     assert!(ResolvedOptions::from_cli(&cli(&["--noplane1", "--hackplane1"])).plane1);
+  }
+}
+
+#[cfg(test)]
+mod xsltparameter_tests {
+  use super::*;
+
+  fn params(flags: &[&str]) -> Result<Vec<String>, clap::Error> {
+    let mut argv = vec!["latexml_oxide"];
+    argv.extend_from_slice(flags);
+    argv.push("src.tex");
+    Cli::try_parse_from(argv).map(|c| c.xslt_parameters)
+  }
+
+  /// #803: Perl's `--xsltparameter=name:value` (LaTeXML.pm L574-578) and our `KEY=VALUE` both
+  /// pass a parameter; a value with neither separator is a usage error, not a silent no-op.
+  #[test]
+  fn xsltparameter_accepts_perls_form_and_rejects_a_malformed_one() {
+    use latexml::post::parse_xslt_parameter as parse;
+    let pair = |k: &str, v: &str| Some((k.to_string(), v.to_string()));
+    assert_eq!(parse("FOO:bar"), pair("FOO", "bar"));
+    assert_eq!(parse(" FOO : bar baz"), pair("FOO", "bar baz"));
+    assert_eq!(
+      parse("URL:http://x.org/?a=b"),
+      pair("URL", "http://x.org/?a=b")
+    );
+    assert_eq!(parse("FOO=bar"), pair("FOO", "bar"));
+    assert_eq!(parse("FOO=a:b"), pair("FOO", "a:b"));
+    assert_eq!(parse("{http://x.org}p=v"), pair("{http://x.org}p", "v"));
+    assert_eq!(parse("FOO"), None);
+    assert_eq!(parse("=bar"), None);
+    assert_eq!(parse(":bar"), None);
+    assert!(params(&["--xsltparameter=FOO:bar", "--xsltparameter", "X=y"]).is_ok());
+    let err = params(&["--xsltparameter=FOO"]).expect_err("malformed");
+    assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation);
   }
 }

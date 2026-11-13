@@ -130,6 +130,28 @@ pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
   }
 }
 
+/// Split one `--xsltparameter` into `(name, value)`: Perl's `name:value` (LaTeXML.pm L575
+/// `/^\s*(\w+)\s*:\s*(.*)$/`, bin/latexmlpost L354) first, else our `name=value`; `None` when
+/// it is neither (#803).
+pub fn parse_xslt_parameter(param: &str) -> Option<(String, String)> {
+  let trimmed = param.trim_start();
+  let name_len = trimmed
+    .find(|c: char| !(c.is_alphanumeric() || c == '_'))
+    .unwrap_or(trimmed.len());
+  if name_len > 0
+    && let Some(value) = trimmed[name_len..].trim_start().strip_prefix(':')
+  {
+    return Some((
+      trimmed[..name_len].to_string(),
+      value.trim_start().to_string(),
+    ));
+  }
+  match param.split_once('=') {
+    Some((name, value)) if !name.is_empty() => Some((name.to_string(), value.to_string())),
+    _ => None,
+  }
+}
+
 /// Emit a post-processing error: capture it into the active log buffer (so it
 /// reaches `cortex.log`) AND bump the Error counter so `Status:conversion`
 /// reflects post-phase failures (Perl `LaTeXML.pm` L633: `max(core, post)`).
@@ -1022,8 +1044,14 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       format!("\"{}\"", crate::core_interface::LATEXML_VERSION),
     );
     for param in xslt_parameters {
-      if let Some((key, value)) = param.split_once('=') {
-        xslt_params.insert(key.to_string(), format!("\"{}\"", value));
+      match parse_xslt_parameter(param) {
+        Some((key, value)) => {
+          xslt_params.insert(key, format!("\"{}\"", value));
+        },
+        None => post_error(
+          "xsltparameter",
+          &format!("xsltparameter not in recognized format: 'name:value' got: '{param}'"),
+        ),
       }
     }
     manifest_xslt_params = xslt_params
