@@ -21505,14 +21505,16 @@ document invalid; after a brace-less `\abstract` the same, since the TOC does no
 ancestor that admits it (`Document::float_out_of_frontmatter`: Perl's `floatToElement`, Document.pm:1052-1077, closing
 form; the container cannot auto-close, so the insertion point comes back): after the abstract, and the text after it
 stays the abstract's. Elsewhere the TOC is inserted as before (in a `{quote}` the inline logical block of #271's bridge).
-(2) The kernel's three begin `\par\@startsection@hook` (in `\lx@kernel@tableofcontents`/`…listoffigures`/`…listoftables`,
+(2) The kernel's three begin `\par\@startsection@hook` (in `\lx@kernel@listof{<ext>}{<title>}`, which
+`\lx@kernel@tableofcontents`/`…listoffigures`/`…listoftables` call,
 `\protected` as `\section*` is robust, still the user name's only token before `\lx@kernel@listbody`: tocbasic.sty:1175-1179's
 `\edef` of `\newcommand*\csname listof\tb@nt@types\endcsname{…}`, KOMA's `\DeclareNewTOC`, expands `\listoffigures`
 and must meet one token), as the `\section*{\contentsname…}` they are in article.cls,
 report.cls and amsart.cls (`\chapter*` in book.cls) does: a paragraph ends, and after a brace-less `\abstract` or inside
 an unclosed `\abstract{` the TOC ends the abstract as a `\section` does (sect05.rs `\abstract`), the hook's other
 members running as at any heading (the frontmatter fallback of a document without `\maketitle`, a bibliography's end).
-A raw class's own `\tableofcontents` replaces the kernel's, as before. The rule for a TOC differs from a `\section*`
+A raw class's own `\tableofcontents` replaces the kernel's, as before (memoir's and oblivoir's lists, which read
+a `.toc` LaTeXML never writes, are `\lx@kernel@listof` again: memoir_cls.rs, MEM1). The rule for a TOC differs from a `\section*`
 inside a balanced abstract, which document.rs's sectioning leniency still keeps in place without an Error (Perl errs
 there, `<ltx:section> isn't allowed in <ltx:abstract>`; a nested second one errs in both): the TOC follows the schema
 and Perl's own placement of an element its context refuses.

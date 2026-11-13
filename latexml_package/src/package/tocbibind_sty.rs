@@ -1,4 +1,4 @@
-use crate::{engine::latex_constructs::toc_select, prelude::*};
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -103,16 +103,10 @@ LoadDefinitions!({
   \fi
 \fi}");
   // `\tocfile`'s heading and list (`\toc@chapter`/`\toc@section` then `\@starttoc{<ext>}`, :263-271): a table of
-  // contents titled `<title>` listing `<ext>`, as the kernel's `\tableofcontents`/`\listoffigures` are (sect04.rs).
+  // contents titled `<title>` listing `<ext>`, as the kernel's `\tableofcontents`/`\listoffigures` are (sect04.rs `\lx@kernel@listof@element`).
   // After `\tocsection` (:313-315) a class without chapters numbers the heading — `\toc@section` becomes
   // `\@nameuse{<unit>}{<title>}` — so the list follows a numbered `\<unit>{<title>}` (`\@tocextra`'s), untitled
   // (pdflatex "1 List of Algorithms" then "2 Intro"); the bibliography's number is not modelled
   // (OXIDIZED_DESIGN_DIVERGENCES #620). A class with chapters ignores `\tocsection` (1605.05950, 2204.09786).
-  DefConstructor!("\\lx@tocbibind@tocfile[]{}",
-    "<ltx:TOC lists='#lists' scope='global' select='#select'>?#1(<ltx:title>#1</ltx:title>)()</ltx:TOC>",
-    properties => sub[args] {
-      let lists = args[1].as_ref().map(|ext| ext.to_string()).unwrap_or_default();
-      let select = if lists == "toc" { toc_select()? } else { String::new() };
-      Ok(stored_map!("lists" => lists, "select" => select))
-    });
+  Let!("\\lx@tocbibind@tocfile", "\\lx@kernel@listof@element");
 });

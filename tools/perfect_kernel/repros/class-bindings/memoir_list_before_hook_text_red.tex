@@ -1,0 +1,16 @@
+% memoir's `\cft<ext>beforelisthook` (memoir.cls:7095) is typeset between the list's heading and its entries; the
+% binding's list element stands at the heading (`\@<ext>maketitle`), so the hook's text follows the whole list.
+% witness: synthetic (MEM1 sibling sweep)
+% oracle:  pdflatex 0 `!`: "Contents", "Before the list.", "1 Intro".
+% engines: rust MEM1 E=0 W=1: `<TOC lists="toc">` titled "Contents", then "Before the list." (int170a: the styled
+%          heading paragraph, then the text, no `<TOC>`).
+% expect:  the text before the list's entries: inside the TOC after its title, which the schema has no place for, or a
+%          list element split at `\@starttoc`.
+% status:  RED (MEM1). moves: post-merge (the text is kept, only its order against the generated entries differs).
+\documentclass{memoir}
+\renewcommand{\cfttocbeforelisthook}{Before the list.}
+\begin{document}
+\tableofcontents*
+\chapter{Intro}
+Text.
+\end{document}
