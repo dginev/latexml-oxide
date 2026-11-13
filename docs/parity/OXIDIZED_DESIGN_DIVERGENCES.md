@@ -36036,3 +36036,12 @@ stopped early (the expl3 functions after the stop are undefined: on TL 2026 it s
 `\regex_match:NnTF`, `\text_lowercase:n`, `\sys_if_shell:TF` undefined and mhchem's `\ce` broken). The dump path never
 reloads and is unchanged. **Guards**: `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
 `expl3_sty::tests::a_muted_expl3_reload_is_counted`, `dump_gate_init::nodump_latex_branch_converts_healthily`.
+
+### 1028. After a Rhai binding's caught `Fatal()`, later errors are still printed and counted (#792)
+
+**Perl.** `Fatal` prints when raised, sets the status fatal (`Common/Error.pm:298`, `:312`), then sets `IGNORE_ERRORS`
+(`:315`) and empties the token stack (`:327`), so a later `Error()` prints nothing (`:362`) even when an `eval` caught the
+Fatal. **Rust.** A Fatal the script catches prints its one line and sets status 3 as in Perl, but the conversion goes
+on reporting: a later error stays its own `Error:script:` line, counted — the user's ruling that every Error is
+emitted and counted (2026-11-11), and no ignore flag outlives the caught Fatal. **Guard**:
+`30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).

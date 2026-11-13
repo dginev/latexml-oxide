@@ -133,7 +133,8 @@ thread_local! {
 }
 
 /// The logged Fatal a registered function raised, if the script's failure `e` is that Fatal; always taken, so a
-/// Fatal the script caught never stands in for a later, unrelated error (see `RAISED_FATAL`).
+/// Fatal the script caught never stands in for a later, unrelated error (see `RAISED_FATAL`). Matched by text: a
+/// later `throw` that repeats the caught Fatal's whole internal message is taken for it (only a hand-written copy).
 pub(super) fn take_raised_fatal(e: &EvalAltResult) -> Option<Error> {
   let (fatal, text) = RAISED_FATAL.with(|r| r.borrow_mut().take())?;
   let raised = match e.unwrap_inner() {

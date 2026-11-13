@@ -26,7 +26,8 @@
     now ends the conversion, as Perl's `Fatal` dies, instead of being contained as an
     `Error:script:` line. A Fatal the script catches never stands in for a later error,
     which stays its own `Error:script:` line. A Fatal ending digestion prints its one
-    `Fatal:` line, no longer repeated by a `Warning:recovery:digest_internal`.
+    `Fatal:` line, no longer repeated by a `Warning:recovery:digest_internal` (a
+    timeout or memory Fatal keeps its "not recovering" warning).
     Guard `30_script_bindings::a_rhai_fatal_is_logged_once`.
 
   - **Rhai `Let(a, b, scope)`** (#796). A binding can now write a global `\let`
