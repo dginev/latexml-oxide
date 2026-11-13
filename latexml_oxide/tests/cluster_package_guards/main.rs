@@ -534,6 +534,9 @@ mod perfect_kernel_batchp22;
 /// meaning, then by spelling, no token rewritten (`split_at_kernel_separators`, the cut eptcs's cells share), one contact
 /// call per piece (OD #995).
 mod perfect_kernel_batchp22b;
+/// P23b: Option C P2-3b — the queue's `author:N` positions count names by the reading's cut at the `\and` family, read by
+/// every consumer and the resolver: a whole-list `\author`'s e-mail line one address a name (OD #995).
+mod perfect_kernel_batchp23b;
 /// P24: Option C P2-4 — eptcs's author block cut where its separators are by meaning (`argument_separators`), not by
 /// spelling (OD #991, #995).
 mod perfect_kernel_batchp24;

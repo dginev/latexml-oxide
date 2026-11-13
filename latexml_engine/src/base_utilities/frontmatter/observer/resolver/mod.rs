@@ -239,6 +239,9 @@ pub enum Input {
     /// a section marker a class defines only inside its `\author` (ijcai19.sty:127, a raw `\@maketitle`), the one before
     /// the addresses its `\emails` (`Resolver::block`, where the reading ends); none for any other block. Not in a dump
     markers: Vec<u16>,
+    /// the `author:N` positions its queued entry holds, one a name the queue's reading parts it into
+    /// (`ledger::AuthorBlock::names`; 0 unread, one)
+    names:   usize,
   },
   Api {
     index:  usize,
@@ -554,8 +557,8 @@ struct Resolver {
   epoch_of:           Vec<Option<usize>>,
   replaced:           Vec<usize>,
   /// the creators each queued author entry made (`start..end`), in queue order: a block's or a creator call's, each call
-  /// queuing one entry, a block whole (`author_entries`)
-  entries:            Vec<(usize, usize)>,
+  /// queuing one entry, a block whole; and the `author:N` positions it holds (`Input::Block::names`, `author_entries`)
+  entries:            Vec<(usize, usize, usize)>,
   /// the block being read's creator calls' labels (`Input::Block::calls`)
   call_labels:        Vec<Vec<String>>,
   /// whether the block being read replaces the authors queued before it (the document's `\\author`, `Input::Block`'s
@@ -901,20 +904,26 @@ impl Resolver {
       .collect()
   }
 
-  /// The queue's author entries, each the live creators it made, in queue order, as an `author:N` label names the N-th
-  /// (`queued_author_marks`' positions at the call, the N-th digested author's label): one a call, a block's whole entry
-  /// its names (`whole_block_call`), an entry a later call dequeued none.
+  /// The queue's author positions, each the live creators it names, in queue order, as an `author:N` label names the N-th
+  /// (`queued_author_marks`' positions at the call): an entry the queue's reading parts into names holds one a name, the
+  /// n-th its n-th creator where the reading made one a name, else each its whole entry (`whole_block_call`), as one name's
+  /// entry is; an entry a later call dequeued none.
   fn author_entries(&self) -> Vec<Vec<usize>> {
-    self
-      .entries
-      .iter()
-      .filter(|&&(start, end)| start == end || (start..end).any(|c| !self.replaced.contains(&c)))
-      .map(|&(start, end)| {
-        (start..end)
-          .filter(|c| !self.replaced.contains(c))
-          .collect()
-      })
-      .collect()
+    let mut positions = Vec::new();
+    for &(start, end, names) in &self.entries {
+      if start != end && (start..end).all(|c| self.replaced.contains(&c)) {
+        continue;
+      }
+      let live: Vec<usize> = (start..end)
+        .filter(|c| !self.replaced.contains(c))
+        .collect();
+      if names > 1 && live.len() == names {
+        positions.extend(live.into_iter().map(|c| vec![c]));
+      } else {
+        positions.extend(std::iter::repeat_n(live, names));
+      }
+    }
+    positions
   }
 
   /// The creators an `author:N` label names (`author_entries`): the N-th entry's; an address among several, the one of them it
@@ -1251,6 +1260,7 @@ pub fn resolve_with(
         events,
         calls,
         markers,
+        names,
       } => {
         policy = conventions(binding, hook);
         resolver.read_note_legends(events, None);
@@ -1273,7 +1283,9 @@ pub fn resolve_with(
         // `\lx@add@authors@append` hook, `split_author_line_cautious`)
         let cautious = hook == "\\lx@add@authors@append";
         resolver.block(*index, policy, cautious, keyvals.as_deref(), events);
-        resolver.entries.push((start, resolver.out.creators.len()));
+        resolver
+          .entries
+          .push((start, resolver.out.creators.len(), (*names).max(1)));
         // (a block whose authors a later clear removed, as a replacing call's: `ledger::record_clear`)
         if *cleared {
           resolver.replaced.extend(start..resolver.out.creators.len());
@@ -1306,7 +1318,9 @@ pub fn resolve_with(
         }
         resolver.api(*index, tag, role, attrs, events, policy);
         if tag == "ltx:creator" && role == "author" {
-          resolver.entries.push((start, resolver.out.creators.len()));
+          resolver
+            .entries
+            .push((start, resolver.out.creators.len(), 1));
         }
       },
       Input::NoteText { index, epoch, mark, events } => {
@@ -1487,6 +1501,7 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
             } else {
               Vec::new()
             },
+            names:   block.names,
           });
         }
       },

@@ -1140,6 +1140,7 @@ mod whole_tests {
       },
       list_setter: None,
       queued: Vec::new(),
+      names: 0,
     }))
   }
 

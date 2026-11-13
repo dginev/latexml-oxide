@@ -357,6 +357,7 @@ fn an_unlabelled_entry_is_no_legend() {
     ],
     calls:   Vec::new(),
     markers: Vec::new(),
+    names:   1,
   }];
   let tuples = resolved_tuples(&fm_resolve(&inputs));
   assert_eq!(tuples, [

@@ -395,15 +395,17 @@ pub(in crate::base_utilities) fn address_line_notes(
 /// entry (a paired row's `Ann Able\lx@add@affiliation{Univ A}`) —, those an `annotate=run` affiliation goes to; when
 /// every queued author has one, the authors of the last author list (`\lx@add@authors@list`: 2010.08573's second
 /// `\aistatsaddress`, the e-mails under a row its first address was paired with).
-pub(in crate::base_utilities) fn queued_row_start() -> usize {
+pub(in crate::base_utilities) fn queued_row_start() -> Result<usize> {
   let affiliation = T_CS!("\\lx@add@affiliation");
+  let positions = queued_entry_positions()?;
+  let mut positions = positions.iter().copied();
   let (authors, start) = with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => {
       let (mut authors, mut start) = (0, 0);
       for (tag, attr, content) in queue {
         let role = attr.get("role").map(String::as_str);
         if tag == "ltx:creator" && role == Some("author") {
-          authors += 1;
+          authors += positions.next().unwrap_or(1);
           if content.unlist_ref().contains(&affiliation) {
             start = authors;
           }
@@ -415,13 +417,11 @@ pub(in crate::base_utilities) fn queued_row_start() -> usize {
     },
     _ => (0, 0),
   });
-  if start < authors {
-    return start;
-  }
-  match lookup_value("lx_authors_list_start") {
+  Ok(match lookup_value("lx_authors_list_start") {
+    _ if start < authors => start,
     Some(Stored::Int(list_start)) if (list_start as usize) < authors => list_start as usize,
     _ => start,
-  }
+  })
 }
 
 /// Whether the addresses of `lines` may be the queued authors' in order from the one at `offset`

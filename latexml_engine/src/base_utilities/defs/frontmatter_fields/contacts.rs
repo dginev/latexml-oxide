@@ -39,7 +39,7 @@ pub(in crate::base_utilities) fn placed_contact_owner(
   content: &Tokens,
   weak: bool,
 ) -> Result<ContactOwner> {
-  let authors = queued_author_count();
+  let authors = queued_author_positions()?;
   let keys = queued_author_name_keys()?;
   let spelled: Vec<usize> = address_owners(&keys, content)
     .into_iter()

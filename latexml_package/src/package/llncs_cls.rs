@@ -135,9 +135,10 @@ LoadDefinitions!({
     // (a list whose authors carry `\inst` marks is split at its `\and`s and `\\`s, each piece a block, as before:
     // `Guang Yang\inst{1}\and \\ Binwei Yang\inst{2}`, 1902.08498 — cut first at the kernel's `\and` by meaning, a
     // macro holding only the separator among them, Option C P2-3, OXIDIZED_DESIGN_DIVERGENCES #995. Not yet one block
-    // the reading cuts: the queue's positions (`queued_author_marks`, the `author:N` labels the Cut's e-mail line gives
-    // one address per author by) count its entries, so a whole marked list read as one entry gives that line to the
-    // block, 2403.04183, 2409.06210, 2412.12966, 2512.24562 — the plan's P4 row)
+    // the reading cuts: the queue's positions count its names since P2-3b (2403.04183, 2409.06210, 2412.12966,
+    // 2512.24562 keep their e-mail lines), but one block reads a `*` after an `\inst` mark as a shown mark (2407.13764,
+    // RED `aa_glued_star_after_inst_mark_shown_twice_red`) and a names row after `\and \\` as an affiliation
+    // (1902.08498, 2605.10631))
     if names.unlist_ref().contains(&T_CS!("\\inst")) {
       out.extend(Invocation!(T_CS!("\\lx@llncs@author@split"), vec![Some(names)]).unlist());
     } else {

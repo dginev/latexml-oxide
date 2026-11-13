@@ -972,6 +972,7 @@ pub fn run_names_show_a_mark() -> Result<bool> {
   }
   // (each name's marks as digested, `queued_author_marks`: the run's are the last ones; a footnote symbol requests none)
   let names = queued_author_marks()?;
+  let run = positions_of_last_entries(run)?;
   Ok(
     names[names.len().saturating_sub(run)..]
       .iter()
@@ -2172,6 +2173,7 @@ fn group_shares_the_mark(marks: &[String], alternating: bool) -> Result<bool> {
     return Ok(false);
   }
   let names = queued_author_marks()?;
+  let since = positions_of_last_entries(since)?;
   // (every piece, symbols too, not `requested_labels`: a name showing only `$^{*}$` shows no mark the group shares, so the
   // line goes by the marked rule to the names that print its label)
   let scripts: Vec<Vec<String>> = names[names.len().saturating_sub(since)..]

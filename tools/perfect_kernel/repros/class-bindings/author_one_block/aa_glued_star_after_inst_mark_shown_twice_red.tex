@@ -1,0 +1,19 @@
+% mechanism: the reading of a whole-list block reads a `*` printed after a name's `\inst` mark as a request for the
+%   label `*` once another name of the block requests it (`\inst{1*}`): the name keeps its "*" and gains a shown mark
+%   "∗". A block of one name does not (llncs's marked list, cut at the call) — a reading defect, not the positions'
+% witness: 2407.13764 (`Qianqian Wang\inst{1,2}* \and Vickie Ye\inst{1*}`, llncs's list as one block: P23b's step 2 attempt)
+% oracle:  pdflatex (-no-shell-escape, TL 2025 has no aa.cls: 0805.1001's aa.cls) 0 errors: "Ann Able1,2 *, Bob Baker1∗ , and Cy Coe2"
+% engines: int169a (632698e1d8) and P23b: Ann Able's personname "Ann Able*" and a sup "∗"; 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able's name "Ann Able*" with no mark beside it; Bob Baker's mark "∗"
+% status:  RED (int169a, P23b): catalog only, no guard
+% moves:   post-merge (blocks llncs's marked list as one block: P23b report)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,2}* \and Bob Baker\inst{1*} \and Cy Coe\inst{2}}
+\institute{Univ A \and Univ B}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

@@ -1,17 +1,17 @@
 % mechanism: the frontmatter queue's author positions (`queue_reading.rs` `queued_author_marks`, the `author:N` labels;
-%   the resolver's `author_entries`) count queued entries, not names: llncs's marked list parted by commas, not `\and`, is
-%   one entry (`\lx@llncs@author@split` cuts at `\and`/`\And`/`\\` only), so the superscript-labelled institute's e-mail
-%   line, one address per author (`place_address_runs`: the count of addresses against the count of entries), is the
-%   block's. The same holds for every author list queued whole (the kernel's, OmniBus's, aa's, sv_support's, webofc's,
-%   ptephy's `\author`): the plan's P4 row ("parting their positions"), and what keeps llncs's marked list from going to
-%   the reading as one block (Option C P2-3: 2403.04183, 2409.06210, 2412.12966, 2512.24562 lose their addresses so)
+%   the resolver's `author_entries`) count names at the `\and`-family separators since P2-3b (`entry_names`), and a comma
+%   is none: llncs's marked list parted by commas is one entry of one position (`\lx@llncs@author@split` cuts at
+%   `\and`/`\And`/`\\`), so the superscript-labelled institute's e-mail line, one address per author
+%   (`place_address_runs`: the count of addresses against the count of positions), is the block's. The reading cuts the
+%   names at the comma at the flush; the call cannot read that cut (OD #995 "P2-3b")
 % witness: synthetic (the comma-parted marked list of 2607.21595, the address line of 2403.04183)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1, Bob Baker2" over "1 Univ A", "2 Univ B",
 %   "{u1, u2}@x.org"
-% engines: int160a1 (1f3949ecad) and P23: u1@x.org and u2@x.org on a nameless creator (the block's), 0 errors, 0 warnings
+% engines: int160a1 (1f3949ecad), P23, int169a (632698e1d8) and P23b: u1@x.org and u2@x.org on a nameless creator (the
+%   block's), 0 errors, 0 warnings
 % expect:  0 errors, 0 warnings; Ann Able: Univ A, u1@x.org; Bob Baker: Univ B, u2@x.org (as the `\and`-parted list gives)
-% status:  RED (int160a1, P23): catalog only, no guard (P4; a queue parting tried in P23 needs the resolver's
-%   `author_entries` to count names too)
+% status:  RED (int160a1, P23, P23b): catalog only, no guard
+% moves:   post-merge (the queue's positions would read the reading's comma cut)
 % preload: ar5iv.sty
 \documentclass{llncs}
 \begin{document}

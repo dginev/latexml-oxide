@@ -42,6 +42,7 @@ use super::*;
 /// #806, #808, #809).
 pub(in crate::base_utilities) fn sequenced_contact_labels(
   commands: &[RawFrontmatter],
+  names: &[Tokens],
 ) -> Result<Vec<String>> {
   // (a document that writes an e-mail between its addresses places each under its address, iopart.cls:363; one whose
   // addresses all come first writes its e-mails "after the postal address(es)", as IOP's guidelines ask, under the
@@ -60,12 +61,10 @@ pub(in crate::base_utilities) fn sequenced_contact_labels(
         Some("affiliation" | "address")
       )
   });
-  // (the names as they print, as `queued_author_name_keys` reads the queue's)
+  // (the names as they print, one a position, as `queued_author_name_keys` reads the queue's: `queued_position_names`)
   let mut keys: Vec<NameKeys> = Vec::new();
-  for entry in commands.iter().filter(|entry| {
-    entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-  }) {
-    keys.push(printed_name_keys(&queued_name(&entry.2), None)?);
+  for name in names {
+    keys.push(printed_name_keys(name, None)?);
   }
   // Each address with the class command's call it came from (`\lx@sequence@call`: `\emailAdd{a, b}` is one call of two
   // addresses), the author it spells, whether it is on the block where `\lx@add@contact@placed` put it, and where it
@@ -462,6 +461,13 @@ pub fn digest_front_matter() -> Result<()> {
   // else — deferred timing, digestion order, late re-let/\def fidelity —
   // is exactly the PR's. Newly-queued entries during this digest are
   // processed by the next invocation (or the end-of-document fallback).
+  // (the queued authors' names, a position each, where a sequenced contact may read them, `\lx@sequence@call` made:
+  // `sequenced_contact_labels`)
+  let author_names = if lookup_int("lx_sequence_call") > 0 {
+    queued_position_names()?
+  } else {
+    Rc::default()
+  };
   forget_queue_reading();
   let mut commands: Vec<RawFrontmatter> = match remove_value("frontmatter_raw") {
     Some(Stored::FrontmatterRaw(commands)) => commands,
@@ -520,7 +526,9 @@ pub fn digest_front_matter() -> Result<()> {
   let outer_sequence_at = lookup_int("lx_frontmatter_sequence_at");
   assign_value(
     "lx_frontmatter_sequence_labels",
-    Stored::String(pin(sequenced_contact_labels(&commands)?.join("\u{1}"))),
+    Stored::String(pin(
+      sequenced_contact_labels(&commands, &author_names)?.join("\u{1}"),
+    )),
     Some(Scope::Global),
   );
   assign_value(

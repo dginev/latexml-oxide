@@ -21,19 +21,27 @@ const QUEUE_READING: &str = "frontmatter_raw_reading";
 /// authors among the first `marks_read`, one marks query per queued author ([`author_marks`]).
 #[derive(Clone, Default)]
 struct QueueReading {
-  read:         usize,
+  read:            usize,
   /// The entries read so far, a reading again counted anew (the block's count in the `--debug=frontmatter` log, which
   /// `perfect_kernel_batchc1` pins).
-  entries_read: usize,
-  name_marks:   Rc<(Vec<String>, Vec<String>)>,
-  marks_read:   usize,
-  author_marks: Rc<Vec<Vec<String>>>,
+  entries_read:    usize,
+  name_marks:      Rc<(Vec<String>, Vec<String>)>,
+  marks_read:      usize,
+  author_marks:    Rc<Vec<Vec<String>>>,
   /// The queue positions (from 1) of the authors requesting each label, ascending.
-  requests:     FxHashMap<String, Vec<usize>>,
+  requests:        FxHashMap<String, Vec<usize>>,
   /// each author's name text where its marks' rehearsal read it ([`argument_marks_and_name`])
-  name_texts:   Vec<Option<String>>,
+  name_texts:      Vec<Option<String>>,
   /// the keys of the first `name_texts` authors' names as they print ([`queued_author_name_keys`])
-  name_keys:    Rc<Vec<NameKeys>>,
+  name_keys:       Rc<Vec<NameKeys>>,
+  /// the `author:N` positions each author entry read holds, one a name the reading parts it into ([`entry_names`])
+  entry_positions: Rc<Vec<usize>>,
+  /// each position's name, in queue order
+  position_names:  Rc<Vec<Tokens>>,
+  /// the author entries whose marks are read
+  entries_marked:  usize,
+  /// the queued entries whose positions are read
+  positions_read:  usize,
 }
 
 impl QueueReading {
@@ -50,35 +58,60 @@ impl QueueReading {
     }
   }
 
+  // (`from`: the queue position of the first of `entries`)
+  fn read_positions(&mut self, entries: &[RawFrontmatter], from: usize) -> Result<()> {
+    for (at, (tag, attr, command)) in entries.iter().enumerate() {
+      if tag == "ltx:creator" && attr.get("role").map(String::as_str) == Some("author") {
+        let names = entry_pieces(&queued_name(command), from + at)?;
+        Rc::make_mut(&mut self.entry_positions).push(names.len());
+        Rc::make_mut(&mut self.position_names).extend(names);
+      }
+    }
+    Ok(())
+  }
+
   fn read_marks(&mut self, entries: &[RawFrontmatter]) -> Result<()> {
     for (tag, attr, command) in entries {
       if tag != "ltx:creator" || attr.get("role").map(String::as_str) != Some("author") {
         continue;
       }
-      let (texts, keys, name) = author_marks(command)?;
-      self.name_texts.push(name);
-      let position = self.author_marks.len() + 1;
-      for label in keys {
-        let requesters = self.requests.entry(label).or_default();
-        if requesters.last() != Some(&position) {
-          requesters.push(position);
+      let count = self.entry_positions[self.entries_marked];
+      self.entries_marked += 1;
+      let from = self.author_marks.len();
+      for at in from..from + count {
+        let name = self.position_names[at].clone();
+        let (texts, keys, text) = if count == 1 {
+          author_marks(command, &name)?
+        } else {
+          author_marks(&name, &name)?
+        };
+        self.name_texts.push(text);
+        let position = at + 1;
+        for label in keys {
+          let requesters = self.requests.entry(label).or_default();
+          if requesters.last() != Some(&position) {
+            requesters.push(position);
+          }
         }
+        Rc::make_mut(&mut self.author_marks).push(texts);
       }
-      Rc::make_mut(&mut self.author_marks).push(texts);
     }
     Ok(())
   }
 }
 
-/// The marks a queued author `entry`'s name ([`queued_name`]) prints at its own level outside its notes, by their printed
-/// text (`argument_marks`: a document macro's mark too, `\newcommand\ua{\textsuperscript{1}}`), and the labels they
-/// request, as `\lx@sup@request@affiliation` keys them (`printed_label_keys`); a `\footnotemark` requests a note, none.
-/// Where the query cannot read the name, the entry's mark operands by spelling (`author_mark_operands`), counted. And the
-/// name's text where the query rehearsed it.
-fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>, Option<String>)> {
+/// The marks a queued author `entry`'s `name` ([`queued_name`], or one name the reading parts it into) prints at its own
+/// level outside its notes, by their printed text (`argument_marks`: a document macro's mark too,
+/// `\newcommand\ua{\textsuperscript{1}}`), and the labels they request, as `\lx@sup@request@affiliation` keys them
+/// (`printed_label_keys`); a `\footnotemark` requests a note, none. Where the query cannot read the name, the entry's
+/// mark operands by spelling (`author_mark_operands`), counted. And the name's text where the query rehearsed it.
+fn author_marks(
+  entry: &Tokens,
+  name: &Tokens,
+) -> Result<(Vec<String>, Vec<String>, Option<String>)> {
   let mut texts = Vec::new();
   let mut keys = Vec::new();
-  if let Some((marks, name)) = argument_marks_and_name(&queued_name(entry))? {
+  if let Some((marks, name)) = argument_marks_and_name(name)? {
     for mark in marks {
       if mark.role.as_deref() == Some("footnotemark") {
         continue;
@@ -180,9 +213,23 @@ fn queue_reading() -> Rc<QueueReading> {
   keep(reading)
 }
 
+/// The queue's reading, its authors' `author:N` positions read too, one a name an entry holds ([`entry_pieces`]).
+fn queue_positions_reading() -> Result<Rc<QueueReading>> {
+  let reading = queue_reading();
+  if reading.positions_read == reading.read {
+    return Ok(reading);
+  }
+  remove_value(QUEUE_READING);
+  let mut reading = Rc::unwrap_or_clone(reading);
+  let from = reading.positions_read;
+  reading.read_positions(&queued_from(from)[..reading.read - from], from)?;
+  reading.positions_read = reading.read;
+  Ok(keep(reading))
+}
+
 /// The queue's reading, its authors' marks read too.
 fn queue_marks_reading() -> Result<Rc<QueueReading>> {
-  let reading = queue_reading();
+  let reading = queue_positions_reading()?;
   if reading.marks_read == reading.read {
     return Ok(reading);
   }
@@ -207,15 +254,33 @@ pub(in crate::base_utilities) fn forget_queue_reading() {
   }
 }
 
-/// The marks of each queued author, by their printed text ([`author_marks`]), in queue order: the n-th digests with
-/// the label `author:n` (`num_ltx:creator{author}`), by which an address goes to it — as the count starts from no
-/// author, which holds unless authors an earlier flush digested are still kept (an appending `\author` after `\maketitle`).
+/// The marks of each queued author, by their printed text ([`author_marks`]), in queue order, one an `author:N`
+/// position: a queued entry holds one a name the reading parts it into ([`entry_pieces`]: sv_support's `\author{A \and
+/// B}` queued whole holds two), the n-th the creator the resolver gives `author:n` (`Resolver::author_entries`), by which an
+/// address goes to it — as the count starts from no author, which holds unless authors an earlier flush digested are
+/// still kept (an appending `\author` after `\maketitle`).
 pub(in crate::base_utilities) fn queued_author_marks() -> Result<Rc<Vec<Vec<String>>>> {
   Ok(Rc::clone(&queue_marks_reading()?.author_marks))
 }
 
-/// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]) as it prints, in queue order (the n-th
-/// digests with `author:n`): the words the rehearsal reads ([`argument_name_text`]: a macro's or a `\let` copy's
+/// The `author:N` positions the queued authors hold ([`queued_author_marks`]): one a name.
+pub(in crate::base_utilities) fn queued_author_positions() -> Result<usize> {
+  Ok(queue_positions_reading()?.position_names.len())
+}
+
+/// The `author:N` positions each queued author entry holds, in queue order ([`queued_author_marks`]).
+pub(in crate::base_utilities) fn queued_entry_positions() -> Result<Rc<Vec<usize>>> {
+  Ok(Rc::clone(&queue_positions_reading()?.entry_positions))
+}
+
+/// The positions the last `entries` queued author entries hold ([`queued_entry_positions`]).
+pub(in crate::base_utilities) fn positions_of_last_entries(entries: usize) -> Result<usize> {
+  let positions = queued_entry_positions()?;
+  Ok(positions.iter().rev().take(entries).sum())
+}
+
+/// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]) as it prints, one an `author:N` position
+/// ([`queued_author_marks`]): the words the rehearsal reads ([`argument_name_text`]: a macro's or a `\let` copy's
 /// expansion, an accent's letter), the marks' own rehearsal shared; an unread name spells no one, counted.
 pub(in crate::base_utilities) fn queued_author_name_keys() -> Result<Rc<Vec<NameKeys>>> {
   let reading = queue_marks_reading()?;
@@ -224,12 +289,15 @@ pub(in crate::base_utilities) fn queued_author_name_keys() -> Result<Rc<Vec<Name
   }
   remove_value(QUEUE_READING);
   let mut reading = Rc::unwrap_or_clone(reading);
-  let names = queued_author_names();
   let from = reading.name_keys.len();
-  for (name, text) in names.iter().zip(&reading.name_texts).skip(from) {
-    let keys = printed_name_keys(name, text.clone())?;
-    Rc::make_mut(&mut reading.name_keys).push(keys);
-  }
+  let keys: Vec<NameKeys> = reading
+    .position_names
+    .iter()
+    .zip(&reading.name_texts)
+    .skip(from)
+    .map(|(name, text)| printed_name_keys(name, text.clone()))
+    .collect::<Result<_>>()?;
+  Rc::make_mut(&mut reading.name_keys).extend(keys);
   Ok(Rc::clone(&keep(reading).name_keys))
 }
 
@@ -367,6 +435,30 @@ fn entry_names(name: &Tokens) -> Result<Vec<Tokens>> {
     content.get(from..).unwrap_or_default().to_vec(),
   ));
   Ok(names)
+}
+
+/// The names a queued author entry's `name` holds ([`entry_names`]) where a binding's whole-list call queued it, at
+/// `queue_position` (`\lx@add@author@split`: sv_support's, aa's, OmniBus's, webofc's, ptephy's, llncs's `\author`) — not
+/// the kernel `\author`'s block, whose addresses a raw class's numbered store places (`class_numbered_institutes`; RED
+/// `raw_class_numbered_institute_email_under_its_entry_lost_red`); several are recorded for its block, whose positions
+/// the resolver counts so.
+fn entry_pieces(name: &Tokens, queue_position: usize) -> Result<Vec<Tokens>> {
+  // (one name: the entry's name whole, as it was read before its names were known)
+  let names = if ledger::queuing_hook(queue_position) == Some("\\lx@add@author@split") {
+    entry_names(name)?
+  } else {
+    Vec::new()
+  };
+  if names.len() < 2 {
+    return Ok(vec![name.clone()]);
+  }
+  ledger::record_entry_names(queue_position, names.len());
+  Ok(names)
+}
+
+/// The queued authors' names, one an `author:N` position ([`queued_author_marks`]), in queue order.
+pub(in crate::base_utilities) fn queued_position_names() -> Result<Rc<Vec<Tokens>>> {
+  Ok(Rc::clone(&queue_positions_reading()?.position_names))
 }
 
 /// The words `tokens` print as a name-shape test reads them ([`visible_name_text`]), accents aside, lowercased.
