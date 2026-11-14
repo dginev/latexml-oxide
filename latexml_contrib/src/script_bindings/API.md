@@ -35,13 +35,21 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-179 functions, 279 calls.
+213 functions, 444 calls.
 
 | call | documentation |
 |---|---|
 | `!(?) -> bool` | Perl's truthiness, for `!!v` (`if ($v)`) and `!v` (`unless ($v)`): `()`, `""`, `"0"`, `0` and `0.0` are false, a bool is itself, every Token, Tokens (even empty), box, whatsit, array and map is true (Perl's objects overload no bool). |
-| `!=((), string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(string, ()) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string form (use `ToString(v) != s`); `()` against a string, either way round, is `""`, as Perl's `undef ne ''` (use `defined(v)` or `!!v`). |
-| `==((), string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(string, ()) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string form (use `ToString(v) == s`); `()` against a string, either way round, is `""`, as Perl's `undef eq ''` (use `defined(v)` or `!v`). Rhai's `switch` does not use this rule: it matches by value and type, so a `"" =>` case never matches `()` — test `if defined(v)` or `!v` instead. |
+| `!=((), string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Dimension, Dimension) -> bool`<br>`!=(Dimension, string) -> bool`<br>`!=(Glue, Glue) -> bool`<br>`!=(Glue, string) -> bool`<br>`!=(MuGlue, MuGlue) -> bool`<br>`!=(MuGlue, string) -> bool`<br>`!=(Number, Number) -> bool`<br>`!=(Number, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(string, ()) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Dimension) -> bool`<br>`!=(string, Glue) -> bool`<br>`!=(string, MuGlue) -> bool`<br>`!=(string, Number) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) != s`); `()` against a string, either way round, is `""`, as Perl's `undef ne ''` (use `defined(v)` or `!!v`). |
+| `*(Dimension, float) -> Dimension`<br>`*(Dimension, int) -> Dimension`<br>`*(Glue, float) -> Glue`<br>`*(Glue, int) -> Glue`<br>`*(MuGlue, float) -> MuGlue`<br>`*(MuGlue, int) -> MuGlue`<br>`*(Number, float) -> Number`<br>`*(Number, int) -> Number` | A Number, Dimension, Glue or MuGlue times an int or float (Number.pm `multiply`, truncated; Glue scales its stretch and shrink). |
+| `+(Dimension, Dimension) -> Dimension`<br>`+(Glue, Dimension) -> Glue`<br>`+(Glue, Glue) -> Glue`<br>`+(Glue, Number) -> Glue`<br>`+(MuGlue, MuGlue) -> MuGlue`<br>`+(Number, Number) -> Number` | The sum of two value handles of one type (Number.pm `add`); Glue + Glue and MuGlue + MuGlue as TeX adds glue (the higher fill order wins), Glue + a Number or Dimension adds to the natural size. |
+| `-(Dimension) -> Dimension`<br>`-(Dimension, Dimension) -> Dimension`<br>`-(Glue) -> Glue`<br>`-(Glue, Dimension) -> Glue`<br>`-(Glue, Glue) -> Glue`<br>`-(Glue, Number) -> Glue`<br>`-(MuGlue) -> MuGlue`<br>`-(MuGlue, MuGlue) -> MuGlue`<br>`-(Number) -> Number`<br>`-(Number, Number) -> Number` | The difference of two value handles (Number.pm `subtract`), or the negation of one (`negate`). |
+| `/(Dimension, int) -> Dimension`<br>`/(Glue, int) -> Glue`<br>`/(MuGlue, int) -> MuGlue`<br>`/(Number, int) -> Number` | A value handle divided by an int, truncated (Number.pm `divide`). |
+| `<(Dimension, Dimension) -> bool`<br>`<(Glue, Glue) -> bool`<br>`<(MuGlue, MuGlue) -> bool`<br>`<(Number, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
+| `<=(Dimension, Dimension) -> bool`<br>`<=(Glue, Glue) -> bool`<br>`<=(MuGlue, MuGlue) -> bool`<br>`<=(Number, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
+| `==((), string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Dimension, Dimension) -> bool`<br>`==(Dimension, string) -> bool`<br>`==(Glue, Glue) -> bool`<br>`==(Glue, string) -> bool`<br>`==(MuGlue, MuGlue) -> bool`<br>`==(MuGlue, string) -> bool`<br>`==(Number, Number) -> bool`<br>`==(Number, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(string, ()) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Dimension) -> bool`<br>`==(string, Glue) -> bool`<br>`==(string, MuGlue) -> bool`<br>`==(string, Number) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) == s`); `()` against a string, either way round, is `""`, as Perl's `undef eq ''` (use `defined(v)` or `!v`). Rhai's `switch` does not use this rule: it matches by value and type, so a `"" =>` case never matches `()` — test `if defined(v)` or `!v` instead. |
+| `>(Dimension, Dimension) -> bool`<br>`>(Glue, Glue) -> bool`<br>`>(MuGlue, MuGlue) -> bool`<br>`>(Number, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
+| `>=(Dimension, Dimension) -> bool`<br>`>=(Glue, Glue) -> bool`<br>`>=(MuGlue, MuGlue) -> bool`<br>`>=(Number, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
 | `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
 | `AddToMacro(string\|Token, string\|Token)` | Append tokens (or TeX source) to a macro's expansion, keeping its lock, as Perl's `AddToMacro`; a non-expandable `cs` Warns and is ignored, an undefined one is defined with the tokens. ([`add_to_macro`](latexml_core::binding::content::add_to_macro)) |
 | `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
@@ -54,6 +62,7 @@ Called at the top level of a binding file, or from inside any body.
 | `AssignMathcode(string, int)`<br>`AssignMathcode(string, int, string)` | Set a character's math code, with an optional scope. ([`assign_mathcode`](latexml_core::state::assign_mathcode)) |
 | `AssignMeaning(string\|Token, string\|Token)` | **Deprecated** (Warns once per binding load): use `Let(cs, other[, scope])`. Give a token (CS name or `Token`) the current meaning of another, as `Let`. ([`let_definition`](latexml_core::state::let_definition)) |
 | `AssignNumber(string, ?)`<br>`AssignNumber(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
+| `AssignRegister(?, ?)`<br>`AssignRegister(?, ?, string)`<br>`AssignRegister(?, ?, string, array)` | Perl's `AssignRegister(cs, value[, scope[, params]])`: a typed value, or a string read for the register's type; a Warning when `cs` is no register. ([`assign_register_token`](latexml_core::state::assign_register_token)) |
 | `AssignSFcode(string, int)`<br>`AssignSFcode(string, int, string)` | Set a character's space-factor code, with an optional scope. ([`assign_sfcode`](latexml_core::state::assign_sfcode)) |
 | `AssignString(string, ?)`<br>`AssignString(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignUCcode(string, int)`<br>`AssignUCcode(string, int, string)` | Set a character's uppercase code, with an optional scope. ([`assign_uccode`](latexml_core::state::assign_uccode)) |
@@ -100,11 +109,12 @@ Called at the top level of a binding file, or from inside any body.
 | `DefMathRewrite(map)`<br>`DefMathRewrite(map, Fn)` | As `DefRewrite`, scoped to math. |
 | `DefParameterType(string, Fn)`<br>`DefParameterType(string, Fn, map)` | Define a parameter type: the reader `|gullet, extra…|` returns its value (Tokens, a Token, `()` for none), with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, `afterDigest`, and `nargs` accepted unread, as Perl's. ([`Parameter`](latexml_core::parameter::Parameter)) |
 | `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`. A Perl-form closure declares its handle and every argument, `|stomach, x|`; fewer parameters is the old form, with a Warning naming the fix. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
-| `DefRegister(string, int)`<br>`DefRegister(string, string)` | Define a register with an initial value. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
+| `DefRegister(string, ?)`<br>`DefRegister(string, ?, map)` | Perl's `DefRegister(cs, value[, #{readonly, getter, setter, address, allocate}])`: the value's type (Number, Dimension, Glue, MuGlue, Tokens) is the register's; a string is read for the type `cs` already has, else by its form (a `mu` unit MuGlue, `plus`/`minus` Glue, else Dimension). `getter` is `|params…|`, `setter` `|value, scope, params…|`. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
 | `Digest(Token) -> Digested`<br>`Digest(Tokens) -> Digested`<br>`Digest(string) -> Digested` | Digest TeX source (a string, TokenizeInternal'd), a `Token` or `Tokens`, returning the digested handle. ([`digest`](latexml_core::stomach::digest)) |
 | `DigestIf(string\|Token) -> ?` | Digest a control sequence if it is defined; `()` otherwise. ([`digest_if`](latexml_core::binding::content::digest_if)) |
 | `DigestText(Token) -> Digested`<br>`DigestText(Tokens) -> Digested`<br>`DigestText(string) -> Digested` | Digest TeX source, a `Token` or `Tokens` in restricted horizontal mode, returning the digested handle. ([`digest_text`](latexml_core::binding::content::digest_text)) |
+| `Dimension(float) -> Dimension`<br>`Dimension(int) -> Dimension`<br>`Dimension(string) -> Dimension` | Perl's `Dimension(spec)`: `"3pt"` (a number and a unit), or an int of sp; a spec Perl's constructor cannot read is an Error and 0. |
 | `EndSemiverbatim()` | Close a `StartSemiverbatim` region, restoring the saved catcodes. ([`end_semiverbatim`](latexml_core::state::end_semiverbatim)) |
 | `Equals(?, ?) -> bool` | Perl's `Equals`: `()` equals only `()`; tokens compare their meanings (themselves when neither has one), `Tokens` token by token, other values by their string. |
 | `Error(string, string, string)`<br>`Error(string, string, string, ?)` | Log an `Error:`, with Perl's trailing details (a string or an array). Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion. |
@@ -117,6 +127,7 @@ Called at the top level of a binding file, or from inside any body.
 | `FindFile(string) -> ?`<br>`FindFile(string, map) -> ?` | The path of a file on the search paths (Perl's `type`/`notex`/`noltxml`/`searchpaths_only`), or `()`. ([`find_file`](latexml_core::binding::content::find_file)) |
 | `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `defined(v)`. |
 | `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
+| `Glue(int) -> Glue`<br>`Glue(int, int, ?, int, ?) -> Glue`<br>`Glue(string) -> Glue` | Perl's `Glue(spec)`: `"1pt plus 2fil minus 1pt"`, an int of sp, or `Glue(sp, plus, pfill, minus, mfill)` with fill orders as names or 0-3; an unreadable spec is an Error and 0. |
 | `Info(string, string, string)`<br>`Info(string, string, string, ?)` | Log an `Info:` line, plus optional details. |
 | `Input(string)` | Input a TeX file (`\input`'s core). ([`input`](latexml_core::binding::content::input)) |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | Find and load the definitions for a package or class. ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
@@ -131,6 +142,7 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupCatcode(string) -> ?` | The category code currently in force for a character; `()` when the table holds none. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |
 | `LookupDefinition(string\|Token) -> Definition?` | Fetch the installed definition of a CS name or `Token` so hooks can be pushed onto it; `()` when undefined or `\let` to a character. |
 | `LookupDelcode(string) -> ?` | A character's delimiter code; `()` when the table holds none. ([`lookup_delcode`](latexml_core::state::lookup_delcode)) |
+| `LookupDimension(string) -> Dimension`<br>`LookupDimension(string, bool) -> Dimension` | Perl's `LookupDimension(x[, noerror])`: a spec or a register's name as a Dimension; `Dimension(0)` with a Warning otherwise. ([`lookup_dimension_cs`](latexml_core::state::lookup_dimension_cs)) |
 | `LookupFloat(string) -> float` | Read a value as a fractional (float) number, keeping the fraction `LookupNumber` would truncate. ([`lookup_float`](latexml_core::state::lookup_float)) |
 | `LookupLCcode(string) -> ?` | A character's lowercase code; `()` when the table holds none. ([`lookup_lccode`](latexml_core::state::lookup_lccode)) |
 | `LookupMapping(string, string) -> ?` | Read one key out of a named mapping, with the type it was stored as; `()` when absent. ([`lookup_mapping`](latexml_core::state::lookup_mapping)) |
@@ -138,17 +150,20 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupMathcode(string) -> ?` | A character's math code; `()` when the table holds none. ([`lookup_mathcode`](latexml_core::state::lookup_mathcode)) |
 | `LookupMeaning(string\|Token) -> string` | What a token means right now: its definition, or itself. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
 | `LookupNumber(string) -> int` | Read a value as a number. ([`lookup_number`](latexml_core::state::lookup_number)) |
-| `LookupRegisterOrDefault(string\|Token) -> string` | A register's value as its TeX string (the type's zero when `cs` is no register); the typed handle is round C's. |
+| `LookupRegister(string\|Token) -> ?`<br>`LookupRegister(string\|Token, array) -> ?` | Perl's `LookupRegister(cs[, params])`: the register's typed value (Number, Dimension, Glue, MuGlue, Tokens); `()` with a Warning when `cs` is no register. ([`lookup_register_token`](latexml_core::state::lookup_register_token)) |
+| `LookupRegisterOrDefault(string\|Token) -> ?` | A register's typed value (as `LookupRegister`), a Number 0 when `cs` is no register, without a Warning. |
 | `LookupSFcode(string) -> ?` | A character's space-factor code; `()` when the table holds none. ([`lookup_sfcode`](latexml_core::state::lookup_sfcode)) |
 | `LookupString(string) -> string` | Read a value as a string; empty when unset. ([`lookup_string`](latexml_core::state::lookup_string)) |
 | `LookupTokens(string) -> Tokens` | Read a value as tokens. ([`lookup_tokens`](latexml_core::state::lookup_tokens)) |
 | `LookupUCcode(string) -> ?` | A character's uppercase code; `()` when the table holds none. ([`lookup_uccode`](latexml_core::state::lookup_uccode)) |
 | `LookupValue(string) -> ?` | Read a value with the type it was stored as (a list as an array); `()` when unset. ([`lookup_value`](latexml_core::state::lookup_value)) |
 | `MergeFont(map)` | Merge font attributes into the current font, group-locally. ([`merge_font`](latexml_core::binding::content::merge_font)) |
+| `MuGlue(int) -> MuGlue`<br>`MuGlue(int, int, ?, int, ?) -> MuGlue`<br>`MuGlue(string) -> MuGlue` | Perl's `MuGlue(spec)`: `"3mu plus 1mu"`, an int of the mu value in sp, or the five-argument form; an unreadable spec is an Error and 0. |
 | `NewCounter(string)`<br>`NewCounter(string, string)`<br>`NewCounter(string, string, map)` | Declare a new counter. ([`new_counter`](latexml_core::binding::counter::dialect::new_counter)) |
 | `Note(string)` | Write a progress note to both the conversion log and stderr. |
 | `NoteLog(string)` | Write a progress note to the conversion log only. |
 | `NoteSTDERR(string)` | Write a progress note to stderr only. |
+| `Number(float) -> Number`<br>`Number(int) -> Number`<br>`Number(string) -> Number` | Perl's `Number(n)`: an int, a float (truncated) or a numeric string; any other string is an Error and 0. |
 | `ParseXML(string) -> array` | Parse a markup chunk into nodes; a bare fragment is fine. ([`parse_fragment`](latexml_core::common::xml::parse_fragment)) |
 | `PassOptions(string, string, array)` | Forward options to a package or class not yet loaded. ([`pass_options`](latexml_core::binding::content::pass_options)) |
 | `PopValue(string) -> ?` | Pop and return the last value of a value-table list, type preserved (`()` if empty). ([`pop_value`](latexml_core::state::pop_value)) |
@@ -211,12 +226,31 @@ Called at the top level of a binding file, or from inside any body.
 | `UnshiftValue(string, ?)` | Prepend a value (string/int/float/bool/Tokens/Token) to a value-table list, creating it (global) if absent. ([`unshift_value`](latexml_core::state::unshift_value)) |
 | `Warn(string, string, string)`<br>`Warn(string, string, string, ?)` | Log a `Warning:` with the given category and object, plus optional details. |
 | `XEquals(string\|Token, string\|Token) -> bool` | Whether two tokens (CS name strings or `Token`s) have the same meaning. ([`x_equals`](latexml_core::state::x_equals)) |
+| `absolute(Dimension) -> Dimension`<br>`absolute(Glue) -> Glue`<br>`absolute(MuGlue) -> MuGlue`<br>`absolute(Number) -> Number` | A value handle's absolute value (Number.pm). |
+| `add(Dimension, Dimension) -> Dimension`<br>`add(Glue, Dimension) -> Glue`<br>`add(Glue, Glue) -> Glue`<br>`add(Glue, Number) -> Glue`<br>`add(MuGlue, MuGlue) -> MuGlue`<br>`add(Number, Number) -> Number` | Perl's `$a->add($b)`: as `+`. |
 | `assign_global(string, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value, "global")`. [`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group. |
 | `assign_value(string, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value, "local")`. [`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group. |
 | `defined(?) -> bool` | Perl's `defined($v)`: true for every value but `()` (`""`, `0` and empty Tokens are defined); `v == ()` is not the test for a string, which compares equal to `()` when empty. |
+| `divide(Dimension, Number) -> Dimension`<br>`divide(Dimension, int) -> Dimension`<br>`divide(Glue, Number) -> Glue`<br>`divide(Glue, int) -> Glue`<br>`divide(MuGlue, Number) -> MuGlue`<br>`divide(MuGlue, int) -> MuGlue`<br>`divide(Number, Number) -> Number`<br>`divide(Number, int) -> Number` | Perl's `$a->divide(n)`: as `/`; also by a Number. |
+| `divideround(Dimension, int) -> Dimension`<br>`divideround(Glue, int) -> Glue`<br>`divideround(MuGlue, int) -> MuGlue`<br>`divideround(Number, int) -> Number` | Perl's `$a->divideround(n)`: the quotient rounded, as eTeX's. |
+| `getShrink(Glue) -> Dimension` | A Glue's shrink as a Dimension (Glue.pm). |
+| `getShrinkOrder(Glue) -> Number` | A Glue's shrink fill order as a Number, 0 (finite) to 3 (filll). |
+| `getStretch(Glue) -> Dimension` | A Glue's stretch as a Dimension (Glue.pm). |
+| `getStretchOrder(Glue) -> Number` | A Glue's stretch fill order as a Number, 0 (finite) to 3 (filll). |
+| `larger(Dimension, Dimension) -> Dimension`<br>`larger(Glue, Glue) -> Glue`<br>`larger(MuGlue, MuGlue) -> MuGlue`<br>`larger(Number, Number) -> Number` | The larger of two value handles of one type, by `valueOf`. |
 | `lookup_value(string) -> string` | **Deprecated** (Warns once per binding load): use `LookupValue(key)`. [`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here. |
+| `multiply(Dimension, Number) -> Dimension`<br>`multiply(Dimension, float) -> Dimension`<br>`multiply(Dimension, int) -> Dimension`<br>`multiply(Glue, Number) -> Glue`<br>`multiply(Glue, float) -> Glue`<br>`multiply(Glue, int) -> Glue`<br>`multiply(MuGlue, Number) -> MuGlue`<br>`multiply(MuGlue, float) -> MuGlue`<br>`multiply(MuGlue, int) -> MuGlue`<br>`multiply(Number, Number) -> Number`<br>`multiply(Number, float) -> Number`<br>`multiply(Number, int) -> Number` | Perl's `$a->multiply(n)`: as `*`; also by a Number. |
+| `negate(Dimension) -> Dimension`<br>`negate(Glue) -> Glue`<br>`negate(MuGlue) -> MuGlue`<br>`negate(Number) -> Number` | A value handle negated (Glue: its stretch and shrink too). |
 | `neutralize_font()` | Reset the text and math fonts to their defaults, group-locally. ([`neutralize_font`](latexml_engine::base_utilities::neutralize_font)) |
+| `ptValue(Dimension) -> float`<br>`ptValue(Dimension, int) -> float`<br>`ptValue(Glue) -> float`<br>`ptValue(Glue, int) -> float` | A Dimension's or Glue's natural size in points, rounded to `prec` decimals (2 by default; Dimension.pm). |
+| `pxValue(Dimension) -> float`<br>`pxValue(Dimension, int) -> float`<br>`pxValue(Glue) -> float`<br>`pxValue(Glue, int) -> float` | A Dimension's or Glue's natural size in pixels at the `DPI` value (Dimension.pm). |
 | `roman(int) -> Tokens` | Lower-case roman numerals of a number, as `Tokens`. |
+| `sign(Dimension) -> int`<br>`sign(Glue) -> int`<br>`sign(MuGlue) -> int`<br>`sign(Number) -> int` | -1, 0 or 1 by a value handle's `valueOf`. |
+| `smaller(Dimension, Dimension) -> Dimension`<br>`smaller(Glue, Glue) -> Glue`<br>`smaller(MuGlue, MuGlue) -> MuGlue`<br>`smaller(Number, Number) -> Number` | The smaller of two value handles of one type, by `valueOf`. |
+| `spValue(Dimension) -> int`<br>`spValue(Glue) -> int` | A Dimension's or Glue's natural size in sp. |
+| `subtract(Dimension, Dimension) -> Dimension`<br>`subtract(Glue, Dimension) -> Glue`<br>`subtract(Glue, Glue) -> Glue`<br>`subtract(Glue, Number) -> Glue`<br>`subtract(MuGlue, MuGlue) -> MuGlue`<br>`subtract(Number, Number) -> Number` | Perl's `$a->subtract($b)`: as `-`. |
+| `toAttribute(Dimension) -> string`<br>`toAttribute(Glue) -> string`<br>`toAttribute(MuGlue) -> string`<br>`toAttribute(Number) -> string` | A value handle as an XML attribute value (`3.0pt`; Dimension.pm `attributeformat`). |
+| `valueOf(Dimension) -> int`<br>`valueOf(Glue) -> int`<br>`valueOf(MuGlue) -> int`<br>`valueOf(Number) -> int` | A value handle's integer value: a Number's value, a Dimension's or Glue's sp (Glue: the natural size). |
 | `whatsit() -> Whatsit` | **Deprecated** (Warns once per binding load): use the hook's whatsit argument. A handle on the whatsit under construction, inside a hook. USING it outside one is a clean script error, not a crash. |
 
 ## `document` methods
@@ -354,6 +388,50 @@ Perl's Common/Font.pm getters, on the font a `DefLigature` `fontTest` closure re
 | `getSeries() -> ?` | A `Font`'s series, or `()`. |
 | `getShape() -> ?` | A `Font`'s shape, or `()`. |
 | `getSize() -> ?` | A `Font`'s size in points, or `()`. |
+
+## `Number` methods
+
+A Number value handle (Common/Number.pm); its shared arithmetic is under Global functions.
+
+2 functions, 2 calls.
+
+| call | documentation |
+|---|---|
+| `toString() -> string` | Perl's `toString`: the value as TeX prints it (`\the`), `1.0pt plus 2.0pt`. |
+| `to_string() -> string` | The value as TeX prints it (`toString`, `\the`): `1.0pt plus 2.0pt`. |
+
+## `Dimension` methods
+
+A Dimension value handle (Common/Dimension.pm); its shared arithmetic is under Global functions.
+
+2 functions, 2 calls.
+
+| call | documentation |
+|---|---|
+| `toString() -> string` | Perl's `toString`: the value as TeX prints it (`\the`), `1.0pt plus 2.0pt`. |
+| `to_string() -> string` | The value as TeX prints it (`toString`, `\the`): `1.0pt plus 2.0pt`. |
+
+## `Glue` methods
+
+A Glue value handle (Common/Glue.pm); its shared arithmetic is under Global functions.
+
+2 functions, 2 calls.
+
+| call | documentation |
+|---|---|
+| `toString() -> string` | Perl's `toString`: the value as TeX prints it (`\the`), `1.0pt plus 2.0pt`. |
+| `to_string() -> string` | The value as TeX prints it (`toString`, `\the`): `1.0pt plus 2.0pt`. |
+
+## `MuGlue` methods
+
+A MuGlue value handle (Core/MuGlue.pm); its shared arithmetic is under Global functions.
+
+2 functions, 2 calls.
+
+| call | documentation |
+|---|---|
+| `toString() -> string` | Perl's `toString`: the value as TeX prints it (`\the`), `1.0pt plus 2.0pt`. |
+| `to_string() -> string` | The value as TeX prints it (`toString`, `\the`): `1.0pt plus 2.0pt`. |
 
 ## `Command` methods
 

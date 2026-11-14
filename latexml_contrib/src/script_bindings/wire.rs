@@ -37,7 +37,7 @@ use super::{
 /// A body that fails PART-WAY may leave elements it opened unclosed; the document
 /// builder's auto-close handles that, so the result is structurally odd rather
 /// than malformed.
-fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Result<T> {
+pub(super) fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Result<T> {
   // (a Fatal the body raised is not contained: it ends the conversion, as Perl's `Fatal` dies, #792)
   if let Some(fatal) = take_raised_fatal(&e) {
     return Err(fatal);
@@ -903,14 +903,18 @@ pub(super) fn wire_conditional(
   def_conditional(cs, paramlist, closure, options)
 }
 
-/// An argument as Perl hands it to a body: a token argument as `Tokens`/`Token`, a keyval set as `KeyVals`, an
-/// omitted optional as `()`; a number or dimension its TeX string until round C's typed handles.
+/// An argument as Perl hands it to a body: a token argument as `Tokens`/`Token`, a keyval set as `KeyVals`, a
+/// Number, Dimension, Glue or MuGlue its typed handle, an omitted optional as `()`.
 pub(super) fn arg_value(arg: ArgWrap) -> Dynamic {
   match arg {
     ArgWrap::Tokens(tokens) => Dynamic::from(tokens),
     ArgWrap::Token(token) => Dynamic::from(token),
     ArgWrap::KV(kv) => Dynamic::from(*kv),
     ArgWrap::None => Dynamic::UNIT,
+    ArgWrap::Number(n) => Dynamic::from(n),
+    ArgWrap::Dimension(d) => Dynamic::from(d),
+    ArgWrap::Glue(g) => Dynamic::from(g),
+    ArgWrap::MuGlue(g) => Dynamic::from(g),
     other => arg_to_dynamic(other),
   }
 }
@@ -1646,15 +1650,26 @@ pub(super) fn wire_parameter_type(
   Ok(())
 }
 
-/// A reader's returned value as an argument: Tokens, a Token or a keyval set as itself, `()` as none (Perl undef),
-/// TeX source TokenizeInternal'd.
-fn dynamic_to_arg(value: Dynamic) -> ArgWrap {
+/// A reader's returned value as an argument: Tokens, a Token, a keyval set or a value handle as itself, `()` as none
+/// (Perl undef), TeX source TokenizeInternal'd.
+pub(super) fn dynamic_to_arg(value: Dynamic) -> ArgWrap {
   if value.is_unit() {
     ArgWrap::None
   } else if let Some(token) = value.clone().try_cast::<Token>() {
     ArgWrap::Token(token)
   } else if let Some(kv) = value.clone().try_cast::<latexml_core::keyvals::KeyVals>() {
     ArgWrap::KV(Box::new(kv))
+  } else if let Some(n) = value.clone().try_cast::<Number>() {
+    ArgWrap::Number(n)
+  } else if let Some(d) = value.clone().try_cast::<Dimension>() {
+    ArgWrap::Dimension(d)
+  } else if let Some(g) = value.clone().try_cast::<latexml_core::common::glue::Glue>() {
+    ArgWrap::Glue(g)
+  } else if let Some(g) = value
+    .clone()
+    .try_cast::<latexml_core::common::muglue::MuGlue>()
+  {
+    ArgWrap::MuGlue(g)
   } else {
     ArgWrap::Tokens(dynamic_to_tokens(value))
   }

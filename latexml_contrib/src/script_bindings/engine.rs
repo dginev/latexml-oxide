@@ -151,6 +151,7 @@ pub(super) fn make_engine() -> Engine {
   // Perl's token constructors and catcode constants (Token.pm:26-37, :45-84); a Perl
   // constant (`T_MATH`, `CC_ACTIVE`) is a zero-argument function here.
   engine.register_type_with_name::<Token>("Token");
+  values::register_values(&mut engine);
   // A token value in a string context (`"(" + ReadArg() + ")"`, `${…}`) is its TeX source, as `UnTeX` gives it.
   engine.register_fn("to_string", |t: &mut Token| Tokens::new(vec![*t]).untex());
   engine.register_fn("to_string", |t: &mut Tokens| t.clone().untex());
@@ -1082,22 +1083,6 @@ pub(super) fn make_engine() -> Engine {
     let keysets: Vec<&str> = keysets.iter().map(String::as_str).collect();
     latexml_core::binding::content::process_key_options(inorder, &keysets).map_err(rhai_err)
   });
-  // LookupRegisterOrDefault (the macro): the register's value, the type's zero when `cs` is no register; the
-  // value is its TeX string until round C's typed handles.
-  engine.register_fn(
-    "LookupRegisterOrDefault",
-    |cs: Dynamic| -> RhaiResult<String> {
-      let cs = token_arg("LookupRegisterOrDefault", cs)?;
-      Ok(
-        latexml_core::state::lookup_register_definition(&cs)
-          .map(|defn| {
-            latexml_core::definition::Definition::value_of(&*defn, Vec::new()).unwrap_or_default()
-          })
-          .unwrap_or_default()
-          .to_string(),
-      )
-    },
-  );
   // FindFile (Package.pm:2076): the path, or `()`; Perl's `type`/`notex`/`noltxml`/`searchpaths_only`.
   engine.register_fn("FindFile", |name: &str| -> RhaiResult<Dynamic> {
     find_file(name, Map::new())
@@ -1153,26 +1138,9 @@ pub(super) fn make_engine() -> Engine {
   // Equals (Object.pm:73): same type and value; two tokens are equal when `\let` to the same meaning.
   engine.register_fn("Equals", |x: Dynamic, y: Dynamic| equals(x, y));
 
-  // ── further definition forms (DefRegister/DefKeyVal/DefMath/DefLigature) ──
+  // ── further definition forms (DefKeyVal/DefMath/DefLigature; DefRegister is in `values.rs`) ──
   // These run when the script executes (per conversion, like a Perl .ltxml),
   // lowering to the same dialect functions their compile-time macros use.
-  engine.register_fn(
-    "DefRegister",
-    |proto: &str, v: i64| -> std::result::Result<(), Box<EvalAltResult>> {
-      let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
-      latexml_core::binding::def::dialect::def_register(cs, params, Number(v), None)
-        .map_err(rhai_err)
-    },
-  );
-  // String value = a dimension spec ("5pt", "0.4em", …) → Dimension register.
-  engine.register_fn(
-    "DefRegister",
-    |proto: &str, spec: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
-      let dim = Dimension::new_f64(Dimension::spec_to_f64(spec).map_err(rhai_err)?);
-      latexml_core::binding::def::dialect::def_register(cs, params, dim, None).map_err(rhai_err)
-    },
-  );
   engine.register_fn(
     "DefKeyVal",
     |keyset: &str, key: &str, vtype: &str| -> std::result::Result<(), Box<EvalAltResult>> {
@@ -2753,7 +2721,12 @@ fn details_of(details: Dynamic) -> String {
 
 /// `Error(cat, obj, msg[, details])`. `Error!` escalates to a Fatal past MAX_ERRORS (an `Err`), which the script
 /// sees as a Rhai error so the conversion aborts cleanly.
-fn script_error(cat: &str, obj: &str, msg: &str, details: Option<String>) -> RhaiResult<()> {
+pub(super) fn script_error(
+  cat: &str,
+  obj: &str,
+  msg: &str,
+  details: Option<String>,
+) -> RhaiResult<()> {
   let res: Result<()> = (|| {
     match details {
       Some(details) => latexml_core::Error!(cat, obj, msg.to_string(), details),
@@ -3110,7 +3083,7 @@ fn explode(s: &str, text: bool) -> Tokens {
 
 /// `==`/`!=` between a `T` and a string either way round, on its string form ([`dynamic_to_string`]), Warning
 /// `deprecated` (`old`) once per binding load.
-fn register_string_tests<T: Clone + 'static>(engine: &mut Engine, old: &'static str) {
+pub(super) fn register_string_tests<T: Clone + 'static>(engine: &mut Engine, old: &'static str) {
   let same = move |v: T, s: &str| {
     warn_deprecated(old);
     dynamic_to_string(Dynamic::from(v)) == s

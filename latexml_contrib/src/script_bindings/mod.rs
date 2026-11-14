@@ -62,7 +62,7 @@ use latexml_core::{
     ExpansionClosure, FontDirective, PrimitiveBody, PrimitiveClosure, PropertiesClosure,
     ReplacementClosure, Reversion, argument::ArgWrap, conditional::ConditionalOptions,
     expandable::ExpandableOptions, math_primitive::MathPrimitiveOptions,
-    primitive::PrimitiveOptions,
+    primitive::PrimitiveOptions, register::RegisterValue,
   },
   digested::Digested,
   document::{Document, tag::TagConstructionClosure},
@@ -602,6 +602,7 @@ fn current_whatsit_entry() -> std::result::Result<(*mut Whatsit, bool), Box<Eval
 }
 
 mod engine;
+mod values;
 mod wire;
 use engine::make_engine;
 #[allow(unused_imports)]
@@ -769,15 +770,18 @@ fn scope_of(scope: &str) -> Option<Scope> {
 /// Marshal a `Stored` out to a Rhai value with its type (Perl hands back the stored object, Package.pm
 /// LookupValue :257, LookupMapping :283): a string, bool, int, float, `Token`, `Tokens` or digested handle as
 /// itself, a list value as an array of such (Perl's arrayref, #315), a hash as a map, a char or catcode as its int,
-/// `None` as `()` (undef). A register value (Dimension, Glue, …: round C) is its TeX string; a kind with no script
-/// form (a node, a font map, a stash) is the placeholder `Stored[??]`. The inverse of [`dynamic_to_stored`].
+/// `None` as `()` (undef), a Number, Dimension, Glue or MuGlue its typed handle; a kind with no script form (a node,
+/// a font map, a stash) is the placeholder `Stored[??]`. The inverse of [`dynamic_to_stored`].
 fn stored_to_dynamic(v: Stored) -> Dynamic {
   match v {
     Stored::None => Dynamic::UNIT,
     Stored::String(s) => Dynamic::from(arena::to_string(s)),
     Stored::Bool(b) => Dynamic::from(b),
     Stored::Int(i) => Dynamic::from(i),
-    Stored::Number(n) => Dynamic::from(n.0),
+    Stored::Number(n) => Dynamic::from(n),
+    Stored::Dimension(d) => Dynamic::from(d),
+    Stored::Glue(g) => Dynamic::from(g),
+    Stored::MuGlue(g) => Dynamic::from(g),
     Stored::Float(f) => Dynamic::from(f.0),
     Stored::Tokens(t) => Dynamic::from(t),
     Stored::Token(t) => Dynamic::from(t),
@@ -811,8 +815,8 @@ fn stored_to_dynamic(v: Stored) -> Dynamic {
 }
 
 /// Marshal a Rhai value INTO a `Stored` (Perl's value table is untyped, Package.pm AssignValue :261,
-/// AssignMapping :287, PushValue): string, int, float, bool, `Token`, `Tokens` and a digested handle keep their
-/// type, an array is a list and a map a hash of such (Perl's arrayref/hashref), `()` is `None` (undef); anything
+/// AssignMapping :287, PushValue): string, int, float, bool, `Token`, `Tokens`, a value handle (Number, Dimension,
+/// Glue, MuGlue) and a digested handle keep their type, an array is a list and a map a hash of such (Perl's arrayref/hashref), `()` is `None` (undef); anything
 /// else falls back to its string form (#540). The inverse of [`stored_to_dynamic`].
 fn dynamic_to_stored(v: Dynamic) -> Stored {
   if v.is_unit() {
@@ -831,6 +835,14 @@ fn dynamic_to_stored(v: Dynamic) -> Stored {
     Stored::Token(token)
   } else if let Some(digested) = v.clone().try_cast::<Digested>() {
     Stored::Digested(digested)
+  } else if let Some(value) = values::dynamic_to_register_value(&v) {
+    match value {
+      RegisterValue::Number(n) => Stored::Number(n),
+      RegisterValue::Dimension(d) => Stored::Dimension(d),
+      RegisterValue::Glue(g) => Stored::Glue(g),
+      RegisterValue::MuGlue(g) => Stored::MuGlue(g),
+      other => other.to_string().into(),
+    }
   } else if v.is_array() {
     Stored::VecDequeStored(
       v.cast::<rhai::Array>()
@@ -867,8 +879,8 @@ fn dynamic_to_tokens(d: Dynamic) -> Tokens {
 fn arg_to_dynamic(arg: ArgWrap) -> Dynamic { Dynamic::from(arg.to_string()) }
 
 /// Read a Rhai value back as a string, Perl's `ToString` (Object.pm:59): a `Token`/`Tokens` as `Tokens->toString`
-/// (`\foo bar` → `\foobar`, as [`rhai_map_to_props`] stores a token property), a digested handle its `ToString`
-/// (Rhai's own printing gives a custom type's Rust name).
+/// (`\foo bar` → `\foobar`, as [`rhai_map_to_props`] stores a token property), a digested handle or a value handle
+/// (Dimension, …) its `ToString` (Rhai's own printing gives a custom type's Rust name).
 fn dynamic_to_string(d: Dynamic) -> String {
   if d.is_string() {
     d.into_string().unwrap_or_default()
@@ -878,6 +890,8 @@ fn dynamic_to_string(d: Dynamic) -> String {
     token.to_string()
   } else if let Some(digested) = d.clone().try_cast::<Digested>() {
     digested.to_string()
+  } else if let Some(value) = values::value_string(&d) {
+    value
   } else if d.is::<WhatsitProxy>() {
     // (`to_string`, `ToString` and `absorbString` raise its error; see `whatsit_string`)
     whatsit_string().unwrap_or_default()

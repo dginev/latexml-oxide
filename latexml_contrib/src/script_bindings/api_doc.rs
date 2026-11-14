@@ -63,6 +63,26 @@ const GROUPS: &[(Option<&str>, &str, &str)] = &[
     "Perl's Common/Font.pm getters, on the font a `DefLigature` `fontTest` closure receives.",
   ),
   (
+    Some("Number"),
+    "`Number` methods",
+    "A Number value handle (Common/Number.pm); its shared arithmetic is under Global functions.",
+  ),
+  (
+    Some("Dimension"),
+    "`Dimension` methods",
+    "A Dimension value handle (Common/Dimension.pm); its shared arithmetic is under Global functions.",
+  ),
+  (
+    Some("Glue"),
+    "`Glue` methods",
+    "A Glue value handle (Common/Glue.pm); its shared arithmetic is under Global functions.",
+  ),
+  (
+    Some("MuGlue"),
+    "`MuGlue` methods",
+    "A MuGlue value handle (Core/MuGlue.pm); its shared arithmetic is under Global functions.",
+  ),
+  (
     Some("Command"),
     "`Command` methods",
     "The `std::process::Command` mirror, for a binding that shells out.",
@@ -85,6 +105,7 @@ const TOKEN_ARG_FNS: &[&str] = &[
   "Let",
   "LookupDefinition",
   "LookupMeaning",
+  "LookupRegister",
   "LookupRegisterOrDefault",
   "SetCondition",
   "XEquals",
@@ -170,19 +191,57 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "!=",
     Doc::Note(
-      "**Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string \
-       form (use `ToString(v) != s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef ne ''` \
+      "**Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares \
+       its string form (use `ToString(v) != s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef ne ''` \
        (use `defined(v)` or `!!v`).",
     ),
   ),
   (
     "==",
     Doc::Note(
-      "**Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string \
-       form (use `ToString(v) == s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef eq ''` \
+      "**Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares \
+       its string form (use `ToString(v) == s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef eq ''` \
        (use `defined(v)` or `!v`). Rhai's `switch` does not use this rule: it matches by value and type, so a `\"\" =>` \
        case never matches `()` — test `if defined(v)` or `!v` instead.",
     ),
+  ),
+  (
+    "*",
+    Doc::Note(
+      "A Number, Dimension, Glue or MuGlue times an int or float (Number.pm `multiply`, truncated; Glue scales its stretch and shrink).",
+    ),
+  ),
+  (
+    "+",
+    Doc::Note(
+      "The sum of two value handles of one type (Number.pm `add`); Glue + Glue and MuGlue + MuGlue as TeX adds glue (the higher fill order wins), Glue + a Number or Dimension adds to the natural size.",
+    ),
+  ),
+  (
+    "-",
+    Doc::Note(
+      "The difference of two value handles (Number.pm `subtract`), or the negation of one (`negate`).",
+    ),
+  ),
+  (
+    "/",
+    Doc::Note("A value handle divided by an int, truncated (Number.pm `divide`)."),
+  ),
+  (
+    "<",
+    Doc::Note("Compares two value handles of one type by `valueOf`."),
+  ),
+  (
+    "<=",
+    Doc::Note("Compares two value handles of one type by `valueOf`."),
+  ),
+  (
+    ">",
+    Doc::Note("Compares two value handles of one type by `valueOf`."),
+  ),
+  (
+    ">=",
+    Doc::Note("Compares two value handles of one type by `valueOf`."),
   ),
   (
     "AddToCounter",
@@ -259,6 +318,13 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Rust(
       "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
+    ),
+  ),
+  (
+    "AssignRegister",
+    Doc::Rust(
+      "Perl's `AssignRegister(cs, value[, scope[, params]])`: a typed value, or a string read for the register's type; a Warning when `cs` is no register.",
+      "latexml_core::state::assign_register_token",
     ),
   ),
   (
@@ -490,7 +556,10 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "DefRegister",
     Doc::Rust(
-      "Define a register with an initial value.",
+      "Perl's `DefRegister(cs, value[, #{readonly, getter, setter, address, allocate}])`: the value's type (Number, \
+       Dimension, Glue, MuGlue, Tokens) is the register's; a string is read for the type `cs` already has, else by \
+       its form (a `mu` unit MuGlue, `plus`/`minus` Glue, else Dimension). `getter` is `|params…|`, `setter` \
+       `|value, scope, params…|`.",
       "latexml_core::binding::def::dialect::def_register",
     ),
   ),
@@ -498,6 +567,49 @@ const DOCS: &[(&str, Doc)] = &[
     "DefRewrite",
     Doc::Note("Register a document rewrite rule (data form, or a replace closure)."),
   ),
+  (
+    "Dimension",
+    Doc::Note(
+      "Perl's `Dimension(spec)`: `\"3pt\"` (a number and a unit), or an int of sp; a spec Perl's constructor cannot read is an Error and 0.",
+    ),
+  ),
+  (
+    "Glue",
+    Doc::Note(
+      "Perl's `Glue(spec)`: `\"1pt plus 2fil minus 1pt\"`, an int of sp, or `Glue(sp, plus, pfill, minus, mfill)` with fill orders as names or 0-3; an unreadable spec is an Error and 0.",
+    ),
+  ),
+  (
+    "LookupDimension",
+    Doc::Rust(
+      "Perl's `LookupDimension(x[, noerror])`: a spec or a register's name as a Dimension; `Dimension(0)` with a Warning otherwise.",
+      "latexml_core::state::lookup_dimension_cs",
+    ),
+  ),
+  (
+    "LookupRegister",
+    Doc::Rust(
+      "Perl's `LookupRegister(cs[, params])`: the register's typed value (Number, Dimension, Glue, MuGlue, Tokens); `()` with a Warning when `cs` is no register.",
+      "latexml_core::state::lookup_register_token",
+    ),
+  ),
+  (
+    "MuGlue",
+    Doc::Note(
+      "Perl's `MuGlue(spec)`: `\"3mu plus 1mu\"`, an int of the mu value in sp, or the five-argument form; an unreadable spec is an Error and 0.",
+    ),
+  ),
+  (
+    "Number",
+    Doc::Note(
+      "Perl's `Number(n)`: an int, a float (truncated) or a numeric string; any other string is an Error and 0.",
+    ),
+  ),
+  (
+    "absolute",
+    Doc::Note("A value handle's absolute value (Number.pm)."),
+  ),
+  ("add", Doc::Note("Perl's `$a->add($b)`: as `+`.")),
   (
     "defined",
     Doc::Note(
@@ -1211,6 +1323,14 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Note("Run the command in this working directory."),
   ),
   (
+    "divide",
+    Doc::Note("Perl's `$a->divide(n)`: as `/`; also by a Number."),
+  ),
+  (
+    "divideround",
+    Doc::Note("Perl's `$a->divideround(n)`: the quotient rounded, as eTeX's."),
+  ),
+  (
     "env",
     Doc::Note("Set one environment variable for the command."),
   ),
@@ -1279,6 +1399,22 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "getShrink",
+    Doc::Note("A Glue's shrink as a Dimension (Glue.pm)."),
+  ),
+  (
+    "getShrinkOrder",
+    Doc::Note("A Glue's shrink fill order as a Number, 0 (finite) to 3 (filll)."),
+  ),
+  (
+    "getStretch",
+    Doc::Note("A Glue's stretch as a Dimension (Glue.pm)."),
+  ),
+  (
+    "getStretchOrder",
+    Doc::Note("A Glue's stretch fill order as a Number, 0 (finite) to 3 (filll)."),
+  ),
+  (
     "hasAttribute",
     Doc::Rust(
       "Whether the node carries that attribute.",
@@ -1307,6 +1443,10 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "larger",
+    Doc::Note("The larger of two value handles of one type, by `valueOf`."),
+  ),
+  (
     "lookup_value",
     Doc::Note(
       "[`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here.",
@@ -1320,8 +1460,16 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "multiply",
+    Doc::Note("Perl's `$a->multiply(n)`: as `*`; also by a Number."),
+  ),
+  (
     "name",
     Doc::Rust("The node's local name.", "libxml::tree::Node::get_name"),
+  ),
+  (
+    "negate",
+    Doc::Note("A value handle negated (Glue: its stretch and shrink too)."),
   ),
   (
     "neutralize_font",
@@ -1375,6 +1523,12 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Note("One property of the whatsit, as a string."),
   ),
   (
+    "ptValue",
+    Doc::Note(
+      "A Dimension's or Glue's natural size in points, rounded to `prec` decimals (2 by default; Dimension.pm).",
+    ),
+  ),
+  (
     "pushAfterConstruct",
     Doc::Note("Append a hook to that definition's `afterConstruct` list."),
   ),
@@ -1393,6 +1547,10 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "pushBeforeDigest",
     Doc::Note("Append a hook to that definition's `beforeDigest` list."),
+  ),
+  (
+    "pxValue",
+    Doc::Note("A Dimension's or Glue's natural size in pixels at the `DPI` value (Dimension.pm)."),
   ),
   (
     "qname",
@@ -1480,6 +1638,10 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "sign",
+    Doc::Note("-1, 0 or 1 by a value handle's `valueOf`."),
+  ),
+  (
     "skipSpaces",
     Doc::Rust(
       "`gullet.skipSpaces()`: `SkipSpaces` on a `Gullet` handle.",
@@ -1487,8 +1649,19 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
-    "toString",
-    Doc::Note("The node and its subtree serialized back to markup — the inverse of `ParseXML`."),
+    "smaller",
+    Doc::Note("The smaller of two value handles of one type, by `valueOf`."),
+  ),
+  (
+    "spValue",
+    Doc::Note("A Dimension's or Glue's natural size in sp."),
+  ),
+  ("subtract", Doc::Note("Perl's `$a->subtract($b)`: as `-`.")),
+  (
+    "toAttribute",
+    Doc::Note(
+      "A value handle as an XML attribute value (`3.0pt`; Dimension.pm `attributeformat`).",
+    ),
   ),
   (
     "unlink",
@@ -1522,6 +1695,12 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Rust(
       "Replace a node by its own children.",
       "latexml_core::document::Document::unwrap_nodes",
+    ),
+  ),
+  (
+    "valueOf",
+    Doc::Note(
+      "A value handle's integer value: a Number's value, a Dimension's or Glue's sp (Glue: the natural size).",
     ),
   ),
   (
@@ -1636,7 +1815,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "LookupRegisterOrDefault",
     Doc::Note(
-      "A register's value as its TeX string (the type's zero when `cs` is no register); the typed handle is round C's.",
+      "A register's typed value (as `LookupRegister`), a Number 0 when `cs` is no register, without a Warning.",
     ),
   ),
   (
@@ -1708,6 +1887,51 @@ const HANDLE_DOCS: &[(&str, &str, Doc)] = &[
       "One property by name, its typed value (string / int / bool / `Tokens` / `Digested` handle / …); `()` when absent.",
       "latexml_core::BoxOps::get_property",
     ),
+  ),
+  (
+    "Dimension",
+    "to_string",
+    Doc::Note("The value as TeX prints it (`toString`, `\\the`): `1.0pt plus 2.0pt`."),
+  ),
+  (
+    "Glue",
+    "to_string",
+    Doc::Note("The value as TeX prints it (`toString`, `\\the`): `1.0pt plus 2.0pt`."),
+  ),
+  (
+    "MuGlue",
+    "to_string",
+    Doc::Note("The value as TeX prints it (`toString`, `\\the`): `1.0pt plus 2.0pt`."),
+  ),
+  (
+    "Number",
+    "to_string",
+    Doc::Note("The value as TeX prints it (`toString`, `\\the`): `1.0pt plus 2.0pt`."),
+  ),
+  (
+    "Node",
+    "toString",
+    Doc::Note("The node and its subtree serialized back to markup — the inverse of `ParseXML`."),
+  ),
+  (
+    "Dimension",
+    "toString",
+    Doc::Note("Perl's `toString`: the value as TeX prints it (`\\the`), `1.0pt plus 2.0pt`."),
+  ),
+  (
+    "Glue",
+    "toString",
+    Doc::Note("Perl's `toString`: the value as TeX prints it (`\\the`), `1.0pt plus 2.0pt`."),
+  ),
+  (
+    "MuGlue",
+    "toString",
+    Doc::Note("Perl's `toString`: the value as TeX prints it (`\\the`), `1.0pt plus 2.0pt`."),
+  ),
+  (
+    "Number",
+    "toString",
+    Doc::Note("Perl's `toString`: the value as TeX prints it (`\\the`), `1.0pt plus 2.0pt`."),
   ),
   (
     "Token",

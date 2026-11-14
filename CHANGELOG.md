@@ -215,6 +215,22 @@
     `DeclareFontMap`'s `*_mathstyle` is a font map, stored as the `Font` (another value Warns unsupported). Guards
     `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_closure_args_and_parameter_types,
     rhai_deprecated_aliases_warn_once}`.
+  - **BREAKING: Rhai registers and values are typed: `Number`, `Dimension`, `Glue`, `MuGlue`** (PR #829 round C).
+    Perl's constructors (`Dimension("3pt")`, `Dimension(65536)` in sp, `Glue("1pt plus 2fil minus 1pt")`,
+    `MuGlue("3mu plus 1mu")`, `Number(5)`) and methods (`valueOf`, `ptValue`, `toString`, `add`, `subtract`,
+    `multiply`, `divide`, `negate`, `smaller`, `larger`, Glue's `getStretch`…), Rhai's `+ - * /` and comparisons
+    over the same arithmetic (Glue sums as TeX's, the higher fill order winning); a handle is true (`!!v`). A spec
+    the constructor cannot read (`Dimension("3 furlongs")`) is an Error and 0, where Perl reads it silently.
+    `DefRegister(cs, value[, #{readonly, getter, setter, address, allocate}])` takes any of them (or `Tokens`), with
+    Perl's option table (another key is `Error:misdefined`); a string value is read for the type `cs` already has,
+    else by its form (`"1pt plus 2pt"` is now a Glue register, where it printed `0.0pt`). New `LookupRegister(cs[,
+    params])`, `AssignRegister(cs, value[, scope[, params]])`, `LookupDimension(x[, noerror])`. Return types that
+    change: `LookupRegisterOrDefault` gives the typed value (was its TeX string), `LookupValue`/`GetKeyVal` of a
+    stored Number, Dimension or Glue the handle (a Number was an int), and a closure's `{Number}`/`{Dimension}`/
+    `{Glue}` argument the handle (was its TeX string). Migration: a string use works unchanged (`"" + v`, `${v}`,
+    `ToString(v)`); a test against a string Warns `deprecated` once per load (use `ToString(v) == "3.0pt"`); an
+    int use takes `v.valueOf()`. `MuGlue("3mu plus 1mu")` no longer reconverts its stretch as points. Guards
+    `cluster_package_guards::perfect_kernel_batchw3rc::{rhai_typed_registers, rhai_typed_registers_error_side}`.
 
   - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
     chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and

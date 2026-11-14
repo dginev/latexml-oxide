@@ -26,6 +26,9 @@ pub const PARAMETER_OPTIONS: &[&str] = &[
   "undigested",
 ];
 
+/// `DefRegister` (Package.pm:1325-1326, `$register_options`).
+pub const REGISTER_OPTIONS: &[&str] = &["readonly", "getter", "setter", "address", "allocate"];
+
 /// `DefConditional` (Package.pm:1185, `$conditional_options`).
 pub const CONDITIONAL_OPTIONS: &[&str] = &["scope", "locked", "skipper"];
 
