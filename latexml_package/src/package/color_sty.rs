@@ -599,9 +599,13 @@ LoadDefinitions!({
   // paragraph as color.sty's `\color@b@x` does (163-164 `\leavevmode`), like the
   // xcolor twin, and its body is the `\hbox`'s: restricted horizontal, not Perl's
   // `internal_vertical`, which split the paragraph around it (KPE #336, #293).
+  // `\fboxsep` pads it as `\fbox` (color.sty `\color@b@x` draws `\fbox`'s frame; Perl #2820).
   DefConstructor!("\\fcolorbox[] Undigested Undigested Undigested",
-    "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
+    "<ltx:text framed='rectangle' framecolor='#framecolor' cssstyle='#cssstyle' _noautoclose='1'>#text</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true,
+    properties => sub[_args] {
+      Ok(framed_properties(FramedOptions { margin: Some(s!("\\fboxsep")), ..FramedOptions::default() }))
+    },
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
       let fspec_str = match whatsit.get_arg(2) {

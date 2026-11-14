@@ -686,6 +686,30 @@ fn lst_skip(key: &str) -> Result<Dimension> {
   Ok(Dimension::new(glue.value_of()))
 }
 
+/// The sides a listing's `frame=` draws (Perl #2820 `%frames`, listings.sty.ltxml:261): a named frame, else its
+/// letters (`tb`, `trBL`; listings.sty `\lst@frame`, upper case a double rule); `none`, or no side named, draws none.
+fn lst_frame_sides(frame: &str) -> Option<String> {
+  let named = match frame {
+    "none" => return None,
+    "leftline" => Some("left"),
+    "topline" => Some("top"),
+    "bottomline" => Some("bottom"),
+    "lines" => Some("topbottom"),
+    "single" | "shadowbox" => Some("rectangle"),
+    _ => None,
+  };
+  let sides = named.map(str::to_string).unwrap_or_else(|| {
+    let lower = frame.to_ascii_lowercase();
+    [('t', "top"), ('b', "bottom"), ('l', "left"), ('r', "right")]
+      .into_iter()
+      .filter(|(letter, _)| lower.contains(*letter))
+      .map(|(_, side)| side)
+      .collect::<Vec<_>>()
+      .join(" ")
+  });
+  (!sides.is_empty()).then_some(sides)
+}
+
 /// A display listing's size as TeX sets it: each source line a line of its own (`\lst@NewLine`,
 /// listings.sty:703-705) a strut high, so one `\baselineskip` whatever its glyphs (lstmisc.sty:1630, :1648), a line
 /// broken under `breaklines` (lstmisc.sty:1308-1320) as many as its width needs, between `aboveskip` and `belowskip`
@@ -3528,7 +3552,8 @@ LoadDefinitions!({
   // (`with_tcb_phantom`, `\lx@lst@renote@raw@refstep`; 2609.20563).
   DefConstructor!("\\@@listings@block {} {} {}",
     "<ltx:listing class='ltx_lstlisting' data='#lstdata' datamimetype='#lstmime' \
-     dataencoding='#lstenc' dataname='#3'>#2</ltx:listing>",
+     dataencoding='#lstenc' dataname='#3' cssstyle='#cssstyle' framed='#framed' \
+     framecolor='#framecolor'>#2</ltx:listing>",
     mode => "internal_vertical",
     before_digest => {
       forget_raw_refstep();
@@ -3555,6 +3580,10 @@ LoadDefinitions!({
       props.insert("lst_aboveskip", Stored::Dimension(lst_skip("aboveskip")?));
       props.insert("lst_belowskip", Stored::Dimension(lst_skip("belowskip")?));
       props.insert("lst_breaklines", Stored::Bool(lst_get_boolean("breaklines")));
+      if let Some(frame) = lst_frame_sides(&lst_get_literal("frame")) {
+        let margin = Some(lst_get_literal("framesep"));
+        props.0.extend(framed_properties(FramedOptions { frame: Some(frame), margin, ..FramedOptions::default() }).0);
+      }
       Ok(props)
     },
     sizer => sub[whatsit] { lst_block_size(whatsit) });
@@ -4195,43 +4224,6 @@ LoadDefinitions!({
     properties => {
       let position = lst_get_literal("numbers");
       stored_map!("position" => Stored::String(pin(&position)))
-    });
-
-  // Frame handler
-  DefPrimitive!("\\lst@@frame Until:\\end", sub [args] {
-    let name = args[0].to_string();
-    let frame = match name.as_str() {
-      "none" => None,
-      "leftline" => Some("left"),
-      "topline" => Some("top"),
-      "bottomline" => Some("bottom"),
-      "lines" => Some("topbottom"),
-      "single" => Some("rectangle"),
-      "shadowbox" => Some("rectangle"),
-      _ => None,
-    };
-    if let Some(f) = frame {
-      assign_value("LISTINGS_FRAME", Stored::String(pin(f)), None);
-    } else {
-      assign_value("LISTINGS_FRAME", Stored::None, None);
-    }
-    lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@frame")]);
-  });
-  DefConstructor!("\\lst@@@set@frame",
-    sub[document, _args, props] {
-      let frame = props.get("frame").map(|v| v.to_string()).unwrap_or_default();
-      if !frame.is_empty() {
-        document.set_attribute(&mut document.get_element().unwrap(), "framed", &frame)?;
-      }
-    },
-    properties => {
-      // Perl #2824: inline listings get no box frame.
-      let frame = if lookup_value("LISTINGS_INLINE").is_some() {
-        String::new()
-      } else {
-        lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default()
-      };
-      stored_map!("frame" => Stored::String(pin(&frame)))
     });
 
   // Background color handler. listings stores the colour command and runs it

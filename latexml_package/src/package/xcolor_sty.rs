@@ -1378,8 +1378,11 @@ LoadDefinitions!({
   // {\color#3}`; xcolor.dtx `\fcolorbox[gray]{0.5}[wave]{580}{test}`). Perl's `[]{}{} Undigested`
   // (xcolor.sty.ltxml:878) read `[` as the background colour.
   DefConstructor!("\\fcolorbox[] Undigested [] Undigested Undigested",
-    "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
+    "<ltx:text framed='rectangle' framecolor='#framecolor' cssstyle='#cssstyle' _noautoclose='1'>#text</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true,
+    properties => sub[_args] {
+      Ok(framed_properties(FramedOptions { margin: Some(s!("\\fboxsep")), ..FramedOptions::default() }))
+    },
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
       let fspec_str = match whatsit.get_arg(2) {

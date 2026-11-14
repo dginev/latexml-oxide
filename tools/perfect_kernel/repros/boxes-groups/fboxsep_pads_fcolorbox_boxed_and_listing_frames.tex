@@ -1,0 +1,35 @@
+% witness: synthetic (upstream LaTeXML #2820, 7412d564; with #2829's CSS padding gone these frames lost all padding)
+% oracle:  pdflatex 0 errors: each frame drawn \fboxsep (3pt) off its text — color.sty `\color@b@x` draws `\fbox`'s
+%          frame, amsmath.sty:399 `\boxed` is `\fbox`; a listing's frame sits `framesep` off it (listings.sty
+%          `\lst@frame`, the letters t/b/l/r, upper case a double rule); `frame=none` and `\lstinline` draw none
+% engines: rust 0340aff82e0 = 0 errors, `\fcolorbox` and text `\boxed` without `cssstyle`, `frame=single` without
+%          padding, `frame=tb`/`trBL` not framed; perl master = the padding, `framed="top bottom"` for `tb`
+% expect:  0 errors, 0 warnings; `cssstyle="padding:3.0pt"` on `\fcolorbox` and `\boxed` (0.0pt under
+%          `\fboxsep=0pt`), `padding:5.0pt` (framesep) on the framed listings, `framed="top bottom"` /
+%          `"top bottom left right"` / `"left"`, `framecolor` the font's; none on `frame=none` or `\lstinline`
+% status:  RED (0340aff82e0) -> GREEN (UPS1: color/xcolor/amsmath `framed_properties(margin \fboxsep)`, listings
+%          `lst_frame_sides` from `LST@frame` + `LST@framesep`)
+\documentclass{article}
+\usepackage{amsmath,xcolor,listings}
+\lstset{framesep=5pt}
+\begin{document}
+\fbox{fb} \fcolorbox{blue}{red}{fc} {\setlength{\fboxsep}{0pt}\fcolorbox{blue}{red}{fz}}
+\boxed{t=1}
+\begin{lstlisting}[frame=single]
+a=1
+\end{lstlisting}
+\begin{lstlisting}[frame=tb]
+b=2
+\end{lstlisting}
+\begin{lstlisting}[frame=trBL,framesep=2pt]
+c=3
+\end{lstlisting}
+\begin{lstlisting}[frame=leftline]
+d=4
+\end{lstlisting}
+\begin{lstlisting}[frame=none]
+e=5
+\end{lstlisting}
+\lstset{frame=single}
+x \lstinline{f=6} y
+\end{document}
