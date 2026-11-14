@@ -9516,7 +9516,7 @@ NOT covered: `<block>` directly in a list (`itemize`/`enumerate`) — colorframe
 framed-in-list nesting) + tableaux (SHARED), 2 docs, distinct root cause (list nesting).
 **Render**: a `\parbox` in a picture still renders as a `<foreignObject>` of the SAME
 dimensions/position; only the inner wrapper flips `<div class="ltx_block">`→`<span
-class="ltx_inline-block" style="width:…">` (and its `<p>`→`<span class="ltx_p">`) — a
+class="ltx_inline-block" style="--ltx-box-width:…">` (#1045; and its `<p>`→`<span class="ltx_p">`) — a
 100pt/56.9pt fixed-width box wraps text identically, so render-faithful. Two SVG goldens
 re-blessed: `parbox_inside_a_picture_renders_as_a_foreign_object` (cluster_xslt_split),
 `picture_nested_in_a_scaled_box_is_converted` (cluster_package_guards).
@@ -36380,21 +36380,42 @@ LaTeXML.css keys `justify-items` on it (#809). The other non-Core attributes sti
 four whole `<mtable>` elements: two default, two with the author's `rowspacing`); repro
 `tools/perfect_kernel/repros/alignment/mtable_no_rowspacing.tex`.
 
-### 1045. A box's width that its element cannot hold rides as the CSS custom property `--ltx-box-width` (Perl: dropped)
+### 1045. Every box's width is the CSS custom property `--ltx-box-width` (Perl: `style="width:…"`, or dropped)
 
-A sectioning unit set inside a minipage or a `\parbox` floats out as a real section carrying the box's class (#250),
-and a framed box holding one becomes an `inline-sectional-block`; neither element admits `width`
-(`Sectional.attributes`, LaTeXML-structure.rnc), so the box's width was lost. **Perl** wraps the unit in a
-`<sectional-block class="ltx_minipage">`, which drops it too (TeX_Box.pool.ltxml `insertBlock`).
+Principle: the HTML/CSS cascade — a presentational value the stylesheet applies, so one rule can override or reuse
+it. Related: #20 (colour), #887 (`--ltx-panel-*`), #250 (a section lifted out of a box).
 
-**Rust** (QAB57; BM Q2.4 asked for the box's "attributes and classes"; DG 2026-11-14: through `cssstyle`, with a
-dedicated custom property so a stylesheet can override or disable it): `insert_block_as` (`carry_box_width`,
-block_insertion.rs) writes the width the element it became cannot hold as `--ltx-box-width:<w>` into its `cssstyle`,
-and LaTeXML.css applies it (`[style*="--ltx-box-width:"] { width: var(--ltx-box-width, auto) }`), as it does the
-`--ltx-*-color` properties; ar5iv-css mirrors the rule, capped at the column. One name for every box (minipage,
-`\parbox`), hence not `--ltx-minipage-width`. An element that admits `width` keeps the attribute: a plain minipage's
-`<inline-block width=…>` is unchanged (rendered as `style="width:…"`; moving it to the property is a corpus-wide
-markup change left to a ruling). Guard `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`.
+**Perl** writes a Positionable element's `width` as `style="width:<w>"` (LaTeXML-common.xsl `base-styling`), and a
+sectioning unit set inside a minipage or a `\parbox` (a real section carrying the box's class, #250; a framed box's
+`inline-sectional-block`) loses the box's width: no `Sectional.attributes` admits `width` (LaTeXML-structure.rnc),
+and Perl's `<sectional-block class="ltx_minipage">` drops it too (TeX_Box.pool.ltxml `insertBlock`).
+
+**Rust** (QAB57; BM Q2.4 asked for the box's "attributes and classes"; DG 2026-11-14: a dedicated custom property, and
+"Move them all now"). One name for every box:
+- the lifted unit: `insert_block_as` (`carry_box_width`, block_insertion.rs) writes the box's width as
+  `--ltx-box-width:<w>` into its `cssstyle`;
+- every other box: `base-styling` writes `--ltx-box-width:<w>` for an LaTeXML element's `width` (minipage and
+  `\parbox` `inline-block`/`inline-logical-block`, the panel `figure` and `p` a minipage becomes, `\makebox`'s `text`,
+  a transformed box's outer, a wrapfigure, a `tabular`/`td` width), and `add_transformable_attributes` for the inner
+  box's `innerwidth`. The XML keeps `width` (JATS and TEI read it).
+- Not boxes, so `width:` stays: `ltx:rule` (its ink, as an image's size) and MathML's `mspace`/`mpadded` (MathML's own
+  attribute). Graphics (`imagewidth`), pictures and SVG, and `--ltx-panel-width` never reach `base-styling`'s width.
+
+LaTeXML.css: `:where([style*="--ltx-box-width:"]:not([style*=";width:"], [style*="; width:"])) { width:
+var(--ltx-box-width, auto) !important }`. Important and of zero specificity, it ranks as the inline `width:` did: over
+every normal rule (`.ltx_tabular .ltx_tabular`'s 100 %, `.ltx_framed_verbatim`'s fit-content), under every other
+`!important` one. It also yields to a `width:` the element's own `cssstyle` sets after the property (varwidth's
+`width:max-content`, #1014; a `\text` minipage's, batch76a). ar5iv-css carries the same rule un-layered, so that its
+layered rules rank under it as under the inline style, and caps a lifted section at its container
+(`:is(section, .ltx_inline-sectional-block)[style*="--ltx-box-width:"] { max-width: 100% }`, as its `.ltx_minipage`). A stylesheet overrides the width with an `!important` rule, as it
+did the inline style, or reuses the value (`width: min(var(--ltx-box-width), 100%) !important`).
+
+Measured: every body element's box and the screenshot ink are identical before and after in Chrome and Firefox at
+1280/768/375 px, under LaTeXML.css and under ar5iv.css. That holds for the repro shapes (side-by-side, figure, nested
+and over-wide minipages, `\parbox` in text, `p{}` cells, `tabular*`, `\makebox`, scaled/resized/rotated boxes,
+varwidth, wrapfigure, framed verbatim, lifted sections) and for arXiv pages (QAB57b A/B). Guards
+`perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width` (repros
+`block-model/section_in_a_box_keeps_the_box_width`, `block-model/box_widths_ride_the_custom_property`).
 
 ### 1046. latexml.sty's `pdfoutput`/`nopdfoutput` options set the output mode over the guess (Perl: no such options)
 

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+  - **Every box's width is the CSS custom property `--ltx-box-width`** (Bruce Miller Q2.4, DG
+    2026-11-14). A minipage, `\parbox`, `\makebox`, `p{}` cell, transformed box or wrapfigure wrote
+    `style="width:<w>"`; the HTML now writes `style="--ltx-box-width:<w>"`, which LaTeXML.css (and
+    ar5iv-css) applies at the inline style's rank, so pages render as before. A section set inside a
+    minipage or `\parbox` keeps the box's width the same way (it was dropped). A rule's width and
+    MathML's stay `width:`; the XML's `width` attribute is unchanged. Custom stylesheets: an
+    `!important` override such as `.ltx_minipage { width: 100% !important }` works as before; a rule
+    that matched `[style*="width"]` still matches; one that keyed on `style^="width:"` must now read
+    the property, and a stylesheet may reuse its value (`width: min(var(--ltx-box-width), 100%)
+    !important`). OXIDIZED_DESIGN #1045; guard
+    `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`.
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer

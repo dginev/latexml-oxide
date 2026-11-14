@@ -590,7 +590,12 @@
     <xsl:if test="@fontsize">
       <xsl:value-of select="concat('font-size:',@fontsize,';')"/>
     </xsl:if>
-    <xsl:if test="@width"  ><xsl:value-of select="concat('width:',@width,';')"/></xsl:if>
+    <!-- (latexml-oxide) a LaTeXML box's width is the CSS custom property ltx-box-width, which LaTeXML.css applies
+         (OXIDIZED_DESIGN_DIVERGENCES #1045); a rule's width is its ink, as an image's size, and MathML's
+         mspace/mpadded width is MathML's own. -->
+    <xsl:if test="@width">
+      <xsl:value-of select="concat(f:if(self::ltx:* and not(self::ltx:rule),'--ltx-box-width:','width:'),@width,';')"/>
+    </xsl:if>
     <xsl:if test="@height" >
       <xsl:choose>
         <xsl:when test="@depth">
@@ -661,7 +666,7 @@
       <xsl:with-param name="name" select="'style'"/>
       <xsl:with-param name="value">
         <xsl:if test="@innerwidth"  >
-          <xsl:value-of select="concat('width:',@innerwidth,';')"/>
+          <xsl:value-of select="concat('--ltx-box-width:',@innerwidth,';')"/>
         </xsl:if>
         <!-- apparently we shouldn't put the innerheigth & innerdepth into the style;
          seems to mess up the positioning? -->

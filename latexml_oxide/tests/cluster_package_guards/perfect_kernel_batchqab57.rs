@@ -46,7 +46,8 @@ fn omnibus_guesses_yield_to_the_document() {
 }
 
 /// A sectioning unit lifted out of a minipage or `\parbox` (OD #250), and a framed box's `inline-sectional-block`,
-/// carry the box's width as `--ltx-box-width` (BM Q2.4), which LaTeXML.css applies; a plain minipage keeps `width`.
+/// carry the box's width as `--ltx-box-width` (BM Q2.4); a plain minipage keeps its `width` attribute. In the HTML every
+/// box's width is that property (DG 2026-11-14), a rule's stays `width:` (OD #1045).
 #[test]
 fn section_in_a_box_keeps_the_box_width() {
   let (log, xml) = convert_counted(include_str!(
@@ -65,10 +66,44 @@ fn section_in_a_box_keeps_the_box_width() {
   assert_eq!(xml.matches("--ltx-box-width").count(), 3, "{xml}");
   let css = include_str!("../../../latexml_post/resources/CSS/LaTeXML.css");
   assert!(
-    css.contains("[style*=\"--ltx-box-width:\"] {\n  width: var(--ltx-box-width, auto);\n}"),
+    css.contains(concat!(
+      ":where([style*=\"--ltx-box-width:\"]:not([style*=\";width:\"], [style*=\"; width:\"])) {\n",
+      "  width: var(--ltx-box-width, auto) !important;\n}"
+    )),
     "LaTeXML.css applies --ltx-box-width"
   );
+
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/box_widths_ride_the_custom_property.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let html = super::svg_nested_picture::post_html(&xml);
+  let styles: Vec<&str> = html
+    .split("style=\"")
+    .skip(1)
+    .filter_map(|rest| rest.split('"').next())
+    .filter(|style| style.contains("width"))
+    .collect();
+  assert_eq!(styles, BOX_WIDTH_STYLES, "{html}");
 }
+
+/// The width styles of box_widths_ride_the_custom_property's HTML, in document order: the minipage, the `\parbox`, the
+/// `\makebox`, the rotated box's outer, inner and `\parbox`, the rule (its ink) and the math `\hspace`'s `mspace`
+/// (MathML's own width) at `width:`, the varwidth (its own `width:max-content` after the property), the wrapfigure, the
+/// lifted section.
+const BOX_WIDTH_STYLES: &[&str] = &[
+  "--ltx-box-width:85.4pt;",
+  "--ltx-box-width:56.9pt;",
+  "--ltx-box-width:113.8pt;",
+  "--ltx-box-width:6.9pt;height:56.9pt;vertical-align:-0.0pt;",
+  "--ltx-box-width:56.9pt;transform:translate(-25.0pt,-25.0pt) rotate(-90deg) ;",
+  "--ltx-box-width:56.9pt;",
+  "width:85.4pt;height:2.0pt;--ltx-bg-color:black;display:inline-block;",
+  "width:2.85em;",
+  "--ltx-box-width:22.3pt;width:max-content;max-width:227.6pt;",
+  "--ltx-box-width:30%;",
+  "--ltx-box-width:113.8pt;",
+];
 
 /// latexml.sty's `nopdfoutput`/`pdfoutput` options set the output mode over the guess from the source (OD #1046; BM
 /// Q4.2). The drivers read `\pdfoutput` as they load: given after graphicx, the driver graphicx chose stays; preloaded
