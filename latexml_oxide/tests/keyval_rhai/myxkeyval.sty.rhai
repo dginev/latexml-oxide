@@ -9,17 +9,17 @@ DefKeyVal("scenario", "cross", "", "", #{ prefix: "myxkeyval", kind: "boolean" }
 // \scenario: imperative body (mirrors the prior compiled binding). Note the
 // `role` cell intentionally shows the `cross` value, as in the Perl original.
 DefConstructor("\\scenario RequiredKeyVals:myxkeyval|scenario", |document, kv| {
-  document.openElement("ltx:para"); document.setAttribute("class", "scenario");
-  document.openElement("ltx:text"); document.setAttribute("class", "role");
+  document.openElement("ltx:para"); document.setAttribute(document.getNode(), "class", "scenario");
+  document.openElement("ltx:text"); document.setAttribute(document.getNode(), "class", "role");
   document.absorbString(GetKeyVal(kv, "cross"));
   document.closeElement("ltx:text");
-  document.openElement("ltx:text"); document.setAttribute("class", "country");
+  document.openElement("ltx:text"); document.setAttribute(document.getNode(), "class", "country");
   document.absorbString(GetKeyVal(kv, "country"));
   document.closeElement("ltx:text");
-  document.openElement("ltx:text"); document.setAttribute("class", "color");
+  document.openElement("ltx:text"); document.setAttribute(document.getNode(), "class", "color");
   document.absorbString(GetKeyVal(kv, "color"));
   document.closeElement("ltx:text");
-  document.openElement("ltx:text"); document.setAttribute("class", "cross");
+  document.openElement("ltx:text"); document.setAttribute(document.getNode(), "class", "cross");
   document.absorbString(GetKeyVal(kv, "cross"));
   document.closeElement("ltx:text");
   document.closeElement("ltx:para");

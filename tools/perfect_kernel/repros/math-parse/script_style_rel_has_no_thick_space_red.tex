@@ -1,0 +1,12 @@
+% witness: revMML2's sibling sweep (synthetic); in script style TeX puts no \thickmuskip around a Rel (\showbox of
+%          `x^{a\mathrel{\star}b}`: no glue in the superscript; tex.web §764, the parenthesised table entries)
+% oracle:  pdflatex 0 errors; the exponent a⋆b set tight
+% engines: rust 650ce6365ae (and fc5211bb491: the space walk is unchanged for a non-K operator)
+%          `<mo lspace="0.278em" rspace="0.278em">⋆</mo>` inside the msup; `x^{a=b}` gives a bare `<mo>=</mo>`
+% expect:  0 errors; in --format=html5 the ⋆ (and `\mathrel{/}`, `\mathrel{+}`) carries no 0.278em in a script
+% status:  RED
+% moves:   post-merge (the space walk, presentation.rs adjust_pair, does not read the script level)
+\documentclass{article}
+\begin{document}
+$x^{a\mathrel{\star}b}$ $x^{a\mathrel{/}b}$ $x^{a\mathrel{+}b}$
+\end{document}

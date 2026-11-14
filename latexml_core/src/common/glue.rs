@@ -105,6 +105,12 @@ static _PLUS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(plus_re_str!()).unwrap())
 static _MINUS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(minus_re_str!()).unwrap());
 static GLUE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(GLUE_RE_STR).unwrap());
 
+/// Whether `spec` is a form Perl's `Glue($spec)`/`MuGlue($spec)` reads (Glue.pm `new`): `$GLUE_re`, or a bare
+/// number of sp; any other string Perl Warns "Missing Glue specification" and reads as 0.
+pub fn is_glue_spec(spec: &str) -> bool {
+  GLUE_RE.is_match(spec) || (!UNIT_RE.is_match(spec) && spec.parse::<f64>().is_ok())
+}
+
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct Glue {
   pub skip:  i64,
@@ -372,7 +378,7 @@ pub fn spec_setup(
         }
       };
 
-      let mut plus = if punit.is_empty() {
+      let plus = if punit.is_empty() {
         None // Some(0.0) ?
       // ? punit = "0";
       } else if let Some(code) = FillCode::from(punit) {
@@ -392,7 +398,7 @@ pub fn spec_setup(
         })
       };
 
-      let mut minus = if munit.is_empty() {
+      let minus = if munit.is_empty() {
         None // ? Some(0.0);
       // munit = 0;
       } else if let Some(code) = FillCode::from(munit) {
@@ -412,28 +418,6 @@ pub fn spec_setup(
         })
       };
 
-      if punit.is_empty() {
-      } else if let Some(pfcode) = FillCode::from(punit) {
-        plus = Some(fixpoint(p, None));
-        pfill = Some(pfcode);
-      } else {
-        plus = Some({
-          let (num, den) = convert_unit_ratio(punit);
-          fixpoint_unit(p, num, den)
-        });
-        pfill = None;
-      }
-      if munit.is_empty() {
-      } else if let Some(mfcode) = FillCode::from(munit) {
-        minus = Some(fixpoint(m, None));
-        mfill = Some(mfcode);
-      } else {
-        minus = Some({
-          let (num, den) = convert_unit_ratio(munit);
-          fixpoint_unit(m, num, den)
-        });
-        mfill = None;
-      }
       (skip, plus, pfill, minus, mfill)
     } else {
       let msg = s!(

@@ -7,7 +7,10 @@ use latexml_core::{
   state::{install_definition, lookup_definition_stored},
 };
 
-use super::*;
+use super::{
+  engine::{GulletHandle, StomachHandle},
+  *,
+};
 
 /// Contain a failure inside a script BODY: report it as an ordinary `Error:` and
 /// fall back to `neutral`, instead of propagating an `Err` that aborts the whole
@@ -27,16 +30,25 @@ use super::*;
 /// contributes nothing and the surrounding document carries on — the same shape
 /// as an undefined control sequence, which LaTeXML already survives.
 ///
-/// Runaway failures still terminate: `Error!` escalates to `Fatal` past
-/// MAX_ERRORS and THAT `Err` propagates from here. Containment bounds the blast
-/// radius of one binding; it does not make a broken binding free.
+/// Runaway failures still terminate: a Fatal the body raised (its own `Fatal()`, or
+/// `Error!` past MAX_ERRORS) propagates from here as that Fatal. Containment bounds the
+/// blast radius of one binding; it does not make a broken binding free.
 ///
 /// A body that fails PART-WAY may leave elements it opened unclosed; the document
 /// builder's auto-close handles that, so the result is structurally odd rather
 /// than malformed.
-fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Result<T> {
+pub(super) fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Result<T> {
+  // (a Fatal the body raised is not contained: it ends the conversion, as Perl's `Fatal` dies, #792)
+  if let Some(fatal) = take_raised_fatal(&e) {
+    return Err(fatal);
+  }
   latexml_core::Error!("script", what, format!("{e}"));
   Ok(neutral)
+}
+
+/// [`contain`] for a hook that returns a bool (a ligature's `fontTest`): the failure is logged, the test false.
+pub(super) fn contain_bool(what: &str, e: Box<EvalAltResult>) -> bool {
+  contain(what, e, false).unwrap_or(false)
 }
 
 /// Install one `DefMacro` registration as a native expandable definition.
@@ -47,19 +59,34 @@ pub(super) fn wire_macro(
   body: FnPtr,
 ) -> Result<()> {
   let (cs, paramlist) = parse_prototype(proto, true)?;
+  wire_macro_token(engine, ast, cs, paramlist, body)
+}
+
+/// [`wire_macro`] for a control sequence already in hand (Perl `DefMacroI`).
+pub(super) fn wire_macro_token(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  cs: Token,
+  paramlist: Option<latexml_core::parameter::Parameters>,
+  body: FnPtr,
+) -> Result<()> {
   let cs_name = cs.to_string();
   let engine = engine.clone();
   let ast = ast.clone();
 
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let dyn_args = perl_body_args(
+      &ast,
+      &body,
+      Dynamic::from(GulletHandle),
+      args,
+      "DefMacro |args|",
+    );
     let ret: Dynamic = match call_deferred_body(&engine, &ast, &body, dyn_args) {
       Ok(v) => v,
       Err(e) => return contain(&format!("macro {cs_name}"), e, Tokens::default()),
     };
-    Ok(mouth::tokenize_internal(TeXString::assembled(
-      dynamic_to_string(ret),
-    )))
+    Ok(dynamic_to_tokens(ret))
   });
 
   def_macro(cs, paramlist, ExpansionBody::Closure(closure), None)?;
@@ -94,7 +121,7 @@ pub(super) fn wire_macro_string_opts(proto: &str, body: &str, opts: Map) -> Resu
     ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(
       body.to_string(),
     ))),
-    Some(expandable_options_from_map(opts)),
+    Some(expandable_options_from_map(proto, opts)?),
   )?;
   Ok(())
 }
@@ -119,8 +146,8 @@ pub(super) fn ctor_arg_to_dynamic(a: &Option<Digested>) -> Dynamic {
 }
 
 /// The imperative-body replacement closure: publishes the active context, calls
-/// the body as `|document, arg1, …|`, pops the context. Shared by every
-/// constructor form that uses a closure body.
+/// the body as Perl's `($document, @args, %props)` — `|document, arg1, …, props|`, the properties one map —
+/// pops the context. Shared by every constructor form that uses a closure body.
 pub(super) fn closure_replacement(
   body: FnPtr,
   engine: Rc<Engine>,
@@ -134,10 +161,16 @@ pub(super) fn closure_replacement(
       // a script-body panic can't leave a stale CTOR_CTX entry. Review M1.
       let _ctx_guard = CtorCtxGuard::new(CtorCtx { document, props });
       // `document` first (Perl's `$_[0]`), then each argument as its Rhai value.
-      let mut call_args: Vec<Dynamic> = Vec::with_capacity(args.len() + 1);
+      let mut call_args: Vec<Dynamic> = Vec::with_capacity(args.len() + 2);
       call_args.push(Dynamic::from(DocProxy));
       for a in args {
         call_args.push(ctor_arg_to_dynamic(a));
+      }
+      // The map is built only for a body that takes it.
+      if closure_arity(&ast, body.fn_name())
+        .is_none_or(|p| p.saturating_sub(body.curry().len()) > args.len() + 1)
+      {
+        call_args.push(Dynamic::from_map(props_to_map(props.clone())));
       }
       match call_deferred_body(&engine, &ast, &body, call_args) {
         Ok(_) => Ok(()),
@@ -189,8 +222,15 @@ pub(super) fn wire_constructor_opts(
       closure_replacement(b, engine.clone(), ast.clone(), proto.to_string())
     },
   };
+  let operation = format!("DefConstructor ({proto})");
+  let opts = checked_opts(
+    &operation,
+    CONSTRUCTOR_OPTIONS,
+    &["outer", "long", "attributeForm"],
+    opts,
+  )?;
   let builder = ConstructorBuilder::new(proto)?.replacement(replacement);
-  apply_opts(builder, opts, engine, ast)?.install()
+  apply_opts(&operation, builder, opts, engine, ast)?.install()
 }
 
 /// Install one `DefEnvironment` registration (template or imperative body, with
@@ -209,8 +249,10 @@ pub(super) fn wire_environment(
       closure_replacement(b, engine.clone(), ast.clone(), proto.to_string())
     },
   };
+  let operation = format!("DefEnvironment ({proto})");
+  let opts = checked_opts(&operation, ENVIRONMENT_OPTIONS, &["attributeForm"], opts)?;
   let builder = EnvironmentBuilder::new(proto)?.replacement(replacement);
-  apply_opts(builder, opts, engine, ast)?.install()
+  apply_opts(&operation, builder, opts, engine, ast)?.install()
 }
 
 /// The builder surface the option-bag loop needs — implemented for both core
@@ -269,17 +311,60 @@ macro_rules! impl_binding_builder {
 impl_binding_builder!(ConstructorBuilder);
 impl_binding_builder!(EnvironmentBuilder);
 
+/// Perl's `CheckOptions` over a Rhai option bag (`options::check_options`): the returned bag keeps
+/// the keys `allowed` lists, less those in `unsupported` (Perl keys the core cannot honour yet),
+/// each of which is warned when set rather than dropped silently.
+pub(super) fn checked_opts(
+  operation: &str,
+  allowed: &[&str],
+  unsupported: &[&str],
+  mut opts: Map,
+) -> Result<Map> {
+  check_options(operation, allowed, opts.keys().map(|k| k.as_str()))?;
+  opts.retain(|key, val| {
+    if unsupported.contains(&key.as_str()) {
+      if val.is::<FnPtr>() || dynamic_to_bool(val) {
+        unsupported_option(operation, key);
+      }
+      false
+    } else {
+      allowed.contains(&key.as_str())
+    }
+  });
+  Ok(opts)
+}
+
+/// An option value as Perl flattens it (Package.pm:1304): an array of closures is each closure in turn.
+pub(super) fn hooks_of(val: Dynamic) -> impl Iterator<Item = Dynamic> {
+  let items = if val.is_array()
+    && val
+      .clone()
+      .cast::<rhai::Array>()
+      .iter()
+      .all(|v| v.is::<FnPtr>())
+  {
+    val.cast::<rhai::Array>()
+  } else {
+    vec![val]
+  };
+  items.into_iter()
+}
+
 /// Apply a Rhai option bag onto a builder: closure options become trampolines
 /// (typed setters), `properties` also accepts a static map, scalars route
 /// through the builder's single-source `set_option`. Shared by the constructor
 /// and environment front-ends.
 pub(super) fn apply_opts<B: BindingBuilder>(
+  operation: &str,
   mut builder: B,
   opts: Map,
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
 ) -> Result<B> {
-  for (key, val) in opts {
+  for (key, val) in opts
+    .into_iter()
+    .flat_map(|(k, v)| hooks_of(v).map(move |v| (k.clone(), v)))
+  {
     match val.clone().try_cast::<FnPtr>() {
       Some(fp) => {
         // Closure option → typed builder setter (front-end builds the closure).
@@ -325,9 +410,8 @@ pub(super) fn apply_opts<B: BindingBuilder>(
             builder =
               builder.after_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
           },
-          // Unknown closure options are silently ignored (forgiving, like Perl
-          // %options; the builder's set_option does the same for scalars).
-          _ => {},
+          // A closure for a key that takes a value (`nargs`, `mode`, …).
+          other => unsupported_option(operation, &format!("{other} as a closure")),
         }
       },
       _ => {
@@ -336,14 +420,15 @@ pub(super) fn apply_opts<B: BindingBuilder>(
           let map = val.cast::<Map>();
           builder = builder.properties(Rc::new(move |_args| Ok(rhai_map_to_props(map.clone()))));
         } else if key.as_str() == "reversion" {
-          // String reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
-          builder = builder.reversion(Reversion::Tokens(mouth::tokenize_internal(
-            TeXString::assembled(dynamic_to_string(val)),
-          )));
+          // A string or Tokens reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
+          builder = builder.reversion(Reversion::Tokens(dynamic_to_tokens(val)));
         } else if key.as_str() == "font" && val.is_map() {
           // Partial-font directive (`font => { family => 'typewriter', … }`).
           let font = font_from_rhai_map(val.cast::<Map>());
           builder = builder.font(FontDirective::Asset(Rc::new(font)));
+        } else if matches!(key.as_str(), "sizer" | "properties" | "font") {
+          // A string sizer (Perl's `sizer => '#1'`) or a non-map font/properties.
+          unsupported_option(operation, &format!("{key} as a {}", val.type_name()));
         } else if let Some(ov) = dynamic_to_option_value(&val) {
           // Scalar option → the builder's generic, single-source `set_option`.
           builder = builder.set_option(key.as_str(), ov)?;
@@ -354,9 +439,8 @@ pub(super) fn apply_opts<B: BindingBuilder>(
   Ok(builder)
 }
 
-/// Build a `before/afterConstruct` trampoline: the body runs with the live
-/// document published as active context (so `document.*` proxy calls work);
-/// the whatsit itself is not yet exposed there (read-only marshaling TBD).
+/// Build a `before/afterConstruct` trampoline: the body is Perl's `($document, $whatsit)` (Constructor.pm:136-139),
+/// the document published as active context and the whatsit read-only.
 pub(super) fn construction_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -369,15 +453,17 @@ pub(super) fn construction_trampoline(
         document,
         props: whatsit.get_properties(),
       });
-      let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(DocProxy),))
+      let _whatsit_guard = WhatsitCtxGuard::new((whatsit as *const Whatsit as *mut Whatsit, false));
+      let args = (Dynamic::from(DocProxy), Dynamic::from(WhatsitProxy));
+      let _: Dynamic = call_deferred_body(&engine, &ast, &fp, args)
         .or_else(|e| contain("afterConstruct", e, Dynamic::UNIT))?;
       Ok(())
     },
   )
 }
 
-/// Build an `afterDigest` trampoline: publish the whatsit so a parameterless body
-/// can reach it via `whatsit()`, call the Rhai closure, pop.
+/// Build an `afterDigest` trampoline: the body receives the whatsit (Perl's `($stomach, $whatsit)`, without the
+/// stomach), published mutable.
 pub(super) fn after_digest_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -386,7 +472,7 @@ pub(super) fn after_digest_trampoline(
   Rc::new(move |w: &mut Whatsit| -> Result<Vec<Digested>> {
     // RAII pop on every exit incl. panic (review M1).
     let _whatsit_guard = WhatsitCtxGuard::new((w as *mut Whatsit, true));
-    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, ())
+    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(WhatsitProxy),))
       .or_else(|e| contain("afterDigest", e, Dynamic::UNIT))?;
     Ok(Vec::new())
   })
@@ -478,14 +564,14 @@ fn wrong_kind_err(cs: &str, family: HookFamily, stored: &Stored) -> Box<EvalAltR
 /// global (harmless for BookML, which only patches already-global defs, but a
 /// real divergence — see PR #333 discussion r3623947537, @xworld21).
 pub(super) fn push_definition_hook(
-  cs: &str,
+  token: &Token,
   family: HookFamily,
   at_front: bool,
   fp: FnPtr,
 ) -> std::result::Result<(), Box<EvalAltResult>> {
   let (engine, ast) = current_script()?;
-  let token = latexml_core::T_CS!(cs);
-  let stored = lookup_definition_stored(&token)
+  let cs = token.to_string();
+  let stored = lookup_definition_stored(token)
     .map_err(rhai_err)?
     .ok_or_else(|| {
       Box::<EvalAltResult>::from(format!(
@@ -516,7 +602,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.options.before_digest, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
     HookFamily::AfterDigest => {
@@ -537,7 +623,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.options.after_digest, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
     HookFamily::BeforeConstruct => {
@@ -548,7 +634,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.before_construct, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
     HookFamily::AfterConstruct => {
@@ -559,7 +645,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.after_construct, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
     HookFamily::AfterDigestBody => {
@@ -570,7 +656,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.after_digest_body, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
   }
@@ -630,16 +716,41 @@ pub(super) fn dynamic_to_option_value(v: &Dynamic) -> Option<OptionValue> {
 /// (`bounded: 1`) or string (`protected: "yes"`) option to `false`, diverging
 /// from the `OptionValue`/`set_option` path that the same bindings reach via
 /// scalar options.
-fn dynamic_to_bool(v: &Dynamic) -> bool {
+pub(super) fn dynamic_to_bool(v: &Dynamic) -> bool {
   dynamic_to_option_value(v)
     .and_then(|ov| ov.into_bool().ok())
     .unwrap_or(false)
 }
 
-/// Install one `DefPrimitive` registration as a native primitive whose body
-/// runs at digestion time for side-effects (state assignments, etc.). The body
-/// receives args as strings and its return value is ignored (pure side-effect);
-/// the primitive contributes no boxes.
+/// The boxes a primitive's body returns, as Perl's `invoke` keeps them (Primitive.pm:78): a box, an array of boxes,
+/// or `()` for none. Any other value is Perl's "Execution yielded non boxes" Error (Stomach.pm:219-223); for one
+/// release it is dropped with a deprecation Warning, as bodies returned their last value unread before.
+fn primitive_boxes(result: Dynamic) -> Vec<Digested> {
+  let items = if result.is_array() {
+    result.cast::<rhai::Array>()
+  } else {
+    vec![result]
+  };
+  let mut boxes = Vec::new();
+  let mut non_box = false;
+  for item in items {
+    if item.is_unit() {
+      continue;
+    }
+    match item.clone().try_cast::<Digested>() {
+      Some(d) => boxes.push(d),
+      None => non_box = true,
+    }
+  }
+  if non_box {
+    warn_deprecated("DefPrimitive returning a non-box");
+  }
+  boxes
+}
+
+/// Install one `DefPrimitive` registration as a native primitive whose body runs at digestion time. The body
+/// receives Perl's `($stomach, @args)` ([`perl_body_args`]); the boxes it returns are the primitive's
+/// ([`primitive_boxes`]), as the `DefPrimitive!` macro's `into_digested_result`.
 pub(super) fn wire_primitive(
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
@@ -653,10 +764,16 @@ pub(super) fn wire_primitive(
   let ast = ast.clone();
 
   let closure: PrimitiveClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Vec<Digested>> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
-    let _: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
+    let dyn_args = perl_body_args(
+      &ast,
+      &body,
+      Dynamic::from(StomachHandle),
+      args,
+      "DefPrimitive |args|",
+    );
+    let result: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("primitive {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(Vec::new())
+    Ok(primitive_boxes(result))
   });
 
   def_primitive(
@@ -681,26 +798,30 @@ pub(super) fn wire_macro_opts(
   let engine = engine.clone();
   let ast = ast.clone();
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let dyn_args = perl_body_args(
+      &ast,
+      &body,
+      Dynamic::from(GulletHandle),
+      args,
+      "DefMacro |args|",
+    );
     let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("macro {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(mouth::tokenize_internal(TeXString::assembled(
-      dynamic_to_string(ret),
-    )))
+    Ok(dynamic_to_tokens(ret))
   });
   def_macro(
     cs,
     paramlist,
     ExpansionBody::Closure(closure),
-    Some(expandable_options_from_map(opts)),
+    Some(expandable_options_from_map(proto, opts)?),
   )?;
   Ok(())
 }
 
-/// Map a Rhai option bag onto `ExpandableOptions` (the `DefMacro!` scalar set).
-pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
+/// Map a Rhai option bag onto `ExpandableOptions`, checked against Perl's `$macro_options`.
+pub(super) fn expandable_options_from_map(proto: &str, opts: Map) -> Result<ExpandableOptions> {
   let mut o = ExpandableOptions::default();
-  for (key, val) in opts {
+  for (key, val) in checked_opts(&format!("DefMacro ({proto})"), MACRO_OPTIONS, &[], opts)? {
     let b = dynamic_to_bool(&val);
     match key.as_str() {
       "locked" => o.locked = b,
@@ -710,11 +831,11 @@ pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
       "mathactive" => o.mathactive = b,
       "robust" => o.robust = b,
       "scope" => o.scope = scope_of(&dynamic_to_string(val.clone())),
-      "alias" => o.alias = Some(dynamic_to_string(val.clone())),
+      "nopackParameters" => o.nopack_parameters = b,
       _ => {},
     }
   }
-  o
+  Ok(o)
 }
 
 /// Map a Rhai option bag onto `PrimitiveOptions` — the full `DefPrimitive!` set:
@@ -722,14 +843,16 @@ pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
 /// trampolines the constructor option-bag uses (the compile-time `DefPrimitive!`
 /// macro accepts these via `defi_opts!`'s generic digest-hook arms, so the two
 /// front-ends match). `engine`/`ast` are the loading script's handles, captured by
-/// the hook trampolines. Unknown keys are ignored (Perl `%options` forgiveness).
+/// the hook trampolines. The keys are checked against Perl's `$primitive_options`.
 pub(super) fn primitive_options_from_map(
+  proto: &str,
   opts: Map,
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
-) -> PrimitiveOptions {
+) -> Result<PrimitiveOptions> {
   let mut o = PrimitiveOptions::default();
-  for (key, val) in opts {
+  let operation = format!("DefPrimitive ({proto})");
+  for (key, val) in checked_opts(&operation, PRIMITIVE_OPTIONS, &["outer", "long"], opts)? {
     let b = dynamic_to_bool(&val);
     match key.as_str() {
       "bounded" => o.bounded = b,
@@ -742,15 +865,19 @@ pub(super) fn primitive_options_from_map(
       "leaveHorizontal" => o.leave_horizontal = b,
       "scope" => o.scope = scope_of(&dynamic_to_string(val.clone())),
       "mode" => o.mode = Some(dynamic_to_string(val.clone())),
-      "nargs" => o.nargs = val.as_int().ok().map(|i| i as usize),
+      "alias" => o.alias = Some(dynamic_to_string(val.clone())),
+      "font" => match val.clone().try_cast::<Map>() {
+        Some(map) => o.font = Some(FontDirective::Asset(Rc::new(font_from_rhai_map(map)))),
+        None => unsupported_option(&operation, "font as a string"),
+      },
       "beforeDigest" => {
-        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+        for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
           o.before_digest
             .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
         }
       },
       "afterDigest" => {
-        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+        for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
           o.after_digest
             .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
         }
@@ -758,29 +885,94 @@ pub(super) fn primitive_options_from_map(
       _ => {},
     }
   }
-  o
+  Ok(o)
 }
 
-/// Install one `DefConditional` registration: the Rhai test closure receives
-/// each argument as its TeX-source string and must return a bool (mirrors the
-/// `DefConditional!` macro's `sub` test → `def_conditional`).
+/// Install one `DefConditional` registration (Perl Package.pm:1187-1236): the Rhai test closure
+/// receives each argument as Tokens (a Token, or its string for a non-token argument) and returns
+/// a bool; with no test, the `\newif` form (`\footrue`/`\foofalse`, `SetCondition`).
 pub(super) fn wire_conditional(
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
   proto: &str,
-  test: FnPtr,
+  test: Option<FnPtr>,
+  opts: Map,
 ) -> Result<()> {
+  let operation = format!("DefConditional ({proto})");
+  let mut options = ConditionalOptions::default();
+  for (key, val) in checked_opts(&operation, CONDITIONAL_OPTIONS, &["skipper"], opts)? {
+    match key.as_str() {
+      "scope" => options.scope = scope_of(&dynamic_to_string(val)),
+      "locked" => options.locked = Some(dynamic_to_bool(&val)),
+      _ => {},
+    }
+  }
   let (cs, paramlist) = parse_prototype(proto, true)?;
   let cs_name = cs.to_string();
   let engine = engine.clone();
   let ast = ast.clone();
-  let closure: ConditionalClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<bool> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
-    let ret: Dynamic = call_deferred_body(&engine, &ast, &test, dyn_args)
-      .or_else(|e| contain(&format!("conditional {cs_name}"), e, Dynamic::FALSE))?;
-    Ok(ret.as_bool().unwrap_or(false))
+  let closure = test.map(|test| -> ConditionalClosure {
+    Rc::new(move |args: Vec<ArgWrap>| -> Result<bool> {
+      // Perl's `&$test($gullet, @args)` (Conditional.pm) when the test declares the gullet; else the arguments alone.
+      let nargs = args.len();
+      let mut dyn_args: Vec<Dynamic> = Vec::with_capacity(nargs + 1);
+      if declares_lead(&ast, &test, nargs) {
+        dyn_args.push(Dynamic::from(GulletHandle));
+      }
+      dyn_args.extend(args.into_iter().map(arg_value));
+      let ret: Dynamic = call_deferred_body(&engine, &ast, &test, dyn_args)
+        .or_else(|e| contain(&format!("conditional {cs_name}"), e, Dynamic::FALSE))?;
+      Ok(ret.as_bool().unwrap_or(false))
+    })
   });
-  def_conditional(cs, paramlist, Some(closure), ConditionalOptions::default())
+  def_conditional(cs, paramlist, closure, options)
+}
+
+/// An argument as Perl hands it to a body: a token argument as `Tokens`/`Token`, a keyval set as `KeyVals`, a
+/// Number, Dimension, Glue or MuGlue its typed handle, an omitted optional as `()`.
+pub(super) fn arg_value(arg: ArgWrap) -> Dynamic {
+  match arg {
+    ArgWrap::Tokens(tokens) => Dynamic::from(tokens),
+    ArgWrap::Token(token) => Dynamic::from(token),
+    ArgWrap::KV(kv) => Dynamic::from(*kv),
+    ArgWrap::None => Dynamic::UNIT,
+    ArgWrap::Number(n) => Dynamic::from(n),
+    ArgWrap::Dimension(d) => Dynamic::from(d),
+    ArgWrap::Glue(g) => Dynamic::from(g),
+    ArgWrap::MuGlue(g) => Dynamic::from(g),
+    other => arg_to_dynamic(other),
+  }
+}
+
+/// Whether `body` takes Perl's arguments, a leading handle (`$_[0]`) then the `nargs` arguments: it declares none
+/// (Perl's plain `sub {…}`) or more than `nargs`. One declaring 1..=nargs is the old form, read as the arguments
+/// alone; a Perl-form body names every argument (`|gullet, _x|`), as the old form cannot be told apart statically.
+pub(super) fn declares_lead(ast: &Rc<AST>, body: &FnPtr, nargs: usize) -> bool {
+  nargs == 0
+    || closure_arity(ast, body.fn_name()).is_none_or(|params| {
+      let params = params.saturating_sub(body.curry().len());
+      params == 0 || params > nargs
+    })
+}
+
+/// A macro or primitive body's arguments as Perl passes them (Expandable.pm:74, Primitive.pm:78): `lead` (the gullet
+/// or stomach handle), then each argument's value. A body declaring no lead is the old form, given TeX strings and
+/// Warned `deprecated` (`what`) once per binding load.
+fn perl_body_args(
+  ast: &Rc<AST>,
+  body: &FnPtr,
+  lead: Dynamic,
+  args: Vec<ArgWrap>,
+  what: &'static str,
+) -> Vec<Dynamic> {
+  if declares_lead(ast, body, args.len()) {
+    std::iter::once(lead)
+      .chain(args.into_iter().map(arg_value))
+      .collect()
+  } else {
+    warn_deprecated(what);
+    args.into_iter().map(arg_to_dynamic).collect()
+  }
 }
 
 /// Install one `DefColumnType` registration: `"<char><params>"` →
@@ -809,12 +1001,16 @@ pub(super) fn wire_columntype(
   let engine = engine.clone();
   let ast = ast.clone();
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let dyn_args = perl_body_args(
+      &ast,
+      &body,
+      Dynamic::from(GulletHandle),
+      args,
+      "DefColumnType |args|",
+    );
     let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("column type {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(mouth::tokenize_internal(TeXString::assembled(
-      dynamic_to_string(ret),
-    )))
+    Ok(dynamic_to_tokens(ret))
   });
   def_macro(cs, paramlist, ExpansionBody::Closure(closure), None)?;
   Ok(())
@@ -824,14 +1020,16 @@ pub(super) fn wire_columntype(
 /// scalars PLUS the `beforeDigest`/`afterDigest` closures (a `MathPrimitive` runs
 /// only the digest pair; its construct fields are never executed). Wired through
 /// the same trampolines as the other front-ends, so the Rhai and compile-time
-/// surfaces match. Unknown keys are ignored (Perl %options forgiveness).
+/// surfaces match. The keys are checked against Perl's `$math_options`.
 pub(super) fn math_options_from_map(
+  proto: &str,
   opts: Map,
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
 ) -> Result<MathPrimitiveOptions> {
   let mut o = MathPrimitiveOptions::default();
-  for (key, val) in opts {
+  let operation = format!("DefMath ({proto})");
+  for (key, val) in checked_opts(&operation, MATH_OPTIONS, &[], opts)? {
     let s = || dynamic_to_string(val.clone());
     let b = || dynamic_to_bool(&val);
     match key.as_str() {
@@ -842,13 +1040,29 @@ pub(super) fn math_options_from_map(
       "operator_role" => o.operator_role = Some(s()),
       "mathstyle" => o.mathstyle = Some(s()),
       "scriptpos" => o.scriptpos = Some(s()),
-      "mode" => o.mode = Some(s()),
+      "decl_id" => o.decl_id = Some(s()),
       "alias" => o.alias = Some(s()),
+      "scope" => o.scope = scope_of(&s()),
+      "operator_scriptpos" => o.operator_scriptpos = val.as_int().ok().map(|i| i as usize),
+      "font" => match val.clone().try_cast::<Map>() {
+        Some(map) => o.font = Some(FontDirective::Asset(Rc::new(font_from_rhai_map(map)))),
+        None => unsupported_option(&operation, "font as a string"),
+      },
+      "reversion" => match val.clone().try_cast::<FnPtr>() {
+        Some(fp) => {
+          o.reversion = Some(Reversion::Closure(reversion_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+          )))
+        },
+        None => o.reversion = Some(Reversion::Tokens(dynamic_to_tokens(val.clone()))),
+      },
+      "sizer" => match val.clone().try_cast::<FnPtr>() {
+        Some(fp) => o.sizer = Some(sizer_trampoline(fp, engine.clone(), ast.clone())),
+        None => unsupported_option(&operation, "sizer as a string"),
+      },
       "revert_as" => o.revert_as = Some(std::borrow::Cow::Owned(s())),
-      "bounded" => o.bounded = b(),
-      "requireMath" => o.require_math = b(),
-      "forbidMath" => o.forbid_math = b(),
-      "isPrefix" => o.is_prefix = b(),
       "reorder" => o.reorder = b(),
       "dual" => o.dual = b(),
       "nogroup" => o.nogroup = b(),
@@ -861,13 +1075,13 @@ pub(super) fn math_options_from_map(
       "lpadding" => o.lpadding = val.as_int().ok().map(|i| i as usize),
       "rpadding" => o.rpadding = val.as_int().ok().map(|i| i as usize),
       "beforeDigest" => {
-        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+        for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
           o.before_digest
             .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
         }
       },
       "afterDigest" => {
-        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+        for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
           o.after_digest
             .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
         }
@@ -1020,9 +1234,9 @@ pub(super) fn wire_constructor_template(proto: &str, template: String) -> Result
     .install()
 }
 
-/// Build a closure-form `reversion` trampoline: the body runs with the whatsit
-/// published READ-ONLY (argString/propertyString available) and each digested
-/// arg as its TeX-source string; its returned string is the reversion TeX.
+/// Build a closure-form `reversion` trampoline: the body is Perl's `($whatsit, @args)` (Whatsit.pm:121), the whatsit
+/// read-only and each arg its TeX-source string; it returns the reversion (TeX source, a `Token` or `Tokens`). A body
+/// declaring no whatsit ([`declares_lead`]) is the old form, given the arguments alone, Warned `deprecated`.
 pub(super) fn reversion_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -1032,24 +1246,29 @@ pub(super) fn reversion_trampoline(
     move |w: &Whatsit, args: &Vec<Option<Digested>>| -> Result<Tokens> {
       // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
       let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
-      let dyn_args: Vec<Dynamic> = args
-        .iter()
-        .map(|a| match a {
+      let _reverting_guard = RevertingGuard::new(w as *const Whatsit as usize);
+      let lead = if declares_lead(&ast, &fp, args.len()) {
+        Some(Dynamic::from(WhatsitProxy))
+      } else {
+        warn_deprecated("reversion |args|");
+        None
+      };
+      let dyn_args: Vec<Dynamic> = lead
+        .into_iter()
+        .chain(args.iter().map(|a| match a {
           Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
           None => Dynamic::UNIT,
-        })
+        }))
         .collect();
       let ret = call_deferred_body(&engine, &ast, &fp, dyn_args)
         .or_else(|e| contain("reversion", e, Dynamic::UNIT))?;
-      Ok(mouth::tokenize_internal(TeXString::assembled(
-        dynamic_to_string(ret),
-      )))
+      Ok(dynamic_to_tokens(ret))
     },
   )
 }
 
-/// Build a `sizer` trampoline: the body sees the read-only whatsit and returns
-/// "w;h;d" dimension specs (e.g. "10pt;8pt;2pt").
+/// Build a `sizer` trampoline: the body receives the read-only whatsit (Perl's `&$sizer($whatsit)`, Whatsit.pm:249)
+/// and returns "w;h;d" dimension specs (e.g. "10pt;8pt;2pt").
 pub(super) fn sizer_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -1059,7 +1278,7 @@ pub(super) fn sizer_trampoline(
     move |w: &Whatsit| -> Result<(Dimension, Dimension, Dimension)> {
       // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
       let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
-      let ret = call_deferred_body(&engine, &ast, &fp, ())
+      let ret = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(WhatsitProxy),))
         .or_else(|e| contain("sizer", e, Dynamic::UNIT))?;
       let spec = dynamic_to_string(ret);
       let mut parts = spec.split(';');
@@ -1205,11 +1424,7 @@ fn parse_rewrite_options(kind: &str, opts: Map) -> latexml_core::rewrite::Rewrit
         }
       },
       "regexp" => o.regexp = Some(dynamic_to_string(val)),
-      "match" => {
-        o.on_match = Some(mouth::tokenize_internal(TeXString::assembled(
-          dynamic_to_string(val),
-        )))
-      },
+      "match" => o.on_match = Some(dynamic_to_tokens(val)),
       // A rewrite's scope is a Perl scope pattern (`label:…`, `id:…`, or one Perl reports as
       // unrecognized), never an assignment scope: `scope_of` kept only `local`/`global` and
       // dropped `label:…`, so the rule applied document-wide (57as review).
@@ -1337,4 +1552,159 @@ pub(super) fn wire_math_ligature_matcher(
     regex:     None,
   }]);
   Ok(())
+}
+
+/// A `Tag` `afterOpen`/`afterClose` hook (Package.pm:2005-2030): Perl calls it with `($document, $node, $box)`;
+/// the Rhai closure receives the document and the node (and the box's digested handle, when it declares it).
+pub(super) fn tag_trampoline(
+  fp: FnPtr,
+  engine: Rc<Engine>,
+  ast: Rc<AST>,
+) -> TagConstructionClosure {
+  Rc::new(
+    move |document: &mut Document,
+          node: &mut libxml::tree::Node,
+          boxed: Option<&Digested>|
+          -> Result<()> {
+      let props = SymHashMap::default();
+      let _ctx_guard = CtorCtxGuard::new(CtorCtx { document, props: &props });
+      let args = (
+        Dynamic::from(DocProxy),
+        Dynamic::from(NodeProxy::borrowed(node.clone())),
+        boxed.map_or(Dynamic::UNIT, |b| Dynamic::from(b.clone())),
+      );
+      let _: Dynamic = call_deferred_body(&engine, &ast, &fp, args)
+        .or_else(|e| contain("Tag", e, Dynamic::UNIT))?;
+      Ok(())
+    },
+  )
+}
+
+/// Install a `DefParameterType(name, reader, options)` (Package.pm:586-590): the reader is called as Perl's
+/// `&$reader($gullet, @extra)` (Parameter.pm:88) and returns the value (Tokens, a Token, `()` for none); the options
+/// are Perl's `$parameter_options` (`nargs` accepted and unread, as Parameter.pm never reads it).
+pub(super) fn wire_parameter_type(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  name: &str,
+  reader: FnPtr,
+  opts: Map,
+) -> Result<()> {
+  let operation = format!("DefParameterType {name}");
+  let opts = checked_opts(
+    &operation,
+    latexml_core::binding::def::options::PARAMETER_OPTIONS,
+    &[],
+    opts,
+  )?;
+  let (engine, ast) = (engine.clone(), ast.clone());
+  let what = format!("parameter type {name}");
+  let read_engine = engine.clone();
+  let read_ast = ast.clone();
+  let mut param = latexml_core::parameter::Parameter {
+    name: arena::pin(name),
+    reader: Rc::new(move |_inner, extra: &[Tokens]| {
+      let args: Vec<Dynamic> = std::iter::once(Dynamic::from(GulletHandle))
+        .chain(extra.iter().cloned().map(Dynamic::from))
+        .collect();
+      match call_deferred_body(&read_engine, &read_ast, &reader, args) {
+        Ok(value) => Ok(dynamic_to_arg(value)),
+        Err(e) => contain(&what, e, ArgWrap::None),
+      }
+    }),
+    ..latexml_core::parameter::Parameter::default()
+  };
+  for (key, val) in opts {
+    match key.as_str() {
+      "optional" => param.optional = dynamic_to_bool(&val),
+      "novalue" => param.novalue = dynamic_to_bool(&val),
+      // Perl's `semiverbatim => [chars]`, or a true value for none extra.
+      "semiverbatim" => {
+        param.semiverbatim = if val.is_array() {
+          Some(string_chars(val))
+        } else {
+          dynamic_to_bool(&val).then(Vec::new)
+        }
+      },
+      "undigested" if dynamic_to_bool(&val) => {
+        param.predigest = Some(Rc::new(|arg: ArgWrap, _extra: &[Tokens]| {
+          Ok(arg.undigested())
+        }));
+      },
+      // Perl's `&$reversion($value, @extra)`: the value as Tokens, each extra as Tokens.
+      "reversion" => match val.try_cast::<FnPtr>() {
+        Some(fp) => {
+          let (engine, ast) = (engine.clone(), ast.clone());
+          let what = format!("{operation} reversion");
+          param.reversion = Some(Rc::new(
+            move |value: Vec<Token>, _inner, extra: &[Tokens]| {
+              let args: Vec<Dynamic> = std::iter::once(Dynamic::from(Tokens::new(value)))
+                .chain(extra.iter().cloned().map(Dynamic::from))
+                .collect();
+              match call_deferred_body(&engine, &ast, &fp, args) {
+                Ok(ret) => Ok(dynamic_to_tokens(ret)),
+                Err(e) => contain(&what, e, Tokens::default()),
+              }
+            },
+          ));
+        },
+        None => unsupported_option(&operation, "reversion as tokens"),
+      },
+      "beforeDigest" => {
+        for fp in hooks_of(val).filter_map(|v| v.try_cast::<FnPtr>()) {
+          param
+            .before_digest
+            .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+        }
+      },
+      "afterDigest" => {
+        for fp in hooks_of(val).filter_map(|v| v.try_cast::<FnPtr>()) {
+          param
+            .after_digest
+            .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+        }
+      },
+      _ => {},
+    }
+  }
+  latexml_core::state::assign_mapping(
+    "PARAMETER_TYPES",
+    name,
+    Some(Stored::Parameter(Rc::new(param))),
+  );
+  Ok(())
+}
+
+/// A reader's returned value as an argument: Tokens, a Token, a keyval set or a value handle as itself, `()` as none
+/// (Perl undef), TeX source TokenizeInternal'd.
+pub(super) fn dynamic_to_arg(value: Dynamic) -> ArgWrap {
+  if value.is_unit() {
+    ArgWrap::None
+  } else if let Some(token) = value.clone().try_cast::<Token>() {
+    ArgWrap::Token(token)
+  } else if let Some(kv) = value.clone().try_cast::<latexml_core::keyvals::KeyVals>() {
+    ArgWrap::KV(Box::new(kv))
+  } else if let Some(n) = value.clone().try_cast::<Number>() {
+    ArgWrap::Number(n)
+  } else if let Some(d) = value.clone().try_cast::<Dimension>() {
+    ArgWrap::Dimension(d)
+  } else if let Some(g) = value.clone().try_cast::<latexml_core::common::glue::Glue>() {
+    ArgWrap::Glue(g)
+  } else if let Some(g) = value
+    .clone()
+    .try_cast::<latexml_core::common::muglue::MuGlue>()
+  {
+    ArgWrap::MuGlue(g)
+  } else {
+    ArgWrap::Tokens(dynamic_to_tokens(value))
+  }
+}
+
+/// The chars of an array of 1-char strings (Perl's `semiverbatim` list).
+fn string_chars(val: Dynamic) -> Vec<char> {
+  val
+    .cast::<rhai::Array>()
+    .into_iter()
+    .filter_map(|c| dynamic_to_string(c).chars().next())
+    .collect()
 }

@@ -163,18 +163,47 @@ pub fn set_ignore_diagnostics(ignore: bool) -> bool {
 /// `set_ignore_diagnostics`).
 pub fn diagnostics_ignored() -> bool { IGNORE_DIAGNOSTICS.get() }
 
+/// The Error and Fatal records an ignoring scope has dropped on this thread, so far.
+#[thread_local]
+static IGNORED_RECORDS: std::cell::Cell<IgnoredRecords> =
+  std::cell::Cell::new(IgnoredRecords { errors: 0, fatals: 0 });
+
+/// A tally of the Error and Fatal records an ignoring scope dropped.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct IgnoredRecords {
+  pub errors: usize,
+  pub fatals: usize,
+}
+
 /// Perl `local $LaTeXML::IGNORE_ERRORS = 1` as a scope: ignores diagnostics
 /// while alive and restores the previous state on drop — panic-safe, unlike a
 /// manual restore after the probed call.
-pub struct IgnoreDiagnosticsScope(bool);
+pub struct IgnoreDiagnosticsScope {
+  previous: bool,
+  before:   IgnoredRecords,
+}
 impl IgnoreDiagnosticsScope {
-  pub fn new() -> Self { Self(set_ignore_diagnostics(true)) }
+  pub fn new() -> Self {
+    Self {
+      previous: set_ignore_diagnostics(true),
+      before:   IGNORED_RECORDS.get(),
+    }
+  }
+  /// The Error and Fatal records dropped while this scope was alive: a scope that mutes a load can still say what
+  /// it muted (#825).
+  pub fn dropped(&self) -> IgnoredRecords {
+    let now = IGNORED_RECORDS.get();
+    IgnoredRecords {
+      errors: now.errors - self.before.errors,
+      fatals: now.fatals - self.before.fatals,
+    }
+  }
 }
 impl Default for IgnoreDiagnosticsScope {
   fn default() -> Self { Self::new() }
 }
 impl Drop for IgnoreDiagnosticsScope {
-  fn drop(&mut self) { set_ignore_diagnostics(self.0); }
+  fn drop(&mut self) { set_ignore_diagnostics(self.previous); }
 }
 
 thread_local! {
@@ -237,6 +266,13 @@ pub fn emit_record(status: LogStatus, target: &str, message: &str) {
   // Perl `IGNORE_ERRORS`: a probing scope drops the record whole (no line, no
   // count) — see `set_ignore_diagnostics`.
   if diagnostics_ignored() {
+    let mut tally = IGNORED_RECORDS.get();
+    match status {
+      LogStatus::Error => tally.errors += 1,
+      LogStatus::Fatal => tally.fatals += 1,
+      _ => {},
+    }
+    IGNORED_RECORDS.set(tally);
     return;
   }
   // After a `TooManyErrors` Fatal or a RESOURCE Fatal has latched, drop
@@ -1221,8 +1257,8 @@ pub type Result<T> = result::Result<T, Error>;
 
 pub struct Error(Box<ErrorData>);
 
-/// As a plain struct would print, since this text reaches the log (`Warning:recovery:digest_internal`,
-/// `Error:document:convert`) and a panic message: the box is no part of what an error says.
+/// As a plain struct would print, since this text reaches the log (`Error:document:convert`) and a panic message:
+/// the box is no part of what an error says.
 impl fmt::Debug for Error {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.debug_struct("Error")
@@ -1297,6 +1333,8 @@ pub enum ErrorCategory {
   /// watermark so the CLI can rerun the document under `--streaming` before
   /// the memory fuse (batch 56dz). Reported as an Info, never a Fatal.
   StreamingRestart,
+  /// A binding's own object, logged as spelled (Perl `Fatal(…, $object, …)`, Error.pm:271).
+  Named(String),
 }
 
 #[derive(Debug)]
@@ -1321,6 +1359,28 @@ pub enum ErrorTarget {
   TargetUnexpected,
   TooManyErrors,
   Timeout,
+  /// A binding's own category, logged as spelled (Perl `Fatal($category, …)`, Error.pm:271): a runtime binding's.
+  Named(String),
+}
+
+impl ErrorTarget {
+  /// The category slot of a `Fatal:<category>:<object>` line.
+  fn log_name(&self) -> String {
+    match self {
+      ErrorTarget::Named(name) => name.clone(),
+      other => format!("{other:?}"),
+    }
+  }
+}
+
+impl ErrorCategory {
+  /// The object slot of a `Fatal:<category>:<object>` line.
+  fn log_name(&self) -> String {
+    match self {
+      ErrorCategory::Named(name) => name.clone(),
+      other => format!("{other:?}"),
+    }
+  }
 }
 
 impl fmt::Display for ErrorCategory {
@@ -1352,6 +1412,7 @@ impl fmt::Display for ErrorCategory {
       MemoryBudget => write!(f, "memory_budget"),
       ReadBudget => write!(f, "read_budget"),
       StreamingRestart => write!(f, "streaming-restart"),
+      Named(name) => write!(f, "{name}"),
     }
   }
 }
@@ -1377,17 +1438,33 @@ impl Error {
     // converter/post sinks call this again on the propagated `Err`; the
     // same `target:category:message` prints once. A fatal built by hand
     // (`Error { .. }` literals) is logged here for the first time.
-    let key = s!("{:?}:{:?}:{}", self.target, self.category, self.message);
-    let already = LAST_FATAL_LOGGED.with(|c| c.borrow().as_deref() == Some(key.as_str()));
-    if already {
+    if self.is_logged_fatal() {
       return;
     }
+    let key = self.fatal_key();
     emit_record(
       LogStatus::Fatal,
-      &s!("Fatal:{:?}:{:?} ", self.target, self.category),
+      &s!(
+        "Fatal:{}:{} ",
+        self.target.log_name(),
+        self.category.log_name()
+      ),
       &self.message,
     );
     LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = Some(key));
+  }
+  fn fatal_key(&self) -> String {
+    s!(
+      "{}:{}:{}",
+      self.target.log_name(),
+      self.category.log_name(),
+      self.message
+    )
+  }
+  /// Whether this is the Fatal `log_fatal` printed last: an `Err` carrying an already-reported Fatal.
+  pub fn is_logged_fatal(&self) -> bool {
+    let key = self.fatal_key();
+    LAST_FATAL_LOGGED.with(|c| c.borrow().as_deref() == Some(key.as_str()))
   }
   pub fn todo() -> Self {
     Error::from(ErrorData {
@@ -1588,7 +1665,7 @@ pub fn note_end(_stage: &str) {
 mod tests {
   use super::*;
 
-  /// The text the log carries (`Warning:recovery:digest_internal`, `Error:document:convert`) and a panic prints.
+  /// The text the log carries (`Error:document:convert`) and a panic prints.
   #[test]
   fn an_error_debugs_as_a_plain_struct() {
     let error = Error::from(ErrorData {
@@ -1651,6 +1728,39 @@ mod tests {
     assert!(
       !resource_fatal_latched(),
       "a Mouth-target fatal is not a resource fatal"
+    );
+    initialize_report();
+  }
+
+  /// An ignoring scope drops its Error and Fatal records whole and tallies them (#825: expl3_sty.rs reports what
+  /// the no-dump expl3-code.tex reload muted); a nested scope tallies only its own, and counting stops at its end.
+  #[test]
+  fn an_ignoring_scope_tallies_what_it_drops() {
+    initialize_report();
+    let outer = IgnoreDiagnosticsScope::new();
+    emit_record(LogStatus::Error, "undefined:\\x", "synthetic");
+    emit_record(LogStatus::Warning, "w:w", "synthetic");
+    {
+      let inner = IgnoreDiagnosticsScope::new();
+      emit_record(LogStatus::Error, "undefined:\\y", "synthetic");
+      emit_record(LogStatus::Fatal, "Fatal:Internal:Unexpected ", "synthetic");
+      assert_eq!(inner.dropped(), IgnoredRecords { errors: 1, fatals: 1 });
+    }
+    assert!(
+      diagnostics_ignored(),
+      "the inner scope restores the outer one's ignoring"
+    );
+    assert_eq!(outer.dropped(), IgnoredRecords { errors: 2, fatals: 1 });
+    drop(outer);
+    assert_eq!(get_status(LogStatus::Error), 0, "dropped, not counted");
+    assert_eq!(get_status(LogStatus::Fatal), 0, "dropped, not counted");
+    let after = IgnoreDiagnosticsScope::new();
+    drop(after);
+    emit_record(LogStatus::Error, "undefined:\\z", "synthetic");
+    assert_eq!(
+      get_status(LogStatus::Error),
+      1,
+      "outside a scope a record counts"
     );
     initialize_report();
   }

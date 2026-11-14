@@ -3,8 +3,9 @@
 %   2205.10749, 2311.06870 (read \CurrentFile under LaTeX); 77g review (\@@underline undefined
 %   without a dump)
 % oracle:  pdflatex 0 errors; no first-line indent; [macro:->][macro:->] same; U:\underline
-% engines: rust=0 errors, 1 warning under LATEXML_NODUMP (recursion:LaTeX.pool) (2026-09-26)
-% expect:  0 errors, 1 warning; five ltx_noindent paragraphs, the \CurrentFile family empty,
+% engines: rust=0 errors, 2 warnings under LATEXML_NODUMP (recursion:LaTeX.pool; expl3:raw-load counting
+%   the 5015 Error records dropped in expl3.sty's raw expl3-code.tex re-load, issue #825) (2026-11-13)
+% expect:  0 errors, 2 warnings; five ltx_noindent paragraphs, the \CurrentFile family empty,
 %   \@@underline the saved \underline (latex.ltx:16368)
 % status:  GREEN (guard dump_gate_init::nodump_latex_branch_converts_healthily)
 % mechanism: the degraded LoadFormat('latex') branch (bootstrap -> base -> constructs, raw

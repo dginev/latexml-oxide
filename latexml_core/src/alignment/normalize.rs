@@ -196,10 +196,14 @@ fn normalize_overprint_spans(alignment: &mut Alignment) {
       } else {
         end
       };
+      let reach = cells[j]
+        .overprint_columns
+        .map_or(reach, |n| reach.min(j + n));
       if reach > start {
-        // The span's right edge is the last covered cell's.
-        if end > start {
-          let right: String = cells[end - 1]
+        // The span's right edge is the last covered cell's: a capped span (`\Block{1-2}`) stops before `end`.
+        let last = reach.min(end);
+        if last > start {
+          let right: String = cells[last - 1]
             .border
             .chars()
             .filter(|c| matches!(c, 'r' | 'R'))

@@ -16,7 +16,7 @@ use latexml_core::{Core, CoreOptions, common::error::Result, state};
 /// A sample contrib binding, authored in Rhai (no Rust toolchain, no recompile).
 const SAMPLE: &str = r##"
   // Expandable macro: \twicex{X} -> XX
-  DefMacro("\\twicex{}", |x| x + x);
+  DefMacro("\\twicex{}", |gullet, x| Tokens(x, x));
 
   // Constructor (imperative, proxy syntax close to Perl's $document->method):
   // \myemph{X} -> <ltx:emph>X</ltx:emph>. `x` is a digested `{}` arg — an opaque
@@ -37,7 +37,7 @@ const SAMPLE: &str = r##"
   DefConstructor("\\uarg Undigested", |document, toks| {
     let s = "U[" + UnTeX(toks) + "]";
     document.openElement("ltx:text");
-    document.setAttribute("class", "uarg");
+    document.setAttribute(document.getNode(), "class", "uarg");
     document.absorbString(s);
     document.closeElement("ltx:text");
   });
@@ -47,7 +47,7 @@ const SAMPLE: &str = r##"
   // \uabs{ZZ} -> <ltx:text class="uabs">ZZ</ltx:text>.
   DefConstructor("\\uabs Undigested", |document, toks| {
     document.openElement("ltx:text");
-    document.setAttribute("class", "uabs");
+    document.setAttribute(document.getNode(), "class", "uabs");
     document.absorb(toks);
     document.closeElement("ltx:text");
   });
@@ -77,7 +77,7 @@ const SAMPLE: &str = r##"
   // \note{N} -> <ltx:text class="note">[N]</ltx:text>
   DefConstructor("\\note{}", |document, x| {
     document.openElement("ltx:text");
-    document.setAttribute("class", "note");
+    document.setAttribute(document.getNode(), "class", "note");
     document.absorbString("[");
     document.absorb(x);
     document.absorbString("]");
@@ -91,7 +91,7 @@ const SAMPLE: &str = r##"
 
   // Primitive: digestion-time side-effect into State (global, so it survives the
   // document group for the post-conversion assertion).
-  DefPrimitive("\\setx{}", |v| { assign_global("script:x", v); });
+  DefPrimitive("\\setx{}", |stomach, v| { AssignValue("script:x", v, "global"); });
 
   // Corpus-shaped template constructor exercising a top-level CONDITIONAL with
   // `#n` rendering through the real Document pipeline (the #171 template AST):
@@ -107,9 +107,9 @@ const SAMPLE: &str = r##"
     "^<ltx:note role=\"footnote\" ?#mark(mark=\"#mark\")()>?#prenote(#prenote )()#2</ltx:note>", #{
     mode: "internal_vertical",
     beforeDigest: || neutralize_font(),
-    afterDigest: || {
-      let m = whatsit().argString(1);
-      if m != "" { whatsit().setProperty("mark", m); }
+    afterDigest: |whatsit| {
+      let m = ToString(whatsit.getArg(1));
+      if m != "" { whatsit.setProperty("mark", m); }
     }
   });
 
@@ -126,18 +126,14 @@ const SAMPLE: &str = r##"
   });
 
   // #635: READ a whatsit property inside an imperative constructor body. Perl
-  // passes `$whatsit->getProperties` to the CODE replacement (Constructor.pm:137),
-  // so the body can branch on / compose from them; the Rhai body reaches them
-  // through `document.getProperty(name)` (typed, `()` when absent) and
-  // `document.getProperties()` (the whole map) — read-siblings of
-  // `absorbProperty`, off the same construction-time property map. \gp{Z} sets
-  // `tag`/`n` via its properties closure, then the body reads them back:
-  // \gp{Z} -> <ltx:text class="gp">T-Z/2</ltx:text>.
-  DefConstructor("\\gp{}", |document, x| {
-    let t = document.getProperty("tag");
-    let all = document.getProperties();
+  // passes `$whatsit->getProperties` to the CODE replacement after the arguments
+  // (Constructor.pm:137); the Rhai body receives them as one trailing map (#716).
+  // \gp{Z} sets `tag`/`n` via its properties closure, then the body reads them
+  // back: \gp{Z} -> <ltx:text class="gp">T-Z/2</ltx:text>.
+  DefConstructor("\\gp{}", |document, x, all| {
+    let t = all.tag;
     document.openElement("ltx:text");
-    document.setAttribute("class", "gp");
+    document.setAttribute(document.getNode(), "class", "gp");
     document.absorbString(t + "/" + all.n);
     document.closeElement("ltx:text");
   }, #{
@@ -187,7 +183,7 @@ const SAMPLE: &str = r##"
   // document.absorbProperty.
   DefEnvironment("{rbox}", |document| {
     document.openElement("ltx:text");
-    document.setAttribute("class", "rbox");
+    document.setAttribute(document.getNode(), "class", "rbox");
     document.absorbProperty("body");
     document.closeElement("ltx:text");
   });
@@ -205,7 +201,7 @@ const SAMPLE: &str = r##"
 
   // ── Wave C/E: package-option machinery through a real \usepackage[draft] ──
   // (ieeetran/article classes' DeclareOption + ProcessOptions shape.)
-  DeclareOption("draft", || assign_global("rh:opt", "draft-on"));
+  DeclareOption("draft", || AssignValue("rh:opt", "draft-on", "global"));
   ProcessOptions();
 
   // ieeetran {IEEEproof}-style: the `properties` closure DIGESTS content
@@ -235,7 +231,7 @@ const SAMPLE: &str = r##"
 
   // natbib \cite-style parameter types: star match + two optionals +
   // Semiverbatim keys — the prototype dialect is shared with the macros.
-  DefMacro("\\rcite OptionalMatch:* [][] Semiverbatim", |star, pre, post, keys| {
+  DefMacro("\\rcite OptionalMatch:* [][] Semiverbatim", |gullet, star, pre, post, keys| {
     "[" + pre + ";" + post + ";" + keys + ";" + star + "]"
   });
 
@@ -246,18 +242,18 @@ const SAMPLE: &str = r##"
     properties: |xs, ys, unused_box| #{ xscale: xs, yscale: ys }
   });
 
-  // listings/siunitx-style OptionalKeyVals: the keyval dict arrives as the
-  // macro's first argument (its TeX-source form).
+  // listings/siunitx-style OptionalKeyVals: the keyval set arrives as the
+  // macro's first argument after the gullet (a `KeyVals`, printing as its TeX form).
   DefKeyVal("RH", "lang", "");
   DefKeyVal("RH", "size", "");
-  DefMacro("\\kvprobe OptionalKeyVals:RH {}", |kv, body| {
+  DefMacro("\\kvprobe OptionalKeyVals:RH {}", |gullet, kv, body| {
     "(" + kv + ")" + body
   });
 
-  // sizer + closure-form reversion (read-only whatsit context in both).
+  // sizer + closure-form reversion, each receiving the read-only whatsit first (Perl's `($whatsit, @args)`).
   DefConstructor("\\sized{}", "<ltx:text class=\"sz\">#1</ltx:text>", #{
-    sizer: || "10pt;8pt;2pt",
-    reversion: |x| "\\sized{" + x + "}"
+    sizer: |whatsit| "10pt;8pt;2pt",
+    reversion: |whatsit, x| "\\sized{" + x + "}"
   });
 
   // DefAccent: \racc{o} routes through \lx@applyaccent (combining acute).
@@ -290,7 +286,7 @@ const SAMPLE: &str = r##"
   DefConstructor("\\rwvictim{}", "<ltx:text class=\"victim\">#1</ltx:text>");
   DefRewrite(#{ select: "descendant-or-self::ltx:text[@class='victim']" }, |document, nodes| {
     document.openElement("ltx:text");
-    document.setAttribute("class", "replaced");
+    document.setAttribute(document.getNode(), "class", "replaced");
     document.absorbString("REPL");
     document.closeElement("ltx:text");
   });
@@ -489,10 +485,10 @@ fn script_binding_macro_and_constructor_convert() {
     "static properties map (\\snote) did not populate #cls; xml=\n{xml}"
   );
   // #635: reading whatsit properties inside an imperative constructor body via
-  // document.getProperty(name) (typed "T-Z") + document.getProperties() (map, .n).
+  // its trailing properties map (.tag "T-Z", .n).
   assert!(
     xml.contains("class=\"gp\"") && xml.contains("T-Z/2"),
-    "getProperty/getProperties did not read the whatsit properties (\\gp); xml=\n{xml}"
+    "the trailing properties map did not carry the whatsit properties (\\gp); xml=\n{xml}"
   );
   // PI template through the runtime interpreter.
   assert!(
@@ -666,12 +662,11 @@ fn script_binding_macro_and_constructor_convert() {
     "the internal fragment wrapper reached the document; xml=\n{xml}"
   );
 
-  // Primitive seam: the digestion-time side-effect persisted into State.
+  // Primitive seam: the digestion-time side-effect persisted into State — the argument's Tokens, as Perl's
+  // `($stomach, @args)` stores them (W3RD2b; a string before).
   let stored = state::lookup_value("script:x");
   let val = match stored {
-    Some(latexml_core::common::store::Stored::String(s)) => {
-      Some(latexml_core::common::arena::to_string(s))
-    },
+    Some(latexml_core::common::store::Stored::Tokens(t)) => Some(t.to_string()),
     _ => None,
   };
   assert_eq!(
@@ -825,7 +820,7 @@ const XMLAPI_SAMPLE: &str = r##"
   DefConstructor("\\xqbuild{}", |document, cls| {
     let c = ToString(cls);
     document.openElement("ltx:text");
-    document.setAttribute("class", c);
+    document.setAttribute(document.getNode(), "class", c);
     document.openElement("ltx:emph");
     document.absorbString(c + "-inner");
     document.closeElement("ltx:emph");
@@ -838,23 +833,23 @@ const XMLAPI_SAMPLE: &str = r##"
     let n = document.insertElement("ltx:text", #{ class: "ins-elem" });
     document.addClass(n, "ins-extra");
     document.generateID(n, "xq");
-    assign_global("xq:insqname", n.qname());
-    assign_global("xq:insid", n.getAttribute("xml:id"));
-    assign_global("xq:cur", document.getNode().qname());
-    assign_global("xq:elem", document.getElement().qname());
+    AssignValue("xq:insqname", n.qname(), "global");
+    AssignValue("xq:insid", n.getAttribute("xml:id"), "global");
+    AssignValue("xq:cur", document.getNode().qname(), "global");
+    AssignValue("xq:elem", document.getElement().qname(), "global");
   });
 
   // findnodes / findnode (Perl `findnodes`/`findnode`), whole-document and
   // scoped to a node — the query half a script had no way to reach before.
   DefConstructor("\\xqfind", |document| {
     let hits = document.findnodes("//ltx:text[@class]");
-    assign_global("xq:count", "" + hits.len());
+    AssignValue("xq:count", "" + hits.len(), "global");
     let one = document.findnode("//ltx:text[contains(@class,'ins-elem')]");
-    assign_global("xq:one", one.getAttribute("class"));
+    AssignValue("xq:one", one.getAttribute("class"), "global");
     let keep = document.findnode("//ltx:text[@class='keep']");
-    assign_global("xq:scoped", "" + document.findnodes(".//ltx:emph", keep).len());
-    assign_global("xq:missing",
-      if type_of(document.findnode("//ltx:nosuch")) == "()" { "unit" } else { "BAD" });
+    AssignValue("xq:scoped", "" + document.findnodes(".//ltx:emph", keep).len(), "global");
+    AssignValue("xq:missing",
+      if type_of(document.findnode("//ltx:nosuch")) == "()" { "unit" } else { "BAD" }, "global");
   });
 
   // Structural manipulation: rename / remove / unwrap / wrap / appendClone /
@@ -889,10 +884,10 @@ const XMLAPI_SAMPLE: &str = r##"
     let target = document.findnode("//ltx:text[@class='keep']");
     try {
       document.replaceNode(target, parsed);
-      assign_global("xq:foreign", "ACCEPTED-A-PARSED-NODE");
+      AssignValue("xq:foreign", "ACCEPTED-A-PARSED-NODE", "global");
     } catch (e) {
-      assign_global("xq:foreign", "rejected");
-      assign_global("xq:foreignmsg", "" + e);
+      AssignValue("xq:foreign", "rejected", "global");
+      AssignValue("xq:foreignmsg", "" + e, "global");
     }
   });
 
@@ -904,10 +899,10 @@ const XMLAPI_SAMPLE: &str = r##"
     document.removeNode(orphan);
     try {
       document.renameNode(orphan, "ltx:emph");
-      assign_global("xq:orphan", "RENAMED-AN-ORPHAN");
+      AssignValue("xq:orphan", "RENAMED-AN-ORPHAN", "global");
     } catch (e) {
-      assign_global("xq:orphan", "rejected");
-      assign_global("xq:orphanmsg", "" + e);
+      AssignValue("xq:orphan", "rejected", "global");
+      AssignValue("xq:orphanmsg", "" + e, "global");
     }
   });
 
@@ -916,21 +911,21 @@ const XMLAPI_SAMPLE: &str = r##"
   // where the model allows (the motivating case: patching \hrule/\vrule).
   DefConstructor("\\xqmodel", |document| {
     // qname/qname form — stable schema facts.
-    assign_global("xq:cc_p_text", if document.canContain("ltx:p", "#PCDATA") {"yes"} else {"no"});
-    assign_global("xq:cc_p_sec",  if document.canContain("ltx:p", "ltx:section") {"yes"} else {"no"});
+    AssignValue("xq:cc_p_text", if document.canContain("ltx:p", "#PCDATA") {"yes"} else {"no"}, "global");
+    AssignValue("xq:cc_p_sec",  if document.canContain("ltx:p", "ltx:section") {"yes"} else {"no"}, "global");
     // node form (the documented `canContain(node, "#PCDATA")` use) must agree
     // with the qname form for that same node's tag.
     let here = document.getNode();
     let qn = here.qname();
-    assign_global("xq:cc_node_agrees",
-      if document.canContain(here, "#PCDATA") == document.canContain(qn, "#PCDATA") {"yes"} else {"no"});
+    AssignValue("xq:cc_node_agrees",
+      if document.canContain(here, "#PCDATA") == document.canContain(qn, "#PCDATA") {"yes"} else {"no"}, "global");
     // floatToElement returns the PREVIOUS insertion point to setNode back to.
     let before = document.getNode().qname();
     let saved = document.floatToElement("ltx:para");
-    assign_global("xq:float_kind", type_of(saved));
+    AssignValue("xq:float_kind", type_of(saved), "global");
     if type_of(saved) != "()" { document.setNode(saved); }
-    assign_global("xq:float_restored",
-      if document.getNode().qname() == before {"yes"} else {"no"});
+    AssignValue("xq:float_restored",
+      if document.getNode().qname() == before {"yes"} else {"no"}, "global");
   });
 "##;
 
@@ -1500,7 +1495,7 @@ const KVMAP_SAMPLE: &str = r##"
   DefConstructor("\\kvmap RequiredKeyVals:KVM", |document, kv| {
     let m = GetKeyVals(kv);
     document.openElement("ltx:text");
-    document.setAttribute("class", "kvmap");
+    document.setAttribute(document.getNode(), "class", "kvmap");
     document.absorbString("map.lang=" + m["lang"] + " map.size=" + m["size"]
       + " rev=" + UnTeX(Revert(kv)));
     document.closeElement("ltx:text");
@@ -1622,4 +1617,253 @@ fn a_rewrite_scope_names_its_unit() {
 
   drop(latexml);
   latexml_core::reset_thread_engine();
+}
+
+/// #792: a Rhai `Fatal()` prints ONE `Fatal:` line (Perl `Fatal` logs once, then dies), wherever it is
+/// raised: at a binding's top level, inside a body, by `Error()` past MAX_ERRORS, or in a binding another
+/// binding loads; and no `Warning:` beside it (Perl prints the one line). A Fatal a script CATCHES was printed at its
+/// raise; a later plain error stays its own contained `Error:script:` and the document carries on.
+/// (row name, the `.sty.rhai` files, the document body, the messages the `Fatal:` lines name, the contained
+/// `Error:script:` lines, a text the document keeps). A binding's top-level throw is its own Fatal, as Perl's
+/// `Fatal('die', …, "File … had an error")` (Package.pm:2338).
+type FatalRow<'a> = (
+  &'a str,
+  &'a [(&'a str, &'a str)],
+  &'a str,
+  &'a [&'a str],
+  usize,
+  &'a str,
+);
+
+// A script's Fatal is `Fatal:<cat>:<obj>`, Perl's (Error.pm:271); W3RD moved it off `Fatal:Internal:Unexpected`.
+#[test]
+fn a_rhai_fatal_is_logged_once() {
+  let rows: &[FatalRow] = &[
+    (
+      "top level",
+      &[(
+        "wftop.sty.rhai",
+        r#"Fatal("unexpected", "Internal", "wftop requires something"); DefMacro("\\wftopmacro", "OK");"#,
+      )],
+      "Before \\wftopmacro\\ after.",
+      &["Fatal:unexpected:Internal  wftop requires something"],
+      0,
+      "",
+    ),
+    (
+      "macro body",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefMacro("\\wftopmacro", || { Fatal("unexpected", "Internal", "wfbody gives up"); "X" });"#,
+      )],
+      "Before \\wftopmacro\\ after.",
+      &["Fatal:unexpected:Internal  wfbody gives up"],
+      0,
+      "",
+    ),
+    (
+      "Error() past MAX_ERRORS",
+      &[(
+        "wftop.sty.rhai",
+        r#"for i in 0..120 { Error("wf", "many", "wfmany " + i); }"#,
+      )],
+      "Body.",
+      &["Too many errors (> 100)!"],
+      0,
+      "",
+    ),
+    (
+      "a binding another binding loads",
+      &[
+        (
+          "wftop.sty.rhai",
+          r#"RequirePackage("wfinner"); DefMacro("\\wftopmacro", "OK");"#,
+        ),
+        (
+          "wfinner.sty.rhai",
+          r#"Fatal("unexpected", "Internal", "wfinner requires something");"#,
+        ),
+      ],
+      "Before \\wftopmacro\\ after.",
+      &["Fatal:unexpected:Internal  wfinner requires something"],
+      0,
+      "",
+    ),
+    (
+      "a caught Fatal, then a plain throw in another body",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefMacro("\\wfa", || { try { Fatal("unexpected", "Internal", "wfa caught one"); } catch (e) { } "A" });
+           DefMacro("\\wfb", || { throw "wfb plain trouble"; "B" });"#,
+      )],
+      "Before \\wfa\\ middle \\wfb\\ after.",
+      &["Fatal:unexpected:Internal  wfa caught one"],
+      1,
+      "Before A middle",
+    ),
+    (
+      "a caught Fatal, then a throw in an afterDigest hook",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefMacro("\\wfa", || { try { Fatal("unexpected", "Internal", "wfa gives up"); } catch (e) { } "A" });
+           DefConstructor("\\wfc", "<ltx:text class=\"wfc\">C</ltx:text>", #{ afterDigest: || { throw "wfc hook trouble"; } });"#,
+      )],
+      "Before \\wfa\\ middle \\wfc\\ after.",
+      &["Fatal:unexpected:Internal  wfa gives up"],
+      1,
+      "Before A middle",
+    ),
+    (
+      "a caught Fatal, then a plain throw at a later binding's top level",
+      &[
+        (
+          "wftop.sty.rhai",
+          r#"try { Fatal("unexpected", "Internal", "wftop caught one"); } catch (e) { }
+             DefMacro("\\wftopmacro", "OK"); RequirePackage("wfinner");"#,
+        ),
+        ("wfinner.sty.rhai", r#"throw "wfinner plain trouble";"#),
+      ],
+      "Before \\wftopmacro\\ after.",
+      &[
+        "Fatal:unexpected:Internal  wftop caught one",
+        "script-binding run error: Runtime error: wfinner plain trouble",
+      ],
+      0,
+      "",
+    ),
+  ];
+  let mut failures = Vec::new();
+  for (name, files, body, messages, want_contained, kept) in rows {
+    let tex = format!(
+      "\\documentclass{{article}}\\usepackage{{wftop}}\\begin{{document}}{body}\\end{{document}}"
+    );
+    let (log, xml, _, code) = latexml::util::test::convert_files_with_status(&tex, files, None);
+    let fatals: Vec<&str> = log.lines().filter(|l| l.starts_with("Fatal:")).collect();
+    let opening = |prefix: &str| log.lines().filter(|l| l.starts_with(prefix)).count();
+    let (contained, warnings) = (opening("Error:script:"), opening("Warning:"));
+    if fatals.len() != messages.len()
+      || fatals
+        .iter()
+        .zip(messages.iter())
+        .any(|(l, m)| !l.contains(m))
+      || code != 3
+      || contained != *want_contained
+      || warnings != 0
+      || !xml.contains(kept)
+    {
+      failures.push(format!(
+        "{name}: {} Fatal: lines (want those naming {messages:?}), status {code}, {contained} contained \
+         Error:script: lines (want {want_contained}), {warnings} Warning: lines (want 0), keeps {kept:?}: {}; \
+         fatals={fatals:#?}\n{log}",
+        fatals.len(),
+        xml.contains(kept)
+      ));
+    }
+  }
+  assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// An example's rows: tag, a finding attribute, the whole element.
+type ExampleRows = &'static [(&'static str, &'static str, &'static str)];
+
+/// Each worked example under `docs/examples/` (a `<name>.tex` beside its `<name>.sty.rhai`), with every paragraph (or
+/// note) of its output as a whole element: its tag, an attribute that finds it, the element.
+const DOCS_EXAMPLES: &[(&str, ExampleRows)] = &[
+  ("constructors", &[
+    (
+      "para",
+      r#"xml:id="p1""#,
+      r#"<para xml:id="p1"><p>A <text class="term">lemma</text>.</p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p2""#,
+      r#"<para xml:id="p2"><p><text class="aside">note</text></p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p3""#,
+      r#"<para xml:id="p3"><p>The <text class="k-x">x</text>.</p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p4""#,
+      r#"<para xml:id="p4"><block class="boxed"><p>inside</p></block></para>"#,
+    ),
+  ]),
+  ("macros", &[(
+    "para",
+    r#"xml:id="p1""#,
+    r#"<para xml:id="p1"><p>ba <text font="bold">x</text> Hello, World! Hi, you! (1,2) no yes</p></para>"#,
+  )]),
+  ("registers", &[(
+    "para",
+    r#"xml:id="p1""#,
+    r#"<para xml:id="p1"><p>3.0pt 1.0pt plus 2.0fil 6.0pt wide 2</p></para>"#,
+  )]),
+  ("sample", &[
+    (
+      "para",
+      r#"xml:id="p1""#,
+      r#"<para xml:id="p1"><p>abab Hello, World! <text font="italic">it</text> <text class="rhai">t</text> <text framed="rectangle">b</text> <text class="note">[N]</text></p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p2""#,
+      r#"<para xml:id="p2"><p>v <text class="exhibit" lang="exhibit" xml:id="exhibit1">one</text> (en)body R(o:a) k/2 [<text class="hooked">h</text>]</p></para>"#,
+    ),
+    (
+      "note",
+      r#"role="footnote""#,
+      r#"<note mark="m" role="footnote">text</note>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p3""#,
+      r#"<para xml:id="p3"><p><Math mode="inline" tex="a:=b" text="a assign b" xml:id="p3.m1"><XMath><XMApp><XMTok name="assign" role="RELOP">≔</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math> <Math mode="inline" tex="\exsum x" text="sum@(x)" xml:id="p3.m2"><XMath><XMApp><XMTok meaning="sum" name="exsum" role="SUMOP">∑</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math> é</p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p4""#,
+      r#"<para xml:id="p4"><quote class="rhai"><p>q</p></quote><note class="who" role="biography">bio</note></para>"#,
+    ),
+  ]),
+];
+
+/// Every worked example under `docs/examples/` converts with no Error or Warning, and each paragraph of its XML is
+/// [`DOCS_EXAMPLES`]'s whole element, so the documented examples cannot rot.
+#[test]
+fn docs_examples_convert_clean() {
+  use latexml::util::test::{assert_element, error_count, warning_count};
+  let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/examples");
+  let mut texs: Vec<String> = std::fs::read_dir(&dir)
+    .expect("docs/examples")
+    .flatten()
+    .map(|e| e.path())
+    .filter(|p| p.extension().is_some_and(|e| e == "tex"))
+    .map(|p| p.file_stem().unwrap().to_string_lossy().to_string())
+    .collect();
+  texs.sort();
+  let names: Vec<&str> = DOCS_EXAMPLES.iter().map(|(name, _)| *name).collect();
+  assert_eq!(texs, names, "every example has its rows in DOCS_EXAMPLES");
+  for (name, elements) in DOCS_EXAMPLES {
+    let tex = std::fs::read_to_string(dir.join(format!("{name}.tex"))).unwrap();
+    let rhai_name = format!("{name}.sty.rhai");
+    let rhai = std::fs::read_to_string(dir.join(&rhai_name)).expect("the example's binding");
+    let (log, xml) = latexml::util::test::convert_files_with(&tex, &[(&rhai_name, &rhai)], None);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{name}\n{log}"
+    );
+    let paras = elements.iter().filter(|(tag, ..)| *tag == "para").count();
+    assert_eq!(
+      xml.matches("<para ").count(),
+      paras,
+      "{name}: a row per paragraph\n{xml}"
+    );
+    for (tag, attr, element) in *elements {
+      assert_element(&xml, tag, &[attr], element);
+    }
+  }
 }

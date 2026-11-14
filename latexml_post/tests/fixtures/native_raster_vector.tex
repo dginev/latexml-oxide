@@ -1,0 +1,10 @@
+% Source of native_raster_vector.pdf: `pdflatex -no-shell-escape native_raster_vector.tex` (TeX Live 2025),
+% grid64.png a 64x64 checkerboard PNG (ImageMagick `convert -size 64x64 pattern:checkerboard -strip PNG8:`), drawn
+% at 48bp, below its own pixels; the guard is graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged.
+\pdfcompresslevel=9 \pdfobjcompresslevel=2
+\pdfinfoomitdate=1 \pdftrailerid{} \pdfsuppressptexinfo=-1
+\documentclass[border=2pt]{standalone}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[width=48bp]{grid64.png} Label
+\end{document}

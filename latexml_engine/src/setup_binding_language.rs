@@ -516,19 +516,20 @@ macro_rules! TypedPrimitive {
 }
 
 #[macro_export]
+/// Perl `LookupRegister($cs, @parameters)` (Package.pm:1360-1369); a cs that is not a register Warns
+/// ([`warn_not_register`](latexml_core::state::warn_not_register)) and reads as the default value (Perl `undef`).
 macro_rules! LookupRegister {
   ($cs:expr_2021) => {
-    LookupRegister!($cs, Vec::new())
+    $crate::LookupRegister!($cs, Vec::new())
   };
   ($cs:expr_2021, $parameters:expr_2021) => {{
-    let params = { $parameters };
-    let defn_opt = { state::lookup_register_definition(&T_CS!($cs)) };
-    if let Some(defn) = defn_opt {
-      defn.value_of(params).unwrap_or_default()
-    } else {
-      let message = s!("The control sequence {:?} is not a register", $cs);
-      Warn!("expected", "register", message);
-      RegisterValue::default()
+    let cs = ::latexml_core::binding::def::macros::register_cs($cs);
+    match ::latexml_core::state::lookup_register_definition(&cs) {
+      Some(defn) => defn.value_of($parameters).unwrap_or_default(),
+      None => {
+        ::latexml_core::state::warn_not_register(&cs);
+        RegisterValue::default()
+      },
     }
   }};
 }
@@ -1267,9 +1268,14 @@ macro_rules! LookupDefinition {
   };
 }
 #[macro_export]
+/// Perl `InstallDefinition($definition, $scope)` (Package.pm:312-315, POD form; the code's leading `$name` is unused by
+/// `State::installDefinition`).
 macro_rules! InstallDefinition {
-  ($name:expr_2021, $definition:expr_2021, $scope:expr_2021) => {
-    state::install_definition($name, $definition, $scope)
+  ($definition:expr_2021) => {
+    ::latexml_core::state::install_definition($definition, None)
+  };
+  ($definition:expr_2021, $scope:expr_2021) => {
+    ::latexml_core::state::install_definition($definition, $scope)
   };
 }
 #[macro_export]
@@ -1835,15 +1841,16 @@ macro_rules! DefKeyVal {
   }};
 }
 
+/// Perl `Digest` (Package.pm:393-402): [`binding_digest`](latexml_core::binding::content::binding_digest).
 #[macro_export]
 macro_rules! Digest {
   ($string:literal) => {{
     let tokenized;
     compile_tokenize_internal!(tokenized, $string);
-    stomach::digest(tokenized)
+    ::latexml_core::binding::content::binding_digest(tokenized)
   }};
 
-  ($tokens:expr_2021) => {{ stomach::digest($tokens) }};
+  ($tokens:expr_2021) => {{ ::latexml_core::binding::content::binding_digest($tokens) }};
 }
 
 #[macro_export]
@@ -1895,11 +1902,21 @@ macro_rules! TeX {
   };
 }
 
+/// Perl `Dimension($spec)` (Dimension.pm:27-46): a dimension from a spec string; one that is neither a dimension nor a
+/// number reads as 0 with a Warning (Perl's "isn't numeric" warning).
 #[macro_export]
 macro_rules! Dimension {
-  ($number:expr_2021) => {
-    Dimension::new_f64(Dimension::spec_to_f64($number)?)
-  };
+  ($number:expr_2021) => {{
+    let spec: &str = &$number;
+    if !Dimension::spec_is_readable(spec) {
+      ::latexml_core::Warn!(
+        "expected",
+        "dimension",
+        format!("{spec:?} is not a dimension; using 0")
+      );
+    }
+    Dimension::new_f64(Dimension::spec_to_f64(spec)?)
+  }};
 }
 
 #[macro_export]
@@ -2001,6 +2018,8 @@ macro_rules! ProcessKeyOptions {
   };
 }
 
+/// Perl `AddToMacro($cs, @tokens)` (Package.pm:2534-2549), but an undefined cs is defined with the addition as
+/// latex.ltx's `\g@addto@macro` does after TeX's undefined-cs error, which is an Error here (OXIDIZED_DESIGN #1036).
 #[macro_export]
 macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{
@@ -2009,62 +2028,7 @@ macro_rules! AddToMacro {
     AddToMacro!(into_cs, into_tokens);
   }};
   ($cs:ident, $tokens:ident) => {{
-    match state::lookup_definition(&$cs)? {
-      None => {
-        // Perl: InputDefinitions pre-defines hooks, but not all paths go through it.
-        // When the CS is undefined (e.g., babel's \AtEndOfPackage hooks), create a new
-        // expandable with the given tokens instead of just warning.
-        def_macro(
-          $cs.clone(),
-          None,
-          ExpansionBody::Tokens($tokens.clone()),
-          Some(ExpandableOptions {
-            scope: Some(::latexml_core::binding::content::add_to_macro_scope()),
-            nopack_parameters: true,
-            ..ExpandableOptions::default()
-          }),
-        )?;
-      },
-      Some(defn) if !defn.is_expandable() => {
-        let message = s!("{} is not an expandable control sequence", $cs);
-        let message2 = "Ignoring addition";
-        Warn!("unexpected", $cs, message, message2);
-      },
-      Some(defn) => {
-        let mut expansion = match defn.get_expansion() {
-          // the .clone() call is again avoidable with a careful refactor via e.g. using
-          // `.remove_definition` from state (as we're redefining the macro again), and then
-          // use a `.remove_expansion` call on defn?
-          Some(ExpansionBody::Tokens(tokens)) => tokens.clone().unlist(),
-          Some(ExpansionBody::Closure(_)) => {
-            let message = s!(
-              "{} has a closure body, AddToMacro will *override* with an ExpandableBody[Tokens] ! \
-              This is usually in error!",
-              $cs
-            );
-            Warn!("unexpected", "ExpandableBody[Closure]", message);
-            Vec::new()
-          },
-          None => Vec::new(),
-        };
-        expansion.extend($tokens.unlist());
-        // Perl Package.pm:2527 — `local $UNLOCKED = 1` allows the
-        // append-redefinition to bypass `:locked` (only an addition,
-        // never a replacement of the body's intent).
-        let _unlock_guard =
-          ::latexml_core::common::local_assignments::local_state_unlocked_guard(true);
-        def_macro(
-          $cs,
-          None,
-          ExpansionBody::Tokens(Tokens!(expansion)),
-          Some(ExpandableOptions {
-            scope: Some(::latexml_core::binding::content::add_to_macro_scope()),
-            nopack_parameters: true,
-            ..ExpandableOptions::default()
-          }),
-        )?;
-      },
-    }
+    ::latexml_core::binding::content::add_to_macro($cs.clone(), $tokens.clone())?;
   }};
 }
 

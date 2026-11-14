@@ -61,6 +61,20 @@ RUN set -ex && apt-get update -qq && apt-get install -qy --no-install-recommends
 # poppler-utils → pdftocairo; mupdf-tools → `mutool draw` (first-choice PDF
 # rasterizer, faster + more gzip-compressible on the canvas slow-tail).
 
+# The image redistributes these (A)GPL tools unmodified: record, for each, the exact
+# Ubuntu source package and where to get it (THIRD-PARTY-NOTICES §4). Both targets
+# inherit it from this stage.
+RUN set -e; d=/usr/local/share/doc/latexml-oxide; mkdir -p "$d"; \
+    dpkg-query -W -f='${Package} ${Version} ${source:Package} ${source:Version}\n' \
+      ghostscript mupdf-tools poppler-utils > /tmp/srcpkgs; \
+    { echo "Source of the GPL/AGPL programs redistributed unmodified in this image,"; \
+      echo "as Ubuntu built them (binary package, version; source package, version, URL):"; \
+      echo; \
+      while read -r pkg ver src srcver; do \
+        echo "$pkg $ver; source $src $srcver: https://launchpad.net/ubuntu/+source/$src/$srcver"; \
+      done < /tmp/srcpkgs; } > "$d/THIRD-PARTY-SOURCES"; \
+    [ "$(wc -l < /tmp/srcpkgs)" -eq 3 ]; rm -f /tmp/srcpkgs; cat "$d/THIRD-PARTY-SOURCES"
+
 # Let ImageMagick read/write PDF/EPS and raise its resource ceilings — arXiv
 # figures need it (Debian's default policy.xml blocks PDF/EPS). Same patch the
 # legacy Perl image applies; benefits both the CLI and the worker.

@@ -2,6 +2,60 @@
 
 ## Unreleased
 
+  - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
+    dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
+    `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now
+    right- or left-aligns a cell by its `columnalign` (`justify-items`); the markup is
+    unchanged. Guard
+    `browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation`
+    (Chrome, local).
+  - **`/` has no operator space** (issue 789). TeX's `/` is an Ord, and MathML Core puts it in
+    category K (zero space), but our dictionary (Perl's) had it in B and Chrome spaces it
+    0.222 em each side. A visible Core-K operator (`/`, `\backslash`, `_`) is now
+    `<mo lspace="0em" rspace="0em">` and an Ord to the space walk, so `\backslash` loses its
+    0.222 em too; a kept `\mathrel{/}` or `\mathpunct{/}` keeps TeX's Rel or Punct space.
+    Guard `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space`.
+  - **Small PDF figures with a raster image keep their vector labels** (after PR 816 by
+    amachino — thank you). A PDF figure of at most 500 KiB that embeds a raster image
+    (a heatmap with axes and labels) was rasterized whole to PNG; it now goes to the
+    vector-SVG path like a vector-only PDF (mutool, then pdftocairo), keeping the text as
+    glyphs and the image at its own resolution, with the PNG path as the fallback. A
+    figure that draws a raster larger than its own pixels keeps the PNG path, where a
+    browser would blur it
+    (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
+  - **The binding macros mean what Perl's same-named API means** (MACSYNC, AUDMAC). `Digest!` leaves
+    the horizontal mode its digestion entered (Package.pm:393-402, through the new `binding_digest`) and `RawTeX!`
+    ends in vertical mode (Package.pm:996). `AssignRegister!` takes Perl's arguments, `(cs, value[, scope[, parameters]])`, `cs` a name
+    or a Token (**API change** for compiled bindings: the third argument was the parameters, now the scope).
+    `LookupRegister!`, `AssignRegister!` and the core `lookup_register` give Perl's one Warning
+    (`The control sequence \X is not a register`, Package.pm:1367-1369); the macros on an undefined cs too
+    (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
+    unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` on an
+    undefined cs is TeX's Error and defines it with the addition, as latex.ltx does (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
+  - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
+    number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
+    `lstlisting` copies the code without its numbers; dark mode colours `body`, not
+    `:root` (upstream `ee4b3640`). `ltx-cv.css`, which the moderncv binding requests
+    (Perl `moderncv.cls.ltxml:25`), and the opt-in `LaTeXML-epub.css`
+    (`--css=LaTeXML-epub.css`, `\newpage` as a page break) are embedded byte-identical to
+    Perl's: both were `missing_file` Warnings with a dangling `<link>`. Mirrored in
+    ar5iv-css. Guard `single_binary_smoke::class_and_opt_in_stylesheets_are_served_embedded`.
+  - **An fvextra `breaklines` Verbatim wraps and fits a phone** (issue 431, issue 702).
+    The bundled CSS's verbatim `white-space:pre` also reached a breaklines line's
+    `\parbox`, so its markup newlines rendered as blank rows (a one-row line 60 px, now
+    15), and PR #718's `.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }`
+    capped nothing, the line around the parbox carrying an inline width: at 375 px the
+    frame scrolled (scrollWidth 468 > 330) and the guard's page was 488 px wide, now 375.
+    Lines and xleftmargin's wrapper are capped at their box, a breaklines line is a flex
+    row whose parbox shrinks to it (also through the `ltx_text` an id keeps around a
+    numbered indented line's parbox), and a framed verbatim is a block; inline `\verb`
+    keeps its spaces and wraps (`pre-wrap`), so a long one no longer widens a narrow page,
+    except in a table cell, which stays unwrapped as the cell is. A breaklines line's text
+    wraps and keeps its spaces (`        return   x` had rendered `return x`). Witnesses
+    2605.00468 and 2605.01024 (their lines' total height 41,496 → 13,650 px and
+    1,476 → 432 px at 1280 px). Mirrored in ar5iv-css. Guards
+    `witnessed_css_delta::verbatim_whitespace_delta_stays_present`,
+    `browser_render_verbatim_narrow` (opt-in).
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
@@ -48,6 +102,20 @@
     the EPUB tests validate their output. Guards
     `cli_css_resource_copy::cli_resources_link_their_copies_from_every_page` and
     `whatsinout::format_epub_ar5iv_preload_carries_the_css_param` (in `cluster_cli`).
+  - **`revert_as => 'context'` reverts by the dual branch, as Perl does** (#821, thanks
+    @nschloe). Both readers now take the branch from the locals stack: a no-argument
+    `DefMathI` (Package.pm L1849-1854), whose reversion the port had fixed to the CS at
+    definition time, and the `\lx@dual` reversion (Base_XMath.pool.ltxml L243), which read
+    a state value nothing set. So `ltx:Math`'s `tex` (presentation branch) got the user's
+    CS and `content-tex` was never written: `\lxDefMath{\plus}{+}` gave `tex="a\plus b"`
+    where Perl gives `tex="a+b"` + `content-tex="a\plus b"`. Golden `math/declare` moves
+    to Perl's attributes, except that `\foo{x}` with an unused `#1` reverts as TeX prints
+    it, `\mathbf{foo}`.
+  - **nicematrix's `{NiceTabular}` keeps its column and row features** (issue 736). `p[c]{5em}`-style columns
+    read their `l`/`c`/`r` and `t`/`m`/`b` keys instead of misreading `[c]` as columns (2607.15452: 12 errors → 0); a
+    `\Block{i-j}` cell spans its columns and rows, and a `\\` in its text breaks a line of the block, not the row
+    (2206.12224); the body's two-color `\rowcolors` no longer swallows the next cell's `$` (2602.03088: 39 errors →
+    0). Guard `perfect_kernel_batchi736::nicematrix_body_features_keep_the_table`.
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
@@ -138,6 +206,228 @@
     matched, a `\r` ended every `tex.print` line, and the next frame could
     desync. The bridge now counts the bytes that reach the pipe and drops the
     added `\r`.
+  - **The no-dump expl3 reload no longer mutes its diagnostics silently** (#825). When
+    `expl3.sty` re-reads `expl3-code.tex` raw (no kernel dump), the records the scope
+    drops are now tallied (`IgnoreDiagnosticsScope::dropped`) and reported: a Warning
+    naming the error and fatal records dropped, or an Error when the reload stopped early,
+    which leaves the expl3 functions it had yet to define missing (mhchem's `\ce` on
+    TL 2026). On TL 2025 a `LATEXML_NODUMP=1` run now warns of the 5015 records
+    the reload mutes. Guards `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
+    `expl3_sty::tests::a_muted_expl3_reload_is_counted`,
+    `dump_gate_init::nodump_latex_branch_converts_healthily`.
+
+  - **`page=` on an SVG, PNG or JPEG no longer re-encodes it** (#791). A single-page
+    format has no page to select (pdfTeX ignores `page=` on a PNG), so
+    `\includegraphics[page=1]{fig.svg}` now copies `fig.svg` as it is, with its
+    `width`/`height`, exactly as without `page=`. Before, it went through ImageMagick
+    into a rewritten `x1.svg` without its size attributes. Guard
+    `graphics::tests::a_single_page_source_ignores_page`.
+
+  - **A Rhai `Fatal()` is logged once** (#792). The script's caller now returns the
+    Fatal the binding raised instead of wrapping it in a second `Fatal:Document:Generic`
+    line; this holds at a binding's top level, in a binding another binding loads, and
+    for `Error()` past MAX_ERRORS. A `Fatal()` inside a body (macro, constructor, hook)
+    now ends the conversion, as Perl's `Fatal` dies, instead of being contained as an
+    `Error:script:` line. A Fatal the script catches never stands in for a later error,
+    which stays its own `Error:script:` line. A Fatal ending digestion prints its one
+    `Fatal:` line, no longer repeated by a `Warning:recovery:digest_internal` (a
+    timeout or memory Fatal keeps its "not recovering" warning).
+    Guard `30_script_bindings::a_rhai_fatal_is_logged_once`.
+
+  - **Rhai `Let(a, b, scope)`** (#796). A binding can now write a global `\let`
+    (`Let("\\alias", "\\target", "global")`), as Perl's `Let($t1, $t2, $scope)`;
+    the 2-arg form stays local. Each side is a string, taken as a control-sequence
+    name, or any `Token`, as in Perl: `Let(T_ACTIVE("~"), "\\nobreakspace")`,
+    `Let(T_MATH(), …)`, `Let("\\x", T_OTHER("a"))`. New token constructors, as Perl's
+    Token.pm exports them: `T_LETTER`, `T_OTHER`, `T_ACTIVE`, `T_COMMENT`, `T_MARKER`,
+    `T_ARG`, `Token(string, catcode)`, the constants `T_BEGIN()` … `T_CR()` and
+    `CC_ESCAPE()` … `CC_ARG()`, and `Tokens(…)` (up to four arguments, or an array). `T_CS` now returns a single `Token`, not a one-token `Tokens`;
+    `Digest`, `Expand`, `ExpandPartially`, `UnTeX`, `AtBeginDocument`, `AtEndDocument`
+    and `absorb` take either. `XEquals`, `IsDefined`, `LookupMeaning`,
+    `LookupDefinition` and `AssignMeaning` take the same token arguments as `Let`.
+    `Let` now goes through `state::let_definition`, as the `Let!` macro does, so a
+    provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
+    `script_bindings::tests::let_takes_any_token`.
+
+  - **A Rhai name that is a Perl API name behaves as Perl's** (PR #829 round G). A `DefPrimitive`
+    body's returned box, or array of boxes, is the primitive's output, as a Perl primitive's
+    (`|| Digest(T_LETTER("A"))` printed nothing before); another returned value is dropped with a
+    deprecation Warning (Perl errs on it; end such a body with `return;`). `MergeFont` and every
+    `font:` option take all of Font.pm's merge keys — `color`/`background` by name (as
+    `LookupColor`), `opacity`, a size name (`large`), `scale`, `forcebold`/`forcefamily`/
+    `forceseries`/`forceshape`, `emph` — where all but family/series/shape/size were dropped
+    silently; an unknown key Warns. Perl's `Warn`/`Error`/`Info`/`Fatal(cat, obj, where, msg,
+    details…)` form is read when `where` is `()` or a handle. `SetCounter`/`AddToCounter` take a
+    Number, `StepCounter` its `noreset`, `PushValue`/`UnshiftValue` up to four values, `Revert` a
+    string, `LookupDimension` a Token, Tokens, box or Dimension; `ptValue`/`pxValue` clamp the
+    precision to 0..5; `Number("12abc")` is 12 with Perl's `perl:warn` Warning, where it was an
+    Error and 0. `ExplodeText` (and `roman`, the kernel's `ExplodeText!`) makes only ASCII
+    letters LETTER, as Perl Token.pm and latex.ltx's `\char@if@alph` (`é` is OTHER).
+    **BREAKING:** `CounterValue` returns a Number (its `+`/`-`/comparisons with an int keep
+    working this release with a deprecation Warning; use `.valueOf()`); `node.getAttribute`
+    of an absent attribute is `()` (`defined(…)` tests it; `== ""` still holds, Warned);
+    `document.setAttribute(key, value)` is deprecated for Perl's `(node, key, value)`.
+    Guard `cluster_package_guards::perfect_kernel_batchw3rg`.
+
+  - **Rhai round G review fixes** (PR #829 round H). `int`/float comparisons and equality with a
+    Number, in either order, compare as ints with the deprecation Warning (`0 < CounterValue(c)`
+    was `false` silently), and `roman`/`Roman` take a Number the same way. A `LookupDefinition`
+    handle keeps the definition it found, so `AssignMeaning` after a redefinition installs the old
+    one, as Perl's. A base colour name (`red`) in `MergeFont` or a `font:` option needs no colour
+    package (dvipsnam.def is read only once one defines `\DefineNamedColor`; it was 4 Errors and
+    Black). `Number(string)` and the core `Number::from(String)` are one reader, Perl's `int()`:
+    `"1e3"` is 1000, a string not wholly a number Warns and reads its numeric prefix (the core gave
+    0 silently). Guard `perfect_kernel_batchw3rg::rhai_perl_names_review_rows`.
+
+  - **Rhai Def* option bags follow Perl's option tables** (PR #829 round A). Each of
+    `DefMacro`, `DefPrimitive`, `DefConstructor`, `DefEnvironment`, `DefMath` and
+    `DefConditional` checks its bag against Perl's key table (Package.pm `CheckOptions`);
+    a key outside it is one `Error:misdefined` ("… does not accept options:bogusopt"),
+    where it was ignored. `DefPrimitive`'s `nargs`, `DefMath`'s `mode`, `bounded`,
+    `requireMath`, `forbidMath`, `isPrefix`, `DefMacro`'s `alias` and the
+    environment-only hooks on `DefConstructor` and the Rust-only `texGroup` are now such
+    keys, as in Perl. Newly honoured: `locked`, `scope` and `nargs` on
+    `DefConstructor`/`DefEnvironment`, `robust` on `DefConstructor` only,
+    `font` and `alias` on `DefPrimitive`, `font`, `reversion`, `sizer`, `decl_id`,
+    `operator_scriptpos` and `scope` on `DefMath`, `nopackParameters` on `DefMacro`.
+    A Perl key the core cannot carry yet (`outer`/`long` on `DefPrimitive`/`DefConstructor`,
+    `attributeForm`, a closure `skipper`, a string `sizer`) is a `Warning:unsupported`.
+    `DefConditional` takes an option bag and has its test-less `\newif` form
+    (`DefConditional("\\iffoo")`, with `SetCondition`); its test receives Tokens.
+    Guard `cluster_package_guards::perfect_kernel_batchw3ra`.
+
+  - **BREAKING: Rhai values keep their type both ways** (PR #829 round B). `LookupValue`
+    and `LookupMapping` return the value as it was stored (a bool, an int, a float,
+    `Token`, `Tokens`, a digested handle; a list as an array), where they returned its
+    string form; a missing key is `()`, where `LookupMapping` returned `""`. `AssignValue`
+    and `AssignMapping` take any of these values, where they took only a string
+    (`AssignValue(k, Tokenize(…))` was "Function not found"); `()` stores undef, and
+    removes a mapping key. A whatsit property or counter property read from a script
+    keeps its type too. Guard `cluster_package_guards::perfect_kernel_batchw3rb`.
+  - **BREAKING: the Rhai gullet reads return Tokens.** `ReadArg`, `ReadUntil` and
+    `ReadOptional` return `Tokens`, keeping the catcodes the source gave, where they
+    returned an untokenized string; `ReadOptional` without a `[…]` is `()`, where it was
+    `""`. A `Token` or `Tokens` in a string context (`"(" + ReadArg() + ")"`) is its TeX
+    source. New `ReadToken`, and a `Gullet` handle with Perl's methods (`readArg`,
+    `readUntil`, `readOptional`, `readToken`, `skipSpaces`).
+  - **A Rhai macro or reversion closure may return a `Token` or `Tokens`**, as a Perl macro
+    sub returns tokens; it expanded to the type's name (`Token`) before.
+  - **Rhai argument shapes as Perl's:** `Digest` takes a string (TeX source), `DigestText`
+    a `Token` or `Tokens`; `AssignCatcode` takes a scope; `LookupCatcode` of a character the
+    table does not hold is `()` (Perl undef), where it was 12.
+  - **New Rhai calls:** `LookupMathcode`/`AssignMathcode`, `LookupSFcode`/`AssignSFcode`,
+    `LookupLCcode`/`AssignLCcode`, `LookupUCcode`/`AssignUCcode`,
+    `LookupDelcode`/`AssignDelcode` (each Assign* with an optional scope), and
+    `LookupMappingKeys` (sorted, as Perl's). A code the table cannot hold (a catcode
+    above 15, a code outside 0..65535) is an Error naming the call, not dropped.
+  - **Rhai diagnostics as Perl's:** `Fatal(cat, obj, msg)` logs `Fatal:<cat>:<obj>`, where it
+    logged `Fatal:Internal:Unexpected` (#792); `Warn`/`Error`/`Info`/`Fatal` take Perl's
+    trailing details (a string or an array of strings, one line each).
+  - **Rhai options Perl accepts, honoured** (PR #829 round D): `Tag`'s `afterOpen`/`afterClose`
+    hooks (and `:early`/`:late`; another key is an Error); `NewCounter`'s `idprefix`/`idwithin`/
+    `nested`; `RequirePackage`/`LoadClass` option maps (`options`, `type`, `notex`, `after`,
+    `withoptions`, …; `LoadClass`'s `notex`/`searchpaths_only` reach no class-load option yet
+    and only Warn; `RequirePackage`'s obsolete `raw` Warns as Perl's); `ProcessOptions(#{inorder,
+    keysets})`; `AtBeginDocument`/`AtEndDocument` of a closure; an array of hook closures
+    (`afterDigest: [f, g]`), each run; `DefLigature`'s `fontTest` closure, given the text's
+    `Font` (`getFamily`, `getSeries`, `getShape`, `getEncoding`, `getLanguage`, `getSize`).
+  - **Rhai calls lower to their macro's core call:** `RefStepCounter` steps through
+    `\refstepcounter`'s current meaning, as `RefStepCounter!` and TeX (`RefStepCounter(c, true)`
+    steps directly; Perl 0.8.8 steps the kernel counter, KNOWN_PERL_ERRORS #412); `AssignMeaning` to an undefined token undefines; a scope string other than
+    local/global is a named scope, as the macros read it, where it was dropped to the default.
+  - **A Rhai closure takes any number of arguments, as a Perl sub:** missing ones are `()`,
+    extra ones dropped (a `DefConditional` test, a `Tag` hook), where the count had to match.
+  - **Rhai arrays and maps are stored as lists and hashes** (`AssignValue`, `AssignMapping`,
+    `PushValue`): `let o = LookupValue(k); o.push(x); AssignValue(k, o)` round-trips, where
+    the array was stored as its printed text. A `Token`/`Tokens` given where a string is
+    read (a `properties` value, an option) is its ToString, as Perl's (`\foo bar` reads
+    `\foobar`), where it was the Rust type name (revW3e).
+  - **New Rhai calls, thin wrappers over the macros' core calls** (PR #829 round D1b):
+    `Invocation`, `AddToMacro`, `DeclareFontMap`/`DeclareFontMapMultichar`, `LoadPool`,
+    `IsEmpty`, `DigestIf`, `ProcessKeyOptions`, `LookupRegisterOrDefault`, `FindFile`, `Input`,
+    `CleanLabel`/`CleanID`, `SetCounter`, `roman`/`Roman`, `UTF`, `Explode`/`ExplodeText`,
+    `BeginItemize`, `Equals`, with Perl's argument forms.
+  - **BREAKING: Rhai hooks take Perl's arguments, and the #716 renames** (PR #829 round D2a). A hook
+    receives the whatsit as Perl passes it: `afterDigest: |whatsit|`, `beforeConstruct`/`afterConstruct:
+    |document, whatsit|`, a sizer `|whatsit|`, and a reversion closure `|whatsit, arg1, …|` — **a reversion
+    written `|arg1, …|` must add the leading `whatsit`**. The whatsit has Whatsit.pm's `getArg(n)` (the
+    argument as a constructor body receives it), `getProperty(key)`, `getProperties()` and `setProperty(key,
+    any value)`. A constructor body receives Perl's `%props` as a trailing map (`|document, x, props|`).
+    `openElement` takes an attribute map and returns the new node; `closeElement` and `maybeCloseElement`
+    return the node closed, or `()`. `DefAccent` takes Perl's options map (`#{below: true}`; it checks no key,
+    as Perl's). `AssignValue(k, 7)` reads back through `LookupNumber`. These old names stay
+    for one release as aliases, each logging `Warning:deprecated:<name>` once per binding load:
+
+    | old | use |
+    |---|---|
+    | `whatsit()` | the hook's `whatsit` argument |
+    | `whatsit.argString(n)` | `whatsit.getArg(n)` |
+    | `whatsit.propertyString(key)` | `whatsit.getProperty(key)` |
+    | `document.getProperty(key)`, `document.getProperties()` | the constructor body's trailing properties map |
+    | `assign_value(k, v)`, `assign_global(k, v)` | `AssignValue(k, v, "local")`, `AssignValue(k, v, "global")` |
+    | `lookup_value(k)` | `LookupValue(k)` |
+    | `AssignString`, `AssignNumber`, `AssignBool` | `AssignValue(k, v[, scope])` |
+    | `AssignMeaning(cs, "\\other")` (a string meaning) | `Let(cs, other[, scope])`, or `AssignMeaning(T_CS(cs), LookupDefinition(other))` |
+    | `DefAccent(a, c, s, below)` | `DefAccent(a, c, s, #{below: true})` |
+
+    Guards `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_perl_forms_716,
+    rhai_deprecated_aliases_warn_once}`.
+  - **BREAKING: Rhai bodies receive Perl's arguments; `GetKeyVal` returns the value** (PR #829 round D2b). A
+    `DefMacro` (and `DefColumnType`, `DefConditional` test) closure is Perl's `|gullet, args|`, a `DefPrimitive`
+    closure `|stomach, args|` (`stomach.getGullet()`), each argument `Tokens`, a `Token`, a `KeyVals` or `()` for an
+    omitted optional. A closure declaring no parameter is Perl's plain `sub {…}`. One declaring no leading handle —
+    1 to as many parameters as the definition's arguments — keeps receiving TeX strings for one release, with
+    `Warning:deprecated:DefMacro |args|` (`DefPrimitive |args|`, `DefColumnType |args|`, `reversion |args|`) once per
+    binding load; the two forms cannot be told apart by arity, so a Perl-form closure declares its handle and every
+    argument, `|gullet, x|` (`|gullet, _x|` where Perl writes `my ($gullet) = @_`); fewer parameters is the old form,
+    with a Warning naming the fix. A body that only concatenates its arguments
+    (`"\\x{" + a + "}"`) migrates by adding the handle, one that calls string methods (`a.len()`) by `UnTeX(a)`. A
+    whatsit in a string is its reversion, as Perl's `ToString($whatsit)`. `GetKeyVal(kv, key)` returns the value as
+    Perl's (KeyVals.pm:31) — Tokens as read, a box once digested, `()` when missing — where it returned a string
+    (`""` when missing): test it as Perl's `if ($v)` with `!!v` (`!v` for `unless`; Perl's truthiness: `()`, `""`,
+    `"0"`, `0` false, every Token, Tokens, box, array and map true) or `defined(v)` (Perl's `defined`), and wrap a
+    string use in `ToString(…)`; an old test against a string (`v != ""`, `"" != v`) compares the string forms, `()`
+    as `""` on either side as Perl's `undef eq ''`, with `Warning:deprecated:value == string` / `() == string` once
+    per load — so `v == ()` is no longer the defined test for a string (`"" == ()` is true). `GetKeyVals` gives those values (a repeated
+    key's as an array).
+    `ToString` takes any value; `document.absorbString` takes any value (its string; `()` adds nothing). New
+    `DefParameterType(name, |gullet, extra…| …, #{…})` with Perl's `$parameter_options` (`nargs` accepted unread).
+    `FindFile`'s `raw` Warns deprecated and is dropped (Package.pm:2079); `AddToMacro` keeps the macro's lock (Package.pm:2547);
+    `DeclareFontMap`'s `*_mathstyle` is a font map, stored as the `Font` (another value Warns unsupported). Guards
+    `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_closure_args_and_parameter_types,
+    rhai_deprecated_aliases_warn_once}`.
+  - **BREAKING: Rhai registers and values are typed: `Number`, `Dimension`, `Glue`, `MuGlue`** (PR #829 round C).
+    Perl's constructors (`Dimension("3pt")`, `Dimension(65536)` in sp, `Glue("1pt plus 2fil minus 1pt")`,
+    `MuGlue("3mu plus 1mu")`, `Number(5)`) and methods (`valueOf`, `ptValue`, `toString`, `add`, `subtract`,
+    `multiply`, `divide`, `negate`, `smaller`, `larger`, Glue's `getStretch`…), Rhai's `+ - * /` and comparisons
+    over the same arithmetic (Glue sums as TeX's, the higher fill order winning); a handle is true (`!!v`). A spec
+    the constructor cannot read (`Dimension("3 furlongs")`) is an Error and 0, where Perl reads it silently.
+    `DefRegister(cs, value[, #{readonly, getter, setter, address, allocate}])` takes any of them (or `Tokens`), with
+    Perl's option table (another key is `Error:misdefined`); a string value is read for the type `cs` already has,
+    else by its form (`"1pt plus 2pt"` is now a Glue register, where it printed `0.0pt`). New `LookupRegister(cs[,
+    params])`, `AssignRegister(cs, value[, scope[, params]])`, `LookupDimension(x[, noerror])`. Return types that
+    change: `LookupRegisterOrDefault` gives the typed value (was its TeX string), `LookupValue`/`GetKeyVal` of a
+    stored Number, Dimension or Glue the handle (a Number was an int), and a closure's `{Number}`/`{Dimension}`/
+    `{Glue}` argument the handle (was its TeX string). Migration: a string use works unchanged (`"" + v`, `${v}`,
+    `ToString(v)`); a test against a string Warns `deprecated` once per load (use `ToString(v) == "3.0pt"`); an
+    int use takes `v.valueOf()`. `MuGlue("3mu plus 1mu")` no longer reconverts its stretch as points. Guards
+    `cluster_package_guards::perfect_kernel_batchw3rc::{rhai_typed_registers, rhai_typed_registers_error_side}`.
+  - **Rhai registers as Perl's, round C's review** (PR #829 round E). `LookupRegister` of an undefined control
+    sequence now Warns `expected:register` as of a non-register (Package.pm:1365-1367; the `LookupRegister!` macro's
+    lookup); a fresh register's unitless string (`DefRegister("\\c", "5")`) is an Error and 0, where it was silently
+    5sp. Glue and MuGlue `+`/`-` are TeX's `\advance` (`Glue - Dimension` keeps the stretch, `MuGlue + MuGlue` keeps
+    the higher fill order), where Perl's Glue.pm/MuGlue.pm differ (OXIDIZED_DESIGN_DIVERGENCES #1030).
+  - **The Rhai dialect is documented for newcomers** (PR #829 round E): a guide,
+    `docs/parity/RHAI_BINDINGS_GUIDE.md` (loading, values, the Perl closure form, truthiness and `defined`,
+    diagnostics, the deprecated-name migration); a three-column cheat sheet, `CHEATSHEET.md` beside `API.md`
+    (Perl | Rust macro | Rhai, generated from `api_doc.rs` and checked with it, its empty cells listed as the
+    dialect's gaps); worked examples under `docs/examples/` that CI converts with no Error or Warning
+    (`30_script_bindings::docs_examples_convert_clean`). `script_bindings_plan.md` keeps the design notes.
+  - **Rhai `AssignMeaning` is Perl's `$STATE->assignMeaning`** (PR #829 round F): `AssignMeaning(token,
+    meaning[, scope])` stores a meaning, a `LookupDefinition` handle, a `Token` (`T_LETTER("a")`, as `\let\x=a`) or
+    `()` (undefined), as the `AssignMeaning!` macro does, where it was a deprecated `Let`. A string meaning, the old
+    `AssignMeaning("\\a", "\\b")`, still lets this release and Warns `deprecated` once per load, naming `Let` and
+    the handle form. Guard `cluster_package_guards::perfect_kernel_batchw3rd::rhai_perl_forms_716` (p5).
 
   - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
     chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and
@@ -516,7 +806,9 @@
     (`.ltx_framed_verbatim.ltx_break` vs `:not(.ltx_break)`) without reaching for the
     fragile `:has(.ltx_parbox)` selector, which was previously the only distinguisher.
     Beyond-Perl (both engines emit no breaklines hook natively), same spirit as the
-    `frame=single`→`ltx_framed_verbatim` remap (#702).
+    `frame=single`→`ltx_framed_verbatim` remap (#702). (The bundled CSS no longer uses
+    it: an unframed breaklines Verbatim carries no hook, so its rules match a line by
+    its `.ltx_parbox` child — see Unreleased, issue 702.)
   - **Streaming byte-identity for a framed `breaklines=true` verbatim.** A single-line
     such verbatim (its parbox layer crosses a fragment seam) used to render nested under
     `--streaming` yet collapsed under the eager path, because `spill_closed_subtrees`

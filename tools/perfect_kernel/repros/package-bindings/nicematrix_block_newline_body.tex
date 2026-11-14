@@ -1,0 +1,24 @@
+% mechanism: nicematrix sets every `\Block` body in `\begin{tabular}{@{}c@{}} #5 \end{tabular}` (nicematrix.sty:7533-7556,
+%   `\__nicematrix_Block_v:nnnnn`), so a `\\` in the body breaks a line inside the block; the binding emitted the body
+%   bare, and the `\\` ended the outer row (the next `\cmidrule` then fell mid-cell)
+% witness: 2206.12224 (`\Block{3-1}{Building\\Block}`, 6 `\noalign` errors)
+% oracle:  pdflatex 0 errors: "Building/Block" on two lines in the first cell; rows "a b" below
+% engines: rust c725371b0af = the row split at the `\\` ("Building" a row, "Block & Head" the next; the witness's
+%          `\cmidrule` after its shifted row gave its 6 `\noalign cannot be used here`); Perl: no binding
+% expect:  0 errors; the first cell holds a one-column tabular of two rows
+% status:  RED (c725371b0af) -> GREEN (I736)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{cc}
+\toprule
+\Block{2-1}{Building\\Block} & Head \\
+\cmidrule{2-2}
+ & Sub \\
+\midrule
+a & b \\
+\bottomrule
+\end{NiceTabular}
+\end{document}

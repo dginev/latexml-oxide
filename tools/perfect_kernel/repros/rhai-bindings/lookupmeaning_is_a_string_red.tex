@@ -1,0 +1,15 @@
+% mechanism: Rhai `LookupMeaning` returns the meaning's printed string, where Perl's `LookupMeaning` (State.pm:370)
+%   and the `LookupMeaning!` macro return the Definition or Token; the string then reads as `AssignMeaning`'s old Let form
+% witness: synthetic (W3RF, DG's AssignMeaning ruling of 2026-11-14; the binding lxlm.sty.rhai, lxlm.sty.ltxml for Perl,
+%   lxlm.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "R"; Perl 0.8.8: <p>R</p>, 0 errors, 0 warnings
+% engines: W3 (fix/rhai-batch1 round F): <p>N</p>, 0 errors, 1 warning (deprecated:AssignMeaning(cs, string))
+% expect:  0 errors, 0 warnings; <p>R</p> (LookupMeaning a handle, `()` when undefined; a string comparison Warned
+%   one release, as ruling 9's `()` == "")
+% status:  RED (W3 fix/rhai-batch1 round F)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{lxlm}
+\begin{document}
+\lxlm\ifx\lxr\relax R\else N\fi
+\end{document}

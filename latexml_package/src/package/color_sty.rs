@@ -269,7 +269,10 @@ pub fn lookup_color_obj(name: &str) -> Color {
       // wins. Witness 1705.06183 (revtex4-1 + hyperref + `\lstset{…\color{Blue}}`).
       // The `named`-model path (parse_color above) already does the analogous
       // lazy-load; this covers the plain `\color{Blue}` (no model) path.
-      if !lookup_bool("color_dvipsnam_lazy_loaded") {
+      // dvipsnam.def is a list of `\DefineNamedColor`s: read it only once a colour package defined that.
+      if !lookup_bool("color_dvipsnam_lazy_loaded")
+        && is_defined_token(&T_CS!("\\DefineNamedColor"))
+      {
         assign_value("color_dvipsnam_lazy_loaded", true, Some(Scope::Global));
         assign_value("color_usenames_active", true, Some(Scope::Global));
         // Force the 68 dvips colors GLOBAL: we are inside a grouped digestion
@@ -358,6 +361,30 @@ pub fn lookup_color_obj(name: &str) -> Color {
 /// Look up a named color from state. Returns hex string.
 /// Perl: LookupColor($name) in Package.pm
 pub fn lookup_color(name: &str) -> String { lookup_color_obj(name).to_attribute() }
+
+/// color.sty's default colours (Perl color.sty.ltxml L136-145).
+const BASE_COLORS: [(&str, &str, &str); 8] = [
+  ("black", "rgb", "0,0,0"),
+  ("white", "rgb", "1,1,1"),
+  ("red", "rgb", "1,0,0"),
+  ("green", "rgb", "0,1,0"),
+  ("blue", "rgb", "0,0,1"),
+  ("cyan", "cmyk", "1,0,0,0"),
+  ("magenta", "cmyk", "0,1,0,0"),
+  ("yellow", "cmyk", "0,0,1,0"),
+];
+
+/// A font's colour by name (Font.pm `merge`'s `color`/`background`, a binding's `MergeFont`): [`lookup_color_obj`],
+/// and with no colour package loaded a base name is color.sty's colour of that name (Perl keeps the name, 0 E).
+pub fn lookup_font_color(name: &str) -> Color {
+  let base = BASE_COLORS.iter().find(|(base, ..)| *base == name.trim());
+  match base {
+    Some((_, model, spec)) if lookup_value(&color_key(name)).is_none() => {
+      color_from_model_spec(model, spec)
+    },
+    _ => lookup_color_obj(name),
+  }
+}
 
 LoadDefinitions!({
   // color.sty:26 `\newif\ifcolors@ \colors@true` (the `monochrome` option
@@ -669,16 +696,7 @@ LoadDefinitions!({
   // ordinary `\definecolor` invocations with no explicit scope; they
   // inherit the scope active at RawTeX-expansion time (the package-load
   // group). Match that by passing `None` rather than forcing Global.
-  for (name, model, spec) in &[
-    ("black", "rgb", "0,0,0"),
-    ("white", "rgb", "1,1,1"),
-    ("red", "rgb", "1,0,0"),
-    ("green", "rgb", "0,1,0"),
-    ("blue", "rgb", "0,0,1"),
-    ("cyan", "cmyk", "1,0,0,0"),
-    ("magenta", "cmyk", "0,1,0,0"),
-    ("yellow", "cmyk", "0,0,1,0"),
-  ] {
+  for (name, model, spec) in &BASE_COLORS {
     let c = color_from_model_spec(model, spec);
     def_color(name, &c, None)?;
   }

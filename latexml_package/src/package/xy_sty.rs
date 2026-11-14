@@ -117,13 +117,15 @@ LoadDefinitions!({
 \expandafter\let\csname xy\xyoption@@ loaded\endcsname=\next@
 \runxywith@"
       );
-      let _ = ::latexml_core::stomach::raw_tex(&tex);
+      // Perl's `\xyoption` (xy.tex.ltxml:32-49) is a macro whose loading is read in place, mid-paragraph too: these
+      // marks are digested (`Digest`), not `RawTeX`, which ends the paragraph (Package.pm:996).
+      let _ = Digest!(TokenizeInternal!(TeXString::assembled(tex)));
       if feature == "curve" {
-        let _ = ::latexml_core::stomach::raw_tex(concat!(
+        let _ = Digest!(TokenizeInternal!(concat!(
           r"\let\curve@check=\relax",
           r"\def\curve{\@ifnextchar\bgroup{\lx@xy@curve@arg}{}}",
           r"\def\lx@xy@curve@arg#1{}",
-        ));
+        )));
       }
       Ok(())
     };

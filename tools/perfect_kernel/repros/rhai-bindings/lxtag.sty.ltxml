@@ -1,0 +1,7 @@
+# Perl stand-in for lxtag.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+NewCounter('lxex');
+DefConstructor('\lxex{}', "<ltx:text class='lxex'>#tags #1</ltx:text>",
+  properties => sub { RefStepCounter('lxex'); });
+1;

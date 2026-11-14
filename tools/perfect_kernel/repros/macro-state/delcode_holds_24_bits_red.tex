@@ -1,0 +1,14 @@
+% mechanism: `\delcode` holds a 24-bit value (tex.web §1232, "Invalid code" only above "FFFFFF); the delcode table stores
+%   `Stored::Charcode(u16)` (state.rs `assign_delcode`/`lookup_delcode`), so a value above "FFFF reads back truncated, the
+%   plain-format `(` = "28300 included. The Rhai `LookupDelcode` (W3RB) reads the same table.
+% witness: synthetic (W3RB); no corpus witness seen
+% oracle:  pdflatex 0 `!`; "164608 1193046"; Perl: the same.
+% engines: rust W3RB: 0 errors, 0 warnings, "33536 13398".
+% expect:  0 errors, 0 warnings; "164608 1193046".
+% status:  RED (W3RB)
+% moves:   post-merge (the delcode table as an integer table; the dump's DELCODE_TABLE and tex_math.rs:2336's -1 reading
+%   move with it)
+\documentclass{article}
+\begin{document}
+\the\delcode`\( \delcode`\Q="123456 \the\delcode`\Q
+\end{document}

@@ -4659,10 +4659,27 @@ newlines/indentation/spacing) and
 `.ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0;
 min-height:1lh; }` (one fancyvrb source line per row, blank lines keep a
 line's height, no inherited paragraph indent). Only the fancyvrb binding
-puts `ltx_verbatim` on an inline-block text span, so inline `\verb`
-(`<code>`, no `ltx_inline-block`) is untouched. Measured after: each line on
+puts `ltx_verbatim` on an inline-block text span. Measured after: each line on
 its own row, `    print(i)` keeps its 4-space indent, `<pre>` renders 4
 lines. Guard: `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
+
+`pre` is scoped where it broke layout (issues #431/#702): inline `\verb`
+(`<code>`) is `pre-wrap; overflow-wrap:break-word`, keeping its spaces but
+wrapping so a long one cannot widen a narrow page, except in a table cell
+(`pre`: the cell is `nowrap`, and TeX does not break `\verb` either); an fvextra
+`breaklines` line's `\parbox` is `normal`, since `pre` rendered the markup's
+newlines as blank rows (a one-row line 60 px, 2605.00468's 849 lines 41,496 →
+13,650 px at 1280 px), and its paragraph's text `pre-wrap`, which wraps and keeps
+the source's spaces (`normal` rendered `        return   x` as `return x`). A
+line, and xleftmargin's wrapper box around it (2605.01024), is capped at
+`max-width:100%`, and a line with a `.ltx_parbox` child is a flex row whose
+parbox shrinks beside the fixed break-indent boxes; an `ltx_text` an id keeps
+around them (a numbered indented line) is `display:contents`. The parbox's
+parent line carries an inline `width`, so the earlier
+`.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }` capped nothing.
+Chrome at 375 px on the browser guard's page: framed breaklines scrollWidth
+468 → 330 = clientWidth, page width 488 → 375 px. Browser guard
+`browser_render_verbatim_narrow` (opt-in, local).
 
 One serialization nuance, same entry: Perl nests two wrappers per line
 (`<text font="typewriter" width="345.0pt"><text class="ltx_verbatim"
@@ -5370,7 +5387,8 @@ border. Only per-instance VALUES are inline (`cssstyle` border-width/padding/bac
 box reuses the existing `ltx_framed_rectangle` semantics for the border and carries a dedicated
 `ltx_framed_verbatim` class for the fixed **responsive** behaviour — `max-width:100%;
 overflow-x:auto; box-sizing:border-box` in a bundled-CSS delta (`LaTeXML.css` + ar5iv-css
-mirror). Rationale: the box spans the print `\linewidth` (~460px, faithful on desktop/tablet)
+mirror), and `display:block; width:fit-content` (a display: no paragraph indent pushes it
+past the viewport; the breaklines reflow is in #93). Rationale: the box spans the print `\linewidth` (~460px, faithful on desktop/tablet)
 but is a shrink-to-fit inline-block of non-wrapping verbatim lines, so on a phone viewport it
 would push its right border off-screen and scroll the whole page; the class caps it at the
 viewport and scrolls over-long lines *within* the box (the containment `.ltx_listing` uses for
@@ -7774,8 +7792,9 @@ surrounding conditional bookkeeping ("Missing \fi or \else, conditional fell
 off end" at the .sty's EOF — the 13-bundle hep-* `expected:\fi` cluster).
 
 **Rust behavior**: `\@addtofilelist` receives `ExplodeText!` tokens —
-alphabetic chars catcode LETTER, the rest OTHER — exactly latex.ltx's
-`\string@makeletter` (L1784-1789) storage rule.
+the ASCII letters A-Z/a-z catcode LETTER, the rest (non-ASCII included) OTHER —
+exactly latex.ltx's `\string@makeletter` (L1784-1789) storage rule, whose
+`\char@if@alph` (L1790-1795) tests only those ranges.
 
 **Why**: kernel-contract restoration. hep-font.sty: first-error cluster →
 **0 errors**; hep-paper manual 370-warning cascade collapses to 2 unrelated
@@ -18251,6 +18270,12 @@ alignment/eqnarray_side_content_only_cell); 65int2 kept it only as an overflow c
 lefteqn_cells_with_content, lefteqn_then_amp, lefteqn_stops_at_side_content}`,
 `perfect_kernel_batch61::eqnarray_continuation_after_lefteqn_does_not_panic`, `53_alignment::eqnarray_test`; repros
 `alignment/lefteqn_*`.
+
+**Bounded overprint** (issue 736): nicematrix's `\Block{i-j}{text}` sets its text over an i×j rectangle whose other
+source cells are empty (nicematrix.sty:7258-7300). `\lx@nicematrix@block@span` marks the anchor cell overprinting with
+`Cell::overprint_columns = j`, which caps the span at `j` columns (a covered cell with text still ends it), and gives it
+`rowspan = i` as `\multirow` does (`normalize_mark_spans` truncates it at a covered cell with text); `*` leaves that
+side unspanned. Witness 2206.12224; guard `perfect_kernel_batchi736::nicematrix_body_features_keep_the_table`.
 
 ### 557. eqnarray has latex.ltx's fourth column, the equation number's (Perl: three columns)
 
@@ -36165,6 +36190,157 @@ kernel raised 137 errors (the scan ran on through latex.ltx under `\ExplSyntaxOf
 pdflatex prints `[read][42]Tail.` (0 `!`). An ordinary `\input` keeps its binding: the empty `glyphtounicode.tex`
 binding answers `\input glyphtounicode` (`\pdfglyphtounicode` a no-op, the raw read's output the same, at fewer
 instructions). **Guards**: `perfect_kernel_batch51::file_get_reads_the_file_whole`, the format build's zero-error gate.
+
+### 1032. An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755)
+
+**Perl** and Rust emit `<mtd columnalign="right">` (`ltx_align_right` unless a border class replaces it, MathML.pm
+L456-473); MathML Core dropped `columnalign`, and Chrome set a `columnalign="right"` cell flush left (start; revMML2: 0 px left,
+12.3 px right; only a cell without the attribute is centred), so an `aligned`'s left column ended short of its relation,
+up to 21 px late (issue 809's repro, 16 px) (`text-align` on `.ltx_align_right` does not reach it). Firefox honours `columnalign`. **Rust.** LaTeXML.css adds
+`math mtd[columnalign="right"] { justify-items:end; }` and `…[columnalign="left"] { justify-items:start; }`, keyed on the
+attribute, which every cell keeps; the markup is unchanged. Offer upstream (LaTeXML.css). **Guards**:
+`cluster_cli::browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation` (Chrome,
+local only, repro `alignment/aligned_left_column_is_right_aligned.tex`),
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the rule
+ships).
+
+### 1033. A visible MathML Core category-K operator has no operator space: `/` is K, and an Ord (issue #789)
+
+**TeX.** `/` is an Ord (mathcode "013D), as is `\backslash` (`\delimiter"26E30F`, class 0): `\showbox` of `$a/b$` and
+`$a\backslash b$` has no glue. **Core** (TR 2025 and ED, Figure 25) puts infix `/`, `\`, `_`, U+2061-2064 and U+2206 in
+category K, zero lspace and rspace. **Perl.** OperatorDictionary.pm:185 lists `/` in B (0.222 em; KNOWN_PERL_ERRORS
+#1240), and the space walk (`adjust_pair`) types an operator by its role, so `/` (MULOP) is a Bin and `\backslash`
+(MULOP, math_common.pool.ltxml:97) gets `lspace`/`rspace` 0.222 em; `<mo>/</mo>` is bare, and Chrome 155 spaces it 0.222 em
+each side (Firefox none). **Rust.** The dictionary has `/` in K; `is_core_k_glyph`
+(presentation.rs) marks a visible infix `<mo>` of category K `lspace="0em" rspace="0em"`, as Perl does for the ZWSP of
+`--noinvisibletimes` (MathML.pm:773), and the walk types it Ord when its role is a Bin (MULOP). A class digestion
+keeps wins: `\mathrel{/}`, `\mathrel{\backslash}` (RELOP) get 0.278 em each side, `\mathpunct{/}`,
+`\mathpunct{\backslash}` (PUNCT) 0 em / 0.167 em, TeX's `\thickmuskip` and `\thinmuskip`. The invisible K operators stay
+bare (Format text, Perl L747; Chrome and Firefox give them no space). Residual: `\mathbin{/}` and `\bigm/` lose their
+Bin/Rel class at digestion and get zero space too (RED `math-parse/mathbin_slash_keeps_binary_space_red.tex`,
+post-merge). Offer upstream. **Guards**:
+`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
+`math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.
+
+### 1034. A small PDF figure is converted to SVG, raster-bearing ones too, unless it draws a raster enlarged (after PR 816)
+
+**Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
+**Rust.** Beyond Perl, a PDF at most 500 KiB (the auto default, `--graphics-svg-threshold-kb 0`; an explicit `N`
+bounds it at `N` KB) first tries the vector converters, `mutool convert -F svg`, then `pdftocairo -svg`
+(`Graphics::convert_image_svg`); every failure falls back to the PNG path: neither tool on PATH, a non-zero exit, the
+15 s timeout, an SVG over 8 MB, an SVG whose `trim`/`viewport` crop cannot be read. Labels, axes and curves stay
+vector, and an embedded raster keeps its own pixels (PERF816, 673 arXiv figures: mutool's SVG -8 ms CPU median per
+figure against the PNG, 70 vs 157 MB gzipped; 23 % of the PNGs lost raster resolution). Until PR 816 (amachino) an
+image XObject in the first 256 KB gated a PDF off the path; DG ruled on 2026-11-14 that size alone gates it (mutool
+first, pdftocairo the fallback; MuPDF, AGPL, only as an unmodified CLI subprocess).
+
+**Enlarged rasters take the PNG path** (DG 2026-11-14, "PNG for enlarged rasters"): an SVG that draws any raster larger
+than its own pixels is discarded and the figure takes main's PNG path, with an `Info`, no Warning and no error count;
+every other figure keeps the SVG. (A raster drawn at its pixel size or smaller inside the figure stays SVG even when the
+page then enlarges the whole figure, e.g. `width=\textwidth`; the browser smooths it then, as it smooths main's PNG of
+that figure.) Neither tool marks a raster's rendering, so a
+browser smooths an enlarged raster into a blur where the PDF (no `/Interpolate`, as pdflatex writes it) shows hard
+pixel blocks, and no static `image-rendering` suits every display size: `pixelated` aliases a raster the page or a phone
+shows smaller. `svg_enlarged_raster` reads every placement, inline, under nested `<g transform>`, through `<use>` and
+through a soft mask's `<mask>` (both tools draw an alpha channel there), and calls a raster enlarged when it is drawn at
+more than 1.01 SVG user units per pixel on either axis on any placement (user units are the PDF's bp, which both tools
+keep; 1.01 absorbs the tools' float rounding, pdftocairo drawing images about 2 % smaller than mutool). A 1×1 raster never counts, however it is drawn: a browser cannot blur a single pixel (DG 2026-11-14;
+10 of the 21 PNG fallbacks in the 60-paper sample were 1×1 rasters in 1503.05958). A placement it
+cannot read counts as enlarged: an image in a `<pattern>` or `<symbol>`, under a `skewX`/`skewY` or a nested `<svg>` viewBox (a shear written as `matrix()` is measured by its axis lengths), past
+8 nested `<use>`, or with a size or pixel count it cannot read. The decision runs on every render after the graphics
+cache, so a cached SVG is judged too (the cache stores the converter's output, not the decision). `/Interpolate true` no
+longer matters (the PNG path renders such a raster as main does). **Guards**:
+`graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged` (each converter present, then the pipeline:
+`native_raster_vector.tex`, a 64×64 PNG at 48 bp, stays SVG; `mixed_raster_vector.tex`, a 4×4 tile at 1 cm, takes the
+PNG path), `graphics::tests::svg_enlarged_raster_reads_every_placement`, `graphics::tests::should_try_svg_path_auto_detect`.
+
+### 1036. `AddToMacro!` on an undefined cs is an Error and defines it with the addition (MACSYNC)
+
+**Perl.** `AddToMacro` (Package.pm:2534-2549) Warns ("not an expandable control sequence") and drops the addition when
+the cs is undefined; a later use of the cs is then an undefined-cs Error. **TeX.** latex.ltx:1832 `\g@addto@macro`'s
+`\expandafter` raises "Undefined control sequence", then its `\xdef` defines the cs with the addition (pdflatex
+`\g@addto@macro\nohook{XY}A\nohook B` → 1 `!`, "AXYB"). **Ours.** TeX's Error (`undefined:\nohook`, as TeX and Perl
+both err) and TeX's outcome, the content kept; before, the cs was defined silently. `\AtEndOfPackage` names its hook with
+`\csname` (latex.ltx:18896), so it makes an empty hook first and raises nothing. A non-expandable cs keeps Perl's Warning and
+is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xdef` makes a self-referencing macro).
+**Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
+`macro-state/g_addto_macro_undefined_defines.tex`).
+
+### 1026. `page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791)
+
+**TeX.** pdfTeX ignores `page=` on a single-image file: `\includegraphics[page=2,width=2cm]{a.png}` typesets the PNG
+(pdflatex, 0 `!` lines). **Perl.** `image_graphicx_parse` pushes `page` as a transform (Util/Image.pm:179) and
+`image_graphicx_is_trivial` counts it non-trivial (:284), so `Post/Graphics.pm:262-271` re-encodes a PNG or JPEG through
+ImageMagick under a generated `xN` name, and refuses it on an SVG with a `limitation` Warning before copying
+(KNOWN_PERL_ERRORS #1241). **Rust.** `Graphics::process` drops `page=` for `svg`/`png`/`jpg`/`jpeg` before planning, so
+such a graphic takes the path it takes without `page=`: the source copied byte for byte, its `imagewidth`/`imageheight`
+kept, no Warning. Before, every `page=` went through `convert` (an SVG became a re-encoded `x1.svg` without its size).
+Multi-page or multi-frame sources (PDF, PS, TIFF, GIF) keep `page=`. **Guard**:
+`graphics::tests::a_single_page_source_ignores_page`.
+
+### 1027. The no-dump expl3-code.tex reload counts what it mutes (#825)
+
+**Perl.** Perl's raw expl3 load raises none of these records, so it has no such scope. **Rust.** Without a kernel dump
+(`LATEXML_NODUMP=1`, or no dump for the tree) `expl3.sty` re-reads expl3-code.tex raw, and `expl3_sty.rs` drops that
+load's raw-load-only cascade whole (Perl `IGNORE_ERRORS`, issue #651; 5015 Error records on TL 2025). The scope now
+tallies what it drops (`IgnoreDiagnosticsScope::dropped`), and `expl3_sty::report_muted_reload` reports it: one
+`Warning:expl3:raw-load` naming the Error and Fatal records dropped when the reload completed (the records the scope
+dropped, not the undefined-CS Errors `SUPPRESS_UNDEFINED_ERRORS`, stomach.rs, never emitted), an `Error:expl3:raw-load` when it
+stopped early (the expl3 functions after the stop are undefined: on TL 2026 it stopped in l3unicode, leaving
+`\regex_match:NnTF`, `\text_lowercase:n`, `\sys_if_shell:TF` undefined and mhchem's `\ce` broken). The dump path never
+reloads and is unchanged. **Guards**: `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
+`expl3_sty::tests::a_muted_expl3_reload_is_counted`, `dump_gate_init::nodump_latex_branch_converts_healthily`.
+
+### 1028. After a Rhai binding's caught `Fatal()`, later errors are still printed and counted (#792)
+
+**Perl.** `Fatal` prints when raised, sets the status fatal (`Common/Error.pm:298`, `:312`), then sets `IGNORE_ERRORS`
+(`:315`) and empties the token stack (`:327`), so a later `Error()` prints nothing (`:362`) even when an `eval` caught the
+Fatal. **Rust.** A Fatal the script catches prints its one line and sets status 3 as in Perl, but the conversion goes
+on reporting: a later error stays its own `Error:script:` line, counted — the user's ruling that every Error is
+emitted and counted (2026-11-11), and no ignore flag outlives the caught Fatal. **Guard**:
+`30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).
+
+### 1030. Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm
+
+**Perl.** Glue.pm overrides only `add`, comparing fill orders with `==` on the fill names (`"fil"` reads as 0, so
+`1pt plus 2pt` + `1pt plus 1fil` is `2.0pt plus 3.0pt`; KNOWN_PERL_ERRORS #1244); `subtract` is Number.pm's
+`new($self->valueOf - $other->valueOf)`, which drops a Glue's stretch and shrink (`Glue("3pt plus 1fil") -
+Dimension("1pt")` is `2.0pt`, `Glue("1pt plus 1fil") - Glue("1pt plus 2fil")` is `0.0pt`); MuGlue + MuGlue takes Glue.pm's
+non-Glue branch (`ref $other eq 'LaTeXML::Common::Glue'` fails), adding only the natural size (`3mu plus 1mu` +
+`1mu plus 1fil` is `4.0mu plus 1.0mu`). **Rust.** The Rhai `+`/`-`/`add`/`subtract` of Glue and MuGlue follow TeX's
+`\advance` (tex.web §1239, the core's `Glue::add_glue`): per component, the higher fill order wins and equal orders add,
+so the examples give `2.0pt plus 1.0fil`, `2.0pt plus 1.0fil`, `0.0pt plus -1.0fil` and `4.0mu plus 1.0fil`, as
+`\advance` on registers prints them. **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers` (p2, all four).
+
+### 1031. A Rhai `Dimension`/`Glue` spec that is not a number and a unit is an Error
+
+**Perl.** `Dimension('3 furlongs')` reads the leading number as sp (`3sp`, with only Perl's `Argument "3 furlongs"
+isn't numeric` warning), and `Glue('1pt plus')` Warns `Missing Glue specification`. **Rust.** The Rhai constructors,
+and the string form of `DefRegister`/`AssignRegister`, raise `Error:unexpected:<spec>` naming the spec and use 0; a
+fresh register's unitless string (`DefRegister("\\c", "5")`) is the same Error, where Perl's untyped register errs at
+`\the`, while an existing register's declared type still reads it (`"5"` for a Number register is 5). A wrong value
+read silently is the likelier wrong output (BM, 2026-11-05). **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers_error_side`.
+
+### 1035. Rhai's Perl-named calls: where they keep our core's behaviour, and the transitions (PR #829 rounds G-H)
+
+**Perl.** `MergeFont(color => 'red')` keeps the name (`color="red"`) with or without a colour package, and Font.pm
+`merge` ignores an unknown key; `Number($s)` is `int($s)` (Number.pm:31-34; `"12abc"` Warns `isn't numeric`);
+`LookupDefinition` returns the definition object; `CounterValue` returns a Number; Perl's diagnostics take
+`(cat, obj, $where, msg, @details)`. **Rust.** The Rhai calls lower to the macros' core calls (rulings 10-13, DG
+2026-11-14): a colour name resolves to its colour (`#FF0000`), a base name (`red`, color.sty's eight) without a colour
+package included, while dvipsnam.def is read only once a package defines `\DefineNamedColor` (so `Blue` with no colour
+package is the lookup's Error and Black, where Perl prints the name); an unknown font key
+Warns; `Number(string)`, the string form of a Number register and the core `Number::from(String)` are one reader with
+Perl's `int()` (`"1e3"` 1000, `"1.5"` 1, a non-numeric remainder Warned and its prefix read), where the core read 0
+silently; a `LookupDefinition` handle keeps the meaning it found, so `AssignMeaning` installs it after a
+redefinition (`A:OLD:NEW`); a `DefPrimitive` body's returned box or array of boxes is its output (Primitive.pm:78).
+CounterValue's int uses (`+`, `-`, `*`, every comparison with an int or float in either order, `roman`/`Roman`) keep
+working one release with one deprecation Warning per load, since Rhai answers an unregistered comparison `false`
+silently. **Guards**: `perfect_kernel_batchw3rg::rhai_perl_names_behave_as_perl` (Font.pm keys, ExplodeText's ASCII
+letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, LookupDimension's argument forms,
+`getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
+unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
+mixed comparisons, `roman(Number)`, `Number(string)`).
 
 ### 1037. An EPUB keeps its log outside the container and never over an existing file (UPS1, upstream #2855)
 

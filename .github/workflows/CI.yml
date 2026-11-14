@@ -340,6 +340,8 @@ jobs:
       # korean and games stay out: the tests that load them declare it with
       # `requires` and skip visibly (listed after the run). These packages add
       # no file the dumps read (latex.ltx/expl3), so the dump-cache key stays.
+      # mupdf-tools + poppler-utils: the PDF→SVG converters (mutool, pdftocairo)
+      # that the latexml_post vector-SVG tests require (LATEXML_SVG_TESTS below).
       - name: install dependencies
         run: |
           sudo apt-get update
@@ -352,7 +354,7 @@ jobs:
             texlive-lang-cyrillic \
             texlive-plain-generic tipa texlive-pstricks texlive-lang-other \
             texlive-lang-arabic texlive-lang-european texlive-lang-spanish \
-            tex-gyre jing
+            tex-gyre jing mupdf-tools poppler-utils
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
@@ -414,6 +416,8 @@ jobs:
         # different knobs that happen to share a name.
         env:
           LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
+          # A missing mutool or pdftocairo fails the vector-SVG tests instead of skipping them.
+          LATEXML_SVG_TESTS: "1"
         run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/8
 
       - name: skipped tests (requirements not met)
