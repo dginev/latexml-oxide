@@ -723,6 +723,8 @@ pub(super) fn insert_block_as(
 
 /// A box's `width` that the element it became cannot hold (a sectioning unit, a `sectional-block`) rides as the CSS
 /// custom property `--ltx-box-width` of its `cssstyle`, which LaTeXML.css applies and a stylesheet may override (BM Q2.4).
+/// It goes first, so a `width:` the box's own style sets (varwidth's `max-content`) follows it and wins; a unit lifted
+/// through nested boxes keeps the innermost box's width, the one pdflatex sets it in.
 fn carry_box_width(
   document: &mut Document,
   node: &mut Node,
@@ -735,9 +737,8 @@ fn carry_box_width(
     return Ok(());
   }
   let style = match node.get_attribute("cssstyle") {
-    Some(style) if !style.is_empty() => {
-      s!("{};--ltx-box-width:{width}", style.trim_end_matches(';'))
-    },
+    Some(style) if style.contains("--ltx-box-width:") => return Ok(()),
+    Some(style) if !style.is_empty() => s!("--ltx-box-width:{width};{style}"),
     _ => s!("--ltx-box-width:{width}"),
   };
   document.set_attribute(node, "cssstyle", &style)

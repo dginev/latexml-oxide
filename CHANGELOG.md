@@ -11,7 +11,10 @@
     `!important` override such as `.ltx_minipage { width: 100% !important }` works as before; a rule
     that matched `[style*="width"]` still matches; one that keyed on `style^="width:"` must now read
     the property, and a stylesheet may reuse its value (`width: min(var(--ltx-box-width), 100%)
-    !important`). OXIDIZED_DESIGN #1045; guard
+    !important`) or switch every box width off (`:where([style*="--ltx-box-width:"])
+    { --ltx-box-width: initial !important }`). The widths now need LaTeXML.css or ar5iv-css: they
+    are lost under `--nodefaultresources` without a stylesheet carrying the rule, and in readers
+    that ignore our CSS or lack `var()`/`:where()`. OXIDIZED_DESIGN #1045; guard
     `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`.
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome

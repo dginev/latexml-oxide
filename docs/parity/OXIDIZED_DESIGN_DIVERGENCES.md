@@ -14386,7 +14386,7 @@ locked. OmniBus's semantic frontmatter commands are locked (user ruling 2026-10-
 later definition — a document's presentational `\newcommand{\orcid}` (2605.08630), `\providecommand{\keywords}`, a
 package's deferred `\providecommand{\doi}` (apacite), a raw `\def\doi` (imsart.sty), a document's
 `\renewcommand{\doi}` (unlike Perl, which lets those replace them; since QAB57 the document's own definitions win
-under the fallback, #1047); conveniences and aliases (`\abst`, `\etal`,
+under the fallback, below); conveniences and aliases (`\abst`, `\etal`,
 `\corref`) and common words (`\volume`, `\issue`, `\journal`) yield. arXiv A/B (3,003 papers, 59f2 -> 59g4):
 2605.05619 errors 52 -> 0 and words 39,866 -> 53,885, 2605.13204 errors 6 -> 0 (its own `\corref`), 2605.13443 its own
 upright `\etal`. Open: a package the paper ships (`\usepackage{mymacros}`) is a raw File, not the document, so its
@@ -14405,6 +14405,26 @@ inst_support (`\inst`, `\institute`, `\author[]{}`) and aas_macros (`\apj`, `\mn
 `\inst{}` took the formula's closing `$`). epsf and graphicx are packages, not guesses: OmniBus loads them as bindings
 (`with_origin(Binding)`), so a document's `\providecommand{\includegraphics}` stays declined. Guard
 `perfect_kernel_batch66l::omnibus_inst_yields_to_newcommand`.
+
+**Extension (QAB57, 2026-11-14): the document's own definitions win over the locked guesses too.** BM Q3.12: "OmniBus
+sets a flag letting `\newcommand` and its family redefine without complaint"; DG 2026-11-14: "the document wins". A
+document that `\newcommand`s a locked guess shows its real class leaves it undefined, so pdflatex prints the
+document's version (probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b"); Perl ignores it and makes a contact of
+it. OmniBus loaded as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition` does not refuse a definition
+of a name whose meaning is still OmniBus's guess (`fallback_meaning_origin` is `Fallback`) when the document's own text
+makes it (`DefinitionOrigin::Document`, the state not re-locked: `state::document_redefines_guess`) — `\newcommand`,
+`\renewcommand`, `\def`, `\DeclareRobustCommand`; `\newenvironment`/`\renewenvironment` also drop OmniBus's
+`\begin{name}` constructor, which `\begin` looks up first. A `\providecommand` defers to a locked guess as to any
+class command (the 2026-10-01 ruling's `\providecommand{\keywords}`; guard
+`perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`). The semantic markup the guess carried
+is lost with it: the e-mail, address, affiliation and ORCID are no longer the author's contacts, the keywords no
+classification, the DOI no link — the document's text is what the PDF prints. Unchanged: OmniBus provided over a named
+binding's base class (ceurart; #736) keeps its locks, and so does a package's or the document's begin-document hook
+code, run re-locked (apacite's `\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link; the document's own
+hook definition is refused too, RED `singletons/omnibus_document_hook_definition_refused_red`, post-merge); so does a
+package the paper ships (`\usepackage{mydefs}` defining `\email`, a raw File: #408's open row). Perl patch prepared
+(`bruce_qa/patches/qa58.patch`: `\newcommand` and `\newenvironment` may redefine OmniBus's guesses). Guard
+`perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
 
 ### 409. A raw float end's `\@endfloatbox` closes only a box that was opened (Perl: it pops the float binding's frame)
 
@@ -36444,31 +36464,46 @@ and Perl's `<sectional-block class="ltx_minipage">` drops it too (TeX_Box.pool.l
 **Rust** (QAB57; BM Q2.4 asked for the box's "attributes and classes"; DG 2026-11-14: a dedicated custom property, and
 "Move them all now"). One name for every box:
 - the lifted unit: `insert_block_as` (`carry_box_width`, block_insertion.rs) writes the box's width as
-  `--ltx-box-width:<w>` into its `cssstyle`;
+  `--ltx-box-width:<w>` at the head of its `cssstyle`, so a `width:` the box's own style sets follows it (varwidth's
+  `--ltx-box-width:63.4pt;width:max-content;max-width:227.6pt`); a unit lifted through nested boxes keeps the first,
+  innermost box's width, the one pdflatex sets it in (a `\section` in a minipage{3cm} inside a minipage{8cm}: 85.4pt);
 - every other box: `base-styling` writes `--ltx-box-width:<w>` for an LaTeXML element's `width` (minipage and
   `\parbox` `inline-block`/`inline-logical-block`, the panel `figure` and `p` a minipage becomes, `\makebox`'s `text`,
-  a transformed box's outer, a wrapfigure, a `tabular`/`td` width), and `add_transformable_attributes` for the inner
-  box's `innerwidth`. The XML keeps `width` (JATS and TEI read it).
+  a transformed box's outer, a wrapfigure, a `tabular`/`td` width, an `ltx:picture` rendered as an image or as its TeX
+  through `add_attributes`), and `add_transformable_attributes` for the inner box's `innerwidth`. The XML keeps
+  `width` as Perl writes it; of our stylesheets only the XHTML ones read it (neither the JATS nor the TEI one does).
 - Not boxes, so `width:` stays: `ltx:rule` (its ink, as an image's size) and MathML's `mspace`/`mpadded` (MathML's own
-  attribute). Graphics (`imagewidth`), pictures and SVG, and `--ltx-panel-width` never reach `base-styling`'s width.
+  attribute). Graphics (`imagewidth`), a picture drawn as SVG, and `--ltx-panel-width` never reach `base-styling`'s
+  width.
 
-LaTeXML.css: `:where([style*="--ltx-box-width:"]:not([style*=";width:"], [style*="; width:"])) { width:
-var(--ltx-box-width, auto) !important }`. Important and of zero specificity, it ranks as the inline `width:` did: over
-every normal rule (`.ltx_tabular .ltx_tabular`'s 100 %, `.ltx_framed_verbatim`'s fit-content), under every other
-`!important` one. It also yields to a `width:` the element's own `cssstyle` sets after the property (varwidth's
-`width:max-content`, #1014; a `\text` minipage's, batch76a). ar5iv-css carries the same rule un-layered, so that its
-layered rules rank under it as under the inline style, and caps a lifted section at its container
-(`:is(section, .ltx_inline-sectional-block)[style*="--ltx-box-width:"] { max-width: 100% }`, as its `.ltx_minipage`). A stylesheet overrides the width with an `!important` rule, as it
-did the inline style, or reuses the value (`width: min(var(--ltx-box-width), 100%) !important`).
+LaTeXML.css: `:where([style*="--ltx-box-width:"]:not([style^="width:"], [style*=";width:"], [style*="; width:"])) {
+width: var(--ltx-box-width, auto) !important }`. Important and of zero specificity, it ranks where the inline `width:`
+ranked: over every normal rule (`.ltx_tabular .ltx_tabular`'s 100 %, `.ltx_framed_verbatim`'s fit-content), under
+every other `!important` one. It is off where the element's own style sets a `width:` (varwidth's `max-content`,
+#1014; a `\text` minipage's, batch76a). ar5iv-css carries the same rule un-layered, so that its layered rules rank under
+it as under the inline style, and caps a lifted section at its container
+(`:is(section, .ltx_inline-sectional-block)[style*="--ltx-box-width:"] { max-width: 100% }`, as its `.ltx_minipage`).
+A stylesheet overrides one box's width with `.sel { --ltx-box-width: <w> !important }` or `.sel { width: <w>
+!important }`, reuses it (`width: min(var(--ltx-box-width), 100%) !important`), and switches every box width off with
+`:where([style*="--ltx-box-width:"]) { --ltx-box-width: initial !important }`.
 
-Measured: every body element's box and the screenshot ink are identical before and after in Chrome and Firefox at
-1280/768/375 px, under LaTeXML.css and under ar5iv.css. That holds for the repro shapes (side-by-side, figure, nested
-and over-wide minipages, `\parbox` in text, `p{}` cells, `tabular*`, `\makebox`, scaled/resized/rotated boxes,
-varwidth, wrapfigure, framed verbatim, lifted sections) and for arXiv pages (QAB57b A/B). Guards
-`perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width` (repros
-`block-model/section_in_a_box_keeps_the_box_width`, `block-model/box_widths_ride_the_custom_property`).
+Cost: a box's width now needs LaTeXML.css or ar5iv-css. It is lost under `--nodefaultresources` without a stylesheet
+carrying the rule, in a reader that does not apply our CSS, and in an EPUB reader without `var()` or `:where()` (the
+EPUB ships LaTeXML.css).
+
+Measured (QAB57b, rerun on QAB57c): every body element's box is identical before and after in Chrome and Firefox at
+1280 and 375 px, under LaTeXML.css and under ar5iv.css, and the screenshot ink where it was compared (Chrome; Firefox
+only on the pages short enough to shoot). That holds for the repro shapes (side-by-side, figure, nested and over-wide
+minipages, `\parbox` in text, `p{}` cells, `tabular*`, `\makebox`, scaled/resized/rotated boxes, varwidth, wrapfigure,
+framed verbatim, lifted sections) and for the 63 arXiv papers whose HTML moved (QAB57b A/B). Guards
+`perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width` (repros `block-model/section_in_a_box_keeps_the_box_width`,
+`section_in_varwidth_keeps_its_own_width`, `section_in_nested_boxes_keeps_the_inner_width`,
+`box_widths_ride_the_custom_property`).
 
 ### 1046. latexml.sty's `pdfoutput`/`nopdfoutput` options set the output mode over the guess (Perl: no such options)
+
+Principle: Perl's own intent for latexml.sty — its options are the author's switches over how LaTeXML processes the
+document, as its X/noX pairs are. Related: #285, #537 (the presented `\pdfoutput` and its cues), #204 (`\ifpdf`).
 
 We present `\pdfoutput=1` unless the source's cues say latex+dvips (#285, #537); Perl presents 0. BM (Q4.2): presenting
 a mode "may often be desirable … And/Or possibly that should be an additional latexml.sty switch". **Rust** (QAB57, DG
@@ -36482,26 +36517,3 @@ driver it chose, as TeX's load order decides. Under a preload of latexml.sty a d
 `backend-persona/latexml_option_after_ar5iv_preload_red`, post-merge). Default output unchanged. Perl patch prepared
 (`bruce_qa/patches/qa64.patch`: the two options, and TeX's latexml.sty declaring them). Guard
 `perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
-
-### 1047. Under OmniBus the document's own definitions win over its guesses, locked ones too (Perl: ignored as a redefinition)
-
-For a class with no binding OmniBus guesses the class's commands, and locks its semantic frontmatter ones (#408). A
-document that `\newcommand`s one of them shows its real class leaves it undefined, so pdflatex prints the
-document's version (probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b"). **Perl** ignores the redefinition
-(`isDefinableLaTeX`, latex_constructs.pool.ltxml:2512-2526, an Info) and makes a contact of it, as did we.
-
-**Rust** (QAB57; BM Q3.12 "OmniBus sets a flag letting `\newcommand` and its family redefine without complaint", DG
-2026-11-14 "the document wins"): OmniBus loaded as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition`
-does not refuse a definition of a name whose meaning is still OmniBus's guess (`fallback_meaning_origin` is
-`Fallback`) when the document's own text makes it (`DefinitionOrigin::Document`, the state not re-locked:
-`state::document_redefines_guess`) — `\newcommand`, `\renewcommand`, `\def`, `\DeclareRobustCommand`;
-`\newenvironment`/`\renewenvironment` also drop OmniBus's `\begin{name}` constructor, which `\begin` looks up first.
-A `\providecommand` defers to a locked guess as to any class command (the 2026-10-01 ruling's
-`\providecommand{\keywords}`; guard `perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`). The semantic markup the guess carried is lost with it: the e-mail, address, affiliation and
-ORCID are no longer the author's contacts, the keywords no classification, the DOI no link — the document's text is
-what the PDF prints. Unchanged: OmniBus provided over a named binding's base class (ceurart; #736) keeps its locks,
-and so does a package's or the document's begin-document hook code, run re-locked (apacite's
-`\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link; the document's own hook definition is refused too,
-RED `singletons/omnibus_document_hook_definition_refused_red`, post-merge). Perl patch prepared
-(`bruce_qa/patches/qa58.patch`: `\newcommand` and `\newenvironment` may redefine OmniBus's guesses). Guard
-`perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.

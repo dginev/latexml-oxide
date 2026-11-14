@@ -46,28 +46,41 @@ fn omnibus_guesses_yield_to_the_document() {
 }
 
 /// A sectioning unit lifted out of a minipage or `\parbox` (OD #250), and a framed box's `inline-sectional-block`,
-/// carry the box's width as `--ltx-box-width` (BM Q2.4); a plain minipage keeps its `width` attribute. In the HTML every
-/// box's width is that property (DG 2026-11-14), a rule's stays `width:` (OD #1045).
+/// carry the box's width as `--ltx-box-width` (BM Q2.4); a plain minipage keeps its `width` attribute. The property
+/// comes before varwidth's own `width:` (which then wins), and a unit lifted through nested boxes keeps the innermost
+/// box's width (revQAB57 B1). In the HTML every box's width is that property (DG 2026-11-14), a rule's stays `width:`
+/// (OD #1045).
 #[test]
 fn section_in_a_box_keeps_the_box_width() {
-  let (log, xml) = convert_counted(include_str!(
-    "../../../tools/perfect_kernel/repros/block-model/section_in_a_box_keeps_the_box_width.tex"
-  ));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  for open in [
-    r#"<inline-block class="ltx_minipage" vattach="top" width="85.4pt" xml:id="p1.1.1">"#,
-    r#"<subsection class="ltx_minipage" cssstyle="--ltx-box-width:113.8pt" xml:id="S0.SSx1">"#,
-    r#"<section class="ltx_parbox" cssstyle="--ltx-box-width:142.3pt" inlist="toc" xml:id="S1">"#,
-    r#"<inline-sectional-block class="ltx_minipage" cssstyle="--ltx-box-width:170.7pt" framed="rectangle" xml:id="S1.p2.1.1">"#,
-    r#"<section inlist="toc" xml:id="S2">"#,
-  ] {
-    assert_eq!(xml.matches(open).count(), 1, "{open}\n{xml}");
+  let rows: [(&str, &str); 3] = [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/block-model/section_in_a_box_keeps_the_box_width.tex"
+      ),
+      "\n  <para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">Plain box: <inline-block class=\"ltx_minipage\" vattach=\"top\" width=\"85.4pt\" xml:id=\"p1.1.1\">\n        <p xml:id=\"p1.1.1.1\">Text in a plain minipage.</p>\n      </inline-block></p>\n  </para>\n  <subsection class=\"ltx_minipage\" cssstyle=\"--ltx-box-width:113.8pt\" xml:id=\"S0.SSx1\">\n    <title>Starred</title>\n    <para xml:id=\"S0.SSx1.p1\">\n      <p xml:id=\"S0.SSx1.p1.1\">Text A.</p>\n    </para>\n  </subsection>\n  <section class=\"ltx_parbox\" cssstyle=\"--ltx-box-width:142.3pt\" inlist=\"toc\" xml:id=\"S1\">\n    <tags>\n      <tag>1</tag>\n      <tag role=\"refnum\">1</tag>\n      <tag role=\"typerefnum\">§1</tag>\n    </tags>\n    <title><tag close=\" \">1</tag>In a parbox</title>\n    <para xml:id=\"S1.p1\">\n      <p xml:id=\"S1.p1.1\">Text B.</p>\n    </para>\n    <para xml:id=\"S1.p2\">\n      <p xml:id=\"S1.p2.1\"><inline-sectional-block class=\"ltx_minipage\" cssstyle=\"--ltx-box-width:170.7pt\" framed=\"rectangle\" xml:id=\"S1.p2.1.1\">\n          <section inlist=\"toc\" xml:id=\"S2\">\n            <tags>\n              <tag>2</tag>\n              <tag role=\"refnum\">2</tag>\n              <tag role=\"typerefnum\">§2</tag>\n            </tags>\n            <title><tag close=\" \">2</tag>Framed</title>\n            <para xml:id=\"S2.p1\">\n              <p xml:id=\"S2.p1.1\">F.</p>\n            </para>\n          </section>\n        </inline-sectional-block></p>\n    </para>\n  </section>\n</document>",
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/block-model/section_in_varwidth_keeps_its_own_width.tex"
+      ),
+      "\n  <section class=\"ltx_minipage\" cssstyle=\"--ltx-box-width:63.4pt;width:max-content;max-width:227.6pt\" inlist=\"toc\" xml:id=\"S1\">\n    <tags>\n      <tag>1</tag>\n      <tag role=\"refnum\">1</tag>\n      <tag role=\"typerefnum\">§1</tag>\n    </tags>\n    <title><tag close=\" \">1</tag>In varwidth</title>\n    <para xml:id=\"S1.p1\">\n      <p xml:id=\"S1.p1.1\">Short.</p>\n    </para>\n    <para xml:id=\"S1.p2\">\n      <p xml:id=\"S1.p2.1\"><inline-sectional-block class=\"ltx_minipage\" cssstyle=\"--ltx-box-width:75.1pt;width:max-content;max-width:227.6pt\" framed=\"rectangle\" xml:id=\"S1.p2.1.1\">\n          <subsection xml:id=\"S1.SSx1\">\n            <title>Framed vw</title>\n            <para xml:id=\"S1.SSx1.p1\">\n              <p xml:id=\"S1.SSx1.p1.1\">Short.</p>\n            </para>\n          </subsection>\n        </inline-sectional-block></p>\n    </para>\n  </section>\n</document>",
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/block-model/section_in_nested_boxes_keeps_the_inner_width.tex"
+      ),
+      "\n  <section class=\"ltx_minipage\" cssstyle=\"--ltx-box-width:85.4pt\" inlist=\"toc\" xml:id=\"S1\">\n    <tags>\n      <tag>1</tag>\n      <tag role=\"refnum\">1</tag>\n      <tag role=\"typerefnum\">§1</tag>\n    </tags>\n    <title><tag close=\" \">1</tag>Inner</title>\n    <para xml:id=\"S1.p1\">\n      <p xml:id=\"S1.p1.1\">Text inner.</p>\n    </para>\n    <para xml:id=\"S1.p2\">\n      <p xml:id=\"S1.p2.1\">Outer text.</p>\n    </para>\n  </section>\n</document>",
+    ),
+  ];
+  for (tex, expected) in rows {
+    let (log, xml) = convert_counted(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(body(&xml), expected, "{xml}");
   }
-  assert_eq!(xml.matches("--ltx-box-width").count(), 3, "{xml}");
   let css = include_str!("../../../latexml_post/resources/CSS/LaTeXML.css");
   assert!(
     css.contains(concat!(
-      ":where([style*=\"--ltx-box-width:\"]:not([style*=\";width:\"], [style*=\"; width:\"])) {\n",
+      ":where([style*=\"--ltx-box-width:\"]:not([style^=\"width:\"], [style*=\";width:\"], [style*=\"; width:\"])) {\n",
       "  width: var(--ltx-box-width, auto) !important;\n}"
     )),
     "LaTeXML.css applies --ltx-box-width"
