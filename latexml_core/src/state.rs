@@ -4980,12 +4980,16 @@ pub fn assign_register_token(
     defn.set_value(value, scope, parameters);
     return Ok(());
   }
+  warn_not_register(cs);
+  Ok(())
+}
+/// Perl `LookupRegister`/`AssignRegister`'s Warning (Package.pm:1367-1369, 1404-1405) on a cs that is not a register.
+pub fn warn_not_register(cs: impl Display) {
   Warn!(
     "expected",
     "register",
-    format!("The control sequence '{cs}' is not a register")
+    format!("The control sequence {cs} is not a register")
   );
-  Ok(())
 }
 pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
   lookup_register_token(&T_CS!(cs), parameters)
@@ -4996,17 +5000,15 @@ pub fn lookup_register_token(
   cs: &Token,
   parameters: Vec<ArgWrap>,
 ) -> Result<Option<RegisterValue>> {
+  // Quiet on an undefined cs, unlike Perl `LookupRegister` (Package.pm:1360-1369): kernel callers probe optional
+  // registers with it (geometry's `\Gm@tw`); the binding macro `LookupRegister!` Warns.
   Ok(match lookup_definition(cs)? {
-    Some(defn) => {
-      if defn.is_register() {
-        defn.value_of(parameters)
-      } else {
-        let message = s!("The control sequence '{}' is not a register", cs);
-        Warn!("expected", "register", message);
-        None
-      }
+    Some(defn) if defn.is_register() => defn.value_of(parameters),
+    Some(_) => {
+      warn_not_register(cs);
+      None
     },
-    _ => None,
+    None => None,
   })
 }
 
@@ -5075,8 +5077,7 @@ pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Option<Dimension> {
       // Undefined single token: warn like Perl and yield nothing.
       _ => {
         if !noerror {
-          let message = s!("The control sequence '{}' is not a register", cs);
-          Warn!("expected", "register", message);
+          warn_not_register(cs);
         }
         return None;
       },

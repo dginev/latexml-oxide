@@ -1,0 +1,17 @@
+% mechanism: nicematrix's `p`/`m`/`b` columns take an optional key list, `p[c]{5em}` (nicematrix.sty:2350-2398, the
+%   `nicematrix / p-column` keys `l`/`c`/`r`); the standard template reader read `[c]` as columns
+% witness: 2607.15452 (`{@{}p[c]{5pt}p[c]{5em}p[c]{5em}p[c]{5em}@{}}`, 12 errors)
+% oracle:  pdflatex 0 errors: two rows "1 2 3" / "4 5 6", the cells centered
+% engines: rust c725371b0af = 18 Warnings (Unrecognized tabular template "[", "]", "t", …), the cells misaligned (the
+%          witness: `[' invalid at this point Errors); Perl: no binding
+% expect:  0 errors; three centered paragraph cells per row
+% status:  RED (c725371b0af) -> GREEN (I736)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{p[c]{2em}m[r]{3em}b[l,t]{3em}}
+1 & 2 & 3 \\
+4 & 5 & 6 \\
+\end{NiceTabular}
+\end{document}

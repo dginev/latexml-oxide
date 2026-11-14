@@ -1,0 +1,17 @@
+% mechanism: a `\Block{1-j}` stopped by its width before the row's next text cell takes its right rule from the last
+%   column it covers (latexml_core alignment/normalize.rs, the overprint span); the span copied the rule of the last
+%   EMPTY cell, one column further right
+% witness: revI736 finding 1, synthetic
+% oracle:  pdflatex 0 errors: "W" over columns 1-2, no rule after it (the colspec has none between columns 2 and 3), a
+%   rule before "D"
+% engines: rust 4f2891e78b8 = 0 errors, the block's <td> border="r"; Perl: no binding
+% expect:  0 errors; W colspan=2 with no right rule; the empty third cell keeps the rule before D
+% status:  RED (4f2891e78b8) -> GREEN (I736)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{c|cc|c}
+\Block{1-2}{W} & & & D \\
+\end{NiceTabular}
+\end{document}

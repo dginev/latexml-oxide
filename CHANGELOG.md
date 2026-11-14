@@ -23,6 +23,15 @@
     figure that draws a raster larger than its own pixels keeps the PNG path, where a
     browser would blur it
     (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
+  - **The binding macros mean what Perl's same-named API means** (MACSYNC, AUDMAC). `Digest!` leaves
+    the horizontal mode its digestion entered (Package.pm:393-402, through the new `binding_digest`) and `RawTeX!`
+    ends in vertical mode (Package.pm:996). `AssignRegister!` takes Perl's arguments, `(cs, value[, scope[, parameters]])`, `cs` a name
+    or a Token (**API change** for compiled bindings: the third argument was the parameters, now the scope).
+    `LookupRegister!`, `AssignRegister!` and the core `lookup_register` give Perl's one Warning
+    (`The control sequence \X is not a register`, Package.pm:1367-1369); the macros on an undefined cs too
+    (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
+    unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` on an
+    undefined cs is TeX's Error and defines it with the addition, as latex.ltx does (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
   - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
     number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
     `lstlisting` copies the code without its numbers; dark mode colours `body`, not
@@ -93,6 +102,20 @@
     the EPUB tests validate their output. Guards
     `cli_css_resource_copy::cli_resources_link_their_copies_from_every_page` and
     `whatsinout::format_epub_ar5iv_preload_carries_the_css_param` (in `cluster_cli`).
+  - **`revert_as => 'context'` reverts by the dual branch, as Perl does** (#821, thanks
+    @nschloe). Both readers now take the branch from the locals stack: a no-argument
+    `DefMathI` (Package.pm L1849-1854), whose reversion the port had fixed to the CS at
+    definition time, and the `\lx@dual` reversion (Base_XMath.pool.ltxml L243), which read
+    a state value nothing set. So `ltx:Math`'s `tex` (presentation branch) got the user's
+    CS and `content-tex` was never written: `\lxDefMath{\plus}{+}` gave `tex="a\plus b"`
+    where Perl gives `tex="a+b"` + `content-tex="a\plus b"`. Golden `math/declare` moves
+    to Perl's attributes, except that `\foo{x}` with an unused `#1` reverts as TeX prints
+    it, `\mathbf{foo}`.
+  - **nicematrix's `{NiceTabular}` keeps its column and row features** (issue 736). `p[c]{5em}`-style columns
+    read their `l`/`c`/`r` and `t`/`m`/`b` keys instead of misreading `[c]` as columns (2607.15452: 12 errors → 0); a
+    `\Block{i-j}` cell spans its columns and rows, and a `\\` in its text breaks a line of the block, not the row
+    (2206.12224); the body's two-color `\rowcolors` no longer swallows the next cell's `$` (2602.03088: 39 errors →
+    0). Guard `perfect_kernel_batchi736::nicematrix_body_features_keep_the_table`.
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads

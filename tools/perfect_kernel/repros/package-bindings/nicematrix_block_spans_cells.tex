@@ -1,0 +1,19 @@
+% mechanism: `\Block{i-j}{text}` sets its text over an i x j rectangle of cells whose other source cells are empty
+%   (nicematrix.sty:7258 `\Block`); the binding kept the text in the anchor cell and every covered cell as its own
+% witness: 2206.12224 (`\Block[c]{1-3}{Semi-honest} & & &`), synthetic
+% oracle:  pdflatex 0 errors: "Big" over the 2x2 top-left corner; "Wide" over the two cells right of "E"; "x" kept in
+%   its own cell after a `\Block{1-3}` whose third cell is not empty
+% engines: rust c725371b0af = 0 errors, no colspan/rowspan, the covered cells as empty <td/>; Perl: no binding
+% expect:  0 errors; Big colspan=2 rowspan=2, Wide colspan=2, the 1-3 block stops at "x" (colspan=2)
+% status:  RED (c725371b0af) -> GREEN (I736)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{cccc}
+\Block{2-2}{Big} & & C & D \\
+ & & F & G \\
+E & \Block{1-2}{Wide} & & H \\
+\Block{1-3}{Long} & & x & I \\
+\end{NiceTabular}
+\end{document}

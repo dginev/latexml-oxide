@@ -1003,7 +1003,8 @@ fn probability_applies_to_a_physics_group() {
 
 /// 57cd review: an expectation or probability named by `\lxDefMath` (a `meaning` or `name`) is typed by
 /// its content, so it applies — expectation@(X), prob@(A) — where 57cd's lexeme took the name and
-/// matched no terminal (every formula unparsed).
+/// matched no terminal (every formula unparsed). `\lxDefMath` reverts as `context`: `tex` the presentation,
+/// `content-tex` the command (Package.pm:1853; Perl's `tex`/`content-tex` here, #821).
 #[test]
 fn named_expectation_tokens_apply() {
   let (stderr, xml) = convert_with(
@@ -1017,11 +1018,11 @@ fn named_expectation_tokens_apply() {
   for (id, math) in [
     (
       "p1.m1",
-      r##"<Math mode="inline" tex="\nabla\EE[X]" text="nabla@(expectation@(X))" xml:id="p1.m1"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMDual><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/></XMApp><XMApp><XMTok meaning="expectation" name="EE" role="UNKNOWN" xml:id="p1.m1.1">𝔼</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.2">X</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
+      r##"<Math content-tex="\nabla\EE[X]" mode="inline" tex="\nabla 𝔼[X]" text="nabla@(expectation@(X))" xml:id="p1.m1"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMDual><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/></XMApp><XMApp><XMTok meaning="expectation" name="EE" role="UNKNOWN" xml:id="p1.m1.1">𝔼</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.2">X</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
     ),
     (
       "p1.m2",
-      r##"<Math mode="inline" tex="a+\PP(A)" text="a + prob@(A)" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMDual><XMApp><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.2"/></XMApp><XMApp><XMTok name="prob" role="UNKNOWN" xml:id="p1.m2.1">ℙ</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.2">A</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
+      r##"<Math content-tex="a+\PP(A)" mode="inline" tex="a+ℙ(A)" text="a + prob@(A)" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMDual><XMApp><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.2"/></XMApp><XMApp><XMTok name="prob" role="UNKNOWN" xml:id="p1.m2.1">ℙ</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.2">A</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
     ),
   ] {
     latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);

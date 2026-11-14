@@ -432,14 +432,9 @@ LoadDefinitions!({
             Tokens::new(tks)
           },
           _other => {
-            // Context-dependent reversion: use presentation if DUAL_BRANCH
-            // is "presentation", otherwise use content. with_value avoids
-            // the Stored::clone + full to_string we previously paid just
-            // to compare against a single literal.
-            let is_presentation = with_value("DUAL_BRANCH", |v| {
-              v.map(|s| s.eq_text("presentation")).unwrap_or(false)
-            });
-            if is_presentation {
+            // Context-dependent reversion, by the dual branch on the locals stack
+            // (Perl Base_XMath.pool.ltxml:243, `($LaTeXML::DUAL_BRANCH || '') eq 'presentation'`).
+            if get_dual_branch() == Some("presentation") {
               match &pr {
                 Some(Stored::Reversion(Reversion::Tokens(tks))) => tks.clone(),
                 Some(Stored::Reversion(Reversion::Closure(cl))) => cl(wself,args)?,

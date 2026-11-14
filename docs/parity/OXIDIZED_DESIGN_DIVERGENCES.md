@@ -18270,6 +18270,12 @@ lefteqn_cells_with_content, lefteqn_then_amp, lefteqn_stops_at_side_content}`,
 `perfect_kernel_batch61::eqnarray_continuation_after_lefteqn_does_not_panic`, `53_alignment::eqnarray_test`; repros
 `alignment/lefteqn_*`.
 
+**Bounded overprint** (issue 736): nicematrix's `\Block{i-j}{text}` sets its text over an i×j rectangle whose other
+source cells are empty (nicematrix.sty:7258-7300). `\lx@nicematrix@block@span` marks the anchor cell overprinting with
+`Cell::overprint_columns = j`, which caps the span at `j` columns (a covered cell with text still ends it), and gives it
+`rowspan = i` as `\multirow` does (`normalize_mark_spans` truncates it at a covered cell with text); `*` leaves that
+side unspanned. Witness 2206.12224; guard `perfect_kernel_batchi736::nicematrix_body_features_keep_the_table`.
+
 ### 557. eqnarray has latex.ltx's fourth column, the equation number's (Perl: three columns)
 
 latex.ltx:15756-15766 gives eqnarray's `\halign` four columns: the three of the equation and
@@ -36246,3 +36252,15 @@ longer matters (the PNG path renders such a raster as main does). **Guards**:
 `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged` (each converter present, then the pipeline:
 `native_raster_vector.tex`, a 64×64 PNG at 48 bp, stays SVG; `mixed_raster_vector.tex`, a 4×4 tile at 1 cm, takes the
 PNG path), `graphics::tests::svg_enlarged_raster_reads_every_placement`, `graphics::tests::should_try_svg_path_auto_detect`.
+
+### 1036. `AddToMacro!` on an undefined cs is an Error and defines it with the addition (MACSYNC)
+
+**Perl.** `AddToMacro` (Package.pm:2534-2549) Warns ("not an expandable control sequence") and drops the addition when
+the cs is undefined; a later use of the cs is then an undefined-cs Error. **TeX.** latex.ltx:1832 `\g@addto@macro`'s
+`\expandafter` raises "Undefined control sequence", then its `\xdef` defines the cs with the addition (pdflatex
+`\g@addto@macro\nohook{XY}A\nohook B` → 1 `!`, "AXYB"). **Ours.** TeX's Error (`undefined:\nohook`, as TeX and Perl
+both err) and TeX's outcome, the content kept; before, the cs was defined silently. `\AtEndOfPackage` names its hook with
+`\csname` (latex.ltx:18896), so it makes an empty hook first and raises nothing. A non-expandable cs keeps Perl's Warning and
+is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xdef` makes a self-referencing macro).
+**Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
+`macro-state/g_addto_macro_undefined_defines.tex`).
