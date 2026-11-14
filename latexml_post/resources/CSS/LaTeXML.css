@@ -580,6 +580,11 @@ foreignObject {
    margins through the ltx_para wrappers, keeping text<->display and
    display<->display gaps uniform (no doubling next to text). */
 .ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }
+/* latexml-oxide local delta (issue #475): MathJax gives its display container a 1em block margin (v3/v4
+   `mjx-container[display]`, v2 `.MathJax_Display`), which inside an equation cell cannot collapse with the skip
+   above, so consecutive displays sat about three times as far apart; the table supplies the skip. */
+table.ltx_eqn_table td.ltx_eqn_cell > mjx-container[display="true"],
+table.ltx_eqn_table td.ltx_eqn_cell > .MathJax_Display { margin-top:0; margin-bottom:0; }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #533): display
    math is a `.ltx_eqn_table { display:table; width:100% }` whose center-pad
    cells stretch it to full width. Inside a width-constrained box — a `p{}` cell

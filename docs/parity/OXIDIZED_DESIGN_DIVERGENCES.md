@@ -36355,3 +36355,14 @@ its tag (half the tag's width to the left, 10 px for `(1)` at 16 px), where TeX 
 gap falls under twice the tag's width. Offered upstream as the same one-line change to LaTeXML.css. **Guards**:
 `cluster_cli::browser_render_eqn_tags_and_authors::equation_tags_stay_beside_and_author_lines_show` (Chrome, local),
 `xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
+
+### 1042. MathJax's display margin is zeroed inside an equation cell (issue #475)
+
+**Perl.** A display equation is a `table.ltx_eqn_table` (our #473 delta adds its 1em block margins). MathJax
+renders a display `<math>` as a block with a 1em block margin (v3/v4 `mjx-container[display="true"]`, v2
+`.MathJax_Display`); inside a table cell that margin cannot collapse with the table's, so consecutive displays sat
+about three times as far apart as without MathJax (reporter nasser1; measured with MathJax 2.1 offline in Chrome: the
+formulas 53 px apart, natively 18 px; ar5iv.css likewise 54 against 20). **Rust.** A local delta zeroes that
+container's block margins in an equation cell, as the table already carries the display skip: 21 px under MathJax 2.1,
+native rendering unchanged. MathJax 3/4 was not loadable offline; its selector is from MathJax's CHTML stylesheet.
+Offered upstream. **Guard**: `xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.

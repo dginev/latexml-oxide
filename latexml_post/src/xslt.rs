@@ -1384,7 +1384,14 @@ mod witnessed_css_delta {
     // and #783 (`\author{name\\school\\dept}`: a starred pop-up -> lines under the name); the
     // browser half is `cluster_cli::browser_render_eqn_tags_and_authors`.
     let css = bundled_latexml_css();
-    for (issue, rule) in [("#810", ".ltx_eqn_eqno { max-width:none; }")] {
+    for (issue, rule) in [
+      ("#810", ".ltx_eqn_eqno { max-width:none; }"),
+      (
+        "#475",
+        "table.ltx_eqn_table td.ltx_eqn_cell > mjx-container[display=\"true\"],\n\
+         table.ltx_eqn_table td.ltx_eqn_cell > .MathJax_Display { margin-top:0; margin-bottom:0; }",
+      ),
+    ] {
       assert!(
         css.contains(issue) && css.contains(rule),
         "LaTeXML.css lost the issue {issue} rule `{rule}`"
