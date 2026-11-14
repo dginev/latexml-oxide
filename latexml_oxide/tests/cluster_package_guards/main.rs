@@ -28,6 +28,7 @@ mod bibliography_names_fields;
 mod bibref_show;
 mod binding_conformance;
 mod binding_singletons_56;
+mod bindings_batch2;
 mod box_primitives;
 mod braced_quantity_tail;
 mod case_change_equivalents;
