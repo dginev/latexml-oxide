@@ -193,7 +193,7 @@ else
   # Extend PKG_CONFIG_PATH with every directory holding a discovered
   # kpathsea.pc, so a TL-tree-shipped .pc gets a chance even when the
   # distribution didn't register it. Report the extension explicitly:
-  # whatever lands here is the incantation the README must document.
+  # whatever lands here is the incantation docs/BUILDING.md must document.
   EXTRA_PC_DIRS=""
   for root in $KPSE_ROOTS; do
     [ -d "$root" ] || continue

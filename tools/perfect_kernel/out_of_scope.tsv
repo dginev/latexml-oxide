@@ -1,6 +1,6 @@
 # In-scope (oracle-clean) manuals ruled out of the perfect-kernel goal; they stay in every sweep as crash canaries.
 # Read by tools/perfect_kernel/scoreboard.py together with shell_escape_excluded.tsv (not repeated here).
-# A defect they expose in shared machinery stays in scope as an ordinary bug. docs/PERFECT_KERNEL.md "Scope".
+# A defect they expose in shared machinery stays in scope as an ordinary bug. docs/archive/PERFECT_KERNEL_2026-11-13.md "Scope".
 # Columns: bundle, name, ruling (user, date), basis.
 # CJK clause ("any other in-scope manual whose content is Japanese, Chinese or Korean typesetting", 2026-10-01)
 # applied 2026-10-02 to the manuals whose source holds >= 200 CJK characters or whose name says zh/cn/jp/ja/tc;
