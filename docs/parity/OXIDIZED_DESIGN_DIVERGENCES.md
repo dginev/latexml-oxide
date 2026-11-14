@@ -36165,3 +36165,13 @@ kernel raised 137 errors (the scan ran on through latex.ltx under `\ExplSyntaxOf
 pdflatex prints `[read][42]Tail.` (0 `!`). An ordinary `\input` keeps its binding: the empty `glyphtounicode.tex`
 binding answers `\input glyphtounicode` (`\pdfglyphtounicode` a no-op, the raw read's output the same, at fewer
 instructions). **Guards**: `perfect_kernel_batch51::file_get_reads_the_file_whole`, the format build's zero-error gate.
+
+### 1037. An EPUB keeps its log outside the container and never over an existing file (UPS1, upstream #2855)
+
+**Perl.** Since #2855 (1718f89e) `latexmlc` keeps an existing external log under an archive output
+(`$keep_log_file`, bin/latexmlc:111-134): a `.zip` packs the log as its `--log` basename (default `<name>.latexml.log`,
+LaTeXML.pm:621-629, t/932_zip.t), and an EPUB packs it into the container as `OPS/<log>`. **Rust.** The `.zip` is as
+Perl. An EPUB writes its log outside the container (epubcheck would flag a log member under `OPS/`), and when a file of
+the log's name already exists it is kept and the log not written ("Log not written: '<log>' exists and is kept" on
+stderr; DG 2026-11-14). A conversion that fails before it starts writes its Fatal log under the same rule.
+`cortex_worker` packs its own `cortex.log` and is unchanged. **Guard**: `cluster_cli::archive_output_keeps_an_existing_log`.

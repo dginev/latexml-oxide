@@ -1140,6 +1140,52 @@ mod whatsinout {
     );
   }
 
+  /// Upstream #2855 (Perl latexmlc:111-134 `$keep_log_file`): an archive output keeps an existing external log of the
+  /// log's name — a `.zip` packs its log as the `--log` basename (Perl t/932_zip.t); EPUB writes it outside the
+  /// container, never over an existing file (OXIDIZED_DESIGN_DIVERGENCES #1037).
+  #[test]
+  fn archive_output_keeps_an_existing_log() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("hello.tex"), HELLO_TEX).unwrap();
+    let existing = "pre-existing external log\n";
+    std::fs::write(work.path().join("ext.log"), existing).unwrap();
+    let out = run(work.path(), &["hello.tex", "--dest=t.zip", "--log=ext.log"]);
+    assert!(out.status.success(), "stderr:\n{}", stderr_of(&out));
+    assert_eq!(
+      std::fs::read_to_string(work.path().join("ext.log")).unwrap(),
+      existing
+    );
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(work.path().join("t.zip")).unwrap()).unwrap();
+    let mut log = String::new();
+    archive
+      .by_name("ext.log")
+      .expect("the log member")
+      .read_to_string(&mut log)
+      .unwrap();
+    assert!(log.contains("Status:conversion:0"), "{log}");
+
+    std::fs::write(work.path().join("hello.latexml.log"), existing).unwrap();
+    let out = run(work.path(), &["hello.tex", "--dest=t.epub"]);
+    let stderr = stderr_of(&out);
+    assert!(out.status.success(), "stderr:\n{stderr}");
+    assert!(
+      stderr.contains("Log not written: 'hello.latexml.log' exists and is kept"),
+      "{stderr}"
+    );
+    assert_eq!(
+      std::fs::read_to_string(work.path().join("hello.latexml.log")).unwrap(),
+      existing
+    );
+    let archive =
+      zip::ZipArchive::new(std::fs::File::open(work.path().join("t.epub")).unwrap()).unwrap();
+    assert!(
+      archive
+        .file_names()
+        .all(|name| name.is_ok_and(|n| !n.ends_with(".log")))
+    );
+  }
+
   /// Issue 807: `--format=epub` writes the EPUB 3 container Perl `latexmlc --dest=x.epub` does (Manifest::Epub,
   /// Pack/Zip.pm), not one bare XHTML file — `mimetype` first and STORED, the content and its CSS under `OPS/`.
   #[test]

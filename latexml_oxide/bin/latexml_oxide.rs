@@ -933,8 +933,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // log — `--log` names it, otherwise `<jobname>.latexml.log` in the current
   // directory (literal/anonymous sources fall back to plain `latexml.log`),
   // and a pre-existing file is removed up front so the log is always this
-  // run's. The archive output packs its log into the zip instead, exactly as
-  // before. Reported missing on the 0.7.5-rc5 witness UAT (2026-08-03): a
+  // run's — except under an archive output, which packs its log and keeps the
+  // file (`external_log` below, #2855). Reported missing on the 0.7.5-rc5 witness UAT (2026-08-03): a
   // fatal scrolled away with nothing on disk to consult.
   let cli_log: Option<String> = cli.log.clone().or_else(|| {
     // Dump-building (`--init`) is not a conversion; no default log there.
@@ -993,6 +993,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     None => latexml_post::extract::Whatsout::Document,
   };
   let is_archive_out = whatsout_mode.is_archive();
+  // Perl latexmlc:111-134 `$keep_log_file` (#2855): an archive packs its log, so an existing external log of that name
+  // is kept; EPUB writes its log outside the container, never over an existing file (OXIDIZED_DESIGN_DIVERGENCES #1037).
+  let external_log: Option<String> = cli_log
+    .clone()
+    .filter(|lp| !(is_archive_out && Path::new(lp).is_file()));
 
   // --whatsin=archive: extract archive to temp directory, find main .tex file
   let mut path_flags = cli.search_paths.clone();
@@ -1010,7 +1015,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let source = if is_archive_mode {
     let (tempdir, main_tex) = match unpack_archive(&source) {
       Ok(r) => r,
-      Err(failure) => fatal_before_conversion(cli_log.as_deref(), &failure, &mut archive_tempdir),
+      Err(failure) => {
+        fatal_before_conversion(external_log.as_deref(), &failure, &mut archive_tempdir)
+      },
     };
     // Read from the archive's entries: the extracted files carry the extraction's clock.
     let main_in_archive = Path::new(&main_tex)
@@ -1049,7 +1056,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         main_tex
       },
       Err(e) => fatal_before_conversion(
-        cli_log.as_deref(),
+        external_log.as_deref(),
         &InputFailure::no_main_tex(&source, &e),
         &mut archive_tempdir,
       ),
@@ -1063,6 +1070,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   }
 
   if let Some(ref lp) = cli_log
+    && !is_archive_out
     && Path::new(lp).is_file()
   {
     let _ = std::fs::remove_file(lp);
@@ -1078,7 +1086,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       object:   "not_tex_source".into(),
       message:  format!("PDF magic detected in source file '{source}'"),
     };
-    fatal_before_conversion(cli_log.as_deref(), &failure, &mut archive_tempdir);
+    fatal_before_conversion(external_log.as_deref(), &failure, &mut archive_tempdir);
   }
 
   // Stash a copy of the resolved main-tex path for end-of-run telemetry,
@@ -1650,7 +1658,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             .and_then(|s| s.to_str())
             .unwrap_or("document");
           let html_name = format!("{stem}.html");
-          let log_name = format!("{stem}.log");
+          // Perl LaTeXML.pm:621-629: the member is the `--log` name (default `<name>.latexml.log`).
+          let log_name = cli_log
+            .as_deref()
+            .and_then(|lp| Path::new(lp).file_name())
+            .and_then(|name| name.to_str())
+            .map_or_else(|| format!("{stem}.log"), str::to_string);
           // Reproducible-build support: honour SOURCE_DATE_EPOCH for the
           // zip member timestamps (Perl Pack/Zip.pm L113-115).
           let source_date_epoch = std::env::var("SOURCE_DATE_EPOCH")
@@ -1693,7 +1706,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
     // --log: write conversion log to file (skip if already packed into
     // the ZIP by the archive output stage).
-    if let Some(ref log_path) = cli_log
+    if is_epub
+      && let Some(ref log_path) = cli_log
+      && external_log.is_none()
+    {
+      eprintln!("Log not written: '{log_path}' exists and is kept");
+    }
+    if let Some(ref log_path) = external_log
       && (is_epub || !is_archive_out)
     {
       // Write the core log and the post-phase log sequentially rather than
