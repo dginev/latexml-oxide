@@ -389,7 +389,7 @@ LoadDefinitions!({
   // A listing box's per-use counter code is the package's own `code=` in `\tcb@opt@<name>` (`tcb_process_init`),
   // run alone, its phantom refstep at once: 6.10 moved it to expl3 (tcolorbox.sty:2428-2444; ≤ 6.9 :2311).
   // The keys are set at use: tcolorbox 2.80 (1606.02242) loads no pgfkeys.
-  RawTeX!(r"\def\lx@tcb@runcolopt#1{\pgfqkeys{/lx@tcb@colopt}{code/.code={##1},.unknown/.code={},#1}}
+  RawTeX!(r"\def\lx@tcb@runcolopt#1{\pgfqkeys{/lx@tcb@colopt}{code/.code={##1},savedelimiter/.code={\def\kvtcb@savedelimiter{##1}},.unknown/.code={},#1}}
     \def\lxtcbusecounter#1{\let\lx@tcb@savedphantom\kvtcb@phantom\let\kvtcb@phantom\@empty
       \expandafter\expandafter\expandafter\lx@tcb@runcolopt\expandafter\expandafter\expandafter
         {\csname tcb@opt@#1\endcsname}%
@@ -870,8 +870,8 @@ pub(crate) fn tcb_counter_step_code(name: &str) -> String {
 /// Run tcolorbox's own init processor for the box `name`, as `\newtcblisting` and its family do
 /// (tcblistingscore.code.tex:301-303 `\__tcobox_process_newtcolorbox:nn`): the counter keys define
 /// `\tcb@cnt@<name>`, and `\tcb@opt@<name>` keeps the per-use options (`tcb_counter_step_code`). The
-/// call is the loaded package's: 6.10 renamed `\tcb@proc@options@init` (tcolorbox.sty:2472), and a
-/// tcolorbox before `\__tcobox_process_newtcolorbox:nn` (2.80, shipped by 1606.02242) has only the old one.
+/// call is the loaded package's: 6.10 renamed `\tcb@proc@options@init` (tcolorbox.sty:2472); tcolorbox 2.80 (shipped by
+/// 1606.02242, :1114) defines only the old one, whose per-use `code=` reads `tcb@cnt@\kvtcb@savedelimiter` (:1090/1107).
 pub(crate) fn tcb_process_init(init_src: &str, name: &str) {
   let call = if lookup_meaning(&T_CS!("\\__tcobox_process_newtcolorbox:nn")).is_some() {
     // (the binding re-runs the init on a redefinition, as `\renewtcolorbox` does: overwrite allowed)

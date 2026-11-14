@@ -19647,5 +19647,23 @@ Perl 0 Errors, `<p>X ZY</p>`; Rust `<p>XZY</p>`):
 \usepackage{import}
 \begin{document}
 X\subimport{sub/}{y}Y
+
+## 1242. `\counterwithin` / `\counterwithout` ignore latex.ltx's `[format]` optional and misread it silently
+
+latex.ltx declares `\NewDocumentCommand\counterwithin{sO{\arabic}mm}` (and `\counterwithout`, latex.ltx:10182-10199): an optional
+`[format]` replaces `\arabic` in the new `\the<ctr>`. Perl's `DefPrimitive('\counterwithin OptionalMatch:* {}{}', …)`
+(latex_constructs.pool.ltxml:3079-3098) has no optional, so `[` is read as the counter name and the text comes out wrong with
+0 Errors. tcolorbox 6.10's `number within` calls `\counterwithin[{\kvtcb@new@format}]` (tcolorbox.sty:2410), so every
+`auto counter,number within=` box misnumbers in Perl. Rust takes `{sO{\arabic}mm}` (WIN1b; guard
+`perfect_kernel_batch56::counter_reset_lists_are_global`, repro `macro-state/counterwithin_takes_a_format_optional.tex`).
+Minimal trigger (pdflatex 0 `!`, "[1.iii][B]"; Perl 0 Errors, "]foosection]barsection" "[3][1.2]"):
+
+```latex
+\documentclass{article}
+\newcounter{foo}\newcounter{bar}
+\counterwithin[\roman]{foo}{section}\counterwithin{bar}{section}\counterwithout[{\Alph}]{bar}{section}
+\begin{document}
+\section{S}\setcounter{foo}{3}\setcounter{bar}{2}
+[\thefoo][\thebar]
 \end{document}
 ```
