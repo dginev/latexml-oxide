@@ -1452,8 +1452,7 @@ pub fn env_hook_has_code(name: &str, point: &str) -> bool {
 /// (`\__hook_toplevel <hook>`) and the next-use code (`\__hook_next <hook>`) — a slot holds code when it is a macro
 /// with a non-empty body (`\__hook_cs_if_empty:c`, :5688).
 pub fn hook_has_code(hook: &str) -> bool {
-  // No L3 hook system (the plain/no-op format) → no hook code anywhere.
-  if lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_none() {
+  if !l3_hooks_loaded() {
     return false;
   }
   let prop = macro_body(&T_CS!(s!("\\g__hook_{hook}_code_prop")));
@@ -1467,6 +1466,9 @@ pub fn hook_has_code(hook: &str) -> bool {
     || hook_slot_has_code(&T_CS!(s!("\\__hook_toplevel {hook}")))
     || hook_slot_has_code(&T_CS!(s!("\\__hook_next {hook}")))
 }
+
+/// No L3 hook system (the plain/no-op format): no hook code anywhere.
+fn l3_hooks_loaded() -> bool { lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_some() }
 
 /// lthooks' `\__hook_cs_if_empty:cF` (latex.ltx:5688-5699): `cs` is a macro with a non-empty body.
 pub fn hook_slot_has_code(cs: &Token) -> bool {
@@ -1495,7 +1497,7 @@ fn macro_body(cs: &Token) -> Option<Option<Vec<Token>>> {
 /// latex.ltx:6399-6411, so later code runs at once), which an already used one needs not. Not kept: the clear code
 /// `\__hook_use_once:nn` leaves in an undeclared hook's next slot, which only `\IfHookEmptyTF` on it would see.
 pub fn hook_use_tokens(hook: &str, once: bool) -> Vec<Token> {
-  if lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_none() {
+  if !l3_hooks_loaded() {
     return Vec::new();
   }
   let has_code = hook_has_code(hook);
@@ -1526,9 +1528,10 @@ pub fn hook_use_tokens(hook: &str, once: bool) -> Vec<Token> {
 
 /// `\__hook_if_execute_immediately:nTF` (latex.ltx:6421-6435): a one-time hook already used runs later code at once.
 fn hook_used_once(hook: &str) -> bool {
+  // (`\if:w I`: the slot's first token is the character `I`)
+  let used = [T_LETTER!("I"), T_OTHER!("I")];
   matches!(macro_body(&T_CS!(s!("\\g__hook_{hook}_reversed_tl"))), Some(Some(body))
-    if body.first().is_some_and(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)
-      && t.with_str(|t| t == "I")))
+    if body.first().is_some_and(|t| used.contains(t)))
 }
 
 /// The TeX group an environment's begin code leaves open: its definition's
