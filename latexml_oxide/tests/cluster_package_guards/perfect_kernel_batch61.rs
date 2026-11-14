@@ -2550,7 +2550,7 @@ Hello.
     // (the line of an address alone is the author's e-mail since 106a, the Kind step for an entry's address line, OD
     // #966; it had been an affiliation) The contact's name ends in a no-break space.
     &format!(
-      r#"<creator role="author"><personname>A. Author</personname><contact name="Email:{}" role="email"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
+      r#"<creator role="author"><personname>A. Author</personname><contact class="ltx_author_line" name="Email:{}" role="email"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
       '\u{a0}'
     ),
   );
@@ -5161,7 +5161,7 @@ Text.
     &xml,
     "creator",
     &["role=\"author\""],
-    "<creator role=\"author\"><personname>A</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">X</contact></creator>",
+    "<creator role=\"author\"><personname>A</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">X</contact></creator>",
   );
 }
 
@@ -6353,7 +6353,9 @@ fn marked_affiliation_review_shapes() {
     format!("<creator {sep}role=\"author\"><personname>{name}</personname>{rest}</creator>")
   };
   let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+    format!(
+      "<contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>"
+    )
   };
   // (an llncs `\email`'s address, set in typewriter type as llncs.cls:897 sets it, 64zc)
   assert_eq!(
@@ -6768,7 +6770,9 @@ fn author_marks_link_their_affiliations() {
     creators_of(&xml)
   };
   let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+    format!(
+      "<contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>"
+    )
   };
   let creator = |before: &str, name: &str, rest: &str| {
     format!("<creator {before}role=\"author\"><personname>{name}</personname>{rest}</creator>")
@@ -6797,7 +6801,7 @@ fn author_marks_link_their_affiliations() {
     // (97e: informs4's family, `UNDECLARED`, written — the `*` line is the legend of Bob Baker's symbol mark, a
     // correspondence note of his, as pdflatex prints it under the names: FIDELITY_CHARTER §4 ruling 2)
     [
-      "<creator role=\"author\"><personname>Ann Able<sup><text font=\"italic\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup><text font=\"italic\">a</text></sup></personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\"><sup>∗</sup>Corresponding author</note></creator>",
     ]
   );

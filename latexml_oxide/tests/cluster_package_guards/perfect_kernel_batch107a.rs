@@ -17,6 +17,7 @@
 use super::{
   convert_files_with,
   perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch77d::author_line,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -94,19 +95,19 @@ fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str) -> String {
 fn a_local_part_spells_its_author_through_the_transliteration() {
   assert_eq!(
     creators_with(repro!("email_list_umlaut_transliteration_split"), (0, 0)),
-    alpha_beta(
+    author_line(alpha_beta(
       r#"<text font="typewriter">ann.able@alpha.edu</text>"#,
       r#"<text font="typewriter">bo.baecker@alpha.edu</text>"#,
       "Bo Bäcker",
       r#"<text font="typewriter">cy.coe@alpha.edu</text>"#,
-    )
+    ))
   );
   let author = |before: &str, name: &str, address: &str| {
     format!(
       concat!(
         r#"<creator {}role="author"> <personname>{}</personname> "#,
         r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> "#,
-        r#"<contact name="Email: " role="email"><text font="typewriter">{}@alpha.edu</text></contact> "#,
+        r#"<contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">{}@alpha.edu</text></contact> "#,
         r#"</creator>"#
       ),
       before, name, address
@@ -180,7 +181,7 @@ fn a_split_address_list_left_unread_is_a_counted_warning() {
       r#"<creator before=" " role="author"> <personname>Bo Baker</personname> "#,
       r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> </creator> "#,
       r#"<creator before=" " role="author"> <personname>Cy Coe</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Department of Physics, University of Beta<break/>"#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Department of Physics, University of Beta<break/>"#,
       r#"<text font="typewriter">{ann.able,xq.zz,<break/>cy.coe}@alpha.edu (Ann)</text></contact> "#,
       r#"</creator>"#
     )
@@ -215,7 +216,7 @@ fn a_split_address_list_read_as_contacts_of_its_own_is_one_list() {
     format!(
       concat!(
         r#"<creator {}role="author"> <personname>{}</personname> "#,
-        r#"<contact name="Affiliation: " role="affiliation">{}</contact> "#,
+        r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">{}</contact> "#,
         r#"<contact name="Email: " role="email"><text font="typewriter">{}@alpha.edu</text></contact> "#,
         r#"</creator>"#
       ),
@@ -293,7 +294,7 @@ fn a_transliteration_neither_breaks_a_tie_nor_lifts_a_threshold() {
       repro!("email_list_literal_and_transliterated_spelling_tie"),
       (0, 0)
     ),
-    alpha_three(
+    author_line(alpha_three(
       [
         ("Jörg Müller", None),
         ("Hans Mueller", None),
@@ -301,14 +302,14 @@ fn a_transliteration_neither_breaks_a_tie_nor_lifts_a_threshold() {
       ],
       "alpha.de",
       Some("mueller")
-    )
+    ))
   );
   assert_eq!(
     creators_with(
       repro!("email_list_short_surname_transliteration_exact"),
       (0, 0)
     ),
-    alpha_three(
+    author_line(alpha_three(
       [
         ("Wei Lü", None),
         ("Ann Able", Some("aable")),
@@ -316,7 +317,7 @@ fn a_transliteration_neither_breaks_a_tie_nor_lifts_a_threshold() {
       ],
       "alpha.org",
       Some("bluesky")
-    )
+    ))
   );
 }
 
@@ -332,7 +333,7 @@ fn a_surname_prefix_never_reuses_the_given_names_letters() {
       repro!("email_list_surname_prefix_outside_given_name"),
       (0, 0)
     ),
-    alpha_three(
+    author_line(alpha_three(
       [
         ("Andrea Andreassen", None),
         ("Andrea Rossi", Some("andrea.rossi")),
@@ -340,11 +341,11 @@ fn a_surname_prefix_never_reuses_the_given_names_letters() {
       ],
       "alpha.dk",
       None
-    )
+    ))
   );
   assert_eq!(
     creators_with(repro!("email_list_nordic_given_name_prefix"), (0, 0)),
-    alpha_three(
+    author_line(alpha_three(
       [
         ("Søren Sørensen", None),
         ("Søren Hansen", Some("soeren.hansen")),
@@ -352,6 +353,6 @@ fn a_surname_prefix_never_reuses_the_given_names_letters() {
       ],
       "alpha.dk",
       None
-    )
+    ))
   );
 }

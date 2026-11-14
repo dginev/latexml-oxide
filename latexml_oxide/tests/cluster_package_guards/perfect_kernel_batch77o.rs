@@ -54,7 +54,7 @@ fn deposit_position_keyword_prints_nothing() {
   );
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
     "{xml}"
   );
 }
@@ -145,7 +145,7 @@ fn aistats_under_review_is_anonymous() {
   ));
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Anonymous Author</personname> <contact name="Affiliation: " role="affiliation">Anonymous Institution</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Anonymous Author</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Anonymous Institution</contact> </creator>"#,
     "{xml}"
   );
   assert!(!xml.contains("Ann Able"), "{xml}");
@@ -276,7 +276,7 @@ fn aistats_without_a_copy_keeps_the_frontmatter() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
     "{xml}"
   );
 }
@@ -333,7 +333,7 @@ fn aistats_note_marked_address_still_pairs_by_column() {
     // (the `$^*$` legend line the starred names' note, ruling 2 — the writer's block-line cut, 94a: it was Bob Baker's
     // affiliation, the cut declining a mark whose formula's closing `$` stands before its line; the note's `mark` the
     // star, 94a r6; P4b2b: the names show the star they print, as pdflatex prints it)
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">*</sup></personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ C</contact> </creator>"#,
   );
   let xml = clean(&format!(
     "\\documentclass[twoside]{{article}}\n\\usepackage[accepted]{{aistats2027}}\n\\begin{{document}}\n\\twocolumn[\\aistatstitle{{A Title}}\n\\aistatsauthor{{{names}}}\n\\aistatsaddress{{{address}}}]\n\\section{{Intro}} Body.\n\\end{{document}}\n"
@@ -353,10 +353,10 @@ fn aistats_address_after_unprinted_material_is_paired() {
   ));
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ M</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator> <creator before=" " role="author"> <personname>Dan Dorn</personname> <contact name="Affiliation: " role="affiliation">Univ D</contact> </creator> <creator before=" " role="author"> <personname>Eve East</personname> <contact name="Affiliation: " role="affiliation">Univ E</contact> <contact name="Affiliation: " role="affiliation">Univ F</contact> </creator> <creator before=" " role="author"> <personname>Fay Fox</personname> <contact name="Affiliation: " role="affiliation">Univ E</contact> <contact name="Affiliation: " role="affiliation">Univ F</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ M</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ C</contact> </creator> <creator before=" " role="author"> <personname>Dan Dorn</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ D</contact> </creator> <creator before=" " role="author"> <personname>Eve East</personname> <contact name="Affiliation: " role="affiliation">Univ E</contact> <contact name="Affiliation: " role="affiliation">Univ F</contact> </creator> <creator before=" " role="author"> <personname>Fay Fox</personname> <contact name="Affiliation: " role="affiliation">Univ E</contact> <contact name="Affiliation: " role="affiliation">Univ F</contact> </creator>"#,
     "{xml}"
   );
-  let paired = r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#;
+  let paired = r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#;
   for (between, after) in [
     (r"\vspace{2pt}", ""),
     (r"\vspace*{-0.1cm}", ""),
@@ -446,7 +446,7 @@ fn aistats_title_block_macro_is_read_in_place() {
   ));
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ M</contact> <contact name="Affiliation: " role="affiliation">College Park</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@m.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ M</contact> <contact name="Affiliation: " role="affiliation">College Park</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">bob@m.edu</text></contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ M</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">College Park</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@m.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ M</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">College Park</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id2">bob@m.edu</text></contact> </creator>"#,
     "{xml}"
   );
 }
@@ -515,7 +515,7 @@ fn aistats_shared_email_list_goes_to_its_row() {
   ));
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <contact name="Email: " role="email">ann@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <contact name="Email: " role="email">bob@b.edu</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">cat@c.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Dan Dorn</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">dan@c.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Eve East</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">eve@c.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Gil Gray</personname> <contact name="Affiliation: " role="affiliation">Univ G</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id4">gil@g.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Hal Hunt</personname> <contact name="Affiliation: " role="affiliation">Univ G</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">hal@g.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Ida Irwin</personname> <contact name="Affiliation: " role="affiliation">Univ G</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> <contact class="ltx_author_line" name="Email: " role="email">ann@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact> <contact class="ltx_author_line" name="Email: " role="email">bob@b.edu</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">cat@c.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Dan Dorn</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">dan@c.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Eve East</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">eve@c.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Gil Gray</personname> <contact name="Affiliation: " role="affiliation">Univ G</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id4">gil@g.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Hal Hunt</personname> <contact name="Affiliation: " role="affiliation">Univ G</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">hal@g.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Ida Irwin</personname> <contact name="Affiliation: " role="affiliation">Univ G</contact> </creator>"#,
     "{xml}"
   );
 }
@@ -529,7 +529,7 @@ fn aistats2e_template_reaches_the_binding() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/aistats2e_template_reaches_the_binding.tex"
   );
-  let expected = r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#;
+  let expected = r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#;
   assert_eq!(frontmatter(&clean(tex)), expected);
   let margin = tex.replace("aistats2e", "aistats2eM");
   assert_eq!(frontmatter(&clean(&margin)), expected);

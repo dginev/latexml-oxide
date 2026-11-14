@@ -964,7 +964,7 @@ fn field_prov_author_trailing_cr_lifted() {
         "creator",
         &[],
         // (the contact's name ends with a no-break space)
-        "<creator role=\"author\"><personname>Daniel Krefl</personname><contact name=\"Affiliation:\u{a0}\" \
+        "<creator role=\"author\"><personname>Daniel Krefl</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
          role=\"affiliation\"><text font=\"italic\">Theoretical Physics Department, CERN</text></contact></creator>",
       ),
     ],

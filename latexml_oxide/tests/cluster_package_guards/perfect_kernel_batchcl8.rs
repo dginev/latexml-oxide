@@ -51,13 +51,13 @@ fn creator_elements(xml: &str) -> Vec<String> {
 /// on their names at `=2`, as off (int153z's `=2` showed "A,C" and "B").
 #[test]
 fn a_sublettered_used_mark_is_written_whole() {
-  let turin = "<contact name=\"Affiliation: \" role=\"affiliation\"> (A)University of Turin, Turin; (B)University \
+  let turin = "<contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\"> (A)University of Turin, Turin; (B)University \
                of Piedmont, Alessandria; (C)INFN, Turin</contact>";
   let expected = [
     format!(
       "<creator role=\"author\"> <personname>A. Amoroso<sup xml:id=\"id1\">2A,2C</sup></personname> {turin} </creator>"
     ),
-    "<creator before=\" \" role=\"author\"> <personname>B. Bee</personname> <contact name=\"Affiliation: \" \
+    "<creator before=\" \" role=\"author\"> <personname>B. Bee</personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
      role=\"affiliation\"> Institute One, City One</contact> </creator>"
       .to_string(),
     format!(
@@ -104,11 +104,11 @@ fn a_wrapped_thanks_note_is_written_whole() {
 /// keeping its own (`cl10_class_email_font_label_printed_once`).
 #[test]
 fn a_class_email_keeps_its_printed_label_as_name() {
-  let univ = "<contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>";
+  let univ = "<contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>";
   let label = "Email address for correspondence: ";
   let bob = |name: &str, printed: &str| {
     format!(
-      "<creator before=\" \" role=\"author\"> <personname>Bob Bee</personname> {univ} <contact name=\"{name}\" \
+      "<creator before=\" \" role=\"author\"> <personname>Bob Bee</personname> {univ} <contact class=\"ltx_author_line\" name=\"{name}\" \
        role=\"email\">{printed}bob@bee.org</contact> </creator>"
     )
   };
@@ -126,7 +126,7 @@ fn a_class_email_keeps_its_printed_label_as_name() {
 
   let ann = |name: &str, label: &str, id: u8| {
     vec![format!(
-      "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" \
+      "<creator role=\"author\"> <personname>Ann Able</personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
        role=\"affiliation\">Univ A</contact> <contact name=\"{name}\" role=\"email\">{label}<text \
        font=\"typewriter\" xml:id=\"id{id}\">ann@able.org</text></contact> </creator>"
     )]
@@ -149,7 +149,7 @@ fn an_in_block_label_names_the_bindings_nested_contact() {
   };
   let creator = |affiliation: &str, name: &str| {
     vec![format!(
-      "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" \
+      "<creator role=\"author\"> <personname>Ann Able</personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
        role=\"affiliation\">{affiliation}</contact> {} </creator>",
       contact(name)
     )]
@@ -166,8 +166,11 @@ fn an_in_block_label_names_the_bindings_nested_contact() {
 /// still requests a / c; `2b`, its letter no entry's label, is as before. Off is the same (the shared reading).
 #[test]
 fn a_glued_marks_letter_is_never_another_entrys() {
-  let affiliation =
-    |text: &str| format!("<contact name=\"Affiliation: \" role=\"affiliation\">{text}</contact>");
+  let affiliation = |text: &str| {
+    format!(
+      "<contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">{text}</contact>"
+    )
+  };
   let turin = affiliation(
     " University of Turin and INFN, (A)University of Turin, Turin; (B)University of Piedmont, Alessandria; (C)INFN, \
      Turin",

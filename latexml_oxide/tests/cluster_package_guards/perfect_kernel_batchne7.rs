@@ -87,7 +87,7 @@ fn tikz_badges_in_frontmatter_contacts_keep_svg_ids() {
   );
   for (holder, href) in [
     (
-      "<contact name=\"URL:\u{a0}\" role=\"url\">",
+      "<contact class=\"ltx_author_line\" name=\"URL:\u{a0}\" role=\"url\">",
       "https://example.org/a",
     ),
     (

@@ -85,7 +85,7 @@ fn authblk_and_inside_a_whole_list_group_parts_the_names() {
 fn a_name_and_the_line_under_it_stay_one_author_and_affiliation() {
   let control = concat!(
     r#"<creator role="author"> <personname>Ann Able</personname> "#,
-    r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> </creator>"#,
+    r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Alpha</contact> </creator>"#,
   );
   assert_eq!(
     counted_creators(repro!("author_name_break_affiliation_control"), &[], 0),
@@ -136,7 +136,7 @@ fn a_space_parted_names_line_is_names_never_an_affiliation() {
   );
   let at = |name: &str, before: bool, university: &str| {
     format!(
-      r#"<creator {}role="author"> <personname>{name}</personname> <contact name="Affiliation: " role="affiliation">{university}</contact> </creator>"#,
+      r#"<creator {}role="author"> <personname>{name}</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">{university}</contact> </creator>"#,
       if before { r#"before=" " "# } else { "" }
     )
   };
@@ -181,7 +181,7 @@ fn a_space_parted_names_line_is_names_never_an_affiliation() {
 fn a_font_command_over_quad_parted_names_parts_them() {
   let at = |name: &str, before: bool| {
     format!(
-      r#"<creator {}role="author"> <personname>{name}</personname> <contact name="Affiliation: " role="affiliation">Stanford University</contact> </creator>"#,
+      r#"<creator {}role="author"> <personname>{name}</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Stanford University</contact> </creator>"#,
       if before { r#"before=" " "# } else { "" }
     )
   };

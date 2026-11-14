@@ -120,11 +120,11 @@ fn image_on_the_first_marked_line_is_kept() {
     creators.join("\n"),
     r##"<creator role="author">
     <personname>Ann Able</personname>
-    <contact name="Affiliation: " role="affiliation"> <graphics graphic="example-image" options="width=10.243pt,keepaspectratio=true" xml:id="g1a"/> Zebra University</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation"> <graphics graphic="example-image" options="width=10.243pt,keepaspectratio=true" xml:id="g1a"/> Zebra University</contact>
   </creator>
 <creator before="  " role="author">
     <personname>Bob Baker</personname>
-    <contact name="Affiliation: " role="affiliation"> <graphics graphic="example-image-a" options="width=10.243pt,keepaspectratio=true" xml:id="g2a"/> Quokka Institute</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation"> <graphics graphic="example-image-a" options="width=10.243pt,keepaspectratio=true" xml:id="g2a"/> Quokka Institute</contact>
   </creator>"##
   );
 }

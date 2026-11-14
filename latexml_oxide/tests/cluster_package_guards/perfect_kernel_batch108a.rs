@@ -98,7 +98,7 @@ fn a_space_of_one_person_makes_no_second_creator() {
 fn a_line_under_a_name_is_its_line() {
   assert_eq!(
     converted(repro!("authblk_line_under_name_is_its_line"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> <contact name="Affiliation: " role="affiliation">Dept. of Physics</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept. of Physics</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("authblk_email_line_under_name"), 0),
@@ -174,7 +174,7 @@ fn the_affil_run_is_every_creator_of_the_call() {
 fn a_glued_mark_in_a_list_or_leading_a_line() {
   assert_eq!(
     converted(repro!("author_glued_mark_in_a_list"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">∗</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">∗</sup></personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -241,7 +241,7 @@ fn a_mark_line_list_out_of_order_places_only_what_it_spells() {
 fn a_row_of_addresses_reads_each_clean() {
   assert_eq!(
     converted(repro!("author_address_row_ties_and_end_comma"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@x.org</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">bob@y.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@x.org</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id2">bob@y.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("author_address_row_comma_before_the_space"), 0),
@@ -258,7 +258,7 @@ fn a_place_under_a_row_institution_stays_with_it() {
       repro!("author_place_under_a_row_institution_stays_with_it"),
       0
     ),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">able@x.edu</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup>Corresponding author</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">bbaker@y.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id1">able@x.edu</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup>Corresponding author</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id3">bbaker@y.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 

@@ -190,7 +190,7 @@ fn a_collaboration_remark_is_the_names_contact() {
     ],
   ];
   assert_eq!(two, want);
-  let bcool = "<contact role=\"collaboration\"><text fontsize=\"80%\">on behalf of the Bcool project \
+  let bcool = "<contact class=\"ltx_author_line\" role=\"collaboration\"><text fontsize=\"80%\">on behalf of the Bcool project \
                team</text></contact>";
   let tex = repro!("emit_a_line_speaking_for_a_collaboration_is_a_contact");
   assert_eq!(collaborations(&run(tex).1), [bcool]);

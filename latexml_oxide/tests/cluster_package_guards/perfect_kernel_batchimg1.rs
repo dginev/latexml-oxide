@@ -52,8 +52,8 @@ fn image_before_a_url_is_in_the_url() {
     creators(&xml),
     r##"<creator role="author">
     <personname>Ann Able</personname>
-    <contact name="Affiliation: " role="affiliation">Zebra University</contact>
-    <contact name="URL: " role="url"><graphics graphic="example-image" options="width=10.243pt,keepaspectratio=true" xml:id="g1a"/> <ref class="ltx_nolink ltx_url" font="typewriter" fontsize="90%" href="https://example.org/x">https://example.org/x</ref></contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Zebra University</contact>
+    <contact class="ltx_author_line" name="URL: " role="url"><graphics graphic="example-image" options="width=10.243pt,keepaspectratio=true" xml:id="g1a"/> <ref class="ltx_nolink ltx_url" font="typewriter" fontsize="90%" href="https://example.org/x">https://example.org/x</ref></contact>
   </creator>"##
   );
 }
@@ -67,7 +67,7 @@ fn image_before_a_mark_is_counted() {
     counted(repro!("fm_image_before_mark_is_counted")),
     r##"<creator role="author">
     <personname>Ann Able</personname>
-    <contact name="Affiliation: " role="affiliation">Zebra University</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Zebra University</contact>
   </creator>"##
   );
 }
@@ -81,8 +81,8 @@ fn image_before_an_address_is_counted() {
     counted(repro!("fm_image_before_address_is_counted")),
     r##"<creator role="author">
     <personname>Ann Able</personname>
-    <contact name="Affiliation: " role="affiliation">Zebra University</contact>
-    <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@x.org</text></contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Zebra University</contact>
+    <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@x.org</text></contact>
   </creator>"##
   );
 }
@@ -113,8 +113,8 @@ fn image_after_a_url_label_is_counted() {
       creators(&xml),
       r##"<creator role="author">
     <personname>Ann Able</personname>
-    <contact name="Affiliation: " role="affiliation">Zebra University</contact>
-    <contact name="Web: " role="url"><ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Zebra University</contact>
+    <contact class="ltx_author_line" name="Web: " role="url"><ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
   </creator>"##
     );
   }
@@ -132,7 +132,7 @@ fn image_inside_an_affiliation_before_a_url_is_kept() {
     format!(
       r##"<creator role="author">
     <personname>Ann Able</personname>
-    <contact name="Affiliation: " role="affiliation">Zebra University{between}<graphics graphic="example-image" options="width=8.5359pt,keepaspectratio=true" xml:id="g1a"/> <ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Zebra University{between}<graphics graphic="example-image" options="width=8.5359pt,keepaspectratio=true" xml:id="g1a"/> <ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
   </creator>"##
     )
   };
@@ -173,8 +173,8 @@ fn image_parted_from_a_url_by_fill_is_kept() {
       format!(
         r##"<creator role="author">
     <personname>Ann Able</personname>
-    <contact name="Affiliation: " role="affiliation">Zebra University, Department of Very Long Names and Places</contact>
-    <contact name="URL: " role="url"><graphics graphic="example-image" options="width=28.45274pt,keepaspectratio=true" xml:id="g1a"/>{between}<ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Zebra University, Department of Very Long Names and Places</contact>
+    <contact class="ltx_author_line" name="URL: " role="url"><graphics graphic="example-image" options="width=28.45274pt,keepaspectratio=true" xml:id="g1a"/>{between}<ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
   </creator>"##
       )
     );

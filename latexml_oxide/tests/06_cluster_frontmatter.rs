@@ -683,7 +683,7 @@ fn frontmatter_neurips_author_bold_coherent() {
   assert_eq!(
     shao.as_deref(),
     Some(
-      "before=\" \" role=\"author\"> <personname>Wenqi Shao<sup>∗</sup></personname> <contact name=\"Affiliation: \" \
+      "before=\" \" role=\"author\"> <personname>Wenqi Shao<sup>∗</sup></personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
        role=\"affiliation\">OpenGVLab, Shanghai AI Laboratory</contact> </creator>"
     ),
     "Wenqi Shao must show the star and hold affiliation 1:\n{x}"

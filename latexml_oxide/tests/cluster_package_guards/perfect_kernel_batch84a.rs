@@ -94,7 +94,7 @@ fn author_wide_space_after_marked_name_separates() {
      xml:id=\"id2\">\u{22c4}</sup></personname></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Dorn</personname></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Ess</personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Ess</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
   ]);
 }
@@ -105,9 +105,9 @@ fn author_wide_space_after_marked_name_separates() {
 fn author_braced_quad_separates_names() {
   let xml = clean(repro!("author_braced_quad_separates_names.tex"));
   assert_creators(&xml, &[
-    "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
+    "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">Univ A</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">Univ B</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact \
@@ -136,7 +136,7 @@ fn author_wide_space_inside_wrapper_separates() {
   let xml = clean(repro!("author_wide_space_inside_wrapper_separates.tex"));
   let univ = |u: &str, id: usize| {
     format!(
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"80%\" xml:id=\"id{id}\">Univ \
+      "<contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"80%\" xml:id=\"id{id}\">Univ \
        {u}</text></contact>"
     )
   };

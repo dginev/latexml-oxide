@@ -89,7 +89,7 @@ fn a_class_label_in_a_name_is_no_excess() {
   ]);
   assert_eq!(
     xml
-      .matches("<contact name=\"Email: \" role=\"email\">")
+      .matches("<contact class=\"ltx_author_line\" name=\"Email: \" role=\"email\">")
       .count(),
     2,
     "{xml}"

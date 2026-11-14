@@ -47,7 +47,7 @@ fn ieee_membership_grade_is_the_readings_contact() {
     (
       repro!("ieee_membership_grade_spelled_by_a_macro_or_copy"),
       &[
-        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact class=\"ltx_author_line\" role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact role=\"membership\">Senior Member,\u{a0}IEEE</contact></creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy\u{a0}Coe</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
       ],

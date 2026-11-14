@@ -130,8 +130,8 @@ fn collaboration_line_under_unmarked_names_covers_its_group() {
 fn team_words_and_company_surnames_name_no_collaboration() {
   let xml = both_ways(repro!("author_team_and_group_lines_stay_affiliations"));
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Machine Learning Group</contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Google Brain Team</contact> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Machine Learning Group</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Google Brain Team</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
   ]);
   let office = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{1}$, Bob Baker$^{2}$\\\\ \
                 $^1$Univ A\\\\ $^2$The ATLAS Collaboration Office, CERN}\n\\maketitle\nBody.\n\\end{document}\n";
@@ -155,7 +155,7 @@ fn collaboration_line_is_made_where_it_prints() {
   let tex = repro!("author_collaboration_line_keeps_its_print_order");
   let xml = both_ways(tex);
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact role="collaboration">for the XYZ Collaboration</contact> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator>"#
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" role="collaboration">for the XYZ Collaboration</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> </creator>"#
   ]);
   let representing = tex.replace(
     r"\author{Ann Able \\ for the XYZ Collaboration \\ Univ X}",

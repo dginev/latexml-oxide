@@ -182,37 +182,37 @@ fn eptcs_todays_shapes_keep_their_creator_elements() {
 <creator role="author">
     <personname>Carl Cole</personname>
     <contact name="Affiliation: " role="affiliation">Univ C</contact>
-    <contact name="Email: " role="email"><text font="typewriter">cole@c.edu</text></contact>
+    <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">cole@c.edu</text></contact>
     <contact name="Affiliation: " role="affiliation">Lab D</contact>
   </creator>
 <creator before="  " role="author">
     <personname>Dan Dorn</personname>
     <contact name="Affiliation: " role="affiliation">Univ C</contact>
-    <contact name="Email: " role="email"><text font="typewriter">dorn@c.edu</text></contact>
+    <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">dorn@c.edu</text></contact>
     <contact name="Affiliation: " role="affiliation">Lab D</contact>
     <contact name="Email: " role="email"><text font="typewriter">dorn@d.org</text></contact>
   </creator>
 <creator before="  " role="author">
     <personname>Eve Eng</personname>
     <contact name="Affiliation: " role="affiliation">Univ E</contact>
-    <contact name="Email: " role="email"><text font="typewriter">e.eng@e.org</text></contact>
+    <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">e.eng@e.org</text></contact>
   </creator>
 <creator before="  " role="author">
     <personname>Fay Fox</personname>
     <contact name="Affiliation: " role="affiliation">Univ E</contact>
-    <contact name="Email: " role="email"><text font="typewriter">fx1@e.org</text></contact>
+    <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">fx1@e.org</text></contact>
   </creator>
 == eptcs_author_tabular
 <creator role="author">
     <personname>Ann Able</personname>
     <note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks">Funded.</note>
-    <contact name="Email: " role="email"><text font="typewriter" fontsize="80%">ann@a.edu</text></contact>
+    <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" fontsize="80%">ann@a.edu</text></contact>
     <contact name="Affiliation: " role="affiliation"><text fontsize="80%">Dept of Tools</text></contact>
     <contact name="Affiliation: " role="affiliation"><text fontsize="80%">Univ of Here</text></contact>
   </creator>
 <creator before="  " role="author">
     <personname>Bob Baker</personname>
-    <contact name="Email: " role="email"><text font="typewriter" fontsize="80%">bob@b.edu</text></contact>
+    <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" fontsize="80%">bob@b.edu</text></contact>
     <contact name="Affiliation: " role="affiliation"><text fontsize="80%">Dept of Tools</text></contact>
     <contact name="Affiliation: " role="affiliation"><text fontsize="80%">Univ of Here</text></contact>
   </creator>

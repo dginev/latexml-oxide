@@ -54,14 +54,14 @@ fn a_written_membership_grade_is_the_authors_contact() {
     clean_creators(repro!("author_written_membership_grade_is_a_contact"), &[]),
     concat!(
       r#"<creator role="author"> <personname>Ann Able</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> "#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> </creator> "#,
       r#"<creator before=" " role="author"> <personname>Bob Baker</personname> "#,
       r#"<contact role="membership">Member, OSA</contact> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> "#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> "#,
       r#"<creator before=" " role="author"> <personname>Cat Cole</personname> "#,
       r#"<contact role="membership"><text font="italic" xml:id="id1">Fellow, IEEE</text></contact> "#,
       r#"<note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks" xml:id="id2">Funded.</note> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ X</contact> </creator>"#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> </creator>"#,
     )
   );
 }
@@ -122,7 +122,7 @@ fn an_author_on_behalf_of_a_collaboration_is_the_authors_contact() {
 fn a_collaboration_line_in_a_raw_name_block_is_the_names_contact() {
   let collaboration = |id: u32| {
     format!(
-      r#"<contact role="collaboration">on behalf of the <emph font="italic" xml:id="id{id}">XYZ</emph>-LAT Collaboration</contact> "#
+      r#"<contact class="ltx_author_line" role="collaboration">on behalf of the <emph font="italic" xml:id="id{id}">XYZ</emph>-LAT Collaboration</contact> "#
     )
   };
   assert_eq!(
@@ -133,7 +133,7 @@ fn a_collaboration_line_in_a_raw_name_block_is_the_names_contact() {
     [
       r#"<creator role="author"> <personname>Ann Able</personname> "#.to_string(),
       collaboration(1),
-      r#"<contact name="Affiliation: " role="affiliation">Univ A, Italy</contact> </creator> "#
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Italy</contact> </creator> "#
         .to_string(),
       r#"<creator before=" " role="author"> <personname>Bob Baker</personname> "#.to_string(),
       collaboration(2),
@@ -162,7 +162,7 @@ fn a_collaboration_remark_in_a_raw_name_block_is_the_authors_contact() {
     concat!(
       r#"<creator role="author"> <personname>A.B. de Able</personname> "#,
       r#"<contact role="collaboration">for the XYZ collaboration.</contact> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ A, USA</contact> "#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, USA</contact> "#,
       r#"<contact name="Affiliation: " role="affiliation">now at Univ B, UK</contact> </creator>"#,
     )
   );

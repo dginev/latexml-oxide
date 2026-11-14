@@ -50,12 +50,12 @@ fn a_cut_email_printed_as_math_is_its_text() {
   let xml = emitted(repro!("emit_a_cut_email_printed_as_math_is_its_text"));
   assert_eq!(xml.len(), 3, "{xml:?}");
   assert_eq!([&xml[0], &xml[2]], [
-    "<creator role=\"author\">\n    <personname>David O. Cook</personname>\n    <contact \
+    "<creator role=\"author\">\n    <personname>David O. Cook</personname>\n    <contact class=\"ltx_author_line\" \
        name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University of Wyoming, WY 82071, \
-       USA</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">dcook12@uwyo.edu</contact>\n  </creator>",
+       USA</contact>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\">dcook12@uwyo.edu</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Benjamin D. Johnson</personname>\n    \
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">UPMC-CNRS, Institut d’Astrophysique de Paris, \
-       France</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">bjohnson@iap.fr</contact>\n  </creator>",
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">UPMC-CNRS, Institut d’Astrophysique de Paris, \
+       France</contact>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\">bjohnson@iap.fr</contact>\n  </creator>",
   ]);
 }
 

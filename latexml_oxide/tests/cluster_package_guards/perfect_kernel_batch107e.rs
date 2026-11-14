@@ -63,7 +63,7 @@ fn clean_creators(tex: &str) -> String {
 fn authblk_without_affil_prints_no_note() {
   assert_eq!(
     clean_creators(repro!("cut_run_authblk_no_affil_marks_its_own_lines")),
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#
   );
 }
 
@@ -126,7 +126,7 @@ fn an_unmarked_first_entry_is_its_unprinted_marks() {
 fn a_legend_after_a_wrapped_run_is_its_carriers_notes() {
   assert_eq!(
     clean_creators(repro!("cut_run_legend_line_after_font_wrapped_entries")),
-    r#"<creator role="author"> <personname>Ann Lee</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id1">Univ A</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup> Equal Contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Ray</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id3">Univ B</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup> Equal Contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Do</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id5">Univ B</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id6"><sup xml:id="id6.1">†</sup> Project Leader</note> </creator>"#
+    r#"<creator role="author"> <personname>Ann Lee</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold" xml:id="id1">Univ A</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup> Equal Contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Ray</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id3">Univ B</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup> Equal Contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Do</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id5">Univ B</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id6"><sup xml:id="id6.1">†</sup> Project Leader</note> </creator>"#
   );
 }
 

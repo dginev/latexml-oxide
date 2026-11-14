@@ -167,9 +167,9 @@ fn a_split_at_a_linebreak_option_leaves_no_option_text() {
     creator_elements(&xml),
     [
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
-       role=\"note\">Zebra note.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
+       role=\"note\">Zebra note.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
        X</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
        name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
     ],
     "{xml}"
@@ -188,7 +188,7 @@ fn a_line_of_no_mark_cut_at_and_starts_an_author() {
     creator_elements(&xml),
     [
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
-       role=\"note\">Zebra note.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
+       role=\"note\">Zebra note.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
        X</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
     ],
@@ -441,44 +441,44 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
     ]),
     (repro!("footremember_unread_keeps_the_replay"), 2, false, &row(&[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" role=\"note\">Univ \
-       X.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Physics</contact></creator>",
+       X.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Physics</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
-       name=\"Note:\u{a0}\" role=\"note\">Univ Y.</contact><contact name=\"Affiliation:\u{a0}\" \
+       name=\"Note:\u{a0}\" role=\"note\">Univ Y.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
        role=\"affiliation\">Dept of Physics</contact></creator>",
     ])),
     // (the base's reading kept: the marks on the names as affiliations and the content check's "1 2" are its own)
     (repro!("footremember_unread_on_a_marked_names_line"), 2, false, &row(&[
       "<creator role=\"author\"><personname>Ann Able</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
        xml:id=\"id1.1\">1</text></sup></contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" \
        xml:id=\"id2.1\">1</text></sup> Univ X</contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
        xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
        xml:id=\"id4.1\">2</text></sup></contact>\
        <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" \
        xml:id=\"id5.1\">1</text></sup> Univ X</contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
        xml:id=\"id6.1\">2</text></sup> Univ Y</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
        xml:id=\"id7.1\">1</text></sup></contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" \
        xml:id=\"id8.1\">1</text></sup> Univ X</contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" \
        xml:id=\"id9.1\">2</text></sup> Univ Y</contact></creator>",
     ])),
     (repro!("footremember_unread_after_a_comma"), 1, false, &row(&[
       "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\u{2217}</sup></personname><contact \
-       name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact><contact name=\"Affiliation:\u{a0}\" \
+       name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
        role=\"affiliation\">Univ X</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
        name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole<sup \
-       xml:id=\"id2\">\u{2020}</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
+       xml:id=\"id2\">\u{2020}</sup></personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
        X</contact></creator>",
     ])),
     (repro!("author_note_macro_local_def_ends_with_its_cell"), 1, false, &row(&[
@@ -489,26 +489,26 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
     // (as the unread line, Carl Cole's recalled mark counted by the given-marks Warning)
     (repro!("footrecall_read_where_the_split_would_be_whole"), 3, false, &row(&[
       "<creator role=\"author\"><personname>Ann Able</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
        xml:id=\"id1.1\">1</text></sup></contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id2\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id2\"><text font=\"italic\" \
        xml:id=\"id2.1\">1</text></sup> Univ X</contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
        xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
        xml:id=\"id4.1\">2</text></sup></contact>\
        <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id5\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id5\"><text font=\"italic\" \
        xml:id=\"id5.1\">1</text></sup> Univ X</contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
        xml:id=\"id6.1\">2</text></sup> Univ Y</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
        xml:id=\"id7.1\">1</text></sup></contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id8\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id8\"><text font=\"italic\" \
        xml:id=\"id8.1\">1</text></sup> Univ X</contact>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" \
+       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" \
        xml:id=\"id9.1\">2</text></sup> Univ Y</contact></creator>",
     ])),
   ];

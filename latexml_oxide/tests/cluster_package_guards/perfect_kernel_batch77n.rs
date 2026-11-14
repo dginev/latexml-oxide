@@ -17,7 +17,7 @@ use latexml::util::test::convert_with;
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
+  perfect_kernel_batch77d::{assert_no_merged_names, author_line, creator, creators, squash},
 };
 
 /// A `sectioning-frontmatter` repro's squashed XML, its conversion free of errors and warnings.
@@ -125,9 +125,13 @@ fn centered_parbox_names_in_a_group_split() {
   let xml = convert_repro!("author_parbox_centered_names_in_a_group.tex");
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A, City")),
-    creator(false, "Bob Baker", &affiliation("Univ B, Town")),
-    creator(false, "Cat Cole", &affiliation("Univ A, City")),
+    creator(true, "Ann Able", &author_line(affiliation("Univ A, City"))),
+    creator(
+      false,
+      "Bob Baker",
+      &author_line(affiliation("Univ B, Town"))
+    ),
+    creator(false, "Cat Cole", &author_line(affiliation("Univ A, City"))),
   ]);
 }
 
@@ -154,7 +158,7 @@ fn note_macro_among_names_is_the_names_note() {
         "{} {}",
         // (a joint first authorship a contribution since 103c, `classify_thanks`'s `project_role`)
         thanks("contribution", "id1", "Co-first authors."),
-        affiliation("Univ A")
+        author_line(affiliation("Univ A"))
       )
     ),
     creator(
@@ -169,7 +173,7 @@ fn note_macro_among_names_is_the_names_note() {
       &format!(
         "{} {}",
         thanks("correspondence", "id2", "Co-corresponding authors."),
-        affiliation("Univ A")
+        author_line(affiliation("Univ A"))
       )
     ),
     creator(
@@ -187,21 +191,21 @@ fn and_opening_a_box_separates_names() {
   let xml = convert_repro!("author_and_opens_a_box.tex");
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation(" Univ A, City")),
+    creator(true, "Ann Able", &author_line(affiliation(" Univ A, City"))),
     creator(
       false,
       "Bob Baker",
       &format!(
         "{} {}",
-        affiliation(" Univ A, City"),
-        affiliation(" Univ B, Town")
+        author_line(affiliation(" Univ A, City")),
+        author_line(affiliation(" Univ B, Town"))
       )
     ),
     creator(
       false,
       // (at `=2` the name without its attribute-less box wrapper)
       "Cat C. Cole",
-      &affiliation(" Univ B, Town")
+      &author_line(affiliation(" Univ B, Town"))
     ),
   ]);
 }
@@ -903,9 +907,9 @@ fn authblk_glued_symbols_in_one_author_block() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = squash(&xml);
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1">†</sup> Corresponding author</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1">†</sup> Corresponding author</note> </creator>"#,
   ]);
 }
 
