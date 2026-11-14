@@ -261,7 +261,7 @@ fn patchcmd_tableofcontents_starttoc() {
 
 /// listings resolves `rulecolor`/`backgroundcolor` when the listing is
 /// drawn, so a colour defined after the `\lstset` applies (easybase.sty:2419
-/// vs :2439; easybook).
+/// vs :2439; easybook). The frame is padded `framesep` (3pt), as listings draws it (upstream #2820).
 #[test]
 fn listings_color_resolved_at_listing() {
   let tex = include_str!(
@@ -272,7 +272,7 @@ fn listings_color_resolved_at_listing() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(
     xml.contains(
-      r##"<listing class="ltx_lstlisting" data="eCA9IDE=" dataencoding="base64" datamimetype="text/plain" framecolor="#C00000" framed="rectangle">"##
+      r##"<listing class="ltx_lstlisting" cssstyle="padding:3.0pt" data="eCA9IDE=" dataencoding="base64" datamimetype="text/plain" framecolor="#C00000" framed="rectangle">"##
     ),
     "{xml}"
   );

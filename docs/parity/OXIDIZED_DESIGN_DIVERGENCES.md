@@ -14386,7 +14386,7 @@ locked. OmniBus's semantic frontmatter commands are locked (user ruling 2026-10-
 later definition — a document's presentational `\newcommand{\orcid}` (2605.08630), `\providecommand{\keywords}`, a
 package's deferred `\providecommand{\doi}` (apacite), a raw `\def\doi` (imsart.sty), a document's
 `\renewcommand{\doi}` (unlike Perl, which lets those replace them; since QAB57 the document's own definitions win
-under the fallback, #1044); conveniences and aliases (`\abst`, `\etal`,
+under the fallback, #1047); conveniences and aliases (`\abst`, `\etal`,
 `\corref`) and common words (`\volume`, `\issue`, `\journal`) yield. arXiv A/B (3,003 papers, 59f2 -> 59g4):
 2605.05619 errors 52 -> 0 and words 39,866 -> 53,885, 2605.13204 errors 6 -> 0 (its own `\corref`), 2605.13443 its own
 upright `\etal`. Open: a package the paper ships (`\usepackage{mymacros}`) is a raw File, not the document, so its
@@ -36343,28 +36343,42 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
 
-### 1044. Under OmniBus the document's own definitions win over its guesses, locked ones too (Perl: ignored as a redefinition)
+### 1037. An EPUB keeps its log outside the container and never over an existing file (UPS1, upstream #2855)
 
-For a class with no binding OmniBus guesses the class's commands, and locks its semantic frontmatter ones (#408). A
-document that `\newcommand`s one of them shows its real class leaves it undefined, so pdflatex prints the
-document's version (probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b"). **Perl** ignores the redefinition
-(`isDefinableLaTeX`, latex_constructs.pool.ltxml:2512-2526, an Info) and makes a contact of it, as did we.
+**Perl.** Since #2855 (1718f89e) `latexmlc` keeps an existing external log under an archive output
+(`$keep_log_file`, bin/latexmlc:111-134): a `.zip` packs the log as its `--log` basename (default `<name>.latexml.log`,
+LaTeXML.pm:621-629, t/932_zip.t), and an EPUB packs it into the container as `OPS/<log>`. **Rust.** The `.zip` is as
+Perl. An EPUB writes its log outside the container (epubcheck would flag a log member under `OPS/`), and when a file of
+the log's name already exists it is kept and the log not written ("Log not written: '<log>' exists and is kept" on
+stderr; DG 2026-11-14). A conversion that fails before it starts writes its Fatal log under the same rule.
+`cortex_worker` packs its own `cortex.log` and is unchanged. **Guard**: `cluster_cli::archive_output_keeps_an_existing_log`.
 
-**Rust** (QAB57; BM Q3.12 "OmniBus sets a flag letting `\newcommand` and its family redefine without complaint", DG
-2026-11-14 "the document wins"): OmniBus loaded as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition`
-does not refuse a definition of a name whose meaning is still OmniBus's guess (`fallback_meaning_origin` is
-`Fallback`) when the document's own text makes it (`DefinitionOrigin::Document`, the state not re-locked:
-`state::document_redefines_guess`) — `\newcommand`, `\renewcommand`, `\def`, `\DeclareRobustCommand`;
-`\newenvironment`/`\renewenvironment` also drop OmniBus's `\begin{name}` constructor, which `\begin` looks up first.
-A `\providecommand` defers to a locked guess as to any class command (the 2026-10-01 ruling's
-`\providecommand{\keywords}`; guard `perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`). The semantic markup the guess carried is lost with it: the e-mail, address, affiliation and
-ORCID are no longer the author's contacts, the keywords no classification, the DOI no link — the document's text is
-what the PDF prints. Unchanged: OmniBus provided over a named binding's base class (ceurart; #736) keeps its locks,
-and so does a package's or the document's begin-document hook code, run re-locked (apacite's
-`\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link; the document's own hook definition is refused too,
-RED `singletons/omnibus_document_hook_definition_refused_red`, post-merge). Perl patch prepared
-(`bruce_qa/patches/qa58.patch`: `\newcommand` and `\newenvironment` may redefine OmniBus's guesses). Guard
-`perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
+### 1038. A listing `frame=` naming no side draws no frame (UPS1, upstream #2820)
+
+**Perl.** Since #2820 (7412d564) listings.sty.ltxml:277-287 frames a listing whose `frame=` is not `none`: a named
+frame from `%frames`, else the sides its letters name (`t`/`b`/`l`/`r`, either case); a value naming none (`xyz`,
+empty) joins to `''`, and `framedProperties` (TeX_Box.pool.ltxml:84) turns that into `framed="rectangle"`. **TeX.**
+lstmisc.sty:1387-1399 keeps such a value as `\lst@frame`, and the frame code draws only the sides whose letters it
+holds: no frame. **Rust.** `lst_frame_sides` (listings_sty.rs) returns no frame for it, as TeX. **Guard**:
+`perfect_kernel_batchups1::fboxsep_pads_fcolorbox_boxed_and_listing_frames` (its `frame=xyz` listing).
+
+### 1041. `<mtable>` carries no default `rowspacing="0pt"` (issue 695)
+
+**Perl.** `pmml_array` writes `rowspacing` from the XMArray's `rowsep` (default `0pt`) on every table of two or more
+rows (MathML.pm:478-481). **Rust.** The same, except that a missing or zero `rowsep` writes nothing
+(`latexml_post/src/mathml/presentation.rs`, `pmml_array_inner`, `is_zero_length`; DG ruling 2026-11-14); an author's
+non-zero `rowsep` (`\arraystretch`, `\jot`) is written as Perl writes it (`rowspacing="10.0pt"`). MathML Core
+gives `<mtable>` only the global attributes, so Chrome ignores it (cell contents 6.88 px apart with or without it),
+while Firefox and MathJax honour it: issue 695's `array` and a `gather*`-nested `aligned` set their rows touching with
+`rowspacing="0pt"` (Firefox, Playwright build 1532: 1.5-3 px between the rows' contents) and without it 8.4-9.9 px
+apart (Firefox's default) and about 3.8 px in MathJax 2.1 (HTML-CSS, offline; its 1ex default); an
+`\arraystretch{2}` array's `10.0pt` gives 16.3 px in Firefox, a `\jot=6pt` `aligned`'s `6.0pt` 11 px. `columnspacing`
+stays: LaTeXML.css keys the aligned-cell padding reset on `columnspacing="0pt"` (#755); `columnalign` stays on `<mtd>`:
+LaTeXML.css keys `justify-items` on it (#809). The other non-Core attributes still written, `align` and `width` on
+`<mtable>`, are left to their own ruling. **Guard**:
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the
+four whole `<mtable>` elements: two default, two with the author's `rowspacing`); repro
+`tools/perfect_kernel/repros/alignment/mtable_no_rowspacing.tex`.
 
 ### 1045. A box's width that its element cannot hold rides as the CSS custom property `--ltx-box-width` (Perl: dropped)
 
@@ -36396,3 +36410,26 @@ driver it chose, as TeX's load order decides. Under a preload of latexml.sty a d
 `backend-persona/latexml_option_after_ar5iv_preload_red`, post-merge). Default output unchanged. Perl patch prepared
 (`bruce_qa/patches/qa64.patch`: the two options, and TeX's latexml.sty declaring them). Guard
 `perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
+
+### 1047. Under OmniBus the document's own definitions win over its guesses, locked ones too (Perl: ignored as a redefinition)
+
+For a class with no binding OmniBus guesses the class's commands, and locks its semantic frontmatter ones (#408). A
+document that `\newcommand`s one of them shows its real class leaves it undefined, so pdflatex prints the
+document's version (probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b"). **Perl** ignores the redefinition
+(`isDefinableLaTeX`, latex_constructs.pool.ltxml:2512-2526, an Info) and makes a contact of it, as did we.
+
+**Rust** (QAB57; BM Q3.12 "OmniBus sets a flag letting `\newcommand` and its family redefine without complaint", DG
+2026-11-14 "the document wins"): OmniBus loaded as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition`
+does not refuse a definition of a name whose meaning is still OmniBus's guess (`fallback_meaning_origin` is
+`Fallback`) when the document's own text makes it (`DefinitionOrigin::Document`, the state not re-locked:
+`state::document_redefines_guess`) — `\newcommand`, `\renewcommand`, `\def`, `\DeclareRobustCommand`;
+`\newenvironment`/`\renewenvironment` also drop OmniBus's `\begin{name}` constructor, which `\begin` looks up first.
+A `\providecommand` defers to a locked guess as to any class command (the 2026-10-01 ruling's
+`\providecommand{\keywords}`; guard `perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`). The semantic markup the guess carried is lost with it: the e-mail, address, affiliation and
+ORCID are no longer the author's contacts, the keywords no classification, the DOI no link — the document's text is
+what the PDF prints. Unchanged: OmniBus provided over a named binding's base class (ceurart; #736) keeps its locks,
+and so does a package's or the document's begin-document hook code, run re-locked (apacite's
+`\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link; the document's own hook definition is refused too,
+RED `singletons/omnibus_document_hook_definition_refused_red`, post-merge). Perl patch prepared
+(`bruce_qa/patches/qa58.patch`: `\newcommand` and `\newenvironment` may redefine OmniBus's guesses). Guard
+`perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
