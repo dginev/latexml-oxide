@@ -1032,7 +1032,7 @@
 <a href=#1032 id=1032 data-nosnippet>1032</a>  </span><span class="kw">let </span>is_directory_mode = cli.whatsin.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"directory"</span>) || source.ends_with(<span class="string">'/'</span>);
 <a href=#1033 id=1033 data-nosnippet>1033</a>  <span class="kw">let </span>source = <span class="kw">if </span>is_directory_mode {
 <a href=#1034 id=1034 data-nosnippet>1034</a>    <span class="kw">let </span>dir_path = Path::new(<span class="kw-2">&amp;</span>source);
-<a href=#1035 id=1035 data-nosnippet>1035</a>    <span class="kw">if let </span><span class="prelude-val">Ok</span>(abs_source) = std::fs::canonicalize(dir_path) {
+<a href=#1035 id=1035 data-nosnippet>1035</a>    <span class="kw">if let </span><span class="prelude-val">Ok</span>(abs_source) = latexml_core::util::pathname::canonicalize(dir_path) {
 <a href=#1036 id=1036 data-nosnippet>1036</a>      path_flags.push(abs_source.to_string_lossy().to_string());
 <a href=#1037 id=1037 data-nosnippet>1037</a>    } <span class="kw">else </span>{
 <a href=#1038 id=1038 data-nosnippet>1038</a>      path_flags.push(source.clone());

@@ -16,272 +16,268 @@
 <a href=#16 id=16 data-nosnippet>16</a>  package::{
 <a href=#17 id=17 data-nosnippet>17</a>    listings_sty::{listings_read_raw_file, lst_process_display, lst_run_body_via_input},
 <a href=#18 id=18 data-nosnippet>18</a>    tcolorbox_sty::{
-<a href=#19 id=19 data-nosnippet>19</a>      tcb_counter_step_code, tcb_listing_startend, tcb_resolve_listing_mode, tcb_xparse_listing,
-<a href=#20 id=20 data-nosnippet>20</a>    },
-<a href=#21 id=21 data-nosnippet>21</a>  },
-<a href=#22 id=22 data-nosnippet>22</a>  prelude::<span class="kw-2">*</span>,
-<a href=#23 id=23 data-nosnippet>23</a>};
-<a href=#24 id=24 data-nosnippet>24</a>
-<a href=#25 id=25 data-nosnippet>25</a><span class="attr">#[rustfmt::skip]
-<a href=#26 id=26 data-nosnippet>26</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">InputDefinitions!</span>(
-<a href=#28 id=28 data-nosnippet>28</a>    <span class="string">"tcblistingscore.code"</span>,
-<a href=#29 id=29 data-nosnippet>29</a>    extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"tex"</span>)),
-<a href=#30 id=30 data-nosnippet>30</a>    noltxml =&gt; <span class="bool-val">true
-<a href=#31 id=31 data-nosnippet>31</a>  </span>);
-<a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="comment">// \newtcblisting[init-options]{name}[N][default]{tcb-options} — a code-listing
-<a href=#34 id=34 data-nosnippet>34</a>  // box. What matters for the logical output is the code BODY, captured verbatim
-<a href=#35 id=35 data-nosnippet>35</a>  // and CLOSED at \end{name}, and the box's title (`tcb_store_pending_title`, the
-<a href=#36 id=36 data-nosnippet>36</a>  // listing's title: OD #768). The raw library's body capture once ran past its
-<a href=#37 id=37 data-nosnippet>37</a>  // \end{name} and swallowed following content; since the virtual-file round trip
-<a href=#38 id=38 data-nosnippet>38</a>  // (`\tcbverbatimwrite` → `listings_read_raw_file`) tcolorbox's own definition
-<a href=#39 id=39 data-nosnippet>39</a>  // (tcblistingscore.code.tex:301-322, `\newenvironment{name}…{\tcblisting{#6,
-<a href=#40 id=40 data-nosnippet>40</a>  // options@for=name}}{\endtcblisting}`) closes too, but it draws the box as a
-<a href=#41 id=41 data-nosnippet>41</a>  // picture whose `label=` lands on the nearest labelled ancestor — a section, else
-<a href=#42 id=42 data-nosnippet>42</a>  // &lt;document&gt; (raw tcolorbox; SYNC silent-loss row "tcolorbox box label") — and the xparse family
-<a href=#43 id=43 data-nosnippet>43</a>  // loses its begin-line reading (77m measurement, OD #768). So: delegate to
-<a href=#44 id=44 data-nosnippet>44</a>  // listings' \lstnewenvironment (same name/[N][default] shape; the leading
-<a href=#45 id=45 data-nosnippet>45</a>  // [init-options] and trailing tcb options feed `tcb_listing_startend`).
-<a href=#46 id=46 data-nosnippet>46</a>  // The signature MUST include the leading `[init-options]` optional (real
-<a href=#47 id=47 data-nosnippet>47</a>  // tcolorbox `\NewDocumentCommand \__tcobox_new_tcolorbox:w { m +O{} m o +o +m }`).
-<a href=#48 id=48 data-nosnippet>48</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\newtcblisting[]{}[][]{}"</span>, sub[(init, name, n, default, opts)] {
-<a href=#49 id=49 data-nosnippet>49</a>    <span class="kw">let </span>env_name = name.to_string().trim().to_string();
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="kw">let </span>(start, end) = tcb_listing_startend(<span class="kw-2">&amp;</span>env_name, init.as_ref(), <span class="kw-2">&amp;</span>opts);
-<a href=#51 id=51 data-nosnippet>51</a>    <span class="comment">// `[N]` alone = N MANDATORY arguments; only a present `[default]` makes the
-<a href=#52 id=52 data-nosnippet>52</a>    // first one optional (tcblistingscore.code.tex:318-323 → `\newenvironment`
-<a href=#53 id=53 data-nosnippet>53</a>    // shape). Emitting an empty `[]` default turned `\newtcblisting{DemoCode}[1]`
-<a href=#54 id=54 data-nosnippet>54</a>    // into an optional-argument environment, so `\begin{DemoCode}{listing only}`
-<a href=#55 id=55 data-nosnippet>55</a>    // read `#1` as empty and executed the displayed preamble code (sweep 39:
-<a href=#56 id=56 data-nosnippet>56</a>    // calculatoritems, mathador, randintlist, tikz-decofonts, tikzbrickfigurines,
-<a href=#57 id=57 data-nosnippet>57</a>    // OutilsGeomTikz, commalists-tools ×2, tikz2d-fr, tutodoc ×2 regressed).
-<a href=#58 id=58 data-nosnippet>58</a>    // Guard: `perfect_kernel_batch56::newtcblisting_mandatory_argument_stays_mandatory`.
-<a href=#59 id=59 data-nosnippet>59</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>signature = String::new();
-<a href=#60 id=60 data-nosnippet>60</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = n {
-<a href=#61 id=61 data-nosnippet>61</a>      signature.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"[{}]"</span>, n.to_string().trim()));
-<a href=#62 id=62 data-nosnippet>62</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(default) = default {
-<a href=#63 id=63 data-nosnippet>63</a>        signature.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"[{default}]"</span>));
-<a href=#64 id=64 data-nosnippet>64</a>      }
-<a href=#65 id=65 data-nosnippet>65</a>    }
-<a href=#66 id=66 data-nosnippet>66</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">format!</span>(
-<a href=#67 id=67 data-nosnippet>67</a>      <span class="string">"\\lstnewenvironment{{{env_name}}}{signature}{{{start}}}{{{end}}}"
-<a href=#68 id=68 data-nosnippet>68</a>    </span>))))
-<a href=#69 id=69 data-nosnippet>69</a>  }, locked =&gt; <span class="bool-val">true</span>);
-<a href=#70 id=70 data-nosnippet>70</a>
-<a href=#71 id=71 data-nosnippet>71</a>  <span class="comment">// \NewTCBListing / \DeclareTCBListing / \RenewTCBListing / \ProvideTCBListing
-<a href=#72 id=72 data-nosnippet>72</a>  // [init-options]{name}{xparse-sig}{options}: the xparse-signature flavor of
-<a href=#73 id=73 data-nosnippet>73</a>  // \newtcblisting (tcbxparse library; tcblistingscore.code.tex:329-355 —
-<a href=#74 id=74 data-nosnippet>74</a>  // `\__tcobox_new_TCBListing:w { m +O{} &gt;{\TrimSpaces} m +m +m }`, so the
-<a href=#75 id=75 data-nosnippet>75</a>  // user shape carries a LEADING optional, same as the plain `\newtcblisting`
-<a href=#76 id=76 data-nosnippet>76</a>  // fix above). Map the signature to a \lstnewenvironment shape (mandatory
-<a href=#77 id=77 data-nosnippet>77</a>  // count + one leading optional, see `tcb_xparse_listing`) and delegate like
-<a href=#78 id=78 data-nosnippet>78</a>  // the plain form.
-<a href=#79 id=79 data-nosnippet>79</a>  // Witnesses: keytheorems-doc L165 `\NewTCBListing{keythmscode}{ !O{} }{…}`
-<a href=#80 id=80 data-nosnippet>80</a>  // (31 uses, no leading optional); atableau.tex L655
-<a href=#81 id=81 data-nosnippet>81</a>  // `\NewTCBListing[use counter=example, …]{example}{ O{} s m }{…#1…#3…}`
-<a href=#82 id=82 data-nosnippet>82</a>  // (leading optional — without absorbing it the three `{}` args grab `[`,
-<a href=#83 id=83 data-nosnippet>83</a>  // `u`, `s` and the options body digests raw: misdefined:# storm).
-<a href=#84 id=84 data-nosnippet>84</a>  // Known residual: the `s` star specifier is not expressible via
-<a href=#85 id=85 data-nosnippet>85</a>  // \lstnewenvironment, so a starred `\begin{example}*` call mis-grabs `*`.
-<a href=#86 id=86 data-nosnippet>86</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\NewTCBListing[]{}{}{}"</span>, sub[(init, name, sig, opts)] {
-<a href=#87 id=87 data-nosnippet>87</a>    tcb_xparse_listing(name, sig, init.as_ref(), <span class="kw-2">&amp;</span>opts)
-<a href=#88 id=88 data-nosnippet>88</a>  });
-<a href=#89 id=89 data-nosnippet>89</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\DeclareTCBListing[]{}{}{}"</span>, sub[(init, name, sig, opts)] {
-<a href=#90 id=90 data-nosnippet>90</a>    tcb_xparse_listing(name, sig, init.as_ref(), <span class="kw-2">&amp;</span>opts)
-<a href=#91 id=91 data-nosnippet>91</a>  });
-<a href=#92 id=92 data-nosnippet>92</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\RenewTCBListing[]{}{}{}"</span>, sub[(init, name, sig, opts)] {
-<a href=#93 id=93 data-nosnippet>93</a>    tcb_xparse_listing(name, sig, init.as_ref(), <span class="kw-2">&amp;</span>opts)
-<a href=#94 id=94 data-nosnippet>94</a>  });
-<a href=#95 id=95 data-nosnippet>95</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ProvideTCBListing[]{}{}{}"</span>, sub[(init, name, sig, opts)] {
-<a href=#96 id=96 data-nosnippet>96</a>    tcb_xparse_listing(name, sig, init.as_ref(), <span class="kw-2">&amp;</span>opts)
-<a href=#97 id=97 data-nosnippet>97</a>  });
-<a href=#98 id=98 data-nosnippet>98</a>
-<a href=#99 id=99 data-nosnippet>99</a>  <span class="comment">// \newtcbinputlisting[init]{\cmd}[n][default]{options} — defines \cmd to
-<a href=#100 id=100 data-nosnippet>100</a>  // INPUT a listing file into a listing box at each use
-<a href=#101 id=101 data-nosnippet>101</a>  // (tcblistingscore.code.tex L355-378: \cmd = \tcbinputlisting{options}).
-<a href=#102 id=102 data-nosnippet>102</a>  // Semantic core honored: `use counter from=&lt;env&gt;` steps the counter
-<a href=#103 id=103 data-nosnippet>103</a>  // recorded for &lt;env&gt; (see tcb_listing_startend) and exposes
-<a href=#104 id=104 data-nosnippet>104</a>  // \thetcbcounter; `listing file=F` — with the call's #-arguments
-<a href=#105 id=105 data-nosnippet>105</a>  // substituted and expanded — is read (VFS first, then disk) and displayed
-<a href=#106 id=106 data-nosnippet>106</a>  // as a listing. Witness: incgraph-doc.sty L128 `\newtcbinputlisting[use
-<a href=#107 id=107 data-nosnippet>107</a>  // counter from=texexptitled]{\inputexamplelisting}[3][]{…listing
-<a href=#108 id=108 data-nosnippet>108</a>  // file={#2}…}`.
-<a href=#109 id=109 data-nosnippet>109</a>  // The options are a macro ARGUMENT in TeX (`\NewDocumentCommand`, L379),
-<a href=#110 id=110 data-nosnippet>110</a>  // not a definition body, so they are read as `{}` and packed here (see
-<a href=#111 id=111 data-nosnippet>111</a>  // `\lstnewenvironment`, listings_sty.rs).
-<a href=#112 id=112 data-nosnippet>112</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newtcbinputlisting []{}[Number][] {}"</span>, sub[(init, cmd, n, default, opts)] {
-<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">let </span>opts = opts.pack_parameters()<span class="question-mark">?</span>;
-<a href=#114 id=114 data-nosnippet>114</a>    <span class="kw">let </span>cmd_tok = cmd
-<a href=#115 id=115 data-nosnippet>115</a>      .unlist_ref()
-<a href=#116 id=116 data-nosnippet>116</a>      .iter()
-<a href=#117 id=117 data-nosnippet>117</a>      .find(|t| t.code == Catcode::CS)
-<a href=#118 id=118 data-nosnippet>118</a>      .copied();
-<a href=#119 id=119 data-nosnippet>119</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(cmd_tok) = cmd_tok <span class="kw">else </span>{
-<a href=#120 id=120 data-nosnippet>120</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#121 id=121 data-nosnippet>121</a>    };
-<a href=#122 id=122 data-nosnippet>122</a>    <span class="comment">// The init options go through tcolorbox's own init processor under the command's name without
-<a href=#123 id=123 data-nosnippet>123</a>    // its backslash (tcblistingscore.code.tex:374-377 `\__tcobox_set_backslash_removed:Nn`, then
-<a href=#124 id=124 data-nosnippet>124</a>    // :359 `\__tcobox_process_newtcolorbox:nn`), as for a listing environment
-<a href=#125 id=125 data-nosnippet>125</a>    // (`tcb_listing_startend`): `use counter=example` gives each use `\thetcbcounter` (the
-<a href=#126 id=126 data-nosnippet>126</a>    // `\examplefile` template of 1912.06298, 2405.01480 …: `title={Example~\thetcbcounter: #2}`
-<a href=#127 id=127 data-nosnippet>127</a>    // was "undefined:\thetcbcounter" once the title was typeset).
-<a href=#128 id=128 data-nosnippet>128</a>    </span><span class="kw">let </span>box_name = cmd_tok.with_str(|s| s.trim_start_matches(<span class="string">'\\'</span>).to_string());
-<a href=#129 id=129 data-nosnippet>129</a>    <span class="kw">let </span>init_src = init.map(|t| t.to_string()).unwrap_or_default();
-<a href=#130 id=130 data-nosnippet>130</a>    <span class="kw">if </span>!init_src.trim().is_empty() {
-<a href=#131 id=131 data-nosnippet>131</a>      <span class="kw">let _ </span>= digest(mouth::tokenize_internal(TeXString::assembled(<span class="macro">format!</span>(
-<a href=#132 id=132 data-nosnippet>132</a>        <span class="string">"\\tcb@proc@options@init{{{init_src}}}{{{box_name}}}"
-<a href=#133 id=133 data-nosnippet>133</a>      </span>))));
-<a href=#134 id=134 data-nosnippet>134</a>    }
-<a href=#135 id=135 data-nosnippet>135</a>    <span class="kw">let </span>n: usize = n.value_of() <span class="kw">as </span>usize;
-<a href=#136 id=136 data-nosnippet>136</a>    <span class="kw">let </span><span class="kw-2">mut </span>param_spec = String::new();
-<a href=#137 id=137 data-nosnippet>137</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>d) = default {
-<a href=#138 id=138 data-nosnippet>138</a>      param_spec.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"[Default:{d}]"</span>));
-<a href=#139 id=139 data-nosnippet>139</a>      <span class="kw">for _ in </span><span class="number">1</span>..n {
+<a href=#19 id=19 data-nosnippet>19</a>      tcb_counter_step_code, tcb_listing_startend, tcb_process_init, tcb_resolve_listing_mode,
+<a href=#20 id=20 data-nosnippet>20</a>      tcb_xparse_listing,
+<a href=#21 id=21 data-nosnippet>21</a>    },
+<a href=#22 id=22 data-nosnippet>22</a>  },
+<a href=#23 id=23 data-nosnippet>23</a>  prelude::<span class="kw-2">*</span>,
+<a href=#24 id=24 data-nosnippet>24</a>};
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a><span class="attr">#[rustfmt::skip]
+<a href=#27 id=27 data-nosnippet>27</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">InputDefinitions!</span>(
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="string">"tcblistingscore.code"</span>,
+<a href=#30 id=30 data-nosnippet>30</a>    extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"tex"</span>)),
+<a href=#31 id=31 data-nosnippet>31</a>    noltxml =&gt; <span class="bool-val">true
+<a href=#32 id=32 data-nosnippet>32</a>  </span>);
+<a href=#33 id=33 data-nosnippet>33</a>
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// \newtcblisting[init-options]{name}[N][default]{tcb-options} — a code-listing
+<a href=#35 id=35 data-nosnippet>35</a>  // box. What matters for the logical output is the code BODY, captured verbatim
+<a href=#36 id=36 data-nosnippet>36</a>  // and CLOSED at \end{name}, and the box's title (`tcb_store_pending_title`, the
+<a href=#37 id=37 data-nosnippet>37</a>  // listing's title: OD #768). The raw library's body capture once ran past its
+<a href=#38 id=38 data-nosnippet>38</a>  // \end{name} and swallowed following content; since the virtual-file round trip
+<a href=#39 id=39 data-nosnippet>39</a>  // (`\tcbverbatimwrite` → `listings_read_raw_file`) tcolorbox's own definition
+<a href=#40 id=40 data-nosnippet>40</a>  // (tcblistingscore.code.tex:301-322, `\newenvironment{name}…{\tcblisting{#6,
+<a href=#41 id=41 data-nosnippet>41</a>  // options@for=name}}{\endtcblisting}`) closes too, but it draws the box as a
+<a href=#42 id=42 data-nosnippet>42</a>  // picture whose `label=` lands on the nearest labelled ancestor — a section, else
+<a href=#43 id=43 data-nosnippet>43</a>  // &lt;document&gt; (raw tcolorbox; SYNC silent-loss row "tcolorbox box label") — and the xparse family
+<a href=#44 id=44 data-nosnippet>44</a>  // loses its begin-line reading (77m measurement, OD #768). So: delegate to
+<a href=#45 id=45 data-nosnippet>45</a>  // listings' \lstnewenvironment (same name/[N][default] shape; the leading
+<a href=#46 id=46 data-nosnippet>46</a>  // [init-options] and trailing tcb options feed `tcb_listing_startend`).
+<a href=#47 id=47 data-nosnippet>47</a>  // The signature MUST include the leading `[init-options]` optional (real
+<a href=#48 id=48 data-nosnippet>48</a>  // tcolorbox `\NewDocumentCommand \__tcobox_new_tcolorbox:w { m +O{} m o +o +m }`).
+<a href=#49 id=49 data-nosnippet>49</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\newtcblisting[]{}[][]{}"</span>, sub[(init, name, n, default, opts)] {
+<a href=#50 id=50 data-nosnippet>50</a>    <span class="kw">let </span>env_name = name.to_string().trim().to_string();
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="kw">let </span>(start, end) = tcb_listing_startend(<span class="kw-2">&amp;</span>env_name, init.as_ref(), <span class="kw-2">&amp;</span>opts);
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="comment">// `[N]` alone = N MANDATORY arguments; only a present `[default]` makes the
+<a href=#53 id=53 data-nosnippet>53</a>    // first one optional (tcblistingscore.code.tex:318-323 → `\newenvironment`
+<a href=#54 id=54 data-nosnippet>54</a>    // shape). Emitting an empty `[]` default turned `\newtcblisting{DemoCode}[1]`
+<a href=#55 id=55 data-nosnippet>55</a>    // into an optional-argument environment, so `\begin{DemoCode}{listing only}`
+<a href=#56 id=56 data-nosnippet>56</a>    // read `#1` as empty and executed the displayed preamble code (sweep 39:
+<a href=#57 id=57 data-nosnippet>57</a>    // calculatoritems, mathador, randintlist, tikz-decofonts, tikzbrickfigurines,
+<a href=#58 id=58 data-nosnippet>58</a>    // OutilsGeomTikz, commalists-tools ×2, tikz2d-fr, tutodoc ×2 regressed).
+<a href=#59 id=59 data-nosnippet>59</a>    // Guard: `perfect_kernel_batch56::newtcblisting_mandatory_argument_stays_mandatory`.
+<a href=#60 id=60 data-nosnippet>60</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>signature = String::new();
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = n {
+<a href=#62 id=62 data-nosnippet>62</a>      signature.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"[{}]"</span>, n.to_string().trim()));
+<a href=#63 id=63 data-nosnippet>63</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(default) = default {
+<a href=#64 id=64 data-nosnippet>64</a>        signature.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"[{default}]"</span>));
+<a href=#65 id=65 data-nosnippet>65</a>      }
+<a href=#66 id=66 data-nosnippet>66</a>    }
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">format!</span>(
+<a href=#68 id=68 data-nosnippet>68</a>      <span class="string">"\\lstnewenvironment{{{env_name}}}{signature}{{{start}}}{{{end}}}"
+<a href=#69 id=69 data-nosnippet>69</a>    </span>))))
+<a href=#70 id=70 data-nosnippet>70</a>  }, locked =&gt; <span class="bool-val">true</span>);
+<a href=#71 id=71 data-nosnippet>71</a>
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="comment">// \NewTCBListing / \DeclareTCBListing / \RenewTCBListing / \ProvideTCBListing
+<a href=#73 id=73 data-nosnippet>73</a>  // [init-options]{name}{xparse-sig}{options}: the xparse-signature flavor of
+<a href=#74 id=74 data-nosnippet>74</a>  // \newtcblisting (tcbxparse library; tcblistingscore.code.tex:329-355 —
+<a href=#75 id=75 data-nosnippet>75</a>  // `\__tcobox_new_TCBListing:w { m +O{} &gt;{\TrimSpaces} m +m +m }`, so the
+<a href=#76 id=76 data-nosnippet>76</a>  // user shape carries a LEADING optional, same as the plain `\newtcblisting`
+<a href=#77 id=77 data-nosnippet>77</a>  // fix above). Map the signature to a \lstnewenvironment shape (mandatory
+<a href=#78 id=78 data-nosnippet>78</a>  // count + one leading optional, see `tcb_xparse_listing`) and delegate like
+<a href=#79 id=79 data-nosnippet>79</a>  // the plain form.
+<a href=#80 id=80 data-nosnippet>80</a>  // Witnesses: keytheorems-doc L165 `\NewTCBListing{keythmscode}{ !O{} }{…}`
+<a href=#81 id=81 data-nosnippet>81</a>  // (31 uses, no leading optional); atableau.tex L655
+<a href=#82 id=82 data-nosnippet>82</a>  // `\NewTCBListing[use counter=example, …]{example}{ O{} s m }{…#1…#3…}`
+<a href=#83 id=83 data-nosnippet>83</a>  // (leading optional — without absorbing it the three `{}` args grab `[`,
+<a href=#84 id=84 data-nosnippet>84</a>  // `u`, `s` and the options body digests raw: misdefined:# storm).
+<a href=#85 id=85 data-nosnippet>85</a>  // Known residual: the `s` star specifier is not expressible via
+<a href=#86 id=86 data-nosnippet>86</a>  // \lstnewenvironment, so a starred `\begin{example}*` call mis-grabs `*`.
+<a href=#87 id=87 data-nosnippet>87</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\NewTCBListing[]{}{}{}"</span>, sub[(init, name, sig, opts)] {
+<a href=#88 id=88 data-nosnippet>88</a>    tcb_xparse_listing(name, sig, init.as_ref(), <span class="kw-2">&amp;</span>opts)
+<a href=#89 id=89 data-nosnippet>89</a>  });
+<a href=#90 id=90 data-nosnippet>90</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\DeclareTCBListing[]{}{}{}"</span>, sub[(init, name, sig, opts)] {
+<a href=#91 id=91 data-nosnippet>91</a>    tcb_xparse_listing(name, sig, init.as_ref(), <span class="kw-2">&amp;</span>opts)
+<a href=#92 id=92 data-nosnippet>92</a>  });
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\RenewTCBListing[]{}{}{}"</span>, sub[(init, name, sig, opts)] {
+<a href=#94 id=94 data-nosnippet>94</a>    tcb_xparse_listing(name, sig, init.as_ref(), <span class="kw-2">&amp;</span>opts)
+<a href=#95 id=95 data-nosnippet>95</a>  });
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ProvideTCBListing[]{}{}{}"</span>, sub[(init, name, sig, opts)] {
+<a href=#97 id=97 data-nosnippet>97</a>    tcb_xparse_listing(name, sig, init.as_ref(), <span class="kw-2">&amp;</span>opts)
+<a href=#98 id=98 data-nosnippet>98</a>  });
+<a href=#99 id=99 data-nosnippet>99</a>
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="comment">// \newtcbinputlisting[init]{\cmd}[n][default]{options} — defines \cmd to
+<a href=#101 id=101 data-nosnippet>101</a>  // INPUT a listing file into a listing box at each use
+<a href=#102 id=102 data-nosnippet>102</a>  // (tcblistingscore.code.tex L355-378: \cmd = \tcbinputlisting{options}).
+<a href=#103 id=103 data-nosnippet>103</a>  // Semantic core honored: `use counter from=&lt;env&gt;` steps the counter
+<a href=#104 id=104 data-nosnippet>104</a>  // recorded for &lt;env&gt; (see tcb_listing_startend) and exposes
+<a href=#105 id=105 data-nosnippet>105</a>  // \thetcbcounter; `listing file=F` — with the call's #-arguments
+<a href=#106 id=106 data-nosnippet>106</a>  // substituted and expanded — is read (VFS first, then disk) and displayed
+<a href=#107 id=107 data-nosnippet>107</a>  // as a listing. Witness: incgraph-doc.sty L128 `\newtcbinputlisting[use
+<a href=#108 id=108 data-nosnippet>108</a>  // counter from=texexptitled]{\inputexamplelisting}[3][]{…listing
+<a href=#109 id=109 data-nosnippet>109</a>  // file={#2}…}`.
+<a href=#110 id=110 data-nosnippet>110</a>  // The options are a macro ARGUMENT in TeX (`\NewDocumentCommand`, L379),
+<a href=#111 id=111 data-nosnippet>111</a>  // not a definition body, so they are read as `{}` and packed here (see
+<a href=#112 id=112 data-nosnippet>112</a>  // `\lstnewenvironment`, listings_sty.rs).
+<a href=#113 id=113 data-nosnippet>113</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newtcbinputlisting []{}[Number][] {}"</span>, sub[(init, cmd, n, default, opts)] {
+<a href=#114 id=114 data-nosnippet>114</a>    <span class="kw">let </span>opts = opts.pack_parameters()<span class="question-mark">?</span>;
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="kw">let </span>cmd_tok = cmd
+<a href=#116 id=116 data-nosnippet>116</a>      .unlist_ref()
+<a href=#117 id=117 data-nosnippet>117</a>      .iter()
+<a href=#118 id=118 data-nosnippet>118</a>      .find(|t| t.code == Catcode::CS)
+<a href=#119 id=119 data-nosnippet>119</a>      .copied();
+<a href=#120 id=120 data-nosnippet>120</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(cmd_tok) = cmd_tok <span class="kw">else </span>{
+<a href=#121 id=121 data-nosnippet>121</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#122 id=122 data-nosnippet>122</a>    };
+<a href=#123 id=123 data-nosnippet>123</a>    <span class="comment">// The init options go through tcolorbox's own init processor under the command's name without
+<a href=#124 id=124 data-nosnippet>124</a>    // its backslash (tcblistingscore.code.tex:374-377 `\__tcobox_set_backslash_removed:Nn`, then
+<a href=#125 id=125 data-nosnippet>125</a>    // :359 `\__tcobox_process_newtcolorbox:nn`), as for a listing environment
+<a href=#126 id=126 data-nosnippet>126</a>    // (`tcb_listing_startend`): `use counter=example` gives each use `\thetcbcounter` (the
+<a href=#127 id=127 data-nosnippet>127</a>    // `\examplefile` template of 1912.06298, 2405.01480 …: `title={Example~\thetcbcounter: #2}`
+<a href=#128 id=128 data-nosnippet>128</a>    // was "undefined:\thetcbcounter" once the title was typeset).
+<a href=#129 id=129 data-nosnippet>129</a>    </span><span class="kw">let </span>box_name = cmd_tok.with_str(|s| s.trim_start_matches(<span class="string">'\\'</span>).to_string());
+<a href=#130 id=130 data-nosnippet>130</a>    tcb_process_init(<span class="kw-2">&amp;</span>init.map(|t| t.to_string()).unwrap_or_default(), <span class="kw-2">&amp;</span>box_name);
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="kw">let </span>n: usize = n.value_of() <span class="kw">as </span>usize;
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="kw">let </span><span class="kw-2">mut </span>param_spec = String::new();
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>d) = default {
+<a href=#134 id=134 data-nosnippet>134</a>      param_spec.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"[Default:{d}]"</span>));
+<a href=#135 id=135 data-nosnippet>135</a>      <span class="kw">for _ in </span><span class="number">1</span>..n {
+<a href=#136 id=136 data-nosnippet>136</a>        param_spec.push_str(<span class="string">"{}"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>      }
+<a href=#138 id=138 data-nosnippet>138</a>    } <span class="kw">else </span>{
+<a href=#139 id=139 data-nosnippet>139</a>      <span class="kw">for _ in </span><span class="number">0</span>..n {
 <a href=#140 id=140 data-nosnippet>140</a>        param_spec.push_str(<span class="string">"{}"</span>);
 <a href=#141 id=141 data-nosnippet>141</a>      }
-<a href=#142 id=142 data-nosnippet>142</a>    } <span class="kw">else </span>{
-<a href=#143 id=143 data-nosnippet>143</a>      <span class="kw">for _ in </span><span class="number">0</span>..n {
-<a href=#144 id=144 data-nosnippet>144</a>        param_spec.push_str(<span class="string">"{}"</span>);
-<a href=#145 id=145 data-nosnippet>145</a>      }
-<a href=#146 id=146 data-nosnippet>146</a>    }
-<a href=#147 id=147 data-nosnippet>147</a>    <span class="kw">let </span>params = <span class="kw">if </span>param_spec.is_empty() {
-<a href=#148 id=148 data-nosnippet>148</a>      <span class="prelude-val">None
-<a href=#149 id=149 data-nosnippet>149</a>    </span>} <span class="kw">else </span>{
-<a href=#150 id=150 data-nosnippet>150</a>      parse_parameters(<span class="kw-2">&amp;</span>param_spec, <span class="kw-2">&amp;</span>cmd_tok, <span class="bool-val">true</span>)<span class="question-mark">?
-<a href=#151 id=151 data-nosnippet>151</a>    </span>};
-<a href=#152 id=152 data-nosnippet>152</a>    <span class="comment">// Same shape as \lstinputlisting (listings_sty.rs): a MACRO whose
-<a href=#153 id=153 data-nosnippet>153</a>    // expansion opens the listing group (`bgroup()`) and yields the display
-<a href=#154 id=154 data-nosnippet>154</a>    // tokens; the display's own trailer closes it. A primitive that unread
-<a href=#155 id=155 data-nosnippet>155</a>    // the display, or a bare expansion without the bgroup, tripped
-<a href=#156 id=156 data-nosnippet>156</a>    // "close a group that switched to mode internal_vertical".
-<a href=#157 id=157 data-nosnippet>157</a>    </span><span class="kw">let </span>expansion: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(
-<a href=#158 id=158 data-nosnippet>158</a>      <span class="kw">move </span>|args: Vec&lt;ArgWrap&gt;| {
-<a href=#159 id=159 data-nosnippet>159</a>              <span class="kw">let </span>sub_args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Tokens&gt;&gt;&gt; = args
-<a href=#160 id=160 data-nosnippet>160</a>          .iter()
-<a href=#161 id=161 data-nosnippet>161</a>          .map(|a| <span class="kw">match </span>a {
-<a href=#162 id=162 data-nosnippet>162</a>            ArgWrap::None =&gt; <span class="prelude-val">None</span>,
-<a href=#163 id=163 data-nosnippet>163</a>            ArgWrap::Tokens(t) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(t)),
-<a href=#164 id=164 data-nosnippet>164</a>            ArgWrap::Token(t) =&gt; <span class="prelude-val">Some</span>(Cow::Owned(Tokens::new(<span class="macro">vec!</span>[<span class="kw-2">*</span>t]))),
-<a href=#165 id=165 data-nosnippet>165</a>            other =&gt; <span class="prelude-val">Some</span>(Cow::Owned(Tokens::new(<span class="macro">ExplodeText!</span>(other.to_string())))),
-<a href=#166 id=166 data-nosnippet>166</a>          })
-<a href=#167 id=167 data-nosnippet>167</a>          .collect();
-<a href=#168 id=168 data-nosnippet>168</a>        <span class="kw">let </span>opts_subst = opts.substitute_parameters(<span class="kw-2">&amp;</span>sub_args);
-<a href=#169 id=169 data-nosnippet>169</a>        <span class="kw">let </span><span class="kw-2">mut </span>counter: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
-<a href=#170 id=170 data-nosnippet>170</a>        <span class="kw">let </span><span class="kw-2">mut </span>file: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
-<a href=#171 id=171 data-nosnippet>171</a>        <span class="kw">for </span>(key, val) <span class="kw">in </span>split_keyval_source(<span class="kw-2">&amp;</span>opts_subst.to_string()) {
-<a href=#172 id=172 data-nosnippet>172</a>          <span class="kw">let </span>val = val.trim().trim_matches([<span class="string">'{'</span>, <span class="string">'}'</span>]).trim();
-<a href=#173 id=173 data-nosnippet>173</a>          <span class="kw">match </span>key.trim() {
-<a href=#174 id=174 data-nosnippet>174</a>            <span class="string">"use counter from" </span><span class="kw">if </span>!val.is_empty() =&gt; {
-<a href=#175 id=175 data-nosnippet>175</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(sym)) =
-<a href=#176 id=176 data-nosnippet>176</a>                lookup_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"tcb_env_counter_{val}"</span>))
-<a href=#177 id=177 data-nosnippet>177</a>              {
-<a href=#178 id=178 data-nosnippet>178</a>                counter = <span class="prelude-val">Some</span>(with(sym, |c| c.to_string()));
-<a href=#179 id=179 data-nosnippet>179</a>              }
-<a href=#180 id=180 data-nosnippet>180</a>            },
-<a href=#181 id=181 data-nosnippet>181</a>            <span class="string">"listing file" </span><span class="kw">if </span>!val.is_empty() =&gt; file = <span class="prelude-val">Some</span>(val.to_string()),
-<a href=#182 id=182 data-nosnippet>182</a>            <span class="kw">_ </span>=&gt; {},
-<a href=#183 id=183 data-nosnippet>183</a>          }
-<a href=#184 id=184 data-nosnippet>184</a>        }
-<a href=#185 id=185 data-nosnippet>185</a>        <span class="comment">// (each use steps the box's counter, as `\tcb@proc@counter@autoanduse`'s `code=` does,
-<a href=#186 id=186 data-nosnippet>186</a>        // tcolorbox.sty:2311)
-<a href=#187 id=187 data-nosnippet>187</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(counter) = counter.filter(|<span class="kw">_</span>| {
-<a href=#188 id=188 data-nosnippet>188</a>          lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">format!</span>(<span class="string">"\\tcb@cnt@{box_name}"</span>))).is_none()
-<a href=#189 id=189 data-nosnippet>189</a>        }) {
-<a href=#190 id=190 data-nosnippet>190</a>          digest(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">format!</span>(
-<a href=#191 id=191 data-nosnippet>191</a>            <span class="string">"\\refstepcounter{{{counter}}}\\def\\thetcbcounter{{\\csname the{counter}\\endcsname}}"
-<a href=#192 id=192 data-nosnippet>192</a>          </span>))))<span class="question-mark">?</span>;
-<a href=#193 id=193 data-nosnippet>193</a>        } <span class="kw">else </span>{
-<a href=#194 id=194 data-nosnippet>194</a>          digest(<span class="macro">Tokenize!</span>(TeXString::assembled(tcb_counter_step_code(<span class="kw-2">&amp;</span>box_name))))<span class="question-mark">?</span>;
-<a href=#195 id=195 data-nosnippet>195</a>        }
-<a href=#196 id=196 data-nosnippet>196</a>        <span class="kw">let </span><span class="prelude-val">Some</span>(file) = file <span class="kw">else </span>{
-<a href=#197 id=197 data-nosnippet>197</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>());
-<a href=#198 id=198 data-nosnippet>198</a>        };
-<a href=#199 id=199 data-nosnippet>199</a>        <span class="kw">let </span>file = do_expand(<span class="macro">Tokenize!</span>(TeXString::assembled(file)))
-<a href=#200 id=200 data-nosnippet>200</a>          .map(|t| t.to_string())
-<a href=#201 id=201 data-nosnippet>201</a>          .unwrap_or_default();
-<a href=#202 id=202 data-nosnippet>202</a>        <span class="kw">let </span>file = file.trim();
-<a href=#203 id=203 data-nosnippet>203</a>        <span class="comment">// Perl reads every listing file through listingsReadRawFile
-<a href=#204 id=204 data-nosnippet>204</a>        // (`FindFile(…, noltxml =&gt; 1)`, listings.sty.ltxml:322-334): the session's
-<a href=#205 id=205 data-nosnippet>205</a>        // virtual store first (a round-tripped `\jobname.&lt;n&gt;.listing`), then
-<a href=#206 id=206 data-nosnippet>206</a>        // kpathsea and the source directory. A read relative to the working
-<a href=#207 id=207 data-nosnippet>207</a>        // directory missed both a tex-tree file (commalists-tools-doc
-<a href=#208 id=208 data-nosnippet>208</a>        // `\DemoCodeFile{commalists-tools.sty}`) and one beside the document
-<a href=#209 id=209 data-nosnippet>209</a>        // (csvsimple-legacy `\xmllisting{namesort}`), and the listing came out
-<a href=#210 id=210 data-nosnippet>210</a>        // empty with no diagnostic.
-<a href=#211 id=211 data-nosnippet>211</a>        // (read before the box's options are resolved below, so a failed read parks no title,
-<a href=#212 id=212 data-nosnippet>212</a>        // phantom or mode for an unrelated later listing)
-<a href=#213 id=213 data-nosnippet>213</a>        </span><span class="kw">let </span>text = listings_read_raw_file(file)<span class="question-mark">?</span>.unwrap_or_default();
-<a href=#214 id=214 data-nosnippet>214</a>        <span class="comment">// The box's options resolved as the box resolves them (`tcb_resolve_listing_mode`, as for a
-<a href=#215 id=215 data-nosnippet>215</a>        // listing environment): its title (typeset as the listing's — 1912.06298 and the other
-<a href=#216 id=216 data-nosnippet>216</a>        // `\examplefile` papers: `title={Example~\thetcbcounter: #2}`), its phantom code (a per-use
-<a href=#217 id=217 data-nosnippet>217</a>        // `label=` / `hypertarget=`, run at the listing's first line: `\examplefile[label={ex:header},
-<a href=#218 id=218 data-nosnippet>218</a>        // …]` was a dangling `\ref`) and its mode, which `\tcbinputlisting` (tcblistingscore.code.tex
-<a href=#219 id=219 data-nosnippet>219</a>        // :337-344 → `\tcb@inputlisting`, :163-177 inside the box, :59-160 outside) follows: the default
-<a href=#220 id=220 data-nosnippet>220</a>        // `listing and text` typesets the file again after the listing (`\tcbuselistingtext` =
-<a href=#221 id=221 data-nosnippet>221</a>        // `\input{\kvtcb@listingfile}`, :25), `text and listing` before it, `text only` alone
-<a href=#222 id=222 data-nosnippet>222</a>        // (dropped with 0 errors before). Guards `perfect_kernel_batch77m::{
-<a href=#223 id=223 data-nosnippet>223</a>        // newtcbinputlisting_keeps_its_title, newtcbinputlisting_keeps_its_label,
-<a href=#224 id=224 data-nosnippet>224</a>        // newtcbinputlisting_follows_its_mode}`.
-<a href=#225 id=225 data-nosnippet>225</a>        </span>tcb_resolve_listing_mode(opts_subst)<span class="question-mark">?</span>;
-<a href=#226 id=226 data-nosnippet>226</a>        <span class="kw">let </span>execute = lookup_bool(<span class="string">"LISTINGS_EXECUTE_BODY"</span>);
-<a href=#227 id=227 data-nosnippet>227</a>        <span class="macro">AssignValue!</span>(<span class="string">"LISTINGS_EXECUTE_BODY" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
-<a href=#228 id=228 data-nosnippet>228</a>        <span class="kw">let </span>layout = lookup_string(<span class="string">"tcb_pending_layout"</span>);
-<a href=#229 id=229 data-nosnippet>229</a>        <span class="comment">// (the text ends its paragraph, as the box it is typeset in does: tcolorbox.sty:360-366
-<a href=#230 id=230 data-nosnippet>230</a>        // `before`/`after` `\par`)
-<a href=#231 id=231 data-nosnippet>231</a>        </span><span class="kw">let </span>run_text = <span class="kw">if </span>execute {
-<a href=#232 id=232 data-nosnippet>232</a>          <span class="kw">let </span><span class="kw-2">mut </span>run = lst_run_body_via_input(<span class="kw-2">&amp;</span>box_name, <span class="kw-2">&amp;</span>text)<span class="question-mark">?</span>.unlist();
-<a href=#233 id=233 data-nosnippet>233</a>          run.push(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>));
-<a href=#234 id=234 data-nosnippet>234</a>          run
-<a href=#235 id=235 data-nosnippet>235</a>        } <span class="kw">else </span>{
-<a href=#236 id=236 data-nosnippet>236</a>          Vec::new()
-<a href=#237 id=237 data-nosnippet>237</a>        };
-<a href=#238 id=238 data-nosnippet>238</a>        <span class="kw">if </span>layout == <span class="string">"O" </span>{
-<a href=#239 id=239 data-nosnippet>239</a>          <span class="comment">// No listing: the box holds its title bar and its text. With no listing to caption, the
-<a href=#240 id=240 data-nosnippet>240</a>          // title is a paragraph before the text; the phantom code has no element of the box to name
-<a href=#241 id=241 data-nosnippet>241</a>          // (a `label` there would name the enclosing section) and is dropped, as a `text only`
-<a href=#242 id=242 data-nosnippet>242</a>          // listing environment drops it (`\lxtcbdropphantom`).
-<a href=#243 id=243 data-nosnippet>243</a>          </span><span class="kw">let </span>title = <span class="kw">match </span>lookup_value(<span class="string">"tcb_pending_title"</span>) {
-<a href=#244 id=244 data-nosnippet>244</a>            <span class="prelude-val">Some</span>(Stored::Tokens(title)) =&gt; title,
-<a href=#245 id=245 data-nosnippet>245</a>            <span class="kw">_ </span>=&gt; <span class="macro">Tokens!</span>(),
-<a href=#246 id=246 data-nosnippet>246</a>          };
-<a href=#247 id=247 data-nosnippet>247</a>          <span class="macro">AssignValue!</span>(<span class="string">"tcb_pending_phantom" </span>=&gt; Stored::None, Scope::Global);
-<a href=#248 id=248 data-nosnippet>248</a>          <span class="macro">AssignValue!</span>(<span class="string">"tcb_pending_title" </span>=&gt; Stored::None, Scope::Global);
-<a href=#249 id=249 data-nosnippet>249</a>          <span class="macro">AssignValue!</span>(<span class="string">"tcb_pending_remove_caption" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
-<a href=#250 id=250 data-nosnippet>250</a>          <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\begingroup"</span>)];
-<a href=#251 id=251 data-nosnippet>251</a>          <span class="kw">if </span>!title.is_empty() {
-<a href=#252 id=252 data-nosnippet>252</a>            out.extend([<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\noindent"</span>)]);
-<a href=#253 id=253 data-nosnippet>253</a>            out.extend(title.unlist());
-<a href=#254 id=254 data-nosnippet>254</a>            out.push(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>));
-<a href=#255 id=255 data-nosnippet>255</a>          }
-<a href=#256 id=256 data-nosnippet>256</a>          out.extend(run_text);
-<a href=#257 id=257 data-nosnippet>257</a>          out.push(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>));
-<a href=#258 id=258 data-nosnippet>258</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(Tokens::new(out));
-<a href=#259 id=259 data-nosnippet>259</a>        }
-<a href=#260 id=260 data-nosnippet>260</a>        bgroup();
-<a href=#261 id=261 data-nosnippet>261</a>        <span class="comment">// tcolorbox reads the file back `nolol` (tcblistings.code.tex:45, and `\lst@MakeCaption`
-<a href=#262 id=262 data-nosnippet>262</a>        // gobbled, :31-33 `listing remove caption`): no list-of-listings entry, so the file name
-<a href=#263 id=263 data-nosnippet>263</a>        // is no float's caption (guard `perfect_kernel_batch77m::newtcbinputlisting_keeps_its_title`).
-<a href=#264 id=264 data-nosnippet>264</a>        </span>assign_value(<span class="string">"LST@nolol"</span>, Stored::String(pin(<span class="string">"true"</span>)), <span class="prelude-val">None</span>);
-<a href=#265 id=265 data-nosnippet>265</a>        <span class="kw">let </span>display = lst_process_display(<span class="prelude-val">Some</span>(Tokens::new(<span class="macro">ExplodeText!</span>(file))), <span class="kw-2">&amp;</span>text);
-<a href=#266 id=266 data-nosnippet>266</a>        <span class="kw">if </span>run_text.is_empty() {
-<a href=#267 id=267 data-nosnippet>267</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(Tokens::new(display));
-<a href=#268 id=268 data-nosnippet>268</a>        }
-<a href=#269 id=269 data-nosnippet>269</a>        <span class="comment">// the text inside the box's group, as `\tcbinputlisting`'s `\begingroup…\endgroup` holds it
-<a href=#270 id=270 data-nosnippet>270</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(display.len() + run_text.len());
-<a href=#271 id=271 data-nosnippet>271</a>        <span class="kw">if </span>layout == <span class="string">"OL" </span>{
-<a href=#272 id=272 data-nosnippet>272</a>          out.extend(run_text);
-<a href=#273 id=273 data-nosnippet>273</a>          out.extend(display);
-<a href=#274 id=274 data-nosnippet>274</a>        } <span class="kw">else </span>{
-<a href=#275 id=275 data-nosnippet>275</a>          out.extend(display);
-<a href=#276 id=276 data-nosnippet>276</a>          <span class="kw">let </span>closer = out.pop();
-<a href=#277 id=277 data-nosnippet>277</a>          out.extend(run_text);
-<a href=#278 id=278 data-nosnippet>278</a>          out.extend(closer);
-<a href=#279 id=279 data-nosnippet>279</a>        }
-<a href=#280 id=280 data-nosnippet>280</a>        <span class="prelude-val">Ok</span>(Tokens::new(out))
-<a href=#281 id=281 data-nosnippet>281</a>      },
-<a href=#282 id=282 data-nosnippet>282</a>    )));
-<a href=#283 id=283 data-nosnippet>283</a>    def_macro(cmd_tok, params, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#284 id=284 data-nosnippet>284</a>  }, locked =&gt; <span class="bool-val">true</span>);
-<a href=#285 id=285 data-nosnippet>285</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\renewtcbinputlisting"</span>, <span class="string">"\\newtcbinputlisting"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#286 id=286 data-nosnippet>286</a>});
+<a href=#142 id=142 data-nosnippet>142</a>    }
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">let </span>params = <span class="kw">if </span>param_spec.is_empty() {
+<a href=#144 id=144 data-nosnippet>144</a>      <span class="prelude-val">None
+<a href=#145 id=145 data-nosnippet>145</a>    </span>} <span class="kw">else </span>{
+<a href=#146 id=146 data-nosnippet>146</a>      parse_parameters(<span class="kw-2">&amp;</span>param_spec, <span class="kw-2">&amp;</span>cmd_tok, <span class="bool-val">true</span>)<span class="question-mark">?
+<a href=#147 id=147 data-nosnippet>147</a>    </span>};
+<a href=#148 id=148 data-nosnippet>148</a>    <span class="comment">// Same shape as \lstinputlisting (listings_sty.rs): a MACRO whose
+<a href=#149 id=149 data-nosnippet>149</a>    // expansion opens the listing group (`bgroup()`) and yields the display
+<a href=#150 id=150 data-nosnippet>150</a>    // tokens; the display's own trailer closes it. A primitive that unread
+<a href=#151 id=151 data-nosnippet>151</a>    // the display, or a bare expansion without the bgroup, tripped
+<a href=#152 id=152 data-nosnippet>152</a>    // "close a group that switched to mode internal_vertical".
+<a href=#153 id=153 data-nosnippet>153</a>    </span><span class="kw">let </span>expansion: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(
+<a href=#154 id=154 data-nosnippet>154</a>      <span class="kw">move </span>|args: Vec&lt;ArgWrap&gt;| {
+<a href=#155 id=155 data-nosnippet>155</a>              <span class="kw">let </span>sub_args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Tokens&gt;&gt;&gt; = args
+<a href=#156 id=156 data-nosnippet>156</a>          .iter()
+<a href=#157 id=157 data-nosnippet>157</a>          .map(|a| <span class="kw">match </span>a {
+<a href=#158 id=158 data-nosnippet>158</a>            ArgWrap::None =&gt; <span class="prelude-val">None</span>,
+<a href=#159 id=159 data-nosnippet>159</a>            ArgWrap::Tokens(t) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(t)),
+<a href=#160 id=160 data-nosnippet>160</a>            ArgWrap::Token(t) =&gt; <span class="prelude-val">Some</span>(Cow::Owned(Tokens::new(<span class="macro">vec!</span>[<span class="kw-2">*</span>t]))),
+<a href=#161 id=161 data-nosnippet>161</a>            other =&gt; <span class="prelude-val">Some</span>(Cow::Owned(Tokens::new(<span class="macro">ExplodeText!</span>(other.to_string())))),
+<a href=#162 id=162 data-nosnippet>162</a>          })
+<a href=#163 id=163 data-nosnippet>163</a>          .collect();
+<a href=#164 id=164 data-nosnippet>164</a>        <span class="kw">let </span>opts_subst = opts.substitute_parameters(<span class="kw-2">&amp;</span>sub_args);
+<a href=#165 id=165 data-nosnippet>165</a>        <span class="kw">let </span><span class="kw-2">mut </span>counter: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
+<a href=#166 id=166 data-nosnippet>166</a>        <span class="kw">let </span><span class="kw-2">mut </span>file: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
+<a href=#167 id=167 data-nosnippet>167</a>        <span class="kw">for </span>(key, val) <span class="kw">in </span>split_keyval_source(<span class="kw-2">&amp;</span>opts_subst.to_string()) {
+<a href=#168 id=168 data-nosnippet>168</a>          <span class="kw">let </span>val = val.trim().trim_matches([<span class="string">'{'</span>, <span class="string">'}'</span>]).trim();
+<a href=#169 id=169 data-nosnippet>169</a>          <span class="kw">match </span>key.trim() {
+<a href=#170 id=170 data-nosnippet>170</a>            <span class="string">"use counter from" </span><span class="kw">if </span>!val.is_empty() =&gt; {
+<a href=#171 id=171 data-nosnippet>171</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(sym)) =
+<a href=#172 id=172 data-nosnippet>172</a>                lookup_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"tcb_env_counter_{val}"</span>))
+<a href=#173 id=173 data-nosnippet>173</a>              {
+<a href=#174 id=174 data-nosnippet>174</a>                counter = <span class="prelude-val">Some</span>(with(sym, |c| c.to_string()));
+<a href=#175 id=175 data-nosnippet>175</a>              }
+<a href=#176 id=176 data-nosnippet>176</a>            },
+<a href=#177 id=177 data-nosnippet>177</a>            <span class="string">"listing file" </span><span class="kw">if </span>!val.is_empty() =&gt; file = <span class="prelude-val">Some</span>(val.to_string()),
+<a href=#178 id=178 data-nosnippet>178</a>            <span class="kw">_ </span>=&gt; {},
+<a href=#179 id=179 data-nosnippet>179</a>          }
+<a href=#180 id=180 data-nosnippet>180</a>        }
+<a href=#181 id=181 data-nosnippet>181</a>        <span class="comment">// (each use steps the box's counter, as `\tcb@proc@counter@autoanduse`'s `code=` does,
+<a href=#182 id=182 data-nosnippet>182</a>        // tcolorbox.sty:2311)
+<a href=#183 id=183 data-nosnippet>183</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(counter) = counter.filter(|<span class="kw">_</span>| {
+<a href=#184 id=184 data-nosnippet>184</a>          lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">format!</span>(<span class="string">"\\tcb@cnt@{box_name}"</span>))).is_none()
+<a href=#185 id=185 data-nosnippet>185</a>        }) {
+<a href=#186 id=186 data-nosnippet>186</a>          digest(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">format!</span>(
+<a href=#187 id=187 data-nosnippet>187</a>            <span class="string">"\\refstepcounter{{{counter}}}\\def\\thetcbcounter{{\\csname the{counter}\\endcsname}}"
+<a href=#188 id=188 data-nosnippet>188</a>          </span>))))<span class="question-mark">?</span>;
+<a href=#189 id=189 data-nosnippet>189</a>        } <span class="kw">else </span>{
+<a href=#190 id=190 data-nosnippet>190</a>          digest(<span class="macro">Tokenize!</span>(TeXString::assembled(tcb_counter_step_code(<span class="kw-2">&amp;</span>box_name))))<span class="question-mark">?</span>;
+<a href=#191 id=191 data-nosnippet>191</a>        }
+<a href=#192 id=192 data-nosnippet>192</a>        <span class="kw">let </span><span class="prelude-val">Some</span>(file) = file <span class="kw">else </span>{
+<a href=#193 id=193 data-nosnippet>193</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>());
+<a href=#194 id=194 data-nosnippet>194</a>        };
+<a href=#195 id=195 data-nosnippet>195</a>        <span class="kw">let </span>file = do_expand(<span class="macro">Tokenize!</span>(TeXString::assembled(file)))
+<a href=#196 id=196 data-nosnippet>196</a>          .map(|t| t.to_string())
+<a href=#197 id=197 data-nosnippet>197</a>          .unwrap_or_default();
+<a href=#198 id=198 data-nosnippet>198</a>        <span class="kw">let </span>file = file.trim();
+<a href=#199 id=199 data-nosnippet>199</a>        <span class="comment">// Perl reads every listing file through listingsReadRawFile
+<a href=#200 id=200 data-nosnippet>200</a>        // (`FindFile(…, noltxml =&gt; 1)`, listings.sty.ltxml:322-334): the session's
+<a href=#201 id=201 data-nosnippet>201</a>        // virtual store first (a round-tripped `\jobname.&lt;n&gt;.listing`), then
+<a href=#202 id=202 data-nosnippet>202</a>        // kpathsea and the source directory. A read relative to the working
+<a href=#203 id=203 data-nosnippet>203</a>        // directory missed both a tex-tree file (commalists-tools-doc
+<a href=#204 id=204 data-nosnippet>204</a>        // `\DemoCodeFile{commalists-tools.sty}`) and one beside the document
+<a href=#205 id=205 data-nosnippet>205</a>        // (csvsimple-legacy `\xmllisting{namesort}`), and the listing came out
+<a href=#206 id=206 data-nosnippet>206</a>        // empty with no diagnostic.
+<a href=#207 id=207 data-nosnippet>207</a>        // (read before the box's options are resolved below, so a failed read parks no title,
+<a href=#208 id=208 data-nosnippet>208</a>        // phantom or mode for an unrelated later listing)
+<a href=#209 id=209 data-nosnippet>209</a>        </span><span class="kw">let </span>text = listings_read_raw_file(file)<span class="question-mark">?</span>.unwrap_or_default();
+<a href=#210 id=210 data-nosnippet>210</a>        <span class="comment">// The box's options resolved as the box resolves them (`tcb_resolve_listing_mode`, as for a
+<a href=#211 id=211 data-nosnippet>211</a>        // listing environment): its title (typeset as the listing's — 1912.06298 and the other
+<a href=#212 id=212 data-nosnippet>212</a>        // `\examplefile` papers: `title={Example~\thetcbcounter: #2}`), its phantom code (a per-use
+<a href=#213 id=213 data-nosnippet>213</a>        // `label=` / `hypertarget=`, run at the listing's first line: `\examplefile[label={ex:header},
+<a href=#214 id=214 data-nosnippet>214</a>        // …]` was a dangling `\ref`) and its mode, which `\tcbinputlisting` (tcblistingscore.code.tex
+<a href=#215 id=215 data-nosnippet>215</a>        // :337-344 → `\tcb@inputlisting`, :163-177 inside the box, :59-160 outside) follows: the default
+<a href=#216 id=216 data-nosnippet>216</a>        // `listing and text` typesets the file again after the listing (`\tcbuselistingtext` =
+<a href=#217 id=217 data-nosnippet>217</a>        // `\input{\kvtcb@listingfile}`, :25), `text and listing` before it, `text only` alone
+<a href=#218 id=218 data-nosnippet>218</a>        // (dropped with 0 errors before). Guards `perfect_kernel_batch77m::{
+<a href=#219 id=219 data-nosnippet>219</a>        // newtcbinputlisting_keeps_its_title, newtcbinputlisting_keeps_its_label,
+<a href=#220 id=220 data-nosnippet>220</a>        // newtcbinputlisting_follows_its_mode}`.
+<a href=#221 id=221 data-nosnippet>221</a>        </span>tcb_resolve_listing_mode(opts_subst)<span class="question-mark">?</span>;
+<a href=#222 id=222 data-nosnippet>222</a>        <span class="kw">let </span>execute = lookup_bool(<span class="string">"LISTINGS_EXECUTE_BODY"</span>);
+<a href=#223 id=223 data-nosnippet>223</a>        <span class="macro">AssignValue!</span>(<span class="string">"LISTINGS_EXECUTE_BODY" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
+<a href=#224 id=224 data-nosnippet>224</a>        <span class="kw">let </span>layout = lookup_string(<span class="string">"tcb_pending_layout"</span>);
+<a href=#225 id=225 data-nosnippet>225</a>        <span class="comment">// (the text ends its paragraph, as the box it is typeset in does: tcolorbox.sty:360-366
+<a href=#226 id=226 data-nosnippet>226</a>        // `before`/`after` `\par`)
+<a href=#227 id=227 data-nosnippet>227</a>        </span><span class="kw">let </span>run_text = <span class="kw">if </span>execute {
+<a href=#228 id=228 data-nosnippet>228</a>          <span class="kw">let </span><span class="kw-2">mut </span>run = lst_run_body_via_input(<span class="kw-2">&amp;</span>box_name, <span class="kw-2">&amp;</span>text)<span class="question-mark">?</span>.unlist();
+<a href=#229 id=229 data-nosnippet>229</a>          run.push(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>));
+<a href=#230 id=230 data-nosnippet>230</a>          run
+<a href=#231 id=231 data-nosnippet>231</a>        } <span class="kw">else </span>{
+<a href=#232 id=232 data-nosnippet>232</a>          Vec::new()
+<a href=#233 id=233 data-nosnippet>233</a>        };
+<a href=#234 id=234 data-nosnippet>234</a>        <span class="kw">if </span>layout == <span class="string">"O" </span>{
+<a href=#235 id=235 data-nosnippet>235</a>          <span class="comment">// No listing: the box holds its title bar and its text. With no listing to caption, the
+<a href=#236 id=236 data-nosnippet>236</a>          // title is a paragraph before the text; the phantom code has no element of the box to name
+<a href=#237 id=237 data-nosnippet>237</a>          // (a `label` there would name the enclosing section) and is dropped, as a `text only`
+<a href=#238 id=238 data-nosnippet>238</a>          // listing environment drops it (`\lxtcbdropphantom`).
+<a href=#239 id=239 data-nosnippet>239</a>          </span><span class="kw">let </span>title = <span class="kw">match </span>lookup_value(<span class="string">"tcb_pending_title"</span>) {
+<a href=#240 id=240 data-nosnippet>240</a>            <span class="prelude-val">Some</span>(Stored::Tokens(title)) =&gt; title,
+<a href=#241 id=241 data-nosnippet>241</a>            <span class="kw">_ </span>=&gt; <span class="macro">Tokens!</span>(),
+<a href=#242 id=242 data-nosnippet>242</a>          };
+<a href=#243 id=243 data-nosnippet>243</a>          <span class="macro">AssignValue!</span>(<span class="string">"tcb_pending_phantom" </span>=&gt; Stored::None, Scope::Global);
+<a href=#244 id=244 data-nosnippet>244</a>          <span class="macro">AssignValue!</span>(<span class="string">"tcb_pending_title" </span>=&gt; Stored::None, Scope::Global);
+<a href=#245 id=245 data-nosnippet>245</a>          <span class="macro">AssignValue!</span>(<span class="string">"tcb_pending_remove_caption" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
+<a href=#246 id=246 data-nosnippet>246</a>          <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\begingroup"</span>)];
+<a href=#247 id=247 data-nosnippet>247</a>          <span class="kw">if </span>!title.is_empty() {
+<a href=#248 id=248 data-nosnippet>248</a>            out.extend([<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\noindent"</span>)]);
+<a href=#249 id=249 data-nosnippet>249</a>            out.extend(title.unlist());
+<a href=#250 id=250 data-nosnippet>250</a>            out.push(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>));
+<a href=#251 id=251 data-nosnippet>251</a>          }
+<a href=#252 id=252 data-nosnippet>252</a>          out.extend(run_text);
+<a href=#253 id=253 data-nosnippet>253</a>          out.push(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>));
+<a href=#254 id=254 data-nosnippet>254</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(Tokens::new(out));
+<a href=#255 id=255 data-nosnippet>255</a>        }
+<a href=#256 id=256 data-nosnippet>256</a>        bgroup();
+<a href=#257 id=257 data-nosnippet>257</a>        <span class="comment">// tcolorbox reads the file back `nolol` (tcblistings.code.tex:45, and `\lst@MakeCaption`
+<a href=#258 id=258 data-nosnippet>258</a>        // gobbled, :31-33 `listing remove caption`): no list-of-listings entry, so the file name
+<a href=#259 id=259 data-nosnippet>259</a>        // is no float's caption (guard `perfect_kernel_batch77m::newtcbinputlisting_keeps_its_title`).
+<a href=#260 id=260 data-nosnippet>260</a>        </span>assign_value(<span class="string">"LST@nolol"</span>, Stored::String(pin(<span class="string">"true"</span>)), <span class="prelude-val">None</span>);
+<a href=#261 id=261 data-nosnippet>261</a>        <span class="kw">let </span>display = lst_process_display(<span class="prelude-val">Some</span>(Tokens::new(<span class="macro">ExplodeText!</span>(file))), <span class="kw-2">&amp;</span>text);
+<a href=#262 id=262 data-nosnippet>262</a>        <span class="kw">if </span>run_text.is_empty() {
+<a href=#263 id=263 data-nosnippet>263</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(Tokens::new(display));
+<a href=#264 id=264 data-nosnippet>264</a>        }
+<a href=#265 id=265 data-nosnippet>265</a>        <span class="comment">// the text inside the box's group, as `\tcbinputlisting`'s `\begingroup…\endgroup` holds it
+<a href=#266 id=266 data-nosnippet>266</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(display.len() + run_text.len());
+<a href=#267 id=267 data-nosnippet>267</a>        <span class="kw">if </span>layout == <span class="string">"OL" </span>{
+<a href=#268 id=268 data-nosnippet>268</a>          out.extend(run_text);
+<a href=#269 id=269 data-nosnippet>269</a>          out.extend(display);
+<a href=#270 id=270 data-nosnippet>270</a>        } <span class="kw">else </span>{
+<a href=#271 id=271 data-nosnippet>271</a>          out.extend(display);
+<a href=#272 id=272 data-nosnippet>272</a>          <span class="kw">let </span>closer = out.pop();
+<a href=#273 id=273 data-nosnippet>273</a>          out.extend(run_text);
+<a href=#274 id=274 data-nosnippet>274</a>          out.extend(closer);
+<a href=#275 id=275 data-nosnippet>275</a>        }
+<a href=#276 id=276 data-nosnippet>276</a>        <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#277 id=277 data-nosnippet>277</a>      },
+<a href=#278 id=278 data-nosnippet>278</a>    )));
+<a href=#279 id=279 data-nosnippet>279</a>    def_macro(cmd_tok, params, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#280 id=280 data-nosnippet>280</a>  }, locked =&gt; <span class="bool-val">true</span>);
+<a href=#281 id=281 data-nosnippet>281</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\renewtcbinputlisting"</span>, <span class="string">"\\newtcbinputlisting"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#282 id=282 data-nosnippet>282</a>});
 </code></pre></div></section></main></body></html>

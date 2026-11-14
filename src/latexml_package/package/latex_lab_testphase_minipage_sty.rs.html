@@ -8,14 +8,16 @@
 <a href=#8 id=8 data-nosnippet>8</a>//! undeclared!" (latex.ltx:7405) without them (tagpdf manual: 88 socket error
 <a href=#9 id=9 data-nosnippet>9</a>//! lines; SHARED, pdflatex clean). The `\@iiiminipage`/`\@iiiparbox` rewrites
 <a href=#10 id=10 data-nosnippet>10</a>//! that call the sockets are PDF-structure only and stay with our minipage.
-<a href=#11 id=11 data-nosnippet>11</a>//! Guard: `perfect_kernel_batch56::testphase_tagging_sockets_and_block_templates_are_declared`.
-<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<a href=#13 id=13 data-nosnippet>13</a>
-<a href=#14 id=14 data-nosnippet>14</a><span class="attr">#[rustfmt::skip]
-<a href=#15 id=15 data-nosnippet>15</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\NewTaggingSocket{minipage/before}{0}
-<a href=#17 id=17 data-nosnippet>17</a>\NewTaggingSocket{minipage/after}{0}
-<a href=#18 id=18 data-nosnippet>18</a>\NewTaggingSocket{parbox/before}{0}
-<a href=#19 id=19 data-nosnippet>19</a>\NewTaggingSocket{parbox/after}{0}"</span>);
-<a href=#20 id=20 data-nosnippet>20</a>});
+<a href=#11 id=11 data-nosnippet>11</a>//! The LaTeX 2026-11-01 kernel declares the four itself (latex.ltx:22533-22536) and the module
+<a href=#12 id=12 data-nosnippet>12</a>//! no longer does: each is declared here only where the kernel has not.
+<a href=#13 id=13 data-nosnippet>13</a>//! Guard: `perfect_kernel_batch56::testphase_tagging_sockets_and_block_templates_are_declared`.
+<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a><span class="attr">#[rustfmt::skip]
+<a href=#17 id=17 data-nosnippet>17</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\IfSocketExistsF{tagsupport/minipage/before}{\NewTaggingSocket{minipage/before}{0}}
+<a href=#19 id=19 data-nosnippet>19</a>\IfSocketExistsF{tagsupport/minipage/after}{\NewTaggingSocket{minipage/after}{0}}
+<a href=#20 id=20 data-nosnippet>20</a>\IfSocketExistsF{tagsupport/parbox/before}{\NewTaggingSocket{parbox/before}{0}}
+<a href=#21 id=21 data-nosnippet>21</a>\IfSocketExistsF{tagsupport/parbox/after}{\NewTaggingSocket{parbox/after}{0}}"</span>);
+<a href=#22 id=22 data-nosnippet>22</a>});
 </code></pre></div></section></main></body></html>

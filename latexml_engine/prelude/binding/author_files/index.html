@@ -23,4 +23,6 @@ answers <code>\IfFileExists</code> as a TeX Live file does.</dd><dt><a class="co
 for — LaTeXML’s styles (<code>latexml.sty</code>, <code>lxRDFa.sty</code>, <code>ar5iv.sty</code>, <code>latexmlman.sty</code>, <code>xylatexml.tex</code>), its fallback
 class <code>OmniBus.cls</code>, the shared cores the class bindings load (<code>ams_core.cls</code>, the <code>_support</code> styles) and the test
 fixtures (<code>keysetopt.sty</code>, <code>lxtesttemplate.sty</code>).</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.stands_in_for_an_author_file.html" title="fn latexml_engine::prelude::binding::author_files::stands_in_for_an_author_file">stands_<wbr>in_<wbr>for_<wbr>an_<wbr>author_<wbr>file</a></dt><dd>Is <code>file</code> (<code>arxiv.sty</code>) the name of a binding that stands in for an author’s file? Matched without regard to
-case, as the binding registry matches a request (<code>jhep.cls</code> → <code>JHEP.cls</code>).</dd></dl></section></div></main></body></html>
+case, as the binding registry matches a request (<code>jhep.cls</code> → <code>JHEP.cls</code>). It stands in on every tree: a paper’s copy
+is read after it (TeX reads the document’s directory first), and where the paper ships none, a later tree’s own file
+(TL 2026’s <code>rasti.cls</code>) answers <code>\IfFileExists</code> by the disk search made before the binding is asked.</dd></dl></section></div></main></body></html>

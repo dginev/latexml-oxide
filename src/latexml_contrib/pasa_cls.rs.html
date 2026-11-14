@@ -17,15 +17,22 @@
 <a href=#17 id=17 data-nosnippet>17</a>
 <a href=#18 id=18 data-nosnippet>18</a><span class="kw">const </span>PASA: RawRead = RawRead {
 <a href=#19 id=19 data-nosnippet>19</a>  shipped: <span class="bool-val">true</span>,
-<a href=#20 id=20 data-nosnippet>20</a>  held: <span class="kw-2">&amp;</span>[(
-<a href=#21 id=21 data-nosnippet>21</a>    <span class="string">"\\@popfilename"</span>,
-<a href=#22 id=22 data-nosnippet>22</a>    <span class="string">r"\def\@popfilename{\expandafter\@p@pfilename\@currnamestack\@nil}"</span>,
-<a href=#23 id=23 data-nosnippet>23</a>  )],
-<a href=#24 id=24 data-nosnippet>24</a>  restored: <span class="kw-2">&amp;</span>[<span class="string">"\\@pushfilename"</span>],
-<a href=#25 id=25 data-nosnippet>25</a>  ..RawRead::new(<span class="string">"pasa"</span>, <span class="string">"cls"</span>)
-<a href=#26 id=26 data-nosnippet>26</a>};
-<a href=#27 id=27 data-nosnippet>27</a>
-<a href=#28 id=28 data-nosnippet>28</a><span class="macro">LoadDefinitions!</span>({
-<a href=#29 id=29 data-nosnippet>29</a>  read_raw(<span class="kw-2">&amp;</span>PASA)<span class="question-mark">?</span>;
-<a href=#30 id=30 data-nosnippet>30</a>});
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// the era's `\@p@pfilename` too: the November 2026 kernel's (latex.ltx:19091) reads a fourth entry, `\pkgcls@outerdate`
+<a href=#21 id=21 data-nosnippet>21</a>  </span>held: <span class="kw-2">&amp;</span>[
+<a href=#22 id=22 data-nosnippet>22</a>    (
+<a href=#23 id=23 data-nosnippet>23</a>      <span class="string">"\\@popfilename"</span>,
+<a href=#24 id=24 data-nosnippet>24</a>      <span class="string">r"\def\@popfilename{\expandafter\@p@pfilename\@currnamestack\@nil}"</span>,
+<a href=#25 id=25 data-nosnippet>25</a>    ),
+<a href=#26 id=26 data-nosnippet>26</a>    (
+<a href=#27 id=27 data-nosnippet>27</a>      <span class="string">"\\@p@pfilename"</span>,
+<a href=#28 id=28 data-nosnippet>28</a>      <span class="string">r"\def\@p@pfilename#1#2#3#4\@nil{\gdef\@currname{#1}\gdef\@currext{#2}\catcode`\@#3\relax\gdef\@currnamestack{#4}}"</span>,
+<a href=#29 id=29 data-nosnippet>29</a>    ),
+<a href=#30 id=30 data-nosnippet>30</a>  ],
+<a href=#31 id=31 data-nosnippet>31</a>  restored: <span class="kw-2">&amp;</span>[<span class="string">"\\@pushfilename"</span>],
+<a href=#32 id=32 data-nosnippet>32</a>  ..RawRead::new(<span class="string">"pasa"</span>, <span class="string">"cls"</span>)
+<a href=#33 id=33 data-nosnippet>33</a>};
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a><span class="macro">LoadDefinitions!</span>({
+<a href=#36 id=36 data-nosnippet>36</a>  read_raw(<span class="kw-2">&amp;</span>PASA)<span class="question-mark">?</span>;
+<a href=#37 id=37 data-nosnippet>37</a>});
 </code></pre></div></section></main></body></html>
