@@ -1,0 +1,6 @@
+# Perl stand-in for lxad.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefConstructor('\lxad{}', "<ltx:text class='#c'>#1</ltx:text>",
+  afterDigest => sub { my ($stomach, $whatsit) = @_; $whatsit->setProperty(c => 'ad'); return; });
+1;

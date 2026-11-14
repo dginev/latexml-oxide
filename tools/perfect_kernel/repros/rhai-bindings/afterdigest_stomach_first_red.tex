@@ -1,0 +1,15 @@
+% mechanism: a Rhai `afterDigest` hook receives the whatsit alone (`|whatsit|`), where Perl's receives ($stomach,
+%   $whatsit) (Definition/Primitive.pm executeAfterDigest); the Perl-form `|stomach, whatsit|` gets `()` as its whatsit
+% witness: synthetic (RHAIH, the sibling of the I-form `afterDigest` probe; the binding lxad.sty.rhai, lxad.sty.ltxml
+%   for Perl, lxad.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A"; Perl 0.8.8: <p><text class="ad">A</text></p>, 0 errors
+% engines: RHAIH (3bb6984f95e): <p><text>A</text></p>, 1 error (script:afterDigest Function not found: setProperty ((), …))
+% expect:  0 errors, 0 warnings; <text class="ad">A</text> (the Perl form read as ruling 8's closures: handle + every
+%   argument; `|whatsit|` the old form, Warned one release)
+% status:  RED (RHAIH)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{lxad}
+\begin{document}
+\lxad{A}
+\end{document}
