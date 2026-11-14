@@ -1484,6 +1484,26 @@ mod witnessed_css_delta {
        plain verbatim would collapse to one line under vanilla's nowrap, and fancyvrb \
        source lines would reflow side-by-side with their indentation collapsed",
     );
+    // Issues #431/#702 at a phone width: inline \verb wraps, a breaklines line's
+    // \parbox drops the markup's newlines and shrinks in a flex row, and lines and
+    // xleftmargin's wrapper are capped (Chrome at 375 px: page 488 -> 375, frame
+    // scrollWidth 468 -> 330; the browser half is `browser_render_verbatim_narrow`).
+    for rule in [
+      "code.ltx_verbatim { white-space:pre-wrap; overflow-wrap:break-word; }",
+      ".ltx_verbatim .ltx_parbox { white-space:normal; }",
+      ".ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; \
+       max-width:100%; }",
+      ".ltx_text.ltx_inline-block:has(> .ltx_text.ltx_verbatim.ltx_inline-block) { display:block; \
+       text-indent:0; max-width:100%; }",
+      ".ltx_text.ltx_verbatim.ltx_inline-block:has(> .ltx_parbox) { display:flex; }",
+      ".ltx_verbatim > .ltx_parbox { flex-shrink:1; min-width:0; }",
+      ".ltx_framed.ltx_framed_verbatim { display:block; width:fit-content; }",
+    ] {
+      assert!(
+        css.contains(rule),
+        "LaTeXML.css lost the verbatim rule `{rule}` (issues #431/#702)"
+      );
+    }
   }
 
   #[test]

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+  - **An fvextra `breaklines` Verbatim wraps and fits a phone** (issue 431, issue 702).
+    The bundled CSS's verbatim `white-space:pre` also reached a breaklines line's
+    `\parbox`, so its markup newlines rendered as blank rows (a one-row line 60 px, now
+    15), and PR #718's `.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }`
+    capped nothing, the line around the parbox carrying an inline width: at 375 px the
+    frame scrolled (scrollWidth 468 > 330) and an unframed one widened the page to 479 px.
+    Lines and xleftmargin's wrapper are capped at their box, a breaklines line is a flex
+    row whose parbox shrinks to it, and a framed verbatim is a block; inline `\verb`
+    keeps its spaces and wraps (`pre-wrap`), so a long one no longer widens a narrow page
+    (582 → 375 px). Witnesses 2605.00468 and 2605.01024 (their lines' total height
+    41,496 → 13,650 px and 1,476 → 432 px at 1280 px). Mirrored in ar5iv-css. Guards
+    `witnessed_css_delta::verbatim_whitespace_delta_stays_present`,
+    `browser_render_verbatim_narrow` (opt-in).
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
