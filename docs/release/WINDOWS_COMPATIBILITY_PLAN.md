@@ -128,9 +128,9 @@ Windows graphics-delegate names:
   bash/`xmllint`/`diff`/`grep`/`wc` dependency on ALL platforms); `greek_test`
   fixed TL-independently via native `\Declare*caseMapping` handlers; the
   test-discovery proc macro (`latexml_codegen`) emits `/`-normalized paths. The
-  tikz `ac_drive_components_test` is circuitikz-version drift (12.4→12.68), so
-  it is compared on Linux/macOS and skipped on Windows (`WINDOWS_GOLDEN_SKIP`) —
-  a portability difference, not a code divergence (`SYNC_STATUS.md`).
+  tikz `ac_drive_components_test` is circuitikz-version drift (12.4→12.68, the
+  1.8.6 transistor gate code): every platform compares the golden of its installed
+  circuitikz (`ac-drive-components.circuitikz-1.8.6.xml`, `Requirements::golden_variant`).
 - [x] **`tools/make_formats.ps1`** — bash-free dump generation mirroring
   `make_formats.sh` (the `.sh` stays authoritative).
 

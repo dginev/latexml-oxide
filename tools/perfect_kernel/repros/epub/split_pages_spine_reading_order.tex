@@ -1,0 +1,19 @@
+% issue 807 follow-up: `latexml_oxide --split --splitat=subsection --splitnaming=labelrelative --dest=k.epub` lists
+% every page post wrote in the OPF manifest and spine, in Split's order (the root, then each page before its
+% children), as Perl's @docs reaches Manifest/Epub.pm `process`. Pages in subdirectories (sec_a/index.xhtml,
+% sec_a/sub_aa.xhtml, S2/index.xhtml) were missing (the CLI read OPS/ only at its top level), and the top-level ones
+% went in file-name order (S1, S10, S11, S2, ...) with a Warning epub:spine.
+% witness: synthetic (issue 807; review revI807 probe n.tex)
+% oracle:  pdflatex 0 errors: eleven sections, one subsection
+% engines: rust (I807 r0) = 0 errors, 1 warning, spine k.xhtml only; perl latexmlc 2026-11-14 = 0 errors, spine k,
+%   sec_a/index, sec_a/sub_aa, S2/index .. S11/index; rust (I807b) = Perl's manifest and spine
+% expect:  0 errors, 0 warnings; spine in reading order
+% status:  GREEN (cluster_cli whatsinout::format_epub_split_pages_follow_splits_order)
+\documentclass{article}
+\begin{document}
+\tableofcontents
+\section{A}\label{sec:a} Text a.
+\subsection{Aa}\label{sub:aa} Text aa.
+\section{B}b\section{C}c\section{D}d\section{E}e\section{F}f
+\section{G}g\section{H}h\section{I}i\section{J}j\section{K}k
+\end{document}

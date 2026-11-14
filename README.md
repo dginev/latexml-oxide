@@ -40,7 +40,7 @@ $ latexml_oxide paper.tex --destination=paper.html
 $ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 
-`--format` takes `html5`, `html`, `xhtml`, `xml`, or `epub` — inferred from the
+`--format` takes `html5`, `html`, `xhtml`, `xml`, or `epub` (a zipped EPUB 3) — inferred from the
 `--destination` extension when omitted. `--help` lists every option.
 Working from a checkout instead of an installed binary? Prefix with
 `cargo run --bin latexml_oxide --`.
@@ -253,6 +253,10 @@ cache, which is slow.
 
 [`cargo-nextest`](https://nexte.st) (`cargo install cargo-nextest`) runs the same suite
 several times faster: `cargo nextest run --workspace`.
+
+With [EPUBCheck](https://www.w3.org/publishing/epubcheck/) installed (`apt install epubcheck`), the EPUB tests
+also validate the `.epub` they write; without it they print `SKIP epubcheck …`, and
+`LATEXML_EPUBCHECK_TESTS=1` turns that skip into a failure.
 
 ### Build profiles
 

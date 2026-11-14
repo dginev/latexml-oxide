@@ -10,6 +10,10 @@ LoadDefinitions!({
   // but route it to the kernel's live-body implementation.
   DefMacro!("\\VerbatimFootnotes", "\\lx@VerbatimFootnotes");
 
+  // fancyvrb 4.8 (2026/10/20, fancyvrb.sty:707) closes each line `\FancyVerbFormatLine{#1}\hfil`, 4.6 `\hss`; our
+  // `\hfil` is a space box (Perl TeX_Glue.pool.ltxml:128), a space after every line pdflatex never prints: keep `\hss`.
+  substitute_in_macro("\\FV@ListProcessLine", "\\hfil", "\\hss")?;
+
   // Perl fancyvrb.sty.ltxml L22-25: hack internals to add css class ltx_verbatim
   // to every typeset source line (fancyvrb applies \FancyVerbFormatLine per line
   // for all Verbatim variants). NOTE: a package that redefines

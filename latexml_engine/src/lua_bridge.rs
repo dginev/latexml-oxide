@@ -46,6 +46,16 @@ use std::{
 /// text is retokenized with current catcodes on the TeX side either way),
 /// then strings / numbers / arrays of strings.
 const LUA_PRELUDE: &str = r#"
+-- A frame's length is the bytes that reach the pipe: Windows texlua writes
+-- stdout in text mode, each '\n' as '\r\n' (the bridge drops the added '\r').
+local CRLF = package.config:sub(1, 1) == '\\'
+local function wire_len(s)
+  if CRLF then
+    local _, newlines = s:gsub('\n', '')
+    return #s + newlines
+  end
+  return #s
+end
 local buf = {}
 local function emit(sep, ...)
   local args = {...}
@@ -70,7 +80,7 @@ tex.tprint = function(tbl) for _, v in ipairs(tbl) do emit('', table.unpack(v)) 
 -- a framed query ('Q <len>' out, 'A <len>' back). Values follow the LuaTeX
 -- convention: counts are integers, dimens are scaled points.
 local function query(payload)
-  io.write(string.format('Q %d\n', #payload))
+  io.write(string.format('Q %d\n', wire_len(payload)))
   io.write(payload)
   io.flush()
   local header = io.read('*l')
@@ -145,7 +155,7 @@ while true do
   else
     out, tag = tostring(err), 'ERR'
   end
-  io.write(string.format('%s %d\n', tag, #out))
+  io.write(string.format('%s %d\n', tag, wire_len(out)))
   io.write(out)
   io.flush()
 end
@@ -369,6 +379,13 @@ pub fn lua_exec(chunk: &str) -> Result<String, String> {
     let Some(proc_) = entry.as_mut() else {
       return Err("texlua not available".to_string());
     };
+    // Windows texlua reads stdin in text mode: a `\r\n` arrives as `\n`, one byte short of the frame's count, so
+    // it is sent as the `\n` it would read (the prelude's `wire_len` covers the other direction).
+    let chunk: std::borrow::Cow<str> = if cfg!(windows) {
+      chunk.replace("\r\n", "\n").into()
+    } else {
+      chunk.into()
+    };
     let do_io = |p: &mut LuaProc| -> std::io::Result<(String, String)> {
       p.stdin.write_all(format!("{}\n", chunk.len()).as_bytes())?;
       p.stdin.write_all(chunk.as_bytes())?;
@@ -384,7 +401,12 @@ pub fn lua_exec(chunk: &str) -> Result<String, String> {
         let n: usize = it.next().and_then(|s| s.parse().ok()).unwrap_or(0);
         let mut body = vec![0u8; n];
         std::io::Read::read_exact(&mut p.stdout, &mut body)?;
-        let body = String::from_utf8_lossy(&body).into_owned();
+        let mut body = String::from_utf8_lossy(&body).into_owned();
+        if cfg!(windows) {
+          // Undo the text-mode stdout: drop the `\r` written before each `\n` (a `\r\n` the chunk printed came
+          // through as `\r\r\n`, and stays `\r\n`).
+          body = body.replace("\r\n", "\n");
+        }
         if tag == "Q" {
           let answer = service_query(&body);
           p.stdin

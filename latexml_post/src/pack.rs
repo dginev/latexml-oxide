@@ -132,6 +132,74 @@ pub fn pack_archive(opts: &PackOptions) -> io::Result<()> {
   Ok(())
 }
 
+/// Zip a whole site directory into `zip_path` — port of Perl `Pack/Zip.pm` `get_archive`: the top-level files in
+/// name order with `mimetype` first and STORED (EPUB OCF wants it at byte 38), then each subdirectory's tree, deflated.
+pub fn pack_directory(
+  dir: &Path,
+  zip_path: &str,
+  source_date_epoch: Option<u64>,
+) -> io::Result<()> {
+  let file = File::create(zip_path)?;
+  let mut zip = ZipWriter::new(BufWriter::with_capacity(ZIP_WRITE_BUF, file));
+  let mut deflated = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+  if let Some(dt) = source_date_epoch.and_then(epoch_to_zip_datetime) {
+    deflated = deflated.last_modified_time(dt);
+  }
+  let stored = deflated.compression_method(CompressionMethod::Stored);
+  let mut files = Vec::new();
+  let mut subdirs = Vec::new();
+  for entry in std::fs::read_dir(dir)? {
+    let entry = entry?;
+    let name = entry.file_name().to_string_lossy().into_owned();
+    if name.starts_with('.') {
+      continue;
+    }
+    if entry.path().is_dir() {
+      subdirs.push(name);
+    } else if entry.path().is_file() && !is_excluded_archive_entry(&name) {
+      files.push(name);
+    }
+  }
+  files.sort_by_key(|name| (name != "mimetype", name.clone()));
+  subdirs.sort();
+  for name in &files {
+    let options = if name == "mimetype" { stored } else { deflated };
+    zip.start_file(name.as_str(), options).map_err(io_err)?;
+    io::copy(&mut File::open(dir.join(name))?, &mut zip)?;
+  }
+  for name in &subdirs {
+    add_tree_to_zip(&mut zip, &dir.join(name), name, &deflated)?;
+  }
+  zip.finish().map_err(io_err)?;
+  Ok(())
+}
+
+/// Archive::Zip `addTree` for [`pack_directory`]: a directory entry, then its members in name order.
+fn add_tree_to_zip<W: Write + io::Seek>(
+  zip: &mut ZipWriter<W>,
+  dir: &Path,
+  name: &str,
+  options: &SimpleFileOptions,
+) -> io::Result<()> {
+  zip.add_directory(name, *options).map_err(io_err)?;
+  let mut entries: Vec<_> = std::fs::read_dir(dir)?.collect::<io::Result<_>>()?;
+  entries.sort_by_key(|entry| entry.file_name());
+  for entry in entries {
+    let basename = entry.file_name().to_string_lossy().into_owned();
+    if is_excluded_archive_entry(&basename) {
+      continue;
+    }
+    let member = format!("{name}/{basename}");
+    if entry.path().is_dir() {
+      add_tree_to_zip(zip, &entry.path(), &member, options)?;
+    } else {
+      zip.start_file(member.as_str(), *options).map_err(io_err)?;
+      io::copy(&mut File::open(entry.path())?, zip)?;
+    }
+  }
+  Ok(())
+}
+
 /// Recursively add files from `dir` to a ZIP archive, preserving the
 /// directory structure relative to `base`.
 ///

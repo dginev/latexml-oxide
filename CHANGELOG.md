@@ -25,6 +25,29 @@
     a left/right pair is its composed arrow (↔, ⇔, ⟷, ⟺, ↦), and the named fills
     (`\rightarrowfill@` …) no longer leave their style argument behind. Witness 2405.01836. Guard
     `arrowfill_heads::arrowfill_keeps_its_heads` (repros `tools/perfect_kernel/repros/arrowfill/`).
+  - **`--format=epub` writes an EPUB 3 container** (issue 807). `--format=epub` or an `.epub`
+    destination selected the EPUB stylesheet but wrote one bare XHTML file. It now writes the zip
+    Perl `latexmlc --dest=x.epub` does: `mimetype` first and stored, `META-INF/container.xml`, and
+    under `OPS/` the content (`<name>.xhtml`), its CSS and images, and `content.opf` (manifest,
+    spine, `properties="mathml nav"`); a document without a TOC gets Perl's undisplayed
+    navigation TOC (`check_TOC`). The conversion log is written beside it, as for a single
+    document; without `--dest` the container is `<source>.epub`. With `--split`, every page post
+    wrote (subdirectories included) enters the manifest and spine in Split's order, the root
+    first and each page before its children, as Perl's `@docs`. Guards
+    `whatsinout::format_epub_writes_an_epub3_container`,
+    `whatsinout::format_epub_split_pages_follow_splits_order` (in `cluster_cli`) and
+    `manifest::epub::tests::url_id_follows_perl`.
+  - **`--css`, `--javascript` and the icon link the copy** (issue 807). Each page linked the
+    path as given, so an absolute `--css` linked the source file (the EPUB pointed outside
+    itself) and a relative one was copied to its basename but linked at its own path; the
+    bundled stylesheets linked `<dest dir>/LaTeXML.css` from a split sub-page. Every link is now
+    where Perl's `copyResource` puts the file, relative to the page (XSLT.pm:71-125): an
+    absolute or escaping path at the top level, a contained relative path at that path, `../`
+    from a sub-page; the `@import`ed files still follow. So `--preload=ar5iv.sty
+    --css=<path>/ar5iv.css` carries and links ar5iv.css in an EPUB. With `epubcheck` installed
+    the EPUB tests validate their output. Guards
+    `cli_css_resource_copy::cli_resources_link_their_copies_from_every_page` and
+    `whatsinout::format_epub_ar5iv_preload_carries_the_css_param` (in `cluster_cli`).
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
@@ -79,6 +102,42 @@
     directory. A `%` in a plain path is a character (`/w/100%/LaTeXML-html5.xsl`); only a
     `file:` URL is percent-decoded. Guards `xslt::local_stylesheet_tests`,
     `xslt_custom_stylesheet::stray_engine_sheets_do_not_replace_the_default`.
+  - **The format builds error-free on the LaTeX kernel of November 2026.** That
+    kernel reads `glyphtounicode.tex` with expl3's `\file_get:nnN` while the format
+    is made (latex.ltx:22952-22957). An `\input` met while definitions are read ran
+    the file in its own loop, so the reader that set `\everyeof` never got the
+    file's tokens: it scanned on through latex.ltx with expl3 syntax off, and
+    `--init=latex.ltx` raised 137 errors. Such an `\input` now joins the reader's
+    input stream with the `\everyeof` tokens at its end, as TeX's does, and in a
+    document no binding answers an `\input` under `\everyeof` either:
+    `\file_get:nnN{ltluatex}` and `{pstricks}` read the files (7 and 16 Errors
+    before). Guard `perfect_kernel_batch51::file_get_reads_the_file_whole`.
+  - **`tools/make_formats.ps1` gates the dumps as `make_formats.sh` does.** The
+    Windows mirror had drifted: it now fails on any `Error:`/`Fatal:` of an
+    `--init` run (`LATEXML_INIT_DEBUG=1`), pins `TEXMFROOT` to the detected TeX Live
+    (the dual-TL guard), and honours `CARGO_TARGET_DIR`. It used to keep a dump
+    built with errors without a word.
+  - **Windows uses the linked libkpathsea it was built with.** The check that the
+    linked library reads the same TeX Live as the `kpsewhich` on PATH compared
+    paths as strings: kpsewhich names the root `C:/texlive/2026`, the library its
+    files `c:/texlive/2026/…`, so every conversion fell back to the subprocess
+    backend (about 270 ms a file lookup). Paths now compare as Windows compares
+    them. Guard `path_is_under_compares_as_the_file_system_does`.
+  - **Windows diagnostics name their source file.** A location's source was taken
+    for a URL whenever it held a `:`, which every Windows path does, so messages
+    read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t.tex; line 3`. Perl's
+    rule is restored (`Locator.pm:55`: a protocol is more than one character).
+    Guard `a_windows_path_is_no_url`.
+  - **Windows keeps the input's directory in its plain form.** The input was
+    canonicalized to Windows' verbatim form (`\\?\C:\…`), which then reached
+    `\graphicspath` lookups (no file found), EPS candidates (listed twice) and
+    progress lines. New `pathname::canonicalize` drops the prefix where the plain
+    path names the same file.
+  - **`\directlua` output on Windows.** texlua writes its stdout in text mode
+    there, so each `\n` arrived as `\r\n`: the frames' byte counts no longer
+    matched, a `\r` ended every `tex.print` line, and the next frame could
+    desync. The bridge now counts the bytes that reach the pipe and drops the
+    added `\r`.
   - **The no-dump expl3 reload no longer mutes its diagnostics silently** (#825). When
     `expl3.sty` re-reads `expl3-code.tex` raw (no kernel dump), the records the scope
     drops are now tallied (`IgnoreDiagnosticsScope::dropped`) and reported: a Warning

@@ -24,8 +24,9 @@ LoadDefinitions!({
   // by `\RequirePackage[TU]{fontenc}` — whatever encoding the document chose before. The luatex/xetex profiles' format
   // declares it (`install_unicode_format_encoding`, fonttext.ltx:56-68,93); under the pdfTeX persona — a fontspec
   // document with no clean xelatex/lualatex oracle — the same installation declares it, tuenc.def input through its
-  // XeTeX branch with `\XeTeXrevision` defined for that input only and restored after (its engine gate, :49-57, would
-  // fall back to T1), and the format's `\@fontenc@load@list` kept. That branch's `\remove@tlig` (`\XeTeXglyph`, which
+  // XeTeX branch with the XeTeX identity it probes defined for that input only and restored after (its engine gate
+  // would fall back to T1: v2.1d's `\XeTeXrevision`, :49-57; v2.2a's `\tex_Umathcode:D` gate and `\XeTeXversion`
+  // branch, :49-58/:99), and the format's `\@fontenc@load@list` kept. That branch's `\remove@tlig` (`\XeTeXglyph`, which
   // the persona lacks) serves tuenc.def's `\textquotedbl`/`\textquotesingle`/`\textasciigrave` (:148-150), which the
   // engine's primitives outrank (sect13.rs `\textquotedbl`). TU is then selected as fontenc.sty:116-121 does — not
   // through the fontenc binding, which defines the Cyrillic text names for any encoding (Perl fontenc.sty.ltxml
@@ -35,10 +36,24 @@ LoadDefinitions!({
   // changelog, latex-via-exemplos. Guards `perfect_kernel_batch60::{fontspec_text_is_tu_encoded,
   // fontspec_selects_tu_after_a_t1_fontenc}`.
   if !is_defined("\\T@TU") {
-    RawTeX!(r"\let\lx@saved@XeTeXrevision\XeTeXrevision\def\XeTeXrevision{}\let\lx@saved@fontenc@load@list\@fontenc@load@list");
+    let identity: Vec<(Token, Option<Stored>)> = ["\\XeTeXrevision", "\\XeTeXversion", "\\tex_Umathcode:D"]
+      .into_iter()
+      .map(|cs| {
+        let token = T_CS!(cs);
+        let meaning = lookup_meaning(&token);
+        (token, meaning)
+      })
+      .collect();
+    RawTeX!(r"\def\XeTeXrevision{}\chardef\XeTeXversion=0 \expandafter\let\csname tex_Umathcode:D\endcsname\Umathcode
+\let\lx@saved@fontenc@load@list\@fontenc@load@list");
     latexml_sty::install_unicode_format_encoding()?;
-    RawTeX!(r"\let\XeTeXrevision\lx@saved@XeTeXrevision\let\lx@saved@XeTeXrevision\@undefined
-\let\@fontenc@load@list\lx@saved@fontenc@load@list\let\lx@saved@fontenc@load@list\@undefined");
+    for (token, meaning) in identity {
+      match meaning {
+        Some(meaning) => assign_meaning(&token, meaning, None),
+        None => let_i(&token, &T_CS!("\\@undefined"), None),
+      }
+    }
+    RawTeX!(r"\let\@fontenc@load@list\lx@saved@fontenc@load@list\let\lx@saved@fontenc@load@list\@undefined");
   }
   RawTeX!(r"\renewcommand\encodingdefault{TU}\fontencoding{TU}%
 \begingroup\let\@elt\relax\xdef\@fontenc@load@list{\@fontenc@load@list\@elt{TU}}\endgroup");

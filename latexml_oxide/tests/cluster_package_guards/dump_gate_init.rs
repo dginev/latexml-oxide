@@ -441,8 +441,12 @@ fn a_dump_built_from_another_tree_is_not_used() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(
     stderr.contains(&format!(
-      "Info:dump:other_tree latex dump {}/latex.{year}.dump.txt was built from another TeX tree: latex.ltx (built from /older/texlive/latex.ltx;",
-      forged.path().display()
+      "Info:dump:other_tree latex dump {} was built from another TeX tree: latex.ltx (built from /older/texlive/latex.ltx;",
+      // The engine names the dump by `Path::join`: `\` on Windows.
+      forged
+        .path()
+        .join(format!("latex.{year}.dump.txt"))
+        .display()
     )),
     "{stderr}"
   );
@@ -525,7 +529,9 @@ fn a_dump_built_from_another_tree_is_not_used() {
   )
   .expect("write a failing plain.tex");
   let mut failing = forced.to_vec();
-  failing.push(("TEXINPUTS", format!("{}:", shadow.path().display())));
+  // kpathsea's path separator: `;` on Windows, where `:` follows the drive letter.
+  let sep = if cfg!(windows) { ';' } else { ':' };
+  failing.push(("TEXINPUTS", format!("{}{sep}", shadow.path().display())));
   let plain_tex = "Text.\n\\bye\n";
   let failure = "building the plain format logged 1 error(s)";
   let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &failing);
@@ -627,10 +633,13 @@ fn a_dump_built_from_another_tree_is_not_used() {
   assert!(!stderr.contains("[format_dumps]"), "{stderr}");
   let loaded_from_matching = stderr.lines().any(|line| {
     line.starts_with("Info:dump_reader:loaded")
-      && line.contains(&format!(
-        "{}/latex.{year}.dump.txt",
-        matching.path().display()
-      ))
+      && line.contains(
+        &matching
+          .path()
+          .join(format!("latex.{year}.dump.txt"))
+          .display()
+          .to_string(),
+      )
   });
   assert!(loaded_from_matching, "{stderr}");
   assert_eq!(
