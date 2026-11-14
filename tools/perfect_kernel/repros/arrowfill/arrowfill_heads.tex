@@ -1,0 +1,17 @@
+% witness: 2405.01836 (mhchem `\ce{<=>}`); 42 papers of the 30k census call `\arrowfill@` (chemarr, extarrows, extpfeil, MnSymbol)
+% oracle:  pdflatex 0 errors: harpoon-left bar, bar harpoon-right, left-right arrow, long right arrow, mapsto arrow
+% engines: rust b272cfa = 0 errors, every head `<XMTok name="to">` (amsmath_sty.rs `\arrowfill@` -> `\to`), the named
+%          fill leaves `\textstyle` behind; Perl 0.8.8 = 1 Error:undefined:\arrowfill@, its XML keeps the heads and bars
+% expect:  amsmath.sty:971-976 draws `#4#1 ... \cleaders #2 ... #3`: heads #1 and #3 kept, a `\relbar`/`\Relbar` end dropped
+% status:  RED (b272cfa) -> GREEN (AFH)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\begin{document}
+$A \mathrel{\hbox{\arrowfill@\leftharpoondown\relbar\relbar\textstyle}} B$
+$A \mathrel{\hbox{\arrowfill@\relbar\relbar\rightharpoonup\textstyle}} B$
+$A \mathrel{\hbox{\arrowfill@\leftarrow\relbar\rightarrow\textstyle}} B$
+$A \mathrel{\hbox{\rightarrowfill@\textstyle}} B$
+$A \mathrel{\hbox{\arrowfill@{\mapstochar\relbar}\relbar\rightarrow\displaystyle}} B$
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 1308.1071 (extpfeil `\xmapsto`), 2606.01903 (extpfeil `\xtwoheadleftarrow`, its `\newextarrow` body spelled out); chemarr, extarrows
+% oracle:  pdflatex 0 errors: harpoons over/under, a long equals, a left-right arrow, a two-headed arrow, amsmath's right arrow
+% engines: rust b272cfa = 0 errors, every `\ext@arrow` body `\mathrel{\to}` (its fill #5 dropped); Perl has no `\ext@arrow`
+% expect:  amsmath.sty:1012-1025 boxes `#5\displaystyle`: the fill's heads are the relation; the labels its scripts
+% status:  RED (b272cfa) -> GREEN (AFH)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,amssymb,chemarr,extarrows}
+\makeatletter
+\begin{document}
+$A \xrightleftharpoons[b]{a} B$
+$A \xlongequal{a} B$
+$A \xleftrightarrow{b} B$
+$A \ext@arrow 0099{\arrowfill@\relbar\relbar\twoheadrightarrow}{}{c} B$
+$A \xrightarrow{d} B$
+\end{document}

@@ -18,6 +18,13 @@
     errors the issue reports no longer occur since batch 50's calc `\widthof` fix. Guards
     `perfect_kernel_batch50::calc_widthof_in_math_measures_own_box` and
     `rust_parse_additions_test`; `sampler_test` and `mathtools_test` now match Perl's goldens.
+  - **amsmath's arrow fills keep their heads** (issue 824's sibling). `\arrowfill@` and
+    `\ext@arrow`'s fill were a plain `\to`, so mhchem's `\ce{A <=> B}` read "→→" and every
+    chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws
+    (`\arrowfill@#1#2#3#4`, :971-976): an end that is just the `\relbar`/`\Relbar` fill is dropped,
+    a left/right pair is its composed arrow (↔, ⇔, ⟷, ⟺, ↦), and the named fills
+    (`\rightarrowfill@` …) no longer leave their style argument behind. Witness 2405.01836. Guard
+    `arrowfill_heads::arrowfill_keeps_its_heads` (repros `tools/perfect_kernel/repros/arrowfill/`).
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
