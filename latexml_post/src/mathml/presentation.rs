@@ -970,9 +970,18 @@ fn pmml_apply_dispatch(
       if meaning == "limit-from" && !args.is_empty() {
         // limit-from: base followed by direction
         let mut items: Vec<NodeData> = args.iter().map(|a| pmml(doc, a)).collect();
-        // The direction is a Bin with no right operand: `0+`, the charge `2-` (issue 824).
+        // The direction is a Bin with no right operand, which TeX makes an Ord (tex.web §728-729), so `0+`, the
+        // charge `2-` (issue 824) are tight; a trailing `<mo>` is postfix, which Core spaces as infix (§3.2.4.2).
         if let Some(sign) = items.last_mut().filter(|n| get_node_tag(n) == "m:mo") {
-          set_ord_spacing(sign);
+          for (key, value) in [
+            ("lspace", "0em"),
+            ("rspace", "0em"),
+            ("_lspace", "0em"),
+            ("_rspace", "0em"),
+          ] {
+            set_node_attr(sign, key, value);
+          }
+          set_node_attr(sign, "_role", "ATOM");
         }
         pmml_row(items)
       } else if meaning == "annotated" && args.len() >= 2 {
@@ -1775,27 +1784,9 @@ fn pmml_scriptsize(doc: &PostDocument, node: &Node) -> NodeData {
     s.set(o.script_step());
     o
   });
-  let mut r = pmml(doc, node);
+  let r = pmml(doc, node);
   CURRENT_STYLE.with(|s| s.set(old));
-  // A script that is one sign (`x^-`, `\ce{e-}`, issue 824) is a Bin first in its list, an Ord to TeX (§729).
-  if get_node_tag(&r) == "m:mo" && get_node_attr(&r, "_role").as_deref() == Some("ADDOP") {
-    set_ord_spacing(&mut r);
-  }
   r
-}
-
-/// Space an `<mo>` as TeX's Ord: a Bin with no operand on one side becomes an Ord (tex.web §728-729). Core gives a
-/// row's trailing `<mo>` the postfix form, which `−`/`+` lack, so infix spacing (§3.2.4.2, B.1); a lone script is unspaced.
-fn set_ord_spacing(sign: &mut NodeData) {
-  for (key, value) in [
-    ("lspace", "0em"),
-    ("rspace", "0em"),
-    ("_lspace", "0em"),
-    ("_rspace", "0em"),
-  ] {
-    set_node_attr(sign, key, value);
-  }
-  set_node_attr(sign, "_role", "ATOM");
 }
 
 /// Convert node at smaller size (fraction numerator/denominator). Port of Perl

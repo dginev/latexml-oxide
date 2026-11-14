@@ -1,7 +1,7 @@
 //! mhchem's formula output as chemistry math (issue 824; OXIDIZED_DESIGN_DIVERGENCES #1040): mhchem's own parser reads
 //! `\ce`, and its output hook (`\__mhchem_output_begin_cf:`, mhchem.sty:1424) turns each `\__mhchem_output_coreFive:nnnnnnn`
 //! unit (mhchem.sty:2774) into element atoms with their isotope, count and charge scripts, a formula's atoms juxtaposed
-//! (no U+2062) and a charge sign tight, a lone one too (DG 2026-11-14). Repros
+//! (no U+2062) and a charge sign tight (DG 2026-11-14). Repros
 //! `tools/perfect_kernel/repros/package-bindings/mhchem_formula_*.tex`.
 use latexml::util::test::{convert_bytes_files_then, kpse_has};
 
@@ -21,10 +21,10 @@ const ROWS: &[Row] = &[
       "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\mathord{{}^{\\mathrm{95}}\\mathord{\\mathrm{Mo}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts></mprescripts><mrow></mrow><mn>95</mn></mmultiscripts><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
       "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mi mathvariant=\"normal\">O</mi></mrow></math>",
       "<math id=\"p4.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
-      "<math id=\"p5.m1\" class=\"ltx_Math\" alttext=\"{}^{\\mathrm{227}}_{\\mathrm{90}}\\mathord{\\mathrm{Th}}^{\\mathrm{+}}\" display=\"inline\" intent=\":literal\"><mmultiscripts><mi>Th</mi><mrow></mrow><mo lspace=\"0em\" rspace=\"0em\">+</mo><mprescripts></mprescripts><mn>90</mn><mn>227</mn></mmultiscripts></math>",
+      "<math id=\"p5.m1\" class=\"ltx_Math\" alttext=\"{}^{\\mathrm{227}}_{\\mathrm{90}}\\mathord{\\mathrm{Th}}^{\\mathrm{+}}\" display=\"inline\" intent=\":literal\"><mmultiscripts><mi>Th</mi><mrow></mrow><mo>+</mo><mprescripts></mprescripts><mn>90</mn><mn>227</mn></mmultiscripts></math>",
       "<math id=\"p6.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{Fe}}\\mathrm{(}\\mathord{\\mathrm{C}}\\mathord{\\mathrm{N}}\\mathrm{)}_{\\mathrm{6}}}^{\\mathrm{3-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mi>Fe</mi><msub><mrow><mo stretchy=\"false\">(</mo><mi mathvariant=\"normal\">C</mi><mi mathvariant=\"normal\">N</mi><mo stretchy=\"false\">)</mo></mrow><mn>6</mn></msub></mrow><mrow><mn>3</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
       "<math id=\"p7.m1\" class=\"ltx_Math\" alttext=\"x={}\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><mrow><mi>x</mi><mo>=</mo><msup><mrow><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></mrow></math>",
-      "<math id=\"p8.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{O}}\\mathord{\\mathrm{H}}}^{\\mathrm{-}}\\mathrm{(}\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\\mathrm{)}\" display=\"inline\" intent=\":literal\"><mrow><msup><mrow><mi mathvariant=\"normal\">O</mi><mi mathvariant=\"normal\">H</mi></mrow><mo lspace=\"0em\" rspace=\"0em\">−</mo></msup><mrow><mo stretchy=\"false\">(</mo><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mi mathvariant=\"normal\">O</mi><mo stretchy=\"false\">)</mo></mrow></mrow></math>",
+      "<math id=\"p8.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{O}}\\mathord{\\mathrm{H}}}^{\\mathrm{-}}\\mathrm{(}\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\\mathrm{)}\" display=\"inline\" intent=\":literal\"><mrow><msup><mrow><mi mathvariant=\"normal\">O</mi><mi mathvariant=\"normal\">H</mi></mrow><mo>−</mo></msup><mrow><mo stretchy=\"false\">(</mo><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mi mathvariant=\"normal\">O</mi><mo stretchy=\"false\">)</mo></mrow></mrow></math>",
     ],
   ),
   (
@@ -57,8 +57,8 @@ const ROWS: &[Row] = &[
       "../../../tools/perfect_kernel/repros/package-bindings/mhchem_formula_amount.tex"
     ),
     &[
-      "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\text{2}\\,\\mathord{\\mathrm{e}}^{\\mathrm{-}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>2</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mi mathvariant=\"normal\">e</mi><mo lspace=\"0em\" rspace=\"0em\">−</mo></msup></mrow></math>",
-      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\text{2}\\,\\mathord{\\mathrm{Na}}^{\\mathrm{+}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>2</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mi>Na</mi><mo lspace=\"0em\" rspace=\"0em\">+</mo></msup></mrow></math>",
+      "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\text{2}\\,\\mathord{\\mathrm{e}}^{\\mathrm{-}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>2</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mi mathvariant=\"normal\">e</mi><mo>−</mo></msup></mrow></math>",
+      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\text{2}\\,\\mathord{\\mathrm{Na}}^{\\mathrm{+}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>2</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mi>Na</mi><mo>+</mo></msup></mrow></math>",
       "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\text{3}\\,\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>3</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mrow><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></mrow></math>",
     ],
   ),
@@ -71,25 +71,6 @@ const ROWS: &[Row] = &[
       "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{Cu}}\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}\\,{\\cdot}\\,\\text{5}\\,\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><mrow><mrow><mi>Cu</mi><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mo lspace=\"0.222em\" rspace=\"0.392em\">⋅</mo><mtext>5</mtext></mrow><mo lspace=\"0.170em\">\u{2062}</mo><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mi mathvariant=\"normal\">O</mi></mrow></mrow></math>",
       "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{[}\\mathord{\\mathrm{Fe}}\\mathrm{(}\\mathord{\\mathrm{C}}\\mathord{\\mathrm{N}}\\mathrm{)}_{\\mathrm{6}}\\mathrm{]}}^{\\mathrm{3-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mo stretchy=\"false\">[</mo><mi>Fe</mi><msub><mrow><mo stretchy=\"false\">(</mo><mi mathvariant=\"normal\">C</mi><mi mathvariant=\"normal\">N</mi><mo stretchy=\"false\">)</mo></mrow><mn>6</mn></msub><mo stretchy=\"false\">]</mo></mrow><mrow><mn>3</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
       "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\textit{R}_{\\mathrm{2}}\\mathord{\\mathrm{Ir}}_{\\mathrm{2}}\\mathord{\\mathrm{Al}}_{\\mathrm{20}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mtext class=\"ltx_mathvariant_italic\">R</mtext><mn>2</mn></msub><mo>\u{2062}</mo><mrow><msub><mi>Ir</mi><mn>2</mn></msub><msub><mi>Al</mi><mn>20</mn></msub></mrow></mrow></math>",
-    ],
-  ),
-  (
-    // A lone script sign is tight in mhchem and in ordinary math alike; a sign before an operand stays a prefix `<mo>`.
-    "mhchem_formula_lone_sign",
-    include_bytes!(
-      "../../../tools/perfect_kernel/repros/package-bindings/mhchem_formula_lone_sign.tex"
-    ),
-    &[
-      "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{e}}^{\\mathrm{-}}\" display=\"inline\" intent=\":literal\"><msup><mi mathvariant=\"normal\">e</mi><mo lspace=\"0em\" rspace=\"0em\">−</mo></msup></math>",
-      "<math id=\"p1.m2\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{Th}}^{\\mathrm{+}}\" display=\"inline\" intent=\":literal\"><msup><mi>Th</mi><mo lspace=\"0em\" rspace=\"0em\">+</mo></msup></math>",
-      "<math id=\"p1.m3\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{Cl}}^{\\mathrm{-}}\" display=\"inline\" intent=\":literal\"><msup><mi>Cl</mi><mo lspace=\"0em\" rspace=\"0em\">−</mo></msup></math>",
-      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"x^{-}\" display=\"inline\" intent=\":literal\"><msup><mi>x</mi><mo lspace=\"0em\" rspace=\"0em\">−</mo></msup></math>",
-      "<math id=\"p2.m2\" class=\"ltx_Math\" alttext=\"x^{+}\" display=\"inline\" intent=\":literal\"><msup><mi>x</mi><mo lspace=\"0em\" rspace=\"0em\">+</mo></msup></math>",
-      "<math id=\"p2.m3\" class=\"ltx_Math\" alttext=\"a_{-}\" display=\"inline\" intent=\":literal\"><msub><mi>a</mi><mo lspace=\"0em\" rspace=\"0em\">−</mo></msub></math>",
-      "<math id=\"p2.m4\" class=\"ltx_Math\" alttext=\"x^{\\pm}\" display=\"inline\" intent=\":literal\"><msup><mi>x</mi><mo lspace=\"0em\" rspace=\"0em\">±</mo></msup></math>",
-      "<math id=\"p2.m5\" class=\"ltx_Math\" alttext=\"x_{+}^{-}\" display=\"inline\" intent=\":literal\"><msubsup><mi>x</mi><mo lspace=\"0em\" rspace=\"0em\">+</mo><mo lspace=\"0em\" rspace=\"0em\">−</mo></msubsup></math>",
-      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"x^{-1}\" display=\"inline\" intent=\":literal\"><msup><mi>x</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math>",
-      "<math id=\"p3.m2\" class=\"ltx_Math\" alttext=\"x^{+n}\" display=\"inline\" intent=\":literal\"><msup><mi>x</mi><mrow><mo>+</mo><mi>n</mi></mrow></msup></math>",
     ],
   ),
 ];

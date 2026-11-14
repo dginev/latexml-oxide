@@ -36371,11 +36371,7 @@ so no U+2062 `<mo>` sits between two elements (Firefox spaced it ~0.17em; copy g
 before its species stays a U+2062 `<mo lspace="0.170em">`. A charge's sign is tight: a `limit-from`'s direction (`2-`,
 also `0+` in any math) is a Bin with no right operand, which TeX makes an Ord (tex.web §728-729), while MathML Core gives
 a trailing `<mo>` the postfix form and, `−` having no postfix entry, the infix 0.2222em (§3.2.4.2, B.1); the MathML
-says `lspace="0em" rspace="0em"` (`presentation.rs`). A lone sign in a script (`\ce{e-}`, `\ce{Th+}`, and in any math
-`x^-`, `a_-`, `x^{\pm}`: an `<mo>` of role ADDOP as the whole script) says the same (DG 2026-11-14), a Bin first in its
-list being an Ord (§729); Core's script layout (§3.4.1) adds no operator spacing and Chrome 155 / Firefox 151 render it
-unchanged, so the attributes state TeX's reading for any renderer. `x^{-1}`, `x^{+n}` keep a prefix `<mo>` (Core D, 0em;
-TeX tight too). A lone MULOP (`A^\dagger`, `x^*`, also TeX's Ord) keeps a bare `<mo>`. MathML:
+says `lspace="0em" rspace="0em"` (`presentation.rs`). A lone sign (`e^-`, `Th+`) keeps a bare `<mo>`. MathML:
 `<msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts/><mrow/><mn>95</mn></mmultiscripts><msub><mi
 mathvariant="normal">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">−</mo></mrow></msup>`
 for `\ce{^{95}MoO4^{2-}}`. This first markup is TENTATIVE (DG's rulings of 2026-11-14) and awaits Bruce Miller's
@@ -36386,4 +36382,4 @@ formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): �
 −0.04 % on 300 synthetic `\ce`, +0.13 % on 2405.01836 (167; with `--nomathparse` −0.08 %: the formulas'
 parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
 `package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
-`mhchem_formula_amount.tex`, `mhchem_formula_juxtaposed.tex`, `mhchem_formula_lone_sign.tex`; witnesses issue 824, 2206.12015).
+`mhchem_formula_amount.tex`, `mhchem_formula_juxtaposed.tex`; witnesses issue 824, 2206.12015).
