@@ -36341,3 +36341,17 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
+
+### 1039. `<mtable>` carries no `rowspacing` (issue 695)
+
+**Perl.** `pmml_array` writes `rowspacing` from the XMArray's `rowsep` (default `0pt`) on every table of two or more
+rows (MathML.pm:478-481). **Rust.** Not emitted (`latexml_post/src/mathml/presentation.rs`, `pmml_array_inner`;
+DG ruling 2026-11-14). MathML Core gives `<mtable>` only the global attributes, so Chrome ignores it (both tables
+48.55 / 48.94 px high either way, rows spaced by the Core `<mtd>` padding), while Firefox and MathJax honour it: issue
+695's `array` and a `gather*`-nested `aligned` set their rows touching with `rowspacing="0pt"`, and without it 6.9 px
+apart in Firefox (Playwright build 1532) and about 3.8 px in MathJax 2.1 (HTML-CSS, offline; its 1ex default). A non-default `rowsep` (`\arraystretch`, `\jot`) is dropped too; only
+MathJax read it. `columnspacing` stays: LaTeXML.css keys the aligned-cell padding reset
+on `columnspacing="0pt"` (#755); `columnalign` stays on `<mtd>`: LaTeXML.css keys `justify-items` on it (#809). The
+other non-Core attributes still written, `align` and `width` on `<mtable>`, are left to their own ruling. **Guard**:
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the
+two whole `<mtable>` elements); repro `tools/perfect_kernel/repros/alignment/mtable_no_rowspacing.tex`.

@@ -164,7 +164,7 @@ Arrays: <Math mode="inline" tex="\begin{array}[]{c}a\\&#10;b\end{array},x" text=
               <XMTok font="italic" role="UNKNOWN" xml:id="p1.m13.2">x</XMTok>
             </XMWrap>
           </XMDual>
-        </XMath><m:math alttext="\begin{array}[]{c}a\\&#10;b\end{array},x" display="inline"><m:mrow><m:mtable rowspacing="0pt"><m:mtr><m:mtd><m:mi>a</m:mi></m:mtd></m:mtr><m:mtr><m:mtd><m:mi>b</m:mi></m:mtd></m:mtr></m:mtable><m:mo lspace="0.167em">,</m:mo><m:mi>x</m:mi></m:mrow></m:math></Math> and limits <Math mode="inline" tex="\lim_{x\to 0}f" text="(limit _ (x to 0))@(f)" xml:id="p1.m14"><XMath>
+        </XMath><m:math alttext="\begin{array}[]{c}a\\&#10;b\end{array},x" display="inline"><m:mrow><m:mtable><m:mtr><m:mtd><m:mi>a</m:mi></m:mtd></m:mtr><m:mtr><m:mtd><m:mi>b</m:mi></m:mtd></m:mtr></m:mtable><m:mo lspace="0.167em">,</m:mo><m:mi>x</m:mi></m:mrow></m:math></Math> and limits <Math mode="inline" tex="\lim_{x\to 0}f" text="(limit _ (x to 0))@(f)" xml:id="p1.m14"><XMath>
           <XMApp>
             <XMApp>
               <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>

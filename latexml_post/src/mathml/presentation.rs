@@ -1609,14 +1609,10 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
     "middle" | "" => "axis",
     _ => vattach.as_str(),
   };
-  let rowsep = node
-    .get_attribute("rowsep")
-    .unwrap_or_else(|| "0pt".to_string());
   let colsep = node
     .get_attribute("colsep")
     .unwrap_or_else(|| "5pt".to_string());
 
-  let mut nrows = 0;
   let mut ncols = 0;
   for row_node in element_children(node) {
     let mut cols = Vec::new();
@@ -1709,7 +1705,6 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
     if nc > ncols {
       ncols = nc;
     }
-    nrows += 1;
     rows.push(NodeData::Element {
       tag:        "m:mtr".to_string(),
       attributes: None,
@@ -1717,16 +1712,13 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
     });
   }
 
-  // Perl L478-479: drop separators if there's only one row/column.
-  let emit_rowsep = nrows >= 2;
+  // Perl L478-482: no `columnspacing` for one column. Perl's `rowspacing` is not emitted:
+  // Core has none; Firefox and MathJax set `0pt` rows touching (issue 695, OXIDIZED_DESIGN #1039).
   let emit_colsep = ncols >= 2;
 
   let mut table_attrs = HashMap::default();
   if align != "axis" {
     table_attrs.insert("align".to_string(), align.to_string());
-  }
-  if emit_rowsep {
-    table_attrs.insert("rowspacing".to_string(), rowsep);
   }
   if emit_colsep {
     table_attrs.insert("columnspacing".to_string(), colsep);

@@ -2736,17 +2736,44 @@ mod aligned_mtable_columnspacing_zero {
   //! needs a browser — this guards the CSS/XML contract the browser test above
   //! renders. If the presentation MathML ever stopped emitting `columnspacing="0pt"`
   //! for `aligned`, the reset would silently no-op and the relation over-space
-  //! again; if the CSS rule were dropped, likewise.
+  //! again; if the CSS rule were dropped, likewise. Issue 695: no `<mtable>` carries
+  //! the non-Core `rowspacing` (Firefox and MathJax honour `0pt`: the rows touch).
 
   use std::{fs, path::Path, process::Command};
 
   const DOC: &str = "\\documentclass[12pt]{book}\n\
                      \\usepackage{amsmath}\n\
+                     \\usepackage{array}\n\
                      \\begin{document}\n\
+                     \\[\\begin{array}{>{\\displaystyle}r @{\\;} >{\\displaystyle}l}\n\
+                     y^{\\prime}+y&=\\sin \\left(x \\right)\\\\\n\
+                     y \\left(0\\right)&=1\\\\\n\
+                     \\end{array}\\]\n\
                      \\begin{gather*}\n\\begin{aligned}\n\
                      y(x) &= C_1 y(x)\\\\ g(x) &= C_1 y_1\n\
                      \\end{aligned}\n\\end{gather*}\n\
                      \\end{document}\n";
+
+  /// Issue 695's `array` MWE, then the `aligned`: whole elements, no `rowspacing`.
+  const MTABLES: [&str; 2] = [
+    "<mtable columnspacing=\"5pt\" displaystyle=\"true\"><mtr><mtd class=\"ltx_align_right\" \
+     columnalign=\"right\"><mrow><msup><mi>y</mi><mo>\u{2032}</mo></msup><mo>+</mo><mi>y</mi></mrow></mtd>\
+     <mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom></mphantom><mo>=</mo><mrow><mi>sin</mi>\
+     <mo>\u{2061}</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mtd></mtr><mtr>\
+     <mtd class=\"ltx_align_right\" columnalign=\"right\"><mrow><mi>y</mi><mo>\u{2061}</mo><mrow><mo>(</mo>\
+     <mn>0</mn><mo>)</mo></mrow></mrow></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow>\
+     <mphantom></mphantom><mo>=</mo><mn>1</mn></mrow></mtd></mtr></mtable>",
+    "<mtable columnspacing=\"0pt\" displaystyle=\"true\"><mtr><mtd class=\"ltx_align_right\" \
+     columnalign=\"right\"><mrow><mi>y</mi><mo>\u{2061}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi>\
+     <mo stretchy=\"false\">)</mo></mrow></mrow></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow>\
+     <mphantom></mphantom><mo>=</mo><mrow><msub><mi>C</mi><mn>1</mn></msub><mo>\u{2062}</mo><mi>y</mi>\
+     <mo>\u{2062}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow></mrow>\
+     </mrow></mtd></mtr><mtr><mtd class=\"ltx_align_right\" columnalign=\"right\"><mrow><mi>g</mi>\
+     <mo>\u{2061}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow></mrow>\
+     </mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom></mphantom><mo>=</mo><mrow>\
+     <msub><mi>C</mi><mn>1</mn></msub><mo>\u{2062}</mo><msub><mi>y</mi><mn>1</mn></msub></mrow></mrow></mtd>\
+     </mtr></mtable>",
+  ];
 
   #[test]
   fn aligned_emits_zero_columnspacing_and_css_resets_mtd_padding() {
@@ -2766,6 +2793,24 @@ mod aligned_mtable_columnspacing_zero {
         String::from_utf8_lossy(&out.stderr).replace('\u{1b}', "")
       )
     });
+
+    let mtables: Vec<&str> = html
+      .match_indices("<mtable")
+      .map(|(i, _)| &html[i..i + html[i..].find("</mtable>").unwrap() + "</mtable>".len()])
+      .collect();
+    assert_eq!(
+      mtables, MTABLES,
+      "issue 695: the <mtable> elements moved:\n{html}"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+      (
+        stderr.matches("Error:").count(),
+        stderr.matches("Warning:").count()
+      ),
+      (0, 0),
+      "the fixture errs or warns:\n{stderr}"
+    );
 
     // The `aligned` renders as ONE native `<math>` with a tight mtable — the
     // attribute the CSS reset keys on. (An HTML `ltx_eqn_table` display would NOT
