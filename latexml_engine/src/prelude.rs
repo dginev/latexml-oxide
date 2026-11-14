@@ -173,6 +173,45 @@ pub fn counter_is_defined(name: &str) -> bool {
   lookup_register_definition(&T_CS!(s!("\\c@{name}"))).is_some()
 }
 
+/// A raw-loaded package's macro `cs` with every `from` token of its body `to` (a binding's patch of the package's own
+/// code, held to the version that has it): false, nothing changed, where `cs` is no token-bodied macro or lacks `from`.
+pub fn substitute_in_macro(cs: &str, from: &str, to: &str) -> Result<bool> {
+  let cs = T_CS!(cs);
+  let Some(Stored::Expandable(macro_)) = lookup_definition_stored(&cs)? else {
+    return Ok(false);
+  };
+  let Some(ExpansionBody::Tokens(body)) = macro_.get_expansion() else {
+    return Ok(false);
+  };
+  let (from, to) = (T_CS!(from), T_CS!(to));
+  if !body.unlist_ref().contains(&from) {
+    return Ok(false);
+  }
+  let tokens = body
+    .unlist_ref()
+    .iter()
+    .map(|t| if *t == from { to } else { *t })
+    .collect();
+  let options = ExpandableOptions {
+    protected: macro_.is_protected,
+    long: macro_.is_long,
+    outer: macro_.is_outer,
+    tex_declared: macro_.checks_par,
+    nopack_parameters: true,
+    ..Default::default()
+  };
+  install_definition(
+    Expandable::new(
+      cs,
+      macro_.get_parameters().cloned(),
+      Some(ExpansionBody::Tokens(Tokens::new(tokens))),
+      Some(options),
+    )?,
+    None,
+  );
+  Ok(true)
+}
+
 /// Empty-body `DefMacro!("\\cs[opt-spec]", "")` stub via runtime call.
 pub fn def_macro_noop(proto: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(proto, true)?;
