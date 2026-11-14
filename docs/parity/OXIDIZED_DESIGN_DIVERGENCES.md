@@ -36147,7 +36147,7 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
 
-### 1026. A small PDF figure is converted to SVG, raster-bearing ones too; an upscaled raster in it renders pixelated (after PR 816)
+### 1034. A small PDF figure is converted to SVG, raster-bearing ones too; an upscaled raster in it renders pixelated (after PR 816)
 
 **Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
 **Rust.** Beyond Perl, a PDF at most 500 KiB (the auto default, `--graphics-svg-threshold-kb 0`; an explicit `N`
