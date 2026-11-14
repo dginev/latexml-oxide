@@ -9771,8 +9771,8 @@ body's font) — is the TeX default with encoding OT1 (TeX_Box.pool.ltxml:218-22
 ```
 
 Rust (60r): fontspec selects the format's TU, installing it first under the pdfTeX persona — tuenc.def input through
-its XeTeX branch (`\XeTeXrevision` defined for that input only, restored after; its gate :49-57 would fall back to
-T1) — and not through the fontenc binding, whose Perl-inherited `setupCyrillic` defines `\cyrr` & co. for any
+its XeTeX branch (the XeTeX identity it probes defined for that input only, restored after: v2.1d's `\XeTeXrevision`,
+v2.2a's `\tex_Umathcode:D` gate and `\XeTeXversion` branch; the gate would fall back to T1) — and not through the fontenc binding, whose Perl-inherited `setupCyrillic` defines `\cyrr` & co. for any
 encoding where TU leaves them undefined; TU's fontmap applies the TeX ligatures except in typewriter (tu_fontmap.rs),
 as xelatex prints.
 `neutralize_font` (base_utilities/fonts_defs.rs) takes its encoding from `\encodingdefault`, expanded as `\fontencoding` expands
@@ -14880,8 +14880,8 @@ with `\CT@drs`): everything up to the first `{` is the colour model, then that g
 Trigger: `\usepackage{colortbl,hhline}`, a row, then `\arrayrulecolor\hhline{---~~~}\hhline{~~~---}` and a row —
 pdflatex 0 errors; Perl and Rust before 69a `\noalign cannot be used here`.
 
-Rust (69a, colortbl_sty.rs): both are the package's brace-delimited macros, still ignored (the rule colour is not
-rendered). Witness 1910.02206. Repro package-bindings/colortbl_arrayrulecolor_unbraced; guard
+Rust (69a, colortbl_sty.rs): both are the package's brace-delimited macros; since W4 (#773, OXIDIZED_DESIGN_DIVERGENCES
+#1025) `\arrayrulecolor`'s colour is rendered on the rules as colortbl draws them, `\doublerulesepcolor`'s stored, unrendered. Witness 1910.02206. Repro package-bindings/colortbl_arrayrulecolor_unbraced; guard
 `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`.
 
 ## 890. cases.sty's options are not declared: `amsstyle` leaves the explanation column text
@@ -19647,5 +19647,43 @@ Perl 0 Errors, `<p>X ZY</p>`; Rust `<p>XZY</p>`):
 \usepackage{import}
 \begin{document}
 X\subimport{sub/}{y}Y
+
+## 1242. `\counterwithin` / `\counterwithout` ignore latex.ltx's `[format]` optional and misread it silently
+
+latex.ltx declares `\NewDocumentCommand\counterwithin{sO{\arabic}mm}` (and `\counterwithout`, latex.ltx:10182-10199): an optional
+`[format]` replaces `\arabic` in the new `\the<ctr>`. Perl's `DefPrimitive('\counterwithin OptionalMatch:* {}{}', …)`
+(latex_constructs.pool.ltxml:3079-3098) has no optional, so `[` is read as the counter name and the text comes out wrong with
+0 Errors. tcolorbox 6.10's `number within` calls `\counterwithin[{\kvtcb@new@format}]` (tcolorbox.sty:2410), so every
+`auto counter,number within=` box misnumbers in Perl. Rust takes `{sO{\arabic}mm}` (WIN1b; guard
+`perfect_kernel_batch56::counter_reset_lists_are_global`, repro `macro-state/counterwithin_takes_a_format_optional.tex`).
+Minimal trigger (pdflatex 0 `!`, "[1.iii][B]"; Perl 0 Errors, "]foosection]barsection" "[3][1.2]"):
+
+```latex
+\documentclass{article}
+\newcounter{foo}\newcounter{bar}
+\counterwithin[\roman]{foo}{section}\counterwithin{bar}{section}\counterwithout[{\Alph}]{bar}{section}
+\begin{document}
+\section{S}\setcounter{foo}{3}\setcounter{bar}{2}
+[\thefoo][\thebar]
+\end{document}
+```
+
+## 1243. amsthm's `\theoremstyle` reads the style name unexpanded
+
+amsthm.sty defines `\theoremstyle#1` to test and use `\csname th@#1\endcsname`, so a macro holding the name expands to it
+(`\def\mystyle{remark}\theoremstyle{\mystyle}` sets the remark style; keytheorems' `style=` key passes its unexpanded key
+variable this way). Perl's amsthm.sty.ltxml:48 reads the argument as a string without expanding it: `Warning:undefined:theoremstyle
+Unknown theorem style '\mystyle', reverting to 'plain'`, and the theorem takes the plain style. Rust expands the name as amsthm does
+(WIN1i; guard `perfect_kernel_batchm1::the_block_instances_of_the_file_are_declared`'s `style=definition` lemma). Minimal trigger
+(pdflatex 0 `!`, an italic remark head; Perl the Warning and the plain style):
+
+```latex
+\documentclass{article}
+\usepackage{amsthm}
+\def\mystyle{remark}
+\theoremstyle{\mystyle}
+\newtheorem{note}{Note}
+\begin{document}
+\begin{note}Body.\end{note}
 \end{document}
 ```

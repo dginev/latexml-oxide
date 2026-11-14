@@ -17,10 +17,17 @@ use latexml_package::{
 
 const PASA: RawRead = RawRead {
   shipped: true,
-  held: &[(
-    "\\@popfilename",
-    r"\def\@popfilename{\expandafter\@p@pfilename\@currnamestack\@nil}",
-  )],
+  // the era's `\@p@pfilename` too: the November 2026 kernel's (latex.ltx:19091) reads a fourth entry, `\pkgcls@outerdate`
+  held: &[
+    (
+      "\\@popfilename",
+      r"\def\@popfilename{\expandafter\@p@pfilename\@currnamestack\@nil}",
+    ),
+    (
+      "\\@p@pfilename",
+      r"\def\@p@pfilename#1#2#3#4\@nil{\gdef\@currname{#1}\gdef\@currext{#2}\catcode`\@#3\relax\gdef\@currnamestack{#4}}",
+    ),
+  ],
   restored: &["\\@pushfilename"],
   ..RawRead::new("pasa", "cls")
 };

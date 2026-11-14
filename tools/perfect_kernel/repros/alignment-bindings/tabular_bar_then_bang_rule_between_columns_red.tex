@@ -1,0 +1,12 @@
+% review revW4d (pre-existing, kernel; found beside issue #773): a `|` followed by a `!{\vrule width 2pt}` between two columns is lost — the
+% cell before them keeps no right border, and that `c` cell reads `align="right"`. Same without colortbl, and the same in Perl.
+% witness: synthetic
+% oracle:  pdflatex 0 errors; a single rule and a 2pt rule between "b" and "c", "b" centred
+% engines: perl=0, `<td align="right" border="b t">` for b; rust e9dbf347975=0, the same
+% expect:  0 errors, 0 warnings; b `<td align="center" border="b r t">` (or c with its left rules)
+% status:  RED (moves: post-merge — the column-template reader drops a `|` directly followed by `!{…}`)
+\documentclass{article}
+\usepackage{array}
+\begin{document}
+\begin{tabular}{||c!{\vrule}c|!{\vrule width 2pt}c||}\hline a&b&c\\\hline\end{tabular}
+\end{document}

@@ -1,0 +1,13 @@
+% issue 807 follow-up (pre-existing, shared with Perl): a document with no sectioning has an empty TOC, so no page
+%   carries the `ltx_toclist` Manifest::Epub (Perl Epub.pm:182) keys `properties="nav"` on, and the EPUB has no
+%   navigation document: EPUBCheck RSC-005 "Exactly one manifest item must declare the "nav" property".
+% witness: synthetic (found by the EPUBCheck guards, batch I807c)
+% oracle:  pdflatex 0 errors: one line, "Hello World!"
+% engines: rust (I807c) = no nav item, RSC-005; perl latexmlc 2026-11-14 = the same
+% expect:  0 errors; a valid EPUB 3: one manifest item with properties="nav" (an empty or title-only navigation list)
+% status:  RED (post-merge)
+% run:     latexml_oxide --dest=no_sections_no_nav_red.epub no_sections_no_nav_red.tex && epubcheck no_sections_no_nav_red.epub
+\documentclass{article}
+\begin{document}
+Hello World!
+\end{document}

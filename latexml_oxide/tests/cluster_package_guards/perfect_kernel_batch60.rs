@@ -336,7 +336,8 @@ fn amsart_raw_addresses_are_set() {
 /// 60l: `\@array` zeroes `\lineskip` and `\baselineskip` for the alignment's body (latex.ltx:16580), so colortbl's
 /// `\ifdim\baselineskip=\z@\noalign\fi{…}` (colortbl.sty:158, :163; tabu.sty:2159) is a `\noalign` between rows: the
 /// table keeps its three rows and rules, as pdflatex, where the group became a cell ("\noalign cannot be used here",
-/// two "Extra alignment tab"). Repro kernel-alignment/colortbl_noalign_idiom.
+/// two "Extra alignment tab"). Repro kernel-alignment/colortbl_noalign_idiom. The rules drawn after each colour are
+/// in it, as pdflatex draws them: red from `\arrayrulecolor{red}`, blue from the raw `\gdef\CT@arc@` (#773, OD #1025).
 #[test]
 fn colortbl_noalign_idiom() {
   assert_elements_with(
@@ -350,7 +351,7 @@ fn colortbl_noalign_idiom() {
       (
         "para",
         "p1",
-        r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="l r t" thead="column">a</td><td align="left" border="r t" thead="column">b</td></tr></thead><tbody><tr><td align="left" border="l r t">c</td><td align="left" border="r t">d</td></tr><tr><td align="left" border="b l r t">e</td><td align="left" border="b r t">f</td></tr></tbody></tabular></para>"##,
+        r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="l r t" thead="column">a</td><td align="left" border="r t" thead="column">b</td></tr></thead><tbody><tr><td align="left" border="l r t" cssstyle="border-top-color:#FF0000;border-left-color:#FF0000;border-right-color:#FF0000">c</td><td align="left" border="r t" cssstyle="border-top-color:#FF0000;border-right-color:#FF0000">d</td></tr><tr><td align="left" border="b l r t" cssstyle="border-top-color:#0000FF;border-bottom-color:#0000FF;border-left-color:#0000FF;border-right-color:#0000FF">e</td><td align="left" border="b r t" cssstyle="border-top-color:#0000FF;border-bottom-color:#0000FF;border-right-color:#0000FF">f</td></tr></tbody></tabular></para>"##,
       ),
       ("para", "p2", r##"<para xml:id="p2"><p>Final.</p></para>"##),
     ],
@@ -531,7 +532,8 @@ fn minipage_in_a_cell_keeps_its_lineskip() {
 
 /// 60o (ruling 7e): an `\autoref` name is built at its target (ruling 2026-10-02 (A)) but its diagnostics are raised
 /// where an `\autoref` prints it, as TeX expands `\<type>autorefname` only there (hyperref.sty:8202-8278). hyperref's
-/// Russian section name `\cyr\cyrr\cyra\cyrz\cyrd.` (hyperref.sty:2952) is undefined under lualatex's TU: no `\autoref`
+/// Russian section name `\cyr\cyrr\cyra\cyrz\cyrd.` (hyperref.sty:2952) is undefined under lualatex's TU before babel 26.16
+/// (which maps the Cyrillic LICR to TU, below): no `\autoref`
 /// (or only a `\ref`), no error (lualatex 0); `\autoref`s, its 4 undefined names once each — LaTeXML reports an undefined
 /// command once per document, also across two targets (lualatex 8, once per use) — with the status summary's undefined
 /// list. The label ties the target's held tag however it is set: a `\subsection*` prints its numbered section's name
@@ -574,6 +576,23 @@ fn autoref_name_diagnostics_wait_for_an_autoref() {
       (0, 0),
       "{body}: {stderr}"
     );
+  }
+  // babel 26.16 maps the Cyrillic LICR to TU (babel.sty:2801 `\input{cyrl2uni.def}`): the names are defined, lualatex
+  // clean (TL 2026, 0 errors, "разд. 1"), and no diagnostic is left to wait for.
+  if latexml::util::test::kpse_text("babel.sty").is_some_and(|sty| sty.contains("cyrl2uni.def")) {
+    let (stderr, xml) = convert("\\section{B}Text. \\autoref{a}.");
+    assert_eq!(
+      (error_count(&stderr), warning_count(&stderr)),
+      (0, 0),
+      "{stderr}"
+    );
+    assert_element(
+      &xml,
+      "tags",
+      &[],
+      r#"<tags><tag>1</tag><tag role="autoref">разд. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags>"#,
+    );
+    return;
   }
   for body in [
     "\\section{B}Text. \\autoref{a} and \\autoref{a}.",

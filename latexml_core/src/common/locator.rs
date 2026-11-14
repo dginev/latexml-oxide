@@ -133,14 +133,18 @@ impl Locator {
         } else {
           string_source.to_string()
         }
-      } else if source.contains(':') {
-        let (base, ext) = pathname::url_split(source);
-        s!("{}.{}", base, ext)
       } else {
-        // Perl Locator.pm L59-60: "$base.$ext", the file named with its extension (#794);
-        // `README.` for an extension-less one, as Perl prints it.
-        let (_path, base, ext) = pathname::split(source);
-        s!("{base}.{ext}")
+        // Perl Locator.pm:55-60: a protocol is more than one character (`index($source, ':') > 1`), so a Windows drive
+        // (`C:/…`) is a path, as is the verbatim prefix std's canonicalize gives (`\\?\C:\…`, `//?/C:/…`); either way
+        // the file is named with its extension, "$base.$ext" (#794; `README.` for an extension-less one, as Perl).
+        let path = pathname::strip_windows_verbatim_prefix(source);
+        if path.find(':').is_some_and(|at| at > 1) {
+          let (base, ext) = pathname::url_split(path);
+          s!("{base}.{ext}")
+        } else {
+          let (_path, base, ext) = pathname::split(path);
+          s!("{base}.{ext}")
+        }
       }
     })
   }
@@ -340,6 +344,23 @@ mod tests {
     let l = Locator::new("", 1, 1, 0, 0);
     let s = l.stringify();
     assert!(s.contains("Anonymous String"), "got {s:?}");
+  }
+
+  /// Perl Locator.pm:55-60: a drive letter is no protocol, so a Windows path shortens to its file name with its extension
+  /// like any path (#794), with or without the verbatim prefix.
+  #[test]
+  fn a_windows_path_is_no_url() {
+    for (source, name) in [
+      ("C:/Users/x/t.tex", "t.tex"),
+      ("//?/C:/Users/x/t.tex", "t.tex"),
+      (
+        "c:/texlive/2026/texmf-dist/tex/latex/base/latex.ltx",
+        "latex.ltx",
+      ),
+    ] {
+      let short = Locator::new(source, 1, 1, 0, 0).get_short_source("");
+      assert_eq!(short, name, "{source}");
+    }
   }
 
   #[test]

@@ -10999,8 +10999,8 @@ that only lualatex or xelatex can compile: `\char`\{` prints "–", a typed `<` 
 - A text symbol, accent or composite declared for TU at a slot above 255 is that code point
   (`decode_slot`; tuenc-greek.def:204 `\DeclareTextSymbol{\textalpha}\UnicodeEncodingName{"03B1}`),
   where the 8-bit rule gives no glyph.
-- The `xetex` profile installs the same format encoding, after `\XeTeXrevision` so that tuenc.def
-  takes its XeTeX branch.
+- The `xetex` profile installs the same format encoding, after `\XeTeXrevision`, `\XeTeXversion` and
+  `\tex_Umathcode:D` so that tuenc.def takes its XeTeX branch (v2.1d probes the first, v2.2a the other two).
 - The pdfTeX-model default keeps OT1, as pdflatex. The TU map is registered for every profile,
   though, so an explicit TU selection under it (`\fontencoding{TU}`, `\UseTextSymbol{TU}`,
   fontenc's `[TU]`, the fontspec binding's `\latinencoding`=TU reached through babel's
@@ -14759,8 +14759,8 @@ natbib_bib_bibliography_prints_its_bibpreamble}`, `perfect_kernel_gemini::bibpre
 **TeX**: fontspec makes the format's TU the text encoding (fontspec-xetex.sty:431-441); `\normalfont`/`\reset@font`
 select `\encodingdefault` (latex.ltx:14113-14122). **Perl** keeps OT1 in both places (KNOWN_PERL_ERRORS #450).
 **Rust** (60r): the fontspec binding selects the format's TU (the luatex/xetex profiles' installation); under the
-pdfTeX persona it installs it, inputting tuenc.def's XeTeX branch with `\XeTeXrevision` defined for the input only, so
-the engine probe stays undefined after;
+pdfTeX persona it installs it, inputting tuenc.def's XeTeX branch with the XeTeX identity it probes (`\XeTeXrevision`;
+v2.2a: `\tex_Umathcode:D`, `\XeTeXversion`) defined for the input only, so the engine probes stay undefined after;
 `neutralize_font` uses `\encodingdefault`, expanded, and tags babel's `\latinencoding` (`neutralize_font_latin`);
 identifiers digested after it come from their source tokens (`\lx@tag@intags OptionalUndigested`, `type_name`,
 `\lxDeclare` keys). Guards `perfect_kernel_batch60::{fontspec_text_is_tu_encoded,
@@ -22371,7 +22371,9 @@ listings (tcolorbox reads the body back `nolol`, KNOWN_PERL_ERRORS #988). The bo
 (2409.11413's `\lstset{title=\lstname}` had emptied all 13 "Listing N: …" titles; a raw box's read-back runs with
 `\lst@MakeCaption` = `\@gobble`, which `lst_process_display_with` reads as such). The box frame and colours are not
 drawn; a box with `detach title` (title not in the bar) keeps none. `\newtcbinputlisting`'s `[init]` options go through
-tcolorbox's own init processor under the command's name (`\tcb@proc@options@init`, tcblistingscore.code.tex:374-377), so
+tcolorbox's own init processor under the command's name (`\__tcobox_process_newtcolorbox:nn`, tcblistingscore.code.tex:359; a
+tcolorbox without it, `\tcb@proc@options@init`: `tcolorbox_sty::tcb_process_init`), and each use runs the counter `code=` it left
+in `\tcb@opt@<name>` (tcolorbox 6.10 moved it to expl3, tcolorbox.sty:2428-2444), so
 `use counter=` gives each use `\thetcbcounter`, and a box without a counter has an empty `\thetcbcounter`
 (tcolorbox.sty:2335-2337 `\tcb@proc@counter@no`, key `no counter` :2258; 2605.21082's `title={\textbf{code~\thetcbcounter}: #2}` prints "code : …",
 `tcolorbox_sty::tcb_counter_step_code`). `\newtcbinputlisting` also carries the box's phantom code (a per-use `label=` /
@@ -36103,3 +36105,63 @@ caption formatted without `\caption` (listings') never reads another's. Only a k
 at the caption, not at the `\captionsetup`.
 **Guards**: `bindings_batch2::caption_justification_and_skip`; `perfect_kernel_batch78d::mdpi_captions_end_the_label_with_a_period`
 (mdpi's `aboveskip=6pt`/`belowskip=-6pt`, `justification=justified`).
+
+### 1025. colortbl's rule colour is each border side's, taken as the rule is drawn (W4, #773)
+
+**TeX.** colortbl.sty:156-192 stores `\arrayrulecolor[model]{colour}` as `\gdef\CT@arc@{\color[model]{colour}}` and
+draws every rule as `{\CT@arc@ <rule>}`: `\hline`, `\@cline`, the preamble's `|` (`\@arrayrule`, set as each row is),
+`\multicolumn`'s own `|`; booktabs' rules alike (booktabs.sty:101,165). The `|` is `\xdef`ed into the preamble
+(array.sty:54 `\@addtopreamble`): a colour set as the preamble is built is frozen there (a `\multicolumn` builds its
+own), an unset one (`\relax`) is read as the rule is drawn, a cell's left `|` as the cell starts. `\CT@start`/`\CT@end`
+(:119-135) save the colour as a `\@tabarray` table (tabular, tabular*, tabularx, array) starts and restore it, globally,
+after its alignment closes (`\endarray`); a longtable or an `\halign` (IEEEeqnarraybox) restores nothing. So a
+mid-table change colours the `\hline`/`\cline` rules drawn after it, and the `|` ones when none was set as the table
+started; a colour never drawn is never evaluated (1910.02206's unbraced `\arrayrulecolor\hhline{---~~~}`). **Perl.** `\arrayrulecolor` and `\doublerulesepcolor` are no-ops
+(colortbl.sty.ltxml:85, :88): every border is the stylesheet's black. **Rust.** The core `Cell` keeps a colour per
+side (`border_color`, `Cell::add_border`): `add_line` takes the colour of the horizontal rule being drawn
+(`alignment::RULE_COLOR`/`take_rule_color`, local to the rule's `\noalign`), and the `|` extraction (tex_tables.rs
+`extract_alignment_column`) reads a vertical rule box's own `border_color`, the last one drawn on each side; every
+border move (normalize.rs's spans and pruned rows and columns, emulateapj's head rule) carries its side's colour. The
+`<td>`/`<XMCell>` carries the coloured sides its `border` keeps as `cssstyle="border-top-color:#BFBFBF;…"`; black,
+the stylesheet's colour (LaTeXML.css `.ltx_border_t`), adds nothing. The binding stores `\CT@arc@` as colortbl does
+and evaluates it as each rule is drawn (`\lx@CT@arc@draw`, ahead of `\@@alignment@hline`, `\lx@cline` — `\hhline`
+and booktabs' `\cmidrule` too), so an author's raw `\gdef\CT@arc@` colours too. Only a `|` takes the colour, as only
+`\@arrayrule` wraps `{\CT@arc@\vline}`: the binding's `|` column type puts `\vrule\lx@CT@paint\lx@CT@arc@<n>` in the
+template, `\lx@CT@arc@<n>` a copy of `\CT@arc@` frozen as the preamble (or a `\multicolumn`'s) is read, one per distinct
+body, or `\vrule\lx@CT@paint@live` (reading `\CT@arc@` as the rule is drawn) when that is `\relax`; the paint token
+sets that colour on the rule box just drawn. The rule box is the template's `\vrule`, as the base's `\vrule\relax`, so a
+cell's reversion trims it and a math array's `tex=` stays its source with or without a colour
+(`colortbl_bar_array_tex_is_its_source.tex`). The template skip lists (`template_after_fill_defeated`,
+`intercol_reachable_in_before`) read the paint tokens by their `\lx@CT@` prefix, as they read `\vrule` by its spelling
+(e0's spelling pins +1 each). A `!{\vrule}` or a typed
+`\vline` keeps the default ink, and a table nested in a cell leaves the cell's rules theirs. `\CT@start`
+saves locally just before `\lx@begin@alignment` of a table `\@tabular@bindings`/`\@array@bindings` set up (a request
+local to the table's group), and
+`\CT@end` restores after `\lx@end@alignment` (`\lx@CT@restore`), so a last row without `\\` keeps the colour. `\arrayrulecolor` is `\lx@hidden@noalign` material, where
+colortbl tests `\baselineskip` for a `\noalign` (so mid-cell in an `l` column, in an explicit `\noalign` or before a
+`\multicolumn` TeX errs, ours does not: `arrayrulecolor_mid_cell_misplaced_noalign_red.tex`,
+`arrayrulecolor_noalign_and_before_multicolumn_red.tex`, post-merge).
+`\doublerulesepcolor` is stored, unrendered (a border has no colour for the gap of `||`). Without `\arrayrulecolor`
+the output is unchanged: a table in coloured text keeps uncoloured borders, where pdflatex draws its rules in the
+current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay skipped
+(`hhline_colortbl_color_code_is_skipped`); a `!{}` rule's own colour (`!{\color{blue}\vrule}`) is not read
+(`arrayrulecolor_bang_rule_own_colour_red.tex`). **Guards**: `perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it`
+(repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
+`perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
+
+### 1029. A file `\input` under a set `\everyeof` is read as a token list, never answered by a binding (WIN1, WIN1F)
+
+**TeX.** An `\input` made while `\everyeof` holds tokens feeds the reader that set them: the file's tokens, then the
+`\everyeof` list (etex.web §362), end a delimited scan opened across the `\input` — expl3's `\file_get:nnN`
+(`\__file_get_aux:nnN`: `\tex_everyeof:D` the marker, `\__file_get_do:Nw`, `\tex_input:D`). The LaTeX kernel of
+November 2026 reads `glyphtounicode.tex` this way while the format is built (latex.ltx:22952-22957). **Perl.** Such an
+`\input` met while definitions are read goes to `InputDefinitions` (Package.pm:2287-2288), its own loop; `\everyeof` is
+a bare register never inserted (eTeX.pool.ltxml:258); a binding answers where one exists. **Rust.** Under a set
+`\everyeof`, `content::input` reads the file on disk in both modes: during definitions `read_as_token_list` opens a mouth
+under the current catcodes ending with the `\everyeof` mark (no definitions loop, no loaded mark, no content-file
+entry); in a document the binding dispatch is skipped and the content path reads it. Before, `--init=latex.ltx` on that
+kernel raised 137 errors (the scan ran on through latex.ltx under `\ExplSyntaxOff`), and in a document
+`\file_get:nnN{ltluatex}` / `{pstricks}` / `{glyphtounicode}` / `{xspace.sty}` raised 7 / 16 / 7 / 7 Errors with `[read] [empty]` where
+pdflatex prints `[read][42]Tail.` (0 `!`). An ordinary `\input` keeps its binding: the empty `glyphtounicode.tex`
+binding answers `\input glyphtounicode` (`\pdfglyphtounicode` a no-op, the raw read's output the same, at fewer
+instructions). **Guards**: `perfect_kernel_batch51::file_get_reads_the_file_whole`, the format build's zero-error gate.

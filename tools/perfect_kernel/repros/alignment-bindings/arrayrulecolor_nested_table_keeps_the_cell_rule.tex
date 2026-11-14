@@ -1,0 +1,15 @@
+% issue #773: a table nested in a cell leaves the cell's `|` rules their colour (each rule box carries its own).
+% witness: synthetic (the review of fix/arrayrulecolor 820dd03806: probe nest)
+% oracle:  pdflatex 0 errors: every outer rule red, the inner tables unruled
+% engines: rust b8a67fad06 = 0 errors, y's cell loses its left rule's colour; Perl = no colour
+% expect:  0 errors; every outer side red
+% status:  RED (b8a67fad06) -> GREEN (fix/arrayrulecolor); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{colortbl}
+\begin{document}
+\arrayrulecolor{red}
+\begin{tabular}{|c|c|}\hline
+a & \begin{tabular}{c}x\end{tabular}\\\hline
+\begin{tabular}{c}y\end{tabular} & d\\\hline
+\end{tabular}
+\end{document}

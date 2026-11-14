@@ -1,0 +1,17 @@
+% issue #773: a math array's `tex=` is its source under colortbl, with or without a rule colour: the `|` rule reverts
+% as the template's `\vrule`, which the cell's reversion trims (tex_tables.rs `trim_column_template`).
+% witness: synthetic (the review of fix/arrayrulecolor 7942f6bb7a: probes arr, nocol)
+% oracle:  pdflatex 0 errors: the rules of the last two arrays red, blue
+% engines: rust 7942f6bb7a = 0 errors, `tex="…\hline\cr\vrule\lx@intercol\hfil x\hfil\lx@intercol\vrule&y…"` (the
+%   template leaked); int171b = the source, no colour; Perl = the source, no colour (a no-op, colortbl.sty.ltxml:85)
+% expect:  0 errors; each `tex=` the source; the coloured arrays' borders red, blue
+% status:  RED (7942f6bb7a) -> GREEN (fix/arrayrulecolor); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{colortbl}
+\begin{document}
+$\begin{array}{|c|c|}\hline x & y\\\hline\end{array}$
+\[\left(\begin{array}{c|c} a & b\\ c & d\end{array}\right)\]
+$\begin{array}{|c|}\arrayrulecolor{red}\hline m\\\hline\end{array}$
+\arrayrulecolor{blue}
+$\begin{array}{|c|c|}\hline x & y\\\hline\end{array}$
+\end{document}

@@ -1,13 +1,17 @@
-% The latex-lab block binding declares the `block` instances latex-lab-testphase-block.sty:1362-1411 does:
-% keytheorems.sty:3330, :3348 edit `theoremblock-0` and `listblock-1` for a theorem with margins.
+% The latex-lab block binding declares the `block` instances latex-lab-testphase-block.sty:1362-1411 (TL 2025,
+% 2025-07-26) does: keytheorems.sty:3330, :3348 edit `theoremblock-0` and `listblock-1` for a theorem with margins.
+% The November block code names them otherwise: keytheorems_on_the_november_block_code.tex.
 % witness: keytheorems/keytheorems-doc (4 errors at sweep #150).
-% oracle:  pdflatex (TL 2025) 0 errors; the three theorems print.
+% oracle:  pdflatex (TL 2025) 0 errors; the three theorems print. pdflatex (TL 2026, latex-lab r80868) 11 `!`, one per
+%          instance its block code does not have.
 % engines: perl 1 error 1 Fatal. int140a: "The instance 'theoremblock-0' of type 'block' is not defined": 2 errors.
-% expect:  0 errors; a `theorem` holding the statement; each file's instance edits cleanly.
+% expect:  0 errors; a `theorem` holding the statement, the lemma upright (`style=` names amsthm's `definition`); each
+%          file's instance edits cleanly.
 \DocumentMetadata{lang=en-US}
 \documentclass{article}
 \usepackage{keytheorems}
 \newkeytheorem{theorem}[leftmargin=1cm,rightmargin=1cm]
+\newkeytheorem{lemma}[style=definition,leftmargin=2em]
 \ExplSyntaxOn
 \clist_map_inline:nn
   {
@@ -20,4 +24,7 @@
 \begin{theorem}
 There are infinitely many primes.
 \end{theorem}
+\begin{lemma}
+Every prime is odd or two.
+\end{lemma}
 \end{document}

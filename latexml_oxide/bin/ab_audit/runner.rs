@@ -729,10 +729,15 @@ mod tests {
 
   #[test]
   fn a_paper_directory_never_leaves_the_output_root() {
-    let root = Path::new("/data/out");
+    // An absolute root on each platform (`/data/out` has no drive on Windows).
+    let root = &if cfg!(windows) {
+      PathBuf::from(r"C:\data\out")
+    } else {
+      PathBuf::from("/data/out")
+    };
     assert_eq!(
       paper_dir(root, "A", "0810.4982"),
-      Ok(PathBuf::from("/data/out/A/0810.4982"))
+      Ok(root.join("A").join("0810.4982"))
     );
     assert!(paper_dir(root, "B", "hep-th9703192").is_ok());
     for key in ["..", ".", "", "../x", "a/../../b", "/etc", "a/b", "x/.."] {
