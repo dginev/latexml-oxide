@@ -36169,8 +36169,11 @@ category K, zero lspace and rspace. **Perl.** OperatorDictionary.pm:185 lists `/
 (MULOP, math_common.pool.ltxml:97) gets `lspace`/`rspace` 0.222 em; `<mo>/</mo>` is bare, and Chrome 155 spaces it 0.222 em
 each side (Firefox none). **Rust.** The dictionary has `/` in K; `is_core_k_glyph`
 (presentation.rs) marks a visible infix `<mo>` of category K `lspace="0em" rspace="0em"`, as Perl does for the ZWSP of
-`--noinvisibletimes` (MathML.pm:773), and the walk types it Ord. The invisible K operators stay bare (Format text,
-Perl L747; Chrome and Firefox give them no space). Residual: `\mathbin{/}` loses its Bin class at digestion and gets
-zero space too (RED `math-parse/mathbin_slash_keeps_binary_space_red.tex`, post-merge). Offer upstream. **Guards**:
+`--noinvisibletimes` (MathML.pm:773), and the walk types it Ord when its role is a Bin (MULOP). A class digestion
+keeps wins: `\mathrel{/}`, `\mathrel{\backslash}` (RELOP) get 0.278 em each side, `\mathpunct{/}`,
+`\mathpunct{\backslash}` (PUNCT) 0 em / 0.167 em, TeX's `\thickmuskip` and `\thinmuskip`. The invisible K operators stay
+bare (Format text, Perl L747; Chrome and Firefox give them no space). Residual: `\mathbin{/}` and `\bigm/` lose their
+Bin/Rel class at digestion and get zero space too (RED `math-parse/mathbin_slash_keeps_binary_space_red.tex`,
+post-merge). Offer upstream. **Guards**:
 `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
 `math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.

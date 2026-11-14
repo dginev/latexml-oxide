@@ -2975,14 +2975,12 @@ fn adjust_pair(root: &mut NodeData, prev: &[usize], next: &[usize], invisop: Opt
       get_node_attr_f64(n, "_lspace"),
     )
   };
-  // A Core-K operator is TeX's Ord whatever its semantic role (`/` MULOP; issue 789).
+  // A Core-K operator in a Bin role (`/` MULOP) is TeX's Ord (issue 789); a kept Rel or Punct
+  // (`\mathrel{/}`, `\mathpunct{/}`) spaces by its class over the forced zero (revMML2).
   let atom_type = |path: &[usize], tag: &str, role: &str| {
-    m_atom_type(tag).unwrap_or_else(|| {
-      if tag == "m:mo" && is_core_k_glyph(&get_node_text(node_at(root, path)), role) {
-        "Ord"
-      } else {
-        role_to_atom_type(role)
-      }
+    m_atom_type(tag).unwrap_or_else(|| match role_to_atom_type(role) {
+      "Bin" if tag == "m:mo" && is_core_k_glyph(&get_node_text(node_at(root, path)), role) => "Ord",
+      class => class,
     })
   };
   let prev_type = atom_type(&iprev, &iprev_tag, &prev_role);

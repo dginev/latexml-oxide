@@ -1,12 +1,16 @@
 % witness: issue 789 (synthetic); TeX's `/` is an Ord (mathcode "013D) and `\backslash` too (\delimiter"26E30F):
-%          \showbox gives no glue around either (pdflatex, TL 2025)
+%          \showbox gives no glue around either (pdflatex, TL 2025); a kept class wins: `\mathrel{/}` has \thickmuskip
+%          each side, `\mathpunct{/}` \thinmuskip after (revMML2), and the same for `\backslash`
 % oracle:  pdflatex 0 errors; a/b, G/H, x^{1/2}, a\b set tight
 % engines: perl 0.8.8 `<mo>/</mo>` (Chrome 155 spaces it 0.222em each side: its dictionary has infix `/` in B, as
 %          Perl's OperatorDictionary.pm:185 does; Core TR/ED put it in K, zero space); rust fc5211bb491 the same, and
 %          `<mo lspace="0.222em" rspace="0.222em">\</mo>` (the space walk reads MULOP as Bin)
-% expect:  0 errors; in --format=html5 every `/` and `\` is `<mo lspace="0em" rspace="0em">`
-% status:  RED (fc5211bb491) -> GREEN (MML2: operator_dictionary.rs `/` in K, presentation.rs Core-K operators are Ord)
+% expect:  0 errors; in --format=html5 every Ord `/` and `\` is `<mo lspace="0em" rspace="0em">`; the Rel ones
+%          0.278em each side, the Punct ones 0em / 0.167em
+% status:  RED (fc5211bb491) -> GREEN (MML2: operator_dictionary.rs `/` in K, presentation.rs Core-K operators are Ord);
+%          the Rel/Punct rows RED (00361d99397: 0em / 0em) -> GREEN (MML2b: only a Bin or Ord role reads as K)
 \documentclass{article}
 \begin{document}
 $a/b$ $G/H$ $x^{1/2}$ $a\backslash b$
+$a\mathrel{/}b$ $a\mathpunct{/}b$ $a\mathrel{\backslash}b$ $a\mathpunct{\backslash}b$
 \end{document}
