@@ -32,6 +32,30 @@
     (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
     unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` on an
     undefined cs is TeX's Error and defines it with the addition, as latex.ltx does (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
+  - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
+    number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
+    `lstlisting` copies the code without its numbers; dark mode colours `body`, not
+    `:root` (upstream `ee4b3640`). `ltx-cv.css`, which the moderncv binding requests
+    (Perl `moderncv.cls.ltxml:25`), and the opt-in `LaTeXML-epub.css`
+    (`--css=LaTeXML-epub.css`, `\newpage` as a page break) are embedded byte-identical to
+    Perl's: both were `missing_file` Warnings with a dangling `<link>`. Mirrored in
+    ar5iv-css. Guard `single_binary_smoke::class_and_opt_in_stylesheets_are_served_embedded`.
+  - **An fvextra `breaklines` Verbatim wraps and fits a phone** (issue 431, issue 702).
+    The bundled CSS's verbatim `white-space:pre` also reached a breaklines line's
+    `\parbox`, so its markup newlines rendered as blank rows (a one-row line 60 px, now
+    15), and PR #718's `.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }`
+    capped nothing, the line around the parbox carrying an inline width: at 375 px the
+    frame scrolled (scrollWidth 468 > 330) and the guard's page was 488 px wide, now 375.
+    Lines and xleftmargin's wrapper are capped at their box, a breaklines line is a flex
+    row whose parbox shrinks to it (also through the `ltx_text` an id keeps around a
+    numbered indented line's parbox), and a framed verbatim is a block; inline `\verb`
+    keeps its spaces and wraps (`pre-wrap`), so a long one no longer widens a narrow page,
+    except in a table cell, which stays unwrapped as the cell is. A breaklines line's text
+    wraps and keeps its spaces (`        return   x` had rendered `return x`). Witnesses
+    2605.00468 and 2605.01024 (their lines' total height 41,496 → 13,650 px and
+    1,476 → 432 px at 1280 px). Mirrored in ar5iv-css. Guards
+    `witnessed_css_delta::verbatim_whitespace_delta_stays_present`,
+    `browser_render_verbatim_narrow` (opt-in).
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
@@ -560,7 +584,9 @@
     (`.ltx_framed_verbatim.ltx_break` vs `:not(.ltx_break)`) without reaching for the
     fragile `:has(.ltx_parbox)` selector, which was previously the only distinguisher.
     Beyond-Perl (both engines emit no breaklines hook natively), same spirit as the
-    `frame=single`→`ltx_framed_verbatim` remap (#702).
+    `frame=single`→`ltx_framed_verbatim` remap (#702). (The bundled CSS no longer uses
+    it: an unframed breaklines Verbatim carries no hook, so its rules match a line by
+    its `.ltx_parbox` child — see Unreleased, issue 702.)
   - **Streaming byte-identity for a framed `breaklines=true` verbatim.** A single-line
     such verbatim (its parbox layer crosses a fragment seam) used to render nested under
     `--streaming` yet collapsed under the eager path, because `spill_closed_subtrees`

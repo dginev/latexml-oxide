@@ -382,11 +382,13 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
 .ltx_listingline { white-space:nowrap; min-height:1em; }
 .ltx_lst_space { white-space: pre; }
 .ltx_lst_numbers_left .ltx_listingline .ltx_tag {
+    user-select: none;
     background-color:transparent;
     margin-left:-3em; width:2.5em;
     position:absolute;
     text-align:right; }
 .ltx_lst_numbers_right .ltx_listingline .ltx_tag {
+    user-select: none;
     background-color:transparent;
     width:2.5em;
     position:absolute; right:3em;
@@ -593,16 +595,27 @@ foreignObject {
    `.ltx_verbatim { white-space:nowrap }` (kept above) overrides the UA `pre`
    rule, so a plain {verbatim} <pre> collapses to ONE line, and fancyvrb's
    per-line spans lose their leading indentation and runs of spaces. `pre`
-   keeps nowrap's no-wrapping and preserves them all. */
+   keeps nowrap's no-wrapping and preserves them all. Inline \verb (a <code>)
+   keeps its spaces but wraps, so a long one cannot widen a narrow page; in a
+   table cell it stays unwrapped, as the cell is. In an fvextra `breaklines`
+   line's \parbox, `pre` would render the markup's newlines as blank lines: the
+   box is `normal`, its paragraph's text `pre-wrap` (wraps, keeps the spaces). */
 .ltx_verbatim { white-space:pre; }
+code.ltx_verbatim { white-space:pre-wrap; overflow-wrap:break-word; }
+.ltx_td code.ltx_verbatim, .ltx_th code.ltx_verbatim { white-space:pre; }
+.ltx_verbatim .ltx_parbox { white-space:normal; }
+.ltx_verbatim .ltx_parbox .ltx_p { white-space:pre-wrap; }
 /* fancyvrb typesets each source line as a width-limited box — a span with
    ltx_text + ltx_verbatim + ltx_inline-block (\FancyVerbFormatLine binding
    hack) — and inline-blocks flow side-by-side in a wide window. One source
    line per row; blank source lines keep a line's height; the enclosing
    paragraph's text-indent must not shift lines. Only fancyvrb lines carry
    ltx_verbatim on an inline-block text span — inline \verb is a <code>
-   without ltx_inline-block, so it is untouched. */
-.ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; }
+   without ltx_inline-block, so it is untouched. A line, and the box fvextra's
+   xleftmargin/xrightmargin wrap it in (arXiv 2605.01024), is capped at its
+   container so a narrow viewport is not widened by its width. */
+.ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; max-width:100%; }
+.ltx_text.ltx_inline-block:has(> .ltx_text.ltx_verbatim.ltx_inline-block) { display:block; text-indent:0; max-width:100%; }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #525): a
    fancyvrb `frame=single` box (emitted by fancyvrb_sty.rs as an
    ltx_framed_rectangle carrying this class) spans the print \linewidth
@@ -611,17 +624,20 @@ foreignObject {
    whole page. Cap it at the viewport and scroll over-long lines WITHIN the box
    (the containment .ltx_listing uses for code, OXIDIZED_DESIGN #110); border-box
    keeps the border+padding inside the cap. Desktop/tablet render at \linewidth
-   unchanged. */
+   unchanged. The box is a display, so a block: no paragraph indent shifts it
+   past the viewport. */
 .ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }
-/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #702): fvextra
-   `breaklines=true` on a framed verbatim carries this marker class (emitted by
-   fancyvrb_sty.rs off `\ifFV@breaklines`), the stable hook for styling a wrapping
-   verbatim apart from a non-wrapping one. fvextra wraps via a fixed print-width
-   `\parbox` (~\linewidth), which on a narrow viewport would overflow and scroll
-   horizontally — defeating the point of breaklines. Cap that inner parbox at the
-   box width so the text reflows to fit; desktop (wide box) is unchanged. Scoped
-   to `.ltx_break`, so the non-wrapping frame box keeps its scroll-over behaviour. */
-.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100%; }
+.ltx_framed.ltx_framed_verbatim { display:block; width:fit-content; }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #702): an fvextra
+   `breaklines` line is a fixed break-indent box beside a print-width \parbox,
+   wider than a phone. As a flex row the parbox shrinks to the capped line and its
+   text reflows, framed (`.ltx_break`) or not; the indent boxes keep their width.
+   An ltx_text kept around the indent boxes and parbox (it carries an id, as
+   with `numbers=left` on an indented line) passes its children to the row. */
+.ltx_text.ltx_verbatim.ltx_inline-block:has(> .ltx_parbox, > .ltx_text > .ltx_parbox) { display:flex; }
+.ltx_verbatim > .ltx_text:has(> .ltx_parbox) { display:contents; }
+.ltx_verbatim > .ltx_inline-block, .ltx_verbatim > .ltx_text > .ltx_inline-block { flex-shrink:0; }
+.ltx_verbatim > .ltx_parbox, .ltx_verbatim > .ltx_text > .ltx_parbox { flex-shrink:1; min-width:0; }
 /* line height 0 just for this layer, to keep the line-box compact */
 .ltx_foreignobject_content {
     display:block;
@@ -739,10 +755,11 @@ cite                 { font-style: normal; }
   }
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  body {
     background-color: black;
     color: white;
   }
+
   /* The :root rule does not appear to propagate color: into SVG foreignObject */
   .ltx_foreignobject_content {
     color: var(--fn-fg-color-to-dark-mode, white);

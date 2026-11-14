@@ -4659,10 +4659,27 @@ newlines/indentation/spacing) and
 `.ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0;
 min-height:1lh; }` (one fancyvrb source line per row, blank lines keep a
 line's height, no inherited paragraph indent). Only the fancyvrb binding
-puts `ltx_verbatim` on an inline-block text span, so inline `\verb`
-(`<code>`, no `ltx_inline-block`) is untouched. Measured after: each line on
+puts `ltx_verbatim` on an inline-block text span. Measured after: each line on
 its own row, `    print(i)` keeps its 4-space indent, `<pre>` renders 4
 lines. Guard: `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
+
+`pre` is scoped where it broke layout (issues #431/#702): inline `\verb`
+(`<code>`) is `pre-wrap; overflow-wrap:break-word`, keeping its spaces but
+wrapping so a long one cannot widen a narrow page, except in a table cell
+(`pre`: the cell is `nowrap`, and TeX does not break `\verb` either); an fvextra
+`breaklines` line's `\parbox` is `normal`, since `pre` rendered the markup's
+newlines as blank rows (a one-row line 60 px, 2605.00468's 849 lines 41,496 →
+13,650 px at 1280 px), and its paragraph's text `pre-wrap`, which wraps and keeps
+the source's spaces (`normal` rendered `        return   x` as `return x`). A
+line, and xleftmargin's wrapper box around it (2605.01024), is capped at
+`max-width:100%`, and a line with a `.ltx_parbox` child is a flex row whose
+parbox shrinks beside the fixed break-indent boxes; an `ltx_text` an id keeps
+around them (a numbered indented line) is `display:contents`. The parbox's
+parent line carries an inline `width`, so the earlier
+`.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }` capped nothing.
+Chrome at 375 px on the browser guard's page: framed breaklines scrollWidth
+468 → 330 = clientWidth, page width 488 → 375 px. Browser guard
+`browser_render_verbatim_narrow` (opt-in, local).
 
 One serialization nuance, same entry: Perl nests two wrappers per line
 (`<text font="typewriter" width="345.0pt"><text class="ltx_verbatim"
@@ -5370,7 +5387,8 @@ border. Only per-instance VALUES are inline (`cssstyle` border-width/padding/bac
 box reuses the existing `ltx_framed_rectangle` semantics for the border and carries a dedicated
 `ltx_framed_verbatim` class for the fixed **responsive** behaviour — `max-width:100%;
 overflow-x:auto; box-sizing:border-box` in a bundled-CSS delta (`LaTeXML.css` + ar5iv-css
-mirror). Rationale: the box spans the print `\linewidth` (~460px, faithful on desktop/tablet)
+mirror), and `display:block; width:fit-content` (a display: no paragraph indent pushes it
+past the viewport; the breaklines reflow is in #93). Rationale: the box spans the print `\linewidth` (~460px, faithful on desktop/tablet)
 but is a shrink-to-fit inline-block of non-wrapping verbatim lines, so on a phone viewport it
 would push its right border off-screen and scroll the whole page; the class caps it at the
 viewport and scrolls over-long lines *within* the box (the containment `.ltx_listing` uses for
