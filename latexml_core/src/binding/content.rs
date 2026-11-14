@@ -4006,8 +4006,8 @@ pub fn add_to_macro_scope() -> Scope {
 }
 
 /// Perl `AddToMacro($cs, @tokens)` (Package.pm:2534): append to a macro's expansion, unlocked, in
-/// [`add_to_macro_scope`]; an undefined `cs` is defined with the tokens (Perl relies on InputDefinitions'
-/// pre-defined hooks, which not every path makes).
+/// [`add_to_macro_scope`]; an undefined `cs` is an Error and is defined with the tokens, as latex.ltx's `\g@addto@macro`
+/// does (OD #1036). One implementation for the `AddToMacro!` macro and Rhai's `AddToMacro`.
 pub fn add_to_macro(cs: Token, tokens: Tokens) -> Result<()> {
   // Package.pm:2547 `locked => $$defn{locked}`: the addition keeps the macro's lock.
   let locked = lookup_bool(&format!("{cs}:locked"));
@@ -4020,7 +4020,12 @@ pub fn add_to_macro(cs: Token, tokens: Tokens) -> Result<()> {
     })
   };
   match lookup_definition(&cs)? {
-    None => def_macro(cs, None, ExpansionBody::Tokens(tokens), options()),
+    // TeX's `\g@addto@macro` and Perl both err on an undefined cs (OD #1036); latex.ltx still defines it with the addition.
+    None => {
+      let message = s!("{cs} is not defined");
+      Error!("undefined", cs, message, "Defining it with the addition");
+      def_macro(cs, None, ExpansionBody::Tokens(tokens), options())
+    },
     Some(defn) if !defn.is_expandable() => {
       let message = s!("{cs} is not an expandable control sequence");
       Warn!("unexpected", cs, message, "Ignoring addition");
@@ -5912,6 +5917,18 @@ pub fn def_color_model(model: &str, coremodel: &str) {
     Stored::String(arena::pin(coremodel)),
     Some(Scope::Global),
   );
+}
+
+/// Perl `Digest` (Package.pm:393-402): digest with side effects and mode changes, then leave a horizontal mode the
+/// digestion entered (`leaveHorizontal_internal`), as [`crate::parameter::Parameter::digest`] does for an argument.
+pub fn binding_digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
+  let mode = lookup_string_from_sym(crate::pin!("MODE"));
+  let value = digest(tokens)?;
+  let nmode = lookup_string_from_sym(crate::pin!("MODE"));
+  if mode != nmode && nmode == "horizontal" {
+    leave_horizontal_internal();
+  }
+  Ok(value)
 }
 
 /// Digest tokens in text mode, whatever mode the caller is in.

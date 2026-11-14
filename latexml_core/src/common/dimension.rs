@@ -59,6 +59,11 @@ impl Dimension {
     round_to(self.0 as f64 / em_width, prec)
   }
 
+  /// Whether [`Self::spec_to_f64`] reads `spec` as written: empty, a dimension (`SPEC_RE`), or a number of sp.
+  pub fn spec_is_readable(spec: &str) -> bool {
+    spec.is_empty() || SPEC_RE.is_match(spec) || spec.parse::<f64>().is_ok()
+  }
+
   pub fn spec_to_f64(spec: &str) -> Result<f64> {
     if spec.is_empty() {
       Ok(0.0)

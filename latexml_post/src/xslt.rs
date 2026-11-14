@@ -1134,6 +1134,10 @@ mod embedded_resources {
       include_str!("../resources/CSS/LaTeXML-blue.css"),
     ),
     (
+      "LaTeXML-epub.css",
+      include_str!("../resources/CSS/LaTeXML-epub.css"),
+    ),
+    (
       "LaTeXML-marginpar.css",
       include_str!("../resources/CSS/LaTeXML-marginpar.css"),
     ),
@@ -1159,6 +1163,7 @@ mod embedded_resources {
       "ltx-book.css",
       include_str!("../resources/CSS/ltx-book.css"),
     ),
+    ("ltx-cv.css", include_str!("../resources/CSS/ltx-cv.css")),
     (
       "ltx-listings.css",
       include_str!("../resources/CSS/ltx-listings.css"),
@@ -1329,6 +1334,33 @@ mod witnessed_css_delta {
        plain verbatim would collapse to one line under vanilla's nowrap, and fancyvrb \
        source lines would reflow side-by-side with their indentation collapsed",
     );
+    // Issues #431/#702 at a phone width: inline \verb wraps (not in a nowrap table
+    // cell), a breaklines line's \parbox drops the markup's newlines while its text
+    // keeps its spaces, and shrinks in a flex row (through an id-carrying ltx_text
+    // wrapper too); lines and xleftmargin's wrapper are capped (Chrome at 375 px:
+    // page 488 -> 375, frame scrollWidth 468 -> 330; the browser half is
+    // `browser_render_verbatim_narrow`).
+    for rule in [
+      "code.ltx_verbatim { white-space:pre-wrap; overflow-wrap:break-word; }",
+      ".ltx_td code.ltx_verbatim, .ltx_th code.ltx_verbatim { white-space:pre; }",
+      ".ltx_verbatim .ltx_parbox { white-space:normal; }",
+      ".ltx_verbatim .ltx_parbox .ltx_p { white-space:pre-wrap; }",
+      ".ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; \
+       max-width:100%; }",
+      ".ltx_text.ltx_inline-block:has(> .ltx_text.ltx_verbatim.ltx_inline-block) { display:block; \
+       text-indent:0; max-width:100%; }",
+      ".ltx_text.ltx_verbatim.ltx_inline-block:has(> .ltx_parbox, > .ltx_text > .ltx_parbox) { \
+       display:flex; }",
+      ".ltx_verbatim > .ltx_text:has(> .ltx_parbox) { display:contents; }",
+      ".ltx_verbatim > .ltx_parbox, .ltx_verbatim > .ltx_text > .ltx_parbox { flex-shrink:1; \
+       min-width:0; }",
+      ".ltx_framed.ltx_framed_verbatim { display:block; width:fit-content; }",
+    ] {
+      assert!(
+        css.contains(rule),
+        "LaTeXML.css lost the verbatim rule `{rule}` (issues #431/#702)"
+      );
+    }
   }
 
   #[test]

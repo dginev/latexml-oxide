@@ -1712,16 +1712,17 @@ fn read_head_lossy(path: &Path) -> Option<String> {
 /// attribute value doesn't end the tag early. Skipping to `<svg` also steps over
 /// the `<?xml …?>` prolog, comments and any DOCTYPE — otherwise the prolog's
 /// `?>` would be mistaken for the end of the start tag.
-pub fn svg_root_tag(head: &str) -> Option<&str> {
-  let start = head.find("<svg")?;
-  let rest = &head[start..];
+pub fn svg_root_tag(head: &str) -> Option<&str> { xml_start_tag(&head[head.find("<svg")?..]) }
+
+/// The start tag that `text` begins with, up to (not including) its `>`, quote-aware.
+pub fn xml_start_tag(text: &str) -> Option<&str> {
   let mut quote: Option<char> = None;
-  for (i, c) in rest.char_indices() {
+  for (i, c) in text.char_indices() {
     match quote {
       Some(q) if c == q => quote = None,
       Some(_) => {},
       None if c == '"' || c == '\'' => quote = Some(c),
-      None if c == '>' => return Some(&rest[..i]),
+      None if c == '>' => return Some(&text[..i]),
       None => {},
     }
   }

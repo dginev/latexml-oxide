@@ -149,6 +149,8 @@ fn nice_decode(data: &str) -> (bool, bool, Vec<NiceRect>) {
 ///   weight and the vertical position are print layout. Unstripped, `X[c,m]`
 ///   read an `m` column of width `]`, which calc reports (nicematrix manual
 ///   ×5, `X[0.5,c,m]`, `X[m]`).
+/// - `p[<keys>]{w}` / `m[…]` / `b[…]` the same way (:2368-2398 `\__nicematrix_p:`, the same `p-column` keys; witness
+///   2607.15452 `p[c]{5pt}`, whose `[c]` was read as columns).
 fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
   let is_char = |t: &Token, c: &str| t.get_catcode() != Catcode::CS && t.with_str(|s| s == c);
   let mut out: Vec<Token> = Vec::with_capacity(toks.len());
@@ -156,7 +158,8 @@ fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
   while i < toks.len() {
     let t = toks[i];
     let is_bar = is_char(&t, "|");
-    let is_x = t.get_catcode() == Catcode::LETTER && t.with_str(|s| s == "X");
+    let is_x =
+      t.get_catcode() == Catcode::LETTER && t.with_str(|s| matches!(s, "X" | "p" | "m" | "b"));
     // `\__nicematrix_X: #1 #2` reads the next token as an undelimited
     // argument, past spaces.
     let mut open = i + 1;
@@ -173,12 +176,22 @@ fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
       while close < toks.len() && !is_char(&toks[close], "]") {
         close += 1;
       }
+      let mut letter = t;
       if is_x {
         let keys = Tokens::new(toks[open + 1..close.min(toks.len())].to_vec()).to_string();
         let hpos = keys
           .split(',')
           .map(str::trim)
           .rfind(|key| matches!(*key, "c" | "l" | "r"));
+        // the vertical keys pick the paragraph column's letter (:2360-2365, `t` a meta of `p`)
+        if !t.with_str(|s| s == "X")
+          && let Some(vpos) = keys
+            .split(',')
+            .map(str::trim)
+            .rfind(|key| matches!(*key, "p" | "t" | "m" | "b"))
+        {
+          letter = T_LETTER!(if vpos == "t" { "p" } else { vpos });
+        }
         if let Some(hpos) = hpos {
           let ragged = match hpos {
             "c" => "\\centering",
@@ -194,7 +207,7 @@ fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
           ]);
         }
       }
-      out.push(t);
+      out.push(letter);
       i = close + 1;
       continue;
     }
@@ -255,7 +268,7 @@ fn nice_tabular_expansion(
   guard_column: bool,
 ) -> Tokens {
   let opts_str = opts_toks.to_string();
-  let mut out: Vec<Token> = Vec::new();
+  let mut out: Vec<Token> = vec![T_CS!("\\lx@nice@bodycolors")];
   out.push(T_CS!("\\lx@nice@setopts"));
   out.push(T_BEGIN!());
   out.extend(opts_toks.unlist());
@@ -379,13 +392,11 @@ LoadDefinitions!({
     }
   }
 
-  // The tabular-like environments (`\NiceTabular`, `\NiceArray`, …) still degrade
-  // to a placeholder-or-\tabular; the math Nice* MATRIX family below renders as a
-  // real math array. NiceTabular[opts]{colspec}[opts] is nicematrix's tabular-like
+  // NiceTabular[opts]{colspec}[opts] is nicematrix's tabular-like
   // environment; the real nicematrix.sty (L3806-3841) reduces it to \NiceArray
   // under a text-mode tabular flag. Degrade faithfully to \tabular with the SAME
   // colspec, dropping the nicematrix-only [opts] — recovers real tables (witnesses
-  // 2605.08776, 2605.13835, 2605.18423) instead of discarding the body +
+  // 2605.08776, 2605.13835, 2605.18423; issue 736: 2407.04619) instead of discarding the body +
   // Error:undefined. Beyond-Perl: the ar5iv nicematrix.sty.ltxml stub still errors
   // here; mirror this upgrade there for strict Rust<->ar5iv parity.
   // Routed through the same `\CodeBefore … \Body` grabber as the matrix
@@ -558,6 +569,15 @@ LoadDefinitions!({
   DefMacro!("\\TikzEveryCell OptionalBalanced {}", "", locked => true);
   DefMacro!("\\lx@nice@tikzeverycell OptionalBalanced {}", "", locked => true);
   DefMacro!("\\rowlistcolors OptionalBalanced {}{} OptionalBalanced", "", locked => true);
+  // In the body, `\rowcolors` and `\rowlistcolors` take no row argument (nicematrix.sty:1653-1656, :5966-5968
+  // `{ O{} m m }`, `{ O{} m O{} }`); the \CodeBefore forms above read the next cell's `$` (2602.03088).
+  DefMacro!("\\lx@nice@rowcolors@tabular OptionalBalanced {}{}", "", locked => true);
+  DefMacro!("\\lx@nice@rowlistcolors@tabular OptionalBalanced {} OptionalBalanced", "", locked => true);
+  DefMacro!(
+    "\\lx@nice@bodycolors",
+    "\\let\\rowcolors\\lx@nice@rowcolors@tabular\\let\\rowlistcolors\\lx@nice@rowlistcolors@tabular",
+    locked => true
+  );
   DefMacro!("\\lx@nice@rowlistcolors OptionalBalanced {}{} OptionalBalanced", "", locked => true);
 
   RawTeX!(concat!(
@@ -850,27 +870,27 @@ LoadDefinitions!({
   // amsmath matrix flavour for delimiter <x>; `\end<x>NiceMatrix` closes the array
   // and paints the recorded colors. Mirrors amsmath_sty.rs:393-427.
   DefMacro!("\\NiceMatrix OptionalBalancedNoSkip",
-    "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=NiceMatrix,datameaning=matrix}",
+    "\\lx@nice@bodycolors\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=NiceMatrix,datameaning=matrix}",
     locked => true);
   DefMacro!("\\endNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\pNiceMatrix OptionalBalancedNoSkip",
-    "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=pNiceMatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}",
+    "\\lx@nice@bodycolors\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=pNiceMatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}",
     locked => true);
   DefMacro!("\\endpNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\bNiceMatrix OptionalBalancedNoSkip",
-    "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=bNiceMatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}",
+    "\\lx@nice@bodycolors\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=bNiceMatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}",
     locked => true);
   DefMacro!("\\endbNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\BNiceMatrix OptionalBalancedNoSkip",
-    "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=BNiceMatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}",
+    "\\lx@nice@bodycolors\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=BNiceMatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}",
     locked => true);
   DefMacro!("\\endBNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\vNiceMatrix OptionalBalancedNoSkip",
-    "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=vNiceMatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}",
+    "\\lx@nice@bodycolors\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=vNiceMatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}",
     locked => true);
   DefMacro!("\\endvNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\VNiceMatrix OptionalBalancedNoSkip",
-    "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=VNiceMatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}",
+    "\\lx@nice@bodycolors\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=VNiceMatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}",
     locked => true);
   DefMacro!("\\endVNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
 
@@ -928,7 +948,7 @@ LoadDefinitions!({
   DefMacro!("\\NiceArrayWithDelims{}{}[]{} OptionalBalancedNoSkip", sub[(l, r, opts1, pream, opts2)] {
     let opts_toks = nice_merge_opts(opts1.map(|o| Tokens!(o.revert())), opts2.map(|o| Tokens!(o.revert())));
     let opts_str = opts_toks.to_string();
-    let mut out: Vec<Token> = Vec::new();
+    let mut out: Vec<Token> = vec![T_CS!("\\lx@nice@bodycolors")];
     out.push(T_CS!("\\def"));
     out.push(T_CS!("\\lx@nice@awd@right"));
     out.push(T_BEGIN!());
@@ -1040,12 +1060,9 @@ LoadDefinitions!({
 
   // In-tabular decoration commands the manuals use pervasively.
   // \Block[opts]{i-j}{content}: nicematrix paints `content` OVER an i×j cell
-  // rectangle whose other source cells are empty. The logical position of the
-  // content is the anchor cell, so emitting it in place preserves content and
-  // reading order; the visual spanning overlay is print styling (a
-  // \multicolumn/rowspan rewrite would break the row's cell count, since the
-  // covered cells are still present in the source). The starred form and
-  // math-mode `$`-wrapped bodies pass through unchanged.
+  // rectangle whose other source cells are empty: the content stays in the anchor
+  // cell, which spans them (`\lx@nicematrix@block@span` below). The starred form
+  // and math-mode `$`-wrapped bodies pass through unchanged.
   // Under `ampersand-in-blocks` (nicematrix.sty:7310-7311, `\__nicematrix_Block_vii`
   // :7592) a body holding `&`/`\\` is typeset as a SUB-GRID — a `tabular`
   // in text, `$\begin{array}$` in math (:7398/:7406), split on `&` (:7906).
@@ -1059,13 +1076,15 @@ LoadDefinitions!({
   // witnesses 2509.04931 `<\LARGE>`, 2411.17050 `<\Large>`, whose formulas parsed only once they were read). Guard
   // `perfect_kernel_batch78a::nicematrix_block_angle_tokens_apply_to_the_content`.
   DefMacro!("\\Block OptionalMatch:* []{} OptionalAngled {}", sub[args] {
-    let mut args = args.into_iter().skip(3);
+    let mut args = args.into_iter().skip(2);
+    let dims: Tokens = args.next().unwrap().into();
     let prefix: Option<Tokens> = args.next().unwrap().into();
     let body: Tokens = args.next().unwrap().into();
     let toks = body.unlist();
     let mut depth = 0i32;
     let mut cols = 1usize;
     let mut max_cols = 1usize;
+    let mut lines = 1usize;
     let newline = T_CS!("\\\\");
     for t in &toks {
       match t.get_catcode() {
@@ -1075,12 +1094,14 @@ LoadDefinitions!({
         _ if depth == 0 && *t == newline => {
           max_cols = max_cols.max(cols);
           cols = 1;
+          lines += 1;
         },
         _ => {},
       }
     }
     max_cols = max_cols.max(cols);
-    let content = if max_cols == 1 {
+    // A `\\` breaks a line of the block's own tabular (:7551), never the outer row (2206.12224).
+    let content = if max_cols == 1 && lines == 1 {
       toks
     } else {
       let (env_begin, env_end) = if lookup_bool_sym(pin!("IN_MATH")) {
@@ -1093,17 +1114,42 @@ LoadDefinitions!({
       out.extend(Tokenize!(TeXString::assembled(env_end)).unlist());
       out
     };
+    let mut out = vec![T_CS!("\\lx@nicematrix@block@span"), T_BEGIN!()];
+    out.extend(dims.unlist());
+    out.push(T_END!());
     match prefix.filter(|p| !p.is_empty()) {
       Some(prefix) => {
-        let mut out = vec![T_BEGIN!()];
+        out.push(T_BEGIN!());
         out.extend(prefix.unlist());
         out.extend(content);
         out.push(T_END!());
-        Ok(Tokens::new(out))
       },
-      None => Ok(Tokens::new(content)),
+      None => out.extend(content),
     }
+    Ok(Tokens::new(out))
   }, locked => true);
+  // The block's `i-j` rectangle (nicematrix.sty:7276-7300; `*` runs to the last row or column, left unspanned): its
+  // cell spans the `j` columns as text overprinting the empty cells after it (OXIDIZED_DESIGN_DIVERGENCES #556), and
+  // the `i` rows as `\multirow`'s; a covered cell that holds text keeps its own column or row. Witness 2206.12224.
+  DefPrimitive!("\\lx@nicematrix@block@span{}", sub[(dims)] {
+    let dims = dims.to_string();
+    // no `-`: nicematrix's "Bad argument for Block" error, and a 1-1 block (:7262-7272)
+    let (rows, columns) = dims.split_once('-').unwrap_or(("1", "1"));
+    let span = |n: &str| n.trim().parse::<usize>().ok().filter(|&n| n > 1);
+    if let Some(alignment) = lookup_alignment()
+      && let Some(data) = alignment.alignment_cell()
+      && let Some(cell) = data.borrow_mut().current_column()
+    {
+      if let Some(rows) = span(rows) {
+        cell.rowspan = Some(rows);
+      }
+      if let Some(columns) = span(columns) {
+        cell.overprint = true;
+        cell.overprint_columns = Some(columns);
+      }
+    }
+    Ok(())
+  });
   // \Hline[opts]: nicematrix's own \hline that survives its internal
   // machinery; opts (color=, thickness=) are rule styling. Reduce to \hline.
   DefMacro!("\\Hline []", "\\hline", locked => true);

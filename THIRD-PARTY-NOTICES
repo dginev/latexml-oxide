@@ -352,4 +352,6 @@ Exception: our container images `apt-get install` these tools (and TeX Live)
 INTO the image, so there they are redistributed, not borrowed. They stay
 separate programs merely aggregated alongside latexml-oxide — which does not
 place latexml-oxide under their terms — and each carries its own Ubuntu
-copyright file under /usr/share/doc.
+copyright file under /usr/share/doc. The exact Ubuntu source package, version
+and download URL of Ghostscript, MuPDF and Poppler are listed in each image's
+/usr/local/share/doc/latexml-oxide/THIRD-PARTY-SOURCES.

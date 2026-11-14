@@ -116,22 +116,22 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "Digest",
     |t: Tokens| -> std::result::Result<Digested, Box<EvalAltResult>> {
-      latexml_core::stomach::digest(t).map_err(rhai_err)
+      latexml_core::binding::content::binding_digest(t).map_err(rhai_err)
     },
   );
   engine.register_fn(
     "Digest",
     |t: Token| -> std::result::Result<Digested, Box<EvalAltResult>> {
-      latexml_core::stomach::digest(Tokens::new(vec![t])).map_err(rhai_err)
+      latexml_core::binding::content::binding_digest(Tokens::new(vec![t])).map_err(rhai_err)
     },
   );
   // A string is TeX source, TokenizeInternal'd (Package.pm:393).
   engine.register_fn(
     "Digest",
     |s: &str| -> std::result::Result<Digested, Box<EvalAltResult>> {
-      latexml_core::stomach::digest(mouth::tokenize_internal(TeXString::assembled(
-        s.to_string(),
-      )))
+      latexml_core::binding::content::binding_digest(mouth::tokenize_internal(
+        TeXString::assembled(s.to_string()),
+      ))
       .map_err(rhai_err)
     },
   );

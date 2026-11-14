@@ -4659,10 +4659,27 @@ newlines/indentation/spacing) and
 `.ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0;
 min-height:1lh; }` (one fancyvrb source line per row, blank lines keep a
 line's height, no inherited paragraph indent). Only the fancyvrb binding
-puts `ltx_verbatim` on an inline-block text span, so inline `\verb`
-(`<code>`, no `ltx_inline-block`) is untouched. Measured after: each line on
+puts `ltx_verbatim` on an inline-block text span. Measured after: each line on
 its own row, `    print(i)` keeps its 4-space indent, `<pre>` renders 4
 lines. Guard: `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
+
+`pre` is scoped where it broke layout (issues #431/#702): inline `\verb`
+(`<code>`) is `pre-wrap; overflow-wrap:break-word`, keeping its spaces but
+wrapping so a long one cannot widen a narrow page, except in a table cell
+(`pre`: the cell is `nowrap`, and TeX does not break `\verb` either); an fvextra
+`breaklines` line's `\parbox` is `normal`, since `pre` rendered the markup's
+newlines as blank rows (a one-row line 60 px, 2605.00468's 849 lines 41,496 →
+13,650 px at 1280 px), and its paragraph's text `pre-wrap`, which wraps and keeps
+the source's spaces (`normal` rendered `        return   x` as `return x`). A
+line, and xleftmargin's wrapper box around it (2605.01024), is capped at
+`max-width:100%`, and a line with a `.ltx_parbox` child is a flex row whose
+parbox shrinks beside the fixed break-indent boxes; an `ltx_text` an id keeps
+around them (a numbered indented line) is `display:contents`. The parbox's
+parent line carries an inline `width`, so the earlier
+`.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }` capped nothing.
+Chrome at 375 px on the browser guard's page: framed breaklines scrollWidth
+468 → 330 = clientWidth, page width 488 → 375 px. Browser guard
+`browser_render_verbatim_narrow` (opt-in, local).
 
 One serialization nuance, same entry: Perl nests two wrappers per line
 (`<text font="typewriter" width="345.0pt"><text class="ltx_verbatim"
@@ -5370,7 +5387,8 @@ border. Only per-instance VALUES are inline (`cssstyle` border-width/padding/bac
 box reuses the existing `ltx_framed_rectangle` semantics for the border and carries a dedicated
 `ltx_framed_verbatim` class for the fixed **responsive** behaviour — `max-width:100%;
 overflow-x:auto; box-sizing:border-box` in a bundled-CSS delta (`LaTeXML.css` + ar5iv-css
-mirror). Rationale: the box spans the print `\linewidth` (~460px, faithful on desktop/tablet)
+mirror), and `display:block; width:fit-content` (a display: no paragraph indent pushes it
+past the viewport; the breaklines reflow is in #93). Rationale: the box spans the print `\linewidth` (~460px, faithful on desktop/tablet)
 but is a shrink-to-fit inline-block of non-wrapping verbatim lines, so on a phone viewport it
 would push its right border off-screen and scroll the whole page; the class caps it at the
 viewport and scrolls over-long lines *within* the box (the containment `.ltx_listing` uses for
@@ -18252,6 +18270,12 @@ alignment/eqnarray_side_content_only_cell); 65int2 kept it only as an overflow c
 lefteqn_cells_with_content, lefteqn_then_amp, lefteqn_stops_at_side_content}`,
 `perfect_kernel_batch61::eqnarray_continuation_after_lefteqn_does_not_panic`, `53_alignment::eqnarray_test`; repros
 `alignment/lefteqn_*`.
+
+**Bounded overprint** (issue 736): nicematrix's `\Block{i-j}{text}` sets its text over an i×j rectangle whose other
+source cells are empty (nicematrix.sty:7258-7300). `\lx@nicematrix@block@span` marks the anchor cell overprinting with
+`Cell::overprint_columns = j`, which caps the span at `j` columns (a covered cell with text still ends it), and gives it
+`rowspan = i` as `\multirow` does (`normalize_mark_spans` truncates it at a covered cell with text); `*` leaves that
+side unspanned. Witness 2206.12224; guard `perfect_kernel_batchi736::nicematrix_body_features_keep_the_table`.
 
 ### 557. eqnarray has latex.ltx's fourth column, the equation number's (Perl: three columns)
 
@@ -36166,6 +36190,81 @@ kernel raised 137 errors (the scan ran on through latex.ltx under `\ExplSyntaxOf
 pdflatex prints `[read][42]Tail.` (0 `!`). An ordinary `\input` keeps its binding: the empty `glyphtounicode.tex`
 binding answers `\input glyphtounicode` (`\pdfglyphtounicode` a no-op, the raw read's output the same, at fewer
 instructions). **Guards**: `perfect_kernel_batch51::file_get_reads_the_file_whole`, the format build's zero-error gate.
+
+### 1032. An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755)
+
+**Perl** and Rust emit `<mtd columnalign="right">` (`ltx_align_right` unless a border class replaces it, MathML.pm
+L456-473); MathML Core dropped `columnalign`, and Chrome set a `columnalign="right"` cell flush left (start; revMML2: 0 px left,
+12.3 px right; only a cell without the attribute is centred), so an `aligned`'s left column ended short of its relation,
+up to 21 px late (issue 809's repro, 16 px) (`text-align` on `.ltx_align_right` does not reach it). Firefox honours `columnalign`. **Rust.** LaTeXML.css adds
+`math mtd[columnalign="right"] { justify-items:end; }` and `…[columnalign="left"] { justify-items:start; }`, keyed on the
+attribute, which every cell keeps; the markup is unchanged. Offer upstream (LaTeXML.css). **Guards**:
+`cluster_cli::browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation` (Chrome,
+local only, repro `alignment/aligned_left_column_is_right_aligned.tex`),
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the rule
+ships).
+
+### 1033. A visible MathML Core category-K operator has no operator space: `/` is K, and an Ord (issue #789)
+
+**TeX.** `/` is an Ord (mathcode "013D), as is `\backslash` (`\delimiter"26E30F`, class 0): `\showbox` of `$a/b$` and
+`$a\backslash b$` has no glue. **Core** (TR 2025 and ED, Figure 25) puts infix `/`, `\`, `_`, U+2061-2064 and U+2206 in
+category K, zero lspace and rspace. **Perl.** OperatorDictionary.pm:185 lists `/` in B (0.222 em; KNOWN_PERL_ERRORS
+#1240), and the space walk (`adjust_pair`) types an operator by its role, so `/` (MULOP) is a Bin and `\backslash`
+(MULOP, math_common.pool.ltxml:97) gets `lspace`/`rspace` 0.222 em; `<mo>/</mo>` is bare, and Chrome 155 spaces it 0.222 em
+each side (Firefox none). **Rust.** The dictionary has `/` in K; `is_core_k_glyph`
+(presentation.rs) marks a visible infix `<mo>` of category K `lspace="0em" rspace="0em"`, as Perl does for the ZWSP of
+`--noinvisibletimes` (MathML.pm:773), and the walk types it Ord when its role is a Bin (MULOP). A class digestion
+keeps wins: `\mathrel{/}`, `\mathrel{\backslash}` (RELOP) get 0.278 em each side, `\mathpunct{/}`,
+`\mathpunct{\backslash}` (PUNCT) 0 em / 0.167 em, TeX's `\thickmuskip` and `\thinmuskip`. The invisible K operators stay
+bare (Format text, Perl L747; Chrome and Firefox give them no space). Residual: `\mathbin{/}` and `\bigm/` lose their
+Bin/Rel class at digestion and get zero space too (RED `math-parse/mathbin_slash_keeps_binary_space_red.tex`,
+post-merge). Offer upstream. **Guards**:
+`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
+`math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.
+
+### 1034. A small PDF figure is converted to SVG, raster-bearing ones too, unless it draws a raster enlarged (after PR 816)
+
+**Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
+**Rust.** Beyond Perl, a PDF at most 500 KiB (the auto default, `--graphics-svg-threshold-kb 0`; an explicit `N`
+bounds it at `N` KB) first tries the vector converters, `mutool convert -F svg`, then `pdftocairo -svg`
+(`Graphics::convert_image_svg`); every failure falls back to the PNG path: neither tool on PATH, a non-zero exit, the
+15 s timeout, an SVG over 8 MB, an SVG whose `trim`/`viewport` crop cannot be read. Labels, axes and curves stay
+vector, and an embedded raster keeps its own pixels (PERF816, 673 arXiv figures: mutool's SVG -8 ms CPU median per
+figure against the PNG, 70 vs 157 MB gzipped; 23 % of the PNGs lost raster resolution). Until PR 816 (amachino) an
+image XObject in the first 256 KB gated a PDF off the path; DG ruled on 2026-11-14 that size alone gates it (mutool
+first, pdftocairo the fallback; MuPDF, AGPL, only as an unmodified CLI subprocess).
+
+**Enlarged rasters take the PNG path** (DG 2026-11-14, "PNG for enlarged rasters"): an SVG that draws any raster larger
+than its own pixels is discarded and the figure takes main's PNG path, with an `Info`, no Warning and no error count;
+every other figure keeps the SVG. (A raster drawn at its pixel size or smaller inside the figure stays SVG even when the
+page then enlarges the whole figure, e.g. `width=\textwidth`; the browser smooths it then, as it smooths main's PNG of
+that figure.) Neither tool marks a raster's rendering, so a
+browser smooths an enlarged raster into a blur where the PDF (no `/Interpolate`, as pdflatex writes it) shows hard
+pixel blocks, and no static `image-rendering` suits every display size: `pixelated` aliases a raster the page or a phone
+shows smaller. `svg_enlarged_raster` reads every placement, inline, under nested `<g transform>`, through `<use>` and
+through a soft mask's `<mask>` (both tools draw an alpha channel there), and calls a raster enlarged when it is drawn at
+more than 1.01 SVG user units per pixel on either axis on any placement (user units are the PDF's bp, which both tools
+keep; 1.01 absorbs the tools' float rounding, pdftocairo drawing images about 2 % smaller than mutool). A 1×1 raster never counts, however it is drawn: a browser cannot blur a single pixel (DG 2026-11-14;
+10 of the 21 PNG fallbacks in the 60-paper sample were 1×1 rasters in 1503.05958). A placement it
+cannot read counts as enlarged: an image in a `<pattern>` or `<symbol>`, under a `skewX`/`skewY` or a nested `<svg>` viewBox (a shear written as `matrix()` is measured by its axis lengths), past
+8 nested `<use>`, or with a size or pixel count it cannot read. The decision runs on every render after the graphics
+cache, so a cached SVG is judged too (the cache stores the converter's output, not the decision). `/Interpolate true` no
+longer matters (the PNG path renders such a raster as main does). **Guards**:
+`graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged` (each converter present, then the pipeline:
+`native_raster_vector.tex`, a 64×64 PNG at 48 bp, stays SVG; `mixed_raster_vector.tex`, a 4×4 tile at 1 cm, takes the
+PNG path), `graphics::tests::svg_enlarged_raster_reads_every_placement`, `graphics::tests::should_try_svg_path_auto_detect`.
+
+### 1036. `AddToMacro!` on an undefined cs is an Error and defines it with the addition (MACSYNC)
+
+**Perl.** `AddToMacro` (Package.pm:2534-2549) Warns ("not an expandable control sequence") and drops the addition when
+the cs is undefined; a later use of the cs is then an undefined-cs Error. **TeX.** latex.ltx:1832 `\g@addto@macro`'s
+`\expandafter` raises "Undefined control sequence", then its `\xdef` defines the cs with the addition (pdflatex
+`\g@addto@macro\nohook{XY}A\nohook B` → 1 `!`, "AXYB"). **Ours.** TeX's Error (`undefined:\nohook`, as TeX and Perl
+both err) and TeX's outcome, the content kept; before, the cs was defined silently. `\AtEndOfPackage` names its hook with
+`\csname` (latex.ltx:18896), so it makes an empty hook first and raises nothing. A non-expandable cs keeps Perl's Warning and
+is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xdef` makes a self-referencing macro).
+**Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
+`macro-state/g_addto_macro_undefined_defines.tex`).
 
 ### 1026. `page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791)
 

@@ -474,6 +474,7 @@ mod perfect_kernel_batchga5;
 mod perfect_kernel_batchgl1;
 /// HG1: the guards DEL1 left hollow asserting again — rows of one table, the wrong ones `_red.tex` catalog repros.
 mod perfect_kernel_batchhg1;
+mod perfect_kernel_batchi736;
 mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
@@ -491,6 +492,8 @@ mod perfect_kernel_batchlo4;
 mod perfect_kernel_batchlogo1;
 mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;
+/// MACSYNC: the binding macros mean what Perl's same-named API means (AUDMAC).
+mod perfect_kernel_batchmacsync;
 /// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a
 /// mailbox link line's as an e-mail label's; OD #992.
 mod perfect_kernel_batchmb1;
@@ -501,6 +504,7 @@ mod perfect_kernel_batchmb2;
 mod perfect_kernel_batchmem1;
 /// MLN1: names led by their marks read as names (`names_led_by_marks`); OD #1019.
 mod perfect_kernel_batchmln1;
+mod perfect_kernel_batchmml2;
 mod perfect_kernel_batchn1;
 mod perfect_kernel_batchn2;
 mod perfect_kernel_batchn2r2;

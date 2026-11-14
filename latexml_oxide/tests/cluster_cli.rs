@@ -147,6 +147,49 @@ mod single_binary_smoke {
       "LaTeXML.css looks empty or invalid",
     );
   }
+
+  #[test]
+  fn class_and_opt_in_stylesheets_are_served_embedded() {
+    // moderncv's binding requests ltx-cv.css (Perl moderncv.cls.ltxml:25) and `--css=LaTeXML-epub.css`
+    // opts into Perl's epub page breaks: both were `missing_file` until embedded.
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("cv.tex"),
+      "\\documentclass{moderncv}\n\\firstname{Jane}\n\\familyname{Doe}\n\\begin{document}\n\
+       \\section{Education}\n\\cventry{2020}{PhD}{Uni}{City}{}{}\n\\newpage\nMore.\n\\end{document}\n",
+    )
+    .expect("write cv.tex");
+    let output = Command::new(bin)
+      .args(["cv.tex", "--css=LaTeXML-epub.css", "--dest", "cv.html"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let count = |p: &str| stderr.lines().filter(|l| l.starts_with(p)).count();
+    assert_eq!(
+      (count("Warning:"), count("Error:")),
+      (0, 0),
+      "no Warning/Error:\n{stderr}"
+    );
+    let html = std::fs::read_to_string(workdir.path().join("cv.html")).expect("read cv.html");
+    for css in ["ltx-cv.css", "LaTeXML-epub.css"] {
+      assert!(
+        html.contains(&format!(
+          "<link rel=\"stylesheet\" href=\"{css}\" type=\"text/css\">"
+        )),
+        "{css} linked:\n{html}"
+      );
+      let bundled = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../latexml_post/resources/CSS")
+        .join(css);
+      assert_eq!(
+        std::fs::read(workdir.path().join(css)).expect("copied css"),
+        std::fs::read(bundled).expect("bundled css"),
+        "{css} copied byte for byte"
+      );
+    }
+  }
 }
 
 mod telemetry {
@@ -2365,31 +2408,11 @@ mod display_math_text_nowrap {
   }
 }
 
-mod browser_render_display_math {
-  //! #527, the *rendered* guarantee: a real headless browser must lay out both a
-  //! pure-`\text{}` display and a mixed math+text display on ONE line without
-  //! clipping. The two failure modes need two metrics, so CSS-string matching
-  //! (the sibling test) is not enough: without the fix the pure-text cell STACKS
-  //! (tall `cellHeight`) while the mixed cell CLIPS (`scrollWidth > clientWidth`).
-  //! `tests/browser/measure.js` renders via Playwright (system Chrome) and reports
-  //! the geometry of every `td.ltx_eqn_cell.ltx_align_center`.
-  //!
-  //! **Opt-in, LOCAL only — deliberately NOT run in CI** (a headless-browser job
-  //! is expensive; the platform-independent `display_math_text_nowrap` is the
-  //! CI-enforced guard). This self-skips (visibly) when node / `playwright-core`
-  //! / a system Chrome is absent, which is the default everywhere including CI.
-  //! To run it: `npm install` in `latexml_oxide/tests/browser`, then
-  //! `LATEXML_BROWSER_TESTS=1 cargo test … browser_render_display_math` — with
-  //! that env set a missing toolchain becomes a hard FAILURE rather than a skip.
+mod browser_harness {
+  //! The opt-in headless-browser guards' shared step: convert a document to HTML5
+  //! with the bundled CSS and run a `tests/browser/*.js` measure script on it.
 
   use std::{fs, path::PathBuf, process::Command};
-
-  const DOC: &str = "\\documentclass[12pt]{article}\n\
-                     \\usepackage{amsmath}\n\
-                     \\begin{document}\n\
-                     \\[\n\\text{The solution is not valid}\n\\]\n\n\
-                     \\[\nx^2 + \\text{the solution is not valid here} = y^2\n\\]\n\
-                     \\end{document}\n";
 
   fn browser_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/browser") }
   fn runs(cmd: &str, arg: &str) -> bool {
@@ -2415,11 +2438,11 @@ mod browser_render_display_math {
       && browser_dir().join("node_modules/playwright-core").is_dir()
   }
 
-  #[test]
-  fn display_math_renders_on_one_line_without_clipping() {
+  /// The measure script's stdout for `doc`, or `None` after a visible SKIP when
+  /// node / playwright-core / a system Chrome is absent. With
+  /// `LATEXML_BROWSER_TESTS` set a missing toolchain is a failure, never a green.
+  pub fn render_and_measure(issue: &str, doc: &str, script: &str) -> Option<String> {
     if !toolchain_ready() {
-      // CI opts in via LATEXML_BROWSER_TESTS: there a missing toolchain is a
-      // failure (never a silent green), everywhere else it is a visible skip.
       assert!(
         std::env::var("LATEXML_BROWSER_TESTS").is_err(),
         "LATEXML_BROWSER_TESTS is set but node + playwright-core + a system Chrome \
@@ -2427,16 +2450,15 @@ mod browser_render_display_math {
         browser_dir().display()
       );
       eprintln!(
-        "SKIP browser render (#527): node/playwright-core/chrome unavailable — \
+        "SKIP browser render ({issue}): node/playwright-core/chrome unavailable — \
          `npm ci` in {} and set LATEXML_BROWSER_TESTS to require it",
         browser_dir().display()
       );
-      return;
+      return None;
     }
-
     let workdir = tempfile::tempdir().expect("tempdir");
     let root = workdir.path();
-    fs::write(root.join("doc.tex"), DOC).unwrap();
+    fs::write(root.join("doc.tex"), doc).unwrap();
     let conv = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .current_dir(root)
       .arg("--format=html5")
@@ -2449,19 +2471,51 @@ mod browser_render_display_math {
       "conversion produced no HTML:\n{}",
       String::from_utf8_lossy(&conv.stderr)
     );
-
     let url = format!("file://{}", root.join("out.html").display());
     let m = Command::new("node")
-      .arg(browser_dir().join("measure.js"))
+      .arg(browser_dir().join(script))
       .arg(&url)
       .output()
-      .expect("run measure.js");
-    let stdout = String::from_utf8_lossy(&m.stdout);
+      .unwrap_or_else(|e| panic!("run {script}: {e}"));
+    let stdout = String::from_utf8_lossy(&m.stdout).into_owned();
     assert!(
       m.status.success(),
-      "measure.js failed: {}\n{stdout}",
+      "{script} failed: {}\n{stdout}",
       String::from_utf8_lossy(&m.stderr)
     );
+    Some(stdout)
+  }
+}
+
+mod browser_render_display_math {
+  //! #527, the *rendered* guarantee: a real headless browser must lay out both a
+  //! pure-`\text{}` display and a mixed math+text display on ONE line without
+  //! clipping. The two failure modes need two metrics, so CSS-string matching
+  //! (the sibling test) is not enough: without the fix the pure-text cell STACKS
+  //! (tall `cellHeight`) while the mixed cell CLIPS (`scrollWidth > clientWidth`).
+  //! `tests/browser/measure.js` renders via Playwright (system Chrome) and reports
+  //! the geometry of every `td.ltx_eqn_cell.ltx_align_center`.
+  //!
+  //! **Opt-in, LOCAL only — deliberately NOT run in CI** (a headless-browser job
+  //! is expensive; the platform-independent `display_math_text_nowrap` is the
+  //! CI-enforced guard). This self-skips (visibly) when node / `playwright-core`
+  //! / a system Chrome is absent, which is the default everywhere including CI.
+  //! To run it: `npm install` in `latexml_oxide/tests/browser`, then
+  //! `LATEXML_BROWSER_TESTS=1 cargo test … browser_render_display_math` — with
+  //! that env set a missing toolchain becomes a hard FAILURE rather than a skip.
+
+  const DOC: &str = "\\documentclass[12pt]{article}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\[\n\\text{The solution is not valid}\n\\]\n\n\
+                     \\[\nx^2 + \\text{the solution is not valid here} = y^2\n\\]\n\
+                     \\end{document}\n";
+
+  #[test]
+  fn display_math_renders_on_one_line_without_clipping() {
+    let Some(stdout) = super::browser_harness::render_and_measure("#527", DOC, "measure.js") else {
+      return;
+    };
 
     // One object per display-equation content cell.
     let cells: Vec<serde_json::Value> =
@@ -2508,8 +2562,6 @@ mod browser_render_aligned_math_spacing {
   //! platform-independent structural half is `aligned_mtable_columnspacing_zero`
   //! (below): the CSS reset only bites when `columnspacing="0pt"` is emitted.
 
-  use std::{fs, path::PathBuf, process::Command};
-
   // The reporter's MWE, distilled: a `gather*` wrapping an `aligned` makes the
   // whole thing ONE `<math>` with a native `<mtable>` (the path the bug lives on).
   const DOC: &str = "\\documentclass[12pt]{book}\n\
@@ -2521,75 +2573,13 @@ mod browser_render_aligned_math_spacing {
                      \\end{aligned}\n\\end{gather*}\n\
                      \\end{document}\n";
 
-  fn browser_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/browser") }
-  fn runs(cmd: &str, arg: &str) -> bool {
-    Command::new(cmd)
-      .arg(arg)
-      .output()
-      .map(|o| o.status.success())
-      .unwrap_or(false)
-  }
-  fn have_chrome() -> bool {
-    [
-      "google-chrome",
-      "google-chrome-stable",
-      "chromium",
-      "chromium-browser",
-    ]
-    .iter()
-    .any(|c| runs(c, "--version"))
-  }
-  fn toolchain_ready() -> bool {
-    runs("node", "--version")
-      && have_chrome()
-      && browser_dir().join("node_modules/playwright-core").is_dir()
-  }
-
   #[test]
   fn aligned_relation_is_not_double_spaced_by_mtd_padding() {
-    if !toolchain_ready() {
-      assert!(
-        std::env::var("LATEXML_BROWSER_TESTS").is_err(),
-        "LATEXML_BROWSER_TESTS is set but node + playwright-core + a system Chrome \
-         are not all available; run `npm ci` in {}",
-        browser_dir().display()
-      );
-      eprintln!(
-        "SKIP browser render (#755): node/playwright-core/chrome unavailable — \
-         `npm ci` in {} and set LATEXML_BROWSER_TESTS to require it",
-        browser_dir().display()
-      );
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#755", DOC, "measure_align_mtd.js")
+    else {
       return;
-    }
-
-    let workdir = tempfile::tempdir().expect("tempdir");
-    let root = workdir.path();
-    fs::write(root.join("doc.tex"), DOC).unwrap();
-    let conv = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
-      .current_dir(root)
-      .arg("--format=html5")
-      .arg("--destination=out.html")
-      .arg("doc.tex")
-      .output()
-      .expect("run latexml_oxide");
-    assert!(
-      root.join("out.html").exists(),
-      "conversion produced no HTML:\n{}",
-      String::from_utf8_lossy(&conv.stderr)
-    );
-
-    let url = format!("file://{}", root.join("out.html").display());
-    let m = Command::new("node")
-      .arg(browser_dir().join("measure_align_mtd.js"))
-      .arg(&url)
-      .output()
-      .expect("run measure_align_mtd.js");
-    let stdout = String::from_utf8_lossy(&m.stdout);
-    assert!(
-      m.status.success(),
-      "measure_align_mtd.js failed: {}\n{stdout}",
-      String::from_utf8_lossy(&m.stderr)
-    );
+    };
 
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
     let cells = v["cells"].as_array().expect("cells array");
@@ -2621,6 +2611,119 @@ mod browser_render_aligned_math_spacing {
       gap < 7.0,
       "aligned `y(x)`→`=` gap rendered {gap}px — double-spaced by mtd padding \
        (pre-fix ~10.8px; the relation space alone is ~4.4px): {stdout}"
+    );
+  }
+
+  /// #809 (inline `aligned`) and #755 (`gather*` around `aligned`): a left
+  /// column of unequal widths is right-aligned against the relation, so every
+  /// row's last-glyph→`=` gap is the relation's lspace alone (0.278 em; an
+  /// `mfrac` adds Chrome's 1px inline padding). Red before LaTeXML.css keyed
+  /// `justify-items` on `mtd[columnalign]`: 25.4/19.2/21.5/5.4 px at 16 px.
+  #[test]
+  fn aligned_left_column_is_right_aligned_against_the_relation() {
+    let doc = include_str!(
+      "../../tools/perfect_kernel/repros/alignment/aligned_left_column_is_right_aligned.tex"
+    );
+    if let Some(stdout) =
+      super::browser_harness::render_and_measure("#809", doc, "measure_align_mtd.js")
+    {
+      let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+      let rows = v["rowGaps"].as_array().expect("rowGaps array");
+      // Two `aligned` (inline, and in `gather*`) of 4 rows each.
+      assert_eq!(rows.len(), 8, "expected 8 aligned rows: {v}");
+      for (i, r) in rows.iter().enumerate() {
+        let gap = r["gap"].as_f64().expect("gap");
+        let want = 0.278 * r["fontPx"].as_f64().expect("fontPx");
+        assert!(
+          (gap - want).abs() <= 1.2,
+          "row {i}: left column→`=` gap {gap}px, want {want}px ± 1.2 — the left column \
+           is not right-aligned (LaTeXML.css `mtd[columnalign]`): {v}"
+        );
+      }
+    }
+  }
+}
+
+mod browser_render_verbatim_narrow {
+  //! Issues #431/#702, the *rendered* guarantee at a phone width (375 px): an fvextra
+  //! `breaklines` line wraps in its `\parbox` without blank rows from the markup's
+  //! newlines, a `frame=single` breaklines box (with xleftmargin's wrapper, arXiv
+  //! 2605.01024) reflows instead of scrolling, and neither it, an unframed one, a
+  //! numbered indented one (ids keep an `ltx_text` around its parbox) nor a long
+  //! inline `\verb` widens the page; a breaklines line keeps its spaces; a `\verb`
+  //! in a table cell stays one row, as the cell is nowrap. Opt-in and LOCAL like the
+  //! guards above; the CI half is
+  //! `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
+
+  const DOC: &str = "\\documentclass{article}\n\\usepackage[ids]{latexml}\n\
+     \\usepackage{fvextra}\n\\begin{document}\n\
+     \\begin{Verbatim}[frame=single,breaklines=true,xleftmargin=1mm]\n\
+     a framed very long line of verbatim text that wraps because breaklines is true and it goes on and on\n\
+     short\n\\end{Verbatim}\n\
+     \\begin{Verbatim}[breaklines=true]\n\
+     an unframed very long line of verbatim text that wraps because breaklines is true and it goes on and on\n\
+     \x20       return   x\n\
+     \\end{Verbatim}\n\
+     \\begin{Verbatim}[breaklines=true,numbers=left]\n\
+     \x20   print(i, \"a long string that must certainly break somewhere along the way ok\")\n\
+     \\end{Verbatim}\n\
+     A long inline \\verb|f(argument_one, argument_two, argument_three, argument_four)| ends here.\n\n\
+     \\begin{tabular}{ll}\n\
+     \\verb|alpha beta gamma delta| & \\verb|epsilon zeta eta theta|\n\
+     \\end{tabular}\n\
+     \\end{document}\n";
+
+  #[test]
+  fn breaklines_verbatim_reflows_at_phone_width() {
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#431/#702", DOC, "measure_verbatim.js")
+    else {
+      return;
+    };
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+    // Before the fix: page 488 px, frame scrollWidth 468 > clientWidth 330, the
+    // one-row `short` line 60 px (four rows of markup newlines), \verb one rect.
+    // On 39397129a3f: page 479 px (the numbered line's ltx_text wrapper), each
+    // cell's \verb 3 rects, the line `return x` (spaces collapsed).
+    let (vw, doc_w) = (
+      v["vw"].as_f64().unwrap(),
+      v["docScrollWidth"].as_f64().unwrap(),
+    );
+    assert!(
+      doc_w <= vw,
+      "the page is {doc_w}px wide at {vw}px: {stdout}"
+    );
+    let frames = v["frames"].as_array().expect("frames");
+    assert_eq!(frames.len(), 1, "one frame=single box: {stdout}");
+    let (sw, cw) = (
+      frames[0]["scrollWidth"].as_f64().unwrap(),
+      frames[0]["clientWidth"].as_f64().unwrap(),
+    );
+    assert!(
+      sw <= cw + 1.0,
+      "the breaklines frame scrolls ({sw} > {cw}): {stdout}"
+    );
+    let (h, fs) = (
+      v["shortLine"]["height"].as_f64().unwrap(),
+      v["shortLine"]["fontSize"].as_f64().unwrap(),
+    );
+    assert!(
+      h < 2.0 * fs,
+      "a one-row breaklines line is {h}px at font {fs}px: {stdout}"
+    );
+    assert!(
+      v["codeRects"][0].as_u64().unwrap() > 1,
+      "the long \\verb did not wrap: {stdout}"
+    );
+    let cells = v["cellCodeRects"].as_array().expect("cellCodeRects");
+    assert!(
+      cells.len() == 2 && cells.iter().all(|n| n.as_u64() == Some(1)),
+      "a \\verb in a nowrap table cell wrapped: {stdout}"
+    );
+    assert_eq!(
+      v["returnLine"].as_str().map(str::trim_end),
+      Some("        return   x"),
+      "a breaklines line lost its spaces: {stdout}"
     );
   }
 }
@@ -2678,6 +2781,16 @@ mod aligned_mtable_columnspacing_zero {
     assert!(
       css.contains("mtable[columnspacing=\"0pt\"] mtd"),
       "LaTeXML.css is missing the native-MathML aligned mtd padding reset (#755)"
+    );
+    // #809: Core dropped `columnalign`; the left column is right-aligned only by the
+    // stylesheet rule keyed on it.
+    assert!(
+      html.contains("columnalign=\"right\""),
+      "aligned's left column lost columnalign=\"right\" (#809):\n{html}"
+    );
+    assert!(
+      css.contains("math mtd[columnalign=\"right\"]"),
+      "LaTeXML.css is missing the native-MathML mtd[columnalign] alignment (#809)"
     );
   }
 }

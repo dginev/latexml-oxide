@@ -2,6 +2,60 @@
 
 ## Unreleased
 
+  - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
+    dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
+    `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now
+    right- or left-aligns a cell by its `columnalign` (`justify-items`); the markup is
+    unchanged. Guard
+    `browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation`
+    (Chrome, local).
+  - **`/` has no operator space** (issue 789). TeX's `/` is an Ord, and MathML Core puts it in
+    category K (zero space), but our dictionary (Perl's) had it in B and Chrome spaces it
+    0.222 em each side. A visible Core-K operator (`/`, `\backslash`, `_`) is now
+    `<mo lspace="0em" rspace="0em">` and an Ord to the space walk, so `\backslash` loses its
+    0.222 em too; a kept `\mathrel{/}` or `\mathpunct{/}` keeps TeX's Rel or Punct space.
+    Guard `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space`.
+  - **Small PDF figures with a raster image keep their vector labels** (after PR 816 by
+    amachino — thank you). A PDF figure of at most 500 KiB that embeds a raster image
+    (a heatmap with axes and labels) was rasterized whole to PNG; it now goes to the
+    vector-SVG path like a vector-only PDF (mutool, then pdftocairo), keeping the text as
+    glyphs and the image at its own resolution, with the PNG path as the fallback. A
+    figure that draws a raster larger than its own pixels keeps the PNG path, where a
+    browser would blur it
+    (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
+  - **The binding macros mean what Perl's same-named API means** (MACSYNC, AUDMAC). `Digest!` leaves
+    the horizontal mode its digestion entered (Package.pm:393-402, through the new `binding_digest`) and `RawTeX!`
+    ends in vertical mode (Package.pm:996). `AssignRegister!` takes Perl's arguments, `(cs, value[, scope[, parameters]])`, `cs` a name
+    or a Token (**API change** for compiled bindings: the third argument was the parameters, now the scope).
+    `LookupRegister!`, `AssignRegister!` and the core `lookup_register` give Perl's one Warning
+    (`The control sequence \X is not a register`, Package.pm:1367-1369); the macros on an undefined cs too
+    (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
+    unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` on an
+    undefined cs is TeX's Error and defines it with the addition, as latex.ltx does (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
+  - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
+    number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
+    `lstlisting` copies the code without its numbers; dark mode colours `body`, not
+    `:root` (upstream `ee4b3640`). `ltx-cv.css`, which the moderncv binding requests
+    (Perl `moderncv.cls.ltxml:25`), and the opt-in `LaTeXML-epub.css`
+    (`--css=LaTeXML-epub.css`, `\newpage` as a page break) are embedded byte-identical to
+    Perl's: both were `missing_file` Warnings with a dangling `<link>`. Mirrored in
+    ar5iv-css. Guard `single_binary_smoke::class_and_opt_in_stylesheets_are_served_embedded`.
+  - **An fvextra `breaklines` Verbatim wraps and fits a phone** (issue 431, issue 702).
+    The bundled CSS's verbatim `white-space:pre` also reached a breaklines line's
+    `\parbox`, so its markup newlines rendered as blank rows (a one-row line 60 px, now
+    15), and PR #718's `.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }`
+    capped nothing, the line around the parbox carrying an inline width: at 375 px the
+    frame scrolled (scrollWidth 468 > 330) and the guard's page was 488 px wide, now 375.
+    Lines and xleftmargin's wrapper are capped at their box, a breaklines line is a flex
+    row whose parbox shrinks to it (also through the `ltx_text` an id keeps around a
+    numbered indented line's parbox), and a framed verbatim is a block; inline `\verb`
+    keeps its spaces and wraps (`pre-wrap`), so a long one no longer widens a narrow page,
+    except in a table cell, which stays unwrapped as the cell is. A breaklines line's text
+    wraps and keeps its spaces (`        return   x` had rendered `return x`). Witnesses
+    2605.00468 and 2605.01024 (their lines' total height 41,496 → 13,650 px and
+    1,476 → 432 px at 1280 px). Mirrored in ar5iv-css. Guards
+    `witnessed_css_delta::verbatim_whitespace_delta_stays_present`,
+    `browser_render_verbatim_narrow` (opt-in).
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
@@ -48,6 +102,20 @@
     the EPUB tests validate their output. Guards
     `cli_css_resource_copy::cli_resources_link_their_copies_from_every_page` and
     `whatsinout::format_epub_ar5iv_preload_carries_the_css_param` (in `cluster_cli`).
+  - **`revert_as => 'context'` reverts by the dual branch, as Perl does** (#821, thanks
+    @nschloe). Both readers now take the branch from the locals stack: a no-argument
+    `DefMathI` (Package.pm L1849-1854), whose reversion the port had fixed to the CS at
+    definition time, and the `\lx@dual` reversion (Base_XMath.pool.ltxml L243), which read
+    a state value nothing set. So `ltx:Math`'s `tex` (presentation branch) got the user's
+    CS and `content-tex` was never written: `\lxDefMath{\plus}{+}` gave `tex="a\plus b"`
+    where Perl gives `tex="a+b"` + `content-tex="a\plus b"`. Golden `math/declare` moves
+    to Perl's attributes, except that `\foo{x}` with an unused `#1` reverts as TeX prints
+    it, `\mathbf{foo}`.
+  - **nicematrix's `{NiceTabular}` keeps its column and row features** (issue 736). `p[c]{5em}`-style columns
+    read their `l`/`c`/`r` and `t`/`m`/`b` keys instead of misreading `[c]` as columns (2607.15452: 12 errors → 0); a
+    `\Block{i-j}` cell spans its columns and rows, and a `\\` in its text breaks a line of the block, not the row
+    (2206.12224); the body's two-color `\rowcolors` no longer swallows the next cell's `$` (2602.03088: 39 errors →
+    0). Guard `perfect_kernel_batchi736::nicematrix_body_features_keep_the_table`.
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
@@ -738,7 +806,9 @@
     (`.ltx_framed_verbatim.ltx_break` vs `:not(.ltx_break)`) without reaching for the
     fragile `:has(.ltx_parbox)` selector, which was previously the only distinguisher.
     Beyond-Perl (both engines emit no breaklines hook natively), same spirit as the
-    `frame=single`→`ltx_framed_verbatim` remap (#702).
+    `frame=single`→`ltx_framed_verbatim` remap (#702). (The bundled CSS no longer uses
+    it: an unframed breaklines Verbatim carries no hook, so its rules match a line by
+    its `.ltx_parbox` child — see Unreleased, issue 702.)
   - **Streaming byte-identity for a framed `breaklines=true` verbatim.** A single-line
     such verbatim (its parbox layer crosses a fragment seam) used to render nested under
     `--streaming` yet collapsed under the eager path, because `spill_closed_subtrees`
