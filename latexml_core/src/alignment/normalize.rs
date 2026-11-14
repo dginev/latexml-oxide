@@ -196,6 +196,9 @@ fn normalize_overprint_spans(alignment: &mut Alignment) {
       } else {
         end
       };
+      let reach = cells[j]
+        .overprint_columns
+        .map_or(reach, |n| reach.min(j + n));
       if reach > start {
         // The span's right edge is the last covered cell's.
         if end > start {

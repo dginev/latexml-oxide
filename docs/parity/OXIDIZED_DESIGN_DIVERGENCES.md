@@ -18243,6 +18243,12 @@ lefteqn_cells_with_content, lefteqn_then_amp, lefteqn_stops_at_side_content}`,
 `perfect_kernel_batch61::eqnarray_continuation_after_lefteqn_does_not_panic`, `53_alignment::eqnarray_test`; repros
 `alignment/lefteqn_*`.
 
+**Bounded overprint** (issue 736): nicematrix's `\Block{i-j}{text}` sets its text over an i×j rectangle whose other
+source cells are empty (nicematrix.sty:7258-7300). `\lx@nicematrix@block@span` marks the anchor cell overprinting with
+`Cell::overprint_columns = j`, which caps the span at `j` columns (a covered cell with text still ends it), and gives it
+`rowspan = i` as `\multirow` does (`normalize_mark_spans` truncates it at a covered cell with text); `*` leaves that
+side unspanned. Witness 2206.12224; guard `perfect_kernel_batchi736::nicematrix_body_features_keep_the_table`.
+
 ### 557. eqnarray has latex.ltx's fourth column, the equation number's (Perl: three columns)
 
 latex.ltx:15756-15766 gives eqnarray's `\halign` four columns: the three of the equation and

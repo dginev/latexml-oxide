@@ -77,6 +77,9 @@ pub struct Cell {
   /// The cell's content overprints the cells to its right, as an `\rlap` does (`\lefteqn`, latex.ltx:15800): the
   /// empty cells that follow it join its span (`normalize_overprint_spans`). Set by `\lx@alignment@cell@overprint`.
   pub overprint:           bool,
+  /// The most columns an overprinting cell spans, its own included (a nicematrix `\Block{i-j}`'s `j`); `None` for no
+  /// bound.
+  pub overprint_columns:   Option<usize>,
 }
 impl Cell {
   /// Marks the column padded on its right when its after tokens hold an intercolumn macro (`\lx@intercol`, or a

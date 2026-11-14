@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **nicematrix's `{NiceTabular}` keeps its column and row features** (issue 736). `p[c]{5em}`-style columns
+    read their `l`/`c`/`r` and `t`/`m`/`b` keys instead of misreading `[c]` as columns (2607.15452: 12 errors → 0); a
+    `\Block{i-j}` cell spans its columns and rows, and a `\\` in its text breaks a line of the block, not the row
+    (2206.12224); the body's two-color `\rowcolors` no longer swallows the next cell's `$` (2602.03088: 39 errors →
+    0). Guard `perfect_kernel_batchi736::nicematrix_body_features_keep_the_table`.
+
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
     `at t.tex; line 10 col 21 - …`, as Perl's `getShortSource` prints it, so a problem

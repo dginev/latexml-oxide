@@ -472,6 +472,7 @@ mod perfect_kernel_batchga5;
 mod perfect_kernel_batchgl1;
 /// HG1: the guards DEL1 left hollow asserting again — rows of one table, the wrong ones `_red.tex` catalog repros.
 mod perfect_kernel_batchhg1;
+mod perfect_kernel_batchi736;
 mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
