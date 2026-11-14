@@ -64,6 +64,7 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 |-----|------------|
 | [`parity/WISDOM.md`](parity/WISDOM.md) | Tactical insights about system internals — check here to avoid re-introducing known bugs. |
 | [`parity/KNOWN_PERL_ERRORS.md`](parity/KNOWN_PERL_ERRORS.md) | Upstream Perl LaTeXML issues; check first when investigating a test failure. |
+| [`parity/UPSTREAM_SYNC_2833_to_0db6f47e.md`](parity/UPSTREAM_SYNC_2833_to_0db6f47e.md) | The upstream LaTeXML master commits after #2833 through `0db6f47e` (2026-11-14): each one's state here (ported, superseded, or ported by UPS1) and its guard. |
 | [`parity/DUMP_DESIGN.md`](parity/DUMP_DESIGN.md) | Kernel dump precompilation (strict LoadFormat mutual exclusivity, unconditional apply). |
 | [`parity/BINDING_DSL_ARCHITECTURE.md`](parity/BINDING_DSL_ARCHITECTURE.md) | Binding-definition DSL: shared `ConstructorBuilder` spine, compile-time + runtime front-ends. |
 | [`parity/RHAI_BINDINGS_GUIDE.md`](parity/RHAI_BINDINGS_GUIDE.md) | **Newcomer guide to the Rhai binding dialect**: loading, values, the Perl closure form, truthiness, diagnostics, the deprecated-name migration; links the generated `API.md`/`CHEATSHEET.md` and the CI-run examples. |
