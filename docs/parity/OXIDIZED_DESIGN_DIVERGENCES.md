@@ -10155,6 +10155,19 @@ frontmatter_leads_a_leading_framed_empty_box,
 frontmatter_hoists_over_an_error_marker_only_paragraph}`,
 `perfect_kernel_batch54::maketitle_inside_a_box_goes_to_the_head`; goldens revtex4_endpage
 (now valid), aliceblog.
+**Extended (QA91, DG 2026-11-14: "keep it in place"; BM's probe Q2.3).** Layer (2) keeps the text the PDF prints
+before the title there: the paragraphs and display blocks (`is_titlepage_layout`) a `\maketitle` flush finds ahead
+of it are wrapped, after the field-ink lift (#715) took a print of the title or the authors out of them, as
+`<titlepage class="ltx_titlepage_before">` right before the placed title block (`wrap_text_before_title`; a titlepage
+is first-group, so the tree stays valid). The class means "text that preceded `\maketitle`" and, like #903's
+`ltx_titlepage_continued`, stands for no title: the XHTML `ltx:title` template still shows the title and creators
+beside it, and every engine reader of "a titlepage replacing the title" excludes both (`title_standing_titlepage`:
+`settle_cover_title_ink`, `lift_marked_field_ink`, `maybe_dedup_leading_title_ink`). Not wrapped: blank lines and
+`\vspace` (content-free), preamble residue, the paragraph holding a boxed `\maketitle`, and whatever follows the
+first section, TOC or float (those still follow the frontmatter). A `{titlepage}` or `\section` flush before
+`\maketitle` places the frontmatter first, and the text before `\maketitle` still follows the title (RED
+`text_before_maketitle_after_an_earlier_flush_red`). Guard
+`perfect_kernel_batch56::text_before_maketitle_stays_before_the_title`; golden revtex4_endpage.
 
 ### 263. `\unwind@titlepage` re-homes what it unwraps through the content model (Perl: children spliced in place)
 
@@ -36342,7 +36355,7 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
 
-### 1044. The title-page deposit's emptied fields keep their value where a quantity's operand reads them (DEPN)
+### 1049. The title-page deposit's emptied fields keep their value where a quantity's operand reads them (DEPN)
 
 **Perl** never runs a raw class's title page (State.pm:502-517). **Rust** deposits it (#124, #265) with the
 frontmatter's fields emptied (`\let\@date\@empty`, sect05.rs `TITLE_PAGE_FIELDS`, and the handed stores,

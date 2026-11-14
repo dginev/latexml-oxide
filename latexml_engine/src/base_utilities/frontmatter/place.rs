@@ -1011,7 +1011,7 @@ pub fn place_frontmatter(
   document: &mut Document,
   wrap_layout: bool,
   anchor: FrontmatterAnchor,
-) -> Result<()> {
+) -> Result<Option<TextBeforeTitle>> {
   // Drain the raw frontmatter queue first, as `insert_frontmatter` does, so
   // `frontmatter_pending` and the flush agree: the `{titlepage}` environment's
   // `after_construct` is the one placement point without its own digest hook, and
@@ -1019,7 +1019,8 @@ pub fn place_frontmatter(
   // after `\end{titlepage}` may still sit undigested there.
   digest_front_matter()?;
   let Some(root) = document.get_document().get_root_element() else {
-    return insert_frontmatter(document);
+    insert_frontmatter(document)?;
+    return Ok(None);
   };
   let kids: Vec<Node> = root
     .get_child_nodes()
@@ -1071,7 +1072,7 @@ pub fn place_frontmatter(
     if let Some(tail) = last_first {
       move_content_free_after(&movers, tail)?;
     }
-    return Ok(());
+    return Ok(None);
   }
   // Visible body content before the flush (prose or a class-drawn cover before
   // `\maketitle`, a section before a late `\title`) does not hold the frontmatter
@@ -1079,7 +1080,8 @@ pub fn place_frontmatter(
   // (`LaTeXML-structure.rnc:34`), so it goes to the head and that content follows
   // it in its own order. Perl places at the current point (`\maketitle`,
   // Base_Utility.pool.ltxml:918), stranding `<title>` after the body — schema-invalid
-  // (user-approved surpass 2026-09-23, OXIDIZED_DESIGN #262). The flush ends the
+  // (user-approved surpass 2026-09-23, OXIDIZED_DESIGN #262); text among it the
+  // `\maketitle` caller then keeps ahead of the title ([`wrap_text_before_title`]). The flush ends the
   // paragraph it interrupts, as every flush point does in LaTeX (`\maketitle`:
   // article.cls:203 opens with `\par`, report/book with `\begin{titlepage}`;
   // `\section`; `\end{document}`) and as the current-point insertion did by
@@ -1090,6 +1092,16 @@ pub fn place_frontmatter(
     FrontmatterAnchor::Top => None,
     FrontmatterAnchor::LeadingFrontmatter => last_first.clone(),
   });
+  // (the body text the flush found ahead of it, which the caller keeps ahead of the title block: QA91)
+  let lead: Vec<Node> = if wrap_layout {
+    Vec::new()
+  } else {
+    kids[i..bound]
+      .iter()
+      .take_while(|k| is_titlepage_layout(k) && !is_preamble_residue(k))
+      .cloned()
+      .collect()
+  };
   let placed = insert_frontmatter_at(document, after.as_ref())?;
   // Content-free nodes that preceded the placed run now follow it, in their order.
   let tail = match (placed.last().cloned(), last_first) {
@@ -1099,5 +1111,59 @@ pub fn place_frontmatter(
   if let Some(tail) = tail {
     move_content_free_after(&movers, tail)?;
   }
+  Ok(match placed.first() {
+    Some(title_block) if lead.iter().any(|k| !node_is_content_free(k)) => Some(TextBeforeTitle {
+      run:         lead,
+      title_block: title_block.clone(),
+    }),
+    _ => None,
+  })
+}
+
+/// The body text a `\maketitle` flush found ahead of it (title-page layout: paragraphs, display blocks), placed after
+/// the frontmatter by [`place_frontmatter`], and the first element of the frontmatter it placed.
+pub struct TextBeforeTitle {
+  run:         Vec<Node>,
+  title_block: Node,
+}
+
+/// Body text set before `\maketitle` stays ahead of the title block, as the PDF prints it (QA91, DG 2026-11-14), wrapped
+/// as a `<titlepage>` of [`BEFORE_TITLEPAGE`] since the schema puts the frontmatter group first (LaTeXML-structure.rnc:34;
+/// OXIDIZED_DESIGN #262). Run after the field-ink lift, which takes a print of the title or the authors out of it.
+pub fn wrap_text_before_title(document: &mut Document, lead: TextBeforeTitle) -> Result<()> {
+  let Some(root) = document.get_document().get_root_element() else {
+    return Ok(());
+  };
+  if lead.title_block.get_parent().as_ref() != Some(&root) {
+    return Ok(());
+  }
+  // (what the lift left of it; never the element holding the insertion point, a `\maketitle` in a box)
+  let point = document.get_node().clone();
+  let run: Vec<Node> = lead
+    .run
+    .into_iter()
+    .filter(|k| k.get_parent().as_ref() == Some(&root))
+    .take_while(|k| !is_ancestor_or_self(k, &point))
+    .collect();
+  if run.iter().all(node_is_content_free) {
+    return Ok(());
+  }
+  let mut titlepage = wrap_as_titlepage(document, &root, &run)?;
+  document.add_class(&mut titlepage, BEFORE_TITLEPAGE)?;
+  titlepage.unlink();
+  let mut title_block = lead.title_block;
+  title_block.add_prev_sibling(&mut titlepage)?;
   Ok(())
+}
+
+/// True when `node` is `inner` or one of its ancestors.
+fn is_ancestor_or_self(node: &Node, inner: &Node) -> bool {
+  let mut cur = Some(inner.clone());
+  while let Some(n) = cur {
+    if n == *node {
+      return true;
+    }
+    cur = n.get_parent();
+  }
+  false
 }

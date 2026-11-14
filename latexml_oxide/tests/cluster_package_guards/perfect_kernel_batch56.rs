@@ -6365,6 +6365,91 @@ fn deposit_reads_a_field_as_a_number() {
   }
 }
 
+/// The XML with no whitespace between tags and no `<resource>`.
+fn flat(xml: &str) -> String {
+  let gaps = regex::Regex::new(r">\s+<").unwrap();
+  let resources = regex::Regex::new(r"<resource [^>]*/>").unwrap();
+  resources
+    .replace_all(&gaps.replace_all(xml, "><"), "")
+    .into_owned()
+}
+
+/// QA91 (DG 2026-11-14, "keep it in place"; BM's probe Q2.3): the body text a document sets before `\maketitle` stays
+/// ahead of the title block, as pdflatex prints it, wrapped as `<titlepage class="ltx_titlepage_before">` (OXIDIZED_DESIGN
+/// #262, `wrap_text_before_title`), and the HTML still shows the title and the creator beside it. Rows: the probe; a
+/// title printed with `\@title` before it, which the field-ink lift takes first (shown once, in `<title>`); a
+/// `\maketitle` in a minipage, whose paragraph is never wrapped; blank lines and `\vspace*` only, no titlepage. Red
+/// (QAB4base): the text after the title block.
+#[test]
+fn text_before_maketitle_stays_before_the_title() {
+  let before = |id: &str, p: &str| {
+    format!(
+      r#"<titlepage class="ltx_titlepage_before" xml:id="id1"><block xml:id="{id}"><p {p}xml:id="{id}.1">"#
+    )
+  };
+  let intro = r#"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Intro</title><para xml:id="S1.p1"><p xml:id="S1.p1.1">"#;
+  let probe = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/text_before_maketitle_stays_before_the_title.tex"
+  );
+  for (tex, body) in [
+    (
+      probe,
+      format!(
+        r#"{}This preamble text comes before the title.</p></block></titlepage><title>The Title</title><creator role="author"><personname>A. Author</personname></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p xml:id="abstract1.1">An abstract.</p></abstract>{intro}Body.</p></para></section>"#,
+        before("p1", "")
+      ),
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/text_before_maketitle_after_a_lifted_title_print.tex"
+      ),
+      format!(
+        r#"{}Preprint XYZ-2024-01</p></block></titlepage><title>Cover Then Maketitle</title><creator role="author"><personname>Max Author</personname></creator>{intro}Text.</p></para></section>"#,
+        before("p2", r#"align="right" "#)
+      ),
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/text_before_maketitle_in_a_box.tex"
+      ),
+      format!(
+        r#"{}Opening words.</p></block></titlepage><title>The Title</title><creator role="author"><personname>A. Author</personname></creator><para xml:id="p2"><p xml:id="p2.1">Body.</p></para>"#,
+        before("p1", "")
+      ),
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/whitespace_before_maketitle_makes_no_titlepage.tex"
+      ),
+      format!(
+        r#"<title>The Title</title><creator role="author"><personname>A. Author</personname></creator>{intro}Body.</p></para></section>"#
+      ),
+    ),
+  ] {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let flat = flat(&xml);
+    let start = flat
+      .find("<document")
+      .and_then(|at| flat[at..].find('>').map(|end| at + end + 1))
+      .unwrap_or(0);
+    assert_eq!(&flat[start..], format!("{body}</document>\n"), "{xml}");
+    if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+      assert_eq!(lines, 0, "jing:\n{xml}");
+    }
+  }
+  // (the HTML shows the text, then the title and the creator: LaTeXML-structure-xhtml.xsl's `ltx:title` template)
+  let (log, html) = convert_html(probe);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let html = flat(&html);
+  assert!(
+    html.contains(
+      r#"<div class="ltx_titlepage ltx_titlepage_before"><div id="p1" class="ltx_block"><p class="ltx_p">This preamble text comes before the title.</p></div></div><h1 class="ltx_title ltx_title_document">The Title</h1><div class="ltx_authors"><span class="ltx_creator ltx_role_author"><span class="ltx_personname">A. Author"#
+    ),
+    "{html}"
+  );
+}
+
 /// Batch 56ha: the deposit's vocabulary gate skips what a no-op macro
 /// absorbs. uantwerpendocs' classes draw their title page inside eso-pic's
 /// `\AddToShipoutPicture*{…}` (a no-op here), so the undefined tikz in that
@@ -8276,29 +8361,25 @@ fn frontmatter_hoists_above_content_free_leading_pagination() {
 
 /// Batch 56gf (OXIDIZED_DESIGN #262, user-approved surpass; supersedes the 56ep
 /// control): visible content before `\maketitle` — a `\includegraphics` logo on
-/// the cover — no longer holds the frontmatter back. The schema puts the front
-/// group first, so `<title>` leads and the logo follows it, kept whole.
+/// the cover — no longer holds the frontmatter back. Since QA91 (DG 2026-11-14,
+/// "keep it in place") it stays ahead of the title as pdflatex prints it (the logo
+/// page, then the title page), wrapped as the before-titlepage, with its pagebreak.
 #[test]
-fn frontmatter_leads_a_leading_graphic() {
+fn leading_graphic_stays_before_the_title() {
   let tex = "\\documentclass{book}\n\\usepackage{graphicx}\n\\title{T}\\author{A}\n\
                \\begin{document}\n\\noindent\\includegraphics{logo}\n\\clearpage\n\
                \\maketitle\n\\chapter{C}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
-  let graphics = xml
-    .find("<graphics")
-    .expect("the leading \\includegraphics <graphics> must be present");
-  let title = xml
-    .find("<title>")
-    .expect("frontmatter <title> must be present");
   assert!(
-    title < graphics,
-    "the frontmatter leads; the logo follows it:\n{xml}"
+    flat(&xml).contains(
+      r#"<titlepage class="ltx_titlepage_before"><block class="ltx_noindent" xml:id="p1"><graphics graphic="logo" xml:id="p1.g1"/><pagination role="newpage"/></block></titlepage><title>T</title>"#
+    ),
+    "the logo stays before the title:\n{xml}"
   );
-  assert!(
-    !xml[..title].contains("<para"),
-    "nothing precedes the title:\n{xml}"
-  );
+  if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+    assert_eq!(lines, 0, "jing:\n{xml}");
+  }
 }
 
 /// Batch 56es (OXIDIZED_DESIGN #245): the `\end{document}` relocation pass. A
@@ -8529,11 +8610,12 @@ fn frontmatter_hoists_over_an_error_marker_only_paragraph() {
     xml.contains("<ERROR class=\"undefined\">\\ThisCommandIsUndefined</ERROR>"),
     "the marker is still reported:\n{xml}"
   );
-  let title = xml.find("<title>Sample Title</title>").expect("title");
-  let words = xml.find("Visible words").expect("argument text");
+  // (since QA91 it stays ahead of the title, as pdflatex prints it, with its marker)
   assert!(
-    title < words,
-    "the frontmatter leads the visible text (#262):\n{xml}"
+    flat(&xml).contains(
+      r#"<titlepage class="ltx_titlepage_before"><block xml:id="p1"><ERROR class="undefined">\ThisCommandIsUndefined</ERROR><p>Visible words</p></block></titlepage><title>Sample Title</title>"#
+    ),
+    "the visible text stays before the title:\n{xml}"
   );
 }
 
@@ -8593,23 +8675,23 @@ fn pagebreak_before_a_leading_bibliography_stays_put() {
 
 /// Batch 56gf (OXIDIZED_DESIGN #262; supersedes the 56es control): an ink-bearing
 /// empty box before `\maketitle` (`\fbox{}`, an `<ltx:text framed="rectangle">`)
-/// is visible body content; the frontmatter still leads and the box follows it.
+/// is visible body content; since QA91 it stays ahead of the title, as pdflatex
+/// prints it, with its pagebreak.
 #[test]
-fn frontmatter_leads_a_leading_framed_empty_box() {
+fn leading_framed_empty_box_stays_before_the_title() {
   let tex = "\\documentclass{report}\n\\begin{document}\n\\noindent\\fbox{}\\clearpage\n\
                \\title{T}\\author{A}\n\\maketitle\nBody.\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
-  let framed = xml
-    .find("framed=")
-    .expect("the \\fbox{} <text framed> must be present");
-  let title = xml
-    .find("<title>")
-    .expect("frontmatter <title> must be present");
   assert!(
-    title < framed,
-    "the frontmatter leads; the framed box follows it:\n{xml}"
+    flat(&xml).contains(
+      r##"<titlepage class="ltx_titlepage_before"><block class="ltx_noindent" xml:id="p1"><p><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle"/></p><pagination role="newpage"/></block></titlepage><title>T</title>"##
+    ),
+    "the framed box stays before the title:\n{xml}"
   );
+  if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+    assert_eq!(lines, 0, "jing:\n{xml}");
+  }
 }
 
 /// Batch 56et (OXIDIZED_DESIGN #246): with no `\maketitle`, an abstract-only

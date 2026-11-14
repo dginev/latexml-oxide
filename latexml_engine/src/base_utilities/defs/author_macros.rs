@@ -731,13 +731,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // anchors it (a superset of #242, which placed at the current point when a
     // pagebreak sat between the titlepage and `\maketitle` — no corpus doc has that
     // shape; the anchored tree is the valid one); preamble residue ahead of it moves
-    // behind it, and visible body content ahead of it stays in order after the
-    // head-placed frontmatter (#262; Perl's current-point placement stranded the
-    // title — amsldoc/tkz-doc/tuda-ci/tzplot and the logo-cover controls).
-    place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
+    // behind it, and a section, TOC or float ahead of it follows the head-placed
+    // frontmatter (#262; Perl's current-point placement stranded the title —
+    // amsldoc/tkz-doc/tuda-ci/tzplot and the logo-cover controls).
+    let before = place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
     // What the document printed of the marked fields before its `\maketitle` is their ink (`\lx@field@mark`).
     if lift_marked_field_ink(doc)? {
       assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
+    }
+    // The text it printed before stays ahead of the title block (QA91; BM's probe Q2.3).
+    if let Some(before) = before {
+      wrap_text_before_title(doc, before)?;
     }
   },
   after_digest => {

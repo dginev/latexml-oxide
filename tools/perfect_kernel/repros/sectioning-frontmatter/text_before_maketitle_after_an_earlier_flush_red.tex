@@ -1,0 +1,24 @@
+% mechanism: body text before `\maketitle` stays ahead of the title only when `\maketitle`'s flush places the
+%   frontmatter (QA91, `wrap_text_before_title`). An earlier flush — a `{titlepage}` environment's
+%   (`place_frontmatter` from its after_construct), a `\section`'s fallback — already placed it, so the text follows
+%   the title, and `\maketitle`, with nothing left to flush, does not end the paragraph: "Opening words." and "Body."
+%   run together
+% witness: synthetic (QA91 round 2 sibling probe; also `Opening words. \section{Early} Early body. \maketitle Body.`:
+%   the title first, "Early body. Body." one paragraph)
+% oracle:  pdflatex 0 errors: page 1 "A Cover Line"; page 2 "Opening words.", "The Title", "A. Author", the date, "Body."
+% engines: QAB4 round 2 (and QAB4base): titlepage, title, creator, then one paragraph "Opening words. Body."; 0 errors,
+%   0 warnings
+% expect:  "Opening words." ahead of `<title>` and "Body." a paragraph of its own
+% status:  RED (QAB4 round 2)
+% moves:   post-merge (an earlier flush's placement; below reach: no affected paper in QAB4's A/B)
+\documentclass{article}
+\title{The Title}
+\author{A. Author}
+\begin{document}
+\begin{titlepage}
+\centering A Cover Line
+\end{titlepage}
+Opening words.
+\maketitle
+Body.
+\end{document}

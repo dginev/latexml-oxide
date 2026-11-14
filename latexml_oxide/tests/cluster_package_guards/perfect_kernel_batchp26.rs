@@ -24,8 +24,8 @@ macro_rules! repro {
 }
 
 /// `tex` converted eager and `--streaming`, each with no Error and `warnings` Warnings of any kind (batch 99b's
-/// `converted` counts only the unclaimed-text net's), the two XMLs the same; the XML from its `<title>` to its end, each
-/// whitespace run one space.
+/// `converted` counts only the unclaimed-text net's), the two XMLs the same; the XML from its `<title>` (or the text set
+/// before `\maketitle`, kept ahead of it: `ltx_titlepage_before`, QA91) to its end, each whitespace run one space.
 #[track_caller]
 pub(super) fn converted_any(tex: &str, warnings: usize) -> String {
   let mut xmls = Vec::new();
@@ -40,7 +40,10 @@ pub(super) fn converted_any(tex: &str, warnings: usize) -> String {
   }
   assert_eq!(xmls[0], xmls[1]);
   let xml = xmls[0].split_whitespace().collect::<Vec<_>>().join(" ");
-  let start = xml.find("<title>").unwrap_or(0);
+  let start = xml
+    .find(r#"<titlepage class="ltx_titlepage_before""#)
+    .or_else(|| xml.find("<title>"))
+    .unwrap_or(0);
   let end = xml[start..]
     .find("</document>")
     .map_or(xml.len(), |end| start + end);
@@ -61,7 +64,7 @@ fn an_in_place_line_is_the_classs_where_a_separator_means_the_kernels() {
       repro!("inplace_contact_kernel_and_line_stays_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <para xml:id="p1"> <tabular vattach="top" xml:id="p1.1"> <tbody> <tr xml:id="p1.1.1"> <td align="center" xml:id="p1.1.1.1"><text fontsize="90%" xml:id="p1.1.1.1.1">Univ A, Town and Univ B, City</text></td> </tr> </tbody> </tabular> </para> <para xml:id="p2"> <p xml:id="p2.1">Body.</p> </para>"#
+    r#"<titlepage class="ltx_titlepage_before" xml:id="id1"> <block xml:id="p1"> <tabular vattach="top" xml:id="p1.1"> <tbody> <tr xml:id="p1.1.1"> <td align="center" xml:id="p1.1.1.1"><text fontsize="90%" xml:id="p1.1.1.1.1">Univ A, Town and Univ B, City</text></td> </tr> </tbody> </tabular> </block> </titlepage> <title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <para xml:id="p2"> <p xml:id="p2.1">Body.</p> </para>"#
   );
   assert_eq!(
     converted(repro!("inplace_contact_class_and_line_is_the_apis"), 0),
@@ -72,14 +75,14 @@ fn an_in_place_line_is_the_classs_where_a_separator_means_the_kernels() {
       repro!("inplace_contact_copied_or_held_kernel_and_stays_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <para xml:id="p1"> <tabular vattach="top" xml:id="p1.1"> <tbody> <tr xml:id="p1.1.1"> <td align="center" xml:id="p1.1.1.1"><text fontsize="90%" xml:id="p1.1.1.1.1">Univ A, Town and Univ B, City</text></td> </tr> </tbody> </tabular> </para> <para xml:id="p2"> <tabular vattach="top" xml:id="p2.1"> <tbody> <tr xml:id="p2.1.1"> <td align="center" xml:id="p2.1.1.1"><text fontsize="90%" xml:id="p2.1.1.1.1">Univ A, Town and Univ B, City</text></td> </tr> </tbody> </tabular> </para> <para xml:id="p3"> <p xml:id="p3.1">Body.</p> </para>"#
+    r#"<titlepage class="ltx_titlepage_before" xml:id="id1"> <block xml:id="p1"> <tabular vattach="top" xml:id="p1.1"> <tbody> <tr xml:id="p1.1.1"> <td align="center" xml:id="p1.1.1.1"><text fontsize="90%" xml:id="p1.1.1.1.1">Univ A, Town and Univ B, City</text></td> </tr> </tbody> </tabular> </block> <block xml:id="p2"> <tabular vattach="top" xml:id="p2.1"> <tbody> <tr xml:id="p2.1.1"> <td align="center" xml:id="p2.1.1.1"><text fontsize="90%" xml:id="p2.1.1.1.1">Univ A, Town and Univ B, City</text></td> </tr> </tbody> </tabular> </block> </titlepage> <title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <para xml:id="p3"> <p xml:id="p3.1">Body.</p> </para>"#
   );
   assert_eq!(
     converted(
       repro!("inplace_contact_kernel_and_copy_under_a_renewed_and"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Address: " role="address">Univ A, Town, Univ B, City</contact> </creator> <para xml:id="p1"> <tabular vattach="top" xml:id="p1.1"> <tbody> <tr xml:id="p1.1.1"> <td align="center" xml:id="p1.1.1.1"><text fontsize="90%" xml:id="p1.1.1.1.1">Univ C, Place and Univ D, Dale</text></td> </tr> </tbody> </tabular> </para> <para xml:id="p2"> <p xml:id="p2.1">Body.</p> </para>"#
+    r#"<titlepage class="ltx_titlepage_before" xml:id="id1"> <block xml:id="p1"> <tabular vattach="top" xml:id="p1.1"> <tbody> <tr xml:id="p1.1.1"> <td align="center" xml:id="p1.1.1.1"><text fontsize="90%" xml:id="p1.1.1.1.1">Univ C, Place and Univ D, Dale</text></td> </tr> </tbody> </tabular> </block> </titlepage> <title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Address: " role="address">Univ A, Town, Univ B, City</contact> </creator> <para xml:id="p2"> <p xml:id="p2.1">Body.</p> </para>"#
   );
   let boxed = converted_any(
     repro!("inplace_contact_and_inside_a_box_or_note_parts_no_line"),

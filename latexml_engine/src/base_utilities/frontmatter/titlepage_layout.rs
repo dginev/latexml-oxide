@@ -449,10 +449,7 @@ pub(in crate::base_utilities) fn maybe_dedup_leading_title_ink(
   }
   assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
   // A titlepage beside the title: the structured title is metadata and the cover the display.
-  if document
-    .findnode("/ltx:document/ltx:titlepage", None)
-    .is_some()
-  {
+  if title_standing_titlepage(document).is_some() {
     return Ok(());
   }
   let nominal = {
