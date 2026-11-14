@@ -1,0 +1,17 @@
+% mechanism: listings `xleftmargin` indents every line by the dimension (listings.sty \lst@xleftmargin); the binding
+%   declares the key (Perl listings.sty.ltxml:925, our listings_sty.rs) but no markup or style carries it, so the
+%   ltx_listing renders at the text's left edge
+% witness: synthetic (issue 853's measurement round)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; both lines indented 2em
+% engines: rust fix/issue-853: 0 errors; Chrome 1280 px: `for` at x 40, the paragraph's edge (Firefox alike); Perl:
+%          the same (the key is declared, not applied)
+% expect:  0 errors; the listing indented by the margin in the rendered HTML
+% status:  RED (fix/issue-853) — moves: post-merge (the listings binding, Perl parity)
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\begin{lstlisting}[xleftmargin=2em]
+for i in x:
+    print(i)
+\end{lstlisting}
+\end{document}
