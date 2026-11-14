@@ -36103,3 +36103,46 @@ caption formatted without `\caption` (listings') never reads another's. Only a k
 at the caption, not at the `\captionsetup`.
 **Guards**: `bindings_batch2::caption_justification_and_skip`; `perfect_kernel_batch78d::mdpi_captions_end_the_label_with_a_period`
 (mdpi's `aboveskip=6pt`/`belowskip=-6pt`, `justification=justified`).
+
+### 1025. colortbl's rule colour is each border side's, taken as the rule is drawn (W4, #773)
+
+**TeX.** colortbl.sty:156-192 stores `\arrayrulecolor[model]{colour}` as `\gdef\CT@arc@{\color[model]{colour}}` and
+draws every rule as `{\CT@arc@ <rule>}`: `\hline`, `\@cline`, the preamble's `|` (`\@arrayrule`, set as each row is),
+`\multicolumn`'s own `|`; booktabs' rules alike (booktabs.sty:101,165). The `|` is `\xdef`ed into the preamble
+(array.sty:54 `\@addtopreamble`): a colour set as the preamble is built is frozen there (a `\multicolumn` builds its
+own), an unset one (`\relax`) is read as the rule is drawn, a cell's left `|` as the cell starts. `\CT@start`/`\CT@end`
+(:119-135) save the colour as a `\@tabarray` table (tabular, tabular*, tabularx, array) starts and restore it, globally,
+after its alignment closes (`\endarray`); a longtable or an `\halign` (IEEEeqnarraybox) restores nothing. So a
+mid-table change colours the `\hline`/`\cline` rules drawn after it, and the `|` ones when none was set as the table
+started; a colour never drawn is never evaluated (1910.02206's unbraced `\arrayrulecolor\hhline{---~~~}`). **Perl.** `\arrayrulecolor` and `\doublerulesepcolor` are no-ops
+(colortbl.sty.ltxml:85, :88): every border is the stylesheet's black. **Rust.** The core `Cell` keeps a colour per
+side (`border_color`, `Cell::add_border`): `add_line` takes the colour of the horizontal rule being drawn
+(`alignment::RULE_COLOR`/`take_rule_color`, local to the rule's `\noalign`), and the `|` extraction (tex_tables.rs
+`extract_alignment_column`) reads a vertical rule box's own `border_color`, the last one drawn on each side; every
+border move (normalize.rs's spans and pruned rows and columns, emulateapj's head rule) carries its side's colour. The
+`<td>`/`<XMCell>` carries the coloured sides its `border` keeps as `cssstyle="border-top-color:#BFBFBF;…"`; black,
+the stylesheet's colour (LaTeXML.css `.ltx_border_t`), adds nothing. The binding stores `\CT@arc@` as colortbl does
+and evaluates it as each rule is drawn (`\lx@CT@arc@draw`, ahead of `\@@alignment@hline`, `\lx@cline` — `\hhline`
+and booktabs' `\cmidrule` too), so an author's raw `\gdef\CT@arc@` colours too. Only a `|` takes the colour, as only
+`\@arrayrule` wraps `{\CT@arc@\vline}`: the binding's `|` column type puts `\vrule\lx@CT@paint\lx@CT@arc@<n>` in the
+template, `\lx@CT@arc@<n>` a copy of `\CT@arc@` frozen as the preamble (or a `\multicolumn`'s) is read, one per distinct
+body, or `\vrule\lx@CT@paint@live` (reading `\CT@arc@` as the rule is drawn) when that is `\relax`; the paint token
+sets that colour on the rule box just drawn. The rule box is the template's `\vrule`, as the base's `\vrule\relax`, so a
+cell's reversion trims it and a math array's `tex=` stays its source with or without a colour
+(`colortbl_bar_array_tex_is_its_source.tex`). The template skip lists (`template_after_fill_defeated`,
+`intercol_reachable_in_before`) read the paint tokens by their `\lx@CT@` prefix, as they read `\vrule` by its spelling
+(e0's spelling pins +1 each). A `!{\vrule}` or a typed
+`\vline` keeps the default ink, and a table nested in a cell leaves the cell's rules theirs. `\CT@start`
+saves locally just before `\lx@begin@alignment` of a table `\@tabular@bindings`/`\@array@bindings` set up (a request
+local to the table's group), and
+`\CT@end` restores after `\lx@end@alignment` (`\lx@CT@restore`), so a last row without `\\` keeps the colour. `\arrayrulecolor` is `\lx@hidden@noalign` material, where
+colortbl tests `\baselineskip` for a `\noalign` (so mid-cell in an `l` column, in an explicit `\noalign` or before a
+`\multicolumn` TeX errs, ours does not: `arrayrulecolor_mid_cell_misplaced_noalign_red.tex`,
+`arrayrulecolor_noalign_and_before_multicolumn_red.tex`, post-merge).
+`\doublerulesepcolor` is stored, unrendered (a border has no colour for the gap of `||`). Without `\arrayrulecolor`
+the output is unchanged: a table in coloured text keeps uncoloured borders, where pdflatex draws its rules in the
+current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay skipped
+(`hhline_colortbl_color_code_is_skipped`); a `!{}` rule's own colour (`!{\color{blue}\vrule}`) is not read
+(`arrayrulecolor_bang_rule_own_colour_red.tex`). **Guards**: `perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it`
+(repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
+`perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.

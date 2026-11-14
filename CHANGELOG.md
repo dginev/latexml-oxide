@@ -111,6 +111,13 @@
     `skip=`, `aboveskip=`, `belowskip=` its margins on the sides caption puts them,
     `position=auto` read as caption reads it; `\captionsetup[longtable]{…}`
     applies to longtable captions. Perl ignores both.
+  - **colortbl's `\arrayrulecolor` colours the table rules** (#773). Each rule
+    takes the colour colortbl draws it in (a `|` the one set as its table or
+    `\multicolumn` starts, else the one current when it is drawn): `\hline`,
+    `\cline`, the `|` rules, `\multicolumn`'s, `\hhline`'s and booktabs' rules.
+    A cell carries it per side as `cssstyle="border-top-color:#BFBFBF"`, and a
+    colour set inside a tabular or array ends with it. Black, and a table without
+    `\arrayrulecolor`, add nothing. (Perl ignores it.)
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
