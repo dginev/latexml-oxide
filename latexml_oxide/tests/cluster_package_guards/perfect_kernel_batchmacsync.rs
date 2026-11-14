@@ -52,6 +52,10 @@ fn macro_rows() -> Result<Vec<String>> {
     "lookup_register {:?}",
     lookup_register("\\nosuchreg", Vec::new())?
   ));
+  rows.push(format!(
+    "lookup_register {:?}",
+    lookup_register("\\relax", Vec::new())?
+  ));
   // Row 9, Dimension.pm:27-46: a number is sp, rounded; an unreadable spec is 0 with a Warning.
   for spec in ["3pt", "1.5", "", "abc"] {
     rows.push(format!(
