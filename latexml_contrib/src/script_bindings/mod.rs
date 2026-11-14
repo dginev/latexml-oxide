@@ -17,12 +17,11 @@
 //!
 //! ## Seams implemented
 //!
-//! * **`DefMacro`** (expandable) — body receives args as strings, returns a string of TeX,
-//!   re-tokenized via `mouth::tokenize_internal` so an expansion to `\textit{x}` faithfully yields
-//!   a control-sequence token.
+//! * **`DefMacro`** (expandable) — body receives Perl's `($gullet, @args)`, the arguments as Tokens, and returns
+//!   Tokens or TeX source (re-tokenized via `mouth::tokenize_internal`, so `\textit{x}` yields a control sequence).
 //! * **`DefConstructor`** (construction) — two forms. A string XML template, or an imperative body
 //!   that reads like the Perl original: it receives a `Document` **proxy** as its first argument
-//!   (Perl's `$_[0]`) and each digested argument as an opaque handle, e.g. `|document, x| {
+//!   (Perl's `$_[0]`), each digested argument as an opaque handle, then Perl's `%props` as one map, e.g. `|document, x| {
 //!   document.openElement("ltx:emph"); document.absorb(x); document.closeElement("ltx:emph"); }`.
 //!   The proxy's methods resolve a thread-local **active context** (the live `&mut Document` +
 //!   props, published for the duration of the call; never borrowed across a re-entrant call).
@@ -41,6 +40,10 @@ use latexml_core::{
   binding::def::{
     builder::{ConstructorBuilder, EnvironmentBuilder, OptionValue},
     dialect::{def_conditional, def_macro, def_primitive},
+    options::{
+      CONDITIONAL_OPTIONS, CONSTRUCTOR_OPTIONS, ENVIRONMENT_OPTIONS, MACRO_OPTIONS, MATH_OPTIONS,
+      PRIMITIVE_OPTIONS, check_options, unsupported_option,
+    },
     replacement,
   },
   common::{
@@ -59,10 +62,10 @@ use latexml_core::{
     ExpansionClosure, FontDirective, PrimitiveBody, PrimitiveClosure, PropertiesClosure,
     ReplacementClosure, Reversion, argument::ArgWrap, conditional::ConditionalOptions,
     expandable::ExpandableOptions, math_primitive::MathPrimitiveOptions,
-    primitive::PrimitiveOptions,
+    primitive::PrimitiveOptions, register::RegisterValue,
   },
   digested::Digested,
-  document::Document,
+  document::{Document, tag::TagConstructionClosure},
   mouth,
   state::Scope,
   token::{Catcode, Token},
@@ -118,14 +121,120 @@ thread_local! {
   /// (Digested args are passed to the body directly as handles, not via here.)
   static CTOR_CTX: RefCell<Vec<CtorCtx>> = const { RefCell::new(Vec::new()) };
 
-  /// Active-context stack for whatsit-receiving hook closures (`afterDigest`, …).
-  /// Lets a parameterless hook body reach the in-flight whatsit via `whatsit()` —
-  /// referenced only when needed (the "omit as implied" model).
+  /// Active-context stack for whatsit-receiving hook closures (`afterDigest`, …): the in-flight whatsit their
+  /// `whatsit` argument (and the deprecated `whatsit()`) resolves.
   /// Entries are (whatsit pointer, mutable?). Digestion hooks (`afterDigest`,
   /// `properties`-adjacent) publish mutable whatsits; construction hooks
   /// (`before/afterConstruct`, `reversion`, `sizer`) publish READ-ONLY ones —
   /// `setProperty` errors there instead of mutating through a shared ref.
   static WHATSIT_CTX: RefCell<Vec<(*mut Whatsit, bool)>> = const { RefCell::new(Vec::new()) };
+
+  /// The whatsits a script reversion is reverting (by address): its own string form would revert it again.
+  static REVERTING: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+
+  /// The deprecated aliases already Warned, by script (its AST) — once per binding load; `load_script` clears its own.
+  static DEPRECATED_WARNED: RefCell<Vec<(usize, &'static str)>> =
+    const { RefCell::new(Vec::new()) };
+
+  /// The already-logged Fatal a registered function returned into Rhai, which can only carry its text (kept
+  /// beside it): the script's caller returns it as raised, so it prints once (#792).
+  static RAISED_FATAL: RefCell<Option<(Error, String)>> = const { RefCell::new(None) };
+}
+
+/// The logged Fatal a registered function raised, if the script's failure `e` is that Fatal; always taken, so a
+/// Fatal the script caught never stands in for a later, unrelated error (see `RAISED_FATAL`). Matched by text: a
+/// later `throw` that repeats the caught Fatal's whole internal message is taken for it (only a hand-written copy).
+pub(super) fn take_raised_fatal(e: &EvalAltResult) -> Option<Error> {
+  let (fatal, text) = RAISED_FATAL.with(|r| r.borrow_mut().take())?;
+  let raised = match e.unwrap_inner() {
+    EvalAltResult::ErrorRuntime(v, _) => v.is_string() && v.to_string() == text,
+    _ => false,
+  };
+  (raised && fatal.is_logged_fatal()).then_some(fatal)
+}
+
+/// The names #716 replaces with Perl's forms, kept one release as aliases: the name a script writes and its
+/// replacement. [`warn_deprecated`] names both; `api_doc` marks each row.
+pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
+  ("whatsit", "the hook's whatsit argument"),
+  ("whatsit.argString", "whatsit.getArg(n)"),
+  ("whatsit.propertyString", "whatsit.getProperty(key)"),
+  (
+    "document.getProperty",
+    "the constructor body's trailing properties map",
+  ),
+  (
+    "document.getProperties",
+    "the constructor body's trailing properties map",
+  ),
+  ("assign_value", "AssignValue(key, value, \"local\")"),
+  ("assign_global", "AssignValue(key, value, \"global\")"),
+  ("lookup_value", "LookupValue(key)"),
+  ("AssignString", "AssignValue(key, value[, scope])"),
+  ("AssignNumber", "AssignValue(key, value[, scope])"),
+  ("AssignBool", "AssignValue(key, value[, scope])"),
+  (
+    "AssignMeaning(cs, string)",
+    "Let(cs, other[, scope]), or AssignMeaning(T_CS(cs), LookupDefinition(other)[, scope])",
+  ),
+  (
+    "DefAccent",
+    "DefAccent(accent, combining, standalone, #{below: true})",
+  ),
+  (
+    "DefMacro |args|",
+    "|gullet, args|, the arguments as Tokens (name each: |gullet, _x|)",
+  ),
+  (
+    "DefPrimitive |args|",
+    "|stomach, args|, the arguments as Tokens (name each: |stomach, _x|)",
+  ),
+  (
+    "DefColumnType |args|",
+    "|gullet, args|, the arguments as Tokens (name each: |gullet, _x|)",
+  ),
+  (
+    "reversion |args|",
+    "|whatsit, args| (name each: |whatsit, _x|)",
+  ),
+  ("value == string", "ToString(value) == string"),
+  ("() == string", "defined(value) or !!value"),
+  (
+    "Number as an int",
+    "n.valueOf() (CounterValue returns a Number, as Perl's)",
+  ),
+  (
+    "document.setAttribute(key, value)",
+    "document.setAttribute(node, key, value)",
+  ),
+  (
+    "DefPrimitive returning a non-box",
+    "a box, an array of boxes, or () (end the body with `return;`), as Perl errs on any other value",
+  ),
+];
+
+/// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement.
+pub(super) fn warn_deprecated(old: &'static str) {
+  let script = CURRENT_SCRIPT.with(|c| {
+    c.borrow()
+      .last()
+      .map_or(0, |(_, ast)| Rc::as_ptr(ast) as usize)
+  });
+  let first = DEPRECATED_WARNED.with(|w| {
+    let mut warned = w.borrow_mut();
+    let first = !warned.contains(&(script, old));
+    if first {
+      warned.push((script, old));
+    }
+    first
+  });
+  if first {
+    let new = DEPRECATED_ALIASES
+      .iter()
+      .find(|(name, _)| *name == old)
+      .map_or("", |(_, new)| *new);
+    latexml_core::Warn!("deprecated", old, format!("{old} is deprecated; use {new}"));
+  }
 }
 
 #[derive(Clone, Copy)]
@@ -165,6 +274,7 @@ macro_rules! ctx_stack_guard {
 
 ctx_stack_guard!(CtorCtxGuard, CTOR_CTX, CtorCtx);
 ctx_stack_guard!(WhatsitCtxGuard, WHATSIT_CTX, (*mut Whatsit, bool));
+ctx_stack_guard!(RevertingGuard, REVERTING, usize);
 ctx_stack_guard!(ScriptCtxGuard, CURRENT_SCRIPT, (Rc<Engine>, Rc<AST>));
 
 /// The engine/AST of the innermost running script (for immediate wiring).
@@ -206,7 +316,45 @@ pub(super) fn call_deferred_body<A: rhai::FuncArgs>(
   args: A,
 ) -> std::result::Result<Dynamic, Box<EvalAltResult>> {
   let _script_guard = ScriptCtxGuard::new((engine.clone(), ast.clone()));
-  body.call::<Dynamic>(engine, ast, args)
+  let mut args_vec: Vec<Dynamic> = Vec::new();
+  args.parse(&mut args_vec);
+  // A Perl sub takes any number of arguments: a closure's missing ones are `()` (undef), extra ones dropped.
+  // A closure's captured variables are curried ahead of its own parameters.
+  if let Some(params) = closure_arity(ast, body.fn_name()) {
+    args_vec.resize(params.saturating_sub(body.curry().len()), Dynamic::UNIT);
+  }
+  body.call::<Dynamic>(engine, ast, args_vec)
+}
+
+/// [`closure_arity`]'s entry: the AST it was read from (held weakly: a dropped script's entry is recomputed) and
+/// the arity.
+type ArityEntry = (std::rc::Weak<AST>, Option<usize>);
+
+thread_local! {
+  static ARITY_CACHE: RefCell<HashMap<(usize, String), ArityEntry>> = RefCell::new(HashMap::new());
+}
+
+/// The parameter count of the script function `fn_name` (a closure's `anon$…`), `None` when the name is
+/// overloaded; looked up once per AST and name.
+fn closure_arity(ast: &Rc<AST>, fn_name: &str) -> Option<usize> {
+  let key = (Rc::as_ptr(ast) as usize, fn_name.to_string());
+  ARITY_CACHE.with(|cache| {
+    if let Some((weak, arity)) = cache.borrow().get(&key)
+      && weak.upgrade().is_some_and(|live| Rc::ptr_eq(&live, ast))
+    {
+      return *arity;
+    }
+    let mut arities = ast
+      .iter_functions()
+      .filter(|f| f.name == fn_name)
+      .map(|f| f.params.len());
+    let arity = match (arities.next(), arities.next()) {
+      (Some(params), None) => Some(params),
+      _ => None,
+    };
+    cache.borrow_mut().insert(key, (Rc::downgrade(ast), arity));
+    arity
+  })
 }
 
 /// Copy the top active-context out (so we never hold the `CTOR_CTX` borrow
@@ -430,25 +578,32 @@ pub(super) struct RhaiCommand {
   cwd:     Option<String>,
 }
 
-/// Rhai proxy for the in-flight whatsit, obtained inside a hook body via
-/// `whatsit()`. Like `DocProxy`, it carries no pointer; methods resolve the
-/// active whatsit context.
+/// Rhai proxy for the in-flight whatsit, passed to a hook body positionally as Perl passes `$whatsit` (#716). Like
+/// `DocProxy`, it carries no pointer; methods resolve the active whatsit context.
 #[derive(Clone)]
 struct WhatsitProxy;
 
-/// Rhai proxy returned by `LookupDefinition(cs)` (#321). Carries only the CS name;
-/// each `push*/unshift*` re-looks-up the CURRENT front definition, splices a hook,
-/// and re-installs — so sequential pushes accumulate (mirroring Perl BookML's
-/// in-place mutation of the shared def-hash). `LookupDefinition` returns `()`, not
-/// this proxy, when the CS is undefined.
+/// Rhai proxy returned by `LookupDefinition(cs)` (#321): the CS and the meaning found, which `AssignMeaning`
+/// installs as Perl's definition object. Each `push*/unshift*` re-looks-up the CURRENT front definition, splices a
+/// hook and re-installs — so sequential pushes accumulate (Perl BookML's in-place mutation of the shared def-hash).
+/// `LookupDefinition` returns `()`, not this proxy, when the CS is undefined.
 #[derive(Clone)]
 struct DefinitionProxy {
-  cs: String,
+  cs:      Token,
+  meaning: Stored,
 }
 
 /// Resolve the top whatsit active-context (used by `WhatsitProxy` methods).
 fn current_whatsit() -> std::result::Result<*mut Whatsit, Box<EvalAltResult>> {
   current_whatsit_entry().map(|(w, _)| w)
+}
+
+/// Run `f` on the in-flight whatsit, read-only — the single site that re-mints it for the readers.
+fn with_whatsit<R>(f: impl FnOnce(&Whatsit) -> R) -> std::result::Result<R, Box<EvalAltResult>> {
+  // SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the core published onto WHATSIT_CTX for the
+  // duration of THIS hook body (an error, not UB, outside one); read only, so no aliasing `&mut` exists.
+  let w = unsafe { &*current_whatsit()? };
+  Ok(f(w))
 }
 
 /// The top whatsit entry incl. its mutability flag.
@@ -457,11 +612,12 @@ fn current_whatsit_entry() -> std::result::Result<(*mut Whatsit, bool), Box<Eval
     c.borrow()
       .last()
       .copied()
-      .ok_or_else(|| Box::<EvalAltResult>::from("whatsit() called outside a hook body"))
+      .ok_or_else(|| Box::<EvalAltResult>::from("a whatsit method called outside a hook body"))
   })
 }
 
 mod engine;
+mod values;
 mod wire;
 use engine::make_engine;
 #[allow(unused_imports)]
@@ -508,21 +664,32 @@ pub fn load_script(src: &str) -> Result<usize> {
   // (a stack, so a script loading another script nests correctly). RAII pop on
   // every exit incl. a panic out of `run_ast` (review M1).
   let before = WIRED_COUNT.with(|c| *c.borrow());
+  let script = Rc::as_ptr(&cached.ast) as usize;
+  DEPRECATED_WARNED.with(|w| w.borrow_mut().retain(|(s, _)| *s != script));
+  // A dropped script's closure arities go with it.
+  ARITY_CACHE.with(|c| c.borrow_mut().retain(|_, (ast, _)| ast.strong_count() > 0));
   let run = {
     let _script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
-    cached
-      .engine
-      .run_ast(&cached.ast)
-      .map_err(|e| Error::from(format!("script-binding run error: {e}")))
+    cached.engine.run_ast(&cached.ast).map_err(|e| {
+      take_raised_fatal(&e).unwrap_or_else(|| Error::from(format!("script-binding run error: {e}")))
+    })
   };
   run?;
   Ok(WIRED_COUNT.with(|c| *c.borrow()) - before)
 }
 
-/// Build a partial `Font` from a Rhai map (family/series/shape/… keys — the
-/// `fontmap!` analog, shared by `MergeFont` and the `font =>` option).
+/// Build a partial `Font` from a Rhai map, Perl Font.pm `merge`'s keys (920-961) — the `fontmap!` analog, shared by
+/// `MergeFont` and every `font:` option. A named color resolves as `lookup_font_color`; an unknown key Warns.
 fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
+  use latexml_core::common::font::rationalize_font_size;
+  use latexml_package::package::color_sty::lookup_font_color;
   let mut font = latexml_core::common::font::Font::default();
+  let number = |val: &Dynamic| {
+    val
+      .as_float()
+      .ok()
+      .or_else(|| val.as_int().ok().map(|i| i as f64))
+  };
   for (key, val) in opts {
     let v = dynamic_to_string(val.clone());
     match key.as_str() {
@@ -532,22 +699,31 @@ fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
       "encoding" => font.encoding = Some(v.into()),
       "language" => font.language = Some(v.into()),
       "mathstyle" => font.mathstyle = Some(v.into()),
-      "size" => {
-        font.size = val
-          .as_float()
-          .ok()
-          .or_else(|| val.as_int().ok().map(|i| i as f64))
-      },
-      _ => {},
+      "opacity" => font.opacity = Some(v.into()),
+      "color" => font.color = Some(lookup_font_color(&v)),
+      "background" => font.bg = Some(lookup_font_color(&v)),
+      // Perl's rationalizeFontSize: a size name (`large`) scales the default size, a number is points.
+      "size" => font.size = number(&val).or_else(|| Some(rationalize_font_size(&v))),
+      "scale" => font.scale = number(&val),
+      "forcebold" => font.forcebold = Some(perl_truthy(&val)),
+      "forcefamily" => font.forcefamily = Some(perl_truthy(&val)),
+      "forceseries" => font.forceseries = Some(perl_truthy(&val)),
+      "forceshape" => font.forceshape = Some(perl_truthy(&val)),
+      "emph" => font.emph = Some(perl_truthy(&val)),
+      "scripted" => font.scripted = Some(perl_truthy(&val)),
+      "fraction" => font.fraction = Some(perl_truthy(&val)),
+      other => latexml_core::Warn!(
+        "unexpected",
+        other,
+        &format!("MergeFont: unknown font key '{other}' ignored (Font.pm merge)")
+      ),
     }
   }
   font
 }
 
-/// Convert a Rhai object map into a whatsit property map. `Digested` handles
-/// (from `DigestText`, `RefStepCounter`, …) pass through as `Stored::Digested`;
-/// a `Digested` under the `font` key contributes its FONT (the IEEEproof
-/// "titlefont" idiom); everything else lands as its string form.
+/// Convert a Rhai object map into a whatsit property map, each value with its type ([`dynamic_to_stored`]); a
+/// `Digested` under the `font` key contributes its FONT (the IEEEproof "titlefont" idiom).
 fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
   let mut props: SymHashMap<Stored> = SymHashMap::default();
   for (k, v) in map {
@@ -561,9 +737,11 @@ fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
         }
         props.insert(k.as_str(), Stored::Digested(d));
       },
-      _ => {
-        props.insert(k.as_str(), dynamic_to_string(v).into());
+      // A constructor reads a token property as its ToString, as Perl's absorb (Object.pm:169) and attributes do.
+      _ if v.is::<Tokens>() || v.is::<Token>() => {
+        props.insert(k.as_str(), dynamic_to_string(v).into())
       },
+      _ => props.insert(k.as_str(), dynamic_to_stored(v)),
     }
   }
   props
@@ -585,39 +763,123 @@ fn props_to_map(props: SymHashMap<Stored>) -> Map {
 /// a Rhai error — the SINGLE boundary-conversion source. Review m4: the inline
 /// `Box::<EvalAltResult>::from(e.to_string())` spelling scattered across the
 /// proxy ops is routed through here so error formatting has one definition.
-fn rhai_err(e: impl std::fmt::Display) -> Box<EvalAltResult> {
-  Box::<EvalAltResult>::from(e.to_string())
+/// A latexml `Err` that is a logged Fatal is kept for the script's caller (`take_raised_fatal`).
+fn rhai_err<E: std::fmt::Display + 'static>(e: E) -> Box<EvalAltResult> {
+  let text = e.to_string();
+  if let Ok(err) = (Box::new(e) as Box<dyn std::any::Any>).downcast::<Error>()
+    && err.is_logged_fatal()
+  {
+    RAISED_FATAL.with(|r| *r.borrow_mut() = Some((*err, text.clone())));
+  }
+  Box::<EvalAltResult>::from(text)
 }
 
-/// Parse a scope string ("local"/"global", anything else = None → TeX default).
-fn scope_of(scope: &str) -> Option<Scope> {
-  match scope {
-    "local" => Some(Scope::Local),
-    "global" => Some(Scope::Global),
-    _ => None,
+/// A token argument: a string names a control sequence (Perl `Let`'s "most common case", Package.pm:385-387), a
+/// `Token` is used as is; anything else, a `Tokens` included, is an error naming the call.
+fn token_arg(call: &str, v: Dynamic) -> std::result::Result<Token, Box<EvalAltResult>> {
+  if v.is_string() {
+    Ok(latexml_core::T_CS!(
+      v.into_immutable_string().unwrap_or_default().as_str()
+    ))
+  } else if let Some(t) = v.clone().try_cast::<Token>() {
+    Ok(t)
+  } else {
+    let got = v.type_name();
+    Err(
+      format!(
+        "{call}: expected a control-sequence name or a Token, got {}",
+        got.rsplit("::").next().unwrap_or(got)
+      )
+      .into(),
+    )
   }
 }
 
-/// Marshal a `Stored` out to a Rhai value: `Digested` as a live handle,
-/// scalars as scalars, the rest via `Display`.
+/// A scope string as the macros read it: "local"/"global", "" for the TeX default, any other name a named scope
+/// (Perl's `'section:1'`, active only once activated).
+fn scope_of(scope: &str) -> Option<Scope> {
+  latexml_core::binding::def::traits::IntoOption::into_option(scope)
+}
+
+/// Marshal a `Stored` out to a Rhai value with its type (Perl hands back the stored object, Package.pm
+/// LookupValue :257, LookupMapping :283): a string, bool, int, float, `Token`, `Tokens` or digested handle as
+/// itself, a list value as an array of such (Perl's arrayref, #315), a hash as a map, a char or catcode as its int,
+/// `None` as `()` (undef), a Number, Dimension, Glue or MuGlue its typed handle; a kind with no script form (a node,
+/// a font map, a stash) is the placeholder `Stored[??]`. The inverse of [`dynamic_to_stored`].
 fn stored_to_dynamic(v: Stored) -> Dynamic {
   match v {
-    Stored::Digested(d) => Dynamic::from(d),
+    Stored::None => Dynamic::UNIT,
     Stored::String(s) => Dynamic::from(arena::to_string(s)),
     Stored::Bool(b) => Dynamic::from(b),
+    Stored::Int(i) => Dynamic::from(i),
+    Stored::Number(n) => Dynamic::from(n),
+    Stored::Dimension(d) => Dynamic::from(d),
+    Stored::Glue(g) => Dynamic::from(g),
+    Stored::MuGlue(g) => Dynamic::from(g),
+    Stored::Float(f) => Dynamic::from(f.0),
+    Stored::Tokens(t) => Dynamic::from(t),
+    Stored::Token(t) => Dynamic::from(t),
+    Stored::Digested(d) => Dynamic::from(d),
+    Stored::Strings(ss) => Dynamic::from_array(
+      ss.iter()
+        .map(|s| Dynamic::from(arena::to_string(*s)))
+        .collect(),
+    ),
+    Stored::VecDequeStored(items) => {
+      Dynamic::from_array(items.into_iter().map(stored_to_dynamic).collect())
+    },
+    Stored::VecDigested(items) => {
+      Dynamic::from_array(items.into_iter().map(Dynamic::from).collect())
+    },
+    Stored::HashStored(h) => Dynamic::from_map(
+      h.0
+        .into_iter()
+        .map(|(k, v)| (arena::to_string(k).into(), stored_to_dynamic(v)))
+        .collect(),
+    ),
+    Stored::HashString(h) => Dynamic::from_map(
+      h.into_iter()
+        .map(|(k, v)| (k.into(), Dynamic::from(v)))
+        .collect(),
+    ),
+    Stored::Charcode(c) => Dynamic::from(i64::from(c)),
+    Stored::Catcode(c) => Dynamic::from(c as i64),
+    // A stored definition is Perl's definition object: a `LookupDefinition` handle.
+    Stored::Expandable(_)
+    | Stored::Conditional(_)
+    | Stored::Primitive(_)
+    | Stored::MathPrimitive(_)
+    | Stored::Constructor(_)
+    | Stored::Register(_) => match definition_cs(&v) {
+      Some(cs) => Dynamic::from(DefinitionProxy { cs, meaning: v }),
+      None => Dynamic::from(v.to_string()),
+    },
     other => Dynamic::from(other.to_string()),
   }
 }
 
-/// Marshal a Rhai value INTO a `Stored` for the value-table list ops
-/// (`PushValue`/`UnshiftValue`). The inverse of [`popped_stored_to_dynamic`].
-/// Perl's `PushValue` is untyped; the Rust State layer holds any `Stored`, so we
-/// preserve every Rhai-representable type — string, int, float, bool, `Tokens`,
-/// and a digested handle. There is no Rhai value for `Dimension`/`Glue`/`Font`/…,
-/// so those are unreachable from a script; anything unrecognized falls back to
-/// its string form (#540).
+/// The CS a stored definition defines.
+fn definition_cs(v: &Stored) -> Option<Token> {
+  use latexml_core::definition::Definition;
+  Some(match v {
+    Stored::Expandable(d) => d.get_cs().into_owned(),
+    Stored::Conditional(d) => d.get_cs().into_owned(),
+    Stored::Primitive(d) => d.get_cs().into_owned(),
+    Stored::MathPrimitive(d) => d.get_cs().into_owned(),
+    Stored::Constructor(d) => d.get_cs().into_owned(),
+    Stored::Register(d) => d.get_cs().into_owned(),
+    _ => return None,
+  })
+}
+
+/// Marshal a Rhai value INTO a `Stored` (Perl's value table is untyped, Package.pm AssignValue :261,
+/// AssignMapping :287, PushValue): string, int, float, bool, `Token`, `Tokens`, a value handle (Number, Dimension,
+/// Glue, MuGlue) and a digested handle keep their type, an array is a list and a map a hash of such (Perl's arrayref/hashref), `()` is `None` (undef); anything
+/// else falls back to its string form (#540). The inverse of [`stored_to_dynamic`].
 fn dynamic_to_stored(v: Dynamic) -> Stored {
-  if v.is_string() {
+  if v.is_unit() {
+    Stored::None
+  } else if v.is_string() {
     v.into_string().unwrap_or_default().into()
   } else if let Ok(i) = v.as_int() {
     Stored::Int(i)
@@ -627,41 +889,114 @@ fn dynamic_to_stored(v: Dynamic) -> Stored {
     Stored::Bool(b)
   } else if let Some(tokens) = v.clone().try_cast::<Tokens>() {
     Stored::Tokens(tokens)
+  } else if let Some(token) = v.clone().try_cast::<Token>() {
+    Stored::Token(token)
   } else if let Some(digested) = v.clone().try_cast::<Digested>() {
     Stored::Digested(digested)
+  } else if let Some(def) = v.clone().try_cast::<DefinitionProxy>() {
+    def.meaning
+  } else if let Some(value) = values::dynamic_to_register_value(&v) {
+    match value {
+      RegisterValue::Number(n) => Stored::Number(n),
+      RegisterValue::Dimension(d) => Stored::Dimension(d),
+      RegisterValue::Glue(g) => Stored::Glue(g),
+      RegisterValue::MuGlue(g) => Stored::MuGlue(g),
+      other => other.to_string().into(),
+    }
+  } else if v.is_array() {
+    Stored::VecDequeStored(
+      v.cast::<rhai::Array>()
+        .into_iter()
+        .map(dynamic_to_stored)
+        .collect(),
+    )
+  } else if v.is_map() {
+    let mut hash = SymHashMap::default();
+    for (k, v) in v.cast::<Map>() {
+      hash.insert(k.as_str(), dynamic_to_stored(v));
+    }
+    Stored::HashStored(hash)
   } else {
     v.to_string().into()
   }
 }
 
-/// Marshal a popped/shifted `Stored` back to a *typed* Rhai value — the
-/// type-preserving counterpart of [`stored_to_dynamic`], used only by
-/// `PopValue`/`ShiftValue` so a pushed int/float/`Tokens` round-trips as itself
-/// rather than as text. (`stored_to_dynamic` stays string-leaning because it
-/// also marshals counter/whatsit property maps, which expect that.)
-fn popped_stored_to_dynamic(v: Stored) -> Dynamic {
-  match v {
-    Stored::String(s) => Dynamic::from(arena::to_string(s)),
-    Stored::Bool(b) => Dynamic::from(b),
-    Stored::Int(i) => Dynamic::from(i),
-    Stored::Number(n) => Dynamic::from(n.0),
-    Stored::Float(f) => Dynamic::from(f.0),
-    Stored::Tokens(t) => Dynamic::from(t),
-    Stored::Digested(d) => Dynamic::from(d),
-    other => Dynamic::from(other.to_string()),
+/// A closure's returned expansion or reversion as Tokens: a `Token` or `Tokens` as itself (a Perl macro sub
+/// returns tokens), `()` as nothing, a string (the Rhai shorthand) TokenizeInternal'd as before.
+fn dynamic_to_tokens(d: Dynamic) -> Tokens {
+  if let Some(tokens) = d.clone().try_cast::<Tokens>() {
+    tokens
+  } else if let Some(token) = d.clone().try_cast::<Token>() {
+    Tokens::new(vec![token])
+  } else if d.is_unit() {
+    Tokens::default()
+  } else {
+    mouth::tokenize_internal(TeXString::assembled(dynamic_to_string(d)))
   }
 }
 
-/// Marshal a digested macro argument into a Rhai value. Every argument is passed
-/// as its TeX-source string (authors parse it in-script as needed).
+/// An argument as its TeX-source string: an old-form body's (deprecated), a `properties` closure's.
 fn arg_to_dynamic(arg: ArgWrap) -> Dynamic { Dynamic::from(arg.to_string()) }
 
-/// Read a Rhai return value back as a string (the TeX-source of the expansion).
+/// Read a Rhai value back as a string, Perl's `ToString` (Object.pm:59): a `Token`/`Tokens` as `Tokens->toString`
+/// (`\foo bar` → `\foobar`, as [`rhai_map_to_props`] stores a token property), a digested handle or a value handle
+/// (Dimension, …) its `ToString` (Rhai's own printing gives a custom type's Rust name).
 fn dynamic_to_string(d: Dynamic) -> String {
   if d.is_string() {
     d.into_string().unwrap_or_default()
+  } else if let Some(tokens) = d.clone().try_cast::<Tokens>() {
+    tokens.to_string()
+  } else if let Some(token) = d.clone().try_cast::<Token>() {
+    token.to_string()
+  } else if let Some(digested) = d.clone().try_cast::<Digested>() {
+    digested.to_string()
+  } else if let Some(value) = values::value_string(&d) {
+    value
+  } else if d.is::<WhatsitProxy>() {
+    // (`to_string`, `ToString` and `absorbString` raise its error; see `whatsit_string`)
+    whatsit_string().unwrap_or_default()
   } else {
     d.to_string()
+  }
+}
+
+/// The hook's whatsit as Perl's `ToString($whatsit)`: its reversion (Whatsit.pm:163). Inside that whatsit's own
+/// script reversion, where Perl recurses without end, an Error and `""` (Rhai's `+` would swallow a raised one).
+fn whatsit_string() -> std::result::Result<String, Box<EvalAltResult>> {
+  let (ptr, _) = current_whatsit_entry()?;
+  if REVERTING.with(|r| r.borrow().contains(&(ptr as usize))) {
+    report_self_reversion().map_err(rhai_err)?;
+    return Ok(String::new());
+  }
+  with_whatsit(|w| w.revert().map(|t| t.to_string()).map_err(rhai_err))?
+}
+
+fn report_self_reversion() -> Result<()> {
+  latexml_core::Error!(
+    "script",
+    "reversion",
+    "a reversion's own whatsit in a string reverts it again; use whatsit.getArg(n)"
+  );
+  Ok(())
+}
+
+/// Perl's truthiness (`if ($v)`): undef, "", "0" and 0 are false, a bool is itself, and every object (Token, Tokens,
+/// a box, a whatsit, an array, a map) is true, as Perl LaTeXML's objects overload no bool (Common/Object.pm:120).
+fn perl_truthy(v: &Dynamic) -> bool {
+  if v.is_unit() {
+    false
+  } else if let Ok(b) = v.as_bool() {
+    b
+  } else if let Ok(i) = v.as_int() {
+    i != 0
+  } else if let Ok(f) = v.as_float() {
+    f != 0.0
+  } else if let Ok(s) = v.as_immutable_string_ref() {
+    !(s.is_empty() || s.as_str() == "0")
+  } else if let Ok(c) = v.as_char() {
+    c != '0'
+  } else {
+    true
   }
 }
 

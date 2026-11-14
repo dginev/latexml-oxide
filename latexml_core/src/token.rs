@@ -802,6 +802,7 @@ macro_rules! ExplodeChars(($text:expr_2021) => (
 /// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 /// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 /// Perl sync: newlines are OTHER, not SPACE (matches Perl #2700 revert of #2646).
+/// Letters are ASCII `[a-zA-Z]` only, as Perl Token.pm:111-116 and latex.ltx `\char@if@alph`; `é` is OTHER.
 #[macro_export]
 macro_rules! ExplodeText(
   ($text:expr_2021) => ({
@@ -811,7 +812,7 @@ macro_rules! ExplodeText(
     else {
       let mut tmp = [0u8; 4];
       let s = c.encode_utf8(&mut tmp);
-      if c.is_alphabetic() {
+      if c.is_ascii_alphabetic() {
       T_LETTER!(s) }
     else { T_OTHER!(s) }}
   ).collect::<Vec<Token>>()
@@ -827,7 +828,7 @@ macro_rules! SymExplodeText(
     else {
       let mut tmp = [0u8; 4];
       let s = c.encode_utf8(&mut tmp);
-      if c.is_alphabetic() {
+      if c.is_ascii_alphabetic() {
       T_LETTER!(s) }
     else { T_OTHER!(s) }}
   ).collect::<Vec<Token>>()

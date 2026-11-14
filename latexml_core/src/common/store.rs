@@ -1062,6 +1062,8 @@ impl<'a> From<&'a Stored> for Option<Number> {
   fn from(value: &'a Stored) -> Option<Number> {
     match value {
       Stored::Number(n) => Some(*n),
+      // A plain integer (a runtime binding's `AssignValue(k, 7)`) is a Number, as Perl's scalar.
+      Stored::Int(i) => Some(Number::new(*i)),
       // A `Float` narrows to an integer `Number` through `Float::value_of`
       // (truncation toward zero, the crate's canonical Float->i64), the same
       // `value_of` narrowing the dimension family uses just below. NB this is

@@ -66,7 +66,8 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 | [`parity/KNOWN_PERL_ERRORS.md`](parity/KNOWN_PERL_ERRORS.md) | Upstream Perl LaTeXML issues; check first when investigating a test failure. |
 | [`parity/DUMP_DESIGN.md`](parity/DUMP_DESIGN.md) | Kernel dump precompilation (strict LoadFormat mutual exclusivity, unconditional apply). |
 | [`parity/BINDING_DSL_ARCHITECTURE.md`](parity/BINDING_DSL_ARCHITECTURE.md) | Binding-definition DSL: shared `ConstructorBuilder` spine, compile-time + runtime front-ends. |
-| [`parity/script_bindings_plan.md`](parity/script_bindings_plan.md) | The runtime (Rhai) script-bindings front-end reference (the `runtime-bindings` feature; on by default). |
+| [`parity/RHAI_BINDINGS_GUIDE.md`](parity/RHAI_BINDINGS_GUIDE.md) | **Newcomer guide to the Rhai binding dialect**: loading, values, the Perl closure form, truthiness, diagnostics, the deprecated-name migration; links the generated `API.md`/`CHEATSHEET.md` and the CI-run examples. |
+| [`parity/script_bindings_plan.md`](parity/script_bindings_plan.md) | The runtime (Rhai) script-bindings design notes (the `runtime-bindings` feature; on by default): why Rhai, the seam, discovery, sandbox, failure containment, shared lowering. |
 
 ## ➗ Math parser (`math/`) — serves both targets
 
@@ -107,7 +108,7 @@ site) that have no Perl equivalent.
 | `reproducers/` | Single-paper reproducers for tracked bugs. |
 | `out-of-scope/` | Cases intentionally out of scope (Perl also fails, no-DTD, …). |
 | `known_crashes/` | Crash reproducers and the intake index; resolved write-ups in `archive/known_crashes/`. |
-| `examples/` | Example bindings (e.g. `sample.sty.rhai`). |
+| `examples/` | Worked Rhai bindings with their documents, converted in CI (`30_script_bindings::docs_examples_convert_clean`). |
 | `scripts/` | One-off analysis helpers referenced by archived diagnostics (e.g. `bucket_callgrind_hot.py`). |
 
 ---

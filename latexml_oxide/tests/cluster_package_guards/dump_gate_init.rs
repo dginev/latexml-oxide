@@ -249,10 +249,9 @@ fn current_file_is_defined_empty_under_latex() {
 /// and under nextest's 20 min terminate-after, so a genuine hang still surfaces:
 /// - issue #651 (witness: a bare `\usepackage{fvextra}` reported "Conversion
 ///   failed: 1 fatal error"): the symptom — an expl3-using document converts,
-///   exits 0 and keeps its body. Not the `expl3_sty.rs` mechanism that fixed it
-///   (scoping out the raw-load-only expl3-code.tex cascade, L33074-33180):
-///   `latex.rs`'s degraded branch has already raw-loaded expl3-code.tex, so
-///   `\tex_let:D` is defined and `expl3.sty` skips its own re-load;
+///   exits 0 and keeps its body; `expl3_sty.rs` mutes `expl3.sty`'s raw expl3-code.tex
+///   re-load (its raw-load-only cascade, L33074-33180) and, since issue #825, counts
+///   what it muted in one `Warning:expl3:raw-load`;
 /// - issue #719 (witness: user MWE): under `\parindent=0pt` the FIRST paragraph
 ///   is `ltx_noindent`. The first landing keyed the stamp on a one-shot that a
 ///   begin-document `\par` consumed first on this branch only; the stamp is now
@@ -260,7 +259,7 @@ fn current_file_is_defined_empty_under_latex() {
 ///   `06_cluster_regressions::cluster_first_para_noindent_719`;
 /// - the `\CurrentFile` family is defined and empty from `latex.rs`'s fallback
 ///   (dump half: `current_file_is_defined_empty_under_latex`), and the branch
-///   warns once, for its `recursion:LaTeX.pool` re-entrance;
+///   warns for its `recursion:LaTeX.pool` re-entrance;
 /// - `\@@underline` is latex.ltx:16368's saved `\underline` without a dump too
 ///   (KNOWN_PERL_ERRORS #987; dump half:
 ///   `perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive`).
@@ -271,8 +270,15 @@ fn nodump_latex_branch_converts_healthily() {
   assert!(ok, "the NODUMP conversion exited non-zero:\n{stderr}");
   assert!(!stderr.contains("fatal error"), "{stderr}");
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 2, "{stderr}");
   assert!(stderr.contains("Warning:recursion:LaTeX.pool"), "{stderr}");
+  // (the muted re-load, counted: 5015 Error records on TL 2025, a count that varies with the tree, #825)
+  assert!(
+    stderr.contains(
+      "Warning:expl3:raw-load The raw expl3-code.tex reload (no kernel dump) completed with "
+    ),
+    "{stderr}"
+  );
   assert_element(
     &xml,
     "para",

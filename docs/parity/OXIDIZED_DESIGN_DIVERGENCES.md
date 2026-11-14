@@ -7792,8 +7792,9 @@ surrounding conditional bookkeeping ("Missing \fi or \else, conditional fell
 off end" at the .sty's EOF — the 13-bundle hep-* `expected:\fi` cluster).
 
 **Rust behavior**: `\@addtofilelist` receives `ExplodeText!` tokens —
-alphabetic chars catcode LETTER, the rest OTHER — exactly latex.ltx's
-`\string@makeletter` (L1784-1789) storage rule.
+the ASCII letters A-Z/a-z catcode LETTER, the rest (non-ASCII included) OTHER —
+exactly latex.ltx's `\string@makeletter` (L1784-1789) storage rule, whose
+`\char@if@alph` (L1790-1795) tests only those ranges.
 
 **Why**: kernel-contract restoration. hep-font.sty: first-error cluster →
 **0 errors**; hep-paper manual 370-warning cascade collapses to 2 unrelated
@@ -36264,3 +36265,79 @@ both err) and TeX's outcome, the content kept; before, the cs was defined silent
 is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xdef` makes a self-referencing macro).
 **Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
 `macro-state/g_addto_macro_undefined_defines.tex`).
+
+### 1026. `page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791)
+
+**TeX.** pdfTeX ignores `page=` on a single-image file: `\includegraphics[page=2,width=2cm]{a.png}` typesets the PNG
+(pdflatex, 0 `!` lines). **Perl.** `image_graphicx_parse` pushes `page` as a transform (Util/Image.pm:179) and
+`image_graphicx_is_trivial` counts it non-trivial (:284), so `Post/Graphics.pm:262-271` re-encodes a PNG or JPEG through
+ImageMagick under a generated `xN` name, and refuses it on an SVG with a `limitation` Warning before copying
+(KNOWN_PERL_ERRORS #1241). **Rust.** `Graphics::process` drops `page=` for `svg`/`png`/`jpg`/`jpeg` before planning, so
+such a graphic takes the path it takes without `page=`: the source copied byte for byte, its `imagewidth`/`imageheight`
+kept, no Warning. Before, every `page=` went through `convert` (an SVG became a re-encoded `x1.svg` without its size).
+Multi-page or multi-frame sources (PDF, PS, TIFF, GIF) keep `page=`. **Guard**:
+`graphics::tests::a_single_page_source_ignores_page`.
+
+### 1027. The no-dump expl3-code.tex reload counts what it mutes (#825)
+
+**Perl.** Perl's raw expl3 load raises none of these records, so it has no such scope. **Rust.** Without a kernel dump
+(`LATEXML_NODUMP=1`, or no dump for the tree) `expl3.sty` re-reads expl3-code.tex raw, and `expl3_sty.rs` drops that
+load's raw-load-only cascade whole (Perl `IGNORE_ERRORS`, issue #651; 5015 Error records on TL 2025). The scope now
+tallies what it drops (`IgnoreDiagnosticsScope::dropped`), and `expl3_sty::report_muted_reload` reports it: one
+`Warning:expl3:raw-load` naming the Error and Fatal records dropped when the reload completed (the records the scope
+dropped, not the undefined-CS Errors `SUPPRESS_UNDEFINED_ERRORS`, stomach.rs, never emitted), an `Error:expl3:raw-load` when it
+stopped early (the expl3 functions after the stop are undefined: on TL 2026 it stopped in l3unicode, leaving
+`\regex_match:NnTF`, `\text_lowercase:n`, `\sys_if_shell:TF` undefined and mhchem's `\ce` broken). The dump path never
+reloads and is unchanged. **Guards**: `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
+`expl3_sty::tests::a_muted_expl3_reload_is_counted`, `dump_gate_init::nodump_latex_branch_converts_healthily`.
+
+### 1028. After a Rhai binding's caught `Fatal()`, later errors are still printed and counted (#792)
+
+**Perl.** `Fatal` prints when raised, sets the status fatal (`Common/Error.pm:298`, `:312`), then sets `IGNORE_ERRORS`
+(`:315`) and empties the token stack (`:327`), so a later `Error()` prints nothing (`:362`) even when an `eval` caught the
+Fatal. **Rust.** A Fatal the script catches prints its one line and sets status 3 as in Perl, but the conversion goes
+on reporting: a later error stays its own `Error:script:` line, counted — the user's ruling that every Error is
+emitted and counted (2026-11-11), and no ignore flag outlives the caught Fatal. **Guard**:
+`30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).
+
+### 1030. Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm
+
+**Perl.** Glue.pm overrides only `add`, comparing fill orders with `==` on the fill names (`"fil"` reads as 0, so
+`1pt plus 2pt` + `1pt plus 1fil` is `2.0pt plus 3.0pt`; KNOWN_PERL_ERRORS #1244); `subtract` is Number.pm's
+`new($self->valueOf - $other->valueOf)`, which drops a Glue's stretch and shrink (`Glue("3pt plus 1fil") -
+Dimension("1pt")` is `2.0pt`, `Glue("1pt plus 1fil") - Glue("1pt plus 2fil")` is `0.0pt`); MuGlue + MuGlue takes Glue.pm's
+non-Glue branch (`ref $other eq 'LaTeXML::Common::Glue'` fails), adding only the natural size (`3mu plus 1mu` +
+`1mu plus 1fil` is `4.0mu plus 1.0mu`). **Rust.** The Rhai `+`/`-`/`add`/`subtract` of Glue and MuGlue follow TeX's
+`\advance` (tex.web §1239, the core's `Glue::add_glue`): per component, the higher fill order wins and equal orders add,
+so the examples give `2.0pt plus 1.0fil`, `2.0pt plus 1.0fil`, `0.0pt plus -1.0fil` and `4.0mu plus 1.0fil`, as
+`\advance` on registers prints them. **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers` (p2, all four).
+
+### 1031. A Rhai `Dimension`/`Glue` spec that is not a number and a unit is an Error
+
+**Perl.** `Dimension('3 furlongs')` reads the leading number as sp (`3sp`, with only Perl's `Argument "3 furlongs"
+isn't numeric` warning), and `Glue('1pt plus')` Warns `Missing Glue specification`. **Rust.** The Rhai constructors,
+and the string form of `DefRegister`/`AssignRegister`, raise `Error:unexpected:<spec>` naming the spec and use 0; a
+fresh register's unitless string (`DefRegister("\\c", "5")`) is the same Error, where Perl's untyped register errs at
+`\the`, while an existing register's declared type still reads it (`"5"` for a Number register is 5). A wrong value
+read silently is the likelier wrong output (BM, 2026-11-05). **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers_error_side`.
+
+### 1035. Rhai's Perl-named calls: where they keep our core's behaviour, and the transitions (PR #829 rounds G-H)
+
+**Perl.** `MergeFont(color => 'red')` keeps the name (`color="red"`) with or without a colour package, and Font.pm
+`merge` ignores an unknown key; `Number($s)` is `int($s)` (Number.pm:31-34; `"12abc"` Warns `isn't numeric`);
+`LookupDefinition` returns the definition object; `CounterValue` returns a Number; Perl's diagnostics take
+`(cat, obj, $where, msg, @details)`. **Rust.** The Rhai calls lower to the macros' core calls (rulings 10-13, DG
+2026-11-14): a colour name resolves to its colour (`#FF0000`), a base name (`red`, color.sty's eight) without a colour
+package included, while dvipsnam.def is read only once a package defines `\DefineNamedColor` (so `Blue` with no colour
+package is the lookup's Error and Black, where Perl prints the name); an unknown font key
+Warns; `Number(string)`, the string form of a Number register and the core `Number::from(String)` are one reader with
+Perl's `int()` (`"1e3"` 1000, `"1.5"` 1, a non-numeric remainder Warned and its prefix read), where the core read 0
+silently; a `LookupDefinition` handle keeps the meaning it found, so `AssignMeaning` installs it after a
+redefinition (`A:OLD:NEW`); a `DefPrimitive` body's returned box or array of boxes is its output (Primitive.pm:78).
+CounterValue's int uses (`+`, `-`, `*`, every comparison with an int or float in either order, `roman`/`Roman`) keep
+working one release with one deprecation Warning per load, since Rhai answers an unregistered comparison `false`
+silently. **Guards**: `perfect_kernel_batchw3rg::rhai_perl_names_behave_as_perl` (Font.pm keys, ExplodeText's ASCII
+letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, LookupDimension's argument forms,
+`getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
+unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
+mixed comparisons, `roman(Number)`, `Number(string)`).

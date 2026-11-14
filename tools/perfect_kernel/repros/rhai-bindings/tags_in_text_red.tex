@@ -1,0 +1,17 @@
+% mechanism: `#tags` in a constructor template whose element (ltx:text) cannot hold ltx:tags: the document
+%   auto-opens an ltx:picture inside the text to hold them and swallows the following "." into it, with no diagnostic
+% witness: synthetic (W3RE review revW3RE, the old docs/examples/sample.sty.rhai \exhibit; the binding lxtag.sty.rhai,
+%   lxtag.sty.ltxml for Perl, lxtag.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A 1 one."
+% engines: W3 (fix/rhai-batch1 round E): <p>A <text class="lxex"><picture><tags><tag>1</tag><tag role="refnum">1</tag>
+%   </tags><text>one</text><text>.</text></picture></text></p>, 0 errors (the tag number kept, the "." moved into
+%   the text, schema-invalid); Perl 0.8.8: <p>A <text class="lxex"/></p> then <p>one.</p>, 1 error
+%   (malformed:ltx:text; the tag number lost)
+% expect:  an Error naming the misplaced ltx:tags (Perl's malformed:ltx:text); "A", the number 1, "one", "." kept in order
+% status:  RED (W3 fix/rhai-batch1 round E, Perl)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{lxtag}
+\begin{document}
+A \lxex{one}.
+\end{document}

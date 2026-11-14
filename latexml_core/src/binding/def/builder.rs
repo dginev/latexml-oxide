@@ -183,8 +183,8 @@ impl ConstructorBuilder {
 /// Apply a **scalar** option by name onto `ConstructorOptions`. THE single
 /// source of truth for the option-name → field mapping — both builders (and so
 /// both front-ends) route scalar options through here, so a new scalar option is
-/// added in exactly one place. Unknown keys are ignored (runtime-forgiving,
-/// matching Perl `%options`).
+/// added in exactly one place. The caller checks the keys against Perl's table
+/// (`options::CONSTRUCTOR_OPTIONS` / `ENVIRONMENT_OPTIONS`) first.
 fn apply_scalar_option(
   options: &mut ConstructorOptions,
   key: &str,
@@ -198,17 +198,17 @@ fn apply_scalar_option(
     "enterHorizontal" => options.enter_horizontal = value.into_bool()?,
     "leaveHorizontal" => options.leave_horizontal = value.into_bool()?,
     "captureBody" => options.capture_body = value.into_bool()?,
-    "texGroup" => {
-      let name = value.into_string()?;
-      options.tex_group =
-        crate::definition::constructor::TexGroup::from_name(&name).ok_or_else(|| {
-          Error::from(format!(
-            "texGroup must be none, semi_simple or box: {name:?}"
-          ))
-        })?
-    },
     "alias" => options.alias = Some(value.into_string()?),
-    _ => log::debug!("binding builder: ignoring unknown scalar option '{key}'"),
+    "locked" => options.locked = value.into_bool()?,
+    "robust" => options.robust = value.into_bool()?,
+    // "local"/"global" or a named scope (Perl's `scope => 'section:1'`), as the macro's option.
+    "scope" => options.scope = super::traits::IntoOption::into_option(value.into_string()?),
+    "nargs" => match value {
+      OptionValue::Int(n) => options.nargs = usize::try_from(n).ok(),
+      _ => return Err(Error::from("nargs expects an integer")),
+    },
+    // A key outside Perl's table is refused (`options::check_options`) before it gets here.
+    _ => return Err(Error::from(format!("unknown constructor option {key}"))),
   }
   Ok(())
 }

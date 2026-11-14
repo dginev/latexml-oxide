@@ -2429,7 +2429,6 @@ impl Processor for Graphics {
     }
     for (idx, node) in nodes.iter().enumerate() {
       let options = node.get_attribute("options").unwrap_or_default();
-      let page = Self::parse_page_option(&options);
       let Some(source) = sources[idx].clone() else {
         let graphic = node
           .get_attribute("graphic")
@@ -2442,6 +2441,10 @@ impl Processor for Graphics {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
+      // A single-page format has no page to select, as pdfTeX ignores `page=` on a PNG: copied as it is (#791, OD #1026).
+      const SINGLE_PAGE: &[&str] = &["svg", "png", "jpg", "jpeg"];
+      let page =
+        Self::parse_page_option(&options).filter(|_| !SINGLE_PAGE.contains(&src_ext.as_str()));
       let props = self.type_properties.get(&src_ext).cloned();
       // Robustness guard (surpass-Perl; user directive 2026-06-22). A source
       // type with no explicit `destination_type` defaults to a WEB-NATIVE
@@ -3790,6 +3793,113 @@ endobj
       copied, png,
       "the author's x1.png must reach the output unchanged"
     );
+  }
+
+  /// #791: `page=` on a single-page format (SVG, PNG, JPEG) selects nothing, as pdfTeX ignores it on a PNG:
+  /// the source is copied as it is, with its size, exactly as without `page=` — never re-encoded by `convert`.
+  #[test]
+  #[cfg(unix)]
+  fn a_single_page_source_ignores_page() {
+    use std::os::unix::fs::PermissionsExt;
+
+    use crate::{
+      document::{PostDocument, PostDocumentOptions},
+      graphics_cache::CachePolicy,
+    };
+
+    let tmp = TempDir::new("graphics_single_page");
+    let svg_body = r#"<svg xmlns="http://www.w3.org/2000/svg" width="100pt" height="50pt" viewBox="0 0 100 50"><rect/></svg>"#;
+    let svg = tmp.join("draw.svg");
+    std::fs::write(&svg, svg_body).unwrap();
+    let mut png = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+    png.extend_from_slice(&13u32.to_be_bytes());
+    png.extend_from_slice(b"IHDR");
+    png.extend_from_slice(&200u32.to_be_bytes());
+    png.extend_from_slice(&100u32.to_be_bytes());
+    png.extend_from_slice(&[8, 2, 0, 0, 0, 0, 0, 0, 0]);
+    png.extend_from_slice(&[0u8; 16]);
+    let img = tmp.join("img.png");
+    std::fs::write(&img, &png).unwrap();
+    // A baseline JPEG's SOF0 frame header: 200 x 100.
+    let jpg_bytes: &[u8] = &[
+      0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x64, 0x00, 0xC8, 0x03, 0x01, 0x22, 0x00,
+      0x02, 0x11, 0x01, 0x03, 0x11, 0x01, 0xFF, 0xD9,
+    ];
+    let jpg = tmp.join("pic.jpg");
+    std::fs::write(&jpg, jpg_bytes).unwrap();
+
+    let log = tmp.join("convert.log");
+    let fake_convert = tmp.join("convert");
+    std::fs::write(
+      &fake_convert,
+      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/convert.log\"\n\
+       for a in \"$@\"; do d=\"$a\"; done\nprintf x > \"$d\"\nexit 0\n",
+    )
+    .unwrap();
+    let mut perms = std::fs::metadata(&fake_convert).unwrap().permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(&fake_convert, perms).unwrap();
+    let mut env = EnvGuard::acquire();
+    let old_path = std::env::var("PATH").unwrap_or_default();
+    env.set("PATH", &format!("{}:{}", tmp.path().display(), old_path));
+
+    let dest = tmp.join("out").join("out.html");
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    let xml = format!(
+      r#"<?xml version="1.0"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
+  <graphics graphic="draw" candidates="{0}" options="page=1" xml:id="g1"/>
+  <graphics graphic="draw" candidates="{0}" xml:id="g2"/>
+  <graphics graphic="draw" candidates="{0}" options="page=2" xml:id="g3"/>
+  <graphics graphic="img" candidates="{1}" options="page=2" xml:id="g4"/>
+  <graphics graphic="pic" candidates="{2}" options="page=1" xml:id="g5"/>
+</document>"#,
+      svg.display(),
+      img.display(),
+      jpg.display()
+    );
+    let doc_opts = PostDocumentOptions {
+      destination: Some(dest.display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
+    let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    let out = graphics.process(doc, nodes).unwrap()[0].to_xml_string();
+    let invocations = std::fs::read_to_string(&log).unwrap_or_default();
+    assert_eq!(invocations, "", "no single-page source reaches `convert`");
+    let element = |id: &str| {
+      let at = out.find(&format!(r#"xml:id="{id}""#)).unwrap();
+      let tag = &out[out[..at].rfind('<').unwrap()..at + out[at..].find('>').unwrap()];
+      let attr = |name: &str| {
+        let at = tag.find(&format!(" {name}=\""))? + name.len() + 3;
+        Some(tag[at..at + tag[at..].find('"')?].to_string())
+      };
+      (attr("imagesrc"), attr("imagewidth"), attr("imageheight"))
+    };
+    let svg_size = element("g2");
+    assert_eq!(svg_size.0.as_deref(), Some("draw.svg"), "{out}");
+    assert!(svg_size.1.is_some() && svg_size.2.is_some(), "{out}");
+    for id in ["g1", "g3"] {
+      assert_eq!(element(id), svg_size, "{id}: as without page=; {out}");
+    }
+    let raster = |src: &str| {
+      (
+        Some(src.to_string()),
+        Some("200".to_string()),
+        Some("100".to_string()),
+      )
+    };
+    assert_eq!(element("g4"), raster("img.png"), "{out}");
+    assert_eq!(element("g5"), raster("pic.jpg"), "{out}");
+    let out_dir = dest.parent().unwrap();
+    assert_eq!(
+      std::fs::read_to_string(out_dir.join("draw.svg")).unwrap(),
+      svg_body
+    );
+    assert_eq!(std::fs::read(out_dir.join("img.png")).unwrap(), png);
+    assert_eq!(std::fs::read(out_dir.join("pic.jpg")).unwrap(), jpg_bytes);
   }
 
   /// `angle=` on a **non-raster** source must not reach `convert`.

@@ -90,6 +90,14 @@ impl Dimension {
   }
 }
 
+impl Dimension {
+  /// Whether `spec` is a form Perl's `Dimension($spec)` reads (Dimension.pm `new`): a number with a two-letter
+  /// unit, or a bare number of sp; any other string Perl reads as a number, silently (`"1pt plus 2pt"` is 1sp).
+  pub fn is_spec(spec: &str) -> bool {
+    spec.is_empty() || SPEC_RE.is_match(spec) || spec.parse::<f64>().is_ok()
+  }
+}
+
 impl std::str::FromStr for Dimension {
   type Err = Error;
   fn from_str(spec: &str) -> Result<Dimension> {

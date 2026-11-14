@@ -1,0 +1,13 @@
+% mechanism: the space before a constructor whose imperative body opens its element (`openElement`) is dropped: the
+%   body runs where the document's pending space token has not been absorbed into the paragraph's text yet
+% witness: synthetic (W3RD2a review revW3h; the binding lximp.sty.rhai, lximp.sty.ltxml for Perl, lximp.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "a b"
+% engines: W3 8ee92a55a49 and Perl 0.8.8: <p><text class="a">a</text><text class="b">b</text></p> (no space)
+% expect:  0 errors; <p><text class="a">a</text> <text class="b">b</text></p>
+% status:  RED (W3 8ee92a55a49, Perl)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{lximp}
+\begin{document}
+\lxa{a} \lxb{b}
+\end{document}

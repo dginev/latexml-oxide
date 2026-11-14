@@ -935,34 +935,10 @@ fn input_definitions_impl(
   // Track loaded files in \@filelist BEFORE loading (Perl: Package.pm calls
   // \@addtofilelist before reading the file, so \@filelist is available inside)
   //
-  // OXIDIZED_DESIGN #166: the kernel stores filelist names through
-  // `\string@makeletter` (latex.ltx L1784-1789), whose `\char@if@alph`
-  // (L1790-1795) tests the ASCII ranges A-Z / a-z ONLY: those characters get
-  // catcode LETTER (`\@expl@char@generate@@nn{`#1}{11}`), everything else —
-  // dots, digits, commas, and non-ASCII alike — keeps its `\string` catcode
-  // (OTHER). Reproduce that rule exactly (NOT `ExplodeText!`, whose
-  // Unicode-`is_alphabetic` letters more than the kernel does).
-  // All-OTHER tokens (`Explode!`) broke every delimited parse of
-  // `\@filelist` whose delimiter is source-typed letters: hep-font.sty's
-  // `\def\hepfont@get@class#1.cls#2\relax` matched nothing (letter `cls`
-  // vs other `cls`), and the resulting empty/mis-split arguments corrupted
-  // the surrounding conditional bookkeeping — the 13-bundle
-  // `expected:\fi` hep-* cluster (2026-08-31 corpus).
+  // OXIDIZED_DESIGN #166: latex.ltx's `\string@makeletter` (L1784-1795) stores the name's ASCII letters as LETTER,
+  // which hep-font.sty's `\def\hepfont@get@class#1.cls#2\relax` over `\@filelist` needs (the hep-* `expected:\fi` cluster).
   if options.handleoptions && lookup_definition(&T_CS!("\\@addtofilelist"))?.is_some() {
-    let name_tokens: Vec<Token> = filename
-      .chars()
-      .map(|c| {
-        let mut tmp = [0u8; 4];
-        let s = c.encode_utf8(&mut tmp);
-        if c.is_ascii_alphabetic() {
-          T_LETTER!(s)
-        } else if c == ' ' {
-          T_SPACE!()
-        } else {
-          T_OTHER!(s)
-        }
-      })
-      .collect();
+    let name_tokens = ExplodeText!(filename);
     digest(Tokens!(
       T_CS!("\\@addtofilelist"),
       T_BEGIN!(),
@@ -4026,6 +4002,58 @@ pub fn add_to_macro_scope() -> Scope {
     Scope::Local
   } else {
     Scope::Global
+  }
+}
+
+/// Perl `AddToMacro($cs, @tokens)` (Package.pm:2534): append to a macro's expansion, unlocked, in
+/// [`add_to_macro_scope`]; an undefined `cs` is an Error and is defined with the tokens, as latex.ltx's `\g@addto@macro`
+/// does (OD #1036). One implementation for the `AddToMacro!` macro and Rhai's `AddToMacro`.
+pub fn add_to_macro(cs: Token, tokens: Tokens) -> Result<()> {
+  // Package.pm:2547 `locked => $$defn{locked}`: the addition keeps the macro's lock.
+  let locked = lookup_bool(&format!("{cs}:locked"));
+  let options = || {
+    Some(ExpandableOptions {
+      scope: Some(add_to_macro_scope()),
+      nopack_parameters: true,
+      locked,
+      ..ExpandableOptions::default()
+    })
+  };
+  match lookup_definition(&cs)? {
+    // TeX's `\g@addto@macro` and Perl both err on an undefined cs (OD #1036); latex.ltx still defines it with the addition.
+    None => {
+      let message = s!("{cs} is not defined");
+      Error!("undefined", cs, message, "Defining it with the addition");
+      def_macro(cs, None, ExpansionBody::Tokens(tokens), options())
+    },
+    Some(defn) if !defn.is_expandable() => {
+      let message = s!("{cs} is not an expandable control sequence");
+      Warn!("unexpected", cs, message, "Ignoring addition");
+      Ok(())
+    },
+    Some(defn) => {
+      let mut expansion = match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(old)) => old.clone().unlist(),
+        Some(ExpansionBody::Closure(_)) => {
+          let message = s!(
+            "{cs} has a closure body, AddToMacro will *override* with an ExpandableBody[Tokens] ! \
+             This is usually in error!"
+          );
+          Warn!("unexpected", "ExpandableBody[Closure]", message);
+          Vec::new()
+        },
+        None => Vec::new(),
+      };
+      expansion.extend(tokens.unlist());
+      // Package.pm:2545 `local $UNLOCKED = 1`: an addition may extend a `:locked` macro.
+      let _unlock_guard = local_state_unlocked_guard(true);
+      def_macro(
+        cs,
+        None,
+        ExpansionBody::Tokens(Tokens::new(expansion)),
+        options(),
+      )
+    },
   }
 }
 

@@ -19685,6 +19685,22 @@ Unknown theorem style '\mystyle', reverting to 'plain'`, and the theorem takes t
 \newtheorem{note}{Note}
 \begin{document}
 \begin{note}Body.\end{note}
+
+## 1241. `page=` on a single-page graphic is a transform: an SVG warns, a PNG or JPEG is re-encoded
+
+`image_graphicx_is_trivial` (Util/Image.pm:281-284) counts `page` beside rotate/clip/trim, so `Post/Graphics.pm:262-271`
+treats `page=` as a complex transform even on a format with one page, which pdfTeX ignores it on (pdflatex, 0 `!`). An
+SVG (`raster => 0`) gets a false `Warning:limitation` ("Cannot (yet) apply complex transforms to non-raster images")
+before it is copied; a PNG or JPEG is read and rewritten by ImageMagick under a generated `xN` name (a JPEG re-encoded
+lossily). Rust ignores `page=` on these formats (OXIDIZED_DESIGN_DIVERGENCES #1026). Minimal trigger (with any
+`nice.svg` and `a.jpg` beside it):
+
+```latex
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[page=1]{nice.svg}
+\includegraphics[page=1]{a.jpg}
 \end{document}
 ```
 
@@ -19703,3 +19719,17 @@ side in Chrome; Rust `<mo lspace="0em" rspace="0em">/</mo>`):
 $a/b$
 \end{document}
 ```
+
+## 1244. Glue.pm `add` compares fill orders as numbers, on their names
+
+`LaTeXML::Common::Glue::add` (Common/Glue.pm, `if ($pf == $pf2)`) compares the stretch and shrink fill orders with `==`,
+but a Glue built from a spec string stores the fill as its name (`"fil"`), which Perl reads as 0. So a finite stretch
+plus a `fil` stretch counts as the same order and the amounts add, where TeX keeps the `fil` (tex.web §1239). Minimal
+trigger, in a `.ltxml` binding:
+
+```perl
+Glue('1pt plus 2pt')->add(Glue('1pt plus 1fil'))->toString   # 2.0pt plus 3.0pt, Warning:perl:warn Argument "fil" isn't numeric
+```
+
+TeX's `\advance\skip0 by 1pt plus 1fil` on `\skip0=1pt plus 2pt` gives `2.0pt plus 1.0fil`, and so does Rust's Rhai
+`Glue + Glue` (OXIDIZED_DESIGN_DIVERGENCES #1030).

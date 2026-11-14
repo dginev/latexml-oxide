@@ -493,21 +493,6 @@ macro_rules! SetCounter {
     SetCounter!($ctr, $value)
   };
   ($ctr:expr_2021, $value:expr_2021) => {
-    state::assign_register(
-      &s!("\\c@{}", $ctr),
-      $value.into(),
-      Some(Scope::Global),
-      Vec::new(),
-    )?;
-    after_assignment();
-    def_macro(
-      T_CS!(s!("\\@{}@ID", $ctr)),
-      None,
-      Tokens::new(Explode!($value.value_of())),
-      Some(ExpandableOptions {
-        scope: Some(Scope::Global),
-        ..ExpandableOptions::default()
-      }),
-    )?;
+    $crate::binding::counter::dialect::set_counter(&$ctr.to_string(), $value.into())?;
   };
 }

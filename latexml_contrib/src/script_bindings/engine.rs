@@ -6,30 +6,14 @@
 
 use super::*;
 
-/// Mini-DSL to expose a `document.<rhai>(qname)` → `Document::<rust>(qname)`
-/// method whose result is discarded — the common side-effect-on-element shape.
-/// Adding a new such method is then one line; see the registrations in
-/// `make_engine`.
-macro_rules! doc_qname_method {
-  ($engine:ident, $rhai:literal, $rust:ident) => {
-    $engine.register_fn(
-      $rhai,
-      |_d: &mut DocProxy, qname: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-        with_doc(|doc, _props| {
-          doc.$rust(qname).map_err(rhai_err)?;
-          Ok(())
-        })
-      },
-    );
-  };
-}
-
 /// Build a sandboxed Rhai engine with the binding API registered.
 pub(super) fn make_engine() -> Engine {
   let mut engine = Engine::new();
   engine.set_max_operations(MAX_OPERATIONS);
   engine.set_max_call_levels(MAX_CALL_LEVELS);
   engine.set_max_string_size(MAX_STRING_SIZE);
+  // Registered operators must win over the built-ins for `()` vs a string (the deprecated string tests below).
+  engine.set_fast_operators(false);
 
   // ── registration API (wired to native defs IMMEDIATELY, in script order) ──
   engine.register_fn(
@@ -73,7 +57,15 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "DefPrimitive",
     |proto: &str, body: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
-      wire_now(|e, a| wire_primitive(e, a, proto, body, primitive_options_from_map(opts, e, a)))
+      wire_now(|e, a| {
+        wire_primitive(
+          e,
+          a,
+          proto,
+          body,
+          primitive_options_from_map(proto, opts, e, a)?,
+        )
+      })
     },
   );
   // Class/package option. Mirrors the `DeclareOption!` macro's lowering
@@ -124,23 +116,134 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "Digest",
     |t: Tokens| -> std::result::Result<Digested, Box<EvalAltResult>> {
-      latexml_core::stomach::digest(t).map_err(rhai_err)
+      latexml_core::binding::content::binding_digest(t).map_err(rhai_err)
     },
   );
-  // `T_CS('\foo')` — a single control-sequence token (wrapped as `Tokens` so it
-  // composes with `Digest`/`Expand`). The dominant token-constructor use.
-  engine.register_fn("T_CS", |name: &str| -> Tokens {
-    Tokens::new(vec![latexml_core::T_CS!(name)])
+  engine.register_fn(
+    "Digest",
+    |t: Token| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::binding::content::binding_digest(Tokens::new(vec![t])).map_err(rhai_err)
+    },
+  );
+  // A string is TeX source, TokenizeInternal'd (Package.pm:393).
+  engine.register_fn(
+    "Digest",
+    |s: &str| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::binding::content::binding_digest(mouth::tokenize_internal(
+        TeXString::assembled(s.to_string()),
+      ))
+      .map_err(rhai_err)
+    },
+  );
+  // Perl's `Tokens(@tokens)` (Tokens.pm:29): an array of `Token`s and `Tokens`, flattened; also
+  // `Tokens()` and `Tokens(a, …)` with up to four items, Rhai having no variadic functions.
+  engine.register_fn("Tokens", || Tokens::new(Vec::new()));
+  engine.register_fn("Tokens", |a: Dynamic| tokens_of(vec![a]));
+  engine.register_fn("Tokens", |a: Dynamic, b: Dynamic| tokens_of(vec![a, b]));
+  engine.register_fn("Tokens", |a: Dynamic, b: Dynamic, c: Dynamic| {
+    tokens_of(vec![a, b, c])
   });
+  engine.register_fn(
+    "Tokens",
+    |a: Dynamic, b: Dynamic, c: Dynamic, d: Dynamic| tokens_of(vec![a, b, c, d]),
+  );
+  engine.register_fn("Tokens", tokens_of);
+  // Perl's token constructors and catcode constants (Token.pm:26-37, :45-84); a Perl
+  // constant (`T_MATH`, `CC_ACTIVE`) is a zero-argument function here.
+  engine.register_type_with_name::<Token>("Token");
+  values::register_values(&mut engine);
+  // A token value in a string context (`"(" + ReadArg() + ")"`, `${…}`) is its TeX source, as `UnTeX` gives it.
+  engine.register_fn("to_string", |t: &mut Token| Tokens::new(vec![*t]).untex());
+  engine.register_fn("to_string", |t: &mut Tokens| t.clone().untex());
+  engine.register_fn("T_CS", |name: &str| -> Token { latexml_core::T_CS!(name) });
+  engine.register_fn("T_LETTER", |c: &str| -> Token {
+    Token::new(c, Catcode::LETTER)
+  });
+  engine.register_fn("T_OTHER", |c: &str| -> Token {
+    Token::new(c, Catcode::OTHER)
+  });
+  engine.register_fn("T_ACTIVE", |c: &str| -> Token {
+    Token::new(c, Catcode::ACTIVE)
+  });
+  engine.register_fn(
+    "Token",
+    |s: &str, cc: i64| -> std::result::Result<Token, Box<EvalAltResult>> {
+      match u8::try_from(cc) {
+        Ok(cc) if cc <= Catcode::ARG as u8 => Ok(Token::new(s, Catcode::from(cc))),
+        _ => Err(format!("Token: no catcode {cc}").into()),
+      }
+    },
+  );
+  engine.register_fn("Token", |s: &str| -> Token {
+    Token::new(s, Catcode::OTHER)
+  });
+  // Token.pm:81-95: `T_COMMENT` prefixes the `%`; `T_ARG` takes 1-9 or a digit Token.
+  engine.register_fn("T_COMMENT", |c: &str| -> Token {
+    Token::new(format!("%{c}"), Catcode::COMMENT)
+  });
+  engine.register_fn("T_MARKER", |t: &str| -> Token {
+    Token::new(t, Catcode::MARKER)
+  });
+  engine.register_fn(
+    "T_ARG",
+    |v: Dynamic| -> std::result::Result<Token, Box<EvalAltResult>> {
+      let n = match v.clone().try_cast::<Token>() {
+        Some(t) => t.to_string().parse::<i64>().unwrap_or(0),
+        None => v
+          .as_int()
+          .map_err(|got| format!("T_ARG: expected an int or a Token, got {got}"))?,
+      };
+      if (1..=9).contains(&n) {
+        Ok(Token::new(n.to_string(), Catcode::ARG))
+      } else {
+        Err(format!("T_ARG: value should be #1-#9, got {n}").into())
+      }
+    },
+  );
+  for (name, token) in [
+    ("T_BEGIN", latexml_core::T_BEGIN!()),
+    ("T_END", latexml_core::T_END!()),
+    ("T_MATH", latexml_core::T_MATH!()),
+    ("T_ALIGN", latexml_core::T_ALIGN!()),
+    ("T_PARAM", latexml_core::T_PARAM!()),
+    ("T_SUB", latexml_core::T_SUB!()),
+    ("T_SUPER", latexml_core::T_SUPER!()),
+    ("T_SPACE", latexml_core::T_SPACE!()),
+    ("T_CR", latexml_core::T_CR!()),
+  ] {
+    engine.register_fn(name, move || -> Token { token });
+  }
+  for (name, cc) in [
+    ("CC_ESCAPE", Catcode::ESCAPE),
+    ("CC_BEGIN", Catcode::BEGIN),
+    ("CC_END", Catcode::END),
+    ("CC_MATH", Catcode::MATH),
+    ("CC_ALIGN", Catcode::ALIGN),
+    ("CC_EOL", Catcode::EOL),
+    ("CC_PARAM", Catcode::PARAM),
+    ("CC_SUPER", Catcode::SUPER),
+    ("CC_SUB", Catcode::SUB),
+    ("CC_IGNORE", Catcode::IGNORE),
+    ("CC_SPACE", Catcode::SPACE),
+    ("CC_LETTER", Catcode::LETTER),
+    ("CC_OTHER", Catcode::OTHER),
+    ("CC_ACTIVE", Catcode::ACTIVE),
+    ("CC_COMMENT", Catcode::COMMENT),
+    ("CC_INVALID", Catcode::INVALID),
+    ("CC_CS", Catcode::CS),
+    ("CC_MARKER", Catcode::MARKER),
+    ("CC_ARG", Catcode::ARG),
+  ] {
+    engine.register_fn(name, move || -> i64 { cc as i64 });
+  }
 
-  // ── state API (for primitive side-effects / value-reading macros) ──
-  // `assign_value` is group-local (TeX default); `assign_global` persists past
-  // the enclosing group. (Untrusted-script key-namespacing is a documented
-  // follow-up — see the plan's critical re-eval §5.)
+  // ── deprecated state shims (#716 §3; Perl writes `AssignValue(k, v, 'global')`): one release, then removed ──
   engine.register_fn("assign_value", |key: &str, val: &str| {
+    warn_deprecated("assign_value");
     latexml_core::state::assign_value(key, val.to_string(), Some(Scope::Local));
   });
   engine.register_fn("assign_global", |key: &str, val: &str| {
+    warn_deprecated("assign_global");
     latexml_core::state::assign_value(key, val.to_string(), Some(Scope::Global));
   });
   // Curated pool helpers, registered 1:1 under their Perl/Rust names so binding
@@ -150,6 +253,7 @@ pub(super) fn make_engine() -> Engine {
     latexml_engine::base_utilities::neutralize_font,
   );
   engine.register_fn("lookup_value", |key: &str| -> String {
+    warn_deprecated("lookup_value");
     match latexml_core::state::lookup_value(key) {
       Some(Stored::String(s)) => arena::to_string(s),
       Some(other) => other.to_string(),
@@ -160,46 +264,32 @@ pub(super) fn make_engine() -> Engine {
   // ── the binding-language surface, 1:1 under its macro names ──
   // Each registration lowers to the SAME native function its compile-time
   // macro does (setup_binding_language.rs), so a Rhai binding reads like the
-  // `.pool`/`_sty.rs` original. String values in, strings/handles out.
-  engine.register_fn("AssignValue", |k: &str, v: &str| {
-    latexml_core::state::assign_value(k, v.to_string(), None);
+  // `.pool`/`_sty.rs` original.
+  // A value keeps its type both ways (Package.pm AssignValue :261 / LookupValue :257).
+  engine.register_fn("AssignValue", |k: &str, v: Dynamic| {
+    latexml_core::state::assign_value(k, dynamic_to_stored(v), None);
   });
-  engine.register_fn("AssignValue", |k: &str, v: &str, scope: &str| {
-    latexml_core::state::assign_value(k, v.to_string(), scope_of(scope));
+  engine.register_fn("AssignValue", |k: &str, v: Dynamic, scope: &str| {
+    latexml_core::state::assign_value(k, dynamic_to_stored(v), scope_of(scope));
   });
-  // Typed `Assign*` counterparts to the typed `Lookup*` readers below (#543).
-  // Before these, a binding could only ever assign a *string*, so a value
-  // written from a script was invisible to `LookupNumber`/`LookupBool`/
-  // `LookupFloat`. Each stores the matching `Stored` variant explicitly — in
-  // particular `AssignFloat` builds a `Float` (keeping the fraction) rather than
-  // an integer `Number`, which a bare `f64 -> Stored` would floor. 2-arg = TeX
-  // default scope (as `AssignValue`), 3-arg takes "local"/"global".
-  engine.register_fn("AssignNumber", |k: &str, v: i64| {
-    latexml_core::state::assign_value(k, Number(v), None);
-  });
-  engine.register_fn("AssignNumber", |k: &str, v: i64, scope: &str| {
-    latexml_core::state::assign_value(k, Number(v), scope_of(scope));
-  });
+  // The float setter `LookupFloat` pairs with (#542/#543), kept beside `AssignValue` (audit §3).
   engine.register_fn("AssignFloat", |k: &str, v: f64| {
     latexml_core::state::assign_value(k, Float(v), None);
   });
   engine.register_fn("AssignFloat", |k: &str, v: f64, scope: &str| {
     latexml_core::state::assign_value(k, Float(v), scope_of(scope));
   });
-  engine.register_fn("AssignBool", |k: &str, v: bool| {
-    latexml_core::state::assign_value(k, v, None);
-  });
-  engine.register_fn("AssignBool", |k: &str, v: bool, scope: &str| {
-    latexml_core::state::assign_value(k, v, scope_of(scope));
-  });
-  // Explicit string counterpart to `LookupString` (equivalent to `AssignValue`,
-  // named for a symmetric typed family).
-  engine.register_fn("AssignString", |k: &str, v: &str| {
-    latexml_core::state::assign_value(k, v.to_string(), None);
-  });
-  engine.register_fn("AssignString", |k: &str, v: &str, scope: &str| {
-    latexml_core::state::assign_value(k, v.to_string(), scope_of(scope));
-  });
+  // Deprecated typed twins of `AssignValue` (#716 §3), which stores each with its type.
+  for old in ["AssignString", "AssignNumber", "AssignBool"] {
+    engine.register_fn(old, move |k: &str, v: Dynamic| {
+      warn_deprecated(old);
+      latexml_core::state::assign_value(k, dynamic_to_stored(v), None);
+    });
+    engine.register_fn(old, move |k: &str, v: Dynamic, scope: &str| {
+      warn_deprecated(old);
+      latexml_core::state::assign_value(k, dynamic_to_stored(v), scope_of(scope));
+    });
+  }
   // The Perl `@values` list-value family (Package.pm L265-279 -> State.pm L218):
   // a value-table key holds a queue that these push/pop/unshift/shift. Always
   // GLOBAL scope, auto-vivifying the list if absent — matching Perl, which takes
@@ -218,15 +308,19 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("UnshiftValue", |k: &str, v: Dynamic| {
     latexml_core::state::unshift_value(k, vec![dynamic_to_stored(v)]);
   });
+  // Perl's `PushValue($key, @values)` / `UnshiftValue($key, @values)` (Package.pm:265/275), up to four values.
+  for arity in 2..=4 {
+    register_variadic_values(&mut engine, arity);
+  }
   engine.register_fn("PopValue", |k: &str| -> Dynamic {
     match latexml_core::state::pop_value(k) {
-      Ok(Some(popped)) => popped_stored_to_dynamic(popped),
+      Ok(Some(popped)) => stored_to_dynamic(popped),
       _ => Dynamic::UNIT,
     }
   });
   engine.register_fn("ShiftValue", |k: &str| -> Dynamic {
     match latexml_core::state::shift_value(k) {
-      Ok(Some(shifted)) => popped_stored_to_dynamic(shifted),
+      Ok(Some(shifted)) => stored_to_dynamic(shifted),
       _ => Dynamic::UNIT,
     }
   });
@@ -244,26 +338,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("LookupString", |k: &str| -> String {
     latexml_core::state::lookup_string(k)
   });
-  // Perl-style `LookupValue`: returns the stored value in its natural shape. A
-  // list value (e.g. `class_options`, a pushed queue) becomes a Rhai array —
-  // mirroring Perl's `LookupValue` returning the arrayref (#315) — rather than
-  // the leaked Debug repr `LookupString` used to emit. Scalars stringify as
-  // before; a missing key is unit (Perl `undef`).
+  // Perl's `LookupValue` (Package.pm:257): the stored value with its type — a list value (`class_options`, a
+  // pushed queue) as a Rhai array (Perl's arrayref, #315), a missing key as `()` (undef).
   engine.register_fn("LookupValue", |k: &str| -> Dynamic {
-    match latexml_core::state::lookup_value(k) {
-      None => Dynamic::UNIT,
-      Some(v) if v.is_list() => {
-        let arr: rhai::Array = v
-          .list_items()
-          .unwrap_or_default()
-          .into_iter()
-          .map(Dynamic::from)
-          .collect();
-        Dynamic::from_array(arr)
-      },
-      Some(Stored::String(s)) => arena::to_string(s).into(),
-      Some(other) => other.to_string().into(),
-    }
+    latexml_core::state::lookup_value(k).map_or(Dynamic::UNIT, stored_to_dynamic)
   });
   engine.register_fn("LookupNumber", |k: &str| -> i64 {
     latexml_core::state::lookup_number(k)
@@ -292,19 +370,58 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("LookupTokens", |k: &str| -> Tokens {
     latexml_core::state::lookup_tokens(k).unwrap_or_default()
   });
-  // Catcode access: the char as a 1-char string, the catcode as its TeX int.
-  engine.register_fn("LookupCatcode", |c: &str| -> i64 {
-    c.chars()
-      .next()
+  // The char-code tables (Package.pm :295-381): the char as a 1-char string, the code as its TeX int, `()` for a
+  // char the table does not hold (Perl undef); each Assign* takes the macro's optional scope.
+  engine.register_fn("LookupCatcode", |c: &str| -> Dynamic {
+    char_of(c)
       .and_then(latexml_core::state::lookup_catcode)
-      .map(|cc| cc as i64)
-      .unwrap_or(12)
+      .map_or(Dynamic::UNIT, |cc| Dynamic::from(cc as i64))
   });
   engine.register_fn("AssignCatcode", |c: &str, code: i64| {
-    if let Some(ch) = c.chars().next() {
-      latexml_core::state::assign_catcode(ch, Catcode::from(code as u8), None);
-    }
+    assign_code("AssignCatcode", assign_catcode, 15, c, code, "")
   });
+  engine.register_fn("AssignCatcode", |c: &str, code: i64, scope: &str| {
+    assign_code("AssignCatcode", assign_catcode, 15, c, code, scope)
+  });
+  engine.register_fn("LookupMathcode", |c: &str| {
+    code_of(latexml_core::state::lookup_mathcode(c))
+  });
+  engine.register_fn("LookupSFcode", |c: &str| {
+    code_of(char_of(c).and_then(latexml_core::state::lookup_sfcode))
+  });
+  engine.register_fn("LookupLCcode", |c: &str| {
+    code_of(char_of(c).and_then(latexml_core::state::lookup_lccode))
+  });
+  engine.register_fn("LookupUCcode", |c: &str| {
+    code_of(char_of(c).and_then(latexml_core::state::lookup_uccode))
+  });
+  engine.register_fn("LookupDelcode", |c: &str| {
+    code_of(char_of(c).and_then(latexml_core::state::lookup_delcode))
+  });
+  for (name, assign) in [
+    (
+      "AssignMathcode",
+      latexml_core::state::assign_mathcode::<u16> as fn(char, u16, Option<Scope>),
+    ),
+    ("AssignSFcode", latexml_core::state::assign_sfcode::<u16>),
+    (
+      "AssignLCcode",
+      latexml_core::state::assign_lccode::<u16, char>,
+    ),
+    (
+      "AssignUCcode",
+      latexml_core::state::assign_uccode::<u16, char>,
+    ),
+    ("AssignDelcode", latexml_core::state::assign_delcode::<u16>),
+  ] {
+    let max = i64::from(u16::MAX);
+    engine.register_fn(name, move |c: &str, code: i64| {
+      assign_code(name, assign, max, c, code, "")
+    });
+    engine.register_fn(name, move |c: &str, code: i64, scope: &str| {
+      assign_code(name, assign, max, c, code, scope)
+    });
+  }
   // StartSemiverbatim/EndSemiverbatim (Perl `Package.pm` exports, L1002-1008):
   // read the following content raw — the default neutralizes the math/special
   // catcodes (`^ _ ~ & $ # '`) to `OTHER` so they are literal, keeping `\ { }`
@@ -329,22 +446,55 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::state::end_semiverbatim().map_err(rhai_err)
     },
   );
-  // LookupMeaning: the meaning of a CS as its display string ("" if none).
-  engine.register_fn("LookupMeaning", |cs: &str| -> String {
-    match latexml_core::state::lookup_meaning(&latexml_core::T_CS!(cs)) {
-      Some(m) => m.to_string(),
-      None => String::new(),
-    }
-  });
-  engine.register_fn("Let", |a: &str, b: &str| {
-    latexml_core::state::let_i(&latexml_core::T_CS!(a), &latexml_core::T_CS!(b), None);
-  });
-  engine.register_fn("XEquals", |a: &str, b: &str| -> bool {
-    latexml_core::state::x_equals(&latexml_core::T_CS!(a), &latexml_core::T_CS!(b))
-  });
-  engine.register_fn("IsDefined", |cs: &str| -> bool {
-    latexml_core::binding::def::dialect::is_defined_token(&latexml_core::T_CS!(cs))
-  });
+  // A token argument is a string naming a control sequence, or a `Token` as is (Perl `Let`, Package.pm:383-390;
+  // `IsDefined`, :330-336), through the core calls the `Let!`/`XEquals!`/`IsDefined!` macros make (#796).
+  engine.register_fn(
+    "LookupMeaning",
+    |cs: Dynamic| -> std::result::Result<String, Box<EvalAltResult>> {
+      Ok(
+        match latexml_core::state::lookup_meaning(&token_arg("LookupMeaning", cs)?) {
+          Some(m) => m.to_string(),
+          None => String::new(),
+        },
+      )
+    },
+  );
+  engine.register_fn(
+    "Let",
+    |a: Dynamic, b: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::let_definition(&token_arg("Let", a)?, &token_arg("Let", b)?, None);
+      Ok(())
+    },
+  );
+  // Perl `Let($token1, $token2, $scope)` (Package.pm:383): "local"/"global", as `AssignValue` (#796).
+  engine.register_fn(
+    "Let",
+    |a: Dynamic, b: Dynamic, scope: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::let_definition(
+        &token_arg("Let", a)?,
+        &token_arg("Let", b)?,
+        scope_of(scope),
+      );
+      Ok(())
+    },
+  );
+  engine.register_fn(
+    "XEquals",
+    |a: Dynamic, b: Dynamic| -> std::result::Result<bool, Box<EvalAltResult>> {
+      Ok(latexml_core::state::x_equals(
+        &token_arg("XEquals", a)?,
+        &token_arg("XEquals", b)?,
+      ))
+    },
+  );
+  engine.register_fn(
+    "IsDefined",
+    |cs: Dynamic| -> std::result::Result<bool, Box<EvalAltResult>> {
+      Ok(latexml_core::binding::def::dialect::is_defined_token(
+        &token_arg("IsDefined", cs)?,
+      ))
+    },
+  );
   // RawTeX: process literal TeX as definitions input (the raw-`\def` escape
   // hatch every nontrivial binding uses). TeX: tokenize-internal + digest.
   engine.register_fn(
@@ -379,6 +529,22 @@ pub(super) fn make_engine() -> Engine {
     },
   );
   engine.register_fn(
+    "AtBeginDocument",
+    |token: Token| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::push_value("@at@begin@document", Tokens::new(vec![token]))
+        .map_err(rhai_err)
+    },
+  );
+  // The closure form (Package.pm:2815): the code becomes a macro, whose token is pushed, as Perl's `DefMacroI`.
+  engine.register_fn(
+    "AtBeginDocument",
+    |body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      let cs = latexml_core::T_CS!(code_macro_name().as_str());
+      wire_now(|e, a| wire_macro_token(e, a, cs, None, body))?;
+      latexml_core::state::push_value("@at@begin@document", Tokens::new(vec![cs])).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
     "AtEndDocument",
     |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::state::push_value(
@@ -392,6 +558,22 @@ pub(super) fn make_engine() -> Engine {
     "AtEndDocument",
     |tokens: Tokens| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::state::push_value("@at@end@document", tokens).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "AtEndDocument",
+    |token: Token| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::push_value("@at@end@document", Tokens::new(vec![token]))
+        .map_err(rhai_err)
+    },
+  );
+  // The closure form (Package.pm:2815): the code becomes a macro, whose token is pushed, as Perl's `DefMacroI`.
+  engine.register_fn(
+    "AtEndDocument",
+    |body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      let cs = latexml_core::T_CS!(code_macro_name().as_str());
+      wire_now(|e, a| wire_macro_token(e, a, cs, None, body))?;
+      latexml_core::state::push_value("@at@end@document", Tokens::new(vec![cs])).map_err(rhai_err)
     },
   );
   engine.register_fn(
@@ -417,8 +599,24 @@ pub(super) fn make_engine() -> Engine {
     },
   );
   engine.register_fn("UnTeX", |t: Tokens| -> String { t.untex() });
+  engine.register_fn(
+    "Expand",
+    |t: Token| -> std::result::Result<Tokens, Box<EvalAltResult>> {
+      latexml_core::gullet::do_expand(Tokens::new(vec![t])).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "ExpandPartially",
+    |t: Token| -> std::result::Result<Tokens, Box<EvalAltResult>> {
+      latexml_core::gullet::do_expand_partially(Tokens::new(vec![t])).map_err(rhai_err)
+    },
+  );
+  engine.register_fn("UnTeX", |t: Token| -> String {
+    Tokens::new(vec![t]).untex()
+  });
   // DigestText: digest a TeX string into a `Digested` handle — the workhorse
   // of `properties` closures that precompute content (e.g. IEEEproof's title).
+  // A string is TeX source, TokenizeInternal'd; a `Token`/`Tokens` is digested as is (Package.pm:405).
   engine.register_fn(
     "DigestText",
     |s: &str| -> std::result::Result<Digested, Box<EvalAltResult>> {
@@ -428,8 +626,46 @@ pub(super) fn make_engine() -> Engine {
       .map_err(rhai_err)
     },
   );
+  engine.register_fn(
+    "DigestText",
+    |t: Tokens| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::binding::content::digest_text(t).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "DigestText",
+    |t: Token| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::binding::content::digest_text(Tokens::new(vec![t])).map_err(rhai_err)
+    },
+  );
   // ToString/ToAttribute/Revert on a Digested handle (Perl ToString/Revert).
-  engine.register_fn("ToString", |d: Digested| -> String { d.to_string() });
+  // Perl's `ToString` of anything (Object.pm:59): a box, Tokens, a Token, a string; `()` as "".
+  engine.register_fn("ToString", |d: Dynamic| -> String {
+    if d.is_unit() {
+      String::new()
+    } else {
+      dynamic_to_string(d)
+    }
+  });
+  // Perl's `if ($v)` / `unless ($v)` as `!!v` / `!v` (perl_truthy): every value type, Rhai's `!` taking only a bool.
+  engine.register_fn("!", |v: Dynamic| !perl_truthy(&v));
+  // A value tested against a string (`w != ""`), which Rhai would answer by type alone: their string forms (`()` as
+  // ""), Warned once per load with the Perl-form test; Perl compares an object's address, so tests `ToString`.
+  register_string_tests::<Tokens>(&mut engine, "value == string");
+  register_string_tests::<Token>(&mut engine, "value == string");
+  register_string_tests::<Digested>(&mut engine, "value == string");
+  // `()` against a string either way round reads as "", as Perl's `undef eq ''` (which Warns `uninitialized`).
+  let unit_test = |s: &str| {
+    warn_deprecated("() == string");
+    s.is_empty()
+  };
+  engine.register_fn("==", move |_: (), s: &str| unit_test(s));
+  engine.register_fn("!=", move |_: (), s: &str| !unit_test(s));
+  engine.register_fn("==", move |s: &str, _: ()| unit_test(s));
+  engine.register_fn("!=", move |s: &str, _: ()| !unit_test(s));
+  // Perl's `defined($v)`: every value but `()`.
+  engine.register_fn("defined", |v: Dynamic| !v.is_unit());
+  engine.register_fn("ToString", |_w: WhatsitProxy| whatsit_string());
   engine.register_fn("ToAttribute", |d: Digested| -> String { d.to_attribute() });
   engine.register_fn(
     "Revert",
@@ -437,46 +673,53 @@ pub(super) fn make_engine() -> Engine {
       d.revert().map_err(rhai_err)
     },
   );
+  // Perl's Revert of a string Explodes it; of undef, nothing (Object.pm:108).
+  engine.register_fn("Revert", |s: &str| explode(s, false));
+  engine.register_fn("Revert", |_: ()| Tokens::new(Vec::new()));
   engine.register_fn(
     "Today",
     || -> std::result::Result<String, Box<EvalAltResult>> {
       latexml_engine::base_utilities::today().map_err(rhai_err)
     },
   );
-  engine.register_fn("Warn", |cat: &str, obj: &str, msg: &str| {
-    latexml_core::Warn!(cat, obj, msg.to_string());
-  });
-  engine.register_fn(
-    "Error",
-    |cat: &str, obj: &str, msg: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      // Error! escalates to Fatal past MAX_ERRORS (a latexml `Err`) — surface
-      // that to the script as a Rhai error so conversion aborts cleanly.
-      let res: Result<()> = (|| {
-        latexml_core::Error!(cat, obj, msg.to_string());
-        Ok(())
-      })();
-      res.map_err(rhai_err)
-    },
-  );
-  // ── the rest of the diagnostics surface (Perl Common/Error.pm), completing
-  // the Warn/Error pair above (#319). ──
-  engine.register_fn("Info", |cat: &str, obj: &str, msg: &str| {
-    latexml_core::Info!(cat, obj, msg.to_string());
-  });
-  engine.register_fn(
-    "Fatal",
-    |cat: &str, obj: &str, msg: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      // Perl `Fatal($cat,$obj,$msg)` logs a fatal and aborts. Surface it as a
-      // Rhai error so the script/conversion aborts cleanly, carrying the
-      // "cat:obj msg" identity, and note the fatal status for the run tally.
-      let res: Result<()> = (|| {
-        latexml_core::Fatal!(Internal, Unexpected, format!("{cat}:{obj} {msg}"));
-        #[allow(unreachable_code)]
-        Ok(())
-      })();
-      res.map_err(rhai_err)
-    },
-  );
+  // Diagnostics (Perl Common/Error.pm :271-394): `cat:obj msg`, plus trailing details as strings or an array of
+  // strings, one line each. Perl's form `(cat, obj, $where, msg, @details)` is read when `$where` is `()`, a handle,
+  // or any 5+-argument call; a string third argument in a 4-argument call stays the message (the older form).
+  for kind in [Diag::Warn, Diag::Error, Diag::Info, Diag::Fatal] {
+    let name = kind.name();
+    engine.register_fn(name, move |cat: &str, obj: &str, msg: &str| {
+      emit_diag(kind, cat, obj, msg, None)
+    });
+    engine.register_fn(
+      name,
+      move |cat: &str, obj: &str, a3: Dynamic, a4: Dynamic| {
+        if a3.is_string() {
+          emit_diag(kind, cat, obj, &dynamic_to_string(a3), Some(details_of(a4)))
+        } else {
+          emit_diag(kind, cat, obj, &dynamic_to_string(a4), None)
+        }
+      },
+    );
+    engine.register_fn(
+      name,
+      move |cat: &str, obj: &str, _where: Dynamic, msg: Dynamic, d1: Dynamic| {
+        emit_diag(
+          kind,
+          cat,
+          obj,
+          &dynamic_to_string(msg),
+          Some(details_of(d1)),
+        )
+      },
+    );
+    engine.register_fn(
+      name,
+      move |cat: &str, obj: &str, _where: Dynamic, msg: Dynamic, d1: Dynamic, d2: Dynamic| {
+        let details = format!("{}\n\t{}", details_of(d1), details_of(d2));
+        emit_diag(kind, cat, obj, &dynamic_to_string(msg), Some(details))
+      },
+    );
+  }
   // Notes + progress reporting (Perl `Note`/`NoteSTDERR`/`NoteLog`, `ProgressStep`,
   // `ProgressSpinup`/`ProgressSpindown`). Matching Perl `Common/Error.pm`: `Note`
   // writes to BOTH the log and stderr, `NoteSTDERR` to stderr only, `NoteLog` to
@@ -587,16 +830,54 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::binding::counter::dialect::new_counter(c, within, None).map_err(rhai_err)
     },
   );
+  // Perl `NewCounter($ctr, $within, idprefix => …, idwithin => …, nested => [...])` (Package.pm:676), as `NewCounter!`.
+  engine.register_fn(
+    "NewCounter",
+    |c: &str, within: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      let (mut idprefix, mut idwithin, mut nested) = (String::new(), String::new(), Vec::new());
+      for (key, val) in opts {
+        match key.as_str() {
+          "idprefix" => idprefix = dynamic_to_string(val),
+          "idwithin" => idwithin = dynamic_to_string(val),
+          "nested" if val.is_array() => {
+            nested = val
+              .cast::<rhai::Array>()
+              .into_iter()
+              .map(dynamic_to_string)
+              .collect()
+          },
+          "nested" => nested = vec![dynamic_to_string(val)],
+          // (Perl's NewCounter, Package.pm:654, checks no option names)
+          _ => {},
+        }
+      }
+      let options = latexml_core::binding::counter::dialect::NewCounterOptions {
+        idprefix: &idprefix,
+        idwithin: &idwithin,
+        nested:   nested.iter().map(String::as_str).collect(),
+      };
+      latexml_core::binding::counter::dialect::new_counter(c, within, Some(options))
+        .map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "StepCounter",
     |c: &str| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::binding::counter::dialect::step_counter(c, false).map_err(rhai_err)
     },
   );
+  // Perl `StepCounter($ctr, $noreset)` (Package.pm:739).
+  engine.register_fn(
+    "StepCounter",
+    |c: &str, noreset: Dynamic| -> RhaiResult<()> {
+      latexml_core::binding::counter::dialect::step_counter(c, perl_truthy(&noreset))
+        .map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "ResetCounter",
     |c: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      latexml_core::binding::counter::dialect::reset_counter(&latexml_core::T_LETTER!(c))
+      latexml_core::binding::counter::dialect::reset_counter(&latexml_core::T_OTHER!(c))
         .map_err(rhai_err)
     },
   );
@@ -606,96 +887,112 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::binding::counter::dialect::add_to_counter(c, Number(n)).map_err(rhai_err)
     },
   );
-  engine.register_fn(
-    "CounterValue",
-    |c: &str| -> std::result::Result<i64, Box<EvalAltResult>> {
-      latexml_core::binding::counter::dialect::counter_value(c)
-        .map(|n| n.0)
-        .map_err(rhai_err)
-    },
-  );
+  // Perl's form takes a Number (Package.pm:730).
+  engine.register_fn("AddToCounter", |c: &str, n: Number| -> RhaiResult<()> {
+    latexml_core::binding::counter::dialect::add_to_counter(c, n).map_err(rhai_err)
+  });
+  // A Number, as Perl's (Package.pm:706); its int-like uses (`+ 1`, `== 3`) Warn for one release (values.rs).
+  engine.register_fn("CounterValue", |c: &str| -> RhaiResult<Number> {
+    latexml_core::binding::counter::dialect::counter_value(c).map_err(rhai_err)
+  });
   // RefStepCounter: returns the refnum/id property map (Digested values come
   // back as handles a `properties` closure can return directly — the amsmath
-  // `properties => ref_step_counter("equation")` idiom).
+  // `properties => ref_step_counter("equation")` idiom). Through `\refstepcounter`'s
+  // current meaning, as `RefStepCounter!`; `noreset` steps the counter directly.
   engine.register_fn(
     "RefStepCounter",
     |c: &str| -> std::result::Result<Map, Box<EvalAltResult>> {
-      let props =
-        latexml_core::binding::counter::dialect::ref_step_counter(c, false).map_err(rhai_err)?;
+      let props = latexml_core::binding::counter::dialect::ref_step_counter_by_meaning(c)
+        .map_err(rhai_err)?;
+      Ok(props_to_map(props))
+    },
+  );
+  engine.register_fn(
+    "RefStepCounter",
+    |c: &str, noreset: bool| -> std::result::Result<Map, Box<EvalAltResult>> {
+      let props = if noreset {
+        latexml_core::binding::counter::dialect::ref_step_counter(c, true)
+      } else {
+        latexml_core::binding::counter::dialect::ref_step_counter_by_meaning(c)
+      }
+      .map_err(rhai_err)?;
       Ok(props_to_map(props))
     },
   );
 
-  // AssignMeaning: bind a CS's meaning to another CS's current meaning by
-  // name (the string form; Tokens-meaning binding goes via Let/RawTeX).
-  engine.register_fn("AssignMeaning", |cs: &str, other: &str| {
-    if let Some(m) = latexml_core::state::lookup_meaning(&latexml_core::T_CS!(other)) {
-      latexml_core::state::assign_meaning(&latexml_core::T_CS!(cs), m, None);
+  // Perl `$STATE->assignMeaning($token, $meaning, $scope)` (State.pm:380), the `AssignMeaning!` macro: the definition a
+  // `LookupDefinition` handle found (as Perl's object, unchanged by a later redefinition), a Token (`\let\x=a`), or `()` (undefines). A string
+  // meaning is the old `Let` form, kept one release with a Warning.
+  fn assign_meaning(
+    cs: Dynamic,
+    meaning: Dynamic,
+    scope: Option<Scope>,
+  ) -> std::result::Result<(), Box<EvalAltResult>> {
+    let cs = token_arg("AssignMeaning", cs)?;
+    if meaning.is_string() {
+      warn_deprecated("AssignMeaning(cs, string)");
+      latexml_core::state::let_definition(&cs, &token_arg("AssignMeaning", meaning)?, scope);
+    } else if meaning.is_unit() {
+      latexml_core::state::assign_meaning(&cs, Stored::None, scope);
+    } else if let Some(def) = meaning.clone().try_cast::<DefinitionProxy>() {
+      latexml_core::state::assign_meaning(&cs, def.meaning, scope);
+    } else {
+      latexml_core::state::assign_meaning(&cs, token_arg("AssignMeaning", meaning)?, scope);
     }
+    Ok(())
+  }
+  engine.register_fn("AssignMeaning", |cs: Dynamic, meaning: Dynamic| {
+    assign_meaning(cs, meaning, None)
+  });
+  engine.register_fn(
+    "AssignMeaning",
+    |cs: Dynamic, meaning: Dynamic, scope: &str| assign_meaning(cs, meaning, scope_of(scope)),
+  );
+
+  // AssignMapping / LookupMapping / LookupMappingKeys (Package.pm :283-293): a value keeps its type, as
+  // AssignValue's; a missing key is `()` (undef); the keys come sorted, as State.pm:261-265 sorts them.
+  engine.register_fn("AssignMapping", |map: &str, key: &str, value: Dynamic| {
+    let value = (!value.is_unit()).then(|| dynamic_to_stored(value));
+    latexml_core::state::assign_mapping(map, key, value);
+  });
+  engine.register_fn("LookupMapping", |map: &str, key: &str| -> Dynamic {
+    latexml_core::state::lookup_mapping(map, key).map_or(Dynamic::UNIT, stored_to_dynamic)
+  });
+  engine.register_fn("LookupMappingKeys", |map: &str| -> rhai::Array {
+    let mut keys: Vec<String> = latexml_core::state::with_mapping_keys(map, |keys| {
+      keys.iter().map(|k| arena::to_string(*k)).collect()
+    });
+    keys.sort();
+    keys.into_iter().map(Dynamic::from).collect()
   });
 
-  // AssignMapping / mapping lookup (Perl AssignMapping/LookupMapping).
-  engine.register_fn("AssignMapping", |map: &str, key: &str, value: &str| {
-    latexml_core::state::assign_mapping(map, key, Some(value.to_string()));
+  // GetKeyVal / GetKeyVals (KeyVals.pm:31-37): the value as stored — Tokens as read, a digested box once the set is
+  // digested (a constructor's argument), `()` for a missing key; a repeated key's last value, its values as an array
+  // in GetKeyVals. A `k=v,…` TeX string (an old-form macro's argument) is read as its values' Tokens.
+  engine.register_type_with_name::<latexml_core::keyvals::KeyVals>("KeyVals");
+  engine.register_fn("to_string", |kv: &mut latexml_core::keyvals::KeyVals| {
+    kv.to_string()
   });
-  engine.register_fn("LookupMapping", |map: &str, key: &str| -> String {
-    latexml_core::state::with_mapping(map, key, |meaning| match meaning {
-      Some(Stored::String(s)) => arena::to_string(*s),
-      Some(other) => other.to_string(),
-      None => String::new(),
-    })
+  engine.register_fn("GetKeyVal", |kv: Dynamic, key: &str| -> Dynamic {
+    keyval_values(kv)
+      .into_iter()
+      .rev()
+      .find(|(k, _)| k == key)
+      .map_or(Dynamic::UNIT, |(_, v)| v)
   });
-
-  // GetKeyVal / GetKeyVals over a keyval argument. A `KeyVals`/`OptionalKeyVals`
-  // argument reaches a constructor *closure* body as a digested `KeyVals` handle
-  // (or unit `()` when an optional set was omitted); it reaches other contexts
-  // as its TeX-source string ("k=v,k2={v2}"). `GetKeyVal` accepts both — plus
-  // unit — so a script body can `GetKeyVal(#1, "width")` uniformly. Missing key
-  // (or unit) → "".
-  engine.register_fn("GetKeyVal", |kv: Dynamic, key: &str| -> String {
-    if let Some(d) = kv.clone().try_cast::<Digested>() {
-      return match d.data() {
-        latexml_core::digested::DigestedData::KeyVals(keyval) => keyval
-          .get_value_digested(key)
-          .map(|v| v.to_string())
-          .unwrap_or_default(),
-        _ => String::new(),
-      };
-    }
-    if kv.is_string() {
-      let s = kv.into_string().unwrap_or_default();
-      return latexml_core::keyval::split_keyval_source(&s)
-        .into_iter()
-        .find(|(k, _)| k == key)
-        .map(|(_, v)| v)
-        .unwrap_or_default();
-    }
-    String::new()
-  });
-  // `GetKeyVals` mirrors `GetKeyVal`: a `RequiredKeyVals`/`OptionalKeyVals`
-  // argument reaches a constructor closure as a digested `KeyVals` handle, and
-  // reaches other contexts as its `k=v,…` source string. Accept both (plus unit
-  // for an omitted optional set) so a script can `GetKeyVals(#1)` uniformly and
-  // turn the arg into a Rhai map (issue #627). Values are the digested value's
-  // string form (falling back to the raw value pre-digestion).
   engine.register_fn("GetKeyVals", |kv: Dynamic| -> Map {
     let mut m = Map::new();
-    if let Some(d) = kv.clone().try_cast::<Digested>() {
-      if let latexml_core::digested::DigestedData::KeyVals(keyval) = d.data() {
-        let mut hash = keyval.get_hash_digested();
-        if hash.is_empty() {
-          hash = keyval.get_hash();
-        }
-        for (k, v) in hash {
-          m.insert(k.into(), Dynamic::from(v));
-        }
-      }
-      return m;
-    }
-    if kv.is_string() {
-      let s = kv.into_string().unwrap_or_default();
-      for (k, v) in latexml_core::keyval::split_keyval_source(&s) {
-        m.insert(k.into(), Dynamic::from(v));
+    for (k, v) in keyval_values(kv) {
+      match m.get_mut(k.as_str()) {
+        None => {
+          m.insert(k.into(), v);
+        },
+        Some(prev) if prev.is_array() => {
+          let mut list = std::mem::take(prev).cast::<rhai::Array>();
+          list.push(v);
+          *prev = Dynamic::from_array(list);
+        },
+        Some(prev) => *prev = Dynamic::from_array(vec![std::mem::take(prev), v]),
       }
     }
     m
@@ -728,26 +1025,168 @@ pub(super) fn make_engine() -> Engine {
     latexml_core::binding::content::select_relaxng_schema(schema, None);
   });
 
-  // ── further definition forms (DefRegister/DefKeyVal/DefMath/DefLigature) ──
+  // ── thin wrappers (W3RD1b): Perl's argument forms, each the core call its compile-time macro makes ──
+  // Invocation (Package.pm:965): a CS name/`Token`, or TeX with `#n` (an anonymous macro); each argument a
+  // `Tokens`/`Token`, TeX source, or `()` (an omitted optional), positionally or as one array.
+  engine.register_fn("Invocation", |cs: Dynamic| invocation(cs, Vec::new()));
+  engine.register_fn("Invocation", invocation);
+  engine.register_fn("Invocation", |cs: Dynamic, a: Dynamic| {
+    invocation(cs, vec![a])
+  });
+  engine.register_fn("Invocation", |cs: Dynamic, a: Dynamic, b: Dynamic| {
+    invocation(cs, vec![a, b])
+  });
+  engine.register_fn(
+    "Invocation",
+    |cs: Dynamic, a: Dynamic, b: Dynamic, c: Dynamic| invocation(cs, vec![a, b, c]),
+  );
+  // AddToMacro (Package.pm:2534): TeX source is TokenizeInternal'd, as Perl's.
+  engine.register_fn(
+    "AddToMacro",
+    |cs: Dynamic, tokens: Dynamic| -> RhaiResult<()> {
+      let cs = token_arg("AddToMacro", cs)?;
+      latexml_core::binding::content::add_to_macro(cs, dynamic_to_tokens(tokens)).map_err(rhai_err)
+    },
+  );
+  // DeclareFontMap (Package.pm:2859): the map an array of 1-char strings or `()`; `family` and the
+  // `*_mathstyle` keys as Perl's options.
+  engine.register_fn(
+    "DeclareFontMap",
+    |name: &str, map: rhai::Array| -> RhaiResult<()> { declare_font_map(name, map, Map::new()) },
+  );
+  engine.register_fn("DeclareFontMap", declare_font_map);
+  // DeclareFontMapMultichar (the `DeclareFontMapMultichar!` macro): position (decimal) → its string.
+  engine.register_fn("DeclareFontMapMultichar", |name: &str, map: Map| {
+    font_map_multichar(format!("{name}_fontmap_multichar"), map);
+  });
+  engine.register_fn(
+    "DeclareFontMapMultichar",
+    |name: &str, family: &str, map: Map| {
+      font_map_multichar(format!("{name}_{family}_fontmap_multichar"), map);
+    },
+  );
+  engine.register_fn("LoadPool", |name: &str| -> RhaiResult<()> {
+    latexml_core::binding::content::input_definitions(
+      name,
+      latexml_core::binding::content::InputDefinitionOptions {
+        extension: Some("pool".into()),
+        ..Default::default()
+      },
+    )
+    .map_err(rhai_err)
+  });
+  // IsEmpty (Package.pm:1034): spaces, braces and other non-printing tokens are empty; a list when each item is.
+  engine.register_fn("IsEmpty", |thing: Dynamic| -> RhaiResult<bool> {
+    is_empty_thing(&thing)
+  });
+  engine.register_fn("DigestIf", |cs: Dynamic| -> RhaiResult<Dynamic> {
+    let token = token_arg("DigestIf", cs)?;
+    Ok(
+      latexml_core::binding::content::digest_if(token)
+        .map_err(rhai_err)?
+        .map_or(Dynamic::UNIT, Dynamic::from),
+    )
+  });
+  // ProcessKeyOptions (the `ProcessKeyOptions!` macro): ProcessOptions' forms, `\@curroptions` kept.
+  engine.register_fn("ProcessKeyOptions", || -> RhaiResult<()> {
+    latexml_core::binding::content::process_key_options(false, &[]).map_err(rhai_err)
+  });
+  engine.register_fn("ProcessKeyOptions", |inorder: bool| -> RhaiResult<()> {
+    latexml_core::binding::content::process_key_options(inorder, &[]).map_err(rhai_err)
+  });
+  engine.register_fn("ProcessKeyOptions", |opts: Map| -> RhaiResult<()> {
+    check_options(
+      "ProcessKeyOptions",
+      &["inorder", "keysets"],
+      opts.keys().map(|k| k.as_str()),
+    )
+    .map_err(rhai_err)?;
+    let inorder = opts
+      .get("inorder")
+      .and_then(|v| v.as_bool().ok())
+      .unwrap_or(false);
+    let keysets = opts
+      .get("keysets")
+      .cloned()
+      .map(string_list)
+      .unwrap_or_default();
+    let keysets: Vec<&str> = keysets.iter().map(String::as_str).collect();
+    latexml_core::binding::content::process_key_options(inorder, &keysets).map_err(rhai_err)
+  });
+  // FindFile (Package.pm:2076): the path, or `()`; Perl's `type`/`notex`/`noltxml`/`searchpaths_only`.
+  engine.register_fn("FindFile", |name: &str| -> RhaiResult<Dynamic> {
+    find_file(name, Map::new())
+  });
+  engine.register_fn("FindFile", find_file);
+  engine.register_fn("Input", |name: &str| -> RhaiResult<()> {
+    latexml_core::binding::content::input(
+      name,
+      latexml_core::binding::content::InputOptions::default(),
+    )
+    .map_err(rhai_err)
+  });
+  // CleanLabel/CleanID (Package.pm:482-511): a `Token`/`Tokens` label is read as its ToString.
+  engine.register_fn("CleanLabel", |label: Dynamic| {
+    latexml_core::common::cleaners::clean_label(&dynamic_to_string(label), None).into_owned()
+  });
+  engine.register_fn("CleanLabel", |label: Dynamic, prefix: &str| {
+    latexml_core::common::cleaners::clean_label(&dynamic_to_string(label), Some(prefix))
+      .into_owned()
+  });
+  engine.register_fn("CleanID", |key: Dynamic| {
+    latexml_core::common::cleaners::clean_id(&dynamic_to_string(key))
+  });
+  engine.register_fn("SetCounter", |ctr: &str, value: i64| -> RhaiResult<()> {
+    latexml_core::binding::counter::dialect::set_counter(ctr, Number(value)).map_err(rhai_err)
+  });
+  // Perl's form takes a Number (Package.pm:722).
+  engine.register_fn("SetCounter", |ctr: &str, value: Number| -> RhaiResult<()> {
+    latexml_core::binding::counter::dialect::set_counter(ctr, value).map_err(rhai_err)
+  });
+  // roman/Roman (Package.pm:470-476) and Explode/ExplodeText (Token.pm:103-116) return Tokens, as Perl's lists.
+  engine.register_fn("roman", |n: i64| {
+    explode(&latexml_core::common::cleaners::roman_aux(n), true)
+  });
+  engine.register_fn("Roman", |n: i64| {
+    explode(
+      &latexml_core::common::cleaners::roman_aux(n).to_ascii_uppercase(),
+      true,
+    )
+  });
+  // CounterValue returned an int before it returned Perl's Number: `roman(CounterValue(c))` keeps working, Warned.
+  engine.register_fn("roman", |n: Number| {
+    warn_deprecated("Number as an int");
+    explode(&latexml_core::common::cleaners::roman_aux(n.0), true)
+  });
+  engine.register_fn("Roman", |n: Number| {
+    warn_deprecated("Number as an int");
+    explode(
+      &latexml_core::common::cleaners::roman_aux(n.0).to_ascii_uppercase(),
+      true,
+    )
+  });
+  engine.register_fn("Explode", |s: &str| explode(s, false));
+  engine.register_fn("ExplodeText", |s: &str| explode(s, true));
+  // UTF (Util/Unicode.pm:23): the character of a code point.
+  engine.register_fn("UTF", |code: i64| -> RhaiResult<String> {
+    u32::try_from(code)
+      .ok()
+      .and_then(char::from_u32)
+      .map(String::from)
+      .ok_or_else(|| format!("UTF: {code} is not a Unicode code point").into())
+  });
+  // BeginItemize (latex_constructs.pool.ltxml:1296): the list's property map, for a `properties` closure.
+  engine.register_fn(
+    "BeginItemize",
+    |itype: &str, counter: &str| -> RhaiResult<Map> { begin_itemize(itype, counter, Map::new()) },
+  );
+  engine.register_fn("BeginItemize", begin_itemize);
+  // Equals (Object.pm:73): same type and value; two tokens are equal when `\let` to the same meaning.
+  engine.register_fn("Equals", |x: Dynamic, y: Dynamic| equals(x, y));
+
+  // ── further definition forms (DefKeyVal/DefMath/DefLigature; DefRegister is in `values.rs`) ──
   // These run when the script executes (per conversion, like a Perl .ltxml),
   // lowering to the same dialect functions their compile-time macros use.
-  engine.register_fn(
-    "DefRegister",
-    |proto: &str, v: i64| -> std::result::Result<(), Box<EvalAltResult>> {
-      let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
-      latexml_core::binding::def::dialect::def_register(cs, params, Number(v), None)
-        .map_err(rhai_err)
-    },
-  );
-  // String value = a dimension spec ("5pt", "0.4em", …) → Dimension register.
-  engine.register_fn(
-    "DefRegister",
-    |proto: &str, spec: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
-      let dim = Dimension::new_f64(Dimension::spec_to_f64(spec).map_err(rhai_err)?);
-      latexml_core::binding::def::dialect::def_register(cs, params, dim, None).map_err(rhai_err)
-    },
-  );
   engine.register_fn(
     "DefKeyVal",
     |keyset: &str, key: &str, vtype: &str| -> std::result::Result<(), Box<EvalAltResult>> {
@@ -796,26 +1235,31 @@ pub(super) fn make_engine() -> Engine {
   );
   engine.register_fn(
     "DefLigature",
-    |pattern: &str, replacement: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let regex_compiled = regex::Regex::new(pattern)
-        .map_err(|e| Box::<EvalAltResult>::from(format!("DefLigature bad regex: {e}")))?;
-      let replacement = replacement.to_string();
-      latexml_core::state::unshift_value("TEXT_LIGATURES", vec![
-        latexml_core::ligature::Ligature {
-          id:        latexml_core::state::generate_ligature_id(),
-          regex:     Some(pattern.to_string()),
-          code:      Some(Rc::new(move |text| {
-            regex_compiled
-              .replace_all(text, replacement.as_str())
-              .to_string()
-          })),
-          font_test: None,
-          matcher:   None,
-        },
-      ]);
-      Ok(())
+    |pattern: &str, replacement: &str| -> RhaiResult<()> {
+      def_ligature(pattern, replacement, Map::new())
     },
   );
+  // Perl `DefLigature($regexp, $replacement, fontTest => sub { my ($font) = @_; … })` (Package.pm:3088): the
+  // ligature applies only where the test, given the text's `Font`, is true.
+  engine.register_fn("DefLigature", def_ligature);
+  // A `Font` handle (Perl's Common/Font.pm getters), as a `fontTest` closure receives it; an unset component is `()`.
+  engine.register_type_with_name::<latexml_core::common::font::Font>("Font");
+  macro_rules! font_getter {
+    ($name:literal, $get:ident) => {
+      engine.register_fn($name, |f: &mut latexml_core::common::font::Font| {
+        f.$get()
+          .map_or(Dynamic::UNIT, |v| Dynamic::from(v.to_string()))
+      });
+    };
+  }
+  font_getter!("getFamily", get_family);
+  font_getter!("getSeries", get_series);
+  font_getter!("getShape", get_shape);
+  font_getter!("getEncoding", get_encoding);
+  font_getter!("getLanguage", get_language);
+  engine.register_fn("getSize", |f: &mut latexml_core::common::font::Font| {
+    f.get_size().map_or(Dynamic::UNIT, Dynamic::from)
+  });
   // DefMath: presentation-string form (the dominant one) + option bag with the
   // macro's scalar option set.
   engine.register_fn(
@@ -838,19 +1282,48 @@ pub(super) fn make_engine() -> Engine {
       // Loading-script handles for the digest-hook trampolines (DefMath doesn't
       // route through `wire_now`, so fetch them directly like `wire_now` does).
       let (engine, ast) = current_script()?;
-      let options = math_options_from_map(opts, &engine, &ast).map_err(rhai_err)?;
+      let options = math_options_from_map(proto, opts, &engine, &ast).map_err(rhai_err)?;
       latexml_core::binding::def::dialect::def_math(cs, params, presentation.to_string(), options)
         .map_err(rhai_err)
     },
   );
-  // DefConditional: the test is a Rhai closure receiving args as strings and
-  // returning a bool.
+  // DefConditional: the test is a Rhai closure receiving its args as Tokens and returning a
+  // bool; without a test (or with `()`), the `\newif` form driven by `SetCondition`.
   engine.register_fn(
     "DefConditional",
     |proto: &str, test: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
-      wire_now(|e, a| wire_conditional(e, a, proto, test))
+      wire_now(|e, a| wire_conditional(e, a, proto, Some(test), Map::new()))
     },
   );
+  engine.register_fn(
+    "DefConditional",
+    |proto: &str, test: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_conditional(e, a, proto, Some(test), opts))
+    },
+  );
+  engine.register_fn(
+    "DefConditional",
+    |proto: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_conditional(e, a, proto, None, Map::new()))
+    },
+  );
+  engine.register_fn(
+    "DefConditional",
+    |proto: &str, _test: (), opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_conditional(e, a, proto, None, opts))
+    },
+  );
+  // SetCondition (Package.pm:1255): `\iffoo` to `\iftrue`/`\iffalse`, for a test-less conditional.
+  engine.register_fn("SetCondition", |cs: Dynamic, value: bool| {
+    let cs = token_arg("SetCondition", cs)?;
+    latexml_core::binding::content::set_condition(&cs, value, None);
+    Ok::<(), Box<EvalAltResult>>(())
+  });
+  engine.register_fn("SetCondition", |cs: Dynamic, value: bool, scope: &str| {
+    let cs = token_arg("SetCondition", cs)?;
+    latexml_core::binding::content::set_condition(&cs, value, scope_of(scope));
+    Ok::<(), Box<EvalAltResult>>(())
+  });
   // DefColumnType: "<char><params>" prototype; the body returns the column's
   // rewrite expansion (installs `\NC@rewrite@<char>`, as the macro does).
   engine.register_fn(
@@ -871,6 +1344,19 @@ pub(super) fn make_engine() -> Engine {
       def_accent_impl(accent, combining, standalone, false).map_err(rhai_err)
     },
   );
+  // Perl's option form `DefAccent($accent, $comb, $standalone, %options)` (TeX_Character.pool.ltxml:92), which reads
+  // no option, so none is checked; the Rust definer reads `below`.
+  engine.register_fn(
+    "DefAccent",
+    |accent: &str,
+     combining: &str,
+     standalone: &str,
+     opts: Map|
+     -> std::result::Result<(), Box<EvalAltResult>> {
+      let below = opts.get("below").is_some_and(dynamic_to_bool);
+      def_accent_impl(accent, combining, standalone, below).map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "DefAccent",
     |accent: &str,
@@ -878,6 +1364,7 @@ pub(super) fn make_engine() -> Engine {
      standalone: &str,
      below: bool|
      -> std::result::Result<(), Box<EvalAltResult>> {
+      warn_deprecated("DefAccent");
       def_accent_impl(accent, combining, standalone, below).map_err(rhai_err)
     },
   );
@@ -893,8 +1380,9 @@ pub(super) fn make_engine() -> Engine {
   // Namespace-aware (`model::get_node_attribute`): libxml stores `xml:id` under
   // the built-in xml namespace, so a plain lookup by the qualified name misses
   // it — a script could not read back the id `generateID` had just written.
-  engine.register_fn("getAttribute", |n: &mut NodeProxy, k: &str| -> String {
-    latexml_core::common::model::get_node_attribute(&n.0, k).unwrap_or_default()
+  // XML::LibXML's getAttribute: undef (`()`) when absent, so `defined(n.getAttribute(k))` tests presence.
+  engine.register_fn("getAttribute", |n: &mut NodeProxy, k: &str| -> Dynamic {
+    latexml_core::common::model::get_node_attribute(&n.0, k).map_or(Dynamic::UNIT, Dynamic::from)
   });
   engine.register_fn("prevSibling", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_prev_sibling() {
@@ -1047,35 +1535,38 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::gullet::skip_spaces().map_err(rhai_err)
     },
   );
-  // ReadArg: one balanced argument off the stream (unexpanded), as TeX source.
+  // The gullet's reads return Tokens (Perl `$gullet->readArg` …, Core/Gullet.pm), so a catcode the
+  // source gave survives. They are methods of a `Gullet` handle, the object a `DefParameterType` reader will
+  // receive (round D), and free functions for a macro body, which has no handle (the Perl body's `$_[0]`).
+  engine.register_type_with_name::<GulletHandle>("Gullet");
+  engine.register_fn("readArg", |_g: &mut GulletHandle| read_arg());
+  engine.register_fn("ReadArg", read_arg);
+  engine.register_fn("readUntil", |_g: &mut GulletHandle, delim: Dynamic| {
+    read_until(delim)
+  });
+  engine.register_fn("ReadUntil", read_until);
+  engine.register_fn("readOptional", |_g: &mut GulletHandle| read_optional());
+  engine.register_fn("ReadOptional", read_optional);
+  engine.register_fn("readToken", |_g: &mut GulletHandle| read_token());
+  engine.register_fn("ReadToken", read_token);
+  engine.register_fn("skipSpaces", |_g: &mut GulletHandle| {
+    latexml_core::gullet::skip_spaces().map_err(rhai_err)
+  });
+  // DefParameterType (Package.pm:586): the reader gets the gullet handle and the type's extra arguments.
   engine.register_fn(
-    "ReadArg",
-    || -> std::result::Result<String, Box<EvalAltResult>> {
-      latexml_core::gullet::read_arg(latexml_core::gullet::ExpansionLevel::Off)
-        .map(|t| t.untex())
-        .map_err(rhai_err)
+    "DefParameterType",
+    |name: &str, reader: FnPtr| -> RhaiResult<()> {
+      wire_now(|e, a| wire_parameter_type(e, a, name, reader, Map::new()))
     },
   );
-  // ReadUntil(delim): tokens up to (and consuming) the delimiter TeX string.
   engine.register_fn(
-    "ReadUntil",
-    |delim: &str| -> std::result::Result<String, Box<EvalAltResult>> {
-      latexml_core::gullet::read_until(&mouth::tokenize_internal(TeXString::assembled(
-        delim.to_string(),
-      )))
-      .map(|t| t.unwrap_or_default().untex())
-      .map_err(rhai_err)
+    "DefParameterType",
+    |name: &str, reader: FnPtr, opts: Map| -> RhaiResult<()> {
+      wire_now(|e, a| wire_parameter_type(e, a, name, reader, opts))
     },
   );
-  // ReadOptional: a bracketed [..] optional ("" when absent).
-  engine.register_fn(
-    "ReadOptional",
-    || -> std::result::Result<String, Box<EvalAltResult>> {
-      latexml_core::gullet::read_optional(None)
-        .map(|t| t.map(|tt| tt.untex()).unwrap_or_default())
-        .map_err(rhai_err)
-    },
-  );
+  engine.register_type_with_name::<StomachHandle>("Stomach");
+  engine.register_fn("getGullet", |_s: &mut StomachHandle| GulletHandle);
 
   // ── package/class machinery (content.rs, the RequirePackage!/… family) ──
   engine.register_fn(
@@ -1098,6 +1589,86 @@ pub(super) fn make_engine() -> Engine {
           ..latexml_core::binding::content::RequireOptions::default()
         },
       )
+      .map_err(rhai_err)
+    },
+  );
+  // Perl `RequirePackage($package, %options)` (Package.pm:2672-2697); a key outside Perl's table is an Error.
+  engine.register_fn(
+    "RequirePackage",
+    |name: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      const REQUIRE_OPTIONS: &[&str] = &[
+        "options",
+        "withoptions",
+        "type",
+        "as_class",
+        "noltxml",
+        "notex",
+        "raw",
+        "after",
+        "searchpaths_only",
+      ];
+      let operation = format!("RequirePackage ({name})");
+      check_options(&operation, REQUIRE_OPTIONS, opts.keys().map(|k| k.as_str()))
+        .map_err(rhai_err)?;
+      let mut o = latexml_core::binding::content::RequireOptions::default();
+      for (key, val) in opts {
+        match key.as_str() {
+          "options" => o.options = string_list(val),
+          "type" => o.extension = Some(dynamic_to_string(val).into()),
+          "as_class" => o.as_class = val.as_bool().unwrap_or(false),
+          "noltxml" => o.noltxml = val.as_bool().ok(),
+          "notex" => o.notex = val.as_bool().ok(),
+          "raw" if val.as_bool().unwrap_or(false) => {
+            latexml_core::Warn!(
+              "deprecated",
+              "raw",
+              "RequirePackage option raw is obsolete; it is not needed"
+            );
+            o.notex = Some(false);
+          },
+          "after" => o.after = dynamic_to_tokens(val),
+          "searchpaths_only" => o.searchpaths_only = val.as_bool().unwrap_or(false),
+          // `withoptions` is accepted and recomputed from `options`, as Perl's (:2694).
+          _ => {},
+        }
+      }
+      latexml_core::binding::content::require_package(name, o).map_err(rhai_err)
+    },
+  );
+  // Perl `LoadClass($class, %options)` (Package.pm:2699-2730): `options`, `withoptions` (the document's options),
+  // `after`; `notex`/`searchpaths_only` reach no class-load option yet (a Warning).
+  engine.register_fn(
+    "LoadClass",
+    |name: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      const LOADCLASS_OPTIONS: &[&str] = &[
+        "options",
+        "withoptions",
+        "after",
+        "notex",
+        "searchpaths_only",
+      ];
+      let operation = format!("LoadClass ({name})");
+      check_options(
+        &operation,
+        LOADCLASS_OPTIONS,
+        opts.keys().map(|k| k.as_str()),
+      )
+      .map_err(rhai_err)?;
+      let (mut options, mut withoptions, mut after) = (Vec::new(), false, Tokens::default());
+      for (key, val) in opts {
+        match key.as_str() {
+          "options" => options = string_list(val),
+          "withoptions" => withoptions = val.as_bool().unwrap_or(false),
+          "after" => after = dynamic_to_tokens(val),
+          other => unsupported_option(&operation, other),
+        }
+      }
+      if withoptions {
+        latexml_core::binding::content::load_class_with_options(name, after)
+      } else {
+        latexml_core::binding::content::load_class(name, options, after)
+      }
+      .and_then(|()| latexml_engine::latex_constructs::settle_chapter_after_class_load())
       .map_err(rhai_err)
     },
   );
@@ -1134,6 +1705,29 @@ pub(super) fn make_engine() -> Engine {
     "ProcessOptions",
     |inorder: bool| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::binding::content::process_options(inorder, &[]).map_err(rhai_err)
+    },
+  );
+  // Perl `ProcessOptions(inorder => 1, keysets => [...])` (Package.pm:2444-2447).
+  engine.register_fn(
+    "ProcessOptions",
+    |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      check_options(
+        "ProcessOptions",
+        &["inorder", "keysets"],
+        opts.keys().map(|k| k.as_str()),
+      )
+      .map_err(rhai_err)?;
+      let inorder = opts
+        .get("inorder")
+        .and_then(|v| v.as_bool().ok())
+        .unwrap_or(false);
+      let keysets = opts
+        .get("keysets")
+        .cloned()
+        .map(string_list)
+        .unwrap_or_default();
+      let keysets: Vec<&str> = keysets.iter().map(String::as_str).collect();
+      latexml_core::binding::content::process_options(inorder, &keysets).map_err(rhai_err)
     },
   );
   engine.register_fn(
@@ -1202,24 +1796,56 @@ pub(super) fn make_engine() -> Engine {
     }
     latexml_core::binding::content::require_resource(r);
   });
-  // Tag: the scalar subset (autoOpen/autoClose) of TagOptions.
-  engine.register_fn("Tag", |tag: &str, opts: Map| {
-    let mut options = latexml_core::document::tag::TagOptions::default();
-    for (key, val) in opts {
-      match key.as_str() {
-        "autoOpen" => {
-          options.auto_open = val
-            .as_bool()
-            .map(Into::into)
-            .or_else(|_| val.as_float().map(Into::into))
-            .ok()
-        },
-        "autoClose" => options.auto_close = val.as_bool().ok(),
-        _ => {},
+  // Tag (Package.pm:2005-2030): autoOpen/autoClose, and the afterOpen/afterClose hooks (each also `:early`, prepended,
+  // and `:late`), a closure or an array of closures; any other key is an Error, as Perl's CheckOptions.
+  engine.register_fn(
+    "Tag",
+    |tag: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      const TAG_OPTIONS: &[&str] = &[
+        "autoOpen",
+        "autoClose",
+        "afterOpen",
+        "afterClose",
+        "afterOpen:early",
+        "afterClose:early",
+        "afterOpen:late",
+        "afterClose:late",
+      ];
+      let operation = format!("Tag ({tag})");
+      check_options(&operation, TAG_OPTIONS, opts.keys().map(|k| k.as_str())).map_err(rhai_err)?;
+      let (engine, ast) = current_script()?;
+      let mut options = latexml_core::document::tag::TagOptions::default();
+      for (key, val) in opts {
+        let hooks = || {
+          Some(
+            hooks_of(val.clone())
+              .filter_map(|v| v.try_cast::<FnPtr>())
+              .map(|fp| tag_trampoline(fp, engine.clone(), ast.clone()))
+              .collect(),
+          )
+        };
+        match key.as_str() {
+          "autoOpen" => {
+            options.auto_open = val
+              .as_bool()
+              .map(Into::into)
+              .or_else(|_| val.as_float().map(Into::into))
+              .ok()
+          },
+          "autoClose" => options.auto_close = val.as_bool().ok(),
+          "afterOpen" => options.after_open = hooks(),
+          "afterClose" => options.after_close = hooks(),
+          "afterOpen:early" => options.after_open_early = hooks(),
+          "afterClose:early" => options.after_close_early = hooks(),
+          "afterOpen:late" => options.after_open_late = hooks(),
+          "afterClose:late" => options.after_close_late = hooks(),
+          _ => {},
+        }
       }
-    }
-    latexml_core::binding::content::install_tag(tag, options);
-  });
+      latexml_core::binding::content::install_tag(tag, options);
+      Ok(())
+    },
+  );
   // MergeFont: merge the given partial font into the current one (Perl
   // `MergeFont(family=>…)`); string keys family/series/shape/size.
   engine.register_fn("MergeFont", |opts: Map| {
@@ -1312,22 +1938,68 @@ pub(super) fn make_engine() -> Engine {
   // argument as an opaque `Digested` handle it can pass back to `document.absorb`.
   engine.register_type_with_name::<DocProxy>("Document");
   engine.register_type_with_name::<Digested>("Digested");
+  // A box in a string context is its `ToString` (Perl's), as `absorbString` reads it.
+  engine.register_fn("to_string", |d: &mut Digested| d.to_string());
 
-  doc_qname_method!(engine, "closeElement", close_element);
-  doc_qname_method!(engine, "maybeCloseElement", maybe_close_element);
-
+  // Perl's `openElement($qname, %attributes)` returns the new node, `closeElement`/`maybeCloseElement` the node
+  // closed or undef (Document.pm:787-866; #716 §2).
   engine.register_fn(
     "openElement",
-    |_d: &mut DocProxy, tag: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    |_d: &mut DocProxy, tag: &str| -> std::result::Result<NodeProxy, Box<EvalAltResult>> {
       with_doc(|doc, _props| {
-        doc.open_element(tag, None, None).map_err(rhai_err)?;
-        Ok(())
+        Ok(NodeProxy::borrowed(
+          doc.open_element(tag, None, None).map_err(rhai_err)?,
+        ))
       })
     },
   );
   engine.register_fn(
+    "openElement",
+    |_d: &mut DocProxy,
+     tag: &str,
+     attrib: Map|
+     -> std::result::Result<NodeProxy, Box<EvalAltResult>> {
+      let attrib = attribute_map(attrib);
+      with_doc(|doc, _props| {
+        Ok(NodeProxy::borrowed(
+          doc
+            .open_element(tag, Some(attrib), None)
+            .map_err(rhai_err)?,
+        ))
+      })
+    },
+  );
+  engine.register_fn(
+    "closeElement",
+    |_d: &mut DocProxy, tag: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|doc, _props| Ok(node_or_unit(doc.close_element(tag).map_err(rhai_err)?)))
+    },
+  );
+  engine.register_fn(
+    "maybeCloseElement",
+    |_d: &mut DocProxy, tag: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        Ok(node_or_unit(
+          doc.maybe_close_element(tag).map_err(rhai_err)?,
+        ))
+      })
+    },
+  );
+  // Perl `$document->setAttribute($node, $key, $value)` (Document.pm:1361).
+  engine.register_fn(
+    "setAttribute",
+    |_d: &mut DocProxy, n: NodeProxy, key: &str, val: &str| -> RhaiResult<()> {
+      with_doc(|doc, _props| {
+        let mut node = n.0.clone();
+        doc.set_attribute(&mut node, key, val).map_err(rhai_err)
+      })
+    },
+  );
+  // The older form on the current node, deprecated.
+  engine.register_fn(
     "setAttribute",
     |_d: &mut DocProxy, key: &str, val: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      warn_deprecated("document.setAttribute(key, value)");
       with_doc(|doc, _props| {
         let mut node = doc.get_node().clone();
         doc.set_attribute(&mut node, key, val).map_err(rhai_err)?;
@@ -1335,11 +2007,20 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // Any value as its string (Perl's `absorb` of a string; a `GetKeyVal` value, Tokens, a box), `()` as nothing.
   engine.register_fn(
     "absorbString",
-    |_d: &mut DocProxy, s: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    |_d: &mut DocProxy, s: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
+      if s.is_unit() {
+        return Ok(());
+      }
+      let s = if s.is::<WhatsitProxy>() {
+        whatsit_string()?
+      } else {
+        dynamic_to_string(s)
+      };
       with_doc(|doc, props| {
-        doc.absorb_string(s, props).map_err(rhai_err)?;
+        doc.absorb_string(&s, props).map_err(rhai_err)?;
         Ok(())
       })
     },
@@ -1798,6 +2479,16 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  engine.register_fn(
+    "absorb",
+    |_d: &mut DocProxy, token: Token| -> std::result::Result<(), Box<EvalAltResult>> {
+      let arg = Digested::from(Tokens::new(vec![token]));
+      with_doc(|doc, _props| {
+        doc.absorb(&arg, None).map_err(rhai_err)?;
+        Ok(())
+      })
+    },
+  );
   // Absorb a whatsit property at the current point — the imperative analog of a
   // template's `#name` hole at content position. The workhorse is
   // `document.absorbProperty("body")` inside an imperative `DefEnvironment`
@@ -1816,17 +2507,12 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
-  // Read a whatsit property BY VALUE inside a constructor body — the read-sibling
-  // of `absorbProperty`. Perl hands `$whatsit->getProperties` to the CODE
-  // replacement (Constructor.pm:137), so the body can branch on / compose from a
-  // property; `absorbProperty` alone (which only splices a property into the tree)
-  // could not (#635). Returns the typed value (string / `Digested` handle / int /
-  // bool …), `()` when the property is absent. Reads the same construction-time
-  // property map `absorbProperty` does; errors (like every `document.*` op) when
-  // called outside an active constructor body.
+  // Deprecated (#716 §1): a constructor body reads its trailing properties map (Perl's `%props`, Constructor.pm:137),
+  // a construction hook its whatsit argument (#635 added these).
   engine.register_fn(
     "getProperty",
     |_d: &mut DocProxy, name: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      warn_deprecated("document.getProperty");
       with_doc(|_doc, props| {
         Ok(match props.get(name) {
           Some(stored) => stored_to_dynamic(stored.clone()),
@@ -1835,40 +2521,52 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
-  // The whole property map as a Rhai object map (Perl `$whatsit->getProperties`) —
-  // for a body that iterates keys or reads several at once (#635).
   engine.register_fn(
     "getProperties",
     |_d: &mut DocProxy| -> std::result::Result<Map, Box<EvalAltResult>> {
+      warn_deprecated("document.getProperties");
       with_doc(|_doc, props| Ok(props_to_map(props.clone())))
     },
   );
 
-  // ── whatsit proxy: reached from a hook body via `whatsit()` ──
+  // ── whatsit proxy: a hook's `whatsit` argument (#716 §1), with Whatsit.pm's accessors ──
   engine.register_type_with_name::<WhatsitProxy>("Whatsit");
-  engine.register_fn("whatsit", || WhatsitProxy);
-  // The n-th (1-based) argument as its TeX-source string.
+  // Perl `getArg($n)` (Whatsit.pm:59): the argument as a constructor body receives it, `()` when absent.
   engine.register_fn(
-    "argString",
-    |_w: &mut WhatsitProxy, n: i64| -> std::result::Result<String, Box<EvalAltResult>> {
-      // SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
-      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
-      // errors out, not UB, when called outside one). The pointer is live for
-      // the call and read-only here (`&*`), so no aliasing `&mut` exists.
-      let w = unsafe { &*current_whatsit()? };
-      match w.get_arg(n as usize) {
-        Some(d) => d.untex().map_err(rhai_err),
-        None => Ok(String::new()),
-      }
+    "getArg",
+    |_w: &mut WhatsitProxy, n: i64| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let n = usize::try_from(n).ok().filter(|n| *n > 0);
+      with_whatsit(|w| ctor_arg_to_dynamic(&n.and_then(|n| w.get_arg(n)).cloned()))
     },
   );
-  // Set a whatsit property from a hook body (Perl `$whatsit->setProperty(k, v)`,
-  // e.g. plain `\footnote`'s afterDigest routing its mark arg to `mark`/`prenote`).
-  // The value lands as a string `Stored`, which the template interpreter renders
-  // at attribute (`to_attribute`), content (absorb), and truth-test positions.
+  // In a string the whatsit is Perl's `ToString($whatsit)`, its reversion (Whatsit.pm:163).
+  engine.register_fn(
+    "to_string",
+    |_w: &mut WhatsitProxy| -> std::result::Result<String, Box<EvalAltResult>> { whatsit_string() },
+  );
+  // Perl `getProperty($key)` (Whatsit.pm:55): the typed value, `()` when absent.
+  engine.register_fn(
+    "getProperty",
+    |_w: &mut WhatsitProxy, key: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_whatsit(|w| {
+        w.get_property(key)
+          .map_or(Dynamic::UNIT, |v| stored_to_dynamic(v.into_owned()))
+      })
+    },
+  );
+  engine.register_fn(
+    "getProperties",
+    |_w: &mut WhatsitProxy| -> std::result::Result<Map, Box<EvalAltResult>> {
+      with_whatsit(|w| props_to_map(w.get_properties().clone()))
+    },
+  );
+  // Perl `setProperty($key, $value)`, any value (e.g. plain `\footnote`'s afterDigest routing its mark to `mark`).
   engine.register_fn(
     "setProperty",
-    |_w: &mut WhatsitProxy, key: &str, val: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    |_w: &mut WhatsitProxy,
+     key: &str,
+     val: Dynamic|
+     -> std::result::Result<(), Box<EvalAltResult>> {
       let (ptr, mutable) = current_whatsit_entry()?;
       if !mutable {
         return Err(Box::<EvalAltResult>::from(
@@ -1888,23 +2586,33 @@ pub(super) fn make_engine() -> Engine {
       // the Miri model `latexml_core::runtime_bindings_reentrancy_model`
       // (`reentrancy_model_single_body_sound`). (A hook that digests other
       // content builds DIFFERENT whatsits → different `WHATSIT_CTX` entries, not
-      // an alias of this one.) The read-only ops above (`&*`) need no such
+      // an alias of this one.) The read-only ops (`with_whatsit`) need no such
       // argument — shared refs may alias freely.
       let w = unsafe { &mut *ptr };
-      w.set_property(key, val.to_string());
+      w.set_property(key, dynamic_to_stored(val));
       Ok(())
     },
   );
-  // Read a whatsit property as a string ("" when absent) — Perl `getProperty`.
+  // Deprecated (#716): the nullary accessor and the string readers, one release.
+  engine.register_fn("whatsit", || {
+    warn_deprecated("whatsit");
+    WhatsitProxy
+  });
+  engine.register_fn(
+    "argString",
+    |_w: &mut WhatsitProxy, n: i64| -> std::result::Result<String, Box<EvalAltResult>> {
+      warn_deprecated("whatsit.argString");
+      with_whatsit(|w| w.get_arg(n as usize).map(Digested::untex))?
+        .transpose()
+        .map(Option::unwrap_or_default)
+        .map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "propertyString",
     |_w: &mut WhatsitProxy, key: &str| -> std::result::Result<String, Box<EvalAltResult>> {
-      // SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
-      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
-      // errors out, not UB, when called outside one). The pointer is live for
-      // the call and read-only here (`&*`), so no aliasing `&mut` exists.
-      let w = unsafe { &*current_whatsit()? };
-      Ok(w.get_property_string(key))
+      warn_deprecated("whatsit.propertyString");
+      with_whatsit(|w| w.get_property_string(key))
     },
   );
 
@@ -1914,12 +2622,20 @@ pub(super) fn make_engine() -> Engine {
   // before/after lists. Returns `()` for an undefined CS (Perl undef). Each
   // `push*` appends (Perl `push`), each `unshift*` prepends (Perl `unshift`).
   engine.register_type_with_name::<DefinitionProxy>("Definition");
-  engine.register_fn("LookupDefinition", |cs: &str| -> Dynamic {
-    match latexml_core::state::lookup_definition_stored(&latexml_core::T_CS!(cs)) {
-      Ok(Some(_)) => Dynamic::from(DefinitionProxy { cs: cs.to_string() }),
-      _ => Dynamic::UNIT,
-    }
-  });
+  // `()` also for a token `\let` to a character, as `LookupDefinition!` and Perl `lookupDefinition` (State.pm:399-416).
+  engine.register_fn(
+    "LookupDefinition",
+    |cs: Dynamic| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let cs = token_arg("LookupDefinition", cs)?;
+      Ok(match latexml_core::state::lookup_definition(&cs) {
+        Ok(Some(_)) => match latexml_core::state::lookup_meaning(&cs) {
+          Some(meaning) => Dynamic::from(DefinitionProxy { cs, meaning }),
+          None => Dynamic::UNIT,
+        },
+        _ => Dynamic::UNIT,
+      })
+    },
+  );
   macro_rules! def_hook_method {
     ($rhai:literal, $family:expr, $at_front:expr) => {
       engine.register_fn(
@@ -1942,4 +2658,579 @@ pub(super) fn make_engine() -> Engine {
   def_hook_method!("unshiftAfterDigestBody", HookFamily::AfterDigestBody, true);
 
   engine
+}
+
+/// Perl's `Tokens(@tokens)` (Tokens.pm:29): `Token`s, `Tokens` and arrays of them, flattened.
+fn tokens_of(items: rhai::Array) -> std::result::Result<Tokens, Box<EvalAltResult>> {
+  let mut list = Vec::with_capacity(items.len());
+  for item in items {
+    if let Some(t) = item.clone().try_cast::<Token>() {
+      list.push(t);
+    } else if let Some(ts) = item.clone().try_cast::<Tokens>() {
+      list.extend(ts.unlist());
+    } else if let Some(nested) = item.clone().try_cast::<rhai::Array>() {
+      list.extend(tokens_of(nested)?.unlist());
+    } else {
+      return Err(
+        format!(
+          "Tokens: expected a Token or Tokens, got {}",
+          item.type_name()
+        )
+        .into(),
+      );
+    }
+  }
+  Ok(Tokens::new(list))
+}
+
+/// The char of a 1-char string argument (Perl passes the char itself).
+fn char_of(c: &str) -> Option<char> { c.chars().next() }
+
+/// A char-code table's entry as a Rhai int, or `()` for an entry the table does not hold (Perl undef).
+fn code_of(code: Option<u16>) -> Dynamic {
+  code.map_or(Dynamic::UNIT, |n| Dynamic::from(i64::from(n)))
+}
+
+fn assign_catcode(ch: char, code: u16, scope: Option<Scope>) {
+  latexml_core::state::assign_catcode(ch, Catcode::from(code as u8), scope);
+}
+
+/// An `Assign*code(char, code[, scope])` call, as its macro (Package.pm :299-381). A code above `max` (a catcode
+/// above 15, TeX's "Invalid code"; a code the u16 table cannot hold) or a missing char is an Error, never dropped.
+fn assign_code(
+  call: &str,
+  assign: fn(char, u16, Option<Scope>),
+  max: i64,
+  c: &str,
+  code: i64,
+  scope: &str,
+) -> RhaiResult<()> {
+  match (char_of(c), u16::try_from(code)) {
+    (Some(ch), Ok(n)) if code <= max => assign(ch, n, scope_of(scope)),
+    _ => {
+      let res: Result<()> = (|| {
+        latexml_core::Error!(
+          "unexpected",
+          call,
+          format!("{call}({c:?}, {code}): the code must be 0..={max} and the char one character")
+        );
+        Ok(())
+      })();
+      res.map_err(rhai_err)?;
+    },
+  }
+  Ok(())
+}
+
+/// A handle on the gullet (thread-local state, so the handle carries nothing): the receiver of Perl's
+/// `$gullet->read*` methods.
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct GulletHandle;
+
+/// A handle on the stomach, a primitive body's first argument (Primitive.pm:78); `getGullet` reaches the gullet.
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct StomachHandle;
+
+type RhaiResult<T> = std::result::Result<T, Box<EvalAltResult>>;
+
+/// One balanced argument off the stream, unexpanded (Perl `readArg`).
+fn read_arg() -> RhaiResult<Tokens> {
+  latexml_core::gullet::read_arg(latexml_core::gullet::ExpansionLevel::Off).map_err(rhai_err)
+}
+
+/// The tokens up to, and consuming, the delimiter (Perl `readUntil`): a string delimiter is TeX source,
+/// TokenizeInternal'd; a `Token`/`Tokens` is used as is.
+fn read_until(delim: Dynamic) -> RhaiResult<Tokens> {
+  let delim = if delim.is_string() {
+    mouth::tokenize_internal(TeXString::assembled(
+      delim.into_string().unwrap_or_default(),
+    ))
+  } else {
+    tokens_of(vec![delim])?
+  };
+  latexml_core::gullet::read_until(&delim)
+    .map(Option::unwrap_or_default)
+    .map_err(rhai_err)
+}
+
+/// A bracketed optional argument, or `()` when there is none (Perl `readOptional` returns undef).
+fn read_optional() -> RhaiResult<Dynamic> {
+  latexml_core::gullet::read_optional(None)
+    .map(|t| t.map_or(Dynamic::UNIT, Dynamic::from))
+    .map_err(rhai_err)
+}
+
+/// The next token, unexpanded, or `()` at the end of input (Perl `readToken`).
+fn read_token() -> RhaiResult<Dynamic> {
+  latexml_core::gullet::read_token()
+    .map(|t| t.map_or(Dynamic::UNIT, Dynamic::from))
+    .map_err(rhai_err)
+}
+
+/// `PushValue`/`UnshiftValue` of `arity` values in one call, in order, as Perl's lists (Package.pm:265/275).
+fn register_variadic_values(engine: &mut Engine, arity: usize) {
+  let push = |k: &str, vs: Vec<Dynamic>| {
+    for v in vs {
+      let _ = latexml_core::state::push_value(k, dynamic_to_stored(v));
+    }
+  };
+  let unshift = |k: &str, vs: Vec<Dynamic>| {
+    latexml_core::state::unshift_value(k, vs.into_iter().map(dynamic_to_stored).collect());
+  };
+  match arity {
+    2 => {
+      engine.register_fn("PushValue", move |k: &str, a: Dynamic, b: Dynamic| {
+        push(k, vec![a, b])
+      });
+      engine.register_fn("UnshiftValue", move |k: &str, a: Dynamic, b: Dynamic| {
+        unshift(k, vec![a, b])
+      });
+    },
+    3 => {
+      engine.register_fn(
+        "PushValue",
+        move |k: &str, a: Dynamic, b: Dynamic, c: Dynamic| push(k, vec![a, b, c]),
+      );
+      engine.register_fn(
+        "UnshiftValue",
+        move |k: &str, a: Dynamic, b: Dynamic, c: Dynamic| unshift(k, vec![a, b, c]),
+      );
+    },
+    _ => {
+      engine.register_fn(
+        "PushValue",
+        move |k: &str, a: Dynamic, b: Dynamic, c: Dynamic, d: Dynamic| push(k, vec![a, b, c, d]),
+      );
+      engine.register_fn(
+        "UnshiftValue",
+        move |k: &str, a: Dynamic, b: Dynamic, c: Dynamic, d: Dynamic| unshift(k, vec![a, b, c, d]),
+      );
+    },
+  }
+}
+
+/// The four diagnostics of Perl Common/Error.pm, as the Rhai functions of the same names.
+#[derive(Clone, Copy)]
+enum Diag {
+  Warn,
+  Error,
+  Info,
+  Fatal,
+}
+impl Diag {
+  fn name(self) -> &'static str {
+    match self {
+      Diag::Warn => "Warn",
+      Diag::Error => "Error",
+      Diag::Info => "Info",
+      Diag::Fatal => "Fatal",
+    }
+  }
+}
+
+fn emit_diag(
+  kind: Diag,
+  cat: &str,
+  obj: &str,
+  msg: &str,
+  details: Option<String>,
+) -> RhaiResult<()> {
+  match (kind, details) {
+    (Diag::Warn, Some(d)) => latexml_core::Warn!(cat, obj, msg.to_string(), d),
+    (Diag::Warn, None) => latexml_core::Warn!(cat, obj, msg.to_string()),
+    (Diag::Info, Some(d)) => latexml_core::Info!(cat, obj, msg.to_string(), d),
+    (Diag::Info, None) => latexml_core::Info!(cat, obj, msg.to_string()),
+    (Diag::Error, details) => return script_error(cat, obj, msg, details),
+    (Diag::Fatal, details) => return script_fatal(cat, obj, msg, details),
+  }
+  Ok(())
+}
+
+/// Perl's trailing `@details` (Error.pm:271-378): a string, or an array of strings joined one per line.
+fn details_of(details: Dynamic) -> String {
+  if details.is_array() {
+    let lines: Vec<String> = details
+      .cast::<rhai::Array>()
+      .into_iter()
+      .map(dynamic_to_string)
+      .collect();
+    lines.join("\n\t")
+  } else {
+    dynamic_to_string(details)
+  }
+}
+
+/// `Error(cat, obj, msg[, details])`. `Error!` escalates to a Fatal past MAX_ERRORS (an `Err`), which the script
+/// sees as a Rhai error so the conversion aborts cleanly.
+pub(super) fn script_error(
+  cat: &str,
+  obj: &str,
+  msg: &str,
+  details: Option<String>,
+) -> RhaiResult<()> {
+  let res: Result<()> = (|| {
+    match details {
+      Some(details) => latexml_core::Error!(cat, obj, msg.to_string(), details),
+      None => latexml_core::Error!(cat, obj, msg.to_string()),
+    }
+    Ok(())
+  })();
+  res.map_err(rhai_err)
+}
+
+/// `Fatal(cat, obj, msg[, details])`: logged as `Fatal:<cat>:<obj> <msg>` (Error.pm:271), ending the run (#792).
+fn script_fatal(cat: &str, obj: &str, msg: &str, details: Option<String>) -> RhaiResult<()> {
+  use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+  let message = match details {
+    Some(details) => format!("{msg}\n\t{details}"),
+    None => msg.to_string(),
+  };
+  let res: Result<()> = (|| {
+    latexml_core::Fatal!(
+      ErrorTarget::Named(cat.to_string()),
+      ErrorCategory::Named(obj.to_string()),
+      message
+    );
+    #[allow(unreachable_code)]
+    Ok(())
+  })();
+  res.map_err(rhai_err)
+}
+
+/// A list option (`options => [...]`, `keysets => [...]`): an array of strings, or one comma-separated string.
+fn string_list(val: Dynamic) -> Vec<String> {
+  if val.is_array() {
+    val
+      .cast::<rhai::Array>()
+      .into_iter()
+      .map(dynamic_to_string)
+      .collect()
+  } else {
+    dynamic_to_string(val)
+      .split(',')
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .collect()
+  }
+}
+
+thread_local! {
+  static CODE_MACROS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// A fresh name for a closure installed as a macro, as Perl's `T_CS(ToString($code))` (`\CODE(0x…)`).
+fn code_macro_name() -> String {
+  let n = CODE_MACROS.with(|c| {
+    c.set(c.get() + 1);
+    c.get()
+  });
+  format!("\\CODE({n})")
+}
+
+/// Perl `Invocation($token, @args)` (Package.pm:965) over the macro's core calls.
+fn invocation(cs: Dynamic, args: rhai::Array) -> RhaiResult<Tokens> {
+  let args: Vec<Option<Tokens>> = args
+    .into_iter()
+    .map(|a| (!a.is_unit()).then(|| dynamic_to_tokens(a)))
+    .collect();
+  use latexml_core::binding::content::{build_invocation, build_invocation_str};
+  if cs.is_string() {
+    build_invocation_str(TeXString::assembled(dynamic_to_string(cs)), args)
+  } else if let Some(tokens) = cs.clone().try_cast::<Tokens>() {
+    match tokens.clone().unlist().as_slice() {
+      [token] => build_invocation(*token, args),
+      _ => {
+        let args: Vec<Option<std::borrow::Cow<Tokens>>> = args
+          .into_iter()
+          .map(|a| a.map(std::borrow::Cow::Owned))
+          .collect();
+        tokens
+          .pack_parameters()
+          .map(|t| t.substitute_parameters(&args))
+      },
+    }
+  } else {
+    build_invocation(token_arg("Invocation", cs)?, args)
+  }
+  .map_err(rhai_err)
+}
+
+/// Perl `DeclareFontMap($name, $map, %options)` (Package.pm:2859).
+fn declare_font_map(name: &str, map: rhai::Array, opts: Map) -> RhaiResult<()> {
+  const FONTMAP_OPTIONS: &[&str] = &[
+    "family",
+    "uppercase_mathstyle",
+    "lowercase_mathstyle",
+    "digit_mathstyle",
+  ];
+  check_options(
+    "DeclareFontMap",
+    FONTMAP_OPTIONS,
+    opts.keys().map(|k| k.as_str()),
+  )
+  .map_err(rhai_err)?;
+  let encname = match opts.get("family") {
+    Some(family) => format!("{name}_{}", dynamic_to_string(family.clone())),
+    None => name.to_string(),
+  };
+  let glyphs: Rc<[Option<char>]> = map
+    .into_iter()
+    .map(|g| {
+      if g.is_unit() {
+        None
+      } else {
+        dynamic_to_string(g).chars().next()
+      }
+    })
+    .collect();
+  latexml_core::state::assign_value(&format!("{encname}_fontmap"), glyphs, Some(Scope::Global));
+  for style in [
+    "uppercase_mathstyle",
+    "lowercase_mathstyle",
+    "digit_mathstyle",
+  ] {
+    // A font map, stored as the `Font` the glyphs take on in math (tex_fonts.rs's `OMS_uppercase_mathstyle`).
+    match opts.get(style).map(|v| v.clone().try_cast::<Map>()) {
+      Some(Some(font)) => latexml_core::state::assign_value(
+        &format!("{encname}_{style}"),
+        Stored::Font(Rc::new(font_from_rhai_map(font))),
+        Some(Scope::Global),
+      ),
+      Some(None) => unsupported_option("DeclareFontMap", &format!("{style} other than a font map")),
+      None => {},
+    }
+  }
+  Ok(())
+}
+
+/// The `DeclareFontMapMultichar!` store: position (decimal) → the string it prints.
+fn font_map_multichar(mapname: String, map: Map) {
+  let map: rustc_hash::FxHashMap<String, String> = map
+    .into_iter()
+    .map(|(pos, s)| (pos.to_string(), dynamic_to_string(s)))
+    .collect();
+  latexml_core::state::assign_value(&mapname, map, Some(Scope::Global));
+}
+
+/// A keyval set's (key, value) pairs in the order given (`GetKeyVal`'s reading): a `KeyVals` argument's values, a
+/// digested set's digested values (its read values before digestion), a `k=v,…` string's values TokenizeInternal'd.
+fn keyval_values(kv: Dynamic) -> Vec<(String, Dynamic)> {
+  let from_set = |set: &latexml_core::keyvals::KeyVals, digested: bool| {
+    let mut out = Vec::new();
+    let mut seen: rustc_hash::FxHashMap<&str, usize> = rustc_hash::FxHashMap::default();
+    for (key, value) in set.get_pairs() {
+      let n = seen.entry(key.as_str()).or_insert(0);
+      let value = match set.get_values_digested(key).and_then(|vs| vs.get(*n)) {
+        Some(d) if digested => Dynamic::from(d.clone()),
+        _ => arg_value(value.clone()),
+      };
+      *n += 1;
+      out.push((key.clone(), value));
+    }
+    out
+  };
+  if let Some(set) = kv.clone().try_cast::<latexml_core::keyvals::KeyVals>() {
+    from_set(&set, false)
+  } else if let Some(d) = kv.clone().try_cast::<Digested>() {
+    match d.data() {
+      latexml_core::digested::DigestedData::KeyVals(set) => from_set(set, true),
+      _ => Vec::new(),
+    }
+  } else if kv.is_string() {
+    latexml_core::keyval::split_keyval_source(&kv.into_string().unwrap_or_default())
+      .into_iter()
+      .map(|(k, v)| {
+        let v = mouth::tokenize_internal(TeXString::assembled(v));
+        (k, Dynamic::from(v))
+      })
+      .collect()
+  } else {
+    Vec::new()
+  }
+}
+
+/// Perl `IsEmpty` (Package.pm:1034): a token is empty unless a letter, other, active or control sequence; TeX
+/// source is read as its tokens; a digested thing as the core's `is_empty`; an array when each item is.
+fn is_empty_thing(thing: &Dynamic) -> RhaiResult<bool> {
+  use latexml_core::token::Catcode;
+  let token_is_empty = |t: &Token| {
+    !matches!(
+      t.code,
+      Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE | Catcode::CS
+    )
+  };
+  if thing.is_unit() {
+    Ok(true)
+  } else if let Some(token) = thing.clone().try_cast::<Token>() {
+    Ok(token_is_empty(&token))
+  } else if let Some(digested) = thing.clone().try_cast::<Digested>() {
+    digested.is_empty().map_err(rhai_err)
+  } else if thing.is_array() {
+    for item in thing.clone().cast::<rhai::Array>() {
+      if !is_empty_thing(&item)? {
+        return Ok(false);
+      }
+    }
+    Ok(true)
+  } else {
+    Ok(
+      dynamic_to_tokens(thing.clone())
+        .unlist()
+        .iter()
+        .all(token_is_empty),
+    )
+  }
+}
+
+/// Perl `FindFile($file, %options)` (Package.pm:2076): the path, or `()`.
+fn find_file(name: &str, opts: Map) -> RhaiResult<Dynamic> {
+  const FINDFILE_OPTIONS: &[&str] = &[
+    "type",
+    "notex",
+    "noltxml",
+    "searchpaths_only",
+    "installation_subdir",
+  ];
+  let operation = format!("FindFile ({name})");
+  let mut opts = opts;
+  // Package.pm:2079-2082: `raw` is deprecated and dropped.
+  if opts.remove("raw").is_some() {
+    latexml_core::Warn!(
+      "deprecated",
+      "raw",
+      "FindFile option raw is deprecated; it is not needed"
+    );
+  }
+  check_options(
+    &operation,
+    FINDFILE_OPTIONS,
+    opts.keys().map(|k| k.as_str()),
+  )
+  .map_err(rhai_err)?;
+  let mut o = latexml_core::binding::content::FindFileOptions::default();
+  for (key, val) in opts {
+    match key.as_str() {
+      "type" => o.ext_type = Some(dynamic_to_string(val).into()),
+      "notex" => o.notex = val.as_bool().unwrap_or(false),
+      "noltxml" => o.forbid_ltxml = val.as_bool().unwrap_or(false),
+      "searchpaths_only" => o.search_paths_only = val.as_bool().unwrap_or(false),
+      other => unsupported_option(&operation, other),
+    }
+  }
+  Ok(latexml_core::binding::content::find_file(name, Some(o)).map_or(Dynamic::UNIT, Dynamic::from))
+}
+
+/// Perl `beginItemize($type, $counter, %options)` (latex_constructs.pool.ltxml:1296): the property map.
+fn begin_itemize(itype: &str, counter: &str, opts: Map) -> RhaiResult<Map> {
+  check_options(
+    "BeginItemize",
+    &["nolevel", "series", "start", "resume"],
+    opts.keys().map(|k| k.as_str()),
+  )
+  .map_err(rhai_err)?;
+  let mut o = latexml_core::binding::counter::dialect::BeginItemizeOptions::default();
+  for (key, val) in opts {
+    match key.as_str() {
+      "nolevel" => o.nolevel = val.as_bool().unwrap_or(false),
+      "series" => o.series = Some(dynamic_to_tokens(val)),
+      "start" => o.start = val.as_int().ok().map(Number),
+      _ => o.resume = Some(dynamic_to_string(val)),
+    }
+  }
+  let counter = (!counter.is_empty()).then_some(counter);
+  let props =
+    latexml_core::binding::counter::dialect::begin_itemize(itype, counter, o).map_err(rhai_err)?;
+  Ok(props_to_map(props))
+}
+
+/// Perl `Equals($x, $y)` (Object.pm:73): undef equals only undef; values of different types differ; tokens
+/// compare their meanings, or themselves when neither has one; `Tokens` token by token; others by value.
+fn equals(x: Dynamic, y: Dynamic) -> bool {
+  if x.is_unit() || y.is_unit() {
+    return x.is_unit() && y.is_unit();
+  }
+  if let (Some(a), Some(b)) = (x.clone().try_cast::<Token>(), y.clone().try_cast::<Token>()) {
+    use latexml_core::state::lookup_meaning;
+    return match (lookup_meaning(&a), lookup_meaning(&b)) {
+      (Some(m), Some(n)) => m == n,
+      (None, None) => a == b,
+      _ => false,
+    };
+  }
+  if let (Some(a), Some(b)) = (
+    x.clone().try_cast::<Tokens>(),
+    y.clone().try_cast::<Tokens>(),
+  ) {
+    return a.equals(b);
+  }
+  // Perl compares builtins (strings, numbers) as strings; a blessed object by its string form.
+  let scalar = |d: &Dynamic| d.is_string() || d.is_int() || d.is_float() || d.is_bool();
+  (x.type_name() == y.type_name() || (scalar(&x) && scalar(&y)))
+    && dynamic_to_string(x) == dynamic_to_string(y)
+}
+
+/// Perl `DefLigature($regexp, $replacement, %options)` (Package.pm:3088), as the `DefLigature!` macro: an
+/// invalid regex is an Error naming it; `fontTest` a closure over the `Font`.
+fn def_ligature(pattern: &str, replacement: &str, opts: Map) -> RhaiResult<()> {
+  check_options(
+    "DefLigature",
+    &["fontTest"],
+    opts.keys().map(|k| k.as_str()),
+  )
+  .map_err(rhai_err)?;
+  let regex_compiled = regex::Regex::new(pattern)
+    .map_err(|e| Box::<EvalAltResult>::from(format!("DefLigature bad regex: {e}")))?;
+  let font_test = match opts
+    .get("fontTest")
+    .and_then(|f| f.clone().try_cast::<FnPtr>())
+  {
+    Some(test) => {
+      let (engine, ast) = current_script()?;
+      let test: latexml_core::ligature::FontTestClosure = Rc::new(move |font| {
+        // (the hook returns a bool, so a Fatal raised in the test is logged, not propagated)
+        match call_deferred_body(&engine, &ast, &test, (Dynamic::from(font.clone()),)) {
+          Ok(ret) => ret.as_bool().unwrap_or(false),
+          Err(e) => contain_bool("DefLigature fontTest", e),
+        }
+      });
+      Some(test)
+    },
+    None => None,
+  };
+  let replacement = replacement.to_string();
+  latexml_core::state::unshift_value("TEXT_LIGATURES", vec![latexml_core::ligature::Ligature {
+    id: latexml_core::state::generate_ligature_id(),
+    regex: Some(pattern.to_string()),
+    code: Some(Rc::new(move |text| {
+      regex_compiled
+        .replace_all(text, replacement.as_str())
+        .to_string()
+    })),
+    font_test,
+    matcher: None,
+  }]);
+  Ok(())
+}
+
+/// The `Explode!`/`ExplodeText!` macros (Perl Token.pm:103-116) as Tokens.
+fn explode(s: &str, text: bool) -> Tokens {
+  use latexml_core::{CharToken, T_LETTER, T_OTHER, T_SPACE};
+  Tokens::new(if text {
+    latexml_core::ExplodeText!(s)
+  } else {
+    latexml_core::Explode!(s)
+  })
+}
+
+/// `==`/`!=` between a `T` and a string either way round, on its string form ([`dynamic_to_string`]), Warning
+/// `deprecated` (`old`) once per binding load.
+pub(super) fn register_string_tests<T: Clone + 'static>(engine: &mut Engine, old: &'static str) {
+  let same = move |v: T, s: &str| {
+    warn_deprecated(old);
+    dynamic_to_string(Dynamic::from(v)) == s
+  };
+  engine.register_fn("==", same);
+  engine.register_fn("!=", move |v: T, s: &str| !same(v, s));
+  engine.register_fn("==", move |s: &str, v: T| same(v, s));
+  engine.register_fn("!=", move |s: &str, v: T| !same(v, s));
 }

@@ -1,0 +1,14 @@
+% A worked example for docs/examples/sample.sty.rhai: CI converts it with no Error or Warning and checks
+% each paragraph of the XML (latexml_oxide/tests/30_script_bindings.rs, docs_examples_convert_clean).
+\documentclass{article}
+\usepackage{sample}
+\begin{document}
+\twicex{ab} \greet{World} \emphx{it} \mytext{t} \boxed{b} \note{N}
+
+\setx{v}\getx{} \exhibit{one} \exkv[lang=en]{body} \exread[o]{a} \exset{k}\exget{} \exhook{h}
+
+\fnote{m}{text} $a := b$ $\exsum x$ \exacc{e}
+
+\begin{rquote}q\end{rquote}
+\begin{biop}{who}bio\end{biop}
+\end{document}
