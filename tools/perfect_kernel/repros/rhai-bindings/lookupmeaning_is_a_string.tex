@@ -3,11 +3,11 @@
 % witness: synthetic (W3RF, DG's AssignMeaning ruling of 2026-11-14; the binding lxlm.sty.rhai, lxlm.sty.ltxml for Perl,
 %   lxlm.sty for pdflatex)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "R"; Perl 0.8.8: <p>R</p>, 0 errors, 0 warnings
-% engines: W3 (fix/rhai-batch1 round F): <p>N</p>, 0 errors, 1 warning (deprecated:AssignMeaning(cs, string))
+% engines: W3 (fix/rhai-batch1 round F): <p>N</p>, 0 errors, 1 warning (deprecated:AssignMeaning(cs, string));
+%   RHAIH (Rhai round H): <p>R</p>, 0 errors, 0 warnings
 % expect:  0 errors, 0 warnings; <p>R</p> (LookupMeaning a handle, `()` when undefined; a string comparison Warned
 %   one release, as ruling 9's `()` == "")
-% status:  RED (W3 fix/rhai-batch1 round F)
-% moves:   post-merge
+% status:  GREEN (RHAIH; guard perfect_kernel_batchw3rg::rhai_values_print_as_perl)
 \documentclass{article}
 \usepackage{lxlm}
 \begin{document}

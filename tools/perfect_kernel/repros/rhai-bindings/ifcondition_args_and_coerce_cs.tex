@@ -1,0 +1,20 @@
+% mechanism: revRHAIH's rows — Rhai `IfCondition` on a conditional taking arguments read them from the document, where
+%   Perl's `IfCondition($if, @args)` (Package.pm:1238) passes the caller's and reads nothing; `coerceCS` (Package.pm:160)
+%   of Tokens failed the binding load; `\csname` needs a space; SetCondition of a non-conditional; LookupMeaning's
+%   string `.is_empty()`/`.len()` (ruling 9)
+% witness: synthetic (revRHAIH r1/r2; the binding lxh.sty.rhai, lxh.sty.ltxml for Perl, lxh.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ME", "T T F T T F D U E 6 1", "X"; Perl 0.8.8: the same
+%   three paragraphs, 2 errors (expected:conditional, `\relax` and `\nosuch`), 0 warnings
+% engines: RHAIH (396ffa641ea): <p>X</p> alone, 4 errors (the binding load: "DefMacroI: expected a control-sequence
+%   name or a Token, got latexml_core::tokens::Tokens", then \mE, \rows, \sets undefined)
+% expect:  Perl's paragraphs and 2 errors; 2 warnings (deprecated:value.is_empty(), deprecated:value.len())
+% status:  GREEN (RHAIH round 2; guard perfect_kernel_batchw3rg::rhai_review_rows_round_h)
+\documentclass{article}
+\usepackage{lxh}
+\begin{document}
+\mE
+
+\rows
+
+\sets\relax X
+\end{document}

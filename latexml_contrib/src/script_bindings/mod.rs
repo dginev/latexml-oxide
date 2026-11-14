@@ -200,6 +200,11 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
   ("value == string", "ToString(value) == string"),
   ("() == string", "defined(value) or !!value"),
   (
+    "value.is_empty()",
+    "!defined(value), or ToString(value).is_empty()",
+  ),
+  ("value.len()", "ToString(value).len()"),
+  (
     "Number as an int",
     "n.valueOf() (CounterValue returns a Number, as Perl's)",
   ),
@@ -212,6 +217,12 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
     "a box, an array of boxes, or () (end the body with `return;`), as Perl errs on any other value",
   ),
 ];
+
+/// A value's type as a script author reads it (`Tokens`, `Definition`), not its Rust path.
+pub(super) fn type_label(v: &Dynamic) -> &'static str {
+  let name = v.type_name();
+  name.rsplit("::").next().unwrap_or(name)
+}
 
 /// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement.
 pub(super) fn warn_deprecated(old: &'static str) {
@@ -462,7 +473,7 @@ fn in_tree_array(
 ) -> std::result::Result<Vec<libxml::tree::Node>, Box<EvalAltResult>> {
   let mut out = Vec::with_capacity(nodes.len());
   for (i, entry) in nodes.into_iter().enumerate() {
-    let kind = entry.type_name();
+    let kind = type_label(&entry);
     let proxy = entry.try_cast::<NodeProxy>().ok_or_else(|| {
       Box::<EvalAltResult>::from(format!(
         "{method}: entry {i} of the array is a {kind}, not a Node"
@@ -784,11 +795,10 @@ fn token_arg(call: &str, v: Dynamic) -> std::result::Result<Token, Box<EvalAltRe
   } else if let Some(t) = v.clone().try_cast::<Token>() {
     Ok(t)
   } else {
-    let got = v.type_name();
     Err(
       format!(
         "{call}: expected a control-sequence name or a Token, got {}",
-        got.rsplit("::").next().unwrap_or(got)
+        type_label(&v)
       )
       .into(),
     )
@@ -870,6 +880,35 @@ fn definition_cs(v: &Stored) -> Option<Token> {
     Stored::Register(d) => d.get_cs().into_owned(),
     _ => return None,
   })
+}
+
+/// Perl's `ToString($definition)` (Definition.pm:116): the CS, then its parameters after a space.
+fn definition_string(d: &DefinitionProxy) -> String {
+  use latexml_core::{common::object::Object, definition::Definition};
+  let params = match &d.meaning {
+    Stored::Expandable(x) => x.get_parameters().map(Object::stringify),
+    Stored::Conditional(x) => x.get_parameters().map(Object::stringify),
+    Stored::Primitive(x) => x.get_parameters().map(Object::stringify),
+    Stored::MathPrimitive(x) => x.get_parameters().map(Object::stringify),
+    Stored::Constructor(x) => x.get_parameters().map(Object::stringify),
+    Stored::Register(x) => x.get_parameters().map(Object::stringify),
+    _ => None,
+  };
+  match params {
+    Some(p) => format!("{} {p}", d.cs),
+    None => d.cs.to_string(),
+  }
+}
+
+/// An array element as Rhai's array display gives it (`to_debug`): a string quoted, a handle its TeX string.
+fn element_string(d: Dynamic) -> String {
+  if d.is_string() {
+    format!("{:?}", d.into_string().unwrap_or_default())
+  } else if d.is_unit() {
+    "()".to_string()
+  } else {
+    dynamic_to_string(d)
+  }
 }
 
 /// Marshal a Rhai value INTO a `Stored` (Perl's value table is untyped, Package.pm AssignValue :261,
@@ -955,6 +994,15 @@ fn dynamic_to_string(d: Dynamic) -> String {
   } else if d.is::<WhatsitProxy>() {
     // (`to_string`, `ToString` and `absorbString` raise its error; see `whatsit_string`)
     whatsit_string().unwrap_or_default()
+  } else if let Some(def) = d.clone().try_cast::<DefinitionProxy>() {
+    definition_string(&def)
+  } else if d.is_array() {
+    let items: Vec<String> = d
+      .cast::<rhai::Array>()
+      .into_iter()
+      .map(element_string)
+      .collect();
+    format!("[{}]", items.join(", "))
   } else {
     d.to_string()
   }
