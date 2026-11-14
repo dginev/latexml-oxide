@@ -1,4 +1,7 @@
 #![feature(alloc_error_hook)]
+// clap's `derive(Parser)` builds the whole CLI (~150 options) in one generated function: one large frame at opt-level 0,
+// once per process. A lint attribute on `Cli` does not reach the derived impl, hence the crate level.
+#![allow(clippy::large_unopt_stack_frames)]
 
 use std::{
   alloc::{Layout, set_alloc_error_hook},

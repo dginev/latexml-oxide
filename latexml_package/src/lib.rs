@@ -563,6 +563,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("varwidth", "sty", package::varwidth_sty::load_definitions),
   ("xargs", "sty", package::xargs_sty::load_definitions),
   ("esint", "sty", package::esint_sty::load_definitions),
+  ("etoc", "sty", package::etoc_sty::load_definitions),
   ("etoolbox", "sty", package::etoolbox_sty::load_definitions),
   ("eurosym", "sty", package::eurosym_sty::load_definitions),
   ("hhline", "sty", package::hhline_sty::load_definitions),

@@ -2639,7 +2639,7 @@ fn shared_code_names_no_package() {
     "A package's decision goes to its binding, or reads what TeX reads (a meaning, `\\@ifl@aded`).";
   let stems = binding_stems();
   assert!(
-    stems.contains(&"natbib".to_string()) && !stems.contains(&"float".to_string()),
+    stems.iter().any(|i| i == "natbib") && !stems.iter().any(|i| i == "float"),
     "{stems:?}"
   );
   let mut counts = BTreeMap::new();

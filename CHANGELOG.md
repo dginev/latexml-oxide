@@ -192,6 +192,30 @@
     Guards `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_perl_forms_716,
     rhai_deprecated_aliases_warn_once}`.
 
+  - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
+    chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and
+    `\tableofcontents` stays the document's contents; `\invisibletableofcontents`
+    prints nothing, as in etoc. A `<ltx:TOC>` whose `scope` is a unit's `xml:id`
+    lists that unit's children (the schema's documented meaning; Perl reads only
+    `global`).
+  - **`{verbatim}` honours upquote (#801).** With `\usepackage{upquote}`, the
+    `verbatim` and `verbatim*` environments now print `'` and `` ` `` upright, as
+    fancyvrb's `Verbatim` and `\verb` already did and as pdflatex prints all of
+    them. Without upquote they keep the typewriter font's curly quotes.
+  - **The standard classes' size options set `\textwidth` (#779).** In one column,
+    `article`, `report` and `book` now set `\textwidth` as their size file does
+    (`size1x.clo`/`bk1x.clo`): the paper's width less 2in, at most 345pt (10pt),
+    360pt (11pt) or 390pt (12pt). Before, every size got 10pt's 345pt, so a
+    `\begin{minipage}{\textwidth}` in a 12pt article was too narrow. Under
+    `\documentstyle`, book's width is `bk1x.clo`'s 4.5in (10pt) or 5in. `\@ptsize`
+    now follows the size option too. Both read the options the class was given,
+    so a class passing its options to `article` (elsarticle, llncs) reaches them;
+    llncs keeps its own 12.2cm.
+  - **`\import@path` is defined (#772).** import.sty's own macro now holds the
+    current import directory, as the package sets and restores it, so a document
+    that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
+    undefined-macro error; a nested `\import` empties it, as import.sty does. Also
+    drops a stray space the import commands typeset before the imported file.
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
@@ -218,6 +242,14 @@
     reallocated `environ` under that thread's `getenv` (7 of 200
     `--init=latex.ltx` runs on Linux aarch64), failing `tools/make_formats.sh`.
     It is now set before the thread exists (STABILITY_WITNESSES Cluster J).
+  - **TikZ matrix and tikz-cd cells sit on their last row's baseline (#785).**
+    `openTikzAlignment` placed a matrix at `y = h + d`; Perl
+    (`pgfsys-latexml.def.ltxml` L952-975) subtracts the last row's depth, read
+    from the row sizes `Alignment.pm` passes to `openContainer` (L321-323). Rust
+    passed none, so every cell of a tikz-cd diagram or `\matrix` sat one
+    last-row depth above its arrows. The alignment now passes
+    `rowheights`/`rowdepths`/`columnwidths` to the container callback as Perl
+    does. Guard `picture_sizing::tikz_matrix_places_last_row_baseline_at_origin`.
 
   - **The XSLT recursion cap now applies in the statically linked release
     binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was

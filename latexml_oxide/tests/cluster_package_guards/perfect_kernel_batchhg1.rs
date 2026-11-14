@@ -777,10 +777,12 @@ fn marked_blocks_restored_read_as_printed() {
       files:    &[],
       counts:   (0, 0),
       lines:    &[],
+      // The minipage is `\linewidth`, llncs.cls:55's 12.2cm `\textwidth` (pdflatex 347.12354pt; 345.0pt before W2F2,
+      // OXIDIZED_DESIGN_DIVERGENCES #1020).
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Baker<sup>2</sup></personname></creator>"#,
-        r#"<creator role="author"><contact name="Affiliation: " role="affiliation"><inline-block class="ltx_minipage" vattach="middle" width="345.0pt"><p><sup>1</sup> Univ A, <sup>2</sup> Univ B</p></inline-block></contact></creator>"#,
+        r#"<creator role="author"><contact name="Affiliation: " role="affiliation"><inline-block class="ltx_minipage" vattach="middle" width="347.1pt"><p><sup>1</sup> Univ A, <sup>2</sup> Univ B</p></inline-block></contact></creator>"#,
       ]),
     },
     Row {

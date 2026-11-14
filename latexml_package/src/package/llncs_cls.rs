@@ -51,6 +51,8 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
+  // llncs.cls:55: the class's own text width, over the one article's size option gave (pdflatex 347.12354pt).
+  RawTeX!(r"\setlength{\textwidth}{12.2cm}");
   // Real llncs.cls L244 sets secnumdepth to 2, so subsubsections are NOT
   // numbered. Both the Perl llncs.cls.ltxml and this port previously omitted it
   // and inherited article's default of 3, giving a plain \subsubsection a

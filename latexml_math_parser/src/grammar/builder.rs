@@ -7,7 +7,10 @@ use crate::semantics::*;
 // `floatsuperscript`) push past 100 chars; `rustfmt::skip` is applied
 // to the entire builder so the BNF reads as a flat table rather than
 // being re-flowed mid-rule.
+// One function by design (the macros share its registry): ~600 KB of frame at opt-level 0, built once per parser on the
+// converting thread's 256 MB stack. Splitting it per rule family is a post-merge refactor (the math parser is parked).
 #[rustfmt::skip]
+#[allow(clippy::large_unopt_stack_frames)]
 pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // We create a declarative macro language of our own, in the spirit of the Marpa SLIF
   default_registry!();
