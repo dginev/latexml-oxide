@@ -547,9 +547,7 @@ pub(crate) fn load() -> Result<()> {
     let mut late = Vec::new();
     for hook in ["enddocument/afterlastpage", "enddocument/afteraux", "enddocument/end"] {
       let toplevel = T_CS!(s!("\\__hook_toplevel {hook}"));
-      if let Ok(Some(Stored::Expandable(code))) = lookup_definition_stored(&toplevel)
-        && matches!(code.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.unlist_ref().is_empty())
-      {
+      if hook_slot_has_code(&toplevel) {
         late.push(toplevel);
       }
     }

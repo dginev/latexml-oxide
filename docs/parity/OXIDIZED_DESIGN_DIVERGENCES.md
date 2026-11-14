@@ -36394,6 +36394,15 @@ package's code there keeps the `.aux` and the page model LaTeXML has not (acro's
 IfLimit; pageslts' numbering check: a false Warning; pbalance) and does not run; `enddocument/info` (the kernel's file
 list and rerun warnings) does not run, so a document's `\AtEndAfterFileList` is still lost (catalog
 `enddocument_info_hook_red`). etoolbox's `\AfterEndDocument` adds to `enddocument/end`, atveryend's commands to their
-hooks as atveryend.sty v1.12. **Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows
-`enddocument_hooks_run`, `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `label_hook_runs`,
-`include_hooks_run`).
+hooks as atveryend.sty v1.12. A label hook's code that prints nothing leaves no box (2501.00173: `\label{…}` + `\ `
+before a list opened an empty paragraph). Whether a hook holds code is lthooks' `\hook_if_empty:nTF` (latex.ltx:6436)
+read from its storage (the labelled-code prop, the top-level and next-use slots: `hook_has_code`), not expanded: the
+expansion cost 0.2-0.4M instructions at every `\label` and environment end; `\include`'s hooks pass over an empty hook
+(`\lx@usehook`, `\lx@useonetimehook`: a `\UseHook` cost 0.7M, a `\UseOneTimeHook` 3M here, as our document never
+runs `\@expl@@@initialize@all@@`), an empty one-time hook only marking itself used (`\__hook_use_once_set:n`; the clear
+code lthooks leaves in an undeclared hook's next slot is not kept, which only `\IfHookEmptyTF` on that used hook would
+see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-files.ltx:193-270, `package/cleveref/after`
+labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
+its `label` hook code cost 3.5M instructions a `\label`. **Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows`
+(rows `enddocument_hooks_run`, `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `label_hook_runs`,
+`include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`).

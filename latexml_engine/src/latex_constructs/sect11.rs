@@ -108,7 +108,8 @@ pub(crate) fn load() -> Result<()> {
       // 2609.13327, Fatal Recursion; Perl hangs, KNOWN_PERL_ERRORS #496). The unread digest is not made.
     }
     // latex.ltx:14941-14946 `\begingroup\UseHookWithArguments{label}{1}{#1}` before the `.aux` write, a whatsit of no
-    // width: its code's text prints here (QA47B).
+    // width: its code's text prints here, and a hook that prints nothing leaves nothing, no list a paragraph would open
+    // for (2501.00173's `\label{…}` + `\ ` before a list; QA47B).
     if hook_has_code("label") {
       let key = whatsit.get_arg(1).map(|key| key.revert()).transpose()?.unwrap_or_default();
       let mut hook = vec![T_CS!("\\begingroup"), T_CS!("\\UseHookWithArguments"), T_BEGIN!()];
@@ -116,7 +117,7 @@ pub(crate) fn load() -> Result<()> {
       hook.extend([T_END!(), T_BEGIN!(), T_OTHER!("1"), T_END!(), T_BEGIN!()]);
       hook.extend(key.unlist());
       hook.extend([T_END!(), T_CS!("\\endgroup")]);
-      return Ok(vec![digest(Tokens::new(hook))?]);
+      return Ok(digest(Tokens::new(hook))?.unlist());
     }
   }
   );
@@ -1330,20 +1331,25 @@ pub(crate) fn load() -> Result<()> {
       };
       let internal = |text: String| mouth::tokenize_internal(TeXString::assembled(text)).unlist();
       let mut toks = internal(s!(
-        "{current}\\UseHook{{include/before}}\\UseOneTimeHook{{include/{path_str}/before}}"
+        "{current}\\lx@usehook{{include/before}}\\lx@useonetimehook{{include/{path_str}/before}}"
       ));
       toks.extend(input.unlist());
       toks.extend(internal(s!(
-        "\\UseOneTimeHook{{include/{path_str}/end}}\\UseHook{{include/end}}\\UseOneTimeHook{{include/{path_str}/after}}\\UseHook{{include/after}}"
+        "\\lx@useonetimehook{{include/{path_str}/end}}\\lx@usehook{{include/end}}\\lx@useonetimehook{{include/{path_str}/after}}\\lx@usehook{{include/after}}"
       )));
       unread(Tokens::new(toks));
     } else if hooks {
       // latex.ltx:9626-9627, a file `\includeonly` left out
       unread(mouth::tokenize_internal(TeXString::assembled(format!(
-        "\\UseHook{{include/excluded}}\\UseOneTimeHook{{include/{path_str}/excluded}}"
+        "\\lx@usehook{{include/excluded}}\\lx@useonetimehook{{include/{path_str}/excluded}}"
       ))));
     }
   });
+
+  // `\UseHook`, `\UseOneTimeHook` that pass over an empty hook without expanding lthooks, which costs 1-3M
+  // instructions a use here (an `\include` runs six; QAB1b): `hook_use_tokens`, read where the hook runs.
+  DefMacro!("\\lx@usehook{}", sub[(hook)] { Tokens::new(hook_use_tokens(&hook.to_string(), false)) });
+  DefMacro!("\\lx@useonetimehook{}", sub[(hook)] { Tokens::new(hook_use_tokens(&hook.to_string(), true)) });
 
   // Perl L4303-4311: \includeonly — restrict which files \include loads
   DefPrimitive!("\\includeonly{}", sub[(paths)] {

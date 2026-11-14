@@ -377,6 +377,38 @@ const ROWS: &[Row] = &[
       ),
     ],
   },
+  // QAB1b: a label hook that prints nothing leaves no box: 2501.00173's `\label{…}` + `\ ` before a list opens no paragraph
+  // (red on QAB1: an empty `<p><text font="italic"></text></p>` before the itemize).
+  Row {
+    name:     "label_hook_opens_no_paragraph",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/label_hook_opens_no_paragraph.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "para",
+      "xml:id=\"Thmremark1.p1\"",
+      r#"<para xml:id="Thmremark1.p1"><itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag>
+<tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1">
+<p xml:id="S0.I1.i1.p1.1"><text font="italic" xml:id="S0.I1.i1.p1.1.1">a</text></p></para></item></itemize></para>"#,
+    )],
+  },
+  // QAB1b: cleveref's binding does not register the kernel's first aid for the raw cleveref.sty (DG 2026-11-14), so the
+  // `label` hook holds none of it; the document's own label code still runs (red on QAB1: "[code]").
+  Row {
+    name:     "cleveref_firstaid_not_registered",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/cleveref_firstaid_not_registered.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "p",
+      "xml:id=\"S1.p1.1\"",
+      r#"<p xml:id="S1.p1.1">[mine][L:s:a] See <ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>"#,
+    )],
+  },
   // QA47B: `\include`'s hooks around the file, and the excluded ones (red: "Text.\nChapter text.\nMore.").
   Row {
     name:     "include_hooks_run",
