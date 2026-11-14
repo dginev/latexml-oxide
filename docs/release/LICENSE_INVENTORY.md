@@ -305,7 +305,9 @@ TeX Live) **into** the image — there we redistribute rather than borrow. "Neve
 linked" still holds and is what matters: separate programs merely aggregated
 alongside latexml-oxide, each with its own Ubuntu copyright file under
 `/usr/share/doc`. Worth stating because "the host provides them" was written for the
-tarball and quietly assumed to hold everywhere.
+tarball and quietly assumed to hold everywhere. The images' `texbase` stage writes the
+source directions (`dpkg-query` binary/source package and version, Launchpad URL) for
+`ghostscript`, `mupdf-tools` and `poppler-utils` to `/usr/local/share/doc/latexml-oxide/THIRD-PARTY-SOURCES`.
 
 Re-verify: `grep -rn 'Command::new' latexml_post/src/graphics.rs`
 

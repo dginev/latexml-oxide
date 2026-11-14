@@ -1,0 +1,10 @@
+% Source of mixed_raster_vector.pdf: `pdflatex -no-shell-escape mixed_raster_vector.tex` (TeX Live 2025),
+% tile.png a 4x4 two-colour PNG, drawn at 1cm (7 bp per pixel): the PNG path, OD #1034; the guard is
+% graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged.
+\pdfcompresslevel=9 \pdfobjcompresslevel=2
+\pdfinfoomitdate=1 \pdftrailerid{} \pdfsuppressptexinfo=-1
+\documentclass[border=2pt]{standalone}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[width=1cm]{tile.png} Label
+\end{document}

@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+  - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
+    dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
+    `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now
+    right- or left-aligns a cell by its `columnalign` (`justify-items`); the markup is
+    unchanged. Guard
+    `browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation`
+    (Chrome, local).
+  - **`/` has no operator space** (issue 789). TeX's `/` is an Ord, and MathML Core puts it in
+    category K (zero space), but our dictionary (Perl's) had it in B and Chrome spaces it
+    0.222 em each side. A visible Core-K operator (`/`, `\backslash`, `_`) is now
+    `<mo lspace="0em" rspace="0em">` and an Ord to the space walk, so `\backslash` loses its
+    0.222 em too; a kept `\mathrel{/}` or `\mathpunct{/}` keeps TeX's Rel or Punct space.
+    Guard `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space`.
+  - **Small PDF figures with a raster image keep their vector labels** (after PR 816 by
+    amachino — thank you). A PDF figure of at most 500 KiB that embeds a raster image
+    (a heatmap with axes and labels) was rasterized whole to PNG; it now goes to the
+    vector-SVG path like a vector-only PDF (mutool, then pdftocairo), keeping the text as
+    glyphs and the image at its own resolution, with the PNG path as the fallback. A
+    figure that draws a raster larger than its own pixels keeps the PNG path, where a
+    browser would blur it
+    (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
