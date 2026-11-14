@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+  - **A bibliography link drops TeX's escapes** (issue 808). A `.bib` `url` written
+    `https://doi.org/10.1162/tacl\_a\_00276` linked to that string, backslashes and all; the
+    href now reads `\_ \% \# \& \$ \~ \{ \}` as the character, while a style that prints the URL
+    still prints it as TeX does. Guard `06_cluster_bibliography::bib_url_escapes_leave_the_href`
+    (OXIDIZED_DESIGN_DIVERGENCES #1039).
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
     dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
     `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now

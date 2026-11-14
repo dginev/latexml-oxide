@@ -1,0 +1,16 @@
+% mechanism: a biber `.bbl` carries a url as `\verb https://example.org/a%20b`; our `\verb` reader takes the `%` for a
+%   comment, so the link (href and printed text) is cut at it, silently. Without the `.bbl` (the `.bib` read) it is whole.
+% witness: synthetic (found beside issue 808, BIBURL)
+% oracle:  pdflatex + biber: 0 errors; prints "url: https://example.org/a%20b"
+% engines: rust base (main 17a64c0415a): <a href="https://example.org/a">https://example.org/a</a>, 0 E 0 W
+% expect:  0 errors; href and text https://example.org/a%20b
+% status:  RED
+% moves:   post-merge (a proposed batch: the biblatex .bbl `\verb` field reader's catcodes)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{biblatex_bbl_url_percent_red.bib}
+\begin{document}
+See \cite{pct}.
+\printbibliography
+\end{document}

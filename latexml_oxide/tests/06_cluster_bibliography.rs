@@ -4364,6 +4364,28 @@ fn bib_doi_with_escaped_brace() {
   assert!(x.contains("The entry after the identifiers"), "{x}");
 }
 
+/// TeX's escapes in a `url` are not part of the link: the href drops them, the printed URL (a `*nat` style prints it)
+/// keeps them as TeX prints the Verbatim field; a URL without a backslash is untouched (issue 808).
+#[test]
+fn bib_url_escapes_leave_the_href() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_url_escapes.tex");
+  let links: Vec<&str> = x
+    .split("<ref ")
+    .skip(1)
+    .filter(|r| r.contains("ltx_bib_external"))
+    .map(|r| r.split("</ref>").next().unwrap_or_default())
+    .collect();
+  assert_eq!(
+    links,
+    [
+      r#"class="ltx_bib_external" href="https://example.org/a_b%20c#frag&amp;q=1~x">https://example.org/a\_b\%20c\#frag\&amp;q=1\~x"#,
+      r#"class="ltx_bib_external" href="https://example.org/a_b%20c">https://example.org/a_b%20c"#,
+      r#"class="doi ltx_bib_external" href="https://dx.doi.org/10.1162/tacl%5Fa%5F00276">Document"#,
+    ],
+    "{x}"
+  );
+}
+
 /// The bibliographies a document shows, each as its title and the keys of its items, in order — not a hidden
 /// (`ltx_nodisplay`) one ([`hidden_bib_items`]).
 fn bib_lists(x: &str) -> Vec<(String, Vec<String>)> {
