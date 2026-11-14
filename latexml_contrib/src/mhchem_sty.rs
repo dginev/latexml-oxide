@@ -178,15 +178,42 @@ fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
   let mut species = 0;
   let mut before = Before::Nothing;
   let mut run = Run::default();
+  // A raw command with its argument (2407.15836 `\textit{R}`, `\mathrm{Y}`) is an atom of the run; any other raw
+  // token (`\cdot`, mhchem's `\bond{-}` and own output) parts it, its braced arguments with it.
+  let heads: Vec<bool> = (0..items.len())
+    .map(|i| match (&items[i], items.get(i + 1)) {
+      (FormulaItem::Raw(t), Some(FormulaItem::Raw(next))) => {
+        t.get_catcode() == Catcode::CS
+          && next.get_catcode() == Catcode::BEGIN
+          && !t.with_str(|s| s.starts_with("\\__mhchem_") || s == "\\bond")
+      },
+      _ => false,
+    })
+    .collect();
+  let (mut in_raw, mut raw_depth) = (false, 0usize);
   for (i, item) in items.into_iter().enumerate() {
     if i == start {
       species = body.len();
     }
+    if !matches!(item, FormulaItem::Raw(_)) {
+      in_raw = false;
+    }
     match item {
       FormulaItem::Raw(t) => {
-        if t.get_catcode() != Catcode::SPACE {
-          run.close(&mut body);
+        let code = t.get_catcode();
+        if raw_depth == 0 && code != Catcode::SPACE && !(in_raw && code == Catcode::BEGIN) {
+          if heads[i] {
+            run.open(body.len(), 1);
+          } else {
+            run.close(&mut body);
+          }
+          in_raw = true;
           before = Before::Atom;
+        }
+        match code {
+          Catcode::BEGIN => raw_depth += 1,
+          Catcode::END => raw_depth = raw_depth.saturating_sub(1),
+          _ => {},
         }
         body.push(t);
       },
@@ -212,7 +239,7 @@ fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
           body.extend(call("\\mathord", formula));
           run.open(species, 1);
         }
-        // A count on raw text (2407.15836 `\ce{\textit{R}2Ir2Al20}`) stays on it, outside the run.
+        // A count on raw text (2407.15836 `\ce{\textit{R}2Ir2Al20}`) scripts it, inside the run.
         if !u.element.is_empty() || run.start.is_some() {
           run.open(body.len(), element_items(&u.element).len());
         }
@@ -249,8 +276,10 @@ impl Run {
   }
 
   fn close(&mut self, body: &mut Vec<Token>) {
+    // A run cut inside a raw group (an unbalanced brace) stays as it is.
     if let Some(start) = self.start.take()
       && self.atoms > 1
+      && balanced(&body[start..])
     {
       let run = body.split_off(start);
       body.extend(kludged(run));
@@ -260,6 +289,21 @@ impl Run {
 }
 
 fn kludged(body: Vec<Token>) -> Vec<Token> { call("\\lx@kludged", body) }
+
+fn balanced(tokens: &[Token]) -> bool {
+  let mut depth = 0isize;
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth < 0 {
+      return false;
+    }
+  }
+  depth == 0
+}
 
 /// What a unit with no element follows.
 #[derive(PartialEq)]

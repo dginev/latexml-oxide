@@ -36387,10 +36387,12 @@ in the text font), as nicefrac's `\nf@mathcopytextfont`; a math-mode `\ce` keeps
 elements and brackets are juxtaposed, not multiplied (DG 2026-11-14): each run of them between amounts and mhchem's own
 operators is `\lx@kludged{…}`, the unparsed row Perl uses for adjacency (Base_XMath.pool.ltxml:193, MathParser.pm:530),
 so no U+2062 `<mo>` sits between two elements (Firefox spaced it ~0.17em; copy gave "H2⁢O"); the amount's thin space
-before its species stays a U+2062 `<mo lspace="0.170em">`. A charge's sign is tight: a `limit-from`'s direction (`2-`,
-also `0+` in any math) is a Bin with no right operand, which TeX makes an Ord (tex.web §728-729), while MathML Core gives
-a trailing `<mo>` the postfix form and, `−` having no postfix entry, the infix 0.2222em (§3.2.4.2, B.1); the MathML
-says `lspace="0em" rspace="0em"` (`presentation.rs`). A lone sign (`e^-`, `Th+`) keeps a bare `<mo>`. MathML:
+before its species stays a U+2062 `<mo lspace="0.170em">`. A raw command with its argument (2407.15836
+`\ce{\textit{R}2Ir2Al20}`, `\mathrm{Y}`) is an atom of the run, its count on it; another raw token (`\cdot`, `\bond{-}`,
+mhchem's own output) parts the run. A charge's sign is tight because it ends its list, TeX's atom rule (#1044); a lone
+sign (`e^-`, `Th+`) keeps a bare `<mo>`, as Core adds no space to a script that is one operator (§3.4.1). With `--cmml`
+a run is an unparsed row (`<cerror><csymbol cd="ambiguous">fragments</csymbol>…`, Perl's `cmml_unparsed`,
+MathML.pm:1361-1375, for any kludged row); the formula's content semantics are stage 2. MathML:
 `<msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts/><mrow/><mn>95</mn></mmultiscripts><msub><mi
 mathvariant="normal">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">−</mo></mrow></msup>`
 for `\ce{^{95}MoO4^{2-}}`. This first markup is TENTATIVE (DG's rulings of 2026-11-14) and awaits Bruce Miller's
@@ -36402,3 +36404,24 @@ formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): �
 parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
 `package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
 `mhchem_formula_amount.tex`, `mhchem_formula_juxtaposed.tex`; witnesses issue 824, 2206.12015).
+
+### 1044. The MathML space walk types atoms by TeX's own rule: a Bin TeX makes an Ord is tight (issue #824)
+
+**Principle (real TeX, MathML Core).** TeX converts a Bin atom to an Ord when it is the first atom of its list or
+follows a Bin, Op, Rel, Open or Punct, and converts the previous Bin when a Rel, Close or Punct follows or the list ends
+(tex.web §728-729, `@<Convert \(a)a bin...@>`); glue is not an atom there. MathML Core spaces an `<mo>` by its inferred
+form (§3.2.4.2): a last child is postfix, and `+` and `−` have no postfix entry, so they fall back to infix,
+0.2222em each side (B.1). Related: #1033, #1040. **Perl.** The space walk (`space_walk`/`adjust_pair`,
+MathML.pm:1097-1284) types each atom by its role alone, so a trailing `+` stays a Bin. **Rust.** `space_walk`
+(presentation.rs) collects an mrow's visually adjacent atoms first, then types them (`item_atom_type`, Perl's role
+table and #1033's Core-K Ord) and applies TeX's conversion over the list (`tex_atom_types`, an `mspace` skipped as
+glue); `adjust_pair` spaces each pair by those types. A converted Bin `<mo>` after the list's first atom whose
+dictionary spacing is nonzero gets `lspace="0em" rspace="0em"`; a leading one is not marked (Core's prefix form gives
+`+` and `−` zero). `\showbox` (pdflatex, TL 2025) agrees on every row: `a+-b` has `\medmuskip` both sides of `+` and
+none around `−` (`<mo>+</mo><mo lspace="0em" rspace="0em">−</mo>`); `x\pm-1`, `f(0+)`, `a+ =b` (`\thickmuskip` only
+around `=`), `a+b+`, `x+,y`, `a+\,=b`, `\{+,-\}`, `x^{2+}`, `\lim_{x\to0+}`, an align cell ending `=b+`, mhchem's charge
+`2-` set the sign tight; `-x`, `(-x)`, `a=-b` keep a bare `<mo>` (the parser's prefix operator, already an Ord).
+This replaces a rule keyed on the parser's `limit-from` reading, which also tightened the binary `+` of `a+-b`.
+Residual: scripts keep Bin and Rel space (TeX's `\medmuskip`/`\thickmuskip` are not inserted in script style;
+`math-parse/script_style_rel_has_no_thick_space_red.tex`). Offer upstream. **Guard**:
+`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro `math-parse/bin_atom_becomes_ord.tex`).
