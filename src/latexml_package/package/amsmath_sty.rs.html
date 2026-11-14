@@ -3617,223 +3617,227 @@
 <a href=#3617 id=3617 data-nosnippet>3617</a>    <span class="string">"&lt;ltx:XMArg enclose='box'&gt;#1&lt;/ltx:XMArg&gt;"</span>,
 <a href=#3618 id=3618 data-nosnippet>3618</a>    alias =&gt; <span class="string">"\\boxed"</span>);
 <a href=#3619 id=3619 data-nosnippet>3619</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\boxed@text{}"</span>,
-<a href=#3620 id=3620 data-nosnippet>3620</a>    <span class="string">"&lt;ltx:Math mode='display' framed='rectangle'&gt;&lt;ltx:XMath&gt;#1&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;"</span>,
-<a href=#3621 id=3621 data-nosnippet>3621</a>    mode =&gt; <span class="string">"math"</span>,
-<a href=#3622 id=3622 data-nosnippet>3622</a>    bounded =&gt; <span class="bool-val">true</span>,
-<a href=#3623 id=3623 data-nosnippet>3623</a>    before_digest =&gt; { <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\lx@newline"</span>); },
-<a href=#3624 id=3624 data-nosnippet>3624</a>    alias =&gt; <span class="string">"\\boxed"</span>);
-<a href=#3625 id=3625 data-nosnippet>3625</a>
-<a href=#3626 id=3626 data-nosnippet>3626</a>  <span class="comment">// Section 4.5: Additional math accents (triple/quadruple dots)
-<a href=#3627 id=3627 data-nosnippet>3627</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\dddot{}"</span>, <span class="string">"\u{02D9}\u{02D9}\u{02D9}"</span>,
-<a href=#3628 id=3628 data-nosnippet>3628</a>    operator_role =&gt; <span class="string">"OVERACCENT"</span>, reversion =&gt; <span class="string">"\\dddot{#1}"</span>);
-<a href=#3629 id=3629 data-nosnippet>3629</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ddddot{}"</span>, <span class="string">"\u{02D9}\u{02D9}\u{02D9}\u{02D9}"</span>,
-<a href=#3630 id=3630 data-nosnippet>3630</a>    operator_role =&gt; <span class="string">"OVERACCENT"</span>, reversion =&gt; <span class="string">"\\ddddot{#1}"</span>);
-<a href=#3631 id=3631 data-nosnippet>3631</a>
-<a href=#3632 id=3632 data-nosnippet>3632</a>  <span class="comment">// Section 4.6: Root adjustment (no-ops — cosmetic only)
-<a href=#3633 id=3633 data-nosnippet>3633</a>  </span>def_macro_noop(<span class="string">"\\leftroot{}"</span>)<span class="question-mark">?</span>;
-<a href=#3634 id=3634 data-nosnippet>3634</a>  def_macro_noop(<span class="string">"\\uproot{}"</span>)<span class="question-mark">?</span>;
+<a href=#3620 id=3620 data-nosnippet>3620</a>    <span class="string">"&lt;ltx:Math mode='display' framed='rectangle' framecolor='#framecolor' cssstyle='#cssstyle'&gt;\
+<a href=#3621 id=3621 data-nosnippet>3621</a>     &lt;ltx:XMath&gt;#1&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;"</span>,
+<a href=#3622 id=3622 data-nosnippet>3622</a>    mode =&gt; <span class="string">"math"</span>,
+<a href=#3623 id=3623 data-nosnippet>3623</a>    bounded =&gt; <span class="bool-val">true</span>,
+<a href=#3624 id=3624 data-nosnippet>3624</a>    properties =&gt; sub[_args] {
+<a href=#3625 id=3625 data-nosnippet>3625</a>      <span class="prelude-val">Ok</span>(framed_properties(FramedOptions { margin: <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"\\fboxsep"</span>)), ..FramedOptions::default() }))
+<a href=#3626 id=3626 data-nosnippet>3626</a>    },
+<a href=#3627 id=3627 data-nosnippet>3627</a>    before_digest =&gt; { <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\lx@newline"</span>); },
+<a href=#3628 id=3628 data-nosnippet>3628</a>    alias =&gt; <span class="string">"\\boxed"</span>);
+<a href=#3629 id=3629 data-nosnippet>3629</a>
+<a href=#3630 id=3630 data-nosnippet>3630</a>  <span class="comment">// Section 4.5: Additional math accents (triple/quadruple dots)
+<a href=#3631 id=3631 data-nosnippet>3631</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\dddot{}"</span>, <span class="string">"\u{02D9}\u{02D9}\u{02D9}"</span>,
+<a href=#3632 id=3632 data-nosnippet>3632</a>    operator_role =&gt; <span class="string">"OVERACCENT"</span>, reversion =&gt; <span class="string">"\\dddot{#1}"</span>);
+<a href=#3633 id=3633 data-nosnippet>3633</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ddddot{}"</span>, <span class="string">"\u{02D9}\u{02D9}\u{02D9}\u{02D9}"</span>,
+<a href=#3634 id=3634 data-nosnippet>3634</a>    operator_role =&gt; <span class="string">"OVERACCENT"</span>, reversion =&gt; <span class="string">"\\ddddot{#1}"</span>);
 <a href=#3635 id=3635 data-nosnippet>3635</a>
-<a href=#3636 id=3636 data-nosnippet>3636</a>  <span class="comment">// Section 4.13: Smash with optional direction (pass through body)
-<a href=#3637 id=3637 data-nosnippet>3637</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\smash[]{}"</span>, <span class="string">"#2"</span>);
-<a href=#3638 id=3638 data-nosnippet>3638</a>  <span class="prelude-val">Ok</span>(())
-<a href=#3639 id=3639 data-nosnippet>3639</a>}
-<a href=#3640 id=3640 data-nosnippet>3640</a>
-<a href=#3641 id=3641 data-nosnippet>3641</a><span class="doccomment">/// Perl: \sideset constructor body (amsmath.sty.ltxml L1183-1225)
-<a href=#3642 id=3642 data-nosnippet>3642</a></span><span class="kw">fn </span>sideset_construct(
-<a href=#3643 id=3643 data-nosnippet>3643</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#3644 id=3644 data-nosnippet>3644</a>  args: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;Digested&gt;],
-<a href=#3645 id=3645 data-nosnippet>3645</a>  props: <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;,
-<a href=#3646 id=3646 data-nosnippet>3646</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#3647 id=3647 data-nosnippet>3647</a>  <span class="kw">use </span>latexml_core::token::Catcode;
-<a href=#3648 id=3648 data-nosnippet>3648</a>
-<a href=#3649 id=3649 data-nosnippet>3649</a>  <span class="kw">use </span><span class="kw">crate</span>::engine::tex_math::is_script;
-<a href=#3650 id=3650 data-nosnippet>3650</a>
-<a href=#3651 id=3651 data-nosnippet>3651</a>  <span class="kw">let </span>pre = args.first().and_then(|a| a.as_ref());
-<a href=#3652 id=3652 data-nosnippet>3652</a>  <span class="kw">let </span>post = args.get(<span class="number">1</span>).and_then(|a| a.as_ref());
-<a href=#3653 id=3653 data-nosnippet>3653</a>  <span class="kw">let </span>base = args.get(<span class="number">2</span>).and_then(|a| a.as_ref());
+<a href=#3636 id=3636 data-nosnippet>3636</a>  <span class="comment">// Section 4.6: Root adjustment (no-ops — cosmetic only)
+<a href=#3637 id=3637 data-nosnippet>3637</a>  </span>def_macro_noop(<span class="string">"\\leftroot{}"</span>)<span class="question-mark">?</span>;
+<a href=#3638 id=3638 data-nosnippet>3638</a>  def_macro_noop(<span class="string">"\\uproot{}"</span>)<span class="question-mark">?</span>;
+<a href=#3639 id=3639 data-nosnippet>3639</a>
+<a href=#3640 id=3640 data-nosnippet>3640</a>  <span class="comment">// Section 4.13: Smash with optional direction (pass through body)
+<a href=#3641 id=3641 data-nosnippet>3641</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\smash[]{}"</span>, <span class="string">"#2"</span>);
+<a href=#3642 id=3642 data-nosnippet>3642</a>  <span class="prelude-val">Ok</span>(())
+<a href=#3643 id=3643 data-nosnippet>3643</a>}
+<a href=#3644 id=3644 data-nosnippet>3644</a>
+<a href=#3645 id=3645 data-nosnippet>3645</a><span class="doccomment">/// Perl: \sideset constructor body (amsmath.sty.ltxml L1183-1225)
+<a href=#3646 id=3646 data-nosnippet>3646</a></span><span class="kw">fn </span>sideset_construct(
+<a href=#3647 id=3647 data-nosnippet>3647</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#3648 id=3648 data-nosnippet>3648</a>  args: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;Digested&gt;],
+<a href=#3649 id=3649 data-nosnippet>3649</a>  props: <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;,
+<a href=#3650 id=3650 data-nosnippet>3650</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#3651 id=3651 data-nosnippet>3651</a>  <span class="kw">use </span>latexml_core::token::Catcode;
+<a href=#3652 id=3652 data-nosnippet>3652</a>
+<a href=#3653 id=3653 data-nosnippet>3653</a>  <span class="kw">use </span><span class="kw">crate</span>::engine::tex_math::is_script;
 <a href=#3654 id=3654 data-nosnippet>3654</a>
-<a href=#3655 id=3655 data-nosnippet>3655</a>  <span class="comment">// Perl: Insert non-scripts from pre as XMWrap BEFORE the base
-<a href=#3656 id=3656 data-nosnippet>3656</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(pre_arg) = pre {
-<a href=#3657 id=3657 data-nosnippet>3657</a>    <span class="kw">for </span>item <span class="kw">in </span>pre_arg.unlist() {
-<a href=#3658 id=3658 data-nosnippet>3658</a>      <span class="kw">if </span>is_script(<span class="kw-2">&amp;</span>item).is_none() &amp;&amp; !item.is_empty().unwrap_or(<span class="bool-val">true</span>) {
-<a href=#3659 id=3659 data-nosnippet>3659</a>        document.open_element(<span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3660 id=3660 data-nosnippet>3660</a>        document.absorb(<span class="kw-2">&amp;</span>item, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3661 id=3661 data-nosnippet>3661</a>        document.close_element(<span class="string">"ltx:XMWrap"</span>)<span class="question-mark">?</span>;
-<a href=#3662 id=3662 data-nosnippet>3662</a>      }
-<a href=#3663 id=3663 data-nosnippet>3663</a>    }
-<a href=#3664 id=3664 data-nosnippet>3664</a>  }
-<a href=#3665 id=3665 data-nosnippet>3665</a>
-<a href=#3666 id=3666 data-nosnippet>3666</a>  <span class="comment">// Insert the base in XMArg
-<a href=#3667 id=3667 data-nosnippet>3667</a>  </span>document.open_element(<span class="string">"ltx:XMArg"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3668 id=3668 data-nosnippet>3668</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = base {
-<a href=#3669 id=3669 data-nosnippet>3669</a>    document.absorb(b, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3670 id=3670 data-nosnippet>3670</a>  }
-<a href=#3671 id=3671 data-nosnippet>3671</a>  <span class="kw">let </span>node_opt = document.close_element(<span class="string">"ltx:XMArg"</span>)<span class="question-mark">?</span>;
-<a href=#3672 id=3672 data-nosnippet>3672</a>  <span class="kw">let </span><span class="kw-2">mut </span>node = node_opt.unwrap_or_else(|| document.get_node().clone());
-<a href=#3673 id=3673 data-nosnippet>3673</a>
-<a href=#3674 id=3674 data-nosnippet>3674</a>  <span class="comment">// Get scriptpos prefix from base
-<a href=#3675 id=3675 data-nosnippet>3675</a>  </span><span class="kw">let </span>opx = node
-<a href=#3676 id=3676 data-nosnippet>3676</a>    .get_first_element_child()
-<a href=#3677 id=3677 data-nosnippet>3677</a>    .and_then(|ch| ch.get_attribute(<span class="string">"scriptpos"</span>))
-<a href=#3678 id=3678 data-nosnippet>3678</a>    .map(|sp| {
-<a href=#3679 id=3679 data-nosnippet>3679</a>      <span class="kw">let </span>prefix: String = sp.chars().take_while(|c| !c.is_ascii_digit()).collect();
-<a href=#3680 id=3680 data-nosnippet>3680</a>      <span class="kw">if </span>prefix.is_empty() {
-<a href=#3681 id=3681 data-nosnippet>3681</a>        <span class="string">"post"</span>.to_string()
-<a href=#3682 id=3682 data-nosnippet>3682</a>      } <span class="kw">else </span>{
-<a href=#3683 id=3683 data-nosnippet>3683</a>        prefix
-<a href=#3684 id=3684 data-nosnippet>3684</a>      }
-<a href=#3685 id=3685 data-nosnippet>3685</a>    })
-<a href=#3686 id=3686 data-nosnippet>3686</a>    .unwrap_or_else(|| <span class="string">"post"</span>.to_string());
-<a href=#3687 id=3687 data-nosnippet>3687</a>
-<a href=#3688 id=3688 data-nosnippet>3688</a>  <span class="kw">let </span>level0 = props
-<a href=#3689 id=3689 data-nosnippet>3689</a>    .get(<span class="string">"scriptlevel"</span>)
-<a href=#3690 id=3690 data-nosnippet>3690</a>    .map(|v| v.to_string().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>))
-<a href=#3691 id=3691 data-nosnippet>3691</a>    .unwrap_or(<span class="number">0</span>);
-<a href=#3692 id=3692 data-nosnippet>3692</a>  <span class="kw">let </span><span class="kw-2">mut </span>level = level0;
-<a href=#3693 id=3693 data-nosnippet>3693</a>
-<a href=#3694 id=3694 data-nosnippet>3694</a>  <span class="comment">// Process pre-scripts in reverse
-<a href=#3695 id=3695 data-nosnippet>3695</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(pre_arg) = pre {
-<a href=#3696 id=3696 data-nosnippet>3696</a>    <span class="comment">// Reverse the token Vec in-place instead of into_iter().rev().collect()
-<a href=#3697 id=3697 data-nosnippet>3697</a>    // which would allocate a second Vec.
-<a href=#3698 id=3698 data-nosnippet>3698</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>items = pre_arg.unlist();
-<a href=#3699 id=3699 data-nosnippet>3699</a>    items.reverse();
-<a href=#3700 id=3700 data-nosnippet>3700</a>    <span class="kw">for </span>item <span class="kw">in </span>items {
-<a href=#3701 id=3701 data-nosnippet>3701</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(scriptop) = is_script(<span class="kw-2">&amp;</span>item) {
-<a href=#3702 id=3702 data-nosnippet>3702</a>        <span class="kw">let </span>y = <span class="kw">if </span>scriptop.<span class="number">1 </span>== Catcode::SUPER {
-<a href=#3703 id=3703 data-nosnippet>3703</a>          <span class="string">"SUPERSCRIPTOP"
-<a href=#3704 id=3704 data-nosnippet>3704</a>        </span>} <span class="kw">else </span>{
-<a href=#3705 id=3705 data-nosnippet>3705</a>          <span class="string">"SUBSCRIPTOP"
-<a href=#3706 id=3706 data-nosnippet>3706</a>        </span>};
-<a href=#3707 id=3707 data-nosnippet>3707</a>        node = sideset_wrap_impl(document, node, <span class="string">"pre"</span>, y, level, <span class="kw-2">&amp;</span>item)<span class="question-mark">?</span>;
-<a href=#3708 id=3708 data-nosnippet>3708</a>        <span class="kw">if </span>scriptop.<span class="number">0 </span>== <span class="string">"FLOATING" </span>{
-<a href=#3709 id=3709 data-nosnippet>3709</a>          level += <span class="number">1</span>;
-<a href=#3710 id=3710 data-nosnippet>3710</a>        }
-<a href=#3711 id=3711 data-nosnippet>3711</a>      }
-<a href=#3712 id=3712 data-nosnippet>3712</a>    }
-<a href=#3713 id=3713 data-nosnippet>3713</a>  }
-<a href=#3714 id=3714 data-nosnippet>3714</a>
-<a href=#3715 id=3715 data-nosnippet>3715</a>  <span class="comment">// Process post-scripts; save non-scripts for insertion after
-<a href=#3716 id=3716 data-nosnippet>3716</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>after: Vec&lt;Digested&gt; = Vec::new();
-<a href=#3717 id=3717 data-nosnippet>3717</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(post_arg) = post {
-<a href=#3718 id=3718 data-nosnippet>3718</a>    <span class="kw">for </span>item <span class="kw">in </span>post_arg.unlist() {
-<a href=#3719 id=3719 data-nosnippet>3719</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(scriptop) = is_script(<span class="kw-2">&amp;</span>item) {
-<a href=#3720 id=3720 data-nosnippet>3720</a>        <span class="kw">if </span>scriptop.<span class="number">0 </span>== <span class="string">"FLOATING" </span>{
-<a href=#3721 id=3721 data-nosnippet>3721</a>          level += <span class="number">1</span>;
-<a href=#3722 id=3722 data-nosnippet>3722</a>        }
-<a href=#3723 id=3723 data-nosnippet>3723</a>        <span class="kw">let </span>y = <span class="kw">if </span>scriptop.<span class="number">1 </span>== Catcode::SUPER {
-<a href=#3724 id=3724 data-nosnippet>3724</a>          <span class="string">"SUPERSCRIPTOP"
-<a href=#3725 id=3725 data-nosnippet>3725</a>        </span>} <span class="kw">else </span>{
-<a href=#3726 id=3726 data-nosnippet>3726</a>          <span class="string">"SUBSCRIPTOP"
-<a href=#3727 id=3727 data-nosnippet>3727</a>        </span>};
-<a href=#3728 id=3728 data-nosnippet>3728</a>        node = sideset_wrap_impl(document, node, <span class="string">"post"</span>, y, level, <span class="kw-2">&amp;</span>item)<span class="question-mark">?</span>;
-<a href=#3729 id=3729 data-nosnippet>3729</a>      } <span class="kw">else if </span>!item.is_empty().unwrap_or(<span class="bool-val">true</span>) {
-<a href=#3730 id=3730 data-nosnippet>3730</a>        after.push(item);
-<a href=#3731 id=3731 data-nosnippet>3731</a>      }
-<a href=#3732 id=3732 data-nosnippet>3732</a>    }
-<a href=#3733 id=3733 data-nosnippet>3733</a>  }
-<a href=#3734 id=3734 data-nosnippet>3734</a>
-<a href=#3735 id=3735 data-nosnippet>3735</a>  <span class="comment">// Set scriptpos on the final node
-<a href=#3736 id=3736 data-nosnippet>3736</a>  </span><span class="kw">if </span>!opx.is_empty() {
-<a href=#3737 id=3737 data-nosnippet>3737</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"scriptpos"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{opx}{level0}"</span>))<span class="question-mark">?</span>;
-<a href=#3738 id=3738 data-nosnippet>3738</a>  }
-<a href=#3739 id=3739 data-nosnippet>3739</a>
-<a href=#3740 id=3740 data-nosnippet>3740</a>  <span class="comment">// Perl: Insert non-script garbage from post AFTER the sideset structure
-<a href=#3741 id=3741 data-nosnippet>3741</a>  </span><span class="kw">for </span>nonscript <span class="kw">in </span><span class="kw-2">&amp;</span>after {
-<a href=#3742 id=3742 data-nosnippet>3742</a>    document.open_element(<span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3743 id=3743 data-nosnippet>3743</a>    document.absorb(nonscript, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3744 id=3744 data-nosnippet>3744</a>    document.close_element(<span class="string">"ltx:XMWrap"</span>)<span class="question-mark">?</span>;
-<a href=#3745 id=3745 data-nosnippet>3745</a>  }
-<a href=#3746 id=3746 data-nosnippet>3746</a>  <span class="prelude-val">Ok</span>(())
-<a href=#3747 id=3747 data-nosnippet>3747</a>}
-<a href=#3748 id=3748 data-nosnippet>3748</a>
-<a href=#3749 id=3749 data-nosnippet>3749</a><span class="doccomment">/// Perl: sidesetWrap (amsmath.sty.ltxml L1227-1234)
-<a href=#3750 id=3750 data-nosnippet>3750</a>/// Uses Document's stack-based API (openElement/closeElement) matching Perl.
-<a href=#3751 id=3751 data-nosnippet>3751</a></span><span class="kw">fn </span>sideset_wrap_impl(
-<a href=#3752 id=3752 data-nosnippet>3752</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#3753 id=3753 data-nosnippet>3753</a>  inner: Node,
-<a href=#3754 id=3754 data-nosnippet>3754</a>  x: <span class="kw-2">&amp;</span>str,
-<a href=#3755 id=3755 data-nosnippet>3755</a>  y: <span class="kw-2">&amp;</span>str,
-<a href=#3756 id=3756 data-nosnippet>3756</a>  level: usize,
-<a href=#3757 id=3757 data-nosnippet>3757</a>  script: <span class="kw-2">&amp;</span>Digested,
-<a href=#3758 id=3758 data-nosnippet>3758</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
-<a href=#3759 id=3759 data-nosnippet>3759</a>  <span class="kw">use </span>latexml_core::digested::DigestedData;
-<a href=#3760 id=3760 data-nosnippet>3760</a>
-<a href=#3761 id=3761 data-nosnippet>3761</a>  <span class="kw">let </span>scriptpos = <span class="macro">format!</span>(<span class="string">"{x}{level}"</span>);
-<a href=#3762 id=3762 data-nosnippet>3762</a>  <span class="comment">// Perl: $document-&gt;openElement('ltx:XMApp')
-<a href=#3763 id=3763 data-nosnippet>3763</a>  </span>document.open_element(<span class="string">"ltx:XMApp"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3764 id=3764 data-nosnippet>3764</a>  <span class="comment">// Perl: $document-&gt;insertElement('ltx:XMTok', undef, role =&gt; ..., scriptpos =&gt; ...)
-<a href=#3765 id=3765 data-nosnippet>3765</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>tok_attrs: HashMap&lt;String, String&gt; = HashMap::default();
-<a href=#3766 id=3766 data-nosnippet>3766</a>  tok_attrs.insert(<span class="string">"role"</span>.to_string(), y.to_string());
-<a href=#3767 id=3767 data-nosnippet>3767</a>  tok_attrs.insert(<span class="string">"scriptpos"</span>.to_string(), scriptpos);
-<a href=#3768 id=3768 data-nosnippet>3768</a>  document.open_element(<span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(tok_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3769 id=3769 data-nosnippet>3769</a>  document.close_element(<span class="string">"ltx:XMTok"</span>)<span class="question-mark">?</span>;
-<a href=#3770 id=3770 data-nosnippet>3770</a>  <span class="comment">// Perl: $new-&gt;appendChild($node) — move existing node into current element (XMApp)
-<a href=#3771 id=3771 data-nosnippet>3771</a>  // Use append_tree to properly recreate the node tree (avoids libxml DOM corruption
-<a href=#3772 id=3772 data-nosnippet>3772</a>  // from unlink_node + add_child on detached nodes).
-<a href=#3773 id=3773 data-nosnippet>3773</a>  </span><span class="kw">let </span>inner_children = <span class="macro">vec!</span>[inner.clone()];
-<a href=#3774 id=3774 data-nosnippet>3774</a>  <span class="kw">let </span><span class="kw-2">mut </span>current = document.get_node().clone();
-<a href=#3775 id=3775 data-nosnippet>3775</a>  document.append_tree(<span class="kw-2">&amp;mut </span>current, inner_children)<span class="question-mark">?</span>;
-<a href=#3776 id=3776 data-nosnippet>3776</a>  <span class="comment">// Perl moves the node, so no box changes hands: the copy's box stays in the
-<a href=#3777 id=3777 data-nosnippet>3777</a>  // aligned cell's, whose reversion is its `tex` (`\sideset` in `aligned`).
-<a href=#3778 id=3778 data-nosnippet>3778</a>  </span>document.remove_node_keeping_box(inner);
-<a href=#3779 id=3779 data-nosnippet>3779</a>  <span class="comment">// Perl: $document-&gt;insertElement('ltx:XMWrap', $script-&gt;getArg(1))
-<a href=#3780 id=3780 data-nosnippet>3780</a>  </span>document.open_element(<span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3781 id=3781 data-nosnippet>3781</a>  <span class="kw">if let </span>DigestedData::Whatsit(w) = script.data()
-<a href=#3782 id=3782 data-nosnippet>3782</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(arg) = w.borrow().get_arg(<span class="number">1</span>)
-<a href=#3783 id=3783 data-nosnippet>3783</a>  {
-<a href=#3784 id=3784 data-nosnippet>3784</a>    document.absorb(arg, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3785 id=3785 data-nosnippet>3785</a>  }
-<a href=#3786 id=3786 data-nosnippet>3786</a>  document.close_element(<span class="string">"ltx:XMWrap"</span>)<span class="question-mark">?</span>;
-<a href=#3787 id=3787 data-nosnippet>3787</a>  <span class="comment">// Perl: $document-&gt;closeElement('ltx:XMApp')
-<a href=#3788 id=3788 data-nosnippet>3788</a>  </span><span class="kw">let </span>closed = document.close_element(<span class="string">"ltx:XMApp"</span>)<span class="question-mark">?</span>;
-<a href=#3789 id=3789 data-nosnippet>3789</a>  <span class="prelude-val">Ok</span>(closed.unwrap_or_else(|| document.get_node().clone()))
-<a href=#3790 id=3790 data-nosnippet>3790</a>}
-<a href=#3791 id=3791 data-nosnippet>3791</a>
-<a href=#3792 id=3792 data-nosnippet>3792</a><span class="comment">// Additional amsmath definitions are added inline in the LoadDefinitions block above.
-<a href=#3793 id=3793 data-nosnippet>3793</a>
-<a href=#3794 id=3794 data-nosnippet>3794</a></span><span class="doccomment">/// amsmath for a binding whose original file does not load it — spie.cls (TeX Live's; spieman.cls), the old
-<a href=#3795 id=3795 data-nosnippet>3795</a>/// ws-procs9x6.cls and ws-ijmpb.cls copies, Scientific Word 2.5's tcilatex.tex, OmniBus's autoload, the old aa.cls —
-<a href=#3796 id=3796 data-nosnippet>3796</a>/// so that a paper using amsmath's commands without loading it still gets them (`original_loads`: the original does
-<a href=#3797 id=3797 data-nosnippet>3797</a>/// load it, as the paper's copy reads, [`crate::shipped_class::shipped_copy_loads`]; then this is the plain load), with
-<a href=#3798 id=3798 data-nosnippet>3798</a>/// the `options` the original passes to it (imsart.cls:84-118 `\PassOptionsToPackage{leqno}{amsmath}`).
-<a href=#3799 id=3799 data-nosnippet>3799</a>/// In pdflatex amsmath is not loaded there: a `\pmatrix{…}`, `\matrix{…}` or `\cases{…}` is Plain TeX's, with no
-<a href=#3800 id=3800 data-nosnippet>3800</a>/// "Old form `\pmatrix'" error (amsmath.sty:1077-1090 `\matrix@check`), and `\@ifpackageloaded{amsmath}` is false
-<a href=#3801 id=3801 data-nosnippet>3801</a>/// (0805.4522 tcilatex, 1003.3524 spie, nucl-th0206027 ws-procs9x6, quant-ph0607049 ws-ijmpb: no error in pdflatex).
-<a href=#3802 id=3802 data-nosnippet>3802</a>/// So the old-form error is off ([`amsmath_loaded_beyond_original`]) until the real amsmath.sty loads: the document's
-<a href=#3803 id=3803 data-nosnippet>3803</a>/// own `\usepackage{amsmath}`, a raw class or package that loads it (ptptex.cls:362 `\if@ams`; a copy's own load, read
-<a href=#3804 id=3804 data-nosnippet>3804</a>/// as the stand-in's copy, `binding::author_files`), or a binding whose original does (mathtools, physics). That
-<a href=#3805 id=3805 data-nosnippet>3805</a>/// load runs the binding again, its `\matrix@error` the error again, as Perl's aa.cls.ltxml:57 reload does for aa. A
-<a href=#3806 id=3806 data-nosnippet>3806</a>/// second such binding finds amsmath's definitions in force and loads nothing. Guards
-<a href=#3807 id=3807 data-nosnippet>3807</a>/// `perfect_kernel_batch77q::{old_form_matrix_is_plain_tex_where_amsmath_is_not_loaded,
-<a href=#3808 id=3808 data-nosnippet>3808</a>/// old_form_matrix_errs_once_the_document_loads_amsmath}`.
-<a href=#3809 id=3809 data-nosnippet>3809</a></span><span class="kw">pub fn </span>require_amsmath_beyond_original(original_loads: bool, options: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#3810 id=3810 data-nosnippet>3810</a>  <span class="comment">// A file whose original does load amsmath after an earlier beyond-original load is the real load: it runs the
-<a href=#3811 id=3811 data-nosnippet>3811</a>  // binding again (spie.cls, then a Scientific Word 5.x tcilatex.tex copy with `\RequirePackage{amsmath}`).
-<a href=#3812 id=3812 data-nosnippet>3812</a>  </span><span class="kw">if </span>load_recorded(<span class="string">"amsmath.sty"</span>) || (!original_loads &amp;&amp; lookup_bool(<span class="string">"amsmath.sty:beyond_original"</span>))
-<a href=#3813 id=3813 data-nosnippet>3813</a>  {
-<a href=#3814 id=3814 data-nosnippet>3814</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#3815 id=3815 data-nosnippet>3815</a>  }
-<a href=#3816 id=3816 data-nosnippet>3816</a>  require_package(<span class="string">"amsmath"</span>, RequireOptions {
-<a href=#3817 id=3817 data-nosnippet>3817</a>    options: options.iter().map(|option| option.to_string()).collect(),
-<a href=#3818 id=3818 data-nosnippet>3818</a>    ..RequireOptions::default()
-<a href=#3819 id=3819 data-nosnippet>3819</a>  })<span class="question-mark">?</span>;
-<a href=#3820 id=3820 data-nosnippet>3820</a>  <span class="kw">if </span>!original_loads {
-<a href=#3821 id=3821 data-nosnippet>3821</a>    amsmath_loaded_beyond_original();
-<a href=#3822 id=3822 data-nosnippet>3822</a>  }
-<a href=#3823 id=3823 data-nosnippet>3823</a>  <span class="prelude-val">Ok</span>(())
-<a href=#3824 id=3824 data-nosnippet>3824</a>}
-<a href=#3825 id=3825 data-nosnippet>3825</a>
-<a href=#3826 id=3826 data-nosnippet>3826</a><span class="doccomment">/// The state after amsmath's binding was loaded where the original file does not load amsmath
-<a href=#3827 id=3827 data-nosnippet>3827</a>/// ([`require_amsmath_beyond_original`]; aa.cls's aa_support): amsmath's definitions stay in force, its old-form
-<a href=#3828 id=3828 data-nosnippet>3828</a>/// error is off (`\matrix@error` gobbles the command), and amsmath counts as not loaded
-<a href=#3829 id=3829 data-nosnippet>3829</a>/// ([`latexml_core::state::mark_unloaded`]), so the next request for it runs its binding again.
-<a href=#3830 id=3830 data-nosnippet>3830</a></span><span class="kw">pub fn </span>amsmath_loaded_beyond_original() {
-<a href=#3831 id=3831 data-nosnippet>3831</a>  let_i(
-<a href=#3832 id=3832 data-nosnippet>3832</a>    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\matrix@error"</span>),
-<a href=#3833 id=3833 data-nosnippet>3833</a>    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@gobble"</span>),
-<a href=#3834 id=3834 data-nosnippet>3834</a>    <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#3835 id=3835 data-nosnippet>3835</a>  );
-<a href=#3836 id=3836 data-nosnippet>3836</a>  mark_unloaded(<span class="string">"amsmath.sty"</span>);
-<a href=#3837 id=3837 data-nosnippet>3837</a>  assign_value(<span class="string">"amsmath.sty:beyond_original"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#3838 id=3838 data-nosnippet>3838</a>}
+<a href=#3655 id=3655 data-nosnippet>3655</a>  <span class="kw">let </span>pre = args.first().and_then(|a| a.as_ref());
+<a href=#3656 id=3656 data-nosnippet>3656</a>  <span class="kw">let </span>post = args.get(<span class="number">1</span>).and_then(|a| a.as_ref());
+<a href=#3657 id=3657 data-nosnippet>3657</a>  <span class="kw">let </span>base = args.get(<span class="number">2</span>).and_then(|a| a.as_ref());
+<a href=#3658 id=3658 data-nosnippet>3658</a>
+<a href=#3659 id=3659 data-nosnippet>3659</a>  <span class="comment">// Perl: Insert non-scripts from pre as XMWrap BEFORE the base
+<a href=#3660 id=3660 data-nosnippet>3660</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(pre_arg) = pre {
+<a href=#3661 id=3661 data-nosnippet>3661</a>    <span class="kw">for </span>item <span class="kw">in </span>pre_arg.unlist() {
+<a href=#3662 id=3662 data-nosnippet>3662</a>      <span class="kw">if </span>is_script(<span class="kw-2">&amp;</span>item).is_none() &amp;&amp; !item.is_empty().unwrap_or(<span class="bool-val">true</span>) {
+<a href=#3663 id=3663 data-nosnippet>3663</a>        document.open_element(<span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3664 id=3664 data-nosnippet>3664</a>        document.absorb(<span class="kw-2">&amp;</span>item, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3665 id=3665 data-nosnippet>3665</a>        document.close_element(<span class="string">"ltx:XMWrap"</span>)<span class="question-mark">?</span>;
+<a href=#3666 id=3666 data-nosnippet>3666</a>      }
+<a href=#3667 id=3667 data-nosnippet>3667</a>    }
+<a href=#3668 id=3668 data-nosnippet>3668</a>  }
+<a href=#3669 id=3669 data-nosnippet>3669</a>
+<a href=#3670 id=3670 data-nosnippet>3670</a>  <span class="comment">// Insert the base in XMArg
+<a href=#3671 id=3671 data-nosnippet>3671</a>  </span>document.open_element(<span class="string">"ltx:XMArg"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3672 id=3672 data-nosnippet>3672</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = base {
+<a href=#3673 id=3673 data-nosnippet>3673</a>    document.absorb(b, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3674 id=3674 data-nosnippet>3674</a>  }
+<a href=#3675 id=3675 data-nosnippet>3675</a>  <span class="kw">let </span>node_opt = document.close_element(<span class="string">"ltx:XMArg"</span>)<span class="question-mark">?</span>;
+<a href=#3676 id=3676 data-nosnippet>3676</a>  <span class="kw">let </span><span class="kw-2">mut </span>node = node_opt.unwrap_or_else(|| document.get_node().clone());
+<a href=#3677 id=3677 data-nosnippet>3677</a>
+<a href=#3678 id=3678 data-nosnippet>3678</a>  <span class="comment">// Get scriptpos prefix from base
+<a href=#3679 id=3679 data-nosnippet>3679</a>  </span><span class="kw">let </span>opx = node
+<a href=#3680 id=3680 data-nosnippet>3680</a>    .get_first_element_child()
+<a href=#3681 id=3681 data-nosnippet>3681</a>    .and_then(|ch| ch.get_attribute(<span class="string">"scriptpos"</span>))
+<a href=#3682 id=3682 data-nosnippet>3682</a>    .map(|sp| {
+<a href=#3683 id=3683 data-nosnippet>3683</a>      <span class="kw">let </span>prefix: String = sp.chars().take_while(|c| !c.is_ascii_digit()).collect();
+<a href=#3684 id=3684 data-nosnippet>3684</a>      <span class="kw">if </span>prefix.is_empty() {
+<a href=#3685 id=3685 data-nosnippet>3685</a>        <span class="string">"post"</span>.to_string()
+<a href=#3686 id=3686 data-nosnippet>3686</a>      } <span class="kw">else </span>{
+<a href=#3687 id=3687 data-nosnippet>3687</a>        prefix
+<a href=#3688 id=3688 data-nosnippet>3688</a>      }
+<a href=#3689 id=3689 data-nosnippet>3689</a>    })
+<a href=#3690 id=3690 data-nosnippet>3690</a>    .unwrap_or_else(|| <span class="string">"post"</span>.to_string());
+<a href=#3691 id=3691 data-nosnippet>3691</a>
+<a href=#3692 id=3692 data-nosnippet>3692</a>  <span class="kw">let </span>level0 = props
+<a href=#3693 id=3693 data-nosnippet>3693</a>    .get(<span class="string">"scriptlevel"</span>)
+<a href=#3694 id=3694 data-nosnippet>3694</a>    .map(|v| v.to_string().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>))
+<a href=#3695 id=3695 data-nosnippet>3695</a>    .unwrap_or(<span class="number">0</span>);
+<a href=#3696 id=3696 data-nosnippet>3696</a>  <span class="kw">let </span><span class="kw-2">mut </span>level = level0;
+<a href=#3697 id=3697 data-nosnippet>3697</a>
+<a href=#3698 id=3698 data-nosnippet>3698</a>  <span class="comment">// Process pre-scripts in reverse
+<a href=#3699 id=3699 data-nosnippet>3699</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(pre_arg) = pre {
+<a href=#3700 id=3700 data-nosnippet>3700</a>    <span class="comment">// Reverse the token Vec in-place instead of into_iter().rev().collect()
+<a href=#3701 id=3701 data-nosnippet>3701</a>    // which would allocate a second Vec.
+<a href=#3702 id=3702 data-nosnippet>3702</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>items = pre_arg.unlist();
+<a href=#3703 id=3703 data-nosnippet>3703</a>    items.reverse();
+<a href=#3704 id=3704 data-nosnippet>3704</a>    <span class="kw">for </span>item <span class="kw">in </span>items {
+<a href=#3705 id=3705 data-nosnippet>3705</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(scriptop) = is_script(<span class="kw-2">&amp;</span>item) {
+<a href=#3706 id=3706 data-nosnippet>3706</a>        <span class="kw">let </span>y = <span class="kw">if </span>scriptop.<span class="number">1 </span>== Catcode::SUPER {
+<a href=#3707 id=3707 data-nosnippet>3707</a>          <span class="string">"SUPERSCRIPTOP"
+<a href=#3708 id=3708 data-nosnippet>3708</a>        </span>} <span class="kw">else </span>{
+<a href=#3709 id=3709 data-nosnippet>3709</a>          <span class="string">"SUBSCRIPTOP"
+<a href=#3710 id=3710 data-nosnippet>3710</a>        </span>};
+<a href=#3711 id=3711 data-nosnippet>3711</a>        node = sideset_wrap_impl(document, node, <span class="string">"pre"</span>, y, level, <span class="kw-2">&amp;</span>item)<span class="question-mark">?</span>;
+<a href=#3712 id=3712 data-nosnippet>3712</a>        <span class="kw">if </span>scriptop.<span class="number">0 </span>== <span class="string">"FLOATING" </span>{
+<a href=#3713 id=3713 data-nosnippet>3713</a>          level += <span class="number">1</span>;
+<a href=#3714 id=3714 data-nosnippet>3714</a>        }
+<a href=#3715 id=3715 data-nosnippet>3715</a>      }
+<a href=#3716 id=3716 data-nosnippet>3716</a>    }
+<a href=#3717 id=3717 data-nosnippet>3717</a>  }
+<a href=#3718 id=3718 data-nosnippet>3718</a>
+<a href=#3719 id=3719 data-nosnippet>3719</a>  <span class="comment">// Process post-scripts; save non-scripts for insertion after
+<a href=#3720 id=3720 data-nosnippet>3720</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>after: Vec&lt;Digested&gt; = Vec::new();
+<a href=#3721 id=3721 data-nosnippet>3721</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(post_arg) = post {
+<a href=#3722 id=3722 data-nosnippet>3722</a>    <span class="kw">for </span>item <span class="kw">in </span>post_arg.unlist() {
+<a href=#3723 id=3723 data-nosnippet>3723</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(scriptop) = is_script(<span class="kw-2">&amp;</span>item) {
+<a href=#3724 id=3724 data-nosnippet>3724</a>        <span class="kw">if </span>scriptop.<span class="number">0 </span>== <span class="string">"FLOATING" </span>{
+<a href=#3725 id=3725 data-nosnippet>3725</a>          level += <span class="number">1</span>;
+<a href=#3726 id=3726 data-nosnippet>3726</a>        }
+<a href=#3727 id=3727 data-nosnippet>3727</a>        <span class="kw">let </span>y = <span class="kw">if </span>scriptop.<span class="number">1 </span>== Catcode::SUPER {
+<a href=#3728 id=3728 data-nosnippet>3728</a>          <span class="string">"SUPERSCRIPTOP"
+<a href=#3729 id=3729 data-nosnippet>3729</a>        </span>} <span class="kw">else </span>{
+<a href=#3730 id=3730 data-nosnippet>3730</a>          <span class="string">"SUBSCRIPTOP"
+<a href=#3731 id=3731 data-nosnippet>3731</a>        </span>};
+<a href=#3732 id=3732 data-nosnippet>3732</a>        node = sideset_wrap_impl(document, node, <span class="string">"post"</span>, y, level, <span class="kw-2">&amp;</span>item)<span class="question-mark">?</span>;
+<a href=#3733 id=3733 data-nosnippet>3733</a>      } <span class="kw">else if </span>!item.is_empty().unwrap_or(<span class="bool-val">true</span>) {
+<a href=#3734 id=3734 data-nosnippet>3734</a>        after.push(item);
+<a href=#3735 id=3735 data-nosnippet>3735</a>      }
+<a href=#3736 id=3736 data-nosnippet>3736</a>    }
+<a href=#3737 id=3737 data-nosnippet>3737</a>  }
+<a href=#3738 id=3738 data-nosnippet>3738</a>
+<a href=#3739 id=3739 data-nosnippet>3739</a>  <span class="comment">// Set scriptpos on the final node
+<a href=#3740 id=3740 data-nosnippet>3740</a>  </span><span class="kw">if </span>!opx.is_empty() {
+<a href=#3741 id=3741 data-nosnippet>3741</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"scriptpos"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{opx}{level0}"</span>))<span class="question-mark">?</span>;
+<a href=#3742 id=3742 data-nosnippet>3742</a>  }
+<a href=#3743 id=3743 data-nosnippet>3743</a>
+<a href=#3744 id=3744 data-nosnippet>3744</a>  <span class="comment">// Perl: Insert non-script garbage from post AFTER the sideset structure
+<a href=#3745 id=3745 data-nosnippet>3745</a>  </span><span class="kw">for </span>nonscript <span class="kw">in </span><span class="kw-2">&amp;</span>after {
+<a href=#3746 id=3746 data-nosnippet>3746</a>    document.open_element(<span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3747 id=3747 data-nosnippet>3747</a>    document.absorb(nonscript, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3748 id=3748 data-nosnippet>3748</a>    document.close_element(<span class="string">"ltx:XMWrap"</span>)<span class="question-mark">?</span>;
+<a href=#3749 id=3749 data-nosnippet>3749</a>  }
+<a href=#3750 id=3750 data-nosnippet>3750</a>  <span class="prelude-val">Ok</span>(())
+<a href=#3751 id=3751 data-nosnippet>3751</a>}
+<a href=#3752 id=3752 data-nosnippet>3752</a>
+<a href=#3753 id=3753 data-nosnippet>3753</a><span class="doccomment">/// Perl: sidesetWrap (amsmath.sty.ltxml L1227-1234)
+<a href=#3754 id=3754 data-nosnippet>3754</a>/// Uses Document's stack-based API (openElement/closeElement) matching Perl.
+<a href=#3755 id=3755 data-nosnippet>3755</a></span><span class="kw">fn </span>sideset_wrap_impl(
+<a href=#3756 id=3756 data-nosnippet>3756</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#3757 id=3757 data-nosnippet>3757</a>  inner: Node,
+<a href=#3758 id=3758 data-nosnippet>3758</a>  x: <span class="kw-2">&amp;</span>str,
+<a href=#3759 id=3759 data-nosnippet>3759</a>  y: <span class="kw-2">&amp;</span>str,
+<a href=#3760 id=3760 data-nosnippet>3760</a>  level: usize,
+<a href=#3761 id=3761 data-nosnippet>3761</a>  script: <span class="kw-2">&amp;</span>Digested,
+<a href=#3762 id=3762 data-nosnippet>3762</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+<a href=#3763 id=3763 data-nosnippet>3763</a>  <span class="kw">use </span>latexml_core::digested::DigestedData;
+<a href=#3764 id=3764 data-nosnippet>3764</a>
+<a href=#3765 id=3765 data-nosnippet>3765</a>  <span class="kw">let </span>scriptpos = <span class="macro">format!</span>(<span class="string">"{x}{level}"</span>);
+<a href=#3766 id=3766 data-nosnippet>3766</a>  <span class="comment">// Perl: $document-&gt;openElement('ltx:XMApp')
+<a href=#3767 id=3767 data-nosnippet>3767</a>  </span>document.open_element(<span class="string">"ltx:XMApp"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3768 id=3768 data-nosnippet>3768</a>  <span class="comment">// Perl: $document-&gt;insertElement('ltx:XMTok', undef, role =&gt; ..., scriptpos =&gt; ...)
+<a href=#3769 id=3769 data-nosnippet>3769</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>tok_attrs: HashMap&lt;String, String&gt; = HashMap::default();
+<a href=#3770 id=3770 data-nosnippet>3770</a>  tok_attrs.insert(<span class="string">"role"</span>.to_string(), y.to_string());
+<a href=#3771 id=3771 data-nosnippet>3771</a>  tok_attrs.insert(<span class="string">"scriptpos"</span>.to_string(), scriptpos);
+<a href=#3772 id=3772 data-nosnippet>3772</a>  document.open_element(<span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(tok_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3773 id=3773 data-nosnippet>3773</a>  document.close_element(<span class="string">"ltx:XMTok"</span>)<span class="question-mark">?</span>;
+<a href=#3774 id=3774 data-nosnippet>3774</a>  <span class="comment">// Perl: $new-&gt;appendChild($node) — move existing node into current element (XMApp)
+<a href=#3775 id=3775 data-nosnippet>3775</a>  // Use append_tree to properly recreate the node tree (avoids libxml DOM corruption
+<a href=#3776 id=3776 data-nosnippet>3776</a>  // from unlink_node + add_child on detached nodes).
+<a href=#3777 id=3777 data-nosnippet>3777</a>  </span><span class="kw">let </span>inner_children = <span class="macro">vec!</span>[inner.clone()];
+<a href=#3778 id=3778 data-nosnippet>3778</a>  <span class="kw">let </span><span class="kw-2">mut </span>current = document.get_node().clone();
+<a href=#3779 id=3779 data-nosnippet>3779</a>  document.append_tree(<span class="kw-2">&amp;mut </span>current, inner_children)<span class="question-mark">?</span>;
+<a href=#3780 id=3780 data-nosnippet>3780</a>  <span class="comment">// Perl moves the node, so no box changes hands: the copy's box stays in the
+<a href=#3781 id=3781 data-nosnippet>3781</a>  // aligned cell's, whose reversion is its `tex` (`\sideset` in `aligned`).
+<a href=#3782 id=3782 data-nosnippet>3782</a>  </span>document.remove_node_keeping_box(inner);
+<a href=#3783 id=3783 data-nosnippet>3783</a>  <span class="comment">// Perl: $document-&gt;insertElement('ltx:XMWrap', $script-&gt;getArg(1))
+<a href=#3784 id=3784 data-nosnippet>3784</a>  </span>document.open_element(<span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3785 id=3785 data-nosnippet>3785</a>  <span class="kw">if let </span>DigestedData::Whatsit(w) = script.data()
+<a href=#3786 id=3786 data-nosnippet>3786</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(arg) = w.borrow().get_arg(<span class="number">1</span>)
+<a href=#3787 id=3787 data-nosnippet>3787</a>  {
+<a href=#3788 id=3788 data-nosnippet>3788</a>    document.absorb(arg, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#3789 id=3789 data-nosnippet>3789</a>  }
+<a href=#3790 id=3790 data-nosnippet>3790</a>  document.close_element(<span class="string">"ltx:XMWrap"</span>)<span class="question-mark">?</span>;
+<a href=#3791 id=3791 data-nosnippet>3791</a>  <span class="comment">// Perl: $document-&gt;closeElement('ltx:XMApp')
+<a href=#3792 id=3792 data-nosnippet>3792</a>  </span><span class="kw">let </span>closed = document.close_element(<span class="string">"ltx:XMApp"</span>)<span class="question-mark">?</span>;
+<a href=#3793 id=3793 data-nosnippet>3793</a>  <span class="prelude-val">Ok</span>(closed.unwrap_or_else(|| document.get_node().clone()))
+<a href=#3794 id=3794 data-nosnippet>3794</a>}
+<a href=#3795 id=3795 data-nosnippet>3795</a>
+<a href=#3796 id=3796 data-nosnippet>3796</a><span class="comment">// Additional amsmath definitions are added inline in the LoadDefinitions block above.
+<a href=#3797 id=3797 data-nosnippet>3797</a>
+<a href=#3798 id=3798 data-nosnippet>3798</a></span><span class="doccomment">/// amsmath for a binding whose original file does not load it — spie.cls (TeX Live's; spieman.cls), the old
+<a href=#3799 id=3799 data-nosnippet>3799</a>/// ws-procs9x6.cls and ws-ijmpb.cls copies, Scientific Word 2.5's tcilatex.tex, OmniBus's autoload, the old aa.cls —
+<a href=#3800 id=3800 data-nosnippet>3800</a>/// so that a paper using amsmath's commands without loading it still gets them (`original_loads`: the original does
+<a href=#3801 id=3801 data-nosnippet>3801</a>/// load it, as the paper's copy reads, [`crate::shipped_class::shipped_copy_loads`]; then this is the plain load), with
+<a href=#3802 id=3802 data-nosnippet>3802</a>/// the `options` the original passes to it (imsart.cls:84-118 `\PassOptionsToPackage{leqno}{amsmath}`).
+<a href=#3803 id=3803 data-nosnippet>3803</a>/// In pdflatex amsmath is not loaded there: a `\pmatrix{…}`, `\matrix{…}` or `\cases{…}` is Plain TeX's, with no
+<a href=#3804 id=3804 data-nosnippet>3804</a>/// "Old form `\pmatrix'" error (amsmath.sty:1077-1090 `\matrix@check`), and `\@ifpackageloaded{amsmath}` is false
+<a href=#3805 id=3805 data-nosnippet>3805</a>/// (0805.4522 tcilatex, 1003.3524 spie, nucl-th0206027 ws-procs9x6, quant-ph0607049 ws-ijmpb: no error in pdflatex).
+<a href=#3806 id=3806 data-nosnippet>3806</a>/// So the old-form error is off ([`amsmath_loaded_beyond_original`]) until the real amsmath.sty loads: the document's
+<a href=#3807 id=3807 data-nosnippet>3807</a>/// own `\usepackage{amsmath}`, a raw class or package that loads it (ptptex.cls:362 `\if@ams`; a copy's own load, read
+<a href=#3808 id=3808 data-nosnippet>3808</a>/// as the stand-in's copy, `binding::author_files`), or a binding whose original does (mathtools, physics). That
+<a href=#3809 id=3809 data-nosnippet>3809</a>/// load runs the binding again, its `\matrix@error` the error again, as Perl's aa.cls.ltxml:57 reload does for aa. A
+<a href=#3810 id=3810 data-nosnippet>3810</a>/// second such binding finds amsmath's definitions in force and loads nothing. Guards
+<a href=#3811 id=3811 data-nosnippet>3811</a>/// `perfect_kernel_batch77q::{old_form_matrix_is_plain_tex_where_amsmath_is_not_loaded,
+<a href=#3812 id=3812 data-nosnippet>3812</a>/// old_form_matrix_errs_once_the_document_loads_amsmath}`.
+<a href=#3813 id=3813 data-nosnippet>3813</a></span><span class="kw">pub fn </span>require_amsmath_beyond_original(original_loads: bool, options: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#3814 id=3814 data-nosnippet>3814</a>  <span class="comment">// A file whose original does load amsmath after an earlier beyond-original load is the real load: it runs the
+<a href=#3815 id=3815 data-nosnippet>3815</a>  // binding again (spie.cls, then a Scientific Word 5.x tcilatex.tex copy with `\RequirePackage{amsmath}`).
+<a href=#3816 id=3816 data-nosnippet>3816</a>  </span><span class="kw">if </span>load_recorded(<span class="string">"amsmath.sty"</span>) || (!original_loads &amp;&amp; lookup_bool(<span class="string">"amsmath.sty:beyond_original"</span>))
+<a href=#3817 id=3817 data-nosnippet>3817</a>  {
+<a href=#3818 id=3818 data-nosnippet>3818</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#3819 id=3819 data-nosnippet>3819</a>  }
+<a href=#3820 id=3820 data-nosnippet>3820</a>  require_package(<span class="string">"amsmath"</span>, RequireOptions {
+<a href=#3821 id=3821 data-nosnippet>3821</a>    options: options.iter().map(|option| option.to_string()).collect(),
+<a href=#3822 id=3822 data-nosnippet>3822</a>    ..RequireOptions::default()
+<a href=#3823 id=3823 data-nosnippet>3823</a>  })<span class="question-mark">?</span>;
+<a href=#3824 id=3824 data-nosnippet>3824</a>  <span class="kw">if </span>!original_loads {
+<a href=#3825 id=3825 data-nosnippet>3825</a>    amsmath_loaded_beyond_original();
+<a href=#3826 id=3826 data-nosnippet>3826</a>  }
+<a href=#3827 id=3827 data-nosnippet>3827</a>  <span class="prelude-val">Ok</span>(())
+<a href=#3828 id=3828 data-nosnippet>3828</a>}
+<a href=#3829 id=3829 data-nosnippet>3829</a>
+<a href=#3830 id=3830 data-nosnippet>3830</a><span class="doccomment">/// The state after amsmath's binding was loaded where the original file does not load amsmath
+<a href=#3831 id=3831 data-nosnippet>3831</a>/// ([`require_amsmath_beyond_original`]; aa.cls's aa_support): amsmath's definitions stay in force, its old-form
+<a href=#3832 id=3832 data-nosnippet>3832</a>/// error is off (`\matrix@error` gobbles the command), and amsmath counts as not loaded
+<a href=#3833 id=3833 data-nosnippet>3833</a>/// ([`latexml_core::state::mark_unloaded`]), so the next request for it runs its binding again.
+<a href=#3834 id=3834 data-nosnippet>3834</a></span><span class="kw">pub fn </span>amsmath_loaded_beyond_original() {
+<a href=#3835 id=3835 data-nosnippet>3835</a>  let_i(
+<a href=#3836 id=3836 data-nosnippet>3836</a>    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\matrix@error"</span>),
+<a href=#3837 id=3837 data-nosnippet>3837</a>    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@gobble"</span>),
+<a href=#3838 id=3838 data-nosnippet>3838</a>    <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#3839 id=3839 data-nosnippet>3839</a>  );
+<a href=#3840 id=3840 data-nosnippet>3840</a>  mark_unloaded(<span class="string">"amsmath.sty"</span>);
+<a href=#3841 id=3841 data-nosnippet>3841</a>  assign_value(<span class="string">"amsmath.sty:beyond_original"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#3842 id=3842 data-nosnippet>3842</a>}
 </code></pre></div></section></main></body></html>
