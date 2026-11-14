@@ -1,0 +1,29 @@
+% issue #773: colortbl saves the rule colour as a `\@tabarray` table starts (tabular, tabular*, tabularx, array) and
+% restores it after the alignment closes (colortbl.sty:119-135 `\CT@start`, `\endarray`'s `\CT@end`), so a last row
+% without `\\` (a plain one, a `\multicolumn` one) keeps the table's colour; an IEEEeqnarraybox or a longtable is no
+% `\@tabarray`: the box restores nothing early, the longtable's change reaches the next table.
+% witness: synthetic (the review of fix/arrayrulecolor 820dd03806: probes noend, ieee2, lt)
+% oracle:  pdflatex 0 errors: x/y red, z blue, c/k green, d red, e black, f-h blue, i and j red
+% engines: rust 820dd03806 = 0 errors, the y row's `|` black, tabularx's red leaks to e; Perl = no colour (no-op)
+% expect:  0 errors; the colours as the oracle
+% status:  RED (820dd03806) -> GREEN (fix/arrayrulecolor); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{colortbl,tabularx,longtable,IEEEtrantools}
+\begin{document}
+\begin{tabular}{|c|c|}\hline
+a & \begin{tabular}{|c|}\arrayrulecolor{red}\hline x\\\hline y\end{tabular}\\\hline
+b & $\begin{array}{|c|}\arrayrulecolor{blue}\hline z\end{array}$\\\hline
+\end{tabular}
+
+\begin{tabular*}{5cm}{|c|}\arrayrulecolor{green}\hline c\\\hline \multicolumn{1}{|c|}{k}\end{tabular*}
+\begin{tabularx}{5cm}{|X|}\arrayrulecolor{red}\hline d\\\hline\end{tabularx}
+\begin{tabular}{|c|}\hline e\\\hline\end{tabular}
+
+\begin{tabular}{|c|c|}\arrayrulecolor{blue}\hline
+f & $\begin{IEEEeqnarrayboxm}{c} w\end{IEEEeqnarrayboxm}$\\\hline
+g & h\\\hline
+\end{tabular}
+
+\begin{longtable}{|c|}\arrayrulecolor{red}\hline i\\\hline\end{longtable}
+\begin{tabular}{|c|}\hline j\\\hline\end{tabular}
+\end{document}

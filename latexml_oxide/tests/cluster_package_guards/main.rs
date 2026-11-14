@@ -127,6 +127,7 @@ mod vfs_file_end;
 mod xkeyval_internals;
 
 mod accent_composite_expansion;
+mod arrowfill_heads;
 mod beamer_includegraphics_overlay;
 /// Issues #772, #760, #801, #787, #773, #779: the bindings batch of 2026-11-13.
 mod bindings_batch1;
@@ -620,6 +621,8 @@ mod perfect_kernel_batchw3rb;
 mod perfect_kernel_batchw3rc;
 mod perfect_kernel_batchw3rd;
 mod perfect_kernel_batchw3rg;
+/// W4: colortbl's `\arrayrulecolor` colours each border side as the rule is drawn (#773); OD #1025.
+mod perfect_kernel_batchw4;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;

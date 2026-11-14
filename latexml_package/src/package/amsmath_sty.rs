@@ -792,7 +792,7 @@ LoadDefinitions!({
   // arrow renderer, #6 the below-label, #7 the above-label.
   // amsmath.sty L971: `\def\arrowfill@#1#2#3#4` — the stretchy-arrow renderer.
   // User code calls both directly when defining custom arrows; we don't model
-  // stretchy rendering, so pass through to plain `\to^{above}_{below}` / `\to`.
+  // stretchy rendering: `\ext@arrow` relates by its fill #5, labels as scripts.
   //
   // EVERY parameter of both is a plain TeX undelimited argument: it reads a
   // single token OR a balanced `{...}` group. Spelling any of them `Token`
@@ -815,15 +815,37 @@ LoadDefinitions!({
   // and a 194-error one here).
   DefMacro!(
     "\\ext@arrow {}{}{}{}{}{}{}",
-    "{\\mathrel{\\to}\\@ifnotempty{#7}{^{#7}}\\@ifnotempty{#6}{_{#6}}}"
+    "{\\mathrel{#5\\displaystyle}\\@ifnotempty{#7}{^{#7}}\\@ifnotempty{#6}{_{#6}}}"
   );
-  DefMacro!("\\arrowfill@ {}{}{}{}", "\\to");
-  DefMacro!("\\rightarrowfill@", "\\rightarrow");
-  DefMacro!("\\leftarrowfill@", "\\leftarrow");
-  DefMacro!("\\leftrightarrowfill@", "\\leftrightarrow");
-  DefMacro!("\\Rightarrowfill@", "\\Rightarrow");
-  DefMacro!("\\Leftarrowfill@", "\\Leftarrow");
-  DefMacro!("\\Leftrightarrowfill@", "\\Leftrightarrow");
+  // amsmath.sty:971-976 draws `#4#1 … \cleaders #2 … #3`: the heads #1 and #3 are the glyph. An end that is just the
+  // fill `\relbar`/`\Relbar` is dropped (both: the fill #2), equal ends count once, and a left/right pair of
+  // `\lx@arrowfill@compose` is its one composed arrow. Witnesses 2405.01836 (mhchem `<=>`), 1308.1071 (extpfeil `\xmapsto`).
+  RawTeX!(
+    r"\def\lx@arrowfill@relbar{\relbar}\def\lx@arrowfill@Relbar{\Relbar}
+\def\lx@arrowfill@end#1{\def\lx@arrowfill@tmp{#1}%
+\ifx\lx@arrowfill@tmp\lx@arrowfill@relbar\let\lx@arrowfill@tmp\@empty\fi
+\ifx\lx@arrowfill@tmp\lx@arrowfill@Relbar\let\lx@arrowfill@tmp\@empty\fi}
+\def\arrowfill@#1#2#3#4{\ensuremath{%
+\lx@arrowfill@end{#1}\let\lx@arrowfill@a\lx@arrowfill@tmp\lx@arrowfill@end{#3}\let\lx@arrowfill@b\lx@arrowfill@tmp
+\ifx\lx@arrowfill@a\lx@arrowfill@b\let\lx@arrowfill@b\@empty\fi
+\ifx\lx@arrowfill@a\@empty\ifx\lx@arrowfill@b\@empty\def\lx@arrowfill@a{#2}\fi\fi
+\ifcsname lx@arrowfill@\detokenize{#1}|\detokenize{#3}\endcsname
+\csname lx@arrowfill@\detokenize{#1}|\detokenize{#3}\endcsname\else\lx@arrowfill@a\lx@arrowfill@b\fi}}
+\def\lx@arrowfill@compose#1#2#3{\expandafter\def\csname lx@arrowfill@\detokenize{#1}|\detokenize{#2}\endcsname{#3}}
+\lx@arrowfill@compose\leftarrow\rightarrow\leftrightarrow
+\lx@arrowfill@compose\Leftarrow\Rightarrow\Leftrightarrow
+\lx@arrowfill@compose\longleftarrow\longrightarrow\longleftrightarrow
+\lx@arrowfill@compose\Longleftarrow\Longrightarrow\Longleftrightarrow
+\lx@arrowfill@compose{\mapstochar\relbar}\rightarrow\mapsto"
+  );
+  // amsmath.sty:977-982: each named fill is `\arrowfill@` short of its style #4; a two-headed one keeps its
+  // single glyph (↔, ⇔).
+  DefMacro!("\\rightarrowfill@ {}", "\\ensuremath{\\rightarrow}");
+  DefMacro!("\\leftarrowfill@ {}", "\\ensuremath{\\leftarrow}");
+  DefMacro!("\\leftrightarrowfill@ {}", "\\ensuremath{\\leftrightarrow}");
+  DefMacro!("\\Rightarrowfill@ {}", "\\ensuremath{\\Rightarrow}");
+  DefMacro!("\\Leftarrowfill@ {}", "\\ensuremath{\\Leftarrow}");
+  DefMacro!("\\Leftrightarrowfill@ {}", "\\ensuremath{\\Leftrightarrow}");
   DefMacro!(
     "\\xleftarrow",
     "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}"

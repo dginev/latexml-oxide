@@ -253,8 +253,10 @@ fn cluster_hdotsfor_columns() {
 /// 1000-error cap). Red without the fix: `Error:unexpected:} Attempt to close a
 /// group that switched to mode display_math`, and the `\simeq` above-label is
 /// replaced by a `0` SUBscript scavenged from the leaked `{40}`. The label
-/// decorates the arrow (Perl `relop : RELOP addOpDecoration`, 57ag), so the
-/// formula parses as `A to ^ similar-to-or-equals B`.
+/// decorates the arrow (Perl `relop : RELOP addOpDecoration`, 57ag). The relation
+/// is the fill's heads (amsmath.sty:971-976; batch AFH, before it a `\to`): the bar
+/// end `{\relbar\relbar}` is kept, as pdflatex draws it (a long bar under the label).
+/// Two adjacent RELOPs read as a `list` (the uncomposed-pair residual of AFH).
 #[test]
 fn cluster_ext_arrow_braced_mkern() {
   let x = convert_to_xml("tests/cluster_regressions/ext_arrow_braced_mkern.tex");
@@ -263,8 +265,11 @@ fn cluster_ext_arrow_braced_mkern() {
     "Math",
     &[r#"xml:id="S0.Ex1.m1""#],
     concat!(
-      r#"<Math mode="display" tex="A{\mathrel{\to}^{\simeq}}B" text="A to ^ similar-to-or-equals B" xml:id="S0.Ex1.m1"><XMath><XMApp>"#,
-      r#"<XMApp role="RELOP"><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMTok name="to" role="RELOP">→</XMTok>"#,
+      r#"<Math mode="display" tex="A{\mathrel{\relbar\relbar}^{\simeq}}B" text="A (list@(relbar, relbar)) ^ similar-to-or-equals B" xml:id="S0.Ex1.m1"><XMath><XMApp>"#,
+      r#"<XMApp role="RELOP"><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMDual role="RELOP"><XMApp><XMTok meaning="list"/>"#,
+      r#"<XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/></XMApp><XMWrap>"#,
+      r#"<XMTok name="relbar" role="RELOP" xml:id="S0.Ex1.m1.1">-</XMTok><XMTok role="PUNCT">⁣</XMTok>"#,
+      r#"<XMTok name="relbar" role="RELOP" xml:id="S0.Ex1.m1.2">-</XMTok></XMWrap></XMDual>"#,
       r#"<XMTok fontsize="70%" meaning="similar-to-or-equals" name="simeq" role="RELOP">≃</XMTok></XMApp>"#,
       r#"<XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok font="italic" role="UNKNOWN">B</XMTok></XMApp></XMath></Math>"#
     ),

@@ -1528,7 +1528,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
           <tag>(23)</tag>
           <tag role="refnum">23</tag>
         </tags>
-        <Math mode="display" tex="{}_{p}F_{q},\qquad\sideset{{}_{a}^{b}}{{}^{c}_{d}}{\sum}" text="list@(_ q _ p F, (_ a ^ b sum ^ c) _ d)" xml:id="S3.E23.m1">
+        <Math mode="display" tex="{}_{p}F_{q},\qquad\sideset{{}_{a}^{b}}{{}^{c}_{d}}{\sum}" text="list@(_ p F _ q, (_ a ^ b sum ^ c) _ d)" xml:id="S3.E23.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1538,13 +1538,13 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
               </XMApp>
               <XMWrap>
                 <XMApp xml:id="S3.E23.m1.1">
-                  <XMTok role="SUBSCRIPTOP" scriptpos="pre2"/>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
                   <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMTok font="italic" role="UNKNOWN">F</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">q</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">q</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
                 <XMApp scriptpos="mid1" xml:id="S3.E23.m1.2">

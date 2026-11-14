@@ -1,0 +1,17 @@
+% issue #773: colortbl's `\CT@arc` tests `\ifdim\baselineskip=\z@\noalign\fi` (colortbl.sty:161-164): mid-cell in an
+% `l`/`c` column (baselineskip zeroed by `\@array`) TeX errs "Misplaced \noalign"; ours makes `\arrayrulecolor`
+% `\lx@hidden@noalign` material, which mid-cell sets the colour silently (a `p` column is clean in both).
+% witness: synthetic (the review of fix/arrayrulecolor 820dd03806: probe midcell)
+% oracle:  pdflatex 1 error (Misplaced \noalign), the rules after it red
+% engines: rust a17c426ea4 = 0 errors, the rules after it red; Perl = 0 errors, no colour (no-op)
+% expect:  1 Error (Misplaced \noalign); the colours as now
+% status:  RED
+% moves:   post-merge (the error boundary of colortbl's \noalign test)
+\documentclass{article}
+\usepackage{colortbl}
+\begin{document}
+\begin{tabular}{|l|l|}\hline
+a \arrayrulecolor{red} & b\\\hline
+c & d\\\hline
+\end{tabular}
+\end{document}

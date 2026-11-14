@@ -9,6 +9,22 @@
     `\@arrayparboxrestore` do (a `\multicolumn` over such a column and longtable's `p`
     columns alike); Perl sets `\hsize` alone. Guard
     `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`.
+  - **A prescript wraps its base's post-scripts** (issue 824). `${}^{95}\mathrm{MoO}_4$`
+    and mhchem's `\ce{^{95}MoO4^{2-}}` read the 4 as a pre-subscript (`_ 4 ^ 95 MoO`,
+    `scriptpos="pre2"`): the grammar applied the prescript first and the post-script over
+    it. The post-scripts now bind first and the prescript wraps them, `^ 95 (MoO _ 4)`, as
+    Perl's `preScripted` (MathGrammar:430-439); a prescripted, post-scripted `\log` or
+    `\sin` is applied, `(^ a log _ 2)@(x)` (was `_ 2 ^ a log * x`, or unparsed). The isotope's 6 `\lx@end@inline@math`
+    errors the issue reports no longer occur since batch 50's calc `\widthof` fix. Guards
+    `perfect_kernel_batch50::calc_widthof_in_math_measures_own_box` and
+    `rust_parse_additions_test`; `sampler_test` and `mathtools_test` now match Perl's goldens.
+  - **amsmath's arrow fills keep their heads** (issue 824's sibling). `\arrowfill@` and
+    `\ext@arrow`'s fill were a plain `\to`, so mhchem's `\ce{A <=> B}` read "→→" and every
+    chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws
+    (`\arrowfill@#1#2#3#4`, :971-976): an end that is just the `\relbar`/`\Relbar` fill is dropped,
+    a left/right pair is its composed arrow (↔, ⇔, ⟷, ⟺, ↦), and the named fills
+    (`\rightarrowfill@` …) no longer leave their style argument behind. Witness 2405.01836. Guard
+    `arrowfill_heads::arrowfill_keeps_its_heads` (repros `tools/perfect_kernel/repros/arrowfill/`).
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
@@ -307,6 +323,13 @@
     `skip=`, `aboveskip=`, `belowskip=` its margins on the sides caption puts them,
     `position=auto` read as caption reads it; `\captionsetup[longtable]{…}`
     applies to longtable captions. Perl ignores both.
+  - **colortbl's `\arrayrulecolor` colours the table rules** (#773). Each rule
+    takes the colour colortbl draws it in (a `|` the one set as its table or
+    `\multicolumn` starts, else the one current when it is drawn): `\hline`,
+    `\cline`, the `|` rules, `\multicolumn`'s, `\hhline`'s and booktabs' rules.
+    A cell carries it per side as `cssstyle="border-top-color:#BFBFBF"`, and a
+    colour set inside a tabular or array ends with it. Black, and a table without
+    `\arrayrulecolor`, add nothing. (Perl ignores it.)
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
