@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **An equation's number stays beside its formula at any page width** (issue 810). LaTeXML.css
+    gave the tag column no width, so on a narrow page a long formula ran under its number; the
+    number is now a column of its own, and an overlong formula scrolls with the page instead.
+    Offered upstream. Guards
+    `browser_render_eqn_tags_and_authors::equation_tags_stay_beside_and_author_lines_show` (Chrome,
+    local) and `witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
     dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
     `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now

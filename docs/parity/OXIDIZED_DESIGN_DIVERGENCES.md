@@ -36341,3 +36341,17 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
+
+### 1041. An equation's tag is its own column in LaTeXML.css (issue #810)
+
+**Perl.** LaTeXML.css gives the tag cell `.ltx_eqn_eqno { max-width:0em; overflow:visible }`: the column takes no
+width and the tag overlays the right centring pad (`min-width:2em`), so a formula wider than the line less 2em runs
+under its tag (reporter nasser1's `align` with `\tag{C.8.1}`: in Chrome the tag sits on the fraction bar at 768 and
+375 px; `(C.8.2)` at 375 px). TeX never overlaps them: tex.web §1202-1205 moves the formula left, or sets the number on
+a line of its own. **Rust.** A local delta `.ltx_eqn_eqno { max-width:none; }`: the tag is a real column, beside the
+formula at every width, and an overlong formula widens the page (it scrolls) instead of reaching the tag; leqno,
+`eqnarray` and multi-row `align` keep their tags beside their rows. The cost: a formula is centred in the line less
+its tag (half the tag's width to the left, 10 px for `(1)` at 16 px), where TeX centres it in the full line until the
+gap falls under twice the tag's width. Offered upstream as the same one-line change to LaTeXML.css. **Guards**:
+`cluster_cli::browser_render_eqn_tags_and_authors::equation_tags_stay_beside_and_author_lines_show` (Chrome, local),
+`xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.

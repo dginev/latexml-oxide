@@ -292,6 +292,9 @@ math mtd[columnalign="left"]  { justify-items:start; }
 
 .ltx_eqn_eqno { max-width:0em; overflow:visible; white-space: nowrap; }
 .ltx_eqn_eqno.ltx_align_right .ltx_tag { float:right; }
+/* latexml-oxide local delta (issue #810): the max-width:0 tag column above lets a long formula run under
+   its tag; give the tag its own column, so the formula never reaches it and an overlong one widens the page. */
+.ltx_eqn_eqno { max-width:none; }
 
 .ltx_eqn_center_padleft,
 .ltx_eqn_center_padright { width:50%; min-width:2em;}

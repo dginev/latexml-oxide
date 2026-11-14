@@ -1378,6 +1378,21 @@ mod witnessed_css_delta {
   }
 
   #[test]
+  fn equation_tag_mathjax_and_author_line_deltas_stay_present() {
+    // Issues #810 (a tag in its own column: Chrome at 375/768 px, the (C.8.1) tag over its formula
+    // -> beside it), #475 (MathJax 2.1 offline: consecutive displays 53 -> 21 px apart, native 18)
+    // and #783 (`\author{name\\school\\dept}`: a starred pop-up -> lines under the name); the
+    // browser half is `cluster_cli::browser_render_eqn_tags_and_authors`.
+    let css = bundled_latexml_css();
+    for (issue, rule) in [("#810", ".ltx_eqn_eqno { max-width:none; }")] {
+      assert!(
+        css.contains(issue) && css.contains(rule),
+        "LaTeXML.css lost the issue {issue} rule `{rule}`"
+      );
+    }
+  }
+
+  #[test]
   fn framed_verbatim_responsive_delta_stays_present() {
     let css = bundled_latexml_css();
     assert!(
