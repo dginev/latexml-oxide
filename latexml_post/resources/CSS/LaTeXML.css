@@ -302,8 +302,8 @@ math mtd[columnalign="left"]  { justify-items:start; }
 .ltx_eqn_right_padright { min-width:2em; }
 .ltx_eqn_left_padright,
 .ltx_eqn_right_padleft  { width:100%; }
-/* latexml-oxide local delta (issue #810): a one-row centred equation is a grid `1fr auto 1fr`, the tag laid
-   over the pad on its side, as TeX centres a display in the full line and moves it only as far as its number needs
+/* latexml-oxide local delta (issue #810): a one-row centred equation is a grid `minmax(2em,1fr) auto 1fr` (`minmax(0,1fr)` in a minipage or
+   table cell), the tag laid over the pad on its side, as TeX centres a display in the full line and moves it only as far as its number needs
    (tex.web §1202; the quad is the padding). The other pad's 100vw width keeps the shrink-to-fit width of the old
    50% table columns; a multi-row table keeps the tag column above. */
 .ltx_equation.ltx_eqn_table > :has(> .ltx_eqn_row:only-child > .ltx_eqn_center_padleft) { display:block; }

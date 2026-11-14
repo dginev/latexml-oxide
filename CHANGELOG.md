@@ -7,7 +7,10 @@
     one-row equation is now centred in the full line, as TeX centres it, and moves aside only as
     far as its number needs; a multi-row table (`align`, `gather`, `eqnarray`) gives its numbers a
     column of their own, centring its rows in the line less that column (10-24 px left at 16 px).
-    An overlong formula scrolls with the page instead. Offered upstream. Guards
+    An overlong formula scrolls with the page instead. In a box narrower than formula and number
+    (a `p{2cm}` cell, a narrow minipage) the number still sits behind the box's scroll, where pdflatex
+    sets it beside the formula, as before this change (red repro
+    `equation_tag_hidden_in_a_narrow_minipage_red.tex`). Offered upstream. Guards
     `browser_render_eqn_tags::equation_tags_stay_beside` (Chrome and Firefox, local) and
     `witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
   - **Consecutive display equations are not spread apart under MathJax** (issue 475). MathJax
