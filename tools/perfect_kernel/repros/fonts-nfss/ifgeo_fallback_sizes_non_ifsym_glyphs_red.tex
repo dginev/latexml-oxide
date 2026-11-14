@@ -1,0 +1,15 @@
+% upstream #2845 (27db0d96): the regenerated StandardMetrics' last fallback, ifgeo10 (ifsym's TFM, 1em x 1em), now sizes
+% glyphs of other fonts that no msam/cm table holds, so wasysym/marvosym symbols take a 1em box.
+% witness: synthetic (revUPS2 probe p4; a 20-paper census of \CIRCLE/\Diamond users changed no output)
+% oracle:  pdflatex 0 errors: \CIRCLE 7.78pt x 5.86pt; \SquareSteel 7.58pt x 6.51pt; $\varbigcirc$ 10.0pt x 6.94pt
+% engines: main before the sync 7.5pt x 7.0pt for each; sync/upstream-0db6f47e 10.0pt x 10.0pt for each; Perl master 10.0pt x 10.0pt
+% expect:  each glyph sized by its own font's metric (the widths and heights pdflatex prints)
+% status:  RED
+% moves:   post-merge (per-font metrics for wasysym/marvosym/stmaryrd, or ifgeo10 only for ifsym's own glyphs; KPE #1245)
+\documentclass{article}
+\usepackage{wasysym}\usepackage{marvosym}\usepackage{stmaryrd}
+\newlength\lw
+\newcommand\w[1]{\settowidth\lw{#1}\the\lw\ \settoheight\lw{#1}\the\lw;}
+\begin{document}
+\w{\CIRCLE}\w{\SquareSteel}\w{$\varbigcirc$}\w{●}\w{◆}\w{◇}
+\end{document}

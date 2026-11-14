@@ -142,7 +142,8 @@ fn log_and_archive_end_with_the_canonical_combined_status() {
   );
   let mut packed_log = String::new();
   std::io::Read::read_to_string(
-    &mut zip.by_name("toomany.log").expect("log member"),
+    // The member is the log's name, default `<name>.latexml.log` (Perl LaTeXML.pm:621-629, upstream #2855).
+    &mut zip.by_name("toomany.latexml.log").expect("log member"),
     &mut packed_log,
   )
   .expect("log readable");
