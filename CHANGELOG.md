@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
+    cell of a paragraph column set `\hsize` to the column's width but kept the page's
+    `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
+    as wide as the page. The cell now sets `\linewidth\hsize`, as array's `\@startpbox` /
+    `\@arrayparboxrestore` do (a `\multicolumn` over such a column and longtable's `p`
+    columns alike); Perl sets `\hsize` alone. Guard
+    `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`.
   - **A prescript wraps its base's post-scripts** (issue 824). `${}^{95}\mathrm{MoO}_4$`
     and mhchem's `\ce{^{95}MoO4^{2-}}` read the 4 as a pre-subscript (`_ 4 ^ 95 MoO`,
     `scriptpos="pre2"`): the grammar applied the prescript first and the post-script over
