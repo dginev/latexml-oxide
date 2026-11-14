@@ -36342,6 +36342,43 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
 
+### 1037. An EPUB keeps its log outside the container and never over an existing file (UPS1, upstream #2855)
+
+**Perl.** Since #2855 (1718f89e) `latexmlc` keeps an existing external log under an archive output
+(`$keep_log_file`, bin/latexmlc:111-134): a `.zip` packs the log as its `--log` basename (default `<name>.latexml.log`,
+LaTeXML.pm:621-629, t/932_zip.t), and an EPUB packs it into the container as `OPS/<log>`. **Rust.** The `.zip` is as
+Perl. An EPUB writes its log outside the container (epubcheck would flag a log member under `OPS/`), and when a file of
+the log's name already exists it is kept and the log not written ("Log not written: '<log>' exists and is kept" on
+stderr; DG 2026-11-14). A conversion that fails before it starts writes its Fatal log under the same rule.
+`cortex_worker` packs its own `cortex.log` and is unchanged. **Guard**: `cluster_cli::archive_output_keeps_an_existing_log`.
+
+### 1038. A listing `frame=` naming no side draws no frame (UPS1, upstream #2820)
+
+**Perl.** Since #2820 (7412d564) listings.sty.ltxml:277-287 frames a listing whose `frame=` is not `none`: a named
+frame from `%frames`, else the sides its letters name (`t`/`b`/`l`/`r`, either case); a value naming none (`xyz`,
+empty) joins to `''`, and `framedProperties` (TeX_Box.pool.ltxml:84) turns that into `framed="rectangle"`. **TeX.**
+lstmisc.sty:1387-1399 keeps such a value as `\lst@frame`, and the frame code draws only the sides whose letters it
+holds: no frame. **Rust.** `lst_frame_sides` (listings_sty.rs) returns no frame for it, as TeX. **Guard**:
+`perfect_kernel_batchups1::fboxsep_pads_fcolorbox_boxed_and_listing_frames` (its `frame=xyz` listing).
+
+### 1041. `<mtable>` carries no default `rowspacing="0pt"` (issue 695)
+
+**Perl.** `pmml_array` writes `rowspacing` from the XMArray's `rowsep` (default `0pt`) on every table of two or more
+rows (MathML.pm:478-481). **Rust.** The same, except that a missing or zero `rowsep` writes nothing
+(`latexml_post/src/mathml/presentation.rs`, `pmml_array_inner`, `is_zero_length`; DG ruling 2026-11-14); an author's
+non-zero `rowsep` (`\arraystretch`, `\jot`) is written as Perl writes it (`rowspacing="10.0pt"`). MathML Core
+gives `<mtable>` only the global attributes, so Chrome ignores it (cell contents 6.88 px apart with or without it),
+while Firefox and MathJax honour it: issue 695's `array` and a `gather*`-nested `aligned` set their rows touching with
+`rowspacing="0pt"` (Firefox, Playwright build 1532: 1.5-3 px between the rows' contents) and without it 8.4-9.9 px
+apart (Firefox's default) and about 3.8 px in MathJax 2.1 (HTML-CSS, offline; its 1ex default); an
+`\arraystretch{2}` array's `10.0pt` gives 16.3 px in Firefox, a `\jot=6pt` `aligned`'s `6.0pt` 11 px. `columnspacing`
+stays: LaTeXML.css keys the aligned-cell padding reset on `columnspacing="0pt"` (#755); `columnalign` stays on `<mtd>`:
+LaTeXML.css keys `justify-items` on it (#809). The other non-Core attributes still written, `align` and `width` on
+`<mtable>`, are left to their own ruling. **Guard**:
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the
+four whole `<mtable>` elements: two default, two with the author's `rowspacing`); repro
+`tools/perfect_kernel/repros/alignment/mtable_no_rowspacing.tex`.
+
 ### 1044. The kernel hooks LaTeX runs where LaTeXML's bindings stand in for its macros (QA47B)
 
 **Perl.** `\AddToHook` is a no-op (latex_base.pool.ltxml), etoolbox's `\AfterEndDocument` queues code nothing reads and
