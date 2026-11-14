@@ -230,14 +230,41 @@ pub(super) fn call_deferred_body<A: rhai::FuncArgs>(
   args.parse(&mut args_vec);
   // A Perl sub takes any number of arguments: a closure's missing ones are `()` (undef), extra ones dropped.
   // A closure's captured variables are curried ahead of its own parameters.
-  let mut arities = ast
-    .iter_functions()
-    .filter(|f| f.name == body.fn_name())
-    .map(|f| f.params.len());
-  if let (Some(params), None) = (arities.next(), arities.next()) {
+  if let Some(params) = closure_arity(ast, body.fn_name()) {
     args_vec.resize(params.saturating_sub(body.curry().len()), Dynamic::UNIT);
   }
   body.call::<Dynamic>(engine, ast, args_vec)
+}
+
+/// [`closure_arity`]'s entry: the AST it was read from (held weakly: a dropped script's entry is recomputed) and
+/// the arity.
+type ArityEntry = (std::rc::Weak<AST>, Option<usize>);
+
+thread_local! {
+  static ARITY_CACHE: RefCell<HashMap<(usize, String), ArityEntry>> = RefCell::new(HashMap::new());
+}
+
+/// The parameter count of the script function `fn_name` (a closure's `anon$…`), `None` when the name is
+/// overloaded; looked up once per AST and name.
+fn closure_arity(ast: &Rc<AST>, fn_name: &str) -> Option<usize> {
+  let key = (Rc::as_ptr(ast) as usize, fn_name.to_string());
+  ARITY_CACHE.with(|cache| {
+    if let Some((weak, arity)) = cache.borrow().get(&key)
+      && weak.upgrade().is_some_and(|live| Rc::ptr_eq(&live, ast))
+    {
+      return *arity;
+    }
+    let mut arities = ast
+      .iter_functions()
+      .filter(|f| f.name == fn_name)
+      .map(|f| f.params.len());
+    let arity = match (arities.next(), arities.next()) {
+      (Some(params), None) => Some(params),
+      _ => None,
+    };
+    cache.borrow_mut().insert(key, (Rc::downgrade(ast), arity));
+    arity
+  })
 }
 
 /// Copy the top active-context out (so we never hold the `CTOR_CTX` borrow
@@ -590,11 +617,10 @@ fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
         props.insert(k.as_str(), Stored::Digested(d));
       },
       // A constructor reads a token property as its ToString, as Perl's absorb (Object.pm:169) and attributes do.
-      _ => match dynamic_to_stored(v) {
-        Stored::Tokens(t) => props.insert(k.as_str(), t.to_string().into()),
-        Stored::Token(t) => props.insert(k.as_str(), t.to_string().into()),
-        stored => props.insert(k.as_str(), stored),
+      _ if v.is::<Tokens>() || v.is::<Token>() => {
+        props.insert(k.as_str(), dynamic_to_string(v).into())
       },
+      _ => props.insert(k.as_str(), dynamic_to_stored(v)),
     }
   }
   props
@@ -755,15 +781,16 @@ fn dynamic_to_tokens(d: Dynamic) -> Tokens {
 /// as its TeX-source string (authors parse it in-script as needed).
 fn arg_to_dynamic(arg: ArgWrap) -> Dynamic { Dynamic::from(arg.to_string()) }
 
-/// Read a Rhai value back as a string: a `Token`/`Tokens` is its TeX source (`UnTeX`), a digested handle its
-/// `ToString` (Rhai's own printing gives a custom type's Rust name).
+/// Read a Rhai value back as a string, Perl's `ToString` (Object.pm:59): a `Token`/`Tokens` as `Tokens->toString`
+/// (`\foo bar` → `\foobar`, as [`rhai_map_to_props`] stores a token property), a digested handle its `ToString`
+/// (Rhai's own printing gives a custom type's Rust name).
 fn dynamic_to_string(d: Dynamic) -> String {
   if d.is_string() {
     d.into_string().unwrap_or_default()
   } else if let Some(tokens) = d.clone().try_cast::<Tokens>() {
-    tokens.untex()
+    tokens.to_string()
   } else if let Some(token) = d.clone().try_cast::<Token>() {
-    Tokens::new(vec![token]).untex()
+    token.to_string()
   } else if let Some(digested) = d.clone().try_cast::<Digested>() {
     digested.to_string()
   } else {

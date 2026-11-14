@@ -467,6 +467,26 @@ pub fn counter_value(ctr: &str) -> Result<Number> {
     Some(value) => Ok(Number::new(value.value_of())),
   }
 }
+/// Perl `SetCounter` (Package.pm:722): assign `\\c@<ctr>` globally, run any `\\afterassignment`, re-derive
+/// `\\@<ctr>@ID`.
+pub fn set_counter(ctr: &str, value: Number) -> Result<()> {
+  assign_register(
+    &s!("\\c@{ctr}"),
+    value.into(),
+    Some(Scope::Global),
+    Vec::new(),
+  )?;
+  after_assignment();
+  def_macro(
+    T_CS!(s!("\\@{ctr}@ID")),
+    None,
+    Tokens::new(Explode!(value.value_of())),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+  )
+}
 /// increments a named counter by a `Number`
 pub fn add_to_counter(ctr: &str, value: Number) -> Result<()> {
   let v = counter_value(ctr)?.add(value);

@@ -844,7 +844,8 @@ pub(super) fn make_engine() -> Engine {
               .collect()
           },
           "nested" => nested = vec![dynamic_to_string(val)],
-          other => unsupported_option("NewCounter", other),
+          // (Perl's NewCounter, Package.pm:654, checks no option names)
+          _ => {},
         }
       }
       let options = latexml_core::binding::counter::dialect::NewCounterOptions {
@@ -1021,6 +1022,165 @@ pub(super) fn make_engine() -> Engine {
     latexml_core::binding::content::select_relaxng_schema(schema, None);
   });
 
+  // ── thin wrappers (W3RD1b): Perl's argument forms, each the core call its compile-time macro makes ──
+  // Invocation (Package.pm:965): a CS name/`Token`, or TeX with `#n` (an anonymous macro); each argument a
+  // `Tokens`/`Token`, TeX source, or `()` (an omitted optional), positionally or as one array.
+  engine.register_fn("Invocation", |cs: Dynamic| invocation(cs, Vec::new()));
+  engine.register_fn("Invocation", invocation);
+  engine.register_fn("Invocation", |cs: Dynamic, a: Dynamic| {
+    invocation(cs, vec![a])
+  });
+  engine.register_fn("Invocation", |cs: Dynamic, a: Dynamic, b: Dynamic| {
+    invocation(cs, vec![a, b])
+  });
+  engine.register_fn(
+    "Invocation",
+    |cs: Dynamic, a: Dynamic, b: Dynamic, c: Dynamic| invocation(cs, vec![a, b, c]),
+  );
+  // AddToMacro (Package.pm:2534): TeX source is TokenizeInternal'd, as Perl's.
+  engine.register_fn(
+    "AddToMacro",
+    |cs: Dynamic, tokens: Dynamic| -> RhaiResult<()> {
+      let cs = token_arg("AddToMacro", cs)?;
+      latexml_core::binding::content::add_to_macro(cs, dynamic_to_tokens(tokens)).map_err(rhai_err)
+    },
+  );
+  // DeclareFontMap (Package.pm:2859): the map an array of 1-char strings or `()`; `family` and the
+  // `*_mathstyle` keys as Perl's options.
+  engine.register_fn(
+    "DeclareFontMap",
+    |name: &str, map: rhai::Array| -> RhaiResult<()> { declare_font_map(name, map, Map::new()) },
+  );
+  engine.register_fn("DeclareFontMap", declare_font_map);
+  // DeclareFontMapMultichar (the `DeclareFontMapMultichar!` macro): position (decimal) → its string.
+  engine.register_fn("DeclareFontMapMultichar", |name: &str, map: Map| {
+    font_map_multichar(format!("{name}_fontmap_multichar"), map);
+  });
+  engine.register_fn(
+    "DeclareFontMapMultichar",
+    |name: &str, family: &str, map: Map| {
+      font_map_multichar(format!("{name}_{family}_fontmap_multichar"), map);
+    },
+  );
+  engine.register_fn("LoadPool", |name: &str| -> RhaiResult<()> {
+    latexml_core::binding::content::input_definitions(
+      name,
+      latexml_core::binding::content::InputDefinitionOptions {
+        extension: Some("pool".into()),
+        ..Default::default()
+      },
+    )
+    .map_err(rhai_err)
+  });
+  // IsEmpty (Package.pm:1034): spaces are NOT empty; a list of things is empty when each is.
+  engine.register_fn("IsEmpty", |thing: Dynamic| -> RhaiResult<bool> {
+    is_empty_thing(&thing)
+  });
+  engine.register_fn("DigestIf", |cs: Dynamic| -> RhaiResult<Dynamic> {
+    let token = token_arg("DigestIf", cs)?;
+    Ok(
+      latexml_core::binding::content::digest_if(token)
+        .map_err(rhai_err)?
+        .map_or(Dynamic::UNIT, Dynamic::from),
+    )
+  });
+  // ProcessKeyOptions (the `ProcessKeyOptions!` macro): ProcessOptions' forms, `\@curroptions` kept.
+  engine.register_fn("ProcessKeyOptions", || -> RhaiResult<()> {
+    latexml_core::binding::content::process_key_options(false, &[]).map_err(rhai_err)
+  });
+  engine.register_fn("ProcessKeyOptions", |inorder: bool| -> RhaiResult<()> {
+    latexml_core::binding::content::process_key_options(inorder, &[]).map_err(rhai_err)
+  });
+  engine.register_fn("ProcessKeyOptions", |opts: Map| -> RhaiResult<()> {
+    check_options(
+      "ProcessKeyOptions",
+      &["inorder", "keysets"],
+      opts.keys().map(|k| k.as_str()),
+    )
+    .map_err(rhai_err)?;
+    let inorder = opts
+      .get("inorder")
+      .and_then(|v| v.as_bool().ok())
+      .unwrap_or(false);
+    let keysets = opts
+      .get("keysets")
+      .cloned()
+      .map(string_list)
+      .unwrap_or_default();
+    let keysets: Vec<&str> = keysets.iter().map(String::as_str).collect();
+    latexml_core::binding::content::process_key_options(inorder, &keysets).map_err(rhai_err)
+  });
+  // LookupRegisterOrDefault (the macro): the register's value, the type's zero when `cs` is no register; the
+  // value is its TeX string until round C's typed handles.
+  engine.register_fn(
+    "LookupRegisterOrDefault",
+    |cs: Dynamic| -> RhaiResult<String> {
+      let cs = token_arg("LookupRegisterOrDefault", cs)?;
+      Ok(
+        latexml_core::state::lookup_register_definition(&cs)
+          .map(|defn| {
+            latexml_core::definition::Definition::value_of(&*defn, Vec::new()).unwrap_or_default()
+          })
+          .unwrap_or_default()
+          .to_string(),
+      )
+    },
+  );
+  // FindFile (Package.pm:2076): the path, or `()`; Perl's `type`/`notex`/`noltxml`/`searchpaths_only`.
+  engine.register_fn("FindFile", |name: &str| -> RhaiResult<Dynamic> {
+    find_file(name, Map::new())
+  });
+  engine.register_fn("FindFile", find_file);
+  engine.register_fn("Input", |name: &str| -> RhaiResult<()> {
+    latexml_core::binding::content::input(
+      name,
+      latexml_core::binding::content::InputOptions::default(),
+    )
+    .map_err(rhai_err)
+  });
+  // CleanLabel/CleanID (Package.pm:482-511): a `Token`/`Tokens` label is read as its ToString.
+  engine.register_fn("CleanLabel", |label: Dynamic| {
+    latexml_core::common::cleaners::clean_label(&dynamic_to_string(label), None).into_owned()
+  });
+  engine.register_fn("CleanLabel", |label: Dynamic, prefix: &str| {
+    latexml_core::common::cleaners::clean_label(&dynamic_to_string(label), Some(prefix))
+      .into_owned()
+  });
+  engine.register_fn("CleanID", |key: Dynamic| {
+    latexml_core::common::cleaners::clean_id(&dynamic_to_string(key))
+  });
+  engine.register_fn("SetCounter", |ctr: &str, value: i64| -> RhaiResult<()> {
+    latexml_core::binding::counter::dialect::set_counter(ctr, Number(value)).map_err(rhai_err)
+  });
+  // roman/Roman (Package.pm:470-476) and Explode/ExplodeText (Token.pm:103-116) return Tokens, as Perl's lists.
+  engine.register_fn("roman", |n: i64| {
+    explode(&latexml_core::common::cleaners::roman_aux(n), true)
+  });
+  engine.register_fn("Roman", |n: i64| {
+    explode(
+      &latexml_core::common::cleaners::roman_aux(n).to_ascii_uppercase(),
+      true,
+    )
+  });
+  engine.register_fn("Explode", |s: &str| explode(s, false));
+  engine.register_fn("ExplodeText", |s: &str| explode(s, true));
+  // UTF (Util/Unicode.pm:23): the character of a code point.
+  engine.register_fn("UTF", |code: i64| -> RhaiResult<String> {
+    u32::try_from(code)
+      .ok()
+      .and_then(char::from_u32)
+      .map(String::from)
+      .ok_or_else(|| format!("UTF: {code} is not a Unicode code point").into())
+  });
+  // BeginItemize (latex_constructs.pool.ltxml:1296): the list's property map, for a `properties` closure.
+  engine.register_fn(
+    "BeginItemize",
+    |itype: &str, counter: &str| -> RhaiResult<Map> { begin_itemize(itype, counter, Map::new()) },
+  );
+  engine.register_fn("BeginItemize", begin_itemize);
+  // Equals (Object.pm:73): same type and value; two tokens are equal when `\let` to the same meaning.
+  engine.register_fn("Equals", |x: Dynamic, y: Dynamic| equals(x, y));
+
   // ── further definition forms (DefRegister/DefKeyVal/DefMath/DefLigature) ──
   // These run when the script executes (per conversion, like a Perl .ltxml),
   // lowering to the same dialect functions their compile-time macros use.
@@ -1089,26 +1249,31 @@ pub(super) fn make_engine() -> Engine {
   );
   engine.register_fn(
     "DefLigature",
-    |pattern: &str, replacement: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let regex_compiled = regex::Regex::new(pattern)
-        .map_err(|e| Box::<EvalAltResult>::from(format!("DefLigature bad regex: {e}")))?;
-      let replacement = replacement.to_string();
-      latexml_core::state::unshift_value("TEXT_LIGATURES", vec![
-        latexml_core::ligature::Ligature {
-          id:        latexml_core::state::generate_ligature_id(),
-          regex:     Some(pattern.to_string()),
-          code:      Some(Rc::new(move |text| {
-            regex_compiled
-              .replace_all(text, replacement.as_str())
-              .to_string()
-          })),
-          font_test: None,
-          matcher:   None,
-        },
-      ]);
-      Ok(())
+    |pattern: &str, replacement: &str| -> RhaiResult<()> {
+      def_ligature(pattern, replacement, Map::new())
     },
   );
+  // Perl `DefLigature($regexp, $replacement, fontTest => sub { my ($font) = @_; … })` (Package.pm:3088): the
+  // ligature applies only where the test, given the text's `Font`, is true.
+  engine.register_fn("DefLigature", def_ligature);
+  // A `Font` handle (Perl's Common/Font.pm getters), as a `fontTest` closure receives it; an unset component is `()`.
+  engine.register_type_with_name::<latexml_core::common::font::Font>("Font");
+  macro_rules! font_getter {
+    ($name:literal, $get:ident) => {
+      engine.register_fn($name, |f: &mut latexml_core::common::font::Font| {
+        f.$get()
+          .map_or(Dynamic::UNIT, |v| Dynamic::from(v.to_string()))
+      });
+    };
+  }
+  font_getter!("getFamily", get_family);
+  font_getter!("getSeries", get_series);
+  font_getter!("getShape", get_shape);
+  font_getter!("getEncoding", get_encoding);
+  font_getter!("getLanguage", get_language);
+  engine.register_fn("getSize", |f: &mut latexml_core::common::font::Font| {
+    f.get_size().map_or(Dynamic::UNIT, Dynamic::from)
+  });
   // DefMath: presentation-string form (the dominant one) + option bag with the
   // macro's scalar option set.
   engine.register_fn(
@@ -1437,7 +1602,14 @@ pub(super) fn make_engine() -> Engine {
           "as_class" => o.as_class = val.as_bool().unwrap_or(false),
           "noltxml" => o.noltxml = val.as_bool().ok(),
           "notex" => o.notex = val.as_bool().ok(),
-          "raw" if val.as_bool().unwrap_or(false) => o.notex = Some(false),
+          "raw" if val.as_bool().unwrap_or(false) => {
+            latexml_core::Warn!(
+              "deprecated",
+              "raw",
+              "RequirePackage option raw is obsolete; it is not needed"
+            );
+            o.notex = Some(false);
+          },
           "after" => o.after = dynamic_to_tokens(val),
           "searchpaths_only" => o.searchpaths_only = val.as_bool().unwrap_or(false),
           // `withoptions` is accepted and recomputed from `options`, as Perl's (:2694).
@@ -2574,4 +2746,250 @@ fn code_macro_name() -> String {
     c.get()
   });
   format!("\\CODE({n})")
+}
+
+/// Perl `Invocation($token, @args)` (Package.pm:965) over the macro's core calls.
+fn invocation(cs: Dynamic, args: rhai::Array) -> RhaiResult<Tokens> {
+  let args: Vec<Option<Tokens>> = args
+    .into_iter()
+    .map(|a| (!a.is_unit()).then(|| dynamic_to_tokens(a)))
+    .collect();
+  use latexml_core::binding::content::{build_invocation, build_invocation_str};
+  if cs.is_string() {
+    build_invocation_str(TeXString::assembled(dynamic_to_string(cs)), args)
+  } else if let Some(tokens) = cs.clone().try_cast::<Tokens>() {
+    match tokens.clone().unlist().as_slice() {
+      [token] => build_invocation(*token, args),
+      _ => {
+        let args: Vec<Option<std::borrow::Cow<Tokens>>> = args
+          .into_iter()
+          .map(|a| a.map(std::borrow::Cow::Owned))
+          .collect();
+        tokens
+          .pack_parameters()
+          .map(|t| t.substitute_parameters(&args))
+      },
+    }
+  } else {
+    build_invocation(token_arg("Invocation", cs)?, args)
+  }
+  .map_err(rhai_err)
+}
+
+/// Perl `DeclareFontMap($name, $map, %options)` (Package.pm:2859).
+fn declare_font_map(name: &str, map: rhai::Array, opts: Map) -> RhaiResult<()> {
+  const FONTMAP_OPTIONS: &[&str] = &[
+    "family",
+    "uppercase_mathstyle",
+    "lowercase_mathstyle",
+    "digit_mathstyle",
+  ];
+  check_options(
+    "DeclareFontMap",
+    FONTMAP_OPTIONS,
+    opts.keys().map(|k| k.as_str()),
+  )
+  .map_err(rhai_err)?;
+  let encname = match opts.get("family") {
+    Some(family) => format!("{name}_{}", dynamic_to_string(family.clone())),
+    None => name.to_string(),
+  };
+  let glyphs: Rc<[Option<char>]> = map
+    .into_iter()
+    .map(|g| {
+      if g.is_unit() {
+        None
+      } else {
+        dynamic_to_string(g).chars().next()
+      }
+    })
+    .collect();
+  latexml_core::state::assign_value(&format!("{encname}_fontmap"), glyphs, Some(Scope::Global));
+  for style in [
+    "uppercase_mathstyle",
+    "lowercase_mathstyle",
+    "digit_mathstyle",
+  ] {
+    if let Some(value) = opts.get(style) {
+      latexml_core::state::assign_value(
+        &format!("{encname}_{style}"),
+        dynamic_to_stored(value.clone()),
+        Some(Scope::Global),
+      );
+    }
+  }
+  Ok(())
+}
+
+/// The `DeclareFontMapMultichar!` store: position (decimal) → the string it prints.
+fn font_map_multichar(mapname: String, map: Map) {
+  let map: rustc_hash::FxHashMap<String, String> = map
+    .into_iter()
+    .map(|(pos, s)| (pos.to_string(), dynamic_to_string(s)))
+    .collect();
+  latexml_core::state::assign_value(&mapname, map, Some(Scope::Global));
+}
+
+/// Perl `IsEmpty` (Package.pm:1034): a token is empty unless a letter, other, active or control sequence; TeX
+/// source is read as its tokens; a digested thing as the core's `is_empty`; an array when each item is.
+fn is_empty_thing(thing: &Dynamic) -> RhaiResult<bool> {
+  use latexml_core::token::Catcode;
+  let token_is_empty = |t: &Token| {
+    !matches!(
+      t.code,
+      Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE | Catcode::CS
+    )
+  };
+  if thing.is_unit() {
+    Ok(true)
+  } else if let Some(token) = thing.clone().try_cast::<Token>() {
+    Ok(token_is_empty(&token))
+  } else if let Some(digested) = thing.clone().try_cast::<Digested>() {
+    digested.is_empty().map_err(rhai_err)
+  } else if thing.is_array() {
+    for item in thing.clone().cast::<rhai::Array>() {
+      if !is_empty_thing(&item)? {
+        return Ok(false);
+      }
+    }
+    Ok(true)
+  } else {
+    Ok(
+      dynamic_to_tokens(thing.clone())
+        .unlist()
+        .iter()
+        .all(token_is_empty),
+    )
+  }
+}
+
+/// Perl `FindFile($file, %options)` (Package.pm:2076): the path, or `()`.
+fn find_file(name: &str, opts: Map) -> RhaiResult<Dynamic> {
+  const FINDFILE_OPTIONS: &[&str] = &[
+    "type",
+    "notex",
+    "noltxml",
+    "searchpaths_only",
+    "installation_subdir",
+  ];
+  let operation = format!("FindFile ({name})");
+  check_options(
+    &operation,
+    FINDFILE_OPTIONS,
+    opts.keys().map(|k| k.as_str()),
+  )
+  .map_err(rhai_err)?;
+  let mut o = latexml_core::binding::content::FindFileOptions::default();
+  for (key, val) in opts {
+    match key.as_str() {
+      "type" => o.ext_type = Some(dynamic_to_string(val).into()),
+      "notex" => o.notex = val.as_bool().unwrap_or(false),
+      "noltxml" => o.forbid_ltxml = val.as_bool().unwrap_or(false),
+      "searchpaths_only" => o.search_paths_only = val.as_bool().unwrap_or(false),
+      other => unsupported_option(&operation, other),
+    }
+  }
+  Ok(latexml_core::binding::content::find_file(name, Some(o)).map_or(Dynamic::UNIT, Dynamic::from))
+}
+
+/// Perl `beginItemize($type, $counter, %options)` (latex_constructs.pool.ltxml:1296): the property map.
+fn begin_itemize(itype: &str, counter: &str, opts: Map) -> RhaiResult<Map> {
+  check_options(
+    "BeginItemize",
+    &["nolevel", "series", "start", "resume"],
+    opts.keys().map(|k| k.as_str()),
+  )
+  .map_err(rhai_err)?;
+  let mut o = latexml_core::binding::counter::dialect::BeginItemizeOptions::default();
+  for (key, val) in opts {
+    match key.as_str() {
+      "nolevel" => o.nolevel = val.as_bool().unwrap_or(false),
+      "series" => o.series = Some(dynamic_to_tokens(val)),
+      "start" => o.start = val.as_int().ok().map(Number),
+      _ => o.resume = Some(dynamic_to_string(val)),
+    }
+  }
+  let counter = (!counter.is_empty()).then_some(counter);
+  let props =
+    latexml_core::binding::counter::dialect::begin_itemize(itype, counter, o).map_err(rhai_err)?;
+  Ok(props_to_map(props))
+}
+
+/// Perl `Equals($x, $y)` (Object.pm:73): undef equals only undef; values of different types differ; tokens
+/// compare their meanings, or themselves when neither has one; `Tokens` token by token; others by value.
+fn equals(x: Dynamic, y: Dynamic) -> bool {
+  if x.is_unit() || y.is_unit() {
+    return x.is_unit() && y.is_unit();
+  }
+  if let (Some(a), Some(b)) = (x.clone().try_cast::<Token>(), y.clone().try_cast::<Token>()) {
+    use latexml_core::state::lookup_meaning;
+    return match (lookup_meaning(&a), lookup_meaning(&b)) {
+      (Some(m), Some(n)) => m == n,
+      (None, None) => a == b,
+      _ => false,
+    };
+  }
+  if let (Some(a), Some(b)) = (
+    x.clone().try_cast::<Tokens>(),
+    y.clone().try_cast::<Tokens>(),
+  ) {
+    return a.equals(b);
+  }
+  // Perl compares builtins (strings, numbers) as strings; a blessed object by its string form.
+  let scalar = |d: &Dynamic| d.is_string() || d.is_int() || d.is_float() || d.is_bool();
+  (x.type_name() == y.type_name() || (scalar(&x) && scalar(&y)))
+    && dynamic_to_string(x) == dynamic_to_string(y)
+}
+
+/// Perl `DefLigature($regexp, $replacement, %options)` (Package.pm:3088), as the `DefLigature!` macro: an
+/// invalid regex is an Error naming it; `fontTest` a closure over the `Font`.
+fn def_ligature(pattern: &str, replacement: &str, opts: Map) -> RhaiResult<()> {
+  check_options(
+    "DefLigature",
+    &["fontTest"],
+    opts.keys().map(|k| k.as_str()),
+  )
+  .map_err(rhai_err)?;
+  let regex_compiled = regex::Regex::new(pattern)
+    .map_err(|e| Box::<EvalAltResult>::from(format!("DefLigature bad regex: {e}")))?;
+  let font_test = match opts
+    .get("fontTest")
+    .and_then(|f| f.clone().try_cast::<FnPtr>())
+  {
+    Some(test) => {
+      let (engine, ast) = current_script()?;
+      let test: latexml_core::ligature::FontTestClosure = Rc::new(move |font| {
+        // (the hook returns a bool, so a Fatal raised in the test is logged, not propagated)
+        match call_deferred_body(&engine, &ast, &test, (Dynamic::from(font.clone()),)) {
+          Ok(ret) => ret.as_bool().unwrap_or(false),
+          Err(e) => contain_bool("DefLigature fontTest", e),
+        }
+      });
+      Some(test)
+    },
+    None => None,
+  };
+  let replacement = replacement.to_string();
+  latexml_core::state::unshift_value("TEXT_LIGATURES", vec![latexml_core::ligature::Ligature {
+    id: latexml_core::state::generate_ligature_id(),
+    regex: Some(pattern.to_string()),
+    code: Some(Rc::new(move |text| {
+      regex_compiled
+        .replace_all(text, replacement.as_str())
+        .to_string()
+    })),
+    font_test,
+    matcher: None,
+  }]);
+  Ok(())
+}
+
+/// The `Explode!`/`ExplodeText!` macros (Perl Token.pm:103-116) as Tokens.
+fn explode(s: &str, text: bool) -> Tokens {
+  use latexml_core::{CharToken, T_LETTER, T_OTHER, T_SPACE};
+  Tokens::new(if text {
+    latexml_core::ExplodeText!(s)
+  } else {
+    latexml_core::Explode!(s)
+  })
 }

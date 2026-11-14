@@ -145,19 +145,27 @@
   - **Rhai options Perl accepts, honoured** (PR #829 round D): `Tag`'s `afterOpen`/`afterClose`
     hooks (and `:early`/`:late`; another key is an Error); `NewCounter`'s `idprefix`/`idwithin`/
     `nested`; `RequirePackage`/`LoadClass` option maps (`options`, `type`, `notex`, `after`,
-    `withoptions`, …); `ProcessOptions(#{inorder, keysets})`; `AtBeginDocument`/`AtEndDocument`
-    of a closure; an array of hook closures (`afterDigest: [f, g]`), each run.
+    `withoptions`, …; `LoadClass`'s `notex`/`searchpaths_only` reach no class-load option yet
+    and only Warn; `RequirePackage`'s obsolete `raw` Warns as Perl's); `ProcessOptions(#{inorder,
+    keysets})`; `AtBeginDocument`/`AtEndDocument` of a closure; an array of hook closures
+    (`afterDigest: [f, g]`), each run; `DefLigature`'s `fontTest` closure, given the text's
+    `Font` (`getFamily`, `getSeries`, `getShape`, `getEncoding`, `getLanguage`, `getSize`).
   - **Rhai calls lower to their macro's core call:** `RefStepCounter` steps through
-    `\refstepcounter`'s current meaning, as `RefStepCounter!` (`RefStepCounter(c, true)` steps
-    directly); `AssignMeaning` to an undefined token undefines; a scope string other than
+    `\refstepcounter`'s current meaning, as `RefStepCounter!` and TeX (`RefStepCounter(c, true)`
+    steps directly; Perl 0.8.8 steps the kernel counter, KNOWN_PERL_ERRORS #412); `AssignMeaning` to an undefined token undefines; a scope string other than
     local/global is a named scope, as the macros read it, where it was dropped to the default.
   - **A Rhai closure takes any number of arguments, as a Perl sub:** missing ones are `()`,
     extra ones dropped (a `DefConditional` test, a `Tag` hook), where the count had to match.
   - **Rhai arrays and maps are stored as lists and hashes** (`AssignValue`, `AssignMapping`,
     `PushValue`): `let o = LookupValue(k); o.push(x); AssignValue(k, o)` round-trips, where
     the array was stored as its printed text. A `Token`/`Tokens` given where a string is
-    read (a `properties` value, an option) is its TeX source, where it was the Rust type
-    name (revW3e).
+    read (a `properties` value, an option) is its ToString, as Perl's (`\foo bar` reads
+    `\foobar`), where it was the Rust type name (revW3e).
+  - **New Rhai calls, thin wrappers over the macros' core calls** (PR #829 round D1b):
+    `Invocation`, `AddToMacro`, `DeclareFontMap`/`DeclareFontMapMultichar`, `LoadPool`,
+    `IsEmpty`, `DigestIf`, `ProcessKeyOptions`, `LookupRegisterOrDefault`, `FindFile`, `Input`,
+    `CleanLabel`/`CleanID`, `SetCounter`, `roman`/`Roman`, `UTF`, `Explode`/`ExplodeText`,
+    `BeginItemize`, `Equals`, with Perl's argument forms.
 
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.

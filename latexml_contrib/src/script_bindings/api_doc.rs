@@ -53,6 +53,11 @@ const GROUPS: &[(Option<&str>, &str, &str)] = &[
     "Perl's `$gullet->read…`: the gullet handle a parameter-type reader receives.",
   ),
   (
+    Some("Font"),
+    "`Font` methods",
+    "Perl's Common/Font.pm getters, on the font a `DefLigature` `fontTest` closure receives.",
+  ),
+  (
     Some("Command"),
     "`Command` methods",
     "The `std::process::Command` mirror, for a binding that shells out.",
@@ -68,11 +73,14 @@ const GROUPS: &[(Option<&str>, &str, &str)] = &[
 /// The calls whose `Dynamic` parameters are token arguments (`token_arg`: a CS name or a `Token`),
 /// rendered `string|Token` rather than `?`.
 const TOKEN_ARG_FNS: &[&str] = &[
+  "AddToMacro",
   "AssignMeaning",
+  "DigestIf",
   "IsDefined",
   "Let",
   "LookupDefinition",
   "LookupMeaning",
+  "LookupRegisterOrDefault",
   "SetCondition",
   "XEquals",
 ];
@@ -398,7 +406,9 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "DefLigature",
-    Doc::Note("Register a text ligature pattern."),
+    Doc::Note(
+      "Register a text ligature pattern; `#{fontTest: |font| …}` limits it to the fonts the closure accepts.",
+    ),
   ),
   (
     "DefMacro",
@@ -1470,6 +1480,139 @@ const DOCS: &[(&str, Doc)] = &[
       "Wrap a run of sibling nodes in a new element.",
       "latexml_core::document::Document::wrap_nodes",
     ),
+  ),
+  (
+    "AddToMacro",
+    Doc::Rust(
+      "Append tokens (or TeX source) to a macro's expansion, as Perl's `AddToMacro`.",
+      "latexml_core::binding::content::add_to_macro",
+    ),
+  ),
+  (
+    "BeginItemize",
+    Doc::Rust(
+      "Open a list level: the `properties` map numbering its items (Perl `beginItemize`).",
+      "latexml_core::binding::counter::dialect::begin_itemize",
+    ),
+  ),
+  (
+    "CleanID",
+    Doc::Rust(
+      "Clean a string into a valid `xml:id`.",
+      "latexml_core::common::cleaners::clean_id",
+    ),
+  ),
+  (
+    "CleanLabel",
+    Doc::Rust(
+      "A label's key: `LABEL:` (or the given prefix) plus the label, spaces to `_`.",
+      "latexml_core::common::cleaners::clean_label",
+    ),
+  ),
+  (
+    "DeclareFontMap",
+    Doc::Note(
+      "Declare an encoding's font map: an array of 1-char strings or `()`, with Perl's `family` and `*_mathstyle` options.",
+    ),
+  ),
+  (
+    "DeclareFontMapMultichar",
+    Doc::Note(
+      "Declare the multi-character glyphs of a font map (optionally a family's): position (decimal string) to its text.",
+    ),
+  ),
+  (
+    "DigestIf",
+    Doc::Rust(
+      "Digest a control sequence if it is defined; `()` otherwise.",
+      "latexml_core::binding::content::digest_if",
+    ),
+  ),
+  (
+    "Equals",
+    Doc::Note(
+      "Perl's `Equals`: `()` equals only `()`; tokens compare their meanings (themselves when neither has one), `Tokens` token by token, other values by their string.",
+    ),
+  ),
+  (
+    "Explode",
+    Doc::Note("A string's characters as `Tokens`, each OTHER (a space a space token)."),
+  ),
+  (
+    "ExplodeText",
+    Doc::Note("A string's characters as `Tokens`, letters LETTER and the rest OTHER."),
+  ),
+  (
+    "FindFile",
+    Doc::Rust(
+      "The path of a file on the search paths (Perl's `type`/`notex`/`noltxml`/`searchpaths_only`), or `()`.",
+      "latexml_core::binding::content::find_file",
+    ),
+  ),
+  (
+    "Input",
+    Doc::Rust(
+      "Input a TeX file (`\\input`'s core).",
+      "latexml_core::binding::content::input",
+    ),
+  ),
+  (
+    "Invocation",
+    Doc::Rust(
+      "The tokens invoking a control sequence on its arguments (each `Tokens`, TeX source or `()` for an omitted optional); TeX with `#n` is an anonymous macro.",
+      "latexml_core::binding::content::build_invocation",
+    ),
+  ),
+  (
+    "IsEmpty",
+    Doc::Note(
+      "Perl's `IsEmpty`: true when nothing but spaces, braces and other non-printing tokens (or empty digested content).",
+    ),
+  ),
+  (
+    "LoadPool",
+    Doc::Rust(
+      "Load a pool (`<name>.pool`).",
+      "latexml_core::binding::content::input_definitions",
+    ),
+  ),
+  (
+    "LookupRegisterOrDefault",
+    Doc::Note(
+      "A register's value as its TeX string (the type's zero when `cs` is no register); the typed handle is round C's.",
+    ),
+  ),
+  (
+    "ProcessKeyOptions",
+    Doc::Rust(
+      "`ProcessOptions` for a package whose options are key=value pairs; `\\@curroptions` is kept.",
+      "latexml_core::binding::content::process_key_options",
+    ),
+  ),
+  (
+    "Roman",
+    Doc::Note("Upper-case roman numerals of a number, as `Tokens`."),
+  ),
+  (
+    "SetCounter",
+    Doc::Rust(
+      "Set a counter's value globally.",
+      "latexml_core::binding::counter::dialect::set_counter",
+    ),
+  ),
+  ("UTF", Doc::Note("The character of a Unicode code point.")),
+  ("getEncoding", Doc::Note("A `Font`'s encoding, or `()`.")),
+  (
+    "getFamily",
+    Doc::Note("A `Font`'s family (`serif`, `typewriter`, …), or `()`."),
+  ),
+  ("getLanguage", Doc::Note("A `Font`'s language, or `()`.")),
+  ("getSeries", Doc::Note("A `Font`'s series, or `()`.")),
+  ("getShape", Doc::Note("A `Font`'s shape, or `()`.")),
+  ("getSize", Doc::Note("A `Font`'s size in points, or `()`.")),
+  (
+    "roman",
+    Doc::Note("Lower-case roman numerals of a number, as `Tokens`."),
   ),
 ];
 

@@ -3996,6 +3996,50 @@ pub fn add_to_macro_scope() -> Scope {
   }
 }
 
+/// Perl `AddToMacro($cs, @tokens)` (Package.pm:2534): append to a macro's expansion, unlocked, in
+/// [`add_to_macro_scope`]; an undefined `cs` is defined with the tokens (Perl relies on InputDefinitions'
+/// pre-defined hooks, which not every path makes).
+pub fn add_to_macro(cs: Token, tokens: Tokens) -> Result<()> {
+  let options = || {
+    Some(ExpandableOptions {
+      scope: Some(add_to_macro_scope()),
+      nopack_parameters: true,
+      ..ExpandableOptions::default()
+    })
+  };
+  match lookup_definition(&cs)? {
+    None => def_macro(cs, None, ExpansionBody::Tokens(tokens), options()),
+    Some(defn) if !defn.is_expandable() => {
+      let message = s!("{cs} is not an expandable control sequence");
+      Warn!("unexpected", cs, message, "Ignoring addition");
+      Ok(())
+    },
+    Some(defn) => {
+      let mut expansion = match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(old)) => old.clone().unlist(),
+        Some(ExpansionBody::Closure(_)) => {
+          let message = s!(
+            "{cs} has a closure body, AddToMacro will *override* with an ExpandableBody[Tokens] ! \
+             This is usually in error!"
+          );
+          Warn!("unexpected", "ExpandableBody[Closure]", message);
+          Vec::new()
+        },
+        None => Vec::new(),
+      };
+      expansion.extend(tokens.unlist());
+      // Package.pm:2545 `local $UNLOCKED = 1`: an addition may extend a `:locked` macro.
+      let _unlock_guard = local_state_unlocked_guard(true);
+      def_macro(
+        cs,
+        None,
+        ExpansionBody::Tokens(Tokens::new(expansion)),
+        options(),
+      )
+    },
+  }
+}
+
 /// The calling file's option list — latex.ltx:18637 `\@loadwithoptions`
 /// `\let`s `\opt@<callee>` to `\opt@\@currname.\@currext`, the shared half
 /// of `\RequirePackageWithOptions` and `\LoadClassWithOptions` (Perl

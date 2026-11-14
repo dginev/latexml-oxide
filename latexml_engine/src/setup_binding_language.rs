@@ -2009,62 +2009,7 @@ macro_rules! AddToMacro {
     AddToMacro!(into_cs, into_tokens);
   }};
   ($cs:ident, $tokens:ident) => {{
-    match state::lookup_definition(&$cs)? {
-      None => {
-        // Perl: InputDefinitions pre-defines hooks, but not all paths go through it.
-        // When the CS is undefined (e.g., babel's \AtEndOfPackage hooks), create a new
-        // expandable with the given tokens instead of just warning.
-        def_macro(
-          $cs.clone(),
-          None,
-          ExpansionBody::Tokens($tokens.clone()),
-          Some(ExpandableOptions {
-            scope: Some(::latexml_core::binding::content::add_to_macro_scope()),
-            nopack_parameters: true,
-            ..ExpandableOptions::default()
-          }),
-        )?;
-      },
-      Some(defn) if !defn.is_expandable() => {
-        let message = s!("{} is not an expandable control sequence", $cs);
-        let message2 = "Ignoring addition";
-        Warn!("unexpected", $cs, message, message2);
-      },
-      Some(defn) => {
-        let mut expansion = match defn.get_expansion() {
-          // the .clone() call is again avoidable with a careful refactor via e.g. using
-          // `.remove_definition` from state (as we're redefining the macro again), and then
-          // use a `.remove_expansion` call on defn?
-          Some(ExpansionBody::Tokens(tokens)) => tokens.clone().unlist(),
-          Some(ExpansionBody::Closure(_)) => {
-            let message = s!(
-              "{} has a closure body, AddToMacro will *override* with an ExpandableBody[Tokens] ! \
-              This is usually in error!",
-              $cs
-            );
-            Warn!("unexpected", "ExpandableBody[Closure]", message);
-            Vec::new()
-          },
-          None => Vec::new(),
-        };
-        expansion.extend($tokens.unlist());
-        // Perl Package.pm:2527 — `local $UNLOCKED = 1` allows the
-        // append-redefinition to bypass `:locked` (only an addition,
-        // never a replacement of the body's intent).
-        let _unlock_guard =
-          ::latexml_core::common::local_assignments::local_state_unlocked_guard(true);
-        def_macro(
-          $cs,
-          None,
-          ExpansionBody::Tokens(Tokens!(expansion)),
-          Some(ExpandableOptions {
-            scope: Some(::latexml_core::binding::content::add_to_macro_scope()),
-            nopack_parameters: true,
-            ..ExpandableOptions::default()
-          }),
-        )?;
-      },
-    }
+    ::latexml_core::binding::content::add_to_macro($cs.clone(), $tokens.clone())?;
   }};
 }
 

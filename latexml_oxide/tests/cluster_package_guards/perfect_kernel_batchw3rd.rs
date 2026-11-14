@@ -46,6 +46,7 @@ const LXRD_TEX: &str = r"\documentclass{article}
 /// p1: `Tag` `afterOpen` and an array under `afterClose:late` run (were dropped); the 2-parameter closure is called
 /// with Perl's 3 arguments `($document, $node, $box)` (Rhai required the exact count).
 /// p2: `RefStepCounter` steps through `\refstepcounter`'s meaning, as `RefStepCounter!` (2; was 1, the kernel step);
+/// the `2` follows TeX and KNOWN_PERL_ERRORS #412, not Perl (Perl 0.8.8 prints 1, Package.pm:756-760);
 /// `NewCounter`'s `idprefix` (`X1`; was "Function not found").
 /// p3: `AssignMeaning` to an undefined token undefines (U; was a no-op, D); a named scope is not the current one (U;
 /// was dropped to local, D); a test closure declaring no parameters takes the conditional's two (T; was an Error).
@@ -136,4 +137,81 @@ fn rhai_diagnostics_error_side() {
   assert_eq!(error_count(&log), 1, "{log}");
   // (the core's Fatal header ends in a space, so every Fatal line has two before its message)
   assert!(log.contains("Fatal:mycat:myobj  a fatal\n\tfd1"), "{log}");
+}
+
+const LXTHIN: &str = r##"RawTeX("\\def\\lxwrap#1{(#1)}\\def\\lxhook{X}\\newcount\\lxc \\lxc=7 \\def\\lxa{A}\\let\\lxb\\lxa");
+NewCounter("lxk");
+LoadPool("LaTeX");
+ProcessKeyOptions();
+DeclareFontMap("LXE", ["a", (), "c"], #{family: "lxfam"});
+DeclareFontMapMultichar("LXE", #{"128": "ab"});
+DeclareFontMapMultichar("LXE", "lxfam", #{"128": "cd"});
+AddToMacro("\\lxhook", "Y");
+DefMacro("\\inv", || Invocation("\\lxwrap", [Tokenize("B")]));
+DefMacro("\\invanon", || Invocation("#1-#2", Tokenize("a"), Tokenize("b")));
+DefMacro("\\lxinfo", || {
+  let r = [IsEmpty(Tokenize("{}")), IsEmpty(Tokenize("a")), Equals(T_CS("\\lxa"), T_CS("\\lxb")),
+    Equals(T_CS("\\lxa"), T_CS("\\relax")), Equals("1", 1), CleanLabel(" ab "), CleanID("x:y"), UTF(65),
+    roman(4), Roman(9), Explode("a b"), ExplodeText("cd"), LookupRegisterOrDefault("\\lxc"),
+    FindFile("article", #{type: "cls"}) != (), DigestIf("\\lxundefd") == ()];
+  let s = ""; for x in r { s += `${x} `; } s
+});
+DefPrimitive("\\lxset", || { SetCounter("lxk", 5); Input("lxin"); });
+DefEnvironment("{lxlist}", "<ltx:itemize>#body</ltx:itemize>",
+  #{properties: || BeginItemize("itemize", "@item")});
+DefLigature("lxq", "Q!", #{fontTest: |font| font.getFamily() != "typewriter"});
+"##;
+
+const LXTHIN_TEX: &str = r"\documentclass{article}
+\usepackage{lxthin}
+\begin{document}
+\inv{} \invanon{} \lxhook
+
+\lxinfo
+
+\lxset\thelxk
+
+\begin{lxlist}\item one\item two\end{lxlist}
+
+lxq \texttt{lxq}
+\end{document}
+";
+
+/// W3RD1b: the thin wrappers, each "Function not found" on e82b4171a6f (the binding stopped loading at the first,
+/// `LoadPool`), and `DefLigature`'s `fontTest`. p1: `Invocation` of a CS and of an anonymous `#1-#2` macro,
+/// `AddToMacro`. p2: `IsEmpty` (braces are empty, a letter is not), `Equals` (`\let` to one meaning; not `\relax`;
+/// `"1"` and `1` as Perl's string compare), `CleanLabel`, `CleanID`, `UTF`, `roman`/`Roman`, `Explode`/`ExplodeText`,
+/// `LookupRegisterOrDefault`, `FindFile`, `DigestIf` of an undefined CS. p3: `Input`, `SetCounter`. The list:
+/// `BeginItemize`'s properties number the items. p5: the ligature applies outside typewriter only. `LoadPool`,
+/// `ProcessKeyOptions` and the font-map calls run clean (0 E / 0 W).
+#[test]
+fn rhai_thin_wrappers() {
+  let (log, xml) = convert_files_with(
+    LXTHIN_TEX,
+    &[("lxthin.sty.rhai", LXTHIN), ("lxin.tex", "IN\n")],
+    None,
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  for (id, para) in [
+    ("p1", r#"<para xml:id="p1"><p>(B) a-b XY</p></para>"#),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>true false true false true LABEL:ab x..y A iv IX a b cd 7 true true</p></para>"#,
+    ),
+    ("p3", r#"<para xml:id="p3"><p>IN 5</p></para>"#),
+    (
+      "p5",
+      r#"<para xml:id="p5"><p>Q! <text font="typewriter">lxq</text></p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+  assert_element(
+    &xml,
+    "item",
+    &["xml:id=\"S0.I1.i2\""],
+    "<item xml:id=\"S0.I1.i2\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">2nd item</tag></tags><para \
+     xml:id=\"S0.I1.i2.p1\"><p>two</p></para></item>",
+  );
 }

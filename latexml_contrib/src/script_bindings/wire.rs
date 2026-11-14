@@ -43,6 +43,11 @@ fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Result<T> {
   Ok(neutral)
 }
 
+/// [`contain`] for a hook that returns a bool (a ligature's `fontTest`): the failure is logged, the test false.
+pub(super) fn contain_bool(what: &str, e: Box<EvalAltResult>) -> bool {
+  contain(what, e, false).unwrap_or(false)
+}
+
 /// Install one `DefMacro` registration as a native expandable definition.
 pub(super) fn wire_macro(
   engine: &Rc<Engine>,
