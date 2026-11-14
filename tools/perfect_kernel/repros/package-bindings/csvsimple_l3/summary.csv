@@ -1,0 +1,4 @@
+model,mae,texmodel
+imagenet,5.1,\imagenet
+pvpower,4.4,\pvpower
+mean,9.6,\mean

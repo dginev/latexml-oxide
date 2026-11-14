@@ -1,0 +1,19 @@
+% issue 807 follow-up (pre-existing, shared with Perl): under `--split --splitnaming=label --dest=<stem>.epub`, a section
+%   whose label equals the document's stem gets the root page's file name, so the section page overwrites the root page
+%   (its contents and TOC are lost) and the OPF lists the same href twice (a duplicate id: an invalid OPF). Perl latexmlc
+%   does the same, but keeps properties="nav" on the first entry; ours puts it on neither.
+% witness: synthetic (review revI807b finding 4, probe z.tex)
+% oracle:  pdflatex 0 errors: a contents list, two sections, a bibliography
+% engines: rust (I807b c507e4c1a12) = the root page lost, the href listed twice, no nav property; perl latexmlc 2026-11-14 =
+%   the same loss and duplicate, nav on the first entry
+% expect:  0 errors; every page its own file (Split's name-collision rule), one manifest entry each, nav on the root
+% status:  RED (post-merge)
+% run:     latexml_oxide --split --splitnaming=label --dest=split_label_collides_with_root_red.epub split_label_collides_with_root_red.tex
+\documentclass{article}
+\begin{document}
+\tableofcontents
+\section{Zed}\label{split_label_collides_with_root_red} Text z.
+\subsection{Zsub}\label{zs} Text zs.
+\section{Alpha}\label{a} Text a.
+\begin{thebibliography}{1}\bibitem{k} K. Book.\end{thebibliography}
+\end{document}

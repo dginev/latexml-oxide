@@ -16,7 +16,8 @@ use crate::{
   package::{
     listings_sty::{listings_read_raw_file, lst_process_display, lst_run_body_via_input},
     tcolorbox_sty::{
-      tcb_counter_step_code, tcb_listing_startend, tcb_resolve_listing_mode, tcb_xparse_listing,
+      tcb_counter_step_code, tcb_listing_startend, tcb_process_init, tcb_resolve_listing_mode,
+      tcb_xparse_listing,
     },
   },
   prelude::*,
@@ -126,12 +127,7 @@ LoadDefinitions!({
     // `\examplefile` template of 1912.06298, 2405.01480 …: `title={Example~\thetcbcounter: #2}`
     // was "undefined:\thetcbcounter" once the title was typeset).
     let box_name = cmd_tok.with_str(|s| s.trim_start_matches('\\').to_string());
-    let init_src = init.map(|t| t.to_string()).unwrap_or_default();
-    if !init_src.trim().is_empty() {
-      let _ = digest(mouth::tokenize_internal(TeXString::assembled(format!(
-        "\\tcb@proc@options@init{{{init_src}}}{{{box_name}}}"
-      ))));
-    }
+    tcb_process_init(&init.map(|t| t.to_string()).unwrap_or_default(), &box_name);
     let n: usize = n.value_of() as usize;
     let mut param_spec = String::new();
     if let Some(ref d) = default {

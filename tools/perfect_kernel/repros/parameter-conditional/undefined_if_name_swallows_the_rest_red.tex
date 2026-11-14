@@ -1,0 +1,15 @@
+% witness: ijsra/ijsra.cls:296 on TL 2026 (KOMA-Script 3.50 dropped `\ifstr`, kept only in scrbase-20260202.sty):
+%   `perfect_kernel_batchm1::the_ijsra_abstract_is_semantic` red there, `\IJSRAopening` lost; synthetic minimal
+% oracle:  pdflatex 1 `!` (Undefined control sequence); "Before. abXY After the call."
+% engines: rust WIN1cf base 2 errors (`\ifstr` undefined, "Defining it now as with \newif"; `\fi` expected at the end):
+%   the stub conditional is false and skips to the end, "abXY After the call." lost; perl the same recovery
+%   (State.pm:532-553 `generateErrorStub`, :540)
+% expect:  1 error (the undefined `\ifstr`), "Before. abXY After the call." kept as TeX prints it
+% status:  RED (WIN1cf)
+% moves:   post-merge
+\documentclass{article}
+\begin{document}
+Before.
+\ifstr{a}{b}{X}{Y}
+After the call.
+\end{document}
