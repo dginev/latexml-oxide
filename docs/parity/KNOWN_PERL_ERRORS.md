@@ -1756,10 +1756,9 @@ Real `latex.ltx` `\document` disables the `\@onlypreamble` commands
 deferred load is legal — #2846 contradicts the kernel. The `(!?)` in the moved
 comment is the author's own doubt.
 
-**Perl status:** REGRESSION introduced by #2846 (verified: vendored post-#2846
-`latexml` rev 51fea96a errors on the reproducer; installed pre-#2846 0.8.8 does
-not). **Fixed in both Rust and Perl here** (revert #2846 + make `\par` context-aware
-— see below); candidate to upstream as the #2846 follow-up.
+**Perl status:** RESOLVED upstream by #2848 (9baaf966), which reverted #2846's
+placement and made `\par` context-aware (below); introduced by #2846 (post-#2846
+`latexml` rev 51fea96a errs on the reproducer, pre-#2846 0.8.8 does not).
 
 **#2846 tried to overload `inPreamble` for two transitions.** `latex.ltx`
 `\document` performs two things at different points: (A) body typesetting begins —
