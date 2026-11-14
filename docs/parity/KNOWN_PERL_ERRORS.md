@@ -9771,8 +9771,8 @@ body's font) — is the TeX default with encoding OT1 (TeX_Box.pool.ltxml:218-22
 ```
 
 Rust (60r): fontspec selects the format's TU, installing it first under the pdfTeX persona — tuenc.def input through
-its XeTeX branch (`\XeTeXrevision` defined for that input only, restored after; its gate :49-57 would fall back to
-T1) — and not through the fontenc binding, whose Perl-inherited `setupCyrillic` defines `\cyrr` & co. for any
+its XeTeX branch (the XeTeX identity it probes defined for that input only, restored after: v2.1d's `\XeTeXrevision`,
+v2.2a's `\tex_Umathcode:D` gate and `\XeTeXversion` branch; the gate would fall back to T1) — and not through the fontenc binding, whose Perl-inherited `setupCyrillic` defines `\cyrr` & co. for any
 encoding where TU leaves them undefined; TU's fontmap applies the TeX ligatures except in typewriter (tu_fontmap.rs),
 as xelatex prints.
 `neutralize_font` (base_utilities/fonts_defs.rs) takes its encoding from `\encodingdefault`, expanded as `\fontencoding` expands

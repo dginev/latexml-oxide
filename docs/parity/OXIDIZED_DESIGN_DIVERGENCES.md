@@ -10990,8 +10990,8 @@ that only lualatex or xelatex can compile: `\char`\{` prints "–", a typed `<` 
 - A text symbol, accent or composite declared for TU at a slot above 255 is that code point
   (`decode_slot`; tuenc-greek.def:204 `\DeclareTextSymbol{\textalpha}\UnicodeEncodingName{"03B1}`),
   where the 8-bit rule gives no glyph.
-- The `xetex` profile installs the same format encoding, after `\XeTeXrevision` so that tuenc.def
-  takes its XeTeX branch.
+- The `xetex` profile installs the same format encoding, after `\XeTeXrevision`, `\XeTeXversion` and
+  `\tex_Umathcode:D` so that tuenc.def takes its XeTeX branch (v2.1d probes the first, v2.2a the other two).
 - The pdfTeX-model default keeps OT1, as pdflatex. The TU map is registered for every profile,
   though, so an explicit TU selection under it (`\fontencoding{TU}`, `\UseTextSymbol{TU}`,
   fontenc's `[TU]`, the fontspec binding's `\latinencoding`=TU reached through babel's
@@ -14750,8 +14750,8 @@ natbib_bib_bibliography_prints_its_bibpreamble}`, `perfect_kernel_gemini::bibpre
 **TeX**: fontspec makes the format's TU the text encoding (fontspec-xetex.sty:431-441); `\normalfont`/`\reset@font`
 select `\encodingdefault` (latex.ltx:14113-14122). **Perl** keeps OT1 in both places (KNOWN_PERL_ERRORS #450).
 **Rust** (60r): the fontspec binding selects the format's TU (the luatex/xetex profiles' installation); under the
-pdfTeX persona it installs it, inputting tuenc.def's XeTeX branch with `\XeTeXrevision` defined for the input only, so
-the engine probe stays undefined after;
+pdfTeX persona it installs it, inputting tuenc.def's XeTeX branch with the XeTeX identity it probes (`\XeTeXrevision`;
+v2.2a: `\tex_Umathcode:D`, `\XeTeXversion`) defined for the input only, so the engine probes stay undefined after;
 `neutralize_font` uses `\encodingdefault`, expanded, and tags babel's `\latinencoding` (`neutralize_font_latin`);
 identifiers digested after it come from their source tokens (`\lx@tag@intags OptionalUndigested`, `type_name`,
 `\lxDeclare` keys). Guards `perfect_kernel_batch60::{fontspec_text_is_tu_encoded,
