@@ -8,9 +8,9 @@
 #       prints the next free OXIDIZED_DESIGN number (max `### N.` over docs/parity/OXIDIZED_DESIGN_*.md and
 #       docs/math/OXIDIZED_DESIGN_MATH.md, plus one), the next free KNOWN_PERL_ERRORS number (max `## N.`,
 #       plus one), and each "Next free number" line of the OD index with whether it is stale. The max is
-#       taken over the working tree AND every open PR's head (`gh pr list`; each `refs/pull/<N>/head` is
-#       fetched from $NEXT_ENTRY_NUMBERS_REMOTE, default origin, into a scratch ref deleted on exit; nothing
-#       is checked out), with the numbers each PR holds above the working tree's max (`OD #1037-#1038 held
+#       taken over the working tree AND every open PR's head (`gh pr list`, up to $NEXT_ENTRY_NUMBERS_PR_LIMIT,
+#       default 1000, warning when reached; each `refs/pull/<N>/head` is fetched from $NEXT_ENTRY_NUMBERS_REMOTE,
+#       default origin, into a per-run scratch ref deleted on exit; nothing is checked out), with the numbers each PR holds above the working tree's max (`OD #1037-#1038 held
 #       by #845`) and every number two sources define with different headings (`CLASH: OD #1037 defined
 #       differently by #1 #2`). Without gh, or when gh or a fetch fails, a WARNING goes to stderr and the
 #       unscanned heads are left out. --local-only reads the working tree alone (no network).
@@ -23,6 +23,8 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
+# The repo is the script's own: a GIT_DIR the pre-push hook exports (a linked worktree's) must not redirect git.
+unset $(git rev-parse --local-env-vars)
 parity="$root/docs/parity"
 od_files=("$parity"/OXIDIZED_DESIGN_*.md)
 [ -f "$root/docs/math/OXIDIZED_DESIGN_MATH.md" ] && od_files+=("$root/docs/math/OXIDIZED_DESIGN_MATH.md")
@@ -70,22 +72,29 @@ table="$tmpdir/headings.tsv"
 : > "$table"
 scanned=""
 gh_ok=0
+pr_count=0
 if [ "$local_only" = 0 ]; then
   remote=${NEXT_ENTRY_NUMBERS_REMOTE:-origin}
+  pr_limit=${NEXT_ENTRY_NUMBERS_PR_LIMIT:-1000}
   if ! command -v gh >/dev/null 2>&1; then
     echo "WARNING: open PR heads not scanned (gh not installed); numbers are the working tree's alone and may collide with an open PR's" >&2
-  elif ! prs_json=$(cd "$root" && gh pr list --state open --json number,headRefName,headRepositoryOwner,isCrossRepository 2>"$tmpdir/gh.err"); then
+  elif ! prs_json=$(cd "$root" && gh pr list --state open --limit "$pr_limit" --json number,headRefName,headRepositoryOwner,isCrossRepository 2>"$tmpdir/gh.err"); then
     echo "WARNING: open PR heads not scanned (gh pr list failed: $(head -1 "$tmpdir/gh.err")); numbers are the working tree's alone and may collide with an open PR's" >&2
   else
     gh_ok=1
-    for pr in $(printf '%s' "$prs_json" | grep -oE '"number":[[:space:]]*[0-9]+' | grep -oE '[0-9]+$' | sort -n); do
-      ref="refs/next-entry-numbers/pr/$pr"
+    prs=$(printf '%s' "$prs_json" | grep -oE '"number":[[:space:]]*[0-9]+' | grep -oE '[0-9]+$' | sort -n || true)
+    pr_count=$(printf '%s' "$prs" | grep -c . || true)
+    [ "$pr_count" -ge "$pr_limit" ] &&
+      echo "WARNING: gh pr list returned $pr_count open PRs, its --limit; heads past it are not scanned (raise NEXT_ENTRY_NUMBERS_PR_LIMIT)" >&2
+    for pr in $prs; do
+      # Per run ($$): concurrent runs in other worktrees of the same repo share refs/.
+      ref="refs/next-entry-numbers/$$/pr/$pr"
+      scratch_refs+=("$ref")
       # refs/pull/<N>/head, not the branch name, so a fork's PR is read too.
       if ! git -C "$root" fetch -q --no-tags "$remote" "+refs/pull/$pr/head:$ref" 2>"$tmpdir/fetch.err"; then
         echo "WARNING: open PR #$pr not scanned (git fetch $remote refs/pull/$pr/head failed: $(head -1 "$tmpdir/fetch.err")); its numbers may collide" >&2
         continue
       fi
-      scratch_refs+=("$ref")
       scanned+=" #$pr"
       while IFS= read -r path; do
         case $path in
@@ -145,6 +154,8 @@ if [ "$local_only" = 1 ]; then
   echo "open PR heads: not scanned (--local-only)"
 elif [ -n "$scanned" ]; then
   echo "open PR heads scanned:$scanned"
+elif [ "$gh_ok" = 1 ] && [ "$pr_count" -gt 0 ]; then
+  echo "open PR heads: none scanned (every fetch failed)"
 elif [ "$gh_ok" = 1 ]; then
   echo "open PR heads: none open"
 fi
