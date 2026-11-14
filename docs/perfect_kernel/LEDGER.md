@@ -9,7 +9,7 @@ Per-document artifacts live under `~/data/perfect_kernel/<bundle>/<name>/`
 2026-08-31 → 2026-09-27: batches 4 → 56kx, sweeps #1 → #129. Clean documents (status 0-1) went from 947 / 2,374 at
 sweep #5 to **1,933** at sweep #129 (`latexml_oxide.56kx5-rel`): errors 11,149, schema-valid 2,272, recall mean 95.76
 (median 99.1, ≥95 % on 82.9 %), cpu_h 2.17. The per-sweep numbers since #113 are the scoreboard in
-[`../PERFECT_KERNEL.md`](../PERFECT_KERNEL.md). Every phase-56 row — the fix log, the sweep history #1–#36, the S2/S3
+[`../archive/PERFECT_KERNEL_2026-11-13.md`](../archive/PERFECT_KERNEL_2026-11-13.md). Every phase-56 row — the fix log, the sweep history #1–#36, the S2/S3
 baselines and the nicematrix exemplar (0 errors since 2026-09-04) — is in
 [`archive/LEDGER_PHASE56_2026-09-27.md`](archive/LEDGER_PHASE56_2026-09-27.md), where a `LEDGER 56xx` reference resolves.
 

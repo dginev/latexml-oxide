@@ -10,8 +10,8 @@ Two co-equal targets drive current work:
    format/dump and package-loading boundary is maintained — the strict-`LoadFormat`
    dump-parity mission is **complete** (zero-error inits, dumps match Perl; audit
    archived at [`docs/archive/PERL_LOADFORMAT_AUDIT.md`](docs/archive/PERL_LOADFORMAT_AUDIT.md),
-   the ~72-CS Perl-only long-tail residual tracked in `SYNC_STATUS.md` "Engine file
-   open gaps"). Ongoing parity work is corpus-driven: mine fatal/error clusters from
+   the ~72-CS Perl-only long-tail residual is demand-driven, `SYNC_STATUS.md` row R
+   LOADFMT). Ongoing parity work is corpus-driven: mine fatal/error clusters from
    live runs, classify vs same-host Perl (`canvas-triage` skill), fix
    GENUINE-RUST-ONLY divergences faithfully.
 2. **Beyond-Perl improvement runs over arXiv.** The production `cortex_worker` fleet
@@ -144,7 +144,7 @@ only). **Subagents are narrow and bounded** (user directives 2026-10-01, 2026-10
 2026-10-12): one question or one mechanism, a fixed deliverable, then stop. Analysis
 agents are read-only. The only writers are `payload-writer` agents, whose fix rounds
 run targeted checks only; the main checkout's tree, integration, the bundle-level full
-suite + A/B, and every push stay in the main session. At most 2 subagents run at once (user directive 2026-10-22). Definitions are discovered at session start; a new one needs a
+suite + A/B, and every push stay in the main session. At most 4 subagents run at once (user 2026-11-11). Definitions are discovered at session start; a new one needs a
 restart. Brief read-only agents with the main checkout, not a worktree: `LaTeXML/`
 (the Perl oracle) is gitignored and absent from every worktree, so a worktree agent
 greps nothing and reports "no gaps" — a payload writer reads the oracle from the main
@@ -286,7 +286,7 @@ kept it; check Core.
 
 Known residual: **`<m:menclose>` is still emitted** for `\cancel` / `\boxed`.
 Core removed it and there is no mechanical replacement, so it is a rendering +
-golden change needing its own branch — tracked as the after-merge line **MENC** in `SYNC_STATUS.md` row R,
+golden change needing its own branch — tracked as the line **MENC** in `SYNC_STATUS.md` row R,
 deferred by user directive 2026-07-30. Don't "fix" it incidentally.
 
 ## Practical guidance

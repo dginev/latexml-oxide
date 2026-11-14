@@ -230,7 +230,7 @@ cd ~/.cargo && latexml_oxide --init=plain.tex && latexml_oxide --init=latex.ltx
 writes `~/.cargo/resources/dumps/{plain,latex}.YYYY.dump.txt` and every later run
 finds them. (`LATEXML_DUMP_DIR` overrides the location; the engine's own
 no-dump error already says *"run `latexml_oxide --init=latex.ltx` to generate"*.)
-Documented in the README's crates.io section.
+Documented in `docs/INSTALL.md`'s crates.io section.
 
 **Why not generate dumps from `build.rs` at `cargo install` time?** (Asked
 2026-07-17.) A dump is produced by *running the fully linked binary* (`make_formats.sh`

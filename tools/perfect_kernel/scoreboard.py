@@ -23,7 +23,7 @@ HTML recall; recall mean / median / share >= 95 %; missing = distinct PDF words 
 then performance (per-document wall seconds of the conversion, core XML): cpu_h = their sum in
 hours, p90 / p99, and the count over 60 s and over 120 s (the 180 s ceiling's approach).
 
-Goal bar (docs/PERFECT_KERNEL.md "Goal bar and ranked path"): a last block counts what is still open on the
+Goal bar (docs/archive/PERFECT_KERNEL_2026-11-13.md "Goal bar and ranked path"): a last block counts what is still open on the
 goal set — the in-scope manuals less the ones ruled out (`out_of_scope.tsv`, `shell_escape_excluded.tsv`):
 G1 not clean (Fatal or errors, timeouts excepted), G2 jing-invalid, G3 below 95 % recall (and their missing words),
 G4 over the 180 s ceiling or timed out, G5 Fatal and timeouts among every other manual (the canaries). A manual

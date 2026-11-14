@@ -15,8 +15,10 @@ documentation = "https://dginev.github.io/latexml-oxide/latexml/"
 # README (which GitHub serves, and which is the single source of truth) is
 # unreachable from this crate dir; without the symlink `cargo publish -p latexml`
 # fails outright: "readme `README.md` does not appear to exist". Cargo dereferences
-# the symlink and packages the real 12 KB content, verified in the tarball.
+# the symlink and packages the real content, verified in the tarball.
 # A copy here would be a second README to keep in step, i.e. guaranteed drift.
+# Its links are absolute GitHub URLs: crates.io resolves a relative one under this
+# crate's directory (`path_in_vcs`), where `docs/` does not exist.
 readme = "README.md"
 description = "A TeX to XML/HTML/ePub converter: a LaTeXML reimplementation in Rust"
 keywords = ["latex", "tex", "html", "mathml", "converter"]
@@ -217,7 +219,7 @@ similar = "3"
 
 # Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
 # Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.
-# Runtime apt dependencies match the README's "Build from source" recipe minus
+# Runtime apt dependencies match docs/BUILDING.md's "Build from source" recipe minus
 # the `-dev` headers (those are compile-time only). The deb only ships the
 # `latexml_oxide` binary — XSLT, CSS, JavaScript and RelaxNG schemas are
 # embedded at build time, so no `resources/` payload is shipped alongside.
@@ -259,6 +261,7 @@ priority = "optional"
 assets = [
   ["../target/maxperf/latexml_oxide", "usr/bin/", "755"],
   ["../README.md", "usr/share/doc/latexml-oxide/README", "644"],
+  ["../docs/INSTALL.md", "usr/share/doc/latexml-oxide/INSTALL.md", "644"],
   ["../CHANGELOG.md", "usr/share/doc/latexml-oxide/CHANGELOG", "644"],
   ["../LICENSE", "usr/share/doc/latexml-oxide/copyright", "644"],
   ["../THIRD-PARTY-NOTICES", "usr/share/doc/latexml-oxide/THIRD-PARTY-NOTICES", "644"],
