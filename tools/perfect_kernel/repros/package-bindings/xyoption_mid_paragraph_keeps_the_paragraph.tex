@@ -1,0 +1,11 @@
+% witness: synthetic (revMACSYNC S2; xy.tex.ltxml:32-49 \xyoption is a macro, read in place)
+% oracle:  pdflatex 0 `!`, one paragraph "Middle end of paragraph." (the two spaces around \xyoption both kept)
+% engines: rust (MACSYNC fa284f59fd2) = "Middle end", one space lost: the feature marks went through RawTeX, whose
+%          leaveHorizontal_internal (Package.pm:996) ended horizontal mode mid-paragraph
+% expect:  <p>Middle  end of paragraph.</p>, 0 E 0 W
+% status:  RED (fa284f59fd2) -> GREEN (MACSYNCb)
+\documentclass{article}
+\usepackage[all]{xy}
+\begin{document}
+Middle \xyoption{curve} end of paragraph.
+\end{document}

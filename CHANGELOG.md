@@ -23,6 +23,15 @@
     figure that draws a raster larger than its own pixels keeps the PNG path, where a
     browser would blur it
     (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
+  - **The binding macros mean what Perl's same-named API means** (MACSYNC, AUDMAC). `Digest!` leaves
+    the horizontal mode its digestion entered (Package.pm:393-402, through the new `binding_digest`) and `RawTeX!`
+    ends in vertical mode (Package.pm:996). `AssignRegister!` takes Perl's arguments, `(cs, value[, scope[, parameters]])`, `cs` a name
+    or a Token (**API change** for compiled bindings: the third argument was the parameters, now the scope).
+    `LookupRegister!`, `AssignRegister!` and the core `lookup_register` give Perl's one Warning
+    (`The control sequence \X is not a register`, Package.pm:1367-1369); the macros on an undefined cs too
+    (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
+    unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` on an
+    undefined cs is TeX's Error and defines it with the addition, as latex.ltx does (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was

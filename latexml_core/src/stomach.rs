@@ -4162,7 +4162,7 @@ fn digest_body(terminal_opt: Option<Token>, in_paragraph: bool) -> Result<Vec<Di
   Ok(expire_local_box_list())
 }
 
-/// a convenience function for including chunks of raw TeX (or LaTeX) code
+/// Perl `RawTeX` (Package.pm:981-997): a convenience function for including chunks of raw TeX (or LaTeX) code
 /// It is useful for copying portions of the normal
 /// implementation that can be handled simply using macros and primitives.
 pub fn raw_tex(text: &str) -> Result<()> {
@@ -4189,6 +4189,9 @@ pub fn raw_tex(text: &str) -> Result<()> {
     }
     Ok(())
   })?;
+  // Perl Package.pm:996: RawTeX ends in vertical mode, whatever mode it began in (mid-paragraph too); a caller that
+  // runs inside a paragraph digests through `Digest` instead, which leaves only a horizontal mode it entered.
+  leave_horizontal_internal();
   Ok(())
 }
 

@@ -36234,3 +36234,15 @@ longer matters (the PNG path renders such a raster as main does). **Guards**:
 `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged` (each converter present, then the pipeline:
 `native_raster_vector.tex`, a 64×64 PNG at 48 bp, stays SVG; `mixed_raster_vector.tex`, a 4×4 tile at 1 cm, takes the
 PNG path), `graphics::tests::svg_enlarged_raster_reads_every_placement`, `graphics::tests::should_try_svg_path_auto_detect`.
+
+### 1036. `AddToMacro!` on an undefined cs is an Error and defines it with the addition (MACSYNC)
+
+**Perl.** `AddToMacro` (Package.pm:2534-2549) Warns ("not an expandable control sequence") and drops the addition when
+the cs is undefined; a later use of the cs is then an undefined-cs Error. **TeX.** latex.ltx:1832 `\g@addto@macro`'s
+`\expandafter` raises "Undefined control sequence", then its `\xdef` defines the cs with the addition (pdflatex
+`\g@addto@macro\nohook{XY}A\nohook B` → 1 `!`, "AXYB"). **Ours.** TeX's Error (`undefined:\nohook`, as TeX and Perl
+both err) and TeX's outcome, the content kept; before, the cs was defined silently. `\AtEndOfPackage` names its hook with
+`\csname` (latex.ltx:18896), so it makes an empty hook first and raises nothing. A non-expandable cs keeps Perl's Warning and
+is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xdef` makes a self-referencing macro).
+**Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
+`macro-state/g_addto_macro_undefined_defines.tex`).

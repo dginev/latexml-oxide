@@ -451,20 +451,40 @@ macro_rules! forbidMath {
   };
 }
 
+/// Perl `AssignRegister($cs, $value, $scope, @parameters)` (Package.pm:1397-1406): `$cs` a name or a Token; a cs that is
+/// not a register Warns and assigns nothing.
 #[macro_export]
 macro_rules! AssignRegister {
-  ($cs:literal, $value:expr_2021) => {
-    AssignRegister!($cs, $value, Vec::new())
+  ($cs:expr_2021, $value:expr_2021) => {
+    $crate::AssignRegister!($cs, $value, None, Vec::new())
   };
-  ($cs:literal, $value:expr_2021, $args:expr_2021) => {
-    let value_ident = { $value };
-    if let Some(defn) = state::lookup_register_definition(&T_CS!($cs)) {
-      (*defn).set_value(value_ident, None, $args);
-    } else {
-      let message = s!("The control sequence {} is not a register", $cs);
-      Warn!("expected", "register", message);
+  ($cs:expr_2021, $value:expr_2021, $scope:expr_2021) => {
+    $crate::AssignRegister!($cs, $value, $scope, Vec::new())
+  };
+  ($cs:expr_2021, $value:expr_2021, $scope:expr_2021, $params:expr_2021) => {
+    let cs = $crate::binding::def::macros::register_cs($cs);
+    match $crate::state::lookup_register_definition(&cs) {
+      Some(defn) => $crate::definition::Definition::set_value(&*defn, $value, $scope, $params),
+      None => $crate::state::warn_not_register(&cs),
     }
   };
+}
+
+/// The token of [`AssignRegister!`]'s and `LookupRegister!`'s (latexml_engine) `$cs` (Perl `T_CS($cs) unless ref $cs`).
+pub fn register_cs(cs: impl RegisterCs) -> crate::token::Token { cs.register_cs() }
+
+/// A register's name as the binding macros take it: a cs name, or the Token itself.
+pub trait RegisterCs {
+  fn register_cs(self) -> crate::token::Token;
+}
+impl RegisterCs for &str {
+  fn register_cs(self) -> crate::token::Token { crate::T_CS!(self) }
+}
+impl RegisterCs for crate::token::Token {
+  fn register_cs(self) -> crate::token::Token { self }
+}
+impl RegisterCs for &crate::token::Token {
+  fn register_cs(self) -> crate::token::Token { *self }
 }
 
 #[macro_export]
