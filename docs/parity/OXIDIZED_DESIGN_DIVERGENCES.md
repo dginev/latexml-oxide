@@ -36341,3 +36341,21 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
+
+### 1041. `<mtable>` carries no default `rowspacing="0pt"` (issue 695)
+
+**Perl.** `pmml_array` writes `rowspacing` from the XMArray's `rowsep` (default `0pt`) on every table of two or more
+rows (MathML.pm:478-481). **Rust.** The same, except that a missing or zero `rowsep` writes nothing
+(`latexml_post/src/mathml/presentation.rs`, `pmml_array_inner`, `is_zero_length`; DG ruling 2026-11-14); an author's
+non-zero `rowsep` (`\arraystretch`, `\jot`) is written as Perl writes it (`rowspacing="10.0pt"`). MathML Core
+gives `<mtable>` only the global attributes, so Chrome ignores it (cell contents 6.88 px apart with or without it),
+while Firefox and MathJax honour it: issue 695's `array` and a `gather*`-nested `aligned` set their rows touching with
+`rowspacing="0pt"` (Firefox, Playwright build 1532: 1.5-3 px between the rows' contents) and without it 8.4-9.9 px
+apart (Firefox's default) and about 3.8 px in MathJax 2.1 (HTML-CSS, offline; its 1ex default); an
+`\arraystretch{2}` array's `10.0pt` gives 16.3 px in Firefox, a `\jot=6pt` `aligned`'s `6.0pt` 11 px. `columnspacing`
+stays: LaTeXML.css keys the aligned-cell padding reset on `columnspacing="0pt"` (#755); `columnalign` stays on `<mtd>`:
+LaTeXML.css keys `justify-items` on it (#809). The other non-Core attributes still written, `align` and `width` on
+`<mtable>`, are left to their own ruling. **Guard**:
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the
+four whole `<mtable>` elements: two default, two with the author's `rowspacing`); repro
+`tools/perfect_kernel/repros/alignment/mtable_no_rowspacing.tex`.

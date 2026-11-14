@@ -1,0 +1,33 @@
+% witness: issue 695 (the array MWE), synthetic aligned sibling; an \arraystretch{2} array and a \jot=6pt aligned
+% oracle:  pdflatex 0 errors; the rows of each table are separated by TeX's own baselineskip (the last two wider)
+% engines: perl 0.8.8 and rust 17a64c0415a emit `<mtable rowspacing="0pt">` on the first two (Perl MathML.pm:481), and
+%          `rowspacing="10.0pt"` / `"6.0pt"` on the last two; MathML Core has no `rowspacing` (Chrome ignores it) while
+%          Firefox and MathJax honour it and set `0pt` rows touching; rust d962299f751 dropped all four
+% expect:  0 errors; the first two `<mtable>`s carry no `rowspacing`, the last two Perl's `10.0pt` / `6.0pt`; every one keeps
+%          `columnspacing` (LaTeXML.css keys the aligned reset on it)
+% status:  RED (17a64c0415a, d962299f751) -> GREEN (MROW); guard
+%          cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{array}
+\begin{document}
+\[
+\begin{array}{>{\displaystyle}r @{\;} >{\displaystyle}l}
+y^{\prime}+y&=\sin \left(x \right)\\
+y \left(0\right)&=1\\
+\end{array}
+\]
+\begin{gather*}
+\begin{aligned}
+y(x) &= C_1 y(x)\\ g(x) &= C_1 y_1
+\end{aligned}
+\end{gather*}
+{\renewcommand\arraystretch{2}
+\[\begin{array}{cc}a&b\\c&d\end{array}\]}
+{\setlength\jot{6pt}
+\begin{gather*}
+\begin{aligned}
+p &= q\\ r &= s
+\end{aligned}
+\end{gather*}}
+\end{document}
