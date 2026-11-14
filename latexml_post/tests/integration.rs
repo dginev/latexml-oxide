@@ -152,23 +152,6 @@ fn test_namespace_registration() {
 }
 
 /// True if a vector-SVG converter (`mutool` or `pdftocairo`) is on PATH.
-/// The Graphics vector-SVG path tries mutool first, then pdftocairo; if
-/// neither is installed the path can't fire and these tests self-skip.
-///
-/// Presence is detected by whether the binary *spawns* (`output().is_ok()`),
-/// NOT by exit status: unlike inkscape, `mutool`/`pdftocairo` exit non-zero
-/// on `--version` (unknown/usage), so a `status.success()` gate would
-/// silently skip even when the tool is installed — a false-negative that
-/// would mask the coverage entirely.
-fn svg_converter_available() -> bool {
-  ["mutool", "pdftocairo"].iter().any(|tool| {
-    std::process::Command::new(tool)
-      .arg("--version")
-      .output()
-      .is_ok()
-  })
-}
-
 /// Regression test for the vector-SVG graphics path (opt-in via
 /// `--graphics-svg-threshold-kb N`). Uses the cifar10 plot PDF from the
 /// upstream [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)
@@ -176,20 +159,11 @@ fn svg_converter_available() -> bool {
 /// vector-SVG converters (mutool → pdftocairo) that preserve vectors
 /// rather than rasterizing via ImageMagick.
 ///
-/// Test behaviour:
-/// - If no vector converter (mutool/pdftocairo) is on PATH, the test exits silently. This keeps the
-///   suite green on minimal runners; CI installs poppler/mupdf so the branch is covered on GH Actions.
-/// - Otherwise, exercise the Graphics processor with `svg_threshold_kb = 200` and assert the output
-///   is a real SVG file.
+/// Exercises the Graphics processor with `svg_threshold_kb = 200` and asserts the output is a real
+/// SVG file. `ignore`d (visibly) where neither converter is on PATH at build time (`build.rs`).
 #[test]
+#[cfg_attr(not(svg_converter_on_path), ignore = "needs mutool or pdftocairo")]
 fn test_vector_svg_graphics_path() {
-  if !svg_converter_available() {
-    eprintln!(
-      "no vector-SVG converter (mutool/pdftocairo) on PATH; skipping vector-SVG regression test"
-    );
-    return;
-  }
-
   let fixture = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/cifar10_vector.pdf"
@@ -260,16 +234,10 @@ fn test_vector_svg_graphics_path() {
 ///
 /// This test asserts the vector-SVG path *completes* fast (doesn't time
 /// out) and does NOT exercise the slow convert path (would blow the suite
-/// runtime). Silent skip if no vector converter is installed.
+/// runtime). `ignore`d where no vector converter is installed.
 #[test]
+#[cfg_attr(not(svg_converter_on_path), ignore = "needs mutool or pdftocairo")]
 fn test_vector_svg_pathological_convert_case() {
-  if !svg_converter_available() {
-    eprintln!(
-      "no vector-SVG converter (mutool/pdftocairo) on PATH; skipping pathological-PDF regression test"
-    );
-    return;
-  }
-
   let fixture = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/pathological_vector.pdf"
@@ -702,4 +670,107 @@ fn panel_grid_markup_states_only_numbers() {
     "<div class=\"ltx_flex_cell ltx_flex_size_2\" style=\"--ltx-panel-width:0.45;\">",
     "<span class=\"ltx_rule ltx_figure_panel\" style=\"width:155.3pt;height:28.5pt;--ltx-bg-color:black;display:inline-block;\">",
   ],);
+}
+
+/// What an SVG draws, in order: each `<image>` as `image WxH <media type>` and each glyph or
+/// path as `glyph`/`path`, resolving `<use>` through its `xlink:href` (mutool draws the image
+/// inline, pdftocairo through a `<use>` of a `<defs>` entry; both draw glyphs as `<use>`).
+fn svg_drawn_shape(svg: &str) -> Vec<String> {
+  use libxml::tree::Node;
+  const XLINK: &str = "http://www.w3.org/1999/xlink";
+  fn index(node: &Node, ids: &mut std::collections::HashMap<String, Node>) {
+    if let Some(id) = node.get_property("id") {
+      ids.insert(id, node.clone());
+    }
+    for child in node.get_child_elements() {
+      index(&child, ids);
+    }
+  }
+  fn image(node: &Node) -> String {
+    let href = node.get_property_ns("href", XLINK).unwrap_or_default();
+    let media = href
+      .strip_prefix("data:")
+      .and_then(|rest| rest.split(';').next())
+      .unwrap_or("external");
+    format!(
+      "image {}x{} {media}",
+      node.get_property("width").unwrap_or_default(),
+      node.get_property("height").unwrap_or_default()
+    )
+  }
+  fn walk(node: &Node, ids: &std::collections::HashMap<String, Node>, out: &mut Vec<String>) {
+    for child in node.get_child_elements() {
+      match child.get_name().as_str() {
+        "defs" | "clipPath" | "mask" => {},
+        "image" => out.push(image(&child)),
+        "path" => out.push("path".to_string()),
+        "use" => {
+          let target = child.get_property_ns("href", XLINK).unwrap_or_default();
+          match ids.get(target.trim_start_matches('#')) {
+            Some(def) if def.get_name() == "image" => out.push(image(def)),
+            Some(_) => out.push("glyph".to_string()),
+            None => out.push(format!("dangling {target}")),
+          }
+        },
+        _ => walk(&child, ids, out),
+      }
+    }
+  }
+  let doc = libxml::parser::Parser::default()
+    .parse_string(svg)
+    .expect("SVG parses");
+  let root = doc.get_root_element().expect("SVG root");
+  assert_eq!(root.get_name(), "svg");
+  let mut ids = std::collections::HashMap::new();
+  index(&root, &mut ids);
+  let mut out = Vec::new();
+  walk(&root, &ids, &mut out);
+  out
+}
+
+/// A small PDF figure that carries a raster image AND vector text takes the vector-SVG path
+/// under the default auto-detect, keeping the label as five vector glyphs and the raster at its
+/// native 4×4 pixels (it was rasterized whole to PNG while an image XObject gated the path off;
+/// after PR 816). Fixture: pdflatex on `\documentclass[border=2pt]{standalone}` with
+/// `\includegraphics[width=1cm]{tile.png} Label`, `tile.png` a 4×4 two-colour PNG.
+#[test]
+#[cfg_attr(not(svg_converter_on_path), ignore = "needs mutool or pdftocairo")]
+fn test_mixed_raster_vector_pdf_keeps_vector_labels() {
+  let fixture = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/mixed_raster_vector.pdf"
+  );
+  let work = tempfile::tempdir().expect("tempdir");
+  let src = work.path().join("mixed_raster_vector.pdf");
+  std::fs::copy(fixture, &src).expect("copy fixture");
+  let xml = format!(
+    r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><graphics graphic="mixed_raster_vector.pdf" candidates="{}"/></document>"#,
+    src.display()
+  );
+  let doc_opts = PostDocumentOptions {
+    destination: Some(work.path().join("out.html").display().to_string()),
+    source_directory: Some(work.path().display().to_string()),
+    ..Default::default()
+  };
+  let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
+  let mut graphics = latexml_post::graphics::Graphics::new(None, true)
+    .with_cache_policy(latexml_post::graphics_cache::CachePolicy::Bypass);
+  let nodes = graphics.to_process(&doc);
+  assert_eq!(nodes.len(), 1);
+  let target = nodes[0].clone();
+  let _out = graphics.process(doc, nodes).expect("graphics process");
+
+  assert_eq!(
+    target.get_property("imagesrc").as_deref(),
+    Some("mixed_raster_vector.svg")
+  );
+  let svg = std::fs::read_to_string(work.path().join("mixed_raster_vector.svg")).expect("SVG");
+  assert_eq!(svg_drawn_shape(&svg), [
+    "image 4x4 image/png",
+    "glyph",
+    "glyph",
+    "glyph",
+    "glyph",
+    "glyph"
+  ]);
 }

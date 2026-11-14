@@ -39,9 +39,9 @@ Two traps when reading a test run:
   streaming sweeps require every swept fixture to convert error-free. Judge a run by its `test result:` lines and exit
   code, **never** by grepping printed output for `Error:` — that heuristic belongs to
   *conversion* logs (below).
-- The two `latexml_post` vector-SVG tests **self-skip silently and green** unless
-  `mutool` or `pdftocairo` is on PATH, so a green local run does not by itself prove
-  that branch ran. CI installs poppler/mupdf.
+- The three `latexml_post` vector-SVG tests are **`ignore`d** (shown as skipped) when
+  neither `mutool` nor `pdftocairo` spawned at build time (`latexml_post/build.rs`, cfg
+  `svg_converter_on_path`); CI's apt set installs neither, so there they show as skipped.
 
 Conversion decisions (what to keep, how to number, who owns a frontmatter item, when a copy may override a
 binding) follow [`docs/parity/FIDELITY_CHARTER.md`](docs/parity/FIDELITY_CHARTER.md) — the user's rulings as standing

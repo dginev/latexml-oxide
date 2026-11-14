@@ -174,10 +174,11 @@ pub struct Graphics {
   graphics_types:   Vec<String>,
   type_properties:  HashMap<String, TypeProperties>,
   background:       String,
-  /// Opt-in vector-SVG path for PDF graphics. When > 0, PDFs under this
-  /// many KB are first attempted via the vector converters (mutool, then
-  /// pdftocairo); fall back to the raster (`convert`/`gs` → PNG) path on
-  /// failure or timeout. 0 disables the path entirely.
+  /// Vector-SVG path for PDF graphics. When > 0, PDFs under this many KB are
+  /// first attempted via the vector converters (mutool, then pdftocairo);
+  /// 0 (the default) does so for PDFs up to 500 KiB (`should_try_svg_path`).
+  /// Either way the raster (`convert`/`gs` → PNG) path takes over on
+  /// failure, timeout or oversized output.
   /// Tracks upstream brucemiller/LaTeXML#902.
   svg_threshold_kb: u32,
   /// Whether conversions may be served from the shared, host-persistent
@@ -987,9 +988,9 @@ impl Graphics {
   /// Try to convert a PDF to plain SVG, preserving vector content. Returns
   /// `true` on success. Tracks upstream brucemiller/LaTeXML#902.
   ///
-  /// Caller decides when to attempt this — typically only for PDF sources
-  /// below a file-size threshold (`should_try_svg_path`), because vector
-  /// converters on raster-embedded PDFs produce massive output (>100 MB).
+  /// Caller decides when to attempt this — only for PDF sources below a
+  /// file-size threshold (`should_try_svg_path`), because vector converters
+  /// on large or path-heavy PDFs can produce massive output (>100 MB).
   /// On any failure the function returns `false` and the worker falls back
   /// to the raster (PNG) path — so a PDF that no vector tool can handle is
   /// never lost, just rasterized instead.
@@ -1395,22 +1396,17 @@ impl Graphics {
   /// Two modes, in priority order:
   ///
   /// 1. **Explicit threshold** (`threshold_kb > 0`): legacy `--graphics-svg-threshold-kb N`
-  ///    behaviour — try SVG for PDFs at most `N` KB, regardless of content. Preserved for
-  ///    back-compat and as the manual override on canvases where the auto-detector misclassifies.
-  /// 2. **Auto-detect default** (`threshold_kb == 0`): scan the PDF header for `/Subtype /Image`
-  ///    and `/Subtype/Image` (the two typical formattings of an image XObject declaration). If NONE
-  ///    is present in the first 256 KB and the file size is at most 500 KB → try SVG. This is the
-  ///    per-paper relief case documented in PERFORMANCE.md (130× speedup on the 41 KB pgfplots
-  ///    fixture).
+  ///    behaviour — try SVG for PDFs at most `N` KB. Preserved for back-compat and as the manual
+  ///    override of the automatic bound.
+  /// 2. **Auto default** (`threshold_kb == 0`): try SVG for PDFs at most 500 KiB, raster-bearing
+  ///    ones included: their labels, axes and curves stay vector and the image is embedded at its
+  ///    own resolution (after PR 816; a raster-only PDF becomes an SVG wrapping its image).
   ///
-  /// Both modes can be globally disabled via
-  /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` (auto-detect only — leaves
-  /// the explicit-threshold path active).
+  /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` disables the auto default only;
+  /// the explicit-threshold path stays active.
   ///
-  /// Safety net: any false positive falls back to the raster path when a
-  /// vector converter emits >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG, so a
-  /// misread raster PDF degrades to "tried SVG, got too-big output, used
-  /// convert" instead of a stuck pipeline.
+  /// Safety net: a converter that fails, times out or emits
+  /// >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG falls back to the raster path.
   fn should_try_svg_path(source: &str, threshold_kb: u32) -> bool {
     if !source.to_lowercase().ends_with(".pdf") {
       return false;
@@ -1430,15 +1426,10 @@ impl Graphics {
       Ok(md) => md.len(),
       Err(_) => return false,
     };
-    // Hard upper bound: even if the detector misses an image
-    // somewhere deeper in the file, a 500 KB cap keeps the
-    // worst-case wasted vector-conversion work bounded (~1-2 s before the
-    // 8 MB output cap kicks in or the conversion finishes anyway).
+    // The 500 KiB input cap bounds the conversion work; the converters'
+    // timeout and the output cap bound the rest.
     const AUTO_MAX_BYTES: u64 = 500 * 1024;
-    if len > AUTO_MAX_BYTES {
-      return false;
-    }
-    !Self::pdf_has_image_xobject(source).unwrap_or(true)
+    len <= AUTO_MAX_BYTES
   }
 
   /// Has `LATEXML_GRAPHICS_VECTOR_AUTO_OFF` been set? Memoised on
@@ -1455,29 +1446,6 @@ impl Graphics {
         Some("1") | Some("true") | Some("yes")
       )
     })
-  }
-
-  /// Scan a PDF for `/Subtype /Image` (with or without whitespace
-  /// between the tokens) — the canonical marker of an image XObject.
-  /// Returns `Some(true)` when found, `Some(false)` when absent in the
-  /// scanned range, `None` on I/O error.
-  ///
-  /// Reads at most `SCAN_LIMIT` bytes from the start of the file. PDF
-  /// objects are written sequentially; for small files (≤500 KB,
-  /// guarded by `should_try_svg_path`'s outer size check) the entire
-  /// stream fits comfortably within the limit. Pure-vector PDFs scan
-  /// in well under a millisecond on modern hardware.
-  fn pdf_has_image_xobject(source: &str) -> Option<bool> {
-    use std::io::Read;
-    const SCAN_LIMIT: usize = 256 * 1024;
-    let mut f = std::fs::File::open(source).ok()?;
-    let mut buf = vec![0u8; SCAN_LIMIT];
-    let n = f.read(&mut buf).ok()?;
-    let head = &buf[..n];
-    // Both spelling variants seen in the wild: `/Subtype /Image` (PDFs
-    // from inkscape / cairo / latex+dvips) and `/Subtype/Image` (more
-    // common in pdflatex output and ImageMagick-produced PDFs).
-    Some(twoway_contains(head, b"/Subtype /Image") || twoway_contains(head, b"/Subtype/Image"))
   }
 
   fn raster_density_for_source(source: &str) -> u32 {
@@ -2030,16 +1998,6 @@ impl Graphics {
   /// `svg_convert_timeout_secs`; default 60 s. Override via
   /// `LATEXML_CONVERT_TIMEOUT_SECS` for debugging.
   fn convert_timeout_secs() -> u64 { CONVERT_TIMEOUT_SECS.unwrap_or(60) }
-}
-
-/// Byte-substring search. Used by `pdf_has_image_xobject` to scan a
-/// PDF prefix for the `/Subtype /Image` marker. Linear in `hay.len()`
-/// times `needle.len()`; both bounded so adequate.
-fn twoway_contains(hay: &[u8], needle: &[u8]) -> bool {
-  if needle.is_empty() || needle.len() > hay.len() {
-    return false;
-  }
-  hay.windows(needle.len()).any(|w| w == needle)
 }
 
 /// Map a destination path to a `&'static str` extension suitable for
@@ -3024,8 +2982,8 @@ mod tests {
     assert!(!Graphics::should_try_svg_path("/no/such/file.pdf", 200));
   }
 
-  /// Auto-detect path (`threshold_kb == 0`): vector-only PDFs trigger
-  /// the SVG attempt, PDFs containing image XObjects do NOT. Uses the
+  /// Auto path (`threshold_kb == 0`): every PDF up to 500 KiB tries SVG,
+  /// raster-bearing ones included (after PR 816). Uses the
   /// real fixtures (`cifar10_vector.pdf`, `pathological_vector.pdf`,
   /// `raster_with_image.pdf`) under `latexml_post/tests/fixtures/`.
   #[test]
@@ -3042,7 +3000,7 @@ mod tests {
     );
     assert!(raster.exists(), "fixture missing: {}", raster.display());
 
-    // Vector PDFs (no /Subtype /Image marker) → SVG path activated.
+    // Vector PDFs → SVG path activated.
     assert!(
       Graphics::should_try_svg_path(cifar.to_str().unwrap(), 0),
       "vector-only PDF must trigger SVG path under auto-detect"
@@ -3052,21 +3010,23 @@ mod tests {
       "pgfplots-style vector PDF must trigger SVG path under auto-detect"
     );
 
-    // Raster PDF (has /Subtype /Image) → SVG path SKIPPED.
+    // A PDF with an image XObject tries SVG too (it may carry vector labels).
     assert!(
-      !Graphics::should_try_svg_path(raster.to_str().unwrap(), 0),
-      "raster-containing PDF must skip auto-detect SVG path"
+      Graphics::should_try_svg_path(raster.to_str().unwrap(), 0),
+      "raster-bearing PDF must try the SVG path under the auto default"
     );
 
-    // Direct detector sanity check.
-    assert_eq!(
-      Graphics::pdf_has_image_xobject(cifar.to_str().unwrap()),
-      Some(false)
-    );
-    assert_eq!(
-      Graphics::pdf_has_image_xobject(raster.to_str().unwrap()),
-      Some(true)
-    );
+    // The 500 KiB bound is now the auto default's whole gate.
+    let tmp = TempDir::new("auto_svg_bound");
+    let at_bound = tmp.join("at_bound.pdf");
+    std::fs::write(&at_bound, vec![0u8; 500 * 1024]).unwrap();
+    assert!(Graphics::should_try_svg_path(at_bound.to_str().unwrap(), 0));
+    let over_bound = tmp.join("over_bound.pdf");
+    std::fs::write(&over_bound, vec![0u8; 500 * 1024 + 1]).unwrap();
+    assert!(!Graphics::should_try_svg_path(
+      over_bound.to_str().unwrap(),
+      0
+    ));
   }
 
   #[test]

@@ -512,19 +512,11 @@ impl LatexmlWorker {
       split_naming:              None,
       xslt_parameters:           &[],
       schemadocs:                false,
-      // Vector-SVG fast path. 0 = auto-detect: scan the PDF header for
-      // `/Subtype /Image` markers; if absent (and the file is at most
-      // 500 KB), route through the vector-SVG converters (mutool →
-      // pdftocairo) for vector-clean output and the documented 100×+
-      // speedup over ImageMagick rasterisation on pgfplots/matplotlib
-      // PDFs (PERFORMANCE.md §"Vector-SVG fast path"). Raster-bearing
-      // PDFs detect their image XObject and stay on the gs/convert path.
-      // Override with a positive integer
-      // (KB threshold) to force the legacy size-only gate, or set
-      // `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` to disable auto-detect
-      // entirely. Replaces the prior hard-coded 200 KB cutoff (which
-      // was strictly looser — would attempt SVG on 200 KB raster PDFs
-      // even when their image XObject was visible in the header).
+      // Vector-SVG fast path. 0 = auto: every PDF at most 500 KiB, raster-bearing
+      // ones included (PR 816), goes through the vector-SVG converters (mutool →
+      // pdftocairo), PNG on failure (PERFORMANCE.md §"Vector-SVG fast path").
+      // A positive integer is an explicit KB threshold;
+      // `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` disables the auto default.
       graphics_svg_threshold_kb: 0,
       // Canvas-bulk path: always convert graphics; no favicon/timestamp.
       graphicimages:             true,
