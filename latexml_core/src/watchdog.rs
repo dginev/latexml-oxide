@@ -85,7 +85,7 @@ pub fn process_rss_kb() -> Option<u64> {
 #[cfg(target_os = "macos")]
 pub fn process_rss_kb() -> Option<u64> {
   let mut info: libc::proc_taskinfo = unsafe { std::mem::zeroed() };
-  let size = std::mem::size_of::<libc::proc_taskinfo>() as libc::c_int;
+  let size = size_of::<libc::proc_taskinfo>() as libc::c_int;
   // SAFETY: proc_pidinfo fills at most `size` bytes of the zeroed struct we
   // own; a short or negative return is handled below.
   let got = unsafe {
@@ -359,10 +359,11 @@ pub fn available_memory_bytes() -> Option<u64> {
     // SAFETY: `stats` is a correctly sized, zeroed struct and `count` names
     // its capacity in `integer_t` units, exactly as the API requires;
     // `mach_host_self` returns a send right that need not be deallocated for
-    // a one-shot query in a short-lived process.
+    // a one-shot query in a short-lived process. (`mach2`, not libc's deprecated
+    // `mach_host_self`: libc points Mach APIs to that crate.)
     let kr = unsafe {
       libc::host_statistics64(
-        libc::mach_host_self(),
+        mach2::mach_init::mach_host_self(),
         libc::HOST_VM_INFO64,
         (&raw mut stats).cast::<libc::integer_t>(),
         &mut count,

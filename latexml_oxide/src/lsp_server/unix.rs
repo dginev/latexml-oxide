@@ -576,12 +576,13 @@ fn run_body_child(
     let sources = collect_sources(uri);
     // Post-process to HTML5 in the child (the heavy XSLT stays inside the
     // cancellable/throwaway process).
-    let html = post_process_html(&core_xml, uri);
+    let core_log = latexml_core::util::logger::flush_log();
+    let post = post_process_html(&core_xml, uri);
     // Engine status (0 ok / 1 warning / 2 error / 3 fatal) — cumulative over
-    // the inherited preamble report plus this body.
+    // the inherited preamble report plus this body and its post.
     let status = latexml_core::common::error::get_status_message();
     let status_code = latexml_core::common::error::get_status_code() as i64;
-    let log = latexml_core::util::logger::flush_log();
+    let (html, log) = (post.html, core_log + post.log.as_str());
     Ok::<(String, String, Vec<String>, String, i64), String>((
       html,
       log,
