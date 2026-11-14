@@ -336,7 +336,8 @@ fn amsart_raw_addresses_are_set() {
 /// 60l: `\@array` zeroes `\lineskip` and `\baselineskip` for the alignment's body (latex.ltx:16580), so colortbl's
 /// `\ifdim\baselineskip=\z@\noalign\fi{…}` (colortbl.sty:158, :163; tabu.sty:2159) is a `\noalign` between rows: the
 /// table keeps its three rows and rules, as pdflatex, where the group became a cell ("\noalign cannot be used here",
-/// two "Extra alignment tab"). Repro kernel-alignment/colortbl_noalign_idiom.
+/// two "Extra alignment tab"). Repro kernel-alignment/colortbl_noalign_idiom. The rules drawn after each colour are
+/// in it, as pdflatex draws them: red from `\arrayrulecolor{red}`, blue from the raw `\gdef\CT@arc@` (#773, OD #1025).
 #[test]
 fn colortbl_noalign_idiom() {
   assert_elements_with(
@@ -350,7 +351,7 @@ fn colortbl_noalign_idiom() {
       (
         "para",
         "p1",
-        r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="l r t" thead="column">a</td><td align="left" border="r t" thead="column">b</td></tr></thead><tbody><tr><td align="left" border="l r t">c</td><td align="left" border="r t">d</td></tr><tr><td align="left" border="b l r t">e</td><td align="left" border="b r t">f</td></tr></tbody></tabular></para>"##,
+        r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="l r t" thead="column">a</td><td align="left" border="r t" thead="column">b</td></tr></thead><tbody><tr><td align="left" border="l r t" cssstyle="border-top-color:#FF0000;border-left-color:#FF0000;border-right-color:#FF0000">c</td><td align="left" border="r t" cssstyle="border-top-color:#FF0000;border-right-color:#FF0000">d</td></tr><tr><td align="left" border="b l r t" cssstyle="border-top-color:#0000FF;border-bottom-color:#0000FF;border-left-color:#0000FF;border-right-color:#0000FF">e</td><td align="left" border="b r t" cssstyle="border-top-color:#0000FF;border-bottom-color:#0000FF;border-right-color:#0000FF">f</td></tr></tbody></tabular></para>"##,
       ),
       ("para", "p2", r##"<para xml:id="p2"><p>Final.</p></para>"##),
     ],

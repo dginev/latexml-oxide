@@ -178,6 +178,18 @@ pub enum BorderSpec {
   Left,
   Right,
 }
+impl BorderSpec {
+  /// The side a `border` letter names (Alignment.pm's `t`, `b`, `l`, `r`, upper case alike).
+  pub fn of_letter(c: char) -> Option<BorderSpec> {
+    match c {
+      't' | 'T' => Some(BorderSpec::Top),
+      'b' | 'B' => Some(BorderSpec::Bottom),
+      'l' | 'L' => Some(BorderSpec::Left),
+      'r' | 'R' => Some(BorderSpec::Right),
+      _ => None,
+    }
+  }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct TemplateConfig {
