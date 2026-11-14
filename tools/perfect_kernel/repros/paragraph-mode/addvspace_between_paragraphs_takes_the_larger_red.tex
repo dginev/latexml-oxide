@@ -1,0 +1,19 @@
+% witness: synthetic (QA26 census: 31 `\addvspace` in 2,000 papers, none between two paragraphs)
+% oracle:  pdflatex 0 errors; latex.ltx `\addvspace`/`\@xaddvskip`: after a `\smallskip` (3pt) the last skip is replaced
+%          by the larger 12pt, after a `\bigskip` the smaller 6pt adds nothing: 12pt before both "After" paragraphs
+% engines: rust QAB8: S1.p2 `--ltx-skip-before:3.0pt`, S1.p3 12.0pt (`\addvspace` is a no-op, latex_constructs sect12.rs);
+%          perl: no skip kept, `\addvspace` a no-op (latex_base.pool.ltxml:802)
+% expect:  0 errors; S1.p2 and S1.p3 `--ltx-skip-before:12.0pt`
+% status:  RED (QAB8)
+% moves:   post-merge (a `\addvspace` that reads and replaces the pending skip, as `\@xaddvskip`)
+\documentclass{article}
+\begin{document}
+\section{Spaces}
+Before.
+
+\smallskip\addvspace{\bigskipamount}
+After a smallskip and a larger addvspace.
+
+\bigskip\addvspace{\medskipamount}
+After a bigskip and a smaller addvspace.
+\end{document}

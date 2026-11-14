@@ -30,6 +30,13 @@
     natively (MathJax 2.1 in Chrome: 53 px against 18). LaTeXML.css now zeroes that margin in
     an equation cell, in a page's table or a minipage's (21 px). Offered upstream. Guard
     `witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
+  - **A `\bigskip`, `\medskip` or `\vspace` between two paragraphs keeps its gap** (QA26). The
+    second paragraph carries `cssstyle="--ltx-skip-before:12.0pt"` (consecutive skips add up to their
+    net, as in TeX), and LaTeXML.css adds it to the paragraph gap (ar5iv-css mirrors it); Perl drops
+    the amount. Not after a heading, across a heading, a float or a sibling environment (theorem, proof), in a
+    title page, box or float, or for a `\vspace` inside a paragraph; a `quote`, `center` or list inside
+    the paragraph does not block it.
+    OXIDIZED_DESIGN #1050. Guard `perfect_kernel_batchqab8::paragraph_skips_go_on_the_next_paragraph`.
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
     dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
     `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now

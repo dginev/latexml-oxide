@@ -4136,7 +4136,7 @@ fn begin_float(
   Let!("\\\\", "\\lx@newline");
   // Between a float's panels (the panel grid rule), while each has the kernel's meaning — an author's or a package's
   // own stands (review rev78x finding 11): a forced `\linebreak` ends their row as `\\` does (`\lx@panel@linebreak`,
-  // sect09.rs); a `\vspace` does not (`\lx@panel@vspace`, sect12.rs), a `\vskip` does; the glue an `\hspace` states
+  // sect09.rs); a `\vspace` does not (its `\lx@vspace@mark`, sect12.rs), a `\vskip` does; the glue an `\hspace` states
   // counts towards their row (`\lx@panel@hspace`, sect12.rs).
   for (name, kernel, panel) in [
     (
@@ -4144,7 +4144,6 @@ fn begin_float(
       "\\lx@kernel@linebreak",
       "\\lx@panel@linebreak",
     ),
-    ("\\vspace", "\\lx@kernel@vspace", "\\lx@panel@vspace"),
     ("\\hspace", "\\lx@kernel@hspace", "\\lx@panel@hspace"),
   ] {
     if x_equals(&T_CS!(name), &T_CS!(kernel)) {
