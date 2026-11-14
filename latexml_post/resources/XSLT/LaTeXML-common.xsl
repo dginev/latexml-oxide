@@ -590,14 +590,19 @@
     <xsl:if test="@fontsize">
       <xsl:value-of select="concat('font-size:',@fontsize,';')"/>
     </xsl:if>
-    <!-- (latexml-oxide) a LaTeXML box's width is the CSS custom property ltx-box-width, which LaTeXML.css applies
-         (OXIDIZED_DESIGN_DIVERGENCES #1045); a rule's width is its ink, as an image's size, and MathML's
-         mspace/mpadded width is MathML's own. -->
+    <!-- (latexml-oxide) a LaTeXML box's width, height and depth are the CSS custom properties ltx-box-width,
+         ltx-box-height and ltx-box-depth, TeX's own values, from which LaTeXML.css derives width, height and
+         vertical-align (OXIDIZED_DESIGN_DIVERGENCES #1045); a rule's size is its ink, as an image's, and MathML's
+         mspace/mpadded sizes are MathML's own. -->
+    <xsl:variable name="box" select="boolean(self::ltx:* and not(self::ltx:rule))"/>
     <xsl:if test="@width">
-      <xsl:value-of select="concat(f:if(self::ltx:* and not(self::ltx:rule),'--ltx-box-width:','width:'),@width,';')"/>
+      <xsl:value-of select="concat(f:if($box,'--ltx-box-width:','width:'),@width,';')"/>
     </xsl:if>
     <xsl:if test="@height" >
       <xsl:choose>
+        <xsl:when test="$box">
+          <xsl:value-of select="concat('--ltx-box-height:',@height,';')"/>
+        </xsl:when>
         <xsl:when test="@depth">
           <xsl:value-of select="concat('height:',f:adddim(@height,@depth),';')"/>
         </xsl:when>
@@ -606,9 +611,14 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
-    <xsl:if test="@depth and not(@yoffset)">
-      <xsl:value-of select="concat('vertical-align:',f:negate(@depth),';')"/>
-    </xsl:if>
+    <xsl:choose>
+      <xsl:when test="@depth and $box">
+        <xsl:value-of select="concat('--ltx-box-depth:',@depth,';')"/>
+      </xsl:when>
+      <xsl:when test="@depth and not(@yoffset)">
+        <xsl:value-of select="concat('vertical-align:',f:negate(@depth),';')"/>
+      </xsl:when>
+    </xsl:choose>
     <xsl:if test="@xoffset">
       <xsl:value-of select="concat('position:relative; left:',@xoffset,';')"/>
     </xsl:if>

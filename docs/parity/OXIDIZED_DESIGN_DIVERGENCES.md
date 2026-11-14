@@ -14906,7 +14906,8 @@ box and the line grows to hold it. **Rust** (61v, with the faithful `\raisebox` 
 `vertical-align:<y>`, so a lowered table icon (`\raisebox{-.5\height}{…}`, 2605.18894) sits centred on its row instead
 of overflowing into the next one; an element that also has `height`, `depth` or `xoffset` (`\raisebox{y}[h][d]`'s
 smash, `\lx@tweaked` overlays) keeps `position:relative`, its content shifted without the line growing, and its `depth`
-gives no `vertical-align` (it would shift the content twice). The logos (`\LaTeX`, `\TeX`) and `\raise`/`\lower`
+gives no `vertical-align` (it would shift the content twice; since QAB57d LaTeXML.css's `--ltx-box-depth` rule, off
+under the `; bottom:` shift, OD #1045). The logos (`\LaTeX`, `\TeX`) and `\raise`/`\lower`
 render with `vertical-align`. Guards `perfect_kernel_batch61::raisebox_raise_measures_the_box`,
 `stream_a_recall::bib_title_recase_keeps_undefined_control_words`.
 
@@ -36552,7 +36553,7 @@ mirrors it as `padding-top` (40 px); the EPUB loads LaTeXML.css. `\addvspace` st
 `paragraph-mode/skip_between_paragraphs_goes_on_the_next.tex`, `skip_between_paragraphs_shapes.tex`,
 `skip_moved_into_a_title_page_is_dropped.tex`).
 
-### 1045. Every box's width is the CSS custom property `--ltx-box-width` (Perl: `style="width:…"`, or dropped)
+### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
 
 Principle: the HTML/CSS cascade — a presentational value the stylesheet applies, so one rule can override or reuse
 it. Related: #20 (colour), #887 (`--ltx-panel-*`), #250 (a section lifted out of a box).
@@ -36573,8 +36574,14 @@ and Perl's `<sectional-block class="ltx_minipage">` drops it too (TeX_Box.pool.l
   a transformed box's outer, a wrapfigure, a `tabular`/`td` width, an `ltx:picture` rendered as an image or as its TeX
   through `add_attributes`), and `add_transformable_attributes` for the inner box's `innerwidth`. The XML keeps
   `width` as Perl writes it; of our stylesheets only the XHTML ones read it (neither the JATS nor the TEI one does).
-- Not boxes, so `width:` stays: `ltx:rule` (its ink, as an image's size) and MathML's `mspace`/`mpadded` (MathML's own
-  attribute). Graphics (`imagewidth`), a picture drawn as SVG, and `--ltx-panel-width` never reach `base-styling`'s
+- every box's height and depth (QAB57d; DG 2026-11-14: "also adding --ltx-box-height and --ltx-box-depth"):
+  `base-styling` writes TeX's own values, `--ltx-box-height:<h>` (above the baseline) and `--ltx-box-depth:<d>` (below),
+  each only where the attribute is set (a `\raisebox{y}[h][d]`'s `text`, a rotated or scaled box's outer
+  `inline-block`), where Perl writes `height:<h+d>` (or `<h>`) and, without a `yoffset`,
+  `vertical-align:<-d>`. A `\raisebox{y}[h][d]` keeps its `position:relative; bottom:<y>`; a plain `\raisebox{y}` its
+  `vertical-align:<y>`. `innerheight`/`innerdepth` stay unwritten, as in Perl.
+- Not boxes, so `width:`/`height:` stay: `ltx:rule` (its ink, as an image's size) and MathML's `mspace`/`mpadded`
+  (MathML's own attributes). Graphics (`imagewidth`), a picture drawn as SVG, and `--ltx-panel-width` never reach `base-styling`'s
   width.
 
 LaTeXML.css: `:where([style*="--ltx-box-width:"]:not([style^="width:"], [style*=";width:"], [style*="; width:"])) {
@@ -36584,11 +36591,22 @@ every other `!important` one. It is off where the element's own style sets a `wi
 #1014; a `\text` minipage's, batch76a). ar5iv-css carries the same rule un-layered, so that its layered rules rank under
 it as under the inline style, and caps a lifted section at its container
 (`:is(section, .ltx_inline-sectional-block)[style*="--ltx-box-width:"] { max-width: 100% }`, as its `.ltx_minipage`).
+The height and depth, one rule per case, as the custom properties inherit and a `var()` fallback cannot test that a
+box's own style sets one (a height-only box inside a box with a depth would add the outer depth):
+`height: var(--ltx-box-height)` where the style sets `--ltx-box-height:`, `height: calc(var(--ltx-box-height) +
+var(--ltx-box-depth))` where it sets both, and `vertical-align: calc(-1 * var(--ltx-box-depth))` where it sets
+`--ltx-box-depth:`; each `!important` in `:where()` and off where the box's own style sets that property (an author's
+`height:`; for the depth a `vertical-align:` or the `; bottom:` of a `yoffset` shift, Perl's `@depth and not(@yoffset)`).
+ar5iv-css carries the three un-layered beside the width's.
 A stylesheet overrides one box's width with `.sel { --ltx-box-width: <w> !important }` or `.sel { width: <w>
 !important }`, reuses it (`width: min(var(--ltx-box-width), 100%) !important`), and switches every box width off with
-`:where([style*="--ltx-box-width:"]) { --ltx-box-width: initial !important }`.
+`:where([style*="--ltx-box-width:"]) { --ltx-box-width: initial !important }`; the same for the height
+(`--ltx-box-height`, `height:`). Every box's height is switched off with `:where([style*="--ltx-box-height:"]) {
+--ltx-box-height: initial !important }` (its depth's drop kept) and every depth set to zero with
+`:where([style*="--ltx-box-depth:"]) { --ltx-box-depth: 0pt !important }` (its height then h): `initial` on the
+depth would void the h+d sum as well.
 
-Cost: a box's width now needs LaTeXML.css or ar5iv-css. It is lost under `--nodefaultresources` without a stylesheet
+Cost: a box's width, height and depth now need LaTeXML.css or ar5iv-css. It is lost under `--nodefaultresources` without a stylesheet
 carrying the rule, in a reader that does not apply our CSS, and in an EPUB reader without `var()` or `:where()` (the
 EPUB ships LaTeXML.css).
 
@@ -36602,10 +36620,21 @@ shapes (side-by-side, figure, nested and over-wide minipages, `\parbox` in text,
 QAB57b; on QAB57c the varwidth section is 131 px wide in Chrome as before QAB57 (QAB57b: 85 px, its heading wrapped)
 and the nested one 114 px (85.4pt; QAB57b: 303 px). Not reached, as before QAB57: a framed box holding a section
 draws its frame as an empty 2 px box above it (RED `block-model/framed_box_section_frame_collapses_red`, post-merge).
+Measured (QAB57d): of 93 arXiv papers (QAB57b's 63 and the 30 heaviest in `\raisebox`, `\smash`, `\parbox[…][h]` of
+a census sample; 92 converted, 2609.23556 crashes on both binaries) the HTML of 52 moved, and only in these
+declarations (`kit/html_style_diff.py --derive-box`: every other declaration and byte unchanged). Each of the 52 has
+every body element's box identical, base against candidate, in Chrome and Firefox at 1280 and 375 px under LaTeXML.css
+and under ar5iv.css (one Chrome 375 px difference in 1505.06377's equation cell, gone on its rerun); screenshot ink is
+identical where shot, but for 2604.04765 in Chrome at 375 px under ar5iv.css, whose base differs from itself by the
+same 22,167 px. So are the repro's and hand-built depth-only, author-`height:`, nested and author-`vertical-align:`
+boxes, and the two switch-off recipes render as the declarations they stand for. Not reached, as in Perl: a
+`\parbox[t][3cm]` or `minipage[t][2cm]` carries no height to write (RED `block-model/parbox_and_minipage_height_dropped_red`,
+post-merge).
 Guards
 `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width` (repros `block-model/section_in_a_box_keeps_the_box_width`,
 `section_in_varwidth_keeps_its_own_width`, `section_in_nested_boxes_keeps_the_inner_width`,
-`box_widths_ride_the_custom_property`).
+`box_widths_ride_the_custom_property`), `perfect_kernel_batchqab57::box_heights_ride_the_custom_properties` (repro
+`block-model/box_heights_ride_the_custom_properties`).
 
 ### 1046. latexml.sty's `pdfoutput`/`nopdfoutput` options set the output mode over the guess (Perl: no such options)
 

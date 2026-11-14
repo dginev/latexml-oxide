@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-  - **Every box's width is the CSS custom property `--ltx-box-width`** (Bruce Miller Q2.4, DG
+  - **Every box's width, height and depth are CSS custom properties: `--ltx-box-width`,
+    `--ltx-box-height`, `--ltx-box-depth`** (Bruce Miller Q2.4, DG
     2026-11-14). A minipage, `\parbox`, `\makebox`, `p{}` cell, transformed box or wrapfigure wrote
     `style="width:<w>"`; the HTML now writes `style="--ltx-box-width:<w>"`, which LaTeXML.css (and
     ar5iv-css) applies at the inline style's rank, so pages render as before. A section set inside a
@@ -14,8 +15,15 @@
     !important`) or switch every box width off (`:where([style*="--ltx-box-width:"])
     { --ltx-box-width: initial !important }`). The widths now need LaTeXML.css or ar5iv-css: they
     are lost under `--nodefaultresources` without a stylesheet carrying the rule, and in readers
-    that ignore our CSS or lack `var()`/`:where()`. OXIDIZED_DESIGN #1045; guard
-    `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`.
+    that ignore our CSS or lack `var()`/`:where()`. A box's height and depth go the same way (DG
+    2026-11-14): `style="height:<h+d>;vertical-align:<-d>"` is now
+    `style="--ltx-box-height:<h>;--ltx-box-depth:<d>"`, TeX's own values, from which LaTeXML.css
+    derives the height and the drop below the line (a `\raisebox{y}[h][d]` keeps its shift); a
+    rule's height and MathML's stay. Switch every box height off with
+    `:where([style*="--ltx-box-height:"]) { --ltx-box-height: initial !important }`, or every depth
+    with `--ltx-box-depth: 0pt` the same way. OXIDIZED_DESIGN #1045; guards
+    `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`,
+    `perfect_kernel_batchqab57::box_heights_ride_the_custom_properties`.
   - **Under the OmniBus fallback, the document's own definitions win over its guesses** (Bruce
     Miller Q3.12, DG 2026-11-14: "the document wins"). A `\newcommand`, `\renewcommand`, `\def`,
     `\DeclareRobustCommand`, `\let` or `\NewDocumentCommand` of a name OmniBus had guessed

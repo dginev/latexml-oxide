@@ -101,14 +101,14 @@ fn section_in_a_box_keeps_the_box_width() {
 }
 
 /// The width styles of box_widths_ride_the_custom_property's HTML, in document order: the minipage, the `\parbox`, the
-/// `\makebox`, the rotated box's outer, inner and `\parbox`, the rule (its ink) and the math `\hspace`'s `mspace`
+/// `\makebox`, the rotated box's outer (its height and depth the properties too, QAB57d), inner and `\parbox`, the rule (its ink) and the math `\hspace`'s `mspace`
 /// (MathML's own width) at `width:`, the varwidth (its own `width:max-content` after the property), the wrapfigure, the
 /// lifted section.
 const BOX_WIDTH_STYLES: &[&str] = &[
   "--ltx-box-width:85.4pt;",
   "--ltx-box-width:56.9pt;",
   "--ltx-box-width:113.8pt;",
-  "--ltx-box-width:6.9pt;height:56.9pt;vertical-align:-0.0pt;",
+  "--ltx-box-width:6.9pt;--ltx-box-height:56.9pt;--ltx-box-depth:0.0pt;",
   "--ltx-box-width:56.9pt;transform:translate(-25.0pt,-25.0pt) rotate(-90deg) ;",
   "--ltx-box-width:56.9pt;",
   "width:85.4pt;height:2.0pt;--ltx-bg-color:black;display:inline-block;",
@@ -116,6 +116,72 @@ const BOX_WIDTH_STYLES: &[&str] = &[
   "--ltx-box-width:22.3pt;width:max-content;max-width:227.6pt;",
   "--ltx-box-width:30%;",
   "--ltx-box-width:113.8pt;",
+];
+
+/// A LaTeXML box's height and depth are `--ltx-box-height` and `--ltx-box-depth` (OD #1045, DG 2026-11-14), each only
+/// where its attribute is set (a depth-only box from XML: no LaTeX constructor writes one); a `\raisebox{y}[h][d]`
+/// keeps its `bottom:` shift, a rule's height and MathML's `mspace` stay as they were. `\parbox[t][3cm]` has no height
+/// to carry (RED `parbox_and_minipage_height_dropped_red`).
+#[test]
+fn box_heights_ride_the_custom_properties() {
+  // Every styled start tag of the page, its LaTeXML logo dropped.
+  let styled = |html: &str| -> Vec<String> {
+    let page = html.split("class=\"ltx_page_logo\"").next().unwrap_or(html);
+    page
+      .split('<')
+      .skip(1)
+      .filter_map(|rest| rest.split('>').next())
+      .filter(|tag| tag.contains("style=\""))
+      .map(|tag| format!("<{tag}>"))
+      .collect()
+  };
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/box_heights_ride_the_custom_properties.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let html = super::svg_nested_picture::post_html(&xml);
+  assert_eq!(styled(&html), BOX_HEIGHT_TAGS, "{html}");
+
+  let xml = concat!(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<document xmlns=\"http://dlmf.nist.gov/LaTeXML\">",
+    "<para xml:id=\"p1\"><p>A <text depth=\"3.0pt\">d</text> <text height=\"5.0pt\">h</text> ",
+    "<text cssstyle=\"height:20pt\" depth=\"3.0pt\" height=\"10.0pt\">a</text></p></para></document>\n"
+  );
+  let html = super::svg_nested_picture::post_html(xml);
+  assert_eq!(
+    styled(&html),
+    [
+      "<span class=\"ltx_text\" style=\"--ltx-box-depth:3.0pt;\">",
+      "<span class=\"ltx_text\" style=\"--ltx-box-height:5.0pt;\">",
+      "<span class=\"ltx_text\" style=\"--ltx-box-height:10.0pt;--ltx-box-depth:3.0pt;height:20pt;\">",
+    ],
+    "{html}"
+  );
+
+  let css = include_str!("../../../latexml_post/resources/CSS/LaTeXML.css");
+  for rule in [
+    ":where([style*=\"--ltx-box-height:\"]:not([style^=\"height:\"], [style*=\";height:\"], [style*=\"; height:\"])) {\n  height: var(--ltx-box-height) !important;\n}",
+    ":where([style*=\"--ltx-box-height:\"][style*=\"--ltx-box-depth:\"]:not([style^=\"height:\"], [style*=\";height:\"], [style*=\"; height:\"])) {\n  height: calc(var(--ltx-box-height) + var(--ltx-box-depth)) !important;\n}",
+    ":where([style*=\"--ltx-box-depth:\"]:not([style^=\"vertical-align:\"], [style*=\";vertical-align:\"], [style*=\"; vertical-align:\"], [style*=\"; bottom:\"])) {\n  vertical-align: calc(-1 * var(--ltx-box-depth)) !important;\n}",
+  ] {
+    assert!(css.contains(rule), "LaTeXML.css lacks {rule}");
+  }
+}
+
+/// The styled elements of box_heights_ride_the_custom_properties's HTML, in document order: `\raisebox{2pt}[10pt][3pt]`,
+/// `\raisebox{0pt}[0pt][0pt]`, `\raisebox{3pt}[6pt]` (each its `bottom:` shift), `\raisebox{3pt}` (TeX's `\raise`), the
+/// `\parbox[t][3cm]`, the rotated box's outer and inner, the text rule and the math rule (their ink), the `mspace`.
+const BOX_HEIGHT_TAGS: &[&str] = &[
+  r#"<span id="p1.1.1" class="ltx_text" style="--ltx-box-height:10.0pt;--ltx-box-depth:3.0pt;position:relative; bottom:2.0pt;">"#,
+  r#"<span id="p1.1.2" class="ltx_text" style="--ltx-box-height:0.0pt;--ltx-box-depth:0.0pt;position:relative; bottom:0.0pt;">"#,
+  r#"<span id="p1.1.3" class="ltx_text" style="--ltx-box-height:6.0pt;position:relative; bottom:3.0pt;">"#,
+  r#"<span id="p1.1.4" class="ltx_text" style="vertical-align:3.0pt;">"#,
+  r#"<span id="p2.1.1" class="ltx_inline-block ltx_parbox ltx_align_top" style="--ltx-box-width:113.8pt;">"#,
+  r#"<span id="p2.1.2" class="ltx_inline-block ltx_transformed_outer" style="--ltx-box-width:6.9pt;--ltx-box-height:28.9pt;--ltx-box-depth:0.0pt;">"#,
+  r#"<span class="ltx_transformed_inner" style="--ltx-box-width:28.9pt;transform:translate(-11.0pt,-11.0pt) rotate(-90deg) ;">"#,
+  r#"<span class="ltx_rule" style="width:28.5pt;height:2.0pt;position:relative; bottom:-1.0pt;--ltx-bg-color:black;display:inline-block;">"#,
+  r#"<span class="ltx_rule" style="width:0.0pt;height:12.9pt;position:relative; bottom:-4.3pt;--ltx-bg-color:black;display:inline-block;">"#,
+  r#"<mspace style="width:2.85em;" width="2.85em">"#,
 ];
 
 /// latexml.sty's `nopdfoutput`/`pdfoutput` options set the output mode over the guess from the source (OD #1046; BM
