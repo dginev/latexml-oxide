@@ -2708,14 +2708,14 @@ const CHEATSHEET_HEADER: &str = r#"# Perl | Rust macro | Rhai: the binding diale
 
 One row per call: its Perl LaTeXML spelling (a `Package.pm` function, or the Perl method or expression that does the
 same), the compile-time Rust macro that lowers to the same core call, and the runtime `.rhai` call. **Generated** from
-`api_doc.rs` with [`API.md`](API.md), and checked with it on every test run (`api_reference_is_up_to_date`); regenerate
+`api_doc.rs` with [`API.md`](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md), and checked with it on every test run (`api_reference_is_up_to_date`); regenerate
 with `UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date`.
 
 An empty cell is a gap, listed at the end: a Perl call the dialect lacks, a Rhai call Perl has no counterpart for (a
 Rhai-only helper), or a Perl function the macros do not spell. Methods (`document.openElement`) have no macro: a
 compiled binding calls the Rust method. A deprecated alias follows the call that replaces it, marked `(deprecated: …)`
-(the aliases of `mod.rs`'s `DEPRECATED_ALIASES`). Each Rhai call's arguments and meaning are in [`API.md`](API.md); the
-newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RHAI_BINDINGS_GUIDE.md).
+(the aliases of `mod.rs`'s `DEPRECATED_ALIASES`). Each Rhai call's arguments and meaning are in [`API.md`](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md); the
+newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md).
 "#;
 
 /// Render the whole reference as Markdown.

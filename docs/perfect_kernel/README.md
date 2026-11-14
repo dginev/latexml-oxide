@@ -1,6 +1,10 @@
 # Perfect Kernel — raw-interpretation conversion of the TeX Live doc corpus
 
-**Mission** (from `docs/PERFECT_KERNEL.md`): iteratively test, audit and develop
+> **The program is COMPLETE** (goal met 2026-11-13, merged into main as `6df4632fb1`; close status in
+> [`../archive/PERFECT_KERNEL_2026-11-13.md`](../archive/PERFECT_KERNEL_2026-11-13.md)). Its open rows continue in
+> [`../SYNC_STATUS.md`](../SYNC_STATUS.md) row R; the docs here stay as their live detail.
+
+**Mission** (from `docs/archive/PERFECT_KERNEL_2026-11-13.md`): iteratively test, audit and develop
 latexml-oxide **kernel** support until package-documentation manuals shipped with
 TeX Live convert to high-quality core XML — schema-healthy markup, all content
 preserved (auditable against the golden PDF sitting next to each manual).
@@ -63,7 +67,7 @@ A raw-first attempt is still the default for every new cluster; a new binding
 requires a justification of this kind in the file header.
 
 > **Stages.** The error-free stage (S0∧S1) closed 2026-09-17; the program now measures content preservation and markup
-> quality over the in-scope manuals (PERFECT_KERNEL.md → Scope): S2 schema validity, S3 recall in the post-processed HTML,
+> quality over the in-scope manuals (PERFECT_KERNEL_2026-11-13.md → Scope): S2 schema validity, S3 recall in the post-processed HTML,
 > and a semantic-markup audit. Verdicts and clusters are logged in `LEDGER.md`.
 
 ## Why this corpus
@@ -127,7 +131,7 @@ A document is *converted perfectly* when, in order of increasing strictness:
 The sweep measures S0-S2 mechanically and S3 over the HTML root; page furniture is not content (user, 2026-10-01: running
 heads, letterheads and page numbers are dropped; semantic notes are kept wherever a class prints them).
 
-**The headline is the in-scope scoreboard** (`tools/perfect_kernel/scoreboard.py`; scope = PERFECT_KERNEL.md → Scope):
+**The headline is the in-scope scoreboard** (`tools/perfect_kernel/scoreboard.py`; scope = PERFECT_KERNEL_2026-11-13.md → Scope):
 clean, errors, schema-valid, HTML recall, cpu_h. A 0-error timeout is not a win (it truncated the document). Rules:
 (1) sweeps run on quiet cores (or their timeouts are re-run solo before tallying); (2) compare sweeps per document by
 error-count delta and status, not by zero-error flips (the nicematrix exemplar sat at 108 → 1001 for four sweeps under a
@@ -139,7 +143,7 @@ and S3 (`post_sweep.sh` + `s3_sweep.sh`, HTML root) run with every sweep — zer
 1. **Sweep** the corpus → `~/data/perfect_kernel_s<N>/`; `tools/perfect_kernel/scoreboard.py` prints the in-scope table
    (the 1,602 manuals some engine compiles cleanly) and then the crash canaries.
 2. **Pick from the scoreboard** (user, 2026-10-01): S3 missing words first, then schema-invalid in-scope manuals, then
-   timeouts; filter by scope first (PERFECT_KERNEL.md → Scope).
+   timeouts; filter by scope first (PERFECT_KERNEL_2026-11-13.md → Scope).
 3. **Root-cause and fix in the kernel/engine** faithfully to real TeX (`tex.web`, `latex.ltx`, the package's own source —
    for raw interpretation the ground truth is the *real* kernel, not LaTeXML's `.pool` simplifications).
 4. **Guard** each fix (a repro in `tools/perfect_kernel/repros/<topic>/` + a red/green test), log it in

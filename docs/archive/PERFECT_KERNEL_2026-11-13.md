@@ -1,3 +1,7 @@
+> **COMPLETE — the goal was met on 2026-11-13 and merged into main as `6df4632fb1`.** Archived verbatim from
+> `docs/PERFECT_KERNEL.md`; the program's rows continue in [`docs/perfect_kernel/`](../perfect_kernel/README.md).
+> The live residual (the deferred list and the after-merge queue) is [`SYNC_STATUS.md`](../SYNC_STATUS.md) row R.
+
 Task: iteratively test, audit and develop the latexml-oxide kernel support until we reach perfect conversion over all documentation bundles available in texlive.
 
 As an example, let us take nicematrix.sty . Its documentation lives at /usr/local/texlive/2025/texmf-dist/doc/latex/nicematrix/ . It contains
@@ -86,7 +90,7 @@ rule). Like the CJK manuals they stay crash canaries; a shared-machinery defect 
 This is the single ranked order to the goal. The agent reports (`~/data/pk_agents/main/agent_reports/`, evidence and designs on file), the open rows of
 `SYNC_STATUS.md`, PLANS.md and KERNEL_CAPABILITIES.md feed it and do not rank on their own. The superseded phase-57/58
 plan, the 2026-09-25 stream table and the corpus-wide scoreboard history are in
-[`perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md).
+[`perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`](../perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md).
 
 **Goal bar** (proposed 2026-10-02 from the quality axes, the scope and the rulings; met at sweeps #146-148,
 confirmed by the user 2026-10-04). One
@@ -134,7 +138,7 @@ VARW), each clean on the next bundle.
 
 The 2026-10-04 close status and its "Still to close" list (all superseded since), the in-scope scoreboard s130-s138
 and the off-the-path leads of 2026-09-27 are in
-[`perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md`](perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md).
+[`perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md`](../perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md).
 
 **Close status (2026-11).** The goal bar of 2026-10-04 held through the frontmatter single-engine work (Option C,
 bundles int154a-int171a) and is re-validated on the final head (row R's GOAL), up to and except the rows DG moved after
@@ -294,14 +298,14 @@ assertions (user, 2026-09-23); a schema win counts only if content is preserved 
 per-document conversion seconds; recall from the inline-glue audit walker since s125) and the crash-canary table after
 it. The bundle sweeps' figures are in each bundle entry of `archive/SYNC_SESSIONS_2026-11.md`, the closing sweep #186
 in the close status above; the s130-s138 table is in
-[`perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md`](perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md),
+[`perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md`](../perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md),
 the corpus-wide rows s113-s130 in the phase-57/58 archive.
 
 ## Open residuals and rulings
 
 **Off the path:** the leads of 2026-09-27 (kernel arXiv-2605 items, engine, class census, performance beyond the
 ceiling, SHARED items), unverified since, are archived in
-[`perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md`](perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md)
+[`perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md`](../perfect_kernel/archive/PERFECT_KERNEL_CLOSE_2026-10-04.md)
 "Off the path" — probe each before taking it; the semantic-coverage figures are the close status's (#186).
 
 **Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes MUST pin the vendor

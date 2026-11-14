@@ -1,7 +1,7 @@
 # Ruled residuals of in-scope manuals: a sweep counts the manual as meeting the goal bar's G1 (kind `errors`: status 2;
 # kind `fatal`: status 3, its error lines), G2 (kind `jing`) or G3 (kind `recall`: missing S3 words classified as no
 # conversion loss) while its count is at most the one recorded here; a higher count is open again.
-# Read by tools/perfect_kernel/scoreboard.py (goal-bar block). docs/PERFECT_KERNEL.md "Goal bar and ranked path".
+# Read by tools/perfect_kernel/scoreboard.py (goal-bar block). docs/archive/PERFECT_KERNEL_2026-11-13.md "Goal bar and ranked path".
 # Columns: bundle, name, kind, count, ruling, basis.
 biblatex-ext	biblatex-ext	errors	1	2026-10-02	bibliography inside a tcolorbox (out of scope): <ltx:bibliography> in the ltx:block of an svg:foreignObject
 biblatex-ext	biblatex-ext	jing	1	2026-10-02	the same bibliography in the foreignObject's ltx:block

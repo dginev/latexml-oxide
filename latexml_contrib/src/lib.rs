@@ -1039,6 +1039,9 @@ pub fn binding_names() -> &'static [(&'static str, &'static str)] {
 // and made visible to the main latexml-oxide executable
 
 #[cfg(test)]
+mod supported_packages_doc;
+
+#[cfg(test)]
 mod tests {
   use super::*;
 
