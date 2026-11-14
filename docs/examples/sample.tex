@@ -1,8 +1,5 @@
-% A worked example for docs/examples/sample.sty.rhai: CI converts it with no Error or Warning and finds
-% each `expect:` line in the XML (latexml_oxide/tests/30_script_bindings.rs, docs_examples_convert_clean).
-% expect: <p>abab Hello, World! <text font="italic">it</text> <text class="rhai">t</text> <text framed="rectangle">b</text> <text class="note">[N]</text></p>
-% expect: <p>v <text class="exhibit" lang="exhibit" xml:id="exhibit1">one</text> (en)body R(o:a) k/2 <text class="hooked">h</text></p>
-% expect: <p>q</p>
+% A worked example for docs/examples/sample.sty.rhai: CI converts it with no Error or Warning and checks
+% each paragraph of the XML (latexml_oxide/tests/30_script_bindings.rs, docs_examples_convert_clean).
 \documentclass{article}
 \usepackage{sample}
 \begin{document}

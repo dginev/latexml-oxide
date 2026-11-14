@@ -1223,14 +1223,16 @@ fn api_reference_is_up_to_date() {
   let sources = macro_sources();
   let undefined: Vec<&str> = api_doc::named_macros()
     .into_iter()
-    .filter(|mac| {
-      !sources.contains(&format!("macro_rules! {mac} "))
-        && !sources.contains(&format!("macro_rules! {mac}("))
+    .filter(|cell| {
+      cell.strip_suffix('!').is_none_or(|mac| {
+        !sources.contains(&format!("macro_rules! {mac} "))
+          && !sources.contains(&format!("macro_rules! {mac}("))
+      })
     })
     .collect();
   assert!(
     undefined.is_empty(),
-    "api_doc's Mirror/PERL_GAPS name macros no workspace crate defines: {undefined:?}"
+    "api_doc's Mirror/PERL_GAPS macro cells that are no `name!` a workspace crate defines: {undefined:?}"
   );
   for (file, generated) in [
     ("API.md", api_doc::generate(&engine)),

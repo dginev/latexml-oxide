@@ -7,7 +7,8 @@ with `UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_t
 
 An empty cell is a gap, listed at the end: a Perl call the dialect lacks, a Rhai call Perl has no counterpart for (a
 Rhai-only helper), or a Perl function the macros do not spell. Methods (`document.openElement`) have no macro: a
-compiled binding calls the Rust method. Each Rhai call's arguments and meaning are in [`API.md`](API.md); the
+compiled binding calls the Rust method. A deprecated alias follows the call that replaces it, marked `(deprecated: …)`
+(the aliases of `mod.rs`'s `DEPRECATED_ALIASES`). Each Rhai call's arguments and meaning are in [`API.md`](API.md); the
 newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RHAI_BINDINGS_GUIDE.md).
 
 | Perl | Rust macro | Rhai |
@@ -26,20 +27,22 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `AddToCounter` | `AddToCounter!` | `AddToCounter` |
 | `AddToMacro` | `AddToMacro!` | `AddToMacro` |
 |  |  | `AppendSearchPath` |
-| `AssignValue` |  | `AssignBool` |
 | `AssignCatcode` | `AssignCatcode!` | `AssignCatcode` |
 | `AssignDelcode` |  | `AssignDelcode` |
 | `AssignValue` |  | `AssignFloat` |
 | `AssignLCcode` |  | `AssignLCcode` |
 | `AssignMapping` | `AssignMapping!` | `AssignMapping` |
 | `AssignMathcode` |  | `AssignMathcode` |
-| `Let` | `AssignMeaning!` | `AssignMeaning` |
-| `AssignValue` |  | `AssignNumber` |
+| `$STATE->assignMeaning` | `AssignMeaning!` | `AssignMeaning` |
 | `AssignRegister` | `AssignRegister!` | `AssignRegister` |
 | `AssignSFcode` |  | `AssignSFcode` |
-| `AssignValue` |  | `AssignString` |
 | `AssignUCcode` |  | `AssignUCcode` |
 | `AssignValue` | `AssignValue!` | `AssignValue` |
+| `AssignValue` |  | `AssignBool` (deprecated: `AssignValue(key, value[, scope])`) |
+| `AssignValue` |  | `AssignNumber` (deprecated: `AssignValue(key, value[, scope])`) |
+| `AssignValue` |  | `AssignString` (deprecated: `AssignValue(key, value[, scope])`) |
+| `AssignValue` |  | `assign_global` (deprecated: `AssignValue(key, value, "global")`) |
+| `AssignValue` |  | `assign_value` (deprecated: `AssignValue(key, value, "local")`) |
 | `AtBeginDocument` |  | `AtBeginDocument` |
 | `AtEndDocument` |  | `AtEndDocument` |
 | `beginItemize` | `BeginItemize!` | `BeginItemize` |
@@ -130,6 +133,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `LookupValue` | `LookupTokens!` | `LookupTokens` |
 | `LookupUCcode` |  | `LookupUCcode` |
 | `LookupValue` |  | `LookupValue` |
+| `LookupValue` |  | `lookup_value` (deprecated: `LookupValue(key)`) |
 | `MergeFont` | `MergeFont!` | `MergeFont` |
 | `MuGlue` | `MuGlue!` | `MuGlue` |
 | `NewCounter` | `NewCounter!` | `NewCounter` |
@@ -186,7 +190,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `T_SUB` | `T_SUB!` | `T_SUB` |
 | `T_SUPER` | `T_SUPER!` | `T_SUPER` |
 | `Tag` | `Tag!` | `Tag` |
-| `Digest(Tokenize($tex))` | `TeX!` | `TeX` |
+| `Digest(TokenizeInternal($tex))` | `TeX!` | `TeX` |
 | `$box->toAttribute` |  | `ToAttribute` |
 | `ToString` |  | `ToString` |
 |  | `Today!` | `Today` |
@@ -201,8 +205,6 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `XEquals` | `XEquals!` | `XEquals` |
 | `$v->absolute` |  | `absolute` |
 | `$v->add` |  | `add` |
-| `AssignValue` |  | `assign_global` |
-| `AssignValue` |  | `assign_value` |
 | `defined $v` |  | `defined` |
 | `$v->divide` |  | `divide` |
 | `$v->divideround` |  | `divideround` |
@@ -211,7 +213,6 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `$v->getStretch` |  | `getStretch` |
 | `$v->getStretchOrder` |  | `getStretchOrder` |
 | `$v->larger` |  | `larger` |
-| `LookupValue` |  | `lookup_value` |
 | `$v->multiply` |  | `multiply` |
 | `$v->negate` |  | `negate` |
 |  |  | `neutralize_font` |
@@ -224,7 +225,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `$v->subtract` |  | `subtract` |
 | `$v->toAttribute` |  | `toAttribute` |
 | `$v->valueOf` |  | `valueOf` |
-| `$whatsit` |  | `whatsit` |
+| `$whatsit` |  | `whatsit` (deprecated: the hook's whatsit argument) |
 | `$document->absorb` |  | `document.absorb` |
 |  |  | `document.absorbProperty` |
 | `$document->absorb` |  | `document.absorbString` |
@@ -239,8 +240,8 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 |  |  | `document.generateID` |
 | `$document->getElement` |  | `document.getElement` |
 | `$document->getNode` |  | `document.getNode` |
-| `$whatsit->getProperties` |  | `document.getProperties` |
-| `$whatsit->getProperty` |  | `document.getProperty` |
+| `$whatsit->getProperties` |  | `document.getProperties` (deprecated: the constructor body's trailing properties map) |
+| `$whatsit->getProperty` |  | `document.getProperty` (deprecated: the constructor body's trailing properties map) |
 | `$document->insertElement` |  | `document.insertElement` |
 | `$document->insertPI` |  | `document.insertPI` |
 |  |  | `document.insertXML` |
@@ -269,11 +270,11 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 |  |  | `node.setContent` |
 | `$node->toString` |  | `node.toString` |
 | `$node->unbindNode` |  | `node.unlink` |
-| `$whatsit->getArg` |  | `whatsit.argString` |
 | `$whatsit->getArg` |  | `whatsit.getArg` |
+| `$whatsit->getArg` |  | `whatsit.argString` (deprecated: `whatsit.getArg(n)`) |
 | `$whatsit->getProperties` |  | `whatsit.getProperties` |
 | `$whatsit->getProperty` |  | `whatsit.getProperty` |
-| `$whatsit->getProperty` |  | `whatsit.propertyString` |
+| `$whatsit->getProperty` |  | `whatsit.propertyString` (deprecated: `whatsit.getProperty(key)`) |
 | `$whatsit->setProperty` |  | `whatsit.setProperty` |
 | `ToString($whatsit)` |  | `whatsit.to_string` |
 | `push(@{$$defn{afterConstruct}}, …)` |  | `definition.pushAfterConstruct` |
@@ -375,4 +376,4 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 
 ## Perl functions with no macro (compiled bindings call the Rust function named)
 
-63 calls: `AssignBool` (`assign_value`), `AssignDelcode` (`assign_delcode`), `AssignFloat` (`assign_value`), `AssignLCcode` (`assign_lccode`), `AssignMathcode` (`assign_mathcode`), `AssignNumber` (`assign_value`), `AssignSFcode` (`assign_sfcode`), `AssignString` (`assign_value`), `AssignUCcode` (`assign_uccode`), `AtBeginDocument` (`push_value`), `AtEndDocument` (`push_value`), `CC_ACTIVE`, `CC_ALIGN`, `CC_ARG`, `CC_BEGIN`, `CC_COMMENT`, `CC_CS`, `CC_END`, `CC_EOL`, `CC_ESCAPE`, `CC_IGNORE`, `CC_INVALID`, `CC_LETTER`, `CC_MARKER`, `CC_MATH`, `CC_OTHER`, `CC_PARAM`, `CC_SPACE`, `CC_SUB`, `CC_SUPER`, `CleanID` (`clean_id`), `CleanLabel` (`clean_label`), `EndSemiverbatim` (`end_semiverbatim`), `Equals`, `ExecuteOptions` (`execute_options`), `ExpandPartially` (`do_expand_partially`), `IsEmpty`, `LookupDelcode` (`lookup_delcode`), `LookupDimension` (`lookup_dimension_cs`), `LookupFloat` (`lookup_float`), `LookupLCcode` (`lookup_lccode`), `LookupMapping` (`lookup_mapping`), `LookupMappingKeys` (`with_mapping_keys`), `LookupMathcode` (`lookup_mathcode`), `LookupSFcode` (`lookup_sfcode`), `LookupUCcode` (`lookup_uccode`), `LookupValue` (`lookup_value`), `PassOptions` (`pass_options`), `PopValue` (`pop_value`), `ProgressSpindown` (`note_end`), `ProgressSpinup` (`note_begin`), `ProgressStep` (`progress_step`), `PushValue` (`push_value`), `SetCondition` (`set_condition`), `ShiftValue` (`shift_value`), `StartSemiverbatim` (`begin_semiverbatim`), `ToString`, `UTF`, `UnTeX` (`Tokens::untex`), `UnshiftValue` (`unshift_value`), `assign_global`, `assign_value`, `lookup_value`.
+57 calls: `AssignDelcode` (`assign_delcode`), `AssignFloat` (`assign_value`), `AssignLCcode` (`assign_lccode`), `AssignMathcode` (`assign_mathcode`), `AssignSFcode` (`assign_sfcode`), `AssignUCcode` (`assign_uccode`), `AtBeginDocument` (`push_value`), `AtEndDocument` (`push_value`), `CC_ACTIVE`, `CC_ALIGN`, `CC_ARG`, `CC_BEGIN`, `CC_COMMENT`, `CC_CS`, `CC_END`, `CC_EOL`, `CC_ESCAPE`, `CC_IGNORE`, `CC_INVALID`, `CC_LETTER`, `CC_MARKER`, `CC_MATH`, `CC_OTHER`, `CC_PARAM`, `CC_SPACE`, `CC_SUB`, `CC_SUPER`, `CleanID` (`clean_id`), `CleanLabel` (`clean_label`), `EndSemiverbatim` (`end_semiverbatim`), `Equals`, `ExecuteOptions` (`execute_options`), `ExpandPartially` (`do_expand_partially`), `IsEmpty`, `LookupDelcode` (`lookup_delcode`), `LookupDimension` (`lookup_dimension_cs`), `LookupFloat` (`lookup_float`), `LookupLCcode` (`lookup_lccode`), `LookupMapping` (`lookup_mapping`), `LookupMappingKeys` (`with_mapping_keys`), `LookupMathcode` (`lookup_mathcode`), `LookupSFcode` (`lookup_sfcode`), `LookupUCcode` (`lookup_uccode`), `LookupValue` (`lookup_value`), `PassOptions` (`pass_options`), `PopValue` (`pop_value`), `ProgressSpindown` (`note_end`), `ProgressSpinup` (`note_begin`), `ProgressStep` (`progress_step`), `PushValue` (`push_value`), `SetCondition` (`set_condition`), `ShiftValue` (`shift_value`), `StartSemiverbatim` (`begin_semiverbatim`), `ToString`, `UTF`, `UnTeX` (`Tokens::untex`), `UnshiftValue` (`unshift_value`).

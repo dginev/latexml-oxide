@@ -11,7 +11,9 @@ dialect keeps Perl's names and argument forms, so a Perl binding translates almo
 
 ## Load a binding
 
-Name the file after the package or class it binds, plus `.rhai`: `mypkg.sty.rhai`, `myclass.cls.rhai`.
+Name the file after the package or class it binds, plus `.rhai`: `mypkg.sty.rhai`, `myclass.cls.rhai`. With
+`mypkg.sty.rhai` beside `doc.tex`, which says `\usepackage{mypkg}`, run `latexml_oxide doc.tex --dest=doc.html` (or
+`--dest=doc.xml` for the XML); every released binary reads `.rhai` bindings.
 
 - Put it beside the document (or in a directory given with `--path=DIR`): `\usepackage{mypkg}` loads it. The `.rhai`
   file is searched **first**, so `article.cls.rhai` overrides the built-in `article` binding.
@@ -95,7 +97,7 @@ Each old name still works this release and Warns `Warning:deprecated` once per b
 |---|---|
 | `assign_value(k, v)`, `assign_global(k, v)`, `AssignString`/`AssignNumber`/`AssignBool` | `AssignValue(k, v[, scope])` |
 | `lookup_value(k)` | `LookupValue(k)` |
-| `AssignMeaning(cs, other)` | `Let(cs, other[, scope])` |
+| `AssignMeaning(cs, "\\other")` (a string meaning) | `Let(cs, other[, scope])`, or `AssignMeaning(T_CS(cs), LookupDefinition(other))` |
 | `whatsit` (the global), `whatsit.argString(n)`, `whatsit.propertyString(k)` | the hook's `whatsit` argument, `whatsit.getArg(n)`, `whatsit.getProperty(k)` |
 | `document.getProperty(k)` in a constructor body | the body's trailing properties map |
 | `DefAccent(cs, combining, standalone, true)` | `DefAccent(cs, combining, standalone, #{below: true})` |

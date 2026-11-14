@@ -39,7 +39,7 @@ sets each call beside its Perl spelling and its compile-time macro.
 
 Called at the top level of a binding file, or from inside any body.
 
-213 functions, 444 calls.
+213 functions, 445 calls.
 
 | call | documentation |
 |---|---|
@@ -64,7 +64,7 @@ Called at the top level of a binding file, or from inside any body.
 | `AssignLCcode(string, int)`<br>`AssignLCcode(string, int, string)` | Set a character's lowercase code, with an optional scope. ([`assign_lccode`](latexml_core::state::assign_lccode)) |
 | `AssignMapping(string, string, ?)` | Bind one key inside a named mapping to any value, as `AssignValue`; `()` removes the key. ([`assign_mapping`](latexml_core::state::assign_mapping)) |
 | `AssignMathcode(string, int)`<br>`AssignMathcode(string, int, string)` | Set a character's math code, with an optional scope. ([`assign_mathcode`](latexml_core::state::assign_mathcode)) |
-| `AssignMeaning(string\|Token, string\|Token)` | **Deprecated** (Warns once per binding load): use `Let(cs, other[, scope])`. Give a token (CS name or `Token`) the current meaning of another, as `Let`. ([`let_definition`](latexml_core::state::let_definition)) |
+| `AssignMeaning(string\|Token, string\|Token)`<br>`AssignMeaning(string\|Token, string\|Token, string)` | Give a token (CS name or `Token`) a meaning: the definition a `LookupDefinition` handle names, a `Token` (`\let\x=a`) or `()` (undefined); optional scope. A string meaning (the old `Let` form) still lets, with a Warning, this release. ([`assign_meaning`](latexml_core::state::assign_meaning)) |
 | `AssignNumber(string, ?)`<br>`AssignNumber(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignRegister(?, ?)`<br>`AssignRegister(?, ?, string)`<br>`AssignRegister(?, ?, string, array)` | Perl's `AssignRegister(cs, value[, scope[, params]])`: a typed value, or a string read for the register's type; a Warning when `cs` is no register. ([`assign_register_token`](latexml_core::state::assign_register_token)) |
 | `AssignSFcode(string, int)`<br>`AssignSFcode(string, int, string)` | Set a character's space-factor code, with an optional scope. ([`assign_sfcode`](latexml_core::state::assign_sfcode)) |

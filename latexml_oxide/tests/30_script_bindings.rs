@@ -1763,37 +1763,107 @@ fn a_rhai_fatal_is_logged_once() {
   assert!(failures.is_empty(), "{failures:#?}");
 }
 
-/// Every worked example under `docs/examples/` (a `<name>.tex` beside its `<name>.sty.rhai`) converts with no Error
-/// or Warning, and its XML holds each `% expect:` line of the `.tex`, so the documented examples cannot rot.
+/// An example's rows: tag, a finding attribute, the whole element.
+type ExampleRows = &'static [(&'static str, &'static str, &'static str)];
+
+/// Each worked example under `docs/examples/` (a `<name>.tex` beside its `<name>.sty.rhai`), with every paragraph (or
+/// note) of its output as a whole element: its tag, an attribute that finds it, the element.
+const DOCS_EXAMPLES: &[(&str, ExampleRows)] = &[
+  ("constructors", &[
+    (
+      "para",
+      r#"xml:id="p1""#,
+      r#"<para xml:id="p1"><p>A <text class="term">lemma</text>.</p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p2""#,
+      r#"<para xml:id="p2"><p><text class="aside">note</text></p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p3""#,
+      r#"<para xml:id="p3"><p>The <text class="k-x">x</text>.</p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p4""#,
+      r#"<para xml:id="p4"><block class="boxed"><p>inside</p></block></para>"#,
+    ),
+  ]),
+  ("macros", &[(
+    "para",
+    r#"xml:id="p1""#,
+    r#"<para xml:id="p1"><p>ba <text font="bold">x</text> Hello, World! Hi, you! (1,2) no yes</p></para>"#,
+  )]),
+  ("registers", &[(
+    "para",
+    r#"xml:id="p1""#,
+    r#"<para xml:id="p1"><p>3.0pt 1.0pt plus 2.0fil 6.0pt wide 2</p></para>"#,
+  )]),
+  ("sample", &[
+    (
+      "para",
+      r#"xml:id="p1""#,
+      r#"<para xml:id="p1"><p>abab Hello, World! <text font="italic">it</text> <text class="rhai">t</text> <text framed="rectangle">b</text> <text class="note">[N]</text></p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p2""#,
+      r#"<para xml:id="p2"><p>v <text class="exhibit" lang="exhibit" xml:id="exhibit1">one</text> (en)body R(o:a) k/2 [<text class="hooked">h</text>]</p></para>"#,
+    ),
+    (
+      "note",
+      r#"role="footnote""#,
+      r#"<note mark="m" role="footnote">text</note>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p3""#,
+      r#"<para xml:id="p3"><p><Math mode="inline" tex="a:=b" text="a assign b" xml:id="p3.m1"><XMath><XMApp><XMTok name="assign" role="RELOP">≔</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math> <Math mode="inline" tex="\exsum x" text="sum@(x)" xml:id="p3.m2"><XMath><XMApp><XMTok meaning="sum" name="exsum" role="SUMOP">∑</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math> é</p></para>"#,
+    ),
+    (
+      "para",
+      r#"xml:id="p4""#,
+      r#"<para xml:id="p4"><quote class="rhai"><p>q</p></quote><note class="who" role="biography">bio</note></para>"#,
+    ),
+  ]),
+];
+
+/// Every worked example under `docs/examples/` converts with no Error or Warning, and each paragraph of its XML is
+/// [`DOCS_EXAMPLES`]'s whole element, so the documented examples cannot rot.
 #[test]
 fn docs_examples_convert_clean() {
+  use latexml::util::test::{assert_element, error_count, warning_count};
   let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/examples");
-  let mut texs: Vec<_> = std::fs::read_dir(&dir)
+  let mut texs: Vec<String> = std::fs::read_dir(&dir)
     .expect("docs/examples")
     .flatten()
     .map(|e| e.path())
     .filter(|p| p.extension().is_some_and(|e| e == "tex"))
+    .map(|p| p.file_stem().unwrap().to_string_lossy().to_string())
     .collect();
   texs.sort();
-  assert!(texs.len() >= 4, "the worked examples: {texs:?}");
-  for tex_path in texs {
-    let name = tex_path.file_stem().unwrap().to_string_lossy().to_string();
-    let tex = std::fs::read_to_string(&tex_path).unwrap();
+  let names: Vec<&str> = DOCS_EXAMPLES.iter().map(|(name, _)| *name).collect();
+  assert_eq!(texs, names, "every example has its rows in DOCS_EXAMPLES");
+  for (name, elements) in DOCS_EXAMPLES {
+    let tex = std::fs::read_to_string(dir.join(format!("{name}.tex"))).unwrap();
     let rhai_name = format!("{name}.sty.rhai");
     let rhai = std::fs::read_to_string(dir.join(&rhai_name)).expect("the example's binding");
     let (log, xml) = latexml::util::test::convert_files_with(&tex, &[(&rhai_name, &rhai)], None);
-    let diagnostics: Vec<&str> = log
-      .lines()
-      .filter(|l| l.starts_with("Error:") || l.starts_with("Fatal:") || l.starts_with("Warning:"))
-      .collect();
-    assert!(diagnostics.is_empty(), "{name}: {diagnostics:?}\n{log}");
-    let expects: Vec<&str> = tex
-      .lines()
-      .filter_map(|l| l.strip_prefix("% expect: "))
-      .collect();
-    assert!(!expects.is_empty(), "{name}.tex names no `% expect:` line");
-    for expect in expects {
-      assert!(xml.contains(expect), "{name}: missing {expect}\n{xml}");
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{name}\n{log}"
+    );
+    let paras = elements.iter().filter(|(tag, ..)| *tag == "para").count();
+    assert_eq!(
+      xml.matches("<para ").count(),
+      paras,
+      "{name}: a row per paragraph\n{xml}"
+    );
+    for (tag, attr, element) in *elements {
+      assert_element(&xml, tag, &[attr], element);
     }
   }
 }

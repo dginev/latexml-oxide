@@ -173,7 +173,10 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
   ("AssignString", "AssignValue(key, value[, scope])"),
   ("AssignNumber", "AssignValue(key, value[, scope])"),
   ("AssignBool", "AssignValue(key, value[, scope])"),
-  ("AssignMeaning", "Let(cs, other[, scope])"),
+  (
+    "AssignMeaning(cs, string)",
+    "Let(cs, other[, scope]), or AssignMeaning(T_CS(cs), LookupDefinition(other)[, scope])",
+  ),
   (
     "DefAccent",
     "DefAccent(accent, combining, standalone, #{below: true})",

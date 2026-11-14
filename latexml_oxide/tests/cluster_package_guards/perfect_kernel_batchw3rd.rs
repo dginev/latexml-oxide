@@ -230,6 +230,10 @@ DefConstructor("\\lxo{}", |document, x, props| {
 DefPrimitive("\\lxs", || { AssignValue("lx:n", 3); AssignValue("lx:t", true, "global"); Let("\\lxr", "\\relax"); });
 DefMacro("\\lxv", || `${LookupNumber("lx:n")} ${LookupBool("lx:t")} ${LookupValue("lx:n") + 1}`);
 DefAccent("\\lxacc", "́", "´", #{below: false});
+DefPrimitive("\\lxam", || { AssignMeaning(T_CS("\\lxbf"), LookupDefinition("\\textbf"));
+  AssignMeaning(T_CS("\\lxch"), T_LETTER("a")); });
+DefPrimitive("\\lxag", || AssignMeaning(T_CS("\\lxgl"), T_LETTER("g"), "global"));
+DefPrimitive("\\lxun", || AssignMeaning(T_CS("\\lxbf"), LookupDefinition("\\lxnone")));
 "#;
 
 const LXRD2_TEX: &str = r"\documentclass{article}
@@ -242,6 +246,8 @@ $\lxm{b}$
 \lxo{X}
 
 \lxs\lxv{} \ifx\lxr\relax R\fi{} \lxacc{e}
+
+\lxam\lxbf{b} \lxch\ifx\lxch a=\fi{} {\lxag}\lxgl{} \lxun\ifdefined\lxbf D\else U\fi
 \end{document}
 ";
 
@@ -252,7 +258,9 @@ $\lxm{b}$
 /// `($whatsit, @args)` (Whatsit.pm:121). p3: `openElement` takes attributes and returns the node, `closeElement` the
 /// node closed, `maybeCloseElement` `()` when nothing closes (Document.pm:787-866); a constructor body's trailing
 /// argument is the properties map (Perl's `%props`, Constructor.pm:137). p4: `AssignValue` stores a number and a bool
-/// (`LookupNumber`/`LookupBool` read them), `Let`, `DefAccent`'s option form (TeX_Character.pool.ltxml:92).
+/// (`LookupNumber`/`LookupBool` read them), `Let`, `DefAccent`'s option form (TeX_Character.pool.ltxml:92). p5 (W3RF):
+/// `AssignMeaning` is Perl's `$STATE->assignMeaning` (State.pm:380): a `LookupDefinition` handle, a Token, `()`, a
+/// scope; Perl and pdflatex "b a= g U", 0 E/W; red on e094f346e9d (E=6, W=1: the old `Let` alias).
 #[test]
 fn rhai_perl_forms_716() {
   let (log, xml) = convert_files_with(LXRD2_TEX, &[("lxrdtwo.sty.rhai", LXRD2)], None);
@@ -268,6 +276,10 @@ fn rhai_perl_forms_716() {
       r#"<para xml:id="p3"><p><text class="pc" title="Node">X</text>pc ()</p></para>"#,
     ),
     ("p4", "<para xml:id=\"p4\"><p>3 true 4 R \u{e9}</p></para>"),
+    (
+      "p5",
+      r#"<para xml:id="p5"><p><text font="bold">b</text> a= g U</p></para>"#,
+    ),
   ] {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
   }
@@ -309,7 +321,8 @@ const LXRD2_OLD_TEX: &str = r"\documentclass{article}
 /// an imperative constructor's `openElement` (RED `rhai-bindings/imperative_constructor_drops_space_red.tex`). W3RD2b: a macro
 /// or primitive body declaring 1..=nargs parameters, no leading gullet/stomach, gets its arguments as strings, Warned
 /// with the fix; so does an old-form reversion `|x|` (red on 8ee92a55a49: W=13, the
-/// reversion `tex="\lxor{Whatsit}"`-garbage; on a1b6c0b827d E=1 for `#{bogus: true}`).
+/// reversion `tex="\lxor{Whatsit}"`-garbage; on a1b6c0b827d E=1 for `#{bogus: true}`). W3RF: `AssignMeaning` is Perl's
+/// again; only its string meaning (the old `Let` form) is the alias.
 #[test]
 fn rhai_deprecated_aliases_warn_once() {
   let (log, xml) = convert_files_with(LXRD2_OLD_TEX, &[("lxrdold.sty.rhai", LXRD2_OLD)], None);
@@ -332,7 +345,10 @@ fn rhai_deprecated_aliases_warn_once() {
     ("AssignString", "AssignValue(key, value[, scope])"),
     ("AssignNumber", "AssignValue(key, value[, scope])"),
     ("AssignBool", "AssignValue(key, value[, scope])"),
-    ("AssignMeaning", "Let(cs, other[, scope])"),
+    (
+      "AssignMeaning(cs, string)",
+      "Let(cs, other[, scope]), or AssignMeaning(T_CS(cs), LookupDefinition(other)[, scope])",
+    ),
     (
       "DefAccent",
       "DefAccent(accent, combining, standalone, #{below: true})",

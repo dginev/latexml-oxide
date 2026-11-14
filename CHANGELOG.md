@@ -194,7 +194,7 @@
     | `assign_value(k, v)`, `assign_global(k, v)` | `AssignValue(k, v, "local")`, `AssignValue(k, v, "global")` |
     | `lookup_value(k)` | `LookupValue(k)` |
     | `AssignString`, `AssignNumber`, `AssignBool` | `AssignValue(k, v[, scope])` |
-    | `AssignMeaning(cs, other)` | `Let(cs, other[, scope])` |
+    | `AssignMeaning(cs, "\\other")` (a string meaning) | `Let(cs, other[, scope])`, or `AssignMeaning(T_CS(cs), LookupDefinition(other))` |
     | `DefAccent(a, c, s, below)` | `DefAccent(a, c, s, #{below: true})` |
 
     Guards `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_perl_forms_716,
@@ -250,6 +250,11 @@
     (Perl | Rust macro | Rhai, generated from `api_doc.rs` and checked with it, its empty cells listed as the
     dialect's gaps); worked examples under `docs/examples/` that CI converts with no Error or Warning
     (`30_script_bindings::docs_examples_convert_clean`). `script_bindings_plan.md` keeps the design notes.
+  - **Rhai `AssignMeaning` is Perl's `$STATE->assignMeaning`** (PR #829 round F): `AssignMeaning(token,
+    meaning[, scope])` stores a meaning, a `LookupDefinition` handle, a `Token` (`T_LETTER("a")`, as `\let\x=a`) or
+    `()` (undefined), as the `AssignMeaning!` macro does, where it was a deprecated `Let`. A string meaning, the old
+    `AssignMeaning("\\a", "\\b")`, still lets this release and Warns `deprecated` once per load, naming `Let` and
+    the handle form. Guard `cluster_package_guards::perfect_kernel_batchw3rd::rhai_perl_forms_716` (p5).
 
   - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
     chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and

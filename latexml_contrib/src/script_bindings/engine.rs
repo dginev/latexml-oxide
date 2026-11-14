@@ -905,18 +905,34 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
-  // Deprecated alias of `Let` (not a Perl export; audit §3).
+  // Perl `$STATE->assignMeaning($token, $meaning, $scope)` (State.pm:380), the `AssignMeaning!` macro: the meaning a
+  // `LookupDefinition` handle names (its current definition), a Token (`\let\x=a`), or `()` (undefines). A string
+  // meaning is the old `Let` form, kept one release with a Warning.
+  fn assign_meaning(
+    cs: Dynamic,
+    meaning: Dynamic,
+    scope: Option<Scope>,
+  ) -> std::result::Result<(), Box<EvalAltResult>> {
+    let cs = token_arg("AssignMeaning", cs)?;
+    if meaning.is_string() {
+      warn_deprecated("AssignMeaning(cs, string)");
+      latexml_core::state::let_definition(&cs, &token_arg("AssignMeaning", meaning)?, scope);
+    } else if meaning.is_unit() {
+      latexml_core::state::assign_meaning(&cs, Stored::None, scope);
+    } else if let Some(def) = meaning.clone().try_cast::<DefinitionProxy>() {
+      let current = latexml_core::state::lookup_meaning(&def.cs).unwrap_or_default();
+      latexml_core::state::assign_meaning(&cs, current, scope);
+    } else {
+      latexml_core::state::assign_meaning(&cs, token_arg("AssignMeaning", meaning)?, scope);
+    }
+    Ok(())
+  }
+  engine.register_fn("AssignMeaning", |cs: Dynamic, meaning: Dynamic| {
+    assign_meaning(cs, meaning, None)
+  });
   engine.register_fn(
     "AssignMeaning",
-    |cs: Dynamic, other: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
-      warn_deprecated("AssignMeaning");
-      latexml_core::state::let_definition(
-        &token_arg("AssignMeaning", cs)?,
-        &token_arg("AssignMeaning", other)?,
-        None,
-      );
-      Ok(())
-    },
+    |cs: Dynamic, meaning: Dynamic, scope: &str| assign_meaning(cs, meaning, scope_of(scope)),
   );
 
   // AssignMapping / LookupMapping / LookupMappingKeys (Package.pm :283-293): a value keeps its type, as

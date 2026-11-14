@@ -141,8 +141,9 @@ DefMacro("\\exget", |gullet| ToString(LookupValue("ex:k")) + "/" + CounterValue(
 //    (before/afterDigest) work on any DefConstructor/DefPrimitive/DefMath;
 //    construct + body hooks (before/afterConstruct, afterDigestBody) are
 //    DefConstructor-only. `LookupDefinition` returns `()` for an undefined CS.
+//    Here the construct hooks bracket the element: \exhook{h} -> [<ltx:text class="hooked">h</ltx:text>].
 DefConstructor("\\exhook{}", "<ltx:text class=\"hooked\">#1</ltx:text>");
 let exdef = LookupDefinition("\\exhook");
 exdef.pushAfterDigest(|| { AssignValue("ex:digested", "yes", "global"); });
-exdef.pushBeforeConstruct(|document| { document.setAttribute("data-pre", "1"); });
-exdef.pushAfterConstruct(|document| { document.setAttribute("data-post", "1"); });
+exdef.pushBeforeConstruct(|document| { document.absorbString("["); });
+exdef.pushAfterConstruct(|document| { document.absorbString("]"); });

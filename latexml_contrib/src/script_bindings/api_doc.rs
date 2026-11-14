@@ -395,10 +395,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignMeaning",
-    Mirror("Let", "AssignMeaning!"),
+    Mirror("$STATE->assignMeaning", "AssignMeaning!"),
     Doc::Rust(
-      "Give a token (CS name or `Token`) the current meaning of another, as `Let`.",
-      "latexml_core::state::let_definition",
+      "Give a token (CS name or `Token`) a meaning: the definition a `LookupDefinition` handle names, a `Token` (`\\let\\x=a`) or `()` (undefined); optional scope. A string meaning (the old `Let` form) still lets, with a Warning, this release.",
+      "latexml_core::state::assign_meaning",
     ),
   ),
   (
@@ -1382,7 +1382,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "TeX",
-    Mirror("Digest(Tokenize($tex))", "TeX!"),
+    Mirror("Digest(TokenizeInternal($tex))", "TeX!"),
     Doc::Rust(
       "Tokenize a TeX source string (style catcodes) and digest it.",
       "latexml_core::stomach::digest",
@@ -2547,14 +2547,26 @@ pub(super) fn stale_gaps(engine: &Engine) -> Vec<&'static str> {
     .collect()
 }
 
-/// Every macro the cheat sheet names, without its `!`, for the check that each is still defined.
+/// Every non-empty macro cell of the cheat sheet, as written, for the check that each ends in `!` and is defined.
 pub(super) fn named_macros() -> Vec<&'static str> {
   let docs = DOCS.iter().map(|(_, Mirror(_, mac), _)| *mac);
+  let handles = HANDLE_DOCS.iter().map(|(_, _, Mirror(_, mac), _)| *mac);
   let gaps = PERL_GAPS.iter().map(|(_, mac)| *mac);
   docs
+    .chain(handles)
     .chain(gaps)
-    .filter_map(|mac| mac.strip_suffix('!'))
+    .filter(|mac| !mac.is_empty())
     .collect()
+}
+
+/// The replacement of a call [`super::DEPRECATED_ALIASES`] deprecates as a whole; `None` for a live call, and for
+/// one whose replacement is its own newer form (`DefAccent(…, #{below: true})`).
+fn deprecated_row(rhai: &str, name: &str) -> Option<&'static str> {
+  super::DEPRECATED_ALIASES
+    .iter()
+    .find(|(old, _)| *old == rhai)
+    .map(|(_, new)| *new)
+    .filter(|new| !new.starts_with(&format!("{name}(")))
 }
 
 /// Render the three-column cheat sheet, Perl | Rust macro | Rhai, as Markdown: a row per registered call (in
@@ -2574,6 +2586,8 @@ pub(super) fn generate_cheatsheet(engine: &Engine) -> String {
   out.push_str("\n| Perl | Rust macro | Rhai |\n|---|---|---|\n");
   let (mut no_perl, mut no_macro) = (Vec::new(), Vec::new());
   for (receiver, ..) in GROUPS {
+    // A deprecated alias sorts right after the call that replaces it (`whatsit.getArg`, then `whatsit.argString`).
+    let mut rows = Vec::new();
     for (_, name) in calls.iter().filter(|(r, _)| r.as_deref() == *receiver) {
       let Some((Mirror(perl, mac), doc)) = lookup_entry(*receiver, name) else {
         continue;
@@ -2582,17 +2596,27 @@ pub(super) fn generate_cheatsheet(engine: &Engine) -> String {
         Some(handle) => format!("{}.{name}", handle.to_lowercase()),
         None => name.clone(),
       };
-      out.push_str(&format!(
-        "| {} | {} | {} |\n",
-        cell(perl),
-        cell(mac),
-        cell(&rhai)
+      let replaced_by = deprecated_row(&rhai, name);
+      let anchor = replaced_by
+        .and_then(|new| new.split_once('('))
+        .map(|(call, _)| call.rsplit('.').next().unwrap_or(call))
+        .filter(|call| call.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
+        .unwrap_or(name);
+      let rhai_cell = match replaced_by {
+        Some(new) if new.contains('(') => format!("`{rhai}` (deprecated: `{new}`)"),
+        Some(new) => format!("`{rhai}` (deprecated: {new})"),
+        None => cell(&rhai),
+      };
+      rows.push((
+        (anchor.to_string(), replaced_by.is_some(), name.clone()),
+        format!("| {} | {} | {rhai_cell} |\n", cell(perl), cell(mac)),
       ));
       if perl.is_empty() {
         no_perl.push(format!("`{rhai}`"));
       }
       // A plain Perl function the macros do not spell: compiled bindings call the Rust function instead.
       if receiver.is_none()
+        && replaced_by.is_none()
         && mac.is_empty()
         && !perl.is_empty()
         && perl.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
@@ -2603,6 +2627,8 @@ pub(super) fn generate_cheatsheet(engine: &Engine) -> String {
         });
       }
     }
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    out.extend(rows.into_iter().map(|(_, row)| row));
   }
   for (perl, mac) in PERL_GAPS {
     out.push_str(&format!("| {} | {} |  |\n", cell(perl), cell(mac)));
@@ -2640,7 +2666,8 @@ with `UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_t
 
 An empty cell is a gap, listed at the end: a Perl call the dialect lacks, a Rhai call Perl has no counterpart for (a
 Rhai-only helper), or a Perl function the macros do not spell. Methods (`document.openElement`) have no macro: a
-compiled binding calls the Rust method. Each Rhai call's arguments and meaning are in [`API.md`](API.md); the
+compiled binding calls the Rust method. A deprecated alias follows the call that replaces it, marked `(deprecated: …)`
+(the aliases of `mod.rs`'s `DEPRECATED_ALIASES`). Each Rhai call's arguments and meaning are in [`API.md`](API.md); the
 newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RHAI_BINDINGS_GUIDE.md).
 "#;
 

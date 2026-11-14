@@ -1,0 +1,3 @@
+% pdflatex stand-in for lxtag.sty.rhai (the oracle run): \lxex steps a counter and prints its number before the argument.
+\newcounter{lxex}
+\newcommand\lxex[1]{\refstepcounter{lxex}\thelxex{} #1}

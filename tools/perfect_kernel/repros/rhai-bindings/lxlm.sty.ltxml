@@ -1,0 +1,5 @@
+# Perl stand-in for lxlm.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefPrimitive('\lxlm', sub { $STATE->assignMeaning(T_CS('\lxr'), LookupMeaning(T_CS('\relax'))); return; });
+1;

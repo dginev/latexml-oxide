@@ -30,7 +30,9 @@ DefMacro("\\showlook", |gullet| {
     m + MuGlue("1mu"), n + Number(2), n.multiply(3),
     d.valueOf(), d.ptValue(), n.valueOf(), g.valueOf(), ToString(g),
     if d > Dimension("2pt") { "gt" } else { "le" },
-    LookupDimension("\\probedim"), LookupDimension("5pt"), LookupRegister("\\probeget")];
+    LookupDimension("\\probedim"), LookupDimension("5pt"), LookupRegister("\\probeget"),
+    Glue("3pt plus 1fil") - Dimension("1pt"), Glue("1pt plus 1fil") - Glue("1pt plus 2fil"),
+    MuGlue("3mu plus 1mu") + MuGlue("1mu plus 1fil")];
   let out = "";
   for p in parts { if out != "" { out += " "; } out += `${p}`; }
   Explode(out)
@@ -72,7 +74,8 @@ const LXRC_TEX: &str = r"\documentclass{article}
 /// `LookupRegister` ("Function not found"), and whose `DefRegister("\\probeskip", "1pt plus 2pt")` printed `0.0pt`.
 /// p1: each register type defined; a `getter` closure. p2: `LookupRegister`'s typed handles and their arithmetic;
 /// Glue + `1pt plus 1fil` is TeX's `2.0pt plus 1.0fil` (Perl's Glue.pm `add` compares the fill names as numbers:
-/// `2.0pt plus 3.0pt`); `ptValue` is Rhai's float `3.0` (Perl `3`). p3: `AssignRegister`, local and global.
+/// `2.0pt plus 3.0pt`), and so are OD #1030's other three, as pdftex's `\advance` prints them (Perl `2.0pt`, `0.0pt`,
+/// `4.0mu plus 1.0mu`); `ptValue` is Rhai's float `3.0` (Perl `3`). p3: `AssignRegister`, local and global.
 /// p4: a `setter` closure; `\advance` of a Glue register by fil glue. p5: a string value is
 /// read for its declared type (Glue, MuGlue; `\parskip` stays Glue); a Tokens register; a `{Dimension}` argument is a
 /// Dimension; `LookupValue` of a register's address and `LookupRegister`'s parameters; `Equals`; a handle is true;
@@ -91,7 +94,8 @@ fn rhai_typed_registers() {
     (
       "p2",
       "Dimension Glue MuGlue Number 4.0pt 2.0pt 6.0pt 1.5pt -3.0pt 2.0pt plus 1.0fil 2.0pt plus 4.0pt -1.0pt plus \
-       -2.0pt 4.0mu plus 1.0mu 7 15 196608 3.0 5 65536 1.0pt plus 2.0pt gt 3.0pt 5.0pt 4.0pt",
+       -2.0pt 4.0mu plus 1.0mu 7 15 196608 3.0 5 65536 1.0pt plus 2.0pt gt 3.0pt 5.0pt 4.0pt 2.0pt plus 1.0fil 0.0pt \
+       plus -1.0fil 4.0mu plus 1.0fil",
     ),
     ("p3", "7.0pt 2.0pt minus 1.0pt 3.0pt 9 1.0pt plus 2.0pt"),
     ("p4", "6.0pt 2.0pt 2.0pt plus 1.0fil"),
