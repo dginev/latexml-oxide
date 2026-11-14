@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+  - **`--format=epub` writes an EPUB 3 container** (issue 807). `--format=epub` or an `.epub`
+    destination selected the EPUB stylesheet but wrote one bare XHTML file. It now writes the zip
+    Perl `latexmlc --dest=x.epub` does: `mimetype` first and stored, `META-INF/container.xml`, and
+    under `OPS/` the content (`<name>.xhtml`), its CSS and images, and `content.opf` (manifest,
+    spine, `properties="mathml nav"`); a document without a TOC gets Perl's undisplayed
+    navigation TOC (`check_TOC`). The conversion log is written beside it, as for a single
+    document; without `--dest` the container is `<source>.epub`. With `--split`, the pages enter
+    the spine in file-name order, counted by a Warning. Guards
+    `whatsinout::format_epub_writes_an_epub3_container` (in `cluster_cli`) and
+    `manifest::epub::tests::url_id_follows_perl`.
+
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
     `at t.tex; line 10 col 21 - …`, as Perl's `getShortSource` prints it, so a problem

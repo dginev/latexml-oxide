@@ -1015,6 +1015,98 @@ mod whatsinout {
     );
   }
 
+  /// Issue 807: `--format=epub` writes the EPUB 3 container Perl `latexmlc --dest=x.epub` does (Manifest::Epub,
+  /// Pack/Zip.pm), not one bare XHTML file — `mimetype` first and STORED, the content and its CSS under `OPS/`.
+  #[test]
+  fn format_epub_writes_an_epub3_container() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\section{Intro}\nHello $E = mc^2$.\n\\end{document}\n";
+    std::fs::write(work.path().join("min.tex"), tex).unwrap();
+    let out = run(work.path(), &[
+      "--format=epub",
+      "--dest=out.epub",
+      "min.tex",
+    ]);
+    let stderr = stderr_of(&out);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    let epub = work.path().join("out.epub");
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(&epub).unwrap()).expect("a zip container");
+    let names: Vec<String> = (0..archive.len())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
+      .collect();
+    assert_eq!(names, [
+      "mimetype",
+      "META-INF/",
+      "META-INF/container.xml",
+      "OPS/",
+      "OPS/LaTeXML.css",
+      "OPS/content.opf",
+      "OPS/ltx-article.css",
+      "OPS/out.xhtml",
+    ]);
+    let mut mimetype = archive.by_index(0).unwrap();
+    assert_eq!(mimetype.compression(), zip::CompressionMethod::Stored);
+    let mut text = String::new();
+    mimetype.read_to_string(&mut text).unwrap();
+    assert_eq!(text, "application/epub+zip");
+    drop(mimetype);
+    let member = |archive: &mut zip::ZipArchive<std::fs::File>, name: &str| {
+      let mut text = String::new();
+      archive
+        .by_name(name)
+        .unwrap()
+        .read_to_string(&mut text)
+        .unwrap();
+      text
+    };
+    let opf = member(&mut archive, "OPS/content.opf");
+    let manifest = &opf[opf.find("<manifest>").expect("a manifest")..];
+    assert!(
+      manifest.starts_with(
+        "<manifest><item id=\"_out.xhtml\" href=\"out.xhtml\" media-type=\"application/xhtml+xml\" \
+         properties=\"mathml nav\"/><item id=\"_LaTeXML.css\" href=\"LaTeXML.css\" media-type=\"text/css\"/>\
+         <item id=\"_ltx-article.css\" href=\"ltx-article.css\" media-type=\"text/css\"/></manifest>\
+         <spine><itemref idref=\"_out.xhtml\"/></spine></package>"
+      ),
+      "{opf}"
+    );
+    assert!(
+      opf.contains("<dc:title>No Title</dc:title><dc:language>en</dc:language>"),
+      "{opf}"
+    );
+    // LaTeXML.pm check_TOC: the navigation document is the content's own undisplayed TOC.
+    let xhtml = member(&mut archive, "OPS/out.xhtml");
+    assert!(
+      xhtml.contains("epub:type=\"toc\" class=\"ltx_TOC ltx_nodisplay ltx_list_toc ltx_toc_toc\""),
+      "{xhtml}"
+    );
+    assert!(!work.path().join("out.epub.zip").exists());
+    // EPUBCheck, where installed.
+    if latexml::util::test::Requirements::packages(&[])
+      .programs(&["epubcheck"])
+      .met()
+    {
+      let check = Command::new("epubcheck")
+        .arg(&epub)
+        .output()
+        .expect("spawn epubcheck");
+      assert!(
+        check.status.success(),
+        "{}",
+        String::from_utf8_lossy(&check.stdout)
+      );
+    }
+  }
+
   /// A zip of `entries` at `path`, as arXiv ships a submission.
   fn write_zip(path: &Path, entries: &[(&str, &[u8])]) {
     use std::io::Write;
