@@ -36554,8 +36554,9 @@ etoolbox's `\AfterEndDocument` adds to `enddocument/end`, atveryend's commands t
 label hook's code that prints nothing leaves no box (2501.00173: `\label{…}` + `\ ` before a list opened an empty
 paragraph). The storage read (`hook_has_code`: the labelled-code prop, the top-level and next-use slots) replaces an
 expansion that cost 0.2-0.4M instructions at every `\label` and environment end; `\include`'s hooks pass over an empty
-hook (`\lx@usehook`, `\lx@useonetimehook`: a `\UseHook` cost 0.7M, a `\UseOneTimeHook` 3M here, as our document never
-runs `\@expl@@@initialize@all@@`), an empty one-time hook only marking itself used (`\__hook_use_once_set:n`; the clear
+hook (`\lx@usehook`, `\lx@useonetimehook`: a `\UseHook` cost 0.7M, a `\UseOneTimeHook` 3M in lthooks' preamble mode,
+where each use rebuilds its hook; the package, class and file hooks of every load take the same path), an empty one-time
+hook only marking itself used (`\__hook_use_once_set:n`; the clear
 code lthooks leaves in an undeclared hook's next slot is not kept, which only `\IfHookEmptyTF` on that used hook would
 see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-files.ltx:193-270, `package/cleveref/after`
 labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
@@ -36572,3 +36573,15 @@ document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard*
 `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `verbatim_begin_hook_reads_its_environment`,
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
 `cleveref_firstaid_absent_removes_nothing`).
+
+**Addendum (HOOKINIT): lthooks' document mode.** latex.ltx:15356-15361 `\@execute@begin@hook{document}` runs
+`\@expl@@@initialize@all@@` (`\__hook_initialize_all:`, :5854) between `env/document/before` and `/begin`: every declared
+hook's code is built once, `\__hook_update_hook_code:n` rebuilds a hook at each later add, and
+`\__hook_post_initialization_defs:` (:6380) makes `\hook_use:n` the expandable `\__hook_use_initialized:n`. LaTeXML's
+`\begin{document}` (sect01.rs, both the constructor and a renewed `document`) runs it there once, and `\document`'s
+`\@kernel@after@begindocument@before` step `\let`s `env/document/begin`'s code to `\@empty` (:9536). Perl's
+`\begin{document}` runs neither and stays in preamble mode: a body `\edef\x{\UseHook{h}}` holds `\hook_use:n {h}`
+where pdflatex's holds the code (KNOWN_PERL_ERRORS #1249), and each body `\UseHook` of a hook with code rebuilt it.
+**Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `use_hook_expands_in_the_body`,
+`hook_code_added_in_the_body_runs`); RED catalog `show_hook_needs_showstream_red` (`\ShowHook` needs pdfTeX's
+`\showstream`, post-merge).

@@ -1,0 +1,22 @@
+% mechanism: latex.ltx:15356-15361 `\@execute@begin@hook{document}` runs `\@expl@@@initialize@all@@`
+%   (`\__hook_initialize_all:`, :5854) before `env/document/begin`: lthooks leaves its preamble mode and `\UseHook`
+%   becomes `\__hook_use_initialized:n` (:6380-6386), expandable, so an `\edef` in the body reads the
+%   hook's code; a hook declared in the body and code an `\AtBeginDocument` adds take part.
+% witness: synthetic (brief HOOKINIT, QAB1b)
+% oracle:  pdflatex 0 `!`; "A[macro:->XYZ] [K] [B(late)] [macro:->KB(late)]"
+% engines: rust 5e02406406 and Perl: "A[macro:->\hook_use:n {myhook}] … [macro:->\hook_use:n {k}\hook_use:n {h}]"
+% expect:  0 errors, 0 warnings; <p>A[macro:-&gt;XYZ] [K] [B(late)] [macro:-&gt;KB(late)]</p>
+% status:  GREEN
+\documentclass{article}
+\NewHook{myhook}
+\AddToHook{myhook}{XYZ}
+\NewHook{h}
+\AddToHook{h}{B}
+\AtBeginDocument{\AddToHook{h}{(late)}}
+\begin{document}
+\NewHook{k}
+\AddToHook{k}{K}
+\edef\x{\UseHook{myhook}}%
+A[\texttt{\meaning\x}] [\UseHook{k}] [\UseHook{h}]
+\edef\y{\UseHook{k}\UseHook{h}}[\texttt{\meaning\y}]
+\end{document}

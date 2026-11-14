@@ -219,8 +219,10 @@ fn a_looping_stored_argument_is_budgeted() {
 fn a_run_over_budget_leaves_no_trace() {
   // (repro, the Warnings with no budget, the budgets)
   let rows: [(&str, usize, &[usize]); 2] = [
+    // (HOOKINIT, 40_000 -> 10_000: the runs' reads fell from 60-80k to 17.5-20k, lthooks in document mode and the file
+    // hooks of `\input` passing over empty hooks; 40_000 no longer ends a run)
     (repro!("check_budget_run_leaves_no_trace"), 0, &[
-      1, 2000, 40_000,
+      1, 2000, 10_000,
     ]),
     (
       repro!("check_store_confirm_over_budget_keeps_the_sentinel_answer"),
