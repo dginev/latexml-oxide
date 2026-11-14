@@ -571,7 +571,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "CounterValue",
     Mirror("CounterValue", "CounterValue!"),
     Doc::Rust(
-      "The current value of a counter.",
+      "The current value of a counter, a Number as Perl's (an int before; its int uses Warn for one release).",
       "latexml_core::binding::counter::dialect::counter_value",
     ),
   ),
@@ -742,7 +742,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "Number",
     Mirror("Number", "Number!"),
     Doc::Note(
-      "Perl's `Number(n)`: an int, a float (truncated) or a numeric string; any other string is an Error and 0.",
+      "Perl's `Number(n)`: an int, a float (truncated) or a numeric string; a string's numeric prefix otherwise, with Perl's `perl:warn` Warning (`\"12abc\"` is 12).",
     ),
   ),
   (
@@ -791,7 +791,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "Error",
     Mirror("Error", "Error!"),
     Doc::Note(
-      "Log an `Error:`, with Perl's trailing details (a string or an array). Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion.",
+      "Log an `Error:`, with Perl's trailing details (a string or an array); Perl's `(cat, obj, where, msg, details…)` form when `where` is `()` or a handle. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion.",
     ),
   ),
   (
@@ -1014,7 +1014,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "MergeFont",
     Mirror("MergeFont", "MergeFont!"),
     Doc::Rust(
-      "Merge font attributes into the current font, group-locally.",
+      "Merge font attributes into the current font, group-locally: Font.pm `merge`'s keys (a color by name as `LookupColor`, a size name or points, `scale`, `forcebold`, …); an unknown key Warns.",
       "latexml_core::binding::content::merge_font",
     ),
   ),
@@ -1229,7 +1229,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "Revert",
     Mirror("Revert", "Revert!"),
     Doc::Rust(
-      "A digested value back to the source tokens that made it.",
+      "A digested value back to the source tokens that made it; a string Explodes, `()` is empty (Object.pm:108).",
       "latexml_core::digested::Digested::revert",
     ),
   ),
@@ -1460,7 +1460,9 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   (
     "Warn",
     Mirror("Warn", "Warn!"),
-    Doc::Note("Log a `Warning:` with the given category and object, plus optional details."),
+    Doc::Note(
+      "Log a `Warning:` with the given category and object, plus optional details; Perl's `where` form as `Error`.",
+    ),
   ),
   (
     "XEquals",
@@ -1645,7 +1647,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "getAttribute",
     Mirror("$node->getAttribute", ""),
     Doc::Rust(
-      "An attribute's value, namespace-aware so `xml:id` is found.",
+      "An attribute's value, namespace-aware so `xml:id` is found; `()` when absent, as XML::LibXML's undef.",
       "latexml_core::common::model::get_node_attribute",
     ),
   ),
@@ -2381,7 +2383,7 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
     "setAttribute",
     Mirror("$document->setAttribute", ""),
     Doc::Rust(
-      "Set an attribute on the current node, if the model allows it.",
+      "Set an attribute on a node, Perl's `(node, key, value)`, if the model allows it; `(key, value)` on the current node is deprecated.",
       "latexml_core::document::Document::set_attribute",
     ),
   ),

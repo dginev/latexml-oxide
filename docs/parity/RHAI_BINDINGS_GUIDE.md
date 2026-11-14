@@ -84,7 +84,8 @@ no parameters takes `|gullet|` and reads its own arguments (`gullet.readArg()`, 
 
 ## Diagnostics
 
-`Warn(category, object, message)`, `Error(…)`, `Info(…)` and `Fatal(…)` are Perl's, with the same severities: a
+`Warn(category, object, message)`, `Error(…)`, `Info(…)` and `Fatal(…)` are Perl's (also Perl's `(category, object, (),
+message, details…)` form), with the same severities: a
 `Fatal` stops the conversion, an `Error` marks the output as likely wrong, a `Warning` notes a recovered problem.
 A Rhai error in a body (a `throw`, a typo'd function) is reported as an `Error:script:` naming the binding, and that
 binding contributes nothing; the conversion goes on.
@@ -103,6 +104,11 @@ Each old name still works this release and Warns `Warning:deprecated` once per b
 | `DefAccent(cs, combining, standalone, true)` | `DefAccent(cs, combining, standalone, #{below: true})` |
 | a body naming only its arguments (`\|x\|`) | the Perl form (`\|gullet, x\|`) |
 | `value == "string"`, `() == ""` | `ToString(value) == "string"`, `defined(value)` / `!!value` |
+| `CounterValue(c) + 1`, `CounterValue(c) == 3` (an int before) | `CounterValue(c).valueOf() + 1` — it returns a Number, as Perl's |
+| `document.setAttribute(key, value)` (the current node) | `document.setAttribute(node, key, value)`, e.g. `document.getNode()` |
+| a `DefPrimitive` body whose last value is not a box (`\|\| RefStepCounter("c")`) | end it with `return;`, or return the boxes it should print |
+
+`node.getAttribute(k)` of an absent attribute is `()`, as XML::LibXML's undef: test it with `defined(…)`.
 
 ## Worked examples
 

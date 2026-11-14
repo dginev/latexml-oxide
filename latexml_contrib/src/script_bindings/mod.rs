@@ -199,6 +199,18 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
   ),
   ("value == string", "ToString(value) == string"),
   ("() == string", "defined(value) or !!value"),
+  (
+    "Number as an int",
+    "n.valueOf() (CounterValue returns a Number, as Perl's)",
+  ),
+  (
+    "document.setAttribute(key, value)",
+    "document.setAttribute(node, key, value)",
+  ),
+  (
+    "DefPrimitive returning a non-box",
+    "a box, an array of boxes, or () (end the body with `return;`), as Perl errs on any other value",
+  ),
 ];
 
 /// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement.
@@ -666,10 +678,18 @@ pub fn load_script(src: &str) -> Result<usize> {
   Ok(WIRED_COUNT.with(|c| *c.borrow()) - before)
 }
 
-/// Build a partial `Font` from a Rhai map (family/series/shape/… keys — the
-/// `fontmap!` analog, shared by `MergeFont` and the `font =>` option).
+/// Build a partial `Font` from a Rhai map, Perl Font.pm `merge`'s keys (920-961) — the `fontmap!` analog, shared by
+/// `MergeFont` and every `font:` option. A named color resolves as `LookupColor`; an unknown key Warns.
 fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
+  use latexml_core::common::font::rationalize_font_size;
+  use latexml_package::package::color_sty::lookup_color_obj;
   let mut font = latexml_core::common::font::Font::default();
+  let number = |val: &Dynamic| {
+    val
+      .as_float()
+      .ok()
+      .or_else(|| val.as_int().ok().map(|i| i as f64))
+  };
   for (key, val) in opts {
     let v = dynamic_to_string(val.clone());
     match key.as_str() {
@@ -679,13 +699,24 @@ fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
       "encoding" => font.encoding = Some(v.into()),
       "language" => font.language = Some(v.into()),
       "mathstyle" => font.mathstyle = Some(v.into()),
-      "size" => {
-        font.size = val
-          .as_float()
-          .ok()
-          .or_else(|| val.as_int().ok().map(|i| i as f64))
-      },
-      _ => {},
+      "opacity" => font.opacity = Some(v.into()),
+      "color" => font.color = Some(lookup_color_obj(&v)),
+      "background" => font.bg = Some(lookup_color_obj(&v)),
+      // Perl's rationalizeFontSize: a size name (`large`) scales the default size, a number is points.
+      "size" => font.size = number(&val).or_else(|| Some(rationalize_font_size(&v))),
+      "scale" => font.scale = number(&val),
+      "forcebold" => font.forcebold = Some(perl_truthy(&val)),
+      "forcefamily" => font.forcefamily = Some(perl_truthy(&val)),
+      "forceseries" => font.forceseries = Some(perl_truthy(&val)),
+      "forceshape" => font.forceshape = Some(perl_truthy(&val)),
+      "emph" => font.emph = Some(perl_truthy(&val)),
+      "scripted" => font.scripted = Some(perl_truthy(&val)),
+      "fraction" => font.fraction = Some(perl_truthy(&val)),
+      other => latexml_core::Warn!(
+        "unexpected",
+        other,
+        &format!("MergeFont: unknown font key '{other}' ignored (Font.pm merge)")
+      ),
     }
   }
   font

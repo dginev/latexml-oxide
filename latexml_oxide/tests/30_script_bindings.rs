@@ -37,7 +37,7 @@ const SAMPLE: &str = r##"
   DefConstructor("\\uarg Undigested", |document, toks| {
     let s = "U[" + UnTeX(toks) + "]";
     document.openElement("ltx:text");
-    document.setAttribute("class", "uarg");
+    document.setAttribute(document.getNode(), "class", "uarg");
     document.absorbString(s);
     document.closeElement("ltx:text");
   });
@@ -47,7 +47,7 @@ const SAMPLE: &str = r##"
   // \uabs{ZZ} -> <ltx:text class="uabs">ZZ</ltx:text>.
   DefConstructor("\\uabs Undigested", |document, toks| {
     document.openElement("ltx:text");
-    document.setAttribute("class", "uabs");
+    document.setAttribute(document.getNode(), "class", "uabs");
     document.absorb(toks);
     document.closeElement("ltx:text");
   });
@@ -77,7 +77,7 @@ const SAMPLE: &str = r##"
   // \note{N} -> <ltx:text class="note">[N]</ltx:text>
   DefConstructor("\\note{}", |document, x| {
     document.openElement("ltx:text");
-    document.setAttribute("class", "note");
+    document.setAttribute(document.getNode(), "class", "note");
     document.absorbString("[");
     document.absorb(x);
     document.absorbString("]");
@@ -133,7 +133,7 @@ const SAMPLE: &str = r##"
   DefConstructor("\\gp{}", |document, x, all| {
     let t = all.tag;
     document.openElement("ltx:text");
-    document.setAttribute("class", "gp");
+    document.setAttribute(document.getNode(), "class", "gp");
     document.absorbString(t + "/" + all.n);
     document.closeElement("ltx:text");
   }, #{
@@ -183,7 +183,7 @@ const SAMPLE: &str = r##"
   // document.absorbProperty.
   DefEnvironment("{rbox}", |document| {
     document.openElement("ltx:text");
-    document.setAttribute("class", "rbox");
+    document.setAttribute(document.getNode(), "class", "rbox");
     document.absorbProperty("body");
     document.closeElement("ltx:text");
   });
@@ -286,7 +286,7 @@ const SAMPLE: &str = r##"
   DefConstructor("\\rwvictim{}", "<ltx:text class=\"victim\">#1</ltx:text>");
   DefRewrite(#{ select: "descendant-or-self::ltx:text[@class='victim']" }, |document, nodes| {
     document.openElement("ltx:text");
-    document.setAttribute("class", "replaced");
+    document.setAttribute(document.getNode(), "class", "replaced");
     document.absorbString("REPL");
     document.closeElement("ltx:text");
   });
@@ -820,7 +820,7 @@ const XMLAPI_SAMPLE: &str = r##"
   DefConstructor("\\xqbuild{}", |document, cls| {
     let c = ToString(cls);
     document.openElement("ltx:text");
-    document.setAttribute("class", c);
+    document.setAttribute(document.getNode(), "class", c);
     document.openElement("ltx:emph");
     document.absorbString(c + "-inner");
     document.closeElement("ltx:emph");
@@ -1495,7 +1495,7 @@ const KVMAP_SAMPLE: &str = r##"
   DefConstructor("\\kvmap RequiredKeyVals:KVM", |document, kv| {
     let m = GetKeyVals(kv);
     document.openElement("ltx:text");
-    document.setAttribute("class", "kvmap");
+    document.setAttribute(document.getNode(), "class", "kvmap");
     document.absorbString("map.lang=" + m["lang"] + " map.size=" + m["size"]
       + " rev=" + UnTeX(Revert(kv)));
     document.closeElement("ltx:text");

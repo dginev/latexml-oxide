@@ -70,12 +70,50 @@ fn unreadable(ctor: &str, spec: &str) -> RhaiResult<()> {
   engine::script_error("unexpected", spec, &msg, None)
 }
 
-fn number_of(spec: &str) -> RhaiResult<Number> {
-  // Perl `int($number)`: a number truncated (Number.pm `new`).
-  match spec.trim().parse::<f64>() {
-    Ok(f) => Ok(Number(f.trunc() as i64)),
-    Err(_) => unreadable("Number", spec).map(|()| Number(0)),
+fn number_of(spec: &str) -> Number {
+  // Perl `int($number)` (Number.pm `new`): truncated; a trailing non-number Warns as Perl's `isn't numeric` and
+  // reads the numeric prefix (`12abc` is 12).
+  let trimmed = spec.trim_start();
+  let prefix = numeric_prefix(trimmed);
+  if prefix.len() != trimmed.len() || prefix.is_empty() {
+    latexml_core::Warn!(
+      "perl",
+      "warn",
+      format!("Argument \"{spec}\" isn't numeric in int")
+    );
   }
+  Number(prefix.parse::<f64>().map_or(0, |f| f.trunc() as i64))
+}
+
+/// The longest prefix of `s` Perl's string-to-number conversion reads: `[+-]?\d*(\.\d*)?([eE][+-]?\d+)?`.
+fn numeric_prefix(s: &str) -> &str {
+  let b = s.as_bytes();
+  let digits = |mut i: usize| {
+    while i < b.len() && b[i].is_ascii_digit() {
+      i += 1;
+    }
+    i
+  };
+  let mut i = usize::from(matches!(b.first(), Some(b'+' | b'-')));
+  let start = i;
+  i = digits(i);
+  let mut mantissa = i > start;
+  if b.get(i) == Some(&b'.') {
+    let j = digits(i + 1);
+    mantissa |= j > i + 1;
+    i = j;
+  }
+  if !mantissa {
+    return "";
+  }
+  if matches!(b.get(i), Some(b'e' | b'E')) {
+    let k = i + 1 + usize::from(matches!(b.get(i + 1), Some(b'+' | b'-')));
+    let e = digits(k);
+    if e > k {
+      i = e;
+    }
+  }
+  &s[..i]
 }
 
 fn dimension_of(spec: &str) -> RhaiResult<Dimension> {
@@ -144,7 +182,7 @@ fn register_value_of_spec(operation: &str, cs: &Token, spec: &str) -> RhaiResult
     },
   };
   Ok(match declared {
-    RegisterType::Number => number_of(spec)?.into(),
+    RegisterType::Number => number_of(spec).into(),
     RegisterType::Glue => glue_of(spec)?.into(),
     RegisterType::MuGlue => muglue_of(spec)?.into(),
     RegisterType::Tokens => mouth::tokenize_internal(TeXString::assembled(spec.to_string())).into(),
@@ -316,7 +354,7 @@ pub(super) fn register_values(engine: &mut Engine) {
   // Perl's constructors: a spec string, or an integer (Number's value, the others' sp).
   engine.register_fn("Number", |n: i64| Number(n));
   engine.register_fn("Number", |f: f64| Number(f.trunc() as i64));
-  engine.register_fn("Number", |s: &str| number_of(s));
+  engine.register_fn("Number", number_of);
   engine.register_fn("Dimension", |sp: i64| Dimension(sp));
   engine.register_fn("Dimension", |sp: f64| Dimension::new_f64(sp));
   engine.register_fn("Dimension", |s: &str| dimension_of(s));
@@ -377,12 +415,13 @@ pub(super) fn register_values(engine: &mut Engine) {
       }
     };
     engine.register_fn(ptvalue, move |d: Dimension| value(d.0, Some(2)));
+    // Number.pm `roundto` clamps the precision to 0..5.
     engine.register_fn(ptvalue, move |d: Dimension, prec: i64| {
-      value(d.0, u8::try_from(prec).ok())
+      value(d.0, Some(prec_of(prec)))
     });
     engine.register_fn(ptvalue, move |g: Glue| value(g.skip, Some(2)));
     engine.register_fn(ptvalue, move |g: Glue, prec: i64| {
-      value(g.skip, u8::try_from(prec).ok())
+      value(g.skip, Some(prec_of(prec)))
     });
   }
   engine.register_fn("spValue", |d: Dimension| d.0);
@@ -416,6 +455,19 @@ pub(super) fn register_values(engine: &mut Engine) {
   engine.register_fn("LookupDimension", |cs: &str, noerror: bool| {
     latexml_core::state::lookup_dimension_cs(cs, noerror).unwrap_or_default()
   });
+  // Perl's other argument forms: a Dimension is itself; a Token, Tokens or box reads as its string.
+  engine.register_fn("LookupDimension", |d: Dimension| d);
+  engine.register_fn("LookupDimension", |cs: Token| {
+    latexml_core::state::lookup_dimension_cs(&cs.to_string(), false).unwrap_or_default()
+  });
+  engine.register_fn("LookupDimension", |cs: Tokens| {
+    latexml_core::state::lookup_dimension_cs(&cs.to_string(), false).unwrap_or_default()
+  });
+  engine.register_fn("LookupDimension", |cs: Digested| {
+    latexml_core::state::lookup_dimension_cs(&cs.to_string(), false).unwrap_or_default()
+  });
+  // CounterValue returned an int before it returned Perl's Number: its int uses keep working one release, Warned.
+  register_number_int_transition(engine);
   // The macro's `LookupRegisterOrDefault`: the typed value, the type's zero (a Number 0) when `cs` is no register.
   engine.register_fn(
     "LookupRegisterOrDefault",
@@ -428,6 +480,28 @@ pub(super) fn register_values(engine: &mut Engine) {
       ))
     },
   );
+}
+
+fn prec_of(prec: i64) -> u8 { prec.clamp(0, 5) as u8 }
+
+/// `Number ⊕ int` and `int ⊕ Number` as the int arithmetic and comparisons they were, each Warned once per load.
+fn register_number_int_transition(engine: &mut Engine) {
+  fn int(n: Number) -> i64 {
+    warn_deprecated("Number as an int");
+    n.0
+  }
+  engine.register_fn("+", |a: Number, b: i64| int(a) + b);
+  engine.register_fn("+", |a: i64, b: Number| a + int(b));
+  engine.register_fn("-", |a: Number, b: i64| int(a) - b);
+  engine.register_fn("-", |a: i64, b: Number| a - int(b));
+  engine.register_fn("==", |a: Number, b: i64| int(a) == b);
+  engine.register_fn("==", |a: i64, b: Number| a == int(b));
+  engine.register_fn("!=", |a: Number, b: i64| int(a) != b);
+  engine.register_fn("!=", |a: i64, b: Number| a != int(b));
+  engine.register_fn("<", |a: Number, b: i64| int(a) < b);
+  engine.register_fn("<=", |a: Number, b: i64| int(a) <= b);
+  engine.register_fn(">", |a: Number, b: i64| int(a) > b);
+  engine.register_fn(">=", |a: Number, b: i64| int(a) >= b);
 }
 
 /// MuGlue + MuGlue as TeX adds glue (tex.web §1239): Glue's addition over the mu components.

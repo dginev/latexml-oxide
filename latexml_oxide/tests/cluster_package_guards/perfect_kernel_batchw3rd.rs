@@ -11,7 +11,7 @@ const LXRD: &str = r#"Tag("ltx:emph", #{afterOpen: |doc, node| node.setAttribute
   "afterClose:late": [|d, n| n.setAttribute("title", "c1")]});
 NewCounter("lxrdc");
 NewCounter("lxrdd", "", #{idprefix: "X"});
-DefPrimitive("\\rsc", || { RefStepCounter("lxrdc"); });
+DefPrimitive("\\rsc", || { RefStepCounter("lxrdc"); return; });
 DefMacro("\\cv", || `${CounterValue("lxrdc")}`);
 DefMacro("\\rid", || RefStepCounter("lxrdd").id);
 DefPrimitive("\\unmean", || Let("\\lxa", "\\lxundefined"));
@@ -290,7 +290,7 @@ const LXRD2_OLD: &str = r#"DefConstructor("\\lxa{}", "<ltx:text class='#c'>#1</l
   afterDigest: || { whatsit().setProperty("c", whatsit().argString(1) + whatsit().propertyString("none"));
     whatsit().setProperty("d", whatsit().argString(1)); }});
 DefConstructor("\\lxb{}", |document, x| {
-  document.openElement("ltx:text"); document.setAttribute("class", document.getProperty("c") + document.getProperties().c);
+  document.openElement("ltx:text"); document.setAttribute(document.getNode(), "class", document.getProperty("c") + document.getProperties().c);
   document.absorb(x); document.closeElement("ltx:text"); }, #{properties: #{c: "q"}});
 DefPrimitive("\\lxs", || { assign_value("lx:a", "A"); assign_global("lx:b", "B"); AssignString("lx:s", "S");
   AssignNumber("lx:n", 3); AssignBool("lx:t", true); AssignMeaning("\\lxm", "\\relax"); });

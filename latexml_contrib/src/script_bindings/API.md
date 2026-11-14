@@ -39,22 +39,22 @@ sets each call beside its Perl spelling and its compile-time macro.
 
 Called at the top level of a binding file, or from inside any body.
 
-213 functions, 445 calls.
+213 functions, 480 calls.
 
 | call | documentation |
 |---|---|
 | `!(?) -> bool` | Perl's truthiness, for `!!v` (`if ($v)`) and `!v` (`unless ($v)`): `()`, `""`, `"0"`, `0` and `0.0` are false, a bool is itself, every Token, Tokens (even empty), box, whatsit, array and map is true (Perl's objects overload no bool). |
-| `!=((), string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Dimension, Dimension) -> bool`<br>`!=(Dimension, string) -> bool`<br>`!=(Glue, Glue) -> bool`<br>`!=(Glue, string) -> bool`<br>`!=(MuGlue, MuGlue) -> bool`<br>`!=(MuGlue, string) -> bool`<br>`!=(Number, Number) -> bool`<br>`!=(Number, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(string, ()) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Dimension) -> bool`<br>`!=(string, Glue) -> bool`<br>`!=(string, MuGlue) -> bool`<br>`!=(string, Number) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) != s`); `()` against a string, either way round, is `""`, as Perl's `undef ne ''` (use `defined(v)` or `!!v`). |
+| `!=((), string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Dimension, Dimension) -> bool`<br>`!=(Dimension, string) -> bool`<br>`!=(Glue, Glue) -> bool`<br>`!=(Glue, string) -> bool`<br>`!=(MuGlue, MuGlue) -> bool`<br>`!=(MuGlue, string) -> bool`<br>`!=(Number, Number) -> bool`<br>`!=(Number, int) -> bool`<br>`!=(Number, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(int, Number) -> bool`<br>`!=(string, ()) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Dimension) -> bool`<br>`!=(string, Glue) -> bool`<br>`!=(string, MuGlue) -> bool`<br>`!=(string, Number) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) != s`); `()` against a string, either way round, is `""`, as Perl's `undef ne ''` (use `defined(v)` or `!!v`). |
 | `*(Dimension, float) -> Dimension`<br>`*(Dimension, int) -> Dimension`<br>`*(Glue, float) -> Glue`<br>`*(Glue, int) -> Glue`<br>`*(MuGlue, float) -> MuGlue`<br>`*(MuGlue, int) -> MuGlue`<br>`*(Number, float) -> Number`<br>`*(Number, int) -> Number` | A Number, Dimension, Glue or MuGlue times an int or float (Number.pm `multiply`, truncated; Glue scales its stretch and shrink). |
-| `+(Dimension, Dimension) -> Dimension`<br>`+(Glue, Dimension) -> Glue`<br>`+(Glue, Glue) -> Glue`<br>`+(Glue, Number) -> Glue`<br>`+(MuGlue, MuGlue) -> MuGlue`<br>`+(Number, Number) -> Number` | The sum of two value handles of one type (Number.pm `add`); Glue + Glue and MuGlue + MuGlue as TeX's `\advance` (the higher fill order wins: `MuGlue("3mu plus 1mu") + MuGlue("1mu plus 1fil")` is `4.0mu plus 1.0fil`), Glue + a Number or Dimension adds to the natural size. Perl's Glue.pm and MuGlue.pm differ (OXIDIZED_DESIGN_DIVERGENCES #1030). |
-| `-(Dimension) -> Dimension`<br>`-(Dimension, Dimension) -> Dimension`<br>`-(Glue) -> Glue`<br>`-(Glue, Dimension) -> Glue`<br>`-(Glue, Glue) -> Glue`<br>`-(Glue, Number) -> Glue`<br>`-(MuGlue) -> MuGlue`<br>`-(MuGlue, MuGlue) -> MuGlue`<br>`-(Number) -> Number`<br>`-(Number, Number) -> Number` | The difference of two value handles (Number.pm `subtract`), or the negation of one (`negate`); a Glue as TeX's `\advance` by the negation: Glue − Dimension keeps the stretch, `Glue("1pt plus 1fil") - Glue("1pt plus 2fil")` is `0.0pt plus -1.0fil` (Perl drops the stretch; OXIDIZED_DESIGN_DIVERGENCES #1030). |
+| `+(Dimension, Dimension) -> Dimension`<br>`+(Glue, Dimension) -> Glue`<br>`+(Glue, Glue) -> Glue`<br>`+(Glue, Number) -> Glue`<br>`+(MuGlue, MuGlue) -> MuGlue`<br>`+(Number, Number) -> Number`<br>`+(Number, int) -> int`<br>`+(int, Number) -> int` | The sum of two value handles of one type (Number.pm `add`); Glue + Glue and MuGlue + MuGlue as TeX's `\advance` (the higher fill order wins: `MuGlue("3mu plus 1mu") + MuGlue("1mu plus 1fil")` is `4.0mu plus 1.0fil`), Glue + a Number or Dimension adds to the natural size. Perl's Glue.pm and MuGlue.pm differ (OXIDIZED_DESIGN_DIVERGENCES #1030). |
+| `-(Dimension) -> Dimension`<br>`-(Dimension, Dimension) -> Dimension`<br>`-(Glue) -> Glue`<br>`-(Glue, Dimension) -> Glue`<br>`-(Glue, Glue) -> Glue`<br>`-(Glue, Number) -> Glue`<br>`-(MuGlue) -> MuGlue`<br>`-(MuGlue, MuGlue) -> MuGlue`<br>`-(Number) -> Number`<br>`-(Number, Number) -> Number`<br>`-(Number, int) -> int`<br>`-(int, Number) -> int` | The difference of two value handles (Number.pm `subtract`), or the negation of one (`negate`); a Glue as TeX's `\advance` by the negation: Glue − Dimension keeps the stretch, `Glue("1pt plus 1fil") - Glue("1pt plus 2fil")` is `0.0pt plus -1.0fil` (Perl drops the stretch; OXIDIZED_DESIGN_DIVERGENCES #1030). |
 | `/(Dimension, int) -> Dimension`<br>`/(Glue, int) -> Glue`<br>`/(MuGlue, int) -> MuGlue`<br>`/(Number, int) -> Number` | A value handle divided by an int, truncated (Number.pm `divide`). |
-| `<(Dimension, Dimension) -> bool`<br>`<(Glue, Glue) -> bool`<br>`<(MuGlue, MuGlue) -> bool`<br>`<(Number, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
-| `<=(Dimension, Dimension) -> bool`<br>`<=(Glue, Glue) -> bool`<br>`<=(MuGlue, MuGlue) -> bool`<br>`<=(Number, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
-| `==((), string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Dimension, Dimension) -> bool`<br>`==(Dimension, string) -> bool`<br>`==(Glue, Glue) -> bool`<br>`==(Glue, string) -> bool`<br>`==(MuGlue, MuGlue) -> bool`<br>`==(MuGlue, string) -> bool`<br>`==(Number, Number) -> bool`<br>`==(Number, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(string, ()) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Dimension) -> bool`<br>`==(string, Glue) -> bool`<br>`==(string, MuGlue) -> bool`<br>`==(string, Number) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) == s`); `()` against a string, either way round, is `""`, as Perl's `undef eq ''` (use `defined(v)` or `!v`). Rhai's `switch` does not use this rule: it matches by value and type, so a `"" =>` case never matches `()` — test `if defined(v)` or `!v` instead. |
-| `>(Dimension, Dimension) -> bool`<br>`>(Glue, Glue) -> bool`<br>`>(MuGlue, MuGlue) -> bool`<br>`>(Number, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
-| `>=(Dimension, Dimension) -> bool`<br>`>=(Glue, Glue) -> bool`<br>`>=(MuGlue, MuGlue) -> bool`<br>`>=(Number, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
-| `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
+| `<(Dimension, Dimension) -> bool`<br>`<(Glue, Glue) -> bool`<br>`<(MuGlue, MuGlue) -> bool`<br>`<(Number, Number) -> bool`<br>`<(Number, int) -> bool` | Compares two value handles of one type by `valueOf`. |
+| `<=(Dimension, Dimension) -> bool`<br>`<=(Glue, Glue) -> bool`<br>`<=(MuGlue, MuGlue) -> bool`<br>`<=(Number, Number) -> bool`<br>`<=(Number, int) -> bool` | Compares two value handles of one type by `valueOf`. |
+| `==((), string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Dimension, Dimension) -> bool`<br>`==(Dimension, string) -> bool`<br>`==(Glue, Glue) -> bool`<br>`==(Glue, string) -> bool`<br>`==(MuGlue, MuGlue) -> bool`<br>`==(MuGlue, string) -> bool`<br>`==(Number, Number) -> bool`<br>`==(Number, int) -> bool`<br>`==(Number, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(int, Number) -> bool`<br>`==(string, ()) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Dimension) -> bool`<br>`==(string, Glue) -> bool`<br>`==(string, MuGlue) -> bool`<br>`==(string, Number) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) == s`); `()` against a string, either way round, is `""`, as Perl's `undef eq ''` (use `defined(v)` or `!v`). Rhai's `switch` does not use this rule: it matches by value and type, so a `"" =>` case never matches `()` — test `if defined(v)` or `!v` instead. |
+| `>(Dimension, Dimension) -> bool`<br>`>(Glue, Glue) -> bool`<br>`>(MuGlue, MuGlue) -> bool`<br>`>(Number, Number) -> bool`<br>`>(Number, int) -> bool` | Compares two value handles of one type by `valueOf`. |
+| `>=(Dimension, Dimension) -> bool`<br>`>=(Glue, Glue) -> bool`<br>`>=(MuGlue, MuGlue) -> bool`<br>`>=(Number, Number) -> bool`<br>`>=(Number, int) -> bool` | Compares two value handles of one type by `valueOf`. |
+| `AddToCounter(string, Number)`<br>`AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
 | `AddToMacro(string\|Token, string\|Token)` | Append tokens (or TeX source) to a macro's expansion, keeping its lock, as Perl's `AddToMacro`; a non-expandable `cs` Warns and is ignored, an undefined one is defined with the tokens. ([`add_to_macro`](latexml_core::binding::content::add_to_macro)) |
 | `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
 | `AssignBool(string, ?)`<br>`AssignBool(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
@@ -96,7 +96,7 @@ Called at the top level of a binding file, or from inside any body.
 | `CleanID(?) -> string` | Clean a string into a valid `xml:id`. ([`clean_id`](latexml_core::common::cleaners::clean_id)) |
 | `CleanLabel(?) -> string`<br>`CleanLabel(?, string) -> string` | A label's key: `LABEL:` (or the given prefix) plus the label, spaces to `_`. ([`clean_label`](latexml_core::common::cleaners::clean_label)) |
 | `Command(string) -> Command` | Start a `std::process::Command` builder. A Rhai-only shim; nothing runs until `output()`. |
-| `CounterValue(string) -> int` | The current value of a counter. ([`counter_value`](latexml_core::binding::counter::dialect::counter_value)) |
+| `CounterValue(string) -> Number` | The current value of a counter, a Number as Perl's (an int before; its int uses Warn for one release). ([`counter_value`](latexml_core::binding::counter::dialect::counter_value)) |
 | `DeclareFontMap(string, array)`<br>`DeclareFontMap(string, array, map)` | Declare an encoding's font map: an array of 1-char strings or `()`, with Perl's `family` and `*_mathstyle` options. |
 | `DeclareFontMapMultichar(string, map)`<br>`DeclareFontMapMultichar(string, string, map)` | Declare the multi-character glyphs of a font map (optionally a family's): position (decimal string) to its text. |
 | `DeclareOption(Fn)`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`). |
@@ -121,18 +121,18 @@ Called at the top level of a binding file, or from inside any body.
 | `Dimension(float) -> Dimension`<br>`Dimension(int) -> Dimension`<br>`Dimension(string) -> Dimension` | Perl's `Dimension(spec)`: `"3pt"` (a number and a unit), or an int of sp; a spec that is not a number and a unit is an Error and 0 (Perl reads `"3 furlongs"` as 3sp, OXIDIZED_DESIGN_DIVERGENCES #1031). |
 | `EndSemiverbatim()` | Close a `StartSemiverbatim` region, restoring the saved catcodes. ([`end_semiverbatim`](latexml_core::state::end_semiverbatim)) |
 | `Equals(?, ?) -> bool` | Perl's `Equals`: `()` equals only `()`; tokens compare their meanings (themselves when neither has one), `Tokens` token by token, other values by their string. |
-| `Error(string, string, string)`<br>`Error(string, string, string, ?)` | Log an `Error:`, with Perl's trailing details (a string or an array). Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion. |
+| `Error(string, string, ?, ?)`<br>`Error(string, string, ?, ?, ?)`<br>`Error(string, string, ?, ?, ?, ?)`<br>`Error(string, string, string)` | Log an `Error:`, with Perl's trailing details (a string or an array); Perl's `(cat, obj, where, msg, details…)` form when `where` is `()` or a handle. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion. |
 | `ExecuteOptions(array)` | Run the handlers for a list of class/package options. ([`execute_options`](latexml_core::binding::content::execute_options)) |
 | `Expand(Token) -> Tokens`<br>`Expand(Tokens) -> Tokens` | Fully expand tokens (a `Tokens`, or one `Token`), without digesting them. ([`do_expand`](latexml_core::gullet::do_expand)) |
 | `ExpandPartially(Token) -> Tokens`<br>`ExpandPartially(Tokens) -> Tokens` | Expand tokens only up to the first unexpandable one. ([`do_expand_partially`](latexml_core::gullet::do_expand_partially)) |
 | `Explode(string) -> Tokens` | A string's characters as `Tokens`, each OTHER (a space a space token). |
 | `ExplodeText(string) -> Tokens` | A string's characters as `Tokens`, letters LETTER and the rest OTHER. |
-| `Fatal(string, string, string)`<br>`Fatal(string, string, string, ?)` | End the conversion with `Fatal:<cat>:<obj>`, plus optional details. |
+| `Fatal(string, string, ?, ?)`<br>`Fatal(string, string, ?, ?, ?)`<br>`Fatal(string, string, ?, ?, ?, ?)`<br>`Fatal(string, string, string)` | End the conversion with `Fatal:<cat>:<obj>`, plus optional details. |
 | `FindFile(string) -> ?`<br>`FindFile(string, map) -> ?` | The path of a file on the search paths (Perl's `type`/`notex`/`noltxml`/`searchpaths_only`), or `()`. ([`find_file`](latexml_core::binding::content::find_file)) |
 | `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `defined(v)`. |
 | `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
 | `Glue(int) -> Glue`<br>`Glue(int, int, ?, int, ?) -> Glue`<br>`Glue(string) -> Glue` | Perl's `Glue(spec)`: `"1pt plus 2fil minus 1pt"`, an int of sp, or `Glue(sp, plus, pfill, minus, mfill)` with fill orders as names or 0-3; an unreadable spec is an Error and 0. |
-| `Info(string, string, string)`<br>`Info(string, string, string, ?)` | Log an `Info:` line, plus optional details. |
+| `Info(string, string, ?, ?)`<br>`Info(string, string, ?, ?, ?)`<br>`Info(string, string, ?, ?, ?, ?)`<br>`Info(string, string, string)` | Log an `Info:` line, plus optional details. |
 | `Input(string)` | Input a TeX file (`\input`'s core). ([`input`](latexml_core::binding::content::input)) |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | Find and load the definitions for a package or class. ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
 | `Invocation(?) -> Tokens`<br>`Invocation(?, ?) -> Tokens`<br>`Invocation(?, ?, ?) -> Tokens`<br>`Invocation(?, ?, ?, ?) -> Tokens`<br>`Invocation(?, array) -> Tokens` | The tokens invoking a control sequence on its arguments (each `Tokens`, TeX source or `()` for an omitted optional); TeX with `#n` is an anonymous macro. ([`build_invocation`](latexml_core::binding::content::build_invocation)) |
@@ -146,7 +146,7 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupCatcode(string) -> ?` | The category code currently in force for a character; `()` when the table holds none. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |
 | `LookupDefinition(string\|Token) -> Definition?` | Fetch the installed definition of a CS name or `Token` so hooks can be pushed onto it; `()` when undefined or `\let` to a character. |
 | `LookupDelcode(string) -> ?` | A character's delimiter code; `()` when the table holds none. ([`lookup_delcode`](latexml_core::state::lookup_delcode)) |
-| `LookupDimension(string) -> Dimension`<br>`LookupDimension(string, bool) -> Dimension` | Perl's `LookupDimension(x[, noerror])`: a spec or a register's name as a Dimension; `Dimension(0)` with a Warning otherwise. ([`lookup_dimension_cs`](latexml_core::state::lookup_dimension_cs)) |
+| `LookupDimension(Digested) -> Dimension`<br>`LookupDimension(Dimension) -> Dimension`<br>`LookupDimension(Token) -> Dimension`<br>`LookupDimension(Tokens) -> Dimension`<br>`LookupDimension(string) -> Dimension`<br>`LookupDimension(string, bool) -> Dimension` | Perl's `LookupDimension(x[, noerror])`: a spec or a register's name as a Dimension; `Dimension(0)` with a Warning otherwise. ([`lookup_dimension_cs`](latexml_core::state::lookup_dimension_cs)) |
 | `LookupFloat(string) -> float` | Read a value as a fractional (float) number, keeping the fraction `LookupNumber` would truncate. ([`lookup_float`](latexml_core::state::lookup_float)) |
 | `LookupLCcode(string) -> ?` | A character's lowercase code; `()` when the table holds none. ([`lookup_lccode`](latexml_core::state::lookup_lccode)) |
 | `LookupMapping(string, string) -> ?` | Read one key out of a named mapping, with the type it was stored as; `()` when absent. ([`lookup_mapping`](latexml_core::state::lookup_mapping)) |
@@ -161,13 +161,13 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupTokens(string) -> Tokens` | Read a value as tokens. ([`lookup_tokens`](latexml_core::state::lookup_tokens)) |
 | `LookupUCcode(string) -> ?` | A character's uppercase code; `()` when the table holds none. ([`lookup_uccode`](latexml_core::state::lookup_uccode)) |
 | `LookupValue(string) -> ?` | Read a value with the type it was stored as (a list as an array); `()` when unset. ([`lookup_value`](latexml_core::state::lookup_value)) |
-| `MergeFont(map)` | Merge font attributes into the current font, group-locally. ([`merge_font`](latexml_core::binding::content::merge_font)) |
+| `MergeFont(map)` | Merge font attributes into the current font, group-locally: Font.pm `merge`'s keys (a color by name as `LookupColor`, a size name or points, `scale`, `forcebold`, …); an unknown key Warns. ([`merge_font`](latexml_core::binding::content::merge_font)) |
 | `MuGlue(int) -> MuGlue`<br>`MuGlue(int, int, ?, int, ?) -> MuGlue`<br>`MuGlue(string) -> MuGlue` | Perl's `MuGlue(spec)`: `"3mu plus 1mu"`, an int of the mu value in sp, or the five-argument form; an unreadable spec is an Error and 0. |
 | `NewCounter(string)`<br>`NewCounter(string, string)`<br>`NewCounter(string, string, map)` | Declare a new counter. ([`new_counter`](latexml_core::binding::counter::dialect::new_counter)) |
 | `Note(string)` | Write a progress note to both the conversion log and stderr. |
 | `NoteLog(string)` | Write a progress note to the conversion log only. |
 | `NoteSTDERR(string)` | Write a progress note to stderr only. |
-| `Number(float) -> Number`<br>`Number(int) -> Number`<br>`Number(string) -> Number` | Perl's `Number(n)`: an int, a float (truncated) or a numeric string; any other string is an Error and 0. |
+| `Number(float) -> Number`<br>`Number(int) -> Number`<br>`Number(string) -> Number` | Perl's `Number(n)`: an int, a float (truncated) or a numeric string; a string's numeric prefix otherwise, with Perl's `perl:warn` Warning (`"12abc"` is 12). |
 | `ParseXML(string) -> array` | Parse a markup chunk into nodes; a bare fragment is fine. ([`parse_fragment`](latexml_core::common::xml::parse_fragment)) |
 | `PassOptions(string, string, array)` | Forward options to a package or class not yet loaded. ([`pass_options`](latexml_core::binding::content::pass_options)) |
 | `PopValue(string) -> ?` | Pop and return the last value of a value-table list, type preserved (`()` if empty). ([`pop_value`](latexml_core::state::pop_value)) |
@@ -177,7 +177,7 @@ Called at the top level of a binding file, or from inside any body.
 | `ProgressSpindown(string)` | Close a named progress stage in the log. ([`note_end`](latexml_core::common::error::note_end)) |
 | `ProgressSpinup(string)` | Open a named progress stage in the log. ([`note_begin`](latexml_core::common::error::note_begin)) |
 | `ProgressStep(string)` | Advance the progress indicator; a no-op in this port. ([`progress_step`](latexml_core::common::error::progress_step)) |
-| `PushValue(string, ?)` | Push a value (string/int/float/bool/Tokens) onto a value-table list, creating it (global) if absent. ([`push_value`](latexml_core::state::push_value)) |
+| `PushValue(string, ?)`<br>`PushValue(string, ?, ?)`<br>`PushValue(string, ?, ?, ?)`<br>`PushValue(string, ?, ?, ?, ?)` | Push a value (string/int/float/bool/Tokens) onto a value-table list, creating it (global) if absent. ([`push_value`](latexml_core::state::push_value)) |
 | `RawTeX(string)` | Process a chunk of literal TeX as definitions. ([`raw_tex`](latexml_core::stomach::raw_tex)) |
 | `ReadArg() -> Tokens` | Read one TeX argument, a token or a braced group, as `Tokens`. ([`read_arg`](latexml_core::gullet::read_arg)) |
 | `ReadOptional() -> ?` | Read a LaTeX optional `[…]` argument as `Tokens`; `()` when there is none. ([`read_optional`](latexml_core::gullet::read_optional)) |
@@ -192,14 +192,14 @@ Called at the top level of a binding file, or from inside any body.
 | `RequirePackage(string)`<br>`RequirePackage(string, array)`<br>`RequirePackage(string, map)` | Load a package (options: Perl's `options`, `type`, `notex`, `after`, …): its binding, or the raw `.sty` when `INCLUDE_STYLES` allows. ([`require_package`](latexml_core::binding::content::require_package)) |
 | `RequireResource(string)`<br>`RequireResource(string, map)` | Attach a CSS or JavaScript resource to the document. ([`require_resource`](latexml_core::binding::content::require_resource)) |
 | `ResetCounter(string)` | Reset a counter to zero. ([`reset_counter`](latexml_core::binding::counter::dialect::reset_counter)) |
-| `Revert(Digested) -> Tokens` | A digested value back to the source tokens that made it. ([`Digested::revert`](latexml_core::digested::Digested::revert)) |
+| `Revert(()) -> Tokens`<br>`Revert(Digested) -> Tokens`<br>`Revert(string) -> Tokens` | A digested value back to the source tokens that made it; a string Explodes, `()` is empty (Object.pm:108). ([`Digested::revert`](latexml_core::digested::Digested::revert)) |
 | `Roman(int) -> Tokens` | Upper-case roman numerals of a number, as `Tokens`. |
 | `SetCondition(string\|Token, bool)`<br>`SetCondition(string\|Token, bool, string)` | Set a test-less conditional (`\newif` style) to true or false. ([`set_condition`](latexml_core::binding::content::set_condition)) |
-| `SetCounter(string, int)` | Set a counter's value globally. ([`set_counter`](latexml_core::binding::counter::dialect::set_counter)) |
+| `SetCounter(string, Number)`<br>`SetCounter(string, int)` | Set a counter's value globally. ([`set_counter`](latexml_core::binding::counter::dialect::set_counter)) |
 | `ShiftValue(string) -> ?` | Remove and return the first value of a value-table list, type preserved (`()` if empty). ([`shift_value`](latexml_core::state::shift_value)) |
 | `SkipSpaces()` | Discard any run of spaces at the head of the input. ([`skip_spaces`](latexml_core::gullet::skip_spaces)) |
 | `StartSemiverbatim()`<br>`StartSemiverbatim(array)` | Begin a SEMI-verbatim region: neutralize the math/special catcodes (`^ _ ~ & $ # '`) to literal `OTHER`, but keep `\ { }` special so control sequences and `\end{env}` still parse. This is NOT full verbatim — a backslash command is still expanded (e.g. the Mathematica `\[Gamma]` fires `\[`, which opens display math), and because `{` `}` stay group-markers a literal brace in the source is consumed as grouping, not printed: `{}` yields nothing and `{x}` yields `x`. Only the `{verbatim}` / fancyvrb environments read a body as raw lines where even `\ { }` are literal. Pass extra single-char strings to neutralize them too — but not `\`, since `\end{env}` needs it. Pair with `EndSemiverbatim` in a `DefEnvironment`'s `beforeDigest`/`beforeDigestEnd`. ([`begin_semiverbatim`](latexml_core::state::begin_semiverbatim)) |
-| `StepCounter(string)` | Step a counter; usually you want `RefStepCounter` instead. ([`step_counter`](latexml_core::binding::counter::dialect::step_counter)) |
+| `StepCounter(string)`<br>`StepCounter(string, ?)` | Step a counter; usually you want `RefStepCounter` instead. ([`step_counter`](latexml_core::binding::counter::dialect::step_counter)) |
 | `T_ACTIVE(string) -> Token` | One active-character `Token` (Perl `T_ACTIVE`), e.g. for `Let(T_ACTIVE("~"), "\\nobreakspace")`. |
 | `T_ALIGN() -> Token` | The `Token` `&` under `CC_ALIGN` (a Perl constant; call it as `T_ALIGN()`). |
 | `T_ARG(?) -> Token` | A parameter `Token` `#n` under `CC_ARG`, from an int 1-9 or a digit `Token` (Perl `T_ARG`). |
@@ -227,8 +227,8 @@ Called at the top level of a binding file, or from inside any body.
 | `Tokens() -> Tokens`<br>`Tokens(?) -> Tokens`<br>`Tokens(?, ?) -> Tokens`<br>`Tokens(?, ?, ?) -> Tokens`<br>`Tokens(?, ?, ?, ?) -> Tokens`<br>`Tokens(array) -> Tokens` | Perl's `Tokens(@tokens)`: a token list from `Token`s and `Tokens` (flattened), given as up to four arguments or as an array. Where a call takes a `Token` (`Let`, `XEquals`, …), a `Tokens` is an error. |
 | `UTF(int) -> string` | The character of a Unicode code point. |
 | `UnTeX(Token) -> string`<br>`UnTeX(Tokens) -> string` | Tokens (or one `Token`) back to the TeX source that could have produced them. ([`Tokens::untex`](latexml_core::tokens::Tokens::untex)) |
-| `UnshiftValue(string, ?)` | Prepend a value (string/int/float/bool/Tokens/Token) to a value-table list, creating it (global) if absent. ([`unshift_value`](latexml_core::state::unshift_value)) |
-| `Warn(string, string, string)`<br>`Warn(string, string, string, ?)` | Log a `Warning:` with the given category and object, plus optional details. |
+| `UnshiftValue(string, ?)`<br>`UnshiftValue(string, ?, ?)`<br>`UnshiftValue(string, ?, ?, ?)`<br>`UnshiftValue(string, ?, ?, ?, ?)` | Prepend a value (string/int/float/bool/Tokens/Token) to a value-table list, creating it (global) if absent. ([`unshift_value`](latexml_core::state::unshift_value)) |
+| `Warn(string, string, ?, ?)`<br>`Warn(string, string, ?, ?, ?)`<br>`Warn(string, string, ?, ?, ?, ?)`<br>`Warn(string, string, string)` | Log a `Warning:` with the given category and object, plus optional details; Perl's `where` form as `Error`. |
 | `XEquals(string\|Token, string\|Token) -> bool` | Whether two tokens (CS name strings or `Token`s) have the same meaning. ([`x_equals`](latexml_core::state::x_equals)) |
 | `absolute(Dimension) -> Dimension`<br>`absolute(Glue) -> Glue`<br>`absolute(MuGlue) -> MuGlue`<br>`absolute(Number) -> Number` | A value handle's absolute value (Number.pm). |
 | `add(Dimension, Dimension) -> Dimension`<br>`add(Glue, Dimension) -> Glue`<br>`add(Glue, Glue) -> Glue`<br>`add(Glue, Number) -> Glue`<br>`add(MuGlue, MuGlue) -> MuGlue`<br>`add(Number, Number) -> Number` | Perl's `$a->add($b)`: as `+`. |
@@ -261,7 +261,7 @@ Called at the top level of a binding file, or from inside any body.
 
 Reached through the `document` handle a constructor body receives as its first argument — Perl's `$document->method`.
 
-29 functions, 44 calls.
+29 functions, 45 calls.
 
 | call | documentation |
 |---|---|
@@ -290,7 +290,7 @@ Reached through the `document` handle a constructor body receives as its first a
 | `removeNode(Node)` | Remove a node, releasing the ids under it. ([`Document::remove_node`](latexml_core::document::Document::remove_node)) |
 | `renameNode(Node, string) -> Node`<br>`renameNode(Node, string, bool) -> Node` | Rename an element, rebuilding it through the model. ([`Document::rename_node`](latexml_core::document::Document::rename_node)) |
 | `replaceNode(Node, array)` | Replace a node by other nodes. ([`Document::replace_node`](latexml_core::document::Document::replace_node)) |
-| `setAttribute(string, string)` | Set an attribute on the current node, if the model allows it. ([`Document::set_attribute`](latexml_core::document::Document::set_attribute)) |
+| `setAttribute(Node, string, string)`<br>`setAttribute(string, string)` | Set an attribute on a node, Perl's `(node, key, value)`, if the model allows it; `(key, value)` on the current node is deprecated. ([`Document::set_attribute`](latexml_core::document::Document::set_attribute)) |
 | `setNode(Node)` | Move the insertion point to a node. ([`Document::set_node`](latexml_core::document::Document::set_node)) |
 | `unwrapNodes(Node)` | Replace a node by its own children. ([`Document::unwrap_nodes`](latexml_core::document::Document::unwrap_nodes)) |
 | `wrapNodes(string, array) -> Node?` | Wrap a run of sibling nodes in a new element. ([`Document::wrap_nodes`](latexml_core::document::Document::wrap_nodes)) |
@@ -306,7 +306,7 @@ An XML node: one returned by `ParseXML`, or one handed to a rewrite / ligature-m
 | `children() -> array` | The node's child nodes. ([`Node::get_child_nodes`](libxml::tree::Node::get_child_nodes)) |
 | `content() -> string` | The node's text content. ([`Node::get_content`](libxml::tree::Node::get_content)) |
 | `firstChild() -> Node?` | The node's first child, or `()`. ([`Node::get_first_child`](libxml::tree::Node::get_first_child)) |
-| `getAttribute(string) -> string` | An attribute's value, namespace-aware so `xml:id` is found. ([`get_node_attribute`](latexml_core::common::model::get_node_attribute)) |
+| `getAttribute(string) -> ?` | An attribute's value, namespace-aware so `xml:id` is found; `()` when absent, as XML::LibXML's undef. ([`get_node_attribute`](latexml_core::common::model::get_node_attribute)) |
 | `hasAttribute(string) -> bool` | Whether the node carries that attribute. ([`get_node_attribute`](latexml_core::common::model::get_node_attribute)) |
 | `name() -> string` | The node's local name. ([`Node::get_name`](libxml::tree::Node::get_name)) |
 | `nextSibling() -> Node?` | The node's next sibling, or `()`. ([`Node::get_next_sibling`](libxml::tree::Node::get_next_sibling)) |

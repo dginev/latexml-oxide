@@ -308,6 +308,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("UnshiftValue", |k: &str, v: Dynamic| {
     latexml_core::state::unshift_value(k, vec![dynamic_to_stored(v)]);
   });
+  // Perl's `PushValue($key, @values)` / `UnshiftValue($key, @values)` (Package.pm:265/275), up to four values.
+  for arity in 2..=4 {
+    register_variadic_values(&mut engine, arity);
+  }
   engine.register_fn("PopValue", |k: &str| -> Dynamic {
     match latexml_core::state::pop_value(k) {
       Ok(Some(popped)) => stored_to_dynamic(popped),
@@ -669,50 +673,53 @@ pub(super) fn make_engine() -> Engine {
       d.revert().map_err(rhai_err)
     },
   );
+  // Perl's Revert of a string Explodes it; of undef, nothing (Object.pm:108).
+  engine.register_fn("Revert", |s: &str| explode(s, false));
+  engine.register_fn("Revert", |_: ()| Tokens::new(Vec::new()));
   engine.register_fn(
     "Today",
     || -> std::result::Result<String, Box<EvalAltResult>> {
       latexml_engine::base_utilities::today().map_err(rhai_err)
     },
   );
-  // Diagnostics (Perl Common/Error.pm :271-378): `cat:obj msg`, plus Perl's trailing `@details` as a string or an
-  // array of strings, one line each.
-  engine.register_fn("Warn", |cat: &str, obj: &str, msg: &str| {
-    latexml_core::Warn!(cat, obj, msg.to_string());
-  });
-  engine.register_fn(
-    "Warn",
-    |cat: &str, obj: &str, msg: &str, details: Dynamic| {
-      latexml_core::Warn!(cat, obj, msg.to_string(), details_of(details));
-    },
-  );
-  engine.register_fn("Error", |cat: &str, obj: &str, msg: &str| {
-    script_error(cat, obj, msg, None)
-  });
-  engine.register_fn(
-    "Error",
-    |cat: &str, obj: &str, msg: &str, details: Dynamic| {
-      script_error(cat, obj, msg, Some(details_of(details)))
-    },
-  );
-  engine.register_fn("Info", |cat: &str, obj: &str, msg: &str| {
-    latexml_core::Info!(cat, obj, msg.to_string());
-  });
-  engine.register_fn(
-    "Info",
-    |cat: &str, obj: &str, msg: &str, details: Dynamic| {
-      latexml_core::Info!(cat, obj, msg.to_string(), details_of(details));
-    },
-  );
-  engine.register_fn("Fatal", |cat: &str, obj: &str, msg: &str| {
-    script_fatal(cat, obj, msg, None)
-  });
-  engine.register_fn(
-    "Fatal",
-    |cat: &str, obj: &str, msg: &str, details: Dynamic| {
-      script_fatal(cat, obj, msg, Some(details_of(details)))
-    },
-  );
+  // Diagnostics (Perl Common/Error.pm :271-394): `cat:obj msg`, plus trailing details as strings or an array of
+  // strings, one line each. Perl's form `(cat, obj, $where, msg, @details)` is read when `$where` is `()`, a handle,
+  // or any 5+-argument call; a string third argument in a 4-argument call stays the message (the older form).
+  for kind in [Diag::Warn, Diag::Error, Diag::Info, Diag::Fatal] {
+    let name = kind.name();
+    engine.register_fn(name, move |cat: &str, obj: &str, msg: &str| {
+      emit_diag(kind, cat, obj, msg, None)
+    });
+    engine.register_fn(
+      name,
+      move |cat: &str, obj: &str, a3: Dynamic, a4: Dynamic| {
+        if a3.is_string() {
+          emit_diag(kind, cat, obj, &dynamic_to_string(a3), Some(details_of(a4)))
+        } else {
+          emit_diag(kind, cat, obj, &dynamic_to_string(a4), None)
+        }
+      },
+    );
+    engine.register_fn(
+      name,
+      move |cat: &str, obj: &str, _where: Dynamic, msg: Dynamic, d1: Dynamic| {
+        emit_diag(
+          kind,
+          cat,
+          obj,
+          &dynamic_to_string(msg),
+          Some(details_of(d1)),
+        )
+      },
+    );
+    engine.register_fn(
+      name,
+      move |cat: &str, obj: &str, _where: Dynamic, msg: Dynamic, d1: Dynamic, d2: Dynamic| {
+        let details = format!("{}\n\t{}", details_of(d1), details_of(d2));
+        emit_diag(kind, cat, obj, &dynamic_to_string(msg), Some(details))
+      },
+    );
+  }
   // Notes + progress reporting (Perl `Note`/`NoteSTDERR`/`NoteLog`, `ProgressStep`,
   // `ProgressSpinup`/`ProgressSpindown`). Matching Perl `Common/Error.pm`: `Note`
   // writes to BOTH the log and stderr, `NoteSTDERR` to stderr only, `NoteLog` to
@@ -859,6 +866,14 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::binding::counter::dialect::step_counter(c, false).map_err(rhai_err)
     },
   );
+  // Perl `StepCounter($ctr, $noreset)` (Package.pm:739).
+  engine.register_fn(
+    "StepCounter",
+    |c: &str, noreset: Dynamic| -> RhaiResult<()> {
+      latexml_core::binding::counter::dialect::step_counter(c, perl_truthy(&noreset))
+        .map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "ResetCounter",
     |c: &str| -> std::result::Result<(), Box<EvalAltResult>> {
@@ -872,14 +887,14 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::binding::counter::dialect::add_to_counter(c, Number(n)).map_err(rhai_err)
     },
   );
-  engine.register_fn(
-    "CounterValue",
-    |c: &str| -> std::result::Result<i64, Box<EvalAltResult>> {
-      latexml_core::binding::counter::dialect::counter_value(c)
-        .map(|n| n.0)
-        .map_err(rhai_err)
-    },
-  );
+  // Perl's form takes a Number (Package.pm:730).
+  engine.register_fn("AddToCounter", |c: &str, n: Number| -> RhaiResult<()> {
+    latexml_core::binding::counter::dialect::add_to_counter(c, n).map_err(rhai_err)
+  });
+  // A Number, as Perl's (Package.pm:706); its int-like uses (`+ 1`, `== 3`) Warn for one release (values.rs).
+  engine.register_fn("CounterValue", |c: &str| -> RhaiResult<Number> {
+    latexml_core::binding::counter::dialect::counter_value(c).map_err(rhai_err)
+  });
   // RefStepCounter: returns the refnum/id property map (Digested values come
   // back as handles a `properties` closure can return directly — the amsmath
   // `properties => ref_step_counter("equation")` idiom). Through `\refstepcounter`'s
@@ -1125,6 +1140,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("SetCounter", |ctr: &str, value: i64| -> RhaiResult<()> {
     latexml_core::binding::counter::dialect::set_counter(ctr, Number(value)).map_err(rhai_err)
   });
+  // Perl's form takes a Number (Package.pm:722).
+  engine.register_fn("SetCounter", |ctr: &str, value: Number| -> RhaiResult<()> {
+    latexml_core::binding::counter::dialect::set_counter(ctr, value).map_err(rhai_err)
+  });
   // roman/Roman (Package.pm:470-476) and Explode/ExplodeText (Token.pm:103-116) return Tokens, as Perl's lists.
   engine.register_fn("roman", |n: i64| {
     explode(&latexml_core::common::cleaners::roman_aux(n), true)
@@ -1350,8 +1369,9 @@ pub(super) fn make_engine() -> Engine {
   // Namespace-aware (`model::get_node_attribute`): libxml stores `xml:id` under
   // the built-in xml namespace, so a plain lookup by the qualified name misses
   // it — a script could not read back the id `generateID` had just written.
-  engine.register_fn("getAttribute", |n: &mut NodeProxy, k: &str| -> String {
-    latexml_core::common::model::get_node_attribute(&n.0, k).unwrap_or_default()
+  // XML::LibXML's getAttribute: undef (`()`) when absent, so `defined(n.getAttribute(k))` tests presence.
+  engine.register_fn("getAttribute", |n: &mut NodeProxy, k: &str| -> Dynamic {
+    latexml_core::common::model::get_node_attribute(&n.0, k).map_or(Dynamic::UNIT, Dynamic::from)
   });
   engine.register_fn("prevSibling", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_prev_sibling() {
@@ -1954,9 +1974,21 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // Perl `$document->setAttribute($node, $key, $value)` (Document.pm:1361).
+  engine.register_fn(
+    "setAttribute",
+    |_d: &mut DocProxy, n: NodeProxy, key: &str, val: &str| -> RhaiResult<()> {
+      with_doc(|doc, _props| {
+        let mut node = n.0.clone();
+        doc.set_attribute(&mut node, key, val).map_err(rhai_err)
+      })
+    },
+  );
+  // The older form on the current node, deprecated.
   engine.register_fn(
     "setAttribute",
     |_d: &mut DocProxy, key: &str, val: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      warn_deprecated("document.setAttribute(key, value)");
       with_doc(|doc, _props| {
         let mut node = doc.get_node().clone();
         doc.set_attribute(&mut node, key, val).map_err(rhai_err)?;
@@ -2719,6 +2751,85 @@ fn read_token() -> RhaiResult<Dynamic> {
   latexml_core::gullet::read_token()
     .map(|t| t.map_or(Dynamic::UNIT, Dynamic::from))
     .map_err(rhai_err)
+}
+
+/// `PushValue`/`UnshiftValue` of `arity` values in one call, in order, as Perl's lists (Package.pm:265/275).
+fn register_variadic_values(engine: &mut Engine, arity: usize) {
+  let push = |k: &str, vs: Vec<Dynamic>| {
+    for v in vs {
+      let _ = latexml_core::state::push_value(k, dynamic_to_stored(v));
+    }
+  };
+  let unshift = |k: &str, vs: Vec<Dynamic>| {
+    latexml_core::state::unshift_value(k, vs.into_iter().map(dynamic_to_stored).collect());
+  };
+  match arity {
+    2 => {
+      engine.register_fn("PushValue", move |k: &str, a: Dynamic, b: Dynamic| {
+        push(k, vec![a, b])
+      });
+      engine.register_fn("UnshiftValue", move |k: &str, a: Dynamic, b: Dynamic| {
+        unshift(k, vec![a, b])
+      });
+    },
+    3 => {
+      engine.register_fn(
+        "PushValue",
+        move |k: &str, a: Dynamic, b: Dynamic, c: Dynamic| push(k, vec![a, b, c]),
+      );
+      engine.register_fn(
+        "UnshiftValue",
+        move |k: &str, a: Dynamic, b: Dynamic, c: Dynamic| unshift(k, vec![a, b, c]),
+      );
+    },
+    _ => {
+      engine.register_fn(
+        "PushValue",
+        move |k: &str, a: Dynamic, b: Dynamic, c: Dynamic, d: Dynamic| push(k, vec![a, b, c, d]),
+      );
+      engine.register_fn(
+        "UnshiftValue",
+        move |k: &str, a: Dynamic, b: Dynamic, c: Dynamic, d: Dynamic| unshift(k, vec![a, b, c, d]),
+      );
+    },
+  }
+}
+
+/// The four diagnostics of Perl Common/Error.pm, as the Rhai functions of the same names.
+#[derive(Clone, Copy)]
+enum Diag {
+  Warn,
+  Error,
+  Info,
+  Fatal,
+}
+impl Diag {
+  fn name(self) -> &'static str {
+    match self {
+      Diag::Warn => "Warn",
+      Diag::Error => "Error",
+      Diag::Info => "Info",
+      Diag::Fatal => "Fatal",
+    }
+  }
+}
+
+fn emit_diag(
+  kind: Diag,
+  cat: &str,
+  obj: &str,
+  msg: &str,
+  details: Option<String>,
+) -> RhaiResult<()> {
+  match (kind, details) {
+    (Diag::Warn, Some(d)) => latexml_core::Warn!(cat, obj, msg.to_string(), d),
+    (Diag::Warn, None) => latexml_core::Warn!(cat, obj, msg.to_string()),
+    (Diag::Info, Some(d)) => latexml_core::Info!(cat, obj, msg.to_string(), d),
+    (Diag::Info, None) => latexml_core::Info!(cat, obj, msg.to_string()),
+    (Diag::Error, details) => return script_error(cat, obj, msg, details),
+    (Diag::Fatal, details) => return script_fatal(cat, obj, msg, details),
+  }
+  Ok(())
 }
 
 /// Perl's trailing `@details` (Error.pm:271-378): a string, or an array of strings joined one per line.

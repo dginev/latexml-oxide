@@ -106,6 +106,26 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
+  - **A Rhai name that is a Perl API name behaves as Perl's** (PR #829 round G). A `DefPrimitive`
+    body's returned box, or array of boxes, is the primitive's output, as a Perl primitive's
+    (`|| Digest(T_LETTER("A"))` printed nothing before); another returned value is dropped with a
+    deprecation Warning (Perl errs on it; end such a body with `return;`). `MergeFont` and every
+    `font:` option take all of Font.pm's merge keys — `color`/`background` by name (as
+    `LookupColor`), `opacity`, a size name (`large`), `scale`, `forcebold`/`forcefamily`/
+    `forceseries`/`forceshape`, `emph` — where all but family/series/shape/size were dropped
+    silently; an unknown key Warns. Perl's `Warn`/`Error`/`Info`/`Fatal(cat, obj, where, msg,
+    details…)` form is read when `where` is `()` or a handle. `SetCounter`/`AddToCounter` take a
+    Number, `StepCounter` its `noreset`, `PushValue`/`UnshiftValue` up to four values, `Revert` a
+    string, `LookupDimension` a Token, Tokens, box or Dimension; `ptValue`/`pxValue` clamp the
+    precision to 0..5; `Number("12abc")` is 12 with Perl's `perl:warn` Warning, where it was an
+    Error and 0. `ExplodeText` (and `roman`, the kernel's `ExplodeText!`) makes only ASCII
+    letters LETTER, as Perl Token.pm and latex.ltx's `\char@if@alph` (`é` is OTHER).
+    **BREAKING:** `CounterValue` returns a Number (its `+`/`-`/comparisons with an int keep
+    working this release with a deprecation Warning; use `.valueOf()`); `node.getAttribute`
+    of an absent attribute is `()` (`defined(…)` tests it; `== ""` still holds, Warned);
+    `document.setAttribute(key, value)` is deprecated for Perl's `(node, key, value)`.
+    Guard `cluster_package_guards::perfect_kernel_batchw3rg`.
+
   - **Rhai Def* option bags follow Perl's option tables** (PR #829 round A). Each of
     `DefMacro`, `DefPrimitive`, `DefConstructor`, `DefEnvironment`, `DefMath` and
     `DefConditional` checks its bag against Perl's key table (Package.pm `CheckOptions`);

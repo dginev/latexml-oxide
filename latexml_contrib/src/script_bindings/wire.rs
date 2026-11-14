@@ -722,10 +722,35 @@ pub(super) fn dynamic_to_bool(v: &Dynamic) -> bool {
     .unwrap_or(false)
 }
 
-/// Install one `DefPrimitive` registration as a native primitive whose body
-/// runs at digestion time for side-effects (state assignments, etc.). The body
-/// receives Perl's `($stomach, @args)` ([`perl_body_args`]) and its return value is ignored (pure side-effect);
-/// the primitive contributes no boxes.
+/// The boxes a primitive's body returns, as Perl's `invoke` keeps them (Primitive.pm:78): a box, an array of boxes,
+/// or `()` for none. Any other value is Perl's "Execution yielded non boxes" Error (Stomach.pm:219-223); for one
+/// release it is dropped with a deprecation Warning, as bodies returned their last value unread before.
+fn primitive_boxes(result: Dynamic) -> Vec<Digested> {
+  let items = if result.is_array() {
+    result.cast::<rhai::Array>()
+  } else {
+    vec![result]
+  };
+  let mut boxes = Vec::new();
+  let mut non_box = false;
+  for item in items {
+    if item.is_unit() {
+      continue;
+    }
+    match item.clone().try_cast::<Digested>() {
+      Some(d) => boxes.push(d),
+      None => non_box = true,
+    }
+  }
+  if non_box {
+    warn_deprecated("DefPrimitive returning a non-box");
+  }
+  boxes
+}
+
+/// Install one `DefPrimitive` registration as a native primitive whose body runs at digestion time. The body
+/// receives Perl's `($stomach, @args)` ([`perl_body_args`]); the boxes it returns are the primitive's
+/// ([`primitive_boxes`]), as the `DefPrimitive!` macro's `into_digested_result`.
 pub(super) fn wire_primitive(
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
@@ -746,9 +771,9 @@ pub(super) fn wire_primitive(
       args,
       "DefPrimitive |args|",
     );
-    let _: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
+    let result: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("primitive {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(Vec::new())
+    Ok(primitive_boxes(result))
   });
 
   def_primitive(
