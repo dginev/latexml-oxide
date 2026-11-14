@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+  - **LaTeX's kernel hooks run where LaTeX runs them** (QA47B). Code a document or package adds
+    with `\AddToHook` to the hooks of `\end{document}` (`env/document/end`, and the document's own
+    code in `enddocument/afterlastpage`, `/afteraux`, `/end`), of `verbatim`/`verbatim*`
+    (`env/verbatim/begin|end`), of `\label` (`label`) and of `\include` (`include/before`,
+    `include/<file>/before|end|after`, `include/excluded`) was dropped; it now runs there,
+    and so do etoolbox's `\AfterEndDocument` and atveryend's commands. A verbatim begin hook reads
+    `verbatim` in `\@currenvir`, as in LaTeX. The kernel's first aid for the raw cleveref.sty is
+    not registered under LaTeXML's cleveref binding, which replaces the code it repairs. Guard
+    `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048).
   - **Text set before `\maketitle` stays above the title** (QA91, Bruce Miller's probe). A
     preprint number, a copyright line or a journal heading the document typesets before
     `\maketitle` came out after the title, the authors and the abstract; it now stays ahead of
