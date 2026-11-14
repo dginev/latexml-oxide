@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
+    dropped `columnalign`, so Chrome centred the left column of an `aligned` (inline, or in
+    `gather*`) and the `=` came up to 21 px late. LaTeXML.css now right- or left-aligns a
+    cell by its `columnalign` (`justify-items`); the markup is unchanged. Guard
+    `browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation`
+    (Chrome, local).
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was

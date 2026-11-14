@@ -36146,3 +36146,17 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (`arrayrulecolor_bang_rule_own_colour_red.tex`). **Guards**: `perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it`
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
+
+### 1026. An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755)
+
+**Perl** and Rust emit `<mtd columnalign="right">` (`ltx_align_right` unless a border class replaces it, MathML.pm
+L456-473); MathML Core dropped `columnalign` and lays an `<mtd>`'s children out as one anonymous `<mrow>`, centred, so in
+Chrome an `aligned`'s left column sat centred in its cell and its relation came up to 21 px late (issue 809's repro, 16 px) (`text-align` on
+`.ltx_align_right` does not reach it). Firefox honours `columnalign`. **Rust.** LaTeXML.css adds
+`math mtd[columnalign="right"] { justify-items:end; }` and `…[columnalign="left"] { justify-items:start; }`, keyed on the
+attribute, which every cell keeps; the markup is unchanged. Offer upstream (LaTeXML.css). **Guards**:
+`cluster_cli::browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation` (Chrome,
+local only, repro `alignment/aligned_left_column_is_right_aligned.tex`),
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the rule
+ships).
+
