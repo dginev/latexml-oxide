@@ -51,6 +51,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `AtBeginDocument` |  | `AtBeginDocument` |
 | `AtEndDocument` |  | `AtEndDocument` |
 | `beginItemize` | `BeginItemize!` | `BeginItemize` |
+| `Box` |  | `Box` |
 | `CC_ACTIVE` |  | `CC_ACTIVE` |
 | `CC_ALIGN` |  | `CC_ALIGN` |
 | `CC_ARG` |  | `CC_ARG` |
@@ -81,15 +82,18 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `DefColumnType` | `DefColumnType!` | `DefColumnType` |
 | `DefConditional` | `DefConditional!` | `DefConditional` |
 | `DefConstructor` | `DefConstructor!` | `DefConstructor` |
+| `DefConstructorI` |  | `DefConstructorI` |
 | `DefEnvironment` | `DefEnvironment!` | `DefEnvironment` |
 | `DefKeyVal` | `DefKeyVal!` | `DefKeyVal` |
 | `DefLigature` | `DefLigature!` | `DefLigature` |
 | `DefMacro` | `DefMacro!` | `DefMacro` |
+| `DefMacroI` |  | `DefMacroI` |
 | `DefMath` | `DefMath!` | `DefMath` |
 | `DefMathLigature` | `DefMathLigature!` | `DefMathLigature` |
 | `DefMathRewrite` | `DefMathRewrite!` | `DefMathRewrite` |
 | `DefParameterType` | `DefParameterType!` | `DefParameterType` |
 | `DefPrimitive` | `DefPrimitive!` | `DefPrimitive` |
+| `DefPrimitiveI` |  | `DefPrimitiveI` |
 | `DefRegister` | `DefRegister!` | `DefRegister` |
 | `DefRewrite` | `DefRewrite!` | `DefRewrite` |
 | `Digest` | `Digest!` | `Digest` |
@@ -109,6 +113,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `GetKeyVal` | `GetKeyVal!` | `GetKeyVal` |
 | `GetKeyVals` | `GetKeyVals!` | `GetKeyVals` |
 | `Glue` | `Glue!` | `Glue` |
+| `IfCondition` |  | `IfCondition` |
 | `Info` | `Info!` | `Info` |
 | `Input` | `Input!` | `Input` |
 | `InputDefinitions` | `InputDefinitions!` | `InputDefinitions` |
@@ -117,6 +122,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `IsEmpty` |  | `IsEmpty` |
 | `$LaTeXML::VERSION` |  | `LaTeXMLVersion` |
 | `Let` | `Let!` | `Let` |
+| `List` |  | `List` |
 | `LoadClass` | `LoadClass!` | `LoadClass` |
 | `LoadPool` | `LoadPool!` | `LoadPool` |
 | `LookupValue` | `LookupBool!` | `LookupBool` |
@@ -279,16 +285,21 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `$node->unbindNode` |  | `node.unlink` |
 | `$whatsit->getArg` |  | `whatsit.getArg` |
 | `$whatsit->getArg` |  | `whatsit.argString` (deprecated: `whatsit.getArg(n)`) |
+| `$whatsit->getFont` |  | `whatsit.getFont` |
 | `$whatsit->getProperties` |  | `whatsit.getProperties` |
 | `$whatsit->getProperty` |  | `whatsit.getProperty` |
 | `$whatsit->getProperty` |  | `whatsit.propertyString` (deprecated: `whatsit.getProperty(key)`) |
 | `$whatsit->setProperty` |  | `whatsit.setProperty` |
 | `ToString($whatsit)` |  | `whatsit.to_string` |
+|  |  | `definition.is_empty` |
+|  |  | `definition.len` |
 | `push(@{$$defn{afterConstruct}}, …)` |  | `definition.pushAfterConstruct` |
 | `push(@{$$defn{afterDigest}}, …)` |  | `definition.pushAfterDigest` |
 | `push(@{$$defn{afterDigestBody}}, …)` |  | `definition.pushAfterDigestBody` |
 | `push(@{$$defn{beforeConstruct}}, …)` |  | `definition.pushBeforeConstruct` |
 | `push(@{$$defn{beforeDigest}}, …)` |  | `definition.pushBeforeDigest` |
+|  |  | `definition.to_debug` |
+| `ToString($definition)` |  | `definition.to_string` |
 | `unshift(@{$$defn{afterConstruct}}, …)` |  | `definition.unshiftAfterConstruct` |
 | `unshift(@{$$defn{afterDigest}}, …)` |  | `definition.unshiftAfterDigest` |
 | `unshift(@{$$defn{afterDigestBody}}, …)` |  | `definition.unshiftAfterDigestBody` |
@@ -307,12 +318,16 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `$font->getShape` |  | `font.getShape` |
 | `$font->getSize` |  | `font.getSize` |
 | `$v->toString` |  | `number.toString` |
+|  |  | `number.to_debug` |
 | `$v->toString` |  | `number.to_string` |
 | `$v->toString` |  | `dimension.toString` |
+|  |  | `dimension.to_debug` |
 | `$v->toString` |  | `dimension.to_string` |
 | `$v->toString` |  | `glue.toString` |
+|  |  | `glue.to_debug` |
 | `$v->toString` |  | `glue.to_string` |
 | `$v->toString` |  | `muglue.toString` |
+|  |  | `muglue.to_debug` |
 | `$v->toString` |  | `muglue.to_string` |
 |  |  | `command.arg` |
 |  |  | `command.args` |
@@ -320,7 +335,6 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 |  |  | `command.env` |
 |  |  | `command.output` |
 | `AfterAssignment` |  |  |
-| `Box` |  |  |
 | `CheckOptions` |  |  |
 | `CleanBibKey` |  |  |
 | `CleanClassName` |  |  |
@@ -333,12 +347,9 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `DefColor` |  |  |
 | `DefColorModel` |  |  |
 | `DefConditionalI` |  |  |
-| `DefConstructorI` |  |  |
 | `DefEnvironmentI` |  |  |
 | `DefExpandable` |  |  |
-| `DefMacroI` |  |  |
 | `DefMathI` |  |  |
-| `DefPrimitiveI` |  |  |
 | `DefRegisterI` |  |  |
 | `Deprecated` |  |  |
 | `DigestLiteral` |  |  |
@@ -349,10 +360,8 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `FontDecodeString` |  |  |
 | `GenerateID` |  |  |
 | `HasKeyVal` |  |  |
-| `IfCondition` |  |  |
 | `InputContent` |  |  |
 | `InstallDefinition` | `InstallDefinition!` |  |
-| `List` |  |  |
 | `LoadFontMap` |  |  |
 | `LoadFormat` |  |  |
 | `LookupColor` | `LookupColor!` |  |
@@ -375,12 +384,12 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 
 ## Perl calls the dialect lacks (an empty Rhai cell)
 
-53 calls: `AfterAssignment`, `Box`, `CheckOptions`, `CleanBibKey`, `CleanClassName`, `CleanIndexKey`, `CleanURL`, `Color`, `ComposeURL`, `Debug`, `DefAutoload`, `DefColor`, `DefColorModel`, `DefConditionalI`, `DefConstructorI`, `DefEnvironmentI`, `DefExpandable`, `DefMacroI`, `DefMathI`, `DefPrimitiveI`, `DefRegisterI`, `Deprecated`, `DigestLiteral`, `DisableKeyVal`, `DocType`, `Float`, `FontDecode`, `FontDecodeString`, `GenerateID`, `HasKeyVal`, `IfCondition`, `InputContent`, `InstallDefinition`, `List`, `LoadFontMap`, `LoadFormat`, `LookupColor`, `MaybeNoteLabel`, `MaybePeekLabel`, `MuDimension`, `NormalizeBibKey`, `Pair`, `PairList`, `ProcessPendingResources`, `ReadAlignmentTemplate`, `ReadParameters`, `Stringify`, `TokensI`, `TrimmedCommaList`, `convertLaTeXArgs`, `createXMRefs`, `decodeMathChar`, `dualize_arglist`.
+47 calls: `AfterAssignment`, `CheckOptions`, `CleanBibKey`, `CleanClassName`, `CleanIndexKey`, `CleanURL`, `Color`, `ComposeURL`, `Debug`, `DefAutoload`, `DefColor`, `DefColorModel`, `DefConditionalI`, `DefEnvironmentI`, `DefExpandable`, `DefMathI`, `DefRegisterI`, `Deprecated`, `DigestLiteral`, `DisableKeyVal`, `DocType`, `Float`, `FontDecode`, `FontDecodeString`, `GenerateID`, `HasKeyVal`, `InputContent`, `InstallDefinition`, `LoadFontMap`, `LoadFormat`, `LookupColor`, `MaybeNoteLabel`, `MaybePeekLabel`, `MuDimension`, `NormalizeBibKey`, `Pair`, `PairList`, `ProcessPendingResources`, `ReadAlignmentTemplate`, `ReadParameters`, `Stringify`, `TokensI`, `TrimmedCommaList`, `convertLaTeXArgs`, `createXMRefs`, `decodeMathChar`, `dualize_arglist`.
 
 ## Rhai calls with no Perl counterpart (an empty Perl cell)
 
-18 calls: `AppendSearchPath`, `Command`, `DeclareFontMapMultichar`, `LookupRegisterOrDefault`, `ParseXML`, `PrependSearchPath`, `ProcessKeyOptions`, `Today`, `neutralize_font`, `document.absorbProperty`, `document.generateID`, `document.insertXML`, `node.setContent`, `command.arg`, `command.args`, `command.current_dir`, `command.env`, `command.output`.
+25 calls: `AppendSearchPath`, `Command`, `DeclareFontMapMultichar`, `LookupRegisterOrDefault`, `ParseXML`, `PrependSearchPath`, `ProcessKeyOptions`, `Today`, `neutralize_font`, `document.absorbProperty`, `document.generateID`, `document.insertXML`, `node.setContent`, `definition.is_empty`, `definition.len`, `definition.to_debug`, `number.to_debug`, `dimension.to_debug`, `glue.to_debug`, `muglue.to_debug`, `command.arg`, `command.args`, `command.current_dir`, `command.env`, `command.output`.
 
 ## Perl functions with no macro (compiled bindings call the Rust function named)
 
-57 calls: `AssignDelcode` (`assign_delcode`), `AssignFloat` (`assign_value`), `AssignLCcode` (`assign_lccode`), `AssignMathcode` (`assign_mathcode`), `AssignSFcode` (`assign_sfcode`), `AssignUCcode` (`assign_uccode`), `AtBeginDocument` (`push_value`), `AtEndDocument` (`push_value`), `CC_ACTIVE`, `CC_ALIGN`, `CC_ARG`, `CC_BEGIN`, `CC_COMMENT`, `CC_CS`, `CC_END`, `CC_EOL`, `CC_ESCAPE`, `CC_IGNORE`, `CC_INVALID`, `CC_LETTER`, `CC_MARKER`, `CC_MATH`, `CC_OTHER`, `CC_PARAM`, `CC_SPACE`, `CC_SUB`, `CC_SUPER`, `CleanID` (`clean_id`), `CleanLabel` (`clean_label`), `EndSemiverbatim` (`end_semiverbatim`), `Equals`, `ExecuteOptions` (`execute_options`), `ExpandPartially` (`do_expand_partially`), `IsEmpty`, `LookupDelcode` (`lookup_delcode`), `LookupDimension` (`lookup_dimension_cs`), `LookupFloat` (`lookup_float`), `LookupLCcode` (`lookup_lccode`), `LookupMapping` (`lookup_mapping`), `LookupMappingKeys` (`with_mapping_keys`), `LookupMathcode` (`lookup_mathcode`), `LookupSFcode` (`lookup_sfcode`), `LookupUCcode` (`lookup_uccode`), `LookupValue` (`lookup_value`), `PassOptions` (`pass_options`), `PopValue` (`pop_value`), `ProgressSpindown` (`note_end`), `ProgressSpinup` (`note_begin`), `ProgressStep` (`progress_step`), `PushValue` (`push_value`), `SetCondition` (`set_condition`), `ShiftValue` (`shift_value`), `StartSemiverbatim` (`begin_semiverbatim`), `ToString`, `UTF`, `UnTeX` (`Tokens::untex`), `UnshiftValue` (`unshift_value`).
+63 calls: `AssignDelcode` (`assign_delcode`), `AssignFloat` (`assign_value`), `AssignLCcode` (`assign_lccode`), `AssignMathcode` (`assign_mathcode`), `AssignSFcode` (`assign_sfcode`), `AssignUCcode` (`assign_uccode`), `AtBeginDocument` (`push_value`), `AtEndDocument` (`push_value`), `Box` (`Tbox::new`), `CC_ACTIVE`, `CC_ALIGN`, `CC_ARG`, `CC_BEGIN`, `CC_COMMENT`, `CC_CS`, `CC_END`, `CC_EOL`, `CC_ESCAPE`, `CC_IGNORE`, `CC_INVALID`, `CC_LETTER`, `CC_MARKER`, `CC_MATH`, `CC_OTHER`, `CC_PARAM`, `CC_SPACE`, `CC_SUB`, `CC_SUPER`, `CleanID` (`clean_id`), `CleanLabel` (`clean_label`), `DefConstructorI` (`def_constructor`), `DefMacroI` (`def_macro`), `DefPrimitiveI` (`def_primitive`), `EndSemiverbatim` (`end_semiverbatim`), `Equals`, `ExecuteOptions` (`execute_options`), `ExpandPartially` (`do_expand_partially`), `IfCondition` (`if_condition_args`), `IsEmpty`, `List`, `LookupDelcode` (`lookup_delcode`), `LookupDimension` (`lookup_dimension_cs`), `LookupFloat` (`lookup_float`), `LookupLCcode` (`lookup_lccode`), `LookupMapping` (`lookup_mapping`), `LookupMappingKeys` (`with_mapping_keys`), `LookupMathcode` (`lookup_mathcode`), `LookupSFcode` (`lookup_sfcode`), `LookupUCcode` (`lookup_uccode`), `LookupValue` (`lookup_value`), `PassOptions` (`pass_options`), `PopValue` (`pop_value`), `ProgressSpindown` (`note_end`), `ProgressSpinup` (`note_begin`), `ProgressStep` (`progress_step`), `PushValue` (`push_value`), `SetCondition` (`set_condition`), `ShiftValue` (`shift_value`), `StartSemiverbatim` (`begin_semiverbatim`), `ToString`, `UTF`, `UnTeX` (`Tokens::untex`), `UnshiftValue` (`unshift_value`).
