@@ -274,7 +274,7 @@
 <a href=#274 id=274 data-nosnippet>274</a>    // just assert consistency with non-empty entries.
 <a href=#275 id=275 data-nosnippet>275</a>    </span><span class="kw">let </span>out = trimmed_comma_list(<span class="string">",a,,b,"</span>);
 <a href=#276 id=276 data-nosnippet>276</a>    <span class="macro">assert!</span>(
-<a href=#277 id=277 data-nosnippet>277</a>      out.contains(<span class="kw-2">&amp;</span><span class="string">"a"</span>.to_string()) &amp;&amp; out.contains(<span class="kw-2">&amp;</span><span class="string">"b"</span>.to_string()),
+<a href=#277 id=277 data-nosnippet>277</a>      out.iter().any(|s| s == <span class="string">"a"</span>) &amp;&amp; out.iter().any(|s| s == <span class="string">"b"</span>),
 <a href=#278 id=278 data-nosnippet>278</a>      <span class="string">"got {out:?}"
 <a href=#279 id=279 data-nosnippet>279</a>    </span>);
 <a href=#280 id=280 data-nosnippet>280</a>  }

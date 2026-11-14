@@ -2106,7 +2106,7 @@
 <a href=#2106 id=2106 data-nosnippet>2106</a>      search_paths.push(source_dir.clone());
 <a href=#2107 id=2107 data-nosnippet>2107</a>    }
 <a href=#2108 id=2108 data-nosnippet>2108</a>    <span class="comment">// Add current directory as fallback
-<a href=#2109 id=2109 data-nosnippet>2109</a>    </span><span class="kw">if </span>!search_paths.contains(<span class="kw-2">&amp;</span><span class="string">"."</span>.to_string()) {
+<a href=#2109 id=2109 data-nosnippet>2109</a>    </span><span class="kw">if </span>!search_paths.iter().any(|p| p == <span class="string">"."</span>) {
 <a href=#2110 id=2110 data-nosnippet>2110</a>      search_paths.push(<span class="string">"."</span>.to_string());
 <a href=#2111 id=2111 data-nosnippet>2111</a>    }
 <a href=#2112 id=2112 data-nosnippet>2112</a>
