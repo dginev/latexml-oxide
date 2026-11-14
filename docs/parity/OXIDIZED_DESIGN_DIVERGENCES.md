@@ -36147,7 +36147,7 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
 
-### 1026. An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755)
+### 1032. An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755)
 
 **Perl** and Rust emit `<mtd columnalign="right">` (`ltx_align_right` unless a border class replaces it, MathML.pm
 L456-473); MathML Core dropped `columnalign`, and Chrome set a `columnalign="right"` cell flush left (start; revMML2: 0 px left,
@@ -36160,7 +36160,7 @@ local only, repro `alignment/aligned_left_column_is_right_aligned.tex`),
 `cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the rule
 ships).
 
-### 1027. A visible MathML Core category-K operator has no operator space: `/` is K, and an Ord (issue #789)
+### 1033. A visible MathML Core category-K operator has no operator space: `/` is K, and an Ord (issue #789)
 
 **TeX.** `/` is an Ord (mathcode "013D), as is `\backslash` (`\delimiter"26E30F`, class 0): `\showbox` of `$a/b$` and
 `$a\backslash b$` has no glue. **Core** (TR 2025 and ED, Figure 25) puts infix `/`, `\`, `_`, U+2061-2064 and U+2206 in

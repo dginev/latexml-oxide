@@ -19656,7 +19656,7 @@ OperatorDictionary.pm:185 lists U+002F among the infix B operators (0.222 em eac
 2025-06-24 and the Editor's Draft, Figure 25) lists it in K, zero space, beside `\` and `_`. TeX's `/` is an Ord
 (mathcode "013D, no glue in `\showbox`). The stored `_lspace`/`_rspace` of 0.222 em agree with the space walk's Bin for
 a MULOP, so Perl's `<mo>/</mo>` carries no spacing and Chrome 155 spaces it 0.222 em. Rust follows Core
-(OXIDIZED_DESIGN_DIVERGENCES #1027). Minimal trigger (pdflatex 0 `!`, `a/b` tight; Perl `<mo>/</mo>`, 0.222 em each
+(OXIDIZED_DESIGN_DIVERGENCES #1033). Minimal trigger (pdflatex 0 `!`, `a/b` tight; Perl `<mo>/</mo>`, 0.222 em each
 side in Chrome; Rust `<mo lspace="0em" rspace="0em">/</mo>`):
 
 ```latex
