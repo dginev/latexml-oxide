@@ -78,11 +78,11 @@ fn dollar_in_boxed_is_text() {
     &["enclose=\"box\""],
     r#"<XMApp enclose="box"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMText>u</XMText><XMText>-</XMText><XMText>S</XMText><XMText>-Artinian rings</XMText></XMApp>"#,
   );
-  // In text: w as text, "ideals" math.
+  // In text: w as text, "ideals" math; the frame padded `\fboxsep` as `\fbox` (upstream #2820).
   assert_element(
     &xml,
     "Math",
     &["framed=\"rectangle\""],
-    r#"<Math framed="rectangle" mode="display" text="[w] * i * d * e * a * l * s" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMText>w</XMText><XMTok font="italic" role="UNKNOWN">i</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">l</XMTok><XMTok font="italic" role="UNKNOWN">s</XMTok></XMApp></XMath></Math>"#,
+    r##"<Math cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" mode="display" text="[w] * i * d * e * a * l * s" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMText>w</XMText><XMTok font="italic" role="UNKNOWN">i</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">l</XMTok><XMTok font="italic" role="UNKNOWN">s</XMTok></XMApp></XMath></Math>"##,
   );
 }

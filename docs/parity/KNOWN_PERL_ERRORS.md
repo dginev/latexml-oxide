@@ -1756,10 +1756,9 @@ Real `latex.ltx` `\document` disables the `\@onlypreamble` commands
 deferred load is legal — #2846 contradicts the kernel. The `(!?)` in the moved
 comment is the author's own doubt.
 
-**Perl status:** REGRESSION introduced by #2846 (verified: vendored post-#2846
-`latexml` rev 51fea96a errors on the reproducer; installed pre-#2846 0.8.8 does
-not). **Fixed in both Rust and Perl here** (revert #2846 + make `\par` context-aware
-— see below); candidate to upstream as the #2846 follow-up.
+**Perl status:** RESOLVED upstream by #2848 (9baaf966), which reverted #2846's
+placement and made `\par` context-aware (below); introduced by #2846 (post-#2846
+`latexml` rev 51fea96a errs on the reproducer, pre-#2846 0.8.8 does not).
 
 **#2846 tried to overload `inPreamble` for two transitions.** `latex.ltx`
 `\document` performs two things at different points: (A) body typesetting begins —
@@ -19733,3 +19732,28 @@ Glue('1pt plus 2pt')->add(Glue('1pt plus 1fil'))->toString   # 2.0pt plus 3.0pt,
 
 TeX's `\advance\skip0 by 1pt plus 1fil` on `\skip0=1pt plus 2pt` gives `2.0pt plus 1.0fil`, and so does Rust's Rhai
 `Glue + Glue` (OXIDIZED_DESIGN_DIVERGENCES #1030).
+
+## 1245. The regenerated StandardMetrics (#2845) drops msam's U+25C6/U+25C7: `\Diamond` takes ifgeo's 1em box
+
+Upstream #2845 (27db0d96) moved amssymb's `\lozenge`/`\blacklozenge` to U+25CA/U+29EB and regenerated
+StandardMetrics from the AMSa fontmap, which now maps slots "06"/"07" to those code points: msam5-10 key U+25CA/U+29EB
+*instead of* U+25C6/U+25C7. `\Diamond` (amsfonts, slot "06") still yields U+25C7, which no msam table holds any more,
+so the new last fallback `ifgeo10` sizes it, 1em × 1em with no depth (ifsym's TFM); txfonts' `\Diamondblack` and
+iopams' `\fulldiamond` (U+25C6) likewise. Rust keeps the U+25C6/U+25C7 keys beside the new ones in every msam size
+(`standard_metrics.rs`; guard `perfect_kernel_batchups1::lozenge_widths_are_msam_glyph_widths`). Minimal trigger
+(pdflatex "6.66669pt 6.9224pt"; Perl master "10.0pt 10.0pt"):
+
+```latex
+\documentclass{article}
+\usepackage{amssymb}
+\newlength\lw
+\begin{document}
+\settowidth\lw{$\Diamond$}\the\lw\ \settoheight\lw{$\Diamond$}\the\lw
+\end{document}
+```
+
+The same regeneration's last fallback, `ifgeo10` (ifsym's TFM, 1em × 1em), now also sizes code points no msam or cm table
+holds, so non-ifsym glyphs that map there take a 1em box: wasysym `\CIRCLE` 10 × 10pt (pdflatex 7.78 × 5.86, main's old
+default 7.5 × 7.0), marvosym `\SquareSteel` 10 × 10pt (pdflatex 7.58 × 6.51); stmaryrd `\varbigcirc`'s width is right
+(10pt) but its height is not (pdflatex 6.94). Perl master does the same. Only measured lengths move (no text); a 20-paper
+census changed no output. Kept as upstream ships it for now: RED `fonts-nfss/ifgeo_fallback_sizes_non_ifsym_glyphs_red.tex`.

@@ -1,0 +1,11 @@
+% witness: synthetic (upstream LaTeXML #2875, 0db6f47e)
+% oracle:  pdflatex 0 errors: `array[t]` aligns its first row's baseline with the line's, `array[b]` its last row's
+%          (latex.ltx `\@array` `[t]`/`[b]` = `\vtop`/`\vbox`)
+% engines: rust 0340aff82e0 = 0 errors, `<mtable align="bottom1">` for [t] (the first row's bottom) and
+%          `align="bottom"` for [b]; perl master (MathML.pm:438-440) = `baseline1`, `baseline-1`
+% expect:  0 errors, 0 warnings; `<mtable align="baseline1">`, `<mtable align="baseline-1">`, none for [c] (the axis)
+% status:  RED (0340aff82e0) -> GREEN (UPS1: presentation.rs `pmml_array_inner`)
+\documentclass{article}
+\begin{document}
+\[ \begin{array}[t]{c} 1\\2\end{array} \begin{array}[b]{c} 3\\4\end{array} \begin{array}{c} 5\\6\end{array} \]
+\end{document}

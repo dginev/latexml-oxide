@@ -299,10 +299,7 @@ fn lookup_metric_name(family: &str, series: &str, shape: &str) -> Option<&'stati
 
 // Fallback fontnames for looking up random Unicode,
 // when they're not in the indicated FontMap
-// Perl #2845 (Common/Font.pm L530): `ifgeo` was appended for the lozenge/
-// diamond glyphs. Until the `ifgeo` TFM is folded into STDMETRICS (a deferred
-// StandardMetrics.pm regen — generated data), this entry resolves to the `cmr`
-// ultimate fallback and is a harmless no-op, matching Perl's list order.
+// Perl #2845 (Common/Font.pm L530): `ifgeo` (STDMETRICS `ifgeo10`) for the geometric shapes, the diamonds among them.
 static METRIC_FALLBACKS: [&str; 7] = ["cmr", "cmmi", "cmsy", "cmex", "msam", "msbm", "ifgeo"];
 
 // Math bearing atom types

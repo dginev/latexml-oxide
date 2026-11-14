@@ -13003,7 +13003,7 @@ fn pdfstringdef_disable_commands_reads_its_argument() {
 }
 
 /// 57r: xcolor's `\fcolorbox{frame}[bg-model]{bg}{text}` (xcolor.sty:822-826), set as the `\hbox` it is:
-/// in the paragraph, spaces kept (KPE #336).
+/// in the paragraph, spaces kept (KPE #336); padded `\fboxsep`, as `\fbox` (upstream #2820).
 #[test]
 fn fcolorbox_reads_the_background_model() {
   let (stderr, xml) = convert_with(
@@ -13018,7 +13018,7 @@ fn fcolorbox_reads_the_background_model() {
     &xml,
     "p",
     &[],
-    r##"<p>B <text backgroundcolor="#FFFF00" framecolor="#FF0000" framed="rectangle">boxed</text> end.</p>"##,
+    r##"<p>B <text backgroundcolor="#FFFF00" cssstyle="padding:3.0pt" framecolor="#FF0000" framed="rectangle">boxed</text> end.</p>"##,
   );
 }
 
@@ -13107,7 +13107,7 @@ c d <Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="p1.m1"><XMath><XMApp><
 
 /// 57r: color.sty's `\fcolorbox` is `\color@b@x` (color.sty:159-164), an `\hbox` in the running
 /// paragraph: its body is restricted horizontal, the paragraph is not split and the space after the
-/// box stays (Perl's `internal_vertical` split it; KPE #336, #293).
+/// box stays (Perl's `internal_vertical` split it; KPE #336, #293); padded `\fboxsep` (upstream #2820).
 #[test]
 fn fcolorbox_stays_in_the_paragraph() {
   let (stderr, xml) = convert_with(
@@ -13122,13 +13122,13 @@ fn fcolorbox_stays_in_the_paragraph() {
     &xml,
     "para",
     &[r#"xml:id="p1""#],
-    r##"<para xml:id="p1"><p>X <text backgroundcolor="#0000FF" framecolor="#FF0000" framed="rectangle">Mid</text> et B.</p></para>"##,
+    r##"<para xml:id="p1"><p>X <text backgroundcolor="#0000FF" cssstyle="padding:3.0pt" framecolor="#FF0000" framed="rectangle">Mid</text> et B.</p></para>"##,
   );
   latexml::util::test::assert_element(
     &xml,
     "para",
     &[r#"xml:id="p2""#],
-    r##"<para xml:id="p2"><p><text backgroundcolor="#0000FF" framecolor="#FF0000" framed="rectangle">Start</text> et B.</p></para>"##,
+    r##"<para xml:id="p2"><p><text backgroundcolor="#0000FF" cssstyle="padding:3.0pt" framecolor="#FF0000" framed="rectangle">Start</text> et B.</p></para>"##,
   );
 }
 

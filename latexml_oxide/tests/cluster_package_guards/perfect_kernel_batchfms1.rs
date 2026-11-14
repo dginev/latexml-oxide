@@ -1177,7 +1177,7 @@ fn field_prov_header_colorbox_lifted() {
 
 /// sectioning-frontmatter/field_prov_header_fcolorbox_lifted: an `\fcolorbox` header, a constructor declared
 /// `restricted_horizontal` (xcolor's `\hbox`): the title block after it is lifted, the header kept (round-5 review probe
-/// h3; main-session call round 6; 0 lifts in round 5).
+/// h3; main-session call round 6; 0 lifts in round 5); the box padded `\fboxsep` (upstream #2820).
 #[test]
 fn field_prov_header_fcolorbox_lifted() {
   assert_eq!(
@@ -1187,7 +1187,7 @@ fn field_prov_header_fcolorbox_lifted() {
       ),
       2
     ),
-    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p><text backgroundcolor=\"#FFFF00\" framecolor=\"#FF0000\" framed=\"rectangle\">LA-UR-12-3456</text></p>\n  </para>"
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p><text backgroundcolor=\"#FFFF00\" cssstyle=\"padding:3.0pt\" framecolor=\"#FF0000\" framed=\"rectangle\">LA-UR-12-3456</text></p>\n  </para>"
   );
 }
 
