@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
+    other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
+    ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer
+    written, so they use their default row gap; an author's own row spacing (`\arraystretch`,
+    `\jot`) is still written. `columnspacing` and `columnalign`, which LaTeXML.css reads, stay.
+    Guard `aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding`.
   - **A bibliography link drops TeX's escapes** (issue 808). A `.bib` `url` written
     `https://doi.org/10.1162/tacl\_a\_00276` linked to that string, backslashes and all; the
     href now reads `\_ \% \# \& \$ \~ \{ \}` as the character, while a style that prints the URL
