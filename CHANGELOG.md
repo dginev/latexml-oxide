@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
+    other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
+    ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer
+    written, so they use their default row gap; an author's own row spacing (`\arraystretch`,
+    `\jot`) is still written. `columnspacing` and `columnalign`, which LaTeXML.css reads, stay.
+    Guard `aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding`.
   - **An equation's number stays beside its formula at any page width** (issue 810). LaTeXML.css
     gave the tag column no width, so on a narrow page a long formula ran under its number. A
     one-row equation is now centred in the full line, as TeX centres it, and moves aside only as

@@ -87,9 +87,9 @@ fn mtable_align_is_the_first_or_last_baseline() {
   assert_eq!(
     tables,
     [
-      r#"<mtable align="baseline1" displaystyle="true" rowspacing="0pt"><mtr><mtd><mn>1</mn></mtd></mtr><mtr><mtd><mn>2</mn></mtd></mtr></mtable>"#,
-      r#"<mtable align="baseline-1" displaystyle="true" rowspacing="0pt"><mtr><mtd><mn>3</mn></mtd></mtr><mtr><mtd><mn>4</mn></mtd></mtr></mtable>"#,
-      r#"<mtable displaystyle="true" rowspacing="0pt"><mtr><mtd><mn>5</mn></mtd></mtr><mtr><mtd><mn>6</mn></mtd></mtr></mtable>"#,
+      r#"<mtable align="baseline1" displaystyle="true"><mtr><mtd><mn>1</mn></mtd></mtr><mtr><mtd><mn>2</mn></mtd></mtr></mtable>"#,
+      r#"<mtable align="baseline-1" displaystyle="true"><mtr><mtd><mn>3</mn></mtd></mtr><mtr><mtd><mn>4</mn></mtd></mtr></mtable>"#,
+      r#"<mtable displaystyle="true"><mtr><mtd><mn>5</mn></mtd></mtr><mtr><mtd><mn>6</mn></mtd></mtr></mtable>"#,
     ],
     "{html}"
   );
