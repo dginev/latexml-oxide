@@ -41,8 +41,8 @@ fn fcolorbox_email_line_in_author() {
   assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(warning_count(&log), warning_count(&unboxed_log), "{log}");
   assert_eq!(elements(&xml, "creator"), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text backgroundcolor=\"#FFFFFF\" xml:id=\"id1\">ann@zebra.edu</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text backgroundcolor=\"#FFFFFF\" xml:id=\"id2\">bob@zebra.edu</text></contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text backgroundcolor=\"#FFFFFF\" xml:id=\"id1\">ann@zebra.edu</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text backgroundcolor=\"#FFFFFF\" xml:id=\"id2\">bob@zebra.edu</text></contact>\n  </creator>",
   ]);
   let plain = |xml: &str| {
     elements(xml, "creator")

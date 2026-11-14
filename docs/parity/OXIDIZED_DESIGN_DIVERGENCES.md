@@ -36531,3 +36531,24 @@ mirrors it as `padding-top` (40 px); the EPUB loads LaTeXML.css. `\addvspace` st
 `paragraph-mode/skip_between_paragraphs_goes_on_the_next.tex`, `skip_between_paragraphs_shapes.tex`,
 `skip_moved_into_a_title_page_is_dropped.tex`).
 
+
+### 1051. A line of the author block under the name is a contact of class `ltx_author_line` (issue #783)
+
+**Principle.** The PDF prints `\author{name\\school\\dept}`'s lines centred under the name (latex.ltx `\@maketitle`'s
+`tabular`); where a contact prints is a fact of that contact, so it goes on the contact, in Perl's own keyvals
+(`\lx@add@affiliation[…]`, Base_Utility.pool.ltxml:645). Related: #156 (a `\thanks` is a marked note, untouched), #52
+(the author block's reading), #412 (a creator laid out by its role's CSS).
+**Perl.** Each `\\` line is `\lx@add@affiliation{line}` (Base_Utility.pool.ltxml:722-726), and since #2767 (`23f3acfa`)
+LaTeXML.css shows every author's contacts only in a hover pop-up behind a blue star unless the document is
+`ltx_authors_multiline` (KNOWN_PERL_ERRORS #1248); the XML cannot tell the line from a setter's `\affiliation{}`.
+**Rust.** A contact the emitter writes from the block's own text, where the last line break, name or column before
+it is a line break and no note holds it (`emit.rs` `on_an_author_line`), carries `class=ltx_author_line`; so does an
+e-mail the Kind step splits out of such a line (`kind_entry_addresses`) and each `\\` line of Perl's split when the
+reading declines (`fallback.rs`). A setter's contact (REVTeX `\affiliation`, `\email`) and a note get none; `\\`
+lines inside a per-author class's own `\author{Name\\line}` (REVTeX, amsart) are marked too. LaTeXML.css (local
+delta after the multiline rules): outside `ltx_authors_multiline`, an author whose contacts are all such lines is an
+`inline-block` card with them under the name, their labels hidden and no star; an author with any other contact keeps
+the pop-up; a `\thanks` keeps its mark and pop-up. Chrome and Firefox at 1280/375 px. ar5iv.css already shows every
+author's contacts (`css/ar5iv.css:613`, `:834`): no change. Offered upstream. **Guards**:
+`06_cluster_frontmatter::frontmatter_author_lines_783` (repros `sectioning-frontmatter/author_lines_783_*.tex`),
+`xslt::witnessed_css_delta::author_line_delta_stays_present`, `cluster_cli::browser_render_author_lines` (local).

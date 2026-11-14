@@ -86,7 +86,7 @@ fn a_tabular_juggle_is_a_column_or_its_break() {
   );
   assert!(two[0].contains(&affiliation("Dept")), "{}", two[0]);
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>A One</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>A One</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact>\n  </creator>"
   ]);
   // (a juggle printing a break between its close and its reopen, 1301.5612's `\end{tabular}\newline\begin{tabular}{c}`)
   let tex = repro!("author_shared_affiliation_line");
@@ -144,8 +144,8 @@ fn a_note_in_a_formula_keeps_its_words() {
     two[1]
   );
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
   ]);
 }
 
@@ -167,7 +167,7 @@ fn a_url_line_under_every_name_is_the_blocks() {
     "{two:#?}"
   );
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator role=\"author\">\n    <contact name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" fontsize=\"90%\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>"
   ]);

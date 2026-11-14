@@ -1559,3 +1559,110 @@ fn frontmatter_author_continuation_line_keeps_its_break() {
     assert!(flat.contains(&creator), "{creator}:\n{x}");
   }
 }
+
+/// Issue #783: each contact `\author{…}` prints on a line under the name (Perl's `\\` line, Base_Utility.pool.ltxml:722-726)
+/// carries class `ltx_author_line`, which LaTeXML.css shows under the name; a setter's contact (REVTeX's `\affiliation`)
+/// and a note do not. Each row: its repro under `sectioning-frontmatter/`, its warnings, every creator whole, in order.
+#[test]
+fn frontmatter_author_lines_783() {
+  const L: &str =
+    "<contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">";
+  const A: &str = "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">";
+  const E: &str = "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\">";
+  macro_rules! repro {
+    ($name:literal) => {
+      include_str!(concat!(
+        "../../tools/perfect_kernel/repros/sectioning-frontmatter/author_lines_783_",
+        $name,
+        ".tex"
+      ))
+    };
+  }
+  let rows: [(&str, &str, usize, Vec<String>); 11] = [
+    ("book", repro!("book"), 0, vec![format!(
+      "<creator role=\"author\"><personname>name</personname>{L}school name</contact>{L}dept. \
+       name</contact></creator>"
+    )]),
+    ("and_thanks_email", repro!("and_thanks_email"), 0, vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
+         ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Supported by X.</note>{L}Univ. of \
+         A</contact>{L}Dept. of Physics</contact></creator>"
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{L}Univ. \
+         of B</contact>{E}<text font=\"typewriter\" xml:id=\"id2\">bob@b.edu</text></contact></creator>"
+      ),
+    ]),
+    ("email_macro", repro!("email_macro"), 0, vec![format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{L}Univ. of A</contact>{E}<text \
+       font=\"typewriter\" xml:id=\"id1\">ann@a.edu</text></contact></creator>"
+    )]),
+    ("unknown_class", repro!("unknown_class"), 1, vec![format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{L}Univ. of A</contact>{L}Dept. of \
+       B</contact></creator>"
+    )]),
+    ("revtex_setters", repro!("revtex_setters"), 0, vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" \
+         role=\"email\">ann@a.edu</contact>{A}Univ. of A, Somewhere</contact></creator>"
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{A}Univ. \
+         of B</contact></creator>"
+      ),
+    ]),
+    ("revtex_line", repro!("revtex_line"), 0, vec![format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{L}Dept. of Physics</contact>{A}Univ. \
+       of A</contact></creator>"
+    )]),
+    ("marked_lines", repro!("marked_lines"), 0, vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname>{L}Univ. of A</contact></creator>"
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{L}Univ. \
+         of B</contact></creator>"
+      ),
+    ]),
+    ("thanks_affiliation", repro!("thanks_affiliation"), 0, vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
+       ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Univ. of A</note>{L}Dept. of B</contact></creator>"
+      ),
+    ]),
+    ("comma_line", repro!("comma_line"), 0, vec![format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{L}Dept. of B, Univ. of \
+       A</contact>{E}ann@a.edu</contact></creator>"
+    )]),
+    ("parbox_line", repro!("parbox_line"), 0, vec![format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{L}Univ. of A<break/>Dept. of \
+       B</contact></creator>"
+    )]),
+    // (a block the reading declines, written as Perl's `\lx@add@authors` splits it: fallback.rs)
+    ("declined_block", repro!("declined_block"), 1, vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
+         role=\"note\">Zebra University.</contact>{L}Dept. of B</contact></creator>"
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{L}Univ. \
+         of C</contact></creator>"
+      ),
+    ]),
+  ];
+  for (name, tex, warnings, expected) in rows {
+    let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      latexml::util::test::error_count(&log),
+      0,
+      "{name}: errors\n{log}"
+    );
+    assert_eq!(
+      latexml::util::test::warning_count(&log),
+      warnings,
+      "{name}: warnings\n{log}"
+    );
+    assert_eq!(whole_creators(&xml), expected, "{name}:\n{xml}");
+  }
+}

@@ -103,6 +103,21 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
     border:none; border-radius:0; box-shadow:none; text-align:center; }
 .ltx_authors_multiline .ltx_contact_name {
     display:none; }
+/* latexml-oxide local delta (issue #783, OXIDIZED_DESIGN_DIVERGENCES #1051): a contact the author block prints on a
+   line under the name has class ltx_author_line; an author whose contacts are all such lines shows them under the
+   name, as the PDF does, not behind the starred pop-up (a \thanks note keeps its mark). */
+.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line))) {
+    display:inline-block; vertical-align:top; text-align:center; margin:0 1em; }
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line))):has(.ltx_author_line),
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line))) .ltx_author_line {
+    display:block; }
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line))):has(.ltx_author_line):before {
+    content:none; }
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line))):has(.ltx_author_line) .ltx_author_notes_content,
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line))):has(.ltx_author_line):hover .ltx_author_notes_content {
+    visibility:visible; opacity:1; position:static; padding:0; background:none; border:none;
+    border-radius:0; box-shadow:none; font-size:inherit; text-align:inherit; }
+.ltx_author_line .ltx_contact_name { display:none; }
 
 .ltx_pubnotes:before {
     content:"\002020"; color:blue;

@@ -40,7 +40,7 @@ use crate::base_utilities::{
     insert::NAME_PRINTED,
     observer::{
       events::{
-        self as events, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
+        self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
         lex_with_inks, text_font_command,
       },
       field_notes::{EnvironmentStep, FieldCreator, HeldExpansion},
@@ -1741,6 +1741,29 @@ fn event_at<R>(
   })
 }
 
+/// Whether the item `span` of the block at ledger index `index` prints on a line under its author's name: the last line
+/// break, name or column before it is a line break, and no note holds it (issue #783).
+fn on_an_author_line(index: usize, span: (u16, u16)) -> bool {
+  with_block(index, false, |_, events| {
+    let holds = |s: (u16, u16)| s.0 <= span.0 && span.1 <= s.1;
+    let mut line = false;
+    for e in events {
+      if e.kind == EventKind::Note && e.span.is_some_and(holds) {
+        return false;
+      }
+      if e.span.is_some_and(|s| s.0 >= span.0) {
+        break;
+      }
+      match e.kind {
+        EventKind::Break => line = e.break_kind != Some(BreakKind::Column),
+        EventKind::Name | EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => line = false,
+        _ => {},
+      }
+    }
+    line
+  })
+}
+
 /// The note `span` of the block at ledger index `index` is one piece of, strictly inside it: from one of its body's
 /// events' start to one's end (the reading's cut of a marked `\thanks`, `Resolver::keep_note`), its span.
 fn note_piece(index: usize, span: (u16, u16)) -> Option<(u16, u16)> {
@@ -2025,6 +2048,14 @@ fn item_call(
 ) -> Result<Tokens> {
   let role = assoc.role.as_str();
   let mut keys = s!("role={role},label={{{label}}}");
+  // (a contact the block prints on a line of its own under the name, Perl's `\\` line (Base_Utility.pool.ltxml:722-726):
+  // marked so, issue #783)
+  if key.0 != Kind::Note
+    && let Some((index, Some(span))) = assoc.source
+    && on_an_author_line(index, span)
+  {
+    keys.push_str(",class=ltx_author_line");
+  }
   // (an entry the reading took addresses out of: written as it printed, its tokens cut at the runs, `address_cut` — written by its
   // text, counted, where the path its whole takes doesn't cut; each address its owner's e-mail as printed, named by its label)
   if let Some(call) = cut_mail_call(cuts, assoc, &keys) {

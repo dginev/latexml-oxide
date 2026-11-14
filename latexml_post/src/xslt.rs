@@ -1366,6 +1366,28 @@ mod witnessed_css_delta {
   }
 
   #[test]
+  fn author_line_delta_stays_present() {
+    // Issue #783 (OXIDIZED_DESIGN_DIVERGENCES #1051): an author whose contacts are all lines of the author block
+    // (`ltx_author_line`) shows them under the name, not behind the starred pop-up; the browser half is
+    // `cluster_cli::browser_render_author_lines`.
+    let css = bundled_latexml_css();
+    for rule in [
+      ".ltx_document:not(.ltx_authors_multiline) \
+       .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line))) {\n    \
+       display:inline-block;",
+      ".ltx_document:not(.ltx_authors_multiline) \
+       .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line))):has(.ltx_author_line):before {\n    \
+       content:none; }",
+      ".ltx_author_line .ltx_contact_name { display:none; }",
+    ] {
+      assert!(
+        css.contains("#783") && css.contains(rule),
+        "LaTeXML.css lost the author-line rule `{rule}` (issue #783)"
+      );
+    }
+  }
+
+  #[test]
   fn constrained_equation_overflow_delta_stays_present() {
     let css = bundled_latexml_css();
     assert!(

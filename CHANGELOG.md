@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **An author's `\\` lines print under the name** (issue 783). `\author{name\\school\\dept}`
+    makes each line a contact, which LaTeXML.css showed only in a hover pop-up behind a blue star.
+    Each such contact now carries class `ltx_author_line`, and an author whose contacts are all
+    lines shows them under the name, as the PDF does; an author with a class's own `\affiliation`
+    or `\email` keeps the pop-up, and a `\thanks` keeps its mark. Offered upstream. Guards
+    `06_cluster_frontmatter::frontmatter_author_lines_783`,
+    `witnessed_css_delta::author_line_delta_stays_present` (OXIDIZED_DESIGN_DIVERGENCES #1051).
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer

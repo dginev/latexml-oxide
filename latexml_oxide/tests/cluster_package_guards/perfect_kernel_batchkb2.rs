@@ -66,8 +66,8 @@ fn a_cut_email_printed_as_math_is_its_text() {
 #[test]
 fn a_whole_entry_gives_its_address_to_no_other_author() {
   assert_eq!(emitted(repro!("emit_a_whole_entry_is_its_owners")), vec![
-    "<creator role=\"author\">\n    <personname>Pascal Klink</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Technische Universität Darmstadt, Germany</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">pascal.klink@tu-darmstadt.de</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Joni Pajarinen</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Technische Universität Darmstadt, Germany</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Aalto University, Finland<break/>Correspondence to</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Pascal Klink</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Technische Universität Darmstadt, Germany</contact>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">pascal.klink@tu-darmstadt.de</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Joni Pajarinen</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Technische Universität Darmstadt, Germany</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Aalto University, Finland<break/>Correspondence to</contact>\n  </creator>"
   ]);
 }
 

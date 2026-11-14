@@ -2873,6 +2873,70 @@ mod browser_render_eqn_tags {
   }
 }
 
+mod browser_render_author_lines {
+  //! Issue #783 rendered at 1280/375 px: an author whose contacts are all `\\` lines of the author block shows them
+  //! under the name with no starred pop-up (a `\thanks` keeps its mark, its text in its pop-up); an author with a
+  //! class's own `\affiliation` keeps the pop-up. Opt-in and LOCAL like the guards above (Firefox too with
+  //! `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::author_line_delta_stays_present`.
+
+  const LINES: &str = "\\documentclass{article}\n\\begin{document}\n\\title{Two authors}\n\
+     \\author{Ann Able\\thanks{Supported by X.} \\\\ Univ.\\ of A \\\\ Dept.\\ of Physics\n\
+     \\and Bob Baker \\\\ Univ.\\ of B \\\\ \\texttt{bob@b.edu}}\n\\date{}\n\\maketitle\ntext\n\\end{document}\n";
+  const SETTER: &str = "\\documentclass[aps,prl]{revtex4-2}\n\\begin{document}\n\\title{REVTeX}\n\
+     \\author{Ann Able\\\\ Dept.\\ of Physics}\n\\affiliation{Univ.\\ of A}\n\
+     \\begin{abstract}Abs.\\end{abstract}\n\\maketitle\ntext\n\\end{document}\n";
+
+  /// Each run's creators as (name, star, [(note mark shown, note text shown)], [(contact text, shown, below the name)]).
+  fn creators(stdout: &str) -> Vec<(String, serde_json::Value)> {
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+    v.as_object()
+      .expect("engines x widths")
+      .iter()
+      .map(|(key, run)| (key.clone(), run["creators"].clone()))
+      .collect()
+  }
+
+  #[test]
+  fn author_lines_show_under_the_name() {
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#783", LINES, "measure_authors.js")
+    else {
+      return;
+    };
+    // Before (Chrome and Firefox, 1280/375): each author a blue `*` whose hover pop-up held its lines.
+    for (key, run) in creators(&stdout) {
+      let expected = serde_json::json!([
+        { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": false }],
+          "contacts": [{ "text": "Univ. of A", "visible": true, "belowName": true },
+                       { "text": "Dept. of Physics", "visible": true, "belowName": true }] },
+        { "name": "Bob Baker", "star": "none", "notes": [],
+          "contacts": [{ "text": "Univ. of B", "visible": true, "belowName": true },
+                       { "text": "bob@b.edu", "visible": true, "belowName": true }] }
+      ]);
+      assert_eq!(run, expected, "the author lines ({key}): {stdout}");
+    }
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#783", SETTER, "measure_authors.js")
+    else {
+      return;
+    };
+    for (key, run) in creators(&stdout) {
+      assert_eq!(
+        run[0]["star"], "\"*\"",
+        "the pop-up is gone ({key}): {stdout}"
+      );
+      assert!(
+        run[0]["contacts"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .all(|c| c["visible"] == false),
+        "a contact of the pop-up shows ({key}): {stdout}"
+      );
+    }
+  }
+}
+
 mod aligned_mtable_columnspacing_zero {
   //! #755, the platform-independent (CI-enforced) half: the native-MathML mtd
   //! padding reset in `LaTeXML.css` keys on `mtable[columnspacing="0pt"]`, so it

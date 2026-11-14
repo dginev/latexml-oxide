@@ -1,0 +1,18 @@
+% witness: synthetic (revtex4-2 \author{Name\\line} + \affiliation)
+% mechanism: issue #783 — a contact the author block prints on a line under the name (Perl's `\\` line,
+%   Base_Utility.pool.ltxml:722-726) carries class `ltx_author_line` (emit.rs `on_an_author_line`; fallback.rs; kind.rs
+%   for an e-mail split out of such a line), which LaTeXML.css shows under the name instead of the starred pop-up.
+% oracle:  pdflatex 0 errors; Ann Able / Dept. of Physics / Univ. of A
+% engines: base (main 2778c0d67e) = no class
+% expect:  the Dept line class="ltx_author_line"; the \\affiliation setter none
+% status:  RED (base) -> GREEN (fix/issue-783); guard 06_cluster_frontmatter::frontmatter_author_lines_783
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{REVTeX line}
+\author{Ann Able\\ Dept.\ of Physics}
+\affiliation{Univ.\ of A}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+text
+\end{document}
