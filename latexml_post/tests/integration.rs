@@ -131,7 +131,7 @@ fn test_processing_instructions() {
   // If PIs are outside the root element, XPath from the document root finds them.
   // Test that the search paths include "." as fallback (always added).
   assert!(
-    doc.searchpaths.contains(&".".to_string()),
+    doc.searchpaths.iter().any(|i| i == "."),
     "Searchpaths should include '.'"
   );
 }

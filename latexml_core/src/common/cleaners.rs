@@ -274,7 +274,7 @@ mod tests {
     // just assert consistency with non-empty entries.
     let out = trimmed_comma_list(",a,,b,");
     assert!(
-      out.contains(&"a".to_string()) && out.contains(&"b".to_string()),
+      out.iter().any(|s| s == "a") && out.iter().any(|s| s == "b"),
       "got {out:?}"
     );
   }

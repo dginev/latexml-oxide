@@ -21,6 +21,10 @@ pub struct MetricData {
   pub parameters:   &'static [f64],
 }
 
+/// Builds one font's entry in its own frame (see `STDMETRICS`).
+#[inline(never)]
+fn metric(build: impl FnOnce() -> MetricData) -> MetricData { build() }
+
 impl Default for MetricData {
   fn default() -> Self {
     MetricData {
@@ -53,9 +57,11 @@ impl Default for MetricData {
 // (a key left from an older OMX map). msam "64/"65 (⋓/⋒) and msbm "36/"37 (⋪/⋫), swapped in Perl's maps, carry equal
 // metrics in every size, so their entries are right either way.
 #[rustfmt::skip]
+// Each font's `MetricData` is built in its own frame (`metric`), so the table's initializer keeps a small stack frame: inline,
+// the 84 entries shared one 1.7 MB frame (clippy::large_stack_frames), paid by whichever thread first reads the table.
 pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
   raw_map!(
-  "amsa" => MetricData {
+  "amsa" => metric(|| MetricData {
     quad: 65536.18,
     encoding: "AMSa",
     file: "/usr/local/texlive/2022/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm",
@@ -198,9 +204,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{21C9}" => (65536.18, 44236.81, 11849.0, 0.0, )
     ),
     emwidth: 65536.18,
-    ..MetricData::default()},
+    ..MetricData::default()}),
   // cmbx10 TFM metrics (Computer Modern Bold Extended)
-  "cmbx" => MetricData {
+  "cmbx" => metric(|| MetricData {
     quad: 75366.00,
     space: 25122.00,
     encoding: "OT1",
@@ -503,9 +509,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "\u{FB00}\u{005D}" => 7145.1875,
       "\u{FB00}\u{2019}" => 7145.1875
     ),
-    ..MetricData::default()},
+    ..MetricData::default()}),
   // cmbx8 TFM metrics (Computer Modern Bold Extended, 8pt design size)
-  "cmbx8" => MetricData {
+  "cmbx8" => metric(|| MetricData {
     quad: 80282.25,
     space: 26760.75,
     encoding: "OT1",
@@ -612,9 +618,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "~" => (40141.1, 45511.1, 0.0, 0.0, )
     ),
     parameters: &[0.0, 26760.75, 13380.375, 8920.25, 29127.125, 80282.25, 8920.25],
-    ..MetricData::default()},
+    ..MetricData::default()}),
   // cmr8 TFM metrics (Computer Modern Roman, 8pt design size)
-  "cmr8" => MetricData {
+  "cmr8" => metric(|| MetricData {
     quad: 69633.00,
     space: 23211.00,
     encoding: "OT1",
@@ -721,8 +727,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "~" => (34816.5, 43950.8, 0.0, 0.0, )
     ),
     parameters: &[0.0, 23211.0, 11605.5, 7737.0, 28216.875, 69633.0, 7737.0],
-    ..MetricData::default()},
-  "cmr" => MetricData {
+    ..MetricData::default()}),
+  "cmr" => metric(|| MetricData {
     quad: 65536.18,
     space: 21845.37,
     encoding: "OT1",
@@ -1068,8 +1074,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{0057}\u{006F}" => -5461.37,
           "\u{0057}\u{0051}" => -1820.5
     ),
-    ..MetricData::default()},
-  "cmm" => MetricData {
+    ..MetricData::default()}),
+  "cmm" => metric(|| MetricData {
     emwidth: 65536.18,
     sizes: raw_map!(
           "\u{0030}" => (32768.12, 28216.87, 0.0, 0.0, ),
@@ -1384,8 +1390,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     slant: 16384.0,
     parameters: &[],
     quad: 65536.18,
-    ..MetricData::default()},
-  "cmm7" => MetricData {
+    ..MetricData::default()}),
+  "cmm7" => metric(|| MetricData {
     emwidth: 76719.12,
     sizes: raw_map!(
           "\u{000A}" => (0.00, 0.00, 0.00, 0.00, ),
@@ -1700,8 +1706,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     slant: 16384.0,
     parameters: &[],
     quad: 76719.12,
-    ..MetricData::default()},
-  "cmm5" => MetricData {
+    ..MetricData::default()}),
+  "cmm5" => metric(|| MetricData {
     emwidth: 96484.81,
     sizes: raw_map!(
           "\u{000A}" => (0.00, 0.00, 0.00, 0.00, ),
@@ -2016,8 +2022,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     slant: 16384.0,
     parameters: &[],
     quad: 96484.81,
-    ..MetricData::default()},
-  "cmsy" => MetricData {
+    ..MetricData::default()}),
+  "cmsy" => metric(|| MetricData {
     quad: 65536.18,
     slant: 16384.0,
     // cmsy10 TFM font dimension parameters (1-indexed in TeX)
@@ -2196,8 +2202,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{1D4A6}\u{2032}" => 3641.0
     ),
     emwidth: 65536.18,
-    ..MetricData::default()},
-  "amsb" => MetricData {
+    ..MetricData::default()}),
+  "amsb" => metric(|| MetricData {
     extraspace: 6554.0,
     exheight: 30340.81,
     emwidth: 65536.0,
@@ -2333,8 +2339,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     quad: 65536.0,
     space: 19661.0,
     encoding: "AMSb",
-    ..MetricData::default()},
-  "cmex" => MetricData {
+    ..MetricData::default()}),
+  "cmex" => metric(|| MetricData {
     encoding: "OMX",
     quad: 65536.18,
     file: "/usr/local/texlive/2022/texmf-dist/fonts/tfm/public/cm/cmex10.tfm",
@@ -2409,10 +2415,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     emwidth: 65536.18,
     exheight: 28216.87,
-    ..MetricData::default()},
+    ..MetricData::default()}),
 
   // cmbsy10 TFM metrics
-  "cmbsy10" => MetricData {
+  "cmbsy10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbsy10.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -2569,10 +2575,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy5 TFM metrics
-  "cmbsy5" => MetricData {
+  "cmbsy5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy5.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -2729,10 +2735,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy6 TFM metrics
-  "cmbsy6" => MetricData {
+  "cmbsy6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy6.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -2889,10 +2895,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy7 TFM metrics
-  "cmbsy7" => MetricData {
+  "cmbsy7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy7.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -3049,10 +3055,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy8 TFM metrics
-  "cmbsy8" => MetricData {
+  "cmbsy8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy8.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -3209,10 +3215,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy9 TFM metrics
-  "cmbsy9" => MetricData {
+  "cmbsy9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy9.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -3369,10 +3375,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx10 TFM metrics
-  "cmbx10" => MetricData {
+  "cmbx10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm",
     encoding: "OT1",
     space: 25122.0000,
@@ -3698,10 +3704,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx12 TFM metrics
-  "cmbx12" => MetricData {
+  "cmbx12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx12.tfm",
     encoding: "OT1",
     space: 24576.0000,
@@ -4027,10 +4033,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx5 TFM metrics
-  "cmbx5" => MetricData {
+  "cmbx5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx5.tfm",
     encoding: "OT1",
     space: 33859.6250,
@@ -4356,10 +4362,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx6 TFM metrics
-  "cmbx6" => MetricData {
+  "cmbx6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx6.tfm",
     encoding: "OT1",
     space: 30704.6875,
@@ -4685,10 +4691,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx7 TFM metrics
-  "cmbx7" => MetricData {
+  "cmbx7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx7.tfm",
     encoding: "OT1",
     space: 28450.8750,
@@ -5014,10 +5020,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx9 TFM metrics
-  "cmbx9" => MetricData {
+  "cmbx9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx9.tfm",
     encoding: "OT1",
     space: 25850.0000,
@@ -5343,10 +5349,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmcsc10 TFM metrics
-  "cmcsc10" => MetricData {
+  "cmcsc10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmcsc10.tfm",
     encoding: "OT1",
     space: 24757.8125,
@@ -5677,10 +5683,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmex10 TFM metrics
-  "cmex10" => MetricData {
+  "cmex10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmex10.tfm",
     encoding: "OMX",
     space: 0.0000,
@@ -5765,10 +5771,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi10 TFM metrics
-  "cmmi10" => MetricData {
+  "cmmi10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -5986,10 +5992,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi12 TFM metrics
-  "cmmi12" => MetricData {
+  "cmmi12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi12.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -6207,10 +6213,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi5 TFM metrics
-  "cmmi5" => MetricData {
+  "cmmi5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi5.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -6428,10 +6434,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi6 TFM metrics
-  "cmmi6" => MetricData {
+  "cmmi6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi6.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -6649,10 +6655,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi7 TFM metrics
-  "cmmi7" => MetricData {
+  "cmmi7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi7.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -6870,10 +6876,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi8 TFM metrics
-  "cmmi8" => MetricData {
+  "cmmi8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi8.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -7091,10 +7097,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi9 TFM metrics
-  "cmmi9" => MetricData {
+  "cmmi9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi9.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -7312,10 +7318,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmib10 TFM metrics
-  "cmmib10" => MetricData {
+  "cmmib10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmib10.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -7533,10 +7539,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr10 TFM metrics
-  "cmr10" => MetricData {
+  "cmr10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr10.tfm",
     encoding: "OT1",
     space: 21845.3750,
@@ -7862,10 +7868,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr12 TFM metrics
-  "cmr12" => MetricData {
+  "cmr12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr12.tfm",
     encoding: "OT1",
     space: 21390.0000,
@@ -8191,10 +8197,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr17 TFM metrics
-  "cmr17" => MetricData {
+  "cmr17" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr17.tfm",
     encoding: "OT1",
     space: 19784.5000,
@@ -8520,10 +8526,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr5 TFM metrics
-  "cmr5" => MetricData {
+  "cmr5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr5.tfm",
     encoding: "OT1",
     space: 30948.0000,
@@ -8845,10 +8851,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr6 TFM metrics
-  "cmr6" => MetricData {
+  "cmr6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr6.tfm",
     encoding: "OT1",
     space: 27306.3125,
@@ -9174,10 +9180,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr7 TFM metrics
-  "cmr7" => MetricData {
+  "cmr7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr7.tfm",
     encoding: "OT1",
     space: 25226.3125,
@@ -9503,10 +9509,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr9 TFM metrics
-  "cmr9" => MetricData {
+  "cmr9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr9.tfm",
     encoding: "OT1",
     space: 22452.0000,
@@ -9832,10 +9838,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsl10 TFM metrics
-  "cmsl10" => MetricData {
+  "cmsl10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsl10.tfm",
     encoding: "OT1",
     space: 21845.3750,
@@ -10161,10 +10167,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsl12 TFM metrics
-  "cmsl12" => MetricData {
+  "cmsl12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsl12.tfm",
     encoding: "OT1",
     space: 21390.0000,
@@ -10490,10 +10496,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsl8 TFM metrics
-  "cmsl8" => MetricData {
+  "cmsl8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsl8.tfm",
     encoding: "OT1",
     space: 23211.0000,
@@ -10819,10 +10825,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsl9 TFM metrics
-  "cmsl9" => MetricData {
+  "cmsl9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsl9.tfm",
     encoding: "OT1",
     space: 22452.0000,
@@ -11148,10 +11154,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsltt10 TFM metrics
-  "cmsltt10" => MetricData {
+  "cmsltt10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsltt10.tfm",
     encoding: "OT1",
     space: 34406.1250,
@@ -11306,10 +11312,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss10 TFM metrics
-  "cmss10" => MetricData {
+  "cmss10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss10.tfm",
     encoding: "OT1",
     space: 21845.3750,
@@ -11597,10 +11603,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss12 TFM metrics
-  "cmss12" => MetricData {
+  "cmss12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss12.tfm",
     encoding: "OT1",
     space: 21390.0000,
@@ -11888,10 +11894,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss17 TFM metrics
-  "cmss17" => MetricData {
+  "cmss17" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss17.tfm",
     encoding: "OT1",
     space: 20543.0625,
@@ -12179,10 +12185,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss8 TFM metrics
-  "cmss8" => MetricData {
+  "cmss8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss8.tfm",
     encoding: "OT1",
     space: 23211.0000,
@@ -12470,10 +12476,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss9 TFM metrics
-  "cmss9" => MetricData {
+  "cmss9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss9.tfm",
     encoding: "OT1",
     space: 22452.0000,
@@ -12761,10 +12767,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssbx10 TFM metrics
-  "cmssbx10" => MetricData {
+  "cmssbx10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssbx10.tfm",
     encoding: "OT1",
     space: 24030.0000,
@@ -13052,10 +13058,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi10 TFM metrics
-  "cmssi10" => MetricData {
+  "cmssi10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi10.tfm",
     encoding: "OT1",
     space: 21845.3750,
@@ -13343,10 +13349,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi12 TFM metrics
-  "cmssi12" => MetricData {
+  "cmssi12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi12.tfm",
     encoding: "OT1",
     space: 21390.0000,
@@ -13634,10 +13640,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi17 TFM metrics
-  "cmssi17" => MetricData {
+  "cmssi17" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi17.tfm",
     encoding: "OT1",
     space: 20543.0625,
@@ -13925,10 +13931,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi8 TFM metrics
-  "cmssi8" => MetricData {
+  "cmssi8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi8.tfm",
     encoding: "OT1",
     space: 23211.0000,
@@ -14216,10 +14222,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi9 TFM metrics
-  "cmssi9" => MetricData {
+  "cmssi9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi9.tfm",
     encoding: "OT1",
     space: 22452.0000,
@@ -14507,10 +14513,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy10 TFM metrics
-  "cmsy10" => MetricData {
+  "cmsy10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -14668,10 +14674,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy5 TFM metrics
-  "cmsy5" => MetricData {
+  "cmsy5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy5.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -14828,10 +14834,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy6 TFM metrics
-  "cmsy6" => MetricData {
+  "cmsy6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy6.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -14987,10 +14993,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy7 TFM metrics
-  "cmsy7" => MetricData {
+  "cmsy7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy7.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -15146,10 +15152,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy8 TFM metrics
-  "cmsy8" => MetricData {
+  "cmsy8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy8.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -15305,10 +15311,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy9 TFM metrics
-  "cmsy9" => MetricData {
+  "cmsy9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy9.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -15464,10 +15470,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti10 TFM metrics
-  "cmti10" => MetricData {
+  "cmti10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti10.tfm",
     encoding: "OT1",
     space: 23447.1875,
@@ -15791,10 +15797,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti12 TFM metrics
-  "cmti12" => MetricData {
+  "cmti12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti12.tfm",
     encoding: "OT1",
     space: 22937.8125,
@@ -16118,10 +16124,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti7 TFM metrics
-  "cmti7" => MetricData {
+  "cmti7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti7.tfm",
     encoding: "OT1",
     space: 27983.1250,
@@ -16445,10 +16451,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti8 TFM metrics
-  "cmti8" => MetricData {
+  "cmti8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti8.tfm",
     encoding: "OT1",
     space: 25167.7500,
@@ -16772,10 +16778,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti9 TFM metrics
-  "cmti9" => MetricData {
+  "cmti9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti9.tfm",
     encoding: "OT1",
     space: 24070.6875,
@@ -17099,10 +17105,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmtt10 TFM metrics
-  "cmtt10" => MetricData {
+  "cmtt10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt10.tfm",
     encoding: "OT1",
     space: 34406.1250,
@@ -17257,10 +17263,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmtt12 TFM metrics
-  "cmtt12" => MetricData {
+  "cmtt12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt12.tfm",
     encoding: "OT1",
     space: 33723.7500,
@@ -17415,10 +17421,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmtt8 TFM metrics
-  "cmtt8" => MetricData {
+  "cmtt8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt8.tfm",
     encoding: "OT1",
     space: 34816.5000,
@@ -17573,10 +17579,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmtt9 TFM metrics
-  "cmtt9" => MetricData {
+  "cmtt9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt9.tfm",
     encoding: "OT1",
     space: 34406.0000,
@@ -17731,10 +17737,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmu10 TFM metrics
-  "cmu10" => MetricData {
+  "cmu10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmu10.tfm",
     encoding: "OT1",
     space: 25486.1875,
@@ -18058,10 +18064,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam10 TFM metrics
-  "msam10" => MetricData {
+  "msam10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18215,10 +18221,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam5 TFM metrics
-  "msam5" => MetricData {
+  "msam5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam5.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18372,10 +18378,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam6 TFM metrics
-  "msam6" => MetricData {
+  "msam6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam6.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18529,10 +18535,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam7 TFM metrics
-  "msam7" => MetricData {
+  "msam7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam7.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18686,10 +18692,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam8 TFM metrics
-  "msam8" => MetricData {
+  "msam8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam8.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18843,10 +18849,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam9 TFM metrics
-  "msam9" => MetricData {
+  "msam9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam9.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -19000,10 +19006,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm10 TFM metrics
-  "msbm10" => MetricData {
+  "msbm10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19144,10 +19150,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm5 TFM metrics
-  "msbm5" => MetricData {
+  "msbm5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19288,10 +19294,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm6 TFM metrics
-  "msbm6" => MetricData {
+  "msbm6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm6.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19432,10 +19438,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm7 TFM metrics
-  "msbm7" => MetricData {
+  "msbm7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19576,10 +19582,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm8 TFM metrics
-  "msbm8" => MetricData {
+  "msbm8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm8.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19720,10 +19726,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm9 TFM metrics
-  "msbm9" => MetricData {
+  "msbm9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm9.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19864,7 +19870,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  }
+  })
 
   )
 });

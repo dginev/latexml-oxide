@@ -477,16 +477,15 @@ mod tests {
     .filter_map(|n| n.get_attribute("href"))
     .collect();
     assert!(
-      hrefs.contains(&"Fisher&Yates.xhtml".to_string()),
+      hrefs.iter().any(|h| h == "Fisher&Yates.xhtml"),
       "the ampersand href did not survive the round-trip: {hrefs:?}"
     );
     assert!(
-      hrefs.contains(&"a\"quote\".xhtml".to_string())
-        && hrefs.contains(&"a<less>.xhtml".to_string()),
+      hrefs.iter().any(|h| h == "a\"quote\".xhtml") && hrefs.iter().any(|h| h == "a<less>.xhtml"),
       "a quote/less-than href did not survive the round-trip: {hrefs:?}"
     );
     assert!(
-      hrefs.contains(&"LaTeXML&core.css".to_string()),
+      hrefs.iter().any(|i| i == "LaTeXML&core.css"),
       "a RESOURCE href is interpolated by the same code path and must be escaped too: {hrefs:?}"
     );
   }
