@@ -8,8 +8,9 @@
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
 
 /// boxes-groups/fboxsep_pads_fcolorbox_boxed_and_listing_frames: xcolor's `\fcolorbox` (0pt under `\fboxsep=0pt`),
-/// text `\boxed`, and the listing frames `single`, `tb`, `trBL` (its own `framesep`), `leftline`, `none`, `\lstinline`
-/// under `frame=single`. Before: no padding, `tb`/`trBL` unframed (with #2829's CSS padding gone).
+/// text `\boxed`, and the listing frames `single`, `tb`, `trBL` (its own `framesep`), `leftline`, `none`, `xyz` (no
+/// side named: no frame, as listings; Perl a rectangle, OD #1038), `\lstinline` under `frame=single`. Before: no
+/// padding, `tb`/`trBL` unframed (with #2829's CSS padding gone).
 #[test]
 fn fboxsep_pads_fcolorbox_boxed_and_listing_frames() {
   let (stderr, xml) = convert_with(
@@ -57,6 +58,10 @@ fn fboxsep_pads_fcolorbox_boxed_and_listing_frames() {
       "ZT01",
       r##"data="ZT01" dataencoding="base64" datamimetype="text/plain""##,
     ),
+    (
+      "Zz03",
+      r##"data="Zz03" dataencoding="base64" datamimetype="text/plain""##,
+    ),
   ] {
     let tag = format!(r#"<listing class="ltx_lstlisting" {frame}>"#);
     assert_eq!(xml.matches(&tag).count(), 1, "{data}: {tag}\n{xml}");
@@ -92,7 +97,8 @@ fn mtable_align_is_the_first_or_last_baseline() {
 
 /// fonts-nfss/lozenge_widths_are_msam_glyph_widths (#2845): amssymb's `\lozenge` (U+25CA) and `\blacklozenge`
 /// (U+29EB) are msam10's glyphs, sized by its metrics (pdflatex 6.66669pt); before, no metric held those code points
-/// and the cmr fallback gave 7.5pt.
+/// and the cmr fallback gave 7.5pt. amssymb's `\Diamond` (U+25C7) is the same glyph, at 10pt and in `\scriptstyle`
+/// (msam7); with upstream's table (KNOWN_PERL_ERRORS #1245) it fell to `ifgeo10`, 10.0pt × 10.0pt.
 #[test]
 fn lozenge_widths_are_msam_glyph_widths() {
   let (stderr, xml) = convert_with(
@@ -104,4 +110,8 @@ fn lozenge_widths_are_msam_glyph_widths() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(&xml, "p", &[], "<p>6.66669pt 6.66669pt</p>");
+  assert!(
+    xml.contains("<p>6.66669pt 6.9224pt 1.11111pt; 5.3889pt 4.82222pt 0.86447pt;</p>"),
+    "{xml}"
+  );
 }

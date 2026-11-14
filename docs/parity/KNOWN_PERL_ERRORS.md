@@ -19686,3 +19686,22 @@ Unknown theorem style '\mystyle', reverting to 'plain'`, and the theorem takes t
 \begin{note}Body.\end{note}
 \end{document}
 ```
+
+## 1245. The regenerated StandardMetrics (#2845) drops msam's U+25C6/U+25C7: `\Diamond` takes ifgeo's 1em box
+
+Upstream #2845 (27db0d96) moved amssymb's `\lozenge`/`\blacklozenge` to U+25CA/U+29EB and regenerated
+StandardMetrics from the AMSa fontmap, which now maps slots "06"/"07" to those code points: msam5-10 key U+25CA/U+29EB
+*instead of* U+25C6/U+25C7. `\Diamond` (amsfonts, slot "06") still yields U+25C7, which no msam table holds any more,
+so the new last fallback `ifgeo10` sizes it, 1em × 1em with no depth (ifsym's TFM); txfonts' `\Diamondblack` and
+iopams' `\fulldiamond` (U+25C6) likewise. Rust keeps the U+25C6/U+25C7 keys beside the new ones in every msam size
+(`standard_metrics.rs`; guard `perfect_kernel_batchups1::lozenge_widths_are_msam_glyph_widths`). Minimal trigger
+(pdflatex "6.66669pt 6.9224pt"; Perl master "10.0pt 10.0pt"):
+
+```latex
+\documentclass{article}
+\usepackage{amssymb}
+\newlength\lw
+\begin{document}
+\settowidth\lw{$\Diamond$}\the\lw\ \settoheight\lw{$\Diamond$}\the\lw
+\end{document}
+```

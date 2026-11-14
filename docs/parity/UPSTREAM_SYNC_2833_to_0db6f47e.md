@@ -14,7 +14,7 @@ read the Perl diff (`git -C LaTeXML show <commit>`), port faithfully, move the g
 | d666adf8 | #2829 | framing: `framedProperties`, `\lx@framed` keyvals, CSS padding dropped | ported | `tex_box.rs` `framed_properties`; `LookupDimension` of a `\def`-ized length diverges (KPE #41) |
 | 9f3fa9fc | #2837 | `\hdotsfor[]{N}` spans N columns | ported | `amsmath_sty.rs` |
 | abd6adb9 | #2846 | clear `inPreamble` before `\AtBeginDocument` | superseded | reverted upstream by #2848 (KPE #43) |
-| 27db0d96 | #2845 | lozenge code points, `ifgeo` fallback, StandardMetrics regenerated | **UPS1** | code points `e5a443de933`; metrics: `standard_metrics.rs` msam5-10 key U+25CA/U+29EB, `ifgeo10` added; guard `perfect_kernel_batchups1::lozenge_widths_are_msam_glyph_widths` |
+| 27db0d96 | #2845 | lozenge code points, `ifgeo` fallback, StandardMetrics regenerated | **UPS1** | code points `e5a443de933`; metrics: `standard_metrics.rs` msam5-10 key U+25CA/U+29EB beside U+25C6/U+25C7 (upstream dropped those, so `\Diamond` fell to `ifgeo10`: KNOWN_PERL_ERRORS #1245), `ifgeo10` added; guard `perfect_kernel_batchups1::lozenge_widths_are_msam_glyph_widths` |
 | 0d02309d | — | llncs `\toctitle{}` → `\toctitle` | ported | `llncs_cls.rs` (witness 2112.13058) |
 | 1718f89e | #2855 | archive output keeps an existing log; the zip's log member is the `--log` name | **UPS1** | `latexml_oxide.rs` `external_log`; EPUB keeps its log outside the container (OD #1037); guard `cluster_cli::archive_output_keeps_an_existing_log` |
 | 5f6b9fd0 | #2852 | standalone subfile `\documentclass` options are not packages | ported (ours first) | `6dabff6d189`, OD #63 |
@@ -23,7 +23,7 @@ read the Perl diff (`git -C LaTeXML show <commit>`), port faithfully, move the g
 | 0db6f47e | #2875 | `<mtable align>`: top → `baseline1`, bottom → `baseline-1` | **UPS1** | `presentation.rs` `pmml_array_inner`; guard `perfect_kernel_batchups1::mtable_align_is_the_first_or_last_baseline` |
 
 Departures recorded with the ports: a listing `frame=` naming no side (empty, `xyz`) draws no frame, as listings does
-(Perl frames a rectangle); an EPUB's log stays outside the container and never over an existing file (OD #1037);
+(Perl frames a rectangle; OD #1038); an EPUB's log stays outside the container and never over an existing file (OD #1037);
 MathML Core keeps no `align` on `<mtable>` — the attribute is ported as Perl writes it. Metric.pm's `$em` guard
 (#2845) applies when a TFM is read, at StandardMetrics generation; this port reads no TFM at run time (the metrics are
 the generated tables), so it has no counterpart. The upstream CSS commits ee4b3640 and 95a77fc0 are taken with PR #844.

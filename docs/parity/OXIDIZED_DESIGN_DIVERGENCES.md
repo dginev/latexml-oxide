@@ -36175,3 +36175,12 @@ Perl. An EPUB writes its log outside the container (epubcheck would flag a log m
 the log's name already exists it is kept and the log not written ("Log not written: '<log>' exists and is kept" on
 stderr; DG 2026-11-14). A conversion that fails before it starts writes its Fatal log under the same rule.
 `cortex_worker` packs its own `cortex.log` and is unchanged. **Guard**: `cluster_cli::archive_output_keeps_an_existing_log`.
+
+### 1038. A listing `frame=` naming no side draws no frame (UPS1, upstream #2820)
+
+**Perl.** Since #2820 (7412d564) listings.sty.ltxml:277-287 frames a listing whose `frame=` is not `none`: a named
+frame from `%frames`, else the sides its letters name (`t`/`b`/`l`/`r`, either case); a value naming none (`xyz`,
+empty) joins to `''`, and `framedProperties` (TeX_Box.pool.ltxml:84) turns that into `framed="rectangle"`. **TeX.**
+lstmisc.sty:1387-1399 keeps such a value as `\lst@frame`, and the frame code draws only the sides whose letters it
+holds: no frame. **Rust.** `lst_frame_sides` (listings_sty.rs) returns no frame for it, as TeX. **Guard**:
+`perfect_kernel_batchups1::fboxsep_pads_fcolorbox_boxed_and_listing_frames` (its `frame=xyz` listing).

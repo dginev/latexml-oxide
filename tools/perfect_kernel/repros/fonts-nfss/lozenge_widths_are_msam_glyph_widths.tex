@@ -1,13 +1,20 @@
 % witness: synthetic (upstream LaTeXML #2845, 27db0d96: StandardMetrics regenerated after amssymb's \lozenge became
-%          U+25CA and \blacklozenge U+29EB)
-% oracle:  pdflatex 0 errors: "6.66669pt 6.66669pt" — msam10's lozenges (TFM width 43690.8125/65536 of the 10pt size)
+%          U+25CA and \blacklozenge U+29EB; that regeneration also dropped msam's U+25C6/U+25C7, KNOWN_PERL_ERRORS #1245)
+% oracle:  pdflatex 0 errors: "6.66669pt 6.66669pt" — msam10's lozenges (TFM width 43690.8125/65536 of the 10pt size);
+%          "6.66669pt 6.9224pt 1.11111pt; 5.3889pt 4.82222pt 0.86447pt;" — amssymb's \Diamond is the same glyph (slot
+%          "06"), at 10pt and in \scriptstyle (msam7)
 % engines: rust 0340aff82e0 = 0 errors, "7.5pt 7.5pt": no metric holds U+25CA/U+29EB, the cmr fallback sizes them;
-%          perl master = msam10's widths
-% expect:  0 errors, 0 warnings; "6.66669pt 6.66669pt"
-% status:  RED (0340aff82e0) -> GREEN (UPS1: standard_metrics.rs msam5-10 keys U+25CA/U+29EB, ifgeo10 added)
+%          rust 8e55aadbab4 = \Diamond (U+25C7) "10.0pt 10.0pt 0.0pt; 7.0pt 7.0pt 0.0pt;": the ifgeo10 fallback;
+%          perl master = msam10's lozenges, \Diamond "10.0pt 10.0pt"
+% expect:  0 errors, 0 warnings; "6.66669pt 6.66669pt", then "6.66669pt 6.9224pt 1.11111pt; 5.3889pt 4.82222pt 0.86447pt;"
+% status:  RED (0340aff82e0) -> GREEN (UPS1: standard_metrics.rs msam5-10 keys U+25CA/U+29EB, ifgeo10 added);
+%          \Diamond RED (8e55aadbab4) -> GREEN (UPS2: msam5-10 keep U+25C6/U+25C7 beside them)
 \documentclass{article}
 \usepackage{amssymb}
 \newlength\lw
+\newcommand\w[1]{\settowidth\lw{#1}\the\lw\ \settoheight\lw{#1}\the\lw\ \settodepth\lw{#1}\the\lw;}
 \begin{document}
 \settowidth\lw{$\lozenge$}\the\lw\ \settowidth\lw{$\blacklozenge$}\the\lw
+
+\w{$\Diamond$} \w{$\scriptstyle\Diamond$}
 \end{document}

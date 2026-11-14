@@ -687,7 +687,8 @@ fn lst_skip(key: &str) -> Result<Dimension> {
 }
 
 /// The sides a listing's `frame=` draws (Perl #2820 `%frames`, listings.sty.ltxml:261): a named frame, else its
-/// letters (`tb`, `trBL`; listings.sty `\lst@frame`, upper case a double rule); `none`, or no side named, draws none.
+/// letters (`tb`, `trBL`; listings.sty `\lst@frame`, upper case a double rule); `none`, or no side named, draws none
+/// (lstmisc.sty:1387-1399; Perl frames a rectangle, OXIDIZED_DESIGN_DIVERGENCES #1038).
 fn lst_frame_sides(frame: &str) -> Option<String> {
   let named = match frame {
     "none" => return None,
