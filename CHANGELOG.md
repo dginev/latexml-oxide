@@ -2,15 +2,15 @@
 
 ## Unreleased
 
-  - **`revert_as => 'context'` reverts by dual branch, as in Perl** (#821). `DefMathI`
-    decides at reversion time — `($LaTeXML::DUAL_BRANCH || 'content') eq 'content'
-    ? $cs : $presentation` (Package.pm L1849-1854) — but the port fixed the content
-    reversion at definition time (the left-over `TODO` in `def_math_constructor`).
-    So the `tex` attribute of `ltx:Math` (presentation branch) got the user's CS and
-    `content-tex` was never written: `\lxDefMath{\plus}{+}` gave
-    `tex="a\plus b"` instead of Perl's `tex="a+b"` + `content-tex="a\plus b"`. Golden
-    `math/declare` moves to Perl's attributes. (`\DeclareMathOperator`'s
-    `tex="\operatorname{…}"` already came from its wrapped DefMath.)
+  - **`revert_as => 'context'` reverts by the dual branch, as Perl does** (#821, thanks
+    @nschloe). Both readers now take the branch from the locals stack: a no-argument
+    `DefMathI` (Package.pm L1849-1854), whose reversion the port had fixed to the CS at
+    definition time, and the `\lx@dual` reversion (Base_XMath.pool.ltxml L243), which read
+    a state value nothing set. So `ltx:Math`'s `tex` (presentation branch) got the user's
+    CS and `content-tex` was never written: `\lxDefMath{\plus}{+}` gave `tex="a\plus b"`
+    where Perl gives `tex="a+b"` + `content-tex="a\plus b"`. Golden `math/declare` moves
+    to Perl's attributes, except that `\foo{x}` with an unused `#1` reverts as TeX prints
+    it, `\mathbf{foo}`.
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
