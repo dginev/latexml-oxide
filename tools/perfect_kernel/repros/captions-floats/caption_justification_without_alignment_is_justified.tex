@@ -1,0 +1,14 @@
+% issue #787, review revCAP2 q3: a declared justification whose body sets no alignment (`{\hyphenpenalty=10000}`) leaves
+% the caption box's `\@parboxrestore` justified text: `text-align:justify`, in place of the float's `\centering`.
+% witness: synthetic (review revCAP2 q3)
+% oracle:  pdflatex 0 errors; the one-line caption centred (singlelinecheck), as any short caption
+% engines: perl=0 (no alignment); rust df5149f093=0, `class="ltx_centering"` (the float's), no text-align
+% expect:  0 errors, 0 warnings; text-align justify with fit-content and auto margins
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionJustification{x}{\hyphenpenalty=10000}
+\captionsetup{justification=x}
+\begin{document}
+\begin{figure}\centering X\caption{A caption.}\end{figure}
+\end{document}

@@ -1,0 +1,23 @@
+% issue #787, review revCAP2 q5: the `position=auto` mark `\caption`/`\captionof` set (`\lx@caption@where`) belongs to
+% that caption: a sub-caption, which caption does not format (subcaption's own), drops it, so listings' caption
+% (`\lx@format@caption@@{lstlisting}`, no `\caption`) reads its own `captionpos=t`: `skip=` below it.
+% witness: synthetic (review revCAP2 q5)
+% oracle:  pdflatex 0 errors; both listing captions above their code, the 9pt skip between caption and code
+% engines: perl=0 (no spacing); rust df5149f093=0, Listing 1 `margin-top:9.0pt` (the sub-caption's horizontal-mode
+%          mark read as bottom)
+% expect:  0 errors, 0 warnings; the sub-caption bare, both listing captions margin-bottom 9pt (top captions)
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{listings}
+\captionsetup[lstlisting]{skip=9pt}
+\begin{document}
+\begin{figure}\begin{subfigure}{.4\textwidth}X\caption{Sub after X.}\end{subfigure}\end{figure}
+\begin{lstlisting}[caption={Listing cap.}]
+x = 1
+\end{lstlisting}
+\begin{lstlisting}[caption={Second listing.}]
+y = 2
+\end{lstlisting}
+\end{document}
