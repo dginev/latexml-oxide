@@ -36160,3 +36160,17 @@ local only, repro `alignment/aligned_left_column_is_right_aligned.tex`),
 `cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the rule
 ships).
 
+### 1027. A visible MathML Core category-K operator has no operator space: `/` is K, and an Ord (issue #789)
+
+**TeX.** `/` is an Ord (mathcode "013D), as is `\backslash` (`\delimiter"26E30F`, class 0): `\showbox` of `$a/b$` and
+`$a\backslash b$` has no glue. **Core** (TR 2025 and ED, Figure 25) puts infix `/`, `\`, `_`, U+2061-2064 and U+2206 in
+category K, zero lspace and rspace. **Perl.** OperatorDictionary.pm:185 lists `/` in B (0.222 em; KNOWN_PERL_ERRORS
+#1240), and the space walk (`adjust_pair`) types an operator by its role, so `/` (MULOP) is a Bin and `\backslash`
+(MULOP, math_common.pool.ltxml:97) gets `lspace`/`rspace` 0.222 em; `<mo>/</mo>` is bare, and Chrome 155 spaces it 0.222 em
+each side (Firefox none). **Rust.** The dictionary has `/` in K; `is_core_k_glyph`
+(presentation.rs) marks a visible infix `<mo>` of category K `lspace="0em" rspace="0em"`, as Perl does for the ZWSP of
+`--noinvisibletimes` (MathML.pm:773), and the walk types it Ord. The invisible K operators stay bare (Format text,
+Perl L747; Chrome and Firefox give them no space). Residual: `\mathbin{/}` loses its Bin class at digestion and gets
+zero space too (RED `math-parse/mathbin_slash_keeps_binary_space_red.tex`, post-merge). Offer upstream. **Guards**:
+`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
+`math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.

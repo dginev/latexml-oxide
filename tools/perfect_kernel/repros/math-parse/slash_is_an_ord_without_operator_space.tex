@@ -1,0 +1,12 @@
+% witness: issue 789 (synthetic); TeX's `/` is an Ord (mathcode "013D) and `\backslash` too (\delimiter"26E30F):
+%          \showbox gives no glue around either (pdflatex, TL 2025)
+% oracle:  pdflatex 0 errors; a/b, G/H, x^{1/2}, a\b set tight
+% engines: perl 0.8.8 `<mo>/</mo>` (Chrome 155 spaces it 0.222em each side: its dictionary has infix `/` in B, as
+%          Perl's OperatorDictionary.pm:185 does; Core TR/ED put it in K, zero space); rust fc5211bb491 the same, and
+%          `<mo lspace="0.222em" rspace="0.222em">\</mo>` (the space walk reads MULOP as Bin)
+% expect:  0 errors; in --format=html5 every `/` and `\` is `<mo lspace="0em" rspace="0em">`
+% status:  RED (fc5211bb491) -> GREEN (MML2: operator_dictionary.rs `/` in K, presentation.rs Core-K operators are Ord)
+\documentclass{article}
+\begin{document}
+$a/b$ $G/H$ $x^{1/2}$ $a\backslash b$
+\end{document}

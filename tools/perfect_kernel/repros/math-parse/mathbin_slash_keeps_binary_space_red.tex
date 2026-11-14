@@ -1,0 +1,14 @@
+% witness: issue 789's sibling (synthetic); `\mathbin{/}` makes TeX's `/` a Bin (\showbox: \medmuskip each side) and
+%          `\bigm/` a Rel (\thickmuskip each side; pdflatex, TL 2025)
+% oracle:  pdflatex 0 errors; a / b with medium space, then with thick space
+% engines: perl 0.8.8 `<mo>/</mo>` and `<mo maxsize="1.200em" …>/</mo>` (0.222em in Chrome, 0 in Firefox); rust MML2
+%          `<mo lspace="0em" rspace="0em">/</mo>` for both: the class is lost at digestion
+%          (latexml_engine/src/tex_math.rs:1194 → adjust_math_role :2694 keeps a plain MULOP), so the token is `a/b`'s
+%          and the Core-K rule gives it zero space
+% expect:  0 errors; in --format=html5 the first `/` keeps 0.222em each side, the second 0.278em
+% status:  RED
+% moves:   post-merge (the `\mathbin`/`\mathrel`/`\bigm` class on a digested math token)
+\documentclass{article}
+\begin{document}
+$a\mathbin{/}b$ $a\bigm/ b$
+\end{document}

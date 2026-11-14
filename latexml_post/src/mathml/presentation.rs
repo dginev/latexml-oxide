@@ -1098,6 +1098,19 @@ fn resolve_token_size(mut s: String) -> String {
   s
 }
 
+/// A Format character (Unicode Cf) of those that occur in math: invisible operators, ZWSP, …
+fn is_format_char(c: char) -> bool {
+  matches!(c,
+    '\u{00AD}' | '\u{200B}'..='\u{200F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}')
+}
+
+/// A visible operator of MathML Core category K (infix `/`, `\`, `_`, U+2206): no operator space,
+/// as TeX's Ord `/` (mathcode "013D) and `\backslash` ("26E30F); issue 789. The invisible K
+/// operators (U+2061-2064) stay bare, as Format text gets no presentation attributes (Perl L747).
+fn is_core_k_glyph(text: &str, role: &str) -> bool {
+  !text.chars().all(is_format_char) && operator_dictionary::opdict_category(text, role) == "K"
+}
+
 /// `role_override` mirrors Perl's `pmml_mo($op, role => 'OPERATOR')` call
 /// (MathML.pm L634): the caller forces the operator dictionary to a specific
 /// role (`OPERATOR` → PREFIX form) rather than the node's stored role. When set,
@@ -1205,14 +1218,13 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>
   // times/apply/separator, ZWSP, …) gets NO visual styling attributes —
   // without this, context color would paint invisible operators.
   // (Approximates \p{Format} with the Cf codepoints that occur in math.)
-  let is_format_only = text.chars().all(|c| {
-    matches!(c,
-      '\u{00AD}' | '\u{200B}'..='\u{200F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}')
-  });
+  let is_format_only = text.chars().all(is_format_char);
 
   // Perl: zero-width space <mo> needs lspace/rspace="0em" to prevent browser
   // default operator spacing that creates visible gaps between letters.
-  if is_replaced_invisible_times && tag == "m:mo" {
+  // Issue 789: likewise a visible Core-K operator, as Chrome 155 spaces a bare
+  // `<mo>/</mo>` 0.222em each side.
+  if tag == "m:mo" && (is_replaced_invisible_times || is_core_k_glyph(&text, &role)) {
     attrs.insert("lspace".to_string(), "0em".to_string());
     attrs.insert("rspace".to_string(), "0em".to_string());
   }
@@ -2963,8 +2975,18 @@ fn adjust_pair(root: &mut NodeData, prev: &[usize], next: &[usize], invisop: Opt
       get_node_attr_f64(n, "_lspace"),
     )
   };
-  let prev_type = m_atom_type(&iprev_tag).unwrap_or_else(|| role_to_atom_type(&prev_role));
-  let next_type = m_atom_type(&inext_tag).unwrap_or_else(|| role_to_atom_type(&next_role));
+  // A Core-K operator is TeX's Ord whatever its semantic role (`/` MULOP; issue 789).
+  let atom_type = |path: &[usize], tag: &str, role: &str| {
+    m_atom_type(tag).unwrap_or_else(|| {
+      if tag == "m:mo" && is_core_k_glyph(&get_node_text(node_at(root, path)), role) {
+        "Ord"
+      } else {
+        role_to_atom_type(role)
+      }
+    })
+  };
+  let prev_type = atom_type(&iprev, &iprev_tag, &prev_role);
+  let next_type = atom_type(&inext, &inext_tag, &next_role);
   let tex_code = atompair_spacing(prev_type, next_type);
   let tex_space = TEX_SPACING[tex_code.unsigned_abs() as usize];
   let target = prev_req_right + next_req_left + tex_space;
