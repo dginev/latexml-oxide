@@ -150,19 +150,55 @@ fn a_tblr_in_a_p_cell_reads_its_tab_marks_safely() {
   assert!(xml.contains("<p>After.</p>"), "{xml}");
 }
 
-/// C3: the latex-lab block binding declares the file's `block` instances: keytheorems edits `theoremblock-0` and
-/// `listblock-1` for a theorem with margins (keytheorems-doc's 4 errors).
+/// C3: the latex-lab block binding declares what the installed block.sty declares. keytheorems edits `theoremblock-0` and
+/// `listblock-1` for a theorem with margins on TL 2025's block code (keytheorems-doc's 4 errors), and `thm-<style>-1`
+/// and `std-list-1` on the November 2026 one (`thmstyle`, keytheorems.sty:3828-3850). The other version's instance names
+/// err as pdflatex does on this TL: 11 `!` for TL 2025's names on the November code, 17 the other way round. A `style=`
+/// key's theorem takes its style on both.
 #[test]
 fn the_block_instances_of_the_file_are_declared() {
-  let (log, xml) = converted(manual_repro!(
-    "package-bindings/keytheorems_block_instances_are_the_files.tex"
-  ));
+  let november = latexml::util::test::kpse_text("latex-lab-testphase-block.sty")
+    .is_some_and(|text| text.contains(r"\NewTemplateType{thmstyle}"));
+  let tl2025 = manual_repro!("package-bindings/keytheorems_block_instances_are_the_files.tex");
+  let tl2026 = manual_repro!("package-bindings/keytheorems_on_the_november_block_code.tex");
+  let (own, other, other_errors) = if november {
+    (tl2026, tl2025, 11)
+  } else {
+    (tl2025, tl2026, 17)
+  };
+  let (log, xml) = converted(own);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = plain(&xml);
   assert!(
-    plain(&xml).contains(
+    xml.contains(
       r#"<para><p><text font="italic">There are infinitely many primes.</text></p></para></theorem>"#
     ),
     "{xml}"
+  );
+  // `style=definition`: keytheorems passes `\theoremstyle` its unexpanded key variable
+  assert!(
+    xml.contains(
+      r#"<title class="ltx_runin"><tag><text font="bold">Lemma 1</text></tag><text font="bold">.</text></title><para><p>Every prime is odd or two.</p></para></theorem>"#
+    ),
+    "{xml}"
+  );
+  assert!(
+    !november
+      || xml.contains(
+        r#"<title class="ltx_runin"><tag><text font="italic">Note 1</text></tag><text font="italic">.</text></title><para><p>Two is even.</p></para></theorem>"#
+      ),
+    "{xml}"
+  );
+  let (log, _) = converted(other);
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (other_errors, 0),
+    "{log}"
+  );
+  assert_eq!(
+    log.matches("LaTeX template Error: The instance '").count(),
+    other_errors,
+    "{log}"
   );
 }
 

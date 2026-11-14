@@ -145,12 +145,13 @@ real structure, not inert declarations.
 **Source of truth.** latex.ltx lttemplates (`\NewTemplateType`,
 `\DeclareTemplateInterface/Code`, `\DeclareInstance`, `\UseInstance`) and
 ltsockets (`\NewSocket` … `\UseSocket`, :7316 top-level check, :7405
-undeclared error); latex-lab-testphase-block.sty:96–170 (types + interfaces),
-:202–330 (`blockenv` display code, `\endblockenv`), :1180–1473 (instances);
-latex-lab-testphase-minipage.sty:47–50 (sockets).
+undeclared error); latex-lab-testphase-block.sty (TL 2025): :96–170 (types + interfaces),
+:202–330 (`blockenv` display code, `\endblockenv`), :1180–1473 (instances); the November 2026 file
+(latex-lab r80868) renames them (`std` templates, `thmstyle`/`captionedtext` types, `\SimpleBlockEnv`/`\BlockEnvEnd`):
+:186–316, :414–425, :1341–1803; latex-lab-testphase-minipage.sty:47–50 (sockets).
 
 **Abstraction.** Template types `blockenv`/`list`/`item`/`para`/`block` are
-declared once (the 56i bindings) and their *code* maps onto the pool's list
+declared as the installed file declares them (the binding reads its top-level declarations, WIN1i) and their *code* maps onto the pool's list
 machinery: `blockenv` display → open the element named by `tag-name`
 (itemize/enumerate/description/quote/quotation/center/theorem/verbatim/Div)
 with the `inner-instance` selecting the item style; `\endblockenv` closes it

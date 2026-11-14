@@ -1863,27 +1863,45 @@ Hello \textgreek{ασδφ} world.
 /// testphase modules (latex-lab-testphase-latest.sty:43,47): ltx-talk.cls
 /// :1860 `\EditInstance{item}{basic}`, tagpdfdocu-patches.sty:127
 /// `\DeclareInstance{blockenv}{docCommand}{display}` + `\UseInstance` +
-/// `\endblockenv`, and :146 `\AssignSocketPlug{tagsupport/minipage/before}
-/// {noop}` find their declarations (ltx-talk ×10, tagpdf manual 113 lines).
+/// `\endblockenv` (TL 2025; the November 2026 block code's `{std}` template and
+/// `\SimpleBlockEnv`/`\BlockEnvEnd`, tagpdfdocu-patches.sty:103), and :146
+/// `\AssignSocketPlug{tagsupport/minipage/before}{noop}` find their
+/// declarations (ltx-talk ×10, tagpdf manual 113 lines).
 #[test]
 fn testphase_tagging_sockets_and_block_templates_are_declared() {
-  let tex = r"\DocumentMetadata{tagging = on}
-\documentclass{article}
+  let november = latexml::util::test::kpse_text("latex-lab-testphase-block.sty")
+    .is_some_and(|text| text.contains(r"\NewTemplateType{thmstyle}"));
+  let (template, keys, block) = if november {
+    (
+      "std",
+      "transparent-level = true",
+      r"\SimpleBlockEnv{docCommand}{tag-name=Div}Hello\BlockEnvEnd",
+    )
+  } else {
+    (
+      "display",
+      "increment-level = false",
+      r"\UseInstance{blockenv}{docCommand}{tag-name=Div,leftmargin=1pt,rightmargin=2pt}Hello\endblockenv",
+    )
+  };
+  let tex = format!(
+    r"\DocumentMetadata{{tagging = on}}
+\documentclass{{article}}
 \ExplSyntaxOn
-\EditInstance{item}{basic}{label-format = #1}
-\DeclareInstance{blockenv}{docCommand}{display}{ name = docCommand, tag-name = Div, increment-level = false }
-\AssignSocketPlug{tagsupport/minipage/before}{noop}
+\EditInstance{{item}}{{basic}}{{label-format = #1}}
+\DeclareInstance{{blockenv}}{{docCommand}}{{{template}}}{{ name = docCommand, tag-name = Div, {keys} }}
+\AssignSocketPlug{{tagsupport/minipage/before}}{{noop}}
 \ExplSyntaxOff
-\begin{document}
-A\UseTaggingSocket{minipage/before}B
-\UseInstance{blockenv}{docCommand}{tag-name=Div,leftmargin=1pt,rightmargin=2pt}Hello\endblockenv
-\begin{itemize}\item one\end{itemize}
-\end{document}
-";
-  let (stderr, xml) = convert(tex, true);
+\begin{{document}}
+A\UseTaggingSocket{{minipage/before}}B
+{block}
+\begin{{itemize}}\item one\end{{itemize}}
+\end{{document}}
+"
+  );
+  let (stderr, xml) = convert(&tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("AB"), "{xml}");
-  assert!(xml.contains("Hello"), "{xml}");
+  assert!(xml.contains("AB\nHello</p>"), "{xml}");
   assert!(xml.contains("<item "), "{xml}");
 }
 
