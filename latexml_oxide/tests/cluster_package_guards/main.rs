@@ -618,6 +618,8 @@ mod perfect_kernel_batchst1;
 mod perfect_kernel_batchst3;
 mod perfect_kernel_batchta1;
 mod perfect_kernel_batchunc;
+/// UPS1: the upstream LaTeXML master commits since #2833 (frames padded as TeX draws them, #2820).
+mod perfect_kernel_batchups1;
 /// VARW: a varwidth box measures its widest line (algxpar-doc, 2401.12710); KNOWN_PERL_ERRORS #1234.
 mod perfect_kernel_batchvarw;
 mod perfect_kernel_batchw3ra;

@@ -1604,8 +1604,10 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
   let vattach = node
     .get_attribute("vattach")
     .unwrap_or_else(|| "middle".to_string());
+  // Perl MathML.pm:438-440 (#2875): a top-attached array sits on its first row's baseline, a bottom one on its last's.
   let align = match vattach.as_str() {
-    "top" => "bottom1",
+    "top" => "baseline1",
+    "bottom" => "baseline-1",
     "middle" | "" => "axis",
     _ => vattach.as_str(),
   };
