@@ -11,11 +11,16 @@
 // `columnspacing`) are deliberately NOT matched by the reset and are not measured
 // here.
 //
+// Issues #809/#755: the left column must also be right-aligned against the
+// relation, so `rowGaps` measures each row's glyph-to-glyph gap from the left
+// column's last glyph to the relation's glyph (the relation's lspace alone).
+//
 // Usage:   node measure_align_mtd.js <file-url>
-// Output:  JSON { cells: [{paddingLeft, paddingRight}, …], firstRelGap }, where
-//          firstRelGap is the px distance from the right edge of the first row's
-//          left column to the left edge of its relation operator (the visible
-//          `y(x)`→`=` gap). Exit 2 on error (no browser, etc.).
+// Output:  JSON { cells: [{paddingLeft, paddingRight}, …], firstRelGap,
+//          rowGaps: [{gap, fontPx}, …] }, where firstRelGap is the px distance
+//          from the right edge of the first row's left column to the left edge
+//          of its relation operator (the visible `y(x)`→`=` gap). Exit 2 on
+//          error (no browser, etc.).
 const { chromium } = require('playwright-core');
 
 (async () => {
@@ -55,7 +60,42 @@ const { chromium } = require('playwright-core');
           }
         }
       }
-      return { cells, firstRelGap };
+      // Per row: the left column's last glyph to the relation's glyph (text
+      // ranges, so the cell's own width and alignment are what is measured).
+      const RELS = ['=', '≠', '≤', '≥', '<', '>'];
+      const lastText = (n) => {
+        const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT, {
+          acceptNode: (t) => (t.data.trim() ? 1 : 3),
+        });
+        let t;
+        let r = null;
+        while ((t = w.nextNode())) r = t;
+        return r;
+      };
+      const textRect = (t) => {
+        const r = document.createRange();
+        r.selectNodeContents(t);
+        return r.getBoundingClientRect();
+      };
+      const rowGaps = Array.from(
+        document.querySelectorAll('math mtable[columnspacing="0pt"] > mtr'),
+      ).flatMap((tr) => {
+        const tds = tr.querySelectorAll(':scope > mtd');
+        const left = tds.length >= 2 ? lastText(tds[0]) : null;
+        const rel = left
+          ? Array.from(tds[1].querySelectorAll('mo')).find((o) =>
+              RELS.includes(o.textContent),
+            )
+          : null;
+        if (!rel) return [];
+        return [
+          {
+            gap:    textRect(rel.firstChild).left - textRect(left).right,
+            fontPx: parseFloat(getComputedStyle(rel).fontSize),
+          },
+        ];
+      });
+      return { cells, firstRelGap, rowGaps };
     });
     console.log(JSON.stringify(result));
   } finally {
