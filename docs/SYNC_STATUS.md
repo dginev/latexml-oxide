@@ -10,11 +10,10 @@
 
 ## How to read this file
 
-**Start at "The task list" below (row R) and take the top unblocked row by Rank.** It is the single entry for the work
-lists (DG 2026-11-12: "We should have a single point of entry for work lists"): the pre-merge table ranked, the
-after-merge list, then the road's conclusions. Everything after it is supporting detail.
+**Start at "The task list" below (row R): DG's campaign order, then the worklist.** It is the single entry for the work
+lists (DG 2026-11-12: "We should have a single point of entry for work lists"). Everything after it is supporting detail.
 
-- **The task list (row R)**: every open task — before the merge ranked, after the merge one line each; first, always.
+- **The task list (row R)**: every open task, one line each; first, always.
 - **Open-row detail**: [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) — the post-merge rows' detail under
   the same ids ("Post-merge rows moved from SYNC_STATUS (SYNC3)") and the older open rows.
 - **Silent-loss inventory**: open losses of authored content or markup with 0 errors (blocks the 98 % claim); its own doc since 2026-11-09, [`perfect_kernel/SILENT_LOSS_INVENTORY.md`](perfect_kernel/SILENT_LOSS_INVENTORY.md).
@@ -43,25 +42,20 @@ Rules that keep this file honest and mergeable:
 6. **Compaction moves only closed history.** An open row stays whole and live (here or in its own doc); only its closed
    facts may go to the archive (SYNC1c, 2026-11-09).
 
-*Last compaction: 2026-11-12 (SYNC3) — one list: the ranked rows folded into row R's task list (post-merge rows one line each, their detail whole in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)"); the closed rows (0, 0b, R8, XP, R3, R4), the old index table and row R's history moved to [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-12-compaction-sync3), with the earlier compactions' log.*
+*Last compaction: 2026-11-14 (DOCSPM, after the merge) — row R became the post-merge worklist: the pre-merge table (GOAL, MPR), its counters, the road's conclusions and the done WIN1 section moved to [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md); the PRs of 2026-11-14 added their residual lines. Before it, 2026-11-12 (SYNC3): the ranked rows folded into row R (detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)"); the closed rows (0, 0b, R8, XP, R3, R4), the old index table and row R's history in [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-12-compaction-sync3), with the earlier compactions' log.*
 
 ---
 
-## The task list — start here (row R, the road to the main merge)
+## The task list — start here (row R, the post-merge worklist)
 
-- **The task list — the single entry for the work until the merge (DG 2026-11-12: "We should have a single point of entry for work lists").** Updated at every decision and every bundle fold; status counts are read from these two tables. Weights: easy 1, medium 3, hard 5.
-- **Done since 2026-11-11:** 117 tasks (weight 322), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md` (P2-3b, MLN, FMPERF, AAS1 — DG's AASTeX perf round — and CORTEX's reruns in bundle int170a; SBX — the sandbox regressions, CIPERF, DOCS and SWEEP — the closing sweep #186, with QA75's short look — in bundle int171a; CORTEX2 — runs 375/376 on the pushed head, no new Fatal cluster, CX171 — after it).
-- **Before the merge:** 2 left (weight 4): GOAL — the verdict to DG (L1 and G1-G6 met on the final tree, CORTEX2 included), MPR — the merge into main from the command line, a regular merge so every commit lands on main (DG 2026-11-13: not a squash, not a GitHub PR), after DG confirms; CI on the push to main validates CIPERF, with a Windows CI dispatch. **DG 2026-11-12 ("having deferred as much work as we have already, what else can be deferred"):** TRUTH, HOLD4, PERF, T1, QA80, QA92, CSS, QA84, QA75 (a short look folded into SWEEP), CLEAN and P6's rest (P6R) moved after the merge; FMPERF cut to one measurement (its levers FMPL), CIPERF to CI fitting its timeouts (the levers into line CI); P6 closes when P6f lands; CORTEX stays ("we should still validate on the cortex sandboxes at least, 2605 and 2606 … that will allow me to preview some results"), run at int169a's push; **DG 2026-11-13:** the sandboxes rerun after int171a's push (CORTEX2: "ideally they do not have obvious degradation by the time we merge to main").
-- **After the merge:** 233 (483; 27 of them the old SYNC rows moved here by SYNC3) — DG's pragmatic bar (2026-11-12): regressions and high-frequency / high-impact gaps before the merge; newly found edge cases after it, unless one invalidates the approach. **DG 2026-11-13 (heads-up):** after the merge, first a medium-sized area from latexml-oxide's open PRs and issues, worked as PRs against latexml-oxide, before this list (clarified at the merge).
-- **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: their PRE work in the table (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA27's input → CSS, QA75, QA80 with QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45, QA84, QA92 with QA02's awaited rest), the POST / LATER / HZN rows and those DG moved post-merge in the list below (QA60 site 8 as SR4/SR5); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
-- **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker (`~/data/pk_agents/main/bruce_qa/ACTIONS.md`), each deferred finding's `_red.tex` (`moves:` names its row).
+- **The campaign (DG 2026-11-14), in order:** (1) finish latexml-oxide's open PRs and issues and ALL the Bruce Q&A residuals (the QA lines below); (2) a cutoff commit — output-changing merges freeze; (3) rerun the 2605/2606 cortex sandboxes and review regressions against runs 375/376; (4) reconvert the whole arXiv corpus in cortex (ARXIV); (5) sync to ar5iv.
+- **The merge (closed):** the perfect-kernel goal met on the final tree `803ce550a6`, merged into main on 2026-11-13 as `6df4632fb1` (a regular merge, DG 2026-11-13). The verdict's basis and the deferred list with each ruling: [`archive/PERFECT_KERNEL_2026-11-13.md`](archive/PERFECT_KERNEL_2026-11-13.md) "Close status"; the pre-merge table, its counters and the road's conclusions: [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md) "Moved from SYNC_STATUS by the 2026-11-14 post-merge reorg".
+- **Done since the merge (2026-11-14):** PRs #826 #831 #832 #812 (portable tests, CI lint, environment writes before the first thread), #833 (WIN1), #828 #830 #834 #835 #836 #839 #840 #813 #821 #842 #844 (issues 736 760 772 773 778 785 787 794 795 803 806 807 782 …), #837 #838 #841 (issues 755 789 809 824's isotopes), #829 #843 (Rhai and the binding macros: issues 791 792 796 825), #846, #827, #800; 32 issues closed (`gh issue list --state closed`). Lines closed here: WIN1 (#833), CORERES's pathname.rs `TEXMFROOT` write (verified before the prewarm spawn and allowlisted by `tools/lint_env_writes.sh`, #812/#831), GUARDC's visible skip (#826). Each PR's recorded residual is a line below (WIN1R, RHAIR … GRMLINT).
+- **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
+- **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  | Rank | Id | Task | Step | Weight | Status |
-  |---|---|---|---|---|---|
-  | 34 | GOAL | Goal met, validated on the final head, up to and except the deferred rows (DG 2026-11-12: "we still want all tests passing before the merge … the goal assumptions need to be validated (goal met!) upto and except the deferred tasks") | 6 | 3 | ongoing — met on the final tree `803ce550a6` (`PERFECT_KERNEL.md`'s close status 2026-11, CORTEX2 included: runs 375/376, no new Fatal cluster, CX171 24 vs October explained); the verdict to DG |
-  | 35 | MPR | The merge into main: from the command line, a regular merge (DG 2026-11-13: every commit lands on main), after DG confirms; then push main (CI validates CIPERF) and a Windows CI dispatch | 6 | 1 | todo |
+  **The worklist** (255 lines, weight 528; id — task; weight — easy 1, medium 3, hard 5):
 
-  **After the merge** (id — task; weight; a moved SYNC row's detail is in `perfect_kernel/OPEN_ROWS.md` "Post-merge rows moved from SYNC_STATUS (SYNC3)" under its id):
 
   - CT1b — CT1b; 1
   - CT1d — CT1d; 1
@@ -143,8 +137,8 @@ Rules that keep this file honest and mergeable:
   - AFNR — two identical `\affiliation{…\footnote{…}}` write two pubnotes, no Warning (`aastex6_footnote_in_repeated_affiliation_doubled_red`; AAS1); 1
   - AAGR — AAS1's guard: a repeated affiliation content that must NOT be reused (`\stepcounter`/`\footnotemark`, A A B A) (revAAS1 NIT); 1
   - LOOP2302 — 2302.07562 loops (`Fatal:Timeout:IfLimit` at 48M conditionals) on int169b and int170a alike; 3
-  - CSSPORT — The ar5iv-css port (PR #54); 3
-  - MHCHEM — a semantic mhchem binding (DG 2026-11-13: deferred, planned; Perl ships none): option (a) of study `agent_reports/2026-11-13_MHCHEM0_report.md` —
+  - CSSPORT — The ar5iv-css port: PR #54 merged 2026-11-05; the mirror of latexml-oxide's later `LaTeXML.css` fixes in ar5iv-css #55, #56 (#841's aligned columns), #57 (#844's verbatim, display runs, ORCID), open; 3
+  - MHCHEM — a semantic mhchem binding (DG 2026-11-13: deferred, planned; Perl ships none; not started — #837 prescripts and #838 arrow heads fixed the raw path's isotopes and `<=>`): option (a) of study `agent_reports/2026-11-13_MHCHEM0_report.md` —
     a thin binding over mhchem's output layer (`\__mhchem_output_coreFive:nnnnnnn`, mhchem.sty:2774; amounts, `+`, arrows, bonds), keeping its parser:
     element tokens (the run split on `[A-Z][a-z]*`, mhchem keeps "MoO" one slot), `mmultiscripts` for isotope/count/charge (charge lifted to the
     formula, minus U+2212), arrows as relations, one `<math>` per `\ce`; ~0.9 % of arXiv (~13k papers; 6,268 calls in the 30k census: 53 % counted
@@ -298,92 +292,32 @@ Rules that keep this file honest and mergeable:
   - EMIT — 0906.2789's `{\em …}` affiliation loses its italic, uncounted (GRP1/LOGO1 lateral; CL171a); 1
   - QA75M — QA75S's minor patterns (`2026-11-13_QA75S_report.md`, gallery scratch_QA75S/gallery/): code listings one paragraph per line (the tabularray, thmtools, nicematrix docs), ACM boilerplate above the authors (2605.07722, 2403.05668), stray † marks and the running head in the body (2311.07985, 2407.08541), achemso citations glued to the word before (2606.06771), biblatex.tex's title lacks "Version 3.21"; 3
   - REPOTRIM — the repository's local-only files out of the tree (DG 2026-11-13: after the merge; "keep all repro files in the repository … The process and session history is likely not useful and can be local-only"): process and session docs (`docs/archive` session logs, `docs/perfect_kernel` archive and worklists, dated audits, ≈22.2k lines), `bin/ab_audit` + `bin/binding_audit` (5.7k), `tools/perfect_kernel` scripts and tsv with local paths (3.9k), `docs/parity/*_AT_EMIT2.tsv` (0.8k) → out of tree on this machine; every repro and NOTES.md stays (`2026-11-13_REPO0_report.md`); 3
-  - GUARDC — the guards as table rows with one shared helper set (`cluster_package_guards` 177k lines, ~32 per test; `convert_clean` ×48, `convert_counted` ×32): −40..−60k lines and CI time; 58 guards silently pass where `kpsewhich` lacks their package (CI's Debian TL) — make the skip visible (`2026-11-13_REPO0_report.md`); 3
-  - CORERES — latexml_core residue (`2026-11-13_CORE0_report.md`): uncalled `dump_frame_bindings` (stomach.rs), `merge_selected_font` (content.rs; sect13.rs:2568's stale comment), `memory_fatal_seen` (watchdog.rs; check MEMORY_FATAL_SEEN's reader first); cache `LXML_TRACE_NODE_BOXES` / `LATEXML_EXPL_TRACE`; arena.rs `first_bytes` aliasing → through `with`; pathname.rs `set_var("TEXMFROOT")` — its thread context unverified (the prewarm may run on a background thread); one frame-id counter (`NEXT_FRAME_ID` / `FRAME_SERIAL`); 2
+  - GUARDC — the guards as table rows with one shared helper set (`cluster_package_guards` 177k lines, ~32 per test; `convert_clean` ×48, `convert_counted` ×32): −40..−60k lines and CI time (the visible skip done in #826: `util::test::Requirements`, one `skip()`; `2026-11-13_REPO0_report.md`); 3
+  - CORERES — latexml_core residue (`2026-11-13_CORE0_report.md`): uncalled `dump_frame_bindings` (stomach.rs), `merge_selected_font` (content.rs; sect13.rs:2568's stale comment), `memory_fatal_seen` (watchdog.rs; check MEMORY_FATAL_SEEN's reader first); cache `LXML_TRACE_NODE_BOXES` / `LATEXML_EXPL_TRACE`; arena.rs `first_bytes` aliasing → through `with`; one frame-id counter (`NEXT_FRAME_ID` / `FRAME_SERIAL`); 2
   - CMTLEN — comment length: 4.8k lines of latexml_core sit in 6+-line comment blocks (BM's "short comments"); the narrative to OD entries, every witness id kept (`2026-11-13_CORE0_report.md`); 2
   - MATHAB — A/B analysis: skip parsed-math-only changes when the `tex=` attributes are equal — the math parser's limits are wall-clock, 25 of int171a's 81 changed papers flipped under load (`2026-11-13_CL171b_report.md`); 1
-  - WIN1 — the suite on the CURRENT TeX Live (TL 2026, tlnet r81108): DONE on `ci/windows-latest-texlive` — every handoff row fixed so it holds on TL 2025, the distro TL and TL 2026 ("WIN1" below, Resolution); its post-merge residuals are listed there; 5
 
-### WIN1 — the suite on the current TeX Live (found by the Windows CI bring-up, 2026-11-13)
-
-- **Why it surfaces on Windows first:** `windows-ci-manual-trigger.yml` installs the latest TeX Live (`TeX-Live/setup-texlive-action`); Linux CI uses Ubuntu's `texlive 2025.20260124`. None of the rows below is Windows-specific: each reproduces on any host whose TL2026 is updated (`tlmgr update --all`, 2026-11-13).
-- **The TeX Live it was found on:** TL 2026 from tlnet at repository revision **81108** (tlmgr's catalog, 2026-11-13), CI's package set (`windows-ci-manual-trigger.yml`): `scheme-medium` + `collection-{latexextra,mathscience,bibtexextra,publishers,fontsextra,langgerman,langfrench,langgreek,langcyrillic}` + `dvipng`.
-- **Revisions that matter (`tlmgr info --only-installed --data name,revision <pkg>`):** latex, latex-lab, graphics, tools r80868; l3kernel r80334; babel r81049; fancyvrb r80718; tcolorbox r79191; fontspec r79934; biblatex r80368; pgf r79866; aliascnt r79461; hyperref r80959; polyglossia r80238; ieeeconf r79618.
-- **tlnet keeps no daily snapshots:** an install made later gets these revisions or newer — compare with the line above; a newer one may add rows, not remove them.
-- **Install recipe (Linux, beside any distro TeX):**
-
-  ```bash
-  mkdir -p ~/tl2026-win1 && cd ~/tl2026-win1
-  curl -LO https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
-  tar xzf install-tl-unx.tar.gz --strip-components=1
-  cat > win1.profile <<'EOF'
-  selected_scheme scheme-medium
-  TEXDIR /opt/texlive-win1/2026
-  TEXMFLOCAL /opt/texlive-win1/texmf-local
-  TEXMFSYSVAR /opt/texlive-win1/2026/texmf-var
-  TEXMFSYSCONFIG /opt/texlive-win1/2026/texmf-config
-  instopt_adjustpath 0
-  tlpdbopt_install_docfiles 0
-  tlpdbopt_install_srcfiles 0
-  EOF
-  sudo ./install-tl --profile=win1.profile
-  export PATH=/opt/texlive-win1/2026/bin/x86_64-linux:$PATH
-  sudo env PATH=$PATH tlmgr install collection-latexextra collection-mathscience collection-bibtexextra \
-    collection-publishers collection-fontsextra collection-langgerman collection-langfrench \
-    collection-langgreek collection-langcyrillic dvipng
-  sudo env PATH=$PATH tlmgr update --self --all
-  ```
-
-- **Then, in the checkout:** with that PATH, `KPSEWHICH=$(command -v kpsewhich) cargo build` (the build-time link decision is cached until `KPSEWHICH` changes — PATH is not tracked), `tools/make_formats.sh` (its zero-error gate is the WIN1 kernel guard), and `cargo nextest run --workspace -E 'test(/<name>/)'` per row below. The dual-TL guard pins `TEXMF*` to the PATH tree.
-- **State on this TeX Live (Windows, `ci` profile, branch `ci/windows-latest-texlive`):** 8096 tests, 67 red — all package drift (rows below); every Windows-only failure is fixed on the branch (CHANGELOG "Unreleased"): the kernel's `\file_get:nnN{glyphtounicode}` at format build (137 init errors → 0), the linked-kpathsea probe (a 3-line article 7.2 s → 0.7 s; the whole suite ~16 min at 16 threads), the locator's `.index.tex` source names, the `\\?\` source directory, the texlua frames, `make_formats.ps1`'s gate, and Windows paths in tests.
-- **WIN1a, babel r81049 (26.16, 2026/11/10):** `undefined:\mainlocalename` (babel.sty:658/:1190 `\let\mainlocalename` from the main language; our language loading skips it). 18 red: `81_babel german_test`, `cluster_thousands_separator_eu`, the streaming shard 0, and `perfect_kernel_*` babel_extras_hooks, babel_ngerman_umlaut_shorthands, german_sty_germantex_switch, mdwtab_hlx, bare_babel_takes_the_class_language, microtype_babel_kerning, shorthandoff_star, utf8_input_keeps_latin1 (bibarts), today_follows_the_babel_language, autoref_names_follow_the_babel_language, gbrief_letter, shorthandoff_reports…, the_doors_stay_the_formats_macros, french_high_punctuation.
-- **WIN1b, tcolorbox r79191 (6.10.0, 2026/05/28):** `undefined:\tcb@proc@options@init` (tcolorbox_sty.rs:898 `tcb_listing_startend`, tcblistingscore_code_tex.rs:132). 6.10 renamed it `\__tcobox_proc_options_init:nn` (tcolorbox.sty:2472, same `{init}{name}`) and moved the counter wiring into expl3 (`\__tcobox_proc_counter_addcounter:n` appends `code={…\thetcbcounter…\stepcounter}` to `\tcb@new@colopt`, :2428-2444). Calling the new name alone is not enough (tried): `\thetcbcounter` stays undefined and `readBalanced` runs out unbalanced — `tcb_counter_step_code` must follow the `\tcb@new@colopt` path, keeping the old one for ≤ 6.9. 15 red: `cluster_newtcblisting_leading_optarg` and the tcb guards of batches 40_43, 54, 59, 77m, 78g.
-- **WIN1c, fontspec r79934:** `undefined:\UnicodeFontFile`. 11 red: batch54 font_exists_test, fontspec_definers, physics2_* ×2; batch56 fourier_mathbb, setmathfont_version, unicode_math_rebinds, xetex_only_packages; batch60 fontspec_selects_tu, fontspec_text_is_tu; batchm1 ijsra_abstract.
-- **WIN1d, latex-lab r80868 (the November kernel):** `LaTeX socket Error: Socket 'tagsupport/{minipage,parbox}/{before,after}' already declared!` — declared by both the kernel and a latex-lab file we load. 9 red: class_census documentmetadata_loads_pdfmanagement; batch54 documentmetadata_loads_tagpdf, documentmetadata_tikz_alt_key, pdffile_and_pdfdict; batch56 sweep44_single_name_gaps, testphase_tagging_sockets, xcolor_definecolor_bridges; batchm1 block_instances; the streaming shard 1. Also `Socket 'caption/label' undeclared!`: batch60 autoref_name_diagnostics, batch74b asmejour_keywords (+ `undefined:\setlist`).
-- **WIN1e, aliascnt r79461:** now warns `Package aliascnt Warning: The package is obsolete`, one Warning more for each guard that counts them `(0, 1)`: batch66h lipics_autoref_alias, batch68g aliascnt_autoref_names_the_alias + llncs_aliascntresetthe, batch77c pasa_era_pushfilename, batch97c svproc_institute_is_each_authors. Decide: an Info for a package's obsolescence notice, or the guards count it.
-- **WIN1f, biblatex r80368:** `undefined:\DeclareDatafieldSet` — batch54 biblatex_style_internal_surface, style_def_printbibliography_override.
-- **WIN1g, fancyvrb r80718 (4.8, 2026/10/20):** every `Verbatim` line ends with a space (`TEST 1  ABC ` for `TEST 1  ABC`): `00_tokenize fancyvrb_test`, `fancyvrb_frame_test`. fancyvrb_sty.rs raw-loads the .sty (`InputDefinitions!(noltxml)`); see what 4.8 changed in its line read (`\FV@PreProcessLine`, fancyvrb.sty:200-300).
-- **WIN1h, single rows:** `86_tikz unit_tests_by_silviu_test` — S14's second picture opens a new paragraph (golden line 1867; pgf r79866); batch56 polyglossia_script_check (`The current main roman font, cmr10, does not …`, polyglossia r80238); batch61 csvsimple_rows_in_a_siunitx_column (`Extra alignment tab '&'`); batch68d author_file_stand_ins — `ieeeconf.cls` is now a TeX Live file (r79618): drop it from `AUTHOR_FILE_STAND_INS` or move it to `FORMER_TEX_LIVE`'s opposite.
-- **Resolution (2026-11-14; reproduced on Linux with an opt-in TL 2026 at `/opt/texlive-win1/2026`, 68 red; every fix keyed on what the installed
-  file defines, never a year; full suite green on TL 2025 and TL 2026):**
-  - WIN1a: `\lx@babel@activate@mainlang` also `\let`s `\mainlocalename` (babel.sty TL 2025 :1140, 26.16 :1190); the 1901-german Warning count
-    reads the installed `babel-german.tex`.
-  - WIN1b: listing boxes call `\__tcobox_process_newtcolorbox:nn` (6.8, 6.10), else `\tcb@proc@options@init` (2.80, `savedelimiter` set); the
-    stored counter `code=` runs per use; `\counterwithin`/`\counterwithout` take latex.ltx's `[format]` (KNOWN_PERL_ERRORS #1242).
-  - WIN1c/f: fontspec's `tuenc.def` load sees `\XeTeXversion` and `\tex_Umathcode:D` too (v2.2a), restored after; biblatex stands in for
-    biblatex-sbl's `\DeclareDatafieldSet`, `\DeclarePageCommands*`, `blx@trackfloats`. ijsra skips visibly where KOMA-Script 3.50 has no `\ifstr`
-    (the class fails in TeX too).
-  - WIN1d: the testphase minipage sockets are declared under `\IfSocketExistsF` (the November kernel declares them, latex.ltx:22533-22536);
-    asmejour's `\setlist` and babel's `cyrl2uni.def` guards follow the installed files.
-  - WIN1e: `warning_count` does not credit a package's own obsolescence notice (aliascnt v1.7 on a 2026-06+ kernel).
-  - WIN1g: fancyvrb 4.8's line-end `\hfil` is swapped back to `\hss` (`prelude::substitute_in_macro`).
-  - WIN1h: polyglossia 2.13's script check; csvsimple fixture `[legacy]`; pasa holds the era `\@p@pfilename` (latex.ltx:19091); the l3fp doors guard
-    reads `\exp_after`'s spelling; stand-ins decided by the binding list (a paper's copy read first, TeX's document-directory rule);
-    `Requirements::golden_variant` picks `unit_tests_by_silviu.pgf-r79866.xml` and `ac-drive-components.circuitikz-1.8.6.xml` by the installed file.
-  - WIN1i (found on the way): the latex-lab block binding reads the installed `latex-lab-testphase-block.sty` (TL 2025 and the November block
-    code, keytheorems' `thmstyle`); amsthm's `\theoremstyle` expands its argument (KNOWN_PERL_ERRORS #1243).
-  - Review fix (WIN1F): a file read as a token list (`\everyeof` set, `\file_get:nnN`) is never answered by a binding (OD #1029); the
-    glyphtounicode binding is back for ordinary `\input`.
-- **Post-merge rows found on the way (each with a `_red.tex` where named):** `\pdftexrevision` is Perl's 19 (pdfTeX 1.40.19) where TL 2025 runs
-  1.40.28, so latex.ltx takes the `\everyjob` glyphtounicode branch (needs a full A/B); an undefined `\if…` recovery swallows the rest
-  (`parameter-conditional/undefined_if_name_swallows_the_rest_red.tex`); biblatex's `\blx@blxinit` hooks never run (sbl's `\lno` …);
-  `\Umathcode` defined under the pdfTeX persona; asmejour's `\arabic*` "Missing number" is our Warning, TeX's Error; a fill glue at a box's end
-  prints a space (`boxes-groups/fill_glue_at_box_end_prints_a_space_red.tex`); csvsimple 3.0's l3 code in an siunitx column
-  (`package-bindings/csvsimple_l3/…_red.tex`); keytheorems custom `thmstyle` → `\newtheoremstyle`; Verbatim `numbers=left` trailing spaces;
-  `latexml_tests_internal` ignores `golden_variant`; the circuitikz predicate could key on `transistors/rounded caps`.
-
-### The road — conclusions (row R; its history in the archive's SYNC3 section)
-
-- **Order (DG 2026-11-09, the inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`), each step reviewed and bundled:** (1) single engine clean; (2) every RED seen on a real paper; (3) Option C P1-P6; (4) the bars; (5) non-frontmatter; (5b) the BM Q&A work; (6) the close. The table's Rank is the order work is taken in.
-- (1) **Done:** `author_block/` deleted (int155a); the e0 fence hardened (int156a); Z18n folded into P2-7 (`shared_row/` deleted, P27b). The old reader's code left — `classify/old_reader/` and `defs/author_macros/ijcai.rs`, fenced by e0's `MOVED_OLD_READER_FILES` (the IJCAI chain and its `@marked`/`@shared` gates, authblk's and IEEEtran's readers, llncs's `affiliation_calls`) — is rerouted in P4b-P6.
-- (2) **Narrowed for the merge (DG 2026-11-11: "The 'fix them all' is a long-term goal for arXiv"):** a real-paper loss is fixed before the merge only at arXiv reach ≥ ~500; below it, counted by a Warning (no silent loss) and kept as a catalogued RED. Left: neurips_2024, 77p's grouping (2603.07345), aa `\mail{\email{x}}` ([`perfect_kernel/SILENT_LOSS_INVENTORY.md`](perfect_kernel/SILENT_LOSS_INVENTORY.md) "Bundle int157a — the residual").
-- (3) **Option C** ([`parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md)): done — P1, P2-0, P2-1 outside llncs, P2-2, P2-4, P2-5/P2-6 gates, P2-7, P3, P2-3 half, one title-page reading (TP1/RK1), F0 + P4a, P4d; left — ranks 1-8; after the merge — TP2, the separator's print-time meaning (SMB1-SMB3).
-- (3) **Rulings 2026-11-11** (the plan's "Segmentation is digested"): each port deletes the spelling path it replaces; its output changes only where the PDF agrees (a condition; the goal stays every source word kept in high-quality semantic markup); every changed paper classified, none worse; its guards updated in the same commit; a separator carries its meaning (kernel / binding / raw), never a per-class spelling list. Each bundle reports the spelling-split sites left, the net `src/` lines, the frontmatter line count and a dev re-score.
-- (4) **The bars** (DG 2026-11-09): a truth set, then a fresh holdout v4 read once — 98/98 on dev3/devh/dev20k and v4, longtail ≥ off with no regression; DG 2026-11-12: after the merge (TRUTH, HOLD4) — the merge is gated by the per-bundle bars (every printed word kept or counted; no paper worse on any A/B), the holdout sealed until HOLD4.
-- (5) **Non-frontmatter:** the generalization audit (GA1-GA5) before the merge; FMPERF at the end of the frontmatter work (the rehearsal, the title-page runs, the separator query, the emitter; `instructions:u` against the 2026-10-31 audit's 18 documents; one lever per batch, byte-identical); PERF, T1, ROW0A and CLEAN (keep-list to DG) moved after the merge (DG 2026-11-12).
-- (5b) **The BM Q&A work** (DG 2026-11-11: "I approve your plan, let us proceed with full speed ahead"; BM's answers of 2026-11-05): done in int161a — QA45 (ML1, OD #180), QA54 fix (b) (PI1, KPE #1222), QA30 (BU1, KPE #1223), QA10 (DTL1a+b, OD #1004, KPE #1221); 2026-11-12 — QA41's audit, QA89 (OD #1005); QA60 site 8 (SR1) parked after DG's "author's group" ruling (SR4/SR5 after the merge).
-- (6) **The close:** DOCS, SWEEP (#186, row 0's G1-G5 on the final head), CORTEX (runs 373/374 at int169a's push) and CIPERF (the CI config only; DG 2026-11-11: "once we merge we will start working on public issues and PRs, and start running CI instantly"; study `agent_reports/2026-11-11_TC0_report.md`) done in bundles int170a-int171a; left CORTEX2 (the reruns on the pushed final head), GOAL's verdict, MPR (DG confirms).
-- **Pushed bundles:** int154a → int171a, each chain's figures in its "Bundle <label>" entry of [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md); the last, int171a (`ad465256df`): gates 8103/8103, A/B 28,354 → 81 changed (1 worse ruled post-merge: LEGAB; 2 fixed by FIX171), E 45,692 → 45,686, F 171 = 171.
+  - WIN1R — WIN1's post-merge rows (WIN1 done in #833: the suite green on TL 2025, the distro TL and TL 2026; its TL 2026 install recipe and resolution in `archive/SYNC_SESSIONS_2026-11.md` "WIN1"): `\pdftexrevision` is Perl's 19 where TL 2025 runs 1.40.28, so latex.ltx takes the `\everyjob` glyphtounicode branch (needs a full A/B); an undefined `\if…` recovery swallows the rest (`parameter-conditional/undefined_if_name_swallows_the_rest_red`); biblatex's `\blx@blxinit` hooks never run (sbl's `\lno` …); `\Umathcode` defined under the pdfTeX persona; asmejour's `\arabic*` "Missing number" our Warning, TeX's Error; a fill glue at a box's end prints a space (`boxes-groups/fill_glue_at_box_end_prints_a_space_red`); csvsimple 3.0's l3 code in an siunitx column (`package-bindings/csvsimple_l3/csvsimple_l3_siunitx_column_red`); keytheorems custom `thmstyle` → `\newtheoremstyle`; Verbatim `numbers=left` trailing spaces; `latexml_tests_internal` ignores `golden_variant`; the circuitikz predicate could key on `transistors/rounded caps`; 3
+  - UPSYNC — the upstream LaTeXML sync to `0db6f47e` (PR #845, open: fbox/listings frame padding #2820, archive logs #2855, …; its record `parity/UPSTREAM_SYNC_2833_to_0db6f47e.md` lands with it); 3
+  - RHAIR — Rhai residuals (#829; OD #1030, #1031, #1035): `LookupMeaning` returns the meaning, not its printed form (`rhai-bindings/lookupmeaning_is_a_string_red`); `ToString` of an array of handles (`tostring_array_of_handles_red`); `#tags` in a text-level template (`tags_in_text_red`); `LookupString` of tokens (`lookupstring_of_tokens_red`); a gullet-only one-argument macro (`gullet_only_on_one_arg_macro_red`); an imperative constructor drops a space (`imperative_constructor_drops_space_red`); the `Invocation` error stub; `counter_value`'s Warning on an undefined counter; not in Rhai yet: `DefMacroI`/`DefPrimitiveI`/`DefConstructorI`, `unlist`, `getCatcode`, `getCSName`, `getFont`; 3
+  - DELC — `\delcode` holds 24 bits: the delcode table as an integer table (the dump's DELCODE_TABLE, tex_math.rs:2336's −1 reading) (`macro-state/delcode_holds_24_bits_red`; #829, W3RB); 1
+  - REGW — the core register lookup could Warn on an undefined CS once the kernel's optional-register probes use the quiet lookup (a Warning there added geometry `\Gm@tw` Warnings to 27 of 200 papers; #843, OD #1036); 1
+  - XYOPT — `\xyoption{<feature>}` without `[all]` loses one space mid-paragraph through `load_tex_definitions`; Perl keeps both (pre-existing; #843); 1
+  - VERBR — verbatim CSS residuals (#844): a `numbers=left` line number overlaps the code (`listings-algorithms/fancyvrb_numbers_left_overlap_the_code_red`); a breaklines first line indented twice (fvextra's negative `\hspace` missing from the HTML); a breaklines Verbatim in a minipage in a `tabular` widens the page (pre-existing); `display: contents` on the id-bearing wrapper may remove an `#id` link's scroll target (suspected, unprobed); 2605.00468 widens a phone page through a fixed-width tcolorbox SVG; 3
+  - MODCV — moderncv 2.x: our binding, like Perl's, predates it — `\name` and `\makecvtitle` raise Errors, `\cventry` drops two fields (`class-bindings/moderncv_name_style_makecvtitle_red`; #844); 3
+  - NICEO — nicematrix: 2206.12224's second trailing key list (`package-bindings/nicematrix_second_trailing_options_red`); NiceArray's `tex=` reverts to `\left.\begin{array}…\right.` and drops `\Block` (pre-existing) (#839, issue 736); 1
+  - MSPC — math spacing (#841; OD #1032, #1033, both to offer upstream): `\mathbin{/}` and `\bigm/` lose their class in digestion (tex_math.rs:1194 → :2694), so no space where TeX gives medium or thick (`math-parse/mathbin_slash_keeps_binary_space_red`); the spacing walk (presentation.rs `adjust_pair`) ignores script style, `x^{a\mathrel{\star}b}` 0.278 em where TeX has none (`math-parse/script_style_rel_has_no_thick_space_red`); 3
+  - PRESC — prescripts (#837, issue 824): a trailing float script after a prescripted factor, a prescripted bare OPFUNCTION (`scripted_factor_l11`), `{}^*x` (`math-parse/{trailing_float_script_after_a_prescripted_factor,prescript_on_a_bare_opfunction,prescript_star_on_a_bare_identifier}_red`); 3
+  - ARRF — arrow heads (#838, OD #81): an uncomposed head pair or a `\let` alias of a head reads as a list (`arrowfill/arrowfill_uncomposed_pair_red`); mathtools' `\xLongleftarrow` undefined (`arrowfill/mathtools_xLongleftarrow_red`, pre-existing); 1
+  - ARCR — colortbl and rules (#835, OD #1025): a `!{}` rule's own colour (`alignment-bindings/arrayrulecolor_bang_rule_own_colour_red`); the error boundary of colortbl's `\noalign` test (`arrayrulecolor_mid_cell_misplaced_noalign_red`, `arrayrulecolor_noalign_and_before_multicolumn_red`); `\hhline` colour codes; the kernel template reader drops a `|` directly before `!{…}` (Perl too; `tabular_bar_then_bang_rule_between_columns_red`); a math array's `\multicolumn` `tex=` loses the template (`math_array_multicolumn_tex_keeps_the_template_red`); 3
+  - CAPJ — caption justification (#834, issue 787, OD #1024): sub-captions (`captions-floats/subcaption_justification_and_skip_red`); `centerlast`/`centerfirst`; a justification through a user macro or raw glue — read the digested body, not its spelling (`caption_justification_through_a_macro_red`, `caption_justification_by_glue_red`); a short multi-line caption under singlelinecheck (`caption_singlelinecheck_short_multiline_red`); 3
+  - LWID — `\linewidth` residuals (#836, issue 778, OD #42): a tabularx `X` cell's width, which needs the X width computed (`kernel-alignment/tabularx_x_cell_linewidth_red`); `\linewidth` inside list items (`lists/list_item_linewidth_red`); 3
+  - TXWD — class text widths (#830): the standard classes' and elsarticle's `twocolumn`, REVTeX's size options (`class-bindings/{standard_class_twocolumn,elsarticle_twocolumn,revtex_size_option}_textwidth_red`); 3
+  - ETOCR — etoc (#830, issue 760): relative depth (`package-bindings/etoc_relative_depth_red`), `\etocsettocstyle` headings (`etoc_settocstyle_heading_red`); 1
+  - IMPFC — import: a filecontents file under an import directory (`package-bindings/import_filecontents_file_under_an_import_dir_red`; #830, issue 772); 1
+  - EPUBR — EPUB residuals (#840, issue 807; Perl the same): a document without sections has no navigation document, which epubcheck rejects (`epub/no_sections_no_nav_red`); `--splitnaming=label` with a label equal to the stem overwrites the root page (`epub/split_label_collides_with_root_red`); CI does not run epubcheck yet; 1
+  - GRMLINT — the math grammar builder (`init_grammar`) shares the stack-frame lint `allow` with the converter; splitting them (#832); 1
+  - MCSS — carry an author's row spacing (and other layout MathML Core dropped) through CSS instead of the unsupported MathML 3 `rowspacing` attribute; `\arraystretch{0.8}` writes a negative `rowspacing="-2.0pt"` today (DG 2026-11-14, PR #848 follow-up; low priority); 3
 
 ---
 
@@ -431,8 +365,10 @@ Each entry's body (defect, cause, fix, guards, witnesses) is verbatim in [`archi
 
 ## Current status
 
-The corpus measure is the perfect-kernel scoreboard ([`PERFECT_KERNEL_2026-11-13.md`](archive/PERFECT_KERNEL_2026-11-13.md), sweeps of the 2,374
-TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/2606 (runs 325-328, 2026-10-04) and run 329's validations are in
+The regression baseline for the campaign's sandbox rerun (row R step 3) is cortex runs 375/376 on `2a1fa68d95`, the pushed final tree (2605: F 9 / E 875;
+2606: F 15 / E 863; `archive/SYNC_SESSIONS_2026-11.md` bundle int171a, CORTEX2); the last complete arXiv run is 336 (2026-10-10). The perfect-kernel
+scoreboard ([`PERFECT_KERNEL_2026-11-13.md`](archive/PERFECT_KERNEL_2026-11-13.md), sweeps of the 2,374 TL manuals) and the per-batch arXiv A/B
+measured the program; the cortex reruns of sandboxes 2605/2606 (runs 325-328, 2026-10-04) and run 329's validations are in
 `archive/SYNC_SESSIONS_2026-10.md`; the last full sandbox rerun before them (2026-08-02, 60,505 docs) in
 `archive/SYNC_SESSIONS_2026-09.md`.
 
@@ -445,7 +381,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 - Cortex API: `http://127.0.0.1:8000/api`. Endpoints: `/api/reports/<corpus>/oxidized-tex-to-html/<severity>` and `/api/corpus/<corpus>/tex_to_html/document/<id>`.
 
 ### CSS themes — `ar5iv.css` vs `LaTeXML.css`
-- `ar5iv.css` is actively developed (`~/git/ar5iv-css`). Base `LaTeXML.css` is a faithful copy of upstream Perl LaTeXML's default theme; bugs in base CSS route upstream to `brucemiller/LaTeXML`.
+- `ar5iv.css` is actively developed (`~/git/ar5iv-css`). Base `LaTeXML.css` starts from upstream Perl LaTeXML's default theme (synced with upstream master in #844).
+- **A measured defect against the PDF is fixed in `LaTeXML.css` (DG 2026-11-14)**, mirrored into ar5iv-css, recorded in OD and offered upstream to `brucemiller/LaTeXML`.
 - Sizing intent gap (witness #721, ar5iv#83): Preserve absolute (`7in`) vs relative (`\textwidth`) intent in `image.rs:186` instead of flattening both to `pt`.
 
 ### Algorithm Markup + CSS Unification (0.7.7 Target)

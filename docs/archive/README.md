@@ -104,6 +104,8 @@ citations are why the file is kept.
   ranked rows (G, XP, R4), the bundle rows int119a-int152a and int133a, row 98d, the pre-flip leftovers' history, the
   long rows' full records and the Rust Error Fixes' bodies, split into one fact per line. Each live residual keeps its
   row, under the same title, in SYNC_STATUS or (since SYNC1b) `../perfect_kernel/SILENT_LOSS_INVENTORY.md`.
+  Later moves add their own `## Moved from SYNC_STATUS by …` sections (SYNC3 2026-11-12; DOCSPM 2026-11-14: the pre-merge
+  table, the road's conclusions and the done WIN1 section with its TL 2026 install recipe).
 - `GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md` — the Gemini engineering review; P1/P5/P6/P7 landed, P3/P4 settled, the
   open ideas lifted into `../performance/BEYOND_PERL_LEVERS.md`.
 - `round19_iteration_log.md` — pre-Round-25 sprint narratives. Cited by `CHANGELOG.md`.
