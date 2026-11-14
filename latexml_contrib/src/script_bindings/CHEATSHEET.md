@@ -33,6 +33,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `$n->valueOf >> $m` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) / `register_number_int_transition` (`latexml_contrib/src/script_bindings/values.rs`) | `>>` |
 | `AddToCounter` | [`AddToCounter!`](latexml_engine::AddToCounter!) / [`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter) | `AddToCounter` |
 | `AddToMacro` | [`AddToMacro!`](latexml_engine::AddToMacro!) / [`add_to_macro`](latexml_core::binding::content::add_to_macro) | `AddToMacro` |
+| `AfterAssignment` | [`after_assignment`](latexml_core::state::after_assignment) | `AfterAssignment` |
 | (Rhai helper; Perl: `PushValue(SEARCHPATHS => $dir)`) | [`add_search_path`](latexml_core::state::add_search_path) | `AppendSearchPath` |
 | `AssignCatcode` | [`AssignCatcode!`](latexml_engine::AssignCatcode!) / [`assign_catcode`](latexml_core::state::assign_catcode) | `AssignCatcode` |
 | `AssignDelcode` | [`assign_delcode`](latexml_core::state::assign_delcode) | `AssignDelcode` |
@@ -73,35 +74,50 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `CC_SPACE` | [`Catcode::SPACE`](latexml_core::token::Catcode::SPACE) | `CC_SPACE` |
 | `CC_SUB` | [`Catcode::SUB`](latexml_core::token::Catcode::SUB) | `CC_SUB` |
 | `CC_SUPER` | [`Catcode::SUPER`](latexml_core::token::Catcode::SUPER) | `CC_SUPER` |
+| `CheckOptions` | [`check_options`](latexml_core::binding::def::options::check_options) | `CheckOptions` |
+| `CleanBibKey` | [`clean_bib_key`](latexml_core::common::cleaners::clean_bib_key) | `CleanBibKey` |
+| `CleanClassName` | [`clean_class_name`](latexml_core::common::cleaners::clean_class_name) | `CleanClassName` |
 | `CleanID` | [`clean_id`](latexml_core::common::cleaners::clean_id) | `CleanID` |
+| `CleanIndexKey` | [`clean_index_key`](latexml_core::common::cleaners::clean_index_key) | `CleanIndexKey` |
 | `CleanLabel` | [`clean_label`](latexml_core::common::cleaners::clean_label) | `CleanLabel` |
+| `CleanURL` | [`clean_url`](latexml_core::common::cleaners::clean_url) | `CleanURL` |
 | (Rhai helper; Perl: `system($program, @args)`) | [`Command::new`](std::process::Command::new) | `Command` |
+| `ComposeURL` | [`compose_url`](latexml_core::common::cleaners::compose_url) | `ComposeURL` |
 | `CounterValue` | [`CounterValue!`](latexml_engine::CounterValue!) / [`counter_value`](latexml_core::binding::counter::dialect::counter_value) | `CounterValue` |
 | `DeclareFontMap` | [`DeclareFontMap!`](latexml_engine::DeclareFontMap!) | `DeclareFontMap` |
 | (Rhai helper; Perl: `DeclareFontMap($name, [..., "ffi", ...])`) | [`DeclareFontMapMultichar!`](latexml_engine::DeclareFontMapMultichar!) / [`load_font_map`](latexml_core::binding::content::load_font_map) | `DeclareFontMapMultichar` |
 | `DeclareOption` | [`DeclareOption!`](latexml_engine::DeclareOption!) | `DeclareOption` |
 | `DefAccent` | [`DefAccent!`](latexml_engine::DefAccent!) | `DefAccent` |
+| `DefAutoload` | [`def_autoload`](latexml_engine::tex::def_autoload) | `DefAutoload` |
 | `DefColumnType` | [`DefColumnType!`](latexml_engine::DefColumnType!) / [`def_macro`](latexml_core::binding::def::dialect::def_macro) | `DefColumnType` |
 | `DefConditional` | [`DefConditional!`](latexml_engine::DefConditional!) / [`def_conditional`](latexml_core::binding::def::dialect::def_conditional) | `DefConditional` |
+| `DefConditionalI` | [`def_conditional`](latexml_core::binding::def::dialect::def_conditional) | `DefConditionalI` |
 | `DefConstructor` | [`DefConstructor!`](latexml_engine::DefConstructor!) / [`def_constructor`](latexml_core::binding::def::dialect::def_constructor) | `DefConstructor` |
 | `DefConstructorI` | [`def_constructor`](latexml_core::binding::def::dialect::def_constructor) | `DefConstructorI` |
 | `DefEnvironment` | [`DefEnvironment!`](latexml_engine::DefEnvironment!) / [`def_environment`](latexml_core::binding::def::dialect::def_environment) | `DefEnvironment` |
+| `DefEnvironmentI` | [`def_environment`](latexml_core::binding::def::dialect::def_environment) | `DefEnvironmentI` |
 | `DefKeyVal` | [`DefKeyVal!`](latexml_engine::DefKeyVal!) / [`define`](latexml_core::keyval::define) | `DefKeyVal` |
 | `DefLigature` | [`DefLigature!`](latexml_engine::DefLigature!) | `DefLigature` |
 | `DefMacro` | [`DefMacro!`](latexml_engine::DefMacro!) / [`def_macro`](latexml_core::binding::def::dialect::def_macro) | `DefMacro` |
 | `DefMacroI` | [`def_macro`](latexml_core::binding::def::dialect::def_macro) | `DefMacroI` |
 | `DefMath` | [`DefMath!`](latexml_engine::DefMath!) / [`def_math`](latexml_core::binding::def::dialect::def_math) | `DefMath` |
+| `DefMathI` | [`def_math`](latexml_core::binding::def::dialect::def_math) | `DefMathI` |
 | `DefMathLigature` | `DefMathLigature!` (`latexml_engine/src/setup_binding_language.rs`) | `DefMathLigature` |
 | `DefMathRewrite` | [`DefMathRewrite!`](latexml_engine::DefMathRewrite!) | `DefMathRewrite` |
 | `DefParameterType` | [`DefParameterType!`](latexml_engine::DefParameterType!) / [`Parameter`](latexml_core::parameter::Parameter) | `DefParameterType` |
 | `DefPrimitive` | [`DefPrimitive!`](latexml_engine::DefPrimitive!) / [`def_primitive`](latexml_core::binding::def::dialect::def_primitive) | `DefPrimitive` |
 | `DefPrimitiveI` | [`def_primitive`](latexml_core::binding::def::dialect::def_primitive) | `DefPrimitiveI` |
 | `DefRegister` | [`DefRegister!`](latexml_engine::DefRegister!) / [`def_register`](latexml_core::binding::def::dialect::def_register) | `DefRegister` |
+| `DefRegisterI` | [`def_register`](latexml_core::binding::def::dialect::def_register) | `DefRegisterI` |
 | `DefRewrite` | [`DefRewrite!`](latexml_engine::DefRewrite!) | `DefRewrite` |
+| `Deprecated` | [`Warn!`](latexml_core::Warn!) | `Deprecated` |
 | `Digest` | [`Digest!`](latexml_engine::Digest!) / [`digest`](latexml_core::stomach::digest) | `Digest` |
 | `DigestIf` | [`DigestIf!`](latexml_engine::DigestIf!) / [`digest_if`](latexml_core::binding::content::digest_if) | `DigestIf` |
+| `DigestLiteral` | [`digest_literal`](latexml_core::binding::content::digest_literal) | `DigestLiteral` |
 | `DigestText` | [`DigestText!`](latexml_engine::DigestText!) / [`digest_text`](latexml_core::binding::content::digest_text) | `DigestText` |
 | `Dimension` | [`Dimension!`](latexml_engine::Dimension!) | `Dimension` |
+| `DisableKeyVal` | [`disable_keyval`](latexml_core::keyval::disable_keyval) | `DisableKeyVal` |
+| `DocType` | [`RegisterDocumentNamespaces!`](latexml_engine::RegisterDocumentNamespaces!) / [`register_document_namespace`](latexml_core::common::model::register_document_namespace) | `DocType` |
 | `EndSemiverbatim` | [`end_semiverbatim`](latexml_core::state::end_semiverbatim) | `EndSemiverbatim` |
 | `Equals` | [`Tokens::equals`](latexml_core::tokens::Tokens::equals) / `equals` (`latexml_contrib/src/script_bindings/engine.rs`) | `Equals` |
 | `Error` | [`Error!`](latexml_core::Error!) | `Error` |
@@ -112,9 +128,12 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `ExplodeText` | [`ExplodeText!`](latexml_core::ExplodeText!) | `ExplodeText` |
 | `Fatal` | [`Fatal!`](latexml_core::Fatal!) | `Fatal` |
 | `FindFile` | [`FindFile!`](latexml_engine::FindFile!) / [`find_file`](latexml_core::binding::content::find_file) | `FindFile` |
+| `FontDecode` | [`font_decode`](latexml_core::binding::content::font_decode) | `FontDecode` |
+| `FontDecodeString` | [`font_decode_string`](latexml_core::binding::content::font_decode_string) | `FontDecodeString` |
 | `GetKeyVal` | [`GetKeyVal!`](latexml_engine::GetKeyVal!) | `GetKeyVal` |
 | `GetKeyVals` | [`GetKeyVals!`](latexml_engine::GetKeyVals!) | `GetKeyVals` |
 | `Glue` | [`Glue!`](latexml_engine::Glue!) | `Glue` |
+| `HasKeyVal` | [`has_keyval`](latexml_core::keyval::has_keyval) | `HasKeyVal` |
 | `IfCondition` | [`if_condition_args`](latexml_core::binding::content::if_condition_args) | `IfCondition` |
 | `Info` | [`Info!`](latexml_core::Info!) | `Info` |
 | `Input` | [`Input!`](latexml_engine::Input!) / [`input`](latexml_core::binding::content::input) | `Input` |
@@ -126,6 +145,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `Let` | [`Let!`](latexml_engine::Let!) / [`let_definition`](latexml_core::state::let_definition) | `Let` |
 | `List` | [`List`](latexml_core::list::List) / `list_of` (`latexml_contrib/src/script_bindings/engine.rs`) | `List` |
 | `LoadClass` | [`LoadClass!`](latexml_engine::LoadClass!) / [`load_class`](latexml_core::binding::content::load_class) | `LoadClass` |
+| `LoadFontMap` | [`load_font_map`](latexml_core::binding::content::load_font_map) | `LoadFontMap` |
 | `LoadPool` | [`LoadPool!`](latexml_engine::LoadPool!) / [`input_definitions`](latexml_core::binding::content::input_definitions) | `LoadPool` |
 | `LookupValue` | [`LookupBool!`](latexml_engine::LookupBool!) / [`lookup_bool`](latexml_core::state::lookup_bool) | `LookupBool` |
 | `LookupCatcode` | [`LookupCatcode!`](latexml_engine::LookupCatcode!) / [`lookup_catcode`](latexml_core::state::lookup_catcode) | `LookupCatcode` |
@@ -147,9 +167,12 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `LookupUCcode` | [`lookup_uccode`](latexml_core::state::lookup_uccode) | `LookupUCcode` |
 | `LookupValue` | [`lookup_value`](latexml_core::state::lookup_value) | `LookupValue` |
 | `LookupValue` | [`lookup_value`](latexml_core::state::lookup_value) | `lookup_value` (deprecated: `LookupValue(key)`) |
+| `MaybeNoteLabel` | [`maybe_note_label`](latexml_core::binding::counter::dialect::maybe_note_label) | `MaybeNoteLabel` |
+| `MaybePeekLabel` | [`maybe_peek_label`](latexml_core::binding::counter::dialect::maybe_peek_label) | `MaybePeekLabel` |
 | `MergeFont` | [`MergeFont!`](latexml_engine::MergeFont!) / [`merge_font`](latexml_core::binding::content::merge_font) | `MergeFont` |
 | `MuGlue` | [`MuGlue!`](latexml_engine::MuGlue!) | `MuGlue` |
 | `NewCounter` | [`NewCounter!`](latexml_engine::NewCounter!) / [`new_counter`](latexml_core::binding::counter::dialect::new_counter) | `NewCounter` |
+| `NormalizeBibKey` | [`normalize_bib_key`](latexml_core::common::cleaners::normalize_bib_key) | `NormalizeBibKey` |
 | `Note` | [`Note!`](latexml_core::Note!) | `Note` |
 | `NoteLog` | [`NoteLog!`](latexml_core::NoteLog!) | `NoteLog` |
 | `NoteSTDERR` | [`NoteSTDERR!`](latexml_core::NoteSTDERR!) | `NoteSTDERR` |
@@ -186,6 +209,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `$gullet->skipSpaces` | [`skip_spaces`](latexml_core::gullet::skip_spaces) | `SkipSpaces` |
 | `StartSemiverbatim` | [`begin_semiverbatim`](latexml_core::state::begin_semiverbatim) | `StartSemiverbatim` |
 | `StepCounter` | [`StepCounter!`](latexml_engine::StepCounter!) / [`step_counter`](latexml_core::binding::counter::dialect::step_counter) | `StepCounter` |
+| `Stringify` | [`Object::stringify`](latexml_core::common::object::Object::stringify) | `Stringify` |
 | `T_ACTIVE` | [`T_ACTIVE!`](latexml_core::T_ACTIVE!) | `T_ACTIVE` |
 | `T_ALIGN` | [`T_ALIGN!`](latexml_core::T_ALIGN!) | `T_ALIGN` |
 | `T_ARG` | [`T_ARG!`](latexml_core::T_ARG!) | `T_ARG` |
@@ -211,6 +235,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `Tokenize` | [`Tokenize!`](latexml_engine::Tokenize!) / [`tokenize`](latexml_core::mouth::tokenize) | `Tokenize` |
 | `TokenizeInternal` | [`TokenizeInternal!`](latexml_engine::TokenizeInternal!) / [`tokenize_internal`](latexml_core::mouth::tokenize_internal) | `TokenizeInternal` |
 | `Tokens` | [`Tokens!`](latexml_core::Tokens!) | `Tokens` |
+| `TrimmedCommaList` | [`trimmed_comma_list`](latexml_core::common::cleaners::trimmed_comma_list) | `TrimmedCommaList` |
 | `UTF` | [`from_u32`](char::from_u32) | `UTF` |
 | `UnTeX` | [`Tokens::untex`](latexml_core::tokens::Tokens::untex) | `UnTeX` |
 | `UnshiftValue` | [`unshift_value`](latexml_core::state::unshift_value) | `UnshiftValue` |
@@ -307,6 +332,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `unshift(@{$$defn{afterDigestBody}}, …)` | [`Constructor::after_digest_body`](latexml_core::definition::constructor::Constructor::after_digest_body) / `push_definition_hook` (`latexml_contrib/src/script_bindings/wire.rs`) | `definition.unshiftAfterDigestBody` |
 | `unshift(@{$$defn{beforeConstruct}}, …)` | [`Constructor::before_construct`](latexml_core::definition::constructor::Constructor::before_construct) / `push_definition_hook` (`latexml_contrib/src/script_bindings/wire.rs`) | `definition.unshiftBeforeConstruct` |
 | `unshift(@{$$defn{beforeDigest}}, …)` | [`Constructor::before_digest`](latexml_core::definition::constructor::Constructor::before_digest) / `push_definition_hook` (`latexml_contrib/src/script_bindings/wire.rs`) | `definition.unshiftBeforeDigest` |
+| `ReadParameters($gullet, $spec)` | [`parse_parameters`](latexml_core::common::def_parser::parse_parameters) / [`Parameters::read_arguments`](latexml_core::parameter::Parameters::read_arguments) | `gullet.ReadParameters` |
 | `$gullet->readArg` | [`read_arg`](latexml_core::gullet::read_arg) | `gullet.readArg` |
 | `$gullet->readOptional` | [`read_optional`](latexml_core::gullet::read_optional) | `gullet.readOptional` |
 | `$gullet->readToken` | [`read_token`](latexml_core::gullet::read_token) | `gullet.readToken` |
@@ -336,49 +362,23 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | (Rhai helper; Perl: `chdir($dir)`) | [`Command::current_dir`](std::process::Command::current_dir) | `command.current_dir` |
 | (Rhai helper; Perl: `local $ENV{$key} = $value`) | [`Command::env`](std::process::Command::env) | `command.env` |
 | (Rhai helper; Perl: `qx($command)`) | [`Command::output`](std::process::Command::output) | `command.output` |
-| `AfterAssignment` | [`after_assignment`](latexml_core::state::after_assignment) |  |
-| `CheckOptions` | [`check_options`](latexml_core::binding::def::options::check_options) |  |
-| `CleanBibKey` | [`clean_bib_key`](latexml_core::common::cleaners::clean_bib_key) |  |
-| `CleanClassName` | [`clean_class_name`](latexml_core::common::cleaners::clean_class_name) |  |
-| `CleanIndexKey` | [`clean_index_key`](latexml_core::common::cleaners::clean_index_key) |  |
-| `CleanURL` | [`clean_url`](latexml_core::common::cleaners::clean_url) |  |
 | `Color` | [`Color`](latexml_core::common::color::Color) |  |
-| `ComposeURL` | [`compose_url`](latexml_core::common::cleaners::compose_url) |  |
 | `Debug` | [`Debug!`](latexml_core::Debug!) |  |
-| `DefAutoload` | [`def_autoload`](latexml_engine::tex::def_autoload) |  |
 | `DefColor` | [`def_color`](latexml_core::binding::content::def_color) |  |
 | `DefColorModel` | [`def_color_model`](latexml_core::binding::content::def_color_model) |  |
-| `DefConditionalI` | [`def_conditional`](latexml_core::binding::def::dialect::def_conditional) |  |
-| `DefEnvironmentI` | [`def_environment`](latexml_core::binding::def::dialect::def_environment) |  |
 | `DefExpandable` | [`DefMacro!`](latexml_engine::DefMacro!) / [`def_macro`](latexml_core::binding::def::dialect::def_macro) | `DefMacro(proto, expansion, opts)` |
-| `DefMathI` | [`def_math`](latexml_core::binding::def::dialect::def_math) |  |
-| `DefRegisterI` | [`def_register`](latexml_core::binding::def::dialect::def_register) |  |
-| `Deprecated` | [`Warn!`](latexml_core::Warn!) / `warn_deprecated` (`latexml_contrib/src/script_bindings/mod.rs`) |  |
-| `DigestLiteral` | [`digest_literal`](latexml_core::binding::content::digest_literal) |  |
-| `DisableKeyVal` | [`disable_keyval`](latexml_core::keyval::disable_keyval) |  |
-| `DocType` | [`RegisterDocumentNamespace!`](latexml_engine::RegisterDocumentNamespace!) / [`register_document_namespace`](latexml_core::common::model::register_document_namespace) |  |
 | `Float` | [`Float`](latexml_core::common::float::Float) | a Rhai float (`1.5`) |
-| `FontDecode` | [`font_decode`](latexml_core::binding::content::font_decode) |  |
-| `FontDecodeString` | [`font_decode_string`](latexml_core::binding::content::font_decode_string) |  |
 | `GenerateID` | [`Document::generate_id`](latexml_core::document::Document::generate_id) | `document.generateID(node, prefix)` |
-| `HasKeyVal` | [`has_keyval`](latexml_core::keyval::has_keyval) |  |
 | `InputContent` | [`input_content`](latexml_core::binding::content::input_content) |  |
 | `InstallDefinition` | [`InstallDefinition!`](latexml_engine::InstallDefinition!) / [`install_definition`](latexml_core::state::install_definition) |  |
-| `LoadFontMap` | [`load_font_map`](latexml_core::binding::content::load_font_map) |  |
 | `LoadFormat` | `plain_dump_available` (`latexml_engine/src/tex.rs`) / `latex_dump_available` (`latexml_engine/src/latex.rs`) |  |
 | `LookupColor` | [`LookupColor!`](latexml_engine::LookupColor!) / [`lookup_color`](latexml_package::package::color_sty::lookup_color) |  |
-| `MaybeNoteLabel` | [`maybe_note_label`](latexml_core::binding::counter::dialect::maybe_note_label) |  |
-| `MaybePeekLabel` | [`maybe_peek_label`](latexml_core::binding::counter::dialect::maybe_peek_label) |  |
 | `MuDimension` | [`MuDimension`](latexml_core::common::mudimension::MuDimension) |  |
-| `NormalizeBibKey` | [`normalize_bib_key`](latexml_core::common::cleaners::normalize_bib_key) |  |
 | `Pair` | [`Pair::new`](latexml_core::common::pair::Pair::new) |  |
 | `PairList` | [`Vec<Pair>`](latexml_core::common::pair::Pair) |  |
 | `ProcessPendingResources` | [`Document::process_pending_resources`](latexml_core::document::Document::process_pending_resources) |  |
 | `ReadAlignmentTemplate` | [`read_alignment_template`](latexml_core::alignment::read_alignment_template) |  |
-| `ReadParameters` | [`parse_parameters`](latexml_core::common::def_parser::parse_parameters) / [`Parameters::read_arguments`](latexml_core::parameter::Parameters::read_arguments) |  |
-| `Stringify` | [`Tokens::stringify`](latexml_core::tokens::Tokens::stringify) / [`Token::stringify`](latexml_core::token::Token::stringify) |  |
 | `TokensI` | [`Tokens::new`](latexml_core::tokens::Tokens::new) | `Tokens(t1, t2, …)` |
-| `TrimmedCommaList` | [`trimmed_comma_list`](latexml_core::common::cleaners::trimmed_comma_list) |  |
 | `convertLaTeXArgs` | [`convert_latex_args`](latexml_core::binding::content::convert_latex_args) |  |
 | `createXMRefs` | [`i_xmref`](latexml_package::xmath_helpers::i_xmref) / `rearrange_ams_split` (`latexml_package/src/package/amsmath_sty.rs`) |  |
 | `decodeMathChar` | [`decode_math_char`](latexml_core::common::mathchar::decode_math_char) |  |
@@ -386,4 +386,4 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 
 ## Perl calls the dialect lacks (an empty Rhai cell)
 
-43 calls: `AfterAssignment`, `CheckOptions`, `CleanBibKey`, `CleanClassName`, `CleanIndexKey`, `CleanURL`, `Color`, `ComposeURL`, `Debug`, `DefAutoload`, `DefColor`, `DefColorModel`, `DefConditionalI`, `DefEnvironmentI`, `DefMathI`, `DefRegisterI`, `Deprecated`, `DigestLiteral`, `DisableKeyVal`, `DocType`, `FontDecode`, `FontDecodeString`, `HasKeyVal`, `InputContent`, `InstallDefinition`, `LoadFontMap`, `LoadFormat`, `LookupColor`, `MaybeNoteLabel`, `MaybePeekLabel`, `MuDimension`, `NormalizeBibKey`, `Pair`, `PairList`, `ProcessPendingResources`, `ReadAlignmentTemplate`, `ReadParameters`, `Stringify`, `TrimmedCommaList`, `convertLaTeXArgs`, `createXMRefs`, `decodeMathChar`, `dualize_arglist`.
+17 calls: `Color`, `Debug`, `DefColor`, `DefColorModel`, `InputContent`, `InstallDefinition`, `LoadFormat`, `LookupColor`, `MuDimension`, `Pair`, `PairList`, `ProcessPendingResources`, `ReadAlignmentTemplate`, `convertLaTeXArgs`, `createXMRefs`, `decodeMathChar`, `dualize_arglist`.

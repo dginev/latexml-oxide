@@ -185,54 +185,12 @@ struct Mirror(&'static str, &'static str);
 /// does the same (`""` while the dialect lacks it: the cheat sheet's gaps). [`stale_gaps`] fails when one gets
 /// registered.
 const PERL_GAPS: &[(&str, &str, &str)] = &[
-  (
-    "AfterAssignment",
-    "latexml_core::state::after_assignment",
-    "",
-  ),
-  (
-    "CheckOptions",
-    "latexml_core::binding::def::options::check_options",
-    "",
-  ),
-  (
-    "CleanBibKey",
-    "latexml_core::common::cleaners::clean_bib_key",
-    "",
-  ),
-  (
-    "CleanClassName",
-    "latexml_core::common::cleaners::clean_class_name",
-    "",
-  ),
-  (
-    "CleanIndexKey",
-    "latexml_core::common::cleaners::clean_index_key",
-    "",
-  ),
-  ("CleanURL", "latexml_core::common::cleaners::clean_url", ""),
   ("Color", "latexml_core::common::color::Color", ""),
-  (
-    "ComposeURL",
-    "latexml_core::common::cleaners::compose_url",
-    "",
-  ),
   ("Debug", "Debug!", ""),
-  ("DefAutoload", "latexml_engine::tex::def_autoload", ""),
   ("DefColor", "latexml_core::binding::content::def_color", ""),
   (
     "DefColorModel",
     "latexml_core::binding::content::def_color_model",
-    "",
-  ),
-  (
-    "DefConditionalI",
-    "latexml_core::binding::def::dialect::def_conditional",
-    "",
-  ),
-  (
-    "DefEnvironmentI",
-    "latexml_core::binding::def::dialect::def_environment",
     "",
   ),
   (
@@ -241,52 +199,15 @@ const PERL_GAPS: &[(&str, &str, &str)] = &[
     "DefMacro(proto, expansion, opts)",
   ),
   (
-    "DefMathI",
-    "latexml_core::binding::def::dialect::def_math",
-    "",
-  ),
-  (
-    "DefRegisterI",
-    "latexml_core::binding::def::dialect::def_register",
-    "",
-  ),
-  (
-    "Deprecated",
-    "Warn! / warn_deprecated @ latexml_contrib/src/script_bindings/mod.rs",
-    "",
-  ),
-  (
-    "DigestLiteral",
-    "latexml_core::binding::content::digest_literal",
-    "",
-  ),
-  ("DisableKeyVal", "latexml_core::keyval::disable_keyval", ""),
-  (
-    "DocType",
-    "RegisterDocumentNamespace! / latexml_core::common::model::register_document_namespace",
-    "",
-  ),
-  (
     "Float",
     "latexml_core::common::float::Float",
     "a Rhai float (`1.5`)",
-  ),
-  (
-    "FontDecode",
-    "latexml_core::binding::content::font_decode",
-    "",
-  ),
-  (
-    "FontDecodeString",
-    "latexml_core::binding::content::font_decode_string",
-    "",
   ),
   (
     "GenerateID",
     "latexml_core::document::Document::generate_id",
     "document.generateID(node, prefix)",
   ),
-  ("HasKeyVal", "latexml_core::keyval::has_keyval", ""),
   (
     "InputContent",
     "latexml_core::binding::content::input_content",
@@ -295,11 +216,6 @@ const PERL_GAPS: &[(&str, &str, &str)] = &[
   (
     "InstallDefinition",
     "InstallDefinition! / latexml_core::state::install_definition",
-    "",
-  ),
-  (
-    "LoadFontMap",
-    "latexml_core::binding::content::load_font_map",
     "",
   ),
   (
@@ -313,23 +229,8 @@ const PERL_GAPS: &[(&str, &str, &str)] = &[
     "",
   ),
   (
-    "MaybeNoteLabel",
-    "latexml_core::binding::counter::dialect::maybe_note_label",
-    "",
-  ),
-  (
-    "MaybePeekLabel",
-    "latexml_core::binding::counter::dialect::maybe_peek_label",
-    "",
-  ),
-  (
     "MuDimension",
     "latexml_core::common::mudimension::MuDimension",
-    "",
-  ),
-  (
-    "NormalizeBibKey",
-    "latexml_core::common::cleaners::normalize_bib_key",
     "",
   ),
   ("Pair", "latexml_core::common::pair::Pair::new", ""),
@@ -349,24 +250,9 @@ const PERL_GAPS: &[(&str, &str, &str)] = &[
     "",
   ),
   (
-    "ReadParameters",
-    "latexml_core::common::def_parser::parse_parameters / latexml_core::parameter::Parameters::read_arguments",
-    "",
-  ),
-  (
-    "Stringify",
-    "latexml_core::tokens::Tokens::stringify / latexml_core::token::Token::stringify",
-    "",
-  ),
-  (
     "TokensI",
     "latexml_core::tokens::Tokens::new",
     "Tokens(t1, t2, …)",
-  ),
-  (
-    "TrimmedCommaList",
-    "latexml_core::common::cleaners::trimmed_comma_list",
-    "",
   ),
   (
     "convertLaTeXArgs",
@@ -2720,6 +2606,205 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
       "Lower-case roman numerals of a number, as `Tokens`; a `Number` (CounterValue's) is read as its int, Warned once as deprecated.",
     ),
   ),
+  (
+    "CleanIndexKey",
+    Mirror("CleanIndexKey", ""),
+    Doc::Rust(
+      "An index key: trimmed, NFC, its trailing `.,;` dropped (Package.pm:513).",
+      "latexml_core::common::cleaners::clean_index_key",
+    ),
+  ),
+  (
+    "CleanClassName",
+    Mirror("CleanClassName", ""),
+    Doc::Rust(
+      "A class name: trimmed, accents decomposed, only `[a-zA-Z0-9]` kept (Package.pm:527).",
+      "latexml_core::common::cleaners::clean_class_name",
+    ),
+  ),
+  (
+    "CleanBibKey",
+    Mirror("CleanBibKey", ""),
+    Doc::Rust(
+      "A bibliography key without its spaces, its case kept (Package.pm:537).",
+      "latexml_core::common::cleaners::clean_bib_key",
+    ),
+  ),
+  (
+    "NormalizeBibKey",
+    Mirror("NormalizeBibKey", ""),
+    Doc::Rust(
+      "`CleanBibKey` lowercased; `()` for a false key, as Perl's `undef` (Package.pm:546).",
+      "latexml_core::common::cleaners::normalize_bib_key",
+    ),
+  ),
+  (
+    "CleanURL",
+    Mirror("CleanURL", ""),
+    Doc::Rust(
+      "A URL, trimmed, each `\\~{}` read as `~` (Package.pm:550).",
+      "latexml_core::common::cleaners::clean_url",
+    ),
+  ),
+  (
+    "ComposeURL",
+    Mirror("ComposeURL", ""),
+    Doc::Rust(
+      "`url` on `base` (unless it has a protocol), then `#` and the `CleanID` of `fragid` when given (Package.pm:557).",
+      "latexml_core::common::cleaners::compose_url",
+    ),
+  ),
+  (
+    "TrimmedCommaList",
+    Mirror("TrimmedCommaList", ""),
+    Doc::Rust(
+      "A comma-separated string as an array of its trimmed items (Package.pm:570).",
+      "latexml_core::common::cleaners::trimmed_comma_list",
+    ),
+  ),
+  (
+    "HasKeyVal",
+    Mirror("HasKeyVal", ""),
+    Doc::Rust(
+      "Whether the key `prefix`/`keyset`/`key` is defined (KeyVal.pm:42).",
+      "latexml_core::keyval::has_keyval",
+    ),
+  ),
+  (
+    "DisableKeyVal",
+    Mirror("DisableKeyVal", ""),
+    Doc::Rust(
+      "Disable the key `prefix`/`keyset`/`key`: using it later Warns (KeyVal.pm:49).",
+      "latexml_core::keyval::disable_keyval",
+    ),
+  ),
+  (
+    "AfterAssignment",
+    Mirror("AfterAssignment", ""),
+    Doc::Rust(
+      "Put the token `\\afterassignment` saved back into the input, for a primitive that assigns (Package.pm:716).",
+      "latexml_core::state::after_assignment",
+    ),
+  ),
+  (
+    "Deprecated",
+    Mirror("Deprecated", "Warn!"),
+    Doc::Note(
+      "Warn `deprecated:key` once per conversion: `key is deprecated (as of version)`, then the message (Error.pm:493).",
+    ),
+  ),
+  (
+    "DigestLiteral",
+    Mirror("DigestLiteral", ""),
+    Doc::Rust(
+      "The `ToString` of a string (Tokenized), Token or Tokens digested in text mode in an ASCII font (Package.pm:414).",
+      "latexml_core::binding::content::digest_literal",
+    ),
+  ),
+  (
+    "DefAutoload",
+    Mirror("DefAutoload", ""),
+    Doc::Rust(
+      "Make `cs` load a binding file (`foo.sty`) when first used (Package.pm:1086).",
+      "latexml_engine::tex::def_autoload",
+    ),
+  ),
+  (
+    "FontDecode",
+    Mirror("FontDecode", ""),
+    Doc::Rust(
+      "The character a code point is in an encoding's font map (the current font's when `()`), or `()` (Package.pm:2871).",
+      "latexml_core::binding::content::font_decode",
+    ),
+  ),
+  (
+    "FontDecodeString",
+    Mirror("FontDecodeString", ""),
+    Doc::Rust(
+      "A string through an encoding's font map, each char a code point; `implicit` decodes only a non-default font's encoding (Package.pm:2895).",
+      "latexml_core::binding::content::font_decode_string",
+    ),
+  ),
+  (
+    "DocType",
+    Mirror("DocType", "RegisterDocumentNamespaces!"),
+    Doc::Rust(
+      "Warns that no DTD is read (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1), then registers the map's document namespaces, as `RegisterDocumentNamespace` (Package.pm:2032).",
+      "latexml_core::common::model::register_document_namespace",
+    ),
+  ),
+  (
+    "DefConditionalI",
+    Mirror("DefConditionalI", ""),
+    Doc::Rust(
+      "`DefConditional` with the control sequence and its parameter spec (a string, or `()`) apart; the test a closure or `()` (Package.pm:1194).",
+      "latexml_core::binding::def::dialect::def_conditional",
+    ),
+  ),
+  (
+    "DefEnvironmentI",
+    Mirror("DefEnvironmentI", ""),
+    Doc::Rust(
+      "`DefEnvironment` with the name and its parameter spec (a string, or `()`) apart (Package.pm:1899).",
+      "latexml_core::binding::def::dialect::def_environment",
+    ),
+  ),
+  (
+    "DefMathI",
+    Mirror("DefMathI", ""),
+    Doc::Rust(
+      "`DefMath` with the control sequence and its parameter spec (a string, or `()`) apart (Package.pm:1617).",
+      "latexml_core::binding::def::dialect::def_math",
+    ),
+  ),
+  (
+    "DefRegisterI",
+    Mirror("DefRegisterI", ""),
+    Doc::Rust(
+      "`DefRegister` with the control sequence and its parameter spec (a string, or `()`) apart (Package.pm:1341).",
+      "latexml_core::binding::def::dialect::def_register",
+    ),
+  ),
+  (
+    "MaybePeekLabel",
+    Mirror("MaybePeekLabel", ""),
+    Doc::Rust(
+      "With a label-mapping hook (`LABEL_MAPPING_HOOK`), peek past spaces for a `\\label` and note its label for the counter about to step (Package.pm:818).",
+      "latexml_core::binding::counter::dialect::maybe_peek_label",
+    ),
+  ),
+  (
+    "MaybeNoteLabel",
+    Mirror("MaybeNoteLabel", ""),
+    Doc::Rust(
+      "With a label-mapping hook, note a label (`CleanLabel`'d) unless it was already used (Package.pm:838).",
+      "latexml_core::binding::counter::dialect::maybe_note_label",
+    ),
+  ),
+  (
+    "LoadFontMap",
+    Mirror("LoadFontMap", ""),
+    Doc::Rust(
+      "An encoding's font map, loaded on first use, as an array of its characters (`()` at an unmapped position); `()` when it has none (Package.pm:2917).",
+      "latexml_core::binding::content::load_font_map",
+    ),
+  ),
+  (
+    "CheckOptions",
+    Mirror("CheckOptions", ""),
+    Doc::Rust(
+      "An Error naming the option keys of a map not in the `allowed` array; whether all were allowed (Package.pm:1062).",
+      "latexml_core::binding::def::options::check_options",
+    ),
+  ),
+  (
+    "Stringify",
+    Mirror("Stringify", ""),
+    Doc::Rust(
+      "The debugging form of a value (`Tokens[…]`, a box's), `undef` for `()`, a string itself (Object.pm:30).",
+      "latexml_core::common::object::Object::stringify",
+    ),
+  ),
 ];
 
 /// `LookupMeaning`'s value read as the string it returned before (ruling 9), deprecated on each handle it returns.
@@ -3060,6 +3145,18 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
     Doc::Rust(
       "Set an attribute on this node directly.",
       "libxml::tree::Node::set_attribute",
+    ),
+  ),
+  (
+    "Gullet",
+    "ReadParameters",
+    Mirror(
+      "ReadParameters($gullet, $spec)",
+      "latexml_core::common::def_parser::parse_parameters / latexml_core::parameter::Parameters::read_arguments",
+    ),
+    Doc::Rust(
+      "The arguments a parameter spec (`{}[]`) reads from the input, each as a body receives it (Package.pm:434).",
+      "latexml_core::parameter::Parameters::read_arguments",
     ),
   ),
 ];

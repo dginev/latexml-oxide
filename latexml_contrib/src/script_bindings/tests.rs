@@ -1151,6 +1151,186 @@ fn m1_errors_are_clean() {
   latexml_core::reset_thread_engine();
 }
 
+/// The Package.pm calls the cheat sheet listed as the dialect's gaps, with Perl's names and meanings (CHEAT3): one
+/// row per call, `(script, state key, value)`, and the Warnings the run must count.
+#[test]
+fn package_pm_gap_calls_mean_what_perl_does() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let rows: &[(&str, &str, &str)] = &[
+    (
+      r#"AssignValue("g:k", CleanIndexKey("  Foo  bar.;; "))"#,
+      "g:k",
+      "Foo  bar",
+    ),
+    (
+      r#"AssignValue("g:k", CleanClassName(" é-x 1 "))"#,
+      "g:k",
+      "ex1",
+    ),
+    (r#"AssignValue("g:k", CleanBibKey(" A b "))"#, "g:k", "Ab"),
+    (
+      r#"AssignValue("g:k", NormalizeBibKey(" A b "))"#,
+      "g:k",
+      "ab",
+    ),
+    (
+      r#"AssignValue("g:k", if defined(NormalizeBibKey("")) { "def" } else { "undef" })"#,
+      "g:k",
+      "undef",
+    ),
+    (r#"AssignValue("g:k", CleanURL(" a\\~{}b "))"#, "g:k", "a~b"),
+    (
+      r#"AssignValue("g:k", ComposeURL("http://x.org/", "p/q", "sec1"))"#,
+      "g:k",
+      "http://x.org/p/q#sec1",
+    ),
+    (
+      r#"AssignValue("g:k", ComposeURL("http://x.org", "https://y.org/z"))"#,
+      "g:k",
+      "https://y.org/z",
+    ),
+    (
+      r#"AssignValue("g:k", TrimmedCommaList(" a , b,c ").reduce(|s, x| s + "|" + x))"#,
+      "g:k",
+      "|a|b|c",
+    ),
+    (
+      r#"let before = HasKeyVal("KV", "gfam", "gkey"); DefKeyVal("gfam", "gkey", "");
+         AssignValue("g:k", `${before} ${HasKeyVal("KV", "gfam", "gkey")}`)"#,
+      "g:k",
+      "false true",
+    ),
+    (
+      r#"DefKeyVal("gfam", "goff", ""); let before = LookupValue("KEYVAL@disabled@KV@gfam@goff");
+         DisableKeyVal("KV", "gfam", "goff");
+         AssignValue("g:k", `${before} ${LookupValue("KEYVAL@disabled@KV@gfam@goff")}`)"#,
+      "g:k",
+      "false true",
+    ),
+    (
+      r#"AssignValue("g:k", DigestLiteral("a{b}c"))"#,
+      "g:k",
+      "abc",
+    ),
+    (
+      r#"DefAutoload("gauto", "gauto.sty"); AssignValue("g:k", `${IsDefined("\\gauto")}`)"#,
+      "g:k",
+      "true",
+    ),
+    (
+      r#"DeclareFontMap("GENC", ["x", "y", "z"]);
+         AssignValue("g:k", FontDecode(1, "GENC") + FontDecodeString("\x02\x00", "GENC", false)
+           + `${defined(FontDecode(-1, "GENC"))}`)"#,
+      "g:k",
+      "yzxfalse",
+    ),
+    (
+      r#"DefConditionalI("\\ifgi", "{}", |a| ToString(a) == "y");
+         AssignValue("g:k", UnTeX(Expand(TokenizeInternal("\\ifgi{y}Y\\else N\\fi\\ifgi{n}Y\\else N\\fi"))))"#,
+      "g:k",
+      "YN",
+    ),
+    (
+      r#"DefMathI("\\gm", (), "∑"); AssignValue("g:k", `${IsDefined("\\gm")}`)"#,
+      "g:k",
+      "true",
+    ),
+    (
+      r#"DefEnvironmentI("genv", "{}", "<ltx:p>#1</ltx:p>"); AssignValue("g:k", `${IsDefined("\\begin{genv}")}`)"#,
+      "g:k",
+      "true",
+    ),
+    (
+      r#"DefRegisterI("\\greg", (), Dimension("3pt")); AssignValue("g:k", ToString(LookupRegister("\\greg")))"#,
+      "g:k",
+      "3.0pt",
+    ),
+    (
+      r#"DeclareFontMap("GENC", ["x", (), "z"]);
+         AssignValue("g:k", LoadFontMap("GENC").map(|c| if defined(c) { c } else { "-" }).reduce(|s, c| s + c, ""))"#,
+      "g:k",
+      "x-z",
+    ),
+    (
+      r#"AssignValue("g:k", `${defined(LoadFontMap("GNONE"))}`)"#,
+      "g:k",
+      "false",
+    ),
+    (
+      r#"AssignValue("g:k", Stringify(Tokens(T_CS("\\a"), T_LETTER("b"))) + Stringify(()))"#,
+      "g:k",
+      "Tokens[\\a,b]undef",
+    ),
+    (
+      r#"AssignValue("g:k", `${CheckOptions("gop", ["a", "b"], #{a: 1})}`)"#,
+      "g:k",
+      "true",
+    ),
+    (
+      r#"DefMacro("\\grp", |gullet| { let a = ReadParameters(gullet, "{}[]"); AssignValue("g:k", `${ToString(a[0])}|${defined(a[1])}`, "global"); Tokens() });
+         Expand(TokenizeInternal("\\grp{xy}z"));"#,
+      "g:k",
+      "xy|false",
+    ),
+  ];
+  for (script, key, expected) in rows {
+    fresh_state();
+    let warnings = get_status(LogStatus::Warning);
+    load_script(script).unwrap_or_else(|e| panic!("{script}: {e}"));
+    assert_eq!(lookup_str(key), *expected, "{script}");
+    assert_eq!(
+      get_status(LogStatus::Warning),
+      warnings,
+      "{script}: no Warning"
+    );
+  }
+  // AfterAssignment puts the saved token back into the input, ahead of what follows.
+  fresh_state();
+  load_script(
+    r#"AssignValue("afterAssignment", T_OTHER("Q"), "global");
+       DefMacro("\\gaa", |gullet| { AfterAssignment(); Tokens() });"#,
+  )
+  .expect("load");
+  let expanded = gullet::do_expand(mouth::tokenize_internal(r"\gaa X")).expect("expand");
+  assert_eq!(expanded.untex(), "QX");
+  assert!(latexml_core::state::lookup_value("afterAssignment").is_none());
+  // CheckOptions Errors on a key not allowed, and answers false.
+  fresh_state();
+  let errors = get_status(LogStatus::Error);
+  load_script(r#"AssignValue("g:k", `${CheckOptions("gop", ["a"], #{a: 1, c: 2})}`)"#)
+    .expect("load");
+  assert_eq!(
+    (lookup_str("g:k").as_str(), get_status(LogStatus::Error)),
+    ("false", errors + 1)
+  );
+  // With a label-mapping hook, MaybePeekLabel notes the label of a following `\label`, MaybeNoteLabel a given one.
+  fresh_state();
+  latexml_core::state::set_label_mapping_hook(Rc::new(|_, _, _| (None, None)));
+  load_script(
+    r#"RawTeX("\\def\\label#1{}");
+       DefMacro("\\gpk", |gullet| { MaybePeekLabel(); Tokens() });"#,
+  )
+  .expect("load");
+  gullet::do_expand(mouth::tokenize_internal(r"\gpk \label{p q}")).expect("expand");
+  assert_eq!(lookup_str("PEEKED_LABEL"), "p_q");
+  load_script(r#"MaybeNoteLabel("n m");"#).expect("load");
+  assert_eq!(lookup_str("PEEKED_LABEL"), "n_m");
+  // Deprecated Warns once per key; DocType Warns that no DTD is read, then registers its namespaces.
+  fresh_state();
+  let warnings = get_status(LogStatus::Warning);
+  load_script(
+    r#"Deprecated("gold", "0.8", "use gnew"); Deprecated("gold", "0.8", "use gnew");
+       DocType("ltx:document", (), (), #{gdt: "http://example.org/gdt"});"#,
+  )
+  .expect("load");
+  assert_eq!(get_status(LogStatus::Warning), warnings + 2);
+  assert_eq!(
+    latexml_core::common::model::get_document_namespace("gdt", true).as_deref(),
+    Some("http://example.org/gdt")
+  );
+  latexml_core::reset_thread_engine();
+}
+
 /// The SHIPPED example binding must always load cleanly — pins
 /// `docs/examples/sample.sty.rhai` against surface drift.
 #[test]

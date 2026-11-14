@@ -39,7 +39,7 @@ sets each call beside its Perl spelling and the Rust a compiled binding uses.
 
 Called at the top level of a binding file, or from inside any body.
 
-226 functions, 551 calls.
+251 functions, 581 calls.
 
 | call | documentation |
 |---|---|
@@ -61,6 +61,7 @@ Called at the top level of a binding file, or from inside any body.
 | `>>(Number, int) -> int`<br>`>>(int, Number) -> int` | **Deprecated** (Warns once per binding load): a Number with an int (or, for `%` and `**`, a float), either way round, as the int it was before `CounterValue` returned a Number (use `n.valueOf()`); Perl's Number has no such operator. |
 | `AddToCounter(string, Number)`<br>`AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
 | `AddToMacro(string\|Token, string\|Token)` | Append tokens (or TeX source) to a macro's expansion, keeping its lock, as Perl's `AddToMacro`; a non-expandable `cs` Warns and is ignored, an undefined one is defined with the tokens. ([`add_to_macro`](latexml_core::binding::content::add_to_macro)) |
+| `AfterAssignment()` | Put the token `\afterassignment` saved back into the input, for a primitive that assigns (Package.pm:716). ([`after_assignment`](latexml_core::state::after_assignment)) |
 | `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
 | `AssignBool(string, ?)`<br>`AssignBool(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignCatcode(string, int)`<br>`AssignCatcode(string, int, string)` | Set a character's category code, with an optional scope. ([`assign_catcode`](latexml_core::state::assign_catcode)) |
@@ -99,35 +100,50 @@ Called at the top level of a binding file, or from inside any body.
 | `CC_SPACE() -> int` | The catcode constant `CC_SPACE` (10), for `Token(string, catcode)`. |
 | `CC_SUB() -> int` | The catcode constant `CC_SUB` (8), for `Token(string, catcode)`. |
 | `CC_SUPER() -> int` | The catcode constant `CC_SUPER` (7), for `Token(string, catcode)`. |
+| `CheckOptions(string, array, map) -> bool` | An Error naming the option keys of a map not in the `allowed` array; whether all were allowed (Package.pm:1062). ([`check_options`](latexml_core::binding::def::options::check_options)) |
+| `CleanBibKey(?) -> string` | A bibliography key without its spaces, its case kept (Package.pm:537). ([`clean_bib_key`](latexml_core::common::cleaners::clean_bib_key)) |
+| `CleanClassName(?) -> string` | A class name: trimmed, accents decomposed, only `[a-zA-Z0-9]` kept (Package.pm:527). ([`clean_class_name`](latexml_core::common::cleaners::clean_class_name)) |
 | `CleanID(?) -> string` | Clean a string into a valid `xml:id`. ([`clean_id`](latexml_core::common::cleaners::clean_id)) |
+| `CleanIndexKey(?) -> string` | An index key: trimmed, NFC, its trailing `.,;` dropped (Package.pm:513). ([`clean_index_key`](latexml_core::common::cleaners::clean_index_key)) |
 | `CleanLabel(?) -> string`<br>`CleanLabel(?, string) -> string` | A label's key: `LABEL:` (or the given prefix) plus the label, spaces to `_`. ([`clean_label`](latexml_core::common::cleaners::clean_label)) |
+| `CleanURL(?) -> string` | A URL, trimmed, each `\~{}` read as `~` (Package.pm:550). ([`clean_url`](latexml_core::common::cleaners::clean_url)) |
 | `Command(string) -> Command` | Start a `std::process::Command` builder. A Rhai-only shim; nothing runs until `output()`. |
+| `ComposeURL(?, ?) -> string`<br>`ComposeURL(?, ?, ?) -> string` | `url` on `base` (unless it has a protocol), then `#` and the `CleanID` of `fragid` when given (Package.pm:557). ([`compose_url`](latexml_core::common::cleaners::compose_url)) |
 | `CounterValue(string) -> Number` | The current value of a counter, a Number as Perl's (an int before; its int uses Warn for one release). ([`counter_value`](latexml_core::binding::counter::dialect::counter_value)) |
 | `DeclareFontMap(string, array)`<br>`DeclareFontMap(string, array, map)` | Declare an encoding's font map: an array of 1-char strings or `()`, with Perl's `family` and `*_mathstyle` options. |
 | `DeclareFontMapMultichar(string, map)`<br>`DeclareFontMapMultichar(string, string, map)` | Declare the multi-character glyphs of a font map (optionally a family's): position (decimal string) to its text. |
 | `DeclareOption(Fn)`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`). |
 | `DefAccent(string, string, string)`<br>`DefAccent(string, string, string, bool)`<br>`DefAccent(string, string, string, map)` | Define an accent command in both its combining and standalone forms; Perl's options map `#{below: true}`. **Deprecated:** its older form (Warns once per binding load); use `DefAccent(accent, combining, standalone, #{below: true})`. |
+| `DefAutoload(?, string)` | Make `cs` load a binding file (`foo.sty`) when first used (Package.pm:1086). ([`def_autoload`](latexml_engine::tex::def_autoload)) |
 | `DefColumnType(string, Fn)` | Define a tabular column type, as its rewrite expansion. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefConditional(string)`<br>`DefConditional(string, (), map)`<br>`DefConditional(string, Fn)`<br>`DefConditional(string, Fn, map)` | Define a conditional control sequence. ([`def_conditional`](latexml_core::binding::def::dialect::def_conditional)) |
+| `DefConditionalI(?, ?, ?)`<br>`DefConditionalI(?, ?, ?, map)` | `DefConditional` with the control sequence and its parameter spec (a string, or `()`) apart; the test a closure or `()` (Package.pm:1194). ([`def_conditional`](latexml_core::binding::def::dialect::def_conditional)) |
 | `DefConstructor(string, Fn)`<br>`DefConstructor(string, Fn, map)`<br>`DefConstructor(string, string)`<br>`DefConstructor(string, string, map)` | Define a control sequence that constructs XML. ([`def_constructor`](latexml_core::binding::def::dialect::def_constructor)) |
 | `DefConstructorI(?, ?, ?)`<br>`DefConstructorI(?, ?, ?, map)` | `DefConstructor` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or `()`, a template string, a closure or `()`, then the option bag. ([`def_constructor`](latexml_core::binding::def::dialect::def_constructor)) |
 | `DefEnvironment(string, Fn)`<br>`DefEnvironment(string, Fn, map)`<br>`DefEnvironment(string, string)`<br>`DefEnvironment(string, string, map)` | Define an environment that constructs XML. ([`def_environment`](latexml_core::binding::def::dialect::def_environment)) |
+| `DefEnvironmentI(?, ?, ?)`<br>`DefEnvironmentI(?, ?, ?, map)` | `DefEnvironment` with the name and its parameter spec (a string, or `()`) apart (Package.pm:1899). ([`def_environment`](latexml_core::binding::def::dialect::def_environment)) |
 | `DefKeyVal(string, string, string)`<br>`DefKeyVal(string, string, string, string)`<br>`DefKeyVal(string, string, string, string, map)` | Declare one key of a keyval family. ([`define`](latexml_core::keyval::define)) |
 | `DefLigature(string, string)`<br>`DefLigature(string, string, map)` | Register a text ligature pattern; `#{fontTest: \|font\| …}` limits it to the fonts the closure accepts. |
 | `DefMacro(string, Fn)`<br>`DefMacro(string, Fn, map)`<br>`DefMacro(string, string)`<br>`DefMacro(string, string, map)` | Define a macro's expansion; a closure body is Perl's `\|gullet, args\|`, each argument Tokens (or a `KeyVals`). A Perl-form closure declares its handle and every argument, `\|gullet, x\|`; fewer parameters is the old form, with a Warning naming the fix. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefMacroI(?, ?, ?)`<br>`DefMacroI(?, ?, ?, map)` | `DefMacro` for a control sequence in hand: a `Token` or a name (`coerceCS`: `\csname x\endcsname`, a single character is active), a parameter-spec string or `()`, the expansion (a closure, TeX source, `Tokens`, a `Token`, `()` for none), then the option bag. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefMath(string, string)`<br>`DefMath(string, string, map)` | Define a mathematical symbol or function. ([`def_math`](latexml_core::binding::def::dialect::def_math)) |
+| `DefMathI(?, ?, string)`<br>`DefMathI(?, ?, string, map)` | `DefMath` with the control sequence and its parameter spec (a string, or `()`) apart (Package.pm:1617). ([`def_math`](latexml_core::binding::def::dialect::def_math)) |
 | `DefMathLigature(Fn)`<br>`DefMathLigature(string, string, map)` | Register a math ligature, as a pattern or a matcher closure. |
 | `DefMathRewrite(map)`<br>`DefMathRewrite(map, Fn)` | As `DefRewrite`, scoped to math. |
 | `DefParameterType(string, Fn)`<br>`DefParameterType(string, Fn, map)` | Define a parameter type: the reader `\|gullet, extra…\|` returns its value (Tokens, a Token, `()` for none), with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, `afterDigest`, and `nargs` accepted unread, as Perl's. ([`Parameter`](latexml_core::parameter::Parameter)) |
 | `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `\|stomach, args\|`. A Perl-form closure declares its handle and every argument, `\|stomach, x\|`; fewer parameters is the old form, with a Warning naming the fix. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
 | `DefPrimitiveI(?, ?, ?)`<br>`DefPrimitiveI(?, ?, ?, map)` | `DefPrimitive` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or `()`, a closure or `()` (digests to nothing), then the option bag. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
 | `DefRegister(string, ?)`<br>`DefRegister(string, ?, map)` | Perl's `DefRegister(cs, value[, #{readonly, getter, setter, address, allocate}])`: the value's type (Number, Dimension, Glue, MuGlue, Tokens) is the register's; a string is read for the type `cs` already has, else by its form (a `mu` unit MuGlue, `plus`/`minus` Glue, another unit Dimension; no unit is an Error and 0). `getter` is `\|params…\|`, `setter` `\|value, scope, params…\|`. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
+| `DefRegisterI(?, ?, ?)`<br>`DefRegisterI(?, ?, ?, map)` | `DefRegister` with the control sequence and its parameter spec (a string, or `()`) apart (Package.pm:1341). ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
+| `Deprecated(string, string, string)` | Warn `deprecated:key` once per conversion: `key is deprecated (as of version)`, then the message (Error.pm:493). |
 | `Digest(Token) -> Digested`<br>`Digest(Tokens) -> Digested`<br>`Digest(string) -> Digested` | Digest TeX source (a string, TokenizeInternal'd), a `Token` or `Tokens`, returning the digested handle. ([`digest`](latexml_core::stomach::digest)) |
 | `DigestIf(string\|Token) -> ?` | Digest a control sequence if it is defined; `()` otherwise. ([`digest_if`](latexml_core::binding::content::digest_if)) |
+| `DigestLiteral(?) -> string` | The `ToString` of a string (Tokenized), Token or Tokens digested in text mode in an ASCII font (Package.pm:414). ([`digest_literal`](latexml_core::binding::content::digest_literal)) |
 | `DigestText(Token) -> Digested`<br>`DigestText(Tokens) -> Digested`<br>`DigestText(string) -> Digested` | Digest TeX source, a `Token` or `Tokens` in restricted horizontal mode, returning the digested handle. ([`digest_text`](latexml_core::binding::content::digest_text)) |
 | `Dimension(float) -> Dimension`<br>`Dimension(int) -> Dimension`<br>`Dimension(string) -> Dimension` | Perl's `Dimension(spec)`: `"3pt"` (a number and a unit), or an int of sp; a spec that is not a number and a unit is an Error and 0 (Perl reads `"3 furlongs"` as 3sp, OXIDIZED_DESIGN_DIVERGENCES #1031). |
+| `DisableKeyVal(string, string, string)` | Disable the key `prefix`/`keyset`/`key`: using it later Warns (KeyVal.pm:49). ([`disable_keyval`](latexml_core::keyval::disable_keyval)) |
+| `DocType(string, ?, ?, map)` | Warns that no DTD is read (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1), then registers the map's document namespaces, as `RegisterDocumentNamespace` (Package.pm:2032). ([`register_document_namespace`](latexml_core::common::model::register_document_namespace)) |
 | `EndSemiverbatim()` | Close a `StartSemiverbatim` region, restoring the saved catcodes. ([`end_semiverbatim`](latexml_core::state::end_semiverbatim)) |
 | `Equals(?, ?) -> bool` | Perl's `Equals`: `()` equals only `()`; tokens compare their meanings (themselves when neither has one), `Tokens` token by token, other values by their string. |
 | `Error(string, string, ?, ?)`<br>`Error(string, string, ?, ?, ?)`<br>`Error(string, string, ?, ?, ?, ?)`<br>`Error(string, string, string)` | Log an `Error:`, with Perl's trailing details (a string or an array); Perl's `(cat, obj, where, msg, details…)` form when `where` is `()` or a handle. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion. |
@@ -138,9 +154,12 @@ Called at the top level of a binding file, or from inside any body.
 | `ExplodeText(string) -> Tokens` | A string's characters as `Tokens`, letters LETTER and the rest OTHER. |
 | `Fatal(string, string, ?, ?)`<br>`Fatal(string, string, ?, ?, ?)`<br>`Fatal(string, string, ?, ?, ?, ?)`<br>`Fatal(string, string, string)` | End the conversion with `Fatal:<cat>:<obj>`, plus optional details. |
 | `FindFile(string) -> ?`<br>`FindFile(string, map) -> ?` | The path of a file on the search paths (Perl's `type`/`notex`/`noltxml`/`searchpaths_only`), or `()`. ([`find_file`](latexml_core::binding::content::find_file)) |
+| `FontDecode(int, ?) -> ?` | The character a code point is in an encoding's font map (the current font's when `()`), or `()` (Package.pm:2871). ([`font_decode`](latexml_core::binding::content::font_decode)) |
+| `FontDecodeString(string, ?, bool) -> string` | A string through an encoding's font map, each char a code point; `implicit` decodes only a non-default font's encoding (Package.pm:2895). ([`font_decode_string`](latexml_core::binding::content::font_decode_string)) |
 | `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `defined(v)`. |
 | `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
 | `Glue(int) -> Glue`<br>`Glue(int, int, ?, int, ?) -> Glue`<br>`Glue(string) -> Glue` | Perl's `Glue(spec)`: `"1pt plus 2fil minus 1pt"`, an int of sp, or `Glue(sp, plus, pfill, minus, mfill)` with fill orders as names or 0-3; an unreadable spec is an Error and 0. |
+| `HasKeyVal(string, string, string) -> bool` | Whether the key `prefix`/`keyset`/`key` is defined (KeyVal.pm:42). ([`has_keyval`](latexml_core::keyval::has_keyval)) |
 | `IfCondition(string\|Token) -> bool?`<br>`IfCondition(string\|Token, array) -> bool?` | The truth of a conditional (`\iffoo` after `\newif`, `\iftrue`) on the arguments given as an array (`IfCondition("\\ifnum", [1, T_OTHER("<"), 2])`; Perl's `IfCondition($if, @args)`), never read from the input, one not given being `()`; `()` with an Error for a control sequence that is not one. ([`if_condition_args`](latexml_core::binding::content::if_condition_args)) |
 | `Info(string, string, ?, ?)`<br>`Info(string, string, ?, ?, ?)`<br>`Info(string, string, ?, ?, ?, ?)`<br>`Info(string, string, string)` | Log an `Info:` line, plus optional details. |
 | `Input(string)` | Input a TeX file (`\input`'s core). ([`input`](latexml_core::binding::content::input)) |
@@ -152,6 +171,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Let(string\|Token, string\|Token)`<br>`Let(string\|Token, string\|Token, string)` | TeX's `\let`: copy one token's meaning onto another, with an optional scope (`"global"` is `\global\let`). Each token is a CS name string or a `Token`. ([`let_definition`](latexml_core::state::let_definition)) |
 | `List(array) -> Digested`<br>`List(array, map) -> Digested` | Perl's `List(@boxes, mode => $mode)` (List.pm:31) as `List([boxes])` or `List([boxes], #{mode: m})`: `()`s dropped, one box (of the asked mode) is itself, else a list in the mode (the current one by default). |
 | `LoadClass(string)`<br>`LoadClass(string, array)`<br>`LoadClass(string, map)` | Load a document class, falling back to a prefix match then OmniBus. ([`load_class`](latexml_core::binding::content::load_class)) |
+| `LoadFontMap(string) -> ?` | An encoding's font map, loaded on first use, as an array of its characters (`()` at an unmapped position); `()` when it has none (Package.pm:2917). ([`load_font_map`](latexml_core::binding::content::load_font_map)) |
 | `LoadPool(string)` | Load a pool (`<name>.pool`). ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
 | `LookupBool(string) -> bool` | Read a value as a boolean. ([`lookup_bool`](latexml_core::state::lookup_bool)) |
 | `LookupCatcode(string) -> ?` | The category code currently in force for a character; `()` when the table holds none. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |
@@ -172,9 +192,12 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupTokens(string) -> Tokens` | Read a value as tokens. ([`lookup_tokens`](latexml_core::state::lookup_tokens)) |
 | `LookupUCcode(string) -> ?` | A character's uppercase code; `()` when the table holds none. ([`lookup_uccode`](latexml_core::state::lookup_uccode)) |
 | `LookupValue(string) -> ?` | Read a value with the type it was stored as (a list as an array); `()` when unset. ([`lookup_value`](latexml_core::state::lookup_value)) |
+| `MaybeNoteLabel(?)` | With a label-mapping hook, note a label (`CleanLabel`'d) unless it was already used (Package.pm:838). ([`maybe_note_label`](latexml_core::binding::counter::dialect::maybe_note_label)) |
+| `MaybePeekLabel()` | With a label-mapping hook (`LABEL_MAPPING_HOOK`), peek past spaces for a `\label` and note its label for the counter about to step (Package.pm:818). ([`maybe_peek_label`](latexml_core::binding::counter::dialect::maybe_peek_label)) |
 | `MergeFont(map)` | Merge font attributes into the current font, group-locally: Font.pm `merge`'s keys (a color by name as `LookupColor`, except that a base name (`red`, …) resolves without a colour package, as color.sty defines it; a size name or points, `scale`, `forcebold`, …); an unknown key Warns. ([`merge_font`](latexml_core::binding::content::merge_font)) |
 | `MuGlue(int) -> MuGlue`<br>`MuGlue(int, int, ?, int, ?) -> MuGlue`<br>`MuGlue(string) -> MuGlue` | Perl's `MuGlue(spec)`: `"3mu plus 1mu"`, an int of the mu value in sp, or the five-argument form; an unreadable spec is an Error and 0. |
 | `NewCounter(string)`<br>`NewCounter(string, string)`<br>`NewCounter(string, string, map)` | Declare a new counter. ([`new_counter`](latexml_core::binding::counter::dialect::new_counter)) |
+| `NormalizeBibKey(?) -> ?` | `CleanBibKey` lowercased; `()` for a false key, as Perl's `undef` (Package.pm:546). ([`normalize_bib_key`](latexml_core::common::cleaners::normalize_bib_key)) |
 | `Note(string)` | Write a progress note to both the conversion log and stderr. |
 | `NoteLog(string)` | Write a progress note to the conversion log only. |
 | `NoteSTDERR(string)` | Write a progress note to stderr only. |
@@ -211,6 +234,7 @@ Called at the top level of a binding file, or from inside any body.
 | `SkipSpaces()` | Discard any run of spaces at the head of the input. ([`skip_spaces`](latexml_core::gullet::skip_spaces)) |
 | `StartSemiverbatim()`<br>`StartSemiverbatim(array)` | Begin a SEMI-verbatim region: neutralize the math/special catcodes (`^ _ ~ & $ # '`) to literal `OTHER`, but keep `\ { }` special so control sequences and `\end{env}` still parse. This is NOT full verbatim — a backslash command is still expanded (e.g. the Mathematica `\[Gamma]` fires `\[`, which opens display math), and because `{` `}` stay group-markers a literal brace in the source is consumed as grouping, not printed: `{}` yields nothing and `{x}` yields `x`. Only the `{verbatim}` / fancyvrb environments read a body as raw lines where even `\ { }` are literal. Pass extra single-char strings to neutralize them too — but not `\`, since `\end{env}` needs it. Pair with `EndSemiverbatim` in a `DefEnvironment`'s `beforeDigest`/`beforeDigestEnd`. ([`begin_semiverbatim`](latexml_core::state::begin_semiverbatim)) |
 | `StepCounter(string)`<br>`StepCounter(string, ?)` | Step a counter; usually you want `RefStepCounter` instead. ([`step_counter`](latexml_core::binding::counter::dialect::step_counter)) |
+| `Stringify(?) -> string` | The debugging form of a value (`Tokens[…]`, a box's), `undef` for `()`, a string itself (Object.pm:30). ([`Object::stringify`](latexml_core::common::object::Object::stringify)) |
 | `T_ACTIVE(string) -> Token` | One active-character `Token` (Perl `T_ACTIVE`), e.g. for `Let(T_ACTIVE("~"), "\\nobreakspace")`. |
 | `T_ALIGN() -> Token` | The `Token` `&` under `CC_ALIGN` (a Perl constant; call it as `T_ALIGN()`). |
 | `T_ARG(?) -> Token` | A parameter `Token` `#n` under `CC_ARG`, from an int 1-9 or a digit `Token` (Perl `T_ARG`). |
@@ -236,6 +260,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Tokenize(string) -> Tokens` | Tokenize a string under the standard catcode table. ([`tokenize`](latexml_core::mouth::tokenize)) |
 | `TokenizeInternal(string) -> Tokens` | Tokenize a string under the style-file table, where `@` is a letter. ([`tokenize_internal`](latexml_core::mouth::tokenize_internal)) |
 | `Tokens() -> Tokens`<br>`Tokens(?) -> Tokens`<br>`Tokens(?, ?) -> Tokens`<br>`Tokens(?, ?, ?) -> Tokens`<br>`Tokens(?, ?, ?, ?) -> Tokens`<br>`Tokens(array) -> Tokens` | Perl's `Tokens(@tokens)`: a token list from `Token`s and `Tokens` (flattened), given as up to four arguments or as an array. Where a call takes a `Token` (`Let`, `XEquals`, …), a `Tokens` is an error. |
+| `TrimmedCommaList(?) -> array` | A comma-separated string as an array of its trimmed items (Package.pm:570). ([`trimmed_comma_list`](latexml_core::common::cleaners::trimmed_comma_list)) |
 | `UTF(int) -> string` | The character of a Unicode code point. |
 | `UnTeX(Token) -> string`<br>`UnTeX(Tokens) -> string` | Tokens (or one `Token`) back to the TeX source that could have produced them. ([`Tokens::untex`](latexml_core::tokens::Tokens::untex)) |
 | `UnshiftValue(string, ?)`<br>`UnshiftValue(string, ?, ?)`<br>`UnshiftValue(string, ?, ?, ?)`<br>`UnshiftValue(string, ?, ?, ?, ?)` | Prepend a value (string/int/float/bool/Tokens/Token) to a value-table list, creating it (global) if absent. ([`unshift_value`](latexml_core::state::unshift_value)) |
@@ -376,10 +401,11 @@ An already-installed definition, for pushing hooks onto it.
 
 Perl's `$gullet->read…`: the gullet handle a macro body or a parameter-type reader receives first.
 
-5 functions, 5 calls.
+6 functions, 6 calls.
 
 | call | documentation |
 |---|---|
+| `ReadParameters(string) -> array` | The arguments a parameter spec (`{}[]`) reads from the input, each as a body receives it (Package.pm:434). ([`Parameters::read_arguments`](latexml_core::parameter::Parameters::read_arguments)) |
 | `readArg() -> Tokens` | `gullet.readArg()`: `ReadArg` on a `Gullet` handle. ([`read_arg`](latexml_core::gullet::read_arg)) |
 | `readOptional() -> ?` | `gullet.readOptional()`: `ReadOptional` on a `Gullet` handle. ([`read_optional`](latexml_core::gullet::read_optional)) |
 | `readToken() -> ?` | `gullet.readToken()`: `ReadToken` on a `Gullet` handle. ([`read_token`](latexml_core::gullet::read_token)) |

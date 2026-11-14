@@ -8,8 +8,17 @@
     trait item the Rhai call itself reaches, each a rustdoc intra-doc link (the sheet is now also rendered as
     `script_bindings::cheatsheet`, so `cargo doc` fails on a renamed item). The Rhai helpers Perl has no single
     call for show the Perl that does the same; four Perl calls point at the Rhai expression that already does
-    them (`DefExpandable`, `Float`, `GenerateID`, `TokensI`). The 43 Perl calls the dialect still lacks are
-    listed at the end. Gate `script_bindings::tests::api_reference_is_up_to_date` (no empty Perl or Rust cell).
+    them (`DefExpandable`, `Float`, `GenerateID`, `TokensI`). Gate
+    `script_bindings::tests::api_reference_is_up_to_date` (no empty Perl or Rust cell).
+  - **26 more Package.pm calls in the Rhai dialect, with Perl's names and meanings**: `CleanIndexKey`,
+    `CleanClassName`, `CleanBibKey`, `NormalizeBibKey`, `CleanURL`, `ComposeURL`, `TrimmedCommaList`,
+    `HasKeyVal`, `DisableKeyVal`, `AfterAssignment`, `Deprecated` (Warns once per key), `DigestLiteral`,
+    `DefAutoload`, `FontDecode`, `FontDecodeString`, `LoadFontMap`, `MaybePeekLabel`, `MaybeNoteLabel`,
+    `CheckOptions`, `Stringify`, `gullet.ReadParameters`, the I-forms `DefConditionalI`, `DefEnvironmentI`,
+    `DefMathI`, `DefRegisterI`, and `DocType`, which Warns that no DTD is read (RelaxNG only,
+    OXIDIZED_DESIGN_DIVERGENCES #1) and registers its document namespaces. 17 Perl calls remain outside the
+    dialect, listed at the end of `CHEATSHEET.md`. Guard
+    `script_bindings::tests::package_pm_gap_calls_mean_what_perl_does`.
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer
