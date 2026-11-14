@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
+    cell of a paragraph column set `\hsize` to the column's width but kept the page's
+    `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
+    as wide as the page. The cell now sets `\linewidth\hsize`, as array's `\@startpbox` /
+    `\@arrayparboxrestore` do (a `\multicolumn` over such a column and longtable's `p`
+    columns alike); Perl sets `\hsize` alone. Guard
+    `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`.
+
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
     `at t.tex; line 10 col 21 - …`, as Perl's `getShortSource` prints it, so a problem
@@ -240,6 +248,13 @@
     that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
     undefined-macro error; a nested `\import` empties it, as import.sty does. Also
     drops a stray space the import commands typeset before the imported file.
+  - **caption's `justification=` and `skip=` reach the caption (#787).** A
+    `\captionsetup{justification=raggedright}` (or `centering`, `raggedleft`,
+    `justified`, and ragged2e's `RaggedRight` &c.) is the `<caption>`'s `text-align`
+    (`cssstyle`), in place of the class a `\centering` in its float gives it, and
+    `skip=`, `aboveskip=`, `belowskip=` its margins on the sides caption puts them,
+    `position=auto` read as caption reads it; `\captionsetup[longtable]{…}`
+    applies to longtable captions. Perl ignores both.
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),

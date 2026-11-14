@@ -1,0 +1,23 @@
+% issue #787: caption.sty's `justification=centering` and `skip=` (`\captionsetup`, global and `[longtable]`): the
+% caption is centred and 20pt above the table's body (ltcaption's `\caption@LT@setup`; caption.sty:251-258 puts the
+% above-skip under a top caption). Perl ignores both (caption.sty.ltxml:30,52; OXIDIZED_DESIGN_DIVERGENCES #1024).
+% witness: synthetic (issue #787)
+% oracle:  pdflatex 0 errors: the caption centred, 20pt above the table
+% engines: perl=0 (no class or spacing); rust base 6df4632fb1=0 `<caption>` with no class or spacing
+% expect:  0 errors; `<caption cssstyle="text-align:center;margin-bottom:20.0pt">`
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage{longtable}
+\usepackage{caption}
+\captionsetup{justification=centering}
+\captionsetup[longtable]{skip=20pt}
+\begin{document}
+\begin{longtable}{|l|l|}
+\caption{Results}\\\hline
+1 & a\\\hline
+\end{longtable}
+\begin{table}
+\caption{After}
+\begin{tabular}{l}b\end{tabular}
+\end{table}
+\end{document}
