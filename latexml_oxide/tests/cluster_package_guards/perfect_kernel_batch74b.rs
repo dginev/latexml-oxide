@@ -429,9 +429,19 @@ fn asmejour_keywords_are_kept() {
   // (none on a kernel older than 2025-11-01, where the class's `\IfFormatAtLeastTF` skips the plug, or one declaring it)
   let socket = "Socket 'caption/label' undeclared!";
   let sockets = log.lines().filter(|l| l.ends_with(socket)).count();
-  assert_eq!(error_count(&log), sockets, "{log}");
+  // asmejour 1.28's `\IfFormatAtLeastTF{2026/11/01}{\setlist[enumerate,1]…}` (asmejour.cls:1356-1364) with no enumitem:
+  // pdflatex (TL 2026) errs the same, 2 sockets + the undefined `\setlist` (then 2 cascade errors).
+  let setlist = log
+    .lines()
+    .filter(|l| l.starts_with("Error:undefined:\\setlist "))
+    .count();
+  assert_eq!(error_count(&log), sockets + setlist, "{log}");
   let plugs = cls.contains(r"\NewSocketPlug{caption/label}");
   assert!(sockets == 0 || (plugs && sockets == 2), "{log}");
+  assert!(
+    setlist == 0 || (cls.contains(r"\setlist[enumerate,1]") && setlist == 1),
+    "{log}"
+  );
   let xml = squash(&xml);
   assert!(
     xml.contains(r#"<keywords name="Keywords: ">alpha, beta</keywords>"#),

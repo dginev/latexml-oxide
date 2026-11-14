@@ -538,6 +538,23 @@ fn autoref_name_diagnostics_wait_for_an_autoref() {
       "{body}: {stderr}"
     );
   }
+  // babel 26.16 maps the Cyrillic LICR to TU (babel.sty:2801 `\input{cyrl2uni.def}`): the names are defined, lualatex
+  // clean (TL 2026, 0 errors, "разд. 1"), and no diagnostic is left to wait for.
+  if latexml::util::test::kpse_has("cyrl2uni.def") {
+    let (stderr, xml) = convert("\\section{B}Text. \\autoref{a}.");
+    assert_eq!(
+      (error_count(&stderr), warning_count(&stderr)),
+      (0, 0),
+      "{stderr}"
+    );
+    assert_element(
+      &xml,
+      "tags",
+      &[],
+      r#"<tags><tag>1</tag><tag role="autoref">разд. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags>"#,
+    );
+    return;
+  }
   for body in [
     "\\section{B}Text. \\autoref{a} and \\autoref{a}.",
     "\\section{B}\\label{b}Text. \\autoref{a} and \\autoref{b}.",

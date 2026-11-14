@@ -1,0 +1,23 @@
+% mechanism: keytheorems on a LaTeX format of 2026-06-01 or later (keytheorems.sty:3828-3850) takes the redesigned
+%   latex-lab block code: `thmstyle` instances (`plain`, `legacy2e`), `\l__block_thmstyle_tl`, the block instances
+%   `thm-<style>-1` and `std-list-1` (latex-lab-testphase-block.sty r80868 :189, :977, :1591). Our block binding
+%   (latex_lab_testphase_block_sty.rs) declares the TL 2025 block.sty's types and instances only.
+% witness: synthetic (keytheorems/keytheorems-doc shape)
+% oracle:  pdflatex (TL 2026 r81108, latex-lab r80868) 0 `!`: "Theorem 1. There are infinitely many primes.";
+%          pdflatex (TL 2025) 0 `!`
+% engines: rust WIN1d (TL 2026) 8 errors (`'plain' of type 'thmstyle' is unknown`, …), the theorem kept; TL 2025 0
+% expect:  0 errors on every TL; the theorem holds the statement
+% status:  RED on TL 2026 (WIN1d), GREEN on TL 2025
+% moves:   the block binding follows the November block.sty (proposed WIN1i); the guard
+%          perfect_kernel_batchm1::the_block_instances_of_the_file_are_declared edits TL 2025 instance names
+%          (`displayblock-6`, …), which pdflatex itself rejects on TL 2026 (11 `!`)
+% preload: ar5iv.sty
+\DocumentMetadata{lang=en-US}
+\documentclass{article}
+\usepackage{keytheorems}
+\newkeytheorem{theorem}[leftmargin=1cm,rightmargin=1cm]
+\begin{document}
+\begin{theorem}
+There are infinitely many primes.
+\end{theorem}
+\end{document}
