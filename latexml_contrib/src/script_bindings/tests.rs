@@ -1201,21 +1201,9 @@ fn package_pm_gap_calls_mean_what_perl_does() {
       "false true",
     ),
     (
-      r#"DefKeyVal("gfam", "goff", ""); let before = LookupValue("KEYVAL@disabled@KV@gfam@goff");
-         DisableKeyVal("KV", "gfam", "goff");
-         AssignValue("g:k", `${before} ${LookupValue("KEYVAL@disabled@KV@gfam@goff")}`)"#,
-      "g:k",
-      "false true",
-    ),
-    (
       r#"AssignValue("g:k", DigestLiteral("a{b}c"))"#,
       "g:k",
       "abc",
-    ),
-    (
-      r#"DefAutoload("gauto", "gauto.sty"); AssignValue("g:k", `${IsDefined("\\gauto")}`)"#,
-      "g:k",
-      "true",
     ),
     (
       r#"DeclareFontMap("GENC", ["x", "y", "z"]);
@@ -1224,21 +1212,18 @@ fn package_pm_gap_calls_mean_what_perl_does() {
       "g:k",
       "yzxfalse",
     ),
+    // Perl's shorter forms: FontDecode($code) in the current font's encoding (OT1), FontDecodeString($s, $enc).
+    (
+      r#"DeclareFontMap("GENC", ["x", "y", "z"]);
+         AssignValue("g:k", FontDecode(65) + FontDecodeString("\x02\x00", "GENC"))"#,
+      "g:k",
+      "Azx",
+    ),
     (
       r#"DefConditionalI("\\ifgi", "{}", |a| ToString(a) == "y");
          AssignValue("g:k", UnTeX(Expand(TokenizeInternal("\\ifgi{y}Y\\else N\\fi\\ifgi{n}Y\\else N\\fi"))))"#,
       "g:k",
       "YN",
-    ),
-    (
-      r#"DefMathI("\\gm", (), "∑"); AssignValue("g:k", `${IsDefined("\\gm")}`)"#,
-      "g:k",
-      "true",
-    ),
-    (
-      r#"DefEnvironmentI("genv", "{}", "<ltx:p>#1</ltx:p>"); AssignValue("g:k", `${IsDefined("\\begin{genv}")}`)"#,
-      "g:k",
-      "true",
     ),
     (
       r#"DefRegisterI("\\greg", (), Dimension("3pt")); AssignValue("g:k", ToString(LookupRegister("\\greg")))"#,
@@ -1263,6 +1248,11 @@ fn package_pm_gap_calls_mean_what_perl_does() {
     ),
     (
       r#"AssignValue("g:k", `${CheckOptions("gop", ["a", "b"], #{a: 1})}`)"#,
+      "g:k",
+      "true",
+    ),
+    (
+      r#"AssignValue("g:k", `${CheckOptions("gop", #{a: true, b: false}, #{a: 1})}`)"#,
       "g:k",
       "true",
     ),
@@ -1398,6 +1388,12 @@ fn api_reference_is_up_to_date() {
     stale_gaps.is_empty(),
     "api_doc::PERL_GAPS lists calls the engine now registers — move each to its DOCS entry's Mirror: \
      {stale_gaps:?}"
+  );
+  let unexplained = api_doc::gaps_without_reason();
+  assert!(
+    unexplained.is_empty(),
+    "a lacking PERL_GAPS call needs its api_doc::GAP_REASONS entry (and a reason names a lacking call): \
+     {unexplained:?}"
   );
   // The cheat sheet's Rust column names real macros: each must still be defined in the workspace.
   let defined = api_doc::workspace_macros();

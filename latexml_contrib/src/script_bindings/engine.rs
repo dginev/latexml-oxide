@@ -1174,21 +1174,23 @@ pub(super) fn make_engine() -> Engine {
   });
   // Package.pm:2032: no DTD is read here (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1), so a Warning, then the
   // document namespaces DocType declares, as `RegisterDocumentNamespaces!` does.
+  let doc_type = |root: &str, _pubid: Dynamic, _sysid: Dynamic, namespaces: Map| {
+    latexml_core::Warn!(
+      "unexpected",
+      "DocType",
+      format!("DocType({root}, …): no DTD is read (RelaxNG only); its namespaces are registered"),
+      "use RegisterDocumentNamespace(prefix, namespace), and RelaxNGSchema for the schema"
+        .to_string()
+    );
+    for (prefix, ns) in namespaces {
+      latexml_core::common::model::register_document_namespace(&prefix, Some(&ns.to_string()));
+    }
+  };
   engine.register_fn(
     "DocType",
-    |root: &str, _pubid: Dynamic, _sysid: Dynamic, namespaces: Map| {
-      latexml_core::Warn!(
-        "unexpected",
-        "DocType",
-        format!("DocType({root}, …): no DTD is read (RelaxNG only); its namespaces are registered"),
-        "use RegisterDocumentNamespace(prefix, namespace), and RelaxNGSchema for the schema"
-          .to_string()
-      );
-      for (prefix, ns) in namespaces {
-        latexml_core::common::model::register_document_namespace(&prefix, Some(&ns.to_string()));
-      }
-    },
+    move |root: &str, pubid: Dynamic, sysid: Dynamic| doc_type(root, pubid, sysid, Map::new()),
   );
+  engine.register_fn("DocType", doc_type);
   engine.register_fn("RelaxNGSchema", |schema: &str| {
     latexml_core::binding::content::select_relaxng_schema(schema, None);
   });
@@ -1359,7 +1361,9 @@ pub(super) fn make_engine() -> Engine {
     },
   );
   // Package.pm:716: the pending `\afterassignment` token, back into the gullet.
-  engine.register_fn("AfterAssignment", latexml_core::state::after_assignment);
+  engine.register_fn("AfterAssignment", || -> RhaiResult<()> {
+    latexml_core::state::after_assignment().map_err(rhai_err)
+  });
   // Error.pm:493: Warn `deprecated` once per key and conversion.
   engine.register_fn("Deprecated", |key: &str, version: &str, message: &str| {
     use latexml_core::state::{assign_mapping, lookup_mapping};
@@ -1404,13 +1408,31 @@ pub(super) fn make_engine() -> Engine {
       Dynamic::from(chars)
     })
   });
-  // Package.pm:1062: an Error for each option key not in `allowed`; whether all were.
+  // Package.pm:1062: an Error naming the option keys not in `allowed` (an array, or Perl's hash: its true keys);
+  // whether all were.
+  let check = |operation: &str, allowed: Vec<String>, options: Map| -> RhaiResult<bool> {
+    let allowed: Vec<&str> = allowed.iter().map(String::as_str).collect();
+    check_options(operation, &allowed, options.keys().map(|k| k.as_str())).map_err(rhai_err)
+  };
   engine.register_fn(
     "CheckOptions",
-    |operation: &str, allowed: rhai::Array, options: Map| -> RhaiResult<bool> {
-      let allowed: Vec<String> = allowed.into_iter().map(dynamic_to_string).collect();
-      let allowed: Vec<&str> = allowed.iter().map(String::as_str).collect();
-      check_options(operation, &allowed, options.keys().map(|k| k.as_str())).map_err(rhai_err)
+    move |operation: &str, allowed: rhai::Array, options: Map| {
+      check(
+        operation,
+        allowed.into_iter().map(dynamic_to_string).collect(),
+        options,
+      )
+    },
+  );
+  engine.register_fn(
+    "CheckOptions",
+    move |operation: &str, allowed: Map, options: Map| {
+      let allowed = allowed.into_iter().filter(|(_, v)| perl_truthy(v));
+      check(
+        operation,
+        allowed.map(|(k, _)| k.to_string()).collect(),
+        options,
+      )
     },
   );
   // Object.pm:30: the debugging form of a value (`Tokens[…]`, `Box[…]`), `undef` for `()`.
@@ -1428,32 +1450,41 @@ pub(super) fn make_engine() -> Engine {
       dynamic_to_string(v)
     }
   });
-  // Package.pm:1086: `\cs` loads `file` (a `.sty`/`.cls` binding) when first used.
+  // Package.pm:1086: `\cs` loads `file` (`name.sty`, `.cls` or `.pool`) when first used.
   engine.register_fn("DefAutoload", |cs: Dynamic, file: &str| -> RhaiResult<()> {
-    let cs = dynamic_to_string(cs);
-    let cs = if cs.starts_with('\\') {
-      cs
-    } else {
-      format!("\\{cs}")
-    };
-    latexml_engine::tex::def_autoload(&cs, file).map_err(rhai_err)
+    latexml_engine::tex::def_autoload_file(&dynamic_to_string(cs), file).map_err(rhai_err)
   });
   // Package.pm:2871-2916: a code point, or each char of a string, through the font map of an encoding
   // (the current font's when `()`).
-  engine.register_fn("FontDecode", |code: i64, encoding: Dynamic| -> Dynamic {
+  let font_decode = |code: i64, encoding: Dynamic| -> Dynamic {
     let encoding = (!encoding.is_unit()).then(|| dynamic_to_string(encoding));
     let code = i32::try_from(code).unwrap_or(-1);
     latexml_core::binding::content::font_decode(code, encoding.as_deref(), None)
       .0
       .map_or(Dynamic::UNIT, |c| Dynamic::from(c.to_string()))
+  };
+  engine.register_fn("FontDecode", move |code: i64| {
+    font_decode(code, Dynamic::UNIT)
   });
+  engine.register_fn("FontDecode", font_decode);
+  let font_decode_string = |string: &str, encoding: Dynamic, implicit: bool| {
+    let encoding = (!encoding.is_unit()).then(|| dynamic_to_string(encoding));
+    latexml_core::binding::content::font_decode_string(string, encoding.as_deref(), implicit)
+  };
   engine.register_fn(
     "FontDecodeString",
-    |string: &str, encoding: Dynamic, implicit: bool| {
-      let encoding = (!encoding.is_unit()).then(|| dynamic_to_string(encoding));
-      latexml_core::binding::content::font_decode_string(string, encoding.as_deref(), implicit)
-    },
+    move |string: &str, encoding: Dynamic| font_decode_string(string, encoding, false),
   );
+  engine.register_fn("FontDecodeString", font_decode_string);
+  // Package.pm:2734: the format is fixed where the dump is chosen, before any binding runs (strict LoadFormat).
+  engine.register_fn("LoadFormat", |name: &str| {
+    script_error(
+      "unexpected",
+      "LoadFormat",
+      &format!("LoadFormat({name}): the format is chosen with the dump, before any binding loads"),
+      None,
+    )
+  });
   engine.register_fn("SetCounter", |ctr: &str, value: i64| -> RhaiResult<()> {
     latexml_core::binding::counter::dialect::set_counter(ctr, Number(value)).map_err(rhai_err)
   });

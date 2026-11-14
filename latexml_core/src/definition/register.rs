@@ -784,7 +784,7 @@ impl Definition for Register {
 
     self.set_value(value, None, args);
 
-    state::after_assignment();
+    state::after_assignment()?;
     // # Tracing ?
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 

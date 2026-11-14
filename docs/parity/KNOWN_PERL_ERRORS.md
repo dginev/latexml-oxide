@@ -19757,3 +19757,18 @@ holds, so non-ifsym glyphs that map there take a 1em box: wasysym `\CIRCLE` 10 �
 default 7.5 × 7.0), marvosym `\SquareSteel` 10 × 10pt (pdflatex 7.58 × 6.51); stmaryrd `\varbigcirc`'s width is right
 (10pt) but its height is not (pdflatex 6.94). Perl master does the same. Only measured lengths move (no text); a 20-paper
 census changed no output. Kept as upstream ships it for now: RED `fonts-nfss/ifgeo_fallback_sizes_non_ifsym_glyphs_red.tex`.
+
+## 1247. `DefAutoload` of a file that is not `.pool`/`.sty`/`.cls` dies instead of Warning
+
+Package.pm:1107, `DefAutoload`'s branch for any other definition file name, calls `Warning(...)`, which
+`LaTeXML::Package` neither defines nor imports (Common/Error.pm exports `Warn`). The intended Warning becomes
+`Fatal:misdefined:LaTeXML::Package::DefAutoload Undefined subroutine '&LaTeXML::Package::Warning' called`, and the
+conversion fails. Minimal trigger, in a `.sty.ltxml` binding a document loads:
+
+```perl
+DefAutoload('gbar', 'gbar');   # a bare name, no .sty/.cls/.pool
+```
+
+Rust Warns `unexpected:gbar Don't know how to autoload \gbar from gbar` and goes on
+(`latexml_engine::tex::def_autoload_file`, the Rhai `DefAutoload`; guard
+`30_script_bindings::package_pm_calls_take_effect_in_a_conversion`). The fix for Perl is `Warn(...)`.

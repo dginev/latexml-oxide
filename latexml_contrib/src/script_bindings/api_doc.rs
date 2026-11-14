@@ -219,11 +219,6 @@ const PERL_GAPS: &[(&str, &str, &str)] = &[
     "",
   ),
   (
-    "LoadFormat",
-    "plain_dump_available @ latexml_engine/src/tex.rs / latex_dump_available @ latexml_engine/src/latex.rs",
-    "",
-  ),
-  (
     "LookupColor",
     "LookupColor! / latexml_package::package::color_sty::lookup_color",
     "",
@@ -276,6 +271,63 @@ const PERL_GAPS: &[(&str, &str, &str)] = &[
   ),
 ];
 
+/// Why each [`PERL_GAPS`] call the dialect lacks has no Rhai call yet, for the cheat sheet's gap list ([`gaps_without_reason`]
+/// fails on a lacking call with none).
+const GAP_REASONS: &[(&str, &str)] = &[
+  ("Color", "a Color value handle the dialect lacks"),
+  (
+    "Debug",
+    "its meaning in the dialect awaits a ruling (Perl's debug-feature switch, or a log line)",
+  ),
+  ("DefColor", "takes a Color value handle the dialect lacks"),
+  (
+    "DefColorModel",
+    "its conversion closures take Color value handles the dialect lacks",
+  ),
+  (
+    "InputContent",
+    "not yet exposed; a binding reaches it as `RawTeX(\"\\\\input{file}\")`",
+  ),
+  (
+    "InstallDefinition",
+    "needs a Definition object; the dialect's definers install their own",
+  ),
+  (
+    "LookupColor",
+    "returns a Color value handle the dialect lacks",
+  ),
+  (
+    "MuDimension",
+    "a MuDimension value handle the dialect lacks",
+  ),
+  ("Pair", "a Pair value handle the dialect lacks"),
+  ("PairList", "a PairList value handle the dialect lacks"),
+  (
+    "ProcessPendingResources",
+    "run by the schema as `ltx:document` opens (Base_Schema.pool.ltxml:61, `afterOpen`); no binding calls it",
+  ),
+  (
+    "ReadAlignmentTemplate",
+    "returns an alignment template, a handle the dialect lacks",
+  ),
+  (
+    "convertLaTeXArgs",
+    "internal to `\\newcommand`'s definers; a binding writes its parameter spec itself",
+  ),
+  (
+    "createXMRefs",
+    "an XMRef per math node or argument, inside `DefMath`'s XMDual (Package.pm:1544), which the dialect's `DefMath` builds",
+  ),
+  (
+    "decodeMathChar",
+    "returns Perl's list (glyph, font, reversion, properties); not yet exposed as a Rhai value",
+  ),
+  (
+    "dualize_arglist",
+    "internal to `DefMath`'s XMDual, which the dialect's `DefMath` builds",
+  ),
+];
+
 /// Every registered call, by name. Overloads share one entry: the signatures
 /// differ, what the call MEANS does not. Names registered on more than one
 /// handle are the exception — they live in [`HANDLE_DOCS`] instead.
@@ -304,7 +356,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "!=",
     Mirror(
       "$a ne $b",
-      "impl PartialEq for Number => latexml_core::common::number::Number / register_string_tests @ latexml_contrib/src/script_bindings/engine.rs",
+      "impl PartialEq for str => str / register_string_tests @ latexml_contrib/src/script_bindings/engine.rs",
     ),
     Doc::Note(
       "**Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares \
@@ -316,7 +368,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "==",
     Mirror(
       "$a eq $b",
-      "impl PartialEq for Number => latexml_core::common::number::Number / register_string_tests @ latexml_contrib/src/script_bindings/engine.rs",
+      "impl PartialEq for str => str / register_string_tests @ latexml_contrib/src/script_bindings/engine.rs",
     ),
     Doc::Note(
       "**Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares \
@@ -478,7 +530,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignBool",
-    Mirror("AssignValue", ""),
+    Mirror("AssignValue", "AssignValue!"),
     Doc::Rust(
       "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
@@ -502,7 +554,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignFloat",
-    Mirror("AssignValue", ""),
+    Mirror("AssignValue", "AssignValue!"),
     Doc::Rust(
       "Bind a key to a fractional (float) value, with a scope.",
       "latexml_core::state::assign_value",
@@ -542,7 +594,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignNumber",
-    Mirror("AssignValue", ""),
+    Mirror("AssignValue", "AssignValue!"),
     Doc::Rust(
       "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
@@ -566,7 +618,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignString",
-    Mirror("AssignValue", ""),
+    Mirror("AssignValue", "AssignValue!"),
     Doc::Rust(
       "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
@@ -590,7 +642,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AtBeginDocument",
-    Mirror("AtBeginDocument", ""),
+    Mirror(
+      "AtBeginDocument",
+      "latexml_package::prelude::at_begin_document",
+    ),
     Doc::Rust(
       "Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\\begin{document}`.",
       "latexml_core::state::push_value",
@@ -598,7 +653,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AtEndDocument",
-    Mirror("AtEndDocument", ""),
+    Mirror("AtEndDocument", "latexml_package::prelude::at_end_document"),
     Doc::Rust(
       "Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\\end{document}`.",
       "latexml_core::state::push_value",
@@ -2705,15 +2760,15 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "DefAutoload",
     Mirror("DefAutoload", ""),
     Doc::Rust(
-      "Make `cs` load a binding file (`foo.sty`) when first used (Package.pm:1086).",
-      "latexml_engine::tex::def_autoload",
+      "Make `cs` load a definition file when first used: `name.sty` (a package), `name.cls` (a class) or `name.pool`, an `.ltxml` suffix dropped; nothing when it is loaded or `cs` defined; any other name Warns (Package.pm:1086).",
+      "latexml_engine::tex::def_autoload_file",
     ),
   ),
   (
     "FontDecode",
     Mirror("FontDecode", ""),
     Doc::Rust(
-      "The character a code point is in an encoding's font map (the current font's when `()`), or `()` (Package.pm:2871).",
+      "The character a code point is in an encoding's font map (the current font's when `()` or not given), or `()` (Package.pm:2871).",
       "latexml_core::binding::content::font_decode",
     ),
   ),
@@ -2721,15 +2776,25 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "FontDecodeString",
     Mirror("FontDecodeString", ""),
     Doc::Rust(
-      "A string through an encoding's font map, each char a code point; `implicit` decodes only a non-default font's encoding (Package.pm:2895).",
+      "A string through an encoding's font map (the current font's when `()`), each char a code point: a char the map lacks is dropped, or with `implicit` a code point past the map (or with no map) decodes to itself (Package.pm:2895).",
       "latexml_core::binding::content::font_decode_string",
+    ),
+  ),
+  (
+    "LoadFormat",
+    Mirror(
+      "LoadFormat",
+      "plain_dump_available @ latexml_engine/src/tex.rs / latex_dump_available @ latexml_engine/src/latex.rs",
+    ),
+    Doc::Note(
+      "An Error: the format (plain or LaTeX) is chosen with its dump before any binding loads, and a binding cannot load another (strict LoadFormat, Package.pm:2752).",
     ),
   ),
   (
     "DocType",
     Mirror("DocType", "RegisterDocumentNamespaces!"),
     Doc::Rust(
-      "Warns that no DTD is read (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1), then registers the map's document namespaces, as `RegisterDocumentNamespace` (Package.pm:2032).",
+      "One Warning per call, that no DTD is read (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1); then the map's document namespaces registered, as `RegisterDocumentNamespace` (Package.pm:2032).",
       "latexml_core::common::model::register_document_namespace",
     ),
   ),
@@ -2793,7 +2858,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "CheckOptions",
     Mirror("CheckOptions", ""),
     Doc::Rust(
-      "An Error naming the option keys of a map not in the `allowed` array; whether all were allowed (Package.pm:1062).",
+      "One Error naming the option keys of a map not allowed (an `allowed` array, or a map of its true keys, Perl's hashref); whether all were (Package.pm:1062).",
       "latexml_core::binding::def::options::check_options",
     ),
   ),
@@ -3307,6 +3372,22 @@ fn short_path(path: &str) -> String {
   }
 }
 
+/// [`PERL_GAPS`] calls the dialect lacks with no [`GAP_REASONS`] entry, and reasons for a call that is no gap.
+pub(super) fn gaps_without_reason() -> Vec<&'static str> {
+  let lacking = PERL_GAPS
+    .iter()
+    .filter(|(_, _, rhai)| rhai.is_empty())
+    .map(|(perl, ..)| *perl);
+  let unexplained = lacking
+    .clone()
+    .filter(|perl| GAP_REASONS.iter().all(|(name, _)| name != perl));
+  let stray = GAP_REASONS
+    .iter()
+    .map(|(name, _)| *name)
+    .filter(|name| lacking.clone().all(|perl| perl != *name));
+  unexplained.chain(stray).collect()
+}
+
 /// [`PERL_GAPS`] entries the engine now registers: move each to its [`DOCS`] entry's [`Mirror`].
 pub(super) fn stale_gaps(engine: &Engine) -> Vec<&'static str> {
   let live = registered_calls(engine);
@@ -3482,7 +3563,11 @@ pub(super) fn generate_cheatsheet(engine: &Engine) -> String {
   let mut lacking = Vec::new();
   for (perl, rust, rhai) in PERL_GAPS {
     let rhai_cell = if rhai.is_empty() {
-      lacking.push(format!("`{perl}`"));
+      let why = GAP_REASONS
+        .iter()
+        .find(|(name, _)| name == perl)
+        .map_or("", |(_, why)| *why);
+      lacking.push(format!("- `{perl}`: {why}."));
       String::new()
     } else if rhai.contains('`') {
       rhai.to_string()
@@ -3496,9 +3581,9 @@ pub(super) fn generate_cheatsheet(engine: &Engine) -> String {
     ));
   }
   out.push_str(&format!(
-    "\n## Perl calls the dialect lacks (an empty Rhai cell)\n\n{} calls: {}.\n",
+    "\n## Perl calls the dialect lacks (an empty Rhai cell)\n\n{} calls, each with the reason:\n\n{}\n",
     lacking.len(),
-    lacking.join(", ")
+    lacking.join("\n")
   ));
   out
 }

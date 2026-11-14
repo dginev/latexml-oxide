@@ -135,6 +135,58 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
   Ok(())
 }
 
+/// Perl's `DefAutoload($cs, $defnfile)` (Package.pm:1086-1107): `defnfile` is `name.pool`, `name.sty` or `name.cls`
+/// (an `.ltxml` suffix dropped), loaded by its type when `cs` is first used; nothing when it is already loaded or `cs`
+/// defined. Any other file name Warns (Perl's own branch dies calling an undefined `Warning`: KNOWN_PERL_ERRORS #1247).
+pub fn def_autoload_file(cs_name: &str, defnfile: &str) -> Result<()> {
+  use latexml_core::{
+    binding::content::load_class, common::store::Stored, definition::ExpansionBody,
+  };
+  let csname = if cs_name.starts_with('\\') {
+    cs_name.to_string()
+  } else {
+    format!("\\{cs_name}")
+  };
+  let defnfile = defnfile.strip_suffix(".ltxml").unwrap_or(defnfile);
+  let Some((name, kind)) = defnfile
+    .rsplit_once('.')
+    .filter(|(_, kind)| matches!(*kind, "pool" | "sty" | "cls"))
+  else {
+    Warn!(
+      "unexpected",
+      defnfile,
+      format!("Don't know how to autoload {csname} from {defnfile}")
+    );
+    return Ok(());
+  };
+  let cs = T_CS!(&csname);
+  if lookup_bool(&s!("{name}.{kind}_loaded"))
+    || lookup_bool(&s!("{name}.{kind}.ltxml_loaded"))
+    || lookup_meaning(&cs).is_some()
+  {
+    return Ok(());
+  }
+  match kind {
+    "sty" => def_autoload(&csname, name),
+    "pool" => def_autoload_pool(&csname, name),
+    _ => {
+      let name = name.to_string();
+      def_macro(
+        cs,
+        None,
+        ExpansionBody::Closure(Rc::new(move |_args| {
+          assign_meaning(&cs, Stored::None, Some(Scope::Global));
+          let pre_keys = snapshot_top_frame_keys();
+          load_class(&name, Vec::new(), Tokens::default())?;
+          hoist_top_frame_package_load(&pre_keys);
+          Ok(Tokens::new(vec![cs]))
+        })),
+        None,
+      )
+    },
+  }
+}
+
 /// Fire the autoload trigger `cs` of `package` (`def_autoload`): the trigger cleared, the package loaded.
 pub fn fire_autoload(cs: &Token, package: &str) -> Result<()> {
   use latexml_core::common::store::Stored;

@@ -16,7 +16,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | Perl | Rust | Rhai |
 |---|---|---|
 | `!$v` | `perl_truthy` (`latexml_contrib/src/script_bindings/mod.rs`) | `!` |
-| `$a ne $b` | [`impl PartialEq for Number`](latexml_core::common::number::Number) / `register_string_tests` (`latexml_contrib/src/script_bindings/engine.rs`) | `!=` |
+| `$a ne $b` | [`impl PartialEq for str`](str) / `register_string_tests` (`latexml_contrib/src/script_bindings/engine.rs`) | `!=` |
 | `$n->valueOf % $m` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) / `register_number_int_transition` (`latexml_contrib/src/script_bindings/values.rs`) | `%` |
 | `$n->valueOf & $m` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) / `register_number_int_transition` (`latexml_contrib/src/script_bindings/values.rs`) | `&` |
 | `$v->multiply($n)` | [`NumericOps::multiply`](latexml_core::common::numeric_ops::NumericOps::multiply) | `*` |
@@ -27,7 +27,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `$v->valueOf < $w->valueOf` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) | `<` |
 | `$n->valueOf << $m` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) / `register_number_int_transition` (`latexml_contrib/src/script_bindings/values.rs`) | `<<` |
 | `$v->valueOf <= $w->valueOf` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) | `<=` |
-| `$a eq $b` | [`impl PartialEq for Number`](latexml_core::common::number::Number) / `register_string_tests` (`latexml_contrib/src/script_bindings/engine.rs`) | `==` |
+| `$a eq $b` | [`impl PartialEq for str`](str) / `register_string_tests` (`latexml_contrib/src/script_bindings/engine.rs`) | `==` |
 | `$v->valueOf > $w->valueOf` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) | `>` |
 | `$v->valueOf >= $w->valueOf` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) | `>=` |
 | `$n->valueOf >> $m` | [`NumericOps::value_of`](latexml_core::common::numeric_ops::NumericOps::value_of) / `register_number_int_transition` (`latexml_contrib/src/script_bindings/values.rs`) | `>>` |
@@ -37,7 +37,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | (Rhai helper; Perl: `PushValue(SEARCHPATHS => $dir)`) | [`add_search_path`](latexml_core::state::add_search_path) | `AppendSearchPath` |
 | `AssignCatcode` | [`AssignCatcode!`](latexml_engine::AssignCatcode!) / [`assign_catcode`](latexml_core::state::assign_catcode) | `AssignCatcode` |
 | `AssignDelcode` | [`assign_delcode`](latexml_core::state::assign_delcode) | `AssignDelcode` |
-| `AssignValue` | [`assign_value`](latexml_core::state::assign_value) | `AssignFloat` |
+| `AssignValue` | [`AssignValue!`](latexml_engine::AssignValue!) / [`assign_value`](latexml_core::state::assign_value) | `AssignFloat` |
 | `AssignLCcode` | [`assign_lccode`](latexml_core::state::assign_lccode) | `AssignLCcode` |
 | `AssignMapping` | [`AssignMapping!`](latexml_engine::AssignMapping!) / [`assign_mapping`](latexml_core::state::assign_mapping) | `AssignMapping` |
 | `AssignMathcode` | [`assign_mathcode`](latexml_core::state::assign_mathcode) | `AssignMathcode` |
@@ -46,13 +46,13 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `AssignSFcode` | [`assign_sfcode`](latexml_core::state::assign_sfcode) | `AssignSFcode` |
 | `AssignUCcode` | [`assign_uccode`](latexml_core::state::assign_uccode) | `AssignUCcode` |
 | `AssignValue` | [`AssignValue!`](latexml_engine::AssignValue!) / [`assign_value`](latexml_core::state::assign_value) | `AssignValue` |
-| `AssignValue` | [`assign_value`](latexml_core::state::assign_value) | `AssignBool` (deprecated: `AssignValue(key, value[, scope])`) |
-| `AssignValue` | [`assign_value`](latexml_core::state::assign_value) | `AssignNumber` (deprecated: `AssignValue(key, value[, scope])`) |
-| `AssignValue` | [`assign_value`](latexml_core::state::assign_value) | `AssignString` (deprecated: `AssignValue(key, value[, scope])`) |
+| `AssignValue` | [`AssignValue!`](latexml_engine::AssignValue!) / [`assign_value`](latexml_core::state::assign_value) | `AssignBool` (deprecated: `AssignValue(key, value[, scope])`) |
+| `AssignValue` | [`AssignValue!`](latexml_engine::AssignValue!) / [`assign_value`](latexml_core::state::assign_value) | `AssignNumber` (deprecated: `AssignValue(key, value[, scope])`) |
+| `AssignValue` | [`AssignValue!`](latexml_engine::AssignValue!) / [`assign_value`](latexml_core::state::assign_value) | `AssignString` (deprecated: `AssignValue(key, value[, scope])`) |
 | `AssignValue` | [`AssignValue!`](latexml_engine::AssignValue!) / [`assign_value`](latexml_core::state::assign_value) | `assign_global` (deprecated: `AssignValue(key, value, "global")`) |
 | `AssignValue` | [`AssignValue!`](latexml_engine::AssignValue!) / [`assign_value`](latexml_core::state::assign_value) | `assign_value` (deprecated: `AssignValue(key, value, "local")`) |
-| `AtBeginDocument` | [`push_value`](latexml_core::state::push_value) | `AtBeginDocument` |
-| `AtEndDocument` | [`push_value`](latexml_core::state::push_value) | `AtEndDocument` |
+| `AtBeginDocument` | [`at_begin_document`](latexml_package::prelude::at_begin_document) | `AtBeginDocument` |
+| `AtEndDocument` | [`at_end_document`](latexml_package::prelude::at_end_document) | `AtEndDocument` |
 | `beginItemize` | [`BeginItemize!`](latexml_engine::BeginItemize!) / [`begin_itemize`](latexml_core::binding::counter::dialect::begin_itemize) | `BeginItemize` |
 | `Box` | [`Tbox::new`](latexml_core::tbox::Tbox::new) | `Box` |
 | `CC_ACTIVE` | [`Catcode::ACTIVE`](latexml_core::token::Catcode::ACTIVE) | `CC_ACTIVE` |
@@ -88,7 +88,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | (Rhai helper; Perl: `DeclareFontMap($name, [..., "ffi", ...])`) | [`DeclareFontMapMultichar!`](latexml_engine::DeclareFontMapMultichar!) / [`load_font_map`](latexml_core::binding::content::load_font_map) | `DeclareFontMapMultichar` |
 | `DeclareOption` | [`DeclareOption!`](latexml_engine::DeclareOption!) | `DeclareOption` |
 | `DefAccent` | [`DefAccent!`](latexml_engine::DefAccent!) | `DefAccent` |
-| `DefAutoload` | [`def_autoload`](latexml_engine::tex::def_autoload) | `DefAutoload` |
+| `DefAutoload` | [`def_autoload_file`](latexml_engine::tex::def_autoload_file) | `DefAutoload` |
 | `DefColumnType` | [`DefColumnType!`](latexml_engine::DefColumnType!) / [`def_macro`](latexml_core::binding::def::dialect::def_macro) | `DefColumnType` |
 | `DefConditional` | [`DefConditional!`](latexml_engine::DefConditional!) / [`def_conditional`](latexml_core::binding::def::dialect::def_conditional) | `DefConditional` |
 | `DefConditionalI` | [`def_conditional`](latexml_core::binding::def::dialect::def_conditional) | `DefConditionalI` |
@@ -146,6 +146,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `List` | [`List`](latexml_core::list::List) / `list_of` (`latexml_contrib/src/script_bindings/engine.rs`) | `List` |
 | `LoadClass` | [`LoadClass!`](latexml_engine::LoadClass!) / [`load_class`](latexml_core::binding::content::load_class) | `LoadClass` |
 | `LoadFontMap` | [`load_font_map`](latexml_core::binding::content::load_font_map) | `LoadFontMap` |
+| `LoadFormat` | `plain_dump_available` (`latexml_engine/src/tex.rs`) / `latex_dump_available` (`latexml_engine/src/latex.rs`) | `LoadFormat` |
 | `LoadPool` | [`LoadPool!`](latexml_engine::LoadPool!) / [`input_definitions`](latexml_core::binding::content::input_definitions) | `LoadPool` |
 | `LookupValue` | [`LookupBool!`](latexml_engine::LookupBool!) / [`lookup_bool`](latexml_core::state::lookup_bool) | `LookupBool` |
 | `LookupCatcode` | [`LookupCatcode!`](latexml_engine::LookupCatcode!) / [`lookup_catcode`](latexml_core::state::lookup_catcode) | `LookupCatcode` |
@@ -371,7 +372,6 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `GenerateID` | [`Document::generate_id`](latexml_core::document::Document::generate_id) | `document.generateID(node, prefix)` |
 | `InputContent` | [`input_content`](latexml_core::binding::content::input_content) |  |
 | `InstallDefinition` | [`InstallDefinition!`](latexml_engine::InstallDefinition!) / [`install_definition`](latexml_core::state::install_definition) |  |
-| `LoadFormat` | `plain_dump_available` (`latexml_engine/src/tex.rs`) / `latex_dump_available` (`latexml_engine/src/latex.rs`) |  |
 | `LookupColor` | [`LookupColor!`](latexml_engine::LookupColor!) / [`lookup_color`](latexml_package::package::color_sty::lookup_color) |  |
 | `MuDimension` | [`MuDimension`](latexml_core::common::mudimension::MuDimension) |  |
 | `Pair` | [`Pair::new`](latexml_core::common::pair::Pair::new) |  |
@@ -386,4 +386,21 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 
 ## Perl calls the dialect lacks (an empty Rhai cell)
 
-17 calls: `Color`, `Debug`, `DefColor`, `DefColorModel`, `InputContent`, `InstallDefinition`, `LoadFormat`, `LookupColor`, `MuDimension`, `Pair`, `PairList`, `ProcessPendingResources`, `ReadAlignmentTemplate`, `convertLaTeXArgs`, `createXMRefs`, `decodeMathChar`, `dualize_arglist`.
+16 calls, each with the reason:
+
+- `Color`: a Color value handle the dialect lacks.
+- `Debug`: its meaning in the dialect awaits a ruling (Perl's debug-feature switch, or a log line).
+- `DefColor`: takes a Color value handle the dialect lacks.
+- `DefColorModel`: its conversion closures take Color value handles the dialect lacks.
+- `InputContent`: not yet exposed; a binding reaches it as `RawTeX("\\input{file}")`.
+- `InstallDefinition`: needs a Definition object; the dialect's definers install their own.
+- `LookupColor`: returns a Color value handle the dialect lacks.
+- `MuDimension`: a MuDimension value handle the dialect lacks.
+- `Pair`: a Pair value handle the dialect lacks.
+- `PairList`: a PairList value handle the dialect lacks.
+- `ProcessPendingResources`: run by the schema as `ltx:document` opens (Base_Schema.pool.ltxml:61, `afterOpen`); no binding calls it.
+- `ReadAlignmentTemplate`: returns an alignment template, a handle the dialect lacks.
+- `convertLaTeXArgs`: internal to `\newcommand`'s definers; a binding writes its parameter spec itself.
+- `createXMRefs`: an XMRef per math node or argument, inside `DefMath`'s XMDual (Package.pm:1544), which the dialect's `DefMath` builds.
+- `decodeMathChar`: returns Perl's list (glyph, font, reversion, properties); not yet exposed as a Rhai value.
+- `dualize_arglist`: internal to `DefMath`'s XMDual, which the dialect's `DefMath` builds.

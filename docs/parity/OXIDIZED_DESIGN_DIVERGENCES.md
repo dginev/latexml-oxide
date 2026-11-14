@@ -19,7 +19,9 @@ rules, and `compute_indirect_model` cannot discover DTD elements. Fixing this pr
 would require significant rearchitecting of the containment model for a rarely-used feature.
 
 **Impact:** Namespace tests (ns1–ns5) are permanently ignored. The `DocType!` macro and
-`set_doc_type()` function have been removed.
+`set_doc_type()` function have been removed. A Rhai binding's `DocType(root, pubid, sysid[, namespaces])`
+(Package.pm:2032) Warns once per call, `unexpected:DocType`, that no DTD is read, then registers its namespaces as
+`RegisterDocumentNamespace` does.
 
 ### 2. No `%\n` in TeX Attributes
 

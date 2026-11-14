@@ -7504,7 +7504,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
       .unwrap_or(Stored::None);
   // };
   if copy_provides_keeps_saved_meaning(token1, token2, &meaning) {
-    after_assignment();
+    let _ = after_assignment(); // (`let_i` returns no Result; a Fatal is logged where `Fatal!` raises it)
     return;
   }
   // A lock against the class and package files (`"{cs}:locked@files"`, [`name_carries_lock`]) holds for their `\let`
@@ -7537,7 +7537,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     let holds = files_lock_holds(&cs, || takes_optional_first(&meaning));
     if holds && !matches!(meaning, Stored::None) {
       restore_cleared_binding(token1);
-      after_assignment();
+      let _ = after_assignment();
       return;
     }
     let protected = copies_lock(&cs);
@@ -7645,12 +7645,12 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     );
     if let Ok(wrapper) = new_wrapper {
       install_definition(wrapper, scope);
-      after_assignment();
+      let _ = after_assignment();
       return;
     }
   }
   assign_meaning(token1, meaning, scope);
-  after_assignment();
+  let _ = after_assignment();
 }
 /// `XEquals` check for two token arguments
 pub fn x_equals(token1: &Token, token2: &Token) -> bool {
@@ -7744,14 +7744,22 @@ pub fn generate_ligature_id() -> usize {
   id as usize
 }
 
-/// run the accumulated directives from `\afterassignment`
-pub fn after_assignment() {
+/// run the accumulated directives from `\afterassignment` (Package.pm:716); a value that is no token (a binding's
+/// `AssignValue("afterAssignment", "Q")`) is an Error and dropped.
+pub fn after_assignment() -> Result<()> {
   match remove_value_sym(pin!("afterAssignment")) {
     Some(Stored::Tokens(after)) => gullet::unread(after),
     Some(Stored::Token(after)) => gullet::unread_one(after),
     None | Some(Stored::None) => {},
-    Some(other) => panic!("unexpected in after_assignment: {other:?}"),
+    Some(other) => {
+      Error!(
+        "unexpected",
+        "afterAssignment",
+        format!("the saved \\afterassignment is not a token: {other:?}; dropped")
+      );
+    },
   }
+  Ok(())
 }
 
 // Ported from Perl's "local" declarations

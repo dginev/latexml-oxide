@@ -39,7 +39,7 @@ sets each call beside its Perl spelling and the Rust a compiled binding uses.
 
 Called at the top level of a binding file, or from inside any body.
 
-251 functions, 581 calls.
+252 functions, 586 calls.
 
 | call | documentation |
 |---|---|
@@ -100,7 +100,7 @@ Called at the top level of a binding file, or from inside any body.
 | `CC_SPACE() -> int` | The catcode constant `CC_SPACE` (10), for `Token(string, catcode)`. |
 | `CC_SUB() -> int` | The catcode constant `CC_SUB` (8), for `Token(string, catcode)`. |
 | `CC_SUPER() -> int` | The catcode constant `CC_SUPER` (7), for `Token(string, catcode)`. |
-| `CheckOptions(string, array, map) -> bool` | An Error naming the option keys of a map not in the `allowed` array; whether all were allowed (Package.pm:1062). ([`check_options`](latexml_core::binding::def::options::check_options)) |
+| `CheckOptions(string, array, map) -> bool`<br>`CheckOptions(string, map, map) -> bool` | One Error naming the option keys of a map not allowed (an `allowed` array, or a map of its true keys, Perl's hashref); whether all were (Package.pm:1062). ([`check_options`](latexml_core::binding::def::options::check_options)) |
 | `CleanBibKey(?) -> string` | A bibliography key without its spaces, its case kept (Package.pm:537). ([`clean_bib_key`](latexml_core::common::cleaners::clean_bib_key)) |
 | `CleanClassName(?) -> string` | A class name: trimmed, accents decomposed, only `[a-zA-Z0-9]` kept (Package.pm:527). ([`clean_class_name`](latexml_core::common::cleaners::clean_class_name)) |
 | `CleanID(?) -> string` | Clean a string into a valid `xml:id`. ([`clean_id`](latexml_core::common::cleaners::clean_id)) |
@@ -114,7 +114,7 @@ Called at the top level of a binding file, or from inside any body.
 | `DeclareFontMapMultichar(string, map)`<br>`DeclareFontMapMultichar(string, string, map)` | Declare the multi-character glyphs of a font map (optionally a family's): position (decimal string) to its text. |
 | `DeclareOption(Fn)`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`). |
 | `DefAccent(string, string, string)`<br>`DefAccent(string, string, string, bool)`<br>`DefAccent(string, string, string, map)` | Define an accent command in both its combining and standalone forms; Perl's options map `#{below: true}`. **Deprecated:** its older form (Warns once per binding load); use `DefAccent(accent, combining, standalone, #{below: true})`. |
-| `DefAutoload(?, string)` | Make `cs` load a binding file (`foo.sty`) when first used (Package.pm:1086). ([`def_autoload`](latexml_engine::tex::def_autoload)) |
+| `DefAutoload(?, string)` | Make `cs` load a definition file when first used: `name.sty` (a package), `name.cls` (a class) or `name.pool`, an `.ltxml` suffix dropped; nothing when it is loaded or `cs` defined; any other name Warns (Package.pm:1086). ([`def_autoload_file`](latexml_engine::tex::def_autoload_file)) |
 | `DefColumnType(string, Fn)` | Define a tabular column type, as its rewrite expansion. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefConditional(string)`<br>`DefConditional(string, (), map)`<br>`DefConditional(string, Fn)`<br>`DefConditional(string, Fn, map)` | Define a conditional control sequence. ([`def_conditional`](latexml_core::binding::def::dialect::def_conditional)) |
 | `DefConditionalI(?, ?, ?)`<br>`DefConditionalI(?, ?, ?, map)` | `DefConditional` with the control sequence and its parameter spec (a string, or `()`) apart; the test a closure or `()` (Package.pm:1194). ([`def_conditional`](latexml_core::binding::def::dialect::def_conditional)) |
@@ -143,7 +143,7 @@ Called at the top level of a binding file, or from inside any body.
 | `DigestText(Token) -> Digested`<br>`DigestText(Tokens) -> Digested`<br>`DigestText(string) -> Digested` | Digest TeX source, a `Token` or `Tokens` in restricted horizontal mode, returning the digested handle. ([`digest_text`](latexml_core::binding::content::digest_text)) |
 | `Dimension(float) -> Dimension`<br>`Dimension(int) -> Dimension`<br>`Dimension(string) -> Dimension` | Perl's `Dimension(spec)`: `"3pt"` (a number and a unit), or an int of sp; a spec that is not a number and a unit is an Error and 0 (Perl reads `"3 furlongs"` as 3sp, OXIDIZED_DESIGN_DIVERGENCES #1031). |
 | `DisableKeyVal(string, string, string)` | Disable the key `prefix`/`keyset`/`key`: using it later Warns (KeyVal.pm:49). ([`disable_keyval`](latexml_core::keyval::disable_keyval)) |
-| `DocType(string, ?, ?, map)` | Warns that no DTD is read (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1), then registers the map's document namespaces, as `RegisterDocumentNamespace` (Package.pm:2032). ([`register_document_namespace`](latexml_core::common::model::register_document_namespace)) |
+| `DocType(string, ?, ?)`<br>`DocType(string, ?, ?, map)` | One Warning per call, that no DTD is read (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1); then the map's document namespaces registered, as `RegisterDocumentNamespace` (Package.pm:2032). ([`register_document_namespace`](latexml_core::common::model::register_document_namespace)) |
 | `EndSemiverbatim()` | Close a `StartSemiverbatim` region, restoring the saved catcodes. ([`end_semiverbatim`](latexml_core::state::end_semiverbatim)) |
 | `Equals(?, ?) -> bool` | Perl's `Equals`: `()` equals only `()`; tokens compare their meanings (themselves when neither has one), `Tokens` token by token, other values by their string. |
 | `Error(string, string, ?, ?)`<br>`Error(string, string, ?, ?, ?)`<br>`Error(string, string, ?, ?, ?, ?)`<br>`Error(string, string, string)` | Log an `Error:`, with Perl's trailing details (a string or an array); Perl's `(cat, obj, where, msg, details…)` form when `where` is `()` or a handle. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion. |
@@ -154,8 +154,8 @@ Called at the top level of a binding file, or from inside any body.
 | `ExplodeText(string) -> Tokens` | A string's characters as `Tokens`, letters LETTER and the rest OTHER. |
 | `Fatal(string, string, ?, ?)`<br>`Fatal(string, string, ?, ?, ?)`<br>`Fatal(string, string, ?, ?, ?, ?)`<br>`Fatal(string, string, string)` | End the conversion with `Fatal:<cat>:<obj>`, plus optional details. |
 | `FindFile(string) -> ?`<br>`FindFile(string, map) -> ?` | The path of a file on the search paths (Perl's `type`/`notex`/`noltxml`/`searchpaths_only`), or `()`. ([`find_file`](latexml_core::binding::content::find_file)) |
-| `FontDecode(int, ?) -> ?` | The character a code point is in an encoding's font map (the current font's when `()`), or `()` (Package.pm:2871). ([`font_decode`](latexml_core::binding::content::font_decode)) |
-| `FontDecodeString(string, ?, bool) -> string` | A string through an encoding's font map, each char a code point; `implicit` decodes only a non-default font's encoding (Package.pm:2895). ([`font_decode_string`](latexml_core::binding::content::font_decode_string)) |
+| `FontDecode(int) -> ?`<br>`FontDecode(int, ?) -> ?` | The character a code point is in an encoding's font map (the current font's when `()` or not given), or `()` (Package.pm:2871). ([`font_decode`](latexml_core::binding::content::font_decode)) |
+| `FontDecodeString(string, ?) -> string`<br>`FontDecodeString(string, ?, bool) -> string` | A string through an encoding's font map (the current font's when `()`), each char a code point: a char the map lacks is dropped, or with `implicit` a code point past the map (or with no map) decodes to itself (Package.pm:2895). ([`font_decode_string`](latexml_core::binding::content::font_decode_string)) |
 | `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `defined(v)`. |
 | `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
 | `Glue(int) -> Glue`<br>`Glue(int, int, ?, int, ?) -> Glue`<br>`Glue(string) -> Glue` | Perl's `Glue(spec)`: `"1pt plus 2fil minus 1pt"`, an int of sp, or `Glue(sp, plus, pfill, minus, mfill)` with fill orders as names or 0-3; an unreadable spec is an Error and 0. |
@@ -172,6 +172,7 @@ Called at the top level of a binding file, or from inside any body.
 | `List(array) -> Digested`<br>`List(array, map) -> Digested` | Perl's `List(@boxes, mode => $mode)` (List.pm:31) as `List([boxes])` or `List([boxes], #{mode: m})`: `()`s dropped, one box (of the asked mode) is itself, else a list in the mode (the current one by default). |
 | `LoadClass(string)`<br>`LoadClass(string, array)`<br>`LoadClass(string, map)` | Load a document class, falling back to a prefix match then OmniBus. ([`load_class`](latexml_core::binding::content::load_class)) |
 | `LoadFontMap(string) -> ?` | An encoding's font map, loaded on first use, as an array of its characters (`()` at an unmapped position); `()` when it has none (Package.pm:2917). ([`load_font_map`](latexml_core::binding::content::load_font_map)) |
+| `LoadFormat(string)` | An Error: the format (plain or LaTeX) is chosen with its dump before any binding loads, and a binding cannot load another (strict LoadFormat, Package.pm:2752). |
 | `LoadPool(string)` | Load a pool (`<name>.pool`). ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
 | `LookupBool(string) -> bool` | Read a value as a boolean. ([`lookup_bool`](latexml_core::state::lookup_bool)) |
 | `LookupCatcode(string) -> ?` | The category code currently in force for a character; `()` when the table holds none. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |
