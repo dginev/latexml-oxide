@@ -80,7 +80,7 @@ fn a_run_in_or_in_place_line_led_by_an_unrequested_symbol_stays_the_classs() {
 /// call the class's text where its title page prints it (`displaced_in_doubt`; review rev99b2 F2, probe q4d).
 #[test]
 fn a_displaced_line_led_by_an_unrequested_symbol_stays_the_classs() {
-  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1044; pdflatex: a gap)
+  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1050; pdflatex: a gap)
   assert_eq!(
     converted(
       repro!("displaced_line_led_by_an_unrequested_symbol_stays_the_classs"),

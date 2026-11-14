@@ -19,7 +19,7 @@ fn convert_clean(tex: &str) -> String {
 /// astro-ph9512088, astro-ph9909358). Repro sectioning-frontmatter/paspconf_revtex3_frontmatter.
 #[test]
 fn paspconf_revtex3_frontmatter() {
-  // (QAB8: the skip between the two discussion paragraphs is kept on the second, `--ltx-skip-before`, OD #1044)
+  // (QAB8: the skip between the two discussion paragraphs is kept on the second, `--ltx-skip-before`, OD #1050)
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/paspconf_revtex3_frontmatter.tex"
   ));

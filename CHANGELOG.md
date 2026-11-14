@@ -7,7 +7,7 @@
     net, as in TeX), and LaTeXML.css adds it to the paragraph gap (ar5iv-css mirrors it); Perl drops
     the amount. Not after a heading, across a heading, float or environment, in a title page, box or
     float, or for a `\vspace` inside a paragraph.
-    OXIDIZED_DESIGN #1044. Guard `perfect_kernel_batchqab8::paragraph_skips_go_on_the_next_paragraph`.
+    OXIDIZED_DESIGN #1050. Guard `perfect_kernel_batchqab8::paragraph_skips_go_on_the_next_paragraph`.
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
     dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
     `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now

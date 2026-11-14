@@ -25682,7 +25682,7 @@ and its standalone blocks:
   after it hoisted out as `logical-block`s and the caption kept in the row's `ltx:block`, 1710.06503 Fig 1, the
   ws-procs961x669 binding net; guard `an_hspace_star_opens_the_row_paragraph`). The float's begin lets `\linebreak` and `\hspace` to the rule's
   `\lx@panel@linebreak`/`\lx@panel@hspace` only while they have the kernel's meaning (`\lx@kernel@…`): an author's or a
-  package's own stands; the kernel `\vspace` marks its own `\vskip` (`\lx@vspace@mark`, #1044).
+  package's own stands; the kernel `\vspace` marks its own `\vskip` (`\lx@vspace@mark`, #1050).
 - **The stated glue counts.** `\hskip` (so `\quad`, `\qquad`) and `\hspace` between two panels add their natural width to
   the row; plain spaces, `\label`s and `\hfill` count 0. A row that begins a paragraph (the float's first, one after a
   `\par`, a `{center}` boundary, a `\vskip`, a caption, or a centred `\\`) keeps the glue stated before its first
@@ -36361,7 +36361,7 @@ lstmisc.sty:1387-1399 keeps such a value as `\lst@frame`, and the frame code dra
 holds: no frame. **Rust.** `lst_frame_sides` (listings_sty.rs) returns no frame for it, as TeX. **Guard**:
 `perfect_kernel_batchups1::fboxsep_pads_fcolorbox_boxed_and_listing_frames` (its `frame=xyz` listing).
 
-### 1044. The glue between two paragraphs is `--ltx-skip-before` on the second (QAB8, QA26)
+### 1050. The glue between two paragraphs is `--ltx-skip-before` on the second (QAB8, QA26)
 
 **Principle:** Perl's own intent, TeX_Glue.pool.ltxml:89-90 ("We should be combining adjacent vskips (?) And then add
 appropriate class/css for spacing to preceding element"), with TeX's vertical list deciding what is between two

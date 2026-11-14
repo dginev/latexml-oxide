@@ -481,7 +481,7 @@ pub(crate) const SKIP_AFTER_PARA: &str = "_skip_after_para";
 const SKIP_BEFORE_PARA: &str = "_skip_before_para";
 
 /// A paragraph right after a sibling paragraph keeps the glue between them as `--ltx-skip-before` (Perl's own intent,
-/// TeX_Glue.pool.ltxml:89-90; OXIDIZED_DESIGN_DIVERGENCES #1044). Any paragraph's start ends the wait for it.
+/// TeX_Glue.pool.ltxml:89-90; OXIDIZED_DESIGN_DIVERGENCES #1050). Any paragraph's start ends the wait for it.
 fn apply_skip_before(document: &mut Document, node: &mut Node) -> Result<()> {
   let Some(mut parent) = node.get_parent() else {
     return Ok(());

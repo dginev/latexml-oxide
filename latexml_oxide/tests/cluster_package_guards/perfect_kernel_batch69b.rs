@@ -73,7 +73,7 @@ fn class_redefining_trivlist_keeps_the_list() {
 /// Errors "Attempt to end mode internal_vertical" (Perl the same).
 #[test]
 fn endlist_with_no_list_open_does_nothing() {
-  // (QAB8: myproof's end code `\par\bigskip` before "After." is kept on it, `--ltx-skip-before`, OD #1044)
+  // (QAB8: myproof's end code `\par\bigskip` before "After." is kept on it, `--ltx-skip-before`, OD #1050)
   let (stderr, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/list-structure/endlist_with_no_list_open_does_nothing.tex"

@@ -19763,7 +19763,7 @@ census changed no output. Kept as upstream ships it for now: RED `fonts-nfss/ifg
 TeX_Glue.pool.ltxml:91-100: `\vskip` closes the open `ltx:p` or `ltx:para` and drops its amount; its own comment
 (:89-90) asks for "appropriate class/css for spacing to preceding element". A topic break the PDF shows as a 12pt gap is
 an ordinary paragraph break in the HTML. Rust keeps it as `--ltx-skip-before` on the next paragraph (OXIDIZED_DESIGN_DIVERGENCES
-#1044): an upstream offer. Minimal trigger (pdflatex: a 12pt gap before "B"; Perl: `<para>` with nothing on it):
+#1050): an upstream offer. Minimal trigger (pdflatex: a 12pt gap before "B"; Perl: `<para>` with nothing on it):
 
 ```latex
 \documentclass{article}

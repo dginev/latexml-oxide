@@ -150,7 +150,7 @@ fn a_runaway_run_leaves_no_ghost_fatal() {
 /// Distinct path: a run's `\fi` matching a conditional opened before it.
 #[test]
 fn a_run_keeps_the_documents_open_conditional() {
-  // (QAB8: the class's `\bigskip`s between the paragraphs are kept on the next, `--ltx-skip-before`, OD #1044)
+  // (QAB8: the class's `\bigskip`s between the paragraphs are kept on the next, `--ltx-skip-before`, OD #1050)
   let tex = repro!("check_run_keeps_the_documents_open_conditional");
   let cls = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/check_dangling_keywords.cls"

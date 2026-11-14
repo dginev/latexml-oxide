@@ -322,7 +322,7 @@ fn braced_first_group_that_does_not_end_the_keywords_runs_the_classs_code() {
 /// (paper.cls:622 `\par\bigskip`), so "After text." is a paragraph of its own, as in pdflatex.
 #[test]
 fn bare_endkeywords_is_the_classs_end_code() {
-  // (QAB8: the end code's `\bigskip` before "After text." is kept on it, `--ltx-skip-before`, OD #1044)
+  // (QAB8: the end code's `\bigskip` before "After text." is kept on it, `--ltx-skip-before`, OD #1050)
   let (log, xml) = convert_beside!("keywords_environment_bare_endkeywords.tex", "kwpaper.cls");
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(!xml.contains("<keywords"), "{xml}");

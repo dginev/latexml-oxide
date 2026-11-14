@@ -97,7 +97,7 @@ fn an_in_place_line_is_the_classs_where_a_separator_means_the_kernels() {
 /// int158a: one contact "Univ A, Town and Univ B, City" under both authors, the word invented).
 #[test]
 fn a_displaced_and_list_is_read_by_meaning() {
-  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1044; pdflatex: a gap)
+  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1050; pdflatex: a gap)
   assert_eq!(
     converted(repro!("displaced_csname_and_institutes_stay_the_classs"), 0),
     r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1">Univ A, Town</text></p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1"><text font="italic" fontsize="90%" xml:id="p2.1.1">Univ B, City</text></p> </para> <para cssstyle="--ltx-skip-before:10.0pt" xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#

@@ -39,7 +39,7 @@ fn an_unnumbered_and_list_stays_every_authors() {
 /// marked n. Read as "not numbered", every raa author held every institute (batch 104b's first A/B: 14 papers).
 #[test]
 fn a_numbered_and_list_the_run_does_not_print_keeps_its_numbers() {
-  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1044; pdflatex: a gap)
+  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1050; pdflatex: a gap)
   assert_eq!(
     converted(
       repro!("raw_class_numbered_institutes_the_run_does_not_print_keep_their_numbers"),

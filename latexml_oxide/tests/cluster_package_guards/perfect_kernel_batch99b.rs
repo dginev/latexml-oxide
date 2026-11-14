@@ -157,7 +157,7 @@ fn a_register_a_class_begin_document_hook_fills_is_no_note() {
 /// and stays the class's text (1704.03333's sifrev).
 #[test]
 fn an_and_list_in_a_displaced_store_goes_by_the_class_numbers_or_stays_the_classs() {
-  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1044; pdflatex: a gap)
+  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1050; pdflatex: a gap)
   assert_eq!(
     converted(
       repro!("displaced_class_numbered_and_institutes_go_by_their_numbers"),

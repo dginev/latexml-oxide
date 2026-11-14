@@ -1,6 +1,6 @@
 //! Guards for QAB8 (QA26): the glue between two sibling paragraphs is kept on the second as
 //! `cssstyle="--ltx-skip-before:<pt>"` (tex_glue.rs `note_skip_after_para`, tex_paragraph.rs `apply_skip_before`;
-//! OXIDIZED_DESIGN_DIVERGENCES #1044). Witnesses 2503.04888, 2001.10915, 2408.07944, 1606.03039.
+//! OXIDIZED_DESIGN_DIVERGENCES #1050). Witnesses 2503.04888, 2001.10915, 2408.07944, 1606.03039.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{convert_with, error_count, warning_count};

@@ -1123,7 +1123,7 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   ("const _seqlabel base_utilities/defs/frontmatter_api.rs", 1),
   // (QAB8, 0 -> 1 each, raised with its reason: DOM marks of the kernel's paragraph glue, no frontmatter key — the glue
-  // after a parent's last paragraph and the glue a paragraph took, OD #1044; the reader exempts only latex_constructs/
+  // after a parent's last paragraph and the glue a paragraph took, OD #1050; the reader exempts only latex_constructs/
   // and tex_box.rs as the kernel's own)
   ("const _skip_after_para tex_paragraph.rs", 1),
   ("const _skip_before_para tex_paragraph.rs", 1),
