@@ -19757,3 +19757,20 @@ holds, so non-ifsym glyphs that map there take a 1em box: wasysym `\CIRCLE` 10 �
 default 7.5 × 7.0), marvosym `\SquareSteel` 10 × 10pt (pdflatex 7.58 × 6.51); stmaryrd `\varbigcirc`'s width is right
 (10pt) but its height is not (pdflatex 6.94). Perl master does the same. Only measured lengths move (no text); a 20-paper
 census changed no output. Kept as upstream ships it for now: RED `fonts-nfss/ifgeo_fallback_sizes_non_ifsym_glyphs_red.tex`.
+
+## 1246. A `\bigskip`, `\medskip` or `\vspace` between two paragraphs leaves no trace
+
+TeX_Glue.pool.ltxml:91-100: `\vskip` closes the open `ltx:p` or `ltx:para` and drops its amount; its own comment
+(:89-90) asks for "appropriate class/css for spacing to preceding element". A topic break the PDF shows as a 12pt gap is
+an ordinary paragraph break in the HTML. Rust keeps it as `--ltx-skip-before` on the next paragraph (OXIDIZED_DESIGN_DIVERGENCES
+#1044): an upstream offer. Minimal trigger (pdflatex: a 12pt gap before "B"; Perl: `<para>` with nothing on it):
+
+```latex
+\documentclass{article}
+\begin{document}
+A.
+
+\bigskip
+B.
+\end{document}
+```

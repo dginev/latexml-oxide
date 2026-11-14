@@ -577,6 +577,10 @@ foreignObject {
    margins through the ltx_para wrappers, keeping text<->display and
    display<->display gaps uniform (no doubling next to text). */
 .ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css; OXIDIZED_DESIGN_DIVERGENCES #1044): the glue a \bigskip,
+   \medskip or \vspace puts between two paragraphs is --ltx-skip-before on the second; it adds to the 1em paragraph
+   gap (the <p> margins collapse with this one). */
+.ltx_para[style*="--ltx-skip-before:"] { margin-top:calc(1em + var(--ltx-skip-before)); }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #533): display
    math is a `.ltx_eqn_table { display:table; width:100% }` whose center-pad
    cells stretch it to full width. Inside a width-constrained box — a `p{}` cell

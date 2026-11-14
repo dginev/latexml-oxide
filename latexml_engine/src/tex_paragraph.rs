@@ -349,6 +349,13 @@ LoadDefinitions!({
         if !lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
           return Ok(Vec::new());
         }
+        // A `\vspace` the paragraph ended at lies between it and the next (tex_glue.rs `note_skip_after_para`).
+        if !LookupBool!("INTERNAL_PAR")
+          && let Some(mut skip) = peek_own_box()
+          && skip.get_property_bool("in_paragraph")
+        {
+          skip.set_property("par_follows", true);
+        }
         match remove_value("vAdjust") { Some(Stored::VecDigested(material)) => {
           assign_value("vAdjust", Stored::VecDigested(Vec::new()), Some(Scope::Global));
           if LookupBool!("INTERNAL_PAR") {
@@ -365,7 +372,17 @@ LoadDefinitions!({
   );
   Let!("\\par", "\\lx@normal@par");
   Tag!("ltx:para", auto_close => true, auto_open => true,
+    after_open => sub[document, node] {
+      apply_skip_before(document, node)?;
+    },
     after_close => sub[document, node] {
+      // An empty paragraph pruned here leaves the skip it took to the next one (`\bigskip\noindent\par`).
+      if node.get_child_elements().is_empty()
+        && let Some(skip) = node.get_attribute(SKIP_BEFORE_PARA)
+        && let Some(mut parent) = node.get_parent()
+      {
+        parent.set_attribute(SKIP_AFTER_PARA, &skip)?;
+      }
       prune_empty_para(document, node)?;
   });
   Tag!("ltx:p", auto_close => true, auto_open => true,
@@ -457,6 +474,60 @@ LoadDefinitions!({
   DefRegister!("\\tolerance", Number!(200));
   DefRegister!("\\pretolerance", Number!(100));
 });
+
+/// The vertical glue (in sp) after a parent's last `ltx:para`, summed by `\vskip` (tex_glue.rs `note_skip_after_para`).
+pub(crate) const SKIP_AFTER_PARA: &str = "_skip_after_para";
+/// The glue an `ltx:para` took from [`SKIP_AFTER_PARA`], given back if the paragraph is pruned empty.
+const SKIP_BEFORE_PARA: &str = "_skip_before_para";
+
+/// A paragraph right after a sibling paragraph keeps the glue between them as `--ltx-skip-before` (Perl's own intent,
+/// TeX_Glue.pool.ltxml:89-90; OXIDIZED_DESIGN_DIVERGENCES #1044). Any paragraph's start ends the wait for it.
+fn apply_skip_before(document: &mut Document, node: &mut Node) -> Result<()> {
+  let Some(mut parent) = node.get_parent() else {
+    return Ok(());
+  };
+  let Some(skip) = parent.get_attribute(SKIP_AFTER_PARA) else {
+    return Ok(());
+  };
+  parent.remove_attribute(SKIP_AFTER_PARA)?;
+  let Ok(sp) = skip.parse::<i64>() else {
+    return Ok(());
+  };
+  if sp <= 0 || !document::helpers::preceding_para_sibling(node) {
+    return Ok(());
+  }
+  let declaration = s!("--ltx-skip-before:{}", Dimension::new(sp).to_attribute());
+  let cssstyle = match node.get_attribute("cssstyle") {
+    Some(css) if !css.is_empty() => s!("{css};{declaration}"),
+    _ => declaration,
+  };
+  document.set_attribute(node, "cssstyle", &cssstyle)?;
+  node.set_attribute(SKIP_BEFORE_PARA, &skip)?;
+  Ok(())
+}
+
+/// Drop the skip a paragraph took (tex_glue.rs `in_unspaced_container`): a title page's layout is its own, and the
+/// paragraphs the frontmatter moves into one were not in it when they took it (2007.05296).
+pub(crate) fn drop_skip_before(document: &mut Document, node: &Node) -> Result<()> {
+  let mut node = node.clone();
+  let Some(cssstyle) = node.get_attribute("cssstyle") else {
+    return Ok(());
+  };
+  if !cssstyle.contains("--ltx-skip-before:") {
+    return Ok(());
+  }
+  let kept: Vec<String> = cssstyle
+    .split(';')
+    .filter(|decl| !decl.is_empty() && !decl.starts_with("--ltx-skip-before:"))
+    .map(str::to_string)
+    .collect();
+  if kept.is_empty() {
+    node.remove_attribute("cssstyle")?;
+  } else {
+    document.set_attribute(&mut node, "cssstyle", &kept.join(";"))?;
+  }
+  Ok(())
+}
 
 /// A `\vadjust`'s material set while the paragraph around it goes on — at the `\par` that `leave_horizontal` runs
 /// before a display (`INTERNAL_PAR`) — ends its own paragraph as that `\par` does there: inside the paragraph, which

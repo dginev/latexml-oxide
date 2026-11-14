@@ -3,7 +3,7 @@
 //! Core TeX Implementation for LaTeXML
 use latexml_core::common::error::emit_warn;
 
-use crate::prelude::*;
+use crate::{prelude::*, tex_paragraph::SKIP_AFTER_PARA};
 static UNICODE_EM_SPACES: [(f64, char); 7] = [
   // Spaces to fake spacing, with width in ems
   (0.100, '\u{200A}'), // Hair space (thinner than thin space)
@@ -180,8 +180,8 @@ LoadDefinitions!({
   });
 
   //======================================================================
-  // If this is the right solution...
-  // then we also should put the desired spacing on a style attribute?!?!?!
+  // Perl: "We should be combining adjacent vskips (?) And then add appropriate class/css for spacing to preceding
+  // element" (TeX_Glue.pool.ltxml:89-90): the glue goes on the next paragraph (`note_skip_after_para`).
   DefConstructor!("\\vskip Glue", sub[document, args, props] {
     unref!(args => length);
     // Between a float's panels a `\vskip` ends their row (the panel grid rule, `note_panel_separator`).
@@ -197,9 +197,16 @@ LoadDefinitions!({
       // As `\par` (`\lx@normal@par`): a skip ends a paragraph, never a list or an inline sectional block open
       // inside it (`\preitem@par`'s `\vskip\itemsep` between two items of a `\trivlist`; KNOWN_PERL_ERRORS #456).
       document.close_element("ltx:para")?;
+    }
+    if pt > 0.0 && let Some(skip) = length.get_dimension() {
+      note_skip_after_para(document, skip, prop_bool!(props, "in_paragraph"), prop_bool!(props, "vspace"),
+        prop_bool!(props, "par_follows"))?;
     }},
     // Perl: leaveHorizontal => 1
-    before_digest => { leave_horizontal()?; },
+    before_digest => {
+      assign_value("lx@vskip@in@paragraph", lookup_string_from_sym(pin!("MODE")) == "horizontal", None);
+      leave_horizontal()?;
+    },
     // Perl: height => $_[1] — stores glue value as height property
     // so getSize() returns it, making \noalign{\vskip X} contribute to row spacing
     properties => sub[args] {
@@ -225,7 +232,8 @@ LoadDefinitions!({
       let row_break = !vspace && lookup_bool("lx@in@float");
       Ok(stored_map!("isSpace" => true, "isSkip" => true,
         "isVerticalSpace" => true, "isBreak" => true,
-        "height" => height, "panel_row_break" => row_break))
+        "height" => height, "panel_row_break" => row_break,
+        "vspace" => vspace, "in_paragraph" => lookup_bool("lx@vskip@in@paragraph")))
     }
   );
   // Remove skip, if last on LIST — never below the paragraph's start (tex.web §1105, `peek_own_box`).
@@ -328,3 +336,56 @@ LoadDefinitions!({
     })
   });
 });
+
+/// Sum a positive `\vskip` that follows an `ltx:para` on that paragraph's parent, for the next paragraph to take
+/// (tex_paragraph.rs `apply_skip_before`). A `\vspace` read in a paragraph is TeX's `\vadjust` there (latex.ltx
+/// `\@vspace`), between paragraphs only when a `\par` follows it at once (`par_follows`, set by that `\par`).
+fn note_skip_after_para(
+  document: &Document,
+  skip: Dimension,
+  in_paragraph: bool,
+  vspace: bool,
+  par_follows: bool,
+) -> Result<()> {
+  if in_paragraph && vspace && !par_follows {
+    return Ok(());
+  }
+  if let Some(mut parent) = document.get_element()
+    && parent
+      .get_last_element_child()
+      .is_some_and(|last| document::helpers::is_para(&last))
+    && !in_unspaced_container(&parent)
+  {
+    let held = parent
+      .get_attribute(SKIP_AFTER_PARA)
+      .and_then(|sp| sp.parse::<i64>().ok())
+      .unwrap_or(0);
+    parent.set_attribute(SKIP_AFTER_PARA, &(held + skip.value_of()).to_string())?;
+  }
+  Ok(())
+}
+
+/// A title page, a box (`minipage`, `\parbox`, `\vbox`, framed: built in `insert_block`'s capture, 2512.08710) or a
+/// float, where no skip is kept (QA26 ruling, DG 2026-11-14).
+fn in_unspaced_container(node: &Node) -> bool {
+  let mut node = Some(node.clone());
+  while let Some(n) = node {
+    let unspaced = with(document::get_node_qname(&n), |q| {
+      matches!(
+        q,
+        "ltx:_CaptureBlock_"
+          | "ltx:titlepage"
+          | "ltx:inline-block"
+          | "ltx:inline-logical-block"
+          | "ltx:figure"
+          | "ltx:table"
+          | "ltx:float"
+      )
+    });
+    if unspaced {
+      return true;
+    }
+    node = n.get_parent();
+  }
+  false
+}

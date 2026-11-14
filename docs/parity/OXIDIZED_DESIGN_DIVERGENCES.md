@@ -25680,9 +25680,9 @@ and its standalone blocks:
   unwraps into it and leave with a capture that stays a container (`drop_panel_separators`; 78x r6: a leading
   `\hspace*{5pt}` or `\hskip` in a `{center}` chose the inline candidate holding its `ltx:break`, the `\parbox` panels
   after it hoisted out as `logical-block`s and the caption kept in the row's `ltx:block`, 1710.06503 Fig 1, the
-  ws-procs961x669 binding net; guard `an_hspace_star_opens_the_row_paragraph`). The float's begin lets `\vspace`, `\linebreak` and
-  `\hspace` to the rule's `\lx@panel@vspace`/`\lx@panel@linebreak`/`\lx@panel@hspace` only while they have the kernel's
-  meaning (`\lx@kernel@…`): an author's or a package's own stands.
+  ws-procs961x669 binding net; guard `an_hspace_star_opens_the_row_paragraph`). The float's begin lets `\linebreak` and `\hspace` to the rule's
+  `\lx@panel@linebreak`/`\lx@panel@hspace` only while they have the kernel's meaning (`\lx@kernel@…`): an author's or a
+  package's own stands; the kernel `\vspace` marks its own `\vskip` (`\lx@vspace@mark`, #1044).
 - **The stated glue counts.** `\hskip` (so `\quad`, `\qquad`) and `\hspace` between two panels add their natural width to
   the row; plain spaces, `\label`s and `\hfill` count 0. A row that begins a paragraph (the float's first, one after a
   `\par`, a `{center}` boundary, a `\vskip`, a caption, or a centred `\\`) keeps the glue stated before its first
@@ -36360,3 +36360,30 @@ empty) joins to `''`, and `framedProperties` (TeX_Box.pool.ltxml:84) turns that 
 lstmisc.sty:1387-1399 keeps such a value as `\lst@frame`, and the frame code draws only the sides whose letters it
 holds: no frame. **Rust.** `lst_frame_sides` (listings_sty.rs) returns no frame for it, as TeX. **Guard**:
 `perfect_kernel_batchups1::fboxsep_pads_fcolorbox_boxed_and_listing_frames` (its `frame=xyz` listing).
+
+### 1044. The glue between two paragraphs is `--ltx-skip-before` on the second (QAB8, QA26)
+
+**Principle:** Perl's own intent, TeX_Glue.pool.ltxml:89-90 ("We should be combining adjacent vskips (?) And then add
+appropriate class/css for spacing to preceding element"), with TeX's vertical list deciding what is between two
+paragraphs. Related: #142 (`\\[dimen]` as `--ltx-break-space`, the same carrier), #422 (glue items flagged `isSkip`).
+**Perl.** `\vskip` only closes the open `ltx:p`/`ltx:para` and drops its amount, so a topic break by `\bigskip`,
+`\medskip` or `\vspace` leaves no trace (KNOWN_PERL_ERRORS #1246). **Rust.** A positive `\vskip` (its natural width)
+met while its parent's last child is an `ltx:para` is summed, in sp, on that parent (tex_glue.rs
+`note_skip_after_para`); the next `ltx:para` opened there takes it as `cssstyle="--ltx-skip-before:<pt>"`, appended to
+any `cssstyle`, when its previous sibling is that paragraph (tex_paragraph.rs `apply_skip_before`, streaming
+placeholders included); any paragraph's start ends the wait, and an empty paragraph pruned at its close gives its skip
+back. So consecutive skips add (`\bigskip\medskip` 18pt); a heading, float, theorem or list between, a skip after a
+heading, a negative or zero amount carry nothing. By the QA26 ruling (DG 2026-11-14) neither do title pages, boxes
+(`ltx:inline-block`, `ltx:inline-logical-block`: a minipage holding paragraphs, 2512.08710) and floats
+(`in_unspaced_container`), nor cover paragraphs the frontmatter later moves into a title page (`drop_skip_before` in
+titlepage_layout.rs, 2007.05296).
+A `\vspace` read inside a paragraph is latex.ltx's `\vadjust` (`\@vspace`, set after its line): it counts only when
+the paragraph's `\par` follows at once (the `\par` marks it, `par_follows`); the kernel `\vspace` now marks its
+`\vskip` (`\lx@vspace@mark`, which made the float's own `\lx@panel@vspace` redundant: removed). A `\vskip` read in a
+paragraph ends it (tex.web §1094) and counts. LaTeXML.css: `.ltx_para[style*="--ltx-skip-before:"] { margin-top:
+calc(1em + var(--ltx-skip-before)) }` (collapsing with the `<p>` margins: 32 px for 12pt at 16 px); ar5iv-css
+mirrors it as `padding-top` (40 px); the EPUB loads LaTeXML.css. `\addvspace` stays a no-op (RED
+`paragraph-mode/addvspace_between_paragraphs_takes_the_larger_red.tex`). Witnesses 2503.04888, 2001.10915,
+2408.07944, 1606.03039. **Guard**: `perfect_kernel_batchqab8::paragraph_skips_go_on_the_next_paragraph` (repros
+`paragraph-mode/skip_between_paragraphs_goes_on_the_next.tex`, `skip_between_paragraphs_shapes.tex`,
+`skip_moved_into_a_title_page_is_dropped.tex`).
