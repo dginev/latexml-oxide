@@ -186,7 +186,6 @@ struct Mirror(&'static str, &'static str);
 /// registered.
 const PERL_GAPS: &[(&str, &str, &str)] = &[
   ("Color", "latexml_core::common::color::Color", ""),
-  ("Debug", "Debug!", ""),
   ("DefColor", "latexml_core::binding::content::def_color", ""),
   (
     "DefColorModel",
@@ -275,10 +274,6 @@ const PERL_GAPS: &[(&str, &str, &str)] = &[
 /// fails on a lacking call with none).
 const GAP_REASONS: &[(&str, &str)] = &[
   ("Color", "a Color value handle the dialect lacks"),
-  (
-    "Debug",
-    "its meaning in the dialect awaits a ruling (Perl's debug-feature switch, or a log line)",
-  ),
   ("DefColor", "takes a Color value handle the dialect lacks"),
   (
     "DefColorModel",
@@ -2739,6 +2734,14 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     Doc::Rust(
       "Put the token `\\afterassignment` saved back into the input, for a primitive that assigns (Package.pm:716).",
       "latexml_core::state::after_assignment",
+    ),
+  ),
+  (
+    "Debug",
+    Mirror("Debug", "Debug!"),
+    Doc::Rust(
+      "Log a `Debug:` record, `Debug(message)` or `Debug(cat, obj, message)`, counted in the status tally; silent unless `--verbose`, where Perl prints unconditionally (Error.pm:476) — DG 2026-11-14.",
+      "latexml_core::common::error::emit_record",
     ),
   ),
   (

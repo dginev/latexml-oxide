@@ -902,6 +902,30 @@ fn diagnostics_surface_info_notes_progress_and_fatal() {
     !log.contains("a stderr note"),
     "NoteSTDERR leaked into the log (it must be stderr only):\n{log}"
   );
+  // `Debug` means our `Debug!` (DG 2026-11-14): counted at every verbosity, logged only under `--verbose`.
+  use latexml_core::{
+    common::error::{LogStatus, get_status},
+    util::logger,
+  };
+  let debug_script = r#"Debug("a quiet debug"); Debug("cat", "obj", "a quiet record");"#;
+  let debugs = get_status(LogStatus::Debug);
+  let _ = logger::init(log::LevelFilter::Info);
+  logger::bind_log();
+  load_script(debug_script).expect("Debug runs");
+  let log = logger::flush_log();
+  assert_eq!(get_status(LogStatus::Debug), debugs + 2);
+  assert!(
+    !log.contains("a quiet"),
+    "Debug printed without --verbose:\n{log}"
+  );
+  let _ = logger::init(log::LevelFilter::Debug);
+  logger::bind_log();
+  load_script(debug_script).expect("Debug runs");
+  let log = logger::flush_log();
+  let _ = logger::init(log::LevelFilter::Off);
+  assert_eq!(get_status(LogStatus::Debug), debugs + 4);
+  assert!(log.contains("a quiet debug"), "{log}");
+  assert!(log.contains("Debug:cat:obj a quiet record"), "{log}");
   let fatal = load_script(r#"Fatal("internal", "obj", "boom");"#);
   assert!(fatal.is_err(), "Fatal must abort the script, got {fatal:?}");
   // Clear the run tally so the raised fatal doesn't leak into sibling tests.

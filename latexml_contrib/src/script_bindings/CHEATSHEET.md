@@ -84,6 +84,7 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | (Rhai helper; Perl: `system($program, @args)`) | [`Command::new`](std::process::Command::new) | `Command` |
 | `ComposeURL` | [`compose_url`](latexml_core::common::cleaners::compose_url) | `ComposeURL` |
 | `CounterValue` | [`CounterValue!`](latexml_engine::CounterValue!) / [`counter_value`](latexml_core::binding::counter::dialect::counter_value) | `CounterValue` |
+| `Debug` | [`Debug!`](latexml_core::Debug!) / [`emit_record`](latexml_core::common::error::emit_record) | `Debug` |
 | `DeclareFontMap` | [`DeclareFontMap!`](latexml_engine::DeclareFontMap!) | `DeclareFontMap` |
 | (Rhai helper; Perl: `DeclareFontMap($name, [..., "ffi", ...])`) | [`DeclareFontMapMultichar!`](latexml_engine::DeclareFontMapMultichar!) / [`load_font_map`](latexml_core::binding::content::load_font_map) | `DeclareFontMapMultichar` |
 | `DeclareOption` | [`DeclareOption!`](latexml_engine::DeclareOption!) | `DeclareOption` |
@@ -364,7 +365,6 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | (Rhai helper; Perl: `local $ENV{$key} = $value`) | [`Command::env`](std::process::Command::env) | `command.env` |
 | (Rhai helper; Perl: `qx($command)`) | [`Command::output`](std::process::Command::output) | `command.output` |
 | `Color` | [`Color`](latexml_core::common::color::Color) |  |
-| `Debug` | [`Debug!`](latexml_core::Debug!) |  |
 | `DefColor` | [`def_color`](latexml_core::binding::content::def_color) |  |
 | `DefColorModel` | [`def_color_model`](latexml_core::binding::content::def_color_model) |  |
 | `DefExpandable` | [`DefMacro!`](latexml_engine::DefMacro!) / [`def_macro`](latexml_core::binding::def::dialect::def_macro) | `DefMacro(proto, expansion, opts)` |
@@ -386,10 +386,9 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 
 ## Perl calls the dialect lacks (an empty Rhai cell)
 
-16 calls, each with the reason:
+15 calls, each with the reason:
 
 - `Color`: a Color value handle the dialect lacks.
-- `Debug`: its meaning in the dialect awaits a ruling (Perl's debug-feature switch, or a log line).
 - `DefColor`: takes a Color value handle the dialect lacks.
 - `DefColorModel`: its conversion closures take Color value handles the dialect lacks.
 - `InputContent`: not yet exposed; a binding reaches it as `RawTeX("\\input{file}")`.

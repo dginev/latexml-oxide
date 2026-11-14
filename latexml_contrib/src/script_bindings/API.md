@@ -39,7 +39,7 @@ sets each call beside its Perl spelling and the Rust a compiled binding uses.
 
 Called at the top level of a binding file, or from inside any body.
 
-252 functions, 586 calls.
+253 functions, 588 calls.
 
 | call | documentation |
 |---|---|
@@ -110,6 +110,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Command(string) -> Command` | Start a `std::process::Command` builder. A Rhai-only shim; nothing runs until `output()`. |
 | `ComposeURL(?, ?) -> string`<br>`ComposeURL(?, ?, ?) -> string` | `url` on `base` (unless it has a protocol), then `#` and the `CleanID` of `fragid` when given (Package.pm:557). ([`compose_url`](latexml_core::common::cleaners::compose_url)) |
 | `CounterValue(string) -> Number` | The current value of a counter, a Number as Perl's (an int before; its int uses Warn for one release). ([`counter_value`](latexml_core::binding::counter::dialect::counter_value)) |
+| `Debug(string)`<br>`Debug(string, string, string)` | Log a `Debug:` record, `Debug(message)` or `Debug(cat, obj, message)`, counted in the status tally; silent unless `--verbose`, where Perl prints unconditionally (Error.pm:476) — DG 2026-11-14. ([`emit_record`](latexml_core::common::error::emit_record)) |
 | `DeclareFontMap(string, array)`<br>`DeclareFontMap(string, array, map)` | Declare an encoding's font map: an array of 1-char strings or `()`, with Perl's `family` and `*_mathstyle` options. |
 | `DeclareFontMapMultichar(string, map)`<br>`DeclareFontMapMultichar(string, string, map)` | Declare the multi-character glyphs of a font map (optionally a family's): position (decimal string) to its text. |
 | `DeclareOption(Fn)`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`). |

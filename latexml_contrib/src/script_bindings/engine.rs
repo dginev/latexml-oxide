@@ -871,6 +871,12 @@ pub(super) fn make_engine() -> Engine {
       },
     );
   }
+  // Perl `Debug($message)` (Error.pm:476-480) with our `Debug!` meaning (DG 2026-11-14): logged only under
+  // `--verbose`, counted either way; plus the macro's `(cat, obj, message)` form.
+  engine.register_fn("Debug", |msg: &str| latexml_core::Debug!("{}", msg));
+  engine.register_fn("Debug", |cat: &str, obj: &str, msg: &str| {
+    latexml_core::Debug!(cat, obj, msg.to_string())
+  });
   // Notes + progress reporting (Perl `Note`/`NoteSTDERR`/`NoteLog`, `ProgressStep`,
   // `ProgressSpinup`/`ProgressSpindown`). Matching Perl `Common/Error.pm`: `Note`
   // writes to BOTH the log and stderr, `NoteSTDERR` to stderr only, `NoteLog` to
