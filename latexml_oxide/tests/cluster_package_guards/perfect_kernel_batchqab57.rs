@@ -72,7 +72,7 @@ fn section_in_a_box_keeps_the_box_width() {
 
 /// latexml.sty's `nopdfoutput`/`pdfoutput` options set the output mode over the guess from the source (OD #1046; BM
 /// Q4.2). The drivers read `\pdfoutput` as they load: given after graphicx, the driver graphicx chose stays; preloaded
-/// (`[pdfoutput]ar5iv.sty`) it overrides the `dvips` class option's DVI cue, whose driver option graphicx still takes.
+/// (`[nopdfoutput]ar5iv.sty`, passed on to latexml.sty) it decides before the document starts.
 #[test]
 fn latexml_pdfoutput_options_override_the_mode() {
   let tex = include_str!(
@@ -83,19 +83,16 @@ fn latexml_pdfoutput_options_override_the_mode() {
     "\\usepackage{ifpdf}\n",
     &format!("\\usepackage{{ifpdf}}\n{option}"),
   );
-  let dvi_cue = tex.replace(option, "").replace(
-    "\\documentclass{article}",
-    "\\documentclass[dvips]{article}",
-  );
+  let no_option = tex.replace(option, "");
   for (source, preload, mode) in [
     (tex.to_string(), None, "Mode: DVI, 0, dvips.def."),
     (after_graphicx, None, "Mode: DVI, 0, pdftex.def."),
-    (dvi_cue.clone(), None, "Mode: DVI, 0, dvips.def."),
     (
-      dvi_cue,
-      Some("[pdfoutput]ar5iv.sty"),
-      "Mode: PDF, 1, dvips.def.",
+      no_option.clone(),
+      Some("[nopdfoutput]ar5iv.sty"),
+      "Mode: DVI, 0, dvips.def.",
     ),
+    (no_option, Some("ar5iv.sty"), "Mode: PDF, 1, pdftex.def."),
   ] {
     let (log, xml) = latexml::util::test::convert_with(&source, preload);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");

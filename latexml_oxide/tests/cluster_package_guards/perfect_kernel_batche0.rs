@@ -2904,7 +2904,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex_constructs/sect05.rs", 266),
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
-  ("latexml_engine/src/latex_constructs/sect08.rs", 69),
+  // (QAB57, 69 -> 70: `assign_meaning` clearing an environment OmniBus guessed, a write the `meaning(` pattern counts)
+  ("latexml_engine/src/latex_constructs/sect08.rs", 70),
   ("latexml_engine/src/latex_constructs/sect09.rs", 1),
   ("latexml_engine/src/latex_constructs/sect10.rs", 3),
   ("latexml_engine/src/latex_constructs/sect11.rs", 28),

@@ -5825,10 +5825,6 @@ fn copies_lock_kept_aside(cs: &str) -> bool {
   lookup_value(&s!("{cs}:locked@cleared")).is_some_and(|b| !matches!(b, Stored::None))
 }
 
-/// [`install_definition`]'s verdict, in the locked state, on a redefinition of `cs`: [`lock_holds_against`] read
-/// against its own interface, and a redefinition the lock lets through drops what a copies lock kept aside
-/// ([`drop_copies_lock_aside`]) — probed only where a lock against the files is set, as every copies lock is one (so
-/// a name without one costs the two probes the lock test always made).
 /// Whether the document redefines a guess of the fallback class, which wins under OmniBus (BM Q3.12, DG 2026-11-14):
 /// OmniBus sets `GUESSES_REDEFINABLE` for a class with no binding, so its locks yield to the document's own text — not
 /// to hook code (apacite's `\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's `\doi`).
@@ -5840,6 +5836,10 @@ pub fn document_redefines_guess(token: &Token) -> bool {
     && lookup_bool("GUESSES_REDEFINABLE")
 }
 
+/// [`install_definition`]'s verdict, in the locked state, on a redefinition of `cs`: [`lock_holds_against`] read
+/// against its own interface, and a redefinition the lock lets through drops what a copies lock kept aside
+/// ([`drop_copies_lock_aside`]) — probed only where a lock against the files is set, as every copies lock is one (so
+/// a name without one costs the two probes the lock test always made).
 fn redefinition_locked(cs: &str, definition: &Stored) -> bool {
   let probe = |suffix: &str| arena::get_suffixed(cs, suffix).is_some_and(lookup_bool_sym);
   if probe(":locked") {

@@ -36354,14 +36354,16 @@ document's version (probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b"). **P
 2026-11-14 "the document wins"): OmniBus loaded as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition`
 does not refuse a definition of a name whose meaning is still OmniBus's guess (`fallback_meaning_origin` is
 `Fallback`) when the document's own text makes it (`DefinitionOrigin::Document`, the state not re-locked:
-`state::document_redefines_guess`) — `\newcommand`, `\renewcommand`, `\providecommand`, `\def`,
-`\DeclareRobustCommand`; `\newenvironment`/`\renewenvironment` also drop OmniBus's `\begin{name}` constructor, which
-`\begin` looks up first. The semantic markup the guess carried is lost with it: the e-mail, address, affiliation and
+`state::document_redefines_guess`) — `\newcommand`, `\renewcommand`, `\def`, `\DeclareRobustCommand`;
+`\newenvironment`/`\renewenvironment` also drop OmniBus's `\begin{name}` constructor, which `\begin` looks up first.
+A `\providecommand` defers to a locked guess as to any class command (the 2026-10-01 ruling's
+`\providecommand{\keywords}`; guard `perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`). The semantic markup the guess carried is lost with it: the e-mail, address, affiliation and
 ORCID are no longer the author's contacts, the keywords no classification, the DOI no link — the document's text is
 what the PDF prints. Unchanged: OmniBus provided over a named binding's base class (ceurart; #736) keeps its locks,
 and so does a package's or the document's begin-document hook code, run re-locked (apacite's
-`\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link). Perl patch prepared
-(`bruce_qa/patches/qa58.patch`: OmniBus's guesses definable for `isDefinableLaTeX`). Guard
+`\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link; the document's own hook definition is refused too,
+RED `singletons/omnibus_document_hook_definition_refused_red`, post-merge). Perl patch prepared
+(`bruce_qa/patches/qa58.patch`: `\newcommand` and `\newenvironment` may redefine OmniBus's guesses). Guard
 `perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
 
 ### 1045. A box's width that its element cannot hold rides as the CSS custom property `--ltx-box-width` (Perl: dropped)

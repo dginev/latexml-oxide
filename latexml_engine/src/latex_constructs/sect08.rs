@@ -155,7 +155,10 @@ pub(crate) fn load() -> Result<()> {
     // but is genuinely undefined in Perl (its `DefAutoload` lives in OmniBus, not
     // loaded for typical papers), so `\providecommand{\align}{…}` must DEFINE it
     // there. See [[project_newenvironment_autoload_clobber]].
-    if is_definable_latex(&cs)?.0 {
+    // (a semantic command OmniBus guessed and locked is the class's own, which `\providecommand` defers to: the
+    // document's `\providecommand{\keywords}` keeps it, user ruling 2026-10-01, where its `\newcommand` replaces it)
+    let locked_guess = is_fallback_meaning(&cs) && lookup_bool(&s!("{}:locked", cs.to_string()));
+    if !locked_guess && is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
       if opt.is_some() {
         define_optional_internal(&cs, nargs, &body, star.is_some())?;
