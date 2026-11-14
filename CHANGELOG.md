@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **amsmath's arrow fills keep their heads** (issue 824's sibling). `\arrowfill@` and
+    `\ext@arrow`'s fill were a plain `\to`, so mhchem's `\ce{A <=> B}` read "→→" and every
+    chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws
+    (`\arrowfill@#1#2#3#4`, :971-976): an end that is just the `\relbar`/`\Relbar` fill is dropped,
+    a left/right pair is its composed arrow (↔, ⇔, ⟷, ⟺, ↦), and the named fills
+    (`\rightarrowfill@` …) no longer leave their style argument behind. Witness 2405.01836. Guard
+    `arrowfill_heads::arrowfill_keeps_its_heads` (repros `tools/perfect_kernel/repros/arrowfill/`).
+
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
     `at t.tex; line 10 col 21 - …`, as Perl's `getShortSource` prints it, so a problem
