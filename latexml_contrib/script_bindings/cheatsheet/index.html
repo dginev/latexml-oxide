@@ -1,0 +1,387 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Perl | Rust macro | Rhai: the binding dialects side by side"><title>latexml_contrib::script_bindings::cheatsheet - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5f4effd57 2026-11-13)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module cheatsheet</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../latexml_contrib/index.html">latexml_<wbr>contrib</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module cheatsheet</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#perl--rust-macro--rhai-the-binding-dialects-side-by-side" title="Perl | Rust macro | Rhai: the binding dialects side by side">Perl | Rust macro | Rhai: the binding dialects side by side</a><ul><li><a href="#perl-calls-the-dialect-lacks-an-empty-rhai-cell" title="Perl calls the dialect lacks (an empty Rhai cell)">Perl calls the dialect lacks (an empty Rhai cell)</a></li><li><a href="#rhai-calls-with-no-perl-counterpart-an-empty-perl-cell" title="Rhai calls with no Perl counterpart (an empty Perl cell)">Rhai calls with no Perl counterpart (an empty Perl cell)</a></li><li><a href="#perl-functions-with-no-macro-compiled-bindings-call-the-rust-function-named" title="Perl functions with no macro (compiled bindings call the Rust function named)">Perl functions with no macro (compiled bindings call the Rust function named)</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In latexml_<wbr>contrib::<wbr>script_<wbr>bindings</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">latexml_contrib</a>::<wbr><a href="../index.html">script_bindings</a></div><h1>Module <span>cheatsheet</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../src/latexml_contrib/script_bindings/mod.rs.html#1076">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="perl--rust-macro--rhai-the-binding-dialects-side-by-side"><a class="doc-anchor" href="#perl--rust-macro--rhai-the-binding-dialects-side-by-side">§</a>Perl | Rust macro | Rhai: the binding dialects side by side</h2>
+<p>One row per call: its Perl LaTeXML spelling (a <code>Package.pm</code> function, or the Perl method or expression that does the
+same), the compile-time Rust macro that lowers to the same core call, and the runtime <code>.rhai</code> call. <strong>Generated</strong> from
+<code>api_doc.rs</code> with <a href="https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md"><code>API.md</code></a>, and checked with it on every test run (<code>api_reference_is_up_to_date</code>); regenerate
+with <code>UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date</code>.</p>
+<p>An empty cell is a gap, listed at the end: a Perl call the dialect lacks, a Rhai call Perl has no counterpart for (a
+Rhai-only helper), or a Perl function the macros do not spell. Methods (<code>document.openElement</code>) have no macro: a
+compiled binding calls the Rust method. A deprecated alias follows the call that replaces it, marked <code>(deprecated: …)</code>
+(the aliases of <code>mod.rs</code>’s <code>DEPRECATED_ALIASES</code>). Each Rhai call’s arguments and meaning are in <a href="https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md"><code>API.md</code></a>; the
+newcomer guide is <a href="https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md"><code>RHAI_BINDINGS_GUIDE.md</code></a>.</p>
+<div class="table"><table><thead><tr><th>Perl</th><th>Rust macro</th><th>Rhai</th></tr></thead><tbody>
+<tr><td><code>!$v</code></td><td></td><td><code>!</code></td></tr>
+<tr><td><code>$a ne $b</code></td><td></td><td><code>!=</code></td></tr>
+<tr><td><code>$n-&gt;valueOf % $m</code></td><td></td><td><code>%</code></td></tr>
+<tr><td><code>$n-&gt;valueOf &amp; $m</code></td><td></td><td><code>&amp;</code></td></tr>
+<tr><td><code>$v-&gt;multiply($n)</code></td><td></td><td><code>*</code></td></tr>
+<tr><td><code>$n-&gt;valueOf ** $m</code></td><td></td><td><code>**</code></td></tr>
+<tr><td><code>$v-&gt;add($w)</code></td><td></td><td><code>+</code></td></tr>
+<tr><td><code>$v-&gt;subtract($w)</code></td><td></td><td><code>-</code></td></tr>
+<tr><td><code>$v-&gt;divide($n)</code></td><td></td><td><code>/</code></td></tr>
+<tr><td><code>$v-&gt;valueOf &lt; $w-&gt;valueOf</code></td><td></td><td><code>&lt;</code></td></tr>
+<tr><td><code>$n-&gt;valueOf &lt;&lt; $m</code></td><td></td><td><code>&lt;&lt;</code></td></tr>
+<tr><td><code>$v-&gt;valueOf &lt;= $w-&gt;valueOf</code></td><td></td><td><code>&lt;=</code></td></tr>
+<tr><td><code>$a eq $b</code></td><td></td><td><code>==</code></td></tr>
+<tr><td><code>$v-&gt;valueOf &gt; $w-&gt;valueOf</code></td><td></td><td><code>&gt;</code></td></tr>
+<tr><td><code>$v-&gt;valueOf &gt;= $w-&gt;valueOf</code></td><td></td><td><code>&gt;=</code></td></tr>
+<tr><td><code>$n-&gt;valueOf &gt;&gt; $m</code></td><td></td><td><code>&gt;&gt;</code></td></tr>
+<tr><td><code>AddToCounter</code></td><td><code>AddToCounter!</code></td><td><code>AddToCounter</code></td></tr>
+<tr><td><code>AddToMacro</code></td><td><code>AddToMacro!</code></td><td><code>AddToMacro</code></td></tr>
+<tr><td></td><td></td><td><code>AppendSearchPath</code></td></tr>
+<tr><td><code>AssignCatcode</code></td><td><code>AssignCatcode!</code></td><td><code>AssignCatcode</code></td></tr>
+<tr><td><code>AssignDelcode</code></td><td></td><td><code>AssignDelcode</code></td></tr>
+<tr><td><code>AssignValue</code></td><td></td><td><code>AssignFloat</code></td></tr>
+<tr><td><code>AssignLCcode</code></td><td></td><td><code>AssignLCcode</code></td></tr>
+<tr><td><code>AssignMapping</code></td><td><code>AssignMapping!</code></td><td><code>AssignMapping</code></td></tr>
+<tr><td><code>AssignMathcode</code></td><td></td><td><code>AssignMathcode</code></td></tr>
+<tr><td><code>$STATE-&gt;assignMeaning</code></td><td><code>AssignMeaning!</code></td><td><code>AssignMeaning</code></td></tr>
+<tr><td><code>AssignRegister</code></td><td><code>AssignRegister!</code></td><td><code>AssignRegister</code></td></tr>
+<tr><td><code>AssignSFcode</code></td><td></td><td><code>AssignSFcode</code></td></tr>
+<tr><td><code>AssignUCcode</code></td><td></td><td><code>AssignUCcode</code></td></tr>
+<tr><td><code>AssignValue</code></td><td><code>AssignValue!</code></td><td><code>AssignValue</code></td></tr>
+<tr><td><code>AssignValue</code></td><td></td><td><code>AssignBool</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
+<tr><td><code>AssignValue</code></td><td></td><td><code>AssignNumber</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
+<tr><td><code>AssignValue</code></td><td></td><td><code>AssignString</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
+<tr><td><code>AssignValue</code></td><td></td><td><code>assign_global</code> (deprecated: <code>AssignValue(key, value, "global")</code>)</td></tr>
+<tr><td><code>AssignValue</code></td><td></td><td><code>assign_value</code> (deprecated: <code>AssignValue(key, value, "local")</code>)</td></tr>
+<tr><td><code>AtBeginDocument</code></td><td></td><td><code>AtBeginDocument</code></td></tr>
+<tr><td><code>AtEndDocument</code></td><td></td><td><code>AtEndDocument</code></td></tr>
+<tr><td><code>beginItemize</code></td><td><code>BeginItemize!</code></td><td><code>BeginItemize</code></td></tr>
+<tr><td><code>Box</code></td><td></td><td><code>Box</code></td></tr>
+<tr><td><code>CC_ACTIVE</code></td><td></td><td><code>CC_ACTIVE</code></td></tr>
+<tr><td><code>CC_ALIGN</code></td><td></td><td><code>CC_ALIGN</code></td></tr>
+<tr><td><code>CC_ARG</code></td><td></td><td><code>CC_ARG</code></td></tr>
+<tr><td><code>CC_BEGIN</code></td><td></td><td><code>CC_BEGIN</code></td></tr>
+<tr><td><code>CC_COMMENT</code></td><td></td><td><code>CC_COMMENT</code></td></tr>
+<tr><td><code>CC_CS</code></td><td></td><td><code>CC_CS</code></td></tr>
+<tr><td><code>CC_END</code></td><td></td><td><code>CC_END</code></td></tr>
+<tr><td><code>CC_EOL</code></td><td></td><td><code>CC_EOL</code></td></tr>
+<tr><td><code>CC_ESCAPE</code></td><td></td><td><code>CC_ESCAPE</code></td></tr>
+<tr><td><code>CC_IGNORE</code></td><td></td><td><code>CC_IGNORE</code></td></tr>
+<tr><td><code>CC_INVALID</code></td><td></td><td><code>CC_INVALID</code></td></tr>
+<tr><td><code>CC_LETTER</code></td><td></td><td><code>CC_LETTER</code></td></tr>
+<tr><td><code>CC_MARKER</code></td><td></td><td><code>CC_MARKER</code></td></tr>
+<tr><td><code>CC_MATH</code></td><td></td><td><code>CC_MATH</code></td></tr>
+<tr><td><code>CC_OTHER</code></td><td></td><td><code>CC_OTHER</code></td></tr>
+<tr><td><code>CC_PARAM</code></td><td></td><td><code>CC_PARAM</code></td></tr>
+<tr><td><code>CC_SPACE</code></td><td></td><td><code>CC_SPACE</code></td></tr>
+<tr><td><code>CC_SUB</code></td><td></td><td><code>CC_SUB</code></td></tr>
+<tr><td><code>CC_SUPER</code></td><td></td><td><code>CC_SUPER</code></td></tr>
+<tr><td><code>CleanID</code></td><td></td><td><code>CleanID</code></td></tr>
+<tr><td><code>CleanLabel</code></td><td></td><td><code>CleanLabel</code></td></tr>
+<tr><td></td><td></td><td><code>Command</code></td></tr>
+<tr><td><code>CounterValue</code></td><td><code>CounterValue!</code></td><td><code>CounterValue</code></td></tr>
+<tr><td><code>DeclareFontMap</code></td><td><code>DeclareFontMap!</code></td><td><code>DeclareFontMap</code></td></tr>
+<tr><td></td><td><code>DeclareFontMapMultichar!</code></td><td><code>DeclareFontMapMultichar</code></td></tr>
+<tr><td><code>DeclareOption</code></td><td><code>DeclareOption!</code></td><td><code>DeclareOption</code></td></tr>
+<tr><td><code>DefAccent</code></td><td><code>DefAccent!</code></td><td><code>DefAccent</code></td></tr>
+<tr><td><code>DefColumnType</code></td><td><code>DefColumnType!</code></td><td><code>DefColumnType</code></td></tr>
+<tr><td><code>DefConditional</code></td><td><code>DefConditional!</code></td><td><code>DefConditional</code></td></tr>
+<tr><td><code>DefConstructor</code></td><td><code>DefConstructor!</code></td><td><code>DefConstructor</code></td></tr>
+<tr><td><code>DefConstructorI</code></td><td></td><td><code>DefConstructorI</code></td></tr>
+<tr><td><code>DefEnvironment</code></td><td><code>DefEnvironment!</code></td><td><code>DefEnvironment</code></td></tr>
+<tr><td><code>DefKeyVal</code></td><td><code>DefKeyVal!</code></td><td><code>DefKeyVal</code></td></tr>
+<tr><td><code>DefLigature</code></td><td><code>DefLigature!</code></td><td><code>DefLigature</code></td></tr>
+<tr><td><code>DefMacro</code></td><td><code>DefMacro!</code></td><td><code>DefMacro</code></td></tr>
+<tr><td><code>DefMacroI</code></td><td></td><td><code>DefMacroI</code></td></tr>
+<tr><td><code>DefMath</code></td><td><code>DefMath!</code></td><td><code>DefMath</code></td></tr>
+<tr><td><code>DefMathLigature</code></td><td><code>DefMathLigature!</code></td><td><code>DefMathLigature</code></td></tr>
+<tr><td><code>DefMathRewrite</code></td><td><code>DefMathRewrite!</code></td><td><code>DefMathRewrite</code></td></tr>
+<tr><td><code>DefParameterType</code></td><td><code>DefParameterType!</code></td><td><code>DefParameterType</code></td></tr>
+<tr><td><code>DefPrimitive</code></td><td><code>DefPrimitive!</code></td><td><code>DefPrimitive</code></td></tr>
+<tr><td><code>DefPrimitiveI</code></td><td></td><td><code>DefPrimitiveI</code></td></tr>
+<tr><td><code>DefRegister</code></td><td><code>DefRegister!</code></td><td><code>DefRegister</code></td></tr>
+<tr><td><code>DefRewrite</code></td><td><code>DefRewrite!</code></td><td><code>DefRewrite</code></td></tr>
+<tr><td><code>Digest</code></td><td><code>Digest!</code></td><td><code>Digest</code></td></tr>
+<tr><td><code>DigestIf</code></td><td><code>DigestIf!</code></td><td><code>DigestIf</code></td></tr>
+<tr><td><code>DigestText</code></td><td><code>DigestText!</code></td><td><code>DigestText</code></td></tr>
+<tr><td><code>Dimension</code></td><td><code>Dimension!</code></td><td><code>Dimension</code></td></tr>
+<tr><td><code>EndSemiverbatim</code></td><td></td><td><code>EndSemiverbatim</code></td></tr>
+<tr><td><code>Equals</code></td><td></td><td><code>Equals</code></td></tr>
+<tr><td><code>Error</code></td><td><code>Error!</code></td><td><code>Error</code></td></tr>
+<tr><td><code>ExecuteOptions</code></td><td></td><td><code>ExecuteOptions</code></td></tr>
+<tr><td><code>Expand</code></td><td><code>Expand!</code></td><td><code>Expand</code></td></tr>
+<tr><td><code>ExpandPartially</code></td><td></td><td><code>ExpandPartially</code></td></tr>
+<tr><td><code>Explode</code></td><td><code>Explode!</code></td><td><code>Explode</code></td></tr>
+<tr><td><code>ExplodeText</code></td><td><code>ExplodeText!</code></td><td><code>ExplodeText</code></td></tr>
+<tr><td><code>Fatal</code></td><td><code>Fatal!</code></td><td><code>Fatal</code></td></tr>
+<tr><td><code>FindFile</code></td><td><code>FindFile!</code></td><td><code>FindFile</code></td></tr>
+<tr><td><code>GetKeyVal</code></td><td><code>GetKeyVal!</code></td><td><code>GetKeyVal</code></td></tr>
+<tr><td><code>GetKeyVals</code></td><td><code>GetKeyVals!</code></td><td><code>GetKeyVals</code></td></tr>
+<tr><td><code>Glue</code></td><td><code>Glue!</code></td><td><code>Glue</code></td></tr>
+<tr><td><code>IfCondition</code></td><td></td><td><code>IfCondition</code></td></tr>
+<tr><td><code>Info</code></td><td><code>Info!</code></td><td><code>Info</code></td></tr>
+<tr><td><code>Input</code></td><td><code>Input!</code></td><td><code>Input</code></td></tr>
+<tr><td><code>InputDefinitions</code></td><td><code>InputDefinitions!</code></td><td><code>InputDefinitions</code></td></tr>
+<tr><td><code>Invocation</code></td><td><code>Invocation!</code></td><td><code>Invocation</code></td></tr>
+<tr><td><code>IsDefined</code></td><td><code>IsDefined!</code></td><td><code>IsDefined</code></td></tr>
+<tr><td><code>IsEmpty</code></td><td></td><td><code>IsEmpty</code></td></tr>
+<tr><td><code>$LaTeXML::VERSION</code></td><td></td><td><code>LaTeXMLVersion</code></td></tr>
+<tr><td><code>Let</code></td><td><code>Let!</code></td><td><code>Let</code></td></tr>
+<tr><td><code>List</code></td><td></td><td><code>List</code></td></tr>
+<tr><td><code>LoadClass</code></td><td><code>LoadClass!</code></td><td><code>LoadClass</code></td></tr>
+<tr><td><code>LoadPool</code></td><td><code>LoadPool!</code></td><td><code>LoadPool</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><code>LookupBool!</code></td><td><code>LookupBool</code></td></tr>
+<tr><td><code>LookupCatcode</code></td><td><code>LookupCatcode!</code></td><td><code>LookupCatcode</code></td></tr>
+<tr><td><code>LookupDefinition</code></td><td><code>LookupDefinition!</code></td><td><code>LookupDefinition</code></td></tr>
+<tr><td><code>LookupDelcode</code></td><td></td><td><code>LookupDelcode</code></td></tr>
+<tr><td><code>LookupDimension</code></td><td></td><td><code>LookupDimension</code></td></tr>
+<tr><td><code>LookupValue</code></td><td></td><td><code>LookupFloat</code></td></tr>
+<tr><td><code>LookupLCcode</code></td><td></td><td><code>LookupLCcode</code></td></tr>
+<tr><td><code>LookupMapping</code></td><td></td><td><code>LookupMapping</code></td></tr>
+<tr><td><code>LookupMappingKeys</code></td><td></td><td><code>LookupMappingKeys</code></td></tr>
+<tr><td><code>LookupMathcode</code></td><td></td><td><code>LookupMathcode</code></td></tr>
+<tr><td><code>LookupMeaning</code></td><td><code>LookupMeaning!</code></td><td><code>LookupMeaning</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><code>LookupNumber!</code></td><td><code>LookupNumber</code></td></tr>
+<tr><td><code>LookupRegister</code></td><td><code>LookupRegister!</code></td><td><code>LookupRegister</code></td></tr>
+<tr><td></td><td><code>LookupRegisterOrDefault!</code></td><td><code>LookupRegisterOrDefault</code></td></tr>
+<tr><td><code>LookupSFcode</code></td><td></td><td><code>LookupSFcode</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><code>LookupString!</code></td><td><code>LookupString</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><code>LookupTokens!</code></td><td><code>LookupTokens</code></td></tr>
+<tr><td><code>LookupUCcode</code></td><td></td><td><code>LookupUCcode</code></td></tr>
+<tr><td><code>LookupValue</code></td><td></td><td><code>LookupValue</code></td></tr>
+<tr><td><code>LookupValue</code></td><td></td><td><code>lookup_value</code> (deprecated: <code>LookupValue(key)</code>)</td></tr>
+<tr><td><code>MergeFont</code></td><td><code>MergeFont!</code></td><td><code>MergeFont</code></td></tr>
+<tr><td><code>MuGlue</code></td><td><code>MuGlue!</code></td><td><code>MuGlue</code></td></tr>
+<tr><td><code>NewCounter</code></td><td><code>NewCounter!</code></td><td><code>NewCounter</code></td></tr>
+<tr><td><code>Note</code></td><td><code>Note!</code></td><td><code>Note</code></td></tr>
+<tr><td><code>NoteLog</code></td><td><code>NoteLog!</code></td><td><code>NoteLog</code></td></tr>
+<tr><td><code>NoteSTDERR</code></td><td><code>NoteSTDERR!</code></td><td><code>NoteSTDERR</code></td></tr>
+<tr><td><code>Number</code></td><td><code>Number!</code></td><td><code>Number</code></td></tr>
+<tr><td></td><td></td><td><code>ParseXML</code></td></tr>
+<tr><td><code>PassOptions</code></td><td></td><td><code>PassOptions</code></td></tr>
+<tr><td><code>PopValue</code></td><td></td><td><code>PopValue</code></td></tr>
+<tr><td></td><td></td><td><code>PrependSearchPath</code></td></tr>
+<tr><td></td><td><code>ProcessKeyOptions!</code></td><td><code>ProcessKeyOptions</code></td></tr>
+<tr><td><code>ProcessOptions</code></td><td><code>ProcessOptions!</code></td><td><code>ProcessOptions</code></td></tr>
+<tr><td><code>ProgressSpindown</code></td><td></td><td><code>ProgressSpindown</code></td></tr>
+<tr><td><code>ProgressSpinup</code></td><td></td><td><code>ProgressSpinup</code></td></tr>
+<tr><td><code>ProgressStep</code></td><td></td><td><code>ProgressStep</code></td></tr>
+<tr><td><code>PushValue</code></td><td></td><td><code>PushValue</code></td></tr>
+<tr><td><code>RawTeX</code></td><td><code>RawTeX!</code></td><td><code>RawTeX</code></td></tr>
+<tr><td><code>$gullet-&gt;readArg</code></td><td></td><td><code>ReadArg</code></td></tr>
+<tr><td><code>$gullet-&gt;readOptional</code></td><td></td><td><code>ReadOptional</code></td></tr>
+<tr><td><code>$gullet-&gt;readToken</code></td><td></td><td><code>ReadToken</code></td></tr>
+<tr><td><code>$gullet-&gt;readUntil</code></td><td></td><td><code>ReadUntil</code></td></tr>
+<tr><td><code>RefCurrentID</code></td><td><code>RefCurrentID!</code></td><td><code>RefCurrentID</code></td></tr>
+<tr><td><code>RefStepCounter</code></td><td><code>RefStepCounter!</code></td><td><code>RefStepCounter</code></td></tr>
+<tr><td><code>RefStepID</code></td><td><code>RefStepID!</code></td><td><code>RefStepID</code></td></tr>
+<tr><td><code>RegisterDocumentNamespace</code></td><td><code>RegisterDocumentNamespace!</code></td><td><code>RegisterDocumentNamespace</code></td></tr>
+<tr><td><code>RegisterNamespace</code></td><td><code>RegisterNamespace!</code></td><td><code>RegisterNamespace</code></td></tr>
+<tr><td><code>RelaxNGSchema</code></td><td><code>RelaxNGSchema!</code></td><td><code>RelaxNGSchema</code></td></tr>
+<tr><td><code>RequirePackage</code></td><td><code>RequirePackage!</code></td><td><code>RequirePackage</code></td></tr>
+<tr><td><code>RequireResource</code></td><td><code>RequireResource!</code></td><td><code>RequireResource</code></td></tr>
+<tr><td><code>ResetCounter</code></td><td><code>ResetCounter!</code></td><td><code>ResetCounter</code></td></tr>
+<tr><td><code>Revert</code></td><td><code>Revert!</code></td><td><code>Revert</code></td></tr>
+<tr><td><code>Roman</code></td><td><code>Roman!</code></td><td><code>Roman</code></td></tr>
+<tr><td><code>SetCondition</code></td><td></td><td><code>SetCondition</code></td></tr>
+<tr><td><code>SetCounter</code></td><td><code>SetCounter!</code></td><td><code>SetCounter</code></td></tr>
+<tr><td><code>ShiftValue</code></td><td></td><td><code>ShiftValue</code></td></tr>
+<tr><td><code>$gullet-&gt;skipSpaces</code></td><td></td><td><code>SkipSpaces</code></td></tr>
+<tr><td><code>StartSemiverbatim</code></td><td></td><td><code>StartSemiverbatim</code></td></tr>
+<tr><td><code>StepCounter</code></td><td><code>StepCounter!</code></td><td><code>StepCounter</code></td></tr>
+<tr><td><code>T_ACTIVE</code></td><td><code>T_ACTIVE!</code></td><td><code>T_ACTIVE</code></td></tr>
+<tr><td><code>T_ALIGN</code></td><td><code>T_ALIGN!</code></td><td><code>T_ALIGN</code></td></tr>
+<tr><td><code>T_ARG</code></td><td><code>T_ARG!</code></td><td><code>T_ARG</code></td></tr>
+<tr><td><code>T_BEGIN</code></td><td><code>T_BEGIN!</code></td><td><code>T_BEGIN</code></td></tr>
+<tr><td><code>T_COMMENT</code></td><td><code>T_COMMENT!</code></td><td><code>T_COMMENT</code></td></tr>
+<tr><td><code>T_CR</code></td><td><code>T_CR!</code></td><td><code>T_CR</code></td></tr>
+<tr><td><code>T_CS</code></td><td><code>T_CS!</code></td><td><code>T_CS</code></td></tr>
+<tr><td><code>T_END</code></td><td><code>T_END!</code></td><td><code>T_END</code></td></tr>
+<tr><td><code>T_LETTER</code></td><td><code>T_LETTER!</code></td><td><code>T_LETTER</code></td></tr>
+<tr><td><code>T_MARKER</code></td><td><code>T_MARKER!</code></td><td><code>T_MARKER</code></td></tr>
+<tr><td><code>T_MATH</code></td><td><code>T_MATH!</code></td><td><code>T_MATH</code></td></tr>
+<tr><td><code>T_OTHER</code></td><td><code>T_OTHER!</code></td><td><code>T_OTHER</code></td></tr>
+<tr><td><code>T_PARAM</code></td><td><code>T_PARAM!</code></td><td><code>T_PARAM</code></td></tr>
+<tr><td><code>T_SPACE</code></td><td><code>T_SPACE!</code></td><td><code>T_SPACE</code></td></tr>
+<tr><td><code>T_SUB</code></td><td><code>T_SUB!</code></td><td><code>T_SUB</code></td></tr>
+<tr><td><code>T_SUPER</code></td><td><code>T_SUPER!</code></td><td><code>T_SUPER</code></td></tr>
+<tr><td><code>Tag</code></td><td><code>Tag!</code></td><td><code>Tag</code></td></tr>
+<tr><td><code>Digest(TokenizeInternal($tex))</code></td><td><code>TeX!</code></td><td><code>TeX</code></td></tr>
+<tr><td><code>$box-&gt;toAttribute</code></td><td></td><td><code>ToAttribute</code></td></tr>
+<tr><td><code>ToString</code></td><td></td><td><code>ToString</code></td></tr>
+<tr><td></td><td><code>Today!</code></td><td><code>Today</code></td></tr>
+<tr><td><code>Token</code></td><td><code>Token!</code></td><td><code>Token</code></td></tr>
+<tr><td><code>Tokenize</code></td><td><code>Tokenize!</code></td><td><code>Tokenize</code></td></tr>
+<tr><td><code>TokenizeInternal</code></td><td><code>TokenizeInternal!</code></td><td><code>TokenizeInternal</code></td></tr>
+<tr><td><code>Tokens</code></td><td><code>Tokens!</code></td><td><code>Tokens</code></td></tr>
+<tr><td><code>UTF</code></td><td></td><td><code>UTF</code></td></tr>
+<tr><td><code>UnTeX</code></td><td></td><td><code>UnTeX</code></td></tr>
+<tr><td><code>UnshiftValue</code></td><td></td><td><code>UnshiftValue</code></td></tr>
+<tr><td><code>Warn</code></td><td><code>Warn!</code></td><td><code>Warn</code></td></tr>
+<tr><td><code>XEquals</code></td><td><code>XEquals!</code></td><td><code>XEquals</code></td></tr>
+<tr><td><code>$n-&gt;valueOf ^ $m</code></td><td></td><td><code>^</code></td></tr>
+<tr><td><code>$v-&gt;absolute</code></td><td></td><td><code>absolute</code></td></tr>
+<tr><td><code>$v-&gt;add</code></td><td></td><td><code>add</code></td></tr>
+<tr><td><code>defined $v</code></td><td></td><td><code>defined</code></td></tr>
+<tr><td><code>$v-&gt;divide</code></td><td></td><td><code>divide</code></td></tr>
+<tr><td><code>$v-&gt;divideround</code></td><td></td><td><code>divideround</code></td></tr>
+<tr><td><code>$v-&gt;getShrink</code></td><td></td><td><code>getShrink</code></td></tr>
+<tr><td><code>$v-&gt;getShrinkOrder</code></td><td></td><td><code>getShrinkOrder</code></td></tr>
+<tr><td><code>$v-&gt;getStretch</code></td><td></td><td><code>getStretch</code></td></tr>
+<tr><td><code>$v-&gt;getStretchOrder</code></td><td></td><td><code>getStretchOrder</code></td></tr>
+<tr><td><code>$v-&gt;larger</code></td><td></td><td><code>larger</code></td></tr>
+<tr><td><code>$v-&gt;multiply</code></td><td></td><td><code>multiply</code></td></tr>
+<tr><td><code>$v-&gt;negate</code></td><td></td><td><code>negate</code></td></tr>
+<tr><td></td><td></td><td><code>neutralize_font</code></td></tr>
+<tr><td><code>$v-&gt;ptValue</code></td><td></td><td><code>ptValue</code></td></tr>
+<tr><td><code>$v-&gt;pxValue</code></td><td></td><td><code>pxValue</code></td></tr>
+<tr><td><code>roman</code></td><td><code>roman!</code></td><td><code>roman</code></td></tr>
+<tr><td><code>$v-&gt;sign</code></td><td></td><td><code>sign</code></td></tr>
+<tr><td><code>$v-&gt;smaller</code></td><td></td><td><code>smaller</code></td></tr>
+<tr><td><code>$v-&gt;spValue</code></td><td></td><td><code>spValue</code></td></tr>
+<tr><td><code>$v-&gt;subtract</code></td><td></td><td><code>subtract</code></td></tr>
+<tr><td><code>$v-&gt;toAttribute</code></td><td></td><td><code>toAttribute</code></td></tr>
+<tr><td><code>$v-&gt;valueOf</code></td><td></td><td><code>valueOf</code></td></tr>
+<tr><td><code>$whatsit</code></td><td></td><td><code>whatsit</code> (deprecated: the hook’s whatsit argument)</td></tr>
+<tr><td><code>$n-&gt;valueOf | $m</code></td><td></td><td><code>|</code></td></tr>
+<tr><td><code>$document-&gt;absorb</code></td><td></td><td><code>document.absorb</code></td></tr>
+<tr><td></td><td></td><td><code>document.absorbProperty</code></td></tr>
+<tr><td><code>$document-&gt;absorb</code></td><td></td><td><code>document.absorbString</code></td></tr>
+<tr><td><code>$document-&gt;addClass</code></td><td></td><td><code>document.addClass</code></td></tr>
+<tr><td><code>$document-&gt;appendClone</code></td><td></td><td><code>document.appendClone</code></td></tr>
+<tr><td><code>$document-&gt;canContain</code></td><td></td><td><code>document.canContain</code></td></tr>
+<tr><td><code>$document-&gt;closeElement</code></td><td></td><td><code>document.closeElement</code></td></tr>
+<tr><td><code>$document-&gt;closeElementAt</code></td><td></td><td><code>document.closeElementAt</code></td></tr>
+<tr><td><code>$document-&gt;findnode</code></td><td></td><td><code>document.findnode</code></td></tr>
+<tr><td><code>$document-&gt;findnodes</code></td><td></td><td><code>document.findnodes</code></td></tr>
+<tr><td><code>$document-&gt;floatToElement</code></td><td></td><td><code>document.floatToElement</code></td></tr>
+<tr><td></td><td></td><td><code>document.generateID</code></td></tr>
+<tr><td><code>$document-&gt;getElement</code></td><td></td><td><code>document.getElement</code></td></tr>
+<tr><td><code>$document-&gt;getNode</code></td><td></td><td><code>document.getNode</code></td></tr>
+<tr><td><code>$whatsit-&gt;getProperties</code></td><td></td><td><code>document.getProperties</code> (deprecated: the constructor body’s trailing properties map)</td></tr>
+<tr><td><code>$whatsit-&gt;getProperty</code></td><td></td><td><code>document.getProperty</code> (deprecated: the constructor body’s trailing properties map)</td></tr>
+<tr><td><code>$document-&gt;insertElement</code></td><td></td><td><code>document.insertElement</code></td></tr>
+<tr><td><code>$document-&gt;insertPI</code></td><td></td><td><code>document.insertPI</code></td></tr>
+<tr><td></td><td></td><td><code>document.insertXML</code></td></tr>
+<tr><td><code>$document-&gt;maybeCloseElement</code></td><td></td><td><code>document.maybeCloseElement</code></td></tr>
+<tr><td><code>$document-&gt;openElement</code></td><td></td><td><code>document.openElement</code></td></tr>
+<tr><td><code>$document-&gt;openElementAt</code></td><td></td><td><code>document.openElementAt</code></td></tr>
+<tr><td><code>$document-&gt;removeNode</code></td><td></td><td><code>document.removeNode</code></td></tr>
+<tr><td><code>$document-&gt;renameNode</code></td><td></td><td><code>document.renameNode</code></td></tr>
+<tr><td><code>$document-&gt;replaceNode</code></td><td></td><td><code>document.replaceNode</code></td></tr>
+<tr><td><code>$document-&gt;setAttribute</code></td><td></td><td><code>document.setAttribute</code></td></tr>
+<tr><td><code>$document-&gt;setNode</code></td><td></td><td><code>document.setNode</code></td></tr>
+<tr><td><code>$document-&gt;unwrapNodes</code></td><td></td><td><code>document.unwrapNodes</code></td></tr>
+<tr><td><code>$document-&gt;wrapNodes</code></td><td></td><td><code>document.wrapNodes</code></td></tr>
+<tr><td><code>$node-&gt;childNodes</code></td><td></td><td><code>node.children</code></td></tr>
+<tr><td><code>$node-&gt;textContent</code></td><td></td><td><code>node.content</code></td></tr>
+<tr><td><code>$node-&gt;firstChild</code></td><td></td><td><code>node.firstChild</code></td></tr>
+<tr><td><code>$node-&gt;getAttribute</code></td><td></td><td><code>node.getAttribute</code></td></tr>
+<tr><td><code>$node-&gt;hasAttribute</code></td><td></td><td><code>node.hasAttribute</code></td></tr>
+<tr><td><code>$node-&gt;localname</code></td><td></td><td><code>node.name</code></td></tr>
+<tr><td><code>$node-&gt;nextSibling</code></td><td></td><td><code>node.nextSibling</code></td></tr>
+<tr><td><code>$node-&gt;parentNode</code></td><td></td><td><code>node.parent</code></td></tr>
+<tr><td><code>$node-&gt;previousSibling</code></td><td></td><td><code>node.prevSibling</code></td></tr>
+<tr><td><code>$document-&gt;getNodeQName($node)</code></td><td></td><td><code>node.qname</code></td></tr>
+<tr><td><code>$node-&gt;removeAttribute</code></td><td></td><td><code>node.removeAttribute</code></td></tr>
+<tr><td><code>$node-&gt;setAttribute</code></td><td></td><td><code>node.setAttribute</code></td></tr>
+<tr><td></td><td></td><td><code>node.setContent</code></td></tr>
+<tr><td><code>$node-&gt;toString</code></td><td></td><td><code>node.toString</code></td></tr>
+<tr><td><code>$node-&gt;unbindNode</code></td><td></td><td><code>node.unlink</code></td></tr>
+<tr><td><code>$whatsit-&gt;getArg</code></td><td></td><td><code>whatsit.getArg</code></td></tr>
+<tr><td><code>$whatsit-&gt;getArg</code></td><td></td><td><code>whatsit.argString</code> (deprecated: <code>whatsit.getArg(n)</code>)</td></tr>
+<tr><td><code>$whatsit-&gt;getFont</code></td><td></td><td><code>whatsit.getFont</code></td></tr>
+<tr><td><code>$whatsit-&gt;getProperties</code></td><td></td><td><code>whatsit.getProperties</code></td></tr>
+<tr><td><code>$whatsit-&gt;getProperty</code></td><td></td><td><code>whatsit.getProperty</code></td></tr>
+<tr><td><code>$whatsit-&gt;getProperty</code></td><td></td><td><code>whatsit.propertyString</code> (deprecated: <code>whatsit.getProperty(key)</code>)</td></tr>
+<tr><td><code>$whatsit-&gt;setProperty</code></td><td></td><td><code>whatsit.setProperty</code></td></tr>
+<tr><td><code>ToString($whatsit)</code></td><td></td><td><code>whatsit.to_string</code></td></tr>
+<tr><td></td><td></td><td><code>definition.is_empty</code></td></tr>
+<tr><td></td><td></td><td><code>definition.len</code></td></tr>
+<tr><td><code>push(@{$$defn{afterConstruct}}, …)</code></td><td></td><td><code>definition.pushAfterConstruct</code></td></tr>
+<tr><td><code>push(@{$$defn{afterDigest}}, …)</code></td><td></td><td><code>definition.pushAfterDigest</code></td></tr>
+<tr><td><code>push(@{$$defn{afterDigestBody}}, …)</code></td><td></td><td><code>definition.pushAfterDigestBody</code></td></tr>
+<tr><td><code>push(@{$$defn{beforeConstruct}}, …)</code></td><td></td><td><code>definition.pushBeforeConstruct</code></td></tr>
+<tr><td><code>push(@{$$defn{beforeDigest}}, …)</code></td><td></td><td><code>definition.pushBeforeDigest</code></td></tr>
+<tr><td></td><td></td><td><code>definition.to_debug</code></td></tr>
+<tr><td><code>ToString($definition)</code></td><td></td><td><code>definition.to_string</code></td></tr>
+<tr><td><code>unshift(@{$$defn{afterConstruct}}, …)</code></td><td></td><td><code>definition.unshiftAfterConstruct</code></td></tr>
+<tr><td><code>unshift(@{$$defn{afterDigest}}, …)</code></td><td></td><td><code>definition.unshiftAfterDigest</code></td></tr>
+<tr><td><code>unshift(@{$$defn{afterDigestBody}}, …)</code></td><td></td><td><code>definition.unshiftAfterDigestBody</code></td></tr>
+<tr><td><code>unshift(@{$$defn{beforeConstruct}}, …)</code></td><td></td><td><code>definition.unshiftBeforeConstruct</code></td></tr>
+<tr><td><code>unshift(@{$$defn{beforeDigest}}, …)</code></td><td></td><td><code>definition.unshiftBeforeDigest</code></td></tr>
+<tr><td><code>$gullet-&gt;readArg</code></td><td></td><td><code>gullet.readArg</code></td></tr>
+<tr><td><code>$gullet-&gt;readOptional</code></td><td></td><td><code>gullet.readOptional</code></td></tr>
+<tr><td><code>$gullet-&gt;readToken</code></td><td></td><td><code>gullet.readToken</code></td></tr>
+<tr><td><code>$gullet-&gt;readUntil</code></td><td></td><td><code>gullet.readUntil</code></td></tr>
+<tr><td><code>$gullet-&gt;skipSpaces</code></td><td></td><td><code>gullet.skipSpaces</code></td></tr>
+<tr><td><code>$stomach-&gt;getGullet</code></td><td></td><td><code>stomach.getGullet</code></td></tr>
+<tr><td><code>$font-&gt;getEncoding</code></td><td></td><td><code>font.getEncoding</code></td></tr>
+<tr><td><code>$font-&gt;getFamily</code></td><td></td><td><code>font.getFamily</code></td></tr>
+<tr><td><code>$font-&gt;getLanguage</code></td><td></td><td><code>font.getLanguage</code></td></tr>
+<tr><td><code>$font-&gt;getSeries</code></td><td></td><td><code>font.getSeries</code></td></tr>
+<tr><td><code>$font-&gt;getShape</code></td><td></td><td><code>font.getShape</code></td></tr>
+<tr><td><code>$font-&gt;getSize</code></td><td></td><td><code>font.getSize</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>number.toString</code></td></tr>
+<tr><td></td><td></td><td><code>number.to_debug</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>number.to_string</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>dimension.toString</code></td></tr>
+<tr><td></td><td></td><td><code>dimension.to_debug</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>dimension.to_string</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>glue.toString</code></td></tr>
+<tr><td></td><td></td><td><code>glue.to_debug</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>glue.to_string</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>muglue.toString</code></td></tr>
+<tr><td></td><td></td><td><code>muglue.to_debug</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>muglue.to_string</code></td></tr>
+<tr><td></td><td></td><td><code>command.arg</code></td></tr>
+<tr><td></td><td></td><td><code>command.args</code></td></tr>
+<tr><td></td><td></td><td><code>command.current_dir</code></td></tr>
+<tr><td></td><td></td><td><code>command.env</code></td></tr>
+<tr><td></td><td></td><td><code>command.output</code></td></tr>
+<tr><td><code>AfterAssignment</code></td><td></td><td></td></tr>
+<tr><td><code>CheckOptions</code></td><td></td><td></td></tr>
+<tr><td><code>CleanBibKey</code></td><td></td><td></td></tr>
+<tr><td><code>CleanClassName</code></td><td></td><td></td></tr>
+<tr><td><code>CleanIndexKey</code></td><td></td><td></td></tr>
+<tr><td><code>CleanURL</code></td><td></td><td></td></tr>
+<tr><td><code>Color</code></td><td></td><td></td></tr>
+<tr><td><code>ComposeURL</code></td><td></td><td></td></tr>
+<tr><td><code>Debug</code></td><td><code>Debug!</code></td><td></td></tr>
+<tr><td><code>DefAutoload</code></td><td></td><td></td></tr>
+<tr><td><code>DefColor</code></td><td></td><td></td></tr>
+<tr><td><code>DefColorModel</code></td><td></td><td></td></tr>
+<tr><td><code>DefConditionalI</code></td><td></td><td></td></tr>
+<tr><td><code>DefEnvironmentI</code></td><td></td><td></td></tr>
+<tr><td><code>DefExpandable</code></td><td></td><td></td></tr>
+<tr><td><code>DefMathI</code></td><td></td><td></td></tr>
+<tr><td><code>DefRegisterI</code></td><td></td><td></td></tr>
+<tr><td><code>Deprecated</code></td><td></td><td></td></tr>
+<tr><td><code>DigestLiteral</code></td><td></td><td></td></tr>
+<tr><td><code>DisableKeyVal</code></td><td></td><td></td></tr>
+<tr><td><code>DocType</code></td><td></td><td></td></tr>
+<tr><td><code>Float</code></td><td></td><td></td></tr>
+<tr><td><code>FontDecode</code></td><td></td><td></td></tr>
+<tr><td><code>FontDecodeString</code></td><td></td><td></td></tr>
+<tr><td><code>GenerateID</code></td><td></td><td></td></tr>
+<tr><td><code>HasKeyVal</code></td><td></td><td></td></tr>
+<tr><td><code>InputContent</code></td><td></td><td></td></tr>
+<tr><td><code>InstallDefinition</code></td><td><code>InstallDefinition!</code></td><td></td></tr>
+<tr><td><code>LoadFontMap</code></td><td></td><td></td></tr>
+<tr><td><code>LoadFormat</code></td><td></td><td></td></tr>
+<tr><td><code>LookupColor</code></td><td><code>LookupColor!</code></td><td></td></tr>
+<tr><td><code>MaybeNoteLabel</code></td><td></td><td></td></tr>
+<tr><td><code>MaybePeekLabel</code></td><td></td><td></td></tr>
+<tr><td><code>MuDimension</code></td><td></td><td></td></tr>
+<tr><td><code>NormalizeBibKey</code></td><td></td><td></td></tr>
+<tr><td><code>Pair</code></td><td></td><td></td></tr>
+<tr><td><code>PairList</code></td><td></td><td></td></tr>
+<tr><td><code>ProcessPendingResources</code></td><td></td><td></td></tr>
+<tr><td><code>ReadAlignmentTemplate</code></td><td></td><td></td></tr>
+<tr><td><code>ReadParameters</code></td><td></td><td></td></tr>
+<tr><td><code>Stringify</code></td><td></td><td></td></tr>
+<tr><td><code>TokensI</code></td><td></td><td></td></tr>
+<tr><td><code>TrimmedCommaList</code></td><td></td><td></td></tr>
+<tr><td><code>convertLaTeXArgs</code></td><td></td><td></td></tr>
+<tr><td><code>createXMRefs</code></td><td></td><td></td></tr>
+<tr><td><code>decodeMathChar</code></td><td></td><td></td></tr>
+<tr><td><code>dualize_arglist</code></td><td></td><td></td></tr>
+</tbody></table>
+</div><h3 id="perl-calls-the-dialect-lacks-an-empty-rhai-cell"><a class="doc-anchor" href="#perl-calls-the-dialect-lacks-an-empty-rhai-cell">§</a>Perl calls the dialect lacks (an empty Rhai cell)</h3>
+<p>47 calls: <code>AfterAssignment</code>, <code>CheckOptions</code>, <code>CleanBibKey</code>, <code>CleanClassName</code>, <code>CleanIndexKey</code>, <code>CleanURL</code>, <code>Color</code>, <code>ComposeURL</code>, <code>Debug</code>, <code>DefAutoload</code>, <code>DefColor</code>, <code>DefColorModel</code>, <code>DefConditionalI</code>, <code>DefEnvironmentI</code>, <code>DefExpandable</code>, <code>DefMathI</code>, <code>DefRegisterI</code>, <code>Deprecated</code>, <code>DigestLiteral</code>, <code>DisableKeyVal</code>, <code>DocType</code>, <code>Float</code>, <code>FontDecode</code>, <code>FontDecodeString</code>, <code>GenerateID</code>, <code>HasKeyVal</code>, <code>InputContent</code>, <code>InstallDefinition</code>, <code>LoadFontMap</code>, <code>LoadFormat</code>, <code>LookupColor</code>, <code>MaybeNoteLabel</code>, <code>MaybePeekLabel</code>, <code>MuDimension</code>, <code>NormalizeBibKey</code>, <code>Pair</code>, <code>PairList</code>, <code>ProcessPendingResources</code>, <code>ReadAlignmentTemplate</code>, <code>ReadParameters</code>, <code>Stringify</code>, <code>TokensI</code>, <code>TrimmedCommaList</code>, <code>convertLaTeXArgs</code>, <code>createXMRefs</code>, <code>decodeMathChar</code>, <code>dualize_arglist</code>.</p>
+<h3 id="rhai-calls-with-no-perl-counterpart-an-empty-perl-cell"><a class="doc-anchor" href="#rhai-calls-with-no-perl-counterpart-an-empty-perl-cell">§</a>Rhai calls with no Perl counterpart (an empty Perl cell)</h3>
+<p>25 calls: <code>AppendSearchPath</code>, <code>Command</code>, <code>DeclareFontMapMultichar</code>, <code>LookupRegisterOrDefault</code>, <code>ParseXML</code>, <code>PrependSearchPath</code>, <code>ProcessKeyOptions</code>, <code>Today</code>, <code>neutralize_font</code>, <code>document.absorbProperty</code>, <code>document.generateID</code>, <code>document.insertXML</code>, <code>node.setContent</code>, <code>definition.is_empty</code>, <code>definition.len</code>, <code>definition.to_debug</code>, <code>number.to_debug</code>, <code>dimension.to_debug</code>, <code>glue.to_debug</code>, <code>muglue.to_debug</code>, <code>command.arg</code>, <code>command.args</code>, <code>command.current_dir</code>, <code>command.env</code>, <code>command.output</code>.</p>
+<h3 id="perl-functions-with-no-macro-compiled-bindings-call-the-rust-function-named"><a class="doc-anchor" href="#perl-functions-with-no-macro-compiled-bindings-call-the-rust-function-named">§</a>Perl functions with no macro (compiled bindings call the Rust function named)</h3>
+<p>63 calls: <code>AssignDelcode</code> (<code>assign_delcode</code>), <code>AssignFloat</code> (<code>assign_value</code>), <code>AssignLCcode</code> (<code>assign_lccode</code>), <code>AssignMathcode</code> (<code>assign_mathcode</code>), <code>AssignSFcode</code> (<code>assign_sfcode</code>), <code>AssignUCcode</code> (<code>assign_uccode</code>), <code>AtBeginDocument</code> (<code>push_value</code>), <code>AtEndDocument</code> (<code>push_value</code>), <code>Box</code> (<code>Tbox::new</code>), <code>CC_ACTIVE</code>, <code>CC_ALIGN</code>, <code>CC_ARG</code>, <code>CC_BEGIN</code>, <code>CC_COMMENT</code>, <code>CC_CS</code>, <code>CC_END</code>, <code>CC_EOL</code>, <code>CC_ESCAPE</code>, <code>CC_IGNORE</code>, <code>CC_INVALID</code>, <code>CC_LETTER</code>, <code>CC_MARKER</code>, <code>CC_MATH</code>, <code>CC_OTHER</code>, <code>CC_PARAM</code>, <code>CC_SPACE</code>, <code>CC_SUB</code>, <code>CC_SUPER</code>, <code>CleanID</code> (<code>clean_id</code>), <code>CleanLabel</code> (<code>clean_label</code>), <code>DefConstructorI</code> (<code>def_constructor</code>), <code>DefMacroI</code> (<code>def_macro</code>), <code>DefPrimitiveI</code> (<code>def_primitive</code>), <code>EndSemiverbatim</code> (<code>end_semiverbatim</code>), <code>Equals</code>, <code>ExecuteOptions</code> (<code>execute_options</code>), <code>ExpandPartially</code> (<code>do_expand_partially</code>), <code>IfCondition</code> (<code>if_condition_args</code>), <code>IsEmpty</code>, <code>List</code>, <code>LookupDelcode</code> (<code>lookup_delcode</code>), <code>LookupDimension</code> (<code>lookup_dimension_cs</code>), <code>LookupFloat</code> (<code>lookup_float</code>), <code>LookupLCcode</code> (<code>lookup_lccode</code>), <code>LookupMapping</code> (<code>lookup_mapping</code>), <code>LookupMappingKeys</code> (<code>with_mapping_keys</code>), <code>LookupMathcode</code> (<code>lookup_mathcode</code>), <code>LookupSFcode</code> (<code>lookup_sfcode</code>), <code>LookupUCcode</code> (<code>lookup_uccode</code>), <code>LookupValue</code> (<code>lookup_value</code>), <code>PassOptions</code> (<code>pass_options</code>), <code>PopValue</code> (<code>pop_value</code>), <code>ProgressSpindown</code> (<code>note_end</code>), <code>ProgressSpinup</code> (<code>note_begin</code>), <code>ProgressStep</code> (<code>progress_step</code>), <code>PushValue</code> (<code>push_value</code>), <code>SetCondition</code> (<code>set_condition</code>), <code>ShiftValue</code> (<code>shift_value</code>), <code>StartSemiverbatim</code> (<code>begin_semiverbatim</code>), <code>ToString</code>, <code>UTF</code>, <code>UnTeX</code> (<code>Tokens::untex</code>), <code>UnshiftValue</code> (<code>unshift_value</code>).</p>
+</div></details></section></div></main></body></html>
