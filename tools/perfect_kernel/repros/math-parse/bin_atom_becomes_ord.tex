@@ -2,18 +2,20 @@
 % oracle:  pdflatex 0 errors; \showbox (TL 2025): a Bin is an Ord when first, after Bin/Op/Rel/Open/Punct, before
 %          Rel/Close/Punct or last (tex.web §728-729): `a+-b` \medmuskip both sides of `+`, none around `−`; `f(0+)`,
 %          `a+ =b` (\thickmuskip only around `=`), `a+b+`, `x+,y` (\thinmuskip after `,` only) set their sign tight
-%          `\nabla\cdot B`: \medmuskip both sides of the `⋅` (`\nabla` is an Ord, mathchar"272, class 0)
+%          `\nabla\cdot B`: \medmuskip both sides of the `⋅` (`\nabla` is an Ord, mathchar"272, class 0); `|\bot_0\rangle`
+%          no glue (2405.12855; `|` and `\bot` are Ords)
 % engines: rust 67f4e2564d3 (MHCHEM2) `<mo lspace="0em" rspace="0em">+</mo>` for the binary `+` of `a+-b`, `x\pm-1`
 %          (a limit-from reading); Perl 0.8.8 spaces every trailing sign (Core's infix fallback for postfix `+`/`−`)
 % expect:  0 errors; in --format=html5 the sign TeX makes an Ord is `<mo lspace="0em" rspace="0em">` where the browser
 %          would space it; a kept Bin and a leading sign (Core's prefix form, 0 already) stay bare; the `⋅` after `∇` stays a
-%          Bin (MHCHEM4's own A/B: the role table's Op for `∇` tightened it); its 0em left is the role table's Op-Bin
+%          Bin (MHCHEM4's own A/B: the role table's Op for `∇` tightened it); its 0em left is the role table's Op-Bin; the `|` before
+%          a converted `⊥` has no space (MHCHEM4's A/B: the role table's Punct gave it 0.167em)
 % status:  RED (67f4e2564d3) -> GREEN (MHCHEM4, OXIDIZED_DESIGN_DIVERGENCES #1044)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}
 $a+-b$ $x\pm-1$ $x^{2+}$ $f(0+)$ $a+ =b$ $a+b+$ $x+,y$ $\lim_{x\to0+}f$ $-x$ $(-x)$
-$\nabla\cdot B$
+$\nabla\cdot B$ $|\bot_0\rangle$
 \begin{align}
 a&=b+
 \end{align}

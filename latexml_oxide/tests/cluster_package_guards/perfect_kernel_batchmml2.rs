@@ -116,6 +116,14 @@ fn core_k_operators_have_no_operator_space() {
       "\\nabla\\cdot B",
       "<mrow><mo>∇</mo><mo lspace=\"0em\" rspace=\"0.222em\">⋅</mo><mi>B</mi></mrow>".to_string(),
     ),
+    // A converted atom's pairs read TeX's classes: `|` is an Ord (2405.12855; red on c1d0777ae27: `|` rspace 0.167em).
+    (
+      "p1.m12",
+      "|\\bot_{0}\\rangle",
+      "<mrow><mo fence=\"false\" stretchy=\"false\">|</mo><msub><mo lspace=\"0em\" rspace=\"0em\">⊥</mo><mn>0</mn></msub><mo \
+       stretchy=\"false\">⟩</mo></mrow>"
+        .to_string(),
+    ),
     (
       "S0.E1.m2",
       "\\displaystyle=b+",
