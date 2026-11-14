@@ -1,0 +1,16 @@
+% witness: synthetic (AUDMAC row 3; AddToMacro, Package.pm:2534-2549)
+% oracle:  pdflatex 1 `!` (Undefined control sequence, latex.ltx:1832 \g@addto@macro's \expandafter), then
+%          \xdef defines \nohook: "AXYB"; Perl: Warning "not an expandable control sequence", the addition dropped,
+%          then Error undefined \nohook: "A<ERROR>B"
+% engines: rust (base fc5211bb491) = "AXYB", 0 E 0 W (the undefined cs defined silently)
+% expect:  "AXYB", 0 E, 1 W (undefined:\nohook, OXIDIZED_DESIGN #1035); the preamble \AtEndOfPackage, whose hook
+%          \csname makes, 0 W
+% status:  RED (fc5211bb491) -> GREEN (MACSYNC)
+\documentclass{article}
+\makeatletter
+\AtEndOfPackage{\def\unused{}}
+\g@addto@macro\nohook{XY}
+\makeatother
+\begin{document}
+A\nohook B
+\end{document}

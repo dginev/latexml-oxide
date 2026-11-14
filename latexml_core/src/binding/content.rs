@@ -5858,6 +5858,18 @@ pub fn def_color_model(model: &str, coremodel: &str) {
   );
 }
 
+/// Perl `Digest` (Package.pm:393-402): digest with side effects and mode changes, then leave a horizontal mode the
+/// digestion entered (`leaveHorizontal_internal`), as [`crate::parameter::Parameter::digest`] does for an argument.
+pub fn binding_digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
+  let mode = lookup_string_from_sym(crate::pin!("MODE"));
+  let value = digest(tokens)?;
+  let nmode = lookup_string_from_sym(crate::pin!("MODE"));
+  if mode != nmode && nmode == "horizontal" {
+    leave_horizontal_internal();
+  }
+  Ok(value)
+}
+
 /// Digest tokens in text mode, whatever mode the caller is in.
 ///
 /// Port of Perl `Package.pm:DigestText` L405-411: brackets the digestion in

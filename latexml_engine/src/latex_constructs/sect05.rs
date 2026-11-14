@@ -534,6 +534,14 @@ pub(crate) fn load() -> Result<()> {
     let hookcs = T_CS!(s!("\\{name}.{ttype}-h@@k"));
     // (what a stand-in's copy registers runs under its provides-mode: `state::copy_provides_wrap`)
     let code = copy_provides_wrap(code);
+    // latex.ltx:18896 names the hook with `\csname`, so it is never an undefined cs (an empty hook here, which
+    // `\g@addto@macro` reads as TeX reads that `\relax`).
+    if lookup_definition(&hookcs)?.is_none() {
+      def_macro(hookcs, None, ExpansionBody::Tokens(Tokens::default()), Some(ExpandableOptions {
+        scope: Some(add_to_macro_scope()),
+        ..ExpandableOptions::default()
+      }))?;
+    }
     AddToMacro!(hookcs, code);
   });
 
