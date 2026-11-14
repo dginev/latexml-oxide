@@ -9780,7 +9780,7 @@ enclosing unit for a same-or-higher level, nesting a deeper one — and made the
 so trailing box content and the post-box text nest inside; non-sectioning lead content stays
 where the box was; the box's `class` (`ltx_minipage`) and any attributes
 `Sectional.attributes` admit (`framed`/`framecolor`/`cssstyle`) ride the first floated unit
-(`width`/`vattach` are dropped, as the old `sectional-block` already dropped them). Numbering
+(`vattach` is dropped, as the old `sectional-block` dropped it; `width` rides as `--ltx-box-width`, #1045). Numbering
 needs no repair: the unit already carries its digest-time `<tags>`.
 **Why**: user ruling 2026-09-20 — "we should not treat a section in a minipage as a schema
 extension … convert the minipage into an annotation via class attribute to the usual
@@ -36363,3 +36363,19 @@ and so does a package's or the document's begin-document hook code, run re-locke
 `\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link). Perl patch prepared
 (`bruce_qa/patches/qa58.patch`: OmniBus's guesses definable for `isDefinableLaTeX`). Guard
 `perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
+
+### 1045. A box's width that its element cannot hold rides as the CSS custom property `--ltx-box-width` (Perl: dropped)
+
+A sectioning unit set inside a minipage or a `\parbox` floats out as a real section carrying the box's class (#250),
+and a framed box holding one becomes an `inline-sectional-block`; neither element admits `width`
+(`Sectional.attributes`, LaTeXML-structure.rnc), so the box's width was lost. **Perl** wraps the unit in a
+`<sectional-block class="ltx_minipage">`, which drops it too (TeX_Box.pool.ltxml `insertBlock`).
+
+**Rust** (QAB57; BM Q2.4 asked for the box's "attributes and classes"; DG 2026-11-14: through `cssstyle`, with a
+dedicated custom property so a stylesheet can override or disable it): `insert_block_as` (`carry_box_width`,
+block_insertion.rs) writes the width the element it became cannot hold as `--ltx-box-width:<w>` into its `cssstyle`,
+and LaTeXML.css applies it (`[style*="--ltx-box-width:"] { width: var(--ltx-box-width, auto) }`), as it does the
+`--ltx-*-color` properties; ar5iv-css mirrors the rule, capped at the column. One name for every box (minipage,
+`\parbox`), hence not `--ltx-minipage-width`. An element that admits `width` keeps the attribute: a plain minipage's
+`<inline-block width=…>` is unchanged (rendered as `style="width:…"`; moving it to the property is a corpus-wide
+markup change left to a ruling). Guard `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`.

@@ -712,6 +712,12 @@ cite                 { font-style: normal; }
   max-width:100%;
   height:auto; /* #2392: preserve the emitted aspect-ratio when the width is capped */
 }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css): the width of a box (a minipage, a \parbox) whose element
+   cannot carry a width attribute (a \section inside it) is its --ltx-box-width; a stylesheet overrides or disables it
+   by redefining this rule (e.g. width:auto), no !important needed. */
+[style*="--ltx-box-width:"] {
+  width: var(--ltx-box-width, auto);
+}
 /* arXiv/html_feedback#6895: \scalerel*{obj}{ref} scales obj to ref's (text) height.
    The scalerel binding wraps obj in .ltx_scalerel; size the box to the line height
    and let its child (an SVG/picture/rule) fill it, so a picture-based inline icon

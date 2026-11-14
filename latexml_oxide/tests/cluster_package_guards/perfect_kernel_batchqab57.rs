@@ -1,5 +1,5 @@
 //! Guards for batch QAB57 (three Bruce Q&A residuals): under OmniBus the document's definitions win over its guesses
-//! (QA58).
+//! (QA58); a section lifted out of a box keeps the box's width as `--ltx-box-width` (QA24).
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert_counted(tex: &str) -> (String, String) {
@@ -42,4 +42,29 @@ fn omnibus_guesses_yield_to_the_document() {
     assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
     assert_eq!(body(&xml), expected, "{xml}");
   }
+}
+
+/// A sectioning unit lifted out of a minipage or `\parbox` (OD #250), and a framed box's `inline-sectional-block`,
+/// carry the box's width as `--ltx-box-width` (BM Q2.4), which LaTeXML.css applies; a plain minipage keeps `width`.
+#[test]
+fn section_in_a_box_keeps_the_box_width() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/section_in_a_box_keeps_the_box_width.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for open in [
+    r#"<inline-block class="ltx_minipage" vattach="top" width="85.4pt" xml:id="p1.1.1">"#,
+    r#"<subsection class="ltx_minipage" cssstyle="--ltx-box-width:113.8pt" xml:id="S0.SSx1">"#,
+    r#"<section class="ltx_parbox" cssstyle="--ltx-box-width:142.3pt" inlist="toc" xml:id="S1">"#,
+    r#"<inline-sectional-block class="ltx_minipage" cssstyle="--ltx-box-width:170.7pt" framed="rectangle" xml:id="S1.p2.1.1">"#,
+    r#"<section inlist="toc" xml:id="S2">"#,
+  ] {
+    assert_eq!(xml.matches(open).count(), 1, "{open}\n{xml}");
+  }
+  assert_eq!(xml.matches("--ltx-box-width").count(), 3, "{xml}");
+  let css = include_str!("../../../latexml_post/resources/CSS/LaTeXML.css");
+  assert!(
+    css.contains("[style*=\"--ltx-box-width:\"] {\n  width: var(--ltx-box-width, auto);\n}"),
+    "LaTeXML.css applies --ltx-box-width"
+  );
 }
