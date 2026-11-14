@@ -36341,3 +36341,35 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
+
+### 1040. An mhchem formula is chemistry math: element atoms, isotope prescripts, counts, a charge on the formula (issue #824, stage 1)
+
+**Perl.** Ships no mhchem binding; the raw package hangs on `\ce`. **Rust (before).** The raw mhchem.sty (TL 2025 v4.10)
+ran through its text-mode branch: an element run was one `\text` (`MoO`, `SO` one `<mtext>`), the count and charge
+`\text` scripts on `\vphantom` bases, the charge's minus an en dash (`<mtext>2 – </mtext>`), the isotope in an
+`<mpadded>` from `\mathchoice`/`\llap`, and a formula of text alone left math (`ltx_markedasmath`). **Rust (now).**
+mhchem's own parser still reads `\ce`; its output hook `\__mhchem_output_begin_cf:` (empty, mhchem.sty:1424, run
+before the formula's `\ensuremath`) rewrites the formula's output list (`lx@mhchem@formula`, `mhchem_sty.rs`). Each
+`\__mhchem_output_coreFive:nnnnnnn` unit (mhchem.sty:2774) becomes, in mhchem's math-mode branch: its element run split
+at its capitals when it is letters only, each element an ordinary atom (`\mathord`, so the letter ligature does not
+merge `Mo` and `O`; Base_XMath.pool.ltxml:443); the isotope's mass and atomic number prescripts (`{}^{95}_{42}`) on
+its first element; the count a subscript and an oxidation state a superscript of its last; the formula's brackets
+(`\__mhchem_output_withFont:n {(}`) math fences. A charge on the formula's last unit is a superscript of the whole
+formula (`\mathord{…}^{2-}`, minus U+2212) unless the formula is one element (`Li+`, `^{227}_{90}Th+`, `2Na+`); an
+amount (`\__mhchem_output_amount:n`, mhchem.sty:2769) is not part of the formula after it (`\ce{3SO4^{2-}}` is
+`3\,\mathord{SO_4}^{2-}`, `\ce{2e-}` is `2\,e^-`); an
+inner unit's charge is the unit's when the unit is several elements (`\ce{OH^-(H2O)}`, 2405.01836). A unit with no
+element (mhchem's count or state on an empty base) scripts the bracket or text it follows (`Fe(CN)6`,
+`\ce{\textit{LnPn}2}`, 2602.09975), after a unit the formula so far:
+`\ce{H2_{(g)}}` is `\mathord{H_2}_{(g)}` and `\ce{SO4^{2-}_{(aq)}}` `\mathord{\mathord{SO_4}^{2-}}_{(aq)}`, the state after
+the charge as pdflatex prints it (an empty `{}` base would leave a floating subscript the math grammar does not parse). A text-mode
+`\ce` sets the formula in the text font math was entered from (`savedfont`, Stomach.pm:518; mhchem.sty:2760 prints it
+in the text font), as nicefrac's `\nf@mathcopytextfont`; a math-mode `\ce` keeps `\mhchem@option@mathFont`. MathML:
+`<msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts/><mrow/><mn>95</mn></mmultiscripts><mo>⁢</mo><msub><mi
+mathvariant="normal">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup>` for `\ce{^{95}MoO4^{2-}}`.
+Arrows, `+` between species, bonds, states and amounts keep mhchem's output (stage 2, SYNC row MHCHEM), and the
+formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): −0.55 % on 2307.12991 (589 `\ce` in its sources),
+−0.04 % on 300 synthetic `\ce`, +0.13 % on 2405.01836 (167; with `--nomathparse` −0.08 %: the formulas'
+parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
+`package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
+`mhchem_formula_amount.tex`; witnesses issue 824, 2206.12015).

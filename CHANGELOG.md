@@ -72,6 +72,15 @@
     errors the issue reports no longer occur since batch 50's calc `\widthof` fix. Guards
     `perfect_kernel_batch50::calc_widthof_in_math_measures_own_box` and
     `rust_parse_additions_test`; `sampler_test` and `mathtools_test` now match Perl's goldens.
+  - **mhchem formulas are chemistry math** (issue 824, stage 1). `\ce{^{95}MoO4^{2-}}` was one
+    `<mtext>MoO</mtext>` with text scripts, an en dash for the minus and the isotope in an
+    `<mpadded>`. mhchem still parses `\ce`; its formula output hook now makes each element an
+    `<mi>` (`Mo`, `O`), the isotope and atomic number prescripts of the first element, the count a
+    subscript of the last, and a closing charge (minus U+2212) a superscript of the whole formula:
+    `<msup><mrow><mmultiscripts><mi>Mo</mi>…<mn>95</mn></mmultiscripts>…<msub><mi>O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup>`.
+    A text-mode `\ce` keeps its text font (bold in `\textbf`). Arrows, `+`, bonds, states and
+    amounts are unchanged. Guard `mhchem_formula::mhchem_formula_units_are_chemistry`
+    (OXIDIZED_DESIGN_DIVERGENCES #1040).
   - **amsmath's arrow fills keep their heads** (issue 824's sibling). `\arrowfill@` and
     `\ext@arrow`'s fill were a plain `\to`, so mhchem's `\ce{A <=> B}` read "→→" and every
     chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws

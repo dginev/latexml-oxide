@@ -1,0 +1,17 @@
+% witness: synthetic (revMHCHEM1 probe f.tex; `Cu^{2+} + 2e-` in 4 of 279 sampled mhchem papers)
+% oracle:  pdflatex 0 errors: 2 e-; 2 Na+; 3 SO4 2-; the amount before the species, the charge on the species
+% engines: rust dc27284332e = 0 errors, the amount inside the charged formula: `\mathord{\text{2}\,\mathord{e}}^{-}`,
+%          msup(mrow(2 e), -) reading (2e)-; Perl hangs on raw mhchem (no oracle)
+% expect:  the amount stays before the formula; a one-element species keeps its own charge (`e^-`, `Na^+`), a formula of
+%          several elements the charge on the whole (`\mathord{SO_4}^{2-}`)
+% status:  RED (dc27284332e) -> GREEN (MHCHEM1b, OXIDIZED_DESIGN_DIVERGENCES #1040)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\ce{2e-}
+
+\ce{2Na+}
+
+\ce{3SO4^{2-}}
+\end{document}

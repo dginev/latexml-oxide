@@ -48,9 +48,11 @@ T8:\ifx\d\e yes\else no\fi
 /// \lx@end@inline@math Attempt to end mode math` (Perl 0). Witness: TL doc
 /// corpus mhchem/mhchem (67 → 13; the rest is the SHARED `\ce` in `align*`
 /// R3c family). Issue 824 (arXiv 2611.12926): the isotope prescript wraps the
-/// post-scripted formula, `^ [95] ([MoO] _ [4]) ^ [2 – ]` as Perl's `preScripted`
-/// (MathGrammar:430-439); RED: the 4 a pre-subscript, `_ [4] ^ [95] [MoO] ^ [2 – ]`. `{HS}`: the
-/// charge's hair space (U+200A).
+/// post-scripted formula as Perl's `preScripted` (MathGrammar:430-439); RED: the 4 a
+/// pre-subscript, `_ [4] ^ [95] [MoO] ^ [2 – ]`. Since mhchem's formula hook (OXIDIZED_DESIGN_DIVERGENCES
+/// #1040) the prescript sits on the element `Mo` and the charge on the formula; mhchem's
+/// `\mhchem@minispace` no longer runs, so the `$…\widthof{$b$}…$` line alone guards calc. The
+/// charge's `limit-from` reading is RED (repro package-bindings/mhchem_charge_meaning_red).
 #[test]
 fn calc_widthof_in_math_measures_own_box() {
   let (stderr, xml) = convert(
@@ -71,25 +73,32 @@ X $a\setlength{\mylen}{\widthof{$b$}}c$ Y
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(stderr.matches("Warning:").count(), 0, "{stderr}");
   assert!(!stderr.contains("lx@end@inline@math"), "{stderr}");
-  let moo4 = r#"<Math mode="inline" tex="\hphantom{{}^{\text{95}}_{\text{}}}{\vphantom{\text{X}}}{}^{\mathchoice{\hbox to0.0pt{\hss$\displaystyle\vphantom{\smash[t]{\text{2}}}\text{95}$}}{\hbox to0.0pt{\hss$\textstyle\vphantom{\smash[t]{\text{2}}}\text{95}$}}{\hbox to0.0pt{\hss$\scriptstyle\vphantom{\smash[t]{\text{2}}}\text{95}$}}{\hbox to0.0pt{\hss$\scriptscriptstyle\vphantom{\smash[t]{\text{2}}}\text{95}$}}}\kern 0.0pt\text{MoO}{\vphantom{\text{X}}}_{\smash[t]{\text{4}}}{\vphantom{\text{X}}}^{\text{2\hskip 0.90417pt--\hskip 0.90417pt}}" text="^ [95] ([MoO] _ [4]) ^ [2{HS}–{HS}]" xml:id="p3.m1">
+  let moo4 = r#"<Math mode="inline" tex="\mathord{{}^{\mathrm{95}}\mathord{\mathrm{Mo}}\mathord{\mathrm{O}}_{\mathrm{4}}}^{\mathrm{2-}}" text="(^ 95 Mo * O _ 4) ^ (limit-from@(2, -))" xml:id="p3.m1">
         <XMath>
-          <XMApp lpadding="8.5pt">
-            <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
-            <XMApp>
-              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+          <XMApp>
+            <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+            <XMApp role="ID">
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                <XMText>MoO</XMText>
-                <XMText><text fontsize="70%">4</text></XMText>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="pre3"/>
+                <XMTok role="ID">Mo</XMTok>
+                <XMTok fontsize="70%" meaning="95" role="NUMBER">95</XMTok>
               </XMApp>
-              <XMText><text fontsize="70%">2{HS}–{HS}</text></XMText>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post3"/>
+                <XMTok role="ID">O</XMTok>
+                <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+              </XMApp>
             </XMApp>
-            <XMText class="ltx_markedasmath" width="0.0pt"><text fontsize="49%">95</text></XMText>
+            <XMApp>
+              <XMTok meaning="limit-from"/>
+              <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+            </XMApp>
           </XMApp>
         </XMath>
-      </Math>"#
-    .replace("{HS}", "\u{200a}");
-  assert!(xml.contains(&moo4), "{xml}");
+      </Math>"#;
+  assert!(xml.contains(moo4), "{xml}");
   // Prescript stays inside ONE well-formed inline Math.
   assert!(
     xml.contains(r#"<XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>"#),
