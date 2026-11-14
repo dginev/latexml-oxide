@@ -35,6 +35,10 @@ DefConstructor("\\term{}", "<ltx:text class=\"term\">#1</ltx:text>");
 - **Option hashes are maps:** Perl's `DefMath('\sum', "∑", role => 'SUMOP')` is
   `DefMath("\\sum", "∑", #{ role: "SUMOP" })`. A key Perl does not accept is an `Error:misdefined`.
 - **Scopes** are strings, as Perl's: `AssignValue("k", v, "global")`; no scope means local.
+- **The I-forms** take the control sequence apart from its parameters, as Perl's: `DefMacroI`, `DefPrimitiveI` and
+  `DefConstructorI` take a `Token` or a name (`"\\csname x y\\endcsname"`, or one character for an active one), a
+  parameter spec (`"{}[]"`) or `()`, the body or `()`, then the option map:
+  `DefMacroI(T_CS("\\foo"), "{}", |gullet, x| Tokens(x, x))`.
 
 ## Values
 
@@ -46,7 +50,10 @@ DefConstructor("\\term{}", "<ltx:text class=\"term\">#1</ltx:text>");
 | string, int, bool, array, map | Perl's scalars, lists and hashes | Rhai literals |
 | `()` | `undef` | a missing value: an absent optional argument, an unset `LookupValue` |
 
-`T_CS` and every `T_*` return one `Token`; `Tokens` only where Perl builds a list. `ToString(v)` is Perl's
+`T_CS` and every `T_*` return one `Token`; `Tokens` only where Perl builds a list. Perl's accessors are methods: `tokens.unlist()` (an array of
+`Token`s), `token.getCatcode()`, `token.getString()`, `token.getCSName()`. `Box("text")` and `List([box, box])` build
+boxes for a primitive to return, `box.getFont()` and a hook's `whatsit.getFont()` read a `Font`; `IfCondition("\\iffoo")`
+is a conditional's truth. `ToString(v)` is Perl's
 `ToString`: the TeX source of Tokens, the text of a value (`"3.0pt"`). The value handles carry Perl's methods and
 arithmetic (`d * 2`, `g.add(Glue("1pt"))`, `d > Dimension("5pt")`); `LookupRegister("\\parskip")` returns one. Glue
 arithmetic is TeX's `\advance` (the higher fill order wins), where Perl's Glue.pm differs

@@ -68,6 +68,104 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // Perl's I-forms (Package.pm:1157, :1291, :1453): a CS (a Token, or a string `coerceCS` reads) and a parameter-spec
+  // string or `()`, no prototype parsing; each lowers to the core call its prototype form makes.
+  engine.register_fn(
+    "DefMacroI",
+    |cs: Dynamic, params: Dynamic, body: Dynamic| -> RhaiResult<()> {
+      let cs = coerce_cs("DefMacroI", cs)?;
+      wire_now(|e, a| {
+        wire_macro_i(
+          e,
+          a,
+          cs,
+          i_form_params("DefMacroI", &cs, params)?,
+          body,
+          None,
+        )
+      })
+    },
+  );
+  engine.register_fn(
+    "DefMacroI",
+    |cs: Dynamic, params: Dynamic, body: Dynamic, opts: Map| -> RhaiResult<()> {
+      let cs = coerce_cs("DefMacroI", cs)?;
+      wire_now(|e, a| {
+        wire_macro_i(
+          e,
+          a,
+          cs,
+          i_form_params("DefMacroI", &cs, params)?,
+          body,
+          Some(opts),
+        )
+      })
+    },
+  );
+  let primitive_i = |cs: Dynamic, params: Dynamic, body: Dynamic, opts: Map| -> RhaiResult<()> {
+    let cs = coerce_cs("DefPrimitiveI", cs)?;
+    let body = match body.clone().try_cast::<FnPtr>() {
+      Some(fp) => Some(fp),
+      None if body.is_unit() => None,
+      None => {
+        return Err(
+          format!(
+            "DefPrimitiveI: the replacement is a closure or (), got {}",
+            type_label(&body)
+          )
+          .into(),
+        );
+      },
+    };
+    wire_now(|e, a| {
+      let options = primitive_options_from_map(&cs.to_string(), opts, e, a)?;
+      wire_primitive_i(
+        e,
+        a,
+        cs,
+        i_form_params("DefPrimitiveI", &cs, params)?,
+        body,
+        options,
+      )
+    })
+  };
+  engine.register_fn(
+    "DefPrimitiveI",
+    move |cs: Dynamic, params: Dynamic, body: Dynamic| primitive_i(cs, params, body, Map::new()),
+  );
+  engine.register_fn("DefPrimitiveI", primitive_i);
+  let constructor_i = |cs: Dynamic, params: Dynamic, repl: Dynamic, opts: Map| -> RhaiResult<()> {
+    let cs = coerce_cs("DefConstructorI", cs)?;
+    wire_now(|e, a| {
+      wire_constructor_i(
+        e,
+        a,
+        cs,
+        i_form_params("DefConstructorI", &cs, params)?,
+        repl,
+        opts,
+      )
+    })
+  };
+  engine.register_fn(
+    "DefConstructorI",
+    move |cs: Dynamic, params: Dynamic, repl: Dynamic| constructor_i(cs, params, repl, Map::new()),
+  );
+  engine.register_fn("DefConstructorI", constructor_i);
+  // Perl's `IfCondition($if, @args)` (Package.pm:1238): the conditional's truth on the given arguments (an array, Rhai
+  // having no variadics), never reading the input; `()` (with its Error) when not one.
+  let if_condition = |cs: Dynamic, args: rhai::Array| -> RhaiResult<Dynamic> {
+    let cs = coerce_cs("IfCondition", cs)?;
+    Ok(
+      latexml_core::binding::content::if_condition_args(&cs, values::parameter_args(args))
+        .map_err(rhai_err)?
+        .map_or(Dynamic::UNIT, Dynamic::from),
+    )
+  };
+  engine.register_fn("IfCondition", move |cs: Dynamic| {
+    if_condition(cs, rhai::Array::new())
+  });
+  engine.register_fn("IfCondition", if_condition);
   // Class/package option. Mirrors the `DeclareOption!` macro's lowering
   // (setup_binding_language.rs): push the name onto `@declaredoptions` and
   // define a `\ds@<opt>` primitive carrying the body. Installed immediately,
@@ -155,6 +253,21 @@ pub(super) fn make_engine() -> Engine {
   // A token value in a string context (`"(" + ReadArg() + ")"`, `${…}`) is its TeX source, as `UnTeX` gives it.
   engine.register_fn("to_string", |t: &mut Token| Tokens::new(vec![*t]).untex());
   engine.register_fn("to_string", |t: &mut Tokens| t.clone().untex());
+  // In an array (Rhai's display takes each element's `to_debug`), as `to_string`.
+  engine.register_fn("to_debug", |t: &mut Token| Tokens::new(vec![*t]).untex());
+  engine.register_fn("to_debug", |t: &mut Tokens| t.clone().untex());
+  // Token.pm's and Tokens.pm's accessors: `unlist` the list's tokens (a Token's is itself), `getString` the text,
+  // `getCSName` the name a definition is stored under (a `{` of any spelling is `Begin`, Token.pm:206 and :227),
+  // `getCatcode` the catcode's int.
+  engine.register_fn("unlist", |t: &mut Tokens| -> rhai::Array {
+    t.clone().unlist().into_iter().map(Dynamic::from).collect()
+  });
+  engine.register_fn("unlist", |t: &mut Token| -> rhai::Array {
+    vec![Dynamic::from(*t)]
+  });
+  engine.register_fn("getString", |t: &mut Token| t.with_str(str::to_string));
+  engine.register_fn("getCSName", |t: &mut Token| t.with_cs_name(str::to_string));
+  engine.register_fn("getCatcode", |t: &mut Token| t.get_catcode() as i64);
   engine.register_fn("T_CS", |name: &str| -> Token { latexml_core::T_CS!(name) });
   engine.register_fn("T_LETTER", |c: &str| -> Token {
     Token::new(c, Catcode::LETTER)
@@ -448,17 +561,13 @@ pub(super) fn make_engine() -> Engine {
   );
   // A token argument is a string naming a control sequence, or a `Token` as is (Perl `Let`, Package.pm:383-390;
   // `IsDefined`, :330-336), through the core calls the `Let!`/`XEquals!`/`IsDefined!` macros make (#796).
-  engine.register_fn(
-    "LookupMeaning",
-    |cs: Dynamic| -> std::result::Result<String, Box<EvalAltResult>> {
-      Ok(
-        match latexml_core::state::lookup_meaning(&token_arg("LookupMeaning", cs)?) {
-          Some(m) => m.to_string(),
-          None => String::new(),
-        },
-      )
-    },
-  );
+  // Perl's `LookupMeaning` (State.pm:370): the definition (a `Definition` handle) or the Token, `()` when undefined.
+  engine.register_fn("LookupMeaning", |cs: Dynamic| -> RhaiResult<Dynamic> {
+    Ok(
+      latexml_core::state::lookup_meaning(&token_arg("LookupMeaning", cs)?)
+        .map_or(Dynamic::UNIT, stored_to_dynamic),
+    )
+  });
   engine.register_fn(
     "Let",
     |a: Dynamic, b: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
@@ -654,6 +763,7 @@ pub(super) fn make_engine() -> Engine {
   register_string_tests::<Tokens>(&mut engine, "value == string");
   register_string_tests::<Token>(&mut engine, "value == string");
   register_string_tests::<Digested>(&mut engine, "value == string");
+  register_string_tests::<DefinitionProxy>(&mut engine, "value == string");
   // `()` against a string either way round reads as "", as Perl's `undef eq ''` (which Warns `uninitialized`).
   let unit_test = |s: &str| {
     warn_deprecated("() == string");
@@ -663,10 +773,51 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("!=", move |_: (), s: &str| !unit_test(s));
   engine.register_fn("==", move |s: &str, _: ()| unit_test(s));
   engine.register_fn("!=", move |s: &str, _: ()| !unit_test(s));
+  // LookupMeaning's value read as the string it was before (`.is_empty()`, `.len()`): its `ToString`, Warned (ruling 9).
+  register_string_length::<Token>(&mut engine);
+  register_string_length::<DefinitionProxy>(&mut engine);
+  register_string_length::<()>(&mut engine);
   // Perl's `defined($v)`: every value but `()`.
   engine.register_fn("defined", |v: Dynamic| !v.is_unit());
   engine.register_fn("ToString", |_w: WhatsitProxy| whatsit_string());
   engine.register_fn("ToAttribute", |d: Digested| -> String { d.to_attribute() });
+  // Perl's `Box($string, $font, $locator, $tokens, %properties)` (Box.pm:29): a text box, in the current font when
+  // `font` is `()`, at the gullet's locator (a script has no locator: `()`), its tokens `T_OTHER($string)` when `()`.
+  engine.register_fn("Box", |s: &str| {
+    text_box(s, Dynamic::UNIT, Dynamic::UNIT, Map::new())
+  });
+  engine.register_fn("Box", |s: &str, font: Dynamic| {
+    text_box(s, font, Dynamic::UNIT, Map::new())
+  });
+  engine.register_fn(
+    "Box",
+    |s: &str, font: Dynamic, _loc: (), tokens: Dynamic| text_box(s, font, tokens, Map::new()),
+  );
+  engine.register_fn(
+    "Box",
+    |s: &str, font: Dynamic, _loc: (), tokens: Dynamic, props: Map| {
+      text_box(s, font, tokens, props)
+    },
+  );
+  // Perl's `List(@boxes, mode => $mode)` (List.pm:31): one box (of the asked mode) is itself, else a List in the mode.
+  engine.register_fn("List", |boxes: rhai::Array| list_of(boxes, None));
+  engine.register_fn(
+    "List",
+    |boxes: rhai::Array, opts: Map| -> RhaiResult<Digested> {
+      let mode = match opts.get("mode") {
+        Some(m) if opts.len() == 1 => m.to_string(),
+        _ => return Err("List: the one option is mode".into()),
+      };
+      list_of(boxes, Some(mode))
+    },
+  );
+  // Perl's `$box->getFont` (Box.pm, Whatsit.pm): a `Font` handle, `()` for a box without one.
+  engine.register_fn("getFont", |d: &mut Digested| -> RhaiResult<Dynamic> {
+    Ok(font_handle(d.get_font().map_err(rhai_err)?))
+  });
+  engine.register_fn("getFont", |_w: &mut WhatsitProxy| -> RhaiResult<Dynamic> {
+    with_whatsit(|w| w.get_font().map(font_handle).map_err(rhai_err))?
+  });
   engine.register_fn(
     "Revert",
     |d: Digested| -> std::result::Result<Tokens, Box<EvalAltResult>> {
@@ -1940,6 +2091,7 @@ pub(super) fn make_engine() -> Engine {
   engine.register_type_with_name::<Digested>("Digested");
   // A box in a string context is its `ToString` (Perl's), as `absorbString` reads it.
   engine.register_fn("to_string", |d: &mut Digested| d.to_string());
+  engine.register_fn("to_debug", |d: &mut Digested| d.to_string());
 
   // Perl's `openElement($qname, %attributes)` returns the new node, `closeElement`/`maybeCloseElement` the node
   // closed or undef (Document.pm:787-866; #716 §2).
@@ -2395,7 +2547,7 @@ pub(super) fn make_engine() -> Engine {
     |_d: &mut DocProxy, nodes: rhai::Array| -> std::result::Result<(), Box<EvalAltResult>> {
       let mut owned = Vec::with_capacity(nodes.len());
       for (i, entry) in nodes.into_iter().enumerate() {
-        let kind = entry.type_name();
+        let kind = type_label(&entry);
         owned.push(entry.try_cast::<NodeProxy>().ok_or_else(|| {
           Box::<EvalAltResult>::from(format!(
             "insertXML: entry {i} of the array is a {kind}, not a Node (from ParseXML)"
@@ -2622,6 +2774,9 @@ pub(super) fn make_engine() -> Engine {
   // before/after lists. Returns `()` for an undefined CS (Perl undef). Each
   // `push*` appends (Perl `push`), each `unshift*` prepends (Perl `unshift`).
   engine.register_type_with_name::<DefinitionProxy>("Definition");
+  // In a string, Perl's `ToString($definition)`: the CS and its parameters.
+  engine.register_fn("to_string", |d: &mut DefinitionProxy| definition_string(d));
+  engine.register_fn("to_debug", |d: &mut DefinitionProxy| definition_string(d));
   // `()` also for a token `\let` to a character, as `LookupDefinition!` and Perl `lookupDefinition` (State.pm:399-416).
   engine.register_fn(
     "LookupDefinition",
@@ -2674,7 +2829,7 @@ fn tokens_of(items: rhai::Array) -> std::result::Result<Tokens, Box<EvalAltResul
       return Err(
         format!(
           "Tokens: expected a Token or Tokens, got {}",
-          item.type_name()
+          type_label(&item)
         )
         .into(),
       );
@@ -2684,6 +2839,87 @@ fn tokens_of(items: rhai::Array) -> std::result::Result<Tokens, Box<EvalAltResul
 }
 
 /// The char of a 1-char string argument (Perl passes the char itself).
+fn font_handle(font: Option<Rc<latexml_core::common::font::Font>>) -> Dynamic {
+  font.map_or(Dynamic::UNIT, |f| Dynamic::from((*f).clone()))
+}
+
+fn text_box(s: &str, font: Dynamic, tokens: Dynamic, props: Map) -> RhaiResult<Digested> {
+  let font = match font.clone().try_cast::<latexml_core::common::font::Font>() {
+    Some(f) => Some(Rc::new(f)),
+    None if font.is_unit() => None,
+    None => return Err(format!("Box: the font is a Font or (), got {}", type_label(&font)).into()),
+  };
+  let tokens = if tokens.is_unit() {
+    Tokens::default()
+  } else {
+    dynamic_to_tokens(tokens)
+  };
+  let mut properties = SymHashMap::default();
+  for (k, v) in props {
+    properties.insert(k.as_str(), dynamic_to_stored(v));
+  }
+  Ok(Digested::from(latexml_core::tbox::Tbox::new(
+    arena::pin(s),
+    font,
+    None,
+    tokens,
+    properties,
+  )))
+}
+
+fn list_of(boxes: rhai::Array, reqmode: Option<String>) -> RhaiResult<Digested> {
+  let mut items = Vec::with_capacity(boxes.len());
+  for b in boxes.into_iter().filter(|b| !b.is_unit()) {
+    match b.clone().try_cast::<Digested>() {
+      Some(d) => items.push(d),
+      None => return Err(format!("List: expected boxes, got {}", type_label(&b)).into()),
+    }
+  }
+  if items.len() == 1
+    && reqmode.as_ref().is_none_or(|m| {
+      items[0]
+        .get_property("mode")
+        .is_some_and(|p| p.to_string() == *m)
+    })
+  {
+    return Ok(items.remove(0));
+  }
+  let mode = reqmode.unwrap_or_else(|| latexml_core::state::lookup_string("MODE"));
+  if mode == "horizontal" {
+    items = items
+      .into_iter()
+      .flat_map(|d| match d.data() {
+        latexml_core::digested::DigestedData::List(l)
+          if d
+            .get_property("mode")
+            .is_some_and(|p| p.to_string() == "horizontal") =>
+        {
+          l.borrow().boxes.clone()
+        },
+        _ => vec![d],
+      })
+      .collect();
+  }
+  let mut list = latexml_core::list::List::new(items);
+  list.mode = Some(if mode.ends_with("math") {
+    latexml_core::TexMode::Math
+  } else {
+    latexml_core::TexMode::Text
+  });
+  list
+    .properties
+    .insert("mode", Stored::String(arena::pin(&mode)));
+  if !list.boxes.is_empty()
+    && mode.ends_with("vertical")
+    && let Some(baseline) = latexml_core::state::lookup_dimension("\\baselineskip")
+  {
+    list
+      .properties
+      .insert("baseline", Stored::Dimension(baseline));
+  }
+  Ok(Digested::from(list))
+}
+
 fn char_of(c: &str) -> Option<char> { c.chars().next() }
 
 /// A char-code table's entry as a Rhai int, or `()` for an entry the table does not hold (Perl undef).
@@ -3233,4 +3469,24 @@ pub(super) fn register_string_tests<T: Clone + 'static>(engine: &mut Engine, old
   engine.register_fn("!=", move |v: T, s: &str| !same(v, s));
   engine.register_fn("==", move |s: &str, v: T| same(v, s));
   engine.register_fn("!=", move |s: &str, v: T| !same(v, s));
+}
+
+/// `is_empty` and `len` of a value as its string (`ToString`, `()` as ""), each deprecated once per binding load.
+fn register_string_length<T: Clone + 'static>(engine: &mut Engine) {
+  let string = |v: &mut T| {
+    let v = Dynamic::from(v.clone());
+    if v.is_unit() {
+      String::new()
+    } else {
+      dynamic_to_string(v)
+    }
+  };
+  engine.register_fn("is_empty", move |v: &mut T| {
+    warn_deprecated("value.is_empty()");
+    string(v).is_empty()
+  });
+  engine.register_fn("len", move |v: &mut T| {
+    warn_deprecated("value.len()");
+    string(v).chars().count() as i64
+  });
 }

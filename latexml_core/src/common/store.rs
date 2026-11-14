@@ -1035,6 +1035,9 @@ impl From<&Stored> for String {
   fn from(value: &Stored) -> String {
     match value {
       Stored::String(v) => arena::to_string(*v),
+      // A token list reads as its text (Perl's `ToString`), not its Debug form (repro rhai-bindings/lookupstring_of_tokens).
+      Stored::Tokens(t) => t.to_string(),
+      Stored::Token(t) => t.to_string(),
       v => s!("{v:?}"),
     }
   }

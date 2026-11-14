@@ -15,7 +15,7 @@ use crate::{
     font::{self, Font, Fontmap},
     model,
   },
-  definition::{Definition, ExpansionBody, expandable::ExpandableOptions},
+  definition::{Definition, ExpansionBody, argument::ArgWrap, expandable::ExpandableOptions},
   document::{
     resource::*,
     tag::{TagOptionName, TagOptions},
@@ -6002,18 +6002,18 @@ pub fn digest_in_group_if(token: Token) -> Result<Option<Digested>> {
 }
 
 /// Test a conditional `\ifXXX` and return its boolean result (Perl: IfCondition).
-/// Looks up the conditional's test closure and invokes it.
 pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {
+  if_condition_args(if_token, Vec::new())
+}
+
+/// Perl's `IfCondition($if, @args)` (Package.pm:1238): the test runs on the caller's arguments, never reading the
+/// input; an argument not given is Perl's undef.
+pub fn if_condition_args(if_token: &Token, args: Vec<ArgWrap>) -> Result<Option<bool>> {
   use crate::definition::conditional::ConditionalType;
   if let Some(defn) = lookup_definition(if_token)?
     && defn.get_conditional_type() == Some(ConditionalType::If)
     && let Some(test) = defn.get_test()
   {
-    // Read arguments for the conditional test
-    let args = match defn.get_parameters() {
-      Some(params) => params.read_arguments(Some(defn.as_ref()))?,
-      None => Vec::new(),
-    };
     return Ok(Some(test(args)?));
   }
   if x_equals(if_token, &T_CS!("\\iftrue")) {
@@ -6025,15 +6025,17 @@ pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {
   Error!(
     "expected",
     "conditional",
-    s!("Expected a conditional, got '{}'", if_token.stringify())
+    s!("Expected a conditional, got '{}'", if_token) // Perl's ToString($if), Package.pm:1251
   );
   Ok(None)
 }
 
-/// Set the boolean value of a `\newif`-type conditional (Perl: SetCondition).
+/// Set the boolean value of a `\newif`-type conditional (Perl: SetCondition, Package.pm:1256).
 /// This is only for simple conditionals taking no arguments.
 pub fn set_condition(if_token: &Token, value: bool, scope: Option<Scope>) {
+  use crate::definition::conditional::ConditionalType;
   if let Ok(Some(defn)) = lookup_definition(if_token)
+    && defn.get_conditional_type() == Some(ConditionalType::If)
     && defn.get_parameters().is_none()
   {
     let target = if value {
@@ -6046,11 +6048,8 @@ pub fn set_condition(if_token: &Token, value: bool, scope: Option<Scope>) {
   }
   emit_error(
     "expected",
-    "newif",
-    &format!(
-      "Expected a conditional defined by \\newif, got '{}'",
-      if_token.stringify()
-    ),
+    "conditional",
+    &format!("Expected a conditional defined by \\newif, got '{if_token}'"),
   );
 }
 

@@ -249,6 +249,33 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
+  - **The Rhai API reference's tables keep their columns.** A description quoting a closure (`|gullet, x|`) split its
+    `API.md` row into extra cells on GitHub; the generator escapes `|` in descriptions too. Guard
+    `script_bindings::tests::api_tables_keep_their_columns`.
+
+  - **Rhai values print as their TeX** (Rhai round H). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
+    and `LookupMeaning!` — a `Definition` handle (which `AssignMeaning` installs) or a Token, `()` when undefined —
+    where it returned the printed string `Stored[??]`; a string comparison keeps working this release with a
+    deprecation Warning. `ToString` of a `Definition` is Perl's (the CS and its parameters, was `DefinitionProxy`),
+    `ToString` of an array, and an array in a string, print each Token, Tokens, box and value handle as its TeX (were
+    Rust type paths, with math Errors), and `LookupString` (the core `lookup_string` behind `LookupString!`) of a
+    stored Token or Tokens is its text (was the Rust Debug form). Guard
+    `perfect_kernel_batchw3rg::rhai_values_print_as_perl`; repros `rhai-bindings/lookupmeaning_is_a_string`,
+    `tostring_array_of_handles`, `lookupstring_of_tokens` turn green.
+
+  - **The Perl binding names Rhai lacked** (Rhai round H, AUDNAME). `DefMacroI`, `DefPrimitiveI` and
+    `DefConstructorI` take Perl's I-form arguments (a `Token` or a name read as `coerceCS`, a parameter spec or `()`,
+    each body kind, the option map) and lower to the core calls their prototype forms make; `IfCondition`, `Box`,
+    `List`, `tokens.unlist`, `token.getCatcode`/`getString`/`getCSName` and `box.getFont`/`whatsit.getFont` are
+    registered. `IfCondition` of a non-conditional reads its Error as Perl's (`got '\relax'`, was `T_CS[\relax]`).
+    Guard `perfect_kernel_batchw3rg::rhai_perl_i_forms_and_accessors`. `IfCondition(cs, [args…])` tests a
+    conditional on the given arguments, as Perl's `IfCondition($if, @args)`, and never reads the input (the core
+    `if_condition` read an argument-taking conditional's arguments from the document); an argument not given is
+    Perl's undef. The I-forms' `coerceCS` takes Tokens as their text, and `\csname X\endcsname` needs Perl's space
+    after `\csname`. `SetCondition` of a control sequence that is no conditional errs as Perl's (it `\let` a
+    parameterless primitive such as `\relax` to `\iftrue`). `LookupMeaning`'s value keeps `.is_empty()`/`.len()` of
+    the string it was one release, Warned. Guard `perfect_kernel_batchw3rg::rhai_review_rows_round_h`.
+
   - **A Rhai name that is a Perl API name behaves as Perl's** (PR #829 round G). A `DefPrimitive`
     body's returned box, or array of boxes, is the primitive's output, as a Perl primitive's
     (`|| Digest(T_LETTER("A"))` printed nothing before); another returned value is dropped with a

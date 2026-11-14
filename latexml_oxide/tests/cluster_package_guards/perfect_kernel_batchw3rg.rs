@@ -153,3 +153,154 @@ fn rhai_perl_names_review_rows() {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
   }
 }
+
+/// W3RH part 1 (AUDNAME "Perl API binding authors use that Rhai lacks"): the I-forms (`coerceCS` names, a Token, a
+/// `\csname` name, an active character; a parameter spec or `()`; each body kind), `IfCondition`, `Box`, `List`,
+/// `unlist`, `getCatcode`, `getString`, `getCSName`, `whatsit.getFont`. Each row was Function not found on 17a64c0415a;
+/// Perl's `.ltxml` twin gives these paragraphs and the one Error (`IfCondition('\relax')`).
+const LXI: &str = r#"DefMacroI("\\mA", (), "MA");
+DefMacroI(T_CS("\\mB"), "{}", |gullet, x| Tokens(x, x));
+DefMacroI("\\mC", "[]{}", Tokens(T_LETTER("c")), #{locked: false});
+DefMacroI("\\csname m D\\endcsname", (), "MD");
+DefMacroI("~", (), "TILDE");
+DefPrimitiveI("\\pA", "{}", |stomach, x| Box("P" + ToString(x)));
+DefPrimitiveI("\\pB", (), ());
+DefPrimitiveI("\\pL", (), |stomach| List([Box("x"), Box("y")]));
+DefConstructorI("\\cA", "{}", "<ltx:text class='ca'>#1</ltx:text>");
+DefConstructorI(T_CS("\\cB"), (), |document| { document.absorbString("CB"); });
+DefConstructorI("\\cC", "{}", "<ltx:text class='cc'>#1</ltx:text>", #{
+  afterDigest: |whatsit| { AssignValue("lx:shape", whatsit.getFont().getShape(), "global"); }
+});
+DefMacro("\\rows", || {
+  let r = [];
+  r.push(Tokenize("ab\\c").unlist().len());
+  r.push(T_LETTER("a").getCatcode());
+  r.push(if T_CS("\\foo").getString() == "\\foo" { "S" } else { "N" });
+  r.push(T_BEGIN().getCSName());
+  r.push(if T_CS("\\foo").getCSName() == "\\foo" { "C" } else { "N" });
+  r.push(if IfCondition("\\iffoo") { "T" } else { "F" });
+  r.push(if IfCondition(T_CS("\\iftrue")) { "T" } else { "F" });
+  r.push(if defined(IfCondition("\\relax")) { "D" } else { "U" });
+  r.push(LookupValue("lx:shape"));
+  r.reduce(|s, v| if s == "" { `${v}` } else { s + " " + v }, "")
+});
+"#;
+
+const LXI_TEX: &str = r"\documentclass{article}
+\usepackage{lxi}
+\newif\iffoo\footrue
+\begin{document}
+A~B \mA \mB{b} \mC[o]{z} \csname m D\endcsname
+
+\pA{q} \pB \pL \cA{a} \cB \textit{\cC{s}}
+
+\rows
+\end{document}
+";
+
+#[test]
+fn rhai_perl_i_forms_and_accessors() {
+  let (log, xml) = convert_files_with(LXI_TEX, &[("lxi.sty.rhai", LXI)], None);
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert!(
+    log.contains("Error:expected:conditional Expected a conditional, got '\\relax'"),
+    "{log}"
+  );
+  for (id, para) in [
+    ("p1", r#"<para xml:id="p1"><p>ATILDEB MAbb c MD</p></para>"#),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>Pqxy<text class="ca">a</text>CB<text class="cc" font="italic">s</text></p></para>"#,
+    ),
+    (
+      "p3",
+      r#"<para xml:id="p3"><p>3 11 S Begin C T T U italic</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+}
+
+/// W3RH part 2, the REDs `rhai-bindings/lookupmeaning_is_a_string`, `tostring_array_of_handles` and
+/// `lookupstring_of_tokens` (red on 17a64c0415a: `N`, Rust type paths with 3 Errors, `Stored::Tokens[…]`).
+/// `LookupMeaning` is the definition or Token (`()` undefined, `== ""` Warned, ruling 9); a `Definition` prints as
+/// Perl's `ToString` (`\foo []` here, as Perl; `\` as `!` to keep the row literal); an array prints each handle as TeX.
+const LXV: &str = r#"fn bang(s) { s.replace("\\", "!"); s }
+DefMacro("\\foo{}[]", "F");
+DefPrimitive("\\lxlm", || AssignMeaning(T_CS("\\lxr"), LookupMeaning("\\relax")));
+DefPrimitive("\\keep{}", |stomach, v| { AssignValue("lx:k", v, "global"); AssignValue("lx:t", T_LETTER("t"), "global"); });
+DefMacro("\\rows", || {
+  let r = [];
+  r.push(bang(ToString(LookupDefinition("\\foo"))));
+  r.push(bang(ToString(LookupMeaning("\\foo"))));
+  r.push(if defined(LookupMeaning("\\nosuch")) { "D" } else { "U" });
+  r.push(ToString(LookupMeaning(T_LETTER("q"))));
+  r.push(type_of(LookupMeaning("\\foo")));
+  r.push(if LookupMeaning("\\nosuch") == "" { "E" } else { "N" });
+  r.push(LookupString("lx:k") + LookupString("lx:t"));
+  r.push(ToString([Number(3), Dimension("1pt"), T_LETTER("a"), Tokenize("bc"), Glue("1pt plus 1fil")]));
+  r.push(`${[T_LETTER("z"), Dimension("2pt")]}`);
+  r.reduce(|s, v| if s == "" { `${v}` } else { s + " ; " + v }, "")
+});
+"#;
+
+const LXV_TEX: &str = r"\documentclass{article}
+\usepackage{lxv}
+\begin{document}
+\lxlm\ifx\lxr\relax R\else N\fi
+
+\keep{k}\rows
+\end{document}
+";
+
+#[test]
+fn rhai_values_print_as_perl() {
+  let (log, xml) = convert_files_with(LXV_TEX, &[("lxv.sty.rhai", LXV)], None);
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 1, "{log}");
+  assert!(log.contains("Warning:deprecated:() == string"), "{log}");
+  for (id, para) in [
+    ("p1", r#"<para xml:id="p1"><p>R</p></para>"#),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>!foo [] ; !foo [] ; U ; q ; Definition ; E ; kt ; [3, 1.0pt, a, bc, 1.0pt plus 1.0fil] ; [z, 2.0pt]</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+}
+
+/// revRHAIH's rows (repro `rhai-bindings/ifcondition_args_and_coerce_cs`), red on 396ffa641ea (the binding load failed
+/// on `DefMacroI(Tokenize(…))`, 4 Errors, `IfCondition("\\ifx")` read the document). Perl's twin: these paragraphs and
+/// the two SetCondition Errors; ours adds ruling 9's two deprecation Warnings.
+const LXH: &str = include_str!("../../../tools/perfect_kernel/repros/rhai-bindings/lxh.sty.rhai");
+
+const LXH_TEX: &str = include_str!(
+  "../../../tools/perfect_kernel/repros/rhai-bindings/ifcondition_args_and_coerce_cs.tex"
+);
+
+#[test]
+fn rhai_review_rows_round_h() {
+  let (log, xml) = convert_files_with(LXH_TEX, &[("lxh.sty.rhai", LXH)], None);
+  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(warning_count(&log), 2, "{log}");
+  for line in [
+    "Error:expected:conditional Expected a conditional defined by \\newif, got '\\relax'",
+    "Error:expected:conditional Expected a conditional defined by \\newif, got '\\nosuch'",
+    "Warning:deprecated:value.is_empty()",
+    "Warning:deprecated:value.len()",
+  ] {
+    assert!(log.contains(line), "{line}\n{log}");
+  }
+  for (id, para) in [
+    ("p1", r#"<para xml:id="p1"><p>ME</p></para>"#),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>T T F T T F D U E 6 1</p></para>"#,
+    ),
+    ("p3", r#"<para xml:id="p3"><p>X</p></para>"#),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+}

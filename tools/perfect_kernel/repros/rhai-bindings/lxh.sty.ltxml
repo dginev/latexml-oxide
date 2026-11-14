@@ -1,0 +1,21 @@
+package LaTeXML::Package::Pool;
+use strict; use warnings; use LaTeXML::Package;
+DefMacroI(TokenizeInternal('\mE'), undef, 'ME');
+DefMacroI('\csnamemF\endcsname', undef, 'MF');
+DefConditional('\ifrh{}', sub { my ($g, $x) = @_; ToString($x) eq 'a'; });
+DefPrimitive('\sets', sub { SetCondition(T_CS('\relax'), 1); SetCondition(T_CS('\nosuch'), 1); return; });
+DefMacro('\rows', sub {
+  my @r;
+  push @r, (IfCondition('\ifx') ? 'T' : 'F');
+  push @r, (IfCondition('\ifx', T_CS('\relax'), T_CS('\relax')) ? 'T' : 'F');
+  push @r, (IfCondition('\ifx', T_CS('\relax'), T_LETTER('a')) ? 'T' : 'F');
+  push @r, (IfCondition('\ifnum', Number(1), T_OTHER('<'), Number(2)) ? 'T' : 'F');
+  push @r, (IfCondition('\ifrh', TokenizeInternal('a')) ? 'T' : 'F');
+  push @r, (IfCondition('\ifrh') ? 'T' : 'F');
+  push @r, (IsDefined('\csnamemF\endcsname') ? 'D' : 'U');
+  push @r, (IsDefined('\mF') ? 'D' : 'U');
+  push @r, (ToString(LookupMeaning(T_CS('\nosuch'))) eq '' ? 'E' : 'N');
+  push @r, length(ToString(LookupMeaning(T_CS('\relax'))));
+  push @r, length(ToString(LookupMeaning(T_LETTER('q'))));
+  Explode(join(' ', @r)); });
+1;
