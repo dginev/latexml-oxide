@@ -36342,7 +36342,7 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
 
-### 1039. An mhchem formula is chemistry math: element atoms, isotope prescripts, counts, a charge on the formula (issue #824, stage 1)
+### 1040. An mhchem formula is chemistry math: element atoms, isotope prescripts, counts, a charge on the formula (issue #824, stage 1)
 
 **Perl.** Ships no mhchem binding; the raw package hangs on `\ce`. **Rust (before).** The raw mhchem.sty (TL 2025 v4.10)
 ran through its text-mode branch: an element run was one `\text` (`MoO`, `SO` one `<mtext>`), the count and charge

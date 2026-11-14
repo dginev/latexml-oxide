@@ -35,7 +35,7 @@ const ROWS: &[Row] = &[
     "mhchem_arrows",
     include_str!("../../../tools/perfect_kernel/repros/arrowfill/mhchem_arrows.tex"),
     &["mhchem.sty"],
-    // The species `A`, `B` are formulas since mhchem's formula hook (OXIDIZED_DESIGN_DIVERGENCES #1039; were text).
+    // The species `A`, `B` are formulas since mhchem's formula hook (OXIDIZED_DESIGN_DIVERGENCES #1040; were text).
     &[
       "A",
       "[⇀↽]",

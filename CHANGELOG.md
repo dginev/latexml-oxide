@@ -80,7 +80,7 @@
     `<msup><mrow><mmultiscripts><mi>Mo</mi>…<mn>95</mn></mmultiscripts>…<msub><mi>O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup>`.
     A text-mode `\ce` keeps its text font (bold in `\textbf`). Arrows, `+`, bonds, states and
     amounts are unchanged. Guard `mhchem_formula::mhchem_formula_units_are_chemistry`
-    (OXIDIZED_DESIGN_DIVERGENCES #1039).
+    (OXIDIZED_DESIGN_DIVERGENCES #1040).
   - **amsmath's arrow fills keep their heads** (issue 824's sibling). `\arrowfill@` and
     `\ext@arrow`'s fill were a plain `\to`, so mhchem's `\ce{A <=> B}` read "→→" and every
     chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws

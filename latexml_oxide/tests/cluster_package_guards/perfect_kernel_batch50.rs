@@ -50,7 +50,7 @@ T8:\ifx\d\e yes\else no\fi
 /// R3c family). Issue 824 (arXiv 2611.12926): the isotope prescript wraps the
 /// post-scripted formula as Perl's `preScripted` (MathGrammar:430-439); RED: the 4 a
 /// pre-subscript, `_ [4] ^ [95] [MoO] ^ [2 – ]`. Since mhchem's formula hook (OXIDIZED_DESIGN_DIVERGENCES
-/// #1039) the prescript sits on the element `Mo` and the charge on the formula; mhchem's
+/// #1040) the prescript sits on the element `Mo` and the charge on the formula; mhchem's
 /// `\mhchem@minispace` no longer runs, so the `$…\widthof{$b$}…$` line alone guards calc. The
 /// charge's `limit-from` reading is RED (repro package-bindings/mhchem_charge_meaning_red).
 #[test]

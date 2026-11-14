@@ -14,7 +14,7 @@
 //!
 //! **2026-11-14 (issue 824): a formula's units are chemistry math.** mhchem's own parser
 //! still reads `\ce`; only its output layer's formula hook is bound
-//! (`semantic_formula`): elements, isotopes, counts and charges (OXIDIZED_DESIGN_DIVERGENCES #1039).
+//! (`semantic_formula`): elements, isotopes, counts and charges (OXIDIZED_DESIGN_DIVERGENCES #1040).
 //! Arrows, `+` between species, bonds, states and amounts keep mhchem's output (stage 2).
 //!
 //! Known edge-case residuals under raw-load (tracked in docs/SYNC_STATUS.md):

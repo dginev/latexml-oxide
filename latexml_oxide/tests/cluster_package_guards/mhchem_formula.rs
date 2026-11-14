@@ -1,4 +1,4 @@
-//! mhchem's formula output as chemistry math (issue 824; OXIDIZED_DESIGN_DIVERGENCES #1039): mhchem's own parser reads
+//! mhchem's formula output as chemistry math (issue 824; OXIDIZED_DESIGN_DIVERGENCES #1040): mhchem's own parser reads
 //! `\ce`, and its output hook (`\__mhchem_output_begin_cf:`, mhchem.sty:1424) turns each `\__mhchem_output_coreFive:nnnnnnn`
 //! unit (mhchem.sty:2774) into element atoms with their isotope, count and charge scripts. Repros
 //! `tools/perfect_kernel/repros/package-bindings/mhchem_formula_*.tex`.
