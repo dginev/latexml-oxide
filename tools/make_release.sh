@@ -153,6 +153,10 @@ else
   cp "${bin_path}" "${stage_dir}/latexml_oxide"
 fi
 cp README.md "${stage_dir}/README.md"
+# README.md links the install steps at docs/INSTALL.md; ship that file at the
+# same relative path so the link resolves inside the unpacked archive.
+mkdir -p "${stage_dir}/docs"
+cp docs/INSTALL.md "${stage_dir}/docs/INSTALL.md"
 cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"
 cp LICENSE "${stage_dir}/LICENSE"
 # THIRD-PARTY-NOTICES: prefer the release-time assembled file (hand-authored
