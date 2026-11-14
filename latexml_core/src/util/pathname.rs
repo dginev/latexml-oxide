@@ -548,6 +548,18 @@ pub fn url_split(url: &str) -> (&str, &str) {
   }
 }
 
+/// The verbatim prefix Windows' `canonicalize` puts before a path (`\\?\C:\…`), and its forward-slash spelling once the
+/// separators are normalised (`//?/C:/…`). A path prefix, not a TeX token: the kernel token-spelling pin counts it here, once.
+pub const WINDOWS_VERBATIM_PREFIXES: [&str; 2] = [r"\\?\", "//?/"];
+
+/// `path` without a leading Windows verbatim prefix (either spelling), for display.
+pub fn strip_windows_verbatim_prefix(path: &str) -> &str {
+  WINDOWS_VERBATIM_PREFIXES
+    .iter()
+    .find_map(|prefix| path.strip_prefix(prefix))
+    .unwrap_or(path)
+}
+
 /// `std::fs::canonicalize` as a path the rest of the system can read: on Windows std returns the verbatim form
 /// (`\\?\C:\dir\f.tex`), which is dropped back to `C:\dir\f.tex` when that names the same file (a drive path; a
 /// `\\?\UNC\…` share or an over-long path keeps it). Kept verbatim, the prefix reached the source directory and every
@@ -557,7 +569,7 @@ pub fn canonicalize(path: impl AsRef<Path>) -> std::io::Result<PathBuf> {
   let canonical = std::fs::canonicalize(path)?;
   if cfg!(windows)
     && let Some(s) = canonical.to_str()
-    && let Some(rest) = s.strip_prefix(r"\\?\")
+    && let Some(rest) = s.strip_prefix(WINDOWS_VERBATIM_PREFIXES[0])
     && rest.as_bytes().get(1) == Some(&b':')
     && rest.as_bytes().first().is_some_and(u8::is_ascii_alphabetic)
     && rest.len() < 260
