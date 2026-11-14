@@ -1,9 +1,9 @@
 // Example runtime script binding (Rhai) for latexml-oxide.
-// See docs/parity/script_bindings_plan.md. The `runtime-bindings` feature is ON by
+// New to the dialect? Read docs/parity/RHAI_BINDINGS_GUIDE.md first. The `runtime-bindings` feature is ON by
 // default: name this file `<pkg>.sty.rhai` next to your document (or on the
 // search path) and `\usepackage{<pkg>}` discovers and loads it — no
-// recompilation. This file doubles as the surface tour and is load-tested in
-// CI (`shipped_example_loads`).
+// recompilation. This file doubles as the surface tour; CI converts sample.tex
+// with it, error- and warning-free (`docs_examples_convert_clean`).
 //
 // A binding file is a Rhai script that calls the registration functions below.
 // NOTE: backslashes in TeX control sequences must be doubled in Rhai strings:
@@ -71,7 +71,7 @@ DeclareOption("eqsecnum", || {
 // ── Primitives (DefPrimitive) — digestion-time side-effects ──
 // State is shared through Perl's AssignValue(key, value[, scope]) / LookupValue(key).
 DefPrimitive("\\setx{}", |stomach, v| { AssignValue("script:x", v, "global"); });
-DefMacro("\\getx", || LookupValue("script:x"));
+DefMacro("\\getx", |gullet| LookupValue("script:x"));
 
 // ── Environments (DefEnvironment) — template (#body) and imperative forms ──
 DefEnvironment("{rquote}", "<ltx:quote class=\"rhai\">#body</ltx:quote>", #{
@@ -102,7 +102,7 @@ DefConstructor("\\fnote{}{}",
 
 // ── Counters & cross-references ──
 NewCounter("exhibit");
-DefConstructor("\\exhibit{}", "<ltx:text class=\"exhibit\">#tags #1</ltx:text>", #{
+DefConstructor("\\exhibit{}", "<ltx:text class=\"exhibit\" xml:id=\"#id\">#1</ltx:text>", #{
   properties: |x| RefStepCounter("exhibit")
 });
 
@@ -114,7 +114,7 @@ DefMacro("\\exkv OptionalKeyVals:EX {}", |gullet, kv, body| {
 
 // ── Math: DefMath, ligatures (data + matcher-closure), accents ──
 DefMath("\\exsum", "∑", #{ role: "SUMOP", meaning: "sum" });
-DefMathLigature(":=", "≔", #{ role: "ASSIGN", name: "assign" });
+DefMathLigature(":=", "≔", #{ role: "RELOP", name: "assign" });
 DefAccent("\\exacc", "́", "´");
 
 // ── Document rewrites (run at finalization) ──
@@ -122,9 +122,9 @@ DefRewrite(#{ xpath: "descendant-or-self::ltx:text[@class='exhibit']",
               attributes: #{ lang: "exhibit" } });
 
 // ── Gullet reads from a macro body ──
-DefMacro("\\exread", || {
-  let opt = ReadOptional();
-  let arg = ReadArg();
+DefMacro("\\exread", |gullet| {
+  let opt = gullet.readOptional();
+  let arg = gullet.readArg();
   "R(" + opt + ":" + arg + ")"
 });
 
@@ -133,7 +133,7 @@ DefPrimitive("\\exset{}", |stomach, v| {
   AssignValue("ex:k", v, "global");
   StepCounter("exhibit");
 });
-DefMacro("\\exget", || LookupString("ex:k") + "/" + CounterValue("exhibit").to_string());
+DefMacro("\\exget", |gullet| ToString(LookupValue("ex:k")) + "/" + CounterValue("exhibit").to_string());
 
 // ── LookupDefinition: fetch an already-installed definition and PUSH hooks onto
 //    it (Perl BookML's `my $d = LookupDefinition(T_CS('\rule')); push(@{ $$d{afterConstruct} }, sub{…})`).

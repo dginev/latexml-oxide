@@ -335,7 +335,9 @@ Discovery rides the ordinary search paths (the document's own directory, plus an
 `article.cls.rhai` deliberately *overrides* the built-in `article` binding, which
 is how you patch a class without touching the binary.
 
-- **Worked example:** [`docs/examples/sample.sty.rhai`](docs/examples/sample.sty.rhai) — a tour of the whole surface (macros, constructors in template and imperative form, environments, options, counters, keyvals, math, rewrites). It is load-tested in CI, so it never rots.
+- **Start here:** [`docs/parity/RHAI_BINDINGS_GUIDE.md`](docs/parity/RHAI_BINDINGS_GUIDE.md) — the dialect for newcomers: loading a binding, values, the Perl closure form, truthiness and `defined`, diagnostics, migrating from the deprecated names.
+- **Worked examples:** [`docs/examples/`](docs/examples/) — short bindings (macros, constructors, registers) and [`sample.sty.rhai`](docs/examples/sample.sty.rhai), a tour of the wider surface. CI converts each with its document, error- and warning-free, so they never rot.
+- **Cheat sheet:** [`CHEATSHEET.md`](latexml_contrib/src/script_bindings/CHEATSHEET.md) — every call as Perl | Rust macro | Rhai, generated and checked with the interface reference; its empty cells are the dialect's gaps.
 - **Interface reference:** [`latexml_contrib/src/script_bindings/API.md`](latexml_contrib/src/script_bindings/API.md) — every function you can call, grouped by handle (global, `document`, `Node`, `whatsit`, `LookupDefinition()`, `Command`). It is **generated from the live engine** and re-checked on every test run, so it cannot drift from what is actually registered. It also renders into `cargo doc` as `latexml_contrib::script_bindings::interface`, so `cargo doc --workspace --open` (and docs.rs) show it beside the Rust API.
 - **Semantics and design notes:** [`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md) — what the calls *mean*, the namespace rules, and what a failing binding degrades to.
 

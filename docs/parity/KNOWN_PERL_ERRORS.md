@@ -19665,3 +19665,17 @@ lossily). Rust ignores `page=` on these formats (OXIDIZED_DESIGN_DIVERGENCES #10
 \includegraphics[page=1]{a.jpg}
 \end{document}
 ```
+
+## 1244. Glue.pm `add` compares fill orders as numbers, on their names
+
+`LaTeXML::Common::Glue::add` (Common/Glue.pm, `if ($pf == $pf2)`) compares the stretch and shrink fill orders with `==`,
+but a Glue built from a spec string stores the fill as its name (`"fil"`), which Perl reads as 0. So a finite stretch
+plus a `fil` stretch counts as the same order and the amounts add, where TeX keeps the `fil` (tex.web §1239). Minimal
+trigger, in a `.ltxml` binding:
+
+```perl
+Glue('1pt plus 2pt')->add(Glue('1pt plus 1fil'))->toString   # 2.0pt plus 3.0pt, Warning:perl:warn Argument "fil" isn't numeric
+```
+
+TeX's `\advance\skip0 by 1pt plus 1fil` on `\skip0=1pt plus 2pt` gives `2.0pt plus 1.0fil`, and so does Rust's Rhai
+`Glue + Glue` (OXIDIZED_DESIGN_DIVERGENCES #1030).

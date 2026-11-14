@@ -36132,3 +36132,24 @@ Fatal. **Rust.** A Fatal the script catches prints its one line and sets status 
 on reporting: a later error stays its own `Error:script:` line, counted — the user's ruling that every Error is
 emitted and counted (2026-11-11), and no ignore flag outlives the caught Fatal. **Guard**:
 `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).
+
+### 1030. Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm
+
+**Perl.** Glue.pm overrides only `add`, comparing fill orders with `==` on the fill names (`"fil"` reads as 0, so
+`1pt plus 2pt` + `1pt plus 1fil` is `2.0pt plus 3.0pt`; KNOWN_PERL_ERRORS #1244); `subtract` is Number.pm's
+`new($self->valueOf - $other->valueOf)`, which drops a Glue's stretch and shrink (`Glue("3pt plus 1fil") -
+Dimension("1pt")` is `2.0pt`, `Glue("1pt plus 1fil") - Glue("1pt plus 2fil")` is `0.0pt`); MuGlue + MuGlue takes Glue.pm's
+non-Glue branch (`ref $other eq 'LaTeXML::Common::Glue'` fails), adding only the natural size (`3mu plus 1mu` +
+`1mu plus 1fil` is `4.0mu plus 1.0mu`). **Rust.** The Rhai `+`/`-`/`add`/`subtract` of Glue and MuGlue follow TeX's
+`\advance` (tex.web §1239, the core's `Glue::add_glue`): per component, the higher fill order wins and equal orders add,
+so the examples give `2.0pt plus 1.0fil`, `2.0pt plus 1.0fil`, `0.0pt plus -1.0fil` and `4.0mu plus 1.0fil`, as
+`\advance` on registers prints them. **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers` (p2).
+
+### 1031. A Rhai `Dimension`/`Glue` spec that is not a number and a unit is an Error
+
+**Perl.** `Dimension('3 furlongs')` reads the leading number as sp (`3sp`, with only Perl's `Argument "3 furlongs"
+isn't numeric` warning), and `Glue('1pt plus')` Warns `Missing Glue specification`. **Rust.** The Rhai constructors,
+and the string form of `DefRegister`/`AssignRegister`, raise `Error:unexpected:<spec>` naming the spec and use 0; a
+fresh register's unitless string (`DefRegister("\\c", "5")`) is the same Error, where Perl's untyped register errs at
+`\the`, while an existing register's declared type still reads it (`"5"` for a Number register is 5). A wrong value
+read silently is the likelier wrong output (BM, 2026-11-05). **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers_error_side`.

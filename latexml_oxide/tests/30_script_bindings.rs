@@ -1762,3 +1762,38 @@ fn a_rhai_fatal_is_logged_once() {
   }
   assert!(failures.is_empty(), "{failures:#?}");
 }
+
+/// Every worked example under `docs/examples/` (a `<name>.tex` beside its `<name>.sty.rhai`) converts with no Error
+/// or Warning, and its XML holds each `% expect:` line of the `.tex`, so the documented examples cannot rot.
+#[test]
+fn docs_examples_convert_clean() {
+  let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/examples");
+  let mut texs: Vec<_> = std::fs::read_dir(&dir)
+    .expect("docs/examples")
+    .flatten()
+    .map(|e| e.path())
+    .filter(|p| p.extension().is_some_and(|e| e == "tex"))
+    .collect();
+  texs.sort();
+  assert!(texs.len() >= 4, "the worked examples: {texs:?}");
+  for tex_path in texs {
+    let name = tex_path.file_stem().unwrap().to_string_lossy().to_string();
+    let tex = std::fs::read_to_string(&tex_path).unwrap();
+    let rhai_name = format!("{name}.sty.rhai");
+    let rhai = std::fs::read_to_string(dir.join(&rhai_name)).expect("the example's binding");
+    let (log, xml) = latexml::util::test::convert_files_with(&tex, &[(&rhai_name, &rhai)], None);
+    let diagnostics: Vec<&str> = log
+      .lines()
+      .filter(|l| l.starts_with("Error:") || l.starts_with("Fatal:") || l.starts_with("Warning:"))
+      .collect();
+    assert!(diagnostics.is_empty(), "{name}: {diagnostics:?}\n{log}");
+    let expects: Vec<&str> = tex
+      .lines()
+      .filter_map(|l| l.strip_prefix("% expect: "))
+      .collect();
+    assert!(!expects.is_empty(), "{name}.tex names no `% expect:` line");
+    for expect in expects {
+      assert!(xml.contains(expect), "{name}: missing {expect}\n{xml}");
+    }
+  }
+}

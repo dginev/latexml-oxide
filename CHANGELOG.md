@@ -239,6 +239,17 @@
     `ToString(v)`); a test against a string Warns `deprecated` once per load (use `ToString(v) == "3.0pt"`); an
     int use takes `v.valueOf()`. `MuGlue("3mu plus 1mu")` no longer reconverts its stretch as points. Guards
     `cluster_package_guards::perfect_kernel_batchw3rc::{rhai_typed_registers, rhai_typed_registers_error_side}`.
+  - **Rhai registers as Perl's, round C's review** (PR #829 round E). `LookupRegister` of an undefined control
+    sequence now Warns `expected:register` as of a non-register (Package.pm:1365-1367; the `LookupRegister!` macro's
+    lookup); a fresh register's unitless string (`DefRegister("\\c", "5")`) is an Error and 0, where it was silently
+    5sp. Glue and MuGlue `+`/`-` are TeX's `\advance` (`Glue - Dimension` keeps the stretch, `MuGlue + MuGlue` keeps
+    the higher fill order), where Perl's Glue.pm/MuGlue.pm differ (OXIDIZED_DESIGN_DIVERGENCES #1030).
+  - **The Rhai dialect is documented for newcomers** (PR #829 round E): a guide,
+    `docs/parity/RHAI_BINDINGS_GUIDE.md` (loading, values, the Perl closure form, truthiness and `defined`,
+    diagnostics, the deprecated-name migration); a three-column cheat sheet, `CHEATSHEET.md` beside `API.md`
+    (Perl | Rust macro | Rhai, generated from `api_doc.rs` and checked with it, its empty cells listed as the
+    dialect's gaps); worked examples under `docs/examples/` that CI converts with no Error or Warning
+    (`30_script_bindings::docs_examples_convert_clean`). `script_bindings_plan.md` keeps the design notes.
 
   - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
     chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and

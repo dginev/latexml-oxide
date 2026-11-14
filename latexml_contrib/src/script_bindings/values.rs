@@ -115,20 +115,34 @@ fn fill_of(fill: &Dynamic) -> Option<FillCode> {
 fn fill_index(fill: Option<FillCode>) -> i64 { fill.map_or(0, |f| f as i64 + 1) }
 
 /// A string value of `DefRegister`, read for the declared type: an existing register's, else the spec's own form
-/// (a `mu` unit is MuGlue, `plus`/`minus` Glue, otherwise a Dimension).
-fn register_value_of_spec(cs: &Token, spec: &str) -> RhaiResult<RegisterValue> {
+/// (a `mu` unit is MuGlue, `plus`/`minus` Glue, another unit a Dimension; no unit is an Error, as Perl's untyped
+/// register errs at `\the`).
+fn register_value_of_spec(operation: &str, cs: &Token, spec: &str) -> RhaiResult<RegisterValue> {
   let declared = latexml_core::state::lookup_register_definition(cs).map(|defn| defn.register_type);
-  let declared = declared.unwrap_or_else(|| {
-    let skip_unit =
-      spec.trim_start_matches(|c: char| c == '-' || c == '+' || c == '.' || c.is_ascii_digit());
-    if skip_unit.starts_with("mu") {
-      RegisterType::MuGlue
-    } else if spec.contains("plus") || spec.contains("minus") {
-      RegisterType::Glue
-    } else {
-      RegisterType::Dimension
-    }
-  });
+  let declared = match declared {
+    Some(declared) => declared,
+    None => {
+      let unit = spec
+        .trim()
+        .trim_start_matches(|c: char| c == '-' || c == '+' || c == '.' || c.is_ascii_digit())
+        .trim_start();
+      if unit.is_empty() {
+        let msg = format!(
+          "{operation} ({cs}): \"{spec}\" has no unit, so no register type; write Number({spec}) or a unit; using \
+           Dimension 0"
+        );
+        engine::script_error("unexpected", spec, &msg, None)?;
+        return Ok(Dimension(0).into());
+      }
+      if unit.starts_with("mu") {
+        RegisterType::MuGlue
+      } else if spec.contains("plus") || spec.contains("minus") {
+        RegisterType::Glue
+      } else {
+        RegisterType::Dimension
+      }
+    },
+  };
   Ok(match declared {
     RegisterType::Number => number_of(spec)?.into(),
     RegisterType::Glue => glue_of(spec)?.into(),
@@ -151,7 +165,7 @@ fn def_register(proto: &str, value: Dynamic, opts: Map) -> RhaiResult<()> {
   .map_err(rhai_err)?;
   let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
   let value = if value.is_string() {
-    register_value_of_spec(&cs, &dynamic_to_string(value))?
+    register_value_of_spec("DefRegister", &cs, &dynamic_to_string(value))?
   } else {
     dynamic_to_register_value(&value).ok_or_else(|| {
       Box::<EvalAltResult>::from(format!(
@@ -260,13 +274,17 @@ fn register_args(args: rhai::Array) -> Vec<ArgWrap> {
     .collect()
 }
 
-/// Perl `LookupRegister($cs, @parameters)` (Package.pm:1360): the typed value; `()` with Perl's Warning when `cs`
-/// is no register.
+/// Perl `LookupRegister($cs, @parameters)` (Package.pm:1360-1368), as the `LookupRegister!` macro: the typed value;
+/// `()` with Perl's Warning when `cs` is no register, undefined included.
 fn lookup_register(cs: Dynamic, args: rhai::Array) -> RhaiResult<Dynamic> {
   let cs = token_arg("LookupRegister", cs)?;
+  let Some(defn) = latexml_core::state::lookup_register_definition(&cs) else {
+    let message = format!("The control sequence '{cs}' is not a register");
+    latexml_core::Warn!("expected", "register", message);
+    return Ok(Dynamic::UNIT);
+  };
   Ok(
-    latexml_core::state::lookup_register_token(&cs, register_args(args))
-      .map_err(rhai_err)?
+    latexml_core::definition::Definition::value_of(&*defn, register_args(args))
       .map_or(Dynamic::UNIT, register_value_to_dynamic),
   )
 }
@@ -276,7 +294,7 @@ fn lookup_register(cs: Dynamic, args: rhai::Array) -> RhaiResult<Dynamic> {
 fn assign_register(cs: Dynamic, value: Dynamic, scope: &str, args: rhai::Array) -> RhaiResult<()> {
   let cs = token_arg("AssignRegister", cs)?;
   let value = if value.is_string() {
-    register_value_of_spec(&cs, &dynamic_to_string(value))?
+    register_value_of_spec("AssignRegister", &cs, &dynamic_to_string(value))?
   } else {
     dynamic_to_register_value(&value).ok_or_else(|| {
       Box::<EvalAltResult>::from(format!(
@@ -338,7 +356,8 @@ pub(super) fn register_values(engine: &mut Engine) {
   register_numeric::<MuGlue>(engine);
   register_glue_sums::<Number>(engine);
   register_glue_sums::<Dimension>(engine);
-  // Glue + Glue is TeX's: the higher fill order wins (Glue.pm `add`; the core's `add_glue`).
+  // Glue ± Glue and MuGlue ± MuGlue as TeX's `\advance` (tex.web §1239): the higher fill order wins, not as
+  // Glue.pm `add` (KNOWN_PERL_ERRORS #1244) or MuGlue's inherited Number.pm `add` (OD #1030).
   engine.register_fn("add", |a: Glue, b: Glue| a.add_glue(b));
   engine.register_fn("+", |a: Glue, b: Glue| a.add_glue(b));
   engine.register_fn("subtract", |a: Glue, b: Glue| a.add_glue(b.negate()));
@@ -458,8 +477,8 @@ where T:
   engine::register_string_tests::<T>(engine, "value == string");
 }
 
-/// `add`/`subtract` (and `+`/`-`) of `T` with itself, and of a Glue with `T`: the plain sum of `valueOf`s, the
-/// left operand's type and stretch kept (Number.pm `add`; Glue.pm `add` of a non-Glue).
+/// `add`/`subtract` (and `+`/`-`) of `T` with itself, and of a Glue with `T`: the sum of `valueOf`s, a Glue's
+/// stretch and shrink kept, as TeX's `\advance` (Perl's Number.pm `subtract` drops them; OD #1030).
 fn register_glue_sums<T>(engine: &mut Engine)
 where T: NumericOps + Copy + Send + Sync + 'static {
   engine.register_fn("add", |a: T, b: T| a.add(b));

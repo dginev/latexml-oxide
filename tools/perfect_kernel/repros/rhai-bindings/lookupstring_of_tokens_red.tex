@@ -1,0 +1,13 @@
+% mechanism: `LookupString` (the `LookupString!` macro's `state::lookup_string`) of a stored Tokens value returns
+%   the Rust Debug form (`From<Stored> for String`), not its TeX text; Perl has no LookupString, `ToString(LookupValue)` reads "k"
+% witness: synthetic (W3RE, found converting docs/examples/sample.sty.rhai; the binding lxls.sty.rhai, lxls.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "k"
+% engines: W3 (fix/rhai-batch1 round E): <p>Stored::Tokens[Tokens([”k”])]</p>, 0 errors
+% expect:  0 errors; <p>k</p>
+% status:  RED (W3 fix/rhai-batch1)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{lxls}
+\begin{document}
+\lxset{k}\lxget
+\end{document}

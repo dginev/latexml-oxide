@@ -113,31 +113,40 @@ const LXRC_ERR: &str = r#"DefRegister("\\probebad", Dimension("3 furlongs"));
 DefRegister("\\probebadg", Glue("1pt plus"));
 DefRegister("\\probeopt", Dimension("1pt"), #{bogus: 1});
 DefRegister("\\probestr", "3 furlongs");
+DefRegister("\\probeunit", "5");
+DefRegister("\\probeint", Number(1));
+DefRegister("\\probeint", "5");
 DefMacro("\\look", |gullet| { let v = LookupRegister("\\relax"); AssignRegister("\\relax", Dimension("1pt"));
-  Explode(if defined(v) { "def" } else { "undef" }) });
+  let u = LookupRegister("\\MDodotkern");
+  Explode(if defined(v) || defined(u) { "def" } else { "undef" }) });
 "#;
 
 const LXRC_ERR_TEX: &str = r"\documentclass{article}
 \usepackage{lxrcerr}
 \begin{document}
-\the\probebad{} \the\probebadg{} \the\probeopt{} \the\probestr{} \look
+\the\probebad{} \the\probebadg{} \the\probeopt{} \the\probestr{} \look{} \the\probeunit{} \the\probeint
 \end{document}
 ";
 
 /// The Error side. A spec the constructor cannot read is an Error and 0 (red on bd0962a211e: the string form read
 /// `3 furlongs` as 0.0pt with E=0); Perl reads `Dimension('3 furlongs')` as 3sp (a Perl `isn't numeric` warning) and
 /// Warns `Missing Glue specification` for `Glue('1pt plus')`. An option outside Perl's `$register_options` is Perl's
-/// `Error:misdefined`. `LookupRegister`/`AssignRegister` of no register Warn as Perl's (2 W) and give `()`.
+/// `Error:misdefined`. `LookupRegister`/`AssignRegister` of no register Warn as Perl's (3 W) and give `()`, an
+/// undefined CS included (mathdots `\MDodotkern`; red on 7b3b2d70f02: no Warning). A fresh register's unitless string
+/// is an Error and 0 (red on 7b3b2d70f02: 5sp, E=0; Perl errs at `\the`); an existing register's type wins (5).
 #[test]
 fn rhai_typed_registers_error_side() {
   let (log, xml) = convert_files_with(LXRC_ERR_TEX, &[("lxrcerr.sty.rhai", LXRC_ERR)], None);
-  assert_eq!(error_count(&log), 4, "{log}");
-  assert_eq!(warning_count(&log), 2, "{log}");
+  assert_eq!(error_count(&log), 5, "{log}");
+  assert_eq!(warning_count(&log), 3, "{log}");
   for line in [
     "Error:unexpected:3 furlongs Dimension(\"3 furlongs\"): not a Dimension specification; using 0",
     "Error:unexpected:1pt plus Glue(\"1pt plus\"): not a Glue specification; using 0",
     "Error:misdefined:DefRegister (\\probeopt) DefRegister (\\probeopt) does not accept options:bogus",
     "Warning:expected:register The control sequence '\\relax' is not a register",
+    "Warning:expected:register The control sequence '\\MDodotkern' is not a register",
+    "Error:unexpected:5 DefRegister (\\probeunit): \"5\" has no unit, so no register type; write Number(5) or a \
+     unit; using Dimension 0",
   ] {
     assert!(log.contains(line), "{line}\n{log}");
   }
@@ -145,6 +154,6 @@ fn rhai_typed_registers_error_side() {
     &xml,
     "para",
     &[],
-    r#"<para xml:id="p1"><p>0.0pt 0.0pt 1.0pt 0.0pt undef</p></para>"#,
+    r#"<para xml:id="p1"><p>0.0pt 0.0pt 1.0pt 0.0pt undef 0.0pt 5</p></para>"#,
   );
 }

@@ -1213,16 +1213,70 @@ fn api_reference_is_up_to_date() {
     "these .rhai calls share one api_doc::DOCS entry across different handles — \
      give each its own api_doc::HANDLE_DOCS entry: {ambiguous:?}"
   );
-  let generated = api_doc::generate(&engine);
-  let path = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/",
-    "src/script_bindings/API.md"
+  let stale_gaps = api_doc::stale_gaps(&engine);
+  assert!(
+    stale_gaps.is_empty(),
+    "api_doc::PERL_GAPS lists calls the engine now registers — move each to its DOCS entry's Mirror: \
+     {stale_gaps:?}"
   );
-  let on_disk = std::fs::read_to_string(path).unwrap_or_default();
+  // The cheat sheet's macro column names real macros: each must still be defined in the workspace.
+  let sources = macro_sources();
+  let undefined: Vec<&str> = api_doc::named_macros()
+    .into_iter()
+    .filter(|mac| {
+      !sources.contains(&format!("macro_rules! {mac} "))
+        && !sources.contains(&format!("macro_rules! {mac}("))
+    })
+    .collect();
+  assert!(
+    undefined.is_empty(),
+    "api_doc's Mirror/PERL_GAPS name macros no workspace crate defines: {undefined:?}"
+  );
+  for (file, generated) in [
+    ("API.md", api_doc::generate(&engine)),
+    ("CHEATSHEET.md", api_doc::generate_cheatsheet(&engine)),
+  ] {
+    check_generated(file, &generated);
+  }
+}
+
+/// Every non-comment `macro_rules!` line of the crates that define the binding macros, for the cheat-sheet check.
+fn macro_sources() -> String {
+  fn walk(dir: &std::path::Path, out: &mut String) {
+    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+      let path = entry.path();
+      if path.is_dir() {
+        walk(&path, out);
+      } else if path.extension().is_some_and(|e| e == "rs") {
+        for line in std::fs::read_to_string(&path).unwrap_or_default().lines() {
+          if line.trim_start().starts_with("macro_rules!") {
+            out.push_str(line.trim_start());
+            out.push('\n');
+          }
+        }
+      }
+    }
+  }
+  let mut out = String::new();
+  for krate in ["latexml_core", "latexml_engine", "latexml_package"] {
+    walk(
+      &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(krate)
+        .join("src"),
+      &mut out,
+    );
+  }
+  out
+}
+
+/// Compare a generated reference with its file beside `API.md`; `UPDATE_API_DOC=1` rewrites it.
+fn check_generated(file: &str, generated: &str) {
+  let path = format!("{}/src/script_bindings/{file}", env!("CARGO_MANIFEST_DIR"));
+  let on_disk = std::fs::read_to_string(&path).unwrap_or_default();
   if generated != on_disk {
     if std::env::var("UPDATE_API_DOC").is_ok() {
-      std::fs::write(path, &generated).expect("write API.md");
+      std::fs::write(&path, generated).expect("write the generated reference");
       return;
     }
     // Show the shape of the drift rather than a 200-line diff.
@@ -1237,7 +1291,7 @@ fn api_reference_is_up_to_date() {
       .filter(|l| !gen_lines.contains(l))
       .collect();
     panic!(
-      "src/script_bindings/API.md is stale — the engine registers a different \
+      "src/script_bindings/{file} is stale — the engine registers a different \
        surface than the reference documents.\n  added: {added:?}\n  removed: {removed:?}\n\
        Regenerate with: UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib \
        api_reference_is_up_to_date"
