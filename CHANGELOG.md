@@ -8,9 +8,11 @@
     under `OPS/` the content (`<name>.xhtml`), its CSS and images, and `content.opf` (manifest,
     spine, `properties="mathml nav"`); a document without a TOC gets Perl's undisplayed
     navigation TOC (`check_TOC`). The conversion log is written beside it, as for a single
-    document; without `--dest` the container is `<source>.epub`. With `--split`, the pages enter
-    the spine in file-name order, counted by a Warning. Guards
-    `whatsinout::format_epub_writes_an_epub3_container` (in `cluster_cli`) and
+    document; without `--dest` the container is `<source>.epub`. With `--split`, every page post
+    wrote (subdirectories included) enters the manifest and spine in Split's order, the root
+    first and each page before its children, as Perl's `@docs`. Guards
+    `whatsinout::format_epub_writes_an_epub3_container`,
+    `whatsinout::format_epub_split_pages_follow_splits_order` (in `cluster_cli`) and
     `manifest::epub::tests::url_id_follows_perl`.
 
   - **The log locator names the file with its extension** (#794). A diagnostic's

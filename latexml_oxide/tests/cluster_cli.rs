@@ -1085,9 +1085,14 @@ mod whatsinout {
     );
     // LaTeXML.pm check_TOC: the navigation document is the content's own undisplayed TOC.
     let xhtml = member(&mut archive, "OPS/out.xhtml");
-    assert!(
-      xhtml.contains("epub:type=\"toc\" class=\"ltx_TOC ltx_nodisplay ltx_list_toc ltx_toc_toc\""),
-      "{xhtml}"
+    let nav = &xhtml[xhtml.find("<nav").expect("a nav")..xhtml.find("</nav>").expect("a nav") + 6];
+    assert_eq!(
+      nav,
+      "<nav xmlns:epub=\"http://www.idpf.org/2007/ops\" epub:type=\"toc\" \
+       class=\"ltx_TOC ltx_nodisplay ltx_list_toc ltx_toc_toc\">\n<ol class=\"ltx_toclist\">\n\
+       <li class=\"ltx_tocentry ltx_tocentry_section\"><a href=\"#S1\" title=\"\" class=\"ltx_ref\">\
+       <span class=\"ltx_text ltx_ref_title\"><span class=\"ltx_tag ltx_tag_ref\">1 </span>Intro</span></a></li>\n\
+       </ol></nav>"
     );
     assert!(!work.path().join("out.epub.zip").exists());
     // EPUBCheck, where installed.
@@ -1105,6 +1110,87 @@ mod whatsinout {
         String::from_utf8_lossy(&check.stdout)
       );
     }
+  }
+
+  /// Issue 807, `--split`: the manifest and spine list every page post wrote, subdirectories included, in Split's
+  /// order (the root, then each page before its children), as Perl's `@docs` reaches `Manifest::Epub::process`;
+  /// `S10` follows `S9`, not `S1`. Spine and manifest as Perl latexmlc writes them (review revI807).
+  #[test]
+  fn format_epub_split_pages_follow_splits_order() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("k.tex"),
+      include_str!("../../tools/perfect_kernel/repros/epub/split_pages_spine_reading_order.tex"),
+    )
+    .unwrap();
+    let out = run(work.path(), &[
+      "--split",
+      "--splitat=subsection",
+      "--splitnaming=labelrelative",
+      "--dest=k.epub",
+      "k.tex",
+    ]);
+    let stderr = stderr_of(&out);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(work.path().join("k.epub")).unwrap())
+        .expect("a zip container");
+    let mut pages: Vec<String> = (0..archive.len())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
+      .filter(|name| name.ends_with(".xhtml"))
+      .collect();
+    pages.sort();
+    let sections: Vec<String> = (2..=11).map(|n| format!("S{n}/index.xhtml")).collect();
+    let mut expected: Vec<String> = ["k.xhtml", "sec_a/index.xhtml", "sec_a/sub_aa.xhtml"]
+      .iter()
+      .map(|page| page.to_string())
+      .chain(sections)
+      .collect();
+    let mut zipped: Vec<String> = expected.iter().map(|page| format!("OPS/{page}")).collect();
+    zipped.sort();
+    assert_eq!(pages, zipped);
+    let mut opf = String::new();
+    archive
+      .by_name("OPS/content.opf")
+      .unwrap()
+      .read_to_string(&mut opf)
+      .unwrap();
+    let id = |page: &str| format!("_{}", page.replace('/', "_x2F_"));
+    let items: String = expected
+      .iter()
+      .map(|page| {
+        let nav = if page == "k.xhtml" {
+          " properties=\"nav\""
+        } else {
+          ""
+        };
+        format!(
+          "<item id=\"{}\" href=\"{page}\" media-type=\"application/xhtml+xml\"{nav}/>",
+          id(page)
+        )
+      })
+      .collect();
+    let itemrefs: String = expected
+      .drain(..)
+      .map(|page| format!("<itemref idref=\"{}\"/>", id(&page)))
+      .collect();
+    let manifest = opf[opf.find("<manifest>").expect("a manifest")..].trim_end();
+    assert_eq!(
+      manifest,
+      format!(
+        "<manifest>{items}<item id=\"_LaTeXML.css\" href=\"LaTeXML.css\" media-type=\"text/css\"/>\
+         <item id=\"_ltx-article.css\" href=\"ltx-article.css\" media-type=\"text/css\"/></manifest>\
+         <spine>{itemrefs}</spine></package>"
+      )
+    );
   }
 
   /// A zip of `entries` at `path`, as arXiv ships a submission.

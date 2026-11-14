@@ -1625,6 +1625,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         let combined_status_line =
           latexml_core::common::error::conversion_status_line(combined_status_code);
         post_log = post.log;
+        let post_pages = post.pages;
         if let (Some(epub_dest), true) = (zip_dest.as_deref(), is_epub) {
           latexml_post::writer::ensure_parent_dir(epub_dest)?;
           if let (Some(site), Some(root)) = (resource_tempdir.as_ref(), dest_for_post.as_deref()) {
@@ -1632,6 +1633,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             let written = write_epub(
               site.path(),
               Path::new(root),
+              &post_pages,
               epub_title.as_deref(),
               epub_dest,
             );
@@ -1947,30 +1949,21 @@ fn make_splitpaths(splitat: &str) -> String {
 }
 
 /// Lay out the EPUB container in `site` around the post-processed `root` (Manifest::Epub) and zip it to `epub_path`
-/// (Pack/Zip.pm `get_archive`). The pages a `--split` wrote beside the root follow it in name order.
+/// (Pack/Zip.pm `get_archive`). The spine is `pages`, the documents post wrote in Split's order (the root, then each
+/// page before its children), as Perl's `@docs` reaches `Manifest::Epub::process`.
 fn write_epub(
   site: &Path,
   root: &Path,
+  pages: &[String],
   title: Option<&str>,
   epub_path: &str,
 ) -> std::io::Result<()> {
-  let ops = site.join("OPS");
-  let mut pages: Vec<std::path::PathBuf> = std::fs::read_dir(&ops)?
-    .filter_map(|entry| entry.ok().map(|e| e.path()))
-    .filter(|path| path.extension().is_some_and(|ext| ext == "xhtml") && path != root)
-    .collect();
-  pages.sort();
-  if !pages.is_empty() {
-    latexml_post::Warn!(
-      "epub",
-      "spine",
-      "the {} split pages enter the EPUB spine in file-name order, not reading order",
-      pages.len()
-    );
+  let mut documents: Vec<std::path::PathBuf> = pages.iter().map(std::path::PathBuf::from).collect();
+  if documents.is_empty() {
+    documents.push(root.to_path_buf());
   }
-  pages.insert(0, root.to_path_buf());
   let mut manifest = latexml_post::manifest::epub::EpubManifest::new(&site.to_string_lossy());
-  if let Err(e) = manifest.process(&pages, title) {
+  if let Err(e) = manifest.process(&documents, title) {
     latexml_post::Error!("I/O", "epub", "{}", e);
   }
   let source_date_epoch = std::env::var("SOURCE_DATE_EPOCH")
