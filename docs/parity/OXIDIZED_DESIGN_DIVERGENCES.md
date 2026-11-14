@@ -36379,6 +36379,19 @@ LaTeXML.css keys `justify-items` on it (#809). The other non-Core attributes sti
 four whole `<mtable>` elements: two default, two with the author's `rowspacing`); repro
 `tools/perfect_kernel/repros/alignment/mtable_no_rowspacing.tex`.
 
+### 1039. A bibliography href drops TeX's escapes (issue 808)
+
+**Perl.** A `.bib` `url` is read `Verbatim` (BibTeX.pool.ltxml:740) and becomes `<ltx:bib-url href='#1'>`, which
+MakeBibliography.pm `do_links` copies into the link, so `url = {https://doi.org/10.1162/tacl\_a\_00276}` gives
+`href="https://doi.org/10.1162/tacl\_a\_00276"`, a dead link.
+**Rust** (DG ruling 2026-11-14, "unescape in hrefs"). `format_links` (make_bibliography.rs, the port of `do_links`,
+which turns an entry's `bib-url`/`bib-identifier`/`bib-review` into its link: `url`, aa's `adsurl`, a `doi` or review
+href) reads `\_ \% \# \& \$ \~ \{ \}` as the character (`\~{}` as `~`) in the href, since a backslash is never valid
+in a URL; any other backslash, and a URL without one, is kept. The XML's `bib-url` keeps the field as the engine reads it (verbatim; a `\~{}`'s braces are already dropped there, pre-existing), and a
+`*nat` style, which prints its URLs, prints it as TeX does, escapes included. A `doi` was already clean
+(`identifier_data`, bibtex.rs). **Guards**: `06_cluster_bibliography::bib_url_escapes_leave_the_href`,
+`make_bibliography::tests::unescape_tex_url_drops_only_tex_escapes`.
+
 ### 1048. The kernel hooks LaTeX runs where LaTeXML's bindings stand in for its macros (QA47B)
 
 **Perl.** `\AddToHook` is a no-op (latex_base.pool.ltxml), etoolbox's `\AfterEndDocument` queues code nothing reads and
