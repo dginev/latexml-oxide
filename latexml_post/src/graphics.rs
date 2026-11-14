@@ -2195,10 +2195,12 @@ fn svg_enlarged_raster(text: &str) -> Option<EnlargedRaster> {
   if !elements.is_empty() {
     walk.element(0, Some([1.0, 0.0, 0.0, 1.0]), 0);
   }
-  // An image the walk never reached is drawn some way it does not read.
+  // An image the walk never reached is drawn some way it does not read. A 1×1 raster is never enlarged, however it
+  // is drawn: a browser cannot blur a single pixel (DG 2026-11-14; 1503.05958's figures carry several).
   elements.iter().enumerate().find_map(|(i, e)| {
     let scale = walk.scales.get(&i).copied().flatten();
-    (e.name == "image" && scale.is_none_or(|s| s > TOLERANCE))
+    let single_pixel = pixels(e.tag) == Some((1, 1));
+    (e.name == "image" && !single_pixel && scale.is_none_or(|s| s > TOLERANCE))
       .then(|| EnlargedRaster { pixels: pixels(e.tag), scale })
   })
 }
@@ -4348,6 +4350,8 @@ endobj
   fn svg_enlarged_raster_reads_every_placement() {
     // A 4×4 PNG (`tests/fixtures/tile.png`).
     const PNG: &str = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAEAQMAAACTPww9AAAABlBMVEXgQCAtZLS26lm/AAAADklEQVQI12MoYPgAhA8AC3gDMY2nLXUAAAAASUVORK5CYII=";
+    // A 1×1 PNG.
+    const PIXEL: &str = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
     let img = |attrs: &str| format!(r#"<image{attrs} width="4" height="4" xlink:href="{PNG}"/>"#);
     let enlarged = |scale: Option<f64>| Some(EnlargedRaster { pixels: Some((4, 4)), scale });
     let rows: Vec<(String, Option<EnlargedRaster>)> = vec![
@@ -4443,6 +4447,17 @@ endobj
       (
         r#"<image width="4" height="4" xlink:href="data:image/png;base64,AAAA"/>"#.into(),
         Some(EnlargedRaster { pixels: None, scale: None }),
+      ),
+      // A 1×1 raster cannot blur (DG 2026-11-14): drawn at 500 bp per pixel, and under a skew, it keeps the SVG.
+      (
+        format!(r#"<image width="500" height="500" xlink:href="{PIXEL}"/>"#),
+        None,
+      ),
+      (
+        format!(
+          r#"<g transform="skewX(10)"><image width="9" height="9" xlink:href="{PIXEL}"/></g>"#
+        ),
+        None,
       ),
     ];
     for (body, expected) in rows {

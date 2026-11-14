@@ -36188,7 +36188,8 @@ pixel blocks, and no static `image-rendering` suits every display size: `pixelat
 shows smaller. `svg_enlarged_raster` reads every placement, inline, under nested `<g transform>`, through `<use>` and
 through a soft mask's `<mask>` (both tools draw an alpha channel there), and calls a raster enlarged when it is drawn at
 more than 1.01 SVG user units per pixel on either axis on any placement (user units are the PDF's bp, which both tools
-keep; 1.01 absorbs the tools' float rounding, pdftocairo drawing images about 2 % smaller than mutool). A placement it
+keep; 1.01 absorbs the tools' float rounding, pdftocairo drawing images about 2 % smaller than mutool). A 1×1 raster never counts, however it is drawn: a browser cannot blur a single pixel (DG 2026-11-14;
+10 of the 21 PNG fallbacks in the 60-paper sample were 1×1 rasters in 1503.05958). A placement it
 cannot read counts as enlarged: an image in a `<pattern>` or `<symbol>`, under a `skewX`/`skewY` or a nested `<svg>` viewBox (a shear written as `matrix()` is measured by its axis lengths), past
 8 nested `<use>`, or with a size or pixel count it cannot read. The decision runs on every render after the graphics
 cache, so a cached SVG is judged too (the cache stores the converter's output, not the decision). `/Interpolate true` no

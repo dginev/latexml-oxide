@@ -8,7 +8,8 @@
     vector-SVG path like a vector-only PDF (mutool, then pdftocairo), keeping the text as
     glyphs and the image at its own resolution, with the PNG path as the fallback. A
     figure that draws a raster larger than its own pixels keeps the PNG path, where a
-    browser would blur it. Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
+    browser would blur it
+    (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
