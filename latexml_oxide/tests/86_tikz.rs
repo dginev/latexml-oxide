@@ -5,7 +5,8 @@ use latexml::{
 
 // Goldens of newer packages whose output really changed (pdflatex agrees): pgf r79866's blank line closing
 // `\pgf@setup@shading@model` (pgfcoreshade.code.tex:378) opens a paragraph after `\pgfdeclareverticalshading`;
-// circuitikz 1.8.6's transistor gate code (`transistors/gate thickness`, pgfcirctripoles.tex) draws longer IGBT bars.
+// circuitikz 1.8.6 draws longer IGBT bars (`\declareigbt` moves `\pgf@circ@setlinewidth` and adds rounded caps); the predicate
+// keys on `transistors/gate thickness`, which arrived in the same release.
 static REQUIRES: &RequirementTable = &[
   (
     "unit_tests_by_silviu",
