@@ -1,6 +1,46 @@
+use std::ops::Range;
+
 use crate::prelude::*;
 
+/// The Springer classes' bold vectors, the two forms their `\vec` takes (KNOWN_PERL_ERRORS #1143): `\lx@sv@vec@mathbf`
+/// is `\mbox{\boldmath$\mathbf{#1}$}` (svjour3.cls:631-636, svjour.cls:546-551 under `\if@mathematic`; svmult.cls:1015-1030
+/// and svproc.cls:389-404 by default), upright bold letters and bold italic Greek ("v + ω", CMBX10 and CMMIB10 in
+/// pdflatex); `\lx@sv@vec@boldmath` is `\mbox{\boldmath$#1$}` (llncs.cls:393-397 under `\if@custvec`, the svjour classes
+/// without `\if@mathematic`, svmult and svproc under `vecphys`), bold italic (CMMIB10). Each reverts as `\vec`; the class
+/// wraps the first in `\ensuremath` where it does. Their `\mathchoice` of four `\mbox`es, one per style, is the
+/// bold font of the current style here. Witnesses 2512.18788, hep-ex0701025 (svmult), 2609.05466 (svjour3).
+pub fn define_bold_vectors() -> Result<()> {
+  DefConstructor!("\\lx@sv@vec@mathbf{}", "#1", bounded => true, require_math => true,
+    font => { series => "bold", family => "serif", shape => "upright", forcebold => true }, alias => "\\vec");
+  DefConstructor!("\\lx@sv@vec@boldmath{}", "#1", bounded => true, require_math => true,
+    font => { forcebold => true }, alias => "\\vec");
+  Ok(())
+}
+
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// svjour: an `\inst` after a comma is the name's before it; `\email` prints in place in each class loading it —
+/// svjour3.cls:303 `\def\email#1{\emailname: #1}` (v3.2 2007/05/08, 1902.07328's copy), svmult.cls:2304
+/// `\def\email#1{\emailname: \url{#1}}` (v5.4 2007/06/25, 0812.2480's), the old svjour.cls:256 `\def\email#1{{e-mail:
+/// \tt#1}}` (2003/04/15 and 1999/09/14, 0901.1015's and 1711.03503's); none is in TeX Live 2025, so read from the
+/// copies the papers ship —, so `\offprints{O. Kochukhov, \email{…}}` names its address's owner
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "svjour",
+  binding: "sv_support.sty",
+  inst_after_comma: true,
+  email_in_place: true,
+  // (svjour3.cls:608 sets its own `\and` where `\maketitle` prints the authors: the separator query's, TP2)
+  title_page: FmTitlePageDecl {
+    title_and: &[("svjour3.cls", "svjour3.cls:608")],
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
+  cite: "svjour3.cls `\\inst` (`\\unskip`), :303 `\\email`; svmult.cls:2304, svjour.cls:256; OD #807, #913",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: sv_support.sty.ltxml
   // Support package for svjour class variants
 
@@ -20,11 +60,13 @@ LoadDefinitions!({
   DefMacro!("\\mailname", "\\textit{Correspondence}");
 
   // Single \author containing multiple authors separated by \and  (Perl PR #2767)
-  // Each `\and` piece is split at its commas, " and " and " \& " (`\lx@add@author@split`, as llncs; 63h): `\author{A and
-  // B \and C}` is three people, where Perl split at commas only (1406.5162, 2105.12728).
+  // The whole list is one `\lx@add@author@split` call, which the reading cuts at its `\and`s, commas, " and " and " \& "
+  // (as llncs; 63h; Option C P2-1b, OXIDIZED_DESIGN_DIVERGENCES #993): `\author{A and B \and C}` is three people, where
+  // Perl split at `\and` and commas only (1406.5162, 2105.12728). The queue's name reader parts the one entry at its
+  // `\and`s for `\institute` (`queued_author_names_spelled`, 2312.14898).
   DefMacro!(
     "\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#1}\\lx@author@trailing"
+    "\\lx@clear@creators[role=author]\\lx@add@author@split{#1}\\lx@author@trailing"
   );
   // Single \institute containing name \at institute \and ... repeating.
   // Note that the name corresponds to (but probably won't match exactly!) an author name
@@ -39,16 +81,162 @@ LoadDefinitions!({
   // and one no author cites is placed as OXIDIZED_DESIGN #159 places orphans (a sole author's, the i-th author's in a
   // grid, else shared below them all), not the last author's alone (63g/63h review; repros
   // sectioning-frontmatter/svjour3_epj_one_institute_shared, svjour3_two_institutes_pair_by_position).
+  // A labelled piece's text before `\at` is the name it is the institute of (its `fuzzy:` label), and svjour3 prints
+  // it, the address on the line after (svjour3.cls:506 `\def\at{\\\let\and=\iand}`): kept so, the line before the
+  // address, when it prints a word no queued author's name prints ([`queued_author_name_prints`]: "Contact author:",
+  // 1711.01894; "Corresponding author", 2107.13864; a fuller name than the author line's, 1705.01399), which had been
+  // lost (Perl the same: sv_support.sty.ltxml:45-47; OXIDIZED_DESIGN_DIVERGENCES #952) — a piece printing only its
+  // author's name adds nothing the names do not hold.
+  // A list the piece opens (`\institute{\begin{itemize}\item[\Letter] Shiqiang~Du \\ \email{…} \at \item[1] Key
+  // Laboratory … \end{itemize}}`, 2305.05902, 2306.07927, 2312.14898, 2605.09054) is the list's structure — its
+  // `\begin{…}`, `\end{…}` and each `\item[…]` — and the words in it. The keep test reads the line as every name-shape
+  // test does ([`queued_author_name_prints`] through `visible_name_text`, where an environment's name and an item's
+  // label print no word: "itemize" had kept a line printing only a queued name, the rev98b review's pe1); only the
+  // words name the owner (`fuzzy:`; the `\begin` in the label had opened the list in the label's digestion, an
+  // Error); the structure the affiliation holds is kept explicitly: the
+  // list's `\begin` when the address closes it, with the item the address goes on in when the address opens with no
+  // `\item` of its own, and an `\end` the piece did not open is dropped (`\begin{itemize}\item Ann Able \at Univ X
+  // \and \item Bob Baker \at Univ Y \end{itemize}`: each piece its own affiliation, balanced).
+  DefMacro!("\\lx@sv@institute@ Until:\\at Until:\\done", sub[(name, address)] {
+    // (decided as `\institute` is read, the authors before it queued; an environment written whole there is no part of
+    // the line — `\begin{acknowledgements}…\end{acknowledgements} T. Ara\'ujo Lima \at …`, 2008.12867, whose text
+    // would be an `<ltx:acknowledgements>` inside a contact, malformed — and stays lost, as before)
+    let mut line = without_environments(name.unlist_ref());
+    let mut address = address.unlist();
+    let opens = line.iter().any(|t| *t == T_CS!("\\begin"));
+    let closes = closes_an_environment(&address);
+    // (an `\end` left in the line closes nothing the piece opened; a list the address does not close is none the
+    // affiliation holds, nor are its items)
+    let dropped: Vec<Range<usize>> = list_structure(&line)
+      .into_iter()
+      .filter(|(command, _)| *command == T_CS!("\\end") || !(opens && closes))
+      .map(|(_, range)| range)
+      .collect();
+    line = without_ranges(&line, &dropped);
+    if !opens && closes {
+      let ends: Vec<Range<usize>> = unopened_ends(&address);
+      address = without_ranges(&address, &ends);
+    }
+    let structure = list_structure(&line);
+    let ranges: Vec<Range<usize>> = structure.iter().map(|(_, range)| range.clone()).collect();
+    let words = without_ranges(&line, &ranges);
+    let mut named = Vec::new();
+    if !address.is_empty() {
+      if !queued_author_name_prints(&Tokens::new(line.clone())) {
+        // (without the spacing and a line break the piece opens with, the layout's: `\and\\ Name \at …`; and without
+        // its `\email` calls, which the label files — kept here they were filed twice, 2312.14898)
+        named = split_email_calls(&line)
+          .0
+          .into_iter()
+          .skip_while(|t| *t == T_SPACE!() || *t == T_CS!("\\\\"))
+          .collect();
+        while named.last() == Some(&T_SPACE!()) {
+          named.pop();
+        }
+        named.push(T_CS!("\\\\"));
+      } else {
+        for (command, range) in &structure {
+          if *command == T_CS!("\\begin") {
+            named.extend_from_slice(&line[range.clone()]);
+          }
+        }
+        let opens_item = address
+          .iter()
+          .find(|t| **t != T_SPACE!())
+          .is_some_and(|t| *t == T_CS!("\\item"));
+        if !opens_item
+          && let Some((_, range)) = structure
+            .iter()
+            .rev()
+            .find(|(command, _)| *command == T_CS!("\\item"))
+        {
+          named.extend_from_slice(&line[range.clone()]);
+        }
+      }
+    }
+    // (a list whose items spell two or more queued names whole before its one `\at` is a list of its authors, no one's:
+    // its owner label names no one (`fuzzy:` empty), so the affiliation is placed as an orphan is (#159: shared below
+    // the authors), and its `\email` calls, no label's now, are in it, each answered by the author it spells — the
+    // surname reading gave the list to the last name's alone, 2312.14898's Bissyandé. Names a comma or "and" parts,
+    // no list's, are each their own owner as before: `Paulo Rezeck and Hector Azp\'urua \at …`, 2202.12391; 1404.4148,
+    // 2108.10893, 2305.05654)
+    if !address.is_empty()
+      && !structure.is_empty()
+      && queued_author_names_spelled(&Tokens::new(line.clone()))? > 1
+    {
+      named.extend(split_email_calls(&words).1);
+      return Ok(Invocation!(
+        "\\lx@add@affiliation[label={fuzzy:}]{\\lx@sv@institute@marks#1\\lx@sv@institute@piece{#2}}",
+        vec![Some(Tokens::new(named)), Some(Tokens::new(address))]
+      ));
+    }
+    // (the name as written where it holds no list command)
+    let label = if dropped.is_empty() && structure.is_empty() {
+      name.unlist_ref().to_vec()
+    } else {
+      words
+    };
+    // (the label's `\email` calls, `Name (\email{…}) \at Address`, are its owner's e-mails, each filed under the label as
+    // its own call, before the affiliation as the line prints them: the old driver digested the label at the flush, its
+    // `\email` filing the contact, which the emitter, reading a label as text, never does — the address had been lost,
+    // no Warning (2206.00320, 1307.4424; OXIDIZED_DESIGN_DIVERGENCES #985). Not in the label any more, whose words are
+    // the owner's name)
+    let (label, calls) = split_email_calls(&label);
+    let label = Tokens::new(label);
+    let emails = if calls.is_empty() {
+      Vec::new()
+    } else {
+      cs_group_tokens("\\lx@sv@institute@emails", &[label.unlist_ref(), &calls])
+    };
+    Ok(Invocation!(
+      "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else#5\\lx@add@affiliation[label={fuzzy:#4}]{\\lx@sv@institute@marks#3\\lx@sv@institute@piece{#2}}\\fi",
+      vec![
+        Some(name),
+        Some(Tokens::new(address)),
+        Some(Tokens::new(named)),
+        Some(label),
+        Some(Tokens::new(emails))
+      ]
+    ))
+  });
+  // The e-mails the owner label of an `\institute` piece holds (`\lx@sv@institute@`): each `\email` call, filed under
+  // that label as `\email` sets it.
   DefMacro!(
-    "\\lx@sv@institute@ Until:\\at Until:\\done",
-    "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#2}\\fi"
+    "\\lx@sv@institute@emails{}{}",
+    "\\begingroup\\def\\email{\\lx@sv@institute@email{#1}}#2\\endgroup"
   );
+  DefMacro!(
+    "\\lx@sv@institute@email{} Semiverbatim",
+    "\\lx@add@email[label={fuzzy:#1},name={\\emailname: }]{\\lx@address@textfont{#2}}"
+  );
+  // A labelled piece's text, without the `\at` sentinel `\lx@sv@institute` appended (the `Until:\done` part keeps it):
+  // `\at` is `\relax` here, but a document may define its own (`\newcommand\at[2]{\left.#1\right|_{#2}}`, allowed as
+  // `\relax` counts as undefined), which then ran at the affiliation's end with its arguments missing (svjour3
+  // 1404.4148, 1705.07573, 1911.12144, 1912.03170, 2107.00750, 2107.11151, 2205.01215, 2210.16010, 2305.18835).
+  DefMacro!("\\lx@sv@institute@piece{}", sub[(piece)] {
+    let mut tokens = piece.unlist();
+    if tokens.last() == Some(&T_CS!("\\at")) {
+      tokens.pop();
+    }
+    Ok(Tokens::new(tokens))
+  });
   // A piece that starts with a mark (`$^{1}$Univ A`, or one piece of lines `$^1$… \\ $^2$…`: 1406.6147, 2405.03406)
   // is a marked list, its lines labelled by their marks, which the authors showing them get (OXIDIZED_DESIGN #159;
   // repro svjour3_marked_institutes_link_by_mark); any other piece is numbered.
+  // (a `\\` opening a piece, `\and\\ \textsuperscript{2} College …`, is the layout's: svjour3 sets each piece on a line
+  // of its own, so the mark still leads it; 1810.10167)
   DefMacro!("\\lx@sv@institute@unlabelled{}", sub[(piece)] {
     let labelseq = Some(mouth::tokenize_internal("labelseq=affiliation"));
-    if leads_with_mark(&piece) {
+    let unbroken = Tokens::new(
+      piece
+        .unlist_ref()
+        .iter()
+        .copied()
+        .skip_while(|t| *t == T_SPACE!() || *t == T_CS!("\\\\"))
+        .collect(),
+    );
+    if leads_with_label(&unbroken, "sv institute")? {
+      let piece = unbroken;
       // its own `\thanksref`, which would add its key to the line's label, a no-op as in any piece (63i review)
       let piece = Tokens::new(
         piece
@@ -97,7 +285,7 @@ LoadDefinitions!({
     "\\lx@add@contact[role=url,name={\\ifx.#1.URL:~\\else#1\\fi}]{\\lx@address@textfont{#2}}"
   );
   DefMacro!(
-    "\\thanks[]{}",
+    "\\thanks[Default:\\lx@contact@thanks@name]{}",
     "\\lx@add@contact[role=thanks,name={#1}]{#2}"
   );
   DefMacro!("\\orcid[]{}", "\\lx@add@orcid[name={#1}]{#2}");
@@ -131,10 +319,25 @@ LoadDefinitions!({
     "\\lx@add@classification[scheme=pacs,name={\\PACSname: }]{#1}"
   );
   DefMacro!("\\headnote{}", "\\lx@add@pubnote[role=node]{#1}");
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
-  DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint]{#1}");
-  DefMacro!("\\journalname{}", "\\lx@add@pubnote[role=journal]{#1}");
-  DefMacro!("\\papertype{}", "\\lx@add@pubnote[role=type]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): svjour3.cls:612-616 sets the dedication in italics
+  // (2609.05466's copy), svjour3.cls:536 / svjour.cls:489 the journal's name before its "manuscript No." (a suffix),
+  // and the paper type is stored, not printed — the role stays.
+  DefMacro!(
+    "\\dedication{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
+  // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915):
+  // svjour3.cls :371-374 (1902.07328's copy) and svjour.cls :327-330 (0901.1015's) `{\itshape Send offprint requests
+  // to\/}: #1` — not the role's "Preprint: " (svmult has no `\offprints`).
+  DefMacro!(
+    "\\offprints{}",
+    "\\lx@add@pubnote[role=preprint,name={Send offprint requests to:~}]{#1}"
+  );
+  DefMacro!(
+    "\\journalname{}",
+    "\\lx@add@pubnote[role=journal,name={}]{#1}"
+  );
+  DefMacro!("\\papertype{}", "\\lx@add@pubnote[role=type,name={}]{#1}");
 
   Let!("\\journalopt", "\\@empty");
 
@@ -225,7 +428,11 @@ LoadDefinitions!({
   DefRegister!("\\tabcapgap", Dimension!("5.5pt"));
   DefRegister!("\\figgap", Dimension!("12.84pt")); // 1cc
 
-  DefMacro!("\\tableheadseprule", "\\hrule");
+  // svjour2.cls:1032 (svjour3.cls and svmult.cls are not in TeX Live 2025) `\newcommand{\tableheadseprule}{\noalign{\hrule height.375mm}}`: the
+  // rule under a table's head row, between rows. Perl's bare `\hrule` (sv_support.sty.ltxml:143) in a `tabular` row
+  // was misplaced ("\noalign cannot be used here" for the `\noalign{\smallskip}` after it: astro-ph0609697;
+  // KNOWN_PERL_ERRORS #967). Guard: `perfect_kernel_batch73a::sv_tableheadseprule_is_a_noalign_rule`.
+  DefMacro!("\\tableheadseprule", r"\noalign{\hrule height.375mm}");
   DefMacro!("\\floatlegendstyle", "\\bfseries");
   def_macro_noop("\\leftlegendglue")?;
 
@@ -322,6 +529,8 @@ LoadDefinitions!({
   Let!("\\squareforqed", "\\qed");
 
   DefMacro!("\\tens{}", "\\ensuremath{\\mathsf{#1}}");
+  // The bold vectors the classes' `\vec` sets, which each class binding defines where its class does.
+  define_bold_vectors()?;
 
   //======================================================================
   // Random text
@@ -421,3 +630,202 @@ LoadDefinitions!({
     "\\let\\thanksref\\lx@sv@institute@thanksref"
   );
 });
+
+/// `tokens` without the environments written whole in them, each `\begin{…}` through its matching `\end{…}` and that
+/// command's argument; an environment opened and not closed there is kept (its `\end` comes after the piece:
+/// `\institute{\begin{itemize}\item[✉] Ann Able \at \item[1] Univ X \end{itemize}}`, 2305.05902, 2306.07927,
+/// 2312.14898, 2605.09054, whose `\begin` kept there balances the list).
+fn without_environments(tokens: &[Token]) -> Vec<Token> {
+  // the index after the `\end{…}` matching the `\begin` at `at`, if the tokens hold it
+  let environment_end = |at: usize| -> Option<usize> {
+    let mut depth = 0usize;
+    let mut i = at;
+    while i < tokens.len() {
+      if tokens[i] == T_CS!("\\begin") {
+        depth += 1;
+      } else if tokens[i] == T_CS!("\\end") {
+        depth -= 1;
+        if depth == 0 {
+          let mut j = i + 1;
+          while tokens.get(j) == Some(&T_SPACE!()) {
+            j += 1;
+          }
+          if tokens
+            .get(j)
+            .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+          {
+            let mut level = 0usize;
+            while j < tokens.len() {
+              match tokens[j].get_catcode() {
+                Catcode::BEGIN => level += 1,
+                Catcode::END => {
+                  level -= 1;
+                  if level == 0 {
+                    return Some(j + 1);
+                  }
+                },
+                _ => {},
+              }
+              j += 1;
+            }
+            return None;
+          }
+          return Some(i + 1);
+        }
+      }
+      i += 1;
+    }
+    None
+  };
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut i = 0;
+  while i < tokens.len() {
+    if tokens[i] == T_CS!("\\begin")
+      && let Some(end) = environment_end(i)
+    {
+      i = end;
+      continue;
+    }
+    out.push(tokens[i]);
+    i += 1;
+  }
+  out
+}
+
+/// The list structure in `tokens`, each command with the tokens it spans: `\begin{…}` and `\end{…}` with their
+/// argument, `\item` with its optional label (`\item [\textsuperscript{1}]`, spaces before it skipped as LaTeX's
+/// `\@ifnextchar` skips them).
+fn list_structure(tokens: &[Token]) -> Vec<(Token, Range<usize>)> {
+  // the index after the spaces from `at`
+  let past_spaces = |mut at: usize| {
+    while tokens.get(at) == Some(&T_SPACE!()) {
+      at += 1;
+    }
+    at
+  };
+  let mut structure = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = tokens[i];
+    let end = if t == T_CS!("\\begin") || t == T_CS!("\\end") {
+      let at = past_spaces(i + 1);
+      if tokens
+        .get(at)
+        .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+      {
+        group_end(tokens, at)
+      } else {
+        i + 1
+      }
+    } else if t == T_CS!("\\item") {
+      let at = past_spaces(i + 1);
+      if tokens.get(at) == Some(&T_OTHER!("[")) {
+        // (the `]` outside braces: `\item[{[a]}]`)
+        let mut depth = 0usize;
+        let mut j = at + 1;
+        while j < tokens.len() && !(depth == 0 && tokens[j] == T_OTHER!("]")) {
+          match tokens[j].get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => depth = depth.saturating_sub(1),
+            _ => {},
+          }
+          j += 1;
+        }
+        (j + 1).min(tokens.len())
+      } else {
+        i + 1
+      }
+    } else {
+      i += 1;
+      continue;
+    };
+    structure.push((t, i..end));
+    i = end;
+  }
+  structure
+}
+
+/// The index after the brace group opening at `at`, or the end of `tokens` when it is not closed.
+fn group_end(tokens: &[Token], at: usize) -> usize {
+  let mut level = 0usize;
+  for (j, t) in tokens.iter().enumerate().skip(at) {
+    match t.get_catcode() {
+      Catcode::BEGIN => level += 1,
+      Catcode::END => {
+        level = level.saturating_sub(1);
+        if level == 0 {
+          return j + 1;
+        }
+      },
+      _ => {},
+    }
+  }
+  tokens.len()
+}
+
+/// The `\end{…}` commands in `tokens` that close no `\begin` of theirs: the environment a piece before opened.
+fn unopened_ends(tokens: &[Token]) -> Vec<Range<usize>> {
+  let mut depth = 0usize;
+  let mut ends = Vec::new();
+  for (command, range) in list_structure(tokens) {
+    if command == T_CS!("\\begin") {
+      depth += 1;
+    } else if command == T_CS!("\\end") {
+      if depth == 0 {
+        ends.push(range);
+      } else {
+        depth -= 1;
+      }
+    }
+  }
+  ends
+}
+
+/// Whether `tokens` close an environment opened before them (an `\end{…}` no `\begin` of theirs matches).
+fn closes_an_environment(tokens: &[Token]) -> bool { !unopened_ends(tokens).is_empty() }
+
+/// `tokens` without those in `ranges`.
+fn without_ranges(tokens: &[Token], ranges: &[Range<usize>]) -> Vec<Token> {
+  (0..tokens.len())
+    .filter(|i| !ranges.iter().any(|range| range.contains(i)))
+    .map(|i| tokens[i])
+    .collect()
+}
+
+/// `cs` followed by each of `args` in braces.
+fn cs_group_tokens(cs: &str, args: &[&[Token]]) -> Vec<Token> {
+  let mut tokens = vec![T_CS!(cs)];
+  for arg in args {
+    tokens.push(T_BEGIN!());
+    tokens.extend_from_slice(arg);
+    tokens.push(T_END!());
+  }
+  tokens
+}
+
+/// `tokens` without their `\email{…}` calls, and the calls.
+fn split_email_calls(tokens: &[Token]) -> (Vec<Token>, Vec<Token>) {
+  let mut rest = Vec::with_capacity(tokens.len());
+  let mut calls = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    if tokens[i] == T_CS!("\\email") {
+      let mut at = i + 1;
+      while tokens.get(at) == Some(&T_SPACE!()) {
+        at += 1;
+      }
+      if tokens
+        .get(at)
+        .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+      {
+        let end = group_end(tokens, at);
+        calls.extend_from_slice(&tokens[i..end]);
+        i = end;
+        continue;
+      }
+    }
+    rest.push(tokens[i]);
+    i += 1;
+  }
+  (rest, calls)
+}

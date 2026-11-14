@@ -1,0 +1,18 @@
+% witness: 2605.01693 (`\author{Khalid Mahmud Labib$^{1}$, Inayat Rasool$^{1}$, Shabbir Ahmed$^{1{\dagger}}$}` and
+%          `\affil{\small $^{1}$Dynamical System and Signals Lab (DSSL)…}`; 77n r6 A/B)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cat Cole1dagger / 1Univ X"
+% engines: rust int32a and 77n r5 = Univ X on all three (authblk's run: the `\small` hid the mark), Cat Cole's dagger
+%          lost; 77n r6 before the fix = Cat Cole with nothing (the mark `1{\dagger}` read as one label, no line's)
+% expect:  0 errors, 0 warnings; 3 creators with Univ X, Cat Cole's dagger shown (`split_glued_symbol` reads a braced
+%          symbol glued to a mark)
+% status:  RED (77n r6 candidate) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$, Cat Cole$^{1{\dagger}}$}
+\affil{\small $^{1}$Univ X}
+\maketitle
+x
+\end{document}

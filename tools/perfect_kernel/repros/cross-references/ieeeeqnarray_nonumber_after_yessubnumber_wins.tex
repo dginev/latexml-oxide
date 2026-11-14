@@ -1,0 +1,60 @@
+% witness: 2012.02697 (`lcmpc.tex:123-136`: `\IEEEnonumber\IEEEyessubnumber* ... \nonumber` rows; `eq:fpar`/`eq:par`
+%          14a/14b as the `.aux`, 79d r2 14b/14c); review rev79d2 finding 1 (probes rev79d2/eq/n.tex, h.tex block k)
+% oracle:  pdflatex 0 errors; prints (1) (1a) (1b) (1c) (2) (3) (4) (5) (5a) (6) (8) (8a) (8b) (9) (10); "See m 1, 1a,
+%          1b; n 1c, 2; o 3, 4; k 5, 5a, 5a; p 6; q 8, 8a, 8a; r 8b, 9; t 10." (latex.ltx `\nonumber` and
+%          IEEEtrantools.sty:1405 `\IEEEnonumber` are `\global\@eqnswfalse`, so after `\IEEEyesnumber` or
+%          `\IEEEyessubnumber` (:1393-1424, which set the counters and clear the pre-advance) the last one wins: the row
+%          prints nothing, its counters stay, and the next row prints them, :2086-2112; or none follows and they stay,
+%          :2022-2023 — so the `p` block's trailing row skips "7")
+% engines: rust 79d r2 prints (1) (1a) (1b) (1c) (1d) (2) (3) (4) (5) (6) (7) (7) (8) (9) (10) (10a) (11) (11a) (12)
+%          (13) and "See m 1, 1b, 1c; n 2, 3; o 4, 6; k 7, 7, 7; p 8; q 10, 11, 11; r 11a, 12; t 13."; 79d r1 fewer
+%          extras, also wrong; Perl 0.8.8 has no IEEEtrantools binding (its IEEEtran.cls.ltxml:269-287 is the model)
+% expect:  0 errors, 0 warnings; the equations' tags and labels as pdflatex's
+% status:  RED (79d r2) -> GREEN (79d r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{m0}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+\IEEEnonumber\IEEEyessubnumber*
+a &=& b \nonumber\\
+&& +c \label{m1}\\
+e &=& f \label{m2}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \IEEEyessubnumber\nonumber\\
+c &=& d \label{n2}\\
+e &=& f \label{n3}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{o1}\\
+c &=& d \IEEEyesnumber\nonumber\\
+e &=& f \label{o3}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{k1}\\
+c &=& d \IEEEyessubnumber\IEEEnonumber\label{k2}\\
+e &=& f \label{k3}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{p1}\\
+c &=& d \IEEEyesnumber\nonumber
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{q1}\\
+c &=& d \IEEEyessubnumber\nonumber\\
+e &=& f \nonumber\label{q3}\\
+g &=& h \label{q4}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray*}{rCl}
+a &=& b \IEEEyessubnumber\nonumber\\
+c &=& d \IEEEyessubnumber\label{r2}\\
+e &=& f \IEEEyesnumber\label{r3}
+\end{IEEEeqnarray*}
+\begin{equation} x \label{t1}\end{equation}
+See m \ref{m0}, \ref{m1}, \ref{m2}; n \ref{n2}, \ref{n3}; o \ref{o1}, \ref{o3}; k \ref{k1}, \ref{k2}, \ref{k3};
+p \ref{p1}; q \ref{q1}, \ref{q3}, \ref{q4}; r \ref{r2}, \ref{r3}; t \ref{t1}.
+\end{document}

@@ -1,0 +1,31 @@
+% mechanism: a line's starts in its cutter (`entry_starts::lines_starts`): a mark whose span opens at the spacing before
+%   it (`\quad`, the line delimiter) starts the line after it, not none
+% witness: 2601.03607
+% oracle:  pdflatex (TL 2025, -no-shell-escape, beside 2601.03607's ieeeconf.cls, which TL lacks) 0 errors: the names
+%          with * and † over "*Equal contribution †Equal advising", "Stanford University"
+% engines: int165a: as expected; int166a (P4b4a): one note "* Equal contribution † Equal advising" on all four marked
+%          names
+% expect:  0 errors, 0 warnings; Ann One and Bob Two the note "* Equal contribution", Di Four and Ed Five "† Equal
+%          advising", Cy Three none; every name "Stanford University"
+% status:  RED (int166a) -> GREEN (P4b4f; guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+\documentclass[letterpaper,10pt,conference]{ieeeconf}
+\begin{document}
+\title{T}
+\author{
+\authorblockN{
+\textbf{Ann One\authorrefmark{1}} \quad
+\textbf{Bob Two\authorrefmark{1}} \quad
+\textbf{Cy Three} \quad
+\textbf{Di Four\authorrefmark{2}} \quad \textbf{Ed Five\authorrefmark{2}}
+}
+\vspace{1mm}
+\authorblockA{
+\authorrefmark{1}Equal contribution \quad
+\authorrefmark{2}Equal advising
+}
+\vspace{1mm}
+\authorblockA{Stanford University}
+}
+\maketitle
+x
+\end{document}

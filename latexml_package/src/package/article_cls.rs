@@ -21,8 +21,6 @@ LoadDefinitions!( {
     "openany",
     "onecolumn",
     "twocolumn",
-    "notitlepage",
-    "titlepage",
   ]
   .iter()
   {
@@ -47,13 +45,25 @@ LoadDefinitions!( {
     });
   });
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
-  DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  // `\input{fleqn.clo}` (fleqn_sty.rs `fleqn_clo`).
+  DeclareOption!("fleqn", sub { fleqn_sty::fleqn_clo()?; });
 
   // article.cls:84-86: two-sided only by option (the kernel's `\@twosidefalse` is the default;
   // KNOWN_PERL_ERRORS #469: Perl's options are no-ops, as book's were for hep-ph0207204).
   DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
   DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
+  // article.cls:50-51, :91-93: `\if@titlepage`, false unless `titlepage` (Perl's no-op options leave it false), which
+  // a class or document may test and which decides its `\maketitle` (article.cls:169-219: `declare_fnsymbol_title_block`,
+  // the kernel's `MaketitleRuns::WithoutTitlepage`, TP1c). Declared before ProcessOptions, so the options run.
+  RawTeX!(r"\newif\if@titlepage \@titlepagefalse");
+  DeclareOption!("titlepage", r"\@titlepagetrue");
+  DeclareOption!("notitlepage", r"\@titlepagefalse");
   ProcessOptions!();
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): article.cls's in two
+  // columns, as its size file sets it for the paper and size options (`standard_class_twocolumn_page`: 229.5pt
+  // columns of a 469pt text on letter paper, 221/452pt on A4), when article is the document's class (review rev79c2
+  // finding 1: a `figure*` stated 2 columns where the PDF gives 2.044). One column is the registers' page.
+  declare_standard_class_page("article");
 
   //**********************************************************************
   // Document structure.
@@ -64,6 +74,9 @@ LoadDefinitions!( {
   // for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
 
   AddToMacro!("\\lx@maketitle@body", "\\ltx@authors@oneline");
+  // article.cls:170-232: the title block marks its notes in `\@fnsymbol` (without `titlepage`) and resets the footnote
+  // counter, when article is the document's class.
+  engine::latex_constructs::declare_fnsymbol_title_block("article", Some(false))?;
 
   DefMacro!("\\@ptsize", "0"); // should depend on options...
   DefMacro!("\\@pnumwidth", "1.55em");
@@ -75,8 +88,6 @@ LoadDefinitions!( {
 
   TeX!(r"
   \newif\if@restonecol
-  \newif\if@titlepage
-  \@titlepagefalse
   ");
 
   //**********************************************************************
@@ -109,13 +120,36 @@ LoadDefinitions!( {
   DefMacro!("\\theequation", "\\arabic{equation}");
   DefMacro!("\\thefigure", "\\arabic{figure}");
   DefMacro!("\\thetable", "\\arabic{table}");
+  // article.cls:457/469 (report.cls, book.cls alike) define `\fnum@figure`/`\fnum@table`; letter.cls, without floats,
+  // has none, but a letter document gets these through the OmniBus fallback (OD #579). Perl's classes define neither
+  // and compose the tag in `\lx@@fnum@@`. Code that takes their current body needs one: babel's ini caption templates
+  // (babel.sty:2959-2965, `\gdef\fnum@table{…{\[fnum@table]}…}`) captured the undefined token itself, so the new
+  // `\fnum@table` called itself and the caption's `\refstepcounter` looped (2605.29738, Lithuanian on demand; Perl
+  // loops too, KNOWN_PERL_ERRORS #654). Each is the tag LaTeXML composes, so a caption reads as before
+  // (OXIDIZED_DESIGN_DIVERGENCES #579).
+  DefMacro!("\\fnum@figure", "\\lx@@fnum@@{figure}");
+  DefMacro!("\\fnum@table", "\\lx@@fnum@@{table}");
 
   DefMacro!("\\theenumi", "\\arabic{enumi}");
   DefMacro!("\\theenumii", "\\alph{enumii}");
   DefMacro!("\\theenumiii", "\\roman{enumiii}");
   DefMacro!("\\theenumiv", "\\Alph{enumiv}");
 
+  // The class's names (article.cls:613-622), in its own load as the real class has them, with the values LaTeXML's
+  // kernel predefines (Perl assigns only article.cls.ltxml:98 `\refname` here, the rest in
+  // latex_constructs.pool.ltxml:719-722, "these actually should be in article/report/book"): a stand-in's copy that
+  // `\LoadClass`es article finds them defined, so its `\newcommand` of one is LaTeX's "already defined"
+  // (`state::ClassLoadFrame`, OXIDIZED_DESIGN_DIVERGENCES #732).
+  DefMacro!("\\contentsname", "Contents");
+  DefMacro!("\\listfigurename", "List of Figures");
+  DefMacro!("\\listtablename", "List of Tables");
   DefMacro!("\\refname", "References");
+  DefMacro!("\\indexname", "Index");
+  DefMacro!("\\figurename", "Figure");
+  DefMacro!("\\tablename", "Table");
+  DefMacro!("\\partname", "Part");
+  DefMacro!("\\appendixname", "Appendix");
+  DefMacro!("\\abstractname", "Abstract");
 
   // Perl L100: article uses section-level bibliography in backmatter.
   // Rust was missing this mapping, so the chapterbib/bibunits/sectionbib
@@ -150,4 +184,63 @@ LoadDefinitions!( {
   // the `openbib` option overrides; a copied `thebibliography` body reads it
   // (mciteplus_doc; Perl's class binding lacks the default too).
   RawTeX!(r"\let\@openbib@code\@empty");
+
+  // article.cls:131-168: the `headings` and `myheadings` page styles. Running heads are page furniture, so
+  // `\markboth`/`\markright` keep nothing (sect05.rs), but a document or a raw style calls the styles by name
+  // (`\ps@headings` in 1004.5433's Mhdr.sty and 1301.4585; `\let\ps@plain\ps@myheadings`, adassconf.sty:534 in
+  // 0711.0180, 0901.3729, 0906.2186) and `\pagestyle{headings}` runs them, as in LaTeX. Perl's binding defines
+  // neither (KNOWN_PERL_ERRORS #760).
+  RawTeX!(r"\if@twoside
+  \def\ps@headings{%
+      \let\@oddfoot\@empty\let\@evenfoot\@empty
+      \def\@evenhead{\thepage\hfil\slshape\leftmark}%
+      \def\@oddhead{{\slshape\rightmark}\hfil\thepage}%
+      \let\@mkboth\markboth
+    \def\sectionmark##1{%
+      \markboth {\MakeUppercase{%
+        \ifnum \c@secnumdepth >\z@
+          \thesection\quad
+        \fi
+        ##1}}{}}%
+    \def\subsectionmark##1{%
+      \markright {%
+        \ifnum \c@secnumdepth >\@ne
+          \thesubsection\quad
+        \fi
+        ##1}}}
+\else
+  \def\ps@headings{%
+    \let\@oddfoot\@empty
+    \def\@oddhead{{\slshape\rightmark}\hfil\thepage}%
+    \let\@mkboth\markboth
+    \def\sectionmark##1{%
+      \markright {\MakeUppercase{%
+        \ifnum \c@secnumdepth >\m@ne
+          \thesection\quad
+        \fi
+        ##1}}}}
+\fi
+\def\ps@myheadings{%
+    \let\@oddfoot\@empty\let\@evenfoot\@empty
+    \def\@evenhead{\thepage\hfil\slshape\leftmark}%
+    \def\@oddhead{{\slshape\rightmark}\hfil\thepage}%
+    \let\@mkboth\@gobbletwo
+    \let\sectionmark\@gobble
+    \let\subsectionmark\@gobble
+    }");
+  // article.cls:480-489: the caption box. The binding's `\caption` builds `ltx:caption` itself and never calls it,
+  // but a raw package setting its own captions does — xtab.sty:84/121/132 `\@makecaption{\@nameuse{fnum@#1}}{…}`
+  // (1010.5412), captcont.sty (1206.7007) — and documents save and wrap it (`\let\old@makecaption\@makecaption`;
+  // 50 papers in all, 1011.6187). Its `Table 1: text` then stands in the text, as LaTeX sets it. Perl's binding
+  // lacks it too (KNOWN_PERL_ERRORS #760).
+  RawTeX!(r"\long\def\@makecaption#1#2{%
+  \vskip\abovecaptionskip
+  \sbox\@tempboxa{#1: #2}%
+  \ifdim \wd\@tempboxa >\hsize
+    #1: #2\par
+  \else
+    \global \@minipagefalse
+    \hb@xt@\hsize{\hfil\box\@tempboxa\hfil}%
+  \fi
+  \vskip\belowcaptionskip}");
 });

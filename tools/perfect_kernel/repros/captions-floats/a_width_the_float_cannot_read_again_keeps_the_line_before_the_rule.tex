@@ -1,0 +1,43 @@
+% witness: review rev78x3 finding 1 (probes p1.tex F1-F2, p8.tex F1: a width macro the float's group no longer
+%          reads, or reads with another meaning, got no delta but kept the real column: two rows where base and pdflatex
+%          keep one); the content of an `\hbox` (`\resizebox`) is set at the enclosing line, not at the box's width
+% oracle:  pdflatex 0 errors, 0 overfull (\columnwidth 246pt): Figures 1-3 one row (2 x 118.08pt), Figure 4 two rows
+%          (2 x 4.5cm = 256.1pt)
+% engines: rust int68a = Figures 1-4 one row each (Perl's 345pt line); 78x r3 = two rows each (Figures 1-3 the
+%          registers' 165.6pt widths against the real 246pt column); Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; Figures 1-3 no `ltx:break`, Figure 4 one; two panels each
+% status:  RED (78x r3: Figures 1-3) -> GREEN (78x r4: a stated width that cannot be read at the float's end, or does
+%          not give the box's width again there, leaves the float the line before the rule; an `\hbox`'s content is
+%          evaluated at the enclosing line)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\def\w{0.2\textwidth}
+\begin{document}
+Text.
+\begin{figure}
+{\def\wa{0.48\columnwidth}%
+\includegraphics[width=\wa]{example-image}\hfill
+\includegraphics[width=\wa]{example-image}}
+\caption{A width macro of an inner group.}
+\end{figure}
+\begin{figure}
+\begin{center}
+\newcommand\wc{0.48\columnwidth}%
+\includegraphics[width=\wc]{example-image}\hfill
+\includegraphics[width=\wc]{example-image}
+\end{center}
+\caption{A width macro of a center.}
+\end{figure}
+\begin{figure}
+{\def\w{0.48\columnwidth}%
+\includegraphics[width=\w]{example-image}\hfill
+\includegraphics[width=\w]{example-image}}
+\caption{An inner meaning shadows an outer one.}
+\end{figure}
+\begin{figure}
+\resizebox{4.5cm}{!}{\includegraphics[width=0.5\linewidth]{example-image}}\hfill
+\resizebox{4.5cm}{!}{\includegraphics[width=0.5\linewidth]{example-image}}
+\caption{A box's content at the enclosing line.}
+\end{figure}
+\end{document}

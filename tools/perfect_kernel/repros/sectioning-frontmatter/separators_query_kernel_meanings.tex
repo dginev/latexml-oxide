@@ -1,0 +1,40 @@
+% mechanism: the binding-callable separator query (`observer/separators.rs` `argument_separators`, its TeX front-end
+%   `\lx@fm@separators{<tokens>}`; OD #995, Option C P2-0): the `\and`-family separators an argument holds at its own level,
+%   as the rehearsal digests it (`Sep(And)` at nest 0), each with the meaning of the token that printed it. Every shape
+%   here is the kernel separator: a literal `\and`, `\And`, `\AND`, one held in a macro of the document's, a `\let` copy
+%   (SEP1, OD #994), a `\csname and\endcsname`; one inside a `\parbox`'s tabular is the box's, not the argument's; none
+%   prints "" (empty). (A group or a font command around a kernel `\and` is no valid kernel author line: pdflatex's
+%   `\end{tabular}` closes the group, "Missing } inserted".) No binding calls the query yet (P2-1+ do): this document calls it itself
+% witness: synthetic (the P2 plan's query, agent_reports/2026-11-10_P2P_report.md S6)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: `\lx@fm@separators` provided as the kernel title's author
+%   tabular, each line prints its names in columns ("Ann Able  Bob Baker"), as the kernel `\and` parts them (`\And`
+%   and `\AND`, which LaTeX's kernel lacks, provided as `\and`, as `latex_constructs/sect05.rs` `\let`s them); the
+%   `\parbox` line's columns inside the box
+% engines: Perl 0.8.8: no such query (not run); base int157a (a8826e189a): `\lx@fm@separators` undefined, the provided
+%   tabular; P20: each line's list below
+% expect:  0 errors, 0 warnings; the lines read L1[kernel] L2[kernel,kernel] L3[kernel] L4[kernel] L5[kernel] L6[] L7[]
+% status:  GREEN (P20; guard perfect_kernel_batchp20::the_separator_query_reads_the_kernel_meanings)
+\documentclass{article}
+\makeatletter
+\providecommand\lx@fm@separators[1]{\begin{tabular}[t]{c}#1\end{tabular}}
+\newcommand\sep[1]{[\lx@fm@separators{#1}]}
+\makeatother
+\providecommand\And{\and}
+\providecommand\AND{\and}
+\newcommand\aut{Ann Able \and Bob Baker}
+\let\nx\and
+\begin{document}
+L1\sep{Ann Able \and Bob Baker}
+
+L2\sep{Ann Able \And Bob Baker \AND Cy Coe}
+
+L3\sep{\aut}
+
+L4\sep{Ann Able \nx Bob Baker}
+
+L5\sep{Ann Able \csname and\endcsname Bob Baker}
+
+L6\sep{\parbox[t]{5cm}{\begin{tabular}[t]{c}Ann Able \and Bob Baker\end{tabular}}}
+
+L7\sep{Ann Able and Bob Baker}
+\end{document}

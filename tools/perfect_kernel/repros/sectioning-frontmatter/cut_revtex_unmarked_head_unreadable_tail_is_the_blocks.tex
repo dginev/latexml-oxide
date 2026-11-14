@@ -1,0 +1,20 @@
+% mechanism: REVTeX's `\affiliation` with an unmarked first entry is read as head + marked lines only where every
+%   top-level line after the head opens with a mark and no box, group or environment holds one
+%   (`revtex4_support_sty::marks_lead_every_line`); a tail with boxed marked lines goes whole to the 98e fail-safe, the
+%   block's once (`addresses:block`, OD #159), as before 107e
+% witness: review rev107e finding 2 (r4); the head + marked lines shape of 2109.01501 and 1903.07834 stays read
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Lee1,2 , Bob Ray2,3 and Cy Do1 / 1 Univ A, Nagoya / 2 Univ B / 3 Inst C / 4 Lab D"
+% engines: rust 107e (r1): a nameless creator "Univ A, Nagoya" (Ann lost entry 1), Ann "Univ B", Bob "Univ B" and
+%   "Inst C 4 Lab D"; int139a: the whole block on the block creator
+% expect:  0 errors, 0 warnings; Ann, Bob and Cy no affiliation; the block creator "Univ A, Nagoya 2 Univ B 3 Inst C 4
+%   Lab D" (the fail-safe's result)
+% status:  RED (107e r1) -> GREEN (107e r2) — perfect_kernel_batch107e::an_unmarked_head_over_an_unreadable_tail_is_the_blocks
+% preload: ar5iv.sty
+\documentclass[aps,prb,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Lee$^{1,2}$, Bob Ray$^{2,3}$ and Cy Do}
+\affiliation{Univ A, Nagoya\\ $^{2}$Univ B\\ \parbox{\linewidth}{$^{3}$Inst C\\ $^{4}$Lab D}}
+\begin{abstract}x\end{abstract}
+\maketitle
+\end{document}

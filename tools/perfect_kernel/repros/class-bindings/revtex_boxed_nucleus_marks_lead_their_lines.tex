@@ -1,0 +1,19 @@
+% mechanism: REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::nucleus_marks_as_marks`): a box holding only a mark set on a spacing nucleus (`\mbox{${\ }^{1}$}`) is
+%   that mark leading its line, so the block is cut by its marks.
+% witness: 0807.4407 (`\mbox{${\ }^{1}$} Department of Physics and Astronomy, University of Turku …\\ \mbox{${\ }^{2}$}
+%   Dipartimento di Scienze Fisiche …`: 98e once on the block, 98a the whole on each); review rev98e S2 (us2)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust 98e: the names no affiliation, the block (a nameless creator) the whole; 98a: the whole on each
+% expect:  0 errors, 0 warnings; each author its line
+% status:  RED (98e) -> GREEN (98e r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{\mbox{${\ }^{1}$} Univ A, Town\\ \mbox{${\ }^{2}$} Univ B, City}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

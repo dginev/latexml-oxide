@@ -3,9 +3,9 @@
 %          `\\` (latex.ltx:16590); rows a/b and c/d, "After TEXT."
 % engines: rust 64ze = 1 error (Error:expected:{ "Missing { inserted": the kernel-tabularcr test reads the unexpanded
 %          token's meaning against `\\`/`\@tabularcr`, and the `\let` copy taken before the tabular holds the
-%          outer meaning)
+%          outer meaning); GA4 = 0: the token is read `\ifx`-equal to `\@tabularcr`
 % expect:  0 errors; rows a/b and c/d
-% status:  RED (64ze)
+% status:  RED (64ze) -> GREEN (GA4)
 % preload: ar5iv.sty
 \documentclass{article}
 \makeatletter\let\mytcr\@tabularcr\makeatother

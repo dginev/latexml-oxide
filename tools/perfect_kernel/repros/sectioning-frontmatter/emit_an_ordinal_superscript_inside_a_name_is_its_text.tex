@@ -1,0 +1,17 @@
+% mechanism: an ordinal indicator written as an underlined superscript (`M$^{\underline{\mbox{a}}}$`, Spanish "Mª", María)
+%   is the name's text, no mark ending the name: U+00AA is a letter. Not ported (main session 2026-11-08, a RED only):
+%   both engines read the superscript as a mark
+% witness: astro-ph9802333 (`J. M$^{\underline{\mbox{a}}}$ Ib\'a\~{n}ez$^1$`)
+% oracle:  pdflatex 0 errors: "J. Ma Ibáñez1, Ann Able1" (the a raised and underlined), "1Univ A"
+% engines: rust MV1, the switch on: "J. M a" and "Ibáñez" two creators; off: one creator "J. M Ibáñez a̲", the a a mark
+% expect:  0 errors, 0 warnings; two creators both ways, "J. Mª Ibáñez" and Ann Able, Univ A theirs
+% status:  RED (MV1, both ways; catalog only, no guard)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{J. M$^{\underline{\mbox{a}}}$ Ib\'a\~{n}ez$^1$, Ann Able$^1$\\
+$^1$Univ A}
+\maketitle
+x
+\end{document}

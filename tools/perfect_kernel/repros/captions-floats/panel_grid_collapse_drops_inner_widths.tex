@@ -1,0 +1,31 @@
+% witness: review rev79c finding 3 (`collapse_float`: an inner float beside content of no width was the float's only
+%          panel, so it carried no `ltx_figure_panel`, and its children kept `panelwidth`s that were fractions of the
+%          inner's line, which `annotate_panel_grid` never overwrites)
+% oracle:  pdflatex 0 errors: each figure one line, the `{subfigure}{0.6\textwidth}` of two `0.45\linewidth` rules
+%          beside an empty box
+% engines: rust 79c r1 = each float `ltx_panels_gallery` 1x2, its rules `panelwidth` 0.45 (of the sub-figure's
+%          line, 0.27 of the float's); Perl 0.8.8 = the same rows, no grid markup
+% expect:  0 errors, 0 warnings; both floats `ltx_panels_gallery` 1x2, their rules no `panelwidth`
+% status:  RED (79c r1) -> GREEN (79c r2, OXIDIZED_DESIGN_DIVERGENCES #887)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+  \centering
+  \begin{subfigure}{0.6\textwidth}
+    \rule{0.45\linewidth}{1cm}\hfill\rule{0.45\linewidth}{1cm}
+  \end{subfigure}%
+  \makebox[0pt]{\textbf{}}%
+  \caption{An inner sub-figure beside an empty box.}
+\end{figure}
+\begin{figure}
+  \centering
+  \begin{subfigure}{0.6\textwidth}
+    \rule{0.45\linewidth}{1cm}\hfill\rule{0.45\linewidth}{1cm}
+  \end{subfigure}%
+  \raisebox{0pt}{}%
+  \caption{An inner sub-figure beside an empty raised box.}
+\end{figure}
+\end{document}

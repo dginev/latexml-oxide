@@ -54,6 +54,9 @@ pub struct NewCounterOptions<'ct> {
 /// registered inside a group outlives it — and re-derive the list's macro.
 /// Repro macro-state/counter_reset_lists_are_global.
 pub fn add_to_counter_reset(ctr: &str, within: &str) -> Result<()> {
+  if copy_provides_keeps_counter(ctr) {
+    return Ok(());
+  }
   let reg = s!("\\cl@{within}");
   let mut toks = vec![T_CS!(ctr), T_CS!(s!("UN{ctr}"))];
   if let Some(prev) = lookup_tokens(&reg) {
@@ -153,6 +156,14 @@ pub fn sync_reset_list_macro(ctr: &str) -> Result<()> {
 /// Defines a new counter named $ctr.
 /// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
 pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>) -> Result<()> {
+  // (a stand-in's copy keeps a counter the binding owns as the binding numbers it: `state::copy_provides_keeps_counter`)
+  if copy_provides_keeps_counter(ctr) {
+    return Ok(());
+  }
+  // (any other counter a stand-in's copy declares is declared for real — its `\c@`, `\cl@`, `\the`, `\p@` names outlive
+  // the copy's overlay, as the real class's do: `state::copy_provides_keeps_counter`)
+  let _declared = (crate::definition::origin::copy_provides() != 0)
+    .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
   let unctr = s!("UN{ctr}"); // UNctr is counter for generating ID's for UN-numbered items.
   if !within.is_empty()
     && within != "document"
@@ -203,6 +214,14 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       }),
     )?;
   }
+  // An alias counter (`register_counter_alias`) given a register of its own (`\let\c@case\relax\newcounter{case}`
+  // after llncs's `\@spothm{case}[theorem]`: 2303.08726) is an alias no more: `\refstepcounter{case}` steps the new
+  // register, as in LaTeX, where the alias was only the `\let` of `\c@case`. A counter whose `\c@` is still the alias's
+  // register keeps it (LaTeX refuses that `\newcounter`, "Command \c@case already defined").
+  if !prev_defn.as_ref().is_some_and(|defn| defn.is_register()) && is_counter_alias(ctr) {
+    assign_mapping::<Stored>("counter_for_type", ctr, None);
+    assign_mapping::<Stored>("counter_alias", ctr, None);
+  }
   after_assignment();
   if !has_value(&clctr) {
     assign_value(&clctr, Tokens!(), Some(Scope::Global));
@@ -246,16 +265,6 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   }
   define_hyper_counter_name(ctr, within)?;
 
-  if let Some(ref options) = options_opt
-    && !options.nested.is_empty()
-  {
-    assign_value(
-      &s!("nested_counters_{}", ctr),
-      options.nested.clone(),
-      Some(Scope::Global),
-    )
-  }
-
   // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro:
   // Perl Package.pm:686 `\the<ctr>` = `\lx@counter@arabic{<ctr>}`, a Token
   // body the format dump can carry (a closure is opaque to it).
@@ -284,9 +293,39 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     )?;
   }
 
+  // (a standard-class derivative re-declaring a counter its standard class's binding declared — article.cls's
+  // `\newcounter{figure}` in a full copy — keeps the binding's ids, LaTeXML's markup: `S1.F1`, not `F1`; the register,
+  // its reset list and `\the<ctr>` are the copy's, as TeX makes them. OXIDIZED_DESIGN_DIVERGENCES #731 rule 13;
+  // 2402.12725's article_saj.cls; guard `perfect_kernel_batch77w::standard_class_derivative_patches_stand`)
+  let ids = T_CS!(s!("\\the{ctr}@ID"));
+  if crate::binding::content::standard_class_binding_assigned(meaning_key(&ids)) {
+    return Ok(());
+  }
+  define_counter_ids(ctr, within, options_opt.as_ref())
+}
+
+/// The id half of [`new_counter`] (Perl Package.pm:689-705, `NewCounter`'s `idprefix`/`idwithin`/`nested`): records
+/// `@ID@prefix@<ctr>` and `nested_counters_<ctr>`, and defines `\the<ctr>@ID` and `\@<ctr>@ID`. A binding calls it
+/// alone for a counter a raw class declared, to give it the ids its standard-class binding gives (the KOMA classes,
+/// `koma_script.rs`: `S1.SS1`, not `section1.subsection1`); the register and its reset list stay the class's.
+pub fn define_counter_ids(
+  ctr: &str,
+  within: &str,
+  options_opt: Option<&NewCounterOptions>,
+) -> Result<()> {
+  if let Some(options) = options_opt
+    && !options.nested.is_empty()
+  {
+    assign_value(
+      &s!("nested_counters_{}", ctr),
+      options.nested.clone(),
+      Some(Scope::Global),
+    )
+  }
+
   let mut prefix = match options_opt {
     None => String::new(),
-    Some(ref opt) => opt.idprefix.to_string(),
+    Some(opt) => opt.idprefix.to_string(),
   };
   if !prefix.is_empty() {
     assign_value(
@@ -304,7 +343,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 
   if !prefix.is_empty() {
     let idwithin = match options_opt {
-      Some(ref opts) => {
+      Some(opts) => {
         if opts.idwithin.is_empty() {
           within
         } else {
@@ -516,6 +555,255 @@ pub fn record_refstep_props(counter: &str, props: &HashMap<Stored>) {
   REFSTEP_PROPS.with(|slot| slot.borrow_mut().insert(counter.to_string(), props.clone()));
 }
 
+/// The tags of the step a raw `\refstepcounter` made (`note_raw_refstep`): one no constructor took, so no element
+/// carries its number.
+const RAW_REFSTEP_TAGS: &str = "raw_refstep_tags";
+/// The counter of that step.
+const RAW_REFSTEP_COUNTER: &str = "raw_refstep_counter";
+/// Which step it is (a serial, one per raw step), told apart from another step's on the object one numbered
+/// (`Document::take_raw_refstep_number`).
+const RAW_REFSTEP_SERIAL: &str = "raw_refstep_serial";
+/// The step [`forget_raw_refstep`] forgot (a listing's start), for [`renote_forgotten_raw_refstep`].
+const RAW_REFSTEP_FORGOTTEN: &str = "raw_refstep_forgotten";
+/// The step an amsmath display's labels name ([`hold_raw_refstep_for_display`]): `Some` inside one.
+const RAW_REFSTEP_DISPLAY: &str = "raw_refstep_display";
+
+thread_local! {
+  static RAW_REFSTEP_SERIALS: std::cell::Cell<i64> = const { std::cell::Cell::new(0) };
+}
+
+/// A raw counter step a `\label` names ([`current_raw_refstep`]): the `tags` LaTeXML makes for every step and the
+/// step's serial.
+#[derive(Clone, Debug)]
+pub struct RawRefstep {
+  /// The step's `tags` (`label_stepped_counter`), whose `refnum` is what `\ref` prints.
+  pub tags:   crate::Digested,
+  /// Which step it is: two steps that print the same number are still two.
+  pub serial: i64,
+}
+
+/// Records the step a raw `\refstepcounter` made on `counter` (its `props` from [`label_stepped_counter`]), whose
+/// number LaTeX's `\label` takes from `\@currentlabel` (latex.ltx:14963-14967), for the labels made after it
+/// ([`current_raw_refstep`]). Local, as LaTeX's `\@currentlabel` is (`\protected@edef`): a box's step stays in
+/// the box. Any other step forgets it ([`label_stepped_counter`]). Witnesses: 2506.01072 (`\newtcbtheorem`),
+/// 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=figures]`), 2609.20563 (`\newtcblisting`).
+pub fn note_raw_refstep(counter: &str, props: &HashMap<Stored>) {
+  if let Some(tags @ Stored::Digested(_)) = props.get("tags") {
+    let serial = RAW_REFSTEP_SERIALS.with(|c| {
+      c.set(c.get() + 1);
+      c.get()
+    });
+    assign_value(RAW_REFSTEP_TAGS, tags.clone(), Some(Scope::Local));
+    assign_value(RAW_REFSTEP_COUNTER, counter.to_string(), Some(Scope::Local));
+    assign_value(RAW_REFSTEP_SERIAL, Stored::Int(serial), Some(Scope::Local));
+  }
+}
+
+/// The raw step recorded now ([`note_raw_refstep`]) stays recorded after the group it was made in: a package that
+/// makes `\@currentlabel` global after its `\refstepcounter` (algorithm2e.sty:1663 `\gdef\@currentlabel{\theAlgoLine}`,
+/// :1659 with hyperref), so that a `\label` after the group (`\While{c}{\label{x} …}`, the line's number made in the
+/// header's group) still names the step (`\lx@refstep@global`, algorithm2e_sty.rs). Witness 1602.05866
+/// (`algline:mainloop`, PDF 8).
+pub fn globalize_raw_refstep() {
+  if let Some((tags, counter, serial)) = recorded_raw_refstep() {
+    assign_value(
+      RAW_REFSTEP_TAGS,
+      Stored::Digested(tags),
+      Some(Scope::Global),
+    );
+    assign_value(RAW_REFSTEP_COUNTER, counter, Some(Scope::Global));
+    assign_value(RAW_REFSTEP_SERIAL, Stored::Int(serial), Some(Scope::Global));
+  }
+}
+
+/// The raw step current now, as recorded ([`note_raw_refstep`]).
+fn recorded_raw_refstep() -> Option<(crate::Digested, String, i64)> {
+  let Some(Stored::Digested(tags)) = lookup_value(RAW_REFSTEP_TAGS) else {
+    return None;
+  };
+  let serial = match lookup_value(RAW_REFSTEP_SERIAL) {
+    Some(Stored::Int(serial)) => serial,
+    _ => 0,
+  };
+  Some((tags, lookup_string(RAW_REFSTEP_COUNTER), serial))
+}
+
+/// Forgets the raw step locally, keeping it for [`renote_forgotten_raw_refstep`]: a listing starts, where listings
+/// makes `\@currentlabel` its line number's (lstmisc.sty:1228 `\lst@Init`, and `\refstepcounter{lstnumber}` per line,
+/// :1225), so a `\label` in an unnumbered listing does not name a step made before it (a `\refstepcounter{problem}`
+/// then an `lstlisting` with `(*\label{ln1}*)`: pdflatex the line's 2; repro
+/// `cross-references/listing_label_names_no_step_before_it.tex`).
+pub fn forget_raw_refstep() {
+  let forgotten = recorded_raw_refstep();
+  assign_value(
+    RAW_REFSTEP_FORGOTTEN,
+    forgotten.is_some(),
+    Some(Scope::Local),
+  );
+  if let Some((tags, counter, serial)) = forgotten {
+    assign_value(
+      &s!("{RAW_REFSTEP_FORGOTTEN}_tags"),
+      Stored::Digested(tags),
+      Some(Scope::Local),
+    );
+    assign_value(
+      &s!("{RAW_REFSTEP_FORGOTTEN}_counter"),
+      counter,
+      Some(Scope::Local),
+    );
+    assign_value(
+      &s!("{RAW_REFSTEP_FORGOTTEN}_serial"),
+      Stored::Int(serial),
+      Some(Scope::Local),
+    );
+    assign_value(RAW_REFSTEP_TAGS, Stored::None, Some(Scope::Local));
+  }
+}
+
+/// Notes again, locally, the step [`forget_raw_refstep`] forgot where the listing started: the box a tcolorbox
+/// listing box is, whose phantom code (its `label`) runs before the listing in the box (tcolorbox.sty:1154-1161,
+/// :1925) while this port runs it in the listing's first line (`listings_sty::with_tcb_phantom`): its label names
+/// the box's step (`\newtcblisting` with `auto counter`, 2609.20563).
+pub fn renote_forgotten_raw_refstep() {
+  if !matches!(
+    lookup_value(RAW_REFSTEP_FORGOTTEN),
+    Some(Stored::Bool(true))
+  ) {
+    return;
+  }
+  if let Some(tags @ Stored::Digested(_)) = lookup_value(&s!("{RAW_REFSTEP_FORGOTTEN}_tags")) {
+    assign_value(RAW_REFSTEP_TAGS, tags, Some(Scope::Local));
+    let counter = lookup_string(&s!("{RAW_REFSTEP_FORGOTTEN}_counter"));
+    assign_value(RAW_REFSTEP_COUNTER, counter, Some(Scope::Local));
+    if let Some(serial) = lookup_value(&s!("{RAW_REFSTEP_FORGOTTEN}_serial")) {
+      assign_value(RAW_REFSTEP_SERIAL, serial, Some(Scope::Local));
+    }
+  }
+}
+
+/// A label the display's own `\label` makes ([`mark_display_label`]) is pending until the kernel's `\label` takes it.
+const RAW_REFSTEP_DISPLAY_LABEL: &str = "raw_refstep_display_label";
+
+/// An amsmath display starts (`{gather}`, `{align}`, `{multline}`, `{aligned}` … and their starred forms): the labels
+/// its own `\label` makes ([`mark_display_label`]) name the step held here, not one made in a row. amsmath's `\label`
+/// there is `\label@in@display` (amsmath.sty:1230-1236), which only stores the key; `\make@display@tag` makes the label
+/// in the row's tag cell (:1240-1252, :1621-1627 `{gather}`, every row), after the cell group a `\refstepcounter` was
+/// made in restored `\@currentlabel` — `\begin{gather*} u=v \refstepcounter{foo}\label{e6} \end{gather*}` is the
+/// section's 7 in pdflatex. `names_the_step`: the display's labels may name the step current here (`{gather}`, and an
+/// `{aligned}`/`{split}` in an `{equation*}`: pdflatex 44, 45). Not for the align family (`{align}`, `{flalign}`,
+/// `{alignat}`) and `{multline}`, starred or not: `\math@cr@@@align` makes the display tag only under `\iftag@`
+/// (:1833-1843), so an untagged row's label is the next tagged row's (`\df@label` carried) or none (pdflatex `??`),
+/// never a step held at the start (repro `cross-references/amsmath_row_label_names_the_display_step.tex`, review probe
+/// rev78g2 al2.tex: `\begin{align} a&=b \label{n2}\notag \\ c&=d \end{align}` in a `\refstepcounter` environment is
+/// equation 1). The kernel's `\label` a document saved before (`\let\originallabel\label` at `\begin{document}`, the
+/// `\labelrel` idiom of 2310.19138) labels at once, after the cell's step ("a"). Local to the display; an inner one
+/// (`{aligned}` in `{gather*}`) keeps the outer's. The outermost start forgets a display label announced and never made
+/// ([`mark_display_label`]).
+pub fn hold_raw_refstep_for_display(names_the_step: bool) {
+  if matches!(lookup_value(RAW_REFSTEP_DISPLAY), Some(Stored::Bool(true))) {
+    return;
+  }
+  end_display_label();
+  if let Some(step) = current_raw_refstep_now().filter(|_| names_the_step) {
+    assign_value(
+      &s!("{RAW_REFSTEP_DISPLAY}_tags"),
+      Stored::Digested(step.tags),
+      Some(Scope::Local),
+    );
+    assign_value(
+      &s!("{RAW_REFSTEP_DISPLAY}_serial"),
+      Stored::Int(step.serial),
+      Some(Scope::Local),
+    );
+  } else {
+    assign_value(
+      &s!("{RAW_REFSTEP_DISPLAY}_tags"),
+      Stored::None,
+      Some(Scope::Local),
+    );
+  }
+  assign_value(RAW_REFSTEP_DISPLAY, Stored::Bool(true), Some(Scope::Local));
+}
+
+/// A paragraph box (`{minipage}`, `\parbox`, the kernel's `\@arrayparboxrestore`) starts: amsmath's
+/// `\@arrayparboxrestore` restores `\label` to the kernel's (amsmath.sty:1237-1238 `\let\label\ltx@label`), so a label
+/// in the box is made at once and names the step current in it, not the display's held step (review probe rev78g2
+/// nest.tex z5, `\begin{gather*} a=b \refstepcounter{foo}\text{\begin{minipage}{2cm}\label{z5}x\end{minipage}}
+/// \end{gather*}`: pdflatex 42; repro `cross-references/amsmath_row_label_names_the_display_step.tex`). Local to the
+/// box. Outside an amsmath display nothing.
+pub fn leave_display_for_parbox() {
+  if !matches!(lookup_value(RAW_REFSTEP_DISPLAY), Some(Stored::Bool(true))) {
+    return;
+  }
+  assign_value(RAW_REFSTEP_DISPLAY, Stored::Bool(false), Some(Scope::Local));
+  let display_label = matches!(
+    (lookup_meaning(&T_CS!("\\label")), lookup_meaning(&T_CS!("\\lx@ams@display@label"))),
+    (Some(Stored::Expandable(a)), Some(Stored::Expandable(b))) if std::rc::Rc::ptr_eq(&a, &b)
+  );
+  if display_label && lookup_meaning(&T_CS!("\\ltx@label")).is_some() {
+    let_i(&T_CS!("\\label"), &T_CS!("\\ltx@label"), None);
+  }
+}
+
+/// The display's own `\label` is making a label (amsmath's `\label@in@display`, expanded): the kernel's `\label` it
+/// reaches (directly, through cleveref's, or after a row's `\noalign` deferral) names the step current where the
+/// display started ([`hold_raw_refstep_for_display`]), until [`end_display_label`].
+pub fn mark_display_label() { assign_value(RAW_REFSTEP_DISPLAY_LABEL, true, Some(Scope::Global)); }
+
+/// The kernel's `\label` made the label [`mark_display_label`] announced.
+pub fn end_display_label() {
+  if lookup_bool(RAW_REFSTEP_DISPLAY_LABEL) {
+    assign_value(RAW_REFSTEP_DISPLAY_LABEL, false, Some(Scope::Global));
+  }
+}
+
+/// The raw step ([`note_raw_refstep`]) a `\label` made now names: `\@currentlabel` is still the step's
+/// `\the<counter>`, not text a package defined since (`\protected@edef\@currentlabel{…}`); for an amsmath display's
+/// own `\label` ([`mark_display_label`]) the step current where the display started ([`hold_raw_refstep_for_display`]).
+/// Witnesses: 2506.01072 (`\newtcbtheorem`), 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=
+/// figures]`), 2609.20563 (`\newtcblisting`), 2310.19138 (`\labelrel` in `{align*}`).
+pub fn current_raw_refstep() -> Option<RawRefstep> {
+  if !(matches!(lookup_value(RAW_REFSTEP_DISPLAY), Some(Stored::Bool(true)))
+    && lookup_bool(RAW_REFSTEP_DISPLAY_LABEL))
+  {
+    return current_raw_refstep_now();
+  }
+  let Some(Stored::Digested(tags)) = lookup_value(&s!("{RAW_REFSTEP_DISPLAY}_tags")) else {
+    return None;
+  };
+  let serial = match lookup_value(&s!("{RAW_REFSTEP_DISPLAY}_serial")) {
+    Some(Stored::Int(serial)) => serial,
+    _ => 0,
+  };
+  Some(RawRefstep { tags, serial })
+}
+
+/// The raw step a `\label`'s whatsit recorded ([`current_raw_refstep`], its `raw_refstep_tags` and
+/// `raw_refstep_serial` properties).
+pub fn raw_refstep_of(props: &HashMap<Stored>) -> Option<RawRefstep> {
+  let Some(Stored::Digested(tags)) = props.get("raw_refstep_tags") else {
+    return None;
+  };
+  let serial = match props.get("raw_refstep_serial") {
+    Some(Stored::Int(serial)) => *serial,
+    _ => 0,
+  };
+  Some(RawRefstep { tags: tags.clone(), serial })
+}
+
+/// [`current_raw_refstep`] outside an amsmath display.
+fn current_raw_refstep_now() -> Option<RawRefstep> {
+  let (tags, counter, serial) = recorded_raw_refstep()?;
+  let the_counter = Tokens!(T_CS!(s!("\\the{}", counter)));
+  let names_the_step = match lookup_meaning(&T_CS!("\\@currentlabel")) {
+    Some(Stored::Expandable(label)) => {
+      matches!(label.get_expansion(), Some(ExpansionBody::Tokens(body)) if *body == the_counter)
+    },
+    _ => false,
+  };
+  names_the_step.then_some(RawRefstep { tags, serial })
+}
+
 /// `\refstepcounter{<ctype>}` through what `\refstepcounter` means now
 /// (`ref_step_counter_planned`).
 pub fn ref_step_counter_by_meaning(ctype: &str) -> Result<HashMap<Stored>> {
@@ -649,6 +937,23 @@ pub fn counter_for_type(ctype: &str) -> String {
   })
 }
 
+/// Records `alias` as an alias counter of `base`, as aliascnt.sty's `\newaliascnt{alias}{base}` makes it
+/// (aliascnt_sty.rs; llncs.cls v2.16+'s `\@spothm`, llncs_cls.rs): `\refstepcounter{alias}` steps `base`'s root
+/// counter (`counter_for_type`, following a chain of aliases), so the alias shares its number and its ids, while the
+/// type stays `alias` — the counter LaTeX's `\refstepcounter` is passed, whose name hyperref gives the target
+/// (`\<alias>autorefname`, `\<alias>name`; [`is_counter_alias`]). Witnesses 2605.20695 (aliascnt lemmas), 2202.10090
+/// (llncs, envcountsame).
+pub fn register_counter_alias(alias: &str, base: &str) {
+  let root = counter_for_type(base);
+  assign_mapping("counter_for_type", alias, Some(root.clone()));
+  assign_mapping("counter_alias", alias, Some(root));
+}
+
+/// Is `ctype` an alias counter ([`register_counter_alias`])?
+pub fn is_counter_alias(ctype: &str) -> bool {
+  with_mapping("counter_alias", ctype, |meaning| meaning.is_some())
+}
+
 /// `<ctype>` without a trailing sentinel control sequence the parameter reader may have pulled in.
 pub fn strip_counter_type_sentinel(ctype: &str) -> &str {
   // Defensive: under some upstream conditions the {} parameter reader pulls a
@@ -665,11 +970,55 @@ pub fn strip_counter_type_sentinel(ctype: &str) -> &str {
   ctype
 }
 
+/// The serial of the counter step in scope ([`label_stepped_counter`]; local).
+const CURRENT_REFSTEP_SERIAL: &str = "current_refstep_serial";
+/// The serial of the latest counter step made ([`label_stepped_counter`]; global).
+const LATEST_REFSTEP_SERIAL: &str = "latest_refstep_serial";
+
+/// Whether a `\label` made now follows a counter step a group has since undone: LaTeX's `\label` names
+/// `\@currentlabel` (latex.ltx:14963-14967), which reverts when the group of the step that set it closes, so a label
+/// after `\end{equation}` inside a theorem names the theorem, not the equation (math0107195, "Theorem 5.3"). Such a
+/// label never names the object that closed step numbered, however near it is (`Document::float_to_label_scoped`).
+pub fn label_follows_an_undone_step() -> bool {
+  match (
+    lookup_value(CURRENT_REFSTEP_SERIAL),
+    lookup_value(LATEST_REFSTEP_SERIAL),
+  ) {
+    (Some(Stored::Int(current)), Some(Stored::Int(latest))) => current != latest,
+    (None, Some(Stored::Int(_))) => true,
+    _ => false,
+  }
+}
+
+/// The serial of the counter step in scope, which a `\label` made now names (`\@currentlabel`, latex.ltx:14963): what
+/// tells a step made inside a frontmatter item from one made before it (`\lx@set@frontmatter@label`).
+pub fn refstep_in_scope() -> Option<i64> {
+  match lookup_value(CURRENT_REFSTEP_SERIAL) {
+    Some(Stored::Int(serial)) => Some(serial),
+    _ => None,
+  }
+}
+
+/// The latest counter step stays the one in scope although the group it was made in has closed: a wrapper group of
+/// LaTeXML's own (caption's `\captionof` set in a float, caption_sty.rs `\@captionof@`) around a step LaTeX makes in
+/// the current group (caption.sty:390-391 `\setcaptiontype*` then `\caption`), so a `\label` after it names the step's
+/// object (2402.05535 `\captionof{figure}{…}\fi\label{…}`).
+pub fn keep_latest_refstep_in_scope() {
+  if let Some(latest @ Stored::Int(_)) = lookup_value(LATEST_REFSTEP_SERIAL) {
+    assign_value(CURRENT_REFSTEP_SERIAL, latest, Some(Scope::Local));
+  }
+}
+
 /// The labelling half of `\refstepcounter` (latex.ltx:14956-14967, after its `\stepcounter`):
 /// `\@currentlabel`, `\@currentID`, the tags and the counter's scope, for the counter `ctr` just
 /// stepped for `ctype`. Returns the `tags` and `id` properties.
 pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> {
   let ctr = ctr.to_string();
+  // A step is the current label's now (`note_raw_refstep` records it again for a raw one); global, as this port's
+  // `\@currentlabel` is.
+  if matches!(lookup_value(RAW_REFSTEP_TAGS), Some(Stored::Digested(_))) {
+    assign_value(RAW_REFSTEP_TAGS, Stored::None, Some(Scope::Global));
+  }
   maybe_preempt_refnum(&ctr, false);
 
   let the_ctr_id = s!("\\the{ctr}@ID");
@@ -715,15 +1064,62 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
     String::new()
   };
 
-  let refnum = digest_text(Tokens!(T_CS!(&the_ctr)))?;
-  let invocation;
-  {
-    invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
+  let digest_label = || -> Result<(crate::Digested, crate::Digested)> {
+    let refnum = digest_text(Tokens!(T_CS!(&the_ctr)))?;
+    let invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
       ctype
     )))])?;
-  }
-
-  let tags = stomach::digest(invocation)?;
+    Ok((refnum, stomach::digest(invocation)?))
+  };
+  // TeX keeps the label unexpanded (`\@currentlabel`, latex.ltx:14963-14967) and typesets it only where `\ref`
+  // prints it; Perl digests it as text here (Package.pm:770 `DigestText`). A step made in math whose label text
+  // cannot set (`\renewcommand{\theconsta}{{\kappa_{\arabic{consta}}}}`, `$\refstepcounter{consta}…$`: three "Script _
+  // can only appear in math mode" per step, 1609.03070, 1904.00290) is the author's math: its digest is discarded and
+  // the label set as `\ensuremath{\the<ctr>}`, local to the label (OXIDIZED_DESIGN #748; guard
+  // `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`). A label text sets keeps Perl's digest.
+  let (refnum, tags) = if lookup_bool("IN_MATH") {
+    let hold = crate::util::logger::DiagnosticsHold::begin();
+    match digest_label() {
+      Ok(label) if hold.errors_raised() == 0 => {
+        hold.commit();
+        label
+      },
+      Err(err) => {
+        hold.commit();
+        return Err(err);
+      },
+      Ok(_) => {
+        hold.discard();
+        push_frame();
+        let saved = T_CS!(s!("\\lx@the@in@math@{ctr}"));
+        let math_label = Tokens::new(vec![T_CS!("\\ensuremath"), T_BEGIN!(), saved, T_END!()]);
+        // (a label whose digest left a group open — a `\p@equation` taking nine arguments ate the closing braces,
+        // 1902.09345 — keeps the frame this pushed, and with it the math label: saved again, the label would call
+        // itself, `\@ensuremath` for ever)
+        let label = if matches!(lookup_meaning(&the_ctr_cs), Some(Stored::Expandable(ref d))
+          if matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if *body == math_label))
+        {
+          digest_label()
+        } else {
+          let_i(&saved, &the_ctr_cs, Some(Scope::Local));
+          def_macro(
+            the_ctr_cs,
+            None,
+            math_label,
+            Some(ExpandableOptions {
+              scope: Some(Scope::Local),
+              ..ExpandableOptions::default()
+            }),
+          )
+          .and_then(|()| digest_label())
+        };
+        pop_frame()?;
+        label?
+      },
+    }
+  } else {
+    digest_label()?
+  };
 
   // Any scopes activated for previous value of this counter (& any nested counters) must be
   // removed. This may also include scopes activated for \label
@@ -731,6 +1127,23 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
 
   // And install the scope (if any) for this reference number.
   assign_value("current_counter", ctr.clone(), Some(Scope::Local));
+  // The step's serial: in scope (local, as LaTeX's `\@currentlabel` is, latex.ltx:14963) and the latest one made
+  // (global). A `\label` whose scope's step is not the latest comes after a step a group has since undone
+  // ([`label_follows_an_undone_step`]).
+  let serial = match lookup_value(LATEST_REFSTEP_SERIAL) {
+    Some(Stored::Int(serial)) => serial + 1,
+    _ => 1,
+  };
+  assign_value(
+    CURRENT_REFSTEP_SERIAL,
+    Stored::Int(serial),
+    Some(Scope::Local),
+  );
+  assign_value(
+    LATEST_REFSTEP_SERIAL,
+    Stored::Int(serial),
+    Some(Scope::Global),
+  );
 
   let scope = arena::pin(format!("{ctr}:{refnum}"));
   let mut receiver = VecDeque::new();
@@ -1001,6 +1414,33 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
   Ok(())
 }
 
+/// The counter of the last numbered `\item` in force, whose label an `\item[…]` references ([`ref_step_item_counter`]).
+const ITEM_LABEL_COUNTER: &str = "lx@item@label@counter";
+/// The [`ITEM_LABEL_COUNTER`] the list's first numbered `\item` found in force: an enclosing list's counter, empty in
+/// a top-level list ([`ref_step_item_counter`]).
+const ITEM_LABEL_ENCLOSING: &str = "lx@item@label@enclosing";
+
+/// Whether the macro `cs` expands to something: defined, and not a parameterless empty macro. An empty body is
+/// stored as no expansion at all (`Expandable::new` "treat empty tokens as None"), so both forms are empty: the
+/// itemize's `\the@item<n>` (sect06.rs) and enumitem's emptied `\p@enum<n>` (enumitem_sty.rs).
+fn prints_something(cs: &str) -> Result<bool> {
+  Ok(match lookup_definition(&T_CS!(cs))? {
+    Some(defn) => {
+      !(defn.is_expandable()
+        && defn.get_conditional_type().is_none()
+        && defn
+          .get_parameters()
+          .is_none_or(|params| params.get_num_args() == 0)
+        && match defn.get_expansion() {
+          None => true,
+          Some(ExpansionBody::Tokens(body)) => body.is_empty(),
+          Some(ExpansionBody::Closure(_)) => false,
+        })
+    },
+    None => false,
+  })
+}
+
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>> {
   let counter = lookup_string("itemcounter");
@@ -1033,8 +1473,54 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
       T_CS!("\\itemtyperefname")
     };
 
-    let mut tag_tokens = vec![
-      T_BEGIN!(),
+    let mut tag_tokens = vec![T_BEGIN!()];
+    // An `\item[…]` does not `\refstepcounter` (latex.ltx `\@item`: only `\if@noitemarg`), so a `\label` on it takes
+    // `\@currentlabel` as the last numbered item in force left it. Perl types `\p@<counter>` instead
+    // (latex_constructs.pool.ltxml:1383 `\let\the<counter>\@empty`), the enclosing item's label only while `\p@enumii`
+    // is the kernel's `\theenumi`: enumitem empties it below the first level (enumitem.sty:551-556), and the reference
+    // was lost (2603.02347, 7 items; covington's `\item[b.]` in an `{example}`, 2405.01972). So when the last numbered
+    // item in force is an enclosing list's (`ITEM_LABEL_COUNTER` names another counter), the refnum is that item's
+    // `\p@<ctr>\the<ctr>`, read before `\the<counter>` is emptied. After a numbered item of the same list LaTeX's
+    // label is that sibling's. Perl's form keeps the enclosing item's label (`\p@enumii` = `\theenumi`, "1" where
+    // LaTeX has "1a"), and nothing at all once enumitem has emptied `\p@<ctr>`: there a nested list's refnum is the
+    // sibling's `\p@<ctr>\the<ctr>`, LaTeX's `\@currentlabel` ("a"). A top-level list keeps Perl's form (no refnum,
+    // the reference reads the item's own label): its `\p@enumi` is empty too, but its authors replace the sibling's
+    // label with their own (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630; 2409.02896), and `\@currentlabel` is
+    // not read here; so is a top-level `\item[…]` with no numbered item in force, where LaTeX's label is the last
+    // section's or equation's. A nested list's author can override it too, and there the sibling's label wins
+    // (2609.14520: "ii)" for the author's "ii′)"); reading an author-set `\@currentlabel` is deferred (user ruling
+    // 2026-10-20, SYNC_STATUS 77u residual). KNOWN_PERL_ERRORS #1003; guards `perfect_kernel_batch77u::{
+    // item_with_its_own_label_takes_the_enclosing_label, enumitem_item_with_its_own_label_takes_the_enclosing_label}`.
+    let ctr = counter_for_type(&counter);
+    let labelled = lookup_string(ITEM_LABEL_COUNTER);
+    let sibling_label = labelled == ctr
+      && !lookup_string(ITEM_LABEL_ENCLOSING).is_empty()
+      && !prints_something(&s!("\\p@{ctr}"))?;
+    if !labelled.is_empty() && (labelled != ctr || sibling_label) {
+      for (alias, cs) in [
+        ("\\lx@item@label@p@", s!("p@{labelled}")),
+        ("\\lx@item@label@the@", s!("the{labelled}")),
+      ] {
+        tag_tokens.extend([
+          T_CS!("\\expandafter"),
+          T_CS!("\\let"),
+          T_CS!("\\expandafter"),
+          T_CS!(alias),
+          T_CS!("\\csname"),
+        ]);
+        tag_tokens.extend(Explode!(cs));
+        tag_tokens.push(T_CS!("\\endcsname"));
+      }
+      tag_tokens.extend([
+        T_CS!("\\def"),
+        T_CS!(s!("\\p@{ctr}")),
+        T_BEGIN!(),
+        T_CS!("\\lx@item@label@p@"),
+        T_CS!("\\lx@item@label@the@"),
+        T_END!(),
+      ]);
+    }
+    tag_tokens.extend([
       T_CS!("\\let"),
       T_CS!(s!("\\the{counter}")),
       T_CS!("\\@empty"),
@@ -1043,7 +1529,7 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
       T_BEGIN!(),
       formatter,
       T_BEGIN!(),
-    ];
+    ]);
     // TODO: Another iffy clone...
     let reverted_tag = (*tag).clone().revert();
     tag_tokens.extend(reverted_tag.clone());
@@ -1072,7 +1558,21 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     }
     props
   } else {
-    ref_step_counter_by_meaning(&counter)?
+    let props = ref_step_counter_by_meaning(&counter)?;
+    // The item set `\@currentlabel` (latex.ltx `\refstepcounter` in `\@item`) when its list is numbered — its
+    // `\the<counter>` prints something; an itemize's `\the@item<n>` and a description's are empty (sect06.rs), as
+    // LaTeX's `\@nmbrlistfalse` lists never step, so an `\item[…]` after an itemize sibling still takes the enclosing
+    // enumerate item's label ("1"). Local to the list, as the `\protected@edef` is; the first numbered item records
+    // the enclosing list's counter it replaces.
+    let ctr = counter_for_type(&counter);
+    if prints_something(&s!("\\the{ctr}"))? {
+      let in_force = lookup_string(ITEM_LABEL_COUNTER);
+      if in_force != ctr {
+        assign_value(ITEM_LABEL_ENCLOSING, in_force, None);
+      }
+      assign_value(ITEM_LABEL_COUNTER, ctr, None);
+    }
+    props
   };
   for (k, v) in attr.into_iter() {
     result.insert_sym(k, v);
@@ -1096,6 +1596,22 @@ pub struct BeginItemizeOptions {
   /// a list that opens no `\list` (paralist's `in…` lists), so `\@listdepth` stays;
   /// enumitem's inline lists do open one (enumitem.sty:1188-1191)
   pub opens_no_list: bool,
+}
+
+/// Runs `\lx@trivlist@hook` in the current group: what a package adds to latex.ltx's `\@trivlist`, which every list but
+/// an in-paragraph one runs (:15862; tabu.sty:2390 `\tabu@trivlist`) and which is locked here (sect06.rs).
+pub fn run_trivlist_hook() -> Result<()> {
+  let hook = T_CS!("\\lx@trivlist@hook");
+  match lookup_meaning(&hook) {
+    None => return Ok(()),
+    Some(Stored::Expandable(defn)) if matches!(defn.expansion, Some(ExpansionBody::Tokens(ref tks)) if tks.is_empty()) =>
+    {
+      return Ok(());
+    },
+    _ => {},
+  }
+  stomach::digest(Tokens!(hook))?;
+  Ok(())
 }
 
 /// Prepare for an list (itemize/enumerate/description/etc)
@@ -1204,6 +1720,9 @@ pub fn begin_itemize(
       Tokens!(T_CS!("\\itemtyperefname")),
       global(),
     )?;
+  }
+  if !itype.starts_with("inline@") {
+    run_trivlist_hook()?;
   }
   if !itype.is_empty() {
     let itype_cs = T_CS!(s!("\\{itype}@item"));
@@ -1557,5 +2076,21 @@ pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit) {
   let inlistkey = s!("{captype}_inlist");
   if let Some(inlist) = remove_value(&inlistkey) {
     whatsit.set_property("inlist", inlist);
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  /// A step planned on a counter that a panic unwound past (`take_pending_step` never ran, `ref_step_counter_planned`)
+  /// is gone when the next conversion starts, with its recorded props: its first `\lx@refstepcounter` on that counter
+  /// takes no stale type (`reset_conversion_state` at `initialize_report`, revST3; cortex_worker catches a paper's
+  /// panic and goes on).
+  #[test]
+  fn a_step_a_panic_left_pending_is_not_the_next_conversions() {
+    super::PENDING_STEPS.with(|steps| steps.borrow_mut().insert("theorem".into(), "lemma".into()));
+    super::record_refstep_props("theorem", &Default::default());
+    crate::common::error::initialize_report();
+    assert_eq!(super::take_pending_step("theorem"), None);
+    assert!(super::REFSTEP_PROPS.with(|slot| slot.borrow().is_empty()));
   }
 }

@@ -1,0 +1,16 @@
+% mechanism: authblk `\author` with an `\affil` next: a line under the rows of names that reads as a name is one (`lines_of_names_before_affil`); the institution is in the `\affil`
+% witness: 2610.38214
+% oracle:  pdflatex: 0 errors; five names, then Univ X
+% engines: rust 108a r1: Eve Ede an affiliation of the other four, silently; int139a: one creator, one Error; perl: one creator
+% expect:  0 errors; five creators, each Univ X
+% status:  RED (108a r1) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\quad Bob Baker\\ Cat Cole\quad Dan Dee\\ Eve Ede}
+\affil{Univ X}
+\maketitle
+Text.
+\end{document}

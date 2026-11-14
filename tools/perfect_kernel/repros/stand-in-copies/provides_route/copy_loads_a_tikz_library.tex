@@ -1,0 +1,14 @@
+% A routed copy's own `\usetikzlibrary{snakes}` loads the library: pgf's scratch `\let`s that run while the copy is read
+% (`\let\pgfutil@reserved@c\pgfutil@reserved@b`) are no re-save of a wrapped command, and are not declined.
+% witness: 2207.07492 (sn-jnl.cls:302-303 `\usepackage{tikz}\usetikzlibrary{snakes}`, its `\draw[snake=snake]`)
+% oracle:  pdflatex 0 errors, the snake drawn
+% engines: rust int40a (c42be4a9a8, 77w r3) = 1 Error "You need to say \usetikzlibrary{snakes}" (2207.07492: 6 undefined
+%          pgf decoration macros); int39a (no saved-meaning rule) = 0 errors
+% expect:  0 errors; tikz's snakes library loaded
+% status:  RED (c42be4a9a8) -> GREEN (int40 follow-up: a copy's `\let` is declined only where it would make the wrapper
+%          call itself, state::copy_provides_keeps_saved_meaning)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\begin{document}
+A \tikz\draw[snake=snake] (0,0)--(1,0); B
+\end{document}

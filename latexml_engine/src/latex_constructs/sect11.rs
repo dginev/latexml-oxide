@@ -30,8 +30,16 @@ pub(crate) fn load() -> Result<()> {
   // \label attaches a label to the nearest parent that can accept a labels attribute
   // but only those that have an xml:id (but should this require a refnum and/or title ???)
   // Note that latex essentially allows redundant labels, but we can record only one!!!
+  // A label after a raw step (`raw_refstep_tags`: a `\refstepcounter` no constructor took, sect08.rs) names the
+  // object the step numbers, which takes the step's number (`take_raw_refstep_number`), and a box drawn as a picture
+  // may be that object (`Document::float_to_label_for`; OXIDIZED_DESIGN_DIVERGENCES #813). Witnesses: 2506.01072
+  // (`\newtcbtheorem`), 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608, 2609.20563 (`\newtcblisting`).
   DefConstructor!("\\lx@label Semiverbatim", sub[document, _olabel, props] {
-    if let Some(savenode) = document.float_to_label() {
+    let raw_step = raw_refstep_of(props);
+    let after_undone_step = matches!(props.get("after_undone_step"), Some(Stored::Bool(true)));
+    if let Some(savenode) =
+      document.float_to_label_scoped(raw_step.as_ref().map(|step| step.serial), after_undone_step)
+    {
       let mut labels : HashMap<String,bool> = HashMap::default();
       if let Some(label) = props.get("label") {
         labels.insert(label.to_string(), true);
@@ -42,12 +50,30 @@ pub(crate) fn load() -> Result<()> {
       let mut sorted_labels: Vec<String> = labels.into_keys().collect();
       sorted_labels.sort();
       document.node_set_attribute("labels", &sorted_labels.join(" "))?;
+      // The later `\label` of a key wins (`release_earlier_label_holders`; witness 2001.00288's `\label{algo2}` on a
+      // line and again on its algorithm, pdflatex "Algorithm 2").
+      if let Some(label) = props.get("label").map(ToString::to_string) {
+        let holder = document.get_node().clone();
+        if holder.get_attribute("labels").is_some_and(|labels| labels.split_whitespace().any(|l| l == label)) {
+          document.release_earlier_label_holders(&label, &holder);
+        }
+      }
+      if let Some(step) = raw_step {
+        document.take_raw_refstep_number(&step.tags, step.serial)?;
+      }
       document.set_node(&savenode);
     }
   },
   // Perl L3847-3848: disappear in tex=/content-tex unless outside DUAL_BRANCH.
   // Empty reversion: \label contributes no visible content to tex= attributes.
   reversion => "",
+  // A label makes no box: TeX's `\label` is a `\write` (latex.ltx `\label`, `\protected@write\@auxout`), a whatsit of
+  // no width. Perl gives the constructor no sizer, so it is measured by its key's text (Whatsit.pm:253-265): every box
+  // holding one was that much wider than TeX's, and a sub-float holding only a `\label` a panel of the key's width —
+  // four `\subfigure[]{\fbox{\label{…}\includegraphics[width=0.23\textwidth]{…}}}` in a REVTeX column, 2+2 in the
+  // PDF, set one per row (0809.3275 Figs 2-6), 2208.08007's `\newcommand{\labelphantom}[1]{\subfloat{\label{#1}}}`
+  // panels a row of their own. KNOWN_PERL_ERRORS #1144; guards `perfect_kernel_batch79c::a_label_makes_no_box*`.
+  sizer => 0,
   properties => {stored_map!("alignmentSkippable" => true, "alignmentPreserve" => true)},
   after_digest => sub[whatsit] {
     if let Some(arg1) = whatsit.get_arg(1) {
@@ -59,6 +85,14 @@ pub(crate) fn load() -> Result<()> {
     };
     let scope = label.replace("LABEL:","label:");
     whatsit.set_property("label", label);
+    if label_follows_an_undone_step() {
+      whatsit.set_property("after_undone_step", true);
+    }
+    if let Some(step) = current_raw_refstep() {
+      whatsit.set_property("raw_refstep_tags", Stored::Digested(step.tags));
+      whatsit.set_property("raw_refstep_serial", Stored::Int(step.serial));
+    }
+    end_display_label();
 
     let ctr_key_opt = with_value("current_counter", |val_opt| val_opt
       .map(|ctr| s!("scopes_for_counter:{}", ctr)));
@@ -80,6 +114,28 @@ pub(crate) fn load() -> Result<()> {
   // in eqnarray/ams rearrangeable bindings prevents an infinite
   // \lx@eqnarray@save@label recursion under nested align/gather (2008.13358).
   let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
+  // Locked against the class and package files (`:locked@files`, state.rs `is_name_locked`), as the kernel minipage
+  // is (sect12.rs): a raw class's own `\label` is the kernel's write of `\newlabel` to the `.aux` (latex.ltx's
+  // `\label`), which pdflatex reads back on its next run and LaTeXML never does, so taking it over recorded no label
+  // and left every reference of the document missing — CMSLATEX.CLS:736 and siuro210301.cls (SIAM's), jasatex.cls,
+  // myajour.cls (1607.06796, 2412.10948, 1504.01662, 1009.5642, math-ph0209020). A file's wrapper of `\label` loses
+  // its extras (showlabels' margin key, refcheck's marks); the label stays recorded. The document's own `\label`
+  // definitions stay its own, as in LaTeX.
+  AssignValue!("\\label:locked@files" => true, Some(Scope::Global));
+  // A wrapper group of LaTeXML's own around a counter step LaTeX makes in the current group closes without undoing it
+  // for the labels after it (`keep_latest_refstep_in_scope`).
+  DefPrimitive!("\\lx@refstep@outlives@group", {
+    keep_latest_refstep_in_scope();
+  });
+  // A package's `\gdef\@currentlabel` after a raw `\refstepcounter` keeps the step for the labels after the group it was
+  // made in (`globalize_raw_refstep`; algorithm2e.sty:1663).
+  DefPrimitive!("\\lx@refstep@global", {
+    globalize_raw_refstep();
+  });
+  // The type a `\label[type]{key}` gives its object's references (cleveref.sty `\label[type]`), where a site that moves
+  // a trailing `\label` reads the optional itself (`typed_label`). The kernel's `\label` has no type: nothing;
+  // cleveref's binding reads it.
+  DefMacro!("\\lx@label@type{}", "");
 
   // A reference shows its target's tags as its `show` names them: a held tag (`\lx@tag@intags@held`) it prints has
   // its deferred diagnostics replayed once the document is read (logger.rs `replay_shown_deferred`, ruling 7e).
@@ -98,21 +154,28 @@ pub(crate) fn load() -> Result<()> {
     if let Some(labels) = node.get_attribute("labels") {
       tie_held_tags(node, &labels);
     }
+    if empty_held_tags_pending() {
+      remove_empty_held_tags(document, node);
+    }
   });
 
   // # These will get filled in during postprocessing.
   // # * is added to accommodate hyperref
   // Perl latex_constructs.pool.ltxml L3873-3878: sizer => '()',
   //   robust => 1, enterHorizontal => 1.
+  // A label only another document holds prints the text xr imported for it (`external_ref_properties`).
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
-    "<ltx:ref ?#1(class='ltx_nolink')() labelref='#label' _force_font='true'/>",
+    "?#reftext(<ltx:ref class='#refclass' labelref='#label' ?#refhref(href='#refhref')() _force_font='true'>#reftext</ltx:ref>)\
+     (<ltx:ref ?#1(class='ltx_nolink')() labelref='#label' _force_font='true'/>)",
     sizer => "()",
     robust => true,
     enter_horizontal => true,
     properties => sub[args] {
-      unpack_opt_ref!(args => _star, label_opt);
-      let label = label_opt.as_ref().unwrap().to_string();
-      Ok(stored_map!("label" => Stored::String(pin(clean_label(&label, None)))))
+      unpack_opt_ref!(args => star, label_opt);
+      let label = clean_label(&label_opt.as_ref().unwrap().to_string(), None).into_owned();
+      let mut props = stored_map!("label" => Stored::String(pin(&label)));
+      external_ref_properties(&label, star.is_some(), &mut props)?;
+      Ok(props)
   });
 
   // "page" does not make sense in xml.  If the user really wants, they will need:
@@ -160,6 +223,15 @@ pub(crate) fn load() -> Result<()> {
   );
 
   DefMacro!("\\lx@ifusebbl{}{}{}", sub[(bib_files_tks, bbl_clause, bib_clause)] {
+    // Every `\bibliography` call is counted, for a package that asks whether one followed its own: bibentry's
+    // `\nobibliography*` warns at the end when none did (bibentry.sty:74-79, whose `\def\bibliography` wrapper the
+    // lock refuses; latexml_contrib bibentry_sty.rs). Witnesses 2505.07606 (`\nobibliography*` then the
+    // `\bibliography`: no warning), 2210.16098 (the starless `\nobibliography`).
+    assign_value(
+      "lx_bibliography_calls",
+      Stored::Int(lookup_int("lx_bibliography_calls") + 1),
+      Some(Scope::Global),
+    );
     let bib_files = Expand!(bib_files_tks).to_string();
     let jobname = Expand!(T_CS!("\\jobname")).to_string();
     if bib_files.is_empty() {
@@ -261,6 +333,7 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\lx@bibliography [] Semiverbatim",
     "<ltx:bibliography files='#2' xml:id='#id' class='#bibclass' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#lists'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#preamble</ltx:bibliography>",
     after_digest => sub[whatsit] {
+      record_bibliography_normalfont()?;
       bgroup();
       begin_bibliography_clean(whatsit)?;
       digest_bibliography_preamble(whatsit)?;
@@ -296,7 +369,10 @@ pub(crate) fn load() -> Result<()> {
     }
   );
 
-  DefConstructor!("\\bibstyle{}", sub[document, _whatsit, props] {
+  // The style is a name, read Semiverbatim as `\bibliographystyle`'s is: digested, `SciPost_bibstyle` erred (2412.10240;
+  // latex.ltx:17773 `\let\bibstyle\@gobble` typesets nothing; Perl pool:3972 `{}` the same, KNOWN_PERL_ERRORS #966). Guard:
+  // `perfect_kernel_batch73a::bibstyle_name_is_not_typeset`.
+  DefConstructor!("\\bibstyle Semiverbatim", sub[document, _whatsit, props] {
     let style = prop_string!(props, "style");
     set_bibstyle(&style);
     if let Some(mut bib) = document.findnode("//ltx:bibliography", None) {
@@ -333,13 +409,12 @@ pub(crate) fn load() -> Result<()> {
   // name at \bibstyle: natbib's `nobibstyle`/`[numbers]` does
   // `\let\bibstyle\@gobble`, and its author-year \bibstyle has no `\bibstyle@`
   // preset for a numeric style, so `\bibstyle{ieeetr}` otherwise vanishes.
-  // MakeBibliography reads this name to number an unsorted numeric style
-  // (ieeetr/IEEEtran/unsrt) in citation order (html_feedback #5930/#6095, the
+  // The name's order (CITE_SORT, the `.bst`'s fact) goes with it: the node's `sort`, by which MakeBibliography numbers
+  // an unsorted numeric style (ieeetr/IEEEtran/unsrt) in citation order (html_feedback #5930/#6095, the
   // natbib/revtex arm of #6294). CITE_STYLE is deliberately NOT set here —
-  // natbib owns numbers-vs-author-year via its options, and the plain-path
-  // \bibstyle DefConstructor already sets CITE_STYLE/CITE_SORT for known styles.
+  // natbib owns numbers-vs-author-year via its options.
   DefPrimitive!("\\lx@record@bibstyle{}", sub[(style)] {
-    assign_value("BIBSTYLE", pin(Expand!(style).to_string()), Some(Scope::Global));
+    record_bibstyle(&Expand!(style).to_string(), Some(Scope::Global));
   });
   DefMacro!(
     "\\bibliographystyle Semiverbatim",
@@ -367,7 +442,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@bibliography@title", None);
   // Should be an environment, but people seem to want to misuse it.
   DefConstructor!("\\thebibliography",
-  "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#preamble<ltx:biblist>",
+  "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true' _own_title='#owntitle'>#title</ltx:title>#preamble<ltx:biblist>",
     before_digest => {
         before_digest_bibliography() },
     after_digest => sub[whatsit] {
@@ -377,13 +452,33 @@ pub(crate) fn load() -> Result<()> {
       skip_spaces()?;
       if if_next(T_BEGIN!())? {
         read_arg(ExpansionLevel::Off)?;
+      } else if let Some(token) = read_token()? {
+        // TeX takes one token as the undelimited argument (revtex4.cls:5549 `[1]`, revtex4-1.cls:7308, natbib.sty:1063):
+        // 1203.4144's placeholder `\bibitem` before `\bibitem{Moffatt}` is the widest label, as is
+        // `\begin{thebibliography}9`'s 9. A `\bibitem` that opens an entry, or any other command, stays: Perl's
+        // leniency for an omitted argument, where TeX would take the `\bibitem` and print the entry's key as text.
+        let width = if token == T_CS!("\\bibitem") {
+          !(if_next(T_BEGIN!())? || if_next(T_OTHER!("["))?)
+        } else {
+          matches!(token.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+        };
+        if !width {
+          unread_one(token);
+        }
       }
       // The heading first, then the preamble, then the list's redirection — the order natbib's
       // `thebibliography` typesets them (natbib.sty:1063-1066), so a font switch in the preamble
       // (`\bibpreamble{\small …}`, apacite's `\bibliographytypesize`) reaches the entries but
       // not the title, whose font `begin_bibliography_clean` reads from its digested box.
       begin_bibliography_clean(whatsit)?;
+      // a continuation's own title (`\refname`, the class's `\bibsection`), which its close drops when no heading
+      // took its place (`drop_own_bibliography_heading`)
+      if lookup_bool("lx_bibliography_is_continued") {
+        whatsit.set_property("owntitle", "true");
+      }
       digest_bibliography_preamble(whatsit)?;
+      // Then the class's `\list` (article.cls:565-571, natbib.sty:1068), which runs `\@trivlist`'s additions.
+      run_trivlist_hook()?;
       setup_pseudo_bibitem()?;
     },
     before_construct => sub[doc,whatsit] {
@@ -429,6 +524,9 @@ pub(crate) fn load() -> Result<()> {
         Let!("\\par", "\\save@par");
         Let!("\\\\", "\\save@backbackslash");
       }
+      // a heading inside it that no `\bibitem` followed (`\lx@bibliography@sectioned`) leaves nothing to continue: a
+      // later lonely `\bibitem` is reported and a later bibliography numbers afresh
+      assign_value("lx_bibliography_sectioned", false, Some(Scope::Global));
     },
     locked=>true);
   Let!("\\saved@endthebibliography", "\\endthebibliography");
@@ -460,12 +558,26 @@ pub(crate) fn load() -> Result<()> {
         assign_value("lx_bibliography_opened_implicitly", false, Some(Scope::Global));
         document.set_attribute(node, "_implicit", "true")?;
       }
+      // …or reopened after a heading inside the author's `{thebibliography}` (`\lx@bibliography@sectioned`)
+      if lookup_bool("lx_bibliography_opened_continued") {
+        assign_value("lx_bibliography_opened_continued", false, Some(Scope::Global));
+        document.set_attribute(node, "_continued", "true")?;
+      }
     },
     after_close => sub[document, node] {
       prune_phantom_entries(document, node);
       remove_emptied_lists(document, node);
-      if !absorb_bibliography_heading(document, node)? && node.has_attribute("_implicit") {
+      let absorbed = absorb_bibliography_heading(document, node)?;
+      if !absorbed && node.has_attribute("_implicit") {
         head_implicit_bibliography(document, node)?;
+      }
+      if node.has_attribute("_continued") {
+        // a continuation the heading before it did not head (a `\paragraph{Note.}` and its text between the entries)
+        // is the list going on, as pdflatex prints it: no `\refname` title, no entry in the TOC of its own
+        if !absorbed {
+          drop_own_bibliography_heading(document, node)?;
+        }
+        prune_interrupted_bibliography(document, node)?;
       }
     });
   // …and those a bibliography's close did not reach: after it (2403.05651's nested `{thebibliography}` ends the outer
@@ -538,10 +650,49 @@ pub(crate) fn load() -> Result<()> {
   // Hack for abused bibliographies; see below
   DefMacro!(
     "\\bibitem",
-    r#"\if@lx@inbibliography\else\expandafter\lx@mung@bibliography\expandafter{\@currenvir}\fi\lx@bibitem"#,
+    r#"\if@lx@inbibliography\else\expandafter\lx@mung@bibliography\expandafter{\@currenvir}\fi\lx@bibitem@autoloads"#,
     locked=>true);
-  // Perl latex_constructs.pool.ltxml L4134-4162: enterHorizontal => 1 + afterDigest.
-  DefConstructor!("\\lx@bibitem[] Semiverbatim",
+  // An autoload the `[label]` calls loads its package before the entry is read, where Perl's digestion of the label
+  // as the `\lx@bibitem`'s argument loaded it (latex_constructs.pool.ltxml:4134): the label is typeset only in the
+  // entry's tags, where a package load came too late — the binding of crckapb.sty gives its bibliography's
+  // `\citeauthoryear` to natbib (OXIDIZED_DESIGN_DIVERGENCES #731), whose parser, loaded inside the tags, took the
+  // label `\the@bibitem` as its own number, `\NAT@wrout{\the@bibitem}` for ever (astro-ph0007279: Fatal
+  // Stomach:Recursion). A package that takes `\bibitem` over (natbib) reads the entry itself. The label is peeked,
+  // and put back as it was; a `\par` ends the peek, as it ends the non-long `\@lbibitem`'s argument (latex.ltx).
+  DefMacro!("\\lx@bibitem@autoloads", {
+    let kernel_bibitem = lookup_meaning(&T_CS!("\\bibitem"));
+    let par = T_CS!("\\par");
+    let mut peeked: Vec<Token> = Vec::new();
+    let mut fired = false;
+    if let Some(open) = read_token()? {
+      peeked.push(open);
+      if open == T_OTHER!("[") {
+        let mut level = 0usize;
+        while let Some(t) = read_token()? {
+          peeked.push(t);
+          match t.get_catcode() {
+            Catcode::BEGIN => level += 1,
+            Catcode::END => level = level.saturating_sub(1),
+            _ if level == 0 && t == T_OTHER!("]") => break,
+            _ if t == par => break,
+            _ => {},
+          }
+          if let Some(package) = crate::tex::unfired_autoload_package(&t) {
+            crate::tex::fire_autoload(&t, &package)?;
+            fired = true;
+          }
+        }
+      }
+    }
+    unread(Tokens::new(peeked));
+    let taken_over = fired && !matches!((lookup_meaning(&T_CS!("\\bibitem")), kernel_bibitem),
+      (Some(Stored::Expandable(now)), Some(Stored::Expandable(before))) if Rc::ptr_eq(&now, &before));
+    Ok(Tokens!(if taken_over { T_CS!("\\bibitem") } else { T_CS!("\\lx@bibitem") }))
+  });
+  // Perl latex_constructs.pool.ltxml L4134-4162: enterHorizontal => 1 + afterDigest. The `[label]` is read
+  // undigested (Perl `[]` digests it): it is typeset only in the entry's tags, each form where TeX prints it
+  // (OXIDIZED_DESIGN_DIVERGENCES #750).
+  DefConstructor!("\\lx@bibitem OptionalUndigested Semiverbatim",
     "<ltx:bibitem key='#key' xml:id='#id' _labelled='#labelled'>#tags<ltx:bibblock>",
     enter_horizontal => true,
     after_digest => sub[whatsit] {
@@ -583,16 +734,59 @@ pub(crate) fn load() -> Result<()> {
         } else {
           RefStepID!("@bibitem")?
         };
-        properties.insert("key", key.into());
+        properties.insert("key", key.clone().into());
         // the author's own label (`\bibitem[Baker(2001)]{}`): a printed entry however empty (`is_phantom_entry`)
         properties.insert("labelled", "true".into());
-        let mut tag_tokens = vec![
-            T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
-        tag_tokens.extend(Revert!(tag));
-        tag_tokens.push(T_END!());
-        tag_tokens.extend(
-          Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")]).unlist());
-        tag_tokens.push(T_END!());
+        // The label is typeset where TeX prints it, form by form. The entry's own label, `\fnum@@bibitem` =
+        // `{\@biblabel{\the@bibitem}}`, is printed here, as `\@lbibitem`'s `\item[\@biblabel{#1}\hfill]`
+        // (latex.ltx:17746-17749). The forms a reference prints (refnum, …) are TeX's `\b@key`, which `\@lbibitem`
+        // writes to the .aux (`\bibcite{key}{label}`) and only a `\cite` of the key expands: typeset only once some
+        // `\cite` prints the key (`cite_prints_keys`), at once when one already has, through the deferred-print list
+        // `b@key` (latexml_core `defer_print`; OXIDIZED_DESIGN_DIVERGENCES #750). Under mn2e/mnras without natbib
+        // (`\def\@biblabel#1{}`, mn2e.cls:1370, mnras.cls:1636) a `\bibitem[\protect\citeauthoryear{…}{…}]{key}`
+        // label errs only where a `\cite` prints it, as in pdflatex (0812.1037, 1105.2318, 1306.6339, 1508.03599). Perl
+        // (latex_constructs.pool.ltxml:4096-4102) digests every form here. Repros index-bib/bibitem_label_*.
+        // Under natbib (its own or any copy: `\NAT@ifcmd`, natbib.sty:809) the label is natbib's to parse at the
+        // `\bibitem` (`\@lbibitem` writes the parsed author and year; `\citeauthoryear` is its delimited parser,
+        // natbib.sty:1014 `#1#2#3(@)(@)\@nil#4`): no `\cite` expands the raw label. It is digested here once, as the
+        // optional argument it was before 70c, and the tags are made from what it digested to, all forms at once;
+        // read raw, out of that context, a copy's parser reads past the label's end (1003.3017's natbib_vw.sty:622;
+        // repro index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited, pdflatex and Perl 0 errors).
+        if lookup_meaning(&T_CS!("\\NAT@ifcmd")).is_some() {
+          let label = digest(Revert!(tag))?;
+          let mut tag_tokens = vec![T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
+          tag_tokens.extend(Revert!(label));
+          tag_tokens.push(T_END!());
+          tag_tokens.extend(Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")]).unlist());
+          tag_tokens.push(T_END!());
+          properties.insert("tags", digest(tag_tokens)?.into());
+          whatsit.set_properties(properties);
+          return Ok(Vec::new());
+        }
+        let mut define_label = vec![T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
+        define_label.extend(Revert!(tag));
+        define_label.push(T_END!());
+        let mut printed_here = Vec::new();
+        let mut printed_by_cite = vec![T_CS!("\\begingroup")];
+        printed_by_cite.extend(define_label.iter().copied());
+        let mut cite_forms = false;
+        for (here, form) in tag_forms(&Tokens!(T_OTHER!("@bibitem")))? {
+          if here {
+            printed_here.extend(form.unlist());
+          } else {
+            cite_forms = true;
+            printed_by_cite.extend(form.unlist());
+          }
+        }
+        printed_by_cite.push(T_CS!("\\endgroup"));
+        let mut tag_tokens = vec![T_BEGIN!()];
+        tag_tokens.extend(define_label);
+        tag_tokens.extend([T_CS!("\\lx@tags"), T_BEGIN!()]);
+        tag_tokens.extend(printed_here);
+        if cite_forms {
+          tag_tokens.extend(deferred_print_tokens(&cite_list(&key), Tokens::new(printed_by_cite)).unlist());
+        }
+        tag_tokens.extend([T_END!(), T_END!()]);
         properties.insert("tags",
           digest(tag_tokens)?.into());
         whatsit.set_properties(properties);
@@ -645,6 +839,42 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   AddToMacro!("\\@startsection@hook", "\\lx@bibliography@unlonely");
+  // A heading inside the author's `{thebibliography}` (`\section*{References}` under `\begin{thebibliography}`, mostly
+  // revtex4/4-1 papers; a topical `\section*`/`\subsection*` between groups of entries, hep-th0109182): pdflatex prints
+  // it inside the list and the entries after it stay the list's; here the unit closes the bibliography
+  // (`ltx:bibliography` auto-closes), so the bibliography state ends with it — the `\bibitem` after it opens the next
+  // bibliography in that unit (`\lx@mung@bibliography`), which takes its heading (`absorb_bibliography_heading`) and the
+  // author's `\end{thebibliography}` closes once. Perl keeps `\if@lx@inbibliography` and errs on every later entry
+  // (`<ltx:bibitem> isn't allowed in <ltx:section>`, KNOWN_PERL_ERRORS #855). Witnesses 1702.06834, 2402.15720,
+  // 2110.15342 (`\section*`), 2307.13534 (`\subsection*`), hep-th0109182; repro index-bib/heading_inside_thebibliography;
+  // guards `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
+  DefPrimitive!("\\lx@bibliography@sectioned", {
+    if x_equals(&T_CS!("\\if@lx@inbibliography"), &T_CS!("\\iftrue")) && lookup_bool("lx_bibliography_author_env") {
+      Digest!("\\@lx@inbibliographyfalse")?;
+      assign_value("lx_bibliography_sectioned", true, Some(Scope::Global));
+      // A bibliography interrupted before its first entry (nothing digested in it yet, `holds_nothing_yet`, nor
+      // `@bibitem` stepped; not itself a continuation) is the pruned one (`prune_interrupted_bibliography`): the
+      // continuation takes its number (`begin_bibliography_clean`), so its entries are `bib.bibN`, as in the one
+      // bibliography pdflatex prints (Perl's ids are fixed at digestion, latex_constructs.pool.ltxml:3877-3883).
+      // `@bibitem` alone misses a labelled `\bibitem[S01]{a}` (`RefStepID`) and a paragraph's entry.
+      let interrupted_empty = CounterValue!("@bibitem").value_of() == 0
+        && !lookup_bool("lx_bibliography_is_continued")
+        && holds_nothing_yet();
+      assign_value("lx_bibliography_sectioned_empty", interrupted_empty, Some(Scope::Global));
+      // the stop the entry before the heading asked for (natbib's `\BibitemShut`, natbib.sty:880-905) ends that entry,
+      // which the next `\bibitem`'s `\bibitem@fin` would put at the head of the next bibliography's first
+      if is_defined_token(&T_CS!("\\bibitem@fin")) {
+        Digest!("\\bibitem@fin")?;
+      }
+      Let!("\\@bibstop", "\\@undefined");
+      if x_equals(&T_CS!("\\bibitem"), &T_CS!("\\restoring@bibitem")) {
+        Let!("\\bibitem", "\\save@bibitem");
+        Let!("\\par", "\\save@par");
+        Let!("\\\\", "\\save@backbackslash");
+      }
+    }
+  });
+  AddToMacro!("\\@startsection@hook", "\\lx@bibliography@sectioned");
   // The bibliography a `\bibitem` opens out of an author's list, in the group standing for that list (below): an
   // `\item` there is that list's, on Perl's path, not one of the bibliography's own (hep-ph9804413's `{enumerate}` of
   // `\bibitem`s; repro index-bib/kernel_bibitem_list_items_stay).
@@ -676,7 +906,10 @@ pub(crate) fn load() -> Result<()> {
       ]);
     }
     // else ? it probably isn't going to work??
-    else if tag == "thebibliography" {
+    // …unless a heading inside it closed the bibliography (`\lx@bibliography@sectioned`): the environment is the kernel's,
+    // its end the author's own `\end{thebibliography}`.
+    else if tag == "thebibliography" && lookup_bool("lx_bibliography_sectioned") {
+    } else if tag == "thebibliography" {
       // (OXIDIZED_DESIGN_DIVERGENCES #484, KNOWN_PERL_ERRORS #569) In `{thebibliography}` with no bibliography open,
       // the class's own list stands in the kernel's:
       // `\let\thebibliography\bibreferences` (ajour, cjour, IEEE-Con-Sys-mag: 0711.2301, astro-ph0005341, 2310.12571;
@@ -710,10 +943,36 @@ pub(crate) fn load() -> Result<()> {
     tokens.push(T_CS!("\\lx@mung@bibliography@pre"));
     tokens.push(T_BEGIN!());
     if tag != "thebibliography" {
-      tokens.extend(Explode!("implicit"));
+      tokens.extend(Explode!("implicit "));
+    }
+    // …and the list that environment opened is closed first, when the `\bibitem` is in it: Kluwer's
+    // `\normallatexbib` `{chapthebibliography}` is `\section*{References}`, a `\list` and an `\item[]` the entries are
+    // typeset in (cargese.cls:1859-1890; kapproc.cls, edbk.sty alike), so the bibliography opened inside that item —
+    // `<ltx:section>`/`<ltx:bibliography> isn't allowed in <ltx:item>`, Perl's too (KNOWN_PERL_ERRORS #887); its entries
+    // are the bibliography's, as in the PDF. The class's `\endlist` then finds it closed (`\endlx@list` closes only
+    // what is open). Witnesses hep-th0212109 (cargese), cond-mat0112379 cond-mat0110649 (kapproc), cond-mat0002157
+    // (edbk); repro index-bib/kluwer_chapthebibliography; guard
+    // `perfect_kernel_batch69a::kluwer_chapthebibliography_closes_its_list`.
+    if !matches!(tag.as_str(), "" | "thebibliography" | "enumerate" | "itemize" | "description")
+      && lookup_string("lx@list@currenvir") == tag
+    {
+      tokens.extend(Explode!("list "));
+    }
+    let continued = lookup_bool("lx_bibliography_sectioned");
+    if continued {
+      tokens.extend(Explode!("continued"));
     }
     tokens.push(T_END!());
     tokens.push(T_CS!("\\lx@kernel@thebibliography"));
+    // The continuation is entered by `\lx@bibitem`, not by the `\bibitem` its setup armed (`setup_pseudo_bibitem`):
+    // what that `\restoring@bibitem` undoes is undone here, or every later blank line or `\\` in an entry would open
+    // an entry of its own (`\section*{References}\bibitem{a} A.,\\ J. 1.` and an erratum paragraph: one entry, as
+    // without the heading; hep-th0109182 [17]).
+    if continued {
+      tokens.extend(mouth::tokenize_internal(TeXString::assembled(
+        r"\let\bibitem\save@bibitem\let\par\save@par\let\\\save@backbackslash".to_string(),
+      )).unlist());
+    }
     // …whose setup (`before_digest_bibliography`, Perl latex_constructs.pool.ltxml:3839-3840) makes `\bibliography` and
     // `\bibliographystyle` do nothing, for the bibliography environment's group. Opened here without one of its own,
     // that would last to the end of the enclosing group — the document's — and drop the author's real bibliography
@@ -742,15 +1001,37 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\lx@mung@bibliography@pre{}", sub[document, args, _props] {
     // whether the bibliography opened next is the `\bibitem`'s own (`head_implicit_bibliography`): set
     // afresh here, so one that failed to open is not taken for the next
-    let implicit = args.first().and_then(|a| a.as_ref()).is_some_and(|a| a.to_string() == "implicit");
-    assign_value("lx_bibliography_opened_implicitly", implicit, Some(Scope::Global));
+    let how = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+    let how: Vec<&str> = how.split_whitespace().collect();
+    assign_value("lx_bibliography_opened_implicitly", how.contains(&"implicit"), Some(Scope::Global));
+    assign_value("lx_bibliography_opened_continued", how.contains(&"continued"), Some(Scope::Global));
     let parent     = document.get_node();
     let tag_sym    = model::get_node_qname(parent);
-    with(tag_sym, |tag|
+    let closed = with(tag_sym, |tag|
       if tag == "ltx:itemize" || tag == "ltx:enumerate" || tag == "ltx:description" {
         document.maybe_close_element(tag)
       } else { Ok(None) }
     )?;
+    // the environment's own list, from inside its item (`\lx@mung@bibliography`) — unless that list was the insertion
+    // point, closed above (a list around it is not the environment's)
+    if closed.is_none() && how.contains(&"list") {
+      let mut node = Some(document.get_node().clone());
+      while let Some(current) = node {
+        let qname = model::get_node_qname(&current);
+        if qname == pin!("ltx:itemize") || qname == pin!("ltx:enumerate") || qname == pin!("ltx:description") {
+          document.close_node_internal(&current)?;
+          // holding only the class's `\item[]`, it was the entries' frame alone
+          if is_empty_block(&current) {
+            document.remove_node(current);
+          }
+          break;
+        }
+        if !document::can_auto_close(&current) {
+          break;
+        }
+        node = current.get_parent();
+      }
+    }
     let mut node = Some(document.get_node().clone());
     while let Some(current) = node {
       if is_heading_unit(&current) {
@@ -846,11 +1127,13 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml L4244-4251: enterHorizontal => 1.
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
     "<ltx:bibref show='#1' bibrefs='#bibrefs' inlist='#bibunit' separator='#separator'
-      yyseparator='#yyseparator'>#3#4</ltx:bibref>",
+      yyseparator='#yyseparator' class='#citeclass'>#3#4</ltx:bibref>",
     enter_horizontal => true,
     properties => sub[args] {
       unref!(args => _show, keys, _phrase1, _phrase2);
-      Ok(stored_map!("bibrefs" => clean_bib_key(&keys.to_string()),
+      let bibrefs = clean_bib_key(&keys.to_string());
+      cite_prints_keys(&bibrefs)?;
+      Ok(stored_map!("bibrefs" => bibrefs,
         "separator" => match lookup_tokens("CITE_SEPARATOR") {
           Some(sep) => digest(sep)?.to_string(),
           None => String::new() },
@@ -859,7 +1142,8 @@ pub(crate) fn load() -> Result<()> {
           None => String::new() },
         "bibunit" => match lookup_value("CITE_UNIT") {
           Some(Stored::String(s)) => to_string(s),
-          _ => String::new() }
+          _ => String::new() },
+        "citeclass" => cite_order_class()
       ))
     }
   );
@@ -958,8 +1242,10 @@ pub(crate) fn load() -> Result<()> {
   // The file name is expanded as `\set@curr@file` (latex.ltx) does it, inside a
   // `\csname` (`\ifincsname` true): underscore's first-aid `_` stays `_` there
   // (arXiv 2606.31852 `\input{sections/logic_T}`).
+  // It runs latex.ltx's file hooks around the file (`content::input_content_with_file_hooks`; 2110.08325).
   DefPrimitive!("\\ltx@input {}", sub[(arg)] {
-    Input!(&::latexml_core::gullet::expand_as_csname_text(arg)?.to_string());
+    let name = ::latexml_core::gullet::expand_as_csname_text(arg)?.to_string();
+    input(&name, InputOptions { file_hooks: true, ..InputOptions::default() })?;
   });
   DefMacro!("\\input", "\\@ifnextchar\\bgroup\\@iinput\\@@input");
   Let!("\\@iinput", "\\ltx@input");
@@ -977,7 +1263,13 @@ pub(crate) fn load() -> Result<()> {
   );
 
   DefMacro!("\\quote@name{}", "\"\\quote@@name#1\\@gobble\"\"");
-  DefMacro!("\\quote@@name{} Match:\"", "#1\\quote@@name");
+  // latex.ltx:9665 `\def\quote@@name#1"{#1\quote@@name}`: the argument is delimited by the `"`, so the loop drops
+  // every `"` of the name (`\quote@name{a"b}` = `"ab"`). Perl's `{} Match:"` (latex_constructs.pool.ltxml:4233) read one
+  // token and then demanded a `"`: "Missing argument Match:\"" for every name longer than one token. latex.ltx:9702
+  // `\@iffileonpath` quotes through it, and VTeX's arXiv configs `\let\IfFileExists\@iffileonpath` (1312.4083 213
+  // errors, 2001.03064 76, 2006.14814 76, 1504.06523 63). KNOWN_PERL_ERRORS #924. Guard
+  // `perfect_kernel_batch70b::quote_name_is_delimited_by_the_quote`.
+  DefMacro!("\\quote@@name Until:\"", "#1\\quote@@name");
   DefMacro!("\\unquote@name{}", "\\quote@@name#1\\@gobble\"");
 
   // Perl L4313-4315: \include — input a file, respecting \includeonly
@@ -989,8 +1281,11 @@ pub(crate) fn load() -> Result<()> {
     // siunitx, physics … never loaded (arXiv 2605.05505, 2605.24122 flooded
     // into `Fatal:TooManyErrors`). Guard:
     // `perfect_kernel_batch56::include_strips_a_tex_extension`.
+    // The name's surrounding blanks are no part of it (`\include{ dir/x}` reads `dir/x.tex` in pdflatex; was a silent
+    // "No file  dir/x.tex", the chapter dropped; KNOWN_PERL_ERRORS #1151).
     let expanded = ::latexml_core::gullet::expand_as_csname_text(path)?.to_string();
-    let path_str = expanded.strip_suffix(".tex").unwrap_or(&expanded).to_string();
+    let expanded = expanded.trim();
+    let path_str = expanded.strip_suffix(".tex").unwrap_or(expanded).to_string();
     // Check if \includeonly restricts inclusion
     let table = lookup_value("including@only");
     let should_include = match table {
@@ -1150,10 +1445,34 @@ pub(crate) fn load() -> Result<()> {
   // Perl: latex_constructs.pool.ltxml L4454 uses the SanitizedVerbatim
   // parameter type so that `\index{a_b}`, `\index{with spaces}`, etc. don't
   // fail tokenization on chars that normally have non-OTHER catcodes.
+  // The entry is typeset only where the index is printed (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #738):
+  // TeX writes it raw to the `.idx` (latex.ltx:17713-17726) and typesets nothing without makeindex's `.ind`, so an
+  // entry's `_` (`\index{API!SELF_HEALING}`) is no TeX error until `\printindex` prints it (1112.3972). The entry is kept
+  // at its place (`\lx@deferred@print`) and digested when `\printindex`/`{theindex}` prints the list, its mark then
+  // where `\index` stood. Guards: `perfect_kernel_batch73a::{index_entry_is_typeset_only_when_printed,
+  // printed_index_keeps_its_entries}`.
   DefMacro!("\\index SanitizedVerbatim", sub[(phrases)] {
     let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
     let chars = IndexChars::for_index_entry(&entry);
-    process_index_phrases(entry, &chars, None, &formed)
+    Ok(deferred_print_tokens("idx", process_index_phrases(entry, &chars, None, &formed)?))
+  });
+  // The anchor of a deferred entry (`deferred_print_tokens`): what the entry digested to when its list was printed, at
+  // the place the entry was made; nothing when it never was.
+  DefConstructor!("\\lx@deferred@print Semiverbatim", sub[document, args, _props] {
+    let id = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+    if let Some(content) = deferred_print_content(id.trim()) {
+      document.absorb(&content, None)?;
+    }
+  },
+    reversion => "",
+    sizer => 0);
+  // `\lx@defer@print{list}{entry}`: the TeX-level `deferred_print_tokens`, for a binding's entry (nomencl_sty.rs).
+  DefMacro!("\\lx@defer@print{}{}", sub[(list, entry)] {
+    Ok(deferred_print_tokens(list.to_string().trim(), entry))
+  });
+  // `\lx@deferred@print@list{list}`: print the list — digest its deferred entries (`resolve_deferred_prints`).
+  DefPrimitive!("\\lx@deferred@print@list{}", sub[(list)] {
+    resolve_deferred_prints(Some(list.to_string().trim()))?;
   });
 
   // `\lx@index@inlist{list}{phrases}` — `\index` into the named list `list` (imakeidx's `\index[name]{…}`,
@@ -1162,7 +1481,7 @@ pub(crate) fn load() -> Result<()> {
     let list = list.to_string();
     let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
     let chars = IndexChars::for_index_entry(&entry);
-    process_index_phrases(entry, &chars, Some(list.trim()), &formed)
+    Ok(deferred_print_tokens(list.trim(), process_index_phrases(entry, &chars, Some(list.trim()), &formed)?))
   });
   DefMacro!("\\indexname", "Index");
   // Perl latex_constructs.pool.ltxml L4567-4585: theindex generates the
@@ -1175,6 +1494,8 @@ pub(crate) fn load() -> Result<()> {
   DefEnvironment!("{theindex}",
   "<ltx:index xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#body</ltx:index>",
   before_digest => {
+    // The index is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
+    resolve_deferred_prints(Some("idx"))?;
     Let!("\\item", "\\index@item");
     Let!("\\subitem", "\\index@subitem");
     Let!("\\subsubitem", "\\index@subsubitem");
@@ -1224,11 +1545,11 @@ pub(crate) fn load() -> Result<()> {
   // does when no file is open — harmless.
   DefMacro!(
     "\\makeindex",
-    "\\ifdefined\\@indexfile\\else\\csname newwrite\\endcsname\\@indexfile\\fi"
+    "\\lx@ifdefined\\@indexfile\\else\\csname newwrite\\endcsname\\@indexfile\\fi"
   );
   DefMacro!(
     "\\makeglossary",
-    "\\ifdefined\\@glossaryfile\\else\\csname newwrite\\endcsname\\@glossaryfile\\fi"
+    "\\lx@ifdefined\\@glossaryfile\\else\\csname newwrite\\endcsname\\@glossaryfile\\fi"
   );
   // \printindex removed — not in Perl engine (defined in makeidx.sty.ltxml)
 
@@ -1252,13 +1573,16 @@ pub(crate) fn load() -> Result<()> {
   // `\@bsphack\begingroup\@sanitize\@index`: the entry is read and dropped
   // (`\@index`, :17726), never typeset — the arXiv papers above call none, and
   // guitar.dtx:397-399's `\changes` text `\protected@edef`s to `\def{\relax}`
-  // (repro `index/glossary_digests_argument_guitar.tex`).
+  // (repro `index/glossary_digests_argument_guitar.tex`). After it, the entry is typeset only where the glossary is
+  // printed (the `.gls` stand-in, `\lx@makeindex@output`), as an `\index` entry is (OXIDIZED_DESIGN_DIVERGENCES #738,
+  // main-session call 2026-10-18 under user ruling 1): latex.ltx:17737-17741 `\@wrglossary` writes it raw to the
+  // `.glo`. Guard: `perfect_kernel_batch73a::glossary_entry_is_typeset_only_when_printed`.
   DefMacro!("\\glossary SanitizedVerbatim", sub[(phrases)] {
     if !is_defined_token(&T_CS!("\\@glossaryfile")) {
       return Ok(Tokens!());
     }
     let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
-    process_index_phrases(entry, &IndexChars::in_force(), Some("glo"), &formed)
+    Ok(deferred_print_tokens("glo", process_index_phrases(entry, &IndexChars::in_force(), Some("glo"), &formed)?))
   });
 
   // Standard English caption names set by babel-english.ldf's
@@ -1369,6 +1693,70 @@ pub(crate) fn load() -> Result<()> {
   Ok(())
 }
 
+/// The `class` of a citation's `ltx:bibref` that says how its numbers print (the post stage's `make_bibcite`, where
+/// the entries' numbers are known): `ltx_cite_sort` orders the keys by entry number, `ltx_cite_compress` joins a run of
+/// three or more consecutive numbers with an en dash ("[1–3]"), `ltx_cite_unsorted_first` puts the keys with no number
+/// before the sorted ones (cite.sty's order). `CITE_SORTCITES`/`CITE_COMPRESS` are set by the package
+/// that sorts: natbib's `sort`/`compress`/`sort&compress` options (natbib.sty:267-271, applied at :377 `\NAT@sort@cites`
+/// and :401 in `\NAT@citexnum`), which revtex4*.cls (revtex4-2.cls:7042 `\RequirePackage[sort&compress]{natbib}`),
+/// achemso (achemso.cls:1396-1398) and acmart (`\bibstyle@acmnumeric`, acmart.cls:385-389) pass; cite.sty, which sorts
+/// and compresses unless `nosort`/`nocompress` (cite.sty:95, :272-297, :412, :415). Perl's bindings ignore them
+/// (natbib.sty.ltxml:69-71, cite.sty.ltxml:17-19): KNOWN_PERL_ERRORS #1072, OXIDIZED_DESIGN_DIVERGENCES #844.
+fn cite_order_class() -> String {
+  let mut classes = Vec::new();
+  if lookup_bool("CITE_SORTCITES") {
+    classes.push("ltx_cite_sort");
+  }
+  if lookup_bool("CITE_COMPRESS") {
+    classes.push("ltx_cite_compress");
+  }
+  // (cite.sty prints a citation it cannot sort, a label not a number or an undefined key, at once, before the sorted
+  // ones: cite.sty:225-230 `\@cite@gobbledump@now`; natbib after them, natbib.sty:1185-1200 `\NAT@nonsort@list`)
+  if lookup_bool("CITE_SORTCITES") && lookup_bool("CITE_UNSORTED_FIRST") {
+    classes.push("ltx_cite_unsorted_first");
+  }
+  classes.join(" ")
+}
+
+/// Record, globally as `lx@bibliography@normalfont`, the font the document's `\normalfont` selects where
+/// `\bibliography` stands — latex.ltx's `\fontencoding\encodingdefault`, `\familydefault`, `\seriesdefault`,
+/// `\shapedefault` (:14113-14121), each expanded now — as the `\normalfont` body, `\fontencoding{…}\lx@normalfont@base
+/// \fontfamily{…}\fontseries{…}\fontshape{…}\selectfont` (sect13.rs), the `.bib` session (bib_session.rs) digests its
+/// entries in. That session runs after the document, in its live state, so its own
+/// `\normalfont` read the defaults of the document's END: cmpj3.sty's `\ukrainianpart` after the bibliography
+/// (`\renewcommand\familydefault{\sfdefault}`, 2603.23615) set the entries sans where pdflatex's bibliography,
+/// typeset in place, is serif. OXIDIZED_DESIGN_DIVERGENCES #779; guard
+/// `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`.
+fn record_bibliography_normalfont() -> Result<()> {
+  let mut tokens = Vec::new();
+  for (default, select) in [
+    ("\\encodingdefault", "\\fontencoding"),
+    ("\\familydefault", "\\fontfamily"),
+    ("\\seriesdefault", "\\fontseries"),
+    ("\\shapedefault", "\\fontshape"),
+  ] {
+    if lookup_definition(&T_CS!(default))?.is_none() {
+      return Ok(());
+    }
+    let code = Expand!(T_CS!(default)).to_string();
+    tokens.push(T_CS!(select));
+    tokens.push(T_BEGIN!());
+    tokens.extend(Explode!(code.trim()));
+    tokens.push(T_END!());
+    if select == "\\fontencoding" {
+      // as `\normalfont` (sect13.rs): an unknown family resets to LaTeXML's serif, not the font in force
+      tokens.push(T_CS!("\\lx@normalfont@base"));
+    }
+  }
+  tokens.push(T_CS!("\\selectfont"));
+  assign_value(
+    "lx@bibliography@normalfont",
+    Tokens::new(tokens),
+    Some(Scope::Global),
+  );
+  Ok(())
+}
+
 /// A labelled node answers, for each role whose tags are held (`type_tag_deferred`, `\lx@tag@intags@held`; ruling 7e),
 /// for the tag a reference to its labels prints: its own tag of that role, else the nearest ancestor's — CrossRef's
 /// walk up for a show word the labelled entry lacks (`\section*` under a numbered chapter prints the chapter's).
@@ -1376,9 +1764,7 @@ pub(crate) fn load() -> Result<()> {
 /// The held diagnostics are raised if a reference shows the role (logger.rs `replay_shown_deferred`). Witness
 /// biblatex-gost-examples.
 fn tie_held_tags(node: &Node, labels: &str) {
-  let roles: Vec<String> = with_mapping_keys("type_tag_deferred", |keys| {
-    keys.into_iter().map(to_string).collect()
-  });
+  let roles = held_tag_roles(with_mapping_keys("type_tag_deferred", |keys| keys));
   if roles.is_empty() {
     return;
   }
@@ -1411,12 +1797,97 @@ fn tie_held_tags(node: &Node, labels: &str) {
   }
 }
 
+/// The roles whose tags are held (`type_tag_deferred`'s keys), sorted: the order the labels answer for them in, so the
+/// order a reference showing two of them replays their diagnostics in (logger.rs `replay_shown_deferred`) is the
+/// roles' and not the symbol table's, which follows the dump's load order (det354 B3).
+fn held_tag_roles(keys: Vec<SymStr>) -> Vec<String> {
+  let mut roles: Vec<String> = keys.into_iter().map(to_string).collect();
+  roles.sort_unstable();
+  roles
+}
+
+/// Removes the empty held tags of `node` (`note_empty_held_tag`: kept for their diagnostics, now tied to the labels
+/// of `node` or of the nodes inside it, which closed first), and its `ltx:tags` if that leaves it empty.
+fn remove_empty_held_tags(document: &mut Document, node: &Node) {
+  let children = |parent: &Node| {
+    std::iter::successors(parent.get_first_child(), |child| child.get_next_sibling())
+      .filter(|child| child.get_type() == Some(NodeType::ElementNode))
+      .collect::<Vec<_>>()
+  };
+  for tags in children(node)
+    .into_iter()
+    .filter(|child| child.get_name() == "tags")
+  {
+    let mut removed = false;
+    for tag in children(&tags) {
+      if tag.get_name() == "tag"
+        && tag.get_first_child().is_none()
+        && tag.has_attribute("_deferred")
+      {
+        document.remove_node(tag);
+        take_empty_held_tag();
+        removed = true;
+      }
+    }
+    if removed && tags.get_first_child().is_none() {
+      document.remove_node(tags);
+    }
+  }
+}
+
+/// Settles the empty held tags left once the document is built (`note_empty_held_tag`), which no target closing over
+/// them tied and removed: a caption's tags in a minipage that became a figure panel (`settle_float_paragraph`'s fold;
+/// two captioned minipages in a figure), a label type's tags put in place after their target closed. Each is tied to
+/// the labels of its owner only — the element holding its `ltx:tags` — as `tie_held_tags` ties one (its held
+/// diagnostics raised where a reference prints its role, `replay_shown_deferred`, so they run before it); an owner
+/// with no label is an object no reference can print, so its tag's diagnostics are dropped with it, as pdflatex never
+/// typesets that format (a section's or an outer figure's label is not the panel's). Then it is removed with an
+/// `ltx:tags` it leaves empty. Run on the document and on each streamed segment; the pending count ends at none.
+/// Witness 2205.00263 (nine empty panel tags removed). Guards `perfect_kernel_batch78j::cleveref_format_errors_in_minipage_panels`,
+/// `…::cleveref_format_of_an_unlabelled_panel_raises_nothing`.
+pub fn settle_empty_held_tags(document: &mut Document, root: &Node) {
+  if !empty_held_tags_pending() {
+    return;
+  }
+  for tag in document.findnodes(
+    "descendant-or-self::ltx:tag[@_deferred and not(node())]",
+    Some(root),
+  ) {
+    let role = tag.get_attribute("role").unwrap_or_default();
+    if let Some(id) = tag
+      .get_attribute("_deferred")
+      .and_then(|id| id.parse().ok())
+    {
+      let owned = tag
+        .get_parent()
+        .filter(|tags| tags.get_name() == "tags")
+        .and_then(|tags| tags.get_parent())
+        .and_then(|owner| owner.get_attribute("labels"));
+      for label in owned.iter().flat_map(|labels| labels.split_whitespace()) {
+        util::logger::defer_to_label(label, &role, id);
+      }
+    }
+    let tags = tag.get_parent();
+    document.remove_node(tag);
+    take_empty_held_tag();
+    if let Some(tags) = tags
+      && tags.get_name() == "tags"
+      && !std::iter::successors(tags.get_first_child(), Node::get_next_sibling)
+        .any(|child| child.get_type() == Some(NodeType::ElementNode))
+    {
+      document.remove_node(tags);
+    }
+  }
+}
+
 /// The units a bibliography may take the heading of: those whose model takes `BackMatter.class`
 /// (LaTeXML-structure.rnc:69-163), which a bibliography closes as section-level back matter
-/// (`adjust_backmatter_element`).
+/// (`adjust_backmatter_element`) — an `\appendix`'s unit too (`\appendix \section*{References}` then the entries in
+/// a `{quote}`, astro-ph0503283).
 const BIBLIOGRAPHY_HEADED_UNITS: &[&str] = &[
   "ltx:part",
   "ltx:chapter",
+  "ltx:appendix",
   "ltx:section",
   "ltx:subsection",
   "ltx:subsubsection",
@@ -1462,7 +1933,7 @@ fn is_empty_block(node: &Node) -> bool {
   with(model::get_node_qname(node), |q| {
     matches!(
       q,
-      "ltx:para" | "ltx:p" | "ltx:itemize" | "ltx:enumerate" | "ltx:description"
+      "ltx:para" | "ltx:p" | "ltx:itemize" | "ltx:enumerate" | "ltx:description" | "ltx:item"
     )
   }) && node.get_content().trim().is_empty()
     && node.get_child_elements().iter().all(is_empty_block)
@@ -1554,6 +2025,71 @@ fn absorb_bibliography_heading(document: &mut Document, bibliography: &Node) -> 
   }
   document.remove_node(unit);
   Ok(true)
+}
+
+/// The bibliography a heading inside the author's `{thebibliography}` interrupted before any entry
+/// (`\lx@bibliography@sectioned`): `\begin{thebibliography}{99}\section*{References}\bibitem…`, the revtex4/4-1 papers'
+/// shape (1702.06834, 2402.15720, 2110.15342). pdflatex prints the environment's heading and then the author's, the
+/// same twice; the bibliography that took the author's heading (`absorb_bibliography_heading`) is the one, and the
+/// first, holding no entry and nothing but its heading, goes, its labels with the second. Kept when its heading is
+/// another's than the author's (a "References" over the topical `\section*`s of hep-th0109182): the PDF prints both.
+fn prune_interrupted_bibliography(document: &mut Document, bibliography: &Node) -> Result<()> {
+  // the element before it in document order, past the heading of a unit it opens (a frame's, 1301.0681)
+  let mut current = bibliography.clone();
+  let previous = loop {
+    match current.get_prev_element_sibling() {
+      Some(previous) if is_heading_part(&previous) => current = previous,
+      Some(previous) => break previous,
+      None => match current.get_parent() {
+        Some(parent) if is_heading_unit(&parent) => current = parent,
+        _ => return Ok(()),
+      },
+    }
+  };
+  if document::get_node_qname(&previous) != pin!("ltx:bibliography")
+    || !document
+      .findnodes("descendant::ltx:bibitem", Some(&previous))
+      .is_empty()
+    || !previous.get_child_elements().iter().all(|child| {
+      is_heading_part(child)
+        || (with(model::get_node_qname(child), |q| q == "ltx:biblist")
+          && child.get_content().trim().is_empty())
+    })
+  {
+    return Ok(());
+  }
+  // (titles compared as `absorb_bibliography_heading` compares a unit's with the bibliography's: case, spaces and a
+  // closing `.`/`:` ignored — the ruling of 2026-10-06 that a unit titled as the bibliography heads it)
+  let title = heading_text(&previous);
+  if !title.is_empty() && title != heading_text(bibliography) {
+    return Ok(());
+  }
+  let mut labels: Vec<String> = Vec::new();
+  collect_labels(&previous, &mut labels);
+  labels.extend(bibliography.get_attribute("labels"));
+  let mut target = bibliography.clone();
+  if !labels.is_empty() {
+    document.set_attribute(&mut target, "labels", &labels.join(" "))?;
+  }
+  let freed = previous.get_attribute_ns("id", XML_NS);
+  document.remove_node(previous);
+  // …and its id: the continuation took its number (`begin_bibliography_clean`), its entries `bib.bibN`, but met the
+  // id still taken when it was built (`biba`, Document.pm:1447-1456 recordID's modifyID); freed (:1460 unRecordID),
+  // it is the survivor's, the one bibliography's `bib` (OXIDIZED_DESIGN_DIVERGENCES #653).
+  if let Some(freed) = freed
+    && let Some(own) = target.get_attribute_ns("id", XML_NS)
+    && own != freed
+    && document
+      .findnodes("descendant::ltx:bibitem[@xml:id]", Some(&target))
+      .first()
+      .and_then(|entry| entry.get_attribute_ns("id", XML_NS))
+      .is_some_and(|id| id.starts_with(&s!("{freed}.")))
+  {
+    document.unrecord_id(&own);
+    let _ = target.remove_attribute_ns("id", XML_NS);
+    document.set_attribute(&mut target, "xml:id", &freed)?;
+  }
+  Ok(())
 }
 
 /// The phantom entries (OXIDIZED_DESIGN #155, the `ltx:bibitem` note above) anywhere inside `root` — wherever the
@@ -1683,35 +2219,57 @@ fn head_implicit_bibliography(document: &mut Document, bibliography: &Node) -> R
     for old in title.get_child_nodes() {
       document.remove_node(old);
     }
+    // the author's heading now, not the bibliography's own (`drop_own_bibliography_heading`)
+    let _ = title.remove_attribute("_own_title");
     document.append_clone(&mut title, run.get_child_nodes())?;
     collect_labels(&paragraph, &mut labels);
     document.remove_node(paragraph);
   } else {
-    for own in bibliography
-      .get_child_elements()
-      .into_iter()
-      .filter(is_heading_part)
-    {
-      document.remove_node(own);
-    }
-    let mut target = bibliography.clone();
-    let lists: Vec<String> = target
-      .get_attribute("inlist")
-      .unwrap_or_default()
-      .split_whitespace()
-      .filter(|l| *l != "toc")
-      .map(str::to_string)
-      .collect();
-    if lists.is_empty() {
-      let _ = target.remove_attribute("inlist");
-    } else {
-      document.set_attribute(&mut target, "inlist", &lists.join(" "))?;
-    }
+    drop_bibliography_heading(document, bibliography)?;
   }
   labels.extend(bibliography.get_attribute("labels"));
   if !labels.is_empty() {
     let mut target = bibliography.clone();
     document.set_attribute(&mut target, "labels", &labels.join(" "))?;
+  }
+  Ok(())
+}
+
+/// A bibliography the PDF prints no heading over: its heading parts (tags, title, toctitle) go, and so does its entry in
+/// the TOC (`inlist="toc"`).
+fn drop_bibliography_heading(document: &mut Document, bibliography: &Node) -> Result<()> {
+  for own in bibliography
+    .get_child_elements()
+    .into_iter()
+    .filter(is_heading_part)
+  {
+    document.remove_node(own);
+  }
+  let mut target = bibliography.clone();
+  let lists: Vec<String> = target
+    .get_attribute("inlist")
+    .unwrap_or_default()
+    .split_whitespace()
+    .filter(|l| *l != "toc")
+    .map(str::to_string)
+    .collect();
+  if lists.is_empty() {
+    let _ = target.remove_attribute("inlist");
+  } else {
+    document.set_attribute(&mut target, "inlist", &lists.join(" "))?;
+  }
+  Ok(())
+}
+
+/// A continuation's own title (`_own_title`, `\thebibliography`), when it is still its title: it goes, with the TOC entry
+/// it made. A title that came from elsewhere (an author's heading) stays.
+fn drop_own_bibliography_heading(document: &mut Document, bibliography: &Node) -> Result<()> {
+  let own = bibliography.get_child_elements().into_iter().any(|child| {
+    with(model::get_node_qname(&child), |q| q == "ltx:title")
+      && child.get_attribute("_own_title").is_some()
+  });
+  if own {
+    drop_bibliography_heading(document, bibliography)?;
   }
   Ok(())
 }
@@ -1804,5 +2362,295 @@ fn collect_labels(node: &Node, labels: &mut Vec<String>) {
   labels.extend(node.get_attribute("labels"));
   for child in node.get_child_elements() {
     collect_labels(&child, labels);
+  }
+}
+
+/// Whether the bibliography being digested holds nothing yet: back from where the heading is to the bibliography's
+/// `\thebibliography`, through the lists enclosing it (`with_box_list_levels`: a beamer frame's own), no entry
+/// (`\lx@bibitem`, natbib's `\lx@NAT@lbibitem`: their key) and no text — at most the empty entries the recovery opened
+/// for a blank line or the heading's own `\par` (`\par@in@bibliography`), which are pruned. Not found, it holds
+/// something.
+fn holds_nothing_yet() -> bool {
+  with_box_list_levels(|levels| {
+    for item in levels.iter().flat_map(|level| level.iter().rev()) {
+      if let DigestedData::Whatsit(ws) = item.data()
+        && ws.borrow().get_definition().get_cs().to_string() == "\\thebibliography"
+      {
+        return true;
+      }
+      if !carries_nothing(item) {
+        return false;
+      }
+    }
+    false
+  })
+}
+
+/// Digested material that puts nothing in the document: white space, an empty box, a whatsit with no argument and no
+/// body (the frontmatter fallback a heading digests before its `\@startsection@hook`, an entry opened with nothing in it)
+/// or one that makes no box — the kernel's `alignmentSkippable` whatsits: `\label` (latex_constructs.pool.ltxml:3782-3792,
+/// whose labels the pruned bibliography hands on, `prune_interrupted_bibliography`), a mark, a tabbing marker. A
+/// `\label{refs}` before the heading keeps the one bibliography's `bib`/`bib.bibN` (OXIDIZED_DESIGN_DIVERGENCES #653).
+fn carries_nothing(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::TBox(tbox) => {
+      let tbox = tbox.borrow();
+      tbox.get_property_bool("alignmentSkippable") || tbox.to_string().trim().is_empty()
+    },
+    DigestedData::List(list) => list
+      .borrow()
+      .unlist_ref()
+      .iter()
+      .all(|inner| carries_nothing(inner)),
+    DigestedData::Whatsit(ws) => {
+      let ws = ws.borrow();
+      ws.get_property_bool("alignmentSkippable")
+        || ws.is_empty().unwrap_or(false)
+        || (ws
+          .get_args()
+          .iter()
+          .all(|arg| arg.as_ref().is_none_or(|a| a.is_empty().unwrap_or(false)))
+          && ws.get_body().ok().flatten().is_none())
+    },
+    DigestedData::Comment(_) => true,
+    _ => false,
+  }
+}
+
+/// The deferred-print list of the entry `key` (latexml_core `defer_print`): TeX's `\b@key`, the label `\@lbibitem`
+/// writes to the .aux (latex.ltx:17746-17749 `\bibcite`) for a `\cite` to print.
+fn cite_list(key: &str) -> String { s!("b@{key}") }
+
+/// A citation prints its keys' labels (latex.ltx:17761-17771 `\@citex` reads each `\b@key`): the forms of each entry's
+/// tags a reference prints, deferred by `\lx@bibitem` until then, are typeset (`resolve_deferred_prints`), and an entry
+/// that comes later typesets them at once. Every citation reaches this through `\@@bibref` (the kernel's `\cite`,
+/// natbib's, biblatex's, the `.bbl` styles'); `\nocite` prints nothing and does not (`\lx@mark@nocite`).
+/// OXIDIZED_DESIGN_DIVERGENCES #750.
+fn cite_prints_keys(bibrefs: &str) -> Result<()> {
+  for key in bibrefs.split(',').filter(|key| !key.is_empty()) {
+    resolve_deferred_prints(Some(&cite_list(key)))?;
+  }
+  Ok(())
+}
+
+/// The tokens of a trailing `\label[type]{key}` a site moves into a caption (`\@caption@postlabel`, sect09.rs;
+/// caption's `\@captionof@postlabel`; algorithm2e's procedure caption), which read the optional type themselves:
+/// `<label>{<key>}`, after `\lx@label@type{<type>}` when a type was given (cleveref.sty `\label[type]`,
+/// KNOWN_PERL_ERRORS #998). An absent or blank type adds no token to the caption's text, which other code re-reads
+/// and scans.
+pub fn typed_label(label: Token, ty: Option<Tokens>, key: Tokens) -> Vec<Token> {
+  let mut tokens = label_type(ty);
+  tokens.extend([label, T_BEGIN!()]);
+  tokens.extend(key.unlist());
+  tokens.push(T_END!());
+  tokens
+}
+
+/// `\lx@label@type{<type>}` for a `\label[type]` a site reads itself (`typed_label`; longtable's label, which names
+/// the table it ends), or nothing for an absent or blank type.
+pub fn label_type(ty: Option<Tokens>) -> Vec<Token> {
+  let mut tokens = Vec::new();
+  if let Some(ty) = ty.filter(|ty| {
+    ty.unlist_ref()
+      .iter()
+      .any(|t| t.get_catcode() != Catcode::SPACE)
+  }) {
+    tokens.extend([T_CS!("\\lx@label@type"), T_BEGIN!()]);
+    tokens.extend(ty.unlist());
+    tokens.push(T_END!());
+  }
+  tokens
+}
+
+/// Records a label of another document that xr's `\externaldocument` imported from that document's `.aux`
+/// (xr_sty.rs): the TeX its `\newlabel` gives as the reference text, the hyperref anchor it names (whose type `\autoref`
+/// prints) and, where the document's URL was given, the link to that anchor. Global, as xr's `\protected@xdef\r@<label>`
+/// is (xr.sty `\XR@test`).
+pub fn record_external_label(label: &str, text: &str, anchor: Option<&str>, href: Option<&str>) {
+  for (field, value) in [("label", Some(text)), ("anchor", anchor), ("href", href)] {
+    if let Some(value) = value {
+      assign_value(
+        &s!("xr@{field}@{label}"),
+        Stored::String(pin(value)),
+        Some(Scope::Global),
+      );
+    }
+  }
+}
+
+/// Records the cleveref type and number of another document's label, its `\newlabel{<label>@cref}{{[<type>][<n>]
+/// [<parents>]<number>}…}` (cleveref.sty `\cref@label`), which `\cref` prints (cleveref_sty.rs `external_cref_text`).
+pub fn record_external_cref(label: &str, ty: &str, number: &str) {
+  for (field, value) in [("creftype", ty), ("crefnum", number)] {
+    assign_value(
+      &s!("xr@{field}@{label}"),
+      Stored::String(pin(value)),
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// One `\newlabel{<name>}{<value>}`, the record of a label an `.aux` file holds (latex.ltx `\newlabel` → `\@newl@bel`,
+/// `\global\@namedef{r@<name>}{<value>}`): the value's first group is the text `\ref` prints, hyperref's fourth the
+/// anchor; a `<label>@cref` record is cleveref's type and number (cleveref.sty `\cref@label`). `url` is the document
+/// the anchors are in, where one is given (xr's `\externaldocument[…]{…}[url]`). Records are kept as xr's are
+/// (`record_external_label`): references to a label this document holds after all print its own.
+pub fn record_newlabel(name: &str, value: &str, url: Option<&str>) {
+  let fields: Vec<&str> = brace_groups(value).collect();
+  let Some(text) = fields.first().map(|text| text.trim()) else {
+    return;
+  };
+  if let Some(key) = name.strip_suffix("@cref") {
+    if let Some((ty, number)) = cref_record(text) {
+      record_external_cref(&clean_label(key, None), ty, number);
+    }
+    return;
+  }
+  let anchor = fields
+    .get(3)
+    .map(|anchor| anchor.trim())
+    .filter(|anchor| !anchor.is_empty());
+  let href = url.filter(|url| !url.is_empty()).map(|url| match anchor {
+    Some(anchor) => s!("{url}#{anchor}"),
+    None => url.to_string(),
+  });
+  record_external_label(&clean_label(name, None), text, anchor, href.as_deref());
+}
+
+/// The `\newlabel{<name>}{<value>}` records of text written to an `.aux` file, which LaTeX reads back at the next
+/// run's `\begin{document}`, before any reference (latex.ltx `\document`, `\@input{\jobname.aux}`). A single run reads
+/// each as it is written, for the references after it: a document's own label macros write them — 2503.03625's
+/// `\customlabel{eq:TC-1}{TC-1}` (`\protected@write\@auxout{}{\string\newlabel{#1}{{#2}…}}`), 1004.2872's
+/// `\phantomequation` (`\immediate\write\@auxout`), theoremref's `\thlabel` — and Perl, which reads no `.aux`, leaves
+/// their references missing.
+pub fn read_back_aux_text(text: &str) -> Result<()> {
+  let mut rest = text;
+  while let Some(at) = rest.find("\\newlabel") {
+    rest = &rest[at + "\\newlabel".len()..];
+    let mut groups = brace_groups(rest);
+    if let (Some(name), Some(value)) = (groups.next(), groups.next()) {
+      let name = name.trim();
+      record_newlabel(name, value, None);
+      // read as the `.aux` is, `@` a letter
+      let value = mouth::tokenize_internal(TeXString::assembled(value.to_string()));
+      DefMacro!(T_CS!(s!("\\r@{name}")), None, value, scope => Some(Scope::Global));
+    }
+  }
+  Ok(())
+}
+
+/// The balanced `{…}` groups at the start of `text`, their contents without the outer braces; a `\{` or `\}` does not
+/// count.
+pub fn brace_groups(text: &str) -> impl Iterator<Item = &str> {
+  let mut rest = text;
+  std::iter::from_fn(move || {
+    let start = rest.find(|c: char| !c.is_whitespace())?;
+    if !rest[start..].starts_with('{') {
+      return None;
+    }
+    let (mut depth, mut escaped) = (0usize, false);
+    for (offset, c) in rest[start..].char_indices() {
+      match c {
+        _ if escaped => escaped = false,
+        '\\' => escaped = true,
+        '{' => depth += 1,
+        '}' => {
+          depth -= 1;
+          if depth == 0 {
+            let group = &rest[start + 1..start + offset];
+            rest = &rest[start + offset + 1..];
+            return Some(group);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  })
+}
+
+/// The type and the number of a cleveref record, `[<type>][<n>][<parents>]<number>` (cleveref.sty `\cref@label`).
+fn cref_record(text: &str) -> Option<(&str, &str)> {
+  let mut rest = text.trim_start();
+  let mut groups = Vec::new();
+  for _ in 0..3 {
+    let inner = rest.strip_prefix('[')?;
+    let close = inner.find(']')?;
+    groups.push(&inner[..close]);
+    rest = &inner[close + 1..];
+  }
+  Some((groups[0].trim(), rest.trim()))
+}
+
+/// A field xr recorded for a label of another document (`record_external_label`, `record_external_cref`): `label`, the
+/// reference text; `anchor`; `href`; `creftype`; `crefnum`.
+pub fn external_label_field(label: &str, field: &str) -> Option<String> {
+  match lookup_value(&s!("xr@{field}@{label}")) {
+    Some(Stored::String(value)) => Some(to_string(value)),
+    _ => None,
+  }
+}
+
+/// The TeX of a field xr recorded (`external_label_field`), read as the `.aux` it comes from is, `@` a letter: IEEEtran's
+/// `\newlabel{sec:a}{{\mbox {II-A}}…}` prints "II-A", as pdflatex typesets the `\r@<label>` xr defined.
+pub fn external_label_tex(label: &str, field: &str) -> Option<Tokens> {
+  external_label_field(label, field)
+    .map(|text| mouth::tokenize_internal(TeXString::assembled(text)))
+}
+
+/// Adds to a reference's properties the text a label of another document prints (`record_external_label`), as pdflatex
+/// prints the `\r@<label>` xr defined: `reftext`, `refclass` (`ltx_ref_external`, after `ltx_nolink` for a starred
+/// reference) and `refhref`. Post drops the text and the class where this document holds the label after all, as
+/// LaTeX's own `.aux`, read at `\begin{document}`, redefines the `\r@<label>` xr made in the preamble.
+pub fn external_ref_properties(
+  label: &str,
+  star: bool,
+  props: &mut SymHashMap<Stored>,
+) -> Result<()> {
+  if let Some(text) = external_label_tex(label, "label") {
+    external_ref_properties_with(label, star, digest(text)?, props);
+  }
+  Ok(())
+}
+
+/// `external_ref_properties` with the text the reference prints given: `\cref`'s and `\autoref`'s, which name the type.
+pub fn external_ref_properties_with(
+  label: &str,
+  star: bool,
+  text: Digested,
+  props: &mut SymHashMap<Stored>,
+) {
+  props.insert("reftext", Stored::Digested(text));
+  let class = if star {
+    "ltx_nolink ltx_ref_external"
+  } else {
+    "ltx_ref_external"
+  };
+  props.insert("refclass", Stored::String(pin(class)));
+  if let Some(href) = external_label_field(label, "href") {
+    props.insert("refhref", Stored::String(pin(&href)));
+  }
+}
+
+#[cfg(test)]
+mod held_tag_role_order {
+  use super::{held_tag_roles, pin};
+
+  /// The held roles come out sorted whatever order the mapping lists its keys in (det354 B3): hyperref's `autoref`
+  /// and cleveref's `creflabel` and its per-type roles.
+  #[test]
+  fn held_tag_roles_are_sorted() {
+    for listed in [["creflabel", "autoref", "cref@equation"], [
+      "cref@equation",
+      "creflabel",
+      "autoref",
+    ]] {
+      let keys = listed.into_iter().map(pin).collect();
+      assert_eq!(held_tag_roles(keys), [
+        "autoref",
+        "cref@equation",
+        "creflabel"
+      ]);
+    }
   }
 }

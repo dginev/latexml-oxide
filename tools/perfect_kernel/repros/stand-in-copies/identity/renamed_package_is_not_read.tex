@@ -1,0 +1,12 @@
+% witness: 2411.02780 (equations.sty is annotate-equations.sty renamed: `\ProvidesPackage{annotate-equations}`, not the
+%          equations package the binding stands in for)
+% oracle:  pdflatex 0 errors ("READ": TeX reads the author's file)
+% engines: rust 72a r1 = the copy read in provides-mode over xkeyval's `\usevalue` (99 Errors); Perl never reads it
+% expect:  0 errors, 0 warnings; "NOT READ" (declared another package: base behaviour)
+% status:  RED (72a r1) -> GREEN (72a r2); reading it raw is an open row
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{equations}
+\begin{document}
+\ifx\annotate\undefined NOT READ\else READ\fi
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: an address with a list boundary on one side only stays in its entry when the other side is a lowercase
+%   word without a colon — prose (`see also data@x.org`, `Write to info@y.org`): one boundary side is enough only beside
+%   a word that is no prose's (`SPAIN. {…}@upc.edu`, `Correspondence: …`; brief 95c r3 F5).
+% witness: synthetic (review rev95c_r2 probe b1); the one-sided shapes kept: 2509.12185, 2112.12175, 2112.04350,
+%   2601.07312
+% oracle:  pdflatex 0 errors: "1 Univ X, see also data@x.org", "2 Univ Y. Write to info@y.org", "3 Dept Z, Univ Z,
+%   write to a@z.org.", "4 Univ W, see sales@w.org, City W"
+% engines: rust 95c-r2: "Univ X, see also", "Univ Y. Write to", "Dept Z, Univ Z, write to", "Univ W, see, City W" and
+%   four e-mails; rust int123a: every address in its affiliation; perl: not run
+% expect:  0 errors, 0 warnings; every affiliation as printed, no e-mail contact
+% status:  RED (95c-r2) -> GREEN (95c-r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^3$, Dan Dole$^4$ \\
+$^1$ Univ X, see also data@x.org \\
+$^2$ Univ Y. Write to info@y.org \\
+$^3$ Dept Z, Univ Z, write to a@z.org. \\
+$^4$ Univ W, see sales@w.org, City W}
+\maketitle
+Text.
+\end{document}

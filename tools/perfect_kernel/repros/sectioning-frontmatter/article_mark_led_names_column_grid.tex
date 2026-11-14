@@ -1,0 +1,15 @@
+% mechanism: each `\and` column a name over its affiliation (`$^1$Ann Able\\ $^1$Inst A \and $^2$Bob Baker\\ $^2$Inst B`):
+%   the first setter is the line answering every request, the last column's
+% witness: synthetic
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 2 / Ann Able Bob Baker / 1 2 / Inst A Inst B"
+% engines: int169a (54ccc986ef): Bob Baker lost (1 warning)
+% expect:  0 errors, 0 warnings; Ann Able: Inst A; Bob Baker: Inst B
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able\\ $^1$Inst A \and $^2$Bob Baker\\ $^2$Inst B}
+\maketitle
+Text.
+\end{document}

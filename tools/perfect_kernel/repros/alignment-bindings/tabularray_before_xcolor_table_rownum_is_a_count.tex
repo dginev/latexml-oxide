@@ -1,0 +1,16 @@
+% witness: synthetic (the other load order of 2601.01074 / 2409.12172)
+% oracle:  pdflatex 0 errors; cells "b1.2", "d2" (tabularray.sty:185 allocates `\c@rownum`; colortbl.sty:272 then lets
+%          `\rownum` to it)
+% engines: rust GA1b as pdflatex (the xcolor binding's macro `\rownum` left beside tabularray's count); rust GA1c as
+%          pdflatex, `\rownum` and `\c@rownum` one count
+% expect:  0 errors, 0 warnings; the cells as pdflatex
+% status:  GREEN (GA1c)
+\documentclass{article}
+\usepackage{tabularray}
+\usepackage[table]{xcolor}
+\begin{document}
+\begin{tblr}{ll}
+a & b\therownum.\thecolnum \\
+c & d\therownum \\
+\end{tblr}
+\end{document}

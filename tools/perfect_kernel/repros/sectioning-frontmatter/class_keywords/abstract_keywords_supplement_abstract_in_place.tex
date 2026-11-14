@@ -1,0 +1,24 @@
+% A supplement's abstract after the document body began (kept in place, `\lx@add@frontmatter@until`) keeps the
+% keywords its class's abstract defines in place with it; the paper's own keywords stay the frontmatter's — the
+% English abstract and keywords mtt.cls papers end with (1310.0585, 1310.0589, 1212.3890).
+% witness: 1310.0585 (mtt.cls:176-181; 14 words of its English and Ukrainian keywords were lost in 68n round 1)
+% oracle:  pdflatex (kwmtt.cls beside it) 0 errors: "Main abstract. Keywords: main words 1 Intro Body.
+%          English abstract. Keywords: english words"
+% expect:  0 errors, 0 warnings; <keywords> "main words"; "english words" a body paragraph
+% status:  RED (68n round 1) -> GREEN (68n)
+% preload: ar5iv.sty
+\documentclass{kwmtt}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+Main abstract.
+\keywords{main words}
+\end{abstract}
+\section{Intro}
+Body.
+\begin{abstract}[en]
+English abstract.
+\keywords{english words}
+\end{abstract}
+\end{document}

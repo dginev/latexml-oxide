@@ -1,0 +1,21 @@
+% authblk's `\affil{Univ A, Town\\ $^{\ast}$Corresponding author: \href{mailto:…}{\texttt{ann.able@a.edu}}}`: a
+% marked line of a contact's words before an address (a mark set as an unparsed formula, a link printing the address)
+% leaves the entry; the address is Ann's e-mail, named "Corresponding author: " as printed (OD #966).
+% witness: 2609.21085 (authblk under article; 2502.19130 "*Correspondence:")
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Bob Baker", "Univ A, Town", "∗Corresponding author: ann.able@a.edu"
+% engines: rust int133a = "Univ A, Town∗Corresponding author: ann.able@a.edu" one affiliation of both
+% expect:  0 errors, 0 warnings; Able: Univ A, Town, e-mail ann.able@a.edu named "Corresponding author: "; Baker:
+%          Univ A, Town
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\ast}$}
+\author{Bob Baker}
+\affil{Univ A, Town\\
+$^{\ast}$Corresponding author: \href{mailto:ann.able@a.edu}{\texttt{ann.able@a.edu}}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

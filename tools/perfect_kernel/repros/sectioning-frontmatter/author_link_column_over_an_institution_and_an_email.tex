@@ -1,0 +1,13 @@
+% witness: the rev77y3 re-review (finding 3, probe b9)
+% oracle:  pdflatex 0 errors: two \and columns: Ann Able over Univ A; a "Project Page" link over Univ B over contact@x.org
+% engines: rust 77y r3 = 0 errors; contact@x.org an affiliation of the shared creator; int38b and 77y r2 a creator "Univ B" with the e-mail
+% expect:  0 errors, 0 warnings; one author, Ann Able with Univ A; the shared creator holds the link (URL), Univ B (affiliation) and contact@x.org (e-mail)
+% status:  RED (77y r3) -> GREEN (77y r4)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Univ A \and \href{https://x.org/p}{Project Page} \\ Univ B \\ \texttt{contact@x.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

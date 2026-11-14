@@ -1,0 +1,20 @@
+% A package's own `\title`, refused by the kernel's lock, still runs for its side effects (OXIDIZED_DESIGN #482, as
+% `\author`'s): the cvpr template's `\renewcommand{\title}[1]{\titleold{#1}\newcommand{\thetitle}{#1}}`, whose
+% `\maketitlesupplementary` prints `\thetitle`.
+% witness: 2308.03900 (cvpr.sty:596-597 copied as arxiv.sty:580), 2409.09893, 2503.23679, 2410.13860 (corl_2024.sty:382),
+%          2407.18899 (eccv.sty:240), 2510.03312/2511.06823 (the idiom in the preamble), 0907.1044 (hepthesis.cls:217)
+% oracle:  pdflatex 0 errors: "Universal Widgets / A. Author / … Body. / Universal Widgets / Supplementary Material / More."
+% engines: rust 67int26 = 1 Error (undefined:\thetitle), `<ERROR>` in the supplementary heading; Perl --includestyles the same
+% expect:  0 errors, 0 warnings; one ltx:title; the supplementary heading "Universal Widgets" + "Supplementary Material"
+% status:  RED (67int26) -> GREEN (int26)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{ttl}
+\title{Universal Widgets}
+\author{A. Author}
+\begin{document}
+\maketitle
+Body.
+\maketitlesupplementary
+More.
+\end{document}

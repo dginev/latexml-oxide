@@ -827,7 +827,11 @@ LoadDefinitions!({
     // OR if XMHint with 0 <= width <= thickmuskip (5mu == ?)
     } else if qn == pin!("ltx:XMHint") {
       if let Some(s_name) = node_ref.get_attribute("name") {
-        if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()) {
+        // Perl `($s = $space_chars{$s})` is false for `\!`'s empty string, so a negative thin space ends the scan:
+        // taken as a separator, `2\!x` made a "number" of the 2 and the hint, which the parser drops with the hint
+        // (`$2\!x$` read "x"; 2609.36534 `$+5.9\!\cdot\!10^{-7}$`, 2608.02769 `\mathbf 1\!\left(`, 2603.03017; guard
+        // `perfect_kernel_batch77x::number_before_negative_thin_space_kept`).
+        if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()).filter(|c| !c.is_empty()) {
           combined = s_char.to_string() + &combined;
         } else {
           break;
@@ -1843,7 +1847,9 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
   // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
   // S3.E22 align/equation cluster (cloned to MathFork main branch).
-  let trailing_num_re = Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap();
+  static TRAILING_NUM_RE: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap());
+  let trailing_num_re = &*TRAILING_NUM_RE;
   let mut id_by_suffix: HashMap<String, String> = HashMap::default();
   for id in &all_ids {
     if let Some(caps) = trailing_num_re.captures(id) {

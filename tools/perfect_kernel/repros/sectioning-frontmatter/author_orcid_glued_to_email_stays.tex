@@ -1,0 +1,14 @@
+% witness: 77n r5 review — an ORCID link glued to an address in a name line (review probes n02; n04 `\cite{x}ann@x.org`)
+% oracle:  pdflatex 0 errors: "Ann Able [iD]ann@x.org / Univ X", "Bob Baker"
+% engines: rust int32a = the line kept whole; 77n r5 = "\orcidlink{…}ann@x.org" moved into an e-mail contact
+% expect:  0 errors, 0 warnings; Ann Able's name with the link and the address as printed, Univ X her affiliation
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{orcidlink}
+\begin{document}
+\title{T}
+\author{Ann Able \orcidlink{0000-0002-1825-0097}ann@x.org\\ Univ X \and Bob Baker}
+\maketitle
+x
+\end{document}

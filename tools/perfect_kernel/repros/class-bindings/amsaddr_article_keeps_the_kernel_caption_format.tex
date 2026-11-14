@@ -1,0 +1,25 @@
+% mechanism: an AMS class's caption format (amsart.cls:1386-1410 `\@makecaption`, "#1.\enspace #2", and its
+%   `\@captionheadfont`, which tells caption the class is an AMS one, caption3.sty:1138) is the class's own
+%   (ams_support_sty.rs `ams_class_caption_format`, from the AMS class bindings): amsaddr under article loads ams_support
+%   and keeps the kernel's "Figure 1: " and caption's colon default for every type.
+% witness: review rev78y finding 1 (probe2/addr.tex; amsaddr's 114 arXiv users)
+% oracle:  pdflatex 0 errors; "Figure 1: Fig one.", "Listing 1: Code one.", "Program 1: Prog one."
+% engines: perl 0.8.8: "Figure 1. " (ams_support.sty.ltxml:192-193; KNOWN_PERL_ERRORS #1140); rust int65a: "Figure 1. ";
+%   78y r1: "Figure 1. ", "Listing 1. ", "Program 1. "
+% expect:  0 errors, 0 warnings; every label closed by ": "
+% status:  RED (78y r1) -> GREEN (78y r2)
+\documentclass{article}
+\providecommand{\email}{}% (amsaddr.sty:44 `\renewcommand{\email}`, which article does not define)
+\usepackage{amsaddr}
+\usepackage{caption}
+\usepackage{float}
+\floatstyle{plain}
+\newfloat{program}{tbp}{lop}
+\floatname{program}{Program}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[name=Listing]{listing}
+\begin{document}
+\begin{figure}[h]X\caption{Fig one.}\end{figure}
+\begin{listing}[h]Z\caption{Code one.}\end{listing}
+\begin{program}[h]W\caption{Prog one.}\end{program}
+\end{document}

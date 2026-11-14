@@ -1,0 +1,14 @@
+% witness: 2603.01171 (`\IEEEauthorblockA{Department …\\ OsloMet …\\ Email: \url{shailendra.bhandari@oslomet.no}}`)
+% oracle:  pdflatex 0 errors: the name, the lines, "Email: ann.able@x.no"
+% engines: Perl: `\IEEEauthorblockA` a contact; ours before Z14: the contact the binding splits off held only the constructor's empty ink, the e-mail lost from the reading
+% expect:  0 errors; the affiliation and the address (perfect_kernel_batchz14::a_url_in_a_contact_call_is_its_text)
+% status:  GREEN (Z14)
+\documentclass[conference]{IEEEtran}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\IEEEauthorblockA{Dept X\\ Univ X\\ Email: \url{ann.able@x.no}}}
+\maketitle
+Body.
+\end{document}

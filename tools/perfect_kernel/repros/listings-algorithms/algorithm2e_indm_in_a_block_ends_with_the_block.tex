@@ -1,0 +1,31 @@
+% witness: 1903.06418 (a balanced \Indp...\Indm); found by rev78r probe e4c
+% oracle:  pdflatex 0 errors; x positions Aa 148.7 | for-i 148.7 | Bb 164.1 | for-j 164.1 | Cc 164.1 | Dd 164.1 |
+%          Ee 148.7 | for-k 164.1 | Ff 179.4 | Gg 148.7 (a level is 15.34pt; a block's group ends what an \Indp/\Indm
+%          in it did, algorithm2e.sty:1626-1629, :1826-1860)
+% engines: rust int54a = Cc two levels in, for-k at the margin, Ff one level in (\Indp/\Indm ignored); 78r r1 = Dd at
+%          the margin (\Indm popped the inner block's level, the block's end the outer's); Perl = int54a
+% expect:  0 errors, 0 warnings; the levels of the PDF: 0 0 1 1 1 1 0 1 2 0
+% status:  RED (int54a, 78r r1) -> GREEN (78r r2, KNOWN_PERL_ERRORS #1107)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[ruled,vlined]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+Aa\;
+\For{$i$}{
+  Bb\;
+  \For{$j$}{
+    \Indm
+    Cc\;
+  }
+  Dd\;
+}
+Ee\;
+\Indp
+\For{$k$}{
+  Ff\;
+}
+\Indm
+Gg\;
+\end{algorithm}
+\end{document}

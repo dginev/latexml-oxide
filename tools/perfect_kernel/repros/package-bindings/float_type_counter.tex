@@ -1,0 +1,21 @@
+% float.sty:24-27 `\newcounter{float@type}` (1, or 4 under a class with figures), doubled by each `\newfloat`
+% (:60-61): a document reading it, `\edef\ftype@algorithm{\the\c@float@type}`, had it undefined in both engines.
+% witness: 2605.14637
+% oracle:  pdflatex 0 `!`, "Type 8."; Perl 3 errors (undefined:\c@float@type, \the\c@float@type, \thefloat@type)
+% engines: rust CAU1: 3 errors
+% expect:  0 errors, 0 warnings; "Type 8."
+% status:  RED (CAU1) -> GREEN (SBX2; perfect_kernel_error_boundary)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{algorithm}
+\makeatletter
+\edef\ftype@algorithm{\the\c@float@type}
+\def\showtype{\thefloat@type}
+\makeatother
+\begin{document}
+\begin{algorithm}
+\caption{Search}
+Step.
+\end{algorithm}
+Type \showtype.
+\end{document}

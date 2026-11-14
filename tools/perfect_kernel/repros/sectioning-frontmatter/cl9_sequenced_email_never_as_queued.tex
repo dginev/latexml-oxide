@@ -1,0 +1,24 @@
+% mechanism: a contact of a class's address list of two or more calls printed apart from the names (`owner=sequence`,
+%   `_sequence=<n>`: jheppub's `\emailAdd`) that the =2 reading writes nothing of is never written as queued below the items
+%   (`emit::sequenced`): there its place in the list named no creator and a nameless creator was invented. Its words stay
+%   lost, counted (int153y's behaviour); open: its recovery.
+% witness: 1901.02012 (jheppub `\author{Washington Taylor}\author{and Andrew P. Turner}\emailAdd{wati {\rmfamily at}
+%   mit.edu}…`); review revX2 finding 1
+% oracle:  pdflatex: jheppub is not in TeX Live and 1901.02012's own jheppub.sty fails on TL 2025 (hyperref's
+%   `\Hy@tempa`, a harness limit); judged against the source: "Washington Taylor and Andrew P. Turner / E-mail:
+%   wati at mit.edu, apturner at mit.edu"
+% engines: off Taylor wati, Turner apturner; CL7 =2 a third, nameless creator holding wati; CL9b =2 2 creators, the
+%   addresses lost, counted
+% expect:  =2 0 errors; exactly the 2 named creators, no nameless creator; the loss counted
+\documentclass{article}
+\usepackage{jheppub}
+\title{T}
+\author{Washington Taylor}
+\author{and Andrew P. Turner}
+\emailAdd{wati {\rmfamily at} mit.edu}
+\emailAdd{apturner {\rmfamily at} mit.edu}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Body.
+\end{document}

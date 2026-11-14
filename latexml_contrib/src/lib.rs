@@ -23,8 +23,10 @@ pub mod script_bindings;
 // I. Add your custom binding definition as a module delcaration here
 // apackage_sty / filelistclass_cls / myclass_cls: test-local structure fixtures,
 // now local `.rhai` next to tests/structure_rhai (Perl t/structure/*.ltxml).
+pub mod and_by_meaning;
 pub mod discard_env;
 pub mod keysetopt_sty;
+pub mod keytheorems_sty;
 pub mod meta_class;
 pub mod shipped_class;
 // mykeyval_sty / myxkeyval_sty: test-local keyval fixtures, now local `.rhai`
@@ -38,18 +40,24 @@ pub mod mytemplate_sty;
 pub mod aamas_cls;
 pub mod abntex2cite_sty;
 pub mod achemso_cls;
+pub mod aero_cls;
 pub mod agujournal2019_cls;
-pub mod aistats2026_sty;
+pub mod aguplus_cls;
+pub mod aistats_sty;
 pub mod alegreyasans_sty;
 pub mod algpseudocodex_sty;
 pub mod aliascnt_sty;
 pub mod aligned_overset_sty;
 pub mod amsdtx_cls;
 pub mod amsldoc_cls;
+pub mod an_cls;
 pub mod animate_sty;
 pub mod aomart_cls;
+pub mod apa6_cls;
 pub mod apa7_cls;
+pub mod apa_cls;
 pub mod apacite_sty;
+pub mod appolb_cls;
 pub mod apxproof_sty;
 pub mod ar5iv_sty;
 pub mod arxbj_cls;
@@ -62,7 +70,10 @@ pub mod autobreak_sty;
 pub mod autofe_sty;
 pub mod axessibility_sty;
 pub mod backref_sty;
+pub mod beilstein_cls;
+pub mod bibentry_sty;
 pub mod biblatex_sty;
+pub mod bmcart_cls;
 pub mod bmvc2k_cls;
 pub mod breqn_sty;
 pub mod bussproofs_sty;
@@ -72,6 +83,8 @@ pub mod caption2_sty;
 pub mod cas_dc_cls;
 pub mod catchfile_sty;
 pub mod ccaption_sty;
+pub mod cclayout_sty;
+pub mod centernot_sty;
 pub mod ceurart_cls;
 pub mod changepage_sty;
 pub mod changes_sty;
@@ -79,8 +92,10 @@ pub mod chemformula_sty;
 pub mod chemnum_sty;
 pub mod chngpage_sty;
 pub mod cimart_cls;
+pub mod cimento_cls;
 pub mod cjk_sty;
 pub mod cjkutf8_sty;
+pub mod cjs_rcs_article_cls;
 pub mod clefval_sty;
 pub mod cmcal_sty;
 pub mod collcell_sty;
@@ -101,6 +116,7 @@ pub mod datetime_sty;
 pub mod dblfloatfix_sty;
 pub mod deluxe_sty;
 pub mod derivative_sty;
+pub mod dgruyter_sty;
 pub mod dhucs_sty;
 pub mod diagrams_sty;
 pub mod diagrams_tex;
@@ -111,7 +127,9 @@ pub mod ecai_cls;
 pub mod hld_cls;
 pub mod imakeidx_sty;
 pub mod jurabib_sty;
+pub mod kluwer_cls;
 pub mod knittingpattern_cls;
+pub mod lni_cls;
 pub mod midl_cls;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
 pub mod bfhlayout_sty;
@@ -120,6 +138,7 @@ pub mod egpubl_cls;
 pub mod ejpecp_cls;
 pub mod elife_cls;
 pub mod emlines_sty;
+pub mod entics_cls;
 pub mod envmath_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
@@ -157,31 +176,41 @@ pub mod ifacconf_cls;
 pub mod alggeom_cls;
 pub mod assoccnt_sty;
 pub mod atlasdoc_cls;
+pub mod autonum_sty;
 pub mod bidi_sty;
+pub mod bmvc2k_natbib_sty;
 pub mod cecs_cls;
+pub mod clear2025_cls;
 pub mod compositio_cls;
 pub mod czipreprint_cls;
 pub mod epl_cls;
+pub mod eptcs_cls;
 pub mod gauss_sty;
 pub mod hha_cls;
 pub mod hvfloat_sty;
 pub mod ieeetj_cls;
 pub mod ifoddpage_sty;
+pub mod ijsra_cls;
 pub mod imsart_cls;
+pub mod imsart_sty;
 pub mod informs_cls;
 pub mod interact_cls;
 pub mod interspeech_cls;
 pub mod interspeech_sty;
+pub mod iucr_cls;
 pub mod jabbrv_sty;
 pub mod jair_sty;
+pub mod jcappub_sty;
 pub mod jcm_cls;
 pub mod jfm_cls;
 pub mod jgcc_cls;
 pub mod jhrs_cls;
 pub mod jinst_cls;
+pub mod jinstpub_sty;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod jpc_sty;
+pub mod jpconf_cls;
 pub mod koma_script;
 pub mod kotexutf_sty;
 pub mod l3draw_sty;
@@ -215,12 +244,14 @@ pub mod moduli_cls;
 pub mod morefloats_sty;
 pub mod mrm_cls;
 pub mod mssymb_tex;
+pub mod multibib_sty;
 pub mod nag_sty;
 pub mod nature_pre_cls;
 pub mod needspace_sty;
 pub mod newpxmath_sty;
 pub mod nicematrix_sty;
 pub mod nicseries_cls;
+pub mod njdnatbib_sty;
 pub mod nlctuserguide_sty;
 pub mod nmbib_sty;
 pub mod nomentbl_sty;
@@ -230,6 +261,7 @@ pub mod openmoss_cls;
 pub mod optica_article_cls;
 pub mod osa_journal_sty;
 pub mod oup_authoring_template_cls;
+pub mod pasa_cls;
 pub mod pasj00_cls;
 pub mod pasj01_cls;
 pub mod pasj02_cls;
@@ -243,6 +275,7 @@ pub mod pinlabel_sty;
 pub mod piton_sty;
 pub mod primearxiv_sty;
 pub mod program_sty;
+pub mod projlib_author_sty;
 pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod ptephy_cls;
@@ -251,6 +284,7 @@ pub mod rasti_cls;
 pub mod rccol_sty;
 pub mod refstyle_sty;
 pub mod resphilosophica_cls;
+pub mod rmaa_cls;
 pub mod robustindex_sty;
 pub mod rotfloat_sty;
 pub mod rsphrase_sty;
@@ -269,12 +303,14 @@ pub mod scrpage_sty;
 pub mod scrreprt_cls;
 pub mod sourcecodepro_sty;
 pub mod spconf_sty;
+pub mod spotcolor_sty;
 pub mod tabls_sty;
 pub mod tac_cls;
 pub mod tagpdf_sty;
 pub mod tex_label_sty;
 pub mod textpos_sty;
 pub mod tgpagella_sty;
+pub mod theoremref_sty;
 pub mod titleps_sty;
 pub mod titleref_sty;
 pub mod tocbasic_sty;
@@ -285,6 +321,7 @@ pub mod underscore_ltx_sty;
 pub mod unicode_math_sty;
 pub mod versonotes_sty;
 pub mod ws_procl_sty;
+pub mod ws_rv_har_sty;
 pub mod xecjk_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
@@ -296,11 +333,13 @@ pub mod scrlayer_scrpage_sty;
 pub mod scrlayer_sty;
 pub mod selfevolagent_cls;
 pub mod semantic_sty;
+pub mod setstack_sty;
 pub mod siamart_cls;
 pub mod siamltex_cls;
 pub mod sigma_cls;
 pub mod silence_sty;
 pub mod smc_ieeeconf_cls;
+pub mod smfart_cls;
 pub mod sn_jnl_cls;
 pub mod spie_cls;
 pub mod srdp_tables_sty;
@@ -313,12 +352,15 @@ pub mod svproc_cls;
 pub mod tabu_sty;
 pub mod tabularray_sty;
 pub mod tipa_sty;
+pub mod tkz_euclide_sty;
 pub mod tlp_cls;
 pub mod uai2025_cls;
 pub mod ucs_sty;
 pub mod updatemarks_sty;
 pub mod uspatent_cls;
 pub mod ut_thesis_cls;
+pub mod vmsta_cls;
+pub mod webofc_cls;
 pub mod widetext_sty;
 pub mod wileyasna_cls;
 pub mod wileymsp_template_cls;
@@ -350,6 +392,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // test-local fixtures; they now live as local `.rhai` next to
   // tests/structure_rhai (gated to `runtime-bindings`).
   ("keysetopt", "sty", keysetopt_sty::load_definitions),
+  ("keytheorems", "sty", keytheorems_sty::load_definitions),
   // Test-only fixture (defines `\hw`), registered under a deliberately
   // unique name `lxtesttemplate` (not `mytemplate`) so it does NOT intercept
   // real arXiv papers that bundle their OWN `mytemplate.sty`. Such papers
@@ -359,7 +402,14 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // undefined under the fixture). Used by tests/contrib/hw.tex.
   ("lxtesttemplate", "sty", mytemplate_sty::load_definitions),
   // ar5iv-bindings ports
-  ("aistats2026", "sty", aistats2026_sty::load_definitions),
+  // The AISTATS family (aistats_sty.rs): `aistats` answers the years the versioned fallback strips to it
+  // (aistats2012.sty, aistats2014.sty … aistats2027.sty), `aistats2026` by name as before, and the 2010-2011 templates
+  // by their own names, which keep a letter after the digits (aistats2e.sty: 1003.0024, 1302.5134, 1302.4922's
+  // `format/aistats2e`; its margin variant aistats2eM.sty: 1202.1568).
+  ("aistats", "sty", aistats_sty::load_definitions),
+  ("aistats2026", "sty", aistats_sty::load_definitions),
+  ("aistats2e", "sty", aistats_sty::load_definitions),
+  ("aistats2eM", "sty", aistats_sty::load_definitions),
   (
     "algpseudocodex",
     "sty",
@@ -370,8 +420,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // biblatex citation wiring runs even in bare mode (see apxproof_sty.rs).
   ("apxproof", "sty", apxproof_sty::load_definitions),
   ("ascmac", "sty", ascmac_sty::load_definitions),
+  ("autonum", "sty", autonum_sty::load_definitions),
   ("bussproofs", "sty", bussproofs_sty::load_definitions),
   ("capt-of", "sty", capt_of_sty::load_definitions),
+  ("centernot", "sty", centernot_sty::load_definitions),
   ("chngpage", "sty", chngpage_sty::load_definitions),
   ("collcell", "sty", collcell_sty::load_definitions),
   ("commath", "sty", commath_sty::load_definitions),
@@ -406,6 +458,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("jurabib", "sty", jurabib_sty::load_definitions),
   ("tex-label", "sty", tex_label_sty::load_definitions),
   ("derivative", "sty", derivative_sty::load_definitions),
+  ("dgruyter", "sty", dgruyter_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
   ("directory", "sty", directory_sty::load_definitions),
   ("figbib", "sty", figbib_sty::load_definitions),
@@ -421,6 +474,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("hepnames", "sty", hepnames_sty::load_definitions),
   ("hepparticles", "sty", hepparticles_sty::load_definitions),
   ("jpc", "sty", jpc_sty::load_definitions),
+  ("kluwer", "cls", kluwer_cls::load_definitions),
   ("kotexutf", "sty", kotexutf_sty::load_definitions),
   ("lanlmac", "tex", lanlmac_tex::load_definitions),
   ("latexmlman", "sty", latexmlman_sty::load_definitions),
@@ -437,6 +491,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("phyzzx", "tex", phyzzx_tex::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
   ("program", "sty", program_sty::load_definitions),
+  (
+    "projlib-author",
+    "sty",
+    projlib_author_sty::load_definitions,
+  ),
   ("quotchap", "sty", quotchap_sty::load_definitions),
   (
     "underscore-ltx",
@@ -456,6 +515,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("stix", "sty", stix_sty::load_definitions),
   ("svg-extract", "sty", svg_extract_sty::load_definitions),
   ("tipa", "sty", tipa_sty::load_definitions),
+  ("tkz-euclide", "sty", tkz_euclide_sty::load_definitions),
   ("tlp", "cls", tlp_cls::load_definitions),
   ("axessibility", "sty", axessibility_sty::load_definitions),
   ("biblatex", "sty", biblatex_sty::load_definitions),
@@ -481,6 +541,15 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tabls", "sty", tabls_sty::load_definitions),
   ("chemnum", "sty", chemnum_sty::load_definitions),
   ("JINST", "cls", jinst_cls::load_definitions),
+  // jcappub (JCAP) and jinstpub (JINST) are SISSA/IOP's siblings of jheppub (JHEP), with its accumulating
+  // `\author[affil]{name}` + `\affiliation` + `\emailAdd` + `\keywords`/`\acknowledgments` frontmatter: each binding
+  // loads jheppub's and adds its own. Perl has no binding for either. Without one, jcappub's `\author`s fell through
+  // to article's (which overwrites), truncating the list to the last author, and `\affiliation`/`\emailAdd` were
+  // undefined: html_feedback #6884, witness arXiv 2404.03569 (63 authors, previously 1); its own journal
+  // abbreviations ride along (jcappub_sty.rs). jinstpub read raw left the affiliations an itemize (2006.05543,
+  // 2303.10224; jinstpub_sty.rs).
+  ("jcappub", "sty", jcappub_sty::load_definitions),
+  ("jinstpub", "sty", jinstpub_sty::load_definitions),
   ("CECS", "cls", cecs_cls::load_definitions),
   ("compositio", "cls", compositio_cls::load_definitions),
   ("alggeom", "cls", alggeom_cls::load_definitions),
@@ -510,6 +579,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("stwol", "sty", ws_procl_sty::stwol_sty::load_definitions),
   ("jhrs", "cls", jhrs_cls::load_definitions),
   ("jcm", "cls", jcm_cls::load_definitions),
+  ("pasa", "cls", pasa_cls::load_definitions),
+  ("jpconf", "cls", jpconf_cls::load_definitions),
+  ("bmcart", "cls", bmcart_cls::load_definitions),
   ("pasj00", "cls", pasj00_cls::load_definitions),
   ("pasj01", "cls", pasj01_cls::load_definitions),
   ("pasj02", "cls", pasj02_cls::load_definitions),
@@ -522,6 +594,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
   ("scicite", "sty", scicite_sty::load_definitions),
+  ("setstack", "sty", setstack_sty::load_definitions),
   // NOTE: extsizes classes (extarticle / extbook / extreport / extletter /
   // extproc) are intentionally NOT bound. Perl LaTeXML ships no binding for
   // them, so `\documentclass{extbook}` falls through to OmniBus.cls.ltxml —
@@ -569,6 +642,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
   ("tagpdf", "sty", tagpdf_sty::load_definitions),
   ("textpos", "sty", textpos_sty::load_definitions),
+  ("ijsra", "cls", ijsra_cls::load_definitions),
+  ("multibib", "sty", multibib_sty::load_definitions),
   ("nomentbl", "sty", nomentbl_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),
   ("xkeymask", "sty", xkeymask_sty::load_definitions),
@@ -600,7 +675,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("harvmac", "tex", harvmac_tex::load_definitions),
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
   ("backref", "sty", backref_sty::load_definitions),
+  ("bibentry", "sty", bibentry_sty::load_definitions),
   ("ccaption", "sty", ccaption_sty::load_definitions),
+  ("cclayout", "sty", cclayout_sty::load_definitions),
   ("caption2", "sty", caption2_sty::load_definitions),
   ("curve2e", "sty", curve2e_sty::load_definitions),
   ("dhucs", "sty", dhucs_sty::load_definitions),
@@ -608,6 +685,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nag", "sty", nag_sty::load_definitions),
   ("oldlfont", "sty", oldlfont_sty::load_definitions),
   ("titleref", "sty", titleref_sty::load_definitions),
+  ("theoremref", "sty", theoremref_sty::load_definitions),
   ("mdframed", "sty", mdframed_sty::load_definitions),
   ("memoir", "cls", memoir_cls::load_definitions),
   ("mhchem", "sty", mhchem_sty::load_definitions),
@@ -617,9 +695,12 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
   ("pdfcomment", "sty", pdfcomment_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
+  ("apa", "cls", apa_cls::load_definitions),
+  ("apa6", "cls", apa6_cls::load_definitions),
   ("apa7", "cls", apa7_cls::load_definitions),
   ("amsdtx", "cls", amsdtx_cls::load_definitions),
   ("amsldoc", "cls", amsldoc_cls::load_definitions),
+  ("an", "cls", an_cls::load_definitions),
   ("achemso", "cls", achemso_cls::load_definitions),
   (
     "agujournal2019",
@@ -627,8 +708,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     agujournal2019_cls::load_definitions,
   ),
   ("agutexSI2019", "cls", agujournal2019_cls::load_definitions),
+  ("aero", "cls", aero_cls::load_definitions),
+  ("aguplus", "cls", aguplus_cls::load_definitions),
   ("aomart", "cls", aomart_cls::load_definitions),
   ("apacite", "sty", apacite_sty::load_definitions),
+  ("appolb", "cls", appolb_cls::load_definitions),
   ("asme2ej", "cls", asme2ej_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
   ("bmvc2k", "cls", bmvc2k_cls::load_definitions),
@@ -643,11 +727,24 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("chemformula", "sty", chemformula_sty::load_definitions),
   ("doclicense", "sty", doclicense_sty::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
+  ("cimento", "cls", cimento_cls::load_definitions),
+  ("vmsta", "cls", vmsta_cls::load_definitions),
+  ("webofc", "cls", webofc_cls::load_definitions),
+  ("entics", "cls", entics_cls::load_definitions),
+  ("entcs", "cls", entics_cls::load_definitions),
+  (
+    "cjs-rcs-article",
+    "cls",
+    cjs_rcs_article_cls::load_definitions,
+  ),
   (
     "colm2025_conference",
     "sty",
     colm2025_conference_sty::load_definitions,
   ),
+  // The COLM family: colm2024_conference, colm2024_arxiv, colm2026_conference reach it through the versioned fallback
+  // (2404.05892, 2404.07921, 2406.07546, 2605.21807, 2608.09164).
+  ("colm", "sty", colm2025_conference_sty::load_definitions),
   ("cvpr", "sty", cvpr_sty::load_definitions),
   ("cvpr2023", "sty", cvpr_sty::load_definitions),
   ("cvpr2024", "sty", cvpr_sty::load_definitions),
@@ -664,6 +761,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("fcs", "cls", fcs_cls::load_definitions),
   ("brief", "cls", brief_cls::load_definitions),
   ("g-brief", "cls", g_brief_cls::load_definitions),
+  ("lni", "cls", lni_cls::load_definitions),
+  ("beilstein", "cls", beilstein_cls::load_definitions),
   ("g-brief2", "cls", g_brief2_cls::load_definitions),
   ("getfiledate", "sty", getfiledate_sty::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
@@ -684,8 +783,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
   ("imsart", "cls", imsart_cls::load_definitions),
+  ("imsart", "sty", imsart_sty::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
   ("interact", "cls", interact_cls::load_definitions),
+  ("iucr", "cls", iucr_cls::load_definitions),
   // Interspeech20YY.cls resolve here by version-suffix stripping (find_file_fallback).
   ("Interspeech", "cls", interspeech_cls::load_definitions),
   ("ieeetj", "cls", ieeetj_cls::load_definitions),
@@ -694,11 +795,15 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nic-series", "cls", nicseries_cls::load_definitions),
   ("czipreprint", "cls", czipreprint_cls::load_definitions),
   ("spconf", "sty", spconf_sty::load_definitions),
+  ("spotcolor", "sty", spotcolor_sty::load_definitions),
+  ("NJDnatbib", "sty", njdnatbib_sty::load_definitions),
+  ("bmvc2k_natbib", "sty", bmvc2k_natbib_sty::load_definitions),
+  ("ws-rv-har", "sty", ws_rv_har_sty::load_definitions),
   ("paspconf", "sty", paspconf_sty::load_definitions),
   ("INTERSPEECH2021", "sty", interspeech_sty::load_definitions),
   ("INTERSPEECH2022", "sty", interspeech_sty::load_definitions),
   ("INTERSPEECH2023", "sty", interspeech_sty::load_definitions),
-  ("clear2025", "cls", jmlr_cls::load_definitions),
+  ("clear2025", "cls", clear2025_cls::load_definitions),
   ("jabbrv", "sty", jabbrv_sty::load_definitions),
   ("jair", "sty", jair_sty::load_definitions),
   ("jgcc", "cls", jgcc_cls::load_definitions),
@@ -723,6 +828,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     resphilosophica_cls::load_definitions,
   ),
   ("lmcs", "cls", lmcs_cls::load_definitions),
+  ("eptcs", "cls", eptcs_cls::load_definitions),
   ("mdpi", "cls", mdpi_cls::load_definitions),
   ("Definitions/mdpi", "cls", mdpi_cls::load_definitions),
   ("modernposter", "cls", modernposter_cls::load_definitions),
@@ -739,6 +845,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     optica_article_cls::load_definitions,
   ),
   ("rasti", "cls", rasti_cls::load_definitions),
+  ("rmaa", "cls", rmaa_cls::load_definitions),
   (
     "oup-authoring-template",
     "cls",
@@ -768,6 +875,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("selfevolagent", "cls", selfevolagent_cls::load_definitions),
   ("smc_ieeeconf", "cls", smc_ieeeconf_cls::load_definitions),
   ("sn-jnl", "cls", sn_jnl_cls::load_definitions),
+  ("smfart", "cls", smfart_cls::load_definitions),
   ("spie", "cls", spie_cls::load_definitions),
   ("svproc", "cls", svproc_cls::load_definitions),
   ("uai2025", "cls", uai2025_cls::load_definitions),
@@ -860,15 +968,27 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
         .iter()
         .find(|(name, extension, _)| matches_entry_nocase(base_only, name, extension))
     })
-    .map(|(_, extension, loader)| {
-      // K1 provenance: a binding's own definitions are `Binding`.
-      use ::latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+    .map(|(name, extension, loader)| {
+      // K1 provenance: a binding's own definitions are `Binding`; a `.pool`
+      // entry is a pool; a binding a fallback class requires stays part of its
+      // guess, `Fallback` (`input_definitions`), and one a binding borrows stays
+      // `Borrowed` (`require_package_borrowed`).
+      use ::latexml_core::definition::origin::{DefinitionOrigin, current_origin, with_origin};
       let origin = if *extension == "pool" {
         DefinitionOrigin::Pool
+      } else if matches!(
+        current_origin(),
+        DefinitionOrigin::Fallback | DefinitionOrigin::Borrowed
+      ) {
+        current_origin()
       } else {
         DefinitionOrigin::Binding
       };
-      with_origin(origin, loader)
+      // (the frontmatter observer notes the binding whose load defines `\author`, its conventions' key; under its
+      // shadow switch only: OXIDIZED_DESIGN_DIVERGENCES #837 — jpconf, jcappub, jinstpub are contrib bindings)
+      ::latexml_engine::base_utilities::note_binding_load(name, extension, || {
+        with_origin(origin, loader)
+      })
     })
     // biblatex style/variant packages (`biblatex-chicago`, `biblatex-apa`,
     // `biblatex-ieee`, `biblatex-nature`, `biblatex-science`, `biblatex-mla`,

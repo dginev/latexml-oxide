@@ -1,11 +1,27 @@
 //! elsart_support.sty — Elsevier article support (non-core additions)
 //! Perl: elsart_support.sty.ltxml — 175 lines
 //! Loads elsart_support_core and adds theorem/proof/section formatting
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("elsart_support_core");
+  // Theorems — Perl elsart_support_core.sty.ltxml L200-204, elsart's only (an elsarticle paper's own `\thm` stands:
+  // 2212.01438; guard `perfect_kernel_batch73a::elsarticle_has_no_thm_environment`).
+  // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
+  // class option):
+  //   if @seceqn:  `\newtheorem{thm}{Theorem}[section] \@addtoreset{thm}{section}`
+  //   else      :  `\newtheorem{thm}{Theorem}`
+  // The base `\newtheorem{thm}` declaration was missing in the prior
+  // Rust port — every `\begin{thm}` in elsart papers reported
+  // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
+  if lookup_bool("@seceqn") {
+    RawTeX!(r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}");
+  } else {
+    RawTeX!(r"\newtheorem{thm}{Theorem}");
+  }
 
   // Perl elsart_support.sty.ltxml L23-24:
   //   if (LookupValue('@amsthm')) { RequirePackage('amsthm'); }
@@ -34,8 +50,21 @@ LoadDefinitions!({
   DefMacro!("\\threehalf", "{\\textstyle\\frac{3}{2}}");
   DefMacro!("\\quart", "{\\textstyle\\frac{1}{4}}");
 
-  // Perl L48-49: differential and exponential unicode forms
-  DefMath!("\\d", "\u{2146}", role => "DIFFOP", meaning => "differential-d");
+  // Perl L48-49: differential and exponential unicode forms. The `\d` is elsart.cls's own (v2.18:1382, v2.20 alike:
+  // `\if@symbold\else\def\d{\,\mathrm{d}}\fi`, 98 of the 150 shipped copies of elsart*.cls; 0708.4004, 0712.3870),
+  // over the kernel's dot-under accent: where a paper ships a copy (elsart4.cls, elsart5.cls, elsartchimie.cls,
+  // 0709.3642's elsart.cls: cond-mat0610502, 0706.1711, cond-mat0504658) that does not redefine it, or the class's
+  // `symbold` option keeps it, `\d` stays the accent. With no copy the class as distributed redefines it.
+  let elsart_copy = crate::shipped_class::shipped_class_text("elsart")?;
+  let redefines_d = elsart_copy.as_deref().is_none_or(|text| {
+    crate::shipped_class::class_code_contains(text, "\\def\\d{\\,\\mathrm{d}}")
+  });
+  // `\if@symbold` is elsart_cls.rs's; the other users of this file (elsart.sty, arxbj.cls, OmniBus) have no option.
+  let symbold = T_CS!("\\if@symbold");
+  let symbold = lookup_definition(&symbold)?.is_some() && if_condition(&symbold)?.unwrap_or(false);
+  if redefines_d && !symbold {
+    DefMath!("\\d", "\u{2146}", role => "DIFFOP", meaning => "differential-d");
+  }
   DefMath!("\\e", "\u{2147}", role => "ID", meaning => "exponential-e");
 
   // Perl L58: \pol (rightwards arrow overaccent)
@@ -89,29 +118,34 @@ LoadDefinitions!({
   DefMacro!("\\AMS{}",  "\\@add@frontmatter{ltx:classification}[scheme=MSC]{#1}");
   DefMacro!("\\PAC{}",  "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
 
-  // Theorem environments — Perl L69-91
-  // Perl L69-91: the full list of elsart theorem environments
-  RawTeX!("\\theoremstyle{plain}");
-  RawTeX!("\\@ifundefined{cor}{\\newtheorem{cor}[thm]{Corollary}}{}");
-  RawTeX!("\\@ifundefined{lem}{\\newtheorem{lem}[thm]{Lemma}}{}");
-  RawTeX!("\\@ifundefined{claim}{\\newtheorem{claim}[thm]{Claim}}{}");
-  RawTeX!("\\@ifundefined{axiom}{\\newtheorem{axiom}[thm]{Axiom}}{}");
-  RawTeX!("\\@ifundefined{conj}{\\newtheorem{conj}[thm]{Conjecture}}{}");
-  RawTeX!("\\@ifundefined{fact}{\\newtheorem{fact}[thm]{Fact}}{}");
-  RawTeX!("\\@ifundefined{hypo}{\\newtheorem{hypo}[thm]{Hypothesis}}{}");
-  RawTeX!("\\@ifundefined{assum}{\\newtheorem{assum}[thm]{Assumption}}{}");
-  RawTeX!("\\@ifundefined{prop}{\\newtheorem{prop}[thm]{Proposition}}{}");
-  RawTeX!("\\@ifundefined{crit}{\\newtheorem{crit}[thm]{Criterion}}{}");
-  RawTeX!("\\theoremstyle{definition}");
-  RawTeX!("\\@ifundefined{defn}{\\newtheorem{defn}[thm]{Definition}}{}");
-  RawTeX!("\\@ifundefined{exmp}{\\newtheorem{exmp}[thm]{Example}}{}");
-  RawTeX!("\\@ifundefined{rem}{\\newtheorem{rem}[thm]{Remark}}{}");
-  RawTeX!("\\@ifundefined{prob}{\\newtheorem{prob}[thm]{Problem}}{}");
-  RawTeX!("\\@ifundefined{prin}{\\newtheorem{prin}[thm]{Principle}}{}");
-  RawTeX!("\\@ifundefined{alg}{\\newtheorem{alg}{Algorithm}}{}");
-  RawTeX!("\\@ifundefined{note}{\\newtheorem{note}{Note}}{}");
-  RawTeX!("\\@ifundefined{summ}{\\newtheorem{summ}{Summary}}{}");
-  RawTeX!("\\@ifundefined{case}{\\newtheorem{case}{Case}}{}");
+  // Theorem environments — Perl L69-91: elsart.cls's. A class binding that loads this file for its other markup
+  // but whose class defines none of them (arxbj.cls:1418-1431 defines `{thm}` only) sets
+  // `lx_elsart_class_theorems_off`: there `{prob}` shadowed 1601.03906's own `\newcommand{\prob}{\mathrm{P}}`,
+  // whose `$\prob_t$` then began a theorem in math (97 errors).
+  if !lookup_bool("lx_elsart_class_theorems_off") {
+    // Perl L69-91: the full list of elsart theorem environments
+    RawTeX!("\\theoremstyle{plain}");
+    RawTeX!("\\@ifundefined{cor}{\\newtheorem{cor}[thm]{Corollary}}{}");
+    RawTeX!("\\@ifundefined{lem}{\\newtheorem{lem}[thm]{Lemma}}{}");
+    RawTeX!("\\@ifundefined{claim}{\\newtheorem{claim}[thm]{Claim}}{}");
+    RawTeX!("\\@ifundefined{axiom}{\\newtheorem{axiom}[thm]{Axiom}}{}");
+    RawTeX!("\\@ifundefined{conj}{\\newtheorem{conj}[thm]{Conjecture}}{}");
+    RawTeX!("\\@ifundefined{fact}{\\newtheorem{fact}[thm]{Fact}}{}");
+    RawTeX!("\\@ifundefined{hypo}{\\newtheorem{hypo}[thm]{Hypothesis}}{}");
+    RawTeX!("\\@ifundefined{assum}{\\newtheorem{assum}[thm]{Assumption}}{}");
+    RawTeX!("\\@ifundefined{prop}{\\newtheorem{prop}[thm]{Proposition}}{}");
+    RawTeX!("\\@ifundefined{crit}{\\newtheorem{crit}[thm]{Criterion}}{}");
+    RawTeX!("\\theoremstyle{definition}");
+    RawTeX!("\\@ifundefined{defn}{\\newtheorem{defn}[thm]{Definition}}{}");
+    RawTeX!("\\@ifundefined{exmp}{\\newtheorem{exmp}[thm]{Example}}{}");
+    RawTeX!("\\@ifundefined{rem}{\\newtheorem{rem}[thm]{Remark}}{}");
+    RawTeX!("\\@ifundefined{prob}{\\newtheorem{prob}[thm]{Problem}}{}");
+    RawTeX!("\\@ifundefined{prin}{\\newtheorem{prin}[thm]{Principle}}{}");
+    RawTeX!("\\@ifundefined{alg}{\\newtheorem{alg}{Algorithm}}{}");
+    RawTeX!("\\@ifundefined{note}{\\newtheorem{note}{Note}}{}");
+    RawTeX!("\\@ifundefined{summ}{\\newtheorem{summ}{Summary}}{}");
+    RawTeX!("\\@ifundefined{case}{\\newtheorem{case}{Case}}{}");
+  }
 
   // Nuclear isotopes — Perl L60-65
   DefMacro!("\\nuc{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
@@ -156,8 +190,56 @@ LoadDefinitions!({
     }
   );
 
-  // Perl L104: \pf proof environment
-  RawTeX!("\\@ifundefined{pf}{\\newenvironment{pf}{\\begin{@proof}[\\proofname]}{\\end{@proof}}}{}");
+  // elsart.cls:477-483 (v2.18; 0708.4004's copy, 94 of the 113 shipped copies alike): `{pf}`, a proof headed
+  // `\Elproofname`, and `{pf*}{<heading>}`, one headed by its argument (run-347 inventory 25 papers; 0708.4409
+  // `\begin{pf*}{Proof of Theorem \ref{t3}}`, 0709.3642, 0811.2675, cs0404055, 0802.0646). Perl's `{pf}` is amsthm's
+  // `{@proof}` (elsart_support.sty.ltxml:104), which elsart does not load, so both were undefined; Perl has no `{pf*}`
+  // (KNOWN_PERL_ERRORS #724). Here each opens an `<ltx:proof>` titled as the class titles it, a constructor pair as
+  // amsthm's `\@proof`/`\end@proof` (amsthm_sty.rs), so a `$$…$$` in the body is still display math (an environment
+  // whose begin digests the title broke it: 0708.4409, 17 errors).
+  DefConstructor!("\\lx@elsart@proof{}",
+    "<ltx:proof><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>",
+    properties => sub[args] {
+      let mut heading = vec![T_BEGIN!(), T_CS!("\\bfseries")];
+      if let Some(Some(arg)) = args.first() {
+        heading.extend(arg.revert()?.unlist());
+      }
+      heading.push(T_END!());
+      let title = digest(Tokens::new(heading))?;
+      let titlefont = title.get_font().ok().flatten().map(|f| (*f).clone());
+      let mut map = stored_map!("title" => title);
+      if let Some(f) = titlefont {
+        map.insert("titlefont", Stored::Font(Rc::new(f)));
+      }
+      Ok(map)
+    });
+  DefConstructor!("\\lx@elsart@endproof", sub[document, _args] {
+    document.maybe_close_element("ltx:proof")?;
+  });
+  if lookup_definition(&T_CS!("\\pf"))?.is_none() {
+    RawTeX!(r"\def\pf{\lx@elsart@proof{\Elproofname}}\def\endpf{\lx@elsart@endproof}");
+  }
+  RawTeX!(r"\@namedef{pf*}#1{\lx@elsart@proof{#1}}\@namedef{endpf*}{\lx@elsart@endproof}");
+  // elsart.cls:47 the name parts of an author or address (`\cty` city, `\cny` country, `\jr`), set as they stand
+  // (`\relax`; 1202.0185, 0711.4590); :56 `\@blstr`, the baseline stretch the options set (0907.1629 adnd.sty:30);
+  // :514 `\ext@algorithm`, :754 `\ftype@figure`; :790, :1006-1008 `\t@glob@notes`/`\output@glob@notes`, the title
+  // page's notes, which the frontmatter carries (astro-ph0103363 calls it: nothing to set here).
+  RawTeX!(r"\let\cty\relax \let\cny\relax\let\jr\relax
+\def\@blstr{1}
+\def\ext@algorithm{lof}
+\def\ftype@figure{1}
+\newtoks\t@glob@notes
+\def\output@glob@notes{}");
+  // The MACMILLAN copies of elsart5.cls (45 of the shipped elsart5 copies, `%%%\KEY added by MACMILLAN`) start the
+  // keywords after `\PACS` with `\KEY` (`\def\KEY{\par\vspace*{7pt}\noindent\@keywordheading}`; 34 + 7 papers;
+  // 0801.1765, 0706.1711, 0708.4004): a keyword group, as `\PACS` opens a classification one. Their `\nolinenumbers`
+  // (`\let\nolinenumbers\relax`, 10 copies; 0904.0552) is lineno's off switch. A copy's guesses
+  // (`DefinitionOrigin::Fallback`).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\KEY", "\\@keyword@cut\\@keyword");
+    Let!("\\nolinenumbers", "\\relax");
+  }
 
   // Caption continuations — Perl L108-110
   DefMacro!("\\contcaption", "\\caption{continued}");
@@ -165,7 +247,11 @@ LoadDefinitions!({
   DefMacro!("\\conttablecaption", "\\caption{continued}");
 
   // Bibliography — Perl L117-175
-  DefEnvironment!("{subbibitems}", "#body");
+  // elsart.cls:600 `\newenvironment{subbibitems}[1]`: the argument is the group's citation key (written to the `.aux` as
+  // `\bibcite{<key>}` at the end, :617-631), not text. Perl's `{subbibitems}` takes none (elsart_support.sty.ltxml:117),
+  // so the key was typeset, a `_` in it erring (0707.3045; KNOWN_PERL_ERRORS #967). Guard:
+  // `perfect_kernel_batch73a::elsart_subbibitems_reads_its_key`.
+  DefEnvironment!("{subbibitems} Semiverbatim", "#body");
 
   // Perl elsart_support.sty.ltxml L120: `{cv*}` env wraps its body in a
   // <ltx:section class='ltx_cv'> with auto-title "Curriculum Vitae".

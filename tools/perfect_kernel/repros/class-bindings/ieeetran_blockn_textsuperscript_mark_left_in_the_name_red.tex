@@ -1,0 +1,14 @@
+% mechanism: IEEEtran `\IEEEauthorblockN{Ann Able\textsuperscript{1}, …}` gives "Ann Able 1": the mark's text in the name (revP3
+%   pre-existing; int159a = P3)
+% witness: synthetic (revP3 probe a9_ieee.tex)
+% expect:  each name once, its marks not as name text, each note once
+% status:  RED (int159a, P3)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2}}
+\IEEEauthorblockA{\textsuperscript{1}Univ X\\ \textsuperscript{2}Univ Y}}
+\maketitle
+Text.
+\end{document}

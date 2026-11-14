@@ -1,0 +1,13 @@
+% witness: sel78i item 5 (the cell above holds text: TeX overprints it)
+% oracle:  pdflatex 0 errors: "Up" printed over "x" of row 1
+% engines: rust int50a = 1 Warning:unsupported:multirow ("Negative row sizes … not yet supported")
+% expect:  0 errors, 1 Warning:unsupported:multirow (HTML cannot overprint); "Up" stays in row 2, row 1 keeps "x"
+% status:  CONTROL (78j)
+\documentclass{article}
+\usepackage{multirow}
+\begin{document}
+\begin{tabular}{lc}
+x & a \\
+\multirow{-2}{*}{Up} & c \\
+\end{tabular}
+\end{document}

@@ -894,6 +894,14 @@ LoadDefinitions!({
   // abstract, and is labelled as `\make@abstract` prints it (crckapb.sty:411 `\keywordsname:`), without the spaces
   // around it (the line's end before the `\end`).
   RawTeX!(r"\long\def\keywords#1\end{\lx@crckapb@keywords{#1}\end}");
+  // crckapb.sty:665-727 the author-year citation commands of the named references (`\citeauthor`, `\citeyear` over
+  // `\@citedata`, the bibliography's `\citeauthoryear`), which this binding leaves out: they print the `b@<key>` an
+  // aux file defines, a "?" here. They are natbib's, as Perl's OmniBus gives them on first use (a `\documentstyle`
+  // option the binding does not handle loaded it: `[editedvolume]`), so the paper's copy, read after this binding,
+  // keeps them (astro-ph9601169's 32 `\citeyear`s; OXIDIZED_DESIGN_DIVERGENCES #731).
+  for trigger in ["\\citeauthor", "\\citeyear", "\\citeauthoryear"] {
+    def_autoload(trigger, "natbib")?;
+  }
   DefMacro!("\\lx@crckapb@keywords{}", sub[(keywords)] {
     let mut keywords = keywords.unlist();
     while keywords.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {

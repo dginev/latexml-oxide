@@ -7,7 +7,8 @@
 % oracle:  pdflatex 0 errors: "(a) (b) Figure 1", "(c) Figure 1", "(d) Figure 1", "Figure 2"
 % engines: rust 57ad 0 errors but the continued parts' sub-captions read (a), (b)
 % expect:  0 errors; sub-captions (a) (b), (c), (d); figures 1, 1, 1, 2
-% status:  RED (57ad)
+% status:  GREEN (78o: `\subcaption` steps the float's counter ahead, as a `{subfigure}` does, not again in a
+%          continued float; guard perfect_kernel_batch78o)
 \documentclass{article}
 \usepackage{graphicx}
 \usepackage{caption}

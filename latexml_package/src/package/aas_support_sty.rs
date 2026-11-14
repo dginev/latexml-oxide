@@ -1,8 +1,45 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::{
   engine::latex_constructs::{after_float, before_float_ex},
-  package::subcaption_sty::subcaption_width_props,
+  package::{deluxetable_sty, revtex4_support_sty, subcaption_sty::subcaption_width_props},
   prelude::*,
 };
+
+/// Whether `digested` holds a table float of its own — the `{table}` a deluxetable opens (`{longrotatetable}`).
+fn holds_table_float(digested: &Digested) -> bool {
+  match digested.data() {
+    DigestedData::List(list) => list.borrow().boxes.iter().any(holds_table_float),
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      let cs = whatsit.get_definition().get_cs().to_string();
+      cs == "\\begin{table}"
+        || cs == "\\begin{table*}"
+        || whatsit
+          .get_body()
+          .ok()
+          .flatten()
+          .is_some_and(|body| holds_table_float(&body))
+        || whatsit.get_args().iter().flatten().any(holds_table_float)
+    },
+    _ => false,
+  }
+}
+
+/// The older AASTeX's affiliation marks (Perl aas_support.sty.ltxml): `\altaffilmark{1,2}` in an `\author` marks the
+/// author with the labels it lists, and `\altaffiltext{n}{text}` is the affiliation those marks request, of every
+/// author carrying `n` — the AAS idiom the classes that copied it share (OmniBus, aguplus, rmaa: `rmaa_cls`).
+pub fn altaffil_markup() -> Result<()> {
+  DefMacro!(
+    "\\altaffilmark Semiverbatim",
+    "\\lx@request@frontmatter@annotation[altaffil]{#1}"
+  );
+  DefMacro!(
+    "\\altaffiltext Semiverbatim {}",
+    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}"
+  );
+  Ok(())
+}
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -53,20 +90,23 @@ LoadDefinitions!({
   DefMacro!("\\edit{}{}",   "#2");
   def_macro_noop("\\ccc{}")?;
   DefMacro!("\\cpright{}{}", "\\lx@add@copyright{#2: #1}");
+  // aastex.cls:1893-1895 (astro-ph0702360's copy) gobbles `\journal`, `\volume`, `\issue`: printed nowhere, kept as
+  // notes with no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
   DefMacro!("\\journal{}",
-    "\\lx@add@pubnote[role=journal]{#1}");
+    "\\lx@add@pubnote[role=journal,name={}]{#1}");
   DefMacro!("\\volume{}",
-    "\\lx@add@pubnote[role=volume]{#1}");
+    "\\lx@add@pubnote[role=volume,name={}]{#1}");
   DefMacro!("\\issue{}",
-    "\\lx@add@pubnote[role=issue]{#1}");
+    "\\lx@add@pubnote[role=issue,name={}]{#1}");
   DefMacro!("\\SGMLbi{}", "#1");
   DefMacro!("\\SGMLbsc{}", "#1");
   DefMacro!("\\SGMLclc{}", "#1");
   DefMacro!("\\SGMLentity{}", "#1");
   def_macro_noop("\\SGML{}")?;
 
-  // 2.1.4 Short Comment
-  DefMacro!("\\slugcomment{}", "\\lx@add@pubnote[role=note]{#1}");
+  // 2.1.4 Short Comment: the slug line at the first page's top right, its text alone (aastex.cls:706; emulateapj.cls:887
+  // `\let\slugcomment\submitted`, :509), no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\slugcomment{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
 
   // 2.1.5 Running Heads
   DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");
@@ -121,17 +161,103 @@ LoadDefinitions!({
 
   // \email[]{addr} applies to previous author
   // \correspondingauthor{name}
-  // The flag and name are AASTeX 7's (aastex701.cls:13318-13328), for its `\email` (aastex_cls.rs): the address after a
-  // `\correspondingauthor{X}` is X's, wherever it stands.
+  // The flag and name are AASTeX 7's (aastex701.cls:13318-13328), for the `\email` below (every 6+ version's): the
+  // address after a `\correspondingauthor{X}` is X's, wherever it stands.
   RawTeX!(r"\newif\iflx@aas@correspauthor\let\lx@aas@correspondent\empty");
   DefMacro!("\\correspondingauthor{}",
     "\\global\\lx@aas@correspauthortrue\\gdef\\lx@aas@correspondent{#1}\\lx@add@contact[role=correspondent,label={fuzzy:#1}]{#1}");
 
 
   // Various contact information attaches to previous \author
-  // AASTeX 6 (revtex-derived): an affiliation is every preceding author's that has none yet (`\author{Ann Able and Bob
-  // Baker}\affiliation{Univ}` gives it to both), as revtex's is (`annotate=new`; 63e).
-  DefMacro!("\\affiliation{}",    "\\lx@add@affiliation[annotate=new]{#1}");
+  // AASTeX 6 (revtex-derived): an affiliation is REVTeX's (revtex4_support_sty.rs `group_or_marked_affiliation`):
+  // every preceding author's that has none yet (`\author{Ann Able and Bob Baker}\affiliation{Univ}` gives it to both;
+  // 63e), each further one before a new author the same run's (`annotate=run`) — aastex631.cls's `\author{K. Ieki}
+  // \author{…}\affiliation{U1}\affiliation{U2}` prints "K. Ieki 1, 2" (2403.06760, 1804.01623, 2001.01892) — and a line
+  // that leads with a mark no group shares goes by its marks, to the authors showing the same mark (`\author{Ann
+  // Able$^{1,2}$}…\affil{$^1$Univ A}`, astro-ph0611722, 0910.4381). Marks outrank that convention (user rulings R1/R2,
+  // 2026-11-01), declared at this call so the frontmatter observer reads the same:
+  // - a line's leading label, a mark or a hand-printed number (`\affil{1 Instituto …}`, `\affil{\scriptsize 2)
+  //   Osservatorio …}`, `\affil{$^1$ Department of Physics…}`: `relocate::leading_line_label`), that a queued AASTeX 5
+  //   `\altaffilmark{N}` requests is labelled `altaffil:N`, the label off the line, and goes to the names requesting it
+  //   (1810.01941, astro-ph0108212, 1808.01089's Horace Zhang, astro-ph0105133, 1911.09695 and eight more: round 1's
+  //   `annotate=run` gave every author every line, 39 -> 364 affiliations in 1810.01941; 97d line 1 to all, the rest to
+  //   the last author);
+  // - a hand-printed number a queued `$^{N}$` requests is that mark (0909.0058), and the line goes by the marked rule;
+  // - an unlabelled line under `$^{N}$` names, which request affiliations by their marks, is declared `annotate=new`
+  //   (`relocate::run_names_show_a_mark`; 1202.0629: each line every author's still without one, the later ones the
+  //   last author's, 97d's result — a stopgap until the observer's one placement order); under `\altaffilmark` names
+  //   (which ask for `\altaffiltext`s, 1210.4079) or a footnote symbol alone, the row's group (`annotate=run`).
+  // Perl's `\lx@add@affiliation{#1}` (aas_support.sty.ltxml:118) gave each to the last author only. AASTeX 7 is
+  // unchanged: aastex701.cls:7370 `\affil@error` stops the run when an author has no affiliation, so its authors never
+  // share a run.
+  // A line holding only an e-mail (`\affil{e-mail: kangx@shao.ac.cn}`, astro-ph0408475; `\affil{$^*$ Email:
+  // gaoyang25@…}` under `Yang Gao\altaffilmark{2, 3, *}`, 1808.01089) and an `\email` set in a line (`\affil{$^1$ Key
+  // Laboratory …\email{zhangqm@pmo.ac.cn}}`, 1503.02933: Q. M. Zhang's, not the five holders') go as the affiliation they
+  // are written as, and the frontmatter API places their addresses: the Kind step takes a line of addresses out of the
+  // entry, its label the contacts' name (`kind_entry_addresses`), and the Link step gives each address the author it
+  // spells, else the one carrier its mark or its group names, else the block (`insert::link_entry_addresses`,
+  // `entry_address_owners`), the empty entry dropped (OXIDIZED_DESIGN_DIVERGENCES #992). The binding's own token readers
+  // of those lines (`placed_email_line_calls`, `take_placed_line_emails`, `labelled_email_line`) are deleted (Z18l).
+  DefMacro!("\\affiliation{}", sub[(content)] {
+    // (lines set with one-argument line wrappers, `\affil{\centerline{$^{1}$Univ A}\centerline{$^{2}$Univ B}}`, are
+    // those lines, read below as `\\` lines are: `relocate::wrapped_lines_as_lines`, REVTeX's call the same)
+    let mut content = wrapped_lines_as_lines(&content).unwrap_or(content);
+    // (a block of `\\` lines, each entry led by a label a queued `\altaffilmark` requests, an unlabelled line the
+    // entry's before it: each entry labelled so — 1610.06611's one `\affil{$^{1}$ Jet Propulsion Laboratory … \\
+    // $^{2}$ Space Radiation Laboratory … \\ …}`, astro-ph0108212's `\affil{\scriptsize 5) Space Telescope Science
+    // Institute, … \\ Affiliated with …}`)
+    let lines: Vec<&[Token]> = split_top_level_lines(content.unlist_ref())
+      .into_iter()
+      .filter(|line| line.iter().any(|t| *t != T_SPACE!()))
+      .collect();
+    let name_marks = queued_name_marks();
+    let (altaffil, sup) = &*name_marks;
+    let mut entries: Vec<(String, Vec<Token>)> = Vec::new();
+    for line in &lines {
+      let line = Tokens::new(line.to_vec());
+      match leading_line_label(&line) {
+        // (one entry: no further mark on the line, `\affil{$^1$Univ A, $^2$Univ B}`, 0909.3044)
+        Some((label, _, rest))
+          if altaffil.contains(&label)
+            && !sup.contains(&label)
+            && !prints_marks(&rest, "aas \\affiliation")? =>
+        {
+          entries.push((label, rest.unlist()));
+        },
+        Some(_) => {
+          entries.clear();
+          break;
+        },
+        None => match entries.last_mut() {
+          Some((_, entry)) => {
+            entry.push(T_CS!("\\\\"));
+            entry.extend(line.unlist());
+          },
+          None => break,
+        },
+      }
+    }
+    if !entries.is_empty() {
+      let mut calls = Vec::new();
+      for (label, rest) in entries {
+        let keyvals = mouth::tokenize_internal(TeXString::assembled(s!("label={{altaffil:{label}}}")));
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@affiliation"), vec![Some(keyvals), Some(Tokens::new(rest))]).unlist(),
+        );
+      }
+      return Ok(Tokens::new(calls));
+    }
+    // (a hand-printed number a queued `$^{N}$` requests: that mark, 0909.0058)
+    if let Some((label, true, rest)) = leading_line_label(&content).filter(|_| lines.len() <= 1)
+      && sup.contains(&label)
+    {
+      let mut marked = mouth::tokenize_internal(TeXString::assembled(s!("$^{{{label}}}$"))).unlist();
+      marked.extend(rest.unlist());
+      content = Tokens::new(marked);
+    }
+    let annotate = if run_names_show_a_mark()? { "new" } else { "run" };
+    revtex4_support_sty::group_or_marked_affiliation(content, annotate)
+  });
   DefMacro!("\\altaffiliation{}", "\\lx@add@altaffiliation{#1}");
   DefMacro!("\\affil",            "\\affiliation");
   DefMacro!("\\authoraddr{}",     "\\lx@add@address{#1}");
@@ -139,18 +265,70 @@ LoadDefinitions!({
   // title footnote "Email: …", :2455-2456): the option is no part of the address (2608.21320; Perl's `\email{}`,
   // aas_support.sty.ltxml:122, left "[" as the address and "show]…" in the body).
   // (in the current font, aastex631.cls:6924-6930 `\href{mailto: #1}{#1}`; 2301.02349, 2101.08512)
-  DefMacro!("\\email[]{}",        "\\lx@add@email{\\lx@address@textfont{#2}}");
+  // The address after a `\correspondingauthor{X}` before any `\author` is X's: aastex631.cls:6917-6931 prints it in the
+  // footnote after "Corresponding author: X" (Repro A, `\correspondingauthor{Ann Able}\email{…}\author{Ann Able}…`,
+  // prints "Corresponding author: Ann Able / ann.able@a.edu": 2601.19870, 2408.08166, 2206.11167, 2010.09756), as
+  // AASTeX 7's (aastex701.cls:13341-13353) prints it wherever it stands; the flag is the next `\email`'s and an `\author`
+  // ends it. Perl's `\email` (aas_support.sty.ltxml:122) gave it to the author before it, none there, and dropped it
+  // (OXIDIZED_DESIGN_DIVERGENCES #963). (one `\lx@add@` call, so an author line holding `\email{…}` reads it as the
+  // class's frontmatter command: `adds_to_frontmatter`)
+  DefMacro!("\\email[]{}",        "\\lx@add@aas@email{#1}{#2}");
+  DefMacro!("\\lx@add@aas@email{}{}",
+    "\\iflx@aas@correspauthor\\expandafter\\lx@aas@email@corresp\\else\\expandafter\\lx@aas@email@author\\fi{#1}{#2}\\global\\lx@aas@correspauthorfalse");
+  // The correspondent's address is the one the `fuzzy:X` label names when X is one name and the address one address
+  // and, in AASTeX 6, no `\author` precedes it; else it is read as any `\email` (`\lx@aas@email@list`): after an author,
+  // the author's before it, an address spelling another author moving to that one (FIDELITY_CHARTER §4, OD #938) — a
+  // label naming no author whole would have taken it off its author: `\author{Yukun Huang (黄宇坤)}…
+  // \correspondingauthor{Yukun Huang}\email{…}`, 2511.16056 —; a list of several addresses
+  // (`\correspondingauthor{Lile Wang, Shenzhen Xu}\email{lilew@pku.edu.cn, xushenzhen@pku.edu.cn}`, 2511.09481) each by
+  // the name it spells; a correspondent of several names (`\correspondingauthor{Jiacheng Meng \& Cheng Li}`, 2008.13733)
+  // labels no one address. AASTeX 7, whose other `\email`s print nothing, reads it so wherever it stands
+  // (`\lx@aas@corresp@anywhere`, aastex_cls.rs).
+  DefMacro!("\\lx@aas@email@corresp{}{}", sub[(_option, address)] {
+    let text = address.to_string();
+    let local = text.split('@').next().unwrap_or("");
+    let several = text.matches('@').count() > 1 || local.contains([',', ';', '|']);
+    let mut correspondent = String::new();
+    if let Some(defn) = lookup_definition(&T_CS!("\\lx@aas@correspondent"))?
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      correspondent = body.to_string();
+    }
+    let names = correspondent.contains([',', ';', '&']) || correspondent.contains(" and ");
+    let authored = lookup_meaning(&T_CS!("\\lx@aas@authored")).is_some()
+      && lookup_meaning(&T_CS!("\\lx@aas@corresp@anywhere")).is_none();
+    let call = if several || names || authored {
+      "\\lx@aas@email@list"
+    } else {
+      "\\lx@aas@email@correspondent"
+    };
+    Ok(Invocation!(T_CS!(call), vec![Some(address)]))
+  });
+  DefMacro!("\\lx@aas@email@correspondent{}",
+    "\\ifx\\lx@aas@correspondent\\empty\\lx@add@email{\\lx@address@textfont{#1}}\\else\\lx@add@email[label={fuzzy:\\lx@aas@correspondent}]{\\lx@address@textfont{#1}}\\fi");
+  DefMacro!("\\lx@aas@email@list{}", "\\lx@add@email{\\lx@address@textfont{#1}}");
+  // (any other address the author's before it; AASTeX 7's is its own, aastex_cls.rs)
+  DefMacro!("\\lx@aas@email@author{}{}", "\\lx@add@email{\\lx@address@textfont{#2}}");
 
   // \collaboration{n}{name} applies to previous authors w/o collab; n is how many to SHOW
   // \nocollaboration{n} ditto, but says they are not in a collaboration group.
-  DefMacro!("\\collaboration{}{}", "\\lx@add@contact[role=collaboration,annotate=new]{#2}");
-  DefMacro!("\\nocollaboration{}", "\\lx@add@contact[role=collaboration,annotate=new]{}");
+  // That is AASTeX 6.3+'s (aastex701.cls:13355 `\def\nocollaboration#1`, :13377 `\def\collaboration#1#2`); AASTeX 6.1's
+  // are REVTeX's, `\collaboration{name}` and an argument-less `\nocollaboration` (aastex61.cls:6298, revtex4-1's
+  // `\@author@def`; aastex701.cls:1942 before its 6.3 redefinition). One binding serves both, by the call's shape: a
+  // second group after `\collaboration`'s, a group after `\nocollaboration`, is the 6.3 form — Perl's two-argument
+  // `\collaboration` (aas_support.sty.ltxml:126) took the `\author` after a 6.1 `\collaboration{(Spitzer Team)}` as
+  // the name, and "P. Mróz" became a paragraph (1802.09023; KNOWN_PERL_ERRORS). Guard
+  // `perfect_kernel_batch81::an_aastex61_collaboration_takes_one_argument`.
+  DefMacro!("\\collaboration{}",
+    "\\@ifnextchar\\bgroup{\\lx@aas@collaboration@count{#1}}{\\lx@aas@collaboration@name{#1}}");
+  DefMacro!("\\lx@aas@collaboration@count{}{}", "\\lx@add@contact[role=collaboration,annotate=new]{#2}");
+  DefMacro!("\\lx@aas@collaboration@name{}", "\\lx@add@contact[role=collaboration,annotate=new]{#1}");
+  DefMacro!("\\nocollaboration",
+    "\\@ifnextchar\\bgroup{\\lx@aas@nocollaboration}{\\lx@add@contact[role=collaboration,annotate=new]{}}");
+  DefMacro!("\\lx@aas@nocollaboration{}", "\\lx@add@contact[role=collaboration,annotate=new]{}");
 
   // Older aas versions: put mark within \author, text will be attached
-  DefMacro!("\\altaffilmark Semiverbatim",
-    "\\lx@request@frontmatter@annotation[altaffil]{#1}");
-  DefMacro!("\\altaffiltext Semiverbatim {}",
-    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}");
+  altaffil_markup()?;
   // The obsolete `\authoremail{…}` (Perl aas_support.sty.ltxml:134 `\email`; aaspp4.sty:129 and aas2pp4.sty:136
   // gobble it, the address unprinted): after authors, `\email`'s, the last author's (astro-ph9612041 gives one after
   // each `\author`); given before any `\author` (astro-ph9803018's `\authoremail{ecford@astro.uva.nl}\author{Eric C.
@@ -182,7 +360,9 @@ LoadDefinitions!({
   DefPrimitive!("\\and", None);
 
   DefMacro!("\\software{}", "\\lx@add@pubnote[role=software]{#1}");
-  DefMacro!("\\submitjournal{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): aastex631.cls:5875-5876
+  // (2608.19186's copy) `\def\@submitted{Submitted to #1}`, aastex62/63/7/701 the same — not the role's "Journal: ".
+  DefMacro!("\\submitjournal{}", "\\lx@add@pubnote[role=journal,name={Submitted to~}]{#1}");
 
   // Alas \doi is not frontmatter.
   DefConstructor!("\\doi{}", "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",
@@ -194,7 +374,7 @@ LoadDefinitions!({
 
   // 2.5 Keywords
   DefMacro!("\\keywords{}",
-    "\\lx@add@keywords[name={\\@ifundefined{keywordsname}{}{\\keywordsname}}]{#1}");
+    "\\lx@add@keywords[name={\\@ifundefined{keywordsname}{\\lx@keywords@name}{\\keywordsname}}]{#1}");
   Let!("\\subjectheadings", "\\keywords");
 
   // 2.6 Comments to Editors. Faithful to Perl aas_support.sty.ltxml L162-163:
@@ -227,7 +407,8 @@ LoadDefinitions!({
   def_macro_noop("\\floattable")?;
   NewCounter!("plate");
   // AASTeX 5.x's plates list with the figures (aastex.cls:1685-1704 `\def\ext@plate{lof}`, "Plate N."; 0908.0069); the
-  // family binding keeps them for every version (aastex 6+ dropped `{plate}`).
+  // family binding defines them for every version, and the AASTeX 6+ and emulateapj class bindings, whose classes have no
+  // `{plate}`, undefine the environment (aastex_cls.rs `undefine_plate`).
   RawTeX!(r"\def\ext@plate{lof}");
   DefMacro!("\\platename", "Plate");
   def_macro_noop("\\platewidth{Dimension}")?;
@@ -388,23 +569,29 @@ LoadDefinitions!({
   // The edit-tracking switches and the list of changes (aastex631.cls:5789-5798, :6108): the `\added`/`\deleted`
   // marks above print as plain text here, so the switches change nothing, and the list, a print summary of those
   // marks, is not typeset.
-  def_macro_noop("\\turnoffedit")?;
-  def_macro_noop("\\turnoffedits")?;
-  def_macro_noop("\\turnoffediting")?;
-  def_macro_noop("\\turnoffeditone")?;
+  // The switches keep their flags (aastex631.cls:5790-5809, the copy 2107.07519 ships), which papers set directly
+  // (`\turnoffonetrue`: 2609.30834) and the class's `\authorcomment` (below) reads; `\edit` here prints its text
+  // whatever they say (the class drops a turned-off `\edit<n>`'s text, :5823-5833: a residual).
+  RawTeX!(r"\newif\ifturnoffedit\def\turnoffedit{\global\turnoffedittrue}\def\turnoffedits{\global\turnoffedittrue}
+\let\turnoffediting\turnoffedits\newif\ifturnoffone\newif\ifturnofftwo\newif\ifturnoffthree
+\def\turnoffeditone{\turnoffonetrue}\def\turnoffedittwo{\turnofftwotrue}\def\turnoffeditthree{\turnoffthreetrue}");
   def_macro_noop("\\listofchanges")?;
-  // aastex631.cls:651 `\reportnum{…}`: a report number set at the top right of the first page.
-  DefMacro!("\\reportnum{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // aastex631.cls:651 `\reportnum{…}`: a report number set at the top right of the first page. It and the two below
+  // print their text alone: no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (2608.19186's copy).
+  DefMacro!("\\reportnum{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
   // aastex631.cls:1494 `\journalinfo{…}`: the journal line of the first page's head ("Accepted to ApJ"); the same
   // note emulateapj's makes (emulateapj_sty.rs).
-  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   // aastex6.cls:972/984 `\submitted{…}` feeds the same journal line (`\journalinfo{\@submitted}`).
-  DefMacro!("\\submitted{}", "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\submitted{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   // aastex6.cls:5212 `\fullcollaborationName{…}` stores the collaboration's full name for the author block's note.
   DefMacro!("\\fullcollaborationName{}", "\\def\\thefullcollaborationname{#1}");
   // Layout switches (aastex631.cls:7323, :6816, :5856): affiliations hidden from the author block, a page break
   // after the keywords, the watermark's font size.
-  def_macro_noop("\\suppressAffiliations")?;
+  // `\suppressAffiliations` sets the class's flag (aastex631.cls:7324-7325), which papers reset
+  // (`\suppressAffiliationsfalse`: 39 papers, 2108.09109, 2210.08658, 2001.00952): the author block here keeps
+  // every affiliation either way.
+  RawTeX!(r"\newif\ifsuppressAffiliations\def\suppressAffiliations{\global\suppressAffiliationstrue}");
   def_macro_noop("\\NewPageAfterKeywords")?;
   def_macro_noop("\\setwatermarkfontsize{}")?;
   // aastex631.cls:6427-6430 the number of authors the author block shows before "et al." (`\AuthorCallLimit` its
@@ -413,6 +600,32 @@ LoadDefinitions!({
   // aastex631.cls:1930 the old name of `\tabletypesize`; :2096 the skip above a deluxetable.
   DefMacro!("\\tablefontsize", "\\tabletypesize");
   RawTeX!(r"\newlength{\abovedeluxetableskip}");
+  // More of AASTeX 6.x (aastex631.cls in 2107.07519's copy; aastex63.cls alike, 1907.08642's), which papers call:
+  // - the table size `\currtabletypesize` that `\tabletypesize` keeps (:1928-1932; 2202.09386, 2405.09667 print
+  //   their notes in it), `\savetablenum` (:1926), `\tablereferences` (:5391), `\deluxetablecaption` (:4780,
+  //   :4798), `\tabcaption[…]{…}`, a table caption outside a float (:1609-1611; 2408.17407, 2502.00504);
+  // - `\resetapptablenumbers` (:7210-7216), the appendix numbering of tables, figures and equations (7 papers:
+  //   2308.05494, 2409.14445); `\authorcomment<n>{…}`, "(Author note n: …)" unless turned off (:5843-5850; 5 papers:
+  //   2004.09658, 2205.09859); `\onecolfootnote` (:7316-7317), a footnote; `\BeforeBegin{env}{code}` (:581), the hook the
+  //   class's own `\begin` runs (papers patch nicematrix through it: 2111.03992, 2203.13406; this `\begin` runs no
+  //   such hook); `\mdash` (:7141); `\apjsecfont` (:219), the section heading's font (2306.12805); the
+  //   acknowledgments box `\ackbox` (:1205; 2605.04423 fills its own); `\ifnumlines` (:253, the `linenumbers`
+  //   option's flag; 2608.12156).
+  // These are AASTeX 6.2 and later's only (aastex62.cls … aastex701.cls; AASTeX 5.2's aastex.cls, 1001.0026's, has none
+  // of them, nor `\authorcomment` aastex701.cls), and this binding serves AASTeX 5 and emulateapj too: as a fallback's
+  // guess, so a paper's own `\newcommand\mdash{--}`, `\tabcaption`, `\BeforeBegin` … wins (the review of 68a; repro
+  // class-bindings/aastex5_newer_commands_yield).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\def\resetapptablenumbers{\global\c@table=0 \global\c@figure=0 \global\c@equation=0
+\def\thetable{\thesection\the\c@table}\def\fnum@table{{\bf\tablename~\thetable}}\def\thefigure{\thesection\the\c@figure}}
+\expandafter\def\csname editcolor1\endcsname{black}\expandafter\def\csname editcolor2\endcsname{black}%
+\expandafter\def\csname editcolor3\endcsname{black}\newcount\colorcount
+\let\onecolfootnote\footnote
+\long\def\BeforeBegin#1#2{\expandafter\gdef\csname BeforeBeg#1\endcsname{#2}}
+\def\mdash{---}\def\apjsecfont{\normalsize}\newbox\ackbox\newif\ifnumlines");
+    define_authorcomment(true)?;
+  }
   // aastex701.cls:6737 `\lambdabar`, the barred lambda (as revsymb_sty.rs has it).
   DefMath!("\\lambdabar", "\u{03BB}\u{0304}");
 
@@ -428,7 +641,15 @@ LoadDefinitions!({
   DefMacro!("\\facilities{}", "\\lx@add@pubnote[role=thanks,name={Facilities:~}]{#1}");
 
   // 2.11 Appendices — Perl aas_support.sty.ltxml L247-249
-  DefMacro!("\\appendix", "\\@appendix");
+  // aastex631.cls:1336-1342: in a two-column document the appendix is set in one column (`\onecolumngrid`) unless
+  // the class option `twocolappendix` asks for two: the page a float's panels are set in rows against follows (the
+  // panel grid rule, `set_panel_page_twocolumn`; 2605.22754 A1.F6, two `0.48\textwidth` panels on a one-column page).
+  DefPrimitive!("\\lx@aas@appendix@columns", {
+    if !crate::shipped_class::class_option_given("twocolappendix")? {
+      set_panel_page_twocolumn(false);
+    }
+  });
+  DefMacro!("\\appendix", "\\lx@aas@appendix@columns\\@appendix");
   // `\@appendix` starts section-numbered appendices, then re-scopes the
   // equation counter to reset within each appendix section. Perl uses
   // `scope => 'global'` on the `\theequation` redefinition so the new
@@ -541,9 +762,14 @@ LoadDefinitions!({
   // 2.14 Electronic Art
   DefMacro!("\\figurenum{}", "\\def\\thefigure{#1}");
   def_macro_noop("\\epsscale{}")?;
-  DefMacro!("\\plotone Semiverbatim", "\\includegraphics[width=\\textwidth]{#1}");
+  // The plots are set at the line (aastex701.cls:8178-8189, emulateapj.cls:1040-1051: `0.85\linewidth`, `0.425\linewidth`
+  // each, times `\epsscale`), here a whole line each (Perl's aas_support.sty.ltxml:317-319 `\textwidth`, the same width
+  // where the page is not declared): against a two-column class's declared page (`declare_panel_page`) a one-column
+  // figure's plot is the column, not 2.09 of it (emulateapj: 1408.6903 Fig 3, astro-ph0609442 Fig 1). The class's
+  // 0.85 and `\epsscale` stay unmodelled, as in Perl.
+  DefMacro!("\\plotone Semiverbatim", "\\includegraphics[width=\\linewidth]{#1}");
   DefMacro!("\\plottwo Semiverbatim Semiverbatim",
-    "\\hbox{\\includegraphics[width=\\textwidth]{#1}\\includegraphics[width=\\textwidth]{#2}}");
+    "\\hbox{\\includegraphics[width=\\linewidth]{#1}\\includegraphics[width=\\linewidth]{#2}}");
   DefMacro!("\\plotfiddle Semiverbatim {}{}{}{}{}{}",
     "\\includegraphics[width=#4pt,height=#5pt]{#1}");
 
@@ -555,7 +781,11 @@ LoadDefinitions!({
   // catcode. Driver: arXiv:astro-ph/9808081 has 5× `\figcaption[X_Y.ps]`.
   // \figcaption checks if inside a figure environment.
   // If yes → \caption; if no → \@figcaption (wraps in figure env).
-  DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
+  // Outside a figure the text is the figure's caption, numbered: AASTeX sets it with `\caption` under
+  // `\def\@captype{figure}` (aastex701.cls:8111-8114; AASTeX 4's end-of-paper list prints "Fig. N.—"). Perl wraps the
+  // bare text in the figure (aas_support.sty.ltxml:332), a `<p>` with no caption and no number, lost markup with 0
+  // errors (astro-ph9806172; silent-loss inventory #24). Guard `perfect_kernel_batch74b::aastex_figcaption_outside_a_figure_is_its_caption`.
+  DefMacro!("\\@figcaption {}", "\\begin{figure}\\caption{#1}\\end{figure}");
   DefMacro!("\\figcaption OptionalSemiverbatim", sub[(opt_arg)] {
     let env = lookup_string_from_sym(pin!("current_environment"));
     if env.contains("figure") {
@@ -573,6 +803,29 @@ LoadDefinitions!({
 
   // 2.15 Tables
   RequirePackage!("deluxetable");
+  // aastex701.cls TL :11298-11299 (aastex62.cls, aastex631.cls alike) `\def\deluxetable{\global\deluxetrue
+  // \catcode`\&=\active \catcode`\$=\active…`: the table makes `$` active as it begins, before its template and its
+  // `\tablehead` are read, so a `$m_{G}$` in the head of a `C` column is the cell's math, which the column's
+  // `\let$\relax` leaves alone (2411.04196). `\aas@table@dollar` is that catcode change in AASTeX 6+ only (below).
+  Let!("\\aas@@deluxetable", "\\deluxetable");
+  DefMacro!("\\deluxetable", "\\aas@table@dollar\\aas@@deluxetable");
+  let_i(&T_CS!("\\aas@@deluxetable*"), &T_CS!("\\deluxetable*"), None);
+  def_macro(
+    T_CS!("\\deluxetable*"),
+    None,
+    ExpansionBody::Tokens(Tokens!(T_CS!("\\aas@table@dollar"), T_CS!("\\aas@@deluxetable*"))),
+    None,
+  )?;
+  // (after deluxetable, whose `\tablenum`, `\tablerefs`, `\tablecaption` and `\tabletypesize` these follow; the
+  // AASTeX 6.x table commands listed above)
+  RawTeX!(r"\def\tabletypesize#1{\gdef\currtabletypesize{#1}}\tabletypesize{\small}");
+  {
+    // (6.2 and later's only, as above)
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\let\savetablenum\tablenum\let\tablereferences\tablerefs\let\deluxetablecaption\tablecaption
+\def\tabcaption{\@ifnextchar[{\@xtabcaption}{\@tabcaption}}\def\@tabcaption#1{{\def\@captype{table}\caption{#1}}}
+\def\@xtabcaption[#1]#2{{\def\@captype{table}\caption{#2}}}");
+  }
   Let!("\\planotable", "\\deluxetable");
   // AASTeX 3's `{planotable}` ends its data itself, without `\enddata` (aaspptwo.sty:252-256 `\endplanotable`:
   // `\crcr\noalign{\vskip .7ex}\hline\endtabular…`; astro-ph9502038); AASTeX 4's (aas2pp4.sty:322) is
@@ -588,10 +841,16 @@ LoadDefinitions!({
   // aastex631.cls L4780-4781:
   //   \newif\ifstartlongtable
   //   \def\startlongtable{\vskip1sp\global\startlongtabletrue}
-  // We treat as a no-op marker — our deluxetable / longtable handling
-  // doesn't need the conditional flag. Driver: 2209.01632 (aastex631)
-  // emitted "\startlongtable not defined" + alignment-tab cascade.
-  def_macro_noop("\\startlongtable")?;
+  // Driver: 2209.01632 (aastex631) emitted "\startlongtable not defined" + alignment-tab cascade. The flag is the next
+  // deluxetable's: a long table, whose caption the class always prints (deluxetable_sty.rs `\lx@deluxe@print@caption`,
+  // aastex701.cls:11568/:11575), until it ends (:11609).
+  DefMacro!("\\startlongtable", r"\global\lx@deluxe@longtrue");
+  // aastex701.cls:11516 `\def\longdeluxetable#1` / :11614 `\def\endlongdeluxetable` are the long table `\deluxetable`
+  // goes to after `\startlongtable` (:11316 `\let\go\longdeluxetable`); called as an environment
+  // (`\begin{longdeluxetable}{ll}`) it is that table without the flag. Undefined, the environment was lost with its
+  // caption and `\label` (2608.15711; pdflatex 0 errors, its `\ref` 2 as the table's number here).
+  DefMacro!("\\longdeluxetable{}", r"\global\lx@deluxe@longtrue\deluxetable{#1}");
+  DefMacro!("\\endlongdeluxetable", r"\enddeluxetable");
 
   // Perl L373: Let('\savedollar' => T_MATH). The hidden 'h' column type
   // used by aas deluxetable tokenizes literal `$` from the template, so
@@ -604,28 +863,55 @@ LoadDefinitions!({
   // (`\startdata`, deluxetable_sty.rs) — inside the group the table opens; tabularx shares tabular's bindings here, where
   // in pdflatex it reads its body before `\tabular` and keeps the body's `$` as written. Witness 2609.05675 (an author's `$z_0$` in a `C` cell).
   let_i(&T_ACTIVE!('$'), &T_CS!("\\savedollar"), Some(Scope::Global));
-  DefMacro!("\\aas@table@dollar", "\\catcode`\\$=\\active\\relax");
+  // …only AASTeX 6+ (aastex_cls.rs sets it): AASTeX 5.x's aastex.cls (5.2; copies in 1403.0937, astro-ph0609108) and
+  // emulateapj.cls have no active `$`, and an author's `$`-delimited macro there (`\def\mcn#1$-$#2 {…}` in a table,
+  // 0903.2259) must find its catcode-3 delimiter (repro captions-floats/aastex5_table_dollar_delimited_macro).
+  DefMacro!("\\aas@table@dollar", "");
   Let!("\\aas@@tabular@bindings", "\\@tabular@bindings");
   DefMacro!("\\@tabular@bindings", "\\aas@table@dollar\\aas@@tabular@bindings");
   Let!("\\aas@@deluxetable@bindings", "\\@deluxetable@bindings");
   DefMacro!("\\@deluxetable@bindings", "\\aas@table@dollar\\aas@@deluxetable@bindings");
+
+  // Every AASTeX sets the `\tablenotetext` mark in math: aastex701.cls TL :11967-11969 (aastex62.cls :5097-5099,
+  // aastex631.cls :5382-5384, 2503.18379's copy) `$^{\hbox to 5pt{$#1$}}$`, the older form (aastex631.cls :2001-2002)
+  // `$^{#1}$`, while `\tablenotemark` sets its mark in text (:8494 `\textsuperscript{…\it #1}`). The mark is set in
+  // the class's box (`\hbox{$#1$}`, so `\tablenotetext{$a$}` is the text "a", 1807.05231) and keyed by what it shows,
+  // as the `\tablenotemark` is (deluxetable_sty.rs `shown_mark`), so `a`, `\rm{b}`, `$\dagger$` pair across the two
+  // (1710.01715). Perl digests it as text (deluxetable.sty.ltxml:106), so `\tablenotetext{^\dagger}` set its `^` in
+  // text (2503.18379, 0803.1504; KNOWN_PERL_ERRORS #873). emulateapj, which loads this binding, sets it in text
+  // (emulateapj_cls.rs). Guards: `perfect_kernel_batch68y::aastex_tablenotetext_mark_is_math`,
+  // `aastex_tablenote_marks_pair_by_what_they_show`.
+  DefMacro!("\\tablenotetext{}{}", "\\lx@deluxe@tablenotetext{\\lx@deluxe@tablenote@mark{#1}}{#2}");
 
   // Decimal table conditionals — Perl L338-345
   DefConditional!("\\ifcolnumberson");
   DefConditional!("\\ifdeluxedecimals");
   DefMacro!("\\deluxedecimals", "\\global\\deluxedecimalstrue");
   RawTeX!("\\global\\deluxedecimalsfalse");
-  Let!("\\decimals", "\\deluxedecimals");
+  // aastex701.cls TL :12014-12021 (aastex62.cls :5144, 1805.06850's copy) `\gdef\decimals{\noalign{…}}`: in a
+  // `tabular` the switch is a `\noalign` at a row start, so a `\tableline` after it is still a rule; each
+  // deluxetable lets it be `\deluxedecimals` (:11331, 11425, 11520, 11714; aastex62.cls :4612, 4661), an assignment
+  // before `\startdata`. Perl's assignment everywhere (aas_support.sty.ltxml:345-347) opened a cell at the row start
+  // and misplaced the `\noalign` after it (1805.06850; KNOWN_PERL_ERRORS #875).
+  // Guard: `perfect_kernel_batch68y::aastex_decimals_is_a_noalign_in_a_tabular`.
+  DefMacro!("\\decimals", "\\noalign{\\global\\deluxedecimalstrue}");
   // aastex701.cls TL :11330, 11424, 11519, 11715 `\global\deluxedecimalsfalse`: each deluxetable (and its starred and
-  // split forms, which all set their template here) starts without `\decimals`.
+  // split forms, which all set their template here) starts without `\decimals`. The `\let` stays in the group of
+  // the environment's `\begin`.
   Let!("\\aas@@set@deluxetable@template", "\\set@deluxetable@template");
-  DefMacro!("\\set@deluxetable@template", "\\global\\deluxedecimalsfalse\\aas@@set@deluxetable@template");
+  DefMacro!("\\set@deluxetable@template",
+    "\\global\\deluxedecimalsfalse\\let\\decimals\\deluxedecimals\\aas@@set@deluxetable@template");
   def_macro_noop("\\colnumbers")?;
   DefMacro!("\\deluxedecimalcolnumbers", "\\deluxedecimalstrue\\colnumbersontrue");
   Let!("\\decimalcolnumbers", "\\deluxedecimalcolnumbers");
 
-  // Hidden column environment — Perl L374
-  DefEnvironment!("{eatone}", "");
+  // The hidden column's cell (`h`, `B` below): aastex701.cls TL :8851-8852 (aastex62.cls :2143-2144) `\eatone` =
+  // `\setbox0=\hbox\bgroup\savedollar\let$\relax`, a box that is never used, holding the cell in math, where the
+  // table's active `$` does nothing; `\endeatone` closes the math and the box. Perl's `{eatone}` environment (L374)
+  // digested the cell as text, so a `{grp1.8_diffuse}` there was a "Script _" error (1907.13126, 76; KNOWN_PERL_ERRORS #991). The class's
+  // `\hskip-2\tabcolsep`, which takes the hidden column's padding back, is presentation and is left out.
+  RawTeX!(r"\begingroup\catcode`\$=\active
+\long\gdef\eatone{\setbox0=\hbox\bgroup\savedollar\let$\relax}\gdef\endeatone{\savedollar\egroup}\endgroup");
 
   // A `D` decimal column is two template columns (aastex701.cls TL :12010 `>\newdoit r<{\endnewdoit} @{}l`; Perl
   // aas_support.sty.ltxml:353-372, which reads `d` the same way — the class's `d`, :12011, is that pair hidden). After
@@ -652,7 +938,25 @@ LoadDefinitions!({
       });
     });
   }
-  DefColumnType!("D", { build_d_columns(); });
+  // The class's `D` is a column type of its own (aastex701.cls TL :12010, aastex62.cls :5140), which a document's
+  // `\usepackage{dcolumn}` after the class replaces with dcolumn's three-argument `D{.}{.}{n}` (the later
+  // `\newcolumntype` wins; aastex701.cls :6286-6291 then only adds a `d`). The binding has dcolumn already (REVTeX's,
+  // revtex4_support_sty.rs, as Perl's), so the document's load changes nothing: a `D` followed by its arguments is
+  // dcolumn's, the class's never takes one. Perl's `D` replaced dcolumn's (aas_support.sty.ltxml:362-363), its
+  // arguments then unknown columns (1607.06811 `\newcolumntype{d}[1]{D{,}{\pm}{#1}}`; KNOWN_PERL_ERRORS #876).
+  // Guard: `perfect_kernel_batch68y::aastex_d_column_with_arguments_is_dcolumns`.
+  if lookup_meaning(&T_CS!("\\NC@rewrite@D")).is_some() {
+    let_i(&T_CS!("\\lx@aas@dcolumn@D"), &T_CS!("\\NC@rewrite@D"), None);
+  }
+  DefColumnType!("D", {
+    skip_spaces()?;
+    if if_next(T_BEGIN!())? && lookup_meaning(&T_CS!("\\lx@aas@dcolumn@D")).is_some() {
+      Tokens!(T_CS!("\\lx@aas@dcolumn@D"))
+    } else {
+      build_d_columns();
+      Tokens!()
+    }
+  });
   DefColumnType!("d", { build_d_columns(); });
   DefMacro!("\\aas@start@D@column XUntil:\\aas@end@D@column", sub[args] {
     let cell = args[0].clone().into_tokens_result()?.unlist();
@@ -756,7 +1060,126 @@ LoadDefinitions!({
   // never typesets them: a file `rolling_ns3.mp4` raised "Script _ can only appear in math mode" (2303.02355;
   // OXIDIZED_DESIGN #551). Guard `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
   DefEnvironment!("{interactive} Semiverbatim Semiverbatim", "#body");
-  DefEnvironment!("{longrotatetable}", "#body");
+  // aastex701.cls:12245-12286 (aastex631.cls alike) `{longrotatetable}` turns the page for the long table it holds, a
+  // deluxetable it sets non-floating (`\global\floatfalse`, `\startlongtabletrue`). Around a plain `tabular` it is that
+  // table's float here (main-session call 2026-10-18, under user ruling 2 "keep the author's caption"; OXIDIZED_DESIGN
+  // _DIVERGENCES #739), its `\label` the table's. Its `\tablecaption` is stored, as the class stores it
+  // (deluxetable_sty.rs `\lx@deluxe@tablecaption`, `in_longrotatetable_body`): a deluxetable in it takes the store, and
+  // the first `\begin{tabular}` directly in it sets a caption still stored, unnumbered — the PDF never prints it, so
+  // the later numbers stay the PDF's (2204.03327). Its `\global\startlongtabletrue` makes the next deluxetable a long
+  // one (`\lx@deluxe@longtrue`), whose caption the PDF always prints, numbered (repro
+  // class-bindings/longrotatetable_tablecaption_goes_to_its_table). Around a deluxetable —
+  // whose own `{table}` the body then holds — it stays the page's setting, the body alone.
+  // A caption no `\begin{tabular}` took (a `tabular*`, `tabularx` or `longtable`, or a `\tablecaption` after the
+  // tabular) is set at the end, in its group, unnumbered (review 73a r3 finding 1).
+  // Guards: `perfect_kernel_batch73a::{longrotatetable_around_a_tabular_is_its_table,
+  // longrotatetable_tablecaption_goes_to_its_table, longrotatetable_caption_without_a_tabular}`.
+  DefEnvironment!("{longrotatetable}", sub[document, _args, props] {
+    let body = match props.get("body") {
+      Some(Stored::Digested(body)) => Some(body.clone()),
+      _ => None,
+    };
+    if matches!(props.get("holds_table"), Some(Stored::Bool(true))) {
+      if let Some(body) = body {
+        document.absorb(&body, None)?;
+      }
+      return Ok(());
+    }
+    let save = document.float_to_element("ltx:table", true)?;
+    let mut attrs = string_map!();
+    for key in ["id", "inlist"] {
+      if let Some(value) = props.get(key).map(|v| v.to_string()).filter(|v| !v.trim().is_empty()) {
+        attrs.insert(if key == "id" { "xml:id".to_string() } else { key.to_string() }, value);
+      }
+    }
+    document.open_element("ltx:table", Some(attrs), None)?;
+    if let Some(Stored::Digested(tags)) = props.get("tags") {
+      document.absorb(tags, None)?;
+    }
+    if let Some(body) = body {
+      document.absorb(&body, None)?;
+    }
+    document.close_element("ltx:table")?;
+    if let Some(save) = save {
+      document.set_node(&save);
+    }
+    Ok(())
+  },
+    properties => { stored_map!("layout" => "vertical") },
+    mode => "internal_vertical",
+    before_digest => {
+      before_float_ex("table", None, true)?;
+      engine::latex_constructs::reset_float_box()?;
+      assign_value("lx@lrt@frame", lookup_value("lx@float@frame"), Some(Scope::Local));
+      // Before `\begin{tabular}`'s group (its `beforebegin` hook, kept after ours): `\tabular` is locked.
+      let hook = "@environment@tabular@beforebegin";
+      if matches!(lookup_value(hook), None | Some(Stored::None) | Some(Stored::Tokens(_))) {
+        let mut tokens = vec![T_CS!("\\lx@lrt@tabular@caption")];
+        tokens.extend(lookup_tokens(hook).map(Tokens::unlist).unwrap_or_default());
+        assign_value(hook, Stored::Tokens(Tokens::new(tokens)), Some(Scope::Local));
+      }
+      // A table float in the body (a deluxetable's `{table}`) makes the body the page's setting (`holds_table_float`),
+      // and a `{longtable}` is a numbered table of its own, with its id: their `beforebegin` hooks note them here, in
+      // the longrotatetable's group, for the end's fallback.
+      for (env, note) in [("table", "\\lx@lrt@note@table"), ("table*", "\\lx@lrt@note@table"),
+        ("longtable", "\\lx@lrt@note@longtable")]
+      {
+        let hook = s!("@environment@{env}@beforebegin");
+        let hook = hook.as_str();
+        if matches!(lookup_value(hook), None | Some(Stored::None) | Some(Stored::Tokens(_))) {
+          let mut tokens = vec![T_CS!(note)];
+          tokens.extend(lookup_tokens(hook).map(Tokens::unlist).unwrap_or_default());
+          assign_value(hook, Stored::Tokens(Tokens::new(tokens)), Some(Scope::Local));
+        }
+      }
+      Digest!(r"\global\lx@deluxe@longtrue")?;
+    },
+    // The end, inside its group: a caption still stored — no `tabular` took it (a `tabular*`, `tabularx` or
+    // `longtable`, or a `\tablecaption` after the tabular) — is set here, unnumbered, as at a `tabular`.
+    before_digest_end => { digest(Tokens!(T_CS!("\\lx@lrt@end@caption")))? },
+    after_digest => sub[whatsit] { after_float(whatsit); },
+    after_digest_body => sub[whatsit] {
+      if let Ok(Some(body)) = whatsit.get_body() {
+        whatsit.set_property("holds_table", Stored::Bool(holds_table_float(&body)));
+      }
+    });
+  DefMacro!("\\lx@lrt@tabular@caption", sub[_args] {
+    Ok(if deluxetable_sty::in_longrotatetable_body() { Tokens!(T_CS!("\\lx@lrt@stored@caption")) } else { Tokens!() })
+  });
+  DefPrimitive!("\\lx@lrt@note@table", {
+    if deluxetable_sty::in_longrotatetable_body() {
+      assign_value("lx@lrt@holds@table", Stored::Bool(true), Some(Scope::Local));
+    }
+  });
+  DefPrimitive!("\\lx@lrt@note@longtable", {
+    if deluxetable_sty::in_longrotatetable_body() {
+      assign_value("lx@lrt@holds@longtable", Stored::Bool(true), Some(Scope::Local));
+    }
+  });
+  // A held `{longtable}` has its number and id (longtable_sty.rs steps at its start), so its caption takes no id step.
+  DefMacro!("\\lx@lrt@end@caption", sub[_args] {
+    Ok(if !deluxetable_sty::in_longrotatetable_body() || lookup_bool("lx@lrt@holds@table") {
+      Tokens!()
+    } else if lookup_bool("lx@lrt@holds@longtable") {
+      Tokens!(T_CS!("\\lx@lrt@stored@caption@noid"))
+    } else {
+      Tokens!(T_CS!("\\lx@lrt@stored@caption"))
+    })
+  });
+  DefMacro!("\\lx@lrt@stored@caption@noid",
+    r"\ifx\lx@deluxe@caption\@empty\else\expandafter\lx@deluxe@caption@noid\expandafter{\lx@deluxe@caption}\global\let\lx@deluxe@caption\@empty\fi");
+  DefMacro!("\\lx@deluxe@caption@noid{}", r"\lx@lrt@longtable@id\lx@setfloatcapt{\lx@@caption{#1}}");
+  // The table then is the longtable's: its id (the longtable steps at its start, longtable_sty.rs), which the collapse
+  // of the two tables keeps (`collapse_float`).
+  DefPrimitive!("\\lx@lrt@longtable@id", {
+    if let Some(Stored::HashStored(props)) = lookup_value("LONGTABLE_PROPERTIES")
+      && lookup_value("table_id").is_none_or(|v| matches!(v, Stored::None))
+    {
+      assign_value("table_id", props.get("id"), Some(Scope::Global));
+    }
+  });
+  DefMacro!("\\lx@lrt@stored@caption",
+    r"\ifx\lx@deluxe@caption\@empty\else\expandafter\lx@deluxe@unnumbered\expandafter{\lx@deluxe@caption}\global\let\lx@deluxe@caption\@empty\fi");
   // aastex701.cls TL :12212-12231 — `rotatetable(*)` sets its table turned 90° on its own page, page layout as for
   // `longrotatetable` (2609.01052).
   DefEnvironment!("{rotatetable}", "#body");
@@ -967,6 +1390,25 @@ LoadDefinitions!({
 });
 
 /// An AASTeX panel's properties: its width, as a sub-figure's, and the gridline row it stands in, if any.
+/// `\authorcomment<n>{text}` (aastex631.cls:5843-5850 in 2107.07519's copy), "(Author~note n: text)" unless the edit
+/// switches turn it off; `numbered` false for the versions that print "(Author~note: text)" — aastex63.cls (98 of the
+/// 102 copies sampled: 2205.09859 :5727-5734, 2004.09658) and aastex62.cls (`aastex_cls`: the paper's copy decides,
+/// else the class name). The definer runs at the caller's origin.
+pub(crate) fn define_authorcomment(numbered: bool) -> Result<()> {
+  let n = |k: u8| if numbered { s!(" {k}") } else { String::new() };
+  RawTeX!(&s!(
+    r"\def\authorcomment#1#2{{{{\colorcount=#1 \ifturnoffedit\let\go\ignorespaces\else\let\go\relax
+\color{{\csname editcolor\the\colorcount\endcsname}}%
+\ifnum\colorcount=1{{\ifturnoffone\else\bf (Author~note{}: #2)\ \fi}}\else
+\ifnum\colorcount=2{{\ifturnofftwo\else\it (Author~note{}: #2)\ \fi}}\else
+\ifnum\colorcount=3{{\ifturnoffthree\else (Author~note{}: #2)\ \fi}}\fi\fi\fi\fi\go}}}}",
+    n(1),
+    n(2),
+    n(3)
+  ));
+  Ok(())
+}
+
 fn aas_panel_props(args: &[Option<Digested>]) -> Result<SymHashMap<Stored>> {
   let mut props = subcaption_width_props(args)?;
   let row = lookup_int("lx_aas_gridrow");

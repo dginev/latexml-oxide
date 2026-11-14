@@ -1,5 +1,10 @@
 use crate::prelude::*;
 LoadDefinitions!({
+  // Perl amsgen.sty.ltxml:19. amsgen.sty:27-38 saves a primitive only while `\meaning` gives its own name, else
+  // "Unable to properly define \@@atop; primitive \atop no longer primitive"; the kernel's `\over` family and
+  // `\overline` read so (tex_debugging.rs, KNOWN_PERL_ERRORS #985), but not every name a raw file saves: amsmath-iop.sty
+  // (0706.4029's) saves `\eqno` and `\leqno`, macros here, primitives in pdflatex (2 false errors with the check). So
+  // the plain `\let` stays; amsmath's `\binom` no longer reads `\@@atop` (amsmath_sty.rs). SYNC_STATUS 77q.
   DefMacro!("\\@saveprimitive{}{}", "\\let#2#1");
 
   Let!("\\@xp", "\\expandafter");

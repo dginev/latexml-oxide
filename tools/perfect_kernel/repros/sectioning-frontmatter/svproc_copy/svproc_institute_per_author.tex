@@ -1,0 +1,15 @@
+% witness: dev20k 2101.04527, 2504.04157, 2206.03859, 1911.11805, 2409.01900 (svproc.cls v1.3, the class beside it)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2", the institutes "1 Univ A, Town A" and "2 Univ B, Town B"
+% engines: rust 97b = no affiliation on either, one document `<note role="institute">Univ A, Town A and Univ B, Town
+%          B</note>` (the contrib svproc binding's own `\institute`); Perl 0 errors: Ann holds "Univ A, Town A", Bob
+%          "Univ B, Town B" (OmniBus's inst_support `\institute`)
+% expect:  0 errors 0 warnings; Ann holds "Univ A, Town A", Bob "Univ B, Town B"; no institute note
+% status:  RED (97b) -> GREEN (97c)
+\documentclass{svproc}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A, Town A \and Univ B, Town B}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: sel78i item 4 (cleveref: 2,556/30k papers)
+% oracle:  pdflatex 0 errors: "eq. (1); eqs. (1) and (2); eqs. (1) to (3); (1); item 1."
+%          (cleveref.sty:7838-7842 \crefdefaultlabelformat{#2#1#3}, \creflabelformat{equation}{\textup{(#2#1#3)}})
+% engines: rust int50a = "eq. 1; eqs. 1 and 2; eqs. 1 to 3; 1; item 1" (Perl cleveref.sty.ltxml:46-76 alike)
+% expect:  0 errors; the equation numbers in parentheses, the item's plain
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass{article}
+\usepackage{amsmath,cleveref}
+\begin{document}
+\begin{equation}a\label{e1}\end{equation}
+\begin{equation}b\label{e2}\end{equation}
+\begin{equation}c\label{e3}\end{equation}
+\begin{enumerate}\item\label{i1} one\end{enumerate}
+\cref{e1}; \cref{e1,e2}; \crefrange{e1}{e3}; \labelcref{e1}; \cref{i1}.
+\end{document}

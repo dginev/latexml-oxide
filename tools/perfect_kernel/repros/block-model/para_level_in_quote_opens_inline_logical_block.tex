@@ -1,0 +1,20 @@
+% witness: 2406.11811 (13 theorems in {quote}), 2103.03402, 0806.0214, 2602.15784, 2301.10544, 1410.7242, 1412.2039,
+%   math0603642 (TOC in {quote}); study rc_struct3 P1 (agent_reports/2026-10-17_rc_struct3.md)
+% oracle:  pdflatex 0 errors; the theorem, the proof and the contents are set inside the quote's indented list
+% engines: rust 67int18b = 3 ("<ltx:theorem>/<ltx:proof>/<ltx:TOC> isn't allowed in <ltx:quote>"), perl = 3 (same schema)
+% expect:  0 errors; each of theorem/proof/TOC inside an `ltx:inline-logical-block` of the quote, in place
+% status:  RED (67int18b) -> GREEN (69c: the auto-open bridge row `inline-logical-block`, ruling P1)
+\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\begin{quote}
+Before.
+\begin{theorem} A statement. \end{theorem}
+After.
+\begin{proof} Trivial. \end{proof}
+\tableofcontents
+\end{quote}
+\section{A}
+Text.
+\end{document}

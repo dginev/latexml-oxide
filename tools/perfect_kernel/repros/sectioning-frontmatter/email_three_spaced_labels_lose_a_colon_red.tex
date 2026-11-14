@@ -1,0 +1,19 @@
+% mechanism: an address line with three spaced e-mail labels before the address (`email_line_label`'s first-label
+%   filter, `frontmatter/classify/email_block_calls.rs` ~136-138, presumed — unconfirmed): only the last label names
+%   the e-mail contact; the first two stay in the Address contact as "E-mail: e-mail", the second label's colon lost.
+%   Expected: every label word kept, in printed order (as two labels give, GL1b's `joined_line_label`)
+% witness: none in the corpus (synthetic, review revGL1b pre-existing (a), probe t3_spaced3)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Univ A, Town, E-mail: e-mail: Email: zz@x.org"
+% engines: rust int157a, GL1, GL1b the same bytes: <contact role="address">Univ A, Town<break/>E-mail: e-mail</contact>
+%   <contact name="Email: " role="email">zz@x.org</contact>
+% expect:  0 errors, 0 warnings; the e-mail contact zz@x.org named "E-mail: e-mail: Email: " (or every label word kept
+%   with its colon)
+% status:  RED (catalog only; a colon lost, the label words misplaced into the address)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ A, Town\\ E-mail: e-mail: Email: zz@x.org}
+\maketitle
+Text.
+\end{document}

@@ -10,6 +10,20 @@ fn convert(tex: &str) -> String {
   xml
 }
 
+/// atlasdoc's binding loads the KOMA class atlasdoc.cls loads (OXIDIZED_DESIGN_DIVERGENCES #736), whose raw load is
+/// quiet, as `\documentclass{scrartcl}` is under pdflatex (OXIDIZED_DESIGN_DIVERGENCES #737).
+fn convert_atlasdoc(tex: &str) -> String {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    !["scrartcl", "scrreprt", "scrbook"]
+      .iter()
+      .any(|class| super::perfect_kernel_batch72a::koma_raw_warnings(&log, class)),
+    "{log}"
+  );
+  xml
+}
+
 /// spieman has no binding of its own: the loader's one warning that it takes spie's, and nothing else.
 fn convert_spieman(tex: &str) -> String {
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
@@ -80,7 +94,8 @@ fn lipics_class_commands_are_defined() {
     "\u{231F}",
     r#"role="event""#,
     "A Conference",
-    r#"<pubnote name="DOI: " role="doi">10.4230/LIPIcs.SAMPLE.2016.1</pubnote>"#,
+    // (the class's label, lipics.cls:637 `\doiHeading`: batch 92e, OD #915)
+    r#"<pubnote name="Digital Object Identifier " role="doi">10.4230/LIPIcs.SAMPLE.2016.1</pubnote>"#,
   ]);
   // The claim's own end is the ◁, not a ∎ besides it; the nested proof keeps its ∎.
   assert_eq!(xml.matches('\u{220E}').count(), 1, "{xml}");
@@ -146,7 +161,7 @@ See \DOI{10.1/x}.
 /// `\AtlasPaperWebpage` reads the reference code. Witnesses 2508.20929, 2103.01029, 1904.03536, 2407.10879.
 #[test]
 fn atlasdoc_setters_are_defined() {
-  let xml = convert(include_str!(
+  let xml = convert_atlasdoc(include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/atlasdoc_class_commands.tex"
   ));
   assert_contains(&xml, &[
@@ -169,7 +184,7 @@ fn atlasdoc_setters_are_defined() {
 #[test]
 fn atlasdoc_title_header_follows_the_options() {
   let doc = |options: &str| {
-    convert(&format!(
+    convert_atlasdoc(&format!(
       r"\documentclass{options}{{atlasdoc}}
 \AtlasTitle{{T}}
 \AtlasJournal{{Phys. Lett. B}}

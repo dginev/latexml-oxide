@@ -1,0 +1,33 @@
+% witness: ar-1col.cls's `\affil` inside `\author{}` (1602.05576, 2405.08158); review rev94b r6 S1 (its probe `p/y/be`:
+%          fc.cls)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able,1 … Ida Ince9", the bold italic "1Univ A, Town" / "2Univ B, City",
+%          the italic underlined "3Lab C, Place4 Lab D, Place" (one line), the bold italic "5Inst E, Town" / "6Inst F,
+%          City" and "7Dept G, Town" / "8Dept H, City", the bold "9Org I, Town", "Body." (fonts CMBXTI10, CMTI9, CMBX9)
+% engines: rust 94b r6 = 0 errors, 0 warnings: each entry of a container inside a text font command (`\textbf{\emph{…}}`)
+%          cut plain (the font where the container starts unknown: `\textbf` is a macro, no whatsit); 94a r9 (the tip)
+%          = each in the inner container alone (`\emph`, `\underline`), the outer font lost
+% expect:  0 errors, 0 warnings; a kernel text font command whose argument opens with the outermost container wraps
+%          each entry again too (`plan::container_wrap`, `events::text_font_command`), nested ones each
+%          (`\textrm{\textbf{\emph{…}}}`): Univ A, Univ B, Inst E … Dept H bold italic emphasized, Lab C and Lab D
+%          italic underlined, Org I (outside the `\emph`, inside the `\textbf`) bold; each name its own line; eager and
+%          --streaming the same
+% status:  RED (94b r6) -> GREEN (94b r7)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affiltextfont.cls}
+\ProvidesClass{affiltextfont}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affiltextfont}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker,$^2$ Cy Cole,$^3$ Dan Doe,$^4$ Eve Ern,$^5$ Fay Fox,$^6$ Gil Gray,$^7$ Hal Hart,$^8$ Ida Ince$^9$
+\affil{\textbf{\emph{$^1$Univ A, Town\\ $^2$Univ B, City}}}
+\affil{\textit{\underline{$^3$Lab C, Place\\ $^4$Lab D, Place}}}
+\affil{\textrm{\textbf{\emph{$^5$Inst E, Town\\ $^6$Inst F, City}}}}
+\affil{\textbf{\emph{$^7$Dept G, Town\\ $^8$Dept H, City}\\ $^9$Org I, Town}}}
+\maketitle
+Body.
+\end{document}

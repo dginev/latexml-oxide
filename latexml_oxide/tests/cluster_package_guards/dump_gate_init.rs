@@ -260,7 +260,10 @@ fn current_file_is_defined_empty_under_latex() {
 ///   `06_cluster_regressions::cluster_first_para_noindent_719`;
 /// - the `\CurrentFile` family is defined and empty from `latex.rs`'s fallback
 ///   (dump half: `current_file_is_defined_empty_under_latex`), and the branch
-///   warns once, for its `recursion:LaTeX.pool` re-entrance.
+///   warns once, for its `recursion:LaTeX.pool` re-entrance;
+/// - `\@@underline` is latex.ltx:16368's saved `\underline` without a dump too
+///   (KNOWN_PERL_ERRORS #987; dump half:
+///   `perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive`).
 #[test]
 fn nodump_latex_branch_converts_healthily() {
   let tex = include_str!("../../../tools/perfect_kernel/repros/loader/nodump_latex_branch.tex");
@@ -293,6 +296,12 @@ fn nodump_latex_branch_converts_healthily() {
     "para",
     &["xml:id=\"p4\""],
     r#"<para class="ltx_noindent" xml:id="p4"><p>degraded-body-text</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p5\""],
+    r#"<para class="ltx_noindent" xml:id="p5"><p><text font="typewriter">U:\underline</text></p></para>"#,
   );
 }
 
@@ -630,4 +639,24 @@ fn a_dump_built_from_another_tree_is_not_used() {
     &["xml:id=\"p1\""],
     r#"<para xml:id="p1"><p>Text.</p></para>"#,
   );
+}
+
+/// plain.tex's `\ialign` (`\everycr{}\tabskip\z@skip\halign`) on the NODUMP branch too: an `\everycr` set before it
+/// does not run (pdftex "count: 0"; the dump branch reads plain.tex's own). Red (78b r1, NODUMP): "count: 2", from
+/// plain_base.rs's `\let\ialign\halign` (Perl plain_base.pool.ltxml:118), right only while `\halign` inserted no
+/// `\everycr` (KNOWN_PERL_ERRORS #1019). Repro kernel-alignment/ialign_clears_everycr_nodump (the rev78b review's
+/// finding 3).
+#[test]
+fn nodump_plain_ialign_clears_everycr() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/kernel-alignment/ialign_clears_everycr_nodump.tex"
+  );
+  let (ok, stderr, xml) = convert_cli(tex, 300, &[("LATEXML_NODUMP", "1")]);
+  assert!(ok, "the NODUMP conversion exited non-zero:\n{stderr}");
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_element(&xml, "p", &[], "<p>count: 0</p>");
 }

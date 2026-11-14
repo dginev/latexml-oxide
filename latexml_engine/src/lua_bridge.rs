@@ -358,6 +358,11 @@ fn service_query(payload: &str) -> String {
 /// callers should degrade to a no-op expansion, matching what the document
 /// would get from a TeX engine without Lua).
 pub fn lua_exec(chunk: &str) -> Result<String, String> {
+  // (a speculative run is undone, the interpreter's globals could not be: `\\author{First\\luaexec{n=(n or 0)+1}}`, which a second
+  // `\\author` replaces, left its count for the body's `\\luaexec{tex.print(n or 0)}`, lualatex's 0)
+  if latexml_core::gullet::in_speculative_digestion() {
+    return Err("a speculative run evaluates no Lua".to_string());
+  }
   LUA.with(|slot| {
     let mut slot = slot.borrow_mut();
     let entry = slot.get_or_insert_with(spawn);

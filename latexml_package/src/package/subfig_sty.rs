@@ -1,5 +1,7 @@
+use latexml_core::{binding::def::builder::OptionValue, document::Document};
+
 use crate::{
-  engine::latex_constructs::{after_float, before_untyped_float},
+  engine::latex_constructs::{after_float, before_untyped_float, note_sub_float_body_width},
   prelude::*,
 };
 
@@ -14,7 +16,32 @@ LoadDefinitions!({
   // `\clearcaptionsetup` are caption's (caption3.sty:244-280). First, so subfig's own definitions
   // below win. Perl's own `\captionsetup[]{}` stub (subfig.sty.ltxml:107; KPE #319) replaced
   // caption's working one when subfig loaded after caption.
-  RequirePackage!("caption");
+  // The `caption` option (subfig.sty:107-128 `\sf@split`, `\sf@setbool`: `0`, `false`, `no`, `off` turn it off) picks
+  // which: caption's kernel alone (`caption3`, which the caption binding stands in for and marks
+  // `\lx@caption@kernel@only`, caption_sty.rs) leaves a class's own `\@makecaption` in place, and caption replaces it —
+  // a load TeX makes even after floatrow's `caption3`, so the mark goes (jfm_cls.rs; 1805.00129, 1612.03374). Guards
+  // `perfect_kernel_batch78a::{jfm_copy_caption_kept_with_subfig_without_caption,
+  // jfm_copy_caption_yields_to_caption_loaders_after_floatrow}`.
+  // (the last `caption=` option wins, as subfig.sty's `\@for` over `\sf@split` sets the switch once per option)
+  let use_caption = lookup_vecdeque("opt@subfig.sty").is_none_or(|options| {
+    options
+      .iter()
+      .filter_map(|option| {
+        let option = option.to_string();
+        option
+          .split_once('=')
+          .filter(|(key, _)| key.trim() == "caption")
+          .map(|(_, value)| !matches!(value.trim(), "0" | "false" | "no" | "off"))
+      })
+      .next_back()
+      .unwrap_or(true)
+  });
+  if use_caption {
+    RequirePackage!("caption");
+    RawTeX!(r"\lx@caption@full@load");
+  } else if !package_loaded("caption") {
+    RequirePackage!("caption3");
+  }
   // subfig's caption-family keys (subfig.sty:163-167, 271-282).
   for key in ["listofformat", "listofindent", "listofnumwidth", "farskip", "topadjust",
               "captionskip", "nearskip"] {
@@ -23,10 +50,15 @@ LoadDefinitions!({
   // subfig.sty:208-225 `\ProcessPackageOptions` (run at :297): the package options, less the
   // `caption` and `config` keys (`\sf@split`, :188-195), are `\captionsetup[subfloat]` settings.
   DeclareOption!(None, {
+    // The key is read expanded, as subfig.sty:125 and :217 `\edef` the whole option list before `\sf@split` (with
+    // `\protect` = `\relax` at package load): a robust command whose body is not yet defined is an undefined-command
+    // Error under pdflatex too (`[labelformat=\rbs]{subfig}`, `\DeclareRobustCommand\rbs{\laterdefined}`: 2 errors)
+    // — unlike caption's handler (caption_sty.rs `current_option_text`), which reads the option as written.
     let option = Expand!(T_CS!("\\CurrentOption")).to_string();
     let key = option.split('=').next().unwrap_or_default().trim();
     if key != "caption" && key != "config" {
-      Digest!("\\edef\\lx@subfig@option{\\noexpand\\captionsetup[subfloat]{\\CurrentOption}}\\lx@subfig@option")?;
+      // The option's tokens unexpanded (`\sf@split` hands them to `\captionsetup`), as caption_sty.rs passes its own.
+      Digest!(r"\def\lx@subfig@optionsetup#1{\captionsetup[subfloat]{#1}}\expandafter\lx@subfig@optionsetup\expandafter{\CurrentOption}")?;
     }
   });
   ProcessOptions!();
@@ -51,15 +83,19 @@ LoadDefinitions!({
   // guarded by \@ifundefined{c@subfigure}/\@ifundefined{c@subtable}, so
   // those calls are no-ops once our pre-bake has run — exact parity.
   //
-  // For caller-defined float types (e.g. \newsubfloat{algorithm}),
-  // Perl dynamically issues NewCounter + Let + DefMacroI + DefEnvironmentI
-  // with $name substituted. The dynamic DefEnvironmentI requires a
-  // runtime "install_environment" API that is not yet exposed in
-  // latexml_core (state::install_definition handles macros/primitives
-  // but not constructor-with-template environments). Documented as a
-  // known missing-API task rather than masked as a stub: no paper in
-  // the 7898-arxiv 2026-04-24 sandbox exercises this path.
-  def_macro_noop("\\newsubfloat[]{}")?;
+  // For a caller-defined float type (subfig.sty:239-263 `\newsubfloat{<type>}`; 2411.16612's
+  // `\newsubfloat[captionskip=10pt]{listing}` for minted's `listing`) the same machinery is made at run time
+  // (`define_subfloat`, Perl's NewCounter + Let + DefMacroI + DefEnvironmentI). Was a no-op, so a `\subfloat` in
+  // such a float found no `\lx@subfloat@<type>` and its sub-floats were lost.
+  // As subfig.sty:244-266: only for a type with no `sub<type>` counter yet (else subfig's warning, and nothing: a
+  // document's `\newsubfloat{figure}` keeps the pre-built figure machinery), listed in `\sf@counterlist`, its keys the
+  // `[sub<type>]` caption settings (`\captionsetup[sub#2]{#1}`). Guards
+  // `perfect_kernel_batch78s::{newsubfloat_makes_sub_floats_of_a_new_type, newsubfloat_keys_and_an_existing_type}`.
+  DefMacro!("\\newsubfloat[]{}",
+    r"\@ifundefined{c@sub#2}{\lx@subfig@newsubfloat{#2}\edef\sf@counterlist{\@ifundefined{sf@counterlist}{}{\sf@counterlist,}sub#2}\captionsetup[sub#2]{#1}}{\PackageWarning{subfig}{The sub#2\space type is already defined.}}");
+  DefPrimitive!("\\lx@subfig@newsubfloat{}", sub[(name)] {
+    define_subfloat(&name.to_string())?;
+  });
 
   // \subfloat — Perl L69-79
   DefMacro!("\\subfloat",
@@ -81,10 +117,14 @@ LoadDefinitions!({
   // \subfloat so the subfloat machinery still kicks in. Witness 2309.00194.
   DefMacro!("\\sidesubfloat", "\\subfloat");
 
-  // \subref — Perl L82-84
+  // \subref — Perl L82-84. subfig.sty:558-563 refers to the `sub@<label>` entry its `\label` writes beside
+  // `<label>` (:524-557, the sub-float number alone: "(a)", starred "a"); a sub-float here carries only `<label>`, so
+  // `\ref{sub@#1}` (Perl's, subfig.sty.ltxml:93-94) dangled, "??" for every `\subref` (KPE #1172). It refers to
+  // `<label>` itself, as subcaption's and subfigure's `\subref` do, and shows the sub-float's refnum ("1a").
+  // Witnesses 1802.05913 (98 dangling), 2304.09615.
   DefMacro!("\\subref",       "\\@ifstar\\sf@@subref\\sf@subref");
-  DefMacro!("\\sf@subref{}",  "\\ref{sub@#1}");
-  DefMacro!("\\sf@@subref{}", "\\pageref{sub@#1}");
+  DefMacro!("\\sf@subref{}",  "\\ref{#1}");
+  DefMacro!("\\sf@@subref{}", "\\ref{#1}");
 
   // Caption setup stubs — Perl L86-90
   def_macro_noop("\\DeclareCaptionListOfFormat{}{}")?;
@@ -103,6 +143,12 @@ LoadDefinitions!({
   // Call NewCounter directly with the Perl options; the `\@ifundefined`
   // guard is dropped because NewCounter is itself idempotent (Perl L36
   // reads as a fresh-or-overwrite, mirroring `\newcounter` semantics).
+  // subfig.sty:298-299 makes a sub-float only where no package made the counter (`\@ifundefined{c@subfigure}
+  // {\newsubfloat{figure}}{}`), and only those join `\sf@counterlist` (below).
+  let made_by_subfig: Vec<&str> = ["subfigure", "subtable"]
+    .into_iter()
+    .filter(|sub| !has_meaning(&T_CS!(s!("\\c@{sub}"))))
+    .collect();
   NewCounter!("subfigure", "figure", idprefix => "sf", idwithin => "figure");
   NewCounter!("subtable", "table", idprefix => "sf", idwithin => "table");
   NewCounter!("subfigure@save");
@@ -118,6 +164,14 @@ LoadDefinitions!({
   // `\ext@subfigure`.
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable", "\\ext@table");
+  // subfig.sty:261-263: `\newsubfloat` lists the sub-float counters it made in `\sf@counterlist`, which caption's
+  // `\DeclareCaptionSubType` names in its error for a counter subfig made (caption3.sty:1848-1856) and caption's
+  // `\captionof` refuses (caption.sty:348; 1506.06268). subfigure.sty's `subfigure` (loaded first: 2508.00020) is
+  // not subfig's: caption accepts `\captionof{subfigure}` there, a panel caption formats as its own, "(a): First"
+  // as pdflatex. Guard `perfect_kernel_batch77s::captionof_subfigure_sty_is_a_panel`.
+  for sub in made_by_subfig {
+    RawTeX!(&s!(r"\edef\sf@counterlist{{\@ifundefined{{sf@counterlist}}{{}}{{\sf@counterlist,}}{sub}}}"));
+  }
 
   // Subfigure display macros
   DefMacro!("\\thesubfigure", "\\alph{subfigure}");
@@ -136,13 +190,22 @@ LoadDefinitions!({
   DefMacro!("\\p@subfigure", "\\thefigure");
   DefMacro!("\\p@subtable", "\\thetable");
 
+  // The sub-caption is the kernel's (`\lx@caption`), not the document's `\caption`: subfig.sty:384-411 builds it with
+  // `\sf@subcaption` (caption3's `\caption@make`), so a document's `\def\caption` does not reach it (the 1808.10020
+  // mechanism; KNOWN_PERL_ERRORS #1126). `[list][caption]` captions with the second (subfig.sty:350-353 `\sf@@subfloat`,
+  // the list entry the first); Perl's `\caption{#1}` printed the list entry (subfig.sty.ltxml:47; KNOWN_PERL_ERRORS #1130,
+  // OXIDIZED_DESIGN_DIVERGENCES #876). Guard
+  // `perfect_kernel_batch78t::subfig_caption_is_not_the_documents_caption`.
   // \lx@subfloat@figure — Perl L45-60. Perl's afterDigest on the inner
   // environment copies the final subfigure counter into subfigure@save so
   // \ContinuedFloat can restore it. Rust embeds `\setcounter{subfigure@save}
   // {\value{subfigure}}` at the end of the expansion; runs at the same
   // moment (after caption digests, so sub counter is final).
-  DefMacro!("\\lx@subfloat@figure[][]{}",
-    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#3\\caption{#1}\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
+  DefMacro!("\\lx@subfloat@figure[][]{}", sub[(list, caption, body)] {
+    Ok(subfloat_tokens("\\lx@subfloat@figure@", list, caption, body))
+  });
+  DefMacro!("\\lx@subfloat@figure@{}{}",
+    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#2#1\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
   DefMacro!("\\lx@subfloat@figure@phantom{}",
     "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#1\\phantomcaption\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
   // Perl L58-60: beforeDigest=>{beforeFloat('subfigure')}, afterDigest=>
@@ -151,23 +214,34 @@ LoadDefinitions!({
   // sub-counter and emits sub-id labels. afterFloat finalizes caption
   // properties on the whatsit. The subfigure@save counter sync is still
   // handled in the macro-body `\setcounter{subfigure@save}{\value{subfigure}}`.
+  // The panel is its body's width, its caption left out, with the glue the body states: subfig.sty:375-376 sets the
+  // body in an `\hbox` and measures it (`\setbox\@tempboxa\hbox{#4}\@tempdima=\wd\@tempboxa`), the sub-caption set
+  // in a box of that width (`note_sub_float_body_width`, OXIDIZED_DESIGN_DIVERGENCES #876, #885). Measured as the box
+  // the environment builds, a body's `\hspace{-3mm}` was left out: 2008.06630 Figs 1, 7, three
+  // `\subfloat{\includegraphics[width=0.16\textwidth]{…}\hspace{-3mm}}` in a 237pt column, one row in the PDF (subfig
+  // ends each with `\ignorespaces`, :424, so no glue between them), set 2+1.
   DefEnvironment!("{lx@subfloat@@figure}",
     "^ <ltx:figure xml:id='#id'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     before_digest => { before_untyped_float("subfigure")?; },
-    after_digest  => sub[whatsit] { after_float(whatsit); }
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    after_digest_body => sub[whatsit] { note_sub_float_body_width(whatsit); }
   );
 
   // \lx@subfloat@table — Perl L45-60 (table variant)
-  DefMacro!("\\lx@subfloat@table[][]{}",
-    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#3\\caption{#1}\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
+  DefMacro!("\\lx@subfloat@table[][]{}", sub[(list, caption, body)] {
+    Ok(subfloat_tokens("\\lx@subfloat@table@", list, caption, body))
+  });
+  DefMacro!("\\lx@subfloat@table@{}{}",
+    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#2#1\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
   DefMacro!("\\lx@subfloat@table@phantom{}",
     "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#1\\phantomcaption\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
   DefEnvironment!("{lx@subfloat@@table}",
     "^ <ltx:table xml:id='#id'>#tags#body</ltx:table>",
     mode => "internal_vertical",
     before_digest => { before_untyped_float("subtable")?; },
-    after_digest  => sub[whatsit] { after_float(whatsit); }
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    after_digest_body => sub[whatsit] { note_sub_float_body_width(whatsit); }
   );
 
   // \ContinuedFloat — Perl L98-102
@@ -176,7 +250,12 @@ LoadDefinitions!({
   // the sub-counter at whatever value the prior float ended on, so a
   // \ContinuedFloat followed by a \subfloat would keep counting from the
   // stale sub index instead of rewinding.
-  RawTeX!(r"\def\lx@subfig@continue@restore#1{\setcounter{sub#1}{\value{sub#1@save}}}");
+  // subfig.sty:587 restores only a float type that has a sub-float counter (`\@ifundefined{c@sub\@captype}{}{…}`):
+  // `\ContinuedFloat` in an `algorithm` float, which no `\newsubfloat` gave a `subalgorithm`, steps the number back and
+  // touches no sub-counter, 0 errors in pdflatex (Perl's binding warns 3 times: `SetCounter`/`CounterValue` on the
+  // missing `subalgorithm@save`, subfig.sty.ltxml:98-102). Witness 1910.02851; guard
+  // `perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises`.
+  RawTeX!(r"\def\lx@subfig@continue@restore#1{\@ifundefined{c@sub#1}{}{\setcounter{sub#1}{\value{sub#1@save}}}}");
   // subfig.sty:581-590: step back, caption's continuation (`\caption@ContinuedFloat`, a no-op
   // without caption, :591), then the sub-counter from its save. Witness 2605.17685; guards
   // `perfect_kernel_batch56::{continuedfloat_suppresses_one_step_per_real_float,
@@ -185,3 +264,126 @@ LoadDefinitions!({
   DefMacro!("\\ContinuedFloat",
     r"\addtocounter{\@captype}{\m@ne}\expandafter\caption@ContinuedFloat\expandafter{\@captype}\expandafter\lx@subfig@continue@restore\expandafter{\@captype}");
 });
+
+/// subfig.sty:239-263 `\newsubfloat{<type>}` (Perl subfig.sty.ltxml:30-62): the `sub<type>` counter (ids `sf<n>` within
+/// the float), its save counter, `\ext@sub<type>`, `\thesub<type>`, `\fnum@sub<type>` (the label format, as the
+/// pre-baked figure and table ones), `\p@sub<type>`, `\lx@subfloat@<type>` and the `lx@subfloat@@<type>` environment: an
+/// `ltx:figure`, `ltx:table` or `ltx:float` as Perl picks by the name.
+fn define_subfloat(name: &str) -> Result<()> {
+  use latexml_core::binding::def::{builder::EnvironmentBuilder, replacement};
+  let sub = s!("sub{name}");
+  NewCounter!(&sub, name, idprefix => "sf", idwithin => name);
+  NewCounter!(&s!("{sub}@save"));
+  Let!(T_CS!(s!("\\ext@{sub}")), T_CS!(s!("\\ext@{name}")));
+  let define = |cs: String, params: &str, body: String| -> Result<()> {
+    let cs = T_CS!(cs);
+    let params = if params.is_empty() {
+      None
+    } else {
+      parse_parameters(params, &cs, true)?
+    };
+    def_macro(
+      cs,
+      params,
+      mouth::tokenize_internal(TeXString::assembled(body)),
+      None,
+    )?;
+    Ok(())
+  };
+  define(s!("\\the{sub}"), "", s!("\\alph{{{sub}}}"))?;
+  define(
+    s!("\\fnum@{sub}"),
+    "",
+    s!("\\lx@subfig@fnum{{{sub}}}{{\\the{sub}}}"),
+  )?;
+  define(s!("\\p@{sub}"), "", s!("\\the{name}"))?;
+  let step = r"\iflx@donecaption\else\refstepcounter@noreset{\@captype}\fi";
+  let unstep = s!(
+    r"\iflx@donecaption\else\addtocounter{{\@captype}}{{\m@ne}}\fi\setcounter{{{sub}@save}}{{\value{{{sub}}}}}"
+  );
+  // The kernel caption with the arguments as read, as the pre-built figure and table ones (`subfloat_tokens`;
+  // 2411.16612's `\newsubfloat` types, OXIDIZED_DESIGN_DIVERGENCES #876).
+  let builder = s!("\\lx@subfloat@{name}@");
+  let cs = T_CS!(s!("\\lx@subfloat@{name}"));
+  def_macro(
+    cs,
+    parse_parameters("[][]{}", &cs, true)?,
+    Some(ExpansionBody::Closure(Rc::new(
+      move |args: Vec<ArgWrap>| {
+        let mut args = args.into_iter().map(ArgWrap::owned_tokens);
+        let (list, caption) = (args.next().flatten(), args.next().flatten());
+        let body = args.next().flatten().unwrap_or_default();
+        Ok(subfloat_tokens(&builder, list, caption, body))
+      },
+    ))),
+    None,
+  )?;
+  define(
+    s!("\\lx@subfloat@{name}@"),
+    "{}{}",
+    s!(r"{step}\begin{{lx@subfloat@@{name}}}#2#1\end{{lx@subfloat@@{name}}}{unstep}"),
+  )?;
+  define(
+    s!("\\lx@subfloat@{name}@phantom"),
+    "{}",
+    s!(r"{step}\begin{{lx@subfloat@@{name}}}#1\phantomcaption\end{{lx@subfloat@@{name}}}{unstep}"),
+  )?;
+  let element = if name.contains("figure") {
+    "ltx:figure"
+  } else if name.contains("table") {
+    "ltx:table"
+  } else {
+    "ltx:float"
+  };
+  let ops = Rc::new(replacement::parse_replacement(&s!(
+    "^ <{element} xml:id='#id'>#tags#body</{element}>"
+  ))?);
+  let sub_for_before = sub.clone();
+  EnvironmentBuilder::new(&s!("{{lx@subfloat@@{name}}}"))?
+    .replacement(Rc::new(move |document: &mut Document, args, props| {
+      replacement::apply_ops(&ops, document, args, props)
+    }))
+    .set_option("mode", OptionValue::Str("internal_vertical".into()))?
+    .before_digest(Rc::new(move || {
+      before_untyped_float(&sub_for_before)?;
+      Ok(Vec::new())
+    }))
+    .after_digest(Rc::new(|whatsit: &mut Whatsit| {
+      after_float(whatsit);
+      Ok(Vec::new())
+    }))
+    .after_digest_body(Rc::new(|whatsit: &mut Whatsit| {
+      note_sub_float_body_width(whatsit);
+      Ok(Vec::new())
+    }))
+    .install()
+}
+
+/// `<builder>{<caption>}{<body>}` for subfig's `\subfloat[list][caption]{body}` as read (subfig.sty:350-353): the
+/// kernel caption `\lx@caption[list]{caption}` with both, `\lx@caption{list}` with one (`\sf@subfloat` sends only a
+/// `\subfloat` with an optional here).
+fn subfloat_tokens(
+  builder: &str,
+  list: Option<Tokens>,
+  caption: Option<Tokens>,
+  body: Tokens,
+) -> Tokens {
+  let mut tokens = vec![T_CS!(builder), T_BEGIN!(), T_CS!("\\lx@caption")];
+  let list = list.unwrap_or_default();
+  match caption {
+    Some(caption) => {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(list.unlist());
+      tokens.extend([T_OTHER!("]"), T_BEGIN!()]);
+      tokens.extend(caption.unlist());
+    },
+    None => {
+      tokens.push(T_BEGIN!());
+      tokens.extend(list.unlist());
+    },
+  }
+  tokens.extend([T_END!(), T_END!(), T_BEGIN!()]);
+  tokens.extend(body.unlist());
+  tokens.push(T_END!());
+  Tokens::new(tokens)
+}

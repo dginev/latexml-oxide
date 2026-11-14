@@ -1,0 +1,21 @@
+% mechanism: the e-mail line under llncs's shared `\institute` goes by place when it lists one address per author and
+%   no spelling contradicts it (FIDELITY_CHARTER §4, `row_address_owners`; OXIDIZED_DESIGN_DIVERGENCES #901). Its
+%   siblings (no guard): two addresses under three authors and one unspelled address under two are the block's;
+%   one author owns every address; a `\url` stays in the institute; a line after the call stays (`<break/>`); an
+%   author-line `\email` stays its author's.
+% witness: the 85b review's p08 (this), p07, p09, p21, r03, p20, p15
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "Univ X" and "p1@x.edu, p2@x.edu"
+% engines: rust int114a = the institute and both addresses on a nameless creator
+% expect:  0 errors, 0 warnings; the institute on both; p1@ Ann Able's, p2@ Bob Baker's
+% status:  RED (int114a) -> GREEN (85b); no guard of its own (the in-order path is guarded by
+%   `perfect_kernel_batch85b::llncs_each_email_call_is_decided_alone`, 2410.04091)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker}
+\institute{Univ X\\ \email{p1@x.edu}, \email{p2@x.edu}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

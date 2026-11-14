@@ -1,0 +1,25 @@
+% RED (review rev103a, probe q8; cmp-lg9710008's shape with its list written out): the kernel `\author` block does not
+% cut `\dag`/`\ddag`-led lines into labelled entries (100a's hand-printed-mark row), so all six address lines pile on
+% the last author, Lei Duan; base alike. Each address is on its spelled author. Reviewer verdict: an acceptable trade.
+% fix:     read a text-symbol-led line some name's mark requests as that mark's entry (100a's tentative ruling).
+% witness: cmp-lg9710008
+% oracle:  pdflatex 0 errors: "Janyce Wiebe† Rebecca Bruce‡ Lei Duan† / †Dept. of CS … ‡Dept. of CSE …"
+% engines: rust int130a = 103a = Wiebe: wiebe@; Bruce: rbruce@; Duan: the six lines + lduan@
+% expect:  0 errors, 0 warnings; Wiebe, Duan: Dept. of CS, NMSU, Las Cruces; Bruce: Dept. of CSE, SMU, Dallas; each
+%          their own address
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Janyce Wiebe\dag \and Rebecca Bruce\ddag \and Lei Duan\dag \\
+\dag Dept. of CS \\
+New Mexico State University \\
+Las Cruces, NM 88003 \\
+\ddag Dept. of CSE \\
+Southern Methodist University \\
+Dallas, TX 75275 \\
+{\tt wiebe@cs.nmsu.edu, lduan@cs.nmsu.edu, rbruce@seas.smu.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

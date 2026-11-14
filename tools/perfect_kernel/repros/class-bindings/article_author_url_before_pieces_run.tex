@@ -1,0 +1,20 @@
+% mechanism: a line of an `\author` block whose first link is a whole `\url` address before a run of `\url` pieces
+%   (`\url{cid@y.org}, \{\url{ann, bob}\}\url{@x.org}`): the run is joined from the line's first ink
+%   (`resolver::joined_address_pieces`); cid@ is its own `\url`'s link, as printed; ann@ and bob@ are text, each lost
+%   link counted.
+% witness: 1710.01968 (the whole `\url{robin.andre@ira.uka.de}` before the pieces)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker1, Cid Cole1" over "1Univ X" and "cid@y.org, {ann, bob}@x.org" in
+%   typewriter
+% engines: rust Z18h = all three plain, W=0 (review revZ18h B1r); int154x = cid@ an `ltx_url` link
+% expect:  0 errors, 2 warnings (ann@ and bob@ written as text); cid@ an `ltx_url` link. The owners are dealt in print
+%   order (cid@ on Ann Able), review revZ18h S-b's RED `article_author_url_pieces_owner_spelling.tex`
+% status:  RED (Z18h) -> GREEN (Z18i) for the links and the count
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^1$ \and Cid Cole$^1$\\
+$^1$Univ X\\
+\url{cid@y.org}, \{\url{ann, bob}\}\url{@x.org}}
+\maketitle
+\end{document}

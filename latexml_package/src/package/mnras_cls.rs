@@ -1,3 +1,5 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -5,6 +7,10 @@ LoadDefinitions!({
   // Perl: mnras.cls.ltxml
 
   LoadClass!("mn");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): mnras.cls's, as
+  // pdflatex gives it — 508pt in two 244pt columns, one column under `onecolumn` — where the `mn` → article chain
+  // keeps article's one-column `\if@twocolumn`. Witness 1902.04580 Figs.
+  declare_panel_page(244.0, 508.0, last_class_option(&["onecolumn", "twocolumn"]) != Some("onecolumn"));
   RequirePackage!("hyperref");
   // MNRAS papers often use \color{ForestGreen} / \color{NavyBlue}
   // from the dvipsnames palette AND \cellcolor (colortbl, loaded via
@@ -25,11 +31,44 @@ LoadDefinitions!({
   if lookup_int("@usenatbib") != 0 {
     RawTeX!(r"\bibpunct{(}{)}{;}{a}{}{,}\renewcommand\bibname{BIBLIOGRAPHY}");
   }
+  // mnras.cls:1636, after its natbib load (:1333): the reference list prints no label, `\def\@biblabel#1{}` (with
+  // natbib or without), as mn2e.cls:1370 (mn2e_cls.rs). Without natbib a `\bibitem[\protect\citeauthoryear{…}{…}]`
+  // label is then typeset only by a `\cite` (sect11.rs `\lx@bibitem`; 1805.00040). Perl's mnras.cls.ltxml leaves the
+  // kernel's `[#1]`.
+  RawTeX!(r"\def\@biblabel#1{}");
   // mnras.cls:1349-1354: with `usedcolumn`, the class's column types on dcolumn's `D` (mn2e_support loads dcolumn).
   if lookup_int("@usedcolumn") != 0 {
     RawTeX!(r"\newcolumntype{d}[1]{D{.}{.}{#1}}\newcolumntype{.}{D{.}{.}{-1}}\newcolumntype{,}{D{,}{,}{2}}");
   }
 
+  // mnras.cls (TL 2025 v3.2, :1399-1479; every copy papers ship, v3.0 to v3.3, alike): the reference-list links mnras.bst
+  // writes, `\doi[text]{10.foo}` (a link to the DOI, "doi:10.foo" or the text, its argument read with `\$&#^_%~`
+  // other), `\eprint{prefix}{id}` (an arXiv or dblp link, else "prefix:id") and `\mniiiauthor{key}{first}{again}`
+  // (the bibliography style's first-time-three-authors switch). Perl's mnras.cls.ltxml defines none of them, so every
+  // `\doi` of an MNRAS reference list was undefined (37 papers: 1609.03154, 2008.09832, 2104.08053; `\eprint` 17:
+  // 1709.09375, 1809.04269; `\mniiiauthor` 4: 1507.08002, 1703.04544, 1806.09815; KNOWN_PERL_ERRORS #742).
+  RawTeX!(r"\def\@urlcharsother{\let\do\@makeother\do\\\do\$\do\&\do\#\do\^\do\_\do\%\do\~}
+\def\doi{\begingroup\@urlcharsother\@ifnextchar[{\@doi}{\@doi[]}}
+\def\@doi[#1]#2{\def\@tempa{#1}\ifx\@tempa\@empty\href{http://dx.doi.org/#2}{doi:#2}\else\href{http://dx.doi.org/#2}{#1}\fi
+  \endgroup}
+\def\eprint#1#2{\@eprint#1:#2::\@nil}
+\def\@eprint@arXiv#1{\href{http://arxiv.org/abs/#1}{{\tt arXiv:#1}}}
+\def\@eprint@dblp#1{\href{http://dblp.uni-trier.de/rec/bibtex/#1.xml}{dblp:#1}}
+\def\@eprint#1:#2:#3:#4\@nil{\def\@tempa{#1}\def\@tempb{#2}\def\@tempc{#3}%
+  \ifx\@tempc\@empty\let\@tempc\@tempb\let\@tempb\@tempa\fi
+  \ifx\@tempb\@empty\def\@tempb{arXiv}\fi
+  \@ifundefined{@eprint@\@tempb}{\@tempb:\@tempc}{\expandafter\expandafter\csname @eprint@\@tempb\endcsname\expandafter{\@tempc}}}
+\def\mniiiauthor#1#2#3{\@ifundefined{mniiiauth@#1}{\global\expandafter\let\csname mniiiauth@#1\endcsname\null #2}{#3}}");
+  // Ionization states, `\ion{He}{I}` "He i", as the class family's versions define them (one binding for every
+  // version, the union of their features): v3.2 (TL 2025, mnras.cls:488) `\text{#1\,\textsc{\lowercase{#2}}}` on
+  // amsmath's `\text`, which the class does not load (pdflatex errs without amsmath), and v3.0 (1809.05472's copy,
+  // mnras.cls:477, the `\text` form commented out at :476) `\textrm{#1}\,\textsc{\lowercase{#2}}`, which needs no
+  // amsmath. So v3.2's where `\text` is defined, v3.0's where it is not (1809.05472 loads no amsmath). Once
+  // mn2e_support's for every class of the family (Perl mn2e_support.sty.ltxml:147, KNOWN_PERL_ERRORS #940), which
+  // mn2e.cls does not define. Guard `perfect_kernel_batch71a::mnras_ion_by_version`.
+  RawTeX!(
+    r"\newcommand\ion[2]{\ifdefined\text\text{#1\,\textsc{\lowercase{#2}}}\else\textrm{#1}\,\textsc{\lowercase{#2}}\fi}"
+  );
   RawTeX!(r"\newcommand\aap{A\&A}");                // Astronomy and Astrophysics
   RawTeX!(r"\let\astap=\aap");                       // alternative shortcut
   RawTeX!(r"\newcommand\aapr{A\&ARv}");              // Astronomy and Astrophysics Review
@@ -95,4 +134,10 @@ LoadDefinitions!({
   RawTeX!(r"\newcommand\sovast{Soviet~Ast.}");
   RawTeX!(r"\newcommand\ssr{Space Sci. Rev.}");
   RawTeX!(r"\newcommand\zap{Z.~Astrophys.}");
+  // v3.0 (2015/05/22, 85 of the 99 copies papers ship) lists `\apspr`, which v3.2 (TeX Live's, :510) disables as a
+  // journal that "does not appear to exist": provide-only, a paper's own definition wins.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\providecommand\apspr{Astrophys.~Space~Phys.~Res.}");
+  }
 });

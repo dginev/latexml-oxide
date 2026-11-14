@@ -1,0 +1,22 @@
+% A fragment of `\@title` stays a fragment when the rest of the value is digested into a box that is never shown: a
+% run's cover is what its own boxes consumed (and what an alignment took right after them), never a ledger entry
+% absorbed elsewhere or never absorbed (fms1 round-3 review finding 1, probe r19; siblings `\sbox`, `\savebox`,
+% `{lrbox}`, each red alone on fms1c).
+% status:  RED (fms1 round 3: the cover was extended over the unused boxes' entries, "About" lifted) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "About", then the title block "About Foo Bar / Ann Author / <date>", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; "About" kept.
+\documentclass{article}
+\usepackage{xstring}
+\makeatletter
+\title{About Foo Bar}\author{Ann Author}
+\newsavebox{\mybox}
+\begin{document}
+\begin{center}\StrLeft{\@title}{5}\end{center}
+\setbox0\hbox{\StrRight{\@title}{8}}
+\sbox2{\StrRight{\@title}{8}}
+\savebox{\mybox}{\StrRight{\@title}{8}}
+\begin{lrbox}{\mybox}\StrRight{\@title}{8}\end{lrbox}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

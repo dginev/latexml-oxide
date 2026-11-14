@@ -1,0 +1,28 @@
+% mechanism: a creator holding one ORCID iD twice — acmart's `\orcid{…}` and an ORCID icon link in the name, which
+%   `\lx@author@href` makes the same contact — keeps one contact of it (`drop_repeated_orcids`;
+%   OXIDIZED_DESIGN_DIVERGENCES #960); two iDs are two contacts
+% witness: 2501.02380 (`\newcommand{\orcidicon}[1]{\href{https://orcid.org/#1}{\includegraphics[scale=0.06]{…}}}`,
+%   `\author{Dave Dice \orcidicon{0000-0001-9164-7747}}\email{…}\orcid{0000-0001-9164-7747}`); review rev103b S2
+% oracle:  pdflatex (TL 2025 acmart) 0 errors: "Ann Able", "Univ A", "Bob Baker", "Univ B"
+% engines: rust 103b: two identical ORCID contacts on Ann Able; int130a: the icon link in the personname; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able one ORCID contact (0000-0002-1825-0097), Bob Baker two (0000-0001-5109-3700
+%   from his link, 0000-0002-1694-233X from `\orcid`), each with e-mail and affiliation
+% status:  RED (103b) -> GREEN (103b r2) — perfect_kernel_batch103b::a_repeated_orcid_is_one_contact
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\usepackage{graphicx}
+\newcommand{\orcidicon}[1]{\href{https://orcid.org/#1}{\includegraphics[width=1em]{example-image}}}
+\begin{document}
+\title{T}
+\author{Ann Able \orcidicon{0000-0002-1825-0097}}
+\email{ann@a.edu}
+\orcid{0000-0002-1825-0097}
+\affiliation{\institution{Univ A}\country{USA}}
+\author{Bob Baker \orcidicon{0000-0001-5109-3700}}
+\email{bob@b.edu}
+\orcid{0000-0002-1694-233X}
+\affiliation{\institution{Univ B}\country{USA}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 77n negative guard — one name in a `\parbox` with its note, an affiliation line under it: the box is no list
+% oracle:  pdflatex 0 errors: "Ann Able∗" centred, "Univ A, City" below
+% engines: rust int31a = 1 creator, the parbox its name (unchanged by 77n)
+% expect:  0 errors, 0 warnings; 1 creator "Ann Able" in its parbox, the note and the affiliation hers
+% status:  GREEN (int31a, 77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\parbox{\textwidth}{\centering Ann Able\thanks{ann@uni.edu}}\\ Univ A, City}
+\maketitle
+x
+\end{document}

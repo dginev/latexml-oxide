@@ -1,0 +1,12 @@
+% Control for document_copy.tex: plain authblk, no copy of `\affil`; unchanged by the lock (102a).
+% witness: 2504.08081 (its shape without the copy)
+% oracle:  pdflatex 0 errors: "Ann Able1,2", then the two affiliations
+% engines: rust int129a = 0 errors; Ann Able with both affiliations
+% expect:  0 errors, 0 warnings; Ann Able with her two affiliations, in order
+% status:  CONTROL (102a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{A Title}\author[1,2]{Ann Able}
+\affil[1]{Astrophysics Group, Cavendish Laboratory, Cambridge}\affil[2]{Kavli Institute for Cosmology, Cambridge}
+\begin{document}\maketitle Body text.\end{document}

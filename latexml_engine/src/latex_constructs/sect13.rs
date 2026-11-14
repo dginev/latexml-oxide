@@ -6,7 +6,7 @@
 use latexml_core::common::numeric_ops::UNITY_F64;
 
 use super::*;
-use crate::base_utilities::unitlength_sp;
+use crate::base_utilities::{shown_arguments, unitlength_sp};
 
 /// `\unitlength` in pt, to the sp: Perl's `picScale` multiplies the register
 /// (latex_constructs.pool.ltxml:4896-4921).
@@ -21,6 +21,50 @@ fn pic_scale(coordinate: f64) -> Result<Dimension> {
 }
 
 #[rustfmt::skip]
+/// How many parameterless macros (or `\protect` wrappers) [`math_alphabet_font`] looks through. TeX itself
+/// expands without bound; a parameterless macro chain longer than this is a loop, which TeX's `#2\relax`
+/// would run anyway.
+const MATH_ALPHABET_LOOKTHROUGH: usize = 16;
+
+/// The font the math alphabet `alphabet` (the `#2` of latex.ltx's `\@fontswitch`, 14312-14321) selects, when it
+/// reaches one: a control sequence whose definition carries a font (`\mathrm`, `\mathbb`, a
+/// `\DeclareMathAlphabet`'d alphabet: `Definition::declared_font`, `\let` copies included), possibly behind
+/// parameterless macros with a token body (`\newcommand\Bbbx{\mathbb}`) and `\protect` (a robust command's
+/// `\protect\X␣`), which TeX's `#2\relax` expands on its way to the alphabet. A closure body is not run here, so a
+/// macro computed by a binding is not looked through. `None` for anything else.
+fn math_alphabet_font(alphabet: &[Token]) -> Result<Option<FontDirective>> {
+  let protect = T_CS!("\\protect");
+  let mut head: Vec<Token> = alphabet.to_vec();
+  for _ in 0..MATH_ALPHABET_LOOKTHROUGH {
+    match head.as_slice() {
+      [first, rest @ ..] if *first == protect && !rest.is_empty() => {
+        head = rest.to_vec();
+      },
+      [cs] if cs.code.is_active_or_cs() => {
+        let Some(defn) = lookup_definition(cs)? else {
+          return Ok(None);
+        };
+        if let Some(font) = defn.declared_font() {
+          return Ok(Some(font.clone()));
+        }
+        if !defn.is_expandable()
+          || defn
+            .get_parameters()
+            .is_some_and(|p| !p.get_parameters().is_empty())
+        {
+          return Ok(None);
+        }
+        match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => head = body.clone().unlist(),
+          _ => return Ok(None),
+        }
+      },
+      _ => return Ok(None),
+    }
+  }
+  Ok(None)
+}
+
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
   // C.14-C.15 Pictures, Fonts, Symbols
@@ -35,7 +79,7 @@ pub(crate) fn load() -> Result<()> {
     before_digest => { egroup()?; },
     after_digest  => { bgroup(); });
 
-  DefConstructor!("\\shortstack[]{}  OptionalMatch:* [Dimension]",
+  DefConstructor!("\\shortstack OptionalPosition {}  OptionalMatch:* [Dimension]",
   "<ltx:inline-block align='#align'><ltx:p>#2</ltx:p></ltx:inline-block>",
   bounded      => true,
   sizer        => "#2",
@@ -172,6 +216,22 @@ pub(crate) fn load() -> Result<()> {
     before_digest => {
       // Perl: before_picture — Let \raisebox to \pic@raisebox
       Let!("\\raisebox", "\\pic@raisebox");
+      // PiCTeX's `\beginpicture` takes `\put`, `\multiput`, `\frame` and `\linethickness` over, and its `\@picture`
+      // (postpictex.tex:39-46, saving the kernel's as `\!latex@picture`) gives a LaTeX picture LaTeX's back; this
+      // environment does not pass through `\@picture`, so it makes those `\let`s itself: a LaTeX picture inside a PiCTeX
+      // `\put{…} at x y` read its own `\put(3,0)` as PiCTeX's, which scanned to the input's end for `at` (1301.4518)
+      if lookup_meaning(&T_CS!("\\!latex@picture")).is_some() {
+        for (cs, latex) in [
+          ("\\put", "\\!latexput"),
+          ("\\multiput", "\\!latexmultiput"),
+          ("\\frame", "\\!latexframe"),
+          ("\\linethickness", "\\!latexlinethickness"),
+        ] {
+          if lookup_meaning(&T_CS!(latex)).is_some() {
+            let_i(&T_CS!(cs), &T_CS!(latex), None);
+          }
+        }
+      }
     },
     properties => sub[args] {
       let unit = unitlength_pt()?;
@@ -380,13 +440,16 @@ pub(crate) fn load() -> Result<()> {
     Ok(pairs)
   }
   // Its `{terminators}{closed}` flags are text, so its size is stated: none,
-  // as the box-free `\line` measures (an auto-opened picture's size).
+  // as the box-free `\line` measures (an auto-opened picture's size). `closed` is `0` (open), `1` (closed) or `2`
+  // (closed and filled, unstroked, as `\circle*`: pict2e's `\fillpath`, `\polygon*`, ellipse.sty's `\ellipse*`).
   DefConstructor!("\\lx@pic@polyline{}{}",
-    "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='#terminators'/>",
+    "<ltx:line points='#points' stroke='#color' stroke-width='#thick' fill='#fill' terminators='#terminators'/>",
     sizer => 0,
     properties => sub[args] {
       let terminators = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
-      let closed = args[1].as_ref().map(|d| d.to_string() == "1").unwrap_or(false);
+      let mode = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      let filled = mode == "2";
+      let closed = filled || mode == "1";
       let unit = unitlength_pt()?;
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
@@ -402,7 +465,8 @@ pub(crate) fn load() -> Result<()> {
       Ok(stored_map!(
         "points" => Stored::String(pin(points)),
         "thick"  => Stored::String(pin(format!("{thick}"))),
-        "color"  => "#000000",
+        "color"  => if filled { "none" } else { "#000000" },
+        "fill"   => if filled { "#000000" } else { "" },
         "terminators" => Stored::String(pin(terminators))
       ))
     }
@@ -795,10 +859,14 @@ pub(crate) fn load() -> Result<()> {
     "\\pic@makebox@{\\framebox}{framed=true}(0,0)[bl]{#1}"
   );
 
-  // \pic@raisebox — simplified raisebox for picture mode
+  // \pic@raisebox — simplified raisebox for picture mode. Its box is an `\hbox` (latex.ltx `\@argrsbox`), read in
+  // text as `\raisebox`'s is: inside a formula in a `\put`, `\raisebox{.2ex}{\tiny $+$}` is a formula of its own, not
+  // the end of the outer one (Perl reads it in the current mode, KNOWN_PERL_ERRORS #678; 0902.1321). Guard:
+  // `perfect_kernel_batch66y::picture_raisebox_reads_its_box_in_text`.
   DefConstructor!("\\pic@raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:g y='#1'>#4</ltx:g>",
-    alias => "\\raisebox"
+    alias => "\\raisebox",
+    mode => "restricted_horizontal", bounded => true
   );
 
   // Perl: latex_constructs.pool.ltxml line 4862
@@ -957,9 +1025,30 @@ pub(crate) fn load() -> Result<()> {
     robust => true
   );
 
+  // latex.ltx:14113-14121 `\normalfont`: `\fontencoding\encodingdefault`, `\edef\f@family{\familydefault}`,
+  // `\edef\f@series{\seriesdefault}`, `\edef\f@shape{\shapedefault}`, `\selectfont` — the DOCUMENT's defaults, and
+  // `\reset@font` (:14122) is the same command, so every reset (`\begin{document}`'s `\init@series@setup`, a
+  // footnote's `\reset@font\footnotesize`, `\textnormal`, a float's `\@floatboxreset`) returns to them. Perl
+  // (latex_constructs.pool.ltxml:5194-5195) resets to `\rmdefault`, `\mddefault`, `\updefault` and keeps the
+  // encoding: a document with `\renewcommand\familydefault{\sfdefault}` (helvet's, cmbright's, sans-serif
+  // posters' and theses' idiom), which pdflatex sets in CMSS throughout, came out serif from the first reset on.
+  // `\lx@normalfont@base` first puts LaTeXML's serif medium upright in force, so a default the font table does not
+  // know (`\familydefault` = `droidserif`, droidserif.sty's `[default]`, 2603.23615) resets to that, as Perl's
+  // `\rmdefault` did, where `\selectfont` alone keeps the font in force for an unknown family (the sans of a
+  // `\sffamily` it was meant to end). OXIDIZED_DESIGN_DIVERGENCES #779. Guards
+  // `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch,
+  // unknown_family_default_resets_to_serif}`.
+  DefPrimitive!("\\lx@normalfont@base", {
+    let current = lookup_font().unwrap_or_else(|| Rc::new(Font::text_default()));
+    let base =
+      current.merge_ref(&fontmap!(family => "serif", series => "medium", shape => "upright"));
+    assign_font(Rc::new(base), Some(Scope::Local));
+    Ok(Vec::new())
+  });
   DefMacro!(
     "\\normalfont",
-    "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont",
+    "\\fontencoding\\encodingdefault\\lx@normalfont@base\\fontfamily{\\familydefault}\
+     \\fontseries{\\seriesdefault}\\fontshape{\\shapedefault}\\selectfont",
     robust => true
   );
   // `\lx@fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): a verbatim `~`/`^`
@@ -978,13 +1067,55 @@ pub(crate) fn load() -> Result<()> {
 
   Let!("\\reset@font", "\\normalfont");
 
-  // Perl: latex_constructs.pool.ltxml:5251
-  // \@fontswitch — LaTeX 2.09 compat helper used by article/book/letter
-  // classes to define \cal and \mit (math-mode font switches). Perl's
-  // override drops the kernel body's \math@bgroup/\math@egroup
-  // machinery (irrelevant outside real TeX boxing); the simpler form
-  // is functionally equivalent for LaTeXML's XML output.
-  DefMacro!("\\@fontswitch{}{}", "\\ifmmode #2\\relax\\else #1 \\fi");
+  // `\@fontswitch{text}{math}` (latex.ltx:14312-14321), the body of every `\DeclareOldFontCommand`
+  // and of article/book/report/letter's `\cal` (`\@fontswitch\relax\mathcal`) and `\mit`: in maths
+  // it lets `\math@bgroup` to `\relax` and runs `#2\relax`, so the alphabet `\mathrm\relax` takes
+  // the `\relax` as its argument and selects its math group to the end of the enclosing group —
+  // `{\rm LP-HF}` is `LP-HF` upright, `{\cal H}` a calligraphic H. Perl's
+  // `\ifmmode #2\relax\else #1 \fi` (latex_constructs.pool.ltxml:5200, KNOWN_PERL_ERRORS) runs the
+  // alphabet with its own grouping, so it read the next token as its argument: `\mathrm{L}P-HF`,
+  // `\mathcal{}H`, `{\rm ^{8}Be}` "Missing sub/superscript argument", `{\rm \left(…\right)}`
+  // "Extra \right" — 511 outputs once a raw class re-declares the old font commands (ptptex,
+  // jpsj2 cond-mat0510381, paper, artikel1; OXIDIZED_DESIGN_DIVERGENCES #593). The text branch is
+  // latex.ltx's `#1` (Perl's `#1 ` set a space after `{\cal x}`'s `\relax`).
+  DefMacro!(
+    "\\@fontswitch{}{}",
+    "\\ifmmode\\lx@math@alphabet@switch{}{#2}\\else#1\\fi"
+  );
+  // `\lx@math@alphabet@switch{reversion}{alphabet}`: the maths branch of `\@fontswitch`. An
+  // alphabet whose binding carries a font (`\mathrm`, `\mathbf`, `\mathcal`, `\mathnormal`, … and
+  // every `\DeclareMathAlphabet`'d one: `Definition::declared_font`) merges that font into the
+  // current one for the rest of the group, as the native `\rm`/`\bf` switches do in maths
+  // (plain_constructs.rs); its box reverts as `reversion` (the old font command's name, a character
+  // string so an `\edef` in maths cannot expand it into itself) or else as the alphabet. In TeX the
+  // `\math@bgroup` let to `\relax` makes ANY alphabet `#2` reaches a switch, so `#2` is looked
+  // through while its head is a parameterless macro or a `\protect` (`\newcommand\Bbbx{\mathbb}`
+  // `\DeclareOldFontCommand{\bbx}{\normalfont}{\Bbbx}`: `{\bbx RZ}` is a blackboard R and Z,
+  // `\U/msb/m/n/10` in pdflatex): [`math_alphabet_font`]. Any other `#2` (a macro with an argument,
+  // or one that ends somewhere else than an alphabet) is TeX's `#2\relax`: it reads the `\relax`,
+  // never the next maths token.
+  DefPrimitive!("\\lx@math@alphabet@switch{}{}", sub[(reversion, alphabet)] {
+    let alphabet = alphabet.unlist();
+    let font = math_alphabet_font(&alphabet)?;
+    let Some(font) = font.filter(|_| lookup_bool_sym(pin!("IN_MATH"))) else {
+      let mut call = alphabet;
+      call.push(T_RELAX!());
+      unread(Tokens::new(call));
+      return Ok(Vec::new());
+    };
+    merge_font_ref(&*font.get_font(None)?);
+    let name = reversion.to_string();
+    let revert = if name.is_empty() {
+      Tokens::new(alphabet)
+    } else if name.starts_with('\\') && name.len() > 1 {
+      Tokens::from(T_CS!(name))
+    } else {
+      Tokens::new(Explode!(name))
+    };
+    let mut props = SymHashMap::default();
+    props.insert("isEmpty", Stored::Bool(true));
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None, revert, props))])
+  });
 
   // Perl: latex_constructs.pool.ltxml L5204-5222.
   //
@@ -1006,7 +1137,10 @@ pub(crate) fn load() -> Result<()> {
   // hack Perl commits to.
   DefPrimitive!("\\selectfont", {
     let current = lookup_font().unwrap();
-    assign_font(Rc::new(nfss_selected_font(&current, true)?), Some(Scope::Local));
+    assign_font(
+      Rc::new(nfss_selected_font(&current, true)?),
+      Some(Scope::Local),
+    );
     crate::tex_fonts::pickup_font()?;
     // latex.ltx:12581: `\selectfont` ends by running the size update a
     // `\fontsize` armed (see `\set@fontsize` below; OXIDIZED_DESIGN_DIVERGENCES
@@ -1088,18 +1222,29 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else\\bgroup\\scshape #1\\expandafter\\egroup\\fi",        protected => true);
   DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else\\bgroup\\normalfont #1\\expandafter\\egroup\\fi", protected => true);
 
-  // Perl: latex_constructs.pool.ltxml line 5365
+  // Perl: latex_constructs.pool.ltxml:5315-5320
   // \DeclareOldFontCommand{\cmd}{text-font-switch}{math-font-cmd}
-  // Defines \cmd to use text-font-switch in text mode, math-font-cmd in math mode.
+  // Defines \cmd to use text-font-switch in text mode, math-font-cmd in math mode — latex.ltx's
+  // `\DeclareRobustCommand#1{\@fontswitch{#2}{#3}}` (14309-14311). In maths that is the alphabet as
+  // a switch to the group's end (`\lx@math@alphabet@switch`, above), reverting as `\cmd`; Perl's
+  // bare `#3` read the next token as the alphabet's argument (`{\rm LP-HF}` → `\mathrm{L}P-HF`,
+  // witnesses jpsj2 cond-mat0510381 and the ptptex/paper/artikel1 classes).
   DefPrimitive!("\\DeclareOldFontCommand{}{}{}", sub[(cmd, font, mathcmd)] {
     // cmd contains a CS token like \bf; get the first token
     let cmd_cs = *cmd.unlist_ref().first()
       .ok_or("DeclareOldFontCommand: expected a CS token")?;
-    // Move `font` and `mathcmd` directly into the closure capture —
+    let mut math = vec![T_CS!("\\lx@math@alphabet@switch"), T_BEGIN!()];
+    math.extend(Explode!(cmd_cs.to_string()));
+    math.push(T_END!());
+    math.push(T_BEGIN!());
+    math.extend(mathcmd.unlist());
+    math.push(T_END!());
+    let math = Tokens::new(math);
+    // Move `font` and `math` directly into the closure capture —
     // they're not used outside. Saves two Tokens clones at setup time.
     DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
       if lookup_bool_sym(pin!("IN_MATH")) {
-        Ok(mathcmd.clone())
+        Ok(math.clone())
       } else {
         Ok(font.clone())
       }
@@ -1153,7 +1298,10 @@ pub(crate) fn load() -> Result<()> {
   // version fell to `_ => {}`, silently swallowed where Perl raises
   // `Error('unexpected', …)`. Both now match Perl. (\mathversion has no
   // `forbidMath`, unlike \boldmath/\unboldmath — Perl doesn't either.)
-  DefPrimitive!("\\mathversion{}", sub[(version)] {
+  // The name is expanded, as latex.ltx:10545-10554 uses it only in `\csname mv@#1\endcsname` and
+  // `\edef\math@version{#1}`: figureversions.sty:169-179 (XCharter, via fontaxes) passes `\l_tmpa_str`
+  // (witnesses 2605.11518, 2605.12374, 2605.22763; Perl reads it unexpanded, but never raw-loads XCharter).
+  DefPrimitive!("\\mathversion Expanded", sub[(version)] {
     let set_forcebold = |bold: bool| {
       let mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
       let merged = mf.merge(Font { forcebold: Some(bold), ..Font::default() });
@@ -1215,7 +1363,11 @@ pub(crate) fn load() -> Result<()> {
     begin_mode("restricted_horizontal")?;
     let digested = digest(arg.clone())?;
     end_mode("restricted_horizontal")?;
-    let text = digested.to_string();
+    // the spacing around the text (`\hspace{-1.1mm} \small 1`, 2501.14912) is the circle's layout
+    let text = typeset_text(&digested, false)
+      .unwrap_or_else(|| digested.to_string())
+      .trim()
+      .to_string();
     let content = unicode_enclosed_alphanumeric(&text)
       .unwrap_or_else(|| format!("{}\u{20DD}", text));
     let in_math = lookup_bool_sym(pin!("IN_MATH"));
@@ -1369,7 +1521,13 @@ pub(crate) fn load() -> Result<()> {
       .iter()
       .map(|(upper, lower)| (T_CS!(*lower), T_CS!(*upper)))
       .collect();
-    pairs.extend(listed.as_chunks::<2>().0.iter().map(|&[lower, upper]| (lower, upper)));
+    pairs.extend(
+      listed
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|&[lower, upper]| (lower, upper)),
+    );
     // `\i`/`\j` (assigned above) are constants too: a pair for them loses.
     let mut mapped_upper: std::collections::HashSet<String> =
       ["\\i ", "\\j "].into_iter().map(String::from).collect();
@@ -1405,7 +1563,9 @@ pub(crate) fn load() -> Result<()> {
 \AddToNoCaseChangeList{\cite}%
 \AddToNoCaseChangeList{\ensuremath}%
 \AddToNoCaseChangeList{\@ensuremath}%
-\AddToNoCaseChangeList{\thanks}%"
+\AddToNoCaseChangeList{\thanks}%
+\AddToNoCaseChangeList{\begin}%
+\AddToNoCaseChangeList{\end}%"
   );
 
   // Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase. They read the
@@ -1547,9 +1707,11 @@ pub(crate) fn load() -> Result<()> {
     Ok(Tokens::new(result))
   }, peeks_by_futurelet => true);
 
-  // latex.ltx:1775 `\def\@ifstar#1{\@ifnextchar *{\@firstoftwo{#1}}}`.
+  // latex.ltx:1775 `\def\@ifstar#1{\@ifnextchar *{\@firstoftwo{#1}}}`, so it lets `\@let@token` as `\@ifnextchar`
+  // does ([`let_peeked_token`]).
   DefMacro!("\\@ifstar {}{}", sub[(if_toks,else_toks)] {
     let next_opt = read_non_space()?;
+    let_peeked_token(next_opt.as_ref());
     if next_opt == Some(T_OTHER!("*")) {
       Ok(if_toks)
     } else {
@@ -1605,8 +1767,11 @@ pub(crate) fn load() -> Result<()> {
 
   // The file name is expanded as `\set@curr@file` (latex.ltx) does, inside a
   // `\csname` (`gullet::expand_as_csname_text`), as `\input` does it.
+  // The name's surrounding blanks are no part of it (latex.ltx `\set@curr@file` reads it as `\@firstofone#1`, an
+  // undelimited argument, and pdflatex finds `x.tex` for `\input{ x.tex}` and `\input{dir/x }`; `content::input`).
   DefMacro!("\\IfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_string = ::latexml_core::gullet::expand_as_csname_text(file)?.to_string();
+    let file_string = file_string.trim().to_string();
     // latex.ltx:19794 file substitution applies before the existence test.
     let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
     // Disk-search variant first (matches Perl FindFile default).
@@ -1618,10 +1783,10 @@ pub(crate) fn load() -> Result<()> {
       // notex=false disk search returns None for binding-only files,
       // pgf bails with "Driver file ... not found", and the entire
       // tikz/pgf rendering pipeline fails (11 PGF/tikz tests + 10k_sandbox
-      // pgf-using papers).
-      || find_file(&file_string, Some(FindFileOptions {
-          notex: true, ..Default::default()
-        })).is_some();
+      // pgf-using papers). A binding standing in for an author's file does
+      // not count: `\IfFileExists{arxiv.sty}` is false unless the paper
+      // ships it, as in TeX (`binding_counts_as_file`, 2606.27281).
+      || binding_counts_as_file(&file_string);
     // latex.ltx:9670 `\IfFileExists@` re-`\def`s the selected branch
     // (`\expandafter\def\expandafter\reserved@a\expandafter{\reserved@a{#2}{#3}}`),
     // so a `\def\x##1{…}` written inside it is scanned as a replacement text
@@ -1644,7 +1809,8 @@ pub(crate) fn load() -> Result<()> {
 
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = ::latexml_core::gullet::expand_as_csname_text(file)?;
-    let file_string = file_tks.to_string();
+    // (surrounding blanks no part of the name, as `\IfFileExists`)
+    let file_string = file_tks.to_string().trim().to_string();
     // latex.ltx:19794 file substitution applies before the existence test;
     // `input()` re-applies it to the name we hand `\ltx@input`.
     let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
@@ -1656,11 +1822,10 @@ pub(crate) fn load() -> Result<()> {
     // compile-time binding — and babel errors with "Unknown option
     // 'italian'". Witness: 38 papers across recent stages with
     // missing-on-disk babel-language packages (italian/spanish/
-    // portuges/brazil/...).
+    // portuges/brazil/...). Not a binding standing in for an author's file
+    // (`binding_counts_as_file`, as `\IfFileExists`).
     let found = find_file(&file_string, None).is_some()
-      || find_file(&file_string, Some(FindFileOptions {
-          notex: true, ..Default::default()
-        })).is_some();
+      || binding_counts_as_file(&file_string);
     if found {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
@@ -1674,17 +1839,44 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml:5461-5468 tests `isDefinableLaTeX`: a CS whose
   // prior definition came from the PLAIN pool is definable too (LaTeX redefines plain
   // macros freely). Guard `perfect_kernel_batch56::ifdefinable_accepts_a_plain_macro`.
-  DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
-    if is_definable_latex(&token)?.0 {
-      iftoken.unlist()
-    } else {
-      let token_str = token.to_string();
-      let mut s = ExplodeText!(token_str);
-      if token_str.starts_with('\\') {
-        s.remove(0);
-      }
-      DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s));
-      vec![T_CS!("\\@notdefinable")]
+  // The name is read as a `{}` argument: one token (spaces aside, as a DefToken) is the CS tested; more than one is
+  // tested as latex.ltx:1296-1305 does, by the `\string` of the whole argument, so `\@ifdefinable{\@nameuse{olA}}{…}`
+  // asks whether `\csname @nameuse{olA}\endcsname` is defined — it is not, and the definition runs. Perl's DefToken
+  // reads `\@nameuse` alone, which is defined: "undefined \olA" (1703.00683: 23 macros, `\olu`, `\calA`, …;
+  // KNOWN_PERL_ERRORS #1116). Guard `perfect_kernel_batch78s::ifdefinable_of_a_group_tests_its_string`.
+  DefMacro!("\\@ifdefinable {} {}", sub[(name, iftoken)] {
+    let mut significant = name.unlist_ref().iter().filter(|t| {
+      let cc = t.get_catcode();
+      cc != Catcode::SPACE && cc != Catcode::COMMENT
+    });
+    match (significant.next().copied(), significant.next()) {
+      (Some(token), None) if token.get_catcode() != Catcode::BEGIN => {
+        if is_definable_latex(&token)?.0 {
+          iftoken.unlist()
+        } else {
+          let token_str = token.to_string();
+          let mut s = ExplodeText!(token_str);
+          if token_str.starts_with('\\') {
+            s.remove(0);
+          }
+          DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s));
+          vec![T_CS!("\\@notdefinable")]
+        }
+      },
+      (None, _) => {
+        Error!("expected", "DefToken", "Expected a DefToken parameter, found nothing.");
+        Vec::new()
+      },
+      _ => {
+        let mut tokens = TokenizeInternal!(r"\edef\reserved@a{\expandafter\@gobble\string").unlist();
+        tokens.extend(name.unlist());
+        tokens.extend(TokenizeInternal!(
+          r"}\@ifundefined\reserved@a{\edef\reserved@b{\expandafter\@carcube\reserved@a xxx\@nil}\ifx\reserved@b\@qend\@notdefinable\else\ifx\reserved@a\@qrelax\@notdefinable\else"
+        ).unlist());
+        tokens.extend(iftoken.unlist());
+        tokens.extend(TokenizeInternal!(r"\fi\fi}\@notdefinable").unlist());
+        tokens
+      },
     }
   });
 
@@ -1747,7 +1939,18 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\bibcite{}{}")?;
   def_macro_noop("\\citation{}")?;
   def_macro_noop("\\contentsline{}{}{}")?;
-  def_macro_noop("\\newlabel{}{}")?;
+  // latex.ltx `\newlabel` (`\@newl@bel r`): `\global\@namedef{r@<name>}{<value>}`, the record an `.aux` file gives a
+  // label, which `\ref` prints. Perl stubs it (LaTeXML reads no `.aux`), and a document's own — the labels of a
+  // companion paper written into its source (1608.05314's `\newlabel{cohadj:eq:horn-1}{{1.1.2}…}`, 2608.10941's
+  // supplement table), or made by its own label macros (0902.1427) — left every reference to them missing; pdflatex
+  // prints the record's text. Recorded as xr records another document's (sect11.rs `record_newlabel`).
+  // OXIDIZED_DESIGN_DIVERGENCES #896.
+  DefPrimitive!("\\newlabel{}{}", sub[(name, value)] {
+    let name = Expand!(name).to_string();
+    let name = name.trim();
+    record_newlabel(name, &value.clone().untex(), None);
+    DefMacro!(T_CS!(s!("\\r@{name}")), None, value, scope => Some(Scope::Global));
+  });
 
   // Perl L5804-5806
   Let!("\\mathgroup", "\\fam");
@@ -1783,66 +1986,95 @@ pub(crate) fn load() -> Result<()> {
   // `latex_constructs_rust_only.rs`. Identical-body duplicate removed here.
 
   //======================================================================
-  // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
+  // Perl latex_constructs.pool.ltxml:5778-5830: language declarations
   // Pre-declare hyphenation languages for babel's \iflanguage checks
   //======================================================================
-  TeX!(
-    r"\newlanguage\l@english
-\newlanguage\l@usenglishmax
-\newlanguage\l@USenglish
-\newlanguage\l@dumylang
-\newlanguage\l@nohyphenation
-\newlanguage\l@arabic
-\newlanguage\l@basque
-\newlanguage\l@bulgarian
-\newlanguage\l@coptic
-\newlanguage\l@welsh
-\newlanguage\l@czech
-\newlanguage\l@slovak
-\newlanguage\l@german
-\newlanguage\l@ngerman
-\newlanguage\l@danish
-\newlanguage\l@esperanto
-\newlanguage\l@spanish
-\newlanguage\l@catalan
-\newlanguage\l@galician
-\newlanguage\l@estonian
-\newlanguage\l@farsi
-\newlanguage\l@finnish
-\newlanguage\l@french
-\newlanguage\l@greek
-\newlanguage\l@monogreek
-\newlanguage\l@ancientgreek
-\newlanguage\l@croatian
-\newlanguage\l@hungarian
-\newlanguage\l@interlingua
-\newlanguage\l@ibycus
-\newlanguage\l@indonesian
-\newlanguage\l@icelandic
-\newlanguage\l@italian
-\newlanguage\l@latin
-\newlanguage\l@mongolian
-\newlanguage\l@dutch
-\newlanguage\l@norsk
-\newlanguage\l@polish
-\newlanguage\l@portuguese
-\newlanguage\l@pinyin
-\newlanguage\l@romanian
-\newlanguage\l@russian
-\newlanguage\l@slovenian
-\newlanguage\l@uppersorbian
-\newlanguage\l@serbian
-\newlanguage\l@swedish
-\newlanguage\l@turkish
-\newlanguage\l@ukenglish
-\newlanguage\l@ukrainiane"
-  );
+  // Perl declares these so that the `\l@<language>` names babel checks for exist ("modern pdflatex seems to come
+  // with hyphenation tables predefined for many languages"), and its `\newlanguage` runs over every name: one the
+  // format already numbered is numbered again past the format's table. The format does number them — TeX Live's
+  // language.dat read into latex.ltx gives `\l@english` 0 (the language TeX starts in, `\language` 0) and
+  // `\l@nohyphenation` 2, and the dump keeps that table — so the re-allocation made `\l@english` 90: a package
+  // comparing `\language` with `\l@english` without babel took the wrong branch, and languages.sty's check
+  // ("Inconsistent language numbering", 0802.3014) failed where pdflatex's 0 passes. Only a name the format left
+  // undefined is declared (KPE #1168).
+  for name in [
+    "english",
+    "usenglishmax",
+    "USenglish",
+    "dumylang",
+    "nohyphenation",
+    "arabic",
+    "basque",
+    "bulgarian",
+    "coptic",
+    "welsh",
+    "czech",
+    "slovak",
+    "german",
+    "ngerman",
+    "danish",
+    "esperanto",
+    "spanish",
+    "catalan",
+    "galician",
+    "estonian",
+    "farsi",
+    "finnish",
+    "french",
+    "greek",
+    "monogreek",
+    "ancientgreek",
+    "croatian",
+    "hungarian",
+    "interlingua",
+    "ibycus",
+    "indonesian",
+    "icelandic",
+    "italian",
+    "latin",
+    "mongolian",
+    "dutch",
+    "norsk",
+    "polish",
+    "portuguese",
+    "pinyin",
+    "romanian",
+    "russian",
+    "slovenian",
+    "uppersorbian",
+    "serbian",
+    "swedish",
+    "turkish",
+    "ukenglish",
+    "ukrainiane",
+  ] {
+    let cs = T_CS!(s!("\\l@{name}"));
+    if lookup_meaning(&cs).is_none() {
+      digest(Tokens!(T_CS!("\\newlanguage"), cs))?;
+    }
+  }
 
-  // Perl latex_constructs: \protected@write
-  DefPrimitive!("\\protected@write{Number}{}{}", sub[(_port, prelude, _tokens)] {
+  // Perl latex_constructs: \protected@write — the prelude only; nothing is written. A label record written to the
+  // `.aux` file is written as latex.ltx writes it (`\let\protect\@unexpandable@protect`, `\write#1{#3}`), so that it
+  // is read back (tex_file_io.rs `\write`, sect11.rs `read_back_aux_text`): 2503.03625's
+  // `\customlabel{eq:TC-1}{TC-1}`, `\protected@write\@auxout{}{\string\newlabel{#1}{{#2}{\thepage}{#2}{#1}{}}}`,
+  // names what `\ref{eq:TC-1}` prints. No other record of the file is read back, and other writes stay unwritten.
+  DefPrimitive!("\\protected@write{Number}{}{}", sub[(port, prelude, tokens)] {
     bgroup();
     Let!("\\thepage", "\\relax");
     let _digested = digest(prelude)?;
+    let port = port.value_of();
+    let to_aux = lookup_string(&s!("output_file:{port}")).ends_with(".aux");
+    let newlabel = T_CS!("\\newlabel");
+    if to_aux && tokens.unlist_ref().contains(&newlabel) {
+      Let!("\\protect", "\\@unexpandable@protect");
+      let mut write = vec![T_CS!("\\write")];
+      write.extend(ExplodeText!(port.to_string()));
+      write.push(T_BEGIN!());
+      write.extend(tokens.unlist());
+      write.push(T_END!());
+      digest(Tokens::new(write))?;
+    }
     egroup()?;
   });
 
@@ -2092,9 +2324,12 @@ pub(crate) fn load() -> Result<()> {
   // latex.ltx:1756-1760 peeks by `\futurelet` behind an unexpandable `\let`,
   // so a number scan ends at it (`peeks_by_futurelet`; egpeirce-doc lost its
   // document to a `\psset` → `\XKV@ifstar` read inside `\ifodd`'s scan).
-  // Guard: `ifnextchar_scans::a_number_scan_ends_at_ifnextchar`.
+  // Guard: `ifnextchar_scans::a_number_scan_ends_at_ifnextchar`. The peek is
+  // `\futurelet\@let@token\@ifnch`, so the next token is left in
+  // `\@let@token` for the branch to test ([`let_peeked_token`]).
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
     let next = read_non_space()?;
+    let_peeked_token(next.as_ref());
     let next_test = match next {
       Some(ref n) => XEquals!(&token, n),
       None => XEquals!(&token, &*TOKEN_END)
@@ -2162,6 +2397,18 @@ pub(crate) fn load() -> Result<()> {
   Ok(())
 }
 
+/// latex.ltx:1756-1771 `\@ifnextchar` peeks by `\futurelet\@let@token\@ifnch` (`\@xifnch` peeks again past a
+/// space): the first token after the spaces is left `\let` to `\@let@token` (a local assignment), which the branch taken
+/// may test. tikz-timing.sty:1156-1170 `\tikztimingtable@checkrow` takes `\@ifnextchar\end`'s false branch and asks
+/// `\ifx\@let@token\extracode`; without it each `\extracode` was read as a table row up to the end of the file
+/// (2409.18120). Perl's closure (latex_constructs.pool.ltxml:5636-5642) sets nothing: KPE #1165. Guard
+/// `perfect_kernel_batch79x::ifnextchar_leaves_the_next_token_in_let_token`.
+fn let_peeked_token(next: Option<&Token>) {
+  if let Some(next) = next {
+    let_i(&T_CS!("\\@let@token"), next, None);
+  }
+}
+
 /// The `(x, y)` of a `Pair` argument of a picture constructor; `(0, 0)` when
 /// absent (Perl's `ReadPair` returns undef for a missing `(`).
 fn pic_pair_arg(arg: Option<&Digested>) -> (f64, f64) {
@@ -2177,6 +2424,92 @@ fn pic_float_arg(arg: Option<&Digested>) -> f64 {
   arg
     .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
     .unwrap_or(0.0)
+}
+
+/// The text a digested `\textcircled` argument typesets, for the circle, or `None` when the circle cannot hold it
+/// as text — then the caller circles the argument's string, its TeX reversion (Perl's `ToString`, KNOWN_PERL_ERRORS
+/// #361): ugly but complete. A box gives its string and a list its pieces in order. A whatsit gives: nothing when it
+/// is space-like (Perl's `isSpace`: the `\phantom{0}` padding of 2501.11185, `\hspace`, `\kern`) or a rule
+/// (`\rule`, the `\vrule` of `\strut`: arguments that are all dimensions or key-values, no text); its formula's body
+/// when it is inline math (`\textcircled{$\cap$}`, 1401.5657); else the text of its one box-valued argument that it
+/// shows (base_utilities.rs `shown_arguments`: no key, keyvals or position keyword) — the content of a box constructor (`\raisebox{-0.9pt}{1}` the `1`, `\mbox`, `\hbox`,
+/// `\fbox`; the `\newcommand\circled[1]{\textcircled{\raisebox{-0.9pt}{#1}}}` idiom, 27 of the 30k sample, sel78k;
+/// 2104.12292, 2110.15350). `None` for anything whose text is not one run of characters: a whatsit inside a formula
+/// (a script, `\frac`, `\sqrt`, an accent, `\overset`, `\mathbb`: `$q_0$` circled as "q0" lost its subscript,
+/// 2508.14614), a whatsit with more than one box-valued argument (`\scalebox{.8}{3}`'s factor is a box too) and an
+/// environment body. A whatsit with no content argument gives its own string: none for `\label{q}`, the reversion
+/// for `\ref{s}` (whose number is not known while digesting) and `\ldots`. Repros:
+/// fonts-nfss/textcircled_of_a_box_circles_its_text, fonts-nfss/textcircled_of_a_formula_keeps_its_source.
+fn typeset_text(digested: &Digested, in_formula: bool) -> Option<String> {
+  match digested.data() {
+    DigestedData::List(list) => list
+      .borrow()
+      .boxes
+      .iter()
+      .map(|b| typeset_text(b, in_formula))
+      .collect(),
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      // a space-like whatsit (Perl's `isSpace`: `\phantom`, `\hphantom`, `\mathstrut`) shows no text
+      if whatsit.get_property_bool("isSpace") {
+        return Some(String::new());
+      }
+      // a script, a fraction, a root, an accent or a font switch in a formula is no run of characters
+      if in_formula {
+        return None;
+      }
+      if let Ok(Some(body)) = whatsit.get_body() {
+        // a formula's body is its text; an environment's is not
+        let is_formula = matches!(body.data(), DigestedData::List(list)
+          if list.borrow().mode == Some(TexMode::Math));
+        return if is_formula {
+          typeset_text(&body, true)
+        } else {
+          None
+        };
+      }
+      // the arguments it shows as text, by their parameter types: never a key (`\ref{s}`'s label), keyvals or a
+      // position keyword (`\makebox[0pt][c]{2}`'s `c`, 2501.11185)
+      let shown = shown_arguments(&whatsit);
+      let args = whatsit.get_args();
+      let present: Vec<(usize, &Digested)> = args
+        .iter()
+        .enumerate()
+        .filter_map(|(i, arg)| Some((i, arg.as_ref()?)))
+        .collect();
+      let is_box = |arg: &Digested| {
+        matches!(
+          arg.data(),
+          DigestedData::TBox(_) | DigestedData::List(_) | DigestedData::Whatsit(_)
+        )
+      };
+      // a rule (`\rule{1pt}{1pt}`, `\strut`'s `\vrule height…`): dimensions and key-values only, no text
+      if !present.is_empty()
+        && present.iter().all(|(_, arg)| {
+          matches!(
+            arg.data(),
+            DigestedData::RegisterValue(_) | DigestedData::KeyVals(_)
+          )
+        })
+      {
+        return Some(String::new());
+      }
+      let mut content = present
+        .iter()
+        .filter(|(i, arg)| is_box(arg) && shown.get(*i).copied().unwrap_or(true));
+      match (content.next(), content.next()) {
+        (Some((_, arg)), None) => typeset_text(arg, false),
+        // no content argument: the whatsit's own string (`\label{q}` none, `\ref{s}` its reversion)
+        (None, _) => Some(digested.to_string()),
+        _ => None,
+      }
+    },
+    DigestedData::RegisterValue(_) | DigestedData::KeyVals(_) | DigestedData::Comment(_) => {
+      Some(String::new())
+    },
+    DigestedData::TBox(_) => Some(digested.to_string()),
+    _ => None,
+  }
 }
 
 /// Perl `picProperties(pt => PairList(picScale(p1), picScale(p2),
@@ -2258,6 +2591,13 @@ pub fn nfss_selected_font(base: &Font, report: bool) -> Result<Font> {
     let message = s!("Unrecognized font family {:?}.", family);
     Info!("unexpected", family, message);
   }
+  // A family named what the font table does not map keeps the font in force, but `\nullfont` holds no characters, so
+  // `\selectfont` leaves it, on the serif `\lx@normalfont@base` falls back to (`\usepackage[default]{opensans}`'s
+  // `\familydefault` = `opensans-LF`, whose `.fd` LaTeXML does not read, in a pgf node, pgf's `\nullfont` regime: prerex's
+  // `chart` manual lost every cell, silently). pgf's own next `\nullfont` keeps text at picture level dropped.
+  if font.get_family().is_some_and(|family| family == "nullfont") {
+    font = font.merge_ref(&fontmap!(family => "serif"));
+  }
   if let Some(sh) = font::lookup_font_series(&series) {
     font = font.merge_ref(sh);
   } else if report && !already_reported(&s!("reported_unrecognized_font_series_{series}")) {
@@ -2269,6 +2609,20 @@ pub fn nfss_selected_font(base: &Font, report: bool) -> Result<Font> {
   } else if report && !already_reported(&s!("reported_unrecognized_font_shape_{shape}")) {
     let message = s!("Unrecognized font shape {:?}.", shape);
     Info!("unexpected", shape, message);
+  }
+  // An encoding with no map of its own decodes through OT1 (`\lx@fontencoding`, tex_fonts.rs, which keeps its name
+  // for `\f@encoding`). A family with a map of its own under it is that font's layout, so the font takes the named
+  // encoding back and decodes through the family's map: `\usefont{U}{bbold}{m}{n}` is bbold's blackboard
+  // (`U_blackboard`, bbold_sty.rs), as `\bbfamily` is. OXIDIZED_DESIGN_DIVERGENCES #914.
+  let unmapped = lookup_string_from_sym(pin!("lx@fontencoding@unmapped"));
+  if !unmapped.is_empty()
+    && font
+      .get_encoding()
+      .is_some_and(|encoding| encoding == "OT1")
+    && let Some(family) = font.get_family()
+    && lookup_value(&s!("{unmapped}_{family}_fontmap")).is_some()
+  {
+    font = font.merge_ref(&fontmap!(encoding => unmapped));
   }
   Ok(font)
 }

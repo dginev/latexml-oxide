@@ -3,9 +3,14 @@
 //! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
 //! definitions run in the original order from `super::load_definitions`.
 
+use std::cell::RefCell;
+
 use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
 
 use super::*;
+
+#[path = "title_page_reading.rs"]
+pub(crate) mod title_page_reading;
 
 /// latex.ltx `\@parse@version`: `YYYY-MM-DD` / `YYYY/MM/DD` → `YYYYMMDD`, 0 if unparsable.
 fn parse_version_date(s: &str) -> i64 {
@@ -151,11 +156,11 @@ pub(crate) fn load() -> Result<()> {
       let request: Option<String> = whatsit.get_arg(3).map(|a| a.to_string());
       // Perl latex_constructs.pool.ltxml L795: `$pkg =~ s/\s+//g;` —
       // strip ALL whitespace (including internal) from each package name
-      // so author typos like `\usepackage{graphic x}` resolve to graphicx.
-      let package_list: Vec<String> = match packages {
-        Some(value) => OPTS_REGEX.split(&value.to_string())
-          .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
-          .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
+      // so author typos like `\usepackage{graphic x}` resolve to graphicx;
+      // and a lone brace group goes, as latex.ltx reads the list
+      // (`requested_package_names`; `\usepackage{{makecell}}`).
+      let package_list = match packages {
+        Some(value) => requested_package_names(&value.to_string()),
         None => Vec::new(),
       };
       // `\@pass@ptions` (latex.ltx:18514): the list is `\protected@xdef`ed
@@ -165,6 +170,7 @@ pub(crate) fn load() -> Result<()> {
         Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
         None => Vec::new(),
       };
+      respell_file_argument(whatsit, 2)?;
       for package in package_list {
         // Record that THIS source-level \usepackage actually executed (the
         // dep-scan's executed-set gate, content.rs maybe_require_dependencies,
@@ -188,17 +194,17 @@ pub(crate) fn load() -> Result<()> {
     let packages: Option<&Digested> = whatsit.get_arg(2);
     let request: Option<String> = whatsit.get_arg(3).map(|a| a.to_string());
     // Perl latex_constructs.pool.ltxml: `\RequirePackage` mirrors
-    // `\usepackage`, with the same `$pkg =~ s/\s+//g;` whitespace strip.
-    let package_list: Vec<String> = match packages {
-      Some(value) => OPTS_REGEX.split(&value.to_string())
-        .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
-        .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
+    // `\usepackage`, with the same `$pkg =~ s/\s+//g;` whitespace strip
+    // and latex.ltx's brace-group strip (`requested_package_names`).
+    let package_list = match packages {
+      Some(value) => requested_package_names(&value.to_string()),
       None => Vec::new(),
     };
     let options_list: Vec<String> = match options {
       Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
       None => Vec::new(),
     };
+    respell_file_argument(whatsit, 2)?;
     for package in package_list {
       // See \usepackage above — record the executed source-level require for
       // the dep-scan's executed-set gate.
@@ -215,13 +221,16 @@ pub(crate) fn load() -> Result<()> {
     after_digest => sub[whatsit] {
       let options_arg: Option<&Digested> = whatsit.get_arg(1);
       let class_arg: Option<&Digested> = whatsit.get_arg(2);
-      let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+      // (whitespace and a lone brace group go as latex.ltx reads the name: `requested_class_name`)
+      let requested = class_arg.map(|c| c.to_string()).unwrap_or_default();
+      let class = requested_class_name(&requested);
       let options: Vec<String> = match options_arg {
         Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
         None => Vec::new(),
       };
+      respell_file_argument(whatsit, 2)?;
       load_class(&class, options, Tokens!())?;
-      sect01::retract_kernel_chapter_if_chapterless()?;
+      settle_chapter_after_class_load()?;
     }
   );
 
@@ -452,9 +461,11 @@ pub(crate) fn load() -> Result<()> {
     before_digest => { only_preamble("\\LoadClassWithOptions") }
     after_digest => sub[whatsit] {
       let class_arg: Option<&Digested> = whatsit.get_arg(1);
-      let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+      let requested = class_arg.map(|c| c.to_string()).unwrap_or_default();
+      let class = requested_class_name(&requested);
+      respell_file_argument(whatsit, 1)?;
       load_class_with_options(&class, Tokens!())?;
-      sect01::retract_kernel_chapter_if_chapterless()?;
+      settle_chapter_after_class_load()?;
     }
   );
   // Perl: latex_constructs.pool.ltxml L900-903
@@ -521,6 +532,8 @@ pub(crate) fn load() -> Result<()> {
     let name = Expand!(T_CS!("\\@currname")).to_string();
     let ttype = Expand!(T_CS!("\\@currext")).to_string();
     let hookcs = T_CS!(s!("\\{name}.{ttype}-h@@k"));
+    // (what a stand-in's copy registers runs under its provides-mode: `state::copy_provides_wrap`)
+    let code = copy_provides_wrap(code);
     AddToMacro!(hookcs, code);
   });
 
@@ -534,17 +547,9 @@ pub(crate) fn load() -> Result<()> {
   // `latex_constructs_rust_only.rs` (which loads last after this file)
   // — so we don't redefine the aliases here.
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
-  let path = s!("{}.{}", Expand!(name), Expand!(ext));
-  // Per OXIDIZED_DESIGN #23: a package is "loaded" when EITHER the
-  // binding (`_loaded`) OR the raw .sty/.cls (`_raw_loaded`) is in
-  // place. User-level `\@ifpackageloaded{X}` doesn't care which path.
-  // Mirrors Perl `\@ifpackageloaded` checking `<X.sty>_loaded` (which
-  // is set by both Perl `loadLTXML` and `loadTeXDefinitions`).
-  // A file that un-marks itself (fontenc.sty tail `\let\ver@fontenc.sty\relax`)
-  // answers "not loaded", as real `\@ifl@aded` does on the relaxed `\ver@`.
-  if (lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_raw_loaded")))
-    && !lookup_bool(&s!("{path}_unmarks_itself"))
-  {
+  // latex.ltx `\@ifl@aded`: `\ver@<name>.<ext>` (`state::file_loaded`); Perl reads the loader's records
+  // (latex_constructs.pool.ltxml:946-953, KNOWN_PERL_ERRORS #1236), OXIDIZED_DESIGN_DIVERGENCES #1015.
+  if file_loaded(&s!("{}.{}", Expand!(name), Expand!(ext))) {
     T_CS!("\\@firstoftwo")
   } else {
     T_CS!("\\@secondoftwo")
@@ -605,7 +610,20 @@ pub(crate) fn load() -> Result<()> {
   //    \g@addto@macro\out{WRONG}\fi[\out]`. Guard:
   //    `perfect_kernel_batch54::g_addto_macro_appends_at_digestion`.
   DefPrimitive!("\\g@addto@macro DefToken {}", sub[(cs, tokens)] {
-    AddToMacro!(cs, tokens);
+    // (a stand-in's copy's append to the document hooks registers nothing: `state::copy_provides_defers_hook_write`;
+    // qm2008_abs.cls's ltxgrid page grid, 0805.2253)
+    if !copy_provides_defers_hook_write(&cs) {
+      // (a `\maketitle` appended to our constructor `\document`, which refuses the addition as Perl does: the class
+      // prints its title page at the end of `\begin{document}`, cup-journal.cls:1014 — noted there for the title-page
+      // check, `\lx@note@title@page`; 2207.13252, 2603.00371); `\maketitle` by meaning, a `\let` copy too
+      if cs == T_CS!("\\document")
+        && lookup_definition(&cs)?.is_some_and(|defn| !defn.is_expandable())
+        && tokens.unlist_ref().iter().any(|t| t.defined_as(&T_CS!("\\maketitle")))
+      {
+        AssignValue!("lx_title_page_at_begin_document" => true, Some(Scope::Global));
+      }
+      AddToMacro!(cs, tokens);
+    }
   });
   DefMacro!("\\addto@hook DefToken {}", "#1\\expandafter{\\the#1#2}");
 
@@ -695,7 +713,13 @@ pub(crate) fn load() -> Result<()> {
   // \@toplist/\@botlist/etc. are ignored (LaTeXML doesn't track float-page
   // placement), but they need to be defined so latex.ltx-driven code paths
   // that consult them (e.g. via `\@cons`) don't error on `\@empty` lookups.
-  def_macro_identity("\\@topnewpage{}")?;
+  // latex.ltx:20466 `\long\def \@topnewpage [#1]{…}`: the bracketed spanning header `\twocolumn[…]` hands it, typeset
+  // here in place. Perl's `\@topnewpage{}` (L1020) read the `[` as its argument, so a class's own `\twocolumn` that
+  // ends `\@ifnextchar[{\@topnewpage}{}` (jpsj.sty:170-173, replayed with its `\maketitle`: cond-mat0011490,
+  // cond-mat0101276, quant-ph9911038) printed "[" and "]" around it (KNOWN_PERL_ERRORS #982). latex.ltx sets the header
+  // in a `\vbox` of its own: here a paragraph of its own in a group, as `\twocolumn[…]` below sets it, so its
+  // `\Large\centering` stays in it.
+  TeX!(r"\long\def\@topnewpage[#1]{\par{\noindent#1\par}}");
   DefMacro!(
     "\\@next{}{}{}{}",
     r"\ifx#2\@empty #4\else\expandafter\@xnext #2\@@#1#2#3\fi"
@@ -822,12 +846,53 @@ pub(crate) fn load() -> Result<()> {
   // has no cvpr binding and never runs `\maketitlesupplementary` at all.) Wrap
   // `#1` in a group with its own `\par`, matching the box scope real LaTeX
   // gives it. Witness html_feedback#6638 (arXiv:2511.14625v1).
-  DefMacro!(
-    "\\twocolumn[]",
-    "\\ifx.#1.\\else\\par{\\noindent#1\\par}\\fi\\par"
-  );
-  // Perl: DefMacro('\onecolumn', '\par');
-  DefMacro!("\\onecolumn", "\\par");
+  // The header is tested for emptiness here, not by an `\ifx.#1.` around it (Perl
+  // latex_constructs.pool.ltxml:1015): LaTeX typesets it (`\@topnewpage`) inside no conditional of its own, so a
+  // header spanning the document's conditional — achemso's `\ifpreprint\else\twocolumn[…\fi …\ifpreprint\else]\fi`,
+  // price.sty's `\ifmulticol\twocolumn[\begin{@twocolumnfalse}\fi …` — had its `\fi` end the test instead
+  // (1810.09262, 1812.09662, 1904.00825, 1912.04806; KNOWN_PERL_ERRORS #672). Guard:
+  // `perfect_kernel_batch66r::twocolumn_header_spans_a_conditional`.
+  //
+  // `\twocolumn` sets `\global\@twocolumntrue` and `\onecolumn` `\global\@twocolumnfalse`, as latex.ltx:20430-20465
+  // does (Perl sets neither): classes branch on the flag after their own `\twocolumn`. The ACM 1.8 family
+  // (acm_proc_article-sp.cls:1441, vldb.cls, sig-alternate.cls) ends with `\twocolumn`, and its `\keywords` is
+  // `\if@twocolumn\section*{Keywords}\else\small\quotation\fi` (vldb.cls:778-782): with the flag false the quotation's
+  // list was never closed and held the rest of the document (1212.6177, 1710.00867, 1609.00969, 1407.2279: "<ltx:section>
+  // isn't allowed in <ltx:item>"). The page geometry `\twocolumn` also sets (`\columnwidth`, `\linewidth`,
+  // `\col@number`) is left alone. KNOWN_PERL_ERRORS #901; guard
+  // `perfect_kernel_batch69b::twocolumn_sets_the_twocolumn_flag`. A class's declared page (`declare_panel_page`, the
+  // panel grid rule) is in two columns from here on, or in one after `\onecolumn` (latex.ltx:20430-20465
+  // `\columnwidth\textwidth`): a `[twocolumn]` article's `\onecolumn` appendix sets its floats against the 469pt text.
+  DefMacro!("\\twocolumn[]", sub[args] {
+    let header: Option<Tokens> = args.into_iter().next().unwrap().into();
+    let mut tokens =
+      vec![T_CS!("\\global"), T_CS!("\\@twocolumntrue"), T_CS!("\\lx@panel@page@twocolumn"), T_CS!("\\par")];
+    if let Some(header) = header.filter(|header| !header.is_empty()) {
+      tokens.extend([T_BEGIN!(), T_CS!("\\noindent")]);
+      tokens.extend(header.unlist());
+      tokens.extend([T_CS!("\\par"), T_END!(), T_CS!("\\par")]);
+    }
+    Ok(Tokens::new(tokens))
+  });
+  // LaTeX's `\maketitle` calls `\twocolumn[\@maketitle]` in two-column mode (latex.ltx's article.cls, IEEEtran.cls,
+  // ieeeconf.cls:3589-3605), so a document that redefines `\twocolumn` adds its full-width block there: the ICRA/IROS
+  // teaser figure under the title (`\let\oldtwocolumn\twocolumn \renewcommand\twocolumn[1][]{\oldtwocolumn[{#1}{…}]}`,
+  // witness 2305.16369). The frontmatter's `\maketitle` makes the call (`\lx@maketitle@body`) with the title left out,
+  // as the frontmatter carries it; a `\twocolumn` still the kernel's, or no macro (revtex's no-op), is not called.
+  // Guard `perfect_kernel_batch80a::maketitle_calls_a_redefined_twocolumn`.
+  Let!("\\lx@kernel@twocolumn", "\\twocolumn");
+  DefMacro!("\\lx@maketitle@twocolumn", sub[_args] {
+    let twocolumn = T_CS!("\\twocolumn");
+    let redefined = matches!(lookup_meaning(&twocolumn), Some(Stored::Expandable(_)))
+      && !x_equals(&twocolumn, &T_CS!("\\lx@kernel@twocolumn"));
+    Ok(if redefined && x_equals(&T_CS!("\\if@twocolumn"), &T_CS!("\\iftrue")) {
+      Tokens!(twocolumn, T_OTHER!("["), T_OTHER!("]"))
+    } else {
+      Tokens::default()
+    })
+  });
+  // Perl: DefMacro('\onecolumn', '\par'); latex.ltx:20430-20437 `\global\@twocolumnfalse` (see `\twocolumn`).
+  DefMacro!("\\onecolumn", "\\global\\@twocolumnfalse\\lx@panel@page@onecolumn\\par");
   DefMacro!("\\@onecolumna", "", locked => true);
   DefMacro!("\\@twocolumna", "", locked => true);
 
@@ -891,15 +956,76 @@ pub(crate) fn load() -> Result<()> {
     // `\date{\def\$##1: ##2 ##3${##2}\$Revision: 3.1 $}` (ulineno.tex:16, 2
     // errors; Perl pool:1066 shares the raw copy). KNOWN_PERL_ERRORS #145.
     // Guard: `perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.
-    // 65a: a call the document body sealed off goes to the class's own `\title` (`sealed_class_call`).
-    r"\lx@sealed@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}\expandafter\lx@title@after\expandafter{\@title}}",
+    // 65a: a call the document body sealed off goes to the class's own `\title` (`sealed_class_call`); 68t: a call
+    // inside the document's `{titlepage}` also runs the class's own printing `\title` there (`titlepage_class_call`).
+    // S1 (frontmatter model M3): once the frontmatter has its copy, the stored tokens are stamped with an out-of-band
+    // field provenance (`\lx@field@mark`, base_utilities.rs; no token added), so a print of `\@title` (or of titling's
+    // `\thetitle`, set by the after-slot from it) is known for the title's ink (P2 witnesses 1605.00182, 2402.14614, 1603.09631, 1503.06457;
+    // OXIDIZED_DESIGN #715). `\author` below does the same for `\@author`.
+    // The class's (or a package's, or the document's) own `\title`, refused by the lock, still runs for its side effects
+    // first, as `\author`'s does (`replay_class_setter`, OXIDIZED_DESIGN #482): the cvpr template's
+    // `\renewcommand{\title}[1]{\titleold{#1}\newcommand{\thetitle}{#1}}` (cvpr.sty:596-597 and its renamed copies:
+    // 2308.03900, 2409.09893, 2503.23679, 2410.13860 corl_2024.sty:382, 2407.18899 eccv.sty:240; in the preamble: 2510.03312,
+    // 2511.06823), whose `\maketitlesupplementary` prints `\thetitle` (undefined:\thetitle); hepthesis.cls:217's
+    // `\global\let\thetitle\@title` (0907.1044).
+    r"\lx@sealed@class@call{title}{#1}{#2}{\lx@replay@class@setter{title}{#1}{#2}\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}\lx@field@mark\gdef\@title{title}\expandafter\lx@title@after\expandafter{\@title}}",
     locked => true);
-  // The class's own call (`sealed_class_call`) when the document body sealed this one off, else the kernel's.
+  // The class's own call (`sealed_class_call`) when the document body sealed this one off; inside the document's
+  // `{titlepage}`, the class's own printing call and then the kernel's (`titlepage_class_call`); else the kernel's.
   DefMacro!("\\lx@sealed@class@call{}{}{}{}", sub[(name, opt, arg, kernel)] {
-    Ok(sealed_class_call(&name.to_string(), &opt, &arg).unwrap_or(kernel))
+    let name = name.to_string();
+    Ok(match sealed_class_call(&name, &opt, &arg, &kernel) {
+      Some(call) => call,
+      None => titlepage_class_call(&name, &opt, &arg, &kernel).unwrap_or(kernel),
+    })
   });
   DefPrimitive!("\\lx@sealed@class@run{}{}{}", sub[(name, opt, arg)] {
     sealed_class_run(&name.to_string(), opt, arg)
+  });
+  DefPrimitive!("\\lx@sealed@storing@run{}{}{}", sub[(name, opt, arg)] {
+    sealed_storing_run(&name.to_string(), opt, arg)
+  });
+  // The same `{titlepage}` rule for a binding's own `\title[]{}` (revtex4_support, ams_support, iopart_support,
+  // mn2e_support): its body is the kernel's part.
+  DefMacro!("\\lx@titlepage@class@call{}{}{}{}", sub[(name, opt, arg, kernel)] {
+    Ok(titlepage_class_call(&name.to_string(), &opt, &arg, &kernel).unwrap_or(kernel))
+  });
+  DefPrimitive!("\\lx@titlepage@class@run{}{}{}", sub[(name, opt, arg)] {
+    titlepage_class_run(&name.to_string(), opt, arg)
+  });
+  // The class's own `\title` printed on the cover (`titlepage_class_run`) is built between these two marks: empty
+  // internal elements (`_Capture_`-suffixed, admitted anywhere by the model, model.rs `can_contain_sym`, so no paragraph
+  // opens or closes for them; a stray one the core finalize drops), between which the print lies in document order —
+  // elements and bare text alike. The print stays only on a cover that stays one: base_utilities.rs
+  // `drop_cover_title_ink` removes it when the titlepage stops standing in for the document's `<ltx:title>`
+  // (`\unwind@titlepage`, `demote_stranded_titlepage`, and at `\end{document}` `settle_cover_title_ink` in a document
+  // left without a top-level `ltx:titlepage`). Rust-only, reverting as nothing.
+  DefConstructor!("\\lx@cover@title@begin",
+    sub[document, _args, _props] {
+      if document.get_element().is_some() {
+        document.insert_mark(COVER_TITLE_BEGIN, None)?;
+      }
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@cover@title@end",
+    sub[document, _args, _props] {
+      if document.get_element().is_some() {
+        document.insert_mark(COVER_TITLE_END, None)?;
+      }
+    },
+    reversion => ""
+  );
+  // The kernel's part of a `{titlepage}` call (`titlepage_class_call`), unless the class's own command just ran it
+  // (a class `\title` that calls a saved kernel `\title`): the frontmatter takes the title once.
+  DefMacro!("\\lx@titlepage@kernel{}", sub[(kernel)] {
+    Ok(if lookup_bool("lx_sealed_class_call_reached_kernel") {
+      // (no kernel part, so no replay to take the cover run's mark)
+      AssignValue!("lx_titlepage_class_ran" => false, Some(Scope::Global));
+      Tokens::default()
+    } else {
+      kernel
+    })
   });
   // The author of the sectional unit the call stands in (`sealed_class_run`, user ruling 2026-10-11): an
   // `ltx:creator` among the unit's front matter (after its tags, title and earlier creators;
@@ -1039,6 +1165,27 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\lx@replay@class@setter{}{}{}", sub[(name, opt, arg)] {
     replay_class_setter(&name.to_string(), opt, arg)?;
   });
+  // the end of a replayed setter's body, in its own group: what it first defined there (`replay_class_setter`)
+  DefPrimitive!("\\lx@replay@capture", {
+    let mut meanings = top_frame_new_meanings();
+    // …and the body's own stores it set here (`defined_stores`), new or not — the lock's drop defined them empty
+    // (state.rs; afthesis.cls:520 `\def\author#1{\def\auth@r{#1}}`): the one holding the argument stays, as the
+    // `\gdef`ed ones do (`note_replay_records`)
+    let body_stores = REPLAY_BODY_STORES.with(|c| c.borrow().clone());
+    for (key, meaning) in top_group_frames_meanings(1) {
+      if body_stores.contains(&key) && !meanings.iter().any(|(k, _)| *k == key) {
+        meanings.push((key, meaning));
+      }
+    }
+    REPLAY_CAPTURED.with(|c| *c.borrow_mut() = meanings);
+  });
+  // the end of a replayed begin code, in the body's own group: what it bound in its plain groups, new or changed
+  // (`replay_class_begin_code`)
+  DefPrimitive!("\\lx@replay@capture@changes", {
+    let base = lookup_int("lx_replay_body_depth").max(0) as usize;
+    let meanings = top_group_frames_meanings((get_frame_depth() + 1).saturating_sub(base));
+    REPLAY_CAPTURED.with(|c| *c.borrow_mut() = meanings);
+  });
   // the replay group's inert frontmatter: each entry point a local no-op taking the same arguments
   DefPrimitive!("\\lx@replay@inert", {
     for cs in FRONTMATTER_ENTRY_POINTS {
@@ -1048,9 +1195,17 @@ pub(crate) fn load() -> Result<()> {
         def_macro(token, params, ExpansionBody::Tokens(Tokens::default()), None)?;
       }
     }
+    // …and the kernel's `\maketitle`, which a class's begin code may call (cmmse2008.cls:146
+    // `\newenvironment{abstract}{\maketitle\makeauthors…`, 0806.4576): run in the replay, it placed the title and
+    // authors in the discarded output and kept its cleanup. An empty macro, not `\relax`, which the AMS classes'
+    // `\ifx\maketitle\relax` reads as a `\maketitle` already run ("Abstract should precede \maketitle", cmfne.cls,
+    // 2210.02246); assigned, as the lock refuses the class's own `\def\maketitle` (state.rs `install_definition`).
+    let maketitle = T_CS!("\\maketitle");
+    let inert = Expandable::new(maketitle, None, Some(ExpansionBody::Tokens(Tokens::default())), None)?;
+    assign_meaning(&maketitle, Stored::Expandable(Rc::new(inert)), Some(Scope::Local));
   });
   DefMacro!("\\author[]{}",
-    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\expandafter\lx@author@after\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
+    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\lx@author@box\lx@author@keys@from\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@keys{#1}\lx@field@mark\def\@author{author}\expandafter\lx@author@after\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically
@@ -1109,7 +1264,34 @@ pub(crate) fn load() -> Result<()> {
   // double-print the title; the common case holds only the injected content).
   // The `\ifx…\@empty` guard makes this a no-op for the vast majority of papers.
   // Witness arXiv:2506.23854 (html_feedback#4281).
-  DefMacro!("\\@maketitle", "");
+  // (3) It holds one marker, `\lx@kernel@maketitle`, empty here: where LaTeX's own `\@maketitle` stands. A title-page
+  // run (`title_page_print_tokens`) puts article.cls's page there, so a document's or a raw file's addition to LaTeX's
+  // `\@maketitle`, or a `\let` copy of it, runs as written around it (TP1, OXIDIZED_DESIGN_DIVERGENCES #953).
+  DefMacro!("\\lx@kernel@maketitle", "");
+  DefMacro!("\\@maketitle", "\\lx@kernel@maketitle");
+  // The title-page reading's marks (`title_page_reading`), each printing nothing: where `\@author` begins, where what a
+  // document appended to it begins and ends (read where they stand, by their definitions: [`title_page_mark`]); the
+  // `\and` family where `\@author` prints, and article.cls's stand-in running, noted as they are digested.
+  DefConstructor!("\\lx@title@page@author", "");
+  DefConstructor!("\\lx@title@page@tail", "");
+  DefConstructor!("\\lx@title@page@tail@end", "");
+  // (LaTeX's own `\@maketitle` and its marker, and the marks, kept as defined here: read by identity, not by name)
+  let defined = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
+  KERNEL_TITLE_DEFS.set(Some(KernelTitleDefs {
+    maketitle: defined("\\@maketitle"),
+    marker:    defined("\\lx@kernel@maketitle"),
+    marks:     [
+      (defined("\\lx@title@page@author"), INK_AUTHOR),
+      (defined("\\lx@title@page@tail"), INK_TAIL),
+      (defined("\\lx@title@page@tail@end"), INK_TAIL_END),
+    ],
+  }));
+  DefPrimitive!("\\lx@title@page@family", {
+    title_page_reading::note_family();
+  });
+  DefPrimitive!("\\lx@title@page@stand@in", {
+    title_page_reading::note_stand_in();
+  });
   // `\lx@captured@stores` nulls, inside the deposit group, every store K11
   // handed to the frontmatter at this `\maketitle` (`frontmatter_stores.rs`
   // redefines it once a raw class's stores are rerouted), so a kept
@@ -1120,25 +1302,137 @@ pub(crate) fn load() -> Result<()> {
   // The stores of a frontmatter ENVIRONMENT the class renewed and the lock kept
   // (sect08.rs `record_dropped_environment_stores`): given and empty here too.
   DefMacro!("\\lx@dropped@env@stores", "");
+  // The class's own records of the values its refused `\title`/`\author` setters were given (`note_replay_records`),
+  // given and empty here too: each recorded part is taken out of its macro, locally, and the rest of the macro stays.
+  DefMacro!("\\lx@replay@records", sub[_args] {
+    let Some(Stored::VecDequeStored(records)) = lookup_value("lx_replay_records") else {
+      return Ok(Tokens::default());
+    };
+    for record in &records {
+      let Stored::VecDequeStored(pair) = record else { continue };
+      let (Some(Stored::String(name)), Some(Stored::Tokens(part))) = (pair.front(), pair.get(1)) else {
+        continue;
+      };
+      let cs = T_CS!(with(*name, ToString::to_string));
+      let Some(Stored::Expandable(d)) = lookup_meaning(&cs) else { continue };
+      // a macro that has since taken parameters is not the token list the record was taken from
+      if d.get_parameters().is_some_and(|p| !p.get_parameters().is_empty()) {
+        continue;
+      }
+      let body: Vec<Token> = match d.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.unlist_ref().to_vec(),
+        _ => continue,
+      };
+      let part = part.unlist_ref();
+      if part.is_empty() || body.len() < part.len() {
+        continue;
+      }
+      let Some(at) = body.windows(part.len()).position(|w| w == part) else { continue };
+      let (mut head, mut tail) = (&body[..at], &body[at + part.len()..]);
+      // a note left empty goes with its text: `\footnote{KW: \@keywords}` with the keywords' label and store taken
+      // out (review probe `fn`) is no note in the PDF, whose footnote showed the keywords
+      if let ([.., note, open], [close, ..]) = (head, tail)
+        && open.get_catcode() == Catcode::BEGIN
+        && close.get_catcode() == Catcode::END
+        && [T_CS!("\\footnote"), T_CS!("\\footnotetext"), T_CS!("\\thanks")].contains(note)
+      {
+        let text_only = *note == T_CS!("\\footnotetext");
+        head = &head[..head.len() - 2];
+        tail = &tail[1..];
+        // (and the mark of an emptied `\footnotetext`, `\footnotemark\footnotetext{KW: \@keywords}`: review probe
+        // `fnx` left an empty `ltx:note` of role footnotemark)
+        if text_only {
+          let mut end = head.len();
+          while end > 0 && head[end - 1].get_catcode() == Catcode::SPACE {
+            end -= 1;
+          }
+          if end > 0 && head[end - 1] == T_CS!("\\footnotemark") {
+            head = &head[..end - 1];
+          }
+        }
+      }
+      let mut rest = head.to_vec();
+      rest.extend_from_slice(tail);
+      let mut emptied = (*d).clone();
+      emptied.expansion = (!rest.is_empty()).then(|| ExpansionBody::Tokens(Tokens::new(rest)));
+      emptied.plan = std::cell::OnceCell::new();
+      assign_meaning(&cs, Stored::Expandable(Rc::new(emptied)), None);
+    }
+    Ok(Tokens::default())
+  });
+  // What the deposit below builds is the class's title page by provenance (`\lx@deposit@end` marks it), which a late
+  // abstract's placement reads: it is that abstract's cover, whatever its typography (pnastwo's `\@contributor` line,
+  // 1404.2263; OXIDIZED_DESIGN_DIVERGENCES #903). Rust-only, reverting as nothing.
+  DefConstructor!("\\lx@deposit@begin",
+    sub[document, _args, _props] {
+      begin_deposit_provenance(document)?;
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@deposit@end",
+    sub[document, _args, _props] {
+      end_deposit_provenance(document)?;
+    },
+    reversion => ""
+  );
+  // What an `\insert` sets inside the deposit goes to the page foot (tex_inserts.rs): the late abstract's cover passes
+  // it over (OXIDIZED_DESIGN_DIVERGENCES #903). Rust-only, reverting as nothing.
+  DefConstructor!("\\lx@deposit@insert@begin",
+    sub[document, _args, _props] {
+      begin_deposit_insert(document)?;
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@deposit@insert@end",
+    sub[document, _args, _props] {
+      end_deposit_insert(document)?;
+    },
+    reversion => ""
+  );
+  // The class prints its title page here, from a trigger of its own that runs no `\maketitle` of ours (FIDELITY_CHARTER
+  // §4, every residual loss counted; OXIDIZED_DESIGN_DIVERGENCES #953 "107d"): elsarticle's `\end{frontmatter}`
+  // (elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`, an empty primitive in the binding; 2312.03765),
+  // a `\maketitle` a raw class appends to `\document` (cup-journal.cls:1014 `\g@addto@macro{\document}{\maketitle}`,
+  // which our constructor `\document` refuses; 2207.13252, 2603.00371). What it prints is noted for the title-page check
+  // only — no deposit, no net, nothing typeset — and only when no `\maketitle` noted a print (a later one supersedes it,
+  // as a second `\maketitle` does).
+  DefPrimitive!("\\lx@note@title@page", {
+    digest_raw_setter_calls()?;
+    if !title_page_noted() {
+      note_title_page_print()?;
+    }
+  });
   // A primitive, not a macro: the deposit is digested first and kept only
   // when it produced content. A class whose `\@maketitle` typesets nothing
   // but captured stores (ptptex, every field in the frontmatter) yields
   // empty centred paragraphs and a page break — dropped; bfhthesis's
   // degree/advisor block beside its captured `\@institution` is kept.
   DefPrimitive!("\\lx@deposit@maketitle", {
+    // (what the document gave the raw setters before this title page: the check's third source, read in this state)
+    digest_raw_setter_calls()?;
+    // What the class's title page prints, decided by TeX: the speculative sentinel runs (frontmatter_stores.rs
+    // `before_title_page_runs`), made in the state the deposit and the replay below meet.
+    crate::frontmatter_stores::before_title_page_runs()?;
+    // (and what the whole title page prints, in that state: its words, checked against the output's)
+    note_title_page_print()?;
     // Both deposits null the title fields, so a `{titlepage}` either lays out
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
+    // Which title-page runs are kept, for the off-table stores no kept run typeset (`\lx@store@untypeset`,
+    // frontmatter_stores.rs).
+    AssignValue!("lx_title_page_deposit_kept" => false, Some(Scope::Global));
+    AssignValue!("lx_title_page_replay_kept" => false, Some(Scope::Global));
     // Speculative like the class-body replay below — it runs with the title fields emptied, outside the class's own
     // `\maketitle`, and Perl never runs it — so its diagnostics are held the same way, and a deposit that raises an
     // error is dropped with them: eptcs.cls:114-130's `\@maketitle` prints `\publicationstatus` and
     // `\copyrightholders`, which its `\maketitle` (:73-89) provides just before calling it, so alone it raised
     // "undefined" for page furniture (1309.1271, 1405.5596, 1109.2657).
     let hold = util::logger::DiagnosticsHold::begin();
-    let deposit = digest(mouth::tokenize_internal(
-      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\and\relax\lx@captured@stores\lx@dropped@env@stores\@maketitle}\fi",
-    ));
+    // (what an `\insert` in it sets, after it: tex_inserts.rs)
+    AssignValue!("lx_deposit_inserts" => Stored::VecDigested(Vec::new()), Some(Scope::Global));
+    let deposit = digest(title_page_deposit_tokens(&[]));
     AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
+    let mut inserts = take_deposit_inserts();
     let deposit = match deposit {
       Ok(deposit) => deposit,
       Err(err) => {
@@ -1150,6 +1444,7 @@ pub(crate) fn load() -> Result<()> {
     let errors = hold.errors_raised();
     if errors > 0 {
       hold.discard();
+      inserts.clear();
       Info!(
         "ignore",
         "\\@maketitle",
@@ -1157,6 +1452,11 @@ pub(crate) fn load() -> Result<()> {
       );
     } else {
       hold.commit();
+      // (what its `\insert`s set is kept after it, an empty title page or not: a store it prints there is typeset,
+      // `hand_untypeset_stores`)
+      if typesets_content(&deposit) || inserts.iter().any(typesets_content) {
+        AssignValue!("lx_title_page_deposit_kept" => true, Some(Scope::Global));
+      }
       if typesets_content(&deposit) {
         out.push(deposit);
       }
@@ -1176,7 +1476,6 @@ pub(crate) fn load() -> Result<()> {
     // only a shipout picture or boxes yields nothing and is dropped. Surpass
     // (Perl drops the class body, State.pm:502-517); OXIDIZED_DESIGN #265.
     // Guard `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
-    let dropped = T_CS!("\\lx@dropped@maketitle");
     // Replay only a body whose vocabulary exists here: every control sequence it
     // would run must be defined at deposit time (`body_vocabulary_is_defined`; a
     // no-op's arguments are skipped, and a defined macro whose own expansion needs
@@ -1185,37 +1484,14 @@ pub(crate) fn load() -> Result<()> {
     // :331 over the amsart binding: `\@setcopyright`, `\andify`, `\@maketitle@hook`)
     // would otherwise error and leave groups open — the backfire that retired an
     // earlier generic replay. A helper the body defines before using it counts as defined
-    // (since 61o; uiucthesis.cls:134-147).
-    let argless = match lookup_meaning(&dropped) {
-      Some(Stored::Expandable(ref d)) => {
-        (d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
-          || dropped_maketitle_takes_options())
-          && match d.get_expansion() {
-            Some(ExpansionBody::Tokens(body)) => body_vocabulary_is_defined(body.unlist_ref(), "\\maketitle"),
-            _ => false,
-          }
-      },
-      _ => false,
-    };
+    // (since 61o; uiucthesis.cls:134-147). Argument-free bodies only (`title_page_replay_tokens`).
     // Not re-entrant: a class body that calls `\maketitle` again reaches the
     // kernel `\maketitle` (locked), whose deposit must not run the body twice.
     // (`\maketitle` itself is NOT redefined here — it is locked, and the lock
     // would record that redefinition as the dropped body.)
-    if argless && !lookup_bool("lx_depositing_class_maketitle") {
+    if let Some(replay) = title_page_replay_tokens(&[]) {
       AssignValue!("lx_depositing_class_maketitle" => true, Some(Scope::Global));
       AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
-      // A `\maketitle[<options>]` body gets the options the kernel `\maketitle`
-      // read for it (`\lx@maketitle@withopt`); without them, its default.
-      let mut replay = mouth::tokenize_internal(
-        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@dropped@maketitle",
-      )
-      .unlist();
-      if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
-        && let Some(ExpansionBody::Tokens(opts)) = o.get_expansion()
-      {
-        replay.extend(opts.unlist_ref().iter().copied());
-      }
-      replay.push(T_END!());
       // The replay is speculative — the body runs with its fields emptied, a
       // state the class never faces — so its diagnostics are held and are the
       // document's only if the replay is kept. A replay that raises an error is
@@ -1228,7 +1504,9 @@ pub(crate) fn load() -> Result<()> {
       let hold = util::logger::DiagnosticsHold::begin();
       // The class's code, read as the class's: a `\def` of a locked name it makes stays refused (state.rs
       // `install_definition`), not a document override.
-      let body = with_origin(DefinitionOrigin::File, || digest(Tokens::new(replay)));
+      AssignValue!("lx_deposit_inserts" => Stored::VecDigested(Vec::new()), Some(Scope::Global));
+      let body = with_origin(DefinitionOrigin::File, || digest(replay));
+      let body_inserts = take_deposit_inserts();
       // Reset before propagating an error, so a failed deposit does not disable
       // every later one. A hard error still propagates on purpose (Fatal stays
       // Fatal): only a recursion/resource Fatal gets here — an undefined internal
@@ -1255,13 +1533,47 @@ pub(crate) fn load() -> Result<()> {
       } else {
         hold.commit();
         // Kept only when it shows something: KOMA's emptied title page (scrreprt, scrbook,
-        // `scrartcl[titlepage]`) and boek/rapport typeset only `\noindent`, skips and `\par`.
+        // `scrartcl[titlepage]`) and boek/rapport typeset only `\noindent`, skips and `\par`. (What its `\insert`s
+        // set is kept after it either way.)
+        if typesets_content(&body) || body_inserts.iter().any(typesets_content) {
+          AssignValue!("lx_title_page_replay_kept" => true, Some(Scope::Global));
+        }
+        inserts.extend(body_inserts);
         if typesets_content(&body) {
           out.push(body);
         }
       }
     }
+    // (the kept title page, between the marks of its provenance)
+    if !out.is_empty() {
+      out.insert(0, digest(Tokens!(T_CS!("\\lx@deposit@begin")))?);
+      out.push(digest(Tokens!(T_CS!("\\lx@deposit@end")))?);
+    }
+    // What its `\insert`s set goes after it, a vertical list of its own (tex.web §1100): out of the paragraph the
+    // `\insert` stood in, ahead of the title page's next line (OXIDIZED_DESIGN_DIVERGENCES #903).
+    if !inserts.is_empty() {
+      out.push(digest(Tokens!(T_CS!("\\par")))?);
+      out.extend(inserts);
+    }
     Ok(out)
+  });
+
+  // LaTeX's `\maketitle` as a speculative run of the class's title page runs it (`title_page_print_tokens`): its
+  // `\@maketitle`, in a group (article.cls:191-207), then the authors' notes
+  // (`\lx@print@thanks`): article.cls's `\maketitle` runs `\@thanks` after it. Only the title-page check's run
+  // (`note_title_page_print`) flushes them, where `\thanks` appends to `\@thanks` as latex.ltx's does; the net's runs
+  // print a note in place (`\@firstofone`), and run nothing here.
+  DefMacro!(
+    "\\lx@print@maketitle",
+    r"\begingroup\@maketitle\lx@print@thanks\endgroup"
+  );
+  DefMacro!("\\lx@print@thanks", "");
+  // …with the class's own `\@author` that the kernel's or a binding's `\author` replaced (`keep_class_author_reader`),
+  // locally: pdflatex's title page prints that one.
+  DefPrimitive!("\\lx@class@author@reader", {
+    if let Some(reader) = lookup_value(CLASS_AUTHOR_READER) {
+      assign_meaning(&T_CS!("\\@author"), reader, Some(Scope::Local));
+    }
   });
 
   // Doesn't produce anything (we're already inserting frontmatter),
@@ -1360,7 +1672,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@maketitle@begin", "");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@maketitle@twocolumn\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters
@@ -1376,6 +1688,8 @@ pub(crate) fn load() -> Result<()> {
   // over (`\maketitle:redefined`, recorded at the locked drop, state.rs).
   // Guard: `perfect_kernel_batch54::maketitle_cleanup_yields_to_a_class_redefinition`.
   DefPrimitive!("\\lx@maketitle@cleanup", sub[_args] {
+    // (this title page's readings, and the `\@author` prefix `\lx@author@tail` kept for them: `title_page_reading`)
+    title_page_reading::end_title_page_epoch();
     if !lookup_bool("\\maketitle:redefined") {
       for cs in ["\\maketitle", "\\title", "\\author", "\\date"] {
         let_i(&T_CS!(cs), &T_CS!("\\relax"), Some(Scope::Global));
@@ -1421,8 +1735,14 @@ pub(crate) fn load() -> Result<()> {
   // `\list` (article.cls:377-387), `\titlepage`, `\section*` — so text after it is
   // a paragraph of its own (Perl kept it in the paragraph before, which the cover
   // then moved ahead of the abstract; 59f, OXIDIZED_DESIGN_DIVERGENCES #407).
-  DefMacro!(T_CS!("\\begin{abstract}"), None, "\\par\\lx@begin@abstract");
-  DefMacro!(T_CS!("\\end{abstract}"), None, "\\lx@end@abstract");
+  DefMacro!(T_CS!("\\begin{abstract}"), None, "\\par\\lx@abstract@begun\\lx@begin@abstract");
+  // An abstract begun with `\begin`: its body's frame records the environment (`lx@until@begun`, read by
+  // `begun_environment`; set by `\lx@abstract@class@setters`, frontmatter_stores.rs, its first token), whose end LaTeX
+  // checks at `\end{document}` or owes after a heading closed it; the command forms do not.
+  DefPrimitive!("\\lx@abstract@begun", {
+    assign_value("lx_abstract_begun", true, Some(Scope::Global));
+  });
+  DefMacro!(T_CS!("\\end{abstract}"), None, "\\lx@end@abstract\\lx@abstract@end@seen");
   // If called directly, maybe as
   //   \abstract{text}
   // OR \abstract text \endabstract
@@ -1473,26 +1793,77 @@ pub(crate) fn load() -> Result<()> {
       // inside the `{` group (a NESTED digest body, `tex_box.rs`), where
       // `until_terminal_inside_group` (stomach.rs) closes the runaway group
       // and ends the body (screenplay-pkg.tex:67).
-      Tokens!(
+      // (Perl's `\lx@add@abstract`, which queues it: a later abstract's `\lx@clear@frontmatter` before the next flush
+      // dequeues it, `command_form` — sn-jnl's template `\abstract{…}` and the paper's, 2305.00493)
+      let mut toks = Tokens!(
         T_CS!("\\par"),
         T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
-        T_CS!("\\lx@begin@abstract"), T_BEGIN!(), T_CS!("\\aftergroup"), T_CS!("\\lx@end@abstract"))
+        T_CS!("\\lx@begin@abstract"), T_OTHER!("[")).unlist();
+      toks.extend(ExplodeText!("command_form=true"));
+      toks.extend([T_OTHER!("]"), T_BEGIN!(), T_CS!("\\aftergroup"), T_CS!("\\lx@end@abstract")]);
+      Tokens::new(toks)
     } else {
       // When \abstract is used without braces (e.g. \abstract ... \section{...}),
       // add \maybe@end@abstract to \@startsection@hook so the abstract closes
       // when the next sectioning command starts.
+      // The brace-less form is the environment's bare begin code, which opens no TeX group
+      // (article.cls:377-387: under `twocolumn` a `\section*`, else `\quotation`), so the `\endgroup` of
+      // an enclosing group ends the abstract first, as for any bare `\X` (`\lx@abstract@bare@frame`).
       Tokens!(
         T_CS!("\\par"),
         T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
-        T_CS!("\\lx@begin@abstract"))
+        T_CS!("\\lx@abstract@braceless"), T_CS!("\\lx@begin@abstract"), T_CS!("\\lx@abstract@bare@frame"))
     }
   },
   locked => true);
 
   DefMacro!(
     "\\endabstract",
-    "\\lx@end@abstract\\let\\maybe@end@abstract\\relax"
+    "\\lx@end@abstract\\let\\maybe@end@abstract\\relax\\lx@abstract@end@seen"
   );
+  // (the `\end{abstract}` a heading-ended `\begin{abstract}` owes, `\lx@heading@ends@frontmatter`)
+  DefPrimitive!("\\lx@abstract@end@seen", {
+    assign_value("lx_abstract_owes_end", false, Some(Scope::Global));
+  });
+  // A token at the head of a brace-less `\abstract`'s body, read in the frame `\lx@add@frontmatter@until` digests it in:
+  // marks that frame as a bare environment's, ended by `\lx@end@abstract`, so the `\endgroup` of an enclosing group
+  // meeting it ends the abstract and then its own group (stomach.rs `close_environment_frame`; an Info, as TeX
+  // has no mismatch): `\twocolumn[\begin{@twocolumnfalse}\maketitle\abstract … \end{@twocolumnfalse}]`
+  // (witness 2305.17823).
+  // A heading at section level or above (`\@startsection`, sect04.rs) inside an abstract ends the abstract there (user
+  // ruling 2026-10-18: "a \section inside an abstract should close/complete the abstract"; Perl errs `<ltx:section>
+  // isn't allowed in <ltx:abstract>`, and ours kept it nested, schema-invalid): the abstract's terminal is read before
+  // the heading, which starts the body with the text after it, as for the brace-less form's `\@startsection@hook`. Not
+  // inside a replayed class code, whose `\section*{\abstractname}` is the class's own heading, discarded with the replay.
+  // A `\begin{abstract}` so ended still owes its `\end{abstract}`: one missing at `\end{document}` is LaTeX's error
+  // (sect02.rs `\lx@end@open@frontmatter`). Keywords end there alike: an environment's begin code called as a command
+  // has no extent — mn2e.cls:993-1003 `\keywords` opens a `\list` no `\endkeywords` closes, spconf's `\keywords` is a
+  // label — and the text the author gave it ends where the paper's first section begins; read as the open body, the
+  // whole document went into `<ltx:keywords>` (mn2e `\keywords{…}` 1004.2791, mnras `\keywords: …` 2201.07008, spconf
+  // `\keywords …` 2309.07195).
+  DefPrimitive!("\\lx@heading@ends@frontmatter", {
+    let terminal = lookup_token("lx@until@terminal");
+    if !lookup_bool("lx_replaying_class_setter")
+      && let Some(terminal) = terminal.filter(|t| *t == T_CS!("\\lx@end@abstract") || *t == T_CS!("\\lx@end@keywords"))
+    {
+      if terminal == T_CS!("\\lx@end@abstract") && begun_environment().is_some() {
+        assign_value("lx_abstract_owes_end", true, Some(Scope::Global));
+      }
+      unread(Tokens!(terminal));
+    }
+  });
+  // Before a brace-less `\abstract`'s body: a class's refused begin code is not replayed for it
+  // (`\lx@abstract@class@setters`, frontmatter_stores.rs). Without its end code it has no extent in TeX, and its
+  // bindings would hold for the rest of the abstract: `\let\section\absection` (frontiersFPHY.cls:520) would disable
+  // the `\@startsection@hook` that ends the abstract, and the whole document went into it.
+  DefPrimitive!("\\lx@abstract@braceless", {
+    assign_value("lx_abstract_braceless", true, Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@abstract@bare@frame", {
+    assign_frame_value("lx@env@bare@end", T_CS!("\\lx@end@abstract"));
+    // The frame is `\lx@add@frontmatter@until`'s; diagnostics about it name the environment.
+    assign_frame_value("groupInitiator", T_CS!("\\abstract"));
+  });
   // Locked against the class and package files (`:locked@files`, state.rs `is_name_locked`) with the
   // kernel's `\abstract`, which is locked against everyone (Perl locks an environment's pair,
   // Package.pm:1993-1997; its own `\endabstract`, latex_constructs.pool.ltxml:1144, is not): a
@@ -1570,6 +1941,11 @@ pub(crate) fn load() -> Result<()> {
       // neutralization and the environment defined. Witnesses hep-th9703192,
       // cond-mat9607110, hep-lat0402021 (run 336, ~1,078 papers).
       Let!("\\centering", "\\@empty");
+      // A cover the document lays out (not a `\maketitle` deposit's, which builds no `ltx:titlepage`): the kernel
+      // `\title` called in it also runs the class's own refused printing `\title` there (`titlepage_class_call`).
+      if !lookup_bool("lx_depositing_frontmatter_fields") {
+        assign_value("lx_titlepage_cover", true, Some(Scope::Local));
+      }
       assign_value("frontmatter_deferred", true, Some(Scope::Global));
       AddToMacro!("\\lx@maketitle@body", "\\unwind@titlepage");
       // In titlepage, abstract is simpler: direct body. The
@@ -1629,9 +2005,13 @@ pub(crate) fn load() -> Result<()> {
   // schema-invalid. Each such child is wrapped in the element the model
   // auto-opens for it there (`<p>` → `<para>`), the shape ordinary paragraph
   // flow gives it; admissible children stay as they are. OXIDIZED_DESIGN #263.
-  // Guard `perfect_kernel_batch56::unwound_titlepage_rehomes_its_paragraphs`.
+  // Guards `perfect_kernel_batch56::unwound_titlepage_rehomes_a_printed_paragraph` (a class `\@maketitle`'s printed
+  // paragraph, deposited in the document's `{titlepage}`) and `…::unwound_titlepage_rehomes_its_paragraphs` (jlreq).
   DefConstructor!("\\unwind@titlepage", sub[document,_args,_props] {
     if let Some(titlepage) = document.maybe_close_element("ltx:titlepage")? {
+      // The unwound cover no longer stands in for the document's `<ltx:title>`, which the HTML then displays: the
+      // class's own printing `\title` run on it goes (OXIDIZED_DESIGN #629; review probe p13).
+      drop_cover_title_ink(document, &titlepage);
       let parent = titlepage.get_parent();
       let children: Vec<Node> = titlepage
         .get_child_nodes()
@@ -1664,6 +2044,88 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\@evenfoot")?;
   def_macro_noop("\\@evenfoot")?;
 
+  Ok(())
+}
+
+/// `text` without one lone balanced brace group around it — the strip TeX makes of a delimited argument that is a
+/// single group (tex.web §400, tex.web:8159-8167): `{makecell}` → `makecell`, `{a}{b}` and `a{b}` unchanged.
+pub(crate) fn strip_lone_group(text: &str) -> &str {
+  let Some(inner) = text.strip_prefix('{').and_then(|t| t.strip_suffix('}')) else {
+    return text;
+  };
+  let mut depth = 0usize;
+  for c in inner.chars() {
+    match c {
+      '{' => depth += 1,
+      '}' if depth == 0 => return text,
+      '}' => depth -= 1,
+      _ => {},
+    }
+  }
+  if depth == 0 { inner } else { text }
+}
+
+/// Does `text` hold whitespace outside every brace group?
+fn has_outer_whitespace(text: &str) -> bool {
+  let mut depth = 0usize;
+  for c in text.chars() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      c if depth == 0 && c.is_whitespace() => return true,
+      _ => {},
+    }
+  }
+  false
+}
+
+/// The file names a `\usepackage`/`\RequirePackage` list requests, as latex.ltx reads them. Four delimited
+/// arguments each lose a lone brace group (§400, [`strip_lone_group`]): the list as `\@fileswith@pti@ns`'s
+/// `[`-delimited #3 (latex.ltx:18714) and as `\zap@space`'s space-delimited #1 (:18695, applied at :18735), then each
+/// item as `\reserved@b`'s `,`-delimited ##1 (:18727-18734) and as `\@onefilewithoptions`'s `[`-delimited #1 (:18740)
+/// — so `\usepackage{{{{{x}}}}}` loads `x`. `\zap@space` drops the spaces, Perl every whitespace
+/// (latex_constructs.pool.ltxml:799 `$pkg =~ s/\s+//g`), and an empty or a `%` item is skipped as Perl skips it
+/// (2605.12897, 2606.09700 `\usepackage{{makecell}}`). Limit: `\zap@space`'s strip is taken for a list without
+/// whitespace outside its groups; with such whitespace (`{{x}} ,y`) TeX's chunk-by-chunk strip is not followed, and
+/// each item loses two groups. No file name has braces, so no name is stripped that TeX keeps.
+fn requested_package_names(list: &str) -> Vec<String> {
+  let list = strip_lone_group(list.trim());
+  let list = if has_outer_whitespace(list) {
+    list
+  } else {
+    strip_lone_group(list)
+  };
+  OPTS_REGEX
+    .split(list)
+    .map(|item| {
+      let item: String = item.chars().filter(|c| !c.is_whitespace()).collect();
+      strip_lone_group(strip_lone_group(&item)).to_string()
+    })
+    .filter(|s| !s.is_empty() && !s.starts_with('%'))
+    .collect()
+}
+
+/// A class name as latex.ltx reads it: the `[`-delimited argument of `\@fileswith@pti@ns` (latex.ltx:18714), then
+/// that of `\@onefilewithoptions` (:18740), each losing a lone brace group (§400); whitespace goes as Perl strips it
+/// (latex_constructs.pool.ltxml:821, LaTeX.pool.ltxml:57).
+pub(crate) fn requested_class_name(text: &str) -> String {
+  let name: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+  strip_lone_group(strip_lone_group(&name)).to_string()
+}
+
+/// Respell a load's file-name argument `n` (what the `<?latexml package=…?>`/`class=…` PI shows) as Perl's PI spells
+/// it, when it holds braces: Perl's `#2` is the digested argument, whose groups leave no braces, so its PI shows the
+/// text without them and with its whitespace (`\usepackage{{amsmath}, { amssymb }}` → `amsmath,  amssymb `,
+/// `{{makecell}}` → `makecell`).
+pub(crate) fn respell_file_argument(whatsit: &mut Whatsit, n: usize) -> Result<()> {
+  let Some(arg) = whatsit.get_arg_mut(n) else {
+    return Ok(());
+  };
+  let text = arg.to_string();
+  if text.contains(['{', '}']) {
+    let spelling: String = text.chars().filter(|c| !matches!(c, '{' | '}')).collect();
+    *arg = digest(Tokens::new(Explode!(&spelling)))?;
+  }
   Ok(())
 }
 
@@ -1743,18 +2205,97 @@ pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> 
 ///   (JINST.cls:823 `\let\abstract\gobble`, with no `\gobble` in the class);
 /// - since 61o, a control sequence the body itself defines before using it counts as defined: uiucthesis.cls:134-137
 ///   `\newcommand{\thesis@small}{\small}` then `{\thesis@small …}`, :147 `\newdimen\thesis@dim` (its title page,
-///   degree statement and Urbana-Champaign line were lost; thesis-ex 86.1 %).
+///   degree statement and Urbana-Champaign line were lost; thesis-ex 86.1 %);
+/// - since 75a the body is read as TeX runs it (OXIDIZED_DESIGN_DIVERGENCES #756): a `\def`/`\gdef`'s parameter text
+///   and replacement text, and a `\newcommand`-family definition's default and body, are stored, not run (tex.web
+///   §473), so they are checked where the body calls the macro ([`BodyDefinee`]) — sig-alternate-05-2015.cls:726-730's
+///   `\def\@makefnmark{…\@thefnmark}` (1505.04771; 204 of the 3,000 sample papers) — while an `\edef`/`\xdef`'s is
+///   checked in place; a called macro's parameter-text delimiters are matched, not run ([`delimiter_positions`];
+///   nowfnt.cls:552 `\@nil`, 1912.00312); what a called macro defines and is undefined here is defined after the call
+///   ([`callee_definees`]); `\futurelet` defines;
+/// - the gate never reports a diagnostic: a parameter text is read by [`gate_parameters`], never by the definition
+///   parser, whose ParamSpec Fatal is sticky; a `\csname`-made name's tokens are run in place and an `\expandafter`
+///   chain's `{`-adjacent token is expanded in place, the rest of either's replacement text stored
+///   ([`expandafter_definee`]; 75a review r3); a body whose definitions nest past [`GATE_DEFINITION_DEPTH`] is refused
+///   with an Info;
+/// - since 86d, a token TeX compares or shows but never runs is not checked ([`unrun_operands`],
+///   OXIDIZED_DESIGN_DIVERGENCES #906): `\ifx`'s comparands, `\ifdefined`'s, `\string`'s, `\meaning`'s
+///   (zaa.cls:166 `\ifx\@dedication\undefined`, 1902.07328), and a `\newif` switch there is no conditional
+///   ([`switch_is_operand`]).
 fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
+  let mut definees: Vec<BodyDefinee> = Vec::new();
+  vocabulary_is_defined(body, what, &mut definees, 0)
+}
+
+/// A control sequence the checked body defines itself: its replacement text and parameters when the body made it with
+/// a definer that stores its replacement text unexpanded (`\def`, `\gdef`, `\newcommand`…; tex.web §473 `scan_toks`
+/// with `xpand` false), checked where the body calls it, once.
+struct BodyDefinee {
+  cs:          Token,
+  replacement: Option<Vec<Token>>,
+  params:      Option<Vec<GateParam>>,
+  checked:     bool,
+}
+
+/// A parameter of a macro the checked body calls, as far as [`delimiter_positions`] matches its call: the literal text
+/// a parameter text opens with (`Match`), a parameter delimited by the text after it (`Until`), an undelimited one
+/// (`Plain`), and any other kind (`Other`: a `#{` brace-delimited one, a binding's own parameter types), where matching
+/// stops.
+#[derive(Clone)]
+enum GateParam {
+  Match(Vec<Token>),
+  Until(Vec<Token>),
+  Plain,
+  Other,
+}
+
+impl GateParam {
+  /// The parameters of a macro defined here, as the gate matches them.
+  fn of(params: &Parameters) -> Vec<GateParam> {
+    params
+      .get_parameters()
+      .iter()
+      .map(|p| {
+        let text = || p.extra.first().map(|e| e.unlist_ref().to_vec());
+        if p.name == pin!("Match") {
+          text().map_or(GateParam::Other, GateParam::Match)
+        } else if p.name == pin!("Until") {
+          text().map_or(GateParam::Other, GateParam::Until)
+        } else if p.name == pin!("Plain") {
+          GateParam::Plain
+        } else {
+          GateParam::Other
+        }
+      })
+      .collect()
+  }
+}
+
+/// [`body_vocabulary_is_defined`] over `body`, with the definitions an enclosing body made (`definees`); `depth` bounds
+/// the checks of the replacement texts a body calls.
+fn vocabulary_is_defined(
+  body: &[Token],
+  what: &str,
+  definees: &mut Vec<BodyDefinee>,
+  depth: usize,
+) -> bool {
   let body = live_branches(body);
   let body = &body[..];
-  let mut definees: Vec<Token> = Vec::new();
+  // the positions of the delimiters a called macro's parameter text matches (`\nowfnt@splitauthor#2,!,!,\@nil`)
+  let mut delimiters: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
+  // the positions of the tokens a primitive compares or shows but never runs ([`unrun_operands`])
+  let mut unrun: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
   let mut i = 0;
   while i < body.len() {
     let t = &body[i];
     i += 1;
-    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      || delimiters.contains(&(i - 1))
+      || unrun.contains(&(i - 1))
+    {
       continue;
     }
+    unrun.extend(unrun_operands(body, i - 1));
     if *t == T_CS!("\\begin")
       && let Some(past) = defined_environment_span(body, i)
     {
@@ -1762,19 +2303,26 @@ fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
       continue;
     }
     if t.with_str(|s| BODY_DEFINERS.contains(&s))
-      && let Some(definee) = body[i..].iter().find(|n| {
+      && let Some(at) = body[i..].iter().position(|n| {
         !matches!(
           n.get_catcode(),
           Catcode::BEGIN | Catcode::SPACE | Catcode::OTHER
         )
       })
-      && matches!(definee.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && matches!(body[i + at].get_catcode(), Catcode::CS | Catcode::ACTIVE)
     {
-      definees.push(*definee);
+      let at = i + at;
+      let definee = body[at];
       if *t == T_CS!("\\let") {
+        definees.push(BodyDefinee {
+          cs:          definee,
+          replacement: None,
+          params:      None,
+          checked:     true,
+        });
         // past the definee, spaces, an optional `=` and one space, and the source (tex.web §1221)
         let is_space = |n: &Token| n.get_catcode() == Catcode::SPACE;
-        let mut j = i + body[i..].iter().position(|n| n == definee).unwrap_or(0) + 1;
+        let mut j = at + 1;
         while body.get(j).is_some_and(is_space) {
           j += 1;
         }
@@ -1787,8 +2335,139 @@ fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
         i = j + 1;
         continue;
       }
+      // `\expandafter\def\expandafter\x\expandafter{\y…}` and `\expandafter\def\csname…\endcsname{…}`: the first token
+      // of the replacement text is expanded once, or the name made, as the definition runs (tex.web §367-368, §372);
+      // the rest of the replacement text is stored like any `\def`'s (§473), so only an `\edef`/`\xdef` reads it in
+      // place. A chain this does not read this way is read in place.
+      if definee == T_CS!("\\expandafter") || definee == T_CS!("\\csname") {
+        let expanding = t.with_str(|s| s == "\\edef" || s == "\\xdef");
+        if let Some(real) = expandafter_definee(body, at) {
+          // `\x`, then nothing but `\expandafter`s up to the replacement text's brace
+          let stored = stored_definition(body, t, real).filter(|s| {
+            body[real + 1..s.open]
+              .iter()
+              .all(|u| *u == T_CS!("\\expandafter") || u.get_catcode() == Catcode::SPACE)
+          });
+          match stored {
+            Some(StoredDefinition { replacement, past, open, .. }) if !expanding => {
+              definees.push(BodyDefinee {
+                cs:          body[real],
+                replacement: Some(replacement),
+                params:      Some(Vec::new()),
+                checked:     false,
+              });
+              // the one token an `\expandafter` before the brace expands now
+              if body[open - 1] == T_CS!("\\expandafter")
+                && open + 1 < past - 1
+                && !vocabulary_is_defined(&body[open + 1..open + 2], what, definees, depth)
+              {
+                return false;
+              }
+              i = past;
+            },
+            _ => {
+              definees.push(BodyDefinee {
+                cs:          body[real],
+                replacement: None,
+                params:      None,
+                checked:     true,
+              });
+              i = real + 1;
+            },
+          }
+          continue;
+        }
+        // `\csname`, perhaps after an `\expandafter` chain: its name tokens are run here; the definition then reads on
+        // from `\endcsname` (the name it makes is not one the body can be checked calling)
+        let mut k = at;
+        while body
+          .get(k)
+          .is_some_and(|u| *u == T_CS!("\\expandafter") || u.get_catcode() == Catcode::SPACE)
+        {
+          k += 1;
+        }
+        let end = (body.get(k) == Some(&T_CS!("\\csname")))
+          .then(|| {
+            let mut level = 0usize;
+            (k..body.len()).find(|&e| {
+              if body[e] == T_CS!("\\csname") {
+                level += 1;
+              } else if body[e] == T_CS!("\\endcsname") {
+                level -= 1;
+              }
+              level == 0
+            })
+          })
+          .flatten();
+        if let Some(end) = end
+          && !expanding
+          && let Some(StoredDefinition { past, .. }) = stored_definition(body, t, end)
+        {
+          if !vocabulary_is_defined(&body[k + 1..end], what, definees, depth) {
+            return false;
+          }
+          i = past;
+        }
+        continue;
+      }
+      // `\def\cs<parameter text>{<replacement text>}`: the parameter text is never run, and only `\edef`/`\xdef`
+      // expand the replacement text as they define (tex.web §473, §1218); the others store it, to run where the
+      // body calls `\cs` (article.cls:206's `\def\@makefnmark{…\@thefnmark}`, copied into sig-alternate-05-2015.cls:
+      // 726-730's `\maketitle` and run only by its footnotes, where latex.ltx defines `\@thefnmark`: 1505.04771).
+      // `\newcommand{\cs}[n][default]{…}` stores the default and the body alike.
+      if let Some(StoredDefinition {
+        replacement,
+        params,
+        past,
+        open,
+      }) = stored_definition(body, t, at)
+      {
+        let unexpanded = !t.with_str(|s| s == "\\edef" || s == "\\xdef");
+        definees.push(BodyDefinee {
+          cs: definee,
+          replacement: unexpanded.then_some(replacement),
+          params,
+          checked: !unexpanded,
+        });
+        // an `\edef`'s replacement text is expanded as it is defined: checked here, past the parameter text
+        i = if t.with_str(|s| s == "\\edef" || s == "\\xdef") {
+          open
+        } else {
+          past
+        };
+        continue;
+      }
+      definees.push(BodyDefinee {
+        cs:          definee,
+        replacement: None,
+        params:      None,
+        checked:     true,
+      });
     }
-    if definees.contains(t) {
+    if let Some(k) = definees.iter().rposition(|d| d.cs == *t) {
+      if let Some(params) = definees[k].params.clone() {
+        delimiters.extend(delimiter_positions(body, i, &params));
+      }
+      if !definees[k].checked {
+        definees[k].checked = true;
+        if let Some(replacement) = definees[k].replacement.clone() {
+          // a body whose own definitions call one another past the bound is not read to the end: refused, not admitted
+          // unread
+          if depth >= GATE_DEFINITION_DEPTH {
+            Info!(
+              "ignore",
+              what,
+              s!(
+                "The {what} body was not replayed: its definitions call one another more than {GATE_DEFINITION_DEPTH} deep"
+              )
+            );
+            return false;
+          }
+          if !vocabulary_is_defined(&replacement, what, definees, depth + 1) {
+            return false;
+          }
+        }
+      }
       continue;
     }
     let Some(meaning) = lookup_meaning(t) else {
@@ -1802,6 +2481,26 @@ fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
       );
       return false;
     };
+    if let Stored::Expandable(ref d) = meaning {
+      if let Some(params) = d.get_parameters() {
+        delimiters.extend(delimiter_positions(body, i, &GateParam::of(params)));
+      }
+      // What a macro the body calls defines is defined after the call: nowfnt.cls:552-575's `\nowfnt@splitauthor`
+      // `\def`s the `\nowfnt@lastname` its `\author` (:581-600) then reads (1912.00312). Only a control sequence
+      // undefined here, so a real meaning is never shadowed ([`callee_definees`]).
+      if let Some(ExpansionBody::Tokens(callee)) = d.get_expansion() {
+        for n in callee_definees(callee.unlist_ref()) {
+          if !definees.iter().any(|d| d.cs == n) {
+            definees.push(BodyDefinee {
+              cs:          n,
+              replacement: None,
+              params:      None,
+              checked:     true,
+            });
+          }
+        }
+      }
+    }
     let own_hold = lookup_bool(&s!("replay_gate_skips_arguments:{}", t.to_string()));
     // An empty expansion is stored as `None`.
     let params = match meaning {
@@ -1825,8 +2524,370 @@ fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
   true
 }
 
+/// The positions of the tokens after `body[at]` that TeX compares or shows but never runs, when `body[at]` is a
+/// primitive that reads them unexpanded: `\ifx`'s two comparands (tex.web §507, `get_next`), e-TeX's `\ifdefined`'s
+/// one (etex.ch `if_def_code`), and `\string`'s and `\meaning`'s (§470-471, `get_token`). An undefined control
+/// sequence there is none TeX meets: zaa.cls:166's `\ifx\@dedication\undefined` (1902.07328) and cms-tdr.cls:786's
+/// `\ifx\cmsMessage\undefined` (2307.11186, 2507.13469) refused their `\maketitle` bodies, and the addresses they
+/// print were lost. A parameter (`#1`) is one comparand. After `\expandafter\ifx`, a `\csname…\endcsname` first
+/// comparand is made as the condition runs (its name tokens run, checked as any others) and the token after its
+/// `\endcsname` is the second; any other token there is expanded once (§367) and nothing is skipped. `\noexpand`'s
+/// operand is checked: in an `\edef`/`\xdef` replacement text (its main use) it is stored and runs later.
+fn unrun_operands(body: &[Token], at: usize) -> Vec<usize> {
+  let t = &body[at];
+  let count = if *t == T_CS!("\\ifx") {
+    2
+  } else if [T_CS!("\\ifdefined"), T_CS!("\\string"), T_CS!("\\meaning")].contains(t) {
+    1
+  } else {
+    return Vec::new();
+  };
+  // the positions one operand from `k` takes: a parameter's `#`s and the token after them, or one token
+  let operand = |k: usize| -> std::ops::Range<usize> {
+    let mut end = k;
+    while body
+      .get(end)
+      .is_some_and(|u| u.get_catcode() == Catcode::PARAM)
+    {
+      end += 1;
+    }
+    k..(end + 1).min(body.len())
+  };
+  let mut k = at + 1;
+  if count == 2 && at > 0 && body[at - 1] == T_CS!("\\expandafter") {
+    if body.get(k) != Some(&T_CS!("\\csname")) {
+      return Vec::new();
+    }
+    let mut level = 0usize;
+    let Some(end) = (k..body.len()).find(|&e| {
+      if body[e] == T_CS!("\\csname") {
+        level += 1;
+      } else if body[e] == T_CS!("\\endcsname") {
+        level -= 1;
+      }
+      level == 0
+    }) else {
+      return Vec::new();
+    };
+    return operand(end + 1).collect();
+  }
+  let mut out = Vec::new();
+  for _ in 0..count {
+    let range = operand(k);
+    k = range.end;
+    out.extend(range);
+  }
+  out
+}
+
+/// A definition a checked body makes ([`stored_definition`]).
+struct StoredDefinition {
+  /// the replacement text it stores (a `\newcommand`'s default with it)
+  replacement: Vec<Token>,
+  /// the parameters a `\def`'s parameter text declares ([`gate_parameters`])
+  params:      Option<Vec<GateParam>>,
+  /// the index past the definition
+  past:        usize,
+  /// the index of the replacement text's opening brace
+  open:        usize,
+}
+
+/// After a definer `t` whose definee is `body[at]`: the replacement text a `\def`-family or `\newcommand`-family
+/// definer stores (a `\newcommand`'s default of its optional argument with it), the parameters a `\def`'s parameter
+/// text declares, and the indices past the definition and of its replacement text's opening brace. `None` for any
+/// other definer, or a definition this cannot read (no braced replacement text).
+fn stored_definition(body: &[Token], t: &Token, at: usize) -> Option<StoredDefinition> {
+  // (a name made, or a replacement text expanded, as the definition runs is read in place by the caller)
+  if body[at] == T_CS!("\\csname") || body[at] == T_CS!("\\expandafter") {
+    return None;
+  }
+  let group_past = |open: usize| -> Option<usize> {
+    let mut level = 0usize;
+    for (k, u) in body.iter().enumerate().skip(open) {
+      match u.get_catcode() {
+        Catcode::BEGIN => level += 1,
+        Catcode::END => {
+          level = level.checked_sub(1)?;
+          if level == 0 {
+            return Some(k + 1);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let name = t.to_string();
+  if ["\\def", "\\gdef", "\\edef", "\\xdef"].contains(&name.as_str()) {
+    // the parameter text runs up to the first `{` (tex.web §473-476)
+    let open = (at + 1..body.len()).find(|&k| body[k].get_catcode() == Catcode::BEGIN)?;
+    let past = group_past(open)?;
+    let params = gate_parameters(&body[at + 1..open]);
+    return Some(StoredDefinition {
+      replacement: body[open + 1..past - 1].to_vec(),
+      params,
+      past,
+      open,
+    });
+  }
+  if ![
+    "\\newcommand",
+    "\\renewcommand",
+    "\\providecommand",
+    "\\DeclareRobustCommand",
+  ]
+  .contains(&name.as_str())
+  {
+    return None;
+  }
+  let skip_spaces = |mut k: usize| {
+    while body
+      .get(k)
+      .is_some_and(|u| u.get_catcode() == Catcode::SPACE)
+    {
+      k += 1;
+    }
+    k
+  };
+  // past `\cs` or `{\cs}`
+  let mut k = skip_spaces(at + 1);
+  if body.get(k).is_some_and(|u| u.get_catcode() == Catcode::END) {
+    k = skip_spaces(k + 1);
+  }
+  let mut replacement = Vec::new();
+  // `[n]`, then `[default]`
+  for n in 0..2 {
+    if body.get(k) != Some(&T_OTHER!("[")) {
+      break;
+    }
+    let close = (k + 1..body.len()).find(|&j| body[j] == T_OTHER!("]"))?;
+    if n == 1 {
+      replacement.extend_from_slice(&body[k + 1..close]);
+    }
+    k = skip_spaces(close + 1);
+  }
+  if !body
+    .get(k)
+    .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+  {
+    return None;
+  }
+  let past = group_past(k)?;
+  replacement.extend_from_slice(&body[k + 1..past - 1]);
+  Some(StoredDefinition {
+    replacement,
+    params: None,
+    past,
+    open: k,
+  })
+}
+
+/// The positions in `body` from `i` on of the delimiters a call of a macro with `params` matches: a `Match`
+/// parameter's literal tokens and an `Until` parameter's delimiter, found as TeX finds them (tex.web §392-399: a
+/// delimited argument runs to the first occurrence of its delimiter outside braces). TeX never runs these tokens —
+/// the macro's parameter text consumes them (nowfnt.cls:552's `\nowfnt@splitauthor#1,#2,#3,#4\@nil`, called as
+/// `\nowfnt@splitauthor#2,!,!,\@nil` by its `\author`: 1912.00312). The arguments themselves are checked as before.
+/// Matching stops at the first parameter of another kind, or at one that does not match.
+fn delimiter_positions(body: &[Token], i: usize, params: &[GateParam]) -> Vec<usize> {
+  let mut out = Vec::new();
+  if !params
+    .iter()
+    .any(|p| matches!(p, GateParam::Until(_) | GateParam::Match(_)))
+  {
+    return out;
+  }
+  let mut k = i;
+  for p in params {
+    if let GateParam::Match(lit) = p {
+      if lit.is_empty() || !body[k.min(body.len())..].starts_with(lit) {
+        break;
+      }
+      out.extend(k..k + lit.len());
+      k += lit.len();
+    } else if let GateParam::Until(delim) = p {
+      let mut level = 0usize;
+      let mut found = None;
+      for j in k..body.len() {
+        if level == 0 && !delim.is_empty() && body[j..].starts_with(delim) {
+          found = Some(j);
+          break;
+        }
+        match body[j].get_catcode() {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => match level.checked_sub(1) {
+            Some(l) => level = l,
+            None => break,
+          },
+          _ => {},
+        }
+      }
+      let Some(j) = found else { break };
+      out.extend(j..j + delim.len());
+      k = j + delim.len();
+    } else if matches!(p, GateParam::Plain) {
+      while body
+        .get(k)
+        .is_some_and(|u| u.get_catcode() == Catcode::SPACE)
+      {
+        k += 1;
+      }
+      match body.get(k) {
+        Some(u) if u.get_catcode() == Catcode::BEGIN => {
+          let mut level = 0usize;
+          let mut past = None;
+          for (j, v) in body.iter().enumerate().skip(k) {
+            match v.get_catcode() {
+              Catcode::BEGIN => level += 1,
+              Catcode::END => {
+                level -= 1;
+                if level == 0 {
+                  past = Some(j + 1);
+                  break;
+                }
+              },
+              _ => {},
+            }
+          }
+          let Some(past) = past else { break };
+          k = past;
+        },
+        Some(_) => k += 1,
+        None => break,
+      }
+    } else {
+      break;
+    }
+  }
+  out
+}
+
+/// How deep the replacement texts a checked body's own definitions call are read ([`vocabulary_is_defined`]); a body
+/// past it is refused.
+const GATE_DEFINITION_DEPTH: usize = 8;
+
+/// The parameters a `\def`'s parameter text `text` declares, read as tex.web §473-476 reads them (as
+/// `parse_def_parameters` does, which reports an ill-formed text, so the gate never calls it): `None` for a text it
+/// cannot know before the body runs — one holding an argument of the enclosing macro (an `ARG` token, `#1` of a
+/// `\renewcommand{\author}[1]{\expandafter\def\csname…#1\endcsname…}`), a doubled `#`, or parameters out of order.
+/// The definition is still stored; its call's arguments are then checked as tokens, which errs toward not replaying.
+fn gate_parameters(text: &[Token]) -> Option<Vec<GateParam>> {
+  let is_param = |t: &Token| {
+    t.get_catcode() == Catcode::PARAM
+      || (matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+        && matches!(lookup_meaning(t), Some(Stored::Token(l)) if l.get_catcode() == Catcode::PARAM))
+  };
+  let ends_text = |t: &Token| t.get_catcode() == Catcode::ARG || is_param(t);
+  let mut out = Vec::new();
+  let mut n = 0u8;
+  let mut k = 0;
+  while k < text.len() {
+    let t = &text[k];
+    if t.get_catcode() == Catcode::ARG {
+      return None;
+    }
+    if !is_param(t) {
+      // the literal text a call must open with
+      let start = k;
+      while k < text.len() && !ends_text(&text[k]) {
+        k += 1;
+      }
+      out.push(GateParam::Match(text[start..k].to_vec()));
+      continue;
+    }
+    let Some(next) = text.get(k + 1) else {
+      // `#{`: the last parameter is delimited by the replacement text's brace
+      out.push(GateParam::Other);
+      break;
+    };
+    if next.get_catcode() != Catcode::OTHER
+      || next.with_str(|d| d.parse::<u8>().ok()) != Some(n + 1)
+    {
+      return None;
+    }
+    n += 1;
+    k += 2;
+    let start = k;
+    while k < text.len() && !ends_text(&text[k]) {
+      k += 1;
+    }
+    if k > start {
+      out.push(GateParam::Until(text[start..k].to_vec()));
+    } else if k + 1 == text.len() && is_param(&text[k]) {
+      // `#n#`: delimited by the replacement text's brace
+      out.push(GateParam::Other);
+      k += 1;
+    } else {
+      out.push(GateParam::Plain);
+    }
+  }
+  Some(out)
+}
+
+/// After a definer whose next control sequence is `body[at]`, an `\expandafter` or a `\csname`: the index of the
+/// control sequence an `\expandafter` chain leads to (`\expandafter\def\expandafter\x\expandafter{\y}` defines `\x`),
+/// `None` when the name is made by `\csname` (or the chain ends otherwise).
+fn expandafter_definee(body: &[Token], at: usize) -> Option<usize> {
+  let mut k = at;
+  while body
+    .get(k)
+    .is_some_and(|u| *u == T_CS!("\\expandafter") || u.get_catcode() == Catcode::SPACE)
+  {
+    k += 1;
+  }
+  let real = body.get(k)?;
+  (matches!(real.get_catcode(), Catcode::CS | Catcode::ACTIVE) && *real != T_CS!("\\csname"))
+    .then_some(k)
+}
+
+/// The control sequences a called macro's replacement text `callee` defines when it runs, that are undefined here: the
+/// definee of each definer in its live branches ([`live_branches`]), past an `\expandafter` chain (a `\csname`-made name
+/// is skipped), and not inside the stored replacement text of a definition it makes (a nested `\def` runs only when that
+/// definition is called). A control sequence defined here keeps its meaning for the gate: the scan never shadows it.
+fn callee_definees(callee: &[Token]) -> Vec<Token> {
+  let callee = live_branches(callee);
+  let mut out: Vec<Token> = Vec::new();
+  let mut k = 0;
+  while k < callee.len() {
+    let c = callee[k];
+    k += 1;
+    if !c.with_str(|s| BODY_DEFINERS.contains(&s)) {
+      continue;
+    }
+    let Some(at) = callee[k..]
+      .iter()
+      .position(|n| {
+        !matches!(
+          n.get_catcode(),
+          Catcode::BEGIN | Catcode::SPACE | Catcode::OTHER
+        )
+      })
+      .map(|at| k + at)
+    else {
+      continue;
+    };
+    let definee = if callee[at] == T_CS!("\\expandafter") || callee[at] == T_CS!("\\csname") {
+      expandafter_definee(&callee, at)
+    } else {
+      matches!(callee[at].get_catcode(), Catcode::CS | Catcode::ACTIVE).then_some(at)
+    };
+    if let Some(d) = definee
+      && lookup_meaning(&callee[d]).is_none()
+      && !out.contains(&callee[d])
+    {
+      out.push(callee[d]);
+    }
+    // a stored replacement text is not run here
+    if let Some(stored) = stored_definition(&callee, &c, at)
+      && !c.with_str(|s| s == "\\edef" || s == "\\xdef")
+    {
+      k = stored.past;
+    }
+  }
+  out
+}
+
 /// The definition commands whose next control sequence the body defines (`*`, `{` and spaces skipped).
-const BODY_DEFINERS: [&str; 18] = [
+const BODY_DEFINERS: [&str; 19] = [
   "\\def",
   "\\edef",
   "\\gdef",
@@ -1845,6 +2906,8 @@ const BODY_DEFINERS: [&str; 18] = [
   "\\newtoks",
   "\\newbox",
   "\\newif",
+  // `\futurelet\cs<token1><token2>` lets `\cs` to `<token2>`, as `\let` does (tex.web §1221); `<token1>` then runs
+  "\\futurelet",
 ];
 
 /// `Some(true)`/`Some(false)` for a token meaning `\iftrue`/`\iffalse` — a `\newif` switch's state.
@@ -1910,17 +2973,33 @@ fn live_branches(body: &[Token]) -> Vec<Token> {
 }
 
 /// Whether a switch token after `before` is an assignment's operand: the name `\let`, `\newif` or a
-/// `\def` defines, or the meaning `\let` copies (`\let\ifX\ifY`, `\let\ifX=\ifY`).
+/// `\def` defines, or the meaning `\let` copies (`\let\ifX\ifY`, `\let\ifX=\ifY`); or a primitive's operand that is
+/// compared or shown, not run ([`unrun_operands`]: `\ifx\ifX\undefined`, `\ifx\x\ifX`, `\string\ifX`; not after
+/// `\expandafter\ifx`, which expands the token after it).
 fn switch_is_operand(before: &[Token]) -> bool {
-  let assigns = |t: &Token| {
-    [r"\let", r"\newif", r"\def", r"\edef", r"\gdef", r"\xdef"]
-      .iter()
-      .any(|cs| *t == T_CS!(*cs))
+  let unrun_before = |t: &Token| {
+    [
+      r"\let",
+      r"\newif",
+      r"\def",
+      r"\edef",
+      r"\gdef",
+      r"\xdef",
+      r"\ifx",
+      r"\ifdefined",
+      r"\string",
+      r"\meaning",
+    ]
+    .iter()
+    .any(|cs| *t == T_CS!(*cs))
   };
   let is_let = |t: &Token| *t == T_CS!(r"\let");
+  let is_expandafter = |t: &Token| *t == T_CS!(r"\expandafter");
   match before {
-    [.., last] if assigns(last) => true,
-    [.., l, _] if is_let(l) => true,
+    [.., e, x] if is_expandafter(e) && *x == T_CS!(r"\ifx") => false,
+    [.., e, x, _] if is_expandafter(e) && *x == T_CS!(r"\ifx") => false,
+    [.., last] if unrun_before(last) => true,
+    [.., l, _] if is_let(l) || *l == T_CS!(r"\ifx") => true,
     [.., l, _, eq] if is_let(l) && eq.get_catcode() == Catcode::OTHER && eq.to_string() == "=" => {
       true
     },
@@ -2035,6 +3114,15 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
   i + 1
 }
 
+thread_local! {
+  /// The local definitions a replayed class setter made (`\lx@replay@capture`), for [`replay_class_setter`].
+  static REPLAY_CAPTURED: RefCell<Vec<(SymStr, Stored)>> =
+    const { RefCell::new(Vec::new()) };
+  /// The stores the replayed setter's own body defines (`defined_stores`), for `\lx@replay@capture`.
+  static REPLAY_BODY_STORES: RefCell<Vec<SymStr>> =
+    const { RefCell::new(Vec::new()) };
+}
+
 /// Run a raw class's own frontmatter setter that the lock refused (`\lx@dropped@<name>`, state.rs) for its side
 /// effects, its output discarded: the kernel's `\<name>` keeps the frontmatter, and the class keeps the flags and stores
 /// its other code tests (OXIDIZED_DESIGN #482). JINST.cls:755-762 `\renewcommand\author[1]{\global\@authortrue…}` and :819-823
@@ -2046,7 +3134,10 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
 /// or reading its own arguments (no parameters: given the call's `[opt]{arg}`) whose vocabulary is defined
 /// (`body_vocabulary_is_defined`) runs, in a group, with `\thanks`, `\footnote` and `\label` gobbled (the kernel makes
 /// the author's notes and labels), not re-entrant; afterwards the kernel's `\@author`/`\@shortauthor` and every store the
-/// body `\def`s are as before (empty if undefined), so what stays is the class's flags, counters, lists and `\let`s; an absent optional argument (`opt` empty) takes the class's default.
+/// body `\def`s that does not hold the argument are as before (empty if undefined), so what stays is the class's flags,
+/// counters, lists and `\let`s, and the body's stores of the argument, which the title-page code reads as empty
+/// (`note_replay_records`; a document's `\gdef\myauth{#1}` read in the body, 77i); an absent optional argument (`opt`
+/// empty) takes the class's default.
 /// Only the dropped body itself is read for stores (`defined_stores`): a store defined inside an internal it calls is
 /// kept, as the amsart `\@dblarg\csname\string\author\endcsname` wrapper's `\\author` sets them (cmfne.cls:462-483
 /// `\firstshortauthor`, which its `\enddoc@text` prints at the end of the document, 2210.02246; the class's own
@@ -2056,13 +3147,234 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
 /// state (jsty3-author.sty:542's xparse `\author`, whose expl3 author list its printer then looped over 991 times:
 /// 2607.24171). Perl never runs a refused definition (State.pm:502-517).
 fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
-  if !lookup_bool(&s!("\\{name}:redefined")) || lookup_bool("lx_replaying_class_setter") {
+  replay_dropped_class_code(name, Some((opt, arg)), &[])
+}
+
+/// The refused class environment's begin code (`\lx@dropped@<name>` of no parameters, from the class's
+/// `\newenvironment`/`\renewenvironment`), replayed at the head of the kernel's environment body
+/// ([`replay_dropped_class_code`] without a call): its output discarded, what it binds in its plain groups — new
+/// meanings and changes to existing ones, `\let\section\absection` — held in the group the kernel's body is read in,
+/// and ended with it, as in TeX, where latex.ltx's `\begin` reads the begin code inside the environment's group
+/// (frontiersFPHY.cls:516-524: 1508.06756, 1805.07007, 1902.06410; bioinfo.cls:495-500: 1406.7114, 0901.4589;
+/// 4arXiv: 1404.0027). The class's own `\begingroup` in it (frontiersFPHY.cls:520) opens a frame of the replay whose
+/// bindings are kept with the others: its `\endgroup` is in the class's end code, so its extent is the environment's
+/// and holding them in the environment's group keeps it; the replay then closes it. A frame an environment or a mode
+/// opened (a `\quotation`, `\begin{center}`) keeps the kernel's own machinery and is not kept. `keep_out`: names
+/// the caller defines for the body itself (`\lx@abstract@class@setters`'s keywords setters). OXIDIZED_DESIGN #482.
+pub(crate) fn replay_class_begin_code(name: &str, keep_out: &[SymStr]) -> Result<()> {
+  replay_dropped_class_code(name, None, keep_out)
+}
+
+/// NFSS's record of the current font (latex.ltx:10519-10535 `\f@family`…, `\fontsize`'s `\f@size`, the size
+/// commands' `\@currsize`): a replayed begin code's font is its layout, discarded with its output, so its record of
+/// that font is not kept either — the next `\bfseries` in the body would select the class's family from it
+/// (frontiersFPHY.cls:521 `\fontfamily{\sfdefault}…\selectfont`: the run-in labels alone sans serif, 1508.06756).
+fn is_font_state(key: SymStr) -> bool {
+  const FONT_STATE: [&str; 11] = [
+    "\\f@encoding",
+    "\\f@family",
+    "\\f@series",
+    "\\f@shape",
+    "\\f@size",
+    "\\f@baselineskip",
+    "\\f@linespread",
+    "\\tf@size",
+    "\\sf@size",
+    "\\ssf@size",
+    "\\@currsize",
+  ];
+  FONT_STATE.iter().any(|cs| meaning_key(&T_CS!(cs)) == key)
+}
+
+/// A binding's record of `part`, the text the parameterless macro `name` prints for a store the frontmatter carries:
+/// it joins `lx_replay_records`, which `\lx@replay@records` takes out of the macro in the title-page deposit and
+/// replay (`\lx@deposit@maketitle`) as it does a refused setter's record (`note_replay_records`). an.cls v1.03's
+/// label before its abstract store (`\noindent{\bfseries\abstractname}\ \@abstract`, an_cls.rs; astro-ph0306340).
+pub fn note_title_page_part(name: &str, part: Tokens) {
+  let mut records = match lookup_value("lx_replay_records") {
+    Some(Stored::VecDequeStored(records)) => records,
+    _ => VecDeque::new(),
+  };
+  records.push_back(Stored::VecDequeStored(VecDeque::from([
+    Stored::String(pin(name)),
+    Stored::Tokens(part),
+  ])));
+  assign_value(
+    "lx_replay_records",
+    Stored::VecDequeStored(records),
+    Some(Scope::Global),
+  );
+}
+
+/// After a kept replay of a refused class setter: what the replay added to each macro it changed (`assigned`, its
+/// journal's meanings with their values before) that is now a parameterless token list — the tail it appended to the
+/// value before (`\g@addto@macro`, `\appto`), the head it prepended, the text it inserted between the two (before a
+/// list's end sentinel), or, when it overwrote the macro, the whole new value — when that part holds the call's
+/// argument `arg`: the class's own record of the value the kernel's setter gave
+/// the frontmatter. Each joins `lx_replay_records` (name, part), which `\lx@replay@records` takes out of the macro in
+/// the title-page deposit and replay (`\lx@deposit@maketitle`); what other code put in the same macro stays (an
+/// affiliation a second class setter appends to the author list). `skip`: the kernel's stores, put back, no records.
+/// Returns the macros recorded, which the replay leaves set (77i).
+fn note_replay_records(
+  assigned: &[(SymStr, Option<Stored>)],
+  arg: &Tokens,
+  skip: &[SymStr],
+) -> Vec<SymStr> {
+  let mut records = match lookup_value("lx_replay_records") {
+    Some(Stored::VecDequeStored(records)) => records,
+    _ => VecDeque::new(),
+  };
+  let mut recorded = Vec::new();
+  for (key, part) in assigned_parts_holding(assigned, arg, skip, false) {
+    records.push_back(Stored::VecDequeStored(VecDeque::from([
+      Stored::String(pin(with(key, ToString::to_string))),
+      Stored::Tokens(Tokens::new(part)),
+    ])));
+    recorded.push(key);
+  }
+  assign_value(
+    "lx_replay_records",
+    Stored::VecDequeStored(records),
+    Some(Scope::Global),
+  );
+  recorded
+}
+
+/// The tokens of `toks` a record compares ([`assigned_parts_holding`]): its ink, without spaces; `characters`, its
+/// characters alone — no control sequence, brace or space —, for a part an `\xdef` made, whose robust commands it
+/// expanded (`\protected@xdef`'s `\protect`, our `\`` as `\lxaccentgrave`: iau.cls:1515's `\affiliation`, 2510.16758).
+fn record_ink(toks: &[Token], characters: bool) -> Vec<Token> {
+  toks
+    .iter()
+    .copied()
+    .filter(|t| match t.get_catcode() {
+      Catcode::SPACE => false,
+      Catcode::CS | Catcode::ACTIVE | Catcode::BEGIN | Catcode::END => !characters,
+      _ => true,
+    })
+    .collect()
+}
+
+/// Of the meanings an assignment journal saw assigned (`assigned`, each with its value before), the parameterless
+/// token-list macros (not `skip`) whose new part holds `arg` ([`record_ink`], its `characters` alone when asked): each macro's key and that part — the old
+/// value's longest common prefix and suffix stay, and the middle between them is what the assignments put in (a tail
+/// appended, a head prepended, text inserted before a sentinel: `\def\tp@tmp##1\tp@end{\gdef\tp@block{##1#1\tp@end}}`),
+/// or the whole new value when the old one does not split that way. The class's own records of an argument
+/// ([`note_replay_records`]; frontmatter_stores.rs `\lx@displaced@end`).
+pub(crate) fn assigned_parts_holding(
+  assigned: &[(SymStr, Option<Stored>)],
+  arg: &Tokens,
+  skip: &[SymStr],
+  characters: bool,
+) -> Vec<(SymStr, Vec<Token>)> {
+  let arg = record_ink(arg.unlist_ref(), characters);
+  let mut parts = Vec::new();
+  if arg.is_empty() {
+    return parts;
+  }
+  // a parameterless token-list macro's body (an empty one stored as `None`)
+  let value = |m: Option<&Stored>| -> Option<Vec<Token>> {
+    let Some(Stored::Expandable(d)) = m else {
+      return None;
+    };
+    if d
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+    {
+      return None;
+    }
+    match d.get_expansion() {
+      None => Some(Vec::new()),
+      Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().to_vec()),
+      Some(_) => None,
+    }
+  };
+  for (key, before) in assigned {
+    let name = with(*key, ToString::to_string);
+    if !name.starts_with('\\') || skip.contains(key) {
+      continue;
+    }
+    let cs = T_CS!(&name);
+    let now = lookup_meaning(&cs);
+    if same_meaning(now.as_ref(), before.as_ref()) {
+      continue;
+    }
+    let Some(now) = value(now.as_ref()) else {
+      continue;
+    };
+    let part = match value(before.as_ref()) {
+      Some(old) if now.len() >= old.len() => {
+        let prefix = now.iter().zip(&old).take_while(|(a, b)| a == b).count();
+        let suffix = now
+          .iter()
+          .rev()
+          .zip(old.iter().rev())
+          .take(old.len() - prefix)
+          .take_while(|(a, b)| a == b)
+          .count();
+        if prefix + suffix == old.len() {
+          now[prefix..now.len() - suffix].to_vec()
+        } else {
+          now
+        }
+      },
+      _ => now,
+    };
+    let held = record_ink(&part, characters);
+    if held.len() >= arg.len() && held.windows(arg.len()).any(|w| w == arg.as_slice()) {
+      parts.push((*key, part));
+    }
+  }
+  parts
+}
+
+/// [`replay_class_setter`] (`call` = the call's `[opt]{arg}`) and [`replay_class_begin_code`] (`call` = `None`).
+fn replay_dropped_class_code(
+  name: &str,
+  call: Option<(Tokens, Tokens)>,
+  keep_out: &[SymStr],
+) -> Result<()> {
+  // (a refused `\newenvironment`/`\renewenvironment` keeps its code without marking the command redefined:
+  // the record is enough for a begin code)
+  if (call.is_some() && !lookup_bool(&s!("\\{name}:redefined")))
+    || lookup_bool("lx_replaying_class_setter")
+  {
+    return Ok(());
+  }
+  // the kernel's part of a `{titlepage}` call whose class `\title` just ran on the cover (`titlepage_class_run`)
+  if call.is_some() && name == "title" && lookup_bool("lx_titlepage_class_ran") {
+    AssignValue!("lx_titlepage_class_ran" => false, Some(Scope::Global));
+    return Ok(());
+  }
+  // …or whose class command just ran in place after the document body began (`sealed_storing_run`)
+  if call.is_some() && lookup_string("lx_sealed_class_ran") == name {
+    assign_value(
+      "lx_sealed_class_ran",
+      Stored::String(pin("")),
+      Some(Scope::Global),
+    );
     return Ok(());
   }
   let dropped = T_CS!(s!("\\lx@dropped@{name}"));
   let Some((takes_opt, stores)) = dropped_class_setter(name) else {
     return Ok(());
   };
+  let begin_code = call.is_none();
+  // a begin code is read with no arguments: one with parameters would take the environment's body
+  if begin_code
+    && !matches!(lookup_meaning(&dropped), Some(Stored::Expandable(d))
+      if d.get_parameters().is_none_or(|p| p.get_parameters().is_empty()))
+  {
+    return Ok(());
+  }
+  if begin_code
+    && let Some(Stored::Expandable(d)) = lookup_meaning(&dropped)
+    && let Some(ExpansionBody::Tokens(body)) = d.get_expansion()
+    && (tail_reads_ahead(body.unlist_ref()) || delimiter_reads_ahead(body.unlist_ref()))
+  {
+    return Ok(());
+  }
+  let (opt, arg) = call.unwrap_or_default();
   // A class `\abstract` keeps nothing of its text the kernel needs (JINST.cls:819-823 sets `\@abstracttrue`; the store
   // is restored below), and a body that typesets it would step its counters (uwthesis.cls:805-839): it gets none.
   let arg = if name == "abstract" {
@@ -2072,36 +3384,65 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   };
   // In a group whose kernel frontmatter is inert (`\lx@replay@inert`: a body that calls a saved kernel `\author`,
   // authoraftertitle.sty:11-15 `\let\Originalauthor\author`, would add every author twice), notes, marks and labels
-  // gobbled, and the footnote and equation counters as they were.
+  // gobbled, and the footnote and equation counters as they were. The frontmatter fallback a sectioning command runs
+  // (`\@startsection@hook`) is inert too: paper.cls:624's `\def\abstract{\small\subsubsection*{\abstractname}}`, replayed
+  // for jheppub's one-argument `\abstract{…}` in the preamble, emitted the title and authors there, where they were
+  // lost, and disabled the document's `\maketitle` (2012.12760, 2207.06852: the rawclasses lever).
   let mut replay = mouth::tokenize_internal(
-    r"{\lx@replay@inert\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\relax\let\label\@gobble\xdef\lx@replay@counts{\global\c@footnote=\the\c@footnote\relax\global\c@equation=\the\c@equation\relax}",
+    r"{\lx@replay@inert\let\lx@frontmatter@fallback\relax\let\maybe@end@abstract\relax\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\relax\let\label\@gobble\xdef\lx@replay@counts{\global\c@footnote=\the\c@footnote\relax\global\c@equation=\the\c@equation\relax}",
   )
   .unlist();
-  replay.push(dropped);
-  if takes_opt && !opt.is_empty() {
-    replay.push(T_OTHER!("["));
-    replay.extend(opt.unlist());
-    replay.push(T_OTHER!("]"));
-  }
+  // The body in a group of its own inside the replay's: what it defines locally there (`\lx@replay@capture`) is what
+  // it would define where the call stands, as in TeX, where the class's setter runs in no group of its own.
   replay.push(T_BEGIN!());
-  replay.extend(arg.unlist());
-  replay.push(T_END!());
-  replay.push(T_END!());
-  replay.push(T_CS!("\\lx@replay@counts"));
+  replay.push(dropped);
+  if begin_code {
+    // A begin code may leave its own groups open for the end code to close (frontiersFPHY.cls:520 `\begingroup`): the
+    // replay's braces are not read after it, where they would meet that group (TeX's "Extra }"); its frames, the
+    // replay's two with them, are closed below as a body's unclosed groups are, and the counters put back after.
+    replay.push(T_CS!("\\lx@replay@capture@changes"));
+  } else {
+    if takes_opt && !opt.is_empty() {
+      replay.push(T_OTHER!("["));
+      replay.extend(opt.unlist());
+      replay.push(T_OTHER!("]"));
+    }
+    replay.push(T_BEGIN!());
+    replay.extend(arg.unlist_ref().iter().copied());
+    replay.push(T_END!());
+    replay.push(T_CS!("\\lx@replay@capture"));
+    replay.push(T_END!());
+    replay.push(T_END!());
+    replay.push(T_CS!("\\lx@replay@counts"));
+  }
   // The stores stay as they were: the kernel's (JINST.cls:757-761 `\xdef`s `\@author`, its layout of every author so
   // far, which `\lx@author@flush` would then hand to the previous author as an author-block row) and those the body
   // itself defines (`\gdef\abstract@cs{…}`, JINST.cls:820), which the class's title layout prints — the kernel is the
   // one source of the frontmatter, and a store the body would define is empty if it was undefined (state.rs, the
-  // dropped setter's internals; afthesis.cls:520).
+  // dropped setter's internals; afthesis.cls:520) — save a body store that now holds the argument (below).
   let mut kernel_stores = vec![T_CS!("\\@author"), T_CS!("\\@shortauthor")];
+  REPLAY_BODY_STORES.with(|c| *c.borrow_mut() = stores.iter().map(meaning_key).collect());
   kernel_stores.extend(stores);
   let saved: Vec<Option<Stored>> = kernel_stores.iter().map(lookup_meaning).collect();
+  // …and the boxes the body itself fills (`filled_boxes`): memo-l.cls:79-84's begin code `\global\setbox\abstractbox=
+  // \vtop\bgroup…` keeps its layout of the abstract, which its `\tableofcontents` (:89-93) prints when the box is not
+  // void — a second abstract, of the header alone (1409.3892)
+  let boxes = match lookup_meaning(&dropped) {
+    Some(Stored::Expandable(d)) => match d.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => filled_boxes(body.unlist_ref()),
+      _ => Vec::new(),
+    },
+    _ => Vec::new(),
+  };
+  let saved_boxes: Vec<Option<Stored>> = boxes.iter().map(|key| lookup_value(key)).collect();
   // …and the lock's own record of the class's definition: a `\let\abstract…` or `\def\author…` the body itself
   // makes is refused again, globally (state.rs), and would replace it.
   let lock_keys = [s!("\\{name}:redefined"), s!("\\{name}:redefined@nargs")];
   let lock_values: Vec<Option<Stored>> = lock_keys.iter().map(|k| lookup_value(k)).collect();
   let dropped_meaning = lookup_meaning(&dropped);
   let depth = get_frame_depth();
+  // the body's own group, inside the replay's (`\lx@replay@capture@changes`)
+  AssignValue!("lx_replay_body_depth" => Stored::Int(depth as i64 + 2), Some(Scope::Global));
   AssignValue!("lx_replaying_class_setter" => true, Some(Scope::Global));
   let hold = util::logger::DiagnosticsHold::begin();
   let journal = begin_assignment_journal();
@@ -2125,19 +3466,45 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
     expire_local_box_list();
     Ok(())
   });
+  let unwound = if begin_code && unwound.is_ok() {
+    digest(Tokens!(T_CS!("\\lx@replay@counts"))).map(|_| ())
+  } else {
+    unwound
+  };
   // An erring replay is undone, a clean one kept. A rollback that cannot apply (the body closed a frame of the
   // document's, or the journal was not open) leaves the replay's assignments, so its diagnostics stay too.
   let mut undone = false;
+  let mut assigned: Vec<(SymStr, Option<Stored>)> = Vec::new();
   if let Some(journal) = journal {
     if result.is_ok() && hold.errors_raised() > 0 {
       undone = journal.rollback();
     } else {
+      assigned = journal.assigned(TableName::Meaning);
       journal.keep();
     }
   }
   // groups left open, or groups of the document the body closed (a stray `\egroup` closing the replay's group
   // early, whose own `}` then closed the document's `{frontmatter}`)
   let unbalanced = get_frame_depth() as isize - depth as isize;
+  // What a clean replay first defined locally (a command or switch it creates; not its changes to what was defined
+  // already — pos.sty's `\seq_put_right:Nn` on the class's author seq, which the deposited title page would print a
+  // second time: perfect_kernel_batch56::class_maketitle_replay_that_errors_is_dropped) is made again where the call
+  // stands, before the stores are put back below:
+  // MastersDoctoralThesis.cls:218 `\DeclareDocumentCommand{\author}{m}{\newcommand{\authorname}{#1}…}`, which the
+  // document prints (2603.21941, 2312.06150, 2011.02318: "I, \authorname, declare…"), revtex4.cls's `\@author@def`
+  // `\@booleanfalse\collaboration@sw` (`\let`), which its `\affiliation` tests (qm2008_abs.cls, snp.cls, jasatex.cls:
+  // 0805.2253, 0806.0481, 0805.4759). Meanings only; none of an erring or unbalanced replay.
+  let captured = REPLAY_CAPTURED.with(|c| std::mem::take(&mut *c.borrow_mut()));
+  let mut held: Vec<SymStr> = Vec::new();
+  if result.is_ok() && hold.errors_raised() == 0 && unbalanced == 0 {
+    for (key, meaning) in captured {
+      if keep_out.contains(&key) || (begin_code && is_font_state(key)) {
+        continue;
+      }
+      assign_internal(TableName::Meaning, key, meaning, Some(Scope::Local));
+      held.push(key);
+    }
+  }
   AssignValue!("lx_replaying_class_setter" => false, Some(Scope::Global));
   for (key, value) in lock_keys.iter().zip(lock_values) {
     if let Some(value) = value {
@@ -2149,10 +3516,38 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   {
     assign_meaning(&dropped, meaning, Some(Scope::Global));
   }
+  for (key, value) in boxes.iter().zip(saved_boxes) {
+    assign_value(key, value.unwrap_or(Stored::None), Some(Scope::Global));
+  }
+  // The class's own record of the field's value — a list the body appended the call's argument to, vmsta.cls:296-315's
+  // `\g@addto@macro\@@@authors{…\name@m@front{#2}…}`, which its `\maketitle` (:534-545, its `\appto` at :691) prints —
+  // is the frontmatter's field (`note_replay_records`): the title-page deposit and replay take out what the replay added,
+  // as they null `\@author` (1506.02940 printed its author and affiliation a second time), and keep what other code
+  // added to the same list. Read before the stores are put back: a store the body itself defines that now holds the
+  // argument is such a record too, and stays set, as TeX leaves it — a document's `\renewcommand\author[1]{\gdef
+  // \myauth{#1}…}` read back in the body ("Written by \myauth.", silent-loss #7) — while the title-page code reads it
+  // as empty. The kernel's own `\@author`/`\@shortauthor` are the frontmatter's and are put back.
+  let kernel_keys = [
+    meaning_key(&kernel_stores[0]),
+    meaning_key(&kernel_stores[1]),
+  ];
+  let recorded = if !begin_code && result.is_ok() && hold.errors_raised() == 0 {
+    note_replay_records(&assigned, &arg, &kernel_keys)
+  } else {
+    Vec::new()
+  };
   for (cs, meaning) in kernel_stores.iter().zip(saved) {
+    if recorded.contains(&meaning_key(cs)) {
+      continue;
+    }
     // only what the body changed past its group (a global `\gdef`/`\xdef`): a store a group of the document holds
-    // locally stays local (iosart2x's `\author`s inside `{frontmatter}`)
-    if same_meaning(lookup_meaning(cs).as_ref(), meaning.as_ref()) {
+    // locally stays local (iosart2x's `\author`s inside `{frontmatter}`), and so does what a begin code bound in its
+    // own groups, held in the environment's above — its extent is the body's, as in TeX (`\def\abstracthead{X}`,
+    // which the body prints). A begin code's `\gdef` is still put back: SolarPhysics.cls:909's `\gdef\@abstract{…}`,
+    // which its title layout prints (1209.2208).
+    if same_meaning(lookup_meaning(cs).as_ref(), meaning.as_ref())
+      || (begin_code && held.contains(&meaning_key(cs)))
+    {
       continue;
     }
     let meaning = meaning.or_else(|| {
@@ -2251,7 +3646,7 @@ fn dropped_class_setter(name: &str) -> Option<(bool, Vec<Token>)> {
 /// cmpj/template, schooldocs-examples, 2301.10468). Not while such a call runs: a class command that calls the kernel's
 /// (`\let\origtitle\title`, beamerbasetitle.sty:69-70, authoraftertitle.sty:11-23) reaches the kernel's, once.
 /// OXIDIZED_DESIGN #526.
-fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
+fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens, kernel: &Tokens) -> Option<Tokens> {
   let (tag, role) = match name {
     "title" => ("ltx:title", ""),
     "author" => ("ltx:creator", "author"),
@@ -2269,10 +3664,21 @@ fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
     return None;
   }
   dropped_class_setter(name)?;
-  if class_command_stores(name) {
+  // A class command that stores what it is given is the class's frontmatter setter: run in place, kept when it prints
+  // and dropped whole when it does not (`sealed_storing_run`). Inside the document's `{titlepage}`, a storing `\title`
+  // is the cover's (`titlepage_class_call`).
+  let stores = class_command_stores(name);
+  if stores && name == "title" && lookup_bool("lx_titlepage_cover") {
     return None;
   }
-  let mut call = vec![T_CS!("\\lx@sealed@class@run"), T_BEGIN!()];
+  let mut call = vec![
+    T_CS!(if stores {
+      "\\lx@sealed@storing@run"
+    } else {
+      "\\lx@sealed@class@run"
+    }),
+    T_BEGIN!(),
+  ];
   call.extend(mouth::tokenize(TeXString::assembled(name.to_string())).unlist());
   call.push(T_END!());
   call.push(T_BEGIN!());
@@ -2281,7 +3687,101 @@ fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
   call.push(T_BEGIN!());
   call.extend(arg.unlist_ref().iter().copied());
   call.push(T_END!());
+  if stores {
+    call.extend(kernel.unlist_ref().iter().copied());
+  }
   Some(Tokens::new(call))
+}
+
+/// [`sealed_class_call`]'s run of a class command that stores what it is given (`class_command_stores`), before the
+/// kernel's part, which the seal keeps out of the frontmatter. A class `\author`/`\title` that also prints where it
+/// stands — a collection's per-contribution `\author` (`\gdef\@author{#1}…\par\noindent\textit{#1}\par`, its own
+/// `\maketitle` leaving `\author` defined) — shows text pdflatex shows (silent-loss #8): it runs in place and its
+/// output is kept, as the in-place supplement abstract is, while the stores the frontmatter owns — the kernel's fields
+/// and the raw class's stores K11 hands to the frontmatter (frontmatter_stores.rs `frontmatter_owned_stores`) — are
+/// put back as they were, so the call does not replace the placed frontmatter (user ruling 2026-10-09: a supplement's
+/// frontmatter does not replace the paper's; printing its text in place is right). Its other assignments stay, as in
+/// pdflatex. One that prints nothing is the class's frontmatter setter, a supplement's (imsart.sty:1958,
+/// schooldocs.sty:70; `perfect_kernel_batch65a`): run journaled and undone whole (`AssignmentJournalGuard::rollback`),
+/// its diagnostics discarded. When no journal can open (one is already open), a run that prints is kept as above and
+/// one that prints nothing keeps its other assignments, said in an Info, the frontmatter's stores put back too. A store
+/// that was undefined is put back undefined. The kernel's part that follows does not
+/// replay the class's command a second time (`lx_sealed_class_ran`). OXIDIZED_DESIGN_DIVERGENCES #526.
+fn sealed_storing_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested>> {
+  let owned = crate::frontmatter_stores::frontmatter_owned_stores();
+  let saved: Vec<Option<Stored>> = owned.iter().map(lookup_meaning).collect();
+  let journal = begin_assignment_journal();
+  let hold = util::logger::DiagnosticsHold::begin();
+  let run = run_dropped_class_command(name, &opt, &arg);
+  let printed = matches!(&run, Ok(Some(digested)) if typesets_content(digested));
+  // The frontmatter's own stores as they were — a store that was undefined is undefined again, as `\@ifundefined` then
+  // reads it.
+  let put_back = |saved: Vec<Option<Stored>>| {
+    for (cs, meaning) in owned.iter().zip(saved) {
+      if !same_meaning(lookup_meaning(cs).as_ref(), meaning.as_ref()) {
+        assign_meaning(cs, meaning.unwrap_or(Stored::None), Some(Scope::Global));
+      }
+    }
+  };
+  if !printed {
+    // An error of the run itself propagates with its diagnostics: a Fatal stays Fatal, its record and the status with
+    // it (discarding the hold would restore the report's counts too).
+    if run.is_err() {
+      hold.commit();
+      return run.map(|_| Vec::new());
+    }
+    let journaled = journal.is_some();
+    let undone = journal.is_some_and(|journal| journal.rollback());
+    if undone {
+      hold.discard();
+    } else {
+      hold.commit();
+      // (not undone: its other assignments stay, but not over the paper's frontmatter)
+      put_back(saved);
+    }
+    if undone {
+      Info!(
+        "frontmatter",
+        "sealed",
+        s!(
+          "\\{name} after the document body began is dropped: the class's own \\{name} only stores it (a frontmatter setter, a supplement's)"
+        )
+      );
+    } else {
+      Info!(
+        "frontmatter",
+        "sealed",
+        s!(
+          "\\{name} after the document body began prints nothing: the class's own \\{name} ran{}",
+          if journaled {
+            " and could not be undone (its groups changed)"
+          } else {
+            ", its assignments kept (no journal could open)"
+          }
+        )
+      );
+    }
+    return Ok(Vec::new());
+  }
+  if let Some(journal) = journal {
+    journal.keep();
+  }
+  hold.commit();
+  let digested = run?;
+  put_back(saved);
+  assign_value(
+    "lx_sealed_class_ran",
+    Stored::String(pin(name)),
+    Some(Scope::Global),
+  );
+  Info!(
+    "frontmatter",
+    "sealed",
+    s!(
+      "\\{name} after the document body began runs the class's own \\{name} in place: its text stays there, the frontmatter keeps the paper's"
+    )
+  );
+  Ok(digested.into_iter().collect())
 }
 
 /// [`sealed_class_call`]'s run: the class's `\lx@dropped@<name>[opt]{arg}`, digested where the call stands, its output
@@ -2291,23 +3791,9 @@ fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
 /// `SectionalFrontMatter.class`), the call's optional argument, or the class's default for it (RecipeBook's
 /// `O{Author: }`), as its label. OXIDIZED_DESIGN #526, #527.
 fn sealed_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested>> {
-  let Some((takes_opt, _)) = dropped_class_setter(name) else {
+  let Some(digested) = run_dropped_class_command(name, &opt, &arg)? else {
     return Ok(Vec::new());
   };
-  let mut call = vec![T_CS!(s!("\\lx@dropped@{name}"))];
-  if takes_opt && !opt.is_empty() {
-    call.push(T_OTHER!("["));
-    call.extend(opt.unlist_ref().iter().copied());
-    call.push(T_OTHER!("]"));
-  }
-  call.push(T_BEGIN!());
-  call.extend(arg.unlist_ref().iter().copied());
-  call.push(T_END!());
-  AssignValue!("lx_sealed_class_call" => true, Some(Scope::Global));
-  AssignValue!("lx_sealed_class_call_reached_kernel" => false, Some(Scope::Global));
-  let digested = digest(Tokens::new(call));
-  AssignValue!("lx_sealed_class_call" => false, Some(Scope::Global));
-  let digested = digested?;
   let in_flow = typesets_content(&digested);
   // A class command that reached the kernel's (through a helper the one-level look did not follow, `\@author@line`
   // calling a saved `\origauthor`) handed the author to the frontmatter, which the seal dropped: a store, not page
@@ -2356,6 +3842,158 @@ fn sealed_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested
     );
   }
   Ok(out)
+}
+
+/// The class's own refused `\<name>` (`\lx@dropped@<name>[opt]{arg}`), digested where the call stands, its output
+/// kept; `None` without a class definition a call can be handed to ([`dropped_class_setter`]). While it runs, a call of
+/// the kernel's command (a saved `\let\origtitle\title`) reaches the kernel's and is recorded
+/// (`lx_sealed_class_call_reached_kernel`).
+fn run_dropped_class_command(name: &str, opt: &Tokens, arg: &Tokens) -> Result<Option<Digested>> {
+  let Some((takes_opt, _)) = dropped_class_setter(name) else {
+    return Ok(None);
+  };
+  let mut call = vec![T_CS!(s!("\\lx@dropped@{name}"))];
+  if takes_opt && !opt.is_empty() {
+    call.push(T_OTHER!("["));
+    call.extend(opt.unlist_ref().iter().copied());
+    call.push(T_OTHER!("]"));
+  }
+  call.push(T_BEGIN!());
+  call.extend(arg.unlist_ref().iter().copied());
+  call.push(T_END!());
+  AssignValue!("lx_sealed_class_call" => true, Some(Scope::Global));
+  AssignValue!("lx_sealed_class_call_reached_kernel" => false, Some(Scope::Global));
+  let digested = digest(Tokens::new(call));
+  AssignValue!("lx_sealed_class_call" => false, Some(Scope::Global));
+  Ok(Some(digested?))
+}
+
+/// A `\title` called inside the document's `{titlepage}` (68t, title study rule R2): when a class, style or the
+/// document itself `\def`s a `\title` that typesets its argument where it stands instead of keeping it — cernart.cls:217
+/// `\def\title#1{\vskip1em\begin{center}\normalsize\bf#1\end{center}\vskip1.5em}`, asp2006.sty:157, pdproc.sty:61, a
+/// document's `\def\title#1{\begin{center}{\large #1}\end{center}}` (gr-qc9404034.tex:96) — the lock refuses the
+/// definition (state.rs, `\lx@dropped@title`) and the kernel keeps the title for the frontmatter. Outside a titlepage
+/// the frontmatter's title, placed first, is the one the PDF prints there. Inside one, pdflatex prints the title on the
+/// cover, and the HTML shows the cover in place of the document's `<ltx:title>`
+/// (LaTeXML-structure-xhtml.xsl:374-375, Perl's :358-359: a document title with an `ltx:titlepage` sibling is not
+/// displayed), so with only the kernel's call the HTML shows no title at all (0904.2708 cernart, gr-qc9404034; Perl the
+/// same). The call stands for what the document's machinery prints: the class's own `\title` runs at the call, its
+/// output kept on the cover ([`titlepage_class_run`]), and the kernel's still keeps the title (metadata). Whatever
+/// else the class's `\title` does: one that only stores prints nothing at its call and is undone, one that stores and
+/// prints (`\gdef\@title{#1}\centerline{#1}`) prints. Only `\title`: the XSLT hides no other field beside a titlepage, so a refused printing `\author` or `\address`
+/// (gr-qc9404034.tex:97-98) would print a second copy of the author the document's frontmatter shows. Not inside a
+/// `\maketitle` deposit's titlepage (`lx_depositing_frontmatter_fields`, no `ltx:titlepage`) and not while a class
+/// command runs. OXIDIZED_DESIGN #629.
+fn titlepage_class_call(name: &str, opt: &Tokens, arg: &Tokens, kernel: &Tokens) -> Option<Tokens> {
+  if name != "title"
+    || !lookup_bool("lx_titlepage_cover")
+    || !lookup_bool(&s!("\\{name}:redefined"))
+    || lookup_bool("lx_sealed_class_call")
+    || lookup_bool("lx_replaying_class_setter")
+  {
+    return None;
+  }
+  dropped_class_setter(name)?;
+  let mut call = vec![T_CS!("\\lx@titlepage@class@run"), T_BEGIN!()];
+  call.extend(mouth::tokenize(TeXString::assembled(name.to_string())).unlist());
+  call.push(T_END!());
+  call.push(T_BEGIN!());
+  call.extend(opt.unlist_ref().iter().copied());
+  call.push(T_END!());
+  call.push(T_BEGIN!());
+  call.extend(arg.unlist_ref().iter().copied());
+  call.push(T_END!());
+  call.push(T_CS!("\\lx@titlepage@kernel"));
+  call.push(T_BEGIN!());
+  call.extend(kernel.unlist_ref().iter().copied());
+  call.push(T_END!());
+  Some(Tokens::new(call))
+}
+
+/// What the kernel's copy of a `\title` argument owns, gobbled while the class's own `\title` prints it on the cover
+/// ([`titlepage_class_run`]): its notes, marks, labels and index entries — the argument is digested twice, and the
+/// second digestion's `\label` put the title's label on `<ltx:document>` (a `\ref` to it then rendered the title, where
+/// pdflatex prints nothing) and its `\thanks` a second `ltx:pubnote` (review probe p5). The same list the `\maketitle`
+/// deposits (`\let\thanks\@gobble`) and the setter replay (`replay_class_setter`) gobble, with `\index`.
+const COVER_PRINT_GOBBLED: [(&str, &str); 5] = [
+  ("\\thanks", "\\@gobble"),
+  ("\\footnote", "\\@gobble"),
+  ("\\footnotemark", "\\relax"),
+  ("\\label", "\\@gobble"),
+  ("\\index", "\\@gobble"),
+];
+
+/// [`titlepage_class_call`]'s run: the class's own `\title`, printed on the cover where the call stands, between the
+/// cover-title marks (`\lx@cover@title@begin`/`@end`, which `drop_cover_title_ink` reads when the cover stops being
+/// one), with the argument's side effects gobbled ([`COVER_PRINT_GOBBLED`]). A `\title` that typesets nothing (a
+/// frontmatter setter: dp_delphi.cls `\def\title#1{\xdef\@title{\@title \par #1}}`, hep-ex0404013) shows nothing at
+/// its call, so the run is undone, its assignments with it (`AssignmentJournalGuard::rollback`) and its diagnostics
+/// held and discarded: such a setter keeps its value only through the kernel's `\title`, as it does outside a
+/// titlepage. One that both stores and prints (`\def\title#1{\gdef\@title{#1}\centerline{#1}}`, review probe p2;
+/// cernphprep.cls:285's CERN header and title, `\gdef\Title{#1}`: 1205.3963, 2112.00610) keeps
+/// what it printed and stored, as in pdflatex; the kernel's part then sets the same `\@title`. A run that called the
+/// kernel's own `\title` (a saved `\let\oldtitle\title`) handed the title to the frontmatter: kept, and the kernel's
+/// part is not run again (`\lx@titlepage@kernel`). When no journal can open (one is already open), a `\title` that may
+/// store ([`class_command_stores`]) is not run, since it could not be undone.
+fn titlepage_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested>> {
+  let journal = begin_assignment_journal();
+  if journal.is_none() && class_command_stores(name) {
+    return Ok(Vec::new());
+  }
+  let hold = util::logger::DiagnosticsHold::begin();
+  let gobbled: Vec<(Token, Option<Stored>)> = COVER_PRINT_GOBBLED
+    .iter()
+    .map(|(cs, _)| (T_CS!(*cs), lookup_meaning(&T_CS!(*cs))))
+    .collect();
+  for (cs, to) in COVER_PRINT_GOBBLED {
+    let_definition(&T_CS!(cs), &T_CS!(to), None);
+  }
+  let run = run_dropped_class_command(name, &opt, &arg);
+  for (cs, meaning) in gobbled {
+    assign_meaning(&cs, meaning.unwrap_or(Stored::None), None);
+  }
+  let digested = match run {
+    Ok(Some(digested)) => digested,
+    other => {
+      hold.commit();
+      if let Some(journal) = journal {
+        journal.keep();
+      }
+      return other.map(|_| Vec::new());
+    },
+  };
+  let reached_kernel = lookup_bool("lx_sealed_class_call_reached_kernel");
+  if !typesets_content(&digested) && !reached_kernel {
+    let undone = journal.is_some_and(|journal| journal.rollback());
+    // the run reached no kernel `\title`, whatever an earlier call left in the flag the rollback restored
+    AssignValue!("lx_sealed_class_call_reached_kernel" => false, Some(Scope::Global));
+    if undone {
+      hold.discard();
+    } else {
+      hold.commit();
+    }
+    return Ok(Vec::new());
+  }
+  if let Some(journal) = journal {
+    journal.keep();
+  }
+  hold.commit();
+  // The class's `\title` ran here and stays run: the kernel's part that follows does not replay it a second time
+  // (`replay_dropped_class_code`; a counter it steps would count twice, int26 review p10).
+  AssignValue!("lx_titlepage_class_ran" => true, Some(Scope::Global));
+  if !typesets_content(&digested) {
+    return Ok(Vec::new());
+  }
+  Info!(
+    "frontmatter",
+    "titlepage",
+    s!(
+      "\\{name} inside {{titlepage}} runs the class's own \\{name} there, which prints it on the cover; the kernel keeps it as the document's metadata"
+    )
+  );
+  let begin = digest(Tokens!(T_CS!("\\lx@cover@title@begin")))?;
+  let end = digest(Tokens!(T_CS!("\\lx@cover@title@end")))?;
+  Ok(vec![begin, digested, end])
 }
 
 /// The default of the optional argument of the class's own `\<name>` (`\lx@dropped@<name>`): a `\newcommand`'s
@@ -2954,6 +4592,352 @@ const SECTIONAL_UNITS: [&str; 9] = [
   "ltx:slide",
 ];
 
+/// Whether code ending in `tokens` may read what follows it: its final command — the last token, or the one before its
+/// trailing braced groups and `\csname…\endcsname` operands, `\expandafter`s passed over — is a macro (what it reads
+/// cannot be told from here: environ's `\NewEnviron` begin code `\expandafter\Collect@Body\csname env@…@parse
+/// \endcsname`, wiley-article.cls:446-489, 1706.00599, defines its reader as it runs) or takes arguments. A begin code
+/// that does would read the environment's body, which a replay does not have: it is not replayed (smfart.cls:552-558's
+/// `\begin{@genabstract}{abstract}`, whose `\@getgenabstext#1\end #2` scans the body). One that ends in a
+/// primitive taking none (frontiersFPHY.cls:523 `\par`, memo-l.cls:84 `\indent`, lipics `\ignorespaces`) is: a reader
+/// inside the code reads the code's own rest (frontiersFPHY.cls:521's `\fontfamily{\sfdefault}`).
+pub(crate) fn tail_reads_ahead(tokens: &[Token]) -> bool {
+  let mut i = tokens.len();
+  let next = |i: &mut usize| -> Option<Token> {
+    while *i > 0 {
+      *i -= 1;
+      if tokens[*i].get_catcode() != Catcode::SPACE {
+        return Some(tokens[*i]);
+      }
+    }
+    None
+  };
+  let Some(mut last) = next(&mut i) else {
+    return false;
+  };
+  // the trailing operands — braced groups, `\csname…\endcsname` runs — back to the command they follow
+  loop {
+    if last.get_catcode() == Catcode::END {
+      let mut level = 1usize;
+      while level > 0 {
+        let Some(t) = next(&mut i) else {
+          return false;
+        };
+        match t.get_catcode() {
+          Catcode::END => level += 1,
+          Catcode::BEGIN => level -= 1,
+          _ => {},
+        }
+      }
+    } else if last.get_catcode() == Catcode::CS && last.with_cs_name(|n| n == "\\endcsname") {
+      loop {
+        let Some(t) = next(&mut i) else {
+          return false;
+        };
+        if t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == "\\csname") {
+          break;
+        }
+      }
+    } else {
+      break;
+    }
+    let Some(t) = next(&mut i) else {
+      return false;
+    };
+    last = t;
+  }
+  while last.get_catcode() == Catcode::CS && last.with_cs_name(|n| n == "\\expandafter") {
+    let Some(t) = next(&mut i) else {
+      return false;
+    };
+    last = t;
+  }
+  if !last.get_catcode().is_active_or_cs() {
+    return false;
+  }
+  // a definition's target is no command the code runs: `\def\msccodes{…}` (cmmse2008.cls:146, 0806.4576) ends in
+  // `\def`, which reads its operands in the code, as `\renewcommand\pickup{…}` does; nor is `\let`'s value
+  // (`\let\savedpickup\pickup`, `\let\savedpickup=\pickup`)
+  let is_cs = |t: &Token, names: &[&str]| {
+    t.get_catcode() == Catcode::CS && t.with_cs_name(|n| names.contains(&n))
+  };
+  let before = next(&mut i);
+  if before.is_some_and(|before| {
+    is_cs(&before, &[
+      "\\def",
+      "\\gdef",
+      "\\edef",
+      "\\xdef",
+      "\\newcommand",
+      "\\renewcommand",
+      "\\providecommand",
+      "\\DeclareRobustCommand",
+    ])
+  }) {
+    return false;
+  }
+  let target = match before {
+    Some(before) if before.get_catcode() == Catcode::OTHER && before.to_string() == "=" => {
+      next(&mut i)
+    },
+    before => before,
+  };
+  if target.is_some_and(|t| t.get_catcode().is_active_or_cs())
+    && next(&mut i).is_some_and(|t| is_cs(&t, &["\\let"]))
+  {
+    return false;
+  }
+  match lookup_meaning(&last) {
+    Some(Stored::Expandable(_)) => true,
+    _ => lookup_definition(&last).ok().flatten().is_some_and(|d| {
+      d.get_parameters()
+        .is_some_and(|p| !p.get_parameters().is_empty())
+    }),
+  }
+}
+
+/// Whether code `tokens` calls a macro whose parameter text has a delimiter that does not occur later in the code, so
+/// the call reads on past the code's end: wds10.sty:527-531's `\abstract` ends `\pickup\ignorespaces`, and `\pickup`
+/// (:539 `\long\def\pickup#1\end#2`) reads the environment's body up to its `\end` (0910.4848), which a replay does
+/// not have. Only the code's own calls count, the tokens outside braces: a braced group is an argument or a body
+/// (`\edef\x{\expandafter\strip@prefix\meaning\relax}`). A definition's operands are no calls: the target and parameter
+/// text of `\def`/`\gdef`/`\edef`/`\xdef` (`\def\pickup#1\end#2{…}` in the code), both of `\let`'s (`\let\saved\pickup`),
+/// `\futurelet`'s target and the command a `\newcommand`/`\renewcommand`/`\providecommand`/`\DeclareRobustCommand`
+/// defines. Nor is a call whose argument the code's expansion produces: one after `\expandafter`
+/// (`\expandafter\rem@pt\the\dimen@`), or followed by `\meaning`, `\the`, `\string` or another primitive whose
+/// expansion is text the code does not show (`\strip@prefix`'s `>` comes from `\meaning`).
+/// The limit: a delimiter a macro of the code expands to (`\pickup\foo`, `\foo` holding `\end`) is not seen, so
+/// such a code is refused, which only leaves it unreplayed, as Perl never replays a refused code.
+fn delimiter_reads_ahead(tokens: &[Token]) -> bool {
+  const DEFINERS: [&str; 4] = ["\\def", "\\gdef", "\\edef", "\\xdef"];
+  const COMMAND_DEFINERS: [&str; 4] = [
+    "\\newcommand",
+    "\\renewcommand",
+    "\\providecommand",
+    "\\DeclareRobustCommand",
+  ];
+  // primitives whose expansion is text the code does not show (tex.web §468 `conv_toks`, §465 `the_toks`)
+  const PRODUCERS: [&str; 10] = [
+    "\\meaning",
+    "\\the",
+    "\\string",
+    "\\detokenize",
+    "\\unexpanded",
+    "\\number",
+    "\\romannumeral",
+    "\\jobname",
+    "\\fontname",
+    "\\csname",
+  ];
+  let is_cs = |t: &Token, names: &[&str]| {
+    t.get_catcode() == Catcode::CS && t.with_cs_name(|n| names.contains(&n))
+  };
+  let mut depth = 0usize;
+  let mut i = 0;
+  // the next token outside braces at or after `i`, skipping spaces
+  let next_operand = |mut i: usize| {
+    while tokens
+      .get(i)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      i += 1;
+    }
+    i
+  };
+  let mut after_expandafter = false;
+  while let Some(t) = tokens.get(i) {
+    let catcode = t.get_catcode();
+    if catcode == Catcode::BEGIN {
+      depth += 1;
+    } else if catcode == Catcode::END {
+      depth = depth.saturating_sub(1);
+    }
+    if depth > 0
+      || catcode == Catcode::BEGIN
+      || catcode == Catcode::END
+      || catcode == Catcode::SPACE
+    {
+      i += 1;
+      continue;
+    }
+    if is_cs(t, &DEFINERS) {
+      // the target, then the parameter text up to the body's `{`
+      i = next_operand(i + 1) + 1;
+      while tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode() != Catcode::BEGIN)
+      {
+        i += 1;
+      }
+      after_expandafter = false;
+      continue;
+    }
+    if is_cs(t, &["\\let"]) {
+      // the target, an optional `=` and one optional space, the value
+      i = next_operand(i + 1) + 1;
+      i = next_operand(i);
+      if tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.to_string() == "=")
+      {
+        i = next_operand(i + 1);
+      }
+      i += 1;
+      after_expandafter = false;
+      continue;
+    }
+    if is_cs(t, &["\\futurelet"]) || is_cs(t, &COMMAND_DEFINERS) {
+      i = next_operand(i + 1);
+      if tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.to_string() == "*")
+      {
+        i = next_operand(i + 1);
+      }
+      if tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode().is_active_or_cs())
+      {
+        i += 1;
+      }
+      after_expandafter = false;
+      continue;
+    }
+    let call = t.get_catcode().is_active_or_cs() && !after_expandafter;
+    after_expandafter = is_cs(t, &["\\expandafter"]);
+    i += 1;
+    if !call {
+      continue;
+    }
+    let Some(Stored::Expandable(definition)) = lookup_meaning(t) else {
+      continue;
+    };
+    let Some(parameters) = definition.get_parameters() else {
+      continue;
+    };
+    let rest = &tokens[i..];
+    if rest.iter().any(|t| is_cs(t, &PRODUCERS)) {
+      continue;
+    }
+    if parameters.get_parameters().iter().any(|p| {
+      p.name == pin!("Until")
+        && p
+          .extra
+          .first()
+          .and_then(|delimiter| delimiter.unlist_ref().first())
+          .is_some_and(|first| !rest.contains(first))
+    }) {
+      return true;
+    }
+  }
+  false
+}
+
+/// The box registers a dropped body `\setbox`es itself (`\global\setbox\abstractbox=\vtop\bgroup`, memo-l.cls:80), as
+/// their value keys (`box<n>`), the register read as `\setbox` reads it: a store, as [`defined_stores`]'s are.
+fn filled_boxes(body: &[Token]) -> Vec<String> {
+  let mut boxes: Vec<String> = Vec::new();
+  for (i, t) in body.iter().enumerate() {
+    if t.get_catcode() != Catcode::CS || !t.with_cs_name(|n| n == "\\setbox") {
+      continue;
+    }
+    // (a register, as `\newbox`'s `\chardef` makes: a scratch `\setbox0` or an undefined name is no store)
+    let Some(target) = body.get(i + 1).filter(|t| {
+      t.get_catcode() == Catcode::CS && matches!(lookup_meaning(t), Some(Stored::Register(_)))
+    }) else {
+      continue;
+    };
+    let number = reading_from_mouth(Mouth::default(), || {
+      unread(Tokens!(*target));
+      read_number()
+    });
+    if let Ok(number) = number {
+      let key = s!("box{}", number.value_of());
+      if !boxes.contains(&key) {
+        boxes.push(key);
+      }
+    }
+  }
+  boxes
+}
+
+/// After a raw class or package loaded (frontmatter_stores.rs `\lx@class@loaded@raw`, `\lx@package@loaded@raw`): the
+/// `\@author` it left, kept ([`CLASS_AUTHOR_READER`]) for the speculative run of the class's whole title page
+/// ([`title_page_print_tokens`]), when it is a reader a raw file defined — a parameterless macro whose body reads a
+/// control sequence a raw file, a binding or the document defined, or a token register — and the file's own `\author`
+/// (refused by the lock, `\lx@dropped@author`, or its own) does not define `\@author` itself
+/// (`\def\author#1{\gdef\@author{#1}}` keeps the names there, which the kernel's value is). The kernel's `\author`
+/// (sect05.rs, Perl latex_constructs.pool.ltxml:1076-1079 `\def\@author{#2}`) or a binding's (authblk_sty.rs) then
+/// replaces it, though it is the only code that prints the class's affiliation list: copernicus.cls:1329-1352
+/// `\renewcommand\@author{\AB@names\AB@affillist}` (0712.1312, 1401.4706), oasics.cls:628-635 under the authblk
+/// binding (1709.00722). A default value — `\def\@author{}`, LaTeX's "No \author given" warning — reads nothing and is
+/// not kept. The unclaimed-text net's (OXIDIZED_DESIGN_DIVERGENCES #953).
+pub(crate) fn keep_class_author_reader() {
+  let author = T_CS!("\\@author");
+  let Some(Stored::Expandable(d)) = lookup_meaning(&author) else {
+    return;
+  };
+  if d.get_origin() != DefinitionOrigin::File
+    || d
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return;
+  }
+  // (a raw file's `\@author` made since the reader was kept, which is no reader, replaces it: the title page prints that
+  // one — review rev98c N2; the same definition, a later file's load that left it, keeps it)
+  if let Some(Stored::Expandable(kept)) = lookup_value(CLASS_AUTHOR_READER)
+    && !Rc::ptr_eq(&kept, &d)
+  {
+    assign_value(CLASS_AUTHOR_READER, Stored::None, Some(Scope::Global));
+  }
+  let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+    return;
+  };
+  let reads = body.unlist_ref().iter().any(|t| {
+    t.get_catcode() == Catcode::CS
+      && match lookup_meaning(t) {
+        Some(Stored::Expandable(e)) => matches!(
+          e.get_origin(),
+          DefinitionOrigin::File | DefinitionOrigin::Binding | DefinitionOrigin::Document
+        ),
+        Some(Stored::Register(r)) => matches!(r.register_type, RegisterType::Tokens),
+        _ => false,
+      }
+  });
+  if !reads {
+    return;
+  }
+  for setter in ["\\lx@dropped@author", "\\author"] {
+    if let Some(Stored::Expandable(setter)) = lookup_meaning(&T_CS!(setter))
+      && setter.get_origin() == DefinitionOrigin::File
+      && let Some(ExpansionBody::Tokens(setter)) = setter.get_expansion()
+      && defined_stores(setter.unlist_ref()).contains(&author)
+    {
+      return;
+    }
+  }
+  assign_value(
+    CLASS_AUTHOR_READER,
+    Stored::Expandable(d),
+    Some(Scope::Global),
+  );
+}
+
+/// The state holding the class's `\@author` reader ([`keep_class_author_reader`]): a value, not a meaning, so the raw
+/// files' code (frontmatter_stores.rs `ClassReaders::survey`) does not read it as one more macro of theirs.
+pub(crate) const CLASS_AUTHOR_READER: &str = "lx_class_author_reader";
+
+/// The token body of the class's `\@author` reader ([`keep_class_author_reader`]), if one was kept.
+pub(crate) fn class_author_reader_body() -> Option<Tokens> {
+  match lookup_value(CLASS_AUTHOR_READER) {
+    Some(Stored::Expandable(d)) => match d.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+      _ => None,
+    },
+    _ => None,
+  }
+}
+
 /// The control sequences a body defines with `\def`, `\gdef`, `\edef` or `\xdef` (the targets the lock's drop gives an
 /// empty definition, state.rs).
 fn defined_stores(body: &[Token]) -> Vec<Token> {
@@ -3018,5 +5002,509 @@ fn dropped_maketitle_takes_options() -> bool {
       params.len() == 1 && params[0].name == pin!("Optional")
     }),
     _ => false,
+  }
+}
+
+/// The kernel's title fields and their setters as the title-page deposit and replay read them: empty (the frontmatter
+/// carries them), the setters only setting the field a class body reads (`\lx@deposit@setters`).
+const TITLE_PAGE_FIELDS: &str = r"\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters";
+
+/// The title-page deposit (`\lx@deposit@maketitle`): the class's `\@maketitle`, unless empty, in a group with the
+/// kernel's fields and the stores the frontmatter carries read as empty. `inject`: definitions made just before
+/// `\@maketitle` runs — a speculative run's sentinel values (frontmatter_stores.rs `before_title_page_runs`).
+pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
+  // (LaTeX's own, the kernel's marker alone: nothing to deposit, as `\@empty`)
+  if maketitle_is_kernels() {
+    return Tokens::default();
+  }
+  let mut tokens = mouth::tokenize_internal(TeXString::assembled(s!(
+    r"\ifx\@maketitle\@empty\else{{{TITLE_PAGE_FIELDS}\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+  )))
+  .unlist();
+  tokens.extend_from_slice(inject);
+  tokens.extend(mouth::tokenize_internal(r"\@maketitle}\fi").unlist());
+  Tokens::new(tokens)
+}
+
+/// The replay of the class's own refused `\maketitle` (`\lx@dropped@maketitle`, `\lx@deposit@maketitle`), in a group
+/// with the fields read as the deposit reads them, `\thanks` gobbled and `\@maketitle` relaxed (no second deposit),
+/// with the options the kernel `\maketitle` read for a `\maketitle[<options>]` body (`\lx@maketitle@withopt`). A call
+/// of the kernel's `\maketitle` from the body (`\let\@origmaketitle\maketitle` … `\def\maketitle{…\@origmaketitle}`)
+/// runs LaTeX's `\maketitle` there, whose `\@maketitle` the deposit already printed: its `\lx@maketitle@body` is
+/// empty too (a macro, which a `{titlepage}` in the body extends with its `\unwind@titlepage`), so the frontmatter is
+/// not made a second time (a second `\maketitle` superseding the first handed the
+/// class's keywords store on as a note beside the deposit's "Key words: lensing",
+/// `perfect_kernel_batch77i::unset_store_reads_as_the_title_page_tests_it`, replayed since #906).
+/// `None` when it is not replayed: a body that takes arguments other than those options, one whose vocabulary is not
+/// defined here (`body_vocabulary_is_defined`), or while a replay runs (not re-entrant). `inject`: as
+/// [`title_page_deposit_tokens`].
+pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
+  if lookup_bool("lx_depositing_class_maketitle") {
+    return None;
+  }
+  let argless = match lookup_meaning(&T_CS!("\\lx@dropped@maketitle")) {
+    Some(Stored::Expandable(ref d)) => {
+      (d.get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+        || dropped_maketitle_takes_options())
+        && match d.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => {
+            body_vocabulary_is_defined(body.unlist_ref(), "\\maketitle")
+          },
+          _ => false,
+        }
+    },
+    _ => false,
+  };
+  if !argless {
+    return None;
+  }
+  let mut replay = mouth::tokenize_internal(TeXString::assembled(s!(
+    r"{{{TITLE_PAGE_FIELDS}\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\let\lx@maketitle@body\@empty\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+  )))
+  .unlist();
+  replay.extend_from_slice(inject);
+  replay.push(T_CS!("\\lx@dropped@maketitle"));
+  if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
+    && let Some(ExpansionBody::Tokens(opts)) = o.get_expansion()
+  {
+    replay.extend(opts.unlist_ref().iter().copied());
+  }
+  replay.push(T_END!());
+  Some(Tokens::new(replay))
+}
+
+/// The class's whole title page as pdflatex runs it at `\maketitle`: the class's own refused `\maketitle` when it is
+/// replayable ([`title_page_replay_tokens`]'s conditions), else LaTeX's, which runs `\@maketitle` — the class's, or
+/// a stand-in for article.cls's (TL 2025 article.cls:236-251) printing `\@title`, `\@author` and `\@date` when no raw
+/// file defined one. A call of the kernel's `\maketitle` from the class's (`\let\@origmaketitle\maketitle`,
+/// sigplanconf.cls) is LaTeX's here too: its `\lx@maketitle@body` runs `\@maketitle`. The fields hold the document's
+/// values; labels and index entries are gobbled, while a footnote is typeset, and an author's note (`\thanks`,
+/// `\@firstofone` here) is typeset in place, as a store the class prints in one is printed (review probes `fn`: "KW:
+/// alpha, beta" in the title page's footnote;
+/// `fnt`: `\@author\thanks{KW: \@keywords}`). The stand-in runs `\@author` as article.cls:246-248 does, inside
+/// `\begin{tabular}[t]{c}…\end{tabular}`, with `\and` as the document has it: the kernel's is a whatsit printing no
+/// word, a word end for `ink_word_text` as latex.ltx's column break is in print (`Inst X\and Bob` is no word "XBob"); a
+/// class's or document's printing a word (`\def\and{\unskip\ und\ \ignorespaces}`) prints it; and a document's copy of
+/// latex.ltx's column break (`\end{tabular}\hskip 1em \@plus.17fil\begin{tabular}[t]{c}`) closes and reopens the
+/// stand-in's tabular, so every column after it stays in the print (FX25, FX25b: 1409.7028, 2103.04211; the `\relax`
+/// `\and` was let to left no material, so a loss beside it read as one unknown word, uncounted: RR1 gap 24,
+/// 2511.15315).
+/// `inject`: as [`title_page_deposit_tokens`].
+/// The stand-in stands where LaTeX's `\@maketitle` would: at the kernel's marker (`\lx@kernel@maketitle`), which a
+/// raw file's or the document's addition to it (`\g@addto@macro\@maketitle`) or `\let` copy keeps, so the addition
+/// runs as written around it; and in place of a `\@maketitle` no raw file, binding or document defined (TP1), or one
+/// the `\maketitle` that runs never runs ([`own_maketitle`], TP1b). A document's own `\@maketitle` otherwise runs as
+/// written, as pdflatex runs it (TP0's probe p2: a title-only one prints "A Title",
+/// where the stand-in printed the authors too).
+pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
+  let mut run = mouth::tokenize_internal(
+    r"{\let\thanks\@firstofone\let\label\@gobble\let\index\@gobble\let\lx@maketitle@body\lx@print@maketitle",
+  )
+  .unlist();
+  // (the class's own `\@author` the kernel's or a binding's replaced, which pdflatex's title page prints:
+  // [`keep_class_author_reader`])
+  if lookup_value(CLASS_AUTHOR_READER).is_some() {
+    run.push(T_CS!("\\lx@class@author@reader"));
+  }
+  run.extend(
+    mouth::tokenize_internal(
+      r"\def\lx@kernel@maketitle{\lx@title@page@stand@in{\@title\par}{\begin{tabular}[t]{c}\@author\end{tabular}\par}{\@date\par}}",
+    )
+    .unlist(),
+  );
+  if !own_maketitle() {
+    run.extend(mouth::tokenize_internal(r"\let\@maketitle\lx@kernel@maketitle").unlist());
+  }
+  run.extend_from_slice(inject);
+  if replays_class_maketitle() {
+    run.push(T_CS!("\\lx@dropped@maketitle"));
+    if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
+      && let Some(ExpansionBody::Tokens(opts)) = o.get_expansion()
+    {
+      run.extend(opts.unlist_ref().iter().copied());
+    }
+  } else {
+    run.push(T_CS!("\\lx@print@maketitle"));
+  }
+  run.push(T_END!());
+  Tokens::new(run)
+}
+
+/// Is `\@maketitle` a raw file's, a binding's or the document's, and the title page in force
+/// ([`title_page_print_tokens`] runs it as written, its stand-in for article.cls's only at the kernel's marker it may
+/// hold)? Not the kernel's own ([`maketitle_is_kernels`]), nor an empty one. One a raw file or the document defined is
+/// the page in force only where the `\maketitle` that runs runs `\@maketitle` (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953):
+/// a class's or the document's own refused `\maketitle`, which the run replays ([`replays_class_maketitle`]: it reaches
+/// `\@maketitle` or not as written), else the document class's, as its binding declares it (`fm_class_maketitle_runs`:
+/// amsart's, IEEEtran's, mnras's do; elsarticle's and acmart's never do, so pdflatex prints none of a document's
+/// `\@maketitle` there; article's, report's and book's do only without their title page, as their `\if@titlepage`
+/// stood after their options, TP1c). Under a class no binding declares (REVTeX), a document's is not taken for its
+/// page, and a raw file's is, as before the reading ran the document's own.
+pub(crate) fn own_maketitle() -> bool {
+  let origin = match lookup_meaning(&T_CS!("\\@maketitle")) {
+    Some(Stored::Expandable(ref d)) if matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()) => {
+      d.get_origin()
+    },
+    _ => return false,
+  };
+  match origin {
+    DefinitionOrigin::Binding => !maketitle_is_kernels(),
+    DefinitionOrigin::File | DefinitionOrigin::Document => {
+      replays_class_maketitle()
+        || fm_class_maketitle_runs().unwrap_or(origin == DefinitionOrigin::File)
+    },
+    _ => false,
+  }
+}
+
+/// LaTeX's own `\@maketitle` and its marker, and the title-page reading's marks with the characters
+/// [`ink_word_text`] reads for them, as [`load`] defined them.
+struct KernelTitleDefs {
+  maketitle: Option<Rc<dyn Definition>>,
+  marker:    Option<Rc<dyn Definition>>,
+  marks:     [(Option<Rc<dyn Definition>>, char); 3],
+}
+
+thread_local! {
+  static KERNEL_TITLE_DEFS: RefCell<Option<KernelTitleDefs>> = const { RefCell::new(None) };
+}
+
+/// Is `definition` the one [`load`] made of `pick`'s?
+fn is_kernel_title_def(
+  definition: &Rc<dyn Definition>,
+  pick: impl Fn(&KernelTitleDefs) -> Option<&Rc<dyn Definition>>,
+) -> bool {
+  KERNEL_TITLE_DEFS.with_borrow(|defs| {
+    defs
+      .as_ref()
+      .and_then(pick)
+      .is_some_and(|kernel| Rc::ptr_eq(kernel, definition))
+  })
+}
+
+/// Is `cs`'s meaning LaTeX's own `\@maketitle` or its marker (`\lx@kernel@maketitle`), by identity — `\@maketitle` as
+/// the kernel defined it, a `\let` copy of it, or the marker reached in an addition to it?
+pub(crate) fn is_latex_maketitle(cs: &Token) -> bool {
+  lookup_definition(cs)
+    .ok()
+    .flatten()
+    .is_some_and(|definition| {
+      is_kernel_title_def(&definition, |defs| defs.maketitle.as_ref())
+        || is_kernel_title_def(&definition, |defs| defs.marker.as_ref())
+    })
+}
+
+/// Is `\@maketitle` the kernel's (LaTeX's page, which prints the frontmatter: nothing to deposit)?
+pub(crate) fn maketitle_is_kernels() -> bool {
+  lookup_definition(&T_CS!("\\@maketitle"))
+    .ok()
+    .flatten()
+    .is_some_and(|definition| is_kernel_title_def(&definition, |defs| defs.maketitle.as_ref()))
+}
+
+/// The character [`ink_word_text`] reads for a mark of the title-page reading's run (`definition`, a whatsit's), by its
+/// definition: where `\@author` begins, where what a document appended to it begins and where it ends.
+pub(crate) fn title_page_mark(definition: &Rc<dyn Definition>) -> Option<char> {
+  KERNEL_TITLE_DEFS.with_borrow(|defs| {
+    defs.as_ref().and_then(|defs| {
+      defs
+        .marks
+        .iter()
+        .find(|(mark, _)| {
+          mark
+            .as_ref()
+            .is_some_and(|mark| Rc::ptr_eq(mark, definition))
+        })
+        .map(|(_, c)| *c)
+    })
+  })
+}
+
+/// Does [`title_page_print_tokens`] run the class's own refused `\maketitle` ([`title_page_replay_tokens`])?
+fn replays_class_maketitle() -> bool {
+  !lookup_bool("lx_depositing_class_maketitle") && title_page_replay_tokens(&[]).is_some()
+}
+
+/// What a speculative title-page run ([`title_page_probe_run`], [`checks_run`]) gave.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum SpeculativeRun {
+  /// The text the run typeset, as [`ink_text`] reads it (in its own case: a caller lower-cases it where it matches a
+  /// sentinel).
+  Printed(String),
+  /// The run ended in a Fatal error of its own, discarded with it: it printed nothing, and no title page the document
+  /// makes is like it (a value only the sentinels give may raise it).
+  Aborted,
+  /// No run was made or kept: no journal could open (one is already open), or its assignments could not be undone.
+  Unavailable,
+  /// A check's run (`speculative_word_run`, [`note_title_page_print`]) read all it may
+  /// (`title_page_check::check_run_budget`), or had no reads left, and was abandoned: the tokens it read.
+  OverBudget(usize),
+}
+
+/// Digest title-page code speculatively (`tokens`: [`title_page_print_tokens`], [`title_page_deposit_tokens`],
+/// [`title_page_replay_tokens`]) and return the text it typesets ([`ink_text`]); nothing of it stays:
+/// its output is discarded, its assignments undone (`AssignmentJournalGuard::rollback`), its diagnostics discarded and
+/// its terminal output muted,
+/// the groups it left open closed in a reading context of their own (as `replay_dropped_class_code` closes a
+/// setter's), the tokens being invoked and the active conditionals put back as they were ([`StomachMark`]). While it runs the frontmatter is frozen and no refused setter is replayed (`lx_replaying_class_setter`),
+/// a `{titlepage}` builds no `ltx:titlepage` (`lx_depositing_frontmatter_fields`) and no deposit re-enters
+/// (`lx_depositing_class_maketitle`). [`SpeculativeRun::Unavailable`] when no journal can open (one is already open)
+/// or when the run's assignments could not be undone (it then keeps its diagnostics, and the global assignments it
+/// made — a class's `\xdef\@x{\@store}` with a sentinel value — stay: OXIDIZED_DESIGN_DIVERGENCES #767's residuals). A
+/// run that raised errors still gives its text: an error is TeX's recovery, which typesets on (an internal our
+/// emulation of the class lacks becomes an `<ltx:ERROR>` holding its name), as pdflatex typesets what the title page
+/// prints. A resource Fatal of the run propagates (Fatal stays Fatal), as does one whose run could not be undone; any
+/// other Fatal is the run's alone — the document never makes it, and a sentinel value may cause it —, discarded with
+/// its diagnostics (an Info says so): [`SpeculativeRun::Aborted`]. The sentinel probes' runs, made by the title-page
+/// reading's builder under its one read budget ([`checks_run`]; TP3, OXIDIZED_DESIGN_DIVERGENCES #953): over it, its
+/// caller falls back to the code walk and the check's Warning names it. `isolated`: in a mouth of its own, so a begin
+/// code reading ahead to its `\end` (smfart.cls:506-520) meets the end of `tokens`, never the document's text.
+pub(crate) fn title_page_probe_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
+  Ok(match checks_run(tokens, isolated, &[(ink_text, None)])? {
+    Ok(mut texts) => SpeculativeRun::Printed(texts.swap_remove(0)),
+    Err(SpeculativeRun::OverBudget(read)) => {
+      note_check_left_out(
+        s!("a sentinel run of the class's title page, after {read} tokens read"),
+        0,
+      );
+      SpeculativeRun::OverBudget(read)
+    },
+    Err(run) => run,
+  })
+}
+
+/// [`title_page_probe_run`] isolated, its text read with where its words end ([`ink_word_text`], each `\insert`'s material
+/// after an [`INK_INSERT`]), the field ledger put back as [`note_title_page_print`] puts it back: what an argument a
+/// binding's frontmatter command never digests prints (`base_utilities::frontmatter::title_page_check`
+/// `end_frontmatter_entry_digestion`, OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
+pub(crate) fn speculative_word_run(tokens: Tokens) -> Result<SpeculativeRun> {
+  checks_word_run(tokens, true)
+}
+
+/// A run of the title-page check's, read by [`ink_word_text`], under the check's read budget
+/// (`title_page_check::check_run_budget`; none left, no run), the field ledger put back and the boxes the run stamped
+/// unstamped, as the observer's rehearsal does: a register's box `\usebox` hands back to the fields, stamped, became an
+/// `ltx:text` of its own in the document.
+fn checks_word_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
+  Ok(
+    match checks_run(tokens, isolated, &[(ink_word_text, Some(INK_INSERT))])? {
+      Ok(mut texts) => SpeculativeRun::Printed(texts.swap_remove(0)),
+      Err(run) => run,
+    },
+  )
+}
+
+/// [`checks_word_run`], its material read by each of `readers` ([`speculative_run_read`]).
+fn checks_run(
+  tokens: Tokens,
+  isolated: bool,
+  readers: &[RunReader],
+) -> Result<std::result::Result<Vec<String>, SpeculativeRun>> {
+  let Some(budget) = check_run_budget() else {
+    return Ok(Err(SpeculativeRun::OverBudget(0)));
+  };
+  let left = check_reads_left();
+  let ledger = FieldLedgerScope::begin();
+  let run = speculative_run_read(tokens, isolated, readers, budget);
+  drop(ledger);
+  DebugFeature!(
+    "frontmatter",
+    "FRONT the check's run read {} tokens",
+    left - check_reads_left()
+  );
+  run
+}
+
+/// What the class's whole title page prints at this `\maketitle`, read with where its words end, noted for the check of
+/// its words against the output (`base_utilities::frontmatter::title_page_check`, OXIDIZED_DESIGN_DIVERGENCES #953): the
+/// title-page reading's ([`title_page_reading::title_page_reading`]), with what it prints without what a document
+/// appended to `\@author` where the title page in force is known not to print that (the check reports a lost word only
+/// the appended text prints as one the page annotates, an Info: FX27). Not inside a deposit or a replay (the title page
+/// they run is this one), nor when no run can be made or kept.
+pub(crate) fn note_title_page_print() -> Result<()> {
+  if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
+    return Ok(());
+  }
+  let reading = title_page_reading::title_page_reading()?;
+  match reading.outcome {
+    title_page_reading::RunOutcome::Printed => {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT the title page prints: {}",
+        reading.words.replace(INK_SEAM, "|")
+      );
+      let untailed = (reading.tail_printed() == Some(false) && reading.untailed != reading.words)
+        .then_some(reading.untailed.as_str());
+      note_title_page_printed(&reading.words, untailed);
+    },
+    title_page_reading::RunOutcome::OverBudget(read) => {
+      note_check_left_out(s!("the class's title page, after {read} tokens read"), 0)
+    },
+    title_page_reading::RunOutcome::Aborted | title_page_reading::RunOutcome::Unavailable => {},
+  }
+  Ok(())
+}
+
+/// A text reader of a speculative run's material, with the mark it sets before each `\insert`'s ([`checks_run`]).
+pub(crate) type RunReader = (fn(&Digested, &mut String), Option<char>);
+
+/// The speculative run ([`title_page_probe_run`]), its material read by each of `readers` in turn: their texts when it
+/// printed, else how it ended. It reads `budget` tokens at most (`gullet::read_budget`): past them it is abandoned and
+/// rolled back as a failed run is, its diagnostics discarded, and gives [`SpeculativeRun::OverBudget`] — never a Fatal,
+/// even when its assignments could not be undone —, counted as having read what it read, its conditionals by no limit.
+fn speculative_run_read(
+  tokens: Tokens,
+  isolated: bool,
+  readers: &[RunReader],
+  budget: usize,
+) -> Result<std::result::Result<Vec<String>, SpeculativeRun>> {
+  let Some(journal) = begin_assignment_journal() else {
+    return Ok(Err(SpeculativeRun::Unavailable));
+  };
+  let _speculative = speculative_digestion();
+  const FLAGS: [&str; 3] = [
+    "lx_replaying_class_setter",
+    "lx_depositing_frontmatter_fields",
+    "lx_depositing_class_maketitle",
+  ];
+  let saved: Vec<bool> = FLAGS.iter().map(|flag| lookup_bool(flag)).collect();
+  for flag in FLAGS {
+    assign_value(flag, true, Some(Scope::Global));
+  }
+  let hold = util::logger::DiagnosticsHold::begin();
+  let resource_fatal_before = resource_fatal_latched();
+  // (and its terminal output — a class's `\typeout{Warning: Missing \institute}`, an.cls's `\ch@ckobl` — is not the
+  // document's: the class's own run of it, the deposit or the replay, writes it once; put back however the run ends)
+  let muted = SuppressLogOutputGuard::new(true);
+  let depth = get_frame_depth();
+  let boxes = box_lists_mark();
+  // (the tokens being invoked and the conditionals as they are, put back however the run ends: `StomachMark`)
+  let stomach_mark = StomachMark::take();
+  // (what an `\insert` in it sets is stashed for after the title page, tex_inserts.rs — printed by it all the same, at
+  // the page foot: its text follows the run's, so a store and the label the class prints before it there are printed,
+  // as they are inline in Perl, and taken out of the deposit with it, `note_store_handed`)
+  let outer_inserts = remove_value("lx_deposit_inserts");
+  assign_value(
+    "lx_deposit_inserts",
+    Stored::VecDigested(Vec::new()),
+    Some(Scope::Global),
+  );
+  let conditionals = if_count();
+  let budget = read_budget(budget);
+  let result = if isolated {
+    reading_from_mouth(Mouth::default(), || {
+      with_origin(DefinitionOrigin::File, || digest(tokens))
+    })
+  } else {
+    with_origin(DefinitionOrigin::File, || digest(tokens))
+  };
+  // (off before anything else reads: closing what the run left open is no part of it)
+  let end = budget.end();
+  note_check_run_reads(end.reads);
+  let over_budget = end.over.then_some(end.reads);
+  if over_budget.is_some() {
+    set_if_count(conditionals);
+  }
+  let inserts = take_deposit_inserts();
+  let unwound = reading_from_mouth(Mouth::default(), || {
+    new_local_box_list();
+    while get_frame_depth() > depth {
+      let before = get_frame_depth();
+      let nobox = lookup_bool("groupNonBoxing");
+      if pop_stack_frame(nobox).is_err() || get_frame_depth() >= before {
+        break;
+      }
+    }
+    expire_local_box_list();
+    Ok(())
+  });
+  stomach_mark.restore();
+  let text = match &result {
+    Ok(digested) => Some(
+      readers
+        .iter()
+        .map(|(read, insert_mark)| {
+          let mut text = String::new();
+          read(digested, &mut text);
+          for insert in &inserts {
+            text.extend(*insert_mark);
+            read(insert, &mut text);
+          }
+          text
+        })
+        .collect::<Vec<_>>(),
+    ),
+    Err(_) => None,
+  };
+  drop(muted);
+  let undone = journal.rollback();
+  remove_value("lx_deposit_inserts");
+  if let Some(outer) = outer_inserts {
+    assign_value("lx_deposit_inserts", outer, Some(Scope::Global));
+  }
+  for (flag, value) in FLAGS.iter().zip(saved) {
+    assign_value(flag, value, Some(Scope::Global));
+  }
+  if let Some(reads) = over_budget {
+    if undone {
+      hold.discard();
+    } else {
+      hold.commit();
+      Info!(
+        "frontmatter",
+        "\\maketitle",
+        "A speculative run the title-page check abandoned could not be undone (its groups changed): its diagnostics and its global assignments stay"
+      );
+    }
+    unwound?;
+    unwind_box_lists_to(boxes);
+    return Ok(Err(SpeculativeRun::OverBudget(reads)));
+  }
+  if let Err(err) = result {
+    // A resource Fatal (the conversion's deadline, its memory budget, a runaway limit) is the document's, and so is
+    // one whose run could not be undone. Any other ends only this run, which the document never makes: a value only
+    // the sentinels give may raise it (a letter where the class's code expects a number). It is discarded with the
+    // run's diagnostics, and the run printed nothing — no store counts as printed by it. A runaway limit (the
+    // pushback, a recursion) is the run's own, as the real `\maketitle` never runs this
+    // code: VisionStyle.cls's title page loops on `\title{X \small Y}`, in pdflatex too (astro-ph0203021; user ruling
+    // 2026-10-19).
+    if !undone || (resource_fatal_latched() && !resource_fatal_before && !unlatch_runaway_fatal()) {
+      hold.commit();
+      return Err(err);
+    }
+    hold.discard();
+    unwound?;
+    // (and the box lists the failed digestion left open)
+    unwind_box_lists_to(boxes);
+    Info!(
+      "frontmatter",
+      "\\maketitle",
+      "A speculative run of the class's title page ended in a Fatal error, discarded with it: no store counts as printed by it"
+    );
+    return Ok(Err(SpeculativeRun::Aborted));
+  }
+  if undone {
+    hold.discard();
+  } else {
+    hold.commit();
+    Info!(
+      "frontmatter",
+      "\\maketitle",
+      "A speculative run of the class's title page could not be undone (its groups changed): its diagnostics and its global assignments stay"
+    );
+  }
+  unwound?;
+  Ok(match text {
+    Some(texts) if undone => Ok(texts),
+    _ => Err(SpeculativeRun::Unavailable),
+  })
+}
+
+/// The material the `\insert`s of a title-page run set (`lx_deposit_inserts`, tex_inserts.rs), taken from the state.
+fn take_deposit_inserts() -> Vec<Digested> {
+  match remove_value("lx_deposit_inserts") {
+    Some(Stored::VecDigested(inserts)) => inserts,
+    _ => Vec::new(),
   }
 }

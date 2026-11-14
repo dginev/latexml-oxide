@@ -1,0 +1,12 @@
+% witness: 1502.01001 (the title's `\author`; here no `\maketitle`: the fallback flush at `\section` digests the title)
+% oracle:  pdflatex 0 errors: prints no title block (no `\maketitle`); LaTeXML places the frontmatter at its fallback flush
+% engines: Perl and off: the title and 2 creators; ours =2 before TA1: the merged creator, the split ones sealed off
+% expect:  0 errors; at =2 exactly 2 creators, Ann/Univ A, Bob/Univ B (perfect_kernel_batchTA1::a_late_author_block_is_read_at_its_own_flush)
+% status:  GREEN (TA1)
+\documentclass{article}
+\begin{document}
+\title{A Title\\
+\author{Ann Able$^1$, Bob Baker$^2$\\ $^1$Univ A\\ $^2$Univ B}}
+\section{Intro}
+x
+\end{document}

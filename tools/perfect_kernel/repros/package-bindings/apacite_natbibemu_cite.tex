@@ -1,0 +1,18 @@
+% mechanism: under apacite's `natbibemu` (apacite.sty:85-92, :587) `\cite` is `\citep` when a `[` follows and `\citet`
+%   otherwise, starred alike (:883-892); the binding made it parenthetical always.
+% witness: none on arXiv found (the option's rule from the source; 2307.11525, 2406.19732 are `natbibapa`)
+% oracle:  pdflatex (TL 2025): apacite's own `natbibemu` `\citep`/`\citet` raise "Illegal parameter number in
+%          definition of \reserved@a" at every citation (101 errors) — a TL-2025 version limit of the option; read
+%          from the source: "A Smith (2001). B (Smith, 2001, p. 5). C Smith (2001)."
+% engines: rust 68w r3 "A (Smith, 2001)"; Perl 0.8.8 has no apacite binding
+% expect:  0 errors, 0 warnings; `\cite{a}` textual (`\citet`), `\cite[p.~5]{a}` parenthetical (`\citep`)
+% status:  FIXED (int17)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[natbibemu]{apacite}
+\begin{document}
+A \cite{a}. B \cite[p.~5]{a}. C \cite*{a}.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Smith}{Smith}{2001}]{a} Smith, J. (2001). Title.
+\end{thebibliography}
+\end{document}

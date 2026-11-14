@@ -4,7 +4,8 @@
 %          run by the `shortlabels` option :1787-1794, sets the template as `label=`)
 % engines: rust (56il) = "Encountered unknown KeyVals key '(a)'" ×2 and labels 1. 2. 1.;
 %          Perl 0 warnings, labels (a) (b) (i) (its KeyVals_aux never warns for a one-keyset form)
-% expect:  0 errors, 0 warnings; <tag>(a)</tag>, <tag role="refnum">a</tag>, <tag>(b)</tag>, <tag>(i)</tag>
+% expect:  0 errors, 0 warnings; <tag>(a)</tag>, <tag role="refnum">(a)</tag>, <tag>(b)</tag>, <tag>(i)</tag> (refnum
+%          "(a)" since 77u, as pdflatex's `\ref`: KNOWN_PERL_ERRORS #808)
 % status:  RED (56il) -> GREEN (56im)
 \documentclass{article}
 \usepackage[shortlabels]{enumitem}

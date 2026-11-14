@@ -1,0 +1,20 @@
+% mechanism: the frontmatter queue's `author:N` positions count names, by the reading's cut at the `\and`-family
+%   separators (`queue_reading.rs` `entry_names`): a whole-list `\author` queued as one entry holds a position a name,
+%   read by every consumer (`queued_author_marks`, `queued_requesters`, `place_address_runs`, ...) and by the resolver
+%   (`Resolver::author_entries`, the block's names recorded in the ledger) — Option C P2-3b, OD #995
+% witness: synthetic (2403.04183's e-mail line, one address an author, under sv_support's whole-list `\author`)
+% oracle:  pdflatex (-no-shell-escape, TL 2025 has no svjour3.cls: 1107.3809's svjour3.cls and svglov3.clo) 0 errors: "Ann Able1 · Bob Baker2" over "1 Univ A", "2 Univ B",
+%   "E-mail: {u1, u2}@x.org"
+% engines: int169a (632698e1d8): u1@x.org and u2@x.org on a nameless creator (the block's: one position for the entry); P23b:
+%   one address a name
+% expect:  0 errors, 0 warnings; Ann Able: 1 Univ A, u1@x.org; Bob Baker: 2 Univ B, u2@x.org
+% status:  GREEN (P23b; guard perfect_kernel_batchp23b)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{\{u1, u2\}@x.org}}
+\maketitle
+Text.
+\end{document}

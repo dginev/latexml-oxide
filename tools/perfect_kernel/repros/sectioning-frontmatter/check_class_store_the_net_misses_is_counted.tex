@@ -1,0 +1,32 @@
+% A raw class's title page prints a store the unclaimed-text net cannot name — its setter writes it through
+% `\csname`, as cup-journal.cls:449-451 writes `\@email@<n>` — inside the class's own `\maketitle`'s `\thanks`, which
+% the replay gobbles, flushed by its `\@thanks` as LaTeX's `\maketitle` flushes it: the address is lost from the output.
+% The title-page check (title_page_check.rs) runs the whole title page once more as pdflatex runs it — `\thanks`
+% latex.ltx's, its text printed where `\@thanks` runs — and counts each word of the document's that the output does not
+% hold, one `Warning:frontmatter:unclaimed` in printed order; the class's own label ("Corresponding") is no document
+% word, an Info (`frontmatter:class_text`). FIDELITY_CHARTER §4: every residual loss counted by a Warning. Without the
+% `\@thanks` pdflatex prints no address, and nothing is counted (check_unflushed_thanks_prints_nothing.tex; review
+% rev106s B1: 106s r1 counted it).
+% witness: cup-journal 2302.11911, 2508.08363, 2607.18758 (computed store names); JUSTC 2409.17603 (an expl3 clist
+%          the title page prints)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able1", "Text.", and the page foot's
+%          "1 Corresponding author: ann.able@lunar.org"
+% engines: rust int133a = 0 errors, 0 warnings, the address lost silently; perl = 0 errors (the raw class is not
+%          loaded: OmniBus), the address lost
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "lunar org"); the frontmatter unchanged
+% status:  RED (int133a) -> GREEN (106s r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netcsname.cls}
+\ProvidesClass{netcsname}\LoadClass{article}
+\newcommand\corr[1]{\expandafter\gdef\csname nc@corr\endcsname{#1}}
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\thanks{Corresponding author: \csname nc@corr\endcsname}\par}\@thanks\endgroup}
+\end{filecontents*}
+\documentclass{netcsname}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\corr{ann.able@lunar.org}
+\maketitle
+Text.
+\end{document}

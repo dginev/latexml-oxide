@@ -1,0 +1,22 @@
+% witness: 1711.01894 (`\institute{\textit{Contact author:} Erwan {Le Merrer} \at IRISA/Inria, …`), 2107.13864
+%          (`Xin-long Luo, Corresponding author \at School of …`), 1705.01399 (`Leonardo Anjoletto Ferreira \at …` under
+%          the author line's `Leonardo A. Ferreira`)
+% oracle:  pdflatex (TL 2025, 2007.09912's svjour3.cls) 0 errors: "Ann Able · Bob B. Baker · Cat Cole", and in the
+%          institute footnote "Contact author: Ann Able", "University of X", "E-mail: ann@x.edu", "Bob Bernard Baker",
+%          "University of Y", "Cat Cole", "University of Z" (svjour3.cls:506 `\def\at{\\…}`)
+% engines: rust int126a = the text before each `\at` only the institute's owner label, no word of it kept; Perl 0.8.8
+%          the same (sv_support.sty.ltxml:45-47)
+% expect:  0 errors, 0 warnings; the text before `\at` the first line of the affiliation where it prints a word no
+%          author's name does (Ann Able's, Bob B. Baker's), none where it is only the name (Cat Cole's)
+% status:  RED (int126a) -> GREEN (98b) — perfect_kernel_batch98b::svjour3_text_before_at_is_kept
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob B. Baker \and Cat Cole}
+\institute{\textit{Contact author:} Ann Able \at University of X \\ \email{ann@x.edu}
+  \and Bob Bernard Baker \at University of Y
+  \and Cat Cole \at University of Z}
+\maketitle
+Text.
+\end{document}

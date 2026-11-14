@@ -1,0 +1,15 @@
+% witness: 1011.0516 (PoS.cls: `Tetsuya Onogi$^a$, …\\ $(a)$Department of Physics, Osaka University, … \\ $(b)$…`)
+% oracle:  pdflatex 0 errors: "Ann Ablea, Bob Bakerb" over "(a)Univ A" and "(b)Univ B"
+% engines: rust 77t base (cf9986651a) = 0 errors: "Ann Ablea" and a creator "Bob Baker ( a ) Univ A ( b ) Univ Bb" (the
+%          lines carry no mark the block reads, so they continue the last name); Perl welds them likewise
+% expect:  0 errors, 0 warnings; Ann Able holds Univ A, Bob Baker Univ B (a parenthesized math lead is the line's mark
+%          when an author requests it as a superscript)
+% status:  RED (77t base) -> GREEN (77t)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$, Bob Baker$^{b}$\\ $(a)$Univ A\\ $(b)$Univ B}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: a `\title` after `\maketitle` with no repeated `\author` block is not switched off: the kernel's relaxed
+%   `\title` prints its argument as body text, the authored text kept (FIDELITY_CHARTER §2), though REVTeX keeps `\title`
+%   a silent setter (revtex4.cls:4259-4263 `\def\@title{#2}`; revtex4-1, revtex4-2 alike) and pdflatex prints nothing
+%   (revtex4_cls.rs `switch_off_author_block_after_maketitle`; the main session's ruling on study CL160, RB1c)
+% witness: 2111.12484, 1801.07635, 1812.00931, 1205.3951, 2105.11038 (a supplement's title), 2105.06760 (`\title{\xi}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / A. / Text. More." (revtex4-1,
+%   revtex4 alike)
+% engines: rust int159a, int159b: 0 errors; the body paragraph "Text. Supplement More."; perl the same; RB1 (int160b):
+%   "Text. More." (the title's words lost). RB1c: as int159b
+% expect:  0 errors, 0 warnings; title T; the body paragraph "Text. Supplement More."
+% status:  GREEN
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\title{Supplement}
+\maketitle
+More.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: synthetic (GA0 finding 3: the kernel's `\noalign\\` rule told longtable by `\@currenvir`'s prefix)
+% oracle:  pdflatex 0 errors: the user environment `longtablex` is a kernel `\tabular`, whose `\\` is `\@tabularcr`
+%          (latex.ltx:16562), so `\noalign\\` is an empty noalign and an empty row; rows a/b and c/d printed
+% engines: rust GA4base = 1 Error:expected:{ "Missing { inserted" (the name began with "longtable")
+% expect:  0 errors; rows a/b and c/d, the \hline above c/d
+% status:  RED (GA4base) -> GREEN (GA4)
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{longtablex}{\tabular{ll}}{\endtabular}
+\begin{document}
+\begin{longtablex}
+a & b \\
+\hline\noalign\\
+c & d \\
+\end{longtablex}
+After TEXT.
+\end{document}

@@ -1,0 +1,26 @@
+% mechanism: a second e-mail label glued to the address behind a note's label (defs/frontmatter_api/kind.rs, the
+%   entry's footnotes: `note_addresses` parts the note's label off, and `joined_line_label` of it and the rest, where
+%   `email_line_label` splits the glued label): the second label joins after the note's label, so REVTeX's
+%   `\affiliation{Univ A\footnote{Corresponding author e-mail: Email:zz@x.org}}` gives Ann the correspondence note
+%   "Corresponding author" and the contact `zz@x.org` named "e-mail: Email: ". GL1 round 0 wrote the inner name after
+%   the outer one, which won: "Corresponding author" and "e-mail:" were printed nowhere (review revGL1 B1)
+% witness: none in the corpus (synthetic, review revGL1 B1, probe r_foot_nest; the note label's witness
+%          cond-mat0202268, the glued shape's hep-ph9606235, astro-ph0001190, hep-ph0411269, 2206.00543)
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "Ann Able", "Univ A^a", "A.", "Text.", footnote "a Corresponding author
+%          e-mail: Email:zz@x.org"
+% engines: rust int157a (d86f58e8e2) = <note role="thanks">Corresponding author</note>, then <contact name="e-mail: "
+%          role="email">Email:zz@x.org</contact>; rust GL1 (e24e610cb4) = no note, <contact name="Email: "
+%          role="email">zz@x.org</contact>
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, <note role="thanks">Corresponding author</note> and <contact
+%          name="e-mail: Email: " role="email">zz@x.org</contact>
+% status:  RED (GL1) -> GREEN (GL1b) — perfect_kernel_batchgl1::second_glued_label_joins_the_note_label
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A\footnote{Corresponding author e-mail: Email:zz@x.org}}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}

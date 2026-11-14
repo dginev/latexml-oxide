@@ -5,8 +5,8 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <figure xml:id="fig1">
-    <figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:fig:dual-left" vattach="middle" width="172.5pt" xml:id="S0.F1">
+  <figure class="ltx_panels_gallery" panelcols="2" panelfill="1" panelline="1" panelrows="1" xml:id="fig1">
+    <figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:fig:dual-left" panelwidth="0.5" vattach="middle" width="172.5pt" xml:id="S0.F1">
       <tags>
         <tag>Figure 1</tag>
         <tag role="refnum">1</tag>
@@ -16,7 +16,7 @@
       <toccaption class="ltx_centering"><tag close=" ">1</tag>Left figure.</toccaption>
       <caption class="ltx_centering"><tag close=": ">Figure 1</tag>Left figure.</caption>
     </figure>
-    <figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:fig:dual-right" vattach="middle" width="172.5pt" xml:id="S0.F2">
+    <figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:fig:dual-right" panelwidth="0.5" vattach="middle" width="172.5pt" xml:id="S0.F2">
       <tags>
         <tag>Figure 2</tag>
         <tag role="refnum">2</tag>
@@ -27,8 +27,8 @@
       <caption class="ltx_centering"><tag close=": ">Figure 2</tag>Right figure.</caption>
     </figure>
   </figure>
-  <table xml:id="tab1">
-    <table align="center" class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:table:dual-left" vattach="middle" width="172.5pt" xml:id="S0.T1">
+  <table class="ltx_panels_gallery" panelcols="2" panelfill="1" panelline="1" panelrows="1" xml:id="tab1">
+    <table align="center" class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:table:dual-left" panelwidth="0.5" vattach="middle" width="172.5pt" xml:id="S0.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="refnum">1</tag>
@@ -51,7 +51,7 @@
       <toccaption class="ltx_centering"><tag close=" ">1</tag>Left table.</toccaption>
       <caption class="ltx_centering"><tag close=": ">Table 1</tag>Left table.</caption>
     </table>
-    <table align="center" class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:table:dual-right" vattach="middle" width="172.5pt" xml:id="S0.T2">
+    <table align="center" class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:table:dual-right" panelwidth="0.5" vattach="middle" width="172.5pt" xml:id="S0.T2">
       <tags>
         <tag>Table 2</tag>
         <tag role="refnum">2</tag>

@@ -1,0 +1,17 @@
+% witness: 68h r2: apa7's `\addORCIDlink` and mrm's `\orcid` (inline ORCID links, apa7_cls.rs, mrm_cls.rs) take the iD
+%          of an orcid.org address as the frontmatter setter does (OXIDIZED_DESIGN_DIVERGENCES #616)
+% oracle:  pdflatex 0 errors (apa7.cls:322-326): "Ann One https://orcid.org/https://orcid.org/0000-0002-1825-0097",
+%          the class building `https://orcid.org/#2` as orcidlink.sty does (mrm.cls is not in TeX Live)
+% engines: rust 68h r1 and 67int9: href="https://orcid.org/https://orcid.org/0000-0002-1825-0097"; perl: no apa7
+%          binding
+% expect:  0 errors; the link is https://orcid.org/0000-0002-1825-0097 (a surpass: the address's iD)
+% status:  GREEN (68h r2)
+\documentclass[man]{apa7}
+\usepackage{hyperref}
+\title{T}\shorttitle{T}
+\author{\addORCIDlink{Ann One}{https://orcid.org/0000-0002-1825-0097}}
+\affiliation{U}
+\begin{document}
+\maketitle
+Text.
+\end{document}

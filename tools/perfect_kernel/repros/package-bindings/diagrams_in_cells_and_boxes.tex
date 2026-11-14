@@ -1,0 +1,23 @@
+% witness: math0010298 (two diagrams side by side in a {|c|c|} tabular of a table), math0109209 (a diagram in
+%          \savebox{\diag}{…}, placed by \usebox in a picture); Paul Taylor's diagrams package
+% oracle:  diagrams.sty is not in TeX Live; in TeX a `$$` in restricted horizontal mode (an LR box, a table cell)
+%          is an empty formula, so a diagram there cannot be a display (the arXiv PDF of math0010298 shows the two
+%          diagrams in the table's cells); in a minipage, a p column or a float it is a display
+% engines: rust 67d r1 = the cell's and the box's diagram broken apart ("\ddot should only appear in math mode",
+%          its objects set as text); rust 66x1 = errors, the diagrams lost; Perl the same
+% expect:  0 errors, 0 warnings; the c-column and \sbox diagrams inline formulas, the minipage, p-column and
+%          figure diagrams displays; all five arrays whole
+% status:  RED (67d r1) -> GREEN (67d)
+\documentclass{article}
+\usepackage{diagrams}
+\newsavebox{\diag}
+\begin{document}
+\begin{tabular}{|c|}
+\begin{diagram} A\ddot{o} & \rTo^\sim & B \end{diagram}
+\end{tabular}
+\sbox{\diag}{\begin{diagram} C & \rTo & D \end{diagram}}\usebox{\diag}
+
+\begin{minipage}{5cm}\begin{diagram} E & \rTo & F \end{diagram}\end{minipage}
+\begin{tabular}{p{3cm}}\begin{diagram} G & \rTo & H \end{diagram}\end{tabular}
+\begin{figure}\begin{diagram} I & \rTo & J \end{diagram}\caption{A diagram.}\end{figure}
+\end{document}

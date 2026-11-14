@@ -1,0 +1,18 @@
+% mechanism: beamer's marked `\institute` list (the cutter `affiliation_calls`, its entries cut at their marks) whose
+%   entries a document macro holding the kernel's `\and` separates (`\newcommand\sep{\and}`): the line is cut at it by
+%   meaning first (`classify::affiliation_lines`, P6f), so the separator is no text of the first entry
+% witness: synthetic (P6f)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 Bob Baker2 / 1 Univ Alpha, Town A / 2 Univ Beta"
+% engines: P6fbase (int169a): Ann Able "Univ Alpha, Town A and", Bob Baker "Univ Beta", 1 warning (the "and" placed
+%   twice)
+% expect:  0 errors, 0 warnings; Ann Able "Univ Alpha, Town A", Bob Baker "Univ Beta" (the hidden marks are AUMK's)
+% status:  GREEN (guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+% preload: ar5iv.sty
+\documentclass{beamer}
+\newcommand\sep{\and}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{\inst{1}Univ Alpha, Town A \sep \inst{2}Univ Beta}
+\begin{document}
+\frame{\titlepage}
+\end{document}

@@ -1,0 +1,21 @@
+% IEEEtran's `\IEEEauthorrefmark{n}` prints the n-th footnote symbol (IEEEtran.cls:4543), so among `$^{n}$` marks it is
+% that symbol: `Ann Able$^{1}$\IEEEauthorrefmark{1}` is "Ann Able1∗", its `∗` the `$^{*}$` legend's, never `$^1$`'s.
+% witness: 2312.10807 (also 2409.20550, 2411.01611)
+% oracle:  pdflatex 0 errors: "Ann Able1∗ , Bob Bell1,2∗ , Cat Cole3† , Dan Dorn2", notes "∗ Equal contribution", "† Corresponding author: Cat Cole cat@c.edu"
+% engines: rust int134b = 0 errors; names print digits, Cat Cole's refmark 2 takes Univ B, the two legends sit on Dan Dorn; perl = `{1}` leaks as text
+% expect:  0 errors, 0 warnings; Ann/Bob "∗" + the contribution note, Cat "†" + the correspondence note and Univ C only, Dan Univ B
+% status:  RED (int134b) -> GREEN (106b)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{Mixed marks}
+\author{Ann Able$^{1}$\IEEEauthorrefmark{1}, Bob Bell$^{1,2}$\IEEEauthorrefmark{1},
+Cat Cole$^{3}$\IEEEauthorrefmark{2}, Dan Dorn$^{2}$%
+\thanks{$^1$Univ A, City A}%
+\thanks{$^2$Univ B, City B}%
+\thanks{$^3$Univ C, City C}%
+\thanks{$^{*}$Equal contribution}%
+\thanks{$^{\dagger}$Corresponding author: Cat Cole {\tt cat@c.edu}}}
+\maketitle
+Text.
+\end{document}

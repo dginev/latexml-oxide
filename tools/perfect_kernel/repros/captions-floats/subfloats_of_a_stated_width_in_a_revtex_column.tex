@@ -1,0 +1,20 @@
+% witness: review rev78x4 finding 3 (probe n6.tex F1: subcaption's `\subfloat` gives its `{subfigure}` the binding's
+%          `{\columnwidth}`, which the source does not state, `\lx@panel@unstated`)
+% oracle:  pdflatex 0 errors (revtex4-2 `twocolumn`, \columnwidth 246pt): two lines, one 4.5cm (128.04pt) sub-float each
+% engines: rust int69b = one row of two; 78x r3 = two rows; 78x r4 = one row of two (the float unevaluable, the base's
+%          line); Perl 0.8.8 one panel per row
+% expect:  0 errors, 0 warnings; two `ltx_figure_panel` sub-figures, one `ltx:break` between them
+% status:  RED (78x r4) -> GREEN (78x r5: a constructor in the unstated region states no width,
+%          `STATED_LENGTHS_WITHHELD`)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\begin{document}
+Text.
+\begin{figure}
+\subfloat[a]{\includegraphics[width=4.5cm]{example-image}}\hfill
+\subfloat[b]{\includegraphics[width=4.5cm]{example-image}}
+\caption{Two sub-floats of 4.5cm.}
+\end{figure}
+\end{document}

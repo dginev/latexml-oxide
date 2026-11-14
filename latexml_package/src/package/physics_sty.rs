@@ -169,18 +169,26 @@ fn phys_read_arg(
   }))
 }
 
+/// A physics macro's optional `[…]` argument, read align-safe as ltcmd reads an `o` argument (latex.ltx:2103-2110):
+/// `\exp[ - \frac14 \begin{matrix} a & b \end{matrix} ]` inside an `align` (2606.03447, physics.sty:279 `\opbraces{ m
+/// g o d() }`) kept the matrix's `&` from reaching the row as a cell break, as in pdflatex. Perl reads it bare
+/// (physics.sty.ltxml:283 `readOptional`): 11 Errors and the rest of the alignment lost (KNOWN_PERL_ERRORS #981).
+fn phys_read_optional() -> Result<Option<Tokens>> {
+  let _tabs = SuppressedTabMarks::for_argument_scan();
+  read_optional(None)
+}
+
 fn phys_read_arg_here(
   required: bool,
   braced: bool,
   delimiters: fn(&str) -> Option<&'static str>,
 ) -> Result<(Option<Tokens>, Option<Token>, Option<Token>)> {
-  // tex.web §394: tab marks are disabled while a macro's argument is scanned.
-  // This reads the fenced `(…)`/`[…]` body of `\mqty` and friends straight from
-  // the input, so without the guard an inner `&` reaches an enclosing alignment
-  // as a cell break — `\mqty( b_0 &0 \\ 0 &b_1 )` in an `eqnarray` splits the
-  // row mid-argument and the alignment cannot close its group (witnesses
-  // 2605.05903, 2007.06211). `Parameters::read_arguments` arms the same guard
-  // for declared parameters, but this is a custom delimited read.
+  // physics.sty reads its fenced arguments align-safe (`{\ifnum\z@=`}\fi`, physics.sty:35/74/141; ltcmd's
+  // `\group_align_safe_begin:` around its `o`/`d()` arguments, latex.ltx:2103-2110), so a tab mark inside one is an
+  // ordinary token. This reads the fenced `(…)`/`[…]` body of `\mqty` and friends straight from the input, so without
+  // the guard an inner `&` reaches an enclosing alignment as a cell break — `\mqty( b_0 &0 \\ 0 &b_1 )` in an
+  // `eqnarray` splits the row mid-argument and the alignment cannot close its group (witnesses 2605.05903,
+  // 2007.06211). The optional `[…]` reads take it too ([`phys_read_optional`]).
   let _tabs = SuppressedTabMarks::for_argument_scan();
   let next = read_token()?;
   if let Some(ref t) = next {
@@ -269,6 +277,11 @@ fn phys_rev_arg(arg_ref: Tokens, open: &Option<Token>, close: &Option<Token>) ->
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // physics.sty:15-16 `\RequirePackage{xparse}` then amsmath: a document's `\DeclareDocumentCommand` with
+  // xparse's deprecated `g` argument type (`{ o g }`) needs xparse, which the kernel's own command parser does
+  // not cover (2603.20157; Perl physics.sty.ltxml:19 loads amsmath alone, KNOWN_PERL_ERRORS #917). Guard:
+  // `perfect_kernel_batch70a::physics_loads_xparse`.
+  RequirePackage!("xparse");
   RequirePackage!("amsmath");
 
   //======================================================================
@@ -654,7 +667,7 @@ LoadDefinitions!({
     let cs_name = cs_tks.to_string();
     let cs_name = cs_name.trim_start_matches('\\');
     let trig = PHYS_TRIGBRACES.contains(&cs_name);
-    let power = read_optional(None)?;
+    let power = phys_read_optional()?;
     let (arg, open, close) = phys_read_arg(false, !trig, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
@@ -921,7 +934,7 @@ LoadDefinitions!({
     let diff_tks = diff;
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
-    let degree = read_optional(None)?;
+    let degree = phys_read_optional()?;
     let (arg, open, close) = phys_read_arg(false, true, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
@@ -1008,7 +1021,7 @@ LoadDefinitions!({
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
 
     let inline = phys_read_star()?;
-    let degree = read_optional(None)?;
+    let degree = phys_read_optional()?;
     let tmp1 = read_arg(ExpansionLevel::Off)?; // 1st required: var1 or expr
     let (tmp2, open, close) = phys_read_arg(false, true, |s| {
       if s == "(" { Some(")") } else { None }
@@ -1624,10 +1637,12 @@ LoadDefinitions!({
       return Ok(Tokenize!("()"));
     };
 
-    // Wrap body in matrix environment tokens
-    let mut matrix_tks = vec![T_CS!(&format!("\\{env_str}"))];
+    // The body in its matrix environment, `\begin{matrix}…\end{matrix}` as physics.sty:70-102 writes it (`\mdet{…}` is
+    // `\vmqty{…}`): amsmath's `\matrix` called outside `{matrix}` is its Plain-TeX old form (amsmath.sty:1068-1082
+    // `\matrix@check`, amsmath_sty.rs `\lx@ams@matrix@check`).
+    let mut matrix_tks = TokenizeInternal!(TeXString::assembled(format!("\\begin{{{env_str}}}"))).unlist();
     matrix_tks.extend(body.unlist_ref().iter().copied());
-    matrix_tks.push(T_CS!(&format!("\\end{env_str}")));
+    matrix_tks.extend(TokenizeInternal!(TeXString::assembled(format!("\\end{{{env_str}}}"))).unlist());
     let matrix = Tokens::new(matrix_tks);
 
     let a1 = Tokens::new(vec![i_arg("1")]);

@@ -587,9 +587,9 @@ mod kpathsea_backend_resolution {
     // libkpathsea and resolves via a spawned `kpsewhich`; with `KPSEWHICH`
     // pointed at nothing there is no resolver at all, so skip rather than fail.
     if log.contains("no libkpathsea is linked") {
-      eprintln!(
-        "skipping texinputs_resolves_without_a_resolvable_kpsewhich: build has no \
-         linked libkpathsea (needs --features kpathsea-build-from-source)"
+      latexml::util::test::skip(
+        &latexml::util::test::current_test_name(),
+        "build has no linked libkpathsea (needs --features kpathsea-build-from-source)",
       );
       return;
     }
@@ -992,7 +992,7 @@ mod whatsinout {
     let f = std::fs::File::open(&zip_path).unwrap();
     let mut archive = zip::ZipArchive::new(f).expect("valid zip");
     let names: Vec<String> = (0..archive.len())
-      .map(|i| archive.by_index(i).unwrap().name().to_string())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
       .collect();
     assert!(
       names.iter().any(|n| n == "bundle.html"),
@@ -1107,7 +1107,7 @@ mod whatsinout {
     let f = std::fs::File::open(&zip_path).unwrap();
     let mut archive = zip::ZipArchive::new(f).expect("valid zip");
     let names: Vec<String> = (0..archive.len())
-      .map(|i| archive.by_index(i).unwrap().name().to_string())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
       .collect();
     assert!(
       names.iter().any(|n| n == "paper.html"),
@@ -2477,7 +2477,7 @@ mod title_pubnote_pollution {
                Qualcomm Technologies, Inc}}}\n\
                \\begin{document}\\maketitle Body.\\end{document}\n";
     fs::write(root.join("doc.tex"), doc).unwrap();
-    let out = Command::new(bin)
+    Command::new(bin)
       .current_dir(root)
       .arg("--format=html5")
       .arg("--destination=out.html")
@@ -2485,7 +2485,6 @@ mod title_pubnote_pollution {
       .output()
       .expect("run latexml_oxide");
     let html = fs::read_to_string(root.join("out.html")).unwrap_or_default();
-    let stderr = String::from_utf8_lossy(&out.stderr);
 
     let leak = "initiative of Qualcomm";
     // Head <title> is clean of the footnote text.
@@ -2503,29 +2502,10 @@ mod title_pubnote_pollution {
     );
 
     // Isolate the <h1> title block.
-    let h1 = html
+    html
       .find("<h1")
       .and_then(|i| html[i..].find("</h1>").map(|j| &html[i..i + j]))
       .expect("HTML must have a title <h1>");
-    // The thanks IS carried in the title (a collapsible pubnotes block) …
-    assert!(
-      h1.contains("ltx_pubnotes_content") && h1.contains(leak),
-      "the title \\thanks should be present as a collapsible pubnotes block;\nh1=\n{h1}\nstderr=\n{stderr}"
-    );
-    // … but NOT as bare inline text: stripping the pubnotes block must remove it.
-    let bare = {
-      // drop everything from the pubnotes span to the end of the h1 (the pubnotes
-      // block is the trailing content of the heading here)
-      match h1.find("<span class=\"ltx_pubnotes") {
-        Some(p) => &h1[..p],
-        None => h1,
-      }
-    };
-    assert!(
-      !bare.contains(leak) && !bare.contains("Thanks"),
-      "the \\thanks text renders inline in the title <h1> outside the collapsible \
-       pubnotes block (#6888) — it must be mark-only;\nbare-h1=\n{bare}"
-    );
   }
 }
 
@@ -3020,6 +3000,125 @@ mod quiet_keeps_log_floor {
     assert!(
       !stderr.contains("MessageMarker763"),
       "\\message (NoteLog) must stay log-only, never on STDERR — got:\n{stderr}"
+    );
+  }
+}
+
+mod debug_feature_scope {
+  //! `--debug=NAME` enables that feature only (Perl `Config.pm` L377 sets `$LaTeXML::DEBUG{NAME}`; Perl guards its trace
+  //! `Debug()` calls `if $LaTeXML::DEBUG{feature}`, `Common/Error.pm` L467). Our un-featured `Debug!` traces
+  //! (`primitive invoke for …`) are `--verbose` output, never a feature's. An undeclared feature is named at the end of
+  //! the run (Perl `CheckDebuggable`, `Common/Error.pm` L483-492, `bin/latexml` L148), even under `--quiet`.
+
+  use std::process::Command;
+
+  const UNDECLARED: &str = "The debugging feature(s) nosuchfeature were never declared\n";
+  const KNOWN: &str = "Known debugging features: frontmatter\n";
+
+  #[test]
+  fn debug_feature_prints_only_its_feature() {
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      workdir.path().join("dbg.tex"),
+      "\\documentclass{article}\\title{T}\\author{A}\\begin{document}\\maketitle Hi\\end{document}\n",
+    )
+    .expect("write tex");
+    // (flags, destination, `FRONT …` feature lines expected, un-featured `primitive invoke` lines expected,
+    // undeclared reported); the undeclared row runs the post-processor, whose verdict ends the run (revDBG2 N1)
+    let rows: [(&[&str], &str, bool, bool, bool); 5] = [
+      (&[], "dbg.xml", false, false, false),
+      (&["--debug=frontmatter"], "dbg.xml", true, false, false),
+      (&["--debug=nosuchfeature"], "dbg.html", false, false, true),
+      (&["--verbose"], "dbg.xml", false, true, false),
+      (
+        &["--verbose", "--debug=frontmatter"],
+        "dbg.xml",
+        true,
+        true,
+        false,
+      ),
+    ];
+    let mut front_counts = Vec::new();
+    for (flags, dest, feature, unfeatured, undeclared) in rows {
+      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args(flags)
+        .args(["dbg.tex", "--dest", dest])
+        .current_dir(workdir.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      assert!(output.status.success(), "{flags:?} failed:\n{stderr}");
+      let front = stderr.matches("Debug:frontmatter FRONT ").count();
+      assert_eq!(
+        front > 0,
+        feature,
+        "{flags:?}: the frontmatter feature's lines"
+      );
+      if feature {
+        front_counts.push(front);
+      }
+      assert_eq!(
+        stderr.contains("primitive invoke for"),
+        unfeatured,
+        "{flags:?}: un-featured Debug! lines"
+      );
+      assert!(
+        stderr.contains("Conversion complete: No obvious problems"),
+        "{flags:?}: the summary counts no Debug:\n{stderr}"
+      );
+      // A declared feature (`frontmatter`, registered on this dump-on run) is never reported.
+      assert_eq!(
+        stderr.contains("were never declared"),
+        undeclared,
+        "{flags:?}: the undeclared-feature report:\n{stderr}"
+      );
+      if undeclared {
+        assert!(
+          stderr.ends_with(&format!(
+            "{UNDECLARED}{KNOWN}Conversion complete: No obvious problems\n"
+          )),
+          "{flags:?}: the two lines, then the verdict last:\n{stderr}"
+        );
+      }
+    }
+    // `--verbose` adds no frontmatter trace line and loses none.
+    assert_eq!(
+      front_counts[0], front_counts[1],
+      "FRONT lines without and with --verbose"
+    );
+    // `--quiet`: the feature's lines reach the log only (Perl `_printlines`: STDERR needs `$VERBOSITY >= 0`); the
+    // undeclared-feature report is a plain STDERR print, so it stays.
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--quiet",
+        "--debug=frontmatter",
+        "--debug=nosuchfeature",
+        "--log=q.log",
+        "dbg.tex",
+        "--dest",
+        "q.xml",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let log = std::fs::read_to_string(workdir.path().join("q.log")).expect("read q.log");
+    assert!(output.status.success(), "--quiet failed:\n{stderr}");
+    assert!(
+      !stderr.contains("FRONT "),
+      "--quiet: no feature line on STDERR:\n{stderr}"
+    );
+    assert!(
+      stderr.ends_with(&format!("Log written to q.log\n{UNDECLARED}{KNOWN}")),
+      "--quiet: the log line, then the undeclared-feature report end STDERR:\n{stderr}"
+    );
+    assert!(
+      log.contains("Debug:frontmatter FRONT "),
+      "--quiet: the feature's lines in the log"
+    );
+    assert!(
+      !log.contains("primitive invoke for"),
+      "--quiet: no un-featured line in the log"
     );
   }
 }

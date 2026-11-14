@@ -1,0 +1,35 @@
+% A raw class's displaced `\address` that prints the name's mark where it is called (utarticle.cls:125-137: `\address`
+% → `\addressmark` → `\@makeadmark{\@tempb}`, `\mbox{$^{\rm #1}$}`), called inside `\author`. Its call ran inside the
+% displaced route's assignment journal, which journals do not nest: the mark's speculative read (`printed_label`,
+% `speculative_label_ink`) got none and read the mark as spelled, `\@tempb`, so the names lost their printed marks "a"
+% and "b". The call is now recorded by a meaning recorder that nests (state.rs `begin_meaning_recorder`), the journal
+% left free (review rev99b B4).
+% witness: 1209.6020 (utarticle)
+% oracle:  pdflatex 0 errors: "Ann Able a", "Bob Baker b", "Cy Cole a", "aUniv A, Town", "bUniv B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, names "Ann Able a", "Bob Baker b"; rust 99b r1 = names "Ann Able", "Bob
+%          Baker"; perl = no raw class load (OmniBus `\address`)
+% expect:  0 errors, 0 warnings; Ann Able's name shows <sup>a</sup>, Bob Baker's <sup>b</sup>, Cy Cole's <sup>a</sup>
+% status:  RED (99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{utadr.cls}
+\ProvidesClass{utadr}\LoadClass{article}
+\newcounter{address}
+\def\theaddress{\alph{address}}
+\def\@makeadmark#1{\mbox{$^{\rm #1}$}}
+\def\addressmark{\stepcounter{address}\xdef\@tempb{\theaddress}\@makeadmark{\@tempb}}
+\def\address#1{\addressmark\begingroup
+  \xdef\@tempa{\theaddress}\let\\=\relax
+  \def\protect{\noexpand\protect\noexpand}\xdef\@address{\leavevmode \@address
+  \quad \vtop{\protect\addresstext{\@tempa}{#1}}}\endgroup}
+\def\addresstext#1#2{\leavevmode\@makeadmark{#1}#2\par}
+\def\@address{}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\vskip1em
+  {\small\it\@address}\end{center}}
+\end{filecontents*}
+\documentclass{utadr}
+\begin{document}
+\title{A Title}
+\author{Ann Able \address{Univ A, Town} \and Bob Baker \address{Univ B, City} \and Cy Cole$^{\rm a}$}
+\maketitle
+Text.
+\end{document}

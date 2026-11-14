@@ -1,0 +1,17 @@
+% witness: 77n r3 review — an unlabelled authblk `\affil` inside `\author` (review probe k1; titling, as 2605.03796)
+% oracle:  pdflatex 0 errors: "Ann Author" only (titling's `\theauthor` loses the `\affil`); the kept Some University
+%          follows int32a and Perl's `annotate=new` (authblk.sty.ltxml:57), not TeX
+% engines: rust int32a = Ann Author with Some University; 77n r3 = Ann Author alone (the `\affil` expands at the flush,
+%          no author queued: `annotate=run:0`, attached to no one)
+% expect:  0 errors, 0 warnings; 1 creator, Ann Author with Some University
+% status:  RED (77n r3) -> GREEN (77n r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{titling}
+\begin{document}
+\title{T}
+\author{Ann Author \affil{Some University}}
+\maketitle
+Body.
+\end{document}

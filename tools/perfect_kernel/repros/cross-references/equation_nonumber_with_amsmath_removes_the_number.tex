@@ -1,0 +1,15 @@
+% witness: the amsmath control of hep-ph9710521 / nucl-th0404042 (amsmath.sty:1268-1269 `\renewcommand{\nonumber}`)
+% oracle:  pdflatex 0 errors; (1), unnumbered, (2); "See 1, 2."
+% engines: rust int54a = the same; Perl the same
+% expect:  0 errors, 0 warnings; the second equation unnumbered, \notag the same
+% status:  GREEN (int54a) -> GREEN (78r, guard of OXIDIZED_DESIGN_DIVERGENCES #865)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation}a=b\label{e1}\end{equation}
+\begin{equation}c=d\nonumber\end{equation}
+\begin{equation}e=f\notag\end{equation}
+\begin{equation}g=h\label{e3}\end{equation}
+See \ref{e1}, \ref{e3}.
+\end{document}

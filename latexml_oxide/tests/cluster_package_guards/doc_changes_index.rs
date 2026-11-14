@@ -121,7 +121,7 @@ fn doc_change_history_is_typeset() {
     &[r#"id="glo.v11.foo""#],
     r##"<li id="glo.v11.foo" class="ltx_indexentry"><span class="ltx_indexphrase"><code class="ltx_verbatim ltx_font_typewriter">\foo</code>:</span>
 <ul class="ltx_indexlist">
-<li id="glo.v11.foo.Bravorevisedstyles" class="ltx_indexentry"><span class="ltx_indexphrase">Bravo revised styles</span><span class="ltx_indexrefs"><span class="ltx_text"> </span><a href="#S0.I1.ix1" title="" class="ltx_ref"><span class="ltx_text ltx_ref_tag">\foo</span></a></span></li></ul></li>"##,
+<li id="glo.v11.foo.Bravorevisedstyles" class="ltx_indexentry"><span class="ltx_indexphrase">Bravo revised styles</span><span class="ltx_indexrefs"><span class="ltx_text"> </span><a href="#S0.I1.ix1" title="" class="ltx_ref"><span class="ltx_text ltx_ref_tag"><span class="ltx_text ltx_font_typewriter" style="font-size:90%;">\foo</span></span></a></span></li></ul></li>"##,
   );
   assert!(!stderr.contains("unexpected:glossary"), "{stderr}");
 }
@@ -155,7 +155,8 @@ where the entry is used.</p>
 /// makeindex sees `foo=\verb!*+\foo+|…` and prints `\verb*+\foo+`. The run
 /// was absorbed unexpanded (key `foo=*\verbatimchar\bslash\@gtempa…`, every
 /// doc.sty manual: source2e, sunpath, circledtext); both marks of `\foo` are
-/// one entry now, with hypdoc's encaps as their styles; the definition refers to the `{macro}` item.
+/// one entry now, with hypdoc's encaps as their styles; the definition refers to the `{macro}` item, by its tag in the
+/// item's own font (a tag with markup is stored as its copy, Perl Scan.pm:269; 78j r3).
 #[test]
 fn doc_index_entries_read_their_macros() {
   let (stderr, xml, html) = convert_xml_then_html(DOC_CHANGES);
@@ -167,7 +168,7 @@ fn doc_index_entries_read_their_macros() {
     &[r#"id="idx""#],
     r##"<section id="idx" class="ltx_index ltx_list_idx">
 <ul class="ltx_indexlist">
-<li id="idx.foo" class="ltx_indexentry"><span class="ltx_indexphrase"><code class="ltx_verbatim ltx_font_typewriter">\foo</code></span><span class="ltx_indexrefs"><span class="ltx_text"> </span><span class="ltx_text ltx_font_hdclindex"><a href="#p1" title="" class="ltx_ref">p1</a></span>, <span class="ltx_text ltx_font_hdpindex"><a href="#S0.I1.ix1" title="" class="ltx_ref"><span class="ltx_text ltx_ref_tag">\foo</span></a></span></span></li></ul>
+<li id="idx.foo" class="ltx_indexentry"><span class="ltx_indexphrase"><code class="ltx_verbatim ltx_font_typewriter">\foo</code></span><span class="ltx_indexrefs"><span class="ltx_text"> </span><span class="ltx_text ltx_font_hdclindex"><a href="#p1" title="" class="ltx_ref">p1</a></span>, <span class="ltx_text ltx_font_hdpindex"><a href="#S0.I1.ix1" title="" class="ltx_ref"><span class="ltx_text ltx_ref_tag"><span class="ltx_text ltx_font_typewriter" style="font-size:90%;">\foo</span></span></a></span></span></li></ul>
 </section>"##,
   );
 }

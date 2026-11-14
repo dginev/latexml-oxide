@@ -1,0 +1,18 @@
+% witness: svmono.cls v5.5 (2009):418 (`\newcommand\backmatter{\clearemptydoublepage\@mainmatterfalse}`); its
+%          chapters number by `\if@chapnum` (:478-513), not by the matter; 1704.03069 (svmono)
+% oracle:  pdflatex (with svmono.cls v5.5; TeX Live ships none) 0 errors: "Chapter 2 Afterword", "Back matter."
+% engines: rust 78a r2 = "Chapter 2", "Main matter." (svmult's no-op `\backmatter`); int40c = "Chapter 2",
+%          "Back matter."; perl (no svmono binding) = 1 error
+% expect:  0 errors, 0 warnings; "Chapter 2 Afterword" with "Back matter."
+% status:  GREEN (78a r3)
+% preload: ar5iv.sty
+\documentclass{svmono}
+\makeatletter
+\begin{document}
+\mainmatter
+\chapter{Intro}
+Text.
+\backmatter
+\chapter{Afterword}
+\if@mainmatter Main matter.\else Back matter.\fi
+\end{document}

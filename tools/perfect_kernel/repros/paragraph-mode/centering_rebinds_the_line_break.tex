@@ -1,0 +1,17 @@
+% witness: hep-ph9607435 (rc_struct6 row 10; `\def\\ml{m_L}`, a typo for `\def\ml`)
+% oracle:  pdflatex 0 errors: `{center}`/`{flushleft}` are `\centering`/`\raggedright` (latex.ltx:15415-15432),
+%   which let `\\` be `\@centercr`
+% engines: rust 67int23b = 3 ("Missing argument Match:ml"), perl = 6
+% expect:  0 errors; each `\\` a line break: two centred lines, two left lines
+% status:  RED (67int23b) -> GREEN (73b: sect06.rs, `\\` = `\@normalcr` in the aligning environments)
+\documentclass{article}
+\def\\ml{m_L}
+\begin{document}
+\begin{center}
+	Patrick Huet\\
+	Department of Physics \\
+\end{center}
+\begin{flushleft}
+A\\ B
+\end{flushleft}
+\end{document}

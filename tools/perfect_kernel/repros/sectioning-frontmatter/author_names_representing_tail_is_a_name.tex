@@ -1,0 +1,21 @@
+% mechanism: the one collaboration remark (`classify::collaborations::collaboration_remark`, P6b): a name's remark opens
+%   with any of `SPEAKS_FOR` ("for", "on behalf of", "representing") wherever it opens, and ends with any collaboration
+%   or team word (`COLLABORATION_WORDS`, `TEAM_WORDS`: "Consortia", "teams" too); the infix reading
+%   (`name_before_remark`) spelled only "for"/"on behalf of" and five words. Siblings, one line each: `Ann Able and Bob
+%   Baker for the XYZ Consortia`, `Ann Able and Bob Baker on behalf of the XYZ teams` (rows of the P6b table).
+% witness: synthetic (the census's `representing the … Collaboration` lines: hep-ex0011032, hep-ex9903035)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker representing the XYZ Collaboration"
+% engines: rust P6bbase: 1 creator, Ann Able, affiliation "Bob Baker representing the XYZ Collaboration" (Bob Baker lost
+%   as a creator); perl: not run
+% expect:  0 errors, 2 warnings (the emitter's plain-text fallback, as `author_names_speaks_for_tail_is_a_name`'s "for"
+%   prints on the base: `author_names_inline_remark_markup_fallback_red`); two creators, Ann Able and Bob Baker, each with
+%   `<contact role="collaboration">representing the XYZ Collaboration</contact>`
+% status:  RED (P6bbase) -> GREEN (perfect_kernel_batchp6b::a_remark_speaks_for_a_group_in_one_vocabulary)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker representing the XYZ Collaboration}
+\maketitle
+Text.
+\end{document}

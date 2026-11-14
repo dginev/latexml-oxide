@@ -25,7 +25,9 @@ LoadDefinitions!({
   RequirePackage!("url");
   RequirePackage!("lipsum");
   RequirePackage!("tipa");
-  RequirePackage!("enumitem");
+  // Interspeech2024.cls:62 (Interspeech.cls:69 of 2025) `\RequirePackage[inline]{enumitem}`: the inline lists
+  // (`{enumerate*}`: 2406.16145, 2408.04363, 2505.19937, 2609.16274).
+  RequirePackage!("enumitem", options => vec![s!("inline")]);
   RequirePackage!("xkeyval");
   RequirePackage!("calc");
   RequirePackage!("xcolor");
@@ -142,7 +144,7 @@ LoadDefinitions!({
   // place` without an empty department (2025 :115-129).
   DefMacro!("\\address{}", sub[(block)] {
     // (an unmarked block is the affiliation of all the authors; 2401.07506)
-    let mut entry = if leads_with_mark(&block) {
+    let mut entry = if leads_with_label(&block, "interspeech address")? {
       vec![T_CS!("\\lx@add@affiliations")]
     } else {
       TokenizeInternal!("\\lx@add@affiliation[annotate=all]").unlist()

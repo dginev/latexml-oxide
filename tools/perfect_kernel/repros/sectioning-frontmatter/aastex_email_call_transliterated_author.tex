@@ -1,0 +1,24 @@
+% An AASTeX 5 `\email` call after a one-call author list, its address spelling an author only through the
+%   transliteration: `\author{J\"org M\"uller and Ann Able}\email{joerg.mueller@x.org}`. The call's `annotate=last` puts
+%   it on Ann Able; a transliterated spelling is a spelling of the name as printed (user ruling 2026-11-05: "also
+%   written Joerg Mueller"), so `insert::respell_emails` and the frontmatter observer's `Resolver::respell_emails` move
+%   it to Jörg Müller (`NameKeys::as_printed`; FIDELITY_CHARTER §4, never by bare position; OXIDIZED_DESIGN_DIVERGENCES
+%   #970). Twin of email_call_goes_to_the_author_it_spells.tex (`able@`).
+% witness: 107a round-1 open question 4; 0911.3506, 1506.04035 (the ASCII shape)
+% oracle:  pdflatex unavailable: AASTeX 5's aastex.cls is not in TL 2025 ("File `aastex.cls' not found"), a harness
+%   limit as for the twin; the class prints the `\email` once, under the author block
+% engines: rust int138a, 107a r1: on Ann Able
+% expect:  0 errors, 0 warnings; Jörg Müller holds joerg.mueller@x.org, Ann Able none
+% status:  RED (int138a, 107a r1) -> GREEN (107a r2)
+% preload: ar5iv.sty
+\documentclass{aastex}
+\begin{document}
+\title{T}
+\author{J\"org M\"uller and Ann Able}
+\affil{Univ A}
+\email{joerg.mueller@x.org}
+\begin{abstract}
+Abstract.
+\end{abstract}
+Text.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: 1312.1871 (C. Cazorla's `\institute{Département AGO, …, Belgium \email{cazorla@…}}`), 2310.16880
+%          (D. Gagnier's); review rev92c r2 B-2 — the llncs twin is right
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able and Bob Baker", then "Univ A, City A, e-mail: ann@a.org"
+%          unnumbered under the row
+% engines: perl 0.8.8 = 0 errors; rust 93a = the address on Ann Able, the institute on a nameless creator; 92c r2
+%          (int 94a) = both on the nameless creator (aa's `\email`, `\lx@add@contact[role=email]`, was no e-mail call
+%          to the shared row, which left the whole institute the block's)
+% expect:  0 errors, 0 warnings; the institute every author's (aa.cls:886-899, `_share=authors`), its trailing comma
+%          a separator; the address the author it spells — as llncs's (aa_support's `\email` the kernel's `\lx@add@email`)
+% status:  RED (92c r2) -> GREEN (92c r3) — perfect_kernel_batch92c::aa_sole_institute_reads_as_llncss
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, City A, \email{ann@a.org}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

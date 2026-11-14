@@ -566,7 +566,7 @@ pub(crate) const EB_BUDGET: u32 = 256;
 impl Digested {
   /// Set a property unless the box is borrowed — being absorbed (`Document::absorb` holds it while its constructor
   /// runs); false then. Perl's store always lands (Box.pm:168-171).
-  fn try_set_property<T: Into<Stored>>(&self, key: &str, value: T) -> bool {
+  pub fn try_set_property<T: Into<Stored>>(&self, key: &str, value: T) -> bool {
     use DigestedData::*;
     match *self.0 {
       // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
@@ -584,6 +584,26 @@ impl Digested {
         .map(|mut w| w.set_property(key, value))
         .is_ok(),
       _ => true, // no-op for Comment/Postponed/RegisterValue/KeyVals/Alignment
+    }
+  }
+
+  /// Remove a property unless the box is borrowed (false then), as [`Self::try_set_property`] sets one.
+  pub(crate) fn try_remove_property(&self, key: &str) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b
+        .try_borrow_mut()
+        .map(|mut b| b.get_properties_mut().remove(key))
+        .is_ok(),
+      List(ref l) => l
+        .try_borrow_mut()
+        .map(|mut l| l.get_properties_mut().remove(key))
+        .is_ok(),
+      Whatsit(ref w) => w
+        .try_borrow_mut()
+        .map(|mut w| w.get_properties_mut().remove(key))
+        .is_ok(),
+      _ => true,
     }
   }
 
@@ -873,6 +893,28 @@ impl Digested {
         }
       ),
       None => false,
+    }
+  }
+
+  /// A table cell's boxes that hold nothing but a paragraph cell (`p{}`/`m{}`/`b{}`, the `\lx@tabular@p@` box,
+  /// tex_tables.rs) with a skippable body, and skippable material: a cell a row span may cover, though
+  /// [`Self::is_skippable`] (Perl's `isSkippable`) counts the box as content. KNOWN_PERL_ERRORS #1015.
+  pub fn is_empty_paragraph_cell(&self) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      List(ref l) => {
+        let l = l.borrow();
+        !l.get_property_bool("alignmentPreserve")
+          && l
+            .boxes
+            .iter()
+            .all(|d| d.is_skippable() || d.is_empty_paragraph_cell())
+      },
+      Whatsit(ref w) => match w.borrow().get_property("paragraph_cell_body") {
+        Some(prop) => matches!(&*prop, Stored::Digested(body) if body.is_skippable()),
+        None => false,
+      },
+      _ => false,
     }
   }
 

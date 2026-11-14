@@ -43,7 +43,17 @@ fn calc_assign(variable: ArgWrap, expression: Tokens, kind: &str) -> Result<()> 
   if let ArgWrap::RegisterDefinition(dbox) = variable {
     let (rtoken, params) = *dbox;
     if let Some(defn) = rtoken.to_register() {
+      let stated = expression.clone();
       let (value, tail) = evaluate(kind, expression)?;
+      // What a length's assignment states, for a float's width read through the register (the panel grid rule,
+      // `note_setlength`).
+      if kind != "Number" && params.is_empty() {
+        engine::latex_constructs::note_setlength(
+          &defn.get_cs_name(),
+          &stated,
+          value.clone().value_of(),
+        );
+      }
       defn.set_value(value, None, params);
       unread_vec(tail);
     }
@@ -486,8 +496,12 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
     }
     return Ok(CalcValue::Reg(value));
   }
-  // Else: literal value — put back token and read normally
-  unread_one(peek);
+  // Else: literal value — put back token and read normally. calc.sty:110 reads it by assigning to a register
+  // (`\calc@numeric` = `\afterassignment\calc@post@scan \global\calc@A`), whose `<optional equals>` (tex.web
+  // §1224) takes one `=`: `\resizebox{=0.93\textwidth}{!}{…}` (2606.05909).
+  if peek != T_OTHER!("=") {
+    unread_one(peek);
+  }
   if expr_type == "Number" {
     Ok(CalcValue::Reg(RegisterValue::Number(read_number()?)))
   } else {

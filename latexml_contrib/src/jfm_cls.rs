@@ -10,7 +10,13 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // jfm.cls loads no amsmath (196 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them unloaded,
+  // its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");
   RequirePackage!("hyperref");
@@ -22,23 +28,72 @@ LoadDefinitions!({
   // :79; not distributed): the class and the template preamble test it around their font checks
   // (`\ifCUPmtlplainloaded \else \checkfont{eurm10} …`; run 340: 597 papers' first error; witnesses 2103.10260,
   // 2103.05851, 1904.02498). The newer copies' `lineno` option (2604.22963's :172, :186, :2239) loads the
-  // lineno-FLM.sty the papers ship at the start of the document (`\nolinenumbers` in a title: 2401.13479, 2406.10975).
+  // lineno-FLM.sty the papers ship at the start of the document (`\nolinenumbers` in a title: 2401.13479, 2406.10975);
+  // an older copy has no such option (2605.03843's v1.25, whose paper ships no lineno-FLM.sty: `[lineno]` is an unused
+  // option there), so the option is the copy's when the paper has one.
+  // The paper's own copy decides what follows where the versions differ: that option; caption, which 35 of 119 sampled
+  // copies load (`\captionsetup`, run 340: 51; 2406.15733); the msam10 check's `\let\le=\leqslant` (73 copies,
+  // active); the bold-italic sans `\mathsfbi` (below). Without a readable copy, the newer versions' choices.
+  let shipped = crate::shipped_class::shipped_class_text("jfm")?;
   RawTeX!(r"\newif\ifCUPmtlplainloaded\newif\iflineno");
   DeclareOption!("prodtf", "\\CUPmtlplainloadedtrue");
-  DeclareOption!("lineno", "\\linenotrue");
+  if shipped
+    .as_deref()
+    .is_none_or(|text| crate::shipped_class::class_code_contains(text, "\\DeclareOption{lineno}"))
+  {
+    DeclareOption!("lineno", "\\linenotrue");
+  }
   DeclareOption!(None, {});
   ProcessOptions!();
   RawTeX!(r"\iflineno\AtBeginDocument{\usepackage{lineno-FLM}}\fi");
-  // The paper's own copy decides what follows where the versions differ: caption, which 35 of 119 sampled copies load
-  // (`\captionsetup`, run 340: 51; 2406.15733); the msam10 check's `\let\le=\leqslant` (73 copies, active); the
-  // bold-italic sans `\mathsfbi` (below). Without a readable copy, the newer versions' choices. (The copies without
-  // caption print "Figure 1." from their own `\@makecaption`, 0712.2739's :953-958; our captions keep ": ", a residual.)
-  let shipped = crate::shipped_class::shipped_class_text("jfm")?;
+  // The copy's caption load keeps its options (2608.01828's :1837 `[…,labelsep=period,…]{caption}`: "Figure 1."); the
+  // copies without caption print "Figure 1." with the label in small caps from their own `\@makecaption` (0712.2739's
+  // :953-958 `{\normalfont\scshape #1\ifrem@fullpt\else .\fi} #2`, `\removefullpoint` dropping the period once),
+  // which the kernel's caption keeps out (`\@makecaption keeps LaTeXML's definition`): its label format is the
+  // figure's and table's title format, as amsart's (ams_support_sty.rs `ams_class_caption_format`), its font the label
+  // font (`\fnum@font@<type>`, sect09.rs) under the class caption fonts knob alone. The document's caption package —
+  // or subcaption's or subfig's, which load it — replaces the class's `\@makecaption` ("Figure 1:" in the text font;
+  // 1711.01065, 2205.10181, 2507.07213 subcaption, 1805.00129 subfig), the old subfigure package does not, nor
+  // floatrow, which loads caption's kernel alone (floatrow.sty:39 `caption3`, whose stand-in is our caption binding:
+  // `\lx@caption@kernel@only`; 2312.13002, 2111.12004): so the format is the class's only where caption is not loaded
+  // by `\begin{document}`; `\removefullpoint` is the copy's either way. Before, both gave "Figure 1:"
+  // (OXIDIZED_DESIGN_DIVERGENCES #784; guards `perfect_kernel_batch78a::{
+  // jfm_copy_captions_end_the_label_with_a_period, jfm_copy_caption_package_keeps_its_options,
+  // jfm_copy_caption_yields_to_caption_loaders, jfm_copy_caption_kept_with_subfigure,
+  // jfm_copy_caption_kept_with_floatrow}`).
   if shipped
     .as_deref()
-    .is_none_or(|text| crate::shipped_class::class_text_loads(text, "caption"))
+    .is_some_and(|text| crate::shipped_class::class_code_contains(text, "rem@fullpt"))
   {
-    RequirePackage!("caption");
+    RawTeX!(r"\newif\ifrem@fullpt\def\removefullpoint{\global\rem@fullpttrue}");
+  }
+  match shipped.as_deref() {
+    None => RequirePackage!("caption"),
+    Some(text) if crate::shipped_class::class_text_loads(text, "caption") => {
+      // The dependency scan declines a `\usepackage` it cannot read as the class's (a `\def` body, a comment block):
+      // caption is loaded all the same.
+      if !crate::shipped_class::require_shipped_packages("cls", &["caption"])? {
+        RequirePackage!("caption");
+      }
+    },
+    Some(text) => {
+      if crate::shipped_class::class_code_contains(text, "\\@makecaption")
+        && crate::shipped_class::class_code_contains(text, "rem@fullpt")
+      {
+        // (the class's `\@makecaption` for every kernel float, a newfloat type's as a figure's: `\lx@makecaption`; its
+        // small-caps label under the class caption fonts knob alone, caption_sty.rs `CLASS_CAPTION_FONTS`)
+        let fonts = if caption_sty::class_caption_fonts() {
+          r"\def\fnum@font@float{\scshape}\def\fnum@font@figure{\scshape}\def\fnum@font@table{\scshape}%"
+        } else {
+          ""
+        };
+        caption_sty::class_makecaption(&s!(
+          r"{fonts}
+\long\def\lx@makecaption##1##2{{\lx@tag[][\ifrem@fullpt\space\else. \fi]{{\lx@fnum@@{{##1}}}}##2\global\rem@fullptfalse}}%
+\long\def\format@title@figure##1{{\lx@makecaption{{figure}}{{##1}}}}\long\def\format@title@table##1{{\lx@makecaption{{table}}{{##1}}}}"
+        ))?;
+      }
+    },
   }
   // jfm.cls:1176-1183 `\checkfont` and the font checks every version runs (:1324-1365): amsbsy, and upmath when the
   // Euler fonts are found and the paper ships upmath.sty (TeX Live has none, so `\upi` is the class's `\pi`; witnesses
@@ -145,6 +200,25 @@ LoadDefinitions!({
     RawTeX!(
       r"\newif\ifappendix\newif\ifoneappendix\newcommand\oneappendix{\global\oneappendixtrue\appendix}"
     );
+    // The figure-caption legend symbols (1702.03412's :1380-1405: `\fullcirc`, `\opencirc`, `\fullsquare`, the line
+    // styles `\full`, `\dashed`, `\dotted`, `\chain`, …; 73 of 85 copies, 29 papers: 1702.03412, 1806.08341,
+    // 1909.12979) and the upright capital Greek (:1419-1429 `\let\rmDelta\Delta`, …; 2004.10578, 2207.01368).
+    RawTeX!(
+      r"\newcommand{\opensquare}{\mbox{$\square$}}\newcommand{\opentriangle}{\mbox{$\vartriangle$}}
+\newcommand{\opentriangledown}{\mbox{$\triangledown$}}\newcommand{\opendiamond}{\mbox{$\lozenge$}}
+\newcommand{\fullsquare}{\mbox{$\blacksquare$}}\newcommand{\fulldiamond}{\mbox{$\blacklozenge$}}
+\newcommand{\fullstar}{\mbox{$\bigstar$}}\newcommand{\fulltriangle}{\mbox{$\blacktriangle$}}\let\fulltri=\fulltriangle
+\newcommand{\fulltriangledown}{\mbox{$\blacktriangledown$}}\let\fulltridown=\fulltriangledown
+\newcommand{\opencirc}{\mbox{\Large$\circ$}}\newcommand{\opensqr}{\mbox{$\square$}}\newcommand{\opentri}{\mbox{$\triangle$}}
+\newcommand{\opentridown}{\mbox{$\bigtriangledown$}}\newcommand{\fullcirc}{\mbox{{\Large$\bullet$}}}
+\newcommand{\fullsqr}{\,\vrule height5pt depth0pt width5pt}
+\newcommand{\dotted}{\protect\mbox{${\mathinner{\cdotp\cdotp\cdotp\cdotp\cdotp\cdotp}}$}}
+\newcommand{\dashed}{\protect\mbox{-\ -\ -\ -}}\newcommand{\broken}{\protect\mbox{-- -- --}}
+\newcommand{\longbroken}{\protect\mbox{--- --- ---}}\newcommand{\chain}{\protect\mbox{--- $\cdot$ ---}}
+\newcommand{\dashddot}{\protect\mbox{--- $\cdot$ $\cdot$ ---}}\newcommand{\full}{\protect\mbox{------}}
+\let\rmGamma\Gamma\let\rmDelta\Delta\let\rmTheta\Theta\let\rmLambda\Lambda\let\rmXi\Xi\let\rmPi\Pi
+\let\rmSigma\Sigma\let\rmUpsilon\Upsilon\let\rmPhi\Phi\let\rmPsi\Psi\let\rmOmega\Omega"
+    );
     DefMacro!("\\aunote{}", "\\thanks{#1}");
     DefMacro!(
       "\\corresau{}",
@@ -152,6 +226,60 @@ LoadDefinitions!({
     );
   }
 
+  // Every version's (85 of 85 copies; 1702.03412's lines): the subequation number "(2.1\textit{a})" (:649) and
+  // `\returnthesubequation`, which re-establishes it after a paper's own `{subeqnarray}` numbering (:641-642;
+  // cond-mat0107563, cond-mat0306566; 14 papers), `\useAMSsubequations` (:624-625; 2304.12657, 2601.23025,
+  // 2608.01542), the title page's `\norule` and `\followon` and the footnote's `\fulloutfootnote` (:1066-1070,
+  // :733-734), the class's `\indexsize` (:136) and `\boldit` (:166-167) and the theorem spacing `\halflineskip`
+  // (:217-218).
+  RawTeX!(
+    r"\renewcommand\thesubequation{\theequation{\itshape\@alph\c@subequation}}
+\newcommand\returnthesubequation{\gdef\thesubequation{\theequation{\itshape\@alph\c@subequation}}}
+\newif\ifuseAMSsubequ\newcommand\useAMSsubequations{\global\useAMSsubequtrue}
+\newif\iffollowon\newif\ifrmrule\newcommand\followon{\global\followontrue}\newcommand\norule{\global\rmruletrue}
+\newif\iffofootnote\newcommand\fulloutfootnote{\global\fofootnotetrue}
+\newcommand\indexsize{\@setfontsize\indexsize\@viiipt\@ixpt}
+\newcommand\boldit{\usefont{OT1}{cmr}{bx}{it}\fontsize{10}{\f@baselineskip}\selectfont}
+\newlength\halflineskip\setlength\halflineskip{6\p@ \@plus .5\p@ \@minus .5\p@}"
+  );
+  // Every version numbers the equations within the sections, "(2.1)" (v1.23-v1.28, cond-mat0107563's, 2608.04345's and
+  // 2103.10260's copies: :615 `\renewcommand\theequation{\thesection.\@arabic\c@equation}`, `\section` itself zeroing
+  // the counter, :301-306; the FLM copies, 2604.22963's and 2507.06135's JFM-FLM_Au.cls: :1317-1318, the same
+  // `\theequation` and `\@addtoreset{equation}{section}`), and the appendices "(A 1)" (`\appendix`, :390-397 and
+  // :616-626: the section counter and the equations zeroed, `\theequation{\thesection\,\@arabic\c@equation}`). The older
+  // copies' `\nosectioneqnreset` (:297-299) numbers them through the paper, "(1)", the appendices' still reset (:303
+  // `\ifappendix \setcounter{equation}\z@\fi`). The binding's article base kept "(1)", "(2)" (2608.04345: 116 equation
+  // references; SYNC row 76; KNOWN_PERL_ERRORS #1097, Perl has no jfm binding). Guard
+  // `perfect_kernel_batch78q::jfm_equations_within_sections`.
+  RawTeX!(
+    r"\renewcommand\theequation{\thesection.\@arabic\c@equation}\@addtoreset{equation}{section}
+\def\appendix{\@appendix\setcounter{section}\z@\setcounter{equation}\z@\@addtoreset{equation}{section}%
+\renewcommand\theequation{\thesection\,\@arabic\c@equation}\global\appendixtrue}"
+  );
+  {
+    let _older = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\newif\ifno@eqnreset
+\newcommand\nosectioneqnreset{\global\no@eqnresettrue\renewcommand\theequation{\@arabic\c@equation}%
+\@removefromreset{equation}{section}}"
+    );
+  }
+  // jfm.cls:299-306 (v1.23-v1.28, 72 of 74 census copies; 2608.04345's): `\section` itself zeroes the equation counter,
+  // a starred one too ("(2.1)" after `\section*`, where the reset by the section counter gave "(2.3)"), only in the
+  // appendices under `\nosectioneqnreset`. The FLM copies' `\section` (JFM-FLM_Au.cls:501, the zeroing commented out
+  // at :481-487; 2507.06135 — 2505.15463's declares `JFM-FLM_Au` and is read raw) is a bare `\@startsection`, their equations reset by
+  // `\@addtoreset{equation}{section}` (:1318), numbered sections only: the paper's copy decides. Residual (review
+  // rev78q2): the appendices' `\section` is the kernel's `\@@appendix`, which the binding cannot wrap there (the locked
+  // `\section` ignores a redefinition made in the document), so an appendix `\section*` keeps the count, "A 2" where
+  // jfm.cls:303 zeroes it, "A 1". Guard `perfect_kernel_batch78q::jfm_section_star_zeroes_equations`.
+  if shipped.as_deref().is_none_or(|text| {
+    !crate::shipped_class::class_code_contains(text, "\\@addtoreset{equation}{section}")
+  }) {
+    RawTeX!(
+      r"\let\lx@jfm@section\section
+\def\section{\ifno@eqnreset\ifappendix\setcounter{equation}\z@\fi\else\setcounter{equation}\z@\fi\lx@jfm@section}"
+    );
+  }
   // jfm.cls L1498: \newcommand{\backsection}[2][\backsectionname]{...\textbf{#1.} #2...}
   // — a backmatter paragraph (Acknowledgements / Declaration of interests / Data
   // availability) with a bold title. Was undefined (Perl defines it). Render as the
@@ -171,11 +299,26 @@ LoadDefinitions!({
   // jfm.cls: \def\corresp#1{\unskip\thanks{#1}} — corresponding author
   // text routed via \thanks.
   DefMacro!("\\corresp{}", "\\thanks{#1}");
-  // \affiliation{...} — institution list, preserve as ltx:note.
-  DefMacro!(
-    "\\affiliation{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}"
-  );
+  // jfm.cls:680 `\newcommand\affiliation[1]{\gdef\@affiliation{#1}}`, printed once under the names (:733 `{\normalfont
+  // \small \@affiliation \par}`). A list its marks label (`$^1$Institut …, $^2$School of Engineering …` under
+  // `Randriamampianina$^1$, Fr\"uh$^2$`; the template's `\aff{1}`) is the names' affiliations, each entry the authors'
+  // showing its mark (the frontmatter API's Cut: OXIDIZED_DESIGN_DIVERGENCES #954; census127 witnesses physics0607157,
+  // 1302.1594), a sole entry every author's; an unmarked one stays the note it was.
+  DefMacro!("\\affiliation{}", sub[(affiliation)] {
+    let marked = leads_with_label(&affiliation, "jfm affiliation")? && queued_authors_marked()?;
+    Ok(if marked {
+      Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+        Some(mouth::tokenize_internal("annotate=all")),
+        Some(affiliation)
+      ])
+    } else {
+      let mut note = mouth::tokenize_internal("\\@add@frontmatter{ltx:note}[role=affiliation]").unlist();
+      note.push(T_BEGIN!());
+      note.extend(affiliation.unlist());
+      note.push(T_END!());
+      Tokens::new(note)
+    })
+  });
   // \keywords{...} — JFM has its own keywords macro.
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 });

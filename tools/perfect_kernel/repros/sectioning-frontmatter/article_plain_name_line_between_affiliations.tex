@@ -1,11 +1,18 @@
 % mechanism: the same alternation without notes: `Ann Able\\ Univ X…\\ Bob Baker\\ Univ Y…`, all plain. "Bob Baker"
 %   reads as a name, but so does a place ("Ann Arbor", "Los Angeles"); with no note, mark or styling to tell them apart
 %   `name_groups` keeps it an affiliation of Ann Able.
-% witness: hep-lat9404004 (its notes-free shape)
-% oracle:  pdflatex: 0 errors; "Ann Able" over "Univ X, Helsinki, Finland", "Bob Baker" over "Univ Y, Liverpool, UK"
-% engines: rust 64zd-base and 64zd: Ann Able with three affiliations, the second "Bob Baker"; perl: one creator per line
-% expect:  0 errors; two creators, each with its affiliation
-% status:  RED (64zd)
+%   The same class, a cue-less person's name with no gap or styling before it: 1908.10448's `Shanghai Jiao Tong
+%   University, \\ Zach Shahn \\ IBM Research,`, and a name after a negative skip, no gap (`Univ A \\[-2pt] Max Moe
+%   \\ Boston, MA`).
+% witness: hep-lat9404004 (its notes-free shape), 1908.10448 (Zach Shahn)
+% oracle:  pdflatex: 0 errors; "Ann Able" over "Univ X, Helsinki, Finland", "Bob Baker" over "Univ Y, Liverpool, UK";
+%          Lee Lowe, Zach Shahn and Max Moe each over their lines
+% engines: rust 64zd-base and 64zd: Ann Able with three affiliations, the second "Bob Baker"; perl: one creator per line;
+%          rust 85a r3: Ann Able as 64zd, Lee Lowe holding "Zach Shahn", "Max Moe" and the lines under them
+% expect:  0 errors; five creators, each with its affiliation
+% status:  RED (64zd) -> GREEN (85a r1, by the institution under "Bob Baker") -> RED (85a r2): with no gap, no
+%          styling and no person's cue (an initial, a particle) a name-shaped line over an institution reads as
+%          `Santa Barbara \\ Kavli Institute …` and `Max Planck \\ Institute for …` do, a line (OD #900; SYNC row)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}
@@ -13,7 +20,14 @@
 \author{Ann Able\\
 Univ X, Helsinki, Finland \\
 Bob Baker\\
-Univ Y, Liverpool, UK}
+Univ Y, Liverpool, UK
+\and Lee Lowe \\
+Shanghai Jiao Tong University, \\
+Zach Shahn \\
+IBM Research, \\
+Univ A \\[-2pt]
+Max Moe \\
+Boston, MA}
 \maketitle
 Text.
 \end{document}

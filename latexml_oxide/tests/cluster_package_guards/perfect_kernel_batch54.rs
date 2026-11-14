@@ -3,20 +3,14 @@
 //! reproduction distilled during triage; the doc-comment names the
 //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
 //! was vetted separately.
+use latexml::util::test::{check_all_requirements, check_requirements, loads};
+
 use super::{
   perfect_kernel_batch40_43::convert_with_files,
   perfect_kernel_batch46::{convert, convert_with, error_count, warning_count},
   perfect_kernel_batch53::convert_with_sty,
   perfect_kernel_batch57::{RAW, assert_elements},
 };
-
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
 
 /// biblatex.sty:4407-4425 defines `\DeclareIndex{Name,List,Field}Format`
 /// through the same `\blx@defformat` as their non-Index siblings, and
@@ -1617,6 +1611,9 @@ fn chemmacros_raw_load_keeps_chemformula_ch() {
 /// `D:YYYYMMDD…` stamp (pdfTeX manual §8.11; datetime2.sty:46-48).
 #[test]
 fn datetime2_raw_dates_render() {
+  if !check_requirements(&["datetime2.sty", "tracklang.sty"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage[en-GB]{datetime2}
 \begin{document}
@@ -2099,6 +2096,7 @@ fn index_control_word_before_at_is_not_glued() {
 \newcommand{\docpkg}[1]{\texttt{#1}\index{#1 package@\texttt{#1} package}\index{packages!#1@\texttt{#1}}}
 \begin{document}
 Uses \docpkg{\TIKZ} here.
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
@@ -2348,9 +2346,10 @@ fn declare_caption_type_makes_a_float() {
   assert!(!xml.contains("[Listagem][Lista"), "{xml}");
 }
 
-/// KNOWN_PERL_ERRORS #142: `\valign{…}` consumes its alignment
+/// KNOWN_PERL_ERRORS #142: `\valign{…}` reads its template and entries
 /// (fancyvrb.sty:570 `\FancyVerbTab`: one `#`-reaches-stomach error per
-/// tab-bearing `Verbatim` line under `showtabs`, pygmentex_demo).
+/// tab-bearing `Verbatim` line under `showtabs`, pygmentex_demo); since 79w
+/// the tab mark's three symbols are the alignment's columns.
 #[test]
 fn valign_swallows_its_alignment() {
   let tex = "\\documentclass{article}
@@ -2384,6 +2383,7 @@ fn index_control_word_before_letter_at_is_not_glued() {
 \makeatother
 \begin{document}
 \extractinternalcommand Text.
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
@@ -2532,6 +2532,7 @@ fn makeidx_keeps_the_allocating_makeindex() {
 \ifdefined\@indexfile STREAMDEFINED\fi
 \makeatother
 \index{alpha}
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
@@ -2655,6 +2656,115 @@ d & e \\
   assert_eq!(xml.matches("<td").count(), 5, "{xml}");
 }
 
+/// tabu.sty's `\tabu@init` (:705-708, `\centering`/`\raggedright`/`\raggedleft` end with `\arraybackslash`; every list,
+/// the kernel's, a package's, one calling `\list`, a bibliography or a class's proof, keeps `\\` a line break), its private `|[<style>]` (:907-911) and `{tabu*}`/`{longtabu*}` (:624/:634), each repro of
+/// `repros/alignment-bindings/` whole (ids masked); the error side keeps array's `>{\centering}p` Error (pdflatex 1).
+/// Witnesses 2210.07016, 2403.07615, 2112.12027, 1907.07986, 1909.02301, 1810.00307, 2112.10477, 2002.01722, 2006.01316,
+/// 1705.07086.
+#[test]
+fn tabu_init_lets_rule_styles_and_starred_environments() {
+  macro_rules! repro {
+    ($name:literal) => {
+      include_str!(concat!(
+        "../../../tools/perfect_kernel/repros/alignment-bindings/",
+        $name,
+        ".tex"
+      ))
+    };
+  }
+  let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+  let rows: [(&str, &str, usize, usize, &str); 11] = [
+    (
+      "centering",
+      repro!("tabu_centering_ends_the_row"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" border="r" thead="row">a</td><td align="left" vattach="middle"><inline-block vattach="middle" width="56.9pt"><p align="center">b</p></inline-block></td><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p class="ltx_align_left">c</p></inline-block></td><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p class="ltx_align_right">g</p></inline-block></td></tr><tr><td align="left" border="r" thead="row">d</td><td align="left" vattach="middle"><inline-block vattach="middle" width="56.9pt"><p align="center">e</p></inline-block></td><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p class="ltx_align_left">f</p></inline-block></td><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p class="ltx_align_right">h</p></inline-block></td></tr></tbody></tabular></para><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">i</td><td align="left"><inline-block vattach="top"><p align="center">j</p></inline-block></td></tr><tr><td align="left" thead="row">k</td><td align="left"><inline-block vattach="top"><p class="ltx_align_right">l</p></inline-block></td></tr></tbody></tabular></para><para><tabular vattach="middle"><tbody><tr><td align="left">x</td><td align="center"><tabular vattach="middle"><tr><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p align="center">a</p></inline-block></td></tr><tr><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p align="center">b</p></inline-block></td></tr></tabular></td></tr><tr><td align="left">y</td><td align="center">z</td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "lists",
+      repro!("tabu_lists_keep_their_line_breaks"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>-</tag><tag role="typerefnum">1st item</tag></tags><para><p>a<break/>b</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><enumerate class="ltx_centering"><item><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para><p>c<break/>d</p></para></item></enumerate></inline-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para><p>e<break/>f</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">u</td><td align="left" vattach="top"><inline-block width="113.8pt"><p align="center"><inline-block class="ltx_parbox" vattach="middle" width="56.9pt"><p>v</p><p>w</p></inline-block></p></inline-block></td></tr><tr><td align="left" thead="row">m</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>–</tag><tag role="typerefnum">1st item</tag></tags><para><p>g<break/>h</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">q</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><quote class="ltx_centering"><p>i<break/>j</p></quote></inline-block></td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "paralist lists",
+      repro!("tabu_paralist_lists_keep_their_line_breaks"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para><p>a<break/>b</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><enumerate class="ltx_centering"><item><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para><p>c<break/>d</p></para></item></enumerate></inline-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><p align="center">w</p></inline-block></td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "enumitem lists",
+      repro!("tabu_enumitem_lists_keep_their_line_breaks"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><enumerate class="ltx_centering"><item><tags><tag>1.</tag><tag role="refnum">1.</tag></tags><para><p>a<break/>b</p></para></item></enumerate></inline-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>*</tag><tag role="refnum">*</tag></tags><para><p>c<break/>d</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><p align="center">w</p></inline-block></td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "theorems",
+      repro!("tabu_theorems_keep_their_line_breaks"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-logical-block vattach="top" width="113.8pt"><theorem class="ltx_centering ltx_theorem_thm" inlist="thm theorem:thm"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag><text font="bold">.</text></title><para><p><text font="italic">a<break/>b</text></p></para></theorem></inline-logical-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-logical-block vattach="top" width="113.8pt"><proof class="ltx_centering"><title class="ltx_runin" font="italic">Proof.</title><para><p>c<break/>d∎</p></para></proof></inline-logical-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-logical-block vattach="top" width="113.8pt"><theorem class="ltx_centering ltx_theorem_defn" inlist="thm theorem:defn"><tags><tag>Definition 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Definition 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Definition 1</text></tag><text font="bold">.</text></title><para><p>e<break/>f</p></para></theorem></inline-logical-block></td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      // the schema's Error for a bibliography in a cell's block: block-model/bibliography_in_a_table_cell_red.tex
+      "bibliography",
+      repro!("tabu_thebibliography_keeps_its_line_breaks"),
+      1,
+      2,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular vattach="middle"><tbody><tr><td align="left" vattach="top"><block vattach="top" width="113.8pt"><bibliography class="ltx_centering" inlist="toc"><title>References</title><biblist><bibitem key="k"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> a<break/>b</bibblock></bibitem></biblist></bibliography></block></td><td align="left">x</td></tr><tr><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><p align="center">y</p></inline-block></td><td align="left">z</td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "class proof",
+      repro!("tabu_class_proof_keeps_its_line_breaks"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row" vattach="top"><inline-logical-block vattach="top" width="113.8pt"><proof class="ltx_centering"><title>Proof</title><para><p>a<break/>b</p></para></proof></inline-logical-block></td><td align="left">x</td></tr><tr><td align="left" thead="row" vattach="top"><inline-block vattach="top" width="113.8pt"><p align="center">y</p></inline-block></td><td align="left">z</td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "longtabu",
+      repro!("longtabu_centering_and_rule_styles"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><table inlist="lot"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><tabular><tr><td align="left">a</td><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p align="center">b</p></inline-block></td></tr><tr><td align="left">c</td><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p align="center">d</p></inline-block></td></tr></tabular></table><table inlist="lot"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><tabular><tr><td align="left" border="l r">e</td><td align="center" border="r">f</td></tr></tabular></table></document>"##,
+    ),
+    (
+      "vline",
+      repro!("tabu_vline_style_spec"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="l r" thead="column">a</td><td align="center" border="r" thead="column">b</td><td align="right" border="r" thead="column">c</td></tr></thead><tbody><tr><td align="center" border="l r">d</td><td align="center" border="r">e</td><td align="right" border="r">f</td></tr></tbody></tabular></para><para><p><Math mode="inline" tex="\begin{array}[]{c|[1pt]c}u&amp;v\\&#10;w&amp;t\end{array}" text="Array[[u, v], [w, t]]"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center" border="r"><XMTok font="italic" role="UNKNOWN">u</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">v</XMTok></XMCell></XMRow><XMRow><XMCell align="center" border="r"><XMTok font="italic" role="UNKNOWN">w</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">t</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para></document>"##,
+    ),
+    (
+      "starred",
+      repro!("tabu_star_environments"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular vattach="middle"><tbody><tr><td align="center" border="l r" vattach="middle"><inline-block vattach="top"><p>a</p></inline-block></td><td align="center" border="r" vattach="middle"><inline-block vattach="top"><p>b</p></inline-block></td><td align="center" border="r" vattach="middle"><inline-block vattach="top"><p>c</p></inline-block></td></tr></tbody></tabular></para><table inlist="lot"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><tabular><tr><td align="left">d</td><td align="center">e</td></tr></tabular></table></document>"##,
+    ),
+    (
+      "array alone",
+      repro!("array_centering_backslash_errs"),
+      2,
+      0,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p align="center">b</p></inline-block></td><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p align="center">c</p><p align="center">d</p></inline-block></td><td align="center">e</td><td align="center" class="ltx_nopad_r">f</td></tr></tbody></tabular></para></document>"##,
+    ),
+  ];
+  for (name, tex, errors, warnings, want) in rows {
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(
+      (error_count(&stderr), warning_count(&stderr)),
+      (errors, warnings),
+      "{name}: {stderr}"
+    );
+    let body = latexml::util::test::xml_element(&xml, "document", &[]).expect("a document");
+    assert_eq!(ids.replace_all(&body, ""), want, "{name}");
+  }
+}
+
 /// xkeyval.tex:38 `\let\XKeyValLoaded\endinput`: expex.tex:65 must not
 /// re-input raw xkeyval over the binding (fragoli, rainbowbrackets:
 /// `undefined:\ep@preambleanchor` on a `\pex` with preamble text).
@@ -2662,7 +2772,7 @@ d & e \\
 fn xkeyval_sets_the_loaded_sentinel() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("expex.sty") {
+  if !check_requirements(&["expex.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -2774,6 +2884,7 @@ fn index_verb_followed_by_cs_is_text() {
 \makeindex
 \begin{document}
 Text\index{foo@\string\verb\string"bar}. More text here.
+\printindex
 \end{document}
 "#;
   let (stderr, xml) = convert(tex, false);
@@ -3130,7 +3241,8 @@ P_2 & 1 & 1 \\
 /// biblatex.sty defines its `\if<test>` commands as BRANCH-SELECTING
 /// macros (`\iffieldundef{f}{true}{false}`, :6205), not TeX conditionals;
 /// plus the round-3 declarations (`\DeclareLabeltitle`, `\letbibmacro`,
-/// `\uspunctuation`, `\footfullcite`).
+/// `\uspunctuation`, `\footfullcite`). `\ifhyperref` takes its false branch: biblatex loads no hyperref
+/// (biblatex.sty:38-44; batch 70a), and pdflatex prints `[N]` too.
 #[test]
 fn biblatex_tests_are_branch_macros() {
   let tex = r"\documentclass{article}
@@ -3150,7 +3262,7 @@ fn biblatex_tests_are_branch_macros() {
 ";
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("[U]\n[N]\n[N]\n[A]\n[H]"), "{xml}");
+  assert!(xml.contains("[U]\n[N]\n[N]\n[A]\n[N]"), "{xml}");
 }
 
 /// biditools.sty:792 `\bidi@ifscanable` rebuilds a macro from its
@@ -3691,6 +3803,7 @@ fn index_entry_defers_protected_macros() {
 \newcommand\nxt{\def\item{\ltest}}
 \begin{document}
 A\index{key@\protect\nxt}
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, true);
@@ -3726,6 +3839,7 @@ fn robustindex_page_reference_hooks_are_inert() {
 \begin{document}
 A\index{alpha!see also gamma\gobblepageref}
 B\index{beta\wrappageref\textbf}
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, true);
@@ -3830,6 +3944,7 @@ fn index_sanitized_backslash_symbol_stays_literal() {
 \usepackage{makeidx}\makeindex
 \begin{document}
 Il comando \cn{\\*} qui.
+\printindex
 \end{document}
 "#;
   let (stderr, xml) = convert(tex, true);
@@ -3981,7 +4096,7 @@ fn underline_is_robust_in_an_edef_write() {
 /// doubled key `→abc→abc`; latex-via-exemplos' accent table).
 #[test]
 fn overrightarrow_is_robust_in_an_index_phrase() {
-  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{$\\overrightarrow{abc}$} Y\n\\end{document}\n";
+  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{$\\overrightarrow{abc}$} Y\n\\printindex\\end{document}\n";
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(
@@ -4356,7 +4471,7 @@ Figure body text.
     &xml,
     "figure",
     &[],
-    "<figure xml:id=\"fig1\"><p class=\"ltx_figure_panel\">Figure body text.</p><break class=\"ltx_break\"/><inline-sectional-block class=\"ltx_figure_panel\"><paragraph inlist=\"toc\" xml:id=\"S0.SS1.SSS0.Px1\"><title>Notes</title><para xml:id=\"S0.SS1.SSS0.Px1.p1\"><p>inside the figure.</p></para></paragraph></inline-sectional-block></figure>",
+    "<figure class=\"ltx_panels_gallery\" panelcols=\"1\" panelrows=\"2\" xml:id=\"fig1\"><p class=\"ltx_figure_panel\">Figure body text.</p><break class=\"ltx_break\"/><inline-sectional-block class=\"ltx_figure_panel\"><paragraph inlist=\"toc\" xml:id=\"S0.SS1.SSS0.Px1\"><title>Notes</title><para xml:id=\"S0.SS1.SSS0.Px1.p1\"><p>inside the figure.</p></para></paragraph></inline-sectional-block></figure>",
   );
 }
 
@@ -4506,6 +4621,9 @@ fn sections_inside_floats_keep_number_id_and_ref() {
 /// carries the mechanism.
 #[test]
 fn math_content_in_a_ref_gets_an_inline_math() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{hyperref}
 \usepackage{glossaries}
@@ -4910,7 +5028,7 @@ fn l3draw_surface_keeps_box_content() {
 fn installed_ldf_outranks_the_language_stub() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("spanish.ldf") || !kpsewhich_has("czech.ldf") {
+  if !check_requirements(&["spanish.ldf", "czech.ldf"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -5123,9 +5241,12 @@ $\begin{pNiceMatrix}
 /// (Perl State.pm:502-517), and its readers then fail on the internal it
 /// would have defined (`\flyleaf`/`\titlepage` :637/:688; usethesis). The
 /// dropped body's `\def`-targets are defined EMPTY, the class's own default
-/// convention (:494-495), so the locked binding stays the single source.
+/// convention (:494-495), so the locked binding stays the single source; the
+/// replay of the refused setter (OXIDIZED_DESIGN #482) then sets them as the
+/// call does, and a store that holds the argument stays set (77i): pdflatex
+/// prints "[First Author][First Author]".
 #[test]
-fn locked_setter_internals_are_defined_empty() {
+fn refused_setter_internals_take_the_replayed_value() {
   let tex = r"\documentclass{article}
 \makeatletter
 \def\author#1{\def\auth@r{#1}\gdef\auth@rtwo{#1}}
@@ -5137,8 +5258,13 @@ fn locked_setter_internals_are_defined_empty() {
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("[][]"), "{xml}");
-  assert!(xml.contains("First Author"), "{xml}");
+  assert!(xml.contains("[First Author][First Author]"), "{xml}");
+  // …and the author is the frontmatter's creator, once
+  assert_eq!(xml.matches("<creator ").count(), 1, "{xml}");
+  assert!(
+    xml.contains("<personname>First Author</personname>"),
+    "{xml}"
+  );
 }
 
 /// xcolor.sty:762-763 `\color` = `\@ifnextchar[\@undeclaredcolor\@declaredcolor`;
@@ -5550,6 +5676,9 @@ x
 /// the same spurious error over the same tree).
 #[test]
 fn capture_box_closes_its_descendants() {
+  if !check_all_requirements(&[&["numberedblock.sty"], loads::LISTOFITEMS]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{numberedblock}
 \begin{document}

@@ -1,0 +1,19 @@
+% mechanism: a comma or a row break a command prints at its own level, after the box it draws, parts what it ends as
+%   any does: only one drawn inside its box, deeper than its own event (a comma, a row of an alignment it opens there:
+%   combelow's `\cb`), is the word's ink (row A2; the reading's `lines::words_through_one_command`, review revNL1 S2)
+% witness: review revNL1 probe q4f (`\newcommand\nlx{\mbox{Jr.}\\}`, `Ann Able~\nlx Bob Baker`); 2507.13598 the
+%   inside side
+% oracle:  pdflatex 0 errors: "Ann Able Jr.,Bob Baker"
+% engines: rust NL1: the switch on, "Ann Able" and "Jr.,Bob Baker"; off, a `merged_creators` Error (the reading's
+%   events read for the old reader's checks); MV1 both ways: "Ann Able Jr." and "Bob Baker"
+% expect:  0 errors, 0 warnings; two creators both ways, "Ann Able Jr." and "Bob Baker"
+% status:  RED (NL1) -> GREEN (perfect_kernel_batchnl1::a_comma_a_command_draws_inside_a_name_parts_no_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\nlx{\mbox{Jr.},}
+\begin{document}
+\title{T}
+\author{Ann Able~\nlx Bob Baker}
+\maketitle
+x
+\end{document}

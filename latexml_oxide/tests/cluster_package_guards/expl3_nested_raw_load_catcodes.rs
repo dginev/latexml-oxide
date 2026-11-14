@@ -10,19 +10,11 @@
 //! AND a paper-local `mymac.sty` on the search path, simultaneously — no single
 //! in-process helper combines all three. Same legitimate subprocess reason as the
 //! `newtcblisting_verbatim` / `deferred_load_retry` tests.
-use std::process::Command;
 
 #[test]
 fn nested_expl3_raw_load_preserves_catcodes() {
-  // Self-skip green when derivative.sty is absent (trimmed CI texlive): with no
-  // raw double-load there is nothing to guard.
-  let has_derivative = Command::new("kpsewhich")
-    .arg("derivative.sty")
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false);
-  if !has_derivative {
-    eprintln!("skip nested_expl3_raw_load_preserves_catcodes: derivative.sty not installed");
+  // Without derivative.sty (a trimmed TeX Live) there is no raw double-load to guard.
+  if !latexml::util::test::check_requirements(&["derivative.sty"]) {
     return;
   }
   let (stderr, _) = super::convert_files(

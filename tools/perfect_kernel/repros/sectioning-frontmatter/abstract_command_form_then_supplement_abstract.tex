@@ -1,0 +1,26 @@
+% `\abstract{…}` after `\maketitle`, then a supplement's `{abstract}` under a later section: the paper's abstract stays
+% at the head, the supplement's stays in place as body text (the seal, OXIDIZED_DESIGN #154). The supplement's clear
+% removed the command form before its seal returned (86i r1), losing the only printed head abstract silently.
+% witness: review probe q07 (86i r1).
+% Guard: perfect_kernel_batch86i::abstract_command_form_twice_before_maketitle_keeps_the_last.
+% oracle:  pdflatex 0 errors: "Abstract Command abstract words. 1 Intro Body. 2 Supplement Abstract Supplement
+%          abstract words. More."
+% engines: perl: one abstract, the supplement's, at the head; the command form dequeued.
+%          rust int117a: the command abstract at the head, the supplement's in place. rust 86i r1: no abstract.
+% expect:  0 errors, 0 warnings; title, creator, abstract ("Command abstract words."), section, section (holding
+%          "Supplement abstract words.").
+% status:  GREEN (int117a) -> RED (86i r1) -> GREEN (86i r2)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\abstract{Command abstract words.}
+
+\section{Intro}
+Body.
+\section{Supplement}
+\begin{abstract}
+Supplement abstract words.
+\end{abstract}
+More.
+\end{document}

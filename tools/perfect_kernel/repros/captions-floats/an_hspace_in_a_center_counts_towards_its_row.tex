@@ -1,0 +1,27 @@
+% witness: review rev78x2 finding 6 (`\hspace` directly in the float counted, in a {center} not, where `\hskip` and
+%          `\quad` count in both)
+% oracle:  pdflatex 0 errors, 0 overfull: each figure two rows (0.45 + 0.2 + 0.45\textwidth > \textwidth)
+% engines: rust int68a = one row each (no glue counted); 78x r2 = Figure 1 one row (the `\hspace` in the {center}
+%          the kernel's, 0), Figure 2 two rows (`\hskip`); Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; one `ltx:break` in each figure
+% status:  RED (78x r2: Figure 1) -> GREEN (78x r3: `\hspace` in a {center}-like environment directly in the float is
+%          the panel rule's, as in the float's own group)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.45\textwidth]{example-image}\hspace{0.2\textwidth}%
+\includegraphics[width=0.45\textwidth]{example-image}
+\end{center}
+\caption{An hspace in a center.}
+\end{figure}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.45\textwidth]{example-image}\hskip0.2\textwidth
+\includegraphics[width=0.45\textwidth]{example-image}
+\end{center}
+\caption{An hskip in a center.}
+\end{figure}
+\end{document}

@@ -1,0 +1,16 @@
+% witness: review 73a finding 3 (psm vs psm0); pst-node.tex:1163 `\def\psmatrix{\begingroup…`, :1191-1192
+%          `\def\endpsmatrix{…\endgroup}`
+% oracle:  latex+dvips (clean): the matrix, the tabular, then "Line one" and "line two." on two lines
+% engines: rust 73a1 = 0 errors, the later `\\` still the matrix's row end (its `\let\\` leaked): the line break lost
+% expect:  0 errors, 0 warnings; the paragraph after the tabular keeps its `<break/>`
+% status:  RED (73a1) -> GREEN (73a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{pst-node}
+\begin{document}
+\psmatrix A & B\\ C & D\endpsmatrix
+
+\begin{tabular}{cc} x & y\\ z & w\\ \end{tabular}
+
+Line one\\ line two.
+\end{document}

@@ -1,0 +1,26 @@
+% witness: 2311.10779 (`\author{Jing Yao$^1$, Wei Xu$^{2}$, …}`, `\affiliation{$^1$Microsoft … \\ $^2$Gaoling …}`,
+%          `\email{{jingyao, jianxun.lian, …}@microsoft.com}`); the fm scorer's acmart rows (6 creators)
+% oracle:  pdflatex (TL 2025, acmart sigconf): "Ann Able1, Bob Baker2 and Cid Cole1", "1Univ X", "2Univ Y",
+%          "{ann.able, cid.cole}@x.org"
+% engines: rust int124a = the shadow right (each line its marked authors', each address its speller's), not written
+%          (acmart declared no conventions, `undeclared`): today's every creator holds both lines and the last both
+%          addresses
+% expect:  0 errors, 0 warnings; acmart is written (its own conventions, brief 95b, OD #942): Ann Able Univ X
+%          ann.able@x.org, Bob Baker Univ Y, Cid Cole Univ X cid.cole@x.org
+% status:  RED (int124a) -> GREEN (95b) — perfect_kernel_batch95b::acmart_is_written
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\settopmatter{printacmref=false}
+\setcopyright{none}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ and Cid Cole$^1$}
+\affiliation{%
+  $^1$Univ X \\
+  $^2$Univ Y \\
+  \country{}
+}
+\email{{ann.able, cid.cole}@x.org}
+\maketitle
+Text.
+\end{document}

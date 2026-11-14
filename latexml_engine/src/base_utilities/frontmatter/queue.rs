@@ -1,0 +1,590 @@
+//! The front matter queue: queueing, document-set defaults, dequeueing and the paragraph breaks of a queued field.
+
+use super::*;
+
+/// While a raw class's own frontmatter setter replays for its side effects (`replay_class_setter`, OXIDIZED_DESIGN
+/// #482), the frontmatter is the kernel's alone: nothing is queued (an entry, an annotation) or removed
+/// (`\lx@clear@frontmatter`, which the kernel's `\lx@add@title`, `\lx@add@date`, `\lx@add@abstract` and
+/// `\lx@add@keywords` run first), whatever path a body takes to the queue.
+fn frontmatter_frozen_for_replay() -> bool { lookup_bool("lx_replaying_class_setter") }
+
+/// frontmatter_raw contains the undigested commands to create frontmatter,
+/// along with the tag & attributes that would be created.
+/// Digestion is deferred until \maketitle, or something similar,
+/// to avoid extra side-effects, particularly when entries
+/// (eg. \title, \author) get redefined & replaced.
+/// Use dequeue_front_matter or \lx@clear@frontmatter if there should be only 1 entry of $tag
+/// Perl: queueFrontMatter($stomach, $tag, $attr, $command).
+pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
+  if frontmatter_frozen_for_replay() {
+    // (an abstract it queues no more: its late marker's ordinal goes with it, not to the next abstract added,
+    // [`take_late_mark`])
+    drop_late_mark(tag);
+    // (a block's rehearsal notes what it would have queued: the emitter counts an entry a block queues of its own,
+    // `rehearsal::note_frozen_entry`, 2503.02741)
+    rehearsal::note_frozen_entry(tag, attr, &command);
+    return;
+  }
+  let queue = frontmatter_queue_name();
+  // (the document's frontmatter commands this entry is made in, for the title-page check: OXIDIZED_DESIGN_DIVERGENCES
+  // #953 "106t")
+  note_frontmatter_entry(
+    tag,
+    attr
+      .and_then(|kv| kv.get_value("role"))
+      .map(|role| role.to_string())
+      .as_deref()
+      .unwrap_or(""),
+    Some(&command),
+  );
+  // (the frontmatter observer's ledger: OXIDIZED_DESIGN_DIVERGENCES #837)
+  record_api_call(tag, attr, &command);
+  // (what `\@author` holds as a creator is queued: the prefix of a tail appended to it after,
+  // `frontmatter_stores::author_tail_calls`)
+  if tag == "ltx:creator" {
+    crate::frontmatter_stores::note_author_seen();
+  }
+  note_document_sets_front_matter(
+    tag,
+    &attr
+      .and_then(|kv| kv.get_value("role"))
+      .map(|role| role.to_string())
+      .unwrap_or_default(),
+  );
+  let mut attr_hash = queued_attributes(attr);
+  // (queued after `\maketitle`'s flush: digested by a later one, still late, [`LATE_ENTRY`])
+  if lookup_bool("lx_frontmatter_here_digested") {
+    attr_hash.insert(LATE_ENTRY.to_string(), "true".to_string());
+    // (and the late marker before it, of its command: [`LATE_MARK_ORDINAL`])
+    if tag == "ltx:abstract" {
+      let ordinal = take_late_mark();
+      if !ordinal.is_empty() {
+        attr_hash.insert(LATE_MARK_ORDINAL.to_string(), ordinal);
+      }
+    }
+  }
+  // (handed on from a raw class's store: its title-page provenance, [`TITLE_PAGE_ENTRY`])
+  let from = lookup_string(crate::frontmatter_stores::STORE_ENTRY_FROM);
+  if !from.is_empty() {
+    attr_hash.insert(TITLE_PAGE_ENTRY.to_string(), from);
+  }
+  DebugFeature!(
+    "frontmatter",
+    "FRONT Queuing {tag} [{:?}] {command}",
+    attr_hash
+  );
+  let missing = with_value(queue, |v| !matches!(v, Some(Stored::FrontmatterRaw(_))));
+  if missing {
+    assign_value(
+      queue,
+      Stored::FrontmatterRaw(Vec::new()),
+      Some(Scope::Global),
+    );
+  }
+  with_value_mut(queue, |val_opt| {
+    if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
+      queue.push((tag.to_string(), attr_hash, command));
+    }
+  });
+}
+
+/// A queued entry's attributes, as `queue_front_matter` stores them.
+/// Convert KeyVals to a hash, but be concerned about multiple values!?!?
+/// (Perl: ToString($attr->getValue($_)) — the last value for multi-valued keys)
+pub(in crate::base_utilities) fn queued_attributes(attr: Option<&KeyVals>) -> TagAttrs {
+  let mut attr_hash = TagAttrs::default();
+  if let Some(kv) = attr {
+    for key in kv.get_keyvals().keys() {
+      if let Some(value) = kv.get_value(key) {
+        attr_hash.insert(key.clone(), value.to_string());
+      }
+    }
+  }
+  attr_hash
+}
+
+/// The queue a frontmatter entry goes to: the document's (`frontmatter_raw`), or, while a stand-in binding's copy of
+/// its author file is read (`binding::content::read_stand_in_copy`, OXIDIZED_DESIGN_DIVERGENCES #731), the copy's
+/// defaults (`frontmatter_copy_defaults`): in TeX a class's own setter call (atlasdoc.cls:189 `\author{The ATLAS
+/// Collaboration}`, :190 `\date{\today}`) only stores the default the document's own call replaces, which its title
+/// page prints if the document makes none ([`hand_copy_frontmatter_defaults`]). A removal (`\lx@clear@frontmatter`,
+/// which `\date` runs first) applies to the same queue: the copy's later `\date{}` (atlasdoc.cls:824 under
+/// `cernpreprint`) clears its `\today`.
+fn frontmatter_queue_name() -> &'static str {
+  if definition::origin::copy_provides() != 0 {
+    "frontmatter_copy_defaults"
+  } else {
+    "frontmatter_raw"
+  }
+}
+
+/// A frontmatter entry `tag` of role `role` (`""`: every role) is set — queued or removed — outside a stand-in copy's
+/// read ([`frontmatter_queue_name`]): the document's (or a binding's) setter call, whatever its value, replaces the
+/// class default the copy stored, as `\def\@date{#1}` does in TeX ([`hand_copy_frontmatter_defaults`]): `\date{}`
+/// removes the class's `\date{\today}`, and `\author{}`/`\title{}` theirs, though they queue nothing.
+fn note_document_sets_front_matter(tag: &str, role: &str) {
+  if definition::origin::copy_provides() != 0 {
+    // (the copy stored a default: from now on its kernel field's setter is observed, as a binding's `\author` may
+    // queue nothing for an empty call — inst_support's accumulates)
+    if !definition::origin::setter_watch() {
+      definition::origin::watch_setter_calls(&COPY_DEFAULT_SETTERS.map(|(setter, ..)| setter));
+    }
+  } else {
+    assign_value(
+      &s!("frontmatter_set:{tag}:{role}"),
+      true,
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// The kernel's fields a stand-in copy's setter stores a default of: setter, tag, role, store.
+const COPY_DEFAULT_SETTERS: [(&str, &str, &str, &str); 3] = [
+  ("\\author", "ltx:creator", "author", "\\@author"),
+  ("\\date", "ltx:date", "creation", "\\@date"),
+  ("\\title", "ltx:title", "", "\\@title"),
+];
+
+/// Did the document set a frontmatter entry `tag` of role `role` — call its setter (`state::setter_called`, the
+/// kernel's fields: whatever binding defines `\author`), or queue or remove one ([`note_document_sets_front_matter`];
+/// a role-less removal sets every role)?
+fn document_set_front_matter(tag: &str, role: &str) -> bool {
+  lookup_bool(&s!("frontmatter_set:{tag}:{role}"))
+    || (!role.is_empty() && lookup_bool(&s!("frontmatter_set:{tag}:")))
+    || COPY_DEFAULT_SETTERS
+      .iter()
+      .any(|(setter, t, r, _)| *t == tag && *r == role && setter_called(&T_CS!(setter)))
+}
+
+/// At `\maketitle` (`\lx@store@defaults`): hand a stand-in copy's frontmatter defaults (`frontmatter_queue_name`) to
+/// the document's frontmatter, each only when the document's setter made no call of its kind (tag and role: its own
+/// `\author` replaces the class's, an empty `\date{}` too, `document_set_front_matter`), and, for the kernel's fields,
+/// only when the copy's own title page prints the store (`frontmatter_stores::copy_title_page_prints`; the binding's
+/// title page prints them when the copy defines none). Five ATLAS papers had the class's `<creator>` beside the
+/// document's (1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536) and a `<date>` the class does not print
+/// (1902.05892, 1904.03536).
+pub fn hand_copy_frontmatter_defaults() {
+  let defaults: Vec<RawFrontmatter> = match remove_value("frontmatter_copy_defaults") {
+    Some(Stored::FrontmatterRaw(defaults)) => defaults,
+    _ => return,
+  };
+  for (tag, attr, command) in defaults {
+    let role = attr.get("role").cloned().unwrap_or_default();
+    if document_set_front_matter(&tag, &role) || has_front_matter_with_role(&tag, &role) {
+      continue;
+    }
+    let store = COPY_DEFAULT_SETTERS
+      .iter()
+      .find(|(_, t, r, _)| *t == tag && (*r == role || r.is_empty()))
+      .map(|(.., store)| *store);
+    if let Some(store) = store
+      && crate::frontmatter_stores::copy_title_page_prints(&T_CS!(store)) == Some(false)
+    {
+      Info!(
+        "frontmatter",
+        tag,
+        s!("The class's default {tag} is not printed by its title page: not shown")
+      );
+      continue;
+    }
+    let missing = with_value("frontmatter_raw", |v| {
+      !matches!(v, Some(Stored::FrontmatterRaw(_)))
+    });
+    if missing {
+      assign_value(
+        "frontmatter_raw",
+        Stored::FrontmatterRaw(Vec::new()),
+        Some(Scope::Global),
+      );
+    }
+    with_value_mut("frontmatter_raw", |val_opt| {
+      if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
+        queue.push((tag, attr, command));
+      }
+    });
+  }
+}
+
+/// Is a frontmatter entry `tag` of role `role` (`""`: any) queued or digested ([`has_front_matter`])?
+fn has_front_matter_with_role(tag: &str, role: &str) -> bool {
+  let matches =
+    |attr: &TagAttrs| role.is_empty() || attr.get("role").map(String::as_str) == Some(role);
+  let queued = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .any(|entry| entry.0 == tag && matches(&entry.1)),
+    _ => false,
+  });
+  queued
+    || with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frnt)) => frnt
+        .get(tag)
+        .is_some_and(|list| list.iter().any(|e| matches(&e.attr))),
+      _ => false,
+    })
+}
+
+/// Build and queue the deferred `\lx@add@frontmatter@now` invocation for a
+/// frontmatter entry `<tag attrs>content</tag>`. Shared by `\lx@add@frontmatter`
+/// (content present) and `\lx@add@frontmatter@container` (content = None — a
+/// deliberate empty container element that anchors later annotations).
+/// Perl: queueFrontMatter($stomach, $tag, $attr,
+///   Invocation(T_CS('\lx@add@frontmatter@now'), $keys, $tag, $attr, $tokens)).
+pub(in crate::base_utilities) fn queue_add_frontmatter_now(
+  keys_opt: Option<&KeyVals>,
+  tag_tks: &Tokens,
+  attrs_opt: Option<&KeyVals>,
+  content: Option<&Tokens>,
+) -> Result<()> {
+  let command = now_command(keys_opt, tag_tks, attrs_opt, content)?;
+  queue_front_matter(&tag_tks.to_string(), attrs_opt, command);
+  Ok(())
+}
+
+/// The command a queued entry is digested by: `\lx@add@frontmatter@now[keys]{tag}[attributes]{content}`.
+pub(in crate::base_utilities) fn now_command(
+  keys_opt: Option<&KeyVals>,
+  tag_tks: &Tokens,
+  attrs_opt: Option<&KeyVals>,
+  content: Option<&Tokens>,
+) -> Result<Tokens> {
+  let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@add@frontmatter@now")];
+  if let Some(keys) = keys_opt {
+    inv_tokens.push(T_OTHER!("["));
+    inv_tokens.extend(keys.revert()?.unlist());
+    inv_tokens.push(T_OTHER!("]"));
+  }
+  inv_tokens.push(T_BEGIN!());
+  inv_tokens.extend(tag_tks.unlist_ref().iter().copied());
+  inv_tokens.push(T_END!());
+  if let Some(attrs) = attrs_opt {
+    inv_tokens.push(T_OTHER!("["));
+    inv_tokens.extend(attrs.revert()?.unlist());
+    inv_tokens.push(T_OTHER!("]"));
+  }
+  inv_tokens.push(T_BEGIN!());
+  if let Some(content) = content {
+    inv_tokens.extend(content.unlist_ref().iter().copied());
+  }
+  inv_tokens.push(T_END!());
+  Ok(Tokens::new(inv_tokens))
+}
+
+/// The number of creators queued so far (`frontmatter_raw`).
+pub fn queued_creator_count() -> usize {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| entry.0 == "ltx:creator")
+      .count(),
+    _ => 0,
+  })
+}
+
+/// Is `affiliation`'s first mark (its label, `entry_mark`) one a queued author carries — an affiliation number, not a
+/// footnote symbol (`is_symbol_mark`: `$^*$Equal contribution` is the legend of the authors' stars)? Only then do the
+/// authors showing that mark answer the affiliation: a mark no author carries (a typo, or authors without marks after
+/// marked ones: `\author{Ann$^1$}\affil{$^1$X}\author{Bob}\affil{$^2$Y}`) would label an affiliation no one requests,
+/// which the frontmatter places on an author of its own without a name. Nor a combined mark
+/// (`\author{Ann$^{1}$}\author{Bob$^{2}$}\affil{$^{1,2}$Univ X}`, 77n r3 review probe w1): the affiliation is labelled
+/// by its first label only (`mark_label`), so Bob lost it; it is the run's.
+pub fn queued_authors_carry_entry_mark(affiliation: &Tokens) -> Result<bool> {
+  Ok(match entry_mark(affiliation.unlist_ref()) {
+    Some(mark) => {
+      !is_symbol_mark(&mark)
+        && clean_frontmatter_labels(&Tokens::new(mark.clone()).to_string(), "affiliation").len()
+          == 1
+        && !queued_requesters(&mark)?.is_empty()
+    },
+    None => false,
+  })
+}
+
+/// Is a frontmatter item with this tag queued (`frontmatter_raw`) or already digested into the
+/// frontmatter (`frontmatter`, which `digest_front_matter` fills at `\maketitle`; a pending
+/// annotation stub is not an item)?
+pub fn has_front_matter(tag: &str) -> bool {
+  let queued = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue.iter().any(|entry| entry.0 == tag),
+    _ => false,
+  });
+  queued
+    || with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frnt)) => frnt.get(tag).is_some_and(|list| {
+        list
+          .iter()
+          .any(|e| e.attr.get("role").map(String::as_str) != Some("pending"))
+      }),
+      _ => false,
+    })
+}
+
+/// This removes previously stored (but deferred) frontmatter that is being overridden.
+/// It matches the tag and any stored attributes in `attr`.
+/// Perl: dequeueFrontMatter($tag, %attr).
+pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
+  // (the observer's ledger: the calls it removes, OXIDIZED_DESIGN_DIVERGENCES #837)
+  record_clear(tag, attr);
+  // (and the title-page check's: what the calls it removes were given is no longer wanted, #953 "106t")
+  note_frontmatter_clear(
+    tag,
+    attr
+      .iter()
+      .find(|(key, _)| *key == "role")
+      .map(|(_, role)| *role),
+  );
+  note_document_sets_front_matter(
+    tag,
+    attr
+      .iter()
+      .find(|(key, _)| *key == "role")
+      .map_or("", |(_, role)| role),
+  );
+  forget_queue_reading();
+  with_value_mut(frontmatter_queue_name(), |val_opt| {
+    if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
+      queue.retain(|entry| {
+        let keep = entry.0 != tag
+          || attr
+            .iter()
+            .any(|(k, v)| entry.1.get(*k).map(String::as_str).unwrap_or("") != *v);
+        if !keep {
+          DebugFeature!("frontmatter", "FRONT DEQueuing {} [{:?}]", entry.0, entry.1);
+        }
+        keep
+      });
+    }
+  });
+}
+
+/// What LaTeX's `\author` does to the authors before it (`\def\@author{#2}`; Perl's `dequeueFrontMatter('ltx:creator', role =>
+/// 'author')`, Base_Utility.pool.ltxml:691): the last call wins. Also a binding's own `\author`, whose body adds its authors one
+/// at a time ([`begin_author_body`]: IEEEtran's blocks; 2606.16069's two `\author` calls).
+pub(in crate::base_utilities) fn replace_queued_authors() {
+  dequeue_front_matter("ltx:creator", &[("role", "author")]);
+  // LaTeX's `\def\@author{#2}` replaces the authors a `\maketitle` that left
+  // `\author` live already typeset (KOMA ≥ 3.12, scrbook.cls:3263-3290; a class's
+  // title page from `\AfterEndPreamble`, udesoftec.cls:1230-1241) for the NEXT
+  // `\maketitle`: they are superseded there (`\lx@maketitle@supersede`), not here —
+  // without one, the authors a fallback placed stay (Perl the same).
+  assign_value(
+    "lx_authors_superseded",
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
+  // A store handed on since that flush went to the authors replaced here: the next
+  // harvest hands it again (`harvest_stores`, `lx_stores_late`).
+  assign_value(
+    "lx_stores_late",
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
+  // The replaced authors take their handed tail with them (a binding's own
+  // `\lx@add@authors` never runs `\lx@author@flush`), and the creators this
+  // `\author` makes are counted from here (`\lx@author@handed`).
+  assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
+  assign_value(
+    "lx_author_creators_before",
+    Stored::Int(queued_creator_count() as i64),
+    Some(Scope::Global),
+  );
+}
+
+/// Begin a binding's `\author` body, whose calls queue its authors and their contacts one by one where Perl's `\author` queues
+/// them all inside one deferred creator (IEEEtran's `\IEEEauthorblockN`, `\IEEEauthorblockA`): the last call wins as in LaTeX
+/// (`\def\@author{#1}`, Perl's `dequeueFrontMatter`), so this removes the authors before it and whatever the last such body
+/// queued. 2606.16069: two `\author` calls, the PDF and Perl four creators; every call kept, eight. A replay of a raw class's setter
+/// that reaches it changes nothing (`frontmatter_frozen_for_replay`): it queues nothing, and the last body stays the last.
+pub fn begin_author_body() {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
+  replace_queued_authors();
+  forget_queue_reading();
+  let queue = frontmatter_queue_name();
+  let earlier = with_value(AUTHOR_BODY_ENTRIES, |value| match value {
+    Some(Stored::FrontmatterRaw(entries)) => entries.clone(),
+    _ => Vec::new(),
+  });
+  let start = with_value_mut(queue, |value| match value {
+    Some(&mut Stored::FrontmatterRaw(ref mut queued)) => {
+      for entry in &earlier {
+        if let Some(at) = queued.iter().position(|queued| queued == entry) {
+          queued.remove(at);
+        }
+      }
+      queued.len()
+    },
+    _ => 0,
+  });
+  assign_value(
+    AUTHOR_BODY_START,
+    Stored::Int(start as i64),
+    Some(Scope::Global),
+  );
+  record_author_body_clear();
+}
+
+/// End a binding's `\author` body ([`begin_author_body`]): what it queued is what a later `\author` takes back.
+pub fn end_author_body() {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
+  let start = usize::try_from(lookup_int(AUTHOR_BODY_START)).unwrap_or(0);
+  let entries = with_value(frontmatter_queue_name(), |value| match value {
+    Some(Stored::FrontmatterRaw(queued)) => queued.get(start..).unwrap_or(&[]).to_vec(),
+    _ => Vec::new(),
+  });
+  assign_value(
+    AUTHOR_BODY_ENTRIES,
+    Stored::FrontmatterRaw(entries),
+    Some(Scope::Global),
+  );
+  record_author_body_end();
+}
+
+/// What the last author body queued, and where the queue stood when it began ([`begin_author_body`]).
+const AUTHOR_BODY_ENTRIES: &str = "lx_author_body_entries";
+const AUTHOR_BODY_START: &str = "lx_author_body_start";
+
+/// A binding's call that reads its last `\author` body again at the next flush, with the definitions in force there, as
+/// `\maketitle` expands `\@author` (IEEEtran's `\lx@IEEE@author@reread`); `None` drops a pending one.
+pub fn reread_author_body_at_flush(call: Option<Tokens>) {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
+  assign_value(
+    AUTHOR_BODY_REREAD,
+    Stored::Tokens(call.unwrap_or_default()),
+    Some(Scope::Global),
+  );
+}
+
+/// The call [`reread_author_body_at_flush`] left, taken by the outermost flush before its rehearsal.
+pub(in crate::base_utilities) fn take_author_body_reread() -> Option<Tokens> {
+  match remove_value(AUTHOR_BODY_REREAD) {
+    Some(Stored::Tokens(call)) if !call.is_empty() => Some(call),
+    _ => None,
+  }
+}
+const AUTHOR_BODY_REREAD: &str = "lx_author_body_reread";
+
+/// A `\par` digested in the frontmatter item `item` (its whatsit's `frontmatter_item`), constructed where the schema is
+/// known: when the item's element holds only inline content (`ltx:acknowledgements`, `ltx:keywords`, `ltx:date`, …: no
+/// `ltx:p`, but `ltx:break`) and is reached from the insertion point without passing an element that holds paragraphs
+/// of its own, the paragraph break is a line break of the item, where text mode would merge the paragraphs (user ruling
+/// 2026-10-18; apa.cls's two-paragraph `\acknowledgements`, OXIDIZED_DESIGN_DIVERGENCES #766). A break only parts
+/// lines: none before the item's first content, none after another (a run of `\par`s), and those left at its end are
+/// dropped when it closes ([`drop_trailing_paragraph_breaks`]). Returns whether the `\par` was the item's (it then
+/// closes nothing); otherwise it is the ordinary `\par`.
+pub(crate) fn frontmatter_paragraph_break(document: &mut Document, item: &str) -> Result<bool> {
+  if document::can_contain_qname(item, "ltx:p") || !document::can_contain_qname(item, "ltx:break") {
+    return Ok(false);
+  }
+  let Some(current) = document.get_element() else {
+    return Ok(false);
+  };
+  let item_sym = pin(item);
+  let mut open = Vec::new();
+  let mut node = Some(current.clone());
+  let item_node = loop {
+    let Some(n) = node else {
+      return Ok(false);
+    };
+    if document::get_node_qname(&n) == item_sym {
+      break n;
+    }
+    if document::can_contain(&n, "ltx:p") || document::get_node_qname(&n) == pin!("ltx:p") {
+      return Ok(false);
+    }
+    node = n.get_parent();
+    open.push(n);
+  };
+  open.push(item_node.clone());
+  if last_line_end(&item_node, &open) == Some(false) && document::can_contain(&current, "ltx:break")
+  {
+    document.insert_element(
+      "ltx:break",
+      Vec::new(),
+      Some(map!(PARAGRAPH_BREAK_MARK.to_string() => "true".to_string())),
+    )?;
+  }
+  Ok(true)
+}
+
+/// Note that the `\par`s digested from here on, at this mode frame, are paragraph breaks of the frontmatter field `tag`
+/// ([`frontmatter_paragraph_break`]): a box, an alignment cell or math inside it begins a deeper mode frame, where a
+/// `\par` is the ordinary one (in a box or cell it ends nothing, tex.web §1096 `end_graf`), while a group (`{\bfseries …}`)
+/// begins none.
+pub(in crate::base_utilities) fn note_frontmatter_paragraphs(tag: &str) {
+  assign_value(
+    "lx_frontmatter_par_item",
+    tag.to_string(),
+    Some(Scope::Local),
+  );
+  assign_value(
+    "lx_frontmatter_par_depth",
+    Stored::Int(mode_frame_depth()),
+    Some(Scope::Local),
+  );
+}
+
+/// How many frames bind the mode (`MODE`): each mode switch — a box, a cell, math, a frontmatter item's text — binds it
+/// in a frame of its own.
+pub(crate) fn mode_frame_depth() -> i64 { with_stacked_values("MODE", |modes| modes.len() as i64) }
+
+/// The frontmatter field whose paragraph break a `\par` digested now is (what [`note_frontmatter_paragraphs`] noted, at
+/// the same mode frame), if any.
+pub(crate) fn frontmatter_paragraph_field() -> Option<String> {
+  let item = lookup_string("lx_frontmatter_par_item");
+  (!item.is_empty() && lookup_int("lx_frontmatter_par_depth") == mode_frame_depth()).then_some(item)
+}
+
+/// The transient mark on the `ltx:break`s [`frontmatter_paragraph_break`] makes (dropped with the other `_`
+/// attributes when the document is finalized).
+const PARAGRAPH_BREAK_MARK: &str = "_paragraph_break";
+
+/// Does `node`'s content end with a paragraph break the frontmatter made (`Some(true)`), with other content
+/// (`Some(false)`), or is it empty (`None`)? Whitespace counts for nothing, and so does an element still `open` (where
+/// the content goes on) that holds nothing yet.
+fn last_line_end(node: &Node, open: &[Node]) -> Option<bool> {
+  let mut child = node.get_last_child();
+  while let Some(n) = child {
+    match n.get_type() {
+      Some(NodeType::TextNode) if n.get_content().trim().is_empty() => {},
+      Some(NodeType::ElementNode) if n.has_attribute(PARAGRAPH_BREAK_MARK) => return Some(true),
+      Some(NodeType::ElementNode) => match last_line_end(&n, open) {
+        Some(found) => return Some(found),
+        None if open.iter().any(|o| o.to_hashable() == n.to_hashable()) => {},
+        None => return Some(false),
+      },
+      _ => return Some(false),
+    }
+    child = n.get_prev_sibling();
+  }
+  None
+}
+
+/// Drop the paragraph breaks [`frontmatter_paragraph_break`] left at the end of the frontmatter element `node` (in its
+/// last group too): a `\par` that ends an item ends no line of it.
+pub(in crate::base_utilities) fn drop_trailing_paragraph_breaks(
+  document: &mut Document,
+  node: &Node,
+) {
+  let mut child = node.get_last_child();
+  while let Some(n) = child {
+    let previous = n.get_prev_sibling();
+    match n.get_type() {
+      Some(NodeType::TextNode) if n.get_content().trim().is_empty() => {},
+      Some(NodeType::ElementNode) if n.has_attribute(PARAGRAPH_BREAK_MARK) => {
+        document.remove_node(n)
+      },
+      Some(NodeType::ElementNode) => return drop_trailing_paragraph_breaks(document, &n),
+      _ => return,
+    }
+    child = previous;
+  }
+}

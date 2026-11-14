@@ -1,0 +1,16 @@
+% mechanism: IEEEtran's plain route with `\author{\aut}`, `\aut` a names list holding `\and`, renewed after `\author`:
+%   P2-8a expanded it at `\author` (`blocks_as_printed`); read again at the flush, the plain route taken again
+% witness: synthetic (P28m2, the plain-route sibling of revP28m S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Cy Coe"
+% engines: int168a: Cy Coe, 0 warnings; P28m: Ann Able, Bob Baker, 0 warnings; P28m2: Cy Coe, 0 warnings
+% expect:  0 errors, 0 warnings; Cy Coe
+% status:  RED (P28m) -> GREEN (P28m2; guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\newcommand\aut{Ann Able \and Bob Baker}
+\title{T}
+\author{\aut}
+\renewcommand\aut{Cy Coe}
+\begin{document}
+\maketitle
+Text.
+\end{document}

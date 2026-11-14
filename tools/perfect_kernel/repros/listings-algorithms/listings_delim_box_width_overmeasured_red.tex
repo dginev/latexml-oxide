@@ -1,0 +1,20 @@
+% mechanism: a listings `moredelim` style that saves the delimited text in an lrbox measures it too wide: the
+%          box's `\wd` is 528.9pt where the 30 typewriter characters take 142.8pt.
+% witness: 1905.06944 (paper.tex:55-70 `\btHL`, a tikz highlight whose bounding box is `\wd`x`\ht` of the box;
+%          since DTL1b pgfmath reads that `\wd`, so the picture is the over-measured 528.9pt wide, before 1x1)
+% oracle:  pdflatex 0 `!`: [142.80316pt]
+% engines: rust DTL1a, DTL1b: [528.89648pt], 0 errors 0 warnings; perl [0.0pt], 8 errors 1 warning (mode errors at
+%          the closing `@`)
+% expect:  0 errors; [142.80316pt]
+% status:  RED
+\documentclass{article}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\footnotesize,moredelim=**[is][{\HL}]{@}{@}}
+\newsavebox\hlbox
+\newcommand\HL{\begin{lrbox}{\hlbox}\bgroup\aftergroup\HLend}
+\def\HLend{\end{lrbox}[\the\wd\hlbox]\usebox\hlbox\egroup}
+\begin{document}
+\begin{lstlisting}
+x = @minimize(d < 1 ? 1 - d : 0);@
+\end{lstlisting}
+\end{document}

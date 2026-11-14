@@ -1,0 +1,21 @@
+% witness: 2608.15322, 2602.03247, 2607.19926 (WileyNJDv5.cls:6953 `\algrenewcommand\ALG@beginalgorithmic{\ttfamily}`)
+% oracle:  pdflatex 0 errors ("1: x ← 1", "2: return x", in typewriter)
+% engines: rust int23 (288e861078) = a whitespace-only `<text font="typewriter">` straight in the `ltx:listing`
+%          (model `listingline*`: schema-invalid)
+% expect:  0 errors, 0 warnings; the listing holds its two lines only
+% status:  RED (int23 288e861078) -> GREEN (int23 fix2)
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\makeatletter
+\algrenewcommand\ALG@beginalgorithmic{\ttfamily}
+\makeatother
+\begin{document}
+\begin{algorithm}
+\caption{A}
+\begin{algorithmic}[1]
+\State $x \gets 1$
+\State \Return $x$
+\end{algorithmic}
+\end{algorithm}
+\end{document}

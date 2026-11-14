@@ -1,0 +1,31 @@
+% witness: review rev94b r3 B2 (its probes `p/b2` orph4j, orph6: a class's `\affil{\inst{3}…}` line, r2's reroute);
+%          ar-1col.cls-like in-place `\affil` (1602.05576, 2405.08158) called as lines of their own
+% oracle:  pdflatex 0 errors: the lines "1Univ A, Town", "2Univ B, City", "3Lab C, Place", "4Lab D, Place", "5Lab E,
+%          Place" where they are called, then "A Title", "Ann Able1 and Bob Baker2", "Body."
+% engines: rust 94b r3 = 0 errors, 0 warnings: "Lab C, Place" a creator of no name's; "4Lab D, Place" and "5Lab E,
+%          Place" contacts of both authors
+% expect:  0 errors, 0 warnings; a line leading with a mark no name requests (`\inst{3}`, `\textsuperscript{4}`,
+%          `$^{5}$`) is the class's line where it is called (`frontmatter_stores.rs` `leads_with_unrequested_mark`): Ann
+%          Able "Univ A, Town", Bob Baker "Univ B, City", the three lines in the body; eager and --streaming the same
+% status:  RED (94b r3) -> GREEN (94b r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affillines.cls}
+\ProvidesClass{affillines}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\inst#1{\textsuperscript{#1}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affillines}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1} and Bob Baker\inst{2}}
+\affil{\inst{1}Univ A, Town}
+\affil{\inst{2}Univ B, City}
+\affil{\inst{3}Lab C, Place}
+\affil{\textsuperscript{4}Lab D, Place}
+\affil{$^{5}$Lab E, Place}
+\maketitle
+Body.
+\end{document}

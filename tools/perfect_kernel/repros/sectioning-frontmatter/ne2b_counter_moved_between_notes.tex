@@ -1,0 +1,20 @@
+% mechanism: an author block whose own digestion moves the footnote counter where its names don't carry it (Bob Baker's
+%   `\addtocounter{footnote}{-2}` between his two notes) has no place in the `=2` reading: the note steps run per
+%   creator, so the move was lost and Carl Cole's `\footnotemark` printed † where LaTeX prints *; and Ann Able's
+%   `\footnotemark` after her note was dropped (the past-marks scan stops at a note). The rehearsal records where the
+%   counter moved (`field_notes` `counter_moves`); a move no name's run or mark holds writes the block as Perl's
+%   \lx@add@authors splits it (CR7, OD #988), with a counted Warning (`emit.rs` `counter_moved`)
+% witness: 1507.05018 (Ombao's `\addtocounter{footnote}{-2}`, Euan's `\footnotemark`; review revNE2 A1)
+% oracle:  pdflatex 0 errors; "Ann Able†∗  Bob Baker‡†  Carl Cole∗" (pdftotext -layout)
+% engines: rust off: 0 errors, Ann †, Carl *; rust =2 (NE2): 0 errors, 0 warnings, Ann's mark lost, Carl †
+% expect:  =2: the block written as Perl's \lx@add@authors splits it (CR7: three creators, Ann †, Carl *, every note
+%          kept; NE2 wrote it whole, one creator), 1 Warning
+% status:  RED (NE2) -> GREEN (perfect_kernel_batchne2::a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Univ X.}\footnotemark \and Bob Baker\thanks{Univ Y.}\addtocounter{footnote}{-2}\thanks{Univ Z.} \and Carl Cole\addtocounter{footnote}{-2}\footnotemark}
+\maketitle
+Text.
+\end{document}

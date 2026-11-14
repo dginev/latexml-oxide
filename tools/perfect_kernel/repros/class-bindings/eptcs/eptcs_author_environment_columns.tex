@@ -1,0 +1,33 @@
+% mechanism: an environment of the paper's own whose begin code opens a tabular, inside an eptcs `\author`, is a table
+%   of names: its columns the names, its `\institute` and `\email` lines (redefined there to span the columns) every
+%   name's, each address of a list the author it spells; a `\thanks` after its end the last name's, beside which its
+%   mark prints.
+% witness: 2409.15014 (`\begin{authors}{5} Kevin Baum & … & Verena Wolf \institute{…} \email{\{kevin.baum,…\}@dfki.de}
+%   \end{authors}\thanks{…}`)
+% oracle:  pdflatex with eptcs.cls beside it: 0 errors; "Ann Able", "Bob Baker", "Carl Cole*" side by side over
+%   "Univ X" and "{ann.able,bob.baker,carl.cole}@x.org"; the footnote "Equal."
+% engines: rust int111d = one personname holding the table; perl has no eptcs binding (OmniBus)
+% expect:  0 errors, 0 warnings; three creators, each with affiliation Univ X and the address its name spells; the
+%   thanks note Carl Cole's
+% status:  RED (int111d) -> GREEN (84b)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\RequirePackage{array}
+\newenvironment{authors}[1]%
+  {\begingroup
+   \renewcommand\institute[1]{\\\multicolumn{#1}{c}{\footnotesize ##1}}%
+   \renewcommand\email[1]{\\\multicolumn{#1}{c}{\footnotesize\ttfamily ##1}}%
+   \begin{tabular}[t]{*{#1}{c}}}
+  {\end{tabular}\endgroup}
+\title{T}
+\author{
+  \begin{authors}{3}
+  Ann Able & Bob Baker & Carl Cole
+  \institute{Univ X}
+  \email{\{ann.able,bob.baker,carl.cole\}@x.org}
+  \end{authors}\thanks{Equal.}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

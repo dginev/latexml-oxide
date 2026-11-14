@@ -1,0 +1,52 @@
+% witness: review rev78x4 finding 1 (probes n3.tex F4, n7.tex F1: latex.ltx:9256 `\newline` is `\@normalcr` in every
+%          context, a justified break, so the `\hspace` after it is a line's start, which TeX discards)
+% oracle:  pdflatex 0 errors (\columnwidth 229.5pt): Figures 1, 2 (`\newline` under `\centering`, in a `{center}`) two
+%          lines, 1 | 3 (no leading glue; the three 68.85pt panels fit); Figures 3, 4 (`\\`, `\@centercr` there) three
+%          lines, 1 | 2 | 1 (the second keeps the `\glue 34.4236`)
+% engines: rust int69b = Figures 1-3 1 | 3, Figure 4 3 | 1; 78x r4 = 1 | 2 | 1 each; Perl 0.8.8 as int69b
+% expect:  0 errors, 0 warnings; Figures 1, 2 one `ltx:break`, three panels after it; Figures 3, 4 two `ltx:break`s
+% status:  RED (78x r4: Figures 1, 2) -> GREEN (78x r5: a `\newline`'s break is `\@normalcr`'s, `PANEL_NORMALCR`)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\begin{document}
+Text.
+\begin{figure}
+\centering
+\includegraphics[width=0.3\columnwidth]{example-image}\newline
+\hspace{0.15\columnwidth}%
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}
+\caption{Centred, a newline.}
+\end{figure}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.3\columnwidth]{example-image}\newline
+\hspace{0.15\columnwidth}%
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}
+\end{center}
+\caption{In a center, a newline.}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=0.3\columnwidth]{example-image}\\
+\hspace{0.15\columnwidth}%
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}
+\caption{Centred, a centred break.}
+\end{figure}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.3\columnwidth]{example-image}\\
+\hspace{0.15\columnwidth}%
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}
+\end{center}
+\caption{In a center, a centred break.}
+\end{figure}
+\end{document}

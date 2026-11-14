@@ -1,0 +1,23 @@
+% IEEEtran's `\IEEEauthorblockA{\IEEEauthorrefmark{3}These authors contributed equally}` beside the numbered
+% institutes, under `Ann Able\IEEEauthorrefmark{1}\IEEEauthorrefmark{3}` and `Bob Baker\IEEEauthorrefmark{2}\IEEEauthorrefmark{3}`:
+% a legend labelled by a number, not a footnote symbol, is its carriers' note all the same (the Kind step reads the
+% entry's text, `affiliations::legend_entry_call`), its mark the number.
+% witness: 2410.12184, 2507.23474 (`\IEEEauthorrefmark{1}Corresponding author`), 2310.15190, 2111.01415 (IEEEtran)
+% oracle:  pdflatex 0 errors: "Ann Able∗‡ Bob Baker†‡", "∗Univ A, Town", "†Univ B, City", "‡These authors contributed
+%          equally" (IEEEtran's `\IEEEauthorrefmark` prints a footnote symbol)
+% engines: rust int130a = "These authors contributed equally" an affiliation of both authors
+% expect:  0 errors, 0 warnings; Able: Univ A and the ltx_thanks_contribution note mark="3"; Baker: Univ B and the same
+%          note; no affiliation of the legend's text
+% status:  RED (int130a) -> GREEN (103c)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}\IEEEauthorrefmark{3},
+Bob Baker\IEEEauthorrefmark{2}\IEEEauthorrefmark{3}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Town}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B, City}
+\IEEEauthorblockA{\IEEEauthorrefmark{3}These authors contributed equally}}
+\maketitle
+Text.
+\end{document}

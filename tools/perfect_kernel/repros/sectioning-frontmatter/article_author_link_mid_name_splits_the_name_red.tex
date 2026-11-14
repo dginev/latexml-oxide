@@ -1,0 +1,17 @@
+% mechanism: an `\href` between a first and a last name in article's kernel `\author`: the link's text becomes a url
+%   contact and the name is cut around it (revBT1b pre-existing, the kernel route)
+% witness: synthetic (revBT1b; no census paper by shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Bea Able    Bob Baker" ("Bea" a link)
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creators "Ann" (url contact "Bea"), "Able",
+%   "Bob Baker": one creator invented, "Bea" out of the name, no Warning; perl not run
+% expect:  0 errors, 0 warnings; creators "Ann Bea Able" (the link kept), Bob Baker
+% status:  RED (int158a; RR1 gap 9b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann \href{http://x.org}{Bea} Able \and Bob Baker}
+\maketitle
+Text.
+\end{document}

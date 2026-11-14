@@ -1,0 +1,18 @@
+% memoir's `{adjustwidth}` / `{adjustwidth*}` (memoir.cls:11267-11297) are lists that only move the margins; the
+% body stays in the flow. memoir is loaded raw, so the list is built as a tagless one-item `<ltx:itemize>`, and the
+% title-ink dedup (arXiv/html_feedback#6924, OXIDIZED_DESIGN #146), which never enters a list, keeps a cover's title
+% copy set in it: 0812.2309 (article.tex:120-143, `\calccentering` + `{adjustwidth*}` covers, `\putTitle`) shows its
+% title twice (68s review finding 2). changepage's binding has the transparent body (latexml_contrib/src/
+% changepage_sty.rs `{adjustwidth}`/`{adjustwidth*}`, OXIDIZED_DESIGN #341), defined only when changepage is loaded.
+% status:  RED (67int13, 68s round 2: `<itemize>` with one tagless `<item>` around the centered line). RUST-ONLY
+%          shape: Perl 0.8.8 has no memoir binding (OmniBus; Error undefined `{adjustwidth*}`, the body in the flow).
+% oracle:  pdflatex 0 errors: "Cover Title", "Text after." (no list label).
+% expect:  0 errors; no `<ltx:itemize>`; the centered "Cover Title" paragraph at document level. (The raw load's
+%          Warning `misdefined:\@iffirstamp`, memoir.cls:5454 `\newif \@iffirstamp`, is not this repro's.)
+\documentclass{memoir}
+\begin{document}
+\begin{adjustwidth*}{1cm}{-1cm}
+\begin{center}\huge Cover Title\end{center}
+\end{adjustwidth*}
+Text after.
+\end{document}

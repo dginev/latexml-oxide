@@ -1,0 +1,16 @@
+% witness: pict2e's `\arc`/`\arc*` (68b, binding gaps G3): 1201.4907, 1503.03277, 1503.03676, 1507.03747,
+%          1611.00631, 2001.00020
+% oracle:  pdflatex 0 errors: a circle, a quarter arc, a filled 45° sector
+% engines: perl 0.8.8 = no binding (`missing_file`), `Error:undefined:\arc`; rust 67int4 = `Error:undefined:\arc`
+% expect:  0 errors, 0 warnings; three `ltx:line` paths, the sector's starting and ending at its centre
+% status:  GREEN
+\documentclass{article}
+\usepackage{pict2e}
+\begin{document}
+\setlength{\unitlength}{1cm}
+\begin{picture}(4,4)
+\put(2,2){\arc{1}}
+\put(2,2){\arc[0,90]{1.5}}
+\put(1,1){\arc*[0,45]{0.5}}
+\end{picture}
+\end{document}

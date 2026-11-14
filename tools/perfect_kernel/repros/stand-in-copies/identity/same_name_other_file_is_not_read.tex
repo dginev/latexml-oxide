@@ -1,0 +1,13 @@
+% witness: hep-ph9609379 (the author's diagrams.sty, `\special` PostScript macros, not Paul Taylor's diagrams package
+%          the binding stands in for); 2411.02780 (equations.sty = annotate-equations.sty renamed)
+% oracle:  pdflatex 0 errors ("READ": TeX reads the author's file)
+% engines: rust 72a r1 = the copy read in provides-mode, its `\Bullet` calling the binding's `\diagram` (101 Errors and
+%          a Fatal in hep-ph9609379); Perl never reads it (Package.pm:2113-2133)
+% expect:  0 errors, 0 warnings; "NOT READ" (a file that shares only the name is not stood in for: base behaviour)
+% status:  RED (72a r1) -> GREEN (72a r2); reading it raw is an open row
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{diagrams}
+\begin{document}
+\ifx\Bullet\undefined NOT READ\else READ\fi
+\end{document}

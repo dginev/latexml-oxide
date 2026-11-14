@@ -163,17 +163,22 @@ pub fn claim_task(identity: &str, taskid: &str) -> ClaimedTask {
   ClaimedTask(())
 }
 
-/// Name `taskid`, converting on the worker `identity`, in the claim, and empty the log mirror.
+/// Name `taskid`, converting on the worker `identity`, in the claim, and empty the log mirror. The
+/// claim also records the child's address space as the paper starts (`space <KiB>`): an allocation
+/// failure in a child that had already grown past a fresh one's is the child's history, not the
+/// paper's ([`retryable`]).
 fn begin_task(identity: &str, taskid: &str) {
   if let Some(claim) = CLAIM.get() {
     let started = std::time::SystemTime::now()
       .duration_since(std::time::UNIX_EPOCH)
       .map(|d| d.as_secs())
       .unwrap_or(0);
+    let space =
+      crate::address_space_kb().map_or(String::new(), |(size_kb, _)| format!("space {size_kb}\n"));
     rewrite_claim(
       claim,
       &format!(
-        "identity {}\ntask {}\nstarted {started}\n",
+        "identity {}\ntask {}\nstarted {started}\n{space}",
         one_line(identity),
         one_line(taskid)
       ),
@@ -331,11 +336,13 @@ pub enum ExitCause {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeadClaim {
   /// The worker identity the conversion ran under (the dispatcher's attempt key).
-  pub identity: Option<String>,
+  pub identity:       Option<String>,
   /// The task the child was converting, if any.
-  pub task:     Option<String>,
+  pub task:           Option<String>,
+  /// The child's address space (KiB) when the task started.
+  pub start_space_kb: Option<u64>,
   /// Why it ended.
-  pub cause:    ExitCause,
+  pub cause:          ExitCause,
 }
 
 impl DeadClaim {
@@ -343,6 +350,7 @@ impl DeadClaim {
   pub fn parse(text: &str) -> Self {
     let mut identity = None;
     let mut task = None;
+    let mut start_space_kb = None;
     let mut first: Option<ExitCause> = None;
     let mut later_signals = Vec::new();
     for line in text.lines() {
@@ -350,6 +358,7 @@ impl DeadClaim {
       match key {
         "identity" => identity = Some(rest.to_string()),
         "task" => task = Some(rest.to_string()),
+        "space" => start_space_kb = rest.trim().parse::<u64>().ok(),
         "cause" => {
           let (kind, value) = rest.split_once(' ').unwrap_or((rest, ""));
           let number = value.trim().parse::<u64>().ok();
@@ -381,7 +390,12 @@ impl DeadClaim {
       Some(cause) => cause,
       None => ExitCause::Unrecorded,
     };
-    DeadClaim { identity, task, cause }
+    DeadClaim {
+      identity,
+      task,
+      start_space_kb,
+      cause,
+    }
   }
 
   /// Whether the death may be the harness's own shutdown (which signals every child with SIGTERM),
@@ -469,11 +483,20 @@ pub fn fatal_line(cause: &ExitCause, pid: u32, governor: bool) -> String {
 /// Whether a cause is **retryable** (user ruling 2026-10-12, "retry, then cause"): a watchdog
 /// timeout, a governor shed and an unrecorded death may not repeat on another try, so the
 /// dispatcher returns the task to its retry budget, reporting the last such cause only when the
-/// budget is spent. A crash by a signal and the memory limits (RSS, `RLIMIT_AS`) are final at once.
-pub fn retryable(cause: &ExitCause, governor: bool) -> bool {
+/// budget is spent. A crash by a signal and the memory limits (RSS, `RLIMIT_AS`) are final at once —
+/// except an allocation failure in a child whose address space at the paper's start (`start_space_kb`)
+/// was already past a fresh worker's ([`crate::FRESH_ADDRESS_SPACE_KB`]; user ruling 2026-10-15). The
+/// allocator's reservations grow a long-lived child's address space, so such a paper may fit in a
+/// fresh one: 53 of run 353's 59 Error→Fatal `oom:alloc_failed` papers convert cleanly in a fresh
+/// process under the same `RLIMIT_AS` (hep-ph0006359, math0111204, math0305067). An unknown start is
+/// taken as fresh.
+pub fn retryable(cause: &ExitCause, start_space_kb: Option<u64>, governor: bool) -> bool {
   match cause {
     ExitCause::Timeout { .. } | ExitCause::Unrecorded => true,
     ExitCause::Signal { first: libc::SIGTERM, .. } => governor,
+    ExitCause::AllocFailed { .. } => {
+      start_space_kb.is_some_and(|kb| kb > crate::FRESH_ADDRESS_SPACE_KB)
+    },
     _ => false,
   }
 }
@@ -738,7 +761,11 @@ impl Reporter {
   fn report(&mut self, pid: u32, stem: &str, claim: &DeadClaim, taskid: &str) {
     let fatal = fatal_line(&claim.cause, pid, self.governor);
     let partial = read_tail(&log_path(&self.dir, stem), PARTIAL_LOG_REPORT_BYTES);
-    let log = report_log(&partial, &fatal, retryable(&claim.cause, self.governor));
+    let log = report_log(
+      &partial,
+      &fatal,
+      retryable(&claim.cause, claim.start_space_kb, self.governor),
+    );
     let identity = claim.identity.clone().unwrap_or_default();
     let outcome = report_archive(taskid, cause_what(&fatal), &log)
       .map_err(|e| e.to_string())
@@ -796,6 +823,18 @@ mod tests {
   }
 
   #[test]
+  fn a_claim_records_the_address_space_its_task_started_in() {
+    let claim =
+      DeadClaim::parse("identity h:s:01\ntask 7\nstarted 17\nspace 3900000\ncause alloc 64\n");
+    assert_eq!(claim.start_space_kb, Some(3_900_000));
+    assert_eq!(claim.cause, ExitCause::AllocFailed { bytes: Some(64) });
+    assert_eq!(
+      DeadClaim::parse("task 7\ncause alloc 64\n").start_space_kb,
+      None
+    );
+  }
+
+  #[test]
   fn an_idle_claim_has_no_task_and_no_cause() {
     let claim = DeadClaim::parse("idle\n");
     assert_eq!(claim.task, None);
@@ -849,22 +888,41 @@ mod tests {
       first: libc::SIGTERM,
       then:  vec![],
     };
-    assert!(retryable(&ExitCause::Timeout { secs: None }, true));
-    assert!(retryable(&ExitCause::Unrecorded, true));
-    assert!(retryable(&shed, true));
+    assert!(retryable(&ExitCause::Timeout { secs: None }, None, true));
+    assert!(retryable(&ExitCause::Unrecorded, None, true));
+    assert!(retryable(&shed, None, true));
     assert!(
-      !retryable(&shed, false),
+      !retryable(&shed, None, false),
       "a SIGTERM without a governor is no shed"
     );
-    assert!(!retryable(&ExitCause::Rss { ceiling_mb: None }, true));
-    assert!(!retryable(&ExitCause::AllocFailed { bytes: None }, true));
+    assert!(!retryable(&ExitCause::Rss { ceiling_mb: None }, None, true));
     assert!(!retryable(
       &ExitCause::Signal {
         first: libc::SIGSEGV,
         then:  vec![libc::SIGABRT],
       },
+      None,
       true
     ));
+    // An allocation failure is final in a fresh child (or one whose start is unknown), retryable
+    // in a child that had grown past a fresh one's address space (user ruling 2026-10-15).
+    let alloc = ExitCause::AllocFailed { bytes: None };
+    assert!(!retryable(&alloc, None, true));
+    assert!(!retryable(
+      &alloc,
+      Some(crate::FRESH_ADDRESS_SPACE_KB),
+      true
+    ));
+    assert!(
+      !retryable(&alloc, Some(1_675_000), true),
+      "a first paper's child"
+    );
+    assert!(retryable(
+      &alloc,
+      Some(crate::FRESH_ADDRESS_SPACE_KB + 1),
+      true
+    ));
+    assert!(retryable(&alloc, Some(3_900_000), true));
     let sigterm = ExitCause::Signal {
       first: libc::SIGTERM,
       then:  vec![],

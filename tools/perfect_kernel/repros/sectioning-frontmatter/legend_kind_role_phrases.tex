@@ -1,0 +1,25 @@
+% Legend lines of an article author block whose role phrases are an author's part in the work: `$^{*}$Joint
+% co-authors, $^{**}$Joint senior co-authors`, `\textsuperscript{\dag}First author`, `\textsuperscript{$\star$}Work
+% performed during internship at Acme`: each marked line is its carriers' note (OD #961's Kind step, `classify_thanks`
+% reading the phrases: 107c), never an affiliation.
+% witness: 2403.05680 (`$^{*}$Joint co-authors, $^{**}$Joint senior co-authors`), 2609.03429 (`\textsuperscript{*}First
+%          author`), 2503.04130 (`\textsuperscript{$\star$}Work performed during internship at NVIDIA`)
+% oracle:  pdflatex 0 errors: "Ann Able1,*,† Bob Baker1,* Cat Cole2,** Dan Dee2,⋆", "1Univ A 2Univ B",
+%          "*Joint co-authors, **Joint senior co-authors", "†First author ⋆Work performed during internship at Acme"
+% engines: rust int139a0 = each legend an affiliation of its carriers
+% expect:  0 errors, 0 warnings; Able, Baker: Univ A + the * note; Able: the † note; Cole: Univ B + the ** note; Dee:
+%          Univ B + the ⋆ note
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\textsuperscript{1,*,\dag} \quad Bob Baker\textsuperscript{1,*} \quad
+Cat Cole\textsuperscript{2,**} \quad Dan Dee\textsuperscript{2,$\star$}\\
+\textsuperscript{1}Univ A \quad \textsuperscript{2}Univ B\\
+$^{*}$Joint co-authors, $^{**}$Joint senior co-authors\\
+\textsuperscript{\dag}First author \quad \textsuperscript{$\star$}Work performed during internship at Acme}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

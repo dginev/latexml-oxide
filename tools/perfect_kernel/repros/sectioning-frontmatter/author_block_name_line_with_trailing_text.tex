@@ -1,0 +1,36 @@
+% witness: the 85a r2 review's w2, w3, w6, w7, w8 (pre-existing, int114a): a name line that carries more than the name
+%          after a wide space — a note (`{\small (on leave)}`, `(Visiting Professor)`) or an address (`{\tt
+%          bob@x.edu}`, `\texttt{ann@x.edu}`) — does not read as a name alone, so it stays a line of the author above
+%          even after a gap or under the names' styling, and on the first line the address stays in the name
+% oracle:  pdflatex 0 errors: one centred column per group, the name and its note or address on one line
+% engines: rust int114a, 85a r2, r3, r4 = "Bob Baker (on leave)", "Bob Baker (Visiting Professor)", "Bob Baker bob@x.edu"
+%          lines of Ann Able, Cat Cole, Dan Dorn; "Eve Eads eve@x.edu" one personname
+% expect:  0 errors, 0 warnings; nine creators, each name its own, the note a note, the address an e-mail
+% status:  RED (int114a, 85a r3, 85a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{{\bf Ann Able} \\
+{\it Univ A} \\
+{\bf Bob Baker}\ \ \ {\small (on leave)} \\
+{\it Univ B}
+\and Cat Cole \\
+Univ A \\
+\\
+Gil Gray~~~~(Visiting Professor) \\
+Univ B
+\and {\bf Dan Dorn} \\
+{\it Univ A} \\
+{\bf Hal Hunt}~~~{\tt hal@x.edu} \\
+{\it Univ B}
+\and Ida Ives \\
+Univ A \\
+\\
+Jan Jones\ \ \ \texttt{jan@x.edu} \\
+Univ B
+\and Eve Eads~~~\texttt{eve@x.edu} \\
+Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

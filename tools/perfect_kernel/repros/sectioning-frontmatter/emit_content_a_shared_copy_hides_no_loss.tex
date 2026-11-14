@@ -1,0 +1,22 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `=2`): a shared item counts
+%   once per the most copies one creator holds, on the lost side as on the excess side, so its copies never hide a word
+%   lost elsewhere: `IDSIA Lab, Lugano` printed once and given to both authors of its row, `IDSIA` of the second row's
+%   line lost
+% witness: review revN2 finding 1 (`scratch_revN2/t/m1.tex`: `IDSIA` printed twice, one copy lost, the shared affiliation
+%   held twice, no Warning); the domain shape 1605.03019
+% oracle:  pdflatex 0 errors; "Ann Able Bob Baker", "IDSIA Lab, Lugano", "Cat Cole", "Dan Dorn",
+%   "IDSIA, 6928 Manno, Switzerland {cat, dan}@idsia.ch"
+% engines: rust int146b, the switch on: `IDSIA` of the second line placed nowhere, 1 warning (the emitter's note)
+% expect:  the switch on: 0 errors, 2 warnings (the note of `6928 Manno Switzerland`; the content check's lost `IDSIA`)
+% status:  RED (int146b) -> GREEN (perfect_kernel_batchn2r2::a_shared_copy_hides_no_differently_worded_loss)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \quad Bob Baker\\
+IDSIA Lab, Lugano
+\and Cat Cole \and Dan Dorn\\
+\small{IDSIA, 6928 Manno, Switzerland {\{cat, dan\}@idsia.ch}}}
+\maketitle
+Body.
+\end{document}

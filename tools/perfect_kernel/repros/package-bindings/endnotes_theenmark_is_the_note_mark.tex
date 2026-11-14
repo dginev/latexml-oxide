@@ -1,0 +1,19 @@
+% witness: cms-noteref-demo (biblatex-chicago's endnote back-references read `\theenmark`: every mark "18")
+% oracle:  pdflatex 0 errors: "One1 two2 The last mark is 2." and "Given7 The given mark is 7." (endnotes.sty:271
+%          `\theenmark` = `\@theenmark`, :274-282 set as each note is made)
+% engines: rust 529dc1b543 = "The last mark is 17." and "The given mark is 17." (`\theenmark` = `\theendnote`, the
+%          counter where it is read); perl the same (endnotes.sty.ltxml:29, "NOT correct")
+% expect:  0 errors, 0 warnings; "The last mark is 2." and "The given mark is 7."
+% status:  RED (529dc1b543) -> GREEN (77v)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{endnotes}
+\begin{document}
+One\endnote{A.} two\endnote{B.}
+\setcounter{endnote}{17}
+The last mark is \theenmark.
+
+Given\endnote[7]{C.}
+\setcounter{endnote}{17}
+The given mark is \theenmark.
+\end{document}

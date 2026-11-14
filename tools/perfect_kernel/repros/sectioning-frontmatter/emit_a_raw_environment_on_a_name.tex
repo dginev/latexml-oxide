@@ -1,0 +1,15 @@
+% mechanism: a raw environment on a name binds no `current_environment`; the meaning of the field's `\begin` and `\end` says it (`field_notes::note_environment`), so the name's run holds its `\end`
+% witness: 2609.05616
+% oracle:  pdflatex 0 errors; "Ann Able (xyz)", "Univ A"
+% engines: rust by frames alone: E 1, `\lx@personname` ends a mode; perl: no such step
+% expect:  0 errors, 0 warnings; Ann Able (xyz) with Univ A
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{CJK}
+\author{Ann Able \begin{CJK*}{UTF8}{gbsn}(xyz)\end{CJK*}\\ Univ A}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

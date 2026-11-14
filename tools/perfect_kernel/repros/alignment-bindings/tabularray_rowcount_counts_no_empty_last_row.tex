@@ -1,0 +1,53 @@
+% witness: synthetic (review of GA1b: t/t2.tex, t/t4.tex)
+% oracle:  pdflatex 0 errors; tables t1-t3 print "a2" (and t3's expanded row "c2.2"); t4 prints "xm3.2", "y1.2",
+%          "y2.2", "z3/3", "w3.2" (tabularray.sty:3722-3731: a last row of one cell that is empty once its leading table
+%          commands are extracted, :3775-3860, is no row; `\\[2pt]` and `\\*` make table commands, :3660-3686)
+% engines: rust GA1b "a3" in t1-t3 ("c3.2"), "xm4.2", "z3/4" (the trailing `\hline`, `[2pt]`, `*` counted a row);
+%          rust GA1c as pdflatex (the read path, `\SetCell` spans, and the `expand=` path `\lx@tblr@rules@shape`)
+% expect:  0 errors, 0 warnings; every cell as pdflatex
+% status:  GREEN (GA1c)
+% (each table in a float of its own placement, which tells them apart in the guard)
+\documentclass{article}
+\usepackage{tabularray}
+\newcommand\myrows{c\therowcount.\thecolcount & d \\}
+\begin{document}
+\begin{table}[h]
+\begin{tblr}{ll}
+\hline
+a\therowcount & b \\
+\hline
+c & d \\ \hline
+\end{tblr}
+\label{t1}
+\end{table}
+
+\begin{table}[t]
+\begin{tblr}{ll}
+a\therowcount & b \\[2pt]
+c & d \\*
+\end{tblr}
+\label{t2}
+\end{table}
+
+\begin{table}[b]
+\begin{tblr}[expand=\myrows]{ll}
+\hline
+a\therowcount & b \\
+\myrows \hline
+\end{tblr}
+\label{t3}
+\end{table}
+
+\begin{table}[p]
+\begin{tblr}{|l|l|}
+\hline
+\SetCell[r=2]{l} xm\therowcount.\thecolcount & y\therownum.\thecolnum \\
+\hline
+ & y\therownum.\thecolnum \\
+\hline
+z\therownum/\therowcount & w\therownum.\thecolnum \\
+\hline
+\end{tblr}
+\label{t4}
+\end{table}
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: pgfmath parses the text of its expanded argument; a register whose name is not a letters run is written back
+%   as `\csname <name>\endcsname` (`pgfmath_input_text`), and a `\dimexpr`/`\numexpr` operand is re-tokenized from that text
+%   under the current catcodes (`pgfmath_read_expr`): a name holding `%` is cut by the comment. Bare, the same name reads
+%   right. Fix: hand `pgfmath_read_expr` the operand tokens it already holds instead of re-tokenizing text (revPGR1b 1)
+% witness: synthetic (revPGR1b); no corpus witness
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [4.0] [9.0]
+% engines: rust PGR1b: [4.0] [0.0], 1 error ("\relax … between \csname and \endcsname") + a stray open-groups Warning;
+%          int163a: [0.0] [0.0], 4 errors
+% expect:  0 errors, 0 warnings; [4.0] [9.0]
+% status:  RED (PGR1b, int163a) — moves: post-merge (PGCNT)
+\documentclass{article}
+\usepackage{pgf}
+\makeatletter
+\edef\y{\expandafter\noexpand\csname a\@percentchar b\endcsname}\expandafter\newdimen\y \y=4pt
+\makeatother
+\def\t#1{\pgfmathparse{#1}[\pgfmathresult]}
+\begin{document}
+\t{\y}\t{\dimexpr\y*2\relax+1}
+\end{document}

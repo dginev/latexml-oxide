@@ -1,0 +1,20 @@
+% witness: 1304.3949 1609.02977 ({IEEEdescription}, \IEEEsetlabelwidth, \IEEEusemathlabelsep); 1905.00616 (\IEEEauthorrefmark); IEEEtrantools.sty :1000-1140, :2616, :2721-2723 under any class
+% oracle:  pdflatex 0 errors; "This text", "Ann Able†", a description "Term One", a bulleted "alpha" (redeflists)
+% engines: rust 68d = 5 errors (undefined \IEEEPARstart, \IEEEauthorrefmark, {IEEEdescription}, \IEEEsetlabelwidth, \IEEEusemathlabelsep); Perl 5 errors (no IEEEtrantools binding, the raw file not loaded)
+% expect:  0 errors 0 warnings; an ltx:description item "Term" "One", an ltx:itemize item "alpha", the mark † in a superscript
+% status:  RED (68d) -> GREEN (67x)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[redeflists]{IEEEtrantools}
+\begin{document}
+\IEEEPARstart{T}{his} text.
+
+Ann Able\IEEEauthorrefmark{2}
+
+\begin{IEEEdescription}[\IEEEsetlabelwidth{Term}\IEEEusemathlabelsep]
+\item[Term] One
+\end{IEEEdescription}
+\begin{itemize}
+\item alpha
+\end{itemize}
+\end{document}

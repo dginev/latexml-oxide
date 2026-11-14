@@ -1,0 +1,18 @@
+% witness: 2605.03796 (main.tex:63-66)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the affiliation "Some University" is the author's; the paragraph "Body." exists
+% mechanism: authblk.sty:148 \newcommand\affil[2][] is robust (\@protected@testopt), so an \affil inside \author
+%   survives titling's \protected@xdef\theauthor{\@author}; our binding's \affil expanded there ("\fi \iffalse",
+%   whole body lost). Fixed: authblk_sty.rs \affil robust.
+% status:  GREEN
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{titling}
+\begin{document}
+\title{T}
+\author{Ann Author$^1$%
+  \affil{$^1$Some University}
+}
+\maketitle
+Body.
+\end{document}

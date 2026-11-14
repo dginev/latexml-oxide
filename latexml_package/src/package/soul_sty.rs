@@ -24,6 +24,13 @@ use crate::{
 // same `\lx@soul@letterspaced`, the state must also be keyed under the alias.
 // In Perl `Let` naturally preserves closure identity, so this step is implicit.
 
+/// soul.sty:263/348: the scanner sets a `\\` in its argument as a forced line break (`\unskip\nobreak\hfil\break`),
+/// never the end of an alignment row; the soul commands digest their argument with `\\` `\let` to `\newline`, local to
+/// the command's group (`bounded`). Perl's constructors digest `\\` as it stands, so in a `p{}` cell
+/// (`\hl{line one \\ line two}`) it ended the row inside the group: "Attempt to close a group that switched to mode
+/// horizontal", the rest of the table lost (2310.07652, 2406.17962; pdflatex 0 errors; KNOWN_PERL_ERRORS #1153).
+fn soul_line_breaks() { let_i(&T_CS!("\\\\"), &T_CS!("\\newline"), None); }
+
 LoadDefinitions!({
   // Perl: soul.sty.ltxml
   // Space-Out and UnderLine package
@@ -64,6 +71,7 @@ LoadDefinitions!({
   enter_horizontal => true,
   bounded => true,
   before_digest => {
+    soul_line_breaks();
     // Look up and digest font tokens for the original CS
     if let Some(token) = get_current_token() {
       let cs_name = token.with_cs_name(|n| n.to_string());
@@ -116,10 +124,11 @@ LoadDefinitions!({
   DefConstructor!("\\textul{}",
   "<ltx:text framed='underline' framecolor='#framecolor' _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true, bounded => true, sizer => "#1",
+  before_digest => { soul_line_breaks(); },
   properties => sub[_args] {
     let mut soul_color: Option<String> = None;
     // Perl getSOULcolor: only when color.sty is loaded.
-    if (lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded"))
+    if package_loaded("color")
       && let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
         let color_name = to_string(color_sym);
         soul_color = Some(lookup_color(&color_name));
@@ -157,11 +166,13 @@ LoadDefinitions!({
   DefConstructor!("\\textst{}",
   "<ltx:text cssstyle='#cssstyle' _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true,
+  bounded => true,
+  before_digest => { soul_line_breaks(); },
   after_digest => sub[whatsit] {
     let mut css = String::from("text-decoration:line-through;");
     // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
     // Perl L64: `if (my $color = ToString(LookupValue($name)))` — stringify at read time.
-    if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
+    if package_loaded("color") {
       let color_name = match lookup_value("soul_strike_color") {
         Some(Stored::String(sym)) => to_string(sym),
         Some(Stored::Tokens(ts)) => do_expand(ts)?.to_string(),
@@ -195,11 +206,12 @@ LoadDefinitions!({
   enter_horizontal => true,
   bounded => true,
   before_digest => {
+    soul_line_breaks();
     // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
     // Perl L64: `ToString(LookupValue($name))` — stringify at read time,
     // supporting either a raw-Tokens entry (from `\sethlcolor`) or the
     // initial string 'yellow' assignment (L103).
-    if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
+    if package_loaded("color") {
       let color_name = match lookup_value("soul_hl_color") {
         Some(Stored::String(sym)) => to_string(sym),
         Some(Stored::Tokens(ts)) => do_expand(ts)?.to_string(),

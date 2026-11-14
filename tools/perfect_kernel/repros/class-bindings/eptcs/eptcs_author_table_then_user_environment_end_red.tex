@@ -1,0 +1,21 @@
+% mechanism: an eptcs `\author` cell holding a one-name table then a user environment whose end prints an e-mail
+%   (`\newenvironment{xe}{}{\texttt{…}}`): the e-mail glues to the name's last word ("Ablezz@z.edu") and the
+%   name is cut to "Ann" (eptcs_cls.rs `cells`, the table's tail; revP24b pre-existing, probe c2/e_userenv3)
+% witness: synthetic (revP24b; no census eptcs paper by shape)
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able zz@z.edu   Bob Baker",
+%   "Univ B" under Bob
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("writes \"Ann\" as its plain text"); creators
+%   "Ann" (e-mail "Ablezz@z.edu"), Bob Baker (Univ B); perl has no eptcs binding
+% expect:  0 errors, 0 warnings; creators Ann Able (e-mail zz@z.edu), Bob Baker (Univ B)
+% status:  RED (int158a; RR1 gap 19)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\newenvironment{xe}{}{\texttt{zz@z.edu}}
+\title{T}
+\author{\begin{tabular}{c}Ann Able\end{tabular}\begin{xe}\end{xe}
+\and
+Bob Baker \institute{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

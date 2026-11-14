@@ -34,9 +34,8 @@ fn old_font_switch_survives_a_raw_size_switch() {
     include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/old_font_switch_then_size.tex");
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // scrartcl's own `\@startsection`/`\@sect` checks (scrartcl.cls), raised
-  // with or without this change.
-  assert_eq!(warning_count(&stderr), 2, "{stderr}");
+  // (scrartcl's own `\@startsection`/`\@sect` checks pass, as under pdflatex: koma_script.rs `koma_pre_load`)
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(
     &xml,
     "para",

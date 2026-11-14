@@ -1,0 +1,29 @@
+% witness: 2108.11527, 2602.09462 (restate= key), 2402.14202
+% oracle:  pdflatex 0 errors: "Lemma 1.1. First paragraph with a=b (1) …", "Theorem 1.2 (Named). Keyed body.", (2) c=d;
+%          § 2: the same two statements again as "Lemma 1.1." and "Theorem 1.2 (Named).", the equation (1) again,
+%          then (3) e=f; "See 1.2 and (1)." (thm-restate.sty:103-184)
+% engines: rust int47a and perl (thm-restate.sty.ltxml:28): each restatement is "See <ref>", no statement
+% expect:  clean (0 errors, 0 warnings); the restated theorems with the original tags and bodies, no labels; the
+%          equation counter put back
+% status:  RED (int47a) -> GREEN (78i)
+\documentclass{article}
+\usepackage{amsmath,amsthm,thmtools,thm-restate}
+\declaretheorem[name=Theorem,numberwithin=section]{theorem}
+\declaretheorem[name=Lemma,sibling=theorem]{lemma}
+\begin{document}
+\section{Intro}
+\begin{restatable}{lemma}{keylem}\label{lem:k}
+First paragraph with
+\begin{equation}\label{eq:a} a=b \end{equation}
+Second paragraph.
+\end{restatable}
+\begin{theorem}[restate=mythm, name=Named]\label{thm:x}
+Keyed body.
+\end{theorem}
+\begin{equation} c=d \end{equation}
+\section{Again}
+\keylem*
+\mythm*
+\begin{equation} e=f \end{equation}
+See \ref{thm:x} and \eqref{eq:a}.
+\end{document}

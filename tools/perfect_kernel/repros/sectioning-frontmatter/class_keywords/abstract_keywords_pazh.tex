@@ -1,0 +1,19 @@
+% A raw class's `\keywords`, defined only inside the environment its `\@maketitle` typesets the abstract's body in
+% (reached from the class's `\endabstract` through `\maketitle`), is the keywords of the frontmatter.
+% witness: 1202.2889 (astlb.cls:91-205), astro-ph0306137 (pazhastl.cls), 1507.06302 (pazhb_eng.cls),
+%          2103.05801 (pazhb.cls)
+% oracle:  pdflatex (kwpazh.cls beside it) 0 errors: "Abstract — Abstract text. Key words: first, second"
+% engines: rust 67int11 = 1 Error (undefined:\keywords)
+% expect:  0 errors, 0 warnings; <keywords> "first, second"; the abstract "Abstract text."
+% status:  RED (67int11) -> GREEN (68n)
+% preload: ar5iv.sty
+\documentclass{kwpazh}
+\begin{document}
+\title{T}\author{A. Author}
+\begin{abstract}
+Abstract text.
+\keywords{first, second}
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

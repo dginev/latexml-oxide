@@ -1,0 +1,49 @@
+% mechanism: a native `\__fp_parse:n` must yield the macro's tokens: signed zeros, inf, the exponent limits, ties to even in
+%   the reader and in + - * /, values next to multiples of pi/4, huge and tiny trigonometric arguments, 16-digit round-offs.
+% witness: review of batch P2; pgf-interference-en (the pixel loop of `\fp_set:Nn`), no arXiv paper
+% oracle:  pdflatex: 0 errors; the same text
+% engines: rust: raw and native byte-identical (`set_native_override`)
+% expect:  0 errors, 0 warnings; the printed values below
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\fp_new:N \xfp
+\fp_set:Nn \xfp { -0 }
+\NewDocumentCommand \T { m } { \fp_to_tl:n {#1} ;~ }
+\NewDocumentCommand \Dec { m } { \exp_args:Nf \tl_to_str:n { \fp_to_decimal:n {#1} } ;~ }
+\ExplSyntaxOff
+\begin{document}
+Zeros: \T{0} \T{-0} \T{0*-1} \T{-0+0} \T{0-0} \T{\xfp} \T{\xfp+\xfp} \T{1-1} \T{abs(-0)} \T{0/5} \T{-0/5}
+\T{round(0.4)} \T{round(-0.4)} \T{trunc(0.9)} \T{ceil(-0.5)} \T{sin(-0)} \T{tan(0)} \T{asin(0)}
+
+Infinities: \T{inf} \T{-inf} \T{inf+1} \T{1-inf} \T{inf*-2} \T{1/inf} \T{exp(inf)} \T{exp(-inf)} \T{ln(inf)}
+\T{sqrt(inf)} \T{atan(inf)} \T{atan(1,inf)} \T{atan(inf,inf)} \T{acos(0)} \T{asec(inf)} \T{0^inf} \T{2^inf} \T{0.5^inf} \T{inf^-1}
+
+Limits: \T{1e10000} \T{-1e10000} \T{1e-9999} \T{9.999999999999999e9999} \T{1e9999*9} \T{1e-9999*0.1} \T{1e-10000}
+\T{1e5000*1e4999} \T{exp(23025)} \T{exp(-23025)} \T{ln(1e9999)} \T{ln(1e-9999)} \T{sqrt(1e9999)} \T{sqrt(1e-9999)} \T{logb(1e9999)}
+
+Ties: \T{1.0000000000000005} \T{1.0000000000000015} \T{1.00000000000000050001} \T{9999999999999999.5} \T{9999999999999998.5}
+\T{1+5e-16} \T{1.000000000000001+5e-16} \T{1-5e-17} \T{1-2.5e-16} \T{1000000000000001*5e-1} \T{3e0*1.666666666666667}
+\T{1/3} \T{2/3} \T{1e16-1} \T{1e16+1} \T{1e16+2} \T{1e16-0.5} \T{1000000000000000-0.05}
+
+Round-offs: \T{0.1+0.2} \T{1.1*1.1} \T{sqrt(2)} \T{sqrt(1e-1)} \T{sqrt(99999999999999.99)} \T{10^15} \T{10^-15} \T{2^0.5}
+\T{(-8)^3} \T{(-8)^2} \T{-2^2} \T{2^3^2} \T{2**3**2} \T{round(2.5)} \T{round(3.5)} \T{round(-2.5)}
+\T{round(2.5,0,1)} \T{round(2.5,0,0)} \T{round(-2.5,0,-1)} \T{round(1.2345,2)} \T{round(1234.5,-2)} \T{floor(-1.5)} \T{ceil(1.5)}
+\T{trunc(-1.5)} \T{round(99.5)} \T{round(0.05,1)} \T{round(1e-20,5)} \T{ceil(1e-20,5)} \T{round(9.5e20,-20)} \T{fact(0)} \T{fact(5)}
+\T{fact(11)} \T{fact(12)} \T{fact(170)} \T{fact(3248)} \T{exp(1)} \T{exp(0.5)} \T{exp(-1e-20)} \T{ln(2)} \T{ln(10)} \T{ln(0.5)}
+
+Angles: \T{sin(1)} \T{cos(1)} \T{tan(1)} \T{cot(1)} \T{sec(1)} \T{csc(1)} \T{sin(pi)} \T{cos(pi)} \T{sin(pi/2)} \T{cos(pi/2)}
+\T{tan(pi/4)} \T{sin(3.141592653589793)} \T{sin(6.283185307179586)} \T{sin(1.570796326794897)} \T{cos(1.570796326794897)}
+\T{tan(1.570796326794897)} \T{sin(1e100)} \T{cos(1e100)} \T{tan(1e100)} \T{sin(1e9999)} \T{cos(1e9999)} \T{sin(1e-100)} \T{cos(1e-100)}
+\T{tan(1e-100)} \T{cot(1e-100)} \T{sin(1e-9999)} \T{sind(30)} \T{cosd(60)} \T{tand(45)} \T{cotd(45)} \T{secd(60)} \T{cscd(30)}
+\T{sind(180)} \T{cosd(90)} \T{sind(360)} \T{sind(1e20)} \T{cosd(1e9000)} \T{sind(-45.5)} \T{asin(1)} \T{asin(-1)} \T{acos(1)} \T{acos(-1)}
+\T{asin(0.5)} \T{acos(0.5)} \T{atan(1)} \T{atan(1,-1)} \T{atan(-1,-1)} \T{atan(-1,1)} \T{atand(1)} \T{asind(0.5)} \T{acosd(0.5)}
+\T{acot(1)} \T{acot(1,-1)} \T{acotd(1)} \T{acsc(1)} \T{acsc(2)} \T{asec(1)} \T{asec(2)} \T{acscd(2)} \T{asecd(2)} \T{atan(1e-100)} \T{atan(1e100)}
+
+Words: \T{pi} \T{2pi} \T{deg} \T{180deg} \T{true} \T{false} \T{1pt} \T{1in} \T{1pc} \T{1cm} \T{1mm} \T{1dd} \T{1cc} \T{1nd} \T{1nc} \T{1bp} \T{1sp}
+\T{2cm*3} \T{3 pi / 2} \T{2(3)} \T{(2)(3)} \T{2(3)^2} \T{2pi^2} \T{1/2pi} \T{1/2(pi)} \T{max(1,2,3)} \T{min(3,2,1)} \T{max(-0,0)} \T{min(0,-0)} \T{abs(-3)}
+\T{sign(-3)} \T{sign(0)} \T{sign(-0)} \T{sign(inf)} \T{logb(1234.5)} \T{logb(0.001)} \T{1<2} \T{1>2} \T{1=1} \T{1<=1} \T{1>=2} \T{1!=2} \T{1!<2} \T{1<2<3}
+\T{1<2>3} \T{3>2>1>0} \T{1?2:3} \T{0?2:3} \T{1?(0?4:5):6} \T{0?1:0?4:5} \T{!0} \T{!1} \T{1&&2} \T{0&&2} \T{1||2} \T{0||2} \T{0&2} \T{1|2} \T{-(1)} \T{+1} \T{++1} \T{--1} \T{-+-1}
+
+Decimals: \Dec{0.1+0.2} \Dec{1/3} \Dec{1e20} \Dec{1e-20} \Dec{-0} \Dec{round(2.5)} \Dec{sin(1)*1e5} \Dec{1234567890123456789}
+\end{document}

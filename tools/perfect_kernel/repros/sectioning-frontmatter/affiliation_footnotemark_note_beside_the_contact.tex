@@ -1,0 +1,20 @@
+% mechanism: a `\footnotemark[<n>]` in an affiliation (authblk's `\affil`): its filled note sat inside the
+%   `ltx:contact`; it is the creator's, right after that contact (queue_digest.rs `lift_notes_beside` on the contact,
+%   OD #1001)
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able Univ X∗", footnote "1 Note A."
+% engines: int159a2: 0 errors, 0 warnings; `<contact role="affiliation">Univ X<note mark="*" role="footnote">…Note
+%   A.</note></contact>`
+% expect:  0 errors, 0 warnings; the affiliation "Univ X" alone, then `<note mark="*" role="footnote">` "Note A."
+% status:  RED (int159a2) -> GREEN (FN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able}
+\affil{Univ X\protect\footnotemark[1]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}
+Text.
+\end{document}

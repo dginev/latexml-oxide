@@ -1,0 +1,19 @@
+% mechanism: a second names row led by labels no mark above requests (`\textbf{$^3$Dan Dole, $^4$Eve Eads, $^1$Fay Ford}`): a
+%   setter answers requests, so the row is names
+% witness: 2605.06126
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 Ann Able, 2 Bob Baker, 1 Cat Cole, / 3 Dan Dole, 4 Eve Eads, 1
+%   Fay Ford / 1 Inst A / 2 Inst B, 3 Inst C / 4 Inst D"
+% engines: int169a (54ccc986ef): a nameless creator holding "Dan Dole", "Eve Eads", Inst C, Inst D; Fay Ford an
+%   affiliation; 1 warning
+% expect:  0 errors, 0 warnings; six creators, each with the Inst its mark requests
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able, $^2$Bob Baker, $^1$Cat Cole, \\
+\textbf{$^3$Dan Dole, $^4$Eve Eads, $^1$Fay Ford}\\
+$^1$Inst A \\ $^2$Inst B, $^3$Inst C \\ $^4$Inst D}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: membranecomputing/membranecomputing (membranecomputing.tex:509)
+% oracle:  pdflatex (TL 2025) 0 errors: "a G", "b b", "X a Y".
+% engines: int141a: 3 errors "Missing { inserted": `\@ensuremath`'s parameter takes the group's `}`. Perl's `\ensuremath{}` the same.
+% expect:  0 errors; the table's two rows and the case-changed line whole
+% status:  GREEN
+\documentclass{article}
+\usepackage{xstring}
+\def\C{}\def\D{}
+\begin{document}
+\begin{tabular}{ll}
+  a & $\StrFindGroup{{\ensuremath{G}}{h}}{1}[\C]\StrExpand[2]{\C}{\D}\D$ \\
+  b & $b$ \\
+\end{tabular}
+
+\MakeUppercase{x \ensuremath{a} y}
+\end{document}

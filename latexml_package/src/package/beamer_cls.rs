@@ -435,6 +435,10 @@ LoadDefinitions!({
     before_digest => {
       Let!("\\ifbeamer@inframe", "\\iftrue");
       Let!("\\frame", "\\framelatex");
+      // a frame inside the author's `{thebibliography}` (`\begin{thebibliography}{20}\begin{frame}[allowframebreaks]
+      // \frametitle{References}\bibitem…`, 1301.0681) is a unit as a heading there is: the bibliography goes on in it
+      // (sect11.rs `\lx@bibliography@sectioned`)
+      Digest!("\\lx@bibliography@sectioned")?;
     },
     after_digest_begin => sub[whatsit] {
       let is_fragile = whatsit.get_args().iter().flatten().any(|arg| {

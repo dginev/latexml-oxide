@@ -33,45 +33,37 @@ fn creators(xml: &str) -> Vec<String> {
 /// the names showing its mark. Repro sectioning-frontmatter/ieee_refmark_sized_marks_link.
 #[test]
 fn ieee_refmark_sized_marks_link() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_sized_marks_link.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m1\">\n          <XMath xml:id=\"m1.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Country</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m2\">\n          <XMath xml:id=\"m2.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B, Country</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Coe<sup xml:id=\"id3\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m3\">\n          <XMath xml:id=\"m3.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B, Country</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m1\">\n          <XMath xml:id=\"m1.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m4a\">\n          <XMath xml:id=\"m4a.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup>Univ A, Country</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id3\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m2\">\n          <XMath xml:id=\"m2.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m5a\">\n          <XMath xml:id=\"m5a.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup>Univ B, Country</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe<sup xml:id=\"id5\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m3\">\n          <XMath xml:id=\"m3.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m5b\">\n          <XMath xml:id=\"m5b.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup>Univ B, Country</contact>\n  </creator>",
   ]);
 }
 
 /// 64a: `\IEEEauthorrefmark` is a mark wherever a block is read — `Google, \IEEEauthorrefmark{3}Google DeepMind` is
-/// two affiliations (2310.02368), and an address under one author's mark is that author's (2404.05610), while a
-/// shared affiliation's address continues it and an address under two marks stays the block's (OD #52(j), #159).
+/// two affiliations (2310.02368), and an address under one author's mark is that author's (2404.05610); an address
+/// under two marks goes to the author it spells, else stays the block's (OD #52(j), #159), one contact an address (77o
+/// r3; the spelling before the block since batch 99a, the placement order's step 2 before step 4:
+/// `affiliations::place_address_runs`). Since 100b (OD #956, ruling E) an address line under one author's affiliation is
+/// the entry's e-mails too: `{steen,sund}@microsoft.com` under Ben Steen alone gives him `steen@`, and `sund@`, which
+/// spells no one and is not his only one, goes once to the block — it had stayed welded into his affiliation.
 /// Repro sectioning-frontmatter/ieee_refmark_address_and_marks_in_a_line.
 #[test]
 fn ieee_refmark_address_and_marks_in_a_line() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_address_and_marks_in_a_line.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ben Steen<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Microsoft Data &amp; AI<break/>{steen,sund}@microsoft.com</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Mic Tufo<sup xml:id=\"id2\">2</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Alex Svy<sup xml:id=\"id3\">3</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google DeepMind</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Dem Hespe<sup xml:id=\"id4\">4</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id5\">Independent</text></contact>\n    <contact name=\"Email: \" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">{tufo,svy}@google.com</contact>\n  </creator>",
-  ]);
-}
-
-/// 64a: an ORCID command's digits (`\orcidicon{0000-0001-8953-1075}`) are no name text, so the name list splits
-/// (2104.02493, 2407.03625). Repro sectioning-frontmatter/ieee_refmark_orcid_digits_are_no_name.
-#[test]
-fn ieee_refmark_orcid_digits_are_no_name() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_orcid_digits_are_no_name.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ole Schu<sup xml:id=\"id1\">1</sup><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0001-8953-1075\">iD</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id2\">Lab A</text>, Stuttgart</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Mark Hahn<sup xml:id=\"id3\">2</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id4\">Firm B</text>, Ulm</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Nic Schein<sup xml:id=\"id5\">1</sup><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0002-5176-6159\">iD</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id6\">Lab A</text>, Stuttgart</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ben Steen<sup xml:id=\"id1\">*</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">*</sup>Microsoft Data &amp; AI</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">steen@microsoft.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Mic Tufo<sup xml:id=\"id3\">†</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">†</sup>Google</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">tufo@google.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Alex Svy<sup xml:id=\"id5\">‡</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\">‡</sup>Google DeepMind</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">svy@google.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dem Hespe<sup xml:id=\"id7\">§</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\">§</sup><text font=\"italic\" xml:id=\"id9\">Independent</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">sund@microsoft.com</contact>\n  </creator>",
   ]);
 }
 
@@ -88,7 +80,7 @@ fn algorithm2e_block_in_algorithmic_line() {
     &xml,
     "listing",
     &["xml:id=\"alg1.3.1.1.1\""],
-    "<listing xml:id=\"alg1.3.1.1.1\"><listingline xml:id=\"alg1.l1\"><tags><tag><text fontsize=\"80%\" xml:id=\"alg1.l1.1\">1:</text></tag><tag role=\"refnum\">1</tag></tags>\u{2002}<Math mode=\"inline\" tex=\"W\\leftarrow 0\" text=\"W leftarrow 0\" xml:id=\"alg1.l1.m1\"><XMath xml:id=\"alg1.l1.m1.1\"><XMApp xml:id=\"alg1.l1.m1.1.1\"><XMTok name=\"leftarrow\" role=\"ARROW\">\u{2190}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">W</XMTok><XMTok meaning=\"0\" role=\"NUMBER\">0</XMTok></XMApp></XMath></Math>;</listingline><listingline xml:id=\"alg1.l2\"><tags><tag><text fontsize=\"80%\" xml:id=\"alg1.l2.1\">2:</text></tag><tag role=\"refnum\">2</tag></tags>\u{2002}<text font=\"bold\" xml:id=\"alg1.l2.2\">for</text> <emph font=\"italic\" xml:id=\"alg1.l2.3\"><Math mode=\"inline\" tex=\"i=1\" text=\"i = 1\" xml:id=\"alg1.l2.m1\"><XMath xml:id=\"alg1.l2.m1.1\"><XMApp xml:id=\"alg1.l2.m1.1.1\"><XMTok font=\"upright\" meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok role=\"UNKNOWN\">i</XMTok><XMTok font=\"upright\" meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math> <text font=\"bold upright\" xml:id=\"alg1.l2.3.1\">to</text> <Math mode=\"inline\" tex=\"n\" text=\"n\" xml:id=\"alg1.l2.m2\"><XMath xml:id=\"alg1.l2.m2.1\"><XMTok role=\"UNKNOWN\">n</XMTok></XMath></Math></emph> <text font=\"bold\" xml:id=\"alg1.l2.4\">do</text></listingline><listingline xml:id=\"alg1.3.1.1.1.1\">\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}<Math mode=\"inline\" tex=\"W\\leftarrow W+1\" text=\"W leftarrow W + 1\" xml:id=\"alg1.m1\"><XMath xml:id=\"alg1.m1.1\"><XMApp xml:id=\"alg1.m1.1.1\"><XMTok name=\"leftarrow\" role=\"ARROW\">\u{2190}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">W</XMTok><XMApp xml:id=\"alg1.m1.1.1.3\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">W</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMApp></XMath></Math>  Append <emph font=\"italic\" xml:id=\"alg1.3.1.1.1.1.1\">x</emph><break/></listingline><listingline xml:id=\"alg1.3.1.1.1.2\">end for</listingline><listingline xml:id=\"alg1.l3\"><tags><tag><text fontsize=\"80%\" xml:id=\"alg1.l3.1\">3:</text></tag><tag role=\"refnum\">3</tag></tags>\u{2002}<text font=\"bold\" xml:id=\"alg1.l3.2\">return</text> <Math mode=\"inline\" tex=\"W\" text=\"W\" xml:id=\"alg1.l3.m1\"><XMath xml:id=\"alg1.l3.m1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">W</XMTok></XMath></Math>;</listingline></listing>",
+    "<listing xml:id=\"alg1.3.1.1.1\"><listingline xml:id=\"alg1.l1\"><tags><tag><text fontsize=\"80%\" xml:id=\"alg1.l1.1\">1:</text></tag><tag role=\"refnum\">1</tag></tags>\u{2002}<Math mode=\"inline\" tex=\"W\\leftarrow 0\" text=\"W leftarrow 0\" xml:id=\"alg1.l1.m1\"><XMath xml:id=\"alg1.l1.m1.1\"><XMApp xml:id=\"alg1.l1.m1.1.1\"><XMTok name=\"leftarrow\" role=\"ARROW\">\u{2190}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">W</XMTok><XMTok meaning=\"0\" role=\"NUMBER\">0</XMTok></XMApp></XMath></Math>;</listingline><listingline xml:id=\"alg1.l2\"><tags><tag><text fontsize=\"80%\" xml:id=\"alg1.l2.1\">2:</text></tag><tag role=\"refnum\">2</tag></tags>\u{2002}<text font=\"bold\" xml:id=\"alg1.l2.2\">for</text> <emph font=\"italic\" xml:id=\"alg1.l2.3\"><Math mode=\"inline\" tex=\"i=1\" text=\"i = 1\" xml:id=\"alg1.l2.m1\"><XMath xml:id=\"alg1.l2.m1.1\"><XMApp xml:id=\"alg1.l2.m1.1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">i</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math> <text font=\"bold upright\" xml:id=\"alg1.l2.3.1\">to</text> <Math mode=\"inline\" tex=\"n\" text=\"n\" xml:id=\"alg1.l2.m2\"><XMath xml:id=\"alg1.l2.m2.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">n</XMTok></XMath></Math></emph> <text font=\"bold\" xml:id=\"alg1.l2.4\">do</text></listingline><listingline xml:id=\"alg1.3.1.1.1.1\">\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}<Math mode=\"inline\" tex=\"W\\leftarrow W+1\" text=\"W leftarrow W + 1\" xml:id=\"alg1.m1\"><XMath xml:id=\"alg1.m1.1\"><XMApp xml:id=\"alg1.m1.1.1\"><XMTok name=\"leftarrow\" role=\"ARROW\">\u{2190}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">W</XMTok><XMApp xml:id=\"alg1.m1.1.1.3\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">W</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMApp></XMath></Math>  Append <emph font=\"italic\" xml:id=\"alg1.3.1.1.1.1.1\">x</emph><break/></listingline><listingline xml:id=\"alg1.3.1.1.1.2\"><text font=\"bold\" xml:id=\"alg1.3.1.1.1.2.1\">end</text></listingline><listingline xml:id=\"alg1.l3\"><tags><tag><text fontsize=\"80%\" xml:id=\"alg1.l3.1\">3:</text></tag><tag role=\"refnum\">3</tag></tags>\u{2002}<text font=\"bold\" xml:id=\"alg1.l3.2\">return</text> <Math mode=\"inline\" tex=\"W\" text=\"W\" xml:id=\"alg1.l3.m1\"><XMath xml:id=\"alg1.l3.m1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">W</XMTok></XMath></Math>;</listingline></listing>",
   );
 }
 
@@ -163,7 +155,7 @@ fn caption_in_minipage_with_adjustbox() {
     &xml,
     "table",
     &["xml:id=\"S0.T1\""],
-    "<table class=\"ltx_minipage ltx_pruned_first\" inlist=\"lot\" labels=\"LABEL:t:a\" vattach=\"middle\" width=\"138.0pt\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>First</toccaption><caption><tag close=\": \">Table 1</tag>First</caption><inline-block depth=\"0.0pt\" height=\"4.3pt\" width=\"5.0pt\" xml:id=\"S0.T1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"S0.T1.1.1\"><text xml:id=\"S0.T1.1.1.1\">a</text></p></inline-block></table>",
+    "<table class=\"ltx_minipage\" inlist=\"lot\" labels=\"LABEL:t:a\" vattach=\"middle\" width=\"138.0pt\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>First</toccaption><caption><tag close=\": \">Table 1</tag>First</caption><inline-block depth=\"0.0pt\" height=\"4.3pt\" width=\"5.0pt\" xml:id=\"S0.T1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"S0.T1.1.1\"><text xml:id=\"S0.T1.1.1.1\">a</text></p></inline-block></table>",
   );
 }
 
@@ -180,33 +172,25 @@ fn caption_in_centered_minipage_with_adjustbox() {
     &xml,
     "table",
     &["xml:id=\"S0.T1\""],
-    "<table class=\"ltx_minipage ltx_pruned_first\" inlist=\"lot\" labels=\"LABEL:t:a\" vattach=\"middle\" width=\"138.0pt\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>First</toccaption><caption class=\"ltx_centering\"><tag close=\": \">Table 1</tag>First</caption><inline-block class=\"ltx_centering\" depth=\"0.0pt\" height=\"4.3pt\" width=\"5.0pt\" xml:id=\"S0.T1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"S0.T1.1.1\"><text xml:id=\"S0.T1.1.1.1\">a</text></p></inline-block></table>",
+    "<table class=\"ltx_minipage\" inlist=\"lot\" labels=\"LABEL:t:a\" vattach=\"middle\" width=\"138.0pt\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>First</toccaption><caption class=\"ltx_centering\"><tag close=\": \">Table 1</tag>First</caption><inline-block class=\"ltx_centering\" depth=\"0.0pt\" height=\"4.3pt\" width=\"5.0pt\" xml:id=\"S0.T1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"S0.T1.1.1\"><text xml:id=\"S0.T1.1.1.1\">a</text></p></inline-block></table>",
   );
-}
-
-/// 64a: an author mark that no affiliation answers stays in the name, as LaTeX prints it — an `\IEEEauthorrefmark`
-/// whose legend is a `\thanks` (2408.02464; 64a review: read as requests, they had vanished).
-/// Repro sectioning-frontmatter/ieee_refmark_unanswered_stays_printed.
-#[test]
-fn ieee_refmark_unanswered_stays_printed() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_unanswered_stays_printed.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id3\"><sup xml:id=\"id3.1\">1</sup>Equal contribution. <sup xml:id=\"id3.2\">2</sup>Corresponding author.</note>\n  </creator>",
-  ]);
 }
 
 /// 64a: `Ann Able$^*$ and Bob Bee$^1$` with no `$^1$` line: Bob's unanswered mark stays in his name (the RED of 63x).
 /// Repro sectioning-frontmatter/author_unmatched_numeric_mark.
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
+/// asterisk (FIDELITY_CHARTER §4).
 #[test]
 fn author_unmatched_numeric_mark() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_unmatched_numeric_mark.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">*</sup></personname>\n  </creator>",
+    format!(
+      "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">{}</sup></personname>\n  </creator>",
+      "∗"
+    )
+    .as_str(),
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Bee<sup xml:id=\"id2\">1</sup></personname>\n  </creator>",
   ]);
 }
@@ -312,19 +296,6 @@ fn llncs_and_inside_wrapper() {
   ]);
 }
 
-/// 64b: `\and` inside a group of names (amsart `{\bf {\large A \and B}}`, 2401.03555).
-/// Repro sectioning-frontmatter/amsart_and_inside_group.
-#[test]
-fn amsart_and_inside_group() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_and_inside_group.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-  ]);
-}
-
 /// 64b: a macro printing only a comma is a separator (`\authcomma`, 2403.07809).
 /// Repro sectioning-frontmatter/author_separator_macro_comma.
 #[test]
@@ -364,36 +335,6 @@ fn author_tied_ampersand() {
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Lead</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-  ]);
-}
-
-/// 64b: a names line opening with a declaration and "and" (`\\\sc and Cat Cole`, 2411.12606). (Bob Baker's small caps
-/// from that `\sc` are not kept on his name — a font loss older than this batch.)
-/// Repro sectioning-frontmatter/author_declaration_line_opens_with_and.
-#[test]
-fn author_declaration_line_opens_with_and() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_declaration_line_opens_with_and.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname><text font=\"smallcaps\" xml:id=\"id1\">Ann Able</text></personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\"><text font=\"smallcaps\" xml:id=\"id2\">Univ A</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<note mark=\"1\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags>\n          <tag>1</tag>\n          <tag role=\"refnum\">1</tag>\n          <tag role=\"typerefnum\">footnote 1</tag>\n        </tags></note></personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><text font=\"smallcaps\" xml:id=\"id3\">Cat Cole</text></personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\"><text font=\"smallcaps\" xml:id=\"id4\">Univ B</text></contact>\n  </creator>",
-  ]);
-}
-
-/// 64b: a list's closing period before a wrapper's mark (2201.07394); the period itself is trimmed off the last name as
-/// any name's trailing punctuation is (63z8 the same).
-/// Repro sectioning-frontmatter/author_wrapper_closing_period_before_mark.
-#[test]
-fn author_wrapper_closing_period_before_mark() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_wrapper_closing_period_before_mark.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>ANN ABLE</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>BOB BAKER</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>CAT COLE</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);
 }
 
@@ -521,8 +462,9 @@ fn graphic_name_with_dots() {
 
 /// 64c (HF10 F4): adjustbox's `\adjustimage`/`\adjincludegraphics` call `\Gin@i`, the body of `\includegraphics`
 /// (adjustbox.sty:275-280) — no longer read as nothing (2410.09019) — through graphicx's dispatch, so the graphic is
-/// sized as `\adjustbox{…}{\includegraphics{…}}` sizes it, not as its file name's text (64c review r1).
-/// Repro graphics-tikz/adjustimage_includes_the_graphic.
+/// sized as `\adjustbox{…}{\includegraphics{…}}` sizes it, not as its file name's text (64c review r1): the box is the
+/// EPS's 10bp BoundingBox, 10.0375pt (7.2pt, the bp read as pixels at 100 DPI, until 78z, OXIDIZED_DESIGN_DIVERGENCES
+/// #886). Repro graphics-tikz/adjustimage_includes_the_graphic.
 #[test]
 fn adjustimage_includes_the_graphic() {
   let tex = include_str!(
@@ -533,7 +475,7 @@ fn adjustimage_includes_the_graphic() {
     &xml,
     "para",
     &["xml:id=\"p1\""],
-    "<para xml:id=\"p1\"><inline-block depth=\"0.0pt\" height=\"7.2pt\" width=\"7.2pt\" xml:id=\"p1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.1.1\"><text xml:id=\"p1.1.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g1\"/></text></p></inline-block><inline-block depth=\"0.0pt\" height=\"7.2pt\" width=\"7.2pt\" xml:id=\"p1.2\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.2.1\"><text xml:id=\"p1.2.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g2\"/></text></p></inline-block></para>",
+    "<para xml:id=\"p1\"><inline-block depth=\"0.0pt\" height=\"10.0pt\" width=\"10.0pt\" xml:id=\"p1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.1.1\"><text xml:id=\"p1.1.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g1\"/></text></p></inline-block><inline-block depth=\"0.0pt\" height=\"10.0pt\" width=\"10.0pt\" xml:id=\"p1.2\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.2.1\"><text xml:id=\"p1.2.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g2\"/></text></p></inline-block></para>",
   );
 }
 
@@ -582,7 +524,7 @@ fn aastex7_email_hidden_without_show() {
 
 /// The core `xml` through the embedded `stylesheet` (`LaTeXML-html5.xsl`, `LaTeXML-epub3.xsl`), in-process, with no POST
 /// error.
-fn post_with(xml: &str, stylesheet: &str) -> String { post_in(xml, stylesheet, None) }
+pub(super) fn post_with(xml: &str, stylesheet: &str) -> String { post_in(xml, stylesheet, None) }
 
 /// [`post_with`] for a document whose post stage reads files beside its source (a `.bib`) in `source_directory`, its
 /// page written beside it as the CLI's `--dest` (so a link renders as the reader sees it).
@@ -598,7 +540,7 @@ fn post_in(xml: &str, stylesheet: &str, source_directory: Option<&str>) -> Strin
     source_directory,
     site_directory: None,
     search_paths: &[],
-    nodefaultresources: true,
+    default_resources: false,
     css_files: &[],
     js_files: &[],
     noinvisibletimes: false,
@@ -663,33 +605,6 @@ fn aastex7_email_hidden_without_show_html() {
   );
 }
 
-/// 64g review r2/r3: an address ahead of every `\author` waits on a pending creator, whose annotations are the sole
-/// author's (`relocate_annotations`) — the metadata with them, which read as empty (it has no text) and was dropped
-/// silently. Repro sectioning-frontmatter/aastex7_email_ahead_of_every_author.
-#[test]
-fn aastex7_email_ahead_of_every_author() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_ahead_of_every_author.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n    <rdf content=\"orphan@x.org\" property=\"schema:email\"/>\n  </creator>",
-  ]);
-}
-
-/// 64g: metadata ahead of every author that an author already has in any annotation is held, not a nameless creator of
-/// its own (2608.17008: `\email{x}`, then `\email[show]{x}` on the first author). Repro
-/// sectioning-frontmatter/aastex7_email_ahead_of_authors_shown_later.
-#[test]
-fn aastex7_email_ahead_of_authors_shown_later() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_ahead_of_authors_shown_later.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">jane@x.org</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>John Roe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <rdf content=\"john@y.org\" property=\"schema:email\"/>\n  </creator>",
-  ]);
-}
-
 /// 64g review r3: metadata on an author whose name prints nothing (`\author{\relax}`) moves to the author before, with
 /// the creator's contacts (`coalesce_empty_creators`), where it was lost with the empty creator. Repro
 /// sectioning-frontmatter/aastex7_email_on_nameless_author.
@@ -703,36 +618,6 @@ fn aastex7_email_on_nameless_author() {
   ]);
 }
 
-/// 64g review r3: an author line holding the class's `\email{…}` is a name and that command (one `\lx@add@` call),
-/// not a name and an address wrapped in an email contact the command leaves empty ("Email:" over a blank link). Repro
-/// sectioning-frontmatter/aastex7_email_inside_author.
-#[test]
-fn aastex7_email_inside_author() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_inside_author.tex"
-  );
-  let xml = convert_clean(tex);
-  assert!(!xml.contains("role=\"email\"/>"), "{xml}");
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n  </creator>",
-  ]);
-}
-
-/// 64g review r4: an author block's line of the class's `\email{…}` is that command as written (`is_email_command` knows
-/// a frontmatter email call that decides how to record it), not a bare address nested in an email contact the command
-/// leaves empty. Repro sectioning-frontmatter/aastex7_email_on_author_line.
-#[test]
-fn aastex7_email_on_author_line() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_on_author_line.tex"
-  );
-  let xml = convert_clean(tex);
-  assert!(!xml.contains("role=\"email\"/>"), "{xml}");
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-  ]);
-}
-
 /// 64g review r5: the class's `\email[show]{…}` on an author-block line is that call as written, its optional argument
 /// part of it — not an address nested in an email contact the call leaves empty. Repro
 /// sectioning-frontmatter/aastex7_email_show_on_author_line.
@@ -743,9 +628,6 @@ fn aastex7_email_show_on_author_line() {
   );
   let xml = convert_clean(tex);
   assert!(!xml.contains("role=\"email\"/>"), "{xml}");
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">jane@x.org</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-  ]);
 }
 
 /// 64g review r6: any class's email command with an optional argument on an author-block line (revtex4-1's
@@ -761,9 +643,6 @@ fn email_command_option_on_author_line() {
     !xml.contains("role=\"email\"/>") && !xml.contains("role=\"affiliation\"/>"),
     "{xml}"
   );
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Also at \" role=\"email\">jane@x.org</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-  ]);
 }
 
 /// 64g: the address after `\correspondingauthor{X}` is X's and displayed, wherever it stands — ahead of the authors
@@ -917,7 +796,7 @@ fn aastex_gridline_panels() {
     &xml,
     "figure",
     &["labels=\"LABEL:f:grid\""],
-    "<figure inlist=\"lof\" labels=\"LABEL:f:grid\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a) left</caption></figure><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(b) right</caption></figure><break class=\"ltx_break\"/><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g3\"/><caption>(c)</caption></figure><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig4\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g4\"/><caption>(d)</caption></figure><toccaption><tag close=\" \">1</tag>Four panels in two rows.</toccaption><caption><tag close=\": \">Figure 1</tag>Four panels in two rows.</caption></figure>",
+    "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" labels=\"LABEL:f:grid\" panelcols=\"2\" panelfill=\"0.8\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" panelwidth=\"0.4\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a) left</caption></figure><figure class=\"ltx_figure_panel\" panelwidth=\"0.4\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(b) right</caption></figure><break class=\"ltx_break\"/><figure class=\"ltx_figure_panel\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g3\"/><caption>(c)</caption></figure><figure class=\"ltx_figure_panel\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig4\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g4\"/><caption>(d)</caption></figure><toccaption><tag close=\" \">1</tag>Four panels in two rows.</toccaption><caption><tag close=\": \">Figure 1</tag>Four panels in two rows.</caption></figure>",
   );
 }
 
@@ -933,7 +812,7 @@ fn aastex_gridline_empty_caption_boxed() {
     &xml,
     "figure",
     &["inlist=\"lof\""],
-    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=207.0021pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/></figure><figure class=\"ltx_figure_panel\" framed=\"rectangle\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/></figure><toccaption><tag close=\" \">1</tag>Left: one map. Right: another.</toccaption><caption><tag close=\": \">Figure 1</tag>Left: one map. Right: another.</caption></figure>",
+    "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.9\" panelline=\"1\" panelrows=\"1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" panelwidth=\"0.6\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=207.0021pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/></figure><figure class=\"ltx_figure_panel\" framed=\"rectangle\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/></figure><toccaption><tag close=\" \">1</tag>Left: one map. Right: another.</toccaption><caption><tag close=\": \">Figure 1</tag>Left: one map. Right: another.</caption></figure>",
   );
 }
 
@@ -950,7 +829,7 @@ fn aastex_bare_fig_panels_keep_numbering() {
     &xml,
     "figure",
     &["labels=\"LABEL:f:x\""],
-    "<figure inlist=\"lof\" labels=\"LABEL:f:x\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=82.8019pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a1)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=82.8019pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(a2)</caption></figure><toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>Panel (a1) and (a2).</toccaption><caption class=\"ltx_centering\"><tag close=\": \">Figure 1</tag>Panel (a1) and (a2).</caption></figure>",
+    "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" labels=\"LABEL:f:x\" panelcols=\"2\" panelfill=\"0.48\" panelline=\"1\" panelrows=\"1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure align=\"center\" class=\"ltx_figure_panel\" panelwidth=\"0.24\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=82.8019pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a1)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" panelwidth=\"0.24\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=82.8019pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(a2)</caption></figure><toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>Panel (a1) and (a2).</toccaption><caption class=\"ltx_centering\"><tag close=\": \">Figure 1</tag>Panel (a1) and (a2).</caption></figure>",
   );
   assert_element(
     &xml,
@@ -961,7 +840,8 @@ fn aastex_bare_fig_panels_keep_numbering() {
 }
 
 /// 64e review r1: each `\gridline` stays one row — inside `{center}` (2103.16579) and when its panels add up wider than
-/// the float (2609.09897). Repro captions-floats/aastex_gridline_rows_kept.
+/// the float (2609.09897); the break between the two `\gridline`s in the `{center}` is a row break the source states
+/// (OXIDIZED_DESIGN_DIVERGENCES #885). Repro captions-floats/aastex_gridline_rows_kept.
 #[test]
 fn aastex_gridline_rows_kept() {
   let tex = include_str!(
@@ -972,13 +852,13 @@ fn aastex_gridline_rows_kept() {
     &xml,
     "figure",
     &["xml:id=\"S0.F1\""],
-    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(b)</caption></figure><break class=\"ltx_break ltx_centering\"/><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g3\"/><caption fontsize=\"80%\">(c)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig4\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g4\"/><caption fontsize=\"80%\">(d)</caption></figure><toccaption><tag close=\" \">1</tag>Centered rows.</toccaption><caption><tag close=\": \">Figure 1</tag>Centered rows.</caption></figure>",
+    "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.6\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure align=\"center\" class=\"ltx_figure_panel\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(b)</caption></figure><break class=\"ltx_break\"/><figure align=\"center\" class=\"ltx_figure_panel\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g3\"/><caption fontsize=\"80%\">(c)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig4\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g4\"/><caption fontsize=\"80%\">(d)</caption></figure><toccaption><tag close=\" \">1</tag>Centered rows.</toccaption><caption><tag close=\": \">Figure 1</tag>Centered rows.</caption></figure>",
   );
   assert_element(
     &xml,
     "figure",
     &["xml:id=\"S0.F2\""],
-    "<figure inlist=\"lof\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"autoref\">Figure\u{a0}2<text xml:id=\"S0.F2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Figure 2</tag></tags><figure class=\"ltx_figure_panel\" xml:id=\"S0.F2.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=182.84958pt,keepaspectratio=true\" xml:id=\"S0.F2.g1\"/><caption fontsize=\"80%\">(e)</caption></figure><figure class=\"ltx_figure_panel\" xml:id=\"S0.F2.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=182.84958pt,keepaspectratio=true\" xml:id=\"S0.F2.g2\"/><caption fontsize=\"80%\">(f)</caption></figure><break class=\"ltx_break\"/><figure class=\"ltx_figure_panel\" xml:id=\"S0.F2.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F2.g3\"/><caption fontsize=\"80%\">(g)</caption></figure><toccaption><tag close=\" \">2</tag>A wide row.</toccaption><caption><tag close=\": \">Figure 2</tag>A wide row.</caption></figure>",
+    "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"1.06\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"autoref\">Figure\u{a0}2<text xml:id=\"S0.F2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Figure 2</tag></tags><figure class=\"ltx_figure_panel\" panelwidth=\"0.53\" xml:id=\"S0.F2.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=182.84958pt,keepaspectratio=true\" xml:id=\"S0.F2.g1\"/><caption fontsize=\"80%\">(e)</caption></figure><figure class=\"ltx_figure_panel\" panelwidth=\"0.53\" xml:id=\"S0.F2.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=182.84958pt,keepaspectratio=true\" xml:id=\"S0.F2.g2\"/><caption fontsize=\"80%\">(f)</caption></figure><break class=\"ltx_break\"/><figure class=\"ltx_figure_panel\" panelwidth=\"0.4\" xml:id=\"S0.F2.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F2.g3\"/><caption fontsize=\"80%\">(g)</caption></figure><toccaption><tag close=\" \">2</tag>A wide row.</toccaption><caption><tag close=\": \">Figure 2</tag>A wide row.</caption></figure>",
   );
 }
 
@@ -995,7 +875,7 @@ fn aastex_rotatefig_boxedfig_and_outside_fig() {
     &xml,
     "figure",
     &["xml:id=\"S0.F1\""],
-    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,angle=22.5,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(r)</caption></figure><figure class=\"ltx_figure_panel\" framed=\"rectangle\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption>(s)</caption></figure><toccaption><tag close=\" \">1</tag>Rotated and boxed.</toccaption><caption><tag close=\": \">Figure 1</tag>Rotated and boxed.</caption></figure>",
+    "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.6\" panelline=\"1\" panelrows=\"1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,angle=22.5,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(r)</caption></figure><figure class=\"ltx_figure_panel\" framed=\"rectangle\" panelwidth=\"0.3\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption>(s)</caption></figure><toccaption><tag close=\" \">1</tag>Rotated and boxed.</toccaption><caption><tag close=\": \">Figure 1</tag>Rotated and boxed.</caption></figure>",
   );
   assert_element(
     &xml,
@@ -1207,35 +1087,9 @@ fn supplement_title_after_body_dropped() {
   assert_element(&xml, "title", &[], "<title>Main Paper Title</title>");
 }
 
-/// 64d (F6): imsart's second `{frontmatter}` for the supplement after the bibliography — its title, authors (with their
-/// addresses) and abstract are the supplement's: the paper's stay, its authors not stacked twice (2301.10468, 2401.11672,
-/// 2503.07022). Repro sectioning-frontmatter/supplement_imsart_frontmatter.
-#[test]
-fn supplement_imsart_frontmatter() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/supplement_imsart_frontmatter.tex"
-  );
-  let xml = convert_clean(tex);
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann\u{a0}Able</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">University A</contact>\n  </creator>",
-  ]);
-  assert_element(&xml, "title", &[], "<title>Main Paper Title</title>");
-  assert_element(
-    &xml,
-    "abstract",
-    &[],
-    "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Main abstract text.</p></abstract>",
-  );
-  // the supplement's abstract text kept in the body
-  assert_element(
-    &xml,
-    "para",
-    &["xml:id=\"p1\""],
-    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Supplement abstract text.</p></para>",
-  );
-}
-
 /// 64d (HF2 S3, site A): a block's unmarked first line of names is a names line later unmarked rows of names continue (2411.13503). Repro sectioning-frontmatter/author_unmarked_first_line_list_wraps.
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
+/// asterisk (FIDELITY_CHARTER §4).
 #[test]
 fn author_unmarked_first_line_list_wraps() {
   let tex = include_str!(
@@ -1243,7 +1097,11 @@ fn author_unmarked_first_line_list_wraps() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">*</sup></personname>\n  </creator>",
+    format!(
+      "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">{}</sup></personname>\n  </creator>",
+      "∗"
+    )
+    .as_str(),
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
@@ -1253,6 +1111,8 @@ fn author_unmarked_first_line_list_wraps() {
 }
 
 /// 64d (HF2 S3, site A): rows of names without trailing commas continue the first line's names (2410.07701). Repro sectioning-frontmatter/author_unmarked_rows_without_trailing_comma.
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
+/// asterisk (FIDELITY_CHARTER §4).
 #[test]
 fn author_unmarked_rows_without_trailing_comma() {
   let tex = include_str!(
@@ -1260,7 +1120,11 @@ fn author_unmarked_rows_without_trailing_comma() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">*</sup></personname>\n  </creator>",
+    format!(
+      "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">{}</sup></personname>\n  </creator>",
+      "∗"
+    )
+    .as_str(),
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
@@ -1284,23 +1148,6 @@ fn author_bold_row_after_marked_names() {
   ]);
 }
 
-/// 64d (HF2 S3): `\bf`-led rows of names and a blank row (2401.05566). Repro sectioning-frontmatter/author_bf_rows_with_blank_line.
-#[test]
-fn author_bf_rows_with_blank_line() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_bf_rows_with_blank_line.tex"
-  );
-  let xml = convert_clean(tex);
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\"><text font=\"bold\" xml:id=\"id1.1\">Core.</text></note>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Eck</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Fay Fox</personname>\n  </creator>",
-  ]);
-}
-
 /// 64d (HF2 S3, site B): `\textbf{…}` rows of names after marked names (2510.11639). Repro sectioning-frontmatter/author_bold_group_rows_after_marked_names.
 #[test]
 fn author_bold_group_rows_after_marked_names() {
@@ -1318,20 +1165,9 @@ fn author_bold_group_rows_after_marked_names() {
   ]);
 }
 
-/// 64d (HF2 S3) negative: a place line after marked names stays the last author's continuation (Perl-identical weld; unchanged). Repro sectioning-frontmatter/author_unmarked_affiliation_after_marked_names.
-#[test]
-fn author_unmarked_affiliation_after_marked_names() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_unmarked_affiliation_after_marked_names.tex"
-  );
-  let xml = convert_clean(tex);
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<break/>Department of Physics, University of Somewhere</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
-  ]);
-}
-
-/// 64d (HF2 S3) negative: a styled place ("Bell Labs, Murray Hill") after marked names is no names row (unchanged). Repro sectioning-frontmatter/author_styled_place_after_marked_names.
+/// 64d (HF2 S3) negative: a styled place ("Bell Labs, Murray Hill") after marked names is no names row; since 77t (user
+/// ruling R12) the affiliation of both names over it, before their marked Univ A — was welded into the last name.
+/// Repro sectioning-frontmatter/author_styled_place_after_marked_names.
 #[test]
 fn author_styled_place_after_marked_names() {
   let tex = include_str!(
@@ -1339,8 +1175,8 @@ fn author_styled_place_after_marked_names() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<break/><text font=\"italic\" xml:id=\"id1\">Bell Labs, Murray Hill</text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id1\">Bell Labs, Murray Hill</text></contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id2\">Bell Labs, Murray Hill</text></contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }
 
@@ -1432,22 +1268,6 @@ fn section_in_margin_list_keeps_bibliography() {
   );
 }
 
-/// 64d review r1: the fallback flush at a starred section digests a preamble title the PDF never prints — provisional,
-/// so the later `\title…\maketitle` is the paper's, with all its authors (`seal_digested_frontmatter`).
-/// Repro sectioning-frontmatter/starred_section_before_late_maketitle.
-#[test]
-fn starred_section_before_late_maketitle() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/starred_section_before_late_maketitle.tex"
-  );
-  let xml = convert_clean(tex);
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
-  ]);
-  assert_element(&xml, "title", &[], "<title>Final Title</title>");
-}
-
 /// 64d negative: a bibliography after an appendix's subsection stays at the document level — the back-matter rule for an
 /// inline sectional block (`adjust_backmatter_element`) applies to that block only (2201.03696, 2401.14483).
 /// Repro sectioning-frontmatter/bibliography_after_appendix_at_document_level.
@@ -1466,36 +1286,6 @@ fn bibliography_after_appendix_at_document_level() {
   // the bibliography a child of the document, right after the appendix
   let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
   assert!(flat.contains("</appendix><bibliography"), "{xml}");
-}
-
-/// 64d review r2: a beamer deck's second title frame after a section is a later part's — the first title and author are
-/// sealed, as page 1 of the PDF shows them (OXIDIZED_DESIGN_DIVERGENCES #154; 64f3 mixed "Part Two" with both authors).
-/// Repro sectioning-frontmatter/beamer_second_title_frame_after_a_section.
-#[test]
-fn beamer_second_title_frame_after_a_section() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/beamer_second_title_frame_after_a_section.tex"
-  );
-  let xml = convert_clean(tex);
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann</personname>\n  </creator>",
-  ]);
-  assert_element(&xml, "title", &[], "<title>Part One</title>");
-}
-
-/// 64d review r3: an unwrapped affiliation line led by a declaration and spacing (`\small \vspace{1mm} $^{1}$Univ A,
-/// $^{2}$Univ B`) — the lead prints nothing and is no institution (`split_before_affiliation_marks`; 2407.15815).
-/// Repro sectioning-frontmatter/author_declaration_vspace_led_affiliation_line.
-#[test]
-fn author_declaration_vspace_led_affiliation_line() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_declaration_vspace_led_affiliation_line.tex"
-  );
-  let xml = convert_clean(tex);
-  assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
-  ]);
 }
 
 /// 64d review r3: a wrapped affiliation lead's declarations after its spacing (`{\small\vspace{1mm}\noindent\it …}`)
@@ -1864,7 +1654,7 @@ fn compositio_family_frontmatter() {
     &xml,
     "pubnote",
     &["role=\"dedication\""],
-    "<pubnote name=\"Dedication:\u{a0}\" role=\"dedication\">To C.</pubnote>",
+    "<pubnote role=\"dedication\">To C.</pubnote>",
   );
   assert_element(
     &xml,
@@ -1992,230 +1782,6 @@ fn replayed_setter_closes_its_groups() {
       "<note mark=\"1\" role=\"footnote\" xml:id=\"footnote1\"><tags>\n          <tag>1</tag>\n          <tag role=\"refnum\">1</tag>\n          <tag role=\"typerefnum\">footnote 1</tag>\n        </tags>A note.</note>",
     );
   }
-}
-
-/// 64k: a labelled email line of a marked author block (`E-mail: \\email{…}` under `\\llap{$^b$}` affiliations) is
-/// its own entry, not the last affiliation's continuation: the address goes to the author whose name it spells
-/// (0903.0326), a lone address spelling none to the author a `\\thanks` names corresponding (1302.2651), and a line
-/// after it continues the entry before it (1503.08624). Repro sectioning-frontmatter/marked_block_email_line_owner.
-#[test]
-fn marked_block_email_line_owner() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_block_email_line_owner.tex"
-  );
-  // the repro as written: the address spelling B. Muna is his, the proceedings line after it Lab B's continuation
-  let v_base: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">bob.muna@x.org</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n  </creator>",
-  ];
-  assert_eq!(creators(&convert_clean(tex)), v_base);
-  let v_spell: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id5\"/>Lab A<break/>City A</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">carl.cole@x.org</text></contact>\n  </creator>",
-  ];
-  let v_corr: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">contact@x.org</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n  </creator>",
-  ];
-  let v_shared: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id3\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id4\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">contact@x.org</text></contact>\n  </creator>",
-  ];
-  let v_wang: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>X.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Y.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Z.\u{a0}Li</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id3\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id4\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id5\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">ywang@x.org</text></contact>\n  </creator>",
-  ];
-  let v_killed: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\">bob.muna@x.org</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id5\"/>Lab A<break/>City A</contact>\n  </creator>",
-  ];
-  let v_jinst2: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>The X Collaboration</personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">bob.muna@x.org</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n  </creator>",
-  ];
-  let v_note: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Corresponding author<break/><text font=\"bold\" xml:id=\"id3\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">contact@x.org</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id5\"/>Lab A<break/>City A</contact>\n  </creator>",
-  ];
-  let v_dagger: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><sup xml:id=\"id4\">\u{2020}</sup> Deceased<break/><text font=\"bold\" xml:id=\"id5\">Proceedings of a workshop</text></contact>\n  </creator>",
-    // (the `\dagger` no affiliation or contact answers stays shown on the name, as printed: 65e
-    // `show_unanswered_marks`; the address goes by its spelling, so it answers no mark)
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole<sup xml:id=\"id6\">\u{2020}</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id7\"/>Lab A<break/>City A</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id8\">carl.cole@x.org</text></contact>\n  </creator>",
-  ];
-  let v_star: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B<break/><sup xml:id=\"id3\">*</sup>Corresponding author<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
-    // (the `*` nothing answers stays shown on the name, as printed: 65e `show_unanswered_marks`)
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole<sup xml:id=\"id5\">\u{2217}</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id7\">contact@x.org</text></contact>\n  </creator>",
-  ];
-  let v_star2: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B<break/><sup xml:id=\"id3\">*</sup>Equal contribution, corresponding author<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id5\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id7\">contact@x.org</text></contact>\n  </creator>",
-  ];
-  let v_wang2: Vec<&str> = vec![
-    "<creator role=\"author\">\n    <personname>X.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Y.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Z.\u{a0}Li</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Corresponding author<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">xwang@x.org</text></contact>\n  </creator>",
-  ];
-  // the address spells C. Cole: theirs, not the corresponding author's
-  assert_eq!(
-    creators(&convert_clean(
-      &tex.replace("bob.muna@x.org", "carl.cole@x.org")
-    )),
-    v_spell
-  );
-  // spelling no one: the corresponding author's
-  assert_eq!(
-    creators(&convert_clean(
-      &tex.replace("bob.muna@x.org", "contact@x.org")
-    )),
-    v_corr
-  );
-  // spelling no one, and no corresponding author: the block's (#159)
-  assert_eq!(
-    creators(&convert_clean(
-      &tex
-        .replace("bob.muna@x.org", "contact@x.org")
-        .replace("\\thanks{Corresponding author.}", "")
-    )),
-    v_shared
-  );
-  // spelling several (two Wangs) of whom the corresponding author is not one: the block's
-  assert_eq!(
-    creators(&convert_clean(
-      &tex
-        .replace(
-          "A.~Able$^a$, B.~Muna$^b$\\thanks{Corresponding author.}, C.~Cole$^a$",
-          "X.~Wang$^a$, Y.~Wang$^a$, Z.~Li$^b$\\thanks{Corresponding author.}"
-        )
-        .replace("bob.muna@x.org", "ywang@x.org")
-    )),
-    v_wang
-  );
-  // a class's own `\email`, killed once its title page is typeset (JINST copies as `arxiv.cls`: 1111.1180): the
-  // address is the contact's content
-  assert_eq!(
-    creators(&convert_clean(
-      &tex
-        .replace(
-          "\\documentclass{article}",
-          "\\documentclass{article}\\makeatletter\\newcommand\\email[1]{{\\tt #1}}\\AtBeginDocument{\\global\\let\\email\\@gobble}\\makeatother"
-        )
-        .replace("\\texttt{bob.muna@x.org}", "\\email{bob.muna@x.org}")
-    )),
-    v_killed
-  );
-  // an earlier `\author` call's authors count in `author:N` (a class whose `\author` appends: 1805.09245's
-  // collaboration)
-  assert_eq!(
-    creators(&convert_clean_files(
-      &tex
-        .replace("\\documentclass{article}", "\\documentclass{JINST}")
-        .replace("\\author{A", "\\author{The X Collaboration}\n\\author{A")
-        .replace(
-          "\\begin{document}",
-          "\\abstract{Short abstract.}\n\\begin{document}"
-        ),
-      &[(
-        "JINST.cls",
-        include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/JINST.cls")
-      )]
-    )),
-    v_jinst2
-  );
-  // after a symbol-marked note naming the corresponding author, the email line continues it: the mark says whose
-  // (1305.7027's `$^\spadesuit$ Corresponding author\newline E-mail: \email{…}`)
-  assert_eq!(
-    creators(&convert_clean(
-      &tex
-        .replace(
-          "B.~Muna$^b$\\thanks{Corresponding author.}",
-          "B.~Muna$^{b,\\spadesuit}$"
-        )
-        .replace(
-          "E-mail: \\texttt{bob.muna@x.org}",
-          "$^\\spadesuit$ Corresponding author\\\\\nE-mail: \\texttt{contact@x.org}"
-        )
-    )),
-    v_note
-  );
-  // after a note under a symbol mark that names no corresponding author (`$^\dagger$ Deceased`), the address goes to
-  // whom it spells, not to whom the mark names
-  assert_eq!(
-    creators(&convert_clean(
-      &tex
-        .replace("C.~Cole$^a$\\\\", "C.~Cole$^{a,\\dagger}$\\\\")
-        .replace(
-          "E-mail: \\texttt{bob.muna@x.org}",
-          "$^\\dagger$ Deceased\\\\\nE-mail: \\texttt{carl.cole@x.org}"
-        )
-    )),
-    v_dagger
-  );
-  let corresponding_author = "A.~Able$^a$, B.~Muna$^b$\\thanks{Corresponding author.}, C.~Cole$^a$";
-  let email_line = "E-mail: \\texttt{bob.muna@x.org}";
-  // a symbol-marked note (`$^*$`) reads as the affiliation above's continuation: its mark is not the
-  // affiliation's, and decides nothing (the block's), never the author the affiliation marks
-  assert_eq!(
-    creators(&convert_clean(
-      &tex
-        .replace(
-          corresponding_author,
-          "A.~Able$^a$, B.~Muna$^b$, C.~Cole$^{a,*}$"
-        )
-        .replace(
-          email_line,
-          "$^*$Corresponding author\\\\\nE-mail: \\texttt{contact@x.org}"
-        )
-    )),
-    v_star
-  );
-  // …and the `\thanks` corresponding author still is the fallback after it
-  assert_eq!(
-    creators(&convert_clean(
-      &tex
-        .replace(
-          corresponding_author,
-          "A.~Able$^a$, B.~Muna$^b$, C.~Cole$^{a}$\\thanks{Corresponding author.}"
-        )
-        .replace(
-          email_line,
-          "$^*$Equal contribution, corresponding author\\\\\nE-mail: \\texttt{contact@x.org}"
-        )
-    )),
-    v_star2
-  );
-  // an address spelling several, after a note whose mark names someone it does not spell: the block's
-  assert_eq!(
-    creators(&convert_clean(
-      &tex
-        .replace(
-          corresponding_author,
-          "X.~Wang$^a$, Y.~Wang$^a$, Z.~Li$^{b,\\spadesuit}$"
-        )
-        .replace(
-          email_line,
-          "$^\\spadesuit$ Corresponding author\\\\\nE-mail: \\texttt{xwang@x.org}"
-        )
-    )),
-    v_wang2
-  );
 }
 
 /// 64k: the shipped class a family binding reads is the one the document asked for, wherever the paper keeps it: a

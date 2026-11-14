@@ -1,0 +1,23 @@
+% witness: 2109.01356 (`\input{ data_table.tex}`), 2509.24347 (`\input{paper/encoding }`), 1804.08035, 2410.05458,
+%          2407.11677, 2002.10466 (a blank inside the braces of `\input`/`\include`; 6 of brk82's 114 papers)
+% oracle:  pdflatex 0 errors: tex.web §526 `scan_file_name` skips leading blanks and a blank ends the name;
+%          "Inner A text." once and "Inner B text." twice print, both references resolve
+% engines: rust int86b = 2 errors (Can't find TeX file ` data_table.tex`, `sub/enc `) and the `\include{ sub/enc}`
+%          silently dropped ("No file  sub/enc.tex"); the two references dangle
+% expect:  0 errors, 0 warnings; both inputs and the include read, both labels resolved
+% status:  RED (int86b) -> GREEN (79n)
+% preload: ar5iv.sty
+\begin{filecontents*}{data_table.tex}
+Inner A text.\label{a}
+\end{filecontents*}
+\begin{filecontents*}{sub/enc.tex}
+Inner B text.\label{b}
+\end{filecontents*}
+\documentclass{article}
+\begin{document}
+\section{S}
+\input{ data_table.tex}
+\input{sub/enc }
+\include{ sub/enc}
+See \ref{a} and \ref{b}.
+\end{document}

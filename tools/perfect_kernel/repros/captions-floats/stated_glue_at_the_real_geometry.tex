@@ -1,0 +1,25 @@
+% witness: 2311.18531 Fig 1 (article + geometry: `0.48 + 3×0.24\textwidth` sub-figures with `−0.25\textwidth` of
+%          `\hspace`); review rev78x finding 3
+% oracle:  pdflatex 0 errors, 0 overfull; one row of four
+% engines: rust int67a = one row of four; 78x r1 = 3+1 (the panels at the geometry's width, the glue at 345pt); Perl
+%          0.8.8 3+1
+% expect:  0 errors, 0 warnings; four `ltx_figure_panel` sub-figures, no `ltx:break`
+% status:  RED (78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: the stated glue at the real geometry)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\hspace{-0.02\textwidth}
+\begin{subfigure}{0.48\textwidth}\centering\includegraphics[width=0.8\linewidth]{example-image}\caption{}\end{subfigure}%
+\hspace{-0.05\textwidth}
+\begin{subfigure}{0.24\textwidth}\centering\includegraphics[width=0.55\linewidth]{example-image}\caption{}\end{subfigure}%
+\hspace{-0.09\textwidth}
+\begin{subfigure}{0.24\textwidth}\centering\includegraphics[width=0.55\linewidth]{example-image}\caption{}\end{subfigure}%
+\hspace{-0.09\textwidth}
+\begin{subfigure}{0.24\textwidth}\centering\includegraphics[width=0.55\linewidth]{example-image}\caption{}\end{subfigure}
+\caption{Negative glue between sub-figures.}
+\end{figure}
+\end{document}

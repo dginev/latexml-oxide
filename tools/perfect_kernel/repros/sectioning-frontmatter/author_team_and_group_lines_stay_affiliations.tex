@@ -1,0 +1,22 @@
+% mechanism: what names a collaboration is read from its words: a team or group word on a line of its own, unframed
+%   (`Machine Learning Group`, `Google Brain Team`), and a collaboration word before an institution's (`The ATLAS
+%   Collaboration Office, CERN`) are affiliations as before (`reads_as_collaboration`, frontmatter/classify/collaborations.rs;
+%   OXIDIZED_DESIGN_DIVERGENCES #946). Sibling (the guard's): aastex `M.~Huertas-Company\altaffilmark{1}, B.~Baker
+%   \altaffilmark{2}` (1212.4143) — a surname holding an institution's word is no collaboration; the line stays as
+%   97a leaves it.
+% witness: 2205.00756 (`Lukas Muttenthaler\\ Machine Learning Group\\ Technische Universit\"at Berlin`, dev20k); the
+%   pos_sty repro's "The collaboration office" (2512.14592); 1212.4143
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able / Machine Learning Group / Univ A" beside "Bob Baker / Google Brain
+%   Team / Univ B"
+% engines: rust 97b and 97d: two creators, each with its two affiliations
+% expect:  0 errors, 0 warnings; Ann Able (Machine Learning Group, Univ A), Bob Baker (Google Brain Team, Univ B); no
+%   collaboration contact
+% status:  GREEN (97d, a guard against the mechanism's over-reach)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Machine Learning Group\\ Univ A \and Bob Baker\\ Google Brain Team\\ Univ B}
+\maketitle
+Body.
+\end{document}

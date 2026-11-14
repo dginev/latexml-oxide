@@ -1,0 +1,18 @@
+% `\bibliographystyle{plain}` beside an earlier `\bibliographystyleweb{plain}` of the same name: a later suffix's style
+% stays off the main list (multibib.sty:234 writes each to its own aux).
+% witness: the review of M2 r2 (`mm_three`).
+% oracle:  pdflatex + bibtex (TL 2025) 0 errors: main aux `\bibstyle{plain}`, alt.aux `\bibstyle{alpha}`.
+% engines: int140a bibstyle="plain" citestyle="numbers" on the main list; M2 r2 bibstyle="alpha" citestyle="numbers" on it.
+% expect:  0 errors; the main list and web numbered, alt under alpha.
+\documentclass{article}
+\usepackage{multibib}
+\newcites{web,alt}{Web,Alt}
+\begin{document}
+Text \cite{zet} \citeweb{wik} \citealt{wik}.
+\bibliographystyleweb{plain}
+\bibliographystyle{plain}
+\bibliographystylealt{alpha}
+\bibliography{multibib_each_list_reads_its_own_style}
+\bibliographyweb{multibib_each_list_reads_its_own_style}
+\bibliographyalt{multibib_each_list_reads_its_own_style}
+\end{document}

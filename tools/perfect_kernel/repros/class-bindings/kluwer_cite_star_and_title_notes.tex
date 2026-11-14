@@ -1,0 +1,29 @@
+% witness: kluwer.cls:2125 `\def\cite{\@ifstar{\citeyear}{\klu@cite}}` (`\cite*`); :958-960 `\nomenclature`, :950-953
+%          `\abbreviations`, each printed under its bold heading (TL's kluwer sampopen.tex); kluwer.cls never loads
+%          natbib (0802.0687, 1306.4881: kluwer_cls.rs borrows it for the class's own author-year code)
+% oracle:  pdflatex 0 errors ("Abbreviations: KAP – Kluwer Academic Publishers"; "Nomenclature:" over "x – a variable";
+%          "Since 1990; natbib not loaded.")
+% engines: rust 67y round 1 = 0 errors, but "Since (Jones and Smith, 1990)", "natbib loaded", and both notes without
+%          their headings
+% expect:  0 errors, 0 warnings; `\cite*` the year; each note its bold heading; natbib not loaded
+% status:  RED (67y round 1) -> GREEN (67y round 2)
+% preload: ar5iv.sty
+\documentclass{kluwer}
+\makeatletter
+\newcommand\natbibstate{\@ifpackageloaded{natbib}{loaded}{not loaded}}
+\makeatother
+\begin{document}
+\begin{article}
+\begin{opening}
+\title{T}
+\author{A. Author}
+\institute{Univ}
+\abbreviations{\abbrev{KAP}{Kluwer Academic Publishers}}
+\nomenclature{\nomen{$x$}{a variable}}
+\end{opening}
+Since \cite*{jones}; natbib \natbibstate.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Jones and Smith}{1990}]{jones} Jones, A. and Smith, B.: 1990, A paper.
+\end{thebibliography}
+\end{article}
+\end{document}

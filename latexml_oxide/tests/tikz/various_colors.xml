@@ -81,8 +81,8 @@
             <td align="center"><text color="#000000">Val Acc. (%)</text></td>
             <td align="center"><text color="#000000">Val Loss</text></td>
           </tr>
-          <tr>
-            <td/>
+          <tr backgroundcolor="#FFD9DE">
+            <td align="center" rowspan="4"><text backgroundcolor="#D9E0FF" color="#000000">IMDB</text></td>
             <td align="left"><text backgroundcolor="#FFD9DE" color="#000000">Stn.</text></td>
             <td align="right"><text backgroundcolor="#FFD9DE" color="#000000">4</text></td>
             <td align="right"><text backgroundcolor="#FFD9DE" color="#000000">32</text></td>
@@ -94,7 +94,6 @@
             <td align="center"><text backgroundcolor="#FFD9DE" color="#000000">0.474 (4)</text></td>
           </tr>
           <tr>
-            <td/>
             <td align="left"><text backgroundcolor="#FCFFD9" color="#000000">Opt.</text></td>
             <td align="right"><text backgroundcolor="#FCFFD9" color="#000000">4</text></td>
             <td align="right"><text backgroundcolor="#FCFFD9" color="#000000">32</text></td>
@@ -106,7 +105,6 @@
             <td align="center"><text backgroundcolor="#FCFFD9" color="#000000">0.472 (2)</text></td>
           </tr>
           <tr>
-            <td/>
             <td align="left"><text backgroundcolor="#D9FFD9" color="#000000">Eff.</text></td>
             <td align="right"><text backgroundcolor="#D9FFD9" color="#000000">4</text></td>
             <td align="right"><text backgroundcolor="#D9FFD9" color="#000000">32</text></td>
@@ -118,7 +116,6 @@
             <td align="center"><text backgroundcolor="#D9FFD9" color="#000000" font="bold">0.468 (1)</text></td>
           </tr>
           <tr backgroundcolor="#D9E0FF">
-            <td align="center"><text backgroundcolor="#D9E0FF" color="#000000">IMDB</text></td>
             <td align="left"><text backgroundcolor="#D9E0FF" color="#000000">Sup.</text></td>
             <td align="right"><text backgroundcolor="#D9E0FF" color="#000000">4</text></td>
             <td align="right"><text backgroundcolor="#D9E0FF" color="#000000">32</text></td>
@@ -129,8 +126,8 @@
             <td align="center"><text backgroundcolor="#D9E0FF" color="#000000" font="bold">78.34 (1)</text></td>
             <td align="center"><text backgroundcolor="#D9E0FF" color="#000000">0.472 (2)</text></td>
           </tr>
-          <tr>
-            <td/>
+          <tr backgroundcolor="#FFD9DE">
+            <td align="center" rowspan="4"><text backgroundcolor="#D9E0FF" color="#000000">Amazon</text></td>
             <td align="left"><text backgroundcolor="#FFD9DE" color="#000000">Stn.</text></td>
             <td align="right"><text backgroundcolor="#FFD9DE" color="#000000">4</text></td>
             <td align="right"><text backgroundcolor="#FFD9DE" color="#000000">128</text></td>
@@ -142,7 +139,6 @@
             <td align="center"><text backgroundcolor="#FFD9DE" color="#000000">0.77 (3)</text></td>
           </tr>
           <tr>
-            <td/>
             <td align="left"><text backgroundcolor="#FCFFD9" color="#000000">Opt.</text></td>
             <td align="right"><text backgroundcolor="#FCFFD9" color="#000000">4</text></td>
             <td align="right"><text backgroundcolor="#FCFFD9" color="#000000">128</text></td>
@@ -154,7 +150,6 @@
             <td align="center"><text backgroundcolor="#FCFFD9" color="#000000">0.75 (2)</text></td>
           </tr>
           <tr>
-            <td/>
             <td align="left"><text backgroundcolor="#D9FFD9" color="#000000">Eff.</text></td>
             <td align="right"><text backgroundcolor="#D9FFD9" color="#000000">4</text></td>
             <td align="right"><text backgroundcolor="#D9FFD9" color="#000000">128</text></td>
@@ -166,7 +161,6 @@
             <td align="center"><text backgroundcolor="#D9FFD9" color="#000000">0.77 (3)</text></td>
           </tr>
           <tr backgroundcolor="#D9E0FF">
-            <td align="center"><text backgroundcolor="#D9E0FF" color="#000000">Amazon</text></td>
             <td align="left"><text backgroundcolor="#D9E0FF" color="#000000">Sup.</text></td>
             <td align="right"><text backgroundcolor="#D9E0FF" color="#000000">4</text></td>
             <td align="right"><text backgroundcolor="#D9E0FF" color="#000000">128</text></td>

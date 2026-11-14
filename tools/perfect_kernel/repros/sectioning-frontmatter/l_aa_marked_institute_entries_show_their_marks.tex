@@ -1,0 +1,20 @@
+% mechanism: l-aa's `\\`-separated `\institute` list (the witnesses' shape) is cut by the binding's own cutter
+%   (`\lx@add@affiliations`, `affiliation_calls`), which shows a marked entry's mark where the names show theirs
+%   (`_markshown=names`, OD #1009), as llncs shape (c)
+% witness: astro-ph0002407, astro-ph9406051 (census P4fC: ~230 l-aa papers of this shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, with astro-ph9604133's l-aa.sty) 0 errors: "A. Able1 and B. Baker2",
+%   "1 Univ A, Town A", "2 Univ B, Town B"
+% engines: int164a: A. Able 1 "Univ A, Town A", B. Baker 2 "Univ B, Town B" (the entries' marks dropped); perl: the
+%   whole institute on the first author, its marks shown
+% expect:  0 errors, 0 warnings; A. Able 1 "1 Univ A, Town A"; B. Baker 2 "2 Univ B, Town B"
+% status:  RED (int164a) -> GREEN (P4f; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentstyle{l-aa}
+\begin{document}
+\thesaurus{08}
+\title{T}
+\author{A. Able$^{1}$ \and B. Baker$^{2}$}
+\institute{$^{1}$ Univ A, Town A \\ $^{2}$ Univ B, Town B}
+\maketitle
+Text.
+\end{document}

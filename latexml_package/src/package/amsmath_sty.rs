@@ -13,11 +13,22 @@ use crate::prelude::*;
 /// Simple alignment bindings for ams environments (no equation rearrangement)
 fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String, String>) {
   use crate::engine::tex_tables::{alignment_bindings, array_strut};
+  // Its `\label`s are amsmath's `\label@in@display`, made after the cell's group (`hold_raw_refstep_for_display`):
+  // an `{aligned}`/`{split}` in an `{equation*}` names the step held at its start (pdflatex 44), a `{multline}`'s none
+  // (`\math@cr@@@align`'s display tag only under `\iftag@`, amsmath.sty:1833-1843; review probe rev78g2 al.tex
+  // `{multline*}` `??`; repro `cross-references/amsmath_row_label_names_the_display_step.tex`).
+  let multline = xml_attributes.get("name").map(String::as_str) == Some("multline");
+  hold_raw_refstep_for_display(!multline);
+  let_display_label();
   // amsmath's rows carry `\strut@`, `\strutbox`'s copy (amsmath.sty:714-718): an `aligned` in a table cell, where
   // `\@array` zeroed `\baselineskip`, keeps its rows' height (KNOWN_PERL_ERRORS #445)
-  let properties = array_strut()
+  let mut properties = array_strut()
     .map(|strut| stored_map!("strut" => strut))
     .unwrap_or_default();
+  // amsmath's `\halign` preambles make each cell math with their own `$` (amsmath.sty `\aligned@a`, `\gather@`:
+  // `$\m@th\displaystyle##$`): a cell whose template `\omit` drops (`\multicolumn`) is text, as an array's is not
+  // (its `\multicolumn` re-inserts `$`, latex.ltx `\@arrayclassz`). `\lx@alignment@multicolumn` reads this.
+  properties.insert("template_math", Stored::Bool(true));
   // Perl (amsmath.sty.ltxml L111-114):
   //   my $cur_jot = LookupDimension('\jot');
   //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)
@@ -56,7 +67,18 @@ fn ams_rearrangeable_bindings(
   mut xml_attributes: HashMap<String, String>,
   redirect_label: bool,
 ) -> Result<()> {
-  let properties = SymHashMap::default();
+  // A row's `\label` is amsmath's `\label@in@display` (amsmath.sty:1230-1236), made in the row's tag cell or not at
+  // all (:1240-1252), after the cell group a `\refstepcounter` was made in restored `\@currentlabel`
+  // (`hold_raw_refstep_for_display`). A `{gather}` makes the display tag on every row (:1621-1627): its labels name
+  // the step current where the display starts (`{gather*}` after a step: that step, a step in the cell the section's
+  // 7). The align family (`redirect_label`: `{align}`, `{flalign}`, `{alignat}`, starred or not) makes it only under
+  // `\iftag@` (:1833-1843): an untagged row's label is the next tagged row's (`\df@label` carried) or none (`??`),
+  // never a held step — it names none (kept on the section or the row as before; review probe rev78g2 al2.tex,
+  // repro `cross-references/amsmath_row_label_names_the_display_step.tex`; OXIDIZED_DESIGN_DIVERGENCES #813).
+  hold_raw_refstep_for_display(!redirect_label);
+  // amsmath.sty `\start@align`, `\start@gather`: the `\halign` is the display itself (`$$\halign`).
+  let mut properties = SymHashMap::default();
+  properties.insert(engine::tex_tables::ALIGNMENT_IS_DISPLAY, Stored::Bool(true));
   // Perl (amsmath.sty.ltxml L123-125):
   //   my $cur_jot = LookupDimension('\jot');
   //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)
@@ -179,10 +201,38 @@ fn ams_rearrangeable_bindings(
     );
     let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
   }
+  let_display_label();
   Ok(())
 }
 
-/// Perl: \@ams@gather@bindings — single centered column
+/// The display's `\label` is amsmath's `\label@in@display` (amsmath.sty:1230-1236): `\lx@ams@display@label`, which
+/// announces the label it makes (`mark_display_label`) and makes it with the `\label` it replaced
+/// (`\lx@ams@display@outer@label`: the kernel's, the `{align}` redirect, cleveref's). Expandable, so a label-only cell
+/// is scanned as before. Once per display: an inner one (`{aligned}`) keeps the outer's. Repros
+/// `cross-references/amsmath_row_label_names_the_display_step.tex`,
+/// `cross-references/amsmath_saved_kernel_label_names_the_cell_step.tex` (witness 2310.19138).
+fn let_display_label() {
+  let wrapped = matches!(
+    (lookup_meaning(&T_CS!("\\label")), lookup_meaning(&T_CS!("\\lx@ams@display@label"))),
+    (Some(Stored::Expandable(a)), Some(Stored::Expandable(b))) if Rc::ptr_eq(&a, &b)
+  );
+  if !wrapped {
+    let_i(
+      &T_CS!("\\lx@ams@display@outer@label"),
+      &T_CS!("\\label"),
+      None,
+    );
+    let_i(&T_CS!("\\label"), &T_CS!("\\lx@ams@display@label"), None);
+  }
+}
+
+/// Perl: \@ams@gather@bindings — single centered column. amsmath's templates brace their cells
+/// (`$\m@th\displaystyle{##}$`: amsmath.sty:1483 `\start@aligned`, 1576 `{gather}`, 2350 `\align@preamble`, 2424
+/// `{split}`), here and in `ams_align_bindings`/`ams_aligned_bindings` as tex_box.rs `\lx@template@bgroup`/
+/// `\lx@template@egroup`: an `{aligned}` cell whose `{`/`}` balance only across them (`u &= }v+w^{z.`) is one formula,
+/// as in pdflatex; `{align}`/`{gather}`/`{split}` collect their bodies as an argument first (amsmath.sty:1412-1434), so
+/// only balanced cells reach theirs. Perl's templates have none (KNOWN_PERL_ERRORS #908). Guard
+/// `perfect_kernel_batch69c::amsmath_aligned_cell_braces_balance_across_the_template`.
 fn ams_gather_bindings() -> Result<()> {
   use latexml_core::alignment::{cell::Cell, template::TemplateConfig};
 
@@ -191,8 +241,13 @@ fn ams_gather_bindings() -> Result<()> {
       T_CS!("\\hfil"),
       T_MATH!(),
       T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
     ])),
-    after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\lx@template@egroup"),
+      T_MATH!(),
+      T_CS!("\\hfil"),
+    ])),
     empty: true,
     ..Cell::default()
   };
@@ -216,14 +271,23 @@ fn ams_align_bindings() -> Result<()> {
       T_CS!("\\hfil"),
       T_MATH!(),
       T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
     ])),
-    after: Some(Tokens::new(vec![T_MATH!()])),
+    after: Some(Tokens::new(vec![T_CS!("\\lx@template@egroup"), T_MATH!()])),
     empty: true,
     ..Cell::default()
   };
   let col2 = Cell {
-    before: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\displaystyle")])),
-    after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
+    before: Some(Tokens::new(vec![
+      T_MATH!(),
+      T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
+    ])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\lx@template@egroup"),
+      T_MATH!(),
+      T_CS!("\\hfil"),
+    ])),
     empty: true,
     ..Cell::default()
   };
@@ -248,14 +312,25 @@ fn ams_aligned_bindings() -> Result<()> {
   };
 
   let col1 = Cell {
-    before: Some(Tokens::new(vec![T_CS!("\\hfil"), T_CS!("\\displaystyle")])),
+    before: Some(Tokens::new(vec![
+      T_CS!("\\hfil"),
+      T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
+    ])),
+    after: Some(Tokens::new(vec![T_CS!("\\lx@template@egroup")])),
     align: Some(Align::Right), // \hfil before → right-aligned
     empty: true,
     ..Cell::default()
   };
   let col2 = Cell {
-    before: Some(Tokens::new(vec![T_CS!("\\displaystyle")])),
-    after: Some(Tokens::new(vec![T_CS!("\\hfil")])),
+    before: Some(Tokens::new(vec![
+      T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
+    ])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\lx@template@egroup"),
+      T_CS!("\\hfil"),
+    ])),
     align: Some(Align::Left), // \hfil after → left-aligned
     empty: true,
     ..Cell::default()
@@ -291,6 +366,26 @@ fn ams_start_box(opt: Option<Tokens>, open: Vec<Token>) -> Tokens {
 }
 
 LoadDefinitions!({
+  // A display's `\label` (`let_display_label`): amsmath's `\label@in@display`, made with the `\label` it replaced
+  // (OXIDIZED_DESIGN_DIVERGENCES #813; repro `cross-references/amsmath_row_label_names_the_display_step.tex`, witness
+  // 2310.19138).
+  DefMacro!("\\lx@ams@display@label", {
+    mark_display_label();
+    Tokens!(T_CS!("\\lx@ams@display@outer@label"))
+  });
+  // amsmath.sty:1237-1238: `\@arrayparboxrestore` restores `\label` to the kernel's (`\let\label\ltx@label`), so a
+  // paragraph box in a display labels at once (`leave_display_for_parbox`; the port's `{minipage}`/`\parbox` call it
+  // themselves; review probe rev78g2 nest.tex z5, the z:a row of repro
+  // `cross-references/amsmath_row_label_names_the_display_step.tex`).
+  DefPrimitive!("\\lx@ams@parbox@label", {
+    leave_display_for_parbox();
+  });
+  // (Not under plain TeX's amstex, which has no `\@arrayparboxrestore`.)
+  if lookup_meaning(&T_CS!("\\@arrayparboxrestore")).is_some() {
+    RawTeX!(
+      r"\toks@\expandafter{\@arrayparboxrestore\lx@ams@parbox@label}\edef\@arrayparboxrestore{\the\toks@}"
+    );
+  }
   // Package options (Perl L44-57). amsmath.sty:52-57 `\newif\ifctagsplit@`
   // (centertags = true by default) is the switch testmath.tex:1796 pokes
   // directly (`\ctagsplit@true`); tag placement is a render no-op here.
@@ -319,6 +414,15 @@ LoadDefinitions!({
   // option below can `\Let` it to `\iftrue`. Drives multline's default row
   // alignment (center normally, left under fleqn).
   DefConditional!("\\if@fleqn");
+  // amsmath.sty:2794-2812 `\mathdisplay`, the begin of `{equation}`, `{equation*}` and `\[` (amsmath.sty:2913-2951):
+  // under `\if@fleqn` the display is `\hbox to\displaywidth\bgroup … $\displaystyle`, so an author's `$` in it
+  // ends that math and starts text in the box (tex.web §1193), the next `$` begins math again — `\lx@math@in@hbox`
+  // (tex_math.rs). Tested where each display begins, as amsmath does. Witnesses: the rc_struct3 E1 sample (7 papers,
+  // agent_reports/2026-10-17_rc_struct3.md); KNOWN_PERL_ERRORS #907. Guard
+  // `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
+  DefMacro!("\\lx@mathdisplay@hook", "\\if@fleqn\\lx@math@in@hbox\\fi");
+  // amsmath's `{equation}` is its own (amsmath.sty:2913-2932), whatever a class's fleqn.clo made it (fleqn_sty.rs).
+  DefMacro!("\\lx@equation@hook", "\\lx@mathdisplay@hook");
   // DIVERGENCE from Perl (#334): amsmath.sty:64 `\newif\if@fleqn` starts
   // false, and amsmath's display environments read only it, so an earlier
   // `fleqn` (article's `fleqn.clo`, fleqn.sty, elsarticle's binding) stops
@@ -346,14 +450,18 @@ LoadDefinitions!({
   // runs them in that order: a local `reqno` beats a global `leqno`, and
   // amsart's default `leqno` plus `[reqno]` gives right tags (Perl's binding
   // declares `reqno` first; DIVERGENCES #336).
+  // amsmath.sty:53 `\newif\iftagsleft@`, set by `leqno`/`reqno` (:54-55); read at :2771 for `\veqno`.
+  DefConditional!("\\iftagsleft@");
   DeclareOption!("leqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::Bool(true)));
+    Let!("\\iftagsleft@", "\\iftrue");
   });
   // Perl `ltx_leqno => undef`: remove the class. `Some(Stored::None)` stored
   // the key, so `\documentclass[reqno]{amsart}` read `ltx_leqno` once the
   // options were processed (56ku A/B: 2605.02221).
   DeclareOption!("reqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
+    Let!("\\iftagsleft@", "\\iffalse");
   });
   DeclareOption!("fleqn", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn", Some(Stored::Bool(true)));
@@ -456,23 +564,36 @@ LoadDefinitions!({
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 769-812
   // Matrix environments
-  DefMacro!(
-    "\\lx@ams@matrix {}",
-    "\\lx@gen@matrix@bindings{#1}\\lx@ams@cr@binding\\lx@ams@matrix@{#1}\\lx@begin@alignment"
-  );
-  DefMacro!(
-    "\\lx@end@ams@matrix",
-    "\\lx@end@alignment\\lx@end@gen@matrix"
-  );
+  define_ams_matrix_base()?;
 
+  // amsmath.sty:1068-1093 `{matrix}`/`{pmatrix}` (and :1116-1118 `{cases}`) start with `\matrix@check`: the
+  // environment when `\@currenvir` names the command, else `\matrix@error` — "Old form `\pmatrix' should be
+  // \begin{pmatrix}" — for Plain TeX's `\pmatrix{…\cr…}` (plain.tex:1091-1097). The old form keeps its content as
+  // Plain TeX's matrix (`\lx@gen@plain@matrix`, plain_constructs.rs) after the error; Perl's
+  // amsmath.sty.ltxml:727, :802, :804 always open an alignment, whose cells then hold the `\cr`s (tex.web §1127,
+  // KNOWN_PERL_ERRORS #993; 11 papers of run 367. The 7 that load amsmath keep the error, by ptptex's raw class
+  // (ptptex.cls:362): hep-ph0110005, hep-ph9509392, hep-ph9511429, hep-ph9702336, hep-th9908038, nucl-th0305048,
+  // hep-th9910005. In 0805.4522 (tcilatex), 1003.3524 (spie), nucl-th0206027 (ws-procs9x6) and quant-ph0607049
+  // (ws-ijmpb) only our binding loads amsmath, and the error stays off: `require_amsmath_beyond_original` below.) The
+  // dispatch was aa's own (`aa_cls.rs`: astro-ph/0002145, astro-ph9609122, astro-ph9809009, astro-ph9503122,
+  // 2609.02726, 2609.04318). Guard `perfect_kernel_batch77q::amsmath_old_form_matrices_keep_their_rows`.
+  RawTeX!(
+    r"\def\matrix@check#1{\expandafter\ifx\csname\@currenvir\endcsname#1\else\matrix@error#1\expandafter\@gobble\fi}
+\def\matrix@error#1{\@amsmath@err{Old form `\string#1' should be \string\begin{\expandafter\@gobble\string#1}}{`\string#1{...}' is old Plain-TeX syntax whose use is ill-advised in LaTeX.}}
+\def\lx@ams@matrix@check#1{\expandafter\ifx\csname\@currenvir\endcsname#1\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}"
+  );
   DefMacro!(
     "\\matrix",
-    "\\lx@ams@matrix{name=matrix,datameaning=matrix}"
+    r"\lx@ams@matrix@check\matrix
+{\lx@ams@matrix{name=matrix,datameaning=matrix}}
+{\matrix@error\matrix\lx@gen@plain@matrix{name=matrix,datameaning=matrix}}"
   );
   DefMacro!("\\endmatrix", "\\lx@end@ams@matrix");
   DefMacro!(
     "\\pmatrix",
-    "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}"
+    r"\lx@ams@matrix@check\pmatrix
+{\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}
+{\matrix@error\pmatrix\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}"
   );
   DefMacro!("\\endpmatrix", "\\lx@end@ams@matrix");
   DefMacro!(
@@ -501,7 +622,6 @@ LoadDefinitions!({
     "\\lx@ams@matrix{name=smallmatrix,atameaning=matrix,style=\\scriptsize}"
   );
   DefMacro!("\\endsmallmatrix", "\\lx@end@ams@matrix");
-  def_macro_noop("\\matrix@check{}")?;
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 687-721 — cases environments
@@ -516,7 +636,9 @@ LoadDefinitions!({
 
   DefMacro!(
     "\\cases",
-    "\\lx@ams@cases{name=cases,meaning=cases,left=\\lx@left\\{}"
+    r"\lx@ams@matrix@check\cases
+{\lx@ams@cases{name=cases,meaning=cases,left=\lx@left\{}}
+{\matrix@error\cases\lx@gen@plain@cases{meaning=cases,left=\lx@left\{,conditionmode=text,style=\textstyle}}"
   );
   DefMacro!("\\endcases", "\\lx@end@ams@cases");
 
@@ -526,7 +648,10 @@ LoadDefinitions!({
   // \! == \negthinspace, plus \quad, \qquad, \negmedspace, \negthickspace
   // these are now native to LaTeX (see latex_constructs.rs C.7.7 Spacing,
   // mirroring Perl latex_constructs.pool.ltxml L2498-2525). The amsmath
-  // pool no longer redefines them.
+  // pool no longer redefines them; amsmath.sty:155-175 declares them again over a package loaded before it
+  // (tipa.sty:429-458's T3 text accents `\!` `\;` `\:`), so the binding re-asserts the kernel's
+  // (witnesses 2603.03017, 2605.00529, 2608.02769).
+  latexml_engine::latex_constructs::define_amsmath_tmspace_commands()?;
 
   // Perl: \mspace{MuDimension} — we use {} since MuDimension param type isn't implemented
   DefConstructor!("\\mspace{}", "<ltx:XMHint name='mspace' width='#1'/>");
@@ -740,15 +865,9 @@ LoadDefinitions!({
     operator_role => "OVERACCENT", operator_stretchy => true);
   DefMath!("\\underleftrightarrow{}", "\u{2194}",
     operator_role => "UNDERACCENT", operator_stretchy => true);
-  // Perl: amsmath.sty.ltxml Section 4.10 — Affixing symbols to other symbols
-  DefConstructor!(
-    "\\overset InScriptStyle {}",
-    r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
-  );
-  DefConstructor!(
-    "\\underset InScriptStyle {}",
-    r###"<ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
-  );
+  // Section 4.10 `\overset`/`\underset`, 4.5 `\dddot`/`\ddddot`, 4.6 `\leftroot`/`\uproot`, 4.13 `\smash`, 7.1
+  // `{subarray}`/`\substack`, 7.2 `\sideset` and `\boxed`: the commands setstack.sty copies from amsmath.
+  define_ams_setstack_commands()?;
   DefConstructor!(
     "\\overunderset InScriptStyle InScriptStyle {}",
     r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#2</ltx:XMWrap><ltx:XMArg>#3</ltx:XMArg></ltx:XMApp></ltx:XMApp>"###
@@ -769,13 +888,24 @@ LoadDefinitions!({
 
   //======================================================================
   // Section 4.11.2 The \binom, \dbinom, and \tbinom commands
-  DefMath!("\\binom{}{}", r"{\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
-  DefMath!("\\tbinom{}{}", r"{\textstyle\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
-  DefMath!("\\dbinom{}{}", r"{\displaystyle\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
+  // amsmath.sty:239-241 builds them on `\genfrac`, never on the user-level `\atop`; Perl's amsmath.sty.ltxml:1020-1025
+  // uses `\atop`, which a document may redefine (`\renewcommand{\atop}[2]{…}`: its second argument is then the
+  // closing brace, KNOWN_PERL_ERRORS #994; 1010.0429, 1209.4365, 1308.4325, 1806.09142, 1904.01263). Here they are the
+  // kernel's `\atop` body itself (tex_math.rs), the fraction `\genfrac` gives, which no document's `\atop` reaches —
+  // not even one redefined before amsmath loads, which `\@@atop` (:212) then saves (pdflatex: amsgen.sty:27-38's
+  // "Unable to properly define \@@atop", not raised here, amsgen_sty.rs; its binomials intact). Guards
+  // `perfect_kernel_batch77q::{binom_ignores_a_redefined_atop, binom_ignores_an_atop_redefined_before_amsmath}`.
+  DefMath!("\\binom{}{}", r"{\left({{#1}\lx@generalized@over{\atop}{thickness=0pt}{#2}}\right)}",
+    meaning => "binomial");
+  DefMath!("\\tbinom{}{}", r"{\textstyle\left({{#1}\lx@generalized@over{\atop}{thickness=0pt}{#2}}\right)}",
+    meaning => "binomial");
+  DefMath!("\\dbinom{}{}", r"{\displaystyle\left({{#1}\lx@generalized@over{\atop}{thickness=0pt}{#2}}\right)}",
+    meaning => "binomial");
 
   //======================================================================
   // amsmath.sty:211-216 saves the six generalized-fraction primitives under
-  // `\@@over` … `\@@abovewithdelims` (`\@saveprimitive` = `\let#2#1`,
+  // `\@@over` … `\@@abovewithdelims`, and :397 `\overline` under `\@@overline` (no witness of its own; the kernel's
+  // `\meaning` of them is the primitive, KNOWN_PERL_ERRORS #985) (`\@saveprimitive` = `\let#2#1`,
   // amsgen.sty.ltxml:19) BEFORE its `\primfrac` wrappers; a document that
   // restores them (abntexto.tex:187 `\let\over=\@@over`) otherwise unsets
   // `\over`. Perl's amsmath.sty.ltxml omits the block (SHARED); the :227
@@ -784,7 +914,8 @@ LoadDefinitions!({
   RawTeX!(
     r"\@saveprimitive\over\@@over \@saveprimitive\atop\@@atop \@saveprimitive\above\@@above
 \@saveprimitive\overwithdelims\@@overwithdelims \@saveprimitive\atopwithdelims\@@atopwithdelims
-\@saveprimitive\abovewithdelims\@@abovewithdelims"
+\@saveprimitive\abovewithdelims\@@abovewithdelims
+\@saveprimitive\overline\@@overline"
   );
   // amsmath.sty:949-950 `\std@minus`/`\std@equal` (the non-Umathcode branch)
   // and :983/:998 `\overarrow@`/`\underarrow@`, read by packages that build
@@ -806,9 +937,15 @@ LoadDefinitions!({
   // Section 4.11.3 The \genfrac command
   // Perl: amsmath.sty.ltxml lines 1016-1094
   // \genfrac{open}{close}{thickness}{style}{numerator}{denominator}
+  // Robust, as amsmath.sty:244 `\DeclareRobustCommand{\genfrac}[4]`: a scanner that expands its input token by token
+  // (xy's matrix-entry reader, xymatrix.tex) meets `\protect\genfrac` and not the body's bare `\if.#1.\else…\fi`, which
+  // leaked "Didn't expect a \fi" (0704.1039: 101 Errors, then TooManyErrors and the bibliography lost). Perl's
+  // amsmath.sty.ltxml:1032 is a plain macro too (KNOWN_PERL_ERRORS #1115). Guard
+  // `perfect_kernel_batch78s::genfrac_in_an_xymatrix_entry`.
   DefMacro!(
     "\\genfrac{}{}{}{}{}{}",
-    r"\lx@genfrac{\if.#1.\else\lx@left#1\fi}{\if.#2.\else\lx@right#2\fi}{#3}{#4}{#5}{#6}"
+    r"\lx@genfrac{\if.#1.\else\lx@left#1\fi}{\if.#2.\else\lx@right#2\fi}{#3}{#4}{#5}{#6}",
+    robust => true
   );
   DefMacro!(
     "\\lx@genfrac{}{}{}{}{}{}",
@@ -1017,10 +1154,13 @@ LoadDefinitions!({
     "\\@ams@intertext{}",
     "\\lx@hidden@crcr\\noalign{\\@@ams@intertext{#1}}"
   );
+  // Reverts to `\intertext` (a `\shortintertext` too: open, post-merge); Perl shows `\@@ams@intertext` (KNOWN_PERL_ERRORS
+  // #1227; 1301.0750, 1906.05085, 2107.14777).
   DefConstructor!(
     "\\@@ams@intertext{}",
     "<ltx:p class='ltx_intertext'>#1</ltx:p>",
-    mode => "internal_vertical"
+    mode => "internal_vertical",
+    alias => "\\intertext"
   );
   // Standalone \intertext (outside alignment) — Perl L734-735
   // Inside alignment, \intertext is Let'd to \@ams@intertext by the alignment bindings.
@@ -1035,16 +1175,6 @@ LoadDefinitions!({
   // and restructure into equationgroup/equation/MathFork.
   Tag!("ltx:equation", after_close => sub[document, node] {
     rearrange_lone_ams_aligned(document, node)?;
-  });
-
-  //======================================================================
-  // Perl: amsmath.sty.ltxml lines 153-161
-  DefPrimitive!("\\lx@ams@cr@binding", {
-    let_i(
-      &T_CS!("\\\\"),
-      &T_CS!("\\lx@alignment@newline@noskip"),
-      None,
-    );
   });
 
   //======================================================================
@@ -1067,12 +1197,61 @@ LoadDefinitions!({
     egroup()?;
   });
 
+  // amsmath.sty:1410-1434, as amsmath defines it: `\collect@body\macro` hands the body up to the matching `\end` (the
+  // nested `\begin…\end` pairs counted by `\push@begins`) to `\macro` as one argument. The display environments below
+  // read their bodies their own way, so Perl's amsmath.sty.ltxml never defined it, and a document's environment built on
+  // it failed: `\def\splitequation{\collect@body\@spliteq}` (2305.01517: 101 errors, a Fatal; 66 census papers call
+  // it; KNOWN_PERL_ERRORS #1186). Guard `perfect_kernel_batch80a::amsmath_collect_body_builds_an_environment`.
+  DefRegister!("\\@envbody" => Tokens!());
+  RawTeX!(
+    r"\def\addto@envbody#1{\global\@envbody\@xp{\the\@envbody#1}}%
+\def\collect@body#1{\@envbody{\@xp#1\@xp{\the\@envbody}}\edef\process@envbody{\the\@envbody\@nx\end{\@currenvir}}%
+\@envbody\@emptytoks \def\begin@stack{b}\begingroup\@xp\let\csname\@currenvir\endcsname\collect@@body
+\edef\process@envbody{\@xp\@nx\csname\@currenvir\endcsname}\process@envbody}%
+\def\push@begins#1\begin#2{\ifx\end#2\else b\@xp\push@begins\fi}%
+\def\collect@@body#1\end#2{\edef\begin@stack{\push@begins#1\begin\end \@xp\@gobble\begin@stack}%
+\ifx\@empty\begin@stack\endgroup\@checkend{#2}\addto@envbody{#1}\else\addto@envbody{#1\end{#2}}\fi
+\process@envbody}"
+  );
+
+  // amsmath's display environments read their body with `\collect@body` before typesetting it
+  // (amsmath.sty:1412-1434): `\collect@@body#1\end#2` takes the body as an argument delimited by `\end`, and a
+  // delimited argument that is exactly one braced group loses that group (tex.web §400, :8162-8166). So
+  // `\begin{align}{a&=b\\&=c}\end{align}` (`\def\bal#1\eal{\begin{align}{#1}\end{align}}`) typesets the
+  // rows; our bindings read the body in the alignment directly, where the `&`s inside the braces were stray.
+  // At the head of the body: one group, immediately followed by `\end`, is put back without its braces.
+  // Only the first `\end`-delimited piece is looked at; a stripped group holding an inner `\begin…\end` derails
+  // amsmath's own `\begin` count (`\push@begins`) in TeX, which is not modelled. Witnesses 2011.06919 2211.06952 1909.04856 2101.06401 (`\begin{align*}{%…}\end{align*}`).
+  // Guard: `perfect_kernel_batch68z::braced_amsmath_body_loses_its_group`.
+  DefMacro!("\\lx@ams@collect@body", sub[_args] {
+    if peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
+      let open = read_token()?.unwrap();
+      let (body, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
+      let delimited = peek_token()?.is_some_and(|t| t == T_CS!("\\end"));
+      match close {
+        Some(_) if delimited => unread(body),
+        Some(close) => {
+          let mut group = vec![open];
+          group.extend(body.unlist());
+          group.push(close);
+          unread_vec(group);
+        },
+        None => {
+          let mut group = vec![open];
+          group.extend(body.unlist());
+          unread_vec(group);
+        },
+      }
+    }
+    Ok(Tokens!())
+  });
+
   DefMacro!(
     "\\gather",
     "\\ifmmode\\let\\endgather\\endgathered\\gathered\\else\
      \\lx@hidden@bgroup\\@ams@gather@bindings\\@@amsgather\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endgather",
@@ -1083,7 +1262,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endgather*\\endcsname\\endgathered\\gathered\\else\
      \\lx@hidden@bgroup\\@ams@gather@bindings\\@@amsgather\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\csname endgather*\\endcsname",
@@ -1114,7 +1293,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi",
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi",
     locked => true);
   DefMacro!("\\endalign",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup",
@@ -1123,7 +1302,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi",
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi",
     locked => true);
   DefMacro!("\\csname endalign*\\endcsname",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup",
@@ -1135,7 +1314,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endfalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endflalign",
@@ -1146,7 +1325,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endfalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\csname endflalign*\\endcsname",
@@ -1170,7 +1349,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endalignat",
@@ -1182,7 +1361,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\csname endalignat*\\endcsname",
@@ -1197,7 +1376,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endxalignat",
@@ -1209,7 +1388,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\csname endxalignat*\\endcsname",
@@ -1224,7 +1403,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,post=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endxxalignat",
@@ -1326,9 +1505,19 @@ LoadDefinitions!({
    <ltx:Math mode='display'><ltx:XMath>#1</ltx:XMath></ltx:Math>\
    </ltx:equation>",
   mode => "display_math",
-  properties => { ref_step_counter_by_meaning("equation") },
-  before_digest => { bgroup(); },
+  // Numbered as `{equation}` is (latex_constructs sect07.rs): the number stepped at the start, a `\tag` in the body
+  // its tag in place of the number, a `\notag`/`\nonumber` none (amsmath.sty `\multline@`, `\tag@in@align`,
+  // `\make@df@tag`: a tagged multline never steps the counter). Perl steps the counter in its properties
+  // (amsmath.sty.ltxml:247 `RefStepCounter('equation')`) and ignores both (hep-th0210191: "(1) (2) (3)" for "(29)",
+  // "(30)" and none). Guards `perfect_kernel_batch77v::{multline_notag_then_tag, multline_tag_replaces_the_number}`.
+  before_digest => {
+    bgroup();
+    use crate::engine::latex_constructs::{before_equation, prepare_equation_counter};
+    prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+    before_equation()?;
+  },
   after_digest => sub[whatsit] {
+    engine::latex_constructs::after_equation(Some(whatsit))?;
     // Perl #2835: multline rows center by default (left under fleqn); the
     // first row is left-aligned and the last row right-aligned.
     let default_align =
@@ -1370,12 +1559,21 @@ LoadDefinitions!({
     }
   });
   DefConstructor!("\\@@multlinestar DigestedBody",
-  "<ltx:equation>\
+  "<ltx:equation xml:id='#id'>#tags\
    <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
    </ltx:equation>",
   mode => "display_math",
-  before_digest => { bgroup(); },
+  // Unnumbered as `{equation*}` is (latex_constructs sect07.rs): a `\tag` in the body is its tag (amsmath.sty
+  // `\tag@in@align`, `\make@df@tag`), which the `<ltx:equation>` without `#tags` dropped (pdflatex "(Z)"). Guard
+  // `perfect_kernel_batch77v::multline_star_tag_is_kept`.
+  before_digest => {
+    bgroup();
+    use crate::engine::latex_constructs::{before_equation, prepare_equation_counter};
+    prepare_equation_counter(stored_map!("preset" => true));
+    before_equation()?;
+  },
   after_digest => sub[whatsit] {
+    engine::latex_constructs::after_equation(Some(whatsit))?;
     // Perl #2835: multline rows center by default (left under fleqn); the
     // first row is left-aligned and the last row right-aligned.
     let default_align =
@@ -1420,7 +1618,7 @@ LoadDefinitions!({
   DefMacro!(
     "\\multline",
     "\\ifmmode\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@AmS@multline\\lx@begin@alignment\
-     \\else\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multline\\lx@begin@alignment\\fi"
+     \\else\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multline\\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endmultline",
@@ -1428,12 +1626,25 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\csname multline*\\endcsname",
-    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multlinestar\\lx@begin@alignment"
+    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multlinestar\\lx@begin@alignment\\lx@ams@collect@body"
   );
   DefMacro!(
     "\\csname endmultline*\\endcsname",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@multline\\lx@hidden@egroup"
   );
+  // amsmath.sty:2535 `\start@multline#1` starts `{multline}` (`\st@rredfalse`) or `{multline*}` (`\st@rredtrue`) and
+  // :2623/:2630 `\lendmultline@`/`\rendmultline@` end it, which a package's own environment calls (aa.cls v9's
+  // linenoaa.sty:45-50; 2606.12741 2605.25644 2606.23815 2606.30286): the binding's, kept before any redefinition.
+  Let!("\\lx@ams@multline", "\\multline");
+  Let!("\\lx@ams@multline@star", "\\multline*");
+  Let!("\\rendmultline@", "\\endmultline");
+  Let!("\\lendmultline@", "\\endmultline");
+  DefMacro!("\\start@multline{}", sub[(starred)] {
+    let mut out = starred.unlist();
+    let star = out.first().is_some_and(|t| *t == T_CS!("\\st@rredtrue"));
+    out.push(T_CS!(if star { "\\lx@ams@multline@star" } else { "\\lx@ams@multline" }));
+    Ok(Tokens::new(out))
+  });
   // AmSTeX version (inside math)
   DefConstructor!("\\@@AmS@multline DigestedBody",
   "#body",
@@ -1486,7 +1697,7 @@ LoadDefinitions!({
   DefMacro!(
     "\\split",
     "\\if@in@ams@align\\lx@ams@marksplitinalign\\fi\
-     \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment"
+     \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment\\lx@ams@collect@body"
   );
   // Perl: \if@in@ams@align — checks if current environment starts with "align"
   // Perl: grep { /^align/ } $STATE->lookupStackedValues('current_environment')
@@ -1561,7 +1772,11 @@ LoadDefinitions!({
   // (`\ams@return@opt@arg`, :1490, :1536) with amsmath's warning. Perl's bindings (amsmath.sty.ltxml
   // 573, 622, 625) read it and dropped it — `[\gamma_i,\beta_i] &= …` lost its left side (witnesses
   // 2605.04504, 2605.10596, 2605.11552, 2605.12210, 2605.18213, 2605.22557; KPE #344). `\lx@ams@pos`
-  // holds the position for `gathered`'s `vattach`.
+  // holds the position for `gathered`'s `vattach`. The empty is the kernel's `\lx@empty` (latex_base.rs:22 lets
+  // LaTeX's `\@empty` be it): the binding also serves the AMS-TeX format without LaTeX (AmSTeX pool, amstex.rs
+  // `RequirePackage!("amsmath")`), where `\@empty` is undefined and `\let\ams@return@opt@arg\@empty` left every AMS-TeX
+  // `$$\gather … \endgather$$` (`\gathered`) an undefined `\ams@return@opt@arg` (an `\input amsppt.sty` document:
+  // math0005042, math0006111, math0009215). Guard `perfect_kernel_batch68r::amstex_gather_without_latex`.
   RawTeX!(
     r"\def\ams@pos@t{\vtop}\def\ams@pos@b{\vbox}\def\ams@pos@c{\vcenter}\let\ams@pos@\ams@pos@c
 \def\lx@ams@start@box#1{%
@@ -1573,9 +1788,9 @@ LoadDefinitions!({
        It could be a misspelled positional argument.\MessageBreak
        If it belongs to the formula add a \relax in\MessageBreak
         front to hide it}%
-     \def\ams@return@opt@arg{[#1]}\let\lx@ams@pos\@empty
+     \def\ams@return@opt@arg{[#1]}\let\lx@ams@pos\lx@empty
   \else
-     \let\ams@return@opt@arg\@empty
+     \let\ams@return@opt@arg\lx@empty
      \edef\lx@ams@pos{\expandafter\detokenize\expandafter{\romannumeral-`\0#1}}%
   \fi}
 \def\lx@ams@gathered#1{\lx@hidden@bgroup\@ams@multirow@bindings{name=gathered,vattach=#1}%
@@ -1662,15 +1877,6 @@ LoadDefinitions!({
     reversion => "\\begin{aligned} #1\\end{aligned}");
 
   //======================================================================
-  // Perl: amsmath.sty.ltxml lines 1170-1175 — subarray/substack
-  DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}");
-  DefMacro!(
-    "\\subarray{}",
-    "\\lx@ams@matrix{name=subarray,style=\\scriptsize,datameaning=list,rowsep=0pt,alignment=#1,alignment-required=true}"
-  );
-  DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
-
-  //======================================================================
   // amsmath.sty:1127 `\newcounter{parentequation}`: cleveref reads `\c@parentequation` for an equation label
   // (cleveref.sty:700-707), which errored "not a register".
   NewCounter!("parentequation");
@@ -1684,16 +1890,6 @@ LoadDefinitions!({
   def_macro_noop("\\DOTSB")?;
   def_macro_noop("\\DOTSI")?;
   def_macro_noop("\\DOTSX")?;
-
-  //======================================================================
-  // Section 7.2 \sideset command
-  // Perl: amsmath.sty.ltxml L1183-1234
-  DefConstructor!("\\sideset{}{}{}", sub[document, args, props] {
-    sideset_construct(document, args, props)?;
-  },
-  properties => {
-    Ok(stored_map!("scriptlevel" => get_script_level()))
-  });
 
   // \calc@shift@gather — amsmath.sty L1632 layout calculation for
   // gather environment's tag positioning (dimen manipulation:
@@ -1747,13 +1943,17 @@ LoadDefinitions!({
   // \eqref is the first token in a paragraph), opening <ltx:p>
   // before the parenthesized ref instead of emitting bare text in
   // vertical mode.
+  // A label only another document holds prints the text xr imported for it, as `\ref` does.
   DefConstructor!("\\eqref Semiverbatim",
-    "(<ltx:ref labelref='#label' _force_font='true'/>)",
+    "(?#reftext(<ltx:ref class='#refclass' labelref='#label' ?#refhref(href='#refhref')() _force_font='true'>#reftext</ltx:ref>)\
+     (<ltx:ref labelref='#label' _force_font='true'/>))",
     mode => "restricted_horizontal", enter_horizontal => true,
     properties => sub[args] {
       unpack_opt_ref!(args => label_opt);
-      let label = label_opt.as_ref().unwrap().to_string();
-      Ok(stored_map!("label" => Stored::String(pin(clean_label(&label, None)))))
+      let label = clean_label(&label_opt.as_ref().unwrap().to_string(), None).into_owned();
+      let mut props = stored_map!("label" => Stored::String(pin(&label)));
+      latexml_engine::latex_constructs::external_ref_properties(&label, false, &mut props)?;
+      Ok(props)
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
 
@@ -1771,23 +1971,6 @@ LoadDefinitions!({
   DefMacro!("\\tagform@{}", "{(\\ignorespaces#1\\unskip\\@@italiccorr)}");
 
   ams_author_called_internals()?;
-
-  // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
-  // dispatch frozen under \write/\edef (moving formulas in toc etc.).
-  DefMacro!(
-    "\\boxed{}",
-    "\\ifmmode\\boxed@math{#1}\\else\\boxed@text{#1}\\fi",
-    robust => true
-  );
-  DefConstructor!("\\boxed@math{}",
-    "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
-    alias => "\\boxed");
-  DefConstructor!("\\boxed@text{}",
-    "<ltx:Math mode='display' framed='rectangle'><ltx:XMath>#1</ltx:XMath></ltx:Math>",
-    mode => "math",
-    bounded => true,
-    before_digest => { Let!("\\\\", "\\lx@newline"); },
-    alias => "\\boxed");
 
   // Perl: amsmath.sty.ltxml L899-900
   DefMath!("\\implies", "\u{27F9}", role => "ARROW", meaning => "implies");
@@ -1817,18 +2000,14 @@ LoadDefinitions!({
   DefMath!("\\idotsint", "\u{222B}\u{22EF}\u{222B}", role => "INTOP",
     meaning => "multiple-integral", variablesize_op => true);
 
-  // Perl: amsmath.sty.ltxml L1283-1293 — italic Greek capitals
-  DefMath!("\\varGamma", "\u{0393}", font => { shape => "italic" });
-  DefMath!("\\varDelta", "\u{0394}", font => { shape => "italic" });
-  DefMath!("\\varTheta", "\u{0398}", font => { shape => "italic" });
-  DefMath!("\\varLambda", "\u{039B}", font => { shape => "italic" });
-  DefMath!("\\varXi", "\u{039E}", font => { shape => "italic" });
-  DefMath!("\\varPi", "\u{03A0}", font => { shape => "italic" });
-  DefMath!("\\varSigma", "\u{03A3}", font => { shape => "italic" });
-  DefMath!("\\varUpsilon", "\u{03A5}", font => { shape => "italic" });
-  DefMath!("\\varPhi", "\u{03A6}", font => { shape => "italic" });
-  DefMath!("\\varPsi", "\u{03A8}", font => { shape => "italic" });
-  DefMath!("\\varOmega", "\u{03A9}", font => { shape => "italic" });
+  // amsmath.sty:384-395 `\@ifundefined{varGamma}{\DeclareMathSymbol{\varGamma}{\mathord}{letters}{"00}`…}: the math
+  // italic's capital Greek letters whatever the alphabet (CMMI10 in pdflatex), unless a class declared them first
+  // (svmult.cls:982-993's upright `\var…`). Perl's amsmath.sty.ltxml:1294-1304 defines them unconditionally with
+  // `font => { shape => 'italic' }`, which a capital Greek letter's default shape overrides: upright (KNOWN_PERL_ERRORS
+  // #1147). Witnesses 1701.03426 (6 italic `\varLambda` in its PDF), 2407.01655. Guard `perfect_kernel_batch79e`.
+  if !is_defined("\\varGamma") {
+    declare_capital_greek("var", Some(LettersClass::Fixed))?;
+  }
 
   // Perl: amsmath.sty.ltxml L1311-1319 — misc stubs
   def_macro_noop("\\mintagsep")?;
@@ -1856,19 +2035,6 @@ LoadDefinitions!({
   //======================================================================
   // Additions from Perl amsmath audit (session 38)
   //======================================================================
-
-  // Section 4.5: Additional math accents (triple/quadruple dots)
-  DefMath!("\\dddot{}", "\u{02D9}\u{02D9}\u{02D9}",
-    operator_role => "OVERACCENT", reversion => "\\dddot{#1}");
-  DefMath!("\\ddddot{}", "\u{02D9}\u{02D9}\u{02D9}\u{02D9}",
-    operator_role => "OVERACCENT", reversion => "\\ddddot{#1}");
-
-  // Section 4.6: Root adjustment (no-ops — cosmetic only)
-  def_macro_noop("\\leftroot{}")?;
-  def_macro_noop("\\uproot{}")?;
-
-  // Section 4.13: Smash with optional direction (pass through body)
-  DefConstructor!("\\smash[]{}", "#2");
 
   // Section 4.4: Nonbreaking dashes (no-op)
   def_macro_noop("\\nobreakdash")?;
@@ -1973,7 +2139,24 @@ LoadDefinitions!({
     }
   });
 
-  // Section 9.4: Accent aliases (Perl L1297-1306)
+  // amsmath.sty:754-797 makes each accent a macro, `\mathaccentV{<name>}<family><slot>#5`, reading its accentee as an
+  // undelimited argument: `\tilde\muu_a` with `\newcommand{\muu}{m_{\gamma'}}` accents all of `m_{\gamma'}`, and the
+  // `_a` is that group's (0801.1527; without amsmath TeX's `\mathaccent` takes the `m` alone, and pdflatex reports the
+  // double subscript). The accent keeps LaTeXML's own construction, its argument braced as `\mathaccent"…{#5}` braces
+  // it (`define_ams_macro_accent`); a command reading a mandatory argument (`\hat\mathbf{x}`) is no accentee amsmath
+  // can take (pdflatex: "Argument of \select@group has an extra }"), and is read with its own arguments, the call the
+  // author wrote, which keeps the formula the author meant, with one Warning that TeX errs there (user ruling 2026-10-17,
+  // OXIDIZED_DESIGN_DIVERGENCES #721; Perl keeps the kernel's accents, KNOWN_PERL_ERRORS #945). Guards
+  // `perfect_kernel_batch71a::{amsmath_accent_macro_argument, undelimited_argument_reads_the_whole_call,
+  // undelimited_argument_warning_once_per_occurrence}`.
+  for accent in [
+    "hat", "check", "tilde", "acute", "grave", "dot", "ddot", "breve", "bar", "vec", "mathring",
+  ] {
+    define_ams_macro_accent(accent)?;
+  }
+  // Section 9.4: Accent aliases (Perl L1297-1306), bound after the macro accents above as amsmath.sty:892-901
+  // `\def\Hat{\hat}` follows them: `\Hat\muu_a` is `\hat\muu_a`, not the kernel accent's double subscript.
+  // Guard `perfect_kernel_batch71a::amsmath_accent_macro_argument` (its `\Hat` row).
   Let!("\\Hat", "\\hat");
   Let!("\\Check", "\\check");
   Let!("\\Tilde", "\\tilde");
@@ -2076,6 +2259,16 @@ Extra braces must be added to prevent wrong output}\@ehc}
 
   // Conditionals (always false sentinels — Perl L58-68)
   DefConditional!("\\ifmeasuring@");
+  // amsmath.sty:1280-1281 and :1290: the switches its display environments set, which classes and documents
+  // copying them set too (copernicus.cls:1894 `\st@rredfalse`, 1606.07128; 2212.07787, 2304.07625): `\ifinalign@`,
+  // `\ifingather@`, `\ifst@rred` (`\iftag@` below). Never read here; the binding's environments decide by their
+  // own names.
+  DefConditional!("\\ifinalign@");
+  DefConditional!("\\ifingather@");
+  DefConditional!("\\ifst@rred");
+  // amsmath.sty:653 the kern between the signs of a multiple integral, which papers building their own
+  // (`\MultiIntegral` copies, 2004.13893, 2210.05620) call.
+  RawTeX!(r"\def\intkern@{\mkern-6mu\mathchoice{\mkern-3mu}{}{}{}}");
   // amsmath.sty:1896 `\let\maxcolumn@widths\@empty`: the column-width register
   // the two-pass `\measure@` (:1936-1944) rebuilds. The binding replaces the
   // alignment code but raw packages still read the register — cryptocode.sty:
@@ -2085,14 +2278,448 @@ Extra braces must be added to prevent wrong output}\@ehc}
   // `\pseudocode` without `width=`; zx-calculus 3, Perl identical, pdflatex
   // clean). amsmath's "no columns measured" default is the empty list.
   Let!("\\maxcolumn@widths", "\\@empty");
-  DefConditional!("\\iftagsleft@");
   // amsmath.sty:1289 `\newif\iftag@` (a tag is pending; xreview sets it)
   // and :1292 `\newif\ifshifttag@`.
   DefConditional!("\\iftag@");
   DefConditional!("\\ifshifttag@");
   // `\if@fleqn` moved up (before the options block, Perl L53 / #2835) so the
   // `fleqn` option can `\Let` it to `\iftrue`.
+  // amsmath.sty:2766-2767, 2770-2771, which authors alias (1409.3102 `\let\veqno\@@leqno`).
+  RawTeX!(
+    r"\let\@@eqno\eqno \let\@@leqno\leqno
+\let\veqno=\@@eqno \iftagsleft@ \let\veqno=\@@leqno \fi"
+  );
 });
+
+/// amsmath's macro accent `\<name>#1` over LaTeXML's own `\<name>` accent, kept as `\lx@ams@kernel@<name>`.
+///
+/// amsmath's accent is `\mathaccentV{<name>}<family><slot>` (amsmath.sty:754-758), parameterless, its `\mathaccentV`
+/// reading the accentee as its fifth, undelimited argument (:811). The binding's accent is a macro of one argument, so
+/// accents.sty's `\underaccent{\dot}{…}` (`\lx@if@isaccent`) takes it for an accent, whose argument goes to the accent
+/// through `\lx@ams@mathaccentV`, the binding's `\mathaccentV`: an accent as the accentee of another is amsmath's
+/// nested accent ([`define_undelimited_argument`]).
+///
+/// Only an accent is redefined, as amsmath's `\@tempa` test of the accent's `\meaning` (amsmath.sty:760-775) leaves
+/// a name that is not a `\mathaccent` alone: one a document undefined for a later package to declare
+/// (`\let\vec\undefined` before MnSymbol, 2210.15345) or made a macro of its own.
+pub fn define_ams_macro_accent(name: &str) -> Result<()> {
+  define_macro_accent(name, r"\lx@ams@mathaccentV")
+}
+
+/// amsfonts' `\widehat#1`, `\widetilde#1` (amsfonts.sty:78-87, unless stix is loaded): macros of one argument over
+/// LaTeXML's own accents, kept as `\lx@ams@kernel@<name>`, their argument passed through `\lx@undelimited@argument`.
+/// Unlike amsmath's accents these take a mandatory argument of their own (`\hat\widehat x` errs in TeX), and an
+/// amsmath accent is no nested accent under them (`\widehat\hat z` errs: `\mathaccent` has no `\macc@nested`).
+pub fn define_amsfonts_macro_accent(name: &str) -> Result<()> {
+  define_macro_accent(name, r"\lx@undelimited@argument{amsfonts}")
+}
+
+fn define_macro_accent(name: &str, reader: &str) -> Result<()> {
+  if lookup_definition(&T_CS!(format!("\\lx@ams@kernel@{name}")))?.is_some()
+    || !lookup_definition(&T_CS!(format!("\\{name}")))?
+      .is_some_and(|definition| !definition.is_expandable())
+  {
+    return Ok(());
+  }
+  define_undelimited_argument()?;
+  RawTeX!(&format!(
+    r"\let\lx@ams@kernel@{name}\{name}\def\{name}#1{{{reader}{{\{name}}}\lx@ams@kernel@{name}{{#1}}}}"
+  ));
+  Ok(())
+}
+
+/// How [`define_undelimited_argument`] passes a TeX macro's undelimited argument that is a single command to the
+/// LaTeXML item reading it, judged by the command's definition (user ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #721).
+enum UndelimitedArgument {
+  /// No mandatory argument (`\alpha`, `\relax`, `\muu`, `\newcommand{\tasknum}[1][]{…}`, an undefined command):
+  /// braced, as TeX braces it.
+  Braced,
+  /// An amsmath accent under amsmath's `\mathaccentV` (`\hat\vec x`): braced, itself over an empty nucleus, as
+  /// amsmath's `\macc@nested` (:832-844) sets it on the `\@empty` that follows it in `\macc@a` (:870). Only that reader
+  /// nests: under amsfonts' `\widehat#1` or breqn's `\sb#1` an amsmath accent is a command reading a mandatory argument.
+  NestedAccent,
+  /// A command reading a mandatory argument (`\mathbf`, `\text`, `\newcommand\nv[1]`, through a robust wrapper's
+  /// parameterless `\protect <cs>` to `<cs>`: `\protect \cs␣`, `\ensuremath`), or a binding closure: `command`, the resolved command, read as `reading`
+  /// says. `tex_errs` when TeX's braced form errs, which is when the command takes a mandatory argument; a closure
+  /// without one may read on, which TeX's macro would not, but its reading is not known to err.
+  Call {
+    command:  Token,
+    tex_errs: bool,
+    reading:  CallReading,
+  },
+}
+
+/// How [`UndelimitedArgument::Call`] reads the command with its own arguments, the call the author wrote.
+enum CallReading {
+  /// A macro (an ltcmd command by its signature): its arguments read by these parameters, the call braced
+  /// (`\hat{\pair{a}{b}}`, `\hat{\vq[a]{x}}`), so the item is the call's whole expansion.
+  Arguments(Parameters),
+  /// A primitive or constructor (`\mathbf`, `\sqrt`): left unbraced, the item it makes is the call, its arguments
+  /// read by its own parameters at digestion (a `Digested` one cannot be read ahead of it); the number of arguments.
+  Item(usize),
+  /// No known reading (a closure without a parameter list, an ltcmd signature with a delimited or embellishment
+  /// argument): left unbraced, for the item to read with what follows.
+  Unknown,
+}
+
+fn reads_a_mandatory_argument(parameters: Option<&Parameters>) -> bool {
+  parameters.is_some_and(|parameters| parameters.get_parameters().iter().any(|p| !p.optional))
+}
+
+/// The reading [`define_undelimited_argument`] gives the single command `argument`; `nests_accents` for amsmath's
+/// `\mathaccentV`, the one reader with a nested accent.
+fn classify_undelimited_argument(
+  argument: &Token,
+  nests_accents: bool,
+) -> Result<UndelimitedArgument> {
+  let ams_mathaccent = T_CS!(r"\lx@ams@mathaccentV");
+  let mut command = *argument;
+  // A robust wrapper's parameterless `\protect <cs>` (a robust command's `\protect \cs␣`, the binding's `\ensuremath`
+  // = `\protect\@ensuremath`, sect07.rs) and an alias's one-token body (amsmath.sty:892 `\def\Hat{\hat}`) are what
+  // TeX's braced form expands to; a bounded chase, as an alias may name itself.
+  for _ in 0..8 {
+    let Some(definition) = lookup_definition(&command)? else {
+      return Ok(UndelimitedArgument::Braced);
+    };
+    let mandatory = reads_a_mandatory_argument(definition.get_parameters());
+    let call = |command: Token| UndelimitedArgument::Call {
+      command,
+      tex_errs: true,
+      reading: match definition.get_parameters() {
+        Some(parameters) if definition.is_expandable() => {
+          CallReading::Arguments(parameters.clone())
+        },
+        Some(parameters) => CallReading::Item(parameters.get_num_args()),
+        None => CallReading::Unknown,
+      },
+    };
+    if !definition.is_expandable() {
+      return Ok(if mandatory {
+        call(command)
+      } else {
+        UndelimitedArgument::Braced
+      });
+    }
+    let body = match definition.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) if definition.get_conditional_type().is_none() => {
+        body.unlist_ref()
+      },
+      _ if mandatory => return Ok(call(command)),
+      _ => {
+        return Ok(UndelimitedArgument::Call {
+          command,
+          tex_errs: false,
+          reading: CallReading::Unknown,
+        });
+      },
+    };
+    if let [protect, inner] = body.as_slice()
+      && protect.with_str(|name| name == "\\protect")
+      && matches!(inner.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && definition
+        .get_parameters()
+        .is_none_or(|parameters| parameters.get_num_args() == 0)
+    {
+      command = *inner;
+      continue;
+    }
+    if nests_accents && body.first() == Some(&ams_mathaccent) {
+      return Ok(UndelimitedArgument::NestedAccent);
+    }
+    // The kernel's `\ensuremath ` (`\@ensuremath`, latex.ltx:15801-15806) has no parameter of its own, its branches
+    // read one: a call of one mandatory argument (`\hat\ensuremath{x}`).
+    if command == T_CS!(r"\@ensuremath") {
+      return Ok(UndelimitedArgument::Call {
+        command,
+        tex_errs: true,
+        reading: match parse_parameters("{}", &command, true)? {
+          Some(parameters) => CallReading::Arguments(parameters),
+          None => CallReading::Unknown,
+        },
+      });
+    }
+    // An ltcmd command (`\NewDocumentCommand`, raw from latex.ltx) is a parameterless wrapper over its signature: the
+    // optimized one's `\__cmd_start_optimized: \cs code` (an all-`m` command, `\cs code` taking the arguments,
+    // latex.ltx `\__cmd_declare_cmd_optimized:Nnn`), the general and expandable ones' `\__cmd_start:nNNnnn {<signature>}…`
+    // / `\__cmd_start_expandable:nNNNNn {<signature>}…`.
+    if body
+      .first()
+      .is_some_and(|first| first.with_str(|name| name.starts_with("\\__cmd_start")))
+    {
+      return ltcmd_undelimited_argument(command, body);
+    }
+    if mandatory {
+      return Ok(call(command));
+    }
+    match body.as_slice() {
+      [alias] if matches!(alias.get_catcode(), Catcode::CS | Catcode::ACTIVE) => command = *alias,
+      _ => return Ok(UndelimitedArgument::Braced),
+    }
+  }
+  Ok(UndelimitedArgument::Braced)
+}
+
+/// [`classify_undelimited_argument`] for the ltcmd command `command`, whose meaning is `body`: an optimized command
+/// is its `\cs code` (that macro and its parameters, when it takes an argument); a general or expandable one's signature
+/// reads a mandatory argument when it has an `m`, `r`, `R`, `v`, `l` or `u` outside its braced defaults and processors
+/// (usrguide.tex §2: the others are optional), its call read by the signature's `m`, `o`, `O{…}` and `s` (the
+/// prefixes `+`, `!` and the processors `>{…}`, `={…}` read nothing): `{\cs[a]{x}}` for `{om}`.
+fn ltcmd_undelimited_argument(command: Token, body: &[Token]) -> Result<UndelimitedArgument> {
+  let optimized = body[0].with_str(|name| name == "\\__cmd_start_optimized:");
+  if optimized {
+    let Some(code) = body.get(1) else {
+      return Ok(UndelimitedArgument::Braced);
+    };
+    let parameters =
+      lookup_definition(code)?.and_then(|definition| definition.get_parameters().cloned());
+    return Ok(if reads_a_mandatory_argument(parameters.as_ref()) {
+      UndelimitedArgument::Call {
+        command:  *code,
+        tex_errs: true,
+        reading:  parameters.map_or(CallReading::Unknown, CallReading::Arguments),
+      }
+    } else {
+      UndelimitedArgument::Braced
+    });
+  }
+  let mut depth = 0usize;
+  let mut mandatory = false;
+  // The signature as LaTeXML parameters, `None` once a letter has no such reading.
+  let mut spec = Some(String::new());
+  for token in body.iter().skip(1) {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth = depth.saturating_sub(1);
+        if depth == 0 {
+          break;
+        }
+      },
+      Catcode::LETTER | Catcode::OTHER if depth == 1 => token.with_str(|letter| {
+        mandatory |= matches!(letter, "m" | "r" | "R" | "v" | "l" | "u");
+        let parameter = match letter {
+          "m" => Some("{}"),
+          "o" | "O" => Some("[]"),
+          "s" => Some("OptionalMatch:* "),
+          "+" | "!" | ">" | "=" => Some(""),
+          _ => None,
+        };
+        spec = spec
+          .take()
+          .zip(parameter)
+          .map(|(spec, parameter)| spec + parameter);
+      }),
+      _ => {},
+    }
+  }
+  if !mandatory {
+    return Ok(UndelimitedArgument::Braced);
+  }
+  let parameters = match spec {
+    Some(spec) => parse_parameters(spec.trim(), &command, true)?,
+    None => None,
+  };
+  Ok(UndelimitedArgument::Call {
+    command,
+    tex_errs: true,
+    reading: parameters.map_or(CallReading::Unknown, CallReading::Arguments),
+  })
+}
+
+/// The arguments of `command`'s call, read from what follows by `parameters` and reverted as the author wrote them
+/// (`{x}`, `[a]`, `*`); `None` for a parameter list with a delimiter that is no argument (`\def\cs(#1){…}`), whose
+/// reversion would drop it, or with an argument digested as it is read; `None` too, the arguments read so far put
+/// back, when an undelimited argument would be a token that ends or structures the current list
+/// ([`ends_the_list`]): the author's call is missing an argument there (`\hat\pair{a} & x`), and its braced reading
+/// would take a cell's `&` or a row's `\\` into the group, so the call is left unbraced, as TeX leaves the tokens.
+fn read_call_arguments(parameters: &Parameters) -> Result<Option<Vec<Token>>> {
+  let parameters = parameters.get_parameters();
+  if parameters
+    .iter()
+    .any(|parameter| parameter.novalue || parameter.predigest.is_some())
+  {
+    return Ok(None);
+  }
+  let mut read = Vec::new();
+  for parameter in parameters {
+    let undelimited =
+      !parameter.optional && with(parameter.name, |name| BRACED_ARGUMENT_TYPES.contains(&name));
+    if undelimited && next_ends_the_list()? {
+      unread_vec(read);
+      return Ok(None);
+    }
+    let argument = parameter.read(None)?;
+    if let Some(reverted) = parameter.revert(argument.into())? {
+      read.extend(reverted.unlist());
+    }
+  }
+  Ok(Some(read))
+}
+
+/// Whether the next non-space token, which an undelimited argument would take, ends or structures the current list
+/// ([`ends_the_list`]), or the input has ended ([`at_end_of_all_input`]); the end of a token list that is not the end
+/// of the input (an argument digested on its own, `\frac{\hat\nv}{2}`) stands for its closing `}`, which a call reads
+/// on, as at a `}`. The spaces before it are read and put back with it, so nothing is consumed.
+fn next_ends_the_list() -> Result<bool> {
+  let mut spaces = Vec::new();
+  let next = loop {
+    match peek_token()? {
+      Some(space) if space.get_catcode() == Catcode::SPACE => {
+        read_token()?;
+        spaces.push(space);
+      },
+      next => break next,
+    }
+  };
+  unread_vec(spaces);
+  Ok(match next {
+    Some(token) => ends_the_list(&token),
+    None => at_end_of_all_input(),
+  })
+}
+
+/// Whether `token` ends or structures the list being built, so no argument is taken from it: by meaning, a column
+/// end (`&` of catcode 4 or a `\let` copy, `\cr`, `\crcr`, `\span`: [`gullet::is_column_end`]) and a parameter token
+/// (catcode 6); by name, the control sequence `\par` (tex.web §392's `par_token`, whatever it means), and the macros
+/// that end a row, an environment or a formula, whose meaning changes with the context: `\\`, `\end`, `\]`, `\)`.
+fn ends_the_list(token: &Token) -> bool {
+  token.get_catcode() == Catcode::PARAM
+    || is_column_end(token).is_some()
+    || (token.get_catcode() == Catcode::CS
+      && token.with_str(|name| matches!(name, "\\par" | "\\\\" | "\\end" | "\\]" | "\\)")))
+}
+
+/// `name`'s possessive, as the Warning names a package: "amsmath's", "amsfonts'".
+fn possessive(name: &str) -> String {
+  if name.ends_with('s') {
+    s!("{name}'")
+  } else {
+    s!("{name}'s")
+  }
+}
+
+/// [`define_undelimited_argument`]'s expansion: `head` followed by `argument`, the undelimited argument the TeX macro
+/// `reader` of `package` read, as `classify_undelimited_argument` reads it.
+fn undelimited_argument(
+  package: &str,
+  reader: &str,
+  head: Tokens,
+  argument: Tokens,
+  nests_accents: bool,
+) -> Result<Tokens> {
+  let mut tokens = head.unlist();
+  let argument = argument.unlist();
+  let reading = match argument.as_slice() {
+    [single] if matches!(single.get_catcode(), Catcode::CS | Catcode::ACTIVE) => {
+      classify_undelimited_argument(single, nests_accents)?
+    },
+    _ => UndelimitedArgument::Braced,
+  };
+  match reading {
+    UndelimitedArgument::Braced => {
+      tokens.push(T_BEGIN!());
+      tokens.extend(argument);
+      tokens.push(T_END!());
+    },
+    UndelimitedArgument::NestedAccent => {
+      tokens.push(T_BEGIN!());
+      tokens.extend(argument);
+      tokens.extend([T_BEGIN!(), T_END!()]);
+      tokens.push(T_END!());
+    },
+    UndelimitedArgument::Call { command, tex_errs, reading } => {
+      let call = match &reading {
+        CallReading::Arguments(parameters) if tex_errs => read_call_arguments(parameters)?,
+        _ => None,
+      };
+      // One Warning per source occurrence: not again where that source is re-read (`tex_math::REREAD_COPY`: the toc
+      // copy of a heading without a `[short]`, a tag's reference forms). A `[short]` title or caption, typeset only in
+      // its list (where TeX errs only if the list is typeset), is digested and kept once, and warns there.
+      if tex_errs && !lookup_bool(engine::tex_math::REREAD_COPY) {
+        let given = argument[0].with_str(|name| name.to_string());
+        let reading = match (&call, reading) {
+          (Some(arguments), _) => {
+            let mut written = vec![argument[0]];
+            written.extend(arguments.iter().copied());
+            s!(
+              "read as {reader}{{{}}}",
+              Tokens::new(written).untex().trim_end()
+            )
+          },
+          (None, CallReading::Item(1)) => {
+            s!("read as {reader}{{{given}…}}, {given} with its argument")
+          },
+          // A constructor of optional arguments too (`\sqrt[]{}`): the call is what it reads from what follows.
+          (None, CallReading::Item(_)) => {
+            s!(
+              "read as {reader}{{{given}…}}, {given} with the arguments it reads from what follows it"
+            )
+          },
+          (None, _) => s!("read as {reader}{{{given}…}}, {given} with what follows it"),
+        };
+        let message = s!(
+          "{} {reader} takes {given} alone as its argument, where TeX errs: {given} reads an argument of its own; \
+           {reading}",
+          possessive(package)
+        );
+        // A heading's, an item's or a theorem's text is digested from a token list: the location is the source's.
+        let at = get_location();
+        let at = if at.contains("Anonymous String") {
+          get_source_location().unwrap_or_default()
+        } else {
+          at
+        };
+        let at = if at.is_empty() { at } else { s!("\n\t{at}") };
+        emit_warn(
+          "malformed",
+          reader,
+          &s!(
+            "{message}{at}\n\tIn {}:{}:{}\n",
+            file!(),
+            line!(),
+            column!()
+          ),
+        );
+      }
+      match call {
+        Some(arguments) => {
+          tokens.push(T_BEGIN!());
+          tokens.push(command);
+          tokens.extend(arguments);
+          tokens.push(T_END!());
+        },
+        None => tokens.push(command),
+      }
+    },
+  }
+  Ok(Tokens::new(tokens))
+}
+
+/// `\lx@undelimited@argument{<package>}{<reader>}{<head>}{<argument>}`: `<head>` (a LaTeXML accent or script, which
+/// reads the next math item) followed by the undelimited macro argument the TeX macro `<reader>` of `<package>` gave
+/// it — amsfonts' `\widehat`/`\widetilde` (amsfonts.sty:78-87), mathstyle's `\sb`/`\sp` (mathstyle.sty:126-127,
+/// `\mathsub{…#1}`, named by what they stand for, `_`/`^`) — braced, as those macros brace it, so a parameterless macro
+/// (or one with optional parameters only: `\newcommand{\tasknum}[1][]{\tau_{#1}}`) is the item with its whole
+/// expansion. amsmath's accents (amsmath.sty:754-797, `\mathaccent"…{#5}`) go through `\lx@ams@mathaccentV`, the same
+/// with amsmath's nested accent. A single command is passed as its definition says (`UndelimitedArgument`): one that
+/// reads a mandatory argument is read with its own arguments, braced, the call the author wrote (`\hat{\mathbf{x}}`,
+/// `\hat{\pair{a}{b}}`), with one Warning that TeX errs there (`\hat\mathbf{x}`: "Argument of \select@group has an
+/// extra }"; breqn's `x_\text{a}`: "Argument of \text@ has an extra }"), whose recovery loses the formula (user ruling
+/// 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #721).
+pub fn define_undelimited_argument() -> Result<()> {
+  if lookup_definition(&T_CS!("\\lx@undelimited@argument"))?.is_some() {
+    return Ok(());
+  }
+  // amsmath's `\mathaccentV` as the binding's accents call it (`define_ams_macro_accent`): its name in an accent's
+  // body is what makes that accent, as its argument, a nested accent (`classify_undelimited_argument`).
+  DefMacro!("\\lx@ams@mathaccentV{}{}{}", sub[(reader, head, argument)] {
+    undelimited_argument("amsmath", reader.untex().trim(), head, argument, true)
+  });
+  DefMacro!("\\lx@undelimited@argument{}{}{}{}", sub[(package, reader, head, argument)] {
+    undelimited_argument(package.untex().trim(), reader.untex().trim(), head, argument, false)
+  });
+  Ok(())
+}
 
 /// The font size of a delimiter `\bBigg@{<factor>}` sizes. amsmath makes the delimiter
 /// `<factor>\big@size` tall (amsmath.sty:726-738), its four sizes being `\big` = `\bBigg@\@ne`,
@@ -2205,6 +2832,23 @@ fn ams_author_called_internals() -> Result<()> {
   \vbox{\kern-\normallineskiplimit\copy\strutbox}}}
 \def\spread@equation{\reset@strutbox@\openup\jot \let\spread@equation\@empty}
 \let\@spread@equation\spread@equation"
+  );
+
+  // amsmath.sty:1309-1317: the alignment dimens, which raw alignment code reads (a shipped
+  // mathtools.sty v1.01a's `\x@calc@shift@lf` and `\place@tag`); and :1364-1376 `\black@`, the
+  // overfull-line check a document's own `\endgather`/`\endalign` copy ends with (`\math@cr
+  // \black@\totwidth@ \egroup`, 0912.5438's fabntheorem.sty: 156 errors before).
+  RawTeX!(
+    r"\newdimen\eqnshift@
+\newdimen\alignsep@
+\newdimen\tagshift@
+\newdimen\tagwidth@
+\newdimen\totwidth@
+\newdimen\lineht@
+\def\black@#1{\noalign{\ifdim#1>\displaywidth
+  \dimen@\prevdepth \nointerlineskip \vskip-\ht\strutbox@ \vskip-\dp\strutbox@
+  \vbox{\noindent\hbox to\displaywidth{\hbox to#1{\strut@\hfill}}}%
+  \prevdepth\dimen@ \fi}}"
   );
 
   // amsmath.sty:1187 `\intertext@` makes `\intertext` the in-alignment one, which is
@@ -2778,6 +3422,17 @@ pub fn rearrange_ams_multirow(
   rearrange_ams_split(document, array)
 }
 
+/// Whether an equation row with no content keeps its number: it is numbered and holds a `\label`, which binds to that
+/// number, or its author tagged it (`\notag \\ \tag{29}`, the alignment's `_tagged` row,
+/// [`TAGGED_ROW_ATTRIBUTE`]) — amsmath prints that row's number (Perl amsmath.sty.ltxml:483 "Numbered ones still show
+/// in print out!!!", which removes it; OXIDIZED_DESIGN_DIVERGENCES #591, KNOWN_PERL_ERRORS #682; witness nlin0106009).
+/// An auto-numbered empty row is removed, as in Perl.
+fn empty_row_keeps_number(document: &mut Document, equation: &Node) -> bool {
+  (equation.get_attribute("labels").is_some()
+    || equation.get_attribute(TAGGED_ROW_ATTRIBUTE).is_some())
+    && !document.findnodes("ltx:tags", Some(equation)).is_empty()
+}
+
 /// Perl: rearrangeAMSGather (amsmath.sty.ltxml L400-415)
 /// Each equation row consists of single equation. Pull math content up past _Capture_.
 pub fn rearrange_ams_gather(document: &mut Document, equationgroup: &mut Node) -> Result<()> {
@@ -2805,9 +3460,7 @@ pub fn rearrange_ams_gather(document: &mut Document, equationgroup: &mut Node) -
       // bound to that number (Perl amsmath.sty.ltxml:483 "Numbered ones still show in print out!!!"). The equation stays
       // with its number and label, its empty cell gone (63j; synthetic repro alignment/align_empty_labelled_row_keeps_number,
       // the shape of eqnarray's 1011.4399). An unnumbered one (align*, `\notag`) names no number and stays flagged.
-      if equation.get_attribute("labels").is_some()
-        && !document.findnodes("ltx:tags", Some(&equation)).is_empty()
-      {
+      if empty_row_keeps_number(document, &equation) {
         cells[0].clone().unlink_node();
         continue;
       }
@@ -2854,10 +3507,8 @@ pub fn rearrange_ams_align(document: &mut Document, equationgroup: &mut Node) ->
       }
     }
     if cells.len() == 1 && cell1_children.is_empty() {
-      // (a numbered row holding only a `\label` keeps its number and label, as in gather above)
-      if equation.get_attribute("labels").is_some()
-        && !document.findnodes("ltx:tags", Some(&equation)).is_empty()
-      {
+      // (a numbered row holding only a `\label` or a `\tag` keeps its number, as in gather above)
+      if empty_row_keeps_number(document, &equation) {
         cells[0].clone().unlink_node();
         continue;
       }
@@ -2867,6 +3518,101 @@ pub fn rearrange_ams_align(document: &mut Document, equationgroup: &mut Node) ->
     // Group every 2 columns into a MathFork
     equationgroup_join_cols(document, 2, &mut equation)?;
   }
+  Ok(())
+}
+
+/// The matrix machinery of amsmath's binding (Perl amsmath.sty.ltxml:152-153 `\lx@ams@cr@binding`, :786-789
+/// `\lx@ams@matrix`/`\lx@end@ams@matrix`, over Base_XMath's `\lx@ams@matrix@`): its matrix environments and the
+/// `{subarray}` of [`define_ams_setstack_commands`] (amsmath's, and setstack's without amsmath).
+pub fn define_ams_matrix_base() -> Result<()> {
+  DefPrimitive!("\\lx@ams@cr@binding", {
+    let_i(
+      &T_CS!("\\\\"),
+      &T_CS!("\\lx@alignment@newline@noskip"),
+      None,
+    );
+  });
+  DefMacro!(
+    "\\lx@ams@matrix {}",
+    "\\lx@gen@matrix@bindings{#1}\\lx@ams@cr@binding\\lx@ams@matrix@{#1}\\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\lx@end@ams@matrix",
+    "\\lx@end@alignment\\lx@end@gen@matrix"
+  );
+  Ok(())
+}
+
+/// The amsmath commands setstack.sty (VIK 1998, IOP's bundle) copies "thus avoiding the need to load the entire
+/// amsmath.sty": `\overset`, `\underset`, `{subarray}`, `\substack`, `\sideset`, `\boxed`, `\dddot`, `\ddddot`,
+/// `\leftroot`, `\uproot` and the optional-argument `\smash` (setstack.sty:34-116, the copy 0803.1550 ships).
+/// amsmath's binding defines them here, and the `setstack` stand-in (latexml_contrib) with the same definitions
+/// (1008.1543, 1306.6377, 2206.02651).
+pub fn define_ams_setstack_commands() -> Result<()> {
+  // Perl: amsmath.sty.ltxml Section 4.10 — Affixing symbols to other symbols
+  DefConstructor!(
+    "\\overset InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
+  DefConstructor!(
+    "\\underset InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
+  //======================================================================
+  // Perl: amsmath.sty.ltxml lines 1170-1175 — subarray/substack
+  DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}");
+  DefMacro!(
+    "\\subarray{}",
+    "\\lx@ams@matrix{name=subarray,style=\\scriptsize,datameaning=list,rowsep=0pt,alignment=#1,alignment-required=true}"
+  );
+  DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
+
+  //======================================================================
+  // Section 7.2 \sideset command
+  // Perl: amsmath.sty.ltxml L1183-1234
+  DefConstructor!("\\sideset{}{}{}", sub[document, args, props] {
+    sideset_construct(document, args, props)?;
+  },
+  properties => {
+    Ok(stored_map!("scriptlevel" => get_script_level()))
+  });
+
+  // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
+  // dispatch frozen under \write/\edef (moving formulas in toc etc.).
+  // amsmath.sty:399 `\boxed` is `\fbox{\m@th$\displaystyle#1$}`: its argument is a math TeX sets in a box of its own,
+  // where an author's `$` ends that math and the next begins it again (`\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}`,
+  // u and S set as text; arXiv 2207.12569), so its argument is digested after tex_math.rs `\lx@math@in@hbox`, in math
+  // and in text (`\boxed@text` is math too). The constructor's argument has no group of its own, so a semi-simple one
+  // keeps the `$` meaning local without a boxing level (a script in the box keeps its `scriptpos`, math/sampler
+  // `\boxed{x^2}`). Perl errs "Missing $ closing display math" at each such `$` (KNOWN_PERL_ERRORS #907). Guard
+  // `perfect_kernel_batchint19::dollar_in_boxed_is_text`.
+  DefMacro!(
+    "\\boxed{}",
+    "\\ifmmode\\boxed@math{\\begingroup\\lx@math@in@hbox #1\\endgroup}\\else\\boxed@text{\\begingroup\\lx@math@in@hbox #1\\endgroup}\\fi",
+    robust => true
+  );
+  DefConstructor!("\\boxed@math{}",
+    "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
+    alias => "\\boxed");
+  DefConstructor!("\\boxed@text{}",
+    "<ltx:Math mode='display' framed='rectangle'><ltx:XMath>#1</ltx:XMath></ltx:Math>",
+    mode => "math",
+    bounded => true,
+    before_digest => { Let!("\\\\", "\\lx@newline"); },
+    alias => "\\boxed");
+
+  // Section 4.5: Additional math accents (triple/quadruple dots)
+  DefMath!("\\dddot{}", "\u{02D9}\u{02D9}\u{02D9}",
+    operator_role => "OVERACCENT", reversion => "\\dddot{#1}");
+  DefMath!("\\ddddot{}", "\u{02D9}\u{02D9}\u{02D9}\u{02D9}",
+    operator_role => "OVERACCENT", reversion => "\\ddddot{#1}");
+
+  // Section 4.6: Root adjustment (no-ops — cosmetic only)
+  def_macro_noop("\\leftroot{}")?;
+  def_macro_noop("\\uproot{}")?;
+
+  // Section 4.13: Smash with optional direction (pass through body)
+  DefConstructor!("\\smash[]{}", "#2");
   Ok(())
 }
 
@@ -3022,3 +3768,49 @@ fn sideset_wrap_impl(
 }
 
 // Additional amsmath definitions are added inline in the LoadDefinitions block above.
+
+/// amsmath for a binding whose original file does not load it — spie.cls (TeX Live's; spieman.cls), the old
+/// ws-procs9x6.cls and ws-ijmpb.cls copies, Scientific Word 2.5's tcilatex.tex, OmniBus's autoload, the old aa.cls —
+/// so that a paper using amsmath's commands without loading it still gets them (`original_loads`: the original does
+/// load it, as the paper's copy reads, [`crate::shipped_class::shipped_copy_loads`]; then this is the plain load), with
+/// the `options` the original passes to it (imsart.cls:84-118 `\PassOptionsToPackage{leqno}{amsmath}`).
+/// In pdflatex amsmath is not loaded there: a `\pmatrix{…}`, `\matrix{…}` or `\cases{…}` is Plain TeX's, with no
+/// "Old form `\pmatrix'" error (amsmath.sty:1077-1090 `\matrix@check`), and `\@ifpackageloaded{amsmath}` is false
+/// (0805.4522 tcilatex, 1003.3524 spie, nucl-th0206027 ws-procs9x6, quant-ph0607049 ws-ijmpb: no error in pdflatex).
+/// So the old-form error is off ([`amsmath_loaded_beyond_original`]) until the real amsmath.sty loads: the document's
+/// own `\usepackage{amsmath}`, a raw class or package that loads it (ptptex.cls:362 `\if@ams`; a copy's own load, read
+/// as the stand-in's copy, `binding::author_files`), or a binding whose original does (mathtools, physics). That
+/// load runs the binding again, its `\matrix@error` the error again, as Perl's aa.cls.ltxml:57 reload does for aa. A
+/// second such binding finds amsmath's definitions in force and loads nothing. Guards
+/// `perfect_kernel_batch77q::{old_form_matrix_is_plain_tex_where_amsmath_is_not_loaded,
+/// old_form_matrix_errs_once_the_document_loads_amsmath}`.
+pub fn require_amsmath_beyond_original(original_loads: bool, options: &[&str]) -> Result<()> {
+  // A file whose original does load amsmath after an earlier beyond-original load is the real load: it runs the
+  // binding again (spie.cls, then a Scientific Word 5.x tcilatex.tex copy with `\RequirePackage{amsmath}`).
+  if load_recorded("amsmath.sty") || (!original_loads && lookup_bool("amsmath.sty:beyond_original"))
+  {
+    return Ok(());
+  }
+  require_package("amsmath", RequireOptions {
+    options: options.iter().map(|option| option.to_string()).collect(),
+    ..RequireOptions::default()
+  })?;
+  if !original_loads {
+    amsmath_loaded_beyond_original();
+  }
+  Ok(())
+}
+
+/// The state after amsmath's binding was loaded where the original file does not load amsmath
+/// ([`require_amsmath_beyond_original`]; aa.cls's aa_support): amsmath's definitions stay in force, its old-form
+/// error is off (`\matrix@error` gobbles the command), and amsmath counts as not loaded
+/// ([`latexml_core::state::mark_unloaded`]), so the next request for it runs its binding again.
+pub fn amsmath_loaded_beyond_original() {
+  let_i(
+    &T_CS!("\\matrix@error"),
+    &T_CS!("\\@gobble"),
+    Some(Scope::Global),
+  );
+  mark_unloaded("amsmath.sty");
+  assign_value("amsmath.sty:beyond_original", true, Some(Scope::Global));
+}

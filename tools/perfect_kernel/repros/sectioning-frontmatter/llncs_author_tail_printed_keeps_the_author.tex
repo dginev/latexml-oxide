@@ -1,0 +1,20 @@
+% mechanism: llncs's `\@maketitle` prints `\@author` (llncs.cls:1035) while its binding's `\author` stores nothing in it:
+%   the binding declares it (`Policy::author_tail`), so the tail a document appends to `\@author` is read
+%   (frontmatter_stores.rs `seen_author_tail`): `\and Bob B\\Inst Y` one more author
+% witness: synthetic (review revFX24 check 1: "llncs now keeps Bob B")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Alice A and Bob B", "Inst Y" in the author line, "Inst X"
+%   under the block
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning (the loss counted); Alice A (Inst X). FX24 and
+%   FX24b: 0 errors, 0 warnings; Alice A (Inst X), Bob B (Inst X, Inst Y); perl not run
+% expect:  0 errors, 0 warnings; Alice A (Inst X), Bob B (Inst X, Inst Y)
+% status:  RED (int158a) -> GREEN (FX24; guard perfect_kernel_batchfx24::an_llncs_author_tail_is_kept, FX24b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+
+\begin{document}
+\title{A Title}
+\author{Alice A}\institute{Inst X}
+\makeatletter\g@addto@macro\@author{\and Bob B\\Inst Y}\makeatother
+\maketitle
+Body text.
+\end{document}

@@ -1,0 +1,25 @@
+% A raw class's store printed in a footnote of its title page (`\footnote{KW: \@keywords}`) is printed by it: the
+% speculative run typesets footnotes (`title_page_print_tokens`, sect05.rs), so the keywords set before `\maketitle`
+% keep their value when set again after it (#6b, `settle_placed_stores`), and the footnote the label and store leave
+% empty goes with them (`\lx@replay@records`).
+% witness: none (synthetic; review probe `fn` of 77i r2; silent-loss inventory #6b).
+% oracle:  pdflatex 0 errors: the footnote "KW: alpha, beta".
+% engines: rust 77i r2: `<keywords name="KW:">gamma</keywords>` and an empty footnote; rust 67int35:
+%          `<keywords>gamma</keywords>` and a footnote "KW: ".
+% expect:  0 errors, 0 warnings; `<keywords name="KW:">alpha, beta</keywords>`; no "gamma", no `note`.
+% status:  RED (77i r2) -> GREEN (77i r3)
+\begin{filecontents*}[overwrite]{rcfn.cls}
+\ProvidesClass{rcfn}
+\LoadClass{article}
+\newcommand*{\keywords}[1]{\def\@keywords{#1}}
+\def\@keywords{}
+\def\@maketitle{\@title\par\@author\footnote{KW: \@keywords}\par}
+\end{filecontents*}
+\documentclass{rcfn}
+\title{T}\author{Anton}
+\keywords{alpha, beta}
+\begin{document}
+\maketitle
+\keywords{gamma}
+Text.
+\end{document}

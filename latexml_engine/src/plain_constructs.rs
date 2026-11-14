@@ -22,6 +22,59 @@ pub(crate) fn tmspace_width(muskip: &str, negative: bool, text_width: &str) -> R
   }
 }
 
+/// The medium space `\>` (plain.tex), which `\:` is: U+2005 in text, the `\medmuskip` in math.
+fn medspace() -> Result<Tbox> {
+  Ok(Tbox::new(
+    pin!("\u{2005}"),
+    None,
+    None,
+    Tokens!(T_CS!("\\>")),
+    stored_map!("name"  => "medspace", "isSpace" => true,
+    "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+    "width" => tmspace_width("\\medmuskip", false, "0.2222em")?),
+  ))
+}
+
+/// plain.tex's `\,` `\!` `\:` `\;` (Perl plain_constructs.pool.ltxml L190-212; the kernel then lets `\:` be `\>`).
+/// amsmath.sty:155-175 declares them again (`\let\!\@undefined` …), and so does its binding
+/// ([`crate::latex_constructs::define_amsmath_tmspace_commands`]): tipa.sty:429-458 makes `\!` `\;` `\:` T3 text
+/// accents, and amsmath loaded after it makes them the spacing commands again (witnesses 2603.03017, 2605.00529,
+/// 2608.02769).
+#[rustfmt::skip]
+pub(crate) fn define_tmspace_commands() -> Result<()> {
+  DefMacro!(
+    "\\,",
+    r"\ifmmode\lx@thinmuskip\else\lx@thinspace\fi",
+    protected => true
+  );
+
+  DefPrimitive!("\\!", {
+    Tbox::new(
+      pin!("\u{200B}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\!")), // zero width space
+      // A kern in text (latex.ltx:15673-15681), math glue in math.
+      stored_map!("name"  => "negthinspace", "isSpace" => true,
+      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thinmuskip", true, "0.16667em")?),
+    )
+  });
+  DefPrimitive!("\\:", { medspace()? });
+  DefPrimitive!("\\;", {
+    Tbox::new(
+      pin!("\u{2004}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\;")),
+      stored_map!("name"  => "thickspace", "isSpace" => true,
+      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thickmuskip", false, "0.2777em")?),
+    )
+  });
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: plain_constructs.pool.ltxml L18
@@ -387,24 +440,7 @@ LoadDefinitions!({
        "isSpace" => true, "isKern" => true),
     )
   });
-  DefMacro!(
-    "\\,",
-    r"\ifmmode\lx@thinmuskip\else\lx@thinspace\fi",
-    protected => true
-  );
-
-  DefPrimitive!("\\!", {
-    Tbox::new(
-      pin!("\u{200B}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\!")), // zero width space
-      // A kern in text (latex.ltx:15673-15681), math glue in math.
-      stored_map!("name"  => "negthinspace", "isSpace" => true,
-      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
-      "width" => tmspace_width("\\thinmuskip", true, "0.16667em")?),
-    )
-  });
+  define_tmspace_commands()?;
   // Perl plain_constructs.pool.ltxml L203-211: the box content is the actual
   // space glyph — U+2005 FOUR-PER-EM (medspace) for `\>`, U+2004 THREE-PER-EM
   // (thickspace) for `\;` — NOT a plain ASCII space. The earlier Rust port used
@@ -412,29 +448,7 @@ LoadDefinitions!({
   // the wider Unicode space (matching `\,`→U+2009 and `\!`→U+200B above). In
   // MATH mode the content is irrelevant (isSpace+width → XMHint), so this only
   // corrects text-mode rendering.
-  DefPrimitive!("\\>", {
-    Tbox::new(
-      pin!("\u{2005}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\>")),
-      stored_map!("name"  => "medspace", "isSpace" => true,
-      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
-      "width" => tmspace_width("\\medmuskip", false, "0.2222em")?),
-    )
-  });
-  DefPrimitive!("\\;", {
-    Tbox::new(
-      pin!("\u{2004}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\;")),
-      stored_map!("name"  => "thickspace", "isSpace" => true,
-      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
-      "width" => tmspace_width("\\thickmuskip", false, "0.2777em")?),
-    )
-  });
-
+  DefPrimitive!("\\>", { medspace()? });
   Let!("\\:", "\\>");
 
 

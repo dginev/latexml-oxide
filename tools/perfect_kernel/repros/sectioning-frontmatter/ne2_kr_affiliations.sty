@@ -1,0 +1,4 @@
+% a kr.sty-shaped title block: \and, \affiliations and \emails defined only inside \@maketitle
+\def\@maketitle{{\centering{\LARGE\@title\par}\vskip 1em
+  {\def\and{\unskip, }\def\affiliations{\egroup\par\bgroup\rm}\def\emails{\egroup\par\bgroup\rm}%
+   \bgroup\bf\@author\egroup}\par}\vskip 1em}

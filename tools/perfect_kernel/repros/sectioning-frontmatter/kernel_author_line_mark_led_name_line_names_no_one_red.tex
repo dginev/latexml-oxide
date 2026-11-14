@@ -1,0 +1,15 @@
+% mechanism: a name line a mark leads (`$^{\dagger}$Ann Able$^{1}$, …`) is read as an affiliation line: one nameless creator, the names as affiliations, uncounted
+% witness: synthetic (revISO1c P1 probe f9)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "†Ann Able1, Bob Baker2 / 1Dept of Physics, Univ X, 2Lab of Chemistry, Univ Y"
+% engines: rust 9d38af1d10 = P4c: 0 E, 0 W; one nameless creator: "Ann Able", ", Bob Baker", "Dept 1 of Physics, …"
+% expect:  0 errors; Ann Able "1Dept of Physics, Univ X", Bob Baker "2Lab of Chemistry, Univ Y"
+% status:  RED (9d38af1d10, P4c)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^{\dagger}$Ann Able$^{1}$, Bob Baker$^{2}$\\ ${\rm ^1Dept}$ of Physics, Univ X, ${\rm ^2Lab}$ of Chemistry, Univ Y}
+\maketitle
+Text.
+\end{document}

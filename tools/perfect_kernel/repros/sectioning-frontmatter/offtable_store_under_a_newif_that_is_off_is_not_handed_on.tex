@@ -1,0 +1,24 @@
+% An off-table store the class's `\@maketitle` prints only under a `\newif` switch that is off is not handed on; with
+% the switch on, the kept title-page deposit typesets it, once (`before_title_page_runs`, frontmatter_stores.rs).
+% aiaa-tc.cls:99-101, 195-201: `\aiaa@conference` printed only `\if@aiaa@handcarry` (the `[handcarry]` option).
+% witness: none (synthetic; the aiaa-tc shape, 77i review finding 7).
+% oracle:  pdflatex 0 errors: without `[handcarry]` "T Anton Text."; with it "AIAA Conference 2004" above the title.
+% engines: rust 77i r1 = r2 here (r1's static walk took the live branch of a `\newif`).
+% expect:  0 errors, 0 warnings; no "AIAA Conference 2004" without the option; once with it, in the deposit.
+% status:  GREEN (77i r1, r2)
+\begin{filecontents*}[overwrite]{rcnewif.cls}
+\ProvidesClass{rcnewif}
+\newif\if@rc@handcarry
+\DeclareOption{handcarry}{\@rc@handcarrytrue}
+\ProcessOptions
+\LoadClass{article}
+\def\rc@conference{}
+\newcommand\RCconference[1]{\def\rc@conference{#1}}
+\def\@maketitle{\if@rc@handcarry{\scriptsize\rc@conference}\par\fi{\LARGE\@title\par}{\large\@author\par}}
+\end{filecontents*}
+\documentclass{rcnewif}
+\title{T}\author{Anton}\RCconference{AIAA Conference 2004}
+\begin{document}
+\maketitle
+Text.
+\end{document}

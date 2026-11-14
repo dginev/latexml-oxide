@@ -1,0 +1,20 @@
+% mechanism: a marked affiliation entry over two lines whose first line's words may name a person ("Hellebore Capital
+%   Management"). 100c r2's re-part fail-safe (repart.rs `joined_rows`, review rev100c B1) declined the item, so the
+%   old reader's one merged creator shipped; the first row of an item a mark labels is the entry's own line.
+% witness: 1507.08137 (IEEE-conference-A4-LaTeX-format.tex:19-45)
+% oracle:  pdflatex 0 errors; "Ann Able #∗ , Bob Baker # , Cat Cole ∗", the two affiliations under them
+% engines: rust int127a and 100c r1: three creators, right; 100c r2 / int128b: one creator "Ann Able , Bob Baker ,
+%   Cat Cole Hellebore Capital Management∗" + merged_creators Error; perl two creators, the three names in one and
+%   "Hellebore Capital Management63 Avenue …" the other
+% expect:  0 errors; Ann (# and * affiliations), Bob (#), Cat (*); no ∗ in any affiliation
+% status:  GREEN (101c)
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{{Ann Able{\small $~^{\#*}$}, Bob Baker{\small $~^{\#}$}, Cat Cole{\small $~^{*}$} }
+{}\vspace{1.6mm}\\ \fontsize{10}{10}\selectfont\itshape
+$^{\#}$\,Hellebore Capital Management\\ 63 Avenue des Champs, Paris\\ \,\\
+$^{*}$\,Laboratoire d'Informatique\\ LIX, Palaiseau\\}
+\begin{document}
+\maketitle
+Text.
+\end{document}

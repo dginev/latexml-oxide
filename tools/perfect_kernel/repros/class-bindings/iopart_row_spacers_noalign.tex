@@ -1,0 +1,18 @@
+% witness: 1502.00309 (`a & b \\\ns` then `\mr`: iopart.cls :935-938 `\ms \bs \ns \es` are `\noalign{\vspace{…}}`;
+%          Perl iopart_support.sty.ltxml:223-227 math spaces, which open a row)
+% oracle:  pdflatex cannot load 1502.00309's iopart.cls under TL 2025 (iopart12.clo absent: a harness limit); its
+%          :924-925, :935-938 definitions in an article preamble: 0 errors; "a b / c d"
+% engines: rust 67int17b = 2 errors (`\noalign` cannot be used here); Perl the same shape
+% expect:  0 errors, 0 warnings; two rows, the rule between them
+% status:  RED (67int17b) -> GREEN (68y)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\begin{tabular}{@{}lc}
+\br
+a & b \\\ns
+\mr
+c & d \\\bs
+\br
+\end{tabular}
+\end{document}

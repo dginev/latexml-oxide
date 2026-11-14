@@ -1,0 +1,29 @@
+% mechanism: jheppub.sty:126-131 `\emailAdd` lists the addresses on one "E-mail:" line. One address left that spells
+%   no author, on a multi-author paper, goes to the one author marked as the corresponding author — here by
+%   `\note{Corresponding author.}` (jheppub.sty:79-84, a footnote) on Bob Baker (`marked_corresponding_author`, user
+%   ruling 2026-10-21); ccole@ is Cat Cole's by its spelling
+% witness: 1901.08773 (`beril@`, A. Kopylov), 2510.11030 (`hjhspace223@`, J.-H. Ha), 2211.07892 (`yoomin@`, Y. M.
+%          Oh); not 1802.03677 (`gear8mike@`: M.V. Smirnov's `\note{Corresponding author.}` is note 1, which J.J. Ling
+%          carries too, so the block's since 78f r3: jheppub_note_number_carried_by_two_stays_the_blocks)
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,a Bob
+%          Bakera and Cat Coleb",
+%          "a Univ A", "b Univ B", "E-mail: zq77@x.org, ccole@y.org", the footnote "1 Corresponding author."
+% engines: rust 78f r1 = zq77@ the author block's; int47a and perl: zq77@ Ann Able's, ccole@ Bob Baker's (the n-th rule)
+% expect:  0 errors, 0 warnings; zq77@ Bob Baker's, ccole@ Cat Cole's
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able,}
+\author[a]{Bob Baker\note{Corresponding author.}}
+\author[b]{and Cat Cole}
+\affiliation[a]{Univ A}
+\affiliation[b]{Univ B}
+\emailAdd{zq77@x.org}
+\emailAdd{ccole@y.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

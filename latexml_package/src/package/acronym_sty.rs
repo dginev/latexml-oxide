@@ -22,6 +22,21 @@ LoadDefinitions!({
 
   def_macro_noop("\\AC@placelabel{}")?;
 
+  // acronym.sty:44-84: the options set their switches; `smaller` also loads relsize, whose `\textsmaller` sets the
+  // short forms (`\acsfont`) and whose `\smaller` the document may use itself (1806.02261's `\acro{\smaller KLD}`).
+  DeclareOption!("footnote", "\\AC@footnotetrue");
+  DeclareOption!("nohyperlinks", "\\AC@nohyperlinkstrue");
+  DeclareOption!("printonlyused", "\\AC@printonlyusedtrue");
+  DeclareOption!("withpage", "\\AC@withpagetrue");
+  DeclareOption!("smaller", "\\AC@smallertrue");
+  DeclareOption!("dua", "\\AC@duatrue");
+  DeclareOption!("nolist", "\\AC@nolisttrue\\AC@nohyperlinkstrue");
+  for option in ["printonlyreused", "nolinebreak", "noacroprefix"] {
+    DeclareOption!(option, None);
+  }
+  ProcessOptions!();
+  RawTeX!(r"\ifAC@smaller\RequirePackage{relsize}\def\acsfont#1{\textsmaller{#1}}\fi");
+
   //======================================================================
   // Whether an acronym is used or not
   DefPrimitive!("\\lx@AC@used{}", sub[(id)] {
@@ -55,7 +70,10 @@ LoadDefinitions!({
   // cycle 91: a bare `\ac{ABC}` between paragraphs at top level
   // emits <ltx:glossaryref> outside any <ltx:p>, producing a
   // structurally invalid block-level glossaryref node.
-  DefConstructor!("\\lx@acronym Undigested {}{}{}",
+  // An acronym's key is a name (acronym.sty builds `\csname fn@#1\endcsname` from it), never typeset, so the
+  // constructors read it Semiverbatim: `\acro{gcc_phat}[GCC-PHAT]{…}` raised "Script _ can only appear in math mode"
+  // where pdflatex is silent (2003.05548, 2603.23723; Perl acronym.sty.ltxml:60, :164, :177, :197 digests it).
+  DefConstructor!("\\lx@acronym Undigested Semiverbatim {}{}",
     "<ltx:glossaryref key='#2' inlist='#3' show='#4'/>",
     mode => "text", enter_horizontal => true,
     reversion => "#1{#2}"
@@ -301,7 +319,7 @@ LoadDefinitions!({
     "\\lx@acro@@@item{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}"
   );
   DefConstructor!(
-    "\\lx@acro@@@item{}{}{}{}{}",
+    "\\lx@acro@@@item Semiverbatim {}{}{}{}",
     "<ltx:glossaryentry inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='label'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase role='short'>#4</ltx:glossaryphrase>\
@@ -322,7 +340,7 @@ LoadDefinitions!({
     "\\lx@acro@@@def{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}"
   );
   DefConstructor!(
-    "\\lx@acro@@@def{}{}{}{}{}",
+    "\\lx@acro@@@def Semiverbatim {}{}{}{}",
     "<ltx:glossarydefinition inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='label'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase role='short'>#4</ltx:glossaryphrase>\
@@ -335,7 +353,10 @@ LoadDefinitions!({
   });
 
   Let!("\\newacro", "\\acrodef");
-  Let!("\\acro", "\\acrodef");
+  // `\acro` is the acronym environment's (acronym.sty:254 `\providecommand*{\acro}{\AC@acro}` in `\acronym`, its
+  // group), undefined outside it as in pdflatex: Perl's `\acro` = `\acrodef` here (acronym.sty.ltxml:189) took the
+  // tokens after an outside `\acro{\smaller KLD}` for its long form, in a display's superscript (1806.02261: the
+  // IEEEeqnarray rows broken, four labels lost). KNOWN_PERL_ERRORS #1176.
 
   // Non-standard definite articles
   DefMacro!(
@@ -344,7 +365,7 @@ LoadDefinitions!({
   );
   // ^ float-up: glossarydefinition floats out of glossarylist to glossary
   DefConstructor!(
-    "\\lx@@acro@phrase{}{}{}",
+    "\\lx@@acro@phrase Semiverbatim {}{}",
     "^ <ltx:glossarydefinition inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='#2'>#3</ltx:glossaryphrase>\
      </ltx:glossarydefinition>"
@@ -366,4 +387,21 @@ LoadDefinitions!({
   );
   Let!("\\acroplural", "\\acrodefplural");
   Let!("\\newacroplural", "\\acrodefplural");
+
+  // acronym.sty gives these commands their starred forms with suffix.sty's `\WithSuffix` (acronym.sty:596-…), which
+  // redefines each one `\protected\def` (suffix.sty:53): they pass an expanding read whole. siunitx's `S` cell
+  // `\protected@edef`s its text (siunitx.sty:5730-5741), and `\ac{MAE}` there expanded its star test and `\newif`
+  // switch: "Missing `\fi`", the table left open (witness 2607.15705). The capital forms are let to these at
+  // `\begin{document}` (above) and keep the flag. Guard
+  // `perfect_kernel_batch80a::acronym_commands_pass_a_siunitx_column_whole`.
+  for name in [
+    "ac", "Ac", "acf", "Acf", "acfi", "Acfi", "acfip", "Acfip", "acfp", "Acfp", "acl", "Acl",
+    "aclp", "Aclp", "aclu", "Aclu", "acp", "Acp", "acs", "acsp", "acsu", "iac", "Iac",
+  ] {
+    if let Some(Stored::Expandable(definition)) = lookup_meaning(&T_CS!(&format!("\\{name}"))) {
+      let mut definition = (*definition).clone();
+      definition.is_protected = true;
+      install_definition(definition, None);
+    }
+  }
 });

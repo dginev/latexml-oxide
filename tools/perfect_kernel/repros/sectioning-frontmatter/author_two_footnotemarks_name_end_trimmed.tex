@@ -1,0 +1,21 @@
+% mechanism: two marks after an author's name, spaced (`Ann Able \footnotemark[1] \footnotemark[2]`), or a spaced
+%   mark in a wrapper left empty (`Bob Baker {\small\footnotemark[3]} \footnotemark[4]`): the lift leaves the text
+%   the notes stood between as one text again, so the name's end is trimmed whole, as with one note
+%   (queue_digest.rs `lift_notes_beside` / `join_texts_after`, OD #1001)
+% witness: 1612.03574 (`Kent-Andre Mardal \footnotemark[2] \footnotemark[3] \and`); synthetic on article
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able ∗†", "Bob Baker ‡ §", footnotes "1 Note A." …
+%   "4 Note D."
+% engines: FN1 round 0 (uncommitted lift, no join): 0 errors, 0 warnings; `<personname>Ann Able </personname>` and
+%   `<personname>Bob Baker </personname>` (the second text node trimmed, the first's space left)
+% expect:  0 errors, 0 warnings; `<personname>Ann Able</personname>` then the notes "Note A." and "Note B.";
+%   `<personname>Bob Baker</personname>` then "Note C." and "Note D." (both at 90 %, the notes' text font as on int159a2)
+% status:  RED (FN1 round 0) -> GREEN (FN1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \footnotemark[1] \footnotemark[2] \and Bob Baker {\small\footnotemark[3]} \footnotemark[4]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}\footnotetext[2]{Note B.}\footnotetext[3]{Note C.}\footnotetext[4]{Note D.}
+Text.
+\end{document}

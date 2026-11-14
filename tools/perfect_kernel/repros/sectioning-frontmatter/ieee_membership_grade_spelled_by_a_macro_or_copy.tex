@@ -1,0 +1,17 @@
+% witness: bindsplit ie3 (`\newcommand\memb{\IEEEmembership}`), segaudit ie2 (`\newcommand\mem[1]{\IEEEmembership{#1}}`),
+%          a `\let` copy (synthetic); the literal shape 2306.15457, 2508.00603
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, Bob Baker, Senior Member, IEEE, and Cy Coe, Fellow, IEEE"
+% engines: rust P5abase = Ann Able, Bob Baker, Cy Coe with no grade, 0 Warnings (the token cut `name_memberships` saw
+%          only the spelling `\IEEEmembership`); Perl = every grade dropped (IEEEtran.cls.ltxml:143 '')
+% expect:  0 errors, 0 warnings; three creators, each its own grade as its `membership` contact
+% status:  RED (P5abase) -> GREEN (P5a: the grade is the reading's contact event, OD #1016)
+\documentclass[journal]{IEEEtran}
+\newcommand\memb{\IEEEmembership}
+\newcommand\mem[1]{\IEEEmembership{#1}}
+\let\grade\IEEEmembership
+\begin{document}
+\title{T}
+\author{Ann~Able,~\memb{Member,~IEEE}, Bob~Baker,~\mem{Senior Member,~IEEE}, and~Cy~Coe,~\grade{Fellow,~IEEE}}
+\maketitle
+Text.
+\end{document}

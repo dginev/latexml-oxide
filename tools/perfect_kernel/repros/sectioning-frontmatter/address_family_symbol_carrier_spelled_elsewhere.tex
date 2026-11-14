@@ -1,0 +1,22 @@
+% A symbol-led entry's addresses: one spells its carrier, the other spells no one and goes to the carriers no other
+% address of the entry spells (`entry_address_owners`' `owner:carriers`, as the only-carrier step excludes them).
+% Review rev100b S1.
+% witness: 1907.01388 (`* chinarentao@163.com, zhutou@ustc.edu` under Tao Ren* and Tao Zhou*)
+% oracle:  pdflatex 0 errors: "Univ X, Town", "Univ Y, Town", "* ann.able@x.org, qz77@y.org"
+% engines: rust int127a = 0 errors, ann.able@ to Ann, qz77@ to Cat; 100b r1 = qz77@ to Ann and Cat; perl = not run
+% expect:  0 errors, 0 warnings; Ann: Univ X + ann.able@; Bob: Univ X; Cat: Univ Y + qz77@
+% status:  RED (100b r1) -> GREEN (100b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able$^*$}
+\author[1]{Bob Baker}
+\author[2]{Cat Cole$^*$}
+\affil[1]{Univ X, Town}
+\affil[2]{Univ Y, Town}
+\affil[*]{ann.able@x.org, qz77@y.org}
+\maketitle
+Body.
+\end{document}

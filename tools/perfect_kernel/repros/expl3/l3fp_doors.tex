@@ -1,0 +1,50 @@
+% mechanism: `\__fp_parse:n`, `\__fp_parse_o:n` and `\__fp_parse_operand:Nw` stay the format's macros, whatever the native l3fp answers: their
+%   `\meaning`, prefixes and replacement text, a one-step `\exp_after:wN` or `\exp_args:No` of a door or of the operand macro. What the operand
+%   macro's run leaves is what the answer leaves. A wholly braced argument (TeX strips the pair of a delimited argument, not of the undelimited
+%   one here) reads as the macro reads it. `\__fp_parse_o:n`'s callers (`\fp_step_function:nnnN`) are answered too.
+% witness: review of batch P2, no arXiv paper
+% oracle:  pdflatex: this text
+% engines: rust: native and raw byte-identical (Perl has no native path)
+% expect:  0 Errors, 0 Warnings; the rows below
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new_protected:Npn \T #1 { \fp_to_tl:n {#1} ;~ }
+\cs_new:Npn \ToStr #1 { \tl_to_str:n {#1} }
+\cs_new:Npn \B #1 { [#1] }
+\cs_set_eq:NN \orig:n \__fp_parse:n
+\ExplSyntaxOff
+\begin{document}
+\ttfamily
+\ExplSyntaxOn
+\tl_set:Ne \l_tmpa_tl { \token_to_meaning:N \__fp_parse:n }
+Meaning:~\tl_to_str:N \l_tmpa_tl
+
+\tl_set:Ne \l_tmpa_tl { \token_to_meaning:N \__fp_parse_operand:Nw }
+Operand:~\tl_to_str:N \l_tmpa_tl
+
+\tl_set:Ne \l_tmpa_tl { \cs_replacement_spec:N \__fp_parse_o:n }
+Replacement:~\tl_to_str:N \l_tmpa_tl
+
+Prefix:~\cs_prefix_spec:N \__fp_parse:n ;~\cs_prefix_spec:N \__fp_parse_operand:Nw ;~\cs_argument_spec:N \__fp_parse:n ;~\cs_if_eq:NNTF \__fp_parse:n \orig:n {same} {other}
+
+\tl_set:Ne \l_tmpa_tl { \exp_after:wN \ToStr \exp_after:wN { \__fp_parse:n {1+1} } }
+Onestep:~\tl_to_str:N \l_tmpa_tl
+
+\tl_set:Ne \l_tmpa_tl { \exp_args:No \tl_to_str:n { \__fp_parse:n {1} } }
+Oargs:~\tl_to_str:N \l_tmpa_tl
+
+\tl_set:Ne \l_tmpa_tl { \exp_after:wN \ToStr \exp_after:wN { \__fp_parse_operand:Nw \c__fp_prec_end_int \__fp_parse_expand:w 1 \s__fp_expr_mark \__fp_parse_infix_end:N \s__fp_expr_stop } }
+Inner:~\tl_to_str:N \l_tmpa_tl
+
+\tl_set:Ne \l_tmpa_tl { \exp_after:wN \ToStr \exp_after:wN { \exp:w \__fp_parse_operand:Nw \c__fp_prec_end_int \__fp_parse_expand:w 1+1 \s__fp_expr_mark \__fp_parse_infix_end:N \s__fp_expr_stop } }
+Leaves:~\tl_to_str:N \l_tmpa_tl
+
+\tl_set:Ne \l_tmpa_tl { \exp_args:Nf \tl_to_str:n { \__fp_parse:n {1+1} } }
+Whole:~\tl_to_str:N \l_tmpa_tl
+
+Braces:~\T{{1}+1}\T{{1}}\T{{1+1}}\T{{1}{2}}\T{~{1}}\T{{{1}}+1}\T{1+{1}}
+
+Step:~\fp_step_function:nnnN {1} {1} {3} \B ;~\fp_to_tl:n {\__fp_parse:n{3}} ;~\fp_to_tl:n {1+\__fp_parse:n{3}*2}
+\ExplSyntaxOff
+\end{document}

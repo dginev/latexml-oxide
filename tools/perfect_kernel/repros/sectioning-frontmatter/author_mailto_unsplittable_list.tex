@@ -1,0 +1,14 @@
+% witness: 2605.27805 (`\{luoyanyan,…,fengjunlan\}it@chinamobile.com`); the r8 re-review of batch 77p (finding 4,
+%          probe t5)
+% oracle:  pdflatex 0 errors: three names, Univ A, a mailto link printing {aable,bbaker,ccole}it@y.edu
+% engines: rust int38 (77p r11) = 0 errors; the whole list the e-mail of Bob Baker (int34a: of Cat Cole)
+% expect:  0 errors, 0 warnings; the list one e-mail contact of the block's shared creator, no name holding it
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able, Bob Baker, Cat Cole \\ Univ A \\ \href{mailto:x@y.edu}{\{aable,bbaker,ccole\}it@y.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: under `\documentclass{nosuchclass}` (the OmniBus path) the title-page check's print leaves out the first
+%   author's words (Alice Able, Polar Lab), where article's stand-in prints every column (revFX25b N2; pre-existing,
+%   int159a0 and FX25b alike; no count lost: the words reach the check from the frontmatter commands' text)
+% witness: synthetic (revFX25b probe p4/col_nosuchclass)
+% oracle:  no PDF (unknown class); under article pdflatex prints both columns, the date and the note
+% engines: int159a0, FX25b: the check's print holds no "Alice Able", no "Polar Lab"
+% expect:  the print holds every author's words, as under article
+% status:  RED (revFX25b N2, catalogued at integration, int159a)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\makeatletter
+\def\and{\end{tabular}\hskip 1em \@plus.17fil\begin{tabular}[t]{c}}
+\newcommand\coauthor[1]{\g@addto@macro\@author{\and #1}}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice Able\\Polar Lab}
+\coauthor{Bob Brown\\Lunar Institute\thanks{Moon note}}
+\date{Some Day}
+\maketitle
+Body.
+\end{document}

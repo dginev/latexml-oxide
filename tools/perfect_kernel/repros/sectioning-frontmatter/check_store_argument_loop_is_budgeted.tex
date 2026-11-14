@@ -1,0 +1,28 @@
+% A looping argument a raw setter only stores (rev108b2 finding 1, synthetic): the class never prints it, so pdflatex prints
+% the whole body, while the title-page check's digestion of it (`argument_print`) never ended: `Fatal:Timeout:Convert` at the
+% conversion's timeout on 108b, the document lost. The check's run has a read budget (`gullet::read_budget`,
+% title_page_check.rs `check_run_budget`): over it the run is abandoned and rolled back, and one Warning says what was left
+% out. The same shapes: `\def\x{\end{document}\x}\x`, and `\loop\iftrue\end{document}\repeat`, whose conditionals the budget
+% puts back (it ended in `Fatal:Timeout:IfLimit`; `perfect_kernel_batchr1::a_run_over_budget_counts_no_conditional_against_the_limit`
+% under an `iflimit` the run and the body reach only together).
+% witness: none (A/B F 7 = 7 on 2,530 papers)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "One", "Body text one."
+% engines: rust int139c = full body, F=0, 0.15 s; 108b `Fatal:Timeout:Convert` at --timeout=60, 39-byte XML; perl = not run
+% expect:  0 errors, 0 fatal, 1 warning (frontmatter:check_budget naming \closing's argument and its size); the body kept
+% status:  RED (108b) -> GREEN (R1)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstoreloopcls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\closing#1{\g@addto@macro\@closing{#1}}\def\@closing{}
+\newcommand{\printclosing}{\@closing}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}\fi}
+\end{filecontents*}
+\documentclass{checkstoreloopcls}
+\title{A Title}\author{Ann Able}
+\closing{\def\x{\begin{center}\end{center}\x}\x}
+\begin{document}\maketitle
+\section{One}
+Body text one.
+\end{document}

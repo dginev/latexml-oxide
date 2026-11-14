@@ -1,0 +1,19 @@
+% mechanism: as revtex_affiliation_isotope_prescript_keeps_its_line.tex, the script on an empty base and a braced
+%   printed one: `${}^{87}{\rm Rb}$` is no mark (the structural reader); the writer's cut (`emitter::plan`, tokens)
+%   sent "Rb Lab" off on int160c; the lexer reads the script as the formula's text (ISO1)
+% witness: 2105.07958 (the prescript class of its `$\rm ^a$` mark; reviewer probe x2)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "2 Univ Y, 87Rb Lab" on Baker's line
+% engines: rust int118a, 90a: `written-different: Affiliation rblab: reading [Block], written []`, 1 Warning, Baker
+%   "2Univ Y" and "Rb 87 Lab" a nameless creator's
+% expect:  0 errors, 0 warnings; Able: Univ X; Baker: Univ Y, ⁸⁷Rb Lab (the whole line)
+% engines: rust int160c: Baker "2 Univ Y", "Rb 87 Lab" a nameless creator's; ISO1: the whole line, Baker's
+% status:  GREEN (Z2, Z3) -> RED (int160c) -> GREEN (ISO1) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X\\ $^{2}$Univ Y, ${}^{87}{\rm Rb}$ Lab}
+\maketitle
+Text.
+\end{document}

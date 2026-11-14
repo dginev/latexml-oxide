@@ -1,0 +1,17 @@
+% mechanism: the names a `\quad` parts each request the affiliation their mark picks; one creator holding both raised merged_creators
+% witness: 2610.07087, 2609.20129 family
+% oracle:  pdflatex: 0 errors; the two names apart, marked
+% engines: rust int139a: Error:frontmatter:merged_creators, one creator; perl (authblk.sty.ltxml:52-55, read): one creator
+% expect:  0 errors; two creators, each with its affiliation
+% status:  RED (int139a) -> GREEN (108a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \quad Bob Baker$^{2}$}
+\affil{$^{1}$Univ X}
+\affil{$^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

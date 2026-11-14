@@ -1,0 +1,18 @@
+% witness: none on arXiv read; listings.sty:1600-1609 (`\newcounter{lstlisting}[chapter]`, `\thelstlisting` = `\thechapter.\@arabic\c@lstlisting`), `numberbychapter` key
+% oracle:  pdflatex (TL 2025) 0 errors: "Listing 1.1: A", "Listing 2.1: B", then 2.1.
+% engines: M3r2, int141a, Perl: "Listing 1", "Listing 2", then 2: the binding keeps the counter within `document`, its ids `LST<n>`.
+% expect:  0 errors; pdflatex's numbers
+% status:  RED
+\documentclass{book}
+\usepackage{listings}
+\begin{document}
+\chapter{One}
+\begin{lstlisting}[caption={A}]
+x
+\end{lstlisting}
+\chapter{Two}
+\begin{lstlisting}[caption={B}]
+y
+\end{lstlisting}
+\thelstlisting
+\end{document}

@@ -25,7 +25,11 @@
 //! The file ends with a **retraction record**: the MathSciNet `\cprime` transliteration family was
 //! briefly always-on here and was removed 2026-07-27. The comment is kept because it carries the
 //! witnesses and the reasoning — do not re-add the family.
-use latexml_core::document::{can_auto_close, can_contain};
+use latexml_core::{
+  definition::origin::DefinitionOrigin,
+  document::{can_auto_close, can_contain},
+  state::file_loaded,
+};
 
 use crate::{
   latex_constructs::{begin_environment_by_macro, end_environment_by_macro},
@@ -47,6 +51,20 @@ LoadDefinitions!({
   // not a decrement: a binding list closed by the kernel `\endlist` (nih/denselists'
   // `{Enumerate}{\Onumerate}{\endlist}`) has already decremented it.
   DefMacro!("\\lx@listdepth@restore", r"\global\@listdepth");
+
+  // A LaTeX display — `\[`, `{displaymath}` (latex.ltx:15734 `\def\displaymath{\[}`), `{equation}`, `{equation*}`
+  // (sect07.rs) — runs `\lx@mathdisplay@hook` where it begins, inside the display's group: empty for latex.ltx's
+  // displays, which are `$$`; amsmath's when its `\mathdisplay` sets them in an `\hbox{$…$}` under `\if@fleqn`
+  // (amsmath_sty.rs; tex_math.rs `\lx@math@in@hbox`). A primitive `$$` does not run it. `\[` (sect07.rs) is Perl's
+  // (latex_constructs.pool.ltxml:2070) followed by the hook. Guard
+  // `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
+  DefMacro!("\\lx@mathdisplay@hook", "");
+  // `{equation}` runs `\lx@equation@hook`, the display hook unless a class sets `{equation}` apart: fleqn.clo:92-103
+  // sets it as `\hb@xt@\linewidth\bgroup $\m@th\displaystyle\hskip\mathindent`, so an author's `$` in it ends that
+  // math and starts text in the box (fleqn_sty.rs `math_displays_in_hbox`), where its `\[` (:50-73) opens a `\bgroup`
+  // after the `$`, which an author's `$` meets as TeX's "Missing } inserted". amsmath, redefining `{equation}`, sets it
+  // back (amsmath_sty.rs). Guard `perfect_kernel_batch73b::dollar_in_a_fleqn_clo_display_is_text`.
+  DefMacro!("\\lx@equation@hook", "\\lx@mathdisplay@hook");
 
   // The register LaTeX's paragraph hook runs: latex.ltx:9070 `\newtoks\everypar` and :9072-9077
   // put `\the\toks<number>` in `\g__para_standard_everypar_tl`, so the hook names the user list by
@@ -80,10 +98,35 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@written@copy", {
     assign_value(crate::tex_math::WRITTEN_COPY, true, Some(Scope::Local));
   });
+  // The text of a caption's toc copy (`\@caption@@@`, longtable's and listings' captions): the `[short]`, or the caption
+  // where it is empty (`\caption[]{…}`) or the caption itself (`\@dblarg`'s copy, latex.ltx:17391-17400 — a `[short]`
+  // the same as the caption reads alike). The caption is then re-read, typeset where it stands (`\lx@reread@copy`): a
+  // Warning for one source occurrence is given there only (OXIDIZED_DESIGN_DIVERGENCES #721; guard
+  // `perfect_kernel_batch71a::undelimited_argument_warning_once_per_occurrence`). Chosen by the tokens, without
+  // expanding either (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
+  DefMacro!("\\lx@toc@copy@text{}{}", sub[(short, caption)] {
+    if short.is_empty() || short == caption {
+      let mut tokens = vec![T_CS!("\\lx@reread@copy")];
+      tokens.extend(caption.unlist());
+      Tokens::new(tokens)
+    } else {
+      short
+    }
+  });
   DefMacro!(
     "\\lx@toc@copy@neutralize",
-    r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
+    r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\lx@caption@postlabel\@gobble\let\lx@label@type\@gobble\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
   );
+
+  // The class's `\@makecaption{<label>}{<text>}` for a caption of type `#1`: latex.ltx's "Figure 1: text" (the
+  // `\sbox\@tempboxa{#1: #2}` of `\@makecaption`, the format of the kernel's figure and table, sect09.rs). A
+  // `\@float` of any other type is made by it too — newfloat's types (newfloat_sty.rs), listings' `\lst@makecaption`
+  // (listings.sty:1675) — so a class whose `\@makecaption` is its own redefines this, its figure's and table's
+  // formats with it (amsart's ". ", ams_support_sty.rs `ams_class_caption_format`; IEEEtran's "Fig. 1." and "TABLE I"
+  // above, ieeetran_cls.rs). float.sty's own styles make their captions themselves (float_sty.rs), and caption, when
+  // loaded, its own (acmart's: sigplan's minted `listing` "Listing 1.", 1807.03757). Guards
+  // `perfect_kernel_batch78y::{ieeetran_*, amsart_newfloat_caption_takes_the_class_format}`.
+  DefMacro!("\\lx@makecaption{}{}", r"\lx@tag[][: ]{\lx@fnum@@{#1}}#2");
 
   //======================================================================
   // 0. The part internals `\@part[#1]#2` / `\@spart#1` — the sectioning hook
@@ -169,6 +212,23 @@ LoadDefinitions!({
   // (zugferd.sty:101 `\IfPackageAtLeastTF{pdfmanagement-testphase}{2024/09/13}
   // {}{…too old}`; zugferd DEMOs, sweep 120), so its `\ver@` records the
   // installed file's `\ProvidesExplPackage` date.
+  // "A stand-in's copy provides" (OXIDIZED_DESIGN_DIVERGENCES #731; `state::note_copy_provides_assignment`): the scope
+  // markers around the `\AtEndOfClass`/`\AtEndOfPackage` code a stand-in's copy registers (`state::copy_provides_wrap`),
+  // which runs at the end of its load under the copy's provides-mode (aa.cls:71's `{abstract}` keeps the binding's),
+  // and the stand-in for lthooks' `\AddToHook code` while the copy is read (`state::swap_copy_provides_hook_seam`):
+  // the document-time code it registers is not registered (`state::copy_provides_defers`; aastex7.cls:459's
+  // `\AddToHook{enddocument}`, 2504.00922).
+  DefPrimitive!("\\lx@copy@provides@begin{}", sub[(id)] {
+    let id = id.to_string().trim().parse::<u32>().unwrap_or(0);
+    definition::origin::enter_copy_provides(id);
+  });
+  DefPrimitive!("\\lx@copy@provides@end", {
+    definition::origin::leave_copy_provides();
+  });
+  DefMacro!("\\lx@copy@provides@AddToHook{}{}{}", sub[(_hook, _label, _code)] {
+    copy_provides_defers("\\AddToHook");
+    Tokens!()
+  });
   DefPrimitive!("\\lx@record@provided{}", sub[(file)] {
     let file = file.to_string();
     let ver_cs = T_CS!(s!("\\ver@{file}"));
@@ -454,14 +514,35 @@ LoadDefinitions!({
   // partway but the cascade has many tendrils — defer to a focused
   // IncludeInRelease refactor.
 
-  // List formatting macros from article.cls / report.cls / book.cls.
-  // No-ops because LaTeXML handles list formatting via CSS.
-  def_macro_noop("\\@listi")?;
-  def_macro_noop("\\@listii")?;
-  def_macro_noop("\\@listiii")?;
-  def_macro_noop("\\@listiv")?;
-  def_macro_noop("\\@listv")?;
-  def_macro_noop("\\@listvi")?;
+  // List parameters, from size10.clo:216-249: bodies as the real ones, though LaTeXML's lists never run them (CSS
+  // formats them). An empty one breaks a class's non-robust `\normalsize` (`\let\@listi\@listI`, size10.clo:53) expanded
+  // in a `\protected@xdef`: `\let` takes the next letter for its name, "Missing control sequence" and the letter lost
+  // (esapub2005.cls's `\affil{\normalsize Campus…}` through authblk, printed "ampus", 2310.07393). Perl leaves them
+  // undefined, which stay in the expansion.
+  DefMacro!(
+    "\\@listi",
+    "\\leftmargin\\leftmargini\\parsep 4\\p@ \\@plus2\\p@ \\@minus\\p@\\topsep 8\\p@ \\@plus2\\p@ \\@minus4\\p@\\itemsep4\\p@ \\@plus2\\p@ \\@minus\\p@"
+  );
+  DefMacro!(
+    "\\@listii",
+    "\\leftmargin\\leftmarginii\\labelwidth\\leftmarginii\\advance\\labelwidth-\\labelsep\\topsep 4\\p@ \\@plus2\\p@ \\@minus\\p@\\parsep 2\\p@ \\@plus\\p@ \\@minus\\p@\\itemsep\\parsep"
+  );
+  DefMacro!(
+    "\\@listiii",
+    "\\leftmargin\\leftmarginiii\\labelwidth\\leftmarginiii\\advance\\labelwidth-\\labelsep\\topsep 2\\p@ \\@plus\\p@ \\@minus\\p@\\parsep\\z@\\partopsep\\p@ \\@plus\\z@ \\@minus\\p@\\itemsep\\topsep"
+  );
+  DefMacro!(
+    "\\@listiv",
+    "\\leftmargin\\leftmarginiv\\labelwidth\\leftmarginiv\\advance\\labelwidth-\\labelsep"
+  );
+  DefMacro!(
+    "\\@listv",
+    "\\leftmargin\\leftmarginv\\labelwidth\\leftmarginv\\advance\\labelwidth-\\labelsep"
+  );
+  DefMacro!(
+    "\\@listvi",
+    "\\leftmargin\\leftmarginvi\\labelwidth\\leftmarginvi\\advance\\labelwidth-\\labelsep"
+  );
   // size1x.clo:220 `\let\@listI\@listi` — the pristine copy that a class's
   // size commands restore (`\let\@listi\@listI`, size10.clo:53,
   // tufte-common.def:374). Witness: tikz-network manual (tufte-book raw).
@@ -529,12 +610,13 @@ LoadDefinitions!({
   // constructor (sect02.rs) runs it where latex.ltx runs the kernel hook;
   // latexrelease.sty:15609 can `\let` it to `\relax`. Perl keeps the preamble
   // definitions. `\init@series@setup` (latex.ltx:13902-13920), the hook's other
-  // half, is not run: the bound `\bfseries`/`\mdseries` do not read its
-  // `\bfseries@rm` family, but it also runs `\reset@font`, `\mdseries` and
-  // `\let\seriesdefault\f@series`, so a preamble `\itshape\bfseries` stays in
-  // force in the body where pdflatex's body is upright medium (a residual
-  // shared with the base and Perl; OXIDIZED_DESIGN_DIVERGENCES #315).
-  // Guard: `rtoken_patchcmd::body_shape_switches_are_protected`.
+  // half, runs after it (sect02.rs): the bound `\bfseries`/`\mdseries` do not
+  // read its `\bfseries@rm` family, but its `\reset@font` (the document's
+  // `\familydefault`, sect13.rs `\normalfont`) ends a preamble
+  // `\itshape\bfseries`, which pdflatex's body does not carry (Perl does;
+  // OXIDIZED_DESIGN_DIVERGENCES #315 addendum, #779).
+  // Guards: `rtoken_patchcmd::body_shape_switches_are_protected`,
+  // `perfect_kernel_batch77u::preamble_font_switch_does_not_reach_the_body`.
   DefMacro!(
     "\\reinstall@nfss@defs",
     r"\protected\def\upshape{\not@math@alphabet@@{\updefault}\fontshape{\updefault}\selectfont}%
@@ -545,6 +627,95 @@ LoadDefinitions!({
 \protected\def\swshape{\not@math@alphabet\swshape\relax\fontshape\swdefault\selectfont}%
 \protected\def\sscshape{\not@math@alphabet\sscshape\relax\fontshape\sscdefault\selectfont}"
   );
+
+  // `\__hook_patch_command:Nnn` (latex.ltx:6888), which applies a `cmd/<name>/<hook>` hook from `\begin{document}`
+  // on: the kernel patches a macro; a binding (a constructor or primitive of ours; a locked macro, a Rust-bodied one, one
+  // reading LaTeXML's argument types) takes no patch until the macro faces, so its hook does not run: a Warning for the
+  // document's code, an Info for a class's or package's (as their redefinitions of a locked command, `state.rs`).
+  Let!("\\lx@hook@patch@command", "\\__hook_patch_command:Nnn");
+  DefMacro!("\\__hook_patch_command:Nnn Token {} {}", sub[(cs, name, hook)] {
+    let meaning = lookup_meaning(&cs);
+    let binding = cs.with_str(is_name_locked)
+      || match &meaning {
+        Some(Stored::Expandable(m)) => {
+          !matches!(m.get_expansion(), Some(ExpansionBody::Tokens(_)))
+            || m.get_parameters().is_some_and(|ps| {
+              ps.get_parameters().iter().any(|p| {
+                !with(p.name, |n| matches!(n, "Plain" | "Until" | "UntilBrace" | "Match" | "RequireBrace"))
+              })
+            })
+        },
+        // no macro to patch, whoever declared it (`\newtheorem`'s `\thm` is the document's)
+        Some(Stored::Constructor(_) | Stored::Primitive(_) | Stored::MathPrimitive(_)) => true,
+        _ => false,
+      };
+    if binding {
+      let hook = s!("cmd/{}/{}", name.to_string(), hook.to_string());
+      let origin = match &meaning {
+        Some(Stored::Expandable(m)) => m.origin,
+        Some(Stored::Constructor(c)) => c.origin,
+        Some(Stored::Primitive(p)) => p.origin,
+        _ => DefinitionOrigin::Unknown,
+      };
+      let command = if origin.is_latexml_owned() {
+        s!("LaTeXML's binding of {}", cs.to_string())
+      } else {
+        cs.to_string()
+      };
+      let message = s!("{command} takes no generic hook; its code does not run");
+      assign_value(&s!("{HOOK_DECLINED}{hook}"), Stored::String(pin(&message)), Some(Scope::Global));
+      // from `\begin{document}` on the kernel patches before it stores the code (`\__hook_cmd_begindocument_code:` is
+      // gone, latex.ltx:6870, :5443-5475): the store step decides (KOMA-Script 3.49 scrartcl.cls:3306-3313)
+      if lookup_meaning(&T_CS!("\\__hook_cmd_begindocument_code:")).is_some() {
+        if document_hook_code(&hook) {
+          Warn!("hook", hook, message);
+        } else {
+          Info!("hook", hook, message);
+        }
+      }
+      return Ok(Tokens!());
+    }
+    let mut call = vec![T_CS!("\\lx@hook@patch@command"), cs, T_BEGIN!()];
+    call.extend(name.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(hook.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  }, protected => true);
+  // lthooks' store steps (latex.ltx:5355, :6332): code stored into a hook whose patch was declined is lost, so each
+  // store is decided by its owner — the document's (`top-level`, a label naming no loaded class or package, and
+  // `\AddToHookNext`'s, which carries none) a Warning, a class's or package's an Info.
+  Let!("\\lx@hook@gput@code@do", "\\__hook_hook_gput_code_do:nnn");
+  DefMacro!("\\__hook_hook_gput_code_do:nnn {} {} {}", sub[(hook, label, code)] {
+    let name = hook.to_string();
+    let message = lookup_string(&s!("{HOOK_DECLINED}{name}"));
+    if !message.is_empty() {
+      if document_hook_label(&label.to_string()) {
+        Warn!("hook", name, message);
+      } else {
+        Info!("hook", name, message);
+      }
+    }
+    let mut call = vec![T_CS!("\\lx@hook@gput@code@do"), T_BEGIN!()];
+    for arg in [hook, label, code] {
+      call.extend(arg.unlist());
+      call.extend([T_END!(), T_BEGIN!()]);
+    }
+    call.pop();
+    Ok(Tokens::new(call))
+  }, protected => true);
+  Let!("\\lx@hook@gput@next@do", "\\__hook_gput_next_do:nn");
+  DefMacro!("\\__hook_gput_next_do:nn {}", sub[(hook)] {
+    let name = hook.to_string();
+    let message = lookup_string(&s!("{HOOK_DECLINED}{name}"));
+    if !message.is_empty() {
+      Warn!("hook", name, message);
+    }
+    let mut call = vec![T_CS!("\\lx@hook@gput@next@do"), T_BEGIN!()];
+    call.extend(hook.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  }, protected => true);
 
   // `\@latexbug` — kernel macro used to mark would-be bug reports.
   // No-op stub.
@@ -594,15 +765,16 @@ LoadDefinitions!({
   //======================================================================
   // 6. Modern LaTeX (2015+) extras
   //======================================================================
-  // `\extrafloats{N}` — request N extra float slots (no-op in LaTeXML).
-  DefPrimitive!("\\extrafloats{}", None);
+  // `\extrafloats{N}` — request N extra float slots (no-op in LaTeXML): no box, as latex.ltx's macro leaves none.
+  DefPrimitive!("\\extrafloats{}", {});
 
   // `\wlog{...}` — write to log only (no-op in LaTeXML).
   def_macro_noop("\\wlog{}")?;
 
   // `\Gin@driver` — pre-defined empty so graphics.sty doesn't error
-  // when loaded from disk (LaTeXML doesn't run a Backend driver).
-  // Not in Perl source; pure Rust hotfix.
+  // when loaded from disk (LaTeXML doesn't run a Backend driver); Perl
+  // latex_constructs.pool.ltxml:4976 defines it empty too. The graphics
+  // binding gives it the driver file graphics.cfg would (graphics_sty.rs).
   def_macro_noop("\\Gin@driver")?;
 
   // `\@tabacckludge` simplified body — Perl-faithful body lives in
@@ -646,12 +818,14 @@ LoadDefinitions!({
   DefMacro!("\\thefootnote", "\\arabic{footnote}");
   NewCounter!("mpfootnote");
   DefMacro!("\\thempfn", "\\thefootnote");
-  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  // A minipage's notes are lettered in italics, latex.ltx:17638 (Perl latex_base.pool.ltxml:272 `\arabic`, unused
+  // there: its minipage numbers its notes as the page's; KNOWN_PERL_ERRORS #1049)
+  DefMacro!("\\thempfootnote", "{\\itshape\\@alph\\c@mpfootnote}");
   DefRegister!("\\footnotesep" => Dimension::new(0));
 
   // C.4.4 / C.5.1 NewCounters (Perl latex_base L300, L312) — dump-path
-  // coverage. \@startsection's SetCounter to 3 (in latex_constructs.rs)
-  // requires the counter to exist beforehand.
+  // coverage: the counters exist before any class sets them, at 0 as
+  // Perl's and latex.ltx:17332 leave `secnumdepth` until a class does (68u).
   NewCounter!("tocdepth");
   NewCounter!("secnumdepth");
 
@@ -741,24 +915,21 @@ LoadDefinitions!({
   // protected => true prevents read_x_token(fully_expand=false) from
   // expanding this (needed for lx_change_case_tokens to preserve
   // \ensuremath{} content unchanged).
-  DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if lookup_bool_sym(pin!("IN_MATH")) {
-      stuff.unlist()
-    } else {
-      // latex.ltx:15807 `\long\def\@ensuredmath#1{$\relax#1$}`: the `\relax`
-      // keeps an EMPTY argument from producing adjacent `$$`, which the mouth
-      // reads as a display-math shift (polynom.sty:1656-1687 Horner scheme:
-      // an empty p-column cell fed to `\ensuremath{##}` inside `\@startpbox`
-      // opened a display frame in a text box — 26 "Missing $ inserted",
-      // polydemo). Perl's latex_constructs.pool.ltxml:2076-2080 omits it too
-      // (SHARED, worse there); pdflatex clean.
-      // Guard: `perfect_kernel_batch56::ensuremath_empty_argument_in_text_box`.
-      let mut result = vec![T_MATH!(), T_CS!("\\relax")];
-      result.extend(stuff.unlist());
-      result.push(T_MATH!());
-      result
-    }
-  }, protected => true);
+  //
+  // Its body is the kernel's `\ensuremath ` (latex.ltx:15801-15806): no parameter, each branch reading its own
+  // argument. A one-step expansion is then TeX's, where a parameter would take the group's `}`: xstring's `\StrExpand[2]`
+  // of a lone `\ensuremath` (membranecomputing:509). `\@ensuredmath`'s `\relax` (latex.ltx:15807) keeps an EMPTY
+  // argument from producing adjacent `$$`, which the mouth reads as a display-math shift (polynom.sty:1656-1687 Horner
+  // scheme: an empty p-column cell fed to `\ensuremath{##}` inside `\@startpbox` opened a display frame in a text box —
+  // 26 "Missing $ inserted", polydemo). Perl's latex_constructs.pool.ltxml:2076-2080 reads `{}` and omits the `\relax`
+  // (SHARED, worse there; KPE #1212); pdflatex clean.
+  // Guards: `perfect_kernel_batch56::ensuremath_empty_argument_in_text_box`,
+  // `perfect_kernel_batchm3::ensuremath_expanded_one_step_alone_in_a_macro`.
+  DefMacro!(
+    "\\@ensuremath",
+    r"\ifmmode\expandafter\@firstofone\else\expandafter\@ensuredmath\fi",
+    protected => true
+  );
 
   //======================================================================
   // 8. {filecontents}/{filecontents*} environments — Rust impl
@@ -819,11 +990,20 @@ LoadDefinitions!({
     // latex.ltx:18956-18967 `\filec@ntents@opt`: the bracket is a comma list
     // and each key is matched EXACTLY (`\filec@ntents@noheader`), never by
     // substring.
-    let noheader = header_star
-      || opts
+    let has_option = |key: &str| {
+      opts
         .as_ref()
-        .map(|o| o.to_string().split(',').any(|k| k.trim() == "noheader"))
-        .unwrap_or(false);
+        .is_some_and(|o| o.to_string().split(',').any(|k| k.trim() == key))
+    };
+    let noheader = header_star || has_option("noheader");
+    // latex.ltx:18990-19004 `\filec@ntents`: unless `force`/`overwrite` (`\@fileswfalse`, :18967-18968), a file
+    // `\openin` finds — anywhere on the search path, or in the current directory only under `nosearch` (:18970) —
+    // is kept: "File `name' already exists on the system. Not generating it from this source", the environment's
+    // lines read and dropped. Writing it shadowed the `name.tex` a paper ships beside the document (KNOWN_PERL_ERRORS
+    // #279 residual). Guard `perfect_kernel_batch77s::filecontents_keeps_a_file_on_disk`.
+    let keep_existing = !has_option("force")
+      && !has_option("overwrite")
+      && filecontents_target_exists(&filename, has_option("nosearch"));
     let mut lines: Vec<String> = Vec::new();
     if !noheader {
       lines.push(format!("%% LaTeX2e file `{filename}'"));
@@ -863,6 +1043,19 @@ LoadDefinitions!({
       }
       break;
     }
+    if keep_existing {
+      let place = if has_option("nosearch") {
+        "in current directory"
+      } else {
+        "exists on the system"
+      };
+      Info!(
+        "note",
+        "filecontents",
+        s!("File `{filename}' already {place}. Not generating it from this source")
+      );
+      return Ok(());
+    }
     let n = lines.len();
     Info!(
       "note",
@@ -876,6 +1069,17 @@ LoadDefinitions!({
     // given, as LaTeX's `\@curr@file` does.
     vfs_store(&output_file_name(&filename), &lines.join("\n"));
     Ok(())
+  }
+  /// Does `\openin` find the file a `{filecontents}` names (latex.ltx:18993-18995 `\openin\@inputcheck\q@curr@file`)?
+  /// A file `\openin` can read: a virtual one an earlier `{filecontents}`/`\openout` wrote, or one on disk — not a
+  /// binding answering for an absent file. `nosearch` looks in the document's own directories only.
+  fn filecontents_target_exists(filename: &str, nosearch: bool) -> bool {
+    let options = FindFileOptions {
+      search_paths_only: nosearch,
+      ..FindFileOptions::default()
+    };
+    find_file(filename, Some(options))
+      .is_some_and(|path| vfs_exists(&path) || std::path::Path::new(&path).is_file())
   }
   // The \filecontents primitive reads filename + raw lines until
   // `\end{<current environment>}`. The `\begin` of that environment (its own
@@ -990,6 +1194,16 @@ LoadDefinitions!({
     let pool = lookup_definition(&cs)?.is_some_and(|prev| prev.get_origin().is_latexml_owned());
     Ok(if pool { if_tks } else { else_tks })
   });
+  // A fallback's guess (`DefinitionOrigin::Fallback`: OmniBus, a class binding's command of an older release), a kernel
+  // stub (`DefinitionOrigin::Stub`: `\shorttitle`, `\equalcontrib`, sect05.rs) and a borrowed package's definition
+  // (`DefinitionOrigin::Borrowed`) yield to the document's own `\NewDocumentCommand`/`\NewDocumentEnvironment`, as
+  // they yield to its `\newcommand` and `\newenvironment` (`state::is_fallback_meaning`): 2509.10728's own
+  // `\NewDocumentEnvironment{nomenclature}` over elsarticle v1.21's `{nomenclature}` (elsarticle_cls.rs) kept the guess
+  // and lost the paper's entry layout; a `\NewDocumentCommand{\shorttitle}` kept the stub silently.
+  DefMacro!("\\lx@if@fallbackdefined{}{}{}", sub[(name, if_tks, else_tks)] {
+    let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
+    Ok(if is_fallback_meaning(&cs) { if_tks } else { else_tks })
+  });
   // The size half of `\selectfont`'s font choice (latex.ltx:12576-12578,
   // `\curr@fontshape/\f@size`), run from `\set@fontsize`'s `\size@update`
   // (sect13.rs; OXIDIZED_DESIGN_DIVERGENCES #288): the current font takes
@@ -1081,11 +1295,15 @@ LoadDefinitions!({
           {
             \cs_if_exist:NTF #1
               {
-                \lx@if@pooldefined { \cs_to_str:N #1 } { }
+                \lx@if@fallbackdefined { \cs_to_str:N #1 }
+                  { \__cmd_declare_cmd:Nnn #1 {#2} {#3} }
                   {
-                    \msg_error:nnxx { cmd } { already-defined }
-                      { \use:nnn \token_to_str:N #1 { } }
-                      { \token_to_str:N \NewDocumentCommand }
+                    \lx@if@pooldefined { \cs_to_str:N #1 } { }
+                      {
+                        \msg_error:nnxx { cmd } { already-defined }
+                          { \use:nnn \token_to_str:N #1 { } }
+                          { \token_to_str:N \NewDocumentCommand }
+                      }
                   }
               }
               { \__cmd_declare_cmd:Nnn #1 {#2} {#3} }
@@ -1098,9 +1316,13 @@ LoadDefinitions!({
       {
         \cs_if_exist:cTF {#1}
           {
-            \lx@if@pooldefined {#1} { }
-              { \msg_error:nnx { cmd } { env-already-defined } {#1} }
-            \use_none:nnn
+            \lx@if@fallbackdefined {#1}
+              { \__cmd_declare_env:nnnn {#1} }
+              {
+                \lx@if@pooldefined {#1} { }
+                  { \msg_error:nnx { cmd } { env-already-defined } {#1} }
+                \use_none:nnn
+              }
           }
           {
             \cs_if_exist:cTF { end #1 }
@@ -1355,6 +1577,8 @@ LoadDefinitions!({
       no_file.push(T_END!());
       return Ok(Tokens::new(no_file));
     };
+    // The list is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
+    resolve_deferred_prints(Some(list))?;
     let env_cs = T_CS!(s!("\\{env}"));
     let replaced = lookup_definition(&env_cs)
       .ok()
@@ -1474,4 +1698,53 @@ pub(crate) fn allocate_ptex_format_registers() -> Result<()> {
     }
   }
   Ok(())
+}
+
+/// The `cmd` hooks whose patch a binding declined (`lx@hook@declined@<hook>`), each holding its message.
+const HOOK_DECLINED: &str = "lx@hook@declined@";
+
+/// Is the document's code on `hook`? lthooks labels code by its owner (latex.ltx:5208 `\__hook_currname_or_default:`): the
+/// document's is `top-level` (:5364-5369) or a label naming no loaded class or package; `\AddToHookNext`'s carries no
+/// label (:6340), counted as the document's.
+fn document_hook_code(hook: &str) -> bool {
+  let body = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
+    Some(Stored::Expandable(m)) => match m.get_expansion() {
+      Some(ExpansionBody::Tokens(t)) => Some(t.clone()),
+      _ => None,
+    },
+    _ => None,
+  };
+  if ["toplevel", "next"]
+    .iter()
+    .any(|code| body(&s!("\\__hook_{code} {hook}")).is_some_and(|t| !t.is_empty()))
+  {
+    return true;
+  }
+  // l3prop's `\s__prop \__prop_pair:wn <label> \s__prop {<code>}` (l3prop)
+  let Some(prop) = body(&s!("\\g__hook_{hook}_code_prop")) else {
+    return false;
+  };
+  let (pair, mark) = (T_CS!("\\__prop_pair:wn"), T_CS!("\\s__prop"));
+  let tokens = prop.unlist();
+  let mut rest = &tokens[..];
+  while let Some(at) = rest.iter().position(|t| *t == pair) {
+    rest = &rest[at + 1..];
+    let end = rest.iter().position(|t| *t == mark).unwrap_or(rest.len());
+    let label: String = rest[..end].iter().map(ToString::to_string).collect();
+    if document_hook_label(&label) {
+      return true;
+    }
+    rest = &rest[end..];
+  }
+  false
+}
+
+/// Is a hook's code under `label` the document's: `top-level`, or a label naming no loaded class or package
+/// (`state::file_loaded`: a `\@ifpackagelater` query's `\relax` `\ver@` is no load, F14)?
+fn document_hook_label(label: &str) -> bool {
+  let owner = label.split('/').next().unwrap_or_default();
+  owner == "top-level"
+    || [".sty", ".cls"]
+      .iter()
+      .all(|ext| !file_loaded(&s!("{owner}{ext}")))
 }

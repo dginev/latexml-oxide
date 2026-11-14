@@ -1,0 +1,19 @@
+% witness: 1607.04619 (`\space and`), 1912.02168 (jfm.cls:1025 `\ns` = `\kern.5em\relax`: `Chang Liu \ns and`),
+%          2004.02831, 2404.12084 (a line ending in `\`, latex.ltx:558 `\def\^^M{\ }`), 2005.00317 (`\thanks{..}and`),
+%          2502.11348 (`and\;`), 1707.03934 (`$^\ast$\&`)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker and Cat Cole and Dan Dorn* and Eve Ess and Fay Fox* &Gus Gray"
+% engines: rust 67int29 = one creator "Ann Able and Bob Baker and Cat Cole and Dan Dornand Eve Ess and Fay Fox*&Gus Gray",
+%          no diagnostic; Perl merges alike (its only "and" separator is " and " between spaces,
+%          Base_Utility.pool.ltxml:678)
+% expect:  0 errors, 0 warnings; 7 creators, one name each, Dan Dorn's note his, Fay Fox's star hers
+% status:  RED (67int29) -> GREEN (77d)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\ns{\kern.5em\relax}
+\begin{document}
+\title{T}
+\author{Ann Able\space and Bob Baker \ns and Cat Cole\
+and Dan Dorn\thanks{Univ D}and Eve Ess and\;Fay Fox$^\ast$\&Gus Gray}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,25 @@
+% Twin of email_list_surname_prefix_outside_given_name.tex through the transliteration: `soeren.hansen@` under S{\o}ren
+%   S{\o}rensen and S{\o}ren Hansen. Transliterated (ø -> oe), Sørensen's "soeren" matched the given name and, again, the
+%   first six letters of "soerensen", tying Hansen's 12 and sending the address to the block. The prefix fallback reads
+%   only the letters outside the given name's match (`email_owners::spelled_owners`; OXIDIZED_DESIGN_DIVERGENCES #970).
+% witness: review rev107a finding 2 (probe p/soeren.tex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: three names over "1University of Alpha" and
+%   "{soeren.hansen,aable}@alpha.dk"
+% engines: rust int138a: as expected (no transliteration); rust 107a r1: `soeren.hansen@` on the block creator
+% expect:  0 errors, 0 warnings; soeren.hansen@ on Søren Hansen, aable@ on Ann Able, none on Søren Sørensen
+% status:  RED (107a r1) -> GREEN (107a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  S{\o}ren S{\o}rensen$^{1}$ \and
+  S{\o}ren Hansen$^{1}$ \and
+  Ann Able$^{1}$ \\
+ {\normalfont $^1$University of Alpha} \\
+ \texttt{\{soeren.hansen,aable\}@alpha.dk}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

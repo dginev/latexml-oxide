@@ -1,0 +1,24 @@
+% mechanism: a name whose mark macro is called through `\csname mA\endcsname` (`\author{A.~Smith\csname
+%   mA\endcsname}`): an Error per such name, "\let should not appear between \csname and \endcsname (partial cs so
+%   far: "\")", at an anonymous string after the class loads, and the mark lost from the name; pdflatex prints it
+% witness: synthetic (review revCST2 finding 3, probes rev_csname, ieee_csname); CSNL
+% oracle:  pdflatex (TL 2025, revtex4-2 and IEEEtran, -no-shell-escape) 0 errors: "A. Smith1 and B. Jones2 / Uni One";
+%          IEEEtran "A. Smith1 , B. Jones2 / Uni One"
+% engines: int165a and CST2 (byte-identical): REVTeX 2 Errors, both names bare ("A. Smith", "B. Jones", the 1 and 2
+%          lost); IEEEtran (the second document below) 1 Error, "A. Smith 1" kept, "B. Jones" bare (the 2 lost)
+% expect:  0 errors, 0 warnings; A. Smith 1 and B. Jones 2, each "Uni One"
+% moves:   post-merge (CSNL)
+% status:  RED (revCST2, int166a) — moves: post-merge (CSNL)
+% (IEEEtran twin: \documentclass[conference]{IEEEtran} and \author{\IEEEauthorblockN{A.~Smith\csname mA\endcsname,
+%  B.~Jones\csname mB\endcsname}\IEEEauthorblockA{Uni One}}, no abstract)
+\documentclass[aps,prl]{revtex4-2}
+\newcommand\mA{$^{1}$}\newcommand\mB{$^{2}$}
+\begin{document}
+\title{T}
+\author{A.~Smith\csname mA\endcsname}
+\author{B.~Jones\csname mB\endcsname}
+\affiliation{Uni One}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

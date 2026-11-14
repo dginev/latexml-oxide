@@ -521,6 +521,62 @@ ms, no longer overlapped with option parsing. Library callers (`latexml::api`)
 run construction on the single worker thread they spawn; a multi-threaded host
 should call `init_kpathsea()` once at start-up before converting concurrently.
 
+**Second writer, `--init` only (fixed 2026-10-14)**: `real_main` set
+`LATEXML_INI_MODE` *after* spawning the prewarm thread, whose
+`kpathsea_init_format` reads `getenv("TEXMF_kpsewhich")`; `setenv` of the new
+name reallocated `environ` under it. Witness: `--init=latex.ltx` exited 139 in
+7 of 200 runs on Linux aarch64 (Ubuntu 24.04, TL2023 apt, `ci` profile), gdb
+`__GI_getenv` ← `kpathsea_var_expand` ← `kpathsea_init_format` on thread
+`kpathsea-prewarm`; it failed `tools/make_formats.sh` and
+`dump_gate_init::latex_ltx_init_has_zero_errors`. Fix: the `set_var` moved to
+just after `Cli::parse()`, before `init_kpathsea()` and the spawn. Rule: every
+environment write in the binaries precedes the prewarm spawn.
+
+**Independent witness (PR 823, an external contributor)**: six 2–27 KB documents
+converted 90 times each by a shell loop on the 0.7.5 release binary (x86_64 Linux,
+glibc 2.39, TL 2023 libkpathsea): 9 SIGSEGV in 540 by default, 0 in 540 with
+`LATEXML_NO_KPATHSEA_PREWARM=1`; the core showed the worker thread in
+`__GI_getenv("HOME")` on a freed chunk while the prewarm thread was just past
+`kpathsea_set_program_name`'s `putenv`s. On the post-fix tree (`862de44e59`,
+release build): gdb breakpoints on `putenv`/`setenv`/`unsetenv`/`pthread_create`
+show all six writes (`TEXMFROOT`, then the five `putenv`s) on the converting
+thread before its first spawn, and 3000 conversions of a small article exited 0
+every time; under `--init` with the second-writer fix (PR 812), `LATEXML_INI_MODE`
+joins them, still before the first spawn.
+
+**Guard**: `tools/lint_env_writes.sh` (run by `tools/lint.sh`, so by CI's lint job
+and the pre-push hook) fails on any `set_var`/`remove_var` or libc
+`setenv`/`putenv`/`unsetenv` in the workspace's library and binary sources outside
+an allowlist of (file, variable) pairs, each a start-up write that precedes every
+spawn or test-only code. The C library's own writes are kept ahead of the spawn
+by `init_kpathsea()`'s placement in both binaries.
+
+## Cluster K — fleet runaways reach `RLIMIT_AS` before any memory fuse (`oom:alloc_failed`) — dominant loop FIXED 2026-10-16 (68q); address-space fuse PARKED
+
+**Symptom.** 448 fleet `Fatal:oom:alloc_failed` in the 2026-10-16 study (agent_reports/2026-10-16_perf_ram_study.md),
+with only the harness's exit report returned. Standalone (no `RLIMIT_AS`) the same papers end in a located
+`Fatal:Timeout:MemoryBudget`.
+
+**Cause.** The harness caps a child at 5632 MiB of address space and sets the cooperative fuse (`LATEXML_RSS_CAP_BYTES`)
+and the watchdog's guard to 5376 MiB of **RSS**; the allocators reserve address space 0.5–2.7 GB above what is resident,
+so children hit the cap at 4.2–5.1 GB RSS, before either fires. 324 of the 448 load `semantic`: its `\inference`
+`\lastbox` peel loop never ended because `\unvbox` returned the box itself (tex.web §1110; KNOWN_PERL_ERRORS #840) —
+FIXED by 68q: 1603.01635, 2506.05832, 1401.6227, 1709.02440, 2311.14452, 2205.02590, 1010.5572, 1011.6429, 1104.1738
+complete at Status 1 in 1–10 s at fleet caps.
+
+**Settled dead-end: an address-space fuse** (68p item 5, rounds 1-2, branch pk/68p2 e78ea52da6, not landed): firing
+256 MiB under `RLIMIT_AS` turns a crash into a named Fatal (1107.2000, 1111.6657, 0804.3328: rc 137 → Status 3) — a
+Fatal either way, retried alike by CorTeX — while it cost a paper that completes: 0804.1983 completes 9/9 runs on
+e839db2fc3, 4/9 with the fuse (dies in Finalizing on one 195 MiB `Vec<u8>` doubling at the cap; round 1, fusing in
+streaming pass 1 too, stopped it 3/3). At the moment the fuse would fire, RSS and VmSize of runaways and of 0804.1983
+look alike (RSS 4.1–4.2 GB, VmSize 5.4–5.6 GB), so no threshold separates them. Measured at fleet caps (`ulimit -v
+5767168`, `--max-rss-mb 5376`, standalone `cortex_worker`), agent_reports/2026-10-16_68p_review.md and
+2026-10-16_68p_r2_report.md.
+
+**Open.** physics0504062: one formula's math-parse spike (RSS 2.5 → 5.2 GB in 0.2 s, ASF traversal) where no
+cooperative check polls (math-parse stream, parked). 0804.2004, 0804.2001, 0804.2002 reach the cap after
+`streaming:transition`; 1009.2640 `Fatal:Document` "failed to create element" (libxml2 `malloc` at the cap).
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.

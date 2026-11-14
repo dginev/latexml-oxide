@@ -1,0 +1,15 @@
+% witness: cond-mat0407333, cs0409028, hep-th0411273, 2101.07380 (\url/\href with neither url.sty nor hyperref loaded)
+% oracle: arXiv builds them (its build loads hyperref into every paper; 2101.07380's PDF: "LaTeX with hyperref");
+%         pdflatex alone: ! Undefined control sequence
+% engines: rust 66z = 4 errors (\url, \href undefined); Perl the same
+% expect: 0 Errors; \url and \href are hyperref's links, in the text and in the bibliography
+% mechanism: ar5iv.sty preload, provide-only at \begin{document} (user ruling 2026-10-14; OXIDIZED_DESIGN #588)
+% status: RED (66z) -> GREEN (67a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+See \url{http://example.org/a_b} and \href{https://doi.org/10.1/x_y}{the DOI}.
+\begin{thebibliography}{1}
+\bibitem{a} A. Author, \url{http://arxiv.org/abs/1234.5678}.
+\end{thebibliography}
+\end{document}

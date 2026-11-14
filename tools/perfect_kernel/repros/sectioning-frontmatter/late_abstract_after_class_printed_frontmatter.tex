@@ -1,0 +1,36 @@
+% A class's \@maketitle that prints frontmatter above the cover lines the document sets after \maketitle: its stored
+% keywords under its label ("Keywords: \@keywords", handed on by \maketitle) and its classification store unlabelled
+% ("\@pacs", handed on as it is set). The fail-safe: a late abstract's run holding an entry handed on from a raw
+% class's store (title-page provenance, `_titlepage`, `\lx@store@from`) is not moved — the class's title page prints
+% it above the cover here, at the page foot in the guard's \footnotetext and \insert variants (86g r3 review probes
+% f1, f2, f3), which the frontmatter cannot tell apart — so the abstract and its run keep int116a's slot, the cover
+% a paragraph after them (OXIDIZED_DESIGN_DIVERGENCES #903; residual: out of print order, as in int116a).
+% witness: none (synthetic; 86g r2 review probe b01, and the classification sibling).
+% Guard: perfect_kernel_batch86g::late_abstract_follows_the_hand_typeset_cover,
+%        perfect_kernel_batch86g::late_abstract_follows_the_class_title_page (its \insert variants);
+%        114_streaming_structure::streaming_late_abstract_follows_its_cover (budget 3).
+% oracle:  pdflatex 0 errors: "Repro Title / Ann Author / Keywords: order, print / 12.34.Ab / Department of Repro,
+%          University of Witness / Abstract / Abstract words here. / 1 Intro".
+% engines: rust 86a: title, creator, abstract, keywords, classification, para (cover), section. 86g r2: title,
+%          creator, titlepage[block], abstract, keywords, classification, section. 86g r3: title, creator, keywords,
+%          classification, titlepage[block], abstract, section (a page-foot variant's store ahead of the cover too).
+% expect:  0 errors, 0 warnings; title, creator, abstract, keywords, classification, para (cover), section.
+\begin{filecontents*}[overwrite]{rcprinted.cls}
+\ProvidesClass{rcprinted}
+\LoadClass{article}
+\newcommand*\keywords[1]{\gdef\@keywords{#1}}
+\def\@keywords{}
+\newcommand*\pacs[1]{\gdef\@pacs{#1}}
+\def\@pacs{}
+\def\@maketitle{\begin{center}{\Large\@title\par}\@author\par\end{center}
+\noindent Keywords: \@keywords\par
+\noindent\@pacs\par}
+\end{filecontents*}
+\documentclass{rcprinted}
+\title{Repro Title}\author{Ann Author}\keywords{order, print}\pacs{12.34.Ab}
+\begin{document}
+\maketitle
+\begin{center}Department of Repro, University of Witness\end{center}
+\begin{abstract}Abstract words here.\end{abstract}
+\section{Intro}Body text.
+\end{document}

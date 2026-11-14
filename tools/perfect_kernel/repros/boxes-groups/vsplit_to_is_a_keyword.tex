@@ -1,0 +1,19 @@
+% witness: 2505.21389 (cutwin.sty:122 `\vsplit#1 to\baselineskip`, `#1` a `\newbox` register) — the rc_struct4 V1
+%   shape (agent_reports/2026-10-17_rc_struct4.md)
+% oracle:  pdflatex 0 errors: tex.web §1082 reads `to` by `scan_keyword` (§407), which skips the spaces before it and
+%   matches either case; the chardef'd register leaves the space after it unread; both pieces and the rest typeset
+%   ("First line text. Second line text. After.")
+% engines: rust 67int19 = 2 ("Missing argument Match:to", the `to`/`TO` typeset as text), perl = 1 on the rc_struct4
+%   repro (TeX_Inserts.pool.ltxml:36 `Match:to`, KNOWN_PERL_ERRORS #926)
+% expect:  0 errors; the three paragraphs, no stray `to`
+% status:  RED (67int19) -> GREEN (70b: tex_inserts.rs `\vsplit` reads `to` as a keyword)
+\documentclass{article}
+\newbox\mybox
+\def\cut#1{\setbox0=\vsplit#1 to\baselineskip}
+\begin{document}
+\setbox\mybox=\vbox{\hsize=3cm First line text.\par Second line text.\par}
+\cut\mybox
+\box0
+\setbox2=\vsplit\mybox TO \baselineskip
+\box2 After.
+\end{document}

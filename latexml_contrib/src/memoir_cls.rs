@@ -27,6 +27,22 @@ LoadDefinitions!({
   // memoir's `\ch@ngetext` (memoir.cls:11237-11245), which its `\changetext`/`\changepage` end
   // with, halves `\columnwidth` for two columns; LaTeXML sets one (changepage_sty.rs).
   RawTeX!(crate::changepage_sty::ONE_COLUMN_CH_NGETEXT);
+  // memoir.cls:7074-7116 `\newlistof`: each list's heading `\@<ext>maketitle` becomes the kernel's list, titled by
+  // memoir's default printer (a document's own runs as written, the list untitled: 2505.14933, 2212.04510); its
+  // `\@starttoc` reads a `.toc` LaTeXML never writes, whoever defines it (notoccite 2209.14824, old memoir 0907.3132).
+  // ob-toclof.sty:31 (oblivoir) renews `\newlistof`. Witnesses oxnum-doc, memman, 1306.4853, 1807.06345, 2107.04315.
+  RawTeX!(
+    r"\def\lx@memoir@listof#1#2{\@namedef{#1headstart}{}\@namedef{print#1nonum}{}\@namedef{after#1title}{}%
+  \@namedef{print#1title}##1{\gdef\lx@memoir@listtitle{##1}}%
+  \@namedef{@#1maketitle}{\global\let\lx@memoir@listtitle\@empty\@nameuse{#1headstart}%
+    {\@nameuse{print#1nonum}\@nameuse{print#1title}{#2}\@nameuse{#1mark}\@nameuse{after#1title}}%
+    \ifx\lx@memoir@listtitle\@empty\lx@kernel@listof{#1}{}\else\lx@kernel@listof{#1}{\lx@memoir@listtitle}\fi}}
+\def\lx@memoir@wrap@newlistof{\let\lx@memoir@newlistof\newlistof
+  \renewcommand{\newlistof}[3]{\lx@memoir@newlistof{##1}{##2}{##3}\lx@memoir@listof{##2}{##3}}%
+  \lx@memoir@listof{toc}{\contentsname}\lx@memoir@listof{lof}{\listfigurename}\lx@memoir@listof{lot}{\listtablename}}
+\lx@memoir@wrap@newlistof
+\AddToHook{package/ob-toclof/after}{\lx@memoir@wrap@newlistof}"
+  );
 
   // memoir's auto-table family (memoir.cls:5477-5719; manual §"Automatic
   // tables", memman.tex:20627-20886). All four build low-level alignments the

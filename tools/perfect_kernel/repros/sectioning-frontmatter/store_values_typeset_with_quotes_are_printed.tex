@@ -1,0 +1,33 @@
+% A raw class's off-table stores whose values TeX typesets differently from their source: `'`, ``` `` ``` and `''` come
+% out as ’ “ ”, and a store under `\MakeLowercase` in lower case. The confirming run (`confirmed_printed`,
+% frontmatter_stores.rs) compares the letters and digits only (`alphanumerics`), in their case unless the store's
+% mixed-case sentinel came out in another; the label check (`printed_right_before`) too: "Organiser’s series:".
+% The `\undefinedthing` drops the title-page deposit (an error there), so the stores reach the frontmatter or nothing.
+% witness: none (synthetic; review probes `q3`, `q4` of 77i r4).
+% oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): "Organiser’s series: O’Brien Lectures", "Note: “x” words",
+%          "Lower: mixed case".
+% engines: rust 77i r4: only "Pages: 1–10" kept as a note (the other three lost, 0 errors).
+% expect:  0 errors, 0 warnings; four `ltx:pubnote`s (each name ends in a no-break space): "Organiser’s series:"
+%          "O’Brien Lectures", "Pages:" "1–10", "Note:" "“x” words", and the unnamed "Mixed Case" (its label is outside the `\MakeLowercase`
+%          argument the store is in, not read as one).
+% status:  RED (77i r4) -> GREEN (77i r5)
+\begin{filecontents*}[overwrite]{rcquote.cls}
+\ProvidesClass{rcquote}
+\LoadClass{article}
+\def\@va{}\newcommand{\sva}[1]{\def\@va{#1}}
+\def\@vb{}\newcommand{\svb}[1]{\def\@vb{#1}}
+\def\@vc{}\newcommand{\svc}[1]{\def\@vc{#1}}
+\def\@vd{}\newcommand{\svd}[1]{\def\@vd{#1}}
+\def\@maketitle{\undefinedthing\begin{center}{\Large\@title\par}\@author\par\end{center}
+ \noindent Organiser's series: \@va\par
+ \noindent Pages: \@vb\par
+ \noindent Note: \@vc\par
+ \noindent Lower: \MakeLowercase{\@vd}\par}
+\end{filecontents*}
+\documentclass{rcquote}
+\title{T}\author{Anton}
+\sva{O'Brien Lectures}\svb{1--10}\svc{``x'' words}\svd{Mixed Case}
+\begin{document}
+\maketitle
+Text.
+\end{document}

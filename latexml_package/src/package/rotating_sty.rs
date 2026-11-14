@@ -4,9 +4,16 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: rotating.sty.ltxml — rotation environments with rotatedProperties
 
+  // rotating.sty:39 and :52-58: the message switch, `\if@rot@twoside` (from the class's `\if@twoside`) and `\rot@LR`,
+  // which `figuresleft`/`figuresright` (:31-38) set and papers set by hand (`\@rot@twosidefalse`: 2306.14600,
+  // 2403.02437). Perl's binding defines neither (KNOWN_PERL_ERRORS #803).
+  RawTeX!(r"\newif\ifrot@messages
+\newif\if@rot@twoside
+\if@twoside\@rot@twosidetrue\else\@rot@twosidefalse\fi
+\def\rot@LR{-1}");
   DeclareOption!("twoside", None);
-  DeclareOption!("figuresright", None);
-  DeclareOption!("figuresleft", None);
+  DeclareOption!("figuresright", { Digest!(r"\@rot@twosidefalse\def\rot@LR{-1}")?; });
+  DeclareOption!("figuresleft", { Digest!(r"\@rot@twosidefalse\def\rot@LR{0}")?; });
   DeclareOption!("quiet", None);
   DeclareOption!("log", None);
   DeclareOption!("chatter", None);
@@ -14,6 +21,13 @@ LoadDefinitions!({
 
   RequirePackage!("graphicx");
   RequirePackage!("ifthen");
+  // rotating.sty:64 `\rotdriver{<driver>}` inputs the graphics driver file `<driver>.def` (42 papers, nearly all
+  // `\rotdriver{dvips}`: 0704.0929, 0704.1238, 0802.2495; `{dvitops}`, `{textures}`). LaTeXML's graphics have no
+  // driver files — graphics.sty's driver options select none either (graphics_sty.rs) — so the driver name is read and
+  // nothing is loaded: what the call does under the latex + dvips the papers were written for, where dvips.def is
+  // already the driver (OXIDIZED_DESIGN_DIVERGENCES #619; under pdflatex, dvips.def replaces pdftex.def's image rules
+  // and the paper's PDF and PNG images are lost). Perl's binding lacks it (KNOWN_PERL_ERRORS #803).
+  DefMacro!("\\rotdriver{}", "");
 
   TeX!(r"\newdimen\rotFPtop \rotFPtop=0pt
 \newdimen\rotFPbot \rotFPbot=0pt

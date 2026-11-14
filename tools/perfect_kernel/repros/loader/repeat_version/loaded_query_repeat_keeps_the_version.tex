@@ -1,0 +1,19 @@
+% witness: synthetic (revGA2 N1): a document unmarks foo (`\let\ver@foo.sty\relax`) and requests it again; LaTeX reads
+%          foo.sty again, so `\ver@foo.sty` is foo's own `\ProvidesPackage` text again
+% oracle:  pdflatex 0 errors: "foo loaded, earlier than 2010."
+% engines: rust GA2 (c21ad0900e) = 0 errors, "foo loaded, later than 2010." (the repeat restored `\fmtversion`)
+% expect:  0 errors, 0 warnings; pdflatex's text
+% status:  RED (GA2) -> GREEN (GA2b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{foo}
+\makeatletter
+\expandafter\let\csname ver@foo.sty\endcsname\relax
+\makeatother
+\usepackage{foo}
+\makeatletter
+\edef\a{foo \@ifpackageloaded{foo}{loaded}{not loaded}, \@ifpackagelater{foo}{2010/01/01}{later}{earlier} than 2010.}
+\makeatother
+\begin{document}
+\a
+\end{document}

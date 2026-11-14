@@ -31,7 +31,7 @@ thread_local! {
 }
 
 /// Forgets the TFMs read so far, misses included: a document may ship its own `.tfm`, so the
-/// next document must not be sized from it (`Converter::prepare_session`, per paper in a
+/// next document must not be sized from it (`reset_conversion_state`, at `initialize_report`, per paper in a
 /// persistent worker; `reset_thread_engine`).
 pub fn reset_tfm_cache() { TFM_CACHE.with(|cache| cache.borrow_mut().clear()); }
 

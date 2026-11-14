@@ -1,14 +1,16 @@
 % KOMA-Script's classes compare `\@startsection` with their copies of the kernel's definition (scrartcl.cls:3292-3330,
 % two variants) and `\@sect`, `\@ssect`, `\@xsect` likewise (:3552-3560, :3753, :3834; scrreprt.cls, scrbook.cls
 % alike), and warn when another package changed them, taking the "alternative approach" that wraps the definition
-% found (:3396-3425). The kernel's sectioning macros are LaTeXML's own semantic bindings, so every scrartcl/scrreprt/
-% scrbook document, raw or not, gets "`\@startsection' has been changed" and "Unexpected definition of \@sect!", where
-% pdflatex is quiet; the wrapping is what keeps LaTeXML's sections (side finding of batch 60m, ltxdockit). The
-% warnings are true: quieting them would take token-identical kernel sectioning macros.
-% status:  CONTROL (2 warnings by design; Perl's sectioning is a binding too)
+% found (:3396-3425). The kernel's sectioning macros are LaTeXML's own (the native `\@startsection`, sect04.rs; the
+% `\@sect` router, latex_constructs_rust_only.rs), so every scrartcl/scrreprt/scrbook document got "`\@startsection'
+% has been changed" and "Unexpected definition of \@sect!", where pdflatex is quiet. The KOMA binding now sets KOMA's
+% copies of those two kernel workers to the kernel's (ours) before the raw load (koma_script.rs `koma_pre_load`), so the
+% class takes pdflatex's branch; LaTeXML's sections are kept by `\scr@startsection` = `\@startsection`
+% (`koma_post_load`), on either branch.
+% status:  CONTROL (2 warnings, batch 60m) -> GREEN (72a r10: 0 warnings, as pdflatex)
 % oracle:  pdflatex 0 errors, no Class scrartcl Warning
-% engines: rust 60m: Warning "`\@startsection' has been changed", Warning "Unexpected definition of \@sect!"
-% expect:  0 errors, those 2 warnings; the section "1 One" and "Text."
+% engines: rust 60m-72a r9: Warning "`\@startsection' has been changed", Warning "Unexpected definition of \@sect!"
+% expect:  0 errors, 0 warnings; the section "1 One" and "Text."
 \documentclass{scrartcl}
 \begin{document}
 \section{One}

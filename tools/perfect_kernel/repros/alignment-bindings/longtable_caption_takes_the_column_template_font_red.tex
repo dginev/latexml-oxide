@@ -1,0 +1,18 @@
+% witness: synthetic (found by GA4b's sibling sweep)
+% oracle:  pdflatex 0 errors: "Table 1: Bold a: x" — the caption's cell is a `\multicolumn` (longtable.sty:476
+%          `\LT@mcol`), which omits the column template, so the caption is not bold
+% engines: rust GA4base, GA4, GA4b = 0 errors; the caption text "Bold" is `font="bold"`: the caption is digested in the
+%          cell after the template's `>{\bfseries}`
+% expect:  0 errors; <caption> "Table 1: Bold" with no bold font
+% status:  RED (GA4base, GA4, GA4b)
+% moves:   post-merge (GA4C: the caption's cell omits the template, as `\LT@mcol`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable,array}
+\begin{document}
+\begin{longtable}{>{\bfseries}l<{:}l}
+\caption{Bold} \\
+a & x \\
+\end{longtable}
+After TEXT.
+\end{document}

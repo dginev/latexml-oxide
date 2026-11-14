@@ -1,0 +1,15 @@
+% mechanism: a pgfmath string result passes its text through (`pgfmath_code_tex.rs` the bare-string pass-through); since PGR1b
+%   a non-letters name is spelled `\csname <name>\endcsname` in that text, so the result's `\meaning` shows the spelling
+%   where pdflatex holds the token (int163a split it: `\c -2`). Typeset output is right (`A`). Fix: string results carry
+%   tokens, not text (revPGR1b 2)
+% witness: synthetic (revPGR1b); no corpus witness
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [A][macro:->\c-2 ]
+% engines: rust PGR1b: [A][macro:->\csname c-2\endcsname ]; int163a: [A][macro:->\c -2]
+% expect:  0 errors, 0 warnings; [A][macro:->\c-2 ]
+% status:  RED (PGR1b, int163a) — moves: post-merge (PGCNT)
+\documentclass{article}
+\usepackage{pgf}
+\expandafter\chardef\csname c-2\endcsname=65
+\begin{document}
+\pgfmathparse{"\csname c-2\endcsname"}[\pgfmathresult][\meaning\pgfmathresult]
+\end{document}

@@ -1,0 +1,25 @@
+% The twin of addr_line_sole_author_orphan_star.tex with one more orphan line, `$^{b}$ Univ B, City`, labelled in the
+%   author's own mark series though she requests only `a`: that line goes to the block creator (OD #159), and the `*`
+%   line is still the sole author's (user ruling 2026-11-05, "Sole author": the owner never depends on other lines).
+%   107c skipped the only-author step whenever any nameless creator stood beside the author; now only one holding names
+%   the reader did not part does (1102.4967's), 107f §D.
+% witness: none (synthetic) — rev107c2 probe p2/o4
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: as the twin, plus "b Univ B, City"
+% engines: rust 107c (473dfa036d) = Ann holds Univ A; a nameless creator holds Univ B, City, the note and qz@a.org
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, Town, Country.; the "* Corresponding author" note; qz@a.org; the
+%   block creator: Univ B, City
+% status:  RED (rev107c2) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{a}$\\
+{\small $^{a}$Univ A, Town,}\\
+{\small Country.}\\
+{\small * Corresponding author, E-mail: qz@a.org }\\
+{\small $^{b}$ Univ B, City}\\
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

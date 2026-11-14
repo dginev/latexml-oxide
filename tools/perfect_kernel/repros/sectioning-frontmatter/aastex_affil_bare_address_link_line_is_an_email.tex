@@ -1,0 +1,24 @@
+% mechanism: an `\affil` line that is one link to a mailbox (`\href{mailto:…}{…}`, or a bare address as target, the
+%   ACL template's) is an e-mail line under the text before the link (user ruling 2026-10-20, batch 77p r8): the Kind
+%   step takes it out of the entry, the link kept a link (frontmatter_api/kind.rs `mailbox_link_line`, the home of the
+%   deleted `author_block/links.rs::mailto_line`), and the Link step places it — here the block's (no one spelled, the
+%   carrier a stopgap). Perl reads no e-mail inside `\affil`: an affiliation (OXIDIZED_DESIGN_DIVERGENCES #992)
+% witness: none in the corpus for aas (synthetic; review revZ18l F2, introduced by Z18l); the ruling's 2601.00240,
+%   2601.07974, 2604.23002, 2606.03014, 2605.18563, 2604.04847
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Write to us" a link to zz@x.org
+% engines: rust int155a4 = Bob Baker's affiliation "Write to us", 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker: 1 Univ A; the block's nameless creator: the e-mail
+%          `<ref href="zz@x.org">Write to us</ref>` named "Email:"
+% status:  RED (int155a4) -> GREEN (Z18o)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1}$}
+\affil{$^1$Univ A}
+\affil{\href{zz@x.org}{Write to us}}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

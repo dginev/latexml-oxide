@@ -1,0 +1,12 @@
+% witness: revZ2's pre-existing list (no paper yet; 2609.01831's cited shape, `Event::ordinal`)
+% oracle:  pdflatex 0 errors: "Ann Able", "5th Floor", "6th Floor"
+% engines: Perl keeps the letters in the entry's text; ours reads "5 Floor" and "6 Floor": the superscript in a group or under `\underline` is a mark the entry drops
+% expect:  0 errors; the ordinal is the entry's text, "5 th Floor", "6 th Floor"
+% status:  RED (Z2r2; catalogued, no guard)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ 5{\textsuperscript{th}} Floor\\ 6\textsuperscript{\underline{th}} Floor}
+\maketitle
+Body.
+\end{document}

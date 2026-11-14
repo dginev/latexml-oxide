@@ -10,7 +10,10 @@
 //! scale). Splitting per suite keeps each process a few GB under the cap.
 #![allow(dead_code)]
 
-use latexml::converter::Converter;
+use latexml::{
+  converter::Converter,
+  util::test::{check_table, fixtures},
+};
 use latexml_core::common::{Config, OutputFormat};
 
 /// A suite's binding dispatcher. A plain `fn` pointer, not an `Rc`, because it
@@ -31,6 +34,17 @@ pub fn convert_with(
   streaming: Option<usize>,
   dispatch: DispatchFn,
 ) -> (String, usize) {
+  convert_preloaded(source, streaming, dispatch, None)
+}
+
+/// [`convert_with`], with `preload` (the CLI's `--preload`): ar5iv.sty, under which a document's own raw class is
+/// loaded (without it the class falls back to OmniBus, its title page and stores unread).
+pub fn convert_preloaded(
+  source: &str,
+  streaming: Option<usize>,
+  dispatch: DispatchFn,
+  preload: Option<Vec<String>>,
+) -> (String, usize) {
   let source = source.to_string();
   std::thread::Builder::new()
     .stack_size(64 * 1024 * 1024)
@@ -47,6 +61,7 @@ pub fn convert_with(
         // divergence (witness omnibus_natbib_bbl_sideload: 101 errors, an
         // empty eager doc, a partial streamed one).
         extra_bindings_dispatch: Some(std::rc::Rc::new(dispatch)),
+        preload,
         ..Config::default()
       };
       let mut c = Converter::from_config(cfg);
@@ -117,7 +132,66 @@ const EXCLUDED_FIXTURES: &[&str] = &[
   // \pubinfo undefined)
   "jpsj2_stores_frontmatter.tex",
   "ptptex_inst_store_frontmatter.tex",
+  // tests/cluster_regressions: biblatex's own errors on purpose, pinned by 06_cluster_bibliography's
+  // biblatex_category_declaration_errors and biblatex_repeated_filter_keys_and
+  "biblatex_category_errors.tex",
+  "biblatex_filter_repeated_keys.tex",
+  // tests/cluster_regressions: `\PackageError`s in `.bbl` titles on purpose, counted by 06_cluster_bibliography's
+  // biblatex_hidden_list_holds_only_unprinted_entries and biblatex_category_list_builds_only_selected_entries
+  "biblatex_filtered_entries_digested_once.tex",
+  "biblatex_filtered_out_entries_errors.tex",
+  "biblatex_category_list_digests_selected.tex",
 ];
+
+/// Fixtures whose streamed output differs from the eager one by a documented divergence — the one exception besides
+/// OXIDIZED_DESIGN_DIVERGENCES #456 (`114_streaming_structure`) to the `--streaming` byte-identity, keyed by the
+/// fixture's directory and name: each is converted both ways, both conversions error-free, and the outputs are compared
+/// with the divergent elements stripped; a test of its own asserts the divergence. `verb_in_index.tex`: an `\index`
+/// entry of an index never printed is typeset in a streamed conversion only, whose fragment yield digests the pending
+/// entries as Perl does (OXIDIZED_DESIGN_DIVERGENCES #738; asserted by
+/// `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries`): its outputs are compared
+/// without their `<indexmark>`s. `biblatex_category_filter_timing.tex`: a list filtered by a category is decided once
+/// the document is digested, which a streamed conversion does at a fragment's yield — before a later `\addtocategory` (OXIDIZED_DESIGN
+/// _DIVERGENCES #762; asserted by `114_streaming_cluster_regressions::streaming_builds_a_category_list_when_absorbed`):
+/// its outputs are compared without their `<bibliography>`s. `biblatex_category_lists_in_newrefsection.tex` is the same
+/// divergence: its `\addtocategory` follows the first refsection's category lists.
+pub const STREAMING_DIVERGENT_FIXTURES: &[(&str, &str)] = &[
+  ("cluster_regressions/verb_in_index.tex", "indexmark"),
+  (
+    "cluster_regressions/biblatex_category_filter_timing.tex",
+    "bibliography",
+  ),
+  (
+    "cluster_regressions/biblatex_category_lists_in_newrefsection.tex",
+    "bibliography",
+  ),
+];
+
+/// `xml` without its `<element …>…</element>` (and `<element …/>`) occurrences, and without the blank lines the
+/// pretty-printed ones leave.
+fn strip_element(xml: &str, element: &str) -> String {
+  let open = format!("<{element}");
+  let close = format!("</{element}>");
+  let mut out = String::with_capacity(xml.len());
+  let mut rest = xml;
+  while let Some(start) = rest.find(&open) {
+    out.push_str(&rest[..start]);
+    let tail = &rest[start..];
+    let head_end = tail.find('>').map_or(tail.len(), |i| i + 1);
+    let end = if tail[..head_end].ends_with("/>") {
+      head_end
+    } else {
+      tail.find(&close).map_or(tail.len(), |i| i + close.len())
+    };
+    rest = &tail[end..];
+  }
+  out.push_str(rest);
+  out
+    .lines()
+    .filter(|line| !line.trim().is_empty())
+    .collect::<Vec<_>>()
+    .join("\n")
+}
 
 pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: DispatchFn) {
   let mut fixtures: Vec<_> = std::fs::read_dir(dir)
@@ -142,6 +216,15 @@ pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: D
       continue;
     }
     let src = path.to_string_lossy().into_owned();
+    // The directory's `requires` table, as its `tex_tests!` binary reads it: a fixture the host tree cannot load is
+    // skipped visibly.
+    let name = path
+      .file_stem()
+      .map(|n| n.to_string_lossy().into_owned())
+      .unwrap_or_default();
+    if !check_table(dir, &name, fixtures::table(dir)) {
+      continue;
+    }
     let (eager_xml, eager_errs) = convert_with(&src, None, dispatch);
     let (streamed_xml, streamed_errs) = convert_with(&src, Some(3), dispatch);
     // A swept fixture converts cleanly: an error means it is degraded here (a missing dispatcher
@@ -159,6 +242,26 @@ pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: D
       ));
       continue;
     }
+    let key = path
+      .iter()
+      .rev()
+      .take(2)
+      .collect::<Vec<_>>()
+      .into_iter()
+      .rev()
+      .map(|part| part.to_string_lossy())
+      .collect::<Vec<_>>()
+      .join("/");
+    let (eager_xml, streamed_xml) = match STREAMING_DIVERGENT_FIXTURES
+      .iter()
+      .find(|(fixture, _)| *fixture == key)
+    {
+      Some((_, element)) => (
+        strip_element(&eager_xml, element),
+        strip_element(&streamed_xml, element),
+      ),
+      None => (eager_xml, streamed_xml),
+    };
     if eager_xml != streamed_xml {
       let byte = eager_xml
         .bytes()

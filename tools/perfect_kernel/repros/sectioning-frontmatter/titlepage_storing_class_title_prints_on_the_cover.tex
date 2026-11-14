@@ -1,0 +1,20 @@
+% witness: review 68t probe p2 (2026-10-16); no arXiv witness found among the review's 60 `\title` redefiners inside
+%          a titlepage (each stores only, dp_delphi.cls `\def\title#1{\xdef\@title{\@title \par #1}}`: hep-ex0404013)
+% oracle:  pdflatex 0 errors: the cover "Static axisymmetric spacetimes" (centered), "Cover text."
+% engines: rust 68t r1 = 0 errors, 0 visible titles: the refused `\title` both stores and prints, and a storing setter
+%          was not run (`class_command_stores`), while the XSLT hides the `ltx:title` beside the titlepage; Perl the same
+% expect:  0 errors, 0 warnings; the titlepage carries the centered print once; the document `ltx:title` stays
+%          (metadata); the frontmatter has one title
+% status:  RED (68t r1) -> GREEN (68t r2)
+\documentclass{article}
+\makeatletter
+\def\title#1{\gdef\@title{#1}\centerline{#1}}
+\makeatother
+\begin{document}
+\begin{titlepage}
+\title{Static axisymmetric spacetimes}
+Cover text.
+\end{titlepage}
+\section{Intro}
+Text.
+\end{document}

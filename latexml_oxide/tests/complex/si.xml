@@ -6743,7 +6743,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table inlist="lot" labels="LABEL:tab:tablenum" placement="H" xml:id="S3.T11">
+    <table class="ltx_panels_gallery" inlist="lot" labels="LABEL:tab:tablenum" panelcols="2" panelrows="1" placement="H" xml:id="S3.T11">
       <tags>
         <tag>Table 11</tag>
         <tag role="refnum">11</tag>

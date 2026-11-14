@@ -1,0 +1,15 @@
+% mechanism: a line under the names that reads as a name, no `\affil` next, is undecided: one creator and the counted Error, not a name made an affiliation (`lines_under_names_read_as_names`)
+% witness: rev108a B1; real: 2606.17061
+% oracle:  pdflatex: 0 errors; the names on two lines
+% engines: rust 108a r1: Bob Baker an affiliation, silently; int139a: as expected here; perl: one creator
+% expect:  1 error (merged_creators); one creator holding both
+% status:  GREEN (int139a) -> RED (108a r1) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\quad Bob Baker\\ Cat Cole}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% authblk's `\affil{Univ A, Town\authorcr Email: {\tt\{aable, bbaker\}@a.edu}}` under two authors: the line after
+% `\authorcr` (no `\\` the token-level Kind step parts) leaves the entry; each address is its spelled author's e-mail
+% (OD #966).
+% witness: 2111.01631, 2309.05601 (authblk under article)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker", "Univ A, Town", "Email: {aable, bbaker}@a.edu"
+% engines: rust int133a = "Univ A, TownEmail: {aable, bbaker}@a.edu" one affiliation of both
+% expect:  0 errors, 0 warnings; Able: Univ A, Town, e-mail aable@a.edu; Baker: Univ A, Town, e-mail bbaker@a.edu,
+%          each in typewriter, named "Email: "
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affil{Univ A, Town\authorcr Email: {\tt\{aable, bbaker\}@a.edu}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

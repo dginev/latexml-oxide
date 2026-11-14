@@ -1,0 +1,20 @@
+% mechanism: the control of printed_text_line_break.tex: the printed text without its `\\`
+% witness: 2605.15804
+% oracle:  pdflatex 0 errors: "Ann Able / School X Dept Y / City" and "Bob Baker / School X Dept Z / City"
+% engines: rust int131a: right
+% expect:  0 errors, 0 warnings; Ann School X and Dept Y City; Bob School X and Dept Z City
+% status:  CONTROL (GREEN)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\textit{School X}
+\IEEEauthorblockA{Dept Y\\ City}
+\and
+\IEEEauthorblockN{Bob Baker}
+\textit{School X}
+\IEEEauthorblockA{Dept Z\\ City}}
+\maketitle
+Text.
+\end{document}

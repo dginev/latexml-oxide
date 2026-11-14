@@ -1,0 +1,17 @@
+% mechanism: an unmarked article block's address line carrying a `\thanks` (`Ann Able, Bob Baker \\ Univ X \\
+%   \texttt{a@x, b@y}\thanks{…}`): its addresses each spelled name's e-mail, its note the document's pubnote
+%   (`address_line_notes`; dispatch.rs unmarked branch, not a per-author class's cautious reading). OD #52(j).
+% witness: 2605.23553 (its unmarked sibling); 2304.05485, 2608.24641
+% oracle:  pdflatex 0 errors
+% engines: rust int129a: the address line an affiliation of both names; perl: the same, welded
+% expect:  0 errors, 0 warnings; each creator "Univ X, Italy" and its own e-mail; one pubnote "Submitted somewhere."
+% status:  GREEN (101b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker \\
+Univ X, Italy \\
+\texttt{ann.able@x.it, bob.baker@y.it}\thanks{Submitted somewhere.}}
+\maketitle
+Body.
+\end{document}

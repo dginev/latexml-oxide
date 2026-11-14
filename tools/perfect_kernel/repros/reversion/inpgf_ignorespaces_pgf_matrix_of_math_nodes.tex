@@ -1,0 +1,14 @@
+% witness: 1301.4725, 1305.4700, 1504.00121 (QA41 audit: the `\ignorespaces` pgf lets to `\lx@inpgf@ignorespaces`)
+% oracle:  pdflatex 0 errors; Perl pgfsys-latexml.def.ltxml:63 returns no box, so a cell reverts as written
+% engines: rust int161a = tex="{\lx@inpgf@ignorespaces a_{1}}" in every matrix cell; a node's own `$x+y$` was clean
+% expect:  0 errors, 0 warnings; the cells tex="{a_{1}}", "{b}", "{c}", "{d^{2}}", the node tex="x+y"
+% status:  RED (int161a) -> GREEN (RV1)
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{matrix}
+\begin{document}
+\begin{tikzpicture}
+\matrix[matrix of math nodes]{ a_1 & b \\ c & d^2 \\};
+\node at (0,-2) {$x+y$};
+\end{tikzpicture}
+\end{document}

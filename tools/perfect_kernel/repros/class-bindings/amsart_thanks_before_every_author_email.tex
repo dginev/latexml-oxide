@@ -1,0 +1,22 @@
+% witness: review rev92a_r3 s1 (probe d2): amsart's `\thanks` e-mail call before every `\author`
+% oracle:  pdflatex: amsart.cls:516 keeps `\thanks` in `\thankses`, run at `\maketitle`, and `\email` (:508)
+%          appends to `\addresses`: "Email address: p@x.org" prints after University Y, City, Bob Baker's address
+% engines: perl 0.8.8 = 0 errors (1 warning, ar5iv.sty absent), p@x.org lost (the `ltx:pubnote` holds "Contact: ");
+%          rust int120a = p@x.org on a nameless creator; rust 92a r4 = the same XML, the shadow the block's (no author
+%          current at the call), the writer "same"
+% expect:  p@x.org on Bob Baker, as the page prints it
+% status:  RED (catalog, no guard): a routed amsart note belongs to the last live author at `\maketitle`, which needs a
+%          change tag and a ruling (SYNC row; deferred to the ams written-family work)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\thanks{Contact: \email{p@x.org}}
+\author{Ann Able}
+\address{University X, Town}
+\author{Bob Baker}
+\address{University Y, City}
+\maketitle
+Text.
+\end{document}

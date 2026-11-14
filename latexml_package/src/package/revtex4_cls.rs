@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{engine::latex_constructs::is_document_class, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -8,12 +8,12 @@ LoadDefinitions!({
 
   // Generally ignorable options
   for option in [
-    "overload", "checkin", "preprint", "manuscript", "showpacs", "noshowpacs",
+    "overload", "showpacs", "noshowpacs",
     "showkeys", "noshowkeys", "balancelastpage", "nobalancelastpage",
-    "preprintnumbers", "nopreprintnumbers", "bibnotes", "nobibnotes",
-    "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
+    "bibnotes", "nobibnotes",
+    "footinbib", "nofootinbib",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom", "tightenlines",
-    "lengthcheck", "eqsecnum", "secnumarabic", "fleqn", "floats", "endfloats",
+    "lengthcheck", "fleqn", "floats", "endfloats",
     "titlepage", "notitlepage", "groupedaddress", "unsortedaddress", "runinaddress",
     "superscriptaddress", "byrevtex", "floatfix", "nofloatfix", "ltxgridinfo",
     "outputdebug", "raggedfooter", "newabstract", "oldabstract",
@@ -25,6 +25,44 @@ LoadDefinitions!({
   ].iter() {
     DeclareOption!(*option, None);
   }
+  // The front matter's footnote marks (revtex4_support_sty.rs `\frontmatter@thefootnote`): letters under
+  // `altaffilletter`, symbols by default and under `altaffilsymbol` (revtex4-1.cls:5955-5957, revtex4.cls:3934-3937,
+  // revtex4-2.cls:5976-5978).
+  DeclareOption!("altaffilletter", {
+    assign_value("revtex@altaffilletter", true, Some(Scope::Global));
+  });
+  DeclareOption!("altaffilsymbol", {
+    assign_value("revtex@altaffilletter", false, Some(Scope::Global));
+  });
+  // REVTeX 4.2's `aapm` society (aapm4-2.rtx; REVTeX 4.0 has no aapm.rtx). The society and journal, which the section
+  // numbers depend on (the `rmp` journal, apsrmp4-2.rtx:124-148, revtex4's rmp.rtx:113-122; `aapm`, aapm4-2.rtx:290-314;
+  // PRL's and AIP `cp`'s `secnumdepth`), are read from the options as the class reads them
+  // (`revtex4_support_sty::selected_journal`).
+  if !revtex4_0 {
+    DeclareOption!("aapm", None);
+  }
+  // The options that number the sections and equations (`revtex4_support_sty::define_section_numbers`): `eqsecnum`
+  // (revtex4-2.cls:6057-6064, revtex4.cls:3836-3840) and `secnumarabic` (revtex4-2.cls:6068-6071, revtex4.cls:3987).
+  for option in ["eqsecnum", "secnumarabic"] {
+    DeclareOption!(option, {
+      assign_value(&s!("revtex@opt@{option}"), true, Some(Scope::Global));
+    });
+  }
+  // The options that decide whether the class prints the `\preprint` numbers (revtex4-1.cls:5856-5909, revtex4.cls
+  // :3847-3892, revtex4-2.cls alike): `preprint` (and `manuscript`, `checkin`) set the preprint style, which prints
+  // them unless `nopreprintnumbers` (in REVTeX 4.0 even then, :3811-3812); `preprintnumbers` prints them in any style
+  // (revtex4_support_sty.rs `preprint_printed`).
+  for option in ["preprint", "manuscript", "checkin"] {
+    DeclareOption!(option, {
+      assign_value("revtex@preprintsty", true, Some(Scope::Global));
+    });
+  }
+  DeclareOption!("preprintnumbers", {
+    assign_value("revtex@preprintnumbers", Stored::Bool(true), Some(Scope::Global));
+  });
+  DeclareOption!("nopreprintnumbers", {
+    assign_value("revtex@preprintnumbers", Stored::Bool(false), Some(Scope::Global));
+  });
 
   // Perl revtex4.cls.ltxml L40-45:
   //   my @revtex_toload = ();        # EMPTY by default
@@ -83,9 +121,49 @@ LoadDefinitions!({
   DeclareOption!("author-year", {
     assign_value("revtex_cite_style", pin("authoryear"), Some(Scope::Global));
   });
+  // revtex4-2.cls:6207-6214 `\DeclareOption{linenumbers}{\appdef\class@documenthook{\RequirePackage{lineno}…\linenumbers}}`:
+  // the option loads lineno at the document's start, and papers given it call `\nolinenumbers`, `{linenomath}`
+  // (revtex4-1 and revtex4-2 papers of run 353: 16 + 16 with the option and lineno's commands undefined; 1010.3732,
+  // 1209.2541, 2003.07846, 2010.12920). Without the option the class loads none: a paper calling them then errs in
+  // pdflatex too. Perl's binding lacks the option (KNOWN_PERL_ERRORS #697).
+  if !revtex4_0 {
+    DeclareOption!("linenumbers", {
+      assign_value("revtex_linenumbers", true, Some(Scope::Global));
+    });
+  }
+  if !revtex4_0 {
+    // revtex4-1.cls:6194-6198, revtex4-2.cls:6215-6219: `nomerge` turns natbib's entry merging off.
+    DeclareOption!("nomerge", {
+      assign_value("revtex_nomerge", true, Some(Scope::Global));
+    });
+  }
   assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): REVTeX's, as
+  // pdflatex gives it — 510pt in two 246pt columns under `twocolumn` (and revtex4-2's `reprint`; REVTeX 4.0 has no
+  // such option), one column of 510pt otherwise; `preprint` (`manuscript`) sets 468pt, in two 229pt columns where
+  // `twocolumn` or a `reprint` given before it sets two (`[preprint,twocolumn]`; review rev78x2 finding 4), a later
+  // `reprint` undoing it — the options as given, the last standing; `\onecolumngrid`/`\twocolumngrid` regions follow
+  // (revtex4_support_sty.rs). Witnesses 1702.02527, 2504.07193 (one column), 2308.02289 (absolute widths against the
+  // 246pt column), 2504.20901, 2504.06175 (`\onecolumngrid` regions).
+  {
+    let reprint: &[&str] = if is_document_class("revtex4") { &[] } else { &["reprint"] };
+    let preprint = matches!(
+      last_class_option(&[&["preprint", "manuscript"], reprint].concat()),
+      Some("preprint" | "manuscript")
+    );
+    let twocolumn = matches!(
+      last_class_option(&[&["twocolumn", "onecolumn"], reprint].concat()),
+      Some("twocolumn" | "reprint")
+    );
+    let (column, text) = if preprint { (229.0, 468.0) } else { (246.0, 510.0) };
+    declare_panel_page(column, text, twocolumn);
+  }
+  // REVTeX's floats are centred (revtex4-2.cls:6770-6772, revtex4.cls:5355-5357
+  // `\appdef\@xfloat@prep{\appdef\@parboxrestore{\centering}}`): a `\\` in them is `\@centercr`
+  // (`declare_panel_floats_centred`).
+  declare_panel_floats_centred();
   // Queue the citation style onto natbib rather than pre-loading natbib here.
   // `numbers` gives the numeric `[N]` refnum + square/comma inline; `author-year`
   // leaves natbib's own author-year (round/semicolon) default. `\PassOptionsToPackage`
@@ -98,15 +176,43 @@ LoadDefinitions!({
   if lookup_string("revtex_cite_style") == "numbers" {
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
   }
+  // revtex4.cls:5480 and revtex4-2.cls:7042 `\RequirePackage[sort&compress]{natbib}`: a citation's numbers sorted, a
+  // run of three or more joined with an en dash ("[1–3]"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). Guard
+  // `perfect_kernel_batch78j::revtex_citations_sort_and_compress`.
+  Digest!("\\PassOptionsToPackage{sort&compress}{natbib}")?;
+  // REVTeX 4.0's own rule for printing a `\preprint` (revtex4_support_sty.rs `preprint_printed`).
+  if revtex4_0 {
+    assign_value("revtex@preprint@v4.0", true, Some(Scope::Global));
+  }
   RequirePackage!("revtex4_support");
+  switch_off_author_block_after_maketitle()?;
+  // revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
+  // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.
+  if !revtex4_0 && !lookup_bool("revtex_nomerge") {
+    natbib_sty::natbib_merge_citations("\\thr@@", false)?;
+  }
+  revtex4_support_sty::define_section_numbers(if revtex4_0 { "" } else { "4-2" })?;
   revtex4_support_sty::record_implicit_bibstyle(if revtex4_0 { "" } else { "4-2" });
+  revtex4_support_sty::retire_option_handlers();
+  if revtex4_0 {
+    // revtex4.cls:4092-4094: REVTeX 4.0 groups the addresses unless an address option said otherwise.
+    RawTeX!(r"\@ifxundefined\groupauthors@sw{\clo@groupedaddress}{}");
+    // `\bm` waits for `\begin{document}` (revtex4.cls:6030-6032; 4.2 defines it at load, revtex4-2.cls:7586).
+    revtex4_support_sty::defer_bm_to_begin_document()?;
+  } else {
+    revtex4_support_sty::define_float_repair()?;
+    // The REVTeX 4.2 internals documents call, `\doi` among them (`define_revtex41_internals`).
+    revtex4_support_sty::define_revtex41_internals()?;
+  }
   // REVTeX 4.0 sets an `\email` or `\homepage` address with `\url`, the `\texttt` its `\href` falls back to
   // (revtex4.cls:4476-4493), so its `_` and `~` read as typed (1001.1076 "aiwen_fan@pku.edu.cn"). REVTeX 4.2, which
   // this binding also serves, sets it in the current font (revtex4-2.cls:1980, its `\href` = `\@href`), as
-  // revtex4_support_sty.rs's commands do.
+  // revtex4_support_sty.rs's commands do; `%` other in the address, as `\sanitize@url` makes it (`UrlSemiverbatim`).
   if revtex4_0 {
-    DefMacro!("\\email[] Semiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
-    DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\@email{} Semiverbatim", "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
   }
 
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.
@@ -123,9 +229,54 @@ LoadDefinitions!({
   if lookup_bool("revtex_load_graphics") {
     RequirePackage!("graphics");
   }
+  if lookup_bool("revtex_linenumbers") {
+    DefPrimitive!("\\lx@revtex@lineno", {
+      RequirePackage!("lineno");
+    });
+    RawTeX!(r"\AtBeginDocument{\lx@revtex@lineno}");
+  }
 
   // Perl revtex4.cls.ltxml L60-62: auto-load `<jobname>.rty` if present.
   // Papers like cond-mat0201306 stash paper-local macros (`\TR`, `\GC`,
   // `\bracketOpen` etc.) in this file via revtex's runtime convention.
   Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
 });
+
+/// REVTeX's `\maketitle` switches the author block off (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662,
+/// revtex4.cls:4709-4717); ours from a repeated block's first `\author` on, its new words counted (OD #1003: 2401.15572,
+/// 1801.07635, 1812.00931, 2510.13035, 2602.09975, 2307.07324, 2001.07542; lone setters kept: 1309.4768, 1106.2389, 2304.09163).
+pub(crate) fn switch_off_author_block_after_maketitle() -> Result<()> {
+  // (not AASTeX's, which loads this binding: aastex701.cls:13231-13266 is its own)
+  if !["revtex4", "revtex4-1", "revtex4-2"]
+    .into_iter()
+    .any(is_document_class)
+  {
+    return Ok(());
+  }
+  // (local `\let`s: a repeat's `\author` inside a group, `{\author{Ann}}\email{…}`, switches off only to its end)
+  DefMacro!(
+    "\\lx@revtex@repeated@author",
+    r"\let\and\relax\let\affiliation\lx@revtex@repeated@gobble\let\email\lx@revtex@repeated@gobble@url\let\thanks\lx@revtex@repeated@gobble\lx@revtex@repeated@gobble"
+  );
+  // (the repeat's names and contacts the content check counts: a new word the output lacks warns, 1206.0114, 1903.12442)
+  DefPrimitive!("\\lx@revtex@repeated@gobble{}", sub[(content)] {
+    fm_record_switched_off_call(&content);
+  });
+  // (`_` and `@` other as the live `\email` reads them, `ann_x@x.org` whole; `%` a comment as under `\@gobble`: revRB1c q2)
+  DefPrimitive!("\\lx@revtex@repeated@gobble@url Semiverbatim", sub[(content)] {
+    fm_record_switched_off_call(&content);
+  });
+  DefPrimitive!("\\lx@revtex@maketitle@setters", sub[_args] {
+    // (a document's own `\maketitle` or `\frontmatter@maketitle` wins, 2509.25344, 2111.12484; `\title`, `\date` stay
+    // the kernel's, 2606.04868; the class's `\let` lets a later `\renewcommand` through, so the locks lift, 2412.14256)
+    if !lookup_bool("\\maketitle:redefined") && lookup_definition(&T_CS!("\\frontmatter@maketitle"))?.is_none() {
+      let_i(&T_CS!("\\author"), &T_CS!("\\lx@revtex@repeated@author"), None);
+      for cs in ["\\affiliation", "\\author", "\\email", "\\thanks"] {
+        assign_value(&s!("{cs}:locked"), false, None);
+      }
+    }
+    Ok(())
+  });
+  AddToMacro!("\\lx@maketitle@body", "\\lx@revtex@maketitle@setters");
+  Ok(())
+}

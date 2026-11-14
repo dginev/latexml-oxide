@@ -1,0 +1,20 @@
+% witness: aa 2210.16066, 1907.11241, 2007.06573, 2103.15844; llncs 2405.04152, 2603.13900 (every author:
+%          `\email{\href{mailto:X}{X}}`); review rev92c B1
+% oracle:  pdflatex: "Ann Able1, Bob Baker2, and Cid Cole3", "1 Univ A ann@a.org", "2 Univ B bob@b.org", "3 Univ C Cid Cole"
+% engines: perl 0.8.8 = 0 errors, each address once; rust int122w = each once; int122y (92c) = Ann's and Bob's twice (the
+%          e-mail call's text read the link's target and its printed text as two addresses, each written)
+% expect:  0 errors, 0 warnings; one contact a print: an `\href` in an e-mail call is the text it prints, never its
+%          `mailto:` target (`\href{mailto:X}{X}`, `\href{mailto:X}{\texttt{X}}`; `\href{mailto:X}{Name}` prints no
+%          address, Cid Cole's contact his name as printed)
+% status:  RED (92c) -> GREEN (92c r2) — perfect_kernel_batch92c::an_email_link_is_the_text_it_prints
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cid Cole\inst{3}}
+\institute{Univ A\\ \email{\href{mailto:ann@a.org}{ann@a.org}} \and Univ B\\ \email{\href{mailto:bob@b.org}{\texttt{bob@b.org}}}
+\and Univ C\\ \email{\href{mailto:cid@c.org}{Cid Cole}}}
+\maketitle
+Text.
+\end{document}

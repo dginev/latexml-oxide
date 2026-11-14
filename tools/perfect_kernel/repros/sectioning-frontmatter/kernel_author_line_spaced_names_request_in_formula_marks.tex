@@ -1,0 +1,17 @@
+% mechanism: a mark after a name and a space is the name's request, not a mark inside a word: `Ann Able$^{1}$ Bob
+%   Baker$^{2}$` requests 1 and 2, so the in-block line's `${\rm ^1Dept}$` and mid-line `${\rm ^2Lab}$` are labels
+%   (`events::names_requested`, the in-word test `lexer::glued_inside_a_word`)
+% witness: synthetic (revISO1b B1, probe kx3)
+% oracle:  pdflatex (TL 2025 article) 0 errors: "Ann Able1 Bob Baker2 / 1Dept of Physics, Univ X, 2Lab of Chemistry, Univ Y"
+% engines: rust int160c = 0 errors, 0 warnings, Able "Dept of Physics, Univ X", Baker "Lab of Chemistry, Univ Y"; ISO1b =
+%   1 warning, both authors "1Dept of Physics, Univ X, Lab of Chemistry, Univ Y" (Ann's 1 alone requested: the 2 lost)
+% expect:  0 errors, 0 warnings; Able "¹Dept of Physics, Univ X"; Baker "²Lab of Chemistry, Univ Y"
+% status:  GREEN (ISO1c) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ Bob Baker$^{2}$\\ ${\rm ^1Dept}$ of Physics, Univ X, ${\rm ^2Lab}$ of Chemistry, Univ Y}
+\maketitle
+Text.
+\end{document}

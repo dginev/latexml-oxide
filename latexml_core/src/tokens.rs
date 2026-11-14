@@ -522,9 +522,12 @@ impl Tokens {
     )
   }
   /// Checks if any BEGIN/END code groups are correctly nested and closed
-  pub fn is_balanced(&self) -> bool {
+  pub fn is_balanced(&self) -> bool { Tokens::slice_is_balanced(&self.0) }
+
+  /// [`Tokens::is_balanced`] of a token slice.
+  pub fn slice_is_balanced(tokens: &[Token]) -> bool {
     let mut level = 0;
-    for t in &self.0 {
+    for t in tokens {
       level += match t.get_catcode() {
         Catcode::BEGIN => 1,
         Catcode::END => -1,
@@ -932,6 +935,7 @@ impl ToTokens for Token {
         Token {
           text: latexml_core::common::arena::pin_static(#text),
           code: #code,
+          prov: 0,
           // Emitted into the consumer crate; the cfg resolves there (the feature
           // propagates from latexml_oxide). See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
           #[cfg(feature = "token-locators")]

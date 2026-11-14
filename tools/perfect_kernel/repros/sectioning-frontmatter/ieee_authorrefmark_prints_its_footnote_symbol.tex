@@ -1,0 +1,18 @@
+% mechanism: `\IEEEauthorrefmark{1}` prints IEEEtran's footnote symbol for 1, ∗ (IEEEtran.cls:4541-4543, outside
+%   `transmag`: `\textsuperscript{\footnotesize\ensuremath{\ifcase#1\or *\or \dagger\or …}}`); the name shows "1"
+%   (OD #928 round 9, Known residual P9; ieeetran_cls.rs). The label is matched (Univ X is Ann Able's), the printed
+%   glyph is not kept.
+% witness: review rev94a r8 z/z07
+% oracle:  pdflatex 0 errors: "Ann Able∗, Bob Baker / ∗Univ X / Univ Y"
+% engines: rust 93a, 94a r8, r9: Ann Able `<sup>1</sup>`; 106b: `<sup>*</sup>`, Univ X Ann Able's; perl: no mark
+%   (`\IEEEauthorrefmark` empty, IEEEtran.cls.ltxml:154)
+% expect:  0 errors, 0 warnings; Ann Able's mark shown as ∗ (the text form `*`, as `\@fnsymbol` sets it in text)
+% status:  RED (catalog) -> GREEN (106b; OD #968, guarded by perfect_kernel_batch106b::refmark_blocks_pair_and_print_their_symbols)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{A Title}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker}\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}\IEEEauthorblockA{Univ Y}}
+\maketitle
+Body.
+\end{document}

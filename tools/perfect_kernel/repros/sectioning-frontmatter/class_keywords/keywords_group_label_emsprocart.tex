@@ -1,0 +1,17 @@
+% A label-only `{keywords}` whose label is a brace group (kwgroups.cls option emsprocart): the group's font and layout commands
+% stay in the label, which names the frontmatter's keywords by its text only; the keywords text is not in its font.
+% witness: 1202.4161, 1006.0632, 1610.08545 (emsprocart.cls:668-670)
+% oracle:  pdflatex (kwgroups.cls beside it) 0 errors: "Keywords. alpha, beta Body." (pdffonts: the label in CMBX, the
+%          keywords not bold)
+% expect:  0 errors, 0 warnings; <keywords name="Keywords.">alpha, beta </keywords>, no font= on the keywords text
+% status:  RED (68n round 1: the name carried the group's commands, the keywords text bold) -> GREEN (68n round 2)
+% preload: ar5iv.sty
+\documentclass[emsprocart]{kwgroups}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{keywords}
+alpha, beta
+\end{keywords}
+Body.
+\end{document}

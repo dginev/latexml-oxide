@@ -1,0 +1,28 @@
+% mechanism: the frontmatter observer reads a pgf/TikZ picture as it prints, its text nodes only (`util_text::picture_text`
+%   through `ink_text_printed`, the events' `ink_of`, and `walk_container`, where a picture without text nodes is a graphic):
+%   an SVG path's data (`\lxSVG@drawpath@unclipped{M 0 0 M 6.3 0 C …}`) is no word of a name, contact or address
+% witness: 2409.13798 (jacow, `R. Apsimon\orcidB{}\textsuperscript{2}`, `\orcidB` an `\href{https://orcid.org/…}{\orcidicon}`
+%   drawing a TikZ logo): at =2 the path data was the link's text, written into the address line by the emitter's plain
+%   text fallback, with 19 words "missing" and "ID" extra in the content check (w56 report, SYNC (33))
+% oracle:  pdflatex 0 errors; "R. Apsimon ID2 , S. Setiniyaz2 , Lancaster University, UK"
+% engines: rust =2 (int152a): 0 errors, the affiliation holding "R. Apsimon M 0 0 M 6.3 0 C …"; off: 0 errors, 6 creators
+% expect:  =2: 0 errors, no path data anywhere, no content-check Warning; off unchanged. Residual RED (deferred, main session
+%   2026-11-08, `sib_first.tex` shape): the names line after an address line is still read as that address's continuation
+% status:  RED (int152a) -> GREEN (perfect_kernel_batchcl4::a_tikz_icons_path_data_is_no_word)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz,hyperref}
+\DeclareRobustCommand{\orcidicon}{%
+  \begin{tikzpicture}
+  \draw[green, fill=green] (0,0) circle [radius=0.16] node[white] {\tiny ID};
+  \end{tikzpicture}\hspace{-2mm}}
+\newcommand{\orcidB}{\href{https://orcid.org/0000-0001-6346-5989}{\orcidicon}}
+\begin{document}
+\title{A Title}
+\author{C. Barbagallo, F. Zomer\textsuperscript{1}\\Laboratoire de Physique, Orsay, France \\
+  R. Apsimon\orcidB{}\textsuperscript{2}, S. Setiniyaz\textsuperscript{2}, Lancaster University, UK \\
+  \textsuperscript{1}also at Paris-Saclay University, France \\
+  \textsuperscript{2}also at Cockcroft Institute, UK}
+\maketitle
+Text.
+\end{document}

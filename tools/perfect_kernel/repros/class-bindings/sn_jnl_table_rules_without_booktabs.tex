@@ -1,0 +1,21 @@
+% witness: 2605.00003 (its sn-jnl.cls copy :1280-1321 defines `\toprule`/`\midrule`/`\botrule` itself), 2006.16202
+% oracle:  pdflatex with 2605.00003's sn-jnl.cls and amsmath: 0 errors, the table "A B / C D" between its rules
+% engines: rust 67z+ (3a3cbdfd01, sn_jnl_cls.rs `RequirePackage!("booktabs")` and `\botrule`) = 0 errors, the rules on
+%          the rows; before 67z `\toprule` undefined without the paper's own `\usepackage{booktabs}`; perl the same
+%          (no sn-jnl binding)
+% expect:  0 errors, 0 warnings; the two rows with their top, middle and bottom rules
+% status:  GREEN (verified on 529dc1b543; guard added in 77v)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\begin{document}
+\begin{table}
+\caption{Values.}
+\begin{tabular}{ll}
+\toprule
+A & B\\
+\midrule
+C & D\\
+\botrule
+\end{tabular}
+\end{table}
+\end{document}

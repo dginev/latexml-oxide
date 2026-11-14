@@ -27,7 +27,8 @@ mod util;
 pub use data::{clear_differential_evidence, get_grammatical_role, read_differential_evidence};
 pub use parser::{
   MathParser, reset_conversion_notices, set_asf_second_chance_alternatives_override,
-  set_hybrid_and_node_limit_override, text_form, type_expectation_operators,
+  set_hybrid_and_node_limit_override, set_parse_deadlines_override, text_form,
+  type_expectation_operators,
 };
 pub use util::{filter_hints, node_to_grammar_lexemes, node_to_grammar_lexemes_from};
 

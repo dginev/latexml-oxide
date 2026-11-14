@@ -1,0 +1,24 @@
+% witness: 68h: caption3.sty:1774-1806 `\DeclareCaptionSubType*[<numbering>]{<type>}` makes `sub<type>` — its counter,
+%          numbered within the type (starred: `\thefigure.\arabic{subfigure}`); undefined with caption alone, a no-op
+%          under subcaption (run 336: 39 first errors: 1202.5818, 1604.05412, 2002.03129, 2106.01798, 1706.00437,
+%          2405.16148, 1907.05468, 2512.12259)
+% oracle:  pdflatex 0 errors: "1.1 First" / "1.2 Second" / "Figure 1: Main" / "See 1.1, 1.2, 1 and 2.a."
+% engines: rust 68h base (67int8): "(a) First", "\thesubalgorithm" undefined; perl: undefined `\DeclareCaptionSubType`
+% expect:  0 errors; the sub-figures are 1.1 and 1.2, the sub-algorithm counter exists
+% status:  GREEN (68h)
+\documentclass{article}
+\usepackage{caption}
+\usepackage{algorithm}
+\DeclareCaptionSubType*[arabic]{figure}
+\DeclareCaptionSubType*{algorithm}
+\usepackage{subcaption}
+\captionsetup[subfigure]{labelformat=simple}
+\begin{document}
+\begin{figure}
+\begin{subfigure}{0.4\textwidth}X\caption{First}\label{a}\end{subfigure}
+\begin{subfigure}{0.4\textwidth}Y\caption{Second}\label{b}\end{subfigure}
+\caption{Main}\label{m}
+\end{figure}
+\setcounter{algorithm}{2}\setcounter{subalgorithm}{1}
+See \ref{a}, \ref{b}, \ref{m} and \thesubalgorithm.
+\end{document}

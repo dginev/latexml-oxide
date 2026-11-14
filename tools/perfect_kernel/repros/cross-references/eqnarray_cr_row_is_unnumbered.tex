@@ -1,0 +1,16 @@
+% witness: arXiv 1011.0523 (PDF (19) was our 22), nucl-th9903062 (PDF (1) our 2, (6) our 12): eqnarray rows ended by a raw \cr
+% oracle:  pdflatex 0 errors; rows ended by \cr unnumbered: (1) c=d, (2) k=l, (3) e=f; "See (1) and (3)." (latex.ltx:15789-15795 \@@eqncr)
+% engines: rust (int50a) = every row numbered 1-4, e=f (5), "See (2) and (5)."; Perl 0.8.8 the same (fidelity3 audit N1)
+% expect:  0 errors; eqnarray refnums 1, 2 on rows c=d and k=l only, the equation 3
+% status:  RED (int50a) -> GREEN (78n, OXIDIZED_DESIGN_DIVERGENCES #847)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+a&=&b \cr
+c&=&d\label{r}\\
+g&=&h \cr
+k&=&l
+\end{eqnarray}
+\begin{equation}e=f\label{e}\end{equation}
+See (\ref{r}) and (\ref{e}).
+\end{document}

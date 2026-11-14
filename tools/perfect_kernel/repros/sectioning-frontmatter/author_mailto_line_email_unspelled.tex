@@ -1,0 +1,20 @@
+% witness: the user ruling of 2026-10-20 on 77p r7's question 1 (a mailto line is an e-mail line, its address to the
+%          name it spells, an unspelled one never guessed); the shape of 2605.18563 with an address no name spells
+% oracle:  pdflatex 0 errors: the three names, the institution, then "Correspondence: lab@uni-b.edu"
+% engines: rust 77p r7 = 0 errors; the line an affiliation of all three names (`annotate=3`)
+% expect:  0 errors, 0 warnings; the address one e-mail contact, named "Correspondence:", on the group's last name as
+%          an address no name spells is placed, on no other name
+% status:  RED (77p r7) -> GREEN (77p r8)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \quad Bob Baker \quad Cat Cole \\
+Univ B \\
+\small{
+  \textbf{Correspondence:} \href{mailto:lab@uni-b.edu}{lab@uni-b.edu}
+}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

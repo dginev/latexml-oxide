@@ -1,0 +1,21 @@
+% mechanism: a column holding no name of its own after the last name is the shared affiliation of every name above it,
+%            whichever spelling opens it: a tabular juggle written inline (`\end{tabular}\begin{tabular}{c}`) or as
+%            sig-alternate's macro (`\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`), both the column TeX
+%            sets (`observer::rehearsal` binds the macro by what it prints between, as `inline_juggles_as_columns` the
+%            inline form; `resolver::blocks` `shared_column`)
+% witness: 0712.1016, 1704.03168 (sig-alternate's `\sharedaffiliation` after the `\alignauthor` columns; the PDF centres
+%          the affiliation under every name); review revG3 finding 1 and Q3 (probes q1e, q3a, q3b)
+% oracle:  pdflatex: 0 errors; "A One", "Bob Two", "Univ Shared", "Main Street 1, City" (one line in article: the
+%          columns fit it)
+% engines: rust FB2b4 `=2`: inline, "Univ Shared" a third creator (an institution as a person); the macro, Bob Two's
+%          affiliation alone; off: the inline form E=5 and one creator, the macro Bob Two's
+% expect:  0 errors, 0 warnings at `=2`; creators A One and Bob Two, each with Univ Shared and Main Street 1, City
+% status:  RED (FB2b4) -> GREEN at `=2` (FB2b5); off unchanged until the flip
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One \and Bob Two \end{tabular}\begin{tabular}{c} Univ Shared \\ Main Street 1, City}
+\maketitle
+Text.
+\end{document}

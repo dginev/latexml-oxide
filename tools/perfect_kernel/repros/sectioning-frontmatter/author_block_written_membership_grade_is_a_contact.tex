@@ -1,0 +1,24 @@
+% mechanism: a membership grade written after the last name's comma in an IEEE name block, of a list
+%   (`\IEEEauthorblockN{…, and Cat Cole, \textit{Fellow, IEEE}}`) or of one name the cautious split keeps whole
+%   (`\IEEEauthorblockN{Dan Dee, {\it Senior Member, IEEE}}`), is that author's `membership` contact
+%   (`membership_read_out`; OXIDIZED_DESIGN_DIVERGENCES #967).
+% witness: 2602.16174 (`\IEEEauthorblockN{Fatih Temiz, Shavbo Salehi, and Melike Erol-Kantarci, \textit{Fellow,
+%   IEEE}}`), 2302.11403 (`\IEEEauthorblockN{Massimiliano Di Ventra, {\it Fellow, IEEE}}`); census132 row 10
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able, Bob Baker, and Cat Cole, Fellow, IEEE Dan Dee, Senior Member, IEEE",
+%   "Univ X", "Univ Y"
+% engines: rust int134b: personnames "Cat Cole, Fellow, IEEE", "Dan Dee, Senior Member, IEEE"; perl: one creator
+%   "Ann Able, Bob Baker, and Cat Cole, Fellow, IEEE" and one "Dan Dee, Senior Member, IEEE"
+% expect:  0 errors, 0 warnings; four creators, Cat Cole's and Dan Dee's grades their membership contacts in italics
+% status:  RED (int134b) -> GREEN (106c)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker, and Cat Cole, \textit{Fellow, IEEE}}
+\IEEEauthorblockA{Univ X}
+\and
+\IEEEauthorblockN{Dan Dee, {\it Senior Member, IEEE}}
+\IEEEauthorblockA{Univ Y}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: an institute's class e-mail call after the first is the entry's, written by its label, when its reader
+%   reads it (`shared_row::read_call`, shared by the row's split and the entry's cut): one address in printed braces is
+%   that address (`single_braced`, 2410.04091), so the Link step's chain places it at its author's place.
+% witness: review revZ18c S2 (probe q5_later_braced); the old split's `read` fallback, which the entry's cut lacked
+% oracle:  pdflatex 0 errors; "Univ X, Town" over "a1@x.edu, {b2@x.edu}, c3@x.edu"
+% engines: rust Z18c = Bob Baker no e-mail, Cid Cole {b2@x.edu} and c3@x.edu, 0 warnings
+% expect:  0 errors, 0 warnings; a1@ Ann Able's, {b2@x.edu} Bob Baker's, c3@ Cid Cole's
+% status:  RED (Z18c) -> GREEN (Z18d)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cid Cole\inst{1}}
+\institute{Univ X, Town\\
+\email{a1@x.edu}, \email{\{b2@x.edu\}}, \email{c3@x.edu}}
+\maketitle
+Body.
+\end{document}

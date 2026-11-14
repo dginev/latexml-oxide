@@ -1,0 +1,33 @@
+% A sole author's run-in `\affil` lines (OD #955) led by the marks the name requests (`Ann Able$^{1,2}$`), then an in-place
+% `\email` line. Each line goes by its label (`contact_line_call`, review rev99b B1); a relocated affiliation takes the
+% place its call had in the frontmatter queue (batch 99a's `relocate::at_queue_position`, FIDELITY_CHARTER R8), so the
+% affiliations come before the e-mail, as the PDF prints them. Before 99a, the relocation placed a labelled contact after
+% the author's directly attached ones: the e-mail first. The run alone could not keep the order: at the call it cannot
+% tell whether a later `\author` requests the same label (2608.19687's interleaved `\author`/`\affil` lines, where it did).
+% witness: 2412.06969, 2503.13373 (iopconfser); 2512.20289, 2603.07344, 2607.12158, 2609.01336, 2609.32125, 2608.28486
+% oracle:  pdflatex 0 errors: "Ann Able1,2", "1Univ A, Town", "2Univ B, City", "E-mail: ann@univ-a.edu"
+% engines: rust 99b0 = the affiliations body paragraphs; rust 99b r2 = the e-mail before the affiliations; perl = no raw
+%          class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town", "2Univ B, City", then the e-mail, in that order
+% status:  RED (99b r2: the e-mail first) -> GREEN (int127a, 99a's `at_queue_position`; guard 100a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipord.cls}
+\ProvidesClass{ipord}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\newcommand{\email}[1]{{\small E-mail: #1}\par}
+\end{filecontents*}
+\documentclass{ipord}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\email{ann@univ-a.edu}
+
+\maketitle
+Text.
+\end{document}

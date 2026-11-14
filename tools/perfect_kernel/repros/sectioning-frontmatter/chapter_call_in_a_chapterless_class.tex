@@ -1,0 +1,18 @@
+% witness: 0802.3014, 0909.2812, 0907.3938, 1403.2269, 1507.01872, 1511.03874, 1606.03650, 2504.00704
+%          (`Error:undefined:\chapter` on 67int21, 12 of the 3,000-paper projection sample)
+% oracle:  pdflatex 2 errors ("Undefined control sequence" at each \chapter; its title set as text), "Still undefined."
+% engines: rust 67int21 = 1 error (undefined:\chapter); Perl 0.8.8 = 1 error (undefined:\thechapter) + 6 warnings
+% expect:  0 errors, 1 warning ("The class defines no \chapter"); a `chapter` "Chapter 1 Intro" holding the section
+% status:  RED (67int21) -> GREEN (72b: OXIDIZED_DESIGN #734)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\chapter{Intro}
+Text.
+\section{Sec}
+More.
+\chapter{Next}
+\makeatletter
+Still \@ifundefined{chapter}{undefined}{defined}.
+\makeatother
+\end{document}

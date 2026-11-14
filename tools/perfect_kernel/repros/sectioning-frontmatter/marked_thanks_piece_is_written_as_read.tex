@@ -1,0 +1,17 @@
+% mechanism: each piece of a marked `\thanks` the reading cuts (`mark_led_pieces`) is sourced at its own span, its first
+%   event's start to its last's end, so the writer writes that piece's tokens, not a cut of its own of the whole note
+%   (`emitter::emit` `note_piece`); with every piece sourced at the whole note's span the writer re-cut it by the switch
+%   off's `split_wrapped_affiliation_marks` and, where the two cuts disagree, lost the piece the reading kept
+% witness: review revG5 finding 1 (synthetic); 2509.19480, 2206.07648 (the KEY1 THANKS witnesses, unchanged)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗ and Bob Baker2∗", the footnote "∗1 Univ A; 2 Univ B. ∗ Corresponding author."
+% engines: off = Ann: Univ A; Bob: Univ B. * Corresponding author.; `=2` (KEY1b) = Bob: Univ B., "Corresponding author"
+%   lost, 2 Warnings
+% expect:  0 errors 0 warnings; `=2` as off
+% status:  RED (KEY1b `=2`) -> GREEN (KEY1c)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,*}$ and Bob Baker$^{2}$\thanks{$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.}}
+\maketitle
+Text.
+\end{document}

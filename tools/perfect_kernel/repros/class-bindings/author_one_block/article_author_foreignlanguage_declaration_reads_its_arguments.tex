@@ -1,0 +1,20 @@
+% mechanism: field_notes.rs `note_call_read`: babel's robust `\foreignlanguage` (`\protect\foreignlanguage␣`, whose
+%   `\bbl@foreign@x` reads the arguments) declares `\bbl@elth` from a token of its expansion; the declaration's span is
+%   what the call read, `\foreignlanguage{vietnamese}{Võ Tiến Phong}`, so the name it prints takes it back, not the
+%   one token `\foreignlanguage` the emitter replayed as a declaration
+% witness: 2606.14878 (RDX1 f2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Võ Tiến Phong1,2"
+% engines: int169b, CAU1 1 error ("babel ... You haven't defined the language '' yet"); perl 0 errors
+% expect:  0 errors, 0 warnings; one creator Võ Tiến Phong with its marks
+% status:  RED (int169b, CAU1) -> GREEN (GRP1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese, english]{babel}
+\begin{document}
+\title{T}
+\author{\foreignlanguage{vietnamese}{Võ Tiến Phong}$^{1,2}$}
+
+\maketitle
+Hi.
+\end{document}

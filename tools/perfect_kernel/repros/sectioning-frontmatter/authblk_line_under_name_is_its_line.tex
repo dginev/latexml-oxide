@@ -1,0 +1,15 @@
+% mechanism: authblk's `\author` reads a whole argument as one name unless it holds a separator; the kernel's author read parts a name from the line under it at `\\`, its note staying the name's
+% witness: 2609.17614, 2609.33057, 2411.09771
+% oracle:  pdflatex: 0 errors; Dept. of Physics under Ann Able
+% engines: rust int139a: `Ann Able Dept. of Physics` in the name; perl (authblk.sty.ltxml:52-55, read): one creator, the line in the name
+% expect:  0 errors; one creator with her note and her affiliation
+% status:  RED (int139a) -> GREEN (108a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Note one.}\\ Dept. of Physics}
+\maketitle
+Text.
+\end{document}

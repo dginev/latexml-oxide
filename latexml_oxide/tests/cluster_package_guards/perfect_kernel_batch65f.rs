@@ -3,7 +3,7 @@
 //! Perl's `\ProvidesFile`/`\ProvidesPackage` triggers answered generic-format probes with "LaTeX", the PDF/DVI choice
 //! read a PDF the source never includes, and the gullet's cycle guard took a file's repeated text for an expansion
 //! loop. Repros under `tools/perfect_kernel/repros/`.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -54,6 +54,9 @@ fn plain_kernel_command_stays_undefined() {
 /// 1802.06281: `Fatal:Timeout:Recursion`). Repro loader/plain_miniltx_graphicx_no_latex.
 #[test]
 fn plain_miniltx_graphicx_loads_no_latex() {
+  if !check_requirements(&["miniltx.tex"]) {
+    return;
+  }
   let (log, xml) = convert_files(
     include_str!("../../../tools/perfect_kernel/repros/loader/plain_miniltx_graphicx_no_latex.tex"),
     &[],
@@ -100,6 +103,9 @@ fn plain_provides_probes_see_plain() {
 /// backend-persona/epstopdf_conversion_beside_eps_is_dvi.
 #[test]
 fn included_figures_choose_the_output_mode() {
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
   let mode = |xml: &str, expected: &str| {
     assert_element(
       xml,

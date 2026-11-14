@@ -1,0 +1,20 @@
+% mechanism: CST1: REVTeX's per-call `\affiliation` asks `leads_with_label` behind the opening-mark gate
+%   (`argument_marks::may_open_with_mark`): a macro of an institute's name opens with its first letter, no rehearsal
+% witness: 2103.04797 (1,161 `\affiliation{\Amsterdam}`, each a macro of an institute's name)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker / Univ A, Town A / Univ B, Town B"
+% engines: int164a and CST1: the creators below (byte-identical: the gate answers as the rehearsal did)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::marks_lead_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\newcommand\InstA{Univ A, Town A}
+\newcommand\InstB{{} Univ B, Town B}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{\InstA}
+\author{Bob Baker}
+\affiliation{\InstB}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

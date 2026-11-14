@@ -1,0 +1,27 @@
+% witness: review of M3's F9 (finding 8): tabularray.sty:2639-2640, :2660-2686, :2880-2881, :3046-3047, `preto`, `appto`, inside the cell's math and its `cmd`
+% oracle:  pdflatex (TL 2025) 0 errors: xf; gy; ph q i as phq and i; ck; mr; anb; Ao, As; CtB, CuB; [dve]; $\alpha w\beta$; 21z34; E; and Saa, Tcc Tdd, eeU, which the binding's `\SetCell`, `\SetRow`, `\SetColumn` lose.
+% engines: M3: the text dropped silently (f, g, h, …).
+% expect:  0 errors, 3 Warnings, one for each `\Set…` key, naming it and its text; every other cell as pdflatex
+% status:  GREEN
+\documentclass{article}
+\usepackage{tabularray}
+\newcommand\br[1]{[#1]}
+\NewColumnType{P}{Q[l,preto={k}]}
+\begin{document}
+\begin{tblr}{Q[l,preto={x}]} f \\ \end{tblr}
+\begin{tblr}{Q[l,appto={y}]} g \\ \end{tblr}
+\begin{tblr}{Q[l,preto={p},appto={q}]l} h & i \\ \end{tblr}
+\begin{tblr}{colspec={ll},column{2}={preto={c}}} j & k \\ \end{tblr}
+\begin{tblr}{colspec={l},row{2}={appto={r}}} l \\ m \\ \end{tblr}
+\begin{tblr}{colspec={l},cell{1}{1}={preto={a},appto={b}}} n \\ \end{tblr}
+\begin{tblr}{colspec={l},cells={preto={A}}} o \\ s \\ \end{tblr}
+\begin{tblr}{colspec={ll},rows={appto={B}},columns={preto={C}}} t & u \\ \end{tblr}
+\begin{tblr}{Q[l,cmd=\br,preto={d},appto={e}]} v \\ \end{tblr}
+\begin{tblr}{Q[l,mode=math,preto={\alpha},appto={\beta}]} w \\ \end{tblr}
+\begin{tblr}{Q[l,preto={1},preto={2},appto={3},appto={4}]} z \\ \end{tblr}
+\begin{tblr}{Q[l,preto={E}]} \\ \end{tblr}
+\begin{tblr}{P} K \\ \end{tblr}
+\begin{tblr}{ll} \SetCell{preto={S}} aa & bb \\ \end{tblr}
+\begin{tblr}{ll} \SetRow{preto={T}} cc & dd \\ \end{tblr}
+\begin{tblr}{ll} \SetColumn{appto={U}} ee & ff \\ \end{tblr}
+\end{document}

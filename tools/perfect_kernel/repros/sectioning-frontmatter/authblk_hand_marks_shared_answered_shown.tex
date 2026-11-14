@@ -1,0 +1,18 @@
+% mechanism: two names printing the same mark, one `\affil` answering both: each name shows its mark
+%   (`per_author_marks`), the affiliation copied to each with its own
+% witness: synthetic (P4b2b; reviewer revP4b2 q6; 2410.01932's four names `\aff{1}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker1", "1Univ A, Town A"
+% engines: P4b2: Ann Able, Bob Baker (no mark), each "1 Univ A, Town A"; P4b2b: the names' marks shown
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 1 "1 Univ A, Town A"
+% status:  GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{1}$}
+\affil{$^{1}$Univ A, Town A}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

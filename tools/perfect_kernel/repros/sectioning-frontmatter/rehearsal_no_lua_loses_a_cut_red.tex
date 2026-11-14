@@ -1,0 +1,16 @@
+% mechanism: a speculative run evaluates no Lua (`lua_bridge::lua_exec`, no rollback reaches an interpreter's globals), so what a chunk prints is not in the rehearsal's reading, and a cut that needs it does not come
+% witness: review revZ3r2 (no corpus witness)
+% oracle:  lualatex 0 errors: "1 Univ X, 2 Univ Y"; pdflatex has no `\luaexec`
+% engines: Perl has no cut. int142a: two entries, by a Lua state a rollback left behind. Z3r3: one entry, nothing lost, E 0, W 0. Never define `\directlua` or `\luatexversion` for this
+% expect:  0 errors, 0 warnings; affiliations "1 Univ X" and "2 Univ Y"; e-mail ann@x.org
+% status:  RED (perfect_kernel_batchz3::rehearsal_no_lua_loses_a_cut_red)
+\documentclass{revtex4-1}
+\usepackage{luacode}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{note}}
+\affiliation{$^{1}$\luaexec{tex.print("Univ X")}, $^{2}$Univ Y}
+\email{\luaexec{tex.print("ann@x.org")}}
+\maketitle
+Body.
+\end{document}

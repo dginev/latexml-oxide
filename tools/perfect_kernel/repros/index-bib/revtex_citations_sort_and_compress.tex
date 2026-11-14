@@ -1,0 +1,14 @@
+% witness: sel78i item 3 (revtex4*: 5,544/30k; revtex4-2.cls:7042 `\RequirePackage[sort&compress]{natbib}`)
+% oracle:  pdflatex 0 errors: "X [1–3], [1, 3]."
+% engines: rust int50a = "[3, 1, 2], [1, 3]"
+% expect:  0 errors; "[1–3]"
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+X \cite{c,a,b}, \cite{a,c}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Able.
+\bibitem{b} B. Baker.
+\bibitem{c} C. Cole.
+\end{thebibliography}
+\end{document}

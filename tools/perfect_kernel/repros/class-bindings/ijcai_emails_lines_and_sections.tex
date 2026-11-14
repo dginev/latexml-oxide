@@ -1,0 +1,39 @@
+% witness: 2002.11711 (`…, im@aizhengpeng.cn, 1871161@stu.neu.edu.cn\\zelei.liu@ntu.edu.sg, han.yu@…`: two addresses
+%          parted by a line break), 2609.15094 (a second `\emails`, `{$^{*}$Corresponding author}`, after the list),
+%          2304.11989 (`\{scs$\_$lzg, …\}@tju.edu.cn`); the stand-in below, named ijcai.sty for pdflatex, is ijcai19.sty's
+%          `\maketitle` (:101-130: `\emails` and `\\` each start a line of the title block)
+% oracle:  pdflatex 0 errors: "Ann Able , Bob Baker , Cid Cole and Dan Dodd* / Univ X / ann.able@x.org, im@bb.org /
+%          {cid_cole, ddodd}@z.org / *Corresponding author"
+% engines: rust int117a = 0 errors; the comma pieces by position (Perl ijcai.sty.ltxml:50-53, KNOWN_PERL_ERRORS #1200):
+%          Baker `im@bb.org\\ \{cid\_cole`, Cole `ddodd\}@z.org \emails $^{*}$Corresponding author`, Dodd none;
+%          Perl: the same
+% expect:  0 errors, 0 warnings; a line break and a further `\emails` part the lines (OD #908): ann.able@ Ann Able's,
+%          cid_cole@ and ddodd@ (the group written out, its underscore an underscore) Cid Cole's and Dan Dodd's by their
+%          spelling, im@ Bob Baker's (four addresses for four authors, in their order); the line with no address no
+%          place of the list and no e-mail: a note (`role=note`) on the author block (88b r1 filed it as an e-mail,
+%          "Email: mailto:…" in the HTML)
+% status:  RED (int117a) -> GREEN (88b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ijcai.sty}
+\ProvidesPackage{ijcai}
+\def\maketitle{\par\begingroup\@maketitle\endgroup
+  \let\maketitle\relax \let\@maketitle\relax
+  \gdef\@author{}\gdef\@title{}}
+\def\@maketitle{\vbox{\centering{\LARGE\bf \@title \par}\vskip 0.2in
+  {\def\and{\unskip\thinspace{\rm ,}\enspace}%
+   \def\And{\unskip\enspace{\rm and}\enspace}%
+   \def\affiliations{\egroup\par\bgroup\rm}%
+   \def\emails{\egroup\par\bgroup\rm}%
+   \bgroup\bf\@author\egroup}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{ijcai}
+\title{T}
+\author{Ann Able\and Bob Baker\and Cid Cole\And Dan Dodd$^{*}$
+\affiliations Univ X
+\emails ann.able@x.org, im@bb.org\\
+\{cid\_cole, ddodd\}@z.org
+\emails $^{*}$Corresponding author}
+\begin{document}
+\maketitle
+\end{document}

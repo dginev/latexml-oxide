@@ -472,6 +472,8 @@ LoadDefinitions!({
       }
     }
   });
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
+  declare_panel_width("\\Gscale@@box", 2, &[], &[]);
 
   // == Rotation ==
 
@@ -644,6 +646,9 @@ LoadDefinitions!({
       let candidates = util::image::image_candidates(&path);
       Ok(stored_map!("graphic" => path, "candidates" => candidates, "options" => ""))
     },
+    after_digest => sub[whatsit] {
+      psfrag_sty::psfrag_graphic(whatsit);
+    },
     alias => "\\includegraphics");
 
   // graphics.sty:189 `\Ginclude@graphics#1` is the driver-level include that
@@ -656,20 +661,72 @@ LoadDefinitions!({
   // Guard: `perfect_kernel_batch56::ginclude_graphics_internal_routes_to_the_constructor`.
   DefMacro!("\\Ginclude@graphics{}", "\\@includegraphics{#1}");
 
-  DefConstructor!("\\DeclareGraphicsExtensions{}", "");
-  DefConstructor!("\\DeclareGraphicsRule{}{}{} Undigested", "");
+  // graphics.sty:116-117 `\DeclareGraphicsExtensions#1{\edef\Gin@extensions{\zap@space#1 \@empty}}`: a macro that records
+  // the list and typesets nothing. As a constructor its argument was digested, so `.pdf_tex` erred (1810.02483; Perl's
+  // constructor the same, graphics.sty.ltxml:306, KNOWN_PERL_ERRORS #966). Guard:
+  // `perfect_kernel_batch73a::declare_graphics_extensions_is_not_typeset`.
+  DefMacro!(
+    "\\DeclareGraphicsExtensions{}",
+    r"\edef\Gin@extensions{\zap@space#1 \@empty}"
+  );
+  // graphics.sty:150-154 `\DeclareGraphicsRule{<ext>}{<type>}{<read-file>}{<command>}` records the rule as
+  // `\Gin@rule@<ext>#1` → `{<type>}{<read-file>}{<command>, or #1 the file when empty}` and typesets nothing: a
+  // macro, so its arguments are not digested — figlatex.sty:120's `\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}`
+  // typeset `.pdftex_t`, a math error (1605.08743; Perl's constructor the same, graphics.sty.ltxml:307,
+  // KNOWN_PERL_ERRORS #858). The rule is kept, as graphicx's `\includegraphics` reads it (`\lx@Gin@include`: a TeX
+  // source given as a graphic, gincltex.sty:43's `.tex`, is read as TeX). One divergence: `<command>` is kept
+  // `\unexpanded`, where graphics.sty's `\edef` would expand a converter's macros (`\OutputFile`) that only the
+  // driver defines — no converter runs here (OXIDIZED_DESIGN_DIVERGENCES #701).
+  RawTeX!(
+    r"\def\DeclareGraphicsRule#1#2#3#4{\edef\@tempa{\string *}\def\@tempb{#3}\expandafter\edef\csname Gin@rule@#1\endcsname##1{{#2}{\ifx\@tempa\@tempb\noexpand\Gin@ext\else#3\fi}{\ifx\indent#4\indent##1\else\unexpanded{#4}\fi}}}"
+  );
+  // graphics.sty:109-112 the bounding box a graphic's reader (`\Gread@<type>`) sets, and :141-148 `\Gin@defaultbp`,
+  // which it sets them with (gincltex.sty:85-86 `\Gin@defaultbp\Gin@urx{\wd\gincltex@box}`).
+  RawTeX!(r"\def\Gin@llx{0}\let\Gin@lly\Gin@llx\let\Gin@urx\Gin@llx\let\Gin@ury\Gin@llx");
+  RawTeX!(
+    r"\def\Gin@defaultbp#1#2{\afterassignment\Gin@def@bp\dimen@#2bp\relax{#1}{#2}}\def\Gin@def@bp#1\relax#2#3{\if!#1!\def#2{#3}\else\dimen@.99626\dimen@\edef#2{\strip@pt\dimen@}\fi}"
+  );
 
   // == Gin internal macros (Perl: RawTeX block, lines 311-324) ==
 
-  // \Gin@extensions — comma-separated list of recognized image extensions.
-  // Real graphics.sty assigns this from the chosen graphics driver
-  // (.eps for dvips, .pdf,.png,.jpg for pdftex). User code rarely reads
-  // it directly, but `\graphicspath` / `\@for` loops in third-party
-  // packages (e.g. xkeyval drivers) iterate over it. Pre-define as
-  // empty to suppress "undefined" cascades — the actual driver-specific
-  // list is filled in elsewhere if a graphics driver binding loads.
-  // Driver: 2103.04594.
-  Let!("\\Gin@extensions", "\\@empty");
+  // \Gin@extensions — the extensions a name without one is tried with, in turn (graphics.sty:206-224), as pdftex.def
+  // sets it (pdftex.def:597-600), the order of `GRAPHICS_EXTENSIONS` (util/image.rs), which reads the list to order an
+  // image's candidates. It is pdftex.def's list under any driver option, where TeX's is the named driver's:
+  // `[dvips]` loads dvips.def, whose list is `.eps,.ps,.eps.gz,.ps.gz,.eps.Z,.mps` (dvips.def:202; pdflatex with
+  // `\usepackage[dvips]{graphicx}` takes `q.eps` beside `q.png`, review rev79a2 finding 3), though `\Gin@driver`
+  // below names that file (`graphics_driver`) — an open row (SYNC_STATUS "`\Gin@extensions` is seeded with
+  // pdftex.def's list"). `.eps` joins it at `\begin{document}`, or
+  // when epstopdf loads (`\lx@graphics@eps@last`). So grfext's `\AppendGraphicsExtensions{.gif}` (1711.06128) puts
+  // `.gif` after the driver's, its `\Prepend…` before, as in TeX; started `\@empty`, an appended `.eps` alone was the
+  // list and ranked first (review rev79a finding 3). `\@for` loops in third-party packages iterate over it
+  // (2103.04594: defined, no "undefined" cascade).
+  DefMacro!(
+    "\\Gin@extensions",
+    ".pdf,.png,.jpg,.mps,.jpeg,.jbig2,.jb2,.PDF,.PNG,.JPG,.JPEG,.JBIG2,.JB2"
+  );
+  // epstopdf-base.sty:498-505 `\AppendGraphicsExtensions{.eps}` (grfext.sty:153-158, :187-193: every `.eps` removed,
+  // one appended), when epstopdf-base loads and grfext is loaded: `.eps` goes last, after what the document declared
+  // before — `\DeclareGraphicsExtensions{.pdf,.eps,.png}\usepackage{epstopdf}` tries `.png` first.
+  DefPrimitive!("\\lx@graphics@eps@last", {
+    let list = match lookup_meaning(&T_CS!("\\Gin@extensions")) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        _ => String::new(),
+      },
+      _ => String::new(),
+    };
+    let mut kept: Vec<&str> = list
+      .split(',')
+      .map(str::trim)
+      .filter(|ext| !ext.is_empty() && *ext != ".eps")
+      .collect();
+    kept.push(".eps");
+    DefMacro!(
+      T_CS!("\\Gin@extensions"),
+      None,
+      Tokens!(Explode!(kept.join(",")))
+    );
+  });
   Let!("\\Gin@decode", "\\@empty");
   DefMacro!("\\Gin@exclamation", "!");
   Let!("\\Gin@page", "\\@empty");
@@ -725,6 +782,18 @@ LoadDefinitions!({
     DefMacro!(cs, None, Tokens!(Explode!(format!("{ratio}"))));
   });
 
+  // graphics.sty:66-107: the driver file the options or graphics.cfg chose (`graphics_driver`), which packages read to
+  // choose their own drivers: trimclip's `tc-\Gin@driver` (trimclip.sty:24, :252-258), eso-pic, crop, pgfplots,
+  // epstopdf-base. Left empty (latex_constructs_rust_only.rs), trimclip fell back to tc-pgf.def and read pgf where
+  // pdflatex reads tc-pdftex.def and no pgf (2202.10115, 2507.09618, 2306.09847); epstopdf-base warned "Drivers other
+  // than `pdftex' and `luatex' are not supported". The driver file itself is not read: its drawing is the binding's.
+  // A token body, as `\def\Gin@driver{pdftex.def}`: packages compare it with `\ifx` (epstopdf-base.sty:193-196).
+  def_macro(
+    T_CS!("\\Gin@driver"),
+    None,
+    mouth::tokenize(TeXString::assembled(graphics_driver().to_string())),
+    None,
+  )?;
   // Perl: \set@color defined elsewhere but referenced by graphics
   // Provide a no-op fallback if not already defined
   def_macro_noop("\\set@color")?;
@@ -735,7 +804,10 @@ LoadDefinitions!({
   // the last package's options processing left) is not empty, it requires pdftexcmds (epstopdf-base.sty:151-182),
   // and that iftex, which defines `\ifpdf` afresh when it loads first. A paper's earlier `\let\ifpdf\relax` is then
   // undone in TeX; kept, JINST's `\label` (JINST.cls:328-334, `\ifpdf…\fi` inside its own conditional) left a stray
-  // `\fi` that ended the caption's argument scan in a Fatal (1310.6454).
+  // `\fi` that ended the caption's argument scan in a Fatal (1310.6454). Before it, pdftex.def:695 adds `.eps` to
+  // `\Gin@extensions`, and epstopdf-base, loaded now, moves it last when grfext is loaded — which that branch loads,
+  // :178-181 — (`\lx@graphics@eps@last`): a document's `\PrependGraphicsExtensions{.eps}` in the preamble, with
+  // epstopdf not loaded, is undone, as pdflatex prints the png beside the eps.
   DefMacro!("\\lx@graphics@if@epstopdf@driver", sub[_args] {
     Ok(Tokens!(if graphics_driver_loads_epstopdf() {
       T_CS!("\\@firstoftwo")
@@ -760,44 +832,48 @@ LoadDefinitions!({
       \else
         \AtEndOfPackage{\AtBeginDocument{\ifx\includegraphics\@undefined\else\lx@graphics@if@epstopdf@driver{%
           \@ifpackageloaded{pst-pdf}{}{\@ifpackageloaded{pdftricks}{}{%
-            \ifx\@curroptions\@empty\else\lx@graphics@require@pdftexcmds\fi}}}{}\fi}}%
+            \edef\Gin@extensions{\Gin@extensions,.eps}%
+            \@ifpackageloaded{epstopdf}{}{\@ifpackageloaded{epstopdf-base}{}{%
+              \ifx\@curroptions\@empty
+                \ifx\AppendGraphicsExtensions\@undefined\else\lx@graphics@eps@last\fi
+              \else\lx@graphics@require@pdftexcmds\lx@graphics@eps@last\fi}}}}}{}\fi}}%
       \fi
     \fi"
   );
 });
 
-/// graphics.sty's driver options in declaration order (graphics.sty:67-88), with whether that driver file loads
-/// epstopdf-base at `\begin{document}`: only pdftex.def and luatex.def do.
-const GRAPHICS_DRIVER_OPTIONS: [(&str, bool); 22] = [
-  ("dvips", false),
-  ("xdvi", false),
-  ("dvipdf", false),
-  ("dvipdfm", false),
-  ("dvipdfmx", false),
-  ("xetex", false),
-  ("pdftex", true),
-  ("luatex", true),
-  ("dvisvgm", false),
-  ("dvipsone", false),
-  ("dviwindo", false),
-  ("emtex", false),
-  ("dviwin", false),
-  ("oztex", false),
-  ("textures", false),
-  ("pctexps", false),
-  ("pctexwin", false),
-  ("pctexhp", false),
-  ("pctex32", false),
-  ("truetex", false),
-  ("tcidvi", false),
-  ("vtex", false),
+/// graphics.sty's driver options in declaration order (graphics.sty:67-88), with the driver file each names
+/// (`xdvi` and `oztex` are `dvips`, `dviwindo` is `dvipsone`, `dvipdfm` is `dvipdfmx`).
+const GRAPHICS_DRIVER_OPTIONS: [(&str, &str); 22] = [
+  ("dvips", "dvips.def"),
+  ("xdvi", "dvips.def"),
+  ("dvipdf", "dvipdf.def"),
+  ("dvipdfm", "dvipdfmx.def"),
+  ("dvipdfmx", "dvipdfmx.def"),
+  ("xetex", "xetex.def"),
+  ("pdftex", "pdftex.def"),
+  ("luatex", "luatex.def"),
+  ("dvisvgm", "dvisvgm.def"),
+  ("dvipsone", "dvipsone.def"),
+  ("dviwindo", "dvipsone.def"),
+  ("emtex", "emtex.def"),
+  ("dviwin", "dviwin.def"),
+  ("oztex", "dvips.def"),
+  ("textures", "textures.def"),
+  ("pctexps", "pctexps.def"),
+  ("pctexwin", "pctexwin.def"),
+  ("pctexhp", "pctexhp.def"),
+  ("pctex32", "pctex32.def"),
+  ("truetex", "truetex.def"),
+  ("tcidvi", "tcidvi.def"),
+  ("vtex", "vtex.def"),
 ];
 
-/// Does graphics.sty's driver (`\Gin@driver`) load epstopdf-base? `\ProcessOptions` runs the declared driver options
-/// that the package or the class was given in declaration order, so the last one listed wins; graphicx passes its
-/// own options on (graphicx.sty:29). With none, graphics.cfg picks the PDF driver for PDF output (`\pdfoutput` > 0,
-/// as K6 sets it) and xetex.def under XeTeX.
-fn graphics_driver_loads_epstopdf() -> bool {
+/// graphics.sty's driver file (`\Gin@driver`): `\ProcessOptions` runs the declared driver options that the package
+/// or the class was given in declaration order, so the last one listed wins; graphicx passes its own options on
+/// (graphicx.sty:29). With none, graphics.cfg picks xetex.def under XeTeX, pdftex.def for PDF output (`\pdfoutput` >
+/// 0, as K6 sets it), else dvips.def (graphics.cfg:24-68).
+fn graphics_driver() -> &'static str {
   let mut given: Vec<String> = Vec::new();
   for key in ["opt@graphics.sty", "opt@graphicx.sty", "class_options"] {
     for item in lookup_vecdeque(key).unwrap_or_default() {
@@ -813,13 +889,23 @@ fn graphics_driver_loads_epstopdf() -> bool {
     .rev()
     .find(|(name, _)| given.iter().any(|g| g == name))
   {
-    Some((_, loads)) => *loads,
+    Some((_, driver)) => driver,
+    None if lookup_bool("XETEX_PROFILE") => "xetex.def",
     None => {
-      !lookup_bool("XETEX_PROFILE")
-        && lookup_register("\\pdfoutput", Vec::new())
-          .ok()
-          .flatten()
-          .is_some_and(|value| Number::from(&value).value_of() > 0)
+      if lookup_register("\\pdfoutput", Vec::new())
+        .ok()
+        .flatten()
+        .is_some_and(|value| Number::from(&value).value_of() > 0)
+      {
+        "pdftex.def"
+      } else {
+        "dvips.def"
+      }
     },
   }
+}
+
+/// Does graphics.sty's driver load epstopdf-base at `\begin{document}`? Only pdftex.def and luatex.def do.
+fn graphics_driver_loads_epstopdf() -> bool {
+  matches!(graphics_driver(), "pdftex.def" | "luatex.def")
 }

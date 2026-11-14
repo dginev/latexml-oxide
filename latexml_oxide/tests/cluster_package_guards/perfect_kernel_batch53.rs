@@ -3,6 +3,8 @@
 //! Each test is the minimal reproduction distilled during triage; the
 //! doc-comment names the ORIGINAL corpus witness (TeX Live doc corpus)
 //! whose larger conversion was vetted separately.
+use latexml::util::test::{check_requirements, loads};
+
 use super::perfect_kernel_batch46::{convert, error_count};
 
 /// eTeX `\numexpr`/`\dimexpr`/`\glueexpr` factor scanning (etex.ch
@@ -142,9 +144,7 @@ fn koma_declaresectioncommand_heading_is_a_subsection() {
     "{xml}"
   );
   assert!(
-    xml.contains(
-      r#"<paragraph inlist="toc" xml:id="section1.subsection1.subsubsection0.paragraphx1">"#
-    ),
+    xml.contains(r#"<paragraph inlist="toc" xml:id="S1.SS1.SSS0.Px1">"#),
     "{xml}"
   );
   assert!(xml.contains("<title>Para</title>"), "{xml}");
@@ -342,6 +342,9 @@ After.
 /// `\ekv@set@was@blank` (expkv.tex L709-712).
 #[test]
 fn expkv_blank_entry_does_not_leak_markers() {
+  if !check_requirements(loads::EXPKV) {
+    return;
+  }
   let (stderr, xml) = convert(
     r"\documentclass{article}
 \usepackage{expkv}

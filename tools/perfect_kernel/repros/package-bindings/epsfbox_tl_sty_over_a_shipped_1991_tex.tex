@@ -1,0 +1,25 @@
+% witness: review rev78s2 finding 1 (probe e1): a paper shipping only a 1991 epsf.tex (local reset :161) and
+%          loading `\usepackage{epsf}` gets TL's epsf.sty, whose reset is global (:505-506)
+% oracle:  pdflatex 0 errors; the log reads TL's epsf.sty; "a.eps: width=100.0pt", b.eps at its natural size
+% engines: rust (78s r2) = b.eps width=100.0pt (TL's `\def \epsfbox #1{` was not read as a definition, so the shipped
+%          epsf.tex decided); rust (int57a) = both 100pt (no reset)
+% expect:  0 errors; a.eps options="width=100.0pt", b.eps no options
+% mechanism: epsf_sty.rs `epsf_resets_globally` reads a `\def` with TL's spaces. KPE #1117.
+% status:  RED (78s r2) -> GREEN (int59)
+\begin{filecontents*}[overwrite]{epsf.tex}
+% A 1991 epsf.tex, reduced: its \epsfbox resets the size locally. TeX never reads it here.
+\newdimen\epsfxsize \newdimen\epsfysize
+\epsfxsize=0pt \epsfysize=0pt
+\def\epsfbox#1{\message{#1: width=\the\epsfxsize}\hbox to\epsfxsize{\hfil}%
+\epsfxsize=0pt\epsfysize=0pt}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{epsf,subfigure}
+\begin{document}
+\begin{figure}
+\setlength{\epsfxsize}{100pt}
+\subfigure[One]{\epsfbox{a.eps}}
+\subfigure[Two]{\epsfbox{b.eps}}
+\caption{C.}
+\end{figure}
+\end{document}

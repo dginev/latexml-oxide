@@ -1,0 +1,13 @@
+% witness: the r6 re-review of batch 77p (finding 4, probes x1, w10, w11)
+% oracle:  pdflatex 0 errors: Ann Able marked dagger and star in one superscript, the institutions under the row
+% engines: rust 77p r9 = 0 errors; Ann Able without Univ A (her mark read as the one label "\dagger*")
+% expect:  0 errors, 0 warnings; Univ A on Ann Able and Cat Cole, Univ B on Bob Baker
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\dagger*}$ \ \ \ \ Bob Baker$^{\ddagger}$ \ \ \ \ Cat Cole$^{\dagger}$ \\ $^\dagger$ Univ A \ \ \ \ $^\ddagger$ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

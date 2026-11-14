@@ -1,0 +1,31 @@
+% What a binding's macro drops while the document's frontmatter entry digests is wanted only when the document wrote
+% it (title_page_check.rs `writes`): xkeyval's own pieces — the `\@nil`-delimited remainders and `\else…\fi` fragments
+% its `\setkeys` hands its binding-made internals — are no text of the document's. Digested speculatively, they raised
+% "Didn't expect \else" and looped until the conversion timed out (106t r2's unfiltered build: 2101.10506, a copy of
+% imsart's `\ead[label=e1,mark]{…}` over xkeyval, Fatal:Timeout:IfLimit).
+% witness: 2101.10506 (stylefile.cls, an imsart copy; its `\author[B]{\fnms{Justin} \snm{Romberg}\ead[label=e3,mark]{…}}`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Body text."
+% engines: rust int135e = 0 errors, 1 warning (106s's "able": the kernel's author splitter parts the name at the
+%          comma inside `\ead`'s brackets, "Ann Ableabel=e1" and "mark]ann@…" — a content residual, SYNC 106t);
+%          106t r2 unfiltered = 4 errors, 1 fatal (Timeout:Convert); perl = not run
+% expect:  0 errors, 0 fatals, 1 warning (106s's "able"), no second-source warning
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: Ann Able whole (106s's splitter residual gone), no second-source
+%          warning
+% status:  GREEN (int135e) -> RED (106t r2 unfiltered) -> GREEN (106t r2) -> GREEN, 0 warnings (HG1; perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lxkvclass.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxkvclass}
+\LoadClass{article}
+\RequirePackage{xkeyval}
+\define@key{lxead}{label}{\def\lx@ead@label{#1}}
+\define@key{lxead}{mark}[true]{}
+\newcommand\ead[2][]{\setkeys{lxead}{#1}\def\@ead{#2}}
+\end{filecontents*}
+\documentclass{lxkvclass}
+\begin{document}
+\title{A Title}
+\author{Ann Able\ead[label=e1,mark]{ann@lunarcollege.org}}
+\maketitle
+Body text.
+\end{document}

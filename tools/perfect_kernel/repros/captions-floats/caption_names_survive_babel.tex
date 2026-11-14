@@ -1,0 +1,15 @@
+% witness: 68h r2: `figurename=`/`tablename=` set the names as newfloat's `\newfloat@setname` does (caption3.sty:1336-1345,
+%          newfloat.sty:179-188): also in the current language's `\captions<language>`, which babel runs at
+%          `\begin{document}`
+% oracle:  pdflatex 0 errors: "Fig. 1: Fig text." / "Tab. 1: Tab text."
+% engines: rust 68h r1: "Figure 1" / "Table 1" (babel's `\captionsenglish` reset the names); rust 67int9 and perl:
+%          "Figure 1: Fig text." / "Table 1: Tab text." (the keys unread, KNOWN_PERL_ERRORS #795)
+% expect:  0 errors; "Fig. 1" and "Tab. 1", bold
+% status:  GREEN (68h r2)
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage[labelfont=bf,figurename=Fig.,tablename=Tab.]{caption}
+\begin{document}
+\begin{figure}\caption{Fig text.}\end{figure}
+\begin{table}\caption{Tab text.}\end{table}
+\end{document}

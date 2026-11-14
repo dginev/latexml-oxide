@@ -4,8 +4,9 @@
 %          `\label{un}\nonumber` and align* rows: "See 2 and 2 and ??.", un naming a number no row shows
 % engines: rust 63i = every labelled empty row dropped, (2) with it, the labels unresolved (Warning:expected:ids Missing
 %          Target for Label at post); 63j r1 kept the unnumbered ones too, un and st bound to no number; Perl drops all
-% expect:  0 errors; no equation carries LABEL:un or LABEL:st; the numbered rows keep (1) and (2)
-% status:  RED (63i, 63j r1) -> GREEN (63j)
+% expect:  0 errors; no equation carries LABEL:st; un names 2 (the counter's next value, its row's reference forms, no
+%          printed tag; 78r, OXIDIZED_DESIGN_DIVERGENCES #847); the numbered rows keep (1) and (2)
+% status:  RED (63i, 63j r1) -> GREEN (63j); un RED (63j-int54a, unresolved) -> GREEN (78r)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}

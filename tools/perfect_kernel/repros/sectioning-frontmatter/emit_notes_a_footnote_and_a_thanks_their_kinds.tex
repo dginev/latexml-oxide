@@ -1,0 +1,14 @@
+% mechanism: a `\\footnote` on a name is `\\lx@add@note`'s contact, a `\\thanks` `\\lx@add@thanks`'s note, as `digest_frontmatter_item` lets them (`Event::footnote`, digested, no spelling)
+% witness: 0707.1799
+% oracle:  pdflatex 0 errors; Ann and Bob with their marks, the footnotes at the foot
+% engines: rust S0: both thanks notes; perl: no such step
+% expect:  0 errors, 0 warnings; Ann a note contact, Bob a thanks note
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able\footnote{A footnote of Ann.} \and Bob Baker\thanks{Funded by the NSF.}\\ Univ B}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: an emitted entry's first superscript is its label, a later one its text (`\lx@sup@setlabel@affiliation`), the
+%   entry's mark recorded from each entry line's start (`\lx@frontmatter@savesups`) as well as each emitted item's: a call nested
+%   in another's content (IEEEtran's `\IEEEauthorblockA` inside the one before) is an entry of its own
+% witness: 1812.05961 (`\IEEEauthorblockA{\IEEEauthorrefmark{1} Laboratory … \IEEEauthorblockA{\IEEEauthorrefmark{2} Department …}…}`:
+%   "† Department …" with the record per item alone, LO1's first cut)
+% oracle:  pdflatex 0 errors; "Ann Able∗† , Bob Baker∗"; ∗ Univ A, Town; † Univ B, City
+% engines: rust int146a `=2` and LO1: Univ B on Bob Baker too (the nested entry's owners, left; the switch off gives it Ann Able alone)
+% expect:  0 errors, 0 warnings; `=2`: no affiliation opening with its own mark
+% status:  GREEN (perfect_kernel_batchlo1::a_symbol_inside_an_entrys_brackets_is_its_text)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{A nested entry's mark}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}\IEEEauthorrefmark{2}, Bob Baker\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}
+Univ A, Town
+\IEEEauthorblockA{\IEEEauthorrefmark{2}
+Univ B, City}}}
+\maketitle
+Text.
+\end{document}

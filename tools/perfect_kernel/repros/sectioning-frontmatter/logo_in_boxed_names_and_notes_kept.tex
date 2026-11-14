@@ -1,0 +1,14 @@
+% mechanism: a logo inside a `\parbox`, a `{minipage}` and a `\thanks` body (the walkers' box and note paths): the
+%   minipage's name lost its `\TeX` (util_text.rs `printed_own_text`).
+% witness: synthetic (LOGO1; the int158a lesson: probe marks and text inside boxes and note bodies)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "LATEX Project∗ | TEX Users", note "∗ Hello LATEX"
+% engines: rust int171a base 0 E 1 W: the second creator "Users", the content check's "excess" TeX
+% expect:  0 E, 0 W; "LaTeX Project" with the note "Hello LaTeX"; "TeX Users"
+% status:  RED -> GREEN (LOGO1)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\parbox{5cm}{\centering \LaTeX\ Project}\thanks{Hello \LaTeX} \and \begin{minipage}{4cm}\centering \TeX\ Users\end{minipage}}
+\maketitle
+Body.
+\end{document}

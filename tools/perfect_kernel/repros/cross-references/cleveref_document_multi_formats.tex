@@ -1,0 +1,23 @@
+% witness: rev78j r2 (1409.7964, 1603.08012 `\crefmultiformat{equation}{(#2#1#3}{, #2#1#3)}{, #2#1#3}{, #2#1#3)}`)
+% oracle:  pdflatex 0 errors: "A (1). B (1). C (1, 3). E §1.1. F figs. 1 and 2. G 1. H 1." (cleveref.sty:1000-1018,
+%          :1939-1975: each position's format holds its own conjunction; \Crefformat derived by \MakeUppercase;
+%          \@crefcopyformats gives the subsection the section's format)
+% engines: rust 78j r1 = "A eq. (1). B Eq. (1). C eqs. (1) and (3). E section 1.1. F figs. 1 and 2. G (1). H 1."
+% expect:  0 errors; the document's formats, cleveref's conjunctions elsewhere
+% status:  RED (78j r1) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\crefformat{equation}{(#2#1#3)}
+\crefmultiformat{equation}{(#2#1#3}{, #2#1#3)}{, #2#1#3}{, #2#1#3)}
+\crefformat{section}{\S#2#1#3}
+\begin{document}
+\section{Intro}\label{s1}
+\subsection{Sub}\label{s11}
+\begin{figure}\caption{F}\label{f1}\end{figure}
+\begin{figure}\caption{G}\label{f2}\end{figure}
+\begin{equation}a=b\label{e1}\end{equation}
+\begin{equation}a=b\label{e2}\end{equation}
+\begin{equation}a=b\label{e3}\end{equation}
+A \cref{e1}. B \Cref{e1}. C \cref{e1,e3}. E \cref{s11}. F \cref{f1,f2}. G \labelcref{e1}. H \labelcref{s1}.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: the user ruling of 2026-10-20 on 77p r7's question 1 (a mailto line is an e-mail line); an unmarked ACL
+%          block whose names share the lines under them: 2605.18563
+% oracle:  pdflatex 0 errors: the three names, the institution, then "Correspondence: bbaker@uni-b.edu"
+% engines: rust 77p r7 = 0 errors; the line an affiliation of all three names (`annotate=3`)
+% expect:  0 errors, 0 warnings; the address an e-mail contact of Bob Baker alone, named "Correspondence:"; the
+%          institution still every name's
+% status:  RED (77p r7) -> GREEN (77p r8)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \quad Bob Baker \quad Cat Cole \\
+Univ B \\
+\small{
+  \textbf{Correspondence:} \href{mailto:bbaker@uni-b.edu}{bbaker@uni-b.edu}
+}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

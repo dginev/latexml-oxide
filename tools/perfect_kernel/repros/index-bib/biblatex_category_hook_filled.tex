@@ -1,0 +1,19 @@
+% witness: 77a r2 review probe p6; hagenberg-thesis hgbbib.sty:94-113 (\AtEveryCitekey files every cited key)
+% oracle:  pdflatex + biber 0 errors: Literature {knuth, lamport}, Online {web}
+% engines: rust 77a r1 printed no bibliography at all (the hook's \addtocategory never runs); before 77a one list
+% expect:  clean (0 errors, 0 warnings); the categories are filled by a hook the binding does not run, so one
+%          unfiltered list {web, knuth, lamport} and an Info naming them (OXIDIZED_DESIGN_DIVERGENCES #762)
+% status:  GREEN (77a r2: fallback, not the oracle's split)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{literature}
+\DeclareBibliographyCategory{online}
+\AtEveryCitekey{\ifentrytype{online}{\addtocategory{online}{\thefield{entrykey}}}{\addtocategory{literature}{\thefield{entrykey}}}}
+\defbibheading{literature}{\section*{Literature}}
+\defbibheading{online}{\section*{Online}}
+\begin{document}
+X \cite{knuth,lamport,web}.
+\bibbycategory
+\end{document}

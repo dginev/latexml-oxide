@@ -1,0 +1,15 @@
+% witness: the rev77y2 re-review (finding 3, probes l4, l5, l7; no paper in its scan)
+% oracle:  pdflatex 0 errors: four \and columns: Ann Able over Univ A; the linked Mary Ann Code over mcode@x.org; the
+%          linked Lawrence Edward Page over "Stanford, CA"; the linked Anne-Page Smith over Univ B
+% engines: rust 77y r2 = 0 errors; creators "mcode@x.org", "Stanford", "CA", "Univ B" holding the linked names as URL
+%          contacts; int38b four authors
+% expect:  0 errors, 0 warnings; four authors, each linked name with the line under it
+% status:  RED (77y r2) -> GREEN (77y r3)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Univ A \and \href{https://x.org/mc}{Mary Ann Code} \\ \texttt{mcode@x.org} \and \href{https://x.org/lp}{Lawrence Edward Page} \\ Stanford, CA \and \href{https://x.org/as}{Anne-Page Smith} \\ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,27 @@
+% witness: 0806.1269 (:627-634), 1612.01009, 1706.05540 and 2 more run-345 papers
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the entry GiesekerGlobal with its review MR0498596 (58 #16687), each linked (msc-links loads hyperref)
+% mechanism: a paper's own \MR re-dress calls amsrefs.sty:2673-2690's \strip@MRprefix and \MRhref, which our amsrefs
+%   binding lacked (4 Errors an entry once 65r's \bibselect read the .ltb; an inline \bib entry the same). Fixed: amsrefs_sty.rs (+ the msc-links
+%   \MRhref/\parse@MR of :2933-2950).
+% status:  GREEN
+\documentclass{amsart}
+\usepackage[backrefs,msc-links,nobysame]{amsrefs}
+\makeatletter
+\def\MR#1{\relax\ifhmode\unskip\spacefactor3000 \space\fi
+  \begingroup\strip@MRprefix#1\@nil\edef\@tempa{\@nx\MRhref{MR\@tempa}{\@tempa}}\@xp\endgroup\@tempa}
+\makeatother
+\begin{document}
+See \cite{GiesekerGlobal}.
+\begin{bibdiv}\begin{biblist}
+\bib{GiesekerGlobal}{article}{
+	author={Gieseker, David},
+	title={Global moduli for surfaces of general type},
+	journal={Invent. Math.},
+	volume={43},
+	date={1977},
+	pages={233--282},
+	review={\MR{0498596 (58 \#16687)}},
+}
+\end{biblist}\end{bibdiv}
+\end{document}

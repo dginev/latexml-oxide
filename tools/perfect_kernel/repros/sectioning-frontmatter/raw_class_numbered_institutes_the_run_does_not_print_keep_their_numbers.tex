@@ -1,0 +1,39 @@
+% A raw class numbering its `\institute{A \and B}` store (an llncs-style `\institutename`, `\def\and{\par
+% \stepcounter{inst}…$^{\theinst}$…}`) whose title page does not print it — here the class prints the institutes at the
+% document's end (`\AtEndDocument{\institutename}`); raa.cls's title page (2003.13998, 2511.10805, 1001.4935, raa_rb
+% 2511.06927, cjaa astro-ph0701846: 14 papers of the batch 104b A/B) is one the speculative run does not typeset either.
+% The run's text then holds no sentinel entry, so it says nothing of the numbering (frontmatter_stores.rs
+% `note_and_numbering` records nothing) and the class's `\institutename` is read as before: entry n is still labelled
+% n. Batch 104b's first round read such a run as "not numbered", and every raa author held every institute.
+% witness: 2003.13998 (raa), 2511.10805 (raa_twocolumn), astro-ph0701846 (cjaa)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 and Cy Cole1,2", "Text.", then "1 Univ A, Town", "2 Univ B, City"
+% engines: rust int131b = 0 errors, 0 warnings, by the numbers; rust 104b r0 = every author both institutes
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town", Bob Baker "Univ B, City", Cy Cole both; marks hidden
+% status:  RED (104b r0) -> GREEN (104b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{endinst.cls}
+\ProvidesClass{endinst}\LoadClass{article}
+\newcounter{inst}
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begingroup
+ \parindent=0pt
+ \setcounter{inst}{1}%
+ \def\and{\par\stepcounter{inst}%
+ \noindent$^{\theinst}$\enspace\ignorespaces}%
+ \noindent$^{1}$\enspace\ignorespaces
+ \@institute\par
+ \endgroup}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\ignorespaces\@author\par}\vskip6pt}
+\AtEndDocument{\par\vskip1em\institutename}
+\end{filecontents*}
+\documentclass{endinst}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} and Cy Cole\inst{1,2}}
+\institute{Univ A, Town \and Univ B, City}
+\maketitle
+Text.
+\end{document}

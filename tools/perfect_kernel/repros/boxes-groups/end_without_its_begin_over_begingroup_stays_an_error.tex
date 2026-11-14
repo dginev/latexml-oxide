@@ -1,0 +1,15 @@
+% Negative control: `\end{X}` over a `\begingroup` with no `\begin{X}` open below it is LaTeX's `\@badend`
+% ("\begin{document} ended by \end{flushleft}") and stays the error it is (stomach.rs
+% end_environment_over_plain_groups acts only on X's own frame).
+% witness: synthetic (control for 1404.3644's raa.cls:322-349 shape)
+% oracle:  pdflatex 2 errors (\begin{document} ended by \end{flushleft}; Extra \endgroup): ill-formed on purpose;
+%          "Bare words." "After words."
+% engines: rust int132a1 = 2 errors, 0 warnings; perl = 2 errors
+% expect:  2 errors, 0 warnings, unchanged; the words kept
+% status:  GREEN (control; guard perfect_kernel_batch98d::end_over_begingroup_without_its_environment_stays_an_error)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begingroup Bare words.\par\end{flushleft}\endgroup
+After words.
+\end{document}

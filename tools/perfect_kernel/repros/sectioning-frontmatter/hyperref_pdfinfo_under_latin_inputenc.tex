@@ -1,0 +1,13 @@
+% witness: bibleref-german/de-bibleref-german, en-bibleref-german (a latin `inputenc`, ß active: a Fatal loop); lineno/fnlineno:44 (`\374`, "\3 undefined")
+% oracle:  pdflatex (TL 2025) 0 errors. pdfinfo: Title "Waßenhoven ø Æ ł œ ö", Keywords "Waßenhoven, øre, ä".
+%          Author and Subject are the source's PDFDocEncoding `\374`, `\200`, `\337`, which hyperref's UTF-16 string breaks: the characters they name are read.
+% engines: int141a: Fatal, "Infinite expansion loop" in `\def\ss{ß}`, and `\3` undefined. Perl records the source (KPE #1050).
+% expect:  0 errors; each `rdf` whole
+% status:  GREEN
+\documentclass{article}
+\usepackage[latin9]{inputenc}
+\usepackage{hyperref}
+\hypersetup{pdfauthor={Uwe L\374ck},pdftitle={Wa\ss enhoven \o{} \AE{} \l{} \oe{} \"o},pdfsubject={\200 and \337},pdfkeywords={Wa^^dfenhoven, ^^f8re, ^^e4}}
+\begin{document}
+Word.
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: an llncs `\author{\aut}` with no `\inst`: the binding queues the block whole (`\lx@add@author@split`,
+%   llncs_cls.rs `\author`), the reading cuts it at the `Sep(And)` the rehearsal digests from `\aut`; the sole
+%   `\institute` is every author's (`_share=authors`)
+% witness: bindsplit probe ln1 (int143b: "the event is there at nest 1, the reading keeps the call whole by
+%   `api:creator`")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker" over "Univ A"
+% engines: Perl 0.8.8 splits by spelling (llncs.cls.ltxml:43): one creator; int156a (MB1): two creators, Univ A each
+% expect:  0 errors, 2 warnings (the emitter writes each name as plain text, "a name its events don't spell": P3);
+%   creators Ann Able (Univ A), Bob Baker (Univ A)
+% status:  GREEN (int156a, before OC1; guard perfect_kernel_batchoc1)
+\documentclass{llncs}
+\newcommand\aut{Ann Able \and Bob Baker}
+\title{T}
+\author{\aut}
+\institute{Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

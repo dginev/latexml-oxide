@@ -1,0 +1,18 @@
+% IEEEtran's `\IEEEauthorblockA{\IEEEauthorrefmark{2}\textit{Dept B, Univ B}, City\\E-mail: ann.able@gmail.com,
+% \{bbaker, ccole\}@b.edu, and dan@d.org}`: the "E-mail:" line, a list with a braced group and a connective "and",
+% leaves the entry; each address is an e-mail contact named by the label, placed by the Link step (OD #966).
+% witness: 2302.02638 (IEEEtran; 2608.22602, 2111.01631, 2402.05226, 2410.11002 the same line in other routes)
+% oracle:  pdflatex 0 errors: "Ann Able∗ , Bob Baker† and Cat Cole†", "∗ Univ A, Town", "† Dept B, Univ B, City",
+%          "E-mail: ann.able@gmail.com, {bbaker, ccole}@b.edu, and dan@d.org"
+% engines: rust int133a = the E-mail line inside the affiliation of Baker and Cole, no e-mail contact
+% expect:  0 errors, 0 warnings; Able: Univ A, e-mail ann.able@gmail.com (spelled); Baker: Dept B, bbaker@b.edu;
+%          Cole: Dept B, ccole@b.edu; dan@d.org, spelling no one, the block's; each e-mail named "E-mail: "
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2} and Cat Cole\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Town}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}\textit{Dept B, Univ B}, City\\E-mail: ann.able@gmail.com, \{bbaker, ccole\}@b.edu, and dan@d.org}}
+\maketitle
+Text.
+\end{document}

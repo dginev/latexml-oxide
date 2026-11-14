@@ -1,0 +1,28 @@
+% A local part two names spell equally: `mueller@` spells Hans Mueller by his letters as printed and Jörg Müller through
+%   the transliteration (ü -> ue). An e-mail address carries no umlaut, so the literal print is no evidence for either:
+%   a genuine tie, no spelling owner (user ruling 2026-11-05, dropping review rev107a finding 1's tie-break;
+%   `email_owners::spelled_owners`; OXIDIZED_DESIGN_DIVERGENCES #970). The rest of the placement order decides: two
+%   addresses for three authors (no author order), two names left for the one open address (no elimination), so the
+%   block creator (OD #159).
+% witness: review rev107a finding 1 (probe p/mueller.tex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: three names over "1University of Alpha" and
+%   "{mueller,schmidt}@alpha.de"
+% engines: rust int138a: mueller@ on Hans Mueller (base letters gave Müller "muller", no tie); rust 107a r1: as expected
+% expect:  0 errors, 0 warnings; schmidt@ on Ann Schmidt, mueller@ on the block creator, none on Jörg Müller or Hans
+%   Mueller
+% status:  GREEN (107a r1) -> GREEN (107a r2, the ruling)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  J\"org M\"uller$^{1}$ \and
+  Hans Mueller$^{1}$ \and
+  Ann Schmidt$^{1}$ \\
+ {\normalfont $^1$University of Alpha} \\
+ \texttt{\{mueller,schmidt\}@alpha.de}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

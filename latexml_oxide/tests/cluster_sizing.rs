@@ -23,22 +23,14 @@ mod pgfplots_units {
   //!
   //! Conditional: needs the kernel dump (so expl3/pgf load cleanly, not the
   //! degraded raw path) AND pgf/pgfplots installed in the host TeX tree.
-  use latexml::util::test::{convert_fixture, dump_available, error_count, kpse_has};
+  use latexml::util::test::{Requirements, convert_fixture, error_count};
 
   #[test]
   fn pgfplots_bar_shift_symbolic_coords_units_flag() {
-    if !dump_available() {
-      eprintln!(
-        "SKIP pgfplots_bar_shift_symbolic_coords_units_flag: no latex kernel dump \
-         in resources/dumps/ (run tools/make_formats.sh)"
-      );
-      return;
-    }
-    if !kpse_has("pgfplots.sty") || !kpse_has("pgf.sty") {
-      eprintln!(
-        "SKIP pgfplots_bar_shift_symbolic_coords_units_flag: pgf/pgfplots not \
-         installed in the host TeX tree"
-      );
+    if !Requirements::packages(&["pgfplots.sty", "pgf.sty"])
+      .format_dump()
+      .met()
+    {
       return;
     }
 
@@ -157,21 +149,23 @@ mod image_sizing_characterization {
   //! which format's typeset size moved.
   //!
   //! The same 200x100 figure is saved as PNG, EPS, PDF and SVG and included with
-  //! no graphicx options. Four containers, four answers, because the resolution
+  //! no graphicx options. Four containers, three answers (four until 78z), because the resolution
   //! used to turn a source measurement into a TeX dimension is chosen per format
   //! rather than once:
   //!
   //! | source              | pdflatex   | Perl LaTeXML | here       | implied dpi |
   //! |---------------------|------------|--------------|------------|-------------|
   //! | PNG 200x100 px      | 200.7495pt | 144.54pt     | 144.54pt   | 100         |
-  //! | EPS BBox 200x100 bp | (n/a)      | (no sizer)   | 144.54pt   | 100, on bp  |
+  //! | EPS BBox 200x100 bp | 200.7495pt | (no sizer)   | 200.75pt   | 72 (bp)     |
   //! | PDF 200x100 bp      | 200.7495pt | (no sizer)   | 200.75pt   | 72          |
   //! | SVG viewBox 200x100 | (n/a)      | (no sizer)   | 150.5625pt | 96          |
   //!
   //! The pdflatex and Perl columns were measured on the same fixtures on
   //! 2026-08-04 (Perl 0.8.8 lacks Image::Magick on this host, so it can only size
   //! what `Image::Size` reads — hence "no sizer" for EPS/PDF/SVG; the PNG row is
-  //! exact parity with us). Perl's own convention is the 100 dpi one:
+  //! exact parity with us; the EPS row's pdflatex figure measured 2026-10-22 through
+  //! epstopdf, latex + dvips 200.75pt; until 78z ours read its bp as 100-dpi pixels,
+  //! 144.54pt, DIVERGENCES #886). Perl's own convention is the 100 dpi one:
   //! `Util/Image.pm:37 our $DPI = 100`, with the box derived as `w * 72.27 / $DPI`
   //! (L271) — which is why an unscaled raster typesets 28% smaller than pdflatex
   //! makes it.
@@ -294,9 +288,10 @@ mod image_sizing_characterization {
     ]);
     // 200 px read as 100 dpi.
     assert_eq!(row(&xml, 0), "144.54pt 72.27pt", "PNG");
-    // 200 bp read as if it were 200 px, then as 100 dpi — the BoundingBox unit
-    // is discarded on the way in.
-    assert_eq!(row(&xml, 1), "144.54pt 72.27pt", "EPS");
+    // 200 bp converted as TeX reads a BoundingBox (latex 200.75pt, pdflatex
+    // 200.7495pt). Until 78z: "144.54pt 72.27pt", the bp read as 200 px at 100 dpi
+    // (OXIDIZED_DESIGN_DIVERGENCES #886).
+    assert_eq!(row(&xml, 1), "200.75pt 100.375pt", "EPS");
     // 200 bp converted honestly: 200 * 72.27/72. Exact pdflatex parity.
     assert_eq!(row(&xml, 2), "200.75pt 100.375pt", "PDF");
     // 200 viewBox user units read as CSS px: 200 * 72.27/96.
@@ -409,7 +404,7 @@ mod geometry_svg_sizing {
   //! Conditional: needs the kernel dump (so tcolorbox's expl3 loads cleanly) AND
   //! tcolorbox installed in the host TeX tree; self-skips otherwise.
 
-  use latexml::util::test::{convert_fixture, dump_available, kpse_has};
+  use latexml::util::test::{Requirements, convert_fixture};
 
   /// Pull the first `viewBox="minx miny W H"` width (the 3rd number) out of the
   /// serialized markup — the tcolorbox root `<svg>` is the first picture.
@@ -436,7 +431,11 @@ mod geometry_svg_sizing {
   }
 
   /// True when this environment can raw-load tcolorbox on the kernel dump.
-  fn can_run() -> bool { dump_available() && kpse_has("tcolorbox.sty") }
+  fn can_run() -> bool {
+    Requirements::packages(&["tcolorbox.sty"])
+      .format_dump()
+      .met()
+  }
 
   const TEX: &str = "literal:\\documentclass{article}\n\
     \\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}\n\
@@ -452,7 +451,6 @@ mod geometry_svg_sizing {
   #[test]
   fn geometry_sizes_svg_but_not_html_flow() {
     if !can_run() {
-      eprintln!("skipping: needs kernel dump + tcolorbox.sty in the host TeX tree");
       return;
     }
     let r = convert_fixture(TEX);
@@ -506,7 +504,6 @@ mod geometry_svg_sizing {
   #[test]
   fn geometry_does_not_clobber_reduced_linewidth() {
     if !can_run() {
-      eprintln!("skipping: needs kernel dump + tcolorbox.sty in the host TeX tree");
       return;
     }
     let r = convert_fixture(TEX_NESTED);
@@ -558,7 +555,7 @@ mod tcbline_nointerlineskip {
   //!
   //! Conditional: needs the kernel dump + tcolorbox in the host TeX tree.
 
-  use latexml::util::test::{convert_fixture, dump_available, kpse_has};
+  use latexml::util::test::{Requirements, convert_fixture};
 
   fn first_box_viewbox_height(xml: &str) -> f64 {
     // The tcolorbox root <svg:svg> is the first picture; its viewBox is
@@ -582,8 +579,10 @@ mod tcbline_nointerlineskip {
 
   #[test]
   fn tcbline_box_not_over_measured() {
-    if !(dump_available() && kpse_has("tcolorbox.sty")) {
-      eprintln!("skipping: needs kernel dump + tcolorbox.sty in the host TeX tree");
+    if !Requirements::packages(&["tcolorbox.sty"])
+      .format_dump()
+      .met()
+    {
       return;
     }
     let r = convert_fixture(TEX);

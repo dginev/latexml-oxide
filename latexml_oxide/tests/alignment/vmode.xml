@@ -173,7 +173,7 @@ This is random text. This is random text. This is random text.</p>
       <toccaption class="ltx_centering"><tag close=" ">1</tag>This is random text. This is random text. This is random text.</toccaption>
       <caption class="ltx_centering"><tag close=": ">Figure 1</tag>This is random text. This is random text. This is random text.</caption>
     </figure>
-    <figure inlist="lof" xml:id="S3.F2">
+    <figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="3" xml:id="S3.F2">
       <tags>
         <tag>Figure 2</tag>
         <tag role="refnum">2</tag>

@@ -1,0 +1,25 @@
+% witness: 0902.2977, 0907.2394, 0910.5929 (sigma.cls:24 `\RequirePackage{amscd}`, every one of the 20 sampled copies;
+%          the paper's `{CD}`)
+% oracle:  pdflatex (clean) with this cut of the class (a square diagram)
+% engines: rust 67o1 = 1+ errors (`{CD}` undefined); Perl: no binding, OmniBus scans the class and loads amscd
+% expect:  0 errors, 0 warnings; one commutative diagram
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sigma.cls}
+\ProvidesClass{sigma}
+\LoadClass{article}
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+\RequirePackage{amscd}
+\usepackage{color}
+\end{filecontents*}
+\documentclass{sigma}
+\begin{document}
+\[
+\begin{CD}
+A @>f>> B \\
+@VgVV @VVhV \\
+C @>k>> D
+\end{CD}
+\]
+\end{document}

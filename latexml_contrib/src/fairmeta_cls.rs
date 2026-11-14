@@ -37,6 +37,8 @@ LoadDefinitions!({
     s!("columnsep=0.65cm"),
   ])?;
   RequirePackage!("geometry");
+  // fairmeta.cls loads amsmath, directly or through `tcolorbox[most]` and nicematrix (every copy of a 1/20 arXiv sample;
+  // tcbtheorems.code.tex:23).
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");

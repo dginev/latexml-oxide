@@ -1,0 +1,8 @@
+% amslocal.sty: a minimal stand-in, written from scratch, for a paper's own AMS-TeX style (math0402285's amams.sty
+% defines its own top matter: \title#1 at :443, \received at :1000 or so; amams states no licence).
+\catcode`\@=11
+\def\title#1{\centerline{\bf #1}\bigskip}
+\def\received#1{\def\thereceived@{#1}}
+\def\startingpage#1{\pageno=#1}
+\catcode`\@=13
+\endinput

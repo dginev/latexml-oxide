@@ -55,9 +55,7 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
       // expansion. Witness 2310.13684. Skip the clear+load and just
       // re-emit cs_for_closure, which by now has the real meaning the
       // already-loaded package installed.
-      let pkg_loaded_key = s!("{}.sty_loaded", pkg_name);
-      let pkg_raw_key = s!("{}.sty_raw_loaded", pkg_name);
-      if lookup_bool(&pkg_loaded_key) || lookup_bool(&pkg_raw_key) {
+      if load_recorded(&s!("{}.sty", pkg_name)) {
         // The re-emit above is only progress when the CS that FIRED this
         // closure is a *different* one that was `\let` to the trigger — the
         // `\varmathbb`/2310.13684 case the comment describes. If the firing CS
@@ -85,28 +83,7 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
         }
         return Ok(Tokens::new(vec![cs_for_closure]));
       }
-      // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
-      // 'global'). Removes the autoload trigger globally.
-      assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
-      // Snapshot the calling frame's MEANING keys before the package load.
-      // Anything new the package installs at the calling frame is then
-      // hoisted to GLOBAL so it survives `\end{X}`'s pop_frame.
-      //
-      // Without this, autoload-triggered package loads from inside a body
-      // group (e.g. amsmath autoload via `\subequations` inside an
-      // environment group at depth>=1) install ALL of the package's CSes
-      // at the calling frame; those CSes vanish when the group exits, so
-      // a sibling autoload trigger (e.g. `\align` later in the body)
-      // fires, finds no real binding, and clears+re-emits → undefined CS
-      // → 10000-error MaxLimit cascade. Observed in 1711.11576 + cluster.
-      //
-      // The single-trigger `let_i(\trigger, \trigger, Global)` from the
-      // earlier round-17 fix is subsumed by the delta-hoist (since the
-      // trigger CS is itself a meaning-key newly-installed by the package
-      // load). (1711.11576: cleanly converts post-fix.)
-      let pre_keys = snapshot_top_frame_keys();
-      require_package(&pkg_name, RequireOptions::default())?;
-      hoist_top_frame_package_load(&pre_keys);
+      fire_autoload(&cs_for_closure, &pkg_name)?;
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
@@ -156,6 +133,59 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     );
   }
   Ok(())
+}
+
+/// Fire the autoload trigger `cs` of `package` (`def_autoload`): the trigger cleared, the package loaded.
+pub fn fire_autoload(cs: &Token, package: &str) -> Result<()> {
+  use latexml_core::common::store::Stored;
+  // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
+  // 'global'). Removes the autoload trigger globally.
+  assign_meaning(cs, Stored::None, Some(Scope::Global));
+
+  // Snapshot the calling frame's MEANING keys before the package load.
+  // Anything new the package installs at the calling frame is then
+  // hoisted to GLOBAL so it survives `\end{X}`'s pop_frame.
+  //
+  // Without this, autoload-triggered package loads from inside a body
+  // group (e.g. amsmath autoload via `\subequations` inside an
+  // environment group at depth>=1) install ALL of the package's CSes
+  // at the calling frame; those CSes vanish when the group exits, so
+  // a sibling autoload trigger (e.g. `\align` later in the body)
+  // fires, finds no real binding, and clears+re-emits → undefined CS
+  // → 10000-error MaxLimit cascade. Observed in 1711.11576 + cluster.
+  //
+  // The single-trigger `let_i(\trigger, \trigger, Global)` from the
+  // earlier round-17 fix is subsumed by the delta-hoist (since the
+  // trigger CS is itself a meaning-key newly-installed by the package
+  // load). (1711.11576: cleanly converts post-fix.)
+  let pre_keys = snapshot_top_frame_keys();
+  require_package(package, RequireOptions::default())?;
+  hoist_top_frame_package_load(&pre_keys);
+  Ok(())
+}
+
+/// The package of `cs` while it is an unfired `def_autoload` trigger of a `.sty`: it still holds the trigger's
+/// definition and the package has not loaded.
+pub fn unfired_autoload_package(cs: &Token) -> Option<String> {
+  use latexml_core::common::store::Stored;
+  if !cs.get_catcode().is_active_or_cs() {
+    return None;
+  }
+  let name = cs.to_string();
+  let Some(Stored::String(package)) = lookup_value(&s!("{name}:autoload")) else {
+    return None;
+  };
+  let package = with(package, |p| p.to_string());
+  if load_recorded(&s!("{package}.sty")) {
+    return None;
+  }
+  let holds_trigger = match lookup_value(&s!("{name}:autoload_trigger")) {
+    Some(Stored::Expandable(trigger)) => {
+      matches!(lookup_meaning(cs), Some(Stored::Expandable(current)) if Rc::ptr_eq(&current, &trigger))
+    },
+    _ => false,
+  };
+  holds_trigger.then_some(package)
 }
 
 /// Variant of `def_autoload` that loads a `.pool` (engine-level
@@ -253,6 +283,9 @@ LoadDefinitions!({
   // defines loads the format and retries, instead of becoming `<ltx:ERROR/>`.
   // See `latex_kernel` for the oracle's rationale and the no-dump branch.
   binding::kernel_autoload::set_hook(crate::latex_kernel::autoload_latex_kernel);
+  binding::kernel_autoload::set_refused_environment_hook(
+    crate::frontmatter_stores::refused_environment_definition,
+  );
 
   // Perl TeX.pool.ltxml L42-48: expl3 triggers
   for ltx3trigger in [

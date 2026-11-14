@@ -165,7 +165,7 @@ LoadDefinitions!({
   DeclareOption!("nohyper", {});
   DeclareOption!("notoc", {});
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RequirePackage!("amssymb");
   // The raw JHEP.cls loads hyperref, giving authors \href / \url / \hypertarget
   // without an explicit \usepackage{hyperref}. Perl's JHEP.cls.ltxml omits
@@ -192,9 +192,11 @@ LoadDefinitions!({
   DefMacro!("\\revised{}", "\\lx@add@date[role=revised,name={\\revisedname}]{#1}");
   DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted,name={\\acceptedname}]{#1}");
   DefMacro!("\\JHEPcopydate{}", "\\lx@add@date[role=copydate]{#1}");
-  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
-  DefMacro!("\\conference{}", "\\lx@add@pubnote[role=conference]{#1}");
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): JHEP.cls:608 sets the dedication in italics, :390
+  // the preprint header's number, and the conference line its name alone (hep-th0103183's copy) — the role stays.
+  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
+  DefMacro!("\\conference{}", "\\lx@add@pubnote[role=conference,name={}]{#1}");
+  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
   DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordsname~}]{#1}");
 
   // Perl L61-64: Acknowledgements environment. Perl uses
@@ -371,4 +373,14 @@ LoadDefinitions!({
   DefMacro!("\\figurename", "Figure");
   DefMacro!("\\tablename", "Table");
   DefMacro!("\\partname", "Part");
+
+  // The equations are numbered within the sections, "(2.1)", plain "(1)" before the first section, the appendices'
+  // "(A.1)" (`\appendix` sets `\thesection` to `\@Alph`): JHEP.cls v2.0.3 (1201.5394's copy):675-676 and :1451,
+  // JHEP3.cls:905-906 and :1787 (0708.0971's copy), PoS.cls:771-772 and :1419 (2205.03535's copy; PoS's binding loads
+  // this one), each `\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}` and
+  // `\@addtoreset{equation}{section}`. Perl's JHEP*.cls.ltxml and PoS.cls.ltxml keep the article's "(1)", "(2)" through
+  // the paper (2205.03535: 77 equation references "2" where the PDF prints "1.2"; KNOWN_PERL_ERRORS #1097). Guard
+  // `perfect_kernel_batch78q::jhep_family_equations_within_sections`.
+  RawTeX!(r"\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}
+\@addtoreset{equation}{section}");
 });

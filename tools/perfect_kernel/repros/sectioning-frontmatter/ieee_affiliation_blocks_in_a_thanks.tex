@@ -1,0 +1,20 @@
+% mechanism: `\IEEEauthorblockA`s inside a `\thanks` after the names: the bare run's wrapper holds them, and they are
+%   lifted out of it as blocks of their own, the funding note the document's (ieeetran_cls.rs
+%   `unnested_affiliation_blocks`, then `wrap_bare_author_block_text` again; OD #1009)
+% witness: 1405.1593 (Bob Baker† given "* Dept A"), the note-label path of 1504.01072
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: one footnote "∗ Dept A, Univ A, Town † Dept B, Univ B, City Email:{ann,cole}@a.edu, bob@b.edu"
+% engines: int162a: Ann and Bob no affiliation, Cy both unmarked; int163a, P4b2: Bob Baker "* Dept A, Univ A, Town"
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole "* Dept A, Univ A, Town", Bob Baker "† Dept B, Univ B, City", each e-mail its owner's
+% status:  RED (P4b2 5e4324996e) -> GREEN (P4cR2)
+% preload: ar5iv.sty
+\documentclass[onecolumn]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}, and Cy Cole\IEEEauthorrefmark{1}}
+\thanks{Funded by a grant.}
+\thanks{\IEEEauthorblockA{\IEEEauthorrefmark{1} Dept A, Univ A, Town}
+\IEEEauthorblockA{\IEEEauthorrefmark{2} Dept B, Univ B, City}
+{\it Email:\{ann,cole\}@a.edu, bob@b.edu}}}
+\maketitle
+Body.
+\end{document}

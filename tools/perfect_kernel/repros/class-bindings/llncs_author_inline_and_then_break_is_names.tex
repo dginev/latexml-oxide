@@ -1,0 +1,18 @@
+% mechanism: a line of llncs's one `\author` ending in an inline `\and` is open: the line after its `\\` is more names
+%   (`ends_open`, the old split's `\and`-then-`\\` piece), not the row's affiliation.
+% witness: 2207.10648 (`Vatche Isahagian \and \\ Vinod Muthusamy`)
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and" / "Cat Cole" over "Univ X"
+% engines: rust Z18b3 = "Cat Cole" an affiliation of Ann Able and Bob Baker, cc@ on a nameless creator
+% expect:  0 errors, 0 warnings; three authors, each Univ X and the address in order
+% status:  RED (Z18b3) -> GREEN (Z18c)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker \and \\
+Cat Cole}
+\institute{Univ X\\ \email{aa@x.com}, \email{bb@x.com}, \email{cc@y.com}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

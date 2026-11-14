@@ -50,9 +50,8 @@ pub struct SegmentMeta {
   /// (schema-driven: whether the parent can contain `#PCDATA`). Pass-2
   /// re-serialization must use the same value or indentation diverges.
   pub noindent:   bool,
-  /// The ancestor font context at the spill point, in `Font::to_string` form —
-  /// the seed `finalize_rec` needs so per-fragment finalize resolves fonts
-  /// exactly as the whole-document walk would have.
+  /// The font `finalize_rec` declares for the spill parent's children (`Document::finalize_context_font`), as its
+  /// `node_fonts` key: per-fragment finalize resolves fonts as the whole-document walk would have.
   pub font:       Option<String>,
   /// Namespace declarations (`(prefix, uri)`) the wrapper must carry so the
   /// segment parses stand-alone. In the eager DOM these live on the document
@@ -75,6 +74,9 @@ pub struct SegmentMeta {
   /// where `label:sec:restricted` stamps `role=FUNCTION` inside a section
   /// whose shell spills separately from its paragraphs).
   pub ancestors:  Vec<String>,
+  /// The nearest ancestor `xml:id` below the root: the element eager finalize mints the run's id-less top nodes
+  /// under (`S1.p1.1` under `S1.p1`), its counters carried through pass 2 (`Document::fragment_anchor_id`).
+  pub anchor:     Option<String>,
 }
 
 /// The element wrapping a spilled segment's sibling subtrees. Matches the
@@ -221,11 +223,11 @@ impl Drop for SegmentStore {
 }
 
 fn store_error(details: String) -> Error {
-  Error {
+  Error::from(crate::common::error::ErrorData {
     target:   ErrorTarget::Internal,
     category: ErrorCategory::Unexpected,
     message:  format!("segment-store: {details}"),
-  }
+  })
 }
 
 #[cfg(test)]
@@ -238,6 +240,7 @@ mod tests {
       noindent:   false,
       parent:     None,
       ancestors:  vec![],
+      anchor:     None,
       font:       Some(String::from("italic")),
       namespaces: vec![(
         String::from("ltx"),

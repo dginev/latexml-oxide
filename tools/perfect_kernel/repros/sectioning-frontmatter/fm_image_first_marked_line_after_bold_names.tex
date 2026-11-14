@@ -1,0 +1,21 @@
+% witness: review revCR8b finding 1, 2503.08161 (`$^{1}$ \includegraphics[width=0.36cm]{polyu-logo.png} The Hong Kong
+%          Polytechnic University`, its names in `\textbf`): an image on the first marked affiliation line after a bold
+%          names line
+% oracle:  pdflatex 0 errors: "Ann Able 1, Bob Baker 2" in bold; "1 [image] Zebra University"; "2 [image] Quokka
+%          Institute"
+% engines: rust CR8b = Ann's "Zebra University" without its image, 0 warnings (a silent loss: the font switch back from
+%          the bold line stood between the image and its run); Bob's image kept; int154r = both images dropped
+% expect:  0 errors, 0 warnings; Ann Able's affiliation holding its image before "Zebra University", Bob Baker's
+%          holding its image before "Quokka Institute"
+% status:  RED (CR8b) -> GREEN (CR8c) — perfect_kernel_batchcr8::image_on_the_first_marked_line_is_kept
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\title{T}
+\author{\textbf{Ann Able $^{1}$, Bob Baker $^{2}$} \\
+$^{1}$ \includegraphics[width=0.36cm]{example-image} Zebra University \\
+$^{2}$ \includegraphics[width=0.36cm]{example-image-a} Quokka Institute}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,11 @@
+% witness: 2109.06028 (longfbox.sty \lfbox, via ellipse.sty; run 349 E 643 -> Fatal TooManyErrors same-error cap)
+% oracle: TL 2025 pdflatex 101 errors (\@tempdimd undefined, ellipse.sty:95); 0 errors with \newdimen\@tempdimd
+% engines: rust 67e1 = 1 expected:<variable> per use of \@tempdimd + undefined \CalculateSin/\UseCos (trig.sty)
+% expect: 0 Errors; the ellipse's picture is emitted
+% mechanism: pict2e < v0.4b (2020/09/30) allocated \@tempdimd; pict2e.sty:123 loads trig in the mode > 0 branch
+% status: RED (67e1) -> GREEN (67g: pict2e binding allocates \@tempdimd if undefined and loads trig)
+\documentclass{article}
+\usepackage{ellipse}
+\begin{document}
+\begin{picture}(20,20)\ellipse{10}{5}\end{picture}
+\end{document}

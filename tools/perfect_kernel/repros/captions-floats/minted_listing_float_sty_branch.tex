@@ -1,0 +1,25 @@
+% witness: 2102.00527 and 1902.08498 ("JSON n", `\renewcommand{\listingscaption}{JSON}`), 2609.21330 ("Code snippet n")
+% oracle:  pdflatex 0 errors; "Figure 1: F.", "Code 2: Code two.", "Code 1: Code one.",
+%          "See 1, 2, listing 1, Listing 2, 1."; a List of Listings
+% engines: rust (78s r1) = 0 errors, "Listing 1 Code one." (newfloat's type, the rename lost, `close=" "`);
+%          rust (int57a) = a {figure}, "Figure 2: Code one."; perl = a {figure} (ar5iv-bindings minted.sty.ltxml:110-111)
+% expect:  0 errors; <float class="ltx_float_listing" inlist="lol"> with <tag close=": ">Code 1</tag>
+% mechanism: minted.sty:284 `\RequirePackage{float}` and :1937-1944 `\newfloat{listing}{tbp}{lol}`
+%   `\floatname{listing}{\listingscaption}` without the `newfloat` option (minted_sty.rs). KPE #1123.
+% status:  GREEN (78s r2)
+\documentclass{article}
+\usepackage{minted}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\renewcommand{\listingscaption}{Code}
+\begin{document}
+\begin{figure}X\caption{F.}\label{f}\end{figure}
+\begin{listing}[H]
+Y\caption{Code one.}\label{l}
+\end{listing}
+\begin{listing}
+Z\caption{Code two.}\label{l2}
+\end{listing}
+See \ref{l}, \autoref{l2}, \cref{l}, \Cref{l2}, \ref{f}.
+\listoflistings
+\end{document}

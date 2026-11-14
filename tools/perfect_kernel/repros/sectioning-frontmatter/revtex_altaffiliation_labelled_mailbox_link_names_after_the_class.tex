@@ -1,0 +1,26 @@
+% mechanism: the one label rule (classify/email_block_calls.rs `entry_line_label`) under REVTeX: an
+%   `\altaffiliation[<name>]{…}` the class names by its optional argument, holding a mailbox link line led by a label
+%   of its own, is an e-mail named after the class's name, then the line's label, as both print (the sibling of
+%   aa_mail_labelled_mailbox_link_names_after_the_class.tex; the address line's 2208.10784, `\altaffiliation[Authors
+%   for Correspondence: ]{Email: …}`). Perl reads no e-mail in an `\altaffiliation`
+% witness: none in the corpus (synthetic, review revZ18o N1's sibling)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able and Bob Baker", "Univ A∗", footnote "∗ Authors for Correspondence:
+%          Contact: here", "here" a mailto link
+% engines: rust int156a (27ca6acecc) = Ann Able's <contact name="Contact: " role="email">, the class's name lost
+% expect:  0 errors, 0 warnings; Ann Able: Univ A and <contact name="Authors for Correspondence: Contact: "
+%          role="email"> holding `<ref href="mailto:zz@x.org">here</ref>`; Bob Baker: Univ A
+% status:  RED (int156a) -> GREEN (MB1) — perfect_kernel_batchmb1::labelled_line_is_named_after_the_class
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A}
+\altaffiliation[Authors for Correspondence: ]{Contact: \href{mailto:zz@x.org}{here}}
+\author{Bob Baker}
+\affiliation{Univ A}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}

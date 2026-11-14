@@ -1,0 +1,18 @@
+% witness: review 78q finding 8 (int53a and 78q r1 alike: "1.1" where pdflatex prints "11")
+% oracle:  pdflatex 0 errors with svjour3.cls v3.2 (the selection probe's copy, :804); "See 1, 11, 12, 2, 21, A, A1."
+% engines: rust (78q r1) = "See 1, 1.1, 1.2, 2, 2.1, A, A.1."
+% expect:  0 errors; a paper's own \newtheorem{x}{X}[section] joins the numbers with the class's \@thmcountersep
+% status:  RED (78q r1) -> GREEN (78q r2, KNOWN_PERL_ERRORS #1111)
+\documentclass{svjour3}
+\newtheorem{obs}{Observation}[section]
+\begin{document}
+\section{One}\label{s1}
+\begin{obs}\label{o1}A.\end{obs}
+\begin{obs}\label{o2}B.\end{obs}
+\section{Two}\label{s2}
+\begin{obs}\label{o3}C.\end{obs}
+\appendix
+\section{App}\label{s3}
+\begin{obs}\label{o4}D.\end{obs}
+See \ref{s1}, \ref{o1}, \ref{o2}, \ref{s2}, \ref{o3}, \ref{s3}, \ref{o4}.
+\end{document}

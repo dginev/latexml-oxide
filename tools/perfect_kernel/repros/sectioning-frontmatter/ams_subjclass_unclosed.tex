@@ -1,0 +1,27 @@
+% witness: 2212.11488 (amsart: `\subjclass{\textbf{AMS Subject Classification}: 65N12, ..., 74G65` with no `}`, a
+%          comment line and a blank line after it; 81 of 153 references dangling, 186 errors)
+% oracle:  pdflatex 0 errors: after `\maketitle`, amsart.cls:620-630 `\@cleartopmattertags` lets `\subjclass` be
+%          `\relax`, so the `{` opens a group the document never closes and the text prints in place; before
+%          `\maketitle` the non-long `\subjclass` (amsart.cls:555 `\newcommand*`) stops at the blank line, "Paragraph
+%          ended before \subjclass was complete"
+% engines: rust int85a = the argument read to the end of the document: 6 errors, the section inside the
+%          classification, its label lost and the reference dangling
+% expect:  0 errors, 1 warning (\end occurred inside a group at level 1, as pdflatex); the classification's text
+%          printed in place, as pdflatex prints it (`\subjclass` is `\relax` there: the binding takes that reading
+%          where its short argument would run into the `\par`, ruling 2026-10-25); the section, its label and the
+%          math after it are the document's
+% status:  RED (int85a) -> 1 error (79m) -> GREEN (80q)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{A}
+\maketitle
+\keywords{K}
+
+\subjclass{\textbf{AMS Subject Classification}: 65N12, 74G65
+	% 74K15
+
+\section{Introduction}\label{sec:a}
+Text $x_1$ and Section~\ref{sec:a}.
+\end{document}

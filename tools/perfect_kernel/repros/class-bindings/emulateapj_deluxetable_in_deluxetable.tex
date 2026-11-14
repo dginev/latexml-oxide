@@ -1,0 +1,31 @@
+% witness: 1704.06321 (a bare \tablenotemark takes the `}` that closed the first table), 1204.1969 (a stray \[ in a
+%          \colhead)
+% oracle:  pdflatex "Not in outer par mode" for the inner float (latex.ltx:17440-17441 \@parmoderr\@floatpenalty\z@;
+%          \end@float, :17501-17505, never adds its box: "You've lost some text"), then emulateapj's longtable
+%          cascade, 98 errors, no PDF; the empty-table form of this repro: 38 errors, finishes
+% engines: rust int32a = Fatal IfLimit (the inner table's \let\lx@eapj@saved@label\label saved the outer table's
+%          \label, which then called itself); 67int17b 0 errors, both tables nested, both captions; Perl 3 errors
+% expect:  1 error ("Not in outer par mode"), 0 warnings; the inner table's head and row and the outer's kept, as
+%          Perl/67int17b keep them (pdflatex drops the inner float)
+% status:  GREEN (batch 77r: the inner deluxetable raises \@parmoderr and keeps the outer's bindings); RED part: the
+%          inner \tablecaption replaces the outer's stored one (int32a too, since 68y; SYNC_STATUS)
+\documentclass[apj]{emulateapj}
+\begin{document}
+Before.
+\begin{deluxetable}{cc}
+\tablecaption{Outer caption}
+\begin{deluxetable}{cc}
+\tablecaption{Inner caption}
+\tablehead{\colhead{IA} & \colhead{IB}}
+\startdata
+ione & itwo \\
+\enddata
+\end{deluxetable}
+\tablehead{\colhead{OA} & \colhead{OB}}
+\startdata
+oone & otwo \\
+\enddata
+\label{sec:interpdisk}
+\end{deluxetable}
+After.
+\end{document}

@@ -1,0 +1,24 @@
+% witness: arXiv 0910.0753 (command-form \numparts ... \endnumparts: "4.3dabga" where the PDF prints 4.3a); the review's probe iop/i2
+% oracle:  pdflatex 0 errors with iopart.cls (0712.1190's copy; :815-825: \numparts numbers \arabic{section}.\arabic{eqnval}\alph{equation}, \endnumparts sets the arabic form back); "Refs 1.1a, A.2, 1.4, 1.5a."
+% engines: rust (78n r1) = "Refs A.1a, A.2, A.3d, A.3ea." (the appendix form, letters piling up); int51a "Refs 2a, 3, 4e, 4fa." (the kernel's \appendix, letters piling up); Perl 0.8.8 the same as int51a
+% expect:  0 errors; tags (1) (1.1a) (1.1b) (A.2) (1.3a) (1.3b) (1.4) (1.5a) (1.5b)
+% status:  RED (78n r1) -> GREEN (78n r2, KNOWN_PERL_ERRORS #1078)
+\documentclass{iopart}
+\begin{document}
+\section{Intro}
+\begin{equation} a \end{equation}
+\appendix
+\section{Second}
+\begin{numparts}
+\begin{eqnarray} c \label{e1}\\ d \end{eqnarray}
+\end{numparts}
+\begin{equation} e \label{e0}\end{equation}
+\numparts
+\begin{eqnarray} f \\ g \end{eqnarray}
+\endnumparts
+\begin{equation} h \label{e2}\end{equation}
+\numparts
+\begin{eqnarray} i \label{e3}\\ j \end{eqnarray}
+\endnumparts
+Refs \ref{e1}, \ref{e0}, \ref{e2}, \ref{e3}.
+\end{document}

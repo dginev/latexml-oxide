@@ -1,0 +1,26 @@
+% mechanism: an elsarticle author call printing a bracketed collaboration with an address keyed to it
+%   (`\author[b]{(The KM3NeT Group)}\address[b]{Univ B}`): the reading makes the call the names' collaboration (P5b's
+%   framed call), so its address "Univ B" becomes a nameless creator. elsarticle prints the call as an author of its
+%   own, keyed to its address. Expected: a creator "(The KM3NeT Group)" holding "Univ B", as the base. The "for the" form
+%   (`\author[b]{for the KM3NeT Group}`) is pre-existing on P5bbase (the same nameless creator). Post-merge, P5BA
+%   (review revP5b; synthetic).
+% witness: synthetic
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able, (The KM3NeT Group)", each with its superscript
+%   key, then "a CERN", "b Univ B"
+% engines: rust P5bbase (green): Ann Able (CERN), (The KM3NeT Group) (Univ B); P5b and P5bb: Ann Able (the collaboration, CERN) and a
+%   nameless creator holding "Univ B"; perl: not run
+% expect:  0 errors, 0 warnings; two creators: Ann Able with "CERN", "(The KM3NeT Group)" with "Univ B"
+% status:  RED (P5b, P5bb)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[a]{Ann Able}
+\author[b]{(The KM3NeT Group)}
+\address[a]{CERN}
+\address[b]{Univ B}
+\end{frontmatter}
+Text.
+\end{document}

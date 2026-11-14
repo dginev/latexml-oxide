@@ -69,13 +69,34 @@ pub(crate) fn load() -> Result<()> {
     locked=>true
   );
   // Check for trailing \label, move it into the caption
-  // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type; our `\lx@cleverref@label[]` drops it)
-  // gives its `[type]` here too: read as the key, `[` became the label and the key was typeset (2404.11739; OXIDIZED_DESIGN
-  // #552). Guard `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
-  DefMacro!(
-    r"\@caption@postlabel{}{}{} SkipMatch:\label [] Semiverbatim",
-    r"\@caption@{#1}{#2}{#3\label{#5}}"
-  );
+  // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type) gives its `[type]` here too: read as
+  // the key, `[` became the label and the key was typeset (2404.11739; OXIDIZED_DESIGN #552). The type goes on as
+  // `\lx@label@type` (sect11.rs `typed_label`), which cleveref's binding makes the labelled object's reference type
+  // (77s). Guards `perfect_kernel_batch65m::cleveref_label_type_after_caption`,
+  // `perfect_kernel_batch77s::cleveref_label_type_names_the_reference`.
+  // The label goes in front of the caption's material: a `\label` after `\caption` names what the caption's
+  // `\refstepcounter` stepped (latex.ltx:17391-17393), the float, and an unnumbered display in the caption steps
+  // nothing; the caption's paragraph (`PBoxContents`) ends with that display's `ltx:equation` open, which a `\label`
+  // at the end took (2310.11556, 1404.2359; Perl puts it at the end, latex_constructs.pool.ltxml:3175;
+  // OXIDIZED_DESIGN_DIVERGENCES #769). It is `\lx@caption@postlabel`, not `\label`, so the scan below for the
+  // caption's own labels does not take the caption's text as its argument, where a stray `\fi` in it would close
+  // that scan's `\ifx` (KNOWN_PERL_ERRORS #641); the toc copy drops it.
+  DefMacro!(r"\@caption@postlabel{}{}{} SkipMatch:\label [] Semiverbatim", sub[(captype, short, caption, ty, key)] {
+    let mut tokens = vec![T_CS!("\\lx@note@caption@label"), T_BEGIN!()];
+    tokens.extend(key.clone().unlist());
+    tokens.extend([T_END!(), T_CS!("\\@caption@")]);
+    for arg in [captype, short] {
+      tokens.push(T_BEGIN!());
+      tokens.extend(arg.unlist());
+      tokens.push(T_END!());
+    }
+    tokens.push(T_BEGIN!());
+    tokens.extend(typed_label(T_CS!("\\lx@caption@postlabel"), ty, key));
+    tokens.extend(caption.unlist());
+    tokens.push(T_END!());
+    Tokens::new(tokens)
+  });
+  DefMacro!("\\lx@caption@postlabel", "\\lx@label");
   DefMacro!(
     r"\@caption@{}{}{}",
     r"\@hack@caption@{#1}{#2}{}#3\label\endcaption"
@@ -87,13 +108,41 @@ pub(crate) fn load() -> Result<()> {
   // \else …}`; 1904.11818, 1602.01884) took the wrapper's own `\else`/`\fi`, and the `\label` scan read to the end of
   // the file (Fatal `Mouth:EoF`; Perl the same, KNOWN_PERL_ERRORS #641). OXIDIZED_DESIGN #570; guards
   // `perfect_kernel_batch66d::caption_hoist_*`.
+  // The branch is a control sequence, not a braced argument: a caption that is a one-token box argument
+  // (`\parbox[b]{9cm}` then `\caption{…}`, mn2e astro-ph0107461) brings the box's `}` along as the `\@xdblarg`
+  // argument (Perl's readArg returns a lone `}` too, Gullet.pm:732-744), and that `}` closed a braced branch early,
+  // so the other branch ran and its `\label` scan read to the end of the file (16 run-345 papers; Perl: one "Attempt
+  // to close" Error). Guard `perfect_kernel_batch66h::caption_one_token_box_argument`.
   DefMacro!(
     r"\@hack@caption@{}{}{} Until:\label Until:\endcaption",
-    r"\ifx.#5.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\@caption@@@{#1}{#2}{#3#4}}{\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption}"
+    r"\ifx.#5.\expandafter\lx@caption@nolabel\else\expandafter\@@@hack@caption@\fi{#1}{#2}{#3#4}#5\endcaption"
   );
+  DefMacro!(r"\lx@caption@nolabel{}{} Until:\endcaption", r"\@caption@@@{#1}{#2}{#3}");
+  // A `\label` in the caption's text reads cleveref's optional type as `\@caption@postlabel` does (typed_label):
+  // read as the key, `\caption{Foo\label[appendixtable]{tin}}` labelled the float `[` and printed
+  // "Fooappendixtable]tin" (pdflatex: "appendix table 1"; the 2404.11739 mechanism, KNOWN_PERL_ERRORS #998;
+  // 1412.3542, 1901.00405, 2008.03354, 2201.04036). Without cleveref the type is read too (OXIDIZED_DESIGN #552).
+  // Guard `perfect_kernel_batch77s::label_type_in_caption_text`.
   DefMacro!(
-    r"\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption",
-    r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption"
+    r"\@@@hack@caption@{}{}{} [] Semiverbatim Until:\label Until:\endcaption",
+    sub[(captype, short, text, ty, key, after, rest)] {
+      let mut tokens = vec![T_CS!("\\lx@note@caption@label"), T_BEGIN!()];
+      tokens.extend(key.clone().unlist());
+      tokens.extend([T_END!(), T_CS!("\\@hack@caption@")]);
+      for arg in [captype, short] {
+        tokens.push(T_BEGIN!());
+        tokens.extend(arg.unlist());
+        tokens.push(T_END!());
+      }
+      tokens.push(T_BEGIN!());
+      tokens.extend(text.unlist());
+      tokens.extend(typed_label(T_CS!("\\label"), ty, key));
+      tokens.extend(after.unlist());
+      tokens.extend([T_END!(), T_CS!("\\label")]);
+      tokens.extend(rest.unlist());
+      tokens.push(T_CS!("\\endcaption"));
+      Tokens::new(tokens)
+    }
   );
 
   DefPrimitive!("\\lx@note@caption@label{}", sub[(label)] {
@@ -118,14 +167,23 @@ pub(crate) fn load() -> Result<()> {
   // Guard `perfect_kernel_batch58::floatrow_floatfoot_keeps_its_text`.
   DefMacro!("\\lx@kernel@setfloatcapt{}", "#1");
   Let!("\\lx@setfloatcapt", "\\lx@kernel@setfloatcapt");
-  // The list entry is the `[short]`, or the caption when it is empty (`\caption[]{…}`), told by its detokenized
-  // text, and chosen without skipping either: Perl's `\ifx.#2.#3\else#2\fi` (pool:3189) saw a `[short]` only a
-  // document gave, and `\@dblarg` now always gives one, the caption itself, whose opening conditional `\ifx` took as
-  // its second token, leaving the caption's `\fi` to close the `\ifx` ("Extra \else", then the file ended scanning
-  // for `\endcaption`: `\caption{\ifdefined\x\color{blue}\fi …}`, 2609.27590, 2609.28438; KNOWN_PERL_ERRORS #468).
+  // The list entry is the `[short]`, or the caption when it is empty (`\caption[]{…}`) or the caption itself
+  // (`\lx@toc@copy@text`, which marks that copy a re-read), told by its tokens, and chosen without expanding either:
+  // Perl's `\ifx.#2.#3\else#2\fi` (pool:3189) saw a `[short]` only a document gave, and `\@dblarg` now always gives
+  // one, the caption itself, whose opening conditional `\ifx` took as its second token, leaving the caption's `\fi` to
+  // close the `\ifx` ("Extra \else", then the file ended scanning for `\endcaption`: `\caption{\ifdefined\x\color{blue}\fi
+  // …}`, 2609.27590, 2609.28438; KNOWN_PERL_ERRORS #468).
+  // A float's caption is its type's title (`\lx@format@title@@`), unless a package formats captions itself: caption's
+  // label formats, separators and fonts (caption_sty.rs, caption3.sty:1661-1715), as latex.ltx's `\@makecaption` is
+  // what caption.sty replaces (caption.sty:206). longtable's caption takes it too (caption.sty:1167).
+  DefMacro!("\\lx@format@caption@@{}{}", r"\lx@format@title@@{#1}{#2}");
+  // A starred caption (`\caption*`, caption.sty:210-227; longtable's, longtable.sty:471-474) is its text alone, which
+  // the kernel leaves as written; caption formats it with the caption's fonts and text format, the label suppressed
+  // (caption_sty.rs `caption_star_format_tokens`).
+  DefMacro!("\\lx@format@scaption@@{}{}", "#2");
   DefMacro!(
     "\\@caption@@@{}{}{}",
-    r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\if\relax\detokenize{#2}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#3}{#2}}}\lx@@caption{\lx@format@title@@{#1}{#3}}}"
+    r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\lx@toc@copy@text{#2}{#3}}}\lx@@caption{\lx@format@caption@@{#1}{#3}}}"
   );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
@@ -149,7 +207,10 @@ pub(crate) fn load() -> Result<()> {
       Some(Stored::HashStored(pre)) => pre,
       _ => step_float_counter(&captype)?,
     };
-    let inlist = digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
+    // The list's extension, read as `\@captype` is above: digested, its letters began a paragraph in the float's
+    // vertical list, whose horizontal mode outlived the counters, and the caption's box then ended that paragraph with
+    // a `\par` (an aas `\references` entry in a table, `perfect_kernel_batch64x::bibitem_after_a_float_reopens_the_list`).
+    let inlist = do_expand(T_CS!(s!("\\ext@{}", captype)))?.to_string();
     assign_value(
       &s!("{}_tags", captype),
       props.get("tags"),
@@ -163,28 +224,57 @@ pub(crate) fn load() -> Result<()> {
       Some(Scope::Global),
     );
     assign_value(&s!("{}_inlist", captype), inlist, Some(Scope::Global));
+    // How many captions of the type were made, for a box that holds one (`end_caption_box`).
+    let count = s!("{CAPTION_COUNT_PREFIX}{captype}");
+    assign_value(&count, lookup_int(&count) + 1, Some(Scope::Global));
   });
 
   DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",
   before_digest => {
     Error!("unexpected", "\\caption", "Use of \\caption outside any known float"); });
 
+  // A forced `\linebreak` (`\linebreak[4]`, its default: latex.ltx `\@no@lnbk`'s `\penalty-\@M`) between a float's
+  // panels ends their row (`note_panel_separator`, the panel grid rule; OXIDIZED_DESIGN_DIVERGENCES #885): the float's
+  // begin lets `\linebreak` to `\lx@panel@linebreak` while it has the kernel's meaning.
+  // `\linebreak` directly in the float's own group (as `\hspace`'s glue, latex_constructs sect12.rs): elsewhere — a
+  // caption, a cell, a box — it stays the no-op it is (sect12.rs `\linebreak[]`), so nothing joins their material.
+  DefPrimitive!("\\lx@panel@linebreak[]", sub[(priority)] {
+    let forced = priority.as_ref().is_none_or(|n| {
+      let n = n.to_string();
+      n.trim().is_empty() || n.trim() == "4"
+    });
+    if forced
+      && !lookup_bool("IN_MATH")
+      && matches!(lookup_value("lx@float@frame"), Some(Stored::Number(n)) if n.0 as u64 == current_frame_id())
+    {
+      unread_vec(vec![T_CS!("\\lx@panel@linebreak@mark")]);
+    }
+  });
+  DefConstructor!("\\lx@panel@linebreak@mark", sub[document, _args, _props] {
+    note_panel_separator(document, "break", None)?;
+  },
+  sizer => { Ok((Dimension::default(), Dimension::default(), Dimension::default())) },
+  reversion => Tokens!(T_CS!("\\linebreak")));
+
   // Note that even without \caption, we'd probably like to have xml:id.
   // Perl: BuildPanelsAndID + collapseFloat (afterClose hooks)
   Tag!("ltx:figure", after_close => sub[document, node, whatsit] {
     document.generate_id(node, "fig")?;
-    arrange_panels(document, node, float_width_of(whatsit))?;
+    let layout = arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
+    annotate_panel_grid(document, node, &layout)?;
   });
   Tag!("ltx:table",  after_close => sub[document, node, whatsit] {
     document.generate_id(node, "tab")?;
-    arrange_panels(document, node, float_width_of(whatsit))?;
+    let layout = arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
+    annotate_panel_grid(document, node, &layout)?;
   });
   Tag!("ltx:float",  after_close => sub[document, node, whatsit] {
     document.generate_id(node, "tab")?;
-    arrange_panels(document, node, float_width_of(whatsit))?;
+    let layout = arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
+    annotate_panel_grid(document, node, &layout)?;
   });
 
   // # These may need to float up to where they're allowed,
@@ -211,7 +301,10 @@ pub(crate) fn load() -> Result<()> {
   // 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575, 2112.07588). The constructor is `\lx@@caption`, which
   // the kernel and the bindings call; `\@@caption` stays its alias, so a class's own meaning for the name is the
   // class's (OXIDIZED_DESIGN #566, KNOWN_PERL_ERRORS #637). Guard `perfect_kernel_batch66b::cup_contcaption_keeps_its_caption`.
-  DefConstructor!("\\lx@@caption{}", sub[document, args, props] {
+  // The material is a paragraph of a vertical box (`PBoxContents`, as Perl's `\@@caption PBoxContents`,
+  // latex_constructs.pool.ltxml:3368), so a `$$…$$` in it is display math (1005.1555, 1907.01498, 2310.11556,
+  // 1404.2359; OXIDIZED_DESIGN_DIVERGENCES #769); `\@@toccaption` below alike.
+  DefConstructor!("\\lx@@caption PBoxContents", sub[document, args, props] {
     let body = args[0].clone();
     // The list entry `\@@toccaption` could not place (below), for the float this caption may become.
     let unplaced_toccaption = remove_value("lx@unplaced@toccaption");
@@ -310,15 +403,14 @@ pub(crate) fn load() -> Result<()> {
       }
     }
     Ok(map)
-  },
-  mode => "text");
+  });
   Let!("\\@@caption", "\\lx@@caption");
   // With no ancestor to hold it, the entry waits for the `\lx@@caption` that follows: a caption in a box that is not a
   // float becomes that float (above), whose list entry it is — LaTeX's `\caption` writes the `\addcontentsline` there
   // too (latex.ltx:17391-17399), and without it the list of figures showed the float's number alone
   // (`\captionsetup{type=figure}` or `\def\@captype{figure}` in a minipage, the tufte margin figures; 2609.06557,
   // 32742).
-  DefConstructor!("\\@@toccaption{}", sub[document, args] {
+  DefConstructor!("\\@@toccaption PBoxContents", sub[document, args] {
     let body = args[0].clone();
     if caption_can_float(document, "ltx:toccaption") {
       let save = document.float_to_element("ltx:toccaption", true)?;
@@ -333,7 +425,7 @@ pub(crate) fn load() -> Result<()> {
     } else if let Some(body) = body {
       assign_value("lx@unplaced@toccaption", Stored::Digested(body), Some(Scope::Global));
     }
-  }, mode => "text");
+  });
 
   // Perl: latex_constructs.pool.ltxml L3450-3458
   // Uses beforeFloat('figure') / afterFloat — sets LAST_FLOATTYPE, rescues counters.
@@ -553,7 +645,14 @@ pub(crate) fn load() -> Result<()> {
   // `perfect_kernel_batch54::marginpar_optional_keeps_its_own_brackets`.
   DefMacro!("\\@xmpar[]{}", "\\lx@marginpar[{#1}]{#2}");
   DefMacro!("\\@ympar{}", "\\lx@marginpar{#1}");
+  // The note's text is set in a box of its own (latex.ltx `\@xympar` → `\@savemarbox`: `\vtop{… #2}`, internal vertical
+  // mode), so it is text wherever `\marginpar` is called: a `$…$` in a note called from a formula opens math there, as
+  // `\lx@note`'s body does (sect03.rs). Perl's constructor (latex_constructs.pool.ltxml:3487) takes no mode, so a note
+  // called from math digested `$#1$` as the formula's own `$`s: the next formula of the paragraph met its scripts in
+  // text (2002.06461's `\newcommand{\defineNotation}[1]{#1\marginnote{$#1$}}` inside `$…$`; KNOWN_PERL_ERRORS #661).
+  // Guard: `perfect_kernel_batch66l::marginnote_formula_called_from_math`.
   DefConstructor!("\\lx@marginpar[]{}", r###"?#1(<ltx:note role='margin' class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>?#2(<ltx:note role='margin' class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>))(<ltx:note role='margin' class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###,
+    mode => "inline_internal_vertical",
     bounded => true, reversion => r"\marginpar[#1]{#2}",
     sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 

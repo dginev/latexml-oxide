@@ -1,0 +1,16 @@
+% witness: 1502.01001, hep-ph0207056 (the title's `\author` with an abstract and a section after `\maketitle`)
+% oracle:  pdflatex 0 errors: the title, Ann Able1, Bob Baker2, 1 Univ A, 2 Univ B, the abstract, the section
+% engines: Perl and off: 2 creators; ours =2 before TA1: the merged creator only, the later flush's split ones sealed off (`Info:frontmatter:sealed`)
+% expect:  0 errors; at =2 exactly 2 creators, Ann/Univ A, Bob/Univ B (perfect_kernel_batchTA1::a_late_author_block_is_read_at_its_own_flush)
+% status:  GREEN (TA1)
+\documentclass{article}
+\begin{document}
+\title{A Title\\
+\author{Ann Able$^1$, Bob Baker$^2$\\ $^1$Univ A\\ $^2$Univ B}}
+\maketitle
+\begin{abstract}
+We study x.
+\end{abstract}
+\section{Intro}
+Body text.
+\end{document}

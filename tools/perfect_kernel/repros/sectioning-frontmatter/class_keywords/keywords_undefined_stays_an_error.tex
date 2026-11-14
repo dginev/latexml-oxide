@@ -1,0 +1,14 @@
+% CONTROL: `\keywords` that nothing defines (article) stays an undefined-macro Error, as pdflatex's.
+% witness: none (synthetic)
+% oracle:  pdflatex 1 error (Undefined control sequence)
+% expect:  1 error (undefined:\keywords), no <keywords>
+% status:  CONTROL
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\keywords{first}
+\end{abstract}
+Body.
+\end{document}

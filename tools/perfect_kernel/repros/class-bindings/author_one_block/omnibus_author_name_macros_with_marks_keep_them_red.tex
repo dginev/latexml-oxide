@@ -1,0 +1,21 @@
+% mechanism: emit.rs `block_names`: a document macro printing a name and its mark (`\nm{Ann Able}{1}` →
+%   `Ann Able$^{1}$`) in OmniBus's one block, whose names keep their marks printed: the first name written by text
+%   (its mark lost), the last from inside the call (its mark as text) — each call should be written whole (Option C
+%   P3, OD #993)
+% witness: synthetic (the int158a lesson: an author-block change reaches OmniBus)
+% oracle:  pdflatex (TL 2025, -no-shell-escape; `nosuchclass` as `article`) 0 errors: "Ann Able1 Bob Baker2"
+% engines: int159a and P3: 0 errors, 2 warnings (OmniBus; "Ann Able" written as its plain text, its mark lost);
+%   personnames "Ann Able", "Bob Baker2" (the mark as plain text). A P3 draft gave `Ann Able<sup>1</sup>`, `Bob
+%   Baker<sup>2</sup>`, 1 warning; the final rule (`made_by_its_call`) does not read a formula mark as its call's
+%   (its formula's span is not its cover); perl not run
+% expect:  0 errors, 1 warning (OmniBus's missing binding); personnames `Ann Able<sup>1</sup>`, `Bob Baker<sup>2</sup>`
+% status:  RED (int159a, P3)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\newcommand\nm[2]{#1$^{#2}$}
+\begin{document}
+\title{T}
+\author{\nm{Ann Able}{1} \and \nm{Bob Baker}{2}}
+\maketitle
+Text.
+\end{document}

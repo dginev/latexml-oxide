@@ -1,0 +1,19 @@
+% A two-letter surname spells the local part made of it alone (`an107@` Weili An's, not Anusuya Nallathambi's initials
+% "an"; `NameKeys::short_surnames`).
+% witness: 2608.22602
+% oracle:  pdflatex 0 errors: "Univ P", "{an107, anallat}@p.edu"
+% engines: rust int127a = 0 errors; the brace list in the affiliation of both; perl = not run
+% expect:  0 errors, 0 warnings; Weili An: Univ P + an107@; Anusuya Nallathambi: Univ P + anallat@
+% status:  RED (int127a) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Weili An}
+\author{Anusuya Nallathambi}
+\affil{Univ P \\ \{an107, anallat\}@p.edu}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: none yet (found 2026-10-30 beside 1707.06238 / 1302.1442's `\inst{\ref{a},\ref{b}}`, aa class A)
+% oracle:  pdflatex with an aa.cls copy: "Univ Y is institute 2." (the `\label` is the institute counter's — the
+%          same `\ref` inside `\inst` prints the number)
+% engines: perl 0.8.8 = the red missing-label key "LABEL:ib"; rust 92a = an empty `ltx_missing_label` span — the
+%          affiliation contact carries no label or refnum, so `<ref labelref="LABEL:ib"/>` has no target
+% expect:  "Univ Y is institute 2." in the body; the affiliations as today
+% status:  RED (SYNC_STATUS row "A body `\ref` to an `\institute` entry's `\label` prints nothing")
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{\ref{ia},\ref{ib}} \and Bob Baker\inst{\ref{ib}}}
+\institute{Univ X\label{ia} \and Univ Y\label{ib}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Univ Y is institute \ref{ib}.
+\end{document}

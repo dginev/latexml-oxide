@@ -71,10 +71,17 @@ LoadDefinitions!({
 \def\backreftwosep{ e~}\def\backreflastsep{ e~}}
 \backrefenglish
 \SetupKeyvalOptions{family=backref,prefix=BR@}
-\DeclareVoidOption{pageref}{\def\backref{\backrefpagesname\ }}
-\DeclareVoidOption{ref}{\def\backref{\backrefsectionsname\ }}
-\DeclareVoidOption{hyperref}{\def\backref{}}
-\DeclareVoidOption{hyperpageref}{\def\backref{}}
+\DeclareBoolOption[false]{verbose}
+\long\def\page@backref#1#2#3{#1}
+\long\def\section@backref#1#2#3{#2}
+\long\def\hyper@section@backref#1#2#3{\hyperlink{#3}{#2}}
+\long\def\hyper@page@backref#1#2#3{\hyperlink{page.#1}{#1}}
+\DeclareVoidOption{pageref}{\def\backref{\backrefpagesname\ }\let\backrefxxx\page@backref}
+\DeclareVoidOption{ref}{\def\backref{\backrefsectionsname\ }\let\backrefxxx\section@backref}
+\DeclareVoidOption{hyperref}{\def\backref{}\let\backrefxxx\hyper@section@backref}
+\DeclareVoidOption{hyperpageref}{\def\backref{}\let\backrefxxx\hyper@page@backref}
+\DeclareBoolOption[true]{enable}
+\DeclareComplementaryOption{disable}{enable}
 \kv@set@family@handler{backref}{}
 \DeclareDefaultOption{}
 \backrefsetup{pageref}
@@ -82,5 +89,18 @@ LoadDefinitions!({
 \newif\ifbackrefparscan\backrefparscantrue
 \@ifundefined{backrefalt}{\def\backrefalt#1#2#3#4{}}{}
 \@ifundefined{backrefentrycount}{\def\backrefentrycount#1#2{#1}}{}"
+  );
+  // backref.sty:457-482 `\Hy@backout`, the hook each citation calls (hyperref's `\hyper@natlinkstart`, backref's
+  // `\BR@citex`): it writes the back-cite record — "Doc-Start" where no label is current — to the .aux for the next run.
+  // The records are never read back here (the lists are not rendered), but documents patch it: `\patchcmd{\Hy@backout}
+  // {Doc-Start}{\@currentHref}{}{\errmessage{I can't seem to patch backref}}` failed on hyperref's `\@gobble` stand-in
+  // (2405.13143, 2601.06492, 2004.14852).
+  RawTeX!(
+    r"\def\Hy@backout#1{\@bsphack
+\ifBR@enable\ifBR@verbose\PackageInfo{backref}{Back cite \string`#1\string'}\fi
+\ifx\@empty\@currentlabel\protected@write\@auxout{}{\string\@writefile{brf}{\string\backcite{#1}{{\thepage}{(document)}{Doc-Start}}}}%
+\else\protected@write\@auxout{}{\string\@writefile{brf}{\string\backcite{#1}{{\thepage}{\@currentlabel}{\@currentHref}}}}\fi
+\else\ifBR@verbose\PackageInfo{backref}{Disabled back cite \string`#1\string'}\fi\fi
+\@esphack}"
   );
 });

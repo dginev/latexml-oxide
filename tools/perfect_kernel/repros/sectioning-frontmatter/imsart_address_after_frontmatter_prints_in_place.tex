@@ -1,0 +1,53 @@
+% mechanism: imsart.sty's unlabelled `\address` after `\end{frontmatter}` is no author's: under the journal options that
+%   set `\@addressatendtrue` (`aap`, imsart.sty:150) each block is stored and printed at the end of the document
+%   (`\printaddresses`), tied to no author. The binding's `\address` (latexml_contrib imsart_cls.rs `imsart_sty_markup`,
+%   shared by the imsart.sty binding) prints it where it is called, as `\printaddressnum` sets a block; inside
+%   `{frontmatter}`, or labelled, it stays a contact. OXIDIZED_DESIGN_DIVERGENCES #986
+% witness: 1301.1466 (crackle.tex:1109-1125, three `\address{<Name> \\ …}` after `\bibliography`, option `aap`); here as a
+%          minimal stand-in of the shipped imsart.sty (a shortened, modified excerpt of its addressatend code)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" / "Body." / then three blocks "Ann Able / Univ A / (e1)",
+%          "Bob Baker / Univ B / (e2)", "Cid Cole / Univ C"
+% engines: int154x: the three blocks printed at the end (imsart.sty read raw), no e-mail kept; CR3: all three addresses
+%          the last author's (Bob Baker), the third naming a person who is no author; CR3b: each author's e-mail, and the
+%          three blocks printed in place, unattributed, their `\printead` rows empty; CR4: each `\printead{eN}` row
+%          "e-mail: <address>", as the real imsart.sty's `\@@printead` prints it (the locked binding replaces the
+%          stand-in's "(eN)")
+% expect:  0 errors, 0 warnings; Ann Able: email ann@x.edu; Bob Baker: email bob@y.org; no address contact; three
+%          tabulars after "Body." whose first rows are Ann Able, Bob Baker, Cid Cole, the first two ending "e-mail: …"
+% status:  RED (CR3) -> GREEN (CR3b; guard perfect_kernel_batchcr3::imsart_address_after_frontmatter_prints_in_place)
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesFile{imsart.sty}[2012/01/01 IMS article style, shortened and modified]
+\DeclareRobustCommand\ead[2][label= ,email]{}
+\def\printead#1{(#1)}
+\newenvironment{aug}{}{\par}
+\newenvironment{frontmatter}{\begin{center}}{\end{center}}
+\def\and{\unskip~and~}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\bgroup\def\fnms##1{##1}\def\snm##1{##1}\noindent#2\egroup}
+\newcount\c@address
+\def\address{\@ifnextchar[{\address@fmt}{\address@fmt[default]}}
+\def\address@fmt[#1]#2{\global\advance\c@address1
+  \expandafter\gdef\csname @address@\the\c@address\endcsname{#2}}
+\newcount\addr@n
+\def\printaddresses{\addr@n=0
+  \loop\ifnum\addr@n<\c@address\global\advance\addr@n1
+    \par\noindent\begin{tabular}[t]{@{}l@{}}\csname @address@\the\addr@n\endcsname\end{tabular}\repeat\par}
+\let\old@enddocument\enddocument
+\def\enddocument{\printaddresses\old@enddocument}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{imsart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\begin{aug}
+\author{\fnms{Ann} \snm{Able}\ead[label=e1]{ann@x.edu}}
+\and
+\author{\fnms{Bob} \snm{Baker}\ead[label=e2]{bob@y.org}}
+\end{aug}
+\end{frontmatter}
+Body.
+\address{Ann Able\\ Univ A\\ \printead{e1}}
+\address{Bob Baker\\ Univ B\\ \printead{e2}}
+\address{Cid Cole\\ Univ C}
+\end{document}

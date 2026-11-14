@@ -1,0 +1,27 @@
+% mechanism: authblk's own `\@author` (authblk.sty:167-171) prints the block; a line of e-mails a document appends to it
+%   (`\g@addto@macro\@author{\\…\texttt{…}, \texttt{…}}`) is an address the block's authors share
+%   (frontmatter_stores.rs `seen_author_tail`, `row_calls` → `\lx@add@affiliation@shared`, `place_address_runs`): one
+%   address for each author in their order, else each on the author it spells, else one contact an address on the
+%   block's shared creator — not one author-block row of every creator (FX24)
+% witness: 2511.15315 (procdoc2/authblk, three e-mails `abdelhamid.ezzerg.24@`, `i.bogunovic@`, `j.knoblauch@ucl.ac.uk`
+%   in one appended line; int158a lost them, FX24 wrote the line on all three creators, FX24b each on its author)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Alice A1 and Bob B2", "1 Inst X", "2 Inst Y",
+%   "alice@x.org, bob@y.org" under the block
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning (the check counts the lost words); the line lost.
+%   FX24: 0 errors, 0 warnings; Alice A and Bob B each hold the row "alice@x.org , bob@y.org". FX24b: 0 errors, 0
+%   warnings; Alice A (Inst X, alice@x.org), Bob B (Inst Y, bob@y.org); perl not run
+% expect:  0 errors, 0 warnings; Alice A (Inst X, alice@x.org), Bob B (Inst Y, bob@y.org)
+% status:  RED (int158a, FX24) -> GREEN (FX24b; guard perfect_kernel_batchfx24::an_authblk_email_line_appended_to_author_is_kept)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{A Title}
+\author[1]{Alice A}
+\author[2]{Bob B}
+\affil[1]{Inst X}
+\affil[2]{Inst Y}
+\makeatletter\g@addto@macro\@author{\\[0.5em]\small\texttt{alice@x.org}, \texttt{bob@y.org}}\makeatother
+\maketitle
+Body.
+\end{document}

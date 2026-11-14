@@ -1,0 +1,24 @@
+% A raw class prints a store's label that holds a comma — `Index terms, keywords: \@keywords` —: 95d r3's clause split at
+% `;`/`,` (frontmatter_stores.rs `line_label_before` ~:5372-5385, meant for pazha2's `\@submitted;` date clauses) applies
+% to every store's label, so the label is cut: the item is named by "keywords:" and "Index terms" is left as a stray body
+% paragraph (review rev95d-r3 S2; markup only, no word lost). OD #940 states the split for dates only.
+% witness: none (static scan of the class-shipping census: no ", <words>: \@store" label shape)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Index terms, keywords: alpha, beta", "Text."
+% engines: rust 95d-r2base = <keywords name="Index terms, keywords:">; rust 95d-r3 = <keywords name="keywords:"> + a body
+%          paragraph "Index terms"
+% expect:  0 errors, 0 warnings; <keywords name="Index terms, keywords:">alpha, beta</keywords>, no stray paragraph (fix:
+%          split at ;/, only when the clause before holds a store or value, or only for date/classification calls)
+% status:  RED (95d-r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{qc.cls}
+\LoadClass{article}
+\def\keywords#1{\gdef\@keywords{#1}}
+\def\@maketitle{\begin{center}{\Large\bfseries \@title\par}{\large\bfseries \@author\par}%
+  \par\vskip 2.5mm{\footnotesize Index terms, keywords: \@keywords}\end{center}}
+\end{filecontents*}
+\documentclass{qc}
+\title{T}\author{Ann Able}
+\keywords{alpha, beta}
+\begin{document}\maketitle
+Text.
+\end{document}

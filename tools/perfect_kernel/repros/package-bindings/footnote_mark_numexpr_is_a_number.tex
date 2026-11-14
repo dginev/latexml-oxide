@@ -1,0 +1,14 @@
+% mechanism: a footnote's `[<n>]` given as an e-TeX integer expression (`\footnotemark[\numexpr\value{footnote}-1]`) is a
+%   number: latex.ltx:17678 `\c@footnote #1\relax` reads it whole. `given_footnote_number` read only digits or a count
+%   register, so the mark was digested on its own: "Missing number, treated as zero" and no mark. Now `\the\numexpr…`
+%   gives its digits, the note marked `\thefootnote` there and paired by them.
+% witness: 2210.14698 (emnlp2022 `\footnotetext[\numexpr\value{footnote}-1]{…}`)
+% oracle:  pdflatex 0 errors; "A1 B21 C.", footnotes "1 One." "2 Two." "1 Again one."
+% engines: perl: 2 Warnings "Missing number, treated as zero", the mark and the text apart; rust int59a: the same
+% expect:  0 errors, 0 warnings; the mark "1" and its text "Again one." one note
+% status:  GREEN (78u)
+\documentclass{article}
+\begin{document}
+A\footnote{One.} B\footnote{Two.}\footnotemark[\numexpr\value{footnote}-1] C.
+\footnotetext[\numexpr\value{footnote}-1]{Again one.}
+\end{document}

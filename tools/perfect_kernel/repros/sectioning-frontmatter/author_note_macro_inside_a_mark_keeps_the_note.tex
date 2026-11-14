@@ -1,0 +1,20 @@
+% mechanism: a macro of optional arguments only inside an author's mark that makes a note (`\textsuperscript{\rm 1,2,
+%   \equalcontrib}`, AAAI's `\equalcontrib`; a document's `\newcommand\eqc{\thanks{…}}`; `\newcommand*\samethanks[1]
+%   [\value{footnote}]{\footnotemark[#1]}`) is the note: it is taken out after the mark with its `[…]` (`notes_out_of_marks`,
+%   `split_mark_notes`); the label `\eqc` answered nothing and printed nothing, so the note was lost. Residual (order):
+%   the unanswered label "2" is made after Cy's note mark (pdflatex "Cy Gamma2†").
+% witness: 2603.17529 (aaai2026 `\textsuperscript{\rm 1,2,\equalcontrib}`), 2503.05186; 2309.12862 (`1\samethanks`)
+% oracle:  pdflatex 0 errors; "Ann Alpha1,2,∗ , Bob Beta1,† , Cy Gamma2†", footnotes "∗ Equal contribution." "† Equal
+%          contribution."
+% engines: perl: the marks dropped, no note; rust int59a: Ann "1,2", Bob "1", Cy nothing, no note
+% expect:  0 errors, 0 warnings; each author's labels and note, Cy's note mark
+% status:  GREEN (78u)
+\documentclass{article}
+\newcommand\eqc{\thanks{Equal contribution.}}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\begin{document}
+\title{T}
+\author{Ann Alpha\textsuperscript{\rm 1,2,\eqc}, Bob Beta\textsuperscript{\rm 1,\eqc}, Cy Gamma\textsuperscript{2\samethanks}}
+\maketitle
+Body.
+\end{document}

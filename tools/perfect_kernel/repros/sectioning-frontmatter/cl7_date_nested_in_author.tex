@@ -1,0 +1,19 @@
+% mechanism: a frontmatter setter run inside an author block (`\date{affils}` nested in `\author`, LaTeX prints it as the
+%   date) is never run at `=2`: the block's rehearsal freezes no sink, its queued date is undone, and the emitter writes the
+%   names alone, the date lost silently. Open: the block is to be declined (written whole) when its rehearsal queued an item
+%   of a tag the emitter doesn't write
+% witness: 2503.02741 (brief CL7, C4)
+% oracle:  pdflatex 0 errors; the date line prints "1BMW AG, Munich / 2Charles University, Prague"
+% engines: rust off: date[creation] "BMW AG, Munich Charles University, Prague"; rust =2 (CL7): no date, 0 warnings
+% expect:  =2 as off: the date kept (or the block written whole, counted)
+% status:  RED (CL7), no guard
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Bernd Prostmaier\textsuperscript{1} \hspace{0.5em} Jan Vavra\textsuperscript{2}
+  \date{\textsuperscript{1}BMW AG, Munich\\
+  \textsuperscript{2}Charles University, Prague}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

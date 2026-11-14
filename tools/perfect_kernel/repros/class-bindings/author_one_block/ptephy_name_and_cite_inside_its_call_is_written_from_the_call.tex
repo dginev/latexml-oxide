@@ -1,0 +1,22 @@
+% mechanism: emit.rs `block_names`: a `\cite` inside a ptephy `\name{…}{marks}` glued to the list's end: the call is
+%   written whole, the cite in the name as pdflatex prints it, the marks argument a request, not the name's text
+%   (Option C P3, OD #993; revBT1c's shape `f6_cite`)
+% witness: synthetic (revBT1c)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann AbleYee [2000]1", "1 Univ X"
+% engines: int159a: 0 errors, 0 warnings; personname "Ann Able" + cite + "1" (the marks argument as text). P3: 0
+%   errors, 0 warnings; perl not run
+% expect:  0 errors, 0 warnings; personname "Ann Able" with its cite (bibref y), no "1"; affiliation Univ X
+% status:  GREEN (P3; guard perfect_kernel_batchp3)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{\fname{Ann} \surname{Able}\cite{y}}{1}}
+\address{\affil{1}{Univ X}}
+\maketitle
+Text.
+\begin{thebibliography}{9}
+\bibitem[Yee(2000)]{y} Y. Yee, J. 1 (2000).
+\end{thebibliography}
+\end{document}

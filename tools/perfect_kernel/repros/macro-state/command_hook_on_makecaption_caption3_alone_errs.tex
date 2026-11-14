@@ -1,0 +1,19 @@
+% mechanism: caption's kernel alone (caption3.sty, the caption binding's `\lx@caption@kernel@only`) keeps the class's
+%   `\@makecaption`, as caption3.sty lets nothing (caption.sty:270 does): a `cmd/@makecaption` hook under
+%   babel-spanish's active `>` errs as without caption, the caption kept.
+% witness: synthetic (CAP1)
+% oracle:  pdflatex 1 `!` "LaTeX hooks Error: Generic hooks cannot be added to '\@makecaption'", "Figura 1: Una
+%   figura."; Perl 0 errors (`\AddToHook` a no-op).
+% engines: rust int163a: 1 Error; CAP1: 1 Error.
+% expect:  1 error, 0 warnings; caption "Figura 1: " + "Una figura."
+% status:  GREEN (CAP1)
+\documentclass{article}
+\usepackage[spanish]{babel}
+\usepackage{caption3}
+\AddToHook{cmd/@makecaption/before}{\small}
+\begin{document}
+\begin{figure}
+\centering X
+\caption{Una figura.}
+\end{figure}
+\end{document}

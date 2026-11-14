@@ -1,0 +1,24 @@
+% mechanism: a link that carries a mark and prints other text than its own target is read as that text, a Name carrying the
+%   link, its span the link's call, written whole with it (`resolver::lines::link_names`, `prints_its_target`; the reading's
+%   pass the ORCID links take too); a link printing its own target stays a contact (`\href{mailto:ann@x.org}{ann@x.org}`,
+%   `\url{…}`), and so does one carrying no mark
+% witness: 1812.07638 (longtail3k, 304 `\href{http://inspirehep.net/record/…}{A.~Cerri}$^{1}$` names, 3,063 links; five `T.~~Hurth`)
+% oracle:  pdflatex 0 errors; Editors, A. Cerri (1), T. Hurth (2), S. Malvezzi (1,2), Bob Baker (2), two institutes, an e-mail and a url
+% engines: rust F1 `=2`: the links url contacts, the names one creator's affiliation "A. Cerri, T. Hurth, …", a nameless
+%   creator holding the institutes, the links' markup lost (a Warning)
+% expect:  0 errors, 0 warnings; `=2` creators as with the switch off, each name in its link, its institutes by its marks
+% status:  RED (F1) -> GREEN (perfect_kernel_batchf1::a_link_printing_a_name_is_the_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{Links on names}
+\author{Editors: \\\href{http://inspirehep.net/record/1}{A.~Cerri}$^{1}$
+, \href{http://inspirehep.net/record/2}{T.~~Hurth}$^{2}$
+, \href{http://inspirehep.net/record/3}{S.~Malvezzi}$^{1,2}$
+, Bob Baker$^{2}$
+\\ \vspace*{4mm} $^{1}$Univ A, Town, $^{2}$Univ B, City
+\\ E-mail: \href{mailto:ann@x.org}{ann@x.org}, \url{http://x.org/~ann}}
+\maketitle
+Text.
+\end{document}

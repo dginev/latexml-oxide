@@ -1,0 +1,19 @@
+% witness: neoschool (neoschool.cls:5168-5214 `{code}`: `\ifx\relax#3\relax\tcbset{title={}}\else…`, 40 boxes)
+% oracle:  pdflatex 0 errors: the first box has no title, the second "Listing 2 – Square Function"
+% engines: rust 77j3 = 0 errors, no title at all; a 77m draft titled the first box "Listing 1 – " too (an absent `!O{}` stood in the options as its stand-in macro, not as the empty default); perl: raw tcblistings
+% expect:  0 errors, 0 warnings; the first listing has no caption, the second "Listing 2 – Square Function"
+% status:  RED (77j3) -> GREEN (77m: tcolorbox_sty.rs `tcb_resolve_listing_mode` splices an empty stand-in to nothing)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\tcbuselibrary{xparse}
+\newcounter{lstcode}
+\NewTCBListing[use counter=lstcode]{code}{ O{} m !O{} }{listing only,
+  code={\ifx\relax#3\relax\tcbset{title={}}\else\tcbset{title={Listing~\thelstcode~--~#3}}\fi}}
+\begin{document}
+\begin{code}{python}
+x = 1
+\end{code}
+\begin{code}{python}[Square Function]
+y = 2
+\end{code}
+\end{document}

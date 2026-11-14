@@ -1,0 +1,21 @@
+% mechanism: the writer's re-part (OD #928): `\makebox{\begin{tabular}…}` in `\author{}`, names comma-separated in
+%   the first row, `{\small\normalfont$^{1}$Univ X \quad$^{2}$Univ Y}` and a `$^{\dagger}$` legend row; today's one
+%   creator holds the tabular. The writer makes each affiliation from its line (the group's switches kept) and the
+%   legend as the dagger name's note (ruling 2).
+% witness: 2609.33104 (five names, three institutions and a corresponding-author legend in one tabular)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 , Cid Cole2†" over "1 Univ X 2 Univ Y" and "† Corresponding author"
+% engines: rust 93a: one creator holding the tabular; perl: the same (one creator)
+% expect:  0 errors, 0 warnings; Ann Able Univ X, Bob Baker Univ Y, Cid Cole Univ Y + note "Corresponding author"
+% status:  GREEN (94a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\makebox[\textwidth][c]{\begin{tabular}{@{}c@{}}
+Ann Able$^{1}$, Bob Baker$^{2}$, Cid Cole$^{2\dagger}$ \\[6pt]
+{\small\normalfont$^{1}$Univ X \quad$^{2}$Univ Y} \\[4pt]
+{\small\normalfont$^{\dagger}$Corresponding author}
+\end{tabular}}}
+\maketitle
+Body.
+\end{document}

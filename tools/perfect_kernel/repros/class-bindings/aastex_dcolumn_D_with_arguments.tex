@@ -1,0 +1,18 @@
+% witness: 1607.06811 (`\usepackage{dcolumn}` + `\newcolumntype{d}[1]{D{,}{\pm}{#1}}` under aastex: a document's
+%          dcolumn after the class replaces its `D` (aastex701.cls :12010, :6286-6291); Perl aas_support.sty.ltxml:362-363
+%          `D` shadows dcolumn's three-argument `D`)
+% oracle:  pdflatex 0 errors; "x  −0.50^a"
+% engines: rust 67int17b = 1 error, 3 warnings (Unrecognized tabular template ".", "6"; `^` in text); Perl the same
+% expect:  0 errors, 0 warnings; the third column aligned on "."
+% status:  RED (67int17b) -> GREEN (68y)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\usepackage{dcolumn}
+\begin{document}
+\begin{table}
+ \newcolumntype{d}[1]{D{.}{.}{#1} }
+ \begin{tabular}{@{}lcd{6}@{}}
+ $x$ && -0.50^{a} \\
+ \end{tabular}
+\end{table}
+\end{document}

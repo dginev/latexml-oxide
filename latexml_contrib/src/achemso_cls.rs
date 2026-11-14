@@ -8,7 +8,13 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // achemso.cls (TeX Live's) loads no amsmath: amsmath's commands for papers that use them unloaded, its "Old form"
+  // error once the paper loads it; the paper's copy decides (`amsmath_sty::require_amsmath_beyond_original`,
+  // KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   // Eager xcolor preload removed for Perl parity: it makes a later document
   // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
@@ -16,7 +22,10 @@ LoadDefinitions!({
   // document loads xcolor itself; color/definecolor stay via hyperref->color.
   // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   RequirePackage!("hyperref");
-  RequirePackage!("natbib");
+  // achemso.cls:1396-1398 `\RequirePackage[sort&compress,numbers,super]{natbib}` (`round` for a non-superscript
+  // journal): a citation's numbers sorted and compressed ("1–3"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). The
+  // numeric styles are not passed: the binding's citations stay as before.
+  RequirePackage!("natbib", options => vec![s!("sort&compress")]);
   // achemso uses setspace internally; user papers also call
   // \singlespacing / \doublespacing in preambles. Witness 2503.21357.
   RequirePackage!("setspace");

@@ -1,0 +1,32 @@
+% A raw class's `\affil` prints its argument where it is called, with no line break of its own: the blank lines the
+% document puts around each call make it a paragraph (iopjournal.cls:108 `\newcommand{\affil}[1]{{\fontsize{8}{10}
+% \selectfont \raggedright \if@anonymous \phantom{#1} \else #1 \fi}}`). The in-place reroute (OD #936) took only a setter
+% whose own code breaks the line, so the lines stayed body paragraphs and the marked authors had no contact. A run-in
+% setter (frontmatter_stores.rs `run_in_contact_setter`) that sets its argument as text — no math, superscript, note or
+% raised box: agujournal2019's `$^{#1}$` mark stays the class's — is the API's where its call stands as a line of its
+% own in the title block (`class_contact_run_in`), never inside a creator's own content.
+% witness: 2608.28486, 2512.15449, 2602.03759, 2606.14342, 2609.32125 (iopjournal)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town", "2Univ B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, "1Univ A, Town" and "2Univ B, City" body paragraphs; perl = no raw
+%          class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds <contact role="affiliation">1Univ A, Town</contact>, Bob Baker
+%          <contact role="affiliation">2Univ B, City</contact>; the body holds only "Text."
+% status:  RED (99b0) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipaf.cls}
+\ProvidesClass{ipaf}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{ipaf}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 2501.07980, 1712.01010, 1812.04463 ship an aa.cls that loads amsmath (aa.cls:201
+%          `\RequirePackage[tbtags,fleqn]{amsmath}`); aa_cls.rs clears amsmath's load record (Perl aa.cls.ltxml:57)
+% oracle:  pdflatex 0 errors: "amsmath loaded.", the equation unnumbered, "thm-patch loaded.", "foo loaded."
+% engines: rust int166a = 0 errors but "amsmath not loaded." (`\@ifl@aded` read the record, while
+%          `\nonumber`'s test read `\ver@amsmath.sty`: two answers), "foo not loaded."
+% expect:  0 errors, 0 warnings; every answer "loaded", the equation unnumbered
+% status:  RED (int166a) -> GREEN (GA2)
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{thmtools}
+\makeatletter
+\@namedef{ver@foo.sty}{2026/01/01}
+\newcommand\loadstate[1]{#1 \@ifpackageloaded{#1}{loaded}{not loaded}.}
+\makeatother
+\begin{document}
+\loadstate{amsmath}
+\begin{equation}
+a=b\nonumber
+\end{equation}
+\loadstate{thm-patch} \loadstate{foo}
+\end{document}

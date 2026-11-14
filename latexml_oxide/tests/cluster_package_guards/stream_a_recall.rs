@@ -3,7 +3,7 @@
 //! the artifact whose words the recall audit counts.
 use std::process::Command;
 
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -57,6 +57,9 @@ const GLSADD_EXTRA: &str =
 /// The location-only reference it leaves in the paragraph prints nothing.
 #[test]
 fn glsaddall_lists_every_entry() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let (stderr, html) = convert_html(GLSADD, &[]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
@@ -100,6 +103,9 @@ fn glsaddall_lists_every_entry() {
 /// entry, the `\glsaddeach`-added one and the preamble `\glsadd` are listed.
 #[test]
 fn glossaries_extra_lists_used_and_added_entries() {
+  if !check_requirements(loads::GLOSSARIES_EXTRA) {
+    return;
+  }
   let (stderr, html) = convert_html(GLSADD_EXTRA, &[]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
@@ -139,6 +145,9 @@ const GLSADD_PREAMBLE: &str =
 /// "Opening words." became p2. Both entries are still listed.
 #[test]
 fn preamble_glsadd_opens_no_paragraph() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let (stderr, html) = convert_html(GLSADD_PREAMBLE, &[]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
@@ -206,6 +215,9 @@ const GLS_MATH_EXTRA: &str =
 /// The location-only reference after the inline formula lists the entry.
 #[test]
 fn gls_in_math_typesets_the_term_alone() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   // (document, glossary type, glossary title, inline alttext, display alttext)
   // (`\frac{d\mathbf v}{dt}` is a Leibniz quotient: its `d`s are differentials, user ruling 2026-10-01d)
   for (tex, list, title, inline_tex, display_tex) in [
@@ -289,11 +301,15 @@ fn gls_in_math_typesets_the_term_alone() {
 }
 
 /// In an alignment the cells' formulae and the whole-row formula of the
-/// `MathFork` stay clean too: a display level admits no inline element, so no
-/// location-only reference is made there, and neither `\gls` nor a `\glsadd`
-/// inside a macro (`\vx`) leaves an `XMText` atom in any formula.
+/// `MathFork` stay clean too: neither `\gls` nor a `\glsadd` inside a macro
+/// (`\vx`) leaves an `XMText` atom in any formula. The location-only reference
+/// goes in a `ltx:text` of the row's `ltx:equation` (which admits no bare inline
+/// element), so each entry is listed (glossaries_sty.rs; silent-loss inventory #20).
 #[test]
 fn gls_in_an_alignment_leaves_the_formulae_alone() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{amsmath}
 \usepackage{glossaries}
@@ -310,7 +326,12 @@ fn gls_in_an_alignment_leaves_the_formulae_alone() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(!xml.contains("<XMText"), "{xml}");
-  assert!(!xml.contains("<glossaryref"), "{xml}");
+  for key in ["v", "vec"] {
+    let reference =
+      format!(r#"<text font="italic"><glossaryref inlist="main" key="{key}" show="none"/></text>"#);
+    assert_eq!(xml.matches(&reference).count(), 1, "{reference}: {xml}");
+  }
+  assert_eq!(xml.matches("<glossaryref").count(), 2, "{xml}");
   assert_element(
     &xml,
     "Math",

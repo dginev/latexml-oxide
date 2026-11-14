@@ -145,6 +145,10 @@ LoadDefinitions!({
         Some(Stored::Font(f)) => Some(Rc::clone(f)),
         _ => None,
       };
+      // Between a float's panels, the glue counts towards their row (the panel grid rule, `note_panel_separator`).
+      if length.value_of() != 0 {
+        crate::latex_constructs::note_panel_separator(document, "glue", Some(length.value_of()))?;
+      }
       let spaces = dimension_to_spaces(length, font.as_deref());
       document.absorb_string(&spaces, &SymHashMap::default())?;
     }
@@ -178,8 +182,12 @@ LoadDefinitions!({
   //======================================================================
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
-  DefConstructor!("\\vskip Glue", sub[document, args, _props] {
+  DefConstructor!("\\vskip Glue", sub[document, args, props] {
     unref!(args => length);
+    // Between a float's panels a `\vskip` ends their row (the panel grid rule, `note_panel_separator`).
+    if prop_bool!(props, "panel_row_break") {
+      crate::latex_constructs::note_panel_separator(document, "vskip", None)?;
+    }
     let pt = length.pt_value(None);
     if pt <= 0.0 {
       // Negative or zero skip: do nothing
@@ -208,9 +216,16 @@ LoadDefinitions!({
         },
         None => Stored::None,
       };
+      // A `\vskip` in a float, not a `\vspace`'s (`\lx@vspace@mark`, latex_constructs sect12.rs), is a row break
+      // between its panels.
+      let vspace = lookup_bool("lx@vspace@mark");
+      if vspace {
+        assign_value("lx@vspace@mark", false, None);
+      }
+      let row_break = !vspace && lookup_bool("lx@in@float");
       Ok(stored_map!("isSpace" => true, "isSkip" => true,
         "isVerticalSpace" => true, "isBreak" => true,
-        "height" => height))
+        "height" => height, "panel_row_break" => row_break))
     }
   );
   // Remove skip, if last on LIST — never below the paragraph's start (tex.web §1105, `peek_own_box`).

@@ -1,0 +1,20 @@
+% GREEN (brief 107g; rev107f2 finding 1's twin, synthetic): as email_own_call_opening_key_of_longer_spelling_moves.tex, with
+%   `bennett@` on Ben Smith's own call beside Joe Bennett.
+% witness: none (synthetic) — rev107f2 probe p_own_head
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: rust 107f r2 (f0d0f30551): bennett@ stays on Ben Smith; int139a4: moves to Joe Bennett
+% expect:  0 errors; the address on Joe Bennett; Ben Smith holds no e-mail
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Joe Bennett}
+\affiliation{Univ X, Town}
+\author{Ben Smith}
+\email{bennett@y.edu}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

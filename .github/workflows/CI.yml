@@ -263,7 +263,7 @@ jobs:
         run: cargo nextest run --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml --test 06_cluster_math
 
   test:
-    # Sharded across 4 runners. The suite's cost is ~398 s of in-binary
+    # Sharded across runners (8 since 2026-11-13, below). The suite's cost is ~398 s of in-binary
     # execution spread over the test targets (consolidated 2026-08 into fewer,
     # concern-grouped `cluster_*` binaries), and `cargo test` runs those
     # targets SEQUENTIALLY — so the test step was 18.7 min on Linux / 29.4 min
@@ -280,20 +280,26 @@ jobs:
     # heaviest tests in the suite) landed in shard 1, which was the critical
     # path of every run. `hash:` spreads them 3-7 per shard, and a test keeps
     # its shard when others are added.
-    name: latexml-oxide CI (shard ${{ matrix.shard }}/4)
+    #
+    # 8 shards (CIP0, 2026-11-13): the perfect_kernel suite is ~8,090 tests,
+    # projected ≈ 292 test-min on this runner (≈ 18 min per shard at 2 test
+    # threads, hash max-shard ≈ 22-24 min). Raise the count, not the threads.
+    name: latexml-oxide CI (shard ${{ matrix.shard }}/8)
     needs: changes
     # Full Linux suite on every code change (PR and main push); skipped only
     # for a docs-only diff.
     if: needs.changes.outputs.not_docs == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    # 75: a shard on a dump-cache miss pays `make formats` (7-11 min) + the
+    # build before its ≈ 22-24-min test step; 75 keeps the worst case ≤ 70 %.
+    timeout-minutes: 75
     strategy:
       # One shard's failure must not cancel the others: we want the FULL
       # failure picture from a red run, the same reason the local command
       # carries --no-fail-fast.
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     env:
       # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
@@ -327,9 +333,13 @@ jobs:
     steps:
       # Minimal apt set: only what `make formats` + tests actually need.
       # Removed: imagemagick, inkscape (graphics post-processing —
-      # not exercised by the test suite); texlive-lang-* (only en/de/fr/
-      # ru/el needed by tests, and texlive-lang-european is the heaviest
-      # superset). Net: ~1.5 GB less apt download + install time.
+      # not exercised by the test suite). The second block (≈230 MB) is what the
+      # guards load (CIF0, 2026-11-13): tracklang/expkv (plain-generic), tipa,
+      # pstricks, the t4/lae/magyar/spanish encodings and languages, tex-gyre, and
+      # jing for the schema guards. texlive-fonts-extra (669 MB), lang-chinese/
+      # korean and games stay out: the tests that load them declare it with
+      # `requires` and skip visibly (listed after the run). These packages add
+      # no file the dumps read (latex.ltx/expl3), so the dump-cache key stays.
       - name: install dependencies
         run: |
           sudo apt-get update
@@ -339,7 +349,10 @@ jobs:
             texlive texlive-latex-extra texlive-science \
             texlive-bibtex-extra texlive-publishers \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
-            texlive-lang-cyrillic
+            texlive-lang-cyrillic \
+            texlive-plain-generic tipa texlive-pstricks texlive-lang-other \
+            texlive-lang-arabic texlive-lang-european texlive-lang-spanish \
+            tex-gyre jing
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
@@ -399,7 +412,15 @@ jobs:
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
+        env:
+          LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/8
+
+      - name: skipped tests (requirements not met)
+        # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
+        if: always()
+        shell: bash
+        run: bash tools/test_skip_summary.sh
 
   # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
   # same make-formats → build → run flow; only the platform deps differ:
@@ -444,7 +465,7 @@ jobs:
       - name: install dependencies
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
-          brew install libxml2 libxslt texlive
+          brew install libxml2 libxslt texlive jing-trang
       - name: surface keg-only pkg-config paths
         run: |
           echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
@@ -488,7 +509,15 @@ jobs:
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
+        env:
+          LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
         run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
+
+      - name: skipped tests (requirements not met)
+        # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
+        if: always()
+        shell: bash
+        run: bash tools/test_skip_summary.sh
 
   # Single aggregating gate. Branch protection matches required checks BY NAME,
   # and a skipped matrix check (`shard 1/4`, `macOS shard 2/4`, …) leaves a PR

@@ -1,0 +1,22 @@
+% mechanism: aa's `\author` splits each `\and` piece with `\lx@add@author@split` (split_author_line), which never reads
+%   collaborations (`collaboration_split`, author_block/collaborations.rs, is the kernel `\author` path's): `XYZ
+%   Collaboration: R.~Abuter\inst{1} \and F.~Allouche\inst{2}` keeps "XYZ Collaboration: R. Abuter" as one name; with a
+%   `\thanks` before the colon (`XYZ Collaboration\thanks{…}: R.~Abuter`), "XYZ Collaboration" is a creator. 97d's
+%   colon heading (`heading_and_name`) is never reached. Unsupported (no one-rule change; SYNC_STATUS row 97f).
+% witness: 2206.00684 (aa, "GRAVITY+ Collaboration\thanks{…}: R.~Abuter\inst{8} \and …", 115 names)
+% oracle:  pdflatex with 2206.00684's aa.cls 0 errors (the class sets the author line in the title block)
+% engines: rust 97f: two creators, "XYZ Collaboration: R. Abuter" one; perl: the same two
+% expect:  0 errors, 0 warnings; R. Abuter (Uni One) and F. Allouche (Uni Two), each with the collaboration
+% status:  RED (97f), no guard
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{XYZ Collaboration:
+R.~Abuter\inst{1}
+\and F.~Allouche\inst{2}
+}
+\institute{Uni One \and Uni Two}
+\abstract{A.}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,55 @@
+% mechanism: the native parser expands what the raw parser would when it would: `\__fp_parse_expand:w` skips spaces, reads a
+%   token, and expands until an unexpandable one, swallowing one space; a macro behind that space is read unexpanded, and
+%   the digits run on across a macro (`1\x` with `\x` = 2 is 12), spaces inside a number are skipped.
+% witness: review of batch P2, no arXiv paper
+% oracle:  pdflatex: 0 errors; the same text
+% engines: rust: raw and native byte-identical
+% expect:  0 errors; the values below
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\NewDocumentCommand \T { m } { \fp_to_tl:n {#1} ;~ }
+\fp_new:N \va \fp_set:Nn \va { 1.5 }
+\dim_new:N \da \dim_set:Nn \da { 1.5pt }
+\int_new:N \ia \int_set:Nn \ia { 3 }
+\cs_new_eq:NN \cepi \c_pi_fp
+\cs_new:Npn \rat #1 { \dim_ratio:nn {#1} { 100cm } }
+\skip_new:N \sa \skip_set:Nn \sa { 2pt plus 1pt }
+\cs_new:Npn \dimfp #1 { \dim_to_fp:n {#1} }
+\cs_new:Npn \eva #1 { \fp_eval:n {#1} }
+\cs_new:Npn \tod #1 { \fp_to_decimal:n {#1} }
+\cs_new:Npn \use #1 { \fp_use:N #1 }
+\cs_new:Npn \iu #1 { \int_use:N #1 }
+\cs_new:Npn \du #1 { \dim_use:N #1 }
+\cs_new:Npn \ie #1 { \int_eval:n {#1} }
+\cs_new:Npn \uc #1 { \use:c {#1} }
+\cs_new:Npn \fv { \c_e_fp }
+\tl_const:Nn \c_atl { 1.25 }
+\ExplSyntaxOff
+\def\x{2}
+\def\y{3}
+\def\sp{ 4}
+\def\tr{5 }
+\def\two#1#2{#1#2}
+\def\vv{\va}
+\def\plus{+}
+\def\ee{e}
+\def\dot{.}
+\def\em{}
+\def\pp{p}\def\ii{i}
+\begin{document}
+Digits: \T{1\x} \T{\x\y} \T{\x \y} \T{1 2 3} \T{1 000 000} \T{1\sp} \T{\sp\x} \T{\tr\x} \T{\tr \x} \T{1\tr 2} \T{\x\dot\y} \T{\x.\y} \T{.\x} \T{1\ee\x} \T{1\ee 2}
+\T{1e\x} \T{1e 2} \T{1e+\x} \T{1e-\x} \T{1e--2} \T{\x e\y} \T{\x\em\y} \T{\em\x}
+
+Words: \T{\pp\ii} \T{2\pp\ii} \T{p i} \T{\x pi} \T{\x cm} \T{\va cm} \T{\da cm} \T{\ia cm} \T{sin\x} \T{sin \x} \T{sin(\x)} \T{sin\va} \T{max(\x,\y)} \T{max\x}
+
+Operators: \T{\x\plus\y} \T{\x \plus \y} \T{\x*\y} \T{\x**\y} \T{\x * *\y} \T{\x^\y} \T{\x/\y} \T{\x<\y} \T{\x< =\y} \T{\x! =\y} \T{\x& &\y} \T{\x| |\y} \T{\x?\y:\x} \T{(\x)pi} \T{(\x)(\y)}
+\T{\va\va} \T{\va\da} \T{\da\va} \T{\ia\ia} \T{\va\ia} \T{2\va} \T{2\da} \T{2\ia} \T{\vv} \T{\vv\vv} \T{\two 1 2} \T{\two{1}{2}} \T{\two\x\y} \T{\two{\x}{\y}+1} \T{\cepi}
+
+Registers: \T{\ia} \T{-\ia} \T{\ia e2} \T{\ia e-2} \T{\da} \T{-\da} \T{\da e2} \T{\da*2} \T{\maxdimen} \T{\rat{1pt}} \T{\rat{-2.5mm}} \T{\rat{ 1 cm }}
+
+Converters: \T{\dimfp{1pt}} \T{\dimfp{2.5cm}} \T{\dimfp{\da}} \T{\dimfp{\sa}} \T{\dimfp{0pt}} \T{2*\dimfp{-1in}} \T{\eva{1+1}} \T{\eva{1/3}*3} \T{\tod{1e3}} \T{\tod{1e-3}} \T{\tod{-0}} \T{\tod{1e20}} \T{\tod{1e16}} \T{\tod{123.456}} \T{\use\va} \T{\use\va*2}
+\T{\iu\ia} \T{\iu\ia*2} \T{1\iu\ia} \T{\du\da} \T{\du\da*2} \T{\the\ia} \T{\the\da} \T{\the\ia e1} \T{\number\ia} \T{\number\da} \T{\rat{\da}} \T{\rat{\sa}} \T{\ie{1}} \T{\uc{va}} \T{\uc{va}*2} \T{\csname va\endcsname} \T{\csname ia\endcsname+1} \T{\fv}
+
+Names: {\def\number{4}\T{\number+1}} {\def\the{5}\T{\the+1}} {\let\mynumber\number \T{\mynumber\ia+1}} {\let\mythe\the \T{\mythe\ia+1}} {\def\mydim{\da}\T{\rat{\mydim}}} {\def\mydim{\dimfp{\da}}\T{\mydim}}
+\end{document}

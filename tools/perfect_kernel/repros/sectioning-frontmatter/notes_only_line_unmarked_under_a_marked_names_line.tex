@@ -1,0 +1,17 @@
+% mechanism: an unmarked note on a line of its own under a marked names line (`\\ \thanks{This work was funded …}`): a
+%   line of unmarked notes only is no line OD #957 joins; the reader continues the entry above with it, so the note is
+%   the last name's. FIDELITY_CHARTER R1: an unmarked item where the names' marks request items of that role goes to
+%   the block, once — a document pubnote. Pre-existing (int127a the same); out of 100c's mechanism (SYNC_STATUS 100c).
+% witness: synthetic (review rev100c q10)
+% oracle:  pdflatex 0 errors; "Ann Able1 , Bob Bell1 ∗", "†" on the line under it; footnotes "∗1Univ A, Town.",
+%   "†This work was funded by Grant X."
+% engines: rust int127a and 100c: Univ A both authors', the funding note Bob's (`ltx_thanks_funding`)
+% expect:  0 errors; Ann: Univ A, Town.; Bob: Univ A, Town.; the funding note one document pubnote
+% status:  RED
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Bell$^{1}$ \thanks{$^{1}$Univ A, Town.}\\ \thanks{This work was funded by Grant X.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

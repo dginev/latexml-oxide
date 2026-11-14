@@ -1,0 +1,33 @@
+% A raw class's run-in `\affil` legend `$^*$Deceased` under the name carrying the same asterisk spelled `\ast` (`Ann
+% Able$^{1,\ast}$`): both print ∗, so the name requests the line. The names' request and the line's label are keyed by
+% one key function (queue_digest.rs `clean_frontmatter_labels`, `one_asterisk`: `*`, `∗`, `\ast` one key), so the line is
+% Ann Able's deceased note. Keyed apart (the name's printed `∗`, the line's spelled `*`), no name seemed to request it
+% and the line stayed the class's text in the body, the name showing an unanswered "∗" (review rev100a B1's reverse
+% direction).
+% witness: review rev100a probe q/p2 (synthetic; 0708.2630's `$^*$Deceased` legend family)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗, Bob Baker2", "1Univ A, Town", "2Univ B, City", "∗Deceased"
+% engines: rust int127a and 100a r1 = "∗Deceased" the class's text, "Ann Able∗"; perl = no raw class load (OmniBus
+%          `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town" and <note class="ltx_note_frontmatter
+%          ltx_thanks_deceased" mark="*" role="thanks">∗Deceased</note>; Bob Baker "2Univ B, City"; the body "Text."
+% status:  RED (100a r1) -> GREEN (100a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{riast.cls}
+\ProvidesClass{riast}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{riast}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,\ast}$, Bob Baker$^{2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^*$Deceased}
+
+\maketitle
+Text.
+\end{document}

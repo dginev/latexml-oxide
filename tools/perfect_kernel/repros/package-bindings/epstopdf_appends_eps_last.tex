@@ -1,0 +1,23 @@
+% mechanism: graphicx's candidates follow `\Gin@extensions` (latexml_core util/image.rs
+%   `declared_graphics_extensions`), as TeX edits it: epstopdf-base.sty:498-505 `\AppendGraphicsExtensions{.eps}`
+%   (grfext: every `.eps` removed, one appended) when it loads — with `\usepackage{epstopdf}`, or at
+%   `\begin{document}` from the driver (pdftex.def:681-701), with grfext already loaded (graphics_sty.rs
+%   `\lx@graphics@eps@last`). `\DeclareGraphicsExtensions{.pdf,.eps,.png}` before `\usepackage{epstopdf}` therefore
+%   tries `.png` before `.eps`: `\includegraphics{q}` beside `q.png` and `q.eps` is the png. The guard's second
+%   document (grfext alone, `\RemoveGraphicsExtensions{.eps}\PrependGraphicsExtensions{.eps}` in the preamble) the same:
+%   the begin-document append undoes the prepend.
+% files:   q.png = graphics-tikz/trimquad.png, q.eps = package-bindings/eps_as_pdf_two.eps
+% witness: review rev79a finding 3 (Append/Prepend act as in TeX)
+% oracle:  pdflatex: 0 errors; "q 200.7495pt." (the png), both documents
+% engines: rust int68a: candidates "q.png,q.eps", "q 144.54pt."; 79a r1: "q.eps,q.png", "q 40.15pt."
+% expect:  0 errors, 0 warnings; candidates "q.png,q.eps", "q 144.54pt.", no cssstyle
+% status:  RED (79a r1) -> GREEN (79a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\DeclareGraphicsExtensions{.pdf,.eps,.png}
+\usepackage{epstopdf}
+\begin{document}
+\sbox0{\includegraphics{q}}q \the\wd0.
+\includegraphics{q}
+\end{document}

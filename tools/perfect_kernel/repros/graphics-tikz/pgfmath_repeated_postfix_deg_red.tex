@@ -1,0 +1,13 @@
+% mechanism: pgfmath's postfix `r` is read only where no letter follows it (pgfmath_code_tex.rs `term`), so the second
+%   `r` of `2rr` ends the parse and the partial result is the integer 2; pgf reads each `r` as its own operator
+%   (pgfmathparser.code.tex:919), deg(deg(2)).
+% witness: synthetic (no corpus reach found)
+% oracle:  pdflatex 0 `!`, [6565.61197]; Perl 0 Errors, [85.6127]
+% engines: rust int161a, DTL1e: [2], 0 errors, 0 warnings
+% expect:  0 errors 0 warnings; [6565.61197] to the last digit pgf rounds
+% status:  RED (int161a, DTL1e)
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{2rr}[\pgfmathresult]
+\end{document}

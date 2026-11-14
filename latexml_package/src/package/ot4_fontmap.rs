@@ -9,8 +9,9 @@ LoadDefinitions!({
     '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}', '\u{03A5}',
     // 0x08-0x0F
     '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{FB00}', '\u{FB01}', '\u{FB02}', '\u{FB03}', '\u{FB04}',
-    // 0x10-0x17: Perl "\x{}" at 0x14 is empty/null — treated as None
-    '\u{0131}', None,       '\u{0060}', '\u{00B4}', None,       '\u{02D8}', '\u{00AF}', '\u{02DA}',
+    // 0x10-0x17: Perl "\x{}" at 0x14 is empty/null — treated as None; 0x11 the dotless j ȷ (ot4enc.def:82
+    // `\DeclareTextSymbol{\j}{OT4}{17}`, as OT1's; Perl's map leaves it empty)
+    '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', None,       '\u{02D8}', '\u{00AF}', '\u{02DA}',
     // 0x18-0x1F
     '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}', '\u{00F8}', '\u{00C6}', '\u{0152}', '\u{00D8}',
     // 0x20-0x27

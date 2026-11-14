@@ -210,7 +210,8 @@ fn def_verbatim(cs: Token, body: Tokens) -> Result<()> {
   )
 }
 
-fn newif_true(cs: &str) -> bool {
+/// Whether a `\newif` switch is true (its meaning is `\iftrue`).
+pub(crate) fn newif_true(cs: &str) -> bool {
   matches!((lookup_meaning(&T_CS!(cs)), lookup_meaning(&T_CS!("\\iftrue"))), (Some(a), Some(b)) if a == b)
 }
 
@@ -487,8 +488,8 @@ fn dispatch_item(item: &[Token]) -> Result<bool> {
   // \pgfkeys@add@path@as@needed — the key's own tokens are kept (catcodes
   // and all) for `\pgfkeyscurrentkey`/`RAW` and the path split; the string
   // only names control sequences.
-  def_verbatim(T_CS!("\\pgfkeyscurrentkeyRAW"), key_toks.clone())?;
   let (full_key, full_key_toks) = if key_str.starts_with('/') {
+    def_verbatim(T_CS!("\\pgfkeyscurrentkeyRAW"), key_toks.clone())?;
     let_i(
       &T_CS!("\\ifpgfkeysaddeddefaultpath"),
       &T_CS!("\\iffalse"),
@@ -496,6 +497,12 @@ fn dispatch_item(item: &[Token]) -> Result<bool> {
     );
     (key_str, key_toks.unlist())
   } else {
+    // `\pgfkeys@addpath#1\relax` (:540-543) takes the expanded key as a delimited argument, so a key that is one
+    // brace group loses its braces: `\def\RelayedType{{node}}` … `\node[\RelayedType, black]` names the style
+    // `/tikz/node` (2110.08325's `\drawGridVertex`; pdflatex 0 errors).
+    let key_toks = Tokens::new(strip_single_group(key_toks.unlist()));
+    let key_str = key_text(&key_toks);
+    def_verbatim(T_CS!("\\pgfkeyscurrentkeyRAW"), key_toks.clone())?;
     let_i(
       &T_CS!("\\ifpgfkeysaddeddefaultpath"),
       &T_CS!("\\iftrue"),

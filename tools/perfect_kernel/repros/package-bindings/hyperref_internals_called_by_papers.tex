@@ -1,0 +1,40 @@
+% witness: hyperref internals papers call (68b, binding gaps G3): `\Hy@Info` 1310.6851; `\Hy@SaveSpaceFactor`,
+%          `\HyperRaiseLinkDefault`/`Hook` 2403.10429, 2510.01943 (a copy of `\Hy@raisedlink`); `\@skiphyperreftrue`
+%          1806.02596; `\thispdfpagelabel` 1810.05756; `\hyper@refstepcounter` 2102.05485, 2303.09820;
+%          `\hyper@link`/`\@extra@b@citeb` 1403.6472, 1612.08986 (`\hyperlinkcite`); `\hyperpage`,
+%          `\hyperindexformat` 0712.1142, 1011.1558 (a makeindex `.ind`); `\psdmapshortnames` 1801.02767
+%          (`psdextra`); `\@refstar` 2204.02601
+% oracle:  pdflatex 0 errors: "See Knuth's book and word. Section 1."; the index "absolute value, 95, 101",
+%          "range, 3–5", "list, 7, 9", "bold, 42" (bold 42)
+% engines: perl 0.8.8 = 15 `Error:undefined` (each of the macros above); rust 67int4 = 15 `Error:undefined` and a
+%          `Warning:expected:<number>`
+% expect:  0 errors, 0 warnings; the cite link's text "Knuth's book", the index page numbers as text, the bold 42
+% status:  GREEN
+\documentclass{article}
+\usepackage{hyperref}
+\hypersetup{psdextra}
+\makeatletter
+\newcommand*\addtopsdmap[2]{\expandafter\def\expandafter\psdmapshortnames\expandafter{\psdmapshortnames\let#1#2}}
+\addtopsdmap\foo\@firstofone
+\newcommand*{\hyperlinkcite}[1]{\hyper@link{cite}{cite.#1\@extra@b@citeb}}
+\def\mylink#1{\Hy@SaveSpaceFactor\begingroup\setlength\@tempdima\HyperRaiseLinkDefault\HyperRaiseLinkHook\endgroup
+  \hbox{\Hy@RestoreSpaceFactor #1\Hy@SaveSpaceFactor}\Hy@RestoreSpaceFactor}
+\newcounter{protocol}
+\Hy@Info{checking}
+\makeatother
+\begin{document}
+\thispdfpagelabel{Title}
+\section{One}\label{s1}
+See \hyperlinkcite{knuth}{Knuth's book} and \mylink{word}.
+\makeatletter\@skiphyperreftrue\refstepcounter{protocol}\hyper@refstepcounter{protocol}\@skiphyperreffalse
+\let\ref\@refstar Section \ref{s1}.\makeatother
+\begin{theindex}
+\item absolute value, \hyperpage{95}, \hyperpage{101}
+\item range, \hyperpage{3--5}
+\item list, \hyperpage{7, 9}
+\item bold, \hyperindexformat{\textbf}{42}
+\end{theindex}
+\begin{thebibliography}{1}
+\bibitem{knuth} D. Knuth, The TeXbook.
+\end{thebibliography}
+\end{document}

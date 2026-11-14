@@ -18,7 +18,7 @@ fn lines_with<'a>(log: &'a str, kind: &str) -> Vec<&'a str> {
 
 /// The core `xml` through `LaTeXML-html5.xsl` in-process, its source files in `source_directory` (the post stage reads
 /// the `.bib` there), with the post stage's log.
-fn post_logged(xml: &str, source_directory: &str) -> (String, String) {
+pub(super) fn post_logged(xml: &str, source_directory: &str) -> (String, String) {
   latexml_core::util::logger::bind_log();
   let destination = format!("{source_directory}/guard.html");
   let opts = latexml::post::PostOptions {
@@ -30,7 +30,7 @@ fn post_logged(xml: &str, source_directory: &str) -> (String, String) {
     source_directory:          Some(source_directory),
     site_directory:            None,
     search_paths:              &[],
-    nodefaultresources:        true,
+    default_resources:         false,
     css_files:                 &[],
     js_files:                  &[],
     noinvisibletimes:          false,
@@ -154,7 +154,7 @@ fn conditional_open_at_end_document() {
   );
   assert_eq!(
     lines_with(&log, "Conditional \\iftrue started"),
-    vec!["\tConditional \\iftrue started t; line 13 col 1 - line 13 col 8"],
+    vec!["\tConditional \\iftrue started t.tex; line 13 col 1 - line 13 col 8"],
     "{log}"
   );
   assert_element(
@@ -210,24 +210,24 @@ fn latin1_inputenc_bytes_are_no_misdefined_info() {
 }
 
 /// Gullet overflow: an integer constant past 2^31 − 1 is TeX's "Number too big" (tex.web §445) and a dimension
-/// reaching 2^30 sp is "Dimension too large" (§460), clamped as TeX clamps, reported as Warnings (the severity of
-/// Perl's scan recoveries, Gullet.pm:904-1089); the clamp is +max_dimen, as §460 negates only for the scan's own sign.
+/// reaching 2^30 sp is "Dimension too large" (§460), clamped as TeX clamps, reported as Errors as TeX's (DTL1d, OD #519;
+/// 64zf's Warnings); the clamp is +max_dimen, as §460 negates only for the scan's own sign. pdflatex 2 `!`.
 /// Was: -200000000000.0pt, silently. Repro
 /// expansion-primitives/dimension_overflow_max_dimen.
 #[test]
-fn number_and_dimension_overflow_clamp_and_warn() {
+fn number_and_dimension_overflow_clamp_and_err() {
   let (log, xml) = convert_ar5iv(include_str!(
     "../../../tools/perfect_kernel/repros/expansion-primitives/dimension_overflow_max_dimen.tex"
   ));
-  assert_eq!(error_count(&log), 0, "{log}");
-  assert_eq!(warning_count(&log), 2, "{log}");
+  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_eq!(
-    lines_with(&log, "Warning:expected:<number> Number too big.").len(),
+    lines_with(&log, "Error:expected:<number> Number too big.").len(),
     1,
     "{log}"
   );
   assert_eq!(
-    lines_with(&log, "Warning:expected:<dimen> Dimension too large.").len(),
+    lines_with(&log, "Error:expected:<dimen> Dimension too large.").len(),
     1,
     "{log}"
   );
@@ -239,16 +239,16 @@ fn number_and_dimension_overflow_clamp_and_warn() {
   );
 }
 
-/// A count assignment takes TeX's `infinity` for a constant past it, and a hexadecimal one too (§445).
+/// A count assignment takes TeX's `infinity` for a constant past it, and a hexadecimal one too (§445); pdflatex 2 `!`.
 #[test]
 fn integer_constant_overflow_is_infinity() {
   let (log, xml) = convert_ar5iv(
     "\\documentclass{article}\n\\begin{document}\n\\count255=99999999999 A=\\the\\count255;\n\\count255=\"FFFFFFFFF B=\\the\\count255.\n\\end{document}\n",
   );
-  assert_eq!(error_count(&log), 0, "{log}");
-  assert_eq!(warning_count(&log), 2, "{log}");
+  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_eq!(
-    lines_with(&log, "Warning:expected:<number> Number too big.").len(),
+    lines_with(&log, "Error:expected:<number> Number too big.").len(),
     2,
     "{log}"
   );
@@ -573,7 +573,7 @@ fn raw_sty_endgroup_against_hbox_is_one_error() {
   assert_eq!(error.len(), 1, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
   assert!(
-    log.contains("at raw_sty_endgroup_against_hbox; line 2"),
+    log.contains("at raw_sty_endgroup_against_hbox.sty; line 2"),
     "{log}"
   );
   assert_element(
@@ -721,18 +721,15 @@ fn doi_sty_doi_is_no_warning() {
     "\\documentclass{apa6}\n\\usepackage{doi}\n\\title{T}\\shorttitle{T}\\author{A}\\affiliation{B}\n\\begin{document}\n\\maketitle\nSee \\doi{10.1000/j_x.2002}.\n\\end{document}\n",
   );
   assert_eq!(error_count(&log), 0, "{log}");
-  // The one Warning is apa6's missing binding (OmniBus stands in).
-  assert_eq!(warning_count(&log), 1, "{log}");
-  assert_eq!(
-    lines_with(&log, "Warning:missing_file:apa6").len(),
-    1,
-    "{log}"
-  );
+  // apa6 has no binding and is read raw under the arXiv profile (rawclasses, 67v): no Warning; before 67v its one
+  // Warning was the missing binding (OmniBus stood in).
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_element(
     &xml,
     "p",
     &["xml:id=\"p1.1\""],
-    "<p xml:id=\"p1.1\">See <ref href=\"https://doi.org/10.1000/j_x.2002\">10.1000/j_x.2002</ref>.</p>",
+    // doi.sty's own `\doitext` "doi:" (pdflatex: "See doi:10.1000/j_x.2002."), now that apa6 is read raw
+    "<p xml:id=\"p1.1\">See doi:<ref class=\"ltx_href\" href=\"https://doi.org/10.1000/j_x.2002\">10.1000/j_x.2002</ref>.</p>",
   );
 }
 
@@ -945,7 +942,7 @@ fn setspace_switch_in_a_section_title_reports_like_any_title_error() {
     "\\documentclass{article}\n\\usepackage{setspace}\n\\begin{document}\n\\section{\\doublespace T}\nZ.\n\\end{document}\n",
   );
   assert_eq!(error_count(&log), 2, "{log}");
-  assert_eq!(lines_with(&log, "\tat t; line 4").len(), 2, "{log}");
+  assert_eq!(lines_with(&log, "\tat t.tex; line 4").len(), 2, "{log}");
   assert!(!log.contains("Anonymous String"), "{log}");
   let (log, xml) = convert_ar5iv(
     "\\documentclass{article}\\usepackage{setspace}\n\\begin{document}\nText.\\footnote{{\\doublespace a} {\\doublespace b}} More.\n\\end{document}\n",

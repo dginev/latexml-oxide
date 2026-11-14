@@ -1,0 +1,16 @@
+% witness: 2604.04847, 2605.29064, 2605.29893, 2606.01600 (the ACL template's correspondence line, a link without
+%          mailto:); the r5 re-review of batch 77p (finding 3)
+% oracle:  pdflatex 0 errors: the names, the institutions, "Correspondence: bbaker@x.edu"
+% engines: rust 77p r8 = 0 errors; the line a URL contact of the shared creator holding an e-mail address
+% expect:  0 errors, 0 warnings; bbaker@x.edu an e-mail contact of Bob Baker, the name it spells, named
+%          "Correspondence:", kept the link as written
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$, Cat Cole$^2$ \\ $^1$Univ A \\ $^2$Univ B \\
+\textbf{Correspondence:} \href{bbaker@x.edu}{bbaker@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

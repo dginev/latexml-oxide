@@ -1,0 +1,17 @@
+% witness: 1412.5940 (PoS_oldRef.cls), 1509.01480, 1211.4334 (PoS.cls:681 `\newcommand\speaker[1]{…#1\thanks{Speaker.}\ }`): `\author{\speaker{R. Cassano}$^1$, G. Bernardi$^2$, …\\ $^1$ INAF-IRA, Bologna, IT; $^2$ SKA SA, …\\ E-mail: \email{…}}`
+% oracle:  pdflatex on 1509.01480's PoS.cls (no PoS.cls in TeX Live) prints "A. Able*1, B. Baker2", the entries' line, the e-mail; 3 `!` of the class's own color stack under TL 2025 at \\begin{document}, a harness limit
+% engines: Perl: `\speaker` a creator of its own, `$^1$` an empty one; ours before Z14: the rehearsal printed no name for `\speaker`, its mark led the line, every name after it an affiliation of no one
+% expect:  0 errors; the reading has every name, `\speaker`'s first, with its entry and its e-mail (perfect_kernel_batchz14::a_speakers_name_prints_in_its_block)
+% status:  GREEN (Z14)
+\documentclass{PoS}
+\title{T}
+\ShortTitle{T}
+\author{\speaker{A. Able}$^1$,
+B. Baker$^2$\\
+$^1$ Univ A, Town A; $^2$ Univ B, Town B\\
+E-mail: \email{able@a.org}}
+\abstract{A.}
+\FullConference{C}
+\begin{document}
+Body.
+\end{document}

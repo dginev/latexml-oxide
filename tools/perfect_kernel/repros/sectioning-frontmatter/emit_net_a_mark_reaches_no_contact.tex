@@ -1,0 +1,21 @@
+% mechanism: the safety net's marks check (`resolver::net::uncoordinated_marks`): a mark printed on a name whose label leads a
+%   line of the block (a line's first run of marks, `$^1$ $^2$ Univ A`) reaches an item of that name's creator carrying it, and a
+%   mark a creator requests printed inside an item is that item's label; counted in a Warning, the reading kept
+% witness: 1703.06483 (`$^1$ $^2$ $^3$ COMSATS …`, `Emails: $^1$waqasaman87@gmail.com, …`: "Guftaar Ahmad Sardar Sidhu 2", the
+%   e-mail line in Shi Jin's affiliation)
+% oracle:  pdflatex 0 errors; "Ann Able1 , Bob Baker2 , and Cat Cole3"; "1 2 Univ A, Town"; Univ C, City; Emails: …
+% engines: rust int145a, the switch on: Bob Baker's mark printed on his name (`<sup>2</sup>` in the personname), no Warning
+% expect:  0 errors, 1 warning (the check's, label 2); the switch on: "Ann Able", "Bob Baker 2" (its mark printed on its name, the
+%   reading kept), "Cat Cole", each an affiliation and an e-mail
+% status:  RED (int145a) -> GREEN (perfect_kernel_batchn1::a_mark_reaching_no_contact_is_counted)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\small Ann Able$^1$, Bob Baker$^2$, and Cat Cole$^3$\\
+$^1$ $^2$ Univ A, Town\\
+$^3$ Univ C, City\\
+Emails: $^1$ann@a.org, $^2$bob@b.org, $^3$cat@c.org}
+\maketitle
+Body.
+\end{document}

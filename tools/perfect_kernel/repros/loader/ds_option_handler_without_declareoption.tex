@@ -1,0 +1,23 @@
+% witness: 2605.19951 (gji.cls:61-70 `\def\ds@…` option handlers), 2606.12015 (biom.cls:48
+%   `\def\ds@usenatbib{\@usenatbibtrue}`, :81 `\ProcessOptions`, :1564-1566 natbib only `\if@usenatbib`: `\citep`
+%   undefined)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; "Extra: yes."
+% mechanism: latex.ltx:18587-18592 `\@process@pti@ns`: an option no `\DeclareOption` declared runs its `\ds@<option>`
+%   when one is defined (2.09-style classes `\def` their handlers), `\default@ds` only otherwise. Perl
+%   (Package.pm:2476-2478) and our `process_options_by` sent every undeclared option to the default handler, so the
+%   class never saw its option. Fixed: content.rs `process_options_by`.
+% status:  GREEN
+\begin{filecontents*}[overwrite]{rcds.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{rcds}
+\newif\ifRC@extra
+\def\ds@extra{\RC@extratrue}
+\ProcessOptions
+\LoadClass{article}
+\ifRC@extra\newcommand\rcextra{yes}\fi
+\end{filecontents*}
+\documentclass[extra]{rcds}
+\begin{document}
+Extra: \rcextra.
+\end{document}

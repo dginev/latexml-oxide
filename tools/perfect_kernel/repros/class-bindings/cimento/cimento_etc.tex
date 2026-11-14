@@ -1,0 +1,15 @@
+% witness: astro-ph0502331 (`\author{K.-I.~Nishikawa\from{ins:x}\ETC, …}`), astro-ph0506233, 1804.04677
+%          (`\title{… physics \ETC\ from …}`): cimento.cls:746 defines `\ETC` only inside its `\maketitle`
+% oracle:  pdflatex with cimento.cls (beside, cut down): "Particle acceleration in pair jets K.-I. Nishikawa, P.
+%          Hardee, C. B. Hededal Text."; 0 errors
+% engines: rust 67int15 = 1 error (undefined `\ETC`)
+% expect:  0 errors, 0 warnings; three creators, the list whole
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{cimento}
+\title{Particle acceleration in pair jets}
+\author{K.-I.~Nishikawa\ETC, P.~Hardee, C.~B.~Hededal}
+\begin{document}
+\maketitle
+Text.
+\end{document}

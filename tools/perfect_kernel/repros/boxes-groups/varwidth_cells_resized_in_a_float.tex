@@ -1,0 +1,49 @@
+% witness: 2507.12476 (Table 1: LyX's `cellvarwidth` cells under `\resizebox{\textwidth}{!}` in a table float)
+% oracle:  pdflatex 0 errors; [T458.58421pt]: the tabular at its cells' widest lines, the resize scaling it by 0.7523
+% engines: rust int164a: [T1428.0pt] (each cell `\linewidth` wide), xscale 0.2416; rust VARW: [T461.91748pt], xscale
+%          0.7469, but each HTML cell `width:345.0pt`, the table drawn ~3 times its column; perl: varwidth = minipage
+%          (KNOWN_PERL_ERRORS #1234)
+% expect:  0 errors, 0 warnings; [T461.91748pt], xscale 0.7469; each varwidth cell its widest line, its HTML style
+%          `width:max-content;max-width:345.0pt` (OXIDIZED_DESIGN_DIVERGENCES #1014)
+% status:  GREEN (VARWb)
+\documentclass{article}
+\usepackage{amsmath,booktabs,varwidth,graphicx}
+\makeatletter
+\newenvironment{cellvarwidth}[1][t]{\begin{varwidth}[#1]{\linewidth}}{\@finalstrut\@arstrutbox\end{varwidth}}
+\makeatother
+\newcommand\T{\begin{tabular}{cccc}
+\toprule
+Order & Matrix Factorization & Posterior Beliefs & Decision Problems\tabularnewline
+\midrule
+\begin{cellvarwidth}[t]
+\centering
+Column space
+
+$\geq_{\text{Col}}$
+\end{cellvarwidth} & \begin{cellvarwidth}[t]
+\centering
+$E'=EG$
+
+Any $G$
+\end{cellvarwidth} & \begin{cellvarwidth}[t]
+\centering
+Affine span
+
+inclusion
+\end{cellvarwidth} & \begin{cellvarwidth}[t]
+\centering
+MH with risk neutrality,
+
+limited liability and ex post budget;
+
+MH with risk aversion and limited liability
+\end{cellvarwidth}\tabularnewline
+\bottomrule
+\end{tabular}}
+\begin{document}
+\setbox0\hbox{\T}[T\the\wd0]
+\begin{table}
+\caption{Comparisons of Experiments}
+\resizebox{\textwidth}{!}{\T}
+\end{table}
+\end{document}

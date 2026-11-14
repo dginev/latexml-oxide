@@ -98,9 +98,13 @@ LoadDefinitions!({
       let expansion = mouth::tokenize_internal(TeXString::assembled(expansion_body));
       def_macro(T_CS!(delim_str), None, expansion, None)?;
     }
-    // Save and deactivate $
-    Let!("\\DC@saved@dollar", "$");
-    let_i(&T_MATH!(), &T_CS!("\\relax"), None);
+    // Save and deactivate $ — in the column's own math only (`\lx@DC@dollar`)
+    // (the meaning of the math shift, Perl's `Let(…, T_MATH)`: a `"$"` here named an undefined control sequence, which
+    // `\DC@end` then gave back to `$` for the rest of the cell; as tex_tables.rs saves the alignment's caller's `$`)
+    if let Some(dollar) = lookup_definition_stored(&T_MATH!())? {
+      assign_meaning(&T_CS!("\\DC@saved@dollar"), dollar, None);
+    }
+    let_i(&T_MATH!(), &T_CS!("\\lx@DC@dollar"), None);
     // Perl: return Tokens(LookupValue('IN_MATH') ? () : T_CS('\lx@begin@inline@math'));
     // FAITHFUL: no `DC_started_math` flag. Perl's \DC@ / \DC@end are symmetric by
     // construction — \DC@ begins inline math unless already IN_MATH, and \DC@end
@@ -114,6 +118,26 @@ LoadDefinitions!({
     } else {
       Ok(Tokens!(T_CS!("\\lx@begin@inline@math")))
     }
+  });
+
+  // The cell's `$` (Perl: `\relax` for the whole cell, dcolumn.sty.ltxml:42-44): dcolumn.sty itself leaves `$` alone
+  // (dcolumn.sty:43-80 `\DC@`), so an author's `$` at the cell's level would end the column's math; there it does
+  // nothing, keeping the number in math as Perl does. In a box the cell holds — `\multirow{2}{*}{$E_{B}$}`, `\mbox` —
+  // TeX is in horizontal mode again and the `$`s are math shifts (2306.05928: `\relax`, they left `E_{B}` in text, a
+  // math error per script; KNOWN_PERL_ERRORS #859): the `$` that opens a formula there marks it
+  // (`lx_dc_inner_math`, local to the formula's group), and the one inside closes it.
+  DefMacro!("\\lx@DC@dollar", {
+    let in_math = lookup_bool_sym(pin!("IN_MATH"));
+    Ok(if in_math && !lookup_bool("lx_dc_inner_math") {
+      Tokens!()
+    } else if in_math {
+      Tokens!(T_CS!("\\DC@saved@dollar"))
+    } else {
+      Tokens!(T_CS!("\\DC@saved@dollar"), T_CS!("\\lx@DC@inner@math"))
+    })
+  });
+  DefPrimitive!("\\lx@DC@inner@math", {
+    assign_value("lx_dc_inner_math", true, None);
   });
 
   // Perl: \DC@end — restores $ and ALWAYS ends inline math (unconditional).

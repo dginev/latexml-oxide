@@ -1,0 +1,13 @@
+% witness: the explicit load behind simpler-wick/tikz-feynman (translations.sty:1129 `\dolistloop\@trnslt@dictionaries`, etextools' `\forlistloop`)
+% oracle:  pdflatex (TL 2025) 0 errors, both chunks run.
+% engines: int141a, M3: 1 error, "Didn't expect a \fi": the hook ends in `\long\csdef{..}\@gobble` and eats the next chunk. Perl not run.
+% expect:  0 errors; both chunks run
+% status:  RED
+\documentclass{article}
+\usepackage{siunitx}
+\usepackage{etextools}
+\AtBeginDocument{\typeout{NEXT CHUNK RUNS}}
+\AtBeginDocument{\typeout{THIRD CHUNK RUNS}}
+\begin{document}
+Word.
+\end{document}

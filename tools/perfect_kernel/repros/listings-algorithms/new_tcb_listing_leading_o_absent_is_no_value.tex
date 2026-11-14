@@ -1,0 +1,17 @@
+% witness: none (77m review probe rev77m/p2/h.tex)
+% oracle:  pdflatex 0 errors: "Code" over "a = 1", "Code: given" over "b = 2"
+% engines: rust 77m r1 = 0 errors, "Code: " (the absent leading `o` was empty, not xparse's no-value marker); perl: raw tcblistings
+% expect:  0 errors, 0 warnings; captions "Code" and "Code: given"
+% status:  RED (77m r1) -> GREEN (77m r2: tcolorbox_sty.rs `tcb_xparse_listing` defaults the leading optional to its stand-in)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\tcbuselibrary{xparse}
+\NewTCBListing{codeo}{ o }{listing only,title={\IfNoValueTF{#1}{Code}{Code: #1}}}
+\begin{document}
+\begin{codeo}
+a = 1
+\end{codeo}
+\begin{codeo}[given]
+b = 2
+\end{codeo}
+\end{document}

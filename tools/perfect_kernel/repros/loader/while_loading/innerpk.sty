@@ -1,0 +1,2 @@
+\ProvidesPackage{innerpk}
+\@ifpackageloaded{outerpk}{\gdef\outerans{outerpk loaded}}{\PackageError{innerpk}{outerpk not loaded while it loads}{}\gdef\outerans{outerpk not loaded}}

@@ -1,0 +1,15 @@
+% witness: arXiv 1911.01952 (\newtheorem{example}{Example}[section]: PDF "Example 2.1", ours "Example II.1")
+% oracle:  pdflatex 0 errors; "Example 2.1: E.", "Example A.1: F."; "See Example 2.1 and Example A.1." (IEEEtran.cls:5607-5627, :5773)
+% engines: rust (int50a) = "Example II.1"; Perl 0.8.8 the same (fidelity3 audit N5)
+% expect:  0 errors; theorem refnums 2.1 and A.1
+% status:  RED (int50a) -> GREEN (78n, KNOWN_PERL_ERRORS #1079)
+\documentclass{IEEEtran}
+\newtheorem{example}{Example}[section]
+\begin{document}
+\section{One}\section{Two}
+\begin{example}\label{x}E.\end{example}
+\appendices
+\section{Extra}
+\begin{example}\label{y}F.\end{example}
+See Example~\ref{x} and Example~\ref{y}.
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: the list cutter's alignment strip (`classify::entry_starts` `line_at_starts`, `notes::aligns`): IEEEtran's
+%   `\IEEEauthorblockA` cut by its marks does not pass through it, so the first piece keeps the block's `\centering`
+%   (an inline `<sup class="ltx_centering">` and `align="center"`), the later ones drop it
+% witness: synthetic (revP4b4a3 should-fix 2, probe i_center)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2" beside "1 Univ Alpha" over
+%   "2 Univ Beta", small italic
+% engines: rust P4b4abase: 0 errors, 0 warnings, both entries `<sup class="ltx_centering">` and `align="center"`;
+%   P4b4a4: 0 errors, 0 warnings, Ann Able's entry only; every entry italic 90 %
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ Alpha", Bob Baker "2 Univ Beta", each italic 90 %, neither with
+%   `class="ltx_centering"` or `align` (a cut piece carries no alignment, P4b4a4)
+% status:  RED (P4b4abase: both entries; P4b4a4: the first; no word lost)
+% moves:   post-merge (P4IAL: the alignment strip on every cut route, IEEEtran's included)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{A Title}
+\author{\IEEEauthorblockN{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2}}
+\IEEEauthorblockA{\centering\small\itshape \textsuperscript{1} Univ Alpha \\ \textsuperscript{2} Univ Beta}}
+\maketitle
+Body.
+\end{document}

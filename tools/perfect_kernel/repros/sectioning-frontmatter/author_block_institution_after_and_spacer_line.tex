@@ -1,0 +1,17 @@
+% witness: the rev98b review's probes pb1 (`\author{Ann Able \and ~\\ University of X}`) and pb6 (`… \and \\
+%          University of X`), synthetic; no arXiv paper known
+% oracle:  pdflatex 0 errors: "Ann Able" in one column, "University of X" one line lower in the next
+% engines: rust int126a = Ann Able holding University of X (pb1; the tie an empty names line, its creator's line
+%          coalesced onto her), a creator "University of X" (pb6); rust 98b = a creator "University of X" for both
+%          (the tie line the block's spacing since #949); Perl 0.8.8 = the tie an empty name, its line coalesced
+% expect:  0 errors, 0 warnings; Ann Able holding University of X: a block a line break opens after the names
+%          before it, its first line an institution, has no names (author_block/dispatch.rs)
+% status:  RED (98b; pb6 int126a too) -> GREEN (98b r2) — perfect_kernel_batch98b::institution_after_and_and_a_break_is_no_name
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \and ~\\ University of X}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: llncs's one `\institute{\affmark{1} Univ A \quad \affmark{2} Univ B\\ \affmark{3} Univ C}`, its marks the
+%   names request (`\affmark` prints `\textsuperscript`): shape (c) by the marks it prints (`prints_list_marks`), and
+%   its cutter (`entry_calls`) starts an entry at each mark as the Cut's decision reads them (`list_marks`), so each
+%   entry is its mark's, as the `$^{1}$` spelling's. Z18g had kept the list whole on the block (the token dispatch saw
+%   no mark: shape (b)), Z18e each line on the names showing its first mark, with "markup lost" Warnings
+% witness: 2608.21425 (its list in a `\parbox`, which the cut enters too)
+% oracle:  pdflatex 0 errors; "Ann Able^1 and Bob Baker^2,3" over "^1 Univ A ^2 Univ B / ^3 Univ C"
+% engines: Z18g..int165a: the institute on the block whole
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B" and "3 Univ C", the marks shown
+% status:  RED (P4b2) -> GREEN (P4b4a; guard perfect_kernel_batchz18g::llncs_institute_hand_marks_cut)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2,3}}
+\institute{\affmark{1} Univ A \quad \affmark{2} Univ B\\
+\affmark{3} Univ C}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

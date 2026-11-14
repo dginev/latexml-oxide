@@ -1,0 +1,18 @@
+% mechanism: two `\IEEEauthorblockA`s nested in one outer block's argument, each after its marks (the second after a
+%   `\\`): every inner block lifted out with the marks before it, the lead's last line, as its label (ieeetran_cls.rs
+%   `unnested_affiliation_blocks`, `prints_marks_alone`; OD #1009)
+% witness: synthetic (review revP4cR2 B1, probes q4 conference and q5 journal); the single-block shape 1710.07993
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ , Bob Baker† , Cy Cole‡", "Univ A, Town", "† … Univ B, City", "‡ Univ C, Village"
+% engines: P4b2: "* †" a mark-only affiliation, "Univ B, City" Ann's and Cy's too; P4cR2 ea6a435433: the first block alone labelled, "Univ B, City" every author's, "†" and "‡" lost, 0 W
+% expect:  0 errors, 0 warnings; Ann Able "* Univ A, Town", Bob Baker "† Univ B, City", Cy Cole "‡ Univ C, Village"
+% status:  RED (P4cR2 ea6a435433) -> GREEN (P4cR2b)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}, Cy Cole\IEEEauthorrefmark{3}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}\IEEEauthorblockA{Univ A, Town}\IEEEauthorrefmark{2}\IEEEauthorblockA{Univ B, City}\\
+\IEEEauthorrefmark{3}\IEEEauthorblockA{Univ C, Village}}}
+\maketitle
+Body.
+\end{document}

@@ -183,9 +183,11 @@ macro_rules! parameter_rust_type {
   (Optional) => {Option<Tokens>};
   (OptionalMatch) => {Option<Tokens>};
   (OptionalBalanced) => {Option<Tokens>};
+  (OptionalBalancedNoSkip) => {Option<Tokens>};
   (OptionalSemiverbatim) => {Option<Tokens>};
   (PackageOptions) => {Option<Tokens>};
   (DefToken) => {Token};
+  (LaTeXDefToken) => {Token};
   (RedefinableToken) => {Token};
   (NormalToken) => {Token};
   (Expanded) => {Tokens};

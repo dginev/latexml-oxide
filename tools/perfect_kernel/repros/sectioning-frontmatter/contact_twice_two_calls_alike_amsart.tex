@@ -1,0 +1,20 @@
+% Two calls printing the same text are two entries: amsart's e-mails that differ in case only, and an address written
+% again with a footnote of its own, all printed (106b r1 folded case and notes and dropped the second of each; review
+% rev106b B1, probe b2).
+% witness: 1010.3502, 2206.09515 (amsart addresses written twice)
+% oracle:  pdflatex 0 errors: "Univ A, City A", "Email address: Ann.Able@x.org", "Univ A, City A1", "Email address: ann.able@x.org", "1 On leave."
+% engines: rust int134b = 0 errors, four contacts; 106b r1 = the second address and the second e-mail dropped; perl = each call's contact
+% expect:  0 errors, 0 warnings; Ann holds the two addresses and the two e-mails, in print order
+% status:  RED (106b r1) -> GREEN (106b r2)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{Two calls alike}
+\author{Ann Able}
+\address{Univ A, City A}
+\email{Ann.Able@x.org}
+\address{Univ A, City A\footnote{On leave.}}
+\email{ann.able@x.org}
+\maketitle
+Text.
+\end{document}

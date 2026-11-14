@@ -1,0 +1,23 @@
+% mechanism: a marked `\IEEEauthorblockA` list's e-mail line one of whose addresses a token register prints
+%   (`\IEEEauthorrefmark{1}\the\annt`): the line's e-mail calls are cut from its tokens (`email_line_calls`, the
+%   `line_addresses` reader at the binding's call), which part `\the` from its register; a `\csname annmail\endcsname`
+%   address errs alike (`\egroup` inside `\csname`, the address lost, counted by a Warning)
+% witness: synthetic (P6f's NIT probe of `lines_starts`' spanned events: not that mechanism — P6dbase, P6fbase, P6f alike)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One*, Bob Two† / *Univ A / †Univ B / Emails: ann@x.org,
+%          † bob@y.org"
+% engines: P6fbase, P6f: 1 error ("You can't use \egroup after \the"), 2 warnings; Ann One's e-mail "0" (invented),
+%   ann@x.org lost
+% expect:  0 errors, 0 warnings; Ann One "* Univ A" + ann@x.org, Bob Two "† Univ B" + bob@y.org
+% status:  RED (P6f)
+% moves:   post-merge (id IEREG; the token e-mail line reader)
+\documentclass{IEEEtran}
+\newtoks\annt \annt={ann@x.org}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann One\IEEEauthorrefmark{1}, Bob Two\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A\\
+\IEEEauthorrefmark{2}Univ B\\
+Emails: \IEEEauthorrefmark{1}\the\annt, \IEEEauthorrefmark{2}bob@y.org}}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,14 @@
+\begingroup%
+  \makeatletter%
+  \ifx\svgwidth\undefined%
+    \setlength{\unitlength}{56.9bp}%
+  \else%
+    \setlength{\unitlength}{\svgwidth}%
+  \fi%
+  \global\let\svgwidth\undefined%
+  \makeatother%
+  \begin{picture}(1,0.5)%
+    \put(0,0){\includegraphics[width=\unitlength,page=1]{box.pdf}}%
+    \put(0.1,0.2){\makebox(0,0)[lt]{Overlay label}}%
+  \end{picture}%
+\endgroup%

@@ -1,0 +1,20 @@
+% RED (rev107f2 finding 3, synthetic; PRE-EXISTING, the base gives the same): a symbol orphan in the sole author's own
+%   mark series. `Ann Able$^{\dagger}$` answers the `$^{\dagger}$` line; the `$^{\ddagger}$ E-mail: lz@b.org` line is
+%   requested by no name, in her series, so by the ruling of 2026-11-05 (FIDELITY_CHARTER §2) it is the block creator's.
+%   `insert::mark_series`' symbol branch does not fire (insert.rs ~1769, ~3410): the ‡ line never gets a `_bymark`
+%   creator, and the address goes to Ann. The cause is unresolved.
+% witness: none (synthetic) — rev107f2 probe p_series3
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: rust 107f r2 (f0d0f30551), int139a4: lz@b.org on Ann Able
+% expect:  0 errors; Ann Able: Univ A, Town; lz@b.org on the block creator
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$\\
+{\small $^{\dagger}$Univ A, Town.}\\
+{\small $^{\ddagger}$ E-mail: lz@b.org}\\
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

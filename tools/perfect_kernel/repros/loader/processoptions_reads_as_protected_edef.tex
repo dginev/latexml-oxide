@@ -1,0 +1,27 @@
+% witness: 68h r2/r3: `\ProcessOptions` reads a package's option list as latex.ltx:18557 `\protected@edef\@curroptions`
+%          (content.rs `process_options`): a macro option expands (`\myopt` runs the declared `alpha`, a
+%          `\PassOptionsToPackage{\myoptb}` and an `\edef`-built option arrive expanded, `\the\textwidth` is its
+%          value), a protected macro, a robust command and `\protect\foo` stand, and so does a `\newcommand` with an
+%          optional argument (`\@protected@testopt`)
+% oracle:  pdflatex 0 errors: "macro:-><ALPHA>[gamma][delta=D][beta=\protect \textbf {x}][w=345.0pt][\po ]
+%          [o=\protect \oa ][r=\protect \rb ][p=\protect \foo ]"
+% engines: rust 68h r1 and 67int9 (a full expansion): 1 error, `\po` lost, "[beta=\bgroup \protect
+%          \not@math@alphabet@@ {bx}…]", "[o=zzq]", "[r=\protect \protectrob ]"; perl (--includestyles): 1 error
+%          (`\foo` undefined), "[beta=x][w=345.0pt][o=zzq][r=rob][p=\foo ]", `\po` lost (KNOWN_PERL_ERRORS #161)
+% expect:  0 errors; pdflatex's list, except `[beta=\textbf {x}]` and `[o=\oa ]` without pdflatex's `\protect`
+%          (the kernel's `\textbf` and an optional-argument `\newcommand` are not `\protect`-wrapped macros here)
+% status:  GREEN (68h r2; red on 026cf18f87)
+\documentclass{article}
+\def\myopt{alpha}
+\def\myoptb{gamma}
+\def\mydelta{D}
+\protected\def\po{alpha}
+\newcommand\oa[1][q]{zz#1}
+\DeclareRobustCommand\rb{rob}
+\PassOptionsToPackage{\myoptb}{poq68h}
+\edef\built{delta=\mydelta}
+\expandafter\PassOptionsToPackage\expandafter{\built}{poq68h}
+\usepackage[\myopt,beta=\textbf{x},w=\the\textwidth,\po,o=\oa,r=\rb,p=\protect\foo]{poq68h}
+\begin{document}
+\showpoq
+\end{document}

@@ -1,0 +1,17 @@
+% What is no cover keeps a late abstract where the frontmatter placed it, after the creators: a float
+% between \maketitle and the abstract (here), and in the guard's variants a \tableofcontents, body prose, a
+% body list, a cover line followed by body prose. pdflatex prints them before the abstract; they are body,
+% not title page (OXIDIZED_DESIGN_DIVERGENCES #903). Guard:
+% perfect_kernel_batch86g::late_abstract_after_body_content_keeps_its_slot.
+% oracle:  pdflatex 0 errors: "Repro Title / Ann Author / A figure / Figure 1: A caption. / Abstract".
+%          perl: title, creator, date, abstract, figure, section.
+% engines: rust 86a, 86g: title, creator, abstract, figure, section.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\title{Repro Title}\author{Ann Author}\date{}
+\begin{document}
+\maketitle
+\begin{figure}[h]\centering\fbox{A figure}\caption{A caption.}\end{figure}
+\begin{abstract}Abstract words here.\end{abstract}
+\section{Intro}Body text.
+\end{document}

@@ -10,6 +10,7 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // bytedance_seed.cls loads amsmath through nicematrix and `tcolorbox[most]` (:28, :32; tcbtheorems.code.tex:23).
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   // bytedance_seed.cls:11-101 (the class ships with each paper): this binding

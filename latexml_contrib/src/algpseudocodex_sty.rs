@@ -506,14 +506,13 @@ LoadDefinitions!({
     }
   );
 
-  // Hook \lx@algorithmicx@item to trigger box checking at the start of each line
+  // Box checking at the start of each line, through the line hook of the algorithmicx binding's `\item`
+  // (`\lx@algorithmicx@item@hook`): redefining `\lx@algorithmicx@item[]` here dropped an `\item[label]`'s label
+  // ("Require:" lost) and numbered `\Statex` (`\item[]`) lines. Guard
+  // `perfect_kernel_batch77s::algpseudocodex_require_shows_its_label`.
   DefMacro!(
-    "\\lx@algorithmicx@item[]",
-    "\\@ifnextchar\\nointerlineskip{}{\\lx@algpx@item}"
-  );
-  DefMacro!(
-    "\\lx@algpx@item",
-    "\\lx@algorithmicx@@item\\algpx@check@box\\algpx@firstLinefalse"
+    "\\lx@algorithmicx@item@hook",
+    "\\algpx@check@box\\algpx@firstLinefalse"
   );
 
   // Listing container with indLines class when \ifalgpx@indLines is active

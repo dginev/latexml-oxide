@@ -1,0 +1,15 @@
+% witness: 2309.03819, 2401.15504 (jgcc.cls:397 `\copyrightinfo{}{}`)
+% oracle:  pdflatex 0 errors; amsart.cls:723-725 `\@setcopyright` prints no copyright without a year (nor without a
+%          series logo)
+% engines: Perl `<date role="copyright">, </date>` (ams_support.sty.ltxml:139; KNOWN_PERL_ERRORS #959); rust 72a r2
+%          the same
+% expect:  0 errors, 0 warnings; no copyright date; with \copyrightinfo{2020}{Me} "2020, Me"
+% status:  RED (72a r2) -> GREEN (72a r3; guarded 72a r4)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\copyrightinfo{}{}
+\begin{document}
+\title{T}
+\maketitle
+Text.
+\end{document}

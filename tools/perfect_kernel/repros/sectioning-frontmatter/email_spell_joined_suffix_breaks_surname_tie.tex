@@ -1,0 +1,19 @@
+% A joined spelling that ends a word of the local part but does not open it (initial + surname, "ywang" in `xywang@`)
+%   is a weak spelling: it never breaks the tie between two names sharing the surname each "wang" spells — Yi Wang's
+%   `yiwang@` is his by "yiwang" opening the word, and `xywang@` then goes to Xiaoyu Wang by the elimination (one
+%   address and one name left), not to Yi Wang by "ywang" (review rev107f B1; brief 107f r2, the one boundary predicate).
+% witness: 2510.24320 (`\{tgui,qz,xjhuang\}@fudan.edu.cn` for Tao Gui, Qi Zhang, Xuanjing Huang: Jixuan Huang's
+%   "jhuang" gave `xjhuang@` to him)
+% oracle:  pdflatex 0 errors: "Yi Wang1, Xiaoyu Wang1", "1Univ. A", "yiwang@a.edu, xywang@a.edu"
+% engines: rust 107f r1 (2afa80e78b) = both addresses on Yi Wang; int139a4 (38d50d21d9) = xywang@ on Xiaoyu Wang
+% expect:  0 errors, 0 warnings; Yi Wang: Univ. A, yiwang@a.edu; Xiaoyu Wang: Univ. A, xywang@a.edu
+% status:  RED (107f r1) -> GREEN (107f r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Yi Wang$^{1}$, Xiaoyu Wang$^{1}$\\ $^{1}$Univ.\ A\\
+  \texttt{yiwang@a.edu, xywang@a.edu}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

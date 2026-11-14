@@ -1,0 +1,17 @@
+% mechanism: a `\thanks` opening with a raised number is cut before each top-level raised mark (`mark_led_pieces`,
+%   the API reader's cut), so an entry's own comma stays its text (`$^{1}$Dept A, Univ A, $^{2}$Univ B`), as the
+%   switch-off `\lx@add@thanks` cuts it (frontmatter_fields.rs, `starts_with_affiliation_mark`, OD #52) — with
+%   `=2` the reading cut only where its comma pieces were as many as its marks, else kept one note of the
+%   last name, every name's marks unanswered
+% witness: 2509.19480, 2505.06451, 2206.07648 (the KEY1 THANKS witnesses, unchanged); review revKEY1 finding 1
+% oracle:  pdflatex 0 errors: "Ann Able1,2, Bob Baker1 and Cat Cole3∗", the footnote "∗1Dept A, Univ A, 2Univ B, 3Univ C"
+% engines: off = Ann: Dept A, Univ A; Univ B; Bob: Dept A, Univ A; Cat: Univ C; `=2` (KEY1) = one note on Cat
+% expect:  0 errors 0 warnings; `=2` as off
+% status:  RED (KEY1 `=2`) -> GREEN (KEY1b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$, Bob Baker$^{1}$ and Cat Cole$^{3}$\thanks{$^{1}$Dept A, Univ A, $^{2}$Univ B, $^{3}$Univ C}}
+\maketitle
+Text.
+\end{document}

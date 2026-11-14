@@ -1,0 +1,21 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `=2`): a block written whole
+%   exempts only the words of the creator it became from the excess count (TeX's own digestion of it), never the rest of
+%   the paper's: a second author's name placed twice (its personname and its ORCID link's text) is counted
+% witness: review revN2 finding 2 (`placed.rs`: one block written whole turned off plain-word excess for the whole paper);
+%   the ORCID link's text a name, 2203.03523, 2306.13366; the block written whole, JAIR 1908.02923, 1109.6618
+% oracle:  pdflatex 0 errors; "Ann Able ann@a.org", "Bob Baker bob@b.org", "Univ A", "Town, Country and Cat Cole", "Univ C"
+% engines: rust int146b, the switch on: `Cat Cole` placed twice, 1 warning (the block written whole), no count
+% expect:  the switch on: 0 errors, 1 warning (the block written whole); since FX4 `Cat Cole` is placed once (the
+%          personname's ORCID link, no orcid contact), so no excess (until FX4: 2 warnings, the excess `Cat Cole`)
+% status:  RED (int146b) -> GREEN (perfect_kernel_batchn2r2::a_whole_block_exempts_only_its_own_creator; FX4)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able ann@a.org\\ Bob Baker bob@b.org\\ Univ A\\ Town, Country}
+\author{\href{https://orcid.org/0000-0001-5935-6018}{Cat Cole}}
+\affiliation{Univ C}
+\maketitle
+Body.
+\end{document}

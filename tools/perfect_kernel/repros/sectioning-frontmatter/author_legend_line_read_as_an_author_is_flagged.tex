@@ -1,0 +1,19 @@
+% A creator whose name is a legend's text (`also at …`, an institution word, lower case first): the detector counts
+% it (`flag_merged_creators`' `creator_not_a_name`), so such a creator is never silent.
+% witness: 1202.2048 (BESIII, elsarticle: 107b r1's creator "also at the Moscow Institute of Physics and Technology,
+%          Moscow, Russia" from the `$^{a}$` legend; review rev107b B2) — synthetic here, as that route is closed
+% oracle:  pdflatex 0 errors: "Ann Able", "also at the Moscow Institute of Physics"
+% engines: rust 107b r1 = two creators, the second named by the legend, 0 errors (silent); Perl the same; CAU1 and
+%          SBX1: one creator, Ann Able, the legend her affiliation, 0 errors 0 warnings (the route closed: the line
+%          after `\and` is no author)
+% expect:  0 errors 0 warnings; Ann Able, "also at the Moscow Institute of Physics" her affiliation (a name read
+%          from such a line keeps creator_not_a_name: perfect_kernel_batchsbx1's "now at the Theory Group" row)
+% status:  RED (107b r1) -> GREEN (107b r2) -> route closed (CAU1); no guard
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \and also at the Moscow Institute of Physics}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: authblk's labelled `\affil[*]{Corresponding author. …}` (`label={*},_labelprints=true`) is its carriers'
+%   note by the Kind step for a legend (`insert::kind_legend_contacts`, OD #961), which reads the label that prints; at
+%   `=2` the emitter replaced the label by the reading's and dropped `_labelprints`, so the legend stayed
+%   an affiliation. The emitter now writes the printed label as `_labelprints`'s value (`emitter::emit::rekeyed`), read
+%   by `insert::legend_mark`; `=2` only
+% witness: 2605.31330, 2606.17567, 2201.11910, 2602.03863, 2605.11756 (P2 NT)
+% oracle:  pdflatex 0 errors: "Ann Able a,* , Bob Baker a,† , and Cat Cole b,†", "a Univ A", "b Univ B",
+%   "* Corresponding author. E-mail: ann@a.org", "† These authors contributed equally to this work."
+% engines: off = the two legends notes of their carriers, ann@a.org Ann's e-mail; LO4 `=2` = both affiliations
+% expect:  0 errors 0 warnings; `=2` creators = off
+% status:  RED (LO4 `=2`) -> GREEN (P2)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[a,*]{Ann Able}
+\author[a,$\dagger$]{Bob Baker}
+\author[b,$\dagger$]{Cat Cole}
+\affil[a]{Univ A}
+\affil[b]{Univ B}
+\affil[*]{Corresponding author. E-mail: ann@a.org}
+\affil[$\dagger$]{These authors contributed equally to this work.}
+\begin{document}
+\maketitle
+Body.
+\end{document}

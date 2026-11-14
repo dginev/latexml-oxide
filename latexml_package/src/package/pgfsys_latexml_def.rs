@@ -346,6 +346,15 @@ fn tikz_alignment_bindings(
 LoadDefinitions!({
   // (protocol fix is applied at \pgfsys@invoke below)
 
+  // gnuplot-lua-tikz-common.tex:17-32 (gnuplot's lua terminal, shipped beside papers' plots) keys its output mode by the
+  // pgf driver file (`\gnuplot@select@driver@\pgfsysdriver`) and stops with "The driver pgfsys-latexml.def is not
+  // supported" (`\errmessage`) for one its table lacks. This driver's entry is `html`, the mode of
+  // pgfsys-tex4ht.def, the other driver writing SVG for the web: a plot's image file is `\pgfimage` (`\gploadimage`,
+  // :88-90), an inline raw image gnuplot's own "not implemented" warning (:79-83) — never the PDF/PostScript image
+  // operators of the `pdf`/`ps` modes (:50-77), which no SVG renders. The table's own `\def`s leave the entry alone
+  // (OXIDIZED_DESIGN_DIVERGENCES #702). Witness 2501.11366. Guard: `perfect_kernel_batch70a::gnuplot_lua_tikz_driver_mode`.
+  RawTeX!(r"\expandafter\def\csname gnuplot@select@driver@pgfsys-latexml.def\endcsname{html}");
+
   // Perl L29-31: image suffix list
   DefMacro!("\\pgfsys@imagesuffixlist",
     ".svg:.png:.gif:.jpg:.jpeg:.eps:.ps:.postscript:.ai:.pdf:");
@@ -360,14 +369,18 @@ LoadDefinitions!({
     let_i(&T_CS!("\\ignorespaces"), &T_CS!("\\lx@inpgf@ignorespaces"), None);
   });
 
-  // Perl L63: redefine ignorespaces inside PGF context
-  DefPrimitive!("\\lx@inpgf@ignorespaces SkipSpaces", None);
+  // Perl L63 `sub { (); }`: a body returning nothing, so no box reverts to the name in a node's `tex=`
+  // (1301.4725, 1305.4700, 1504.00121).
+  DefPrimitive!("\\lx@inpgf@ignorespaces SkipSpaces", {});
 
   // Perl L892-918: \lxSVG@halign — SVG matrix layout for tikz-cd and pgf matrix
   // Replaces \halign inside pgf/tikz contexts to produce <svg:g> elements
   // with transform matrices instead of <ltx:tabular/tr/td>.
   DefConstructor!("\\lxSVG@halign BoxSpecification",
     "#alignment",
+    // It takes the primitive's place (`\lxSVG@installcommands` lets `\halign` to it), so a document's `\halign` macro
+    // saved inside a picture ends with it (tex_tables.rs `run_halign_redefinition_prelude`; witness 2107.05054).
+    halign_primitive => true,
     bounded => true, leave_horizontal => true,
     sizer => sub[whatsit] {
       match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment_d)) => {
@@ -988,7 +1001,7 @@ LoadDefinitions!({
   // evaluation. Perl doesn't override \pgfsetdash (raw TeX works there),
   // but we override it following the same pattern as \pgfmathsetlength.
   DefPrimitive!("\\pgfsetdash{}{}", sub[(pattern_toks, offset_toks)] {
-    use crate::package::pgfmath_code_tex::pgfmathparse_eval_with_units;
+    use crate::package::pgfmath_code_tex::{pgfmathparse, pgfmathparse_expanded};
     // Step 1: Parse the dash pattern.
     // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid). Each top-level brace group is one
     // dimension, expanded as tokens (a group may hold a macro, `{\dl}`, which a string round-trip
@@ -1008,8 +1021,7 @@ LoadDefinitions!({
           depth -= 1;
           if depth == 0 {
             if !group.is_empty() {
-              let input = do_expand(Tokens::new(std::mem::take(&mut group)))?.to_string();
-              let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+              let (result_str, _units) = pgfmathparse(Tokens::new(std::mem::take(&mut group)))?;
               let value: f64 = result_str.parse().unwrap_or(0.0);
               // Convert to sp then format as pt dimension (matching \the\pgf@x)
               let dim = Dimension((value * 65536.0).round() as i64);
@@ -1029,11 +1041,8 @@ LoadDefinitions!({
     // round-trip turned into characters that pgfmath then read as a register name
     // ("\tikz@dashphase is not a register"; beautybook, 4,304× over the 3,003-paper A/B).
     let expanded = do_expand(offset_toks)?;
-    let offset_str = expanded.to_string();
-    let offset_str = offset_str.trim().to_string();
-    if !offset_str.is_empty() {
-      let input = offset_str;
-      let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+    if expanded.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE) {
+      let (result_str, _units) = pgfmathparse_expanded(expanded)?;
       let value: f64 = result_str.parse().unwrap_or(0.0);
       let dim = Dimension((value * 65536.0).round() as i64);
       assign_register("\\pgf@x", dim.into(), None, vec![])?;
@@ -1535,11 +1544,17 @@ LoadDefinitions!({
   DefMacro!("\\pgfsys@defineimage",
     "\\edef\\pgf@image{\\lxSVG@includegraphics{\\pgf@imagewidth}{\\pgf@imageheight}{\\pgf@filename}}");
 
-  // Perl L597-623: \lxSVG@includegraphics — simplified
-  // The full Perl version has complex beforeConstruct/afterConstruct for foreignObject
-  // wrapping. For now, just emit the graphics element.
+  // Perl L597-628: \lxSVG@includegraphics, pgf's image — `\pgfimage`, and the file tikz's `external` library
+  // includes for a picture (`mode=graphics if exists`, tikzlibraryexternal_code_tex.rs). Its candidates are the files
+  // the graphics search finds (Perl `pathname_findall($graphic, types => ['*'], paths => GRAPHICSPATHS)` relative to
+  // the source directory: `image_candidates`), and its box is the file's size under the width/height keys (`sizer =>
+  // \&image_graphicx_sizer`). Red (int83a): no candidates, so post had no file to render and every externalized
+  // figure was an `ltx_missing_image` (2302.00752: 18 figures shipped as `SFTforPDE-figure<N>.pdf`; 1905.03839,
+  // 1506.05333). Perl's beforeConstruct/afterConstruct open an svg:foreignObject when none is open; here the
+  // document auto-opens one inside a picture, and outside a picture none is wanted (Perl's errs: "<svg:foreignObject>
+  // isn't allowed in <ltx:p>"). Guard: `perfect_kernel_batch79k::an_externalized_tikz_figure_finds_its_file`.
   DefConstructor!("\\lxSVG@includegraphics{}{} Semiverbatim",
-    "<ltx:graphics graphic='#3' options='#options'/>",
+    "<ltx:graphics graphic='#graphic' candidates='#candidates' options='#options'/>",
     properties => sub[args] {
       let w = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let h = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
@@ -1548,9 +1563,13 @@ LoadDefinitions!({
       if !w.is_empty() { options_parts.push(format!("width={}", w)); }
       if !h.is_empty() { options_parts.push(format!("height={}", h)); }
       let options = options_parts.join(",");
-      let candidates = graphic.clone();
+      let candidates = util::image::image_candidates(&graphic);
       Ok(stored_map!("graphic" => graphic, "candidates" => candidates, "options" => options))
-    }
+    },
+    after_digest => sub[whatsit] {
+      util::image::image_graphicx_sizer(whatsit);
+    },
+    alias => "\\includegraphics"
   );
 
   //===================================================================

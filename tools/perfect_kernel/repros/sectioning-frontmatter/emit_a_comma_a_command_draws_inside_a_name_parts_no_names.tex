@@ -1,0 +1,23 @@
+% mechanism: the ink one command draws inside a word is the word's letters (row A2; the reading's
+%   `lines::words_through_one_command`): combelow's `\cb{t}` stacks a `t` over a comma in an alignment, so the lexer's
+%   comma and the alignment's row break inside the command's cover part no names; the old reader reads `\cb{t}` as one
+%   token group
+% witness: 2507.13598 (`Bogdan Rai\cb{t}\u{a}\textsuperscript{2} \quad Sarah Adel Bargal\textsuperscript{1} \\`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1", "Bogdan Rait, ă2 Sarah Adel Bargal1" (pdftotext's reading of ț)
+% engines: rust MV1, the switch on: the second names line read as every author's affiliation, two creators lost;
+%   off: "Bogdan Rai t , ă" a creator
+% expect:  0 errors, 0 warnings; the switch on: four creators, "Bogdan Raită" one name (written from its tokens)
+% status:  RED (MV1, the switch on) -> GREEN
+%   (perfect_kernel_batchnl1::a_comma_a_command_draws_inside_a_name_parts_no_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{combelow}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1} \quad Bob Baker\textsuperscript{1} \\
+  Bogdan Rai\cb{t}\u{a}\textsuperscript{2} \quad Sarah Adel Bargal\textsuperscript{1} \\
+  \textsuperscript{1}Univ A \\
+  \textsuperscript{2}Univ B}
+\maketitle
+x
+\end{document}

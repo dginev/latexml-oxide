@@ -15,11 +15,12 @@ Stuff, More Stuff
 </keywords>
   <section inlist="toc" xml:id="S1">
     <tags>
-      <tag>I</tag>
+      <tag>I.</tag>
       <tag role="refnum">I</tag>
       <tag role="typerefnum">§I</tag>
     </tags>
-    <title><tag close=" ">I</tag><text font="smallcaps">A Theorem</text></title>
+    <title><tag close=" ">I.</tag><text font="smallcaps">A Theorem</text></title>
+    <toctitle><tag close=" ">I</tag>A Theorem</toctitle>
     <theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" labels="LABEL:th1" xml:id="Thmtheorem1">
       <tags>
         <tag>Theorem 1</tag>
@@ -44,11 +45,12 @@ Stuff, More Stuff
   </section>
   <section inlist="toc" xml:id="S2">
     <tags>
-      <tag>II</tag>
+      <tag>II.</tag>
       <tag role="refnum">II</tag>
       <tag role="typerefnum">§II</tag>
     </tags>
-    <title><tag close=" ">II</tag><text font="smallcaps">IEEE style eqnarray</text></title>
+    <title><tag close=" ">II.</tag><text font="smallcaps">IEEE style eqnarray</text></title>
+    <toctitle><tag close=" ">II</tag>IEEE style eqnarray</toctitle>
     <para xml:id="S2.p1">
       <p>Normal numbering.</p>
       <equationgroup class="ltx_eqn_eqnarray" xml:id="S2.EGx1">

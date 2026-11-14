@@ -1,0 +1,20 @@
+% mechanism: an svjour3 `\author` cut by a macro `\sep` = ` \and\relax`: the cut leaves the separator's word in the
+%   next name ("and Bob Baker") (revP24b pre-existing, probe c3/s_sep2)
+% witness: synthetic (revP24b; by shape only elsarticle 2408.03242 `\newcommand{\sep}{\and}`, whose names are right)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2312.14898's svjour3.cls and svglov3.clo) 0 errors: "Ann Able · Bob
+%   Baker", "Univ X"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("appear … more often than the author blocks
+%   print them: and"); creators "Ann Able", "and Bob Baker", a nameless creator holding Univ X; perl not run
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker (Univ X as today's nameless institute creator); no "and"
+%   in a name
+% status:  RED (int158a; RR1 gap 17)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\newcommand\sep{ \and\relax}
+\begin{document}
+\title{T}
+\author{Ann Able \sep Bob Baker}
+\institute{Univ X}
+\maketitle
+Text.
+\end{document}

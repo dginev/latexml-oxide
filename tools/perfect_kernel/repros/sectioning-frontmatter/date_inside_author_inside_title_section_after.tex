@@ -1,0 +1,19 @@
+% mechanism: as date_inside_author_inside_title_over_later_date.tex, with a `\section` after `\maketitle`: the late
+%   block's recovered date was queued for the next flush, which the section's closing of the frontmatter never ran, so
+%   the date was dropped with no Warning and the outer `\date` printed. It is now placed at the end of the outermost
+%   flush, after its own queue (`emitter::emit::defer_to_flush_end`, `place::digest_front_matter`).
+%   OXIDIZED_DESIGN_DIVERGENCES #985
+% witness: review revCR4 finding 3 (probe d11); nearly every paper has a section after `\maketitle`
+% oracle:  pdflatex 0 errors: "A Title" / "Ann Able" / "Dinner One" / "1 S" / "Body."
+% engines: int154w, CR4: <date>Dinner Two</date>, "Dinner One" dropped, no Warning
+% expect:  0 errors; <date role="creation">Dinner One</date>; 1 Warning, the title-page check's "unclaimed: two" (as d2)
+% status:  RED (CR4) -> GREEN (CR4b; guard perfect_kernel_batchcr4b::date_inside_author_inside_title_section_after)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title \author{Ann Able \date{Dinner One}}}
+\date{Dinner Two}
+\maketitle
+\section{S}
+Body.
+\end{document}

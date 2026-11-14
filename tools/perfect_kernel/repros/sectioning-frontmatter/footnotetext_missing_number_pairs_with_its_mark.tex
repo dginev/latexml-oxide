@@ -1,0 +1,14 @@
+% mechanism: `\footnotetext[<n>]` sets `\c@mpfn` to `<n>` (latex.ltx:17694-17699): `\value` of a counter not yet
+%   defined is TeX's "Missing number, treated as zero", the text marked 0 as the `\footnotemark[\value{nosuch}]` it
+%   answers, so the two pair (`tex_footnote_number`, `footnote_pairing`'s `_fnvalue` 0) and the real `\footnote` keeps 1.
+% witness: synthetic (revGA1e B1, its probe f1: `\footnotemark[\value{nosuch}]` silent and empty)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 2 `!` ("Missing number, treated as zero."): "Text0 and more1 .",
+%   footnotes "1 Real.", "0 Paired."
+% engines: rust int163a, GA1e 0 errors, 0 warnings: an empty mark and an unpaired footnotetext "Paired."; GA1f 0 errors,
+%   2 warnings
+% expect:  2 "Missing number" Warnings; a footnote marked 0 holding "Paired.", the footnote 1 "Real."
+% status:  RED (int163a, GA1e) -> GREEN (GA1f)
+\documentclass{article}
+\begin{document}
+Text\footnotemark[\value{nosuch}] and more\footnote{Real.}.\footnotetext[\value{nosuchb}]{Paired.}
+\end{document}

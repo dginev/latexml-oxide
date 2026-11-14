@@ -1,0 +1,17 @@
+% witness: sel78d item 2 (17/30k IEEEtran papers with \appendix[...]); rev78c2 probe i2; IEEEtran.cls:5719-5745
+%          \appendix[<title>] (counters reset, \thesection "A", the heading "Appendix \\* <title>"); KPE #1022 residual
+% oracle:  pdflatex 0 errors: "I. INTRO", "A. Sub", refs "I, I-A, A, A, 1"; "APPENDIX" "PROOF", "A. Lemma", "(1)"
+% engines: rust int45b = "[Proof]" a paragraph of the subsection, no appendix heading, the next subsection "B." refnum "B"
+% expect:  0 errors; one appendix, refnum "A", tag "Appendix", title "Proof"; its subsection "A." (refnum "A")
+% status:  RED (int45b) -> GREEN (78d)
+\documentclass{IEEEtran}
+\begin{document}
+\section{Intro}\label{s1}
+\subsection{Sub}\label{s11}
+Refs: \ref{s1}, \ref{s11}, \ref{a1}, \ref{a11}, \ref{e1}.
+\appendix[Proof]
+\label{a1}
+\subsection{Lemma}\label{a11}
+Text.
+\begin{equation}x=y\label{e1}\end{equation}
+\end{document}

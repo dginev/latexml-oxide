@@ -1,0 +1,17 @@
+% mechanism: as revtex_affiliation_requested_isotope_digit_takes_the_wrong_owner_red, on the kernel `\author`'s in-block
+%   lines: `${\rm ^{3}He}$` mid-line under `Cat Cole$^{3}$`, a line of its own led by `$^{3}$`
+% witness: synthetic (revISO1b P1, probe k4)
+% oracle:  pdflatex (TL 2025 article) 0 errors: "1Univ X / 2Univ Y, 3He Lab / 3Univ Z"
+% engines: rust int160c = ISO1b = ISO1c = 0 errors, 0 warnings: Baker "Univ Y", Cat "³He Lab" and "Univ Z" (wrong owner,
+%   uncounted)
+% expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y, ³He Lab"; Cat "Univ Z"
+% status:  RED (int160c, ISO1b, ISO1c)
+% moves:   P4c makes it a row of perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{3}$\\ $^{1}$Univ X\\ $^{2}$Univ Y, ${\rm ^{3}He}$ Lab\\ $^{3}$Univ Z}
+\maketitle
+Text.
+\end{document}

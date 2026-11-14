@@ -1,0 +1,23 @@
+% mechanism: `\footnotemark[<n>]`, `\footnote[<n>]` set `\c@mpfn` to `<n>` (latex.ltx:17652-17657, :17678-17682): an
+%   `<n>` that is no number and leaves nothing to print (`\relax`, `\value` of a counter not yet defined, latex.ltx:10127)
+%   is TeX's "Missing number, treated as zero", the mark `\thefootnote` at 0 ("0", `\fnsymbol` nothing). Ours
+%   (`tex_footnote_number`) reads it by the `\setcounter` siblings' reader; a number then `\relax` is the number. A mark
+%   that prints something (`$\dagger$`) or a blank one stays as given, with no diagnostic (OXIDIZED_DESIGN_DIVERGENCES
+%   #851; the blank: footnotemark_blank_is_tex_zero_red).
+% witness: 2407.13730, 2606.19583 (`\footnoterecall` = `\footnotemark[\value{uni}]` read before its `\newcounter`,
+%   footnoterecall_counter_defined_by_an_earlier_creator_red; int163a counted the empty mark by `\value`'s "assuming 0")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 7 `!` ("Missing number, treated as zero."): "A0 B0 D2 E†0 F0 G H.",
+%   "I J†", footnote "0 Body."
+% engines: rust int163a 0 errors, 2 warnings, GA1e 0 errors, 2 warnings (both: A, B, F and I marks empty, the three
+%   `\footnotemark`s and the `\footnote` silent); GA1f 0 errors, 6 warnings
+% expect:  6 "Missing number" Warnings (the core's severity; E's `$\dagger$` silent, #851); marks 0, 0, 2, †, 0 (with
+%   "Body."), nothing, †
+% status:  RED (int163a, GA1e) -> GREEN (GA1f)
+\documentclass{article}
+\begin{document}
+A\footnotemark[\value{nosuch}] B\footnotemark[\relax] D\footnotemark[2\relax] E\footnotemark[$\dagger$]
+F\footnote[\relax]{Body.}
+G\setcounter{footnote}{\value{nosuchb}} H\setcounter{footnote}{\relax}.
+
+\renewcommand\thefootnote{\fnsymbol{footnote}}I\footnotemark[\value{nosuchc}] J\footnotemark[2].
+\end{document}

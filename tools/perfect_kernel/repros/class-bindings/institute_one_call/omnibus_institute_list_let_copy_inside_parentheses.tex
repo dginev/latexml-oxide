@@ -1,0 +1,28 @@
+% mechanism: inst_support_sty.rs `\institute` (OmniBus: `nosuchclass`) cuts its list first at the kernel's `\and` by
+%   meaning, then each segment by spelling at `\and`/`\And`, no token rewritten (`\lx@splitting@by@meaning`,
+%   `split_at_kernel_separators`; Option C P2-2, P22c, OD #995) — a `\let` copy of the kernel's `\and`, made before the
+%   document renews `\and`, inside balanced parentheses (which the spelling split protects): cut there, as TeX's column
+%   break parts them; the renewed literal `\and` keeps the spelling's cut (trap T8): three pieces, one call each
+% witness: synthetic (review revP22b B1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, `article` for the missing class, with `\providecommand` of `\inst`,
+%   `\email` and `\institute` (appending its list to `\@author`) added for it only, OD #408) 0 errors: "Univ A (North"
+%   under the names, then a column break at the copy, "South), Town" in the next column — neither "and" nor ","
+% engines: Perl 0.8.8 splits by spelling (inst_support.sty.ltxml:36-38) and misses the copy;
+%   int158a (2ff10b7ff9): "Univ A (North and South), Town" written for Ann Able and Bob Baker, 0 errors, 2 warnings
+%   (the content check counts the invented "and");
+%   P22b (9ccabf4923): the copy rewritten as `\and`, which the split protected and which printed the renewed ", ":
+%   "Univ A (North, South), Town" for both, 0 errors, 1 warning
+% expect:  0 errors, 1 warning (the missing class binding); Ann Able: Univ A (North, e-mail ann@a.org; Bob Baker:
+%   South), Town; the third piece, Univ B, no author's (no `\inst{3}`)
+% status:  GREEN (P22c; guard perfect_kernel_batchp22b::a_kernel_and_inside_parentheses_cut_where_it_stands)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\let\myand\and \renewcommand\and{\unskip, }
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A (North \myand South), Town\\ \email{ann@a.org} \and Univ B}
+
+\maketitle
+Text.
+\end{document}

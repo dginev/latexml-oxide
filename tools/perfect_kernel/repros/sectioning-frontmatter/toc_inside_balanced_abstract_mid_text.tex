@@ -1,0 +1,20 @@
+% A `\tableofcontents` in the middle of a balanced `{abstract}`: the TOC goes after the abstract (`ltx:abstract`
+% admits none), and the text after it stays the abstract's, a paragraph of its own (the TOC is a `\section*` in
+% article.cls: it ends the paragraph).
+% witness: 1602.08755
+% oracle:  pdflatex 0 errors: "Abstract First text. Contents 1 Intro Second text.", then "1 Intro Body."
+% engines: rust 67int23b = 1 Error (malformed:ltx:TOC in ltx:p); Perl the same
+% expect:  0 errors, 0 warnings; ltx:abstract = p "First text.", p "Second text."; the ltx:TOC its next sibling
+% status:  RED (67int23b) -> GREEN (74a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\begin{abstract}
+First text.
+\tableofcontents
+Second text.
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

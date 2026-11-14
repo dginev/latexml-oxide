@@ -1,0 +1,23 @@
+% witness: 2202.02533's family (IEEEtran census, 36 papers whose entry address spells no one: `owner:only-carrier`),
+%          0707.1008 (`\IEEEauthorblockA{ETH Zurich\\ CH-8092 Zurich, Switzerland\\ Email: lapidoth@isi.ee.ethz.ch}`)
+% oracle:  pdflatex (TL 2025): two columns, "Ann Able / Univ X / Email: office@x.org" and "Bob Baker / Univ Y /
+%          Email: bob@y.org"
+% engines: rust int124a = the shadow right (office@x.org the entry's only carrier's, `owner:only-carrier`), the
+%          writer declining it: `owner:entry-address` was no change tag (OD #938 names it one), so only a spelled
+%          address was written
+% expect:  0 errors, 0 warnings; Ann Able "Univ X" office@x.org, Bob Baker "Univ Y" bob@y.org, written
+% status:  RED (int124a) -> GREEN (95b) — perfect_kernel_batch95b::an_entry_address_of_its_only_carrier_is_written
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\IEEEauthorblockA{Univ X\\
+Email: office@x.org}
+\and
+\IEEEauthorblockN{Bob Baker}
+\IEEEauthorblockA{Univ Y\\
+Email: bob@y.org}}
+\maketitle
+Text.
+\end{document}

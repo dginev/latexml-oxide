@@ -176,6 +176,11 @@ LoadDefinitions!({
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {
+  // A length register the document allocates (`\newdimen`, `\newskip`): the panel grid rule's
+  // `note_length_allocated`.
+  if matches!(address_type, "\\dimen" | "\\skip") {
+    crate::latex_constructs::note_length_allocated(&cs);
+  }
   // Let w/o AfterAssign
   let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
   assign_meaning(&cs, relax_meaning, None);

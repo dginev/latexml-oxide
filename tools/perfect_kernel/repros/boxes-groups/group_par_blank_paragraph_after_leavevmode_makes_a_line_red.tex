@@ -1,0 +1,22 @@
+% witness: synthetic (revRG1b P1)
+% oracle:  pdflatex 0 errors: P1-P4 =12.0pt, D=0.0pt (`\showbox`: the indent box's line, then x's 12pt below);
+%          P5=0.0pt, D5=12.0pt (a [t] minipage, the indent's line on top); P6=8.39996pt, D6=15.60004pt (a p-cell)
+% engines: rust rg1c = int162a = rg1b: P1-P5 4.30554pt, D 0.0pt (x's line only), P6 8.4pt, D6 3.6pt; rg1: P1, P3
+%          12.0pt, P5 0.0pt+12.0pt (its empty_line, RG1b's B1, by accident right here)
+% expect:  0 errors; the oracle's values
+% status:  RED: a paragraph begun by `\leavevmode` or `\indent` and ended by a `\par` inside a group (or right after an
+%          empty group) makes no line for its indent box. moves: post-merge
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\leavevmode{ \par}x}P1=\the\ht0, D1=\the\dp0.
+
+\setbox0\vbox{\leavevmode{\par}x}P2=\the\ht0, D2=\the\dp0.
+
+\setbox0\vbox{\indent{ \par}x}P3=\the\ht0, D3=\the\dp0.
+
+\setbox0\vbox{\leavevmode{}\par x}P4=\the\ht0, D4=\the\dp0.
+
+\setbox0\hbox{\begin{minipage}[t]{3cm}\leavevmode{ \par}x\end{minipage}}P5=\the\ht0, D5=\the\dp0.
+
+\setbox0\hbox{\begin{tabular}[t]{p{3cm}}\leavevmode{ \par}x\end{tabular}}P6=\the\ht0, D6=\the\dp0.
+\end{document}

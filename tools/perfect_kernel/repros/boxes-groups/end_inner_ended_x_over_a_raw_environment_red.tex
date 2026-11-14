@@ -1,0 +1,16 @@
+% mechanism: an inner `\end{X}` already ended by the `\end{X}`-over-plain-groups branch, then a raw environment's
+%   frame between the next `\end{X}` and the outer X: TeX's second `\end{center}` closes the inner center's group, still
+%   open after the first; ours stops its walk at the raw `\begin{bad}` frame and refuses (stomach.rs
+%   end_environment_over_plain_groups; review rev98d2 finding 1, synthetic, better than base)
+% witness: none (review rev98d2 probe q1)
+% oracle:  pdflatex (TL 2025) 0 errors: "A words. B words. C words.D words. E words."
+% engines: rust int132a1 5 errors, 1 warning; 98d round 1 1 E / 1 W (by ending the outer center, wrongly); 98d round 2
+%          3 E / 1 W; perl not run
+% expect:  0 errors; the five sentences in TeX's centred blocks
+% status:  RED (98d r2) — open, SYNC row 98d; no guard
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{bad}{\begingroup}{\endgroup}
+\begin{document}
+\begin{center}\begin{bad}\begin{center}\begingroup A words.\end{center}B words.\end{center}C words.\end{bad}D words.\end{center}E words.
+\end{document}

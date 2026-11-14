@@ -1,0 +1,15 @@
+% witness: reviewer probe for batch 66f (sbx341/review/p/nat1.tex); 2606.16139 / 2606.30583 shape
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; \Citet is defined under biblatex's natbib=true (blx-natbib.def)
+% mechanism: biblatex's natbib option loads blx-natbib.def, which defines the natbib commands including the
+%   capitalised ones; our biblatex binding's natbib compatibility leaves \Citet undefined.
+% status:  RED
+\documentclass{article}
+\usepackage[natbib=true]{biblatex}
+\begin{filecontents*}{\jobname.bib}
+@article{a, author={A. Aa}, title={T}, journal={J}, year={2023}}
+\end{filecontents*}
+\addbibresource{\jobname.bib}
+\begin{document}
+\citealp{a}, \citep{a}, \Citet{a}.
+\end{document}

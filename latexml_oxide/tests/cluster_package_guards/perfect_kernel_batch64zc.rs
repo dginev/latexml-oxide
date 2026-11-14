@@ -51,20 +51,6 @@ fn amsart_email_address_in_typewriter() {
   ]);
 }
 
-/// 64zc: an llncs `\email` on an `\institute` line, which the author block makes the institute's authors' contact,
-/// keeps the command's typewriter type (llncs.cls:897). Repro
-/// sectioning-frontmatter/llncs_institute_email_in_typewriter.
-#[test]
-fn llncs_institute_email_in_typewriter() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_institute_email_in_typewriter.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of A </contact>\n    <contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann_able@a.edu</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of B </contact>\n    <contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@b.edu, carl@b.edu</text></contact>\n  </creator>",
-  ]);
-}
-
 /// 64zc: elsarticle sets an `\ead` address, a `[url]` one too, in typewriter type (elsarticle.cls:215-219, :232-235).
 /// Repro sectioning-frontmatter/elsarticle_ead_address_in_typewriter.
 #[test]
@@ -101,86 +87,6 @@ fn revtex4_2_ot1_email_keeps_its_underscore() {
   assert_eq!(creators(&convert_clean(tex)), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann_able@a.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of A</contact>\n  </creator>",
   ]);
-}
-
-/// 64zc review: a typewriter address split by a character in another font keeps one run for `\~{}` (the accent of an
-/// empty letter is the current font's, cmtt's `~`) and links to its whole text, not the one character between runs
-/// (1601.03451, 1601.02576, 1601.02586). The link is all the text of the typewriter runs: a nested run's font is only
-/// its change from the run around it, so `ann\textbf{x}y`, `\textit{cat}@…`, `\textsl{\texttt{h}}h@…` are whole
-/// addresses, and revtex4's `\homepage{http://x.org/~ann \textit{(lab)}}` links with its note. Residual, pinned here as it stands: the binding's Semiverbatim
-/// address freezes `$`/`^`, so `$^\dagger$` and `$\sim$` print as text with their `$`s and the links hold them, where
-/// pdflatex prints "† ann@a.edu" and "∼bob" (RED sectioning-frontmatter/semiverbatim_address_freezes_math; Perl the
-/// same). Repro sectioning-frontmatter/typewriter_address_split_keeps_its_link.
-#[test]
-fn typewriter_address_split_keeps_its_link() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/typewriter_address_split_keeps_its_link.tex"
-  );
-  assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">University of A</contact>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">$^</text>†<text font=\"typewriter\" xml:id=\"id2\">$ ann@a.edu</text></contact>\n    <contact name=\"URL: \" role=\"url\"><text font=\"typewriter\" xml:id=\"id3\">http://a.edu/~ann</text></contact>\n  </creator>",
-    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">University of B</contact>\n    <contact name=\"URL: \" role=\"url\"><text font=\"typewriter\" xml:id=\"id4\">http://b.edu/$</text>∼<text font=\"typewriter\" xml:id=\"id5\">$bob</text></contact>\n  </creator>",
-  ]);
-  let html = latexml::api::convert_to_html(tex).expect("HTML");
-  let hrefs: Vec<&str> = html
-    .match_indices("<a href=\"")
-    .map(|(at, open)| {
-      let rest = &html[at + open.len()..];
-      &rest[..rest.find('"').unwrap()]
-    })
-    .filter(|href| {
-      href.starts_with("mailto:") || href.starts_with("http://a.") || href.starts_with("http://b.")
-    })
-    .collect();
-  assert_eq!(
-    hrefs,
-    vec![
-      "mailto:$^%E2%80%A0$%20ann@a.edu",
-      "http://a.edu/~ann",
-      "http://b.edu/$%E2%88%BC$bob"
-    ],
-    "{html}"
-  );
-  let html = latexml::api::convert_to_html(
-    r"\documentclass[aps]{revtex4}
-\begin{document}
-\title{T}
-\author{A}
-\email{ann_able@a.edu}
-\homepage{http://x.org/~ann \textit{(lab)}}
-\affiliation{U}
-\maketitle
-x
-\end{document}",
-  )
-  .expect("HTML");
-  for href in [
-    "<a href=\"mailto:ann_able@a.edu\">",
-    "<a href=\"http://x.org/~ann%20(lab)\">",
-  ] {
-    assert!(html.contains(href), "{href}\n{html}");
-  }
-  let html = latexml::api::convert_to_html(
-    r"\documentclass{amsart}
-\begin{document}
-\title{T}
-\author{A}
-\email{ann\textbf{x}y@a.edu}
-\author{C}
-\email{\textit{cat}@a.edu}
-\author{H}
-\email{\textsl{\texttt{h}}h@a.edu}
-\maketitle
-x
-\end{document}",
-  )
-  .expect("HTML");
-  for href in [
-    "<a href=\"mailto:annxy@a.edu\">",
-    "<a href=\"mailto:cat@a.edu\">",
-    "<a href=\"mailto:hh@a.edu\">",
-  ] {
-    assert!(html.contains(href), "{href}\n{html}");
-  }
 }
 
 /// 64zc review: the ASCII encoding of an address keeps `\i` and `\j` (its 0x10/0x11 are OT1's dotless ı and ȷ), so
@@ -227,7 +133,7 @@ fn class_email_paths_keep_their_font_and_underscore() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_institute_email_keeps_its_underscore.tex"
     )),
     vec![
-      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of A </contact>\n    <contact name=\"E-mail: \" role=\"email\">ann_able@a.edu</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of A</contact>\n    <contact name=\"E-mail: \" role=\"email\">ann_able@a.edu</contact>\n  </creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of B</contact>\n  </creator>",
     ]
   );

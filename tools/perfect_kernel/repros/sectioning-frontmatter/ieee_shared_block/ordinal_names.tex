@@ -1,0 +1,22 @@
+% mechanism: the writer's re-part takes a name's marks out (as the reading has them), so an IEEE ordinal
+%   (`1\textsuperscript{st} Ann Able`) would print "1 Ann Able"; the re-part gate (`emitter/repart.rs`) accepts the API's
+%   run items (`api:annotate:new`) only when no name of today's prints a mark before its first word — today's stays
+%   (the CONTROL of `starred_names_one_line`)
+% witness: 2503.04159, 1806.11431, 2406.04658
+% oracle:  pdflatex 0 errors: "1st Ann Able / Univ X" and "2nd Bob Baker 3rd Cy Cole / Univ Y"
+% engines: rust int130a, 104a: as written, the second block one creator; a gate accepting every API run item:
+%   "1 Ann Able", "2 Bob Baker 3rd", "Cy Cole"
+% expect:  0 errors, 0 warnings; the ordinals kept in every name
+% status:  GREEN (104a r2; the ordinal names' re-part a residual, SYNC row 104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{1\textsuperscript{st} Ann Able}
+\IEEEauthorblockA{\textit{Univ X}\\ ann@x.edu}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Bob Baker {3\textsuperscript{rd} Cy Cole}}
+\IEEEauthorblockA{\textit{Univ Y}\\ \{bob, cy\}@y.edu}}
+\maketitle
+Text.
+\end{document}

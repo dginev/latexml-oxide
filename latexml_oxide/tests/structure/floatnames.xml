@@ -51,7 +51,7 @@ Check: Macro flippyname is NOT defined.</p>
     </tags>
     <p>A Floppy!</p>
     <toccaption><tag close=" ">1</tag>Something that flops</toccaption>
-    <caption><tag close=" ">Floppy 1</tag>Something that flops</caption>
+    <caption><tag close=": ">Floppy 1</tag>Something that flops</caption>
   </float>
   <para xml:id="p2">
     <p>See the <ref labelref="LABEL:flp2"/>.

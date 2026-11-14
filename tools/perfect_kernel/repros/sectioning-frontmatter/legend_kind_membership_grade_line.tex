@@ -1,0 +1,21 @@
+% A marked line that is a membership grade ("Senior Member, IEEE", IEEE_lsens's `\IEEEauthorieeemembermark{2}` line, a
+% raw class's mark) is its carriers' membership contact, as IEEEtran's `\IEEEmembership` makes one, not an affiliation;
+% an affiliation set as a link that prints no URL (`\href{https://a.edu}{Univ A, City A}`, 1812.03371) stays one.
+% witness: 2310.02678, 2505.15137
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Bell2*", "1 Univ A, City A", "2 Univ B, City B", "* Senior Member, IEEE"
+% engines: rust int134b = 0 errors; Bob holds "Senior Member, IEEE" as an affiliation; perl = an affiliation
+% expect:  0 errors, 0 warnings; Ann Univ A; Bob Univ B and the membership "Senior Member, IEEE"
+% status:  RED (int134b) -> GREEN (106b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\newcommand{\membermark}[1]{\textsuperscript{*}}
+\title{Grade line}
+\author{Ann Able$^{1}$ and Bob Bell$^{2}$\membermark{1}\\
+$^{1}$\href{https://a.edu}{Univ A, City A}\\
+$^{2}$Univ B, City B\\
+\membermark{1}Senior Member, IEEE}
+\begin{document}
+\maketitle
+Text.
+\end{document}

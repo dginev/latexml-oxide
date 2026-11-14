@@ -1,0 +1,15 @@
+% mechanism: an IEEEtran (journal) `\author` whose `\and` is spelled `\csname and\endcsname`: the kernel's block
+%   (`\lx@add@authors`) holds no `\and` token; the rehearsal digests the `\csname` to the separator and the reading
+%   cuts the block at that `Sep(And)`
+% witness: OC1's spelling probe of bindsplit ie1 (the `\csname` spelling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able Bob Baker", two names
+% engines: int156a (MB1): two creators
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker
+% status:  GREEN (int156a, before OC1; guard perfect_kernel_batchoc1)
+\documentclass{IEEEtran}
+\title{T}
+\author{Ann Able \csname and\endcsname Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

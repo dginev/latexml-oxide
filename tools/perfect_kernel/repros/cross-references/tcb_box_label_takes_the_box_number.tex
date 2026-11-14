@@ -1,0 +1,20 @@
+% witness: 2505.20088, 2311.09542, 2509.17784, 2602.03411, 2606.06976 (`\newtcolorbox[auto counter]`), 2402.06608, 2506.01072 (`\newtcbtheorem`) (tcolorbox.sty:2311 `\refstepcounter{\tcbcounter}` in the phantom code, :998 `label`, :1154-1161, :1925)
+% oracle:  pdflatex 0 errors; "See 1, 2.1, 1 and 2." (newlabel th:a {1}, lm:b {2.1}, rb:a {1}, box:a {2}: the uncounted box keeps the section's)
+% engines: rust (int47a) = "See 2, 2, 2 and 2." (every label on section S2); Perl 0.8.8 the same (KNOWN_PERL_ERRORS #1038)
+% expect:  0 errors; th:a, lm:b, rb:a on their box pictures with refnum 1, 2.1, 1; box:a on S2; `\ref`s print "1, 2.1, 1 and 2"
+% status:  GREEN (78g)
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{theorems}
+\newtcbtheorem{thm}{Theorem}{}{th}
+\newtcbtheorem[number within=section]{lem}{Lemma}{}{lm}
+\newtcolorbox[auto counter]{rawbox}[1][]{title={Box \thetcbcounter},#1}
+\begin{document}
+\section{One}
+\section{Two}
+\begin{thm}{Title}{a}Body.\end{thm}
+\begin{lem}{Within}{b}Body.\end{lem}
+\begin{rawbox}[label=rb:a]Inside.\end{rawbox}
+\begin{tcolorbox}[label=box:a]Uncounted.\end{tcolorbox}
+See \ref{th:a}, \ref{lm:b}, \ref{rb:a} and \ref{box:a}.
+\end{document}

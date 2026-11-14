@@ -1,0 +1,28 @@
+% witness: oz.sty:45, :289-310 (`\DeclareSymbolFont{AMSb}{U}{msb}{m}{n}`, `\DeclareMathSymbol\nleqslant{\mathrel}{AMSb}
+%          {"0A}` … `\nsupseteqq` "23), zed-csp.sty:61, :231-232; amsfonts.sty:89 and amstex.sty:1939 (`\dabar@` at
+%          msam "39); amsfonts' `\newsymbol\ngeqq 2315` reaches the same `\DeclareMathSymbol` (amsfonts.sty:117-138);
+%          89c r2's sweep (each of the 423 reference names declared at its own slot of its own font: 6 msbm names
+%          and `\dabar@` lost to the draft rule)
+% oracle:  pdflatex: "a ⩽̸ b, a ≧̸ b, a ⫅̸ b, a ╌╌ b" (msbm10 "0A, "15, "22, msam10 "39, each the font's glyph;
+%          pdftotext reads the dash bars as `99`, no ToUnicode), 0 errors
+% engines: rust 89c r2 draft (the no-map rule for symbols too; by the sweep) = U+FFFD and the fonts' Warnings; rust
+%          int120a and 89c r1 = 0 warnings, the binding's tokens; perl 0.8.8 = 0 warnings, the three pairs (no
+%          meaning), the dash bars an empty token
+% expect:  0 errors, 0 warnings: each the token LaTeXML's own amssymb binding makes of the name (⩽̸ RELOP
+%          `not-less-than-nor-equals`, …, `\dabar@` ╌) — the msam/msbm maps have no single character for these glyphs,
+%          but the fonts have them, so they are no gaps (sect08.rs `symbol_font_lacks_slot`; OXIDIZED_DESIGN_DIVERGENCES
+%          #910)
+% status:  GREEN (int120a, 89c r1) -> RED (89c r2 draft) -> GREEN (89c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsfonts}
+\makeatletter
+\DeclareMathSymbol\nleqslant{\mathrel}{AMSb}{"0A}
+\DeclareMathSymbol\ngeqq{\mathrel}{AMSb}{"15}
+\DeclareMathSymbol\nsubseteqq{\mathrel}{AMSb}{"22}
+\DeclareMathSymbol{\dabar@}{\mathord}{AMSa}{"39}
+\newcommand\dabars{\dabar@\dabar@}
+\makeatother
+\begin{document}
+$a\nleqslant b$, $a\ngeqq b$, $a\nsubseteqq b$, $a\mathrel{\dabars} b$
+\end{document}

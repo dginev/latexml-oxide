@@ -1,0 +1,23 @@
+% mechanism: an ORCID link of llncs's `\author` block that prints no word (the `\orcidicon` template's icon, here a
+%   rule) is written as the kernel's ORCID link to the iD the reading read, the icon as printed inside it, the iD in its
+%   link and title (`frontmatter_fields::orcid_icon_link`, `\lx@orcid@href`), as `\lx@author@href` makes it of a name's
+%   link — the template's `\xdef` leaving the iD's macro in the address, as in the witnesses.
+% witness: 2008.02173, 2009.11534
+% oracle:  pdflatex 0 errors; "Ann Able [icon] and Bob Baker"
+% engines: rust Z18e = a plain link holding the icon, the iD's title lost; int154x = the kernel's ORCID logo
+% expect:  0 errors, 0 warnings; Ann Able's ORCID contact links 0000-0002-1825-0097 and its title names it
+% status:  RED (Z18e) -> GREEN (Z18g)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{hyperref}
+\newcommand{\orcidicon}{\rule{1ex}{1ex}}
+\expandafter\xdef\csname orcidA\endcsname{\noexpand\href{https://orcid.org/\csname orcidauthorA\endcsname}{\noexpand\orcidicon}}
+\newcommand{\orcidauthorA}{0000-0002-1825-0097}
+\begin{document}
+\title{A Title}
+\author{Ann Able\orcidA \and Bob Baker}
+\institute{Univ X}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

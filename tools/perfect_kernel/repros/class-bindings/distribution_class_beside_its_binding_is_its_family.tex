@@ -1,0 +1,8 @@
+% A class shipped beside the binding's own class is of that family, and keeps the binding: `jmlrbook` beside `jmlr.cls`.
+% witness: none (control for distribution_class_named_after_a_binding.tex; raw it gives 9 Errors)
+% oracle:  pdflatex (TL 2025) not checked: this guards the route, jmlrbook.cls needs a volume to typeset
+% expect:  0 errors; "Can't find binding for class jmlrbook (using jmlr)"
+\documentclass{jmlrbook}
+\begin{document}
+Body.
+\end{document}

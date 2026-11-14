@@ -1,0 +1,19 @@
+% witness: 1907.07986, 1909.02301, 1810.00307, 2112.10477, 2002.01722, 2006.01316, 1705.07086 (201 Errors together)
+% oracle:  pdflatex 0 errors: rows a/b/c, d/e/f and u/v, w/t ruled
+% engines: rust TABU2base = 0 Errors, 30 Warnings ("Unrecognized tabular template" for `[`, `1`, `.`, `]`, …; `p`
+%          read the `t` of `pt` as its width, an invented `t` in the cell); Perl 0.8.8 has no tabu binding
+% expect:  tabu.sty:907-911 tabu's private `|` reads an optional line style (`\tabu@rewritevline[#1]`), spaces before it
+%          skipped, in a `\multicolumn` and in math too; the rule is kept, its width, dash and colour not modelled
+% status:  RED (TABU2base) -> GREEN (TABU2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu}{|[1.2pt]l|c| [2pt red] r|[on 2pt off 1pt]}
+a & b & c \\
+\multicolumn{1}{|[1pt]c|}{d} & e & f \\
+\end{tabu}
+
+$\begin{tabu}{c|[1pt]c} u & v \\ w & t \end{tabu}$
+\end{document}

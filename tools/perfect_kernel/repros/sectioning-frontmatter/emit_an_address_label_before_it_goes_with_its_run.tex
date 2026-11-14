@@ -1,0 +1,31 @@
+% mechanism: a label printed before an entry's address (the words naming a contact before an e-mail word or a colon) goes
+%   with the address run the cut takes at `=2`, as the Kind step for an address line takes it (RT1 rows 64-67,
+%   72: `insert::kind_address_lines`, `address_line_cut`): an unmarked `\affil[ ]` line whole (its e-mail named
+%   `Corresponding author: `, the role-note step's correspondence note of its owner), a second line of an entry with its
+%   break; a marked `\affil[*]` stays the legend the Kind step for a legend makes its carriers' note (`emitter::address_cut`
+%   `labelled`; OD #980 P1br2); `=2` only
+% witness: 2305.02090, 2404.05566 (`\affil[ ]{Corresponding author: …}`), 1807.09187 (`Correspondence: …`), 2008.08137,
+%   1510.03749, 2107.10505; marked: 1812.03816, 2004.06340, 2012.13817
+% oracle:  pdflatex 0 errors; "Ann Able1,* , Bob Baker1, and Cy Cole2"; "1 Univ X"; "Corresponding author: ann@x.org";
+%   "2 Univ Z, Correspondence: cy@z.org"; "* Corresponding author: bob@x.org"
+% engines: rust P1b `=2`: "Corresponding author" an affiliation of the last author, "Univ Z Correspondence" Cy's, "Corresponding
+%   author" Bob's note (marked); LO4 `=2` the two unmarked as here
+% expect:  0 errors, 0 warnings; Ann's correspondence note and e-mail `Corresponding author: ` gone into it, Cy's entry "Univ Z"
+%   and e-mail named `Correspondence: `, Bob's note marked `*` and e-mail
+% status:  RED (P1b) -> GREEN (perfect_kernel_batchp1e::a_label_before_an_address_goes_with_its_run)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{A label before an address}
+\author[1]{Ann Able}
+\author[1,*]{Bob Baker}
+\author[2]{Cy Cole}
+\affil[1]{Univ X}
+\affil[ ]{Corresponding author: \textit{ann@x.org}}
+\affil[2]{Univ Z\\ Correspondence: cy@z.org}
+\affil[*]{Corresponding author: bob@x.org}
+\date{}
+\maketitle
+Text.
+\end{document}

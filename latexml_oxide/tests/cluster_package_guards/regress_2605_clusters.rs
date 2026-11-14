@@ -1,3 +1,5 @@
+use latexml::util::test::{check_requirements, loads};
+
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
 /// hyperref: a defined `\hyper@makecurrent` (a noop from batch 55b, hyperref.sty's own since 64h) makes
@@ -431,14 +433,6 @@ fn autoloaded_package_outlives_the_group() {
   assert_eq!(xml.matches(r#"font="italic""#).count(), 1, "{xml}");
 }
 
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
-
 /// tex.web §577 `scan_font_ident` expands: `\fontdimen8 \ifx#1\displaystyle
 /// \textfont\else…\fi 3` selects `\textfont` (arXiv 2605.21425's `\mathpalette`
 /// underline macro: the unexpanded read took `\ifx` as the font, 1000 orphaned
@@ -481,6 +475,9 @@ fn text_font_command_ends_with_egroup() {
 /// labels, Fatal; Perl the same).
 #[test]
 fn glossaries_underscore_label_is_a_key() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/index-bib/glossaries_underscore_label.tex");
   let (stderr, xml) = convert_with(tex, None);
@@ -506,7 +503,7 @@ fn mathcode_reads_the_whole_code() {
   let (stderr, xml) = convert_with(tex, None);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<p>32768yes32768.</p>"), "{xml}");
-  if kpsewhich_has("slovak.ldf") {
+  if check_requirements(&["slovak.ldf"]) {
     let tex = include_str!(
       "../../../tools/perfect_kernel/repros/expansion-primitives/mathcode_reads_the_whole_code.tex"
     );
@@ -530,11 +527,11 @@ fn ieeetj_is_ieeetran() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(
-    xml.contains("<personname>Alice Smith<sup>1</sup></personname>"),
+    xml.contains("<personname>Alice Smith<sup>*</sup></personname>"),
     "{xml}"
   );
   assert!(
-    xml.contains("<personname>Bob Jones<sup>1</sup></personname>"),
+    xml.contains("<personname>Bob Jones<sup>*</sup></personname>"),
     "{xml}"
   );
   assert!(
@@ -664,7 +661,7 @@ fn tabular_template_missing_argument_stays_in_the_template() {
     assert!(
       stderr.contains(&format!(
         "Error:expected:{column} Missing argument of the column type '{column}' at the end of \
-         the tabular template; token ignored\n\tat t; line {line} col 1"
+         the tabular template; token ignored\n\tat t.tex; line {line} col 1"
       )),
       "{column}: {stderr}"
     );

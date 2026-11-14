@@ -1,0 +1,16 @@
+% witness: 2605.23316 (csf2026.tex:122)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors, 0 Fatal; an appendix "Proofs"
+% mechanism: IEEEtran.cls:5752-5775's \appendices is its own code; ours called \appendix by name, so a document's
+%   \renewcommand{\appendix}{\appendices} looped (Fatal:Timeout:PushbackLimit). Fixed: ieeetran_cls.rs reaches
+%   the kernel's \appendix through a copy taken at load.
+% status:  GREEN
+\documentclass[conference]{IEEEtran}
+\renewcommand{\appendix}{\appendices}
+\begin{document}
+\section{Intro}
+Text.
+\appendix
+\section{Proofs}
+More.
+\end{document}

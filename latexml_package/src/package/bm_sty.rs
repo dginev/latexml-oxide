@@ -95,6 +95,13 @@ fn take_number(tokens: &[Token], mut i: usize, out: &mut Vec<Token>) -> usize {
   i
 }
 
+/// A `_` or `^`: a script character, or a control sequence let to one (`\sb`, `\sp`).
+fn is_script(token: &Token) -> bool {
+  matches!(token.get_catcode(), Catcode::SUPER | Catcode::SUB)
+    || token.defined_as(&T_SUPER!())
+    || token.defined_as(&T_SUB!())
+}
+
 /// The index of the first token at or after `i` that is not a blank.
 fn skip_blanks(tokens: &[Token], mut i: usize) -> usize {
   while tokens
@@ -218,11 +225,6 @@ fn script_argument(run: &[Token], i: usize) -> Option<(Vec<Token>, usize)> {
 /// `\active@math@prime` joins it. A script whose argument cannot be told keeps the rest of the run as its argument,
 /// with a Warning naming `cs`.
 fn bold_run(out: &mut Vec<Token>, cs: &str, bold: Token, run: Vec<Token>) {
-  let is_script = |t: &Token| {
-    matches!(t.get_catcode(), Catcode::SUPER | Catcode::SUB)
-      || t.defined_as(&T_SUPER!())
-      || t.defined_as(&T_SUB!())
-  };
   let is_superscript = |t: &Token| t.get_catcode() == Catcode::SUPER || t.defined_as(&T_SUPER!());
   let is_prime = |t: &Token| t.get_catcode() == Catcode::OTHER && t.to_string() == "'";
   let undetermined = |script: &Token, rest: &[Token]| {
@@ -360,6 +362,41 @@ pub fn bold_math(cs: &str, bold: Token, arg: Tokens, argument: BoldArgument) -> 
   let in_math = lookup_bool("IN_MATH");
   // Perl's `requireMath` on `cs` (Package.pm:1069-1073), the warning naming `cs`.
   requireMath!(cs);
+  // bm.sty's `\bm` emits a math shift at the level `\bm` is used at (`\bm@add{#1}`, bm.sty:281), where it ends the
+  // enclosing formula and the next begins one: the argument is set as bold runs between its top-level `$`s, which stand
+  // between them (bm's `\boldsymbol{e^+e^-$$\rightarrow$$J/\psi}`, 2506.20975: three formulas; rc_struct6 row 9;
+  // `\bm{\hat{m}$}` ends the formula after the bold m). Guard `perfect_kernel_batch73b::dollar_in_boldsymbol_is_text`.
+  if argument == BoldArgument::Scanned && in_math {
+    let mut level = 0usize;
+    let shifts: Vec<usize> = tokens
+      .iter()
+      .enumerate()
+      .filter_map(|(at, token)| {
+        match token.get_catcode() {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => level = level.saturating_sub(1),
+          Catcode::MATH if level == 0 => return Some(at),
+          _ => {},
+        }
+        None
+      })
+      .collect();
+    if !shifts.is_empty() {
+      let mut out = Vec::new();
+      let mut from = 0;
+      for at in shifts.into_iter().chain(std::iter::once(tokens.len())) {
+        let segment = &tokens[from..at];
+        if skip_blanks(segment, 0) < segment.len() {
+          out.extend(bold_math(cs, bold, Tokens::new(segment.to_vec()), argument).unlist());
+        }
+        if let Some(&shift) = tokens.get(at) {
+          out.push(shift);
+        }
+        from = at + 1;
+      }
+      return Tokens::new(out);
+    }
+  }
   let commands: Vec<Token> = tokens
     .iter()
     .filter(|t| at_top_level(&mut depth, t))
@@ -370,9 +407,38 @@ pub fn bold_math(cs: &str, bold: Token, arg: Tokens, argument: BoldArgument) -> 
   // whole).
   let split = in_math && !commands.is_empty() && !delimiters_pair_up(&commands);
   if !split {
-    let mut out = vec![bold, T_BEGIN!()];
-    out.extend(tokens);
-    out.push(T_END!());
+    let mut tokens = tokens;
+    // bm.sty's `\bm` emits a script ending its argument as it stands (`\let_\relax` in `\bm@general`,
+    // bm.sty:162-217), so it takes its argument from after `\bm`'s closing brace: `\bm{G_}{(10)}` is a bold `G`
+    // subscripted by `(10)`, `M\bm_{max}` is `M_{max}` (arXiv 2010.13108, 1708.01493). Here the script follows the
+    // bounded `bold`, as `bold_run` leaves it on the split path; in the group it would read the `}` ("Missing
+    // sub/superscript argument"). A boxed or grouped command ([`BoldArgument::Grouped`]) keeps TeX's error, its box
+    // ending there.
+    let mut script = None;
+    if argument == BoldArgument::Scanned
+      && let Some(last) = tokens
+        .iter()
+        .rposition(|t| t.get_catcode() != Catcode::SPACE)
+      && is_script(&tokens[last])
+    {
+      script = Some(tokens[last]);
+      tokens.truncate(last);
+    }
+    let mut out = Vec::new();
+    // `\bm_`: the script alone, attaching to what precedes `\bm` as in TeX.
+    if script.is_none() || skip_blanks(&tokens, 0) < tokens.len() {
+      // A command that boxes its argument — amsbsy's `\boldsymbol`, `\hbox{$\m@th\displaystyle#1$}` (amsbsy.sty:28-36)
+      // — has a `$` there end that math and start text in the box, the next begin math again (tex.web §1193, §1138):
+      // `\lx@math@in@hbox` (tex_math.rs), local to `bold`'s bounded group. `$\boldsymbol{\theta=\pi/2$ and $\phi=0}$`
+      // (2508.01295; rc_struct6 row 9, KNOWN_PERL_ERRORS #907). Guard `perfect_kernel_batch73b::dollar_in_boldsymbol_is_text`.
+      out.extend([bold, T_BEGIN!()]);
+      if argument == BoldArgument::Grouped {
+        out.push(T_CS!("\\lx@math@in@hbox"));
+      }
+      out.extend(tokens);
+      out.push(T_END!());
+    }
+    out.extend(script);
     return Tokens::new(out);
   }
   if argument == BoldArgument::Grouped {

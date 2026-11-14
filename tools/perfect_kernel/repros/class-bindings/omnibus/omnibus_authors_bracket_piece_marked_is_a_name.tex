@@ -1,0 +1,24 @@
+% mechanism: in OmniBus's `\authors{…}` list (AGU's agujournal2019, read whole by the reading as llncs's `\author`), a
+%   piece after a separator that carries its own mark (`\affil{1}`, read as llncs's `\inst`) is a name of its own,
+%   whatever it opens with: a bracket that a `\add[ver3]{…}` of trackchanges prints (`resolver/lines.rs`
+%   `names_line_events`: a bracket remark joins the name before only when it carries no mark of its own; a join of two
+%   marked names left is the safety net's counted Warning, `net::merged_names`; OXIDIZED_DESIGN_DIVERGENCES #991)
+% witness: 2308.02720 (`Y. Dong\affil{6}, \add[ver3]{S. Curry}\affil{1}`, trackchanges missing: `\add` undefined)
+% oracle:  pdflatex with the stand-in `pdflatex/aguauthors.cls` (`TEXINPUTS=pdflatex//: pdflatex <this>`, from
+%   `omnibus/`): 0 errors; "Ann Able^{1,2}, Bob Baker^{2}, [ver3]Cy Cole^{1}" over "^1 Univ One" and "^2 Lab Two"
+% engines: rust int155a0 = the bracket piece already a name of its own; red only through Ann Able's affiliation the
+%   text "1,2", 2 warnings; Z18k2 = one creator "Bob Baker, [ver3]Cy Cole" holding both affiliations, no Warning
+% expect:  0 errors, 1 warning (the unknown class's); Ann Able: Univ One, Lab Two; Bob Baker: Lab Two; [ver3]Cy Cole:
+%   Univ One
+% status:  RED (int155a0, Z18k2) -> GREEN (Z18k3)
+% preload: ar5iv.sty
+\documentclass{aguauthors}
+\newcommand\add{\relax}
+\title{T}
+\authors{Ann Able\affil{1,2}, Bob Baker\affil{2}, \add[ver3]{Cy Cole}\affil{1}}
+\affiliation{1}{Univ One}
+\affiliation{2}{Lab Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

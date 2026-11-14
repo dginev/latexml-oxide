@@ -1,0 +1,15 @@
+% witness: rev78j r2 (natbib numbers mode, an alpha-style label `\bibitem[Knu84]{k1}`)
+% oracle:  pdflatex 0 errors: "A [1–3]. G [Knu84, Lam86, Mil90]." and the list's "[Knu84] K1." (natbib.sty:811-817
+%          \NAT@bare, :1005-1012 \NAT@apalk: a label with no (year) and no ", " is the number)
+% engines: rust 78j r1 = "G [5–7]", the list "[5] K1."
+% expect:  0 errors; the labels as given, not compressed
+% status:  RED (78j r1) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage[numbers,sort&compress]{natbib}
+\begin{document}
+A \citep{c,a,b}. G \citep{k1,k2,k3}.
+\begin{thebibliography}{9}
+\bibitem[Smith(2001)]{a} A. \bibitem[Jones(2002)]{b} B. \bibitem[Doe(2003)]{c} C.
+\bibitem[Knu84]{k1} K1. \bibitem[Lam86]{k2} K2. \bibitem[Mil90]{k3} K3.
+\end{thebibliography}
+\end{document}

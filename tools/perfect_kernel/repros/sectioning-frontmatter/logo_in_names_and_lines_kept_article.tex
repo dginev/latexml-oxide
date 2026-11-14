@@ -1,0 +1,15 @@
+% mechanism: `\TeX`/`\LaTeX` in kernel `\and` columns: a name, an in-line affiliation and the content check's word count
+%   all read the logo's text (util_text.rs `printed_own_text`).
+% witness: synthetic (QA75S v3, v4; LOGO1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Smith | Bob Baker, TEX Users Group | The LATEX Project"
+% engines: rust int171a base 0 E 1 W: Bob Baker's affiliation "Users Group", and "Frontmatter content check: 1 words or
+%          addresses appear in the placed frontmatter more often than the author blocks print them: LaTeX."
+% expect:  0 E, 0 W; Ann Smith; Bob Baker, affiliation "TeX Users Group" (the logo kept); "The LaTeX Project"
+% status:  RED -> GREEN (LOGO1)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Smith \and Bob Baker, \TeX{} Users Group \and The \LaTeX\ Project}
+\maketitle
+Body.
+\end{document}

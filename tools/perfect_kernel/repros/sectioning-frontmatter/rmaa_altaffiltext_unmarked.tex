@@ -1,0 +1,57 @@
+% mechanism: the rmaa.cls binding (rmaa_cls.rs) on an \altaffiltext no author marks: the class prints it as footnote 1
+%   under the title page all the same, so it is the author block's affiliation; an \affil inside the \author, which
+%   the class sets on a line under the names, is the affiliation of the authors before it; the whole keyword list given
+%   at once (\keywords) is the frontmatter's keywords.
+% witness: 1301.7157 (dmgroups_rmaa-final.tex:47-53: six authors without marks, `\altaffiltext{1}{Instituto de
+%          Astronom\'{\i}a, UNAM. Ensenada, M\'exico.}`, \resumen before \abstract, \keywords), astro-ph0105072
+%          (KIMESWENGER.tex:23-24 `\author{S. Kimeswenger\altaffilmark{1} \affil{Institut f{\"u}r Astrophysik, …}}`);
+%          rmaa.cls v3.24 :491-494 \affil, :500-503, :543-546; here a minimal stand-in of the class
+% oracle:  pdflatex 0 errors: "H. Aceves and F.J. Tamayo / Universidad de Sonora, Mexico. / and A. Third / Third place. /
+%          Resumen Se estudia. / Abstract We study. / Key Words: methods: numerical -- dark matter / 1 Instituto de
+%          Astronomia, UNAM. Ensenada, Mexico."
+% engines: rust int116a = 0 errors, the affiliations in the names or lost, the Spanish abstract and the keywords lost
+% expect:  0 errors, 0 warnings; three creators with their \affil, the block's affiliation; the two abstracts in the
+%          title page's order; the keywords
+% status:  RED (int116a) -> GREEN (86b)
+% preload: ar5iv.sty
+\begin{filecontents*}{rmaa.cls}
+% A minimal stand-in for rmaa.cls v3.24 (2007/09/14, Instituto de Astronomia, UNAM), written for a latexml-oxide test:
+% the title-page stores of its :450-461, the \affil of :491-494, :500-503, :509-524, :543-546, its \maketitle (:914-940) and \@maketitle
+% (:943-999).
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{rmaa}[2007/09/14 v3.24 stand-in]
+\LoadClass{article}
+\newcommand{\affil}[1]{\\[1.5ex]{\itshape #1}\\[1.5ex]}
+\newcommand{\altaffilmark}[1]{\textsuperscript{#1}}
+\newcommand{\altaffiltext}[2]{\stepcounter{footnote}%
+  \protected@xdef\@thanks{\@thanks\protect\footnotetext[#1]{#2}}}
+\newcommand{\@resumen}{}
+\newcommand{\resumen}[1]{\renewcommand{\@resumen}{{\ignorespaces#1}}}
+\newif\if@abstractpresent
+\renewcommand{\abstract}[1]{\renewcommand{\@abstract}{{\ignorespaces#1}}\@abstractpresenttrue}
+\newcommand{\@abstract}{}
+\newcommand{\@kwdsep}{ --- }
+\newif\if@firstkwd\@firstkwdtrue
+\newcommand{\@keywords}{}
+\newcommand{\addkeyword}[1]{\if@firstkwd\renewcommand\@keywords{#1}\@firstkwdfalse
+  \else\edef\@keywords{\@keywords\@kwdsep #1}\fi}
+\newcommand{\keywords}[1]{\renewcommand{\@keywords}{#1}}
+\renewcommand{\maketitle}{\par\begingroup\newpage\@maketitle\@thanks\endgroup
+  \let\maketitle\relax\let\@maketitle\relax\gdef\@thanks{}\gdef\@author{}\gdef\@title{}}
+\renewcommand{\@maketitle}{\null
+  \begin{center}{\@title\par}\medskip\parbox{.8\textwidth}{\centering\@author\par}\par
+    \if@abstractpresent\parbox{.8\textwidth}{\centerline{\bfseries Resumen}\par\@resumen
+      \centerline{\bfseries Abstract}\par\@abstract\par
+      \noindent Key Words:~\@keywords}\fi
+  \end{center}\par}
+\end{filecontents*}
+\documentclass[journal]{rmaa}
+\title{Intragroup dark matter distribution in small groups}
+\author{H. Aceves and F.J. Tamayo \affil{Universidad de Sonora, M\'exico.} and A. Third \affil{Third place.}}
+\altaffiltext{1}{Instituto de Astronom\'{\i}a, UNAM. Ensenada, M\'exico.}
+\resumen{Se estudia.}
+\abstract{We study.}
+\keywords{methods: numerical -- dark matter}
+\begin{document}
+\maketitle
+Body.
+\end{document}

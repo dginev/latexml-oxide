@@ -1,0 +1,19 @@
+% mechanism: in a names line read by the reading (llncs's `\author`), a bracketed piece after a separator — a comma or
+%   "and" — that carries its own mark (`\inst{1}`) is a name of its own, marks win (FIDELITY_CHARTER §4 R1); a bracket
+%   with no mark of its own stays a remark on the name before (`resolver/lines.rs` `names_line_events`;
+%   OXIDIZED_DESIGN_DIVERGENCES #991)
+% witness: 2308.02720 (OmniBus's `\authors`: `Y. Dong\affil{6}, \add[ver3]{S. Curry}\affil{1}`)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2, [v3]Cy Cole1 and (Dee) Dorn2" over "1 Univ One" and "2 Lab Two"
+% engines: rust int155a0, Z18k2 = "Bob Baker, [v3]Cy Cole and (Dee) Dorn" one creator holding both affiliations, no
+%   Warning
+% expect:  0 errors, 0 warnings; Ann Able: Univ One; Bob Baker: Lab Two; [v3]Cy Cole: Univ One; (Dee) Dorn: Lab Two
+% status:  RED (int155a0, Z18k2) -> GREEN (Z18k3)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}, Bob Baker\inst{2}, [v3]{Cy Cole}\inst{1} and (Dee) Dorn\inst{2}}
+\institute{Univ One \and Lab Two}
+\maketitle
+Text.
+\end{document}

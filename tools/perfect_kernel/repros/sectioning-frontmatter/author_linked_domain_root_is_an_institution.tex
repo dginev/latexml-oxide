@@ -1,0 +1,13 @@
+% witness: the r6 re-review of batch 77p (finding 2, probes x10, w8)
+% oracle:  pdflatex 0 errors: two columns, each a name over a linked one-word institution
+% engines: rust 77p r9 = 0 errors; "Google" and "Meta" URL contacts of their names
+% expect:  0 errors, 0 warnings; each link to a bare domain an affiliation of its column's name, the link inside it
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ \href{https://www.google.com}{Google} \and Bob Baker \\ \href{https://www.meta.com}{Meta}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

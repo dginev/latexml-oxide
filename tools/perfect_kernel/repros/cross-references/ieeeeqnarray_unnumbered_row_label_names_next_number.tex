@@ -1,0 +1,28 @@
+% witness: review rev78r finding 6 (IEEEtrantools.sty:1986-1991 and :2072-2117 pre-advance the equation counter for the
+%          next row and point `\@currentlabel` at it; :1405 `\IEEEnonumber` prints and steps nothing; :2022-2023 roll the
+%          counter back at the end)
+% oracle:  pdflatex 0 errors; rows (1), unnumbered, (2); unnumbered; unnumbered; (3); "See 2, 3, 3 and 3."
+% engines: rust int72a = ie1 "1" (its row unnumbered, the label the group's), ie2 and ie3 the raw ids "S0.Ex2",
+%          "S0.Ex3"; Perl 0.8.8 raw ids (KNOWN_PERL_ERRORS #1106)
+% expect:  0 errors, 0 warnings; ie1 on the row numbered 2; ie2 and ie3 on their rows with the reference form 3 alone
+% status:  RED (int72a) -> GREEN (79d, OXIDIZED_DESIGN_DIVERGENCES #847)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \\
+c &=& d \label{ie1}\nonumber\\
+e &=& f
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray*}{rCl}
+g &=& h \label{ie2}
+\end{IEEEeqnarray*}
+\begin{IEEEeqnarray}{rCl}
+k &=& l \label{ie3}\IEEEnonumber
+\end{IEEEeqnarray}
+\begin{equation}
+m = n \label{ie4}
+\end{equation}
+See \ref{ie1}, \ref{ie2}, \ref{ie3} and \ref{ie4}.
+\end{document}

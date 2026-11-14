@@ -1,0 +1,25 @@
+% witness: review rev92e r2 B1' (a constructor declaring a font counted as a transparent wrapper whatever it
+%          constructs, so one with no argument never found ink: revsymb's `\openone`, `DefConstructor("\openone", "1",
+%          font => …)`, dropped its note, in the XML and in the observer)
+% oracle:  pdflatex (article + amssymb, revsymb): 0 errors; Ann's footnote "∗ 𝟙", Bob's and Cat's a bare mark
+% engines: rust 92e r2 (b1ed75e) = no note for Ann, Bob or Cat; rust 92a5 keeps all three (Bob's and Cat's empty)
+% expect:  0 errors, 0 warnings; Ann's note holds its formula's 𝟙; Bob's note kept, an empty `ltx:emph` (`\emph`'s
+%          template prints only its argument, but its construction hook closing the element cannot be read: in doubt,
+%          ink — a blank note kept); no note for Cat (`$\mathbb{}$`, a font switch over nothing: a template printing only
+%          its argument, no hook)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: Ann's note (its 𝟙) and Bob's (an empty \emph) dropped, none counted; 92e's guard kept only the counts after DEL1
+% engines: rust UNC = 0 errors, 1 warning: the notes still dropped (no item is keyed by a text of no letter or
+%          digit, emitter/plan.rs `creator_items`), now counted: the content check's "2 notes … \thanks{$\openone$} \thanks{\emph{}}"
+% engines: rust LOGO1 = 0 errors, 1 warning: Ann's note written, its formula's 𝟙 (revsymb's constant template "1" is
+%          ink, util_text.rs `printed_own_text`); Bob's `\emph{}` still dropped and counted
+% status:  RED (92e r2) -> GREEN (92e r3) -> RED (int160a, HG1) -> counted (UNC)
+% moves:   post-merge (the notes written: key a wordless note by its place, as a picture's)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amssymb,revsymb}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{$\openone$} \and Bob Baker\thanks{\emph{}} \and Cat Cole\thanks{$\mathbb{}$}}
+\maketitle
+Text.
+\end{document}

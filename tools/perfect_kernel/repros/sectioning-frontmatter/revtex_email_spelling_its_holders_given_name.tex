@@ -1,0 +1,25 @@
+% mechanism: a revtex author's own `\email` whose address is the holder's given name (`santos@` under `\author{Santos
+%   Bravo Yuste}`) and a co-author's surname (`\author{Andr\'es Santos}`): today's respell moves it to the co-author it
+%   spells by surname, its holder no veto (the names' keys read a surname; FIDELITY_CHARTER §4 #420, measured brief 95c
+%   r3: never respelling an own one-address call would fix it, and break 22 real papers' corresponding addresses).
+% witness: 0711.3633, 0809.3090 (`\author{Santos Bravo Yuste}\email{santos@unex.es}`, `\author{Andr\'es
+%   Santos}\email{andres@unex.es}`)
+% oracle:  pdflatex 0 errors: "Santos Bravo Yuste∗ and Andrés Santos†"; the footnotes "∗ santos@x.es", "† andres@x.es"
+% engines: rust int123a, 95c-r3: santos@x.es on Andrés Santos beside andres@x.es; perl: not run
+% expect:  santos@x.es on Santos Bravo Yuste, andres@x.es on Andrés Santos; 0 errors
+% status:  RED (95c-r3; SYNC row)
+% preload: ar5iv.sty
+\documentclass[aps,prb]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Santos Bravo Yuste}
+\email{santos@x.es}
+\author{Andr\'es Santos}
+\email{andres@x.es}
+\affiliation{Univ X}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

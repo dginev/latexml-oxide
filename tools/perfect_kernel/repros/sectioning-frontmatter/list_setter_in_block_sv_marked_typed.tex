@@ -1,0 +1,13 @@
+% witness: 2502.07804's marks on cond-mat0605195's shape (svjour: hand-typed `${}^{1}$` on the names, the institute list
+%          in the last name's group; review revDEL3 B1's sibling, synthetic)
+% oracle:  pdflatex (svjour.cls + svepjST.clo of 2502.07804) 0 errors: "Ann Able1 , Bob Baker2"; "1 Univ X, Town · 2 Lab Y, City"
+% engines: rust DEL3 = the marks dropped from the names (`keeps` forced off for a setter's block)
+% expect:  the names keep their marks; 0 errors, 0 warnings
+% status:  RED (DEL3) -> GREEN (DEL3b)
+\documentclass[epjST]{svjour}
+\begin{document}
+\title{T}
+\author{Ann Able${}^{1}$ \and {Bob Baker${}^{2}$\institute{Univ X, Town \and Lab Y, City}}}
+\maketitle
+Text.
+\end{document}

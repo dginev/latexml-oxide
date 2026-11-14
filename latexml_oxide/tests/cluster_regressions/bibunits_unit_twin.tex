@@ -1,0 +1,23 @@
+% mechanism: bibunits — a `\cite` outside every `{bibunit}` is the kernel's (bibunits.sty: only `\bibunit` lets
+%   `\cite` to `\bu@cite`), so it goes to the main bibliography; inside a unit it keeps the unit's list, `\cite*`
+%   both. Perl's binding stamps `bu<N>` on every `\cite` (bibunits.sty.ltxml:32-41), here `bu1` on the cite after
+%   the unit (KNOWN_PERL_ERRORS #1223; BM Q2.7).
+% witness: synthetic (BM Q2.7 probe's twin); 2510.13035 (11 cites after its unit), 2306.06173, 2303.06077
+% oracle:  pdflatex + bibtex (main, bu1): 0 errors; `Main [3]. Unit [2] and [1]. After [2]`;
+%          main References [1] Abel [2] Miller [3] Smith, the unit's [1] Abel [2] Zimmer
+% engines: rust int160c: `Main` and `After` cites inlist="bu0"/"bu1", Miller in the unit's References; perl: the
+%   same, and `Main` dangles
+% expect:  0 errors; unit cites inlist="bu1" / "bibliography bu1", main cites no inlist; every cite links
+% status:  RED (int160c) -> GREEN (BU1)
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+Main \cite{Smith2020}.
+\begin{bibunit}[plain]
+Unit \cite{zeta} and \cite*{alpha}.
+\putbib[bibunits_refs]
+\end{bibunit}
+After \cite{mid}.
+\bibliographystyle{plain}
+\bibliography{bibunits_refs}
+\end{document}

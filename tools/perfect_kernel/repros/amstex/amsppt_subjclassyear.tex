@@ -1,0 +1,16 @@
+% witness: cs0201007, math0205233, math0209036 (171 class-less papers with undefined \subjclassyear in run 353)
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; the footnote "2000 Mathematics Subject Classification. 05E05, 13A50."
+% engines: rust 67int12 = 1 Error undefined:\subjclassyear, "2000" printed in the body, classification name "Classification: "; perl 0.8.8 the same undefined \subjclassyear
+% expect:  0 errors; classification scheme and name "2000 Mathematics Subject Classification", codes 05E05, 13A50
+% status:  GREEN (68r)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author A. Author\endauthor
+\subjclassyear{2000}
+\subjclass 05E05, 13A50\endsubjclass
+\endtopmatter
+\document
+Body text.
+\enddocument

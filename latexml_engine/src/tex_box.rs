@@ -2,7 +2,13 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use latexml_core::common::{error::emit_warn, numeric_ops::round_to};
+use std::cell::{Cell, RefCell};
+
+use latexml_core::{
+  common::{error::emit_warn, numeric_ops::round_to},
+  stomach::{TEMPLATE_BRACE_OPEN, digest_group_body_in_paragraph, off_save_closer},
+  stored_dimension,
+};
 
 use crate::prelude::*;
 
@@ -125,6 +131,179 @@ fn hlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
       item
     })
     .collect()
+}
+
+/// tex.web §1110 `unpackage` for `\unvbox`/`\unvcopy` (§1109 `vmode+un_vbox`): the box's list goes into the current
+/// vertical list and the box itself — its dimensions, its `to` height, its being one item — is gone. A register
+/// filled by `\setbox0\vbox{…}` or `\vtop{…}` holds the whatsit, whose list is its contents (argument 2). Perl puts the
+/// whatsit back whole (`Whatsit::unlist` returns itself, TeX_Box.pool.ltxml:725-742), so a `\lastbox` after `\unvbox`
+/// took the whole box and a peel loop never ended: `\setbox\pb=\vbox{\unvbox\pb \global\setbox\lb=\lastbox}` took the
+/// box, left an empty `\vbox{}`, and took that again the next round, for ever (infernce.sty's `\@adjustPremises`, under
+/// every semantic.sty `\inference`: ~315 arXiv `oom:alloc_failed` Fatals, among them 1603.01635 and 2506.05832;
+/// KNOWN_PERL_ERRORS #840; the study's other `\lastbox` users, 1209.2208 and math0301370, fail elsewhere). `\unvcopy`
+/// puts back copies (§1110 `copy_node_list`).
+///
+/// The list is put back where it goes into a vertical box's own list (`\vbox`, `\vtop`, `\parbox` contents:
+/// [`in_vertical_box_list`]), where LaTeXML sets the box's lines as lines, bracketed by a pair of boundary marks
+/// ([`splice_mark`]): the box's end closed whatever its contents had opened (§1086 `vbox_group`: `end_graf`; a
+/// minipage's or `\parbox`'s `ltx:p`; a `\noindent` paragraph's `ltx:para`), and the end mark closes it in the new
+/// list, so what follows the spliced material starts a line of its own (without it: "Para two.More.", "MiniA" and
+/// "AfterA" side by side). Elsewhere — the main vertical list, a float's, footnote's or minipage's body — and in math
+/// the box goes back whole, as Perl's: spliced there, its hboxes ran together into one paragraph
+/// (OXIDIZED_DESIGN_DIVERGENCES #637; the shape needs R6, `\hbox` in vertical mode as a line, and a ruling: repro
+/// boxes-groups/box_primitives_unpack cases 8-9).
+fn vlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
+  let is_vbox = |w: &Whatsit| {
+    matches!(
+      w.get_definition().get_cs_name().as_ref(),
+      "\\vbox" | "\\vtop"
+    )
+  };
+  match stuff.data() {
+    DigestedData::Whatsit(w)
+      if !lookup_bool_sym(pin!("IN_MATH"))
+        && w.try_borrow().is_ok_and(|w| is_vbox(&w))
+        && in_vertical_box_list() =>
+    {
+      let mut items: Vec<Digested> = w
+        .borrow()
+        .get_arg(2)
+        .map(Digested::unlist)
+        .unwrap_or_default();
+      if copy {
+        items = items
+          .into_iter()
+          .map(|item| spliced(item, false, true))
+          .collect();
+      }
+      // A list of nothing but the marks of earlier splices brackets nothing: put back empty, as the box was.
+      if items.iter().all(is_splice_mark) {
+        return Vec::new();
+      }
+      let serial = SPLICE_SERIAL.get() + 1;
+      SPLICE_SERIAL.set(serial);
+      if let (Some(begin), Some(end)) = (
+        splice_mark(&T_CS!("\\lx@splice@begin"), serial),
+        splice_mark(&T_CS!("\\lx@splice@end"), serial),
+      ) {
+        items.insert(0, begin);
+        items.push(end);
+      }
+      items
+    },
+    _ => stuff.unlist(),
+  }
+}
+
+/// Whether the current list is a vertical box's own (`VBoxContents`: `\vbox`, `\vtop`, `\parbox`, a `p` column's
+/// cell): the frame its mode was bound in (`begin_mode`'s `BOUND_MODE`) is the one the box reader marked
+/// (`lx@vbox@list`, base_utilities.rs `predigest_list_in_mode`). A group inside the box is still the box's list; a
+/// minipage, a float, a footnote begun in it are lists of their own.
+fn in_vertical_box_list() -> bool {
+  for frame in 0..undo_depth() {
+    if is_value_bound("BOUND_MODE", Some(frame)) {
+      return is_value_bound("lx@vbox@list", Some(frame));
+    }
+  }
+  false
+}
+
+thread_local! {
+  /// The serial of the last spliced list ([`vlist_of`]); a pair of boundary marks shares one.
+  static SPLICE_SERIAL: Cell<i64> = const { Cell::new(0) };
+  /// The begin marks absorbed whose end mark is not yet: serial → the [`SPLICE_ATTRIBUTE`] value of the element it
+  /// recorded, and that element's name then.
+  static SPLICE_STARTS: RefCell<HashMap<i64, (String, SymStr)>> = RefCell::default();
+}
+
+/// The internal attribute by which a begin mark records the element it was absorbed in — a value, not a node handle,
+/// which `rename_node` or a removal would leave dangling —, removed again by the end mark of the splice that set it
+/// (and stripped from the output with every `_` attribute should that end mark not come).
+const SPLICE_ATTRIBUTE: &str = "_lx_splice";
+
+/// A boundary mark of a list `\unvbox` spliced ([`vlist_of`]), `cs` `\lx@splice@begin` or `\lx@splice@end`: no node in
+/// TeX, so the list-tail primitives see through it (stomach.rs `is_list_tail_transparent`) and it reverts as nothing.
+/// Absorbed, the begin mark records the element the list starts in; the end mark closes back to it whatever the list
+/// opened and left open — only to that element, only while it is open under the same name, only if what lies between
+/// may auto-close, and nothing at all for an end mark whose begin mark was not absorbed (a `\vsplit` took it).
+fn splice_mark(cs: &Token, serial: i64) -> Option<Digested> {
+  let definition = lookup_definition(cs).ok().flatten()?;
+  let mut mark = Whatsit {
+    definition,
+    ..Whatsit::default()
+  };
+  // What a constructor's invocation gives every whatsit (constructor.rs): its font, mode and math flag; the sizing
+  // pass reads the font.
+  let font = lookup_font().unwrap_or_else(|| Rc::new(Font::text_default()));
+  mark.set_property("font", Stored::Font(font));
+  mark.set_property("isMath", false);
+  mark.set_property("mode", lookup_string_from_sym(pin!("MODE")));
+  mark.set_property("alignmentSkippable", true);
+  mark.set_property("lx@splice", Stored::Int(serial));
+  mark.set_property("reversion", Tokens!());
+  Some(Digested::from(mark))
+}
+
+/// Whether `item` is a boundary mark of a spliced list ([`splice_mark`]).
+fn is_splice_mark(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+      matches!(
+        w.get_definition().get_cs_name().as_ref(),
+        "\\lx@splice@begin" | "\\lx@splice@end"
+      )
+    }),
+    _ => false,
+  }
+}
+
+/// The begin mark's absorption ([`splice_mark`]): record the current element, by the [`SPLICE_ATTRIBUTE`] it already
+/// carries (an enclosing splice began there) or one it now gets.
+fn absorb_splice_begin(document: &mut Document, serial: i64) -> Result<()> {
+  let Some(mut node) = document.get_element() else {
+    return Ok(());
+  };
+  let value = match node.get_attribute(SPLICE_ATTRIBUTE) {
+    Some(value) => value,
+    None => {
+      let value = serial.to_string();
+      node.set_attribute(SPLICE_ATTRIBUTE, &value)?;
+      value
+    },
+  };
+  let qname = document::get_node_qname(&node);
+  SPLICE_STARTS.with_borrow_mut(|starts| starts.insert(serial, (value, qname)));
+  Ok(())
+}
+
+/// The end mark's absorption ([`splice_mark`]): close back to the element its begin mark recorded.
+fn absorb_splice_end(document: &mut Document, serial: i64) -> Result<()> {
+  let Some((value, qname)) = SPLICE_STARTS.with_borrow_mut(|starts| starts.remove(&serial)) else {
+    return Ok(());
+  };
+  let Some(current) = document.get_element() else {
+    return Ok(());
+  };
+  let mut node = current.clone();
+  let mut closeable = true;
+  loop {
+    if node.get_attribute(SPLICE_ATTRIBUTE).as_deref() == Some(value.as_str()) {
+      break;
+    }
+    closeable &= document::can_auto_close(&node);
+    match node.get_parent() {
+      Some(parent) if parent.get_type() == Some(NodeType::ElementNode) => node = parent,
+      _ => return Ok(()),
+    }
+  }
+  if closeable && node != current && document::get_node_qname(&node) == qname {
+    document.close_to_node(&node, true)?;
+  }
+  // The begin mark that gave the element its value ends last of those sharing it (the splices nest): the record goes.
+  if value == serial.to_string() {
+    node.remove_attribute(SPLICE_ATTRIBUTE)?;
+  }
+  Ok(())
 }
 
 /// An item put back by `\unhbox` (`copy` false: itself, unless it must be marked as paragraph material) or `\unhcopy`
@@ -267,27 +446,26 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
 
 /// Helper to get (width, height, depth) from a Digested node_box without mutable borrows.
 /// This avoids RefCell conflicts when called during the absorption pipeline.
-/// For simple TBox/Whatsit: reads cached_width/height/depth properties.
+/// For simple TBox/Whatsit: reads the declared width/height/depth, else the cached ones.
 /// For Lists: sums child box widths and takes max height/depth.
 fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
+  // Declared before cached: Perl's `\ht` setter writes `cheight` too (TeX_Box.pool.ltxml:620-628, Box.pm `setHeight`),
+  // so a size measured before it never wins (repro graphics-tikz/node_box_declared_size_over_measured; 2408.03209).
+  // A declared size stored as a String (diagbox, `\rotate[f]`, "1em") is no Dimension: the measured one stands.
   fn read_dims(d: &Digested) -> (Dimension, Dimension, Dimension) {
     d.with_properties(|props| {
-      let w = match props.get("cached_width").or_else(|| props.get("width")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
+      let dim = |declared: &str, cached: &str| {
+        stored_dimension(props.get(declared))
+          .or_else(|| stored_dimension(props.get(cached)))
+          .unwrap_or_default()
       };
-      let h = match props.get("cached_height").or_else(|| props.get("height")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      (w, h, d)
+      (
+        dim("width", "cached_width"),
+        dim("height", "cached_height"),
+        dim("depth", "cached_depth"),
+      )
     })
   }
-  // First try: read cached dimensions
   let dims = read_dims(digested);
   if dims.0.value_of() != 0 || dims.1.value_of() != 0 || dims.2.value_of() != 0 {
     return dims;
@@ -559,7 +737,8 @@ LoadDefinitions!({
     // R2: were we mid-paragraph when this group opened? If so, the characters
     // typeset so far belong to the OUTER paragraph. Perl's text-mode `{...}`
     // flows FLAT (`digestUntil`), so a grouped `\par` repacks them; Rust
-    // localizes the group (below), hiding them from the inner `\par`. Captured
+    // localizes the group (below), hiding them from the inner `\par`, and its list
+    // continues their paragraph (`digest_group_body_in_paragraph`). Captured
     // BEFORE `bgroup` (the matching `}` restores mode via `egroup`).
     let mid_para = {
       let mode = lookup_string_from_sym(pin!("MODE"));
@@ -579,7 +758,11 @@ LoadDefinitions!({
     } else {
       TexMode::Text
     });
-    let body = digest_next_body(None)?;
+    let body = if mid_para {
+      digest_group_body_in_paragraph()?
+    } else {
+      digest_next_body(None)?
+    };
     // R2: if this text-mode group actually broke a paragraph (its digested body
     // resumed vertical mode — i.e. contains a `\par` whatsit), repack the outer
     // paragraph's now-restored loose run NOW, so the box-list matches Perl's flat
@@ -643,6 +826,25 @@ LoadDefinitions!({
     )
   });
 
+  // The boundary marks of a list `\unvbox` spliced into a vertical box's own list (`vlist_of`, `splice_mark`):
+  // Rust-only, no node in TeX, reverting as nothing (OXIDIZED_DESIGN_DIVERGENCES #637).
+  DefConstructor!("\\lx@splice@begin",
+    sub[document, _args, props] {
+      if let Some(&Stored::Int(serial)) = props.get("lx@splice") {
+        absorb_splice_begin(document, serial)?;
+      }
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@splice@end",
+    sub[document, _args, props] {
+      if let Some(&Stored::Int(serial)) = props.get("lx@splice") {
+        absorb_splice_end(document, serial)?;
+      }
+    },
+    reversion => ""
+  );
+
   // Perl TeX_Box.pool.ltxml L50-55: \lx@hidden@bgroup / \lx@hidden@egroup
   // — scoping without visible { } in reversion.
   DefConstructor!("\\lx@hidden@bgroup", "#body",
@@ -658,6 +860,48 @@ LoadDefinitions!({
     after_digest => sub[_whatsit] { egroup()?; },
     reversion => ""
   );
+
+  // The braces of an alignment template's math cell, `$\displaystyle{##}$` (latex.ltx:15760-15763 `{eqnarray}`,
+  // amsmath.sty:1483/1576/2350/2424): the u-part's `{` and the v-part's `}` enclose the cell's text, and TeX resets
+  // the alignment state after the u-part (tex.web §324, §789), so a cell's own `}` closes the template's `{` and the
+  // v-part's `}` closes a cell's `{` (`G_t(h)=}\det(h)-e^{\frac{a}{2}g_t.`, 2207.06932, 1912.10594). The pair opens
+  // no group of its own: the u-part marks the cell's frame (stomach.rs `TEMPLATE_BRACE_OPEN`), and the cell's `}`
+  // that would close that frame closes the mark instead (stomach.rs `egroup`), so a well-formed cell digests, nests
+  // and reverts exactly as without the braces, and a cell that leaves a group or a mode open meets the cell's end as
+  // before; a net stray `}` leaves the alignment count at −1, so the column end reaches the stomach and gets its `{`
+  // (stomach.rs `align_error`, tex.web §1127), which this v-part closes. Rust-only: Perl's templates have no braces
+  // (KNOWN_PERL_ERRORS #908, #923). Guard
+  // `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
+  DefPrimitive!("\\lx@template@bgroup", {
+    assign_value(TEMPLATE_BRACE_OPEN, true, None);
+  });
+  DefPrimitive!("\\lx@template@egroup", {
+    if is_value_bound(TEMPLATE_BRACE_OPEN, Some(0)) {
+      if lookup_bool(TEMPLATE_BRACE_OPEN) {
+        // A well-formed cell: the pair closes.
+        assign_value(TEMPLATE_BRACE_OPEN, false, None);
+      } else {
+        // The cell's `}` closed the template's `{` and opened nothing after, the cell still ending here — an `\egroup`
+        // (`a\egroup &=& b`; a `}` token would leave the alignment count at −1, so its `&` would be no cell end): this
+        // `}` meets the cell's formula (tex.web §1069 `extra_right_brace`), deleted. Guard
+        // `perfect_kernel_batch69c::egroup_closing_a_template_brace_errs_once`.
+        Error!(
+          "unexpected",
+          "}",
+          "Extra }, or forgotten $",
+          "The alignment template's } has no group left to close in the cell; deleted."
+        );
+      }
+    } else if !lookup_bool(TEMPLATE_BRACE_OPEN)
+      && off_save_closer().is_some_and(|closer| closer == T_END!())
+    {
+      // The cell's `}` closed the template's `{`, and a `{` of the cell is open: this `}` closes it.
+      egroup()?;
+    }
+    // That `{` may be the one `align_error` inserted before the column end (`a} &=& b`, KNOWN_PERL_ERRORS #923).
+    // Otherwise a group or a mode the cell left open (math9805003's `{Sb}`, a stray `$`'s in-math text): left to the
+    // cell's end, as without the braces.
+  });
 
   // These are for those screwy cases where you need to create a group like box,
   // more than just bgroup, egroup,
@@ -871,6 +1115,41 @@ LoadDefinitions!({
     t.push(T_END!());
     Ok(Tokens::new(t))
   });
+  // Perl TeX_Box.pool.ltxml:200-209: like `VBoxContents`, but horizontal mode starts at once
+  // (`\lx@enterhorizontal` in front of the material), so the result is one paragraph of the current width, set in an
+  // internal vertical list: a caption (`\@@caption PBoxContents`, latex_constructs.pool.ltxml:3368), whose `$$` is
+  // display math as in the `\vbox` LaTeX sets a caption in (amsart.cls:1386-1392 `\vbox{\noindent…}`), where a
+  // restricted horizontal argument would make it an empty formula (tex.web §1138; 1005.1555, 1907.01498, 2310.11556,
+  // 1404.2359). The material is the braced argument, digested from a mouth of its own, as `HBoxArgContents` digests
+  // an unbraced one: a caption is a macro's argument, tokenized before `\lx@@caption` reads it, and a formula it
+  // leaves open (an author's `$` inside a math `\qty` unit, 2512.12866) ends with it, where Perl's live reader
+  // (`readBoxContents`) took the caption's `}` as the formula's and read on through the document. The box's mode is
+  // the inline form, which ends no paragraph around it with a `\par` (Perl's `internal_vertical` does): a caption the
+  // engine had set as text never did, and a `\par` an enclosing list redefined — an aas `\references` entry — must
+  // not run for it (OXIDIZED_DESIGN_DIVERGENCES #769).
+  DefParameterType!(PBoxContents, sub[_inner, _extra] {
+    let mut body = box_prefix_tokens(Some(Tokens!(T_CS!("\\lx@enterhorizontal")))).unlist();
+    body.extend(read_arg(ExpansionLevel::Off)?.unlist());
+    Ok(Tokens::new(body))
+  },
+  predigest => sub[arg] {
+    match arg {
+      ArgWrap::Tokens(body) => reading_from_mouth(Mouth::default(), move || {
+        unread(body);
+        predigest_box_contents_in_mode(ArgWrap::None, "inline_internal_vertical")
+      }),
+      _ => predigest_box_contents_in_mode(arg, "inline_internal_vertical"),
+    } },
+  reversion => sub[arg, _inner, _extra] {
+    let mut t: Vec<Token> = vec![T_BEGIN!()];
+    t.extend(arg);
+    t.push(T_END!());
+    Ok(Tokens::new(t))
+  });
+  // Perl TeX_Box.pool.ltxml:211-213 `$_[0]->enterHorizontal`, which fires no `\everypar`.
+  DefPrimitive!("\\lx@enterhorizontal", {
+    enter_horizontal_without_everypar();
+  });
 
   // This re-binds a number of important control sequences to their default text binding.
   // This is useful within common boxing or footnote macros that can appear within
@@ -963,6 +1242,8 @@ LoadDefinitions!({
     if is_fill_line {
       attrs.insert("class".to_string(), "ltx_leaderfill".to_string());
     }
+    // (a TeX box: `mode => "restricted_horizontal"` marks this element for a frontmatter field's print, core
+    // `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715)
     let node = document.open_element(newtag, Some(attrs), None)?;
     if let Some(contents) = contents_opt {
       document.absorb(contents, None)?;
@@ -1382,6 +1663,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "height");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_height(value);
@@ -1413,6 +1695,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "width");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_width(value);
@@ -1437,6 +1720,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "depth");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_depth(value);
@@ -1505,7 +1789,7 @@ LoadDefinitions!({
       // Only unlist if box is vertical (mode ends with "vertical")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
-        Ok(stuff.unlist())
+        Ok(vlist_of(&stuff, false))
       } else {
         Ok(vec![at_natural_size(stuff)])
       }
@@ -1521,7 +1805,7 @@ LoadDefinitions!({
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
-        Ok(stuff.unlist())
+        Ok(vlist_of(&stuff, true))
       } else {
         Ok(vec![at_natural_size(stuff)])
       }
@@ -1704,7 +1988,21 @@ LoadDefinitions!({
     whatsit.set_property("cached_depth", cdepth);
     // hrule defaults to full width — don't cache a specific width
 
-    if lookup_alignment().is_some() {
+    // An `\hrule` is the alignment's own only on the alignment's vertical list, between its rows (`\noalign`, an
+    // `\hline`, digested in a pseudo-row's column): in an open cell it is the cell's material — in TeX an error in the cell's restricted horizontal mode,
+    // the rule of a box's own vertical list inside it (tex.web §1076 `begin_box` starts that list; §1094
+    // `head_for_vmode`). Perl adds a border row for any `\hrule` while an `Alignment` is visible
+    // (TeX_Box.pool.ltxml:846-851) and `add_line` restarts the row's columns (Alignment.pm:126), so a cell's
+    // `\vbox{…\hrule…}` (ytableau's box frames, ytableau.sty:260-296) dropped the row's middle cells and, after an
+    // `\omit` cell, set the next cell outside its template's math (2308.07459; KNOWN_PERL_ERRORS #669). Guard:
+    // `perfect_kernel_batch66n::rule_in_a_cell_box_keeps_the_row`.
+    let between_rows = lookup_alignment().is_some_and(|alignment| {
+      alignment.alignment_cell().is_some_and(|cell| {
+        let cell = cell.borrow();
+        !cell.is_in_column() || cell.current_row().is_some_and(|row| row.is_pseudo())
+      })
+    });
+    if between_rows {
       // Perl: set isHorizontalRule only if dimensions suggest a real rule
       // A full-width (default) rule with an explicit height is a horizontal
       // rule too — `\noalign{\hrule height 1pt}` fell through the former

@@ -1,0 +1,18 @@
+% mechanism: as revtex_nucleus_mark_after_a_conjunction_parts_entries, with no comma before the "and" and a `\&` before
+%   the third mark (OXIDIZED_DESIGN_DIVERGENCES #964; review rev104c2 F1)
+% witness: none (review rev104c2 probe q11's siblings)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1Univ X and 2Lab Y & 3Inst Z"
+% engines: rust 104c r2: Ann "Univ X and 2Lab Y", Bob none
+% expect:  0 errors, 0 warnings; each author its own entry
+% status:  RED (104c r2) -> GREEN (104c r3) — perfect_kernel_batch104c::a_conjunction_before_a_nucleus_mark_parts_entries
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+\author{Cat Cole $^3$}
+\affiliation{${}^1$Univ X and ${}^2$Lab Y \& ${}^3$Inst Z}
+\maketitle
+Text.
+\end{document}

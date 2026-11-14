@@ -1,0 +1,23 @@
+% mechanism: the list cutter (`classify::entry_starts` `lines_starts`): the lines of an environment the list opens
+%   (`\begin{footnotesize}`) are not cut apart, no piece holding half of it; a start inside it dropped, the list is
+%   read as the base read it
+% witness: 2506.05954 (`\affiliation{\begin{footnotesize} ${}^a$New Engineering…\\ ${}^b$…\end{footnotesize}}`)
+% oracle:  pdflatex (TL 2025, revtex4-1, -no-shell-escape) 0 errors: "a Univ A" over "b Univ B", small
+% engines: rust P4b4abase: 0 errors, each name its line; P4b4a: 2 errors (half an environment in each piece)
+% expect:  0 errors, 0 warnings; Ann Able "a Univ A, Town", Bob Baker "b Univ B, City" (the base's output; the
+%   `footnotesize` lost as in the base, pre-existing, post-merge)
+% status:  RED (P4b4a) -> GREEN (P4b4a3, P4b4a4), guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass[aps,prd]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$}
+\author{Bob Baker$^{b}$}
+\affiliation{\begin{footnotesize}
+  ${}^a$Univ A, Town\\
+  ${}^b$Univ B, City
+\end{footnotesize}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,27 @@
+% pgfmath reads `\wd`/`\ht`/`\dp` of a box (Perl pgfmath.code.tex.ltxml:696-701, the box lookup :499-521): a box
+% named by a register (`\newsavebox`, `\newbox`, a count holding the number) or by digits (`\wd0`, which TeX and pgf
+% read and Perl's grammar does not: Perl gives 0 there), times a factor, in a sum, negated. tikzscale measures every
+% picture so (tikzscale.sty:522-524); read as 0, its width loop never converged and `\requestedSize/0` clamped every
+% coordinate (2010.05701, 2205.15714, 2311.08887, 2604.09771: 52,200 "Dimension too large" with mechanism B).
+% witness: 2010.05701, 2205.15714, 2311.08887, 2604.09771.
+% status:  GREEN (DTL1). Base int160a1: every value 0.0 but `200/\wd \mb` 200.0, 1 Warning (divisor zero).
+% oracle:  pdflatex 0 `!`: [100.0][7.0][3.0] / [50.0][4.0][2.0][50.0] / [200.0][45.0][2.0][-1.0] / [30.0][25.0];
+%          Perl 0 errors, [100.0][10.0][0.0] / [0.0][0.0][0.0][50.0] / … (its \rule raise and `\wd0` differ).
+% expect:  0 errors, 0 warnings, the pdflatex values.
+\documentclass{article}
+\usepackage{pgf}
+\newsavebox{\mb}
+\newbox\nb
+\newcount\bn
+\begin{document}
+\sbox{\mb}{\rule[-3pt]{100pt}{10pt}}\setbox\nb=\hbox{\vrule width 20pt height 5pt depth 1pt}%
+\setbox0=\hbox{\vrule width 50pt height 4pt depth 2pt}\bn=0
+\makeatletter\newsavebox{\my@box}\sbox{\my@box}{\rule{30pt}{1pt}}\makeatother
+\pgfmathparse{\wd\mb}[\pgfmathresult]\pgfmathparse{\ht\mb}[\pgfmathresult]\pgfmathparse{\dp\mb}[\pgfmathresult]
+
+\pgfmathparse{\wd0}[\pgfmathresult]\pgfmathparse{\ht0}[\pgfmathresult]\pgfmathparse{\dp 0}[\pgfmathresult]\pgfmathparse{\wd\bn}[\pgfmathresult]
+
+\pgfmathparse{2\wd\mb}[\pgfmathresult]\pgfmathparse{\wd\nb*2+\ht\nb}[\pgfmathresult]\pgfmathparse{200/\wd \mb}[\pgfmathresult]\pgfmathparse{-\dp\nb}[\pgfmathresult]
+
+\makeatletter\pgfmathsetmacro{\w}{\wd\my@box}[\w]\makeatother\pgfmathsetmacro{\q}{\wd\mb*0.25}[\q]
+\end{document}

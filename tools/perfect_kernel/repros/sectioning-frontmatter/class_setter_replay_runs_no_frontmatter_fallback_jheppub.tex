@@ -1,0 +1,20 @@
+% witness: 2012.12760, 2207.06852 (paper.cls + jheppub.sty, the rawclasses lever: title, authors and
+%   affiliations lost)
+% oracle: pdflatex: title, author, abstract
+% engines: rust=0 errors, no <title>, no <creator> (2026-10-16; also on 67int15 under [rawclasses])
+% expect: 0 errors; <title>The Title</title> and the author's <creator>
+% status: GREEN (batch 68u)
+% mechanism: jheppub's one-argument \abstract{…} (jheppub_sty.rs records \abstract:redefined@nargs) makes the
+%   kernel \abstract replay the class's refused \abstract for its flags (sect05.rs replay_class_setter);
+%   paper.cls:624's \def\abstract{\small\subsubsection*{\abstractname}} runs a sectioning command, whose
+%   \@startsection@hook ran \lx@frontmatter@fallback in the preamble: the title and authors were emitted
+%   there and lost, and \maketitle disabled. The replay now makes the fallback inert, as it does the notes.
+\documentclass{paper}
+\usepackage{jheppub}
+\title{The Title}
+\author{Ann Author}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

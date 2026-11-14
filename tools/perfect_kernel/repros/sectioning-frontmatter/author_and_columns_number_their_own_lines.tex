@@ -1,0 +1,18 @@
+% mechanism: `\and` columns each numbering their own lines (`Ann Able$^{1}$ \\ $^{1}$Univ X \and Bob Baker$^{1}$ \\
+%   $^{1}$Univ Y`): a label with entries in several columns labels each column's own names
+%   (`Resolver::answer_pending`'s per-column labels, OD #925), and the writer writes it. A label whose entries all
+%   stand in one column stays every carrier's (the sibling in `author_and_columns_share_one_list.tex`).
+% witness: (construct) the 77p r6 re-review's finding 3, probes x6, w28 (`author_symbol_carriers_stay_in_their_row`,
+%   symbols); this the numbered sibling
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1 Cat Cole1,2" over "1 Univ X", "1 Univ Y", "2 Univ Z" in columns
+% engines: rust 92c: Univ X and Univ Y each on Ann Able, Bob Baker and Cat Cole (the old reader and the reading alike)
+% expect:  0 errors, 0 warnings; Ann Able Univ X, Bob Baker Univ Y, Cat Cole Univ Z
+% status:  GREEN (93a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \\ $^{1}$Univ X \and Bob Baker$^{1}$ \\ $^{1}$Univ Y \and Cat Cole$^{1,2}$ \\ $^{2}$Univ Z}
+\maketitle
+Body.
+\end{document}

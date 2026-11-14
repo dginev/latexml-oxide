@@ -1,0 +1,14 @@
+% witness: rev77x finding 7 (laeenc.def:83-97 `\shaddanasb` … `\shaddakasra`, slots 198-203)
+% oracle:  pdflatex 0 errors; the default LAE font (aealmohanadb, ararabeyes.enc) has no glyph at 198-203 and prints
+%          nothing; arabi's DTP Naskh LAE font (ardtpnaskh.enc) draws shadda with fathatan, dammatan, kasratan, fatha,
+%          damma, kasra there — Unicode's U+0651 with U+064B-0650, as the LFE map's 0xC6-0xCB
+% engines: rust 77x r1 = dropped, 6 Warnings ("has no Unicode glyph for it"); int36a dropped silently; Perl no LAE map,
+%          1 Error (`\RequirePackage` in the document: arabi's babel binding), the letters lost
+% expect:  0 errors, 0 warnings; each letter with its shadda and vowel
+% status:  GREEN (77x r2, lae_fontmap.rs)
+\documentclass{article}
+\usepackage[LAE,OT1]{fontenc}
+\usepackage[english,arabic]{babel}
+\begin{document}
+\baa\shaddanasb{} \baa\shaddaraff{} \baa\shaddajarr{} \baa\shaddafatha{} \baa\shaddadamma{} \baa\shaddakasra.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: extsizes' copy of the standard class runs `\@maketitle` only without `titlepage` (the same `\if@titlepage`
+%   choice at class load), so the document's title-only `\@maketitle` is the page in force and the appended tail prints
+%   nowhere (`MaketitleRuns::WithoutTitlepage`, OXIDIZED_DESIGN_DIVERGENCES #953)
+% witness: synthetic (review revTP1c)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title / Body." (no authors)
+% engines: TP1c: Alice A, Bob B (invented, extarticle undeclared), 0 warnings; int160a0: Alice A, 1 warning; TP1 at integration: Alice A
+% expect:  one creator Alice A, 0 errors, 0 warnings, no `frontmatter:annotated`
+% status:  GREEN at integration of TP1 (main session). Guard perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read
+% preload: ar5iv.sty
+\documentclass{extarticle}
+\makeatletter\def\@maketitle{\begin{center}{\Large\@title}\end{center}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

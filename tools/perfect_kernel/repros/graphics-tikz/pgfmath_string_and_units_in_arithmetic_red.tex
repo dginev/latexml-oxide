@@ -1,0 +1,20 @@
+% witness: review of M3's pgfmath arrays (finding 5); a `"` operand of the grammar is only whole-formula or a ternary's branch, a unit after an array primary is skipped, a parenthesised array is read
+% oracle:  pdflatex (TL 2025): R0 2.0, R1 a, R2 1, 0 errors; R3-R6 err, R3 0, R4 0, R5 0, R6 0; R7 2.0; R8 a.
+% engines: M3r2, M3: R0 0.0, R1 0.0, R2 0.0; R3 1, R4 6.0, R5 20, R6 1 with no Error; R7 0.0; R8 0.0 and an Error. int141a: as wrong, R8 silent. Wrong numbers with no Error, OD #973 "Left".
+% expect:  pdflatex's values and its errors
+% status:  RED
+\documentclass{article}
+\usepackage{tikz}
+\def\nums{{1,2,3}}
+\pgfmathdeclarefunction{f}{1}{\edef\pgfmathresult{#1}}
+\begin{document}
+\pgfmathparse{"1"+1}\typeout{R0 = \pgfmathresult}
+\pgfmathparse{("a")}\typeout{R1 = \pgfmathresult}
+\pgfmathparse{dim("a")}\typeout{R2 = \pgfmathresult}
+\pgfmathparse{{1,2}[0] pt}\typeout{R3 = \pgfmathresult}
+\pgfmathparse{3*{1,2}[1]pt}\typeout{R4 = \pgfmathresult}
+\pgfmathparse{{10,20}[1] mm}\typeout{R5 = \pgfmathresult}
+\pgfmathparse{({1,2,3})[1]}\typeout{R6 = \pgfmathresult}
+\pgfmathparse{\nums[1]*\dimexpr 1pt\relax}\typeout{R7 = \pgfmathresult}
+\pgfmathparse{f({"a","b"}[0])}\typeout{R8 = \pgfmathresult}
+\end{document}

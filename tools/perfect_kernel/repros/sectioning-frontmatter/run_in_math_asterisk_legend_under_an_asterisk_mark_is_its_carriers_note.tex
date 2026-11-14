@@ -1,0 +1,33 @@
+% A raw class's run-in `\affil` legend `$^\ast$Deceased` under the name carrying the same asterisk written `*` (`Ann
+% Able$^{1,*}$`): both print ∗, so the name requests the line, by the one key both sides are keyed by (queue_digest.rs
+% `clean_frontmatter_labels`, `one_asterisk`). The line's label was keyed by its printed text, `affiliation:∗` (U+2217),
+% the name's plain `*` `affiliation:*`: no name seemed to request the line, so batch 100a r1's doubt reader
+% (frontmatter_stores.rs `requested_as_printed`) left it the class's text in the body (review rev100a B1). The note's
+% mark is the glyph the line prints (`line_mark`: ∗).
+% witness: review rev100a probe q/p2b (synthetic; 0708.2630's `$^*$Deceased` legend family)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗, Bob Baker2", "1Univ A, Town", "2Univ B, City", "∗Deceased"
+% engines: rust int127a = "∗Deceased" Ann Able's affiliation contact; rust 100a r1 = the class's text in the body, "Ann
+%          Able∗"; perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town" and <note class="ltx_note_frontmatter
+%          ltx_thanks_deceased" mark="∗" role="thanks">∗Deceased</note>; Bob Baker "2Univ B, City"; the body "Text."
+% status:  RED (100a r1) -> GREEN (100a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{rimast.cls}
+\ProvidesClass{rimast}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{rimast}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,*}$, Bob Baker$^{2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^\ast$Deceased}
+
+\maketitle
+Text.
+\end{document}

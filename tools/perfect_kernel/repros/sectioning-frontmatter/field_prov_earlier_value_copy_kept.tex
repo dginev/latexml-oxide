@@ -1,0 +1,19 @@
+% A copy of an earlier `\title` value (`\let\oldtitle\@title`, then `\title{Short}`) is not a print of the field the
+% frontmatter displays: each `\title` call's positions follow the previous call's, so the old copy covers none of the
+% new value's (fms1 re-review finding 7).
+% status:  RED (fms1 round 2: the old copy's positions covered the short value's extent and it was lifted)
+%          → GREEN (fms1 round 3).
+% oracle:  pdflatex 0 errors: "Long Original Title", then the title block "Short / Ann Author / <date>".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the old copy kept.
+\documentclass{article}
+\makeatletter
+\title{Long Original Title}
+\let\oldtitle\@title
+\title{Short}
+\author{Ann Author}
+\begin{document}
+\begin{center}\oldtitle\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

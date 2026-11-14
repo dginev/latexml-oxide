@@ -1,0 +1,24 @@
+% witness: 92a r4 sibling of review rev92a_r3 B1 (`\emailAdd`, which the rehearsal binds as it binds `\email`): one
+%          note calls the binding's `\email` and the paper's own `\emailAdd`
+% oracle:  pdflatex: "Email address: carl@z.org" under University Y, City, Bob Baker's address; the footnote prints
+%          "Correspondence to ; at home bob@home.org."
+% engines: perl 0.8.8 = 0 errors (1 warning, ar5iv.sty absent), carl@z.org on Bob Baker, bob@home.org in the
+%          `ltx:pubnote`; rust int120a = the same XML, the writer declined (the reading had no carl@z.org)
+% expect:  0 errors, 0 warnings; each call read by its own command's meaning when the note is rehearsed (at the
+%          flush, \maketitle): carl@z.org Bob Baker's own call (api:annotate:last owner:own-call), bob@home.org the
+%          note's text; the writer "same"
+% status:  GREEN (92a r4)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\newcommand{\emailAdd}[1]{\texttt{#1}}
+\begin{document}
+\title{A title}
+\author{Ann Able}
+\address{University X, Town}
+\author{Bob Baker}
+\address{University Y, City}
+\thanks{Correspondence to \email{carl@z.org}; at home \emailAdd{bob@home.org}}
+\maketitle
+Text.
+\end{document}

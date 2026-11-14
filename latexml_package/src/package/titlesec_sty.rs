@@ -220,7 +220,16 @@ LoadDefinitions!({
     // resets, an `\endlist` closes the list its before-code opened (AVT.sty's `\part`, 2605.05095);
     // a rule after a display title sits at the title's end. `rightmargin`, `wrap` and `drop` never
     // use it (:901-1029). A run-in title ends `#4{#8}#5\unskip` (:792), after-code or none.
-    if !matches!(shape_str.as_str(), "rightmargin" | "wrap" | "drop") {
+    let after_target = s!("\\format@title@after@{sec}");
+    if matches!(shape_str.as_str(), "rightmargin" | "wrap" | "drop") {
+      def_macro(T_CS!(&after_target), None, Tokens!(), None)?;
+    } else {
+      // An unnumbered title runs it too (`\lx@format@title@after@@`, base_utilities.rs; 1905.13490's run-in
+      // `\subsection*{Basic notation}` ends with its `[.]`; guard
+      // `perfect_kernel_batch78a::titlesec_after_code_closes_an_unnumbered_title`).
+      // (An `explicit` after-code naming the title, `#1`, has no title to name there.)
+      let after_alone = if has_parameter_reference(&after) { Tokens!() } else { Tokens::new(after.clone()) };
+      def_macro(T_CS!(&after_target), None, after_alone, None)?;
       body.extend(after);
     }
     if shape_str == "runin" {
@@ -302,7 +311,8 @@ LoadDefinitions!({
   // (regulatory example1/2 -en/-nl; Perl titlesec.sty.ltxml:83 shares the
   // no-op). A kernel sectioning command (locked) keeps its binding; a new
   // one becomes an `\@startsection` heading at the titlesec level, shifted
-  // by one in a chapterless class (LaTeX's own level 0 is `\chapter`). Guard:
+  // by one in a chapterless class (LaTeX's own level 0 is `\chapter`; titlesec.sty:1526 `\@ifundefined{chapter}`,
+  // `state::class_defines_chapter`, not a `chapter` counter alone). Guard:
   // `perfect_kernel_batch54::titleclass_defines_a_new_heading_command`.
   DefPrimitive!("\\titleclass {} [] {} []", sub[(cmd, level, _class, parent)] {
     let Some(cmd) = cmd.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) else {
@@ -325,7 +335,7 @@ LoadDefinitions!({
     if lookup_meaning(&cmd).is_some() {
       return Ok(vec![]); // \section & co keep their (locked) bindings
     }
-    let shift = if has_chapter_counter() { 0 } else { 1 };
+    let shift = if has_chapter_counter() && class_defines_chapter() { 0 } else { 1 };
     def_macro(
       cmd,
       None,
@@ -393,7 +403,11 @@ fn ttl_class_heading(name: &str) -> Tokens {
     _ => None,
   };
   let level = level.unwrap_or_else(|| {
-    let shift = if has_chapter_counter() { 0 } else { 1 };
+    let shift = if has_chapter_counter() && class_defines_chapter() {
+      0
+    } else {
+      1
+    };
     do_expand(Tokenize!(TeXString::assembled(s!(
       "\\csname ttll@{name}\\endcsname"
     ))))

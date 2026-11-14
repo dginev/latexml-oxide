@@ -1,0 +1,28 @@
+% mechanism: authblk's sibling of `article_coauthor_appended_to_author_is_kept.tex (was `…_is_lost_silently_red`)`: `\coauthor{Bob B}`
+%   appends `\and Bob B` to `\@author` between two `\affil` calls. authblk's `\author` stores nothing in the kernel
+%   `\@author` (its own `\@author` prints the block, authblk.sty:167-171), so the tail is what follows the value
+%   `\@author` held as the authors were queued (frontmatter_stores.rs `seen_author_tail`); before FX24 the appended
+%   name was lost (revP26 probe c4/co)
+% witness: 2511.15315 (authblk via procdoc2, an appended tail of e-mails lost); synthetic shape
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Alice A", "Inst X", "Inst Y", "Bob B" (authblk prints the
+%   appended name after the affiliations)
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("The title page prints 1 word(s) … does not
+%   hold: bob"); one creator Alice A (Inst X, Inst Y): "Bob B" lost. FX24: 0 errors, 0 warnings; Alice A (Inst X,
+%   Inst Y), Bob B; perl not run
+% expect:  0 errors, 0 warnings; Alice A and Bob B both creators; Inst X and Inst Y kept
+% status:  RED (int158a; RR1 gap 24b) -> GREEN (FX24; guard perfect_kernel_batchfx24::an_authblk_coauthor_appended_to_author_is_kept)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\makeatletter
+\newcommand\coauthor[1]{\g@addto@macro\@author{\and #1}}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\affil{Inst X}
+\coauthor{Bob B}
+\affil{Inst Y}
+\maketitle
+Body.
+\end{document}

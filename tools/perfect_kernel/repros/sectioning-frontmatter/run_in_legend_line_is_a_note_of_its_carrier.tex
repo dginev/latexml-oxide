@@ -1,0 +1,41 @@
+% A raw class's run-in `\affil` line that is a legend (`$^*$Author to whom any correspondence should be addressed.`)
+% under the one name showing its symbol. Its mark labels it (FIDELITY_CHARTER: a symbol that starts a line labels it,
+% affiliation or legend alike), so it goes to Ann Able alone, and as a legend — a symbol mark and a correspondence,
+% contribution or address-change text (queue_digest.rs `legend_note_kind`, `classify_thanks`) — it is her note
+% (`<note role="thanks" mark="*">`), as the frontmatter observer writes it when it re-parts the names: labelled as an
+% affiliation, it had been her affiliation contact (review rev99b B1; the observer declining here over the creator
+% holding two names, as in 2609.15125).
+% witness: 2609.15125 (iopjournal; 2602.03759, 2604.08878, 2607.12158)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗ (iD), Bob Baker2 (iD) Dan Dole2 (iD), Cy Cole3 and the XY team4", "∗Author to
+%          whom any correspondence should be addressed."
+% engines: rust 99b0 = the legend a body paragraph; rust 99b r1 = every author's affiliation; perl = no raw class load
+%          (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds <note role="thanks" mark="*">∗Author to whom any correspondence should be
+%          addressed.</note>, no author an affiliation of it
+% status:  RED (99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipcol.cls}
+\ProvidesClass{ipcol}\LoadClass{article}
+\RequirePackage{hyperref}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\newcommand{\orcid}[1]{\href{https://orcid.org/#1}{(iD)}}
+\end{filecontents*}
+\documentclass{ipcol}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,*}$\orcid{0000-0000-0000-0000}, Bob Baker$^2$\orcid{0000-0000-0000-0000} Dan Dole$^{2}$\orcid{0000-0000-0000-0000}, Cy Cole$^{3}$ and the XY team$^{4}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^3$Univ C, Place}
+
+\affil{$^4$See the author list of the XY team}
+
+\affil{$^*$Author to whom any correspondence should be addressed.}
+
+\maketitle
+Text.
+\end{document}

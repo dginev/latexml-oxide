@@ -1,0 +1,19 @@
+% GREEN (brief 107g, mechanism 2): a weak spelling after at most two letters stands whatever follows it: `ylwanguestc@`
+%   ("wang", a mailbox word glued on), in an institute's line under the authors, is Yinglong Wang's, not the block's.
+% witness: 2208.05114 (`ylwanguestc@`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int138a: on Yinglong Wang; int139a: on the block
+% expect:  0 errors; ylwanguestc@ on Yinglong Wang
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Zhen Liu\inst{1} \and Yinglong Wang\inst{2} \and Bing Zeng\inst{3}}
+\institute{Univ A, City \\
+\email{liuzhen03@a.com} \and
+Univ B, City \\
+\email{ylwanguestc@gmail.com} \and
+Univ C, City \\
+\email{zengbing@c.cn}}
+\maketitle
+Body.
+\end{document}

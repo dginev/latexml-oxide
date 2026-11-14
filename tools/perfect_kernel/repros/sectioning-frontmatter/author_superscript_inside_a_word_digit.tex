@@ -1,0 +1,16 @@
+% witness: 77n r4 control — a digit superscript inside a word in an author block (ACL `\author{… \\ $^1$NLP$^2$CT Lab,
+%          …}`, 2603.20851, 2605.30274; `I$^2$R`, `DM$^3$L` in 2603.04869, 2604.00800)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2 / 1NLP2CT Lab, Univ X / 2Univ Y"
+% engines: rust 77n r3 = the in-word superscript kept in place; the r4 limits (no mark list, no "and" after it) leave it
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with "NLP<sup>2</sup>CT Lab, Univ X", Bob Baker with Univ Y
+% status:  GREEN (77n r3, r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$NLP$^2$CT Lab, Univ X \\
+$^2$Univ Y}
+\maketitle
+x
+\end{document}

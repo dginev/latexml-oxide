@@ -15,7 +15,7 @@
 //!      `\RequirePackage{xkeyval}` / `\RequirePackage{currfile}` (→ filehook), so
 //!      `\AtEndOfPackageFile` / `\define@key` were undefined.
 
-use std::process::Command;
+use latexml::util::test::check_requirements;
 
 use crate::common::strip_ansi;
 
@@ -27,14 +27,6 @@ fn convert(doc: &str) -> String {
 fn error_count(log: &str) -> usize {
   let re = regex::Regex::new(r"(Error|Fatal):[^:\s]+:").unwrap();
   log.lines().filter(|l| re.is_match(l)).count()
-}
-
-fn kpsewhich_has(name: &str) -> bool {
-  Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
 }
 
 /// Self-contained (all bindings are compiled in — no TeX Live package needed):
@@ -64,8 +56,7 @@ fn standalone_under_includestyles_provides_filehook_hooks() {
 /// — and convert cleanly. Skipped where TeX Live lacks stex.
 #[test]
 fn raw_stex_sty_loads_not_the_perl_ltxml() {
-  if !kpsewhich_has("stex.sty") || !kpsewhich_has("stex.sty.ltxml") {
-    eprintln!("stex.sty / stex.sty.ltxml not in TeX Live — skipping");
+  if !check_requirements(&["stex.sty", "stex.sty.ltxml"]) {
     return;
   }
   let log = convert(

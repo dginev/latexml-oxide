@@ -1,0 +1,18 @@
+% witness: 0907.3938 (math.sty:10 loads amsxtra; `&= \rbar1{(\T\lm)\spdot}_{\lmd_n} \\` in {align*}; brk89)
+% oracle:  pdflatex 0 errors: amsxtra.sty:32-34 superscripts a text-font period (`\spdot`), two (`\spddot`), three
+%          (`\spdddot`)
+% engines: rust int90a = 5 errors ("Missing { inserted" at the next `\\`, "\endgroup Attempt to close non-boxing
+%          group"; "Done." lost): the binding's `^{\dot}` gave the accent the group's `}`; Perl's
+%          amsxtra.sty.ltxml:27 is the same `^{\dot}`
+% expect:  0 errors, 0 warnings; the three superscripts; "Done." kept
+% status:  RED (int90a) -> GREEN (79u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,amsxtra}
+\begin{document}
+\begin{align*}
+  0 &= f\spdot + g\spddot \\
+    &= h\spdddot
+\end{align*}
+Done.
+\end{document}

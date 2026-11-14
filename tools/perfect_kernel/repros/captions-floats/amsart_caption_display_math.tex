@@ -1,0 +1,16 @@
+% witness: 0803.4182 (amsart \caption{... $$ \frac{W(\tilde\Lambda)}{W(\{\tilde a\})} = ... $$ }); rc_struct2 C11
+% oracle:  pdflatex 0 errors with amsart: its \@makecaption sets the caption in a \vbox paragraph (amsart.cls
+%          \setbox\@tempboxa\vbox{...#2...\par}), so $$ there is display math; with article (\sbox) the same text errs
+% expect:  0 errors; the caption keeps the display formula
+% status:  RED (batch 68z): the kernel's \lx@@caption is digested in text mode (latex_constructs/sect09.rs), so $$ is an
+%          empty formula pair and the scripts between them err (2 Errors "Script ^"); a fix needs a display inside
+%          ltx:caption (schema) or an amsart caption mode — not local
+\documentclass{amsart}
+\begin{document}
+\begin{figure}
+\caption{\label{fig:x} The bijection implies
+ $W(\{{\tilde c},{\tilde d}\}) = W(\{c^\circ,d^\circ \})$.
+This leads to
+ $$ \frac{W({\tilde \Lambda})}{W(\{{\tilde a}\})} = W(\{c^\circ,d^\circ\}) \, .$$ }
+\end{figure}
+\end{document}

@@ -1,0 +1,13 @@
+% witness: arXiv 1312.5793 (`\newcommand{\smalltwomatrix[5]}{\left(\begin{smallmatrix}{#2}&{#3}\\{#4}&{#5}\end{smallmatrix}\right)}`)
+% oracle:  pdflatex 0 errors; "[a b c d] x" — latex.ltx `\new@command#1{\@testopt{\@newcommand#1}0}` (:1156): `#1` is
+%          `\smalltwomatrix[5]`, `\@testopt` sees the body's `{` and inserts `[{0}]`, so the command takes five
+%          arguments, the first optional with default 0
+% engines: rust (int110o) = five plain arguments: `\two{a}{b}{c}{d}` swallowed the next token (the paper: 90
+%          script errors, the error-limit Fatal)
+% expect:  0 errors; "[a b c d] x"
+% status:  RED (int110o) -> GREEN (82h)
+\documentclass{article}
+\newcommand{\two[5]}{[#2 #3 #4 #5]}
+\begin{document}
+\two{a}{b}{c}{d} x
+\end{document}

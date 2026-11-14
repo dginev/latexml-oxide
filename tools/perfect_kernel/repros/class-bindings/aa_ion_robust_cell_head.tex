@@ -1,0 +1,14 @@
+% witness: 0801.2767 (`& \ion{H$\delta$}& 24.0`: aa.cls v6.1 :639 / v9.1 :1729 `\DeclareRobustCommand{\ion}[2]`;
+%          Perl aa_support.sty.ltxml:247 a plain macro, expanded by the cell's look for `\omit`, reads the `&`)
+% oracle:  pdflatex with 0801.2767's aa.cls (v6.1): 0 errors; "4101 Hδ 24.0 / 4267 C ii 0.3"
+% engines: rust 67int17b = 1 error (Stray alignment "&"); Perl the same shape
+% expect:  0 errors, 0 warnings; three cells per row
+% status:  RED (67int17b) -> GREEN (68y)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\begin{tabular}{llc}
+4101 & \ion{H$\delta$}& 24.0 \\
+4267 & \ion{C}{ii} & 0.3 \\
+\end{tabular}
+\end{document}

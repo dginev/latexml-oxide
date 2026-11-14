@@ -1,0 +1,20 @@
+% mechanism: REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::nucleus_marks_as_marks`): a mark set on unbraced spacing (`$~^{1}$`) leads its line as `$^{1}$` does.
+% witness: 1211.5032 (`\affiliation{$~^{1}$INFN, Sezione di Padova …\\$~^{2}$Dipartimento di Fisica e Astronomia …}`:
+%   98e r1 once on the block, 98a the whole on each)
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "Ann Able1 and Bob Baker1,2 / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust 98e r1: the names none, the block (a nameless creator) the whole; 98a: the whole on each
+% expect:  0 errors, 0 warnings; Ann Able Univ A, Bob Baker both
+% status:  RED (98e) -> GREEN (98e r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{1,2}$}
+\affiliation{$~^{1}$Univ A, Town
+\\$~^{2}$Univ B, City}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

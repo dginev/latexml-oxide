@@ -1,0 +1,18 @@
+% mechanism: "representing " is among the words a remark speaking for a group opens with (`SPEAKS_FOR`), as the
+%   collaboration framing reads it: a call of its own `\author{representing the X Collaboration}` is the names'
+%   collaboration under `=2` as off
+% witness: hep-ex9903035 (=2: a creator "representing the ATLAS Pixel Collaboration", creator_not_a_name)
+% oracle:  pdflatex 0 errors; "John Richardson", "Lawrence Berkeley Laboratory", "representing the ATLAS Pixel Collaboration"
+% engines: rust off: 1 creator with a collaboration contact; rust =2 (int152c): 1 error, 2 creators
+% expect:  0 errors, 0 warnings, 1 creator, its affiliation and collaboration contacts
+% status:  RED (int152c) -> GREEN (perfect_kernel_batchne2::representing_a_collaboration_is_its_contact)
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4-2}
+\begin{document}
+\title{T}
+\author{John Richardson}
+\affiliation{Lawrence Berkeley Laboratory}
+\author{representing the ATLAS Pixel Collaboration}
+\maketitle
+Text.
+\end{document}

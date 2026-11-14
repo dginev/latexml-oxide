@@ -1,0 +1,10 @@
+% witness: none (the `\crcr` half of tex.web §785 `align_peek`; companion of everycr_runs_after_every_cr, math0005042)
+% oracle:  pdftex 0 errors; "count: 3" (the preamble's `\cr`, `a\cr`, `b\crcr`; the `\crcr` after `a\cr` ends no row:
+%          `align_peek` skips it, so no `\everycr`)
+% engines: rust int40c = "count: 0"; perl alike (KNOWN_PERL_ERRORS #1019); 78b = "count: 3"
+% expect:  0 errors; "count: 3"
+% status:  GREEN (78b; guard perfect_kernel_batch78b::everycr_skips_a_redundant_crcr)
+\count1=0
+\setbox0\vbox{\everycr{\noalign{\global\advance\count1 by 1 }}\halign{#\cr a\cr\crcr b\crcr}}
+count: \the\count1
+\bye

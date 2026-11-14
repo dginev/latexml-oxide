@@ -9,14 +9,14 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <picture height="224.94" width="534.45" xml:id="p1.pic1">
-      <svg:svg height="224.94" overflow="visible" version="1.1" viewBox="0 0 534.45 224.94" width="534.45">
-        <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,224.94) matrix(1 0 0 -1 0 0) translate(22.68,0) translate(0,116.71)">
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -18.06 -4.73)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:2.64em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="36.51">AC in</svg:foreignObject>
+    <picture height="224.94" width="527.84" xml:id="p1.pic1">
+      <svg:svg height="224.94" overflow="visible" version="1.1" viewBox="0 0 527.84 224.94" width="527.84">
+        <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,224.94) matrix(1 0 0 -1 0 0) translate(20.99,0) translate(0,116.71)">
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -16.37 -4.8)">
+            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:2.39em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="33.13"><text font="sansserif">AC in</text></svg:foreignObject>
           </svg:g>
-          <svg:path d="M 62.6 -59.06 h 78.74 v 118.11 h -78.74 Z" style="fill:none"/>
-          <svg:g transform="matrix(1.0 0.0 0.0 1.0 85.33 -39.65)">
+          <svg:path d="M 60.91 -59.06 h 78.74 v 118.11 h -78.74 Z" style="fill:none"/>
+          <svg:g transform="matrix(1.0 0.0 0.0 1.0 83.64 -39.65)">
             <svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" transform="matrix(1 0 0 1 0 0) translate(14.33,0) translate(0,0.28)">
               <svg:g stroke-width="0.4pt">
                 <svg:path d="M 0 0 L 0 39.37 M 0 61.42 L 0 78.74" style="fill:none"/>
@@ -28,13 +28,13 @@
             </svg:g>
           </svg:g>
           <svg:g stroke-width="1.6pt">
-            <svg:path d="M 22.95 0 L 62.32 0" style="fill:none"/>
+            <svg:path d="M 21.26 0 L 60.63 0" style="fill:none"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 76.3 64.22)">
-            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:3.71em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="51.35">Rectifier</svg:foreignObject>
+            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:3.47em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="47.95"><text font="sansserif">Rectifier</text></svg:foreignObject>
           </svg:g>
-          <svg:path d="M 161.58 -56.83 h 157.48 v 113.65 h -157.48 Z" style="fill:none"/>
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 220.63 -52.21)">
+          <svg:path d="M 159.89 -56.83 h 157.48 v 113.65 h -157.48 Z" style="fill:none"/>
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 218.94 -52.21)">
             <svg:foreignObject height="104.43" overflow="visible" style="--ltx-fo-width:2.85em;--ltx-fo-height:7.55em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 104.43)" width="39.44"><inline-block class="ltx_minipage" vattach="top" width="2.85em">
                 <p/>
                 <picture class="ltx_align_left" height="104.43" width="197.44" xml:id="p1.pic1.pic1">
@@ -65,13 +65,13 @@
               </inline-block></svg:foreignObject>
           </svg:g>
           <svg:g stroke-width="1.6pt">
-            <svg:path d="M 141.62 0 L 161.3 0" style="fill:none"/>
+            <svg:path d="M 139.93 0 L 159.61 0" style="fill:none"/>
           </svg:g>
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 180.32 61.99)">
-            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:8.7em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="120.38">Intermediate circuit</svg:foreignObject>
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 182.3 61.99)">
+            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:8.14em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="112.66"><text font="sansserif">Intermediate circuit</text></svg:foreignObject>
           </svg:g>
-          <svg:path d="M 339.3 -59.06 h 78.74 v 118.11 h -78.74 Z" style="fill:none"/>
-          <svg:g transform="matrix(1.0 0.0 0.0 1.0 359.41 -30.87)">
+          <svg:path d="M 337.61 -59.06 h 78.74 v 118.11 h -78.74 Z" style="fill:none"/>
+          <svg:g transform="matrix(1.0 0.0 0.0 1.0 357.72 -30.87)">
             <svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(0.55,0) translate(0,30.87)">
               <svg:path d="M 0 0" style="fill:none"/>
               <svg:path d="M 33.07 30.59 L 33.07 13.64 L 16.54 4.55" style="fill:none"/>
@@ -89,44 +89,44 @@
             </svg:g>
           </svg:g>
           <svg:g stroke-width="1.6pt">
-            <svg:path d="M 319.34 0 L 339.02 0" style="fill:none"/>
+            <svg:path d="M 317.64 0 L 337.33 0" style="fill:none"/>
           </svg:g>
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 354.8 64.22)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:3.51em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="48.51">Inverter</svg:foreignObject>
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 354.91 64.22)">
+            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:3.19em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="44.13"><text font="sansserif">Inverter</text></svg:foreignObject>
           </svg:g>
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 462.57 -4.73)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:3.25em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="44.97">AC out</svg:foreignObject>
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 460.88 -4.8)">
+            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:3.02em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="41.74"><text font="sansserif">AC out</text></svg:foreignObject>
           </svg:g>
           <svg:g stroke-width="1.6pt">
-            <svg:path d="M 418.31 0 L 457.68 0" style="fill:none"/>
+            <svg:path d="M 416.62 0 L 455.99 0" style="fill:none"/>
           </svg:g>
-          <svg:path d="M 43.47 -116.44 h 393.7 v 39.37 h -393.7 Z" style="fill:none"/>
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 197.04 -101.55)">
-            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:6.29em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="87"><text font="bold">Control unit</text></svg:foreignObject>
+          <svg:path d="M 41.78 -116.44 h 393.7 v 39.37 h -393.7 Z" style="fill:none"/>
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 200.27 -101.55)">
+            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:5.54em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="76.72"><text font="sansserif bold">Control unit</text></svg:foreignObject>
           </svg:g>
-          <svg:path d="M 43.47 -68.64 h 393.7 v 157.48 h -393.7 Z" style="fill:none"/>
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 202.1 94.01)">
-            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:5.62em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="77.77"><text font="bold">Power unit</text></svg:foreignObject>
+          <svg:path d="M 41.78 -68.64 h 393.7 v 157.48 h -393.7 Z" style="fill:none"/>
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 204.47 94.01)">
+            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:5.03em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="69.59"><text font="sansserif bold">Power unit</text></svg:foreignObject>
           </svg:g>
-          <svg:path d="M 101.97 -59.89 L 101.97 -78.46" style="fill:none"/>
-          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 1.0 -1.0 0.0 101.97 -59.61)">
+          <svg:path d="M 100.28 -59.89 L 100.28 -78.46" style="fill:none"/>
+          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 1.0 -1.0 0.0 100.28 -59.61)">
             <svg:path d="M -2.88 3.32 C -2.35 1.33 -1.18 0.39 0 0 C -1.18 -0.39 -2.35 -1.33 -2.88 -3.32" style="fill:none"/>
           </svg:g>
-          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 -1.0 1.0 0.0 101.97 -78.74)">
+          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 -1.0 1.0 0.0 100.28 -78.74)">
             <svg:path d="M -2.88 3.32 C -2.35 1.33 -1.18 0.39 0 0 C -1.18 -0.39 -2.35 -1.33 -2.88 -3.32" style="fill:none"/>
           </svg:g>
-          <svg:path d="M 240.32 -76.23 L 240.32 -57.66" style="fill:none"/>
-          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 -1.0 1.0 0.0 240.32 -76.51)">
+          <svg:path d="M 238.63 -76.23 L 238.63 -57.66" style="fill:none"/>
+          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 -1.0 1.0 0.0 238.63 -76.51)">
             <svg:path d="M -2.88 3.32 C -2.35 1.33 -1.18 0.39 0 0 C -1.18 -0.39 -2.35 -1.33 -2.88 -3.32" style="fill:none"/>
           </svg:g>
-          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 1.0 -1.0 0.0 240.32 -57.38)">
+          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 1.0 -1.0 0.0 238.63 -57.38)">
             <svg:path d="M -2.88 3.32 C -2.35 1.33 -1.18 0.39 0 0 C -1.18 -0.39 -2.35 -1.33 -2.88 -3.32" style="fill:none"/>
           </svg:g>
-          <svg:path d="M 378.67 -59.89 L 378.67 -78.46" style="fill:none"/>
-          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 1.0 -1.0 0.0 378.67 -59.61)">
+          <svg:path d="M 376.98 -59.89 L 376.98 -78.46" style="fill:none"/>
+          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 1.0 -1.0 0.0 376.98 -59.61)">
             <svg:path d="M -2.88 3.32 C -2.35 1.33 -1.18 0.39 0 0 C -1.18 -0.39 -2.35 -1.33 -2.88 -3.32" style="fill:none"/>
           </svg:g>
-          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 -1.0 1.0 0.0 378.67 -78.74)">
+          <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.0 -1.0 1.0 0.0 376.98 -78.74)">
             <svg:path d="M -2.88 3.32 C -2.35 1.33 -1.18 0.39 0 0 C -1.18 -0.39 -2.35 -1.33 -2.88 -3.32" style="fill:none"/>
           </svg:g>
         </svg:g>

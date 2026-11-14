@@ -1,0 +1,15 @@
+% witness: 0907.4214 + 10 more letter papers of the rawclasses lever (rawcls3/b_regressions.tsv)
+% oracle: pdflatex 2 errors (letter.cls defines no \section/\subsection); Perl --includestyles 0 errors, unnumbered
+% engines: rust=1 (Error:undefined:\thesubsection) perl=0 (2026-10-16)
+% expect: 0 errors; section and subsection unnumbered (no <tags>)
+% status: GREEN (batch 68u)
+% mechanism: latex.ltx:17332 \newcount\c@secnumdepth leaves it 0 and the class sets it (article.cls 3); letter.cls
+%   sets nothing. Our kernel set 3 (sect04.rs, Rust-only), so the kernel \subsection numbered and stepped a counter
+%   letter.cls never defines. The kernel now leaves it 0, as Perl (latex_base.pool.ltxml:312).
+\documentclass{letter}
+\begin{document}
+\section{Intro}
+Text.
+\subsection{Sub}
+More.
+\end{document}

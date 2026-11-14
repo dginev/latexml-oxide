@@ -1,0 +1,17 @@
+% mechanism: reading.rs `unfold_held_names` (OD #1018), repeated: `\aut` holds `\autA`, which holds a name and `\autB`,
+%   which holds two: each read's shared span is one level's macro, unfolded in turn (at most `UNFOLD_LEVELS`), until
+%   every name has its own tokens, `\textbf{Baker}` kept
+% witness: synthetic (AUT0 b4)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Bob Baker, Cy Cole", Baker in bold
+% engines: int167a: 0 errors, 3 warnings (the names by their text), the bold lost
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob **Baker**, Cy Cole
+% status:  RED (int167a) -> GREEN (AUT1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\autB{Bob \textbf{Baker}, Cy Cole}\def\autA{Ann Able, \autB}\def\aut{\autA}
+\begin{document}
+\title{T}
+\author{\aut}
+\maketitle
+Text.
+\end{document}

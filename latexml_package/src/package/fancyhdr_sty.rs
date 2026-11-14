@@ -31,7 +31,13 @@ LoadDefinitions!({
   // are not converted, so there is nothing to size.
   def_macro_noop("\\f@nch@setoffs")?;
 
-  // not implemented yet: \fancycenter[][]{}{}{}, since 4.0
+  // fancyhdr.sty:378-405 `\fancycenter[distance][stretch]{left}{center}{right}` (since 4.0) sets a field's three parts
+  // in one box, which only a field prints: the fields print nothing here. fancyhdr.sty:429-437 `\fancyfootalign{dimen}`
+  // aligns the feet; fancyhdr.sty:438-444 `\fancyhdrsettoheight{length}{field}` sets the length to the field's height,
+  // which no field has here.
+  def_macro_noop("\\fancycenter[][]{}{}{}")?;
+  def_macro_noop("\\fancyfootalign{}")?;
+  DefMacro!("\\fancyhdrsettoheight{}{}", "\\setlength{#1}{0pt}");
 
   // always false as LaTeXML does not paginate
   DefMacro!("\\iffloatpage{}{}", "#2");
@@ -39,11 +45,40 @@ LoadDefinitions!({
   DefMacro!("\\ifbotfloat{}{}", "#2");
   DefMacro!("\\iffootnote{}{}", "#2"); // since 3.8
 
-  def_macro_noop("\\fancypagestyle{}[]{}")?;
-  // fancyhdr.sty:617-619 `\ps@fancy`/`\ps@fancyplain`: the page styles a class
+  // fancyhdr.sty:609-619 `\ps@f@nch@fancyproto`, `\ps@fancy`/`\ps@fancyplain`: the page styles a class
   // probes (`seminar.cls:760 \@ifgoodps{fancy}`) or `\let`s — headers are not
   // modelled, so the styles are empty.
-  RawTeX!(r"\def\ps@fancy{}\def\ps@fancyplain{}\@namedef{f@nch@ps@fancy-is-fancyhdr}{}");
+  // fancyhdr.sty:691-711 `\fancypagestyle[*]{name}[base]{defs}` stores the style as `\ps@name`, the base style then
+  // the definitions (Perl fancyhdr.sty.ltxml:56 makes it a no-op), so the class's code is there to read: the
+  // frontmatter stores read what a title page's page style prints (frontmatter_stores.rs, K11's toks stores:
+  // googlecloud.cls:103-114 prints `\the\correspondingauthor` in `firststyle`'s foot, 2607.06973; cmu.cls:144-164,
+  // 2608.26053; deepseek.cls:147-171, 2401.14196). Selecting the style runs nothing (`\lx@fancyhdr@style` drops the
+  // code, as Perl's no-op `\fancypagestyle` and `\pagestyle`, latex_constructs.pool.ltxml:997, select nothing): its
+  // fields set no head or foot here, and its code may test what a binding does not model — popets.sty:189-279's
+  // `standardpagestyle` under the acmart binding reads acmart.cls's `\if@ACM@printfolios` and `\if@ACM@timestamp`,
+  // which pdflatex defines (9 Errors on 2408.16304, 2602.20222, 2606.05273 when it ran). The starred form's reset of
+  // the fields (`\f@nch@pagestyle@setup`) and the base style's checks (an unknown or non-fancyhdr base is a
+  // `\PackageError`) are not modelled: the fields are not.
+  RawTeX!(
+    r"\long\def\lx@fancyhdr@style#1{}%
+\def\ps@f@nch@fancyproto{}\@namedef{f@nch@ps@f@nch@fancyproto-is-fancyhdr}{}%
+\def\ps@fancy{\ps@f@nch@fancyproto}\def\ps@fancyplain{\ps@f@nch@fancyproto}\@namedef{f@nch@ps@fancy-is-fancyhdr}{}%
+\newif\iff@nch@pagestyle@star
+\def\fancypagestyle{\@ifstar{\f@nch@pagestyle@startrue\f@nch@pagestyle}{\f@nch@pagestyle@starfalse\f@nch@pagestyle}}%
+\def\f@nch@pagestyle#1{\@ifnextchar[{\f@nch@@pagestyle{#1}}{\f@nch@@pagestyle{#1}[f@nch@fancyproto]}}%
+\long\def\f@nch@@pagestyle#1[#2]#3{\@namedef{ps@#1}{\lx@fancyhdr@style{\@nameuse{ps@#2}#3\relax}}%
+  \@namedef{f@nch@ps@#1-is-fancyhdr}{}}%
+\fancypagestyle*{fancydefault}{\f@nch@initialise}"
+  );
+  // fancyhdr.sty:753-766 `\fancypagestyleassign{new}{old}`: the style `old` under the name `new`.
+  RawTeX!(
+    r"\def\fancypagestyleassign#1#2{\@ifundefined{ps@#2}{%
+    \PackageError{fancyhdr}{\string\fancypagestyleassign: Unknown page style `#2'}{}}{%
+    \expandafter\let\csname ps@#1\expandafter\endcsname\csname ps@#2\endcsname
+    \@ifundefined{f@nch@ps@#2-is-fancyhdr}{%
+      \expandafter\let\csname f@nch@ps@#1-is-fancyhdr\endcsname\@undefined}{%
+      \@namedef{f@nch@ps@#1-is-fancyhdr}{}}}}"
+  );
   // fancyhdr.sty:849-851: under the newlfm class, `\ps@@empty` is fancyhdr's
   // version marker, which newlfm.cls:41 tests with `\@ifundefined` (class census
   // 2026-09-24). fancyhdr lets it to `\f@nch@ps@empty`, which is not modelled here:

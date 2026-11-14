@@ -1,6 +1,8 @@
 //! Red/green guards for batch 66b: run 340's Fatal origins still Fatal at the int8 head (cortex `Stomach:Recursion`,
 //! `Timeout:PushbackLimit`, `Mouth:EoF`, `Document:Malformed`; sample `~/data/pk_agents/main/run340/fatal/`).
 //! Repros `tools/perfect_kernel/repros/*`.
+use latexml::util::test::check_requirements;
+
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert(tex: &str) -> String {
@@ -67,7 +69,7 @@ fn locked_robust_cite_keeps_its_inner_definition() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/macro-state/locked_robust_inner_cite.tex"
   ));
-  assert!(xml.contains(r#"<cite class="ltx_citemacro_cite">[<bibref bibrefs="a" separator="," yyseparator=","/>]</cite>"#), "{xml}");
+  assert!(xml.contains(r#"<cite class="ltx_citemacro_cite">[<bibref bibrefs="a" class="ltx_cite_sort ltx_cite_compress ltx_cite_unsorted_first" separator="," yyseparator=","/>]</cite>"#), "{xml}");
 }
 
 /// A paper's mdpi.cls (2105.08579's, 2201.05363's, 1809.00601's, abridged) loads paracol (:55) and, after the preamble,
@@ -143,6 +145,9 @@ Body text.
 /// as a quotation (2 errors). Witness 2401.14559.
 #[test]
 fn file_let_of_a_files_locked_end_half_is_refused() {
+  if !check_requirements(&["arabtex.sty"]) {
+    return;
+  }
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/macro-state/file_let_of_locked_end_half.tex"
   ));

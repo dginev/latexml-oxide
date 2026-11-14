@@ -1,0 +1,21 @@
+% A labelled link line ending an IEEEtran author block's last entry, `\IEEEauthorblockA{\textsuperscript{1}Univ A\\
+% \textsuperscript{2}Univ B\\ Project website: {\small\href{https://x.org/p}{https://x.org/p}}}`: the line leaves the
+% entry it is glued to and is the entry's holder's URL contact, its label the contact's name as printed (OD #969's link
+% line with a label, parted off its entry: 107c), never an affiliation's text.
+% witness: 2609.03591 (`Project website: {\small\href{…}{…}}` under an IEEE blockA, 10 authors)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A", "2Univ B", "Project website: https://x.org/p"
+% engines: rust int139a0 = "Univ B / Project website: …" one affiliation of Bob Baker
+% expect:  0 errors, 0 warnings; Able Univ A; Baker Univ B and a url contact named "Project website: "
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2}}
+\IEEEauthorblockA{\textsuperscript{1}Univ A\\
+\textsuperscript{2}Univ B\\
+Project website: {\small\href{https://x.org/p}{https://x.org/p}}}}
+\maketitle
+Text.
+\end{document}

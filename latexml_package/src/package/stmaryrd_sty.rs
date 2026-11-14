@@ -2,15 +2,15 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // stmaryrd.sty L40: \def\stmry@if#1#2{\let#2=\@undefined\iftrue#1#2}
-  // The pattern in TL is `\stmry@if X Y \fi` where #1=X, #2=Y. The
-  // default (option `only` not given) opens an \iftrue that absorbs
-  // content until the trailing \fi. We bind stmaryrd symbols
-  // directly (not via raw load), but old-arrows.sty raw-loads
-  // stmaryrd and triggers \stmry@if at definition time. Provide a
-  // \iftrue-emitting stub so the \fi matches.
-  // Witness 2406.00395 (old-arrows), 2406.02375.
-  RawTeX!(r"\def\stmry@if#1#2{\iftrue}");
+  // stmaryrd.sty:40 `\def\stmry@if#1#2{\let#2=\@undefined\iftrue#1#2}`: the pattern is `\stmry@if <definer> <cs>
+  // <rest> \fi`, which (option `only` not given) undefines `<cs>` and runs `<definer><cs><rest>` inside an `\iftrue`
+  // the trailing `\fi` closes. We bind stmaryrd's symbols directly (not via raw load), but other packages use it:
+  // old-arrows.sty:489-492 `\stmry@if\def\varmapsfrom{\varleftarrow\mapsfromchar}\fi` when stmaryrd is loaded.
+  // A stub that only opened the `\iftrue` (gobbling `<definer><cs>`) left `{\varleftarrow\mapsfromchar}` to run at
+  // load time: `\varleftarrow`/`\varlongleftarrow` undefined (default options define neither), 19 papers.
+  // Witnesses 2406.00395 (old-arrows), 2406.02375, 2006.11831, 2102.02198, 2208.02506. Guard:
+  // `perfect_kernel_batch68j::stmaryrd_if_defines_its_cs`.
+  RawTeX!(r"\def\stmry@if#1#2{\let#2=\@undefined\iftrue#1#2}");
 
   // Relational operators
   DefMath!("\\Yup",    None, "\u{2144}",                  role => "RELOP");

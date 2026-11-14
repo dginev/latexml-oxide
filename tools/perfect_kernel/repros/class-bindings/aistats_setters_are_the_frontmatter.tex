@@ -1,0 +1,30 @@
+% mechanism: aistats's title-block setters print in place inside `\twocolumn[…]` (aistats2027.sty:173/248/355, every
+%   year alike) and never reach `\title`/`\author`; the family binding (aistats_sty.rs) makes `\aistatstitle` the title
+%   and pairs `\aistatsauthor`'s columns with `\aistatsaddress`'s (name, affiliation, e-mail lines).
+% witness: 2610.11580 (aistats2027), 1806.02924, 2604.21432, 2605.03921 (HF14; 7 of 6,000 sampled papers)
+% oracle:  pdflatex 0 errors; "A Title / Ann Able Bob Baker / Univ A Univ B / ann@a.edu bob@b.edu"
+% engines: rust int31a: 0 errors, no title, no creators (blocks and tables); perl: no aistats binding (raw: the same)
+% expect:  0 errors; the title; 2 creators, each with its affiliation and e-mail
+% status:  RED (int31a) -> GREEN (77o)
+\begin{filecontents*}{aistats2027.sty}
+\ProvidesPackage{aistats2027}
+\DeclareOption{accepted}{\renewcommand{\statePaper}{\acceptedPaper}}
+\newcommand{\statePaper}{0}\newcommand{\acceptedPaper}{1}
+\ProcessOptions\relax
+\long\def\aistatstitle#1{{\centering{\Large\bfseries #1\par}}\vskip 0.25in}
+\long\def\aistatsauthor#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}\bfseries Anonymous Author\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}\bfseries}\begin{tabular}[t]{c}\bfseries #1\end{tabular}}\fi\par}
+\long\def\aistatsaddress#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}Anonymous Institution\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}}\begin{tabular}[t]{c}#1\end{tabular}}\fi\par}
+\end{filecontents*}
+\documentclass[twoside]{article}
+\usepackage[accepted]{aistats2027}
+\begin{document}
+\twocolumn[\aistatstitle{A Title}
+
+\aistatsauthor{Ann Able \And Bob Baker}
+
+\aistatsaddress{Univ A \\ ann@a.edu \And Univ B \\ bob@b.edu}]
+\begin{abstract}Abs.\end{abstract}
+\section{Intro} Body.
+\end{document}

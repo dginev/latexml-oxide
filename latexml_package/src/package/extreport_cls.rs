@@ -21,5 +21,7 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("report");
+  // extsizes' copy of report.cls's title block (`declare_fnsymbol_title_block`), when extreport is the document's class.
+  engine::latex_constructs::declare_fnsymbol_title_block("extreport", Some(true))?;
   Let!("\\@ptsize", "\\lx@extsizes@ptsize");
 });

@@ -1,0 +1,18 @@
+% mechanism: a mark a name prints after its note stays with the name at `=2`: the past-marks scan of `emit.rs`
+%   `block_names` stopped at a Note, so the `\footnotemark` was dropped with no Warning and a later name's mark came out
+%   one symbol short; the scan now runs past a note the reading routes out, the note's footnote step written before the
+%   mark in the name's tokens (`note_steps` no more steps it)
+% witness: 1610.06031 (`G. Citti\thanks{...}\footnotemark[1]`); 1910.05268, 1911.13299, 2103.01544, 2409.17728,
+%   2510.10730, 2511.12633, 2602.21072, 2101.04763 (review revNE2r2 Q2)
+% oracle:  pdflatex 0 errors; "Ann Able∗  Bob Baker∗" (pdftotext; `\footnotemark[1]` prints the note's own ∗)
+% engines: rust off: 0 errors, Ann *, Bob *; rust =2 (NE2b): 0 errors, 0 warnings, Ann's mark lost
+% expect:  =2 as off: 0 errors, 0 warnings, Ann's and Bob's footnotemark *
+% status:  RED (NE2b) -> GREEN (perfect_kernel_batchne2::a_mark_after_its_names_note_stays_with_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Univ X.}\footnotemark[1] \and Bob Baker\footnotemark[1] \and Carl Cole\thanks{Univ Y.}}
+\maketitle
+Text.
+\end{document}

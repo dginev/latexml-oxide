@@ -1,0 +1,14 @@
+% witness: 1703.00683 (23 undefined macros: \olu, \calA, ...)
+% oracle:  pdflatex 0 errors; $\olA$ prints an overlined A
+% engines: rust (int57a) = 1 Error undefined:\olA; perl = the same (DefToken reads \@nameuse)
+% expect:  0 errors; the Math holds an XMApp of overline over A
+% mechanism: latex.ltx:1296-1305 tests `\string` of the whole argument, so the group's name
+%   "@nameuse{olA}" is undefined and the definition runs; sect13.rs read a DefToken. KPE #1116.
+% status:  GREEN (78s)
+\documentclass{article}
+\makeatletter
+\@ifdefinable{\@nameuse{olA}}{\@namedef{olA}{\overline{A}}}
+\makeatother
+\begin{document}
+$\olA$
+\end{document}

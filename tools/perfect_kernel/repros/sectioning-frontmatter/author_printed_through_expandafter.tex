@@ -1,0 +1,18 @@
+% mechanism: as title_printed_through_expandafter.tex, for `\@author` printed by `\centerline`.
+% witness: review revP1, no arXiv paper yet
+% oracle:  pdflatex: 0 errors; prints "Hello World" twice, as title and author, then "Body text."
+% engines: rust int141a: both lifted; P1b: a paragraph kept for each
+% expect:  0 errors; `<personname>Hello World</personname>`; the only paragraph is "Body text."
+% status:  GREEN (pins int141a's behaviour)
+\documentclass{article}
+\def\foo{Hello World}
+\def\wrap#1{#1}
+\title{\expandafter\wrap\expandafter{\foo}}
+\author{\expandafter\wrap\expandafter{\foo}}
+\begin{document}
+\makeatletter
+\centerline{\Large\bf{\noindent\@title}}
+\centerline{\@author}
+\makeatother
+Body text.
+\end{document}

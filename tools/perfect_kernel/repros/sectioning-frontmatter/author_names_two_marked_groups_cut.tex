@@ -1,0 +1,20 @@
+% mechanism: the writer's block-line cut (OD #925, #928; review rev94a B3, S3): two marked institute groups on one
+%   line, `{\small $~^1$ Univ X}{\small $~^2$ Univ Y}`, one contact today, cut at their marks for the names requesting
+%   them; each made line from its own ink, the mark left out (a made affiliation carries no entry mark, as today's
+%   copies) — 94a read the line from its mark, whose formula's `$` the group closing after it left unbalanced, the cut
+%   declined and the joined contact stayed: Ann Able and Cid Cole held "Univ X 2 Univ Y", Bob Baker nothing.
+% witness: 2308.11662 (`{\small $~^1$ University of Texas at Austin}{\small $~^2$ University of Colorado Boulder}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 , Cid Cole1,2" / "1 Univ X 2 Univ Y"
+% engines: rust 93a: Ann Able Univ X, Bob Baker Univ Y, Cid Cole both; rust 94a: the joined contact on Ann Able and
+%   Cid Cole, Bob Baker none; perl: the joined contact on Bob Baker and Cid Cole
+% expect:  0 errors, 0 warnings; Ann Able Univ X, Bob Baker Univ Y, Cid Cole Univ X + Univ Y
+% status:  RED (94a) -> GREEN (94a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^1$, Bob Baker$^2$, Cid Cole$^1$$^,$$^2$ \\
+{\small $~^1$ Univ X}{\small $~^2$ Univ Y}}
+\maketitle
+Body.
+\end{document}

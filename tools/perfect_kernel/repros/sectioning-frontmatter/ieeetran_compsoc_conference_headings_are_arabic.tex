@@ -1,0 +1,18 @@
+% witness: rev78c finding 2 (compsoc,conference); IEEEtran.cls:2545-2549 makes compsoc \thesection arabic,
+%          :2570-2575 its conference heading forms end in a period; Perl IEEEtran.cls.ltxml:160-174 the same
+% oracle:  pdflatex 0 errors: "1. Intro", "1.1. Sub", "1.1.1. Subsub.", "Refs: 1, 1.1, 1.1.1, A, A.1.";
+%          "Appendix A. Proof", "A.1. Lemma"
+% engines: rust 78c r1 = "I.", "I.1.", "I.1.1.", refs "I", "I-A", "I-A1"
+% expect:  0 errors; heading tags "1.", "1.1.", "1.1.1.", refnums arabic; appendix "Appendix A.", subsection "A.1."
+% status:  RED (78c r1) -> GREEN (78c r2)
+\documentclass[compsoc,conference]{IEEEtran}
+\begin{document}
+\section{Intro}\label{s1}
+\subsection{Sub}\label{s11}
+\subsubsection{Subsub}\label{s111}
+Refs: \ref{s1}, \ref{s11}, \ref{s111}, \ref{a1}, \ref{a11}.
+\appendices
+\section{Proof}\label{a1}
+\subsection{Lemma}\label{a11}
+Text.
+\end{document}

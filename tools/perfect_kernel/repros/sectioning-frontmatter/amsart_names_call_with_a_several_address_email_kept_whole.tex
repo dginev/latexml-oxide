@@ -1,0 +1,22 @@
+% mechanism: the fail-safe of 95e's write-out: one amsart \author call naming two people and one \email whose
+%   addresses the reading writes out (`ruling3:written-out`) but today's contact prints them in pieces the write-out
+%   cannot copy (an `\href` around the first address: `apply::text_leaf` finds no one text leaf). The names are still
+%   re-parted; the e-mail stays one contact on the call's author, as today's (int123a) holds it — an e-mail split never
+%   declines a paper's names (the S2b writer's retry with `give_back_listed`, deleted in DEL4).
+% witness: 2109.07363 (the re-part's shape; its own e-mails are written out); synthetic for the link
+% oracle:  pdflatex 0 errors: "ANN ABLE & BOB BAKER", "Email address: ann@x.org, bob@y.org"
+% engines: rust int123a: two creators, the e-mail whole on Bob Baker; int124b: one creator holding both names
+%   (the re-part declined), 0 errors
+% expect:  0 errors, 0 warnings; two creators, Univ X and the e-mail (its link kept) whole on Bob Baker
+% status:  RED (int124b) -> GREEN (95e)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able $\&$ Bob Baker}
+\address{Univ X}
+\email{\href{mailto:ann@x.org}{ann@x.org},\:bob@y.org}
+\maketitle
+Text.
+\end{document}

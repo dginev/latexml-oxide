@@ -5,6 +5,14 @@ use latexml_package::{
   prelude::*,
 };
 
+/// The listings keys every minted body starts from, minted's own defaults (minted.sty:1005 `mathescape=false`, :1013
+/// `texcl=false`, :1019 `escapeinside=`; minted has no `escapechar`): minted's options are its own, so a document's
+/// `\lstset{mathescape=true}` for its `{lstlisting}`s must not reach the minted bodies listings stands in for here —
+/// the `$` of a shell `sed "s/$/…/"` opened math (1812.09490, whose program.sty then made it a Fatal). A minted
+/// body's own `[mathescape]`/`[escapeinside=!!]` follow them (html_feedback#1028). Guard
+/// `perfect_kernel_batch77q::minted_body_ignores_the_document_listings_escapes`.
+const MINTED_LST_RESET: &str = "mathescape=false,escapechar={},escapeinside={},texcl=false";
+
 LoadDefinitions!({
   // minted.sty:282 reads its options with `\ProcessPgfOptions`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
@@ -12,14 +20,28 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("lineno");
   RequirePackage!("framed");
-  RequirePackage!("newfloat");
+  // minted.sty:155-165 `chapter`/`section` (the listing counter's `within`) and `newfloat`, read with
+  // `\ProcessPgfOptions` (:282), the last one given winning; :284 `newfloat` or `float` for the `listing` float type.
+  let (minted_newfloat, minted_within) = minted_float_options();
+  if minted_newfloat {
+    RequirePackage!("newfloat");
+  } else {
+    RequirePackage!("float");
+  }
   RequirePackage!("calc");
   RequirePackage!("kvoptions");
   RequirePackage!("etoolbox");
   RequirePackage!("fancyvrb");
+  // minted.sty:32 `\RequirePackage{fvextra}` (minted 2.2+ too): `Verbatim`'s `breaklines`/`breakanywhere` keys
+  // are fvextra's; with fancyvrb alone they were undefined keys (2512.12360; Perl's ar5iv-bindings
+  // minted.sty.ltxml:24 has the line commented out, KNOWN_PERL_ERRORS #916). Guard:
+  // `perfect_kernel_batch70a::minted_loads_fvextra`.
+  RequirePackage!("fvextra");
   // Stub as listing for now
   RequirePackage!("listings");
   DeclareOption!("chapter", "");
+  // minted reads its options as keys; the handler is not left defined for a later package's `chapter` option.
+  let_i(&T_CS!("\\ds@chapter"), &T_RELAX!(), None);
   // INCOMPLETE IMPLEMENTATION — mostly stubs that allow content-preservation
   def_macro_noop("\\DeleteFile[]{}")?;
   DefMacro!("\\MintedPygmentize", "pygmentize");
@@ -77,6 +99,10 @@ LoadDefinitions!({
     // :1420 `\minted@error{Cannot find input file …}`).
     let contents = listings_read_raw_file(file_str.trim())?.unwrap_or_default();
     bgroup();
+    let mut reset = vec![T_CS!("\\lstset"), T_BEGIN!()];
+    reset.extend(Tokenize!(MINTED_LST_RESET).unlist());
+    reset.push(T_END!());
+    digest(Tokens::new(reset))?;
     assign_value(
       "current_environment",
       Stored::String(pin("lstlisting")),
@@ -113,7 +139,7 @@ LoadDefinitions!({
   });
   def_macro_noop("\\listoflistings")?;
   DefMacro!("\\listingscaption", "Listing");
-  DefMacro!("\\listoflistingscaption", "List of listings");
+  DefMacro!("\\listoflistingscaption", "List of Listings");
   // Perl minted.sty.ltxml L58-99 dynamically defined new CSes via runtime
   // DefMacroI closures. The TeX-level equivalent uses `\expandafter\def
   // \csname <name>\endcsname` so the same user input now binds working aliases.
@@ -149,29 +175,41 @@ LoadDefinitions!({
   // language (e.g. `lean4`) is a silent no-op, so minted's Pygments lexer name passes
   // through verbatim and degrades to plain text rather than erroring. `\newmintedfile`
   // binds either the given optional macro or `\<lang>file` to `\inputminted`.
-  RawTeX!(
-    r#"\def\newmint{\@ifnextchar[\lx@minted@nm@opt\lx@minted@nm@noopt}
-\def\lx@minted@nm@noopt#1#2{\expandafter\def\csname #1\endcsname{\lstinline[language=#1]}}
-\def\lx@minted@nm@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\lstinline[language=#2]}}
+  RawTeX!(&r#"\def\newmint{\@ifnextchar[\lx@minted@nm@opt\lx@minted@nm@noopt}
+\def\lx@minted@nm@noopt#1#2{\expandafter\def\csname #1\endcsname{\lstinline[@RESET@,language=#1]}}
+\def\lx@minted@nm@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\lstinline[@RESET@,language=#2]}}
 \def\newmintinline{\@ifnextchar[\lx@minted@nmi@opt\lx@minted@nmi@noopt}
-\def\lx@minted@nmi@noopt#1#2{\expandafter\def\csname #1inline\endcsname{\lstinline[language=#1]}}
-\def\lx@minted@nmi@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\lstinline[language=#2]}}
+\def\lx@minted@nmi@noopt#1#2{\expandafter\def\csname #1inline\endcsname{\lstinline[@RESET@,language=#1]}}
+\def\lx@minted@nmi@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\lstinline[@RESET@,language=#2]}}
 \def\newminted{\@ifnextchar[\lx@minted@nmd@opt\lx@minted@nmd@noopt}
 \def\lx@minted@nmd@noopt#1#2{\lx@minted@nmd@def{#1code}{#1}}
 \def\lx@minted@nmd@opt[#1]#2#3{\lx@minted@nmd@def{#1}{#2}}
 \def\lx@minted@nmd@def#1#2{%
-  \lstnewenvironment{#1}{\lstset{language=#2}}{}%
-  \lstnewenvironment{#1*}[1]{\lstset{language=#2,##1}}{}}
+  \lstnewenvironment{#1}{\lstset{@RESET@,language=#2}}{}%
+  \lstnewenvironment{#1*}[1]{\lstset{@RESET@,language=#2,##1}}{}}
 \def\newmintedfile{\@ifnextchar[\lx@minted@nmf@opt\lx@minted@nmf@noopt}
 \def\lx@minted@nmf@opt[#1]#2{\let#1\inputminted}
 \def\lx@minted@nmf@noopt#1{\expandafter\let\csname #1file\endcsname\inputminted}
-"#
-  );
+"#.replace("@RESET@", MINTED_LST_RESET));
   def_macro_noop("\\setminted[]{}")?;
   def_macro_noop("\\setmintedinline[]{}")?;
   def_macro_noop("\\usemintedstyle[]{}")?;
-  def_macro_noop("\\SetupFloatingEnvironment{}{}")?;
-  DefMacro!("\\mint[]{}", "\\lstinline[language=#2]");
+  // A document's `\SetupFloatingEnvironment{listing}{…}` is newfloat's (newfloat_sty.rs, newfloat.sty:304), loaded with
+  // minted's `newfloat` option above or by the document; minted itself makes none (minted.sty), so on its float.sty
+  // route without newfloat it is undefined in pdflatex. The no-op here stands in only then (Perl has no minted binding):
+  // before, it replaced newfloat's on the newfloat route too (2306.12224, 2405.15425, 2411.16612, 2507.09840,
+  // 2510.09447; review rev78s2 finding 4; KNOWN_PERL_ERRORS #1138).
+  if !is_defined("\\SetupFloatingEnvironment") {
+    def_macro_noop("\\SetupFloatingEnvironment{}{}")?;
+  }
+  DefMacro!("\\mint[]{}", sub[(_opts, lang)] {
+    let mut out = vec![T_CS!("\\lstinline"), T_OTHER!("[")];
+    out.extend(Tokenize!(MINTED_LST_RESET).unlist());
+    out.extend(Tokenize!(",language=").unlist());
+    out.extend(lang.unlist());
+    out.push(T_OTHER!("]"));
+    Tokens::new(out)
+  });
   // `\mintinline[opts]{lang}{code}` — beyond-Perl frozencache color path.
   // When NO `_minted/` frozencache is present the code arg is left untouched in
   // the stream and we reconstruct the historical `\lstinline[language=<lang>]`
@@ -191,7 +229,8 @@ LoadDefinitions!({
         if !crate::minted_frozencache::cache_available() {
           // Delegate to \lstinline, which reads the following {code} verbatim.
           let mut out = vec![T_CS!("\\lstinline"), T_OTHER!("[")];
-          out.extend(Tokenize!("language=").unlist());
+          out.extend(Tokenize!(MINTED_LST_RESET).unlist());
+          out.extend(Tokenize!(",language=").unlist());
           out.extend(lang.unlist());
           out.push(T_OTHER!("]"));
           return Ok(Tokens::new(out));
@@ -276,33 +315,29 @@ LoadDefinitions!({
           Tokens!(T_OTHER!("lstlisting")),
           None,
         )?;
-        // Feed `language=<lang>,<opts>` to `\lstset`. The language activates the
+        // Feed `<MINTED_LST_RESET>,language=<lang>,<opts>` to `\lstset`. The language activates the
         // listings language pack for keyword/string/comment highlighting; matching
         // is case-insensitive and an unknown language (e.g. `lean4`) is a silent
         // no-op, so passing minted's Pygments lexer name verbatim degrades to the
         // old plain rendering rather than erroring. The `[opts]` still ride along
         // for `escapeinside`/`mathescape` (html_feedback#1028); minted-only keys
         // (`linenos`, `fontsize`, …) are stored harmlessly.
-        let mut kv: Vec<Token> = Vec::new();
+        let mut kv: Vec<Token> = Tokenize!(MINTED_LST_RESET).unlist();
         if let Some(lang) = lang.as_ref().filter(|l| !l.unlist_ref().is_empty()) {
-          kv.extend(Tokenize!("language=").unlist());
+          kv.extend(Tokenize!(",language=").unlist());
           kv.extend(lang.unlist_ref().iter().cloned());
         }
         if let Some(opts) = opts.as_ref().filter(|o| !o.unlist_ref().is_empty()) {
-          if !kv.is_empty() {
-            kv.push(T_OTHER!(","));
-          }
+          kv.push(T_OTHER!(","));
           kv.extend(opts.unlist_ref().iter().cloned());
         }
-        if !kv.is_empty() {
-          let _ = digest(Tokens::new(
-            std::iter::once(T_CS!("\\lstset"))
-              .chain(std::iter::once(T_BEGIN!()))
-              .chain(kv)
-              .chain(std::iter::once(T_END!()))
-              .collect(),
-          ));
-        }
+        let _ = digest(Tokens::new(
+          std::iter::once(T_CS!("\\lstset"))
+            .chain(std::iter::once(T_BEGIN!()))
+            .chain(kv)
+            .chain(std::iter::once(T_END!()))
+            .collect(),
+        ));
         // fancyvrb.sty:295-297/386-403: a user environment that wraps minted
         // with `\VerbatimEnvironment` (RetoMatematico.cls:174 `{codigo}` =
         // `{\VerbatimEnvironment\begin{minted}[…]{#1}}{\end{minted}}`) names the
@@ -346,6 +381,52 @@ LoadDefinitions!({
     DefMacro!(T_CS!("\\end{minted}"), None, Tokens!());
     DefMacro!(T_CS!("\\endminted"), None, Tokens!());
   }
-  DefMacro!(T_CS!("\\begin{listing}"), None, "\\begin{figure}");
-  DefMacro!(T_CS!("\\end{listing}"), None, "\\end{figure}");
+  // minted.sty:1931-1944: `listing` is a float type of its own, numbered apart from the figures (within the
+  // `section`/`chapter` option's counter): with the `newfloat` option newfloat's `\DeclareFloatingEnvironment
+  // [fileext=lol,placement=tbp]{listing}` (2411.16612), else float.sty's `\newfloat{listing}{tbp}{lol}` named
+  // `\floatname{listing}{\listingscaption}`, which a `\renewcommand{\listingscaption}{…}` renames ("JSON 1",
+  // 1902.08498; "Code snippet 1", 2609.21330; "Listing 1: …", 2102.00527). Perl's ar5iv-bindings minted.sty.ltxml:110-111
+  // make it a `{figure}`, so a listing printed "Figure 1" and took the figures' numbers, and wrapfig's
+  // `{wrapfloat}{listing}` met a float type with no counter (KNOWN_PERL_ERRORS #1123). Guards
+  // `perfect_kernel_batch78s::{minted_listing_is_a_float_of_its_own, minted_listing_is_float_sty_s_by_default}`.
+  let within = minted_within
+    .map(|within| s!("within={within},"))
+    .unwrap_or_default();
+  if minted_newfloat {
+    RawTeX!(&s!(
+      r"\DeclareFloatingEnvironment[{within}fileext=lol,placement=tbp]{{listing}}"
+    ));
+  } else {
+    let within = minted_within
+      .map(|within| s!("[{within}]"))
+      .unwrap_or_default();
+    RawTeX!(&s!(
+      r"\newfloat{{listing}}{{tbp}}{{lol}}{within}\floatname{{listing}}{{\listingscaption}}"
+    ));
+  }
 });
+
+/// minted's float options (minted.sty:155-165, read by `\ProcessPgfOptions{/minted/pkg}`, :282): `newfloat`
+/// (`newfloat/.is if`: alone or `=true`; `=false` turns it off) and the listing counter's `within`, `chapter` or
+/// `section`; each the last one given.
+fn minted_float_options() -> (bool, Option<&'static str>) {
+  let mut newfloat = false;
+  let mut within = None;
+  if let Some(options) = lookup_vecdeque("opt@minted.sty") {
+    for option in options.iter() {
+      let option = option.to_string();
+      let (key, value) = option
+        .split_once('=')
+        .map_or((option.trim(), "true"), |(key, value)| {
+          (key.trim(), value.trim())
+        });
+      match key {
+        "newfloat" => newfloat = value != "false",
+        "chapter" => within = Some("chapter"),
+        "section" => within = Some("section"),
+        _ => {},
+      }
+    }
+  }
+  (newfloat, within)
+}

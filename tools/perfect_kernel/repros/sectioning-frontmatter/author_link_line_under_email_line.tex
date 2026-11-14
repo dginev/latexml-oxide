@@ -1,0 +1,22 @@
+% witness: 2602.22394 (`{\footnotesize\texttt{shicheng2025@…}, \texttt{yizhouy@…}, \texttt{yangsb3@…}} \\
+%          {\footnotesize \url{https://github.com/…}}`; the 77p r5 re-review's probes q1, q3), 2602.23802
+%          (`{\tt{\small{\url{…}}}}`), 2602.09509 (`Demo Code:~\url{…}`)
+% oracle:  pdflatex 0 errors: the link lines printed under the addresses
+% engines: rust 77p r5 = 0 errors; the braced link line welded into the e-mail line, which no longer read as addresses:
+%          every address one contact of Sibei Yang; a bare `\url` line welded into "Univ B" two lines up; int34a welded
+%          the link into the last address
+% expect:  0 errors, 0 warnings; each address on its owner; each link line its own entry, welded into no e-mail line and
+%          no affiliation; a URL contact (`role=url`, the "Demo Code:" label its text) of the whole block, the shared
+%          creator below the authors (user ruling 2026-10-20), not an affiliation of Sibei Yang
+% status:  RED (77p r5) -> GREEN (77p r6); RED (77p r6, affiliations of Sibei Yang) -> GREEN (77p r7)
+\documentclass{article}
+\usepackage{url}
+\title{T}
+\author{Cheng Shi$^{1}$, Yizhou Yu$^{1}$, Sibei Yang$^{2}$$^{\dagger}$ \\ $^{1}$Univ A, $^{2}$Univ B \\
+{\footnotesize\texttt{shicheng2025@x.hk},
+\texttt{yizhouy@acm.org},
+\texttt{yangsb3@y.cn}} \\ {\footnotesize \url{https://github.com/a/b}} \\ Demo Code:~\url{https://github.com/c/d}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

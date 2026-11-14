@@ -160,4 +160,41 @@ LoadDefinitions!({
   DefMacro!("\\@supertabular@finish", r"\@supertabular@bottomcaption\end{table}\@supertabular@clear");
 
   DefMacro!("\\shrinkheight{Dimension}", None);
+
+  // supertabular.sty:62-63, :515-543 (v4.2c, TL 2025): the page-break step `\ST@newpage` (close the tabular,
+  // `\newpage`, reopen it under the head). The binding sets a supertabular as one table and never breaks it, so
+  // nothing here calls it, but a style that patches the step reads it: dgruyter.sty:1704-1706
+  // `\let\bareST@newpage\ST@newpage` `\expandafter\def\expandafter\ST@newpage\expandafter{\ST@newpage\noalign{…}}`
+  // (176 papers shipping dgruyter.sty; 1503.04650, 1711.03341).
+  RawTeX!(r"\newif\ifST@star
+\newif\ifST@mp
+\def\ST@newpage{%
+  \noalign{\ST@trace\tw@{Starting new page, writing tail}}%
+  \@tabletail
+  \ifST@star
+    \csname endtabular*\endcsname
+  \else
+    \endtabular
+  \fi
+  \ifST@mp
+    \endminipage
+  \fi
+  \global\let\ST@skippage\ST@newpage
+  \newpage\@calnextpageht
+  \let\ST@next\@tablehead
+  \ST@trace\tw@{writing head}%
+  \ifST@mp
+    \noindent\minipage{\columnwidth}%
+    \parfillskip\ST@parfillskip
+    \rightskip \ST@rightskip
+    \leftskip \ST@leftskip
+  \fi
+  \noindent
+  \ifST@star
+    \expandafter\csname org@tabular*\expandafter\endcsname
+    \expandafter{\expandafter\ST@wd\expandafter}%
+    \expandafter{\ST@tableformat}%
+  \else
+    \expandafter\org@tabular\expandafter{\ST@tableformat}%
+  \fi}");
 });

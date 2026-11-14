@@ -1877,7 +1877,24 @@ impl Graphics {
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
   /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
-  fn convert_image(source: &str, dest: &str, _dpi: u32, page: Option<u32>) -> bool {
+  fn convert_image(source: &str, dest: &str, dpi: u32, page: Option<u32>) -> bool {
+    // A MetaPost figure that leaves its fonts to dvips is converted from a copy that holds them, as dvips would give
+    // them (`postscript_fonts`, OXIDIZED_DESIGN #587; gr-qc0001079, math0102124).
+    let with_fonts = crate::postscript_fonts::with_downloaded_fonts(source, dest);
+    // (the copy is removed when `with_fonts` drops, on every path)
+    Self::convert_image_from(
+      with_fonts
+        .as_ref()
+        .and_then(|copy| copy.path().to_str())
+        .unwrap_or(source),
+      dest,
+      dpi,
+      page,
+    )
+  }
+
+  /// [`Self::convert_image`] of the file `source` as it is.
+  fn convert_image_from(source: &str, dest: &str, _dpi: u32, page: Option<u32>) -> bool {
     // Build the source argument with optional page selector
     // Perl: image_read reads "$source[$page]" where $page = ($page // 1) - 1
     let source_arg = if let Some(p) = page {
@@ -2809,9 +2826,8 @@ mod tests {
   // `EnvGuard` (env mutation, serialised + restored) and `TempDir` (unique
   // name, removed on drop including on panic) are shared with
   // `graphics_cache::tests`; see that module for the rationale. `EnvGuard` is
-  // only referenced by the `#[cfg(unix)]` density test below, so gate its
-  // import the same way or it reads as unused on Windows (`-D warnings`).
-  #[cfg(unix)]
+  // used by the `#[cfg(unix)]` density test and by the platform-independent
+  // raster crop test, so its import is ungated (the Windows `cargo check`).
   use crate::test_env::EnvGuard;
   use crate::test_env::TempDir;
 

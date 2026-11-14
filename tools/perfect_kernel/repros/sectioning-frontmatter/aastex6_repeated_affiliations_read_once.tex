@@ -1,0 +1,29 @@
+% mechanism: the frontmatter reading rehearses each API call's content outside the author blocks (reading.rs
+%   `read_pending`); a content the calls repeat whose first run left nothing behind is read once and its events given to
+%   every repeat (rehearsal.rs `rehearse_call`, batch AAS1): an accented one and a document macro's here, each repeated
+% witness: 1901.01540 (aastex62, 1,427 `\affiliation`s over 228 contents, "Leibniz Universit\"at Hannover" 58 times);
+%   1710.09320 (aastex61, 1,257 over 160); 2103.04797 (REVTeX, 1,161 `\affiliation{\Amsterdam}`-style macros)
+% oracle:  pdflatex with 2403.06760's own aastex631.cls (TL 2025 ships none) 0 errors: "Ann Able,1 Bob Baker,2 Cat
+%   Cole,1, 2 and Dan Dorn3 / 1 Leibniz Universität Hannover / 2 Uni Two, Town / 3 Uni Three"
+% engines: rust int169b and AAS1 byte-identical: Ann Able Leibniz Universität Hannover, Bob Baker Uni Two, Town, Cat
+%   Cole both, Dan Dorn Uni Three
+% expect:  0 errors, 0 warnings; the creators as the oracle prints them
+% status:  GREEN (int169b, AAS1: a byte-identical port's pin)
+\documentclass{aastex631}
+\newcommand\Uni{Uni Two, Town}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Leibniz Universit\"at Hannover}
+\author{Bob Baker}
+\affiliation{\Uni}
+\author{Cat Cole}
+\affiliation{Leibniz Universit\"at Hannover}
+\affiliation{\Uni}
+\author{Dan Dorn}
+\affiliation{Uni Three}
+\begin{abstract}A.\end{abstract}
+\keywords{K}
+\section{Intro}
+Text.
+\end{document}

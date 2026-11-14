@@ -14,8 +14,10 @@ use latexml_core::keyval::split_keyval_source;
 
 use crate::{
   package::{
-    listings_sty::{listings_read_raw_file, lst_process_display},
-    tcolorbox_sty::{tcb_listing_startend, tcb_xparse_listing},
+    listings_sty::{listings_read_raw_file, lst_process_display, lst_run_body_via_input},
+    tcolorbox_sty::{
+      tcb_counter_step_code, tcb_listing_startend, tcb_resolve_listing_mode, tcb_xparse_listing,
+    },
   },
   prelude::*,
 };
@@ -29,12 +31,18 @@ LoadDefinitions!({
   );
 
   // \newtcblisting[init-options]{name}[N][default]{tcb-options} — a code-listing
-  // box. Its box styling is purely visual; what matters for the logical output is
-  // the code BODY, which must be captured verbatim and CLOSED at \end{name}. The
-  // raw library's body capture does not integrate with LaTeXML's verbatim reader,
-  // so the listing runs past its \end{name} and swallows following content.
-  // Delegate to listings' \lstnewenvironment (same name/[N][default] shape; the
-  // leading [init-options] and trailing tcb options feed `tcb_listing_startend`).
+  // box. What matters for the logical output is the code BODY, captured verbatim
+  // and CLOSED at \end{name}, and the box's title (`tcb_store_pending_title`, the
+  // listing's title: OD #768). The raw library's body capture once ran past its
+  // \end{name} and swallowed following content; since the virtual-file round trip
+  // (`\tcbverbatimwrite` → `listings_read_raw_file`) tcolorbox's own definition
+  // (tcblistingscore.code.tex:301-322, `\newenvironment{name}…{\tcblisting{#6,
+  // options@for=name}}{\endtcblisting}`) closes too, but it draws the box as a
+  // picture whose `label=` lands on the nearest labelled ancestor — a section, else
+  // <document> (raw tcolorbox; SYNC silent-loss row "tcolorbox box label") — and the xparse family
+  // loses its begin-line reading (77m measurement, OD #768). So: delegate to
+  // listings' \lstnewenvironment (same name/[N][default] shape; the leading
+  // [init-options] and trailing tcb options feed `tcb_listing_startend`).
   // The signature MUST include the leading `[init-options]` optional (real
   // tcolorbox `\NewDocumentCommand \__tcobox_new_tcolorbox:w { m +O{} m o +o +m }`).
   DefMacro!("\\newtcblisting[]{}[][]{}", sub[(init, name, n, default, opts)] {
@@ -101,7 +109,7 @@ LoadDefinitions!({
   // The options are a macro ARGUMENT in TeX (`\NewDocumentCommand`, L379),
   // not a definition body, so they are read as `{}` and packed here (see
   // `\lstnewenvironment`, listings_sty.rs).
-  DefPrimitive!("\\newtcbinputlisting []{}[Number][] {}", sub[(_init, cmd, n, default, opts)] {
+  DefPrimitive!("\\newtcbinputlisting []{}[Number][] {}", sub[(init, cmd, n, default, opts)] {
     let opts = opts.pack_parameters()?;
     let cmd_tok = cmd
       .unlist_ref()
@@ -111,6 +119,19 @@ LoadDefinitions!({
     let Some(cmd_tok) = cmd_tok else {
       return Ok(Vec::new());
     };
+    // The init options go through tcolorbox's own init processor under the command's name without
+    // its backslash (tcblistingscore.code.tex:374-377 `\__tcobox_set_backslash_removed:Nn`, then
+    // :359 `\__tcobox_process_newtcolorbox:nn`), as for a listing environment
+    // (`tcb_listing_startend`): `use counter=example` gives each use `\thetcbcounter` (the
+    // `\examplefile` template of 1912.06298, 2405.01480 …: `title={Example~\thetcbcounter: #2}`
+    // was "undefined:\thetcbcounter" once the title was typeset).
+    let box_name = cmd_tok.with_str(|s| s.trim_start_matches('\\').to_string());
+    let init_src = init.map(|t| t.to_string()).unwrap_or_default();
+    if !init_src.trim().is_empty() {
+      let _ = digest(mouth::tokenize_internal(TeXString::assembled(format!(
+        "\\tcb@proc@options@init{{{init_src}}}{{{box_name}}}"
+      ))));
+    }
     let n: usize = n.value_of() as usize;
     let mut param_spec = String::new();
     if let Some(ref d) = default {
@@ -161,10 +182,16 @@ LoadDefinitions!({
             _ => {},
           }
         }
-        if let Some(counter) = counter {
+        // (each use steps the box's counter, as `\tcb@proc@counter@autoanduse`'s `code=` does,
+        // tcolorbox.sty:2311)
+        if let Some(counter) = counter.filter(|_| {
+          lookup_meaning(&T_CS!(format!("\\tcb@cnt@{box_name}"))).is_none()
+        }) {
           digest(Tokenize!(TeXString::assembled(format!(
             "\\refstepcounter{{{counter}}}\\def\\thetcbcounter{{\\csname the{counter}\\endcsname}}"
           ))))?;
+        } else {
+          digest(Tokenize!(TeXString::assembled(tcb_counter_step_code(&box_name))))?;
         }
         let Some(file) = file else {
           return Ok(Tokens!());
@@ -181,12 +208,76 @@ LoadDefinitions!({
         // `\DemoCodeFile{commalists-tools.sty}`) and one beside the document
         // (csvsimple-legacy `\xmllisting{namesort}`), and the listing came out
         // empty with no diagnostic.
+        // (read before the box's options are resolved below, so a failed read parks no title,
+        // phantom or mode for an unrelated later listing)
         let text = listings_read_raw_file(file)?.unwrap_or_default();
+        // The box's options resolved as the box resolves them (`tcb_resolve_listing_mode`, as for a
+        // listing environment): its title (typeset as the listing's — 1912.06298 and the other
+        // `\examplefile` papers: `title={Example~\thetcbcounter: #2}`), its phantom code (a per-use
+        // `label=` / `hypertarget=`, run at the listing's first line: `\examplefile[label={ex:header},
+        // …]` was a dangling `\ref`) and its mode, which `\tcbinputlisting` (tcblistingscore.code.tex
+        // :337-344 → `\tcb@inputlisting`, :163-177 inside the box, :59-160 outside) follows: the default
+        // `listing and text` typesets the file again after the listing (`\tcbuselistingtext` =
+        // `\input{\kvtcb@listingfile}`, :25), `text and listing` before it, `text only` alone
+        // (dropped with 0 errors before). Guards `perfect_kernel_batch77m::{
+        // newtcbinputlisting_keeps_its_title, newtcbinputlisting_keeps_its_label,
+        // newtcbinputlisting_follows_its_mode}`.
+        tcb_resolve_listing_mode(opts_subst)?;
+        let execute = lookup_bool("LISTINGS_EXECUTE_BODY");
+        AssignValue!("LISTINGS_EXECUTE_BODY" => false, Scope::Global);
+        let layout = lookup_string("tcb_pending_layout");
+        // (the text ends its paragraph, as the box it is typeset in does: tcolorbox.sty:360-366
+        // `before`/`after` `\par`)
+        let run_text = if execute {
+          let mut run = lst_run_body_via_input(&box_name, &text)?.unlist();
+          run.push(T_CS!("\\par"));
+          run
+        } else {
+          Vec::new()
+        };
+        if layout == "O" {
+          // No listing: the box holds its title bar and its text. With no listing to caption, the
+          // title is a paragraph before the text; the phantom code has no element of the box to name
+          // (a `label` there would name the enclosing section) and is dropped, as a `text only`
+          // listing environment drops it (`\lxtcbdropphantom`).
+          let title = match lookup_value("tcb_pending_title") {
+            Some(Stored::Tokens(title)) => title,
+            _ => Tokens!(),
+          };
+          AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
+          AssignValue!("tcb_pending_title" => Stored::None, Scope::Global);
+          AssignValue!("tcb_pending_remove_caption" => false, Scope::Global);
+          let mut out = vec![T_CS!("\\begingroup")];
+          if !title.is_empty() {
+            out.extend([T_CS!("\\par"), T_CS!("\\noindent")]);
+            out.extend(title.unlist());
+            out.push(T_CS!("\\par"));
+          }
+          out.extend(run_text);
+          out.push(T_CS!("\\endgroup"));
+          return Ok(Tokens::new(out));
+        }
         bgroup();
-        Ok(Tokens::new(lst_process_display(
-          Some(Tokens::new(ExplodeText!(file))),
-          &text,
-        )))
+        // tcolorbox reads the file back `nolol` (tcblistings.code.tex:45, and `\lst@MakeCaption`
+        // gobbled, :31-33 `listing remove caption`): no list-of-listings entry, so the file name
+        // is no float's caption (guard `perfect_kernel_batch77m::newtcbinputlisting_keeps_its_title`).
+        assign_value("LST@nolol", Stored::String(pin("true")), None);
+        let display = lst_process_display(Some(Tokens::new(ExplodeText!(file))), &text);
+        if run_text.is_empty() {
+          return Ok(Tokens::new(display));
+        }
+        // the text inside the box's group, as `\tcbinputlisting`'s `\begingroup…\endgroup` holds it
+        let mut out = Vec::with_capacity(display.len() + run_text.len());
+        if layout == "OL" {
+          out.extend(run_text);
+          out.extend(display);
+        } else {
+          out.extend(display);
+          let closer = out.pop();
+          out.extend(run_text);
+          out.extend(closer);
+        }
+        Ok(Tokens::new(out))
       },
     )));
     def_macro(cmd_tok, params, expansion, None)?;

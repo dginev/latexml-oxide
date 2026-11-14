@@ -1,0 +1,20 @@
+% GREEN (brief 107g, mechanism 2): a four-letter surname between other letters spells an address weakly; a weak spelling
+%   owns an address no other name spells, so `tpengqy@` set after the last \author is Q. Y. Peng's, not Y. J. Shang's, whose
+%   name does not stand in it (FIDELITY_CHARTER §4 #420's count).
+% witness: 2004.06253 (`tpengqy@`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int138a: on Q. Y. Peng; int139a: on Y. J. Shang
+% expect:  0 errors; tpengqy@ on Q. Y. Peng
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Q. Y. Peng}
+\author{Y. J. Shang}
+\email{tpengqy@x.cn}
+\affiliation{Univ X, Town}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

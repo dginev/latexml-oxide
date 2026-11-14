@@ -1,0 +1,34 @@
+% witness: 1511.08547, 1707.00398, 1709.02675, 1709.08526, 1806.01802 (WileyNJD-v1.cls's reference styles load
+%          amsrefs: 1511.08547's copy :1106, :1851, :2499, :3081, :3685; `{bibdiv}`, `\bib` undefined in 9 papers of
+%          run 353); 1511.08547, 1707.00398 (`\subfloat`: :256 `\RequirePackage [labelformat=empty]{subfig}`);
+%          :4712 `\usepackage{listings}` (`\lstset`, as WileyNJD-v2.cls:3346: 1802.08557, 2206.13356)
+% oracle:  pdflatex with 1511.08547's WileyNJD-v1.cls: 3 errors (its \zz option parser, a TL 2025 harness limit);
+%          "REFERENCES [1] Donald Knuth (1970) The art J. Comp. 1 … One Figure 1: Figures" (the subfigure unlabelled)
+% engines: rust 67int3 = 5 errors (undefined {bibdiv}, {biblist}, \bib, \lstset, \subfloat)
+% expect:  0 errors, 0 warnings; one bibliography entry; a subfigure without "(a)"
+% status:  RED (67int3) -> GREEN (67w)
+% preload: ar5iv.sty
+\documentclass[AMS]{WileyNJD-v1}
+\begin{document}
+\title{A v1 paper}
+\author{Ann Author}
+\maketitle
+\section{Intro}
+See \cite{knuth}.
+\lstset{basicstyle=\small}
+\begin{figure}
+\subfloat[One]{\rule{1cm}{1cm}}
+\caption{Figures}
+\end{figure}
+\begin{bibdiv}
+\begin{biblist}
+\bib{knuth}{article}{
+  author={Knuth, Donald},
+  title={The art},
+  journal={J. Comp.},
+  volume={1},
+  date={1970},
+}
+\end{biblist}
+\end{bibdiv}
+\end{document}

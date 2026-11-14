@@ -1,3 +1,4 @@
+pub mod author_files;
 pub mod content;
 pub mod virtual_files;
 #[macro_use]

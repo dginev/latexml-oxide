@@ -47,11 +47,13 @@ LoadDefinitions!({
   // The size option set `\@ptsize` (amsart.cls:258-296); the article binding resets it (article_cls.rs), the class
   // loading no base class.
   RawTeX!(r"\let\lx@ams@ptsize\@ptsize");
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RawTeX!(r"\let\@ptsize\lx@ams@ptsize");
   RequirePackage!("ams_support");
   ams_support_sty::amsart_author_storage()?;
   ams_support_sty::amsart_uppercase_nonmath()?;
+  ams_support_sty::ams_class_caption_format()?;
+  ams_support_sty::amsart_class_internals()?;
   // amsart.cls:518-520 (amsproc.cls alike): `\\enddoc@text`, run `\\AtEndDocument`, sets the translators and the
   // addresses after the body (`\\@settranslators`, `\\@setaddresses`, :524-577, ported raw), and a derived class
   // queues its own end matter there (resphilosophica.cls:94 `\\AddtoEndMatter`: its `{notes}` collection, :432). The

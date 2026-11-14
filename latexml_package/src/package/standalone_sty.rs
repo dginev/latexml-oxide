@@ -28,6 +28,32 @@ LoadDefinitions!({
       }
     }
   }
+  // standalone.sty:26-39: in a main document `\ifstandalone` (and `\ifstandalonebeamer`) is false, `\onlyifstandalone`
+  // gobbles its argument and `\IfStandalone{<standalone>}{<main>}` takes the second (11 papers `\ifstandalone`:
+  // 1310.0809, 2010.10238, 2011.05064; `\onlyifstandalone` 2208.05046, 2403.07821; `\IfStandalone` 2208.05046); :707-709
+  // an environment `{standalone}[<opt>]` that keeps its body (2310.18279). Perl's binding defines none
+  // (KNOWN_PERL_ERRORS #806).
+  RawTeX!(r"\@ifundefined{ifstandalone}{\expandafter\newif\csname ifstandalone\endcsname\standalonefalse}{}
+\@ifundefined{ifstandalonebeamer}{\expandafter\newif\csname ifstandalonebeamer\endcsname\standalonebeamerfalse}{}
+\@ifundefined{onlyifstandalone}{\let\onlyifstandalone\@gobble}{}
+\@ifundefined{IfStandalone}{\let\IfStandalone\@secondoftwo}{}
+\@ifundefined{standalone}{\newenvironment{standalone}[1][]{}{}}{}");
+  // standalone.sty:296-304 `\standaloneconfig{<keys>}` sets the package's keys as its options do (`\setkeys
+  // {standalone.sty}`): `mode=` (`tex`, `image`, `build`, `buildmissing`, `buildnew`; 17 papers: 1905.04614,
+  // 1910.10882, 2210.09924) is the mode `\includestandalone` follows, and `subpreambles` keeps the sub-files'
+  // preambles; the other keys shape a build or the class and are read without effect, their values unexpanded as
+  // `\setkeys` stores them (`build={latexoptions={… -jobname \quote\buildjobname\quote}}`, 1703.03769's copy).
+  DefPrimitive!("\\standaloneconfig Undigested", sub[(keys)] {
+    for item in top_level_items(&keys.to_string()) {
+      let (key, value) = item.split_once('=').map_or((item.trim(), "true"), |(k, v)| (k.trim(), v.trim()));
+      if key == "mode" {
+        assign_value("standalone_mode", Stored::String(pin(unbraced(value))), None);
+      }
+      if key.ends_with("subpreambles") && value != "false" {
+        assign_value("standalone_subpreambles", Stored::Bool(true), None);
+      }
+    }
+  });
   // standalone.sty:255 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
   // BEYOND PERL (the Perl standalone.sty.ltxml omits these): the real
@@ -47,6 +73,27 @@ LoadDefinitions!({
   // resolve to always-available package bindings.)
   RequirePackage!("xkeyval");
   RequirePackage!("currfile");
+  // standalone.sty:1012-1013 `\IfFileExists{gincltex.sty}{\RequirePackage{gincltex}…}` (TeX Live has it): gincltex.sty:43
+  // `\DeclareGraphicsRule{.tex}{tex}{.tex}{}`, so `\includegraphics{x.tex}` beside standalone reads the file as TeX
+  // (graphicx_sty.rs `\lx@Gin@include`); handed to the image converter it was lost (2511.17298, 2305.04329,
+  // 2408.06999, 2305.16841). gincltex has no binding, so it is read raw: only where raw styles are (amsrefs_sty.rs the
+  // same). Guard: `perfect_kernel_batch70a::standalone_loads_gincltex`.
+  // A sub-file gincltex boxes (`\gincltex@boxfile`'s `\input`, gincltex.sty:45-56, from its reader `\Gread@tex` or its
+  // include `\Ginclude@tex`, :57-90) is the sub-file `\includestandalone` reads (standalone.sty:1014-1021 hands it to
+  // `\includegraphics`): standalone's `\sa@documentclass` (:602-646) gobbles its preamble, so its packages never load
+  // in the main document's body — 2512.06733's `\includegraphics{figures/c4_ex1.tex}` ran the sub-file's
+  // `\usepackage{cleveref}` after `\begin{document}`, and the begin-document half of cleveref never came
+  // ("`\lx@cleverrefnum@@` undefined" ×8).
+  // Guard `perfect_kernel_batchint20::gincltex_subfile_preamble_is_skipped`.
+  if lookup_bool("INCLUDE_STYLES") {
+    RequirePackage!("gincltex");
+    if IsDefined!(&T_CS!("\\gincltex@boxfile")) {
+      RawTeX!(
+        r"\let\lx@standalone@gincltex@boxfile\gincltex@boxfile
+\def\gincltex@boxfile#1{\lx@standalone@skippreamble\lx@standalone@gincltex@boxfile{#1}}"
+      );
+    }
+  }
 
   DefMacro!("\\@standalone@end@input", "\\egroup\\endinput");
   // The sub-file `\includestandalone` reads next has its preamble skipped (in the group around it).
@@ -57,6 +104,7 @@ LoadDefinitions!({
   // Perl L21-23: DefPrimitiveI \@standalone@start@input — sets inPreamble = 0.
   DefPrimitive!("\\@standalone@start@input", {
     assign_value("inPreamble", false, None);
+    assign_value("lx@subpreamble@begindocument", Stored::Bool(false), None);
   });
 
   // Perl L24-33: DefPrimitive \@standalone@documentclass[]{} — open a
@@ -107,6 +155,8 @@ LoadDefinitions!({
     // and `100_stale_autoload_no_runaway` (same boundary, fresh process).
     activate_scope(subfile_scope_here());
     assign_value("inPreamble", true, None);
+    // its `\AtBeginDocument` code is not run (`at_document_hook`, sect02.rs; 2405.01743)
+    assign_value("lx@subpreamble@begindocument", Stored::Bool(true), None);
     if class_tks.to_string().trim() == "standalone"
       && let Some(kv) = options_kv.as_ref()
     {
@@ -117,6 +167,12 @@ LoadDefinitions!({
           RequirePackage!(key.trim());
         }
       }
+    }
+    // A sub-file of the standalone class names its cropped environments in its preamble (`\standaloneenv
+    // {circuitikz}`, 2505.21582), which standalone.sty never runs (see below); run here, it marks nothing
+    // (standalone.sty:802 `\let\standaloneenv\@gobble`).
+    if class_tks.to_string().trim() == "standalone" && !IsDefined!(&T_CS!("\\standaloneenv")) {
+      Let!(T_CS!("\\standaloneenv"), T_CS!("\\@gobble"));
     }
     Let!(T_CS!("\\begin{document}"), T_CS!("\\@standalone@start@input"));
     Let!(T_CS!("\\end{document}"),   T_CS!("\\@standalone@end@input"));
@@ -218,7 +274,7 @@ LoadDefinitions!({
 });
 
 /// A keyval value without one balanced outer brace pair, as xkeyval reads it (`{0.5\textwidth}`; not `{a}{b}`).
-fn unbraced(value: &str) -> &str {
+pub(crate) fn unbraced(value: &str) -> &str {
   let value = value.trim();
   if !value.starts_with('{') || !value.ends_with('}') {
     return value;
@@ -240,7 +296,7 @@ fn unbraced(value: &str) -> &str {
 }
 
 /// The items of a keyval list at brace depth 0.
-fn top_level_items(list: &str) -> Vec<String> {
+pub(crate) fn top_level_items(list: &str) -> Vec<String> {
   let (mut items, mut current, mut depth) = (Vec::new(), String::new(), 0usize);
   for c in list.chars() {
     match c {

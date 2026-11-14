@@ -1,0 +1,13 @@
+\begin{filecontents*}[overwrite]{lxfontbody.cls}
+\LoadClass{article}
+\usefont{T1}{cmss}{bx}{sl}
+\end{filecontents*}
+% witness: none (SYNC_STATUS "Font-Selection Chain Residuals" 4, W17; DIVERGENCES #315)
+% oracle:  pdflatex 0 errors; "Body text." CMR10, "it" CMTI10 (the class's `\usefont` reset at `\begin{document}`)
+% engines: rust 77s = `<text font="sansserif bold slanted">Body text. </text>`; 77u plain text; Perl as 77s
+% expect:  0 errors, 0 warnings; "Body text." with no font attribute, "it" italic
+% status:  GREEN (77u, sect02.rs runs `\init@series@setup`)
+\documentclass{lxfontbody}
+\begin{document}
+Body text. \textit{it}
+\end{document}

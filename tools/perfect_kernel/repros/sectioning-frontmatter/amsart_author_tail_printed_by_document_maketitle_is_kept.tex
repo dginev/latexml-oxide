@@ -1,0 +1,26 @@
+% note:    written on pk/FX26 (parked for TP1); `Policy::author_tail` and `title_page_prints_author_tail` named below are
+%   FX26's, not int159a's. On int159a the reading makes no creator of the tail and the title-page check counts it
+%   (Warning "bob"): the loss is counted, the creator still lost
+% mechanism: under amsart, whose binding declares its title page prints no `\@author` tail (`Policy::author_tail`
+%   `Unprinted`: amsart's prints `\authors`), a document's `\def\@maketitle` printing `\@author` prints what is
+%   appended to it (amsart's `\author` stores nothing there, so only the tail). The walk says printed
+%   (frontmatter_stores.rs `title_page_prints_author_tail`), but the binding route reads a tail only under a binding
+%   declaring it printed (`author_tail_calls`), so "Bob B" is lost; the title-page check prints it, counting the loss
+% witness: synthetic (FX26)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: page 1 "A Title / and Bob B / Body."
+% engines: int159a (`latexml_oxide.int159a-rel`) and FX26: 0 errors, 1 warning ("The title page prints 1 word(s) …
+%   does not hold: bob"); one creator Alice A: "Bob B" lost, counted; perl not run
+% expect:  Bob B a creator (or the printed tail kept), 0 warnings
+% status:  GREEN since TP1 (was RED, FX26): the document's `\@maketitle` runs as written in the title-page reading's run,
+%   which prints the tail, its own evidence over amsart's declaration (`AuthorPage::Own`): creators Alice A, Bob B; E=0 W=0
+%   (int160a: Alice A alone, W=1 "bob"). Guard perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read
+% preload: ar5iv.sty
+\documentclass{amsart}
+\makeatletter\def\@maketitle{\begin{center}{\Large\@title}\par\@author\end{center}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

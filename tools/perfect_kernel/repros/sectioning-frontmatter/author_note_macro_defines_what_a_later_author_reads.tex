@@ -1,0 +1,12 @@
+% mechanism: a paper macro printing a note and defining (`\setlab{Alpha}`: ` \footnote{…} \gdef\lab{#1} `) on one
+%   author, its definition read by the next (`(\lab)`). Its call prints, so no declaration replays it, and the note it
+%   makes is no name's run: the block is written as Perl's `\lx@add@authors` splits it, in order (`declaration_reads_past`)
+% witness: synthetic (the sibling of footnoterecall_three_authors_spaced_remember; 2407.13730's shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One ∗", "Bob Two (Alpha)"; footnote ∗ Lab Alpha.
+% engines: rust e6a6c93a18 1 error (undefined \lab), 2 warnings, a creator "Alpha and Bob Two ( \lab )"
+% expect:  0 errors, 1 warning (the decline); Ann One with the note "Lab Alpha.", Bob Two (Alpha)
+% status:  RED (e6a6c93a18) -> GREEN (perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand\setlab[1]{ \footnote{Lab #1.} \gdef\lab{#1} }
+\title{T}\author{Ann One\setlab{Alpha} \and Bob Two (\lab)}
+\begin{document}\maketitle Body.\end{document}

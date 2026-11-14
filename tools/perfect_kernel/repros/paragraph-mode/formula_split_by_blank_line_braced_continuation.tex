@@ -1,0 +1,19 @@
+% witness: hep-th9402135:444-446 (`quotient map $p: \cf^{1} \rightarrow` <blank line> `{\cf^{1}/G}$ is smooth`, with
+%          `\def\cf{{\cal F}}`), reduced
+% oracle:  pdflatex 3 errors ("Missing $ inserted" at the \par and at the `^` in the group, "Extra }, or forgotten $"),
+%          pdftotext "The quotient map p : F 1 → / F1 /G is smooth, and y is a point."; Perl 0 errors, one formula
+%          tex="p:{\cal F}^{1}\rightarrow\par{{\cal F}^{1}/G}"
+% engines: rust 66t2: 3 errors, the formula ended at the blank line; Math "issmooth,and", "isapoint."
+% expect:  0 errors; one formula p:{\cal F}^{1}\rightarrow{{\cal F}^{1}/G} (Perl's content, the `\par` reverting as
+%          nothing), then the formula y; "is smooth, and" text
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w): the look-ahead goes into a brace group that is no command's argument
+%          (`{\cf^{1}/G}`): its `^` is math-only, so the formula continues (stomach.rs `formula_continues_past_par`)
+% preload: ar5iv.sty
+% status:  GREEN (66w; guard perfect_kernel_batch66w::formula_split_by_a_blank_line_continues_in_a_group)
+\documentclass{article}
+\def\cf{{\cal F}}
+\begin{document}
+The quotient map $p: \cf^{1} \rightarrow
+
+{\cf^{1}/G}$ is smooth, and $y$ is a point.
+\end{document}

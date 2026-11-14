@@ -1,0 +1,37 @@
+% The title-page check's source gate (title_page_check.rs `document_source_words`) reads the document's own text: a
+% file a package reads as content from the TeX tree is none of it (translations.sty `\input`s its TeX Live
+% dictionary, translations-basic-dictionary-english.trsl, which writes "Contents"), and a `.bbl`'s definitions are its
+% BibTeX style's (`\providecommand{\URLprefix}{URL: }`), its entries the document's. So the class's own labels the
+% check finds lost — "Contents lists available at ScienceDirect", "URL:" in a note its `\@thanks` flushes, as
+% medima.sty's journal header and `\printFirstPageNotes` print them — are the class's text, an Info, not the
+% document's words in a Warning (int139a1 named "contents" and "url").
+% witness: elsarticle + medima.sty 2507.07920 ("contents"), 2201.10981 and 2409.09188 ("url"), whose title pages the
+%          binding's `\end{frontmatter}` prints since 107d
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able1", "Text [?]." (one run), "References", "[1] A. Able.
+%          A book.", the page foot's "1 Contents lists available at ScienceDirect. URL: none"
+% engines: rust int139a1 = 0 errors, 1 warning (frontmatter:unclaimed "contents url"); perl = 0 errors, no check
+% expect:  0 errors, 0 warnings; one frontmatter:class_text Info naming the labels
+% status:  RED (int139a1) -> GREEN (107d)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{jnlhead.cls}
+\ProvidesClass{jnlhead}\LoadClass{article}
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\thanks{Contents lists available at ScienceDirect. URL: none}\par}\@thanks\endgroup}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{\jobname.bbl}
+\providecommand{\URLprefix}{URL: }
+\begin{thebibliography}{1}
+\bibitem{able} A. Able. A book.
+\end{thebibliography}
+\end{filecontents*}
+\documentclass{jnlhead}
+\usepackage{translations}
+\LoadDictionary{translations-basic-dictionary}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+Text \cite{able}.
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}

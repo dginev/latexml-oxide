@@ -1,0 +1,30 @@
+% A class's \@maketitle prints a store of its own the frontmatter has no setter for (`\jinfo`, an off-table store)
+% above the cover lines the document sets after \maketitle; its title page is not kept here (the deliberate
+% \undefinedthing, as eptcs's and nowfnt's raised errors), so \maketitle hands the store on as a note
+% (`hand_untypeset_stores`). Queued after \maketitle placed the frontmatter, the note is late, and handed on from
+% the class's store (title-page provenance, `_titlepage`): the fail-safe leaves the late abstract's run where it is,
+% int116a's slot, as the class's title page may print such a store above the cover or at the page foot
+% (OXIDIZED_DESIGN_DIVERGENCES #903; residual: out of print order, as in int116a).
+% witness: none (synthetic; the off-table sibling of 86g r2 review finding 1).
+% Guard: perfect_kernel_batch86g::late_abstract_follows_the_hand_typeset_cover.
+% oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): "Repro Title / Ann Author / Journal of Repro 12 (2026)
+%          / Department of Repro, University of Witness / Abstract / Abstract words here. / 1 Intro".
+% engines: rust 86a: title, creator, abstract, pubnote, para (cover), section. 86g r2: title, creator,
+%          titlepage[block], abstract, pubnote, section. 86g r3: title, creator, pubnote, titlepage[block], abstract,
+%          section.
+% expect:  0 errors, 0 warnings; title, creator, abstract, pubnote, para (cover), section.
+\begin{filecontents*}[overwrite]{rcjinfo.cls}
+\ProvidesClass{rcjinfo}
+\LoadClass{article}
+\def\@jinfo{}
+\newcommand{\jinfo}[1]{\def\@jinfo{#1}}
+\def\@maketitle{\undefinedthing\@title\par\@author\par{\bfseries\@jinfo\par}}
+\end{filecontents*}
+\documentclass{rcjinfo}
+\title{Repro Title}\author{Ann Author}\jinfo{Journal of Repro 12 (2026)}
+\begin{document}
+\maketitle
+\begin{center}Department of Repro, University of Witness\end{center}
+\begin{abstract}Abstract words here.\end{abstract}
+\section{Intro}Body text.
+\end{document}

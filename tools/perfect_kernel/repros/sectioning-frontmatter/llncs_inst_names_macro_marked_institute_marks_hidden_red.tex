@@ -1,0 +1,24 @@
+% mechanism: llncs shape (c) under names marked `\inst{n}`, the institute's marks printed by a document macro
+%   (`\affmark`): shape (c) is read from the printed marks (P4b4a), so the binding's own cutter (`affiliation_calls`)
+%   hides its entries' marks with the names' `\inst` requests, as for the `$^{1}$` twin
+%   (llncs_inst_names_marked_institute_marks_hidden_red); pdflatex prints both. Before P4b4a the token dispatch saw no
+%   mark (shape (b)) and the reading placed each entry with its mark shown
+% witness: synthetic (P4b4a sibling probe s11; 1803.02579, breqn's math-active `^` read the same way)
+%   (and `\institute{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}`, P4b4a2 probe s6: the box read through, the same)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town A",
+%   "2Univ B, Town B"
+% engines: int165a: Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"; P4b4a: the same entries, every mark
+%   hidden (0 warnings)
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A"; Bob Baker 2 "2 Univ B, Town B"
+% status:  RED (P4b4a)
+% moves:   post-merge (AUMK: names' request marks shown)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{\affmark{1}Univ A, Town A \\ \affmark{2}Univ B, Town B}
+\maketitle
+Text.
+\end{document}

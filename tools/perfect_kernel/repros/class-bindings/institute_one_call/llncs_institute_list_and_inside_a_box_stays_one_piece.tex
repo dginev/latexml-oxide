@@ -1,0 +1,23 @@
+% mechanism: llncs_cls.rs `\institute` → `\lx@llncs@institute@dispatch`: an `\and` the cut by meaning leaves whole
+%   (`split_at_kernel_separators` cuts at the list's own level only), here inside an `\mbox`, keeps the list one
+%   numbered piece (shape (a)'s `\lx@llncs@affiliation`), as the split of it made it — the gate asks the separator
+%   query at every level (`argument_separators_at_every_level`, Option C P2-3, OD #995), as `\institutename` numbers an
+%   institute at every `\and` it runs; it does not read the list as the sole institute every author shares
+% witness: synthetic (P23's first gate, the query at the list's own level, gave the affiliation to both authors)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker" over "1 Univ A, Town A (North 2 South)"
+%   (numbered: the `\and` in the box steps the count)
+% engines: Perl 0.8.8 splits by spelling (llncs.cls.ltxml:46-48): one piece; int160a1 (1f3949ecad): the same XML as
+%   P23, 0 errors, 1 warning
+% expect:  0 errors, 1 warning (the content check: the "and" the XML writes, which pdflatex prints as the mark 2); Ann
+%   Able and Bob Baker with no contact; "Univ A, Town A (North and South)" on a nameless creator (the block's: a numbered
+%   institute no `\inst` picks, `llncs_several_institutes_without_marks_stay_the_blocks.tex`)
+% status:  GREEN (int160a1 and P23; guard perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, Town A \mbox{(North \and South)}}
+\maketitle
+Text.
+\end{document}

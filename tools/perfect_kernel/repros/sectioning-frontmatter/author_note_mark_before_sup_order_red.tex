@@ -1,0 +1,16 @@
+% mechanism: FN1's lift (queue_digest.rs `lift_notes_beside`) moves a note out of the name to just after it; where the
+%   name holds printed content after the note (`Bob Baker\footnotemark[2]$^2$`), that content now precedes the mark:
+%   `<personname>Bob Baker<sup>2</sup></personname> <note mark="†">…`; pdflatex prints "Bob Baker†2". No word or mark
+%   lost; two marks' order changed (revFN1 finding 1; OD #1001)
+% witness: synthetic; the shape of 2505.14146, 2203.10939
+% expect:  the PDF's order of the printed marks kept
+% status:  RED (FN1b; recorded at integration, int160a)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker\footnotemark[2]$^2$, and Cy Cole\\ Univ A}
+\begin{document}
+\maketitle
+\footnotetext[2]{Note B.}
+Body.
+\end{document}

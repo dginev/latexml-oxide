@@ -1,0 +1,19 @@
+% An author-block row with a superscript mark that matches no author is kept with the shared creator
+% (OXIDIZED_DESIGN #159), not dropped as an orphaned annotation.
+% witness: none (probe).
+% engines: rust int160a (HG1) = 0 errors, 0 warnings, one creator: A. Author holds both "Affiliation one" and "Affiliation two" (authorblock contacts), the unrequested mark's line not the shared creator's, and the "1" pdflatex prints after "A. Author" lost; 59's guard never compared its expected creators after DEL1. Counts and the name pinned, this RED cited: perfect_kernel_batchhg1::reds_keep_their_counts_and_right_parts
+% status:  GREEN (59d) -> RED (int160a, HG1; renamed `_red` HG1b, relocate.rs's comment follows)
+% oracle:  pdflatex 0 errors: "1Affiliation one", "2Affiliation two".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\makeatletter
+\def\address[#1]#2{\g@addto@macro\@author{\\\textsuperscript{#1}#2}}
+\makeatother
+\begin{document}
+\title{T}
+\author{A. Author\textsuperscript{1}}
+\address[1]{Affiliation one}
+\address[2]{Affiliation two}
+\maketitle
+Body.
+\end{document}

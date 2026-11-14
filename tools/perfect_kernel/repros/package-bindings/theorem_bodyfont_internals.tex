@@ -1,0 +1,20 @@
+% witness: cc.cls 1507.02955 (ccthm.sty:100-108, :177-185 `\def\theorempreamble\@thm#1#2{…\@thm{#1}{#2}}`
+%          `\theorem@bodyfont{\theorempreamble}`)
+% oracle:  pdflatex 0 errors; Definition 1 upright, Theorem 1 italic "of kind thm, noted."
+% engines: rust 67o1 = 3 errors (`\theorem@bodyfont` undefined, `expected:Match` `\@thm`, `\thmkind` undefined)
+% expect:  0 errors; the theorem's body is italic and reads "An italic body of kind thm, noted."
+% status:  RED (67o1) -> GREEN (67p)
+\documentclass{article}
+\usepackage{theorem}
+\makeatletter
+\newtoks\everytheorem \everytheorem{\def\thmnote{noted}}
+\def\theorempreamble\@thm#1#2{\def\thmkind{#1}\the\everytheorem\@thm{#1}{#2}}
+\theorembodyfont{\upshape}
+\newtheorem{defn}{Definition}
+\theorem@bodyfont{\theorempreamble}
+\newtheorem{thm}{Theorem}
+\makeatother
+\begin{document}
+\begin{defn}An upright body.\end{defn}
+\begin{thm}An italic body of kind \thmkind, \thmnote.\end{thm}
+\end{document}

@@ -6,12 +6,12 @@
 //! `\if@filesw … \makeatletter \input\jobname.aux \fi` to re-read the
 //! label `.aux` for the "constants may have changed, rerun" check.
 //!
-//! Our engine never opens `\@mainaux` at *runtime* (the kernel's
-//! `\openout\@mainaux\jobname.aux` is baked into the dump at build
-//! time, with the build-time jobname), so no in-memory `<jobname>.aux`
-//! buffer exists; the raw `\input\jobname.aux` then fails with
-//! `Error:missing_file:<jobname>.aux`. (Unlike LaTeX's silent `\@input`,
-//! constants.sty uses the hard `\input`.)
+//! Until `\begin{document}` opened `\jobname.aux` (sect02.rs, OXIDIZED_DESIGN
+//! #576), no in-memory `<jobname>.aux` existed and that raw `\input\jobname.aux`
+//! failed with
+//! `Error:missing_file:<jobname>.aux` (constants.sty uses the hard `\input`,
+//! not LaTeX's silent `\@input`). The re-read stays out of the port: there is
+//! no `.aux` round trip to check (see below).
 //!
 //! Perl LaTeXML never observes this: its default TEXINPUTS excludes
 //! `/usr/share/texlive`, so constants.sty is reported missing-file and

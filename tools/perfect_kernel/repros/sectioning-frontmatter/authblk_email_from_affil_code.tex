@@ -1,0 +1,29 @@
+% An `\email` built from authblk's `\affil` code (the ACL/NAACL templates: a `\newcommand\email[2][]` that
+% `\xdef`s `\AB@authors`/`\AB@affillist`) adds to authblk's visual accumulators, which nothing reads here: the
+% e-mails are lost. Not a copy of `\affil` (a new name, so the 102a lock does not reach it); variant (iii) of the
+% dev lost-words census mechanism A (SYNC_STATUS row 102a).
+% witness: 2406.11632 (acl_latex_v7.tex:28-46), 1904.03969 (naaclhlt2019.tex:43-61)
+% oracle:  pdflatex 0 errors: both affiliations, then both e-mail addresses
+% engines: rust int129a = 102a = 0 errors; both affiliations, no e-mail; perl = Errors (\AB@authors undefined)
+% expect:  0 errors, 0 warnings; each author's e-mail a contact
+% status:  RED (102a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\makeatletter
+\newcommand\email[2][]{\newaffiltrue\let\AB@blk@and\AB@pand
+  \if\relax#1\relax\def\AB@note{\AB@thenote}\else\def\AB@note{\relax}\setcounter{Maxaffil}{0}\fi
+  \begingroup\let\protect\@unexpandable@protect
+  \@temptokena=\expandafter{\AB@authors}%
+  {\def\\{\protect\\\protect\Affilfont}\xdef\AB@temp{#2}}%
+  \xdef\AB@authors{\the\@temptokena\AB@las\AB@au@str\protect\\[\affilsep]\protect\Affilfont\AB@temp}%
+  \gdef\AB@las{}\gdef\AB@au@str{}%
+  {\def\\{, \ignorespaces}\xdef\AB@temp{#2}}%
+  \@temptokena=\expandafter{\AB@affillist}%
+  \xdef\AB@affillist{\the\@temptokena\AB@affilsep\AB@affilnote{}\protect\Affilfont\AB@temp}%
+  \endgroup\let\AB@affilsep\AB@affilsepx}
+\makeatother
+\title{A Title}\author[1]{Ann Able}\author[2]{Bob Baker}
+\affil[1]{Tokyo Institute of Technology}\affil[2]{Nara Institute of Science and Technology}
+\email{\texttt{ann.able@titech.example.jp}}\email{\texttt{bob.baker@naist.example.jp}}
+\begin{document}\maketitle Body text.\end{document}

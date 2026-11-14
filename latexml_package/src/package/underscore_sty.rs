@@ -15,5 +15,9 @@ LoadDefinitions!({
   // l3kernel's own). Break behavior is presentation; the glyph is the
   // content.
   DefMacro!("\\BreakableUnderscore", "\\textunderscore");
-  at_begin_document(TokenizeInternal!(r"\catcode`_\active"))?;
+  // underscore.sty:26-31 `\AtBeginDocument{… \catcode\string`\_\string=\active …}`: registered in the kernel's
+  // begin-document hook in load order, so a package loaded later that sets `_` again at the document's start wins, as in
+  // pdflatex — mathstyle.sty:233-236 makes it other (12). The binding's `at_begin_document` list (Perl `AtBeginDocument`)
+  // ran after every `\AtBeginDocument` and left `_` active, a subscript in text (2507.09194).
+  RawTeX!(r"\AtBeginDocument{\catcode`\_\active}");
 });

@@ -1,0 +1,26 @@
+% smfart's `{altabstract}`, `{abstract}`, `{altabstract}` after `\maketitle`, a hand-typeset cover line before each:
+% every abstract follows its own line (smfart_cls.rs marks `{altabstract}` with `\lx@frontmatter@mark` itself;
+% `place_later_abstract`, cover_order.rs, OXIDIZED_DESIGN_DIVERGENCES #903), as pdflatex prints them.
+% witness: 1006.5288 (amsart's two abstracts, the kernel path); review 86i r2 probe o6 (the smfart path).
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line.
+% oracle:  pdflatex 0 errors: "PROBE TITLE / Ann Author / Cover one / Abstract. — Alt first words. / Cover two /
+%          Résumé. — Main second words. / Cover three / Abstract. — Alt third words. / 1. Intro".
+% engines: perl (vendored HEAD) 1 error: "Main second words." only, the `{altabstract}`s as body text.
+%          rust int117a: titlepage, "Main second words.", "Alt third words.", the cover lines; the first lost.
+%          rust 86i r2: titlepage, "Alt first words.", "Main second words.", Cover two, Cover three, "Alt third words.".
+% expect:  0 errors, 0 warnings; titlepage[Cover one], abstract (Alt first), Cover two, abstract (Main second),
+%          Cover three, abstract (Alt third), section.
+% status:  RED (86i r2) -> GREEN (86i r3)
+\documentclass{smfart}
+\title{Probe Title}\author{Ann Author}
+\begin{document}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{altabstract}Alt first words.\end{altabstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Main second words.\end{abstract}
+\begin{center}Cover three\end{center}
+\begin{altabstract}Alt third words.\end{altabstract}
+\section{Intro}
+Intro text.
+\end{document}

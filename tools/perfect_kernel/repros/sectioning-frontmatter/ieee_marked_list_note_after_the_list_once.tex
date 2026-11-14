@@ -1,0 +1,23 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1009): IEEEtran's
+%   author tail `\thanks{\IEEEauthorrefmark{1} Univ A; \IEEEauthorrefmark{2}Univ B.}\thanks{Supported by …}` — the note
+%   after the list is printed once, no part of every entry (`CutParameters::shared_parts`)
+% witness: 2605.05837 (its funding `\thanks` written four times, once per entry)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ , and Bob Baker†", "∗ Univ A, Town A; † Univ B, Town B.", "Supported by Grant 1."
+% engines: P4cbase: the note once (the entries without their marks); P4c2: the note once per entry (2)
+% expect:  0 errors, 0 warnings; Ann Able "* Univ A, Town A", Bob Baker "† Univ B, Town B.", the note once
+% status:  RED (P4c2 237a9e11af) -> GREEN (P4c3)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\begin{document}
+\title{T}
+\author{%
+  \IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1},
+    and Bob Baker\IEEEauthorrefmark{2}}
+\thanks{\IEEEauthorrefmark{1} Univ A, Town A;
+  \IEEEauthorrefmark{2}Univ B, Town B.}
+\thanks{Supported by Grant 1.}
+}
+\maketitle
+Text.
+\end{document}

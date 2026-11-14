@@ -1,0 +1,15 @@
+% mechanism: `\meaning` prints a macro's prefixes with `print_esc` (tex.web §1295; `print_meaning` §296), so in the
+%   current `\escapechar`: ltcmdhooks reads an `\NewDocumentCommand`'s prefixes with `\escapechar` `/`
+%   (latex.ltx:7011-7016) and errs on `\protected` ("Missing argument", the text "“protected //" printed).
+% witness: synthetic (QA47A)
+% oracle:  pdflatex 0 `!`; "/protected/long macro:#1->/relax #1|macro:->/relax"
+% engines: rust int161a: "\protected\long macro:#1->/relax #1|…"; QA47A: as pdflatex
+% expect:  0 errors, 0 warnings
+% status:  GREEN (QA47A)
+\documentclass{article}
+\protected\long\def\x#1{\relax #1}
+\def\y{\relax}
+\begin{document}
+{\escapechar=`\/ \xdef\a{\meaning\x}\xdef\b{\meaning\y}}
+\texttt{\a|\b}
+\end{document}

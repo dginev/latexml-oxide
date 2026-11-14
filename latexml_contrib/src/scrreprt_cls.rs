@@ -5,6 +5,7 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  crate::koma_script::koma_pre_load()?;
   InputDefinitions!("scrreprt", noltxml => true, extension => Some(Cow::Borrowed("cls")));
-  crate::koma_script::koma_post_load()?;
+  crate::koma_script::koma_post_load(crate::koma_script::KomaClass::Chaptered)?;
 });

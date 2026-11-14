@@ -1,0 +1,17 @@
+% witness: 1002.1686, 1112.3058, 2111.14165, 0808.1974, 1411.6913 (amsrefs `\section*{References}\begin{biblist}` without
+%          `{bibdiv}`); 14 papers of the int19 census (rc_struct5 B1)
+% oracle:  pdflatex 0 errors: "References", then "[1] J. Doe, T, J (2000)"
+% engines: rust 67int19b = 1 Error:malformed:ltx:biblist (<ltx:biblist> isn't allowed in <ltx:section>); Perl 0.8.8 the
+%          same (KNOWN_PERL_ERRORS #939)
+% expect:  0 errors; one <bibliography> titled References holding the entry
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{amsrefs}
+\begin{document}
+See \cite{A}.
+\section*{References}
+\begin{biblist}
+\bib{A}{article}{author={Doe, J.}, title={T}, journal={J}, year={2000}}
+\end{biblist}
+\end{document}

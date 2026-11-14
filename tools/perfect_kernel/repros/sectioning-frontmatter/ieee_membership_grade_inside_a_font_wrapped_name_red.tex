@@ -1,0 +1,16 @@
+% mechanism: P5a2's flush prints `\IEEEmembership`'s grade as text where it stands (ieeetran_cls.rs:351-353 `\lx@IEEE@grade`);
+%   when the emitter writes a name span that wraps the grade (a font group around name AND grade), the grade prints inside
+%   the name, and the rehearsal's membership contact is kept too — the grade twice, once in the name.
+% witness: synthetic (revP5a2 r4; 0 of the 1,794 `\IEEEmembership` papers of the 30k census have the font-wrapped shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able, Member, IEEE and Bob Baker" (bold first author + grade)
+% engines: rust P5abase (= int166a): personname "Ann Able", two membership contacts "Member, IEEE", 1 W; rust P5a2:
+%          personname "Ann Able, Member, IEEE" + one membership contact "Member, IEEE"
+% expect:  personname "Ann Able" (bold), one membership contact "Member, IEEE"; Bob Baker none
+% status:  RED (revP5a2, int167a) — moves: post-merge (IEGF)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able,~\IEEEmembership{Member,~IEEE}} and Bob Baker}
+\maketitle
+Body.
+\end{document}

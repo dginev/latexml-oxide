@@ -1,0 +1,17 @@
+% witness: synthetic (GA0 finding 10, tex_math.rs `eqno_stops_at`)
+% oracle:  pdflatex 0 errors: (1) and (3) set as the equation numbers, then "Text after."
+% engines: perl 0.8.8 = 6 Errors (Missing $ closing display math, malformed) — its `$$` close reads the second `$` by
+%          spelling; rust GA5base (int166a) = 1 Error (Fell of the end reading tag for \eqno!): the tag's stop set
+%          compared spellings, so `\dollar` (`\let\dollar=$`) did not end it; the tag (3) and "Text after." lost
+% expect:  0 errors, 0 warnings; both tags, "Text after." kept
+% status:  RED (GA5base) -> GREEN (GA5: the stop set by meaning, Perl's `defined_as`, TeX_Math.pool.ltxml:1245-1253;
+%          guard perfect_kernel_batchga5::batchga5_meaning_rows)
+% preload: ar5iv.sty
+\documentclass{article}
+\let\myeqno\eqno
+\let\dollar=$
+\begin{document}
+$$ a = b \myeqno (1) $$
+$$ e = f \eqno (3) \dollar\dollar
+Text after.
+\end{document}

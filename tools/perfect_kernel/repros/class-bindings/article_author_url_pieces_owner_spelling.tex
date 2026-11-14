@@ -1,0 +1,19 @@
+% mechanism: a joined run of `\url` pieces under the last `\and` column (`\{\url{bob, ann}\}\url{@x.org}`): the
+%   resolver gives both addresses to that column's author (`owner:only-author`); a later step deals the print in print
+%   order, never through the owners' spelling (`resolver/owners.rs` `spelled_owners`), so Ann Able gets bob@.
+% witness: none real (synthetic; review revZ18h S-b scanned the 109 changed papers: only 1710.01968 and 2505.15472 join,
+%   both in owner order)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker1" over "1Univ X" and "{bob, ann}@x.org" in typewriter
+% engines: rust Z18h/Z18i = Ann Able bob@x.org, Bob Baker ann@x.org, W=2 (Z18i: the two lost links counted);
+%   int154x = Ann ann@, Bob bob@ (W=1). The same list as text, `\texttt{\{bob, ann\}@x.org}`, is right on all three
+% expect:  Ann Able ann@x.org, Bob Baker bob@x.org
+% status:  RED (no guard)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^1$\\
+$^1$Univ X\\
+\{\url{bob, ann}\}\url{@x.org}}
+\maketitle
+\end{document}

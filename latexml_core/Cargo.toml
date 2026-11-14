@@ -64,7 +64,7 @@ regex = { version = "1.7.1", default-features = false, features = ["std", "perf"
 log = "0.4"
 quote = { version = "1.0", optional = true }
 proc-macro2 = { version = "1.0", optional = true }
-libxml = "0.3.21"
+libxml = "0.3.23"
 # (replaced `dirs` 2026-05-17 — its single use was `dirs::home_dir()`,
 # which on Linux is exactly `std::env::var_os("HOME")`. On Windows
 # dirs falls back to `SHGetKnownFolderPath`; not relevant for us.)
@@ -100,6 +100,11 @@ winnow = "1.0"
 # supply-chain surface — only a direct edge.
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# `mach_host_self` (watchdog.rs `available_memory_bytes`): libc deprecated its Mach
+# APIs in favour of the `mach2` crate.
+[target.'cfg(target_os = "macos")'.dependencies]
+mach2 = "0.7"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [

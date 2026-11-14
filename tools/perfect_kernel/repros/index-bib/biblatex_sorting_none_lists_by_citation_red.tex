@@ -1,0 +1,16 @@
+% witness: synthetic (revGA3)
+% oracle: pdflatex+biber (clean, 0 `!` lines); engine: pdflatex
+% expect: `sorting=none` lists by citation: "First [1] then [2]; both [2, 1]." References [1] Beta [2] Alpha;
+%   with `sortcites=true` the list is the same and the last citation reads "[1, 2]"
+% mechanism: with no shipped `.bbl`, the `.bib` rendered without biber carries no `sort` from biblatex's `sorting`
+%   option, so post lists alphabetically.
+% ours (GA3base and GA3): [1] Alpha [2] Beta
+% status: RED
+% moves: post-merge (BLSN)
+\documentclass{article}
+\usepackage[style=numeric,sorting=none]{biblatex}
+\addbibresource{biblatex_sorting_none_lists_by_citation_red.bib}
+\begin{document}
+First \cite{b} then \cite{a}; both \cite{a,b}.
+\printbibliography
+\end{document}

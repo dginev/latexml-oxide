@@ -1,0 +1,26 @@
+% A two-letter surname whose transliteration has three: `Wei L\"u`, "lu" and "lue". The transliteration lifted "lue"
+%   over the three-letter surname threshold, so `bluesky@` (holding "lue") spelled Wei Lü. A word's length class comes
+%   from its base spelling: "lue" stays a short surname, which only a local part of those letters alone spells
+%   (`email_owners::SpelledWord`, `NameKeys::of`; OXIDIZED_DESIGN_DIVERGENCES #970).
+% witness: review rev107a finding 3 (probe p/lue.tex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: three names over "1University of Alpha" and
+%   "{aable,bluesky}@alpha.org"
+% engines: rust int138a: as expected; rust 107a r1: `bluesky@` on Wei Lü
+% expect:  0 errors, 0 warnings; aable@ on Ann Able, bluesky@ on the block creator (two addresses for three names, one
+%   spelled: no order, two names left), none on Wei Lü
+% status:  RED (107a r1) -> GREEN (107a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Wei L\"u$^{1}$ \and
+  Ann Able$^{1}$ \and
+  Bo Baker$^{1}$ \\
+ {\normalfont $^1$University of Alpha} \\
+ \texttt{\{aable,bluesky\}@alpha.org}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

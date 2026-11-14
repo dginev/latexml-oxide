@@ -1,0 +1,19 @@
+% mechanism: a bracketed piece after a separator carrying its own mark is a name of its own only when it prints words
+%   after its bracket closes (`[ver3]S. Curry`, `[v3]{Cy Cole}`, `(Dee) Dorn`: observer/resolver/lines.rs
+%   `names_line_events`, `bracket_spans_whole`); a piece the bracket spans whole is a remark, joined to the name before
+%   it, and since both pieces carry marks the join is the safety net's counted Warning (`net::merged_names`), never a
+%   creator invented from a remark (OXIDIZED_DESIGN_DIVERGENCES #991)
+% witness: none in the corpus (synthetic; review revZ18k3 R1, introduced by Z18k3); 2308.02720 kept at 11 creators
+% oracle:  pdflatex 0 errors: "Ann Able^1 and [equal contribution]^1, Bob Baker^2" over "1 Univ One", "2 Lab Two"
+% engines: rust int155a4 = 3 creators, "[equal contribution]" one of its own, 0 warnings
+% expect:  0 errors, 1 warning (the safety net's); "Ann Able and [equal contribution]": Univ One; Bob Baker: Lab Two
+% status:  RED (int155a4) -> GREEN (Z18o)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} and [equal contribution]\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ One \and Lab Two}
+\maketitle
+Text.
+\end{document}

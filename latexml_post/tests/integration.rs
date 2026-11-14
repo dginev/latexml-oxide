@@ -605,3 +605,101 @@ fn test_unit_bearing_svg_without_viewbox_is_converted_not_truncated() {
     }
   }
 }
+
+/// The start tags of the floats, flex divs and rule spans `LaTeXML-html5.xsl` makes of `xml` (`panel_grid_*` guards).
+fn panel_grid_start_tags(xml: &str) -> Vec<String> {
+  let stylesheet = [
+    "resources/XSLT/LaTeXML-html5.xsl",
+    "../resources/XSLT/LaTeXML-html5.xsl",
+  ]
+  .into_iter()
+  .find(|p| std::path::Path::new(p).exists())
+  .expect("LaTeXML-html5.xsl");
+  use latexml_post::xslt::XSLT;
+  let doc = PostDocument::new_from_string(xml, PostDocumentOptions::default()).expect("parse");
+  let mut xslt = XSLT::new(
+    stylesheet,
+    rustc_hash::FxHashMap::default(),
+    false,
+    None,
+    vec![],
+  )
+  .expect("XSLT processor");
+  let html = xslt
+    .process(doc, vec![])
+    .expect("xslt process")
+    .into_iter()
+    .next()
+    .map(|d| d.get_document().to_string())
+    .unwrap_or_default();
+  html
+    .match_indices('<')
+    .filter_map(|(at, _)| html[at..].find('>').map(|end| &html[at..=at + end]))
+    .filter(|tag| {
+      tag.starts_with("<figure")
+        || tag.starts_with("<div class=\"ltx_flex")
+        || tag.starts_with("<span class=\"ltx_rule")
+    })
+    .map(str::to_string)
+    .collect()
+}
+
+/// The panel grid's markup reaches the HTML as CSS custom properties (OXIDIZED_DESIGN_DIVERGENCES #887; user rulings
+/// 2026-10-22 and 2026-10-23, grid study option (a)): a float's `panelrows`/`panelcols`/`panelline`/`panelfill` on its
+/// own element (`--ltx-panel-rows`, `--ltx-panel-cols`, `--ltx-panel-line`, `--ltx-panel-fill`, inherited by the flex
+/// rows and cells the para stylesheet builds in it), a panel's `panelwidth`/`panelspan` on the `div.ltx_flex_cell`
+/// holding it (`--ltx-panel-width`, `--ltx-panel-span`), the class `ltx_panels_gallery` on the float as every class is;
+/// the flex markup is otherwise the same, and a panel's own element gets no style from them. Guard
+/// `perfect_kernel_batch79c` (the XML side).
+#[test]
+fn panel_grid_markup_reaches_the_html_as_custom_properties() {
+  const GALLERY: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Document">
+  <figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelfill="0.9" panelline="1" panelrows="2" xml:id="S0.F1">
+    <tags><tag>Figure 1</tag><tag role="refnum">1</tag></tags>
+    <rule class="ltx_figure_panel" height="28.5pt" panelwidth="0.45" width="155.3pt"/>
+    <rule class="ltx_figure_panel" height="28.5pt" panelwidth="0.45" width="155.3pt"/>
+    <break class="ltx_break"/>
+    <rule class="ltx_figure_panel" height="28.5pt" panelspan="2" panelwidth="0.9" width="310.5pt"/>
+    <caption><tag close=": ">Figure 1</tag>A gallery.</caption>
+  </figure>
+</document>"#;
+  assert_eq!(panel_grid_start_tags(GALLERY), [
+    "<figure class=\"ltx_figure ltx_panels_gallery\" \
+       style=\"--ltx-panel-rows:2;--ltx-panel-cols:2;--ltx-panel-line:1;--ltx-panel-fill:0.9;\">",
+    "<div class=\"ltx_flex_figure\">",
+    "<div class=\"ltx_flex_cell ltx_flex_size_2\" style=\"--ltx-panel-width:0.45;\">",
+    "<span class=\"ltx_rule ltx_figure_panel\" style=\"width:155.3pt;height:28.5pt;--ltx-bg-color:black;display:inline-block;\">",
+    "<div class=\"ltx_flex_cell ltx_flex_size_2\" style=\"--ltx-panel-width:0.45;\">",
+    "<span class=\"ltx_rule ltx_figure_panel\" style=\"width:155.3pt;height:28.5pt;--ltx-bg-color:black;display:inline-block;\">",
+    "<div class=\"ltx_flex_break\">",
+    "<div class=\"ltx_flex_cell ltx_flex_size_1\" style=\"--ltx-panel-width:0.9;--ltx-panel-span:2;\">",
+    "<span class=\"ltx_rule ltx_figure_panel\" style=\"width:310.5pt;height:28.5pt;--ltx-bg-color:black;display:inline-block;\">",
+  ],);
+}
+
+/// The panel grid's properties are numbers only (review rev79c finding 5): a crafted XML whose grid attributes are not
+/// numbers (`panelwidth="1;color:red"`, `panelline="x"`) gets none of them in `style` — the stylesheet emits a property
+/// only for a numeric value, and writes the number, never the attribute's text (the schema types them `xsd:decimal`
+/// and `xsd:nonNegativeInteger`).
+#[test]
+fn panel_grid_markup_states_only_numbers() {
+  const CRAFTED: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Document">
+  <figure class="ltx_panels_gallery" panelcols="2;x:y" panelfill="0.90" panelline="x" panelrows="1" xml:id="S0.F1">
+    <rule class="ltx_figure_panel" height="28.5pt" panelwidth="1;color:red" width="155.3pt"/>
+    <rule class="ltx_figure_panel" height="28.5pt" panelspan="}" panelwidth="0.450" width="155.3pt"/>
+    <caption>A crafted gallery.</caption>
+  </figure>
+</document>"#;
+  assert_eq!(panel_grid_start_tags(CRAFTED), [
+    "<figure class=\"ltx_figure ltx_panels_gallery\" style=\"--ltx-panel-rows:1;--ltx-panel-fill:0.9;\">",
+    "<div class=\"ltx_flex_figure\">",
+    "<div class=\"ltx_flex_cell ltx_flex_size_2\">",
+    "<span class=\"ltx_rule ltx_figure_panel\" style=\"width:155.3pt;height:28.5pt;--ltx-bg-color:black;display:inline-block;\">",
+    "<div class=\"ltx_flex_cell ltx_flex_size_2\" style=\"--ltx-panel-width:0.45;\">",
+    "<span class=\"ltx_rule ltx_figure_panel\" style=\"width:155.3pt;height:28.5pt;--ltx-bg-color:black;display:inline-block;\">",
+  ],);
+}

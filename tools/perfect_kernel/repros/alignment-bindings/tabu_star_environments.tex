@@ -1,0 +1,20 @@
+% witness: 2112.12027 (`{tabu*}spread 0pt{*{9}{|X[-1m,c]}|}` printed its column spec as text)
+% oracle:  pdflatex 0 errors: a b c in three ruled cells; d e
+% engines: rust TABU2base = 4 Errors (`{tabu*}`/`{longtabu*}` undefined, 2 Extra `&`; "spread 0pt*3—X[-1m,c]—" and
+%          "lc" invented as text); Perl 0.8.8 has no tabu binding
+% expect:  tabu.sty:624/634 `{tabu*}` = `\tabuscantokenstrue \tabu`, `{longtabu*}` likewise (the body's rescan not
+%          modelled)
+% status:  RED (TABU2base) -> GREEN (TABU2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu*}spread 0pt{*{3}{|X[-1m,c]}|}
+a & b & c \\
+\end{tabu*}
+
+\begin{longtabu*}{lc}
+d & e \\
+\end{longtabu*}
+\end{document}

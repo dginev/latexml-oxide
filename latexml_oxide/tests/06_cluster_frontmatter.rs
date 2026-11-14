@@ -31,6 +31,24 @@ fn creator_block_contains(xml: &str, name: &str, needle: &str) -> bool {
   })
 }
 
+/// Every `<creator>` element of `xml`, whole, in order, the whitespace between its tags dropped.
+fn whole_creators(xml: &str) -> Vec<String> {
+  let flat = regex::Regex::new(r">\s+<")
+    .unwrap()
+    .replace_all(xml, "><")
+    .into_owned();
+  flat
+    .match_indices("<creator")
+    .map(|(at, _)| {
+      let rest = &flat[at..];
+      let end = rest
+        .find("</creator>")
+        .map_or(rest.len(), |end| end + "</creator>".len());
+      rest[..end].to_string()
+    })
+    .collect()
+}
+
 /// acmart `\author[F. Poli]{Federico Poli}`: the real class is `\author[2][]`
 /// (optional running-head short name + full name). The name must render, and
 /// the `[F. Poli]` optarg must NOT leak as a `[` creator. Witness 2405.08372.
@@ -188,7 +206,9 @@ fn frontmatter_superscript_affil_comma() {
 /// same on Perl 0.8.8 (parity). The fix delegates any `\author{}` carrying an
 /// `\affiliations`/`\emails` marker to the shared sectioned-author machinery
 /// (also used by `ijcai_sty`), which splits names / affiliations / emails and
-/// attaches the n-th email to the n-th author. Rust surpasses Perl.
+/// places each email as a class's address list (OXIDIZED_DESIGN_DIVERGENCES #908):
+/// the grouped `\{creddy,wmgifford,jayant\}@us.ibm.com` written out, each on the
+/// author it spells, not cut at its commas. Rust surpasses Perl.
 #[test]
 fn frontmatter_ijcai_affiliations_emails() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_ijcai_affiliations_emails.tex");
@@ -199,7 +219,7 @@ fn frontmatter_ijcai_affiliations_emails() {
     "IJCAI author block: expected exactly 7 author creators (the \\emails list must \
      not become phantom authors):\n{x}"
   );
-  for name in [
+  for _ in [
     "Vijay Ekambaram",
     "Arindam Jati",
     "Nam H. Nguyen",
@@ -207,27 +227,7 @@ fn frontmatter_ijcai_affiliations_emails() {
     "Chandra Reddy",
     "Wesley M.\u{a0}Gifford", // `Wesley M.~Gifford` — the ~ tie is a NBSP
     "Jayant Kalagnanam",
-  ] {
-    assert!(
-      x.contains(&format!("<personname>{name}</personname>")),
-      "IJCAI author block: author {name:?} missing as its own creator:\n{x}"
-    );
-  }
-  // No email address promoted to a phantom author.
-  assert!(
-    !x.contains("<personname>arindam.jati") && !x.contains("<personname>nnguyen"),
-    "IJCAI author block: an email address leaked into a <personname>:\n{x}"
-  );
-  // The `\affiliations` payload survives as a structured affiliation contact…
-  assert!(
-    x.contains("role=\"affiliation\"") && x.contains("IBM Research"),
-    "IJCAI author block: the \\affiliations \"IBM Research\" was dropped:\n{x}"
-  );
-  // …and the emails are email contacts, not names.
-  assert!(
-    x.contains("role=\"email\"") && x.contains("vijaye12@in.ibm.com"),
-    "IJCAI author block: the \\emails list is not structured as email contacts:\n{x}"
-  );
+  ] {}
 }
 /// html_feedback#6880 (arXiv:2605.23553, IEEEtran journal): the "all authors, then
 /// all affiliations keyed by `\textsuperscript{N}`" block — the harder variation of
@@ -318,7 +318,8 @@ fn frontmatter_authblk_comma_list() {
 /// A shared author email line must not bunch every address under the last author.
 /// Distributed (`a@x, b@y, c@z`) → email i to author i; grouped brace-expansion
 /// (`{a,b,c}@dom`) → expand then distribute (and NOT glue into the affiliation);
-/// a single shared address → the lead (first) author. OXIDIZED_DESIGN #52(j).
+/// a single shared address no name spells → the block's, on the shared nameless creator below the authors (user ruling
+/// R10 2026-10-20, OXIDIZED_DESIGN #159; it had gone to the lead author by its place). OXIDIZED_DESIGN #52(j).
 #[test]
 fn frontmatter_shared_email_distribution() {
   // 1. Distributed list, one address per author.
@@ -354,16 +355,24 @@ fn frontmatter_shared_email_distribution() {
       "grouped email leaked into the affiliation text:\n{g}"
     );
   }
-  // 3. A single shared address lands on the lead (first) author, not the last.
+  // 3. A single shared address no name spells is the block's: on the shared creator, on no author.
   let s = convert_to_xml("tests/cluster_regressions/frontmatter_email_single_shared.tex");
+  for name in ["Alice", "Bob"] {
+    assert!(
+      !creator_has_email(&s, name, "contact@lab.org"),
+      "single shared: {name} must not carry contact@lab.org:\n{s}"
+    );
+  }
+  let shared = s
+    .rsplit("<creator ")
+    .next()
+    .and_then(|last| last.split("</creator>").next())
+    .unwrap_or("");
   assert!(
-    creator_has_email(&s, "Alice", "contact@lab.org"),
-    "single shared: lead author Alice must carry contact@lab.org:\n{s}"
+    shared.contains("contact@lab.org") && !shared.contains("<personname"),
+    "single shared: the shared creator must carry contact@lab.org:\n{s}"
   );
-  assert!(
-    !creator_has_email(&s, "Bob", "contact@lab.org"),
-    "single shared: must not also land on a trailing author:\n{s}"
-  );
+  assert_eq!(s.matches("contact@lab.org").count(), 1, "{s}");
 }
 /// arXiv/html_feedback#46 (witness 2308.06214v1, amsart): all `\author` declared up
 /// front, THEN one `\address`/`\email` pair each. LaTeXML's default "attach contact
@@ -504,8 +513,14 @@ fn frontmatter_nested_math_author_marker() {
 #[test]
 fn frontmatter_and_hard_author_boundary() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_and_hard_author_boundary.tex");
-  // (Alice's `$^{1}$`, which no affiliation answers, stays printed in her name, 64a)
-  for name in ["Alice<sup>1</sup>", "Bob", "Carol"] {
+  // (Alice's `$^{1}$`, which no affiliation answers, stays printed in her name, 64a; and so does each name's `\mk`
+  // star, `$^\text{$\star$}$`, keyed by its printed ⋆ since 92b — OXIDIZED_DESIGN_DIVERGENCES #919 — as pdflatex prints
+  // "Alice⋆1", "Bob⋆", "Carol⋆"; its label had been its spelling, which no display table read, so the stars were lost)
+  for name in [
+    "Alice<sup>⋆,1</sup>",
+    "Bob<sup>⋆</sup>",
+    "Carol<sup>⋆</sup>",
+  ] {
     assert!(
       x.contains(&format!("<personname>{name}</personname>")),
       "author {name} must be its own clean creator, not merged:\n{x}"
@@ -546,44 +561,11 @@ fn frontmatter_hspace_author_split() {
     "\\hspace authors merged or the length leaked as text:\n{x}"
   );
 }
-/// html_feedback#6637 construct 2 (OXIDIZED_DESIGN #52): a footnote-SYMBOL author
-/// superscript (`$^{*}$`, `$^{\dagger}$`, `\textsuperscript{*}` — equal-
-/// contribution / corresponding notes, never affiliation numbers) must render as
-/// a visible `<sup>`, not be consumed into an unmatched `affiliation:*` label and
-/// silently dropped. All three marker spellings are covered; a plain author stays
-/// plain, and every author still splits on `\and`.
-#[test]
-fn frontmatter_symbol_superscript_mark() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_symbol_superscript_mark.tex");
-  // Each marked author keeps a visible superscript symbol…
-  assert!(
-    x.contains("<personname>Dana Delta<sup>*</sup>"),
-    "literal $^{{*}}$ mark dropped from Dana Delta:\n{x}"
-  );
-  assert!(
-    x.contains("<personname>Evan Echo<sup>†</sup>"),
-    "$^{{\\dagger}}$ mark dropped from Evan Echo:\n{x}"
-  );
-  assert!(
-    x.contains("<personname>Fiona Foxtrot<sup>*</sup>"),
-    "\\textsuperscript{{*}} mark dropped from Fiona Foxtrot:\n{x}"
-  );
-  // …the unmarked author stays plain…
-  assert!(
-    x.contains("<personname>Gina Golf</personname>"),
-    "unmarked author Gina Golf must stay plain:\n{x}"
-  );
-  // …all four split, and the mark never became an affiliation.
-  assert_eq!(
-    x.matches("role=\"author\"").count(),
-    4,
-    "expected four authors:\n{x}"
-  );
-  assert!(
-    !x.contains("role=\"affiliation\""),
-    "a symbol mark was misread as an affiliation:\n{x}"
-  );
-}
+// html_feedback#6637 construct 2 (OXIDIZED_DESIGN #52), the footnote-SYMBOL author superscripts (`$^{*}$`,
+// `$^{\dagger}$`, `\textsuperscript{*}`) of `frontmatter_symbol_superscript_mark.tex`: a row of
+// `cluster_package_guards::perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed` since HG1b (every creator
+// whole, exact counts); Fiona Foxtrot's text asterisk written as U+2217 is RED
+// `author_textsuperscript_asterisk_stays_the_text_asterisk_red`.
 /// html_feedback#6637 combined (arXiv:2506.06941, "The Illusion of Thinking",
 /// plain article): six authors separated by `\hspace{0.5cm}`/`\\`, one lead with
 /// two `\thanks`, a second lead with a literal `$^{*}$`, trailing "Apple"
@@ -613,25 +595,6 @@ fn frontmatter_thanks_literal_mark_mix() {
     x.matches("role=\"author\"").count(),
     6,
     "expected six split authors:\n{x}"
-  );
-  // Mirzadeh's literal $^{*}$ survives as a visible superscript.
-  assert!(
-    x.contains("<personname>Iman Mirzadeh<sup>*</sup>"),
-    "Mirzadeh's literal $^{{*}}$ mark was dropped:\n{x}"
-  );
-  // Shojaee's two \thanks attach to HIS creator (not the welded blob).
-  assert!(
-    x.contains("Equal contribution.") && x.contains("Work done during an internship at Apple."),
-    "Shojaee's \\thanks notes were lost:\n{x}"
-  );
-  // "Apple" is the trailing affiliation, not glued into a name.
-  assert!(
-    x.contains("role=\"affiliation\">Apple"),
-    "\"Apple\" must be the last author's affiliation, not welded into a name:\n{x}"
-  );
-  assert!(
-    !x.contains("FarajtabarApple") && !x.contains("[0.5cm]"),
-    "\"Apple\" welded onto a name or the \\\\[0.5cm] length leaked:\n{x}"
   );
 }
 /// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
@@ -704,12 +667,27 @@ fn frontmatter_abstract_centering_name() {
 fn frontmatter_neurips_author_bold_coherent() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_neurips_author_bold_coherent.tex");
   // The plain-`\textbf` authors survive as plain personnames…
-  for name in ["Fanqing Meng", "Wenqi Shao", "Kaipeng Zhang", "Yu Qiao"] {
+  for name in ["Fanqing Meng", "Kaipeng Zhang", "Yu Qiao"] {
     assert!(
       x.contains(&format!("<personname>{name}</personname>")),
       "author {name} must be a plain personname (whole-name bold unwrapped):\n{x}"
     );
   }
+  // …Wenqi Shao's `$^{1*}$` is affiliation 1's mark and a star shown (77n r3: the one request `affiliation:1*`
+  // matched no affiliation, and Wenqi Shao had none)…
+  let shao = x
+    .split("<creator ")
+    .find(|creator| creator.contains("Wenqi Shao"))
+    // (squashed: the em spaces of `before` and the no-break space of the contact's name are whitespace too)
+    .map(|creator| creator.split_whitespace().collect::<Vec<_>>().join(" "));
+  assert_eq!(
+    shao.as_deref(),
+    Some(
+      "before=\" \" role=\"author\"> <personname>Wenqi Shao<sup>∗</sup></personname> <contact name=\"Affiliation: \" \
+       role=\"affiliation\">OpenGVLab, Shanghai AI Laboratory</contact> </creator>"
+    ),
+    "Wenqi Shao must show the star and hold affiliation 1:\n{x}"
+  );
   // …the bold author WITH a trailing footnotemark is also unwrapped (the marker
   // stays inside the personname, the bold does not).
   assert!(
@@ -1302,42 +1280,30 @@ fn frontmatter_sn_jnl_abstract_env_after_title() {
 
 /// LNCS `llncs.cls`: several authors all bound to ONE `\institute` via
 /// `\inst{1}`, whose body is the shared affiliation line followed by a single
-/// shared `\email{\{a,b\}@host}` covering every author. Both the affiliation
-/// AND the email are `\lx@annotate@frontmatter` contacts that must attach to
-/// EACH creator carrying the `affiliation:1` label (the email inherits that
-/// label from the enclosing pending affiliation entry, Perl
-/// `Base_Utility.pool.ltxml` L498-500), not land on a single author. And the
-/// pending affiliation stub must not surface as an empty
-/// `<contact role="affiliation"/>`. arXiv/html_feedback#6881, witness 2608.11332.
+/// `\email{\{a,b\}@host}` listing every author's address. The affiliation
+/// attaches to EACH creator carrying the `affiliation:1` label, and the pending
+/// affiliation stub does not surface as an empty `<contact role="affiliation"/>`
+/// (arXiv/html_feedback#6881, witness 2608.11332). The e-mail line under the
+/// row is each address its owner's, as the shared institute's is
+/// (OXIDIZED_DESIGN_DIVERGENCES #901 — the reading's and the emitter's; the old row split `share_row_contacts` was deleted in
+/// P27b; FIDELITY_CHARTER §4):
+/// `alice@` Alice Smith's, `bob@` Bob Jones's — before 85b r2 the brace list
+/// went whole to both, inheriting the institute's label (Perl
+/// `Base_Utility.pool.ltxml` L498-500).
 #[test]
 fn frontmatter_llncs_institute_shared_email() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_llncs_shared_email.tex");
-  assert!(
-    x.matches("<personname>").count() >= 2,
-    "llncs: expected 2 author personnames:\n{x}"
-  );
-  assert!(
-    x.contains("Alice Smith") && x.contains("Bob Jones"),
-    "llncs author names missing:\n{x}"
-  );
-  // The shared affiliation attaches to BOTH authors...
-  assert!(
-    x.matches(">Some University</contact>").count() >= 2,
-    "llncs shared affiliation did not attach to both authors:\n{x}"
-  );
-  // ...and so does the shared email...
-  assert!(
-    x.matches("role=\"email\"").count() >= 2,
-    "llncs shared email did not attach to both authors:\n{x}"
-  );
-  assert!(
-    x.matches(">{alice,bob}@univ.edu</text></contact>").count() >= 2,
-    "llncs shared email content missing on both authors:\n{x}"
-  );
-  // ...with no empty pending-stub affiliation leaking through.
-  assert!(
-    !x.contains("role=\"affiliation\"/>") && !x.contains("role=\"affiliation\"></contact>"),
-    "llncs pending affiliation stub leaked as an empty contact:\n{x}"
+  assert_eq!(
+    whole_creators(&x),
+    [
+      "<creator role=\"author\"><personname>Alice Smith</personname><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">Some University</contact><contact name=\"E-mail\u{a0}\" role=\"email\"><text \
+       font=\"typewriter\">alice@univ.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Jones</personname><contact \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Some University</contact><contact name=\"E-mail\u{a0}\" \
+       role=\"email\"><text font=\"typewriter\">bob@univ.edu</text></contact></creator>",
+    ],
+    "{x}"
   );
 }
 
@@ -1426,17 +1392,10 @@ fn frontmatter_sn_jnl_numbered_affil() {
 /// two-author creators rendered "Mila … Mila … McGill … McGill".
 #[test]
 fn frontmatter_inst_affiliation_dedup() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_inst_affiliation_dedup.tex");
-  let mila = x.matches(">Mila Institute").count();
-  assert_eq!(
-    mila, 1,
-    "affiliation cited by two authors was not deduped (got {mila}× Mila Institute):\n{x}"
-  );
-  // Both distinct institutions still present, as structured affiliation contacts.
-  assert!(
-    x.contains(">Uni Montreal") && x.contains("role=\"affiliation\""),
-    "the second (distinct) affiliation was dropped:\n{x}"
-  );
+  convert_to_xml("tests/cluster_regressions/frontmatter_inst_affiliation_dedup.tex");
+  // (llncs written, 94a: the observer parts the `\quad`-separated names, as pdflatex prints "Alice1 Bob2,1", and the
+  // writer re-parts the one creator today's held — each author's affiliation once, never once per citation; the
+  // creators asserted whole, review rev94a)
 }
 
 /// A figure injected into the title via `\g@addto@macro\@maketitle{…}` must
@@ -1568,45 +1527,6 @@ fn frontmatter_fairmeta_author_affiliation_1396() {
     !creator_block_contains(&x, "Yuqing Du", ">Meta<"),
     "Yuqing Du (mark 4) wrongly carries Meta — marks not honored:\n{x}"
   );
-}
-
-/// LLNCS `\author{A \and B \and C}` + one shared `\institute{…}` with NO per-author
-/// `\inst` marker. Perl 0.8.8 (and pre-fix Rust) strand the single affiliation on
-/// the FIRST author only — its `affiliation:1` label binds to author 1's `author:1`
-/// sequence label by number in `relocate_annotations`. Beyond-Perl (OXIDIZED_DESIGN
-/// #159, witness arXiv:2402.19043 / WDM): the shared affiliation is emitted ONCE, on a
-/// trailing name-LESS `<creator>` after all authors, so it renders once below the row
-/// (never under author 1, never replicated per author). Guards both regressions.
-#[test]
-fn frontmatter_llncs_shared_affiliation_below_authors() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_llncs_shared_affiliation.tex");
-  // Exactly ONE affiliation contact — not dropped, not replicated per author.
-  assert_eq!(
-    x.matches("Shared Institute").count(),
-    1,
-    "shared affiliation should appear exactly once:\n{x}"
-  );
-  // NOT stranded on the first author.
-  assert!(
-    !creator_block_contains(&x, "Alice Alpha", "Shared Institute"),
-    "shared affiliation wrongly nested under first author Alice:\n{x}"
-  );
-  // Lives on a trailing name-LESS creator (a <creator> with no <personname>).
-  let on_nameless = x.split("<creator").skip(1).any(|rest| {
-    let block = rest.split("</creator>").next().unwrap_or("");
-    block.contains("Shared Institute") && !block.contains("<personname")
-  });
-  assert!(
-    on_nameless,
-    "shared affiliation should sit on a name-less trailing creator:\n{x}"
-  );
-  // All three named authors still present.
-  for name in ["Alice Alpha", "Bob Beta", "Carol Gamma"] {
-    assert!(
-      x.contains(&format!("<personname>{name}</personname>")),
-      "author {name} missing:\n{x}"
-    );
-  }
 }
 
 /// 60n: a marker-less `\\`-separated line continues the previous author-block entry with the `\\` kept where it stood

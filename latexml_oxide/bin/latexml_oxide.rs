@@ -29,9 +29,19 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: dhat::Alloc = dhat::Alloc;
 
+/// `--xsltparameter` is checked as it is read, as bin/latexmlpost L354-356 fails on a malformed one (#803).
+fn xslt_parameter_arg(param: &str) -> Result<String, String> {
+  match latexml::post::parse_xslt_parameter(param) {
+    Some(_) => Ok(param.to_string()),
+    None => Err("not in recognized format: 'name:value' (or 'name=value')".to_string()),
+  }
+}
+
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
+// `args_override_self`: an option given twice keeps its last value, as GetOpt::Long does (#530).
 #[command(name = "latexml_oxide", version = latexml::identity::VERSION_WITH_REVISION, about)]
+#[command(args_override_self = true)]
 struct Cli {
   /// The TeX/LaTeX source file(s) to convert (overridden by --source). A `.bib`,
   /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected. Several files
@@ -290,9 +300,14 @@ struct Cli {
   /// bounded fragments, closed subtrees spill to disk beside the source, and
   /// a second, streaming pass finishes them — so peak memory is bounded by
   /// fragment size instead of document size. Output is byte-identical to the
-  /// normal path (guarded by the 114_streaming_* sweep), save one case: a
-  /// heading unit with prose before the bibliography after it keeps its own
-  /// heading (OXIDIZED_DESIGN_DIVERGENCES #456). Off by default;
+  /// normal path (guarded by the 114_streaming_* sweep), save three documented
+  /// cases: a heading unit with prose before the bibliography after it keeps
+  /// its own heading (OXIDIZED_DESIGN_DIVERGENCES #456); an `\index` /
+  /// `\nomenclature` / `\glossary` entry of a list the document never prints
+  /// is typeset at a fragment yield where the normal path typesets nothing
+  /// (OXIDIZED_DESIGN_DIVERGENCES #738); and a late abstract whose cover has a
+  /// root child spilled at a small fragment budget keeps its slot, ahead of
+  /// that cover (OXIDIZED_DESIGN_DIVERGENCES #903). Off by default;
   /// also AUTO-activates when the projected memory need of a large source
   /// exceeds the --max-memory ceiling, i.e. only where the normal path is
   /// certain to exhaust memory anyway.
@@ -399,7 +414,7 @@ struct Cli {
   quiet: bool,
 
   /// Enable a named debug feature, e.g. --debug frontmatter (repeatable).
-  /// Implies debug-level logging.
+  /// Prints that feature's debugging output only (--verbose prints the rest).
   #[arg(long = "debug", value_name = "FEATURE")]
   debug: Vec<String>,
 
@@ -417,8 +432,8 @@ struct Cli {
   #[arg(long, value_name = "DIR")]
   sourcedirectory: Option<String>,
 
-  /// Additional XSLT parameters (repeatable, key=value)
-  #[arg(long = "xsltparameter", value_name = "KEY=VALUE")]
+  /// Additional XSLT parameters (repeatable; Perl's name:value, or name=value)
+  #[arg(long = "xsltparameter", value_name = "NAME:VALUE", value_parser = xslt_parameter_arg)]
   xslt_parameters: Vec<String>,
 
   // === Dev/internal flags ===
@@ -450,8 +465,10 @@ struct Cli {
 /// Allocation-failure hook — emits a `Fatal:` line in the project's
 /// logging convention so aggregation tooling records the failure, then
 /// exits with code 137. See `cortex_worker.rs::custom_alloc_error_hook`
-/// for full rationale + witness paper.
+/// for full rationale + witness paper; like it, it allocates nothing, takes no lock and ends at
+/// once on a re-entry (`watchdog::enter_alloc_failure_hook`).
 fn custom_alloc_error_hook(layout: Layout) {
+  latexml_core::watchdog::enter_alloc_failure_hook();
   // Attribute by alignment: the gullet pushback is a Vec<Token> (4-byte
   // items); any other alignment is a DIFFERENT runaway (align 8 = Vec of
   // boxes/pointers — e.g. nested-pgfmatrix churn; align 1 = a string
@@ -460,17 +477,18 @@ fn custom_alloc_error_hook(layout: Layout) {
   let site = if layout.align() == 4 {
     "likely runaway macro expansion (gullet pushback Vec<Token> growth)"
   } else {
-    "allocation site unknown for this alignment — rerun with RUST_BACKTRACE=1"
+    "allocation site unknown for this alignment — break on `__rust_alloc_error_handler` in a \
+     debugger to find it"
   };
-  eprintln!(
+  latexml_core::watchdog::write_stderr_unlocked(format_args!(
     "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; {}. \
-     Exiting with code 137.",
+     Exiting with code 137.\n",
     layout.size(),
     layout.align(),
     site
-  );
+  ));
   latexml_core::watchdog::try_remove_registered_paths();
-  process::exit(137);
+  latexml_core::watchdog::exit_now(137);
 }
 
 /// Read back which side of a `--opt`/`--noopt` boolean pair clap kept, or `None`
@@ -514,25 +532,25 @@ fn chosen_by_clap(pos: bool, neg: bool) -> Option<bool> {
 /// `_prepare_options`. Every other pair has a static default and is fully resolved.
 struct ResolvedOptions {
   /// Core tri-states (`None` ⇒ leave the engine/state default untouched).
-  include_comments:   Option<bool>,
-  nomathparse:        Option<bool>,
-  number_sections:    Option<bool>,
+  include_comments:  Option<bool>,
+  nomathparse:       Option<bool>,
+  number_sections:   Option<bool>,
   /// Whether output splitting is enabled (Perl `split!` + `split*`-implies rule).
-  split_enabled:      bool,
+  split_enabled:     bool,
   /// User's explicit `--post`/`--nopost` choice; format-dependent default applied
   /// at the post-processing site.
-  post:               Option<bool>,
+  post:              Option<bool>,
   /// User's explicit `--pmml`/`--nopmml` choice; format-dependent default applied
   /// at the post-processing site.
-  pmml:               Option<bool>,
+  pmml:              Option<bool>,
   /// Post reps/flags with static defaults, fully resolved.
-  cmml:               bool,
-  keep_xmath:         bool,
-  mathtex:            bool,
-  noinvisibletimes:   bool,
-  plane1:             bool,
-  nodefaultresources: bool,
-  graphicimages:      bool,
+  cmml:              bool,
+  keep_xmath:        bool,
+  mathtex:           bool,
+  noinvisibletimes:  bool,
+  plane1:            bool,
+  default_resources: bool,
+  graphicimages:     bool,
 }
 
 impl ResolvedOptions {
@@ -543,29 +561,28 @@ impl ResolvedOptions {
       // Perl Core.pm L45 `comments!`; `noparse`/`parse` (mathparse); `numbersections!`
       // (default on). `None` leaves the setting unset (Rust comments default OFF —
       // OXIDIZED_DESIGN #2).
-      include_comments:   chosen_by_clap(cli.comments, cli.nocomments),
-      nomathparse:        chosen_by_clap(cli.nomathparse, cli.mathparse),
-      number_sections:    chosen_by_clap(cli.numbersections, cli.nonumbersections),
+      include_comments:  chosen_by_clap(cli.comments, cli.nocomments),
+      nomathparse:       chosen_by_clap(cli.nomathparse, cli.mathparse),
+      number_sections:   chosen_by_clap(cli.numbersections, cli.nonumbersections),
       // Perl `Common/Config.pm` L124-130: `split!` is last-wins; the value options
       // `--splitat`/`--splitpath`/`--splitnaming` do `split = 1 unless defined split`,
       // i.e. they enable splitting ONLY when neither `--split` nor `--nosplit`
       // decided it (a split! always overwrites; a split* never overwrites a decided
       // value, so only the split! pair's order — which clap resolves — matters).
-      split_enabled:      chosen_by_clap(cli.split, cli.nosplit)
+      split_enabled:     chosen_by_clap(cli.split, cli.nosplit)
         .unwrap_or(cli.splitat.is_some() || cli.splitnaming.is_some() || cli.splitpath.is_some()),
-      post:               chosen_by_clap(cli.post, cli.nopost),
-      pmml:               chosen_by_clap(cli.pmml, cli.nopmml),
-      cmml:               chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
-      keep_xmath:         chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
-      mathtex:            chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
-      noinvisibletimes:   chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
+      post:              chosen_by_clap(cli.post, cli.nopost),
+      pmml:              chosen_by_clap(cli.pmml, cli.nopmml),
+      cmml:              chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
+      keep_xmath:        chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
+      mathtex:           chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
+      noinvisibletimes:  chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
       // Perl `MathML.pm` L70: `--hackplane1` forces plane1 on; otherwise the
       // pair is last-wins over a default-on.
-      plane1:             cli.hackplane1
-        || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
-      nodefaultresources: chosen_by_clap(cli.nodefaultresources, cli.defaultresources)
-        .unwrap_or(false),
-      graphicimages:      chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
+      plane1:            cli.hackplane1 || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
+      default_resources: chosen_by_clap(cli.defaultresources, cli.nodefaultresources)
+        .unwrap_or(true),
+      graphicimages:     chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
     }
   }
 }
@@ -770,6 +787,33 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // rather than re-deciding at each site.
   let resolved = ResolvedOptions::from_cli(&cli);
 
+  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
+  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
+  // → plain_constructs and the latex equivalent) reads
+  // `LATEXML_INI_MODE` to decide whether to fully load the format
+  // or stop after the bootstrap pool. If it's not set yet,
+  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
+  // pollutes the snapshot taken later in `ini_tex::dump_format` and
+  // silences the diff for everything raw plain.tex / latex.ltx defines
+  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
+  // problem from 2026-04-26).
+  //
+  // It must also be set before the kpathsea-prewarm thread below exists. Set
+  // after it, glibc's `setenv` reallocates `environ` while that thread's
+  // `kpathsea_init_format` walks it in `getenv`: `--init` segfaulted in
+  // `getenv("TEXMF_kpsewhich")` in ~3.5% of runs (7/200, Linux aarch64,
+  // TL2023), failing `tools/make_formats.sh` and `dump_gate_init`. The same
+  // use-after-free as the `init_kpathsea` ordering below.
+  if cli.init.is_some() {
+    // SAFETY: no other thread reads the environment yet: the only other
+    // thread, `main`, is blocked joining this one, and the prewarm thread is
+    // spawned below. `prepare_session` and `ini_tex::dump_format` read the var
+    // but never mutate the environment.
+    unsafe {
+      std::env::set_var("LATEXML_INI_MODE", "1");
+    }
+  }
+
   // Kick off kpathsea pre-init in a background thread. Force-runs
   // `kpathsea_init_db` + per-format `kpathsea_init_format` so the
   // first real `find_file` from digest sees the fast post-init path
@@ -814,19 +858,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   } else {
     0
   };
-  let log_level = if !cli.debug.is_empty() {
-    // --debug NAME implies debug-level logging (Perl: Debug() output is
-    // emitted whenever the feature flag is set).
-    log::LevelFilter::Debug
-  } else {
-    match verbosity {
-      v if v < 0 => log::LevelFilter::Warn,
-      0 => log::LevelFilter::Info,
-      _ => log::LevelFilter::Debug,
-    }
+  let log_level = match verbosity {
+    v if v < 0 => log::LevelFilter::Warn,
+    0 => log::LevelFilter::Info,
+    _ => log::LevelFilter::Debug,
   };
   latexml_core::util::logger::init(log_level).ok();
-  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites.
+  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites only.
   for feature in &cli.debug {
     latexml_core::common::error::enable_debug_feature(feature);
   }
@@ -1086,24 +1124,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     streaming: resolve_streaming(cli.streaming, resolve_max_memory(cli.max_memory), &source),
     source_date_epoch,
   };
-  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
-  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
-  // → plain_constructs and the latex equivalent) reads
-  // `LATEXML_INI_MODE` to decide whether to fully load the format
-  // or stop after the bootstrap pool. If it's not set yet,
-  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
-  // pollutes the snapshot taken later in `ini_tex::dump_format` and
-  // silences the diff for everything raw plain.tex / latex.ltx defines
-  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
-  // problem from 2026-04-26).
-  if cli.init.is_some() {
-    // SAFETY: setting the var before any thread is spawned. `prepare_session`
-    // and `ini_tex::dump_format` both read it but neither mutates env.
-    unsafe {
-      std::env::set_var("LATEXML_INI_MODE", "1");
-    }
-  }
-
   let mut converter = Converter::from_config(opts.clone());
   // `--whatsin=xml` forces the already-converted-XML input path regardless of the
   // file's extension (Perl-style: the input analog of `--format` for output),
@@ -1515,7 +1535,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           // destination's directory (document.rs / Perl Config.pm L466-469).
           site_directory: cli.sitedirectory.as_deref(),
           search_paths: &cli.search_paths,
-          nodefaultresources: resolved.nodefaultresources,
+          default_resources: resolved.default_resources,
           css_files: &cli.css_files,
           js_files: &cli.js_files,
           noinvisibletimes: resolved.noinvisibletimes,
@@ -1609,7 +1629,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             source_date_epoch,
           })?;
           eprintln!("Output written to {}", zip_dest);
-        } else {
+        } else if !(output.is_empty() && post.status_code >= 3) {
+          // A post-processing Fatal leaves no output, and nothing is written (#782).
           latexml_post::writer::write_output(&output, target.as_deref())?;
         }
         // resource_tempdir is dropped here (after pack_archive has copied
@@ -1686,6 +1707,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   if let Some(body) = latexml_core::watchdog::peak_memory_report() {
     emit_info("memory", "peak", &body);
   }
+  // Perl bin/latexml L148, bin/latexmlpost L216: name an undeclared `--debug` feature; the verdict below stays the last line.
+  latexml_core::common::error::check_debuggable();
   // The end-of-run verdict: the LAST line of a conversion names the COMBINED
   // core+post outcome. The core prints its own verdict when it finishes, but
   // on a post-processing run thousands of per-page lines follow it — a
@@ -1980,6 +2003,7 @@ fn fatal_before_conversion(
   failure: &InputFailure,
   archive_tempdir: &mut Option<tempfile::TempDir>,
 ) -> ! {
+  // No `check_debuggable` here: Base never loaded, so every `--debug` feature would read undeclared.
   latexml_core::common::error::emit_fatal(&failure.category, &failure.object, &failure.message);
   let code = latexml_core::common::error::get_status_code().max(3);
   let verdict = latexml_core::common::error::conversion_verdict(code);
@@ -2021,7 +2045,7 @@ fn unpack_archive_files(
     let mut archive = zip::ZipArchive::new(file)?;
     for i in 0..archive.len() {
       let mut entry = archive.by_index(i)?;
-      let outpath = dest.join(entry.mangled_name());
+      let outpath = dest.join(entry.mangled_name()?);
       if entry.is_dir() {
         std::fs::create_dir_all(&outpath)?;
       } else {
@@ -2357,8 +2381,8 @@ mod boolean_flag_last_wins_tests {
 
     let c = cli(&["--defaultresources", "--nodefaultresources"]);
     assert_eq!(
-      chosen_by_clap(c.nodefaultresources, c.defaultresources),
-      Some(true)
+      chosen_by_clap(c.defaultresources, c.nodefaultresources),
+      Some(false)
     );
 
     let c = cli(&["--comments", "--nocomments"]);
@@ -2399,7 +2423,7 @@ mod boolean_flag_last_wins_tests {
     assert!(!r.keep_xmath);
     assert!(!r.mathtex);
     assert!(!r.noinvisibletimes);
-    assert!(!r.nodefaultresources);
+    assert!(r.default_resources, "default_resources defaults ON");
     assert!(!r.split_enabled);
     assert_eq!(r.post, None);
     assert_eq!(r.pmml, None);
@@ -2420,5 +2444,53 @@ mod boolean_flag_last_wins_tests {
 
     // --hackplane1 forces plane1 on even against a later --noplane1 (Perl MathML.pm L70).
     assert!(ResolvedOptions::from_cli(&cli(&["--noplane1", "--hackplane1"])).plane1);
+  }
+
+  /// #530: a value option or flag given twice keeps its last value (GetOpt::Long), and is not a
+  /// usage error; a repeatable option still accumulates.
+  #[test]
+  fn repeated_options_are_last_wins() {
+    let c = cli(&["--urlstyle=file", "--urlstyle=server"]);
+    assert_eq!(c.urlstyle.as_deref(), Some("server"));
+    let c = cli(&["--dest", "a.html", "--dest=b.html", "--split", "--split"]);
+    assert_eq!(c.dest.as_deref(), Some("b.html"));
+    assert!(c.split);
+    let c = cli(&["--css", "a.css", "--css", "b.css"]);
+    assert_eq!(c.css_files, ["a.css", "b.css"]);
+  }
+}
+
+#[cfg(test)]
+mod xsltparameter_tests {
+  use super::*;
+
+  fn params(flags: &[&str]) -> Result<Vec<String>, clap::Error> {
+    let mut argv = vec!["latexml_oxide"];
+    argv.extend_from_slice(flags);
+    argv.push("src.tex");
+    Cli::try_parse_from(argv).map(|c| c.xslt_parameters)
+  }
+
+  /// #803: Perl's `--xsltparameter=name:value` (LaTeXML.pm L574-578) and our `KEY=VALUE` both
+  /// pass a parameter; a value with neither separator is a usage error, not a silent no-op.
+  #[test]
+  fn xsltparameter_accepts_perls_form_and_rejects_a_malformed_one() {
+    use latexml::post::parse_xslt_parameter as parse;
+    let pair = |k: &str, v: &str| Some((k.to_string(), v.to_string()));
+    assert_eq!(parse("FOO:bar"), pair("FOO", "bar"));
+    assert_eq!(parse(" FOO : bar baz"), pair("FOO", "bar baz"));
+    assert_eq!(
+      parse("URL:http://x.org/?a=b"),
+      pair("URL", "http://x.org/?a=b")
+    );
+    assert_eq!(parse("FOO=bar"), pair("FOO", "bar"));
+    assert_eq!(parse("FOO=a:b"), pair("FOO", "a:b"));
+    assert_eq!(parse("{http://x.org}p=v"), pair("{http://x.org}p", "v"));
+    assert_eq!(parse("FOO"), None);
+    assert_eq!(parse("=bar"), None);
+    assert_eq!(parse(":bar"), None);
+    assert!(params(&["--xsltparameter=FOO:bar", "--xsltparameter", "X=y"]).is_ok());
+    let err = params(&["--xsltparameter=FOO"]).expect_err("malformed");
+    assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation);
   }
 }

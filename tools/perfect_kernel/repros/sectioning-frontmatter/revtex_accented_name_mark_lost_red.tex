@@ -1,0 +1,19 @@
+% mechanism: a name's mark whose printed text is an accented letter (`\textsuperscript{\'a}`): the emitter writes the
+%   name as its plain text, the mark lost from it (counted: "writes \"Ann Able\" as its plain text, its markup lost")
+%   while Bob's plain `b` mark is kept. Pre-existing (int160c, F0, P4d alike); found by review revF0 (probe a6).
+% witness: synthetic (review revF0 probe a6)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Ableá and Bob Bakerb", "áUniv A, Town A", "bUniv B, Town B"
+% engines: int160c, F0, P4d: Ann Able "Ann Able" (the mark "á" lost), "á Univ A, Town A"; Bob Baker "Bob Baker b",
+%          "b Univ B, Town B"; 0 errors, 1 warning; perl: not compared
+% expect:  0 errors, 0 warnings; Ann Able's name "Ann Able" with its mark "á", her affiliation "Univ A, Town A"
+% status:  RED (catalog, no guard)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{\'a}}
+\author{Bob Baker\textsuperscript{b}}
+\affiliation{\textsuperscript{\'a}Univ A, Town A\\ \textsuperscript{b}Univ B, Town B}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

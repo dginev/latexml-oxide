@@ -8,10 +8,11 @@
 //! `--timeout`: the pre-fix binary re-read the asset ~42 ms per inclusion
 //! (~150 s, a timeout Fatal), the memoized one finishes in ~20 s; every
 //! graphic resolves.
+use latexml::util::test::check_requirements;
 
 #[test]
 fn repeated_inclusions_of_one_asset_read_it_once() {
-  if !latexml::util::test::kpse_has("hwemoji-assets.pdf") {
+  if !check_requirements(&["hwemoji-assets.pdf"]) {
     return; // no such asset on this TeX Live
   }
   let body: String = (1..=3600)

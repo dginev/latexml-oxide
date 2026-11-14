@@ -1,0 +1,24 @@
+% witness: review probe c4_preamble (68w r2 re-review 3); topical groups as hep-th0109182's
+% oracle:  pdflatex 4 errors (`Improper \prevdepth`: text before the list's first `\item`), printing "Sorted by topic." in
+%          the list, then "Books" [1], "Articles" [2]; ours and Perl open an entry for the paragraph (no error)
+% engines: rust 68w r2 = `biba` held `bib.bib1` (the paragraph's entry never steps `@bibitem`); Perl 0.8.8 errs on every
+%          later entry (KPE #855)
+% expect:  0 errors; `bib` keeps the paragraph, `biba` "Books" `biba.bib1`, `bibb` "Articles" `bibb.bib2`
+% status:  FIXED (68w r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{a,b}.
+\begin{thebibliography}{9}
+Sorted by topic.
+
+\subsection*{Books}
+\bibitem{a} A. Author, Book.
+
+Second para.
+\subsection*{Articles}
+\bibitem{b} B. Author, J. 2.
+
+Third para.
+\end{thebibliography}
+\end{document}

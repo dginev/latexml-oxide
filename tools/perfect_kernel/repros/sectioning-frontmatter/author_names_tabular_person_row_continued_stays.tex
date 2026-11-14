@@ -1,0 +1,19 @@
+% mechanism: a font-parted person row in a `tabular` is no item (OD #928, review rev94a r5 t06's sibling): with no
+%   cell's font setting "Bob Baker" apart (`labels::later_line_is_names`), the reading reads each unmarked row under
+%   the name as its own entry, and the writer makes no item that may name a person on no structural evidence
+%   (`repart::plan`'s `reads_as_a_person`, as `Ann Able\\ Bob Baker`): today's one creator stays (93a's). Catalog
+%   repro, no guard: the decline is `perfect_kernel_batch94a::a_person_in_a_tabular_row_is_no_item`'s path.
+% witness: review rev94a r5 t/t06_fonts (the font-separated persons of 1009.1429 set in a `tabular`)
+% oracle:  pdflatex 0 errors: "Ann Able / Univ X (italic) / Bob Baker / Univ Y (italic)"
+% engines: rust 93a: one creator, the tabular its name; rust 94a r5: two creators (the cell's font reset read as
+%   Bob Baker's own font); perl: not run
+% expect:  0 errors, 0 warnings; today's one creator, the tabular its name
+% status:  GREEN (94a r6; the reading changed, the output 93a's)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\begin{tabular}{c}Ann Able\\ {\it Univ X}\\ Bob Baker\\ {\it Univ Y}\end{tabular}}
+\maketitle
+Body.
+\end{document}

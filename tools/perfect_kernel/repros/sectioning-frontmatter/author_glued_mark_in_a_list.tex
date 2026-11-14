@@ -1,0 +1,15 @@
+% mechanism: a list with a glued piece asks for each number, the symbol shown (`glued_marks`)
+% witness: `$^{N,N*}$`: 335 rows in 7 months
+% oracle:  pdflatex: 0 errors; Ann Able 1,2*, Bob Baker 2
+% engines: rust int139a: the star lost, silently
+% expect:  0 errors; Ann Able * with Univ X and Univ Y; Bob Baker Univ Y
+% status:  RED (int139a) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2*}$, Bob Baker$^{2}$\\ $^1$Univ X\\ $^2$Univ Y}
+\maketitle
+Text.
+\end{document}

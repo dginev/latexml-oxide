@@ -1,0 +1,19 @@
+% witness: 2503.08161 (`\includegraphics[width=0.36cm]{hf-logo.png} \texttt{\small\url{…}}`): an image on a later line
+%          before a URL, not a run of text (reviews revCR8b finding 1, revCR8c finding 2); 2505.21327's
+%          `{\github\ \texttt{\url{…}}}` lines are the shape a note broke
+% oracle:  pdflatex 0 errors: "Ann Able", "Zebra University", "[image] https://example.org/x"
+% engines: rust CR8c, int157a2 = the image dropped, 0 warnings (a Layout event no writer writes). CR8c's note for it, in
+%          its place or at its line's end, made 2505.21327's two URL lines one affiliation, their markup lost: reverted
+% expect:  0 errors, 0 warnings; Ann Able, her affiliation "Zebra University", and one url contact holding the image then
+%          the URL, as printed (`events::place_pictures`: the contact's span grown over the image)
+% status:  RED (CR8c, int157a2) -> GREEN (IMG1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}\usepackage{url}
+\title{T}
+\author{Ann Able \\ Zebra University \\
+\includegraphics[width=0.36cm]{example-image} \texttt{\small \url{https://example.org/x}}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

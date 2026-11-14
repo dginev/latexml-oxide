@@ -1,0 +1,22 @@
+% mechanism: bibunits — a preamble `\nocite` belongs to the main `.aux` (TeX: no unit is open yet), but the kernel
+%   binding defers it to `\end{document}` (sect11.rs `\nocite`, `@at@end@document`), where `\lx@mark@nocite` reads
+%   `CITE_UNIT` of the last section unit still open, so the entry is listed in that unit's References.
+% witness: synthetic (revBU1 P2)
+% oracle:  pdflatex + bibtex (main, bu1): 0 errors; main .aux Smith2020, bu1.aux zeta; main References [1] Smith,
+%   the unit's [1] Zimmer
+% engines: rust int160c, BU1b: 0 E / 0 W; the nocite's bibref inlist="bu1", the unit's References list Smith and
+%   Zimmer (the main one too: Smith, and Zimmer by bibunits_main_list_holds_unit_cites_red.tex); perl: not run
+% expect:  0 errors; the nocite without inlist; the unit's References hold Zimmer only
+% status:  RED (int160c, BU1, BU1b)
+\documentclass{article}
+\usepackage{bibunits}
+\nocite{Smith2020}
+\begin{document}
+Main text.
+\bibliographystyle{plain}
+\bibliography{bibunits_units}
+\bibliographyunit[\section]
+\section{One}
+One \cite{zeta}.
+\putbib[bibunits_units]
+\end{document}

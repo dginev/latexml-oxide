@@ -1,0 +1,17 @@
+% witness: 77n S5 — a `\footnotetext` among revtex4-1 names, before the name's mark: `\author{ M. A.
+%          P\'erez-Garc\'ia$^1$, A. Pérez Martínez \footnotetext{On leave from …} $^{1a}$, E. Rodríguez Querts$^2$}`
+%          (2201.11098)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker 1a, Cat Cole2" over the affiliations
+% engines: rust int31a = one creator "Ann Able , Bob Baker , Cat Cole" (+1 Error:frontmatter:merged_creators): the
+%          note's text read as name text; Perl merges alike
+% expect:  0 errors, 0 warnings; 3 creators, the note and the mark "1a" Bob Baker's
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{ Ann Able$^1$, Bob Baker \footnotetext{On leave from Univ C, City} $^{1a}$, Cat Cole$^2$}
+\affiliation{$^1$Univ A, City\\$^2$Univ B, Town}
+\maketitle
+x
+\end{document}

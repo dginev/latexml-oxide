@@ -3,11 +3,11 @@ use std::borrow::Cow;
 use libxml::tree::Node;
 
 use super::SizingClosure;
-// use crate::common::font::Font;
-use crate::common::arena::SymHashMap as HashMap;
 use crate::{
   Digested,
-  common::{error::*, object::Object, store::Stored},
+  common::{
+    arena::SymHashMap as HashMap, error::*, font::LettersClass, object::Object, store::Stored,
+  },
   definition::{
     BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
     PrimitiveClosure, Reversion,
@@ -83,6 +83,16 @@ pub struct MathPrimitiveOptions {
   pub revert_as:              Option<Cow<'static, str>>,
   pub lpadding:               Option<usize>,
   pub rpadding:               Option<usize>,
+  /// A glyph `\DeclareMathSymbol`'d from the math italic symbol font (`letters`), with its math class: the token's
+  /// font is specialized by `Font::specialize_letters` (a capital Greek letter italic as the class says).
+  pub letters_class:          Option<LettersClass>,
+  /// A Warning that belongs to the symbol's print, not its digestion: carried as the box's
+  /// [`ABSORB_WARNING_PROPERTY`](crate::document::ABSORB_WARNING_PROPERTY) (on the simple primitive's box and on a
+  /// constructor's whatsit alike) and raised once per key when the document absorbs it
+  /// ([`absorb_warning`](crate::document::absorb_warning)) — an undecodable glyph's once-per-font Warning
+  /// (`\DeclareMathSymbol`, OXIDIZED_DESIGN_DIVERGENCES #27). A property, so a simple symbol stays on the primitive
+  /// path with a simple symbol's box and sizing.
+  pub absorb_warning:         Option<Stored>,
 }
 impl PartialEq for MathPrimitiveOptions {
   fn eq(&self, other: &MathPrimitiveOptions) -> bool {
@@ -107,6 +117,9 @@ impl MathPrimitiveOptions {
     }
     if let Some(ref decl_id) = self.decl_id {
       h.insert("decl_id", decl_id.into());
+    }
+    if let Some(ref warning) = self.absorb_warning {
+      h.insert(crate::document::ABSORB_WARNING_PROPERTY, warning.clone());
     }
     if let Some(ref operator_role) = self.operator_role {
       h.insert("operator_role", operator_role.into());

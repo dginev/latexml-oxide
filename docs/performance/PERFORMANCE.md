@@ -182,17 +182,15 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
 
 ### P1 — XMDual pruning: discarded serialization, then repeated global lookup
 
-* **Current reality:** `Document::prune_xmduals` unconditionally calls
-  `node_to_string(&dual)` and discards the returned `String`. Separately,
-  `collapse_xmdual` evaluates `//*[@idref='<dualid>']` from the document for
+* **Current reality:** the discarded `node_to_string(&dual)` in
+  `Document::prune_xmduals` is gone (batch 68p, byte-identical, within noise).
+  `collapse_xmdual` still evaluates `//*[@idref='<dualid>']` from the document for
   each collapsed dual.
 * **Cost shape:** definite serialization/allocation waste, followed by a
   worst-case `O(collapsed_duals * document_nodes)` reference-repair loop. The
   delta has not yet been measured.
-* **Order:** first remove only the discarded serialization and run a
-  same-session byte-identical A/B. Then, as a separate change, build one
-  `idref -> nodes` index and update its buckets when ids move. See audit F1/F2
-  for edge cases and witnesses.
+* **Next:** build one `idref -> nodes` index and update its buckets when ids
+  move. See audit F2 for edge cases and witnesses.
 
 ### P2 — Complete streaming across the core-to-post boundary
 
@@ -257,6 +255,78 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
   - Sweeps alongside other tasks: `JOBS=4` maximum.
   - Memory ceiling: Keep `JOBS × --max-memory <= 24 GB` to preserve headroom for rust-analyzer (~4 GB) and OS buffers.
 
+### P9 — Frontmatter pipeline (audit [`FRONTMATTER_PERF_AUDIT_2026-10-31.md`](../archive/FRONTMATTER_PERF_AUDIT_2026-10-31.md))
+
+The frontmatter costs 0.68–1.05 % of a median conversion and 0.5–0.9 % of fleet CPU, linear in creators. It is 40.9 % of a
+975-author conversion (2103.04797). Levers, each output-neutral and measured alone:
+- **Two quadratics:** `relocate_annotations` `held()` (`relocate.rs:335-339`, 3.7 % at 975) and `queued_author_count`
+  (`queue_digest.rs:827-834`).
+- **One shared index for the post-insertion passes:** today they make ≈12 relative XPath queries per creator. The
+  self-check Warnings (96a) ride the same index.
+- **Typed keys:** `font_key` (`events/mod.rs:622`) and `policy.rs:142`. Also `get_frontmatter_name` digested once per role.
+- **Keyval digestion per API call:** 5.9 % at 975.
+- **The API content digested once:** the lexer reads the real digestion's boxes, not a rehearsal's (7.6 % at 975). It is
+  gated on identical readings.
+
+**The observer writes nothing on 17 of the 18 measured papers.** Its cost is the ceiling for coordinating its phases:
+16.0 % at 975 creators, ≈0.05 % fleet-wide.
+
+### P10 — XPath compiled-expression cache (engine-wide) — LANDED (libxml 0.3.23)
+
+`XPath::findnodes` (`latexml_core/src/common/xml.rs`) reached rust-libxml's `node_evaluate` → `xmlXPathNodeEval`,
+which compiles the expression on every call: a document makes 15k–32k calls of only 57–63 distinct expressions. The
+cache cannot live in latexml-oxide alone (rust-libxml keeps `Node::wrap` and `Object`'s document private), so
+rust-libxml 0.3.23 adds `xpath::Expression` + `Context::*_compiled` (KWARC/rust-libxml#223), and core `XPath` and
+`PostDocument` keep a table of compiled expressions (`compiled_xpath`, cap `COMPILED_XPATH_LIMIT` = 1,024; a
+non-compiling expression keeps its string evaluation and its Error; open nit (rev96x): nothing is cached for it, so
+each call compiles it twice and libxml2 prints its stderr line twice (`\lxRDFa[ancestor::ltx:section[]…`: 2 → 4 lines,
+same Errors, same XML) — cache the failure (`Result<Expression, XPathError>` under the cap) and return it). Measured alone (perf stat instructions:u vs
+`95c-rel`, 18 audit docs): −0.86 % mean (−0.51 … −1.32 %), XML byte-identical. Measured and NOT taken: post's per-call
+`XPathContext` (61 per document — no lever); `get_nodes_as_vec` upgrading the document once per result set (+0.005 %,
+noise).
+
+### P11 — `_font` attribute traffic (engine-wide; sized, perf453c) — option 1 LANDED (libxml 0.3.23)
+
+All traffic of the private `_font` attribute cost **3.17 % of instructions pooled** over 16 docs (1.09 % on
+1910.01256 … 7.17 % on 2005.08745; 3.78 M calls): libxml2 `xmlGet/Has/SetProp` 1.23 % exact, rust-libxml's
+CString/String/xmlFree wrapper 0.87, the font-id parse 0.50 and format 0.17, `Font::to_hashable` on every set 0.39,
+the rest ≤0.12 each. Hot callers: `get_node_font` from `open_text` 1.94 %, `set_node_font` from
+`open_element_at_with_box` 0.62 %. Options, cleanest first:
+1. **LANDED**: keep the attribute, read it in place behind `get_node_font`/`has_node_font`/`get_node_language`
+   (`Node::with_attribute(c"_font", str::parse::<u64>)`, rust-libxml#223) — alone −1.18 % mean (−0.52 … −2.49 %);
+2. the font id in libxml2's `xmlNode._private` (unused by rust-libxml) behind the Perl-shaped methods, with an explicit
+   font copy at the 12 raw attribute-copy sites and at the streaming spill — ≈2.5 %, output at risk at any missed site;
+   it would also take the `_private` slot P12's NodeMap lever wants;
+3. a pointer-keyed side map — rejected (stale entries on node free/reuse, the `node_boxes` history).
+Dead code: `font_match_xpaths` (`common/font.rs:2335-2356`); stale comment `document.rs:1812-1813`.
+
+**P10 + P11 + rust-libxml 0.3.23's wrapper work (#224, #226), as shipped** (perf stat instructions:u, release build
+with libxml 0.3.23 from crates.io vs `tip2` on 0.3.22, the 18 audit docs of `perf453b`): **−4.75 % summed, −4.64 %
+mean (−3.12 … −6.24 %), XML byte-identical on all 18**; the wrapper work alone −2.83 % summed against the #223 code.
+
+### P12 — rust-libxml wrapper layer after 0.3.23 (sized 2026-10-31 on `int123a-bench`, 6 docs)
+
+The wrapper layer (Rust-side conversions, allocations and node bookkeeping around libxml2) cost ≈6.5 % pooled before
+0.3.23; 0.3.23 took the parts inside the crate without an API change (names and short values through a 128-byte stack
+copy, single-text values read in place, a `str::from_utf8` fast path, child lists sized once, `get_child_elements`
+wrapping elements only). Left, each with its basis (exact call counts × gdb-stepped instructions per call):
+* `get_properties` callers that read only names or a count — `namespace_prefixes_in_use` (`document.rs` ~:8744,
+  0.51 %), `finalize_rec` (~:1218, 0.51 %; `_`-prefixed names and the count), `append_tree` (~:8171, 0.45 %),
+  `serialize_into` (~:2696, 0.24 %): ≈1.9 % with a borrowed attribute walk — a latexml-side change, needing an additive
+  rust-libxml visitor (no public-API break).
+* `get_name` behind `get_node_qname` (`common/model.rs:723`) and `collect_named` (`latexml_math_parser/src/util.rs:946`):
+  0.72 % of String copies, 2.56 M calls — a borrowed name read (additive API) on the latexml side.
+* `Node::_wrap`'s `NodeMap` probe + `Rc` clone on every traversal step (5.27 M hits, 0.48 %): a `_private` back-pointer
+  would remove the probe, but collides with P11 option 2 — design decision, not taken.
+* `_autoopened` presence tests (`document.rs` ~:3540, ~:3584, `get_attribute("_autoopened").is_some()`) copy the value
+  into a `String` only to test it exists: 2.93 M calls, 0.79 % with the wrapper (perf453c basis); `has_attribute` is
+  allocation-free on 0.3.23 — a one-lever run, measured alone.
+* `set_property` 2.14 % is libxml2's own `xmlSetNsProp` (frees and re-creates the text child): no wrapper lever.
+Method: call counts by hardware breakpoints on each wrapper function's out-of-line entry (`perf stat -e
+mem:ADDR:x`, ASLR off) cross-checked against an `LD_PRELOAD` count of libxml2's property calls, instructions per call
+by gdb single-stepping 150–200 calls, attribution by in-process stack sampling — sampled shares under-count high-IPC
+code on AMD (skid), so the figures are counts × stepped instructions.
+
 ### P8 — Lower-frequency global scans and lookup allocation
 
 * **Logger stderr writes:** each emitted record costs 2-3 unbuffered `write_all` system calls on stderr (`latexml_core/src/util/logger.rs:449-453`; the `flush()`es at `:307`/`:454` are no-ops on unbuffered stderr) — the lever if render logging must get cheaper: one write per record, or a buffered stderr (review `../archive/CODE_REVIEW_2026-08-03.md`, whose flush attribution this corrects).
@@ -264,15 +334,185 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
   `preceding::ltx:section`, a potential per-paragraph document scan. Establish
   intended scope, replace with a structural/keyed test, and require
   byte-identical output on scaling fixtures (audit F8).
-* **File fallback:** the two fallback helpers compile the same regexes per
-  invocation; lookup clones search paths and scans freshly materialized binding
-  registries twice. Use `Lazy<Regex>`, a borrowed path view, and prebuilt exact
-  plus lowercase indexes after collecting miss-count telemetry (audit F9).
+* **File fallback:** the fallback regexes are `Lazy` now (`content.rs`); lookup
+  still clones search paths and scans freshly materialized binding registries
+  twice. Use a borrowed path view and prebuilt exact plus lowercase indexes after
+  collecting miss-count telemetry (audit F9).
 
 
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-11-13 — the AASTeX many-author regression (batch AAS1)
+
+Basis: FMPERF (2026-11-13) measured 1710.09320 (aastex61, 1,108 authors) +13.3 % and 1901.01540 (aastex62, 1,202) +14.4 %
+`instructions:u` against the 2026-10-31 audit tip (82adbc1802), the frontmatter alone +1.9 / +2.2 G. Frame-pointer
+profiles of both binaries (`kit/perf_profile.sh`, `EVENT=instructions:u PERIOD=3000017`; the default period throttles on
+this host) put the growth in `digest_front_matter`: the reading's rehearsals (`read_at_flush`, 0.96 G on 1901.01540, of
+it the API calls' 0.67 G, 1,427 `\affiliation` calls over 228 contents), the emitter (`emit_commands`, 0.53 G, diffuse) and
+the entries' digestion (+0.33 G over the audit's, `begin_frontmatter_entry_digestion`'s scan the one frame that grew).
+Median of 3 interleaved, release, `--preload=ar5iv.sty --nocomments`; each lever against the step before; XML
+byte-identical on all five at every step.
+
+| Lever | 1710.09320 | 1901.01540 | 2103.04797 | 2005.08745 | 1507.02068 |
+|---|---|---|---|---|---|
+| L1 an API call's character-only content rehearsed once per reading (`rehearsal.rs` `rehearse_call`; L2 widens the rule, today's) | −4.36 % | −3.58 % | 0.00 % | +0.02 % | 0.00 % |
+| L2 any content whose first run left nothing behind (no diagnostic, conditional, footnote step, definition, environment, queued entry, open group) | −1.15 % | −1.30 % | −6.41 % | +0.03 % | −0.01 % |
+| L3 the title-page check's queued records indexed by content (length and hash), not length (`title_page_check.rs` `content_keys`) | +0.01 % | −0.44 % | −0.70 % | −0.11 % | 0.00 % |
+| **cumulative** (int169b → AAS1, G) | 10.986 → 10.390 | 13.555 → 12.842 | 7.694 → 7.153 | 12.429 → 12.422 | 5.492 → 5.493 |
+
+Against the audit tip the two AASTeX papers stand at +7.3 % (9.686 → 10.390 G) and +8.3 % (11.859 → 12.842 G). The rest
+of the gap, by the profile after L2 (1901.01540): the author blocks' rehearsals (≈0.33 G, every name distinct; of a
+rehearsal's fixed cost `install_event_bindings` ≈63 K instructions), `emit_commands` (≈0.53 G, no frame above 0.3 %),
+and the entries' digestion (+0.3 G over the audit's, diffuse). Dead end: hashing every candidate content of an invocation
+apart (one slice per `{`) was quadratic in a long `\author` command (1507.02068 +0.93 %); the keys fold from the end.
+
+### 2026-11-06 — a native answer for l3fp's doors (pk/P2)
+
+Basis: `perf stat -e instructions:u`, release, `[rawstyles,rawclasses,luatex]latexml.sty` for the `b*` rows (`kit/probe.sh`, `PERF=1`), `run_doc.sh` for the manuals (`kit/perf_docs.sh`), XML byte-identical to base P1 on every row.
+`\__fp_parse_operand:Nw` at the shape only `\__fp_parse:n` and `\__fp_parse_o:n` (expl3-code.tex:17313-17339) give it answers with exactly what its run leaves, or runs as defined (OXIDIZED_DESIGN_DIVERGENCES #977). The doors themselves stay macros: that costs 16.7 K instructions a call against a hook on the door (first form, ledger row `P2`), for `\meaning`, `\exp_args:No` and a user's redefinition to stay the format's.
+
+| Document | P1 instructions | a hook on the door | this form | wall, P1 → this (mostly idle cores) |
+|---|---:|---:|---:|---:|
+| `b1_fp1000` | 69.24 G | 1.64 G | **1.71 G, -97.5 %** | |
+| `pgf-interference-en` | 2,155 G | 425 G | **428.6 G, -80.1 %** | 150.2 → 33.6 s |
+| `pgf-interference-de` | 2,158 G | 427 G | **429.4 G, -80.1 %** | 151.0 → 33.5 s |
+
+The install and the watch, under `ar5iv.sty`, P1 → this: an empty article 895.93 → 896.14 M (+0.02 %), an article with amsmath 1,081.43 → 1,081.56 M (+0.01 %), `b0_empty` 3,471.7 → 3,469.7 M; `b5_fill1000` no change.
+
+The watch runs per assignment on every paper, and only the same binary on against off shows it (`LATEXML_L3FP_NATIVE=1` against `=0`, as the environment's size moves the count): `b5_fill1000`, 439 K assignments looked at, +16.1 M (+0.14 %) under `ar5iv.sty` and +14.3 M (+0.12 %) under the docs' preload; `hello` +0.02 %. Against P1 the same document reads +0.02 % and -0.09 %, so a build's layout masks it. Of the 16 M, about 12 M is the test (28 instructions an assignment, 1,000,000 `\def`s: 51.8 → 38.9 on against off, with the guard-free read of a name's second and third bytes in `arena::first_bytes`; before it, +21.7 M and +20.9 M) and the rest is one allocation moving the heap: the install's single assignment alone is +13 M, a leaked block of its size alone +7 M. Dead ends, each measured on the empty article: a set of the watched names made at the install, 1.8 M for its scan of the meaning table; a name test on every meaning assignment, 1.1 M, nearly all of it the preload's bindings, so only a document's, a raw file's or a format file's assignment is looked at; a test of its own for the native call on every macro call, 0.27 % of `b0_empty`, so it shares `yields_calls`' (`SpecialCall`); its function pointer in `Expandable`, 0.33 M over 24,000 records, so it is held once.
+
+What is left of `pgf-interference` is its `\fill` and `\colorlet` per pixel. Census (a call is one door): the TeX Live manuals, 971,116 calls in 346 documents, 94.3 % native; a seeded 2,000 arXiv papers using `siunitx`, `xfp`, `l3draw` or `\fp`, 28,171 calls in 52 papers (`ar5iv.sty`'s siunitx binding does not reach l3fp), 97.6 % native in the first form. Top fallbacks on the manuals, each only speed left on the table: `\exp_after:wN` by way of `\exp_args:*` and `\seq_item:Nn` (22.6k), `\arabic` (5.3k), `\box_wd:N` in a `\dim_ratio:nn` (4k), `\pgfkeysvalueof` (5.7k), conditionals `\if_int_compare:w`, `\if:w` (4.4k), `\the` of `\numexpr` (2k), `rand` (1.4k), `em` and `ex` (1.1k). No manual changes an l3fp name. `kit/l3fp_census.py` over logs of `LATEXML_L3FP_TRACE=1` names them with a sample argument.
+
+### 2026-11-06 — interpreter hot paths, the pk/P1 levers
+
+Basis: `perf stat -e instructions:u`, release, the TikZ audit's benchmarks (`~/data/pk_agents/main/tikz_perf/audit/`) under `[rawstyles,rawclasses,luatex]latexml.sty`, XML byte-identical to the base on every row (`kit/perf_lever.sh`, ledger `~/data/pk_agents/main/perf_ledger.tsv`). `b0_empty` loads `pgf-interference` and `pgfplots` and typesets nothing; "article" is a plain article with amsmath under `ar5iv.sty`.
+
+| Lever | fp1000 | fill1000 | addplot500 | b0_empty |
+|---|---:|---:|---:|---:|
+| Base `d6e175bacb` | 88.94 G | 14.85 G | 31.82 G | 5.19 G |
+| P1a a token read tests only what is due at this count (`Gullet::full_read_at`) | -15.8 % | -11.4 % | -14.4 % | -6.7 % |
+| P1d `Error` boxed, so a `Result` costs a pointer | -0.7 % | -0.15 % | -0.4 % | 0 |
+| P1e a line works out its location only if it warns; `\def` formats no side keys | 0 | -3.8 % | -4.5 % | -13.4 % |
+| P1g the `\noexpand` test inlined, its slow paths cold | -2.4 % | -2.1 % | -2.2 % | -0.9 % |
+| P1h `read_token`'s usual token apart from its rare cases | -1.3 % | -0.8 % | -0.9 % | -0.5 % |
+| P1i an argument's read apart from its rare cases; arguments read in place | -3.1 % | -1.3 % | -1.5 % | -0.6 % |
+| P1l `read_x_token`'s rare paths apart | -0.5 % | -0.1 % | -0.2 % | 0 |
+| P1m regex literals compiled once (`find_file_fallback`: three per lookup) | -0.2 % | -0.9 % | -0.9 % | -4.7 % |
+| **All** | **69.31 G, -22.1 %** | **12.01 G, -19.1 %** | **24.54 G, -22.9 %** | **3.92 G, -24.5 %** |
+
+The article: 1.169 G → 1.080 G, -7.6 %. pgf-interference-en/-de: over 180 s on idle SMT siblings → 154 s with P1a and the since reverted P1b, on cores shared with bundle checks. The base's drift since 59q (`1be2a69de7`), the reason they had crossed the ceiling: fp1000 +6.2 %, fill1000 +12 %, addplot500 +12.8 %, by many small steps (`kit/perf_bisect.sh`, `kit/perf_bisect.py`); the largest single one, `ae89a0a8b0` +4.4 % with `ee3c2c6d9e` -2.5 % after it, is the frontmatter stamp on stored tokens.
+
+**What pays, and why (machine code read with `kit/perf_frames.py`):**
+- Work that can't be due. A read tested the token limit, the deadline's period, the cycle guard's window and the debug ring for every token, about 72 instructions; each depends only on the count, so one comparison against a precomputed count stands in for them all.
+- Eager work for a rare branch: a formatted location with a regex per input line for an Info that almost never fires, three `format!`s per `\def`, three regex compilations per file lookup.
+- **Hot/cold splitting, for functions called per token or per expansion.** The prologue is paid per call. `noexpand_shadowed` rejected a letter behind six pushes; the test is inline at the call sites now. A slow path inline also decides what LLVM will inline: `#[thread_local]` in place of `thread_local!` removed a state check from `is_noexpand_family` and still lost 1.4 %, because the memo's resize code, no longer behind a closure, grew it from 304 to 506 bytes and `noexpand_shadowed`'s inlined test became a call and a second prologue. Keep the slow path out of line and the fast one gains (P1g).
+
+**Dead ends, measured, with why:**
+- `\expandafter` expanding its token straight onto the input (tex.web §368), not returning a list: -0.3 %, -0.3 %, -0.7 %, and it changed output, so it was reverted. `invoke_expansion` stamps an expansion's list with the field provenance a raw `\@title` print is told by (`inherit_field_prov`), and with no list the title stayed in the body as well, silently. Guards `perfect_kernel_batchp1`. Other readers of that list are `keyvals.rs:533`, `xkeyval_sty.rs:130` and `latex_constructs/mod.rs:1828`, which consume it, not unread it.
+- A pool of macro-argument token buffers: +0.06 %, +0.2 %, +0.5 %. Under mimalloc a pop and push cost what an allocation does; allocation isn't where a macro call's time goes.
+- Splitting `read_balanced_with_close`, 11.6 KB with a 344-byte frame: -0.15 %, -0.17 %, -0.05 %. Its prologue is per group and its time per token, on the loop's lines. A hot/cold split doesn't reach a loop.
+- A bulk read of unexpanded arguments off the pushback: -0.16 %, +0.08 %, -0.65 %, and +0.46 % loading pgf. Runs between braces average 2.3-2.8 tokens and 30-53 % are empty, so the setup per run eats the savings.
+
+**`-Zplt=yes` (`.cargo/config.toml`).** 515 K of the binary's 1.04 M call sites loaded their target from the GOT and called through memory, though the target is in the same binary. The flag makes them direct calls. Median of 7 interleaved runs on one core with an idle SMT sibling (`kit/perf_ab_cycles.sh`), same tree, XML identical: cycles fp1000 22.27 G → 21.88 G (-1.75 %), fill1000 4.446 G → 4.379 G (-1.50 %), addplot500 8.423 G → 8.235 G (-2.24 %), a plain article -0.36 %, inside its 1.5-1.8 % spread. Instructions -0.07 to -0.22 %, so this is the indirect call's cost and not less work. It doesn't show in `instructions:u`, and a loaded machine hides it: the first attempt read 8-29 % spreads.
+
+**Against pdflatex, where this leaves us** (task-clock, median of 3 on one quiet core, `ar5iv.sty`, P1 without `-Zplt`; pdflatex writes its PDF too): loading pgf and pgfplots 269 → 295 ms, 1.10×; fill1000 518 → 852 ms, 1.64×; addplot500 638 → 1,665 ms, 2.61×; fp1000 1,515 → 4,358 ms, 2.88×. With the load subtracted: 2.2×, 3.7×, 3.3×. So the goal "pgf/TikZ as fast as pdflatex" isn't met on token-heavy loops. After P1 the interpreter's profile is flat: on fp1000 `read_x_token`, the largest self entry at 12.85 %, has no instruction above 3.3 %; on fill1000 and addplot500 every string-formatting site is under 0.5 %, and every lookup entry under 2 %. The next large gains are native layers for what a document actually loops in.
+
+**Next:** the l3fp loop is a native evaluator's job, not the interpreter's (`pk/P2`). Then pgfplots' arithmetic: addplot500 is the furthest from pdflatex of what stays interpreted.
+
+**The last regression, the title-page check (`pk/R1`).** Of the 50 manuals that slowed between sweeps #149 and #151 (`~/data/pk_agents/main/perf_corpus/regressed/table.txt`, `kit/perf_docs.sh`: 36.94 T at #149, 40.07 T at int141a, 32.09 T on P1), one stayed above #149 on P1: uantwerpenexam-example2, 224.9 G at #149, 203 G before the check, 295 G at 106s (`b16791f753`), 385 G at 108b (`8c3e0b1308`), 322.2 G on P1. `speculative_run` was 47 % of it: `\extrainfo` (100 lines, a raw setter's store, printed by the class's `\maketitle`) was digested by the output, by the print check (22.1 %) and by the third source (24.9 %), 164 million reads a run, as each `\selectlanguage` in it runs the class's `\captionsenglish` or `\captionsdutch`, which reads the language's `.data` file again, a `\regex_match` and a `\prop_gput` per line (`uantwerpenexam.cls:84,:99-104`).
+- **A budget, all of the fix.** No run of the check's reads more than 8 M tokens, three such per conversion (`gullet::read_budget`, `check_run_budget`, about a second each): 322.7 G with no budget (`LATEXML_CHECK_READ_BUDGET=0`), 176.9 G with 4 M, 178.9 G with 8 M, by `perf_docs.sh`, the XML byte-identical. So that manual's `\extrainfo` and its title page go unchecked, both named in a `Warning:frontmatter:check_budget`. The worst a document can ask of the check is 24 M reads, about 11 G. On 299 raw-class papers a run reads 487,915 at most, and 1,826,755 all of a paper's; none is stopped, nor any of `popZ01`'s 1,873.
+- **Settled: nothing the check wants is skipped.** Leaving an argument to the print's run when the print holds most of the words it spells took 322.2 G to 247.7 G with no budget and nothing once the budget fires (the print and `\extrainfo` both stop at it), and -0.03 to -0.9 % on six other witnesses, the watch's gain included. It lost a word uncounted, a `\thanks` behind a macro (`check_store_thanks_by_alias_is_counted`), and was a spelling read in the frontmatter: removed (OD #953 "R1"). Reducing this manual's check further needs a way to know a run's text without a second digestion (the plan's "digest once").
+- **The watch.** `Expandable::may_be_watched` tests inline what the two call watches can see, so a package's macro no longer takes their cold path: -0.2 % jwjournal-demo-en, -0.46 % Scrabble-doc-fr, against P1. They stay on to the end in a document with no `\maketitle`, and against no watch still cost 1.0 % and 0.2 %: the calls they record.
+- **The 50 again** (`kit/perf_docs.sh`, s149, P1, R1): 36.94 T, 32.09 T, 31.88 T. uantwerpenexam-example2 0.80× of #149; none above #149 but SASnRdisplay, 1.04×, which is work the document asks for: bisected to 79z (`8eb3ead38d`, +2.4 %, a listings markup style opens its own group) and 80b (`50eebcc647`, +2.1 %, a listings style that is a macro runs, with the token in `\lst@token`), both 2026-10-24. Its one Warning more, an `\ifx` open at `\end{document}`, isn't the check's either and isn't root-caused.
+
+### 2026-10-31 — frontmatter overhead levers (batch 96p)
+
+Basis: the read-only perf audit perf453 (2026-10-31: frontmatter 0.68–1.05 % of a median conversion, 3.5–15.6 % on
+many-author papers, every stage linear or better up to 592 creators) and its 15 documents — many-author 2005.08745,
+2402.17260, 1707.07081, 2409.19633, 2407.00879, hep-ex0508047, 2201.11593, 1205.2739, 2603.24341, 2006.14918; median
+2005.03240, 2504.05250, 1601.01776, 1004.1370, 1812.02463. Measured with `perf stat -e instructions:u` (call graphs do
+not work on this host: Zen 5 has no LBR and the binary no frame pointers), release, `--preload=ar5iv.sty --nocomments`,
+median of 3 interleaved runs per document on its own core; each lever against the build before it (one lever per run).
+Noise floor (base against an identical build): ±0.1 % per document. Every lever leaves the output byte-identical on the
+15 documents eager and `--streaming`; the 3,000-paper frontmatter sample (`fm_scorer/sample.txt`; 2,922 convert, 78
+have no main file) was compared once cumulatively after L3 and again on the final commit, L5 alone on the documents.
+
+| Lever | Removed | many-author: mean / max gain | median: mean / max | audit upper bound |
+|---|---|---|---|---|
+| L1 typed font key (`observer/events/mod.rs` `FontKey`) | a `format!("{:?}/{:?}/{:?}/{:?}")` String per text box the event lexer walks, and its clones per name run: the key is the box's `Rc<Font>`, compared by family, series, shape and size | 0.57 % / 1.76 % (1707.07081) | 0.01 % / 0.03 % (noise) | 0.19 % / 0.90 % (`font_key`'s own frames; the key's clones and comparisons in the lexer were outside it) |
+| L2 marks recorded by name where they are made (core `Document::insert_mark` / `made_mark`, `made_field_marks`) | the whole-document scans for the cover-title marks (`settle_cover_title_ink`, `drop_cover_title_ink`), the field marks (`settle_field_marks`, `field_ink_runs`) and the abstract markers (`remove_frontmatter_marks`) in a document none of that name was made in: 15/15 documents make no cover-title and no field mark, 1/15 (1812.02463) no abstract marker | 0.02 % / 0.07 % (within noise) | 0.04 % / 0.05 % (within noise) | 0.05–0.65 %, 0.18–0.51 % median — a bound in wall time (gdb time samples of all three scans), not instructions: the walks are memory-bound, so their instruction gain stays inside the noise floor (the end-of-document abstract-marker scan is not skipped, below) |
+| L3 post-insertion passes read on demand (`frontmatter/relocate.rs` `HeldAnnotations`, `insert.rs` `show_unanswered_marks`) | `relocate_annotations`' test of an unlabelled annotation against every author's children, once per annotation (annotations × authors × children, each child's text built): each author's values of a kind are read once, again only after the author changed; every author's shown marks (two XPath queries each), read only when an institute labelled by a mark asks; `show_unanswered_marks`' four XPath queries per creator (its personname, its superscripts twice, its `_answers`), read only when a request no entry answers reaches them | 0.18 % / 0.46 % (1707.07081; 2409.19633 0.41 %, 2005.08745 0.29 %) | 0.02 % / 0.03 % | 0.20–1.79 % for all post-insertion passes, the writer's 0–0.74 % included |
+| L5 the ledger's queued-author count under the census only (`observer/ledger.rs` `authors_queued`) | `queued_author_count` (a walk of the whole frontmatter queue) at every `\author` call the ledger records, quadratic in the authors; the dump is its only reader and is written under `LATEXML_FM_SHADOW=1` only (DEL4: the count and the census deleted) | 0.02 % / 0.09 % | 0.00 % (noise) | 0.37 % at ~1,000 authors (perf453b) |
+| **cumulative** (82adbc1802 → L3) | | **0.73 % / 2.28 %** (1707.07081; 2409.19633 1.11 %, 2603.24341 1.00 %) | **0.05 % / 0.08 %** | |
+
+On the bounds audit's many-author tail (perf453b: 2103.04797, 975 creators, revtex4-1; 1901.01540, 1,202, aastex62;
+1710.09320, 1,108, aastex61) L1–L3 together save 6.03 %, 0.53 % and 0.50 %, and L5 0.47 %, 0.44 %, 0.44 % more; the
+outputs byte-identical.
+
+**Measured, not taken:**
+- The end-of-document abstract-marker scan (`remove_frontmatter_marks`, sect02.rs `\lx@finalize@document`) when the
+  flush's sweep removed every marker made before it (14/15 documents): a marker made while the insertion point is in a
+  detached subtree (the core has such points, `insert_element`'s hep-th0201062, 1009.0637) and reattached later would
+  be missed. Recording the marker nodes instead is unsafe: `remove_node` frees the subtree and a held handle dangles.
+- L4, keyvals digested per frontmatter call (`frontmatter_api.rs` `\lx@add@frontmatter@now` `be_digested()` 0.42 %
+  [max 0.82 %], `\lx@annotate@frontmatter@now` 0.35 % [1.32 %]): each call's keyvals are digested once, at its `@now`;
+  the queueing primitive reads them undigested (`queue.rs` `queue_front_matter`). Repeats are distinct calls with the
+  same keyvals: revtex queues a run's shared `\affiliation` once per author of the run (1707.07081: 194 of its 702
+  digestions are one affiliation's `role={affiliation},annotate={run}`; 2103.04797: 2,138, 91 of them `\Fermi`'s),
+  each its own annotation, content digested per author. The cost per call (~0.2 M instructions on 2103.04797) is
+  Perl's `KeyVals::beDigested` ported: the `\setkeys` expansion (`set_keys_expansion`, its `\def`s of the xkeyval
+  internals and each key's code, assignments that persist) digested, then each value. Not redundant; reusing a digestion
+  across calls would skip those assignments. Left.
+- `queue_digest.rs` `get_frontmatter_name` (0.09 % [0.43 %]; ~1.0 % self time at ~1,000 authors, perf453b) digests
+  `\lx@<tag>@<role>@name` per call. A cache keyed by the name macro's meaning is not exact: the bindings' bodies end in
+  an active `~` (`Affiliation:~`) whose meaning, and what that expands to, is not the name macro's, and the text a
+  digestion gives depends on the font encoding (OT1's `<`). Exact needs the meanings of every token the expansion
+  reaches and the encoding in the key; left for the frontmatter re-architecture.
+- `observer/policy.rs` `declarations_key` (a `format!` per `policy_for` lookup, ~0.05 %): an interned key needs a
+  state-value lookup by symbol and a per-conversion memo cleared with `arena::reset`; not worth it at that size.
+- A shared post-insertion index (creators in order → personname, contacts, notes, marks; label → nodes; `SymStr`
+  keys) for every pass: the passes move, clone, rename and remove what it would index (coalesce, distribute, relocate,
+  respell, show, drop, the writer), so each mutation has to go through it; `HeldAnnotations` (L3) is its shape for one
+  pass (read once, re-read for the creator a change touched). The next stage.
+- The rehearsal's second digestion of the author block (`observer/shadow.rs` → `rehearsal.rs`, perf453): mean 1.26 %,
+  max 3.11 % on multi-author revtex, ≤ 0.11 % on median papers. The real digestion and DOM absorb are construction.
+- The rest of the insertion chain (`coalesce_empty_creators`, `distribute_upfront_contacts`, `answered_labels`,
+  `drop_empty_contacts`, `flag_merged_creators`): one or two whole-document queries each, and one query per creator
+  in `coalesce_empty_creators` and `flag_merged_creators` whose answer each uses; ≤ 0.10 % of a conversion apiece in the
+  audit's samples.
+
+### 2026-10-16 — pre-rerun tactical pass + memory-fuse audit (batch 68p)
+
+The memory-fuse change the audit proposed (address space against `RLIMIT_AS`) is PARKED, a settled
+dead-end: it turns a crash into a named Fatal (both final, retried alike) and cost 0804.1983's
+completion (9/9 → 4/9 runs) — `STABILITY_WITNESSES.md` Cluster K. The audit's dominant OOM loop
+(`semantic`'s `\lastbox` peel) is fixed in the kernel instead (68q, `\unvbox` splices, §1110).
+
+Basis: the read-only study `~/data/pk_agents/main/agent_reports/2026-10-16_perf_ram_study.md`
+(`perf` is blocked on this host, `perf_event_paranoid=4`: gdb stack samples, `telemetry.json`
+phases, wall/CPU/max RSS from `wait4`). Measured 67int10b-rel vs the batch, release, `--preload=ar5iv.sty
+--nocomments`, A and B back to back on one idle core; every output `cmp`-identical (minus the
+generator lines). One mechanism per commit:
+
+| Lever | Witness | before → after |
+|---|---|---|
+| ObjectDB `Entry::push_new`: a set of the list's Display strings beside the Vec (was a scan formatting every item, O(n²)) | 1702.06564 (html) | 176.1 → 59.7 s; post_scan 109.0 → 0.7 s |
+| Title-ink dedup: one preorder walk to the first `ltx:section` (was `//ltx:p[…][not(preceding::ltx:section)…]` at every sectioning command, Principle 6) | 2208.14314, 2108.10297 | 134.2 → 14.0 s (build 123.0 → 2.8), 151.8 → 37.1 s (build 118.7 → 6.9) |
+| Math-parse dedup: `XM: Hash` (consistent with its `Eq`) indexes the kept trees (was `Vec::contains`, deep `eq` against every kept tree) | 1509.06364 (29,183 parses), 1203.5809 | 156.7 → 9.5 s, 37.8 → 25.3 s (math_parse 27.2 → 15.2) |
+| Root namespace declarations: one walk for every prefix (was one recursion per prefix with a child `Vec` per node) | 8 ordinary gen80 papers × 3, xml | CPU 73.9 → 69.3 s (−6.2 %); gen80 80/80 xml + html identical |
+| `prune_xmduals`' discarded `node_to_string` (audit F1) | 2304.10050, 1702.06564, 3 more | within noise |
+
+Max RSS unchanged within 1 % on every witness. Random check: 98 pop67o papers (`shuf
+--random-source=<(yes 68)`), all five levers, 24-way: out.html byte-identical, exit codes equal, CPU
+323.5 → 286.8 s (−11 %, concurrent, indicative only).
+
+**Not attempted** (the study's (d) list, binding): the `Rewrite::apply_clause` retry (fix the
+rust-libxml subtree-namespace cause instead); a C-allocator swap (closed 2026-10-07); Rc-shared `XM`
+subtrees for the math-parse spikes; lowering `ASF_SECOND_CHANCE_ALTERNATIVES` (changes output); F3
+file-backed core→post; F6; the startup `kpsewhich` spawn; digest runaways and tikzscale (correctness);
+Token under 8 bytes (P5).
 
 ### 2026-10-07 — random 2609 sample profile (pre-rerun perf pass)
 
@@ -1295,3 +1535,16 @@ scratch (both a public `Tokens` API change), lowering `read_balanced`'s cap 16
 and a full `perf report` call graph on the 610 MB bench binary (> 5 min symbol
 load; use `-g none` flat self). Beyond these, closing the 6× needs fewer tokens
 per picture (pgf binding emitting less) — the harder program.
+
+## Many-author blocks: the names read once (C1, 2026-11-06)
+
+Each contact of an author block read every queued name again (`queued_author_marks`, `queued_name_marks`,
+`requesting_authors`), so the block's cost was names × contacts. `frontmatter/queue_reading.rs` reads each entry once and
+keeps the reading in the state beside the queue (it is read again when a name's command changes meaning, forgotten when the
+queue loses entries). `instructions:u`, `int142a-rel` → `C1-rel`, XML byte-identical: 2103.04797 (975 authors) 11.30 G → 8.14 G
+(−28.0 %); 1901.01540 (1,202) 32.16 G → 14.23 G (−55.7 %); 2005.08745 (592, labelled: the Cut left them at once) 12.69 G →
+12.70 G (+0.05 %); `hello.tex` 1.0810 G → 1.0812 G (+0.02 %); `b5_fill1000.tex` 11.563 G → 11.562 G. Generated blocks, 600
+names: 300 marked `\affiliation`s 21.6 G → 4.4 G, the 20-entry list repeated after every name 175.3 G → 8.0 G. Left, both
+synthetic-only so far: `relocate::for_run_names` per `\affiliation` after a long run (9.9 % of the 300 marked calls under
+aastex631), `frontmatter_api::cut::place_uncut_copies`'s queue walk per repeated list (15 % of the repeated list, its copies'
+`printed_marks_as_marks` reading the queue's marks). Guard `perfect_kernel_batchc1`.

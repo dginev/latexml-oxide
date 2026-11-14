@@ -1,0 +1,19 @@
+% RED (rev107g finding 2's other route, synthetic; PRE-EXISTING, int138a gives the same): the same glued word where the
+%   observer's writer reads the entry. Its address reader (`resolver::address_runs`) reads printed text with no fonts, so
+%   `China.{\tt aable@a.edu}` is the address `China.aable@a.edu` and the affiliation loses ", China.". The kernel's
+%   `kind_address_lines` starts an address at its font (addr_line_glued_word_before_a_font_of_its_own.tex). Fix: carry the
+%   font boundary into the writer's reading.
+% witness: none (synthetic); the real 2203.06585 takes the kernel route
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: rust int138a, int139a: `China.aable@a.edu`, `China.bbaker@b.edu`
+% expect:  0 errors; each affiliation keeps ", China."; aable@a.edu and bbaker@b.edu on their authors
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$
+\thanks{$^{1}$Ann Able is with Univ A, Town, China.{\tt\footnotesize aable@a.edu}}%
+\thanks{$^{2}$Bob Baker is with Univ B, City, China.{\tt\footnotesize bbaker@b.edu}}%
+}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,16 @@
+% mechanism: a `\date` nested two levels deep (`\title{…\author{…\title{…\author{…\date{X}}}}}`) never runs in TeX,
+%   but the deferral of a late block's date (`emit::recover_queued`) places it at the end of the outermost flush,
+%   replacing the date TeX prints. OXIDIZED_DESIGN_DIVERGENCES #985 (known RED)
+% witness: review revCR4b finding 1 (probe d17; synthetic, no real paper)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): "Dinner Two"
+% engines: int154w and CR4 "Dinner Two"; CR4b and the int154a merge "Dinner X" (W=1, the content check counts it)
+% expect:  `<date>Dinner Two</date>`
+% status:  RED (int154a merge)
+\documentclass{article}
+\begin{document}
+\title{A Title \author{Ann Able \title{Inner \author{Bob Baker \date{Dinner X}}}}}
+\date{Dinner Two}
+\maketitle
+\section{S}
+Body.
+\end{document}

@@ -1,0 +1,22 @@
+% An abstract whose first line is a sectioning heading (the structured-abstract idiom: scrartcl
+% `\begin{abstract}\section*{Abstract:} …`): the heading closes the abstract before it holds anything (user ruling
+% 2026-10-18), the text goes with the heading into the body, and no empty ltx:abstract is left behind.
+% witness: 1507.08575 (Schmied2015.tex:31-41: `\section*{Abstract:}`, `\section*{Availability:}`, `\section*{Contact:}`)
+% oracle:  pdflatex 0 errors: "Abstract: Multiview … / Availability: … / Contact: …" under the abstract heading
+% engines: rust 67int26 = 2 Errors, three sections nested in ltx:abstract; int26 r2 without the drop = an empty
+%          ltx:abstract
+% expect:  0 errors, 0 warnings; no ltx:abstract; unnumbered sections "Abstract:" and "Availability:" with their text
+% status:  RED (67int26) -> GREEN (int26)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{abstract}
+
+\section*{Abstract:} Structured abstract text.
+
+\section*{Availability:}
+Code is online.
+\end{abstract}
+\section{Introduction}
+Body.
+\end{document}

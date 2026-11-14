@@ -1,0 +1,18 @@
+% mechanism: `\author{Ann Able\inst{1}, Bob Baker\inst{2} \and the XYZ Collaboration}`: the names entry holds a comma
+%   list and a collaboration after `\and`; the institutes' e-mail lines (one address under each) stay on a nameless
+%   creator, where the PDF prints u1 under Univ A (only Ann requests 1) and u2 under Univ B (only Bob)
+% witness: synthetic (revP23b finding 3, probe aa_coll; svjour3 and OmniBus alike)
+% oracle:  pdflatex (TL 2025, -no-shell-escape; TL 2025 has no aa.cls: 0805.1001's aa.cls) 0 errors
+% engines: int169a (632698e1d8) and P23b: u1@x.org and u2@x.org on a nameless creator, 0 errors
+% expect:  0 errors; Ann Able: Univ A, u1@x.org; Bob Baker: Univ B, u2@x.org; the collaboration as printed
+% status:  RED (int169a, P23b): catalog only, no guard
+% moves:   post-merge (id XYZC)
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} \and the XYZ Collaboration}
+\institute{Univ A \\ \email{u1@x.org} \and Univ B \\ \email{u2@x.org}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

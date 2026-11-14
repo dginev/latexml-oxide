@@ -204,17 +204,22 @@ pub(crate) fn load() -> Result<()> {
   // inline-math OPEN that the row's `\cr` then cannot balance ("`\org@halign`
   // Attempt to close a group that switched to mode math"; tablists-rus 101,
   // Perl 12; KPE #174). The real spacing macros `\@xargarraycr`/`\@yargarraycr`
-  // (:16600/:16602) are `$`-free and stay. Guard:
+  // (:16600/:16602) are `$`-free and stay. The brace half stays too, as the alignment count needs it (tex.web §442: a
+  // character constant's brace does not count, a skipped one does): the array pair in array.sty:256-258's form
+  // `\ifnum0=`{}\fi`, which takes back the `\iffalse{\fi` of the opener (tablists.sty:158) without closing a group;
+  // the tabular pair as latex.ltx:16592-16594 has it, `\ifnum0=`{\fi}`, whose `}` closes the opener's `{` (:16591).
+  // Without it the count stayed +1 to the row's `\cr`, which then reached the stomach ("Missing } inserted", tex.web
+  // §1127 `align_error`). Guard:
   // `perfect_kernel_batch54::array_continuation_macros_carry_no_math_shift`.
-  DefMacro!("\\@xarraycr", "\\@ifnextchar[\\@argarraycr{\\cr}");
+  DefMacro!("\\@xarraycr", "\\@ifnextchar[\\@argarraycr{\\ifnum0=`{}\\fi\\cr}");
   DefMacro!(
     "\\@argarraycr[]",
-    "\\ifdim #1>\\z@ \\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
+    "\\ifnum0=`{}\\fi\\ifdim #1>\\z@ \\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
   );
-  DefMacro!("\\@xtabularcr", "\\@ifnextchar[\\@argtabularcr{\\cr}");
+  DefMacro!("\\@xtabularcr", "\\@ifnextchar[\\@argtabularcr{\\ifnum0=`{\\fi}\\cr}");
   DefMacro!(
     "\\@argtabularcr[]",
-    "\\ifdim #1>\\z@ \\unskip\\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
+    "\\ifnum0=`{\\fi}\\ifdim #1>\\z@ \\unskip\\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
   );
   if !has_value("GUESS_TABULAR_HEADERS") {
     AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
@@ -303,8 +308,9 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   // Perl latex_constructs.pool.ltxml L3735-3746: mode => 'restricted_horizontal',
-  //   enterHorizontal => 1.
-  DefConstructor!("\\@@tabular[] Undigested DigestedBody",
+  //   enterHorizontal => 1. Perl's `[]` is an `OptionalPosition` here (and on `\@@tabular@`, `\@@array`): read the
+  //   same, but no text on the page (base_parameter_types.rs, base_utilities.rs `shown_arguments`).
+  DefConstructor!("\\@@tabular OptionalPosition Undigested DigestedBody",
     "#3",
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
     before_digest => { bgroup(); },
@@ -340,7 +346,7 @@ pub(crate) fn load() -> Result<()> {
   );
   // Perl latex_constructs.pool.ltxml L3753-3757: mode => 'restricted_horizontal',
   //   enterHorizontal => 1.
-  DefConstructor!("\\@@tabular@{Dimension}[] Undigested DigestedBody",
+  DefConstructor!("\\@@tabular@{Dimension} OptionalPosition Undigested DigestedBody",
     "#4",
     before_digest => { bgroup(); },
     reversion    => r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*}",
@@ -362,7 +368,11 @@ pub(crate) fn load() -> Result<()> {
   // `\multicolumn` is unlocked at latex_constructs.pool.ltxml:3702 — SURPASS).
   // Binding-level redefinitions (colortbl) load unlocked and still win. Guard:
   // `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+  // The lock protects that interface of three arguments (state.rs `another_interface`): a package's
+  // `\multicolumn` of another arity is a command of its own, not a copy (sltables.sty:193, the sltables-doc-en
+  // manual, as Perl keeps it). Guard: `perfect_kernel_batchm1::a_package_multicolumn_of_another_arity_is_its_own`.
   AssignValue!("\\multicolumn:locked" => true, Some(Scope::Global));
+  AssignValue!("\\multicolumn:locked@arity" => 3i64, Some(Scope::Global));
 
   // A weird bit that sometimes gets invoked by Cargo Cult programmers...
   // to \noalign in the defn of \hline! Bizarre! (see latex.ltx)
@@ -392,13 +402,13 @@ pub(crate) fn load() -> Result<()> {
               cols_vec.push(this_num);
             }
             from = None;
-            num = String::new();
+            num.clear();
           },
           '-' => {
             // `\cline{-3}` (no leading number) is malformed but appears in
             // the wild; treat it as `\cline{1-3}` rather than panicking.
             from = Some(num.parse::<usize>().unwrap_or(1));
-            num = String::new();
+            num.clear();
           }
           c if c.is_ascii_digit() => num.push(c_next),
           _ => break
@@ -486,20 +496,48 @@ pub(crate) fn load() -> Result<()> {
       tabular_bindings(template, SymHashMap::default(), attrs)?;
       return Ok(Vec::new());
     }
-    math_array_bindings(pos.as_ref(), template)?;
+    math_array_bindings(pos.as_ref(), template, true)?;
   });
 
   // latex.ltx:16550 `\array` `\let\@classz\@arrayclassz` (math cells).
+  // Outside math the array is a formula of its own: TeX sets each cell as `$\relax\@sharp$` (`\@arrayclassz` above),
+  // so the cells are math wherever the array is; LaTeXML's math cells need math mode, so `\array` opens an inline
+  // formula and `\endarray` closes it (Perl reads the cells as text — "Script _ can only appear in math mode",
+  // "<ltx:XMArray> isn't allowed in <ltx:p>", KNOWN_PERL_ERRORS #677; 1611.02392 `bnfarray` in a tabular cell).
+  // Guard: `perfect_kernel_batch66y::array_in_text_has_math_cells`.
+  // A `[c]` array (latex.ltx `\@array`'s `\vcenter`) in text is TeX's "Missing $ inserted" too; a `[t]`/`[b]` one
+  // (`\vtop`/`\vbox`) is clean. Every array setup resets the close in its own group (`\@array` below), so an inner
+  // array never inherits an outer text array's.
+  Let!("\\lx@array@text@close", "\\relax");
+  DefMacro!(
+    "\\lx@array@text@open{}",
+    r"\ifmmode\let\lx@array@text@close\relax\else\lx@array@vcenter@check{#1}\lx@begin@inline@math\let\lx@array@text@close\lx@end@inline@math\fi"
+  );
+  DefPrimitive!("\\lx@array@vcenter@check{}", sub[(pos)] {
+    let pos = pos.to_string();
+    if !matches!(pos.trim(), "t" | "b") {
+      Error!(
+        "expected",
+        "$",
+        "Missing $ inserted",
+        "An array outside math is centred with \\vcenter, which only math can hold; it is set as a formula of its own."
+      );
+    }
+  });
   DefMacro!(
     "\\array[]{}",
-    r"\let\@classz\@arrayclassz\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
+    r"\lx@array@text@open{#1}\let\@classz\@arrayclassz\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
   );
-  DefMacro!("\\endarray", None, r"\lx@end@alignment\@end@array");
+  DefMacro!(
+    "\\endarray",
+    None,
+    r"\lx@end@alignment\@end@array\lx@array@text@close"
+  );
   DefPrimitive!("\\@end@array", {
     egroup()?;
     restore_dollar_outside_alignment();
   });
-  DefConstructor!("\\@@array[] Undigested DigestedBody",
+  DefConstructor!("\\@@array OptionalPosition Undigested DigestedBody",
     "#3",
     before_digest => { bgroup(); },
     reversion    => r"\begin{array}[#1]{#2}#3\end{array}");
@@ -524,7 +562,7 @@ pub(crate) fn load() -> Result<()> {
   // enclosing math); `\@arrayclassz` keeps `\@@array` (math cells).
   DefMacro!(
     "\\@array[]{}",
-    r"\@array@bindings[#1]{#2}\ifx\@classz\@tabclassz\expandafter\@@tabular\else\expandafter\@@array\fi[#1]{#2}\lx@begin@alignment"
+    r"\let\lx@array@text@close\relax\@array@bindings[#1]{#2}\ifx\@classz\@tabclassz\expandafter\@@tabular\else\expandafter\@@array\fi[#1]{#2}\lx@begin@alignment"
   );
   DefMacro!("\\@tabarray", r"\m@th\@ifnextchar[\@array{\@array[c]}");
 
@@ -542,7 +580,13 @@ fn array_attachment(pos: Option<&Tokens>) -> String {
 /// The math-cell alignment `\@array@bindings` opens (Perl latex_constructs.pool.ltxml:3792-3809) for a template its
 /// caller built: `\array`'s from its column letters, IEEEtrantools' `\IEEEeqnarraybox` from the IEEEtrantools column
 /// types (`ieeetrantools_sty.rs`).
-pub fn math_array_bindings(pos: Option<&Tokens>, template: Template) -> Result<()> {
+/// `omit_is_text`: the cells' math is their template's `$` (latex.ltx `\@arrayclassz` `$\relax\@sharp$`), so an
+/// `\omit`ted cell is text (tex.web §789; tex_tables.rs `omit_cell_is_text`).
+pub fn math_array_bindings(
+  pos: Option<&Tokens>,
+  template: Template,
+  omit_is_text: bool,
+) -> Result<()> {
   let mut attrs = HashMap::default();
   attrs.insert(String::from("vattach"), array_attachment(pos));
   attrs.insert(String::from("role"), String::from("ARRAY"));
@@ -570,6 +614,12 @@ pub fn math_array_bindings(pos: Option<&Tokens>, template: Template) -> Result<(
   }
   if let Some(strut) = array_strut() {
     properties.insert("strut", strut);
+  }
+  // latex.ltx `\@arrayclassz`: each cell is `$\relax\@sharp$`, its math the template's, so an `\omit`ted cell is
+  // text (tex.web §789; tex_tables.rs `omit_cell_is_text`). Rust-only key: LaTeXML's array cells are math by the
+  // alignment's mode.
+  if omit_is_text {
+    properties.insert("math_cells_template", Stored::Bool(true));
   }
   alignment_bindings(template, String::from("math"), properties, attrs);
   // Perl: if display math, switch to text mathstyle

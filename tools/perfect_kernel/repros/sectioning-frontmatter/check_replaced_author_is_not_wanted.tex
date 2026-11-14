@@ -1,0 +1,25 @@
+% LaTeX's `\author` replaces the author before it (`\def\@author{#1}`): of two `\author` calls the title page prints the
+% second alone, as the output holds it (DIVERGENCES #406). The title-page check's second source (what the document gave
+% its frontmatter commands, title_page_check.rs) takes out what a call the frontmatter API then removes was given
+% (`note_frontmatter_clear`, at `\lx@clear@frontmatter`): the binding declares it replaced. Without it the first
+% author's name and note were counted ("ann ablesupported lunar grant", 106t's first build).
+% witness: control (the daj sibling, where the class's `\author` accumulates and the binding keeps the kernel's:
+%          1510.08733, 2112.09352 — OD #953 "106t", silent by this rule)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Bob Baker", the date, "Abstract", "Text of the
+%          abstract.", "1 Intro", "Body." (no "Ann Able", no note)
+% engines: rust int135e = 0 errors, 0 warnings; perl = 0 errors, 0 warnings (one creator, Bob Baker)
+% expect:  0 errors, 0 warnings, no frontmatter:class_text Info
+% status:  GREEN (negative)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able\thanks{Supported by the Lunar Grant.}}
+\author{Bob Baker}
+\maketitle
+\begin{abstract}
+Text of the abstract.
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

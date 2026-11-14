@@ -1,0 +1,14 @@
+% witness: the 69c review (agent_reports/2026-10-17_69c_review.md item 7): `\lx@template@egroup`'s error branch
+%   (tex_box.rs) never fired, as only a `}` token closed the template's `{`, not `\egroup`
+% oracle:  pdflatex 1 error: `\egroup` closes the template's `{` of `$\displaystyle{##}$` (latex.ltx:15760), and the
+%   v-part's `}` meets the cell's math shift — "Extra }, or forgotten $" (tex.web §1069 `extra_right_brace`), deleted;
+%   the rows are kept
+% engines: rust 67int18b = 17 (the `\egroup` ended the cell's formula, the alignment unravelled), 69c round 1 = 17,
+%   perl = not run (no template braces, KNOWN_PERL_ERRORS #908)
+% expect:  1 error, TeX's "Extra }, or forgotten $"; both rows, each cell its formula
+% status:  RED (69c round 1) -> GREEN (69c round 2: stomach.rs `closes_template_brace` takes `\egroup` as `}`)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray} a\egroup &=& b \\ y&=&z \end{eqnarray}
+Post $q$.
+\end{document}

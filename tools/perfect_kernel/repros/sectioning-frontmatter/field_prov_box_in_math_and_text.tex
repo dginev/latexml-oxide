@@ -1,0 +1,17 @@
+% A box holding `\@title` used twice, once in a `{center}` and once in a formula's `\mbox`: the `{center}` use is a
+% whole print and lifted; the formula's is no print (its boxes are absorbed in math), so it stays (fms1 round-3 review
+% finding 1 sibling: the formula was lifted with its paragraph).
+% status:  RED (fms1 round 3: both uses lifted, the formula gone) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "About Foo Bar", "About Foo Bar" (the formula), then the title block, "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×1; the formula kept.
+\documentclass{article}
+\makeatletter
+\title{About Foo Bar}\author{Ann Author}
+\begin{document}
+\sbox0{\@title}
+\begin{center}\usebox0\end{center}
+$\mbox{\usebox0}$
+\maketitle
+\section{Intro}
+Text.
+\end{document}

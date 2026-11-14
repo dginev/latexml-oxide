@@ -1,0 +1,25 @@
+% RED (review revRB1d S1): a repeated REVTeX block whose new name and address are spelled through macros (`\DD`,
+%   `\UY`) is switched off with no Warning: the content check reads a gobbled argument as spelled, and a control word
+%   is a word break there (ledger.rs record_switched_off_call; OD #1003). The earlier entries are read as printed.
+% witness: synthetic (`\affiliation{\ucsb}`-style macros are common in REVTeX papers)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Text. / 2 / More."
+% engines: rust int160b, RB1c, RB1d: 1 creator Ann Able (Univ X, Town), 0 warnings; "Dan Doe" and the new address lost silently.
+% expect:  the loss counted: a Warning naming "Dan Doe" and "Ypsilon Zell" (keeping them is revtex_repeated_block_new_author_kept_red)
+% status:  RED
+\documentclass[aps,prl]{revtex4-2}
+\newcommand{\UY}{Universit\"at Ypsilon, Zell}
+\newcommand{\DD}{Dan Doe}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\maketitle
+Text.
+\clearpage
+\author{Ann Able}
+\affiliation{\UY}
+\author{\DD}
+\affiliation{Univ X, Town}
+\maketitle
+More.
+\end{document}

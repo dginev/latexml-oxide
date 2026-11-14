@@ -95,9 +95,23 @@ macro_rules! RequirePackage {
 }
 #[macro_export]
 #[rustfmt::skip] // arms carry edition-2024 `:expr_2021` markers that push past 100 cols
+/// A binding's class load, then the "has chapters" step for it, as at a raw class's `\LoadClass` return
+/// (`settle_chapter_after_class_load`, OXIDIZED_DESIGN #179): a binding built on report or book has the kernel's
+/// `\chapter` for the rest of its load. `withoptions => true` is Perl's `LoadClass($class, withoptions => 1)`
+/// (`load_class_with_options`: the class takes the document's options). Every binding's class load goes through it.
 macro_rules! LoadClass {
-  ($class:expr_2021) => {{ load_class($class, Vec::new(), Tokens!())? }};
-  ($class:expr_2021, $options:expr_2021, $after:expr_2021) => {{ load_class($class, $options, $after)? }};
+  ($class:expr_2021) => {{
+    load_class($class, Vec::new(), Tokens!())?;
+    $crate::latex_constructs::settle_chapter_after_class_load()?
+  }};
+  ($class:expr_2021, withoptions => true) => {{
+    load_class_with_options($class, Tokens!())?;
+    $crate::latex_constructs::settle_chapter_after_class_load()?
+  }};
+  ($class:expr_2021, $options:expr_2021, $after:expr_2021) => {{
+    load_class($class, $options, $after)?;
+    $crate::latex_constructs::settle_chapter_after_class_load()?
+  }};
 }
 
 #[macro_export]
@@ -115,11 +129,19 @@ macro_rules! DeclareFontMap {
 }
 
 /// Declare multi-char overrides for font map positions that need more than one character.
-/// Usage: `DeclareFontMapMultichar!("T2B", { 0x80 => "\u{04F6}\u{0336}", 0x91 => "C\u{0337}" });`
+/// Usage: `DeclareFontMapMultichar!("T2B", { 0x80 => "\u{04F6}\u{0336}", 0x91 => "C\u{0337}" });`, or for a family's
+/// own map (`DeclareFontMap!("U", map, "blackboard")`), `DeclareFontMapMultichar!("U", "blackboard", { … })`.
 #[macro_export]
 macro_rules! DeclareFontMapMultichar {
   ($name:expr_2021, { $($pos:expr_2021 => $str:expr_2021),* $(,)? }) => {{
     let mapname = s!("{}_fontmap_multichar", $name);
+    let map: HashMap<String, String> = [
+      $( ($pos.to_string(), $str.to_string()), )*
+    ].into_iter().collect();
+    state::assign_value(&mapname, map, Some(Scope::Global));
+  }};
+  ($name:expr_2021, $family:expr_2021, { $($pos:expr_2021 => $str:expr_2021),* $(,)? }) => {{
+    let mapname = s!("{}_{}_fontmap_multichar", $name, $family);
     let map: HashMap<String, String> = [
       $( ($pos.to_string(), $str.to_string()), )*
     ].into_iter().collect();
@@ -606,7 +628,9 @@ macro_rules! DefConstructor {
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor(cs, params, compiled_replacement, ConstructorOptions::default());
+    let options =
+      ConstructorOptions { template: Some($replacement), ..ConstructorOptions::default() };
+    def_constructor(cs, params, compiled_replacement, options);
   }};
   // Pre-parsed prototype flavors
   // Pre-parsed prototype; Closure replacement flavors
@@ -627,7 +651,9 @@ macro_rules! DefConstructor {
   ($cs:expr_2021, $parameters:expr_2021, $replacement:literal) => {{
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default());
+    let options =
+      ConstructorOptions { template: Some($replacement), ..ConstructorOptions::default() };
+    def_constructor($cs, $parameters, compiled_replacement, options);
   }};
   ($cs:expr_2021, $parameters:expr_2021, None) => {{
     def_constructor($cs, $parameters, $replacement, ConstructorOptions::default());
@@ -635,7 +661,8 @@ macro_rules! DefConstructor {
 
   // Optioned flavors come last due to :tt munching
   ($cs:expr_2021, $parameters:expr_2021, $replacement:literal, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    options.template = Some($replacement);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
     def_constructor($cs, $parameters, compiled_replacement, options);
@@ -645,7 +672,8 @@ macro_rules! DefConstructor {
     def_constructor($cs, $parameters, None, options);
   }};
   ($proto:expr_2021, $replacement:literal, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    options.template = Some($replacement);
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
@@ -1052,6 +1080,9 @@ pub fn declared_text_composite(
   }
   (!chars.is_empty()).then_some(chars)
 }
+
+/// Whether `cs` names an accent's inner command ([`accent_inner_name`]).
+pub fn is_accent_inner(cs: &str) -> bool { cs.starts_with("\\lxaccent") }
 
 pub fn accent_inner_name(accent: &str) -> String {
   let word = match &accent[1..] {
@@ -2509,6 +2540,11 @@ macro_rules! defi_opts {
   defi_opts!(@munch ()
     -> {$kind, $( [ $key @ $val ] )*
       [ mathstyle @ Some($literal.to_string()) ] })
+  };
+  // drops: the argument numbers a binding macro drops by design (`ExpandableOptions::drops`), `drops => [2]`
+  (@munch ( $(,)? drops $(:)?$(=>)? [ $($number:literal),* $(,)? ] $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [drops @ &[$($number),*]]})
   };
   // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*)

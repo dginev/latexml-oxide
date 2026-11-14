@@ -1,0 +1,13 @@
+% witness: silent-loss row #16 (probe tcb16/l.tex); 2512.18601, 2606.05464, 2606.27251, 2607.12625 (raw `{tcblisting}` prompt boxes)
+% oracle:  pdflatex 0 errors: the box prints "Plain Title" over "x = 1"; the list of listings is empty (tcblistings.code.tex:39/:45 read the body back `nolol`, `listing remove caption`)
+% engines: rust 77j3 = 0 errors, but the listing is a float inlist="lol" with toccaption "<job>.listing"; perl: ignores `nolol` (listings.sty.ltxml:889), the same lol float
+% expect:  0 errors, 0 warnings; "Plain Title" and the listing in the box; no inlist="lol" float, no ".listing" toccaption
+% status:  RED (77j3) -> GREEN (77m: listings_sty.rs `lst_process_display_with` honours `nolol`)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\begin{document}
+\begin{tcblisting}{title=Plain Title,listing only}
+x = 1
+\end{tcblisting}
+\lstlistoflistings
+\end{document}

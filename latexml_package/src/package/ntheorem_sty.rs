@@ -4,8 +4,10 @@ use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
   // Basically, this package is similar to amsthm.sty (or theorem.sty)
-  // with two main enhancements: endmarks, list of theorems
-  RequirePackage!("amsthm");
+  // with two main enhancements: endmarks, list of theorems.
+  // Perl RequirePackage('amsthm'); the real ntheorem.sty (:52) loads only ifthen, so the binding borrows
+  // amsthm (`require_package_borrowed`): `\@ifpackageloaded{amsthm}` stays false, as in LaTeX.
+  require_package_borrowed("amsthm")?;
   RequirePackage!("ifthen");
 
   // Re-redefine from amsthm from LaTeX; use same note font as head font
@@ -20,7 +22,15 @@ LoadDefinitions!({
   DeclareOption!("leqno", None);
   DeclareOption!("fleqn", None);
   DeclareOption!("amsmath", None);
-  DeclareOption!("amsthm", None);
+  // ntheorem.sty:668-711: the `amsthm` option defines `\swapnumbers`, `\openbox`, `\proofname` and `{proof}`,
+  // which the binding takes from the borrowed amsthm; they are ntheorem's own then, so a later package's
+  // `\newenvironment{proof}` is refused, as LaTeX refuses it (`claim_borrowed_meanings`).
+  DeclareOption!("amsthm", sub {
+    claim_borrowed_meanings(&[
+      "\\swapnumbers", "\\openbox", "\\proofname",
+      "\\proof", "\\endproof", "\\begin{proof}", "\\end{proof}",
+    ]);
+  });
   DeclareOption!("hyperref", None);
   DeclareOption!("standard", sub {
     AssignValue!("thm@usestd" => true);
@@ -46,6 +56,9 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
+  // ntheorem.sty:572 `\gdef\theoremstyle`, :580 `\newtoks\theorembodyfont`: ntheorem's own names, which the
+  // binding takes from the borrowed amsthm.
+  claim_borrowed_meanings(&["\\theoremstyle", "\\theorembodyfont"]);
 
   // Registers
   DefRegister!("\\theoremindent"                => Dimension::new(0));
@@ -132,6 +145,11 @@ LoadDefinitions!({
   DefRegister!("\\qedsymbol" => Tokens!());
   DefMacro!("\\qed", "\\@qedbox{\\the\\qedsymbol}");
 
+  // ntheorem.sty:824-839, :870 `\@thm`: every theorem steps its counter, a `\newtheorem*` one printing no number
+  // (`THEOREM_UNNUMBERED_STEPS`; 1606.01585). Perl's ntheorem.sty.ltxml:163-166 declares it as the kernel's starred
+  // theorem, which steps none (KNOWN_PERL_ERRORS #1120). Guard `perfect_kernel_batch78s::ntheorem_starred_steps_its_counter`.
+  AssignValue!(THEOREM_UNNUMBERED_STEPS => true, Some(Scope::Global));
+
   //======================================================================
   // Redefine \newtheorem to also create * variants
   Let!("\\orig@newtheorem", "\\newtheorem");
@@ -142,7 +160,17 @@ LoadDefinitions!({
   );
 
   DefMacro!("\\Theoremname", "\\lx@thistheorem");
-  Let!("\\renewtheorem", "\\newtheorem");
+  // ntheorem.sty:731-740, :808-814 `\renewtheorem{<name>}`: a name no theorem has is an error ("Theorem keyword #1
+  // undefined", `\@ifundefined{#1}`, :809-811), then `\<name>` and `\<name>*` are let to `\relax` and
+  // `\@newtheorem{<name>}` declares it, so the `\@ifdefinable` refusal of an existing theorem (sect08.rs
+  // `\newtheorem`) does not apply (Perl ntheorem.sty.ltxml:170 `Let('\renewtheorem', '\newtheorem')`, its
+  // `\newtheorem` refusing none). Guards `55_theorem::ntheorem_test` (`\renewtheorem{Lemma}{Lemma}`),
+  // `perfect_kernel_batch77v::ntheorem_renewtheorem_of_undefined_errs`.
+  DefMacro!(
+    "\\renewtheorem OptionalMatch:* {}",
+    "\\@ifundefined{#2}{\\PackageError{ntheorem}{Theorem keyword #2 undefined}\\@ehc}{}\
+     \\expandafter\\let\\csname #2\\endcsname\\relax\\expandafter\\let\\csname #2*\\endcsname\\relax\\newtheorem#1{#2}"
+  );
 
   //======================================================================
   // Style commands - newtheoremstyle and renewtheoremstyle

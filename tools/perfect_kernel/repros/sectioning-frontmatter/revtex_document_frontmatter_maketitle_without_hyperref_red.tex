@@ -1,0 +1,26 @@
+% mechanism: RB1's step-aside (revtex4_cls.rs ~:274) yields to a document's own `\frontmatter@maketitle` whatever the
+%   load; pdflatex uses that definition only with hyperref (revtex4-2.cls:2703-2708 re-lets `\maketitle` from
+%   class@documenthook); without hyperref revtex4-2.cls:3131 has already let `\maketitle` to the class's own, so the
+%   redefinition is dead and the class's switch-off applies (revRB1 should-fix 1; already wrong on the base)
+% witness: synthetic (revRB1 probe fmnohy)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): "T Ann Able Univ X Text. More."
+% engines: RB1b = int159a: Ann holds Univ X + Univ Y; body "Text. Supplement Bob Baker More."
+% expect:  Ann Able (Univ X); the repeated block printing nothing
+% status:  RED (RB1b; catalogued at integration, int160a)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\makeatletter
+\def\frontmatter@maketitle{\@author@finish\title@column\titleblock@produce}
+\makeatother
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X}
+\maketitle
+Text.
+\title{Supplement}
+\author{Bob Baker}
+\affiliation{Univ Y}
+\maketitle
+More.
+\end{document}

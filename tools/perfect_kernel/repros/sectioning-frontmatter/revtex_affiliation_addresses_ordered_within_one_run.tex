@@ -1,0 +1,24 @@
+% mechanism: an unspelled address of an entry several authors carry goes to one carrier by place only within one run
+%   of addresses (brief 95c r2 S2): `office@x.org`, a run apart from `ann@x.org`, is no place of an order, so it stays
+%   in the entry, the block's (FIDELITY_CHARTER §4); `ann@x.org` is Ann Able's by spelling, and its cut keeps one space
+%   (N1: "Univ Y, Phone 123").
+% witness: the reviewer's probe s6 (rev95c); cond-mat0607219 (revtex's shared `\affiliation` printing an address)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" over "Dept X, Univ Y, ann@x.org, Phone 123, office@x.org"
+% engines: rust 95c: office@x.org Bob Baker's by place, "Univ Y,  Phone 123"; rust int123a: the affiliation whole on
+%   both; perl: the same
+% expect:  0 errors, 0 warnings; both "Dept X, Univ Y, Phone 123", Ann Able ann@x.org, office@x.org the block
+%          creator's e-mail (107c: the tail after the comma leaves the entry; it had stayed in it)
+% status:  RED (95c) -> GREEN (95c-r2)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Dept X, Univ Y, ann@x.org, Phone 123, office@x.org}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

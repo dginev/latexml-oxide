@@ -1,0 +1,18 @@
+% A URL alone on a line under an IEEE author block (wrapped by the binding into a block of its own) is the block's URL
+% contact, once, not an affiliation copied to every author.
+% witness: 2511.18438
+% oracle:  pdflatex 0 errors: "Ann Able∗ , Bob Bell†", "∗ Univ A, † Univ B", "https://github.com/example/project"
+% engines: rust int134b = 0 errors; the URL an affiliation on both authors; perl = the same
+% expect:  0 errors, 0 warnings; Ann Univ A, Bob Univ B, a nameless block creator with the URL contact
+% status:  RED (int134b) -> GREEN (106b)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{url}
+\begin{document}
+\title{Link line}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Bell\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, \IEEEauthorrefmark{2}Univ B}\\
+{\texttt{\url{https://github.com/example/project}}}}
+\maketitle
+Text.
+\end{document}

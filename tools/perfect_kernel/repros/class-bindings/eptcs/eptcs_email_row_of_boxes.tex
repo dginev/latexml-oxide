@@ -1,0 +1,22 @@
+% mechanism: an eptcs `\and` cell whose names and e-mails are each set in a box with a skip between them
+%   (`\makebox[0cm][c]{…}\hspace{40mm}\makebox[0cm][c]{…}`): the reading's e-mail text is what the boxes print, a skip
+%   a space (`events::raw_lines`), so each address is one and goes to the name it spells (OXIDIZED_DESIGN_DIVERGENCES
+%   #991)
+% witness: 1210.2456 (`\makebox[0cm][c]{Sabine Broda}\hspace{40mm}\makebox[0cm][c]{Nelma Moreira}` over
+%   `\email{\makebox[0cm][c]{sbb@…}\hspace{40mm}\makebox[0cm][c]{nam@…}}`)
+% oracle:  pdflatex with eptcs.cls beside it: 0 errors; "Ann Able" and "Bob Baker" side by side over "Univ A" and
+%   "ann@a.edu" and "bob@a.edu" in typewriter type
+% engines: rust int155a0 = one creator "Ann Able Bob Baker" with both addresses; Z18k (WIP) = the two names, and a
+%   nameless creator's note "\makebox[0.0pt][c]{ann@a.edu} \makebox[0.0pt][c]{bob@a.edu}"
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, ann@a.edu; Bob Baker: Univ A, bob@a.edu
+% status:  RED (int155a0) -> GREEN (Z18k2)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\title{T}
+\author{\makebox[0cm][c]{Ann Able}\hspace{40mm}\makebox[0cm][c]{Bob Baker}
+\institute{Univ A}
+\email{\makebox[0cm][c]{ann@a.edu}\hspace{40mm}\makebox[0cm][c]{bob@a.edu}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

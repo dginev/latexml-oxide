@@ -1,0 +1,23 @@
+% mechanism: the same null-CS internal as null_cs_optional_internal_keeps_the_line_break, met by the frontmatter: the
+%   overwritten `\\` (`{#1\\}`) recursed in `\date` until the Stomach's `MAXSTACK` Fatal, and the stack of tokens being
+%   invoked, never emptied, made the build's next digestion (103c's `kind_legend_contacts` reading a contact's name) a
+%   second Fatal that stopped the build
+% witness: 2410.07647 (886 words on int130a, 96 with two Fatals on int131a)
+% oracle:  pdflatex (TL 2025) 0 errors: "Before text." / "T" / "Ann Author^a" / "Univ A" / "A" / "B"
+% engines: rust int131a: 2 Fatals (Stomach:Recursion, then the build stopped early); perl: 0 errors
+% expect:  0 errors, 0 warnings; "Before text." and "Body text." kept; Ann Author with Univ A; the date "A B"
+% status:  RED (int131a) -> GREEN (131fix) — perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\expandafter\newcommand\expandafter{\csname\endcsname}[1][x]{{#1\\}}
+\title{T}
+\author[a]{Ann Author}
+\affil[a]{Univ A}
+\date{A\\B}
+\begin{document}
+Before text.
+
+\maketitle
+Body text.
+\end{document}

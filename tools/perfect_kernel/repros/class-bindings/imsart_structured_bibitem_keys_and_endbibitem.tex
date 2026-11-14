@@ -1,0 +1,23 @@
+% witness: 0906.4329, 1010.4313, 1202.6182 (run 349: \endbibitem 337; every structured entry printed "[author]")
+% oracle:  pdflatex 0 errors with the shipped imsart.cls/.sty (2012/08/16; 1202.2089): :2514 `\let\endbibitem\relax`, :2585-2769 `\@barticle[#1]` drops the key list
+% engines: rust 67i1 = 1 Error:undefined:\endbibitem + Error:undefined:{binproceedings}, "[author]" in the text; Perl 0.8.8 errors on every \b* construct (no binding)
+% expect:  0 errors, 1 Warning (imsart.sty is not in TeX Live); the entries read "Author, A. Title. Journal 1 1–2." without "[author]"
+% status:  RED (67i1) -> GREEN (67j)
+% preload: ar5iv.sty
+\documentclass[aoas]{imsart}
+\begin{document}
+\begin{frontmatter}\title{T}\end{frontmatter}
+Text \cite{a,b}.
+\begin{thebibliography}{2}
+\bibitem{a}
+\begin{barticle}[author]
+\bauthor{\bsnm{Author}, \binits{A.}} \btitle{Title}. \bjournal{Journal} \bvolume{1} \bpages{1--2}.
+\end{barticle}
+\endbibitem
+\bibitem{b}
+\begin{binproceedings}[author]
+\bauthor{\bsnm{Writer}, \binits{B.}} \btitle{Talk}.
+\end{binproceedings}
+\endbibitem
+\end{thebibliography}
+\end{document}

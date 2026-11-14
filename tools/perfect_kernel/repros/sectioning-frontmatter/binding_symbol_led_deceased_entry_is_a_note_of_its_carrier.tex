@@ -1,0 +1,22 @@
+% A binding's affiliation (REVTeX `\affiliation`) holding a marked entry and a symbol-led `$^\star$Deceased` entry under
+% `Ann Able$^{1,\star}$`: the frontmatter observer reads a symbol-led entry whose text is a legend as a note of the names
+% showing the mark (resolver/api.rs, the `api:leading-mark` legend: correspondence, a contribution, and an author
+% deceased — an annotation of the same kind, FIDELITY_CHARTER §4, user ruling 2026-11-02), so it is Ann Able's note, her
+% shown ⋆ answered; the department stays both authors' affiliation.
+% witness: synthetic (the API sibling of review rev99b2 probe q4e; the legend shape of 0812.1531)
+% oracle:  pdflatex 0 errors: "Ann Able1,⋆ and Bob Baker1", "1Dept of Physics, Univ A, Town", "⋆Deceased"
+% engines: rust int127a = "⋆Deceased" Ann Able's affiliation contact, her name keeping "1,⋆"; perl = revtex binding,
+%          the whole affiliation both authors'
+% expect:  0 errors, 0 warnings; Ann Able holds "1Dept of Physics, Univ A, Town" and <note class="ltx_note_frontmatter
+%          ltx_thanks_deceased" role="thanks">⋆Deceased</note>; Bob Baker the department
+% status:  RED (int127a) -> GREEN (100a)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,\star}$ and Bob Baker$^{1}$}
+\affiliation{$^1$Dept of Physics, Univ A, Town \\ $^\star$Deceased}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

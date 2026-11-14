@@ -1,0 +1,15 @@
+% witness: 0805.2253, 0806.0481, 0805.4759 (qm2008_abs.cls, snp.cls: REVTeX 4 copies routed to the revtex4 binding):
+%          ltxgrid's `\prepdef\@begindocumenthook{…}` (qm2008_abs.cls:3233) ran its page grid over the binding's names at
+%          \begin{document}, 7 "Missing number, treated as zero" Warnings
+% oracle:  pdflatex 0 errors, "Text HOOKED." (TeX runs the class's document-time code; OD #731 rule 5 does not
+%          register a stand-in copy's, its binding standing in for that code)
+% engines: rust 77w r2 (the declaration route) = "Text HOOKED.", the 3 witnesses' 7 Warnings; 529dc1b543 = the copy
+%          read raw
+% expect:  0 errors, 0 warnings; "Text UNHOOKED.": the copy's write to \@begindocumenthook is document-time code, not
+%          registered (Info "defers code to the document (\@begindocumenthook)")
+% status:  RED (77w r2) -> GREEN (77w: state.rs install_definition, a copy's write to the document hooks)
+% preload: ar5iv.sty
+\documentclass{hookcopy}
+\begin{document}
+Text \qmhooked.
+\end{document}

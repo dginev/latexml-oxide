@@ -1,0 +1,12 @@
+% witness: tipa.sty:283-344 `\DeclareTextAccentDefault{\textsubring}{T3}` (latex.ltx:9985-9986, `\UseTextAccent` :9958)
+% oracle:  pdflatex 0 errors; "Voiceless n̥ and g̥, ȃ; abcd stays." (the accent from T3, the letter in T1: `g` not ɡ; in
+%          math tipa.sty:429-457 `\;` `\!` `\:` set the letters alone)
+% engines: rust int36a = "n and g, a" (the default accent undefined, the ring lost); 77x the accents; Perl the ring
+%          lost, 1 Error (no tipa.sty; `\DeclareTextAccentDefault` ignored in any case)
+% expect:  0 errors, 0 warnings; "Voiceless n̥ and g̥, ȃ;" and the formula a b c d
+% status:  GREEN (77x, sect08.rs `\DeclareTextAccentDefault`, `\UseTextAccent`)
+\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+Voiceless \textsubring{n} and \textsubring{g}, \textroundcap{a}; $a\;b\!c\:d$ stays.
+\end{document}

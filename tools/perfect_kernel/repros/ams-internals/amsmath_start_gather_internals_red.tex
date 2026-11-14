@@ -1,0 +1,24 @@
+% witness: aa.cls v9's linenoaa.sty:53-58 renews {gather}/{gather*} on amsmath.sty `\start@gather` and closes it
+%          open-coded (`\math@cr \black@\totwidth@ \egroup $$`); the sibling of
+%          amsmath_start_multline_internals.tex, no witness paper in the 2605/2606 reruns
+% oracle:  pdflatex 0 errors; "a+b = c1 (1)", "d = e (2)", "f = g2"
+% engines: rust (SBX1) 9 errors 2 warnings (`\start@gather` undefined, `\noalign`, `\egroup`, `$`); perl 18 errors
+% expect:  0 errors; two numbered rows and one unnumbered, as the same document without the renewals
+% status:  RED (SBX1)
+% moves:   post-merge (the closer is not one named macro: a lock of {gather} or `\math@cr`/`\black@` emulation)
+\documentclass{article}
+\usepackage{amsmath,lineno}
+\makeatletter
+\renewenvironment{gather}{\linenomathNonumbers\start@gather\st@rredfalse}{%
+  \math@cr \black@\totwidth@ \egroup
+  $$\endlinenomath\ignorespacesafterend}
+\renewenvironment{gather*}{\linenomath\start@gather\st@rredtrue}{\endgather\endlinenomath}
+\makeatother
+\begin{document}
+\begin{gather}
+a+b = c_1 \\ d = e
+\end{gather}
+\begin{gather*}
+f = g_2
+\end{gather*}
+\end{document}

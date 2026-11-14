@@ -1,4 +1,4 @@
-use latexml_package::prelude::*;
+use latexml_package::{package::natbib_sty::natbib_invocation, prelude::*};
 
 // nmbib.sty raw-loads over the natbib binding, then reimplements natbib's
 // LOW-LEVEL citation engine (`\NAT@citexnum`, nmbib.sty:141) and adds
@@ -29,7 +29,14 @@ use latexml_package::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("nmbib", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  DefMacro!("\\citeall OptionalMatch:* [][]{}", "\\citet*[#2][#3]{#4}");
+  // its notes as read (`natbib_invocation`): a lone `[p.~5]` stays the post-note natbib makes of it
+  DefMacro!("\\citeall OptionalMatch:* [][]{}", sub[args] {
+    let mut it = args.into_iter().skip(1);
+    let pre: Option<Tokens> = it.next().unwrap().into();
+    let post: Option<Tokens> = it.next().unwrap().into();
+    let keys: Tokens = it.next().unwrap().into();
+    Ok(natbib_invocation("\\citet", Some(Tokens!(T_OTHER!("*"))), pre, post, keys))
+  });
   DefMacro!("\\@biblabel{}", "[#1]");
   RawTeX!(r"\newif\ifNMBIB@rendered");
   DefMacro!("\\multibibliography{}", "\\gdef\\NMBIB@saved@bib@list{#1}");

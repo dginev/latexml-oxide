@@ -1,0 +1,18 @@
+% mechanism: names that open with their `\inst` marks (`\inst{1}Ann Able, \inst{2}Bob Baker`) keep each mark on the
+%   name it leads, as `$^1$Ann Able, $^2$Bob Baker` does (`marks_before_glued_commas`): the comma rule of
+%   llncs_comma_before_inst_is_the_name_before is for marks that follow their names
+% witness: rev78f probe c01_lead
+% oracle:  pdflatex (llncs.cls, TL 2025) 0 errors: "¹Ann Able,²Bob Baker and ³Cat Cole", "1 Inst A", "2 Inst B",
+%          "3 Inst C"
+% engines: rust 78f r1 = Inst A and Inst B on Ann Able, Bob Baker bare; int47a = each its own
+% expect:  0 errors, 0 warnings; Ann Able with Inst A, Bob Baker with Inst B, Cat Cole with Inst C
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{\inst{1}Ann Able, \inst{2}Bob Baker \and \inst{3}Cat Cole}
+\institute{Inst A \and Inst B \and Inst C}
+\maketitle
+Text.
+\end{document}

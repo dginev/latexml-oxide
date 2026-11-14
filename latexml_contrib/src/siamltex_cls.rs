@@ -26,7 +26,7 @@ fn push_classification_to_frontmatter(
       if let Some(Stored::HashTagData(frnt)) = val_opt {
         frnt
           .entry("ltx:classification".to_string())
-          .or_insert_with(Vec::new)
+          .or_default()
           .push(entry);
       }
     });
@@ -36,7 +36,13 @@ fn push_classification_to_frontmatter(
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // siamltex.cls:156-175: `\maketitle` marks the title block's notes in `\fnsymbol` and resets the counter after it
+  // (0903.0014: "BELTRAME∗† AND UWE THIELE‡", the `\footnotetext[n]`s after `\maketitle` the same).
+  latexml_package::engine::latex_constructs::declare_fnsymbol_title_block("siamltex", None)?;
   RequirePackage!("amsthm");
+  // A copy of the class the paper edited to load the algorithm packages (2210.03478's siamltex.cls:299-300
+  // `\usepackage{algorithmicx,algorithm}` `\usepackage{algpseudocode}`; the distributed class loads none) decides them.
+  crate::shipped_class::require_shipped_algorithm_packages("cls")?;
   // siamltex.cls:459-476 (and :756-759): the theorems share one counter, numbered within the section unless the
   // `onethmnum` option (:102); `{example}`, `{remark}` and `{defthm}` among them. Declared here as the class does, the
   // OmniBus theorem set, which declares only free names (OXIDIZED_DESIGN #533), no longer renumbers them all within the
@@ -113,6 +119,24 @@ LoadDefinitions!({
     "SIAM J.\\ S{\\fiveptsize CI.} C{\\fiveptsize OMPUT}"
   );
   DefMacro!("\\sirev", "SIAM R{\\fiveptsize EV}");
+  // siamltex1213.cls:184-204 (siamltex704.cls:189-209): `\slugger{journal}{year}{vol}{no}{pages}` stores the slug
+  // line, the journal's copyright and volume note `\@maketitle` sets above the title (:211). Print furniture, so
+  // stored and never typeset; the journal macros it names (`\sisc`, …) stay unexpanded (math0610498, 1410.0201,
+  // 1410.1612).
+  RawTeX!(
+    r"\def\@translation{}
+\def\slugger#1#2#3#4#5{\gdef\@slugger{\thispagestyle{plain}%
+\vspace*{-36pt}
+{\sixptsize\baselineskip10pt
+\noindent
+\expandafter\csname#1\endcsname.\hspace*{\fill}
+{\scriptsize{\copyright}} #2 Society for Industrial and
+Applied\vspace*{-1.2mm}  Mathematics\\
+Vol.\ #3, No.\ #4, pp.\ #5
+\hspace*{\fill} \@translation\par}
+\normalsize\vskip19.7pt}}
+\def\@slugger{}"
+  );
   DefMacro!("\\contentsname", "Contents");
   DefMacro!("\\listfigurename", "List of Figures");
   DefMacro!("\\listtablename", "List of Tables");

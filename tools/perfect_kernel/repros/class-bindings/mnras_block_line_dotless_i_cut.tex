@@ -1,0 +1,20 @@
+% witness: 1009.1371 (`Instituto de Astrof{\'\i}sica de Canarias`), 2401.03603 (`Astrof\'{\i}sica`): the sibling of
+%          mnras_block_line_accent_cut.tex — `\i` is latex.ltx's OT1 `\chardef` glyph (slot 16), its letter read through
+%          the encoding's font map
+% oracle:  pdflatex (TL 2025): "A. Able,1 B. Baker,2 and C. Cole1,2", "1 Uni One, City", "2 Instituto de Astrofísica de
+%          Canarias, Spain"
+% engines: rust 97e r1 = the block-line cut declined (the span's letters "Astrofsica"); two lines one contact
+% expect:  0 errors, 0 warnings; each line cut and written: Baker the Instituto, Cole both
+% status:  RED (97e r1) -> GREEN (97e) — perfect_kernel_batch97e::a_block_line_with_accents_is_cut
+% preload: ar5iv.sty
+\documentclass{mnras}
+\title{T}
+\author[A. Able et al.]
+{\parbox{\textwidth}{\raggedright A.~Able,$^{1}$
+B.~Baker,$^{2}$ and C.~Cole$^{1,2}$}\vspace{0.4cm}\\
+\parbox{\textwidth}{\raggedright $^{1}$Uni One, City\\
+$^{2}$Instituto de Astrof{\'\i}sica de Canarias, Spain}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

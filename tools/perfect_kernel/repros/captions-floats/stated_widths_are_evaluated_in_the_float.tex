@@ -1,0 +1,40 @@
+% witness: review rev78x2 finding 1 (probes q1.tex Figs 2-3, q2.tex Fig 2: a width macro defined in the float, or
+%          one a later \renewcommand changes, read with the meaning it has at the document's end)
+% oracle:  pdflatex 0 errors, 0 overfull (\columnwidth 246pt): each figure one row (2 x 118.08pt + \hfill)
+% engines: rust int68a = one row each (Perl's 345pt line); 78x r2 = two rows in Figures 1-3 (the widths evaluated
+%          as the float's element opens, after its group ended: `\w` and `\wl` undefined, `\ww` 0.2 then read as
+%          0.48 ... the other way round); Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; no `ltx:break` in any figure, two panels each
+% status:  RED (78x r2) -> GREEN (78x r3: the stated widths are evaluated at the float's end, inside its group)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\begin{document}
+\title{T}
+\maketitle
+Text.
+\begin{figure}
+\def\w{0.48\columnwidth}%
+\includegraphics[width=\w]{example-image}\hfill
+\includegraphics[width=\w]{example-image}
+\caption{A macro defined in the float.}
+\end{figure}
+\begin{figure}
+\newcommand\wl{0.48\columnwidth}%
+\includegraphics[width=\wl]{example-image}\hfill
+\includegraphics[width=\wl]{example-image}
+\caption{A command defined in the float.}
+\end{figure}
+\newcommand\ww{0.48\columnwidth}
+\begin{figure}
+\includegraphics[width=\ww]{example-image}\hfill
+\includegraphics[width=\ww]{example-image}
+\caption{A command a later one redefines.}
+\end{figure}
+\renewcommand\ww{0.8\columnwidth}
+\begin{figure}
+\includegraphics[width=0.48\columnwidth]{example-image}\hfill
+\includegraphics[width=0.48\columnwidth]{example-image}
+\caption{Stated directly.}
+\end{figure}
+\end{document}

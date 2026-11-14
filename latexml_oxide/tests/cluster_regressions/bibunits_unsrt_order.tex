@@ -1,0 +1,11 @@
+% expect: a bibunit's own unsorted style numbers its list by first citation: [1] Gamma [2] Alpha [3] Beta
+% pdflatex+bibtex (bu1): "We cite [1, 2] and then [3]." References [1] Gamma [2] Alpha [3] Beta (0 `!` lines)
+% ours (GA3 base): the same order, no sort attribute; fixed: the same, sort="false"
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+\begin{bibunit}[unsrt]
+We cite \cite{gamma,alpha} and then \cite{beta}.
+\putbib[cite_order]
+\end{bibunit}
+\end{document}

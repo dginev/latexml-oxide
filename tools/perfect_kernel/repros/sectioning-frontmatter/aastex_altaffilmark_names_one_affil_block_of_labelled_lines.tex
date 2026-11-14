@@ -1,0 +1,23 @@
+% mechanism: one `\affil` holding a block of `\\` lines, each entry led by a label a queued `\altaffilmark` requests (an
+%   unlabelled line the entry's before it): each entry labelled `altaffil:N` and given to the names requesting it, an
+%   `\email` set in an entry the e-mail of the author it spells, not of each holder (aas_support_sty.rs `\affiliation`;
+%   the Link step's `entry_address_owners`, OD #992 — 97f r2's `take_placed_line_emails`, deleted Z18l).
+% witness: 1610.06611 (aastex, one `\affil{$^{1}$ Jet Propulsion Laboratory … \\ $^{2}$ Space Radiation Laboratory … \\
+%   …}` under `D. J. Walton\altaffilmark{1,2,3}, …`), 1612.09425, astro-ph0108212 (`\affil{\scriptsize 5) Space
+%   Telescope Science Institute, … \\ Affiliated with …}`), 1503.02933 (`\affil{$^1$ Key Laboratory …\email{zhangqm@pmo.ac.cn}}`:
+%   an intermediate build gave the address to the five authors of line 1); review rev97cd F1
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1, Bob Baker2 and Cat Cole1,2 / 1 Uni One / Dept X / 2 Uni
+%   Two"
+% engines: rust 97d and 97f r1: every author the whole block "1 Uni One Dept X 2 Uni Two", Bob Baker the e-mail
+% expect:  0 errors, 0 warnings; Ann Able "Uni One Dept X", Bob Baker "Uni Two" and bbaker@uni.edu, Cat Cole both
+% status:  RED (97f r1) -> GREEN (97f r2)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1}, Bob Baker\altaffilmark{2} and Cat Cole\altaffilmark{1,2}}
+\affil{$^1$ Uni One \\ Dept X \\
+$^2$ Uni Two\email{bbaker@uni.edu}}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

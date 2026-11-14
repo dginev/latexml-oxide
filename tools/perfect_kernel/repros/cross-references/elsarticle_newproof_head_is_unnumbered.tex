@@ -1,0 +1,13 @@
+% witness: arXiv 1304.5109 (\newproof{proof}{Proof}: heads "Proof 1." ... "Proof 13." where the PDF prints "Proof.")
+% oracle:  pdflatex 0 errors; "Lemma 1. L.", "Proof. P.", "Proof (of the lemma). Q." (elsarticle.cls:1200-1236, \scshape head, \rmfamily body)
+% engines: rust (int50a) = "Proof 1", "Proof 2 (of the lemma)", bold head, italic body; Perl 0.8.8 the same (fidelity3 audit N7)
+% expect:  0 errors; proof theorems numbered (refnum 1, 2), their heads the name alone with a period ("Proof.", "Proof (of the lemma)."), small caps, the body upright
+% status:  RED (int50a) -> GREEN (78n r2; r1 left the proofs unnumbered, KNOWN_PERL_ERRORS #1080)
+\documentclass{elsarticle}
+\newtheorem{lemma}{Lemma}
+\newproof{proof}{Proof}
+\begin{document}
+\begin{lemma}L.\end{lemma}
+\begin{proof}P.\end{proof}
+\begin{proof}[of the lemma]Q.\end{proof}
+\end{document}

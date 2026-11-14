@@ -1,0 +1,16 @@
+% oblivoir (kotex-oblivoir) loads memoir, then ob-toclof.sty, which renews `\newlistof` (:31-74) and re-issues the
+% three lists (:138-140): each a heading and memoir's `\@starttoc{<ext>}` (memoir.cls:7122).
+% witness: kotex-oblivoir/{obchaptertoc-doc,oblivoir-simpledoc,ob-mathleading-doc,obsideparas} (TOC0 root A)
+% oracle:  pdflatex 0 `!`: "차례" listing "차례" and "1 Intro", "그림 차례" listing "1 A figure".
+% engines: rust int170a E=0 W=1, no `<TOC>`, two styled paragraphs "차 례"/"그림 차례"; Perl 0.8.8 (OmniBus) E=0, the kernel's two `<TOC>`.
+% expect:  `<TOC lists="toc">` titled "차례", `<TOC lists="lof">` titled "그림 차례", no heading paragraph; W=1 the raw
+%          load's `misdefined:\@iffirstamp`.
+% status:  RED (int170a) -> GREEN (MEM1)
+\documentclass{oblivoir}
+\begin{document}
+\tableofcontents
+\listoffigures*
+\section{Intro}
+Text.
+\begin{figure}\caption{A figure}\end{figure}
+\end{document}

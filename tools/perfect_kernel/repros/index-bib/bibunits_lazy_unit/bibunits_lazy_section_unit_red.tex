@@ -1,0 +1,20 @@
+% mechanism: bibunits — a `\bibliographyunit[\section]` unit starts at its first `\cite`/`\putbib` (bibunits.sty
+%   `\@bibunit` → `\bibunit`, `\@startbibunitorrelax`), so a section with neither takes no number; the binding steps
+%   `\@bibunitauxcnt` at every `\section` (bibunits.sty.ltxml `\@bibunit` → `\lx@startbibunit`), so the cited
+%   section reads `bu2.bbl` where TeX's is `bu1`. Sibling of bibunits_lazy_unit_red.tex.
+% witness: synthetic (revBU1 P1); papers using `\bibliographyunit[...]`: 0909.3553, 1501.00202
+% oracle:  pdflatex: 0 errors; only bu1.aux (zeta); the References from bu1.bbl: [1] Z. Zimmer, Last in the alphabet
+% engines: rust int160c, BU1, BU1b: the cite inlist="bu2", no bu2.bbl, so the `.bib` route; post: 1 Error
+%   (missing_file:nosuchbib), 2 Warnings, `[zeta]` dangles, no References; perl: not run (it steps at every `\section`)
+% expect:  0 errors; the cite inlist="bu1", the References hold the bu1.bbl entry Zimmer
+% status:  RED (int160c, BU1, BU1b)
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+\bibliographyunit[\section]
+\section{Intro}
+No citation here.
+\section{Body}
+Body \cite{zeta}.
+\putbib[nosuchbib]
+\end{document}

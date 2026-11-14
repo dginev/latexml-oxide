@@ -1,0 +1,13 @@
+% witness: math9611222, math9611223, math9412232, math0005042 (diag.tex's \newCD: \Let@ before its \halign, \\ between rows)
+% oracle:  pdftex (\input amstex) 0 errors; amstex.tex:486 \def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}: the row end is \cr
+% engines: rust 67int20 = 8 errors ("\@ifstar"/"\@eqpen" undefined, "Missing } inserted" at the row's \cr, …: amsmath_sty.rs's \Let@ is \let\\\math@cr); 67int19b 4; perl: \Let@ undefined
+% expect:  0 errors; a 2x2 alignment A B / C D
+% status:  GREEN (int20)
+\input amstex
+\input amsppt.sty
+\catcode`\@=11
+\def\grid#1\endgrid{\vcenter{\Let@\halign{&\hfil$##$\hfil\quad\cr#1\crcr}}}
+\catcode`\@=\active
+\document
+$$\grid A&B\\ C&D\endgrid$$
+\enddocument

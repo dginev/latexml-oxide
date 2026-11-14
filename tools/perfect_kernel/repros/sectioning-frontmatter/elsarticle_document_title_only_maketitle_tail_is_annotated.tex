@@ -1,0 +1,22 @@
+% mechanism: the sibling of elsarticle_author_tail_under_document_maketitle_is_annotated.tex on the check's words: a
+%   document's `\@maketitle` printing the title alone is no title page of elsarticle's (its `\maketitle` never runs
+%   `\@maketitle`, elsarticle.cls:918-989), so the title-page check reads the stand-in's words (title, authors), not the
+%   title alone — a word elsarticle prints and the output lost would be counted (TP0's p2, mirrored); the appended "bob"
+%   an Info, as elsarticle's own page prints `\elsauthors` (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953)
+% witness: synthetic (review revTP1 B1, the check's words)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title / Alice A / Body.", no "Bob B"
+% engines: int160a0 (`latexml_oxide.int160a0-rel`): 0 errors, 0 warnings, the Info; Alice A. TP1: 0 errors, 0 warnings,
+%   no Info (the check read "A Title" alone); Alice A. TP1b: 0 errors, 0 warnings, Info "The title page annotates 1
+%   word(s) that its output does not hold: bob"; Alice A; perl not run
+% expect:  0 errors, 0 warnings; one creator Alice A; the check's "bob" an Info (annotated)
+% status:  GREEN (TP1b; guard perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\makeatletter\def\@maketitle{\begin{center}{\Large\@title}\par\end{center}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 1907.07986, 2112.12027 (the longtabu path of tabu_centering_ends_the_row.tex and tabu_vline_style_spec.tex)
+% oracle:  pdflatex 0 errors: rows a/b, c/d; e/f with rules
+% engines: rust TABU2base = 1 Error:unexpected:& (b and c in one cell), 4 Warnings (`|[1pt]` read as columns);
+%          Perl 0.8.8 has no tabu binding (`{longtabu}` undefined)
+% expect:  `\longtabu` runs `\tabu@init` too (tabu.sty:626-633, :687): the centred cell's `\\` ends the row and `|`
+%          takes its line style
+% status:  RED (TABU2base) -> GREEN (TABU2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\usepackage{tabu}
+\begin{document}
+\begin{longtabu}{l>{\centering}p{2cm}}
+a & b \\
+c & d \\
+\end{longtabu}
+
+\begin{longtabu}{|[1pt]l|c|}
+e & f \\
+\end{longtabu}
+\end{document}

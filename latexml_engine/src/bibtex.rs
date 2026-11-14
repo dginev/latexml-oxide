@@ -29,6 +29,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use latexml_core::tokens::Tokens;
+use rustc_hash::FxHashSet;
 
 use crate::prelude::*;
 
@@ -595,15 +596,43 @@ fn copy_balanced_group(chars: &mut std::iter::Peekable<std::str::Chars>, out: &m
 /// and this reads that declaration back off the definition instead of keeping a
 /// second copy of the list that could drift from it.
 fn bib_field_source(value: &str, handler: &Rc<dyn Definition>) -> String {
-  let reads_raw = handler
+  let first = handler
     .get_parameters()
-    .and_then(|params| params.get_parameters().first().map(|p| reads_field_raw(p)))
-    .unwrap_or(false);
-  if reads_raw {
-    value.to_string()
-  } else {
-    escape_bib_data_specials(value)
+    .and_then(|params| params.get_parameters().first().cloned());
+  match first {
+    Some(p) if reads_field_raw(p) && with(p.name, |name| name != "Verbatim") => {
+      identifier_data(value)
+    },
+    Some(p) if reads_field_raw(p) => value.to_string(),
+    _ => escape_bib_data_specials(value),
   }
+}
+
+/// An identifier field's value (`doi`, `isbn`, `issn`, `lccn`, `pii`, `crossref`: the `Semiverbatim` handlers) as
+/// the identifier itself: TeX's escapes and grouping braces are not part of it. BibTeX counts every brace, escaped or
+/// not, so MathSciNet's DOI `10.1007/978-3-642-29849-3\{_}10` (its `url` reads `…3_10`) is balanced for BibTeX — but
+/// the `Semiverbatim` reader takes `\{` for a control symbol, and the `}` after `_` ended the argument, a stray `}`
+/// in the entry (2601.01900, 2511.01040, 2601.01772; 74 papers, all 2511+). An escape's backslash (`\_`, `\{`, `\&`)
+/// and every brace are dropped, so `\{_}`, `{\_}` and `\_` all read `_`. A value holding a control word is markup
+/// around the identifier (`\href{https://doi.org/…}{…}`, `\url{…}`; `href_semiverbatim_loop`) and is passed as it is.
+/// `url` (`Verbatim`) keeps its characters. Guard: `06_cluster_bibliography::bib_doi_with_escaped_brace`.
+fn identifier_data(value: &str) -> String {
+  let mut rest = value.chars().peekable();
+  while let Some(c) = rest.next() {
+    if c == '\\' && rest.peek().is_some_and(|next| next.is_ascii_alphabetic()) {
+      return value.to_string();
+    }
+  }
+  let mut out = String::with_capacity(value.len());
+  let mut chars = value.chars().peekable();
+  while let Some(c) = chars.next() {
+    match c {
+      '\\' if chars.peek().is_some_and(|next| !next.is_ascii_alphabetic()) => {},
+      '{' | '}' => {},
+      _ => out.push(c),
+    }
+  }
+  out
 }
 
 /// Whether `p` consumes its argument's characters as data rather than as TeX.
@@ -752,7 +781,7 @@ pub fn current_entry_raw_field(name: &str) -> Option<String> {
 /// `\bib@@names{<role>}` for a biblatex `editora`/`editorb`/`editorc` list, the
 /// role read from its `type_field` (`editoratype = {compiler}`), `editor` when
 /// unset (biblatex.def:3002). The name list itself follows in the input.
-fn bib_typed_names(type_field: &str) -> Tokens {
+pub fn bib_typed_names(type_field: &str) -> Tokens {
   let role = current_entry_raw_field(type_field)
     .map(|t| t.trim().to_string())
     .filter(|t| !t.is_empty())
@@ -761,6 +790,354 @@ fn bib_typed_names(type_field: &str) -> Tokens {
   tokens.extend(Explode!(&role));
   tokens.push(T_END!());
   Tokens::new(tokens)
+}
+
+/// The handlers of biblatex's own field names (biblatex manual §2.2.2), each `\bib@field@<type>@<field>` that
+/// files its value in the entry's structure. `declared`: `None` for every field — the biblatex binding's, on both of
+/// biblatex's routes (a `.bbl`'s entries, a `.bib` rendered without biber: `\printbibliography` falls back to
+/// `\bibliography{…}`, biblatex_sty.rs `\biblatex@printbibliography`) —, else only the fields the document's `.bst`
+/// declares in its `ENTRY` list ([`bst_declared_fields`]), which are the fields bibtex(1) passes to the style.
+///
+/// The classic reader filed them as unprinted `ltx:bib-data`, losing about 7,000 words of reference text in 78
+/// manuals of sweep 120 (publisher locations, journal names, access dates, addenda). Rust-only: Perl has no biblatex
+/// binding and prints no bibliography without a `.bbl`. Defined for every route (batches 56ie-57), they printed under
+/// natbib/BibTeX what the style never prints — "Accessed: 2025-08-15", "Note: ⟨addendum⟩" where plainnat and apsrev4-1
+/// declare neither field (arXiv 2602.10008, 2606.11822), and a `journaltitle={\undefinedmacro Jt}` raised
+/// `Error:undefined` —, where Perl keeps them as `\bib@field@default@default`'s raw `bib-data`; a style that declares
+/// one prints it (ACM-Reference-Format.bst:38 `location`, sn-mathphys.bst and mdpi.bst `urldate`), as
+/// here (OXIDIZED_DESIGN_DIVERGENCES #823). Guards `perfect_kernel_batch78i::{natbib_biblatex_only_fields_are_raw_data,
+/// biblatex_prints_its_own_fields, bst_declared_biblatex_field_is_printed}`. An entry giving both `journal` and
+/// `journaltitle` (or `subtitle` and `titleaddon`) gets both; biber rejects such entries.
+pub fn define_biblatex_fields(declared: Option<&FxHashSet<String>>) -> Result<()> {
+  let want = |field: &str| declared.is_none_or(|fields| fields.contains(field));
+  if want("journaltitle") {
+    DefMacro!(
+      "\\bib@field@default@journaltitle",
+      "\\bib@addto@related{journal}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("location") {
+    DefMacro!(
+      "\\bib@field@default@location",
+      "\\bib@@field{ltx:bib-place}"
+    );
+    DefMacro!(
+      "\\bib@field@inbook@location",
+      "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
+    );
+    DefMacro!(
+      "\\bib@field@incollection@location",
+      "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("urldate") {
+    DefMacro!(
+      "\\bib@field@default@urldate",
+      "\\bib@@field{ltx:bib-date}[role=accessed]"
+    );
+  }
+  if want("titleaddon") {
+    DefMacro!(
+      "\\bib@field@default@titleaddon",
+      "\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("addendum") {
+    DefMacro!(
+      "\\bib@field@default@addendum",
+      "\\bib@@field{ltx:bib-note}[role=addendum]"
+    );
+  }
+  // biblatex's second-tier fields, which its standard styles print too
+  // (standard.bbx:211/260/309/311/578/710; biblatex.def:2999-3017 `byeditorx`,
+  // :3173-3185 `booktitle`, :3230-3240 `issue`): unprinted `ltx:bib-data` lost
+  // ~305-636 words over 19-31 manuals of sweep 123 (biblatex-chicago
+  // cms-trad/dates/notes-sample, biblatex-fiwi ×4, biblatex-apa-test).
+  // Rust-only, as above. They keep their place in the entry's structure:
+  // - the main title is the multi-volume work, the HOST of a volume: nested in
+  //   the part's book (proceedings) host, else the entry's own host;
+  if want("maintitle") {
+    DefMacro!(
+      "\\bib@field@default@maintitle",
+      "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("mainsubtitle") {
+    DefMacro!(
+      "\\bib@field@default@mainsubtitle",
+      "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitleaddon") {
+    DefMacro!(
+      "\\bib@field@default@maintitleaddon",
+      "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitle") {
+    DefMacro!(
+      "\\bib@field@inbook@maintitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("mainsubtitle") {
+    DefMacro!(
+      "\\bib@field@inbook@mainsubtitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitleaddon") {
+    DefMacro!(
+      "\\bib@field@inbook@maintitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitle") {
+    DefMacro!(
+      "\\bib@field@incollection@maintitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("mainsubtitle") {
+    DefMacro!(
+      "\\bib@field@incollection@mainsubtitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitleaddon") {
+    DefMacro!(
+      "\\bib@field@incollection@maintitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitle") {
+    DefMacro!(
+      "\\bib@field@inproceedings@maintitle",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("mainsubtitle") {
+    DefMacro!(
+      "\\bib@field@inproceedings@mainsubtitle",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitleaddon") {
+    DefMacro!(
+      "\\bib@field@inproceedings@maintitleaddon",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  // - the book subtitle and addon belong to the host book (proceedings);
+  if want("booksubtitle") {
+    DefMacro!(
+      "\\bib@field@default@booksubtitle",
+      "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("booktitleaddon") {
+    DefMacro!(
+      "\\bib@field@default@booktitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("booksubtitle") {
+    DefMacro!(
+      "\\bib@field@inproceedings@booksubtitle",
+      "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("booktitleaddon") {
+    DefMacro!(
+      "\\bib@field@inproceedings@booktitleaddon",
+      "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  // - the issue is a PART of the journal: nested in an article's journal host,
+  //   directly in a `@periodical` (which is the journal);
+  if want("issuetitle") {
+    DefMacro!(
+      "\\bib@field@default@issuetitle",
+      "\\bib@addto@related{journal}{host}\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("issuesubtitle") {
+    DefMacro!(
+      "\\bib@field@default@issuesubtitle",
+      "\\bib@addto@related{journal}{host}\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("issuetitle") {
+    DefMacro!(
+      "\\bib@field@periodical@issuetitle",
+      "\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("issuesubtitle") {
+    DefMacro!(
+      "\\bib@field@periodical@issuesubtitle",
+      "\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  // - the event (a conference, a performance, a screening) is its own object,
+  //   the proceedings' event for an `@inproceedings`;
+  if want("eventtitle") {
+    DefMacro!(
+      "\\bib@field@default@eventtitle",
+      "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("eventtitleaddon") {
+    DefMacro!(
+      "\\bib@field@default@eventtitleaddon",
+      "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("venue") {
+    DefMacro!(
+      "\\bib@field@default@venue",
+      "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("eventdate") {
+    DefMacro!(
+      "\\bib@field@default@eventdate",
+      "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
+    );
+  }
+  if want("eventtitle") {
+    DefMacro!(
+      "\\bib@field@inproceedings@eventtitle",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("eventtitleaddon") {
+    DefMacro!(
+      "\\bib@field@inproceedings@eventtitleaddon",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("venue") {
+    DefMacro!(
+      "\\bib@field@inproceedings@venue",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("eventdate") {
+    DefMacro!(
+      "\\bib@field@inproceedings@eventdate",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
+    );
+  }
+  // In a part of a book the event nests in the book host too, so the "In" rows
+  // (make_bibliography.rs, the `incollection` spec: `ltx:bib-related[@type]/
+  // ltx:bib-title`, `ltx:bib-related/ltx:bib-place`) do not print it as the
+  // book's title and place before the event rows print it again. (biblatex's
+  // standard drivers print an event for `@inproceedings`, `@proceedings` and
+  // `@unpublished` only, standard.bbx:311/578/710; sbl.bbx:293 prints the
+  // event of an `@incollection`.) Witnesses: biblatex-chicago cms-*-sample;
+  // repro index-bib/biblatex_title_units_events (guard
+  // `bibliography_names_fields::biblatex_title_units_and_events_print_once`).
+  if want("eventtitle") {
+    DefMacro!(
+      "\\bib@field@incollection@eventtitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("eventtitleaddon") {
+    DefMacro!(
+      "\\bib@field@incollection@eventtitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("venue") {
+    DefMacro!(
+      "\\bib@field@incollection@venue",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("eventdate") {
+    DefMacro!(
+      "\\bib@field@incollection@eventdate",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
+    );
+  }
+  if want("eventtitle") {
+    DefMacro!(
+      "\\bib@field@inbook@eventtitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("eventtitleaddon") {
+    DefMacro!(
+      "\\bib@field@inbook@eventtitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("venue") {
+    DefMacro!(
+      "\\bib@field@inbook@venue",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("eventdate") {
+    DefMacro!(
+      "\\bib@field@inbook@eventdate",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
+    );
+  }
+  // - `editora`-`editorc` are name lists whose role is `editor[abc]type`
+  //   (`compiler`, `director`, …; biblatex.def:3002 `bytypestrg{editora}{editor}`
+  //   defaults it to `editor`).
+  if want("editora") {
+    DefMacro!("\\bib@field@default@editora", sub[_args] { Ok(bib_typed_names("editoratype")) });
+  }
+  if want("editorb") {
+    DefMacro!("\\bib@field@default@editorb", sub[_args] { Ok(bib_typed_names("editorbtype")) });
+  }
+  if want("editorc") {
+    DefMacro!("\\bib@field@default@editorc", sub[_args] { Ok(bib_typed_names("editorctype")) });
+  }
+  // biblatex's name for BibTeX's `annote` (biblatex manual §2.2.2 "annotation";
+  // `annote` is its alias there): docsurvey's 126 annotated entries were read
+  // and dropped (OXIDIZED_DESIGN_DIVERGENCES #289).
+  if want("annotation") {
+    DefMacro!(
+      "\\bib@field@default@annotation",
+      "\\bib@@field{ltx:bib-note}[role=annotation]"
+    );
+  }
+  Ok(())
+}
+
+/// The fields the document's bibliography style declares (`\bibliographystyle{<style>}`, the `BIBSTYLE` value): the
+/// `ENTRY { … }` field list of `<style>.bst`, lowercased, which is what bibtex(1) copies from a `.bib` entry for the
+/// style to print. `None` without a style or a `.bst` on the search path.
+pub fn bst_declared_fields() -> Option<FxHashSet<String>> {
+  static ENTRY: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\bENTRY\s*\{([^}]*)\}").unwrap());
+  let style = lookup_string("BIBSTYLE");
+  // (`\bibliographystyle{myalpha.bst}`, 2511.23185: kpathsea takes a name already ending in `.bst` as it is)
+  let style = style.trim();
+  let style = style.strip_suffix(".bst").unwrap_or(style);
+  if style.is_empty() {
+    return None;
+  }
+  let path = find_file(&s!("{style}.bst"), None)?;
+  let bytes = std::fs::read(path).ok()?;
+  let text = String::from_utf8_lossy(&bytes);
+  // `%` comments outside the list's words are BibTeX's too (a field list may carry them)
+  let code: String = text
+    .lines()
+    .map(|line| line.split('%').next().unwrap_or_default())
+    .collect::<Vec<_>>()
+    .join("\n");
+  let fields = ENTRY.captures(&code)?;
+  Some(
+    fields[1]
+      .split_whitespace()
+      .map(str::to_lowercase)
+      .collect(),
+  )
 }
 
 /// Perl: `copyCrossrefFields(@fields)` — for each named field, if
@@ -1931,224 +2308,13 @@ LoadDefinitions!({
     "\\bib@@field{ltx:bib-edition}"
   );
   DefMacro!("\\bib@field@default@address", "\\bib@@field{ltx:bib-place}");
-  // biblatex's field names (biblatex manual §2.2.2), read when the biblatex
-  // binding renders a `.bib` without biber (`\printbibliography` falls back to
-  // `\bibliography{…}`, biblatex_sty.rs `\biblatex@printbibliography`). The
-  // classic reader filed them as unprinted `ltx:bib-data`, losing about 7,000
-  // words of reference text in 78 manuals of sweep 120 (publisher locations,
-  // journal names, access dates, addenda). Rust-only: Perl has no biblatex
-  // binding and prints no bibliography without a `.bbl`. An entry giving both
-  // `journal` and `journaltitle` (or `subtitle` and `titleaddon`) gets both;
-  // biber rejects such entries.
-  DefMacro!(
-    "\\bib@field@default@journaltitle",
-    "\\bib@addto@related{journal}{host}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@default@location",
-    "\\bib@@field{ltx:bib-place}"
-  );
-  DefMacro!(
-    "\\bib@field@inbook@location",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
-  );
-  DefMacro!(
-    "\\bib@field@incollection@location",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
-  );
-  DefMacro!(
-    "\\bib@field@default@urldate",
-    "\\bib@@field{ltx:bib-date}[role=accessed]"
-  );
-  DefMacro!(
-    "\\bib@field@default@titleaddon",
-    "\\bib@@field{ltx:bib-subtitle}"
-  );
-  // biber's alphabetic label, which a `.bbl`'s entries carry
-  // (biblatex_sty.rs); MakeBibliography prints it as the entry's refnum
-  // (`given_label`). It is TeX like a title — `B{\"o}t01`, `{\v C}re+05`
-  // (arXiv 1212.4446), `AAP\textsuperscript {+}96` (arXiv 1512.08147) — so it
-  // is digested, not kept as raw `bib-data` text.
-  DefMacro!(
-    "\\bib@field@default@labelalpha",
-    "\\bib@@field{ltx:bib-data}[role=labelalpha]"
-  );
-  DefMacro!(
-    "\\bib@field@default@addendum",
-    "\\bib@@field{ltx:bib-note}[role=addendum]"
-  );
-  // biblatex's second-tier fields, which its standard styles print too
-  // (standard.bbx:211/260/309/311/578/710; biblatex.def:2999-3017 `byeditorx`,
-  // :3173-3185 `booktitle`, :3230-3240 `issue`): unprinted `ltx:bib-data` lost
-  // ~305-636 words over 19-31 manuals of sweep 123 (biblatex-chicago
-  // cms-trad/dates/notes-sample, biblatex-fiwi ×4, biblatex-apa-test).
-  // Rust-only, as above. They keep their place in the entry's structure:
-  // - the main title is the multi-volume work, the HOST of a volume: nested in
-  //   the part's book (proceedings) host, else the entry's own host;
-  DefMacro!(
-    "\\bib@field@default@maintitle",
-    "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@default@mainsubtitle",
-    "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@default@maintitleaddon",
-    "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@inbook@maintitle",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@inbook@mainsubtitle",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@inbook@maintitleaddon",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@incollection@maintitle",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@incollection@mainsubtitle",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@incollection@maintitleaddon",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@maintitle",
-    "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@mainsubtitle",
-    "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@maintitleaddon",
-    "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  // - the book subtitle and addon belong to the host book (proceedings);
-  DefMacro!(
-    "\\bib@field@default@booksubtitle",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@default@booktitleaddon",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@booksubtitle",
-    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@booktitleaddon",
-    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-subtitle}"
-  );
-  // - the issue is a PART of the journal: nested in an article's journal host,
-  //   directly in a `@periodical` (which is the journal);
-  DefMacro!(
-    "\\bib@field@default@issuetitle",
-    "\\bib@addto@related{journal}{host}\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@default@issuesubtitle",
-    "\\bib@addto@related{journal}{host}\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@periodical@issuetitle",
-    "\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@periodical@issuesubtitle",
-    "\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-subtitle}"
-  );
-  // - the event (a conference, a performance, a screening) is its own object,
-  //   the proceedings' event for an `@inproceedings`;
-  DefMacro!(
-    "\\bib@field@default@eventtitle",
-    "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@default@eventtitleaddon",
-    "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@default@venue",
-    "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
-  );
-  DefMacro!(
-    "\\bib@field@default@eventdate",
-    "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@eventtitle",
-    "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@eventtitleaddon",
-    "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@venue",
-    "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
-  );
-  DefMacro!(
-    "\\bib@field@inproceedings@eventdate",
-    "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
-  );
-  // In a part of a book the event nests in the book host too, so the "In" rows
-  // (make_bibliography.rs, the `incollection` spec: `ltx:bib-related[@type]/
-  // ltx:bib-title`, `ltx:bib-related/ltx:bib-place`) do not print it as the
-  // book's title and place before the event rows print it again. (biblatex's
-  // standard drivers print an event for `@inproceedings`, `@proceedings` and
-  // `@unpublished` only, standard.bbx:311/578/710; sbl.bbx:293 prints the
-  // event of an `@incollection`.) Witnesses: biblatex-chicago cms-*-sample;
-  // repro index-bib/biblatex_title_units_events (guard
-  // `bibliography_names_fields::biblatex_title_units_and_events_print_once`).
-  DefMacro!(
-    "\\bib@field@incollection@eventtitle",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@incollection@eventtitleaddon",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@incollection@venue",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
-  );
-  DefMacro!(
-    "\\bib@field@incollection@eventdate",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
-  );
-  DefMacro!(
-    "\\bib@field@inbook@eventtitle",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
-  );
-  DefMacro!(
-    "\\bib@field@inbook@eventtitleaddon",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
-  );
-  DefMacro!(
-    "\\bib@field@inbook@venue",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
-  );
-  DefMacro!(
-    "\\bib@field@inbook@eventdate",
-    "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
-  );
-  // - `editora`-`editorc` are name lists whose role is `editor[abc]type`
-  //   (`compiler`, `director`, …; biblatex.def:3002 `bytypestrg{editora}{editor}`
-  //   defaults it to `editor`).
-  DefMacro!("\\bib@field@default@editora", sub[_args] { Ok(bib_typed_names("editoratype")) });
-  DefMacro!("\\bib@field@default@editorb", sub[_args] { Ok(bib_typed_names("editorbtype")) });
-  DefMacro!("\\bib@field@default@editorc", sub[_args] { Ok(bib_typed_names("editorctype")) });
+  // biblatex's own field names (journaltitle, location, urldate, titleaddon, addendum, maintitle, the event and
+  // issue titles, editora-c, annotation, …) are read by the biblatex binding (biblatex_sty.rs, after its
+  // `LoadPool!("BibTeX")`) and, on the BibTeX route, only where the document's `.bst` declares them; elsewhere they
+  // stay `\bib@field@default@default`'s raw `bib-data`, as in Perl (OXIDIZED_DESIGN_DIVERGENCES #823).
+  if let Some(declared) = bst_declared_fields() {
+    define_biblatex_fields(Some(&declared))?;
+  }
   DefMacro!(
     "\\bib@field@default@publisher",
     "\\bib@@field{ltx:bib-publisher}"
@@ -2307,13 +2473,6 @@ LoadDefinitions!({
   // Standard BibTeX fields.
   DefMacro!(
     "\\bib@field@default@annote",
-    "\\bib@@field{ltx:bib-note}[role=annotation]"
-  );
-  // biblatex's name for BibTeX's `annote` (biblatex manual §2.2.2 "annotation";
-  // `annote` is its alias there): docsurvey's 126 annotated entries were read
-  // and dropped (OXIDIZED_DESIGN_DIVERGENCES #289).
-  DefMacro!(
-    "\\bib@field@default@annotation",
     "\\bib@@field{ltx:bib-note}[role=annotation]"
   );
 
@@ -3630,6 +3789,21 @@ mod tests {
   }
 
   // --- process_identifier (Perl L784) ---
+
+  #[test]
+  fn identifier_data_drops_tex_escapes_and_braces() {
+    assert_eq!(
+      identifier_data(r"10.1007/978-3-642-29849-3\{_}10"),
+      "10.1007/978-3-642-29849-3_10"
+    );
+    assert_eq!(identifier_data(r"10.1000/a{\_}b"), "10.1000/a_b");
+    assert_eq!(identifier_data(r"10.1000/c\_d"), "10.1000/c_d");
+    // Markup around the identifier is left for the field's reader.
+    assert_eq!(
+      identifier_data(r"\href{https://doi.org/10.1/x}{10.1/x}"),
+      r"\href{https://doi.org/10.1/x}{10.1/x}"
+    );
+  }
 
   #[test]
   fn process_identifier_trims_whitespace() {

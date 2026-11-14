@@ -8,14 +8,20 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
-  // Do NOT eager-load xcolor (Perl ships no jmlr binding → OmniBus, no
-  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
-  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
-  // "Unrecognized tabular template" → "Extra alignment tab". The document
-  // loads xcolor with its own options; `\color`/`\definecolor` stay
-  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
+  // (jmlr.cls:150 `\RequirePackage{natbib}`: the class's own load, so a document's `\usepackage[numbers]{natbib}` is
+  // LaTeX's "Option clash", its options dropped — binding/content.rs `apply_new_options_on_reload`)
+  AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+  // jmlr.cls:150-154 `\RequirePackage{graphicx}`, `{url}`, `\PassOptionsToPackage{x11names}{xcolor}`
+  // `\RequirePackage{xcolor}`: papers colour with `\textcolor`/`\definecolor` without loading xcolor (21 of run 353
+  // with them undefined: 1902.03035, 2010.02010, 2107.03212). Perl, with no binding, loads it through OmniBus's scan of
+  // the class (Package.pm:2776-2813). It was once left out because a document's later `\usepackage[table]{xcolor}` was
+  // then a no-op; a repeat load now applies its new options (content.rs `apply_new_options_on_reload`, xcolor_sty.rs
+  // `\ds@table`, witness 2605.00310).
+  RequirePackage!("graphicx");
+  RequirePackage!("url");
+  RequirePackage!("xcolor", options => vec![s!("x11names")]);
   // jmlr.cls:155-156 — the class's algorithm floats; without them
   // `{algorithm2e}` is undefined and its `\caption` cascades to "outside any
   // known float" (pmlr-sample). Guard:
@@ -28,6 +34,19 @@ LoadDefinitions!({
   // the `\floatconts` family, `enumerate*` (pmlr-sample). Guard:
   // `perfect_kernel_batch54::jmlr_has_the_jmlrutils_surface`.
   RequirePackage!("jmlrutils");
+  // jmlr.cls:743-745 `\artchapter` (`\ClassError{jmlr}{Chapters not permitted in articles}`) with `\let\chapter
+  // \artchapter`, and :950-959 `\jmlrbookcommands`' `\bookchapter`: the class has a `\chapter`, so a package's
+  // `\@ifundefined{chapter}` takes the chapter branch, as in TeX (OXIDIZED_DESIGN #179 (a)). An article's call, which
+  // TeX refuses with the class's error, is LaTeXML's chapter with that error's text as its one Warning (OD #734, the
+  // OD #721 precedent). The class's chapter counter (:732) is made at the call, as the stand-in's
+  // (`kernel_chapter_with_warning` marks it; `has_chapter_counter` ignores it), so the class's appendix is lettered by
+  // section, as jmlr.cls:720-729 `\artappendix` (`\let\appendix\artappendix`): "Appendix A", not "Appendix 1.A".
+  DefMacro!("\\chapter", {
+    kernel_chapter_with_warning(
+      "latex",
+      "Class jmlr Error: Chapters not permitted in articles; LaTeXML's \\chapter is used",
+    )
+  });
 
   // Author block. jmlr.cls L259/374-449:
   //   \author[short]{ \Name{N1} \Email{E1} \\ \Name{N2} \Email{E2}
@@ -81,13 +100,14 @@ LoadDefinitions!({
     "\\IncludeName{}{}",
     "\\@add@frontmatter{ltx:note}[role=name]{#1 #2}"
   );
-  DefMacro!("\\And", " ");
-  // \acks{text} — JMLR Acknowledgments-and-Disclosure-of-Funding
-  // section. Author body; emit as structural ltx:acknowledgements
-  // (matches jmlr2e \acks treatment from commit 78bd49f1e2).
+  // (a space; a `" "` string body would tokenize as an empty line, `\par`: KNOWN_PERL_ERRORS #984)
+  DefMacro!(T_CS!("\\And"), None, Tokens!(T_SPACE!()));
+  // jmlr.cls:595 `\newcommand{\acks}[1]{\section*{Acknowledgments}#1}`: the acknowledgments under the heading the
+  // class prints (the binding wrote the slug "acknowledgments-disclosure-of-funding", which the XSLT printed). Guard
+  // `perfect_kernel_batch78c::jmlr_acknowledgements_carry_the_printed_heading`.
   DefConstructor!(
     "\\acks{}",
-    "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>"
+    "<ltx:acknowledgements name='Acknowledgments'>#1</ltx:acknowledgements>"
   );
   DefMacro!("\\clearauthor{}", "\\author{#1}");
 
@@ -99,6 +119,16 @@ LoadDefinitions!({
   DefMacro!(
     "\\jmlrvolume{}",
     "\\@add@frontmatter{ltx:note}[role=volume]{#1}"
+  );
+  // jmlr.cls:551-556: the issue and the page range, printed with the volume in the title footnote (`\@titlefoot`,
+  // :492-521; witness 2605.20066, nesy2026.cls:41).
+  DefMacro!(
+    "\\jmlrissue{}",
+    "\\@add@frontmatter{ltx:note}[role=issue]{#1}"
+  );
+  DefMacro!(
+    "\\jmlrpages{}",
+    "\\@add@frontmatter{ltx:note}[role=pages]{#1}"
   );
   // JMLR frontmatter — preserve author-typed metadata as ltx:note so
   // it reaches the XML (content-preserving). Year/page/workshop/dates

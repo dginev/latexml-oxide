@@ -1,0 +1,21 @@
+% tabularray's `\SetCell[c=<n>,r=<m>]{<keys>}` (tabularray.sty:2542-2615) spans n columns and m rows over the empty
+% cells the author leaves; the binding defined it as a no-op, so "Wide" sat in one cell beside a stray empty one and
+% "Tall" spanned no row. The binding's body pass (`tblr_span_cells`) now spans them (the covered separators become
+% `\span`, the row span is `\multirow`'s); the columns' templates (rules, the first one's alignment) stay.
+% witness: probe tblr.tex (sel78k); 25 sample papers call \SetCell / \SetCells
+% oracle:  pdflatex 0 errors; "Wide" over columns 1-2, "Tall" over rows 2-3, "Both" over columns 2-3, "All" over the row
+% engines: rust int49a = 0 errors, no colspan/rowspan, a stray <td/> after "Wide"; perl (ar5iv stub) no spans either
+% expect:  0 errors; "Wide" colspan="2", "Tall" rowspan="2", "Both" colspan="2", "All" colspan="3"
+%   (a row that ends before its covered cells), no empty cell in rows 1, 4 and 5
+% status:  RED (int49a) -> GREEN (78l)
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{hlines,vlines,colspec={ccc}}
+\SetCell[c=2]{c} Wide & & C\\
+\SetCell[r=2]{c} Tall & B2 & C2\\
+ & B3 & C3\\
+A4 & \SetCell[c=2]{c} Both & \\
+\SetCell[c=3]{c} All\\
+\end{tblr}
+\end{document}

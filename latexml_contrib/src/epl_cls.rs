@@ -99,6 +99,10 @@ LoadDefinitions!({
     let names: Tokens = names;
     Ok(Invocation!(T_CS!("\\lx@epl@author"), vec![short, Some(email_notes_as_emails(names))]))
   }, locked => true);
+  // :725 the `\inst` the title prints the names with, `\def\inst##1{\unskip${}^{##1}$…}` (defined only there): it takes
+  // back the space before it, so `\author{Zhen Wang,\inst{1,2} Attila Szolnoki,\inst{3} …}` gives each name the marks
+  // after its comma (1201.1900; base_utilities.rs `inst_takes_back_space`)
+  DefMacro!("\\lx@title@inst{}", "\\unskip${}^{#1}$");
   // :657 `\etal`
   DefMacro!("\\etal", "\\unskip\\ \\emph{et al.}");
   // :1375 `\let\And\and`
@@ -143,8 +147,12 @@ LoadDefinitions!({
   } else {
     DefMacro!("\\abstract{}", "\\lx@add@abstract{#1}");
   }
-  // :568 `\dedication`, set under the abstract (:800)
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // :568 `\dedication`, set under the abstract (:800), with no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (epl2.cls:537-541,
+  // 2212.14228's copy)
+  DefMacro!(
+    "\\dedication{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
   // :543-562, :606 the issue data (volume, issue, year, first page, DOI, page id and the dates) the publisher fills
   // in, printed in the banner only by the production layout (:615-634 prints neither): stored, as there. The class's
   // `\renewcommand{\year}` (:545) is not followed: `\year` stays the TeX date parameter the kernel's `\today` reads.

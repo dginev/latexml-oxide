@@ -1,0 +1,17 @@
+
+% A preprint line in an `\mbox` before the document's own title block: `\mbox` is `\leavevmode\hbox{#1}`, a TeX box,
+% so its text is no body text for a print outside it; the title block after it is lifted, the header kept (fms1
+% round-4 review finding 3 ruling: a box by the TeX mechanism).
+% status:  RED (fms1 round 4: `\mbox`'s `ltx:text` read as body text, the title block kept) → GREEN (fms1 round 5).
+% oracle:  pdflatex 0 errors: "preprint ABC-123", "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; the header kept.
+\documentclass{article}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\noindent\mbox{preprint ABC-123}
+\vspace{1cm}
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

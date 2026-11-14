@@ -1,0 +1,21 @@
+% witness: hep-th0109182 (topical `\section*`/`\subsection*` headings between groups of entries)
+% oracle:  pdflatex 0 errors: References; General Background [1] A; Special Topics [2] B; More [3] C
+% engines: rust 67int15 = 3 Error:malformed:ltx:bibitem (in <ltx:section>/<ltx:subsection>); Perl 0.8.8 the same
+%          (KNOWN_PERL_ERRORS #855)
+% expect:  0 errors; the empty References <bibliography> kept (the PDF's heading over the groups), then one
+%          <bibliography> per heading holding its entries, numbered on through the list (1, 2, 3)
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{a,b,c}.
+\begin{thebibliography}{99}
+\section*{General Background}
+\bibitem{a} A. Author, J. 1 (2000).
+\subsection*{Special Topics}
+\bibitem{b} B. Author, J. 2 (2001).
+\section*{More}
+\bibitem{c} C. Author, J. 3 (2002).
+\end{thebibliography}
+After.
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: a mark after a word on a contact line no mark leads (`10 m$^{3}$`) is counted as a name's request (`events::names_requested`, a line-led rule), so the isotope `${\rm ^{3}He}$` reads as a mark: its 3 lost (counted by 1 W)
+% witness: synthetic (revISO1c S1 probe h2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / Lab of 10 m3 Tanks, 3He Center"
+% engines: rust 9d38af1d10 = P4c: 0 E, 1 W; both authors "Lab of 10 m Tanks, He Center" (the 3s lost)
+% expect:  0 errors; both authors "Lab of 10 m³ Tanks, ³He Center"
+% status:  RED (9d38af1d10, P4c)
+% moves:   the name-span signal (the marks inside the name reader's spans), a main-session decision (P4c report: not readable in the lexer)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ Lab of 10 m$^{3}$ Tanks, ${\rm ^{3}He}$ Center}
+\maketitle
+Text.
+\end{document}

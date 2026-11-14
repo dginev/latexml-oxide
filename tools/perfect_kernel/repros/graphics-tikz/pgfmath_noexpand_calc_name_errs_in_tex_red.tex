@@ -1,0 +1,22 @@
+% mechanism: a calc name kept from the parse's expansion by `\noexpand` (`\noexpand\real{2.5}*2`) reaches pgf's
+%   parser as a control sequence; TL 2025's pgf errs on it (Missing number, an unknown operator) and prints 0, the
+%   text after the name left over ("max(", "min("). Ours lets calc's names and evaluates them silently ([5.0] [6.0]
+%   [4.0]); Perl raises one Error:pgfparse per parse (revDTL1g finding 1, pP). For the error-boundary batch EB1: the
+%   Error side.
+% witness: synthetic
+% oracle:  pdflatex 11 `!` ("Missing number", "Illegal unit of measure", "Missing control sequence inserted", PGF Math
+%          "Unknown operator"), [0] max([0] min([0]; Perl 3 E (pgfparse: "Parse of '\real{2.5}*2' failed", …),
+%          12 W, [0] [0] [0]
+% engines: rust DTL1g, int162a: [5.0] [6.0] [4.0], 0 errors, 0 warnings
+% expect:  pgf's values and a counted Error per parse
+% status:  RED (DTL1g, int162a)
+% moves:   EB1 makes it a row of `perfect_kernel_error_boundary` (Error side).
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{\noexpand\real{2.5}*2}[\pgfmathresult]
+
+\pgfmathparse{\noexpand\maxof{1}{3}*2}[\pgfmathresult]
+
+\pgfmathsetmacro\x{\noexpand\minof{4}{3}+1}[\x]
+\end{document}

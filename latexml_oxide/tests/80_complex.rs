@@ -13,6 +13,33 @@ use latexml_core::common::error::*;
 
 const DIR: &str = "tests/complex";
 
+// Perl t/80_complex.t, without si's `env => 'CI'`: the local gates run it too.
+static REQUIRES: &RequirementTable = &[
+  (
+    "cleveref_minimal",
+    Requirements::packages(&["cleveref.sty"]),
+  ),
+  (
+    "figure_dual_caption",
+    Requirements::packages(&["graphicx.sty"]).texlive_min(2021),
+  ),
+  (
+    "figure_mixed_content",
+    Requirements::packages(&[
+      "algorithm.sty",
+      "algorithmic.sty",
+      "graphicx.sty",
+      "ifthen.sty",
+      "keyval.sty",
+    ])
+    .texlive_min(2021),
+  ),
+  (
+    "si",
+    Requirements::packages(&["siunitx.sty"]).texlive_min(2015),
+  ),
+];
+
 pub fn complex_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     "xii" | "xii.latexml" => Some(helpers::xii_tex::load_definitions()),
@@ -26,7 +53,7 @@ fn complex(name: &str) {
     &format!("tests/complex/{name}.tex"),
     name,
     DIR,
-    None,
+    Some(REQUIRES),
     Some(Rc::new(complex_tests_dispatch)),
   );
 }

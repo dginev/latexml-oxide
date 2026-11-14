@@ -14,10 +14,10 @@
 // refactor clean.
 use std::rc::Rc;
 
-use latexml::tex_tests;
+use latexml::{tex_tests, util::test::fixtures};
 
 tex_tests!(
   "tests/structure",
-  None,
+  Some(fixtures::STRUCTURE),
   Some(Rc::new(latexml_contrib::dispatch))
 );

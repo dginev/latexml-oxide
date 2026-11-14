@@ -5,13 +5,21 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: svmult.cls.ltxml
+  // svmono, svmult's monograph twin (lib.rs), from the name the binding serves (read before the classes it loads).
+  let served = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
+  let svmono = served == "svmono";
+  // The class this load serves, whose copy the binding reads where versions differ (`\vec`, the running heads): svmono
+  // and SNmult papers ship `svmono.cls`/`SNmult.cls`, not `svmult.cls` (review rev79b finding 8).
+  let served_class =
+    if svmono || served.eq_ignore_ascii_case("SNmult") { served.clone() } else { String::from("svmult") };
 
+  RawTeX!(r"\newif\if@numart\@numarttrue");
   // Generally ignorable options
   for option in [
-    "nospthms", "vecphys", "vecarrow", "norunningheads", "referee", "oribibl",
+    "nospthms", "norunningheads", "referee", "oribibl",
     "chaprefs", "footinfo", "openany", "sechang", "deutsch", "francais",
     // These could affect numbering...
-    "numart", "book", "envcountresetchap", "envcountresetsect", "envcountsame",
+    "envcountresetchap", "envcountresetsect", "envcountsame",
     "envcountchap",
     "natbib",
   ].iter() {
@@ -20,6 +28,12 @@ LoadDefinitions!({
   // svmult.cls:182-208 (svmono.cls:183-210): `graybox` loads color and framed and sets `{svgraybox}` and
   // `{svtintedbox}` shaded; without it they are a quotation-like list (svmult.cls:822-850).
   DeclareOption!("graybox", { AssignValue!("svmult_graybox" => true); });
+  // svmult.cls:112-113 the `\vec` options (below)
+  DeclareOption!("vecphys", "\\def\\vec@style{phys}");
+  DeclareOption!("vecarrow", "\\def\\vec@style{arrow}");
+  // :1034, :1044 the numbering options, which an unstarred or starred `\title` sets again
+  DeclareOption!("numart", "\\@numarttrue");
+  DeclareOption!("book", "\\@numartfalse");
 
   // Other options could load sv<option>.clo
   // Anything else gets passed to book.
@@ -29,8 +43,67 @@ LoadDefinitions!({
 
   ProcessOptions!();
   // Perl svmult.cls.ltxml L34: LoadClass('book', withoptions => 1)
-  load_class_with_options("book", Tokens!())?;
+  LoadClass!("book", withoptions => true);
+  // svmult.cls:478-484 `\backmatter` keeps its `\@mainmatterfalse` commented out and its `\@chapter` (:592) steps the
+  // counter whatever the matter: a back-matter chapter stays numbered ("Chapter 2 Afterword"; 1905.01770's copy), not
+  // book's unnumbered one (book_cls.rs, KNOWN_PERL_ERRORS #1016) — Perl's book no-op, as before. svmono.cls:418 sets
+  // `\@mainmatterfalse`, but numbers its chapters by `\if@chapnum` too (:478-513, 1704.03069), so only the flag
+  // follows the matter. Guards `perfect_kernel_batch78a::{svmult_backmatter_chapters_stay_numbered,
+  // svmono_backmatter_leaves_the_main_matter}`.
+  //
+  // The appendix: svmult.cls:713 (v5.4 2007; v5.5 2018 :720) `\renewcommand\appendix{\par}`, the article appendix of a
+  // contributed chapter, resets nothing — the sections count on ("3 Proofs" after "2"; 1808.08417's sections 5, 6 and
+  // "Theorem 6.1", 2108.07775's "8 Appendix", 2212.13109's "9 Appendix: Octonions"), so LaTeXML's appendix starts
+  // without book's section reset (KNOWN_PERL_ERRORS #1016); its `\backmatter` (:482) `\let\appendix=\bppendix`, the
+  // book appendix (:715-732), which resets the chapter and section counters as book's does. svmono.cls:598-608 resets
+  // them in every `\appendix`: book's. Guard `perfect_kernel_batch78a::svmult_appendix_keeps_counting_sections`.
+  //
+  // So the main-matter `\appendix` is that `\par` and nothing else: its sections are the contribution's next ones
+  // ("1.2 Proofs" under a `\title`, "2 Proofs" under a `\title*`), not an `ltx:appendix` of LaTeXML's appendix
+  // numbering (".2", 1801.05601; KNOWN_PERL_ERRORS #1026). Guard
+  // `perfect_kernel_batch78c::svmult_maketitle_numbers_the_contribution`.
+  if svmono {
+    DefMacro!("\\backmatter", "\\@mainmatterfalse");
+  } else {
+    // (the book appendix numbers its sections in the appendix chapter, :728, whatever `\thesection` was before)
+    Let!("\\lx@svmult@book@appendix", "\\appendix");
+    DefMacro!("\\lx@svmult@bppendix", "\\lx@svmult@book@appendix\\def\\thesection{\\thechapter.\\@arabic\\c@section}");
+    DefMacro!("\\appendix", "\\par");
+    DefMacro!("\\backmatter", "\\let\\appendix\\lx@svmult@bppendix");
+  }
   RequirePackage!("sv_support");
+  // `\vec` (KNOWN_PERL_ERRORS #1143: Perl's binding ignores the options and keeps the kernel's arrow accent): svmult.cls
+  // :1015-1030 of 2605.10553's copy (and 8 of the census's 65 copies) redefines it in its begin-document code to the
+  // upright bold `\mbox{\boldmath$\mathbf{#1}$}` — "v + ω" in CMBX10 and CMMIB10 — or, with `vecphys`, the bold italic
+  // `\mbox{\boldmath$#1$}`; `vecarrow` keeps the accent where its test (`\ifx\vec@style\fig@type`) compares `arrow`
+  // with `arrow`, but by `\begin{document}` the class has made `\fig@type` `figure` (:1890), so pdflatex prints the bold
+  // italic there too. 37 copies run the same test in the class body, where `\fig@type` is still `arrow` (0812.2480's),
+  // and 10 in the hook against a `\vec@type` of their own (2401.17237's): there `vecarrow` is the arrow. 10 older
+  // copies define the bold italic alone, no options (1405.1421's). A copy without its own picks the first. Witnesses
+  // 2512.18788, hep-ex0701025 (16 of 76 census papers use `\vec`; audit #363).
+  {
+    let copy = crate::shipped_class::shipped_class_text(&served_class)?;
+    let has = |code: &str| {
+      copy
+        .as_deref()
+        .is_some_and(|text| crate::shipped_class::class_code_contains(text, code))
+    };
+    if has("\\def\\vec#1{\\mathchoice") {
+      RawTeX!(r"\def\vec#1{\lx@sv@vec@boldmath{#1}}");
+    } else if copy.is_none() || has("\\ifx\\vec@style\\fig@type") || has("\\ifx\\vec@style\\vec@type") {
+      let arrow_compares =
+        has("\\vec@type") || (copy.is_some() && !has("\\AtBeginDocument{\\ifx\\vec@style\\fig@type"));
+      let in_hook = copy.is_none() || has("\\AtBeginDocument{\\ifx\\vec@style");
+      let choice = [
+        r"\def\lx@sv@vec@type{",
+        if arrow_compares { "arrow" } else { "figure" },
+        r"}\ifx\vec@style\lx@sv@vec@type\else\@ifundefined{vec@style}",
+        r"{\def\vec#1{\ensuremath{\lx@sv@vec@mathbf{#1}}}}{\def\vec#1{\ensuremath{\lx@sv@vec@boldmath{#1}}}}\fi",
+      ]
+      .concat();
+      raw_tex(&if in_hook { s!("\\AtBeginDocument{{{choice}}}") } else { choice })?;
+    }
+  }
   RequirePackage!("url");
   // svmult.cls v1.0:939/942 (CR line ends), svmultln.cls:1810/1813: `\newtoks\tocauthor`, `\newtoks\toctitle`, the
   // table-of-contents forms of the author and title — token registers, as in llncs (llncs_cls.rs), so
@@ -39,10 +112,27 @@ LoadDefinitions!({
   DefRegister!("\\tocauthor" => Tokens!());
   DefRegister!("\\toctitle" => Tokens!());
 
-  // \title with optional * to affect numbering (* => numart, none => book)
+  // \title with optional * to affect numbering (* => numart, none => book): svmult.cls v5.x :2068-2070 `\title*`
+  // `\ds@numart`, `\title` `\ds@book`, which set `\if@numart` (:1033-1044, true by default and by the `numart`
+  // option), read by `\subfigures` (below).
   DefMacro!("\\title OptionalMatch:* {}",
-    "\\if.#1.\\else\\def\\thesection{\\arabic{section}}\\fi\
+    "\\if.#1.\\@numartfalse\\def\\thesection{\\thechapter.\\@arabic\\c@section}\\@addtoreset{section}{chapter}\
+     \\else\\@numarttrue\\def\\thesection{\\arabic{section}}\\fi\
      \\lx@add@title{#2}");
+  // svmult.cls:2141-2152: `\maketitle` starts a contribution — the section, figure, table, equation and footnote
+  // counters from 0 — and numbers it a chapter under a `\title` (`\refstepcounter{chapter}`, "Chapter 1" and its
+  // sections "1.1"), not under a `\title*` (the chapter stepped and stepped back, resetting what it numbers). Its
+  // `\thesection` is `\newcounter`'s `\@arabic\c@section` ("1"), which a chapter does not reset ("Chapter 2", "2
+  // Notes"), until a `\title` (`\ds@book`, :1044-1053) numbers the sections in the chapter and resets them with it.
+  // Perl's binding (svmult.cls.ltxml:40-42) numbers no chapter: "0.1" (1801.05601; KNOWN_PERL_ERRORS #1026).
+  if !svmono {
+    DefMacro!("\\thesection", "\\@arabic\\c@section");
+    RawTeX!(r"\@removefromreset{section}{chapter}");
+    RawTeX!(r"\def\lx@svmult@maketitle{\stepcounter{section}\setcounter{section}{0}\setcounter{subsection}{0}%
+\setcounter{figure}{0}\setcounter{table}{0}\setcounter{equation}{0}\setcounter{footnote}{0}%
+\if@numart\stepcounter{chapter}\addtocounter{chapter}{-1}\else\refstepcounter{chapter}\fi}");
+    AddToMacro!("\\lx@maketitle@body", "\\lx@svmult@maketitle");
+  }
 
   //======================================================================
   // Upright greek letters
@@ -56,18 +146,25 @@ LoadDefinitions!({
   DefMath!("\\upi",    "\u{03C0}", font => { shape => "upright", forceshape => true });
   DefMath!("\\utau",   "\u{03C4}", font => { shape => "upright", forceshape => true });
 
-  // Italic var-Greek letters
-  DefMath!("\\varDelta",   "\u{0394}", font => { shape => "italic" });
-  DefMath!("\\varGamma",   "\u{0393}", font => { shape => "italic" });
-  DefMath!("\\varLambda",  "\u{039B}", font => { shape => "italic" });
-  DefMath!("\\varOmega",   "\u{03A9}", font => { shape => "italic" });
-  DefMath!("\\varPhi",     "\u{03A6}", font => { shape => "italic" });
-  DefMath!("\\varPi",      "\u{03A0}", font => { shape => "italic" });
-  DefMath!("\\varPsi",     "\u{03A8}", font => { shape => "italic" });
-  DefMath!("\\varSigma",   "\u{03A3}", font => { shape => "italic" });
-  DefMath!("\\varTheta",   "\u{0398}", font => { shape => "italic" });
-  DefMath!("\\varUpsilon", "\u{03A5}", font => { shape => "italic" });
-  DefMath!("\\varXi",      "\u{039E}", font => { shape => "italic" });
+  // svmult.cls:971-981 (svmono.cls and SNmult.cls the same; every census copy) "Springer likes them as italics to depict
+  // variables": the capital Greek letters are the math italic's, italic as a Latin letter unless a math alphabet is in
+  // force (Perl's binding leaves them upright, KNOWN_PERL_ERRORS #1147). Witnesses 0812.2480, 2401.17237, 2605.10553.
+  declare_capital_greek("", Some(LettersClass::Variable))?;
+  // The var-Greek letters: svmult.cls:982-993 (v5.x; 0812.2480's, 2401.17237's, 2605.10553's copies) declares them from
+  // `operators`, "the upright forms are defined here as \var<Character>", where its capital Greek are `letters`'
+  // italics (:971-981; the reverse of amsmath's `\varGamma`). Perl's binding (svmult.cls.ltxml:56-66) makes them
+  // italic, which a capital Greek letter's default shape overrode anyway (`Font::specialize`); review rev79b finding 4.
+  DefMath!("\\varDelta",   "\u{0394}");
+  DefMath!("\\varGamma",   "\u{0393}");
+  DefMath!("\\varLambda",  "\u{039B}");
+  DefMath!("\\varOmega",   "\u{03A9}");
+  DefMath!("\\varPhi",     "\u{03A6}");
+  DefMath!("\\varPi",      "\u{03A0}");
+  DefMath!("\\varPsi",     "\u{03A8}");
+  DefMath!("\\varSigma",   "\u{03A3}");
+  DefMath!("\\varTheta",   "\u{0398}");
+  DefMath!("\\varUpsilon", "\u{03A5}");
+  DefMath!("\\varXi",      "\u{039E}");
 
   // Blackboard bold letters (identical \bbbX cluster to llncs_cls.rs).
   // Perl: DefPrimitiveI('\bbbc', undef, "\x{2102}");
@@ -256,4 +353,96 @@ see SVMono documentation -}\begin{quotation}}{\end{quotation}}"#);
 \def\samenumber{\addtocounter{\@captype}{-1}}"
     );
   }
+  // What every release from v1.0 (1999) to v5.15 defines (0912.1479's v5.4 copy; 80-99 of the 102 copies papers ship;
+  // run 347: 48 svmult papers call one), a copy without one leaving it to the paper (`DefinitionOrigin::Fallback`;
+  // Perl's binding defines none of it, KNOWN_PERL_ERRORS #812):
+  // - :1285 `\let\ts\,`, a thin space (17 papers: 1001.0767, 1405.1421, cond-mat0605750);
+  // - :115-116 `\if@runhead`, true unless the `norunningheads` option (v1.x :37-38: false unless `runningheads`), which
+  //   papers test (0803.2826, 0808.2157, 0810.2505);
+  // - :240-242 `\svparindent` (12pt), :949 `\verbatimindent`, :1756-1758 `\twocaptionwidth{w1}{w2}` (1607.02736,
+  //   1804.07860, 1605.01046): layout;
+  // - :376 `\mtaddtocont{entry}` and :734 `\hyperhrefextend`, a mini table of contents' line, written to the aux file
+  //   (1310.7882, 2311.01874);
+  // - :1903-1923 `\subfigures`, after which the figure's captions are numbered as one figure lettered (3a, 3b; :1918-1920
+  //   under the chapter's number only in a book-numbered contribution, `\if@numart\else\thechapter.\fi`: an unstarred
+  //   `\title`'s, 1.3a — under a chapter numbered, as the book binding's `\thefigure` prefixes one), the counter
+  //   restored at the figure's end (:1905 `\def\endfigure{\resetsubfig\end@float}`; 1310.5064, 1411.2805, 1710.10378;
+  //   `{subfigures}` around several figures, 2008.12552);
+  // - :2307-2310 `{abbrsymblist}[label width]`, the "List of Abbreviations and Symbols" section, a description list
+  //   (0810.2505, cond-mat0501076);
+  // - :987 `\greeksym{a}`, the letter set in the Symbol font: the Greek letter the font has there, upright (Adobe
+  //   Symbol encoding, OXIDIZED_DESIGN #623; 0903.0562, 1111.1183's `\uDelta` `\mbox{\greeksym{D}}`), any other argument in that font;
+  // - v1.1 :74 `\micro`, `\mbox{\usefont{U}{eur}{m}{n}\char22}`: Euler's upright Greek mu, U+03BC (astro-ph0108509,
+  //   hep-ph0301145);
+  // - v5.5 :2392-2402 `\circledmark[colour]{mark}` and `\formtmp{colour}{title}`, the titled boxes' mark and title bar
+  //   (their colours dropped, as the boxes' above);
+  // - v5.15 :2589-2591 `\Description{text}`, the description of a figure's image, written to a file of them: the
+  //   float's description, as acmart's (2602.21993).
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    // (v1.x asks for running heads with its option, v5.x asks to drop them with its own)
+    let asks_for_runheads = crate::shipped_class::shipped_class_text(&served_class)?
+      .is_some_and(|text| crate::shipped_class::class_code_contains(&text, "\\DeclareOption{runningheads}"));
+    let runhead = if asks_for_runheads {
+      crate::shipped_class::class_option_given("runningheads")?
+    } else {
+      !crate::shipped_class::class_option_given("norunningheads")?
+    };
+    RawTeX!(if runhead { r"\let\if@runhead\iftrue" } else { r"\let\if@runhead\iffalse" });
+    RawTeX!(
+      r"\let\ts\,
+\newdimen\svparindent
+\setlength{\svparindent}{12\p@}
+\newdimen\verbatimindent \verbatimindent\parindent
+\def\twocaptionwidth#1#2{\def\first@capwidth{#1}\def\second@capwidth{#2}}
+\twocaptionwidth{.46\textwidth}{.46\textwidth}
+\newcommand{\mtaddtocont}[1]{\protected@write\@auxout{\let\label\@gobble\let\index\@gobble\let\glossary\@gobble}{\string\@mtwritefile{#1}}}
+\def\hyperhrefextend{\ifx\hyper@anchor\@undefined\else{\@currentHref}\fi}
+\newcounter{merk}
+\def\resetsubfig{\global\let\last@subfig=\undefined}
+\def\r@setsubfig{\xdef\last@subfig{\number\value{figure}}\setcounter{figure}{\value{merk}}\setcounter{merk}{0}}
+\def\subfigures{\refstepcounter{figure}\@tempcnta=\value{merk}\setcounter{merk}{\value{figure}}\setcounter{figure}{\the\@tempcnta}\def\thefigure{\if@numart\else\ifnum\c@chapter>\z@\thechapter.\fi\fi\@arabic\c@merk\alph{figure}}\let\resetsubfig=\r@setsubfig}
+\AddToHook{env/figure/end}{\resetsubfig}
+\AddToHook{env/figure*/end}{\resetsubfig}
+\def\abbrsymbname{List of Abbreviations and Symbols}
+\newenvironment{abbrsymblist}[1][\qquad]{\section*{\abbrsymbname}\begin{description}}{\end{description}}
+\newcommand{\micro}{\mbox{\upshape μ}}
+\newcommand\circledmark[2][white]{#2}
+\def\formtmp#1#2{\lx@sv@box{#2}}"
+    );
+    DefMacro!("\\greeksym{}", sub[(letter)] {
+      let letter: Tokens = letter;
+      let text = letter.to_string();
+      Ok(match symbol_font_greek(text.trim()) {
+        Some(greek) => mouth::tokenize_internal(TeXString::assembled(format!("\\mbox{{\\upshape {greek}}}"))),
+        None => {
+          let mut tokens = TokenizeInternal!(r"\usefont{U}{psy}{m}{n}").unlist();
+          tokens.extend(letter.unlist());
+          Tokens::new(tokens)
+        },
+      })
+    });
+    crate::float_description::define_float_description("\\Description")?;
+    DefMacro!("\\Description{}", sub[(long)] {
+      Ok(crate::float_description::float_description_tokens(None, &long))
+    });
+  }
+  // The astronomical journal abbreviations 7 copies paste in (1711.01112, 2002.10370, 1801.09940's svmult_aa.cls).
+  crate::shipped_class::provide_shipped_aas_macros("svmult")?;
 });
+
+/// The Greek letter the Symbol font (Adobe Symbol encoding, `\usefont{U}{psy}{m}{n}`) has at the ASCII letter
+/// `letter`, if it is one.
+fn symbol_font_greek(letter: &str) -> Option<char> {
+  let mut chars = letter.chars();
+  let (Some(c), None) = (chars.next(), chars.next()) else {
+    return None;
+  };
+  const LOWER: &str = "αβχδεφγηιϕκλμνοπθρστυϖωξψζ";
+  const UPPER: &str = "ΑΒΧΔΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ";
+  match c {
+    'a'..='z' => LOWER.chars().nth(c as usize - 'a' as usize),
+    'A'..='Z' => UPPER.chars().nth(c as usize - 'A' as usize),
+    _ => None,
+  }
+}

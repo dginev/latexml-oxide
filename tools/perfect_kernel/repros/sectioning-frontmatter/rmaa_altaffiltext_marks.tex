@@ -1,0 +1,64 @@
+% mechanism: rmaa.cls keeps its title page in stores only its own \maketitle prints, which the kernel's locked
+%   \maketitle refuses: \altaffiltext appends a footnote to \@thanks, \resumen and \addkeyword store the Spanish abstract
+%   and the keywords. The rmaa.cls binding (rmaa_cls.rs) makes each the frontmatter: an \altaffiltext{n} is the
+%   affiliation of every author whose \altaffilmark lists n (a mark list `1,2`; one label on two authors); the
+%   running head's \shorttitle (:550, :421) the toc title, as OmniBus's (and Perl's).
+% witness: 0903.4819 (rmzkv3.tex:13-32: `\altaffilmark{1}`, `\altaffilmark{1,2}`, \resumen, four \addkeyword),
+%          astro-ph0208329 (lsilva.tex:12-20: one label on two authors); rmaa.cls v3.24 :450-453 \resumen, :500-503
+%          \altaffiltext, :509-524 \addkeyword, :550-554 \shorttitle, :914-999 \maketitle; here a minimal stand-in of the class
+% oracle:  pdflatex 0 errors: "R.E. Mennickent1 and Z. Kolaczkowski1,2 and L. Silva2 / Resumen En este articulo. /
+%          Abstract In this paper. / Key Words: Binaries: Eclipsing --- Stars: Early-type / 1 Universidad de Concepcion,
+%          Chile. / 2 Uniwersytet Wroclawski, Poland." (the running head "DOUBLE PERIODIC VARIABLES")
+% engines: rust int116a = 0 errors, the affiliations, the Spanish abstract, the keywords and the short title lost, the
+%          marks shown; perl (OmniBus) = the affiliations and the toc title kept, \addkeyword undefined, the Spanish
+%          abstract in place of the English
+% expect:  0 errors, 0 warnings; three creators, each with the affiliations its marks request, in order; the two
+%          abstracts; the keywords, both entries; the toc title
+% status:  RED (int116a) -> GREEN (86b)
+% preload: ar5iv.sty
+\begin{filecontents*}{rmaa.cls}
+% A minimal stand-in for rmaa.cls v3.24 (2007/09/14, Instituto de Astronomia, UNAM), written for a latexml-oxide test:
+% the title-page stores of its :450-461, :500-503, :509-524, :543-546, its \maketitle (:914-940) and \@maketitle
+% (:943-999).
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{rmaa}[2007/09/14 v3.24 stand-in]
+\LoadClass{article}
+\newcommand{\altaffilmark}[1]{\textsuperscript{#1}}
+\newcommand{\altaffiltext}[2]{\stepcounter{footnote}%
+  \protected@xdef\@thanks{\@thanks\protect\footnotetext[#1]{#2}}}
+\newcommand{\@resumen}{}
+\newcommand{\resumen}[1]{\renewcommand{\@resumen}{{\ignorespaces#1}}}
+\newif\if@abstractpresent
+\renewcommand{\abstract}[1]{\renewcommand{\@abstract}{{\ignorespaces#1}}\@abstractpresenttrue}
+\newcommand{\@abstract}{}
+\newcommand{\@kwdsep}{ --- }
+\newif\if@firstkwd\@firstkwdtrue
+\newcommand{\@keywords}{}
+\newcommand{\addkeyword}[1]{\if@firstkwd\renewcommand\@keywords{#1}\@firstkwdfalse
+  \else\edef\@keywords{\@keywords\@kwdsep #1}\fi}
+\newcommand{\keywords}[1]{\renewcommand{\@keywords}{#1}}
+\newcommand{\shorttitle}[1]{\renewcommand\@shorttitle{\MakeUppercase{#1}}}
+\newcommand{\@shorttitle}{SHORT TITLE GOES HERE}
+\renewcommand{\@oddhead}{\hfil\@shorttitle\hfil\llap{\thepage}}
+\renewcommand{\maketitle}{\par\begingroup\newpage\@maketitle\@thanks\endgroup
+  \let\maketitle\relax\let\@maketitle\relax\gdef\@thanks{}\gdef\@author{}\gdef\@title{}}
+\renewcommand{\@maketitle}{\null
+  \begin{center}{\@title\par}\medskip\parbox{.8\textwidth}{\centering\@author\par}\par
+    \if@abstractpresent\parbox{.8\textwidth}{\centerline{\bfseries Resumen}\par\@resumen
+      \centerline{\bfseries Abstract}\par\@abstract\par
+      \noindent Key Words:~\@keywords}\fi
+  \end{center}\par}
+\end{filecontents*}
+\documentclass[preprint,proceedings]{rmaa}
+\title{Unveiling the phenomenon of Double Periodic Variables}
+\shorttitle{Double Periodic Variables}
+\author{R.E. Mennickent\altaffilmark{1} and Z. Ko{\l}aczkowski\altaffilmark{1,2} and L. Silva\altaffilmark{2}}
+\altaffiltext{1}{Universidad de Concepci\'on, Chile.}
+\altaffiltext{2}{Uniwersytet Wroc{\l}awski, Poland.}
+\abstract{In this paper.}
+\resumen{En este art\'\i{}culo.}
+\addkeyword{Binaries: Eclipsing}
+\addkeyword{Stars: Early-type}
+\begin{document}
+\maketitle
+Body.
+\end{document}

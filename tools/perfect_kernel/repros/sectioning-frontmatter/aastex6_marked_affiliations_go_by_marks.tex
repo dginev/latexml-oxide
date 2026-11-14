@@ -1,0 +1,23 @@
+% mechanism: an AASTeX `\affiliation` that leads with a mark no group shares goes to the authors showing it, as
+%   REVTeX's does (revtex4_support_sty.rs `group_or_marked_affiliation`, now aas_support_sty.rs's `\affiliation` too):
+%   `\author{Ann Able$^{1,2}$}\author{Bob Baker$^{1}$}\author{Cat Cole$^{2}$}\affiliation{$^{1}$Uni One}…`. The
+%   group rule (aastex6_consecutive_authors_share_affiliations.tex) would give every line to all three.
+% witness: astro-ph0611722 (aastex, `M. Chavez$^{1,2}$, … C. Morossi$^4$` over `\affil{$^1$INAOE…}` … `\affil{$^5$…}`:
+%   97d gave each author "1INAOE" only); dev giant-list census M3
+% oracle:  pdflatex with 2403.06760's aastex631.cls 0 errors: "Ann Able1,2 1, 2 , Bob Baker1 1, 2 and Cat Cole2 1, 2
+%   / 1 1Uni One / 2 2Uni Two" (the class numbers the group; the hand-typed marks name each line's authors)
+% engines: rust 97d: Ann Able and Bob Baker "1Uni One", Cat Cole both; perl: Cat Cole both, the others none
+% expect:  0 errors, 0 warnings; Ann Able Uni One and Uni Two, Bob Baker Uni One, Cat Cole Uni Two
+% status:  RED (97d) -> GREEN (97f)
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{1}$}
+\author{Cat Cole$^{2}$}
+\affiliation{$^{1}$Uni One}
+\affiliation{$^{2}$Uni Two}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

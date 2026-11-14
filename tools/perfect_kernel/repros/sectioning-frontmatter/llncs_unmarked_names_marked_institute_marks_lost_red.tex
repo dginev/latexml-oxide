@@ -1,0 +1,19 @@
+% mechanism: llncs shape (c) under names printing no mark: no name requests an entry, so the binding's own cutter's
+%   entries (`affiliation_calls`) land on the block's nameless creator, their printed marks hidden as the names show
+%   none (OD #1009) — the "1" and "2" pdflatex prints are lost, uncounted
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker", "1Univ A, Town A",
+%   "2Univ B, Town B"
+% engines: int164a, P4f: Ann Able, Bob Baker, a nameless creator with "Univ A, Town A" and "Univ B, Town B" (0 warnings)
+% expect:  0 errors; the entries "1 Univ A, Town A", "2 Univ B, Town B" with their marks (or a Warning counting them)
+% status:  RED (P4f)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{$^{1}$Univ A, Town A \\ $^{2}$Univ B, Town B}
+\maketitle
+Text.
+\end{document}

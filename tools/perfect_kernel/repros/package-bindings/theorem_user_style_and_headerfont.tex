@@ -1,0 +1,22 @@
+% witness: cc.cls 1507.02955 (thcc.sty `\def\th@cc{\normalfont\slshape …}`, `\theoremheaderfont{\scshape}`)
+% oracle:  pdflatex 0 errors; Remark 1 slanted, Theorem 1 italic, both heads in small caps (the second
+%          `\theoremheaderfont` only types "should be used only once")
+% engines: rust 67o1 = 0 errors, but the Remark's body italic (the document's style never ran) and the heads italic
+% expect:  0 errors; the Remark's body is slanted and its head small caps
+% status:  RED (67o1) -> GREEN (67p)
+\documentclass{article}
+\usepackage{theorem}
+\makeatletter
+\def\th@mine{\normalfont\slshape
+  \def\@begintheorem##1##2{\item[\hskip\labelsep\theorem@headerfont ##1\ ##2.]}}
+\makeatother
+\theoremheaderfont{\scshape}\theoremheaderfont{\itshape}
+\theoremstyle{mine}
+\newtheorem{rem}{Remark}
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}
+\begin{document}
+Upright text.
+\begin{rem}A slanted body.\end{rem}
+\begin{thm}An italic body.\end{thm}
+\end{document}

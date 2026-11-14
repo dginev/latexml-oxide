@@ -1,0 +1,14 @@
+% witness: 2011.12274 (\RN 24 papers, \Rn 6), 1707.02797 (\DeclareNolabel 22), 2406.05146 (\DeclareRefcontext),
+%          2207.06399 (\BiblatexSplitbibDefernumbersWarningOff)
+% oracle:  pdflatex 0 errors, "Cases IV and iii."
+% engines: rust 67int6 = 8 undefined
+% expect:  0 errors, 0 warnings; "Cases IV and iii."
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::biblatex_roman_numerals_and_config_commands
+\documentclass{article}
+\usepackage[style=alphabetic]{biblatex}
+\DeclareNolabel{\nolabel{\regexp{[\p{Z}]+}}}
+\DeclareRefcontext{supp}{labelprefix=S}
+\BiblatexSplitbibDefernumbersWarningOff
+\begin{document}
+Cases \RN{4} and \Rn{3}.
+\end{document}

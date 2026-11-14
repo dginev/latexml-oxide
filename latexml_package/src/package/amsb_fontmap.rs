@@ -21,8 +21,9 @@ pub fn amsb_table() -> Rc<[Option<char>]> {
     '\u{228A}', '\u{228B}', None, None, '\u{2ACB}', '\u{2ACC}', '\u{2ACB}', '\u{2ACC}',
     // 0x28-0x2F
     '\u{228A}', '\u{228B}', '\u{2288}', '\u{2289}', '\u{2226}', '\u{2224}', '\u{2224}', '\u{2226}',
-    // 0x30-0x37
-    '\u{22AC}', '\u{22AE}', '\u{22AD}', '\u{22AF}', '\u{22ED}', '\u{22EC}', '\u{22EB}', '\u{22EA}',
+    // 0x30-0x37: msbm draws \ntriangleleft at 0x36 and \ntriangleright at 0x37 (amssymb.sty:225-226); Perl swaps
+    // them (KNOWN_PERL_ERRORS #1202)
+    '\u{22AC}', '\u{22AE}', '\u{22AD}', '\u{22AF}', '\u{22ED}', '\u{22EC}', '\u{22EA}', '\u{22EB}',
     // 0x38-0x3F
     '\u{219A}', '\u{219B}', '\u{21CD}', '\u{21CF}', '\u{21CE}', '\u{21AE}', '\u{22C7}', '\u{2205}',
     // 0x40-0x47: blackboard bold letters

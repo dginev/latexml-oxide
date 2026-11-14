@@ -1,0 +1,16 @@
+% mechanism: risk: an affiliation line printing name-shaped text (`$^2$Zhipu AI`) under names with trailing marks: it answers
+%   the names' requests, so it is the setter, never names
+% witness: synthetic (the MLN study's risk row)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "Ann Able1 Bob Baker2 / 1 Max Planck Institut 2 Zhipu AI"
+% engines: int169a (54ccc986ef) and MLN1: the same
+% expect:  0 errors, 0 warnings; Ann Able: Max Planck Institut; Bob Baker: Zhipu AI
+% status:  GREEN (both)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^2$\\
+$^1$Max Planck Institut \quad $^2$Zhipu AI}
+\maketitle
+Text.
+\end{document}

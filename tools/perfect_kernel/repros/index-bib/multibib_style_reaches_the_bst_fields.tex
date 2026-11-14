@@ -1,0 +1,17 @@
+% multibib's `\bibliographystyle<suffix>` writes the style to its side aux only (multibib.sty:234), so `BIBSTYLE` stayed
+% empty and the fields the style declares stayed raw data (OXIDIZED_DESIGN_DIVERGENCES #823). The binding records it, for
+% each suffix of a list.
+% witness: quantumarticle/quantum-bibliographystyle-demo (`accessed`).
+% oracle:  pdflatex + bibtex (TL 2025) 0 errors: web.bbl prints "(accessed: 12.07.2019)", quantum.bst:44, :719.
+% engines: int140a: no `accessed` (the field stays data); perl: the same, no `urldate` printed.
+% expect:  0 errors, 0 warnings; the entry's `accessed` span holds the date.
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\usepackage{url}
+\usepackage[resetlabels]{multibib}
+\newcites{web,other}{website references,other references}
+\begin{document}
+Text.\citeweb{web_date}
+\bibliographystyleweb{quantum}
+\bibliographyweb{multibib_style_reaches_the_bst_fields}
+\end{document}

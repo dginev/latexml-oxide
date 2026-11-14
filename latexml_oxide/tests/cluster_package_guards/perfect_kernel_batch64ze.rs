@@ -170,7 +170,7 @@ fn svjour_preprint_is_a_pubnote() {
     &xml,
     "pubnote",
     &[],
-    "<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">CERN-TH-2024-001</pubnote>",
+    "<pubnote role=\"preprint\">CERN-TH-2024-001</pubnote>",
   );
 }
 
@@ -187,7 +187,9 @@ fn class_defined_bm_is_bold_math() {
 }
 
 /// IEEEAerospaceCLS.cls:267-272, 403-408, 541-549: `\acknowledgements` and `\thebiography` open unnumbered sections,
-/// `{biographywithpic}{<name>}{<file>}` is the IEEEtran biography (2601.06000; base: 3 errors).
+/// `{biographywithpic}{<name>}{<file>}` is the IEEEtran biography (2601.06000; base: 3 errors). The unnumbered
+/// headings take the section font (78a; the class's is `\large\bfseries\scshape`, :489-490, the binding's IEEEtran
+/// small caps).
 #[test]
 fn ieeeaerospace_acknowledgements_and_biography() {
   let xml = convert_clean(repro!(
@@ -198,7 +200,7 @@ fn ieeeaerospace_acknowledgements_and_biography() {
     &xml,
     "section",
     &["xml:id=\"Sx1\""],
-    r#"<section xml:id="Sx1"><title>Acknowledgements</title><para xml:id="Sx1.p1"><p xml:id="Sx1.p1.1">Thanks TEXT.</p></para></section>"#,
+    r#"<section xml:id="Sx1"><title font="smallcaps">Acknowledgements</title><para xml:id="Sx1.p1"><p xml:id="Sx1.p1.1">Thanks TEXT.</p></para></section>"#,
   );
   // The whole biography; the graphic's `candidates` path depends on where the output is written.
   let section = xml_element(&xml, "section", &["xml:id=\"Sx2\""]).expect("the biography section");
@@ -208,7 +210,7 @@ fn ieeeaerospace_acknowledgements_and_biography() {
     .into_owned();
   assert_eq!(
     section,
-    "<section xml:id=\"Sx2\"><title>Biography</title><float class=\"biography\" xml:id=\"Sx2.tab1\"><tabular \
+    "<section xml:id=\"Sx2\"><title font=\"smallcaps\">Biography</title><float class=\"biography\" xml:id=\"Sx2.tab1\"><tabular \
      xml:id=\"Sx2.tab1.1\"><tr xml:id=\"Sx2.tab1.1.1\"><td xml:id=\"Sx2.tab1.1.1.1\"><graphics graphic=\"example-image\" \
      options=\"width=71.13188pt,height=91.04881pt\" xml:id=\"Sx2.g1\"/></td><td xml:id=\"Sx2.tab1.1.1.2\"><inline-block \
      xml:id=\"Sx2.tab1.1.1.2.1\"><p xml:id=\"Sx2.tab1.1.1.2.1.1\"><text class=\"ltx_font_bold\" \
@@ -248,7 +250,7 @@ fn quantumarticle_revtex_compatibility() {
     &xml,
     "para",
     &["xml:id=\"p1\""],
-    r#"<para xml:id="p1"><p xml:id="p1.1">Body TEXT in Phys. Rev. Lett., see <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator="," show="Authors Phrase1NumberPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> and <cite class="ltx_citemacro_cite">[<bibref bibrefs="a" separator="," show="Number" yyseparator=","/>]</cite>.</p></para>"#,
+    r#"<para xml:id="p1"><p xml:id="p1.1">Body TEXT in Phys. Rev. Lett., see <cite class="ltx_citemacro_citet"><bibref bibrefs="a" class="ltx_cite_sort ltx_cite_compress" separator="," show="Authors Phrase1NumberPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> and <cite class="ltx_citemacro_cite">[<bibref bibrefs="a" class="ltx_cite_sort ltx_cite_compress" separator="," show="Number" yyseparator=","/>]</cite>.</p></para>"#,
   );
 }
 
@@ -369,17 +371,28 @@ fn noalign_followed_by_tabularcr() {
 }
 
 /// The kernel `\@tabularcr` reached past `\relax`, as `\tabularnewline`, or in a bare `\tabular…\endtabular`: pdflatex
-/// clean, so no error (review 64ze round 2, `/tmp/rev64ze2/na/{t6,n_tnl,n_bare}`).
+/// clean, so no error (review 64ze round 2, `/tmp/rev64ze2/na/{t6,n_tnl,n_bare}`). GA4: by its meaning (`\ifx`-equal to
+/// `\@tabularcr`: a `\let` copy, before the tabular or in it) and the alignment's own `\\` (a user `longtablex` is a
+/// kernel tabular), each red on GA4base with 1 error.
 #[test]
 fn noalign_followed_by_tabularcr_forms() {
-  for table in [
+  let tables = [
     "\\begin{tabular}{|l|l|}\na & b \\\\\n\\noalign\\relax\\\\\nc & d \\\\\n\\end{tabular}",
     "\\begin{tabular}{|l|l|}\na & b \\\\\n\\noalign\\tabularnewline\nc & d \\\\\n\\end{tabular}",
     "\\tabular{ll}\na & b \\\\\n\\noalign\\\\\nc & d \\\\\n\\endtabular",
-  ] {
-    let tex = format!(
+  ]
+  .map(|table| {
+    format!(
       "\\documentclass{{article}}\n\\begin{{document}}\n{table}\nAfter TEXT.\n\\end{{document}}\n"
-    );
+    )
+  });
+  let repros = [
+    repro!("kernel-alignment", "noalign_let_tabularcr"),
+    repro!("kernel-alignment", "noalign_tabularcr_let_alias"),
+    repro!("kernel-alignment", "noalign_tabularcr_in_a_user_longtablex"),
+  ]
+  .map(str::to_string);
+  for tex in tables.into_iter().chain(repros) {
     let (log, xml) = convert_with(&tex, Some("ar5iv.sty"));
     assert_eq!(error_count(&log), 0, "{tex}\n{log}");
     assert_eq!(warning_count(&log), 0, "{tex}\n{log}");

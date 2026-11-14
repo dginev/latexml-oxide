@@ -9,7 +9,8 @@
 %          labels; perl: not run.
 % expect:  0 errors; labels="LABEL:sa" on the first panel and labels="LABEL:sb" on the second, the outer figure
 %          labelled by neither.
-% status:  RED (64ze, 65a)
+% status:  GREEN (78o: the minipage holding a `\subcaption` is its sub-figure, `begin_caption_box`; guard
+%          perfect_kernel_batch78o; the panel in the `\scalebox`'s inline-block stays schema-invalid, as before)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{graphicx}

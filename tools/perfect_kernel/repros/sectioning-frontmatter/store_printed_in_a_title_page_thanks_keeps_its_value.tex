@@ -1,0 +1,25 @@
+% A raw class's store printed in an author's note of its title page, `\@author\thanks{KW: \@keywords}`, is printed by
+% it: the speculative run typesets `\thanks` (`title_page_print_tokens`, sect05.rs), so the keywords set before
+% `\maketitle` keep their value when set again after it (#6b). Its `\footnotemark\footnotetext{KW: \@keywords}` form
+% loses the mark with the emptied text (`\lx@replay@records`).
+% witness: none (synthetic; review probes `fnt`, `fnx` of 77i r3; silent-loss inventory #6b).
+% oracle:  pdflatex 0 errors: the note "KW: alpha, beta".
+% engines: rust 77i r3: `<keywords name="KW:">gamma</keywords>`; the `\footnotetext` form an empty
+%          `<note role="footnotemark">`.
+% expect:  0 errors, 0 warnings; `<keywords name="KW:">alpha, beta</keywords>`; no "gamma", no `note`.
+% status:  RED (77i r3) -> GREEN (77i r4)
+\begin{filecontents*}[overwrite]{rcthanks.cls}
+\ProvidesClass{rcthanks}
+\LoadClass{article}
+\newcommand*{\keywords}[1]{\def\@keywords{#1}}
+\def\@keywords{}
+\def\@maketitle{\@title\par\@author\thanks{KW: \@keywords}\par}
+\end{filecontents*}
+\documentclass{rcthanks}
+\title{T}\author{Anton}
+\keywords{alpha, beta}
+\begin{document}
+\maketitle
+\keywords{gamma}
+Text.
+\end{document}

@@ -1,0 +1,23 @@
+% RED (review rev100b3 finding 1, synthetic; no corpus witness among the 27 `ttloss` papers): 100b's line-font reader
+% (`email_lines::in_line_font`) counts every `@` of the line, the one in `\href`'s URL argument too, which prints
+% nothing; the URL sits outside the `\texttt`, so the line reads as printing in two fonts and its written-out
+% addresses come out plain. Ann's own `\href{…}{\texttt{…}}` loses its inner `\texttt` before that, in the r1
+% address path (`address_tokens`). Sibling shape: `\href{mailto:c@y.org}{\tt\{c,d\}@y.org}` (rev100b3 probe q3).
+% fix:     skip the URL (first) argument of `\href`/`\url` when reading the line's font; keep `\href`'s text font.
+% oracle:  pdflatex 0 errors: "Univ X, Town / able@x.org, {baker, cole}@y.org", every address in typewriter
+% engines: rust int127a = all three typewriter, but baker@/cole@ linked to mailto:able@x.org; rust 100b r3 = Ann's
+%          `<ref>` without its font, baker@y.org and cole@y.org plain (each on its own author, linked to nothing)
+% expect:  0 errors, 0 warnings; each author holds their own address, each in font="typewriter"
+% status:  RED
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Bob Baker}
+\author[1]{Cat Cole}
+\affil[1]{Univ X, Town \\ \href{mailto:able@x.org}{\texttt{able@x.org}}, \texttt{\{baker, cole\}@y.org}}
+\maketitle
+Body.
+\end{document}

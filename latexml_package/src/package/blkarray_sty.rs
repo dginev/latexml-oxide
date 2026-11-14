@@ -16,7 +16,8 @@
 //! of the shared matrix — a construct LaTeXML's `array` cannot express (its
 //! `left=`/`right=` wrap the whole matrix). We render each `block` transparently:
 //! its rows flow into the single `blockarray` alignment (correct structure +
-//! content, and the label row/column are preserved), but the block's delimiter
+//! content, and the label row/column are preserved), formatted by the block's own
+//! columns (`>{}`/`<{}`, OXIDIZED_DESIGN_DIVERGENCES #771), but the block's delimiter
 //! parentheses are DROPPED. This is chosen deliberately over the raw `.sty`'s OOM
 //! — a matrix without its outer parens beats losing the whole document section.
 use crate::prelude::*;
@@ -29,12 +30,21 @@ LoadDefinitions!({
   // `\\` row boundaries. Route to the same machinery as `\array`
   // (latex_constructs.rs `\@array@bindings`/`\@@array`/`\lx@begin@alignment`).
   // blkarray's own blockarray column specs are plain (`c cccccc`, `cccc`) — the
-  // delimiters live on the block specs, which we gobble — so the spec passes to
+  // delimiters live on the block specs, which drop them (below) — so the spec passes to
   // the AlignmentTemplate parser unchanged.
   DefMacro!(
     T_CS!("\\begin{blockarray}"),
     "[]{}",
-    "\\@array@bindings[#1]{#2}\\lx@blkarray@repeating\\@@array[#1]{#2}\\lx@begin@alignment"
+    "\\let\\begin\\lx@blkarray@begin\\@array@bindings[#1]{#2}\\lx@blkarray@repeating\\@@array[#1]{#2}\\lx@begin@alignment"
+  );
+  // blkarray.sty:1099-1102, :1123 `\\let\\begin\\BA@begin`: inside a `{blockarray}` a `\\begin` of a block is expandable,
+  // its `\\noalign` reached by the look-ahead at a cell's head, where the kernel's `\\protected` `\\begin` stops.
+  RawTeX!(
+    r"\let\lx@blkarray@@begin\begin
+\def\lx@blkarray@begin#1{\ifcsname lx@blkarray@begin@#1\endcsname\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
+  {\csname begin{#1}\endcsname}{\lx@blkarray@@begin{#1}}}
+\let\lx@blkarray@begin@block\@empty
+\expandafter\let\csname lx@blkarray@begin@block*\endcsname\@empty"
   );
   // blkarray.sty:1206-1208 aligns with a repeating preamble, `\BA@upart##\BA@vpart&&\BA@upart##\BA@vpart\cr`, so
   // a row may run past its spec's columns; such a cell gets no format (`\BA@col@use`'s `\csname` of a column the spec
@@ -51,6 +61,24 @@ LoadDefinitions!({
   });
   // blkarray.sty:749-750; papers set it (`\setlength\BA@colsep{4pt}`, 2301.06399).
   RawTeX!(r"\newdimen\BA@colsep \BA@colsep=\tabcolsep");
+  // 68b (binding gaps G3): the public blkarray commands papers use inside a `{blockarray}`.
+  // blkarray.sty:934-947 `\BAmulticolumn{n}{spec}{text}`, blkarray's `\multicolumn` (1202.0500, 1204.2176,
+  // 1301.3189, 1311.0327, 1401.4921, 1407.4836).
+  Let!("\\BAmulticolumn", "\\multicolumn");
+  // :1677-1683 `\BAnewcolumntype[n]{c}{spec}`, a column type for blkarray's preambles (1302.2340, 1402.5950,
+  // 1408.0807, 1702.06723, 2005.02853: `\BAnewcolumntype{s}{>{$\small$}c}`): the rewrite the alignment template
+  // reads a column letter through, as array's `\newcolumntype` makes it (`\NC@rewrite@<c>`, alignment.rs).
+  RawTeX!(
+    r"\def\BAnewcolumntype{\@ifnextchar[{\lx@BA@nct}{\lx@BA@nct[0]}}
+\def\lx@BA@nct[#1]#2#3{\expandafter\@reargdef\csname NC@rewrite@\string#2\endcsname[#1]{#3}}"
+  );
+  // :1063 `\BAextrarowheight` (1312.6738, 1503.04543, 1503.08375 set it), the height blkarray adds to each row.
+  RawTeX!(r"\newdimen\BAextrarowheight");
+  // :1005-1012 `\BAnoalign{material}`/`\BAnoalign*{material}`: material between rows, which the star also lets
+  // the current block's delimiters span (1912.05110 `\BAnoalign{\vskip -7ex}`).
+  RawTeX!(
+    r"\def\BAnoalign{\@ifstar\lx@BA@noalign\lx@BA@noalign}\long\def\lx@BA@noalign#1{\noalign{#1}}"
+  );
   // blkarray.sty:2057-2068: `\BAhline` rules every column (`\BAhhline{*{\BA@col@max}{-}}`), as `\hline` does.
   Let!("\\BAhline", "\\hline");
   DefMacro!("\\BAhhline Semiverbatim", sub[(spec)] {
@@ -63,17 +91,76 @@ LoadDefinitions!({
   DefMacro!(
     T_CS!("\\end{blockarray}"),
     None,
-    "\\lx@end@alignment\\@end@array"
+    "\\lx@end@alignment\\@end@array\\let\\begin\\lx@blkarray@@begin"
   );
 
-  // `block` / `block*` are transparent: gobble the column spec (which may carry
-  // `(`, `[`, `|` delimiters we cannot render sub-region-wise) and contribute
-  // their rows directly to the enclosing blockarray alignment. Magic CSes → no
-  // `\begingroup`, so the block boundary does not disturb the alignment grouping.
-  DefMacro!(T_CS!("\\begin{block}"), "{}", "");
-  DefMacro!(T_CS!("\\end{block}"), None, "");
-  DefMacro!(T_CS!("\\begin{block*}"), "{}", "");
-  DefMacro!(T_CS!("\\end{block*}"), None, "");
+  // A `block`'s own preamble formats its rows (blkarray.sty:868-922 `\BA@beginblock`, `\begin{block}` inside a
+  // `{blockarray}` by :1099-1102 `\BA@begin`): a `\noalign` that parses the block's columns, which its rows use
+  // (`\BA@col@use` keys each column's `>{}`/`<{}` parts by the block, :838-839) until `\BA@endblock`'s `\noalign`
+  // puts the enclosing preamble back (:885-892). The delimiters are not columns: `(`, `)`, `[`, `]`, `\{`, `\}`
+  // are blkarray's `\Left`/`\Right` (:1998-2003), which draw a parenthesis beside the block's sub-region, a shape
+  // the `array` alignment cannot express, so they are dropped. A block that changed no format (`{c(cc)}`) is the
+  // transparent block it was. `\begin{block}{*{2}{>{$\footnotesize}c<{$}}}` keeps its cells' `$`/`$` wrappers
+  // (1706.05431, 2207.06508, 2210.16910; OXIDIZED_DESIGN_DIVERGENCES #771). Magic CSes: no `\begingroup` around the
+  // block, so its boundary does not cross the alignment's rows.
+  // The `\noalign` is the hidden one, which adds no row of its own.
+  DefMacro!(
+    T_CS!("\\begin{block}"),
+    "{}",
+    r"\lx@hidden@noalign{\lx@blkarray@columntypes\lx@blkarray@delimiters\lx@blkarray@block{#1}}"
+  );
+  DefMacro!(
+    T_CS!("\\end{block}"),
+    None,
+    r"\lx@hidden@noalign{\lx@blkarray@endblock}"
+  );
+  DefMacro!(
+    T_CS!("\\begin{block*}"),
+    "{}",
+    r"\lx@hidden@noalign{\lx@blkarray@columntypes\lx@blkarray@delimiters\lx@blkarray@block{#1}}"
+  );
+  DefMacro!(
+    T_CS!("\\end{block*}"),
+    None,
+    r"\lx@hidden@noalign{\lx@blkarray@endblock}"
+  );
+  // blkarray's own column types for a block's preamble, local to the group it is read in: `>{}`/`<{}` (:1714-1725,
+  // :1818-1831, array.sty's without it) and the delimiters, which are no columns.
+  DefPrimitive!("\\lx@blkarray@columntypes", {
+    DefColumnType!(">{}", sub[(before)] {
+      let before = VecDeque::from(before.unlist());
+      with_building_template(|template| template.add_before_column(before));
+    });
+    DefColumnType!("<{}", sub[(after)] {
+      with_building_template(|template| template.add_after_column(after.unlist()));
+    });
+  });
+  RawTeX!(
+    r"\def\lx@blkarray@delimiters{\BAnewcolumntype{(}{}\BAnewcolumntype{)}{}\BAnewcolumntype{[}{}\BAnewcolumntype{]}{}\BAnewcolumntype{\{}{}\BAnewcolumntype{\}}{}\BAnewcolumntype[2]{\Left}{}\BAnewcolumntype[2]{\Right}{}}"
+  );
+  DefPrimitive!("\\lx@blkarray@block AlignmentTemplate", sub[(block)] {
+    let Some(alignment) = lookup_alignment() else { return Ok(Vec::new()) };
+    let Some(alignment) = alignment.alignment_cell() else { return Ok(Vec::new()) };
+    let mut alignment = alignment.borrow_mut();
+    let template = alignment.get_template_mut();
+    push_value("lx@blkarray@preambles", Stored::Template(Rc::new(template.clone())))?;
+    for (n, column) in block.get_columns().iter().enumerate() {
+      let mut column = column.clone();
+      column.mark_intercol_after();
+      match template.get_columns_mut().get_mut(n) {
+        Some(slot) => *slot = column,
+        None => template.get_columns_mut().push(column),
+      }
+    }
+  });
+  DefPrimitive!("\\lx@blkarray@endblock", {
+    if let Some(Stored::Template(outer)) = pop_value("lx@blkarray@preambles")?
+      && let Some(alignment) = lookup_alignment()
+      && let Some(alignment) = alignment.alignment_cell()
+    {
+      *alignment.borrow_mut().get_template_mut() = (*outer).clone();
+    }
+  });
 });
 
 /// The column runs `\BAhhline{spec}` rules (blkarray.sty:2074-2210), for one `\cline` each: `-` `=` `.` `"` rule a

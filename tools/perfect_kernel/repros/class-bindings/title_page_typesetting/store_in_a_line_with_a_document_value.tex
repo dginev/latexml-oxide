@@ -1,0 +1,24 @@
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `ClassReaders::store_lines`,
+%   `prints_in_a_line_with_a_value`, `harvest_stores`). The other values of a store's line are judged when the class is
+%   loaded and again at `\maketitle`, with the document's: zzfmf.cls's `{\itshape \@issueinfo; DOI \@doi\par}` has
+%   `\@issueinfo` empty when the class ends, and the document's `\issueinfo{Issue 4}` makes it printed text, so the line
+%   stays the class's and `\doi` — a store handed on as it is set — waits for `\maketitle` (`lx_store_deferred_<name>`)
+%   and is not handed on. Without `\issueinfo` the DOI is the frontmatter's pubnote (the guard's control). Its
+%   `{\@jinfo\linebreak\@address\par}`: `\linebreak` ends the class's line, the address is the frontmatter's.
+% witness: review rev79a Q1 (tlp.cls:627's shape, 1209.2617); `\linebreak`: review rev79a finding 6
+% oracle:  pdflatex: 0 errors; "The Title" / "An Author" / "Vol. 1, 2026" / "Dept of Probes, Somewhere" / "Issue 4;
+%   DOI 10.1000/xyz" (italic)
+% engines: rust int68a, 79a r1: <pubnote role="doi">10.1000/xyz</pubnote> and the body line "Issue 4; DOI"; the
+%   address the frontmatter's in 79a r1, not in int68a
+% expect:  0 errors, 0 warnings; the address contact; no doi pubnote; the body line "Issue 4; DOI 10.1000/xyz"
+% status:  RED (int68a, 79a r1) -> GREEN (79a r2)
+% preload: ar5iv.sty
+\documentclass{zzfmf}
+\title{The Title}\author{An Author}
+\address{Dept of Probes, Somewhere}
+\issueinfo{Issue 4}
+\doi{10.1000/xyz}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

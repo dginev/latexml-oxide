@@ -1,0 +1,19 @@
+% witness: 77n r3 — authblk `\author{Bob}` without a mark after a marked author and its mark-led `\affil`, then
+%          `\affil{$^2$Y}` (the r2 review probe b6)
+% oracle:  pdflatex 0 errors: "Ann1 / 1X / Bob2 / 2Y"
+% engines: rust int32a = Ann X, Bob Y; 77n r2 = Bob nothing, Y on a creator without a name
+% expect:  0 errors, 0 warnings; 2 creators, Ann with X only, Bob with Y only (the authors since the last `\affil`,
+%          authblk.sty:115-116)
+% status:  RED (77n r2) -> GREEN (77n r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^1$}
+\affil{$^1$X}
+\author{Bob}
+\affil{$^2$Y}
+\maketitle
+x
+\end{document}

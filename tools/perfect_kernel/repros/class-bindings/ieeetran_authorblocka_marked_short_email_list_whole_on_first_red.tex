@@ -1,0 +1,23 @@
+% mechanism: an IEEEtran marked e-mail line whose addresses carry their marks (`{\it\IEEEauthorrefmark{1}ann}@x`,
+%   `$\{${\it\IEEEauthorrefmark{2}bob, \IEEEauthorrefmark{3}cy}$\}$@y`): with `\_`-bearing local parts each address goes
+%   to its mark's name (`ieeetran_authorblocka_marked_email_list_read_whole`); with these short ones the line stays one
+%   affiliation of the first name
+% witness: synthetic (P4b4f, the sibling of 1506.02349's shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Emails: *ann@ntu.edu.sg, {†bob, ‡cy}@sutd.edu.sg" under the
+%          three names
+% engines: int165a, int166a after P4b4f alike: Ann One holds "Emails: * ann @ntu.edu.sg, { † bob, ‡ cy } @sutd.edu.sg"
+%          as an affiliation, Bob Two and Cy Three no e-mail; 0 errors, 0 warnings (int166a: cut into fragments, W=3)
+% expect:  0 errors, 0 warnings; Ann One ann@ntu.edu.sg, Bob Two bob@sutd.edu.sg, Cy Three cy@sutd.edu.sg
+% status:  RED (int165a, P4b4f: the addresses on no owner, no word lost)
+% moves:   post-merge
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann One\IEEEauthorrefmark{1}, Bob Two\IEEEauthorrefmark{2}, Cy Three\IEEEauthorrefmark{3}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A\\
+\IEEEauthorrefmark{2}\IEEEauthorrefmark{3}Univ B\\
+Emails: {\it\IEEEauthorrefmark{1}ann}@ntu.edu.sg,
+$\{${\it\IEEEauthorrefmark{2}bob, \IEEEauthorrefmark{3}cy}$\}$@sutd.edu.sg}}
+\maketitle
+x
+\end{document}

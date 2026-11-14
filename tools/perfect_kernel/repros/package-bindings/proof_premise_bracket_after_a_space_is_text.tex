@@ -1,0 +1,23 @@
+% witness: review of 77q (bracketed premises, a substitution `[x:=t]B`, plausible in logic papers; 1709.05725's
+%          `\\[1pt]` stays the row end's)
+% oracle:  pdflatex 0 errors, the premise rows "s" and "[t]u", "*[t]u", "[t]u": amsmath's `\math@cr` reads `*` and `[`
+%          with `\new@ifnextchar` (amsmath.sty:1174-1180, amsgen.sty:54-63), which skips no space
+% engines: rust 77q r1 = 0 errors, `[t]` dropped as a row skip each time (`infer@(E, Array[[s], [u]])`); perl = 0
+%          errors, the `\\` reaching the display (KNOWN_PERL_ERRORS #995)
+% expect:  0 errors, 0 warnings; each `[t]` kept in the second premise row
+% status:  RED (77q r1) -> GREEN (77q r2: proof_sty.rs `drop_row_skips`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,proof}
+\begin{document}
+\begin{align*}
+\infer{E}{s \\ [t] u}
+\end{align*}
+\begin{align*}
+\infer{E}{s \\ *[t] u}
+\end{align*}
+\begin{align*}
+\infer{E}{s \\* [t] u}
+\end{align*}
+After.
+\end{document}

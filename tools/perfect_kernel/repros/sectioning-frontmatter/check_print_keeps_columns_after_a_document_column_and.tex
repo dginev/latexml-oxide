@@ -1,0 +1,34 @@
+% mechanism: a document's `\and` copying latex.ltx's column break (`\end{tabular}\hskip 1em \@plus.17fil
+%   \begin{tabular}[t]{c}`) under article: the title-page check's stand-in for article.cls's `\@maketitle` (sect05.rs
+%   `title_page_print_tokens`) ran `\@author` outside the tabular article.cls:246-248 (TL 2025) wraps it in, so the
+%   `\begin{tabular}` the last `\and` opened was never closed and everything after it (the last column's later rows,
+%   `\@date`, the `\thanks` texts) left the print. Since FX25b the stand-in runs `\@author` inside
+%   `\begin{tabular}[t]{c}…\end{tabular}` as article.cls does: the copy closes and reopens it, and every column stays
+% witness: 1409.7028, 2103.04211 (`\def\and{\end{tabular}\begin{tabular}[t]{c}}`; their print's words, seams dropped:
+%   int159a0 105, 105; FX25 27, 20; FX25b 105, 105, the base's words exactly); review revFX25 (its `_red` repro, without
+%   the date and the note)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two columns "Alice Able | Bob Brown" over "Polar Lab | Lunar
+%   Institute*", "Some Day", the foot "* Moon note"
+% engines: int159a0: print "… Polar LabBob Brown Lunar Institute  Some Day ||||Moon note||", Warning "brown lunar
+%   institute moon note" (5 words), Info `class_text` "labbob"; FX25: print "A Title Alice Able Polar Lab
+%   ||||||Bob Brown||||", Warning "bob brown" only ("lunar institute moon note" uncounted); FX25b: print "A Title
+%   ||||||Alice Able||Polar Lab|||| ||||||Bob Brown||Lunar Institute |||| Some Day ||||Moon note||", 1 Warning "bob
+%   brown lunar institute moon note" (6 words); creators Alice Able (Polar Lab) on all three; perl not run
+% expect:  0 errors; the print holds every column, the date and the note; the appended column's loss (RR1 gap 24,
+%   article_coauthor_appended_to_author_is_kept.tex (was `…_is_lost_silently_red`)) counted by one Warning of its 6 words while it is
+%   lost, no Warning once it is held
+% status:  GREEN (FX25b; guard perfect_kernel_batchfx25::the_check_print_keeps_columns_after_a_document_column_and)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\and{\end{tabular}\hskip 1em \@plus.17fil\begin{tabular}[t]{c}}
+\newcommand\coauthor[1]{\g@addto@macro\@author{\and #1}}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice Able\\Polar Lab}
+\coauthor{Bob Brown\\Lunar Institute\thanks{Moon note}}
+\date{Some Day}
+\maketitle
+Body.
+\end{document}

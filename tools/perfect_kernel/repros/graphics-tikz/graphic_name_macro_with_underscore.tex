@@ -1,0 +1,12 @@
+% witness: 1908.04391 (fig_tables/*: \def\seq_name{2014-12-10-18-10-50} … {…/posenet-\seq_name-clip_t-50}), 2609.16620 (\PATHFIG_supp)
+% oracle:  pdflatex 2 errors, only "File `a-fig-b' not found" and "File `fig_trans' not found" (no image files here): the names expand as below; graphicx.sty:198-203 \Gin@ii[#1]#2 reads the name at the document's catcodes, \Gin@setfile/\filename@parse expand it: \seq's parameter text "_name" (a subscript _) matches
+% engines: rust 67int20 = 4 errors ("Missing argument Match:_name for \seq", twice per call: \lx@Gin@include and the constructor read Semiverbatim, _ other); 67int19b 2; perl the same (Semiverbatim)
+% expect:  0 errors; graphic="a-fig-b" and graphic="fig_trans"
+% status:  GREEN (int20)
+\documentclass{article}
+\usepackage[draft]{graphicx}
+\def\seq_name{fig}
+\begin{document}
+\includegraphics[width=1cm,height=1cm]{a-\seq_name-b}
+\includegraphics[width=1cm,height=1cm]{\seq_name_trans}
+\end{document}

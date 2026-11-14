@@ -99,6 +99,11 @@ LoadDefinitions!({
   //======================================================================
   // Additional or different definitions from revtex4_support
 
+  // REVTeX 3's own `\address` (aps.sty v3.1), the address of the author group before it (the group rule,
+  // `annotate=run`, KNOWN_PERL_ERRORS #1190); revtex4's is its obsolete alias of `\affiliation`
+  // (revtex4_support_sty.rs).
+  DefMacro!("\\address{}", "\\lx@add@address[annotate=run]{#1}");
+
   DefConditional!("\\ifpreprintsty");
   DefConditional!("\\ifsecnumbers");
   DefConditional!("\\ifsegabssty");
@@ -117,6 +122,14 @@ LoadDefinitions!({
   if lookup_bool("revtex3@segabs") {
     RawTeX!("\\global\\segabsstytrue");
   }
+  // aps.sty v3.1:965-968 (REVTeX 3.1, as chao-dyn9701025 ships it) `\preprint` defines `\@preprint` only under
+  // `\ifpreprintsty`, and `\@maketitle` prints it first (:1006-1010), with no reset at the document's start: a number
+  // is printed in the preprint style wherever it is called, and is metadata otherwise (revtex4_support_sty.rs
+  // `\lx@revtex@preprint@printed`/`…@identifier`; OXIDIZED_DESIGN_DIVERGENCES #770).
+  DefMacro!(
+    "\\preprint",
+    "\\ifpreprintsty\\expandafter\\lx@revtex@preprint@printed\\else\\expandafter\\lx@revtex@preprint@identifier\\fi"
+  );
   // The substyle's numbering (aps.sty:220-227; seg.sty:247-253 the same without `\p@subsection`; osa.sty:195-202
   // with arabic sections): sections I, II, …, subsections A, B, … referenced with their section ("II A"),
   // subsubsections 1, 2, … ("II A 1").

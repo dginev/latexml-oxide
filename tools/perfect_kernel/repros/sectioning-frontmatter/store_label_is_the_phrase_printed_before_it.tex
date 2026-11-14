@@ -1,0 +1,24 @@
+% A raw class's keywords store printed in a title-page footnote after a sentence, `\footnote{Funded. KW:
+% \@keywords}`: the entry's name is the phrase printed right before the store, "KW:" (`line_label_before`,
+% frontmatter_stores.rs: a sentence before it in the same line stays), confirmed by TeX's run of the title page
+% (`verify_title_page_labels`), and the footnote keeps "Funded.".
+% witness: none (synthetic; review probe `fnm` of 77i r3).
+% oracle:  pdflatex 0 errors: the footnote "Funded. KW: alpha, beta".
+% engines: rust 77i r3: `<keywords name="Funded. KW:">alpha, beta</keywords>`, the footnote gone.
+% expect:  0 errors, 0 warnings; `<keywords name="KW:">alpha, beta</keywords>`; a footnote "Funded."; no "gamma".
+% status:  RED (77i r3) -> GREEN (77i r4)
+\begin{filecontents*}[overwrite]{rcphrase.cls}
+\ProvidesClass{rcphrase}
+\LoadClass{article}
+\newcommand*{\keywords}[1]{\def\@keywords{#1}}
+\def\@keywords{}
+\def\@maketitle{\@title\par\@author\footnote{Funded. KW: \@keywords}\par}
+\end{filecontents*}
+\documentclass{rcphrase}
+\title{T}\author{Anton}
+\keywords{alpha, beta}
+\begin{document}
+\maketitle
+\keywords{gamma}
+Text.
+\end{document}

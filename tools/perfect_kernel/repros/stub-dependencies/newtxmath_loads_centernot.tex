@@ -1,0 +1,13 @@
+% witness: 2002.09451, 2103.01489, 2104.13315 (acmart, which loads newtxmath; `\centernot\implies` with no centernot
+%          package; newtxmath.sty:36 `\RequirePackage{centernot}`)
+% oracle:  pdflatex 0 errors ("a ⇏ b")
+% engines: rust 67o1 = 1 error (`\centernot` undefined: the newtxmath binding skips it); Perl's newtxmath.sty.ltxml
+%          comments the load out, "just a minor typesetting adjustment" (KNOWN_PERL_ERRORS #694)
+% expect:  0 errors, 0 warnings; one not-implies arrow token
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{newtxmath}
+\begin{document}
+$a \centernot\implies b$
+\end{document}

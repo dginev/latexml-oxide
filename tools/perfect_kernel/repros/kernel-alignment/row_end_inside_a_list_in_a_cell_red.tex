@@ -1,0 +1,18 @@
+% witness: synthetic (revTABU2 N2: the shape of q1/q2 on the first TABU2 binary, without tabu)
+% oracle:  pdflatex 20 `!` lines (the `\tabularnewline` in the item ends the row inside the list's group); the PDF
+%          still prints • a, Before., x, b, y, z, After.
+% engines: rust TABU2base = 8 Errors, 1 Warning, and the document keeps only "Before.": the recovery from the
+%          unbalanced group drops the table and every word after it; Perl not run (the same kernel recovery)
+% expect:  the Errors kept, and a, b, x, y, z and "After." kept in the document
+% status:  RED (TABU2base, TABU2b)
+% moves:   post-merge (id TABUE)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Before.
+\begin{tabular}{p{4cm}l}
+\begin{itemize}\item a\tabularnewline b\end{itemize} & x \\
+y & z \\
+\end{tabular}
+After.
+\end{document}

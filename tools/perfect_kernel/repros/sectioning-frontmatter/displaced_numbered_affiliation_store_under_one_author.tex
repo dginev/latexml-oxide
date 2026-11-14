@@ -1,0 +1,31 @@
+% A raw class's `\affiliation` keeps each call in a store whose name it computes (iau.cls:1515 `\expandafter
+% \protected@xdef\csname affil\the\affilcount\endcsname{#1}\global\advance\affilcount1`), printed by its title page's
+% loop over them; no static store names the value, and the kernel's `\maketitle` deposit printed it as a body paragraph
+% under the sole author, who had no contact. The setter's call runs inside an assignment journal that records the
+% computed macro and the part of it holding the argument, compared by its characters (`\protected@xdef` expands our
+% accents), so the store's name need not be known: the affiliation is the author's, and the deposit takes it out.
+% witness: 2510.16758, 2607.25849 (iau)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Department of Physics, University of Aberdeen, Scotland"
+% engines: rust 99b0 = 0 errors, 0 warnings, the affiliation a body paragraph; perl = no raw class load
+% expect:  0 errors, 0 warnings; Ann Able holds <contact role="affiliation">Department of Physics, University of
+%          Aberdeen, Scotland</contact>; the body holds only "Text."
+% status:  RED (99b0) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dsaff.cls}
+\ProvidesClass{dsaff}\LoadClass{article}
+\newcount\dsaffcount \dsaffcount=0
+\def\affiliation#1{\expandafter\protected@xdef\csname dsaff\the\dsaffcount\endcsname{#1}%
+  \global\advance\dsaffcount1 }
+\def\printaffil{{\count@=0 \loop\ifnum\count@<\dsaffcount
+  \csname dsaff\the\count@\endcsname\par\advance\count@1 \repeat}}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\vskip1em
+  {\small\printaffil}\end{center}}
+\end{filecontents*}
+\documentclass{dsaff}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{Department of Physics, University of Aberdeen, Scotland}
+\maketitle
+Text.
+\end{document}

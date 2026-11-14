@@ -1,0 +1,11 @@
+% witness: 2412.10240 (`\bibstyle{SciPost_bibstyle}`)
+% oracle:  pdflatex (clean): latex.ltx:17773 `\let\bibstyle\@gobble`
+% engines: rust 67int22 = 1 error (the name digested: `_`); Perl = 1 (pool:3972 `{}`, KNOWN_PERL_ERRORS #966)
+% expect:  0 errors, 0 warnings; the paragraph "Text."
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text.
+\bibstyle{SciPost_bibstyle}
+\end{document}

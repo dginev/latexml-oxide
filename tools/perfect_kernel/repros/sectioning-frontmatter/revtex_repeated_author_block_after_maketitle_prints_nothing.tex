@@ -1,0 +1,39 @@
+% mechanism: REVTeX's `\maketitle` switches the author block off (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662,
+%   revtex4.cls:4709-4717: `\affiliation`, `\author`, `\email`, `\thanks` gobble their argument, `\and` is `\relax`);
+%   ours switches off a block repeated after it from its first `\author` on, so its names and contacts print nothing;
+%   its `\title`, before the `\author`, prints as body text, as int159b (revtex4_cls.rs
+%   `switch_off_author_block_after_maketitle`). The guard runs it also under revtex4-1, revtex4.
+% witness: 2307.07324, 2001.07542 (last author with 4 institutes); 1801.07635, 1812.00931, 2510.13035, 2602.09975
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Bob Baker / Univ Y, City / A. /
+%   Text. / More." (revtex4-1, revtex4 alike): no "Supplement", no second names
+% engines: rust int138a-int159a: 0 errors; Bob Baker holds Univ Y, City and Univ X, Town; the body paragraph "Text.
+%   Supplement Ann Able Bob Baker More."; perl: Bob Baker holds every copy (PERL-ORIGIN). RB1: the body "Text. More.";
+%   RB1c: as expected
+% expect:  0 errors, 0 warnings; Ann Able (ann.able@x.org, Univ X, Town); Bob Baker (bob.baker@y.org, Univ Y, City);
+%   the body paragraph "Text. Supplement More."
+% status:  GREEN
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{ann.able@x.org}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\email{bob.baker@y.org}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\clearpage
+\title{Supplement}
+\author{Ann Able}
+\email{ann.able@x.org}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\email{bob.baker@y.org}
+\affiliation{Univ Y, City}
+\maketitle
+More.
+\end{document}

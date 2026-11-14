@@ -1,0 +1,26 @@
+% witness: 1805.12376 (ci2018.cls: `\def\affil#1{\gdef\@affil{#1}\ifx\@affil\@empty\else{\reset@font\affilfont\unskip,\
+%          #1\vphantom{gy}\endgraf}\fi}`, several inside one `\author{…}`); review rev94b B4 (its probe `ci8`, stand-in
+%          `cistand.cls`)
+% oracle:  pdflatex 0 errors: "A Title", the lines "ANN ABLE, Univ A", "and DAN DOE, Univ B", "EVE EGAN, Univ C", "Body."
+% engines: rust 94b = 0 errors, 0 warnings: the second `\affil` inside the kernel's second creator ran the class's
+%          definition (the first had attached its annotation, so the creator no longer read as digesting): "EVE EGAN ,
+%          Univ C gy" in a name, its affiliation ", Univ C gy"
+% expect:  0 errors, 0 warnings; every `\affil` inside the author the API's (`creator_entry_in_progress`): ANN ABLE Univ
+%          A, DAN DOE Univ B, EVE EGAN Univ C; eager and --streaming the same
+% status:  RED (94b) -> GREEN (94b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilsinauthor.cls}
+\ProvidesClass{affilsinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\author#1{\gdef\@author{#1}}
+\def\affil#1{\gdef\@affil{#1}\ifx\@affil\@empty\else{\reset@font\affilfont\unskip,\ #1\vphantom{gy}\endgraf}\fi}\affil{}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilsinauthor}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE \affil{Univ A} and DAN DOE \affil{Univ B} EVE EGAN \affil{Univ C}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: printed text ending in `\\` between `\IEEEauthorblockN` and `\IEEEauthorblockA` in each `\and` column
+%   made a regular `\and`x`\\` grid, which the binding transposed to row-major (`transpose_ieee_author_grid`, OD #128):
+%   the `\IEEEauthorblockA` row then went to the last author of the row above. A grid transposes only when every cell
+%   that prints something names an author; this one's columns are each one author's, as printed
+% witness: 2605.15804
+% oracle:  pdflatex 0 errors: two columns, "Ann Able / School X / Dept Y / City" and "Bob Baker / School X / Dept Z / City"
+% engines: rust int131a: Ann School X only, Bob School X, Dept Y, Dept Z
+% expect:  0 errors, 0 warnings; Ann School X and Dept Y City; Bob School X and Dept Z City (as printed_text_control.tex)
+% status:  RED (int131a) -> GREEN (104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\textit{School X}\\
+\IEEEauthorblockA{Dept Y\\ City}
+\and
+\IEEEauthorblockN{Bob Baker}
+\textit{School X}\\
+\IEEEauthorblockA{Dept Z\\ City}}
+\maketitle
+Text.
+\end{document}

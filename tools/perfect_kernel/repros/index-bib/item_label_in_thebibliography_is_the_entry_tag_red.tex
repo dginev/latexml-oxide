@@ -1,0 +1,16 @@
+% mechanism: an `\item[label]` in `thebibliography` (asl.cls:5658 `\@bib@item`'s `\item[\@wrap@list{…}]`) is an entry
+%   whose label is printed as its tag; ours (and Perl's, `\item@in@bibliography` = `\save@bibitem{}`, latex_constructs.
+%   pool.ltxml:4062) opens an entry with the default tag and leaves `[label]` in the entry's text.
+% witness: synthetic (GA1d); the shape of 1005.4193, 0705.0395 (asl.cls)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [A1] First entry. [B2] Second entry.
+% engines: perl and rust int163a, GA1d: 0 errors; tags [1]/[2], text "[[A1]] First entry." / "[[B2]] Second entry."
+% expect:  0 errors, 0 warnings; tags [A1]/[B2], text "First entry." / "Second entry."
+% status:  RED (int163a, GA1d)
+% moves:   post-merge
+\documentclass{article}
+\begin{document}
+\begin{thebibliography}{9}
+\item[{[A1]}] First entry.
+\item[{[B2]}] Second entry.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,12 @@
+% witness: 1301.4725, 1305.4700, 1504.00121 (every tikz-cd / pgf-matrix math cell; QA41 audit, 47 of 2,000 papers)
+% oracle:  pdflatex 0 errors; Perl pgfsys-latexml.def.ltxml:63 `\lx@inpgf@ignorespaces` is `sub { (); }`, no box:
+%          each node's Math reverts tex="{X}", tex="{Y^{\prime}}"
+% engines: rust int161a = tex="{\lx@inpgf@ignorespaces X}" (`DefPrimitive!(…, None)`, Perl's undef body: an empty box
+%          reverting to the name); perl = tex="{X}"
+% expect:  0 errors, 0 warnings; tex="{X}" and tex="{Y^{\prime}}"
+% status:  RED (int161a) -> GREEN (RV1)
+\documentclass{article}
+\usepackage{tikz-cd}
+\begin{document}
+\begin{tikzcd} X \arrow[r] & Y' \end{tikzcd}
+\end{document}

@@ -229,8 +229,19 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\lx@fontencoding{}", sub[(encoding)] {
     let encoding = Expand!(encoding).to_string();
+    // latex.ltx:10490 `\fontencoding` sets `\f@encoding` to the name it is given. An encoding without a map
+    // (`U` but for its msa/msb families) decodes through OT1, below, so the font says OT1; the name is kept beside
+    // it, for `\f@encoding` (sect08.rs), while the font is the one merged here. That is what amsart-derived
+    // classes test: `\fontencoding{U}\fontfamily{msa}\try@load@fontshape` must find umsa.fd (amsart.cls:380-382;
+    // nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470: `\symAMSb` was undefined). Giving `U`
+    // OT1's map instead decoded every U symbol font without a map of its own through OT1 (shuffle.sty's
+    // `\shuffle` printed Δ, 2306.04672). OXIDIZED_DESIGN_DIVERGENCES #645.
+    let unmapped_key = pin!("lx@fontencoding@unmapped");
     let merged = if load_font_map(&encoding).is_some() {
       MergeFont!(encoding => encoding.clone());
+      if !lookup_string_from_sym(unmapped_key).is_empty() {
+        AssignValue!("lx@fontencoding@unmapped", String::new());
+      }
       encoding
     } else {
       // Report once per encoding, not once per switch. Perl has no Info
@@ -247,6 +258,7 @@ LoadDefinitions!({
       }
       // Default to OT1 encoding if no map found
       MergeFont!(encoding => "OT1");
+      AssignValue!("lx@fontencoding@unmapped", encoding);
       String::from("OT1")
     };
     // latex.ltx:10490-10516: a `\fontencoding` that changes the encoding arms
@@ -379,7 +391,8 @@ LoadDefinitions!({
       'p', 'q', 'r', 's', 't', 'u', 'v',
       'w', // x          y           z           dotless i    dotless j    weier-p    arrow
       // acc.inv.breve
-      'x', 'y', 'z', '\u{0131}', 'j', '\u{2118}', '\u{2192}', '\u{0361}'
+      // dotless j is ȷ U+0237 (cmmi10 0x7C, fontmath.ltx:217 `\jmath`); Perl has `j` (KNOWN_PERL_ERRORS #1202)
+      'x', 'y', 'z', '\u{0131}', '\u{0237}', '\u{2118}', '\u{2192}', '\u{0361}'
     ]
   ); // Perl: '\u{00A0}' . '\u{0361}' — two-char string, we use U+0361 only
 
@@ -410,7 +423,8 @@ LoadDefinitions!({
     // cal P      cal Q       cal R cal S        cal T       cal U       cal V   cal W
     '\u{1D4AB}','\u{1D4AC}','\u{211B}','\u{1D4AE}','\u{1D4AF}','\u{1D4B0}','\u{1D4B1}','\u{1D4B2}',
     // cal X      cal Y       cal Z       cup          cap       uplus       wedge       vee
-    '\u{1D4B3}','\u{1D4B4}','\u{1D4B5}','\u{222A}','\u{2229}','\u{228C}','\u{2227}','\u{2228}',
+    // uplus is ⊎ U+228E (cmsy10 0x5D, fontmath.ltx:280); Perl has ⊌ U+228C (KNOWN_PERL_ERRORS #1202)
+    '\u{1D4B3}','\u{1D4B4}','\u{1D4B5}','\u{222A}','\u{2229}','\u{228E}','\u{2227}','\u{2228}',
     // vdash      dashv       lfloor    rfloor       lceil       rceil       lbrace       rbrace
     '\u{22A2}', '\u{22A3}', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}',  '{',         '}',
     // langle     rangle       |          \|  updownarrow Updownarrow backslash   wr
@@ -497,9 +511,9 @@ LoadDefinitions!({
   });
 
   // EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})
-  DefLigature!(r"--", "\u{2013}", fontTest => sub[arg] { non_typewriter(arg) });
+  DefLigature!(r"--", "\u{2013}", fontTest => sub[arg] { dash_ligatures(arg) });
   // EM DASH
-  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] { non_typewriter(arg) });
+  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] { dash_ligatures(arg) });
 
   // Ligatures for doubled single left & right quotes to convert to double quotes
   DefLigature!("\u{2018}\u{2018}", "\u{201C}",
@@ -544,6 +558,10 @@ fn encoding_of(font: &Font) -> &str {
     .get_encoding()
     .map_or("OT1", |encoding| encoding.as_ref())
 }
+
+/// The dashes are every text font's but typewriter's and tipa's: tipa10.tfm's ligature program has only `""` and `||`
+/// (tipa.mf:66-67, t3_fontmap.rs), so `--` in IPA text is two hyphens.
+fn dash_ligatures(font: &Font) -> bool { non_typewriter(font) && encoding_of(font) != "T3" }
 
 /// The Cork-family encodings (ec and its Cyrillic, Vietnamese and texnansi relatives) and the Unicode ones.
 fn guillemet_ligature_fonts(encoding: &str) -> bool {

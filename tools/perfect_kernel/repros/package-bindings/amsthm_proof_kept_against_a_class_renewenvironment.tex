@@ -1,0 +1,20 @@
+% witness: smfart 1711.11547, 1902.02049, 2108.12000 (smfart.cls:1194 `\renewenvironment{proof}[1][\proofname]` over a
+%          `\trivlist`; also smfbook.cls:1281, ijmart.cls:336): 86 papers under the raw-class lever lost every proof
+% oracle:  pdflatex 0 errors, "Démonstration. — Because."
+% engines: rust 67o1 = 0 errors, 0 <proof> (an itemize "trivlist" item); perl the same (amsthm.sty.ltxml:146-192
+%          locks nothing): SHARED, KNOWN_PERL_ERRORS #690
+% expect:  0 errors, 0 warnings; one <proof> titled "Démonstration." (the class's \proofname)
+% status:  RED (67o1) -> GREEN (67s); guard perfect_kernel_batch67s::class_renewed_proof_keeps_the_binding
+\begin{filecontents*}[overwrite]{smfproofcls.cls}
+\ProvidesClass{smfproofcls}
+\LoadClass{article}
+\RequirePackage{amsthm}
+\renewenvironment{proof}[1][\proofname]{\par\pushQED{\qed}\normalfont\topsep0pt
+  \trivlist\itemindent\z@\item[\hskip\labelsep\normalfont\itshape #1. ---]\ignorespaces}%
+  {\popQED\endtrivlist\@endpefalse\medskip}
+\def\proofname{D\'emonstration}
+\end{filecontents*}
+\documentclass{smfproofcls}
+\begin{document}
+\begin{proof}Because.\end{proof}
+\end{document}

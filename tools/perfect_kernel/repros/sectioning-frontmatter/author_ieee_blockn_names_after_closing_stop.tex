@@ -1,0 +1,20 @@
+% An `\IEEEauthorblockN` whose last line of names closes with a full stop after its last grade keeps that line's
+%   authors and grades: the stop after the grade is no part of the names (ieeetran_cls.rs `without_stop_after_grade`),
+%   so the line continues the names and the block's cautious split parts them.
+% witness: 2405.10825 (`…, Jiangchuan Liu, \IEEEmembership{Fellow, IEEE}. }`); 2112.14209, 2409.11755, 2510.15773
+% oracle:  pdflatex 0 errors: "Hao Zhou, Chengming Hu, / Can Chen, Xue Liu, Fellow, IEEE, / Charlie Zhang, Fellow,
+%          IEEE, Xianbin Wang, Fellow, IEEE, Jiangchuan Liu, Fellow, IEEE."
+% engines: rust 86d-base = 0 errors, four creators, each with the affiliation "Charlie Zhang, , Xianbin Wang, ,
+%          Jiangchuan Liu, ."; perl = one creator holding every name, no grade (KNOWN_PERL_ERRORS #534)
+% expect:  0 errors, 0 warnings; seven creators in order, Xue Liu, Charlie Zhang, Xianbin Wang and Jiangchuan Liu each
+%          with role=membership "Fellow, IEEE"
+% status:  RED (86d-base; a rule in the line test alone: one creator holding seven names, 1 Error) -> GREEN (86d)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Hao Zhou, Chengming Hu, \\ Can Chen, Xue Liu,  \IEEEmembership{Fellow, IEEE},\\ Charlie Zhang, \IEEEmembership{Fellow, IEEE}, Xianbin Wang, \IEEEmembership{Fellow, IEEE}, Jiangchuan Liu, \IEEEmembership{Fellow, IEEE}. }
+}
+\maketitle
+Body.
+\end{document}

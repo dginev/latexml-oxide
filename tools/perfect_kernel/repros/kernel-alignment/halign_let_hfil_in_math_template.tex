@@ -1,0 +1,16 @@
+% witness: synthetic (GA0 finding 10, tex_tables.rs `before_cell_unlist`/`after_cell_unlist` and the cell's fills)
+% oracle:  pdflatex 0 errors: the first column centred, the second flush left, in both alignments
+% engines: perl 0.8.8 = 0 Errors, both alignments align="center" / "left" (TeX_Tables.pool.ltxml:762, :774
+%          `defined_as(T_hfil)`); rust GA5base (int166a) = 0 Errors, but the `\myhfil` (`\let\myhfil\hfil`) one
+%          align="left" with the fills inside the math (tex="\hfil x\hfil"): the `$`/`\hfil` reorder compared spellings
+% expect:  0 errors, 0 warnings; the `\myhfil` alignment as the `\hfil` one: align="center", tex="x"
+% status:  RED (GA5base) -> GREEN (GA5: the reorder and the fill test by meaning; guard
+%          perfect_kernel_batchga5::batchga5_meaning_rows)
+% preload: ar5iv.sty
+\documentclass{article}
+\let\myhfil\hfil
+\begin{document}
+\halign{$\myhfil#\myhfil$&\quad$#\myhfil$\cr x&a\cr yyyyyy&bbbbbb\cr}
+
+\halign{$\hfil#\hfil$&\quad$#\hfil$\cr x&a\cr yyyyyy&bbbbbb\cr}
+\end{document}

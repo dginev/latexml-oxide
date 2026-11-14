@@ -1,0 +1,13 @@
+% `thanks_mark_list_in_a_tabular_one_line_each` with an `@{}` column spec: the opening's frame covers the spec, its
+% braces too (`content::Field::past_open_environment`).
+% witness: synthetic (revSBX2 p/f6_tab_at.tex)
+% oracle:  pdflatex 0 `!`: footnote "1 Univ A" "2 Univ B"; Perl not run
+% engines: rust CAU1: 1 error (\@@tabular Attempt to end mode restricted_horizontal); SBX2 65c16dff38: 0 E 1 W,
+%          Ann Able "Univ A 2 Univ B"
+% expect:  0 errors, 0 warnings; Univ A on Ann Able, Univ B on Bob Baker
+% status:  RED (CAU1, SBX2 65c16dff38) -> GREEN (SBX2F; perfect_kernel_error_boundary)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\thanks{\begin{tabular}{@{}l@{}}$^{1}$Univ A\\ $^{2}$Univ B\end{tabular}}}
+\begin{document}\maketitle Hi.\end{document}

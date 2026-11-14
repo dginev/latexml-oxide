@@ -1,0 +1,15 @@
+% witness: 2405.01972 (`\textipa{\textltailn}aawoore`), 1802.05444
+% oracle:  pdflatex 0 errors; tipa's named symbols (t3enc.def `\DeclareTextSymbol`, tipa.sty:88-279 defaults to T3), the
+%          macro-made barred letters (t3enc.def:523-546), `\tipaencoding`, the IPA environment, T3 in an `\mbox` in math
+% engines: rust int36a = the symbols dropped, 8 Warnings ("T3 has no font map"), `\textbarb` a two-row table; 77x
+%          the letters, 0 Warnings; Perl reads no tipa.sty: 3 Errors
+%          (`\textipa`, `IPA` undefined), the symbols dropped
+% expect:  0 errors, 0 warnings; "A ə, ʃ, ʌ, ɲ and ɚʘʤɤ." "B ʃəŋ and tʃ C ə … ə … D ƀđʣ."
+% status:  GREEN (77x, t3_fontmap.rs, t3enc_def.rs)
+\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+A \textschwa, \textesh, \textturnv, \textltailn{} and \textipa{\textrhookschwa\textbullseye\textdyoghlig\textbabygamma}.
+
+B {\tipaencoding S@N} and \begin{IPA}tS\end{IPA} C \mbox{\textipa{@}} $x\mbox{\textipa{@}}$ D \textbarb\textbard\textdzlig.
+\end{document}

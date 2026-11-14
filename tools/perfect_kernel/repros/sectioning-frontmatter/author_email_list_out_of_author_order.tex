@@ -6,10 +6,11 @@
 % engines: rust 63m4 = the addresses to the authors in order (cole@ Bob Baker's, baker@ Cat Cole's); rust 63m5 =
 %          zed@ Bob Baker's (the second email contact, so `author:2`); Perl splits every comma of the block into
 %          "authors"
-% expect:  0 errors; 3 authors with their affiliations; the address line, not in the authors' order, one contact of
-%          the last author, as a line of more addresses than authors is, and so the line after it (giving each address
-%          to the name it spells is a residual: `author:N` counts the document's authors)
-% status:  RED (63m4, 63m5) -> GREEN (63m)
+% expect:  0 errors; 3 authors with their affiliations; the address line, not in the authors' order, gives each
+%          address to the author it spells (77p r3, `owners_by_elimination`: able@ Ann Able's, baker@ Bob Baker's,
+%          cole@ Cat Cole's; 63m kept it one contact of the last author), and the line after it, spelling no one, is
+%          one contact of the last author
+% status:  RED (63m4, 63m5) -> GREEN (63m); the spelled placement 77p r3
 \documentclass{article}
 \title{T}
 \author{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{1}$\\ $^{1}$Univ.\ A\\ $^{2}$Univ.\ B\\

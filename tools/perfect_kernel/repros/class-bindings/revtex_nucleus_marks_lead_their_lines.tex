@@ -1,0 +1,26 @@
+% mechanism: REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::nucleus_marks_as_marks`): a mark set on a spacing nucleus (`${\,\!}^1$`) leads a line as `$^1$` does,
+%   so the block is cut by its marks — the second mark after the line's `and` too — never sent unread to the block.
+% witness: 2112.13115 (Eyink 1,2 and Jafari 1 over `${\,\!}^1$Department of Applied Mathematics …\\ and ${\,\!}^2$
+%   Department of Physics …, \\ The Johns Hopkins University …`: 98a both departments one contact on each, 98e none);
+%   review rev98e S2
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "Ann Able1,2∗ and Bob Baker1† / 1 Department of Mathematics / and 2
+%   Department of Physics, / The Univ, City, USA"
+% engines: rust 98e: the names no affiliation, the block (a nameless creator) the whole; 98a: the whole on each
+% expect:  0 errors, 0 warnings; Ann Able both departments, Bob Baker Mathematics
+% status:  RED (98e) -> GREEN (98e r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able${\,\!}^{1,2}$}
+\email{able@x.edu}
+\author{Bob Baker${\,\!}^1$}
+\email{baker@x.edu}
+\affiliation{${\,\!}^1$Department of Mathematics\\
+and ${\,\!}^2$Department of Physics, \\
+The Univ, City, USA}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

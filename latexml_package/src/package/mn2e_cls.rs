@@ -37,8 +37,27 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
+  declare_mn_page();
   RequirePackage!("mn2e_support");
+  // mn2e.cls:1370, after its natbib load (:1201-1203): the reference list prints no label, `\def\@biblabel#1{}`
+  // (with natbib or without), as mnras.cls:1636 (mnras_cls.rs). Without natbib a
+  // `\bibitem[\protect\citeauthoryear{…}{…}]` label is then typeset only by a `\cite` (sect11.rs `\lx@bibitem`;
+  // 0812.1037, 1105.2318, 1306.6339). Perl's mn2e.cls.ltxml leaves the kernel's `[#1]`.
+  RawTeX!(r"\def\@biblabel#1{}");
+  // mn2e.cls:1372-1378: without `usenatbib` (natbib makes its own) the class allocates `\bibhang` = 2em, which a
+  // shipped natbib copy may only set (1003.3017's natbib_vw.sty:440-441 comments out its `\newlength{\bibhang}`;
+  // repro index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited, pdflatex and Perl 0 errors).
+  if lookup_int("@usenatbib") == 0 {
+    RawTeX!(r"\newlength{\bibhang}\setlength{\bibhang}{2em}");
+  }
+  // mn2e.cls (2001/02/06 v2.2) :1210-1216, as mnras.cls :1349-1354 (mnras_cls.rs): with `usedcolumn`, the class's
+  // column types on dcolumn's `D` (mn2e_support loads dcolumn). Perl's mn2e_support.sty.ltxml:18-19 only loads
+  // dcolumn, so a `d{2.1}` column was unknown and its cells' `&` stray (astro-ph0701731, astro-ph0312263;
+  // KNOWN_PERL_ERRORS #877). Guard: `perfect_kernel_batch68y::mn2e_usedcolumn_column_types`.
+  if lookup_int("@usedcolumn") != 0 {
+    RawTeX!(r"\newcolumntype{d}[1]{D{.}{.}{#1}}\newcolumntype{.}{D{.}{.}{-1}}\newcolumntype{,}{D{,}{,}{2}}");
+  }
   // mn2e.cls copies with the one "2001/02/06 v2.2" stamp differ in the journal abbreviations `.bbl`s from the
   // astronomy `.bst`s write (`\apj`, `\mnras`): the common 1574-line copy defines none, a 1695-line one
   // `\def\apj{ApJ}%` and the rest of the AAS set (0804.2668; 92 of the run-336 papers whose first error was one ship
@@ -131,14 +150,21 @@ const MN2E_JOURNAL_ABBREVIATIONS: &str = r"\let\jnl@style=\rmfamily
 /// one is left out), and a line is taken whole (a second definition on it comes along); a `%`-commented line is not a
 /// definition.
 fn shipped_journal_abbreviations(text: &str) -> String {
-  let name_rx = Regex::new(r"\\(?:newcommand|def|let)\\([A-Za-z@]+)").unwrap();
+  static NAME_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\\(?:newcommand|def|let)\\([A-Za-z@]+)").unwrap());
+  let name_rx = &*NAME_RX;
   let wanted: Vec<String> = name_rx
     .captures_iter(MN2E_JOURNAL_ABBREVIATIONS)
     .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
     .filter(|name| !name.contains('@'))
     .collect();
-  let line_rx = Regex::new(r"^\\(?:newcommand\*?|def|let)\s*\\([A-Za-z@]+)").unwrap();
-  let internal_rx = Regex::new(r"\\([A-Za-z]*@[A-Za-z@]*)").unwrap();
+  static LINE_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^\\(?:newcommand\*?|def|let)\s*\\([A-Za-z@]+)").unwrap()
+  });
+  let line_rx = &*LINE_RX;
+  static INTERNAL_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\\([A-Za-z]*@[A-Za-z@]*)").unwrap());
+  let internal_rx = &*INTERNAL_RX;
   // Each one-line definition in the copy, by the name it defines.
   let mut in_iffalse = false;
   let definitions: Vec<(String, &str)> = text
@@ -197,4 +223,21 @@ fn shipped_journal_abbreviations(text: &str) -> String {
     out.push('\n');
   }
   out
+}
+
+/// The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) of mn2e.cls and
+/// mn.cls (mn.sty), as pdflatex gives it: 504pt (42pc) in two 240pt columns 2pc apart (mn2e.cls:15-22, :470-484;
+/// mn.sty:73-79, :895-903), one column under `onecolumn` or `referee` (`\ds@referee`, mn2e.cls:57-60, whose text is
+/// 39pc = 468pt), the options as given. The registers' 345pt read as the page set a `figure` against 345pt and a
+/// `figure*` against the same line (review rev79c2 finding 1).
+pub(crate) fn declare_mn_page() {
+  let referee = given_class_options()
+    .iter()
+    .any(|option| option == "referee");
+  let text = if referee { 468.0 } else { 504.0 };
+  let twocolumn = !matches!(
+    last_class_option(&["onecolumn", "twocolumn", "referee"]),
+    Some("onecolumn" | "referee")
+  );
+  declare_panel_page((text - 24.0) / 2.0, text, twocolumn);
 }
