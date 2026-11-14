@@ -14,13 +14,6 @@
     natively (MathJax 2.1 in Chrome: 53 px against 18). LaTeXML.css now zeroes that margin in
     an equation cell (21 px). Offered upstream. Guard
     `witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
-  - **An author's `\\` lines print under the name** (issue 783). `\author{name\\school\\dept}`
-    makes each line an affiliation contact, which LaTeXML.css showed only in a pop-up behind a
-    blue star; an author with an affiliation now shows its contacts as lines under the name,
-    as in the PDF and as the multiline author layout does. The XML is unchanged; an author
-    with only an e-mail keeps the pop-up. Offered upstream. Guards
-    `browser_render_eqn_tags_and_authors::equation_tags_stay_beside_and_author_lines_show`
-    (Chrome, local) and `witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
     dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
     `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now

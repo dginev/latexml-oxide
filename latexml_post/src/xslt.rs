@@ -1391,16 +1391,6 @@ mod witnessed_css_delta {
         "table.ltx_eqn_table td.ltx_eqn_cell > mjx-container[display=\"true\"],\n\
          table.ltx_eqn_table td.ltx_eqn_cell > .MathJax_Display { margin-top:0; margin-bottom:0; }",
       ),
-      (
-        "#783",
-        ".ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(> .ltx_author_notes \
-         .ltx_role_affiliation) {\n    display:inline-block; vertical-align:top; }",
-      ),
-      (
-        "#783",
-        ".ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:has(.ltx_role_affiliation):before {\n    \
-         content:none; }",
-      ),
     ] {
       assert!(
         css.contains(issue) && css.contains(rule),

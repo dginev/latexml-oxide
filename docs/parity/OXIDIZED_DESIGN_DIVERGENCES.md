@@ -36366,16 +36366,3 @@ formulas 53 px apart, natively 18 px; ar5iv.css likewise 54 against 20). **Rust.
 container's block margins in an equation cell, as the table already carries the display skip: 21 px under MathJax 2.1,
 native rendering unchanged. MathJax 3/4 was not loadable offline; its selector is from MathJax's CHTML stylesheet.
 Offered upstream. **Guard**: `xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
-
-### 1044. An author's affiliation lines print under the name in the default author layout (issue #783)
-
-**Perl.** `\author{name\\school\\dept}` makes each line after `\\` an affiliation contact (Base_Utility.pool.ltxml:722,
-kept); LaTeXML.css shows an author's contacts only in a hover pop-up behind a blue star unless the document carries
-`ltx_authors_multiline`, where the PDF prints the lines under the name (reporter nasser1). **Rust.** The XML is
-unchanged. Outside `ltx_authors_multiline`, an author with an affiliation contact lays out as a card
-(`display:inline-block`) with its contacts as lines under the name, labels hidden and no star, as the multiline
-layout does; authors sit side by side as the PDF's `\and` tabulars. An author without an affiliation contact (an
-`\email` alone) keeps the pop-up; a `\thanks` is a note on the name (#156), untouched. The XML cannot tell a `\\` line
-from an `\affiliation{}` (REVTeX), so both show, as both print in the PDF. Offered upstream. **Guards**:
-`cluster_cli::browser_render_eqn_tags_and_authors::equation_tags_stay_beside_and_author_lines_show` (Chrome, local),
-`xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.

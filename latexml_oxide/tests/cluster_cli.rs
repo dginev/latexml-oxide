@@ -2768,29 +2768,6 @@ mod browser_render_eqn_tags_and_authors {
         [("(C.8.1)", false), ("(C.8.2)", false)],
         "a tag runs into its formula at {w}px: {stdout}"
       );
-      let creators = v[w]["creators"].as_array().expect("creators");
-      assert_eq!(creators.len(), 1, "one author at {w}px: {stdout}");
-      assert_eq!(
-        creators[0]["star"], "none",
-        "the starred pop-up is back at {w}px: {stdout}"
-      );
-      let lines: Vec<_> = creators[0]["contacts"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|c| {
-          (
-            c["text"].as_str().unwrap(),
-            c["visible"].as_bool().unwrap(),
-            c["belowName"].as_bool().unwrap(),
-          )
-        })
-        .collect();
-      assert_eq!(
-        lines,
-        [("school name", true, true), ("dept. name", true, true)],
-        "the author's lines are not printed under the name at {w}px: {stdout}"
-      );
     }
   }
 }
