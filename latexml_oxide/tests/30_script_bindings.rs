@@ -1869,7 +1869,7 @@ fn docs_examples_convert_clean() {
 }
 
 /// The Package.pm calls the cheat sheet added, by their effect in a conversion (revCHEAT3): `DefAutoload`'s trigger
-/// loads its file (a `.sty`, an `.sty.ltxml`; a bare name Warns), `DefMathI`/`DefEnvironmentI` build their markup, a
+/// loads its file (a `.sty`, an `.sty.ltxml`, a `.cls`, a `.pool`; a bare name Warns), `DefMathI`/`DefEnvironmentI` build their markup, a
 /// `DisableKeyVal` key is ignored at use, `Deprecated` Warns once, `DocType`'s three-argument form Warns, and a non-token
 /// `afterAssignment`, `LoadFormat` and a key `CheckOptions`' hash refuses are Errors with the conversion going on.
 #[test]
@@ -1879,6 +1879,8 @@ fn package_pm_calls_take_effect_in_a_conversion() {
     DefAutoload("gfoo", "lxpmauto.sty");
     DefAutoload("\\gqux", "lxpmqux.sty.ltxml");
     DefAutoload("gbar", "lxpmbar");
+    DefAutoload("gcls", "lxpmcls.cls");
+    DefAutoload("gpool", "lxpmpool.pool.ltxml");
     DefMathI("\\gm", "{}", "\\sqrt{#1}");
     DefEnvironmentI("genv", "{}", "<ltx:para class='g'><ltx:p>#1</ltx:p>#body</ltx:para>");
     RawTeX("\\RequirePackage{keyval}\\define@key{gfam}{gon}{[on:#1]}\\define@key{gfam}{goff}{[off:#1]}");
@@ -1894,9 +1896,14 @@ fn package_pm_calls_take_effect_in_a_conversion() {
     ("lxpm.sty.rhai", binding),
     ("lxpmauto.sty.rhai", r#"DefMacro("\\gfoo", "AUTOLOADED");"#),
     ("lxpmqux.sty.rhai", r#"DefMacro("\\gqux", "QUXLOADED");"#),
+    ("lxpmcls.cls.rhai", r#"DefMacro("\\gcls", "CLSLOADED");"#),
+    (
+      "lxpmpool.pool.rhai",
+      r#"DefMacro("\\gpool", "POOLLOADED");"#,
+    ),
   ];
   let tex = "\\documentclass{article}\\usepackage{lxpm}\\begin{document}\n\
-             A \\gfoo{} B \\gqux{} C $\\gm{x}$ \\setkeys{gfam}{gon=1,goff=2}\\gaa D\n\n\
+             A \\gfoo{} B \\gqux{} \\gcls{} \\gpool{} C $\\gm{x}$ \\setkeys{gfam}{gon=1,goff=2}\\gaa D\n\n\
              \\begin{genv}{T}body\\end{genv}\n\\end{document}";
   let (log, xml) = latexml::util::test::convert_files_with(tex, &files, None);
   let lines =
@@ -1924,7 +1931,7 @@ fn package_pm_calls_take_effect_in_a_conversion() {
     &xml,
     "p",
     &[],
-    r#"<p>A AUTOLOADED B QUXLOADED C <Math mode="inline" tex="\gm{x}" text="gm@(x)" xml:id="p1.m1"><XMath><XMApp>
+    r#"<p>A AUTOLOADED B QUXLOADED CLSLOADED POOLLOADED C <Math mode="inline" tex="\gm{x}" text="gm@(x)" xml:id="p1.m1"><XMath><XMApp>
        <XMTok meaning="square-root" name="gm" role="UNKNOWN"/><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp>
        </XMath></Math> [on:1]D</p>"#,
   );

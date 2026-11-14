@@ -1452,7 +1452,19 @@ pub(super) fn make_engine() -> Engine {
   });
   // Package.pm:1086: `\cs` loads `file` (`name.sty`, `.cls` or `.pool`) when first used.
   engine.register_fn("DefAutoload", |cs: Dynamic, file: &str| -> RhaiResult<()> {
-    latexml_engine::tex::def_autoload_file(&dynamic_to_string(cs), file).map_err(rhai_err)
+    let cs = match cs.clone().try_cast::<Token>() {
+      Some(token) => token,
+      None => {
+        let name = dynamic_to_string(cs);
+        let name = if name.starts_with('\\') {
+          name
+        } else {
+          format!("\\{name}")
+        };
+        latexml_core::T_CS!(name.as_str())
+      },
+    };
+    latexml_engine::tex::def_autoload_file(&cs, file).map_err(rhai_err)
   });
   // Package.pm:2871-2916: a code point, or each char of a string, through the font map of an encoding
   // (the current font's when `()`).
