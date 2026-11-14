@@ -1446,12 +1446,17 @@ fn env_hook_invocation(name: &str, point: &str) -> Option<Tokens> {
 /// to `1` when there is code (the no-op format's stub answers `#3` = `1`, and
 /// its `\UseHook` then digests nothing).
 pub fn env_hook_has_code(name: &str, point: &str) -> bool {
+  hook_has_code(&format!("env/{name}/{point}"))
+}
+
+/// Whether the kernel hook `hook` holds code, by the kernel's own `\IfHookEmptyTF` (see [`env_hook_has_code`]).
+pub fn hook_has_code(hook: &str) -> bool {
   // No L3 hook system (the plain/no-op format) → no hook code anywhere.
   if lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_none() {
     return false;
   }
   let mut toks = vec![T_CS!("\\IfHookEmptyTF"), T_BEGIN!()];
-  toks.extend(ExplodeText!(format!("env/{name}/{point}")));
+  toks.extend(ExplodeText!(hook));
   toks.push(T_END!());
   toks.extend([
     T_BEGIN!(),

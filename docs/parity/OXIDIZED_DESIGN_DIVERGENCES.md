@@ -11397,9 +11397,9 @@ LaTeXML has no pages, puts the box where `\box` would put it in the current mode
 `\shipout` (latex.ltx:19911-19917, ltshipout) ends in `\tex_shipout:D \box_use:N \l_shipout_box`
 (latex.ltx:19986), the expl3-code.tex:531 copy of the primitive, so the kernel's shipout hooks run
 unchanged. LaTeXML never runs an output routine (`\clearpage` is `\lx@newpage`, `\output` never
-fires) and its `\end{document}` (sect02.rs) never reaches `enddocument/afterlastpage`, whose
-`\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20269, in the dump) ships a "Temporary
-page!" box — so only an explicit `\shipout` reaches the primitive, and a document without one is
+fires) and its `\end{document}` (sect02.rs) never reaches
+`\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20269, in the dump), which ships a "Temporary
+page!" box (the document's own `enddocument/afterlastpage` code runs, #1044) — so only an explicit `\shipout` reaches the primitive, and a document without one is
 unchanged. A void box gives LaTeX's "Ignoring void shipout box" warning (latex.ltx:19944).
 
 **Perl** defines no `\shipout` (TeX_FileIO.pool.ltxml:257 is a placeholder). With a braced operand
@@ -36341,3 +36341,22 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
+
+### 1044. The kernel hooks LaTeX runs where LaTeXML's bindings stand in for its macros (QA47B)
+
+**Perl.** `\AddToHook` is a no-op (latex_base.pool.ltxml), etoolbox's `\AfterEndDocument` queues code nothing reads and
+atveryend's commands are no-ops: every hook's code is dropped. **Rust.** With the kernel's hooks loaded, the bindings
+that stand in for latex.ltx's macros run its hooks at its points: `\end{document}` runs `env/document/end` before
+`\enddocument` (:15386); `\begin{verbatim}`/`{verbatim*}` run `env/<name>/begin|end` (no DefEnvironment fires them;
+etoolbox's `\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
+`\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
+`include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
+`enddocument/afterlastpage`, `/afteraux` and `/end` (:15262-15277) follow the last page, where pdflatex prints nothing
+they typeset: the document's own code (lthooks' top-level slot) runs for its side effects in a dropped box, while a
+package's code there keeps the `.aux` and the page model LaTeXML has not (acro's property lists, 2502.06996: a Fatal
+IfLimit; pageslts' numbering check: a false Warning; pbalance) and does not run; `enddocument/info` (the kernel's file
+list and rerun warnings) does not run, so a document's `\AtEndAfterFileList` is still lost (catalog
+`enddocument_info_hook_red`). etoolbox's `\AfterEndDocument` adds to `enddocument/end`, atveryend's commands to their
+hooks as atveryend.sty v1.12. **Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows
+`enddocument_hooks_run`, `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `label_hook_runs`,
+`include_hooks_run`).

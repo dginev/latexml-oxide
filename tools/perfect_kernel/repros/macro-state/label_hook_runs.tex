@@ -1,0 +1,16 @@
+% latex.ltx:14941-14946 `\label` runs `\UseHookWithArguments{label}{1}{#1}` in a group before its `.aux` write:
+%   the hook's text prints where the label stands, its local definitions end with the group.
+% witness: QATRI probe p47/hk.tex (BM Q3.3, QA47B); synthetic.
+% status:  GREEN (QA47B; RED before: "[L:a]" and "[L:fig:a]" lost)
+% oracle:  pdflatex 0 errors; "Figure 1: Cap.[L:fig:a] Text.[L:a] OUT."
+% engines: rust I824base: "Text. OUT.", "Cap."; QA47B: "Text.[L:a] OUT.", "Cap.[L:fig:a]"; Perl: `\AddToHook…` no-ops.
+% expect:  0 errors, 0 warnings; <p>Text.[L:a] OUT.</p>; <caption>…Cap.[L:fig:a]</caption>
+\documentclass{article}
+\AddToHookWithArguments{label}{[L:#1]\def\inner{IN}}
+\def\inner{OUT}
+\begin{document}
+Text.\label{a} \inner.
+\begin{figure}
+\caption{Cap.\label{fig:a}}
+\end{figure}
+\end{document}

@@ -6,6 +6,9 @@
 //! oracle (pdflatex `!` count and text, Perl's) is in its repro header; the RED shapes stay catalog repros
 //! (`command_hook_on_an_optional_argument_command_red`, `command_hook_on_a_tex_primitive_red`,
 //! `command_hook_on_makecaption_caption_repeat_without_options_red`).
+//! QA47B adds the kernel hooks LaTeX runs where LaTeXML's bindings stand in for its macros: `env/document/end` and the
+//! late `enddocument/*` hooks, `env/verbatim/begin|end`, `label`, `\include`'s file hooks (RED catalog:
+//! `enddocument_info_hook_red`).
 use latexml::util::test::{
   RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
 };
@@ -305,6 +308,87 @@ const ROWS: &[Row] = &[
       "p",
       "xml:id=\"p1.1\"",
       r#"<p xml:id="p1.1">A <emph font="italic" xml:id="p1.1.1">b</emph>.</p>"#,
+    )],
+  },
+  // QA47B: `\end{document}` runs `env/document/end` before `\enddocument`, its text printed; the late hooks run for
+  // their side effects only (red: "[DE]" lost, 0 warnings).
+  Row {
+    name:     "enddocument_hooks_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/enddocument_hooks_run.tex"
+    ),
+    counts:   (0, 3),
+    messages: &[
+      "Warning:latex:(qab) Package qab Warning: afterlastpage    ",
+      "Warning:latex:(qab) Package qab Warning: afteraux    ",
+      "Warning:latex:(qab) Package qab Warning: end    ",
+    ],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">Text.\n[DE][AED]</p>",
+    )],
+  },
+  // QA47B: etoolbox's and atveryend's commands onto those hooks, their own bindings (red: "[BCD]" lost, 0 warnings).
+  Row {
+    name:     "enddocument_hook_commands_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/enddocument_hook_commands_run.tex"
+    ),
+    counts:   (0, 4),
+    messages: &[
+      "Warning:latex:(qab) Package qab Warning: AfterLastShipout    ",
+      "Warning:latex:(qab) Package qab Warning: AtVeryEndDocument    ",
+      "Warning:latex:(qab) Package qab Warning: AtVeryVeryEnd    ",
+      "Warning:latex:(qab) Package qab Warning: AfterEndDocument    ",
+    ],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">Text.\n[BCD]</p>",
+    )],
+  },
+  // QA47B: the verbatim constructor fires `env/verbatim[*]/begin|end`; etoolbox's code runs once (red: "[tt].").
+  Row {
+    name:     "verbatim_env_hooks_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/verbatim_env_hooks_run.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[("p", "xml:id=\"p1.3\"", r#"<p xml:id="p1.3">[bteBE].</p>"#)],
+  },
+  // QA47B: `\label`'s hook prints in place, its definitions local (red: "Text. OUT.", "Cap.").
+  Row {
+    name:     "label_hook_runs",
+    tex:      include_str!("../../../tools/perfect_kernel/repros/macro-state/label_hook_runs.tex"),
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[
+      (
+        "p",
+        "xml:id=\"p1.1\"",
+        r#"<p xml:id="p1.1">Text.[L:a] OUT.</p>"#,
+      ),
+      (
+        "caption",
+        "",
+        r#"<caption><tag close=": ">Figure 1</tag>Cap.[L:fig:a]</caption>"#,
+      ),
+    ],
+  },
+  // QA47B: `\include`'s hooks around the file, and the excluded ones (red: "Text.\nChapter text.\nMore.").
+  Row {
+    name:     "include_hooks_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/include_hooks_run.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">Text.\n[EX][OX]\n[IB][ICB]Chapter text.\n[ICE][IE][ICA][IA]\nMore.</p>",
     )],
   },
 ];

@@ -1883,12 +1883,18 @@ fn apply_dospecials() {
   }
 }
 
-fn before_digest_verbatim() -> Result<Vec<Digested>> {
+fn before_digest_verbatim(starred: bool) -> Result<Vec<Digested>> {
   bgroup();
   apply_dospecials();
   let mut stuff = Vec::new();
   if let Some(b) = lookup_tokens("@environment@verbatim@atbegin") {
     stuff.push(digest(b.unlist())?);
+  }
+  // latex.ltx:15362 `\UseHook{env/verbatim/begin}` in `\begin`'s group: this constructor is no DefEnvironment, whose
+  // closure fires it (dialect.rs), so the kernel hook's code was dropped (QA47B).
+  let begin_hook = env_hook_tokens(if starred { "verbatim*" } else { "verbatim" }, "begin");
+  if !begin_hook.is_empty() {
+    stuff.push(digest(begin_hook)?);
   }
   AssignValue!("current_environment", "verbatim");
   DefMacro!("\\@currenvir", "verbatim");
@@ -1996,6 +2002,11 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   // Note last line ends up as Whatsit's "trailer"
   if let Some(b) = lookup_tokens("@environment@verbatim@atend") {
     lines.push(pin(digest(b)?.to_string()));
+  }
+  // latex.ltx:15386 `env/verbatim/end`, inside the group, as the store above (QA47B).
+  let end_hook = env_hook_tokens(if starred { "verbatim*" } else { "verbatim" }, "end");
+  if !end_hook.is_empty() {
+    lines.push(pin(digest(end_hook)?.to_string()));
   }
   egroup()?;
   lines.push(pin_static(end));

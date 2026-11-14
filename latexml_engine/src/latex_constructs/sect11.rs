@@ -107,6 +107,17 @@ pub(crate) fn load() -> Result<()> {
       // which may loop (`\renewcommand\theenumi{\RegularTheEnumi}` with `\def\RegularTheEnumi{\theenumi}`:
       // 2609.13327, Fatal Recursion; Perl hangs, KNOWN_PERL_ERRORS #496). The unread digest is not made.
     }
+    // latex.ltx:14941-14946 `\begingroup\UseHookWithArguments{label}{1}{#1}` before the `.aux` write, a whatsit of no
+    // width: its code's text prints here (QA47B).
+    if hook_has_code("label") {
+      let key = whatsit.get_arg(1).map(|key| key.revert()).transpose()?.unwrap_or_default();
+      let mut hook = vec![T_CS!("\\begingroup"), T_CS!("\\UseHookWithArguments"), T_BEGIN!()];
+      hook.extend(ExplodeText!("label"));
+      hook.extend([T_END!(), T_BEGIN!(), T_OTHER!("1"), T_END!(), T_BEGIN!()]);
+      hook.extend(key.unlist());
+      hook.extend([T_END!(), T_CS!("\\endgroup")]);
+      return Ok(vec![digest(Tokens::new(hook))?]);
+    }
   }
   );
   // Perl L3862: Let('\label', '\lx@label'). The canonical label constructor is
@@ -1293,6 +1304,8 @@ pub(crate) fn load() -> Result<()> {
       Some(Stored::HashString(map)) => map.contains_key(&path_str),
       _ => true,
     };
+    // (the include hooks run in the document only: latex.ltx:9630, 2605.05505's `\include{preamble.tex}` is a bare input)
+    let hooks = is_defined_token(&T_CS!("\\UseOneTimeHook")) && !lookup_bool("inPreamble");
     if should_include {
       // latex.ltx:9557→9612→9730: `\include` reaches the file through
       // `\@input@{#1.tex}` = `\InputIfFileExists{…}{}{\typeout{No file …}}`,
@@ -1300,8 +1313,34 @@ pub(crate) fn load() -> Result<()> {
       // thesis-ex ships without its `\include`d chapters; pdflatex prints
       // "No file 1-introduction.tex."). Perl's `\include` opens it hard
       // (SHARED). Guard: `perfect_kernel_batch56::sweep46_single_name_gaps`.
-      unread(Tokenize!(TeXString::assembled(format!(
+      // latex.ltx:9609-9617 `\@include` names the file current (`\@filehook@set@CurrentFile`, which filehook's
+      // `\AtBeginOfIncludes` reads: 1903.01803) and runs the include hooks around it (QA47B).
+      let assign = T_CS!("\\@expl@@@filehook@file@pop@assign@@nnnn");
+      let input = Tokenize!(TeXString::assembled(format!(
         "\\InputIfFileExists{{{path_str}.tex}}{{}}{{\\typeout{{No file {path_str}.tex.}}}}"
+      )));
+      if !hooks {
+        unread(input);
+        return Ok(Vec::new());
+      }
+      let current = if is_defined_token(&assign) {
+        ::latexml_core::binding::content::file_hook_names(&s!("{path_str}.tex")).0
+      } else {
+        String::new()
+      };
+      let internal = |text: String| mouth::tokenize_internal(TeXString::assembled(text)).unlist();
+      let mut toks = internal(s!(
+        "{current}\\UseHook{{include/before}}\\UseOneTimeHook{{include/{path_str}/before}}"
+      ));
+      toks.extend(input.unlist());
+      toks.extend(internal(s!(
+        "\\UseOneTimeHook{{include/{path_str}/end}}\\UseHook{{include/end}}\\UseOneTimeHook{{include/{path_str}/after}}\\UseHook{{include/after}}"
+      )));
+      unread(Tokens::new(toks));
+    } else if hooks {
+      // latex.ltx:9626-9627, a file `\includeonly` left out
+      unread(mouth::tokenize_internal(TeXString::assembled(format!(
+        "\\UseHook{{include/excluded}}\\UseOneTimeHook{{include/{path_str}/excluded}}"
       ))));
     }
   });
