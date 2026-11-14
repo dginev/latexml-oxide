@@ -1,0 +1,13 @@
+% witness: review revCSSI of issue 810 (its m probe), synthetic
+% oracle:  pdflatex 0 errors, no Overfull: "f(x) = x + y + z (1)" on one line of the minipage
+% engines: rust CSSIb with LaTeXML.css, Chrome/Firefox: the browser's wider glyphs make formula plus tag exceed the
+%          138 px box with TeX's quad between them; the equation scrolls (149/152 px wide) and (1) is behind the
+%          scroll (base 17a64c0415a: 178/180 px, also hidden)
+% expect:  (1) visible: TeX's own-line fallback (tex.web §1202-1205) or a wrap of the tag under the formula
+% status:  RED (CSSIb); moves: post-merge (no CSS-only own-line fallback over a centring grid)
+\documentclass{article}
+\begin{document}
+\begin{minipage}{0.3\textwidth}
+\begin{equation}f(x)=x+y+z\end{equation}
+\end{minipage}
+\end{document}

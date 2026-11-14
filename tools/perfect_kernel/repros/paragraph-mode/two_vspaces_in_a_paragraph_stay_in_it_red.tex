@@ -1,0 +1,21 @@
+% witness: revQAB8 (synthetic): two `\vspace`s in a row inside a paragraph — latex.ltx makes each a `\vadjust`, so the
+%          paragraph goes on and the space lands after its line; ours ends the paragraph at the first, and the second is
+%          then read in vertical mode as glue BETWEEN paragraphs (`note_skip_after_para`, tex_glue.rs:207)
+% oracle:  pdflatex 0 errors (TL 2025): "First text" and "more on the same line." on one line (pdftotext, same y), the 3cm
+%          after it before "Second"; `Third text \medskip\bigskip` + blank line: an 18pt gap (TeX's \par marks the run)
+% engines: rust QAB8 98044e0225f: `--ltx-skip-before:56.9pt` on "more on the same line."; the Third case 12pt
+% expect:  0 errors; "First text … more on the same line." one paragraph, `--ltx-skip-before:85.4pt` on "Second";
+%          the Third case 18.0pt
+% status:  RED
+% moves:   post-merge (a `\vskip` read in vertical mode right after an unresolved in-paragraph `\vspace` inherits
+%          in_paragraph; `\par` marks the whole run)
+\documentclass{article}
+\begin{document}
+First text\vspace{1cm}\vspace{2cm} more on the same line.
+
+Second paragraph.
+
+Third text \medskip\bigskip
+
+Fourth paragraph.
+\end{document}

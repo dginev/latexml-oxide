@@ -51,6 +51,7 @@ pub(in crate::base_utilities) fn normalize_titlepage_layout_children(
       demote_para_class_content(document, &child)?;
       document.rename_node(child, "ltx:block", true)?;
     } else if q == pin_static("ltx:para") {
+      crate::tex_paragraph::drop_skip_before(document, &child)?;
       document.rename_node(child, "ltx:block", true)?;
     }
   }

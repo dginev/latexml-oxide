@@ -35,7 +35,11 @@ fn lastbox() {
       case("p8", r##"<para xml:id="p8"><p>[1]</p></para>"##),
       case("p9", r##"<para xml:id="p9"><p>[0]</p></para>"##),
       case("p10", r##"<para xml:id="p10"><p>[0.0pt]</p></para>"##),
-      case("p11", r##"<para xml:id="p11"><p>[0.0pt] done.</p></para>"##),
+      // (QAB8: c11's `\par\vskip3pt` before it is kept, `--ltx-skip-before`, OD #1050)
+      case(
+        "p11",
+        r##"<para cssstyle="--ltx-skip-before:3.0pt" xml:id="p11"><p>[0.0pt] done.</p></para>"##,
+      ),
       case("p12", r##"<para xml:id="p12"><p>[h]</p></para>"##),
       case("p13", r##"<para xml:id="p13"><p>[void]</p></para>"##),
       case("p14", r##"<para xml:id="p14"><p>[3.0pt]</p></para>"##),
@@ -484,7 +488,8 @@ fn vadjust() {
       ),
       case(
         "p12",
-        r##"<para class="ltx_noindent" xml:id="p12"><p>Victor  Xray.</p></para>"##,
+        // (QAB8: Papa's `\vadjust{\vspace{1em}}`, set after its line, is the glue before this paragraph, OD #1050)
+        r##"<para class="ltx_noindent" cssstyle="--ltx-skip-before:10.0pt" xml:id="p12"><p>Victor  Xray.</p></para>"##,
       ),
       case(
         "p13",

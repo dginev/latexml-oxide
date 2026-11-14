@@ -398,13 +398,12 @@ pub(crate) fn load() -> Result<()> {
   // `<ltx:para>` stayed open and `<rule>` landed inside it).
   // ntheorem_test, plus the simpler `bigskip_test`, both confirm the
   // Perl-faithful expansion produces the expected sibling layout.
-  DefMacro!("\\vspace OptionalMatch:* {}", "\\vskip #2\\relax");
-  // In a float, `\vspace` between panels is TeX's in a paragraph (latex.ltx:9361-9370 `\@vspace`: `\vadjust`
-  // outside vertical mode), which breaks no line, where a `\vskip` there ends the paragraph: the float's begin lets
-  // `\vspace` to this, whose `\vskip` (`\lx@vspace@mark`) is no row break (the panel grid rule, `note_panel_separator`).
+  // Its `\vskip` is marked (`\lx@vspace@mark`): outside vertical mode a `\vspace` is a `\vadjust` (latex.ltx:9361-9370
+  // `\@vspace`), which breaks no line where a `\vskip` ends the paragraph. Between a float's panels it is no row break
+  // (the panel grid rule, `note_panel_separator`); in a paragraph, glue between two paragraphs only when a `\par`
+  // follows (tex_glue.rs `note_skip_after_para`).
+  DefMacro!("\\vspace OptionalMatch:* {}", "\\lx@vspace@mark\\vskip #2\\relax");
   DefPrimitive!("\\lx@vspace@mark", { assign_value("lx@vspace@mark", true, None); });
-  DefMacro!("\\lx@panel@vspace OptionalMatch:* {}", "\\lx@vspace@mark\\vskip #2\\relax");
-  Let!("\\lx@kernel@vspace", "\\vspace");
   def_primitive_noop("\\addvspace {}")?;
   def_primitive_noop("\\addpenalty {}")?;
   def_primitive_noop("\\@endparenv")?;

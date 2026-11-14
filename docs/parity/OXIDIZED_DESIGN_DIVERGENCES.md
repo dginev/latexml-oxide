@@ -25712,9 +25712,9 @@ and its standalone blocks:
   unwraps into it and leave with a capture that stays a container (`drop_panel_separators`; 78x r6: a leading
   `\hspace*{5pt}` or `\hskip` in a `{center}` chose the inline candidate holding its `ltx:break`, the `\parbox` panels
   after it hoisted out as `logical-block`s and the caption kept in the row's `ltx:block`, 1710.06503 Fig 1, the
-  ws-procs961x669 binding net; guard `an_hspace_star_opens_the_row_paragraph`). The float's begin lets `\vspace`, `\linebreak` and
-  `\hspace` to the rule's `\lx@panel@vspace`/`\lx@panel@linebreak`/`\lx@panel@hspace` only while they have the kernel's
-  meaning (`\lx@kernel@…`): an author's or a package's own stands.
+  ws-procs961x669 binding net; guard `an_hspace_star_opens_the_row_paragraph`). The float's begin lets `\linebreak` and `\hspace` to the rule's
+  `\lx@panel@linebreak`/`\lx@panel@hspace` only while they have the kernel's meaning (`\lx@kernel@…`): an author's or a
+  package's own stands; the kernel `\vspace` marks its own `\vskip` (`\lx@vspace@mark`, #1050).
 - **The stated glue counts.** `\hskip` (so `\quad`, `\qquad`) and `\hspace` between two panels add their natural width to
   the row; plain spaces, `\label`s and `\hfill` count 0. A row that begins a paragraph (the float's first, one after a
   `\par`, a `{center}` boundary, a `\vskip`, a caption, or a centred `\\`) keeps the glue stated before its first
@@ -36254,6 +36254,30 @@ post-merge). Offer upstream. **Guards**:
 `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
 `math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.
 
+**Extension (2026-11-14, issue #824): TeX's Bin→Ord rule in the same walk.** The walk's atom types move toward TeX's classes in one
+mechanism: the Core-K Ord above, and a sign TeX makes an Ord is tight.
+**Principle (real TeX, MathML Core).** TeX converts a Bin atom to an Ord when it is the first atom of its list or
+follows a Bin, Op, Rel, Open or Punct, and converts the previous Bin when a Rel, Close or Punct follows or the list ends
+(tex.web §728-729, `@<Convert \(a)a bin...@>`); glue is not an atom there. MathML Core spaces an `<mo>` by its inferred
+form (§3.2.4.2): a last child is postfix, and `+` and `−` have no postfix entry, so they fall back to infix,
+0.2222em each side (B.1). Related: #1040. **Perl.** The space walk (`space_walk`/`adjust_pair`,
+MathML.pm:1097-1284) types each atom by its role alone, so a trailing `+` stays a Bin. **Rust.** `space_walk`
+(presentation.rs) collects an mrow's visually adjacent atoms first, then types them (`item_atom_type`, Perl's role
+table and #1033's Core-K Ord) and applies TeX's conversion over the list (`tex_atom_types`, an `mspace` skipped as
+glue; `∇`, `|`, `‖` and `.` read as TeX's Ords, class 0, where the role table says Op or Punct, so `\nabla\cdot B`
+keeps a binary `⋅`); `adjust_pair` spaces a pair that touches a converted sign by those types; every other pair keeps the role table's types (Perl's), so `\nabla\cdot B` still lacks TeX's medium space before `⋅` (RED `math-parse/nabla_cdot_is_a_binary_operation_red.tex`). A converted Bin `<mo>` after the list's first atom whose
+dictionary spacing is nonzero gets `lspace="0em" rspace="0em"`; a leading one is not marked (Core's prefix form gives
+`+` and `−` zero). `\showbox` (pdflatex, TL 2025) agrees on every row: `a+-b` has `\medmuskip` both sides of `+` and
+none around `−` (`<mo>+</mo><mo lspace="0em" rspace="0em">−</mo>`); `x\pm-1`, `f(0+)`, `a+ =b` (`\thickmuskip` only
+around `=`), `a+b+`, `x+,y`, `a+\,=b`, `\{+,-\}`, `x^{2+}`, `\lim_{x\to0+}`, an align cell ending `=b+`, mhchem's charge
+`2-` set the sign tight; `-x`, `(-x)`, `a=-b` keep a bare `<mo>` (the parser's prefix operator, already an Ord).
+This replaces a rule keyed on the parser's `limit-from` reading, which also tightened the binary `+` of `a+-b`.
+Residuals: scripts keep Bin, Rel and Punct space (TeX inserts none in script style, §764), so a converted sign
+after a comma in a script (2003.05751 `\mathcal{P}^{2,+}`) leaves the comma Core's 0.167em
+(`math-parse/script_style_rel_has_no_thick_space_red.tex`); a braced `{\mathop{\square}}` is TeX's Ord but the role
+table's Op (2012.06541). Offer upstream. **Guard**:
+`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro `math-parse/bin_atom_becomes_ord.tex`).
+
 ### 1034. A small PDF figure is converted to SVG, raster-bearing ones too, unless it draws a raster enlarged (after PR 816)
 
 **Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
@@ -36423,3 +36447,114 @@ in a URL; any other backslash, and a URL without one, is kept. The XML's `bib-ur
 `*nat` style, which prints its URLs, prints it as TeX does, escapes included. A `doi` was already clean
 (`identifier_data`, bibtex.rs). **Guards**: `06_cluster_bibliography::bib_url_escapes_leave_the_href`,
 `make_bibliography::tests::unescape_tex_url_drops_only_tex_escapes`.
+
+### 1042. An equation's tag stays beside its formula in LaTeXML.css (issue #810)
+
+**Perl.** LaTeXML.css gives the tag cell `.ltx_eqn_eqno { max-width:0em; overflow:visible }`: the column takes no
+width and the tag overlays the right centring pad (`min-width:2em`), so a formula wider than the line less 2em runs
+under its tag (reporter nasser1's `align` with `\tag{C.8.1}`: in Chrome the tag sits on the fraction bar at 768 and
+375 px; `(C.8.2)` at 375 px; a long `\tag` over `z=1` at 375 px in Firefox). TeX never overlaps them: tex.web
+§1202-1205 centres the display in the full line, recentres it in the line less the number when the gap falls under
+twice the number's width, and sets the number on a line of its own when even that does not fit. **Rust.** Two local
+deltas. (1) `.ltx_eqn_eqno { max-width:none; }`: the tag is a real column. (2) A one-row centred equation
+(`.ltx_equation.ltx_eqn_table`, its row the only child) is a grid `minmax(2em,1fr) auto 1fr` (leqno mirrored), the tag
+laid over the pad on its side with a 1em quad: the formula is centred in the full line while the tag fits, and moves
+only as far as the tag needs when it does not, a continuous form of TeX's two-step rule (a long `\tag` at 375 px:
+4 px left in Chrome, 27 px in Firefox, where TeX's rule gives 75/86); under a minipage or a table cell
+(`.ltx_inline-block`, `.ltx_td`) the 2em minimum is 0. The other pad's `width:100vw; max-width:100%` keeps the
+shrink-to-fit width the old 50% table columns gave (an equation in a list item is centred in the item's line, now in
+Firefox too). Measured in Chrome and Firefox at 1280/768/375 px: a one-row equation 0 px off the line's centre (was
+-10 px for `(1)`, -68/-79 px for the long `\tag` at 1280 with (1) alone); a `p{4cm}` cell's `q=r+s+t (14)` fits its
+152 px without scrolling, the tag visible (was 179 px, the tag behind the scroll); the accessibility tree is
+unchanged (playwright `ariaSnapshot`, Chrome's `LayoutTable` roles). A multi-row table (`align`, `gather`,
+`eqnarray`, `subequations`) keeps (1) alone, since its rows share columns: its rows are centred in the line less the
+tag column (-10 to -24 px at 16 px). Not reached: a formula plus its tag wider than a narrow box in the browser scrolls
+with the tag behind the scroll, where TeX would set the number on its own line (repro
+`alignment/equation_tag_hidden_in_a_narrow_minipage_red.tex`). Offered upstream. **Guards**:
+`cluster_cli::browser_render_eqn_tags::equation_tags_stay_beside` (Chrome, Firefox with `LATEXML_FIREFOX`; local),
+`xslt::witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
+
+### 1043. MathJax's display margin is zeroed inside an equation cell (issue #475)
+
+**Perl.** A display equation is a `table.ltx_eqn_table` (our #473 delta adds its 1em block margins). MathJax
+renders a display `<math>` as a block with a 1em block margin (v3/v4 `mjx-container[display="true"]`, v2
+`.MathJax_Display`); inside a table cell that margin cannot collapse with the table's, so consecutive displays sat
+about three times as far apart as without MathJax (reporter nasser1; measured with MathJax 2.1 offline in Chrome: the
+formulas 53 px apart, natively 18 px; ar5iv.css likewise 54 against 20). **Rust.** A local delta zeroes that
+container's block margins in an equation cell, as the table already carries the display skip: 21 px under MathJax 2.1,
+native rendering unchanged. The rule matches `.ltx_eqn_table .ltx_eqn_cell`, so it holds for the span-built equation
+of a minipage or a tabular cell too. MathJax 3/4 was not loadable offline; its selector is from MathJax's CHTML
+stylesheet. Offered upstream. **Guard**: `xslt::witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
+
+### 1040. An mhchem formula is chemistry math: element atoms, isotope prescripts, counts, a charge on the formula (issue #824, stage 1)
+
+**Perl.** Ships no mhchem binding; the raw package hangs on `\ce`. **Rust (before).** The raw mhchem.sty (TL 2025 v4.10)
+ran through its text-mode branch: an element run was one `\text` (`MoO`, `SO` one `<mtext>`), the count and charge
+`\text` scripts on `\vphantom` bases, the charge's minus an en dash (`<mtext>2 – </mtext>`), the isotope in an
+`<mpadded>` from `\mathchoice`/`\llap`, and a formula of text alone left math (`ltx_markedasmath`). **Rust (now).**
+mhchem's own parser still reads `\ce`; its output hook `\__mhchem_output_begin_cf:` (empty, mhchem.sty:1424, run
+before the formula's `\ensuremath`) rewrites the formula's output list (`lx@mhchem@formula`, `mhchem_sty.rs`). Each
+`\__mhchem_output_coreFive:nnnnnnn` unit (mhchem.sty:2774) becomes, in mhchem's math-mode branch: its element run split
+at its capitals when it is letters only, each element an ordinary atom (`\mathord`, so the letter ligature does not
+merge `Mo` and `O`; Base_XMath.pool.ltxml:443); the isotope's mass and atomic number prescripts (`{}^{95}_{42}`) on
+its first element; the count a subscript and an oxidation state a superscript of its last; the formula's brackets
+(`\__mhchem_output_withFont:n {(}`) math fences. A charge on the formula's last unit is a superscript of the whole
+formula (`\mathord{…}^{2-}`, minus U+2212) unless the formula is one element (`Li+`, `^{227}_{90}Th+`, `2Na+`); an
+amount (`\__mhchem_output_amount:n`, mhchem.sty:2769) is not part of the formula after it (`\ce{3SO4^{2-}}` is
+`3\,\mathord{SO_4}^{2-}`, `\ce{2e-}` is `2\,e^-`); an
+inner unit's charge is the unit's when the unit is several elements (`\ce{OH^-(H2O)}`, 2405.01836). A unit with no
+element (mhchem's count or state on an empty base) scripts the bracket or text it follows (`Fe(CN)6`,
+`\ce{\textit{LnPn}2}`, 2602.09975), after a unit the formula so far:
+`\ce{H2_{(g)}}` is `\mathord{H_2}_{(g)}` and `\ce{SO4^{2-}_{(aq)}}` `\mathord{\mathord{SO_4}^{2-}}_{(aq)}`, the state after
+the charge as pdflatex prints it (an empty `{}` base would leave a floating subscript the math grammar does not parse). A text-mode
+`\ce` sets the formula in the text font math was entered from (`savedfont`, Stomach.pm:518; mhchem.sty:2760 prints it
+in the text font), as nicefrac's `\nf@mathcopytextfont`; a math-mode `\ce` keeps `\mhchem@option@mathFont`. A formula's
+elements and brackets are juxtaposed, not multiplied (DG 2026-11-14): each run of them between amounts and mhchem's own
+operators is `\lx@kludged{…}`, the unparsed row Perl uses for adjacency (Base_XMath.pool.ltxml:193, MathParser.pm:530),
+so no U+2062 `<mo>` sits between two elements (Firefox spaced it ~0.17em; copy gave "H2⁢O"); the amount's thin space
+before its species stays a U+2062 `<mo lspace="0.170em">`. A raw command with its argument (2407.15836
+`\ce{\textit{R}2Ir2Al20}`, `\mathrm{Y}`) is an atom of the run, its count on it; another raw token (`\cdot`, `\bond{-}`,
+mhchem's own output) parts the run. A charge's sign is tight because it ends its list, TeX's atom rule (#1033); a lone
+sign (`e^-`, `Th+`) keeps a bare `<mo>`, as Core adds no space to a script that is one operator (§3.4.1). With `--cmml`
+a run is an unparsed row (`<cerror><csymbol cd="ambiguous">fragments</csymbol>…`, Perl's `cmml_unparsed`,
+MathML.pm:1361-1375, for any kludged row); the formula's content semantics are stage 2. MathML:
+`<msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts/><mrow/><mn>95</mn></mmultiscripts><msub><mi
+mathvariant="normal">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">−</mo></mrow></msup>`
+for `\ce{^{95}MoO4^{2-}}`. This first markup is TENTATIVE (DG's rulings of 2026-11-14) and awaits Bruce Miller's
+feedback and refinements; stage 2 adds MathML `intent` on these presentation elements (formula, element, count and
+charge each their own element). DG: "We expect further improvements are both possible and needed."
+Arrows, `+` between species, bonds, states and amounts keep mhchem's output (stage 2, SYNC row MHCHEM), and the
+formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): −0.55 % on 2307.12991 (589 `\ce` in its sources),
+−0.04 % on 300 synthetic `\ce`, +0.13 % on 2405.01836 (167; with `--nomathparse` −0.08 %: the formulas'
+parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
+`package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
+`mhchem_formula_amount.tex`, `mhchem_formula_juxtaposed.tex`; witnesses issue 824, 2206.12015).
+### 1050. The glue between two paragraphs is `--ltx-skip-before` on the second (QAB8, QA26)
+
+**Principle:** TeX's vertical list decides what lies between two paragraphs; Perl's own comment asks for it
+(TeX_Glue.pool.ltxml:89-90: "add appropriate class/css for spacing to preceding element"). It sits on the FOLLOWING paragraph
+by DG's design ruling (2026-11-14, design A of the QA26 study): one element carries one gap, the stylesheet decides how to
+show it, and nothing is added to or between the blocks. Related: #142 (`\\[dimen]` as `--ltx-break-space`, the same carrier), #422 (glue items flagged `isSkip`).
+**Perl.** `\vskip` only closes the open `ltx:p`/`ltx:para` and drops its amount, so a topic break by `\bigskip`,
+`\medskip` or `\vspace` leaves no trace (KNOWN_PERL_ERRORS #1246). **Rust.** A `\vskip` (its natural width) met
+while its parent's last child is an `ltx:para` is summed, in sp, on that parent (tex_glue.rs `note_skip_after_para`);
+the next `ltx:para` opened there takes a positive net as `cssstyle="--ltx-skip-before:<pt>"`, appended to any
+`cssstyle`, when its previous sibling is that paragraph (tex_paragraph.rs `apply_skip_before`, streaming
+placeholders included); any paragraph's start ends the wait, and an empty paragraph pruned at its close gives its skip
+back. So consecutive skips add as on TeX's vertical list (`\bigskip\medskip` 18pt, `\bigskip\vspace{-6pt}` 6pt;
+needspace's `\vskip\dimen@ … \vskip-\dimen@` nets 0, mdframed_loads_its_dependencies); a heading, float, theorem or
+list between, a skip after a heading, and a net that is not positive carry nothing. By the QA26 ruling (DG 2026-11-14) neither do title pages, boxes
+(`ltx:inline-block`, `ltx:inline-logical-block`: a minipage holding paragraphs, 2512.08710) and floats
+(`in_unspaced_container`), nor cover paragraphs the frontmatter later moves into a title page (`drop_skip_before` in
+titlepage_layout.rs, 2007.05296).
+A `\vspace` read inside a paragraph is latex.ltx's `\vadjust` (`\@vspace`, set after its line): it counts only when
+the paragraph's `\par` follows at once (the `\par` marks it, `par_follows`); the kernel `\vspace` now marks its
+`\vskip` (`\lx@vspace@mark`, which made the float's own `\lx@panel@vspace` redundant: removed). A `\vskip` read in a
+paragraph ends it (tex.web §1094) and counts. LaTeXML.css: `.ltx_para[style*="--ltx-skip-before:"] { margin-top:
+calc(1em + var(--ltx-skip-before)) }` (collapsing with the `<p>` margins: 32 px for 12pt at 16 px); ar5iv-css
+mirrors it as `padding-top` (40 px); the EPUB loads LaTeXML.css. `\addvspace` stays a no-op (RED
+`paragraph-mode/addvspace_between_paragraphs_takes_the_larger_red.tex`). Witnesses 2503.04888, 2001.10915,
+2408.07944, 1606.03039. **Guard**: `perfect_kernel_batchqab8::paragraph_skips_go_on_the_next_paragraph` (repros
+`paragraph-mode/skip_between_paragraphs_goes_on_the_next.tex`, `skip_between_paragraphs_shapes.tex`,
+`skip_moved_into_a_title_page_is_dropped.tex`).
+

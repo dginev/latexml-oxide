@@ -154,7 +154,7 @@ Once? Once.</p>
   <para xml:id="p17">
     <p>First line</p>
   </para>
-  <para xml:id="p18">
+  <para cssstyle="--ltx-skip-before:0.1pt" xml:id="p18">
     <p>second line</p>
   </para>
   <rule height="1px" width="100%"/>

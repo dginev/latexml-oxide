@@ -160,26 +160,27 @@ fn a_register_a_class_begin_document_hook_fills_is_no_note() {
 /// and stays the class's text (1704.03333's sifrev).
 #[test]
 fn an_and_list_in_a_displaced_store_goes_by_the_class_numbers_or_stays_the_classs() {
+  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1050; pdflatex: a gap)
   assert_eq!(
     converted(
       repro!("displaced_class_numbered_and_institutes_go_by_their_numbers"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B, City</contact> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1.1">1</text></sup></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B, City</contact> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1.1">1</text></sup></p> </para> <para cssstyle="--ltx-skip-before:10.0pt" xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
       repro!("displaced_and_institutes_the_class_does_not_number_stay_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1">Univ A, Town</text></p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1"><text font="italic" fontsize="90%" xml:id="p2.1.1">Univ B, City</text></p> </para> <para xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1">Univ A, Town</text></p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1"><text font="italic" fontsize="90%" xml:id="p2.1.1">Univ B, City</text></p> </para> <para cssstyle="--ltx-skip-before:10.0pt" xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
       repro!("displaced_lines_a_title_page_separator_numbers_stay_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">2</sup></personname> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1.1">1</text></sup><text fontsize="90%" xml:id="p1.1.2"> </text><text font="italic" fontsize="90%" xml:id="p1.1.3">Univ A, Town</text></p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1"><sup xml:id="p2.1.1"><text font="italic" fontsize="90%" xml:id="p2.1.1.1">2</text></sup><text font="italic" fontsize="90%" xml:id="p2.1.2"> Univ B, City</text></p> </para> <para xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">2</sup></personname> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1.1">1</text></sup><text fontsize="90%" xml:id="p1.1.2"> </text><text font="italic" fontsize="90%" xml:id="p1.1.3">Univ A, Town</text></p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1"><sup xml:id="p2.1.1"><text font="italic" fontsize="90%" xml:id="p2.1.1.1">2</text></sup><text font="italic" fontsize="90%" xml:id="p2.1.2"> Univ B, City</text></p> </para> <para cssstyle="--ltx-skip-before:10.0pt" xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
   );
 }
 
