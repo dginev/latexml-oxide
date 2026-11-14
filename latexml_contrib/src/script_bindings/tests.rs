@@ -874,9 +874,13 @@ fn lookup_value_on_list_returns_rhai_array() {
 /// log from neither (both macros wrote stderr and were level-gated off).
 #[test]
 fn diagnostics_surface_info_notes_progress_and_fatal() {
+  use latexml_core::{
+    common::error::{LogStatus, get_status},
+    util::logger,
+  };
   fresh_state();
   // Capture the log buffer to prove routing (the log write is not stderr-gated).
-  latexml_core::util::logger::bind_log();
+  logger::bind_log();
   load_script(
     r#"
     Info("test", "obj", "an info message");
@@ -889,7 +893,7 @@ fn diagnostics_surface_info_notes_progress_and_fatal() {
     "#,
   )
   .expect("non-fatal diagnostics must load and run cleanly");
-  let log = latexml_core::util::logger::flush_log();
+  let log = logger::flush_log();
   assert!(
     log.contains("a log note"),
     "NoteLog did not reach the log:\n{log}"
@@ -903,10 +907,6 @@ fn diagnostics_surface_info_notes_progress_and_fatal() {
     "NoteSTDERR leaked into the log (it must be stderr only):\n{log}"
   );
   // `Debug` means our `Debug!` (DG 2026-11-14): counted at every verbosity, logged only under `--verbose`.
-  use latexml_core::{
-    common::error::{LogStatus, get_status},
-    util::logger,
-  };
   let debug_script = r#"Debug("a quiet debug"); Debug("cat", "obj", "a quiet record");"#;
   let debugs = get_status(LogStatus::Debug);
   let _ = logger::init(log::LevelFilter::Info);
