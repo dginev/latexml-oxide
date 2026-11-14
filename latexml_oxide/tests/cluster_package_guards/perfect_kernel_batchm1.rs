@@ -9,7 +9,7 @@
 //! test of a known xcolor model (`xcolor_sty.rs`), a `<titlepage>` for a later late abstract's cover line
 //! (`cover_order.rs`), `\selectfont` out of `\nullfont` (`sect13.rs`), a template's own text in `typesets_content`
 //! (`util_text.rs`), multibib's style (`multibib_sty.rs`), and ijsra's slots and abstract (`ijsra_cls.rs`).
-use latexml::util::test::{check_requirements, convert_with, rng_error_count};
+use latexml::util::test::{check_requirements, convert_with, kpse_text, rng_error_count, skip};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -410,6 +410,14 @@ fn the_ijsra_abstract_is_semantic() {
   assert!(log.contains(r"\endlx@list"), "{log}");
   assert!(!xml.contains("the abstract text"), "{xml}");
   if !check_requirements(&["ijsra.cls"]) {
+    return;
+  }
+  // ijsra.cls:296 calls KOMA's `\ifstr`, which KOMA-Script 3.50 (TL 2026) dropped from scrbase.sty: the class fails in TeX too.
+  if !kpse_text("scrbase.sty").is_some_and(|sty| sty.contains(r"\providecommand*{\ifstr}")) {
+    skip(
+      "the_ijsra_abstract_is_semantic",
+      "this KOMA-Script has no \\ifstr, which ijsra.cls needs",
+    );
     return;
   }
   let (log, xml) = cli_conversion(
