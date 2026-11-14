@@ -1,0 +1,18 @@
+% witness: 63i review r1 finding 4 (svjour3 epjc3 marked institute lines, one with its own `\thanksref`; synthetic)
+% oracle:  pdflatex (svjour3.cls + svepjc3.clo) 0 errors: "^1 Univ A ^n1", "^2 Univ B" under "Ann Able^1, Bob Baker^2"
+% engines: rust 63h = both institutes shared; 63i r1 = Ann not linked (the \thanksref key joined Univ A's label)
+% expect:  by mark: Ann Univ A, Bob Univ B; the institute's note kept; 0 errors
+% status:  RED (63i r1) -> GREEN (63i)
+\documentclass[twocolumn,epjc3]{svjour3}
+\begin{document}
+\title{T\thanks{Title note.}}
+\author{Ann Able$^{1}$\thanksref{e1} \and Bob Baker$^{2}$}
+\thankstext{e1}{e-mail: ann@a.org}
+\institute{$^{1}$Univ A\thanksref{n1} \\ $^{2}$Univ B}
+\thankstext{n1}{Institute note.}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

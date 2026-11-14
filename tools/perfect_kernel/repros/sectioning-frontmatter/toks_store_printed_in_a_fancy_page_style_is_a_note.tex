@@ -1,0 +1,24 @@
+% A raw class's token register (`\newtoks\correspondingauthor`) the document fills, which the class prints only in the
+% foot of the fancyhdr page style its `\maketitle` selects (`\fancypagestyle{firststyle}`, `\thispagestyle
+% {firststyle}`): K11's toks store (frontmatter_stores.rs `toks_store`) makes it the frontmatter's corresponding-author
+% note at `\maketitle`, led by the label the class prints before it; fancyhdr_sty.rs stores the style as `\ps@firststyle`
+% (fancyhdr.sty:691-711), so the class's code is there to read. The footer itself stays unset (page furniture).
+% witness: 2607.06973 (googlecloud.cls:80/:103-114, "Corresponding author(s): Haoxin Liu …"), 2608.26053 (cmu.cls
+%          :113/:144-164), 2604.13010 (nv.cls); census: 23 papers ship such a class (googledeepmind,
+%          nvidiatechreport, berkeley, instadeep, hku, ds, dm, dmml, deepseek, …).
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Text.", page 1 footer "Corresponding author(s): ann@x.org"
+% engines: rust int124a = 0 errors, "ann@x.org" lost; perl = 1 error (undefined \correspondingauthor), "ann@x.org" a
+%          body paragraph before the title
+% expect:  0 errors, 0 warnings; <ltx:note role="corresponding">Corresponding author(s): ann@x.org</ltx:note>
+% status:  RED (int124a) -> GREEN (95d)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{gtoks.cls}
+\LoadClass{article}\RequirePackage{fancyhdr}
+\newtoks\correspondingauthor
+\fancypagestyle{firststyle}{\fancyfoot[L]{\if\relax\the\correspondingauthor\relax
+  \else Corresponding author(s): \the\correspondingauthor\fi}}
+\renewcommand{\maketitle}{{\@title\par\@author\par}\thispagestyle{firststyle}}
+\end{filecontents*}
+\documentclass{gtoks}
+\title{T}\author{Ann Able}\correspondingauthor{ann@x.org}
+\begin{document}\maketitle Text.\end{document}

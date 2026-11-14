@@ -1,0 +1,17 @@
+% witness: chinesechess.sty coffin scaling (scan_dimen coefficient x internal dimension)
+% oracle: pdflatex 2 errors, "! Number too big." (200000000000 -> 2147483647, tex.web §445) then "! Dimension too
+%          large." (§460), B=[16383.99998pt] (max_dimen; §460 negates only for the scan's own sign, so the negative
+%          unit gives +max_dimen)
+% engines: rust 64zd = 0 diagnostics, B=[-200000000000.0pt] (clamped only past the i64 range, batch 56bq); 64zf = 2
+%          warnings, B=[16383.99998pt]; DTL1d = 2 errors, B=[16383.99998pt]; Perl = 0 diagnostics, B=[-200000000000.0pt]
+% expect:  2 errors ("Number too big.", "Dimension too large."), 0 warnings; B=[16383.99998pt]
+% status:  KEPT (56bq) -> GREEN (64zf: TeX's clamps; DTL1d: reported as Errors, as TeX's, OD #519; the 56bq headroom
+%          for pgf intermediates measured on the 64zf A/B tikz sample)
+% mechanism: gullet.rs `number_too_big` (§445: decimal/octal/hex constants and a factor's integer part) and
+%   `dimension_too_large` (§460 attach_sign: the factor x unit product of read_dimension, glue and mudimen)
+\documentclass{article}
+\begin{document}
+\dimen0=-1pt
+\dimen2=200000000000\dimen0
+B=[\the\dimen2]\par
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 2606.06323 (siunitx loads translations; the paper's second error once the expl3 exit cleanup is fixed)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors
+% mechanism: unknown — translations.sty:1113-1130's `\AtBeginDocument` code (`\@ifpackageloaded`, `\expanded`,
+%   `\forcsvlist`, `\dolistloop`) after etextools raises "Expected opening '{'" (gullet.rs read of a required group, at
+%   an anonymous string); etextools alone and translations alone are clean.
+% status:  RED
+\documentclass{article}
+\usepackage{etextools}
+\usepackage{translations}
+\begin{document}
+Text.
+\end{document}

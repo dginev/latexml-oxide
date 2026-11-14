@@ -1,0 +1,19 @@
+% mechanism: an `\IEEEauthorblockA` nested after the outer block's own lines is a block of its own, the outer keeping
+%   its lines (ieeetran_cls.rs `unnested_affiliation_blocks`, OD #1009), as conference mode prints it on rows of its own
+% witness: 2605.02682 (P4b2: every author "* Equal Contribution"; spliced in, the Cisco line and the e-mails were lost)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ , Bob Baker∗ , Cy Cole†", "Cisco Systems, Town", "Email: {ann, bob, cy}@c.com", "∗Equal Contribution, †Senior Author"
+% engines: P4b2: Cy Cole† "* Equal Contribution" too; a plain splice (P4cR2 WIP): the Cisco line and the e-mails lost
+% expect:  0 errors, 0 warnings; each author "Cisco Systems, Town", its e-mail, and the legend its mark requests
+% status:  RED (P4b2 5e4324996e) -> GREEN (P4cR2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{1}, Cy Cole\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{Cisco Systems, Town \\
+Email: \{ann, bob, cy\}@c.com
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Equal Contribution, \IEEEauthorrefmark{2}Senior Author}
+}}
+\maketitle
+Body.
+\end{document}

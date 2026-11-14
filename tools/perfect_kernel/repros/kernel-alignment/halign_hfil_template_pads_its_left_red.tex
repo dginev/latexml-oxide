@@ -1,0 +1,13 @@
+% witness: synthetic (GA0 finding 8; seen beside GA5's `\let\myhfil\hfil` rows)
+% oracle:  pdflatex 0 errors: a raw `\halign` has no inter-column padding (`\tabskip` 0pt)
+% engines: perl 0.8.8 = every cell `ltx_nopad_l ltx_nopad_r`; rust GA5 (and GA5base) = the `\hfil#\hfil` cells
+%          `ltx_nopad_r` only, while the same template through `\let\myhfil\hfil` gets both: a padding test reads
+%          the template's spelling (one of GA0 finding 8's five copies; alignment.rs KNOWN LIMITATION :874-882)
+% expect:  0 errors, 0 warnings; every cell `ltx_nopad_l ltx_nopad_r`, as Perl
+% status:  RED (GA5)
+% moves:   GA6 (padding from the digested boxes, Perl's left-scan)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\halign{\hfil#\hfil&\hfil$#$\cr left & x\cr wider text & yy+z\cr}
+\end{document}

@@ -1,0 +1,5 @@
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 10 10
+newpath 0 0 moveto 10 0 lineto 10 10 lineto 0 10 lineto closepath fill
+showpage
+%%EOF

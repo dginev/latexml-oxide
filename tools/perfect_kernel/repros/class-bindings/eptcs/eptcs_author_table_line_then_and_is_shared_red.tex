@@ -1,0 +1,18 @@
+% mechanism: an eptcs `\author{\begin{tabular}{c}Ann Able\end{tabular}\\ Univ A\and Bob Baker \institute{Univ B}}`:
+%   the `\\` line after the table is given to both columns (eptcs_cls.rs `cells`; revP24b pre-existing, probe
+%   c2/e_tabnl2)
+% witness: synthetic (revP24b; no census eptcs paper by shape)
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "Univ A", "Bob
+%   Baker" over "Univ B"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B,
+%   Univ A); perl has no eptcs binding
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B)
+% status:  RED (int158a; RR1 gap 20)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\title{T}
+\author{\begin{tabular}{c}Ann Able\end{tabular}\\ Univ A\and Bob Baker \institute{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

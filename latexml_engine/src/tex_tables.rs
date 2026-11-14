@@ -11,6 +11,135 @@ use latexml_core::alignment::{read_alignment_template, template::TemplateConfig}
 
 use crate::prelude::*;
 
+/// The alignment property counting the `\omit`s of the current `\multicolumn` cell still to be read by the cell-head
+/// peek: they are the `\multicolumn`'s, which boxes its body itself (`\lx@alignment@multicolumn`), so the peek does not
+/// box that cell as text. On the alignment, and cleared at each cell's end: a `\multicolumn` misplaced mid-cell
+/// (its first `\omit` read in the cell, "Misplaced \omit") leaves no count for a later cell or alignment.
+const MULTICOLUMN_OMITS: &str = "multicolumn_omits";
+
+/// Whether an `\omit`ted cell of `alignment` is boxed as text (tex.web §789: `\omit` drops the u/v template, so the
+/// cell is restricted horizontal): where the cells' math is their template's `$`, an amsmath alignment
+/// (`template_math`, amsmath_sty.rs) or an `array` (`math_cells_template`, latex.ltx `\@arrayclassz`
+/// `$\relax\@sharp$`, sect10.rs `math_array_bindings`).
+fn omit_cell_is_text(alignment: &Alignment) -> bool {
+  ["template_math", "math_cells_template"].iter().any(|key| {
+    matches!(
+      alignment.get_property(key).as_deref(),
+      Some(Stored::Bool(true))
+    )
+  })
+}
+
+/// The alignment property of an alignment set without `\halign` in TeX: latex.ltx's `tabbing` builds each line from
+/// boxes (`\@startline`, `\@stopline`, `\@addfield`) and never executes `\halign`, so a document's `\halign` macro
+/// does not run for it (`run_halign_redefinition_prelude`). Every other alignment `\lx@begin@alignment` starts reaches
+/// `\halign` in TeX.
+pub const ALIGNMENT_WITHOUT_HALIGN: &str = "without_halign";
+
+/// The alignment property of an alignment that is a display by itself in TeX, `$$\halign…$$`: amsmath's align and
+/// gather families (amsmath.sty `\start@align`, `\start@gather`), latex.ltx's `eqnarray` and IEEEtrantools'
+/// `IEEEeqnarray` (IEEEtrantools.sty:2013). Material a document's `\halign` macro typesets before the primitive is an
+/// error there (`run_halign_redefinition_prelude`). Not cases.sty's `numcases`, whose `\halign` is inside a `\vbox`
+/// (cases.sty:73-75). amsmath's `multline` is a display too but is not marked: its material is kept in the formula
+/// (TeX: "Improper \halign inside $$'s"), the safe direction.
+pub const ALIGNMENT_IS_DISPLAY: &str = "display";
+
+/// Whether `token` means the `\halign` primitive, under whatever name a package saved it (cryptocode.sty:950
+/// `\let\@pc@halign\halign`): a constructor declared `halign_primitive`, the primitive itself or a binding's stand-in
+/// that takes its place — inside a pgf picture its SVG matrix `\lxSVG@halign` (`\lxSVG@installcommands` lets `\halign`
+/// to it, pgfsys_latexml_def.rs; Perl pgfsys-latexml.def L59), which a pseudocode in a TikZ node saves instead (witness
+/// 2107.05054).
+fn means_halign_primitive(token: &Token) -> bool {
+  with_meaning(
+    token,
+    |meaning| matches!(meaning, Some(Stored::Constructor(c)) if c.halign_primitive),
+  )
+}
+
+/// Whether the alignment being started (its bindings ran before `\lx@begin@alignment`) carries the boolean `key`.
+fn alignment_property(key: &str) -> bool {
+  lookup_alignment().is_some_and(|alignment| {
+    alignment.alignment_cell().is_some_and(|cell| {
+      matches!(
+        cell.borrow().get_property(key).as_deref(),
+        Some(Stored::Bool(true))
+      )
+    })
+  })
+}
+
+/// Run a document's `\halign` redefinition where an alignment the binding builds would reach `\halign` in TeX: the
+/// `before_digest` of `\lx@begin@alignment`, whose boxes go before the alignment.
+///
+/// amsmath's alignment environments and every `\ialign`-based one (latex.ltx `\@array`, plain `\ialign` =
+/// `\everycr{}\tabskip\z@skip\halign`, `\eqalign`, `\matrix`, `\oalign`, longtable, eqnarray, amscd, blkarray,
+/// IEEEtrantools) execute the token `\halign`, so in TeX a macro `\halign` runs first and the primitive it ends with
+/// starts the alignment. Our bindings build those alignments in Rust (`\lx@begin@alignment`), so the macro's
+/// expansion is digested here, in the group the alignment starts in (TeX's: its definitions last as long), and its
+/// final primitive is the alignment already being built. `tabbing` never reaches `\halign`
+/// ([`ALIGNMENT_WITHOUT_HALIGN`]). Only the conservative shape is run: a parameterless macro whose expansion ends with
+/// the primitive (under any name); one that never reaches it, reaches it only through another macro, or reaches it
+/// mid-expansion is not run at all.
+///
+/// Material the expansion typesets precedes the alignment, as on TeX's list. In display math TeX errs instead ("Improper
+/// \halign inside $$'s", tex.web §774) and deletes it: there it is a Warning and dropped.
+///
+/// cryptocode.sty:950-957 (and its `mode=text` branch :760-770) redefines `\halign` inside `\pseudocode` to bind
+/// `\@pc@lb` to the alignment's `\\` and `\\` to its line-numbering wrapper: without the prelude every line after the
+/// first lost its number and `mode=text` erred `undefined:\@pc@lb` (witnesses 1804.05141, 2106.03626, 2107.06049,
+/// 2108.04600, 2202.07253, 2410.11134). Repro kernel-alignment/cryptocode_halign_redefinition_numbers_lines; guards
+/// `perfect_kernel_batch76a`. OXIDIZED_DESIGN_DIVERGENCES #760.
+fn run_halign_redefinition_prelude() -> Result<Vec<Digested>> {
+  let halign = T_CS!("\\halign");
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&halign) else {
+    return Ok(Vec::new());
+  };
+  if defn.get_num_args() != 0 || !matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(_))) {
+    return Ok(Vec::new());
+  }
+  if alignment_property(ALIGNMENT_WITHOUT_HALIGN) {
+    return Ok(Vec::new());
+  }
+  let mut expansion = defn.invoke(false)?.unlist();
+  while expansion
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    expansion.pop();
+  }
+  match expansion.pop() {
+    Some(last) if means_halign_primitive(&last) => {},
+    _ => return Ok(Vec::new()),
+  }
+  if expansion.iter().any(means_halign_primitive) {
+    return Ok(Vec::new());
+  }
+  let material = digest(Tokens::new(expansion))?;
+  if material.is_skippable() {
+    return Ok(Vec::new());
+  }
+  if alignment_property(ALIGNMENT_IS_DISPLAY) {
+    Warn!(
+      "unexpected",
+      "\\halign",
+      format!(
+        "Improper \\halign inside $$'s: the redefined \\halign typeset material before its display alignment, which \
+         is deleted: {}",
+        material.untex().unwrap_or_default()
+      )
+    );
+    return Ok(Vec::new());
+  }
+  Ok(vec![material])
+}
+
+fn multicolumn_omits(alignment: &Alignment) -> i64 {
+  match alignment.get_property(MULTICOLUMN_OMITS).as_deref() {
+    Some(Stored::Int(n)) => *n,
+    _ => 0,
+  }
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Tables Family of primitive control sequences
@@ -49,11 +178,29 @@ LoadDefinitions!({
         Ok(Tokens!())
       }}},
     sizer => "#alignment",
+    before_digest => sub { run_halign_redefinition_prelude() },
     after_digest => sub[whatsit] {
       bgroup();
+      // the `\everycr{}` of the `\ialign` the LaTeX/plain macro this alignment stands for starts with (latex.ltx:631,
+      // `\@array` :16573; plain.tex `\ialign`), in the alignment's group: an `\halign` nested in a cell finds it
+      // empty (repro kernel-alignment/everycr_cleared_in_a_bound_alignment, the rev78b review's finding 2)
+      AssignRegister!("\\lx@frozen@everycr", RegisterValue::Tokens(Tokens!()));
       if let Some(alignment) = lookup_alignment() {
+        // latex.ltx:16580 `\@array`: `\lineskip\z@skip \baselineskip\z@skip` in the alignment's own group, for
+        // a LaTeX table's body (array.sty:231-232, longtable.sty:191 alike; its bindings mark the alignment
+        // `zero_interline` after reading the strut, plain `\halign` keeps them). A p cell, `\parbox` and minipage
+        // restore them (`\@arrayparboxrestore`, :16272-16287). colortbl's `\ifdim\baselineskip=\z@\noalign\fi{`
+        // (colortbl.sty:158, :163; tabu.sty:2159) tells the space between rows and an l/c/r cell from a p cell or the
+        // text outside by it. Repro kernel-alignment/colortbl_noalign_idiom.
+        let zero_interline = alignment.alignment_cell().is_some_and(|cell| {
+          matches!(cell.borrow().get_property("zero_interline").as_deref(), Some(Stored::Bool(true)))
+        });
+        if zero_interline {
+          AssignRegister!("\\lineskip", Glue::default().into());
+          AssignRegister!("\\baselineskip", Glue::default().into());
+        }
         whatsit.set_property("alignment", Stored::Digested(alignment));
-        digest_alignment_body(whatsit)?;
+        digest_alignment_body(whatsit, false)?;
       }
       egroup()?;
     }
@@ -61,12 +208,26 @@ LoadDefinitions!({
 
   // Seems odd to need both end markers here...
   DefMacro!("\\lx@end@alignment", r"\lx@hidden@crcr\lx@close@alignment");
-  DefPrimitive!("\\lx@close@alignment", None);
+  // Perl TeX_Tables.pool.ltxml:45 `sub { }`: returns nothing, so no box reverts to the name.
+  DefPrimitive!("\\lx@close@alignment", {});
 
   // & gives an error except within the right context
   // (which should redefine it!)
-  DefConstructor!("&", {
-    Error!("unexpected", "&", "Stray alignment \"&\"");
+  // In the cascade of a misplaced `\noalign`/`\omit`/`\span` it is a Warning: Perl lets `&` to `\relax` there
+  // (TeX_Tables.pool:120-135), see `report_misplaced_alignment` (astro-ph0407419, a pasj00 table read outside any
+  // alignment). Decided where it is digested, reported where it is constructed (Perl's construction-time error).
+  DefConstructor!("&", sub[_document, _args, props] {
+    if props.get("misplaced_cascade").is_some() {
+      Warn!("unexpected", "&", "Stray alignment \"&\" (in the cascade of a misplaced alignment command above)");
+    } else {
+      Error!("unexpected", "&", "Stray alignment \"&\"");
+    }
+  },
+  after_digest => sub[whatsit] {
+    if lookup_bool(MISPLACED_ALIGNMENT) {
+      whatsit.set_property("misplaced_cascade", Stored::Bool(true));
+    }
+    Ok(Vec::new())
   });
 
   Tag!("ltx:td", after_close => sub[doc, node] { doc.trim_node_whitespace(node)?; });
@@ -75,39 +236,48 @@ LoadDefinitions!({
   // Primitive column types;
   // This is really LaTeX, but the mechanisms are used behind-the-scenes here, too.
   DefColumnType!("|", {
-    with_current_build_template(|template_opt| {
-      template_opt
-        .unwrap()
-        .add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")])
+    with_building_template(|template| {
+      template.add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")])
     });
   });
   // Perl: l/c/r column types do NOT set `align` explicitly.
   // Alignment is derived from \hfil fills during extractAlignmentColumn:
   //   \hfil after  → left,  \hfil before+after → center,  \hfil before → right
+  // Under a `>{…}` prefix the cell is array.sty's `\d@llarbegin\insert@column\d@llarend` (array.sty:146-152, a group in a
+  // tabular, :279), so the prefix and the `<{…}` suffix run inside it: the hidden-column idiom
+  // `>{\lrbox0}l<{\endlrbox}` closes that group first (latex.ltx `\lrbox`'s `\endgroup`) and reopens it in the box
+  // (2106.01404's `H` column; pdflatex 0 errors). Perl's columns have no such group: "\endgroup Attempt to close
+  // non-boxing group", the table lost.
+  fn text_column(template: &mut Template, fill_before: bool, fill_after: bool) {
+    let grouped = template.has_pending_prefix();
+    let mut before = Vec::new();
+    if fill_before {
+      before.push(T_CS!("\\hfil"));
+    }
+    if grouped {
+      before.push(T_CS!("\\begingroup"));
+    }
+    let mut after = Vec::new();
+    if grouped {
+      after.push(T_CS!("\\endgroup"));
+    }
+    if fill_after {
+      after.push(T_CS!("\\hfil"));
+    }
+    template.add_column(Cell {
+      before: (!before.is_empty()).then(|| Tokens::new(before)),
+      after: (!after.is_empty()).then(|| Tokens::new(after)),
+      ..Cell::default()
+    })
+  }
   DefColumnType!("l", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
+    with_building_template(|template| text_column(template, false, true));
   });
   DefColumnType!("c", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
+    with_building_template(|template| text_column(template, true, true));
   });
   DefColumnType!("r", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
+    with_building_template(|template| text_column(template, true, false));
   });
 
   // Perl TeX_Tables L69-74: p{Dimension} builds the cell as a *VBox* via
@@ -120,12 +290,16 @@ LoadDefinitions!({
   // paragraph wrap (box-model fix `7545e07fd6`) now sizes these cells correctly,
   // so this faithful form no longer mis-sizes (was the blocker on 1610.00974).
   // before => Tokens(\lx@tabular@p, T_LETTER('t'), {, <width>, }, {); after => }
-  DefColumnType!("p{Dimension}", sub[(width)] {
+  // The width stays tokens until a cell of the column is typeset, as in TeX: the preamble keeps `\@startpbox{#1}` and
+  // the cell runs its `\setlength\hsize{#1}` (latex.ltx:16755; array.sty:189-191, :387-389). Perl reads a Dimension
+  // here (TeX_Tables.pool.ltxml:69-74), so a width that does not scan erred even in a column no row reaches
+  // (2606.15832: `{|cc|ccc|c|p|}`, 6 cells per row; pdflatex clean). OXIDIZED_DESIGN_DIVERGENCES #437.
+  DefColumnType!("p{}", sub[(width)] {
     let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("t"), T_BEGIN!()];
-    before.extend(width.revert()?.unlist());
+    before.extend(width.unlist());
     before.push(T_END!());
     before.push(T_BEGIN!());
-    with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| template.add_column(Cell {
       before: Some(Tokens::new(before)),
       after: Some(Tokens!(T_END!())),
       align: Some(Align::Justify),
@@ -133,25 +307,28 @@ LoadDefinitions!({
       ..Cell::default()}));
   });
 
-  // Perl TeX_Tables L76-80: the paragraph cell as a *VBox* (a real, `\\`-capable
-  // paragraph) emitting `width=` on an `<ltx:inline-block>`.
-  //
-  // NOTE: the global `p{Dimension}` column type above is a pre-existing Rust
-  // divergence — it wraps cells in `\vtop{\hbox to <w>..}` (an `\hbox`, hence
-  // single-line, no embedded `\\`, and no `width=` attribute). Porting that
-  // globally to this VBox form (faithful to Perl) is the correct end state but
-  // exposes a latent alignment span/sizing bug when a `\multicolumn` spans *over*
-  // p-columns (witness: graphics/graphrot's `\multicolumn{10}{|l}` over `p{1in}`
-  // columns); see SYNC_STATUS "1610.00974". Until that span/sizing bug is fixed,
-  // we keep the global `\vtop\hbox` form and use this Perl-faithful VBox form ONLY
-  // for `\multicolumn{}{p{}}{}` cells (see `\lx@alignment@multicolumn`), where an
-  // embedded `\\` MUST be a line break rather than the alignment row terminator.
-  // This fixes the #1 corpus fatal (1610.00974) with no fixture regression.
+  // Perl TeX_Tables L76-80: the paragraph cell as a *VBox* (a real paragraph) emitting `width=` on an
+  // `<ltx:inline-block>`. Every `p{}` cell takes it, a `\multicolumn` over a `p{}` column too (`\lx@alignment@multicolumn`
+  // splices it as Perl does; the earlier `\vtop{\hbox to <w>…}` form and its multicolumn-only rewrite are gone,
+  // 1610.00974).
+  // The interline values a vertical box's lines are set with (latex.ltx:16284-16286, the part of
+  // `\\@arrayparboxrestore` that `\\@array`'s zero `\\lineskip`/`\\baselineskip` concerns, `\\lx@begin@alignment`):
+  // a p cell (`\\@startpbox`, :16755), tabularx's X and tabulary's columns, `\\parbox` and minipage set them back. So
+  // does `\\everypar{}` (:16279) here, `\\parbox`'s and minipage's: an enclosing paragraph's `\\everypar` stays out of
+  // the box (`perfect_kernel_batchm3::a_box_restore_clears_everypar`).
+  // Repro kernel-alignment/colortbl_noalign_idiom.
+  DefPrimitive!("\\lx@array@keeps@interline", {
+    assign_value("lx@array@keeps@interline", Stored::Bool(true), None);
+  });
+  DefMacro!(
+    "\\lx@restore@interline",
+    "\\lineskip\\normallineskip\\lineskiplimit\\normallineskiplimit\\baselineskip\\normalbaselineskip"
+  );
   DefMacro!(
     "\\lx@tabular@p{}{}",
-    "\\hsize=#2\\relax\\lx@tabular@p@{#1}{#2}"
+    "\\setlength\\hsize{#2}\\everypar{}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
   );
-  DefConstructor!("\\lx@tabular@p@{}{Dimension} VBoxContents",
+  DefConstructor!("\\lx@tabular@p@ Position {Dimension} VBoxContents",
   sub[document, args, props] {
     let body = args[2].as_ref().unwrap();
     if body.is_empty()? { return Ok(()); }
@@ -165,6 +342,14 @@ LoadDefinitions!({
     let attachment = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let width = args[1].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
     Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
+  },
+  // The cell's paragraph box, which a row span may cover when it is empty (`Digested::is_empty_paragraph_cell`,
+  // alignment/normalize.rs): Perl's `isSkippable` (Alignment.pm:513-517) cannot look into this constructor, so a
+  // `\multirow` above an empty p cell was truncated to one row ("covers non-empty cells"; KNOWN_PERL_ERRORS #1015;
+  // witnesses 2602.22000 A1.T3/T4, 2605.23257). Otherwise the empty p cell stays the content it is in Perl (its
+  // `align`, an all-empty row kept). Guard `perfect_kernel_batch78a::multirow_in_a_paragraph_column_spans_its_rows`.
+  after_digest => sub[whatsit] {
+    whatsit.set_property("paragraph_cell_body", whatsit.get_arg(3).cloned());
   });
 
   DefColumnType!("*{Number}{}", sub[(n,pattern)] {
@@ -177,8 +362,8 @@ LoadDefinitions!({
 
   // Perl TeX_Tables L81-86: @{} disables intercolumn before and after
   DefColumnType!("@{}", sub[(filler)] {
-    with_current_build_template(|template_opt| {
-      let t = template_opt.unwrap();
+    with_building_template(|template| {
+      let t = template;
       t.disable_intercolumn();
       t.add_between_column(filler.unlist());
       t.disable_intercolumn();
@@ -193,6 +378,9 @@ LoadDefinitions!({
   //\tabskip          pg is optional glue put between columns in a table.
   DefConstructor!("\\cr", "\n");
   DefConstructor!("\\crcr", "\n");
+  // tex.web §339 `frozen_cr`: the `\cr` TeX inserts when a file ends inside an alignment's preamble, whatever
+  // `\cr` means by then (gullet.rs `recover_at_file_end`).
+  Let!("\\lx@frozen@cr", "\\cr");
   // These are useful for reversion of higher-level macros that use alignment
   // internally, but don't use explicit &,\cr in the user markup
   DefConstructor!("\\lx@hidden@cr",    "\n", alias => "");
@@ -200,6 +388,10 @@ LoadDefinitions!({
   DefConstructor!("\\lx@hidden@align", "",   alias => "");
 
   DefRegister!("\\everycr", Tokens!());
+  // tex.web §774/§799 `begin_token_list(every_cr, …)`: the alignment inserts the `\everycr` slot, whatever the name
+  // `\everycr` means by then — tabu.sty:1362 `\let\everycr\tabu@noeverycr` (a macro) around its `\ialign`, colortbl.sty
+  // :116-117 `\let\CT@everycr\everycr \newtoks\everycr`. [`insert_everycr`] reads this name.
+  Let!("\\lx@frozen@everycr", "\\everycr");
   DefRegister!("\\tabskip", Glue!("0"));
 
   //======================================================================
@@ -209,48 +401,69 @@ LoadDefinitions!({
   // \omit             c  is used in the body of a table to change an entry's template from the one
   // in the preamble. \span             c  combines adjacent entries in a table into a single
   // entry.
+  // A misplaced `\noalign` is tex.web §1126 `any_mode(no_align)` → §1129 `no_align_error`: report "Misplaced
+  // \noalign" and carry on ("I'll ignore this case"). No meaning changes; the `{…}` (or `\bgroup…\egroup`) that
+  // follows is an ordinary group, its material typeset where it stands (pdflatex: `Text \noalign{visible words}
+  // end.` reads "Text visible words end."). The group's first token is `\lx@noalign@misplaced@mark`, so inside that
+  // body no rule marker borders a row (`alignment_to_rule`: TeX's `\hrule` in a cell errors and draws nothing; a
+  // stray `\hline`/`\cline` used to stack `border="bbbb…"`, 2306.10087, 2511.12320); the real `{` primitive opens
+  // the group, so math `tex=` keeps its braces (`a{b+c}d`). Perl TeX_Tables.pool:120-127 opens a `bgroup` it never
+  // closes with `\let`s of `&`/`\noalign`/`\omit`/`\span` to `\relax` inside, silencing every later misplaced
+  // `\noalign`/`\omit`/`\span` until that group ends (KPE #191's `\omit`/`\span` case). Dead end: consuming the body
+  // unread (to keep a `bgroup` balanced, REG-1 / math0403005) dropped its text. Guards:
+  // `perfect_kernel_batch65::{misplaced_noalign_leaves_span_alone, misplaced_noalign_body_is_typeset,
+  // stray_hline_in_a_paragraph_is_one_error, misplaced_commands_are_each_reported,
+  // misplaced_hline_in_a_cell_draws_no_rule, misplaced_noalign_in_math_keeps_its_braces}`.
   DefPrimitive!("\\noalign", {
-    // Perl `DefPrimitiveI('\noalign', ...)`: bgroup() + error + lets.
-    // We MATCH Perl's bgroup but then read+discard the `{...}` body and
-    // egroup so the body's closing `}` doesn't leak past the bgroup
-    // frame. Without this body-consume, the user's `\hline`
-    // (= `\noalign{\@@alignment@hline}`) hitting the bad path (cell
-    // content rather than INNER 1's noalign branch) leaves the bgroup
-    // pushed AND its `{` pushes a SECOND frame, while only the body's
-    // `}` pops one — the `\noalign`'s primitive-bgroup leaks. The leak
-    // then cascades into \vtop/\hbox mode-end mismatches in p{}-column
-    // arrays (REG-1 / math0403005).
-    bgroup();
-    Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
-    // Consume the `{...}` body so its `}` matches our bgroup frame.
-    if let Some(tok) = read_token()? {
-      if tok.get_catcode() == Catcode::BEGIN {
-        let _ = read_balanced(ExpansionLevel::Off, false, false)?;
-      } else {
-        unread_one(tok);
+    report_misplaced_alignment("\\noalign")?;
+    // Spaces before the group are typeset as they come. §1129 reads nothing more: the brace is opened on the next
+    // `main_control` pass (§1063 `non_math(left_brace)`: `new_save_level(simple_group)`; §1150 `mmode+left_brace`),
+    // for a left brace by meaning (`cur_cmd=left_brace`, so `\bgroup` too); it gets the mark as its group's first token.
+    // A macro that expands to a brace is not looked through, so its body is not marked (a rule in it borders a row).
+    let mut ahead = Vec::new();
+    while let Some(t) = read_token()? {
+      let space = t.get_catcode() == Catcode::SPACE;
+      let brace = !space && is_left_brace(&t);
+      ahead.push(t);
+      if brace {
+        ahead.push(T_CS!("\\lx@noalign@misplaced@mark"));
+      }
+      if !space {
+        break;
       }
     }
-    egroup()?;
-    Let!(&T_ALIGN!(), T_RELAX!());
-    Let!(&T_CS!("\\noalign"), T_RELAX!());
-    Let!(&T_CS!("\\omit"), T_RELAX!());
-    Let!(&T_CS!("\\span"), T_RELAX!());
+    unread(Tokens::new(ahead));
   });
+  // The first token of a misplaced `\noalign`'s group: marks the body (locally) so no rule marker in it borders a row.
+  DefPrimitive!("\\lx@noalign@misplaced@mark", {
+    assign_value("lx@noalign@misplaced", Stored::Bool(true), None);
+  });
+  // A misplaced `\omit` is tex.web §1129 `omit_error`, a misplaced `\span` §1127-1128 `align_error`: report and
+  // continue, no group. Perl TeX_Tables.pool:128-135 opens a `bgroup` it never
+  // closes (with `\let`s to `\relax` inside it) — the group then swallows the
+  // next `}` and every enclosing frame drifts by one (nicematrix manual:
+  // `\multicolumn` = `\omit…` in a measurement pass off any alignment leaked
+  // +2 frames per use, ending in a `\Body` runaway to EoF; KPE #191). A
+  // live alignment never reaches these primitives (`\lx@alignment@multicolumn`
+  // / `omit_column`). Guard:
+  // `perfect_kernel_batch54::misplaced_omit_does_not_open_a_group`.
   DefPrimitive!("\\omit", {
-    Error!("unexpected", "\\omit", "\\omit cannot be used here");
-    bgroup();
-    Let!(&T_ALIGN!(), T_RELAX!());
-    Let!(&T_CS!("\\noalign"), T_RELAX!());
-    Let!(&T_CS!("\\omit"), T_RELAX!());
-    Let!(&T_CS!("\\span"), T_RELAX!());
+    report_misplaced_alignment("\\omit")?;
   });
   DefPrimitive!("\\span", {
-    bgroup();
-    Error!("unexpected", "\\span", "\\span cannot be used here");
-    Let!(&T_ALIGN!(), T_RELAX!());
-    Let!(&T_CS!("\\noalign"), T_RELAX!());
-    Let!(&T_CS!("\\omit"), T_RELAX!());
-    Let!(&T_CS!("\\span"), T_RELAX!());
+    report_misplaced_alignment("\\span")?;
+  });
+  // The frozen `\span` of the alignment machinery (user ruling 2026-10-11): `\multicolumn`
+  // (`\lx@alignment@multicolumn`), `\multispan` and latex.ltx's `\sp@n` span their columns with this copy of the
+  // primitive (a `Primitive` with cs `\span`, so `gullet::is_column_end` takes it for `\span`), which a document's
+  // `\def\span{\mathrm{span}}` cannot reach. TeX and Perl use `\span` itself: there the redefinition breaks every
+  // `\multicolumn` ("Misplaced \omit", latex.ltx:16603/16749/16753). See `frozen_span`.
+  Let!("\\lx@span", "\\span");
+  // Expands to nothing after `report_redefined_span`: the token-bodied users of `\lx@span` (latex.ltx's `\sp@n`,
+  // overridden in latex_constructs_rust_only.rs) report the clash through it.
+  DefMacro!("\\lx@span@check", sub[_args] {
+    report_redefined_span();
+    Vec::<Token>::new()
   });
 
   //======================================================================
@@ -276,27 +489,8 @@ LoadDefinitions!({
 
   // Perl TeX_Tables L159-184: \halign BoxSpecification
   DefConstructor!("\\halign BoxSpecification", "#alignment",
-  reversion => sub[whatsit, _args] {
-    let mut tks = vec![T_CS!("\\halign")];
-    if let Some(spec) = whatsit.get_arg(1) {
-      tks.extend(spec.revert()?.unlist());
-    }
-    tks.push(T_BEGIN!());
-    if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
-      tks.extend_from_slice(template_tks.unlist_ref());
-    }
-    tks.push(T_CS!("\\cr"));
-    if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref()
-      && let DigestedData::Alignment(data) = alignment_d.data() {
-        // Mirror line-30 fix: tolerate a re-entrant borrow during
-        // reversion rather than panic. See comment there.
-        if let Ok(d) = data.try_borrow() {
-          tks.extend(d.revert()?.unlist());
-        }
-      }
-    tks.push(T_END!());
-    Ok(Tokens::new(tks))
-  },
+  halign_primitive => true,
+  reversion => sub[whatsit, _args] { alignment_primitive_reversion(whatsit, T_CS!("\\halign")) },
   bounded => true,
   leave_horizontal => true,
   sizer => sub[whatsit] {
@@ -311,36 +505,19 @@ LoadDefinitions!({
     document.maybe_close_element("ltx:p")?;
   },
   after_digest => sub[whatsit] {
-    whatsit.set_property("mode", Stored::from("internal_vertical"));
-    begin_mode("restricted_horizontal")?;
-    let template = parse_halign_template(whatsit)?;
-    // Get width from BoxSpecification 'to' key
-    let width_attr: Option<String> = {
-      let spec = whatsit.get_arg(1);
-      if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
-        Some(w.to_attribute())
-      } else {
-        None
-      }
-    };
-    let mut xml_attrs = HashMap::default();
-    if let Some(w) = width_attr {
-      xml_attrs.insert(String::from("width"), w);
-    }
-    alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
-    // Mark as \halign — first column CAN get ltx_nopad_l (unlike LaTeX
-    // tabular). with_value avoids the Stored::clone on the Digested
-    // variant; the inner Rc<Digested> + RefCell<Alignment> mutation
-    // still works fine through the borrow.
-    with_value("Alignment", |v| {
-      if let Some(Stored::Digested(d)) = v
-        && let DigestedData::Alignment(alignment) = d.data() {
-          alignment.borrow_mut().is_halign = true;
-        }
-    });
-    digest_alignment_body(whatsit)?;
-    end_mode("restricted_horizontal")?;
-    decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+    halign_after_digest(whatsit, HashMap::default(), |template, xml_attrs| {
+      alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
+      // Mark as \halign — first column CAN get ltx_nopad_l (unlike LaTeX
+      // tabular). with_value avoids the Stored::clone on the Digested
+      // variant; the inner Rc<Digested> + RefCell<Alignment> mutation
+      // still works fine through the borrow.
+      with_value("Alignment", |v| {
+        if let Some(Stored::Digested(d)) = v
+          && let DigestedData::Alignment(alignment) = d.data() {
+            alignment.borrow_mut().is_halign = true;
+          }
+      });
+    })?;
   });
 
   def_macro_noop("\\lx@alignment@row@before")?;
@@ -354,9 +531,54 @@ LoadDefinitions!({
   // \valign           c  begins the vertical alignment of material (i.e., makes a table containing
   // columns).
 
-  // Implement ???
-  // DefMacro('\vrule','\relax');
-  def_macro_noop("\\valign")?;
+  // TeX §768-812: `\valign<box spec>{<alignment>}` sets each line its `\cr` ends as a column of the table, its
+  // `&`-separated entries stacked from the top, each built in internal vertical mode and packed as a vbox (§785
+  // `init_span`, §796 `fin_col`). The body is read as `\halign`'s is (`halign_after_digest`, its `{` found as §403
+  // `scan_left_brace`, `\valign\relax{…}` too), each template column inside a `\vbox`, and the lines read are turned
+  // into the table's columns (`Alignment::transpose`). It is horizontal material: in vertical mode it starts a
+  // paragraph (§1090 `vmode+valign`: `back_to_hmode`), so it closes none. Perl's `DefMacro('\valign','')`
+  // (TeX_Tables.pool.ltxml:555) leaves the template in the stream, whose bare `#` reaches the stomach — fancyvrb.sty:570
+  // `\FancyVerbTab` = `\valign{\vfil##\vfil\cr…}`, one error per displayed `Verbatim` line with a tab under `showtabs`
+  // (pygmentex_demo, KPE #142); consuming the body unread dropped its entries and, for a body closed by `\egroup`
+  // (an environment's begin `\valign\bgroup…\cr`, its end `\crcr\egroup`), the rest of the file: 2502.06786's teaser
+  // figure with its caption and label ("File ended while scanning text of \valign"). Guards
+  // `perfect_kernel_batch54::valign_swallows_its_alignment`, `perfect_kernel_batch79w::valign_*`.
+  DefConstructor!("\\valign BoxSpecification", "#alignment",
+  reversion => sub[whatsit, _args] { alignment_primitive_reversion(whatsit, T_CS!("\\valign")) },
+  bounded => true,
+  sizer => sub[whatsit] {
+    match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment_d)) => {
+      let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
+      Ok((w, h, d))
+    } _ => {
+      Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+    }}
+  },
+  after_digest => sub[whatsit] {
+    halign_after_digest(whatsit, HashMap::default(), |mut template, xml_attrs| {
+      let in_vbox = |cell: &mut Cell| {
+        let mut before = vec![T_CS!("\\vbox"), T_CS!("\\bgroup")];
+        before.extend(cell.before.take().map(Tokens::unlist).unwrap_or_default());
+        cell.before = Some(Tokens::new(before));
+        let mut after = cell.after.take().map(Tokens::unlist).unwrap_or_default();
+        after.push(T_CS!("\\egroup"));
+        cell.after = Some(Tokens::new(after));
+      };
+      template.get_columns_mut().iter_mut().for_each(in_vbox);
+      template.get_repeated_mut().iter_mut().for_each(in_vbox);
+      alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
+      with_value("Alignment", |v| {
+        if let Some(Stored::Digested(d)) = v
+          && let DigestedData::Alignment(alignment) = d.data() {
+            alignment.borrow_mut().is_halign = true;
+          }
+      });
+    })?;
+    if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref()
+      && let DigestedData::Alignment(alignment) = alignment_d.data() {
+        alignment.borrow_mut().transpose();
+      }
+  });
 
   // VERY tricky (and mostly Wrong).
   // The issue is for \\ to look ahead for * and [],
@@ -370,35 +592,13 @@ LoadDefinitions!({
 
   // This is the internal macro for \\[dim] used by LaTeX for various arrays, tabular, etc
   DefMacro!("\\lx@alignment@newline", {
-    let (_star, optional) = read_newline_args(true)?;
-    let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
-    if let Some(opt_tks) = optional {
-      tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
-      tokens.push(T_BEGIN!());
-      tokens.extend(opt_tks.unlist());
-      tokens.push(T_END!());
-    } else {
-      tokens.push(T_CS!("\\lx@alignment@newline@marker"));
-    }
-    tokens.push(T_END!());
-    Tokens::new(tokens)
+    alignment_newline_then(true, &[])?
   });
   // However, the above will skip spaces --AND a newline! -- looking for [],
   // which is kinda weird in math, since there may be a reasonable math [ in the 1st column!
   // AMS kindly avoids that, by using a special version of \\
   DefMacro!("\\lx@alignment@newline@noskip", {
-    let (_star, optional) = read_newline_args(false)?;
-    let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
-    if let Some(opt_tks) = optional {
-      tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
-      tokens.push(T_BEGIN!());
-      tokens.extend(opt_tks.unlist());
-      tokens.push(T_END!());
-    } else {
-      tokens.push(T_CS!("\\lx@alignment@newline@marker"));
-    }
-    tokens.push(T_END!());
-    Tokens::new(tokens)
+    alignment_newline_then(false, &[])?
   });
   // These are the markers that produce \\ in the reversion,
   // and (eventually will) add vertical space to the row!
@@ -483,7 +683,9 @@ LoadDefinitions!({
     reversion  => "",
     properties =>  sub[args] {
       // Sometimes, we're smuggling stuff that needs to be carried into the XML.
-      let mut props = stored_map!("alignmentSkippable" => true);
+      // (`alignmentNoalign`: material between rows, which the next cell carries, as `\rowcolor`'s, and which stays
+      // with its row when the cell's content moves: latexml_core alignment/normalize.rs `normalize_upward_spans`)
+      let mut props = stored_map!("alignmentSkippable" => true, "alignmentNoalign" => true);
       // Check if any arg (or child of a List arg) has alignmentPreserve.
       // This propagates the property from e.g. \label (inside a List) to the
       // \lx@hidden@noalign whatsit, so the alignment absorption code knows
@@ -511,7 +713,7 @@ LoadDefinitions!({
   DefMacro!("\\hline", "\\noalign{\\@@alignment@hline}");
   DefConstructor!("\\@@alignment@hline", "",
     after_digest => sub[_whatsit] {
-      if let Some(alignment_stored) = lookup_alignment() {
+      if let Some(alignment_stored) = alignment_to_rule() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()
           .add_line("t", Vec::new());
       }
@@ -543,6 +745,26 @@ LoadDefinitions!({
   Let!("\\@tabular@begin@heading", "\\lx@alignment@begin@heading");
   Let!("\\@tabular@end@heading", "\\lx@alignment@end@heading");
 
+  // Rust-only: the current cell's content overprints the cells to its right, as an `\rlap` does (`\lefteqn`,
+  // latex.ltx:15800): at normalization the empty cells after it join its span, and a cell with content keeps its
+  // column (`Cell::overprint`, OXIDIZED_DESIGN_DIVERGENCES #556). The argument is a class for the cell (empty for
+  // none), which its column's element carries.
+  DefPrimitive!("\\lx@alignment@cell@overprint Semiverbatim", sub[(class)] {
+    let class = class.to_string();
+    if let Some(alignment_stored) = lookup_alignment()
+      && let Some(data) = alignment_stored.alignment_cell()
+      && let Some(cell) = data.borrow_mut().current_column()
+    {
+      cell.overprint = true;
+      if !class.trim().is_empty() {
+        cell.class = Some(match cell.class.take() {
+          Some(old) => s!("{old} {}", class.trim()),
+          None => class.trim().to_string(),
+        });
+      }
+    }
+  });
+
   //======================================================================
   // Multicolumn support
   // Perl: DefRegisterI('\lx@alignment@ncolumns', undef, Dimension(0), getter => sub { ... })
@@ -570,155 +792,81 @@ LoadDefinitions!({
     }
   );
 
-  // Perl: DefMacro('\lx@alignment@multicolumn {Number} AlignmentTemplate {}', sub { ... })
-  // Expands to \omit + (span-1) × (\span \omit) + before_cell_tokens + body + after_cell_tokens
+  // Perl: DefMacro('\lx@alignment@multicolumn {Number} AlignmentTemplate {}', sub { ... }), the first of Perl's two
+  // definitions (TeX_Tables.pool.ltxml:693-702): \omit + (span-1) × (\span \omit) + the column's before tokens + body +
+  // its after tokens, the template spliced in-line since it is used once. Perl overrides it with :704-713
+  // (`\lx@alignment@altcolumn{template}\relax body`, which `replaceColumn`s the cell's template); the port keeps the
+  // splice (OXIDIZED_DESIGN_DIVERGENCES #474, #559).
   DefMacro!("\\lx@alignment@multicolumn {Number} AlignmentTemplate {}", sub[(span, template, body)] {
     let n = span.value_of();
     let column = template.get_columns().first();
     // First part, like \multispan
     let mut tks = vec![T_CS!("\\omit")];
     for _ in 1..n {
-      tks.push(T_CS!("\\span"));
+      tks.push(frozen_span());
       tks.push(T_CS!("\\omit"));
     }
-    // A paragraph (p/m/b) multicolumn cell must render as a *VBox* via
-    // `\lx@tabular@p` (Perl-faithful, see above), so that an embedded `\\` is a
-    // paragraph line break rather than the alignment row terminator. The global
-    // `p{}` column type wraps in `\vtop{\hbox to..}` (an `\hbox` that cannot hold
-    // `\\`), so we substitute the VBox form here and rebind top-level `\\` to
-    // `\lx@newline` in the body. Fixes 1610.00974 (the #1 corpus fatal); a normal
-    // `\\`-less p-cell, and every non-paragraph column, are unaffected.
-    let is_pcol = column.map(|c| c.align == Some(Align::Justify)).unwrap_or(false);
-    if is_pcol {
-      // A paragraph column (`p{}`, `m{}`, `b{}` — all `align=Justify`). Each wraps
-      // the cell in a box, but the `before`/`after` token *shape* differs:
-      //   * global `p{}`: before `[border] \vtop { \hbox to <w> \relax {`,
-      //     after `} } [border]` — two opening braces, width inside `\hbox to`;
-      //   * array.sty `m{}`/`b{}`: before `\vtop {` / `\vbox {`, after `}` —
-      //     one opening brace, width carried on the Cell's `width` field.
-      // For a multicolumn cell an embedded top-level `\\` must be a *paragraph
-      // line break*, not the row terminator, so we replace the box construct with
-      // the Perl-faithful VBox form `\lx@tabular@p <t|m|b> {<width>} { … }` (one
-      // open / one close brace), preserving surrounding `|`-borders. This handles
-      // all three forms uniformly — it was previously `p{}`-only, so a
-      // `\multicolumn` over an `m{}`/`b{}` column spliced the wrong brace count and
-      // corrupted the group stack (witness 1805.01525: `\multicolumn{1}{L{5cm}}`
-      // over `m{}` → `\@end@tabular Attempt to close boxing group`).
-      let before_toks: Vec<Token> =
-        column.and_then(|c| c.before.as_ref()).map(|b| b.unlist_ref().clone()).unwrap_or_default();
-      let after_toks: Vec<Token> =
-        column.and_then(|c| c.after.as_ref()).map(|a| a.unlist_ref().clone()).unwrap_or_default();
-      // Rebind only top-level `\\` (depth 0) in the body to `\lx@newline`, so an
-      // embedded `\\` is a paragraph line break, not the alignment row terminator.
-      let rebind_newline = |body: &Tokens, out: &mut Vec<Token>| {
-        let dbl = T_CS!("\\\\");
-        let nl = T_CS!("\\lx@newline");
-        let mut depth = 0i32;
-        for t in body.unlist_ref().iter() {
-          match t.get_catcode() {
-            Catcode::BEGIN => { depth += 1; out.push(*t); },
-            Catcode::END => { depth -= 1; out.push(*t); },
-            _ if depth == 0 && *t == dbl => out.push(nl),
-            _ => out.push(*t),
-          }
+    // latex.ltx:16603-16607 sets the cell in a group of its own (`\multispan{#1}\begingroup … \@preamble\hbox{}
+    // \endgroup`), so what it lets locally ends before the row's `\\`: a `\centering` in the cell
+    // (`\multicolumn{12}{c}{\centering …} \\[-22pt]`, 1511.05496; pdflatex 0 errors) lets `\\` to `\@centercr` only
+    // inside it. The row end is what that group protects here, so `\\` is saved and put back after the cell; a whole
+    // group would also end the alignment state the cell reads at its close (`\centering`'s, the cell's `align`).
+    tks.extend([T_CS!("\\let"), T_CS!("\\lx@multicolumn@cr"), T_CS!("\\\\")]);
+    // A paragraph column (`p{}`, array.sty `m{}`/`b{}`, tabularx `X`, tabulary `J`: `align=Justify`) boxes the cell, and
+    // an embedded `\\` of a `\multicolumn` cell is a line break in that box, not the row end: `\let\\\lx@newline` (and
+    // `\tabularnewline`, so an `\arraybackslash` in the prefix keeps that recovery: pdflatex reads that `\\` as
+    // `\@tabularcr` too, array.sty:247 / latex.ltx:16576: "Missing \endgroup inserted") inside the box group the
+    // before tokens opened, ahead of the column's `>{…}` tokens (`Cell::prefix_at`), so a prefix macro that takes
+    // arguments takes the `\ignorespaces` and the body as in TeX, not the `\let`. In TeX that `\\` is `\@tabularcr`,
+    // whose `\cr` lands inside the omitted span's `\vtop` group ("Missing } inserted": latex.ltx `\multicolumn` splices
+    // the whole `\@preamble` after `\omit`), unless a `\centering`/`\raggedright` in the cell has let `\\` to
+    // `\@centercr`, the line break this recovery gives (1610.00974, the former #1 corpus fatal; Perl makes a new row of
+    // the rest, OXIDIZED_DESIGN_DIVERGENCES #559). A binding, not a rewrite of the body's brace-depth-0 `\\` tokens: an
+    // environment is no brace group, so the rewrite also turned the row ends of a nested `\begin{tabular}…\end{tabular}`
+    // (or of a `pmatrix`, `cases`, `aligned`) into line breaks; its rows collapsed into one, its `&` overflowed and a
+    // following `\hline` was a misplaced `\noalign` (2607.14806, 2010.13561, 1808.05579). A nested alignment lets `\\`
+    // to its own row end (latex_constructs/sect10.rs:177 `\@tabularcr`, :579 the math `\\`), as in TeX. The column's
+    // own box tokens are spliced as Perl splices them: the `\lx@tabular@p` form of `p{}`/`m{}`/`b{}`, or the `\vtop{` of
+    // `X` (1805.01525: `\multicolumn{1}{L{5cm}}` over `m{}`).
+    if let Some(col) = column
+      && let Some(before) = &col.before {
+        let mut before = before.unlist_ref().clone();
+        if col.align == Some(Align::Justify) {
+          let at = col.prefix_at.unwrap_or(before.len()).min(before.len());
+          before.splice(at..at, [
+            T_CS!("\\let"), T_CS!("\\\\"), T_CS!("\\lx@newline"),
+            T_CS!("\\let"), T_CS!("\\tabularnewline"), T_CS!("\\lx@newline"),
+          ]);
         }
-      };
-      // The global `p{}` column is now ALREADY in the Perl-faithful `\lx@tabular@p`
-      // VBox form (TeX_Tables L69-74), so Perl's `\lx@alignment@multicolumn` just
-      // splices before+body+after with no box rewrite. Mirror that. Only array.sty
-      // `m{}`/`b{}` (raw `\vtop{`/`\vbox{`) still need the transform below.
-      if before_toks.iter().any(|t| *t == T_CS!("\\lx@tabular@p")) {
-        tks.extend(before_toks.iter().copied());
-        rebind_newline(&body, &mut tks);
-        tks.extend(after_toks.iter().copied());
-        return Ok(Tokens::new(tks));
+        // beforeCellUnlist: reorder $ and \hfil (move \hfil before $)
+        tks.extend(before_cell_unlist(before));
       }
-      // Width: the global `p{}` encodes it in `\hbox to <w> \relax`; `m{}`/`b{}`
-      // carry it on the Cell — fall back to that when the tokens lack it.
-      let mut width = extract_pcol_width(&before_toks);
-      if width.is_empty()
-        && let Some(w) = column.and_then(|c| c.width.as_ref())
-        && let Ok(rev) = w.revert() {
-          width = rev.unlist();
-        }
-      // The box command (`\vtop` for p/m, `\vbox` for b) marks where the box
-      // construct begins; everything before it is the `|`-border prefix.
-      let box_idx = before_toks.iter()
-        .position(|t| *t == T_CS!("\\vtop") || *t == T_CS!("\\vbox"))
-        .unwrap_or(before_toks.len());
-      let tail = &before_toks[box_idx..];
-      // Extent of the box construct itself: `\vtop {` / `\vbox {` (one opening
-      // brace), or the global `p{}` form `\vtop { \hbox to <w> \relax {` (two).
-      // We count ONLY those braces — `column.before` is built (template.rs
-      // `add_column`) as `[\lx@intercol] <box-open> <`>{}`-prefix decls>`, so a
-      // `\hspace{0pt}` in a `>{…}` prefix sits AFTER the box-open; its balanced
-      // `{` must NOT inflate the close-brace count, and its decls must be kept
-      // INSIDE the cell (they are cell-content setup like `\raggedright`).
-      let first_brace = tail.iter().position(|t| t.get_catcode() == Catcode::BEGIN);
-      let (box_open_len, box_open_braces) = match first_brace {
-        // `p{}`: `\hbox` right after the first brace → a 2nd brace follows `\relax`.
-        Some(fb) if tail.get(fb + 1) == Some(&T_CS!("\\hbox")) => {
-          match tail[fb + 1..].iter().position(|t| t.get_catcode() == Catcode::BEGIN) {
-            Some(j) => (fb + 1 + j + 1, 2),
-            None => (fb + 1, 1),
-          }
-        }
-        // `m{}`/`b{}`: a single brace closes the construct.
-        Some(fb) => (fb + 1, 1),
-        None => (tail.len(), 1),
-      };
-      // `>{…}` cell-prefix declarations that followed the box-open — kept inside.
-      let decls: Vec<Token> = tail[box_open_len..].to_vec();
-      // Vertical attachment letter for `\lx@tabular@p` (t=top, m=middle, b=bottom).
-      let letter = match column.and_then(|c| c.vattach.as_deref()) {
-        Some("middle") => "m",
-        Some("bottom") => "b",
-        _ => "t",
-      };
-      // `after` is `[<inner> }×N <border suffix>]` — the N closing braces match the
-      // box's opens; `<inner>` (e.g. `\lx@column@trimright`) is inside the box and
-      // `<border suffix>` follows. Locate that run of N consecutive `}`.
-      let is_end = |t: &Token| t.get_catcode() == Catcode::END;
-      let close_run = if after_toks.len() >= box_open_braces {
-        (0..=after_toks.len() - box_open_braces)
-          .find(|&i| (0..box_open_braces).all(|k| is_end(&after_toks[i + k])))
-      } else {
-        None
-      };
-      let (inner_after, border_suffix): (&[Token], &[Token]) = match close_run {
-        Some(i) => (&after_toks[..i], &after_toks[i + box_open_braces..]),
-        None => (&after_toks[..], &[]),
-      };
-      // Border prefix (everything before the box command), unchanged.
-      tks.extend(before_toks[..box_idx].iter().copied());
-      // VBox cell: \lx@tabular@p <letter> {<width>} {
-      tks.push(T_CS!("\\lx@tabular@p"));
-      tks.extend(ExplodeText!(letter));
-      tks.push(T_BEGIN!());
-      tks.extend(width);
-      tks.push(T_END!());
-      tks.push(T_BEGIN!());
-      // `>{…}` declarations belong inside the cell, before the body.
-      tks.extend(decls);
-      // Rebind top-level `\\` (depth 0); nested groups keep their meaning.
-      rebind_newline(&body, &mut tks);
-      tks.extend(inner_after.iter().copied()); // e.g. \lx@column@trimright, inside the box
-      tks.push(T_END!()); // close the VBoxContents
-      tks.extend(border_suffix.iter().copied()); // trailing border / intercolumn
-    } else {
-      // Next part: put the template in-line, since it's only used once.
-      // beforeCellUnlist: reorder $ and \hfil (move \hfil before $)
-      if let Some(col) = column
-        && let Some(before) = &col.before {
-          tks.extend(before_cell_unlist(before.unlist_ref().clone()));
-        }
-      tks.extend(body.unlist_ref().iter().copied());
-      // afterCellUnlist: reorder $ and \hfil (move \hfil after $)
-      if let Some(col) = column
-        && let Some(after) = &col.after {
-          tks.extend(after_cell_unlist(after.unlist_ref().clone()));
-        }
+    // In TeX an `\omit`ted cell is restricted horizontal mode: the math of an amsmath alignment's cells comes from its
+    // template's `$` (`template_math`, amsmath_sty.rs), so the spanned cell of an `aligned` is text and a `$f_0(x)$` in
+    // it a formula (1808.07192 `&\min &\multicolumn{2}{l}{$f_0(x)$}`; Perl keeps the cell math, its `$` opened text
+    // and the scripts erred: KNOWN_PERL_ERRORS #662). An array's `\multicolumn` re-inserts its `$` (latex.ltx
+    // `\@arrayclassz`), so its cells stay math. Guard: `perfect_kernel_batch66l::multicolumn_in_aligned_is_text`.
+    let text_cell = lookup_alignment().is_some_and(|alignment| {
+      alignment.alignment_cell().is_some_and(|cell| {
+        // the `\omit`s above are this cell's: the cell-head peek leaves the cell to this body (an array's keeps its
+        // math, an amsmath one is boxed here)
+        cell.borrow_mut().get_properties_mut().insert(MULTICOLUMN_OMITS, Stored::Int(n.max(1)));
+        matches!(cell.borrow().get_property("template_math").as_deref(), Some(Stored::Bool(true)))
+      })
+    });
+    if text_cell {
+      tks.extend([T_CS!("\\hbox"), T_BEGIN!()]);
     }
+    tks.extend(body.unlist_ref().iter().copied());
+    if text_cell {
+      tks.push(T_END!());
+    }
+    // afterCellUnlist: reorder $ and \hfil (move \hfil after $)
+    if let Some(col) = column
+      && let Some(after) = &col.after {
+        tks.extend(after_cell_unlist(after.unlist_ref().clone()));
+      }
+    tks.extend([T_CS!("\\let"), T_CS!("\\\\"), T_CS!("\\lx@multicolumn@cr")]);
     Ok(Tokens::new(tks))
   });
 
@@ -754,6 +902,137 @@ LoadDefinitions!({
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
 
+/// The `\halign` after-digest shared by the tabular primitive (above) and the
+/// SVG matrix variant (`\lxSVG@halign`, pgfsys_latexml_def.rs): the
+/// restricted-horizontal mode frame, the template parse, the `to` width, the
+/// caller's alignment bindings, the body digest, and the align-state balance
+/// for a `{` opener (tex.web §347: only a catcode-1 `{` is masked by the
+/// gullet, so only that opener is unmasked here — a `\halign\bgroup`, pgf's
+/// matrices, must not be). ONE implementation: the SVG copy once kept an
+/// unconditional decrement after the tabular one gained this guard (batch
+/// 54), and every tikz-cd inside an amsmath cell left the cell's math open.
+/// The reversion of an `\halign` or `\valign`: the primitive, its box specification, the template and the rows.
+fn alignment_primitive_reversion(whatsit: &Whatsit, primitive: Token) -> Result<Tokens> {
+  let mut tks = vec![primitive];
+  if let Some(spec) = whatsit.get_arg(1) {
+    tks.extend(spec.revert()?.unlist());
+  }
+  tks.push(T_BEGIN!());
+  if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
+    tks.extend_from_slice(template_tks.unlist_ref());
+  }
+  tks.push(T_CS!("\\cr"));
+  if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref()
+    && let DigestedData::Alignment(data) = alignment_d.data()
+  {
+    // Mirror line-30 fix: tolerate a re-entrant borrow during
+    // reversion rather than panic. See comment there.
+    if let Ok(d) = data.try_borrow() {
+      tks.extend(d.revert()?.unlist());
+    }
+  }
+  tks.push(T_END!());
+  Ok(Tokens::new(tks))
+}
+
+pub fn halign_after_digest(
+  whatsit: &mut Whatsit,
+  mut xml_attrs: HashMap<String, String>,
+  bind: impl FnOnce(Template, HashMap<String, String>),
+) -> Result<()> {
+  whatsit.set_property("mode", Stored::from("internal_vertical"));
+  begin_mode("restricted_horizontal")?;
+  let template = parse_halign_template(whatsit)?;
+  // Get width from BoxSpecification 'to' key
+  let width_attr: Option<String> = {
+    let spec = whatsit.get_arg(1);
+    if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
+      Some(w.to_attribute())
+    } else {
+      None
+    }
+  };
+  if let Some(w) = width_attr {
+    xml_attrs.insert(String::from("width"), w);
+  }
+  bind(template, xml_attrs);
+  digest_alignment_body(whatsit, true)?;
+  end_mode("restricted_horizontal")?;
+  // Balance the opening `{` OUTSIDE of the masking of ALIGN_STATE — only
+  // when the opener WAS a `{` character (see `parse_halign_template`).
+  if matches!(
+    whatsit.get_property("halign_brace_opener").as_deref(),
+    Some(Stored::Bool(true))
+  ) {
+    decrement_align_group_count();
+  }
+  Ok(())
+}
+
+/// Whether the LaTeX table being bound zeroes its interline values (latex.ltx:16580 `\@array`, marking the alignment
+/// `zero_interline` for `\lx@begin@alignment`). tabularray's `tblr` is set as a `\tabular`/`array` but builds its own
+/// alignment, which keeps them (pdflatex: 12pt in a `tblr` cell, `\\[\baselineskip]` a 12pt gap): its mapping marks the
+/// next table with `\lx@array@keeps@interline`, consumed here so a table nested in its cells zeroes again. Repro
+/// kernel-alignment/tblr_keeps_its_interline_values.
+pub fn array_zeroes_interline() -> bool {
+  if lookup_bool("lx@array@keeps@interline") {
+    assign_value("lx@array@keeps@interline", Stored::Bool(false), None);
+    false
+  } else {
+    true
+  }
+}
+
+/// The row strut of a LaTeX alignment: `\@array` builds `\@arstrutbox` from `\strutbox` (latex.ltx:16567-16570; the
+/// `\arraystretch` factor is the `rowsep` attribute), and amsmath's matrices and `cases` are `\array`s, `aligned`'s
+/// rows carry `\strut@` (amsmath.sty:714-718, :1073-1076, :1121-1126), so a table or matrix nested in a cell, where
+/// `\baselineskip` is zero, keeps its rows' height. `\baselineskip` (Perl's `alignmentBindings` strut) when `\strutbox` is void or a class made
+/// it something other than a box register (jlreq).
+pub fn array_strut() -> Option<Stored> {
+  let baselineskip = || {
+    lookup_register("\\baselineskip", Vec::new())
+      .ok()
+      .flatten()
+      .map(Stored::from)
+  };
+  if lookup_register_definition(&T_CS!("\\strutbox")).is_none() {
+    return baselineskip();
+  }
+  let strutbox = lookup_register("\\strutbox", Vec::new())
+    .ok()
+    .flatten()?
+    .value_of();
+  let dimension = |cs: &str| {
+    lookup_register(cs, vec![ArgWrap::Number(Number(strutbox))])
+      .ok()
+      .flatten()
+      .map(|value| value.value_of())
+      .unwrap_or(0)
+  };
+  match dimension("\\ht") + dimension("\\dp") {
+    0 => baselineskip(),
+    strut => Some(Stored::Dimension(Dimension::new(strut))),
+  }
+}
+
+/// A new alignment's rows run no row hook of an enclosing one: an `\halign`, `{array}` or `tikzcd` in an `{eqnarray}`
+/// or `align` row inherited `\eqnarray@row@before` and stepped the equation once per inner row (1601.02132; Perl alike,
+/// KNOWN_PERL_ERRORS #518). Every alignment's bindings call this after `assign_alignment`; the numbered displays
+/// (eqnarray, amsmath, cases) set their hooks afterwards. The hooks are local to the enclosing cell, so the outer
+/// alignment's later rows still run its own.
+pub fn clear_alignment_row_hooks() {
+  let_i(
+    &T_CS!("\\lx@alignment@row@before"),
+    &T_CS!("\\lx@empty"),
+    None,
+  );
+  let_i(
+    &T_CS!("\\lx@alignment@row@after"),
+    &T_CS!("\\lx@empty"),
+    None,
+  );
+}
+
 pub fn alignment_bindings(
   template: Template,
   mode: String,
@@ -765,6 +1044,10 @@ pub fn alignment_bindings(
   } else {
     mode
   };
+  // A new alignment's own `\hline`s rule its rows, even inside a misplaced `\noalign`'s body.
+  assign_value("lx@noalign@misplaced", Stored::Bool(false), None);
+  // ... and its own misplaced commands start no cascade of an outer one ([`report_misplaced_alignment`]).
+  assign_value(MISPLACED_ALIGNMENT, Stored::Bool(false), None);
   let is_math = mode.ends_with("math");
   let (container, rowtype, coltype) = if is_math {
     ("ltx:XMArray", "ltx:XMRow", "ltx:XMCell")
@@ -802,7 +1085,14 @@ pub fn alignment_bindings(
     xml_attributes,
   });
   assign_alignment(alignment, None);
+  clear_alignment_row_hooks();
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
+  // The re-let of `$` below is LaTeXML's device for its cells; TeX never rebinds `$`. The caller's `$` is kept beside
+  // it, so an alignment whose bindings run before its group opens (`\array`, `\@array`, `\tabular`) gives it back
+  // when that group closes (`restore_dollar_outside_alignment`).
+  if let Ok(Some(dollar)) = lookup_definition_stored(&T_MATH!()) {
+    assign_meaning(&T_CS!("\\lx@dollar@outside@alignment"), dollar, None);
+  }
   let_i(
     &T_MATH!(),
     &if is_math {
@@ -814,7 +1104,49 @@ pub fn alignment_bindings(
   );
 }
 
-pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
+/// Gives `$` back the meaning it had where the alignment's bindings ran, once the alignment's group has closed.
+/// `\array`'s bindings run in the enclosing group, before `\@@array` opens its own (Perl latex_constructs.pool.ltxml:3755
+/// alike), so without an environment group around it the math-cell `$` outlived the array: makecell's math branch
+/// `\hbox{$\array…\endarray$}` (makecell.sty:131-133) then opened a text box at its closing `$` (pdflatex clean;
+/// Perl errs too, KNOWN_PERL_ERRORS #462; witness 2606.05500).
+///
+/// Contract: the caller is the closer of an alignment whose bindings ran in the scope this restore lands in (bindings
+/// before the alignment's `bgroup`, as `\tabular`, `\array`, longtable, IEEEtran, delarray and blkarray do). The saved
+/// value is never cleared, so a closer whose opener bound inside its own group would pick up an enclosing alignment's
+/// save here.
+pub fn restore_dollar_outside_alignment() {
+  let saved = T_CS!("\\lx@dollar@outside@alignment");
+  if lookup_meaning(&saved).is_some() {
+    let_i(&T_MATH!(), &saved, None);
+  }
+}
+
+/// Puts the `\everycr` list in front of the next token, as tex.web §774 `init_align` does once the preamble is read
+/// and §799 `fin_row` after every row a `\cr` or a nonredundant `\crcr` ends (never after a `\noalign`'s material,
+/// §1133, nor at a redundant `\crcr`, which `align_peek` §785 skips). The list is the value current then, in the
+/// alignment's group: an `\everycr` a cell sets locally has ended with the cell (§791 `fin_col`'s `unsave`).
+fn insert_everycr() {
+  let Some(register) = lookup_register_definition(&T_CS!("\\lx@frozen@everycr")) else {
+    return;
+  };
+  if let Some(RegisterValue::Tokens(tokens)) = register.value_of(Vec::new())
+    && !tokens.is_empty()
+  {
+    unread(tokens);
+  }
+}
+
+/// Digest an alignment's body, row by row. `runs_everycr`: the alignment is the `\halign` primitive's (tex.web
+/// §768-812), which inserts `\everycr` (`insert_everycr`) after its preamble and after every row. An alignment a
+/// binding builds (`\lx@begin@alignment`) stands for a LaTeX/plain macro that starts its `\halign` with an `\everycr`
+/// of its own — `\ialign`'s `\everycr{}` (latex.ltx:631, `\@array` :16573), array.sty's and longtable's tagging hooks,
+/// amsmath's `\displ@y` spacing — whose rows the binding already builds, so it runs none.
+///
+/// Before (Perl alike, TeX_Tables.pool.ltxml:109 only stores the register): no alignment ran it, so lamstex's
+/// `\newCD` (math0005042), which counts a diagram's rows with `\everycr{\noalign{\global\advance\rowcount@\@ne…}}`,
+/// counted none and built its `\ifcase` size lists empty. KNOWN_PERL_ERRORS #1019. Repro
+/// kernel-alignment/everycr_runs_after_every_cr; guards `perfect_kernel_batch78b`.
+pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Result<()> {
   // Now read & digest the body.
   // Note that the body MUST end with a \cr, and that we've made Special Arrangments
   // with \alignment@cr to recognize the end of the \halign
@@ -832,11 +1164,16 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
   };
   local_reading_alignment(&alignment_stored);
   whatsit.set_property("alignment", Stored::Digested(alignment_stored.clone()));
+  if runs_everycr {
+    insert_everycr(); // tex.web §774: the preamble's `\cr`
+  }
 
   // Debug!("Halign {}: BODY Processing...",alignment) if $LaTeXML::DEBUG{halign};
   let mut lastwascr = false;
   let mut reversion: Vec<Token> = Vec::new();
   let mut creversion: Vec<Token> = Vec::new();
+  // the field-ledger serials of the row-end markers the body consumes (core `document::FIELD_TAKEN_PROPERTY`)
+  let mut field_taken: Vec<u32> = Vec::new();
   let alignment_cell = alignment_stored.alignment_cell().unwrap();
   loop {
     let (cell_opt, next, vtype, hidden) = digest_alignment_column(alignment_cell, lastwascr)?;
@@ -857,11 +1194,9 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       break;
     }
     lastwascr = false;
-    // Perl L319-320: $next->defined_as(T_END) — recognizes \egroup as alignment end
-    let next_is_end = next
-      .as_ref()
-      .map(|t| t.defined_as(&T_END!()))
-      .unwrap_or(false)
+    // Perl L319-320: $next->defined_as(T_END) — recognizes \egroup as alignment end; any catcode-2 character
+    // ends it too (tex.web §1068), as `scan_left_brace` opens it on any catcode-1 character (60j)
+    let next_is_end = next.as_ref().map(is_right_brace).unwrap_or(false)
       || next == Some(T_CS!("\\lx@close@alignment"));
     if (vtype.is_none() || vtype.as_ref().unwrap().is_empty()) && (next.is_none() || next_is_end) {
       // End of alignment
@@ -869,32 +1204,35 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       break;
     } else if vtype.as_deref() == Some("align") {
       alignment_cell.borrow_mut().end_column()?;
+      alignment_cell.borrow_mut().column_ended();
       if !hidden {
         reversion.push(next.unwrap()); // and record the &
         creversion.push(next.unwrap()); // and record the &
       }
     } else if vtype.as_deref() == Some("insert") {
       alignment_cell.borrow_mut().end_column()?;
-    } else if vtype.as_deref() == Some("cr") || vtype.as_deref() == Some("crcr") {
+    } else if matches!(vtype.as_deref(), Some("cr" | "crcr" | "noalign")) {
       alignment_cell.borrow_mut().end_row()?;
-      // longtable `\kill`: the row just ended was only for width measurement;
-      // `\lx@longtable@kill@flag` set LONGTABLE_KILL_NEXT before the `\crcr`,
-      // so discard the just-committed (now box-balanced) row. Ending via the
-      // normal cr path closes the column boxes cleanly first (avoiding the
-      // locked-frame FATAL of removing it mid-cell). Witness 2010.09763.
-      if lookup_bool("LONGTABLE_KILL_NEXT") {
-        remove_value("LONGTABLE_KILL_NEXT");
-        alignment_cell.borrow_mut().remove_row();
-      }
+      // A binding's request for the row just ended (`RowDisposition`: longtable's `\kill` and caption row, witness
+      // 2010.09763), taken after the row end has closed its column boxes (no locked-frame Fatal).
+      alignment_cell.borrow_mut().dispose_ended_row();
       if !hidden {
         reversion.push(next.unwrap());
         creversion.push(next.unwrap());
       } else if vtype.as_deref() == Some("cr") {
         let arg_toks = read_arg(ExpansionLevel::Off)?;
         let arg = digest(arg_toks)?;
+        // the row's end marker is the alignment's, never absorbed: a field value's `\\` (`\author{A \\ B}` set in a
+        // `tabular`) is taken by the print's structure once the alignment is shown (core
+        // `document::field_ink_taken_serials`, OXIDIZED_DESIGN #715)
+        document::field_ink_taken_serials(&arg, &mut field_taken);
         reversion.extend(p_revert(arg.clone())?.unlist());
         creversion.extend(c_revert(arg)?.unlist());
       } else if vtype.as_deref() == Some("crcr") {
+      }
+      // tex.web §799 `fin_row`: a `\cr` or nonredundant `\crcr` ended the row; a `\noalign`'s material ends none.
+      if runs_everycr && vtype.as_deref() != Some("noalign") {
+        insert_everycr();
       }
       lastwascr = true;
     } else if let Some(next_tok) = next {
@@ -903,6 +1241,26 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
     }
   }
   alignment_cell.borrow_mut().end_row()?;
+  {
+    let borrowed = alignment_cell.borrow();
+    let n_rows = borrowed.rows().len();
+    let n_cols = borrowed
+      .rows()
+      .iter()
+      .map(|r| r.get_columns().len())
+      .max()
+      .unwrap_or(0);
+    assign_value(
+      "LAST_ALIGNMENT_ROWS",
+      Stored::Int(n_rows as i64),
+      Some(Scope::Global),
+    );
+    assign_value(
+      "LAST_ALIGNMENT_COLS",
+      Stored::Int(n_cols as i64),
+      Some(Scope::Global),
+    );
+  }
   alignment_cell
     .borrow_mut()
     .set_reversion(Tokens!(reversion));
@@ -911,6 +1269,17 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
     .set_content_reversion(Tokens!(creversion));
   //   Debug("Halign $alignment: BODY DONE!\n"
   //       . "=> " . join(',', map { Stringify($_); } @reversion)) if $LaTeXML::DEBUG{halign};
+  if !field_taken.is_empty() {
+    whatsit.set_property(
+      document::FIELD_TAKEN_PROPERTY,
+      Stored::VecDequeStored(
+        field_taken
+          .into_iter()
+          .map(|s| Stored::Int(i64::from(s)))
+          .collect(),
+      ),
+    );
+  }
   expire_align_group_count();
   expire_reading_alignment();
   Ok(())
@@ -920,6 +1289,30 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
 // accommodating the current template and any special cs's
 // Returns the column's digested boxes, the ending token, and it's alignment type.
 type DigestedColumn = Result<(Option<Digested>, Option<Token>, Option<String>, bool)>;
+/// The alignment's inter-row mode for the cell-head peek (tex.web §15510
+/// `align_peek` runs in the -vmode `init_align` §15350 entered), restored
+/// on drop so every exit path of the peek loop leaves `MODE` as it was.
+/// The cell-head peek's mode override (tex.web §15510 `align_peek` runs in
+/// the alignment's -vmode, before `init_row` §15532). `MODE` is frame-local
+/// (`begin_mode` binds it in the box's own frame), so the override and its
+/// restore MUST happen in the SAME save frame: a restore issued inside the
+/// cell group that `start_column` opens dies with that group and leaves the
+/// rest of the row in internal vertical mode (spaces before `&`/`\\` kept
+/// in `tex=`, diagbox cells measured at the full text width — the 40_math /
+/// 53_alignment / 65_graphics goldens). The peek therefore ends the override
+/// BEFORE any row/cell group opens (`\omit` re-enters after its row group).
+struct AlignPeekMode(String);
+impl AlignPeekMode {
+  fn enter() -> Self {
+    let saved = lookup_string_from_sym(pin!("MODE"));
+    assign_frame_value_sym(pin!("MODE"), "internal_vertical");
+    AlignPeekMode(saved)
+  }
+}
+impl Drop for AlignPeekMode {
+  fn drop(&mut self) { assign_frame_value_sym(pin!("MODE"), self.0.clone()); }
+}
+
 pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) -> DigestedColumn {
   new_local_box_list();
   let ismath = lookup_bool_sym(pin!("IN_MATH"));
@@ -944,7 +1337,33 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     // (column_before, marker, last_token) bundle into an empty gullet,
     // looping infinitely. Reset to None per Perl's per-iteration semantics.
     last_token = None;
-    while let Some(xtoken) = read_x_token(Some(true), false, Some(false))? {
+    // tex.web §15350 (`init_align`: a display/box `\halign` enters -vmode) and
+    // §15510 (`align_peek`): the per-column peek that expands the cell-head
+    // token runs in the alignment's INTER-ROW mode, internal vertical;
+    // `init_row` §15532 switches to restricted horizontal only afterwards, and
+    // `\noalign` material stays in -vmode (§15513). LaTeXML digests the whole
+    // body in restricted_horizontal, so a cell-head `\ifhmode\else\expandafter
+    // \hbox\fi\bgroup…$…$…\egroup` (abntexto.tex:79-81's active `<…>` in the
+    // class's `$$\halign{$#$\cr…}$$`, :727-736) dropped its `\hbox`, its inner
+    // `$` became a math END inside the template's math, and the display, the
+    // list and the section after it never closed (abntexto 8; Perl 4 — SHARED).
+    // The override lives only for the peek: restored on EVERY exit of this
+    // loop (`peek_mode`'s Drop, ended before any row/cell group opens). Guard:
+    // `perfect_kernel_batch56::alignment_cell_head_peeks_in_internal_vertical_mode`.
+    let mut peek_mode = Some(AlignPeekMode::enter());
+    loop {
+      // Between rows a command's argument tail has no place: handed back it
+      // would open the next row (`dropping_argument_tails`).
+      // The peek stops at a `\newcommand` optional-argument macro (its `\@protected@testopt` reaches `\futurelet`'s
+      // `\let`): TeX starts the cell there, and its arguments are read inside it (`read_x_token_cell_head`, tex.web
+      // §785/§791).
+      let between_rows = !alignment.borrow().is_in_row();
+      let next = if between_rows {
+        dropping_argument_tails(BETWEEN_ALIGNMENT_ROWS, read_x_token_cell_head)?
+      } else {
+        read_x_token_cell_head()?
+      };
+      let Some(xtoken) = next else { break };
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();
       // Skip leading space. Skip \par or blank line(?). Or \crcr following a \cr
@@ -960,25 +1379,132 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         //         Debug("Halign $alignment: OMIT at " . Stringify($token)) if
         // $LaTeXML::DEBUG{halign};
         if !alignment.borrow().is_in_row() {
+          // The row group opens here: end the override in the frame that
+          // set it and re-enter inside the row's frame (see `AlignPeekMode`).
+          drop(peek_mode.take());
           alignment.borrow_mut().start_row(false)?;
+          peek_mode = Some(AlignPeekMode::enter());
         }
-        alignment.borrow_mut().omit_next_column();
+        // tex.web §789: `\omit` drops the u/v template, so in an amsmath alignment or an `array`, whose math is
+        // their template's `$` (`omit_cell_is_text`), the cell is restricted horizontal and its `$…$` a formula:
+        // its material is boxed as text, as `\lx@alignment@multicolumn` boxes an amsmath body (and keeps an array's
+        // math, re-inserting its `$` as latex.ltx `\multicolumn` splices `\@arrayclassz`'s); a `\multicolumn`'s own
+        // `\omit`s are its (`MULTICOLUMN_OMITS`). 2306.14299 (`& \omit \hfill $\qquad (-1)^{n} c$` in
+        // `aligned`/`split`); guards `perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`,
+        // `perfect_kernel_batch68z::an_omit_cell_of_an_array_is_text`.
+        let multicolumn_omits = multicolumn_omits(&alignment.borrow());
+        if multicolumn_omits > 0 {
+          alignment
+            .borrow_mut()
+            .get_properties_mut()
+            .insert(MULTICOLUMN_OMITS, Stored::Int(multicolumn_omits - 1));
+          alignment.borrow_mut().omit_next_column();
+        } else if omit_cell_is_text(&alignment.borrow()) {
+          alignment.borrow_mut().omit_next_column_as_text();
+        } else {
+          alignment.borrow_mut().omit_next_column();
+        }
       } else if token.defined_as(&T_CS!("\\noalign")) {
         // \puts something in vertical list. Perl L381 uses `defined_as`, so a
         // `\let`-copy of `\noalign` (e.g. expl3's `\tex_noalign:D`, used by the
         // `pseudo` package's per-line init `\noalign`) is recognized here rather
         // than falling through to the primitive's "cannot be used here" error.
         // Debug("Halign $alignment: noalign at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
+        // `end_row`/`start_column` change frames: end the override first; the
+        // material's own -vmode (§15513) is bound inside its group below.
+        drop(peek_mode.take());
         if alignment.borrow().is_in_row() {
           alignment.borrow_mut().end_row()?;
         }
         alignment.borrow_mut().start_column(true)?;
         alignment.borrow_mut().last_column();
-        let next_arg = read_arg(ExpansionLevel::Off)?;
-        let r = digest(next_arg)?;
+        // tex.web §15513: `\noalign` does `scan_left_brace`, opens the
+        // no_align_group, and the material is EXECUTED up to the `}` that
+        // closes that group. A token-level pre-scan (`read_arg`) miscounted
+        // latex.ltx's `\hline` brace hack — `\noalign{\ifnum0=`}\fi\hrule…}`
+        // whose first `}` is a char constant consumed by `\ifnum` at
+        // execution — so the body was cut at `\ifnum0=` and the rest leaked
+        // into the alignment as cell content (boldline `\hlineB`, any raw
+        // rule macro built on the hack; shipunov/boldline-ex-en: "`\@end@tabular`
+        // Attempt to close boxing group"; Perl identical, pdflatex clean).
+        // The kernel's own `\hline` = `\noalign{\@@alignment@hline}` never
+        // hit it. Guard: `perfect_kernel_batch54::noalign_body_is_executed_to_its_group_end`.
+        // §785 `align_peek`: `scan_left_brace` — expanded, past spaces and `\relax` (`\noalign\relax{\hrule}`).
+        // `\noalign\\` (past spaces and `\relax`, §785): an empty noalign and the row end, "Missing { inserted" unless
+        // the `\\` is the kernel text tabular's `\@tabularcr`, whose `{\ifnum0=`}\fi` gives the brace (latex.ltx:16590;
+        // 2309.15248). OXIDIZED_DESIGN_DIVERGENCES #514.
+        let mut skipped = Vec::new();
+        let raw = loop {
+          match read_token()? {
+            Some(t) if t.get_catcode() == Catcode::SPACE || t.defined_as(&TOKEN_RELAX) => {
+              skipped.push(t)
+            },
+            other => break other,
+          }
+        };
+        let tabularcr = T_CS!("\\@tabularcr");
+        let kernel_tabularcr = raw.as_ref().is_some_and(|t| x_equals(t, &tabularcr))
+          && !package_loaded("array")
+          && matches!(alignment.borrow().get_property("row_end").as_deref(),
+            Some(Stored::Token(t)) if *t == tabularcr);
+        if let Some(t) = raw {
+          unread_one(t);
+        }
+        for t in skipped.into_iter().rev() {
+          unread_one(t);
+        }
+        let empty_noalign = match read_non_blank_non_relax()? {
+          Some(t) => {
+            let is_cr = t.defined_as(&T_CS!("\\lx@hidden@cr"));
+            unread_one(t);
+            is_cr
+          },
+          None => false,
+        };
+        if empty_noalign && !kernel_tabularcr {
+          Error!("expected", "{", "Missing { inserted");
+        }
+        let mut body = Vec::new();
+        if !empty_noalign {
+          scan_left_brace()?;
+          // The one-frame reader shape of `predigest_box_contents_in_mode`:
+          // execute the material (so `\ifnum0=`}` consumes its char-constant
+          // `}` during expansion) and STOP at the `}` that closes the group
+          // without invoking it — the alignment's own cell machinery must not
+          // see it as a cell end.
+          bgroup();
+          // tex.web §15513: `\noalign` material runs in -vmode; bound in the
+          // group's own frame, so `egroup` below restores the cell mode.
+          assign_frame_value_sym(pin!("MODE"), "internal_vertical");
+          let level = get_frame_depth();
+          new_local_box_list();
+          loop {
+            let next = match get_pending_comment() {
+              Some(comment) => Some(comment),
+              None => read_x_token(Some(true), false, None)?,
+            };
+            let Some(token) = next else { break };
+            if is_right_brace(&token) && level >= get_frame_depth() {
+              break;
+            }
+            check_timeout()?;
+            extend_box_list(invoke_token(&token)?);
+          }
+          body = expire_local_box_list();
+          egroup()?;
+        }
+        // As `digest` does: a single box stands alone (the rule-only
+        // `\noalign{\hrule}` becomes the next row's border via that shape).
+        let r: Digested = if body.len() == 1 {
+          body.pop().unwrap()
+        } else {
+          List::new(body).into()
+        };
         alignment.borrow_mut().end_row()?;
         expire_local_box_list();
-        return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole
+        // A `\noalign`'s material is digested as a row ended by `\cr`, but it ends no row (vtype `noalign`: no
+        // `\everycr` after it, tex.web §1133).
+        return Ok((Some(r), Some(T_CS!("\\cr")), some!("noalign"), false)); // Pretend this is a whole
       // row???
       } else if token.defined_as(&T_CS!("\\lx@hidden@noalign")) {
         // \puts something in vertical list. Perl L389 uses `defined_as`.
@@ -989,16 +1515,34 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         break;
       }
     }
+    // The peek is over: back to the cell mode (tex.web `init_row`/`init_col`,
+    // §15532/§15560) in the frame that set the override, before the cell
+    // group opens below.
+    drop(peek_mode.take());
     //     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if
     // $LaTeXML::DEBUG{halign};
-    // Perl L395: $token->defined_as(T_END) — recognizes \egroup as column end
-    let last_is_end = last_token
-      .as_ref()
-      .map(|t| t.defined_as(&T_END!()))
-      .unwrap_or(false)
+    // Perl L395: $token->defined_as(T_END) — recognizes \egroup as column end (any catcode-2 character, §1068)
+    let last_is_end = last_token.as_ref().map(is_right_brace).unwrap_or(false)
       || last_token == Some(T_CS!("\\lx@close@alignment"));
     if last_token.is_none() || last_is_end {
-      expire_local_box_list();
+      // Material between the last row and the alignment's end — a `\label` after the final `\\` (`… \\ \label{c}
+      // \end{eqnarray*}`, 1206.1393, where `\eqnarray` set `\@currentlabel` and pdflatex resolves it) — has no next
+      // cell to carry it: the row above keeps what must reach the document (`alignmentPreserve`), as `\noalign`
+      // material after the last row stays in the list after it. Perl drops it (KNOWN_PERL_ERRORS #1182).
+      let trailing: Vec<Digested> = expire_local_box_list()
+        .into_iter()
+        .filter(|item| item.get_property_bool("alignmentPreserve"))
+        .collect();
+      if !trailing.is_empty()
+        && let Some(row) = alignment
+          .borrow_mut()
+          .rows_mut()
+          .iter_mut()
+          .rev()
+          .find(|row| !row.is_pseudo())
+      {
+        row.after.extend(trailing);
+      }
       return Ok((None, last_token, None, false));
     }
     // Next column, unless spanning (then combine columns)
@@ -1007,6 +1551,15 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
       alignment.borrow_mut().next_column()?;
     } else {
       alignment.borrow_mut().start_column(false)?;
+    }
+    // An `\omit`ted cell that ends at once (`\omit\span`, latex.ltx `\multispan`; an empty `\omit&`) has nothing to
+    // box as text: no empty box for each spanned column.
+    if last_token
+      .as_ref()
+      .is_some_and(|t| is_column_end(t).is_some())
+      && let Some(column) = alignment.borrow_mut().current_column()
+    {
+      column.omit_text_box = false;
     }
     // Push before template,  Marker and put the token back
     let to_unread = Tokens!(
@@ -1017,6 +1570,9 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     unread(to_unread);
     while let Some(token) = read_x_token(Some(true), false, Some(false))? {
+      if align_error(&token)? {
+        continue;
+      }
       if let Some((_atoken, vtype, hidden)) = is_column_end(&token) {
         if vtype == "span" {
           // next column, but continue accumulating
@@ -1026,6 +1582,10 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         } else {
           // Debug("Halign $alignment: COLUMN ended with " . Stringify($token) . "\n"
           //     . "  => " . ToString(List(@LaTeXML::LIST))) if $LaTeXML::DEBUG{halign};
+          alignment
+            .borrow_mut()
+            .get_properties_mut()
+            .remove(MULTICOLUMN_OMITS);
           let current_list = expire_local_box_list();
           let mut out_list = List::new(current_list);
           out_list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
@@ -1108,14 +1668,8 @@ pub fn trim_column_template(mut alignment: RefMut<Alignment>, tokens: Tokens) ->
 fn template_after_fill_defeated(after: &Option<Tokens>) -> bool {
   let Some(toks) = after else { return false };
   let toks = toks.unlist_ref();
-  // Index just past the last fill in the template.
-  let mut last_fill = None;
-  for (i, tok) in toks.iter().enumerate() {
-    let s = tok.to_string();
-    if s == "\\hfil" || s == "\\hfill" {
-      last_fill = Some(i);
-    }
-  }
+  // Index of the last fill in the template, read as `has_after_fill` reads it ([`is_fill`]).
+  let last_fill = toks.iter().rposition(is_fill);
   let Some(fill_idx) = last_fill else {
     return false;
   };
@@ -1161,20 +1715,12 @@ pub fn extract_alignment_column(
     has_before_fill = colspec
       .before
       .as_ref()
-      .map(|b| {
-        b.unlist_ref()
-          .iter()
-          .any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill"))
-      })
+      .map(|b| b.unlist_ref().iter().any(is_fill))
       .unwrap_or(false);
     has_after_fill = colspec
       .after
       .as_ref()
-      .map(|a| {
-        a.unlist_ref()
-          .iter()
-          .any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill"))
-      })
+      .map(|a| a.unlist_ref().iter().any(is_fill))
       .unwrap_or(false);
     // The trailing `\hfil` is *defeated* when the column's `after` template
     // carries real content after it — the `array`-package `!{|}` appends
@@ -1226,6 +1772,15 @@ pub fn extract_alignment_column(
     (true, false) => Some(Align::Right),
     (false, false) => None,
   };
+  // The text box of an `\omit` cell (`Alignment::get_column_before`) holds the cell's material: its leading and
+  // trailing fill glue are the cell's, read below as the cell's alignment.
+  if (n0..=n1.max(n0)).any(|n| {
+    alignment
+      .get_column(n)
+      .is_some_and(|column| column.omit_text_box)
+  }) {
+    hoist_omit_text_box_fills(&mut boxes);
+  }
   // --- Scan phase: peel boxes from both sides ---
   while let Some(front_box) = boxes.pop_front() {
     match front_box.data() {
@@ -1245,6 +1800,13 @@ pub fn extract_alignment_column(
           prev_rspaces_transfer = Some(std::mem::take(&mut lspaces));
         }
       },
+      // A phantom with a width is the cell's content, as in TeX — not padding, which a column takes at its widest
+      // cell's, nor skippable material the peel goes past (a TikZ `align=` line opening with `\phantom` shifted the
+      // whole column, 2605.03603).
+      _ if is_phantom_with_width(&front_box) => {
+        boxes.push_front(front_box);
+        break;
+      },
       _ if front_box.get_property("isSpace").is_some()
         && front_box.get_property("isVerticalSpace").is_none() =>
       {
@@ -1254,7 +1816,8 @@ pub fn extract_alignment_column(
         if front_box.get_property("isHorizontalRule").is_some()
           || front_box.get_property("alignmentSkippable").is_some()
           || matches!(item, DigestedData::Comment(_))
-          || front_box.is_empty()? =>
+          || front_box.is_empty()?
+          || front_box.is_strut() =>
       {
         saveleft.push_front(front_box)
       },
@@ -1281,6 +1844,10 @@ pub fn extract_alignment_column(
         border.push('r');
         rspaces.clear(); // Perl L508: discard spacing after rule
       },
+      _ if is_phantom_with_width(&last_box) => {
+        boxes.push_back(last_box);
+        break;
+      },
       _ if last_box.get_property("isSpace").is_some()
         && last_box.get_property("isVerticalSpace").is_none() =>
       {
@@ -1290,7 +1857,8 @@ pub fn extract_alignment_column(
         if last_box.get_property("isHorizontalRule").is_some()
           || last_box.get_property("alignmentSkippable").is_some()
           || matches!(item, DigestedData::Comment(_))
-          || last_box.is_empty()? =>
+          || last_box.is_empty()?
+          || last_box.is_strut() =>
       {
         saveright.push_front(last_box);
       },
@@ -1374,97 +1942,206 @@ pub fn extract_alignment_column(
 //  As if: \lx@alignment@newline OptionalMatch:* [Dimension]
 // Read arguments for \\, namely * and/or [Dimension]
 // BUT optionally do it while skipping spaces (latex style) or not (ams style)
+// Perl pool:557-571 looks `Alignment` up but never uses it: `\\` outside
+// any alignment still reads its `*`/`[dim]` and expands to nothing harmful.
+// A former Rust-only `Err` here fired for every `\nl`/`\\` inside a
+// not-yet-open table body (aguplus `planotable` collects `\tablehead{… & …}`
+// and `\nl` rows before its `\halign` opens — witness aguplus/plano).
+/// A `\\` met inside a brace group within an alignment cell — real TeX's
+/// `{\ifnum0=`}\fi` guard (latex.ltx:16583-16594 `\@tabularcr`/`\@arraycr`)
+/// keeps the `\cr` from ending the row while `align_state ≠ 0`, and pdflatex
+/// then reports "Misplaced \cr" for a plain tabular. tabularray reads its
+/// body itself and makes such a `\\` a line break INSIDE the cell
+/// (ProfSio.sty:2917 `\SetCell{l}{… \\ …}` and `{Consignes\\ \\ …}` cells,
+/// ProfSio manuals). Ending the row here instead misread the cell's closing
+/// `}` as the alignment's `\egroup` ("Attempt to close non-boxing group",
+/// "Attempt to end mode restricted_horizontal", stray `&`) — Perl silently
+/// truncates the table. An in-cell break is the faithful reading for
+/// tabularray and the benign recovery for a plain tabular. The break is the kernel's
+/// `\lx@newline` (what `\\` means outside an alignment, sect01.rs), not `\newline`: a
+/// column's `\let\newline\\` (1901.05279's `>{\centering\let\newline\\…}m{…}` type) made
+/// `\newline` this very `\\` again, an expansion loop (`Fatal:Timeout:Recursion`). The
+/// `*` (no page break, dropped) and `[dim]` were read already: the dimension goes on to the break, and without one a
+/// `\relax` keeps `\lx@newline` from reading a later `[…]` of the text (`c\\[2pt] [d]`).
+fn in_cell_newline(optional: Option<Tokens>) -> Tokens {
+  let mut tokens = vec![T_CS!("\\lx@newline")];
+  match optional {
+    Some(dimension) => {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(dimension.unlist());
+      tokens.push(T_OTHER!("]"));
+    },
+    None => tokens.push(T_CS!("\\relax")),
+  }
+  Tokens::new(tokens)
+}
+
+/// True while the reader sits inside a user brace group of the current cell:
+/// a small positive `align_group_count`. The template-scanning mask parks the
+/// count at 1000000 (tex.web §789's own value) between a `&` and the next
+/// column's `before-column` marker, so a `\\` that follows an empty cell
+/// (`S & \\`) sees the mask, not a group.
+fn inside_cell_group() -> bool {
+  let c = align_group_count();
+  c > 0 && c < 500_000
+}
+
+/// The row end `\\[<dim>]` expands to: `\lx@hidden@cr{<marker>}`. The optional
+/// length is read here, a `\dimen` as `\@xtabularcr`'s `\ifdim #1>\z@`
+/// (latex.ltx:16590-16602) reads it, and what follows it in the brackets is
+/// dropped with a warning: the marker sits inside `\lx@hidden@cr`'s argument,
+/// whose rest nobody reads (OXIDIZED_DESIGN #317).
+fn alignment_newline_tokens(optional: Option<Tokens>) -> Result<Tokens> {
+  let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
+  if let Some(opt_tks) = optional {
+    // TeX's scan, not calc's: the space goes to `\vskip#1` or `\@tempdima#1` (amsmath.sty:1181-1182
+    // `\noalign{\vskip#1\relax}`, latex.ltx's `\@argarraycr`), which calc never evaluates (2606.21036's
+    // `\\[-\belowdisplayskip\vspace{-1em}]` under calc).
+    let (value, tail) = read_braced(opt_tks, || read_value(RegisterType::Dimension))?;
+    drop_argument_tail(&T_CS!("\\\\"), tail, BETWEEN_ALIGNMENT_ROWS);
+    tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
+    tokens.push(T_BEGIN!());
+    tokens.extend(value.revert()?.unlist());
+    tokens.push(T_END!());
+  } else {
+    tokens.push(T_CS!("\\lx@alignment@newline@marker"));
+  }
+  tokens.push(T_END!());
+  Ok(Tokens::new(tokens))
+}
+
+/// An alignment's `\\`, expanded: its `*` and `[<dim>]` read with the alignment's tabs disabled (`read_newline_args`,
+/// latex.ltx's `{\ifnum0=`}\fi` guard), then the row end, followed by `then` — or, inside a group in a cell, a line break
+/// (no row end, no `then`). `\lx@alignment@newline` and `@noskip` follow it with nothing; `{numcases}`'s `\\` with the
+/// left-hand side that opens each row (cases_sty.rs).
+pub fn alignment_newline_then(skipspaces: bool, then: &[Token]) -> Result<Tokens> {
+  let (_star, optional) = read_newline_args(skipspaces)?;
+  if inside_cell_group() {
+    return Ok(in_cell_newline(optional));
+  }
+  let mut tokens = alignment_newline_tokens(optional)?.unlist();
+  tokens.extend_from_slice(then);
+  Ok(Tokens::new(tokens))
+}
+
 fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
-  if lookup_alignment().is_some() {
-    local_align_group_count(1000000);
+  local_align_group_count(1000000);
+  if skipspaces {
+    skip_spaces()?;
+  }
+  let (mut star, mut optional) = (false, None);
+  let mut next_opt = read_token()?;
+  if next_opt == Some(T_OTHER!("*")) {
+    star = true;
     if skipspaces {
       skip_spaces()?;
     }
-    let (mut star, mut optional) = (false, None);
-    let mut next_opt = read_token()?;
-    if next_opt == Some(T_OTHER!("*")) {
-      star = true;
-      if skipspaces {
-        skip_spaces()?;
-      }
-      next_opt = read_token()?;
-    }
-    if next_opt == Some(T_OTHER!("[")) {
-      optional = Some(read_until(&Tokens!(T_OTHER!("]")))?);
-      next_opt = None;
-    }
-    if let Some(next) = next_opt {
-      unread_one(next);
-    }
-    expire_align_group_count();
-    Ok((star, optional))
+    next_opt = read_token()?;
+  }
+  if next_opt == Some(T_OTHER!("[")) {
+    optional = Some(read_until(&Tokens!(T_OTHER!("]")))?.unwrap_or_default());
+    next_opt = None;
+  }
+  if let Some(next) = next_opt {
+    unread_one(next);
+  }
+  expire_align_group_count();
+  Ok((star, optional))
+}
+
+/// The alignment whose rows a rule marker (`\hline`'s `\@@alignment@hline`, `\cline`, an `\hrule`) borders: the
+/// current one, except inside a misplaced `\noalign`'s body, where TeX's `\hrule` errors in the cell and draws nothing
+/// (tex.web §1126/§1129; see `\noalign`). A stray `\cline`/`\hline` there used to stack `border="bbbb…"`
+/// (2306.10087). Guard: `perfect_kernel_batch65::misplaced_hline_in_a_cell_draws_no_rule`.
+pub fn alignment_to_rule() -> Option<Digested> {
+  lookup_alignment().filter(|_| !lookup_bool("lx@noalign@misplaced"))
+}
+
+/// The group-local flag of [`report_misplaced_alignment`]: a misplaced alignment command was reported in this group.
+const MISPLACED_ALIGNMENT: &str = "lx@misplaced@alignment";
+
+/// Report a misplaced `\noalign`, `\omit` or `\span` (tex.web §1127-1129 `align_error`/`no_align_error`/`omit_error`;
+/// none changes a meaning, as in TeX). The first in a group is an Error; the later ones in that group, and its stray
+/// `&`s, are its cascade and Warnings: Perl's recovery reports the first and `\let`s `&`/`\noalign`/`\omit`/`\span` to
+/// `\relax` in a group around the rest (TeX_Tables.pool:120-135), so they are silent there; TeX reports each, but its
+/// 100-error stop counts one paragraph (tex.web §76, reset by §1096 `end_graf`) and every `\hline`'s `\hrule` ends one,
+/// where a document-wide count of 100 (Perl's, `Fatal:TooManyErrors`) made a table read outside any alignment fatal:
+/// 107 of run 340's 287 Error→Fatal papers (astro-ph0407419 pasj00 without its class, 1405.2337, 1411.6016; 64ze, with
+/// Perl's `\let`s, gave 13 errors on astro-ph0407419; 65b, each an Error, 101 + Fatal). A new alignment clears the
+/// flag in its own group ([`alignment_bindings`]); at top level the group is the document body, the flag cleared at
+/// `\begin{document}` ([`end_misplaced_alignment_cascade`]). Guards
+/// `perfect_kernel_batch65h::{misplaced_alignment_cascade_is_one_error,
+/// misplaced_alignment_cascade_ends_with_its_group}`, `perfect_kernel_batch65::misplaced_commands_are_each_reported`.
+fn report_misplaced_alignment(cs: &str) -> Result<()> {
+  if lookup_bool(MISPLACED_ALIGNMENT) {
+    Warn!(
+      "unexpected",
+      cs,
+      format!("{cs} cannot be used here (in the cascade of a misplaced alignment command above)")
+    );
   } else {
-    Err("read_newline_args should only be called with a proper 'Alignment' active in state".into())
+    Error!("unexpected", cs, format!("{cs} cannot be used here"));
+    assign_value(MISPLACED_ALIGNMENT, Stored::Bool(true), None);
+  }
+  Ok(())
+}
+
+/// End the cascade of a misplaced alignment command (`report_misplaced_alignment`) at `\begin{document}`: one in the
+/// preamble, where no group closes before the body, does not make the body's first one a Warning.
+pub fn end_misplaced_alignment_cascade() {
+  assign_value(MISPLACED_ALIGNMENT, Stored::Bool(false), None);
+}
+
+/// Report, once per document, that the frozen `\span` stands in for a redefined one: the document's `\span` no longer
+/// has the primitive's command code ([`is_column_end`]), so the alignment machinery's own spans (`\multicolumn`,
+/// `\multispan`, `\sp@n`; user ruling 2026-10-11) make a recovery TeX does not make (there the author's macro runs and
+/// the span breaks: "Misplaced \omit"). Witnesses 1405.2652, 0710.0886, math0409364 (`\span` redefined, `\lefteqn`'s
+/// `\multicolumn` in `eqnarray`). Guard: `perfect_kernel_batch65::multicolumn_spans_with_the_frozen_span`.
+pub fn report_redefined_span() {
+  let redefined = !matches!(is_column_end(&T_CS!("\\span")), Some((_, "span", _)));
+  if redefined && !already_reported("lx@frozen@span@reported") {
+    Warn!(
+      "unexpected",
+      "\\span",
+      "the document redefines \\span; alignment spans (\\multicolumn, \\multispan) use the primitive (TeX: \
+       Misplaced \\omit)"
+    );
   }
 }
 
-// Recognise "implicit alignment tab" CS tokens, i.e. `\let\amp=&`.
-// Real TeX treats `\amp` (whose meaning is the `&` char-token with
-// catcode ALIGN) as an alignment tab in `\halign` preambles and
-// bodies — see texbook.tex p.~277 ("implicit characters") and
-// tex.web @<Manufacture a control...@> (cur_cmd dispatch by meaning,
-// not by token catcode).
-fn is_implicit_align(t: &Token) -> bool {
-  if t.get_catcode() != Catcode::CS {
-    return false;
-  }
-  matches!(
-    lookup_meaning(t),
-    Some(Stored::Token(tt)) if tt.get_catcode() == Catcode::ALIGN
-  )
+/// The frozen `\span` token, `\lx@span`, for the alignment machinery's own column spans, after
+/// [`report_redefined_span`].
+pub fn frozen_span() -> Token {
+  report_redefined_span();
+  T_CS!("\\lx@span")
 }
 
-// `\cr` / `\crcr` `\let`-equivalents. Less common in the wild than
-// implicit `&` but covered by the same Knuth-TeX semantics. The body
-// path uses the analogous `gullet::is_column_end` which does meaning-
-// equality against the COLUMN_ENDS table — keep both code paths in
-// sync. Two shapes of implicit-CR are observed:
-//
-//   - `\let\rowEnd=\cr` while `\cr` is a Constructor (LaTeXML's normal state): meaning of `\rowEnd`
-//     becomes `Stored::Constructor` with the same `.cs` as `\cr`. Use meaning-equality against
-//     `lookup_meaning(\cr)`.
-//   - `\let\rowEnd=<token-CS>`: meaning is `Stored::Token(<\cr>)`. Use the by-name fallback
-//     (matches when no engine binding has shipped a proper `\cr` Constructor / Primitive yet).
-fn is_implicit_cr(t: &Token) -> bool {
-  if t.get_catcode() != Catcode::CS {
-    return false;
-  }
-  let defn = lookup_meaning(t);
-  let Some(defn) = defn else {
-    return false;
-  };
-  // Meaning-equality (handles `\let \rowEnd \cr` where `\cr` is a
-  // Constructor / Primitive — the LaTeXML-default state).
-  for cr_cs in &[T_CS!("\\cr"), T_CS!("\\crcr")] {
-    if let Some(cr_defn) = lookup_meaning(cr_cs)
-      && defn == cr_defn
-    {
-      return true;
-    }
-  }
-  // Fallback: meaning IS the CS token `\cr` / `\crcr` (raw alias form).
-  if let Stored::Token(tt) = defn
-    && tt.get_catcode() == Catcode::CS
-  {
-    return tt.with_str(|s| s == "\\cr" || s == "\\crcr");
-  }
-  false
+/// True when `t` is a control sequence `\let` to a catcode-PARAM `#` (array.sty's
+/// `\@sharp`): tex.web §783 tests the MEANING (`mac_param`) for the template slot.
+fn meaning_is_param(t: &Token) -> bool {
+  t.get_catcode().is_active_or_cs()
+    && matches!(lookup_meaning(t), Some(Stored::Token(m)) if m.get_catcode() == Catcode::PARAM)
 }
 
 // Perl TeX_Tables L187-240: Parse an \halign style alignment template from Gullet
 pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
-  let t = read_non_space()?;
-  // Perl L190: $t->defined_as(T_BEGIN) — checks \let aliases like \bgroup
-  if !t
+  // §774 `init_align`: `scan_spec`, then the `{` as §403 `scan_left_brace` finds it — expanded, past spaces and
+  // `\relax` (`\halign\relax{…}`).
+  let t = read_non_blank_non_relax()?;
+  // tex.web §347: only a `{` CHARACTER moved align_state when it was read
+  // (`\bgroup` does not), so only that opener has a `+1` for the after_digest
+  // to balance — recorded here, consulted at the decrement. An unconditional
+  // decrement drove the OUTER alignment's live count to -1 when a nested
+  // `\halign to\linewidth\bgroup` (oz.sty:800 `\z@format`, `op` inside
+  // `class`) closed, and the outer's following `\crcr\noalign` was rejected
+  // (ozguide). Guard: `perfect_kernel_batch54::nested_halign_bgroup_keeps_the_outer_align_state`.
+  let brace_opener = t
     .as_ref()
-    .map(|t| t.defined_as(&T_BEGIN!()))
-    .unwrap_or(false)
-  {
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+  whatsit.set_property("halign_brace_opener", Stored::Bool(brace_opener));
+  // Perl L190: $t->defined_as(T_BEGIN) — checks \let aliases like \bgroup; any catcode-1 character opens it too
+  // (§403 `cur_cmd=left_brace`), as the box and `\noalign` openers since 60j.
+  if !t.as_ref().is_some_and(is_left_brace) {
     Error!("expected", "\\bgroup", "Missing \\halign box");
     // Put back the token we consumed so it can be handled elsewhere
     if let Some(tok) = t {
@@ -1487,28 +2164,48 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   let mut nexttabskip = tabskip;
   // Only expand certain things; See TeX book p.238
   local_align_group_count(1000000);
-  while let Some(t) = read_token()? {
+  // tex.web §777 `init_align` scans the preamble at `aligning` status: a file
+  // that ends inside it is "File ended while scanning preamble of \halign",
+  // and TeX's `\cr}` ends the preamble and the alignment there (§339).
+  let aligning = set_scanner_status(ScannerStatus::Aligning, get_current_token());
+  loop {
+    let t = match read_token()? {
+      Some(t) => t,
+      None if recover_at_file_end()? == FileEndRecovery::Inserted => continue,
+      None => break,
+    };
     let cc = t.get_catcode();
-    if t == T_CS!("\\tabskip") {
+    // tex.web §783 `get_preamble_token` dispatches on the command code (`cur_cmd`), like the body's column ends
+    // (`gullet::is_column_end`): `\let\myspan\span` expands the next token and `\let\rowEnd=\cr` (an ACTIVE
+    // character too: metre's `\obeylines`+`\let\par=\cr` terminator, batch 56bb) ends the preamble, while a
+    // `\def\span`/`\def\cr` macro is an ordinary template token, expanded only when the cell is read.
+    let column_end = is_column_end(&t).map(|(_, kind, hidden)| (kind, hidden));
+    // §783 tests `\tabskip` by command too (`assign_glue`, `tab_skip_code`): a `\let` copy sets it, a macro does not.
+    let is_tabskip = t.get_catcode().is_active_or_cs()
+      && with_meaning(
+        &t,
+        |defn| matches!(defn, Some(Stored::Register(r)) if *r.get_cs() == T_CS!("\\tabskip")),
+      );
+    if is_tabskip {
       // Read the tabskip assignment
       read_keyword(&["="])?;
       nexttabskip = read_glue()?;
-    } else if t == T_CS!("\\span") {
+    } else if matches!(column_end, Some(("span", _))) {
       // ex-span-ded next token
       let expanded = read_x_token(Some(false), false, None)?;
       if let Some(xt) = expanded {
         unread_one(xt);
       }
-    } else if cc == Catcode::PARAM {
-      // Found the template's column slot
+    } else if cc == Catcode::PARAM || meaning_is_param(&t) {
+      // Found the template's column slot. array.sty's `\@mkpream` builds the
+      // template with `\@sharp` (array.sty:97 `\let\@sharp##`, a cs whose
+      // MEANING is the `#` placeholder), so a package-assembled `\ialign`
+      // (sgame.sty:58, tabularcalc, tabvar, epslatex) carries the slot as that
+      // cs; tex.web §783 checks the meaning (`cur_cmd=mac_param`), not the
+      // token. Guard: `perfect_kernel_batch54::ialign_template_accepts_the_sharp_placeholder`.
       before = false;
-      tokens.push(t);
-    } else if cc == Catcode::ALIGN
-      || t == T_CS!("\\cr")
-      || t == T_CS!("\\crcr")
-      || is_implicit_align(&t)
-      || is_implicit_cr(&t)
-    {
+      tokens.push(if cc == Catcode::PARAM { t } else { T_PARAM!() });
+    } else if matches!(column_end, Some(("align", _) | ("cr" | "crcr", false))) {
       // End the column
       if before {
         // Leading & means repeated columns
@@ -1539,7 +2236,7 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
         post.clear();
         before = true;
       }
-      if cc != Catcode::ALIGN && !is_implicit_align(&t) {
+      if column_end != Some(("align", false)) {
         break; // \cr or \crcr (explicit or implicit) ends the template
       }
       tokens.push(t);
@@ -1557,6 +2254,7 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
       tokens.push(t);
     }
   }
+  drop(aligning);
   expire_align_group_count();
   // Store the template's token representation for reversion
   let template_tokens = Tokens::new(tokens.clone());
@@ -1579,33 +2277,18 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   Ok(template)
 }
 
-/// Recover the `<width>` token slice from a `p{Dimension}` column's `before`
-/// list, which `DefColumnType("p{Dimension}")` builds as
-/// `\vtop { \hbox to <width> \relax {`. Returns the tokens strictly between
-/// `\hbox to` and `\relax` (empty if the shape is unexpected). Used by
-/// `\lx@alignment@multicolumn` to drive the Perl-faithful VBox cell form for
-/// paragraph multicolumns without re-parsing the dimension.
-fn extract_pcol_width(before: &[Token]) -> Vec<Token> {
-  // `before` may carry an intercolumn/border prefix (`\vrule \relax \lx@intercol`)
-  // from a `|`, so locate the `\relax` that follows `\hbox to`, not the border's.
-  let Some(h) = before.iter().position(|t| *t == T_CS!("\\hbox")) else {
-    return Vec::new();
-  };
-  match before[h..].iter().position(|t| *t == T_CS!("\\relax")) {
-    // skip `\hbox`, `t`, `o` (the "to") → width runs up to the next `\relax`
-    Some(off) if off > 3 => before[h + 3..h + off].to_vec(),
-    _ => Vec::new(),
-  }
-}
+/// A template's fill glue by meaning (a `\let\myhfil\hfil` copy too), as Perl's `defined_as(T_hfil)`
+/// (TeX_Tables.pool.ltxml:762).
+fn is_fill(t: &Token) -> bool { t.defined_as(&T_CS!("\\hfil")) || t.defined_as(&T_CS!("\\hfill")) }
 
 // Perl TeX_Tables L735-745: beforeCellUnlist
-// Reorder `$ \hfil` → `\hfil $` in template tokens
+// Reorder `$ \hfil` → `\hfil $` in template tokens; both by meaning, as Perl's `defined_as` (:762, :774)
 fn before_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   let mut toks: VecDeque<Token> = tokens.into();
   let mut result = Vec::new();
   while let Some(t) = toks.pop_front() {
-    if t == T_MATH!()
-      && let Some(hfil) = toks.pop_front_if(|next| *next == T_CS!("\\hfil"))
+    if t.defined_as(&T_MATH!())
+      && let Some(hfil) = toks.pop_front_if(|next| next.defined_as(&T_CS!("\\hfil")))
     {
       result.push(hfil); // push \hfil
       toks.push_front(t); // put $ back
@@ -1622,8 +2305,8 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   let mut toks: VecDeque<Token> = tokens.into();
   let mut result: VecDeque<Token> = VecDeque::new();
   while let Some(t) = toks.pop_back() {
-    if t == T_MATH!()
-      && let Some(hfil) = toks.pop_back_if(|prev| *prev == T_CS!("\\hfil"))
+    if t.defined_as(&T_MATH!())
+      && let Some(hfil) = toks.pop_back_if(|prev| prev.defined_as(&T_CS!("\\hfil")))
     {
       result.push_front(hfil); // push \hfil to front
       toks.push_back(t); // put $ back
@@ -1632,6 +2315,138 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
     result.push_front(t);
   }
   result.into()
+}
+
+/// tex.web §789: an `\omit` cell is restricted horizontal, its material boxed as text (`Alignment::get_column_before`
+/// opens the `\hbox{`, `get_column_after` closes it), but in TeX its fill glue is the cell's, setting the cell flush
+/// right or centered (`\omit\hfill $y$`, `\multispan2\hfil … \hfil`, `\omit{\hfill $x$}`: 2306.14299). The box's
+/// leading fills (and the spaces before them) go before it and its trailing fills after it, where
+/// `extract_alignment_column`'s scan reads the cell's alignment from them, as from an unboxed cell. Only `\hfil` and
+/// `\hfill` are fills there (`\hss` leaves no box). Guard
+/// `perfect_kernel_batch68z::an_omit_cell_text_box_keeps_the_cell_alignment`.
+fn hoist_omit_text_box_fills(boxes: &mut VecDeque<Digested>) {
+  let is_hbox = |item: &Digested| match item.data() {
+    DigestedData::Whatsit(w) => w
+      .try_borrow()
+      .is_ok_and(|w| w.get_definition().get_cs_name().as_ref() == "\\hbox"),
+    _ => false,
+  };
+  let is_space = |item: &Digested| {
+    item.get_property_bool("isSpace") && !item.get_property_bool("isVerticalSpace")
+  };
+  let is_fill = |item: &Digested| item.get_property_bool("isFill");
+  // The cell's contents, as `\hbox`'s list, the fills cut from its front (`leading`) or back.
+  let cut = |item: &Digested, leading: bool| -> Vec<Digested> {
+    let DigestedData::Whatsit(w) = item.data() else {
+      return Vec::new();
+    };
+    let Ok(mut w) = w.try_borrow_mut() else {
+      return Vec::new();
+    };
+    let Some(contents) = w.get_arg_mut(2) else {
+      return Vec::new();
+    };
+    // the box's own list, under the lists a group in it leaves (`\omit{\hfill $x$}`: the group's empty `{`/`}`
+    // markers stay where they are, for its reversion)
+    let mut items: VecDeque<Digested> = contents.unlist().into();
+    let mut passed = Vec::new();
+    let mut last_fill = 0;
+    loop {
+      let Some(item) = (if leading {
+        items.pop_front()
+      } else {
+        items.pop_back()
+      }) else {
+        break;
+      };
+      if matches!(item.data(), DigestedData::List(_)) {
+        let inner = item.unlist();
+        if leading {
+          for inner in inner.into_iter().rev() {
+            items.push_front(inner);
+          }
+        } else {
+          items.extend(inner);
+        }
+        continue;
+      }
+      let fill = is_fill(&item);
+      let passes = fill || is_space(&item) || item.is_empty().unwrap_or(false);
+      passed.push(item);
+      if fill {
+        last_fill = passed.len();
+      } else if !passes {
+        break;
+      }
+    }
+    if last_fill == 0 {
+      return Vec::new();
+    }
+    let rest = passed.split_off(last_fill);
+    let (mut hoisted, kept): (Vec<Digested>, Vec<Digested>) = passed
+      .into_iter()
+      .partition(|item| is_fill(item) || is_space(item));
+    // what is not hoisted goes back, in order
+    for item in kept.into_iter().chain(rest).rev() {
+      if leading {
+        items.push_front(item);
+      } else {
+        items.push_back(item);
+      }
+    }
+    if !leading {
+      hoisted.reverse();
+    }
+    let items: Vec<Digested> = items.into();
+    let mode = match contents.data() {
+      DigestedData::List(list) => list.borrow().mode.clone(),
+      _ => None,
+    };
+    let mut list = List::new(items);
+    list.mode = mode;
+    *contents = list.into();
+    hoisted
+  };
+  // the box, under the lists the cell's material may be wrapped in
+  while let Some(front) = boxes.front()
+    && matches!(front.data(), DigestedData::List(_))
+  {
+    let front = boxes.pop_front().unwrap();
+    for item in front.unlist().into_iter().rev() {
+      boxes.push_front(item);
+    }
+  }
+  if let Some(front) = boxes.front().cloned()
+    && is_hbox(&front)
+  {
+    for item in cut(&front, true).into_iter().rev() {
+      boxes.push_front(item);
+    }
+  }
+  while let Some(back) = boxes.back()
+    && matches!(back.data(), DigestedData::List(_))
+  {
+    let back = boxes.pop_back().unwrap();
+    boxes.extend(back.unlist());
+  }
+  if let Some(back) = boxes.back().cloned()
+    && is_hbox(&back)
+  {
+    boxes.extend(cut(&back, false));
+  }
+}
+
+/// A box flagged as space with a positive width (tex_box.rs `is_space_flagged_box`: `\phantom`, `\hphantom`):
+/// content, not padding. A zero-width one (`\vphantom`, `\mathstrut`) is peeled as before: kept as content it moved a
+/// cell's fill alignment and, with it, the header guess; a negative-width phantom (rare) is peeled too.
+fn is_phantom_with_width(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+      crate::tex_box::is_space_flagged_box(&w)
+        && matches!(w.get_property("width").as_deref(), Some(Stored::Dimension(width)) if width.value_of() > 0)
+    }),
+    _ => false,
+  }
 }
 
 #[cfg(test)]

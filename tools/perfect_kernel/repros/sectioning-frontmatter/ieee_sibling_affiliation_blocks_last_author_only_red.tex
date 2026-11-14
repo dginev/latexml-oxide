@@ -1,0 +1,18 @@
+% mechanism: two sibling `\IEEEauthorblockA`s after one names block of two authors: pdflatex prints both in the names'
+%   column, but the second block's `\lx@add@affiliation@marked[annotate=new]` reaches only the authors with no
+%   affiliation yet, so the last author alone (ieeetran_cls.rs `\IEEEauthorblockA`; not the nesting of
+%   `unnested_affiliation_blocks`, which splices an unmarked inner block into its outer for this reason)
+% witness: synthetic (review revP4cR2 probe q14)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Bob Baker", "Dept X, Univ Y", "Lab Z"
+% engines: P4b2, P4cR2, P4cR2b: Ann Able "Dept X, Univ Y"; Bob Baker "Dept X, Univ Y", "Lab Z"
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker "Dept X, Univ Y" and "Lab Z"
+% status:  RED (P4cR2b)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker}\IEEEauthorblockA{Dept X, Univ Y}\IEEEauthorblockA{Lab Z}}
+\maketitle
+Body.
+\end{document}

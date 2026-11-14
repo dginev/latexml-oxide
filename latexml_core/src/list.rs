@@ -129,10 +129,20 @@ impl BoxOps for List {
     if let Some(Stored::String(s)) = self.properties.get("vattach") {
       options.insert("vattach", Stored::String(*s));
     }
-    if let Some(width) = self.properties.get("width")
-      && options.get("width").is_none()
-    {
-      options.insert("width", width.clone());
+    // A horizontal list is a paragraph only at its OWN width (Perl
+    // computeBoxesSize, Font.pm:661, 683: `$boxes->getProperty('width')`,
+    // never `$options{width}`). A width passed in the options is the enclosing
+    // box's requested size (`compute_size_and_cache`), which must not break the
+    // contents' lines: `\makebox[1em]{aaa bbb ccc ddd}` measured 4.3pt high and
+    // 36pt deep, set as a 1em paragraph (TeX and Perl: 6.94pt, 0pt). Witness:
+    // the bxcalc manual's measured boxes (sample-bxcalc, batch 56kf).
+    match self.properties.get("width") {
+      Some(width) => {
+        options.insert("width", width.clone());
+      },
+      None => {
+        options.remove("width");
+      },
     }
     // Perl #2798 (S6): pass the List's recorded \baselineskip (set by S4 in
     // repack_horizontal) so compute_boxes_size can stack lines with the right
@@ -142,7 +152,32 @@ impl BoxOps for List {
     {
       options.insert("baseline", baseline.clone());
     }
-    font.compute_boxes_size(&self.boxes, options)
+    // A vertical box's `\lineskip` and `\lineskiplimit` (base_utilities.rs `predigest_box_contents_in_mode`).
+    for key in ["lineskip", "lineskiplimit"] {
+      if let Some(value) = self.properties.get(key) {
+        options.insert(key, value.clone());
+      }
+    }
+    // Not vertical: horizontal and math lists (`hpack`, tex.web §649, §720);
+    // `compute_boxes_size`'s own default for a list with no mode.
+    let horizontal = match options.get("mode") {
+      Some(Stored::String(mode)) => {
+        crate::common::arena::with(*mode, |mode| !mode.ends_with("vertical"))
+      },
+      _ => true,
+    };
+    let (width, height, depth) = font.compute_boxes_size(&self.boxes, options)?;
+    // An hbox's height and depth start at 0 (tex.web §649 `hpack`), which a
+    // one-item list, measured through `compute_boxes_size`'s bare-box shortcut,
+    // did not do: `\hbox{\rotatebox[origin=l,y=1.2em]{90}{Qg}}` was 12pt deep
+    // below 0 (arXiv 2605.19974). Perl's `List()` returns the lone box itself
+    // (List.pm:41-44), so Perl measures it unfloored too (DIVERGENCES #331).
+    // A vbox keeps a negative depth (tex.web §670).
+    if horizontal {
+      Ok((width, Dimension(height.0.max(0)), Dimension(depth.0.max(0))))
+    } else {
+      Ok((width, height, depth))
+    }
   }
 }
 
@@ -199,6 +234,30 @@ impl List {
       locator,
       properties: HashMap::default(),
     }
+  }
+
+  /// Append `boxes`, keeping the font and locator [`List::new`] would give
+  /// the longer list: the last box's that has one (or, under
+  /// `token-locators`, the extent to the last box's end). For a list only its
+  /// owner holds — `Document::append_node_box` growing a node's own box.
+  pub fn push_boxes(&mut self, boxes: Vec<Digested>) {
+    for bx in &boxes {
+      if let Ok(Some(bx_font)) = bx.get_font() {
+        self.font = Some(bx_font);
+      }
+      #[cfg(feature = "token-locators")]
+      if let Some(l) = bx.get_locator().filter(|l| l.from_line != 0) {
+        self.locator = match self.locator.take() {
+          None => Some(l),
+          Some(a) => Locator::new_range(a, l).or(Some(a)),
+        };
+      }
+      #[cfg(not(feature = "token-locators"))]
+      if let Some(l) = bx.get_locator() {
+        self.locator = Some(l);
+      }
+    }
+    self.boxes.extend(boxes);
   }
 
   pub fn is_empty(&self) -> bool {

@@ -1,0 +1,15 @@
+% mechanism: an undefined command past a name's `\thanks`, which the reading routes out to a note: no event covers it,
+%   the name's run stops before the note; the emitter writes it after the name (`block_names`), its Error raised once in
+%   the personname as Perl's. OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: 2508.21091 (`Songwei Liu\textsuperscript{\rm 1}\thanks{Porject Leader.}\equalcorres,`), 1101.4098
+%   (`E.Prandini\from{ins:x}\thanks{…}\ETC,`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 "Undefined control sequence": "Ann Able∗ Bob Baker", footnote "∗ Supported by X."
+% engines: Perl 0.8.8: 1 Error, Ann Able<ERROR>\undefinedprobecs</ERROR> with the thanks, Bob Baker; DEL5 (=2): 0 Errors
+% expect:  1 Error, 0 Warnings; Ann Able<ERROR>\undefinedprobecs</ERROR> with the note "Supported by X.", Bob Baker
+% status:  RED (DEL5) -> GREEN (ERR2)
+\documentclass{article}
+\author{Ann Able\thanks{Supported by X.}\undefinedprobecs \and Bob Baker}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

@@ -1,0 +1,653 @@
+# Perfect Kernel — the generalized kernel-capability program
+
+**Approved by the user 2026-09-05**: *"prioritize a well-designed generalized
+kernel support, faithful to the originals and with clear and well-defined
+abstractions."* This document is the standing plan for that program. It is a
+living worklist (no date in the name); each capability row carries its status.
+
+It complements [`ARCHITECTURE_THEMES.md`](ARCHITECTURE_THEMES.md) (the recurring
+mechanisms distilled from batches 33–53, and themes 7–10 and 2b from batches 56jm–56kc). Where a capability *is* a
+theme, the theme section holds the model and this file holds the landing plan;
+where it is new (K1, K3, K4, K6), the model is here.
+
+**Standing practice (user, 2026-09-26):** an architectural insight is recorded as it is met — the
+mechanism in ARCHITECTURE_THEMES.md, the landing plan here — and the open capabilities are implemented in
+dedicated sessions once a large goal completes, not inside the batch that found them.
+
+**Design rules for every capability**
+
+1. **Faithful to the originals.** The model is tex.web / latex.ltx / the real
+   `.sty`, cited by file:line. Perl LaTeXML is the reference for the *XML*
+   shape, not for kernel mechanics it emulates loosely. A divergence from Perl
+   is recorded in `docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md`.
+2. **One abstraction, one owner.** Each capability names its Rust type or
+   module and the invariant it maintains. Bindings consume the abstraction;
+   they never re-implement it (the `\verb`/listings/tcolorbox readers of
+   batch 56i were six re-implementations of K5).
+3. **Mechanism over symptom.** A fix that only closes the witness is not
+   landed under this program; it goes to the batch fix log. A program row
+   lands with the class-level guard (a repro from a *different* package than
+   the witness).
+4. **Additive first, rewrite last.** K1, K3, K4, K5, K7 are additive; K2 is a
+   rewrite on its own branch with its own sweep gate.
+
+## Summary
+
+| # | Capability | Theme | Retires (evidence) | Order | Status |
+|---|---|---|---|---|---|
+| K1 | Definition provenance + raw-load-then-overlay bindings | new (2 policy) | "already defined" 261 lines; stub-vs-raw internals (`\pdfstringdefPreHook` ×6, `\siunitx_number_format:nN`, `\ifGm@showframe` ×3, `\chemmacros_load_module:n`, PDF-API / `\LuaUL*` stubs) | 1 | **Steps 1-2 LANDED** (56l `DefinitionOrigin`; 56n retraction retired; 59g `Fallback` origin: OmniBus yields to the document, DIVERGENCES #408); step 3 (Overlay audit: hyperref, siunitx, geometry, fontspec, chemformula, forest) DEFERRED |
+| K3 | lthooks as the single hook store | 6 | source2e, tikz-ext-manual, euclideangeometry (56i regression), every `\AddToHook{package/…}` no-op | 2 | Steps 1 (56i, `\AtBeginDocument` routed), 2 (54c `use_load_hooks`), 4-kernel (56s) LANDED; step 3 (delete the private stores) + step-4 binding audit OPEN; no in-scope witness |
+| K4 | Kernel templates and sockets backed by our constructors | new | ltx-talk ×10, tagpdf 113 lines, diffcoeff, every tagging-aware class | 2 | OPEN — inert declarations landed (56i); no in-scope witness with errors (s134) |
+| K5 | One line-oriented raw reader | 4 | `\verb` EOL, listings line 1, `\tcbverbatimwrite`, fancyvrb, `\DocInput`, `.listing` round trips (25 docs) | 3 | OPEN |
+| K2 | Semantic nest separate from the save stack | 1 (R9, approved 2026-09-02) | `unexpected:\endgroup` 49 docs, three off_save site patches (56g/56h), tutodoc, kblocks, nath | 4 | APPROVED (R9, 2026-09-02); deferred (re-steer 2026-10-01). Its in-scope witness kaytannollista-latexia (165 'Attempt to close a group that switched to mode internal_vertical') was a binding seam, fixed by 59h (a raw `\@endfloatbox` closes only a box that was opened, DIVERGENCES #409) |
+| K6 | A consistent font-selection model for Unicode engines | 5 | polyglossia 136 lines, fontspec queries, `\mathitalicsmode` ×4, most lualatex manuals | 5 | persona LANDED (56id, DIVERGENCES #285: `\ifpdf` follows `\pdfoutput`, 1 unless the source ships EPS/PS) and the font-file record (56x); OPEN — the polyglossia TRUE stub (56i) is the anti-pattern to replace |
+| K7 | One in-memory file model | 6 | VFS `./` (56i), `\jobname` round trips, `\IfFileExists`/`\openin`/`\file_full_name:n` gaps | 6 | half-landed (b42/b47/b50/55m/56i) |
+| K8 | Runaway cap that degrades instead of discarding | — | csvsimple-l3, forest-doc (pre-56i), euclideangeometry: 500 same-errors → 39-byte XML | 7 | OPEN — no in-scope witness (canaries only); deferred |
+| K9 | Group codes on every frame; closers dispatch on the group code | 1 | the fused mode-frame family (DIFFICULT_CASES D12: msc, modernposter, dsptricks/psmatrix) | staged | Stage 0 LANDED (56ac: frame serials, the box reader ends on its own frame; msc 21 → 0); stage 3 retired for psmatrix (56af); no in-scope witness needs the rest (kaytannollista-latexia was the floatrow seam, 59h) |
+| K13 | Binding-conformance detector: the real macros' signatures and prologues against the bindings | 7, 2b | arydshln `\hdashline[..]`/`;{..}` (56jx), `\makebox`/`\raisebox` enterHorizontal lost (54n→56kb), the "arity long tail" | after the current goal, first | Stages 0-2 LANDED (57b, 57c, 57h); the 60 complete HIGH findings landed or verified in 57i/57j/57ah/57aj; stage 3 DEFERRED (re-steer 2026-10-01; resumes with the post-goal generalization audit) |
+| K14 | Two-phase typed parameters: read the macro's argument, then parse the type inside it | 7 | 56jm, 56jr/56ju (and 56jr's three sweep-#126 regressions), 56jw A-D, 56jz, 56kf's first cut (every `{Dimension}` read as a `\setlength` operand; now the declared `SetlengthDimension`) | after K13 | OPEN, deferred (re-steer 2026-10-01) |
+| K15 | A typed tail of the horizontal list (glue, kern, penalty, char, box) | 8 | 56jy trim, babel-french `;`, the paragraph text-node split, `\@bsphack`/`\xspace` spacing | after K13 | OPEN, deferred (re-steer 2026-10-01); french highpunct fixed at its site (gemini-13 Q6, c393accb65, guard `perfect_kernel_gemini::french_high_punctuation_unskips_the_space`) |
+| K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 86.9 % at s134 (57cm), 99.4 % with bibtex's `.bbl`, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
+| K17 | A fixed, stratified manual regression net per batch | 10 | 56jr/56js regressions found five batches late (sweep #126) | cheapest; any time | LANDED (phase 57, 2026-09-27): `manual_net.{tsv,sh}`, `manual_net_select.py`, `manual_net_compare.py` |
+| K18 | Typed box sizes: a box's measured size is its constructed size | 11 | `\framebox[w]` 12.08 vs 10.0pt, `\raisebox` height, `\parbox` 0.1pt rounding, `\resizebox`/`\scalebox`/`\rotatebox` sizes (56kf side finding); `\makebox[w]` contents line-broken at w | step 1 (the four + the width leak) 56kj; step 2: `\height` etc. bound to the box (`\raisebox[h][d]`), `\Gscale@div`, makecell/diagbox, the sizer audit | STEP 1 LANDED (56kj); step 2: `\height` binding LANDED (56kl), `\resizebox`/`\Gscale@div`/makecell/diagbox/audit OPEN |
+| K19 | Order-free math ranking: pragmas rank readings by violation count; a reversed enumeration reads alike | 12 | 57ao A/B (≈2,550 formulas moved by order), `(f(x)+1)(g(x)+1)`, rc59c bigop operand, `\{(0,6),(1,4)\}` | after the current math train | step 1 LANDED (57av); PARKED with the math stream (user 2026-10-02) |
+| K10 | A pdfTeX byte mouth (256-entry catcode table over U+0000..U+00FF) | new (7 CJK/kotex manuals, D9) | cjk-ko-doc, kotex-doc, kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer (`\가`/`\japanese`/`\ifx 가가`) | 8 | steps 1+2 LANDED (56bl); step 3 dropped — witnesses out of scope (CJK, 2026-10-01) |
+| K11 | Raw classes' title-page stores reroute to the frontmatter API | surpass (user-approved 2026-09-18) | jpsj2, ptptex; 390 of 655 TL classes define store setters | — | steps 1-2 LANDED (56di, 56dj); extended 58m, 58q, 59d, 59e; OPEN: list-append stores other than `\@author` (verify a witness first) |
+| K12 | pTeX control-word letters under a pLaTeX class | CJK (D9) | jsarticle `\if西暦`, ptex-manual `\黄マーカー` | — | LANDED (56ds, `PTEX_PROFILE` + upTeX `kcatcode`); the pTeX residual is PARKED, SHARED with Perl; witnesses out of scope (CJK, 2026-10-01) |
+| K20 | Gullet expansion fidelity: four tex.web algorithms the gullet deviates from (column ends by command code §342/§789, `\left`/`\middle`/`\right` as primitives with `scan_delimiter` §1160/§1188-1192, §395 extra `}` in a delimited argument, peeking macros as one unexpandable step §380/§440-445/§506/§785) | C5 (study 2026-10-11) | ~400-700 arXiv papers: X1 62 IfLimit Fatals in `\xymatrix`, redefined `\span` ~127, V1b cell-head `_` ~61, part of Mouth:EoF 338; 8 REDs; queued rows 64n/64o/64v; OD #500's expansion-only residual | 2 (after P0) | OPEN, ordered G4 → G2 → G3 → G1 (user 2026-10-11) |
+| K21 | Environments as TeX does them: `Streamed` (group + element opened/closed) vs `Captured` (`#body` box) DefEnvironments, no default mode, the XML element stack independent of the save stack | C2; extends K9, K2 | M1 residual 82/150 (64y), `$$` in 64 mode-less `#body` environments (~1,700 fixed by 64ra), `\endlx@list` 839, ~5k first errors, 15 REDs, HF6 | 3 (behind P0) | OPEN; HIGH risk, staged |
+| K22 | Binding provenance and ownership: a FileIdentity per class/package load, an owned set per binding over a raw-loaded real file, the shipped-copy delta, a corpus-copy conformance audit | C1; generalizes K1 step 3 and K13 stage 3 | `undefined:` 63% of run-336 first errors (227 clusters of ≥100 papers ≈54k tasks), binding surplus over the paper (OSA abbreviations, PoS/JHEP macros, EPL `{widetext}`), 31 renamed JHEP3 copies, ~15 REDs | read-only audit in parallel with K20 | step 2 census DONE 2026-10-11 (83.6% of the not-in-TL bound families' papers ship the file); FileIdentity + owned-set overlay OPEN |
+| K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | IN PROGRESS — superseded as a design record by [`../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md) (the observer is the one engine's reading, the emitter (the default since the flip, 2026-11-09; the switch and the old driver deleted, DEL2), the rest of the old reader removed before the merge); the FM S2a.1-S2a.2 r1-r7 history, this row's status as it stood, in `../archive/SYNC_SESSIONS_2026-11.md` |
+| K24 | One audited A/B comparator: stamped revisions or refuse, per-qname element counts, attribute text, canonical XML diff with mapped ids, frontmatter tuples; entry numbers allocated at integration | P0; extends K17 to arXiv; seed of the A4 audit | ≥7 missed or near-missed regressions in one week (64zc r1, 64x r1/r4, 63w4, 64k5, 64u EPL, 64b), 122 ad-hoc compare scripts, 3 renumberings | 1 | LANDED (p0 `1e47551e6c`, 2026-10-11): `ab_audit run/compare/audit` + `tools/perfect_kernel/next_entry_numbers.sh` |
+
+## K1 — Definition provenance and raw-load-then-overlay bindings
+
+**Goal.** A new `.sty`/`.cls` works at the raw level by default; a binding only
+says which constructs become XML.
+
+**Source of truth.** latex.ltx `\newcommand` → `\@ifdefinable` (:1006);
+expl3-code.tex:2031 `\__kernel_chk_if_free_cs:N`; latex.ltx:4820
+`\NewDocumentCommand`, :4872 `\__cmd_new_env:nnnn`. Perl:
+`isDefinableLaTeX` (latex_constructs.pool.ltxml:2512) — the leniency the
+pool needs because it pre-defines article-level names for class-less input.
+
+**Abstraction.** `DefinitionOrigin { Plain, LatexDump, Pool, Binding(name),
+File(path), Document }` stored on every definition (today inferred from
+locator shapes in `latex_constructs/mod.rs::is_latexml_predefinition_source`).
+One predicate, `origin.is_latexml_owned()`, consulted by `\newcommand`,
+`\cs_new`, ltcmd, `\@ifdefinable`, the dump reader and `\let`-retraction. A
+binding declares its shape: `Overlay` (load the real file raw, then define
+constructors, locked) or `Replace` (today's default; to be justified per
+binding). The overlay form is what tcblistingscore, tagpdf-base,
+pdfmanagement, polyglossia and circuitikz already do by hand.
+
+**Design as landed (56l):** [`archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md`](archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md) (the 2026-09-05 source-survey design).
+
+**Landing.** (1) LANDED 56l, (2) LANDED 56n. (3) Audit the bindings that `Replace` a package whose internals raw code reaches for (hyperref, siunitx, geometry, fontspec, chemformula, forest) and convert to `Overlay` one at a time, witnesses re-run. Guards: a repro per declarator over a pool name from a class (ltx-talk shape) and over a binding name from a raw package (lua-ul shape).
+
+**Risk.** LOW for (1)–(2); MED per binding in (3) (overlay exposes the real
+package's internals to our constructors — the tcolorbox listing family was
+the template).
+
+## K2 — Semantic nest separate from the save stack
+
+Model, witnesses and fix shape: [`ARCHITECTURE_THEMES.md` §1](ARCHITECTURE_THEMES.md#1-grouping-and-mode-are-one-stack-tex-keeps-two)
+(tex.web §211–219 nest, §268–284 save stack, §1064–1069 `off_save`). The
+three `off_save` site patches of batches 56g/56h (`stomach.rs::endgroup`,
+`digest_next_body`, `egroup`) are the symptom form; the program form is one
+`off_save` routine on the nest. Own branch, own sweep gate (S0∧S1 must not
+drop on the oracle-clean slice). Approved as R9 on 2026-09-02.
+
+## K3 — lthooks as the single hook store
+
+**Goal.** Every hook a raw package or class can see is the L3 one.
+
+**Source of truth.** latex.ltx lthooks: `\AtBeginDocument` = `\AddToHook
+{begindocument}` (:18901), `\AtEndDocument`, `\AtBeginDvi`, `\AtEndPreamble`/
+`\AfterEndPreamble`, `package/<name>/after`, `file/<name>/after`, `env/<name>/
+{before,begin,end,after}`, `shipout/*`; label = current file name, `top-level`
+runs last. Perl keeps private stores (`@at@begin@document`,
+latex_constructs.pool.ltxml:296-297) that ignore labels — the source2e
+`\RemoveFromHook` miss and the tikz-ext-manual ordering bug.
+
+**Abstraction.** `hooks::gput(hook, label, code)` in `latexml_engine` that
+calls `\hook_gput_code:nnn` when the L3 system exists and the private store
+only on the format-less path; the Rust `AtBeginDocument()` helper
+(`prelude.rs:28`) and every binding's `RawTeX!(r"\AtBeginDocument{…}")` go
+through it. `\begin{document}` (sect02.rs) fires only `\hook_use:n
+{begindocument}`; the private store is drained into the hook at format end.
+
+**Landing plan.** (1) Move `AtBeginDocument()`/`AtEndDocument()` helpers onto
+`hooks::gput` with the binding's package name as label. (2) Make the package
+loader fire `package/<name>/after` and `file/<name>/after` (theme 6's
+`\@onefilewithoptions` seam) — LANDED 54c (`use_load_hooks`, guard
+`perfect_kernel_batch54::package_after_hook_fires_for_a_binding_load`). (3) Delete the private stores. Guards: the
+56i `atbegindocument_joins_the_l3_begindocument_hook` and
+`pgfmanual_toplevel_atbegindocument_runs_last`. The euclideangeometry regression
+(a `\special_relax` marker inside a `\g__hook_` csname) is the first K3
+correctness item: the label/argument must reach lthooks as *tokens*, never
+through an expansion that can insert markers. (4) Self-terminating fused
+environments must hand their terminator back to the current `\end` macro so
+`env/<name>/after` and any hooked `\end` fire: the kernel `{verbatim}` does
+(batch 56s, DIVERGENCES #199); audit the bindings that read their own body
+(listings, fancyvrb, minted, comment) for the same shape.
+
+**Risk.** MED — ordering of begin-document code changes for every document
+(lthooks order is the faithful one; goldens that encoded the old order are
+re-baselined, not patched around).
+
+## K4 — Kernel templates and sockets backed by our constructors
+
+**Goal.** A class written against the 2024+ kernel (`\DeclareInstance
+{blockenv}{myenv}`, `\EditInstance{item}{basic}`, `\AssignSocketPlug`) gets
+real structure, not inert declarations.
+
+**Source of truth.** latex.ltx lttemplates (`\NewTemplateType`,
+`\DeclareTemplateInterface/Code`, `\DeclareInstance`, `\UseInstance`) and
+ltsockets (`\NewSocket` … `\UseSocket`, :7316 top-level check, :7405
+undeclared error); latex-lab-testphase-block.sty:96–170 (types + interfaces),
+:202–330 (`blockenv` display code, `\endblockenv`), :1180–1473 (instances);
+latex-lab-testphase-minipage.sty:47–50 (sockets).
+
+**Abstraction.** Template types `blockenv`/`list`/`item`/`para`/`block` are
+declared once (the 56i bindings) and their *code* maps onto the pool's list
+machinery: `blockenv` display → open the element named by `tag-name`
+(itemize/enumerate/description/quote/quotation/center/theorem/verbatim/Div)
+with the `inner-instance` selecting the item style; `\endblockenv` closes it
+(`end_mode` on the K2 nest). Sockets are raw and stay raw; the tagging ones
+(`tagsupport/*`) are declared, no-op plugs.
+
+**Landing plan.** (1) `blockenv` code bodies call `\lx@blockenv@begin{tag}` /
+`\endblockenv` → the pool's begin/end list constructors. (2) `item` instances
+feed `\makelabel`. (3) Map `\DeclareInstance{blockenv}{X}` onto a
+`DefEnvironment`-equivalent so `\begin{X}` works. Guards: the 56i
+`testphase_tagging_sockets_and_block_templates_are_declared` plus a repro
+that declares a `blockenv` instance and asserts the element it opens.
+
+**Risk.** MED — list-structure fidelity; keep the enumitem/paralist goldens
+green.
+
+## K5 — One line-oriented raw reader
+
+**Goal.** Every verbatim-family construct reads lines through one reader.
+
+**Source of truth.** tex.web §343–360 (`get_next`, `state`, `\endlinechar`
+§360), latex.ltx:15504–15510 `\verb@eol@error`, verbatim.sty:107–112
+`\verbatim@start`, lstmisc.sty:45–64 (write-file tee), doc.sty
+`\MakePercentIgnore`, tcolorbox.sty:2726–2735, fancyvrb.sty:418–421.
+
+**Abstraction.** `mouth::RawLines` — a reader over the *current* mouth with:
+`from_column_zero()` (the line the pushback was probed from, OXIDIZED #162),
+`until(pattern)` (regex on the raw line, remainder pushed back as tokens
+under the caller's regime), `regime(CatcodeRegime)` (verbatim / semiverbatim
+/ obeylines: what the EOL yields — active `^^M`, space, `\par`), honouring
+`\endlinechar` and the `\scantokens` pseudo-file budget. Bindings (listings,
+fancyvrb, verbatim, tcolorbox, doc, minted, `\verb`) call it; none keeps a
+private scanner.
+
+**Landing plan.** (1) Extract today's `listings_read_raw_lines_with_outer`,
+`read_verb_invocation`'s scan and `verbatim@` into `RawLines`. (2) Port the
+other five callers. Guards: the existing #162 guards, `verb_ended_by_end_of
+_line_recovers`, `forest_docinput_lstenv_writefile_gobbles_doc_percent`, the
+`tcbverbatimwrite_*` pair — all kept, plus one per ported caller.
+
+**Risk.** LOW–MED (the readers are well guarded; the risk is in `\scantokens`
+budget interplay).
+
+## K6 — A consistent font-selection model for Unicode engines
+
+**Goal.** Packages that *ask about* fonts get consistent answers from one
+state, not per-package TRUE/FALSE stubs.
+
+**Source of truth.** NFSS (latex.ltx fontdef/`\selectfont`, `\fontencoding`),
+fontspec (`\fontspec_if_script:nTF`, `\fontspec_if_language`, `\l_fontspec
+_family_tl`, `\newfontfamily`, `\setmainfont` → family declarations),
+unicode-math (`\setmathfont`, `\mathitalicsmode`), polyglossia.sty:632–677
+(the script check), LuaTeX manual §7 (math-code primitives). The 56i
+polyglossia binding answers TRUE unconditionally — correct for the witnesses,
+not a model.
+
+**Abstraction.** `FontModel` in `latexml_engine`: the NFSS state plus a
+declared-family table populated by `\setmainfont`/`\newfontfamily`
+(name, features, scripts declared or implied by the name), answering the
+fontspec conditionals from that table ("a declared font supports the
+scripts its declaration named; the default cmr answers as the oracle's
+default font would"). Engine persona (theme 5) decides which primitives
+exist (`\mathitalicsmode`, `\Umathcode`).
+
+**Landing plan.** (1) Family table + the five fontspec conditionals. (2)
+polyglossia's binding reduces to loading raw. (3) unicode-math surface.
+Guards: `polyglossia_script_check_passes_without_font` kept, plus a
+`\newfontfamily\greekfont[Script=Greek]` repro.
+
+**Risk.** MED — touches every lualatex document's preamble.
+
+## K7 — One in-memory file model
+
+Model: [`ARCHITECTURE_THEMES.md` §6](ARCHITECTURE_THEMES.md#6-file-loading-and-file-io-bypass-the-kernel).
+`latexml_core::binding::virtual_files` is the store; the program item is
+that *every* existence/read/write primitive consults it first with one key
+normalization (`vfs_key`, 56i) and one search order, and that the loader
+runs latex.ltx's `\@onefilewithoptions` (also K3's step 2). Half-landed.
+
+## K8 — Runaway cap that degrades instead of discarding
+
+**Goal.** A document that fires the same error 500 times keeps its output.
+
+**Source of truth.** tex.web §1283 (`error_count`, 100 → `history=fatal`) is
+per *paragraph*/interaction, not per document; Perl's `MaxErrors` fatal is a
+beyond-TeX guard. Ours (`TooManyErrors:MaxLimit`, the same-error runaway cap)
+aborts the whole conversion, leaving a 39-byte XML (csvsimple-l3,
+euclideangeometry, forest-doc before 56i).
+
+**Abstraction.** The cap becomes a *suppression*: after N identical errors
+the construct that raises them is neutralized for the rest of the document
+(its definition replaced by the error-once no-op), the count is reported
+once, and conversion continues. Fatal stays Fatal for genuine kernel faults.
+
+**Risk.** LOW; beyond-Perl reliability lever, recorded as a divergence.
+
+## K9 — Group codes on every frame; closers dispatch on the group code
+
+**Goal.** The parked "fused mode-frame family" (DIFFICULT_CASES D12: msc,
+modernposter, dsptricks/psmatrix — a `\begingroup`/`\endgroup` pair or a
+deferred `\egroup` straddling a box or cell boundary) stops cascading.
+
+**Source of truth.** tex.web keeps the semantic nest (§211-218 `push_nest`/
+`pop_nest`: mode + current list) apart from the save stack (§274
+`new_save_level(group_code)`); a box pushes both (§1083-1085 `scan_spec` then
+`push_nest`) and is packaged when its GROUP closes (§1085-1086 `package`:
+`unsave` → `hpack` → `pop_nest`). `}` dispatches on `cur_group` only
+(§1068 `handle_right_brace`: `simple_group` → `unsave`, `semi_simple_group` →
+`extra_right_brace`, box groups → `package`); `\endgroup` checks
+`cur_group = semi_simple_group` only, else `off_save` (§1064-1065) inserts the
+matching closer with "Missing } inserted". Perl fuses the two
+(Stomach.pm:330-335 admits it: modes "are NOT correlated to grouping").
+
+**Today.** One `State` frame stack carries groups AND modes: `begin_mode` =
+`push_stack_frame(false)` + `BOUND_MODE` bound in that frame (stomach.rs `begin_mode`); `end_mode` demands the top
+frame be the mode frame; `egroup`/`endgroup` gate on `BOUND_MODE`-on-top + `groupNonBoxing`; the box reader's
+terminal is the raw frame depth (base_utilities/boxes_lists.rs). Batch 56z added `lx@group@code` for `bounded` environments only.
+
+**Abstraction (staged; each stage = guard + control).**
+- Stage 0, no behaviour change: every opener writes its group code
+  (`simple`, `semi_simple`, `hbox`/`vbox`/`vtop`, `math`/`display`/
+  `math_left`, `align`), generalizing 56z's `lx@group@code`.
+- Stage 1 (msc, modernposter): `end_mode` closes intervening `semi_simple`
+  frames the tex.web way (one "Missing } inserted"-class warning) instead of
+  refusing; the box reader keys its terminal on the box's OWN group level.
+- Stage 2: `\endgroup`/`}`/`\egroup` dispatch on the group code with
+  `off_save`/`extra_right_brace` recovery, unified with the existing
+  "Missing $ inserted" path (stomach.rs:851-877).
+- Stage 3 (psmatrix/dsptricks): alignment cell-boundary group codes — the
+  template's `\begingroup…##…\endgroup` pairs close on the save stack
+  without exposing the `\halign` box frame.
+
+**Before Stage 1.** Stage 0 resolved msc (56ac). Trace the next in-scope witness first (`\tracinggroups=1` on
+pdflatex vs `LXML_TRACE_FRAMES=1`); a local missing pop lands first. Notes `~/data/pk_agents/w22/mode-frames/NOTES.md`.
+
+**Risk.** LOW (Stage 0), MED (1-2: `AlignPeekMode`, `$…$`, `INNER_BOX`/
+`\ifinner`, `\aftergroup` order), HIGH (3).
+
+## K10 — A pdfTeX byte mouth
+
+Steps 1+2 LANDED 56bl (package-scoped byte mouth, `decode_byte_mouth_runs`); step 3 dropped (witnesses CJK, out of scope 2026-10-01). Dead end: a global byte mouth under the pdfTeX persona (utf8.def:157-170 vs `utf8_input_keeps_latin1_code_points_other`). Detail: [`archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md`](archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md).
+
+## K11 — Raw classes' title-page stores reroute to the frontmatter API
+
+**Goal (user, 2026-09-18, APPROVED — surpass Perl).** "Both `\author` and
+`\inst` need to use the latexml provided Frontmatter API so that we can recover
+high-quality semantic XML annotating the metadata kinds" and "we need to surpass
+perl and detect these common mechanisms rerouting them to the Frontmatter API".
+Under LaTeXML's locked `\maketitle` a raw class's `\@maketitle` never runs, so
+everything the class STORED for it — affiliations (`\inst`, `\institute`,
+`\affiliation`, `\address`), abstract (`\abst`, `\abstract`), dates by role
+(`\recdate`, `\received`, `\accepted`), publication info (`\pubinfo`,
+`\journal`), `\subtitle`, `\keywords`, `\email` — is lost in Perl (its ~200
+class bindings are the only route) and was deposited as body paragraphs by the
+Rust `\lx@deposit@maketitle` surpass (sect05.rs:948), presentational and, on
+manptp, ahead of the frontmatter. Batch 56di landed the two per-command forms
+(`\inst` in an author = `\lx@request@frontmatter@annotation[affiliation]`,
+llncs.cls.ltxml:50; a ptptex binding for its five setters); K11 is the general
+rule that makes such bindings unnecessary for the common shape.
+
+**Source of truth.** The store convention is mechanical: a class setter whose
+body is a pure store — `\gdef\@NAME{#1}`, `\def\@NAME{#1}`, `\long`/`\global`
+variants, `\newcommand\NAME[1]{\gdef\@NAME{#1}}` (ptptex.cls:616,
+jpsj2.cls:842, gammas.cls:189 …) — is a metadata setter by construction, a
+check on the macro's token body, never a guess. The KIND comes from a surveyed
+NAME → kind table (evidence: every TL `.cls` scanned; Perl's own class
+bindings' setter → `\lx@add@*` mappings; survey
+`~/data/pk_agents/w23/frontmatter_stores/`). The frontmatter API is Perl's
+(Base_Utility.pool.ltxml:547-640): `\lx@add@{title,subtitle,author,affiliation,
+date[role],abstract,keywords,pubnote,…}`, `\lx@add@affiliations` with `$^n$`
+labels linked from the authors' `$^{n,}$` (`\lx@author@withsup` /
+`\lx@affiliation@withsup`).
+
+**Mechanism (as landed: 56dj, extended 58m, 58q, 59d, 59e).** After a raw `.cls` loads (the
+`latexml_core/src/binding/content.rs` after-hook site; since 68x also for the class a binding reads raw, at the end
+of that class load, the binding's own setters kept),
+`\lx@class@loaded@raw{name}` runs `frontmatter_stores::reroute_raw_class_stores`: each setter of the NAME → kind
+table that the class defined as a pure store — one argument, or `[optional]{mandatory}` (58m, bfhlayout
+`\institute`) — is rerouted to the frontmatter API. The class's `\@maketitle` is kept (it was `\let` to `\@empty`
+until sweep 93): `\lx@deposit@maketitle` (sect05.rs) digests it with the title fields and the captured stores read as
+empty and keeps what it typesets when it raises no error, and replays the class's own refused `\maketitle`
+(`\lx@dropped@maketitle`) the same way when the replay gate finds its vocabulary defined (`body_vocabulary_is_defined`;
+since 75a a `\def`'s replacement text and a called macro's delimiters are not checked as run, and a class's
+`\appto`/`\g@addto@macro` to the refused `\maketitle` extends the class's definition, state.rs
+`extended_refused_definition`; OXIDIZED_DESIGN_DIVERGENCES #756-#757). An off-table store whose
+title-page code does not typeset — a refused body the gate rejects, a deposit or replay that errs, a class field the
+deposit reads as empty (jfpc's `\@author` built from its stores) — is handed on at `\maketitle` since 77i — the document's title or
+authors when the class's own `\title`/`\author` hands its argument to the store's setter (or its `\@author` prints the
+store as the names) and the document has none, rows of the creators' author block for a store its `\@author` prints
+beside the names, nothing for a store that only repeats the creators' names (no label printed before it, every creator
+named), else an `ltx:pubnote` named by the label the title page prints before it (when TeX's run prints it right before
+the store, `verify_title_page_labels`, 77i r4) — when speculative runs of the class's title page with each store set to
+a letters and then a digits sentinel print both, a plain value is in the run with the document's own values, and no
+kept deposit or replay typesets it (`before_title_page_runs`,
+`hand_untypeset_stores`, OXIDIZED_DESIGN_DIVERGENCES #767); one only a refused class environment
+prints (wiley-article's abstract) was tabled in 75a (#758). Guard
+`only_table_names_with_store_bodies_are_rerouted`. Since 58m the stores are read where the class reads them:
+creator stores (affiliation, address, e-mail, ORCID; editor, speaker) and an abstract or keywords the title page reads (named
+by its label or not, 77i r4) at `\maketitle`,
+the others when set (once a
+`\maketitle` placed one — handed on and printed by its title page, the sentinel run — a later call only re-sets the store; a store the title page prints after a label is named by
+it, 77i, #154). 58q
+leaves a binding's own setters alone (`latexml_core::binding::store_setters`, KPE #418/#419); 59d hands what code
+appends to `\@author` to the creator (DIVERGENCES #405); 59e lets a later `\maketitle` typeset the authors set
+after the last one (DIVERGENCES #406). Inside author content `\inst{n}` is the affiliation link request
+(`\lx@author@withinst`). The 56dj text and the original steps are in the archive.
+
+68u r2 (DIVERGENCES #643) widens what a setter is, by the NAME's semantics: (rule (a)) a table setter storing its
+argument in a macro of another name is the frontmatter's when the reader scan finds only the class's title-page code
+reading it (apa6.cls:760 `\affiliation` → `\@affil`, :779 `\authornote` → `\@acks`; a store another class macro
+reads stays raw, sweep 93's letter `\fromaddress` / afthesis `\addr@ss`); a setter may define side macros beside its
+store (tufte-common.def:608-614); a raw class's redefinition of the kernel's unlocked `\date` storing `\@date` keeps its
+definitions and sets the frontmatter's date; a `{keywords}` collecting its body (`\Collect@Body`) for the title page
+only is the frontmatter's keywords (cclayout.sty:71-73).
+
+**Open.** List-append stores other than `\@author` (verify a witness first); retire the per-class bindings whose only
+content is store rerouting (ptptex first), keeping those with non-store shapes; apa/apa6's numbered author and
+affiliation forms (`\twoauthors` … `\sixaffiliations`, 64 of 188 papers, no creator at all); expl3 stores
+(asmejour.cls:1483 `\date` → `\g__asmejour_date_tl`).
+
+## Ordering
+
+**Since 2026-10-11 (user):** K20–K24 are scheduled on their own, in this order: manual sweep #149 → K24 (P0) → K20 (G4 → G2 → G3 → G1) → K21, with K22's read-only census and audit in parallel → K23 in shadow mode. Evidence for each: [`KERNEL_CAPABILITY_GAPS_2026-10-11.md`](KERNEL_CAPABILITY_GAPS_2026-10-11.md). The rule below still governs K1–K19.
+
+Capabilities are not scheduled on their own (user re-steer 2026-10-01): a batch item from the scoreboard (S3 missing words → schema-invalid → timeouts, in-scope manuals) that belongs to a capability lands as that capability's step, with its class guard, not as a site patch. The remaining steps resume with the whole-branch generalization audit after the goal. Math (K19) is parked with the math stream (2026-10-02).
+
+## Status log
+
+Rows through 2026-09-24: [`archive/KERNEL_CAPABILITIES_STATUS_LOG_2026-09-24.md`](archive/KERNEL_CAPABILITIES_STATUS_LOG_2026-09-24.md); 2026-09-25 to 09-27 (K13 stages 0-2, K13–K17 recorded, the `node_boxes` sweep cadence): [`archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md`](archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md). Since 2026-10-01 a capability step lands only as a scoreboard batch's fix (see Ordering).
+
+## K12 — pTeX control-word letters under a pLaTeX class
+
+LANDED 56ds (`PTEX_PROFILE` from `\NeedsTeXFormat{pLaTeX2e}`, `state::is_ptex_kanji_letter`; guard `perfect_kernel_batch56::kanji_control_words_under_platex`). pTeX primitive residual (`\kanjiskip` …) PARKED, SHARED; witnesses out of scope (CJK, 2026-10-01). Detail: [`archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md`](archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md).
+
+## K13 — Binding-conformance detector
+
+**Model:** ARCHITECTURE_THEMES theme 7 (typed parameters are claims about how TeX reads) and 2b
+(replacing a macro drops its mode transitions).
+
+**Abstraction.** A read-only audit tool (`tools/perfect_kernel/`), not an engine change: for each
+package the corpus loads, load it raw in a scratch state and record every public macro's real signature
+— parameter text and delimiters, `\newcommand` arity and optional default, xparse argument spec — and
+its body prologue (`\leavevmode`, `\par`, `\@bsphack`, `\ifmmode`); read the binding's declared
+parameters and constructor options (`mode`, `enter_horizontal`, `leave_horizontal`) for the same control
+sequences; report every mismatch ranked by the number of corpus documents that load the package.
+
+**Invariant.** A binding that replaces a macro reads the same arguments and makes the same mode
+transition as the macro, or the difference is recorded in OXIDIZED_DESIGN_DIVERGENCES.
+
+**Landing.** (1) Signature extraction from the raw load (our engine's own definitions after a raw
+`\usepackage`); (2) binding-side extraction (the definition's `Parameters` and constructor options);
+(3) the ranked report, run once over the corpus's packages; its rows then become ordinary batches or
+feed K14. **Class guard:** the report flags the known cases (arydshln's `\hdashline` optional, a
+`\makebox` without enterHorizontal on the 56ka binary). **Risk:** LOW (read-only).
+
+**As landed (57b, 57c, 57h; design and stage notes: [`archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md`](archive/KERNEL_CAPABILITIES_LANDED_2026-10-02.md)).**
+- Stage 0: `latexml_core::definition::DeclaredMode` on `Primitive`/`Constructor`, read through `Definition::declared_mode()` (guard `perfect_kernel_batch56::a_definition_keeps_its_declared_mode`).
+- Stage 1: `latexml::conformance` (`latexml_oxide/src/conformance/`, `test-utils`): `view_of(cs)` + `compare(raw, binding)` (guards `binding_conformance::{kernel_box_family_conforms_to_latex_ltx, arydshln_binding_conforms_to_the_sty, makebox_without_entering_horizontal_is_reported, hdashline_without_its_optional_is_reported, delimited_parameters_read_on_past_their_given_items}`).
+- Stage 2: `audit_package`/`real_views` (`audit.rs`), the `binding_audit` bin, `tools/perfect_kernel/binding_conformance.sh` + `binding_conformance_rank.py` (guards `binding_conformance::{the_walker_follows_tex_through_body_assignments, the_walker_reads_what_real_bodies_hand_on, a_package_audit_reads_both_sides}`). Run 57h: 612 bindings, 611 audited (ajmacros' raw load never finishes, DIFFICULT_CASES §D9); 74,250 public macros; HIGH 2,119 / MED 5,704 / LOW 16,858; 60 complete HIGH findings → landed/verified 57i, 57j, 57ah, 57aj (SYNC_STATUS).
+- Known walker limits: continuations handed to expl3 conditionals (`\IfBooleanTF`, `\autoref`), run-time `\futurelet` peeks (amsmath `\FN@`), a group opened before the reader (soul `\caps`), context-bound definitions (`\aligned`), real sides reaching LaTeXML definitions (eufrak `\mathfrak`); expandable-ltcmd defaults not read.
+- Stage 3 (environments' `\endX`, classes, the allowlist): DEFERRED (re-steer 2026-10-01).
+- Validation: re-applying pre-56jx `Let!("\\hdashline","\\hline")` gives OPT_MISSING; a `\@makebox` without enter_horizontal (pre-56kb) gives PROLOGUE_ENTERH_MISSING; HEAD flags neither.
+
+## K14 — Two-phase typed parameters
+
+**Model:** theme 7. **Abstraction:** `latexml_core::parameter` — a binding for a LaTeX *macro* reads its
+argument token list exactly as the real macro would (undelimited, delimited, or the kernel's peek), then
+parses the typed value (`Dimension`, `Number`, `Semiverbatim`, …) from that list in an isolated mouth,
+with one central policy for what remains (56jr's ArgumentTails, generalized). Only bindings of
+*primitives* keep scanning the live gullet, as TeX's primitives do.
+
+**Invariant.** A macro binding's parameters never consume input the real macro would not, and never
+leave input it would have consumed; expansion happens where the real macro's body would expand.
+
+**Landing.** Per parameter type, in the order K13's report ranks them; each step removes a per-reader
+rest rule. **Class guard:** the 56jz template overrun, 56jr's braced rest, and the three sweep-#126
+regressions (tkz-grapheur, bxcalc, PixelArtTikz) as repros from different packages. **Risk:** MED–HIGH;
+a primitive's scan legitimately crosses into the following tokens, so the primitive/macro line must be
+exact.
+
+## K15 — A typed tail of the horizontal list
+
+**Model:** theme 8. **Abstraction:** the stomach keeps the last item of the current horizontal list with
+its kind and amount (glue including inter-word space, kern, penalty, char, box), maintained where
+material is appended; `\unskip`/`\unkern`/`\unpenalty` (tex.web §1105), `\lastskip`/`\lastkern`/
+`\lastpenalty` (§424) and `\removelastskip` act on it. Glue becomes spaces only at the XML boundary,
+under one trim rule that replaces `trim_node_right_whitespace` and its dependence on how the DOM split
+the text.
+
+**Invariant.** A tail operation sees what TeX's list would hold, independent of text-node splitting.
+
+**Landing.** (1) The tail record and `\unskip`/`\lastskip`; (2) the boundary trim; (3) retire the
+per-site whitespace patches. **Class guard:** RED repros `babel-lang/french_highpunct_unskips_space.tex`
+and `block-model/paragraph_trim_text_node_split.tex`, plus a `\@bsphack`/`\@esphack` case. **Risk:**
+MED; whitespace golden churn.
+
+## K16 — Bibliographies from the style's programs
+
+**Model:** theme 9. **Abstraction:** (a) `latexml_engine`/`latexml_post`: a native `.bst` interpreter —
+BibTeX's stack VM with its built-in functions (btxdoc, btxhak) — that writes the `.bbl` the existing
+`.bbl` reader digests, so a `.bib` + `.bst` document gets pdflatex's reference text for any style; (b)
+the biblatex formatter takes the style's declarations (`\DeclareBibliographyAlias`, `.lbx` bibstrings,
+`\DeclareFieldFormat`) instead of hard-coded FMT_SPEC rows — batch 56kc's alias hook is the first
+instance.
+
+**Invariant.** A reference list reads as the style prints it; formatter rows are no longer the way a
+style feature is added.
+
+**Landing.** (a) is standalone and closes the DEFERRED_FAMILIES `.bib`+`.bst`-without-`.bbl` family
+(abntex2cite 80.5 → 99.4 % measured with bibtex's own `.bbl`); (b) per declaration kind. Running
+biblatex's drivers raw over the `.bbl` would be exact but loses the per-field markup — needs a ruling.
+**Risk:** MED (a is new code but isolated).
+
+## K17 — A fixed, stratified manual regression net per batch
+
+**Model:** theme 10. **Abstraction:** a fixed set of ~200 manuals chosen for package diversity (one or two
+per package family, weighted to the mechanisms batches touch), run per batch beside the arXiv A/B, plus
+the whole repro catalog (`repros.sh`), each against the previous binary with byte-diff classification
+(the arXiv harness's `tex=` fingerprint included).
+
+**Invariant.** A lateral regression is caught at the batch that causes it, not at the next sweep.
+
+**Landing.** Select the set from the census and the sweep history; a runner and a comparer in
+`tools/perfect_kernel/`; the gate ladder's L2 then names it. **Risk:** LOW; ~15 min on 64 cores per batch.
+
+**Landed (57a; re-selected 2026-09-29 for the scope ruling).** `manual_net_select.py <sweep> corpus.tsv > manual_net.tsv` picks greedily for load coverage (`(Loading …)`, `(Processing definitions …)`) then output coverage, per √seconds, ≤2 manuals a bundle, from in-scope manuals that ended status 0-2 in < 45 s: from sweep #130, 797 manuals, 3,149/3,201 load and 395/402 output features, 1,202 s serial. `manual_net.sh <binA> <dumpsA> <binB> <dumpsB> <out> [jobs]` runs both sides on cores 64-127 with a fixed `SOURCE_DATE_EPOCH`, validates both sides (outside the 8 GB cap — jing JVMs fail under it) and runs every repro topic; `manual_net_compare.py <out> [--recall]` fails toward flagging (missing manual, incomplete repro run, unscorable recall, worse status, new Fatal, more errors, valid→invalid, words −1 %, recall down, Math `tex=` change, newly failing repro). Null run A = B (56kx5): no changes, 7 min at 24 jobs. Re-select when the corpus changes.
+
+## K18 — Typed box sizes: a box's measured size is its constructed size
+
+**Model:** theme 11.
+**Abstraction:** a whatsit's `width`/`height`/`depth` properties are typed `Dimension`s, rendered to attribute text only when the XML is written (`Stored::to_attribute`). Every box constructor has a sizer that carries its own geometry: the frame inside `\framebox[w]`'s width, `\raisebox`'s raise and its optional height and depth, the scale and rotation of the graphics boxes, following graphics.sty's `\Gscale@div` (tex.web §455). The list's own width wins over a width inherited from the whatsit.
+
+**Invariant:** `\wd`/`\ht`/`\dp` of a box equal pdflatex's to the sp where the XML attribute already does, and no size key holds a `Stored::String`.
+
+**Landing:**
+1. **Step 1:** the four items of the RED repro, with the width-leak fix as a prerequisite for `\framebox`.
+2. **Step 2:** bind `\width`/`\height`/`\depth`/`\totalheight` to the box while a box command reads its size arguments (latex.ltx `\@begin@tempboxa`; 0pt stubs at sect12.rs, as Perl's pool.ltxml:4644-4647), then honour `\raisebox`'s `[height][depth]`. `\Gscale@div`'s arithmetic for `\resizebox`. A debug-build warning in `compute_size_and_cache` for any String size, and the audit of the constructors without a sizer (79 `sizer =>` sites, 54 engine + 25 package/contrib, against 945 `DefConstructor!`, 364 + 581). makecell and diagbox follow.
+
+**Class guard:** the RED repro turns green, and `\makebox[1em]{aaa bbb ccc ddd}` measures 6.94444pt / 0pt.
+
+**Status:** step 1 LANDED in 56kj (guards `perfect_kernel_batch56::{box_sizes_are_their_constructed_sizes, a_box_width_does_not_break_its_contents}`): `\framebox[w]`, `\parbox`, `\raisebox` (Perl's `raisedSizer`), `\scalebox`/`\resizebox`/`\rotatebox`/`\reflectbox` and rotating.sty (sharing `rotated_properties`), and the width leak, measure pdflatex's sizes (DIVERGENCES #327). Step 2, first part LANDED in 56kl (guard `perfect_kernel_batch56::box_size_arguments_measure_the_box`, DIVERGENCES #328): `TempboxaDimension` size arguments are read with the box set (`within_tempboxa`), so `\width`/`\height`/`\depth`/`\totalheight` measure it for `\makebox`, `\framebox`, `\parbox`'s height, `\raisebox`'s `[height][depth]` (its sizer applies them) and `\Gscale@box@dd`/`@dddd`. Open for step 2: `\raisebox`'s raise (needs `yoffset` to render with reserved space, not `position:relative`; RED repro `raisebox_raise_measures_the_box.tex`, 13 papers); `\resizebox{\width}` and `\resizebox*` (`GraphixDimension`/`\Gscale@@box`, 4 papers); `\pic@raisebox`, `{minipage}`'s [height]; `\resizebox{1em}` is 10.00002pt (Perl's) where pdflatex gives 10.00081pt through `\Gscale@div`; makecell and diagbox; the String-size detector and the sizer audit.
+
+**58b:** a second width leak closed — a text group `{…}` in a paragraph was a List with `width=\hsize` and no mode, measured as an `\hsize`-wide paragraph of its own (every measured box holding an inline group: vbox 30.94pt for pdflatex's 6.94pt, parbox 17.92+12.92pt); it is now a `horizontal` List that `flatten_paragraph` opens (guard `perfect_kernel_batch58::text_group_is_measured_in_its_line`).
+
+**Risk:** LOW for (a)-(c), with attributes byte-identical. MED for the width leak, since measured heights of multi-word boxes change and small numeric goldens may move.
+
+## K19 — Order-free math ranking
+
+**Status:** PARKED with the math stream (user 2026-10-02); step 1 LANDED 57av.
+
+**Model:** theme 12.
+**Abstraction:** a reading's rank is the tuple of its violation counts under the student pragmas, in their
+order (`student_defaults`); `soft_prune_choices` keeps the readings with the lowest count instead of all when
+none is clean, and the root-only multi-tree pragmas (`prefer_named_interval_at_root`,
+`prefer_non_self_wrapping_root`, `prefer_distributed_relation_at_root`) count over the whole tree.
+
+**Invariant:** the chosen reading does not depend on the order the route enumerated the readings in: the tree
+route and pure ASF read a formula alike, and so does the same route with its readings reversed.
+
+**Landing:**
+1. Count-based `soft_prune_choices` (RED repro `math-parse/function_application_beside_a_fenced_factor`); A/B
+   with a Perl sample — #18 applies `f(x)` where a shared failure hid it.
+2. The detector: a test-only override that reverses the readings before ranking; run it over the grouped
+   parse goldens, then a corpus scan, and list every formula whose reading moves.
+3. The root-only pragmas to whole-tree counts, or retired by the Fence port (#154; 57au landed it for bracket and
+   brace lists, so no wrapped interval or `set@(set@(…))` reading exists there any more; paren pairs remain).
+
+**Class guard:** the RED repro turns green; the grouped parse goldens read identically in reversed order.
+
+**Risk:** MED — every formula whose readings all failed some pragma may move; A/B and Perl sample per step.
+
+## K20 — Gullet expansion fidelity
+
+**Model:** tex.web, read where the gullet deviates: §342/§789 (a column ends when `get_next` yields `cur_cmd` ∈
+{tab_mark, car_ret} at align_state 0, so a `\def\span` is a call), §1160/§1188-1192 (`\left`/`\middle`/`\right` are one
+unexpandable `left_right` command that scans its delimiter; `\middle`/`\right` check `cur_group`), §392-396 (a
+delimited argument meeting an unmatched `}` backs it up with "Argument of \x has an extra }" and inserts `\par`), and
+§380/§440-445/§506/§785 (readers stop at the first unexpandable token, and latex.ltx's `\@ifnextchar` starts with an
+unexpandable `\let`, :1756-1760). Evidence and per-step tests: [`KERNEL_CAPABILITY_GAPS_2026-10-11.md` §4](KERNEL_CAPABILITY_GAPS_2026-10-11.md#4-c5--gullet-expansion-fidelity-seed-6-in-depth).
+
+**Abstraction, one step each, in this order:**
+- **G4 (LANDED 65b):** a column end is recognized by its command code. `gullet.rs` `is_column_end` takes a
+  `Primitive`/`Constructor` whose defining cs is a column end, or a `\let` to `&`. This is equality on the defining
+  cs, which `\let` copies and the dump keep; it is not the frozen-copy design planned here. The `\halign` preamble
+  uses the same test, and `\tabskip` by register identity. Frozen copies `\lx@span` (the machinery's own spans, user
+  ruling 2026-10-11) and `\lx@frozen@cr` (a file end in a preamble) exist only for emitted tokens. Perl
+  `Gullet.pm:266-277` compares current meanings (KPE #603). OD #522-#525.
+- **G2 (LANDED 65d):** `\left`/`\middle`/`\right` are unexpandable (`\left` a constructor, `\middle` a primitive
+  dispatching to `\lx@delim@middle`) and scan their delimiter as tex.web §1160 (`tex_math::scan_delimiter`, the
+  `DelimiterToken` parameter; matched by meaning, `\delimiter` codes scanned at the token level, "Missing delimiter (.
+  inserted)" otherwise), which closes WISDOM #41's `\left` row without Perl's `undigested` invoke. `\left`'s group
+  carries the K9 code `\left` (`\lx@math@left@group`); `\middle`/`\right` give §1192 "Extra \right." at the formula's
+  group and §1064 `off_save` against a document `{`/`\begingroup`. OD #530.
+- **G3:** `read_until` on a catcode-2 token at depth 0 backs it up with the §395 Error; non-`\long` takes 62h's
+  `abandon_argument_at_par`, `\long` appends `\par` (today: Fatal Mouth:EoF, Rust-only; Perl reads on, `Gullet.pm:654-665`).
+- **G1:** a definition whose first TeX step is an unexpandable assignment expands to one unexpandable `\lx@peek⟨id⟩`
+  step; executing it runs the peek. Retires the per-reader patches (`scan_stops_at_futurelet_peek`,
+  `optional_arg_protected`, `AlignPeekMode`). Measure the dump's own `\@ifnextchar` first; G1 is on the hot path.
+
+**Invariant:** each reader stops where TeX stops and reports what TeX reports; minimal expansion chains match
+pdflatex's log and output.
+
+**Class guard:** one harness of expansion-chain repros (the five G1 chains, the five G2 tests, the G3 pair, the `\span`
+repro), whole output pinned, plus the REDs `expansion-primitives/ifnextchar_inside_if_operand`,
+`macro-state/m5_locked_name_in_expansion_only_context` (`math-parse/left_delimiter_outside_the_map` green in 65d, now
+golden `tests/parse/left_right_delimiters`).
+
+**Risk:** MED; per step an arXiv A/B on the cluster witnesses, 300 random papers and the manual net; a perf check for G1.
+
+## K21 — Environments as TeX does them
+
+**Model:** `\begin{X}` = `\begingroup` + `\X`; `\end{X}` = `\endX` + `\@checkend` + `\endgroup`; the group kind comes from
+the begin code (tex.web §269) and the mode changes only if that code changes it. Perl captures a body and defaults the
+mode to restricted horizontal (`Package.pm:1899-1990`, :1902). Extends K9 (group codes) and K2.
+
+**Abstraction:** `DefEnvironment` gets two body models — `Captured` (as today: minipage, tabular, floats, picture,
+tcolorbox) and `Streamed` (begin = a semi_simple group + a constructor opening the element; end = close the element,
+`\lx@checkend`, endgroup); no default mode; the XML element stack independent of the save stack, so 64y's group-kind
+table becomes derived and a closer ending an environment is §1064 `off_save`.
+
+**Landing:** (1) K24; (2) the 64 mode-less `#body` sites (census in 64ra's report) drop their boxed mode, A/B per batch,
+then "no mode" is the default with a `Captured` allowlist; (3) itemize/enumerate/description stream; (4) quote,
+quotation, center, flush*, theorems, proof; (5) retire the marker path in `close_environment_frame`.
+
+**Class guard:** byte-identical XML on 300 random + 100 theorem/list-heavy papers; the boxes-groups REDs go green; the
+M1 sample drops from 82/150 to ≤20. **Risk:** HIGH (ids, `#body` hooks, reversions, sizers).
+
+## K22 — Binding provenance and ownership
+
+**Model:** K1's overlay, extended to classes and to author-shipped copies; the class-family ruling (one binding, the
+union of a family's features). What cannot be done: infer the XML an author's edited `\maketitle`/`\author` was meant
+for — those keep the binding's semantics, and one Info says so.
+
+**Abstraction:** (a) a FileIdentity per class/package resolution (requested name, resolved path, provenance —
+binding-only / TL / shipped / shipped variant / legacy-absent —, `\Provides*` version and date, content hash; one Info
+line; queryable by bindings, generalizing `requested_shipped_class`); (b) an owned set per binding, installed over the
+raw-loaded real file when present; (c) the shipped-copy delta by the K13 walker (non-owned edits stand, owned edits keep
+the binding's semantics with an Info, renamed copies route by fingerprint); (d) a corpus-copy conformance audit (K13
+stage 3); (e) legacy-absent styles keep their emulation.
+
+**Landing:** (1) FileIdentity logging, no behaviour change; (2) the census — what share of the ≈14k papers fixed in the
+64-series ship the file (confirms or kills (b)); (3) the audit; (4) one shipped-heavy family overlay (iopart or svmult),
+byte-identical but for intended changes; (5) owned sets for the frontmatter bindings; (6) the delta handler.
+
+**Census (step 2, 2026-10-11, read-only; data `~/data/pk_agents/main/c1_census/`, report
+`agent_reports/2026-10-11_c1_census.md`).** Of the 11,993 run-336 cluster papers behind the 64-series binding fixes,
+54.6% ship the family's file (exact 6,198, variant 351). By kind:
+- not in TL with a binding (aipproc, elsart, tcilatex, JINST, compositio, ws, iopart, svmult, mdpi, WileyNJD, ptephy,
+  paspconf, PoS): **83.6%** — so (b) matters;
+- legacy-absent (l-aa, EPL, OSA, REVTeX 2, axodraw v1): 0.2% — the emulation owns every name.
+
+Shipped copies drift: mdpi 393 distinct hashes over 844 papers, WileyNJD 200/558, ws 86/1,077.
+A textual form of (d) — names a shipped copy defines that the binding's closure lacks — lists 41 of the 59 names fixed
+this week at the pre-batch commit. Its misses are `@` names, wrong meanings under the right name, and kernel-side
+fixes. Ranked by papers whose own `.tex` uses the name, 26 of its top 30 at head are run-336 first-error undefined
+commands.
+
+**Class guard:** the audit lists this week's 20 hand-fixed gaps (`\ioptwocol`, `\toctitle`, `\history`, `\state`,
+`\bodymatter`, the PoS/OSA surplus). **Risk:** LOW for (1)-(3), MED-HIGH per family after.
+
+## K23 — Frontmatter author-block event model
+
+**Superseded as a design record (2026-11-08).** The event model landed as the frontmatter observer (FM S2a.1-S2a.2,
+OD #837; the event gaps Z1-Z3, OD #978) and is now the one engine's reading. Its design, state and remaining path are one
+living doc, [`../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md) ("Where it
+stands", "The path", "Definition of done"). The 2026-10 design (layers A-D, the landing plan, the class guard) and its
+"As landed" notes are in [`../archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md) "From
+`perfect_kernel/KERNEL_CAPABILITIES.md`", verbatim.
+
+## K24 — One audited A/B comparator
+
+**Model:** K17's `manual_net_compare.py`, which fails toward flagging, carried to arXiv and to XML content.
+**Abstraction:** one Rust tool that refuses to compare binaries whose stamped revisions differ from the requested
+commits, and reports per paper the status and diagnostics by class, element counts for every qname, text by element
+class including attribute text, a canonical XML diff with ids mapped (not stripped, no wrapper stripping), and
+frontmatter tuples; a TSV plus a summary ranking regressions first. Entry numbers (OD/KPE) are allocated at
+integration by a script reading the current maxima. It is the seed of the A4 full-arXiv fidelity audit.
+
+**Class guard:** replayed on this week's misses (64u EPL `{widetext}`, 64x r4's lost graphics panels, 64zc r1's
+one-character mailto links, 63w4's orcid slot), it flags each. **Risk:** LOW (tooling).
+
+**As landed (p0, `1e47551e6c`; six review rounds).** `latexml_oxide/bin/ab_audit/` (`test-utils` only; pure-Rust
+`roxmltree`, one parser per thread). Usage:
+- `ab_audit run --bin-a A --expect-a SHA --bin-b B --expect-b SHA --papers ids.txt --out DIR -j 16 --cores 80-95`
+  converts each paper with both binaries (`--preload=ar5iv.sty`, 8 GB, 300 s), refusing a binary whose stamp
+  (`--version` revision, else the log banner) is not the expected commit, two byte-identical binaries, one stamp
+  behind two expected commits, or a binary older than its commit; `--accept-stamp` replays history loudly. Resume
+  is keyed on the binary hash, the run settings and the inherited `LATEXML_*`/`LXML_*`/`TEX*`/`PATH`/`HOME`.
+- `ab_audit compare A_ROOT B_ROOT -o PREFIX` and `ab_audit audit ROOT -o PREFIX` (the A4 seed) write a TSV, a
+  summary and per-paper details; exit 0 = only change/identical rows, 1 = a regression or review row, 2 = refused or
+  nothing to compare.
+- Fails toward flagging: a timeout, crash, OOM, missing/unparsable XML or log, a status line outside 0–3, a status
+  that disagrees with the log's diagnostics, a mid-line diagnostic, or an unrecognised directory is a flagged row.
+  Regression flags include lost text by element class (single characters and inter-word spaces kept), lost
+  elements per qname, creator/contact loss in the frontmatter tuples, `geometry-collapsed`, `leaked-dimension`;
+  review flags include `attrs-changed:<qname@attr>`, `space-lost`, `moved-text`, `text-jitter`, `gained-number`.
+- `tools/perfect_kernel/next_entry_numbers.sh [--renumber report.md]` prints the next free OD/KPE numbers and maps
+  `OD #NEWk`/`KPE #NEWk` placeholders at integration, refusing a report with leftover placeholders.
+Measured: `audit` ≈ 3,400 docs/s and `compare` ≈ 2,400 pairs/s at `-j 16`; s147 → s148 = 73 regression / 7 review /
+43 change / 2,251 identical, every sampled regression genuine. Report: `agent_reports/2026-10-11_payload_p0.md`.

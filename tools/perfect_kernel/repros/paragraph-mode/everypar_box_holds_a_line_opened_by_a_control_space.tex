@@ -1,0 +1,14 @@
+% A hook that opens a box for each line's material (a Maple session transcript: \everypar{\setbox0=\hbox\bgroup},
+% the active end of line \leavevmode\egroup\box0\par). TeX backs a horizontal command met in vertical mode up and
+% inserts \everypar in front of it (tex.web §1090-1091), so a line opened by \  \leavevmode or \hskip is in the box.
+% pdflatex: A B C D After., 0 errors. Witness gr-qc9505014.
+\documentclass{article}
+\begin{document}
+\def\eol{\leavevmode\egroup\box0\par}
+{\everypar{\setbox0=\hbox\bgroup}%
+\ A\eol
+B\eol
+\leavevmode C\eol
+\hskip1pt D\eol}
+After.
+\end{document}

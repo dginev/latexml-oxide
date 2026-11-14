@@ -1,0 +1,20 @@
+% latex.ltx:10132-10137 `\stepcounter` adds with `\addtocounter{#1}\@ne` and resets each counter within by
+% stepping it from -1 (`\@stpelt`); `\refstepcounter` (:14956-14967) steps with `\stepcounter`. So a patch on
+% `\addtocounter` sees every step, and one on `\stepcounter` every `\refstepcounter` and reset: reledmac watches
+% `\stepcounter{page}` through its `\addtocounter` patch (reledmac.sty:6632-6651). calc.sty:64-69's own
+% `\stepcounter` advances without `\addtocounter` (second paragraph of the guard).
+% witness: 58a review finding 2 (rev58a probes/hk.tex).
+% Guard: perfect_kernel_batch58::counter_steps_go_through_the_patches.
+% status:  GREEN (58a)
+% oracle:  pdflatex 0 errors; " afoo abar sbar sfoo afoo abar sbar sfoo."
+% engines: rust 58a1: " sfoo." (the steps bypassed the macros).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{etoolbox}
+\newcounter{foo}\newcounter{bar}[foo]
+\newcommand\trace{}
+\apptocmd{\addtocounter}{\xdef\trace{\trace\space a#1}}{}{\typeout{FAIL add}}
+\apptocmd{\stepcounter}{\xdef\trace{\trace\space s#1}}{}{\typeout{FAIL step}}
+\begin{document}
+\stepcounter{foo}\refstepcounter{foo}\trace.
+\end{document}

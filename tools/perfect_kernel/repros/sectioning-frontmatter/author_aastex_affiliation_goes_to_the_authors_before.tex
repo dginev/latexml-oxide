@@ -1,0 +1,12 @@
+% witness: 63e review r3 finding 4 (AASTeX 6, revtex-derived: an \affiliation is every preceding author's without one)
+% oracle:  pdflatex (emulateapj) 0 errors: "Ann Able and Bob Baker" over "Univ"
+% engines: rust (63e r4) = only Bob Baker with Univ
+% expect:  2 creators, both with Univ; 0 errors
+% status:  RED (63e r4) -> GREEN (63e)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\affiliation{Univ}
+\maketitle
+\end{document}

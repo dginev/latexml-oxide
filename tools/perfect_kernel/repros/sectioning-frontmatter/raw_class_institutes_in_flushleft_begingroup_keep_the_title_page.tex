@@ -1,0 +1,71 @@
+% raa's title page: its `\institutename` (raa.cls:322-349, copied here) is `\begin{flushleft}\begingroup …
+% \end{flushleft}\endgroup`, legal TeX. Our `\end{flushleft}` errored against the class's group (Perl too), and the
+% errors held in the speculative `\@maketitle` deposit (sect05.rs `\lx@deposit@maketitle`) dropped the whole title
+% page: in raa papers the abstract and the keywords with it, with no Warning of the loss.
+% witness: 1404.3644 1304.5354 1508.02561 1509.00139 2004.06992 2110.11117 2306.16795 1604.05586 2003.13998 2102.01352
+%          (raa), 2511.10805 (raa_twocolumn); cjaa, chjaa, raa06, raa_rb in the long tail
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able1 and Bob Baker2", "1 Univ A, Town", "2 Univ B, City", "Abstract We
+%          present the abstract words here.", "Key words: stars: general, galaxies: photometry"
+% engines: rust int132a1 = 0 errors, 1 warning (`\end{document}` with open groups); the deposit dropped ("raised 2
+%          error(s)"), the abstract a pubnote; in 1404.3644 the abstract and keywords lost; perl = 0 errors here (no raw
+%          class: OmniBus); on the witnesses too Perl never loads raa.cls ("Can't find binding for class raa (using
+%          OmniBus)"), so it has no `\end{flushleft}` Error there; it errs on the bare shape (KNOWN_PERL_ERRORS #1207)
+% expect:  0 errors, 0 warnings; title, both authors with their institute, the class's "Abstract" and "Key words"
+%          paragraphs kept
+% status:  RED (int132a1) -> GREEN (98d; guard perfect_kernel_batch98d::a_raa_title_page_keeps_its_abstract_and_keywords)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{raamini.cls}
+\ProvidesClass{raamini}\LoadClass{article}
+\newcounter{inst}
+\newdimen\instindent
+\def\institute#1{\gdef\@institute{#1}}
+\def\RAAabstract#1{\gdef\@abstract{#1}}
+\AtEndOfClass{\let\abstract=\RAAabstract}
+\def\keywordname{{\bfseries Key words:~}}
+\def\keywords{\par\addvspace\baselineskip\noindent\keywordname\ \ignorespaces}
+\def\inst#1{\unskip$^{#1}$}
+\def\institutename{\par
+ \begin{flushleft}
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \setcounter{inst}{1}%
+ \def\and{\par\stepcounter{inst}%
+ \hangindent\instindent
+ \noindent
+ \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}
+ \ifnum\value{inst}>9\relax\setbox0=\hbox{$^{88}$\enspace}%
+                 \else\setbox0=\hbox{$^{8}$\enspace}\fi
+ \instindent=\wd0\relax
+ \ifnum\value{inst}=1\relax
+ \else
+   \parindent=0pt
+   \setcounter{inst}{1}%
+   \hangindent\instindent
+   \noindent
+   \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces
+ \fi
+ \normalsize
+ \ignorespaces
+ \@institute\par
+ \end{flushleft}
+ \endgroup}
+\def\maketitle{\par\begingroup\@maketitle\endgroup}
+\def\@maketitle{\begin{flushleft}{\Large\bfseries\noindent\ignorespaces\@title\par}\vskip14pt
+ {\large\noindent\ignorespaces\@author}\end{flushleft}
+ \vskip6pt\leftskip=1cm\rightskip=\leftskip
+ \institutename
+ \vskip12pt\noindent{\bfseries\abstractname}\ \@abstract\par}
+\end{filecontents*}
+\documentclass{raamini}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1} and Bob Baker\inst{2}}
+\institute{Univ A, Town \and Univ B, City}
+\abstract{We present the abstract words here.
+\keywords{stars: general, galaxies: photometry}}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

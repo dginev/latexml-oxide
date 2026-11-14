@@ -1,0 +1,21 @@
+% A raw class's table setter stores its own `\@keywords`, which only a cover macro of the class's reads
+% (`\makecover`), and the document never calls it: pdflatex prints no keywords. K11 still makes a <ltx:keywords> on the
+% class path: a raw class's own store is rerouted whatever reads it (frontmatter_stores.rs `store_setter_body`), as the
+% raw package's test (`ClassReaders::read_where_nothing_runs`, 95d-r2) lost real class stores — bfhlayout.sty's
+% `\@department`, read by a `\@titlefooterleft` a scrlayer layer of bfhthesis.cls's title page prints (DEMO-BFHThesis),
+% and dmtcs.cls's `\@keywords` (0905.1102).
+% witness: none (synthetic, review rev95d probe p9); the class twin of 2605.31044's rlj.sty
+% oracle:  pdflatex 0 errors: "T", "Ann Able", today's date, "Text."; no keywords
+% engines: rust int124a, 95d, 95d-r2 = 0 errors, <ltx:keywords name="Keywords: ">alpha, beta</ltx:keywords>
+% expect:  0 errors, 0 warnings; no <ltx:keywords>
+% status:  RED (95d-r2): a raw class's own store is rerouted unread
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{kwcover.cls}
+\LoadClass{article}
+\def\keywords#1{\gdef\@keywords{#1}}
+\def\makecover{\par\noindent\textbf{Keywords:} \@keywords\par}
+\end{filecontents*}
+\documentclass{kwcover}
+\title{T}\author{Ann Able}\keywords{alpha, beta}
+\begin{document}\maketitle
+Text.\end{document}

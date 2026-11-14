@@ -1,0 +1,12 @@
+% refsection=chapter opens a refsection at each \chapter: no \printbibliography repeats the previous list
+\documentclass{report}
+\usepackage[refsection=chapter]{biblatex}
+\addbibresource{biblatex_second_printbibliography.bib}
+\begin{document}
+\chapter{One}
+Text \cite{k1}.
+\printbibliography[heading=subbibintoc]
+\chapter{Two}
+Text \cite{k2}.
+\printbibliography[heading=subbibintoc]
+\end{document}

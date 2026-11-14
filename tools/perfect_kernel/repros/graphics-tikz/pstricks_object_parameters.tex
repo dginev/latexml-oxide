@@ -1,0 +1,38 @@
+% witness: egameps (`\newpsobject{branchline}{psline}{linecolor=\@branchcolor,
+%   linestyle=\@branchstyle,…}`, egameps.sty:62-63); dspTricksManual,
+%   pst-node `{psmatrix}` (objects in alignment cells)
+% oracle:  latex 0 errors: blue and red dashed 1pt branch lines; the table
+%   keeps its 2x2 cells; `\psarcn{->}` has its head at 0 degrees (its end);
+%   `[HTML]{FF8000}` is orange and `myc` #123456
+% engines: rust(P1 c29f1eb2cf)=0 errors, the branch lines solid (the
+%   unexpanded `\@branchstyle` read as a style name), `[HTML]{FF8000}` black,
+%   `\psarcn{->}` terminators "-<", `\parabola` x "66.78999999999999"
+% expect:  0 errors, 0 warnings; the attributes below (pstricks_drawing.rs)
+% status:  GREEN (w1-pstricks, P1 review)
+% mechanism: value macros are read expanded, as pstricks' own
+%   `\csname psls@\pslinestyle\endcsname` reads them; colours parse in any
+%   xcolor model (`parse_xcolor`); Perl's `reverseArrow` regex needs a head on
+%   both sides; the reflected parabola point is rounded.
+\documentclass{article}
+\usepackage{pstricks}
+\definecolor{myc}{HTML}{123456}
+\makeatletter
+\def\@branchcolor{blue}\def\@branchstyle{dashed}\def\@branchwidth{1pt}
+\newpsobject{branchline}{psline}%
+   {linecolor=\@branchcolor,linestyle=\@branchstyle,linewidth=\@branchwidth}
+\makeatother
+\begin{document}
+\begin{pspicture}(3,2)
+\branchline(0,0)(1,1)
+\branchline[linecolor=red](0,1)(1,0)
+\psline[linecolor={[HTML]{FF8000}}](0,0)(2,0)
+\psline[linecolor=myc](0,1)(2,1)
+\psarcn{->}(1,1){1}{90}{0}
+\parabola(0.3,0)(0.9982,1)
+\end{pspicture}
+
+\begin{tabular}{cc}
+\begin{pspicture}(1,1)\psline(0,0)(1,1)\end{pspicture} & B\\
+\psline[linewidth=2pt](0,0)(1,1)C & D
+\end{tabular}
+\end{document}

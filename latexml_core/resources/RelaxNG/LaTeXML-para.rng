@@ -191,6 +191,7 @@ Or, should caption be used for theorem and proof?</a:documentation>
     <ref name="Positionable.attributes"/>
     <ref name="Transformable.attributes"/>
     <ref name="Backgroundable.attributes"/>
+    <ref name="PanelGrid.attributes"/>
     <ref name="Data.attributes"/>
     <optional>
       <attribute name="placement">
@@ -234,6 +235,7 @@ more permissive) expansion that drains the figure_mixed_content ERROR_DEBT.</a:d
     <ref name="Positionable.attributes"/>
     <ref name="Transformable.attributes"/>
     <ref name="Backgroundable.attributes"/>
+    <ref name="PanelGrid.attributes"/>
     <ref name="Data.attributes"/>
     <optional>
       <attribute name="placement">
@@ -274,6 +276,7 @@ more permissive) expansion that drains the figure_mixed_content ERROR_DEBT.</a:d
     <ref name="Positionable.attributes"/>
     <ref name="Transformable.attributes"/>
     <ref name="Backgroundable.attributes"/>
+    <ref name="PanelGrid.attributes"/>
     <ref name="Data.attributes"/>
     <optional>
       <attribute name="role">

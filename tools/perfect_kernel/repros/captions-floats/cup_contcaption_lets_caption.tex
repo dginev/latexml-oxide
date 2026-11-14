@@ -1,0 +1,15 @@
+% witness: 1209.5152, 1311.2960, 1410.5131, 1610.02500, 2205.14586 (fac.cls:803), 2212.13027 (ijsipaper.cls:876), 1604.04575 (mscs.cls:794), 2112.07588
+% oracle:  pdflatex 0 errors: "Figure 1: First", "Figure 1: First, continued", "Figure 2: Second"
+% engines: rust 65int8 = Fatal:Stomach:Recursion (97 errors); perl = Fatal:perl:deep_recursion
+% expect:  0 errors; three figures, the continued one numbered 1 again
+% status:  GREEN (66b)
+\documentclass{article}
+\makeatletter
+\let\@@caption\caption
+\newcommand\contcaption{\addtocounter{\@captype}\m@ne \@@caption}
+\makeatother
+\begin{document}
+\begin{figure}\caption{First}\end{figure}
+\begin{figure}\contcaption{First, continued}\end{figure}
+\begin{figure}\caption{Second}\end{figure}
+\end{document}

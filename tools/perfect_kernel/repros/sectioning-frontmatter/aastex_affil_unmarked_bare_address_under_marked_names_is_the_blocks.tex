@@ -1,0 +1,23 @@
+% mechanism: under names showing `$^{N}$` marks aas declares `annotate=new` (aas_support_sty.rs `\affiliation`), whose
+%   walk gives an unmarked `\affil` to the last author even when every author it reaches holds an affiliation already
+%   (Perl's `new`, Base_Utility.pool.ltxml:520-536): that run's stopgap, no mark, label or place, is tagged
+%   (`RUN_LEFTOVER`, observer/resolver/api.rs), and its one carrier is no `owner:only-carrier` of an address no one
+%   spells (`Resolver::answer_inner_emails`, `take_out_entry_addresses`): the block's, once (FIDELITY_CHARTER §4;
+%   OXIDIZED_DESIGN_DIVERGENCES #992)
+% witness: none in the corpus (synthetic; review revZ18l F1, introduced by Z18l); the aas census byte-diff of Z18o
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 and Bob Baker1 / 1Univ A / zz@x.org"
+% engines: rust int155a4 = Bob Baker's e-mail, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker: 1 Univ A; the block's nameless creator: the e-mail zz@x.org
+% status:  RED (int155a4) -> GREEN (Z18o)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1}$}
+\affil{$^1$Univ A}
+\affil{zz@x.org}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

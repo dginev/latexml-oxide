@@ -1,0 +1,19 @@
+% witness: 2606.06185 (main_PAW.tex:524-527)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; tex="\braket{\phi|\left[m\cdot r-m|R|^{2}\right]|\psi}" kept whole; a \right whose \left is
+%   hidden in a macro (\lp) leaves the count at zero, so the later \left[b|c\right] stays whole
+% mechanism: braket.sty:33's \braket splits nowhere; the binding's reading of the notation split at the | inside
+%   \left[...\right], cutting the pair ("Attempt to close boxing group"). Fixed: braket_sty.rs split_braket_arg
+%   counts open \left...\right pairs, never below zero.
+% status:  GREEN
+\documentclass{article}
+\usepackage{braket}
+\usepackage{amsmath}
+\newcommand\lp{\left(}
+\begin{document}
+\begin{equation}\begin{aligned}
+D=&\braket{\phi|\left[ m\cdot r-m|R|^2\right]|\psi}
+\\&-c.
+\end{aligned}\end{equation}
+\[ \braket{\lp a\right)|\left[b|c\right]} \]
+\end{document}

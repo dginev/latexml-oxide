@@ -1,0 +1,17 @@
+% witness: 63i review r2 finding 1 (revtex `\author{Ann$^{\mathrm{a}}$}\author{Bob}\affiliation{$^{\mathrm{a}}$Univ A}`; synthetic)
+% oracle:  pdflatex (revtex4-2) 0 errors: "Ann Able^a, Bob Baker" over "^a Univ A"
+% engines: rust 63h = Univ A on both (revtex group rule); 63i r2 = both bare, Univ A shared (\mathrm{a} read two ways)
+% expect:  as 63h; 0 errors
+% status:  RED (63i r2) -> GREEN (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\mathrm{a}}$}
+\author{Bob Baker}
+\affiliation{$^{\mathrm{a}}$Univ A}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

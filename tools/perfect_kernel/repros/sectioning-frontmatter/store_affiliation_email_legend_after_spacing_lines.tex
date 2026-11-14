@@ -1,0 +1,32 @@
+% A raw package's `\affiliation` store (`\def\@affiliation{#1}`, printed by its `\maketitle` as `{\emph\@affiliation}`)
+% holds the marked institutes, two spacing lines (`\vspace{0.3cm} $ $ \\`) and then an e-mail legend, each address
+% after its author's mark (`{\tt $^\bigstar$ann@a.org, $^\clubsuit$bob@b.org}`). Since 95d's raw-package reroute
+% (frontmatter_stores.rs `reroute_raw_package_stores`) the store is the frontmatter's affiliations, and the legend
+% line after the empty-math spacing lines is read as one affiliation entry of the last name, its marks stripped
+% (author_block's store-affiliation line reading, not a take-out: brief 97b part C). Without the two spacing lines
+% the same legend is each address its marked author's e-mail (the shape this file's twin gives).
+% witness: 2508.08560 (chetnew.sty:276, :306; the ★⧫♠♣ legend made M. Woolley's affiliation, from 95d)
+% oracle:  pdflatex 0 errors: "T", "Ann Able^{a,⋆}, Bob Baker^{b,♣}", "a Univ A", "b Univ B",
+%          "⋆ ann@a.org, ♣ bob@b.org", "Text."
+% engines: rust int124a = the store not read (the title page in the body); rust 95d-int125b, 97b = Bob Baker's second
+%          <contact role="affiliation"> "ann@a.org, bob@b.org", Ann's ★ left on her name, no e-mail contact
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, e-mail ann@a.org; Bob Baker: Univ B, e-mail bob@b.org; no
+%          affiliation holding an address
+% status:  RED (95d-97b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affstore.sty}
+\newcommand{\affiliation}[1]{\def\@affiliation{#1}}
+\affiliation{}
+\def\maketitle{\begin{center}{\Large\@title}\par\bigskip\@author\par\bigskip{\emph\@affiliation}\end{center}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{amssymb}
+\usepackage{affstore}
+\title{T}
+\author{Ann Able$^{a,\bigstar}$, Bob Baker$^{b,\clubsuit}$}
+\affiliation{$^a$ Univ A\\ $^b$ Univ B \vspace{0.3cm} $ $ \\ \vspace{0.3cm} $ $\\ \vspace{0.0cm}
+{\tt $^\bigstar$ann@a.org, $^\clubsuit$bob@b.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,14 @@
+% mechanism: etoolbox.sty:1740-1747 (a 2020+ format) `\AfterEndPreamble` is
+%   `\AddToHook{begindocument/end}`, a one-time hook: code added after it ran executes at once.
+%   Perl's binding (etoolbox.sty.ltxml:1718) queues it on a list nothing reads after
+%   `\begin{document}`.
+% witness: K13 stage-2 audit (57h) etoolbox row (0 of 3,003 A/B papers)
+% oracle:  pdflatex 0 errors, "A LateZ"
+% engines: rust 57p: 0 errors, "A Z"; perl the same
+% expect:  0 errors; <p>A LateZ</p>
+% status:  GREEN (57r)
+\documentclass{article}
+\usepackage{etoolbox}
+\begin{document}
+A \AfterEndPreamble{Late}Z
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: pgfmath reads no `\fontdimen`: pgf stops on "Missing number" and "Unknown operator `6'" and Perl raises
+%   Error:pgfparse, but ours reads `\fontdimen` as an unknown register (0) and returns the partial parse with no
+%   diagnostic (revDTL1b P2).
+% rule:    (1), Perl's Error for the text the grammar leaves, `6\font`; held back as pgfmath_empty_operand_parses_
+%   silently_red (EB1).
+% witness: synthetic
+% oracle:  pdflatex 7 `!` (Missing number ×2, Missing font identifier ×2, Font \nullfont has only 7 fontdimen
+%   parameters ×2, PGF Math Error: Unknown operator `6'), [0]; Perl 1 Error (pgfparse: Parse of '\fontdimen6\font'
+%   failed), [0]
+% engines: rust int161a, DTL1e, EB1: [0.0], 0 errors, 0 warnings
+% expect:  [0.0] and a counted Error
+% status:  RED (int161a, DTL1e, EB1)
+% moves:   the pgfmath grammar-gap batch, then a row of `perfect_kernel_error_boundary` (Error side).
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{\fontdimen6\font}[\pgfmathresult]
+\end{document}

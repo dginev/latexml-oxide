@@ -1,4 +1,4 @@
-use latexml_core::state::{assign_mapping, with_mapping};
+use latexml_core::binding::counter::dialect::register_counter_alias;
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -35,12 +35,11 @@ LoadDefinitions!({
     let base_s = base.to_string();
     // Only patch a successfully-created alias (aliascnt `\gdef`s `\AC@cnt@A`
     // exactly when the alias is defined; a name clash leaves it undefined).
+    // `register_counter_alias` follows the chain to the root: if B is itself an alias we already recorded its root
+    // under counter_for_type; otherwise B is the root. It also marks A as an alias, the type hyperref names the
+    // target by (`\autoref` "Lemma 2", not the root's "Theorem 2"; hyperref_sty.rs `\lx@autorefnum@@`).
     if is_defined(&s!("\\AC@cnt@{alias_s}")) {
-      // Follow the chain to the root: if B is itself an alias we already recorded
-      // its root under counter_for_type; otherwise B is the root.
-      let root = with_mapping("counter_for_type", &base_s, |m| m.map(ToString::to_string))
-        .unwrap_or(base_s);
-      assign_mapping("counter_for_type", &alias_s, Some(root));
+      register_counter_alias(&alias_s, &base_s);
     }
   });
 

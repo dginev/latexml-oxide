@@ -1,0 +1,16 @@
+% witness: sel78c item 3 (78/30k acmart papers call \citestyle{acmauthoryear}); acmart.cls:379-384
+%          \bibstyle@acmauthoryear: square brackets, no comma between the names and the year (KPE)
+% oracle:  pdflatex 0 errors: "See [Able 2001]."
+% engines: rust int43a = "(Able, 2001)" (no \bibstyle@acmauthoryear: \citestyle was a no-op)
+% expect:  0 errors; the citation "[" show="AuthorsPhrase1Year" with an empty-space phrase "]"
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass[sigconf]{acmart}
+\citestyle{acmauthoryear}
+\begin{document}
+\title{T}
+\maketitle
+See \cite{a}.
+\begin{thebibliography}{1}
+\bibitem[Able(2001)]{a} A. Able. 2001. Paper. J. 1, 2.
+\end{thebibliography}
+\end{document}

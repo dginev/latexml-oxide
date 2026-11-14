@@ -1,0 +1,22 @@
+% witness: 2008.06630 (3dv.sty over `[10pt,twocolumn,letterpaper]{article}`: `\textwidth 6.875in`, `\columnsep
+%          0.3125in`, 237.136pt columns; the cvpr/iccv/wacv styles alike)
+% oracle:  pdflatex 0 errors, 0 overfull (\columnwidth 237.136pt, \textwidth 496.856pt): Figure 1 two rows (2 x 117pt
+%          and 4pt of glue over the column)
+% engines: rust int75a = two rows (the registers' page and `\columnsep`, no page declared); Perl 0.8.8 = one row (its
+%          345pt `\hsize`); with article's page declared, its 10pt separation over the style's 0.3125in would make
+%          243.4pt columns (one row)
+% expect:  0 errors, 0 warnings; one `ltx:break` in Figure 1
+% status:  GREEN (int75a) -> GREEN (79f: a declared page's separation holds only while `\columnsep` is the
+%          binding's; guards the declared page against a style's own)
+% preload: ar5iv.sty
+\documentclass[10pt,twocolumn,letterpaper]{article}
+\setlength{\textwidth}{6.875in}
+\setlength{\columnsep}{0.3125in}
+\begin{document}
+Text.
+\begin{figure}
+\centering
+\rule{117pt}{1cm}\hspace{4pt}\rule{117pt}{1cm}
+\caption{Two 117pt panels in a column.}
+\end{figure}
+\end{document}

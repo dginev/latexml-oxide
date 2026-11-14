@@ -1,0 +1,21 @@
+% mechanism: the queue's marks query (Option C F0/P4a) under flexisym, whose digits, letters and punctuation are math-active
+%   `\mathchar`s, each a whatsit carrying its `glyph` (tex_math.rs): the text walkers read a glyph that shows nothing else
+%   (`util_text::printed_glyph`), so `$^{2,3}$` is a mark as without flexisym (the twin
+%   `queue_marks_authblk_noblocks_list`)
+% witness: 2312.00656 (uai2023.cls + authblk[noblocks] + flexisym; CL162's regression of int162a)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One1 Bob Two2,3 Cy Three1 / 1First Univ 2Second Univ 3Third Univ"
+% engines: int162a: 3 creators "Ann One", "Bob Two", "Cy Three" (no marks, no Warning), each holding all three
+%   affiliations in one contact; FMK1: the twin's creators below (int161a's shape)
+% expect:  0 errors, 0 warnings; Ann One 1 (none) / Bob Two 2,3 (²Second Univ, ³Third Univ: each mark shown, P4c, P4b2b) / Cy Three (none; its authblk-generated 1 RED authblk_labelled_marks_dropped_red) / a
+%   nameless creator (First Univ) — wrong in two places, as the twin: RED `authblk_noblocks_trailing_note_list_red`
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{article}
+\usepackage[noblocks]{authblk}
+\usepackage{flexisym}
+\title{T}
+\author{Ann One$^1$ \qquad Bob Two$^{2,3}$ \qquad Cy Three}
+\affil{First Univ \qquad $^2$Second Univ \qquad $^3$Third Univ}
+\begin{document}
+\maketitle
+Text.
+\end{document}

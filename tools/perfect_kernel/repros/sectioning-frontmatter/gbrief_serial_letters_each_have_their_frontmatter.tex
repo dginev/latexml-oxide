@@ -1,0 +1,21 @@
+% witness: the 59o review (probe serial.tex): serial letters, a new \Adresse before each {g-brief}
+% oracle:  pdflatex 0 errors; each letter's first page prints its own recipient (and the sender)
+% engines: rust 59o4 = one sender and one addressee, the first letter's (the frontmatter is emitted once,
+%   `\global\let\lx@gbrief@frontmatter\relax`); Perl and rust before 59o: none at all
+% expect:  0 errors; the second letter's addressee Herr Karl Zweiter too (a frontmatter per letter needs a design:
+%   the document has one frontmatter)
+% status:  RED (open)
+\documentclass{g-brief2}
+\Name{Otto Raffzahn}
+\AdressZeileA{Wiesenacker 25a}
+\Gruss{Gruss}{1cm}
+\begin{document}
+\Adresse{Frau\\Else Mittellos}
+\begin{g-brief}
+Erster Brief.
+\end{g-brief}
+\Adresse{Herr\\Karl Zweiter}
+\begin{g-brief}
+Zweiter Brief.
+\end{g-brief}
+\end{document}

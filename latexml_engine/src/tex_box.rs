@@ -2,9 +2,385 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use latexml_core::common::{error::emit_warn, numeric_ops::round_to};
+use std::cell::{Cell, RefCell};
+
+use latexml_core::{
+  common::{error::emit_warn, numeric_ops::round_to},
+  stomach::{TEMPLATE_BRACE_OPEN, digest_group_body_in_paragraph, off_save_closer},
+  stored_dimension,
+};
 
 use crate::prelude::*;
+
+/// tex.web §1083 (`vpack(…, exactly | additional)`): `\vbox to <h>` is `h` high, a `spread <s>` box its contents'
+/// height plus `s` — Perl `setHeight` (TeX_Box.pool.ltxml:549-552, :571-574), which the port had left out: `\vbox to
+/// 50pt{\hbox{A}}` measured 6.83pt. A `\vtop` keeps its first box's height and takes the rest into its depth (§1087:
+/// `d := x + d - h`, the packed box's height and depth less the first item's height): `\vtop to 30pt{\hbox{A}}` is
+/// 6.83pt high and 23.17pt deep (Perl set the height, OXIDIZED_DESIGN_DIVERGENCES #420).
+fn set_specified_height(whatsit: &mut Whatsit, top: bool) {
+  let spec = whatsit.get_arg(1);
+  let to = match GetKeyVal!(spec, "to") {
+    Some(ArgWrap::Dimension(h)) => Some(*h),
+    _ => None,
+  };
+  let spread = match GetKeyVal!(spec, "spread") {
+    Some(ArgWrap::Dimension(s)) => Some(*s),
+    _ => None,
+  };
+  if to.is_none() && spread.is_none() {
+    return;
+  }
+  // `\vbox to` needs no measuring; a `spread` box its natural height, a `\vtop` its packed depth.
+  let (packed_height, packed_depth) = if top || to.is_none() {
+    packed_size(whatsit.get_arg(2))
+  } else {
+    Default::default()
+  };
+  let height = to.unwrap_or_else(|| packed_height.add(spread.unwrap_or_default()));
+  if top {
+    let first = match whatsit.get_height() {
+      Some(RegisterValue::Dimension(h)) => h,
+      _ => Dimension::default(),
+    };
+    whatsit.set_depth(height.add(packed_depth).subtract(first));
+  } else {
+    whatsit.set_height(height);
+  }
+}
+
+/// The contents of a `\vbox` or `\vtop` packed as `\vbox` packs them (tex.web §668 `vpack`): the height down to the
+/// last item's baseline and that item's depth. A `\vtop`'s contents are measured top-aligned, so they are measured
+/// here as a bottom-aligned copy.
+fn packed_size(contents: Option<&Digested>) -> (Dimension, Dimension) {
+  let dimension = |value: Option<RegisterValue>| match value {
+    Some(RegisterValue::Dimension(d)) => d,
+    _ => Dimension::default(),
+  };
+  match contents.map(Digested::data) {
+    Some(DigestedData::List(list)) => {
+      let mut bottom = list.borrow().clone();
+      bottom
+        .properties
+        .insert("vattach", Stored::String(pin!("bottom")));
+      bottom
+        .compute_size(SymHashMap::default())
+        .map(|(_, height, depth)| (height, depth))
+        .unwrap_or_default()
+    },
+    Some(_) => contents.map_or_else(Default::default, |item| {
+      (dimension(item.get_height()), dimension(item.get_depth()))
+    }),
+    None => Default::default(),
+  }
+}
+
+/// A box flagged as space: `\indent` (an empty hbox, tex.web §1091) and the phantoms (plain.tex/latex.ltx
+/// `\finph@nt`: an hbox of the argument's size). `\lastbox` takes them, and an alignment cell keeps a leading one as its
+/// content, not as padding (tex_tables.rs `extract_alignment_column`).
+pub(crate) fn is_space_flagged_box(whatsit: &Whatsit) -> bool {
+  matches!(
+    whatsit.get_definition().get_cs_name().as_ref(),
+    "\\indent"
+      | "\\phantom"
+      | "\\lx@text@hphantom"
+      | "\\lx@math@hphantom"
+      | "\\vphantom"
+      | "\\mathstrut"
+  )
+}
+
+/// tex.web §1110 `unpackage`: `\unhbox`/`\unhcopy` put a box's list into the current list. A register filled by
+/// `\setbox0\hbox{…}` (LaTeX's `\sbox`, `\savebox`) holds the `\hbox` whatsit, whose list is its contents (argument 2);
+/// Perl puts the whatsit back whole (`Whatsit::unlist` returns itself), so `\unhbox0\unskip` could not reach the box's
+/// last glue, `\lastbox` after `\unhbox` took the whole box, and `\hbox{\unhcopy0}` kept a `to` width (KNOWN_PERL_ERRORS
+/// #434). Any other box goes back as it is. `\unhcopy` puts back copies (§1110 `copy_node_list`): a later `\lastbox` or
+/// `\wd` acts on them, not on the register's box. Put into a paragraph, the items are paragraph material
+/// (`in_paragraph`): digested inside the `\hbox`, a `\parbox` there — in a group's body — was restricted-box material,
+/// and one spliced at a paragraph's start was set apart as a paragraph of its own; what a box inside holds stays
+/// restricted (`\rotatebox{90}{\parbox…}`). In math mode, where TeX refuses to unpack a box ("Incompatible list
+/// can't be unboxed"), the box goes back whole, as Perl does: LaTeXML is in math mode inside `$\emph{…}$`, where TeX is
+/// not.
+fn hlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
+  if lookup_bool_sym(pin!("IN_MATH")) {
+    return stuff.unlist();
+  }
+  let items = match stuff.data() {
+    DigestedData::Whatsit(w)
+      if w
+        .try_borrow()
+        .is_ok_and(|w| w.get_definition().get_cs_name().as_ref() == "\\hbox") =>
+    {
+      w.borrow()
+        .get_arg(2)
+        .map(Digested::unlist)
+        .unwrap_or_default()
+    },
+    _ => stuff.unlist(),
+  };
+  let in_paragraph = lookup_string_from_sym(pin!("MODE")) == "horizontal";
+  items
+    .into_iter()
+    .map(|item| {
+      let mut item = spliced(item, in_paragraph, copy);
+      // In a paragraph each is an item of its line (tex.web §1076): a minipage keeps its own (vertical) mode, and
+      // the paragraph's repack (stomach.rs `repack_paragraph`) stopped at it, stacking tcolorbox's `sidebyside`
+      // halves (`\unhbox\tcb@upperbox\kern…\unhbox\tcb@lowerbox`) instead of setting them side by side.
+      if in_paragraph && matches!(item.data(), DigestedData::Whatsit(_)) {
+        item.set_property("in_hlist", true);
+      }
+      item
+    })
+    .collect()
+}
+
+/// tex.web §1110 `unpackage` for `\unvbox`/`\unvcopy` (§1109 `vmode+un_vbox`): the box's list goes into the current
+/// vertical list and the box itself — its dimensions, its `to` height, its being one item — is gone. A register
+/// filled by `\setbox0\vbox{…}` or `\vtop{…}` holds the whatsit, whose list is its contents (argument 2). Perl puts the
+/// whatsit back whole (`Whatsit::unlist` returns itself, TeX_Box.pool.ltxml:725-742), so a `\lastbox` after `\unvbox`
+/// took the whole box and a peel loop never ended: `\setbox\pb=\vbox{\unvbox\pb \global\setbox\lb=\lastbox}` took the
+/// box, left an empty `\vbox{}`, and took that again the next round, for ever (infernce.sty's `\@adjustPremises`, under
+/// every semantic.sty `\inference`: ~315 arXiv `oom:alloc_failed` Fatals, among them 1603.01635 and 2506.05832;
+/// KNOWN_PERL_ERRORS #840; the study's other `\lastbox` users, 1209.2208 and math0301370, fail elsewhere). `\unvcopy`
+/// puts back copies (§1110 `copy_node_list`).
+///
+/// The list is put back where it goes into a vertical box's own list (`\vbox`, `\vtop`, `\parbox` contents:
+/// [`in_vertical_box_list`]), where LaTeXML sets the box's lines as lines, bracketed by a pair of boundary marks
+/// ([`splice_mark`]): the box's end closed whatever its contents had opened (§1086 `vbox_group`: `end_graf`; a
+/// minipage's or `\parbox`'s `ltx:p`; a `\noindent` paragraph's `ltx:para`), and the end mark closes it in the new
+/// list, so what follows the spliced material starts a line of its own (without it: "Para two.More.", "MiniA" and
+/// "AfterA" side by side). Elsewhere — the main vertical list, a float's, footnote's or minipage's body — and in math
+/// the box goes back whole, as Perl's: spliced there, its hboxes ran together into one paragraph
+/// (OXIDIZED_DESIGN_DIVERGENCES #637; the shape needs R6, `\hbox` in vertical mode as a line, and a ruling: repro
+/// boxes-groups/box_primitives_unpack cases 8-9).
+fn vlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
+  let is_vbox = |w: &Whatsit| {
+    matches!(
+      w.get_definition().get_cs_name().as_ref(),
+      "\\vbox" | "\\vtop"
+    )
+  };
+  match stuff.data() {
+    DigestedData::Whatsit(w)
+      if !lookup_bool_sym(pin!("IN_MATH"))
+        && w.try_borrow().is_ok_and(|w| is_vbox(&w))
+        && in_vertical_box_list() =>
+    {
+      let mut items: Vec<Digested> = w
+        .borrow()
+        .get_arg(2)
+        .map(Digested::unlist)
+        .unwrap_or_default();
+      if copy {
+        items = items
+          .into_iter()
+          .map(|item| spliced(item, false, true))
+          .collect();
+      }
+      // A list of nothing but the marks of earlier splices brackets nothing: put back empty, as the box was.
+      if items.iter().all(is_splice_mark) {
+        return Vec::new();
+      }
+      let serial = SPLICE_SERIAL.get() + 1;
+      SPLICE_SERIAL.set(serial);
+      if let (Some(begin), Some(end)) = (
+        splice_mark(&T_CS!("\\lx@splice@begin"), serial),
+        splice_mark(&T_CS!("\\lx@splice@end"), serial),
+      ) {
+        items.insert(0, begin);
+        items.push(end);
+      }
+      items
+    },
+    _ => stuff.unlist(),
+  }
+}
+
+/// Whether the current list is a vertical box's own (`VBoxContents`: `\vbox`, `\vtop`, `\parbox`, a `p` column's
+/// cell): the frame its mode was bound in (`begin_mode`'s `BOUND_MODE`) is the one the box reader marked
+/// (`lx@vbox@list`, base_utilities.rs `predigest_list_in_mode`). A group inside the box is still the box's list; a
+/// minipage, a float, a footnote begun in it are lists of their own.
+fn in_vertical_box_list() -> bool {
+  for frame in 0..undo_depth() {
+    if is_value_bound("BOUND_MODE", Some(frame)) {
+      return is_value_bound("lx@vbox@list", Some(frame));
+    }
+  }
+  false
+}
+
+thread_local! {
+  /// The serial of the last spliced list ([`vlist_of`]); a pair of boundary marks shares one.
+  static SPLICE_SERIAL: Cell<i64> = const { Cell::new(0) };
+  /// The begin marks absorbed whose end mark is not yet: serial → the [`SPLICE_ATTRIBUTE`] value of the element it
+  /// recorded, and that element's name then.
+  static SPLICE_STARTS: RefCell<HashMap<i64, (String, SymStr)>> = RefCell::default();
+}
+
+/// The internal attribute by which a begin mark records the element it was absorbed in — a value, not a node handle,
+/// which `rename_node` or a removal would leave dangling —, removed again by the end mark of the splice that set it
+/// (and stripped from the output with every `_` attribute should that end mark not come).
+const SPLICE_ATTRIBUTE: &str = "_lx_splice";
+
+/// A boundary mark of a list `\unvbox` spliced ([`vlist_of`]), `cs` `\lx@splice@begin` or `\lx@splice@end`: no node in
+/// TeX, so the list-tail primitives see through it (stomach.rs `is_list_tail_transparent`) and it reverts as nothing.
+/// Absorbed, the begin mark records the element the list starts in; the end mark closes back to it whatever the list
+/// opened and left open — only to that element, only while it is open under the same name, only if what lies between
+/// may auto-close, and nothing at all for an end mark whose begin mark was not absorbed (a `\vsplit` took it).
+fn splice_mark(cs: &Token, serial: i64) -> Option<Digested> {
+  let definition = lookup_definition(cs).ok().flatten()?;
+  let mut mark = Whatsit {
+    definition,
+    ..Whatsit::default()
+  };
+  // What a constructor's invocation gives every whatsit (constructor.rs): its font, mode and math flag; the sizing
+  // pass reads the font.
+  let font = lookup_font().unwrap_or_else(|| Rc::new(Font::text_default()));
+  mark.set_property("font", Stored::Font(font));
+  mark.set_property("isMath", false);
+  mark.set_property("mode", lookup_string_from_sym(pin!("MODE")));
+  mark.set_property("alignmentSkippable", true);
+  mark.set_property("lx@splice", Stored::Int(serial));
+  mark.set_property("reversion", Tokens!());
+  Some(Digested::from(mark))
+}
+
+/// Whether `item` is a boundary mark of a spliced list ([`splice_mark`]).
+fn is_splice_mark(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+      matches!(
+        w.get_definition().get_cs_name().as_ref(),
+        "\\lx@splice@begin" | "\\lx@splice@end"
+      )
+    }),
+    _ => false,
+  }
+}
+
+/// The begin mark's absorption ([`splice_mark`]): record the current element, by the [`SPLICE_ATTRIBUTE`] it already
+/// carries (an enclosing splice began there) or one it now gets.
+fn absorb_splice_begin(document: &mut Document, serial: i64) -> Result<()> {
+  let Some(mut node) = document.get_element() else {
+    return Ok(());
+  };
+  let value = match node.get_attribute(SPLICE_ATTRIBUTE) {
+    Some(value) => value,
+    None => {
+      let value = serial.to_string();
+      node.set_attribute(SPLICE_ATTRIBUTE, &value)?;
+      value
+    },
+  };
+  let qname = document::get_node_qname(&node);
+  SPLICE_STARTS.with_borrow_mut(|starts| starts.insert(serial, (value, qname)));
+  Ok(())
+}
+
+/// The end mark's absorption ([`splice_mark`]): close back to the element its begin mark recorded.
+fn absorb_splice_end(document: &mut Document, serial: i64) -> Result<()> {
+  let Some((value, qname)) = SPLICE_STARTS.with_borrow_mut(|starts| starts.remove(&serial)) else {
+    return Ok(());
+  };
+  let Some(current) = document.get_element() else {
+    return Ok(());
+  };
+  let mut node = current.clone();
+  let mut closeable = true;
+  loop {
+    if node.get_attribute(SPLICE_ATTRIBUTE).as_deref() == Some(value.as_str()) {
+      break;
+    }
+    closeable &= document::can_auto_close(&node);
+    match node.get_parent() {
+      Some(parent) if parent.get_type() == Some(NodeType::ElementNode) => node = parent,
+      _ => return Ok(()),
+    }
+  }
+  if closeable && node != current && document::get_node_qname(&node) == qname {
+    document.close_to_node(&node, true)?;
+  }
+  // The begin mark that gave the element its value ends last of those sharing it (the splices nest): the record goes.
+  if value == serial.to_string() {
+    node.remove_attribute(SPLICE_ATTRIBUTE)?;
+  }
+  Ok(())
+}
+
+/// An item put back by `\unhbox` (`copy` false: itself, unless it must be marked as paragraph material) or `\unhcopy`
+/// (`copy`: a copy, arguments and body included). `in_paragraph` marks the item and the items of a group's body, never
+/// what a constructor's arguments hold, nor an environment's body, which is digested in its own mode (restricted
+/// horizontal unless declared: `{rotate}`'s `\parbox` stays a box's content, as typed; arXiv 2605.20645's
+/// `\rotatebox{90}{\parbox…}` shape).
+fn spliced(item: Digested, in_paragraph: bool, copy: bool) -> Digested {
+  if !copy && !in_paragraph {
+    return item;
+  }
+  match item.data() {
+    DigestedData::Whatsit(w) => match w.try_borrow() {
+      Ok(w) => {
+        let mut whatsit = w.clone();
+        if copy {
+          whatsit.args = std::mem::take(&mut whatsit.args)
+            .into_iter()
+            .map(|arg| arg.map(|arg| spliced(arg, false, true)))
+            .collect();
+        }
+        if let Some(Stored::Digested(body)) = whatsit.properties.get("body").cloned() {
+          // No declared mode: a group (`\lx@hidden@bgroup`), whose body shares the box's list; an environment's body
+          // has its own. Constructors that start a mode in `before_digest` (inline math, notes) pass too — harmless:
+          // only `\parbox` and `{minipage}` read the mark, marked anyway in a note and ignored in math.
+          let shares_list = whatsit
+            .get_definition()
+            .declared_mode()
+            .is_none_or(|declared| declared.mode.is_none());
+          whatsit.properties.insert(
+            "body",
+            Stored::Digested(spliced(body, in_paragraph && shares_list, copy)),
+          );
+        }
+        if in_paragraph {
+          whatsit.set_property("in_paragraph", true);
+        }
+        Digested::from(whatsit)
+      },
+      Err(_) => item.clone(),
+    },
+    DigestedData::List(list) => match list.try_borrow() {
+      Ok(list) => {
+        let mut list = list.clone();
+        list.boxes = std::mem::take(&mut list.boxes)
+          .into_iter()
+          .map(|item| spliced(item, in_paragraph, copy))
+          .collect();
+        Digested::from(list)
+      },
+      Err(_) => item.clone(),
+    },
+    _ => item,
+  }
+}
+
+/// `\unvbox`/`\unvcopy` of a list LaTeXML does not unpack (a `\vsplit` piece, a list without a mode: R2) goes back
+/// as one item at its contents' natural size: the split height, or a `\ht`/`\dp`/`\wd` set on the box, belongs to
+/// the box, not to the list `unpackage` puts back (tex.web §1110). `\vbox{\unvbox2}` of a piece split `to 12pt`
+/// measured 12pt; TeX's is the line's 6.83pt. Residual (R2): a piece of several lines is measured side by side.
+fn at_natural_size(stuff: Digested) -> Digested {
+  const BOX_SIZE: [&str; 3] = ["height", "depth", "width"];
+  if let DigestedData::List(list) = stuff.data()
+    && let Ok(list) = list.try_borrow()
+    && BOX_SIZE.iter().any(|key| list.properties.contains_key(key))
+  {
+    let mut natural = list.clone();
+    for key in BOX_SIZE
+      .iter()
+      .chain(&["cached_width", "cached_height", "cached_depth"])
+    {
+      natural.properties.remove(key);
+    }
+    return Digested::from(natural);
+  }
+  stuff
+}
 
 /// Perl: hackVBoxAttachment($box, $valign)
 /// Sets vattach on the box, with special handling for \halign alignment objects.
@@ -70,27 +446,26 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
 
 /// Helper to get (width, height, depth) from a Digested node_box without mutable borrows.
 /// This avoids RefCell conflicts when called during the absorption pipeline.
-/// For simple TBox/Whatsit: reads cached_width/height/depth properties.
+/// For simple TBox/Whatsit: reads the declared width/height/depth, else the cached ones.
 /// For Lists: sums child box widths and takes max height/depth.
 fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
+  // Declared before cached: Perl's `\ht` setter writes `cheight` too (TeX_Box.pool.ltxml:620-628, Box.pm `setHeight`),
+  // so a size measured before it never wins (repro graphics-tikz/node_box_declared_size_over_measured; 2408.03209).
+  // A declared size stored as a String (diagbox, `\rotate[f]`, "1em") is no Dimension: the measured one stands.
   fn read_dims(d: &Digested) -> (Dimension, Dimension, Dimension) {
     d.with_properties(|props| {
-      let w = match props.get("cached_width").or_else(|| props.get("width")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
+      let dim = |declared: &str, cached: &str| {
+        stored_dimension(props.get(declared))
+          .or_else(|| stored_dimension(props.get(cached)))
+          .unwrap_or_default()
       };
-      let h = match props.get("cached_height").or_else(|| props.get("height")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      (w, h, d)
+      (
+        dim("width", "cached_width"),
+        dim("height", "cached_height"),
+        dim("depth", "cached_depth"),
+      )
     })
   }
-  // First try: read cached dimensions
   let dims = read_dims(digested);
   if dims.0.value_of() != 0 || dims.1.value_of() != 0 || dims.2.value_of() != 0 {
     return dims;
@@ -362,7 +737,8 @@ LoadDefinitions!({
     // R2: were we mid-paragraph when this group opened? If so, the characters
     // typeset so far belong to the OUTER paragraph. Perl's text-mode `{...}`
     // flows FLAT (`digestUntil`), so a grouped `\par` repacks them; Rust
-    // localizes the group (below), hiding them from the inner `\par`. Captured
+    // localizes the group (below), hiding them from the inner `\par`, and its list
+    // continues their paragraph (`digest_group_body_in_paragraph`). Captured
     // BEFORE `bgroup` (the matching `}` restores mode via `egroup`).
     let mid_para = {
       let mode = lookup_string_from_sym(pin!("MODE"));
@@ -382,7 +758,11 @@ LoadDefinitions!({
     } else {
       TexMode::Text
     });
-    let body = digest_next_body(None)?;
+    let body = if mid_para {
+      digest_group_body_in_paragraph()?
+    } else {
+      digest_next_body(None)?
+    };
     // R2: if this text-mode group actually broke a paragraph (its digested body
     // resumed vertical mode — i.e. contains a `\par` whatsit), repack the outer
     // paragraph's now-restored loose run NOW, so the box-list matches Perl's flat
@@ -410,20 +790,20 @@ LoadDefinitions!({
       }
     }
     let mut properties = SymHashMap::default();
-    // Perl: List stores mode property from current TeX mode string.
-    // Only set for vertical modes to enable vertical stacking in compute_size.
-    // Not set for horizontal modes to avoid interfering with repack_horizontal's
-    // mode detection logic which defaults to "horizontal" when mode property is None.
+    // Perl `List()` (List.pm:31-55) records the current mode and gives a vertical list its
+    // baseline, never a width; Perl's text-mode `{` digests flat into the paragraph
+    // (TeX_Box.pool.ltxml:30-42). A text group in a paragraph is therefore a `horizontal` List,
+    // which `flatten_paragraph` opens into the paragraph around it: given `width=\hsize` and no
+    // mode it was measured as a paragraph of its own, one `\hsize`-wide word that broke the lines
+    // around it — `\setbox0\vbox{Plain {x} y.\par}` 30.94pt high for pdflatex's 6.94pt,
+    // `\parbox{3cm}{A {\bfseries B} C}` 17.92pt, and a reledmac `\pstart` with `{\em x}` split
+    // into an extra numbered line (58b, reledmac root A; K18 width-leak family). Guard
+    // `perfect_kernel_batch58::text_group_is_measured_in_its_line`.
     let mode_str = lookup_string_from_sym(pin!("MODE"));
-    if mode_str.ends_with("vertical") {
-      properties.insert("mode", Stored::String(pin(&mode_str)));
-    }
-    // Perl: List() sets width => \hsize when mode eq 'horizontal' (NOT restricted_horizontal)
-    if matches!(mode, Some(TexMode::Text))
-      && mode_str == "horizontal"
-      && let Some(hsize) = lookup_dimension("\\hsize")
+    if mode_str.ends_with("vertical")
+      || (matches!(mode, Some(TexMode::Text)) && mode_str == "horizontal")
     {
-      properties.insert("width", Stored::Dimension(hsize));
+      properties.insert("mode", Stored::String(pin(&mode_str)));
     }
     List {
       boxes,
@@ -446,6 +826,25 @@ LoadDefinitions!({
     )
   });
 
+  // The boundary marks of a list `\unvbox` spliced into a vertical box's own list (`vlist_of`, `splice_mark`):
+  // Rust-only, no node in TeX, reverting as nothing (OXIDIZED_DESIGN_DIVERGENCES #637).
+  DefConstructor!("\\lx@splice@begin",
+    sub[document, _args, props] {
+      if let Some(&Stored::Int(serial)) = props.get("lx@splice") {
+        absorb_splice_begin(document, serial)?;
+      }
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@splice@end",
+    sub[document, _args, props] {
+      if let Some(&Stored::Int(serial)) = props.get("lx@splice") {
+        absorb_splice_end(document, serial)?;
+      }
+    },
+    reversion => ""
+  );
+
   // Perl TeX_Box.pool.ltxml L50-55: \lx@hidden@bgroup / \lx@hidden@egroup
   // — scoping without visible { } in reversion.
   DefConstructor!("\\lx@hidden@bgroup", "#body",
@@ -461,6 +860,48 @@ LoadDefinitions!({
     after_digest => sub[_whatsit] { egroup()?; },
     reversion => ""
   );
+
+  // The braces of an alignment template's math cell, `$\displaystyle{##}$` (latex.ltx:15760-15763 `{eqnarray}`,
+  // amsmath.sty:1483/1576/2350/2424): the u-part's `{` and the v-part's `}` enclose the cell's text, and TeX resets
+  // the alignment state after the u-part (tex.web §324, §789), so a cell's own `}` closes the template's `{` and the
+  // v-part's `}` closes a cell's `{` (`G_t(h)=}\det(h)-e^{\frac{a}{2}g_t.`, 2207.06932, 1912.10594). The pair opens
+  // no group of its own: the u-part marks the cell's frame (stomach.rs `TEMPLATE_BRACE_OPEN`), and the cell's `}`
+  // that would close that frame closes the mark instead (stomach.rs `egroup`), so a well-formed cell digests, nests
+  // and reverts exactly as without the braces, and a cell that leaves a group or a mode open meets the cell's end as
+  // before; a net stray `}` leaves the alignment count at −1, so the column end reaches the stomach and gets its `{`
+  // (stomach.rs `align_error`, tex.web §1127), which this v-part closes. Rust-only: Perl's templates have no braces
+  // (KNOWN_PERL_ERRORS #908, #923). Guard
+  // `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
+  DefPrimitive!("\\lx@template@bgroup", {
+    assign_value(TEMPLATE_BRACE_OPEN, true, None);
+  });
+  DefPrimitive!("\\lx@template@egroup", {
+    if is_value_bound(TEMPLATE_BRACE_OPEN, Some(0)) {
+      if lookup_bool(TEMPLATE_BRACE_OPEN) {
+        // A well-formed cell: the pair closes.
+        assign_value(TEMPLATE_BRACE_OPEN, false, None);
+      } else {
+        // The cell's `}` closed the template's `{` and opened nothing after, the cell still ending here — an `\egroup`
+        // (`a\egroup &=& b`; a `}` token would leave the alignment count at −1, so its `&` would be no cell end): this
+        // `}` meets the cell's formula (tex.web §1069 `extra_right_brace`), deleted. Guard
+        // `perfect_kernel_batch69c::egroup_closing_a_template_brace_errs_once`.
+        Error!(
+          "unexpected",
+          "}",
+          "Extra }, or forgotten $",
+          "The alignment template's } has no group left to close in the cell; deleted."
+        );
+      }
+    } else if !lookup_bool(TEMPLATE_BRACE_OPEN)
+      && off_save_closer().is_some_and(|closer| closer == T_END!())
+    {
+      // The cell's `}` closed the template's `{`, and a `{` of the cell is open: this `}` closes it.
+      egroup()?;
+    }
+    // That `{` may be the one `align_error` inserted before the column end (`a} &=& b`, KNOWN_PERL_ERRORS #923).
+    // Otherwise a group or a mode the cell left open (math9805003's `{Sb}`, a stray `$`'s in-math text): left to the
+    // cell's end, as without the braces.
+  });
 
   // These are for those screwy cases where you need to create a group like box,
   // more than just bgroup, egroup,
@@ -624,9 +1065,40 @@ LoadDefinitions!({
   // hardcoded to 'restricted_horizontal' / 'internal_vertical'
   // respectively — independent of the current mode at invocation time.
   DefParameterType!(HBoxContents, sub[_inner, _extra] {
-      read_box_contents(lookup_tokens("\\everyhbox")) },
-    predigest => sub[arg] {
-      predigest_box_contents_in_mode(arg, "restricted_horizontal") });
+    read_box_contents(lookup_tokens("\\everyhbox")) },
+  predigest => sub[arg] {
+    with_own_adjust_queue(|| predigest_box_contents_in_mode(arg, "restricted_horizontal")) },
+  // Same brace re-wrap as VBoxContents below: the one-frame loop returns a
+  // bare `List::new(boxes)` (batch 54n), so `\\hbox{a}` reverts as `\\hbox{a}`.
+  reversion => sub[arg, _inner, _extra] {
+    let mut t: Vec<Token> = vec![T_BEGIN!()];
+    t.extend(arg);
+    t.push(T_END!());
+    Ok(Tokens::new(t))
+  });
+  // Perl `{}` box argument (latex_constructs.pool.ltxml:4649 `\\mbox {}`,
+  // :4658 `\\@makebox[..]{}`, :4689 `\\@framebox[..]{}`, :4800 `\\raisebox
+  // {..}[..][..]{}`): one macro argument — braced, or a single token — digested
+  // by the same live one-frame loop as `HBoxContents` (divergence #188). See
+  // `read_box_arg_contents`.
+  DefParameterType!(HBoxArgContents, sub[_inner, _extra] {
+    read_box_arg_contents(lookup_tokens("\\everyhbox")) },
+  predigest => sub[arg] {
+    with_own_adjust_queue(|| match arg {
+      // The unbraced single token: Perl `readArg`'s `Tokens($token)`,
+      // digested from its own mouth (the loop ends at its EOF).
+      ArgWrap::Tokens(body) if !body.is_empty() => reading_from_mouth(Mouth::default(), move || {
+        unread(body);
+        predigest_box_contents_in_mode(ArgWrap::None, "restricted_horizontal")
+      }),
+      _ => predigest_box_contents_in_mode(arg, "restricted_horizontal"),
+    }) },
+  reversion => sub[arg, _inner, _extra] {
+    let mut t: Vec<Token> = vec![T_BEGIN!()];
+    t.extend(arg);
+    t.push(T_END!());
+    Ok(Tokens::new(t))
+  });
   DefParameterType!(VBoxContents, sub[_inner, _extra] {
     read_box_contents(lookup_tokens("\\everyvbox")) },
   predigest => sub[arg] {
@@ -642,6 +1114,41 @@ LoadDefinitions!({
     t.extend(arg);
     t.push(T_END!());
     Ok(Tokens::new(t))
+  });
+  // Perl TeX_Box.pool.ltxml:200-209: like `VBoxContents`, but horizontal mode starts at once
+  // (`\lx@enterhorizontal` in front of the material), so the result is one paragraph of the current width, set in an
+  // internal vertical list: a caption (`\@@caption PBoxContents`, latex_constructs.pool.ltxml:3368), whose `$$` is
+  // display math as in the `\vbox` LaTeX sets a caption in (amsart.cls:1386-1392 `\vbox{\noindent…}`), where a
+  // restricted horizontal argument would make it an empty formula (tex.web §1138; 1005.1555, 1907.01498, 2310.11556,
+  // 1404.2359). The material is the braced argument, digested from a mouth of its own, as `HBoxArgContents` digests
+  // an unbraced one: a caption is a macro's argument, tokenized before `\lx@@caption` reads it, and a formula it
+  // leaves open (an author's `$` inside a math `\qty` unit, 2512.12866) ends with it, where Perl's live reader
+  // (`readBoxContents`) took the caption's `}` as the formula's and read on through the document. The box's mode is
+  // the inline form, which ends no paragraph around it with a `\par` (Perl's `internal_vertical` does): a caption the
+  // engine had set as text never did, and a `\par` an enclosing list redefined — an aas `\references` entry — must
+  // not run for it (OXIDIZED_DESIGN_DIVERGENCES #769).
+  DefParameterType!(PBoxContents, sub[_inner, _extra] {
+    let mut body = box_prefix_tokens(Some(Tokens!(T_CS!("\\lx@enterhorizontal")))).unlist();
+    body.extend(read_arg(ExpansionLevel::Off)?.unlist());
+    Ok(Tokens::new(body))
+  },
+  predigest => sub[arg] {
+    match arg {
+      ArgWrap::Tokens(body) => reading_from_mouth(Mouth::default(), move || {
+        unread(body);
+        predigest_box_contents_in_mode(ArgWrap::None, "inline_internal_vertical")
+      }),
+      _ => predigest_box_contents_in_mode(arg, "inline_internal_vertical"),
+    } },
+  reversion => sub[arg, _inner, _extra] {
+    let mut t: Vec<Token> = vec![T_BEGIN!()];
+    t.extend(arg);
+    t.push(T_END!());
+    Ok(Tokens::new(t))
+  });
+  // Perl TeX_Box.pool.ltxml:211-213 `$_[0]->enterHorizontal`, which fires no `\everypar`.
+  DefPrimitive!("\\lx@enterhorizontal", {
+    enter_horizontal_without_everypar();
   });
 
   // This re-binds a number of important control sequences to their default text binding.
@@ -663,6 +1170,23 @@ LoadDefinitions!({
   // Collapse/remove/unwrap unneeded svg:g's to reduce tree depth.
   Tag!("svg:g", after_close => sub[document, node] {
     collapse_svg_group(document, node)?;
+  });
+  // A picture TeX copied (`\usebox`, expl3's `\box_use:N`) repeats its svg ids: an outermost svg
+  // root makes the ids under it unique, with their references (`Document::record_svg_ids`;
+  // suanpan-l3, thuaslogos; KNOWN_PERL_ERRORS #391). A nested root is its outer root's.
+  Tag!("svg:svg", after_close => sub[document, node] {
+    let mut outermost = true;
+    let mut ancestor = node.get_parent();
+    while let Some(parent) = ancestor {
+      if document::with_node_qname(&parent, |qname| qname.starts_with("svg:")) {
+        outermost = false;
+        break;
+      }
+      ancestor = parent.get_parent();
+    }
+    if outermost {
+      document.record_svg_ids(node)?;
+    }
   });
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props] {
@@ -718,6 +1242,8 @@ LoadDefinitions!({
     if is_fill_line {
       attrs.insert("class".to_string(), "ltx_leaderfill".to_string());
     }
+    // (a TeX box: `mode => "restricted_horizontal"` marks this element for a frontmatter field's print, core
+    // `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715)
     let node = document.open_element(newtag, Some(attrs), None)?;
     if let Some(contents) = contents_opt {
       document.absorb(contents, None)?;
@@ -861,33 +1387,34 @@ LoadDefinitions!({
         // use that width instead of the accumulated box widths.
         // Perl: the node_box IS the minipage whatsit with getSize returning the
         // specified width. Our appendNodeBox creates Lists that sum widths incorrectly.
+        // `insert_block` writes that width as the Dimension; it is rewritten below in ems of this foreignObject's
+        // anchor, the one basis the browser reads it by (DIVERGENCES #46). Converting it in `insert_block` by the
+        // body's font instead disagreed with the anchor wherever the two fonts differ — an italic or typewriter last
+        // box (2605.01325, 2605.07905), a `\ttfamily` or `\scriptsize` node — and the box overran or fell short of
+        // its frame (guard `picture_sizing::svg_block_width_is_in_font_size_ems`).
+        let mut sized_block = None;
         if w.value_of() != 0 {
           for child_el in &children {
             let child_qname = document::get_node_qname(child_el);
             let is_block = with(child_qname, |s|
               s == "ltx:inline-block" || s == "ltx:_CaptureBlock_");
             if is_block
-              && let Some(width_attr) = child_el.get_attribute("width") {
-                // Parse width from attribute (e.g. "28.5pt", "2.85em")
-                let trimmed = width_attr.trim();
-                if let Some(pt_str) = trimmed.strip_suffix("pt") {
-                  if let Ok(val) = pt_str.parse::<f64>() {
-                    w = Dimension::new((val * 65536.0) as i64);
-                    break;
-                  }
-                } else if let Some(em_str) = trimmed.strip_suffix("em")
-                  && let Ok(val) = em_str.parse::<f64>() {
-                    // 1em = 10pt at default font size
-                    let font_size = wh.get_font().ok().flatten()
-                      .map(|f| f.get_em_width())
-                      .unwrap_or((10.0 * 65536.0) as i64);
-                    w = Dimension::new((val * font_size as f64) as i64);
-                    break;
-                  }
-              }
+              && let Some(width_attr) = child_el.get_attribute("width")
+              && let Some(val) = width_attr.trim().strip_suffix("pt").and_then(|v| v.parse::<f64>().ok())
+            {
+              w = Dimension::new((val * 65536.0) as i64);
+              sized_block = Some(child_el.clone());
+              break;
+            }
           }
         }
-        if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
+        // Perl TeX_Box.pool.ltxml:409-424 sizes the foreignObject whenever the
+        // whatsit exists — a ZERO-size box gets `width="0" height="0"` too
+        // (quantikz's empty cells, tikz-cd's empty matrix nodes); the schema
+        // requires both attributes (svg-extensibility.rnc:38-45), and a
+        // zero-size guard here left 3,010 foreignObjects sizeless in 32 sweep-78
+        // manuals. Guard: `cluster_schema::empty_node_foreign_object_is_sized`.
+        {
           has_dims = true;
           let w_px = w.px_value(Some(2));
           let h_px = h.px_value(Some(2));
@@ -905,12 +1432,15 @@ LoadDefinitions!({
           document.set_attribute(node, "transform",
             &s!("matrix(1 0 0 -1 0 {})", h_px))?;
           document.set_attribute(node, "overflow", "visible")?;
-          // Perl L373-387: CSS custom properties in em units
-          // Perl: emValue(undef, $font) = roundto($sp / $font->getEMWidth, undef)
-          let em_width = wh.get_font().ok().flatten()
-            .map(|f| f.get_em_width())
-            .unwrap_or(0);
-          let em_width = if em_width > 0 { em_width as f64 } else { 65536.0 * 10.0 };
+          // Perl TeX_Box.pool.ltxml:409-431: CSS custom properties in em units, divided by the whatsit's quad and
+          // anchored at its size (DIVERGENCES #46). Here the em is the size of the foreignObject's node font — the
+          // font around the picture — and the anchor below declares it: `finalize` sets the content's `fontsize`
+          // relative to it (`_font_anchor`), so the content renders at TeX's sizes. The node whatsit's font is a
+          // picture's `\nullfont` at the size in force, or the node's own `font=`: anchored at its quad, a
+          // `font=\scriptsize` node's `fontsize="70%"` text came out 0.7 × 7.97pt = 5.58pt (TeX 7pt), a
+          // `{\scriptsize …}` node's 7.97pt (repro graphics-tikz/foreignobject_anchor_font_size).
+          let em_width = document.get_node_font(node).get_size().unwrap_or(10.0) * 65536.0;
+          document.set_attribute(node, "_font_anchor", &(em_width / 65536.0).to_string())?;
           let w_em = w.value_f64() / em_width;
           let h_em = h.value_f64() / em_width;
           let d_em = d.value_f64() / em_width;
@@ -927,15 +1457,17 @@ LoadDefinitions!({
           // frame: tcolorbox content ran through the right border
           // (2605.02240; 509px content in a 440px box).
           // The anchor MUST be the SAME em basis the divisions above used:
-          // the font's QUAD (em width), not its point size. cmtt10's quad
-          // is 10.5pt while its size is 10pt — anchoring quad-divided em
-          // values with the point size shrank every typewriter-content box
+          // dividing by one basis and anchoring at another (cmtt10's quad
+          // 10.5pt against its 10pt size) shrank every typewriter-content box
           // by quad/size ~ 5% (2605.00468: fo 348.8pt vs its own 366.2pt
           // lines, uniform 17.4pt deficit poking text past the frame).
           let font_size = em_width / 65536.0;
           document.set_attribute(node, "style",
             &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;font-size:{}pt;",
               fmt_em(w_em), fmt_em(h_em), fmt_em(d_em), fmt_em(font_size)))?;
+          if let Some(mut block) = sized_block {
+            document.set_attribute(&mut block, "width", &s!("{}em", fmt_em(w_em)))?;
+          }
         }
       }
       if !has_dims && !node.has_attribute("overflow") {
@@ -963,9 +1495,9 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       // Perl: hackVBoxAttachment($box, 'bottom')
       hack_vbox_attachment(whatsit, "bottom");
+      set_specified_height(whatsit, false);
       whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
       whatsit.set_property("is_vbox", true);
-      // Note: BoxSpecification 'to'/'spread' height not used in XML output
     }
   );
 
@@ -987,9 +1519,9 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       // Perl: hackVBoxAttachment($box, 'top')
       hack_vbox_attachment(whatsit, "top");
+      set_specified_height(whatsit, true);
       whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
       whatsit.set_property("is_vbox", true);
-      // Note: BoxSpecification 'to'/'spread' height not used in XML output
     }
   );
 
@@ -1009,12 +1541,65 @@ LoadDefinitions!({
   // \lastbox        c  is void or the last hbox or vbox on the current list.
   // ======================================================================
 
+  // tex.web §1080: the last item of the current list when it is an hlist or vlist node, else void and the item
+  // stays — at a character, a formula, a rule, a penalty, glue, a kern or a space; and void in a paragraph with
+  // nothing of its own yet (`peek_own_box`). Perl pops any item (TeX_Box.pool.ltxml:596-597, KNOWN_PERL_ERRORS
+  // #432): `\hbox{xy\lastbox}` lost its "y". A paragraph's closing `\par` marker is no node: `\lastbox` takes the
+  // paragraph's line before it (`end_graf`), so `\loop\unskip\unpenalty\setbox0\lastbox\ifvoid0…` counts a one-line
+  // paragraph once (short-math-guide.tex:140-187; caesar_book.cls:106-115, sidenotes caesar_example). `\indent` is
+  // an empty hbox, and the phantoms are hboxes (plain.tex `\phantom`, `\mathstrut`), though both are flagged as space
+  // here. Residual: a group's list in horizontal mode is taken whole. Guard `box_primitives::lastbox`.
   DefPrimitive!("\\lastbox", {
-    // Hopefully, the correct box got seen!
-    pop_box_list().map(|b| vec![b]).unwrap_or_default()
+    let is_box = |item: &Digested| match item.data() {
+      DigestedData::TBox(_) => false,
+      DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+        let definition = w.get_definition();
+        let cs = definition.get_cs_name();
+        is_space_flagged_box(&w)
+          || !(matches!(cs.as_ref(), "\\hrule" | "\\vrule")
+            || w.is_math()
+            || w
+              .get_property("mode")
+              .is_some_and(|mode| mode.to_string() == "math")
+            || [
+              "isPenalty",
+              "isSkip",
+              "isKern",
+              "isVerticalSpace",
+              "isSpace",
+              "isHorizontalRule",
+              "isVerticalRule",
+            ]
+            .iter()
+            .any(|key| w.get_property_bool(key)))
+      }),
+      _ => ![
+        "isPenalty",
+        "isSkip",
+        "isKern",
+        "isVerticalSpace",
+        "isSpace",
+      ]
+      .iter()
+      .any(|key| item.get_property_bool(key)),
+    };
+    match peek_own_box() {
+      Some(item) if is_box(&item) => pop_own_box().into_iter().collect(),
+      Some(_) => Vec::new(),
+      // The implicit indent box at a paragraph's start is taken, though void here: TeX's is an empty `\hbox to
+      // \parindent` (KNOWN_PERL_ERRORS #432 residual).
+      None => {
+        take_implicit_indent();
+        Vec::new()
+      },
+    }
   });
 
-  DefPrimitive!("\\setbox Number SkipMatch:=", sub[(number)] {
+  // tex.web §1241 `scan_optional_equals` (§405) expands while it looks for `=`: reledmac's
+  // `\setbox\l@dlp@rbox\ifleftnoteup=\vbox…` (reledmac.sty:7474-7479) typeset "=" when the `=` was matched
+  // unexpanded (Perl `SkipMatch:=`, KNOWN_PERL_ERRORS #398). Guard
+  // `perfect_kernel_batch58::optional_equals_expands`.
+  DefPrimitive!("\\setbox Number SkipKeyword:=", sub[(number)] {
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     if let Some(after_token) = remove_value("afterAssignment") {
       assign_value("BeforeNextBox", after_token, None);
@@ -1027,7 +1612,11 @@ LoadDefinitions!({
       None
     };
     clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
-    let mut rest = if let Some(xtoken) = read_x_token(None, false, None)? {
+    // `\setbox0 = \hbox{…}` typesets the box, where the space after `=` was
+    // taken as the operand and the box landed in the text (19 files under TL
+    // tex/latex and tex/generic spell it so; Perl alike, KPE #254).
+    let xtoken = read_box_operand()?;
+    let mut rest = if let Some(xtoken) = xtoken {
         invoke_token(&xtoken)?
     } else { Vec::new() };
     let stuff = if !rest.is_empty() {
@@ -1036,6 +1625,18 @@ LoadDefinitions!({
       Stored::None
     };
     assign_value(&format!("box{}", number.value_of()), stuff, scope);
+    // A `\box`/`\copy`/`\lastbox`/`\vsplit` operand has no body to take the
+    // pending `\afterassignment` token: TeX inserts it right after the
+    // assignment (tex.web §1211 `done:`, §1269). Left pending, it fired inside
+    // some later box: luatexja's `\raise`/`\lower` via `\ltj@afterbox`
+    // (luatexja-core.sty:684-702) emptied every pgf picture. Perl
+    // (TeX_Box.pool.ltxml:599-617) has the same gap (KNOWN_PERL_ERRORS #253).
+    // Witnesses: suanpan-l3 (2,342 empty pictures), arXiv 2605.30618.
+    // Guard: `perfect_kernel_batch56::afterassignment_setbox_box_operand`.
+    let pending = box_prefix_tokens(None);
+    if !pending.is_empty() {
+      unread(pending);
+    }
     rest
   });
 
@@ -1062,6 +1663,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "height");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_height(value);
@@ -1093,6 +1695,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "width");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_width(value);
@@ -1117,6 +1720,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "depth");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_depth(value);
@@ -1146,13 +1750,13 @@ LoadDefinitions!({
   // \unhbox<8bit>, \unhcopy<8bit>
   // Perl: $stomach->enterHorizontal (TeX_Box.pool.ltxml lines 663, 673)
   DefPrimitive!("\\unhbox Number", sub[(number)] {
-    enter_horizontal();
     let box_key = s!("box{}", number.value_of());
+    enter_horizontal();
     match remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
       // Only unlist if box is horizontal (mode ends with "horizontal")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("horizontal") {
-        Ok(stuff.unlist())
+        Ok(hlist_of(&stuff, false))
       } else {
         Ok(vec![stuff])
       }
@@ -1162,12 +1766,12 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\unhcopy Number", sub[(number)] {
-    enter_horizontal();
     let box_key = s!("box{}", number.value_of());
+    enter_horizontal();
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("horizontal") {
-        Ok(stuff.unlist())
+        Ok(hlist_of(&stuff, true))
       } else {
         Ok(vec![stuff])
       }
@@ -1185,9 +1789,9 @@ LoadDefinitions!({
       // Only unlist if box is vertical (mode ends with "vertical")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
-        Ok(stuff.unlist())
+        Ok(vlist_of(&stuff, false))
       } else {
-        Ok(vec![stuff])
+        Ok(vec![at_natural_size(stuff)])
       }
     } _ => {
       Ok(Vec::new())
@@ -1201,9 +1805,9 @@ LoadDefinitions!({
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
-        Ok(stuff.unlist())
+        Ok(vlist_of(&stuff, true))
       } else {
-        Ok(vec![stuff])
+        Ok(vec![at_natural_size(stuff)])
       }
     } _ => {
       Ok(Vec::new())
@@ -1280,8 +1884,12 @@ LoadDefinitions!({
       } else { (None, None, None) }
     } else { (None, None, None) };
 
-    // Perl: $stomach->enterHorizontal
-    enter_horizontal();
+    // Perl: $stomach->enterHorizontal — but not for the rule `\leaders` reads (see `\hrule`).
+    if lookup_bool("lx@leaders@rule") {
+      assign_value("lx@leaders@rule", false, None);
+    } else {
+      enter_horizontal();
+    }
 
     // Perl: rwidth => $width, cwidth => $width || Dimension('0.4pt'), etc.
     // Use to_attribute() for 1-decimal-place formatting matching Perl's Dimension->toAttribute
@@ -1303,7 +1911,18 @@ LoadDefinitions!({
     let w_pt = width.map(|d| d.value_of() as f64 / 65536.0);
     let h_pt = height.map(|d| d.value_of() as f64 / 65536.0);
 
-    match lookup_alignment() { Some(_alignment) => {
+    // OXIDIZED_DESIGN #176: a zero-width rule has nothing to draw anywhere —
+    // it is the standard strut (`\vrule height 12pt width 0pt`, and
+    // latex.ltx:12596's `\strutbox`, which `\strut` `\unhcopy`s into every
+    // TeXbook `\halign{\strut#&…}` template) — so it is `invisible` even in
+    // an alignment. Perl tests the alignment branch first and its
+    // `h > 3 * w` reads any positive height as a column rule (`border="ll"`
+    // on the strutted cell; KNOWN_PERL_ERRORS #131). Guard:
+    // `perfect_kernel_batch54::zero_width_vrule_is_a_strut_not_a_border`.
+    if w_pt == Some(0.0) {
+      whatsit.set_property("invisible", true);
+      whatsit.set_property("alignmentSkippable", true);
+    } else if lookup_alignment().is_some() {
       // Perl: set isVerticalRule only if dimensions suggest a real rule
       let dominated_by_height = match (h_pt, w_pt) {
         (None, None) => true,
@@ -1314,9 +1933,7 @@ LoadDefinitions!({
       if dominated_by_height {
         whatsit.set_property("isVerticalRule", true);
       }
-    } _ => if w_pt == Some(0.0) {
-      whatsit.set_property("invisible", true);
-    }}
+    }
     // Set color from current font (Perl: only if NOT black)
     if let Some(font) = lookup_font()
       && let Some(color) = font.color
@@ -1348,8 +1965,15 @@ LoadDefinitions!({
       } else { (None, None, None) }
     } else { (None, None, None) };
 
-    // Perl: $stomach->leaveHorizontal;
-    leave_horizontal()?;
+    // Perl: $stomach->leaveHorizontal; — but not for the rule `\leaders` reads: there it is a rule
+    // specification (tex.web §1078/§1084 `scan_box`), never executed, so it ends no paragraph (Perl
+    // ends it, TeX_Box.pool.ltxml:838; KPE #405). Guard
+    // `perfect_kernel_batch58::leaders_rule_keeps_the_paragraph`.
+    if lookup_bool("lx@leaders@rule") {
+      assign_value("lx@leaders@rule", false, None);
+    } else {
+      leave_horizontal()?;
+    }
     let w_pt = width.map(|d| d.value_of() as f64 / 65536.0);
     let h_pt = height.map(|d| d.value_of() as f64 / 65536.0);
 
@@ -1364,17 +1988,37 @@ LoadDefinitions!({
     whatsit.set_property("cached_depth", cdepth);
     // hrule defaults to full width — don't cache a specific width
 
-    if let Some(_alignment) = lookup_alignment() {
+    // An `\hrule` is the alignment's own only on the alignment's vertical list, between its rows (`\noalign`, an
+    // `\hline`, digested in a pseudo-row's column): in an open cell it is the cell's material — in TeX an error in the cell's restricted horizontal mode,
+    // the rule of a box's own vertical list inside it (tex.web §1076 `begin_box` starts that list; §1094
+    // `head_for_vmode`). Perl adds a border row for any `\hrule` while an `Alignment` is visible
+    // (TeX_Box.pool.ltxml:846-851) and `add_line` restarts the row's columns (Alignment.pm:126), so a cell's
+    // `\vbox{…\hrule…}` (ytableau's box frames, ytableau.sty:260-296) dropped the row's middle cells and, after an
+    // `\omit` cell, set the next cell outside its template's math (2308.07459; KNOWN_PERL_ERRORS #669). Guard:
+    // `perfect_kernel_batch66n::rule_in_a_cell_box_keeps_the_row`.
+    let between_rows = lookup_alignment().is_some_and(|alignment| {
+      alignment.alignment_cell().is_some_and(|cell| {
+        let cell = cell.borrow();
+        !cell.is_in_column() || cell.current_row().is_some_and(|row| row.is_pseudo())
+      })
+    });
+    if between_rows {
       // Perl: set isHorizontalRule only if dimensions suggest a real rule
+      // A full-width (default) rule with an explicit height is a horizontal
+      // rule too — `\noalign{\hrule height 1pt}` fell through the former
+      // `_ => false` and was neither rendered nor a border (Perl
+      // TeX_Box.pool:851 shares the heuristic). Guard:
+      // `perfect_kernel_batch54::noalign_rule_with_height_is_a_border`.
       let dominated_by_width = match (h_pt, w_pt) {
-        (None, None) => true,
+        (None, None) | (Some(_), None) => true,
         (None, Some(w)) => w > 20.0,
         (Some(h), Some(w)) => w > 3.0 * h,
-        _ => false,
       };
       if dominated_by_width {
-        _alignment.alignment_cell().unwrap().borrow_mut()
-          .add_line("t", Vec::new());
+        // no border from a misplaced `\noalign`'s body (`tex_tables::alignment_to_rule`)
+        if let Some(alignment) = crate::tex_tables::alignment_to_rule() {
+          alignment.alignment_cell().unwrap().borrow_mut().add_line("t", Vec::new());
+        }
         whatsit.set_property("isHorizontalRule", true);
       }
     }
@@ -1441,6 +2085,17 @@ LoadDefinitions!({
       // Hide alignment so that \hrule inside \leaders doesn't add border="t"
       // Perl: $STATE->assignValue(Alignment => undef);
       assign_value("Alignment", Stored::None, None);
+      // tex.web §1084 `scan_box` (`read_box_operand`): the next token after expansion that is
+      // neither a spacer nor `\relax` decides; an `\hrule`/`\vrule` there is a rule specification,
+      // read and never executed, so it leaves or enters no paragraph. A box filler's own rules
+      // execute as usual. Skipping by meaning also lets a robust (`\protect\relax`-headed) filler
+      // through, which Perl's literal-`\relax` skip loses (KPE #405).
+      if let Some(token) = read_box_operand()? {
+        if token.defined_as(&T_CS!("\\hrule")) || token.defined_as(&T_CS!("\\vrule")) {
+          assign_value("lx@leaders@rule", true, None);
+        }
+        unread_one(token);
+      }
     },
     after_digest => sub[whatsit] {
       // Mark the leader whatsit as a horizontal FILL leader. `\hbox to <line-width>`
@@ -1460,20 +2115,103 @@ LoadDefinitions!({
   // \lx@hflipped to satisfy the file-order parity audit.
 });
 
-// Risky: I think this needs to be digested as a body to work like TeX (?)
-// but parameter think's it's just parsing from gullet...
+/// Reader for `HBoxContents`/`VBoxContents` (`\hbox`, `\vbox`, `\vtop`, `\vcenter`): after the box
+/// specification, the `{` as tex.web §645 `scan_spec` ends with §403 `scan_left_brace` — expanded, past spaces and
+/// `\relax`, else "Missing { inserted" — then `\everyhbox`/`\everyvbox` (§1083) and any `\afterassignment` token.
+/// Perl's `readBoxContents` (TeX_Box.pool.ltxml:139-160) skipped any token, unexpanded, to the next `{`:
+/// `E\hbox\relax\mac F` with `\def\mac{{bravo}}` dropped the rest of the document without a diagnostic
+/// (pdflatex: "EbravoF"). Repro boxes-groups/box_brace_is_scanned.
 pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
-  while let Some(t) = read_token()? {
-    // Perl: $t->defined_as(T_BEGIN) — checks meaning, not catcode.
-    // This catches both { (catcode BEGIN) and \bgroup (\let to T_BEGIN).
-    if t.defined_as(&T_BEGIN!()) {
+  scan_left_brace()?;
+  unread(box_prefix_tokens(everybox_opt));
+  Ok(Tokens!())
+}
+
+/// Reader for `HBoxArgContents`: ONE macro argument (Perl `Gullet::readArg`,
+/// Gullet.pm:732-741 — skip spaces, a catcode-BEGIN token opens a balanced
+/// group, any other single token IS the argument), positioned for the live
+/// one-frame box loop of `predigest_box_contents_in_mode`. The four Perl
+/// `{}`-argument box constructors (`\mbox`, `\@makebox`, `\@framebox`,
+/// `\raisebox`) are `\hbox{#1}` of a macro argument (latex.ltx:16082
+/// `\DeclareRobustCommand\mbox[1]{\leavevmode\hbox{#1}}`), so `\mbox\qquad` is
+/// `\hbox{\qquad}`. `read_box_contents`'s brace scan is the `\hbox` primitive's
+/// (tex.web §1083 `scan_spec` … `scan_left_brace`); the forward skip to the next `{`
+/// it was before 60j, on an unbraced argument, consumed the `}` closing an
+/// enclosing group and took a later `{` as the box: `\subsection{… ggg\\\mbox\qquad and packages}` leaked
+/// one group per sectioning re-digest ("\end occurred inside a group at level
+/// 4", the title truncated after the `\\`; ltnews issue 40, an `\endgroup`
+/// error under the renewed `document` of divergence #232). Three cases: a
+/// braced argument leaves the live gullet positioned after its `{` (empty
+/// result, as `read_box_contents`); an implicit begin-group (`\bgroup`) is
+/// re-inserted as `\bgroup }` for the live loop, TeX's `\hbox{\bgroup}` whose
+/// body runs on to the `\egroup`; any other single token comes back as the
+/// result, an ISOLATED list like Perl's `Tokens($token)` — the
+/// `HBoxArgContents` predigest digests it from its own mouth, so an
+/// argument-taking token (`\mbox\emph{x}`: pdflatex rejects it, Perl and this
+/// engine are lenient) finds its argument exhausted rather than swallowing
+/// the box's `}`.
+pub fn read_box_arg_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
+  let prefix = box_prefix_tokens(everybox_opt);
+  match read_non_space()? {
+    Some(t) if t.get_catcode() != Catcode::BEGIN && !t.defined_as(&T_BEGIN!()) => {
+      let mut body = prefix.unlist();
+      body.push(t);
+      Ok(Tokens::new(body))
+    },
+    Some(t) if t.get_catcode() != Catcode::BEGIN => {
+      // An implicit begin-group (`\mbox\bgroup z\egroup`): TeX's `\hbox{\bgroup}`
+      // — the `}` closes the `\bgroup` and the box body runs on in the live
+      // stream up to the `\egroup`, so it is re-inserted as `\bgroup }` for
+      // the live loop (tex.web §1068: a `}` may close a `\bgroup` group).
+      let mut live = prefix.unlist();
+      live.push(t);
+      live.push(T_END!());
+      unread(Tokens::new(live));
+      Ok(Tokens!())
+    },
+    _ => {
+      unread(prefix);
+      Ok(Tokens!())
+    },
+  }
+}
+
+/// The box operand of `\setbox` and `\shipout`: tex.web §1084 `scan_box` reads
+/// the next token after expansion whose command is neither a spacer nor
+/// `\relax` (§404: an implicit space such as `\@sptoken`, a `\let` alias of
+/// `\relax` such as `\scan_stop:` and a `\noexpand`-ed token, §358, are skipped
+/// too; guard `perfect_kernel_batch58::box_operand_skips_noexpanded_token`); `None` at the end of
+/// input. TeX requires a box command (`\hbox`, `\vbox`, `\vtop`, `\box`,
+/// `\copy`, `\lastbox`, `\vsplit`) and otherwise reports "A `<box>` was
+/// supposed to be here"; the caller invokes whatever comes (SYNC_STATUS).
+/// `\leaders` peeks with it (the same §1084 read) and unreads the token, to
+/// tell a rule specification from a box filler.
+pub fn read_box_operand() -> Result<Option<Token>> {
+  let mut xtoken = read_x_token(None, false, None)?;
+  while let Some(ref t) = xtoken {
+    // A `\noexpand`-ed token has `\relax`'s meaning here (§358).
+    if is_space_or_implicit_space(t) || t.defined_as(&T_CS!("\\relax")) || t.is_noexpand_family() {
+      xtoken = read_x_token(None, false, None)?;
+    } else {
       break;
-    } // Skip till { or \bgroup
+    }
+  }
+  Ok(xtoken)
+}
+
+/// The tokens a box body starts with, once its `{` has been consumed:
+/// `\everyhbox` / `\everyvbox`, then the pending `\afterassignment` token
+/// (`BeforeNextBox`) — the order the former two `unread`s produced.
+fn box_prefix_tokens(everybox_opt: Option<Tokens>) -> Tokens {
+  let mut prefix: Vec<Token> = Vec::new();
+  // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
+  if let Some(everybox) = everybox_opt {
+    prefix.extend(everybox.unlist());
   }
   // Now, insert some extra tokens, if any, possibly from \afterassignment
   match remove_value("BeforeNextBox") {
-    Some(Stored::Tokens(tokens)) => unread(tokens),
-    Some(Stored::Token(token)) => unread_one(token),
+    Some(Stored::Tokens(tokens)) => prefix.extend(tokens.unlist()),
+    Some(Stored::Token(token)) => prefix.push(token),
     None | Some(Stored::None) => {},
     Some(other) => emit_warn(
       "internal",
@@ -1481,9 +2219,5 @@ pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
       &format!("afterAssignment should be a token, got: {other}"),
     ),
   };
-  // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
-  if let Some(everybox) = everybox_opt {
-    unread(everybox);
-  }
-  Ok(Tokens!())
+  Tokens::new(prefix)
 }

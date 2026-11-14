@@ -1,0 +1,22 @@
+% A postal code printed with its address is a word of that line; a number alone is a volume's, a page's, an identifier's
+% far more often. Digits are counted from an argument that also yields a counted word.
+% witness: 1011.2770 ("01886 02138"), 2305.00867 ("2628 2629"), 2605.02209 ("4677 95054")
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Gravel Road 01886", "10027"
+% engines: rust int139c = 0 errors, 0 warnings; rust 108b = 1 warning "gravel road", the Info "01886 10027"; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store) "gravel road 01886"; the Info names "10027"
+% status:  RED (108b) -> GREEN (108b2)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstoredigitswicls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\address#1{\gdef\auaddr{#1}}\def\zip#1{\gdef\auzip{#1}}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}{\auaddr\par\auzip\par}\fi}
+\end{filecontents*}
+\documentclass{checkstoredigitswicls}
+\title{A Title}\author{Ann Able}
+\address{Gravel Road 01886}
+\zip{10027}
+\begin{document}\maketitle
+Body text.
+\end{document}

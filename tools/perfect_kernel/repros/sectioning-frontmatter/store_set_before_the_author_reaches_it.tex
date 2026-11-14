@@ -1,0 +1,21 @@
+% A raw class's affiliation store set before `\author` reaches the author: the stores are read once,
+% at `\maketitle`, as the class's `\@maketitle` reads them; handed on when set, the affiliation found
+% no creator yet and was dropped, and the deposit printed the store nowhere.
+% witness: disser's thesis templates (`\institution` before `\author`, titledefs.rtx:66).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "T", "Anton", "[Dept]".
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcbefore.cls}
+\ProvidesClass{rcbefore}
+\LoadClass{article}
+\newcommand*\department[1]{\def\@department{#1}}
+\department{}
+\def\@maketitle{\@title\par\@author\par[\@department]}
+\end{filecontents*}
+\documentclass{rcbefore}
+\title{T}
+\department{Dept}\author{Anton}
+\begin{document}
+\maketitle
+Text.
+\end{document}

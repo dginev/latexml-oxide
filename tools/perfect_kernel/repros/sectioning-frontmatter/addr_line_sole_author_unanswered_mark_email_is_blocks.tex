@@ -1,0 +1,22 @@
+% A sole author's orphan line labelled in her own mark series is the block creator's, an e-mail line as an affiliation
+%   line (FIDELITY_CHARTER "Sole author", user 2026-11-05: an orphan in the author's own mark series is still the block
+%   creator's): `$^{b}$ E-mail: lab@b.org` beside `Ann Able$^{a}$` goes with `$^{b}$ Univ B, City` to the block creator;
+%   the only-author step takes only lines no rule placed (review rev107f finding 4).
+% witness: none (synthetic) — rev107f probe s_sole_block_mark; twins addr_line_sole_author_orphan_star{,_with_block}.tex
+% oracle:  pdflatex 0 errors: "Ann Able a", "a Univ A, Town.", "b Univ B, City", "b E-mail: lab@b.org"
+% engines: rust 107f r1 (2afa80e78b) = lab@b.org on Ann Able; int139a4 = on the block creator
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, Town.; the block creator: Univ B, City, lab@b.org
+% status:  RED (107f r1) -> GREEN (107f r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{a}$\\
+{\small $^{a}$Univ A, Town.}\\
+{\small $^{b}$ Univ B, City}\\
+{\small $^{b}$ E-mail: lab@b.org}\\
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

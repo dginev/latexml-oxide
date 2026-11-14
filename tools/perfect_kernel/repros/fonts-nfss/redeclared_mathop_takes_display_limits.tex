@@ -1,0 +1,23 @@
+% witness: no corpus paper (89a r2 review S2); the shape kpfonts.sty and newtxsf.sty avoid with their own names
+%          (`\sumop`, `\prodop`): a kernel `\mathop` redeclared in a font with no map, at its fontmath.ltx slot
+%          (:256 `\sum` largesymbols "50, :252 `\bigcup` "53; U/jkpex draws the same layout there)
+% oracle:  pdflatex: the display ∑ and ⋃ with their limits under and over them, the inline ∑ with scripts; 0 errors
+% engines: rust 89a r3 = 0 errors, ∑ SUMOP and ⋃ SUMOP `meaning="union"` (the binding's token) with
+%          scriptpos="post1" scripts (MathML msubsup/msub) and no mathstyle; the kernel's own `\sum` and `\bigcup`
+%          carry mathstyle="display" scriptpos="mid" (munderover/munder); int118a = the stand-ins P and S;
+%          perl 0.8.8 = 0 errors, both symbols dropped
+% expect:  0 errors, 0 warnings; the display ∑ and ⋃ set their limits as the kernel's tokens do (scriptpos="mid",
+%          mathstyle="display"), the inline ∑ its scripts after it
+% status:  RED (deferred: a binding's scriptpos/mathstyle closures are not carried by the reference table —
+%          OXIDIZED_DESIGN_DIVERGENCES #910; it needs a display capture or a role-based rule)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareFontFamily{U}{jkpex}{}
+\DeclareFontShape{U}{jkpex}{m}{n}{<->jkpex}{}
+\DeclareSymbolFont{largesymbolsX}{U}{jkpex}{m}{n}
+\let\sum\undefined \DeclareMathSymbol{\sum}{\mathop}{largesymbolsX}{"50}
+\let\bigcup\undefined \DeclareMathSymbol{\bigcup}{\mathop}{largesymbolsX}{"53}
+\begin{document}
+\[\sum_{i=1}^n x_i = \bigcup_{j} A_j\]
+and inline \(\sum_{i=1}^n x_i\).
+\end{document}

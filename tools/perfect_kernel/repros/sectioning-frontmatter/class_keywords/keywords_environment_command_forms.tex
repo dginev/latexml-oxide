@@ -1,0 +1,24 @@
+% A label-only `{keywords}` environment (kwpaper.cls, paper.cls:621) called as a command: `\keywords{…}` is the
+% frontmatter's keywords of its argument; a bare `\keywords text`, whose extent only the class's layout knows, runs the
+% class's own begin code (a run-in heading), as before, and the rest of the document stays where it is.
+% witness: none (synthetic; paper.cls papers write `\keywords{…}` as well as the environment)
+% oracle:  pdflatex (kwpaper.cls beside it) 0 errors: "Keywords: first, second ... Keywords: bare words Next paragraph.
+%          1 Intro Body."
+% expect:  0 errors, 0 warnings; <keywords name="Keywords:"> "first, second"; "bare words" in a <paragraph>; the
+%          section kept
+% status:  RED (68n round 1: the until-body of a command-form `\keywords` would read to the document's end) -> GREEN
+% preload: ar5iv.sty
+\documentclass{kwpaper}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\keywords{first, second}
+
+Text.
+
+\keywords bare words
+
+Next paragraph.
+\section{Intro}
+Body.
+\end{document}

@@ -270,12 +270,20 @@ impl Object for Digested {
   }
   fn get_locator(&self) -> Option<Locator> {
     use DigestedData::*;
+    // Defensive `try_borrow`, as in `with_properties` and `get_font`: an
+    // Alignment in `be_absorbed_mut` (an exclusive `borrow_mut`) opens its
+    // table and row elements, and `Document::append_node_box` then builds
+    // `List::new(<the node's box>, <that Alignment>)`, whose locator scan asks
+    // the Alignment for its locator; an infallible `.borrow()` panicked
+    // ("RefCell already mutably borrowed"). A re-entrant borrow has no
+    // locator to give. Witnesses 1205.0376, 2605.03048; guard
+    // `perfect_kernel_batch54::tabu_to_width_and_x_columns`.
     match *self.0 {
-      TBox(ref b) => b.borrow().get_locator(),
-      List(ref l) => l.borrow().get_locator(),
+      TBox(ref b) => b.try_borrow().ok().and_then(|b| b.get_locator()),
+      List(ref l) => l.try_borrow().ok().and_then(|l| l.get_locator()),
       Comment(ref c) => c.get_locator(),
-      Whatsit(ref w) => w.borrow().get_locator(),
-      Alignment(ref w) => w.borrow().get_locator(),
+      Whatsit(ref w) => w.try_borrow().ok().and_then(|w| w.get_locator()),
+      Alignment(ref w) => w.try_borrow().ok().and_then(|w| w.get_locator()),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
       RegisterValue(ref rv) => rv.get_locator(),
       Postponed(ref _t) => None, // Tokens carry no locator
@@ -410,15 +418,17 @@ impl BoxOps for Digested {
   // at the Digested interface
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    use DigestedData::*;
-    match *self.0 {
-      // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
-      // i.e. Rc<RefCell<Tbox>>, Rc<RefCell<List>>, etc.
-      TBox(ref b) => b.borrow_mut().set_property(key, value),
-      List(ref l) => l.borrow_mut().set_property(key, value),
-      Whatsit(ref w) => w.borrow_mut().set_property(key, value),
-      _ => { /* no-op for Comment/Postponed/RegisterValue/KeyVals/Alignment */ },
+    if !self.try_set_property(key, value) {
+      emit_error(
+        "unexpected",
+        "reentrant_property_write",
+        &s!("Property {key} not set: its box is in use (being absorbed or sized)"),
+      );
     }
+  }
+
+  fn set_memo_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    let _ = self.try_set_property(key, value);
   }
 
   fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
@@ -554,8 +564,59 @@ const FP_BUDGET: u32 = 48;
 pub(crate) const EB_BUDGET: u32 = 256;
 
 impl Digested {
+  /// Set a property unless the box is borrowed — being absorbed (`Document::absorb` holds it while its constructor
+  /// runs); false then. Perl's store always lands (Box.pm:168-171).
+  pub fn try_set_property<T: Into<Stored>>(&self, key: &str, value: T) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
+      // i.e. Rc<RefCell<Tbox>>, Rc<RefCell<List>>, etc.
+      TBox(ref b) => b
+        .try_borrow_mut()
+        .map(|mut b| b.set_property(key, value))
+        .is_ok(),
+      List(ref l) => l
+        .try_borrow_mut()
+        .map(|mut l| l.set_property(key, value))
+        .is_ok(),
+      Whatsit(ref w) => w
+        .try_borrow_mut()
+        .map(|mut w| w.set_property(key, value))
+        .is_ok(),
+      _ => true, // no-op for Comment/Postponed/RegisterValue/KeyVals/Alignment
+    }
+  }
+
+  /// Remove a property unless the box is borrowed (false then), as [`Self::try_set_property`] sets one.
+  pub(crate) fn try_remove_property(&self, key: &str) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b
+        .try_borrow_mut()
+        .map(|mut b| b.get_properties_mut().remove(key))
+        .is_ok(),
+      List(ref l) => l
+        .try_borrow_mut()
+        .map(|mut l| l.get_properties_mut().remove(key))
+        .is_ok(),
+      Whatsit(ref w) => w
+        .try_borrow_mut()
+        .map(|mut w| w.get_properties_mut().remove(key))
+        .is_ok(),
+      _ => true,
+    }
+  }
+
   /// immutably borrow the inner Digested data
   pub fn data(&self) -> &DigestedData { &self.0 }
+
+  /// Number of live `Digested` handles sharing this box (diagnostics: a box
+  /// still referenced after its fragment was absorbed and dropped is retained
+  /// somewhere else).
+  pub fn strong_count(&self) -> usize { Rc::strong_count(&self.0) }
+
+  /// Identity of the shared allocation (diagnostics: visit each box once).
+  pub fn as_ptr(&self) -> *const DigestedData { Rc::as_ptr(&self.0) }
 
   /// A content-aware but COST-BOUNDED fingerprint for the stomach cycle guard
   /// ([`crate::cycle_guard`]).
@@ -641,6 +702,18 @@ impl Digested {
       DigestedData::RegisterValue(r) => {
         6u8.hash(h);
         std::mem::discriminant(r).hash(h);
+        // The amount tells register values apart: a PiCTeX `\plot` sets each of its dots with its own `\raise`, and
+        // hashed by kind alone a long line of them read as a loop past `STOMACH_CYCLE_ACTIVATE` (0801.0709;
+        // OXIDIZED_DESIGN_DIVERGENCES #326).
+        match r {
+          RegisterValue::Number(v) => v.0.hash(h),
+          RegisterValue::Dimension(v) => v.0.hash(h),
+          RegisterValue::MuDimension(v) => v.0.hash(h),
+          RegisterValue::Glue(v) => (v.skip, v.plus, v.minus).hash(h),
+          RegisterValue::MuGlue(v) => (v.skip, v.plus, v.minus).hash(h),
+          RegisterValue::Pair(v) => (v.x.0.to_bits(), v.y.0.to_bits()).hash(h),
+          RegisterValue::Token(_) | RegisterValue::Tokens(_) => {},
+        }
       },
       DigestedData::Comment(c) => {
         7u8.hash(h);
@@ -789,6 +862,62 @@ impl Digested {
     })
   }
 
+  /// A strut: something that occupies height but leaves no ink — an
+  /// `invisible` zero-width `\vrule`, or an `\hbox`/`\vbox` whatsit whose
+  /// `content_box` holds only struts and skippable material (latex.ltx:12596's
+  /// `\strutbox`, which `\strut` `\unhcopy`s into every TeXbook
+  /// `\halign{\strut#&…}` template cell — halignatt.tex). An alignment treats
+  /// a strut-only cell as empty (Perl's `isrule` test, Alignment.pm L459-462,
+  /// extended; its `isSkippable` L514 already looks through `content_box`).
+  /// Guard: `perfect_kernel_batch54::zero_width_vrule_is_a_strut_not_a_border`.
+  pub fn is_strut(&self) -> bool {
+    let DigestedData::Whatsit(w) = self.data() else {
+      return false;
+    };
+    let w = w.borrow();
+    if w.get_property_bool("alignmentPreserve") {
+      return false;
+    }
+    if w.get_property_bool("invisible") {
+      return true;
+    }
+    // A box counts only when it actually holds a strut: `\null` (`\hbox{}`)
+    // stays what Perl's peel sees, an opaque box.
+    match w.get_property("content_box") {
+      Some(prop) => matches!(
+        &*prop,
+        Stored::Digested(cb) if {
+          let inner = cb.unlist_ref();
+          inner.iter().any(|b| b.is_strut())
+            && inner.iter().all(|b| b.is_strut() || b.is_skippable())
+        }
+      ),
+      None => false,
+    }
+  }
+
+  /// A table cell's boxes that hold nothing but a paragraph cell (`p{}`/`m{}`/`b{}`, the `\lx@tabular@p@` box,
+  /// tex_tables.rs) with a skippable body, and skippable material: a cell a row span may cover, though
+  /// [`Self::is_skippable`] (Perl's `isSkippable`) counts the box as content. KNOWN_PERL_ERRORS #1015.
+  pub fn is_empty_paragraph_cell(&self) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      List(ref l) => {
+        let l = l.borrow();
+        !l.get_property_bool("alignmentPreserve")
+          && l
+            .boxes
+            .iter()
+            .all(|d| d.is_skippable() || d.is_empty_paragraph_cell())
+      },
+      Whatsit(ref w) => match w.borrow().get_property("paragraph_cell_body") {
+        Some(prop) => matches!(&*prop, Stored::Digested(body) if body.is_skippable()),
+        None => false,
+      },
+      _ => false,
+    }
+  }
+
   /// Check if all items are "empty" or only spaces or otherwise skippable in a table cell.
   /// Perl: isSkippable (Alignment.pm L484-508)
   pub fn is_skippable(&self) -> bool {
@@ -873,9 +1002,25 @@ impl Digested {
   }
 
   /// builds an attribute-friendly String form of the digested object, suitable for XML attributes
+  /// (Perl `toAttribute`): a list joins its items' forms (List.pm:85-87); a whatsit whose definition
+  /// gives an attribute form — carried here as its `attributeForm` property, which Perl also reads first
+  /// (Whatsit.pm:217-228) — is that text, `\hskip`'s spaces (TeX_Glue.pool.ltxml:85) rather than the
+  /// reverted `\enskip`; anything else is its string.
   pub fn to_attribute(&self) -> String {
     match *self.0 {
       DigestedData::RegisterValue(ref v) => v.to_attribute(),
+      DigestedData::List(ref list) => list
+        .borrow()
+        .boxes
+        .iter()
+        .map(Digested::to_attribute)
+        .collect(),
+      DigestedData::Whatsit(ref whatsit) => {
+        match whatsit.borrow().properties.get("attributeForm") {
+          Some(Stored::String(form)) => arena::with(*form, str::to_string),
+          _ => self.to_string(),
+        }
+      },
       _ => self.to_string(),
     }
   }
@@ -1057,6 +1202,20 @@ mod tests {
     // ...while structurally identical lists DO (so real cycles are still caught).
     let ab2 = list_of(vec![tbox_with("a"), tbox_with("b")]);
     assert_eq!(ab.cycle_fingerprint(), ab2.cycle_fingerprint());
+  }
+
+  #[test]
+  fn cycle_fingerprint_distinguishes_register_amounts() {
+    // Two dots of a PiCTeX line differ only by their `\raise` (0801.0709): equal kinds, different amounts.
+    let raise = |sp: i64| Digested::from(RegisterValue::Dimension(Dimension(sp)));
+    assert_ne!(
+      raise(65536).cycle_fingerprint(),
+      raise(131072).cycle_fingerprint()
+    );
+    assert_eq!(
+      raise(65536).cycle_fingerprint(),
+      raise(65536).cycle_fingerprint()
+    );
   }
 
   #[test]

@@ -1,0 +1,17 @@
+% witness: sel78i item 3 (cite.sty:412 `nosort`)
+% oracle:  pdflatex 0 errors: "X [3, 1, 2, 4], [2, 3, 4]." (nosort: no sorting, a run in the order given compressed:
+%          cite.sty:514-520 [nosort,compress] -> "[2–4]")
+% engines: rust int50a = "[3, 1, 2, 4], [2, 3, 4]"
+% expect:  0 errors; "[3, 1, 2, 4]" kept, "[2–4]"
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass{article}
+\usepackage[nosort]{cite}
+\begin{document}
+X \cite{c,a,b,d}, \cite{b,c,d}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Able.
+\bibitem{b} B. Baker.
+\bibitem{c} C. Cole.
+\bibitem{d} D. Dee.
+\end{thebibliography}
+\end{document}

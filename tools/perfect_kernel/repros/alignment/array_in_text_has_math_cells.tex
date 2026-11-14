@@ -1,0 +1,12 @@
+% witness: 1611.02392 (kdefs.tex:453 bnfarray = \begin{tabular}[t]{c}\begin{array}[t]{...}; E 24 -> 0)
+% oracle: pdflatex 0 errors (latex.ltx \@arrayclassz sets each cell as $\relax\@sharp$: math wherever the array is)
+% engines: rust 66x = 4 errors (Script _/^ in text; the auto-opened formula swallows "after."); Perl 6 (+ XMArray in p/td)
+% expect: 0 Errors; each array its own inline formula with math cells; "after." outside the formula
+% mechanism: \@array@bindings opens a math alignment (XMArray) but its cells were digested in the surrounding text mode
+% status: RED (66x) -> GREEN (66y: \array outside math opens an inline formula, \endarray closes it)
+\documentclass{article}
+\begin{document}
+Before \begin{array}[t]{ll} x_1 & y^2 \\ a & b \end{array} after.
+
+\begin{tabular}[t]{c}\begin{array}[t]{l@{~~}l} e_1 & e_2 \end{array}\end{tabular}
+\end{document}

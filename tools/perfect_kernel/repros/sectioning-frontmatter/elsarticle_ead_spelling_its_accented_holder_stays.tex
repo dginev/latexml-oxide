@@ -1,0 +1,32 @@
+% mechanism: `insert::respell_emails` (an e-mail call placed by its position moved to the one author its address spells,
+%   the AASTeX `\author{Ann Able and Bob Baker}\email{able@x.org}` case, batch81) reads each name by its base letters, as
+%   an address spells it and the observer's reading reads it (`resolver::base_letters`): `javier.martinez@` spells
+%   Javier Martínez-López, its holder, before Carlos Javier Navarro, so it stays; the accent had left it spelling
+%   "Javier" alone, Navarro's, which took it. After a call naming two people the respell still moves `aable@` to Ann
+%   Able. G6 of brief 95c.
+% witness: 2410.00275 (`\author[label2,label4,label5]{Javier Martínez-López}\ead{javier.martinez@ugr.es}` before
+%   `\author[label2]{Carlos Javier Navarro}`)
+% oracle:  pdflatex 0 errors: "Javier Martínez-López, Carlos Javier Navarro, Ann Able, Bob Baker" over "Univ X" (with
+%   no `\journal` the class sets no e-mail footnote on the page: `\ead` stores the address, elsarticle.cls:215-219)
+% engines: rust 94b-r7: javier.martinez@x.org on Carlos Javier Navarro; perl: on Javier Martínez-López
+% expect:  0 errors, 0 warnings; javier.martinez@x.org Javier Martínez-López's, carlos@x.org Navarro's, aable@x.org
+%   Ann Able's (moved off Bob Baker)
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Javier Martínez-López}
+\ead{javier.martinez@x.org}
+\author{Carlos Javier Navarro}
+\ead{carlos@x.org}
+\author{Ann Able, Bob Baker}
+\ead{aable@x.org}
+\address{Univ X}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Text.
+\end{document}

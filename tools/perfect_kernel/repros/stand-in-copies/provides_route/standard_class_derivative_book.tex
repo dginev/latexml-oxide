@@ -1,0 +1,29 @@
+% witness: hep-ex0405054 (book_modified.cls:531 `\newcommand\appendix`, `\ProvidesClass{book}`: int37a "Appendix A…D",
+%          77w r2 "Chapter A…D"), math0301023 (khbook.cls:285 `\newcommand\frontmatter`: "Voorwoord"/"Dankwoord"
+%          unnumbered); the 77w r2 re-review's finding 1 (its probe4)
+% oracle:  pdflatex 0 errors: "Preface ... Chapter 1 Intro ... 1.1 Sec ... Appendix A Extra ... Afterword"
+% engines: rust 69e78f9511 (77w r2) = the copy's `\newcommand`s of `\frontmatter`/`\mainmatter`/`\backmatter`/`\appendix`
+%          replace the book binding's: "Chapter 1 Preface", "Chapter 2 Intro", "Chapter A Extra", no <appendix>;
+%          rust 529dc1b543 (int37a) = the binding's: "Preface", "Chapter 1 Intro", "Appendix A Extra",
+%          "Appendix B Afterword" (as `\documentclass{book}`: the binding's `\backmatter` numbers on, Perl
+%          book.cls.ltxml:121 `DefPrimitive('\backmatter', undef)` alike)
+% expect:  0 errors, 0 warnings; "Preface", "Chapter 1 Intro", "Appendix A Extra" (as int37a and `\documentclass{book}`)
+% status:  RED (69e78f9511) -> GREEN (77w r3: only the binding's text names yield to the derivative's `\newcommand`)
+% preload: ar5iv.sty
+\documentclass{bookcopy}
+\begin{document}
+\frontmatter
+\chapter{Preface}
+Pre text.
+\mainmatter
+\chapter{Intro}
+Intro text.
+\section{Sec}
+More.
+\appendix
+\chapter{Extra}
+App text.
+\backmatter
+\chapter{Afterword}
+After.
+\end{document}

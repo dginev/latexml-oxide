@@ -1,0 +1,13 @@
+% mechanism: a text group whose only material is a formula holding glue (`$\mskip5mu$`) before `\par`: the formula is
+%   not blank to `stomach::adds_no_line_material` (a math box, not a space/skip/kern), so the group's piece is kept as a
+%   paragraph of its own and measured as a second line; TeX's line is x's alone (the math-on/off and the glue add no
+%   height)
+% witness: synthetic (revRG1c PE1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: G1=4.30554pt, E1=0.0pt
+% engines: rust int162a = rg1c: G1=16.30554pt, E1=0.0pt
+% expect:  0 errors; the oracle's values
+% status:  RED. moves: post-merge
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{x{$\mskip5mu$\par}}G1=\the\ht0, E1=\the\dp0.
+\end{document}

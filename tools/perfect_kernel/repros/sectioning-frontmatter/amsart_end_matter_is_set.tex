@@ -1,0 +1,19 @@
+% amsart's `\enddoc@text` (amsart.cls:518-520, amsproc alike) runs `\AtEndDocument`: the translators and addresses
+% after the body, and whatever a derived class queues there — resphilosophica.cls:94 `\AddtoEndMatter` holds its
+% `{notes}` collection (:432) and its `\bibliography` (:99). The ams_core binding defined no `\enddoc@text` hook, so
+% the queued notes never ran: "Collected sentence alpha." was lost with no diagnostic (G3 slice 4 R2: rpsample).
+% PERL-ORIGIN (Perl's ams_core.cls.ltxml has no hook either; KNOWN_PERL_ERRORS #443).
+% status:  GREEN 60m; guard perfect_kernel_batch60::amsart_end_matter_is_set
+% oracle:  pdflatex (two passes), 0 errors: "Body text." / author block "A" / "Bibliography notes:" "Collected sentence
+%          alpha."
+% engines: rust 60j4: "Body text." only, 0 errors
+% expect:  0 errors; after "Body text.", the notes heading "Bibliography notes" and "Collected sentence alpha."
+\documentclass{resphilosophica}
+\title{T}\author{A}
+\begin{document}
+\maketitle
+Body text.
+\begin{notes}{Bibliography notes}
+Collected sentence alpha.
+\end{notes}
+\end{document}

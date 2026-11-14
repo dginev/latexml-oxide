@@ -1,0 +1,19 @@
+% A raw class's `\keywords`, which the class defines only inside its abstract environment, is the keywords of the
+% frontmatter: the locked kernel `{abstract}` refuses the class's (`\lx@dropped@abstract`), so `\keywords` was undefined.
+% witness: 1706.00599 (wiley-article.cls:446-489), 1801.08881 (nbdt-article.cls:430-473), 1712.05593, 1809.03406
+% oracle:  pdflatex (kwwiley.cls beside it) 0 errors: "Abstract text. KEYWORDS first, second"
+% engines: rust 67int11 = 1 Error (undefined:\keywords), the keywords a paragraph of the abstract
+% expect:  0 errors, 0 warnings; <keywords> "first, second"; the abstract "Abstract text."
+% status:  RED (67int11) -> GREEN (68n)
+% preload: ar5iv.sty
+\documentclass{kwwiley}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+\keywords{first, second}
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: \openout completes an extension-less name to <name>.tex (tex.web
+%   §1374, :24928 "if cur_ext="" then cur_ext:=".tex""); {filecontents} writes
+%   through \immediate\openout (latex.ltx:18998, :19023). The binding stored the
+%   bare name (Perl TeX_FileIO.pool.ltxml:120-126 too), so \IfFileExists{democode.tex}
+%   was false and \input{democode.tex} a missing file.
+% witness: latex4wp/latex4wp (latexdemo DefineCode/\PrintDemo: 98 of 105 words missing)
+% oracle:  pdflatex 0 errors; "A:Yes. B:Yes. C:Alpha code."
+% engines: rust=1 error (missing_file democode.tex), "A:No. B:Yes."; perl "A:No B:No"
+%          + the same missing_file (56jm-rel, 2026-09-25)
+% expect:  0 errors; "A:Yes. B:Yes. C:Alpha code." and D's verbatim "Alpha code."
+%          (\verbatiminput reads the bare name as \input does, tex.web §537)
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\usepackage{verbatim}
+\begin{document}
+\begin{filecontents*}[overwrite]{democode}
+Alpha code.
+\end{filecontents*}
+A:\IfFileExists{democode.tex}{Yes}{No}.
+B:\IfFileExists{democode}{Yes}{No}.
+C:\input{democode.tex}
+D:\verbatiminput{democode}
+\end{document}

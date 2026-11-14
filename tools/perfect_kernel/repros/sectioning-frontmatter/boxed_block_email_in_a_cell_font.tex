@@ -1,0 +1,19 @@
+% mechanism: boxed_block_emails_written_out_of_a_brace_list.tex with each row's own declaration in a `tabular` cell
+%   (`\small` rows, then `\footnotesize \texttt{…}`): a cell's declarations end at its `\\`.
+% witness: 2608.20401
+% oracle:  pdflatex 0 errors
+% engines: rust int127a: one creator holding the tabular; perl the same
+% expect:  0 errors; Ann (Univ A); Bob (Univ B, bob.baker@b.org typewriter at 80%)
+% status:  GREEN (100c)
+\documentclass{article}
+\title{T}
+\author{\begin{tabular}{c}
+Ann Able\textsuperscript{1} \quad Bob Baker\textsuperscript{2}\\
+\small \textsuperscript{1}Univ A\\
+\small \textsuperscript{2}Univ B\\
+\footnotesize \texttt{bob.baker@b.org}
+\end{tabular}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

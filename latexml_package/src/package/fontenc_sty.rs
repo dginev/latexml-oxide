@@ -68,153 +68,13 @@ fn setup_cyrillic() -> Result<()> {
   DefMacro!("\\CYRYA", "\u{042F}");
   DefMacro!("\\CYRYO", "\u{0401}");
 
-  // Stub-define the remaining entries in @uclclist so that document-level
-  // expansion of the uclclist doesn't trip undefined-CS errors. Perl's
-  // LaTeXML processes @uclclist via a token-level scan (MakeUppercase /
-  // MakeLowercase) that doesn't invoke the CSes, so Perl tolerates these
-  // being undefined; Rust's digestion path expands them eagerly. We stub
-  // them as identity-empty so they carry no output but don't error.
-  // These are the T2A/T2B/T2C-extended cyrillic CSes; when the document
-  // doesn't actually use them in text output (the common case for non-
-  // cyrillic papers that nonetheless import babel), the stub is
-  // semantically invisible.
-  for cs in [
-    "cyrabhch",
-    "CYRABHCH",
-    "cyrabhchdsc",
-    "CYRABHCHDSC",
-    "cyrabhdze",
-    "CYRABHDZE",
-    "cyrabhha",
-    "CYRABHHA",
-    "cyrae",
-    "CYRAE",
-    "cyrbyus",
-    "CYRBYUS",
-    "cyrchldsc",
-    "CYRCHLDSC",
-    "cyrchrdsc",
-    "CYRCHRDSC",
-    "cyrchvcrs",
-    "CYRCHVCRS",
-    "cyrdelta",
-    "CYRDELTA",
-    "cyrdje",
-    "CYRDJE",
-    "cyrdze",
-    "CYRDZE",
-    "cyrdzhe",
-    "CYRDZHE",
-    "cyreps",
-    "CYREPS",
-    "cyrfita",
-    "CYRFITA",
-    "cyrgdsc",
-    "CYRGDSC",
-    "cyrgdschcrs",
-    "CYRGDSCHCRS",
-    "cyrghcrs",
-    "CYRGHCRS",
-    "cyrghk",
-    "CYRGHK",
-    "cyrgup",
-    "CYRGUP",
-    "cyrhdsc",
-    "CYRHDSC",
-    "cyrhhcrs",
-    "CYRHHCRS",
-    "cyrhhk",
-    "CYRHHK",
-    "cyrie",
-    "CYRIE",
-    "cyrii",
-    "CYRII",
-    "cyrishrtdsc",
-    "CYRISHRTDSC",
-    "cyrizh",
-    "CYRIZH",
-    "cyrje",
-    "CYRJE",
-    "cyrkbeak",
-    "CYRKBEAK",
-    "cyrkdsc",
-    "CYRKDSC",
-    "cyrkhcrs",
-    "CYRKHCRS",
-    "cyrkhk",
-    "CYRKHK",
-    "cyrkvcrs",
-    "CYRKVCRS",
-    "cyrldsc",
-    "CYRLDSC",
-    "cyrlhk",
-    "CYRLHK",
-    "cyrlje",
-    "CYRLJE",
-    "cyrmdsc",
-    "CYRMDSC",
-    "cyrmhk",
-    "CYRMHK",
-    "cyrndsc",
-    "CYRNDSC",
-    "cyrng",
-    "CYRNG",
-    "cyrnhk",
-    "CYRNHK",
-    "cyrnje",
-    "CYRNJE",
-    "cyrnlhk",
-    "CYRNLHK",
-    "cyrotld",
-    "CYROTLD",
-    "cyrphk",
-    "CYRPHK",
-    "cyrq",
-    "CYRQ",
-    "cyrrdsc",
-    "CYRRDSC",
-    "cyrrhk",
-    "CYRRHK",
-    "cyrrtick",
-    "CYRRTICK",
-    "cyrsacrs",
-    "CYRSACRS",
-    "cyrschwa",
-    "CYRSCHWA",
-    "cyrsdsc",
-    "CYRSDSC",
-    "cyrsemisftsn",
-    "CYRSEMISFTSN",
-    "cyrshha",
-    "CYRSHHA",
-    "cyrtdsc",
-    "CYRTDSC",
-    "cyrtetse",
-    "CYRTETSE",
-    "cyrtshe",
-    "CYRTSHE",
-    "cyrushrt",
-    "CYRUSHRT",
-    "cyrw",
-    "CYRW",
-    "cyry",
-    "CYRY",
-    "cyryat",
-    "CYRYAT",
-    "cyryhcrs",
-    "CYRYHCRS",
-    "cyryi",
-    "CYRYI",
-    "cyrzdsc",
-    "CYRZDSC",
-    "cyrzhdsc",
-    "CYRZHDSC",
-  ]
-  .iter()
-  {
-    let cs_tok = T_CS!(&s!("\\{}", cs));
-    def_macro(cs_tok, None, Tokens!(), None)?;
-  }
+  // The extended T2A/T2B/T2C letters (`\cyrje`, `\cyrlje`, `\cyrii`, …) are left undefined, as Perl's
+  // `setupCyrillic` (fontenc.sty.ltxml:58-89) leaves them: the encoding's `.def` declares them
+  // (t2aenc.def:176-237 `\DeclareTextSymbol`), and an empty stub here made it refuse the bare command,
+  // so every ј љ њ ћ ђ џ і ї є ґ printed nothing (serbian-def-cyr/proba, cmpj/template; Perl keeps
+  // them; ј and і print as Latin j/i, T2A's slots 106/105, as in Perl and pdftotext). The stubs (#219) kept `\@uclclist` from tripping undefined commands under `\MakeUppercase`
+  // (arXiv 1209.1578, `[T1]{fontenc}`); the case mapping now reads the list's tokens without calling
+  // them (`\lx@prepare@case@mapping`, sect13.rs), and 1209.1578 converts identically without them.
   AddToMacro!(
     "\\@uclclist",
     r"\cyra\CYRA\cyrabhch\CYRABHCH\cyrabhchdsc\CYRABHCHDSC\cyrabhdze\CYRABHDZE\cyrabhha\CYRABHHA\cyrae\CYRAE\cyrb\CYRB\cyrbyus\CYRBYUS\cyrc\CYRC\cyrch\CYRCH\cyrchldsc\CYRCHLDSC\cyrchrdsc\CYRCHRDSC\cyrchvcrs\CYRCHVCRS\cyrd\CYRD\cyrdelta\CYRDELTA\cyrdje\CYRDJE\cyrdze\CYRDZE\cyrdzhe\CYRDZHE\cyre\CYRE\cyreps\CYREPS\cyrerev\CYREREV\cyrery\CYRERY\cyrf\CYRF\cyrfita\CYRFITA\cyrg\CYRG\cyrgdsc\CYRGDSC\cyrgdschcrs\CYRGDSCHCRS\cyrghcrs\CYRGHCRS\cyrghk\CYRGHK\cyrgup\CYRGUP\cyrh\CYRH\cyrhdsc\CYRHDSC\cyrhhcrs\CYRHHCRS\cyrhhk\CYRHHK\cyrhrdsn\CYRHRDSN\cyri\CYRI\cyrie\CYRIE\cyrii\CYRII\cyrishrt\CYRISHRT\cyrishrtdsc\CYRISHRTDSC\cyrizh\CYRIZH\cyrje\CYRJE\cyrk\CYRK\cyrkbeak\CYRKBEAK\cyrkdsc\CYRKDSC\cyrkhcrs\CYRKHCRS\cyrkhk\CYRKHK\cyrkvcrs\CYRKVCRS\cyrl\CYRL\cyrldsc\CYRLDSC\cyrlhk\CYRLHK\cyrlje\CYRLJE\cyrm\CYRM\cyrmdsc\CYRMDSC\cyrmhk\CYRMHK\cyrn\CYRN\cyrndsc\CYRNDSC\cyrng\CYRNG\cyrnhk\CYRNHK\cyrnje\CYRNJE\cyrnlhk\CYRNLHK\cyro\CYRO\cyrotld\CYROTLD\cyrp\CYRP\cyrphk\CYRPHK\cyrq\CYRQ\cyrr\CYRR\cyrrdsc\CYRRDSC\cyrrhk\CYRRHK\cyrrtick\CYRRTICK\cyrs\CYRS\cyrsacrs\CYRSACRS\cyrschwa\CYRSCHWA\cyrsdsc\CYRSDSC\cyrsemisftsn\CYRSEMISFTSN\cyrsftsn\CYRSFTSN\cyrsh\CYRSH\cyrshch\CYRSHCH\cyrshha\CYRSHHA\cyrt\CYRT\cyrtdsc\CYRTDSC\cyrtetse\CYRTETSE\cyrtshe\CYRTSHE\cyru\CYRU\cyrushrt\CYRUSHRT\cyrv\CYRV\cyrw\CYRW\cyry\CYRY\cyrya\CYRYA\cyryat\CYRYAT\cyryhcrs\CYRYHCRS\cyryi\CYRYI\cyryo\CYRYO\cyryu\CYRYU\cyrz\CYRZ\cyrzdsc\CYRZDSC\cyrzh\CYRZH\cyrzhdsc\CYRZHDSC"
@@ -226,6 +86,17 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Font Encoding
   // We ALSO need to read in or set the char=>unicode mapping.
+
+  // fontenc.sty (2025/07/18) un-marks itself at its end — `\global\let
+  // \ver@fontenc.sty\relax`, `\global\let\opt@fontenc.sty\relax` — so EVERY
+  // `\usepackage[<encs>]{fontenc}` loads it again with the new encodings
+  // (no option clash). Perl's binding is loaded once (Package.pm:2328), so
+  // montex's second request (mls.sty:416 `[LMS,LMO,LMA,LMC,T1]` after
+  // ctib.sty's `[LCT,T1]`) never input lmcenc.def → `\MyTogrog` undefined
+  // (SHARED, pdflatex clean). The loader honours the declaration
+  // (content.rs `already_handled`). Guard:
+  // `perfect_kernel_batch56::fontenc_reloads_with_new_encodings`.
+  AssignValue!("fontenc.sty_unmarks_itself" => true, Some(Scope::Global));
 
   DeclareOption!(None, {
     let current_option = Expand!(T_CS!("\\CurrentOption")).to_string();
@@ -242,6 +113,7 @@ LoadDefinitions!({
     && !font_encodings.is_empty()
   {
     setup_cyrillic()?;
+    let mut any_encoding = false;
     for encoding_stored in font_encodings.into_iter() {
       if let Stored::String(enc_sym) = encoding_stored {
         let encoding = to_string(enc_sym);
@@ -264,10 +136,25 @@ LoadDefinitions!({
         // Load fontmap BEFORE the enc def file, so \DeclareTextSymbol
         // can look up glyph positions during def loading.
         let has_fontmap = load_font_map(&encoding).is_some();
-        InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
+        // fontenc.sty:81-83 (formats from 2020/02/02 on): the `.def` is input
+        // only while `\T@<enc>` is undefined. The format preloads T1, OT1,
+        // TS1, OML, OMS and OMX (the dump carries `\T@T1` …), and Perl skips
+        // them through the dumped `t1enc.def_loaded` flag (Package.pm:2328-
+        // 2330), which our dump reader drops. Re-inputting t1enc.def re-ran
+        // `\DeclareFontEncoding{T1}` and t1enc.dfu at document time, making
+        // `ș`/`ț` active `\textcommabelow s` — the kernel's `\ooalign` fallback,
+        // so "Roșca" came out as a two-row tabular, and inside a natbib
+        // `\bibitem` label, whose author list is split at commas, a
+        // PushbackLimit Fatal (arXiv 2605.20924, 2605.08338, 2605.19649,
+        // 2605.23281, 2605.13873, 2605.31401, 2605.21804; Perl and pdflatex
+        // clean). Guard: `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.
+        if !is_defined(&s!("\\T@{encoding}")) {
+          InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
+        }
         if has_fontmap {
           MergeFont!(encoding => encoding);
         }
+        any_encoding = true;
       } else {
         let message = s!(
           "Only strings should be stored as font encoding names, at: {:?}",
@@ -276,7 +163,22 @@ LoadDefinitions!({
         Error!("fontenc", "font_encodings", message);
       }
     }
+    // fontenc.sty:116 `\usefont\encodingdefault…`: the encoding in force is
+    // `\encodingdefault` after the last option, fontmap or not. Only the
+    // mapped ones were merged above (Perl fontenc.sty.ltxml:90-99 alike), so
+    // `[LGR,TU]` left LGR active and every Latin letter of the body came out
+    // Greek (greek-fontenc's test-tuenc-greek, recall 25 %). Under pdfTeX,
+    // tuenc.def itself turns the default to T1 ("Defaulting to T1 encoding").
+    if any_encoding {
+      let encoding = Expand!(T_CS!("\\encodingdefault")).to_string();
+      if !encoding.is_empty() && encoding != "ASCII" {
+        MergeFont!(encoding => encoding);
+      }
+    }
   }
+  // `\let\opt@fontenc.sty\relax`: the option list does not carry over
+  // into the next load.
+  AssignValue!("font_encodings" => Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });

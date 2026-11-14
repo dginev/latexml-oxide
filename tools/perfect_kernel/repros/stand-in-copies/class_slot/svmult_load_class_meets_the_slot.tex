@@ -1,0 +1,13 @@
+% witness: astro-ph0005332, physics0102085, astro-ph0110202 (svmult.cls `\LoadClass[twoside]{article}`; 238 of every
+%          25th arXiv paper's copies), 1609.02100 (svmono.cls)
+% oracle:  pdflatex 0 errors: "1 Intro", "Text SV."
+% engines: Perl never reads the copy (svmult.cls.ltxml:34 `LoadClass('book')`)
+% expect:  0 errors, 0 warnings; the class slot's Info (the binding's book stands for the copy's `\LoadClass{article}`,
+%          OXIDIZED_DESIGN_DIVERGENCES #736: the net for a binding whose base is not its file's); the section whole
+% status:  GREEN (72a r8, r9)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\section{Intro}
+Text \svextra.
+\end{document}

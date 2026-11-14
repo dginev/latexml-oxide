@@ -1,0 +1,27 @@
+% A raw class's `\@author` prints an address list from a register (`\emailAdd`, as aaskaiid.sty:308-313 keeps
+% `\email@toks`) under the name: a line of addresses alone is the block's e-mail contacts (the sole author's here,
+% OXIDIZED_DESIGN #159), not the net's note line. The code and date lines of the same store shape are guarded green
+% (perfect_kernel_batchhg1 `hollow_guards_restored_read_as_printed`, net_shaped_store_below_the_floor_is_kept).
+% witness: 2606.27706, 2607.25721 (aaskaiid.sty `\email@toks`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "E-mail: ann.able@lunar.org", "Text."
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: `<note role="note">ann.able@lunar.org</note>` on Ann Able, the
+%          label "E-mail:" dropped (105a's guard, which pinned the contact, converted nothing after DEL1)
+% expect:  0 errors, 0 warnings; Ann Able's `<contact role="email">ann.able@lunar.org</contact>`
+% status:  RED (int160a, HG1)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netmail.cls}
+\ProvidesClass{netmail}\LoadClass{article}
+\def\@anames{}
+\newtoks\email@toks
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\emailAdd[1]{\email@toks=\expandafter{\the\email@toks#1}}
+\renewcommand\@author{\@anames\\E-mail: \the\email@toks}
+\end{filecontents*}
+\documentclass{netmail}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\emailAdd{ann.able@lunar.org}
+\maketitle
+Text.
+\end{document}

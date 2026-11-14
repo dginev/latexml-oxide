@@ -1,0 +1,18 @@
+% mechanism: a `\thanks` holding a class binding's e-mail call (llncs's `\email`, `EmailMeaning::InPlace`): the binding
+%   makes the contact and the note written at `=2` prints the address nowhere, so the contact stays — FX3's rule (a link
+%   the written note still prints is the note's alone) is for a link or the document's own `\email` only
+% witness: 2406.13066 (llncs, `\thanks{Corresponding author: \email{harrygietz@gmail.com}}`; the draft rule dropped its
+%   e-mail, held nowhere)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Smith1⋆ and Bob Jones1 / 1 Univ A, Town", footnote
+%   "⋆ Corresponding author: ann@x.org"
+% engines: FX3 draft `=2` = Ann's note "Corresponding author:", no contact (the address lost); FX3base `=2` = the contact
+% expect:  0 errors at `=2`; Ann Smith: the e-mail ann@x.org kept, held once
+% status:  RED (FX3 draft) -> GREEN (FX3)
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Smith\inst{1}\thanks{Corresponding author: \email{ann@x.org}} \and Bob Jones\inst{1}}
+\institute{Univ A, Town}
+\maketitle
+Text.
+\end{document}

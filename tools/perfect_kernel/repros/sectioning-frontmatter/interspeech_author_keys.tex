@@ -1,0 +1,22 @@
+% witness: 2605.02715 (Interspeech.cls of 2026, :146-209 `\author[affiliation=…,orcid=…,correspondingauthor]{First}{Last}`,
+%          :216 `\address`, :338-352 the corresponding-author note): the binding knew only `\name`, so OmniBus's one-argument
+%          `\author` kept the given names and the family names fell into the body
+% oracle:  pdflatex 0 errors (with the paper's Interspeech.cls): "Ada Byron-King 1,2,** , Bo Li 2", both affiliations
+% engines: rust 63v4 = creators "Ada", "Bo"; "Byron-King" and "Li" body paragraphs
+% expect:  0 errors, 0 warnings; whole names, each author's affiliations by its marks, the ORCID, the email and the
+%          corresponding-author note
+% status:  RED (63v4) -> GREEN (63w)
+\documentclass[cameraready]{Interspeech}
+\title{T}
+\author[affiliation={1,2},correspondingauthor,orcid=0009-0008-0680-1817]{Ada}{Byron-King}
+\author[affiliation={2}]{Bo}{Li}
+\email{ada@x.org}
+\address{$^1$ University A, Country A\\ $^2$ University B, Country B}
+\keywords{speech}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

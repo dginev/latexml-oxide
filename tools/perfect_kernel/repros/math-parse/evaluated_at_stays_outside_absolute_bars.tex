@@ -1,0 +1,27 @@
+% witness: 57ak A/B Perl sample (root-causer): 2605.12082 A2.Ex48 `|K|\,|\nabla\chi|_{L^2(K)}|\nabla\psi|_{L^2(K)}`,
+%          2605.04766 S6.Ex145 `|\nabla U_\varepsilon|_2^2+…|\nabla U_\varepsilon|_2^4`; Perl's `absExpression`
+%          sets `$forbidEvalAt` (MathGrammar:410; the evalAt alternatives of moreFactors test it, :259-262), so
+%          no evaluation bar is read inside `|…|`; Rust's `bare_abs`/`fenced` take any `expression`
+%          (grammar/builder.rs), and a scripted closing bar reads as an evaluation bar of the content
+% oracle:  Perl 0 errors: `(absolute-value@(nabla@(a))) _ L * (absolute-value@(nabla@(b))) _ L`,
+%          `(absolute-value@(a)) _ L * (absolute-value@(b)) _ L`, `(absolute-value@(u)) _ H + (absolute-value@(nabla * u)) _ H`,
+%          `evaluated-at@(f * x, 0, 1)`, `(norm@(a)) _ 2 * (norm@(b)) _ 2`
+% engines: rust 57al1 `evaluated-at@(absolute-value@(evaluated-at@(nabla@(a), L)) * nabla@(b), L)`,
+%          `evaluated-at@(absolute-value@(evaluated-at@(a, L)) * b, L)` (57aj2 the same),
+%          `absolute-value@(limit-from@(evaluated-at@(u, H), +)) * nabla * evaluated-at@(u, H)` (57aj2 Perl's),
+%          `evaluated-at@(f@(x), 0, 1)`, the norms Perl's (RUST-ONLY)
+% expect:  0 errors; no `evaluated-at` inside an `absolute-value`; the evaluation bar outside bars kept
+%          57am review, divergence #350: only single-bar pairs forbid it, and not in a nested group — `\|u|_{\Gamma}\|`,
+%          `\left|M|_{S}\right|`, `|g(f|_{x=0})|` parse (2605.01526, 2605.07463; Perl fails); a preference, not a prune:
+%          `|f(x)|_{0}^{1}|`, whose only reading nests the bar, is |eval(f(x), 0, 1)| (Perl fails; 57am review, evcorp), and
+%          counted per pair, so the other pairs of the formula still read Perl's way: `|\nabla a|_{L}|\nabla b|_{L}+|f(x)|_{0}^{1}|`
+%          (57am review round 3); a pair keeps its bar only when no reading without it exists — `|f(x)|_0^1|+c` is a
+%          conditional, as Perl (residual, divergence #350)
+% status:  RED (57al) -> GREEN (57am: the single-bar fences mark it, `Meta::evaluation_bar_inside`, and the forest keeps
+%          the trees with the fewest marks, `XM::prefer_fewest_evaluation_bars_inside`, latexml_math_parser/src/semantics)
+\documentclass{article}
+\begin{document}
+$|\nabla a|_{L}|\nabla b|_{L}$ $|a|_{L}|b|_{L}$ $(|u|_{H}+|\nabla\times u|_{H})$ $f(x)|_{0}^{1}$ $\|a\|_{2}\|b\|_{2}$
+$\|u|_{\Gamma}\|$ $\left|M|_{S}\right|$ $|g(f|_{x=0})|$ $|f(x)|_{0}^{1}|$
+$|\nabla a|_{L}|\nabla b|_{L}+|f(x)|_{0}^{1}|$
+\end{document}

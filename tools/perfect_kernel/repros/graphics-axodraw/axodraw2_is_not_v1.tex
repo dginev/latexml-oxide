@@ -1,0 +1,18 @@
+% witness: 1701.01404 (`\usepackage{axodraw2}`, `{axopicture}`, `\Line[arrow]`): with a v1 binding registered, the
+%          versioned-name fallback answered axodraw2 with it ("Interpreted as versioned package, falling back to
+%          axodraw.sty"), `{axopicture}` undefined and `\Line[arrow]` broken (0 -> 9 errors)
+% oracle:  pdflatex 0 errors (axodraw2 asks for `axohelp`: the "Run `axohelp …'" warnings)
+% engines: rust 64qb = 0 errors (TL axodraw2.sty raw-loaded); rust 64w r1 = 2 errors; Perl not run
+% expect:  0 errors; axodraw2.sty read from TeX Live, its two axohelp warnings, the label `q` in the axopicture
+% status:  RED (64w r1) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw2}
+\begin{document}
+Diagram:
+\begin{axopicture}(100,50)
+\Line[arrow](0,0)(50,50)
+\Gluon(0,25)(100,25){3}{6}
+\Text(50,10)[l]{$q$}
+\end{axopicture}
+\end{document}

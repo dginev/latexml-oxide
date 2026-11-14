@@ -1,0 +1,34 @@
+% witness: none (review of 88b r1, probe p1; 0 of the 202 `\emails` papers break a line inside a group, all 21 breaks
+%          sit between items); the stand-in below, named ijcai.sty for pdflatex, is ijcai19.sty's `\maketitle`
+%          (:101-130)
+% oracle:  pdflatex 0 errors: "Ann Able , Bob Baker and Cid Cole / Univ X / {aable, bbaker, / ccole}@x.edu"
+% engines: rust int117a = 0 errors, the comma pieces by position (Perl ijcai.sty.ltxml:50-53, KNOWN_PERL_ERRORS
+%          #1200); rust 88b r1 = 0 errors, Bob Baker `{aable, bbaker,` and Cid Cole `ccole}@x.edu` (the `\\` inside the
+%          printed group parted it into two lines); Perl: the comma pieces
+% expect:  0 errors, 0 warnings; the group one line of three addresses (a break inside `\{ … \}` parts no line),
+%          written out, each on the author it spells (OD #908); the same with `\textbraceleft aable` and
+%          `ccole\textbraceright @x.edu` (review of r2, probe i7; pdflatex 0 errors, "{aable, bbaker, / ccole}@x.edu";
+%          rust 88b r2: Bob Baker `{aable, bbaker,`, Cid Cole `ccole}@x.edu`)
+% status:  RED (88b r1) -> GREEN (88b r2); the `\textbrace` pair RED (88b r2) -> GREEN (88b r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ijcai.sty}
+\ProvidesPackage{ijcai}
+\def\maketitle{\par\begingroup\@maketitle\endgroup
+  \let\maketitle\relax \let\@maketitle\relax
+  \gdef\@author{}\gdef\@title{}}
+\def\@maketitle{\vbox{\centering{\LARGE\bf \@title \par}\vskip 0.2in
+  {\def\and{\unskip\thinspace{\rm ,}\enspace}%
+   \def\And{\unskip\enspace{\rm and}\enspace}%
+   \def\affiliations{\egroup\par\bgroup\rm}%
+   \def\emails{\egroup\par\bgroup\rm}%
+   \bgroup\bf\@author\egroup}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{ijcai}
+\title{T}
+\author{Ann Able\and Bob Baker\And Cid Cole
+\affiliations Univ X
+\emails \{aable, bbaker,\\ ccole\}@x.edu}
+\begin{document}
+\maketitle
+\end{document}

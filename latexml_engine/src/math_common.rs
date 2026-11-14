@@ -32,7 +32,7 @@ use crate::prelude::*;
 /// `\big(` came out at 48% instead of 120%, i.e. SMALLER than the surrounding
 /// text rather than half again as large. pdflatex renders `\big(` visibly
 /// larger than an adjacent `(`, and Perl agrees at 120%.
-fn symbolic_font_size(symbolic: &str) -> Font {
+pub fn symbolic_font_size(symbolic: &str) -> Font {
   Font {
     size: Some(font::rationalize_font_size(symbolic)),
     ..Font::default()
@@ -140,7 +140,7 @@ static DELIM_CHAR_MAP: Lazy<HashMap<char, DelimCharProps>> = Lazy::new(|| {
 /// Perl: augmentDelimiterProperties($doc, $whatsit, $role, $stretchy)
 /// Look up delimiter character in DELIM_CHAR_MAP and set name/meaning/role.
 /// When role is empty, don't change the role (Perl: $role=undef).
-fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<()> {
+pub fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<()> {
   let current = document.get_node().clone();
   let delim_opt = current
     .get_child_nodes()
@@ -194,6 +194,10 @@ fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<(
   }
   Ok(())
 }
+
+/// The NFSS commands that are latex.ltx macros of assignments (`\fontencoding` sets `\f@encoding`, `\selectfont`
+/// the font) and primitives here: `\accent` performs them between its number and its character (tex.web §1123).
+const NFSS_ASSIGNMENTS: [&str; 2] = ["\\lx@fontencoding", "\\selectfont"];
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -263,12 +267,22 @@ LoadDefinitions!({
     let mut assignments: Vec<Digested> = Vec::new();
     let mut last_token: Option<Token> = None;
     let mut last_defn: Option<Rc<dyn Definition>> = None;
+    // tex.web §1270 do_assignments reads "the next non-blank non-relax non-call token" (§404) with get_x_token, which
+    // expands a protected macro too: latex.ltx:9958-9965 `\UseTextAccent{OT1}{\'}{e}` sets `\accent19 \fontencoding
+    // {OT1}\selectfont e` (`\add@accent`, :9906-9912), the robust `\fontencoding` a `\protect` (`\relax`) and the
+    // font switch a run of assignments in latex.ltx; here `\lx@fontencoding` and `\selectfont` are primitives
+    // (`NFSS_ASSIGNMENTS`). Perl stops at the font switch (KNOWN_PERL_ERRORS #1004; guard
+    // `perfect_kernel_batch77x::use_text_accent_font_assignments`).
     loop {
-      let token_opt = read_x_non_space()?;
+      // Expanded as for execution: a protected macro too.
+      let token_opt = read_x_token(Some(false), false, Some(true))?;
       let token = match token_opt {
         Some(t) => t,
         None => { break; }
       };
+      if token.get_catcode() == Catcode::SPACE || token.defined_as(&TOKEN_RELAX) {
+        continue;
+      }
       let defn = if token.get_catcode().is_active_or_cs() {
         lookup_definition(&token)?.map(|d| d as Rc<dyn Definition>)
       } else {
@@ -289,6 +303,7 @@ LoadDefinitions!({
           } else {
             // Check \def, \edef, \gdef, \xdef
             matches!(cs_str.as_str(), "\\def" | "\\edef" | "\\gdef" | "\\xdef")
+              || NFSS_ASSIGNMENTS.contains(&cs_str.as_str())
           }
         }
       } else {
@@ -394,9 +409,33 @@ LoadDefinitions!({
   def_math_atom("\\surd", "\u{221A}", Some("OPERATOR"), Some("square-root"))?;
   def_math_atom("\\top", "\u{22A4}", Some("ADDOP"), Some("top"))?;
   def_math_atom("\\bot", "\u{22A5}", Some("ADDOP"), Some("bottom"))?;
-  DefMath!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||");
+  // LaTeX's `\|` is a protected macro (fontmath.ltx:467 `\DeclareMathDelimiter{\|}`, latex.ltx:13641-13645
+  // `\set@mathdelimiter`: `\protected\xdef\|{\delimiter"026B30D }`), so one `\expandafter` step gives its body —
+  // beilstein.cls:264 (from bpchem.sty) `\expandafter\DeclareRobustCommand\expandafter\|\expandafter{\|}` makes `\|`
+  // a robust command over that body. Perl's `\|` is the unexpandable math atom (math_common.pool.ltxml:84), so that
+  // line defines `\|` as itself: `Fatal:Timeout:Recursion` (witness 2604.06890; KNOWN_PERL_ERRORS #842). As with `\{`
+  // below, the atom lives in an internal whose `alias` keeps the reversion (`tex="\|"`) and the user name is a
+  // protected macro expanding to it; `\left\|`, `\big\|` and `\Vert` (`Let`, below) reach the same atom
+  // (`tex_math::DELIMITER_MAP`). OXIDIZED_DESIGN_DIVERGENCES #642; guard
+  // `perfect_kernel_batch68u::a_robust_double_bar_over_its_expansion_typesets_it`.
+  DefMath!("\\lx@math@Vert", None, "\u{2225}", role => "VERTBAR", name => "||", alias => "\\|");
+  DefMacro!("\\|", r"\lx@math@Vert", protected => true);
   // should get meaning => "parallel"to' when used as infix, but NOT when for OPEN|CLOSE
-  def_math_atom("\\angle", "\u{2220}", None, None)?;
+  // OXIDIZED_DESIGN #170 shape (surpass-Perl, user-approved 2026-08-31),
+  // extended to the one math symbol it named as residual: real LaTeX's
+  // `\angle` is `\DeclareRobustCommand` (fontmath.ltx L243), so
+  // `\meaning\angle` starts with `macro:` and tikzmath's meaning sniff
+  // (tikzlibrarymath.code.tex L22-46, L181-217) accepts it as a VARIABLE —
+  // `\tikzmath{\angle = aziangle(\tikz@cs@azi);}` (sunpath.sty L44-47,
+  // 6-manual cluster, 990/1001 errors each). Perl's math atom gives a
+  // primitive meaning → keyword path → `\csname pgfmath\angle\endcsname`
+  // loops to the error cap. Two-level: the U+2220 atom lives in the
+  // space-suffixed CS, the user name is a plain macro expanding to it.
+  // The `alias` keeps the reversion (`tex="\angle"`) and the XMTok `name`
+  // at the user-facing name (guard: 22_fonts abxtest golden).
+  // Guard: cluster_package_guards::angle_tikzmath_variable.
+  DefMath!("\\angle ", None, "\u{2220}", alias => "\\angle");
+  def_macro(T_CS!("\\angle"), None, ExpansionBody::Tokens(Tokens!(T_CS!("\\angle "))), None)?;
 
   // NOTE: This is probably the wrong role.
   // Also, should probably carry info about Binding for OpenMath
@@ -484,33 +523,33 @@ LoadDefinitions!({
     font => { size => 9.0 },
     dynamic_scriptpos => true, mathstyle => "text");
   DefMath!("\\sum",    None, "\u{2211}", role => "SUMOP", meaning => "sum",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\prod",   None, "\u{220F}", role => "SUMOP", meaning => "product",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\coprod", None, "\u{2210}", role => "SUMOP", meaning => "coproduct",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\int",    None, "\u{222B}", role => "INTOP", meaning => "integral",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\oint",   None, "\u{222E}", role => "INTOP", meaning => "contour-integral",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\bigcap",    None, "\u{22C2}", role => "SUMOP", meaning => "intersection",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigcup",    None, "\u{22C3}", role => "SUMOP", meaning => "union",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigsqcup",  None, "\u{2A06}", role => "SUMOP", meaning => "square-union",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigvee",    None, "\u{22C1}", role => "SUMOP", meaning => "or",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigwedge",  None, "\u{22C0}", role => "SUMOP", meaning => "and",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigodot",   None, "\u{2A00}", role => "SUMOP",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigotimes", None, "\u{2A02}", role => "SUMOP", meaning => "tensor-product",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigoplus",  None, "\u{2A01}", role => "SUMOP", meaning => "direct-sum",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\biguplus",  None, "\u{2A04}", role => "SUMOP", meaning => "symmetric-difference",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
 
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.4. Binary Operation Symbols, p.42
@@ -909,15 +948,44 @@ LoadDefinitions!({
 
   // NOTE that all the above accents REQUIRE math mode
   // EXCEPT underline, overrightarrow and overleftarrow!
-  Let!("\\underbar", "\\underline"); // Will anyone notice?
+  // latex.ltx:619 `\def\underbar#1{\underline{\sbox\tw@{#1}\dp\tw@\z@\box\tw@}}`, robust (:1831 `\MakeRobust`): the
+  // argument is boxed, in text mode, so `\underbar{$\psi$}` is legal inside math (2308.06669). Perl lets it to
+  // `\underline` (math_common.pool.ltxml:541), where the inner `$` toggled out of math. In math an argument without a
+  // `$` of its own keeps that reading, an underlined formula: boxed it would only change font, to an upright text "x"
+  // in place of the variable (semantic markup before the PDF's look, the 2026-10-06 priority order); one with its
+  // own `$…$` is boxed, as latex.ltx does. (`\setbox\tw@\hbox`: `\sbox` up to its color group.)
+  DefMacro!("\\underbar{}", sub[(arg)] {
+    let own_formula = arg.unlist_ref().iter().any(|t| t.get_catcode() == Catcode::MATH);
+    let form = if lookup_bool_sym(pin!("IN_MATH")) && !own_formula {
+      T_CS!("\\lx@underbar@formula")
+    } else {
+      T_CS!("\\lx@underbar@boxed")
+    };
+    Invocation!(form, vec![arg])
+  }, robust => true);
+  DefMacro!("\\lx@underbar@formula{}", "\\underline{#1}");
+  DefMacro!(
+    "\\lx@underbar@boxed{}",
+    "\\underline{\\setbox\\tw@\\hbox{#1}\\dp\\tw@\\z@\\box\\tw@}"
+  );
 
+  // `protected`, as `\overline`/`\underline` (tex_math.rs) and LaTeX's own
+  // `\DeclareRobustCommand` (fontmath.ltx:424): a partial expansion — the
+  // `\index` phrase pass (`process_index_phrases`) under `\protect` =
+  // `\@unexpandable@protect` — froze only the `\ifmmode` and let the bare
+  // `\else`/`\fi` run against an empty conditional stack ("Didn't expect a
+  // \else … not in a conditional" ×2 and a doubled index key `→abc→abc`;
+  // latex-via-exemplos' accent table, `\index{$\overrightarrow{abc}$}`; Perl
+  // never expands there). Frozen whole, the macro digests once, live.
   DefMacro!(
     "\\overrightarrow{}",
-    r"\protect\ifmmode\lx@math@overrightarrow{#1}\else$\lx@math@overrightarrow{#1}$\fi"
+    r"\protect\ifmmode\lx@math@overrightarrow{#1}\else$\lx@math@overrightarrow{#1}$\fi",
+    protected => true
   );
   DefMacro!(
     "\\overleftarrow{}",
-    r"\protect\ifmmode\lx@math@overleftarrow{#1}\else$\lx@math@overleftarrow{#1}$\fi"
+    r"\protect\ifmmode\lx@math@overleftarrow{#1}\else$\lx@math@overleftarrow{#1}$\fi",
+    protected => true
   );
 
   DefMacro!("\\skew{}{}{}", r"{#2{#3\mkern#1mu}\mkern-#1mu}{}"); // ignore the subtle spacing for now?
@@ -937,9 +1005,13 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@text@rbrace", "}", alias => "\\}",
   font => { shape => "upright" }, bounded => true); // Since not DefMath!
   Let!("\\lbrace", "\\{");
-  Let!(&T_CS!("\\lbrack"), T_OTHER!("["));
+  // plain.tex:509, latex.ltx:562 `\def\lbrack{[} \def\rbrack{]}`: macros, not Perl's `\let` to the characters
+  // (math_common.pool.ltxml:565, KNOWN_PERL_ERRORS #640), which `\@ifnextchar[`/`\pgfutil@ifnextchar[` took for an
+  // options bracket: a tikzcd whose first cell opens with `\lbrack` read its matrix as options and looped (Fatal
+  // `Timeout:PushbackLimit`, 2212.11079). Guard `perfect_kernel_batch66d::lbrack_is_a_macro`.
+  DefMacro!("\\lbrack", "[");
   Let!("\\rbrace", "\\}");
-  Let!(&T_CS!("\\rbrack"), T_OTHER!("]"));
+  DefMacro!("\\rbrack", "]");
   DefMath!("\\lceil",  None, "\u{2308}", role => "OPEN",  stretchy => false); // LEFT CEILING
   DefMath!("\\rceil",  None, "\u{2309}", role => "CLOSE", stretchy => false); // RIGHT CEILING
   DefMath!("\\lfloor", None, "\u{230A}", role => "OPEN",  stretchy => false); // LEFT FLOOR
@@ -1087,17 +1159,33 @@ LoadDefinitions!({
   // (the rest of the figures, sections, and the bibliography) is absorbed and
   // LOST. Confirmed: the unconditional port drops 2004.10048's bibliography
   // (24 bibitems → 0), so newer Perl regresses it too. So peek for `{`
-  // (`\@ifnextchar\bgroup`, the `\input` idiom) and, absent one, emit an empty
+  // (`\lx@hphantom@peek`, an `\@ifnextchar\bgroup`) and, absent one, emit an empty
   // (zero-width) phantom that consumes nothing, letting the trailing
   // `\endminipage` close its minipage in the ambient mode.
   //
   // DIVERGENCE (OXIDIZED_DESIGN): the brace-guard is beyond #2783 — it keeps BOTH
   // the quantikz2 leak fix (witness 2508.13557) and the malformed-minipage case
   // (witness 2004.10048) correct, a reliability surpass over newer Perl.
-  DefMacro!(
-    "\\hphantom",
-    "\\@ifnextchar\\bgroup\\lx@hphantom@braced\\lx@hphantom@empty"
-  );
+  // `\protect` first, as Perl's `\protect\ifmmode` (math_common.pool.ltxml:655): at an alignment
+  // row's start TeX expands ahead for `\omit`/`\noalign` (tex.web §785), and the unguarded
+  // peek reached `\ifmmode` before the template's `$`, digesting the argument as text
+  // (witness 2605.21158, an align row opening with `\hphantom{… \hat …}`).
+  DefMacro!("\\hphantom", "\\protect\\lx@hphantom@peek");
+  // The `\@ifnextchar\bgroup` peek without LaTeX's `\@ifnextchar` (latex_constructs/sect13.rs): this pool serves plain TeX documents
+  // too, where calling the LaTeX macro autoloaded the LaTeX format mid-document, and its dump replaced the document's
+  // own macros — harvmac's `\ref`, so `\refs`' `\edef` re-expanded an unchanged reference label forever
+  // (`Timeout:PushbackLimit`, 64 plain harvmac papers of run 329: hep-th0505019, hep-th9210021, hep-th9805158,
+  // gr-qc9306023; Perl's `\hphantom` has no peek).
+  DefMacro!("\\lx@hphantom@peek", sub[_args] {
+    let next = read_non_space()?;
+    let braced = next.as_ref().is_some_and(|n| XEquals!(&T_CS!("\\bgroup"), n));
+    let mut result = vec![if braced { T_CS!("\\lx@hphantom@braced") } else { T_CS!("\\lx@hphantom@empty") }];
+    if let Some(t_next) = next {
+      retract_scanned_brace(&t_next);
+      result.push(t_next);
+    }
+    result
+  }, peeks_by_futurelet => true);
   DefMacro!(
     "\\lx@hphantom@braced{}",
     "\\ifmmode\\lx@math@hphantom{#1}\\else\\lx@text@hphantom{#1}\\fi"
@@ -1136,10 +1224,12 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
     properties => { stored_map!("isSpace" => true) },
+    // latex.ltx:15613-15617 `\finph@nt`: a `\vphantom` box has its argument's height and depth and no width (`\ifh@`
+    // is false); Perl gave it the argument's width too (math_common.pool.ltxml:684-687, KNOWN_PERL_ERRORS #433).
     after_digest => sub[whatsit] {
       if let Some(arg) = whatsit.get_arg_mut(1) {
-        let (w, h, d, _, _, _) = arg.get_size(None)?;
-        whatsit.set_property("width", Stored::Dimension(w));
+        let (_, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(Dimension::default()));
         whatsit.set_property("height", Stored::Dimension(h));
         whatsit.set_property("depth", Stored::Dimension(d));
       }
@@ -1154,8 +1244,8 @@ LoadDefinitions!({
 
   // This is actually LaTeX's definition, but let's just do it this way.
   // Locked to prevent raw plain-TeX/amstex overrides that expand via
-  // the \radical primitive (undefined in LaTeXML) — arxiv 1012.3836
-  // uses amstex's `\def\sqrt#1{\radical"270370 {#1}}`.
+  // the \radical primitive — arxiv 1012.3836 uses amstex's
+  // `\def\sqrt#1{\radical"270370 {#1}}`.
   DefConstructor!(
     "\\sqrt OptionalInScriptStyle Digested",
     "?#1(<ltx:XMApp><ltx:XMTok meaning='nth-root'/>\
@@ -1163,9 +1253,16 @@ LoadDefinitions!({
     (<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)",
     locked => true
   );
+  // The radical `\radical` (tex_math.rs) builds: this `\sqrt`, under a name no
+  // document redefines. The lock stops only the `\def` family, not `\let`, so a
+  // `\let\sqrt\sqrtsign` (mathfixs.sty:139 `\let\sqrt=\mafx@sqrt`, whose body
+  // reaches `\radical\z@{#2}` (:109) and `\sqrtsign` (:117, :130)) would turn `\radical` → `\sqrt` →
+  // `\sqrtsign` → `\radical` into a loop. Guard:
+  // `dump_gate_init::radical_survives_a_let_sqrt`.
+  Let!("\\lx@radical@sqrt", "\\sqrt");
 
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
-    read_until(&until[0]) },
+    Ok(ArgWrap::Tokens(read_until(&until[0])?.unwrap_or_default())) },
   before_digest => {
     bgroup();
     MergeFont!(mathstyle => "script");

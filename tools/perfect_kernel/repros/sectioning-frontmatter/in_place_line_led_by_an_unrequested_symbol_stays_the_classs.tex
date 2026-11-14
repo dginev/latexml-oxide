@@ -1,0 +1,30 @@
+% A raw class's in-place `\affil` (a setter breaking its own line, OD #936) whose line leads with a control-sequence
+% footnote symbol no name requests (`$^\dagger$Deceased` under `Ann Able$^{1}$, Bob Baker$^{2}$`): in doubt, the class's
+% text where it prints (frontmatter_stores.rs `class_contact`, `leads_with_unrequested_mark`, `is_a_mark`; review rev99b2
+% F2's in-place sibling, where it went to every author).
+% witness: review rev99b2 probe q4h (synthetic)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A, Town", "2Univ B, City", "†Deceased"
+% engines: rust int127a = "†Deceased" an affiliation of both authors; perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town", Bob Baker "2Univ B, City", nothing else; the body
+%          holds "†Deceased" and "Text."
+% status:  RED (int127a) -> GREEN (100a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipinp.cls}
+\ProvidesClass{ipinp}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1\par}}
+\end{filecontents*}
+\documentclass{ipinp}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^\dagger$Deceased}
+
+\maketitle
+Text.
+\end{document}

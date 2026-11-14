@@ -1,0 +1,39 @@
+% mechanism: psfrag's epsf.sty (psfrag.dtx, option `epsf`) is a wrapper, `\RequirePackage{epsfig}`, so `\epsfbox` is
+%   epsfig's, which resets the size after its `\egroup` in the current group (epsfig.sty:100-101 `\epsfysize\z@
+%   \epsfxsize\z@`): inside `\subfigure`'s box the reset is lost and the size serves the second panel too. epsf_sty.rs
+%   `epsf_resets_globally` found no `\epsfbox` in the copy and no epsf.tex, and took TL's global reset.
+% witness: astro-ph0012205 (`\documentstyle[prl,aps,epsf,…]{revtex}` with psfrag's epsf.sty), astro-ph9611186,
+%   astro-ph9911225; review rev78s2 finding 1
+% oracle:  pdflatex 0 errors; "after one: 100.0pt" (the size kept past the first panel)
+% engines: perl: both 100pt (no reset, KNOWN_PERL_ERRORS #1117); rust int61a: b.eps at its natural size
+% expect:  0 errors, 0 warnings; both graphics options="width=100.0pt"
+% status:  GREEN (78v)
+\begin{filecontents*}[overwrite]{epsf.sty}
+% psfrag's epsf.sty (psfrag.dtx, option epsf), reduced: epsf is epsfig.
+\ProvidesPackage{epsf}
+\DeclareOption*{\PassOptionsToPackage{epsfig}{\CurrentOption}}
+\ProcessOptions
+\RequirePackage{epsfig}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{a.eps}
+%!PS-Adobe-2.0 EPSF-2.0
+%%BoundingBox: 0 0 50 50
+%%EndComments
+showpage
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{b.eps}
+%!PS-Adobe-2.0 EPSF-2.0
+%%BoundingBox: 0 0 50 50
+%%EndComments
+showpage
+\end{filecontents*}
+\documentclass{article}
+\usepackage{epsf,subfigure}
+\begin{document}
+\begin{figure}
+\setlength{\epsfxsize}{100pt}
+\subfigure[One]{\epsfbox{a.eps}}\typeout{after one: \the\epsfxsize}
+\subfigure[Two]{\epsfbox{b.eps}}
+\caption{C.}
+\end{figure}
+\end{document}

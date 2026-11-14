@@ -1,0 +1,18 @@
+% witness: 77a r5 review probe bs/a_alphabetic (a natbib template's \bibliographystyle left after \printbibliography)
+% oracle:  pdflatex + biber 1 error ("Package biblatex Error: '\bibliographystyle' invalid for 'biblatex'", the
+%          command ignored): "X [Knu84; Böt01; Balbes & Dwinger; Goo94a; Goo94b]."; References [Balbes & Dwinger]
+%          balbes [Böt01] boet [Goo94a] goossens [Goo94b] goossens2 [Knu84] knuth
+% engines: rust 77a r5 ran the kernel's \bibliographystyle, which rewrote the bibliography's bibstyle to `plain`:
+%          the list was no longer biblatex's and printed [1]-[5], cited "[5, 2, 1, 3, 4]", 0 errors
+% expect:  0 errors, 1 Warning (biblatex's error, reported as a Warning: ignoring it keeps the labels); the oracle's
+%          labels (the citation joined by "," where biblatex prints ";")
+% status:  GREEN (77a r6: the biblatex binding defines \bibliographystyle as blx-compat.def:13-17 does)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber,style=alphabetic]{biblatex}
+\addbibresource{biblatex_bibliographystyle_ignored.bib}
+\begin{document}
+X \cite{knuth,boet,balbes,goossens,goossens2}.
+\printbibliography
+\bibliographystyle{plain}
+\end{document}

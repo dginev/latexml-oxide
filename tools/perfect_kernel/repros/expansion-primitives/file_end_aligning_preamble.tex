@@ -1,0 +1,17 @@
+% A file that ends inside an alignment preamble is a runaway at tex.web's `aligning` status
+% (§777 `init_align`): TeX reports "File ended while scanning preamble of \halign" and inserts
+% `\cr}` (§339), which ends the preamble and the alignment; the enclosing input goes on.
+% witness: batch 56ja residual (SYNC_STATUS "Balanced reads other than definitions ...")
+% oracle:  pdflatex 1 error ("File ended while scanning preamble of \halign"), prints "A B"
+% engines: rust=5 errors (extra alignment tab, mode mismatches), "B" lost: the unfinished
+%          preamble read on into the document (56ja-rel, 2026-09-25)
+% expect:  1 error "File ended while scanning preamble of \halign"; "A" and "B" kept
+% status:  GREEN (W9: ScannerStatus::Aligning in parse_halign_template; guard
+%          scanner_status::a_file_ending_inside_a_preamble_ends_the_alignment)
+\documentclass{article}
+\begin{filecontents*}{file_end_aligning_halign.tex}
+\halign{#abc
+\end{filecontents*}
+\begin{document}
+A \input file_end_aligning_halign.tex B
+\end{document}

@@ -1,0 +1,13 @@
+% witness: none (tex.web §783: the preamble tests `\tabskip` by command, `assign_glue`/`tab_skip_code`)
+% oracle:  pdflatex 0 errors: `\let\mytabskip\tabskip` then `\mytabskip=1em` in the preamble sets the glue before
+%          the second column, as `\tabskip=1em` does
+% engines: rust 65b r1 = 0 errors, but `\mytabskip=1em` was template text (preamble matched `\tabskip` by name):
+%          second column `ltx_nopad_l`
+% expect:  0 errors; the table equals the one `\tabskip=1em` gives (second column without `ltx_nopad_l`)
+% status:  RED (65b r1) -> GREEN (65b r2); guard perfect_kernel_batch65::let_copy_of_tabskip_sets_the_preamble_glue
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\let\mytabskip\tabskip
+\halign{#\mytabskip=1em&#\cr a&b\cr c&d\cr}
+\end{document}

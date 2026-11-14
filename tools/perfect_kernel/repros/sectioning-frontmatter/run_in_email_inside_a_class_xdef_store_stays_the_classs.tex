@@ -1,0 +1,37 @@
+% A raw class's inline `\email` (iau.cls:4107 `\newcommand{\email}[1]{\iffinals#1\else\href{mailto:#1}{…}\fi}`, a
+% run-in setter, OD #955) called inside its displaced `\affiliation`, which stores with `\protected@xdef` (iau.cls:1516).
+% The run-in decider expanded inside the `\xdef` and baked its API call into the store; at the deposit it fired and
+% gave the address to the last creator (the editors', 2607.25849), leaving "email: " in the body. The rerouted setters
+% and their deciders are protected, so the call stays in the store as written and decides where it is digested: the
+% displaced call holding it is in doubt, so it is the class's, as its title page prints it (review rev99b B3). The
+% other call's line is the author's requesting its mark (`contact_line_call`, B1: Bob Baker, mark 1 only, holds none of it).
+% witness: 2607.25849 (iau; 2510.16758)
+% oracle:  pdflatex 0 errors: "Ann Able1,2 , Bob Baker1", "email: info@univ-a.edu", "1Univ A, Town", "2Univ B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, both stores body paragraphs; rust 99b r1 = Bob Baker holds the e-mail, the
+%          body "email: " with no address; perl = no raw class load (OmniBus `\affiliation`)
+% expect:  0 errors, 0 warnings; Ann Able holds "2Univ B, City"; Bob Baker nothing; the body "email: info@univ-a.edu"
+%          and "1Univ A, Town"
+% status:  RED (99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{iaem.cls}
+\ProvidesClass{iaem}\LoadClass{article}
+\RequirePackage{hyperref}
+\newcount\iaemcount \iaemcount=0
+\def\affiliation#1{\expandafter\protected@xdef\csname iaem\the\iaemcount\endcsname{#1}%
+  \global\advance\iaemcount1 }
+\def\printaffil{{\count@=0 \loop\ifnum\count@<\iaemcount
+  \csname iaem\the\count@\endcsname\par\advance\count@1 \repeat}}
+\newif\iffinals
+\newcommand{\email}[1]{\iffinals#1\else\href{mailto:#1}{#1}\fi}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\vskip1em
+  {\small\printaffil}\end{center}}
+\end{filecontents*}
+\documentclass{iaem}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,2}$, Bob Baker$^{1}$}
+\affiliation{email: \email{info@univ-a.edu}\\ $^1$Univ A, Town}
+\affiliation{$^2$Univ B, City}
+\maketitle
+Text.
+\end{document}

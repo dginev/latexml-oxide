@@ -1,0 +1,12 @@
+% witness: asmeconf/asmeconf-template (asmeconf.cls:2033/2045 `\NoHyper\footnotemark[#1]\endNoHyper`)
+% oracle:  pdflatex 0 errors
+% engines: rust=2 errors (s114: \NoHyper, \endNoHyper undefined) perl=n/a
+% expect:  0 errors; <p>A1B</p>-shaped text with no ERROR stubs
+% status:  GREEN (batch 56gm)
+% mechanism: hyperref_sty.rs bound only `\begin{NoHyper}`/`\end{NoHyper}`; hyperref.sty:6147-6177
+%   defines the macros \NoHyper/\endNoHyper themselves, which classes call directly.
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+A\NoHyper B\endNoHyper C
+\end{document}

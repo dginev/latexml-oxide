@@ -1,0 +1,22 @@
+% mechanism: a document macro printing an e-mail line in place behind prose, under an aa `\institute` entry two names
+%   request: a binding's marked list, no numbered store, so the line goes back into the entry whole
+%   (only a class's numbered store's call unwraps its lines, `\lx@add@store@affiliations`, P23e)
+% witness: synthetic (review revP23c B1, probe d2g)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, arXiv's aa.cls) 0 errors: "1 Univ A, Town", "Corresponding authors’
+%   e-mails: ann@x.org, bob@y.org", "2 Univ B"
+% engines: P23b: as expected; P23c (093cd11411): "Corresponding authors’", the label "e-mails: " and the typewriter font
+%   dropped, 0 warnings (silent loss); P23d: as expected
+% expect:  0 errors, 0 warnings; Ann Able and Bob Best: "1 Univ A, Town Corresponding authors’", an e-mail contact named
+%   "e-mails: " in typewriter (ann@x.org, bob@y.org); Carl Cole: "2 Univ B"
+% status:  GREEN (P23d; guard perfect_kernel_batchp23b::a_raw_class_store_email_line_goes_to_the_authors_it_spells)
+% preload: ar5iv.sty
+\documentclass{aa}
+\newcommand{\emails}[1]{Corresponding authors' e-mails: \texttt{#1}}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Best\inst{1} \and Carl Cole\inst{2}}
+\institute{$^{1}$Univ A, Town\\ \emails{ann@x.org, bob@y.org}\\ $^{2}$Univ B}
+\abstract{A}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 2608.25509 (svproc, marks typed by hand `${}^{1,2}$`, `\institute{Weez-U Welding… \and Nantes Université…}`;
+%          97c's one real-paper regression: sv_support's path put both institutes on the block)
+% oracle:  pdflatex (TL 2025, 2409.01900's svproc.cls): "Ann Able1,2 , Bob Baker1 and Cy Cole2", "1 Univ A, Town A",
+%          "2 Univ B, Town B"
+% engines: rust 97c = the reading right (the `\and` entries numbered 1, 2), not written: both institutes the block's
+% expect:  0 errors, 0 warnings; sv_support written (brief 97e): Ann Able both, Bob Baker Univ A, Cy Cole Univ B
+% status:  RED (97c) -> GREEN (97e) — perfect_kernel_batch97e::sv_support_is_written
+% preload: ar5iv.sty
+\documentclass{svproc}
+\begin{document}
+\title{T}
+\author{Ann Able${}^{1,2}$, Bob Baker${}^{1}$ and Cy Cole${}^{2}$}
+\institute{Univ A, Town A \and Univ B, Town B}
+\maketitle
+Body.
+\end{document}

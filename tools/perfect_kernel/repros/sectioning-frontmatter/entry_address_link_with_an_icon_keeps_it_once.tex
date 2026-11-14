@@ -1,0 +1,23 @@
+% mechanism: an address printed through `\href{mailto:…}{…}` beside an icon in the link (a `\rule`, a formula) comes out
+%   with the font alone: a wrapper is taken whole only when every piece under it is text inside the cut, so the link
+%   and its icon stay once, where they printed (brief 95c r3 F2); the cut's separator trim stops at a piece that is not
+%   text, so the comma before the icon stays (r3 F6).
+% witness: synthetic (review rev95c_r2 probes c1, c3); the link shape of 2111.14566, 1804.04123
+% oracle:  pdflatex 0 errors: "1 Univ X, ■ ann.able@x.org", "2 Univ Y, ⊠ bob.baker@y.org"
+% engines: rust 95c-r2: the link with its icon copied into the e-mail too (the icon printed twice), the affiliation
+%   "Univ X<ref>…</ref>" (its comma lost); rust int123a: the link inside the affiliation; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able "Univ X, <ref><rule/></ref>", e-mail "ann.able@x.org"; Bob Baker "Univ Y,
+%   <ref><Math/></ref>", e-mail "bob.baker@y.org"
+% status:  RED (95c-r2) -> GREEN (95c-r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$ Univ X, \href{mailto:ann.able@x.org}{\rule{1ex}{1ex} ann.able@x.org} \\
+$^2$ Univ Y, \href{mailto:bob.baker@y.org}{$\boxtimes$\,bob.baker@y.org}}
+\maketitle
+Text.
+\end{document}

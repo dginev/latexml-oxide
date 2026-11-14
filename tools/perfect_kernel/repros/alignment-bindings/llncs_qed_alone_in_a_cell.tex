@@ -1,0 +1,19 @@
+% witness: review of 64ra round 7 (synthetic; the size-less class QED symbols — llncs, svjour3/svmult, A&A, mn2e,
+%          elsart — share the cause); 1905.10621 (an amsthm `\qed` alone in IEEEeqnarray `x` cells, its elsarticle
+%          `\qed` replaced by amsthm's: krudces.sty:188)
+% oracle:  pdflatex 0 errors, the □ in the eqnarray cell and in the tabular cell (llncs.cls:400
+%          `\squareforqed` = `\hbox{\rlap{$\sqcap$}$\sqcup$}`)
+% engines: rust 64h4 = 0 errors, the eqnarray cell empty (`<td/>`: a size-less whatsit alone makes the cell
+%          "empty", Perl Alignment.pm:458-470), the tabular's kept; Perl the same
+% expect:  0 errors, 0 warnings; the eqnarray's third cell holds ∎
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\begin{eqnarray*}
+a &=& \mbox{\qed}
+\end{eqnarray*}
+\begin{tabular}{l}
+\qed
+\end{tabular}
+\end{document}

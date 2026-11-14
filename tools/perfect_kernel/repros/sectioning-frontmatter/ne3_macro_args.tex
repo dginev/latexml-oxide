@@ -1,0 +1,24 @@
+% mechanism: a run a macro of which reads past its end (all-undelimited parameters, by its meaning) is refused, the
+%   item written as its text, counted (`emitter::content::reads_past`)
+% witness: 2209.12410 (=2: `\authord{Anh Thu Nguyen}` cut from its second argument: \@undefined and an \lx@personname mode
+%   error)
+% oracle:  pdflatex 0 errors; "ANN ABLE, BOB BAKER / Univ A … / CAT COLE / Univ C, City C"
+% engines: rust =2 (int153x): 1 error (\lx@personname), 1 warning; rust off: 1 error (merged_creators, the old reader)
+% expect:  =2: 0 errors from the pieces, CAT COLE written as its text (a counted warning); off unchanged
+% status:  RED (int153x) -> GREEN (perfect_kernel_batchne3::a_macro_cut_from_its_arguments_is_its_text)
+\documentclass{article}
+\def\Mr{\uppercase}
+\def\vsm{\vskip0.1cm}
+\def\authors#1{\author{\parbox{.9\textwidth}{\begin{flushleft}{#1}\end{flushleft}}}}
+\def\authord#1#2{\indent\Mr{#1}\\
+  \textit{\indent#2}\vsm}
+\begin{document}
+\title{T}
+\authors{\authord{Ann Able, Bob Baker}
+{Univ A, City A\\ Univ B, City B}
+\authord{Cat Cole}
+{Univ C, City C}
+}
+\maketitle
+Text.
+\end{document}

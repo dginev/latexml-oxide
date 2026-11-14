@@ -1,0 +1,15 @@
+% mechanism: llncs's `\and` names and `\institute`: a name led by `\LaTeX` lost the logo (util_text.rs `printed_own_text`).
+% witness: synthetic (LOGO1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "LATEX Project and Ann Smith", institutes "TEX Users Group", "Univ X"
+% engines: rust int171a base 0 E 1 W: <personname>Project</personname> and the content check's "excess" LaTeX
+% expect:  0 E, 0 W; the logo element and " Project", Ann Smith, the institutes as today (a nameless creator holds
+%          them: no `\inst` marks, the llncs reading's own shape)
+% status:  RED -> GREEN (LOGO1)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{\LaTeX\ Project \and Ann Smith}
+\institute{\TeX\ Users Group \and Univ X}
+\maketitle
+Body.
+\end{document}

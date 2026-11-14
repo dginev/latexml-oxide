@@ -1,0 +1,21 @@
+% mechanism: multido's Number variable starts as its initial value AS WRITTEN (multido.tex:193-197
+%   `\multido@init@n`: `\edef#3{#1}`) and steps by fixed-point `\fpAdd`, in the decimals of the step
+%   (:215-283). The binding read a Float and reverted it, so `\n=1+1` began as `1.0`; since calc
+%   evaluates a braced length whole (56jr), bardiag.sty:667 `\setlength{\ytick}{\yunitlength*
+%   \real{\betweenticks}*\n}` met the `.0` after the count `1`: "`.' invalid at this point".
+% witness: TL manuals bardiag (0 -> 10 errors in 56jr), bardiag2 (0 -> 4)
+% oracle:  pdflatex 0 errors: "[1:1.0pt][2:2.0pt][3:3.0pt]", "[2.00][-1.05][-4.10]", "[0][0.5][1.0]"
+% engines: rust 56jr = 1 error, "[1.0:1.0pt]…", "[2.0][-1.05][-4.1]"; perl = 0 errors, the same text
+% expect:  0 errors, 0 warnings
+% status:  RED (56ju) -> GREEN (56ju)
+\documentclass{article}
+\usepackage{calc,multido}
+\newlength\y \newlength\x
+\setlength\y{1pt}
+\begin{document}
+\multido{\n=1+1}{3}{\setlength{\x}{\y*\n}[\n:\the\x]}
+
+\multido{\n=2.00+-3.05}{3}{[\n]}
+
+\multido{\n=0+0.5 }{3}{[\n]}
+\end{document}

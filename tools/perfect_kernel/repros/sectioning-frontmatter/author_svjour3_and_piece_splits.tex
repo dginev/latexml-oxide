@@ -1,0 +1,15 @@
+% witness: 1406.5162, 2105.12728, 1709.07063, 2105.05947 (svjour3 `\author{A and B \and C}`; 4 of 64 svjour3 papers
+%          flagged Error:frontmatter:merged_creators in the 63h A/B)
+% oracle:  pdflatex (svjour3.cls) 0 errors: "Ann Able and Bob Baker · Carl Cole" — three people
+% engines: rust 63g = "Ann Able and Bob Baker" one creator (merged_creators error), Carl Cole; Perl one creator too
+% expect:  three creators Ann Able, Bob Baker, Carl Cole, as llncs splits its `\and` pieces (63e); 0 errors
+% status:  RED (63g) -> GREEN (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker \and Carl Cole}
+\institute{Univ A}
+\date{}
+\maketitle
+Text.
+\end{document}

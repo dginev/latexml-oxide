@@ -21,6 +21,7 @@ LoadDefinitions!({
   InnerPool!(base_schema);
   InnerPool!(base_parameter_types);
   InnerPool!(base_utilities);
+  InnerPool!(frontmatter_stores);
   InnerPool!(base_xmath);
 
   // Perl Base.pool.ltxml L30-48 — TeX subsystem

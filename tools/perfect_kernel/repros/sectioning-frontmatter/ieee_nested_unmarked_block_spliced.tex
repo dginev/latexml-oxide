@@ -1,0 +1,17 @@
+% mechanism: an unmarked `\IEEEauthorblockA` nested after the outer block's own text is spliced into the outer's lines,
+%   on rows of its own (a `\\` before and after it), as pdflatex prints it in the outer's column under every name
+%   (ieeetran_cls.rs `unnested_affiliation_blocks`; OD #1009)
+% witness: synthetic (review revP4cR2 B3, probes q9 journal, q10, q11, q12); 2503.18173's last block
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Bob Baker", "Dept X, Univ Y", "Lab Z", "Email: {ann, bob}@y.edu"
+% engines: P4b2: "Lab Z" an affiliation of its own, each author's; P4cR2 ea6a435433: "Lab Z" Bob's alone
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker "Dept X, Univ Y Lab Z", each its e-mail
+% status:  RED (P4cR2 ea6a435433) -> GREEN (P4cR2b)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker}
+\IEEEauthorblockA{Dept X, Univ Y \IEEEauthorblockA{Lab Z} Email: \{ann, bob\}@y.edu}}
+\maketitle
+Body.
+\end{document}

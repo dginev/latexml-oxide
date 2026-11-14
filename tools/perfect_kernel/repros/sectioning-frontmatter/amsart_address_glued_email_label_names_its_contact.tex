@@ -1,0 +1,21 @@
+% mechanism: an e-mail label glued to its address names the line's contact (frontmatter/classify/email_block_calls.rs
+%   `email_line_label`): `Email:zz@x.org` reads as the list `[zz@x.org]` through `email_addresses`' glued-label arm, and
+%   the label is split off when the whole line reads the same addresses as the rest behind it, so the address is the
+%   contact's content and the label its name, as the spaced `Email: zz@x.org` gives; a Kind step line whose entry the
+%   class gives no name (defs/frontmatter_api/kind.rs, `entry_line_label`'s label alone). Before GL1 the label was
+%   kept in the content, "Email: Email:zz@x.org" in HTML and a broken `mailto:Email:zz@x.org`
+% witness: 2206.00543 (amsart `\address{…\newline email:joonhyun@…}`), astro-ph0001190, hep-ph0411269, hep-ph9606235
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "ANN ABLE", "Text.", "Univ A, Town, Email:zz@x.org"
+% engines: rust int157a (d86f58e8e2) = <contact name="Email: " role="email">Email:zz@x.org</contact>
+% expect:  0 errors, 0 warnings; Ann Able: the address "Univ A, Town" and <contact name="Email: " role="email">
+%          zz@x.org</contact>
+% status:  RED (int157a) -> GREEN (GL1) — perfect_kernel_batchgl1::glued_label_names_an_address_line_contact
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ A, Town\\ Email:zz@x.org}
+\maketitle
+Text.
+\end{document}

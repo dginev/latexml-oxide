@@ -1,0 +1,36 @@
+% witness: w-art.cls's `\address[\inst{1}]{…}` (0910.5837, 1105.1753, quant-ph0606237); review rev94b r4 S1 (its probe
+%          `p/m/later`, capa.cls: `\author` appending to `\@author`)
+% oracle:  pdflatex 0 errors: "(2 ) Univ B, City", "3Lab C, Place", "(4 ) Lab D, Place", then "A Title", "Ann Able1
+%          and Bob Baker2 and Cy Cole3", the date, "Body."
+% engines: rust 94b r4 = 0 errors, 0 warnings: a mark no author had requested yet was in doubt at the call — every line
+%          the class's, in the body: Bob Baker and Cy Cole without their affiliations; 94a r7 (base): Bob Baker's and Cy
+%          Cole's, and "Lab D, Place" on a creator of no name
+% expect:  0 errors, 0 warnings; Bob Baker "Univ B, City", Cy Cole "Lab C, Place" (the later `\author` requests their
+%          marks), no copy of the two lines in the body; "(4) Lab D, Place" (requested by none) the class's line where
+%          it printed, no nameless creator; eager and --streaming the same
+% status:  RED (catalog, no guard). 94b r5-r6 kept the call in doubt and decided it at `\maketitle` (a replay, then a
+%          lift of the printed ink); every round of that path digested a line twice or moved it (review rev94b r4-r6),
+%          so 94b r7 removed it: a line in doubt is the class's at the call, digested once (`frontmatter_stores.rs`
+%          `class_contact`) — the three lines in the body, Bob Baker and Cy Cole without a contact (94b r4's output;
+%          OXIDIZED_DESIGN_DIVERGENCES #936, SYNC_STATUS row). No census paper takes this shape (300 setter census,
+%          cpc-hepnp 60, the 3,000 sample).
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{laterauth.cls}
+\ProvidesClass{laterauth}
+\LoadClass{article}
+\let\@author\@empty\renewcommand\author[2][]{\g@addto@macro\@author{#2 }}
+\newcommand\address[2][]{\par{\small\ifx\relax#1\relax\else(#1) \fi #2}\par}
+\def\affil#1{\par{\small #1}\par}
+\def\inst#1{\textsuperscript{#1}}
+\end{filecontents*}
+\documentclass{laterauth}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}}
+\address[\inst{2}]{Univ B, City}
+\affil{\inst{3}Lab C, Place}
+\address[\inst{4}]{Lab D, Place}
+\author{and Bob Baker\inst{2} and Cy Cole\inst{3}}
+\maketitle
+Body.
+\end{document}

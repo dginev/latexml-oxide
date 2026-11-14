@@ -1,0 +1,17 @@
+% mechanism: a call whose printed words the reading holds no place for, and of which it writes nothing, is written as
+%   queued, the queue digested as Perl's (`emit.rs` `emit_commands`, `Unwritten::AsQueued`): iopart's `\ead` with no
+%   address in its text was lost at `=2` ("they are lost", and the content check's count)
+% witness: 2112.14174 (brief CL7, C6)
+% oracle:  pdflatex (iopart.cls + iopart10.clo from 1707.02801's source) 0 errors; "E-mail: jborkowska astro.uni.torun.pl"
+% engines: rust off: an e-mail contact "jborkowska astro.uni.torun.pl"; rust =2 (int153y): none, 2 warnings
+% expect:  =2 as off: 0 errors, the contact kept, 1 warning (the call written as queued)
+% status:  RED (int153y) -> GREEN (perfect_kernel_batchcl7::a_call_the_reading_writes_nothing_of_is_written_as_queued)
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Justyna Borkowska$^{1}$ \& Boudewijn F. Roukema$^{1}$}
+\address{$^1$ Institute of Astronomy, Torun, Poland}
+\ead{jborkowska astro.uni.torun.pl}
+Body.
+\end{document}

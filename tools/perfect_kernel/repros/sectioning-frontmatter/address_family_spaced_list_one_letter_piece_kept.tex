@@ -1,0 +1,17 @@
+% A one-letter first part of a spaced list after an e-mail label (`E-mail: a, bob@x.org`): the spaced-list rule of
+% `address_runs` reads it as on base, so the line is not split into an affiliation "E-mail: a" plus the e-mail (review
+% rev103a2 B1, probe m8). Since 106a the whole line is addresses (the Kind step for an entry's address line, OD #966):
+% `bob@x.org` Bob Baker's, `a@x.org`, spelling no author, the block's — int130a/int133a kept the whole line as the
+% last author's affiliation, the imperfection this pinned.
+% witness: none (synthetic)
+% oracle:  pdflatex 0 errors: "Univ X / E-mail: a, bob@x.org"
+% engines: rust int130a/int133a = 0 errors, the whole line Bob Baker's affiliation; rust 103a r2 = Bob Baker's affiliation "E-mail: a" + bob@x.org
+% expect:  0 errors, 0 warnings; Ann Able: Univ X; Bob Baker: e-mail bob@x.org; the block: e-mail a@x.org
+% status:  RED (103a r2) -> GREEN (103a r3); re-pinned 106a
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}\author{Ann Able \and Bob Baker\\ Univ X\\ E-mail: a, bob@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

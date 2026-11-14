@@ -1,0 +1,14 @@
+% witness: 2408.01956, 2408.00368 (`\IEEEauthorblockN{Yong~Zeng,~\IEEEmembership{Senior Member, IEEE}, Shi~Jin,...}`:
+%          the author's own comma after each grade)
+% oracle:  pdflatex 0 errors (journal mode; conference mode prints no grades): "Huizhi Wang, Yong Zeng, Senior Member,
+%          IEEE, Shi Jin, Fellow, IEEE"
+% engines: rust 63k = three authors, the grades dropped; 63l r2 merged them into one author (merged_creators error)
+% expect:  0 errors; three authors, Yong Zeng's and Shi Jin's grades their membership contacts
+% status:  RED (63l r2) -> GREEN (63l)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Huizhi~Wang, Yong~Zeng,~\IEEEmembership{Senior Member, IEEE}, Shi~Jin,~\IEEEmembership{Fellow, IEEE}}
+\IEEEauthorblockA{Southeast University}}
+\maketitle
+\end{document}

@@ -1,0 +1,19 @@
+% witness: review of 65o (the number column, latex.ltx:15764): a row that reaches it and is ended by `\\` or the
+%          environment's end, where `\@@eqncr` (:15789-15795) finds `\@eqcnt` = 3
+% oracle:  pdflatex 3 errors, `Too many columns in eqnarray environment` (rows 1 and 2 of the eqnarray, row 2 of the
+%          eqnarray*)
+% engines: rust 65int2 = 3 x `Error:unexpected:&` (Extra alignment tab)
+% expect:  3 errors, `Error:unexpected:eqnarray Too many columns in eqnarray environment`; the empty fourth cells leave
+%          no `td`
+% status:  GREEN (65o)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+K &=& a + b &\\
+L &=& c + d &
+\end{eqnarray}
+\begin{eqnarray*}
+K &=& a + b &\cr
+L &=& c + d &
+\end{eqnarray*}
+\end{document}

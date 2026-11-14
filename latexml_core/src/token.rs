@@ -28,7 +28,12 @@ static CONTROLNAME: &[&str] = &[
 ];
 
 /// A Token category code, as in TeX
+///
+/// Two bytes (`#[repr(u16)]`), so that [`Token`] (`text` u32, `code`, `prov` u16) has no padding byte: with one, every
+/// move of a token on the gullet's read path (`Option<Token>`, `CheckedRead::Tok`, the `Result` slot) copied the pad
+/// and `prov` as a 3-byte blob, byte by byte (`token_layout_code_at_byte_4`).
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
+#[repr(u16)]
 pub enum Catcode {
   ESCAPE,
   BEGIN,
@@ -284,12 +289,26 @@ impl Catcode {
 ///     Token { text: arena::pin_static(" "), code: Catcode::SPACE}
 ///   });
 /// ```
+///
+/// `#[repr(C)]` pins the field order `text`, `code`, `prov` (`loc`): `code` stays at byte 4, where it sat before
+/// `prov` existed, and with a two-byte [`Catcode`] the struct has no padding (`prov` at 6). Rust's default layout put
+/// `prov` at 4 and `code` at 6, which made every move of a token through `Option<Token>`, `CheckedRead::Tok` and the
+/// read path's `Result` slot a 4-piece field-wise copy (`gullet::read_internal_token_checked`: +1.29 % instructions
+/// on an empty article; +1.14 % with `repr(C)` alone, the pad byte still copied apart; +0.65 % gap-free). The guard
+/// is `token_layout_code_at_byte_4`.
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Token {
   /// an arena id the character content for this token
   pub text: SymStr,
   /// a TeX catcode
   pub code: Catcode,
+  /// Out-of-band field provenance (`0` = none): the frontmatter field whose stored value this token
+  /// is a token of (the kernel `\title`/`\author` stamp their store, latexml_engine `\lx@field@mark`), so the
+  /// ink digested from it is known for that field's print. Not part of TeX's token: **excluded from `PartialEq`**
+  /// (`\ifx`, `\meaning`, `\pdfstrcmp`, xstring compare as pdflatex does), never written, never dumped. It sits in
+  /// what was the struct's padding: `Token` stays 8 bytes (`token_size_invariant`). OXIDIZED_DESIGN #715.
+  pub prov: u16,
   /// Origin handle into the per-conversion token-origin side arena (1-based;
   /// `0` = no recorded origin). Present only under the `token-locators` feature
   /// (the opt-in source-map precision build); `Token` stays 8 bytes otherwise.
@@ -330,22 +349,44 @@ impl PartialEq for Token {
   }
 }
 
+/// The comparison is reflexive (a token is equal to itself, a space to any space).
+impl Eq for Token {}
+
+/// Hashes what [`PartialEq`] compares: the catcode, and the text unless a space (every space is one), so that equal
+/// tokens hash alike (a set of the distinct tokens read: the frontmatter rehearsal's `\let`-copy scan).
+impl std::hash::Hash for Token {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.code.hash(state);
+    if self.code != Catcode::SPACE {
+      self.text.hash(state);
+    }
+  }
+}
+
 // Per-symbol memo for `Token::is_noexpand_family`, indexed by the symbol's
 // arena index: 0 = not yet computed, 1 = not in the family, 2 = in the family.
 // Sound because the arena is append-only (a symbol's text never changes);
 // MUST be cleared alongside `arena::reset()` (see
 // `reset_noexpand_family_memo`, called from `reset_thread_engine`) since a
-// reset renumbers symbols.
-thread_local! {
-  static NOEXPAND_FAMILY_MEMO: std::cell::RefCell<Vec<u8>> =
-    const { std::cell::RefCell::new(Vec::new()) };
-}
+// reset renumbers symbols. A symbol's index is its byte offset in the arena's
+// buffer (not a dense index), so the memo covers only the first
+// `NOEXPAND_MEMO_SPAN` bytes and a later symbol is checked directly: unbounded,
+// the memo grew with every byte interned, to 1.5 GB after a long pgf path
+// (tkz-grapheur), and in `cortex_worker`, which never resets the arena, with
+// the worker's whole lifetime. Ordinary papers' arenas are 8-21 MB, inside the
+// span, so for them the memo is as before. A map keyed by symbol bounds it
+// too, but costs +0.5 % instructions on typical papers (the 24-paper C2 set).
+#[thread_local]
+static NOEXPAND_FAMILY_MEMO: std::cell::RefCell<Vec<u8>> = std::cell::RefCell::new(Vec::new());
+/// The arena byte span the [`Token::is_noexpand_family`] memo covers (64 MiB).
+const NOEXPAND_MEMO_SPAN: usize = 1 << 26;
 
 /// Clear the [`Token::is_noexpand_family`] per-symbol memo. Companion to
 /// `arena::reset()` — symbol indices are reused after a reset, so stale
 /// entries would alias unrelated strings (same bug class as the REPORT-map
-/// fix, `7b64a48ad1`).
-pub fn reset_noexpand_family_memo() { NOEXPAND_FAMILY_MEMO.with(|m| m.borrow_mut().clear()); }
+/// fix, `7b64a48ad1`). The storage is freed, not only emptied: a `#[thread_local]` has no destructor, so what a
+/// reset keeps would outlive a thread that exits (the memo runs to megabytes, one byte per arena byte).
+pub fn reset_noexpand_family_memo() { *NOEXPAND_FAMILY_MEMO.borrow_mut() = Vec::new(); }
 
 /// Name of the bare no-op control sequence `\noexpand` collapses to, and the
 /// prefix of every member of the no-expand family. See [`Token::is_noexpand_family`].
@@ -366,6 +407,7 @@ pub fn noexpand_family(shadowed: &Token) -> Token {
   Token {
     text: arena::pin(text),
     code: Catcode::CS,
+    prov: 0,
     #[cfg(feature = "token-locators")]
     loc: 0,
   }
@@ -381,6 +423,7 @@ pub fn noexpand_family(shadowed: &Token) -> Token {
 pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("{"),
   code: Catcode::BEGIN,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -389,6 +432,7 @@ pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("}"),
   code: Catcode::END,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -397,6 +441,7 @@ pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("$"),
   code: Catcode::MATH,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -405,6 +450,7 @@ pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("&"),
   code: Catcode::ALIGN,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -413,6 +459,7 @@ pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("#"),
   code: Catcode::PARAM,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -421,6 +468,7 @@ pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("^"),
   code: Catcode::SUPER,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -429,6 +477,7 @@ pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("_"),
   code: Catcode::SUB,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -437,6 +486,7 @@ pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static(" "),
   code: Catcode::SPACE,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -445,6 +495,7 @@ pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\n"),
   code: Catcode::SPACE,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -453,6 +504,7 @@ pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\relax"),
   code: Catcode::CS,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -461,6 +513,7 @@ pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\expandafter"),
   code: Catcode::CS,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -469,6 +522,7 @@ pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\endcsname"),
   code: Catcode::CS,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -522,7 +576,7 @@ macro_rules! T_SUB(() => { *$crate::token::TOKEN_SUB });
 macro_rules! T_SPACE(() => { *$crate::token::TOKEN_SPACE };
 ($text:literal) => {
   Token { text: $crate::pin!($text), code: Catcode::SPACE,
-      #[cfg(feature = "token-locators")] loc: 0
+      prov: 0, #[cfg(feature = "token-locators")] loc: 0
     }
 });
 /// macro for a CR "\n" token
@@ -535,6 +589,7 @@ macro_rules! T_LETTER {
     Token {
       text: $crate::pin!($text),
       code: Catcode::LETTER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -543,6 +598,7 @@ macro_rules! T_LETTER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -555,6 +611,7 @@ macro_rules! T_OTHER {
     Token {
       text: $crate::pin!($text),
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -563,6 +620,7 @@ macro_rules! T_OTHER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -575,6 +633,7 @@ macro_rules! T_OTHER_CHAR {
     Token {
       text: $crate::common::arena::pin_char($text),
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -589,6 +648,7 @@ macro_rules! T_ACTIVE {
     Token {
       text: $crate::common::arena::pin(s),
       code: Catcode::ACTIVE,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -601,6 +661,7 @@ macro_rules! T_COMMENT {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -613,6 +674,7 @@ macro_rules! T_CS {
     $crate::token::Token {
       text: $crate::pin!($text),
       code: $crate::token::Catcode::CS,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -621,6 +683,7 @@ macro_rules! T_CS {
     $crate::token::Token {
       text: $crate::common::arena::pin($text),
       code: $crate::token::Catcode::CS,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -638,6 +701,7 @@ macro_rules! T_MARKER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -651,15 +715,26 @@ macro_rules! T_ARG {
     Token {
       text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::ARG,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
   };
 }
 
-/// Token constructor macro (defaults to OTHER code)
+/// Token constructor macro (defaults to OTHER code). `Token!(sym <SymStr>, <catcode>)` takes an
+/// already-interned symbol (a token's `text`, a `Stored::String`), without interning it again.
 #[macro_export]
 macro_rules! Token {
+  (sym $sym:expr_2021, $cc:expr_2021) => {
+    Token {
+      text: $sym,
+      code: $cc,
+      prov: 0,
+      #[cfg(feature = "token-locators")]
+      loc: 0,
+    }
+  };
   ($text:expr_2021) => {
     Token!($text, Catcode::OTHER)
   };
@@ -667,6 +742,7 @@ macro_rules! Token {
     Token {
       text: $crate::pin!($text),
       code: $cc,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -675,6 +751,7 @@ macro_rules! Token {
     Token {
       text: $crate::common::arena::pin($text),
       code: $cc,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -685,13 +762,17 @@ macro_rules! Token {
 #[macro_export]
 macro_rules! CharToken {
   ($c:expr_2021) => {
-    CharToken!($c, Catcode::OTHER)
+    CharToken!($c, $crate::token::Catcode::OTHER)
   };
-  ($c:expr_2021, $cc:expr_2021) => {{
-    let mut tmp = [0u8; 4];
-    let s = $c.encode_utf8(&mut tmp);
-    Token!(s, $cc)
-  }};
+  ($c:expr_2021, $cc:expr_2021) => {
+    $crate::token::Token {
+      text: $crate::common::arena::pin_char($c),
+      code: $cc,
+      prov: 0,
+      #[cfg(feature = "token-locators")]
+      loc: 0,
+    }
+  };
 }
 
 /// Explode a string into a list of tokens, all w/catcode OTHER (except space).
@@ -759,6 +840,7 @@ impl Default for Token {
     Token {
       text: arena::pin_static("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -767,12 +849,300 @@ impl Default for Token {
 
 ///======================================================================
 /// Accessors.
+/// The bits of a [`Token::prov`] below the field: the token's position in the field's stored value (saturating).
+pub const FIELD_PROV_POS_BITS: u16 = 14;
+/// The largest position a field's stamps take, cumulative per document (`\lx@field@mark`, `\lx@field@stamp`).
+pub const FIELD_PROV_POS_MASK: u16 = (1 << FIELD_PROV_POS_BITS) - 1;
+/// The author field (`2`) is the top bit alone, the id `3` being none: its positions take 15 bits, so a call's own
+/// positions (the frontmatter observer's rehearsal of one author block, positions per call) reach 32,767 — a block of
+/// 559 names past the 16,383 the stamps take (2204.09614, 2404.06718). The stamps' tokens below 16,384 read as before.
+pub const AUTHOR_PROV_POS_MASK: u16 = (1 << (FIELD_PROV_POS_BITS + 1)) - 1;
+const AUTHOR_PROV: u16 = 1 << (FIELD_PROV_POS_BITS + 1);
+/// The field provenance of the token at `pos` of field `field`'s stored value (`field` 1 or 2; `0` is no field).
+pub fn field_prov(field: u16, pos: usize) -> u16 {
+  if field == 2 {
+    AUTHOR_PROV | (pos.min(AUTHOR_PROV_POS_MASK as usize) as u16)
+  } else {
+    (field << FIELD_PROV_POS_BITS) | (pos.min(FIELD_PROV_POS_MASK as usize) as u16)
+  }
+}
+/// The field of a [`Token::prov`] (`0` = none).
+#[inline]
+pub fn field_prov_field(prov: u16) -> u16 {
+  if prov & AUTHOR_PROV != 0 {
+    2
+  } else {
+    prov >> FIELD_PROV_POS_BITS
+  }
+}
+/// The position in its field's stored value of a [`Token::prov`].
+#[inline]
+pub fn field_prov_pos(prov: u16) -> u16 {
+  if prov & AUTHOR_PROV != 0 {
+    prov & AUTHOR_PROV_POS_MASK
+  } else {
+    prov & FIELD_PROV_POS_MASK
+  }
+}
+
+/// The expansion of a token with a field provenance (`prov`, [`Token::prov`]) is that field's too: each of its tokens
+/// without a provenance of its own takes `prov` (an `\and` in `\@author` expands to ink of the author field). A no-op
+/// for `prov` 0, the case of every token outside a frontmatter field's store.
+#[inline]
+pub fn inherit_field_prov(prov: u16, expansion: &mut Tokens) {
+  if prov != 0 {
+    for t in expansion.unlist_mut() {
+      if t.prov == 0 {
+        t.prov = prov;
+      }
+    }
+  }
+}
+
+/// A cover of a field's stored value: the positions `start..end` (end exclusive) of one field (`field`, `0` = none)
+/// that an invocation consumed, its own position and its arguments. See [`field_cover_pending_merge`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct FieldCover {
+  /// the field (`1` title, `2` author; `0` = no cover)
+  pub field: u16,
+  /// the first position covered
+  pub start: u16,
+  /// one past the last position covered
+  pub end:   u16,
+}
+
+/// The cover of a field token's invocation that produced no box (a font switch, `\relax`, a macro's expansion still
+/// to be digested): the next box digested from that field's tokens within it takes it (a field's print covers its
+/// font switches and the arguments a macro or primitive consumed, OXIDIZED_DESIGN #715).
+#[thread_local]
+static FIELD_COVER_PENDING: std::cell::Cell<FieldCover> =
+  std::cell::Cell::new(FieldCover { field: 0, start: 0, end: 0 });
+
+/// Merge `cover` with the pending cover of a boxless invocation when they touch (the same field, `cover` starting
+/// inside or at the end of the pending one), clearing the pending cover either way: what a box digested from a field
+/// token covers of its stored value.
+pub fn field_cover_pending_merge(cover: FieldCover) -> FieldCover {
+  let pending = FIELD_COVER_PENDING.replace(FieldCover::default());
+  if pending.field == cover.field && pending.start <= cover.start && cover.start <= pending.end {
+    FieldCover {
+      field: cover.field,
+      start: pending.start,
+      end:   pending.end.max(cover.end),
+    }
+  } else {
+    cover
+  }
+}
+
+/// Leave `cover` pending for the next box of its field ([`field_cover_pending_merge`]), merged with the pending one
+/// it continues.
+pub fn field_cover_set_pending(cover: FieldCover) {
+  let merged = field_cover_pending_merge(cover);
+  FIELD_COVER_PENDING.set(merged);
+}
+
+/// One entry of the field ledger ([`field_ledger_push`]): the cover of a box digested from a field token, and whether
+/// the structure the print is set in took the box instead of the document absorbing it ([`field_ledger_take`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct FieldLedgerEntry {
+  /// what the box covers of its field's value
+  pub cover: FieldCover,
+  /// taken by an alignment the document shows: a `tabular` row's end marker (a value's `\\`), digested and consumed by
+  /// the alignment body, never absorbed, so no run of ink holds it (taken when the alignment's whatsit is absorbed,
+  /// core `document::FIELD_TAKEN_PROPERTY`)
+  pub taken: bool,
+}
+
+thread_local! {
+  /// The covers of the boxes digested from field tokens, in digestion order ([`field_ledger_push`]). What a run of ink
+  /// covers is the entries of the boxes it absorbed (core `Document::absorb`'s field runs keep their serials), and of
+  /// those an alignment took right after them ([`field_ledger_take`]); never an entry absorbed elsewhere (another run,
+  /// a formula) or never absorbed (an unused `\setbox`, `\sbox`, `{lrbox}`), OXIDIZED_DESIGN #715.
+  static FIELD_LEDGER: std::cell::RefCell<Vec<FieldLedgerEntry>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+}
+/// Set once the frontmatter placement settled the field ink (core `Document::settle_field_ink`): the ledger records
+/// nothing more, and nothing digested after it carries a field provenance property.
+#[thread_local]
+static FIELD_LEDGER_SETTLED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+/// The most covers the ledger keeps (a full ledger records no more: a print digested past it is no whole print).
+const FIELD_LEDGER_CAP: usize = 1 << 16;
+
+/// Is the field ledger recording ([`field_ledger_settle`])? The stomach records a field token's box only while it is.
+#[inline]
+pub fn field_ledger_live() -> bool { !FIELD_LEDGER_SETTLED.get() }
+
+/// Stop recording field covers: the frontmatter placement settled the field ink (no run is marked after it).
+pub fn field_ledger_settle() { FIELD_LEDGER_SETTLED.set(true); }
+
+/// Record the cover of a box digested from a field token (the field ledger); its serial, the box's `fieldSerial`.
+pub fn field_ledger_push(cover: FieldCover) -> Option<u32> {
+  if FIELD_LEDGER_SETTLED.get() {
+    return None;
+  }
+  FIELD_LEDGER.with(|ledger| {
+    let mut ledger = ledger.borrow_mut();
+    if ledger.len() >= FIELD_LEDGER_CAP {
+      return None;
+    }
+    ledger.push(FieldLedgerEntry { cover, taken: false });
+    u32::try_from(ledger.len() - 1).ok()
+  })
+}
+
+/// Note that the structure a print is set in took the box recorded with `serial` (an alignment's row-end marker, a
+/// value's `\\`): no run absorbs it, and the run its row ends may cover it ([`FieldLedgerEntry::taken`]).
+pub fn field_ledger_take(serial: u32) {
+  FIELD_LEDGER.with(|ledger| {
+    if let Some(entry) = ledger.borrow_mut().get_mut(serial as usize) {
+      entry.taken = true;
+    }
+  });
+}
+
+/// The positions of field `field`'s value covered by the ledger entries with the serials in `serials` (inclusive
+/// `first..=last` intervals): sorted disjoint `start..end` intervals, merged where they touch.
+pub fn field_ledger_cover(field: u16, serials: &[(u32, u32)]) -> Vec<(u16, u16)> {
+  let mut cover: Vec<(u16, u16)> = FIELD_LEDGER.with(|ledger| {
+    let ledger = ledger.borrow();
+    let mut cover = Vec::new();
+    for &(first, last) in serials {
+      let (first, last) = (first as usize, last as usize);
+      if first > last || first >= ledger.len() {
+        continue;
+      }
+      cover.extend(
+        ledger[first..=last.min(ledger.len() - 1)]
+          .iter()
+          .filter(|e| e.cover.field == field)
+          .map(|e| (e.cover.start, e.cover.end.max(e.cover.start + 1))),
+      );
+    }
+    cover
+  });
+  cover.sort_unstable();
+  let mut merged: Vec<(u16, u16)> = Vec::with_capacity(cover.len());
+  for (start, end) in cover {
+    match merged.last_mut() {
+      Some((_, e)) if start <= *e => *e = (*e).max(end),
+      _ => merged.push((start, end)),
+    }
+  }
+  merged
+}
+
+/// The entry the field ledger recorded with `serial` ([`field_ledger_push`]).
+pub fn field_ledger_entry(serial: u32) -> Option<FieldLedgerEntry> {
+  FIELD_LEDGER.with(|ledger| ledger.borrow().get(serial as usize).copied())
+}
+
+/// A stretch of digestion the document never keeps (a rehearsal of a frontmatter field's value, latexml_engine's
+/// frontmatter observer), over which the field ledger records ([`field_ledger_live`], even once the placement settled
+/// it) and after which it is as it was: the entries pushed meanwhile are dropped, the pending cover and the settled
+/// flag put back, and the gate of field stamping (`document::field_prov_stamped`: a `\title` the rehearsal
+/// stamps) as it was (on drop). Its serials are read while it is open ([`field_ledger_entry`]); a print the document
+/// makes later is numbered as if it had never run.
+///
+/// The boxes the stomach stamped with a field provenance meanwhile (`fieldProv`/`fieldSerial`, `invoke_token`) are
+/// unstamped on drop as well (`field_stamp_noted`): a box the run did not make — a register's, `\copy`/`\usebox`
+/// handing back the stored box itself — would otherwise keep the run's serial, which the ledger no longer holds, and
+/// the document's own print of it, finding it stamped, would not stamp it again (FM S2a.2 r9: `\usebox{\ORCIDicon}` in
+/// an `\author`, wrapped in an `ltx:text` with an id under the observer's census switch, since deleted: 2405.14627, 2603.26792; repro
+/// `sectioning-frontmatter/observer_rehearsal_leaves_a_used_box_unchanged`).
+pub struct FieldLedgerScope {
+  len:     usize,
+  pending: FieldCover,
+  settled: bool,
+  stamped: bool,
+  /// The enclosing scope's stamp journal (none outside every scope).
+  outer:   Option<Vec<Digested>>,
+}
+
+/// What runs on each field token's invocation while a rehearsal takes notes on what its boxes do not hold (the frontmatter
+/// observer's `field_notes`, in the engine): `Token::prov`'s test in the stomach, then this. All the core knows of them, so
+/// no line of theirs sits among the code the core's hot path is inlined from (Z01: the same lines here cost a text document
+/// 0.17 % of `instructions:u` with no call made, a reshuffle of the crate's codegen units).
+pub type FieldNotesHook = fn(&Token, FieldCover, FieldInvocation<'_>);
+
+/// What a field token's invocation did ([`FieldNotesHook`]), now that it read what it reads.
+#[derive(Clone, Copy)]
+pub enum FieldInvocation<'a> {
+  /// the stomach digested it, to these boxes
+  Digested(&'a [Digested]),
+  /// the gullet expanded it, to these tokens, about to go on the input
+  Expanded(&'a Tokens),
+}
+#[thread_local]
+static FIELD_NOTES_HOOK: std::cell::Cell<Option<FieldNotesHook>> = std::cell::Cell::new(None);
+
+/// Set (or, with `None`, clear) the hook [`FieldNotesHook`] names.
+pub fn set_field_notes_hook(hook: Option<FieldNotesHook>) { FIELD_NOTES_HOOK.set(hook); }
+
+/// The hook [`FieldNotesHook`] names, while one is set.
+#[inline]
+pub fn field_notes_hook() -> Option<FieldNotesHook> { FIELD_NOTES_HOOK.get() }
+
+/// The pending cover of a boxless invocation ([`field_cover_pending_merge`]).
+pub fn field_cover_pending() -> FieldCover { FIELD_COVER_PENDING.get() }
+
+thread_local! {
+  /// The boxes stamped with a field provenance while a [`FieldLedgerScope`] is open (none outside one).
+  static FIELD_STAMPED_BOXES: std::cell::RefCell<Option<Vec<Digested>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+/// Note that the stomach stamped `digested` with a field provenance (`fieldProv`/`fieldSerial`), which had none: a
+/// [`FieldLedgerScope`] open now takes the stamp off again when it closes.
+pub(crate) fn field_stamp_noted(digested: &Digested) {
+  FIELD_STAMPED_BOXES.with(|boxes| {
+    if let Some(boxes) = boxes.borrow_mut().as_mut() {
+      boxes.push(digested.clone());
+    }
+  });
+}
+
+impl FieldLedgerScope {
+  /// Open the scope: the ledger records from here.
+  pub fn begin() -> Self {
+    let len = FIELD_LEDGER.with(|ledger| ledger.borrow().len());
+    FieldLedgerScope {
+      len,
+      pending: FIELD_COVER_PENDING.replace(FieldCover::default()),
+      settled: FIELD_LEDGER_SETTLED.replace(false),
+      stamped: crate::document::field_prov_stamped(),
+      outer: FIELD_STAMPED_BOXES.with(|boxes| boxes.replace(Some(Vec::new()))),
+    }
+  }
+}
+
+impl Drop for FieldLedgerScope {
+  fn drop(&mut self) {
+    FIELD_LEDGER.with(|ledger| ledger.borrow_mut().truncate(self.len));
+    FIELD_COVER_PENDING.set(self.pending);
+    FIELD_LEDGER_SETTLED.set(self.settled);
+    crate::document::restore_field_prov_stamped(self.stamped);
+    let stamped = FIELD_STAMPED_BOXES.with(|boxes| boxes.replace(self.outer.take()));
+    for digested in stamped.into_iter().flatten() {
+      digested.try_remove_property(crate::document::FIELD_PROV_PROPERTY);
+      digested.try_remove_property(crate::document::FIELD_SERIAL_PROPERTY);
+    }
+  }
+}
+
+/// Clear the pending field cover and the ledger, and record again (conversion start).
+pub fn reset_field_cover_pending() {
+  FIELD_COVER_PENDING.set(FieldCover::default());
+  FIELD_LEDGER.with(|ledger| ledger.borrow_mut().clear());
+  FIELD_LEDGER_SETTLED.set(false);
+}
+
 impl Token {
   /// simple Token constructor, wrapping over text and catcode
   pub fn new<T: AsRef<str>>(text: T, code: Catcode) -> Self {
     Token {
       text: arena::pin(text),
       code,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -874,44 +1244,66 @@ impl Token {
   /// fallback). The bare `\special_relax` (no suffix) is the no-shadow case
   /// (`\dont_expand` at end-of-input). `\x01` is never valid in a CS name or as
   /// an active char, so the encoding is unambiguous.
+  #[inline]
   pub fn is_noexpand_family(&self) -> bool {
-    if self.code != Catcode::CS {
-      return false;
-    }
+    self.code == Catcode::CS && self.names_noexpand_family()
+  }
+
+  /// [`Self::is_noexpand_family`] of a control sequence.
+  fn names_noexpand_family(&self) -> bool {
     // Per-symbol memo: this runs ×2 per CS token via `state::meaning_key`
     // (read_x_token decides whether to expand, invoke_token how to invoke),
     // and the string-prefix probe was ~2% of digest self-time (2026-08-23
     // audit). A symbol's text never changes (append-only arena), so the
-    // answer is memoized by symbol index: 0 = unknown, 1 = no, 2 = yes.
-    // Cleared with the arena in `reset_thread_engine` (symbol indices are
-    // reused after `arena::reset`).
+    // answer is memoized by symbol index: 0 = unknown, 1 = no, 2 = yes, for
+    // the indices below `NOEXPAND_MEMO_SPAN`. Cleared with the arena in
+    // `reset_thread_engine` (symbol indices are reused after `arena::reset`).
     use string_interner::Symbol;
     let idx = self.text.to_usize();
-    let cached = NOEXPAND_FAMILY_MEMO.with(|m| m.borrow().get(idx).copied().unwrap_or(0));
-    if cached != 0 {
-      return cached == 2;
+    if idx < NOEXPAND_MEMO_SPAN {
+      let cached = NOEXPAND_FAMILY_MEMO.borrow().get(idx).copied().unwrap_or(0);
+      if cached != 0 {
+        return cached == 2;
+      }
     }
+    self.read_noexpand_family(idx)
+  }
+
+  /// The first look at a symbol: its text decides, and the answer goes in the memo. Kept out of line, as
+  /// [`Self::noexpand_shadowed`] runs for every token of an argument and must stay small enough to inline its test.
+  #[cold]
+  #[inline(never)]
+  fn read_noexpand_family(&self, idx: usize) -> bool {
     let is_family = self.with_str(|s| {
       s.starts_with(NOEXPAND_PREFIX)
         && (s.len() == NOEXPAND_PREFIX.len() || s.as_bytes()[NOEXPAND_PREFIX.len()] == NOEXPAND_SEP)
     });
-    NOEXPAND_FAMILY_MEMO.with(|m| {
-      let mut memo = m.borrow_mut();
+    if idx < NOEXPAND_MEMO_SPAN {
+      let mut memo = NOEXPAND_FAMILY_MEMO.borrow_mut();
       if memo.len() <= idx {
         memo.resize(idx + 1, 0);
       }
       memo[idx] = if is_family { 2 } else { 1 };
-    });
+    }
     is_family
   }
 
   /// Recover the shadowed token from a `\special_relax`-family token, if it
   /// shadows one (i.e. not the bare `\special_relax`). The shadowed token is a
   /// CS (text begins `\`) or an active char.
+  #[inline]
   pub fn noexpand_shadowed(&self) -> Option<Token> {
-    if self.code != Catcode::CS {
-      return None;
+    if self.is_noexpand_family() {
+      self.shadowed_by_noexpand()
+    } else {
+      None
     }
+  }
+
+  /// [`Self::noexpand_shadowed`] of a member of the family.
+  #[cold]
+  #[inline(never)]
+  fn shadowed_by_noexpand(&self) -> Option<Token> {
     // Compute the owned shadowed name + its catcode INSIDE the `with_str`
     // borrow, then `arena::pin` it OUTSIDE. `with_str`'s `s` (hence `rest`)
     // aliases the arena's append-only buffer; a re-entrant `arena::pin(rest)`
@@ -931,16 +1323,28 @@ impl Token {
     Some(Token {
       text: arena::pin(name),
       code,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     })
   }
 
   /// Return the character code of  character part of the token, or 256 if it is a control
-  /// sequence
+  /// sequence. A SPACE token's code is always 32: tex.web §289 `space_token =
+  /// 2^8·spacer + " "` and §349 (`mid_line + car_ret` → `cur_chr := " "`) — an
+  /// end-of-line becomes a space with character code 32, whatever produced it.
+  /// This token keeps its `"\n"` TEXT (Perl's data model, `PRESERVE_NEWLINES`,
+  /// the `tex=` reversion) but Perl's `getCharcode` returned `ord("\n")` = 10
+  /// for it (Token.pm:243), so `\if` compared an end-of-line space unequal to a
+  /// typed one: stringstrings' `\if\BlankSpace#1` took the wrong branch on a
+  /// `\@for` item that was a lone newline and desynchronised the conditional
+  /// stack (`Extra \else`), then tikzviolinplots' KDE loop ran away
+  /// (batch 56gc, OXIDIZED_DESIGN #260).
   pub fn get_charcode(&self) -> u32 {
     if self.code == Catcode::CS {
       256
+    } else if self.code == Catcode::SPACE {
+      32
     } else {
       self.with_str(|text| {
         if let Some(c) = text.chars().next() {
@@ -949,6 +1353,16 @@ impl Token {
           0
         }
       })
+    }
+  }
+
+  /// How far this token moves a brace count: 1 for a begin-group, -1 for an end-group, else 0. Brace balance is a property of
+  /// a run of tokens, no reading of what they spell.
+  pub fn group_step(&self) -> i32 {
+    match self.get_catcode() {
+      Catcode::BEGIN => 1,
+      Catcode::END => -1,
+      _ => 0,
     }
   }
 
@@ -1001,6 +1415,7 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -1009,6 +1424,7 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::CS,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -1130,9 +1546,14 @@ impl From<&str> for Token {
       Some('\\') => T_CS!(text),
       Some('%') => T_COMMENT!(text),
       _ => {
-        if text.chars().all(|c| c.is_alphabetic()) {
-          T_LETTER!(text)
-        } else if text.chars().all(|c| c.is_whitespace()) {
+        // tex.web §464 `str_toks`: a string becomes tokens with catcode
+        // OTHER, except the space character (catcode SPACE). No catcode is
+        // ever inferred from the character class — U+00A0/U+0085 are Unicode
+        // whitespace but under the pdfTeX byte mouth (K10) they are the bytes
+        // 0xA0/0x85 of 素 or 銀紅, and letters are letters only through a
+        // mouth's catcode table. The punctuation arms above are the callers'
+        // alias contract (`{`, `}`, `\cs`…), not a catcode guess.
+        if text.chars().all(|c| c.is_ascii_whitespace()) {
           T_SPACE!()
         } else {
           T_OTHER!(text)
@@ -1226,6 +1647,32 @@ pub fn clear_token_origins() { TOKEN_ORIGINS.with(|o| o.borrow_mut().clear()); }
 mod tests {
   use super::*;
 
+  /// The `is_noexpand_family` memo is indexed by arena byte offset, so it covers
+  /// only the first `NOEXPAND_MEMO_SPAN` bytes: a control sequence interned after
+  /// more text than that is checked directly and the memo stays within the span
+  /// (unbounded, it grew to the arena's size, 1.5 GB after tkz-grapheur's long
+  /// pgf path). The answers are the same on both sides of the span, and on a
+  /// memo hit.
+  #[test]
+  fn noexpand_memo_stays_within_its_span() {
+    std::thread::spawn(|| {
+      let early = T_CS!(NOEXPAND_PREFIX);
+      assert!(early.is_noexpand_family());
+      let _bulk = arena::pin("x".repeat(NOEXPAND_MEMO_SPAN + (1 << 20)));
+      let late_family = T_CS!(format!("{NOEXPAND_PREFIX}{}\\foo", NOEXPAND_SEP as char));
+      let late_other = T_CS!("\\noexpandmemoprobe");
+      assert!(early.is_noexpand_family());
+      assert!(late_family.is_noexpand_family());
+      assert!(!late_other.is_noexpand_family());
+      let len = NOEXPAND_FAMILY_MEMO.borrow().len();
+      assert!(len <= NOEXPAND_MEMO_SPAN, "memo grew to {len} bytes");
+      reset_noexpand_family_memo();
+      arena::reset();
+    })
+    .join()
+    .unwrap();
+  }
+
   /// `Token` size invariant (docs/performance/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
   /// default (`SymStr` + `Catcode`), 12 only under the `token-locators`
   /// precision build (+ the `u32` origin handle). Guards the corpus/parity/
@@ -1236,13 +1683,68 @@ mod tests {
     assert_eq!(
       size_of::<Token>(),
       8,
-      "default Token must stay 8 bytes (SymStr + Catcode)"
+      "default Token must stay 8 bytes (SymStr + Catcode + prov)"
     );
     #[cfg(feature = "token-locators")]
     assert_eq!(
       std::mem::size_of::<Token>(),
       12,
       "token-locators Token is 8 + a u32 origin handle"
+    );
+  }
+
+  /// The field ledger (OXIDIZED_DESIGN #715): an entry an alignment took is marked so, a run's cover is the entries of
+  /// the serials it holds (never an entry between them it does not), and once the frontmatter placement settled the
+  /// field ink nothing more is recorded (fms1 round-3 review finding 5).
+  #[test]
+  fn field_ledger_take_cover_and_settle() {
+    reset_field_cover_pending();
+    let cover = |start, end| FieldCover { field: 1, start, end };
+    let a = field_ledger_push(cover(0, 5)).unwrap();
+    let unused = field_ledger_push(cover(5, 9)).unwrap();
+    let marker = field_ledger_push(cover(9, 10)).unwrap();
+    field_ledger_take(marker);
+    assert!(field_ledger_entry(marker).is_some_and(|e| e.taken));
+    assert!(field_ledger_entry(unused).is_some_and(|e| !e.taken));
+    assert_eq!(field_ledger_cover(1, &[(a, a)]), vec![(0, 5)]);
+    assert_eq!(field_ledger_cover(1, &[(a, a), (marker, marker)]), vec![
+      (0, 5),
+      (9, 10)
+    ]);
+    assert!(field_ledger_live());
+    field_ledger_settle();
+    assert!(!field_ledger_live());
+    assert_eq!(field_ledger_push(cover(10, 11)), None);
+    reset_field_cover_pending();
+    assert!(field_ledger_live());
+    assert_eq!(field_ledger_entry(a), None);
+  }
+
+  /// `#[repr(C)]` and a two-byte `Catcode` keep `Token` gap-free with `code` at byte 4 (`text` u32 at 0, `code` u16
+  /// at 4, `prov` u16 at 6, `loc` at 8 under token-locators). Why: under Rust's default layout `prov` took byte 4 and
+  /// `code` moved to byte 6, and a pad byte stayed, so every token move on the gullet's read path became a field-wise
+  /// copy (+1.29 % instructions on an empty article, +3.27 % on 2311.18489; gap-free +0.65 % / +1.66 %, fms1 round 3).
+  /// OXIDIZED_DESIGN #715.
+  #[test]
+  fn token_layout_code_at_byte_4() {
+    assert_eq!(std::mem::offset_of!(Token, text), 0);
+    assert_eq!(
+      std::mem::offset_of!(Token, code),
+      4,
+      "Token.code must sit at byte 4 (read-path codegen)"
+    );
+    assert_eq!(
+      size_of::<Catcode>(),
+      2,
+      "Catcode fills bytes 4-5: no pad byte before prov"
+    );
+    assert_eq!(std::mem::offset_of!(Token, prov), 6);
+    #[cfg(feature = "token-locators")]
+    assert_eq!(std::mem::offset_of!(Token, loc), 8);
+    assert_eq!(
+      size_of::<Option<Token>>(),
+      size_of::<Token>(),
+      "Option<Token> keeps its niche"
     );
   }
 
@@ -1421,5 +1923,19 @@ mod tests {
     // ARG catcode prepends # in Display.
     let t = Token::new("1", Catcode::ARG);
     assert_eq!(format!("{t}"), "#1");
+  }
+}
+
+#[cfg(test)]
+mod charcode_tests {
+  use super::{Catcode, Token};
+
+  /// tex.web §289/§349: every space token has character code 32, an
+  /// end-of-line space included (its text stays "\n").
+  #[test]
+  fn end_of_line_space_has_character_code_32() {
+    assert_eq!(Token::new("\n", Catcode::SPACE).get_charcode(), 32);
+    assert_eq!(Token::new(" ", Catcode::SPACE).get_charcode(), 32);
+    assert_eq!(Token::new("A", Catcode::LETTER).get_charcode(), 65);
   }
 }

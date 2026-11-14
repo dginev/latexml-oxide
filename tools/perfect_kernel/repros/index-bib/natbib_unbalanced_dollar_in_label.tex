@@ -1,0 +1,22 @@
+% witness: 1208.0605 1208.0597 1205.3745 1508.02141 2110.01464 2110.01484 (unbalanced `$` in a natbib \bibitem label)
+% oracle: pdflatex (clean, 2 runs: natbib.sty:822 \NAT@wrout only writes the label to the .aux); engine: pdflatex
+% expect: 0 errors; the full-authors tag holds Mantz and a closed formula; refnum/key stay upright text; the revtex
+%   item's authors tag is "Sasaki" (its stray `$` dropped, no `$$`); "AFTERWORDS survive."
+% mechanism: the binding typesets the label pieces as tags (natbib_sty.rs `\NAT@@wrout`); the piece's unclosed `$`
+%   opened math that ran past the \bibitem ("\endgroup Attempt to close non-boxing group"). Perl the same
+%   (natbib.sty.ltxml:609-629). Fixed: natbib_sty.rs `\NAT@wrout` balances each piece's math shifts within its
+%   groups (KPE #670).
+% status:  GREEN
+\documentclass{article}
+\usepackage{natbib}
+\providecommand\citenamefont[1]{#1}
+\begin{document}
+Text \citep{mae08,sas11}.
+\begin{thebibliography}{1}
+\bibitem[{{Mantz} {et~al.}(2008){Mantz}, $\, {Ebeling}, \& {Rapetti}}]{mae08}
+{Mantz}, A., $\, \!${Allen}, S.~W. 2008, MNRAS, 387, 1179
+\bibitem[{\citenamefont {Sasaki$}(2011)}]{sas11}
+M.~Sasaki et al., Opt. Express 19, 10387 (2011)
+\end{thebibliography}
+After the bibliography, AFTERWORDS survive.
+\end{document}

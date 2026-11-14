@@ -1,0 +1,44 @@
+% mechanism: what the native `\__fp_parse:n` does not handle with certainty runs the raw macro over the untouched argument:
+%   a tuple, nan, rand, a word it does not know, a flag or a message (their Errors stay exactly as many), a primitive, a
+%   conditional or `\csname` in the argument (no side effect before the raw run), an active character.
+% witness: review of batch P2, no arXiv paper
+% oracle:  pdflatex: the same text, its 36 errors each a message of l3fp (the invalid operations, the unknown words, the ignored symbols) or a TeX error of the same shape
+% engines: rust: raw and native byte-identical, Error count equal
+% expect:  Errors as many as the raw macro's; the values below
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\NewDocumentCommand \T { m } { \fp_to_tl:n {#1} ;~ }
+\fp_new_variable:n { xx }
+\fp_set_variable:nn { xx } { 3 }
+\fp_new_function:n { dbl }
+\fp_set_function:nnn { dbl } { y } { 2 * y }
+\ExplSyntaxOff
+\newcount\mycount \mycount=7
+\newdimen\mydim \mydim=1.5pt
+\newskip\myskip \myskip=2pt plus 1pt
+\newbox\mybox \setbox\mybox=\hbox{x}
+\newtoks\mytoks \mytoks={12}
+\def\cond{\ifnum1<2 3\else 4\fi}
+\def\viacs{\csname undefinedbefore\endcsname}
+\def\usedigit#1{#1}
+\def\delimited#1;{#1}
+\protected\def\prot{5}
+\catcode`\~=\active \def~{1}
+\begin{document}
+Tuples: \T{e1} \T{1?0?4:5:6} \T{(1,2)} \T{(1,2)+(3,4)} \T{2*(1,2)} \T{()} \T{(1,)} \T{max((1,2))}
+
+Nan: \T{nan} \T{nan+1} \T{sin(nan)} \T{max(nan,1)} \T{NaN} \T{1<nan} \T{nan?1:2}
+
+Flags: \T{1/0} \T{0/0} \T{inf-inf} \T{0*inf} \T{sqrt(-1)} \T{ln(0)} \T{ln(-1)} \T{asin(2)} \T{acos(-2)} \T{sin(inf)} \T{cot(0)} \T{csc(0)}
+\T{logb(0)} \T{fact(-1)} \T{fact(1.5)} \T{fact(4000)} \T{(-8)^0.5} \T{0^-1} \T{1e10001} \T{1e-10001} \T{1e9999*1e9999} \T{1e-9999*1e-9999} \T{exp(1e6)} \T{exp(-1e6)}
+\T{ln(1)} \T{atan(0)} \T{atan(0,1)} \T{round(1,0.5)} \T{asec(0.5)} \T{acsc(0.5)}
+
+Words: \T{rand()*0} \T{randint(1,1)} \T{xx} \T{xx+1} \T{dbl(2)} \T{Inf} \T{INFINITY} \T{1em*0} \T{1ex*0}
+
+Tokens: \T{\mycount} \T{\mycount e2} \T{\mydim} \T{\mydim e2} \T{\myskip} \T{\wd\mybox*0} \T{\the\mycount} \T{\number\mycount} \T{\numexpr 2+3\relax}
+\T{\dimexpr 2pt+3pt\relax} \T{\the\mytoks} \T{\cond} \T{\viacs 1} \T{\expandafter\usedigit\expandafter{\number\mycount}} \T{\delimited 3;} \T{\prot} \T{~} \T{2~} \T{{1}+2} \T{1+{2}}
+\T{pi\usedigit 2} \T{pi 2} \T{(2)3*2} \T{\mycount 2} \T{\usedigit{4}} \T{\usedigit 5} \T{1 \usedigit 2} \T{\fp_eval:n{1+1}} \T{\fpeval{1+1}}
+
+\expandafter\ifx\csname undefinedbefore\endcsname\relax relax\else undefined\fi.
+\end{document}

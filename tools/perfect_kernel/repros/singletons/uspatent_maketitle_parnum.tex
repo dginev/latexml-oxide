@@ -1,0 +1,14 @@
+% witness: uspatent/PatentApplication (uspatent.cls:188 \renewcommand{\maketitle}{\patentTitlePage\patentStart})
+% oracle:  pdflatex 0 errors
+% engines: rust=Error:undefined:\theparnum + Error:undefined:counter:parnum perl=n/a (2026-09-06)
+% expect:  0 errors; body has [0001] First paragraph.
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: uspatent.cls redefines \maketitle to run \patentStart, which defines counter `parnum`.
+%   Kernel \maketitle was locked, dropping the class redefinition and leaving `parnum` undefined.
+\documentclass{uspatent}
+\begin{document}
+\title{Test Patent}
+\author{Test Inventor}
+\maketitle
+\patentParagraph First paragraph.
+\end{document}

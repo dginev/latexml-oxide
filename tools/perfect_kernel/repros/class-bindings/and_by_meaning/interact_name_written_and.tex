@@ -1,0 +1,15 @@
+% mechanism: a written `\and` at interact_cls.rs `\author`: an `\and` in a `\name` prints the class word "and " (interact.cls:266): today's output, pinned before P2-5
+% witness: P2P plan step P2-5 (no census paper holds a macro-held or `\let` separator)
+% oracle:  pdflatex with 1603.08785's interact.cls (TL 2025, -no-shell-escape): "Ann Able and Bob Baker" over "Univ A" (1 `!` line on every row, the literal one too: the copy's, not the shape's)
+% engines: perl not run; int158a: as expected (pin)
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ A)
+% status:  GREEN (int158a and P25; guard perfect_kernel_batchp25)
+% preload: ar5iv.sty
+\documentclass{interact}
+
+\title{T}
+\author{\name{Ann Able \and Bob Baker}\affil{Univ A}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,8 @@
+% witness: \usepackage{tabu}; \everyrow{\hline} (tabu.sty user cmd, header comment L20)
+% oracle:  pdflatex 0 errors ; engines rust=2 (b54x)
+% expect:  0 errors; <ltx:tabular> with cells
+% status:  GREEN (batch 54, perfect_kernel_batch54::tabu_row_surface_is_covered)
+\documentclass{article}\usepackage{tabu}
+\begin{document}
+\begin{tabu}{ll}\everyrow{\hline}a & b \\ c & d \\\end{tabu}
+\end{document}

@@ -1,0 +1,29 @@
+% A raw class's in-place `\address` lines holding the kernel's `\and` as a `\let` copy (`\nx`) or held in a macro of the
+% document's (`\both`): read by meaning (`argument_separators`, OD #995, P2-6), each is the kernel separator, as the
+% written one is (`inplace_contact_kernel_and_line_stays_the_classs`), so each call is the class's line
+% (`frontmatter_stores.rs` `kernel_and_list`). Read by spelling before, neither held an `\and`: one API contact
+% "Univ A, Town and Univ B, City", the word invented, the content check's Warning counting it.
+% witness: synthetic (the P2 plan's macro-held and `\let`-copied separators; no census paper holds one)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two lines "Univ A, Town   Univ B, City", each in two columns
+% engines: rust int158a = 0 errors, 1 warning (the content check's "and"), Ann Able's address "Univ A, Town and Univ B,
+%          City"; P26 = 0 errors, 0 warnings, the class's two lines; perl = no raw class load (OmniBus `\address`)
+% expect:  0 errors, 0 warnings; Ann Able with no contact; two body paragraphs, each the class's tabular
+% status:  RED (int158a) -> GREEN (P26; guard
+%          perfect_kernel_batchp26::an_in_place_line_is_the_classs_where_a_separator_means_the_kernels)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipand.cls}
+\ProvidesClass{ipand}
+\LoadClass{article}
+\newcommand\address[1]{\par{\small\begin{tabular}[t]{c}#1\end{tabular}}\par}
+\end{filecontents*}
+\documentclass{ipand}
+\let\nx\and
+\newcommand\both{Univ A, Town \and Univ B, City}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Town \nx Univ B, City}
+\address{\both}
+\maketitle
+Body.
+\end{document}

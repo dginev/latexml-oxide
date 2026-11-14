@@ -1,0 +1,24 @@
+% status:  GREEN (97a)
+% witness: shape of 2410.11607 (dev20k, BESIII revtex4-1 one-`\author` list) with one name's mark missing; the census
+%          witnesses of the reported merge are in OXIDIZED_DESIGN_DIVERGENCES #943.
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; prints "A. Able1 , B. in der Baker, C. Cole1",
+%          "(XYZ Collaboration)", then the institute — three people.
+% engines: rust 95b r3 = ONE creator `A. Able, B. in der Baker, C. Cole<break/>(XYZ Collaboration)`, 0 errors (silent);
+%          Perl 0.8.8 = one creator (revtex4_support.sty.ltxml:46), silent. Rust 97a: the marked-list reading
+%          (`marked_names`, names_split.rs) needs EVERY piece marked, so a mark that does not cover `B.~in der Baker`
+%          leaves the line to the cautious shape test — one creator, as today — and the two marked names it holds are the
+%          merge its marks contradict: one `Error:frontmatter:merged_creators` ("One author holds 2 names": the marked
+%          names, a lower bound of the three).
+%          Without the collaboration line the observer's writer re-parts the names into three creators (the writer's
+%          creators carry no merge count: no Error).
+% expect:  1 error (`frontmatter:merged_creators`, 2 names), 0 warnings; one creator holding the three names and the
+%          institute. Guard `perfect_kernel_batch97a::marked_list_with_an_unmarked_name_is_a_reported_merge`.
+\documentclass[aps,prd,twocolumn]{revtex4-1}
+\begin{document}
+\title{A Title}
+\author{A.~Able$^{1}$, B.~in der Baker, C.~Cole$^{1}$\\
+(XYZ Collaboration)\\
+$^{1}$ Institute of One}
+\maketitle
+Body text.
+\end{document}

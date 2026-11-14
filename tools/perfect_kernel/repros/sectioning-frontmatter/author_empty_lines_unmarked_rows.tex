@@ -1,0 +1,14 @@
+% witness: 2602.23649; the r7 re-review of batch 77p (finding 6, probes e2, e3)
+% oracle:  pdflatex 0 errors: three rows of names, a ~~~~ line, the institution after an empty \textsuperscript{}, a
+%          ~~~~ line, the project URL
+% engines: rust 77p r10 = 0 errors; two empty affiliations on every name
+% expect:  0 errors, 0 warnings; Univ A on every name, no empty contact; the URL a URL contact of the block
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able, Bob Baker, \\ Cat Cole, Dan Dorn \\ Eve Eads, Fay Fox \\ ~~~~\\ \textsuperscript{}Univ A \\ ~~~~\\ \url{https://x.org/proj}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

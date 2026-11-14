@@ -1,0 +1,17 @@
+% witness: 1203.4144 (revtex4: `\begin{thebibliography}` + a bare `\bibitem` line, then `\bibitem{Moffatt} Dormy E., …`)
+% oracle:  pdflatex 0 errors, "Cite [1] and [2]. [1] Entry A. [2] Entry B.": revtex4's `{thebibliography}[1]`
+%          (revtex4.cls:5549) takes the bare `\bibitem` as its argument, the widest label
+% engines: rust int79b = entry a lost (the bare `\bibitem` took `\bibitem` as its key; `<ltx:bibitem> isn't allowed in
+%          <ltx:tag>`), `\cite{a}` a missing citation; Perl the same (`thebibliography` reads only a braced argument)
+% expect:  0 errors, 0 warnings; bibitems a and b, each cited
+% status:  RED (int79b) -> GREEN (79g)
+% preload: ar5iv.sty
+\documentclass{revtex4}
+\begin{document}
+Cite \cite{a} and \cite{b}.
+\begin{thebibliography}
+\bibitem
+\bibitem{a} Entry A.
+\bibitem{b} Entry B.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,16 @@
+% witness: latex-doc-ptr (latex-doc-ptr.sty:69-88 redefines \theendnotes raw, :86 \input{\jobname.ent})
+% oracle: pdflatex clean (endnotes writes the .ent and reads it back)
+% engines: pdflatex; Perl LaTeXML fails earlier (undefined \@enotes)
+% expect: 0 errors; one inline ltx:note role="endnote"
+% status: GREEN (batch 56bm, 2026-09-09)
+% mechanism: endnotes.sty:309/323 — \endnote opens \jobname.ent (\if@enotesopen\else
+%   \@openenotes\fi) before writing; our inline \lx@note never opened it, so the raw
+%   \theendnotes' \input reported missing_file. The binding keeps the invariant (empty file).
+\documentclass{article}
+\usepackage{endnotes}
+\let\footnote=\endnote
+\makeatletter\def\theendnotes{\immediate\closeout\@enotes \input{\jobname.ent}}\makeatother
+\begin{document}
+Text\footnote{a note}.
+\theendnotes
+\end{document}

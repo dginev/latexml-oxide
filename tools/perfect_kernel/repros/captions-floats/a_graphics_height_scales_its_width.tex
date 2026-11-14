@@ -1,0 +1,23 @@
+% witness: 2209.01559 Fig 6 (eight `\subfigure`s of `height=0.21\linewidth` heatmaps in a two-column column under
+%          geometry; 4+4 in the PDF)
+% oracle:  pdflatex 0 errors, 0 overfull (\columnwidth 247.9pt, \textwidth 505.9pt); 3+1
+% engines: rust int67a = one row of four (the heights at Perl's 505.9pt `\linewidth`); 78x r1 = 3+1 (the height key
+%          counted as a width, review rev78x finding 1); Perl 0.8.8 one panel per row
+% expect:  0 errors, 0 warnings; one `ltx:break`, before the fourth sub-figure
+% status:  RED (int67a) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: an aspect-keeping graphic's stated height
+%          scales its natural width, `declare_panel_width`'s height keys)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\centering
+\subfigure[A]{\includegraphics[height=0.21\linewidth]{example-image-a}}
+\subfigure[B]{\includegraphics[height=0.21\linewidth]{example-image-a}}
+\subfigure[C]{\includegraphics[height=0.21\linewidth]{example-image-a}}
+\subfigure[D]{\includegraphics[height=0.21\linewidth]{example-image-a}}
+\caption{Heights.}
+\end{figure}
+\end{document}

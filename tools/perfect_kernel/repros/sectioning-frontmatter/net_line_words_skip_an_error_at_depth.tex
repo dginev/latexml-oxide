@@ -1,0 +1,28 @@
+% A raw class's store only its own `\@author` prints, below the unclaimed-text net's floor, whose undefined font switch
+% stands inside the store's bold group: the `ltx:ERROR` it leaves sits in the note line's `ltx:text`, not at the line's
+% top (insert.rs `net_note_lines`, `text_without_errors`). An error's text is no printed word: the store's Warning names
+% "lunarfund" alone, not the switch's name.
+% witness: 2601.14329 (physics_report.sty:400-404 `{\songti\zihao{-4}#2}`, ctex's `\songti` undefined here; review
+%          rev105a B1)
+% oracle:  pdflatex 1 error (the undefined `\songti`, on purpose): "A Title", "Ann Able", "Lunarfund", "Text."
+% engines: rust 105a r1 = 1 error, 1 warning naming "lunarfund songti"; perl = 1 error (the raw class is not loaded:
+%          OmniBus), the word lost
+% expect:  1 error (undefined:\songti), 0 warnings: "Lunarfund" kept as the creator's note, the ERROR's text no word of
+%          it (ERR2: the content check's Warning counting "songti", which the guard pinned, is gone)
+% status:  RED (105a r1) -> GREEN (105a r2) -> re-expected (ERR2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{neterr.cls}
+\ProvidesClass{neterr}\LoadClass{article}
+\def\@anames{}\def\@xa{}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\xa[1]{\gdef\@xa{\textbf{#1\songti}}}
+\renewcommand\@author{\@anames\\\@xa}
+\end{filecontents*}
+\documentclass{neterr}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\xa{Lunarfund}
+\maketitle
+Text.
+\end{document}

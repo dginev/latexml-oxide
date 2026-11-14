@@ -1,0 +1,22 @@
+% A `block`'s preamble formats the block's rows (blkarray.sty:868-922 `\BA@beginblock`, a `\noalign` that parses the
+% block's columns; `\BA@col@use` keys each column's `>{}`/`<{}` by the block, :838-839) until `\end{block}` puts the
+% blockarray's back. The binding gobbled the block preamble, so `>{$\footnotesize}c<{$}` lost its `$` wrappers and the
+% cell's own `$x_{1}$` was text in the display. The delimiters (`(cc)`) are no columns.
+% witness: 1706.05431, 2207.06508, 2210.16910
+% oracle:  pdflatex 0 errors
+% engines: rust int29c = 2 x `Error:unexpected:_ Script _ can only appear in math mode`; perl has no blkarray binding
+% expect:  0 errors, 0 warnings; the first row's cells are subscripted math; the second block's row is 0, 1
+% status:  RED (int29c) -> GREEN (77k)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{blkarray}
+\begin{document}
+\begin{equation}
+  \begin{blockarray}{cc}
+    \begin{block}{*{2}{>{$\footnotesize}c<{$}}}
+      $x_{1}$ & $y_{2}$ \\
+    \end{block}
+    \begin{block}{(cc)} 0 & 1 \\ \end{block}
+  \end{blockarray}
+\end{equation}
+\end{document}

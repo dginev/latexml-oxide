@@ -1,0 +1,25 @@
+% witness: 77n S5 — a `{footnote}` environment after each name, the comma between the names written inside the
+%          first: `\author{Velibor \v{Z}eli\begin{footnote}{Linn\'{e} FLOW Centre, …},\end{footnote} Du\v{s}an
+%          Zorica\begin{footnote} {Mathematical Institute, …}\end{footnote}}` (1703.02032)
+% oracle:  pdflatex 0 errors: "Ann Able∗, Bob Baker†" (`\begin{footnote}` runs `\footnote`, whose argument is the
+%          braced text; the comma prints after the mark), the two notes below
+% engines: rust int31a = one creator "Ann Able, Bob Baker" with both notes (+1 Error:frontmatter:merged_creators): the
+%          environment read as one unit hid the comma; Perl (latexml 0.8.8) splits at that comma, the environment's
+%          `\begin` and `\end` in different authors: 2 creators with their notes and 6 Errors ("Attempt to end mode
+%          restricted_horizontal", "Attempt to close boxing group")
+% expect:  0 errors, 0 warnings; 2 creators, each with its own note
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able%
+\begin{footnote}
+{Univ A, City},
+\end{footnote}
+Bob Baker%
+\begin{footnote} {Univ B, Town}
+\end{footnote}}
+\maketitle
+x
+\end{document}

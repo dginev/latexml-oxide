@@ -1,0 +1,14 @@
+% mechanism: the later author's recall held in a document's macro (`\recalluni` = `\footnoterecall{uni}`): the read of
+%   the printing call's counter is found one level into the macro's body (`content::reads_definition`), so the block
+%   is written as Perl's `\lx@add@authors` splits it, in order, and Bob Two's mark reads the counter
+% witness: synthetic (the one-level sibling of footnoterecall_three_authors_spaced_remember)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One ∗", "Bob Two∗"; footnote ∗ The University
+% engines: rust e6a6c93a18 0 errors, 2 warnings (the note's plain text, "Missing number"), Bob Two's mark empty
+% expect:  0 errors, 1 warning (the decline); Ann One with the note, Bob Two the mark ∗
+% status:  RED (e6a6c93a18) -> GREEN (perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand{\footnoteremember}[2]{ \footnote{#2} \newcounter{#1} \setcounter{#1}{\value{footnote}} }
+\newcommand{\footnoterecall}[1]{\footnotemark[\value{#1}]}
+\newcommand{\recalluni}{\footnoterecall{uni}}
+\title{T}\author{Ann One\footnoteremember{uni}{The University} \and Bob Two\recalluni}
+\begin{document}\maketitle Body.\end{document}

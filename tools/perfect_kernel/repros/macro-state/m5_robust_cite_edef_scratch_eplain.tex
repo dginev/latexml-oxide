@@ -1,0 +1,15 @@
+% witness: math0308041, math0612670, 0705.2148, 0802.3843, 1207.1752, 1401.4197 (eplain.tex:346-348 btxmac `\edef\cite{\the\catcode`@}` + `\let\@oldatcatcode=\cite`; :666 `\catcode`@ = \@oldatcatcode`; :721 `\def\@Fornoop#1\@@#2#3{}`)
+% oracle: pdflatex clean (TL 2025, 0 errors): "[11] and 11knuth."
+% engines: rust base 67m1-rel: Info:ignore:\cite, Warning:expected:<number> Missing number (`@` becomes catcode 0), Fatal:ParamSpec "Parameters for \@ not in order" — the kernel `\cite` is a robust binding (`\protect \cite␣`, sect11.rs) whose 0-parameter wrapper did not own its calls, so the scratch value was refused; Perl's `\cite` is not locked: 0 errors, "[11] and 11knuth."
+% expect: 0 errors; "[11] and " then the real citation: a robust binding is judged by its inner `\cite␣` (user ruling 2026-10-15, OXIDIZED_DESIGN #500), so the value is the meaning for `\let` and the braced call keeps the binding
+% status: RED (base 67m1) -> GREEN (67n)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\makeatletter
+\edef\cite{\the\catcode`@}\let\x=\cite
+\catcode`@=\x\relax
+\def\@Fornoop#1\@@#2#3{}
+[\the\catcode`@] and \cite{knuth}.
+\begin{thebibliography}{9}\bibitem{knuth} D. Knuth, TeXbook.\end{thebibliography}
+\end{document}

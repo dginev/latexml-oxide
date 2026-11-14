@@ -1,0 +1,23 @@
+% witness: review rev92a_r4 S1 (probe d3): amsart's `\thanks` e-mail call of two addresses before every `\author`
+% oracle:  pdflatex: amsart.cls:516 keeps `\thanks` in `\thankses`, run at `\maketitle`, and `\email` (:508)
+%          appends to `\addresses`: "Email address: p@x.org, q@y.org" prints after University Y, City
+% engines: perl 0.8.8 = 0 errors, 0 warnings (no preload), the addresses lost (the `ltx:pubnote` holds
+%          "Contact: "); rust int120a = "p@x.org, q@y.org" on a nameless creator; rust 92a r4 = the same XML, the
+%          shadow p@x.org on Ann Able and q@y.org on Bob Baker (owner:order), the writer declined
+% expect:  0 errors, 0 warnings; no live author is current at the call, so the whole call is the block's
+%          (api:document-note owner:block), one call never parted by order: today's XML, the writer "same" (the
+%          page's Bob Baker deferred with amsart_thanks_before_every_author_email)
+% status:  RED (92a r4) -> GREEN (92a r5)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\thanks{Contact: \email{p@x.org, q@y.org}}
+\author{Ann Able}
+\address{University X, Town}
+\author{Bob Baker}
+\address{University Y, City}
+\maketitle
+Text.
+\end{document}

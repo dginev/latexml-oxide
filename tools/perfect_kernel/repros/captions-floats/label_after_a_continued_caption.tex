@@ -1,0 +1,17 @@
+% A `\label` right after a caption names that caption's number (`\@currentlabel`, set by its `\refstepcounter`). In a
+% continued float with two captions, or a `\phantomcaption` then a `\caption`, the labels all land on the float
+% element, which carries the last step's tags, so `\ref{b}` reads the second caption's number. Older than 58h (m58g the
+% same); found in the 58h review.
+% witness: none (synthesized; the 58h review, rev58h4).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; "Refs: 1 1 2 3.".
+% engines: rust 58h: "Refs: 1 2 2 3." (HTML).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\begin{figure}\caption{A}\label{a}\end{figure}
+\begin{figure}\ContinuedFloat\caption{B}\label{b}\caption{C}\label{c}\end{figure}
+\begin{figure}\caption{D}\label{d}\end{figure}
+Refs: \ref{a} \ref{b} \ref{c} \ref{d}.
+\end{document}

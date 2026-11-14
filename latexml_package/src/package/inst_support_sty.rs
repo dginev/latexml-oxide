@@ -1,7 +1,23 @@
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// inst_support: an `\inst` after a comma is the name's before it. It owns the `\author` of OmniBus, which makes `\alignauthor` a no-op
+/// (OmniBus.cls.ltxml:76) that parts the columns of what the class stands in for (sig-alternate.cls:283, sigchi.cls), as nothing
+/// printed tells: its column break.
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "inst_support",
+  binding: "inst_support.sty",
+  inst_after_comma: true,
+  cite: "Perl inst_support.sty.ltxml:33-35; OD #807 (2401.16957)",
+  block_breaks: &[("\\alignauthor", FmBreakKind::Column)],
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: inst_support.sty.ltxml (PR #2767)
   // This bit of code supports the \inst style institution markup
   // used by several document classes and styles [aa, llncs, sv]
@@ -23,16 +39,31 @@ LoadDefinitions!({
   // (shared upstream bug; witness arXiv:2605.00004, whose pdflatex PDF lists all
   // four authors). Surpass-Perl (OXIDIZED_DESIGN #53):
   //   * accept the optional `[marks]` so `[` is never mistaken for the name,
-  //   * take the name from #2 and split it on \and/\And/comma as before,
+  //   * take the name from #2, the whole list one `\lx@add@author@split` call the reading cuts at its `\and`s (the
+  //     `Sep(And)` events the rehearsal digests: a macro-held one too, which Perl's split by spelling missed; P2-1,
+  //     OD #993), then each piece at its commas, " and " and " \& " (`R. Braun\inst{1} and W. B. Burton\inst{2}`,
+  //     astro-ph9810433; 63e),
   //   * ACCUMULATE across calls — drop the per-call `\lx@clear@creators`, which
   //     is a no-op on the first call anyway, so single-`\author` classes are
-  //     unaffected (and aa/llncs/sv define their own `\author` regardless).
+  //     unaffected. (llncs, sv and aa define their own `\author` — aa's the kernel's
+  //     replacing one aa.cls keeps, OXIDIZED_DESIGN #922. Restoring Perl's clear
+  //     here (92b) changed 162 of 1,305 OmniBus papers with two or more `\author`
+  //     calls, most of them stacking classes reached through OmniBus — achemso,
+  //     autart, pasj00, lipics, the AMS `-l` classes, oup, a subfile of a revtex
+  //     main —, so the clear stays dropped until each binding says its class's:
+  //     OXIDIZED_DESIGN #920.)
   // The `[marks]` (author↔affiliation label) are dropped, matching Perl's own
   // handling; wiring them to the affiliation annotation is a separate follow-up.
   DefMacro!("\\author[]{}",
-    "\\lx@splitting{\\lx@add@author}{\\and\\And,}{#2}");
+    "\\lx@add@author@split{#2}\\lx@author@trailing");
+  // \institute{list}: one `labelseq=affiliation` contact call per institute (Perl L36-38 splits by spelling at
+  // `\and`/`\And`), cut at the kernel's `\and` by meaning as well — a macro holding only the separator, a `\let` copy
+  // where the document renewed `\and` — which the spelling missed, so a piece holding an `\email` is one call of its
+  // own, not one call the emitter writes whole for every author (Option C P2-2, OXIDIZED_DESIGN_DIVERGENCES #995;
+  // `\lx@splitting@by@meaning`, the cut eptcs's cells share). A separator the spelling cut keeps its cut whatever it
+  // means (a renewed `\and`); one a macro holds together with institutes stays in its piece, which the reading cuts.
   DefMacro!("\\institute{}",
-    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
+    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting@by@meaning{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
   DefMacro!("\\inst{}", "\\lx@request@frontmatter@annotation[affiliation]{#1}");
 
   // \and variants — Perl L41-45

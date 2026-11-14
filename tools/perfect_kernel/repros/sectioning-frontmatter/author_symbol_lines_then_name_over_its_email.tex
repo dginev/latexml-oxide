@@ -1,0 +1,13 @@
+% witness: the rev77y2 re-review (finding 4, probe k15)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; Cat Cole, then her
+%          address ccole@x.edu
+% engines: rust 77y r2 = 0 errors; "Cat Cole" an affiliation of the shared creator (int38b the same; 77y r1 an author)
+% expect:  0 errors, 0 warnings; three authors, Univ A on Ann Able, Univ B on Bob Baker, the address on Cat Cole
+% status:  RED (77y r2) -> GREEN (77y r3)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ \texttt{ccole@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

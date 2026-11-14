@@ -1,0 +1,22 @@
+% mechanism: multirow.sty:174-177 sets the text between struts, `\hbox{\strut#6\strut}`: a one-argument author macro as
+%   the whole text takes the closing `\strut`; the binding's `\hbox{\multirowsetup #2}` (Perl's the same) let it take
+%   the box's `}`, and the rest of the table ran in the box
+% witness: 2507.07731 (`\newcommand{\instructblip}[1]{…}`, `\multirow{5}{*}{\instructblip}`)
+% oracle:  pdflatex 0 errors: "InstructBLIP" spanning two rows beside "a" / "b"; "A = 0 x / y" (0 bold, two rows)
+% engines: rust 67int17b = Error:unexpected:\noalign + 3 more Errors and a Warning; Perl 0.8.8 the same shape
+%   (KNOWN_PERL_ERRORS #888)
+% expect:  0 errors; a rowspan=2 cell holding InstructBLIP; in the `array`, the formula's tex= holds no strut rule
+%   (2501.19081: the kernel `\strut` reverted as `\vrule height=…` there)
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{multirow,amsmath}
+\newcommand{\ib}[1]{InstructBLIP}
+\begin{document}
+\begin{tabular}{ll}
+\multirow{2}{*}{\ib} & a \\
+ & b \\
+\hline
+\end{tabular}
+\[ A = \begin{array}{cc} \multirow{2}{*}{$\mathbf{0}$} & x \\ & y \end{array} \]
+\end{document}

@@ -1,0 +1,16 @@
+% mechanism: a name's mark inside a box that also holds a space (`\mbox{ \,$^{1}$}`): the affiliations now carry their marks
+%   and owners (P4cR1's `at_own_level`), but the mark on the NAME is lost with no Warning (the `\hbox to 0pt{$^1$\hss}`
+%   sibling loses it too, but counted: "a name its events don't spell")
+% witness: synthetic (revP4cR1 pre-existing)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Lee 1 and Bob Ray 2"
+% engines: P4b2b and P4cR1: `<personname>Ann Lee</personname>` (no mark), 0 W on P4cR1
+% expect:  0 errors; each name with its printed mark (or the loss counted)
+% status:  RED (P4b2b, P4cR1) — moves: post-merge (with the P4b4 printed-marks rendering)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Lee\mbox{ \,$^{1}$} and Bob Ray\mbox{ \,$^{2}$}}
+\IEEEauthorblockA{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}}
+\maketitle
+Body.
+\end{document}

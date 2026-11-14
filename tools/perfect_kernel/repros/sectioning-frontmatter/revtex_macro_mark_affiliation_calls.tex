@@ -1,0 +1,20 @@
+% mechanism: Option C P4b: REVTeX's `\affiliation` asks whether a label leads each call (`leads_with_label`, digested);
+%   a document macro printing the mark (`\newcommand\ua{$^{1}$}`) leads it as `$^{1}$` does
+% witness: synthetic (the census's author_user_mark_macro feature; hep-ph0301204's `\edef\MSU{$^{1}$ }` lines)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1Univ A, Town A / 2Univ B, Town B"
+% engines: P4bbase and P4b: the creators below (byte-identical: the observer's reading already labelled the entries)
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::marks_lead_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\newcommand\ua{$^{1}$}
+\newcommand\ub{$^{2}$}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\affiliation{\ua Univ A, Town A}
+\affiliation{\ub Univ B, Town B}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

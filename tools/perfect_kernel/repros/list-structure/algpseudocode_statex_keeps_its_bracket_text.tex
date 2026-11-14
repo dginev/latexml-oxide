@@ -1,0 +1,20 @@
+% witness: synthetic (63j review r2: `\Statex` = `\item[]`, algorithmicx.sty:632; a line's own text may open with "[")
+% oracle:  pdflatex 0 errors: "Require: data", "[Phase one] begins" (unnumbered), "1: x", "a]b c", "Ensure: out", "2: y"
+% engines: rust 63i = every line numbered 1-6, Require/Ensure and the \item labels lost; 63j r2 read "[Phase one]" as
+%          the \Statex line's label; Perl numbers every line
+% expect:  0 errors; labelled lines tagged by their labels (a "]" inside a braced one kept), the \Statex line untagged
+%          with its text whole, the counter stepped only by \State
+% status:  RED (63i, 63j r2) -> GREEN (63j)
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\begin{document}
+\begin{algorithmic}[1]
+\Require data
+\Statex [Phase one] begins
+\State x
+\item[{a]b}] c
+\Ensure out
+\State y
+\end{algorithmic}
+\end{document}

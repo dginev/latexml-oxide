@@ -1,0 +1,34 @@
+% A colspec naming a column type tabularray does not know is an error (tabularray.sty:3389-3410,
+% "Unknown Column type S!": siunitx's S without \UseTblrLibrary{siunitx}), reported for the first such type
+% of the colspec, where tabularray stops reading columns (the rest, which it typesets as stray text, is
+% dropped: `{lzr}` is `l`, and in a repeat the first copy's columns before it, counted once: `*{3}{lz}` is
+% one `l`, not three — review 5 reported two extra alignment tabs in math); the table is still typeset — never with the key
+% list around the colspec as the template (`hlines, vlines, colspec={…}` gave a `p` the width `e`: calc
+% "e invalid" and 17 warnings), nor with the colspec as the kernel's template (its "Unrecognized tabular
+% template" warnings on top of the error, `{zz}`).
+% witness: 57cp review (kl_nolib.tex), review 3 (NIT 11), review 5 (colz.tex). Guard: perfect_kernel_batch57::tabularray_unknown_column_type.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 5 errors: "Unknown Column type S!", "Unknown Column type z!" (four times).
+% engines: rust 57co2: calc "e invalid" + 17 warnings, no tabularray error; 57cp3: `{zz}` 5 warnings, 2 errors;
+%          57cp5: `*{3}{lz}` in math 2 "Extra alignment tab" errors.
+% expect:  5 errors, 0 warnings; the cells Head, Head, 111, 2.1 in two columns, then a, b, then a, b, c (twice),
+%          then 1, 2, 3 in math.
+\documentclass{article}
+\usepackage{calc,siunitx,tabularray}
+\begin{document}
+\begin{tblr}{
+  hlines, vlines,
+  colspec={S[table-format=3.2]S[table-format=3.2]}
+}
+ {Head} & {Head} \\
+ 111 & 2.1 \\
+\end{tblr}
+
+\begin{tblr}{zz} a & b \\ \end{tblr}
+
+\begin{tblr}{lzr} a & b & c \\ \end{tblr}
+
+\begin{tblr}{*{2}{lz}r} a & b & c \\ \end{tblr}
+
+$\begin{tblr}{*{3}{lz}} 1 & 2 & 3 \\ \end{tblr}$
+\end{document}

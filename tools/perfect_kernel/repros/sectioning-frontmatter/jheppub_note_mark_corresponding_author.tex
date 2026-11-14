@@ -1,0 +1,26 @@
+% mechanism: jheppub.sty:84-89 `\newcommand\note[2][]`, the optional argument the mark the note's text prints under:
+%   `\note[*]{Corresponding author.}` in Bob Baker's `\author` is his note, his name whole, and marks him as the
+%   corresponding author, so the one `\emailAdd` address left over is his (`marked_corresponding_author`)
+% witness: 2606.26596 ("Jia-Jun Wu*]Corresponding authors" and a note "[" before), 1510.03434, 2404.00867; rev78f2
+%          probe s7
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,a Bob
+%          Bakera,∗ and Cat Colea", "a Univ A", "E-mail: zq77@x.org", the footnote "* Corresponding author."
+% engines: rust 78f r2 = the name "Bob Baker*]Corresponding author" and a note "[" (the binding's one-argument
+%          `\note`, Perl's jheppub.sty.ltxml:39, KNOWN_PERL_ERRORS #1033), zq77@ his; int47a and perl: that name,
+%          zq77@ Ann Able's
+% expect:  0 errors, 0 warnings; Bob Baker with the note "Corresponding author." and zq77@
+% status:  RED (78f r2) -> GREEN (78f r3)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able,}
+\author[a,*]{Bob Baker\note[*]{Corresponding author.}}
+\author[a]{and Cat Cole}
+\affiliation[a]{Univ A}
+\emailAdd{zq77@x.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

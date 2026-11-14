@@ -1,0 +1,18 @@
+% mechanism: the counter-case of `ieee_ordinal_name_line_before_shared_block`: a bare run before the block's
+%   `\IEEEauthorblockA` led by an ordinal is a name line only where a names block leads with one (the template's
+%   convention, ieeetran_cls.rs `wrap_bare_author_block_text` `ordinal_names`); here an address line, kept an affiliation
+% witness: synthetic (P4cR2's sibling sweep: without the gate "3rd Floor, Bldg 2" was an invented creator)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able", "3rd Floor, Bldg 2", "School A", "Town A"
+% engines: P4b2: as expected; P4cR2 without the names gate: a second creator "3 rd Floor, Bldg 2"
+% expect:  0 errors, 2 warnings (the content check's pair for the ordinal in an affiliation, "3" missing and "3rd"
+%   extra, the base's: the words are kept); one creator, Ann Able, "3 rd Floor, Bldg 2" and the School block hers
+% status:  GREEN (P4cR2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able} 3\textsuperscript{rd} Floor, Bldg 2
+\IEEEauthorblockA{\textit{School A} \\ Town A}}
+\maketitle
+Body.
+\end{document}

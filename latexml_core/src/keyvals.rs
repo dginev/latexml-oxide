@@ -7,17 +7,18 @@ use rustc_hash::FxHashMap as HashMap;
 use super::keyval::{has_keyval, keyval_get, keyval_qname};
 use crate::{
   BoxOps, Digested, NO_PROPERTIES,
+  binding::def::dialect::def_macro,
   common::{
-    arena::SymHashMap,
+    arena::{self, SymHashMap},
     error::{emit_warn, *},
     font::Font,
     object::Object,
     store::Stored,
   },
-  definition::argument::ArgWrap,
+  definition::{ExpansionBody, argument::ArgWrap, expandable::ExpandableOptions},
   document::Document,
   gullet::{self, ExpansionLevel},
-  state,
+  state::{self, Scope},
   token::{Catcode, Token},
   tokens::Tokens,
 };
@@ -31,6 +32,16 @@ struct KVData {
   keysets:        Vec<String>,
   digested_value: Option<Digested>,
 }
+
+thread_local! {
+  /// The (prefix, key, keysets) of each unknown key reported in this conversion, each reported once.
+  static SEEN_MISSING: std::cell::RefCell<rustc_hash::FxHashSet<(String, String, String)>> =
+    std::cell::RefCell::default();
+}
+
+/// Forget the unknown keys reported: a conversion reports its own (`initialize_report`, as Perl's `$$state{status} = {}`
+/// per conversion, LaTeXML.pm:232), not only those a persistent worker's earlier paper did not (ST3).
+pub fn reset_unknown_keys_reported() { SEEN_MISSING.with_borrow_mut(|seen| seen.clear()); }
 
 #[allow(dead_code)] // TODO: remove when KeyVals is fully implemented
 #[derive(Debug, Clone)]
@@ -51,6 +62,9 @@ pub struct KeyVals {
   cached_pairs:         Vec<(String, ArgWrap)>,
   cached_hash:          HashMap<String, Vec<ArgWrap>>,
   cached_hash_digested: HashMap<String, Vec<Digested>>,
+  /// The tokens each typed length value states (`width=0.48\textwidth`), in the order given, kept under
+  /// `parameter::KEEP_STATED_LENGTHS` ([`Self::stated_entry`]).
+  stated:               Vec<(String, Tokens)>,
 }
 
 impl Default for KeyVals {
@@ -68,6 +82,7 @@ impl Default for KeyVals {
       cached_pairs:         Vec::new(),
       cached_hash:          HashMap::default(),
       cached_hash_digested: HashMap::default(),
+      stated:               Vec::new(),
     }
   }
 }
@@ -217,15 +232,14 @@ impl KeyVals {
       hook_missing,
     } = options;
     let prefix = prefix.unwrap_or_else(|| String::from("KV"));
-    // Perl KeyVals.pm #2777 (fdc8bf91, 2026-03-27):
-    // filter empty strings from the keyset list. Split("," , ",pstricks")
-    // (e.g. \pst@famlist accumulates as ",pstricks") yields ["", "pstricks"];
-    // the empty keyset caused keyval_qname("psset","","ArrowInside") to
-    // collide with raw \def\psset@@ArrowInside (a delimited-argument helper)
-    // and emit spurious "Missing argument" errors. Hardening here matches
-    // the Perl fix regardless of how keysets was constructed at the call
-    // site.
-    keysets.retain(|k| !k.is_empty());
+    // The EMPTY family is a family (xkeyval.tex:83-88): pst-xkey.tex:53-57
+    // accumulates `\pst@famlist` as ",pstricks", so every `\psset` searches
+    // "" (pstricks.tex:808-810 `precode`/`postcode`/`exchange`, pst-node.tex's
+    // `Xnodesep` family) before "pstricks". Perl KeyVals.pm:52 drops the empty
+    // entries (its `keyval_qname` doubled the `@` and collided with pstricks'
+    // delimited `\psset@@…` helpers; `keyval_qname` now uses xkeyval's header
+    // rule instead) — KNOWN_PERL_ERRORS #212, DIVERGENCES #219. Only an
+    // ABSENT list falls back to `_anonymous_`.
     if keysets.is_empty() {
       keysets = vec![String::from("_anonymous_")];
     }
@@ -267,18 +281,17 @@ impl KeyVals {
         // maxWarnings limits; our rate-limit is per (prefix,key,keysets)
         // and unbounded in count, so the first occurrence is always
         // visible but repeats are silently dropped.
-        type SeenSet = rustc_hash::FxHashSet<(String, String, String)>;
-        thread_local! {
-          static SEEN_MISSING: std::cell::RefCell<SeenSet> =
-            std::cell::RefCell::new(SeenSet::default());
-        }
         let all_joined = allkeysets.join(",");
+        // (a speculative digestion's diagnostics go with it: what it sees is not seen, or the document's own Warning goes unsaid)
         let is_new = SEEN_MISSING.with(|cell| {
-          cell
-            .borrow_mut()
-            .insert((prefix.clone(), key.to_string(), all_joined.clone()))
+          let seen = (prefix.clone(), key.to_string(), all_joined.clone());
+          if gullet::in_speculative_digestion() {
+            !cell.borrow().contains(&seen)
+          } else {
+            cell.borrow_mut().insert(seen)
+          }
         });
-        if is_new {
+        if is_new && !(prefix == "KV" && unknown_keyval_keys_ignored()) {
           // Intentional divergence from Perl (KeyVals.pm L97 uses Info).
           // An unknown KeyVal key in `\setkeys` (non-starred) is the
           // package binding admitting it doesn't recognise an option
@@ -348,26 +361,77 @@ impl KeyVals {
     gullet::skip_spaces()?;
 
     let mut last_token = None;
-    while let Some(token) = gullet::read_x_token(None, false, None)? {
+    // Real keyval reads each comma item as a delimited macro argument
+    // (keyval.sty `\KV@do#1,`, tex.web §392): the KEY is taken UNEXPANDED and
+    // a `{…}` inside it is opaque. Perl's readKeyWordFrom (KeyVals.pm:273-286)
+    // and this port expanded while scanning and ended the key at the first
+    // `}`/`,`/`=` — so an enumitem shortlabel macro, verifica.cls:245-252
+    // `\setlist[test]{\@risp,leftmargin=*}` with `\@risp` = `\fbox{…}`,
+    // was unfolded into its box code, cut at an inner `}`, and the tail of
+    // the option list plus the real closing `}` landed in the stream:
+    // "Attempt to close a group that switched to mode horizontal" ×3 per
+    // document (verifica example1-5). enumitem's shortlabel path receives
+    // the key `\@risp` itself, as real enumitem does. Guard:
+    // `perfect_kernel_batch54::keyval_key_is_brace_aware`.
+    let mut depth: usize = 0;
+    while let Some(token) = gullet::read_token()? {
       // skip to the next iteration if we have a paragraph
       if token == T_CS!("\\par") {
         continue;
       }
-      // if we have one of out delimiters, we end
+      // A brace inside the key is part of it; only an END at depth 0 can be
+      // the closing delimiter.
+      match token.get_catcode() {
+        Catcode::BEGIN => {
+          depth += 1;
+          tokens.push(token);
+          continue;
+        },
+        Catcode::END if depth > 0 => {
+          depth -= 1;
+          tokens.push(token);
+          continue;
+        },
+        _ => {},
+      }
+      // if we have one of out delimiters (outside any group), we end
       if delim.contains(&token) {
         last_token = Some(token);
         break;
       }
       tokens.push(token);
     }
+    let mut tokens = Tokens::new(tokens);
+    // xkeyval.tex L140-146 `\XKV@ifcmd`: a key may be wrapped as
+    // `\savevalue{key}` / `\gsavevalue{key}`. Real xkeyval detects the leading
+    // command on the unexpanded key and strips it; here the wrapper macros
+    // (xkeyval_sty.rs) latch the pending-save flags and expand to the bare
+    // key, so only a key that STARTS with one of them is expanded.
+    if let Some(first) = tokens.unlist_ref().first()
+      && (*first == T_CS!("\\savevalue") || *first == T_CS!("\\gsavevalue"))
+    {
+      tokens = gullet::do_expand(tokens)?;
+    }
     // return the tokens and the last token
-    Ok((Tokens::new(tokens), last_token))
+    Ok((tokens, last_token))
   }
 
   //======================================================================
   // Public accessors of all the values
   //======================================================================
   // Note: The API of this need to be stable, as people may be using it
+
+  /// The tokens the last of `keys` given states as its length value (`width=0.48\textwidth`), where they were kept
+  /// (`parameter::KEEP_STATED_LENGTHS`), with the key that stated them (`width`, `totalheight`; the value they gave is
+  /// [`Self::get_value`]'s): a key given again replaces its value.
+  pub fn stated_entry(&self, keys: &[&str]) -> Option<(&str, &Tokens)> {
+    self
+      .stated
+      .iter()
+      .rev()
+      .find(|(key, _)| keys.contains(&key.as_str()))
+      .map(|(key, tokens)| (key.as_str(), tokens))
+  }
 
   /// return the value of a given key. If multiple values are given, return the last one.
   pub fn get_value(&self, key: &str) -> Option<&ArgWrap> {
@@ -391,6 +455,10 @@ impl KeyVals {
 
   /// return a list of values for a given key
   pub fn get_values(&self, key: &str) -> Option<&Vec<ArgWrap>> { self.cached_hash.get(key) }
+  /// return the digested values of a given key, in the order given
+  pub fn get_values_digested(&self, key: &str) -> Option<&Vec<Digested>> {
+    self.cached_hash_digested.get(key)
+  }
 
   /// return the set of key-value pairs
   pub fn get_pairs(&self) -> Iter<'_, (String, ArgWrap)> { self.cached_pairs.iter() }
@@ -458,13 +526,22 @@ impl KeyVals {
     };
     let hook_missing = self.hook_missing;
 
-    // Read existing tokens from rmmacro (if defined and has meaning)
+    // Read the existing leftover list from rmmacro ONE STEP (its body), as
+    // xkeyval.tex L497 `\XKV@addtolist@o\XKV@rm\XKV@tempa` does. Perl
+    // (KeyVals.pm:345-346) fully `Expand`s it — but a leftover VALUE may name a
+    // macro that is only defined by the time its key code runs:
+    // chessboard.sty:1439 saves `trimarea=\board` at load time, and `\board`
+    // is `\edef`'d inside `\chessboard` (:1087) just before the leftovers are
+    // dispatched (:1110); every intermediate `\setkeys*` re-read `\XKV@rm`
+    // and raised "undefined \board" (chessboard-skakps). Perl never reaches
+    // this: its xkeyval stub stops at `\XKV@testopta`. Guard:
+    // `perfect_kernel_batch54::setrmkeys_keeps_leftover_values_unexpanded`.
     let mut rmtokens: Vec<Token> = Vec::new();
     if let Some(rm) = rmmacro
-      && state::has_meaning(&rm)
-      && let Ok(expanded) = gullet::do_expand(Tokens!(rm))
+      && let Ok(Some(defn)) = state::lookup_expandable(&rm, None)
+      && let Ok(body) = defn.invoke(true)
     {
-      rmtokens = expanded.unlist();
+      rmtokens = body.unlist();
     }
 
     let mut tokens: Vec<Token> = Vec::new();
@@ -555,7 +632,13 @@ impl KeyVals {
             tokens.push(T_CS!("\\def"));
             tokens.push(T_CS!("\\XKV@header"));
             tokens.push(T_BEGIN!());
-            tokens.extend(Explode!(s!("{prefix}@{keyset}@")));
+            // xkeyval.tex:83-88 `\XKV@makehd`: no `<family>@` segment for the
+            // empty family (same rule as `keyval_qname`).
+            tokens.extend(Explode!(if keyset.is_empty() {
+              s!("{prefix}@")
+            } else {
+              s!("{prefix}@{keyset}@")
+            }));
             tokens.push(T_END!());
             tokens.push(T_CS!("\\def"));
             tokens.push(T_CS!("\\XKV@tkey"));
@@ -871,6 +954,146 @@ impl KeyVals {
   // This method reads the keyval pairs INCLUDING the delimiters, (rather than
   // parsing after the fact), since some values may have special catcode needs.
 
+  /// xkeyval `\savekeys` membership: the save list for `<prefix>@<keyset>@`
+  /// lives in `\XKV@<prefix>@<keyset>@save` (xkeyval.tex L407-415, maintained
+  /// by the verbatim `\XKV@savekeys` port in xkeyval_sty.rs); entries are key
+  /// names, optionally wrapped as `\global{key}` for a global save. Returns
+  /// `Some(global)` when `key` is listed.
+  fn save_listed(&self, keyset: &str, key: &str) -> Option<bool> {
+    let cs = T_CS!(s!("\\XKV@{}", keyval_qname(&self.prefix, keyset, "save")));
+    state::lookup_meaning(&cs)?;
+    let body = gullet::do_expand(Tokens!(cs)).ok()?.to_string();
+    for entry in body.split(',') {
+      let e = entry.trim();
+      let (global, name) = match e.strip_prefix("\\global") {
+        Some(rest) => (true, rest),
+        None => (false, e),
+      };
+      let name = name
+        .trim()
+        .trim_start_matches('{')
+        .trim_end_matches('}')
+        .trim();
+      if name == key {
+        return Some(global);
+      }
+    }
+    None
+  }
+
+  /// xkeyval.tex L560-583 `\XKV@replacepointers`: splice every
+  /// `\usevalue{X}` in a value with the stored `\XKV@<header>X@value` body
+  /// (one macro level, re-scanned so a stored value may itself point on),
+  /// EAGERLY at `\setkeys` time under the key's own header. The key code
+  /// then receives the literal value, so a value it stores for later
+  /// (pmdraw.sty:1704-1706 `\renewcommand{\pmdraw@tikz}{#1}`, consumed inside
+  /// the tikzpicture at :1857-1860) never carries an unresolved pointer into
+  /// a context whose active `\setkeys` header differs — the lazy `\usevalue`
+  /// macro (xkeyval_sty.rs) produced 501 "no value recorded" errors on
+  /// pmdraw. A missing store errors and drops the pointer (L570-571); a
+  /// back-linking pointer cancels the replacement (L573-576).
+  fn replace_pointers(&self, keyset: &str, value: Tokens) -> Result<Tokens> {
+    let usevalue = T_CS!("\\usevalue");
+    if !value.unlist_ref().contains(&usevalue) {
+      return Ok(value);
+    }
+    let mut toks: Vec<Token> = value.unlist();
+    let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+    let mut seen: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < toks.len() {
+      if toks[i] != usevalue {
+        out.push(toks[i]);
+        i += 1;
+        continue;
+      }
+      // the pointer's key: a braced group or the single next token
+      let mut j = i + 1;
+      let key = if j < toks.len() && toks[j].get_catcode() == Catcode::BEGIN {
+        let mut depth = 0;
+        let mut inner = Vec::new();
+        while j < toks.len() {
+          match toks[j].get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => {
+              depth -= 1;
+              if depth == 0 {
+                j += 1;
+                break;
+              }
+            },
+            _ => {},
+          }
+          if depth > 1 || toks[j].get_catcode() != Catcode::BEGIN {
+            inner.push(toks[j]);
+          }
+          j += 1;
+        }
+        Tokens::new(inner).to_string()
+      } else if j < toks.len() {
+        j += 1;
+        toks[j - 1].to_string()
+      } else {
+        String::new()
+      };
+      let key = key.trim().to_string();
+      let cs = T_CS!(s!(
+        "\\XKV@{}@value",
+        keyval_qname(&self.prefix, keyset, &key)
+      ));
+      // xkeyval.tex L569 `\XKV@ifundefined` tests DEFINEDNESS, not the body:
+      // a key saved with an empty value (pmdraw.sty:2191-2264 `tikz={}`,
+      // `label node={}` …) is `\let` to an empty-bodied macro (L525-527) and
+      // replaces to nothing. `Expandable::new` collapses an empty Tokens body
+      // to `expansion = None`, so `get_expansion()` alone reads it as
+      // unrecorded — pmdraw manual, 501 `no value recorded` errors + cap.
+      let body = match state::lookup_definition(&cs) {
+        Ok(Some(defn)) => Some(match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => body.clone(),
+          _ => Tokens::new(Vec::new()),
+        }),
+        _ => None,
+      };
+      match body {
+        None => {
+          Error!(
+            "undefined",
+            "\\usevalue",
+            s!("no value recorded for key `{key}'; ignored")
+          );
+          toks.drain(i..j);
+        },
+        Some(_) if seen.contains(&key) => {
+          Error!(
+            "unexpected",
+            "\\usevalue",
+            "back linking pointers; pointer replacement canceled"
+          );
+          toks.drain(i..j);
+        },
+        Some(body) => {
+          seen.push(key);
+          toks.splice(i..j, body.unlist());
+        },
+      }
+    }
+    Ok(Tokens::new(out))
+  }
+
+  /// Store a saved key value as `\XKV@<prefix>@<keyset>@<key>@value`
+  /// (xkeyval.tex L521-528).
+  fn store_saved_value(&self, keyset: &str, key: &str, value: Tokens, global: bool) -> Result<()> {
+    let cs = T_CS!(s!(
+      "\\XKV@{}@value",
+      keyval_qname(&self.prefix, keyset, key)
+    ));
+    let options = global.then(|| ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    });
+    def_macro(cs, None, ExpansionBody::Tokens(value), options)
+  }
+
   pub fn read_from(&mut self, until: Token, silence_missing: bool) -> Result<()> {
     // if we want to force skip_missing keys, we set it up here
     let skip_missing = self.skip_missing.clone();
@@ -886,6 +1109,23 @@ impl KeyVals {
     // set and read tokens
     let _open = gullet::read_token()?;
 
+    // xkeyval pointer system (\savevalue/\usevalue/\savekeys — xkeyval.tex
+    // L405-436, L518-533, L560-583): record the active prefix/keysets so the
+    // \usevalue closure (xkeyval_sty.rs) can resolve the
+    // `\XKV@<header><key>@value` stores this read creates below.
+    state::assign_value(
+      "XKV@ptr@prefix",
+      Stored::String(arena::pin(&self.prefix)),
+      None,
+    );
+    state::assign_value(
+      "XKV@ptr@keysets",
+      Stored::String(arena::pin(self.keysets.join(","))),
+      None,
+    );
+
+    // the typed lengths' stated tokens kept (`stated_entry`)
+    let mut stated: Vec<(String, Tokens)> = Vec::new();
     let punct_tks = Tokens!(T_OTHER!(","));
     let until_tks = Tokens!(until);
     // iterate over all the key-value pairs to read
@@ -953,10 +1193,21 @@ impl KeyVals {
             }
           }
           // reparse (and expand) the tokens representing the value
+          let mut raw_value_tks: Option<Tokens> = None;
           if !toks.is_empty() {
-            let stripped_toks = Tokens::new(toks).strip_braces_n(2);
+            // xkeyval.tex L525-528 saves the RAW value (pointers unresolved)
+            // before L529 replaces the pointers for the key code.
+            let raw_toks = Tokens::new(toks).strip_braces_n(2);
+            raw_value_tks = Some(raw_toks.clone());
+            let stripped_toks = self.replace_pointers(keyset, raw_toks)?;
             if !stripped_toks.is_empty() {
               if let Some(Stored::Parameter(ref keytype)) = keytype_opt {
+                // a length's tokens as stated, where they are kept (`stated_entry`)
+                if (keytype.name == crate::pin!("Dimension") || keytype.name == crate::pin!("Glue"))
+                  && state::lookup_bool(crate::parameter::KEEP_STATED_LENGTHS)
+                {
+                  stated.push((key.to_string(), stripped_toks.clone()));
+                }
                 value = keytype.reparse(stripped_toks)?;
               } else {
                 value = ArgWrap::Tokens(stripped_toks);
@@ -981,6 +1232,29 @@ impl KeyVals {
           if let Some(Stored::Parameter(ref keydef)) = keytype_opt {
             keydef.revert_catcodes()?;
           }
+          // xkeyval pointer system: `\savevalue{key}` latched the pending
+          // flags while the key portion expanded (closure in xkeyval_sty.rs),
+          // and a `\savekeys` list can mark the key persistently (entries may
+          // be `\global{key}`). Mirror xkeyval.tex L521-528: store the value
+          // as `\XKV@<prefix>@<keyset>@<key>@value` so raw packages can read
+          // it back (chessboard.sty L1221-1229
+          // `\boolean{\XKV@UFCB@locset@psset@value}`, xskak.sty L415).
+          let pending_rkv = state::lookup_bool("XKV@ptr@rkv");
+          let pending_sg = state::lookup_bool("XKV@ptr@sg");
+          if pending_rkv || pending_sg {
+            state::assign_value("XKV@ptr@rkv", Stored::from(false), None);
+            state::assign_value("XKV@ptr@sg", Stored::from(false), None);
+          }
+          let save_global = if pending_rkv {
+            Some(pending_sg)
+          } else {
+            self.save_listed(keyset, key)
+          };
+          if let Some(global) = save_global {
+            let value_tks =
+              raw_value_tks.unwrap_or_else(|| value.clone().owned_tokens().unwrap_or_default());
+            self.store_saved_value(keyset, key, value_tks, global)?;
+          }
         }
         // and store our value please
         if !silence_missing || self.can_resolve_keyval_for(key) {
@@ -994,6 +1268,7 @@ impl KeyVals {
       }
     }
 
+    self.stated.extend(stated);
     // rebuild and return nothing
     self.rebuild(None);
 
@@ -1022,7 +1297,7 @@ impl KeyVals {
           let expanded = gullet::do_expand(vtks)?;
           let mut exp_str = expanded.to_string();
           if exp_str == "{}" {
-            exp_str = String::new();
+            exp_str.clear();
           }
           tks.push(T_OTHER!(exp_str));
         },
@@ -1044,6 +1319,21 @@ impl From<KeyVals> for Result<Option<Digested>> {
   fn from(value: KeyVals) -> Result<Option<Digested>> {
     let tmp: Digested = value.into();
     tmp.into()
+  }
+}
+
+/// Whether keyval's unknown-key report has been switched off: keyval.sty raises it through `\KV@errx`
+/// (keyval.sty:41-42, :60-65), which a package may redefine to do nothing for its own `\setkeys` — CoverPage.sty:128
+/// `\def\KV@errx##1{\relax}` ("keyval: ignore unknown keys") for a BibTeX record's other fields. Then TeX reports
+/// nothing, and neither does the native `\setkeys`. (keyval's default and `unknownkeyserror` raise an error; this
+/// engine warns.)
+fn unknown_keyval_keys_ignored() -> bool {
+  match state::lookup_definition(&T_CS!("\\KV@errx")) {
+    Ok(Some(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.unlist_ref().iter().all(|t| *t == T_CS!("\\relax")),
+      _ => true,
+    },
+    _ => false,
   }
 }
 
@@ -1132,29 +1422,29 @@ mod tests {
   }
 
   #[test]
-  fn keyvals_new_filters_empty_keysets() {
-    // Perl KeyVals.pm #2777 (fdc8bf91): \pst@famlist accumulates as
-    // ",pstricks"; a naive split yields ["", "pstricks"]. The empty
-    // entry would collide with `\def\psset@@ArrowInside` via the
-    // keyval_qname("psset","","ArrowInside") → "psset@@ArrowInside"
-    // path. Empty entries must be filtered before any default fallback.
+  fn keyvals_new_keeps_the_empty_family() {
+    // `\pst@famlist` accumulates as ",pstricks" (pst-xkey.tex:53-57); xkeyval
+    // searches the empty family first, and its key macros are `\psset@<key>`
+    // (keyval_qname's header rule), so nothing collides with pstricks'
+    // delimited `\psset@@…` helpers. Perl drops the entry (KPE #212).
     let cfg = KeyvalsConfig {
       keysets: vec!["".to_string(), "pstricks".to_string()],
       ..KeyvalsConfig::default()
     };
     let kv = KeyVals::new(cfg);
-    assert_eq!(kv.keysets, vec!["pstricks".to_string()]);
+    assert_eq!(kv.keysets, vec!["".to_string(), "pstricks".to_string()]);
   }
 
   #[test]
-  fn keyvals_new_all_empty_keysets_defaults_to_anonymous() {
-    // If every keyset entry is empty, we still fall back to
-    // _anonymous_ (not retain an empty keyset).
+  fn keyvals_new_all_empty_keysets_stay_the_empty_family() {
+    // Explicit empty entries are the empty family; only an ABSENT list
+    // falls back to _anonymous_.
     let cfg = KeyvalsConfig {
       keysets: vec!["".to_string(), "".to_string()],
       ..KeyvalsConfig::default()
     };
     let kv = KeyVals::new(cfg);
-    assert_eq!(kv.keysets, vec!["_anonymous_".to_string()]);
+    // An explicit empty family is xkeyval's empty family, not `_anonymous_`.
+    assert_eq!(kv.keysets, vec!["".to_string(), "".to_string()]);
   }
 }

@@ -1,0 +1,37 @@
+% witness: review rev78x2 finding 1 (probe q2.tex Figs 1, 3: a width read through a length register set after
+%          \begin{document}, held at the registers' geometry, split a row base and pdflatex keep)
+% oracle:  pdflatex 0 errors, 0 overfull (\columnwidth 246pt, \textwidth 510pt): Figure 1 one row (2 x 118.08pt),
+%          Figure 2 two rows (2 x 229.5pt), Figure 3 one row (2 x 118.08pt)
+% engines: rust int68a = one row each (Perl's 345pt line); 78x r2 = two rows each (the register's 165.6pt, 155.25pt,
+%          165.6pt against the real 246pt column); Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; Figure 1 and Figure 3 no `ltx:break`, Figure 2 one; two panels each
+% status:  RED (78x r2: Figures 1 and 3; int68a: Figure 2) -> GREEN (78x r3: a `\setlength` keeps what it stated and
+%          the register is evaluated at the real geometry; a register the document assigned otherwise, `\figu=…`, leaves
+%          its float the registers' line, as int68a)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\newlength\figw
+\newlength\figv
+\newlength\figu
+\begin{document}
+\setlength\figw{0.48\columnwidth}
+Text.
+\begin{figure}
+\includegraphics[width=\figw]{example-image}\hfill
+\includegraphics[width=\figw]{example-image}
+\caption{A register set in the body.}
+\end{figure}
+\begin{figure}
+\setlength\figv{0.45\textwidth}%
+\includegraphics[width=\figv]{example-image}\hfill
+\includegraphics[width=\figv]{example-image}
+\caption{A register set in the float.}
+\end{figure}
+\figu=0.48\columnwidth
+\begin{figure}
+\includegraphics[width=\figu]{example-image}\hfill
+\includegraphics[width=\figu]{example-image}
+\caption{A register a primitive assignment sets.}
+\end{figure}
+\end{document}

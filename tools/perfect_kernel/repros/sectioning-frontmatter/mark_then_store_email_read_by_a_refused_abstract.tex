@@ -1,0 +1,23 @@
+% A raw class's `\email` prints a mark, then stores its argument (`\def\email#1{\textsuperscript{*}\gdef\@email{#1}}`),
+% and only its `\endabstract`'s `\maketitle` reads the store, which the kernel's locked `{abstract}` never runs: K11
+% takes a table setter that leads with a printed mark not using its argument before a pure store
+% (frontmatter_stores.rs `table_setter_stores`), so the mark still prints at the name and the e-mail is its creator's.
+% witness: 1202.2889 (astlb.cls:78, :176); census: 10 of the 11 pazh/astl papers (astlb, pazhb, pazhb_eng, pazha2,
+%          pazhastl)
+% oracle:  pdflatex 0 errors: "Abstract. Abs.", "T", "Ann Able*", today's date, "Text.", footnote "e-mail: ann@x.org"
+% engines: rust int124a = 0 errors, the e-mail lost; perl = 0 errors, <ltx:contact role="email"> on Ann Able (OmniBus)
+% expect:  0 errors, 0 warnings; Ann Able<sup>*</sup> with <ltx:contact role="email">ann@x.org</ltx:contact>
+% status:  RED (int124a) -> GREEN (95d)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{astmark.cls}
+\LoadClass{article}
+\def\email#1{\textsuperscript{*}\gdef\@email{#1}}
+\def\@@email#1{\footnotetext{e-mail: #1}}
+\def\abstract{\par\textbf{Abstract.} }\def\endabstract{\maketitle\@@email{\@email}}
+\end{filecontents*}
+\documentclass{astmark}
+\begin{document}
+\title{T}\author{Ann Able\email{ann@x.org}}
+\begin{abstract}Abs.\end{abstract}
+Text.
+\end{document}

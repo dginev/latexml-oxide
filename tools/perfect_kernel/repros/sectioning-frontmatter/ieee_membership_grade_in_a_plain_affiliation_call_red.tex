@@ -1,0 +1,19 @@
+% witness: synthetic (review revP5a B1 sibling b7 and N1: a grade inside `\IEEEauthorblockA` in a plain `\author` list)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, Bob Baker," then "Univ A, Member, ACM" then "Cy Coe"
+% engines: rust P5abase = Ann's grade, "Member, ACM" dropped silently, 0 warnings; rust P5a = "Member, ACM" a membership
+%          of both, 2 warnings; rust P5a2 = "Univ A, Member, ACM" both authors' affiliation as printed, still the 2 false
+%          content-check Warnings: the affiliation call's event reads the grade's inner `\lx@add@contact` as printed words
+%          ("contactMember creatorltx ltx"), so "Member" also counts as excess
+% expect:  0 errors, 0 warnings; Ann's grade; "Univ A, Member, ACM" both authors' affiliation ("Cy Coe" a line of the
+%          affiliation: the base's reading, a separate matter)
+% status:  RED (P5a2: the 2 Warnings)
+% moves:   post-merge (IEGW: the content check skips the binding's internal call by its meaning)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE}, Bob~Baker,\\
+\IEEEauthorblockA{Univ A, \IEEEmembership{Member, ACM}}\\
+Cy Coe}
+\maketitle
+Body.
+\end{document}

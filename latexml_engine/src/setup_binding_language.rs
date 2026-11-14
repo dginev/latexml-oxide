@@ -66,7 +66,16 @@ macro_rules! InnerPool {
         true,
         Some($crate::prelude::state::Scope::Global),
       );
-      $crate::$name::load_definitions()?;
+      // A plain pool's definitions belong to the plain layer (Perl: their source is
+      // `plain_*.pool`, which `isDefinableLaTeX` lets LaTeX redefine).
+      let __origin = if stringify!($name).starts_with("plain") {
+        ::latexml_core::definition::origin::DefinitionOrigin::Plain
+      } else {
+        ::latexml_core::definition::origin::DefinitionOrigin::Pool
+      };
+      ::latexml_core::definition::origin::with_origin(__origin, || {
+        $crate::$name::load_definitions()
+      })?;
     }
   }};
 }
@@ -86,9 +95,23 @@ macro_rules! RequirePackage {
 }
 #[macro_export]
 #[rustfmt::skip] // arms carry edition-2024 `:expr_2021` markers that push past 100 cols
+/// A binding's class load, then the "has chapters" step for it, as at a raw class's `\LoadClass` return
+/// (`settle_chapter_after_class_load`, OXIDIZED_DESIGN #179): a binding built on report or book has the kernel's
+/// `\chapter` for the rest of its load. `withoptions => true` is Perl's `LoadClass($class, withoptions => 1)`
+/// (`load_class_with_options`: the class takes the document's options). Every binding's class load goes through it.
 macro_rules! LoadClass {
-  ($class:expr_2021) => {{ load_class($class, Vec::new(), Tokens!())? }};
-  ($class:expr_2021, $options:expr_2021, $after:expr_2021) => {{ load_class($class, $options, $after)? }};
+  ($class:expr_2021) => {{
+    load_class($class, Vec::new(), Tokens!())?;
+    $crate::latex_constructs::settle_chapter_after_class_load()?
+  }};
+  ($class:expr_2021, withoptions => true) => {{
+    load_class_with_options($class, Tokens!())?;
+    $crate::latex_constructs::settle_chapter_after_class_load()?
+  }};
+  ($class:expr_2021, $options:expr_2021, $after:expr_2021) => {{
+    load_class($class, $options, $after)?;
+    $crate::latex_constructs::settle_chapter_after_class_load()?
+  }};
 }
 
 #[macro_export]
@@ -106,11 +129,19 @@ macro_rules! DeclareFontMap {
 }
 
 /// Declare multi-char overrides for font map positions that need more than one character.
-/// Usage: `DeclareFontMapMultichar!("T2B", { 0x80 => "\u{04F6}\u{0336}", 0x91 => "C\u{0337}" });`
+/// Usage: `DeclareFontMapMultichar!("T2B", { 0x80 => "\u{04F6}\u{0336}", 0x91 => "C\u{0337}" });`, or for a family's
+/// own map (`DeclareFontMap!("U", map, "blackboard")`), `DeclareFontMapMultichar!("U", "blackboard", { … })`.
 #[macro_export]
 macro_rules! DeclareFontMapMultichar {
   ($name:expr_2021, { $($pos:expr_2021 => $str:expr_2021),* $(,)? }) => {{
     let mapname = s!("{}_fontmap_multichar", $name);
+    let map: HashMap<String, String> = [
+      $( ($pos.to_string(), $str.to_string()), )*
+    ].into_iter().collect();
+    state::assign_value(&mapname, map, Some(Scope::Global));
+  }};
+  ($name:expr_2021, $family:expr_2021, { $($pos:expr_2021 => $str:expr_2021),* $(,)? }) => {{
+    let mapname = s!("{}_{}_fontmap_multichar", $name, $family);
     let map: HashMap<String, String> = [
       $( ($pos.to_string(), $str.to_string()), )*
     ].into_iter().collect();
@@ -213,19 +244,19 @@ macro_rules! DefMathLigature {
     let ntomatch = chars.len();
     let matcher : Option<LigatureMatcher> = Some(Rc::new(
       move |_document: &mut Document, node_opt: &mut Node| {
-      let mut node : Node;
-      let mut node_mut = node_opt;
+      // Perl Package.pm:3116-3121: only a character still to match needs a node, so a
+      // ligature may start its container (`\[...\]`, a `&:=` cell). Golden:
+      // latexml_oxide/tests/parse/math_lexemes.tex#ligature_starts_its_container.
+      let mut node = Some(node_opt.clone());
       for c in chars.iter() {
-        if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok") ||
-           node_mut.get_content() != c.to_string() {
+        let Some(current) = node else {
+          return Ok(None);
+        };
+        if model::with_node_qname(&current, |qname| qname != "ltx:XMTok") ||
+           current.get_content() != c.to_string() {
           return Ok(None);
         }
-        if let Some(sibling) = node_mut.get_prev_sibling() {
-          node = sibling;
-          node_mut = &mut node;
-        } else {
-          return Ok(None);
-        }
+        node = current.get_prev_sibling();
       }
       if ntomatch > 0 {
         Ok(Some((ntomatch, $replacement.to_string(), attr.clone())))
@@ -366,19 +397,17 @@ macro_rules! TypedConditional {
 ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
 #[macro_export]
 macro_rules! DefPrimitive {
-  // Case: simple literal replacement
-  // Perl: Box($string, font, locator, $current_token) — reversion is the CS token
+  // Case: simple literal replacement — a string body, as Perl's `DefPrimitive($proto, $string)`:
+  // `Primitive::invoke` enters horizontal mode for a defined string (Primitive.pm:73, even `''`;
+  // `def_primitive` makes it the prologue) and boxes it, reverting to the CS or its alias and the
+  // reverted arguments. A closure returning the box skipped the mode switch (`\copyright{} x`
+  // lost its space, witness 2605.01273; wasysym's `\ataribox`, a K13 finding). Perl's `undef`
+  // replacement is `None`.
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let cs_for_closure = cs;
-    let closure : PrimitiveBody = PrimitiveBody::Closure(Rc::new(
-      move | _args: Vec<ArgWrap>| {
-      Tbox::new(arena::pin_static($replacement), None, None,
-        Tokens!(cs_for_closure), SymHashMap::default())
-        .into_digested_result()
-    }));
-    def_primitive(cs, params, Some(closure), options)?;
+    let body = PrimitiveBody::String(arena::pin_static($replacement));
+    def_primitive(cs, params, Some(body), options)?;
   }};
   // closure with literal prototype
   ($proto:literal, sub[( $($var:ident),* )]
@@ -599,7 +628,9 @@ macro_rules! DefConstructor {
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor(cs, params, compiled_replacement, ConstructorOptions::default());
+    let options =
+      ConstructorOptions { template: Some($replacement), ..ConstructorOptions::default() };
+    def_constructor(cs, params, compiled_replacement, options);
   }};
   // Pre-parsed prototype flavors
   // Pre-parsed prototype; Closure replacement flavors
@@ -620,7 +651,9 @@ macro_rules! DefConstructor {
   ($cs:expr_2021, $parameters:expr_2021, $replacement:literal) => {{
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default());
+    let options =
+      ConstructorOptions { template: Some($replacement), ..ConstructorOptions::default() };
+    def_constructor($cs, $parameters, compiled_replacement, options);
   }};
   ($cs:expr_2021, $parameters:expr_2021, None) => {{
     def_constructor($cs, $parameters, $replacement, ConstructorOptions::default());
@@ -628,7 +661,8 @@ macro_rules! DefConstructor {
 
   // Optioned flavors come last due to :tt munching
   ($cs:expr_2021, $parameters:expr_2021, $replacement:literal, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    options.template = Some($replacement);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
     def_constructor($cs, $parameters, compiled_replacement, options);
@@ -638,7 +672,8 @@ macro_rules! DefConstructor {
     def_constructor($cs, $parameters, None, options);
   }};
   ($proto:expr_2021, $replacement:literal, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    options.template = Some($replacement);
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
@@ -790,14 +825,19 @@ macro_rules! StepCounter {
   };
 }
 
-/// convenience macro for `api::counter_dialect::ref_step_counter`
+/// convenience macro for `api::counter_dialect::ref_step_counter_by_meaning` (a step through
+/// `\refstepcounter`'s current meaning, as LaTeX's own steps are); `noreset` steps directly.
 #[macro_export]
 macro_rules! RefStepCounter {
   ($ctr:expr_2021) => {
-    ref_step_counter($ctr, false)
+    ref_step_counter_by_meaning($ctr)
   };
   ($ctr:expr_2021, $noreset:expr_2021) => {
-    ref_step_counter($ctr, $noreset)
+    if $noreset {
+      ref_step_counter($ctr, true)
+    } else {
+      ref_step_counter_by_meaning($ctr)
+    }
   };
 }
 
@@ -897,6 +937,167 @@ macro_rules! DefLigature {
   };
 }
 
+/// The private inner control sequence of a `DefAccent!` accent: letters only
+/// (`\lxaccentdot` for `\.`, `\lxaccentumlaut` for `\"`, `\lxaccentu` for
+/// `\u`), so it survives every string round trip a document can put an
+/// expanded accent through — a `\write`+`\input`, `\scantokens`, titlecaps'
+/// `\string`-and-re-read of a word's tokens — under the document's catcodes
+/// (`@` OTHER) as well as a package's (`\lx@accent@.` split into the undefined
+/// `\lx@accent@` in titlecaps and `\lx` in grafcet, sweep 74).
+/// T1's `\DeclareTextComposite` for this engine: the accent applied to ONE
+/// alphabetic letter, which the current font prints as itself, whose NFC with
+/// the combiner is a single character is that character (the letter's catcode
+/// kept); otherwise `None` and the accent takes the `\lx@applyaccent`
+/// primitive. See `DefAccent!`.
+pub fn accent_composite(
+  letter: &[latexml_core::token::Token],
+  combiner: char,
+) -> Option<latexml_core::token::Token> {
+  use latexml_core::{
+    common::{arena::pin_char, font::decode_string},
+    token::{Catcode, Token},
+  };
+  use unicode_normalization::UnicodeNormalization;
+  let [t] = letter else { return None };
+  if !matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+    return None;
+  }
+  let c = t.with_str(|s| {
+    let mut it = s.chars();
+    match (it.next(), it.next()) {
+      (Some(c), None) if c.is_alphabetic() => Some(c),
+      _ => None,
+    }
+  })?;
+  // Only a letter the current font prints as itself: LGR's `i` is ι
+  // (lgr_fontmap.rs), so `\"i` is ϊ in pdflatex and in Perl, whose accent
+  // combines with the digested (font-decoded) letter; composing the raw `i`
+  // gave the Latin ï (greek-fontenc test-lgrenc, char-list). `\lx@applyaccent`
+  // digests first, as Perl does. Guard:
+  // `greek_text::lgr_accent_combines_with_the_decoded_letter`.
+  if decode_string(pin_char(c), None, true) != pin_char(c) {
+    return None;
+  }
+  let composed: String = format!("{c}{combiner}").nfc().collect();
+  let mut it = composed.chars();
+  match (it.next(), it.next()) {
+    (Some(cc), None) => Some(Token::new(cc.to_string(), t.get_catcode())),
+    _ => None,
+  }
+}
+
+/// The composite the current font encoding declares for this accent and
+/// argument, when the argument has no precomposed form (`accent_composite`
+/// returned `None`): latex.ltx:9938-9947 `\@text@composite` looks up the key
+/// `\csname\string\<enc>\<accent>-\string<first token>\endcsname` (the spelling
+/// of `latex_constructs` sect08 and of the dumped t1enc.def/ot1enc.def keys)
+/// and, when it exists, uses it in place of the accent — the rest of the
+/// argument is dropped, as there (T1 `\"{ab}` is ä, pdflatex alike).
+/// greek-fontenc.def:221/226
+/// `\DeclareTextCompositeCommand{\~}{\LastDeclaredEncoding}{>}{\accpsiliperispomeni}`
+/// makes `\~>{\alpha}` the psili + perispomeni on alpha (ἆ, lualatex and
+/// pdflatex); without the lookup the tilde landed on the `>` (">̃α",
+/// greek-fontenc char-list-alphabeta, alphabeta-doc). A letter the font prints
+/// as itself keeps the native path above, so Latin accents on letters are
+/// unchanged in every encoding.
+///
+/// A glyph composite (`\DeclareTextComposite`: sect08's glyph primitive, or a
+/// dumped key whose body is the catcode-11 slot character, latex.ltx:9948-9955)
+/// is returned as that character, decoded through the encoding — a catcode-11
+/// token, as the kernel's is. Returning the KEY made the box revert to the
+/// key's name (`$\text{Mart\'{\i}nez}$` under LY1 wrote
+/// `tex="…\LY1\'-\i nez…"`) and left an unexpandable token where
+/// bibleref-parse.sty:495-507's expand-until-character loop needs a character
+/// (`\"\i`). A `\DeclareTextCompositeCommand` key is returned as the key and
+/// expands to its commands. `None`: no composite, or a glyph the font would
+/// re-map when typeset (an ASCII slot it does not print as itself). Guards:
+/// `greek_text::declared_composite_on_a_punctuation_key`,
+/// `greek_text::glyph_composite_is_a_character`.
+pub fn declared_text_composite(
+  accent: &str,
+  arg: &[latexml_core::token::Token],
+) -> Option<Vec<latexml_core::token::Token>> {
+  use latexml_core::{
+    common::{
+      arena::{self, pin_char},
+      font::{decode_str, decode_string, is_unicode_encoding},
+      store::Stored,
+    },
+    definition::{Definition, ExpansionBody, PrimitiveBody},
+    state::{lookup_font, lookup_meaning},
+    token::{Catcode, Token},
+  };
+  // `\string` of the first token, `\@empty` for an empty argument
+  // (latex.ltx:9938-9940 appends `\@empty` to the argument).
+  let first = arg
+    .first()
+    .map_or_else(|| "\\@empty".to_string(), |t| t.to_string());
+  // `\cf@encoding` (latex_constructs sect08): the font's encoding, OT1 when
+  // it has none.
+  let encoding = lookup_font().map(|font| {
+    font
+      .get_encoding()
+      .map(|e| e.to_string())
+      .unwrap_or_else(|| "OT1".to_string())
+  })?;
+  let key = latexml_core::T_CS!(format!("\\\\{encoding}{accent}-{first}"));
+  if !latexml_core::binding::def::dialect::is_defined_token(&key) {
+    return None;
+  }
+  let glyph: String = match lookup_meaning(&key) {
+    Some(Stored::Primitive(p)) => match p.replacement {
+      Some(PrimitiveBody::String(glyph)) => arena::with(glyph, |g| g.to_string()),
+      _ => return Some(vec![key]),
+    },
+    Some(Stored::Expandable(m)) => match m.get_expansion() {
+      Some(ExpansionBody::Tokens(body))
+        if body.unlist_ref().len() == 1
+          && matches!(
+            body.unlist_ref()[0].get_catcode(),
+            Catcode::LETTER | Catcode::OTHER
+          ) =>
+      {
+        let code = body.unlist_ref()[0].get_charcode();
+        match u8::try_from(code) {
+          Ok(slot) if !is_unicode_encoding(&encoding) => {
+            arena::with(decode_str(slot, Some(encoding.clone()), false)?, |g| {
+              g.to_string()
+            })
+          },
+          _ => body.unlist_ref()[0].to_string(),
+        }
+      },
+      _ => return Some(vec![key]),
+    },
+    _ => return Some(vec![key]),
+  };
+  let mut chars = Vec::new();
+  for c in glyph.chars() {
+    if c.is_ascii() && decode_string(pin_char(c), None, true) != pin_char(c) {
+      return None;
+    }
+    chars.push(Token::new(c.to_string(), Catcode::LETTER));
+  }
+  (!chars.is_empty()).then_some(chars)
+}
+
+/// Whether `cs` names an accent's inner command ([`accent_inner_name`]).
+pub fn is_accent_inner(cs: &str) -> bool { cs.starts_with("\\lxaccent") }
+
+pub fn accent_inner_name(accent: &str) -> String {
+  let word = match &accent[1..] {
+    "'" => "acute",
+    "." => "dot",
+    "=" => "macron",
+    "\"" => "umlaut",
+    "^" => "hat",
+    "`" => "grave",
+    "~" => "tilde",
+    name => return format!("\\lxaccent{}", name.replace('@', "at")),
+  };
+  format!("\\lxaccent{word}")
+}
+
 // Defines an accent command using a combining char that follows the
 // 1st char of the argument.  In cases where there is no argument, `standalonechar` is used.
 #[macro_export]
@@ -923,11 +1124,66 @@ macro_rules! DefAccent {
       name: pin!("Plain"), spec: pin!("{}"), ..Parameter::default()
       }.init()?
     ]));
-    def_macro(T_CS!($accent), plain_param, ExpansionBody::Tokens(Tokens!(
-        T_CS!("\\lx@applyaccent"), T_OTHER!($accent),
-        T_OTHER_CHAR!($combiningchar), T_OTHER!($standalonechar),
-        T_BEGIN!(), T_ARG!(1), T_END!())),
-      Some(ExpandableOptions{protected: true, ..ExpandableOptions::default()}))?;
+    // OXIDIZED_DESIGN #170 (surpass-Perl, user-approved 2026-08-31): text
+    // accents are TWO-LEVEL — the real (protected) accent lives in the
+    // space-suffixed CS, and the user-facing name is a plain macro that
+    // expands straight to it. pdflatex ground truth (probed 2026-08-31):
+    // `\meaning\u` = `macro:->\T1-cmd \u \T1\u ` — a MACRO (so tikzmath's
+    // 4-char meaning sniff, tikzlibrarymath.code.tex L22-46, classifies an
+    // accent-CS `\tikzmath` variable correctly; 11-doc cluster, witnesses
+    // cahierprof-doc, sunpath, colorblind_doc) that stays EXPANDABLE inside
+    // `\csname` (the kernel's `\<enc>-cmd` dispatch; our historical
+    // csname-accent behavior, guarded by cluster_csname_accent's twemoji
+    // fixture, which a literal `\protect` token here broke — the suite
+    // caught it). Perl's protected-primitive accents fail the tikzmath
+    // half. Guard: cluster_package_guards::accent_meaning_robust_shape.
+    // The inner is a PRIVATE, letters-only name, not the control-symbol
+    // `\<accent> ` that
+    // `\DeclareRobustCommand*\<accent>` (latex.ltx `\DeclareRobustCommand`)
+    // uses for its own inner: LaTeX's accent inner is `\OT1\.` (ot1enc.def:52),
+    // so babel-spanish's `\let\es@save@dot\.` + `\DeclareRobustCommand*\.{…
+    // \es@save@dot}` (spanish.ldf:329-331) keeps a snapshot of the ORIGINAL
+    // accent; with `\. ` shared, the redefinition overwrote the snapshot's
+    // target and `\.o` cycled forever (latexsheet-esmx, 420 s; batch 56bs).
+    let inner_cs = T_CS!($crate::setup_binding_language::accent_inner_name($accent));
+    // T1's `\DeclareTextComposite` (t1enc.def; latex.ltx `\DeclareTextComposite`
+    // lowercases the slot into the CHARACTER token): under T1 the accent on
+    // a letter with a precomposed glyph EXPANDS to that character — `\"o`
+    // is the char `ö` after one expansion step, an unexpandable char token
+    // that ends any expand-until-not-a-cs loop. Only letters without a slot
+    // reach `\add@accent` and the `\accent` primitive. Mirror that: a
+    // single letter whose NFC with the combiner is one character expands to
+    // it (the letter's catcode kept); everything else — an empty group, a
+    // multi-letter group, a non-letter, a pair with no precomposed form —
+    // takes `\lx@applyaccent`, the stomach primitive (tex_character.rs).
+    // Without this, bibleref-parse.sty:495-507's `\brp@@expandcs` —
+    // `\expandafter\brp@@expandcs #1` while `#1` is a control sequence —
+    // re-read the inert `\lx@applyaccent` forever (`\brp@parse{IK\"onige}`;
+    // the manual's German book names, 420 s timeout; OT1 pdflatex hangs the
+    // same way, T1 pdflatex finishes: the composite is what terminates it).
+    let accent_str: &'static str = $accent;
+    let combiner: char = $combiningchar;
+    let standalone_str: &'static str = $standalonechar;
+    def_macro(inner_cs.clone(), plain_param, ExpansionBody::Closure(Rc::new(move |args| {
+      let letter = args.first().map(|a| a.unlist_cow().into_owned()).unwrap_or_default();
+      if let Some(composed) = $crate::setup_binding_language::accent_composite(&letter, combiner) {
+        return Ok(Tokens!(composed));
+      }
+      if let Some(composite) =
+        $crate::setup_binding_language::declared_text_composite(accent_str, &letter)
+      {
+        return Ok(Tokens::new(composite));
+      }
+      let mut toks = vec![
+        T_CS!("\\lx@applyaccent"), T_OTHER!(accent_str),
+        Token::new(combiner.to_string(), Catcode::OTHER), T_OTHER!(standalone_str), T_BEGIN!(),
+      ];
+      toks.extend(letter);
+      toks.push(T_END!());
+      Ok(Tokens::new(toks))
+    })), Some(ExpandableOptions{protected: true, ..ExpandableOptions::default()}))?;
+    def_macro(T_CS!($accent), None, ExpansionBody::Tokens(Tokens!(inner_cs)),
+      None)?;
   }};
 }
 
@@ -1042,30 +1298,30 @@ macro_rules! IsDefinable {
 #[macro_export]
 macro_rules! Let {
   ($token1:literal, $token2:literal) => {
-    state::let_i(&T_CS!($token1), &T_CS!($token2), None)
+    state::let_definition(&T_CS!($token1), &T_CS!($token2), None)
   };
   ($token1:literal, $token2:literal, None) => {
-    state::let_i(&T_CS!($token1), &T_CS!($token2), None)
+    state::let_definition(&T_CS!($token1), &T_CS!($token2), None)
   };
   ($token1:literal, $token2:literal, $scope:expr_2021) => {
-    state::let_i(&T_CS!($token1), &T_CS!($token2), Some($scope))
+    state::let_definition(&T_CS!($token1), &T_CS!($token2), Some($scope))
   };
   // half-packaged args
   ($token1:literal, $token2:expr_2021) => {
-    state::let_i(&T_CS!($token1), &$token2, None)
+    state::let_definition(&T_CS!($token1), &$token2, None)
   };
   ($token1:expr_2021, $token2:literal) => {
-    state::let_i(&$token1, &T_CS!($token2), None)
+    state::let_definition(&$token1, &T_CS!($token2), None)
   };
   // internal form, pre-packaged arguments
   ($token1:expr_2021, $token2:expr_2021) => {
-    state::let_i(&$token1, &$token2, None)
+    state::let_definition(&$token1, &$token2, None)
   };
   ($token1:expr_2021, $token2:expr_2021, None) => {
-    state::let_i(&$token1, &$token2, None)
+    state::let_definition(&$token1, &$token2, None)
   };
   ($token1:expr_2021, $token2:expr_2021, $scope:expr_2021) => {
-    state::let_i(&$token1, &$token2, Some($scope))
+    state::let_definition(&$token1, &$token2, Some($scope))
   };
 }
 
@@ -1730,6 +1986,21 @@ macro_rules! ProcessOptions {
   };
 }
 
+/// [`ProcessOptions!`] for a binding whose package reads its options with a key=value processor
+/// (`process_key_options`): the same forms, `\@curroptions` left as it was.
+#[macro_export]
+macro_rules! ProcessKeyOptions {
+  () => {
+    process_key_options(false, &[])?;
+  };
+  (*) => {
+    process_key_options(true, &[])?;
+  };
+  (keysets => [$($keyset:expr_2021),+ $(,)?]) => {
+    process_key_options(true, &[$($keyset),+])?;
+  };
+}
+
 #[macro_export]
 macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{
@@ -1748,7 +2019,7 @@ macro_rules! AddToMacro {
           None,
           ExpansionBody::Tokens($tokens.clone()),
           Some(ExpandableOptions {
-            scope: Some(Scope::Global),
+            scope: Some(::latexml_core::binding::content::add_to_macro_scope()),
             nopack_parameters: true,
             ..ExpandableOptions::default()
           }),
@@ -1787,7 +2058,7 @@ macro_rules! AddToMacro {
           None,
           ExpansionBody::Tokens(Tokens!(expansion)),
           Some(ExpandableOptions {
-            scope: Some(Scope::Global),
+            scope: Some(::latexml_core::binding::content::add_to_macro_scope()),
             nopack_parameters: true,
             ..ExpandableOptions::default()
           }),
@@ -2110,10 +2381,11 @@ macro_rules! defi_opts {
     -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_close_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  // auto_open: Option<bool>
+  // auto_open: Option<AutoOpen> — `true`, or a fraction (`0.5`) as in Perl
   (@munch ( $(,)? auto_open $(:)?$(=>)? $auto:literal $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_open @ $auto.into() ]})
+    defi_opts!(@munch ($($next)*)
+      -> {$kind, $( [ $key @ $val ] )* [ auto_open @ Some($auto.into()) ]})
   };
   // auto_close: Option<bool>
   (@munch ( $(,)? auto_close $(:)?$(=>)? $auto:literal $($next:tt)*)
@@ -2268,6 +2540,11 @@ macro_rules! defi_opts {
   defi_opts!(@munch ()
     -> {$kind, $( [ $key @ $val ] )*
       [ mathstyle @ Some($literal.to_string()) ] })
+  };
+  // drops: the argument numbers a binding macro drops by design (`ExpandableOptions::drops`), `drops => [2]`
+  (@munch ( $(,)? drops $(:)?$(=>)? [ $($number:literal),* $(,)? ] $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [drops @ &[$($number),*]]})
   };
   // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*)

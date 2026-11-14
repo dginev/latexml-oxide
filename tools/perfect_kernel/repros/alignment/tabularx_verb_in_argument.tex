@@ -1,0 +1,16 @@
+% witness: 2404.06128 (82 errors, 73 `&`), 2309.04295 (44): tabularx.sty:91 `\let\verb\TX@verb` (:205-209 reads up to
+%          the delimiter token as it stands), so `\verb|x|` inside a `\makecell{…}` cell of a tabularx is whole; the
+%          kernel `\verb` needs an active delimiter and scanned past the argument into the source
+% oracle:  pdflatex 0 errors
+% engines: rust 63u5 = 15 errors, the alignment broken (`\lx@begin@alignment`, `\vtop`, `&`); Perl 0.8.8 = 2
+% expect:  0 errors; two verbatim runs, "theorem" and "fixes a b :: real"
+% status:  RED (63u5) -> GREEN (63v)
+\documentclass{article}
+\usepackage{tabularx,makecell}
+\begin{document}
+\begin{tabularx}{\linewidth}{|l|X|}
+\hline
+A & \makecell[l]{\verb|theorem| \\ \quad\verb|fixes a b :: real|} \\ \hline
+B & C \\ \hline
+\end{tabularx}
+\end{document}

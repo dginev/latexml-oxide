@@ -1,0 +1,22 @@
+% witness: 2508.15289 (ws-mpla `\pub`), 0709.0836 (ws-procs9x6 `\epsfig`), 0709.1411 (ws-ijmpa `\cdash`, lists),
+%   2103.07802 (ws-rv9x6 `\if@addchapnum`); run 340 ~1,700 papers on World Scientific classes
+% oracle:  pdflatex with a paper's ws-mpla.cls: 0 errors; "Received …" and "Revised …" under the authors; (i)/(ii),
+%   (a) with a nested (i), (1) and bulleted lists
+% engines: rust 65int4 = errors (`\pub`, `\cdash`, the list environments undefined); no Perl binding for ws-*
+% expect:  0 errors; pubnote elements role=received and role=revised; four lists, three enumerated (labels (i),
+%   (a) with a nested (i), (1)) and one itemized;
+%   `\psfig`, `\epsfig` and `\epsfbox` defined
+% status:  RED (65int4) -> GREEN (65t)
+\documentclass{ws-mpla}
+\begin{document}
+\title{Title}
+\author{Author}
+\pub{Received (1 May 2020)}{Revised (2 June 2020)}
+\begin{abstract}Abstract.\end{abstract}
+Text C\cdash H.
+\begin{romanlist}\item one\item two\end{romanlist}
+\begin{alphlist}\item alpha\begin{enumerate}\item inner\end{enumerate}\end{alphlist}
+\begin{arabiclist}\item arabic\end{arabiclist}
+\begin{itemlist}\item bullet\end{itemlist}
+\ifdefined\psfig PSFIG\fi\ \ifdefined\epsfig EPSFIG\fi\ \ifdefined\epsfbox EPSFBOX\fi
+\end{document}

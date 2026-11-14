@@ -1,0 +1,13 @@
+% witness: 0712.3606, 1007.2277, 1101.3125, 1108.2782, 1605.06550, nucl-th0308018, physics0501160 (appolb.cls, Acta Phys.
+%          Pol. B: not in TeX Live, not shipped); 13 papers of the int19 census (rc_struct5 P1)
+% oracle:  appolb.cls:322 (2210.03396's copy) prints "PACS numbers: 27.75.-q" (the class is not in TL 2025: no pdflatex run)
+% engines: rust 67int19b = 1 Error:undefined:\PACS (OmniBus); Perl 0.8.8 the same
+% expect:  0 errors; <classification scheme="pacs"> 27.75.-q
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{appolb}
+\begin{document}
+\title{T}\author{A}\address{B}\maketitle
+\PACS{27.75.-q}
+Text.
+\end{document}

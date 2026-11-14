@@ -1,0 +1,12 @@
+% witness: 57l root-cause: subfig loads caption (subfig.sty:124-142), which defines `\caption*` and the
+%          caption keys; the binding loaded neither, and subfig's own keys (:163-167, 271-282) were unknown
+% oracle:  pdflatex 0 errors; an unnumbered "Unnumbered" caption
+% engines: rust 57k: "Table 1" with a `*` caption and a stray paragraph
+% expect:  0 errors, 0 warnings; `<table xml:id="tab1"><caption>Unnumbered</caption></table>`
+% status:  RED (57k) -> GREEN (57l)
+\documentclass{article}
+\usepackage{subfig}
+\captionsetup[subfloat]{listofformat=subsimple,farskip=2pt,captionskip=1pt,topadjust=0pt,nearskip=0pt}
+\begin{document}
+\begin{table}\caption*{Unnumbered}\end{table}
+\end{document}

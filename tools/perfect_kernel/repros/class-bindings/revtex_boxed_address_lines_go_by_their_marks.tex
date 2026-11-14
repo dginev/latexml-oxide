@@ -1,0 +1,28 @@
+% mechanism: a box holding a whole line is a line, and boxes side by side each led by a mark are entries the marks part
+%   (`relocate::wrapped_lines_as_lines`: `\mbox`/`\hbox` the whole line between `\\`, or every box mark-led;
+%   `\leftline` a line of its own): each entry of the `\address` block by its leading label.
+% witness: the siblings of hep-ex0409040's `\centerline` lines (review revab126); 1412.5812 (`\affiliation{\mbox{$^{1}$
+%   Russian Quantum Center…}\mbox{$^{2}$Bauman…}…}`: 98a every author the whole block), 0911.2853 (`\mbox{$^a$…}\\
+%   \mbox{Blegdamsvej…}\\ \mbox{$^b$…}`: 98a every author the whole block)
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "A. One,1 B. Two,2 C. Three,3 and D. Four4 / 4 Delta College, Oslo /
+%   1 Alpha University, Beijing / 2 Beta Institute, Rome 3 Gamma Lab, Paris" (a box no mark leads goes on with the
+%   entry before it)
+% engines: rust 98a: each creator the four entries as one affiliation; perl: D. Four alone
+% expect:  0 errors, 0 warnings; A. One Alpha University, B. Two Beta Institute, C. Three Gamma Lab, D. Four Delta
+%   College
+% status:  RED (98a) -> GREEN (98e)
+% preload: ar5iv.sty
+\documentclass[aps,prl,groupedaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{A.~One,$^{1}$ B.~Two,$^{2}$ C.~Three,$^{3}$ and~D.~Four$^{4}$}
+\address{
+\mbox{$^{1}$Alpha University, Beijing}\\
+\mbox{$^{2}$Beta Institute,} \mbox{Rome}
+\mbox{$^{3}$Gamma Lab, Paris}
+\leftline{$^{4}$Delta College, Oslo}
+}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

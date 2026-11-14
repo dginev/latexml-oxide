@@ -1,0 +1,18 @@
+% witness: modernposter/demo (a0poster spanning tikzpicture[overlay]); pgf-free reduction
+% oracle: pdflatex clean (exit 0, 0 errors) — box built, closed by \AtEndDocument \egroup
+% engines: pdflatex
+% expect: 0 errors (the \hbox is opened, filled, and closed across \AtEndDocument)
+% status:  GREEN (batch 56ad, 2026-09-06: document hooks run inline, latex.ltx:15255-15259)
+% mechanism: a box reader (\hbox\bgroup) opened in the main galley whose closing
+%   \egroup is deferred to \AtEndDocument fails because @at@end@document is digested
+%   in ISOLATION (latex_constructs/sect02.rs:377 digest(ops)), so the \egroup runs in
+%   a bounded sub-context and never reaches the suspended box-reader loop
+%   (base_utilities.rs:3617 predigest_box_contents_in_mode). Real LaTeX runs the hook
+%   INLINE in the main stream: \enddocument -> \UseOneTimeHook{enddocument} BEFORE
+%   \@checkend (latex.ltx:15257). First error: \egroup Attempt to close a group that
+%   switched to mode restricted_horizontal.
+\documentclass{article}
+\AtEndDocument{X\egroup}
+\begin{document}
+\setbox0=\hbox\bgroup A
+\end{document}

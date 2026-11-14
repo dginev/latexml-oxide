@@ -1,0 +1,22 @@
+% witness: 64k review r2 (findings 1-2): a class `\author` that calls a saved kernel setter which clears before it adds
+%          (the kernel `\date`: `\lx@clear@frontmatter`, then `\lx@add@date`), or that opens a group it does not
+%          close (`\begingroup`, an environment)
+% oracle:  pdflatex 0 errors; the date, the author, the footnote
+% engines: rust 64k r2 = the date set before `\author` lost (the replay's `\date` cleared the queue; its add was inert),
+%          and the replay's group, left open under the class's `\begingroup`, kept `\footnote` gobbled and the
+%          frontmatter inert for the rest of the document; Perl never replays
+% expect:  0 errors; date "1 May 2020" once; one creator Alice; the body's footnote kept
+% status:  RED (64k r2) -> GREEN (64k)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\let\Originaldate\date
+\renewcommand*{\author}[1]{\Originaldate{Replayed}\begingroup\gdef\theauthorname{#1}}
+\makeatother
+\title{A title}
+\date{1 May 2020}
+\author{Alice}
+\begin{document}
+\maketitle
+Text.\footnote{A note.}
+\end{document}

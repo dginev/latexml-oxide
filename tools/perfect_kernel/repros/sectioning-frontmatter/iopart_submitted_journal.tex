@@ -1,0 +1,16 @@
+% witness: hep-th9910179 (Error:recursion:\journal)
+% oracle:  pdflatex 0 errors (with iopart.cls); "Submitted to: Institute of Physics Publishing"
+% engines: rust (int57a) = 1 Error recursion:\journal; perl = the same (iopart_support.sty.ltxml:98-99)
+% expect:  0 errors; <pubnote role="journal">Institute of Physics Publishing</pubnote>
+% mechanism: iopart.cls:277-278 `\submitted` prints \journal; the binding's `\submitto{\journal}` ran
+%   `\def\journal{\journal}`. KPE #1121.
+% status:  GREEN (78s)
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{A B}
+\address{Univ}
+\submitted
+\maketitle
+Text.
+\end{document}

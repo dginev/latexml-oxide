@@ -1,0 +1,17 @@
+% witness: 2608.11802, 2607.26704 (oasics-v2021.cls:725), 2403.18812 (no-lipics-v2022.cls:988), tgdk-v2021
+% oracle:  pdflatex "Hooks: checked first, starred after; inside the document: at once." (bold); 0 errors
+% engines: rust 67int15 = 1 error (undefined `\caption@AtBeginDocument`)
+% expect:  0 errors, 0 warnings; both hooks run at `\begin{document}`, the starred after; inside the document at once
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{caption}
+% oasics-v2021.cls:725, no-lipics-v2022.cls:988
+\makeatletter
+\caption@AtBeginDocument{\@ifpackageloaded{subfig}{\PackageError{test}{Do not load subfig}{}}{\gdef\checked{checked}}}
+\caption@AtBeginDocument*{\gdef\afterwards{\checked{} first, starred after}}
+\newcommand\now{\caption@AtBeginDocument{\textbf{at once}}}
+\makeatother
+\begin{document}
+Hooks: \afterwards; inside the document: \now.
+\end{document}

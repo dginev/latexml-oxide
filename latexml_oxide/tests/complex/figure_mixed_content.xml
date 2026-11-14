@@ -15,13 +15,13 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <resource src="ltx-listings.css" type="text/css"/>
-  <table inlist="lot" placement="t" xml:id="S0.T1">
+  <table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelfill="0.36" panelline="1" panelrows="2" placement="t" xml:id="S0.T1">
     <tags>
-      <tag><text fontsize="90%">Table 1</text></tag>
+      <tag>Table 1</tag>
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Table 1</tag>
     </tags>
-    <inline-block class="ltx_figure_panel" depth="9.5pt" height="13.1pt" width="124.2pt" xscale="0.900015259021897" xtranslate="-6.9pt" yscale="0.900015259021897" ytranslate="1.3pt">
+    <inline-block class="ltx_figure_panel" depth="7.3pt" height="10.9pt" panelwidth="0.36" width="124.2pt" xscale="0.900015259021897" xtranslate="-6.9pt" yscale="0.900015259021897" ytranslate="1.0pt">
       <tabular class="ltx_minipage" vattach="middle" width="138.0pt">
         <tbody>
           <tr>
@@ -35,7 +35,8 @@
         </tbody>
       </tabular>
     </inline-block>
-    <inline-block class="ltx_figure_panel" depth="9.5pt" height="13.1pt" width="124.2pt" xscale="0.900015259021897" xtranslate="-6.9pt" yscale="0.900015259021897" ytranslate="1.3pt">
+    <break class="ltx_break"/>
+    <inline-block class="ltx_figure_panel" depth="7.3pt" height="10.9pt" panelwidth="0.36" width="124.2pt" xscale="0.900015259021897" xtranslate="-6.9pt" yscale="0.900015259021897" ytranslate="1.0pt">
       <tabular class="ltx_minipage" vattach="middle" width="138.0pt">
         <tbody>
           <tr>
@@ -50,16 +51,16 @@
       </tabular>
     </inline-block>
     <toccaption><tag close=" "><text fontsize="80%">1</text></tag><text fontsize="80%">table with two resized, minipage, tabulars</text></toccaption>
-    <caption fontsize="80%"><tag close=": "><text fontsize="113%">Table 1</text></tag><text fontsize="113%">table with two resized, minipage, tabulars</text></caption>
+    <caption fontsize="80%"><tag close=": ">Table 1</tag>table with two resized, minipage, tabulars</caption>
   </table>
   <pagination role="newpage"/>
-  <figure inlist="lof" labels="LABEL:array:fig" xml:id="S0.F1">
+  <figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:array:fig" panelcols="2" panelrows="2" xml:id="S0.F1">
     <tags>
-      <tag><text fontsize="90%">Figure 1</text></tag>
+      <tag>Figure 1</tag>
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}[345.0pt]\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{\lx@tag[ ]{{\small(a)}}{\small}}}\end{subfigure}&amp;\begin{subfigure}[345.0pt]\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{\small}}}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
+    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}{345.0pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{{a}}}{}}}\lx@@caption{{\lx@tag[ ]{{\small{(a){}}}}{\small}}}\end{subfigure}&amp;\begin{subfigure}{345.0pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{{b}}}{}}}\lx@@caption{{\lx@tag[ ]{{\small{(b){}}}}{\small}}}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
         <XMath>
           <XMArray role="ARRAY" vattach="middle">
             <XMRow>
@@ -74,27 +75,26 @@
         </XMath>
       </Math></p>
     <break class="ltx_break"/>
-    <figure class="ltx_figure_panel" inlist="lof" labels="LABEL:array:subfig1" xml:id="S0.F1.sf1">
+    <figure class="ltx_figure_panel" inlist="lof" labels="LABEL:array:subfig1" panelwidth="0.247" xml:id="S0.F1.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
-        <tag role="refnum">1(a)</tag>
+        <tag role="refnum">1a</tag>
       </tags>
       <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=85.35826pt,keepaspectratio=true" xml:id="S0.F1.sf1.g1"/>
-      <toccaption><tag close=" ">(a)</tag></toccaption>
+      <toccaption><tag close=" ">a</tag></toccaption>
       <caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption>
     </figure>
-    <break class="ltx_break"/>
-    <figure class="ltx_figure_panel" inlist="lof" labels="LABEL:array:subfig2" xml:id="S0.F1.sf2">
+    <figure class="ltx_figure_panel" inlist="lof" labels="LABEL:array:subfig2" panelwidth="0.247" xml:id="S0.F1.sf2">
       <tags>
         <tag><text fontsize="90%">(b)</text></tag>
-        <tag role="refnum">1(b)</tag>
+        <tag role="refnum">1b</tag>
       </tags>
       <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=85.35826pt,keepaspectratio=true" xml:id="S0.F1.sf2.g1"/>
-      <toccaption><tag close=" ">(b)</tag></toccaption>
+      <toccaption><tag close=" ">b</tag></toccaption>
       <caption><tag close=" "><text fontsize="90%">(b)</text></tag></caption>
     </figure>
     <toccaption><tag close=" ">1</tag>math array figure</toccaption>
-    <caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">math array figure</text></caption>
+    <caption><tag close=": ">Figure 1</tag>math array figure</caption>
   </figure>
   <para xml:id="p1">
     <p>Testing <ref labelref="LABEL:array:subfig1"/> and <ref labelref="LABEL:array:subfig2"/> inside <ref labelref="LABEL:array:fig"/>.</p>
@@ -107,7 +107,7 @@
       <tag role="typerefnum">Algorithm 1</tag>
     </tags>
     <toccaption><tag close=" ">1</tag>A Wrapped Algorithm</toccaption>
-    <caption><tag close=" "><text font="bold">Algorithm 1</text></tag> A Wrapped Algorithm</caption>
+    <caption><tag close=" "><text font="bold">Algorithm 1</text></tag>A Wrapped Algorithm</caption>
     <p framed="topbottom">1- mock algorithm with just enough textual content.<break/>2- mock algorithm with just enough textual content.<break/>3- mock algorithm with just enough textual content.</p>
   </figure>
   <paragraph inlist="toc" xml:id="S0.SS0.SSS0.Px1">
@@ -116,9 +116,9 @@
       <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Nibh sit amet commodo nulla. Id nibh tortor id aliquet lectus proin nibh. Quam quisque id diam vel quam elementum. Ut porttitor leo a diam sollicitudin tempor id. Pulvinar etiam non quam lacus suspendisse faucibus interdum posuere lorem. Magnis dis parturient montes nascetur ridiculus mus mauris. Quam nulla porttitor massa id. Mattis ullamcorper velit sed ullamcorper morbi tincidunt ornare massa eget. Fringilla urna porttitor rhoncus dolor. Eget mauris pharetra et ultrices neque ornare aenean. Lorem sed risus ultricies tristique nulla. Nunc lobortis mattis aliquam faucibus purus in massa. Purus ut faucibus pulvinar elementum integer enim neque. Cras sed felis eget velit aliquet sagittis. Odio aenean sed adipiscing diam donec adipiscing. Lacus sed turpis tincidunt id aliquet. Blandit volutpat maecenas volutpat blandit. Donec massa sapien faucibus et molestie. Blandit aliquam etiam erat velit.</p>
       <pagination role="newpage"/>
     </para>
-    <figure inlist="lof" placement="htbp" xml:id="S0.F2">
+    <figure class="ltx_panels_matrix" inlist="lof" panelcols="3" panelrows="2" placement="htbp" xml:id="S0.F2">
       <tags>
-        <tag><text fontsize="90%">Figure 2</text></tag>
+        <tag>Figure 2</tag>
         <tag role="refnum">2</tag>
         <tag role="typerefnum">Figure 2</tag>
       </tags>
@@ -149,19 +149,19 @@
         </tbody>
       </tabular>
       <toccaption class="ltx_centering"><tag close=" ">2</tag>a tabular + resizebox</toccaption>
-      <caption class="ltx_centering"><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">a tabular + resizebox</text></caption>
+      <caption class="ltx_centering"><tag close=": ">Figure 2</tag>a tabular + resizebox</caption>
     </figure>
     <pagination role="newpage"/>
-    <figure inlist="lof" xml:id="S0.F3">
+    <figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelrows="2" xml:id="S0.F3">
       <tags>
-        <tag><text fontsize="90%">Figure 3</text></tag>
+        <tag>Figure 3</tag>
         <tag role="refnum">3</tag>
         <tag role="typerefnum">Figure 3</tag>
       </tags>
-      <block class="ltx_figure_panel ltx_minipage" vattach="top" width="138.0pt">
+      <block class="ltx_figure_panel ltx_minipage" panelwidth="0.4" vattach="top" width="138.0pt">
         <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=55.1983pt,keepaspectratio=true" xml:id="S0.F3.g1"/>
       </block>
-      <block class="ltx_figure_panel ltx_minipage" vattach="top" width="138.0pt">
+      <block class="ltx_figure_panel ltx_minipage" panelwidth="0.4" vattach="top" width="138.0pt">
         <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=55.1983pt,keepaspectratio=true" xml:id="S0.F3.g2"/>
       </block>
       <break/>
@@ -195,10 +195,10 @@
         </item>
       </itemize>
       <toccaption><tag close=" ">3</tag>Two minipages and an itemize</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Two minipages and an itemize</text></caption>
+      <caption><tag close=": ">Figure 3</tag>Two minipages and an itemize</caption>
     </figure>
     <pagination role="newpage"/>
-    <figure xml:id="S0.SS0.SSS0.Px1.fig1">
+    <figure class="ltx_panels_gallery" panelcols="1" panelrows="3" xml:id="S0.SS0.SSS0.Px1.fig1">
       <p align="center" class="ltx_figure_panel">First</p>
       <break class="ltx_break"/>
       <equation class="ltx_figure_panel" xml:id="S0.Ex1">
@@ -212,9 +212,9 @@
       <p align="center" class="ltx_figure_panel">Third</p>
     </figure>
     <pagination role="newpage"/>
-    <figure inlist="lof" xml:id="S0.F4">
+    <figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="11" xml:id="S0.F4">
       <tags>
-        <tag><text fontsize="90%">Figure 4</text></tag>
+        <tag>Figure 4</tag>
         <tag role="refnum">4</tag>
         <tag role="typerefnum">Figure 4</tag>
       </tags>
@@ -394,78 +394,77 @@
       <verbatim class="ltx_figure_panel" font="typewriter"> some verbatim $#! stuff 
 </verbatim>
       <toccaption><tag close=" ">4</tag>Highly mixed figure</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 4</text></tag><text fontsize="90%">Highly mixed figure</text><note mark="1" role="footnote" xml:id="footnote1"><tags>
+      <caption><tag close=": ">Figure 4</tag>Highly mixed figure<note mark="1" role="footnote" xml:id="footnote1"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">footnote 1</tag>
           </tags>note1</note></caption>
     </figure>
     <pagination role="newpage"/>
-    <figure inlist="lof" xml:id="S0.F5">
+    <figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelrows="2" xml:id="S0.F5">
       <tags>
-        <tag><text fontsize="90%">Figure 5</text></tag>
+        <tag>Figure 5</tag>
         <tag role="refnum">5</tag>
         <tag role="typerefnum">Figure 5</tag>
       </tags>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F5.g1"/>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F5.g2"/>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F5.g1"/>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F5.g2"/>
       <break class="ltx_break"/>
       <p class="ltx_figure_panel">.</p>
       <toccaption><tag close=" ">5</tag>Caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 5</text></tag><text fontsize="90%">Caption</text><note mark="2" role="footnote" xml:id="footnote2"><tags>
+      <caption><tag close=": ">Figure 5</tag>Caption<note mark="2" role="footnote" xml:id="footnote2"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">footnote 2</tag>
           </tags>Note</note></caption>
     </figure>
     <pagination role="newpage"/>
-    <figure inlist="lof" xml:id="S0.F6">
+    <figure class="ltx_panels_matrix" inlist="lof" panelcols="2" panelfill="0.66" panelline="1" panelrows="2" xml:id="S0.F6">
       <tags>
-        <tag><text fontsize="90%">Figure 6</text></tag>
+        <tag>Figure 6</tag>
         <tag role="refnum">6</tag>
         <tag role="typerefnum">Figure 6</tag>
       </tags>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F6.g1"/>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F6.g2"/>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F6.g1"/>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F6.g2"/>
       <break/>
       <toccaption><tag close=" ">6</tag>mid-fig caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 6</text></tag><text fontsize="90%">mid-fig caption</text></caption>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F6.g3"/>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F6.g4"/>
+      <caption><tag close=": ">Figure 6</tag>mid-fig caption</caption>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F6.g3"/>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F6.g4"/>
     </figure>
     <pagination role="newpage"/>
-    <figure inlist="lof" xml:id="S0.F9">
+    <figure class="ltx_panels_matrix" inlist="lof" panelcols="2" panelfill="0.66" panelline="1" panelrows="2" xml:id="S0.F9">
       <tags>
-        <tag><text fontsize="90%">Figure 9</text></tag>
+        <tag>Figure 9</tag>
         <tag role="refnum">9</tag>
         <tag role="typerefnum">Figure 9</tag>
       </tags>
       <toccaption><tag close=" ">7</tag>leading caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 7</text></tag><text fontsize="90%">leading caption</text></caption>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F9.g1"/>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F9.g2"/>
+      <caption><tag close=": ">Figure 7</tag>leading caption</caption>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F9.g1"/>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F9.g2"/>
       <break/>
       <toccaption><tag close=" ">8</tag>mid-fig caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 8</text></tag><text fontsize="90%">mid-fig caption</text></caption>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F9.g3"/>
-      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F9.g4"/>
+      <caption><tag close=": ">Figure 8</tag>mid-fig caption</caption>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F9.g3"/>
+      <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" panelwidth="0.33" xml:id="S0.F9.g4"/>
       <toccaption><tag close=" ">9</tag>trailing caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 9</text></tag><text fontsize="90%">trailing caption</text></caption>
+      <caption><tag close=": ">Figure 9</tag>trailing caption</caption>
     </figure>
     <pagination role="newpage"/>
-    <figure placement="tb" xml:id="S0.SS0.SSS0.Px1.fig3">
-      <float class="ltx_figure_panel ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg:main" placement="H" vattach="middle" width="193.2pt" xml:id="alg2">
+    <figure class="ltx_panels_gallery" panelcols="1" panelfill="0.56" panelline="1" panelrows="2" placement="tb" xml:id="S0.SS0.SSS0.Px1.fig3">
+      <float class="ltx_figure_panel ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg:main" panelwidth="0.56" placement="H" vattach="middle" width="193.2pt" xml:id="alg2">
         <tags>
           <tag><text font="bold">Algorithm 2</text></tag>
           <tag role="refnum">2</tag>
           <tag role="typerefnum">Algorithm 2</tag>
         </tags>
         <toccaption><tag close=" ">2</tag>Algorithms in minipage</toccaption>
-        <caption><tag close=" "><text font="bold">Algorithm 2</text></tag> Algorithms in minipage</caption>
+        <caption><tag close=" "><text font="bold">Algorithm 2</text></tag>Algorithms in minipage</caption>
         <listing framed="topbottom">
           <listingline xml:id="alg2.l0"><tags>
-              <tag><text fontsize="80%">0:</text></tag>
-              <tag role="refnum">0</tag>
+              <tag><text font="bold">Require:</text></tag>
             </tags> line
 </listingline>
           <listingline xml:id="alg2.l1"><tags>
@@ -671,7 +670,8 @@
 </listingline>
         </listing>
       </float>
-      <figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="144.9pt" xml:id="S0.SS0.SSS0.Px1.fig2">
+      <break class="ltx_break"/>
+      <figure class="ltx_figure_panel ltx_minipage ltx_panels_gallery" panelcols="2" panelrows="1" panelwidth="0.42" vattach="middle" width="144.9pt" xml:id="S0.SS0.SSS0.Px1.fig2">
         <float class="ltx_figure_panel ltx_float_algorithm" framed="top" inlist="loa" labels="LABEL:alg:rpc" placement="H" xml:id="alg3">
           <tags>
             <tag><text font="bold">Algorithm 3</text></tag>
@@ -679,11 +679,10 @@
             <tag role="typerefnum">Algorithm 3</tag>
           </tags>
           <toccaption><tag close=" ">3</tag><text color="#0000FF">line</text></toccaption>
-          <caption><tag close=" "><text font="bold">Algorithm 3</text></tag> <text color="#0000FF">line</text></caption>
+          <caption><tag close=" "><text font="bold">Algorithm 3</text></tag><text color="#0000FF">line</text></caption>
           <listing framed="topbottom">
             <listingline xml:id="alg3.l0"><tags>
-                <tag><text fontsize="80%">0:</text></tag>
-                <tag role="refnum">0</tag>
+                <tag><text font="bold">Require:</text></tag>
               </tags> line
 </listingline>
             <listingline xml:id="alg3.l1"><tags>
@@ -768,11 +767,10 @@
             <tag role="typerefnum">Algorithm 4</tag>
           </tags>
           <toccaption><tag close=" ">4</tag><text color="#0000FF">line</text></toccaption>
-          <caption><tag close=" "><text font="bold">Algorithm 4</text></tag> <text color="#0000FF">line</text></caption>
+          <caption><tag close=" "><text font="bold">Algorithm 4</text></tag><text color="#0000FF">line</text></caption>
           <listing framed="topbottom">
             <listingline xml:id="alg4.l0"><tags>
-                <tag><text fontsize="80%">0:</text></tag>
-                <tag role="refnum">0</tag>
+                <tag><text font="bold">Require:</text></tag>
               </tags> line
 </listingline>
             <listingline xml:id="alg4.l1"><tags>

@@ -28,8 +28,7 @@ LoadDefinitions!({
 
   // No-op the public watermark API
   def_macro_noop("\\newwatermark{}")?;
-  def_macro_noop("\\xnewwatermark[]{}")?;
-  def_macro_noop("\\xnewwatermark*[]{}")?;
+  def_macro_noop("\\xnewwatermark OptionalMatch:* []{}")?;
   def_macro_noop("\\removewatermark{}")?;
   def_macro_noop("\\DeclareWatermarkParser{}")?;
   // Options (printwatermark, draft, etc.) handled by DeclareOption no-ops

@@ -1,0 +1,17 @@
+% witness: synthetic (review revP5a S1, scratch c3: the grade-on-its-own-line rule fired after an affiliation line)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE∗ and Bob Baker", "Univ A, Town", "Fellow, IEEE"; the footnote
+%          "Note." (whose grade the third line is, the PDF does not say)
+% engines: rust P5abase = Ann's grade; "Fellow, IEEE" dropped silently; rust P5a = Bob's (`line:contact
+%          membership:name-above`, the last name above, past the affiliation line)
+% expect:  0 errors, 0 warnings; Ann's grade; the line continuing the affiliation above it, "Univ A, Town Fellow, IEEE";
+%          the note Bob's
+% status:  RED (P5a) -> GREEN (P5a2)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE}\IEEEauthorrefmark{1} and Bob~Baker\\
+Univ A, Town\\
+\IEEEmembership{Fellow,~IEEE}\thanks{Note.}}
+\maketitle
+Body.
+\end{document}

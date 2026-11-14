@@ -1,0 +1,17 @@
+% mechanism: epsfig.sty:61-100 defines `\epsfbox` (and `\epsffile`, :100) to include the graphic at `\epsfxsize` or
+%   `\epsfysize` (`\Ginclude@graphics`), then reset both. The epsfig binding made it a no-op, as Perl's does
+%   (epsfig.sty.ltxml:69), so `\epsffile` figures vanished whenever no epsf binding was loaded over it — which OmniBus
+%   used to do for every `\documentstyle[aps,…,epsfig]{revtex}` paper (aps a missing option before 64zd).
+% witness: cond-mat9908394
+% oracle:  pdflatex: 0 errors; x.eps included twice, the first 2cm wide (rwi=566), the second at its natural size
+% engines: rust 64y: both graphics, both 2cm wide (OmniBus's epsf over epsfig's no-op); rust 64zd r1 (no OmniBus): none; perl: both,
+%   both 2cm wide (no reset)
+% expect:  0 errors; two `<graphics>`, the first with width=56.9pt, the second with no options
+% status:  RED (64zd r1) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps,epsfig]{revtex}
+\begin{document}
+\epsfxsize=2cm
+\epsffile{x.eps}
+\epsfbox{x.eps}
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: hyperref's `\href{…}{Ann Able\footnotemark[1]}` in `\author`: the mark is written as a `<sup>∗</sup>`
+%   after the link and again as the note's mark, so the name prints "∗" twice (the note itself is the creator's,
+%   beside the name, OD #1001; the extra `<sup>` is not the lift's: int159a2 has it too)
+% witness: synthetic (FN1b's sibling probe of a mark inside a link)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ Bob Baker†", footnotes "1 Note A." "2 Note B."
+% engines: int159a2 (`latexml_oxide.int159a2-rel`): 0 errors, 0 warnings; `<personname><ref href="http://x.org">Ann
+%   Able<note mark="*" …>Note A.</note></ref><sup>∗</sup></personname>`; FN1b: `<personname><ref …>Ann
+%   Able</ref><sup>∗</sup></personname><note mark="*" …>Note A.</note>`; perl not run
+% expect:  0 errors, 0 warnings; `<personname><ref href="http://x.org">Ann Able</ref></personname>` then the note
+%   "Note A." marked "*", no second "∗" in the name
+% status:  RED (int159a2, FN1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{\href{http://x.org}{Ann Able\footnotemark[1]} \and Bob Baker\footnotemark[2]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}\footnotetext[2]{Note B.}
+Text.
+\end{document}

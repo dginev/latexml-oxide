@@ -1,0 +1,25 @@
+% witness: cond-mat0003103 (REVTeX 3: items 1-17 of an {enumerate}, one natbib \bibitem, items 18-26; cited "Ref. 24")
+% oracle:  pdflatex 0 errors: 1. A, [1] V, 2. B, 3. C — the \bibitem is one item of the author's list
+% engines: rust 64x = 1 Error:malformed:ltx:bibitem (the entry inside the list's item; natbib's \bibitem opens no
+%          bibliography after an \item of the list, as base and Perl 0.8.8 do: 1 error)
+% expect:  0 errors; the list's items 1., 2., 3. and the entry [1] between them, in order
+% status:  RED (64x): needs the environment model of SYNC K21 — a bibliography that leaves the list element while the
+%          list's TeX group stays open (an earlier list-resume mechanism restarted numbering, lost enumitem options and
+%          numbered kernel \bibitems apart from the list's items; removed in round 7)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \cite{v}.
+\section*{REFERENCES}
+\begin{enumerate}
+
+\item A. Able, Title.
+
+\bibitem{v} V. Vesna, Title.
+
+\item B. Baker, Title.
+
+\item C. Cole, Title.
+\end{enumerate}
+\end{document}

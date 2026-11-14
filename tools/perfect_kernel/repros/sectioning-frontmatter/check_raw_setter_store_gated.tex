@@ -1,0 +1,29 @@
+% A raw class's setter stores what the document gives it, and the class's title page prints the store under a gate only
+% the class's refused `\author` opens (CUP-JNL-DTM.cls:371-373,429-435,509-514: `\auaddress` printed under `\aucount>0`,
+% advanced by the class's own `\author`, which the kernel's lock refuses): the rehearsal, whose `\aucount` stays 0,
+% prints no address, where pdflatex prints "Lunar Institute, Gravel Road". The title-page check's third source
+% (title_page_check.rs `digest_raw_setter_calls`): what the document's text gives a raw class's setter before the title page,
+% digested, is wanted too, its words named apart, `Warning:frontmatter:unclaimed_store`, since pdflatex may not print a
+% store. FIDELITY_CHARTER §4; OXIDIZED_DESIGN_DIVERGENCES #953 "108b".
+% witness: 2305.00867 (CUP-JNL-DTM); 1011.2770, 2605.02209 and 1401.7920 are the same source's other writers
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Lunar Institute, Gravel Road",
+%          "Body text."
+% engines: rust int139c = 0 errors, 0 warnings, the address lost silently; perl = 0 errors, keeps the address (it
+%          appears not to read the raw class): a content loss against Perl, counted here, not fixed
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store "lunar institute gravel road"); the XML unchanged
+% status:  RED (int139c) -> GREEN (108b)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{gatedcls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\auaddress{}
+\newcommand{\address}[1]{\g@addto@macro\auaddress{#1\par}}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}{\auaddress}\fi}
+\end{filecontents*}
+\documentclass{gatedcls}
+\title{A Title}\author{Ann Able}
+\address{Lunar Institute, Gravel Road}
+\begin{document}\maketitle
+Body text.
+\end{document}

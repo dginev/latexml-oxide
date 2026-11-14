@@ -1,0 +1,15 @@
+% An outer spec naming a theme no \NewTblrTheme defined is an error, for any table
+% (tabularray.sty:4094-4098 `\tl_use:c` of the theme's code: "Erroneous variable ... used"); the table
+% is still typeset.
+% witness: 57cp review 1 (th.tex). Guard: perfect_kernel_batch57::tabularray_undefined_theme.
+% status:  GREEN (57cp)
+% oracle:  pdflatex: 1 error per table (Erroneous variable \g__tblr_theme_nothere_code_tl used).
+% engines: rust 57co2: silent.
+% expect:  2 errors (one per table), 0 warnings; both tables typeset.
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}[theme=nothere]{ll} A & B \\ \end{tblr}
+
+\begin{longtblr}[theme=nothere, label=none]{ll} C & D \\ \end{longtblr}
+\end{document}

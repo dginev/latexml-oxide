@@ -1,0 +1,14 @@
+% witness: review 64y round 1 (proof_endgroup)
+% oracle:  pdflatex 0 errors
+% engines: rust 64ra 0/0 and 64y 0/0, the rest of the document inside <ltx:proof>; Perl 0/0, same
+% expect:  0 errors; proof ends at the \endgroup
+% status:  RED (64y side finding): \begin{proof} = \begin{@proof} -> the \@proof DefConstructor; same cause as amsthm_bare_proof_closed_by_brace
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsthm}\newtheorem{thm}{Theorem}
+\begin{document}
+Intro.
+
+\begin{proof} Proof text. \endgroup After proof.
+
+Next para.
+\end{document}

@@ -1,0 +1,29 @@
+% witness: 2309.15562 (its author block, shortened; its `\authorblockN`, IEEEtran's old name, undefined in TL 2025,
+%          written `\IEEEauthorblockN`); batch 77p r10 A/B (a handle is no address since r10, so the
+%          environment's name no longer read as one)
+% oracle:  pdflatex 0 errors: two names with their addresses, the institution centred under them
+% engines: rust 77p r10 w2 = 0 errors; an empty affiliation on Bob Baker (77p r9: two empty e-mail contacts on the
+%          shared creator), from the `\end{@IEEEauthorhalign}\hfill\strut` and `\begin{@IEEEauthorhalign}` lines
+% expect:  0 errors, 0 warnings; no empty contact anywhere
+% status:  RED (77p r10 w2) -> GREEN (77p r10)
+\documentclass[conference]{IEEEtran}
+\title{T}
+\makeatletter
+\author{%
+\IEEEauthorblockN{Ann Able$^{1}$}
+\IEEEauthorblockA{\texttt{aable@x.edu}}
+\and
+\IEEEauthorblockN{Bob Baker$^{1}$}
+\IEEEauthorblockA{\texttt{bbaker@x.edu}}
+\end{@IEEEauthorhalign}%
+\hfill\strut
+\\[-.5\baselineskip]
+\centering
+${}^1$Univ A\\[-1.5\baselineskip]
+\begin{@IEEEauthorhalign}%
+}
+\makeatother
+\begin{document}
+\maketitle
+Text.
+\end{document}

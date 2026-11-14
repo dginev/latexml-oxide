@@ -1,0 +1,18 @@
+% witness: 2408.14427 (llncs, `\email{\{first.last\}@uii-ai.com}` under the institute five authors carry, given to Meng
+%          Zheng, the corresponding author); review rev92b_r1 B2
+% oracle:  pdflatex: "Ann Able1⋆, Bob Baker1, and Cid Cole2" (the note "⋆ Corresponding author."), 1 Univ X
+%          {first.last}@x.org, 2 Univ Y cid.cole@y.org
+% engines: perl 0.8.8 = 0 errors, the template on Ann Able and on Bob Baker; rust 92b r1 the same, the shadow on Ann
+%          Able (`owner:corresponding`)
+% expect:  0 errors, 0 warnings; the shadow reading: the template the block's (`owner:inner-email owner:pattern`),
+%          cid.cole@y.org Cid Cole's (spelled)
+% status:  RED (92b r1, the shadow) -> GREEN (92b r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\thanks{Corresponding author.} \and Bob Baker\inst{1} \and Cid Cole\inst{2}}
+\institute{Univ X\\ \email{\{first.last\}@x.org} \and Univ Y\\ \email{cid.cole@y.org}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,33 @@
+% witness: hexgame (hexgame.sty `\PstHexagon` from pst-poly.tex:62-71, which
+%   sets `\NormalCoor` around `\pssetlength{\PstPoly@IntermediatePointDim}
+%   {\PstPoly@IntermediatePoint}` with the empty default, then draws polar
+%   coordinates `(\PstPoly@IntermediatePointDim;\the\pst@cnta\PstPoly@Decimal)`)
+% oracle:  latex 0 errors; D=28.45274pt (the empty length is `\psunit`, the
+%   `\NormalCoor` `\pssetlength`, pstricks.tex:750-754); the polar lines
+%   start 0.5cm from the origin at 44.5 and 30 degrees
+% engines: rust(P1 c29f1eb2cf, 52affa7218)=1 error "\@nil undefined" in
+%   hexgame (here: "Missing argument Until:\@nil", job aborted): `\NormalCoor`
+%   was a no-op, so the `\SpecialCoor` `\pssetlength` (:795,
+%   `\special@length#1#2\@nil#3`, :1001) ran on the empty value and read past
+%   its `\@nil`; rust(56ir) and perl: `\pssetlength` is `\setlength`, 0 errors
+% expect:  0 errors, 0 warnings; D=28.45274pt; the two polar lines drawn
+% status:  GREEN (w1-pstricks, P1 review 2)
+% mechanism: `\SpecialCoor`/`\NormalCoor` are the raw pstricks.tex
+%   definitions (:746-806, value state), not Perl's no-ops (:1037-1038),
+%   since `\pssetlength` is raw too.
+\documentclass{article}
+\usepackage{pstricks}
+\makeatletter
+\newdimen\PolyDim
+\def\PolyPoint{}
+\def\PolyDecimal{.5}
+\begin{document}
+\NormalCoor\pssetlength{\PolyDim}{\PolyPoint}\SpecialCoor
+D=\the\PolyDim.
+\pssetlength{\PolyDim}{0.5}
+\begin{pspicture}(-2,-2)(2,2)
+\pst@cnta=44
+\psline(\PolyDim;\the\pst@cnta\PolyDecimal)(1;90)
+\psline(\PolyDim;30)(1;90)
+\end{pspicture}
+\end{document}

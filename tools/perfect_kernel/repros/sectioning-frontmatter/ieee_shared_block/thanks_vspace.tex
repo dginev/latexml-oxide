@@ -1,0 +1,18 @@
+% mechanism: a run of notes and spacing (`\thanks{…}\vspace{2mm}`) between `\IEEEauthorblockN` and the shared
+%   `\IEEEauthorblockA` is the document's notes (`document_notes`: the parts printing nothing left out), not an
+%   affiliation block printing nothing that claims every name but the last
+% witness: synthetic (`thanks` with a `\vspace`; 1508.00691)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker / University of X / ann@x.edu, bob@x.edu"
+% engines: rust int130a, 104a: Ann e-mail only, Bob the affiliation
+% expect:  0 errors, 0 warnings; each author University of X and their own e-mail; the note the document's thanks
+% status:  RED (104a) -> GREEN (104a r2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able and Bob Baker}
+\thanks{Corresponding author: Bob Baker.}\vspace{2mm}
+\IEEEauthorblockA{University of X\\ ann@x.edu, bob@x.edu}}
+\maketitle
+Text.
+\end{document}

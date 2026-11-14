@@ -1,0 +1,15 @@
+% witness: amsldoc-it/itamsldoc, amsldoc-vn/amsldoc-vi, amsmath/amsldoc (amsldoc.cls:84-92 \cn)
+% oracle:  pdflatex + makeindex, 0 errors: "Index \\*, 1 \alpha, 1"
+% engines: rust (56jm) = entries "verb”*“verbatimchar“@xp…"; rust (56js before the fix) = 9 errors
+%          on amsldoc-it (the `\\*` entry's \def\* ate the entry)
+% expect:  0 errors, 0 warnings
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: `\string\verb` writes the characters `\verb`, which the .ind re-read makes the
+%   command; the macro-assembled body is expanded with control symbols inert.
+\documentclass{amsldoc}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+Commands \cn{alpha} and \cn{\\*}.
+\printindex
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: REVTeX's group rule (`group_or_marked_affiliation`): a symbol after a letter (`$^{a*,b}$`) prints "a∗",
+%   one label of two parts, requested once by its letter (`requested_label_keys`: a); the unmarked head is the requested a
+%   no line prints, the lettered sibling of the numbered shape
+% witness: synthetic (review revP4b3c B1, probe q10; the rule's witnesses 2109.01501, 1903.07834)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "Ann Ablea∗,b and Bob Bakerb,c / Univ A, Town A /
+%          b Univ B, Town B / c Univ C, Town C"
+% engines: P4b3base: as expected; P4b3d: both names bare, a nameless creator holding the whole block (E 0, W 0)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", "b Univ B, Town B"; Bob Baker "b Univ B, Town B", "c Univ C, Town C"
+% status:  RED (P4b3d) -> GREEN (P4b3e; guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a*,b}$}
+\author{Bob Baker$^{b,c}$}
+\affiliation{Univ A, Town A\\ $^{b}$Univ B, Town B\\ $^{c}$Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

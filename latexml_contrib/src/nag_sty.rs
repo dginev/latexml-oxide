@@ -25,10 +25,19 @@ LoadDefinitions!({
     "nag.sty",
     "nag.sty is minimally stubbed — \\ObsoleteCS/\\ObsoletePackage/\\ObsoleteClass are no-ops; kernel commands are not redefined."
   );
-  // The public API: silently consume their args.
+  // The public API (nag.sty:82-168, 265-334, 534), with its arguments: silently consume them. `\ObsoleteClass` takes
+  // the optional reason as the others do (:154 `[3][obsolete]`). Witness 1303.5654 (`\ObsoleteEnv` undefined: 1 error
+  // before, 0 after).
   DefMacro!("\\ObsoletePackage[]{}{}", "");
-  DefMacro!("\\ObsoleteClass{}{}", "");
+  DefMacro!("\\ObsoleteClass[]{}{}", "");
   DefMacro!("\\ObsoleteCS[]{}{}", "");
+  DefMacro!("\\ObsoleteEnv[]{}{}", "");
+  DefMacro!("\\SuggestedPackage[]{}", "");
+  DefMacro!("\\IncompatiblePackages[]{}{}{}", "");
+  DefMacro!("\\BadFileLoadOrder[]{}{}", "");
+  DefMacro!("\\NotAnEnvironment{}", "");
+  DefMacro!("\\NotASwitch{}", "");
+  DefMacro!("\\NagDeclareFloat{}", "");
   DefMacro!("\\nag[]{}", "");
   def_macro_noop("\\nagrequirepackage{}")?;
   def_macro_noop("\\nagshow{}")?;

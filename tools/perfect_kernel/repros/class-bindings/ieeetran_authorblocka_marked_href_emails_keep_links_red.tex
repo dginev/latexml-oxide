@@ -1,0 +1,20 @@
+% mechanism: an IEEEtran marked e-mail line whose addresses are `\href{mailto:…}{…}` links behind their marks
+%   (`Email: \IEEEauthorrefmark{1}\href{mailto:ann@x.edu}{ann@x.edu}, …`): each address goes to its mark's name as a
+%   plain e-mail contact, its link dropped
+% witness: 2505.22454 (int165a and P4b4f: no link; int166a kept the paper's last address's link alone)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Email: *ann@x.edu, †bob@x.edu", each a mailto: link
+% engines: int165a, int166a, P4b4f: 0 errors, 0 warnings; Ann One ann@x.edu, Bob Two bob@x.edu, no `<ref href="mailto:…">`
+% expect:  0 errors, 0 warnings; each e-mail contact its `<ref class="ltx_href" href="mailto:…">`
+% status:  RED (int165a, P4b4f: the links lost, no word lost)
+% moves:   post-merge
+\documentclass{IEEEtran}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann One\IEEEauthorrefmark{1}, Bob Two\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{Dept of X, Univ A\\
+Email: \IEEEauthorrefmark{1}\href{mailto:ann@x.edu}{ann@x.edu},
+\IEEEauthorrefmark{2}\href{mailto:bob@x.edu}{bob@x.edu}}}
+\maketitle
+x
+\end{document}

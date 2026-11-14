@@ -1,0 +1,11 @@
+% witness: cms-legal-sample (biblatex-chicago); \printbiblist prints its heading and prenote
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_printbiblist.bib}
+\defbibnote{legal}{Shorthands are used unless noted.}
+\begin{document}
+Text \cite{k1}.
+\printbiblist[prenote=legal,title=Legal Authority Shorthands]{shorthand}
+\printbiblist[heading=none,title=Untitled List]{shorthand}
+\printbibliography
+\end{document}

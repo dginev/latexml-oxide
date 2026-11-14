@@ -68,6 +68,7 @@ At End stuff(inside).End stuff.After End stuff(outside).</p>
       <verbatim font="typewriter">
 \some \code
 End verbatim(inside): Some Code.</verbatim>
+      <p>After End verbatim(outside).</p>
     </para>
   </section>
   <section inlist="toc" xml:id="S3">
@@ -206,7 +207,7 @@ xABYZ.</p>
         <p>relax is not patchable</p>
       </para>
       <para xml:id="S3.SS4.p4">
-        <p>begin is  patchable</p>
+        <p>begin is not patchable</p>
       </para>
       <para xml:id="S3.SS4.p5">
         <p>first and second</p>
@@ -313,19 +314,19 @@ Bold to <text font="italic">italic</text></p>
         <p>relax is not defprotected</p>
       </para>
       <para xml:id="S3.SS6.p16">
-        <p>begin is not defprotected</p>
+        <p>begin is  defprotected</p>
       </para>
       <para xml:id="S3.SS6.p17">
-        <p>prefix test begin: false</p>
+        <p>prefix test begin: true</p>
       </para>
       <para xml:id="S3.SS6.p18">
         <p>prefix test noise: false</p>
       </para>
       <para xml:id="S3.SS6.p19">
-        <p>prefix test newrobustcmd: false</p>
+        <p>prefix test newrobustcmd: true</p>
       </para>
       <para xml:id="S3.SS6.p20">
-        <p>prefix test newrobustcmd: false</p>
+        <p>prefix test newrobustcmd: true</p>
       </para>
       <para xml:id="S3.SS6.p21">
         <p>ifcsltxprotect relax: false</p>

@@ -1,0 +1,19 @@
+% mechanism: as ieee_blocka_tabular_rules_print_no_line, for `\cline{…}` and booktabs' rules with their optional
+%   widths (`\toprule`, `\midrule[1pt]`, `\bottomrule`): each drops out of the rows (OXIDIZED_DESIGN_DIVERGENCES #964,
+%   review rev104c S3)
+% witness: none (review rev104c S3's sibling commands; the reading's witness 2606.28962)
+% oracle:  pdflatex (TL 2025, booktabs) 0 errors: "Ann Able1 , Bob Baker2 / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust int131a0: Ann "Univ A, Town 2 Univ B, City", Bob none; 104c r1: each author their row, 3 Errors and
+%   3 Warnings
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town", Bob "Univ B, City"
+% status:  RED (104c r1) -> GREEN (104c r2) — perfect_kernel_batch104c::tabular_rows_are_marked_entries
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{booktabs}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{1}$, Bob Baker$^{2}$}
+\IEEEauthorblockA{\begin{tabular}{c}\toprule $^{1}$Univ A, Town\\ \cline{1-1} $^{2}$Univ B, City\\ \midrule[1pt] \bottomrule\end{tabular}}}
+\maketitle
+Text.
+\end{document}

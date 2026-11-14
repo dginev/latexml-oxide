@@ -1,0 +1,17 @@
+% mechanism: a written `\and` at pasj00_cls.rs `pasj_author_list` cut: today's output, pinned before P2-5
+% witness: P2P plan step P2-5 (no census paper holds a macro-held or `\let` separator)
+% oracle:  pdflatex with 0708.1797's pasj00.cls: 0 `!` lines
+% engines: perl not run; int158a: as expected (pin)
+% expect:  0 errors, 0 warnings; creators Ann Able (altaffiliation Univ A), Bob Baker (altaffiliation Univ B)
+% status:  GREEN (int158a and P25; guard perfect_kernel_batchp25)
+% preload: ar5iv.sty
+\documentclass{pasj00}
+
+\title{T}
+\author{Ann Able\altaffilmark{1} \and Bob Baker\altaffilmark{2}}
+\altaffiltext{1}{Univ A}
+\altaffiltext{2}{Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

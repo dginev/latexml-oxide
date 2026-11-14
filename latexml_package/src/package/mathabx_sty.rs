@@ -477,6 +477,11 @@ LoadDefinitions!({
   def_math_sym("\\curvearrowleft", "\u{21B6}", Some("ARROW"), None)?;
   def_math_sym("\\curvearrowright", "\u{21B7}", Some("ARROW"), None)?;
   def_math_sym("\\curvearrowbotright", "\u{293B}", Some("ARROW"), None)?;
+  // mathabx.dcl:639 `\curvearrowbotleftright` (mathb "F5"): a bottom arc with a head at each end, which no Unicode
+  // character draws; the bottom arc ⤻ (U+293B, `\curvearrowbotright`'s) is the closest (OXIDIZED_DESIGN_DIVERGENCES
+  // #857). Perl leaves it undefined (mathabx.sty.ltxml:487, commented out; KNOWN_PERL_ERRORS #1095). Witness 2308.12945 (`\underset{
+  // \curvearrowbotleftright}{\times}`, the swap of a product's factors).
+  def_math_sym("\\curvearrowbotleftright", "\u{293B}", Some("ARROW"), None)?;
   def_math_sym("\\circlearrowleft", "\u{21BA}", Some("ARROW"), None)?;
   def_math_sym("\\circlearrowright", "\u{21BB}", Some("ARROW"), None)?;
   def_math_sym("\\leftsquigarrow", "\u{21DC}", Some("RELOP"), None)?;
@@ -535,38 +540,38 @@ LoadDefinitions!({
   //  \sum, \prod
   //  \coprod, \intop
   DefMath!("\\iintop", "\u{222C}", meaning => "double-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\iiintop", "\u{222D}", meaning => "triple-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   //  \ointop, \oint
   DefMath!("\\oiintop", "\u{222F}", meaning => "double-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\bigplus", "+",
     font => { scale => 1.2 },
     meaning => "nary-plus", role => "BIGOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\bigtimes", "\u{2A09}",
     meaning => "nary-times", role => "BIGOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\bigcomplementop", "\u{2201}",
     meaning => "nary-complement", role => "BIGOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   //  \bigcap
   //  \bigcup, \biguplus
   DefMath!("\\bigsqcap", None, "\u{2A05}",
     role => "SUMOP",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   //  \bigsqcup
   //  \bigwedge
   //  \bigvee
   DefMath!("\\bigcurlywedge", None, "\u{22CF}",
     font => { scale => 1.6 },
     role => "SUMOP",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigcurlyvee", None, "\u{22CE}",
     font => { scale => 1.6 },
     role => "SUMOP",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
 
   //======================================================================
   // Big circles (mathx)

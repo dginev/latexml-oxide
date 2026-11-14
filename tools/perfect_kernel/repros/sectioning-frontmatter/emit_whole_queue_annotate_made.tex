@@ -1,0 +1,22 @@
+% mechanism: a tail a raw macro appends to `\@author` after the block (`\g@addto@macro\@author{\\ #1}`) is handed to the
+%   creators the call made, `annotate={made}` with `lx_author_made` (frontmatter_stores.rs `author_tail_calls`); under
+%   `=2` the call made one whole entry, so "made" was 1 and only the last name got the row (review revZ4b
+%   finding 4); where the call made every queued creator the tail is now `annotate=all`, Perl's every parent
+% witness: review revZ4b (no dev3/devh paper); the guard's rows: this file, three names `Ann Able, Bob Baker and Cat Cole`
+% oracle:  pdflatex 0 errors; "Ann Able" and "Bob Baker" in two `\and` columns, "Univ A, Town" under Bob Baker's (the tail
+%   joins the last column); with `Ann Able, Bob Baker and Cat Cole` one column, the row under all three
+% engines: rust int144am, Z4br2 and LO1, `=2`: Bob Baker alone holds "Univ A, Town"; off and `=1`: both
+% expect:  0 errors, 0 warnings; `=2` as off: each name holds the row
+% status:  RED (Z4br2) -> GREEN (perfect_kernel_batchz4b::annotate_made_reaches_every_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newcommand\address[1]{\g@addto@macro\@author{\\ #1}}
+\makeatother
+\title{T}
+\author{Ann Able \and Bob Baker}
+\address{Univ A, Town}
+\begin{document}
+\maketitle
+Text.
+\end{document}

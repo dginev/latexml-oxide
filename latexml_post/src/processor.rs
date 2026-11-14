@@ -6,7 +6,6 @@
 use std::path::PathBuf;
 
 use libxml::tree::Node;
-use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 
 use crate::document::PostDocument;
@@ -138,7 +137,9 @@ pub struct PackageInfo {
 ///
 /// Port of `Processor::find_documentclass_and_packages`.
 pub fn find_documentclass_and_packages(doc: &PostDocument) -> (ClassInfo, Vec<PackageInfo>) {
-  let pi_re = Regex::new(r#"\s*([\w\-_]*)=[\"'](.*?)[\"']"#).unwrap();
+  static PI_RE: std::sync::LazyLock<regex::Regex> =
+    std::sync::LazyLock::new(|| regex::Regex::new(r#"\s*([\w\-_]*)=[\"'](.*?)[\"']"#).unwrap());
+  let pi_re = &*PI_RE;
   let mut class: Option<String> = None;
   let mut classoptions = String::from("onecolumn");
   let mut oldstyle: Option<String> = None;
@@ -190,7 +191,9 @@ pub fn find_documentclass_and_packages(doc: &PostDocument) -> (ClassInfo, Vec<Pa
 ///
 /// Port of `Processor::find_preambles`.
 pub fn find_preambles(doc: &PostDocument) -> String {
-  let pi_re = Regex::new(r#"\s*([\w\-_]*)=[\"'](.*?)[\"']"#).unwrap();
+  static PI_RE: std::sync::LazyLock<regex::Regex> =
+    std::sync::LazyLock::new(|| regex::Regex::new(r#"\s*([\w\-_]*)=[\"'](.*?)[\"']"#).unwrap());
+  let pi_re = &*PI_RE;
   let mut preambles = Vec::new();
 
   for pi in doc.findnodes("//processing-instruction('latexml')") {

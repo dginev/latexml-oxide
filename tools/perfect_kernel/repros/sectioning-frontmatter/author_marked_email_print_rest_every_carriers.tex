@@ -1,0 +1,22 @@
+% mechanism: a block line's e-mail entry under a mark several names carry, one address of the print spelling a
+%   carrier and another spelling none (`$^\dagger$\texttt{cole@x.org, alpha@y.org}` under Ann Able†, Bob Baker† and
+%   Cat Cole†): the spelled address its carrier's (`owner:spelled`), the unspelled one every carrier's — the
+%   symbol-line ruling (FIDELITY_CHARTER §4, 2026-10-30, "every symbol carrier"): a spelled address beside it does not
+%   send it to the block (`Resolver::print_address_owners`).
+% witness: synthetic (the review rev93a r2 probe c4); the print path's witnesses 2409.11430, 2410.18711, 2506.19548,
+%   2510.10618
+% oracle:  pdflatex 0 errors: "Ann Able1† , Bob Baker1† , Cat Cole1†" over "1 Univ A, City" and "† cole@x.org,
+%   alpha@y.org"
+% engines: rust 93a r2: cole@x.org Cat Cole's, alpha@y.org the block's (a nameless creator)
+% expect:  0 errors, 0 warnings; Cat Cole cole@x.org and alpha@y.org, Ann Able and Bob Baker alpha@y.org
+% status:  GREEN (93a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1\dagger}$, Bob Baker$^{1\dagger}$, Cat Cole$^{1\dagger}$ \\
+$^1$Univ A, City \\
+$^\dagger$\texttt{cole@x.org, alpha@y.org}}
+\maketitle
+Text.
+\end{document}

@@ -56,6 +56,8 @@
   <!-- RDFa is invalid in EPUB3, so just skip over it -->
   <xsl:template match="ltx:rdf">
   </xsl:template>
+  <!-- latexml-oxide (OXIDIZED_DESIGN #479): nor type an author as the subject of the ltx:rdf skipped -->
+  <xsl:template match="ltx:creator" mode="rdfa-subject"/>
 
   <!-- Linking to a text/plain data URL is invalid in EPUB3,
        so just skip over it -->

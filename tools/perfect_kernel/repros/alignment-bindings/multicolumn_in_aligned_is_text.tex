@@ -1,0 +1,23 @@
+% witness: 1808.07192 (Equivalent_Intermediate_Formulation.tex:29-33 `&\min &\multicolumn{2}{l}{$f_0(x)$}` in aligned)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the spanned cell is text holding the formula f_0(x); an array's \multicolumn cell stays math;
+%   "AFTERWORDS survive."
+% mechanism: `\multicolumn` is `\multispan` (`\omit`): no u-template, so an amsmath alignment's cell loses its `$`
+%   and is restricted horizontal (array.sty `\d@llarbegin` = `\begingroup` outside `\array`). The binding (as Perl
+%   TeX_Tables.pool.ltxml:693-702) kept the cell math, so `$f_0(x)$` opened text around the scripts. Fixed:
+%   tex_tables.rs `\lx@alignment@multicolumn` boxes the body as text in an alignment whose math is its template's
+%   (`template_math`, amsmath_sty.rs) (KPE #662).
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsmath,array}
+\begin{document}
+Before.
+\begin{equation}
+\begin{aligned}
+&\min &\multicolumn{2}{l}{$f_0(x)$}\\
+&\text{s.t.} & x &\leq 1
+\end{aligned}
+\end{equation}
+\[ \begin{array}{cc} \multicolumn{2}{c}{a_1+b} \\ c & d \end{array} \]
+After the equation, AFTERWORDS survive.
+\end{document}

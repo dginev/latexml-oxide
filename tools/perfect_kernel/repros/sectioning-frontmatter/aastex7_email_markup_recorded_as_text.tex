@@ -1,0 +1,24 @@
+% witness: 64g review r1 finding 1 (no corpus witness: 0 of 3,123 recorded addresses in 373 AASTeX 7 papers of 2608 carry
+%          markup); aastex701.cls:13341-13353 does not print `#2`
+% oracle:  pdflatex 0 errors; no address printed
+% engines: rust 64g = content="\url{ann@z.org}" and content="\hrefmailto:jr@x.org" (the source, the second mangled);
+%          Perl displays both as contacts (aas_support.sty.ltxml:122)
+% expect:  0 errors; Ann Able = rdf schema:email "ann@z.org"; John Roe = rdf schema:email "jr@x.org" — the value as
+%          hyperref's \pdfstringdef would make it (SYNC F2, the same open mechanism as
+%          sectioning-frontmatter/hyperref_pdfinfo_expands_macros)
+% status:  RED (64g)
+\documentclass{aastex701}
+\usepackage{url}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{Univ A}
+\email{\url{ann@z.org}}
+\author{John Roe}
+\affiliation{Univ B}
+\email{\href{mailto:jr@x.org}{jr@x.org}}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

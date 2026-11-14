@@ -1,0 +1,15 @@
+% witness: 983 corpus manuals (5,201 lines), any load of scrlfile-hook: nomencl → tocbasic → scrbase
+%   → scrlfile → scrlfile-hook
+% oracle:  pdflatex 0 warnings
+% engines: rust (s117) = 5× "Package scrlfile-hook Warning: More file names popped from stack than
+%   put to."; perl = 0 (fires no file hooks at all)
+% expect:  0 errors, 0 warnings; <p>x</p>
+% status:  GREEN (batch 56gz)
+% mechanism: input_definitions fired file/before|after (use_load_hooks) without ltfilehook's
+%   \@expl@@@filehook@file@push@@/…@pop@@ (latex.ltx:18772/18789); scrlfile-hook.sty:146-158 seeds
+%   its stack from the kernel's (empty) and underflowed once per file open when it loaded.
+\documentclass{article}
+\usepackage{nomencl}
+\begin{document}
+x
+\end{document}

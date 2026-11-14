@@ -1,0 +1,41 @@
+% mechanism: `placed_contact_owner`'s surname match on the names as they print, on the paths both readings agree on:
+%   a name of characters read as typed (`Ann Able`), a tie rehearsed (`B.~Smith`), a particle ("van der" joined), a hyphenated surname joined, a
+%   `\textsc` surname, a literal accent (`M\"{o}rk` "moerk"), a note's words aside (`\thanks{With Joe Moss.}`: moss@
+%   is no one's by spelling, the group's only author's), a name in an `\mbox`
+% witness: synthetic (P5c); 0901.2914, 1111.5264 (`J~W~Conklin`, a tied name)
+% oracle:  pdflatex (opex3.sty of 0901.2914 beside it) 0 errors: "B. Smith" … "smith@x.org", "Dan van der Dole" …
+%          "vanderdole@x.org", "Eve Kurz-Lang" … "kurzlang@x.org", "Gil Hart" … "hart@x.org", "Ida Mörk" …
+%          "ida.moerk@x.org", "Kim Lee1" "Univ P", "Lou May" "Univ O" "moss@x.org", "Nia Nash" … "nash@x.org"
+% engines: rust P5cbase = P5c (the guard pins both)
+% expect:  0 errors, 0 warnings; smith@ B. Smith's, vanderdole@ Dan van der Dole's, kurzlang@ Eve Kurz-Lang's, hart@ Gil
+%          Hart's, ida.moerk@ Ida Mörk's, moss@ Lou May's, nash@ Nia Nash's
+% status:  GREEN (P5cbase, P5c)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{opex3}
+\begin{document}
+\title{T}
+\author{B.~Smith}\address{Univ Y}
+\author{Ann Able}\address{Univ X}
+\email{smith@x.org}
+\author{Dan van der Dole}\address{Univ Z}
+\author{Cy Coe}\address{Univ W}
+\email{vanderdole@x.org}
+\author{Eve Kurz-Lang}\address{Univ V}
+\author{Fay Fox}\address{Univ U}
+\email{kurzlang@x.org}
+\author{Gil \textsc{Hart}}\address{Univ T}
+\author{Hal Ives}\address{Univ S}
+\email{hart@x.org}
+\author{Ida M\"{o}rk}\address{Univ R}
+\author{Jon Kay}\address{Univ Q}
+\email{ida.moerk@x.org}
+\author{Kim Lee\thanks{With Joe Moss.}}\address{Univ P}
+\author{Lou May}\address{Univ O}
+\email{moss@x.org}
+\author{\mbox{Nia Nash}}\address{Univ L}
+\author{Oz Orr}\address{Univ K}
+\email{nash@x.org}
+\begin{abstract}A.\end{abstract}
+Text.
+\end{document}

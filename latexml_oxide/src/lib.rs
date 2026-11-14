@@ -7,8 +7,11 @@ extern crate latexml_package;
 
 pub mod api;
 pub mod bib_session;
+#[cfg(feature = "test-utils")]
+pub mod conformance;
 pub mod converter;
 pub mod core_interface;
+pub mod format_dumps;
 pub mod identity;
 pub mod ini_tex;
 pub mod lsp_server;
@@ -16,6 +19,8 @@ pub mod main_tex;
 pub mod multidoc;
 pub mod post;
 pub mod render_workers;
+pub mod source_date;
+pub mod streaming_restart;
 pub mod util;
 
 /// Load the embedded LaTeXML schema (compile-time) into the runtime
@@ -25,6 +30,9 @@ pub mod util;
 /// all callers through this one function lets LTO keep exactly one
 /// instance in the final binary. Mirrors Perl
 /// `LaTeXML::Common::Model::compileSchema` (Model.pm L121-136).
+// The generated loader builds the whole schema in one frame (opt-level 0); it runs once per process at start-up. Splitting
+// it per element in the `load_model!` proc macro is a post-merge refactor.
+#[allow(clippy::large_unopt_stack_frames)]
 pub fn load_latexml_default_model() {
   use latexml_codegen::LoadModel;
   load_model!("LaTeXML");

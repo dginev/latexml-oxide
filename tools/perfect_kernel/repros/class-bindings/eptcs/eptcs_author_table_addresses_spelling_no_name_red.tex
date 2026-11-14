@@ -1,0 +1,24 @@
+% mechanism: an eptcs cell holding a table of names whose e-mail row spells no name, after another author's cell: the
+%   addresses go to a nameless creator (the reading's owner, a second mechanism beside `cells`; P24 report,
+%   open)
+% witness: synthetic (P24 report; the table alone, or addresses spelling the names, are right)
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "Univ A"; "Bob
+%   Baker | Cy Cole" over "qq@b.edu | zed@c.edu"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker, Cy
+%   Cole, and a nameless creator holding qq@b.edu and zed@c.edu; perl has no eptcs binding
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (qq@b.edu), Cy Cole (zed@c.edu); no nameless
+%   creator
+% status:  RED (int158a; RR1 gap 21)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\title{T}
+\author{Ann Able \institute{Univ A}
+\and
+\begin{tabular}{c@{\qquad}c}
+Bob Baker & Cy Cole\\
+\texttt{qq@b.edu} & \texttt{zed@c.edu}
+\end{tabular}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

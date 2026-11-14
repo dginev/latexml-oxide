@@ -1,0 +1,23 @@
+% witness: 0711.3504, 0712.0330, 1404.6651 (`{tabnote}`, `{tabfootnote}`, `\tabmark`); 0811.0496 (`{otherinfo}`);
+%          1111.6854 (`\titlefont`, `\authorfont`)
+% oracle:  pdflatex with 0712.0330's ws-ijmpe.cls: "Published in: Int. J. Mod. Phys. E, Vol. 18 (2009)", "a A footnote.",
+%          "Source: From the survey."; 0 errors
+% engines: rust 67int10 = 6 errors (undefined `\titlefont`, `\authorfont`, `{otherinfo}`, `{tabfootnote}`, `\tabmark`, `{tabnote}`)
+% expect:  0 errors, 0 warnings; the publication line centred, the table's footnote and its "Source:" note
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{ws-ijmpe}
+\begin{document}
+\title{\titlefont{A Journal Paper}}
+\author{\authorfont{A. Author}}
+\address{Somewhere University}
+\maketitle
+\begin{otherinfo}Published in: Int. J. Mod. Phys. E, Vol. 18 (2009)\end{otherinfo}
+\begin{abstract}An abstract.\end{abstract}
+\section{Introduction}
+Text.
+\begin{table}[h]\tbl{A table.}{\begin{tabular}{cc}\toprule a\tabmark{a} & b\\ \colrule 1 & 2\\ \botrule\end{tabular}}
+\begin{tabfootnote}\tabmark{a} A footnote.\end{tabfootnote}
+\begin{tabnote}[Source]From the survey.\end{tabnote}
+\end{table}
+\end{document}

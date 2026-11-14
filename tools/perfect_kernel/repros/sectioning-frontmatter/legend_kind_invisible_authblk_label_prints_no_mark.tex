@@ -1,0 +1,25 @@
+% mechanism: authblk's `_labelprints` is set for any non-empty `\affil[x]` label (authblk_sty.rs), and
+%   `kind_legend_contacts` (insert.rs) writes the label's SOURCE text into the note's `mark=`; a label that prints
+%   nothing visible (`~`, `\phantom{*}`, also `\,`, `\hspace{…}`) is no printed mark, so the line should stay the
+%   affiliation base makes, as `\affil[ ]` does (OXIDIZED_DESIGN_DIVERGENCES #961, review rev103c3 should-fix 1)
+% witness: synthetic, review rev103c3 probe p5; none of the 126 A/B outputs carries a `\`- or `˜`-mark
+% oracle:  pdflatex (TL 2025) 0 errors; pdftotext prints no mark before either legend line
+% engines: rust 103c r3: notes with mark="˜" and mark="\phantom*"; int130a: both lines affiliations (nameless
+%   creator); perl: not run
+% expect:  0 errors; neither line a note with a visible mark (affiliations as int130a, or a note whose mark prints
+%   nothing); "printed" decided from the label's digested text, not its source
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Bob Baker}
+\affil[1]{Univ A, Town}
+\affil[~]{Corresponding author: bob@a.edu}
+\affil[\phantom{*}]{These authors contributed equally.}
+\date{}
+\maketitle
+Text.
+\end{document}

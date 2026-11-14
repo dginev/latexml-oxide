@@ -1,0 +1,24 @@
+% mechanism: emit.rs `event_run_at`: a mark a wrapper holds after the name, `\textbf{Ann Able\textsuperscript{1}}`, its
+%   group opening before the name: the name is written from its own tokens in its font and the mark stays apart
+%   (P2 B), never the wrapper whole with the mark's text in the name. A mark only its call's expansion prints
+%   (`made_by_its_call`, no position of its own) is the one P3 writes with the call
+% witness: 2606.08894 (ACL `\textbf{Yizheng Sun\textsuperscript{1}},`; a P3 draft wrote "Yizheng Sun 1" in 14
+%   papers of its A/B: 2509.07459, 2510.18909, 2602.14602, 2604.05775, 2606.05936, 2608.29120, 2609.12704, …)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1, Bob Baker2", "1Univ X, 2Univ Y"
+% engines: int159a and P3: 0 errors, 0 warnings; personnames "Ann Able", "Bob Baker" (the bold of a whole name
+%   unwrapped, OD #122; each mark its affiliation's link); perl not run
+% expect:  0 errors, 0 warnings; personnames Ann Able, Bob Baker, no mark text in a name
+% status:  GREEN (int159a and P3; guard perfect_kernel_batchp3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+ \textbf{Ann Able\textsuperscript{1}},
+ \textbf{Bob Baker\textsuperscript{2}}
+ \\
+ \textsuperscript{1}Univ X, \textsuperscript{2}Univ Y
+}
+\maketitle
+Text.
+\end{document}

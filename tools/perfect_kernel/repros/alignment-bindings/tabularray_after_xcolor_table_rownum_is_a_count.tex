@@ -1,0 +1,30 @@
+% witness: 2601.01074 (W 0 -> 55 on GA1b), 2409.12172 (W 0 -> 154 on GA1b): `\usepackage[table]{xcolor}` before tabularray
+% oracle:  pdflatex 0 errors; tblr cells "b1.2", "d2"; the \rowcolors tabular's cells "b1.1", "d2.2", "f3"
+%          (colortbl.sty:269-274: `\rownum` a count, `\c@rownum` the same register; tabularray.sty:185 `\int_zero_new:N`
+%          keeps it, :1682 sets it per cell; colortbl.sty:261 steps it per row under `\rowcolors`)
+% engines: rust GA1b 6 Warnings `expected:register` ('\c@rownum' is not a register: the colortbl binding let it to the
+%          xcolor binding's macro), cells "b0.2", "d0"; rust int160a1 3 errors 12 warnings; rust GA1c as pdflatex
+% expect:  0 errors, 0 warnings; every cell as pdflatex
+% status:  GREEN (GA1c)
+\documentclass{article}
+\usepackage[table]{xcolor}
+\usepackage{tabularray}
+\begin{document}
+\begin{table}[h]
+\begin{tblr}{ll}
+a & b\therownum.\thecolnum \\
+c & d\therownum \\
+\end{tblr}
+\label{t1}
+\end{table}
+
+\begin{table}[t]
+\rowcolors{2}{gray}{white}
+\begin{tabular}{ll}
+a & b\therownum.\the\rownum \\
+c & d\therownum.\number\rownum \\
+e & f\therownum \\
+\end{tabular}
+\label{t2}
+\end{table}
+\end{document}

@@ -1,0 +1,29 @@
+% witness: 1610.00974 (`\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`), 1805.01525 (`L{5cm}` = >{..}m{})
+% oracle:  pdflatex 0 errors; MMM/NNN and XXX/YYY stack inside their merged cells, bx/bz and xu/xv
+%   are rows of nested tables (`\centering`/`\raggedright` let `\\` to \@centercr in the cell)
+% engines: rust 65p=0 perl=0 (2026-10-12; rust base=0 errors, 2 "Missing number" Warnings, X width="0.0pt";
+%   perl makes NNN and YYY new outer rows)
+% expect:  0 errors, 0 warnings; MMM and NNN two <p> of one merged cell, XXX and YYY likewise; the
+%   b{} and X nested tabulars have 2 tr each
+% status:  GREEN (batch 65p, 2026-10-12)
+% mechanism: the multicolumn paragraph cell's `\let\\\lx@newline` precedes the column's >{} declarations
+%   (`Cell::prefix_at`), so an embedded `\\` stays a line break; nested alignments rebind it. The cells are legal
+%   because a `\centering`/`\raggedright` in the cell body lets `\\` to \@centercr.
+\documentclass{article}
+\usepackage{array,tabularx}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}m{#1}}
+\begin{document}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|L{5cm}|}{\centering MMM\\ NNN} \\ \hline
+\multicolumn{2}{|b{5cm}|}{\begin{tabular}{l} bx \\ bz \end{tabular}} \\ \hline
+yyy & zzz \\ \hline
+\end{tabular}
+
+\begin{tabularx}{\textwidth}{|X|X|}
+\hline
+\multicolumn{2}{|X|}{\raggedright XXX\\ YYY} \\ \hline
+\multicolumn{1}{|X|}{\begin{tabular}{l} xu \\ xv \end{tabular}} & qq \\ \hline
+ppp & rrr \\ \hline
+\end{tabularx}
+\end{document}

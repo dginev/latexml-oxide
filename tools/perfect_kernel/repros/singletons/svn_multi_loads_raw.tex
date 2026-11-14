@@ -1,0 +1,21 @@
+% witness: K13 stage-2 audit row svn-multi (57h; 0 A/B papers); the contrib stub made `\ifsvnmodified`
+%          and `\ifsvnfilemodified` TeX conditionals (real: two-argument choosers, svn-multi.sty:256,
+%          :277), gave the storage macro `\svnurl` an argument (:269) and made `\svnid`/`\svnidlong`
+%          no-ops, so the keyword groups' `$…$` became math
+% oracle:  pdflatex 0 errors, pass 1: "Revision -2 by (clean); url []." and "File 7 by bob."; pass 2 reads the
+%          document keywords back from the .aux ("Revision 42 by alice …", svn-multi.sty's `\svn@write`),
+%          which a single-pass conversion does not (open residual); the file keywords are set at once
+% engines: perl 6 errors (no binding: the macros are undefined); rust 57ag 1 error
+%          (`Error:expected:\fi`), four formulas from the preamble, the text after "(" lost
+% expect:  0 errors, 0 warnings; the pass-1 text, no Math
+% status:  RED (57ag) -> GREEN (57ah: the real package loaded raw, latexml_contrib svn_multi_sty.rs)
+\documentclass{article}
+\usepackage{svn-multi}
+\svnidlong{$HeadURL: http://svn.example.org/repo/doc.tex $}
+{$LastChangedDate: 2020-01-02 03:04:05 +0000 (Thu, 02 Jan 2020) $}
+{$LastChangedRevision: 42 $}{$LastChangedBy: alice $}
+\begin{document}
+Revision \svnrev{} by \svnauthor{} (\ifsvnmodified{modified}{clean}); url [\svnurl].
+
+\svnid{$Id: sub.tex 7 2021-02-03 04:05:06Z bob $}File \svnfilerev{} by \svnfileauthor.
+\end{document}

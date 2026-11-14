@@ -1,0 +1,13 @@
+% mechanism: mathabx.dcl:639 declares `\curvearrowbotleftright` (mathb "F5", a bottom arc with a head at each end);
+%   the binding (as Perl's, mathabx.sty.ltxml:487, commented out) left it undefined. No Unicode character draws the
+%   glyph: the bottom arc U+293B is the closest (OXIDIZED_DESIGN_DIVERGENCES #857)
+% witness: 2308.12945 (`X \underset{\substack{\curvearrowbotleftright \\ C_2}}{\times} X`)
+% oracle:  pdflatex 0 errors
+% engines: rust int52a = Error:undefined:\curvearrowbotleftright; Perl 0.8.8 the same
+% expect:  0 errors; an XMTok role ARROW U+293B
+% status:  RED (int52a) -> GREEN (78p)
+\documentclass{article}
+\usepackage{mathabx}
+\begin{document}
+$a \curvearrowbotleftright b$
+\end{document}

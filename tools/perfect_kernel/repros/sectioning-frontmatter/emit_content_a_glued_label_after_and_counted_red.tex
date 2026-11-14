@@ -1,0 +1,17 @@
+% mechanism: a mark glued past a separator's word to the text of an entry of its label (`$^2$Dept Y and $^2$Lab Q`)
+%   is that entry's text (one list labels each entry once, `calls::split_marked_pieces`); the observer's writer cuts the
+%   line there, losing "and" and the "2", which the content check counts (`resolver::placed::retold_words`, CT1ar)
+% witness: synthetic (CT1ar sibling of 2204.02412)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 / 1Univ X, Town / 2Dept Y and 2 Lab Q, City"
+% engines: rust CT1arbase: Bob "Dept Y" and "Lab Q, City", 0 warnings; CT1ar: the same, 1 Warning naming "2 and"
+% expect:  0 errors, 0 warnings; Bob "Dept Y and 2Lab Q, City"
+% status:  RED (the cut) — the loss counted since CT1ar (perfect_kernel_batchn2::a_glued_label_cut_as_an_entry_is_counted);
+%   moves: post-merge (the events-side cutter's S1 rule, SYNC row 99a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^1$Univ X, Town \\ $^2$Dept Y and $^2$Lab Q, City}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 2605.25017 (`\author[1]{…}\author[1]{…}\affil[1]{Dept}\affil{<both e-mails>}`); 77n r3/r4/r5 reviews — an
+%          unlabelled authblk `\affil` after a labelled one, a labelled `\author[1]` before an unlabelled author (review
+%          probes q10, r07)
+% oracle:  pdflatex 0 errors: "Ann1 and Bob1 / 1Univ X / 1Univ Y" (authblk numbers Bob and Univ Y by its note)
+% engines: rust int32a = Ann with Univ Y and Univ X, Bob with Univ Y; 77n r5 = Ann with Univ X only (a `label=` read as
+%          answering her)
+% expect:  0 errors, 0 warnings; 2 creators, Ann with Univ Y and Univ X, Bob with Univ Y (Perl's `annotate=new`; Univ X
+%          on Bob, which authblk's `\AB@thenote` prints, is a SYNC row)
+% status:  GREEN (int32a) -> RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann}
+\author{Bob}
+\affil[1]{Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

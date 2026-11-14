@@ -1,0 +1,24 @@
+% witness: 2006.14937 (datatool's numeric parser: `\regex_replace_case_once:nN { \c_datatool_numeric_leading_zeros_regex
+%          {…} … }` → 501× "Invalid character '_' following '\c' escape", Fatal runaway; "Can't convert non-numerical `0'")
+% oracle:  pdflatex: `\pdfstrcmp` compares its texts as `show_token_list` writes them (pdftex.web `compare_strings`,
+%          tex.web §292/§262): a control word with a trailing space, so `\relax` = `\string\relax\space`, and l3regex
+%          recognises a compiled regex variable by its meaning (`\__regex_compile_use_aux:w`)
+% engines: rust int98a = the plain token text (Perl pdfTeX.pool.ltxml:277 `ToString`, KNOWN_PERL_ERRORS #1178): "NE",
+%          the variable compiled as a pattern
+% expect:  0 errors, 0 warnings; "A:EQ. B:EQ. [xby] Max: 58.18."
+% status:  RED (int98a) -> GREEN (80j: pdftex.rs `\pdfstrcmp` compares `writable_tokens`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{datatool}
+\begin{document}
+A:\ifnum\pdfstrcmp{\relax}{\string\relax\space}=0 EQ\else NE\fi.
+\ExplSyntaxOn
+B:\exp_args:Ne \str_if_eq:nnTF { \token_to_str:N \relax \c_space_tl } { \relax } {EQ} {NE}.
+\regex_const:Nn \c_my_regex { a }
+\tl_set:Nn \l_tmpa_tl { xay }
+\regex_replace_case_once:nN { \c_my_regex {b} } \l_tmpa_tl
+[\l_tmpa_tl]
+\ExplSyntaxOff
+\def\theMax{0}\DTLmax{\theMax}{\theMax}{58.18}
+Max: \theMax.
+\end{document}

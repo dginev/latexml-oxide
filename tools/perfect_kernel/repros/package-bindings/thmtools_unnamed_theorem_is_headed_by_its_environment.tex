@@ -1,0 +1,16 @@
+% witness: 1505.04294 (`\declaretheorem[style=mystyle,…]{definition}`: 90 theorems headed "1.1", … for "Definition 1.1")
+% oracle:  pdflatex 0 errors: "Theorem 1.1. A", "Defn 1.2. B" — thm-kv.sty:359 names the theorem
+%          `\thmt@modifycase #1`, `\protect\MakeUppercase` by default (:34-42), which takes the first token only
+% engines: rust int49a = 0 errors, head "1.2" (no name, typerefnum " 1.2"); perl = "Defn 1.2" (thmtools.sty.ltxml:80-82)
+% expect:  0 errors, 0 warnings; the defn's tag and typerefnum are "Defn 1.2"
+% status:  RED (int49a) -> GREEN (78k: thmtools_sty.rs defaults the name to `\thmt@modifycase{<env>}`)
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\declaretheorem[numberwithin=section,name=Theorem]{thm}
+\declaretheorem[sibling=thm,style=definition]{defn}
+\begin{document}
+\section{S}
+\begin{thm}A\end{thm}
+\begin{defn}\label{d}B\end{defn}
+See \ref{d}.
+\end{document}

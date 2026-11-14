@@ -1,0 +1,29 @@
+% A document that renews `\and` (`\renewcommand\and{\unskip, }`) after saving the kernel's (`\let\oldand\and`): the
+% separator's meaning is the token's that printed it, not `\and`'s (`argument_separators`, OD #995, P2-6). The renewed
+% `\and` is the document's (`raw`): Ann Able's contact "Univ A, Town, Univ B, City", as before. The saved `\oldand` is
+% the kernel separator: its line is the class's (`frontmatter_stores.rs` `kernel_and_list`), where by spelling it went
+% to the API with the word "and" invented.
+% witness: synthetic (a renewed `\and` reaching the gate, the P26 brief)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Univ A, Town, Univ B, City", "Univ C, Place   Univ D, Dale"
+% engines: rust int158a = 0 errors, 1 warning (the content check's "and"), both lines Ann Able's contacts; P26 = 0
+%          errors, 0 warnings, the first her contact, the second the class's line; perl = no raw class load
+% expect:  0 errors, 0 warnings; Ann Able's contact "Univ A, Town, Univ B, City"; the `\oldand` line a body tabular
+% status:  RED (int158a) -> GREEN (P26; guard
+%          perfect_kernel_batchp26::an_in_place_line_is_the_classs_where_a_separator_means_the_kernels)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipand.cls}
+\ProvidesClass{ipand}
+\LoadClass{article}
+\newcommand\address[1]{\par{\small\begin{tabular}[t]{c}#1\end{tabular}}\par}
+\end{filecontents*}
+\documentclass{ipand}
+\let\oldand\and
+\renewcommand\and{\unskip, }
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Town \and Univ B, City}
+\address{Univ C, Place \oldand Univ D, Dale}
+\maketitle
+Body.
+\end{document}

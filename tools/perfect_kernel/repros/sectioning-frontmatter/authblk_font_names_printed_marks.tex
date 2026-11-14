@@ -1,0 +1,22 @@
+% mechanism: authblk names in font commands with printed marks: the printed-marks writer (`per_author_marks`, a call
+%   appending names) writes each name's own balanced run, digested as written, so its markup is kept (the mark inside the
+%   font group as the kernel nests `\textit{…}$^{3}$`). Bob Two's whole-name pure bold is unwrapped by OD #122 (user
+%   2026-08-16), as `\author{\textbf{Bob Two}}` is in plain article: no loss, no Warning. Was the RED
+%   authblk_bold_name_markup_lost_uncounted_red, whose "rebuilt without its font" was OD #122's unwrap (P4b4r)
+% witness: synthetic (int164a integration; FMK1's sibling s4 row `queue_marks_flexisym_authblk_boxed_note`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: Ann One italic, Bob Two bold (CMBX12), Cy Three small caps,
+%   Dan's "Four" bold, Eve Five upright, each with its upright mark (CMR8); authblk's own "1" after Eve Five and before
+%   First Univ: RED `authblk_noblocks_trailing_note_list_red`
+% engines: int163a: Bob Two plain, 1 W ("a name its events don't spell", the mark inside the bold); int165a: as expected
+% expect:  0 errors, 0 warnings; five creators, each name with its mark and its markup (Bob Two's bold unwrapped, OD
+%   #122), each affiliation with its mark
+% status:  GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{article}
+\usepackage[noblocks]{authblk}
+\title{T}
+\author{\textit{Ann One$^{1}$} \qquad \textbf{Bob Two$^{2}$} \qquad \textsc{Cy Three}$^{3}$ \qquad Dan \textbf{Four}$^{4}$ \qquad \mbox{Eve Five$^{5}$}}
+\affil{$^1$First Univ \qquad $^2$Second Univ \qquad $^3$Third Univ \qquad $^4$Fourth Univ \qquad $^5$Fifth Univ}
+\begin{document}
+\maketitle
+Text.
+\end{document}

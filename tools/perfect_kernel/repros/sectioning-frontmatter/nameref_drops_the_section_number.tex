@@ -1,0 +1,16 @@
+% witness: synthetic (63k root-cause side finding; Perl CrossRef.pm:774-777 yanks a \nameref title's tag; a \nameref
+%          inside a section title, 63k review)
+% oracle:  pdflatex 0 errors: "See Target." and the third section "3 After Target" (nameref prints the title only)
+% engines: rust 63j = the ref reads "2 Target" (the title's tag kept), the third section's TOC entry "After "; Perl
+%          "Target", and "After 2 Target" in the TOC (fillInTitle passes no nameref flag; KNOWN_PERL_ERRORS #531)
+% expect:  0 errors; the \nameref reads "Target", in the text and in the third section's TOC entry
+% status:  RED (63j) -> GREEN (63k)
+\documentclass{article}
+\usepackage{nameref}
+\begin{document}
+\tableofcontents
+\section{First}
+\section{Target}\label{tgt}
+See \nameref{tgt}.
+\section{After \nameref{tgt}}
+\end{document}

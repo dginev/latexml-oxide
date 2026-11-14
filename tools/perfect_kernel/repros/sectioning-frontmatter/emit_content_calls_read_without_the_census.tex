@@ -1,0 +1,18 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `=2`) reads the rehearsed
+%   creator calls of a paper with no author block whether or not the census ran (deleted in DEL4): the flush read
+%   every paper under `=2` (`shadow::reads_now`, gone with it; since DEL4 the observer reads every paper), so llncs's `\institute` printing `ann@a.org` twice, the output once, is
+%   counted in production too
+% witness: 1401.5951 (llncs: the content check's 2 findings under the census, none without it); N2r2's question (c)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker", "Univ A, Town", "ann@a.org", "ann@a.org"
+% engines: rust N2r2, the switch on: without the census 0 warnings (the calls unread), with it 1 (the lost `ann@a.org`)
+% expect:  the switch on, with or without the census: 0 errors, 1 warning (the content check's lost `ann@a.org`)
+% status:  RED (N2r2) -> GREEN (perfect_kernel_batchn2r3::the_calls_are_read_without_the_census)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, Town\\ \email{ann@a.org}\\ \email{ann@a.org}}
+\maketitle
+Body.
+\end{document}

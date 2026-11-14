@@ -1,0 +1,21 @@
+% witness: showexpl-test (showexpl doc; G3 residual slice 1 M4: ends at example 11 of 19, 50 % recall); design
+%   agent_reports scratch_showexpl_m4/
+% oracle:  pdflatex 0 errors; "Listing 1: Whole document", the code, "Inner text." (Large), then "See Example 1. After
+%   the example."
+% engines: rust 59t = Error:unexpected:\usepackage; the XML ends after the example's own \end{document}: the binding
+%   ran the result without showexpl's preset (showexpl.sty:88-114, :348-366) and dropped the keys (RUST-ONLY)
+% expect:  0 errors; an ltx:float (inlist lol, LABEL:ex:whole, caption "Whole document") holding the listing; then
+%   <p> "Inner text." at 144 %; then "See Example <ref/>. After the example."; no LABEL:inner
+% status:  RED (59t) -> GREEN (59u)
+\documentclass{article}
+\usepackage{showexpl}
+\begin{document}
+\begin{LTXexample}[pos=b,preset=\Large,caption={Whole document},label=ex:whole]
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Inner text\label{inner}.
+\end{document}
+\end{LTXexample}
+See Example~\ref{ex:whole}. After the example.
+\end{document}

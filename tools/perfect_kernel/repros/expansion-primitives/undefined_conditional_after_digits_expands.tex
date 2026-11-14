@@ -1,0 +1,13 @@
+% An undefined conditional that ends the digits of a dimension's factor is expanded as its error
+% stub (`\iffalse`, State.pm:537-545) before the decimal point is tested: Perl's `readFactor`
+% reads the end token again (Gullet.pm:876-880), so `1\ifFa\else.5\fi pt` is 1.5pt.
+% witness: none (probe).
+% status:  GREEN (59a)
+% oracle:  Perl LaTeXML: 1 error (the undefined conditional), "A:[1.5pt]" (pdflatex differs: TeX
+%          drops an undefined token).
+% expect:  1 error, 0 warnings.
+\documentclass{article}
+\begin{document}
+\newdimen\da
+A:\da=1\ifFa\else.5\fi pt[\the\da]
+\end{document}

@@ -1,0 +1,18 @@
+% witness: arXiv 2110.01778 (detection-main.tex:79-87, `$\boldsymbol{t.\colA = \valA$ and $\valA \neq \valL}$`),
+%   review r1 of 65c (probe u2)
+% mechanism: amsbsy's `\boldsymbol{#1}` typesets #1 in `\mathchoice{\hbox{$\m@th\displaystyle#1$}}...` (amsbsy.sty:28-34), so a
+%   `$ ... $` pair inside the argument is TEXT inside that box and the outer math is balanced. Ours digests the
+%   argument as math: the inner `$` closes the outer math, "Missing } inserted" twice, and the math stays open to
+%   `\end{document}` -- the rest of the paper is built inside it (2110.01778: 13,281 words, 64 malformed bibitems).
+% oracle:  pdflatex 0 errors, "Only if t = a and a /= b. After words."
+% engines: rust 64ze/65c = 0 errors, 4 warnings: 2 `Warning:expected:}` ("Missing } inserted"), the end-document
+%          warning and `Warning:unparsed_math:PERIOD_UNKNOWN_…` (the `. After words.` tail as an unparsed math), "After
+%          words." inside that math; Perl = 2 errors, `tex="\boldsymbol{t=a$and$a\neq b}"`
+% expect:  0 errors, 0 warnings; "and" as text inside the bold math, "After words." in the paragraph after it
+% status:  RED (65c side finding, Rust \boldsymbol argument mode; not this batch's mechanism)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,amsbsy}
+\begin{document}
+Only if $\boldsymbol{t = a$ and $a \neq b}$. After words.
+\end{document}

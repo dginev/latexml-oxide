@@ -1,0 +1,58 @@
+% mechanism: a renamed copy of imsart.cls that declares itself imsart is read after the imsart.cls binding, with the
+%   imsart.sty copy it loads; the binding's keyword markup stays locked until the class's end (`\AtEndOfClass`), so the
+%   copy's raw blocks are refused too and every entry and the classification are kept.
+% witness: 1401.3408 (myimsart.cls `\ProvidesClass{imsart}` :68, `\RequirePackage[generic]{myimsart}` :177; myimsart.sty
+%          :1536-1537 the headings); here as a minimal stand-in of the shipped files
+% oracle:  pdflatex 0 errors: "AMS 2000 subject classifications: Primary 62L10; secondary 62L15, 60G40. Keywords and
+%          phrases: Shewhart test, Change detection."
+% engines: rust 85a = 0 errors, one keyword entry, the codes lost; a lock released right after the binding's raw
+%          imsart.sty read (86a r2 draft) lost both elements: the copy's myimsart.sty redefined the blocks
+% expect:  0 errors, 1 warning (the binding's request for imsart.sty, which neither the paper nor TeX Live ships, as on
+%          1401.3408); <keywords name="Keywords and phrases: "> with both entries and a <classification
+%          scheme="AMS 2000 subject classifications"> with the codes
+% status:  RED (85a) -> GREEN (86a)
+% preload: ar5iv.sty
+\begin{filecontents*}{myimsart.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{imsart}
+\LoadClass{article}
+\RequirePackage{myimsart}
+\end{filecontents*}
+\begin{filecontents*}{myimsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{myimsart}
+\def\sep@key@value#1=#2/?/#3{\setpkgattr{#3}{#1}{#2}}
+\def\do@option@list#1#2{\@for\curr@option:={#2}\do{\expandafter\sep@key@value\curr@option/?/{#1}\relax}}
+\protected\def\setpkgattr#1#2#3{\expandafter\long\expandafter\gdef\csname #1@#2\endcsname{#3}}
+\def\ims@href#1#2{#2}
+\def\msc@url{https://mathscinet.ams.org/mathscinet/msc/msc2020.html}
+\newtoks\keywords@list
+\def\addto@keywords@list#1{\keywords@list=\expandafter{\the\keywords@list#1, }}
+\newbox\keyword@box
+\setpkgattr{keyword}{AMS}{AMS 2000 subject classifications:}
+\setpkgattr{keyword}{KWD}{Keywords and phrases:}
+\gdef\keyword{\@ifnextchar[{\@keyword}{\@keyword[class=KWD]}}
+\gdef\@keyword[#1]{\do@option@list{keyword}{#1}\def\keyword@name{\csname keyword@\keyword@class\endcsname}%
+  \let\kwd@sep\relax
+  \global\setbox\keyword@box=\vbox\bgroup\ifvoid\keyword@box\else\unvbox\keyword@box\fi
+  \noindent{\keyword@name}\space\hskip.1pt}
+\def\endkeyword{\unskip.\par\egroup}
+\def\keyword@fmt{\ifvoid\keyword@box\else\unvbox\keyword@box\fi}
+\def\sep{\unskip\string, }
+\DeclareRobustCommand*\kwd{\@ifnextchar[\@kwd{\@kwd[\kwd@sep]}}
+\def\@kwd[#1]#2{\unskip#1{#2}\addto@keywords@list{#2}\let\kwd@sep\sep}
+\newenvironment{frontmatter}{}{\maketitle}
+\def\maketitle{\keyword@fmt}
+\end{filecontents*}
+\documentclass{myimsart}
+\begin{document}
+\begin{frontmatter}
+\begin{keyword}[class=AMS]
+\kwd[Primary ]{62L10}
+\kwd[; secondary ]{62L15, 60G40}
+\end{keyword}
+\begin{keyword}
+\kwd{Shewhart test}
+\kwd{Change detection}
+\end{keyword}
+\end{frontmatter}
+Body.
+\end{document}

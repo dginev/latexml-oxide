@@ -1,0 +1,26 @@
+% mechanism: whether a lost Name ink fails the block's names ranks it against the written names in one owner decision
+%   (`resolver::words::Written::lost_inks`, its `Holder`): an address the lost name spells best is its own, whatever written
+%   name a shorter spelling of it reaches, and the block is written whole, Perl's whole-block `\lx@add@author`
+%   (Base_Utility.pool.ltxml:692-694); the guard's second row, `Andy Smith` and `smith@`, no written name spelling it
+% witness: 1908.02923 (JAIR `\name Andy Philips \email philips@…`: `philips@` prefix-spells the written Philip Laird, so the
+%   lost name was a note under Laird and `philips@` went to Steven Minton; review revN1r2); 1109.6618
+% oracle:  pdflatex 0 errors (with the full jair.sty); "Steven Minton", "Andy Philips", "Philip Laird"; "NASA Ames Research Center"
+% engines: rust N1r2, the switch on: Andy Philips a note of Philip Laird, philips@ptolemy.arc.nasa.gov on Steven Minton
+% expect:  0 errors, 1 warning (the lost words, the block written whole); the switch on: one creator, the block whole
+% status:  RED (N1r2) -> GREEN (perfect_kernel_batchn1::a_lost_name_spells_its_own_address)
+% preload: ar5iv.sty
+\documentclass[twoside,11pt]{article}
+\usepackage{emit_jair_rows}
+\begin{document}
+\title{Minimizing Conflicts}
+\author{\name Steven Minton \email minton@ptolemy.arc.nasa.gov \\
+       \name Andy Philips \email philips@ptolemy.arc.nasa.gov \\
+       \addr NASA Ames Research Center, Mail Stop: 244-7,\\
+       Moffett Field, CA  94035 USA
+       \AND
+       \name Philip Laird \email laird@ptolemy.arc.nasa.gov \\
+       \addr NASA Ames Research Center,\\
+       Moffett Field, CA  94035 USA}
+\maketitle
+Text.
+\end{document}

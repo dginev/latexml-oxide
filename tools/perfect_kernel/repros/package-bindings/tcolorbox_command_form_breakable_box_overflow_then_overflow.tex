@@ -1,0 +1,17 @@
+% witness: synthetic (review revSBX1 B1; the breakable witnesses' shape, 2605.05949 2605.19136 2605.24941 2605.28003
+%          2605.30434 2606.07718, in tcolorbox's command form `\tcolorbox[…]…\endtcolorbox`, tcolorbox.sty:1150, no group)
+% oracle:  pdflatex 1 `!` (Arithmetic overflow, the author's own \dimexpr after the box; the box broken over pages);
+%          Perl 0 errors
+% engines: rust CAU1 5 errors; SBX1 (7dcc1681f8) 0 errors 1 warning: the later overflow an Info under the box's name
+% expect:  1 error (the author's Arithmetic overflow), 1 warning (the box's measure, naming it); all 40 lines kept
+% status:  RED (SBX1 7dcc1681f8) -> GREEN (SBX1F; error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\newcommand\tall{Line \rule{1pt}{450pt}\par}
+\newcommand\ten{\tall\tall\tall\tall\tall\tall\tall\tall\tall\tall}
+\begin{document}
+\tcolorbox[breakable,title=Prompt]
+\ten\ten\ten\ten
+\endtcolorbox
+After: \the\dimexpr 16000pt*3\relax.
+\end{document}

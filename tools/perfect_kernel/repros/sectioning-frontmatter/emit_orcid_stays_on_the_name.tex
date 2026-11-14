@@ -1,0 +1,15 @@
+% mechanism: an ORCID written on a name stays there, its logo in the name, no contact twice on a repeat flush
+% witness: 2208.05251, 2209.13190; root xmlns:svg of 7 S0 papers
+% oracle:  pdflatex 0 errors; "Ann Able" and the logo
+% engines: rust S0: logo moved to a contact; perl: no such step
+% expect:  0 errors, 0 warnings; logo inside `personname`, no orcid contact
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{orcidlink}
+\author{Ann Able\orcidlink{0000-0002-1825-0097}\\ Univ A}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

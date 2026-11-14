@@ -1,7 +1,10 @@
 //! aa_support.sty — Astronomy & Astrophysics journal support
 //! Perl: aa_support.sty.ltxml — 469 lines
 //! Shared by aa.cls and aa.sty
-use crate::prelude::*;
+use crate::{
+  prelude::*,
+  shipped_class::{class_code_contains, shipped_class_text},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -101,20 +104,54 @@ LoadDefinitions!({
   def_macro_noop("\\authrun")?;
   def_macro_noop("\\titrun")?;
 
-  // Correspondence (Perl PR #2767)
-  DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint]{#1}");
-  DefMacro!("\\email Semiverbatim", "\\lx@add@contact[role=email]{#1}");
+  // Correspondence (Perl PR #2767), labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30;
+  // OXIDIZED_DESIGN_DIVERGENCES #915): aa.cls :337-340 (0903.3512's copy) `{\it Send offprint requests to\/}: #1`,
+  // the modern one :459 `\aa@offprintsname`, :898-914 the same — not the role's "Preprint: ".
+  DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint,name={Send offprint requests to:~}]{#1}");
+  // aa.cls:824 `e-mail: {\aa@emailfont #1}`, `\aa@emailfont` = `\ttfamily` (:600); 2101.02014, 2101.04399. Perl's
+  // `\lx@add@contact[role=email]{#1}` (aa_support.sty.ltxml:109) is the kernel's `\lx@add@email` (Base_Utility.pool.ltxml
+  // :655, the same contact): said so, it is a class e-mail command the shared row and the author block's lines read
+  // (`is_email_command`), as llncs's (review rev92c r2 B-2: 1312.1871, 2310.16880).
+  DefMacro!("\\email Semiverbatim", "\\lx@add@email{\\lx@address@urlfont{#1}}");
+  // aa.cls 2026 (:812): `\corrauth{<email>}` is `\thanks{Corresponding author: <email>}` on the current author.
+  // 58 2609 papers (2609.06653).
+  DefMacro!("\\corrauth{}", "\\lx@add@contact[role=corresponding,name={Corresponding author: }]{#1}");
+  // aa.cls 2026 (:569) the e-mail font its `\email`/`\corrauth` use, which a paper's own
+  // `\renewcommand*{\corrauth}` reuses (2609.17322).
+  DefMacro!("\\aa@emailfont", "\\ttfamily");
 
   // aa_support: Perl L? gobbles \journalname; surpass with content
   // preservation — A&A papers set \journalname{Astronomy & Astrophysics}
   // and the value is genuine author metadata for the JATS pipeline.
-  DefMacro!("\\journalname{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): aa.cls v9.4 (2609.21658's copy) sets
+  // the journal's name before its "manuscript no." (:415-418, a suffix, not a label), the head note above the title
+  // (:980, :1070-1072), the dedication in italics (:983, :1138-1142); older copies alike (0903.3512,
+  // astro-ph0608669) — the role stays.
+  DefMacro!("\\journalname{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   DefMacro!("\\rnotename", "(Research Note)");
   DefMacro!("\\rnotname", "(RN)");
-  DefMacro!("\\headnote{}", "\\lx@add@pubnote[role={note}]{#1}");
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
-  DefMacro!("\\mailname", "\\it Correspondence to \\/");
-  DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname}]{#1}");
+  DefMacro!("\\headnote{}", "\\lx@add@pubnote[role={note},name={}]{#1}");
+  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
+  // aa.cls's own `\def\mailname{{\it Correspondence to\/}:}` (every copy that defines it, 129 of 434 `\mail` papers:
+  // 0705.1240, 1005.3784, 0805.1001; OXIDIZED_DESIGN_DIVERGENCES #944), the italic in a group: Perl's
+  // `\it Correspondence to \/` (aa_support.sty.ltxml:118) left the name's `\it` on the address and on every frontmatter
+  // item after it (the date, 2012.11607's names and affiliations) and lost the colon the class prints. The space after
+  // it is the print code's, not the name's (`\mailname\ \ignorespaces\@mail`): `\mail`'s `name={\mailname\ }` below.
+  DefMacro!("\\mailname", "{\\it Correspondence to\\/}:");
+  // Labelled as the paper's copy prints it (FIDELITY_CHARTER §4; OXIDIZED_DESIGN_DIVERGENCES #944): aa.cls v4.03-v7.0
+  // print `\footnotetext[0]{\kern-\bibindent\mailname\ \ignorespaces\@mail}`, `\mailname` = `{\it Correspondence
+  // to\/}:` (1005.3784's v7.0 :272, :466-468; 0805.1001's v6.1 :264, :457-459; 129 of 434 `\mail` papers); the later
+  // copies only store it (`\newcommand*\mail[1]{\renewcommand*\aa@mail{#1}}`, 2007.14739's :965-966, which nothing
+  // reads; 297 papers, 2012.11607, 2606.29508) and print neither the address nor a label, so the item has none. Read
+  // off the copy's code, not its version; no copy shipped (1209.2606), labelled as Perl labels it
+  // (aa_support.sty.ltxml:118-119), in aa.cls's text above.
+  // (printed in the footnote, after the institutes under the names, whenever it is queued: its print zone the footer's,
+  // `_zone=footer`, OXIDIZED_DESIGN_DIVERGENCES #954)
+  if shipped_class_text("aa")?.is_some_and(|text| !class_code_contains(&text, "\\mailname")) {
+    DefMacro!("\\mail {}", "\\lx@add@address[name={},_zone=footer]{#1}");
+  } else {
+    DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname\\ },_zone=footer]{#1}");
+  }
   DefMacro!("\\doi{}", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\DOI{}", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");
@@ -140,7 +177,7 @@ LoadDefinitions!({
   // surfaces a `@name` attribute would miss the heading.
   DefConstructor!("\\acknowledgements", "<ltx:acknowledgements name='#name'>",
     properties => sub[_args] {
-      let name = digest(T_CS!("\\acknowledgmentsname"))
+      let name = digest_in_group(T_CS!("\\acknowledgmentsname"))
         .map(|d| d.to_string()).unwrap_or_default();
       Ok(stored_map!("name" => name))
     });
@@ -156,6 +193,11 @@ LoadDefinitions!({
   // Theorem environments — Perl L142-155
   //======================================================================
 
+  // aa.cls's own `{theorem}` (every version; 2509.20613's v9.1 :1556
+  // `\newtheorem{theorem}{Theorem}{\bfseries}{\itshape}`), the counter the others share: Perl's list
+  // (aa_support.sty.ltxml:141-153) lacks it, so `\begin{theorem}` was undefined (1601.05309, 1805.03673, 2304.08489,
+  // 2509.20613, 2509.25347; KNOWN_PERL_ERRORS #740).
+  RawTeX!("\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}}{}");
   RawTeX!("\\newtheorem*{proof}{Proof}");
   RawTeX!("\\@ifundefined{corollary}{\\newtheorem{corollary}[theorem]{Corollary}}{}");
   RawTeX!("\\@ifundefined{definition}{\\newtheorem{definition}[theorem]{Definition}}{}");
@@ -196,14 +238,16 @@ LoadDefinitions!({
   // original is `locked => true`, but re-DefEnvironment inside the
   // aa_support load path replaces it before any document body runs.
   use crate::engine::latex_constructs::{
-    after_equation, before_equation, prepare_equation_counter,
+    after_equation, before_equation, prepare_equation_counter, prepare_latex_equation_counter,
   };
   DefEnvironment!(
     "{equation}",
     "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
     mode => "display_math",
     before_digest => {
-      prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+      // LaTeX's numbering: a `\nonumber` removes the number only where amsmath is loaded (OXIDIZED_DESIGN_DIVERGENCES #865;
+      // 1712.01010's shipped aa.cls loads amsmath, so its `\nonumber`s still remove the number).
+      prepare_latex_equation_counter();
       before_equation()?;
       Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
     },
@@ -239,13 +283,48 @@ LoadDefinitions!({
 
   // Perl: DefMacro('\longtab{}', '') with comment "just let it do the table
   // contents as usual." Usage: `\longtab{N}{table-body}` — the {N} number is
-  // consumed; the table-body block flows through as normal tokens. Perl does
-  // NOT define a `{longtab}` environment, so we don't either; an extra
-  // DefEnvironment trips the mode-switch on `\end{...}` matching.
-  def_macro_noop("\\longtab{}")?;
+  // consumed; the table-body block flows through as normal tokens. aa.cls:1430
+  // `\Newassociation{longtab}{Longtab}{\jobname}` (answers.sty) makes `{longtab}`
+  // an environment as well, which files the tables away and reads them back at
+  // the document's end; there the one-argument `\longtab` took the `\begin` of
+  // the `{longtable}` inside as its argument (1611.08428; Perl the same). The
+  // environment is a plain wrapper here (the tables stay where they are), told
+  // apart from the command by `\@currenvir`, which `\begin{longtab}` sets before
+  // it calls `\longtab` (latex.ltx:15371-15377). No DefEnvironment: it trips the
+  // mode-switch on `\end{...}` matching. Guard:
+  // `perfect_kernel_batch65::aa_longtab_environment_wraps_its_longtable`.
+  // aa.cls v9.1 (2016) :1280-1286 takes `\newcommand\longtab[2][]` — `[opt]{body}`, the body set at the document's end
+  // (`\aalongfloat`) — where the older classes' first argument is the table's number: a digits-only first argument is
+  // that number, dropped, any other is the body, set here. Gobbling it lost the whole table (1811.02197's three
+  // `\longtab{\begin{landscape}…}` tables, their `\label`s dangling). Guard:
+  // `perfect_kernel_batch80a::aa_v9_longtab_keeps_its_body`.
+  DefMacro!("\\longtab", sub[_args] {
+    if Expand!(T_CS!("\\@currenvir")).to_string() == "longtab" {
+      return Ok(Tokens::new(vec![]));
+    }
+    let optional = read_optional(None)?;
+    let first = read_arg(ExpansionLevel::Off)?;
+    let text = first.to_string();
+    let number = !text.trim().is_empty() && text.trim().chars().all(|c| c.is_ascii_digit());
+    if number && optional.is_none() {
+      Ok(Tokens::new(vec![]))
+    } else {
+      Ok(first)
+    }
+  });
+  DefMacro!("\\endlongtab", "");
   Let!("\\tablefoot", "\\footnote");
-  DefMacro!("\\tablefootmark{}", "\\footnotemark[$#1$]");
-  DefMacro!("\\tablefoottext{}{}", "\\footnotetext[$#1$]{#2}");
+  // aa.cls (v9.1, 2211.06931's copy) :1672-1681 sets the mark in text, `\hbox{\@textsuperscript{\normalfont
+  // \itshape\ignorespaces#1}}` (`\tablefoottext` adds parentheses around it): the mark is the author's text, so
+  // `\tablefootmark{$^\dag$}` is a dagger. Perl's `[$#1$]` (aa_support.sty.ltxml:229-230) closed the author's math
+  // at once and set the `^` in text (2211.06931 2507.11600 2012.11559 2404.06316 2104.06278; KNOWN_PERL_ERRORS
+  // #871). The note's own superscripted tag carries the mark, as with any `\footnotemark[…]`, and both commands give
+  // it the same text, so a `\tablefoottext` still pairs with its `\tablefootmark`s by `mark` (the parentheses are
+  // presentation of the note text, left out). The doubled braces survive the optional argument's own brace
+  // stripping, so the mark's `\itshape` stays in the mark.
+  // Guard: `perfect_kernel_batch68y::aa_tablefootmark_sets_the_mark_in_text`.
+  DefMacro!("\\tablefootmark{}", "\\footnotemark[{{\\normalfont\\itshape\\ignorespaces#1}}]");
+  DefMacro!("\\tablefoottext{}{}", "\\footnotetext[{{\\normalfont\\itshape\\ignorespaces#1}}]{#2}");
   DefMacro!("\\tablefont", "\\small");
   // NOTE: do NOT define `\tablenote` here. aa.cls does NOT provide it (its
   // table-footnote command is `\tablefoot`, above) — A&A papers that want
@@ -281,8 +360,12 @@ LoadDefinitions!({
   DefMath!("\\@vec{}",  "#1",            role => "ID", font => { forcebold => true });
   DefMath!("\\@tens{}", "\\mathsf{#1}",  role => "ID");
 
-  // \ion{symbol}{ionization} — Perl L247
-  DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}");
+  // \ion{symbol}{ionization} — Perl L247. aa.cls makes it robust (v6.1 :639, v9.1 :1729 `\DeclareRobustCommand
+  // {\ion}[2]`), so a cell starting with it is not expanded by the alignment's look for `\omit`/`\noalign` (e-TeX
+  // §785 stops at a protected macro): Perl's plain macro was expanded there, read the cell's `&` as its second
+  // argument and stranded it (0801.2767 `& \ion{H$\delta$}& 24.0`; KNOWN_PERL_ERRORS #872, the look-ahead #880).
+  // Guard: `perfect_kernel_batch68y::aa_ion_is_robust_at_a_cell_head`.
+  DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}", protected => true);
 
   // \element — Perl aa_support.sty.ltxml L250:
   //   DefMacro('\element[][][][]{}', '\ensuremath{\@element[#1][#2][#3][#4]{\mathrm{#5}}}')
@@ -355,8 +438,13 @@ LoadDefinitions!({
   // Perl L314-324: math small caps, QED square
   DefConstructor!("\\mathsc{}", "#1", bounded => true, require_math => true,
     font => { family => "smallcaps", series => "medium", shape => "upright" });
+  // Sized as aa.cls's `\squareforqed` `\hbox{\rlap{$\sqcap$}$\sqcup$}` (a glyph box; v5.3/5.4 :805, v6.0 :893, v6.1
+  // :905, v7.0 :914; v8+ define none, `\sq` is `\Box`), so a cell or `\mbox` holding only a direct `\squareforqed` is
+  // not dropped as empty (Perl Alignment.pm:458-470). `\sq`/`\qed` are redefined below as plain characters (already
+  // sized; Perl aa_support.sty.ltxml:321-324 keeps them `\squareforqed`, a pre-existing difference).
   DefConstructor!("\\squareforqed",
-    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    sizer => sub[whatsit] { Ok(engine::latex_constructs::sqcup_qed_size(whatsit)) });
   Let!("\\sq", "\\squareforqed");
   Let!("\\qed", "\\squareforqed");
 

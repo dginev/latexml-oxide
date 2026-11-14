@@ -1,0 +1,18 @@
+% witness: review 89d r1 (S1, probe rev89d/pr/bbm); font.rs's family table maps `bbm`, `bbold` and `bbmss` all to
+%          `blackboard`, and bbold_sty.rs registers `U_blackboard`, so bbold's map decodes bbm's and bbmss's fonts too
+% oracle:  pdflatex: "ℝ ℝ ℝ" (bbm10's, bbmss10's and bbm's math R), 0 errors; bbm10 and bbmss10 have no character at
+%          "0B or "00 (tftopl: 58 characters), so the log says "Missing character" four times and nothing is printed
+% engines: rust 89d = 0 errors, 0 warnings, `ℝαℾ` twice (bbold's glyphs at "0B and "00), `$\mathbbm{R}$` R; without
+%          bbold `RﬀΓ` twice (no `U` map: OT1, #645; SYNC_STATUS Font-Selection residual 13); perl (read, not run):
+%          bbold.sty.ltxml:30's `U` map decodes every `U` font, these alike
+% expect:  0 errors; bbm's and bbmss's R as their fonts draw it and the two empty slots U+FFFD, each font saying so in
+%          one Warning — bbold's map keyed to bbold's NFSS family before font.rs normalises it, and bbm/bbmss read
+%          through their own tables (OXIDIZED_DESIGN_DIVERGENCES #914; SYNC_STATUS Font-Selection residuals 11, 12)
+% status:  RED (89d)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bbm}
+\usepackage{bbold}
+\begin{document}
+{\usefont{U}{bbm}{m}{n}R\char"0B\char"00} {\usefont{U}{bbmss}{m}{n}R\char"0B\char"00} $\mathbbm{R}$
+\end{document}

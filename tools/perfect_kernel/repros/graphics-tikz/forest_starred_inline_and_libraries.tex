@@ -1,0 +1,31 @@
+% witness: forest/forest-doc (forest-doc.tex:1933-1947 `\Forest*` in running text, :56-57
+%          `\useforestlibrary`, :1853 `\forestapplylibrarydefaults{linguistics}`)
+% oracle:  pdflatex 0 errors
+% engines: rust=2 (tip 56ir: Error:undefined:\forestapplylibrarydefaults and
+%          \forest@iflibraryloaded)
+% expect:  0 errors; every form's tree is an <inline-block class="ltx_forest_tree"> inside its
+%          <p>, the environment's too (`text \begin{forest}…\end{forest} more` stays one
+%          paragraph); LOADED printed for both libraries
+% status:  GREEN
+% mechanism: forest.sty:8506-8514 — the `{forest}` environment runs `\forest@env`, `\Forest`
+%   runs `\forest@env` for the star and `\forest@group@env` (:8528, `{\forest@env{#1}}`)
+%   otherwise: the star only drops a group (forest-doc.tex:1927-1929); every form draws an
+%   inline box. A style a tree defines (`vptier`) is local to it (forest-doc.tex:2545).
+%   :140-161 package options name libraries, :162-172 `\useforestlibrary` /
+%   `\forestapplylibrarydefaults`, recorded as `\forest@libraries@loaded@<lib>` (:173-177);
+%   linguistics' `sn edges`/`nice empty nodes` are preamble keys of the keylist parser.
+\documentclass{article}
+\usepackage[edges]{forest}
+\useforestlibrary{linguistics}
+\begin{document}
+We create a \Forest*{[DP [D] [NP]]} and merge it.
+
+\Forest{[VP, vptier/.style={tier=vp} [V, vptier] [DP]]}
+
+The tree \begin{forest} sn edges, nice empty nodes [S [NP] [VP]] \end{forest} stays inline.
+
+\forestapplylibrarydefaults{linguistics}
+\makeatletter
+\forest@iflibraryloaded{linguistics}{LOADED}{MISSING} \forest@iflibraryloaded{edges}{LOADED}{MISSING}
+\makeatother
+\end{document}

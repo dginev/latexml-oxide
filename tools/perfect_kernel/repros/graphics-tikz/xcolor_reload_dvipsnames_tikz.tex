@@ -1,0 +1,18 @@
+% witness: arXiv 2605.28926 (\usepackage[most]{tcolorbox} loads xcolor, then
+%          \usepackage[dvipsnames]{xcolor}; \fill[Maroon, opacity=1] in tikz)
+% oracle:  pdflatex 0 errors (xcolor.sty:171-193: the name sets are keys, processed on a repeat load)
+% engines: rust (56ht) = pgfkeys "I do not know the key '/tikz/Maroon'" per use (the paper: Fatal);
+%          Perl: the same (option dropped on reload)
+% expect:  0 errors; the fill and the text in Maroon
+% status:  RED (56ht) -> GREEN (56hu, OXIDIZED_DESIGN #281)
+% mechanism: ProcessOptions clears \ds@dvipsnames to \relax, so the repeat-load recovery
+%   (OXIDIZED_DESIGN #43) found nothing to run. Durable \ds@<names> handlers are re-asserted,
+%   as \ds@table already is.
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}\fill[Maroon] (0,0) rectangle (1,1);\end{tikzpicture}
+\textcolor{Maroon}{M}
+\end{document}

@@ -1,0 +1,19 @@
+% witness: review of 64x round 10 (bibafter0): a paragraph after a lonely natbib \bibitem, with no heading between
+% oracle:  pdflatex 1 error (Lonely \item); "More text." is a paragraph of its own after Able's entry
+% engines: rust 64x: 1 Error:malformed:ltx:bibitem ("\bibitem outside any list"), and "More text." becomes a keyless
+%          entry of the bibliography the \bibitem opened (the bibliography's \par redirection, as the appendix
+%          paragraph of perfect_kernel_batch64x::phantom_entries_are_pruned_anywhere); 64zc put it inside the misplaced
+%          <bibitem>
+% expect:  1 Error:malformed:ltx:bibitem; "More text." a paragraph after the bibliography, not a <bibitem>
+% status:  RED (the implicit bibliography's extent: what ends one a \bibitem opens with no heading or environment end)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+\section{Summary}
+Text \citep{a}.
+
+\bibitem[Able(2011)]{a} Able, A. 2011, ApJ.
+
+More text.
+\end{document}

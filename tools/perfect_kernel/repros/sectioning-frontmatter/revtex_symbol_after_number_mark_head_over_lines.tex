@@ -1,0 +1,19 @@
+% mechanism: REVTeX's group rule (`group_or_marked_affiliation`): a symbol after a number (`$^{1*,2}$`) prints "1∗",
+%   one label of two parts; a name requests each label once, by its letter- or digit-led parts (`requested_label_keys`:
+%   1), so the unmarked head is the one requested label no line prints (1), as 2109.01501's rule reads it
+% witness: synthetic (review revP4b3c B1, probe q7; the rule's witnesses 2109.01501, 1903.07834)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "Ann Able1∗,2 and Bob Baker2,3 / Univ A, Town A /
+%          2 Univ B, Town B / 3 Univ C, Town C"
+% engines: P4b3base: as expected; P4b3d: both names bare, a nameless creator holding the whole block (E 0, W 0)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", "2 Univ B, Town B"; Bob Baker "2 Univ B, Town B", "3 Univ C, Town C"
+% status:  RED (P4b3d) -> GREEN (P4b3e; guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1*,2}$}
+\author{Bob Baker$^{2,3}$}
+\affiliation{Univ A, Town A\\ $^{2}$Univ B, Town B\\ $^{3}$Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

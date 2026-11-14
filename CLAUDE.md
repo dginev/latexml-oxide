@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth.
+> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth for the design, data model and interfaces; where Perl approximates TeX itself, real TeX (tex.web, latex.ltx, the package source, pdflatex) decides behaviour, recorded as a divergence and offered to Perl as a patch (DG 2026-08-31; BM — Bruce Miller, LaTeXML's author — 2026-11-05: fidelity is "seldom (if ever?) traded for speed" but "may more often be lost due to not understanding what TeX really is doing").
 
 ## Active priorities: faithful parity + beyond-Perl arXiv runs
 
@@ -28,23 +28,34 @@ those numbers here — the copy drifts.
 
 Two traps when reading a test run:
 
-- **A fully green suite still prints `Error:` lines to stderr.** Several tests
-  deliberately raise diagnostics to prove they get reported (the `graphics.rs`
-  worker-thread fold emits `failed_to_convert` for a nonexistent `w0.pdf`; the Rhai
-  script-binding tests emit `boom`). Judge a test run by its `test result:` lines and
-  exit code, **never** by grepping its output for `Error:` — that heuristic belongs to
-  *conversion* logs (below), and here it inverts.
+- **A test's log lines are captured with its output.** The logger echoes through
+  `eprint!` (`logger.rs` `stderr_echo`), so `cargo test` and nextest show a test's
+  `Info:`/`Warning:`/`Error:` lines only when it fails (`--nocapture` or nextest
+  `--success-output` shows them all). `Error:`/`Fatal:` come only from tests that raise
+  them on purpose and assert them by count (the `graphics.rs` worker-thread fold's
+  `failed_to_convert` for a nonexistent `w0.pdf`, the error-path guards); a passing test
+  whose fixture errors incidentally is a fixture bug — the exception is a known binding gap
+  pinned by name and tracked in `docs/SYNC_STATUS.md` (the forest-doc guard) — and the
+  streaming sweeps require every swept fixture to convert error-free. Judge a run by its `test result:` lines and exit
+  code, **never** by grepping printed output for `Error:` — that heuristic belongs to
+  *conversion* logs (below).
 - The two `latexml_post` vector-SVG tests **self-skip silently and green** unless
   `mutool` or `pdftocairo` is on PATH, so a green local run does not by itself prove
   that branch ran. CI installs poppler/mupdf.
+
+Conversion decisions (what to keep, how to number, who owns a frontmatter item, when a copy may override a
+binding) follow [`docs/parity/FIDELITY_CHARTER.md`](docs/parity/FIDELITY_CHARTER.md) — the user's rulings as standing
+rules; ask only where it conflicts or is silent.
 
 Durable parity rules (the dump/format boundary):
 
 1. **Strict `LoadFormat` mutual exclusivity** (Perl
    `Package.pm:LoadFormat` L2734-2752). `tex.rs` and `latex.rs`
    take exactly one branch:
-   * `bootstrap → dump → constructs` if `<format>.dump.txt` is on
-     disk and `LATEXML_NODUMP` is unset, OR
+   * `bootstrap → dump → constructs` if a `<format>.dump.txt` built
+     from this TeX tree is found (its `# source` stamps; when none is,
+     one is built for the tree, OXIDIZED_DESIGN_DIVERGENCES #449) and
+     `LATEXML_NODUMP` is unset, OR
    * `bootstrap → base → constructs` otherwise.
    Never both.
 2. **Unconditional dump apply** in `dump_reader.rs`. Mirrors Perl
@@ -64,21 +75,13 @@ Durable parity rules (the dump/format boundary):
    a parity gap, not a thing to suppress with caps.
 
 **Distribution model.** Per-TL-year dump files
-(`resources/dumps/{plain,latex}.YYYY.dump.txt` + `texlive.YYYY.version`) are **NOT
-committed to the repo**. They are generated at release time by
-`.github/workflows/release-dumps.yml` (called from `release.yml` on tag push, also
-dispatchable standalone) across a 5-year moving TL window, each year inside its
-pinned container (`ghcr.io/tkw1536/texlive-docker:YYYY`, the image family behind Perl
-LaTeXML's CI). Each `--init` runs under `LATEXML_INIT_DEBUG=1` behind a strict
-zero-`Error:`/`Fatal:` gate — **init output is suppressed otherwise, so naive grepping
-sees nothing**. The release build embeds the whole window at build time (gzip, DEP-12;
-`latexml_engine/build.rs` scans `resources/dumps/`). **Dev/CI generate their
-ambient-year dump via `tools/make_formats.sh`** — run it once after checkout, after a
-TL upgrade, or before test runs needing dumps (CI.yml does). Runtime resolves the
-ambient year via `kpsewhich -var-value=SELFAUTOPARENT` (leading-digit parse, so
-MacTeX's `2026basic` works) with a `pdflatex --version` fallback; `kpsewhich --version`
-returns the same kpathsea-library string on TL2023 and TL2025, so it is **not** a
-usable discriminator.
+(`resources/dumps/{plain,latex}.YYYY.dump.txt`) are **not committed**; releases
+generate a 5-year window inside pinned TL containers and embed it at build time.
+**Dev/CI generate the ambient-year dump via `tools/make_formats.sh`** — run it once
+after checkout, after a TL upgrade, or before test runs needing dumps. The `--init`
+runs are gated on zero `Error:`/`Fatal:` and **their output is suppressed otherwise,
+so naive grepping sees nothing**. Year resolution, the container matrix, and the
+`kpsewhich --version` non-discriminator: [`docs/parity/DUMP_DESIGN.md`](docs/parity/DUMP_DESIGN.md).
 
 ## Project Overview
 
@@ -105,7 +108,7 @@ multi-level, themed table of contents saying what each doc is for and when to re
 it. Read it when you need to find or place a doc.
 
 **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) is the start-here worklist** for both
-targets (ranked rows R1…R9 — take the top unblocked one). Labels there have gone
+targets (ranked rows — take the top unblocked one). Labels there have gone
 stale before: verify a status against its named guard test or `gh issue view` before
 acting on it, and note that SHA-ancestry does not work here because the repo
 squash-merges.
@@ -119,11 +122,32 @@ squash-merges.
 - **Record the conclusion, not the play-by-play.** State the defect, its cause, the fix, and the guard test names — not how it was found or what was tried on which day. Keep what is expensive to re-derive: witness arXiv ids, `file:line` into the Perl source, minimal trigger examples, named guards, identifiers a reader would otherwise grep for, measured figures with their basis, and settled dead-ends (one line each, so they are not re-attempted). Cut connective tissue, not identifiers.
 - Keep **[`docs/README.md`](docs/README.md)** current — its themed TOC tables — when adding, renaming, merging, or archiving a doc.
 
-## Skills (`.claude/skills/`)
+## Skills and agents (`.claude/skills/`, `.claude/agents/`)
 
-`canvas-triage` (genuine Rust bug vs Perl parity) → `min-repro` (shrink it) →
-`perl-port` (faithful fix) is the standard chain, wrapped by `resolve-issue` for
-a public GitHub issue. `perf-check` governs measurement.
+`cluster-classify` (group a sweep's failures) → `canvas-triage` (genuine Rust bug
+vs Perl parity) → `min-repro` (shrink it) → `perl-port` (faithful fix) is the
+standard chain, wrapped by `resolve-issue` for a public GitHub issue.
+`surpass-perl` governs the rare intentional divergence, `dump-debug` the
+dump-vs-NODUMP branch, `perf-check` measurement, `next-release` shipping.
+
+**Every subagent runs on Opus 5.5 at high effort** (user directive 2026-09-30,
+superseding xhigh of 2026-09-25 and the earlier Opus 4.8 pin). The project
+definitions in `.claude/agents/` pin this (`model: claude-opus-5-5`, `effort: high`), including an override of the built-in
+`general-purpose`: `root-causer` (read-only root-causing of one failure),
+`reviewer` (read-only pre-commit review of the diff), `log-scanner` (log tallying),
+`perf-measure` (one measurement question: a lever, a document, a profile),
+`math-diagnose` (one math-parse phenomenon → red golden rows + fix plan + open
+questions), `payload-writer` (one payload batch on its own `pk/<batch>` branch and
+`~/data/pk_wt/<batch>` worktree; commits, never pushes), `general-purpose` (fallback
+only). **Subagents are narrow and bounded** (user directives 2026-10-01, 2026-10-10,
+2026-10-12): one question or one mechanism, a fixed deliverable, then stop. Analysis
+agents are read-only. The only writers are `payload-writer` agents, whose fix rounds
+run targeted checks only; the main checkout's tree, integration, the bundle-level full
+suite + A/B, and every push stay in the main session. At most 2 subagents run at once (user directive 2026-10-22). Definitions are discovered at session start; a new one needs a
+restart. Brief read-only agents with the main checkout, not a worktree: `LaTeXML/`
+(the Perl oracle) is gitignored and absent from every worktree, so a worktree agent
+greps nothing and reports "no gaps" — a payload writer reads the oracle from the main
+checkout's path.
 
 ## Build & Test
 
@@ -132,7 +156,7 @@ Requires **Rust nightly**.
 | Profile | Use | Tuned for |
 |---------|-----|-----------|
 | `test`  | `cargo test` / `cargo run` / `cargo build` (default = `dev`/`test`) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. **All local development and triage** — the only profile to use day-to-day. |
-| `ci`    | `cargo test --profile ci` (only used in `.github/workflows/CI.yml`) | Lowest RAM (16 GB GitHub Actions runner) and fastest compile. `opt-level = 0`, `codegen-units = 256`. |
+| `ci`    | `cargo nextest run --cargo-profile ci --profile ci` (CI workflows only; `tools/make_formats.sh` via `PROFILE=ci`) | Fastest build + test on the 4 vCPU / 16 GB GitHub runner. Workspace crates at `opt-level = 0`, every dependency and `latexml_core` at `1`, `codegen-units = 256`, debug-assertions on, no debuginfo. Measured vs all-`0`: test CPU 88 → 23.8 min for +46 s of build over warm deps (2:02 → 2:48, 4 cores / 2 jobs; cold +1:55, 2:37 → 4:32), peak build RSS ≈3.5 GB either way. |
 | `release` | `cargo build --release` / `cargo run --release` | Strong-optimized binary tuned for our 32 GB / 20-thread laptop. `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Used for **sandbox sweeps and Perl-parity measurements**, NOT distribution. |
 | `maxperf` | `cargo build --profile maxperf` | **Distribution / publish-grade artifact**. Inherits release, plus `lto = "fat"`, `codegen-units = 1`. Slowest build, smallest + fastest binary. **Reserved for shipping a stable state.** |
 
@@ -144,7 +168,7 @@ specifically need a publish-grade canvas measurement or a Perl-parity baseline
 
 **Distribution build** ships `--profile maxperf --no-default-features --features
 runtime-bindings`: `--no-default-features` drops the `test-utils` feature (removing
-`phf` + `glob` and 4 transitive crates), while `runtime-bindings` keeps the runtime
+`glob`, `roxmltree` and `similar`), while `runtime-bindings` keeps the runtime
 contributed-bindings front-end (runtime opt-in, so default conversions are
 unaffected). This is the recipe `tools/make_release.sh` uses. `maxperf` sets
 `panic = "abort"` — production-only, since canvas sweeps depend on `catch_unwind` for
@@ -172,7 +196,9 @@ a per-binary tally. **Test binaries are grouped by concern**: single/double-test
 files were consolidated 2026-08 into `cluster_*.rs` binaries (one link unit per
 subsystem — `cluster_cli`, `cluster_fontmap`, `cluster_xslt_split`,
 `cluster_package_guards`, `cluster_sizing`, `cluster_frontmatter_classes`, plus the
-existing `06_cluster_*`) to cut link steps. **Do NOT merge the fixture-sweep
+existing `06_cluster_*`) to cut link steps. A large binary keeps its modules one
+per file under a directory with a `main.rs` root (`tests/cluster_package_guards/`):
+one link unit, and test paths stay `<module>::<test>`. **Do NOT merge the fixture-sweep
 binaries** (`tex_tests!` harness stubs, `114_streaming_*`): each is a separate
 process on purpose — co-locating their many conversions in one `cargo test` process
 accretes unreclaimable libxml2 residue past the RSS fuse (see `streaming_sweep/mod.rs`).
@@ -185,6 +211,8 @@ dead text on the deployed site, so the warning is the only signal there is.
 ## Code Style
 
 Formatting is configured in `rustfmt.toml` — run `cargo +nightly fmt --all`.
+
+**No `unsafe` in our main code** (user 2026-11-08): a performance need is met by a better algorithm or data design, never by `unsafe`. Existing `unsafe` sits only at FFI/OS boundaries (libxml/XSLT, signals, sockets, the arena) and is not grown.
 
 ```bash
 rustup component add rust-analyzer rustfmt clippy --toolchain nightly
@@ -241,6 +269,15 @@ Removed by Core, and what to emit instead:
 | `<maligngroup>`, `<malignmark>`, `<mglyph>` | nothing — drop |
 | `<mstack>`, `<mlongdiv>`, `<msline>`, `<mscarries>`, `<mscarry>`, `<msgroup>`, `<msrow>` | nothing — elementary-math layout is out of scope |
 
+**`mathvariant` in Core** survives only as `normal` on a single-character `<mi>` (§3.2.2:
+`mi` has `text-transform: math-auto`, so one char renders italic unless told otherwise); every
+other style is carried by the Plane 1 Mathematical Alphanumeric Symbols. So a font-less
+single-char `<mi>` (`\mathrm{d}`) says `normal` and an italic one says nothing (Perl
+MathML.pm:717-719). Known residual, awaiting a ruling: non-`normal` values Perl emits too — on
+`<mn>`/`<mo>`, and on any token whose text Plane 1 cannot carry (`\mathbf{\infty}`), the bold
+kept under `--hackplane1`, every token under `--noplane1`. The spec (W3C CR snapshot and Editor's Draft) is kept locally, uncommitted, in
+`background/mathml-core/`.
+
 Do **not** reason from "MathML 3 defines an element for exactly this purpose" —
 that argument once produced a wrong divergence entry justifying `<m:none/>`
 (OXIDIZED_DESIGN #86, since removed). MathML 3 defining it is not evidence Core
@@ -248,7 +285,7 @@ kept it; check Core.
 
 Known residual: **`<m:menclose>` is still emitted** for `\cancel` / `\boxed`.
 Core removed it and there is no mechanical replacement, so it is a rendering +
-golden change needing its own branch — tracked as **`SYNC_STATUS.md` R3b**,
+golden change needing its own branch — tracked as the after-merge line **MENC** in `SYNC_STATUS.md` row R,
 deferred by user directive 2026-07-30. Don't "fix" it incidentally.
 
 ## Practical guidance

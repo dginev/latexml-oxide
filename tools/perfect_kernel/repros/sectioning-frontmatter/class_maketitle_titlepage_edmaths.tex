@@ -1,0 +1,20 @@
+% witness: edmaths/edmaths-example-report (edmaths.sty:166-181 \maketitle = \begin{titlepage}...)
+%   also chetdoc, kdgcoursetext/kdgmasterthesis, wkmgr1/2, ryesample, umthesis, UNAMThesis,
+%   whatsnote-demo, wsemclassic-test (all 56gj deposits)
+% oracle:  pdflatex 0 errors; the title page shows title, author, degree, university, date
+% engines: rust (56gj) built <titlepage> with only the degree/university lines; the XSLT then
+%   hides the document title block (LaTeXML-structure-xhtml.xsl ltx:title: "Skip title, if the
+%   parent has a titlepage") -> HTML lost title/author/date (edmaths S3 95.9 -> 94.5)
+% expect:  0 errors; <title>, <creator>, <date> at the head; the class fields in a logical-block;
+%   no <titlepage>
+% status:  GREEN (batch 56gm)
+\documentclass{report}
+\makeatletter
+\renewcommand{\maketitle}{\begin{titlepage}\begin{center}{\LARGE\@title}\\ \@author\\
+  Doctor of Philosophy\\ The University of Nowhere\\ \@date\end{center}\end{titlepage}}
+\makeatother
+\title{T}\author{A. N. Author}\date{1999}
+\begin{document}
+\maketitle
+Body.
+\end{document}

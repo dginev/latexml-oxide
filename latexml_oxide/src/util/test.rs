@@ -6,6 +6,12 @@ use once_cell::sync::Lazy;
 
 use crate::core_interface::DigestionAPI;
 
+mod requirements;
+pub use requirements::{
+  JING, RequirementTable, Requirements, check_all_requirements, check_requirements, check_table,
+  current_test_name, file_available, fixtures, loads, skip, skip_log_path, texlive_version,
+};
+
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 // Sampled at static init; subsequent reads are atomic loads.
 static TEST_LOG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_TEST_LOG").is_ok());
@@ -21,26 +27,23 @@ static BLESS: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_BLESS").is_ok());
 
 pub fn latexml_tests(
   dirpath: &str,
-  requires: Option<&phf::Map<&str, &str>>,
+  requires: Option<&RequirementTable>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
   latexml_tests_internal(dirpath, requires, dispatcher_opt)
 }
 pub fn latexml_tests_internal(
   dirpath: &str,
-  requires: Option<&phf::Map<&str, &str>>,
+  requires: Option<&RequirementTable>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
-  if !validate_requirements(dirpath, requires) {
-    return; // test group only if required files are found.
-  }
   for tex_file in glob(&s!("{}/*.tex", dirpath)).unwrap().flatten() {
     let name = tex_file.file_stem().unwrap().to_str().unwrap();
     let xml_file = tex_file.with_extension("xml");
 
     let tex_file_string = tex_file.to_str().unwrap();
     let xml_file_str = xml_file.to_str().unwrap();
-    if xml_file.exists() {
+    if xml_file.exists() && check_table(dirpath, name, requires) {
       latexml_ok_internal(tex_file_string, xml_file_str, name, dispatcher_opt.clone());
     } else {
       // Skip, these could be tex fragment files.
@@ -90,8 +93,10 @@ pub fn init_test_rss_cap() {
       // generated test (before any conversion thread reads the env in
       // `stomach::check_timeout`). `Once`'s release/acquire ordering
       // happens-before all those reads, so there is no setenv/getenv race.
+      let mib = latexml_core::watchdog::default_ceiling_mib().max(16_000);
+      let bytes = mib.saturating_mul(1024 * 1024);
       unsafe {
-        std::env::set_var("LATEXML_RSS_CAP_BYTES", "9000000000");
+        std::env::set_var("LATEXML_RSS_CAP_BYTES", bytes.to_string());
       }
     }
   });
@@ -243,7 +248,8 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
 /// because the count is **environment-dependent** for some entries (e.g.
 /// `glossary` errors on one host's datatool/expl3 but converts clean in CI) —
 /// failing at zero would break whichever environment is already clean. When an
-/// entry's `[error-debt] … 0 errors` shows up EVERYWHERE, remove it by review.
+/// entry's `[error-debt] … 0 errors` shows up EVERYWHERE (in captured output: run
+/// with `--nocapture` to see it on a green run), remove it by review.
 /// Each note records Perl's current behavior (verify with `latexml --verbose`
 /// — `--quiet` HIDES Perl errors). Tracked in `docs/SYNC_STATUS.md`.
 ///
@@ -256,23 +262,11 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
 /// figure, so only the spurious malformed-error is gone (XML byte-identical).
 const ERROR_DEBT: &[(&str, &str)] = &[];
 
-/// Emit a line to the process's REAL stderr, SURVIVING libtest's per-test
-/// output capture. libtest only intercepts the `print!`/`eprint!` macros and
-/// replays them solely on FAILURE, so a plain `eprintln!` from a PASSING test
-/// is swallowed — which defeats the `[error-debt] … review for removal` and
-/// `[intentional-fail]` notices, whose entire purpose is to be SEEN on a green
-/// run (review m2). A direct `write(2)` bypasses the capture. One syscall per
-/// line is atomic up to PIPE_BUF, so concurrent test threads don't interleave.
-#[cfg(unix)]
-fn note_uncaptured(line: &str) {
-  use std::{io::Write, os::unix::io::FromRawFd};
-  // SAFETY: fd 2 is the process stderr, valid for the whole run. `ManuallyDrop`
-  // stops the `File`'s Drop from `close()`-ing the shared descriptor.
-  let mut f = std::mem::ManuallyDrop::new(unsafe { std::fs::File::from_raw_fd(2) });
-  let _ = f.write_all(format!("{line}\n").as_bytes());
-}
-#[cfg(not(unix))]
-fn note_uncaptured(line: &str) {
+/// The `[error-debt]` and `[intentional-fail]` notices: in the test's captured
+/// output, shown with it when it fails (`--nocapture` shows them on a green run).
+/// They once went to fd 2 directly to be seen on every green run (review m2); a
+/// green run now prints nothing (user directive 2026-09-28).
+fn note(line: &str) {
   eprintln!("{line}");
 }
 
@@ -280,13 +274,13 @@ pub fn latexml_test_single(
   tex_file_str: &str,
   name: &str,
   dirpath: &str,
-  requires: Option<&phf::Map<&str, &str>>,
+  requires: Option<&RequirementTable>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
   init_logger();
   init_test_rss_cap();
-  if !validate_requirements(dirpath, requires) {
-    return; // test group only if required files are found.
+  if !check_table(dirpath, name, requires) {
+    return;
   }
   // Platform-skipped golden fixtures: kept live (and compared) on the
   // platforms whose TeX distribution matches the committed golden, but
@@ -332,11 +326,6 @@ pub fn latexml_test_single(
   if suppress {
     latexml_core::common::error::set_suppress_log_output(false);
   }
-}
-
-fn validate_requirements(_dirpath: &str, _requires: Option<&phf::Map<&str, &str>>) -> bool {
-  // TODO
-  true
 }
 
 // fn latexml_ok(tex_path: &str, xml_path: &str, name: &str) { latexml_ok_internal(tex_path,
@@ -464,7 +453,7 @@ fn process_texfile(
     // Permanent contract: exact SOFT-error count, and NEVER fatal — the point is
     // graceful recovery. Drift fails both ways; a Fatal is always a regression.
     (Some((_, expect, reason)), _) => {
-      note_uncaptured(&format!(
+      note(&format!(
         "[intentional-fail] {name}: {n_soft} soft errors, {n_fatal} fatal (expect {expect}, 0) — {reason}"
       ));
       if n_fatal > 0 {
@@ -495,12 +484,12 @@ fn process_texfile(
     // entry is clean EVERYWHERE (the `[error-debt] … 0 errors` log flags it).
     (None, Some((_, reason))) => {
       if n_err == 0 {
-        note_uncaptured(&format!(
+        note(&format!(
           "[error-debt] {name}: 0 errors HERE — clean in this \
           environment; review for removal once clean everywhere — {reason}"
         ));
       } else {
-        note_uncaptured(&format!("[error-debt] {name}: {n_err} errors — {reason}"));
+        note(&format!("[error-debt] {name}: {n_err} errors — {reason}"));
       }
       Ok(())
     },
@@ -514,7 +503,7 @@ fn process_texfile(
            Fix the engine/binding/specimen. If the input SHOULD error (verify with \
            bin/latexml --verbose), add to INTENTIONALLY_FAILING; if it should convert \
            clean but doesn't yet, add to ERROR_DEBT with a SYNC_STATUS entry. See \
-           docs/reproducers/MALFORMED_CLOSE_NUMBERED_2026-06-10.md.",
+           docs/archive/MALFORMED_CLOSE_NUMBERED_2026-06-10.md.",
           latexml_core::common::error::get_status_message()
         ))
       }
@@ -577,7 +566,7 @@ fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
 
 // `new_test_engine` and `lex_single_tex_formula` moved to
 // `crate::util::preset` (audit DEP-02, 2026-05-18). They have no
-// dependency on `glob`/`phf` and need to be callable from the
+// dependency on `glob` and need to be callable from the
 // `latexmlmath_oxide` production binary, which builds without the
 // `test-utils` feature. Re-exported here so the dominant
 // `use latexml::util::test::*;` pattern in integration tests
@@ -615,38 +604,709 @@ macro_rules! tex_tests {
 // boilerplate previously lived as per-test-file copies — a drift hazard for
 // the project's #1 signal-integrity rule (robust error-log counting).
 
-/// Count inline `Error:<class>:` markers (parity_check.sh's lax pattern, see
+/// Count inline `Error:<category>:` markers (parity_check.sh's lax pattern, see
 /// feedback_strict_vs_lax_error_grep.md). Errors are emitted INLINE within
-/// `(Building...Error:..)` envelopes, not at line starts.
+/// `(Building...Error:..)` envelopes, not at line starts. The category is anything up
+/// to the next `:` — `missing_file`, `I/O`, `<char>` count too (WISDOM 85; a
+/// lowercase-letters category missed them).
 pub fn error_count(log: &str) -> usize {
   log
     .match_indices("Error:")
     .filter(|(i, _)| {
       let tail = &log.as_bytes()[*i + 6..];
-      let n_class = tail.iter().take_while(|b| b.is_ascii_lowercase()).count();
+      let n_class = tail
+        .iter()
+        .take_while(|b| **b != b':' && !b.is_ascii_whitespace())
+        .count();
       n_class > 0 && tail.get(n_class) == Some(&b':')
     })
     .count()
 }
 
-/// True iff a year-versioned latex kernel dump is present in the dev tree.
-/// Without it the engine raw-loads `expl3-code.tex` (degraded mode) and the
-/// error landscape is dominated by unrelated raw-load cascades — dump-gated
-/// tests should SKIP rather than measure the wrong thing. Delegates to the
-/// engine's own dump-name convention so a filename-scheme change cannot make
-/// the tests silently self-skip forever.
-pub fn dump_available() -> bool {
-  let dir = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/dumps"));
-  !latexml_engine::dump_paths::available_years_in_dir(dir, "latex").is_empty()
+/// The first `<tag …>…</tag>` (or self-closing `<tag …/>`) element of `xml`
+/// whose start tag contains every fragment in `attrs` (e.g. `key="smith2020"`),
+/// returned WHOLE — start tag, attributes, children, end tag — with the
+/// inter-tag whitespace of pretty-printing collapsed (`>\s+<` → `><`, trimmed)
+/// so the same element compares equal across serializers. Nesting of the same
+/// tag is tracked, so the outermost match is returned complete. `None` when no
+/// element matches.
+///
+/// This is the guard-strength primitive (PLANS.md item 5, user directive
+/// 2026-09-17): a guard asserts the entire markup context of its feature, not a
+/// substring that unrelated markup can satisfy. `tag` is matched with or
+/// without the `ltx:` prefix.
+pub fn xml_element(xml: &str, tag: &str, attrs: &[&str]) -> Option<String> {
+  let bare = tag.strip_prefix("ltx:").unwrap_or(tag);
+  let opens = [format!("<{bare}"), format!("<ltx:{bare}")];
+  let mut from = 0;
+  while let Some(rel) = xml[from..].find('<') {
+    let start = from + rel;
+    let rest = &xml[start..];
+    let Some(open) = opens.iter().find(|o| {
+      rest.starts_with(o.as_str())
+        && rest[o.len()..]
+          .chars()
+          .next()
+          .is_some_and(|c| c.is_whitespace() || c == '>' || c == '/')
+    }) else {
+      from = start + 1;
+      continue;
+    };
+    let tag_end = start_tag_end(rest)?;
+    let start_tag = &rest[..=tag_end];
+    if !attrs.iter().all(|a| start_tag.contains(a)) {
+      from = start + 1;
+      continue;
+    }
+    if start_tag.ends_with("/>") {
+      return Some(normalize_markup(start_tag));
+    }
+    // Depth-aware scan to the matching close tag.
+    let close = format!("</{}>", &open[1..]);
+    let mut depth = 1usize;
+    let mut pos = tag_end + 1;
+    while depth > 0 {
+      let rel = rest[pos..].find('<')?;
+      let at = pos + rel;
+      if rest[at..].starts_with(&close) {
+        depth -= 1;
+        pos = at + close.len();
+        if depth == 0 {
+          return Some(normalize_markup(&rest[..pos]));
+        }
+      } else if rest[at..].starts_with(open.as_str())
+        && rest[at + open.len()..]
+          .chars()
+          .next()
+          .is_some_and(|c| c.is_whitespace() || c == '>' || c == '/')
+      {
+        let e = start_tag_end(&rest[at..])?;
+        if !rest[at..at + e].ends_with('/') {
+          depth += 1;
+        }
+        pos = at + e + 1;
+      } else {
+        pos = at + 1;
+      }
+    }
+    return None;
+  }
+  None
 }
 
-/// True iff `kpsewhich` resolves the named file in the host TeX tree.
-pub fn kpse_has(file: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(file)
+/// Byte offset of the `>` that closes the start tag beginning at `s[0]`,
+/// skipping any `>` inside a quoted attribute value (libxml2 does not escape
+/// `>` in attributes: `tex="a>b"`).
+fn start_tag_end(s: &str) -> Option<usize> {
+  let mut quote: Option<u8> = None;
+  for (i, b) in s.bytes().enumerate() {
+    match (quote, b) {
+      (Some(q), c) if c == q => quote = None,
+      (Some(_), _) => {},
+      (None, b'"') | (None, b'\'') => quote = Some(b),
+      (None, b'>') => return Some(i),
+      _ => {},
+    }
+  }
+  None
+}
+
+/// Collapse pretty-printing whitespace and trim, so an element's serialization
+/// compares equal whatever the indentation: a whitespace run that contains a
+/// newline is indentation — dropped when it touches a tag boundary (`>` before
+/// it or `<` after it), one space otherwise; a run without a newline is real
+/// text spacing and is kept verbatim.
+pub fn normalize_markup(s: &str) -> String {
+  let mut out = String::with_capacity(s.len());
+  let chars: Vec<char> = s.chars().collect();
+  let mut i = 0;
+  while i < chars.len() {
+    if chars[i].is_whitespace() {
+      let start = i;
+      while i < chars.len() && chars[i].is_whitespace() {
+        i += 1;
+      }
+      let run: String = chars[start..i].iter().collect();
+      if run.contains('\n') {
+        let at_boundary =
+          out.ends_with('>') || chars.get(i) == Some(&'<') || out.is_empty() || i >= chars.len();
+        if !at_boundary {
+          out.push(' ');
+        }
+      } else {
+        out.push_str(&run);
+      }
+    } else {
+      out.push(chars[i]);
+      i += 1;
+    }
+  }
+  sort_start_tag_attributes(out.trim())
+}
+
+/// Rewrite every start tag as `<name a="…" b="…">` with its attributes in
+/// lexicographic order. Attribute order is not significant in XML, and one
+/// emitter (the bibliography's `<ref>` for a `.bib` URL field) orders them by
+/// hash — the test-side normalization keeps a pinned element stable; the
+/// nondeterminism itself is tracked separately.
+fn sort_start_tag_attributes(s: &str) -> String {
+  use std::sync::LazyLock;
+  static START_TAG: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"<([A-Za-z_:][\w:.-]*)((?:\s+[\w:.-]+="[^"]*")+)\s*(/?)>"#).unwrap()
+  });
+  static ATTR: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"([\w:.-]+)="([^"]*)""#).unwrap());
+  START_TAG
+    .replace_all(s, |c: &regex::Captures| {
+      let mut attrs: Vec<(String, String)> = ATTR
+        .captures_iter(&c[2])
+        .map(|a| (a[1].to_string(), a[2].to_string()))
+        .collect();
+      attrs.sort();
+      let attrs: Vec<String> = attrs
+        .into_iter()
+        .map(|(k, v)| format!("{k}=\"{v}\""))
+        .collect();
+      format!("<{} {}{}>", &c[1], attrs.join(" "), &c[3])
+    })
+    .to_string()
+}
+
+/// Assert that the first `<tag …>` element carrying every `attrs` fragment is
+/// EXACTLY `expected` (whitespace-normalized on both sides). The failure
+/// message prints the element that was found, so a guard can be pinned from a
+/// real conversion in one round trip.
+#[track_caller]
+pub fn assert_element(xml: &str, tag: &str, attrs: &[&str], expected: &str) {
+  match xml_element(xml, tag, attrs) {
+    Some(found) => {
+      let want = normalize_markup(expected);
+      assert!(
+        found == want,
+        "element <{tag} {}> differs from the expected markup\n--- found:\n{found}\n--- expected:\n{want}\n--- xml:\n{xml}",
+        attrs.join(" ")
+      );
+    },
+    None => panic!(
+      "no <{tag} {}> element in the output\n--- xml:\n{xml}",
+      attrs.join(" ")
+    ),
+  }
+}
+
+/// RelaxNG-validate a core-XML string against the repo's authoritative
+/// `LaTeXML.rng` with `jing` (the S2 bar of the perfect-kernel program): the
+/// number of jing error lines, `Some(0)` = schema-valid; `None` when `jing` is
+/// not installed (CI installs it), logged as a skip of the check ([`skip`]); a guard
+/// whose point is the schema declares [`JING`] instead.
+/// The schema directory is prepared the way `tools/perfect_kernel/validate.sh`
+/// does — the `.rng` files copied to a temp dir with the `urn:x-LaTeXML:RelaxNG:`
+/// includes rewritten to relative paths — once for every process and checkout of
+/// the same schema: the directory is named by a hash of the files' names and
+/// contents.
+pub fn rng_error_count(xml: &str) -> Option<usize> {
+  use std::{path::PathBuf, process::Command, sync::OnceLock};
+  static SCHEMA: OnceLock<Option<PathBuf>> = OnceLock::new();
+  let dir = SCHEMA
+    .get_or_init(|| {
+      if !requirements::program_available("jing") {
+        return None;
+      }
+      let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../latexml_core/resources/RelaxNG");
+      // Shared by every test process (a per-process directory left ~15,000 in `/tmp`), named by a
+      // hash of the schema sources so a changed `.rng` or model gets a directory of its own; written
+      // aside and renamed into place, so a concurrent reader never sees a partial one.
+      let mut sources: Vec<PathBuf> = [src.clone(), src.join("svg")]
+        .iter()
+        .filter_map(|dir| std::fs::read_dir(dir).ok())
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|e| e == "rng"))
+        .collect();
+      sources.sort();
+      let hash = sources.iter().fold(0xcbf2_9ce4_8422_2325u64, |hash, path| {
+        // The path below the schema root (`svg/…`), so every checkout of the same schema shares it.
+        let name = path
+          .strip_prefix(&src)
+          .unwrap_or(path)
+          .to_string_lossy()
+          .into_owned()
+          .into_bytes();
+        let bytes = std::fs::read(path).unwrap_or_default();
+        name.into_iter().chain(bytes).fold(hash, |h, b| {
+          (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
+        })
+      });
+      let dir = std::env::temp_dir().join(format!("latexml-rng-schema-{hash:016x}"));
+      if dir.join("LaTeXML.rng").exists() {
+        return Some(dir);
+      }
+      let dir_partial = std::env::temp_dir().join(format!(
+        "latexml-rng-schema-{hash:016x}.{}",
+        std::process::id()
+      ));
+      let dir = {
+        let target = dir;
+        let dir = dir_partial;
+        std::fs::create_dir_all(dir.join("svg")).ok()?;
+        for (sub, from) in [("", src.clone()), ("svg", src.join("svg"))] {
+          for entry in std::fs::read_dir(&from).ok()? {
+            let path = entry.ok()?.path();
+            if path.extension().is_some_and(|e| e == "rng") {
+              let text = std::fs::read_to_string(&path).ok()?;
+              let text = if sub.is_empty() {
+                text
+                  .replace("urn:x-LaTeXML:RelaxNG:svg:", "svg/")
+                  .replace("urn:x-LaTeXML:RelaxNG:", "")
+              } else {
+                text
+                  .replace("urn:x-LaTeXML:RelaxNG:svg:", "")
+                  .replace("urn:x-LaTeXML:RelaxNG:", "")
+              };
+              std::fs::write(dir.join(sub).join(path.file_name()?), text).ok()?;
+            }
+          }
+        }
+        if std::fs::rename(&dir, &target).is_err() {
+          let _ = std::fs::remove_dir_all(&dir);
+        }
+        target
+      };
+      Some(dir)
+    })
+    .as_ref();
+  let Some(dir) = dir else {
+    // The caller's other assertions still run; the skipped schema check is logged like a skipped test.
+    let test = current_test_name();
+    skip(
+      &test,
+      &format!("Missing program jing for {test} (its schema check)"),
+    );
+    return None;
+  };
+  let file = dir.join(format!(
+    "doc-{}-{:?}.xml",
+    std::process::id(),
+    std::thread::current().id()
+  ));
+  std::fs::write(&file, xml).ok()?;
+  let out = Command::new("jing")
+    .arg(dir.join("LaTeXML.rng"))
+    .arg(&file)
     .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
+    .ok()?;
+  std::fs::remove_file(&file).ok();
+  let text = format!(
+    "{}{}",
+    String::from_utf8_lossy(&out.stdout),
+    String::from_utf8_lossy(&out.stderr)
+  );
+  Some(
+    text
+      .lines()
+      .filter(|l| l.contains(": error:") || l.contains(": fatal:"))
+      .count(),
+  )
+}
+
+/// True iff a latex kernel dump built from this TeX tree is on disk where the format loads one from
+/// (`LATEXML_DUMP_PATH`/`LATEXML_DUMP_DIR`, installed, dev tree). Without it the engine raw-loads `expl3-code.tex`
+/// (degraded mode) and the error landscape is dominated by unrelated raw-load cascades — dump-gated tests declare
+/// it ([`Requirements::format_dump`]) and SKIP visibly. The engine's own lookup, so a test cannot disagree with the
+/// conversion it gates.
+pub fn dump_available() -> bool { latexml_engine::dump_paths::format_dump_on_disk("latex") }
+
+/// The path the engine's kpathsea lookup resolves `file` to in the host TeX tree, if any (the lookup the conversion
+/// itself uses, so a test and the engine agree).
+pub fn kpse_path(file: &str) -> Option<String> { latexml_core::util::pathname::kpsewhich(&[file]) }
+
+/// True iff the engine's kpathsea lookup resolves the named file in the host TeX tree. For an expectation that
+/// depends on the tree; a test that cannot run without the file declares it with [`check_requirements`] instead.
+pub fn kpse_has(file: &str) -> bool { kpse_path(file).is_some() }
+
+/// The text of the host TeX tree's copy of `file` (a class's version decides a guard's expectation), if any.
+pub fn kpse_text(file: &str) -> Option<String> {
+  kpse_path(file)
+    .and_then(|path| std::fs::read(path).ok())
+    .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+}
+
+//======================================================================
+// In-process conversion for guards (user directive 2026-10-03): the cargo-built library, never a spawned binary.
+// Lifted from cluster_package_guards/perfect_kernel_batch46.rs so every test crate shares one copy.
+
+/// The jobname of a `convert_with*` conversion: its source is `<GUARD_JOBNAME>.tex` in a temporary directory, so a side
+/// file the document reads by `\jobname` is `t.bbl`, `t.aux`. A fixture names no file of its own `t`: the source is
+/// a real file, among `\includegraphics{t}`'s candidates and what `\input{t}` reads.
+pub const GUARD_JOBNAME: &str = "t";
+
+/// The deadline of a `convert_with*` conversion, in seconds: the probe ceiling — a bound, so a runaway regression fails
+/// as a `Fatal:Timeout` rather than hanging the test, with headroom for a heavy raw-preload guard on a loaded CI box
+/// (the CLI's own default is 60 s).
+pub const GUARD_TIMEOUT_SECS: u64 = 180;
+
+/// The HTML page of `tex` through [`crate::api::convert_to_html_with`], without the bundled CSS/JS. With no
+/// destination those files would otherwise be copied into the test's working directory, the crate root.
+pub fn convert_to_html_page(tex: &str) -> Result<String, String> {
+  crate::api::convert_to_html_with(tex, &crate::api::HtmlOptions { default_resources: false })
+}
+
+/// Convert `tex` in-process (`convert_in_process`) — the package and contrib bindings, `preload` when given, comments
+/// off, XML. Returns (log, XML).
+pub fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
+  let (log, xml, ()) = convert_with_then(tex, preload, |_| ());
+  (log, xml)
+}
+
+/// [`convert_with`], also running `inspect` on the XML in the conversion's thread (while its arena and state live).
+pub fn convert_with_then<R: Send + 'static>(
+  tex: &str,
+  preload: Option<&str>,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, R) {
+  convert_with_setup_then(tex, preload, || {}, inspect)
+}
+
+/// [`convert_with_then`], also running `setup` in the conversion's thread before it starts: where a test sets a
+/// thread-local override (never the process env, which parallel tests share).
+pub fn convert_with_setup_then<R: Send + 'static>(
+  tex: &str,
+  preload: Option<&str>,
+  setup: impl FnOnce() + Send + 'static,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, R) {
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &[],
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    setup,
+    move |xml, _| inspect(xml),
+  );
+  (run.log, run.xml, run.inspected)
+}
+
+/// [`convert_with`], also returning the conversion's verdict: (log, XML, status line, status code) —
+/// `ConversionResponse::status` ("4 errors; 4 undefined macros[…]", the CLI's "Conversion complete" summary) and
+/// `status_code` (3 = fatal, 2 = error, lower = OK/warnings).
+pub fn convert_with_status(tex: &str, preload: Option<&str>) -> (String, String, String, usize) {
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &[],
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    || {},
+    |_, _| (),
+  );
+  (run.log, run.xml, run.status, run.status_code)
+}
+
+/// [`convert_with`] after writing `files` (`(name, content)`, subdirectories created) beside the document — for a
+/// guard needing a package, class, binding (`.rhai`) or data file next to its source.
+pub fn convert_files_with(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+) -> (String, String) {
+  let files: Vec<(&str, &[u8])> = files
+    .iter()
+    .map(|(name, content)| (*name, content.as_bytes()))
+    .collect();
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &files,
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    || {},
+    |_, _| (),
+  );
+  (run.log, run.xml)
+}
+
+/// [`convert_files_with`], also returning the conversion's verdict as [`convert_with_status`] does: (log, XML, status
+/// line, status code).
+pub fn convert_files_with_status(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+) -> (String, String, String, usize) {
+  let files: Vec<(&str, &[u8])> = files
+    .iter()
+    .map(|(name, content)| (*name, content.as_bytes()))
+    .collect();
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &files,
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    || {},
+    |_, _| (),
+  );
+  (run.log, run.xml, run.status, run.status_code)
+}
+
+/// [`convert_files_with`] for sources that are not UTF-8 text — a legacy-encoded document or `.bib`, written byte for
+/// byte — also running `inspect` on the XML and the source directory in the conversion's thread, while its state and
+/// that directory live (the post stage's recursive `.bib` session digests in the document's own state, bib_session.rs,
+/// and finds the `.bib` beside the source). Returns (log, XML, `inspect`'s result).
+pub fn convert_bytes_files_then<R: Send + 'static>(
+  tex: &[u8],
+  files: &[(&str, &[u8])],
+  preload: Option<&str>,
+  inspect: impl FnOnce(&str, &std::path::Path) -> R + Send + 'static,
+) -> (String, String, R) {
+  let run = convert_in_process(
+    tex,
+    files,
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    || {},
+    inspect,
+  );
+  (run.log, run.xml, run.inspected)
+}
+
+/// [`convert_with_setup_then`] after writing `files` (`(name, content)`) beside the document: `setup` runs in the
+/// conversion's thread before it (a thread-local override), `inspect` on the XML after it, in the same thread. Returns
+/// (log, XML, `inspect`'s result).
+pub fn convert_files_with_setup_then<R: Send + 'static>(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+  setup: impl FnOnce() + Send + 'static,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, R) {
+  let files: Vec<(&str, &[u8])> = files
+    .iter()
+    .map(|(name, content)| (*name, content.as_bytes()))
+    .collect();
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &files,
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    setup,
+    move |xml, _| inspect(xml),
+  );
+  (run.log, run.xml, run.inspected)
+}
+
+/// [`convert_files_with`] of a source dated `source_date_epoch` (Unix seconds, UTC) — what the CLI and cortex read
+/// from a paper's bundle (`latexml::source_date`) — for a guard of the job's clock under ar5iv's archival preload.
+pub fn convert_dated_files_with(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+  source_date_epoch: i64,
+) -> (String, String) {
+  let files: Vec<(&str, &[u8])> = files
+    .iter()
+    .map(|(name, content)| (*name, content.as_bytes()))
+    .collect();
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &files,
+    preload,
+    Some(source_date_epoch),
+    GUARD_TIMEOUT_SECS,
+    || {},
+    |_, _| (),
+  );
+  (run.log, run.xml)
+}
+
+/// [`convert_with`] under a `secs` deadline instead of [`GUARD_TIMEOUT_SECS`] — for a guard of a heavy document.
+pub fn convert_with_timeout(tex: &str, preload: Option<&str>, secs: u64) -> (String, String) {
+  let run = convert_in_process(tex.as_bytes(), &[], preload, None, secs, || {}, |_, _| ());
+  (run.log, run.xml)
+}
+
+/// What [`convert_in_process`] returns: the response's log, XML, verdict, and the `inspect` result.
+struct InProcessRun<R> {
+  log:         String,
+  xml:         String,
+  status:      String,
+  status_code: usize,
+  inspected:   R,
+}
+
+/// The conversion behind the `convert_with*` family — the CLI's production path, in-process: `tex` written as
+/// `<GUARD_JOBNAME>.tex` with `files` beside it in a temporary directory, `prepare_session`, then [`Converter::convert`] on the
+/// source's path (the digest, salvage and verdict arms the CLI and cortex run), on a fresh 256 MiB-stack thread so
+/// each conversion starts from a clean thread-local engine. The thread carries a `timeout_secs` deadline (a runaway
+/// regression fails as a `Fatal:Timeout`, not a hung test) and the harness's raised memory fuse ([`init_test_rss_cap`]'s
+/// figure, thread-local: `cargo test` runs sibling conversions in one process, whose RSS they share; an explicit
+/// `LATEXML_RSS_CAP_BYTES` still wins). `setup` runs after the fuse is set, so it may override it.
+///
+/// [`Converter::convert`]: crate::converter::Converter::convert
+fn convert_in_process<R: Send + 'static>(
+  tex: &[u8],
+  files: &[(&str, &[u8])],
+  preload: Option<&str>,
+  source_date_epoch: Option<i64>,
+  timeout_secs: u64,
+  setup: impl FnOnce() + Send + 'static,
+  inspect: impl FnOnce(&str, &std::path::Path) -> R + Send + 'static,
+) -> InProcessRun<R> {
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  for (name, content) in files {
+    let path = workdir.path().join(name);
+    if let Some(parent) = path.parent() {
+      let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(path, content).expect("write file");
+  }
+  let source = workdir.path().join(format!("{GUARD_JOBNAME}.tex"));
+  std::fs::write(&source, tex).expect("write the guard source");
+  let source = source.to_string_lossy().into_owned();
+  let source_dir = workdir.path().to_path_buf();
+  let preload = preload.map(String::from);
+  let fixtures: Vec<String> = files.iter().map(|(name, _)| (*name).to_string()).collect();
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(move || {
+      if std::env::var_os("LATEXML_RSS_CAP_BYTES").is_none() {
+        let mib = latexml_core::watchdog::default_ceiling_mib().max(16_000);
+        latexml_core::stomach::set_memory_cap(Some(mib.saturating_mul(1024 * 1024)));
+      }
+      setup();
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+      let opts = latexml_core::common::Config {
+        format: latexml_core::common::OutputFormat::XML,
+        include_comments: Some(false),
+        preload: preload.map(|p| vec![p]),
+        bindings_dispatch: Some(std::rc::Rc::new(latexml_package::dispatch)),
+        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        source_date_epoch,
+        ..latexml_core::common::Config::default()
+      };
+      let mut converter = crate::converter::Converter::from_config(opts.clone());
+      // As cortex_worker and the CLI do before preparing a session (plain TeX vs LaTeX, DVI class option).
+      converter.note_main_source(&source);
+      let resp = match converter.prepare_session(&opts) {
+        Ok(()) => {
+          latexml_core::stomach::set_timeout(timeout_secs);
+          converter.convert(source)
+        },
+        Err(e) => crate::converter::ConversionResponse {
+          result:      None,
+          log:         format!("Error:prepare_session:{e}"),
+          status:      String::from("Initialization failed."),
+          status_code: 3,
+        },
+      };
+      let xml = resp.result.unwrap_or_default();
+      let inspected = inspect(&xml, &source_dir);
+      latexml_core::stomach::set_timeout(0);
+      latexml_core::reset_thread_engine();
+      assert_fixtures_not_shadowed(&fixtures, &resp.log);
+      InProcessRun {
+        log: resp.log,
+        xml,
+        status: resp.status,
+        status_code: resp.status_code,
+        inspected,
+      }
+    })
+    .expect("spawn test worker")
+    .join()
+    // the worker's own panic (an `inspect` assertion) as the test's, message intact
+    .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+}
+
+/// Each of `sources` (paths of `.tex` files) converted in turn on ONE thread, as `cortex_worker` converts its papers: a
+/// `Converter` and `prepare_session` per document, no engine reset between them (the [`convert_with`] options). Returns
+/// (log, XML) per source; a guard compares a document's pair with the one it gets converted alone.
+pub fn convert_on_one_thread(sources: Vec<String>, preload: Option<&str>) -> Vec<(String, String)> {
+  let preload = preload.map(String::from);
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(move || {
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+      let opts = latexml_core::common::Config {
+        format: latexml_core::common::OutputFormat::XML,
+        include_comments: Some(false),
+        preload: preload.map(|p| vec![p]),
+        bindings_dispatch: Some(std::rc::Rc::new(latexml_package::dispatch)),
+        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        ..latexml_core::common::Config::default()
+      };
+      let runs = sources
+        .into_iter()
+        .map(|source| {
+          let mut converter = crate::converter::Converter::from_config(opts.clone());
+          converter.note_main_source(&source);
+          converter.prepare_session(&opts).expect("a session");
+          latexml_core::stomach::set_timeout(GUARD_TIMEOUT_SECS);
+          let resp = converter.convert(source);
+          latexml_core::stomach::set_timeout(0);
+          (resp.log, resp.result.unwrap_or_default())
+        })
+        .collect();
+      latexml_core::reset_thread_engine();
+      runs
+    })
+    .expect("spawn test worker")
+    .join()
+    .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+}
+
+/// Fails the guard when the conversion took a binding in place of one of its fixture packages or classes and never
+/// read the fixture: Perl's FindFile_fallback (Package.pm:2186-2189 and the suffix lists after it;
+/// `binding::content::find_file_fallback`) reads `myproof.sty`, `foo_v2.sty` or `bar-arxiv.cls` as a version of
+/// `proof.sty`, `foo.sty`, `bar.cls`, and a binding of that name wins over the file beside the source
+/// (`Info:fallback:<name> Interpreted as versioned package, falling back to …`), so the guard tests something else
+/// (`perfect_kernel_batch67s::package_redefined_proof_keeps_the_binding` once did). A binding that follows the copy
+/// it answers for reads the fixture (its path in the log: `(Processing definitions …/JINST_mod.cls`, `Loading
+/// dependencies for …/icml2026.sty`), which is the fallback under test, not a shadowed fixture.
+fn assert_fixtures_not_shadowed(fixtures: &[String], log: &str) {
+  for fixture in fixtures {
+    let base = fixture.rsplit('/').next().unwrap_or(fixture);
+    let Some(stem) = base
+      .strip_suffix(".sty")
+      .or_else(|| base.strip_suffix(".cls"))
+    else {
+      continue;
+    };
+    let fell_back = log.lines().any(|line| {
+      line
+        .split("Info:fallback:")
+        .nth(1)
+        .and_then(|rest| rest.split_whitespace().next())
+        .is_some_and(|name| name == stem || name == base)
+    });
+    let read = log.contains(&format!("/{base}"));
+    assert!(
+      !fell_back || read,
+      "fixture {fixture} is shadowed by a binding through the versioned-name fallback (Package.pm \
+       FindFile_fallback) and never read: rename it so the conversion reads it\n{log}"
+    );
+  }
+}
+
+/// Count of lines carrying a `Warning:<category>:` diagnostic anywhere in the line (WISDOM 85: a diagnostic can
+/// follow other output on the same line), whatever its category spells.
+pub fn warning_count(log: &str) -> usize {
+  log
+    .lines()
+    .filter(|line| {
+      line.match_indices("Warning:").any(|(i, _)| {
+        let tail = &line.as_bytes()[i + 8..];
+        let n_class = tail
+          .iter()
+          .take_while(|b| **b != b':' && !b.is_ascii_whitespace())
+          .count();
+        n_class > 0 && tail.get(n_class) == Some(&b':')
+      })
+    })
+    .count()
 }
 
 /// Convert a test fixture with the standard HTML5 config and return the full
@@ -660,6 +1320,7 @@ pub fn convert_fixture(source: &str) -> crate::converter::ConversionResponse {
     ..latexml_core::common::Config::default()
   };
   let mut c = crate::converter::Converter::from_config(cfg);
+  c.note_main_source(source);
   c.initialize_session().expect("initialize");
   c.convert(source.to_string())
 }
@@ -799,6 +1460,67 @@ mod exemption_audit {
         .iter()
         .any(|(k, hits)| k == key && hits.len() == 2),
       "audit should flag the duplicate {key:?}: {collisions:?}"
+    );
+  }
+}
+
+#[cfg(test)]
+mod element_helper_tests {
+  use super::{assert_element, normalize_markup, xml_element};
+
+  const XML: &str = "<document>\n  <bibliography>\n    <biblist>\n      <bibitem key=\"a\" xml:id=\"bib.a\">\n        <bibtag role=\"refnum\">1</bibtag>\n        <bibblock>Author <emph>T</emph></bibblock>\n      </bibitem>\n      <bibitem key=\"b\"><bibtag>2</bibtag></bibitem>\n    </biblist>\n  </bibliography>\n  <graphics graphic=\"x.pdf\"/>\n</document>\n";
+
+  #[test]
+  fn first_element_is_returned_whole_and_normalized() {
+    assert_eq!(
+      xml_element(XML, "bibitem", &[]).as_deref(),
+      Some(
+        "<bibitem key=\"a\" xml:id=\"bib.a\"><bibtag role=\"refnum\">1</bibtag><bibblock>Author <emph>T</emph></bibblock></bibitem>"
+      )
+    );
+  }
+
+  #[test]
+  fn attribute_fragments_select_a_later_element() {
+    assert_eq!(
+      xml_element(XML, "ltx:bibitem", &["key=\"b\""]).as_deref(),
+      Some("<bibitem key=\"b\"><bibtag>2</bibtag></bibitem>")
+    );
+    assert_eq!(xml_element(XML, "bibitem", &["key=\"zz\""]), None);
+  }
+
+  #[test]
+  fn nested_same_tag_and_self_closing_are_handled() {
+    let nested = "<g id=\"o\"><g id=\"i\"><path/></g><text>L</text></g>";
+    assert_eq!(xml_element(nested, "g", &[]).as_deref(), Some(nested));
+    assert_eq!(
+      xml_element(nested, "g", &["id=\"i\""]).as_deref(),
+      Some("<g id=\"i\"><path/></g>")
+    );
+    assert_eq!(
+      xml_element(XML, "graphics", &[]).as_deref(),
+      Some("<graphics graphic=\"x.pdf\"/>")
+    );
+    // `<graphicsX>` is not `<graphics>`.
+    assert_eq!(xml_element("<graphicsX/>", "graphics", &[]), None);
+    // A `>` inside an attribute value does not end the start tag.
+    assert_eq!(
+      xml_element("<p><Math tex=\"a>b\"><XMath/></Math></p>", "Math", &[]).as_deref(),
+      Some("<Math tex=\"a>b\"><XMath/></Math>")
+    );
+  }
+
+  #[test]
+  fn normalization_keeps_text_whitespace() {
+    assert_eq!(
+      normalize_markup("<p>\n  a <b> c </b>\n</p>\n"),
+      "<p>a <b> c </b></p>"
+    );
+    assert_element(
+      XML,
+      "bibitem",
+      &["key=\"b\""],
+      "<bibitem key=\"b\">\n  <bibtag>2</bibtag>\n</bibitem>",
     );
   }
 }

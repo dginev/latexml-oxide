@@ -1,0 +1,22 @@
+% Two printed lines that share their text are two entries: the second address's "Groningen" is no copy of the first's,
+% and both stay (106b r1's text-only dedupe dropped it: 0808.4092, 1106.1785; review rev106b B1).
+% witness: 0808.4092, 1106.1785, 2608.29625, 2609.05568, 2406.03340
+% oracle:  pdflatex 0 errors: "Ann Able", "Dept. of Physics,", "Univ A,", "Groningen", "and", "Dept. of Math,", "Univ B,", "Groningen"
+% engines: rust int134b = 0 errors, every line a contact; 106b r1 = the second "Groningen" dropped; perl = each call's contact
+% expect:  0 errors, 0 warnings; Ann holds the eight lines, "Groningen" twice
+% status:  RED (106b r1) -> GREEN (106b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Two addresses}
+\author{Ann Able\\
+Dept. of Physics,\\
+Univ A,\\
+Groningen\\
+and\\
+Dept. of Math,\\
+Univ B,\\
+Groningen}
+\begin{document}
+\maketitle
+Text.
+\end{document}

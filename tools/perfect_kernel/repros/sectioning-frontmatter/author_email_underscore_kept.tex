@@ -1,0 +1,13 @@
+% witness: 2509.10377 (`wu\_zhiliang` in `\{12421181,…,wu\_zhiliang,…\}@zju.edu.cn`); review of 63m: a line of several
+%          addresses split into one contact each lost `\_` ("annable@x.edu")
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" / "Univ. A" / "ann_able@x.edu, bob@y.edu"
+% engines: rust 63m6 = ann.able's address "annable@x.edu"; Perl keeps the line with Bob Baker as an affiliation
+% expect:  0 errors; 2 authors with "Univ. A"; ann_able@x.edu Ann Able's, bob@y.edu Bob Baker's, the underscore kept
+% status:  RED (63m6) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker\\ Univ.\ A\\ \texttt{ann\_able@x.edu, bob@y.edu}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

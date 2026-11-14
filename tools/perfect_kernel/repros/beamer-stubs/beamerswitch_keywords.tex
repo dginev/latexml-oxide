@@ -1,0 +1,13 @@
+% witness: beamerswitch/beamerswitch-example.tex (TL2025 doc)
+% oracle: pdflatex clean; doc engine: pdflatex
+% expect: 0 errors; \keywords defined by beamerbasetitle.sty:213-215 (\mode<all>)
+% status: GREEN (batch 56z, 2026-09-06)
+% mechanism: beamer_cls.rs:459 defines \subject noop but OMITS its sibling
+%   \keywords (same \mode<all> block, beamerbasetitle.sty:215).
+\documentclass{beamerswitch}
+\title{T}
+\author{A}
+\keywords{CTAN, literate programming}
+\begin{document}
+\begin{frame}\maketitle\end{frame}
+\end{document}

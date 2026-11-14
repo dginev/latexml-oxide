@@ -1,0 +1,12 @@
+% witness: lineno/lineno (lineno.sty:2214 \newcommand*\firstlinenumber[1])
+% oracle:  pdflatex 0 errors
+% engines: rust=? perl=? (2026-09-06)
+% expect:  0 errors; body paragraph 'ok' present
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: lineno_sty.rs is a STUB binding; omits \firstlinenumber that raw lineno.sty:2214 defines
+\documentclass{article}
+\usepackage{lineno}
+\begin{document}
+\firstlinenumber{1}%
+ok
+\end{document}

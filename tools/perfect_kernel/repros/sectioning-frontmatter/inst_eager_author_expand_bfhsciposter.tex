@@ -1,0 +1,20 @@
+% witness: bfh-ci/DEMO-BFHSciPoster (DEMO-BFHSciPoster.tex:34 + bfhsciposter.cls:445,476)
+% oracle:  lualatex 0 errors (this article reduction: pdflatex 0 errors)
+% engines: rust=1 perl=? (2026-09-06)
+% expect:  0 errors; author frontmatter <ltx:creator>/<ltx:personname> contains superscript "*"
+% mechanism: bfhsciposter.cls:476 `\cs_set_eq:NN \inst \__ptxcd_inst:n` defines \inst
+%   ONLY inside \ptxcd_poster_setup_title_box: (a tcolorbox title hbox hook), right
+%   before \@author is expanded. Real TeX therefore expands \inst there. Our engine
+%   stores \@author (sect05.rs:871) and digests the author frontmatter content at a
+%   DIFFERENT point (not inside the class's title-box group), where \inst is undefined
+%   -> Error:undefined:\inst. Reduced here to \inst defined only inside \@maketitle.
+% status:  GREEN (batch 56z, 2026-09-06)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\begingroup\def\inst##1{\textsuperscript{##1}}\@author\par\endgroup}
+\makeatother
+\begin{document}
+\author{Name\inst{*}}
+\title{T}
+\maketitle
+\end{document}

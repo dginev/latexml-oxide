@@ -79,7 +79,8 @@ fn sb_in_amsppt_refs() {
 #[test]
 fn halign_body_implicit_cr() {
   // `\let\rowEnd=\cr` followed by `\halign{...\rowEnd ... \rowEnd}`.
-  // Before the fix in `is_implicit_cr` (tex_tables.rs), the preamble
+  // Before the fix in `is_implicit_cr` (tex_tables.rs; since batch 65b the
+  // preamble parser `parse_halign_template` asks `gullet::is_column_end`), the preamble
   // parser only recognised implicit \cr when its meaning was
   // Stored::Token(\cr). But `\let \rowEnd \cr` against a Constructor
   // `\cr` produces Stored::Constructor — the parser missed it, ate
@@ -180,8 +181,8 @@ fn babel_spanish_decimalpoint() {
 #[test]
 fn chemformula_raw_l3keys() {
   // Round-33 fix (commit 1afa4dc8ca). chemformula 4.x is expl3-based;
-  // the INCLUDE_STYLES post-binding raw load triggers
-  // \ProcessKeysPackageOptions at chemformula.sty L481, undefined
+  // its raw load (now the binding's own `InputDefinitions!`, batch 56az)
+  // triggers \ProcessKeysPackageOptions at chemformula.sty L481, undefined
   // unless l3keys2e is loaded first. Driver 2504.13749.
   let (code, status) = run_trip("chemformula_raw_l3keys");
   assert_eq!(

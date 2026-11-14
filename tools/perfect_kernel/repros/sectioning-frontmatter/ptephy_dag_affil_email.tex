@@ -1,0 +1,21 @@
+% witness: 1601.07691 (`\address{Graduate School … \email{narikawat@…} \affil{\dag}\email{tagoshi@…}}` under
+%          `\name{…Narikawa}{\ast} and \name{…Tagoshi}{\dag}`), 1703.03659 (`\name{T. Fukuda}{1,*}`, single-argument
+%          `\affil`s)
+% oracle:  pdflatex (1807.02967's ptephy_v1.cls and authblk-TI.sty, a stand-in for the logo `newlogo`, TL 2025) 0
+%          errors: "Ann Able∗ and Bob Baker†" over "Graduate School, Osaka Univ", "∗E-mail: ann@example.org",
+%          "∗E-mail: bob@example.org" (the `\dag` before it an authblk affiliation mark, not printed)
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; both with the affiliation; Ann's email hers (the `\ast` author), Bob's his (the `\dag` before it)
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy_v1}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{\ast} and \name{Bob Baker}{\dag}}
+\address{Graduate School, Osaka Univ
+\email{ann@example.org}
+\affil{\dag}\email{bob@example.org}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

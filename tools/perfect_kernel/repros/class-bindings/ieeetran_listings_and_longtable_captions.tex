@@ -1,0 +1,16 @@
+% mechanism: listings.sty:1675 `\lst@makecaption` is the class's `\@makecaption` (IEEEtran's figure form "Listing 1."),
+%   longtable.sty:475-483 `\LT@makecaption` its own "TABLE I: " whatever the class's is.
+% witness: review rev78s2 finding 5 (the 78v caption-separator row)
+% oracle:  pdflatex 0 errors; "Listing 1. Code one.", "TABLE I: Long one."
+% engines: perl: caption settings not applied (KNOWN_PERL_ERRORS #795); rust int65a: "Listing 1: "
+% expect:  0 errors, 0 warnings; "Listing 1" closed by ". ", "TABLE I" by ": "
+% status:  GREEN (78y)
+\documentclass[onecolumn]{IEEEtran}
+\usepackage{listings}
+\usepackage{longtable}
+\begin{document}
+\begin{lstlisting}[caption={Code one.}]
+x = 1
+\end{lstlisting}
+\begin{longtable}{c}\caption{Long one.}\\ Y\\ \end{longtable}
+\end{document}

@@ -1,0 +1,23 @@
+% A class `\let\thanks\footnote` (talk.cls:413 shape): pdflatex prints the address as a footnote; the output lacks it,
+% and the title-page check gives no Warning and no Info — the class's \thanks is not the one the check runs (review
+% rev106s2 S2; r1 counted it).
+% witness: synthetic (rev106s2 q9)
+% oracle:  pdflatex 0 errors: "A Title / Ann Able1 / Text." + footnote "1 Corresponding author: ann.able@lunar.org"
+% engines: rust 106s r2: the address absent, no diagnostic (a silent loss)
+% expect:  0 errors; the address kept, or 1 Warning naming "lunar org"
+% status: RED (106s residual, same fix as check_class_let_thanks_gobble_red)
+\begin{filecontents*}[overwrite]{letfn.cls}
+\ProvidesClass{letfn}\LoadClass{article}
+\newcommand\corr[1]{\expandafter\gdef\csname nc@corr\endcsname{#1}}
+\let\thanks\footnote
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\thanks{Corresponding author: \csname nc@corr\endcsname}\par}\endgroup}
+\end{filecontents*}
+\documentclass{letfn}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\corr{ann.able@lunar.org}
+\maketitle
+Text.
+\end{document}

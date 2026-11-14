@@ -1,0 +1,22 @@
+% mechanism: rows of one formatting block with "" punctuation run their fields
+%   together: the name block's editor after the author (Perl MakeBibliography.pm
+%   :708/:752/:769/:783 "HandelAtlanta Symphony (Ed.)"), the website's title and
+%   type after the name (:781-787 "V. JacobsonModified TCP…(Website)"), and an
+%   entry's notes (note, howpublished, addendum are all ltx:bib-note; :688 do_any
+%   "NovemberhowLimanoteMikeaddendum"; organization and institution are both
+%   ltx:bib-organization, "OscarorgCobaltinstitution"). LaTeXML.css adds no separators.
+% witness: biblatex-ieee/biblatex-ieee (@online), biblatex-chicago/cms-notes-sample
+%   (@video, @music, @misc notes)
+% oracle:  pdflatex+biber 0 errors; each field a separate unit
+% engines: rust=0 errors, fields glued; perl identical (base 0d10215663, 2026-09-26)
+% expect:  0 errors; "V. Jacobson (1990) Modified TCP … (Website)",
+%          "John Cleese, Terry Gilliam (Ed.) (2001) Commentaries.",
+%          "Oscarorg, Cobaltinstitution", "Note: Novemberhow. Limanote. Mikeaddendum"
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\usepackage[style=numeric,sorting=none]{biblatex}
+\addbibresource{bib_fields_separated.bib}
+\begin{document}
+\nocite{jacobson,cleese,mis}
+\printbibliography
+\end{document}

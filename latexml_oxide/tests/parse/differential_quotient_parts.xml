@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="\frac{dn}{d+2}" text="(d * n) / (d + 2)" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+              <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="P=\frac{p\,\mathrm{d}V}{\mathrm{d}t}" text="P = (p * differential-d@(V)) / differential-d@(t)" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok font="italic" role="UNKNOWN">P</XMTok>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN" rpadding="1.7pt">p</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">V</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\frac{\mathrm{d}V}{\mathrm{d}t}" text="differential-d@(V) / differential-d@(t)" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMApp>
+              <XMTok fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">V</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+<Math mode="inline" tex="\frac{d-1}{dk}" text="(d - 1) / (d * k)" xml:id="p1.m4">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMApp>
+              <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\frac{d(d+1)}{dn}" text="(d * (d + 1)) / (d * n)" xml:id="p1.m5">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+              <XMDual>
+                <XMRef idref="p1.m5.1"/>
+                <XMWrap>
+                  <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="p1.m5.1">
+                    <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="c\,dk" text="c * d * k" xml:id="p1.m6">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">c</XMTok>
+            <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            <XMTok font="italic" role="UNKNOWN">k</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\frac{dk}{2}" text="(d * k) / 2" xml:id="p1.m7">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+            </XMApp>
+            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\frac{d^{2}y}{dx^{2}}" text="(differential-d ^ 2)@(y) / (differential-d@(x)) ^ 2" xml:id="p1.m8">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+              <XMApp>
+                <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

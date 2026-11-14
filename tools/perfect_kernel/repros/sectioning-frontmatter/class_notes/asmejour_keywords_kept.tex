@@ -1,0 +1,21 @@
+% asmejour's `\keywords` stores for the abstract's coffin (asmejour.cls:1367-1382), which the locked `{abstract}` never
+% builds: the keywords were lost with 0 errors. Kept as the document's keywords under the class's "Keywords:" label
+% (asmejour_cls.rs); the class's date footnote (:1474-1488) already keeps `\date`.
+% witness: 2510.10694 (`\keywords{Digital Twin, …}`)
+% oracle:  pdflatex 0 errors: the abstract ends "Keywords: alpha, beta"; the date footnote "Version 2, 1 May 2025"
+% engines: rust 67int28 = 0 errors, no keywords (the date a footnote); perl not run
+% expect:  0 errors; <ltx:keywords name="Keywords: ">alpha, beta</ltx:keywords>; the date footnote "Version 2, 1 May 2025"
+% status:  RED (67int28) -> GREEN (int27)
+% preload: ar5iv.sty
+\documentclass{asmejour}
+\begin{document}
+\title{A Title}
+\SetAuthorBlock{Ann Author}{Somewhere}
+\keywords{alpha, beta}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\date{Version 2, 1 May 2025}
+\maketitle
+Body text.
+\end{document}

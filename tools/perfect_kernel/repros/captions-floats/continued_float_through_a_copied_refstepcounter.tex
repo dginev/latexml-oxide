@@ -1,0 +1,23 @@
+% A document (crossreference.sty:85, varioref's old-kernel branch, a preamble) may redefine `\refstepcounter` as a copy
+% of the kernel's that never calls it. caption still continues a float through it (caption.sty:557-568
+% `\caption@@refcounter`: the counter's own `\stepcounter` is suppressed for the length of the `\refstepcounter`), and
+% so do we: a first 58h cut left the continuation to the kernel's step ("Continued 'figure' after '??'", or Figure 2
+% with no diagnostic when the copy came after the first float).
+% witness: none (synthesized; the 58h review).
+% Guard: perfect_kernel_batch58::continued_float_through_a_copied_refstepcounter.
+% status:  GREEN (58h)
+% oracle:  pdflatex 0 errors; Figure 1, Figure 1 (continued), Figure 2; "value 2".
+% engines: rust 58h first cut: Figure 2 for the continued one; m58g as the oracle.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{caption}
+\usepackage{hyperref}
+\makeatletter
+\def\refstepcounter#1{\stepcounter{#1}\protected@edef\@currentlabel{\csname p@#1\endcsname\csname the#1\endcsname}}
+\makeatother
+\begin{document}
+\begin{figure}\caption{A}\label{fa}\end{figure}
+\begin{figure}\ContinuedFloat\caption{A cont}\label{fb}\end{figure}
+\begin{figure}\caption{B}\label{fc}\end{figure}
+Refs: \ref{fa} \ref{fb} \ref{fc}; value \the\value{figure}.
+\end{document}

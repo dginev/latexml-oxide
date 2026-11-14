@@ -1,0 +1,15 @@
+% `\let\everypar\mytoks` re-points the control sequence, not LaTeX's paragraph hook: the hook runs
+% the register allocated at latex.ltx:9070 (`\newtoks\everypar`, :9072-9077), so assignments
+% through the new meaning go to `\mytoks` and the paragraph still gets "X".
+% status:  GREEN (58k)
+% oracle:  pdflatex 0 errors: "XHello world." and "XThen [Y]." (`\mytoks` took the assignment).
+% engines: rust m58i: "YHello world." (fired the list `\everypar` names now).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\newtoks\mytoks
+\begin{document}
+\everypar{X}\let\everypar\mytoks \everypar{Y}
+Hello world.
+
+Then [\the\mytoks].
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: the list cutter (`classify::entry_starts` `line_at_starts`, `notes::lead_declarations`): a cut piece
+%   carries only the lead declarations that print nothing and set the font, size or colour, read by their meaning
+%   (`fonts::sets_font`); a macro printing text before the first mark (`\mydept`) stays on the first piece alone
+% witness: synthetic (revP4b4a2 B1 probe d1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Dept of Physics, 1Univ A, 2Univ B" printed once
+% engines: rust P4b4abase, P4b4a: 0 errors, 0 warnings, "Dept of Physics," once, on Ann Able; P4b4a3: Bob Baker's
+%   entry "Dept of Physics, 2 Univ B" too (printed twice, nothing counted)
+% expect:  0 errors, 0 warnings; Ann Able "Dept of Physics, 1 Univ A", Bob Baker "2 Univ B"
+% status:  RED (P4b4a3) -> GREEN (P4b4a4), guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\mydept}{Dept of Physics,}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{\mydept\ $^{1}$Univ A, $^{2}$Univ B}
+\maketitle
+Body.
+\end{document}

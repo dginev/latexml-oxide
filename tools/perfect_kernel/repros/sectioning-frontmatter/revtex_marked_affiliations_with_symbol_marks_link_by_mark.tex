@@ -1,0 +1,19 @@
+% witness: 63i review r1 finding 1 (revtex authors first, `Bob Baker$^{b,\dagger}$`, then marked affiliations; synthetic)
+% oracle:  pdflatex (revtex4-2) 0 errors: "Ann Able^a, Bob Baker^{b,†}, and Cat Cole^a"; "^a Univ A", "^b Univ B"
+% engines: rust 63h = Univ A on everyone, Univ B on Cat too (group rule); 63i r1 = Bob none (the † made his mark none)
+% expect:  by mark: Ann and Cat Univ A, Bob Univ B; 0 errors
+% status:  RED (63i r1) -> GREEN (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$}
+\author{Bob Baker$^{b,\dagger}$}
+\author{Cat Cole$^{a}$}
+\affiliation{$^{a}$Univ A}
+\affiliation{$^{b}$Univ B}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

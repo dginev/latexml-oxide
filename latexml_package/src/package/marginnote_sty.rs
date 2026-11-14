@@ -30,33 +30,25 @@ LoadDefinitions!({
   DefMacro!("\\raggedleftmarginnote", "\\raggedleft");
   DefMacro!("\\raggedrightmarginnote", "\\raggedright");
 
-  // Perl marginnote.sty.ltxml L37-40: \marginnote[left]{right}[vshift]
-  // expands to \marginpar — with the left-margin text (#1) included as the
-  // optional [left] argument when present, and the vshift (#3) ignored.
-  // Prior Rust stub dropped #1 entirely; this port preserves the left branch.
-  DefMacro!("\\marginnote []{}[]", sub[(left, right, _vadjust)] {
-    let mut out: Vec<Token> = Vec::new();
-    out.push(T_CS!("\\marginpar"));
-    if let Some(l) = left {
-      // [\mn@parboxrestore\marginfont\raggedleftmarginnote <left>]
-      out.push(T_OTHER!("["));
-      out.push(T_CS!("\\mn@parboxrestore"));
-      out.push(T_CS!("\\marginfont"));
-      out.push(T_CS!("\\raggedleftmarginnote"));
-      out.push(T_SPACE!());
-      out.extend(l.unlist());
-      out.push(T_OTHER!("]"));
-    }
-    // {\mn@parboxrestore\marginfont\raggedrightmarginnote <right>}
-    out.push(T_BEGIN!());
-    out.push(T_CS!("\\mn@parboxrestore"));
-    out.push(T_CS!("\\marginfont"));
-    out.push(T_CS!("\\raggedrightmarginnote"));
-    out.push(T_SPACE!());
-    out.extend(right.unlist());
-    out.push(T_END!());
-    Ok(Tokens::new(out))
-  });
+  // marginnote.sty:319-343: `\marginnote` = `\@dblarg\@mn@marginnote`, then
+  // `\@mn@marginnote[#1]#2` → `\@ifnextchar[` → `\@mn@@marginnote[#1]#2[#3]`
+  // → `\@mn@@@marginnote[#1]#2[#3]`, i.e. the note body rides through three
+  // macro-argument layers before it is set. Perl marginnote.sty.ltxml:37-40
+  // (and the former port) expanded `\marginnote` straight to `\marginpar`:
+  // one layer short, so a body calibrated for the real depth —
+  // skdoc.cls:631 `\marginnote{\clist_map_inline:Nn…{\index@option*{####1}}}`
+  // — left a literal `#1` (`misdefined:#` ×48) and defined glossary entries
+  // under the leaked key (`Glossary entry 'index-1-opt'…` ×96; iodhbwm
+  // 146 errors, KPE #166). The terminal macro sets the note as `\marginpar`
+  // (the `[left]` text only when it differs from the right one — `\@dblarg`
+  // copies the body into `#1`); the page-position machinery is skipped.
+  // Guard: `perfect_kernel_batch54::marginnote_body_rides_three_argument_layers`.
+  RawTeX!(r"\newcommand*{\marginnote}{\@dblarg\@mn@marginnote}
+\newcommand{\@mn@marginnote}[2][]{\begingroup\@ifnextchar[{\@mn@@marginnote[{#1}]{#2}}{\@mn@@marginnote[{#1}]{#2}[\z@]}}
+\newcommand{\@mn@@marginnote}{}
+\long\def\@mn@@marginnote[#1]#2[#3]{\endgroup\@mn@@@marginnote[{#1}]{#2}[{#3}]}
+\newcommand{\@mn@@@marginnote}{}
+\long\def\@mn@@@marginnote[#1]#2[#3]{\def\mn@tempa{#1}\def\mn@tempb{#2}\ifx\mn@tempa\mn@tempb\marginpar{\mn@parboxrestore\marginfont\raggedrightmarginnote #2}\else\marginpar[\mn@parboxrestore\marginfont\raggedleftmarginnote #1]{\mn@parboxrestore\marginfont\raggedrightmarginnote #2}\fi}");
 
   // Perl marginnote.sty.ltxml L42-46: \@mn@if@RTL dispatches at
   // expansion time — if \if@RTL is defined (LookupValue) AND currently
@@ -80,9 +72,6 @@ LoadDefinitions!({
   Let!("\\mn@vadjust", "\\vadjust");
 
   // stubs that do nothing
-  def_macro_noop("\\@mn@marginnote []{}")?;
-  def_macro_noop("\\@mn@@marginnote []{}[]")?;
-  def_macro_noop("\\@mn@@@marginnote []{}[]")?;
   def_macro_noop("\\@mn@margintest")?;
   def_macro_noop("\\@mn@thispage")?;
   def_macro_noop("\\@mn@atthispage")?;

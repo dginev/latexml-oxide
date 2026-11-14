@@ -1,0 +1,17 @@
+% acronym.sty gives \ac & co. their starred forms with suffix.sty's \WithSuffix, which makes each one
+% \protected\def (suffix.sty:53), so a siunitx S cell's \protected@edef (siunitx.sty:5730-5741) keeps it whole.
+% pdflatex: two rows, 0 errors. Witness 2607.15705.
+\documentclass{article}
+\usepackage[printonlyused]{acronym}
+\usepackage{siunitx}
+\begin{document}
+\begin{acronym}
+\acro{MAE}{mean absolute error}
+\end{acronym}
+\begin{tabular}{lS}
+Model & \ac{MAE} \\
+Base & 355.3 \\
+\end{tabular}
+
+After the table.
+\end{document}

@@ -1,0 +1,54 @@
+% mechanism: the authors' `\inst` marks given by document macros (`\newcommand\ia{\inst{1}}`) under a raw class
+%   numbering its `\institute` entries by `\refstepcounter` (sab.cls's `\institutename`, verbatim here): the queue reads
+%   the names' marks by their printed text (`queued_author_marks`, Option C F0), so `numbered_marks_requested` sees the
+%   numbers the macros print and entry n goes to the names marked n. A pin of F0's reading (the token reading saw no
+%   mark in `\ia`), the path `class_numbered_institutes` asks.
+% witness: synthetic (P4d; the route of 2308.05831, 2501.08874)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1 Univ A, Town A", "2 Univ B, Town B"
+% engines: F0 and P4d: below; perl: no raw class load
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  GREEN (F0, P4d; guard perfect_kernel_batchc1::class_numbered_institutes_read_by_meaning)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sabinst.cls}
+\ProvidesClass{sabinst}\LoadClass{article}
+\newcounter{inst}
+\newdimen\instindent
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \refstepcounter{inst}%July 2009
+ \def\and{\par\refstepcounter{inst}%July 2009
+ \hangindent\instindent
+ \noindent
+ \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}
+ \ifnum\value{inst}>9\relax\setbox0=\hbox{$^{88}$\enspace}%
+                 \else\setbox0=\hbox{$^{8}$\enspace}\fi
+ \instindent=\wd0\relax
+ \ifnum\value{inst}=1\relax
+ \else
+   \setcounter{inst}{1}%
+   \hangindent\instindent
+   \noindent
+   \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces
+ \fi
+ \small
+ \ignorespaces
+ \@institute\par
+ \endgroup}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\ignorespaces\@author\par}\vskip6pt
+  \small\rm\leftskip=.8cm\rightskip=\leftskip\institutename}
+\end{filecontents*}
+\documentclass{sabinst}
+\newcommand\ia{\inst{1}}\newcommand\ib{\inst{2}}
+\begin{document}
+\title{T}
+\author{Ann Able\ia{} and Bob Baker\ib}
+\institute{Univ A, Town A \and Univ B, Town B}
+\maketitle
+Text.
+\end{document}

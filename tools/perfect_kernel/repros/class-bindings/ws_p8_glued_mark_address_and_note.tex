@@ -1,0 +1,22 @@
+% ws-p8's `\author{Maarten Golterman$^{a1}$ and Santi Peris$^b$}`: the mark "a1" is address a glued to footnote 1 (a
+% note the body prints, "$^1$presenter at conference"), so the queue does not cut the `\address` at its marks; under
+% `=2` the reader parts "a1" into a and 1 (under entries no number labels, a number is a note's mark), and
+% the call, written by its two lines, leaves each e-mail its own item.
+% witness: hep-ph0011101 (`\def\a{{a}}`, `$^{\a 1}$`, ws-p8-50x6-00.cls)
+% oracle:  pdflatex (TL 2025, hep-ph0011101's ws-p8-50x6-00.cls) 0 errors: "MAARTEN GOLTERMANa1 AND SANTI PERISb",
+%          "a Department of Physics, Washington University, St. Louis MO 63130, USA", "E-mail: maarten@aapje.wustl.edu",
+%          "b IFAE, Univ. Autonoma de Barcelona, Spain", "E-mail: peris@ifae.es"
+% engines: rust KB1base =2 = address a on Peris (the call's `annotate=` default, KEY1's "label:unrequested
+%          owner:annotate"); off = both addresses on Peris, one contact (today's); perl = not run
+% expect:  0 errors, 0 warnings both ways; =2: Golterman address a and his e-mail, Peris address b and his e-mail;
+%          off unchanged
+% status:  RED (KB1base =2) -> GREEN (KB1) — perfect_kernel_batchkb1::a_glued_address_and_note_mark_parts_at_emit_2
+\documentclass{ws-p8-50x6-00}
+\begin{document}
+\title{T}
+\author{Maarten Golterman$^{a1}$ and Santi Peris$^b$}
+\address{{}$^a$Department of Physics, Washington University, St. Louis MO 63130, USA\\E-mail: maarten@aapje.wustl.edu\\
+{}$^b$IFAE, Univ. Autonoma de Barcelona, Spain\\E-mail: peris@ifae.es}
+\maketitle
+Text. {\footnotesize {}$^1$presenter at conference}
+\end{document}

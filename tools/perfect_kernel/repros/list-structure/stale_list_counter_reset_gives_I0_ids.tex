@@ -1,0 +1,14 @@
+% A nested list's counter joins the enclosing counter's reset list (`\cl@<counter>`) when it first opens and stays there
+% after it closes; a later list on the same counter then resets an open list's counter, and its items get `.I0` ids that
+% do not hang on their list (`S0.I2.i1.I1` holding `S0.I2.i1.I0.i1`), sibling lists colliding (`…I1a`). Perl the same
+% (latex_constructs.pool.ltxml:1335 adds to `\cl@` and never removes).
+% witness: 2605.04012 (`A5.I5.i2.I0.i3.I1`); 14 of the 3,003 A/B papers have `.I0.i` item ids.
+% status:  RED (open; follow-up of 58j's shared-counter filter, which removes the stale entries only for looping inputs)
+% oracle:  pdflatex 0 errors; every item under its list (ids: each item id extends its list's).
+% engines: rust 58j and Perl: items `.I0.i1`, `.I0.i1a`.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\begin{enumerate}\item a \begin{itemize}\item b\end{itemize}\end{enumerate}
+\begin{itemize}\item c \begin{enumerate}\item d\end{enumerate} \begin{enumerate}\item e\end{enumerate}\end{itemize}
+\end{document}

@@ -1,0 +1,19 @@
+% witness: authoraftertitle.sty:11-15 (`\let\Originalauthor\author`, `\renewcommand*{\author}[1]{\Originalauthor{#1}…}`),
+%          hausarbeit-jura.cls:392-394, aguplus.cls:233-235 — a class or package `\author` that calls the kernel's
+% oracle:  pdflatex 0 errors; one author
+% engines: rust 64k round 1 = two creators (the replayed class setter ran the saved kernel `\author`, whose frontmatter
+%          adders queued Alice again); Perl one (never replays)
+% expect:  0 errors; exactly one creator Alice; \theauthor stored by the wrapper
+% status:  RED (64k r1) -> GREEN (64k)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\let\Originalauthor\author
+\renewcommand*{\author}[1]{\Originalauthor{#1}\gdef\theauthorname{#1}}
+\makeatother
+\title{A title}
+\author{Alice}
+\begin{document}
+\maketitle
+Text.
+\end{document}

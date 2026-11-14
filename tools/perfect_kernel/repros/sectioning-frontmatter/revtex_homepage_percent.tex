@@ -1,0 +1,24 @@
+% witness: 0712.3811 (revtex4: `\homepage{http://www.nhn.ou.edu/%7Emilton}`; 76 of 84 references dangling)
+% oracle:  pdflatex 0 errors: revtex4.cls:4476-4490 reads the address under `\sanitize@url`, `%` other, and prints
+%          "URL: http://www.nhn.ou.edu/%7Emilton"; "Sec. I", "(1)" print
+% engines: rust int85a = the `%` a comment, the address argument running to the end of the document; 10 errors, the
+%          equation's label lost and its reference dangling; Perl reads `%` as a comment too (Semiverbatim's
+%          SPECIALS lack it)
+% expect:  0 errors, 0 warnings; the author's url contact http://www.nhn.ou.edu/%7Emilton, the e-mail with `%`
+%          other too; the section and the equation keep their labels
+% status:  RED (int85a) -> GREEN (79m)
+% preload: ar5iv.sty
+\documentclass[aps,prd]{revtex4}
+\begin{document}
+\title{T}
+\author{A One}
+\email{one%two@a.edu}
+\homepage{http://www.nhn.ou.edu/%7Emilton}
+\affiliation{Dept}
+\maketitle
+\section{S}\label{sec:a}
+\begin{equation}
+E=1,\label{eq:b}
+\end{equation}
+See Sec.~\ref{sec:a} and Eq.~(\ref{eq:b}).
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 64b review r3 finding 1 (a separator macro read past a visible font command, written as plain text: the
+%          bold "&" of an affiliation lost)
+% oracle:  pdflatex 0 errors: "Ann Able / AT&T Labs" with a bold "&"
+% engines: rust 64b7 = "AT&T Labs" without the bold; 64b3 bold kept; Perl bold kept (no separator macros)
+% expect:  0 errors; the affiliation AT<text font="bold">&amp;</text>T Labs
+% status:  RED (64b7) -> GREEN (64b)
+\documentclass{article}
+\newcommand{\amp}{\textbf{\&}}
+\begin{document}
+\title{T}
+\author{Ann Able\\ AT\amp T Labs}
+\maketitle
+\end{document}

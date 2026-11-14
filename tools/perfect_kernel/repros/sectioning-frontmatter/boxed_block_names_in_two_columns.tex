@@ -1,0 +1,22 @@
+% mechanism: unmarked names in two columns of a boxed block (`Ann Able & \mbox{\ \ } & Bob Baker`): the observer's
+%   resolver joins Name events with only layout between them (`joins_previous`, rule `name:layout-joined`), across the
+%   cells too, so it reads ONE name "Ann Able Bob Baker"; once its e-mails could be made (OD #958) the re-part wrote
+%   that one person. The re-part now declines a name joined across an alignment's cells (repart.rs
+%   `joined_across_cells`) and today's one creator stays. Right: two creators (the resolver's join, SYNC_STATUS 100c).
+% witness: 1302.4168
+% oracle:  pdflatex 0 errors; "Ann Able   Bob Baker" / "{ann, bob}@a.edu" / "Univ A"
+% engines: rust int127a: one creator holding the tabular; 100c the same (100c1: one creator "Ann Able Bob Baker");
+%   perl one creator holding the tabular
+% expect:  0 errors; Ann (Univ A, ann@a.edu), Bob (Univ A, bob@a.edu)
+% status:  RED
+\documentclass{article}
+\title{T}
+\author{\begin{tabular}{ccc}
+Ann Able & \mbox{\ \ } & Bob Baker\\
+\multicolumn{3}{c}{\{ann, bob\}@a.edu}\\
+\multicolumn{3}{c}{Univ A}
+\end{tabular}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

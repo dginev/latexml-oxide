@@ -1,0 +1,36 @@
+% tex.web §970-974 `vert_break` breaks only at glue after a non-discardable item, a kern before glue or a penalty (a
+% box after a box stands for the interline glue; glue at the top or after glue, and a rule, are no break) and takes
+% the last break whose piece fits (§974); §968 prunes glue
+% and kerns from the top
+% of the remainder and §977 voids an emptied register. Splitting before every item (a zero-size `\par` left by
+% `\endgraf` became its own last piece) gave reledmac's `\do@line` loop (reledmac.sty:2099-2101, :2199-2200) an
+% empty numbered line after every wrapped `\pstart` paragraph (58b, reledmac root B; Perl's `\vsplit` never empties
+% the register, TeX_Inserts.pool.ltxml:36-40, and times out).
+% witness: rc_reledmac mB.tex / v2.tex (57cp review). Guard: perfect_kernel_batch58::vsplit_breaks_only_where_tex_can.
+% status:  GREEN (58b)
+% oracle:  pdflatex 0 errors; "[1][2][2][2][2][3][1][2][2][3][3][3][3][2]".
+% engines: rust 58a3: "[2][3][3][3][6][3][3][2][2][2][3][3][3][3]"; 58b4: positive heights ran past the last
+%          break ("[1]" for "[2]").
+% Residuals (not here): a paragraph is one item, never split into its lines; `\penalty` leaves no item; no
+% interline glue model; a vertical `\kern` starts a paragraph (58c).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\newcount\n
+\def\drain{\drainto{0pt}}
+\def\drainto#1{\n=0 \loop\ifvbox0 \advance\n1 \setbox2\vsplit0 to #1\repeat[\the\n]}
+\begin{document}
+\setbox0\vbox{Plain x y.\par}\drain
+\setbox0\vbox{\hbox{A}\vskip2pt\hbox{B}}\drain
+\setbox0\vbox{\hbox{A}\penalty0\hbox{B}\vskip1pt}\drain
+\setbox0\vbox{\vskip3pt\hbox{A}\hbox{B}}\drain
+\setbox0\vbox{\vskip3pt\vskip2pt\hbox{A}\vskip4pt\vskip5pt\hbox{B}}\drain
+\setbox0\vbox{\hbox{A}\hbox{}\hbox{B}}\drain
+\setbox0\vbox{\hbox{A}\hrule\hbox{B}}\drain
+\setbox0\vbox{\hbox{A}\vskip2pt\hbox{B}}\drainto{12pt}
+\setbox0\vbox{\offinterlineskip\hbox{A}\vskip2pt\hbox{B}\vskip2pt\hbox{C}}\drainto{20pt}
+\setbox0\vbox{First para.\par Second para.\par Third para.\par}\drainto{\baselineskip}
+\setbox0\vbox{\hbox{A}\vskip\parskip\hbox{B}\vskip\parskip\hbox{C}}\drainto{\baselineskip}
+\setbox0\vbox{\hbox{A}\medskip\hbox{B}\medskip\hbox{C}}\drainto{\baselineskip}
+\setbox0\vbox{\hbox{A}\vskip2pt\label{l1}\hbox{B}}\drain
+\setbox0\vbox{\hbox{A}\hbox{B}\hbox{C}\hbox{D}}\drainto{25pt}
+\end{document}

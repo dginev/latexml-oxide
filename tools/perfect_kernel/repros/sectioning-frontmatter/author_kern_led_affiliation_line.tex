@@ -1,0 +1,11 @@
+% witness: 2407.15815 (an affiliation line led by `\kern2pt`)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_vspace_led_affiliation_line.md)
+% engines: rust 64e4 = Ann unlinked, a creator "Univ A1" (RUST-ONLY: Perl links it)
+% expect:  0 errors; Ann Able (Univ A), Bob Baker (Univ B)
+% status:  RED (64e4) -> GREEN (64d)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ \kern2pt$^{1}$Univ A \quad $^{2}$Univ B}
+\maketitle
+\end{document}

@@ -1,0 +1,24 @@
+% mechanism: a repeated block's switched-off calls feed the content check only the words no earlier call's text holds,
+%   by the check's own reading (`ledger::record_switched_off_call`): a printed `Universität` holds a spelled
+%   `Universit{\"a}t`, a spelled `Stra\ss e` holds `Stra{\ss}e`, so a duplicate spelled through a macro warns nothing
+% witness: synthetic (review revRB1c S1); the guard's second row swaps the two spellings
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Universität X, Straße 1, München / Text. / 2 /
+%   More."
+% engines: rust RB1c (round 2): 1 Warning "Frontmatter content check: 6 words … missing …: 1 e Munchen Stra
+%   Universitat X."; RB1d: as expected
+% expect:  0 errors, 0 warnings; Ann Able (Universität X, Straße 1, München); the body "Text. More."
+% status:  GREEN
+\documentclass[aps,prl]{revtex4-2}
+\newcommand{\UX}{Universit\"at X}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{\UX, Stra\ss e 1, M\"unchen}
+\maketitle
+Text.
+\clearpage
+\author{Ann Able}
+\affiliation{Universit{\"a}t X, Stra{\ss}e 1, M{\"u}nchen}
+\maketitle
+More.
+\end{document}

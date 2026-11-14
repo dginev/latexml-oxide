@@ -10,7 +10,8 @@ files are easy to introduce. This linter catches all four.
 Runs four checks:
 
   1. Broken [[links]] — references to nonexistent files
-  2. Orphan files — memory files not linked from MEMORY.md
+  2. Orphan files — memory files not reachable from MEMORY.md (links followed
+     transitively, so files listed only in `wisdom_index` count as reachable)
   3. MEMORY.md line budget — must be under 200 lines (truncation cap)
   4. Stale CS claims — wisdom files that mention a \\cs that no longer
      appears in the codebase (probably a renamed/removed CS)
@@ -95,11 +96,29 @@ def check_broken_links(verbose: bool = True) -> int:
   return len(broken)
 
 
+def reachable_from_index() -> set[str]:
+  """Files reachable from MEMORY.md following [[links]] transitively.
+
+  MEMORY.md delegates the per-subsystem wisdom roster to `wisdom_index`
+  (README_memory Rule 4), so direct index membership is not the test.
+  """
+  refs = all_refs()
+  seen: set[str] = set()
+  frontier = list(index_refs())
+  while frontier:
+    f = frontier.pop()
+    if f in seen:
+      continue
+    seen.add(f)
+    frontier.extend(refs.get(f, ()))
+  return seen
+
+
 def check_orphans(verbose: bool = True) -> int:
-  refs = index_refs()
+  refs = reachable_from_index()
   orphans = sorted(f for f in memory_files() if f not in refs)
   if verbose:
-    print(f"[orphans] {len(orphans)} files not linked from MEMORY.md")
+    print(f"[orphans] {len(orphans)} files not reachable from MEMORY.md (links followed transitively)")
     for f in orphans:
       print(f"  {f}.md")
   return len(orphans)

@@ -1,0 +1,15 @@
+% witness: the reviewer's probe newcmd_base; 2301.03442 (ws-rv9x6.cls:91 `\newcommand\bibname`, a standalone class:
+%          defined); 2506.14995 (MRM.cls:3191 `\def\refname`: redefined)
+% oracle:  pdflatex: 2 errors "LaTeX Error: Command \refname already defined." and "... \figurename ...", then
+%          "Figure 1: C" and "References" (article.cls:616 and its \figurename stay)
+% engines: rust 72a r5 = 0 errors, "Fig 1", "Works Cited"
+% expect:  2 errors (Command \refname / \figurename already defined), 0 warnings; "Figure 1"; "References"
+% status:  RED (72a r5) -> GREEN (72a r6)
+% preload: ar5iv.sty
+\documentclass{cimart}
+\begin{document}
+\begin{figure}x\caption{C}\end{figure}
+\begin{thebibliography}{1}
+\bibitem{a} X.~An. A title. 2021.
+\end{thebibliography}
+\end{document}

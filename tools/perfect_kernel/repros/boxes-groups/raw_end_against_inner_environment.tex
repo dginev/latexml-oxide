@@ -1,0 +1,12 @@
+% witness: review 64y round 1 (m1_rawend)
+% oracle:  pdflatex 2 errors (\@checkend: \begin{center} ended by \end{foo}, latex.ltx:15389/15394)
+% engines: rust 64ra 1E+1W -> 64y r1 0E+1W -> 64y 1E+1W (\lx@checkend); Perl 3E
+% expect:  1 Error '\begin{center} ended by \end{foo}'; the Warning is foo's group left open at \end{document}, as in TeX
+% status:  GREEN (64y r2); guard perfect_kernel_batch64y::raw_end_against_inner_environment_is_an_error
+% preload: ar5iv.sty
+\documentclass{article}\newtheorem{thm}{Theorem}\newenvironment{foo}{\par}{\par}
+\begin{document}
+Intro.
+
+\begin{foo}\begin{center} Cent \end{foo} After.
+\end{document}

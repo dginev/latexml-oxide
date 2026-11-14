@@ -1,0 +1,17 @@
+% witness: cnltx/cnltx_en (+20 more cnltx-doc manuals; see NOTES.md)
+% oracle: pdflatex (TL2025)  ->  ! LaTeX Error: Loading a class or package in a group.  ->  ! LaTeX Error: Environment multicols undefined.
+% engines: pdflatex, perl-latexml, latexml-oxide ALL emit {multicols} undefined
+% expect: SHARED upstream-broken; no faithful fix produces multicols
+% status: RED (Error:undefined:{multicols} The environment {multicols} is not defined.)
+% mechanism: cnltx-doc.cls:728 \AfterPackage!{hyperref}{...\RequirePackage{multicol}...}
+%            defers to file/hyperref.sty/after hook; hook fires at \currentgrouplevel>0;
+%            latex.ltx:18700 \@fileswithoptions forbids grouped \RequirePackage -> multicol
+%            never loaded -> {multicols} undefined at \begin{multicols}.
+\documentclass{scrartcl}
+\AfterPackage!{color}{\RequirePackage{multicol}}
+\usepackage{color}
+\begin{document}
+\begin{multicols}{2}
+Hello columns.
+\end{multicols}
+\end{document}

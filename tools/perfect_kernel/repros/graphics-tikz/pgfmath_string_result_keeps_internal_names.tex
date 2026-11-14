@@ -1,0 +1,15 @@
+% A pgfmath string result holding an internal control word (a string operand is expanded first:
+% `\,` is `\lx@thinspace`) is read back with `@` a letter, also in the document body.
+% witness: wheelchart manual (`5>10?"#1":"\,\%"` labels, 29 "undefined \lx" and script errors).
+% status:  GREEN (59b)
+% Only a defined `@`-name is read that way: `"\relax@x"` stays `\relax` then `@x`.
+% oracle:  lualatex 0 errors: "C %D" (a thin space before the percent sign), "[@x]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\def\WCtest#1#2{\pgfmathparse{5>10?"#1":"#2"}\pgfmathresult}
+C\WCtest{}{\,\%}D
+
+\pgfmathparse{1>0?"\relax@x":"y"}[\pgfmathresult]
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 2607.02596 (a hand-typed `$^{1}$` picks no institute), 1912.11606, 2302.05745 (llncs class S of the stage-6
+%          gate study)
+% oracle:  pdflatex: "Ann Able1 and Bob Baker1" / Univ X / info@x.org
+% engines: perl 0.8.8 = 0 errors; rust 92a: today's XML Univ X both names', info@ on the block (it spells no one, no
+%          corresponding author); the shadow all on the block
+% expect:  0 errors, 0 warnings; the same in the shadow reading (`api:share:authors`, `owner:block`)
+% status:  RED (92a, the shadow) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{1}$}
+\institute{Univ X\\ \email{info@x.org}}
+\maketitle
+Text.
+\end{document}

@@ -265,6 +265,13 @@ impl Template {
   }
   pub fn set_reversion(&mut self, tks: Tokens) { self.reversion = Some(tks); }
   pub fn set_repeating(&mut self) { self.repeating = true; }
+  /// Repeats `cell` past the template's own columns, as a preamble whose repeating part (tex.web §793: what follows
+  /// `&&`) is that one column: a row may hold more cells than the template has columns, and those get `cell`.
+  pub fn repeat_past_columns(&mut self, cell: Cell) {
+    self.repeating = true;
+    self.non_repeating = self.columns.len();
+    self.repeated = vec![Cell { empty: true, ..cell }];
+  }
   pub fn set_padding(&mut self, d: Dimension) { self.padding = Some(d); }
   pub fn get_padding(&self) -> Option<&Dimension> { self.padding.as_ref() }
 
@@ -297,6 +304,10 @@ impl Template {
       prev.has_intercol_after = true;
     }
   }
+
+  /// Whether a `>{…}` prefix waits for the next column (`add_column` puts it after that column's own `before`,
+  /// followed by `\ignorespaces`).
+  pub fn has_pending_prefix(&self) -> bool { !self.save_before.is_empty() }
 
   // These add material before & after the current column
   pub fn add_before_column(&mut self, mut new: VecDeque<Token>) {
@@ -360,14 +371,20 @@ impl Template {
     if let Some(prop_before) = col.before {
       before.extend(prop_before.unlist());
     }
+    let prefix_at = before.len();
     if !self.save_before.is_empty() {
       before.extend(self.save_before.clone());
+      // array.sty's `\insert@column` (array.sty:97-101): the `>{…}` tokens, then `\ignorespaces`, then the cell, so a
+      // `>{\form}` whose `\form` takes an argument takes the `\ignorespaces`, not the cell's first token (2504.02110:
+      // `\form{\mbox}{x}` left the `x` and an `&` astray).
+      before.push(T_CS!("\\ignorespaces"));
     }
     col.before = if !before.is_empty() {
       Some(Tokens::new(before))
     } else {
       None
     };
+    col.prefix_at = Some(prefix_at);
     col.has_intercol_before = has_intercol_before;
     let mut after = vec![T_CS!("\\lx@column@trimright")];
     if let Some(prop_after) = col.after {
@@ -415,7 +432,28 @@ impl Template {
   pub fn set_pseudo(&mut self) { self.pseudorow = true; }
   pub fn unset_pseudo(&mut self) { self.pseudorow = false; }
   pub fn is_pseudo(&self) -> bool { self.pseudorow }
+
+  /// Whether this equation row carries tags its author set. `\lx@equation@settag` (amsmath's `\tag`, `\TCItag`,
+  /// AAS's `\eqnum`, …) first retracts the row's own number — `EQUATIONROW_TAGS` becomes `{id, reset}` — and then
+  /// stores the given `tags`; the after-row step (latex_constructs `after_equation`) copies those properties onto the
+  /// row. An auto-numbered row has `tags` without `reset`, a `\nonumber` row `reset` without `tags`. A tagged row is
+  /// never empty: its tag is its content (OXIDIZED_DESIGN_DIVERGENCES #591, KNOWN_PERL_ERRORS #682).
+  pub fn has_explicit_tags(&self) -> bool {
+    self.properties.contains_key("tags")
+      && matches!(self.properties.get("reset"), Some(Stored::Bool(true)))
+  }
 }
+
+/// The internal attribute a math alignment's row element carries when its author tagged it
+/// ([`Template::has_explicit_tags`]), so the equation-group rearrangements keep that row even when its cells are
+/// empty (`… \nonumber \\ && \tag{27}`); stripped with the other `_` attributes at finalization.
+pub const TAGGED_ROW_ATTRIBUTE: &str = "_tagged";
+
+/// The property a math alignment's row carries when it prints a number that must survive though its cells are empty:
+/// latex.ltx's eqnarray number on a row of its own under an unnumbered row (`x &=& y \cr \end{eqnarray}`, the
+/// `\@@eqncr` of the end), which `rearrange_eqnarray` joins to the equation above. Normalization keeps such a row; it
+/// is stripped with the other `_` attributes at finalization.
+pub const NUMBER_ROW_PROPERTY: &str = "_number_row";
 
 #[cfg(test)]
 mod tests {

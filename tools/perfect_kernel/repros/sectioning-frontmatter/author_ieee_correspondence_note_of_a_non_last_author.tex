@@ -1,0 +1,23 @@
+% A correspondence note whose symbol mark names a non-last author of an IEEE block that closes in a full stop after a
+%   grade: the shared author-block reader ties no such note to that author's mark, so the binding leaves the block as
+%   the base reads it (ieeetran_cls.rs `without_stop_after_grade`: marks on the names, none leading a note, OD #906).
+%   Without the stop (or with it taken out) the note goes to the last author by position. The fix is a reader change
+%   for the ownership rule's single home, the observer (its S2c stage; user ruling 2026-10-28), not this binding's.
+% witness: none (synthetic; the 86d r2 re-review's n4b; 0 of 1,801 papers of pop ieee86d by regex).
+% oracle:  pdflatex 0 errors: "Ann Able∗ , Member, IEEE, Bob Baker, / and Cat Cole, Fellow, IEEE." and the footnote
+%          "∗ Corresponding author."
+% engines: rust 86d-base = 86d = two creators, "Ann Able*" (role=membership "Member, IEEE") and Bob Baker, each with
+%          the affiliation "and Cat Cole, .", the note a document note; with no stop (the re-review's n4), three
+%          creators and the note Cat Cole's, base alike; perl = three creators with no grades (KNOWN_PERL_ERRORS #534)
+%          and an empty fourth holding the note "$ˆ*$Corresponding author."
+% expect:  0 errors, 0 warnings; three creators Ann Able (role=membership "Member, IEEE"; the mark not in her name, the
+%          note hers), Bob Baker and Cat Cole (role=membership "Fellow, IEEE")
+% status:  RED (86d); catalog only, no guard
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able$^{*}$,~\IEEEmembership{Member,~IEEE,} Bob Baker,\\ and Cat Cole,~\IEEEmembership{Fellow,~IEEE}.\thanks{$^{*}$Corresponding author.}}
+\maketitle
+Body.
+\end{document}

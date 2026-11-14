@@ -1,0 +1,18 @@
+% witness: 2307.05035 (IEEEtran + authblk: `\author[1]{Hani Saleh,~\IEEEmembership{Senior Member,~IEEE,}}` … `\affil[1]{…}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Senior Member, IEEE,1 and Bob Bell2", then "1 University of X", "2 University
+%          of Y"
+% engines: rust int126a = Ann Able and Bob Bell with their affiliations, no grade; Perl 0.8.8 = no grade
+% expect:  0 errors, 0 warnings; Ann Able with her grade and University of X, Bob Bell with University of Y
+% status:  RED (int126a) -> GREEN (98b) — perfect_kernel_batch98b::authblk_labelled_author_reads_its_grade
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able,~\IEEEmembership{Senior Member,~IEEE,}}
+\author[2]{Bob Bell}
+\affil[1]{University of X}
+\affil[2]{University of Y}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% nicefrac.sty:90-104 typesets each part in \ensuremath{\mbox{\fontsize\sf@size\z@\selectfont#1{#3}}}:
+% the parts are TEXT inside a box, so a `$…$` in one opens math inside it and is clean. Perl's binding
+% (nicefrac.sty.ltxml:59-62), and Rust's (nicefrac_sty.rs:24), digest the parts in math, where that
+% `$` closes the formula: 2 errors (guard deferred_math_end_never_escapes_the_math_frame pins them
+% and the deferred math end they exercise). PERL-ORIGIN. Witness egpeirce-doc.tex:1831.
+% oracle:  pdflatex 0 errors; "X 1/2^16 Y", "Z a W"
+% expect:  0 errors; the denominator's superscript kept
+% status:  RED (57y2)
+\documentclass{article}
+\usepackage{nicefrac}
+\begin{document}
+X \nicefrac{1}{2$^{\textrm{16}}$} Y
+
+Z $a$ W
+\end{document}

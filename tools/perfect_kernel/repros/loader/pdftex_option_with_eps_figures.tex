@@ -1,0 +1,12 @@
+% witness: 2210.04612 (MDPI template; 47 of run 336's papers): the `pdftex` class option, an EPS logo beside PNG figures
+% oracle:  pdflatex 0 errors
+% engines: rust 64g = Error:errmessage "Backend request inconsistent with engine: using 'dvips'" (any shipped .eps chose
+%          DVI output; the `pdftex` option's pdfmode backend then fails expl3's check, expl3-code.tex:8036-8041)
+% expect:  0 errors (side files logo.eps and fig.png beside it — the guard writes them)
+% status:  RED (64g) -> GREEN (64h)
+\documentclass[pdftex]{article}
+\usepackage{graphicx}
+\usepackage{xparse}
+\begin{document}
+\includegraphics[width=1cm]{fig.png}
+\end{document}

@@ -1,0 +1,16 @@
+% witness: review of 59q (synthetic; tex.web §392/§396 runaway argument, non-\long macro)
+% oracle:  pdflatex 1 error "Paragraph ended before \a was complete" (the non-\long macro is abandoned at the \par);
+%   the page shows only "bar."
+% engines: rust 59q = 0 diagnostics, `<p>xfoo</p><p>bar</p>` (the argument read across the \par); Perl latexml the
+%   same (SHARED). The undelimited shape (`\def\b#1{x#1}` `\b{foo\par bar}.`, also with a blank line) is silent too.
+%   TeX checks every token of a non-\long macro's argument for \par as it reads (tex.web §392, §399, §396
+%   back_error); Perl never reads its stored `isLong` (Expandable.pm:46), and the kernel checks only an argument
+%   that ran to a file's end (gullet.rs `abandon_runaway_call`). A fix is the §392 check in the argument readers:
+%   every macro call, so an arXiv A/B and a perf measurement come with it
+% expect:  1 error "Paragraph ended before \a was complete"; `<p>bar.</p>`
+% status:  RED (open)
+\documentclass{article}
+\def\a#1.{x#1}
+\begin{document}
+\a foo\par bar.
+\end{document}

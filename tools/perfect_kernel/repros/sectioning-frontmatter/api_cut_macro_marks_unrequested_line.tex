@@ -1,0 +1,25 @@
+% mechanism: a three-line amsart `\address` list whose marks document macros print, repeated after the first and third
+%   names, line 3's mark requested by no name: the per-line cutter (`entry_calls`) reads the list's marks as digested
+%   (`list_marks`), so line 3, which prints one, is no continuation of the entry above it but an entry of its own, as
+%   the `$^{3}$` spelling's (the token cutter saw no mark in `\uc` and joined it to Bob's)
+% witness: synthetic (P4b2; the macro-printed twin of queue_marks_ams_macro_marks_three_entry_copies)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1, Bob Baker2, and Cy Cole1", the list
+%          "1 Univ A, Town A, 2 Univ B, Town B, 3 Univ C, Town C" printed twice
+% engines: P4b, P4b2, int165a: Ann and Cy "1 Univ A, Town A", Bob "2 Univ B, Town B 3 Univ C, Town C", W=0
+% expect:  0 errors, 0 warnings; Ann and Cy "1 Univ A, Town A", Bob "2 Univ B, Town B", a nameless creator
+%          "3 Univ C, Town C" (as the `$^{3}$` spelling gives)
+% status:  RED (P4b2) -> GREEN (P4b4a; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{amsart}
+\newcommand\ua{\textsuperscript{1}}
+\newcommand\ub{\textsuperscript{2}}
+\newcommand\uc{\textsuperscript{3}}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\address{\ua Univ A, Town A\\ \ub Univ B, Town B\\ \uc Univ C, Town C}
+\author{Bob Baker$^{2}$}
+\author{Cy Cole$^{1}$}
+\address{\ua Univ A, Town A\\ \ub Univ B, Town B\\ \uc Univ C, Town C}
+\maketitle
+Body.
+\end{document}

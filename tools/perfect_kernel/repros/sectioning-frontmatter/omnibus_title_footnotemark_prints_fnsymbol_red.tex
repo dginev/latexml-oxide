@@ -1,0 +1,13 @@
+% mechanism: a class with no binding (scrartcl, any raw class under OmniBus) whose `\maketitle` marks its notes in
+%   `\@fnsymbol` and lets `\footnote` be `\thanks` (scrartcl.cls:2860-2861, :2986, the counter reset :3039, as
+%   article.cls:203-205): the title's notes step no counter and print arabic marks; the observer reads them `\@fnsymbol`
+%   (rehearsal `TITLE_FOOTNOTE_HOOK`). Only article, report, book declare the title block (`declare_fnsymbol_title_block`)
+% witness: 2407.13730, 2606.19583 (their recall marks print "0", footnoterecall_counter_defined_by_an_earlier_creator_red)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One∗", "Bob Two∗"; title note ∗ The University; body 1
+% engines: rust e6a6c93a18, FNR1 0 errors, 0 warnings, Bob Two's mark "1"
+% expect:  0 errors, 0 warnings; Bob Two's mark ∗, the body's note 1
+% status:  RED (e6a6c93a18, FNR1)
+% moves:   proposed batch (the title block of a class with no binding); not FNR1's mechanism
+\documentclass{scrartcl}
+\title{T}\author{Ann One\thanks{The University} \and Bob Two\footnotemark[1]}
+\begin{document}\maketitle Body\footnote{Body note.}.\end{document}

@@ -28,7 +28,7 @@ use crate::{
     primitive::Primitive,
     register::{Register, RegisterValue},
   },
-  document::tag::{RawFrontmatter, TagData},
+  document::tag::{RawFrontmatter, TagList},
   keyval::KeyVal,
   keyvals::KeyVals,
   ligature::Ligature,
@@ -79,6 +79,11 @@ pub enum Stored {
   Chars(Box<[char]>),
   /// boxed `[Option<char>]`
   Fontmap(Rc<[Option<char>]>),
+  /// A font's parameters, `\fontdimen1`.. in sp (TeX's `param` array; Perl's
+  /// `$$fontinfo{data}`, TeX_Fonts.pool.ltxml:131-146): one array per font,
+  /// written in place, since a `\fontdimen` assignment is always global
+  /// (tex.web §1253). expl3 keeps its intarrays here.
+  FontDimens(Rc<RefCell<Vec<i64>>>),
   /// boxed collection
   Strings(Rc<[SymStr]>),
   /// boxed collection (latexml)
@@ -92,7 +97,7 @@ pub enum Stored {
   /// boxed map - Stored
   HashStored(SymHashMap<Stored>),
   /// boxed map (latexml)
-  HashTagData(HashMap<String, Vec<TagData>>),
+  HashTagData(HashMap<String, TagList>),
   /// queued-but-undigested frontmatter commands (Perl: `frontmatter_raw`)
   FrontmatterRaw(Vec<RawFrontmatter>),
   // LaTeXML primitives (Copy types)
@@ -154,6 +159,13 @@ pub enum Stored {
   KeyVals(Rc<KeyVals>),
   /// alignment template (for storing between macros, e.g. deluxetable)
   Template(Rc<crate::alignment::template::Template>),
+  /// A binding-private payload carried on a whatsit's properties (Perl's
+  /// `%props` held any scalar or reference): a parsed tree, a parser context.
+  /// Cheap to clone (`Rc`), compared by identity, never serialized to a dump,
+  /// downcast at the reading site (`Rc::downcast`/`Any::downcast_ref`). This
+  /// is what lets a constructor's `properties` hand its own `before_digest`
+  /// result to its replacement without a thread-local side table.
+  Opaque(Rc<dyn std::any::Any>),
 }
 
 impl fmt::Debug for Stored {
@@ -166,6 +178,7 @@ impl fmt::Debug for Stored {
       Node(ref n) => write!(f, "Stored::Node[{n:?}]"),
       Chars(ref vs) => write!(f, "Stored::Chars[{vs:?}]"),
       Fontmap(ref vs) => write!(f, "Stored::Fontmap[{vs:?}]"),
+      FontDimens(ref params) => write!(f, "Stored::FontDimens[{} params]", params.borrow().len()),
       Stash(ref vs) => write!(f, "Stored::Stash[{vs:?}]"),
       Strings(ref vs) => write!(f, "Stored::Strings[{vs:?}]"),
       Bool(ref b) => write!(f, "Stored::Bool[{b:?}]"),
@@ -205,6 +218,7 @@ impl fmt::Debug for Stored {
       KeyVal(ref kv) => write!(f, "KeyVal[{kv:?}]"),
       KeyVals(ref kvs) => write!(f, "KeyVals[{kvs:?}]"),
       Template(ref t) => write!(f, "Template[{t}]"),
+      Opaque(_) => write!(f, "Stored::Opaque"),
     }
   }
 }
@@ -274,6 +288,13 @@ impl PartialEq for Stored {
       Fontmap(ref vs) => {
         if let Fontmap(vs2) = other {
           *vs == *vs2
+        } else {
+          false
+        }
+      },
+      FontDimens(ref params) => {
+        if let FontDimens(params2) = other {
+          *params.borrow() == *params2.borrow()
         } else {
           false
         }
@@ -548,6 +569,13 @@ impl PartialEq for Stored {
       Template(ref t) => {
         if let Template(t2) = other {
           Rc::ptr_eq(t, t2)
+        } else {
+          false
+        }
+      },
+      Opaque(ref a) => {
+        if let Opaque(b) = other {
+          Rc::ptr_eq(a, b)
         } else {
           false
         }
@@ -933,8 +961,8 @@ impl From<HashMap<String, Stored>> for Stored {
   }
 }
 
-impl From<HashMap<String, Vec<TagData>>> for Stored {
-  fn from(value: HashMap<String, Vec<TagData>>) -> Self { Stored::HashTagData(value) }
+impl From<HashMap<String, TagList>> for Stored {
+  fn from(value: HashMap<String, TagList>) -> Self { Stored::HashTagData(value) }
 }
 
 impl From<RegisterValue> for Stored {
@@ -1241,12 +1269,7 @@ impl<'a> From<&'a Stored> for Token {
     match value {
       Stored::Tokens(ts) => ts.into(),
       Stored::Token(t) => *t,
-      Stored::String(text) => Token {
-        text: *text,
-        code: Catcode::CS,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
+      Stored::String(text) => Token!(sym * text, Catcode::CS),
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);
         Warn!("stored", "cast", message);

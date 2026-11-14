@@ -1,0 +1,17 @@
+% witness: review of 68f (siunitx-v2.sty:5624-5625 \__siunitx_table_rewrite_create:N s / S at begin-document)
+% oracle:  pdflatex 0 errors; the [=v2] rollback (siunitx.sty:37-39) re-creates s and S at begin-document over the
+%          document's own s, with no siunitx warning (array.sty:345 warns 'Column s is already defined' for v2's
+%          own \newcolumntype, which our \newcolumntype never raises); renders "A 62.0 m"
+% engines: rust 68f r1 = 0 errors, 1 warning ('Tabular column type "s" overwritten'), the s cell the unit m;
+%          Perl 0 errors, 0 warnings, the s cell the document's paragraph "m" (the rollback is not read)
+% expect:  0 errors, 0 warnings; the S cell the number 62.0, the s cell the siunitx unit m
+% status:  RED (68f r1) -> GREEN (68f r2)
+\documentclass{article}
+\usepackage{siunitx}[=v2]
+\usepackage{tabularx}
+\newcolumntype{s}{>{\hsize=.5\hsize}X}
+\begin{document}
+\begin{tabular}{lSs}
+A & 62.0 & m \\
+\end{tabular}
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: a class's own `\email` printing its label in a font of its own before the address: at =2 the label is the
+%   contact's `name` and is taken out of the content once as the contact is placed (`insert::drop_printed_name`, keyed
+%   `_nameprinted` by the frontmatter emitter), the emptied italic wrapper with it; the address keeps its typewriter font.
+% witness: review revX2 2 (`\def\email#1{E-mail: #1}`: `<contact name="E-mail: ">E-mail: bob@bee.org</contact>`, the label
+%   rendered twice); jpp/jfm 2603.18265, 2310.05678
+% oracle:  pdflatex 0 errors: "Ann Able / Univ A / E-mail: ann@able.org"
+% engines: off `name="Email: "` with the whole print as content; int153w =2 `name="E-mail: "` with the label in the
+%   content too; CL10 =2 `name="E-mail: "`, content the typewriter address alone
+% expect:  0 errors; 0 warnings
+\documentclass{article}
+\def\email#1{\textit{E-mail:}~\texttt{#1}}
+\title{Title}
+\author{Ann Able\\ Univ A\\ \email{ann@able.org}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

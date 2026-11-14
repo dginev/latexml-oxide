@@ -45,11 +45,51 @@ LoadDefinitions!({
   // token is reached. \noboundary             c  if present, breaks ligatures and kerns.
   // \vadjust                c  inserts a vertical list between two lines in a paragraph.
 
-  def_primitive_noop("\\ignorespaces SkipSpaces")?;
+  // tex.web §1045: `\ignorespaces` runs `get_x_token` until a non-space —
+  // it EXPANDS what follows (Perl `SkipSpaces` peeks unexpanded, so
+  // `\ignorespaces\if@ignore…\fi <space>` — latex.ltx:15392's `\end`
+  // epilogue behind comment.sty's `\end{Included}`→`\ignorespaces` — left
+  // the end-of-line space in the paragraph; pdflatex eats it).
+  DefPrimitive!("\\ignorespaces", {
+    if let Some(t) = read_x_non_space()? {
+      unread_one(t);
+    }
+  });
   def_primitive_noop("\\noboundary")?;
   // \vadjust<filler>{<vertical mode material>}
-  // Note: \vadjust ignores in vertical mode...
-  DefPrimitive!("\\vadjust {}", sub[(arg)] { push_tokens("vAdjust", arg); });
+  // TeX forbids `\vadjust` in vertical mode (tex.web §1098); as Perl, it is queued for the next paragraph's end.
+  // The material is read live after its `{` and built there, in a group of its own whose paragraph, if it begins one,
+  // ends at the group's end (§1099-1100 `begin_insert_or_adjust`, `insert_group`: `end_graf`; base_utilities.rs
+  // `predigest_insert_group_contents`); its own `\vadjust`s go to that paragraph (`with_own_adjust_queue`). What it
+  // built waits for the paragraph's `\par` (§889 sets it after the line). Perl (TeX_Paragraph.pool.ltxml:32) queues
+  // the tokens of a macro argument and digests them at the `\par`: a short verbatim in it ran its `\ifx`, a box
+  // register a group restored was empty (KNOWN_PERL_ERRORS #441; repros boxes-groups/vadjust_material_is_read_live,
+  // vadjust_material_is_built_where_it_is_read, vadjust_material_is_a_vertical_list; guard `box_primitives::vadjust`).
+  DefPrimitive!("\\vadjust", {
+    // pdfTeX's `\vadjust pre {…}` sets the material before the line; here it is set after it (KNOWN_PERL_ERRORS #441).
+    read_keyword(&["pre"])?;
+    // §403 `scan_left_brace`: the material runs to the group's `}`.
+    scan_left_brace()?;
+    // The material is a list of its own: its paragraph is indented by the `\parindent` in force there, and the
+    // class the host paragraph's `\par` will read (deferred by the `\par` before it) waits for it.
+    let host_class = lookup_value("next_para_class");
+    let parindent_zero =
+      lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0);
+    assign_value(
+      "next_para_class",
+      if parindent_zero {
+        Stored::from("ltx_noindent")
+      } else {
+        Stored::None
+      },
+      None,
+    );
+    let built = with_own_adjust_queue(predigest_insert_group_contents);
+    assign_value("next_para_class", host_class.unwrap_or(Stored::None), None);
+    if let Some(material) = built? {
+      push_digested("vAdjust", material);
+    }
+  });
 
   //======================================================================
   // Basic Paragraph
@@ -83,8 +123,8 @@ LoadDefinitions!({
     }
   },
   properties => { stored_map!("isSpace" => true) },
-  // Perl: enterHorizontal => 1
-  before_digest => { enter_horizontal(); });
+  // Perl: enterHorizontal => 1; the whatsit is the paragraph's indent box (tex.web §1091).
+  before_digest => { enter_horizontal_listed_indent(); });
   DefConstructor!("\\noindent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
@@ -99,8 +139,8 @@ LoadDefinitions!({
     }
   },
   properties => { stored_map!("isSpace" => true) },
-  // Perl: enterHorizontal => 1
-  before_digest => { enter_horizontal(); });
+  // Perl: enterHorizontal => 1; a paragraph begun without its indent box (tex.web §1091).
+  before_digest => { enter_horizontal_listed_indent(); });
 
   // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
   // A para can contain both p and displayed equations and such.
@@ -123,8 +163,18 @@ LoadDefinitions!({
 
   DefConstructor!("\\lx@normal@par",
     sub[document, _args, props] {
+      // (in a frontmatter item whose element holds only inline content, a line break: OXIDIZED_DESIGN_DIVERGENCES #766)
+      let item = prop_string!(props, "frontmatter_item");
+      if !item.is_empty() && frontmatter_paragraph_break(document, &item)? {
+        return Ok(());
+      }
       if !prop_bool!(props, "noop") {
         document.maybe_close_element("ltx:p")?;
+        // A source paragraph break between a float's panels ends their row (the panel grid rule,
+        // `note_panel_separator`); not the one leaving horizontal mode inserts (2605.00347, below).
+        if !prop_bool!(props, "internal_par") {
+          crate::latex_constructs::note_panel_separator(document, "par", None)?;
+        }
         let element = document.get_element();
         if let Some(mut node) = element {
           let qname = document::get_node_qname(&node);
@@ -161,29 +211,66 @@ LoadDefinitions!({
           // break per subfigure, so an intended 4-per-row grid collapsed to 1
           // panel per row (arXiv 2605.00347). Removed; see arrange_panels.
         }
-        if !prop_bool!(props, "internal_par") {
+        // A `\par` ends a paragraph, never a list (a TeX list is a paragraph shape, not a group): a `\trivlist`
+        // begun inside the paragraph, `_autoclose` as Perl's, stays open (csquotes' `{quotesample}`, a blank line
+        // before its first `\item`; KNOWN_PERL_ERRORS #456). Nor the inline sectional block an item's heading opens
+        // in its paragraph, with the section in it (`list_or_block_open_inside_para`; 1805.06896).
+        if !prop_bool!(props, "internal_par") && !document::helpers::list_or_block_open_inside_para(document) {
           document.maybe_close_element("ltx:para")?;
         }
       }
     },
     before_digest => {
+      // A `\par` in an inline formula the math after it continues (a formula split by a blank line, hep-th9402135):
+      // the formula goes on, as Perl's, and this whatsit reverts as nothing (`lx@par@void`). It still clears the
+      // paragraph shape, as every `\par` (below); the `next_para_class` and `\vadjust` work of its after-digest is
+      // left to the `\par` that ends the paragraph, which this one does not. Otherwise tex.web §1046-1047
+      // `mmode+par_end`: "Missing $ inserted", the inline formula ended and this `\par` read again after it; this
+      // whatsit, left in the formula, reverts as nothing. OXIDIZED_DESIGN #553.
+      if formula_continues_past_par() {
+        assign_value("parshape", Stored::None, None);
+        assign_value("interlinepenalties", Stored::None, None);
+        assign_value("lx@par@void", true, None);
+        return Ok(Vec::new());
+      }
+      let again = get_current_token().unwrap_or_else(|| T_CS!("\\par"));
+      if insert_dollar_sign(Tokens!(again))? {
+        assign_value("lx@par@void", true, None);
+        return Ok(Vec::new());
+      }
       // Perl: combine any digested horizontal material into a horizontal List
       let mode = lookup_string_from_sym(pin!("MODE"));
       let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
       if mode == "horizontal" && bound.ends_with("vertical") {
-        // Perl: $stomach->repackHorizontal;
-        repack_horizontal();
+        // Perl: $stomach->repackHorizontal; an explicit `\par` ends the paragraph (tex.web §1096 `end_graf`).
+        if LookupBool!("INTERNAL_PAR") {
+          repack_horizontal();
+        } else {
+          end_graf();
+        }
         assign_value_inplace_sym(pin!("MODE"), bound); // Resume vertical/internal_vertical
       }
       assign_value("parshape", Stored::None, None);
       assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
+      if lookup_bool("lx@par@void") {
+        assign_value("lx@par@void", false, None);
+        whatsit.set_property("noop", true);
+        whatsit.set_property("reversion", Tokens!());
+        return Ok(Vec::new());
+      }
       whatsit.set_property("mode", lookup_string_from_sym(pin!("MODE")));
       // When invoked by leave_horizontal: no reversion, don't close ltx:para
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);
         whatsit.set_property("reversion", Tokens!());
+      } else {
+        // the frontmatter field whose own paragraph break this is (`frontmatter_paragraph_field`), whose element decides
+        // at construction what it makes (`frontmatter_paragraph_break`)
+        if let Some(item) = frontmatter_paragraph_field() {
+          whatsit.set_property("frontmatter_item", item);
+        }
       }
       // \par is a NOOP only in the RAW preamble — before `\begin{document}` opens the
       // document environment (package loading, stray `\str_lowercase` output in the
@@ -256,9 +343,18 @@ LoadDefinitions!({
           { assign_value("next_para_class", "ltx_noindent", None); }
         }
         // Vertical adjustments
-        match remove_value("vAdjust") { Some(Stored::Tokens(vadj)) => {
-          assign_value("vAdjust", Tokens!(), Some(Scope::Global));
-          Ok(vec![ Digest!(vadj)? ])
+        // Each queued `\vadjust` is a list already built, its paragraph ended (the primitive above). A `\par` in a
+        // restricted horizontal box or in math ends no paragraph (tex.web §1096 `end_graf` acts in `hmode` only), so the
+        // queue waits: `Juliet\vadjust{Kilo} \mbox{Lima\par Mike}` sets Kilo after Juliet's line.
+        if !lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
+          return Ok(Vec::new());
+        }
+        match remove_value("vAdjust") { Some(Stored::VecDigested(material)) => {
+          assign_value("vAdjust", Stored::VecDigested(Vec::new()), Some(Scope::Global));
+          if LookupBool!("INTERNAL_PAR") {
+            material.iter().for_each(keep_inside_paragraph);
+          }
+          Ok(material)
         } _ => {
           Ok(Vec::new())
         }}
@@ -361,3 +457,26 @@ LoadDefinitions!({
   DefRegister!("\\tolerance", Number!(200));
   DefRegister!("\\pretolerance", Number!(100));
 });
+
+/// A `\vadjust`'s material set while the paragraph around it goes on — at the `\par` that `leave_horizontal` runs
+/// before a display (`INTERNAL_PAR`) — ends its own paragraph as that `\par` does there: inside the paragraph, which
+/// it does not close (`internal_par`), so the display and the text after it stay in that paragraph. Boxes keep their
+/// own paragraphs.
+fn keep_inside_paragraph(material: &Digested) {
+  match material.data() {
+    DigestedData::List(list) => {
+      if let Ok(list) = list.try_borrow() {
+        list.boxes.iter().for_each(keep_inside_paragraph);
+      }
+    },
+    DigestedData::Whatsit(whatsit) => {
+      if let Ok(mut whatsit) = whatsit.try_borrow_mut()
+        && whatsit.get_definition().get_cs_name() == "\\lx@normal@par"
+      {
+        whatsit.set_property("internal_par", true);
+        whatsit.set_property("reversion", Tokens!());
+      }
+    },
+    _ => {},
+  }
+}

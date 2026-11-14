@@ -33,6 +33,21 @@ LoadDefinitions!({
     "\\corresp{}",
     "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
   );
+  // IEEEtaes.cls:4882 `\member{grade}` after an `\author{…}`: that author's membership, printed with the name; an
+  // empty one is nothing (2403.15966). :3455-3456 `\editor`, `\supplementary`: printed in the title footnote
+  // (:3427-3428).
+  DefMacro!(
+    "\\member{}",
+    "\\if!#1!\\else\\lx@add@contact[role=membership]{#1}\\fi"
+  );
+  DefMacro!(
+    "\\editor{}",
+    "\\if!#1!\\else\\@add@frontmatter{ltx:note}[role=editor]{#1}\\fi"
+  );
+  DefMacro!(
+    "\\supplementary{}",
+    "\\if!#1!\\else\\@add@frontmatter{ltx:note}[role=supplementary]{#1}\\fi"
+  );
 
   // IEEE-style keywords env.
   DefEnvironment!(

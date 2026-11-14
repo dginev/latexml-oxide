@@ -23,6 +23,21 @@ LoadDefinitions!({
   DefConditional!("\\if@dotitletoc@pp");
   DefConditional!("\\if@dohead@pp");
   DefConditional!("\\if@dopage@pp");
+  // appendix.sty:36-40 (whether the class has chapters) and the internals that classes copying its `appendices`
+  // call when they re-dress it (sn-jnl.cls; wlscirep.cls:221-245, 2606.09094): `\clear@ppage` (:100-101, a page
+  // break: nothing here) and `\@resets@pp`/`\@resets@ppsub` (:181-205, :246-264), the counter resets and letter
+  // numbering `\appendices`/`\subappendices` make too; their saved-section and hyperref steps have no XML
+  // counterpart.
+  DefConditional!("\\if@chapter@pp");
+  RawTeX!(r"\@ifundefined{chapter}{}{\@chapter@pptrue}
+\newcounter{@pps}
+\newcommand{\@resets@pp}{\par\stepcounter{@pps}\setcounter{section}{0}%
+  \if@chapter@pp\setcounter{chapter}{0}\renewcommand\@chapapp{\appendixname}\renewcommand\thechapter{\@Alph\c@chapter}%
+  \else\setcounter{subsection}{0}\renewcommand\thesection{\@Alph\c@section}\fi}
+\newcommand{\@resets@ppsub}{\par\stepcounter{@pps}%
+  \if@chapter@pp\setcounter{section}{0}\renewcommand{\thesection}{\setthesection}%
+  \else\setcounter{subsection}{0}\renewcommand{\thesubsection}{\setthesubsection}\fi}");
+  def_macro_noop("\\clear@ppage")?;
 
   DefMacro!("\\appendixtocon",       "\\@dotoc@pptrue");
   DefMacro!("\\appendixtocoff",      "\\@dotoc@ppfalse");
@@ -46,8 +61,15 @@ LoadDefinitions!({
   def_macro_noop("\\appendixpage")?;
   def_macro_noop("\\addappheadtotoc")?;
 
+  // (by the class's chapters, as appendix.sty:38's `\@ifundefined{chapter}` — not a `chapter` counter alone, which
+  // WileyNJD-v2.cls:2410, WileyNJDv5.cls:5728 and MRM.cls:2160 declare with no `\chapter`: "Appendix A";
+  // `state::class_defines_chapter`, OXIDIZED_DESIGN #179)
+  // The environment never calls `\appendix`, which is all cleveref patches (cleveref.sty:174-176), so a `\cref` to its
+  // sections prints their counter's name, "Sec. A" (2507.16108, 2511.19260; also 2203.14452, 2502.21249, 2508.04603,
+  // 2608.04513), unless the document called `\appendix` before or inside it (1810.06583, 1904.07153, 2112.09636,
+  // 2208.03406: "appendix A"); cleveref_sty.rs `cref_type`.
   DefPrimitive!("\\lx@pp@appendix@begin", {
-    if lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some() {
+    if has_chapter_counter() && class_defines_chapter() {
       begin_appendices("chapter");
     } else {
       begin_appendices("section");
@@ -64,7 +86,7 @@ LoadDefinitions!({
 
   // Adjust numbering!!!
   DefPrimitive!("\\lx@pp@subappendix@begin", {
-    if lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some() {
+    if has_chapter_counter() && class_defines_chapter() {
       begin_appendices("section");
     } else {
       begin_appendices("subsection");

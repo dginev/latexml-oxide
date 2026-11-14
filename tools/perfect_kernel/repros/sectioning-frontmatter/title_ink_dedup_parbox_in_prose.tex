@@ -1,0 +1,16 @@
+% A `\parbox` in running prose whose centered display-font words repeat the unprinted `\title` (no `\maketitle`):
+% the box is part of the sentence, not a cover. The title-ink dedup (arXiv/html_feedback#6924, OXIDIZED_DESIGN #146,
+% witness 2608.10928) entered any non-centered paragraph and any box in it, and deleted the box's words (68s review
+% finding 1, probe p2_parbox_only); a cover paragraph is one holding only boxes (2010.07703's
+% `\noindent\begin{minipage}`).
+% status:  RED (67int13: the parbox left empty, "Some running text with a box  inside it."; 68s round 1 dropped
+%          the box too) → GREEN (68s round 2).
+% oracle:  pdflatex 0 errors: "Some running text with a box Boxed Words inside it.", "1 One x".
+% expect:  0 errors, 0 warnings; no `title_ink_dedup` Info; the paragraph keeps its parbox and its words.
+\documentclass{article}
+\title{Boxed Words}
+\begin{document}
+Some running text with a box \parbox{5cm}{\centering\LARGE Boxed Words} inside it.
+\section{One}
+x
+\end{document}

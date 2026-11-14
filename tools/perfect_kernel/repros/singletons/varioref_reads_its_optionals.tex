@@ -1,0 +1,21 @@
+% witness: K13 stage-2 audit rows varioref (57h; 4 A/B papers load it, none writes an optional); the real
+%          macros read `\vref*[text]{l}`, `\vpageref*[here][far]{l}`, `\vrefrange[here]{a}{b}`,
+%          `\vpagerefrange*[here]{a}{b}`, `\fullref{l}`, `\reftextfaraway{l}` (tools/varioref.sty:803-966,
+%          :123-125); the binding read no optional (Perl varioref.sty.ltxml:24-27), gave `\fullref` and
+%          `\reftextfaraway` no argument, and its range texts used `#2`/`#3` in two-parameter macros
+% oracle:  pdflatex 0 errors: "See 1 here, above, 1 to 1 here, 1 on page 1 and on page 1. Also 1, 1,here and
+%          on pages 1–1." (page text for a same-page label)
+% engines: perl = rust 57ag, 0 errors: `<ref labelref="LABEL:["/>here]sec:a` ×4, bare "sec:a" text, and
+%          `\reftextpagerange{a}{b}` refs b and the empty label
+% expect:  0 errors, 0 warnings; every ref to sec:a, no "[" and no label text; the page text dropped
+%          (the binding models no pages) and the range a language-neutral dash (Perl's; varioref's
+%          "to" is its English table's)
+% status:  RED (57ag) -> GREEN (57ah: the real signatures, varioref_sty.rs)
+\documentclass{article}
+\usepackage{varioref}
+\begin{document}
+\section{Intro}\label{sec:a}
+See \vref[here]{sec:a}, \vpageref[above][below]{sec:a},
+\vrefrange[here]{sec:a}{sec:a}, \fullref{sec:a} and \reftextfaraway{sec:a}.
+Also \vref*{sec:a}, \Vref{sec:a}, \vpagerefrange*[here]{sec:a}{sec:a} and \reftextpagerange{sec:a}{sec:a}.
+\end{document}

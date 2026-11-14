@@ -1,0 +1,19 @@
+% mechanism: `\begin{abstract}\begingroup\doublespace …\end{abstract}`: the abstract's end closes the switch's
+%   `\begingroup` (setspace.sty:542-547), the plain `\begingroup` stays open, and LaTeX reports the abstract left open.
+%   Ours re-arms the switch on the plain group's parent only when that group POPS; here the `\begingroup` is
+%   abandoned at `\end{document}` (a Warning), so no Error is raised.
+% witness: review 4 of 64zf (probe r13)
+% oracle:  pdflatex 1 error ("\begin{abstract} on input line 16 ended by \end{document}")
+% engines: rust 64zf = 0 errors, 1 warning (open group at \end{document}); Perl = 1 error ("\lx@add@frontmatter@until
+%   Attempt to close a group that switched to mode internal_vertical") + 4 warnings (ar5iv missing, open groups at
+%   \end{document}, "\enddoublespace body should have ended", "\lx@end@abstract body should have ended")
+% expect:  1 error; the abstract text kept
+% status:  RED (64zf review: under-report, pre-existing)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{setspace}
+\begin{document}
+\begin{abstract}\begingroup\doublespace Abs text.
+\end{abstract}
+Body.
+\end{document}

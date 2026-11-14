@@ -1,0 +1,35 @@
+% mechanism: arxbj's `{keyword}[class=…]` blocks (ims_support's `vtex_keyword_markup`, the VTeX classes' shared markup):
+%   a `class=AMS|MSC…` block is the classification, its scheme the class's printed heading without the closing ":"
+%   (the HTML shows the scheme as its heading); a key the class gives no heading (arxbj's `MSC`) keeps the key.
+% witness: 1106.2467, 0811.0643 (arxbj.cls:2499-2541 of 1106.2467's copy: headings for AMS and KWD only)
+% oracle:  pdflatex (1106.2467's arxbj.cls, an empty stand-in for its missing texsort.sty; 1 harness `!` line, hyperref's
+%          dvips driver option): "AMS 2000 subject classifications: Primary 60F05; secondary 62G20", "60J10" (no
+%          heading), "Keywords: coupling; perfect simulation"
+% engines: rust 85a = 0 errors, classification scheme="AMS" (the HTML heading "AMS") and the MSC block a
+%          <keywords name=" ">; rust 86a r1 the same scheme
+% expect:  0 errors, 0 warnings; <keywords name="Keywords: ">, <classification scheme="AMS 2000 subject
+%          classifications"> and <classification scheme="MSC">, in source order of their kinds
+% status:  RED (85a, 86a r1) -> GREEN (86a)
+% preload: ar5iv.sty
+\documentclass{arxbj}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\begin{aug}
+\author{\fnms{A.} \snm{Author}}
+\end{aug}
+\begin{abstract}Abstract.\end{abstract}
+\begin{keyword}[class=AMS]
+\kwd[Primary ]{60F05}
+\kwd[; secondary ]{62G20}
+\end{keyword}
+\begin{keyword}[class=MSC]
+\kwd{60J10}
+\end{keyword}
+\begin{keyword}
+\kwd{coupling}
+\kwd{perfect simulation}
+\end{keyword}
+\end{frontmatter}
+Body.
+\end{document}

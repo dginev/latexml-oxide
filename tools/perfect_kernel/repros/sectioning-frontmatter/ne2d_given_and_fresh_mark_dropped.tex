@@ -1,0 +1,19 @@
+% mechanism: a block dropping a given `\footnotemark[1]` and a bare `\footnotemark` (which steps the counter, so a later
+%   mark would print one symbol short) is still written whole at `=2`, Perl's whole-block creator, with 1 Warning: only a
+%   block whose every dropped mark is given its number keeps its creators (`emit.rs` `mark_dropped`)
+% witness: 1912.01737 (the given mark's shape); 1111.1979 (`Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$`, bare marks:
+%   still written whole), 1911.13299
+% oracle:  pdflatex 0 errors; "Ann Able,1∗Bob Baker,1∗Carl Cole,2†Dan Dory2‡" (pdftotext)
+% engines: rust off: 0 errors, 0 warnings; rust =2 (int153c-rel): the block written whole, 1 Warning
+% expect:  =2: the block written whole (every note kept), 1 Warning
+% status:  GREEN (perfect_kernel_batchne2::a_given_mark_on_no_name_keeps_the_creators)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\begin{document}
+\title{T}
+\author{Ann Able,$^{1}$\thanks{Univ X.} Bob Baker,$^{1}$\samethanks[1] Carl Cole,$^{2}$\footnotemark{} Dan Dory$^{2}$\footnotemark\\
+$^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+Text.
+\end{document}

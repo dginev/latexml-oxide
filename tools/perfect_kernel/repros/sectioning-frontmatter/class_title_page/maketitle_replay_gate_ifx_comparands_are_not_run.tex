@@ -1,0 +1,21 @@
+% A title page testing `\ifx\@dedication\undefined` is replayed: the replay gate does not take a comparand of `\ifx`
+%   (or of `\ifdefined`, `\string`, `\meaning`) for code that runs (tex.web §507, §470), so the
+%   addresses only the class's `\maketitle` prints are kept.
+% witness: 1902.07328 (zaa.cls:166 `\ifx\@dedication\undefined`; its `\@addresses`, :115-127, :190, lost "Calgary");
+%          2307.11186, 2507.13469 (cms-tdr.cls:786 `\ifx\cmsMessage\undefined`; still refused at :689's
+%          `\ifthenelse{…}{\cmsContact}{}`)
+% oracle:  pdflatex (tpifx.cls beside it) 0 errors: "On Stability / Elena Braverman / University of Calgary, Canada /
+%          Body."
+% engines: rust 86d-base = 0 errors, no "Calgary" (Info: The \maketitle body was not replayed: it uses \undefined);
+%          perl (OmniBus, the class is not read) = the address a contact
+% expect:  0 errors, 0 warnings; "University of Calgary, Canada" a paragraph between the frontmatter and the body, once
+% status:  RED (86d-base) -> GREEN (86d)
+% preload: ar5iv.sty
+\documentclass{tpifx}
+\begin{document}
+\title{On Stability}
+\author{Elena Braverman}
+\address{University of Calgary, Canada}
+\maketitle
+Body.
+\end{document}

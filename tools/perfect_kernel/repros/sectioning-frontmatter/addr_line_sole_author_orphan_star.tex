@@ -1,0 +1,24 @@
+% One author whose mark `$^{a}$` is answered, and an orphan `* Corresponding author, E-mail: qz@a.org` line no name
+%   requests: in a one-author group the orphan line's contacts and notes are that sole author's — FIDELITY_CHARTER §4's
+%   "the group's only author" beats §2's orphan rule there (user ruling 2026-11-05, "Sole author"); the orphan mark is
+%   not kept as a label. The owner never depends on other lines: the twin addr_line_sole_author_orphan_star_with_block.tex
+%   gives the same (rev107c2 finding 2; the only-author step skips only for a nameless creator holding names, 107f §D).
+% witness: none (synthetic) — rev107c2 probe p2/o2; B1's real witness 1711.00192
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able a / a Univ A, Town, / Country. / * Corresponding
+%   author, E-mail: qz@a.org"
+% engines: rust 107c (473dfa036d) = as expected (the twin differed)
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, Town, Country.; the "* Corresponding author" note; qz@a.org
+% status:  RED (rev107c2, the pair) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{a}$\\
+{\small $^{a}$Univ A, Town,}\\
+{\small Country.}\\
+{\small * Corresponding author, E-mail: qz@a.org }\\
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: TeX_Math.pool.ltxml:527-550's DefRewrite turns a Math holding only a floating superscript (`word$^{2}$`)
+%   into text `<ltx:sup>` with `local $LaTeXML::BOX = getNodeBox(XMArg)`: the box's font is the math default (italic),
+%   so the digit comes out `<sup><text font="italic">2</text></sup>`, where the formula's own token is upright (the
+%   XMTok carries no font; math digits are fam 0). Inside `\textit{…}` Rust repeats the italic on the sup's text; Perl
+%   gives `<sup>3</sup>` (inherited). Fix: the sup's text takes the XMArg tokens' font, not the box's math default.
+%   The frontmatter's mark formulas share it (OD #928 residual "a mark formula rewritten into a superscript keeps the
+%   formula's italic digits", rv11, rv15; P4b4r's `authblk_font_names_printed_marks` pins the italic digits).
+% witness: synthetic (P4b4r Q2; every `Name$^{1}$` affiliation mark on the authblk/raw-class paths)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; fonts CMR10, CMR7 (the superscript digits, upright), CMTI10, CMMI10
+% engines: rust int165a: `Plain word<sup><text font="italic">2</text></sup>`, `<text font="italic">italic
+%          word<sup><text font="italic">3</text></sup></text>`; perl (same host): `<sup><text font="italic">2</text></sup>`,
+%          `<sup>3</sup>` inside the italic
+% expect:  `Plain word<sup>2</sup>`; inside `\textit` the sup's digit upright (`<text font="upright">3</text>` or the
+%          equivalent), as pdflatex prints CMR7
+% status:  RED (P4b4r Q2, int166a) — moves: post-merge (SUPIT); Perl-shared (KNOWN_PERL_ERRORS #1235)
+\documentclass{article}
+\begin{document}
+Plain word$^{2}$ and \textit{italic word$^{3}$} and $x^{4}$.
+\end{document}

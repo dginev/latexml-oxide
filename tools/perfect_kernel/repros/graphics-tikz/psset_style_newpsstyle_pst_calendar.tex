@@ -1,0 +1,17 @@
+% witness: pst-calendar/pst-calendar-doc (pst-calendar.sty \newpsstyle{september}{…} + \psset{style=september})
+% oracle:  lualatex 0 "Custom style" errors; Perl LaTeXML 0 errors
+% engines: rust=2 (sweep62; 1 on sweep60 — the \rput body was skipped before 56ao)
+% expect:  0 errors; one //ltx:picture with the placed \rput box
+% status:  GREEN (batch 56as, 2026-09-07)
+% mechanism: pstricks.tex:633-636 style key = \@ifundefined{pscs@#1}{\@pstrickserr{Custom style…}}
+%   {\@nameuse{pscs@#1}}; pstricks.tex:638-645 \newpsstyle = \@namedef{pscs@#2}. The binding's
+%   `def_macro_noop("\newpsstyle{}{}")` hid the definition from the raw \psset.
+\documentclass{article}
+\usepackage{pstricks}
+\newpsstyle{september}{linewidth=2pt}
+\begin{document}
+Top: \psset{style=september}
+\begin{pspicture}(0,0)(2,2)
+\rput(1,1){\psset{style=september}\psframe(0,0)(1,1)}
+\end{pspicture}
+\end{document}

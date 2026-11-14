@@ -1,0 +1,21 @@
+% witness: 2409.08589 (Interspeech.cls of 2025, :95-110 `\author`, :115-129 `\affiliation{department}{institution}{place}`
+%          numbered `$^n$`, :152-153 a bold `\vec`)
+% oracle:  pdflatex 0 errors: "Ada Byron 1, Bo Li 2", "1 University A, City A, Country A", "2 Department B, University B, …"
+% engines: rust 63v4 = creators "Ada", "Bo" with the department alone as affiliation
+% expect:  0 errors, 0 warnings; whole names, each with its numbered affiliation; `\vec{v}` bold
+% status:  RED (63v4) -> GREEN (63w)
+\documentclass{Interspeech}
+\interspeechcameraready
+\title{T}
+\author[affiliation={1}]{Ada}{Byron}
+\author[affiliation={2}]{Bo}{Li}
+\affiliation{}{University A}{City A, Country A}
+\affiliation{Department B}{University B}{City B, Country B}
+\email{ada@x.org}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+Text $\vec{v}$.
+\end{document}

@@ -1,0 +1,30 @@
+% witness: 2605.20695 (html_feedback#6560, aliascnt lemmas under amsart); 2604.22493 (lipics-v2021's aliascnt
+%          siblings, which define their `\*autorefname`s); llncs.cls v2.16+'s `\@spothm` (2202.10090)
+% oracle:  pdflatex (aliascnt v1.5, hyperref): "Theorem 1, Lemma 2, Proposition 3, Corollary 4, Lemma 8, Theorem 9";
+%          "See 8, Theorem 1, 2, Proposition 3, Theorem 4." — hyperref's type is the alias the theorem steps, named
+%          by `\propautorefname` and not at all for a lemma without `\lemmaautorefname`/`\lemmaname`; the plain
+%          `[theorem]` corollary is the counter's "Theorem"; 0 errors
+% engines: rust 67int9 = "Theorem 8, Theorem 1, Theorem 2, Proposition 3, Theorem 4" (the alias's root named)
+% expect:  0 errors, 0 warnings; the oracle's tags and autoref names
+% status:  RED (67int9) -> GREEN (68g r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{aliascnt}
+\usepackage{hyperref}
+\newtheorem{theorem}{Theorem}
+\newaliascnt{lemma}{theorem}
+\newtheorem{lemma}[lemma]{Lemma}
+\aliascntresetthe{lemma}
+\newaliascnt{prop}{theorem}
+\newtheorem{prop}[prop]{Proposition}
+\aliascntresetthe{prop}
+\providecommand*{\propautorefname}{Proposition}
+\newtheorem{cor}[theorem]{Corollary}
+\begin{document}
+\begin{theorem}\label{t1}a\end{theorem}
+\begin{lemma}\label{l1}b\end{lemma}
+\begin{prop}\label{p1}c\end{prop}
+\begin{cor}\label{c1}d\end{cor}
+\setcounter{lemma}{7}\begin{lemma}\label{l2}e\end{lemma}\begin{theorem}f\end{theorem}
+See \autoref{l2}, \autoref{t1}, \autoref{l1}, \autoref{p1}, \autoref{c1}.
+\end{document}

@@ -157,6 +157,12 @@ pub struct Config {
   /// projected need exceeds the memory cap). The budget is a box count on
   /// the same per-box basis as the box-list guards.
   pub streaming:               Option<usize>,
+  /// The date of the source (Unix seconds, UTC): the newest modification time among the TeX source files of the
+  /// bundle the document came in — an archive's entries, a directory's or a file's mtimes
+  /// (`latexml::source_date`). `None` when there is none (stdin, literal input, an archive whose entries carry no
+  /// time). ar5iv's archival preload sets the job's clock from it, so `\today` prints the paper's date, never the
+  /// conversion's.
+  pub source_date_epoch:       Option<i64>,
 }
 impl Default for Config {
   fn default() -> Self {
@@ -179,6 +185,7 @@ impl Default for Config {
       source_map:              None,
       inputencoding:           None,
       streaming:               None,
+      source_date_epoch:       None,
     }
   }
 }

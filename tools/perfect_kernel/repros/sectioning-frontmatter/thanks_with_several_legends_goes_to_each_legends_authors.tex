@@ -1,0 +1,15 @@
+% witness: 2609.39576 (`\thanks{$^{\dag}$ These authors are with ... $^{*}$ This author is with ... $^{\ddag}$ This author
+%          is with ... The work presented in this paper is supported by ...}` after the last of five marked authors),
+%          seen in the 62zq A/B
+% oracle:  pdflatex 0 errors: one footnote "† Univ X. * Univ Y.", the authors "Ann Able†, Bob Baker*"
+% engines: rust (62zq) = 0 errors: the note stays whole on Bob Baker, its marks shown (`note_body` labels a note by its
+%          leading mark only when it is one legend); Perl 0.8.8 keeps it whole on Bob Baker, its math as text
+% expect:  0 errors; Ann Able holds "Univ X." and Bob Baker "Univ Y." — each legend of the note with the authors whose
+%          marks request it (a trailing unmarked sentence, as in the witness, staying with the note's author)
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}\author{Ann Able$^{\dag}$, Bob Baker$^{*}$\thanks{$^{\dag}$ Univ X. $^{*}$ Univ Y.}}
+\maketitle
+Text.
+\end{document}

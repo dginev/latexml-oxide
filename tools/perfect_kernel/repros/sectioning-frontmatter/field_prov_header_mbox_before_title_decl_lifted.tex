@@ -1,0 +1,18 @@
+% An `\mbox` preprint line before a `\title`/`\author` the document declares in its body, then the document's own
+% title block: the box is digested before any field is stamped, and it is still a TeX box (`\leavevmode\hbox{#1}`),
+% so the title block after it is lifted and the header kept (fms1 round-6 review finding 1: digest-time box marks
+% wait for the ledger, not for the stamp).
+% status:  RED (fms1 round 6: the box unmarked, its text read as body text, the title block kept and shown twice) →
+%          GREEN (int22).
+% oracle:  pdflatex 0 errors: "LA-UR-12-3456", "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; the header kept.
+\documentclass{article}
+\makeatletter
+\begin{document}
+\noindent\mbox{LA-UR-12-3456}
+
+\title{Header Title}\author{Ann Author}
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

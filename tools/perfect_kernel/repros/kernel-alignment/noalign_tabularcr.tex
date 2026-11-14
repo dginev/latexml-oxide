@@ -1,0 +1,18 @@
+% witness: 2309.15248 (svmult: `\noalign{\smallskip}\svhline\noalign\\` after a table's head row, twice)
+% oracle:  pdflatex 0 errors: in tabular `\\` is `\@tabularcr` (latex.ltx), whose expansion opens with `{`, so
+%          `\noalign\\` scans that brace for the noalign group, `\ifnum0=`{\fi}` closes it, and the `\cr` ends an empty
+%          row; rows a/b and c/d printed
+% engines: rust 64zc = 11 errors (Error:expected:{ "Missing { inserted", then the noalign group never closes and the
+%          table and the rest of the document cascade: 2309.15248 lost its 44 bibitems once 64ze defined \svhline)
+% expect:  0 errors; rows a/b and c/d, the \hline above c/d
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{tabular}{ll}
+a & b \\
+\hline\noalign\\
+c & d \\
+\end{tabular}
+After TEXT.
+\end{document}

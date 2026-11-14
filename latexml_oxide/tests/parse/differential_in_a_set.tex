@@ -1,0 +1,11 @@
+% A `d<var>` after `\in` is an infinitesimal set (`\tau_1\in dt`; 2605.03594, 2605.11264, 2605.15276), but a `d` before a
+% set's letter scales the set — a blackboard, calligraphic, bold or capital letter, upright `d` or not:
+% `k\in d\mathbb{Z}`, `x\in d\Lambda`, `y\in dZ` (the 57cj.23.6 review).
+% witness: 2605.03594, 2605.11264, 2605.15276; review probes p_in, q_in.
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; `dt` a differential, the set multiples letters
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$k\in d\mathbb{Z}$ $x\in d\Lambda$ $y\in dZ$ $k\in d\mathbf{Z}$ $m\in d\mathcal{L}$ $x\in\mathrm{d}\mathbb{Z}$ $\tau_1\in dt$
+\end{document}

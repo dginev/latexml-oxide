@@ -1,0 +1,26 @@
+% mechanism: the base-name retry of `\includegraphics{gp_plot.eps}` (shipped only as `.pdf`; util/image.rs
+%   `image_candidates`, OXIDIZED_DESIGN_DIVERGENCES #882) finds `gp_plot.pdf` in both `\graphicspath` directories. Its
+%   hits are ordered as TeX tries them: by type (pdftex.def's `\Gin@extensions`, pdftex.def:597-600), then by search
+%   directory (each type is looked for along the `\graphicspath` entries in turn), then by name within one directory, so
+%   `new/gp_plot.pdf` comes first and sizes the box, as the extensionless `\includegraphics{gp_plot}` does. A tie-break
+%   by full path put `figs/gp_plot.pdf` first and sized the box from it, twice as wide (review rev78v2 finding 2).
+% witness: none in the census (review rev78v2 probe gp.tex); the retry's witnesses 1408.2843, 1503.04804, 0907.3747
+% oracle:  pdflatex (TL 2025, with real 200bp and 400bp pages): `\includegraphics{gp_plot}` reads `new/gp_plot.pdf`,
+%   "width 200.7495pt"; the `.eps` name fails there ("File `gp_plot-eps-converted-to.pdf' not found", its epstopdf
+%   converts to a new name); arXiv's pdflatex of the time read `gp_plot.pdf` from the first directory
+% engines: perl: no candidates for the `.eps` name (KNOWN_PERL_ERRORS #1137); rust int62a: none either; rust 78v r1:
+%   `new/gp_plot.pdf,figs/gp_plot.pdf`; rust 78v r2: `figs/gp_plot.pdf,new/gp_plot.pdf`, "width 401.5pt"
+% expect:  0 errors, 0 warnings; both graphics candidates="new/gp_plot.pdf,figs/gp_plot.pdf", 20.075em wide; "width
+%   200.75pt" twice
+% files:   the guard writes new/gp_plot.pdf (a copy of eps_as_pdf_one.pdf, 200bp x 100bp) and figs/gp_plot.pdf (a copy
+%   of eps_as_pdf_two.pdf, 400bp x 200bp)
+% status:  GREEN (78v r3)
+\documentclass{article}
+\usepackage{graphicx}
+\graphicspath{{new/}{figs/}}
+\begin{document}
+\sbox0{\includegraphics{gp_plot.eps}}width \the\wd0.
+\sbox0{\includegraphics{gp_plot}}width \the\wd0.
+\includegraphics{gp_plot.eps}
+\includegraphics{gp_plot}
+\end{document}

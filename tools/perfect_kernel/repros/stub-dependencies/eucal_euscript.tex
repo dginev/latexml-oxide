@@ -1,0 +1,10 @@
+% witness: 2103.16394, 2103.05078; run 340: `\EuScript` the first error of 229 papers
+% oracle:  pdflatex with eucal.sty (:32 `\DeclareMathAlphabet\EuScript`): 0 errors; Euler script letters
+% engines: rust 65x = error (`\EuScript` undefined)
+% expect:  0 errors; \EuScript{A} and, under [mathscr], \mathscr{B} as script letters
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage[mathscr]{eucal}
+\begin{document}
+$\EuScript{A} \cup \mathscr{B}$
+\end{document}

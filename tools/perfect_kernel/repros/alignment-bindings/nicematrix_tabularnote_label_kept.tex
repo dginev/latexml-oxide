@@ -1,0 +1,18 @@
+% witness: 2602.00629 (`\makecell{Runtime offline \\ (s/epoch\tabularnote[$\star$]{1 epoch = ...})}` in a
+%          `{NiceTabular}`: 54 errors, every section after the table lost, 9 dangling labels)
+% oracle:  pdflatex: `\tabularnote[label]{text}` (nicematrix.sty:577 `{ o m }`) marks the note with the label in place
+%          of its number (:627)
+% engines: rust int98a = the binding passed the bracket-stripped label as `\footnote#1`, so `[x]` became the note's
+%          text and `[$\star$]` opened math in the note's argument
+% expect:  0 errors, 0 warnings; both notes keep their text, marked "x" and "$\star$"; "After." follows the table
+% status:  RED (int98a) -> GREEN (80i: nicematrix_sty.rs `\tabularnote` passes the label in brackets)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nicematrix,makecell}
+\begin{document}
+\begin{NiceTabular}{cc}
+B\tabularnote[x]{note one} & \makecell{C \\ (D\tabularnote[$\star$]{note two})} \\
+\end{NiceTabular}
+
+After.
+\end{document}

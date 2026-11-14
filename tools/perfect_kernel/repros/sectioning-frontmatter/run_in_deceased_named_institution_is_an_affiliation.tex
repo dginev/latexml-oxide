@@ -1,0 +1,35 @@
+% A raw class's run-in `\affil` line led by the dagger its carrier shows, naming an institution with the word
+% "Deceased" (`$^\dagger$Department of Deceased Estates, Univ C, Village`): an affiliation of Ann Able, not a deceased
+% note. "Deceased" is a legend only when the text does not read as an affiliation, as funding is, or opens with the word
+% (queue_digest.rs `legend_note_kind`, the frontmatter observer's `is_legend_text`; `reads_as_affiliation`,
+% `opens_with_deceased`) — so the kernel's line route, the kernel's `\author` block and REVTeX's binding read the line
+% alike (review rev100a S2, probes e/e1, e/e2, e/e3). The sibling opening with the word stays a note
+% (`run_in_deceased_legend_naming_an_institution_is_a_note`).
+% witness: review rev100a probe e/e1 (synthetic)
+% oracle:  pdflatex 0 errors: "Ann Able1,†, Bob Baker2", "1Univ A, Town", "2Univ B, City", "†Department of Deceased
+%          Estates, Univ C, Village"
+% engines: rust int127a = Ann Able's affiliation; rust 100a r1 = her deceased note; perl = no raw class load (OmniBus
+%          `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town" and "†Department of Deceased Estates, Univ C,
+%          Village" as affiliations; Bob Baker "2Univ B, City"; the body "Text."
+% status:  RED (100a r1) -> GREEN (100a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ridest.cls}
+\ProvidesClass{ridest}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{ridest}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,\dagger}$, Bob Baker$^{2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^\dagger$Department of Deceased Estates, Univ C, Village}
+
+\maketitle
+Text.
+\end{document}

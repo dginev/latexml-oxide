@@ -1,0 +1,12 @@
+% witness: mdframed.sty:72-77 (zref-abspage -> zref-base -> pdftexcmds -> iftex's `\ifpdf`; needspace)
+% oracle:  pdflatex 0 errors (mdframed.sty:72-77 loads kvoptions, xparse, etoolbox, zref-abspage, needspace, color)
+% engines: rust 65bundle = 2 errors (`\ifpdf`, `\needspace` undefined)
+% expect:  0 errors; text "PDF output. Kept together."
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mdframed}
+\begin{document}
+\ifpdf PDF output.\else DVI output.\fi
+\needspace{3\baselineskip}Kept together.
+\end{document}

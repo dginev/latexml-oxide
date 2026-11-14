@@ -1,0 +1,25 @@
+% witness: rev78j4 m1c, m1, m2, m5 (two captioned minipages in a figure, the panels unlabelled; the format of
+%          2008.12750, 2604.24399)
+% oracle:  pdflatex 2 errors, both at \Cref{fo}, the outer figure's own form ("Argument of \@declaredcolor has an
+%          extra }" + "Paragraph ended before \@declaredcolor was complete", one runaway argument); none for the
+%          panels, whose format no reference prints; "See Section 1 and section 1." and "See blueFig. 5."
+% engines: rust 78j r4 = 5 errors: each unlabelled panel's held form error tied to the nearest labelled ancestor (the
+%          section's `sec`/`other`, the outer figure's `fo`) and replayed at a reference to that object
+% expect:  1 error, the outer figure's form at \Cref{fo}; no empty held tag left in the panels
+% status:  RED (78j r4) -> GREEN (78j r5)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{cleveref}
+\crefformat{figure}{#2\color{blue}Fig.~#1#3}
+\begin{document}
+\section{Intro}\label{sec}\label{other}
+\begin{figure}
+\begin{minipage}{4cm}x\caption{left}\end{minipage}\hfill\begin{minipage}{4cm}y\caption{right}\end{minipage}
+\end{figure}
+See \Cref{other} and \cref{sec}.
+\begin{figure}
+\begin{minipage}{4cm}x\caption{left}\end{minipage}\hfill\begin{minipage}{4cm}y\caption{right}\end{minipage}
+\caption{outer}\label{fo}
+\end{figure}
+See \Cref{fo}.
+\end{document}

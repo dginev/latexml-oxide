@@ -36,54 +36,23 @@ LoadDefinitions!({
     \def\tablename{Tabelle}\def\partname{Teil}%
     \def\pagename{Seite}\def\seename{siehe}%
     \def\alsoname{siehe auch}\def\proofname{Beweis}}");
-  RawTeX!(r"\providecommand\dategerman{}");
+  // germanb.ldf:124-130: the German date (an empty stub left `\today` in English).
+  // Guard: `perfect_kernel_batch58::today_follows_the_babel_language`.
+  RawTeX!(r#"\providecommand\month@german{\ifcase\month\or
+    Januar\or Februar\or M\"arz\or April\or Mai\or Juni\or
+    Juli\or August\or September\or Oktober\or November\or Dezember\fi}"#);
+  RawTeX!(r"\providecommand\dategerman{\def\today{\number\day.~\month@german\space\number\year}}");
   RawTeX!(r"\providecommand\captionsngerman{\captionsgerman}");
   RawTeX!(r"\providecommand\datengerman{\dategerman}");
+  // germanb.ldf language hooks — see the matching note in ngerman_sty.rs.
+  RawTeX!(r#"\providecommand\extrasgerman{\@ifundefined{languageshorthands}{}{\languageshorthands{german}\bbl@activate{"}}}"#);
+  RawTeX!(r#"\providecommand\noextrasgerman{\@ifundefined{bbl@deactivate}{}{\bbl@deactivate{"}}}"#);
+  RawTeX!(r"\providecommand\extrasngerman{\extrasgerman}");
+  RawTeX!(r"\providecommand\noextrasngerman{\noextrasgerman}");
 
-  // German " shorthand dispatch (from germanb.ldf). We replace germanb.ldf
-  // entirely via our binding dispatcher, so babel's \initiate@active@char
-  // + \declare@shorthand{german}{"a}{...} calls in germanb.ldf never fire.
-  // Simpler to implement the dispatch here as a native primitive that
-  // reads the next token and emits the umlaut/ß/guillemet directly. A
-  // future refactor could load germanb.ldf raw in parallel (the
-  // \initiate@active@char machinery does work in our engine now — verified
-  // 2026-04-17) and drop this custom primitive.
-  DefPrimitive!("\\lx@german@dq@dispatch", {
-    let tok = read_token()?;
-    let ch = tok.as_ref().map(|t| t.with_str(|s| s.to_string())).unwrap_or_default();
-    let expansion: &str = match ch.as_str() {
-      "a" => "\u{00E4}", "o" => "\u{00F6}", "u" => "\u{00FC}",
-      "e" => "\u{00EB}", "i" => "\u{00EF}",
-      "A" => "\u{00C4}", "O" => "\u{00D6}", "U" => "\u{00DC}",
-      "E" => "\u{00CB}", "I" => "\u{00CF}",
-      "s" | "z" => "\u{00DF}",
-      "S" => "SS", "Z" => "SZ",
-      "`" => "\u{201E}", "'" => "\u{201C}",
-      "<" => "\u{00AB}", ">" => "\u{00BB}",
-      "~" => "-", "=" => "-",
-      // consonants/unknowns: pass-through (below)
-      _ => "",
-    };
-    if !expansion.is_empty() {
-      unread(Tokenize!(expansion));
-    } else if !ch.is_empty()
-      && let Some(t) = tok { unread(Tokens!(t)); }
-  });
-  DefPrimitive!("\\mdqon", { assign_catcode('"', Catcode::ACTIVE, None); });
-  DefPrimitive!("\\mdqoff", { assign_catcode('"', Catcode::OTHER, None); });
-  // Faithful to babel germanb.ldf's `\initiate@active@char{"}`, which binds
-  // the active-`"` MEANING when german is LOADED — independent of catcode and
-  // of which language is the document main. Bind it here too, so that if ANY
-  // package later flips `"` to catcode-13 ACTIVE (witness 1006.0641:
-  // `\usepackage[german,english]{babel}` + a package + `fabfeynmp`, whose
-  // `{\catcode`\"=11 …}` group + babel's deferred activation leave `"` active),
-  // the active `"` always has the dispatch meaning rather than erroring
-  // "T_ACTIVE["] is not defined" on the first bare `"` in the body. The
-  // `\selectlanguage{german}` hook (babel_support_sty.rs) still (re)binds
-  // catcode+meaning together when german is actually selected.
-  if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
-    assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
-  }
+  // The `"` shorthand dispatch (`\lx@german@dq@dispatch`), `\mdqon` and
+  // `\mdqoff` live in babel_support_sty.rs: they belong to babel's German
+  // (every `\usepackage[ngerman]{babel}` document, not only german.sty).
   // germanb.ldf L173: `\def\dq{"}` — `\dq` yields a literal double-quote (the
   // saved catcode-12 `"`, since `"` itself becomes the active shorthand). Map to
   // `\textquotedbl`, LaTeXML's literal double-quote. (An earlier note recorded
@@ -95,4 +64,21 @@ LoadDefinitions!({
   RawTeX!(r"\providecommand\bbl@allowhyphens{}");
   RawTeX!(r"\providecommand\bbl@ss{\ss}\providecommand\bbl@SS{SS}");
   RawTeX!(r"\providecommand\bbl@sz{\ss}\providecommand\bbl@SZ{SZ}");
+  // german.sty:314-319, 662-671: the user-level switches. `\germanTeX` is
+  // what the kernel's first aid (latex2e-first-aid-for-external-files.ltx:160-166,
+  // `file/german.sty/after`) runs once our binding reports the file's version
+  // — and what documents written for german.sty call themselves (a0poster
+  // a0/a0_eng, adrconv, akletter, cryst … 11 TL manuals errored
+  // `undefined:\germanTeX`). `\umlautlow`/`\umlauthigh` choose the accent
+  // placement of `\"` — a font matter with no XML counterpart.
+  RawTeX!(r"\providecommand\umlautlow{}\providecommand\umlauthigh{}");
+  RawTeX!(r"\providecommand\germanTeX{\mdqon\selectlanguage{german}}");
+  // german.sty:373-377 `\def@dqmacro{c}{text}{math}` / `\let@dqmacro` — the
+  // `"c` shorthand installers a derivative patches (germkorr.sty:141-144);
+  // recorded under german's own `\@grmn@@<c>dq` name.
+  RawTeX!(
+    r"\def\grmn@dq@macro#1#2{\expandafter#1\csname @grmn@@\string #2dq\endcsname}
+\def\def@dqmacro#1#2#3{\grmn@dq@macro\def{#1}{{#2}{#3}}}
+\def\let@dqmacro#1#2{\begingroup\edef\x{\endgroup\let\grmn@dq@macro\noexpand{#1}\grmn@dq@macro\noexpand{#2}}\x}"
+  );
 });

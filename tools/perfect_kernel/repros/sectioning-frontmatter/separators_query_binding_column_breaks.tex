@@ -1,0 +1,23 @@
+% mechanism: the binding-callable separator query (`observer/separators.rs` `argument_separators`, `\lx@fm@separators`;
+%   OD #995, Option C P2-0) names `binding` every separator a binding defines, whatever it prints: colm2025's `\And` and
+%   `\AND` (`latexml_contrib/src/colm2025_conference_sty.rs:23-24`, stand-ins for the class's column breaks, as jmlr2e's
+%   `jmlr2e_sty.rs:35` and neurips's no-ops `neurips_sty.rs:145-146`) read `binding` as aas_support's real `\and` does.
+%   `Binding` alone says neither "a separator" nor "none": a caller reads the binding's own definition. The kernel's
+%   `\and`, which the package leaves, reads `kernel`
+% witness: synthetic (revP20 S1, its probe `pr/colm.tex`)
+% oracle:  pdflatex cannot run it: colm2025_conference.sty is not in TL 2025 (the document is otherwise the article
+%   repros' shape); not validated
+% engines: Perl 0.8.8: no such query (not run); P20 (93541f6f93) and P20b: C1[binding,binding] C2[kernel]
+% expect:  0 errors, 0 warnings; the lines read C1[binding,binding] C2[kernel]
+% status:  GREEN (P20b; guard perfect_kernel_batchp20::the_separator_query_reads_a_binding_meaning)
+\documentclass{article}
+\usepackage{colm2025_conference}
+\makeatletter
+\providecommand\lx@fm@separators[1]{#1}
+\newcommand\sep[1]{[\lx@fm@separators{#1}]}
+\makeatother
+\begin{document}
+C1\sep{Ann Able \And Bob Baker \AND Cy Coe}
+
+C2\sep{Ann Able \and Bob Baker}
+\end{document}

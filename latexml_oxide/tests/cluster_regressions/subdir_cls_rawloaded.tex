@@ -1,0 +1,6 @@
+% A paper-local subdir CLASS without a binding raw-loads under the arXiv profile's localrawclasses (62k):
+% subdirdispatch/localjournal.cls defines \subdirclsmarker, so SUBDIRCLSLOADED reaches the output. Guards too that
+% dispatch does not name-match a stripped `localjournal` binding. The marker is tested, not called, so a run without
+% the class converts without an error.
+\documentclass{subdirdispatch/localjournal}
+\begin{document}\ifdefined\subdirclsmarker\subdirclsmarker\fi\end{document}

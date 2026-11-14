@@ -1,0 +1,17 @@
+% mechanism: 2204.02412's glued repeated label in an `\and` column whose own line its label leads (`$^1$Center for Astro
+%   (CAP$^1$)`), while the first column's line 1 is another list's: the writer cuts the line there, and the content check
+%   counts the "1" in its column alone (`resolver::placed::retold_words`, CT1ar)
+% witness: synthetic (CT1ar sibling of 2204.02412; the column's other direction is emit_content_a_label_repeated_per_column)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 / 1Univ X, Town | Bob Baker1 / 1Center for Astro (CAP1 ), Univ Z"
+% engines: rust CT1arbase: Bob "Center for Astro (CAP" and ", Univ Z", 0 warnings; CT1ar: the same, 1 Warning naming "1"
+% expect:  0 errors, 0 warnings; Ann "Univ X, Town"; Bob "Center for Astro (CAP1), Univ Z"
+% status:  RED (the cut) — the loss counted since CT1ar (perfect_kernel_batchn2::a_glued_label_cut_as_an_entry_is_counted);
+%   moves: post-merge (the events-side cutter's S1 rule, SYNC row 99a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \\ $^1$Univ X, Town \and Bob Baker$^{1}$ \\ $^1$Center for Astro (CAP$^1$), Univ Z}
+\maketitle
+Text.
+\end{document}

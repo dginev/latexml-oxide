@@ -1,0 +1,19 @@
+% issue #772: import.sty's own `\import@path` (import.sty:83 `\protected@xdef\import@path{…}`, :93 restored after the
+% input, :142 empty outside) is what a document reads; the binding kept it in a value only.
+% witness: synthetic (issue #772: `\href{\import@path index.tex}{…}` in a `\subimport`ed file)
+% oracle:  pdflatex 0 errors: [][a/][a/b/] [a/] []
+% engines: rust=1 perl=1 (2026-11-13, undefined \import@path)
+% expect:  0 errors; the five paths as pdflatex prints them
+% status:  GREEN
+\begin{filecontents*}{a/x.tex}
+[\import@path]\subimport{b/}{y}[\import@path]
+\end{filecontents*}
+\begin{filecontents*}{a/b/y.tex}
+[\import@path]
+\end{filecontents*}
+\documentclass{article}
+\usepackage{import}
+\begin{document}
+\makeatletter
+[\import@path]\subimport{a/}{x}[\import@path]
+\end{document}

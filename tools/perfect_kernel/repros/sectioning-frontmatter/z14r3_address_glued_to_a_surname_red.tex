@@ -1,0 +1,16 @@
+% mechanism: `resolver/lines.rs` `names_without_addresses` (Z14r3) cuts a names row from the start of the whole word that contains an
+%   address, so a surname glued to its address goes with it: the reading's creator is `Ann`. Cut where the address starts inside its word,
+%   stepping back only over punctuation glued in front of it (`|`, an em dash, `(`), never over letters.
+% witness: none on a real paper (review revZ14r3); sibling of 1006.4832 (`Kristiaan Pelckmans |kp@it.uu.se|`)
+% oracle:  pdflatex 0 errors: "Ann Able(ann@a.org)"
+% engines: Perl has no reading. int143b: the name keeps the address. Z14r2: "Ann Able" and e-mail ann@a.org. Z14r3: reading "Ann", the
+%   writer declines, output int143b's
+% expect:  0 errors; one creator "Ann Able" with e-mail ann@a.org, as Z14r2
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able(ann@a.org)}
+\maketitle
+Body.
+\end{document}

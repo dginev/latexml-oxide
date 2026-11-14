@@ -1,0 +1,59 @@
+% witness: 2201.11773, 2507.12447 (imsart.sty:944 `\DeclareRobustCommand\ead[2][label= ,email]`, :965 `\printead`,
+%          :2003 `\author[A]`, :2088 `\address[A]`; the copy 2201.11773 ships), 2201.09706 (`\thanksref{addr1}`, :746), 2201.08502 (`\thankstext`,
+%          :789, its text lost; `\arxiv`, :1186); here as minimal stand-ins of the shipped files
+% oracle:  pdflatex 0 errors (with the real imsart files): "Ann Able*1 Bob Baker2 Cy Cole3" over "1 Department of
+%          Mathematics, McGill University, e-mail: ann@uni.edu", "2 Bernoulli Institute, University of Groningen,
+%          e-mail: bob@rug.nl; url: https://bob.example.org", "3 Cole Institute"; footnotes "arXiv: 0000.00000",
+%          "* Supported by a grant."
+% engines: rust 63q4 = 0 errors, 0 warnings, but personname "Ann Ablelabel=e1]ann@uni.edu" with an email contact "[",
+%          a creator "url]https://bob.example.org" holding the addresses, each ending "??"; the note and arXiv id lost
+% expect:  0 errors, 0 warnings; each author its name (a name list one author each), its `\ead` as an
+%          email (or a URL contact for `url`), the address its mark or `\thanksref` labels and the `\thankstext` note
+%          it names; the title its own note; the reprinted addresses (`\printead`) left out; the arXiv identifier the
+%          paper's pubnote, the document's own `\arxiv` its bibliography's
+% status:  RED (63q4) -> GREEN (63r)
+\begin{filecontents*}{imsart.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{imsart}
+\LoadClass{article}
+\RequirePackage{imsart}
+\end{filecontents*}
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{imsart}
+\DeclareRobustCommand\ead[2][label= ,email]{#2}
+\DeclareRobustCommand{\printead}{\@ifnextchar[{\printead@opt}{\printead@opt[]}}
+\def\printead@opt[#1]#2{, ??}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\g@addto@macro\@author{#2\and}}
+\def\address{\@ifnextchar[{\address@fmt}{\address@fmt[]}}
+\def\address@fmt[#1]#2{\g@addto@macro\@author{#2}}
+\DeclareRobustCommand{\thanksref}{\@ifnextchar[{\thanksref@opt}{\thanksref@opt[]}}
+\def\thanksref@opt[#1]#2{\textsuperscript{??}}
+\def\thankstext{\@ifnextchar[{\thankstext@opt}{\thankstext@opt[]}}
+\def\thankstext@opt[#1]#2#3{\protected@xdef\@thanks{\@thanks}}
+\def\arxiv#1{\gdef\@arxiv{#1}\thankstext[]{fm@arXiv}{arXiv: #1}}
+\@ifundefined{frontmatter}{\newenvironment{frontmatter}{}{}}{}
+\@ifundefined{aug}{\newenvironment{aug}{}{}}{}
+\end{filecontents*}
+\documentclass{imsart}
+\arxiv{0000.00000}
+\begin{document}
+\renewcommand{\arxiv}[1]{arXiv:#1}
+\begin{frontmatter}
+\title{A Title\thanksref{T0}}
+\thankstext{T0}{Supported by a fund.}
+\begin{aug}
+\author[A]{Ann Able\thanksref{t1}\ead[label=e1]{ann\_a@uni.edu}}
+\author[B]{Bob Baker\ead[label=e2]{bob@rug.nl}\ead[label=u1,url]{https://bob.example.org}}
+\author{Cy Cole\thanksref{addrC} and Di Dunn\thanksref{addrC}}
+\author{Eve Earl \ead[label=e5]{eve@uni.edu}}
+\address[A]{Department of Mathematics, McGill University\printead[presep={,\ }]{e1}}
+\address[B]{Bernoulli Institute, University of Groningen\printead[presep={,\ }]{e2,u1}}
+\address[addrC]{Cole Institute}
+\thankstext{t1}{Supported by a grant.}
+\end{aug}
+\end{frontmatter}
+Text \cite{k}.
+\begin{thebibliography}{1}
+\bibitem{k} A. Author. A paper. \arxiv{1234.5678}.
+\end{thebibliography}
+\end{document}

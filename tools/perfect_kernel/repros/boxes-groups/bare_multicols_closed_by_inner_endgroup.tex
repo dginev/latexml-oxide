@@ -1,0 +1,14 @@
+% witness: review 64y round 4 (t1)
+% oracle:  pdflatex 0 errors (the \endgroup unsaves \multicols's \begingroup, tex.web 1063; the } then closes the brace group)
+% engines: rust 64w 2E+1W -> 64y r4 1E (the re-read \endgroup closed the brace group too) -> 64y 0/0; Perl 2E
+% expect:  0 errors 0 warnings; columns end before 'After.'
+% status:  GREEN (64y r5); guard perfect_kernel_batch64y::bare_multicols_closed_by_inner_endgroup
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{setspace,lscape,multicol}
+\begin{document}
+Intro.
+
+{\multicols{2} Text in columns.\endgroup} After.
+
+Closing text.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: review probe rev77t/A2 (an author's mark written in parentheses, `$^{(a)}$`, as its line's `$(a)$` lead;
+%          1011.0516's PoS.cls block writes `$^a$`)
+% oracle:  pdflatex 0 errors: "Ann Able(a), Bob Baker(b)" over "(a)Univ A" over "(b)Univ B"
+% engines: rust 77t r1 (bf9f65aac9) = 0 errors: both authors hold "(a)Univ A<break/>(b)Univ B" (the requested mark
+%          "(a)" is no "a", so the leads labelled nothing and the lines fell to the unmarked-institution rule); the 77t
+%          base welded both lines into Bob Baker's name
+% expect:  0 errors, 0 warnings; Ann Able holds Univ A, Bob Baker Univ B (a requested mark's parentheses are its
+%          writing, not its label)
+% status:  RED (77t r1) -> GREEN (77t r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{(a)}$, Bob Baker$^{(b)}$\\ $(a)$Univ A\\ $(b)$Univ B}
+\maketitle
+Text.
+\end{document}

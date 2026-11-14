@@ -1,0 +1,50 @@
+% mechanism: Kluwer `\normallatexbib` `{chapthebibliography}` = `\section*{References}`, a `\list`, a `\bgroup` and an
+%   `\item[]` the entries are typeset in (cargese.cls:1859-1906, defined here as the class does; kapproc.cls, edbk.sty
+%   alike): the first `\bibitem` opened the kernel's bibliography inside that item; the environment's own list is closed
+%   first now (sect11.rs `\lx@mung@bibliography`), and the empty list goes; the bibliography takes the heading
+% witness: hep-th0212109 hep-th0212193 (cargese.cls), cond-mat0112379 cond-mat0110649 (kapproc.cls), cond-mat0002157
+%   (edbk.sty)
+% oracle:  pdflatex 0 errors: "References", "[1] A. Author, Journal 1 (2000) 1.", "[2] B. Author, Journal 2 (2001) 2."
+% engines: rust 67int17b = Error:malformed:ltx:section + Error:malformed:ltx:bibliography (in <ltx:item>); Perl 0.8.8
+%   (cargese raw) the same (KNOWN_PERL_ERRORS #887)
+% expect:  0 errors; one <bibliography> titled References with both entries, after the acknowledgements' section; no
+%   empty <section>/<itemize>
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\chapthebibliography#1{\section*{References}
+\everypar={}
+      \list{\@biblabel{\arabic{enumiv}}}%
+           {\settowidth\labelwidth{\@biblabel{#1}}%
+            \leftmargin\labelwidth
+            \advance\leftmargin\labelsep
+            \usecounter{enumiv}%
+            \let\p@enumiv\@empty
+            \renewcommand{\theenumiv}{\arabic{enumiv}}}%
+        \def\newblock{\hskip .11em \@plus.33em \@minus.07em}%
+      \sloppy\clubpenalty4000\widowpenalty4000%
+      \sfcode`\.=\@m
+\bgroup
+\frenchspacing
+\normalsize
+\itemsep=-1pt
+\vskip-12pt
+\vskip1sp
+\item[]
+}
+\def\endchapthebibliography{\vskip24pt\egroup\parindent=0pt\relax
+     \def\@noitemerr
+       {\@latex@warning{Empty `thebibliography' environment}}%
+      \endlist}
+\def\@bibitem#1{\item\if@filesw \immediate\write\@auxout
+       {\string\bibcite{#1}{\the\value{\@listctr}}}\fi\ignorespaces}
+\makeatother
+\begin{document}
+\section*{Acknowledgments}
+Thanks \cite{a,b}.
+\begin{chapthebibliography}{99}
+\bibitem{a} A. Author, Journal 1 (2000) 1.
+\bibitem{b} B. Author, Journal 2 (2001) 2.
+\end{chapthebibliography}
+\end{document}

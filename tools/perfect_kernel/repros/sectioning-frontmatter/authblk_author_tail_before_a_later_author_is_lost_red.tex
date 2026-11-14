@@ -1,0 +1,24 @@
+% mechanism: authblk, a tail appended to `\@author` between two `\author` calls: the second creator's queueing records
+%   `\@author` with the tail in it (`note_author_seen`), so at `\maketitle` the tail is part of the prefix and
+%   `seen_author_tail` finds none after it; "Bob B", "Inst Y" are lost (counted by the title-page check's Warning).
+%   A second mechanism (the record would have to keep the value from before the tail), not FX24b's
+% witness: synthetic (review revFX24)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Alice A1, Carol C2", "Inst X", "Inst Z", then
+%   "Bob B / Inst Y" under the block
+% engines: int158a (`latexml_oxide.int158a-rel`), FX24, FX24b: 0 errors, 1 warning (the loss counted); Alice A (Inst X),
+%   Carol C (Inst Z); perl not run
+% expect:  0 errors, 0 warnings; Alice A (Inst X), Carol C (Inst Z), Bob B (Inst Y)
+% status:  RED (int158a, FX24, FX24b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{A Title}
+\author[1]{Alice A}
+\affil[1]{Inst X}
+\makeatletter\g@addto@macro\@author{\and Bob B\\Inst Y}\makeatother
+\author[2]{Carol C}
+\affil[2]{Inst Z}
+\maketitle
+Body text.
+\end{document}

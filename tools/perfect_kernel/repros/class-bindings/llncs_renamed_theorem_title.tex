@@ -1,0 +1,21 @@
+% witness: none in the 484-paper llncs sample (the 68g r2 re-review's q3 shape); the class's own titling,
+%          llncs.cls:1073/1082/1096/1122 `\csname #1name\endcsname`
+% oracle:  pdflatex with TL 2025 llncs.cls v2.26: "Theorem 1. a Lemme 2. b Remarque 3. c See Theorem 1, Lemme 2,
+%          Remarque 3. Preuve."; 0 errors
+% engines: rust 67int9 / 68g r2 = titles "Lemma 2", "Remark 3", "Proof" (the caption, not `\<env>name`); 68g r2
+%          autoref "Lemme 2"
+% expect:  0 errors, 0 warnings; the oracle's titles, matching the autoref names
+% status:  RED (68g r2) -> GREEN (68g r3)
+% preload: ar5iv.sty
+\documentclass[envcountsame]{llncs}
+\usepackage{hyperref}
+\renewcommand{\lemmaname}{Lemme}
+\renewcommand{\remarkname}{Remarque}
+\renewcommand{\proofname}{Preuve}
+\begin{document}
+\begin{theorem}\label{t1}a\end{theorem}
+\begin{lemma}\label{l1}b\end{lemma}
+\begin{remark}\label{r1}c\end{remark}
+See \autoref{t1}, \autoref{l1}, \autoref{r1}.
+\begin{proof}d\end{proof}
+\end{document}

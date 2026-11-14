@@ -1,0 +1,23 @@
+% witness: cnltx/cnltx_en (cnltx-doc.cls:728) + 24 more cnltx-doc manuals
+% oracle:  pdflatex/lualatex TL2025 = 3+ ERRORS (Loading a class in a group;
+%          Environment multicols undefined). Author's shipped PDF predates the
+%          scrlfile deprecation (class last updated 2019) => NOT oracle-clean on TL2025.
+% engines: rust=2 perl=2 (2026-09-04) [{multicols},\mytoc]; pdflatex=7 lualatex=fails-early(missing libertine)
+% expect:  SHARED faithful failure — {multicols} + custom cmd undefined, matches pdflatex TL2025
+% status:  CONTROL (pdflatex TL2025 ALSO rejects: deprecated \AfterPackage! misparses)
+% mechanism: modern scrlfile-hook.sty:209 \AfterPackage{s m o +m}; xparse `s` matches only
+%   `*` not `!`, so \AfterPackage!{hyperref}{BODY} -> s=false, m=`!`, o=NoValue, +m=`hyperref`;
+%   BODY runs as a plain group => \RequirePackage{multicol} loaded in a group, defs local & lost.
+\documentclass{scrartcl}
+\usepackage{etoolbox}
+\AfterPackage!{hyperref}{%
+  \newcommand\mytoc{TOC-DEFINED}%
+  \RequirePackage{multicol}%
+}
+\AtEndPreamble{\RequirePackage{hyperref}}
+\begin{document}
+Before.
+\begin{multicols}{2}
+\mytoc\ columns.
+\end{multicols}
+\end{document}

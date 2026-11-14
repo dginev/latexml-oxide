@@ -1,0 +1,16 @@
+% mechanism: an IEEEtran (journal) `\author` with a `\let` copy of `\and` (`\let\nx\and`) between the names: the
+%   kernel's block (`\lx@add@authors`) holds no `\and` token; the rehearsal binds the copy to the separator's event by
+%   its meaning (`\nx` is `\and`, OD #994), and the reading cuts the block at that `Sep(And)`
+% witness: OC1's spelling probe of bindsplit ie1 (the `\let` spelling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able Bob Baker", two names
+% engines: OC1b: one creator "Ann Able and Bob Baker", 1 error
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker
+% status:  GREEN (SEP1; guard perfect_kernel_batchsep1)
+\documentclass{IEEEtran}
+\let\nx\and
+\title{T}
+\author{Ann Able \nx Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

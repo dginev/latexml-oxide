@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+% The entry points are macros (pgfkeys.code.tex:320, :589, :607): a
+% group-closing `}` where their list should be is refused and left, as for any
+% macro argument (`{{\tikzset}\marg{options}}`, sa-tikz-doc.tex:336, with
+% `\tikzset` = `\pgfqkeys{/tikz}`); a primitive's `{}` parameter consumed it.
+\pgfkeys{/t/a/.code={[a:#1]}}
+\begingroup{{\pgfqkeys{/t}}X}\endgroup
+\begingroup{{\pgfkeysalso}Y}\endgroup
+\begingroup{{\pgfkeys}Z}\endgroup
+\pgfkeys{/t/a=1}[end]
+\end{document}

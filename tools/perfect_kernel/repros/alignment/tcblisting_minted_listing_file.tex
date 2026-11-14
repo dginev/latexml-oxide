@@ -1,0 +1,15 @@
+% witness: tkz-grapheur/tkz-grapheur-examples-integrals (recall 20.5 %), -exemples-integrales (19.2 %);
+%          32 sweep-#122 manuals with an empty minted-engine `tcblisting` listing
+% oracle:  pdflatex: the listing shows `\DrawZorp[Colors=blue]{h(x)}`
+% engines: rust (56in) = empty <listing class="ltx_lstlisting" …/> (0 errors); Perl: empty listing
+%          and 65 errors on the witness (`\minted@outputdir` undefined)
+% expect:  0 errors; a <listingline> holding \DrawZorp[Colors=blue]{h(x)}
+% status:  RED (56in) -> GREEN (56io)
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{minted}
+\begin{document}
+\begin{tcblisting}{listing engine=minted,minted language=latex,listing only}
+\DrawZorp[Colors=blue]{h(x)}
+\end{tcblisting}
+\end{document}

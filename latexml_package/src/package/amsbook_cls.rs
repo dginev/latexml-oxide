@@ -3,10 +3,16 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: amsbook.cls.ltxml
-  // Ignorable options (Perl L22-30)
+  // amsbook.cls:58-60 (amsart.cls alike): `\@classname` is the file that loaded this class, the top of
+  // `\@currnamestack` (`\@pushfilename` prepends the loader, latex.ltx); loaded by `\documentclass` that entry is
+  // empty and the class names itself. Read here, in the class's own load, not in a file it loads.
+  RawTeX!(r"\def\@tempa#1#2\@nil{\edef\@classname{#1}}
+\expandafter\@tempa\@currnamestack{}{}{}\@nil
+\ifx\@classname\@empty \edef\@classname{\@currname}\fi");
+  // Ignorable options (Perl L22-30); `oneside`/`twoside` go on to book's (KNOWN_PERL_ERRORS #469:
+  // two-sided by default, amsbook.cls:103-104/:329-330).
   for option in ["a4paper", "letterpaper", "landscape", "portrait",
-    "8pt", "9pt", "10pt", "11pt", "12pt",
-    "oneside", "twoside", "draft", "final", "e-only",
+    "draft", "final", "e-only",
     "titlepage", "notitlepage", "onecolumn", "twocolumn",
     "centertags", "tbtags",
     "openright", "openany",
@@ -18,20 +24,43 @@ LoadDefinitions!({
   // `leqno` re-asserts, `reqno` clears, `fleqn` sets ltx_fleqn=1. Rust
   // previously declared leqno/reqno/fleqn as no-ops, so amsbook docs
   // with [reqno] still rendered left-numbered equations.
-  AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true);
-  DeclareOption!("leqno", { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
-  DeclareOption!("reqno", { assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>); });
+  // amsbook.cls:130-133: `leqno` and `reqno` also go to amsmath, whose own
+  // switch sets the tags (DIVERGENCES #336). `leqno` is the default
+  // (amsbook.cls:329).
+  DeclareOption!("leqno", {
+    AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true);
+    Digest!("\\PassOptionsToPackage{leqno}{amsmath}")?;
+  });
+  DeclareOption!("reqno", {
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
+    Digest!("\\PassOptionsToPackage{reqno}{amsmath}")?;
+  });
   DeclareOption!("fleqn", { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  execute_options(&["leqno"])?;
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{book}")?;
   });
+  // The size options are the class's (ams_support_sty.rs `declare_ams_size_options`).
+  ams_support_sty::declare_ams_size_options()?;
   ProcessOptions!();
+  // The size option set `\@ptsize` (amsbook.cls:258-296 as amsart.cls); the book binding resets it (book_cls.rs).
+  RawTeX!(r"\let\lx@ams@ptsize\@ptsize");
   LoadClass!("book");
+  RawTeX!(r"\let\@ptsize\lx@ams@ptsize");
   RequirePackage!("ams_support");
+  ams_support_sty::amsart_author_storage()?;
+  ams_support_sty::amsart_uppercase_nonmath()?;
+  ams_support_sty::ams_class_caption_format()?;
+  // amsbook.cls carries amsart's internals line for line (:616 `\newbox\abstractbox`, :638-649 `\@setabstract`/
+  // `\@setabstracta`, :1090-1121 the contents lines, `\except`/`\for`, `\@keywords`, `\copyrightinfo`): memo-l.cls
+  // (`\LoadClass{amsbook}`, its `\tableofcontents` tests `\ifvoid\abstractbox`; 2412.15928, 2511.16188, 1512.07128)
+  // and the derived book classes call them. KNOWN_PERL_ERRORS #721.
+  ams_support_sty::amsart_class_internals()?;
 
-  // Frontmatter/mainmatter/backmatter — Perl L46-56
-  def_primitive_noop("\\frontmatter")?;
-  def_primitive_noop("\\mainmatter")?;
+  // Frontmatter/mainmatter/backmatter — Perl L46-56 (no-ops); amsbook.cls:944-948 switches the
+  // page numbering, which `\thepage` shows (roman, then arabic).
+  DefMacro!("\\frontmatter", "\\pagenumbering{roman}");
+  DefMacro!("\\mainmatter", "\\pagenumbering{arabic}");
   def_primitive_noop("\\backmatter")?;
 
   // List formatting — Perl L58-72
@@ -46,4 +75,22 @@ LoadDefinitions!({
   // Perl L64-66: description end alias and \upn = \textup
   Let!("\\enddescription", "\\endlist");
   Let!("\\upn", "\\textup");
+
+  // amsbook.cls:303-313: the running-head mark builder the class's
+  // `\ps@headings` gives `\chaptermark`/`\sectionmark`/`\partmark`
+  // (`\@secmark\markboth\chapterrunhead{}`), and the section number it reads.
+  // Marks have no XML form (`\@mkboth` is `\@gobbletwo`), but a class may call
+  // its marks: my-thesis.cls:153-160 `\pagestyle{headings}\chaptermark{}` (TeX
+  // Live class census 2026-09-24).
+  RawTeX!(r"\long\def\@nilgobble#1\@nil{}
+\let\@secnumber\@empty
+\def\@secmark#1#2#3#4{%
+  \begingroup \let\protect\@unexpandable@protect
+  \edef\@tempa{\endgroup \toks@{\protect#2{#3}{\@secnumber}}}%
+  \@tempa
+  \toks@\@xp{\the\toks@{#4}}%
+  \afterassignment\@nilgobble\@temptokena\@themark{}\@nil
+  \edef\@tempa{\@nx\@mkboth{%
+    \ifx\markright#1\the\@temptokena\else\the\toks@\fi}{\the\toks@}}%
+  \@tempa}");
 });

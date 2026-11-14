@@ -32,6 +32,15 @@ comma-separated term chains.
 **Impact:** `ambiguous_relations_test` equations `0=<x,y>` and `0=<x,y>A` now parse
 correctly instead of being marked `ltx_math_unparsed`. Test XMLs updated to match.
 
+**Relations, not angles (57ch, 57ch.1):** the signs are relations — Perl's reading, which parses most of these
+(`a<b,c>d` `formulae@(a < b, c > d)`) — where an operand ends before the `<` and one starts after the `>`
+(`c_1<c_D,c_2>c_D`), or where the `<` continues an inequality whatever follows the `>` (`0<s<1,\ t>-1` formulae@(0 < s
+< 1, t > −1), `\mathbb{P}(m<S<m+\delta\mid S>m)` P@(conditional@(…)); `semantics::angle_signs_are_relations`,
+`continues_an_inequality`). A plain Dirac bracket `<a|b>`, `<a|f|b>` is refuted only by the inequality rule: a factor on
+either side keeps it (`c_m^*<m|H|n>c_n`, as Perl). `2<x,y>=z` keeps its angles (this golden); Perl joins `>` `=` into one
+relation (`TwoPartRelop`, MathGrammar:711) and reads `formulae@(2 < x, y >= z)`. Guards: `tests/parse/fenced_lists.tex`
+("Plain angle signs between operands are relations"), `tests/math/ambiguous_relations`.
+
 ### 8. Broad Bigop Argument Absorption
 
 **Decision:** Bigops (`\sum`, `\int`, etc.) absorb the full `term` (mulop/invisible-times
@@ -42,8 +51,11 @@ chain), not just the next `tight_term`.
 entire product is the summand. Perl's `addOpArgs` (Parse::RecDescent) non-deterministically
 selects narrow absorption for some expressions (documented in KNOWN_PERL_ERRORS #9).
 
-**Grammar:** `bigop_application = bigop/scripted_bigop/composed_bigop term`, lifted to
-`expression` level so bigops can't be followed by invisible-times on the right.
+**Grammar:** `bigop_application = any_bigop/scripted_bigop/prescripted_bigop term`, lifted to
+term level so bigops can't be followed by invisible-times on the right. Adjacent bigops apply in
+turn (`\partial\partial f` = ∂@(∂@(f))); a bare bigop is an operand (`bigop_operand`); only a
+FLOAT script starts a pre-scripted bigop; a function or operator that starts a term before a bigop
+is a factor (`function_factor bigop_operand`: `\min_\theta\sum` = min_θ * ∑…) (57w/57x).
 
 **Impact:** `declare_test` sum equations updated. `calculus_test` improved (331→273 diffs).
 
@@ -246,6 +258,72 @@ diagnostic attribute on UNKNOWN tokens that participate in such speculation.
 `\usepackage[mathparserspeculate]{latexml}` is kept for backwards compatibility
 but does not change which tree wins.
 
+**In a bare argument (batch 57am).** Perl's `aBarearg` (MathGrammar:327) is
+`preScripted['UNKNOWN'] doubtArgs`, and `doubtArgs` leaves the `(`: Perl reads
+`\log f(x)` as log@(f)·x. Rust's bare argument item (`speculative_item`, for an
+operator and an OPFUNCTION alike, alone or in the greedy chain) applies the
+unknown to its group wherever it stands in the chain: `\log f(x)` log@(f@(x)),
+`\nabla f(x)` ∇@(f@(x)), `a\log f(x)` a·log@(f@(x)), `\eta\nabla L(\theta)`
+η·∇@(L@(θ)), `\log\lambda g(x)` log@(λ·g@(x)), `\log 2y(1+x)` log@(2·y@(1+x)); a
+juxtaposed product that leaves the group outside the argument's last item, through
+nested bare applications, is pruned (`leaves_a_bare_argument`, `takes_the_group`,
+`last_bare_leaf`). A top-level product still goes by the student pragmas. Since 57av
+`FencedLettersAreFunctionArguments` checks every factor beside the one before it and
+ranks readings by its violation count, so an applied reading wins wherever the grammar
+offers one: `f(x)(a+b)` f@(x)·(a+b), `(f(x)+1)(g(x)+1)`, `k(x-y)(x+y)` k@(x−y)·(x+y),
+`L(f)(x)` L@(f)·x. A letter whose own group holds it as a plain value multiplies it, as Perl (57bz,
+`letter_recurs_in_its_group`; 2605.28300, 2605.02279, 2605.04013, 2605.30479, 2605.00539, 2605.31439):
+`x(x+1)` x·(x+1), `n(n-1)(N-n)` n·(n−1)·(N−n), `\lambda(\lambda I-A)`, `x(x-(y+z))`; a letter only, in the
+same font, not a head (`f(f(x))`), not in function position (a differential `d` before a factor: `d(x\,dy)`
+d@(x·d·y), 2605.21794), not scripted (`x(1+x^2)` keeps the application, Perl multiplies), not before an argument list (`u(x,u)`, `E(Y|X,E)`,
+`I(a;I\mid q)`, `u(x,u>0)` — the sign of a function Perl's `forbidArgs` flags under MaybeFunctions,
+MathGrammar:524-525, where default Perl multiplies every unknown), not in a named font
+(`\mathbb E[\mathbb E[X]]`, `{\cal V}(|{\cal V}|=K)`). It holds in a bare argument too, which then ends
+before the group: `\sin x(x+1)` sin@(x)·(x+1), `\log 2x(1+x)` log@(2·x)·(1+x) as Perl, but also `\max_x
+x(1-x)` max_x@(x)·(1−x) and `\ker R(R+\mathrm{id})` (2605.21992) where the argument is the whole product. The
+chain after an application does not start at a letter times its own group: `p(p+2)\Gamma(p/2)` p·(p+2)·Γ·(p/2)
+(2605.26653, 21 formulas), under the open coefficient question. Known misses, no structural cue: an operator
+on its own image (`T(Tx)`, `V(UVx)`, 2605.01968), a measure of a set naming it (`\gamma(\ldots\setminus
+\operatorname{spt}\gamma)`, 2605.10491), italic expectation shorthand (`E[X-EX]`), name clashes (`G[V(G)\setminus
+S]`, 2605.11288), a pairing `s\left(a,b\right)`, a nested application (`f(\min(\operatorname{dom}(f)))`,
+2605.21142; `m(\mathrm{id}\otimes m)`, 2605.11903) — SYNC_STATUS "A letter times its own group". After a visible operator the letter
+applies too, the fenced factor being the last operand's (57az: `\lambda\cdot g(x)`
+λ·g@(x), `\Omega(n\cdot f(n))`, `v(O)-\beta\cdot c(O)`; 2605.00201, 2605.00411,
+2605.00423). After another application — a group its function closed — the letter applies
+too (user ruling 2026-09-29; 57bl, `application_before_a_letter`): `f(x)g(y)` f@(x)·g@(y),
+`P(A|B)P(B|C,D)`, `\Gamma(s)\zeta(s)`, `\log(x)f(y)` (1,607 formulas / 373 papers read
+f@(x)·g·y; 2605.09849, 2605.08899, 2605.05133) — a group in parentheses or brackets only, as at the start
+of a product: `U(t)H|\psi\rangle` U@(t)·H·ket, `P(A)P\{X>0\}` P@(A)·P·set (57bn). An ellipsis is transparent to the chain (57bv): a letter after it reads as it would with the ellipsis removed —
+`g(1)g(2)\cdots g(n)` g@(1)·g@(2)·⋯·g@(n), `\cdots g(n)` ⋯·g@(n), `a\cdots g(n)` a·⋯·g·n (after a coefficient);
+2605.23467, 2605.10016, 2605.05078 (`ellipsis_after_an_application`, golden `tests/parse/ellipsis_products`). After a juxtaposed coefficient the grammar
+offers none, so Perl's reading stays: `\lambda g(x)` λ·g·x, `2x(1+y)` 2·x·(1+y),
+`(a+b)g(x)` (repro `math-parse/application_after_a_leading_factor`, which asks whether #18
+should reach there) — so a bare argument applies more often than a top-level product does. #18
+applies letters, never a pre-built atom: a role-less XMDual (`\binom`, a matrix, `cases`,
+physics `\abs`) lexes as ATOM, as Perl's `getGrammaticalRole` gives it (MathParser.pm:851-854),
+and stays a product (`\binom{n}{2}(x+1)` binomial@(n, 2)·(x+1); 57be). With Perl's
+greedy chain this reads `\nabla f(x)\cdot d` as ∇@(f@(x)·d) (Perl's greed gives
+`\nabla u\cdot d` ∇@(u·d) too). A scripted group stays outside (`\nabla f(x)^T d`
+∇@(f)·x^T·d, as `f(x)^2` is f·x²). A postfix after a letter's application (57bw) takes the application where
+#18 applies the letter without one — first in a product, after another application, in a bare argument
+(`letter_postfixed`) — beyond Perl, whose `addScripts` runs before a head's arguments (MathGrammar:419-424,
+:545-558): `x(n+1)!` (x@(n+1))!, `f(n)g(n)!` f@(n)·(g@(n))! (Perl x·(n+1)!, f·n·g·n!); after a juxtaposed coefficient
+the letter multiplies its postfixed group as it does without the postfix, `2n(n-1)!` 2·n·(n−1)! (the coefficient
+question left open). A function's application takes it too, `f(x)!` (f@(x))!; an OPFUNCTION's argument takes it,
+bare or a group, `\log n!` log@(n!), `\log(n-k)!` log@((n−k)!) (Perl unparsed). A trig function's and an operator's
+argument take it too (57ca, user ruling 2026-09-29: factorial is ill-defined on the reals a trig function returns;
+every POSTFIX alike, `\sin 30\%` sin@(30%)), `\sin x!` sin@(x!), `\nabla f!` ∇@(f!), as Perl's `aTrigBarearg`/`aBarearg`
+with `addScripts`, and beyond Perl a group, `\sin(n)!` sin@(n!), `\nabla(f)!` ∇@(f!) (Perl unparsed); a
+group's one operand (floor, ceiling, angle, conditional) takes it, `\log\lfloor n/2\rfloor!` log@(⌊n/2⌋!), and a list's
+application the whole, `\max(a,b)!` (max@(a, b))! (`group_factor` = `operand_group` | `list_group`). Golden
+`tests/parse/postfix_operands`.
+
+**Juxtaposed functions (57cb, divergence #376).** A bare argument's later items take no OPFUNCTION
+(`op_bare_next`): `\log f(x)\log g(x)` is log@(f@(x))·log@(g@(x)), each unknown still applied inside its own
+argument, and `\nabla f(x)\log y` ∇@(f@(x))·log@(y) (user ruling 2026-09-29; Perl's greedy chain nests the second
+function inside the first). A first-item function still nests (`\log\log x`), and a trig function still continues
+the argument. Golden `tests/parse/opfunction_arguments#juxtaposed_operator_functions_are_separate_factors`.
+
 **Author override.** Authors who want `f(x) = f * x` can declare `f` as ID:
 `\lxDeclare[role=ID]{f}`. With the ID role, the speculative grammar rule
 `unknown fenced_factor` does not apply (it's gated on role UNKNOWN), so only
@@ -283,5 +361,19 @@ deletion alone leaves `f(x)` unparseable) and the per-fixture toward-Perl
 verification method — is preserved on branch
 `archive/fx-perl-parity-attempt-2026-07-02` (commit `bcf88db280`). Do not
 re-attempt the flip without a fresh explicit user decision.
+
+**Explicit space before a group multiplies it** (user ruling Q6, 2026-10-01, 57cj.22; `semantics::space_before_a_group`):
+a letter followed by `\,`, `\;`, `\ `, `~` before a group that is no argument list does not apply to it, everywhere — as
+trig arguments (#367) and derivative operands (#374) already read — and the space ends an OPFUNCTION's or operator's bare
+argument there too: `k\,(x-y)` k·(x−y), `\log k\,(x-y)` log(k)·(x−y), `\exp\phi\,(1-x)` exp(φ)·(1−x), `\nabla\phi\,(1-x)`
+∇(φ)·(1−x), `a\,[b+c]` (were k@(x−y), log@(k@(x−y)), …; the 57cj.8 review's mine: 429 formulas in 140 of the 3,003 A/B
+papers; 2605.09037 `r=a\,(1-e\cos f_e)`, 2605.25633 `c_1\,S\,(L+1)`). An argument list keeps the application, an evaluation point (`u\,(x,t)`, `u\,(x,0)=g(x)`, as the derivative
+operand's `\partial_x u\,(0,t)`), and so does a name, a function a space does not part from its argument (`\mathrm{Unif}\,[0,1]`,
+`\mathrm{sigmoid}\,(x)`, `{\rm Pr}\,[A]`, `\mathrm{cos}\,(\Omega t)`: 50 of the km24 A/B's first-cut changes; `is_a_one_letter_head`),
+and so does a group whose content is only ever an argument — a condition, a relation, a semicolon parameter list (`p\,(x\mid y)`,
+`P\,(X\in A)`, `\phi\,(x;\theta)`; `holds_an_argument_s_content`, 57cj.23, the merge review);
+without the space nothing changes (`k(x-y)` k@(x−y)). km24 A/B (m60 → m63): 375 one-letter readings, e.g. 2605.00580
+`\alpha\,(1-2\,s_i)` α·(1−2s_i), 2605.00224 `\beta\,[\Delta\log\pi_\theta-…]`. Guard
+`tests/parse/rust_parse_additions.tex` ("Explicit space before a group multiplies it").
 
 ---

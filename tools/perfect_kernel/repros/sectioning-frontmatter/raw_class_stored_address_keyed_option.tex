@@ -1,0 +1,35 @@
+% witness: 0902.1737 (stacs.cls:246-298: `\author[key]{short}{full}` and `\address[key]{…}` append to `\addresses`,
+%          which its `\maketitle` prints; the key is a name, `\@exname{@#1}`, printed as the author's mark; our kernel's
+%          `\author` leaves the class's third argument as a paragraph, so the `\address` after it stands in horizontal
+%          mode)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able^ua Bob Baker^ub", "^ua Univ A, Town", "^ub Univ B, City", "Body."
+% engines: rust 94b r2 draft = 0 errors, 0 warnings: Ann Able's address the class's store — the call in horizontal
+%          mode read as running text — which the kernel's `\maketitle` never prints: lost (0902.1737 lost its three)
+% expect:  0 errors, 0 warnings; a setter that stores its line for the title page is the API's wherever it is called
+%          while the authors are set (`\lx@class@contact@stored`), its optional argument (a key) dropped as OmniBus drops
+%          it: Ann Able `address=Univ A, Town`, Bob Baker `address=Univ B, City`, no name;
+%          eager and --streaming the same
+% status:  RED (94b r2 draft) -> GREEN (94b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{keyedstand.cls}
+\ProvidesClass{keyedstand}
+\LoadClass{article}
+\def\addresses{}
+\def\authors{}
+\def\@exname#1{\expandafter\csname #1\endcsname}
+\renewcommand{\author}[2][]{\expandafter\gdef\csname @#1\endcsname{#1}%
+  \g@addto@macro\authors{#2\textsuperscript{#1} }\g@addto@macro\addresses{\author{}{}}}
+\newcommand{\address}[2][]{\g@addto@macro\addresses{\address{}{\textsuperscript{\@exname{@#1}}#2}}}
+\def\@setaddresses{\def\author##1##2{}\def\address##1##2{\par\noindent ##2\par}\addresses}
+\def\maketitle{{\Large\@title\par}{\authors\par}\@setaddresses}
+\end{filecontents*}
+\documentclass{keyedstand}
+\begin{document}
+\title{A Title}
+\author[ua]{Ann Able}
+\noindent\address[ua]{Univ A, Town}
+\author[ub]{Bob Baker}
+\address[ub]{Univ B, City}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,21 @@
+% An \input issued while a raw package is read keeps the current catcodes, as TeX's \input does:
+% CoverPage.sty:58-70 makes @ the escape character and inputs \jobname.BibTeX.txt so that
+% @article{...} runs \article; the definitions mouth forced @ back to a letter and the cover page
+% printed "title undefined" (Perl Package.pm:2287-2288 + Mouth.pm:98-100 alike). 61k reads a plain
+% content file under the current catcodes (content.rs), as the binding path already did.
+% witness: coverpage/SimpleSample (G3 slice 7b R3). Guard:
+%   perfect_kernel_batch61::input_from_a_package_keeps_the_catcodes.
+% oracle:  pdflatex 0 errors: "Title: Some Waste of Paper. Source: in: Irreality Journal. ..."
+%          perl: "title undefined" (SHARED).
+% engines: rust 61j2: "title undefined"; 61k4: "Title: Some Waste of Paper."
+\begin{filecontents*}{\jobname.BibTeX.txt}
+@article{Key,
+  title = {Some Waste of Paper},
+  journal = {Irreality Journal},
+}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{CoverPage}
+\begin{document}
+\makeatletter Title: \CP@Title. Source: \CP@InSource\makeatother
+\end{document}

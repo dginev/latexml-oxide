@@ -1,0 +1,28 @@
+% witness: review r1 of 59u (~/data/pk_agents/review_59u/: showexpl-test:200 rangeaccept, chessboard.tex:3517 graphic=,
+%   r7/nocr.tex footnote/cite)
+% oracle:  pdflatex 0 errors; result 1 shows only L2 L3 (`rangeaccept` reads the code's line range, showexpl.sty:301-323);
+%   result 2 reads "Inner and k." (the preset's `\footnote[2][]{}` and `\cite[1][]{}`, :92/:109-110), so the outer
+%   footnotes are 1 and 2; result 3 is the image (`graphic=`, :349, :379-381), not "Hidden result text."
+% engines: rust 59u = L1-L4 in result 1; result 2 keeps a numbered note and a <cite> (`\footnote`/`\cite` are locked,
+%   Perl alike, latex_constructs.pool.ltxml:487-490), the second outer footnote is 3; result 3 typesets the text
+% expect:  0 errors; result 1 holds L2 L3 only; result 2 reads "Inner and k." with no note; the outer notes are
+%   marked 1 and 2; result 3 is an ltx:graphics of example-image
+% status:  RED (open)
+\documentclass{article}
+\usepackage{showexpl}
+\begin{document}
+Before\footnote{Outer one.}.
+\begin{LTXexample}[linerange={2-3},rangeaccept=true]
+L1
+L2
+L3
+L4
+\end{LTXexample}
+\begin{LTXexample}
+Inner\footnote{Inner note} and \cite{k}.
+\end{LTXexample}
+After\footnote{Outer two.}.
+\begin{LTXexample}[graphic=example-image]
+Hidden result text.
+\end{LTXexample}
+\end{document}

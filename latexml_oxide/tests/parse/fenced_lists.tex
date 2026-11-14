@@ -1,0 +1,293 @@
+% A bracket or brace pair around a list of two or more expressions is Perl's `Fence` (MathParser.pm:1390-1417):
+% one XMDual over the delimiters, the items and the separators as written, named by `enclose2` (two items:
+% `[@,@]` closed-interval, `{@,@}` set; :1368-1373) or `encloseN` (more: `{@,@}` set; :1376-1377), keyed by the
+% delimiters and the first separator, else `list` — never `delimited-[]` or `set` around a list the post-pass
+% then names. A list holding a relation is one `Formulae` item (MathGrammar:69), fenced as one.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/bracket_pair_is_a_closed_interval
+% witness: 57at Perl sample (root-causer; 75 of the train A/B's 288 changed readings, 22 papers): 2605.03853
+%          S2.E1.m1, 2605.11903 ×21, 2605.18952 ×11, 2605.29282 ×8; ≈15.8k `delimited-[]@(closed-interval@(…))`
+%          in the 3,003 B outputs, 85 in Perl's (nested brackets only)
+% oracle:  Perl 0 errors, each row as read here (modulo divergence #18: Perl `u * 0`, `psi * x`)
+% cause:   `fenced` wrapped a bracket list in `delimited-[]` and a brace list in `set`, and `rename_fenced_lists`
+%          then named the inner list: `delimited-[]@(closed-interval@(0, T))`, `set@(set@(a, b))`; and
+%          `prefer_more_delimited_wrappers` preferred that reading to the grammar's interval, one fence more
+%          (`prefer_named_interval_at_root` dropped it at the root only). Small formulas read wrapped before 57ao;
+%          its complete readings brought the wrapped variant to sampled ones (57at)
+\section{A bracket pair is a named interval}
+$t\in[0,T]$
+
+% formerly rows of repro math-parse/fenced_list_is_one_dual_named_by_its_delimiters (57ak Perl sample: 13,249
+% formulas in 1,611 papers read an inline `[a,b]` wrapped); `G[i,j]` applies G (divergence #18)
+$[-1,1]$ $x+[0,1]$ $G[i,j]$
+
+$u(0)=u_{0},\quad t\in[0,T]$
+
+$v+[G,\psi(x)]=0$
+
+\section{A brace list is one set}
+$x\in\{a,b\}$
+
+$S=\{a,b,c\}$
+
+$\{x_1,\dots,x_n\}\subset A$
+
+\section{Other lists stay lists, their separators as written}
+$v=[u;w]$
+
+$w=[a,b,c]$
+
+% 57av train A/B: parens around a fenced list are transparent — the paren branch of `fenced` read a bracket list's
+% presentation as a bare list and took its delimiters and separators for the items, `vector@([, ;, ])` (118 formulas;
+% 2605.08815 S2.E4 `E_{\mathrm{conf}}\!\left([|z^p-z^b|;\;z^p-z^b]\right)`, 2605.00444, 2605.00423)
+$\left([a;b]\right)$
+
+$E\!\left([|x-y|;\;x-y]\right)$
+
+$\left(\{a;b;c\}\right)$
+
+% 57ax train A/B: a fenced list is one closed item — a relation after it does not split it (`infix_relation`
+% pruned `W = list, ∈ R` as a comma formula boundary: 233 formulas unparsed, 2605.03399, 2605.29816, 2605.29171),
+% and a comma after it does not extend it (57ay review: before 57ay `[a,b,c],d` read `list@(a, b, c, d)`,
+% `\max([a,b,c],d)` `maximum@(list@(a, b, c, d))`, `P([a,b,c],x=0)` `P@(list@(a, b, c, x = 0))`; Perl keeps the
+% fenced list one item in each, and the `P` row otherwise differs: Perl `P * (list@(list@(a, b, c), x) = 0)`, Rust
+% applies P (#18) to the fenced list, one `formulae` item since 57bk). An empty fenced list inside a fence has no items to present
+% alone; an interval is not a list, and a comma after it starts one
+$W=[w_1,\ldots,w_d]\in\mathbb{R}^{d}$
+
+$x=[a,b,c]=y$
+
+$u=\{a;b;c\}\in S$
+
+$[a,b,c],d$
+
+$\max([a,b,c],d)$
+
+$[a,b,c],d|e$
+
+$P([a,b,c],x=0)$
+
+$[()]$
+
+$[a,b],c$
+
+% 57au review: a relation among the items makes the list one `formulae` item, as Perl's grammar reads it
+% (`OPEN Formulae CLOSE`); the tables name only a list of expressions (MathGrammar:462, 472-475). Before the review
+% fix `\{x=1;y=2\}` read `list@(…)` (the set lost) and `\Pr[X=1,Y=2]` `Pr@(closed-interval@(X = 1, Y = 2))`.
+% Perl `set@(formulae@(x = 1, y = 2))`, `P * set@(formulae@(…))`; `Pr@(X = 1, Y = 2)` spreads the items as the
+% function's arguments (`ApplyDelimited`), as Rust does since 57bb (below)
+\section{A list holding a relation is one formulae item}
+$\{x=1;y=2\}$
+
+$\mathbb{P}\{X\le t,Y\le s\}$
+
+$\Pr[X=1,Y=2]$
+
+% witness: 57ay review; the 57ay train A/B (2605.00042 `J(H;\alpha)`, 2605.00130 `I(X;F')`, 2605.00423
+%          `[\mathbf{a};\mathbf{b}]`, 2605.00435 `K_t=[K_{t-1};k_t]`, 2605.00161 `\mathcal{N}(\epsilon;0,I)`)
+% oracle:  Perl 0 errors: `p * list@(x, theta)`, `N * list@(epsilon, 0, I)`, `f * vector@(a, b, c)`, `list@(a, b, c)`,
+%          `x element-of list@(0, 1)`, `list@(a, b)`, `K _ t = list@(…)`, `set@(list@(a, b))`, `x ^ (list@(a, b))`,
+%          `maximum@(a, b)` (three times), `maximum@(a colon b)`, `set@(list@(a, b))`; Rust applies the unknowns (#18),
+%          and reads `\max(a:b)` `maximum@(list@(a, b))` (`fence` for a metarelation, one argument either way)
+% cause:   Perl's `Fence` names a fenced list by its delimiters and FIRST separator, and its enclose tables hold comma
+%          lists only (MathParser.pm:1368-1377, 1405-1409). The paren branch of `fenced` named every list `vector`
+%          and rebuilt its presentation with commas of its own (`p(x;\theta)` rendered `p(x,θ)`); the `interval`
+%          action named `(a;b)`, `[a;b]` intervals; `rename_fenced_lists` renamed a script's `(a;b)`; and a function
+%          spread only a `vector` (`\max[a;b]` `maximum@(list@(a, b))`), where Perl's arguments sit between any
+%          delimiters and any `argPunct` (PUNCT, MIDDLE, VERTBAR; MathGrammar:570-577, :656); `(x=1\quad y=2)` got a comma
+%          its source does not have (and since 57bk a paren relation list is one `formulae` item, as Perl)
+\section{A fenced list is named by its first separator}
+$p(x;\theta)$
+
+$\mathcal{N}(\epsilon;0,I)$
+
+$f(a,b;c)$
+
+$\left(a;b;c\right)$
+
+$x\in(0;1)$
+
+$(a;b]$
+
+% a reversed pair is the French open interval, `;` its usual separator (divergence #362; Perl unparsed)
+$x\in]0;1[$
+
+$K_t=[K_{t-1};k_t]$
+
+$\{[a;b]\}$
+
+$x^{(a;b)}$
+
+$\max(a;b)$
+
+$\max[a;b]$
+
+$\max\left(a\middle/b\right)$
+
+$\max(a:b)$
+
+$\{(a;b)\}$
+
+$(x=1\quad y=2)$
+
+% formerly repro math-parse/opfunction_applies_to_a_bracketed_group
+% witness: 57am probes (the 57ak Perl sample's `\operatorname{E}\{…\}`, 2605.24123 A1.Ex37Xa); 2605.20398 (physics
+%          `\sin[\ell]`, guard perfect_kernel_batch56::physics_trig_takes_no_braced_argument)
+% oracle:  Perl 0 errors: `E@(X) * E@(Y)`, `E@(X) * Y`, `Pr@(A)`, `exponential@(x) * y`, `maximum@(a, b)` (three times),
+%          `Pr@(conditional@(A, B))`, `exponential@(- x ^ 2 / 2)`, `logarithm@(x)` (the floor dropped), a garbled
+%          `maximum@(x * ket@(x) * 0)`, `maximum * open-closed-interval@(a, b)`, unparsed, `set@(x element-of A)`,
+%          `delimited-[]@(x <= 1)`, `Pr@(X <= t)`, `supremum@(set@(x element-of A))`,
+%          `Pr@(X element-of closed-interval@(0, 1))`
+% cause:   Perl's `addEasyArgs` (MathGrammar:570-577) applies a function to `OPEN Argument (argPunct Argument)*
+%          CLOSE` for any balanced pair and drops the delimiters (`ApplyDelimited`); an `Argument` is an expression a
+%          relation may extend (:581-587). Rust applied the function to the fence (`delimited-[]@(X)`, `set@(x)`,
+%          `closed-interval@(a, b)`), spreading only a paren `vector`; and a bracket or brace group held an expression
+%          only, so a relation inside one was unparsed. A named function of the content — floor, `\lvert`, a
+%          set-builder — stays one argument, where Perl's grammar, reading arguments first, loses it (divergence
+%          #363); a close of another kind is no argument's (`\max(a,b]`), but a missing close still ends the argument the
+%          author opened (`\operatorname{null}(G(\theta(t))`, 2605.00284; `\exp((n-k)(\ln…`, 2605.25295; Perl unparsed)
+\section{A function takes the arguments between any delimiters}
+$\operatorname{E}[X]\operatorname{E}[Y]$
+
+$\operatorname{E}[X]Y$
+
+$\Pr[A]$
+
+$\exp\{x\}y$
+
+$\max\{a,b\}$
+
+$\max[a,b]$
+
+$\max\langle a,b\rangle$
+
+$\Pr[A|B]$
+
+$\exp\left[-\frac{x^2}{2}\right]$
+
+$\log\lfloor x\rfloor$
+
+$\max\{x\mid x>0\}$
+
+$\max(a,b]$
+
+$\exp((n-k)(\ln(1-F(t))$
+
+$\operatorname{null}(G(\theta(t))$
+
+$\{x\in A\}$
+
+$[x\le 1]$
+
+$\Pr\{X\le t\}$
+
+$\sup\{x\in A\}$
+
+$\Pr[X\in[0,1]]$
+
+% ... scripted too (57bf; Perl attaches the scripts first, `preScripted[...]`, MathGrammar:282-284, :430-433):
+% Perl `(maximum _ i)@(a _ i, b _ i)`, `(E _ p)@(X)`, `(sine ^ 2)@(x, y)`; angle brackets are an inner product, not
+% an argument list — `\max_m\langle t,b_m\rangle` is the maximum of one inner product (95 formulas in 38 papers of the
+% A/B, every one an inner product: 2605.02896 `\max\langle Q,X\rangle`, 2605.20551; Perl spreads them, divergence
+% #363), and one item in them an average, `\log\langle Z\rangle` `logarithm@(delimited-⟨⟩@(Z))` (Perl `logarithm@(Z)`)
+$\max_{i}\{a_i,b_i\}$
+
+$\operatorname{E}_{p}[X]$
+
+$\sin^2(x,y)$
+
+$\max_m\langle t,b_m\rangle$
+
+$\log\langle Z\rangle$
+
+% ... and a bar after a bar-free formula inside braces is the set-builder's such-that, which Perl's `{` tries first
+% (MathGrammar:487-498), never one side of a pair the evaluation bar closes (57bb train Perl sample: 2605.04766;
+% 8 formulas in 6 papers read `set@(x * (delimited-∣|@(f)) _ A = 0)`); a group that opens with its bar pair, or
+% has no set-builder reading, is a set (pragma `SetBuildersTakeTheirBar`, a soft prune: its refusal as a hard rule
+% unparsed 100 formulas in 33 papers, `\{m>\theta'|I|\}`, 2605.16086; `\{1<|x|<2\}`, 2605.01547). Perl: the
+% conditional sets as here, `set@(absolute-value@(x) = 1)`, `Pr@(absolute-value@(X) <= t)`,
+% `set@(evaluated-at@(f, A) = 0)`, `set@(m > theta ^ prime * absolute-value@(I))`,
+% `set@(1 < absolute-value@(x) < 2)`
+$\{x\mid f|_{A}=0\}$
+
+$\{v\in V\;|\;v|_{\Gamma}=0\}$
+
+$\{|x|=1\}$
+
+$\Pr\{|X|\le t\}$
+
+$\{f|_{A}=0\}$
+
+$\{m>\theta'|I|\}$
+
+$\{1<|x|<2\}$
+
+% ... counted once per set, so a genuine set with bars beside it does not hide the set-builder (57bb review;
+% Perl `conditional-set@(x, evaluated-at@(f, A) = 0) union set@(y = absolute-value@(z))`)
+$\{x\mid f|_{A}=0\}\cup\{y=|z|\}$
+
+% a split row parsed whole holds its lexemes by reference, and its groups spread as Perl's (57bb review: they
+% stayed `maximum@(vector@(a, b))`, 2605.01929, 2605.04581)
+\begin{equation}\begin{split}\max(a,b)&=c\end{split}\end{equation}
+
+\begin{equation}\begin{split}\max\{a,b\}&=\operatorname{E}[X]\end{split}\end{equation}
+
+% A half-open interval's endpoints are expressions (57bj; RED-drain survey P7, 2605.31172 `t\in[0,T+1)`, 2605.01053,
+% 2605.03240; 447 formulas / 121 papers were unparsed). Perl's `factorOpenExpr` reads `Expression (PUNCT Expression)(s)`
+% before any close (MathGrammar:472-475): `x element-of open-closed-interval@(- 1, 0)`, …; `]-1,1[` is Rust's French
+% open interval (divergence #362; Perl unparsed)
+% A metarelation between a fence's two items is one relation (57bk; Perl `OPEN Formulae CLOSE` with a `metarelopFormula`,
+% MathGrammar:69, :118-125, one item fenced, MathParser.pm:1412-1415): `p iff q`, `set@(a iff b)`,
+% `set@(Gamma proves list@(A, B))`, `S not-proves c`, `delimited-⟨⟩@(a iff b)`; only a colon makes a set-builder
+% (`suchThatOp`, :499-501). Rust named the pair from the tables, dropping the relation (`list@(p, q)`; 108 formulas in
+% 11 papers, 2605.08011, 2605.06214, 2605.25146, 2605.00251). And a paren list holding a relation is one Formulae item,
+% `formulae@(a < 1, b < 2)` as Perl (was `vector@(…)`; ~1,070 formulas / ~330 papers, 2605.00042, 2605.01907), whose
+% items a known function still takes: `Pr@(X <= x, Y <= y)`
+\section{A fenced metarelation is one relation}
+$(p\iff q)$ $\{a\iff b\}$ $\{\Gamma\vdash A,B\}$ $(S\not\vdash c)$ $\langle a\iff b\rangle$ $\{a:b\}$
+$(a<1,b<2)$ $(a<1;b<2)$ $\Pr(X\le x,Y\le y)$
+
+\section{A half-open interval's endpoints are expressions}
+$x\in(-1,0]$ $t\in[-1,1)$ $(-\infty,0]$ $[-\pi,\pi)$ $t\in[0,T+1)$ $x\in]-1,1[$
+
+% A colon list between brackets, or of three or more terms between parentheses, is a `list` (57bm; divergence #366),
+% as `(a:b)` is: an index `[G:H]`, a range `[1:t]`, `[k+1:d]`, a projective point `[x_0:\dots:x_n]`, a ratio `(x:y:z)`
+% (2605.14715, 2605.08808, 2605.01646, 2605.25087, 2605.00473; ~216 formulas / 52 papers were unparsed). Perl reads a
+% metarelation, `delimited-[]@(a colon b)`, `x colon y colon z` (MathGrammar:69, :118-125), and fails on `[K:\mathbb{Q}]=2`
+% and `x\in[a:b]`. A sum between colons in parentheses is a double contraction, no list:
+% `(\nabla x:\nabla y-\nabla z:\nabla w)` stays unparsed (2605.21445, 2605.01156, 2605.09779); a paren item may carry a
+% sign (`(1:-1:0)`, Perl `SignedTerm`)
+\section{A colon list between delimiters is a list}
+$[a:b]$ $[G\colon H]$ $[x_0:x_1:\dots:x_n]$ $(x:y:z)$ $c^{[1:t]}$ $[K:\mathbb{Q}]=2$ $x\in[a:b]$
+$[k+1:d]$ $\max[a:b]$ $(1:-1:0)$ $(x:-y:z)$
+
+% witness: 2605.04340 `c_{1}<c_{\mathcal{D}},c_{2}>c_{\mathcal{D}}`, 2605.12157 `0<x<a,\;t>0`, 2605.19552 S4.E20
+%          `d_{1}<\cdots<d_{n},\ k_{i},d_{i}>0` (the 57bs regression), 2605.13710, 2605.16223, 2605.28612 (`f(a)<a\quad
+%          \textrm{or}\quad f(b)>b`, 12 trees, here without its applications), 2605.20541, 2605.23043, 2605.11979;
+%          2605.17504 `\mathbb{P}_{X\sim p}\big(m<s(X)<m+\delta\mid s(X)>m\big)` (the plain braket);
+%          ~33 of the 53 angle fences of the 57bp7 output (18 papers) read relations
+% oracle:  plain.tex:99, :101 (`<`, `>` are `\mathrel`, mathcode "313C, "313E); Perl reads the relations:
+%          `formulae@(c _ 1 < c _ D, c _ 2 > c _ D)`, `formulae@(0 < x < a, t > 0)`, `formulae@(x < a, b > y)`,
+%          `formulae@(absolute-value@(x) < 1, y > 0)`; it misreads the braket too (MathGrammar:770-773,
+%          `P * (m < S * inner-product@(m + delta, S) * m)`) and unparses most controls below
+% expect:  0 errors, 0 warnings; relations where an operand ends before the `<` and one starts after the `>`, read as
+%          the `\le`/`\ge` spellings are (the conditional `P@(conditional@(m < S < m + delta, S > m))`); the controls
+%          keep their angles (divergence OXIDIZED_DESIGN_MATH #7)
+\section{Plain angle signs between operands are relations}
+$c_{1}<c_{\mathcal{D}},c_{2}>c_{\mathcal{D}}$ $0<x<a,\;t>0$ $d_{1}<\cdots<d_{n},\ k_{i},d_{i}>0$ $x<a,b>y$
+$\{(x,y)\in\mathbb{R}^{2}:x<j,y>\Pi_{n}(j)\}$ $a<b\quad\textrm{or}\quad c>d$ $|x|<1,y>0$
+$\mathbb{P}\big(m<S<m+\delta\mid S>m\big)$ $\mathbb{P}_{X\sim p}\big(m<s(X)<m+\delta\mid s(X)>m\big)$
+% (57ch review) a `<` that continues an inequality is a relation whatever follows its `>` (`continues_an_inequality`;
+% Perl `formulae@(0 < s < 1, t > - 1)`); a plain bracket between factors stays one, as Perl's:
+% `c_m^*<m|H|n>c_n` c_m^*·⟨m|H|n⟩·c_n, `g<\psi|\phi>h` g·⟨ψ|φ⟩·h
+$0<s<1,\ t>-1$ $x<y<a,b>-1$ $\sum_{m,n}c_m^*<m|H|n>c_n$ $c_m^*<m|n>c_n$ $g<\psi|\phi>h$ $f(x)<a|b>c$
+
+% must not change: a relation stands at the `<` or at the `>`, not at both (a sign after the `>` starts no operand;
+% 2605.14422 `k=\arg\max\limits_{k}<E(c),E(d)>` as `\max_{k}<a,b>`, whose 16 trees would warn ambiguous_math)
+$<f,g>=1$ $S_{ij}=<a,b>$ $\sum_{i=1}^{N}<a_{i},b_{i}>$ $\lambda\cdot<a,b>$ $e_{<u,i>}$ $\exp(<a,b>)$ $0=<x,y>A$
+$\lambda<x,y>$ $\lambda<x,y>+1$ $\mu_{23}=<2|\vec{\mu}|3>$ $\max_{k}<a,b>$ $0<<a,b>>1$
+
+\end{document}

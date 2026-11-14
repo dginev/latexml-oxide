@@ -1,0 +1,32 @@
+% witness: synthetic (revGA2 B1; the idiom `\expandafter\ifx\csname ver@X.sty\endcsname\relax` is in 170 of 4,000 sampled
+%          zips): queries before the loads leave `\ver@<file>` as `\relax`; then a binding load (amsmath, natbib, graphicx,
+%          hyperref, booktabs), a binding not queried (geometry, `\@ifundefined` makes no `\relax`), and a raw load of a
+%          file declaring no version (bar.sty)
+% oracle:  pdflatex 0 errors: all seven "loaded."; the `\nonumber` equation unnumbered, the next (1)
+% engines: rust GA2 (c21ad0900e) = 0 errors, "not loaded." for all but geometry (the loader kept the query's `\relax`)
+% expect:  0 errors, 0 warnings; pdflatex's answers and numbering
+% status:  RED (GA2) -> GREEN (GA2b)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newcommand\st[1]{#1 \@ifpackageloaded{#1}{loaded}{not loaded}.}
+\@for\x:=hyperref,amsmath,natbib,graphicx,booktabs,bar\do{%
+  \expandafter\ifx\csname ver@\x.sty\endcsname\relax\fi}
+\@ifundefined{ver@geometry.sty}{}{}
+\@ifpackagelater{amsmath}{2000/01/01}{}{}
+\IfPackageAtLeastTF{natbib}{2000/01/01}{}{}
+\IfPackageLoadedTF{graphicx}{}{}
+\makeatother
+\usepackage{amsmath,natbib,graphicx,geometry,hyperref,booktabs,bar}
+\makeatletter
+\edef\a{\st{hyperref} \st{amsmath} \st{natbib} \st{graphicx} \st{geometry} \st{booktabs} \st{bar}}
+\makeatother
+\begin{document}
+\a
+\begin{equation}
+a=b\nonumber
+\end{equation}
+\begin{equation}
+c=d
+\end{equation}
+\end{document}

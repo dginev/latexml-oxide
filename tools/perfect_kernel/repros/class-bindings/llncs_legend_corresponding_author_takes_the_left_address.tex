@@ -1,0 +1,19 @@
+% mechanism: the one address left on the block of an entry's several carriers goes to the carrier marked the
+%   corresponding author (`EntryOwnerFacts::corresponding`); the reading marks one by a note or by a legend that says
+%   so, here institute 2 (`Resolver::corresponding`, the one fact; the old split's `place::marked_corresponding_author`),
+%   and the Link step (`insert::link_entry_addresses`) reads it on the creator the emitter writes (`_corresponding`),
+%   no longer re-reading the DOM's notes alone. A `\thanks{Corresponding author}` gives Ann zz9@ the same way.
+% witness: review revZ18c S5 (confirmed by Z18d); the `\thanks` form: llncs_corresponding_author_takes_the_left_address
+% oracle:  pdflatex 0 errors; "Ann Able1,2 and Bob Baker1", 1 "Univ X, Town / zz9@x.edu", 2 "Corresponding author"
+% engines: rust ERR2, int154z, Z18d, int154u = zz9@ the nameless block creator's; S5 = Ann Able's
+% expect:  0 errors, 0 warnings; zz9@ Ann Able's (owner:corresponding)
+% status:  RED (Z18d) -> GREEN (S5), guard perfect_kernel_batchs5::a_legend_corresponding_author_takes_the_left_address
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,2} \and Bob Baker\inst{1}}
+\institute{Univ X, Town\\ \email{zz9@x.edu} \and Corresponding author}
+\maketitle
+Body.
+\end{document}

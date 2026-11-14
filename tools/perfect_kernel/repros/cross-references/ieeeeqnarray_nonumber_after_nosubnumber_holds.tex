@@ -1,0 +1,34 @@
+% witness: review rev79d3 finding 1 (probe rev79d3/eq/w.tex); the class of 2012.02697's `\IEEEyessubnumber ... \nonumber`
+%          rows (cross-references/ieeeeqnarray_nonumber_after_yessubnumber_wins), no corpus paper in the 79d population
+% oracle:  pdflatex 0 errors; prints (1) (1a) (2) (2a) (3) (5) (6) (6a) (7); `.aux` g0 1, g1 1a, g3 2, g4 2a, h1 3, h3 5,
+%          i1 6, i2 6a, i4 7 (IEEEtrantools.sty:1428-1434: `\IEEEnosubnumber` on a row that prints its number steps
+%          `equation` out of the sub-equations and clears the pre-advance, so the `\nonumber` after it leaves the
+%          counters for the next row, or, last in its environment, skips "4")
+% engines: rust 79d r3 prints (1) (1a) (1a) (1b) (2) (3) (4) (4a) (5), labels g3 1a, g4 1b, h1 2, h3 3; Perl 0.8.8 has no
+%          IEEEtrantools binding
+% expect:  0 errors, 0 warnings; the equations' tags and labels as pdflatex's
+% status:  RED (79d r3) -> GREEN (int75 follow-up, KNOWN_PERL_ERRORS #1146)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{g0}\\
+a &=& b \IEEEyessubnumber*\label{g1}\\
+c &=& d \IEEEnosubnumber\nonumber\\
+e &=& f \label{g3}\\
+g &=& h \label{g4}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{h1}\\
+c &=& d \IEEEnosubnumber\nonumber
+\end{IEEEeqnarray}
+\begin{equation} x\label{h3}\end{equation}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{i1}\\
+c &=& d \IEEEyessubnumber\label{i2}\\
+e &=& f \IEEEyesnumber\nonumber\\
+g &=& h \label{i4}
+\end{IEEEeqnarray}
+See g \ref{g0}, \ref{g1}, \ref{g3}, \ref{g4}; h \ref{h1}, \ref{h3}; i \ref{i1}, \ref{i2}, \ref{i4}.
+\end{document}

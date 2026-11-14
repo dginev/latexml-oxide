@@ -1,0 +1,21 @@
+% mechanism: an address printed in `\emph{…}` inside an affiliation entry comes out with its font: any inline element
+%   wrapping text alone is a wrapper the cut takes whole (`ltx:emph` among them, not `ltx:text`/`ltx:ref` alone), and
+%   an emptied one is removed from the affiliation (brief 95c r3 F1).
+% witness: 0808.1112 (`\small Email: \emph{duan@iit.edu} \hskip30pt Email: \emph{jayan@amt.ac.cn}`)
+% oracle:  pdflatex 0 errors: "1 Univ X, Email: ann.able@x.org", "2 Univ Y, bob.baker@y.org" (the addresses italic,
+%   Bob's line small)
+% engines: rust 95c-r2: Ann's e-mail plain text (its italic lost); Bob's affiliation "Univ Y<emph/>"; rust int123a: the
+%   addresses inside the affiliations, italic; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able "Univ X", e-mail "Email: " `<emph font="italic">`; Bob Baker
+%   `<text fontsize="90%">Univ Y</text>`, e-mail `<emph font="italic" fontsize="90%">`
+% status:  RED (95c-r2) -> GREEN (95c-r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$ Univ X, Email: \emph{ann.able@x.org} \\
+$^2$ {\small Univ Y, \emph{bob.baker@y.org}}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,12 @@
+% A lone italic `d<var>` with only weak structure is a differential when the document integrates over the same
+% `d<var>` elsewhere (`\rho_x\,dx` beside `\int_\Omega f\,dx`), and a letter otherwise (`\rho_t\,dt`): the italic `d`
+% is every document's default letter, so its identity alone is no evidence — the token-identity rule (user ruling
+% 2026-10-01e) speaks for an upright `d`, a document's convention token.
+% witness: none (the 57cj.23.6 review: `\int f\,dx\le d^2n` and `\int f\,dx\to dx` alone read differentials when the
+%          italic identity counted).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; `dx` differentials, `dt` and `d^2n` letters
+\documentclass{article}
+\begin{document}
+$\int_\Omega f\,dx$ $\rho_x\,dx$ $\rho_t\,dt$ $\int f\,dx\le d^2n$
+\end{document}

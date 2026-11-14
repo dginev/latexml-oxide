@@ -1,0 +1,14 @@
+% witness: 62zo review (side finding); enumitem.sty:139 `\newlength\labelindent`
+% oracle:  pdflatex 0 errors: enumitem declares `\labelindent`, so a document may `\setlength` it
+% engines: rust (62zo) = 3 errors (`\setlength{\labelindent}`, `\the\labelindent` on an undefined `\labelindent`): the enumitem binding has
+%          the `labelindent` key (enumitem_sty.rs) but never declares the length; under IEEEtran the binding's
+%          `\let\labelindent\IEEElabelindent` (from Perl's IEEEtran.cls.ltxml, not the class) hides it — a faithful
+%          `\newlength\labelindent` there would then meet "already defined", so the two belong together
+% expect:  0 errors; "Indent 0.0pt."
+% status:  RED
+\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\setlength{\labelindent}{0pt}
+Indent \the\labelindent.
+\end{document}

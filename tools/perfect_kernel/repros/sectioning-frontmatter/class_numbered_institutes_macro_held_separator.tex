@@ -1,0 +1,22 @@
+% mechanism: a class numbering its `\institute` entries at each `\and` (llncs.cls:870-885's `\institutename`, copied by
+%   preprint.cls, 2405.16615) under an `\and` a document macro holds (`\newcommand\nx{\and}`): the entries are cut by
+%   the separator's meaning (`class_numbered_institutes` through `split_at_kernel_separators`, Option C P4d), entry n
+%   going to the names marked n. The token split saw one entry: the whole list, the kernel's " and " written in, under
+%   every author.
+% witness: synthetic (P4d; the class beside, numinst.cls, is llncs's `\institutename`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1 Univ A, Town A", "2 Univ B, Town B"
+% engines: F0: Ann Able 1 and Bob Baker 2 each "Univ A, Town A and Univ B, Town B", 0 W; P4d: below; perl: no binding
+%          for the class (its `\institute` raw)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B" (as the written `\and`'s twin,
+%          class_numbered_institutes_go_by_the_authors_marks)
+% status:  RED (F0) -> GREEN (P4d; guard perfect_kernel_batchc1::class_numbered_institutes_read_by_meaning)
+% preload: ar5iv.sty
+\documentclass{numinst}
+\newcommand\nx{\and}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\institute{Univ A, Town A \nx Univ B, Town B}
+\maketitle
+Text.
+\end{document}

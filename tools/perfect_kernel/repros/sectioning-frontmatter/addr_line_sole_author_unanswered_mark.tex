@@ -1,0 +1,24 @@
+% A one-author article block whose last line, in a font wrapper, is `{\small * Corresponding author, E-mail: qz@a.org}`
+% under `Ann Able$^{a}$*`: the paper's one author owns the address (FIDELITY_CHARTER §4, "the group's only author",
+% before the block, an unanswered line mark included), and the role phrase before the label is her correspondence note
+% (review rev107c B1, N4: 107c r2).
+% witness: 1711.00192 (`\author{ Jian Shi$^{a}$*\\ {\small $^{a}$College …}\\ … {\small * Corresponding author, E-mail:
+%          mathematic@126.com }}`)
+% oracle:  pdflatex 0 errors: "Ann Ablea *", "aUniv A, Town,", "Country.", "* Corresponding author, E-mail: qz@a.org"
+% engines: rust int139a0 = the whole line in the affiliation; 107c r1 = the e-mail on a nameless block creator, "*
+%          Corresponding author" left in the affiliation
+% expect:  0 errors, 0 warnings; Able: Univ A, Town, Country; the `*` correspondence note; qz@a.org named "E-mail: "
+% status:  RED (107c r1) -> GREEN (107c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{a}$*\\
+{\small $^{a}$Univ A, Town,}\\
+{\small Country.}\\
+{\small * Corresponding author, E-mail: qz@a.org }\\
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

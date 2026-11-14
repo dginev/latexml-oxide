@@ -1,0 +1,14 @@
+% mechanism: a formula in a name or an entry comes through digestion: no plain text
+% witness: S0's Math 80 → 65
+% oracle:  pdflatex 0 errors; "Ann α Able1", "Institute of β Studies"
+% engines: rust S0: lost on a text item; perl: no such step
+% expect:  0 errors, 0 warnings; `Math` in the name and the entry
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann $\alpha$ Able$^{1}$, Bob Baker$^{2}$\\ $^{1}$Institute of $\beta$ Studies\\ $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

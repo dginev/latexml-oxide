@@ -1,0 +1,22 @@
+% witness: TL class census 2026-09-24 — yathesis (yathesis.cls:459 \@ifpackagelater{babel}{2013/04/15}
+%          {\PassOptionsToPackage{main=\YAD@mainlanguage}{babel}} before babel is loaded, then :519
+%          passes main= again: "Bad option 'main=french' … previous setting of 'main'")
+% oracle:  pdflatex 0 errors; [F][T][F][2025-...] (expl3's date as declared, expanded)
+% engines: rust (56hy) = [T][T][T]: \@ifpackagelater was "#3" (Perl latex_constructs.pool:972),
+%          and \ver@<file> held the unexpanded \ProvidesExplPackage date (\ExplFileDate …)
+% expect:  0 errors; <p>[F][T][F][ok]</p>
+% status:  RED (56hy) -> GREEN (56ia, KNOWN_PERL_ERRORS #238)
+% mechanism: latex.ltx:18405-18411 \@ifl@ter reads \ver@<file>; :18481-18483 \@pr@videpackage
+%   \protected@xdef's it, :22454-22457 \@providesfile \xdef's it.
+\documentclass{article}
+\usepackage{expl3}
+\makeatletter
+\edef\a{\@ifpackagelater{babel}{2013/04/15}{T}{F}}
+\edef\b{\@ifpackagelater{expl3}{2018/05/12}{T}{F}}
+\edef\c{\@ifpackagelater{expl3}{2999/01/01}{T}{F}}
+\edef\d{\expandafter\expandafter\expandafter\@car\csname ver@expl3.sty\endcsname\@nil}
+\edef\d{\if2\d ok\else bad\fi}
+\makeatother
+\begin{document}
+[\a][\b][\c][\d]
+\end{document}

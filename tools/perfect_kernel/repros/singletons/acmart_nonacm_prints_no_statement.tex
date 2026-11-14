@@ -1,0 +1,15 @@
+% acmart's `nonacm` option prints no copyright statement (acmart.cls:2265-2269, only a `cc` licence).
+% witness: 2605.30212 (nonacm).
+% status:  GREEN (58q)
+% oracle:  pdflatex 0 errors: no copyright or permission text.
+% expect:  0 errors, 0 warnings.
+\documentclass[sigconf,nonacm]{acmart}
+\setcopyright{rightsretained}
+\copyrightyear{2020}
+\begin{document}
+\title{T}
+\author{A. Author}
+\affiliation{\institution{U}\country{X}}
+\maketitle
+Text.
+\end{document}

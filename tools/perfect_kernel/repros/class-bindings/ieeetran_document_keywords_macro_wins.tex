@@ -1,0 +1,17 @@
+% witness: 2006.10005 2008.05854 2011.04315 (IEEEtran.cls defines no \keywords; Perl IEEEtran.cls.ltxml:400-404 locks its convenience one)
+% oracle:  pdflatex 0 errors; Index Terms—M-estimators, shrinkage, regularization
+% engines: rust 66l = 2 errors; Perl 5
+% expect:  0 errors; <keywords> holds M-estimators, shrinkage, regularization
+% status:  RED (66l) -> GREEN (66m)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\newcommand{\keywords}{M-estimators, shrinkage, regularization}
+\begin{document}
+\title{A Title}
+\maketitle
+\begin{IEEEkeywords}
+\keywords
+\end{IEEEkeywords}
+\section{Intro}
+Text.
+\end{document}

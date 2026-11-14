@@ -1,0 +1,19 @@
+% witness: 2201.01230 (algorithmic `\renewcommand{\algorithmicrequire}{\textbf{Input:}}`; fidelity audit round 2)
+% oracle:  pdflatex 0 errors: "Input: the data", "Ensure: the model", "1: x"
+% engines: rust 63i = both labelled lines tagged "0:" (the line counter), their labels lost; Perl alike
+% expect:  `\REQUIRE`/`\ENSURE` lines tagged by their labels (Input:, Ensure:), the counter unstepped (x is line 1); 0 errors
+% status:  RED (63i) -> GREEN (63j)
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\begin{document}
+\begin{algorithm}
+\caption{C}
+\begin{algorithmic}[1]
+\REQUIRE the data
+\ENSURE the model
+\STATE x
+\end{algorithmic}
+\end{algorithm}
+\end{document}

@@ -1,0 +1,23 @@
+% crossreftools.sty reads every label's data from \r@<label> (crossreftools.sty:293-345) and lists
+% the labels from the .lla file (\crtaddlabeltotoc, :433-441; \@crt@listofl@bels, :407-421), both
+% defined only by a second LaTeX run. The binding (crossreftools_sty.rs) is that second pass per
+% label: \r@<label> from the values at the label (backward references), the .lla line kept and
+% printed when the list is built; its \label wrapper is put back around cleveref's \label.
+% witness: crossreftools/crossreftools_driver (84.4 -> 96.9 %). Guard:
+%   perfect_kernel_batch61::crossreftools_label_data_and_list.
+% oracle:  pdflatex (second run) 0 errors: "List of labels / 1 foo / Shown text gen";
+%          "Name text See Shown text, Name text, Shown text, Name text."
+%          perl: no binding; "[UNDEFINED]", empty names, empty list.
+% engines: rust 61n2: empty list, "See <ref>, , [UNDEFINED], ."; 61o1: the list's two entries,
+%          "Name text", "Shown text", "Name text" (\ref{gen} shows the chapter's number: residual,
+%          \@currentlabel reference text).
+\documentclass{book}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{crossreftools}
+\begin{document}
+\crtlistoflabels*
+\chapter{Foo}\label{foo}
+\crtcrossreflabel[Name text]{Shown text}[gen]
+See \ref{gen}, \crtnameref{gen}, \crtrefnumber{gen}, \crtunameref{gen}.
+\end{document}

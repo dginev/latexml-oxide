@@ -1,0 +1,22 @@
+% witness: 77n r6 review — a symbol legend after two unmarked `\affil`s the run gave the unmarked author only (review
+%          probe x1; x5)
+% oracle:  pdflatex 0 errors: "Ann Able1,dagger and Bob Baker / 1Univ X / Univ Y / Univ W / daggerCorresponding author"
+% engines: rust int32a, 77n r5, r6 = Ann Able (dagger shown) without the legend (Univ W recorded the run's extent as the
+%          authors it reached, Bob Baker alone)
+% expect:  0 errors, 0 warnings; Ann Able (dagger shown) with the legend and Univ X, Bob Baker with Univ Y, Univ W and
+%          the legend
+% status:  RED (int32a) -> GREEN (77n r7)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,\dagger}$}
+\author{Bob Baker}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\affil{Univ W}
+\affil{$^\dagger$Corresponding author}
+\maketitle
+x
+\end{document}

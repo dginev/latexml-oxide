@@ -141,9 +141,7 @@ LoadDefinitions!({
       code_str.parse::<u32>().unwrap_or(0)
     };
     if let Some(ch) = char::from_u32(code_val) {
-      unread(Tokens!(Token { text: pin_char(ch), code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
-    }));
+      unread(Tokens!(CharToken!(ch)));
     }
   });
 

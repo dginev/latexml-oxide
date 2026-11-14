@@ -1,0 +1,15 @@
+% witness: rev78r finding 2 (mn2e_support_sty.rs and aa_support_sty.rs's own {equation}); census pop78r_3cls
+%          (0705.0429, 1210.2963, 1606.01184 mn2e; 2009.07670 mnras)
+% oracle:  pdflatex 0 errors; (1) (2), "See 1; 2." (mnras.cls's {equation} is LaTeX's, latex.ltx:15737-15739;
+%          `\nonumber` :15775 is eqnarray's switch)
+% engines: rust int54a = (1) only, the first equation unnumbered, "See [S0.Ex1]; 1."; 78r r1 the same; Perl the same
+%          (latex_constructs.pool.ltxml:1915-1916)
+% expect:  0 errors, 0 warnings; two numbered equations
+% status:  RED (int54a, 78r r1) -> GREEN (78r r2, OXIDIZED_DESIGN_DIVERGENCES #865)
+% preload: ar5iv.sty
+\documentclass{mnras}
+\begin{document}
+\begin{equation}a=b\nonumber\label{m1}\end{equation}
+\begin{equation}c=d\label{m2}\end{equation}
+See \ref{m1}; \ref{m2}.
+\end{document}

@@ -1,0 +1,16 @@
+% acmart's public-domain mode (`\setcopyright{usgov}`) prints the year without a copyright sign
+% (acmart.cls:2289-2294 `\@copyrightyear.\ ` when `\if@printcopyright` is false) beside its statement.
+% witness: none (synthetic; review probe).
+% status:  GREEN (58q)
+% oracle:  pdflatex 0 errors: the public-domain paragraph, then "2020."
+% expect:  0 errors, 0 warnings.
+\documentclass[sigconf]{acmart}
+\setcopyright{usgov}
+\copyrightyear{2020}
+\begin{document}
+\title{T}
+\author{A. Author}
+\affiliation{\institution{U}\country{X}}
+\maketitle
+Text.
+\end{document}

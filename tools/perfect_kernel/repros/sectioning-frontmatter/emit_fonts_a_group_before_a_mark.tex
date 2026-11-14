@@ -1,0 +1,14 @@
+% mechanism: an entry's font from the digested list, a group opened before its mark (`Event::ink_font`, `\\lx@fm@entry@font`)
+% witness: 1208.4825, 2203.00365
+% oracle:  pdflatex 0 errors; small affiliations
+% engines: rust S0: dropped; perl: no such step
+% expect:  0 errors, 0 warnings; `<text fontsize="90%">` on each entry
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ {\small $^{1}$Univ A, Town}\\ {\small $^{2}$Univ B, City}}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,28 @@
+% elsarticle's `\maketitle` written inside `{frontmatter}`: pdflatex prints the title page there and once more at
+% `\end{frontmatter}` (elsarticle.cls:1303), the same fields both times. Our `\maketitle` notes the print (the deposit)
+% and empties the kernel's fields, so the binding's `\end{frontmatter}` notes nothing again (`\lx@note@title@page` only
+% when no print was noted): the check reads the `\maketitle`'s print, and the words the document's own macro added to
+% `\@title` are counted, as when `\end{frontmatter}` alone prints it.
+% witness: elsarticle 2312.03765's shape (`\subjclass` into `\@title`), with the document's `\maketitle`
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Linear extensions", "Waldemar Sieg", the page foot's "2010
+%          Mathematics subject classification. Primary: 26A15.", the title page twice, "1. Intro", "Text."
+% engines: rust int139a1 = 0 errors, 1 warning (the `\maketitle`'s print); perl = 0 errors, the classification lost
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "2010 mathematics subject classification primary")
+% status:  GREEN (107d: the print a `\maketitle` noted is not replaced by an emptied one)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\makeatletter
+\newcommand{\subjclass}[2][2010]{%
+  \let\@oldtitle\@title
+  \gdef\@title{\@oldtitle\footnotetext{#1 \emph{Mathematics subject classification.} #2}}}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{Linear extensions}
+\author{Waldemar Sieg}
+\subjclass{Primary: 26A15.}
+\maketitle
+\end{frontmatter}
+\section{Intro}
+Text.
+\end{document}

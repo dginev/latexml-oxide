@@ -1,0 +1,1326 @@
+//! Red/green guards for perfect-kernel phase-59 batches: the TikZ performance levers (59a) and
+//! the wheelchart pgfmath roots (59b).
+use latexml::util::test::{assert_element, check_all_requirements, loads};
+
+use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
+
+/// 59a: number scanning keeps the token after the signs in hand (tex.web §440), but an undefined
+/// conditional met there is read again as its error stub (`\iffalse`, State.pm:537-545), as Perl's
+/// chain of reads does: `\ifnum\ifdraft 1\else 0\fi=0` is true. Kept in hand, it fell to "Missing
+/// number". Repro expansion-primitives/undefined_conditional_in_a_number_expands.
+#[test]
+fn undefined_conditional_in_a_number_expands() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/undefined_conditional_in_a_number_expands.tex"
+  );
+  assert_elements(tex, RAW, (1, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>yes.</p></para>"##,
+  )]);
+}
+
+/// 59a: the same in a dimension scan (`read_dimension`): the stub is read again before the
+/// internal dimension and glue are tested, so `\ifcompact\columnwidth\else\textwidth\fi` is
+/// `\textwidth` (kept in hand it was 0pt and the left-over `\textwidth` assigned 0 to itself).
+/// Repro expansion-primitives/undefined_conditional_in_a_dimension_expands.
+#[test]
+fn undefined_conditional_in_a_dimension_expands() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/undefined_conditional_in_a_dimension_expands.tex"
+  );
+  assert_elements(tex, RAW, (3, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>A:[345.0pt]</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>B:[7.0pt]</p></para>"##,
+    ),
+    ("para", "p3", r##"<para xml:id="p3"><p>C:yes.</p></para>"##),
+  ]);
+}
+
+/// 59a: an undefined conditional that ends a factor's digits is read again as its stub before
+/// the decimal point is tested (Perl `readFactor`, Gullet.pm:876-880): `1\ifFa\else.5\fi pt` is
+/// 1.5pt, not 1pt and an "Illegal unit". Repro
+/// expansion-primitives/undefined_conditional_after_digits_expands.
+#[test]
+fn undefined_conditional_after_digits_expands() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/undefined_conditional_after_digits_expands.tex"
+  );
+  assert_elements(tex, RAW, (1, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>A:[1.5pt]</p></para>"##,
+  )]);
+}
+
+/// 59b (wheelchart root 1): pgfmath's `?:` binds looser than the comparisons and `&&`/`||`
+/// (pgfmathparser.code.tex:898-916), chained ternaries group to the left; the chosen branch keeps
+/// its form (`7`, `-1.0`, `5.0`), as does `ifthenelse`'s (an integer still ends an `\ifnum`).
+/// wheelchart's `arc data dir={\WCmidangle<180?1:-1}` was 0 and walked a zero-length arc forever.
+/// Repro graphics-tikz/pgfmath_ternary_after_a_comparison.
+#[test]
+fn pgfmath_ternary_after_a_comparison() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_ternary_after_a_comparison.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>[-1.0][7][0][5.0]</p></para>"##,
+    ),
+    ("para", "p2", r##"<para xml:id="p2"><p>[4]A[1]</p></para>"##),
+  ]);
+}
+
+/// 59b (wheelchart root 2): `\pgfmathsetlength\reg{+…}` reads from its argument alone (pgf's
+/// `#1#2\unskip`, pgfmathcalc.code.tex:30-38), so the `\ifdim` after it compares the new value;
+/// a skip register takes glue, a mu register mu glue; tokens after the value are typeset after the
+/// assignment. Repro graphics-tikz/pgfmathsetlength_reads_only_its_argument.
+#[test]
+fn pgfmathsetlength_reads_only_its_argument() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmathsetlength_reads_only_its_argument.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>N[1.0pt plus 2.0pt]</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>CXY[3.0pt]D[3.0mu]</p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p>EXF[2.0pt]</p></para>"##,
+    ),
+  ]);
+}
+
+/// 59b (wheelchart root 3): pgfmath's `width("…")`/`height("…")`/`depth("…")` measure the typeset
+/// text (Perl pgfmath.code.tex.ltxml:523-537), as pdflatex does. Repro
+/// graphics-tikz/pgfmath_width_of_a_string.
+#[test]
+fn pgfmath_width_of_a_string() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_width_of_a_string.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[13.05559][6.83331][1.94444]</p></para>"##,
+  )]);
+}
+
+/// 59b (wheelchart root 4): a pgfmath string result holding an internal control word
+/// (`\,` expanded to `\lx@thinspace`) is read back with `@` a letter in the document body; an
+/// undefined `@`-name is not (`"\relax@x"` stays `\relax` then `@x`).
+/// Repro graphics-tikz/pgfmath_string_result_keeps_internal_names.
+#[test]
+fn pgfmath_string_result_keeps_internal_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_string_result_keeps_internal_names.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      "<para xml:id=\"p1\"><p>C\u{2009}%D</p></para>",
+    ),
+    ("para", "p2", r##"<para xml:id="p2"><p>[@x]</p></para>"##),
+  ]);
+}
+
+/// 59b: a user-declared pgfmath function keeps its result's form (an integer `\pgfmathresult`
+/// stays an integer) and receives integer arguments as integers, so `?:`, `ifthenelse` and
+/// `\ifnum` on its result behave as in pgf. Repro
+/// graphics-tikz/pgfmath_user_function_keeps_integer_form.
+#[test]
+fn pgfmath_user_function_keeps_integer_form() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_user_function_keeps_integer_form.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[1][1][1.0][7][6.0]YES</p></para>"##,
+  )]);
+}
+
+/// 59b: a user-declared pgfmath function whose result is not a number runs its body once and is
+/// reported once (its counter steps once). Repro graphics-tikz/pgfmath_user_function_runs_once.
+#[test]
+fn pgfmath_user_function_runs_once() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_user_function_runs_once.tex"
+  );
+  assert_elements(tex, RAW, (1, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[1]</p></para>"##,
+  )]);
+}
+
+/// 59b: a pgfmath expression is evaluated in one group, as `\pgfmathparse` does
+/// (pgfmathparser.code.tex:21, :145-148; KPE #421): a tikzmath function's parameter does not
+/// outlive the parse (2605.28612's `\CircleCenterX1` read 111 cm), and a later call of the same
+/// parse sees an earlier one's local definitions. Repro
+/// graphics-tikz/pgfmath_function_body_is_grouped.
+#[test]
+fn pgfmath_function_body_is_grouped() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_function_body_is_grouped.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    ("para", "p1", r##"<para xml:id="p1"><p>[0]</p></para>"##),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>[5.0][1]U</p></para>"##,
+    ),
+  ]);
+}
+
+/// 59d: what code appends to `\@author` after `\author` stored it is the author block LaTeX prints
+/// with the names; at `\maketitle` it is handed to the creators as author-block rows
+/// (`\lx@author@tail`, frontmatter_stores.rs), not dropped (Perl drops it). An unmarked row after a
+/// marked one continues it, in source order (62zl, `affiliation_calls`; before, the marked row was
+/// placed after the unmarked one). Repro sectioning-frontmatter/author_block_appended_after_author_is_kept.
+#[test]
+fn author_block_appended_after_author_is_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_appended_after_author_is_kept.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>A. Author</personname><contact \
+     role=\"authorblock\">Affiliation one<break/>Emails: a@b.c</contact></creator>",
+  );
+}
+
+/// 59d: the extended T2A letters print through t2aenc.def's `\DeclareTextSymbol`s; the fontenc
+/// binding's empty stubs made the declarations refuse the bare commands, so ј љ њ ћ ђ џ і ї є ґ
+/// vanished (serbian-def-cyr/proba, cmpj/template). Since 77s ј і Ј, set in the Latin slots j i J, are the
+/// Cyrillic letters (OXIDIZED_DESIGN_DIVERGENCES #776; they read Latin j/i/J before). Repro
+/// fonts-nfss/t2a_extended_letters_print.
+#[test]
+fn t2a_extended_letters_print() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/t2a_extended_letters_print.tex");
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    "<para xml:id=\"p1\"><p>\u{0458}љњћђџ \u{0408}ЉЊЋЂЏ ґє\u{0456}ї ж</p></para>",
+  )]);
+}
+
+/// 59d: a class whose `\author` appends (one `\author`/`\affil` pair per author) gives each author the
+/// rows appended after it (`\lx@author@flush`), not the last author's rows to all. Repro
+/// sectioning-frontmatter/author_block_follows_each_author.
+#[test]
+fn author_block_follows_each_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_follows_each_author.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  // (whole creator elements, whitespace aside)
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  for creator in [
+    "<creatorrole=\"author\"><personname>AliceA</personname><contactrole=\"authorblock\">InstX</contact></creator>",
+    "<creatorbefore=\"\"role=\"author\"><personname>BobB</personname><contactrole=\"authorblock\">InstY</contact></creator>",
+  ] {
+    assert!(flat.contains(creator), "{creator} in {xml}");
+  }
+}
+
+/// 59d: the author block after a second, replacing `\author` goes to every creator that call made
+/// (counted after the earlier authors are removed). Repro
+/// sectioning-frontmatter/author_block_after_a_replaced_author.
+#[test]
+fn author_block_after_a_replaced_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_after_a_replaced_author.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  for creator in [
+    "<creatorrole=\"author\"><personname>AliceA</personname><contactrole=\"authorblock\">Email:all@y.org</contact></creator>",
+    "<creatorbefore=\"\"role=\"author\"><personname>BobB</personname><contactrole=\"authorblock\">Email:all@y.org</contact></creator>",
+    "<creatorbefore=\"\"role=\"author\"><personname>CarolC</personname><contactrole=\"authorblock\">Email:all@y.org</contact></creator>",
+  ] {
+    assert!(flat.contains(creator), "{creator} in {xml}");
+  }
+  // the replaced author is gone: exactly the three creators of the second call
+  assert_eq!(
+    flat.matches("<creator").count(),
+    3,
+    "three creators in {xml}"
+  );
+  assert!(
+    !flat.contains("Xavier"),
+    "the replaced author is dropped in {xml}"
+  );
+}
+
+/// 59e: fancyhdr's `\f@nch@setoffs`, re-run by a document after `\newgeometry` (the wheelchart manual),
+/// sizes running heads only, and converts to nothing. Repro singletons/fancyhdr_setoffs_after_newgeometry.
+#[test]
+fn fancyhdr_setoffs_after_newgeometry() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/fancyhdr_setoffs_after_newgeometry.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Body.</p></para>"##,
+  )]);
+}
+
+/// 59e: text right before an abstract, the cover its first flush wraps as `<titlepage>`, is closed
+/// before it moves (was: `Error:malformed:ltx:document` at `\end{document}`). Repro
+/// sectioning-frontmatter/abstract_after_body_text.
+#[test]
+fn abstract_after_body_text() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/abstract_after_body_text.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "abstract",
+    "abstract1",
+    r##"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>x</p></abstract>"##,
+  )]);
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  assert!(
+    flat.contains("<titlepage><blockxml:id=\"p1\"><p>foo</p></block></titlepage><abstract"),
+    "the cover, then the abstract, in {xml}"
+  );
+}
+
+/// 59f: an abstract ends the paragraph it interrupts (LaTeX's begins with `\par`): text after it is a
+/// paragraph of its own, after the abstract. Repro sectioning-frontmatter/abstract_ends_the_open_paragraph.
+#[test]
+fn abstract_ends_the_open_paragraph() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/abstract_ends_the_open_paragraph.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  assert!(
+    flat.contains(
+      "<titlepage><blockxml:id=\"p1\"><p>foo</p></block></titlepage><abstractinlist=\"toc\"name=\"Abstract\"xml:id=\"abstract1\"><p>x</p></abstract><paraxml:id=\"p2\"><p>bar</p></para>"
+    ),
+    "foo, the abstract, then bar in {xml}"
+  );
+  // (the paragraph `\par` ends has no trailing newline)
+  assert!(
+    xml.contains("<p>foo</p>"),
+    "foo's paragraph ends at the abstract in {xml}"
+  );
+}
+
+/// 59g: a document's `\newcommand` of a name a fallback class (OmniBus) defined wins: `\abst` is the
+/// document's absolute value, not OmniBus's abstract alias. Repro singletons/omnibus_alias_shadows_newcommand.
+#[test]
+fn omnibus_alias_yields_to_newcommand() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/omnibus_alias_shadows_newcommand.tex"
+  );
+  // (one Warning: the class has no binding, OmniBus stands in)
+  let xml = assert_elements(tex, RAW, (0, 1), &[]);
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  assert!(
+    flat.contains(
+      r#"<Mathmode="inline"tex="\frac{1}{|a|}"text="1/absolute-value@(a)"xml:id="p1.m1"><XMath><XMApp><XMTokmathstyle="text"meaning="divide"role="FRACOP"/><XMTokfontsize="70%"meaning="1"role="NUMBER">1</XMTok><XMDual><XMApp><XMTokmeaning="absolute-value"/><XMRefidref="p1.m1.1"/></XMApp><XMWrap><XMTokfontsize="70%"role="OPEN"stretchy="false">|</XMTok><XMTokfont="italic"fontsize="70%"role="UNKNOWN"xml:id="p1.m1.1">a</XMTok><XMTokfontsize="70%"role="CLOSE"stretchy="false">|</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#
+    ),
+    "the document's \\abst in {xml}"
+  );
+  assert!(!xml.contains("abstract"), "no abstract opened in {xml}");
+}
+
+/// 59h: a raw float end that calls the kernel's `\@endfloatbox` (floatrow's `\float@dblend` for a
+/// `\DeclareNewFloatType`) on the `{@float}`/`{@dblfloat}` binding's own frame closes nothing the
+/// binding did not open: the `\egroup\color@endbox` of `\@xfloat`'s box go with it (3 errors per
+/// float before). Witness kaytannollista-latexia. Repro
+/// captions-floats/floatrow_new_float_type_closes_its_box.
+#[test]
+fn floatrow_new_float_type_closes_its_box() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_new_float_type_closes_its_box.tex"
+  );
+  // (floatrow's float names are `Esim~<n>`: a no-break space, but in the typed reference)
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "float",
+      "esim1",
+      "<float class=\"ltx_float_esim\" inlist=\"loesim\" xml:id=\"esim1\"><tags><tag>Esim\u{a0}1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Esim 1</tag></tags><p>x</p><toccaption><tag close=\" \">1</tag>A</toccaption><caption><tag close=\" \">Esim\u{a0}1</tag>A</caption></float>",
+    ),
+    (
+      "float",
+      "esim2",
+      "<float class=\"ltx_float_esim\" inlist=\"loesim\" xml:id=\"esim2\"><tags><tag>Esim\u{a0}2</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Esim 2</tag></tags><p>y</p><toccaption><tag close=\" \">2</tag>B</toccaption><caption><tag close=\" \">Esim\u{a0}2</tag>B</caption></float>",
+    ),
+  ]);
+}
+
+/// 59h: a box a raw opener makes itself (`\color@vbox\normalcolor\vbox\bgroup`…`\@floatboxreset`,
+/// commedit's and examplep's shape) keeps `\@endfloatbox`'s closers, in the text and in a figure.
+/// Repro captions-floats/raw_float_box_keeps_its_closers.
+#[test]
+fn raw_float_box_keeps_its_closers() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/raw_float_box_keeps_its_closers.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p2",
+      r##"<para vattach="bottom" xml:id="p2"><p>Inside the box.</p></para>"##,
+    ),
+    ("para", "p3", r##"<para xml:id="p3"><p>After.</p></para>"##),
+    (
+      "figure",
+      "S0.F1",
+      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom">Box in a figure.</p><toccaption><tag close=" ">1</tag>F</toccaption><caption><tag close=": ">Figure 1</tag>F</caption></figure>"##,
+    ),
+  ]);
+}
+
+/// 59i: a tcolorbox listing box's `hypertarget=` names its listing: the begin line's `*[boxb]`
+/// (`{ s o }`, read by listings' raw reader alone) reaches the options' `#2`, and the box's phantom
+/// code runs at the start of the listing's first line, as tcolorbox runs it inside the box; a box
+/// without the optional makes no anchor (`\IfValueT` of xparse's no-value marker). Witness
+/// jsonparse-doc (7 dangling links). Repro captions-floats/tcb_listing_keeps_its_hypertarget.
+#[test]
+fn tcb_listing_keeps_its_hypertarget() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/tcb_listing_keeps_its_hypertarget.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p2",
+    r##"<para xml:id="p2"><listing class="ltx_lstlisting" data="fHN0b3JlIGlufD17PHRsPn0=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><anchor xml:id="boxb"/>|<text class="ltx_lst_identifier">store</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">in</text>|={&lt;<text class="ltx_lst_identifier">tl</text>&gt;}</listingline></listing><listing class="ltx_lstlisting" data="fGdsb2JhbHw=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx2"><anchor xml:id="boxc"/>|<text class="ltx_lst_identifier">global</text>|</listingline></listing><listing class="ltx_lstlisting" data="fG5vbmV8" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx3">|<text class="ltx_lst_identifier">none</text>|</listingline></listing><p>Links: <ref idref="boxa">A</ref>, <ref idref="boxb">B</ref>, <ref idref="boxc">C</ref>.</p></para>"##,
+  )]);
+  // the plain box keeps its own target
+  assert_element(
+    &xml,
+    "anchor",
+    &["xml:id=\"boxa\""],
+    r#"<anchor xml:id="boxa"/>"#,
+  );
+}
+
+/// 59i: a listing box's `label=` names its own listing (its first line; run before the listing,
+/// the label named the element before it), and `step=` steps its counter; 78g: the first line takes the box counter's
+/// number, which `\ref` prints (each `[auto counter]` box "1"; OXIDIZED_DESIGN_DIVERGENCES #813). Repro
+/// captions-floats/tcb_listing_label_names_its_listing.
+#[test]
+fn tcb_listing_label_names_its_listing() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/tcb_listing_label_names_its_listing.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><listing class="ltx_lstlisting" data="YSBi" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:first" xml:id="lstnumberx1"><tags><tag role="refnum">1</tag></tags><text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">b</text></listingline></listing><listing class="ltx_lstlisting" data="YyBk" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:second" xml:id="lstnumberx2"><tags><tag role="refnum">1</tag></tags><text class="ltx_lst_identifier">c</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">d</text></listingline></listing><listing class="ltx_lstlisting" data="ZSBm" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">e</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">f</text></listingline></listing><p>See <ref labelref="LABEL:first"/>, <ref labelref="LABEL:second"/>; section 1.</p></para>"##,
+  )]);
+}
+
+/// 59i review: a tcolorbox listing box's begin-line arguments read as xparse reads them — a brace
+/// group hides a `]` (`[{a]b}]` was a Fatal: unbalanced stand-in), an absent `!O{dflt}` is its
+/// default, a leading-optional signature (`{ o s }`) still reads a later `*` (the raw reader's
+/// pushback branch), and an empty listing keeps its phantom code (anchor `boxe`, `step=demo`) on
+/// one empty line, the only place a `listing` has. Repro
+/// captions-floats/tcb_listing_begin_line_edge_cases.
+#[test]
+fn tcb_listing_begin_line_edge_cases() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/tcb_listing_begin_line_edge_cases.tex"
+  );
+  let listing = |data: &str, n: usize| {
+    format!(
+      r##"<listing class="ltx_lstlisting" data="{data}" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx{n}"><text class="ltx_lst_identifier">x</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>{n}</listingline></listing>"##
+    )
+  };
+  let paras = [
+    format!(r#"<para xml:id="p1">{}<p>A: nostar:a]b.</p></para>"#, listing("eCA9IDE=", 1)),
+    format!(r#"<para xml:id="p2">{}<p>B: star:none.</p></para>"#, listing("eCA9IDI=", 2)),
+    format!(r#"<para xml:id="p3">{}<p>C: dflt.</p></para>"#, listing("eCA9IDM=", 3)),
+    format!(r#"<para xml:id="p4">{}<p>D: star.</p></para>"#, listing("eCA9IDQ=", 4)),
+    r##"<para xml:id="p5"><listing class="ltx_lstlisting" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx5"><anchor xml:id="boxe"/></listingline></listing><p>E: 2, <ref idref="boxe">to the box</ref>.</p></para>"##.to_string(),
+  ];
+  assert_elements(tex, RAW, (0, 0), &[
+    ("para", "p1", &paras[0]),
+    ("para", "p2", &paras[1]),
+    ("para", "p3", &paras[2]),
+    ("para", "p4", &paras[3]),
+    ("para", "p5", &paras[4]),
+  ]);
+}
+
+/// 59j: a package that installs the kernel's checking `\fontencoding` (luatexja, lltjfont.sty:549-551,
+/// :573-574 = latex.ltx:10490-10492) never sees LaTeXML's private `ASCII` font map, which `\UrlFont`
+/// and `\verbatim@font` select through `\lx@fontencoding` — qworld's 7 "Encoding scheme `ASCII'
+/// unknown" (one per `\url`), 33 in 11 luatexja manuals. `~`/`^` stay ASCII. Repro
+/// fonts-nfss/url_font_survives_a_checking_fontencoding.
+#[test]
+fn url_font_survives_a_checking_fontencoding() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/url_font_survives_a_checking_fontencoding.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>A <ref class="ltx_nolink ltx_url" font="typewriter" href="https://ctan.org/pkg/q~orld">https://ctan.org/pkg/q~orld</ref> B</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>C <text font="typewriter">x~y^z</text> D</p></para>"##,
+    ),
+  ]);
+}
+
+/// 59k: an `\index`/`\glossary` entry is the string `\@wrindex`/`\@wrglossary` write under `\@sanitize`
+/// (latex.ltx:17720-17740, :1778), so its `&` is a literal & in the indexphrase and its key, not a
+/// `Stray alignment` (robustsample.tex:45/:59, robustglossary's `formula&explanation`); `\@index`
+/// reverts to nothing, as Perl's (latex_constructs.pool.ltxml:4409-4412), so a formula holding an
+/// `\index` keeps its own tex=. The entry sits one brace level in, so in an alignment its `&` ends no
+/// cell (an `align` lost the rest of the document), and its neutral font keeps the text encoding
+/// (T1 `<`, not OT1 `¡`). Repro index-bib/index_entry_ampersand_is_literal.
+#[test]
+fn index_entry_ampersand_is_literal() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/index_entry_ampersand_is_literal.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>G: Text.<indexmark inlist="glo"><indexphrase key="B&amp;Borel subgroup"><Math mode="inline" tex="B" text="B" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">B</XMTok></XMath></Math>&amp;Borel subgroup</indexphrase></indexmark></p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>I: Text.<indexmark><indexphrase key="B&amp;Borel"><Math mode="inline" tex="B" text="B" xml:id="p2.m1"><XMath><XMTok font="italic" role="UNKNOWN">B</XMTok></XMath></Math>&amp;Borel</indexphrase></indexmark></p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p>Math <Math mode="inline" tex="x+y" text="x + y" xml:id="p3.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math><indexmark><indexphrase key="inmath">inmath</indexphrase></indexmark> end.</p></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><p><text font="bold">Bold<indexmark><indexphrase key="plainword">plainword</indexphrase></indexmark></text> text.</p></para>"##,
+    ),
+    // in an alignment cell the entry's `&` ends no cell: the `<{X}` template stays after the entry
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center"><text font="bold">e<indexmark><indexphrase key="y&amp;z">y&amp;z</indexphrase></indexmark>X</text></td><td align="center">f</td></tr></tbody></tabular></para>"##,
+    ),
+    // in `align`, both equations and the paragraph after it; under T1 the entry's `<` stays `<`
+    (
+      "para",
+      "p6",
+      r##"<para xml:id="p6"><equationgroup class="ltx_eqn_align" xml:id="S0.EGx1"><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><indexmark><indexphrase key="x&amp;y">x&amp;y</indexphrase></indexmark><MathFork><Math tex="\displaystyle a=b" text="a = b" xml:id="S0.E1.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=b" text="absent = b" xml:id="S0.E1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle c=d" text="c = d" xml:id="S0.E2.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle c" text="c" xml:id="S0.E2.m1"><XMath><XMTok font="italic" role="UNKNOWN">c</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=d" text="absent = d" xml:id="S0.E2.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup><p>After the alignment, T1: x<indexmark><indexphrase key="a&lt;b&gt;c">a&lt;b&gt;c</indexphrase></indexmark>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 59l: biblatex-ext's add-on packages (tabular bibliographies, open-access symbols) are raw-loaded over
+/// the biblatex binding instead of re-running it, so `\defbibtabular`/`\printbibtabular`/`\oasymbol`
+/// exist; the tabular worker prints the binding's bibliography (its rows filter with biblatex
+/// internals the binding stands in for). The biblatex-ext manual lost its last two sections to the
+/// undefined commands (10 errors -> 1). Repro index-bib/biblatex_ext_addons_load.
+#[test]
+fn biblatex_ext_addons_load() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_ext_addons_load.tex");
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Text <cite class="ltx_citemacro_cite"><bibref bibrefs="sigfridsson" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref></cite>. Symbol: defined.</p></para>"##,
+    ),
+    (
+      "bibliography",
+      "bib",
+      r##"<bibliography bibstyle="biblatex" citestyle="authoryear" files="biblatex-examples.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"##,
+    ),
+  ]);
+}
+
+/// 59l: biblatex-ext-oa's `\apptocmd` patches of the `begentry` and `doi+eprint+url` bibmacros
+/// (biblatex-ext-oa.sty:401, :429) find no bibmacro — the binding's `\newbibmacro` stores none — so
+/// the package warns "Failed to patch" (an accurate warning: no open-access mark prints) under each
+/// symbol package it loads, and converts otherwise. Repro index-bib/biblatex_ext_oa_patches_warn.
+#[test]
+fn biblatex_ext_oa_patches_warn() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_ext_oa_patches_warn.tex");
+  for backend in ["tikz", "l3draw", "pict2e"] {
+    let tex = tex.replace("symbolpackage=tikz", &format!("symbolpackage={backend}"));
+    assert_elements_with(
+      &tex,
+      RAW,
+      (0, 1),
+      &["Failed to patch 'begentry' bibmacro"],
+      &[
+        (
+          "para",
+          "p1",
+          r##"<para xml:id="p1"><p>Text <cite class="ltx_citemacro_cite"><bibref bibrefs="sigfridsson" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref></cite>. Symbol: defined.</p></para>"##,
+        ),
+        (
+          "bibliography",
+          "bib",
+          r##"<bibliography bibstyle="biblatex" citestyle="authoryear" files="biblatex-examples.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"##,
+        ),
+      ],
+    );
+  }
+}
+
+/// 59l: an open-access symbol package loaded without biblatex (biblatex-ext.tex:3927, "stand-alone")
+/// does not bring the biblatex binding in, so the document's natbib bibliography stays: only an
+/// overlay that loads biblatex itself (biblatex-cv) falls back to the binding. Repro
+/// index-bib/biblatex_ext_symbol_package_alone. The tag carries plainnat's order, `sort="true"` (GA3,
+/// OXIDIZED_DESIGN_DIVERGENCES #116).
+#[test]
+fn biblatex_ext_symbol_package_alone_keeps_the_bibliography() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/biblatex_ext_symbol_package_alone.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Text. Symbol: defined.</p></para>"##,
+    ),
+    (
+      "bibliography",
+      "bib",
+      r##"<bibliography bibstyle="plainnat" citestyle="authoryear" files="biblatex-examples" inlist="toc" sort="true" xml:id="bib"><title>References</title></bibliography>"##,
+    ),
+  ]);
+}
+
+/// 59m: `\hypertarget`/`\hyperdef` around display material. In running text the anchor is a point
+/// destination before the display — hyperref's default `\Hy@nestingfalse` (hyperref.sty:323) makes
+/// `\hypertarget` `\hyper@@anchor{#1}{\relax}#2` (:4805-4810) — and the localizing walk wraps a node
+/// only where its parent may hold the anchor, so a display in a `\parbox` (philex.sty:136 `\lb`)
+/// leaves its destination in the next paragraph, not inside `ltx:equation`. Both shapes were
+/// `<equation><anchor><Math/></anchor></equation>`, schema-invalid (philexmanual; Perl the same).
+/// Repro block-model/hypertarget_display_text_anchors_before_it.
+#[test]
+fn hypertarget_display_text_anchors_before_it() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/hypertarget_display_text_anchors_before_it.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p><inline-block class="ltx_parbox" vattach="middle" width="142.3pt"><equation class="ltx_centering" xml:id="S0.Ex1"><Math mode="display" tex="x=1" text="x = 1" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math></equation><p align="center"><anchor xml:id="compo"/>.</p></inline-block></p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>A <anchor xml:id="d"/></p><equation xml:id="S0.Ex2"><Math mode="display" tex="y=2" text="y = 2" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></equation><p>b.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 59m (review): a `\hypertarget` around a block in vertical mode — a figure's content, a numbered `equation`,
+/// an `align`, a display with `\text`, a `tabular` — keeps a visible destination, a bare anchor in the paragraph
+/// after the block. The parent check alone let the walk pass a refused `ltx:Math`/`ltx:rule` and wrap generated
+/// text: a figure's `typerefnum` tag (the HTML lost the id), an equation's refnum tag, an `align`'s or a tabular's
+/// last cell, math `XMText` (where the math pass renamed the id: the link dangled). Refused anchor content is one
+/// unit; `ltx:tags` and `ltx:MathBranch` are never entered. Repro
+/// block-model/hypertarget_block_text_keeps_a_visible_destination.
+#[test]
+fn hypertarget_block_text_keeps_a_visible_destination() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/hypertarget_block_text_keeps_a_visible_destination.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F1",
+      r##"<figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule class="ltx_figure_panel" height="28.5pt" panelwidth="0.082" width="28.5pt"/><break class="ltx_break"/><p class="ltx_figure_panel"><anchor xml:id="f"/></p><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="autoref">Equation 1</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="y=2" text="y = 2" xml:id="S0.E1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></equation><p><anchor xml:id="e"/>After e.</p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><equationgroup class="ltx_eqn_align" xml:id="S0.EGx1"><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="autoref">Equation 2</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle y=2" text="y = 2" xml:id="S0.E2.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.E2.m1"><XMath><XMTok font="italic" role="UNKNOWN">y</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=2" text="absent = 2" xml:id="S0.E2.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation><equation xml:id="S0.E3"><tags><tag>(3)</tag><tag role="autoref">Equation 3</tag><tag role="refnum">3</tag></tags><MathFork><Math tex="\displaystyle z=3" text="z = 3" xml:id="S0.E3.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">z</XMTok><XMTok meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle z" text="z" xml:id="S0.E3.m1"><XMath><XMTok font="italic" role="UNKNOWN">z</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=3" text="absent = 3" xml:id="S0.E3.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup><p><anchor xml:id="a"/>After a.</p></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><equation xml:id="S0.Ex1"><Math mode="display" tex="y\text{ if }z" text="y * [ if ] * z" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMText> if </XMText><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMath></Math></equation><p><anchor xml:id="t"/>After t.</p></para>"##,
+    ),
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center">a</td><td align="center">b</td></tr><tr><td align="center">c</td><td align="center">d</td></tr></tbody></tabular><p><anchor xml:id="b"/></p></para>"##,
+    ),
+  ]);
+}
+
+/// 59n: a tblr's outer `evaluate=`/`expand=` preprocess the body as tabularray does before it splits the
+/// cells (`\__tblr_modify_table_body:`, tabularray.sty:3567-3575: the functional library's evaluation,
+/// :8289-8306, `all` :8275-8277; each `expand=` macro once, :3579-3591; `expand+=` appends). The
+/// binding read the table unprocessed, so a function returning rows that start with an empty cell ran
+/// inside the first cell and its `&` met the cell's group ("Stray alignment": the tabularray manual's
+/// last error, tabularray.tex:2859-2870). p4's body redefines its macros as it runs, so only an expansion
+/// before the cells run gives 20/30, 50/60 (the kernel's own expansion gave X/Y, P/Q), with the default
+/// `expand=\rowa` merged with the table's `expand+=\rowb`. Repro
+/// alignment-bindings/tblr_evaluate_and_expand_preprocess_the_body.
+#[test]
+fn tblr_evaluate_and_expand_preprocess_the_body() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tblr_evaluate_and_expand_preprocess_the_body.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td border="l r t" thead="column"/><td align="left" border="r t" thead="column">y</td><td align="left" border="r t" thead="column">y</td><td align="left" border="r t" thead="column">y</td></tr></thead><tbody><tr><td border="l r t"/><td align="left" border="r t">y</td><td align="left" border="r t">y</td><td align="left" border="r t">y</td></tr><tr><td border="b l r t"/><td align="left" border="b r t">y</td><td align="left" border="b r t">y</td><td align="left" border="b r t">y</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="center">AA</td><td align="center">BB</td><td align="center">CC</td></tr><tr><td align="center">20</td><td align="center">30</td><td align="center">40</td></tr><tr><td align="center">50</td><td align="center">60</td><td align="center">70</td></tr><tr><td align="center">DD</td><td align="center">EE</td><td align="center">FF</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left" border="t">Row1</td><td align="left" border="t">1</td></tr><tr><td align="left" border="b t">All</td><td align="left" border="b t">All</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="center" thead="column">a</td><td align="center" thead="column">b</td></tr></thead><tbody><tr><td align="center">20</td><td align="center">30</td></tr><tr><td align="center">50</td><td align="center">60</td></tr></tbody></tabular></para>"##,
+    ),
+  ]);
+}
+
+/// 59o: a g-brief letter's sender and addressee are its frontmatter (user ruling 2026-10-01). The classes print them
+/// only in `\ps@firstpage`'s head and foot (g-brief2.cls:304-426, g-brief.cls:306-360), which LaTeXML never
+/// typesets, so both engines lost every field (SHARED); the bindings hand them to the frontmatter at `\begin{g-brief}`:
+/// a `creator` of role `sender` (name, then a contact per block, labelled as the class labels it; no label where the
+/// class prints none) and one of role `addressee` (postal note, address), with the fields' values at the letter —
+/// setters after it change nothing (the queue digests later). Blank fields leave no contact; g-brief.cls's bank
+/// block needs bank, BLZ and account (its own condition); a return address only when one was set. The HTML renders
+/// both roles in place, each label apart from its value. (`e--Mail:`: a label reaches the `name` attribute untypeset,
+/// RED `sectioning-frontmatter/contact_name_label_keeps_its_ligatures`.) OXIDIZED_DESIGN_DIVERGENCES #412. Repros
+/// sectioning-frontmatter/{gbrief2_letter_sender_and_addressee, gbrief_letter_sender_and_addressee,
+/// gbrief_fields_are_read_at_the_letter}.
+#[test]
+fn gbrief_letter_sender_and_addressee_are_frontmatter() {
+  for (tex, sender, addressee) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/gbrief2_letter_sender_and_addressee.tex"
+      ),
+      r##"<creator role="sender"><personname>Otto Raffzahn</personname><contact name="Adresse:" role="address">Wiesenacker 25a</contact><contact name="Telefon:" role="phone">+49 000 0000000</contact><contact name="Internet:" role="internet">raffzahn@example.com</contact></creator>"##,
+      r##"<creator role="addressee"><contact role="address">Frau<break/>Else Mittellos</contact></creator>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/gbrief_letter_sender_and_addressee.tex"
+      ),
+      r##"<creator role="sender"><personname>Otto Raffzahn</personname><contact role="address">Wiesenacker 25a<break/>D-99533 Weitewelt</contact><contact name="Telefon:" role="phone">+49 000 00000</contact><contact name="e--Mail:" role="email">raffzahn@example.com</contact><contact name="HTTP:" role="http">http://www.example.com</contact><contact name="Bankverbindung:" role="bank">Bankhaus Skrupellos<break/><text fontsize="82%">BLZ</text> 000.000.00<break/><text fontsize="82%">Kto.</text> 000.000.000</contact></creator>"##,
+      r##"<creator role="addressee"><contact role="postal_note">EINSCHREIBEN</contact><contact role="address">Frau<break/>Else Mittellos</contact></creator>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/gbrief_fields_are_read_at_the_letter.tex"
+      ),
+      r##"<creator role="sender"><personname>Otto</personname></creator>"##,
+      r##"<creator role="addressee"><contact role="address">Frau Else</contact></creator>"##,
+    ),
+  ] {
+    let xml = assert_elements(tex, RAW, (0, 0), &[]);
+    assert_element(&xml, "creator", &[r#"role="sender""#], sender);
+    assert_element(&xml, "creator", &[r#"role="addressee""#], addressee);
+  }
+  // The structure XSLT renders both roles in place (the plain `creator` template renders nothing outside a title).
+  let (_, html) = super::perfect_kernel_batch46::convert_html(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/gbrief2_letter_sender_and_addressee.tex"
+  ));
+  assert_element(
+    &html,
+    "div",
+    &[r#"class="ltx_creator ltx_role_sender""#],
+    r##"<div class="ltx_creator ltx_role_sender">
+<span class="ltx_personname">Otto Raffzahn
+</span>
+<span class="ltx_contact ltx_role_address"><span class="ltx_contact_name">Adresse:</span> Wiesenacker 25a</span>
+<span class="ltx_contact ltx_role_phone"><span class="ltx_contact_name">Telefon:</span> +49 000 0000000</span>
+<span class="ltx_contact ltx_role_internet"><span class="ltx_contact_name">Internet:</span> raffzahn@example.com</span>
+</div>"##,
+  );
+  assert_element(
+    &html,
+    "div",
+    &[r#"class="ltx_creator ltx_role_addressee""#],
+    r##"<div class="ltx_creator ltx_role_addressee">
+<span class="ltx_contact ltx_role_address">Frau
+<br class="ltx_break">Else Mittellos</span>
+</div>"##,
+  );
+}
+
+/// 59p: a raw class's `\maketitle` body (replayed by `\lx@deposit@maketitle`) keeps its title-page content. The
+/// replay gate no longer checks a `\newif` switch's dead branch (uantwerpencoursetext's
+/// `\if@copyright\backgroundsetup{…}\fi`, uantwerpencoursetext.cls:474-477; `\unless` inverts it) nor the inside of a
+/// `tikzpicture` (uantwerpenletter's `\path`, :285-292; the tikz binding marks it `replay_gate_scoped_vocabulary:`),
+/// and eso-pic's one-shot overlay inside the replay is the title page's picture (uantwerpenexam.cls:282-401; user
+/// ruling 2026-10-02, OXIDIZED_DESIGN_DIVERGENCES #413), its page positions `\put`s (lni.cls:544-553) and its
+/// arguments checked by its own diagnostics hold, not the gate (the `\def` inside it). Repros
+/// sectioning-frontmatter/{maketitle_replay_skips_a_dead_branch, maketitle_replay_reads_an_environment_as_a_unit,
+/// title_page_overlay_is_the_page_picture, title_page_overlay_places_page_positions}.
+#[test]
+fn maketitle_replay_keeps_its_title_page_content() {
+  for (tex, p1) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_skips_a_dead_branch.tex"
+      ),
+      r##"<para xml:id="p1"><p>CONFIDENTIAL AND PROPRIETARY.Body.</p></para>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_reads_an_environment_as_a_unit.tex"
+      ),
+      r##"<para xml:id="p1"><p>CONFIDENTIAL AND PROPRIETARY.
+<picture height="21.52" width="81.1" xml:id="p1.pic1"><svg:svg height="21.52" overflow="visible" version="1.1" viewBox="0 0 81.1 21.52" width="81.1"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,21.52) matrix(1 0 0 -1 0 0) translate(40.55,0) translate(0,10.76) matrix(1.0 0.0 0.0 1.0 -35.94 -3.46)"><svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:5.14em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="71.11">Subject line</svg:foreignObject></svg:g></svg:svg></picture>Body.</p></para>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_page_overlay_is_the_page_picture.tex"
+      ),
+      r##"<para xml:id="p1"><picture fill="none" height="795.0pt" stroke="none" unitlength="1.0pt" width="614.3pt" xml:id="p1.pic1"><g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)"><picture fill="none" height="0.0pt" stroke="none" unitlength="1.0pt" width="0.0pt" xml:id="p1.pic1.pic1"><g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="167.5pt" transform="translate(99.63,968.59)"><text>Course 5-Bistrologie, exam 2018-01-29</text></g></picture></g></picture><p>Extra info.Body.</p></para>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_page_overlay_places_page_positions.tex"
+      ),
+      r##"<para xml:id="p1"><picture fill="none" height="795.0pt" stroke="none" unitlength="1.0pt" width="614.3pt" xml:id="p1.pic1"><g innerdepth="0.0pt" innerheight="6.9pt" innerwidth="37.9pt" transform="translate(0,0)"><g innerdepth="0.0pt" innerheight="6.9pt" innerwidth="37.9pt" transform="translate(99.63,99.63)"><text>DOI line</text></g></g></picture><p>Extra info.Body.</p></para>"##,
+    ),
+    (
+      // a definition inside the overlay is the overlay's hold's to check (pdflatex 0 errors)
+      "\\documentclass{article}\n\\usepackage{eso-pic}\n\\renewcommand\\maketitle{%\n  \\AddToShipoutPicture*{\\put(72,700){\\def\\lbl{Course}\\lbl}}%\n  Extra info.}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody.\n\\end{document}\n",
+      r##"<para xml:id="p1"><picture fill="none" height="795.0pt" stroke="none" unitlength="1.0pt" width="614.3pt" xml:id="p1.pic1"><g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="30.1pt" transform="translate(99.63,968.59)"><text>Course</text></g></picture><p>Extra info.Body.</p></para>"##,
+    ),
+    (
+      // `\unless` inverts the switch: the live branch is the shown one (pdflatex 0 errors, "SHOWN")
+      "\\documentclass{article}\n\\newif\\ifcopyright\n\\renewcommand\\maketitle{\\unless\\ifcopyright SHOWN\\else\\undefinedthing\\fi}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody.\n\\end{document}\n",
+      r##"<para xml:id="p1"><p>SHOWNBody.</p></para>"##,
+    ),
+  ] {
+    assert_elements(tex, RAW, (0, 0), &[("para", "p1", p1)]);
+  }
+}
+
+/// 59p: a title-page deposit is kept only when it typesets content (`typesets_content`): a body that lays out only
+/// the title fields — all in the frontmatter, emptied for the replay — adds no empty paragraph (KOMA, boek, rapport
+/// title pages; a whatsit's string is its reversion, so `\noindent\par\null` read as text), and titling's
+/// `\thetitle`/`\theauthor`/`\thedate` are emptied with `\@title` (uol-physics-report typeset the title twice).
+/// Repros sectioning-frontmatter/{maketitle_replay_shows_nothing_from_an_emptied_title_page,
+/// maketitle_replay_empties_titling_copies}.
+#[test]
+fn maketitle_replay_adds_nothing_the_frontmatter_has() {
+  for tex in [
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_shows_nothing_from_an_emptied_title_page.tex"
+    ),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_empties_titling_copies.tex"
+    ),
+  ] {
+    assert_elements(tex, RAW, (0, 0), &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Body.</p></para>"##,
+    )]);
+  }
+}
+
+/// 59p: a replay or overlay whose errors discard it (`DiagnosticsHold::discard`) takes back the stubs standing in for
+/// them: the document's own later use of the command reports its error (it was an uncounted `<ERROR>`). A mechanism
+/// probe (pdflatex reports both uses). The groups such a replay leaves open stay open (RED
+/// sectioning-frontmatter/discarded_maketitle_replay_leaves_its_groups_open; closing them broke oegatb).
+#[test]
+fn discarded_replay_takes_back_its_stubs() {
+  // the overlay's error is discarded with its stub: the body's own use is reported
+  assert_elements_with(
+    "\\documentclass{article}\n\\usepackage{eso-pic}\n\\renewcommand\\maketitle{%\n  \\AddToShipoutPicture*{\\put(72,700){\\undefinedthing}}%\n  Extra info.}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody \\undefinedthing{} end.\n\\end{document}\n",
+    RAW,
+    (1, 0),
+    &["The token T_CS[\\undefinedthing] is not defined."],
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Extra info.Body <ERROR class="undefined">\undefinedthing</ERROR> end.</p></para>"##,
+    )],
+  );
+  // a class body that reaches an undefined internal through a defined helper (the gate checks the body's own
+  // vocabulary): the replay is discarded with its stub — and with it "Extra info.", which pdflatex prints after the
+  // error, counted by the title-page check (106s: a loss of printed words, `title_page_check`)
+  assert_elements_with(
+    "\\documentclass{article}\n\\def\\helper{\\undefinedthing}\n\\renewcommand\\maketitle{\\helper Extra info.}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody \\undefinedthing{} end.\n\\end{document}\n",
+    RAW,
+    (1, 1),
+    &[
+      "The token T_CS[\\undefinedthing] is not defined.",
+      "The title page prints 2 word(s) of the document's that its output does not hold: extra info",
+    ],
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Body <ERROR class="undefined">\undefinedthing</ERROR> end.</p></para>"##,
+    )],
+  );
+}
+
+/// 59r: arabi's LAE and LFE font encodings decode to Arabic and Farsi letters. Their text symbols are slots of the
+/// encoding (`\DeclareTextSymbol{\lam}{LAE}{108}`, laeenc.def; `\peh` LFE 112, lfeenc.def), and with no fontmap every
+/// slot decoded to nothing — arabi/samplebook kept only its punctuation (Perl the same). The maps come from the default
+/// fonts' encoding vectors (ararabeyes.enc, farsiwebencoding.enc): a typed `,` in the font is the Arabic comma,
+/// `\llahchar` is lam lam shadda heh, the mirrored `<` `>` slots are the logical « », and a Latin `\textLR` run in an
+/// Arabic paragraph keeps its quote ligatures (tested by its own font, `Document::text_run_font`).
+/// OXIDIZED_DESIGN_DIVERGENCES #415. Repros fonts-nfss/{lae_text_symbols_are_arabic_letters,
+/// lfe_text_symbols_are_farsi_letters}, one conversion each.
+#[test]
+fn arabi_text_symbols_are_arabic_letters() {
+  if !check_all_requirements(&[loads::LAE, &["arabic.ldf"]]) {
+    return;
+  }
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/lae_text_symbols_are_arabic_letters.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      ("para", "p1", r##"<para xml:id="p1"><p>لام، بت.</p></para>"##),
+      ("para", "p2", r##"<para xml:id="p2"><p>اللّه.</p></para>"##),
+      ("para", "p3", r##"<para xml:id="p3"><p>«ل»</p></para>"##),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><p>ل D “q” ل</p></para>"##,
+      ),
+    ],
+  );
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/lfe_text_symbols_are_farsi_letters.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>پاگ، ژی.</p></para>"##,
+      ),
+      ("para", "p2", r##"<para xml:id="p2"><p>اللّه.</p></para>"##),
+      ("para", "p3", r##"<para xml:id="p3"><p>«ل»</p></para>"##),
+    ],
+  );
+}
+
+/// 59s: four kernel-level losses, one conversion. p1: a braced `\openin` name is the name and a `"` is not part of it
+/// (TeX Live's `scan_file_name`, tex.ch `more_name`; `tex_file_name`). p2: no `\fileversion`/`\filedate` is
+/// predefined (latex.ltx defines neither), so a document's `\newcommand` stands. p3: a family LaTeX does not know is
+/// replaced, with the series and shape, by its encoding's defaults (latex.ltx `\wrong@fontshape`, in a group:
+/// `\f@family` keeps its value), so pgf's `\nullfont` does not swallow the node; a document's
+/// `\DeclareFontSubstitution` sets the defaults; a family with a mixed-case `.fd` (here written by `filecontents`) is
+/// known. p4: textpos absolute blocks' text boxes are placed where they are
+/// written (textpos_sty.rs). Repro singletons/file_names_versions_fonts_textblocks.
+#[test]
+fn file_names_versions_fonts_and_textblocks_are_kept() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/file_names_versions_fonts_textblocks.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>OPEN. OPEN. OPEN.</p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><p>Version 0.3d, dated July 5, 2024.</p></para>"##,
+      ),
+      (
+        "para",
+        "p3",
+        r##"<para xml:id="p3"><p>Hello. <picture height="18.83" width="78.49" xml:id="p3.pic1"><svg:svg height="18.83" overflow="visible" version="1.1" viewBox="0 0 78.49 18.83" width="78.49"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,18.83) matrix(1 0 0 -1 0 0) translate(39.24,0) translate(0,9.42) matrix(1.0 0.0 0.0 1.0 -34.63 -4.8)"><svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:4.98em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="68.88">Inside node</svg:foreignObject></svg:g></svg:svg></picture> verdana.<text font="bold">A </text>B<text font="bold">.</text><text font="sansserif">C.</text><text font="italic">D.</text></p></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><p>Alpha <note class="ltx_marginpar" role="margin"><inline-logical-block><para vattach="bottom" xml:id="p4.p1"><p>Bravo</p></para></inline-logical-block></note>and<inline-block vattach="bottom"><p>Charlie</p></inline-block> end.</p></para>"##,
+      ),
+    ],
+  );
+}
+
+/// 59t: `\autoref` names follow hyperref — a class's or document's earlier name stands (`\providecommand*`,
+/// hyperref.sty:8293-8312), `\<type>name` and the counter's name are the fallbacks (`\HyRef@testreftype`), so a
+/// `[theorem]`-numbered proposition is a "Theorem"; a `[theorem]`-numbered claim with its own `\claimautorefname` is a
+/// "Claim" (pdflatex: "Theorem"; OXIDIZED_DESIGN_DIVERGENCES #418). Repro singletons/autoref_names_follow_hyperref.
+#[test]
+fn autoref_names_follow_hyperref() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/autoref_names_follow_hyperref.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1",
+        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Fig. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sf" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="autoref">Fig. 1a</tag><tag role="refnum">1a</tag></tags><toccaption><tag close=" ">a</tag>S</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">S</text></caption></figure><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
+      ),
+      (
+        "theorem",
+        "Thmlemma1",
+        r##"<theorem class="ltx_theorem_lemma" inlist="thm theorem:lemma" labels="LABEL:l" xml:id="Thmlemma1"><tags><tag>Lemma 1</tag><tag role="autoref">Lemma 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Lemma 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Lemma 1</text></tag></title><para xml:id="Thmlemma1.p1"><p><text font="italic">A</text></p></para></theorem>"##,
+      ),
+      (
+        "theorem",
+        "Thmtheorem1",
+        r##"<theorem class="ltx_theorem_prop" inlist="thm theorem:prop" labels="LABEL:p" xml:id="Thmtheorem1"><tags><tag>Proposition 1</tag><tag role="autoref">Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Proposition 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Proposition 1</text></tag></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">B</text></p></para></theorem>"##,
+      ),
+      (
+        "theorem",
+        "Thmtheorem2",
+        r##"<theorem class="ltx_theorem_claim" inlist="thm theorem:claim" labels="LABEL:c" xml:id="Thmtheorem2"><tags><tag>Claim 2</tag><tag role="autoref">Claim 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Claim 2</tag></tags><title class="ltx_runin"><tag><text font="bold">Claim 2</text></tag></title><para xml:id="Thmtheorem2.p1"><p><text font="italic">C</text></p></para></theorem>"##,
+      ),
+    ],
+  );
+}
+
+/// 59t: a babel language's `\autoref` names come through `\extras<lang>` (`\HyLang@DeclareLang`,
+/// hyperref.sty:3120-3180), as babel runs it at `\begin{document}` — over a preamble `\renewcommand` as in pdflatex —
+/// and at a language switch (a French figure is a "figure", hyperref.sty:2852-2869).
+/// The separator is a plain space where pdflatex has U+00A0: RED babel-lang/ngerman_tilde_is_a_nobreak_space.
+/// Repro babel-lang/autoref_names_follow_the_babel_language.
+#[test]
+fn autoref_names_follow_the_babel_language() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/babel-lang/autoref_names_follow_the_babel_language.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1",
+        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Abbildung 1</tag><tag role="autoref">Abbildung 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Abbildung 1</tag></tags><toccaption><tag close=" ">1</tag>Bild</toccaption><caption><tag close=": ">Abbildung 1</tag>Bild</caption></figure>"##,
+      ),
+      (
+        "table",
+        "S0.T1",
+        r##"<table inlist="lot" labels="LABEL:t" xml:id="S0.T1"><tags><tag>Tabelle 1</tag><tag role="autoref">Tabelle 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Tabelle 1</tag></tags><toccaption><tag close=" ">1</tag>Tafel</toccaption><caption><tag close=": ">Tabelle 1</tag>Tafel</caption></table>"##,
+      ),
+      (
+        "figure",
+        "S0.F2",
+        r##"<figure inlist="lof" labels="LABEL:g" xml:id="S0.F2" xml:lang="fr"><tags><tag>Figure 2</tag><tag role="autoref">figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>Image</toccaption><caption><tag close=": ">Figure 2</tag>Image</caption></figure>"##,
+      ),
+    ],
+  );
+}
+
+/// 59t: listings' `linerange` selects the lines shown (`a-b`, `N`; listings.sty:1412-1460), and a `literate` key's
+/// tokens stand for their characters (`{\\Real}` matches `\Real`). Repro singletons/listings_linerange_and_literate_keys.
+#[test]
+fn listings_linerange_and_literate_keys_select_and_replace() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/listings_linerange_and_literate_keys.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><listing class="ltx_lstlisting" data="eCA6IFxSZWFsIC0+IHk=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">x</text><text class="ltx_lst_space"> </text>:<text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\mathbb{R}" text="R" xml:id="lstnumberx1.m1"><XMath><XMTok font="blackboard" role="UNKNOWN">R</XMTok></XMath></Math></text><text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\to" text="to" xml:id="lstnumberx1.m2"><XMath><XMTok name="to" role="ARROW">→</XMTok></XMath></Math></text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">y</text></listingline></listing><listing class="ltx_lstlisting" data="TDEKTDIKTDMKTDQKTDUKTDYKTDc=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx2"><text class="ltx_lst_identifier">L2</text></listingline><listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">L3</text></listingline><listingline xml:id="lstnumberx4"><text class="ltx_lst_identifier">L6</text></listingline></listing><listing class="ltx_lstlisting" data="TTEKTTIKTTMKTTQKTTU=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx5"><text class="ltx_lst_identifier">M4</text></listingline></listing></para>"##,
+    )],
+  );
+}
+
+/// 59t: `\printglossary[title=…]` titles the glossary (glossaries.sty:7546-7548); nomentbl's entries keep their unit
+/// and note (nomentbl.sty:136-142; contrib nomentbl_sty.rs). Repro index/glossary_title_and_nomentbl_columns.
+#[test]
+fn glossary_title_and_nomentbl_columns_are_kept() {
+  if !check_all_requirements(&[loads::GLOSSARIES, &["nomentbl.sty"]]) {
+    return;
+  }
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index/glossary_title_and_nomentbl_columns.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "glossary",
+        "glo.main",
+        r##"<glossary lists="main" xml:id="glo.main"><title>Symbols</title></glossary>"##,
+      ),
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>Use <glossaryref inlist="main" key="d">d</glossaryref>.<glossarydefinition inlist="nomenclature" key="nomencl.1"><glossaryphrase key="nomencl.1" role="sort">aL<Math mode="inline" tex="L" text="L" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">L</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="name"><Math mode="inline" tex="L" text="L" xml:id="p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">L</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="description">length</glossaryphrase><glossaryphrase key="nomencl.1" role="unit">m</glossaryphrase><glossaryphrase key="nomencl.1" role="note">SI base quantity</glossaryphrase><glossaryphrase key="nomencl.1" role="group"><text fontsize="120%">Latin Letters</text></glossaryphrase></glossarydefinition></p></para>"##,
+      ),
+    ],
+  );
+}
+
+/// 59t: `\DeclareUppercaseMapping` and its siblings read the kernel's `o m m` (latex.ltx:22402-22416): a locale
+/// option is consumed, not typeset (polyglossia/babel Latin). Repro babel-lang/casemapping_locale_option_is_read.
+#[test]
+fn casemapping_locale_option_is_read() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/babel-lang/casemapping_locale_option_is_read.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Salve SALVE</p></para>"##,
+    )],
+  );
+}
+
+/// 59u: showexpl's `LTXexample` runs its result in showexpl's preset group (showexpl.sty:88-114, :348-366): a
+/// whole-document example neither ends the conversion nor leaks its `\label`; `caption=`/`label=` caption the code
+/// listing and `preset=` styles the result. Repro singletons/showexpl_whole_document_example.
+#[test]
+fn showexpl_example_result_runs_in_its_preset() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/showexpl_whole_document_example.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "float",
+        "LST1",
+        r##"<float class="ltx_lstlisting" inlist="lol" labels="LABEL:ex:whole" xml:id="LST1"><tags><tag>Listing 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Listing 1</tag></tags><toccaption><tag close=" ">1</tag>Whole document</toccaption><caption><tag close=": ">Listing 1</tag>Whole document</caption><listing class="ltx_lstlisting" data="XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXHVzZXBhY2thZ2V7YW1zbWF0aH0KXGJlZ2lue2RvY3VtZW50fQpJbm5lciB0ZXh0XGxhYmVse2lubmVyfS4KXGVuZHtkb2N1bWVudH0=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1">\<text class="ltx_lst_identifier">documentclass</text>{<text class="ltx_lst_identifier">article</text>}</listingline><listingline xml:id="lstnumberx2">\<text class="ltx_lst_identifier">usepackage</text>{<text class="ltx_lst_identifier">amsmath</text>}</listingline><listingline xml:id="lstnumberx3">\<text class="ltx_lst_identifier">begin</text>{<text class="ltx_lst_identifier">document</text>}</listingline><listingline xml:id="lstnumberx4"><text class="ltx_lst_identifier">Inner</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">text</text>\<text class="ltx_lst_identifier">label</text>{<text class="ltx_lst_identifier">inner</text>}.</listingline><listingline xml:id="lstnumberx5">\<text class="ltx_lst_identifier">end</text>{<text class="ltx_lst_identifier">document</text>}</listingline></listing></float>"##,
+      ),
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p><text fontsize="144%">Inner text.</text></p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><p>See Example <ref labelref="LABEL:ex:whole"/>. After the example.</p></para>"##,
+      ),
+    ],
+  );
+  assert!(
+    !xml.contains("LABEL:inner"),
+    "the example's own \\label leaked:\n{xml}"
+  );
+}
+
+/// algorithmic's `\\` (`\@centercr`, `\unskip\par`) breaks the listing line where pdflatex does, with no space left
+/// before the break and nothing joined across it. Repro `list-structure/algorithmic_line_break.tex` (2605.13790).
+#[test]
+fn algorithmic_line_break() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/list-structure/algorithmic_line_break.tex"),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "listingline",
+        "algx1.l1",
+        r##"<listingline xml:id="algx1.l1"><tags><tag><text fontsize="80%">1:</text></tag><tag role="refnum">1</tag></tags> Taking step on<break/><Math mode="inline" tex="x+y" text="x + y" xml:id="algx1.l1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math></listingline>"##,
+      ),
+      (
+        "listingline",
+        "algx1.l2",
+        r##"<listingline xml:id="algx1.l2"><tags><tag><text fontsize="80%">2:</text></tag><tag role="refnum">2</tag></tags> Two<break/>lines</listingline>"##,
+      ),
+      (
+        "listingline",
+        "algx1.l3",
+        r##"<listingline xml:id="algx1.l3"><tags><tag><text fontsize="80%">3:</text></tag><tag role="refnum">3</tag></tags> Spaced<break/>out</listingline>"##,
+      ),
+      (
+        "listingline",
+        "algx1.l4",
+        r##"<listingline xml:id="algx1.l4"><tags><tag><text fontsize="80%">4:</text></tag><tag role="refnum">4</tag></tags> Ends here<break/></listingline>"##,
+      ),
+      (
+        "listingline",
+        "algx1.l5",
+        r##"<listingline xml:id="algx1.l5"><tags><tag><text fontsize="80%">5:</text></tag><tag role="refnum">5</tag></tags> Next</listingline>"##,
+      ),
+    ],
+  );
+  // A `\\` with no listing line open (pdflatex: "There's no line here to end"; `\@nolnerr` is Perl's no-op) writes
+  // no `<break/>` into `<listing>`, where the schema has none (A/B 2605.30102: 6 "isn't allowed" errors).
+  let xml = assert_elements(
+    "\\documentclass{article}\\usepackage{algorithmic}\\begin{document}\\begin{algorithmic}\n\\\\\n\\STATE x\n\\end{algorithmic}\\end{document}",
+    RAW,
+    (0, 0),
+    &[(
+      "listingline",
+      "algx1.l1",
+      r##"<listingline xml:id="algx1.l1"><tags><tag role="refnum">1</tag></tags> x</listingline>"##,
+    )],
+  );
+  assert!(
+    !xml.contains("<break"),
+    "a break outside a listing line:\n{xml}"
+  );
+}
+
+/// 60b: montex's LMC encoding decodes to the Cyrillic the kmr fonts draw (lmcenc.def, mccoding.mf) and its ligature
+/// program composes the umlaut letters and digraphs (kmr10.tfm LIGTABLE); Perl falls back to OT1 and reads Latin
+/// transliteration (KNOWN_PERL_ERRORS #438). Repro fonts-nfss/lmc_encoding_prints_cyrillic (montex, mlsquick).
+#[test]
+fn lmc_encoding_prints_cyrillic() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/lmc_encoding_prints_cyrillic.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>Халх өндөр хувьсгал «А» 200 ₮ №</p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><p>яа ёо юу й Я Ё Ю Й ыл</p></para>"##,
+      ),
+      (
+        "para",
+        "p3",
+        r##"<para xml:id="p3"><p>шууд щи ЩА Сһиг</p></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><p>ЭЁЙӨҮ эёйөү</p></para>"##,
+      ),
+      ("para", "p5", r##"<para xml:id="p5"><p>ө Ө</p></para>"##),
+      (
+        "para",
+        "p6",
+        r##"<para xml:id="p6"><p><text font="typewriter">э &lt;&lt;А&gt;&gt; \{}_"|</text></p></para>"##,
+      ),
+      ("para", "p7", r##"<para xml:id="p7"><p>a”о</p></para>"##),
+      (
+        "para",
+        "p8",
+        r##"<para xml:id="p8"><p>?‘ !‘ яав</p></para>"##,
+      ),
+      (
+        "para",
+        "p9",
+        r##"<para xml:id="p9"><p>“Халх” ”</p></para>"##,
+      ),
+      ("para", "p10", r##"<para xml:id="p10"><p>”o</p></para>"##),
+      ("para", "p11", r##"<para xml:id="p11"><p>”’о</p></para>"##),
+    ],
+  );
+}
+
+/// 60d: a class's `\maketitle` that is only a table typesets something: `typesets_content` reads a tabular whatsit's
+/// `alignment` property, so the replay is kept (simplecv/testcv, brandeis-problemset/example lost their title tables
+/// at 59p; sweep #136). Repro sectioning-frontmatter/maketitle_class_table_is_kept.
+#[test]
+fn maketitle_class_table_is_kept() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_class_table_is_kept.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para class="ltx_noindent" xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">Hamlet Street</td></tr></tbody></tabular></para>"##,
+    )],
+  );
+}
+
+/// 60f: `\noindent` and `\indent` start a paragraph whose indent box, if any, is listed before `\everypar` is read
+/// (tex.web §1091 `new_graf`: `begin_token_list(every_par)` after the box), so the hook's text follows the command's
+/// whatsit and the paragraph keeps `ltx_noindent`/`ltx_indent`; digested in the command's before-digest, the hook's
+/// text opened the `ltx:p` first and the class was lost. Repro block-model/noindent_class_survives_everypar.
+#[test]
+fn noindent_keeps_its_class_under_everypar() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/noindent_class_survives_everypar.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para class="ltx_noindent" xml:id="p1"><p>Alpha.</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para class="ltx_noindent" xml:id="p2"><p>[ep]Bravo.</p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p>[ep]Charlie.</p></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para class="ltx_indent" xml:id="p4"><p>[ep]Delta.</p></para>"##,
+    ),
+  ]);
+}

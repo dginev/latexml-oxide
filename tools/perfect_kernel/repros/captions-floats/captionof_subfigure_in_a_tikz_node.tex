@@ -1,0 +1,24 @@
+% witness: 2008.05535 (`\captionof{subfigure}{…}` in a TikZ `\node` inside a figure; 77k)
+% oracle:  pdflatex 2 errors ("Package caption Error: Should not be used with subtype `subfigure'", caption.sty:346-352,
+%          and TikZ's "Giving up on this path"): "Figure 1: Normalized vertiport capacity = 1", "Figure 2: Whole.",
+%          "Text after."
+% engines: rust int34a = 28 errors (the caption wrapped in a {subfigure} whose width read the caption's internals;
+%          `\lx@tag`/`\@@toccaption` mode errors in the node's box), an empty <figure>, "Whole." and "Text after." lost
+% expect:  1 error (the subtype refusal); the figure keeps both captions, "Text after." follows
+% status:  RED (int34a) -> GREEN (77s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\centering
+\begin{tikzpicture}
+\draw (0,0) rectangle (2,1);
+\node[text width=0.45\textwidth,align=left,anchor=south west] at (-0.7,-1.6) {\captionof{subfigure}{Normalized vertiport capacity = 1}};
+\end{tikzpicture}
+\caption{Whole.}
+\end{figure}
+Text after.
+\end{document}

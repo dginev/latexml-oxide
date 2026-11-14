@@ -1,0 +1,19 @@
+% witness: 0812.4232, 0901.1843, 0908.3912 (v1.0.1 copies: `\def\apj{ApJ}`), 1504.02326, 1803.06245, 1807.07956
+%          (v1.20b), 2003.05953 (v3.0), 1807.02064 (`\newcommand*\apj{ApJ}`), 2401.03908 (`\newcommand\mnras{\ref@jnl
+%          {MNRAS}}`): copies of elsarticle.cls with aas_macros.sty pasted in; here a minimal stand-in of such a copy
+% oracle:  pdflatex 0 errors (with the stand-in): "In ApJ and MNRAS."
+% engines: rust 67y round 1 = 2 errors (`\apj`, `\mnras` undefined: the binding shadows the copy)
+% expect:  0 errors, 0 warnings; the journal names as aas_macros' binding sets them, provided only where the copy
+%          defines them
+% status:  RED (67y round 1) -> GREEN (67y round 2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{elsarticle.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{elsarticle}
+\LoadClass{article}
+\def\apj{ApJ}
+\def\mnras{MNRAS}
+\end{filecontents*}
+\documentclass{elsarticle}
+\begin{document}
+In \apj{} and \mnras.
+\end{document}

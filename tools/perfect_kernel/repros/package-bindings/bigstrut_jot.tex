@@ -1,0 +1,11 @@
+% witness: 2103.02346, 2103.03442, 2103.02074 (bigstrut.sty `\bigstrutjot`; run 340: 188 first errors)
+% oracle:  pdflatex 0 errors
+% engines: rust 65int7 = 2 errors (`\bigstrutjot` undefined)
+% expect:  0 errors; the table's cell "A"
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{bigstrut}
+\setlength{\bigstrutjot}{3pt}
+\begin{document}
+\begin{tabular}{c}\hline A\bigstrut\\\hline\end{tabular}
+\end{document}

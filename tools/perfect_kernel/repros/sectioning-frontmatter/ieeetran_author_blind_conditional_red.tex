@@ -1,0 +1,17 @@
+% mechanism: an anonymous-review switch written in `\author` (`\author{\ifblind Anonymous Authors\else <blocks>\fi}`,
+%   `\blindtrue`): the body calls `\IEEEauthorblockN`, so the block route takes the printed branch's words as bare
+%   text after no block: an affiliation of a nameless creator
+% witness: synthetic (revP28m S2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Anonymous Authors"
+% engines: int168a, P28m, P28m2: a nameless creator with the affiliation "Anonymous Authors", 0 warnings
+% expect:  0 errors, 0 warnings; one creator named "Anonymous Authors"
+% status:  RED (int168a, P28m, P28m2)
+% moves:   post-merge (P28C: the route read on the conditional's taken branch)
+\documentclass[conference]{IEEEtran}
+\newif\ifblind\blindtrue
+\title{T}
+\author{\ifblind Anonymous Authors\else\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\and\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}\fi}
+\begin{document}
+\maketitle
+Text.
+\end{document}

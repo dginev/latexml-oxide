@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>A declared operator leaves the following letters italic</title>
+    <para xml:id="S1.p1">
+      <p><Math content-tex="\E X+y" mode="inline" tex="\operatorname{\mathbb{E}}X+y" text="E@(X) + y" xml:id="S1.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok font="blackboard" name="E" role="OPFUNCTION" scriptpos="post">E</XMTok>
+                <XMTok font="italic" role="UNKNOWN">X</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math content-tex="\argmax_{z}f(z)" mode="inline" tex="\operatorname*{arg\,max}_{z}f(z)" text="(argmax _ z)@(f@(z))" xml:id="S1.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMApp name="argmax" role="OPERATOR" scriptpos="post">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok>
+                  <XMTok role="UNKNOWN">max</XMTok>
+                </XMApp>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMDual>
+                  <XMRef idref="S1.p1.m2.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m2.1">z</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>A declared operator with a plain body keeps its name</title>
+    <para xml:id="S2.p1">
+      <p><Math content-tex="\Tr B" mode="inline" tex="\operatorname{Tr}B" text="Tr@(B)" xml:id="S2.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok name="Tr" role="OPFUNCTION" scriptpos="post">Tr</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>A starred operator with a command body puts its limits below in display</title>
+    <para xml:id="S3.p1">
+      <equation xml:id="S3.Ex1">
+        <Math content-tex="\argmax_{x}g" mode="display" tex="\operatorname*{arg\,max}_{x}g" text="(argmax _ x)@(g)" xml:id="S3.Ex1.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                <XMApp name="argmax" role="OPERATOR" scriptpos="mid">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok>
+                  <XMTok role="UNKNOWN">max</XMTok>
+                </XMApp>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">g</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <p>and <Math content-tex="\argmax_{x}g" mode="inline" tex="\operatorname*{arg\,max}_{x}g" text="(argmax _ x)@(g)" xml:id="S3.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMApp name="argmax" role="OPERATOR" scriptpos="post">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok>
+                  <XMTok role="UNKNOWN">max</XMTok>
+                </XMApp>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">g</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S4">
+    <tags>
+      <tag>4</tag>
+      <tag role="refnum">4</tag>
+      <tag role="typerefnum">§4</tag>
+    </tags>
+    <title><tag close=" ">4</tag>A starred operator with a plain body puts its limits below in display</title>
+    <para xml:id="S4.p1">
+      <equation xml:id="S4.Ex2">
+        <Math content-tex="\argmin_{x}f" mode="display" tex="\operatorname*{argmin}_{x}f" text="(argmin _ x)@(f)" xml:id="S4.Ex2.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                <XMTok name="argmin" role="OPERATOR" scriptpos="mid">argmin</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">f</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <p><Math content-tex="\argmin_{x}f" mode="inline" tex="\operatorname*{argmin}_{x}f" text="(argmin _ x)@(f)" xml:id="S4.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok name="argmin" role="OPERATOR" scriptpos="post">argmin</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">f</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+</document>

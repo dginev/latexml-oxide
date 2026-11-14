@@ -1,0 +1,18 @@
+% mechanism: reading.rs `unfold_held_names` records only a macro of no parameters (`field_notes::field_expansion`): a call's
+%   cover past its arguments is not known when the call ends the field (its next token none of the field's), so
+%   splicing its expansion would keep its arguments after it, printing the note twice. Such a macro holding names stays
+%   by text, counted ("a name its events don't spell"), as before AUT1
+% witness: synthetic (AUT1's sibling sweep; no census paper: AUT0's 36 witnesses are all parameterless)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ Bob Baker", "∗Univ X"
+% engines: int167a and AUT1: 0 errors, 2 warnings (each name by its text), Baker's bold lost
+% expect:  0 errors, 0 warnings; creators Ann Able (note Univ X), Bob **Baker** — the inline twin's
+% status:  RED (int167a, AUT1); moves: post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\aut[1]{Ann Able#1 \and Bob \textbf{Baker}}
+\begin{document}
+\title{T}
+\author{\aut{\thanks{Univ X}}}
+\maketitle
+Text.
+\end{document}

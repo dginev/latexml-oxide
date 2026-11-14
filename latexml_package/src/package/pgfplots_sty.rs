@@ -12,6 +12,16 @@ LoadDefinitions!({
   // from the raw-sty body — safe to omit since pgfplots defaults to a
   // usable compat level without the autoset.
   DefMacro!("\\pgfplots@iffileexists", "\\IfFileExists", locked => true);
+  // pgfplotscore.code.tex:74-89: `\def\pgfplotsenablelua{0}` is pgfplots' own
+  // boot-time switch for its Lua backend. Under the `[luatex]` profile
+  // `\directlua` exists (the external-texlua bridge), so `lua support=auto`
+  // (:64-70) took the LuaTeX path whose `tex.enableprimitives` bootstrap
+  // (ltluatex.tex:63, :117) cannot reach this engine — `undefined:
+  // \pgfplotsglobalretval`, `\pgfplotsutil@savecatcodetable` on every axis
+  // (colorblind_doc, srdp-mathematik, sunpath; Perl has no such profile). The
+  // Lua backend is only a coordinate accelerator: output is identical. Guard:
+  // `perfect_kernel_batch54::pgfplots_lua_backend_is_off_under_luatex_profile`.
+  DefMacro!("\\pgfplotsenablelua", "0");
   InputDefinitions!("pgfplots", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });
 

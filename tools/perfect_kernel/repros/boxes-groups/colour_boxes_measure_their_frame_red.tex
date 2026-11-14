@@ -1,0 +1,15 @@
+% witness: synthetic (VARWb's sibling sweep: a varwidth holding a `\fcolorbox` was measured 0pt wide)
+% oracle:  pdflatex 0 errors; [32.63339pt] [31.8334pt] [32.63339pt]
+% engines: rust VARWb = int164a = 0 errors: [0.0pt] [25.8334pt] [32.63339pt]: `\fcolorbox` measures nothing and
+%          `\colorbox` its text without `\fboxsep`; `\fbox` right; perl: not compared
+% expect:  0 errors; pdflatex's widths
+% status:  RED (moves: post-merge)
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\setbox0\hbox{\fcolorbox{red}{yellow}{boxed}}[\the\wd0]
+
+\setbox0\hbox{\colorbox{yellow}{boxed}}[\the\wd0]
+
+\setbox0\hbox{\fbox{boxed}}[\the\wd0]
+\end{document}

@@ -1,0 +1,16 @@
+% witness: rev78c finding 1 (caption's v1 options, caption.sty:114-147, are first-load keys: on a repeat load,
+%          caption3.sty:416-429's \caption@ExecuteOptions, they are undefined)
+% oracle:  pdflatex 2 errors "Package caption Error: footnotesize undefined." / "bf undefined."; "Figure 1: Schematic."
+%          at 10pt (MAIN=10), label not bold
+% engines: rust 78c r1 = the repeat load's options dropped silently (0 warnings)
+% expect:  0 errors, 2 warnings (unknown KeyVals key 'footnotesize', 'bf'); the caption unchanged
+% status:  RED (78c r1, silent) -> GREEN (78c r2)
+\documentclass{article}
+\usepackage{subcaption}
+\usepackage[footnotesize,bf]{caption}
+\begin{document}
+\begin{figure}
+A
+\caption{Schematic.}
+\end{figure}
+\end{document}

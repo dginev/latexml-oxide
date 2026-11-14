@@ -1,0 +1,14 @@
+% witness: svmult.cls:1677-1688 `\AtBeginDocument{… \def\bibsection{\section*{\refname}…}}` (cond-mat0303533;
+%          census 2026-10-17)
+% oracle:  pdflatex 0 errors (the copy's heading "COPY REFERENCES", SV-EXTRA)
+% engines: rust 67int20b = 1 error (\svextra undefined: the copy is not read)
+% expect:  0 errors, 0 warnings; SV-EXTRA; the bibliography titled as the binding titles it without the copy
+% status:  RED (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\svextra
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, A title.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,12 @@
+% witness: 2103.00564 (34 \coloneq), 2212.01087, 2508.05134, 2603.09013 (newpxmath after mathtools); 1812.07002 (newtxmath)
+% oracle:  pdflatex 0 errors; "TX:no. a≔b, a≕b, 𝑔, noV." (newpxmath.sty:1541-1542 \re@DeclareMathSymbol\coloneq/\eqcolon lettersA 58/59 over mathtools', :1858 \varg; newpxmath.sty:23-33 never loads txfonts, and has no \varv)
+% engines: rust 68j r1 = "TX:yes", a:-b, a-:b, ℊ, V (newpxmath loaded the txfonts binding); rust 67int10 = \coloneq ≔ (mathtools), \eqcolon ≕, \varg undefined; perl = no binding
+% expect:  0 errors, 0 warnings; TX:no, ≔ (U+2254), ≕ (U+2255), italic g, noV
+% status:  RED (68j r1) -> GREEN (68j r2); guard perfect_kernel_batch68j::newpxmath_coloneq_over_mathtools
+\documentclass{article}
+\usepackage{mathtools}
+\usepackage{newpxmath}
+\makeatletter
+\begin{document}
+TX:\@ifpackageloaded{txfonts}{yes}{no}. $a\coloneq b$, $a\eqcolon b$, $\varg$, \ifdefined\varv V\else noV\fi.
+\end{document}

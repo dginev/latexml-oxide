@@ -1,0 +1,13 @@
+% witness: 2401.14196 (deepseek.cls loads authblk: `\author[*]{...}` labels a whole list of names)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" with the mark 1, over "Univ A"
+% engines: rust (63d) = ONE personname "Ann Able, Bob Baker", 0 errors (silent); Perl alike (authblk.sty.ltxml:50)
+% expect:  2 creators, both linked to Univ A; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{article}
+\usepackage{authblk}
+\author[1]{Ann Able, Bob Baker}
+\affil[1]{Univ A}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

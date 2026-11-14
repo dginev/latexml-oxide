@@ -1,0 +1,22 @@
+% witness: 1401.6686 (jmlr2e `\keywords{...}` written as a command; rc_struct M9)
+% oracle:  pdflatex 0 errors (jmlr2e.sty shipped by the witness): "Keywords: Message Passing, Decimation", then the
+%          section and its display, "Keywords: Graphs, Trees" (the begin code's group stays open: a warning only)
+% engines: rust 64h4 = 4 errors + 1 warning (the open `{keywords}` classification swallowed the document: `_`, `^`,
+%          section in classification, open groups at the end); Perl 0.8.8 = 2 Error:undefined (\keywords, \editor:
+%          no jmlr2e binding, the raw style not loaded)
+% expect:  jmlr2e.sty:151-153 — the command form is the keywords environment around its argument
+% status:  RED (64h4) -> GREEN (64qb)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{jmlr2e}
+\begin{document}
+\title{T}\author{A}
+\keywords{Message Passing, Decimation}
+\editor{E}\maketitle
+\section{Intro}
+The marginal is
+$$ x_i = y^2 $$
+\begin{keywords}
+Graphs, Trees
+\end{keywords}
+\end{document}

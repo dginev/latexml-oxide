@@ -1,0 +1,12 @@
+% witness: 0806.1442, 1103.1986 (run 340's `&` cluster, R1): `\lefteqn{lhs}&\\`, one `&` after the `\lefteqn`
+% oracle:  pdflatex 0 errors; pdftotext `a+b+c+d` above `x <= e + f.`
+% engines: rust 65int2 and Perl 0.8.8 = 1 x `Error:unexpected:&`
+% expect:  0 errors, 0 warnings; the `\lefteqn` cell spans the three columns, the second row's cells as written
+% status:  RED (65int2) -> GREEN (65o)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray*}
+\lefteqn{a+b+c+d}&\\
+&x\leq e+f.
+\end{eqnarray*}
+\end{document}

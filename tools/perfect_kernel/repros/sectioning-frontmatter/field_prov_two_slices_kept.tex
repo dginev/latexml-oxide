@@ -1,0 +1,17 @@
+% Two slices of `\@title` with a gap between them (`\StrLeft{\@title}{2}\par\StrRight{\@title}{2}`) are two runs,
+% neither whole: runs are joined only where the second goes on exactly where the first stopped on the field's extent
+% (fms1 re-review finding 2, probe q16).
+% status:  RED (fms1 round 2: the join merged the slices by their endpoints and removed both) → GREEN (fms1 round 3).
+% oracle:  pdflatex 0 errors: "Sp", "le", then the title block "Split Title / Ann Author / <date>", "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` Info; "Sp" and "le" kept.
+\documentclass{article}
+\usepackage{xstring}
+\makeatletter
+\title{Split Title}
+\author{Ann Author}
+\begin{document}
+\begin{center}\StrLeft{\@title}{2}\par\StrRight{\@title}{2}\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: a collaboration line under a name is its contact made where the line prints among the name's contacts
+%   (`Collaborations`, author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946): read in the last name's content
+%   at its line's place, so the collaboration comes before the institution under it, as the contacts render in document
+%   order (LaTeXML-structure-xhtml.xsl:795). Review rev97cd D1.
+% witness: 0910.2149 (PoS, `\speaker{Yaquan FANG}\\ On Behalf Of The ATLAS Collaboration \\ University of Wisconsin,
+%   Madison\\ E-mail: …`: 97d r1 gave Wisconsin, e-mail, collaboration), hep-ex0011032 (`Xiaoyan Shen\\ Representing
+%   the BES Collaboration\\ Institute of High Energy Physics, …`), 2501.13770
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able", "for the XYZ Collaboration", "Univ X" stacked
+% engines: rust 97d r1: Ann Able — affiliation Univ X, then the collaboration; perl: the lines welded into the name
+% expect:  0 errors, 0 warnings; one creator, Ann Able, `<contact role="collaboration">for the XYZ
+%   Collaboration</contact>` then `<contact role="affiliation">Univ X</contact>`
+% status:  RED (97d r1) -> GREEN (97d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \\ for the XYZ Collaboration \\ Univ X}
+\maketitle
+Body.
+\end{document}

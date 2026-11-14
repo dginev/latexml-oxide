@@ -1,0 +1,21 @@
+% mechanism: emit.rs `block_names`: ptephy `\name{…}{marks}` calls inside a `\parbox` the list is set in: the last call
+%   glued to the box's end is written from inside the call, its marks argument the name's text (Option C P3, OD #993; the
+%   box sibling of `ptephy_name_inside_its_call_is_written_from_the_call`)
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann Able1 and Bob Baker2", "1 Univ X", "2 Univ Y"
+% engines: int159a and P3: 0 errors, 1 warning ("Ann Able" written as its plain text: "a name its events don't
+%   spell"); personnames "Ann Able", "Bob Baker2" (the marks argument as text). A P3 draft that grew every name's run
+%   over a kept mark whose cover held the name gave "Bob Baker"; the final rule reads a mark as its call's only where
+%   it has no position of its own (`made_by_its_call`), which the box's mark here fails; perl not run
+% expect:  0 errors, 0 warnings; personnames Ann Able (Univ X) and Bob Baker (Univ Y), each written from its call
+% status:  RED (int159a, P3)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\parbox{5cm}{\name{\fname{Ann} \surname{Able}}{1} and \name{\fname{Bob} \surname{Baker}}{2}}}
+\address{\affil{1}{Univ X}\affil{2}{Univ Y}}
+\maketitle
+Text.
+\end{document}

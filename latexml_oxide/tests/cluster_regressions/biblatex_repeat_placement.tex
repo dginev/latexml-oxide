@@ -1,0 +1,12 @@
+% a repeated \printbibliography prints only where an ltx:bibliography can stand (biblatex_sty.rs)
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_second_printbibliography.bib}
+\begin{document}
+Text \cite{k1} and \cite{k2}.
+\printbibliography[title=Primary List]
+\begin{itemize}
+\item In a list: \printbibliography[title=Item List]
+\end{itemize}
+Text \begin{minipage}{5cm}\printbibliography[title=Box List]\end{minipage} more.
+\end{document}

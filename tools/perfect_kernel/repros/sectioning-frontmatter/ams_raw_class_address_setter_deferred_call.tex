@@ -1,0 +1,36 @@
+% mechanism: a lock on the AMS contact setters that lets a file's wrapper through must test a real call of the saved
+%   copy, not its mention: this class stores the call itself (\g@addto@macro\st@pending{\st@address[#1]{#2}}) for its
+%   own \@maketitle, which our dropped deposit never runs. Review finding S1 of the AMS setter lock (SYNC_STATUS
+%   frontmatter row).
+% witness: (construct; 0902.1737's stacs.cls shape)
+% oracle:  pdflatex 0 errors: "R. GROSSI / Dipartimento di Informatica, Universita di Pisa / Current address: ..."
+% engines: rust int116a = the address lost (the creator's name, current address, e-mail and URL only)
+% expect:  0 errors, 0 warnings; the creator's address "Dipartimento di Informatica, Universita di Pisa" kept
+% status:  RED (int116a; no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}{stcswrapstore.cls}
+% A synthetic class in stacs.cls's shape (2008, on amsart), written for a latexml-oxide test: its \address (:294-298), the
+% same store for \curraddr, \email and \urladdr (rmmcart.cls), \@maketitle (:351-364), \@setaddresses (:384-407) and
+% \enddoc@text (:468).
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{stcswrapstore}[2008/01/01 stand-in]
+\LoadClass[11pt,reqno]{amsart}
+\let\st@address\address
+\def\st@pending{}
+\renewcommand{\address}[2][]{\g@addto@macro\st@pending{\st@address[#1]{#2}}}
+\def\@setaddresses{\par\begingroup\def\address##1##2{##2\par}%
+  \def\curraddr##1##2{Current address: ##2\par}\def\email##1##2{E-mail address: ##2\par}%
+  \def\urladdr##1##2{URL: ##2\par}\addresses\endgroup}
+\def\@maketitle{\@settitle\ifx\@empty\authors\else\@setauthors\fi\begingroup\def\st@address[##1]##2{##2\par}\par\st@pending\endgroup\@setaddresses}
+\def\enddoc@text{}
+\end{filecontents*}
+\documentclass{stcswrapstore}
+\begin{document}
+\title{Optimal Cache-Aware Suffix Selection}
+\author{R. Grossi}
+\address{Dipartimento di Informatica, Universita di Pisa}
+\curraddr{Google Inc., NY}
+\email{grossi@di.unipi.it}
+\urladdr{http://www.di.unipi.it/grossi}
+\maketitle
+Body.
+\end{document}

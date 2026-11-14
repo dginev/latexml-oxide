@@ -1,0 +1,26 @@
+% witness:  msc/msc  (/usr/local/texlive/2025/texmf-dist/doc/latex/msc/msc.tex)
+% oracle:   pdflatex CLEAN (0 '!' lines); manual draws message-sequence charts
+% engines:  pdflatex(clean) / Perl-latexml 25 err / oxide 21 err (b56ab)  -> SHARED
+% expect:   0 errors + non-trivial SVG for the instance head node
+% status:   GREEN (batch 56ac, 2026-09-06: \globaldefs no longer globalizes the save-frame bookkeeping — KPE #209, DIVERGENCES #215; 0 errors, 10 <svg:g>)
+% mechanism: (batch 56ab removed the driver-scope groups: \pgfsys@beginscope/@endscope
+%   are q/Q literals, no TeX group; an empty {msc} chart is now clean.) What remains is
+%   the fused mode-frame family (DIFFICULT_CASES D12): \pgf@maketext
+%   (pgfcorescopes.code.tex:160-184) opens \setbox\hbox\bgroup \pgfinterruptpicture
+%   (= \begingroup, :742-766) \bgroup and defers the box's \egroup via \aftergroup
+%   (\pgf@@maketextafter :173-177); msc's `instance head` multipart shape supplies a
+%   text-width \vbox part on top, so a nested \hbox reader's end_mode
+%   (base_utilities.rs:3624) meets an internal_vertical frame opened by `{`, then every
+%   \endgroup cascades (stomach.rs:889/1092). tex.web separates the save stack (§274,
+%   \endgroup §1063 checks cur_group only) from the semantic nest (§211-218); our
+%   begin_mode/end_mode fuse them. Fix = decouple the nest from the save stack; no
+%   stopgap pop. LXML_TRACE_BOUND_MODE=1 prints the backtrace. Every sub-msc isolation
+%   (\hbox\bgroup\begingroup\vbox{\hbox X}\endgroup\egroup, multipart/text-width
+%   nodes in {pgfscope}) is green — the trigger needs msc's shape replay.
+\documentclass{article}
+\usepackage{msc}
+\begin{document}
+\begin{msc}{Example}
+\declinst{usr}{User}{control}
+\end{msc}
+\end{document}

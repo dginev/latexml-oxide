@@ -1,0 +1,41 @@
+% A kernel macro's drop is TeX's own, never a loss: ifthen's `\ifthenelse{<test>}{<true>}{<false>}` ends in the
+% format's `\@firstoftwo` (latex.ltx `\long\def\@firstoftwo#1#2{#1}`), which reads both branches from the document's
+% text and drops the one not taken, as pdflatex does — the title, author and abstract are made inside it, so the
+% title-page check took it for a frontmatter command and its untaken branch (a second abstract, a `{keywords}` the
+% class does not even define) for an argument it drops (`title_page_check::never_digested`). Only a binding's
+% undeclared drop counts (`DocumentArgument::used`: `DefinitionOrigin::is_binding_made`, the rule the drop watch
+% inside an entry already kept). 106t r3's first census build counted "zebra quagga".
+% witness: 2202.08832 (article, `\ifthenelse{\boolean{arxiv}}{…abstract…}{…abstract…\begin{keywords}…statistical
+%          physics\end{keywords}}`: "physics"; the r3 census over 3,000 papers of popint125a_s10k)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", the date, "Abstract", "Text of the
+%          abstract.", "Body." (no "Another abstract", no "Zebra quagga")
+% engines: rust int135e = 0 errors, 0 warnings; 106t r3 first build = 0 errors, 1 warning ("zebra quagga"); perl = not
+%          run
+% expect:  0 errors, 0 warnings
+% status:  GREEN (int135e) -> RED (106t r3 first build) -> GREEN (106t r3)
+% preload: ar5iv.sty
+\documentclass[11pt]{article}
+\usepackage{ifthen}
+\newboolean{arxiv}
+\setboolean{arxiv}{true}
+\begin{document}
+\ifthenelse{\boolean{arxiv}}{
+\title{A Title}
+\author{Ann Able}
+}{
+}
+\maketitle
+\ifthenelse{\boolean{arxiv}}{
+\begin{abstract}
+Text of the abstract.
+\end{abstract}
+}{
+\begin{abstract}
+Another abstract about statistical physics.
+\end{abstract}
+\begin{keywords}
+Zebra quagga
+\end{keywords}
+}
+Body.
+\end{document}

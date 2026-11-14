@@ -1,0 +1,22 @@
+% mechanism: a raw class's affiliation store whose lines its marks lead (`$*$`, `$\dagger$`), with an unmarked line
+%   after the last mark that reads as every author's ("All authors: Some Network"): the reading runs the last mark's
+%   entry on over it (`Resolver::api` `line:continued`), as it runs quant-ph0101015's "London SW7 2BZ, UK" on — the
+%   same position; nothing the digested structure shows parts the two (the line above ends with a comma there, not
+%   here: a text cue, no structure), so the line goes to the `†` names alone. The kernel `\author` block's sibling
+%   (`\author{… \\ $^\dagger$Laboratory B, City B \\ All authors: Some Network}`) reads it so too, and its writer holds
+%   the continued entry back (today's placement, the block's).
+% witness: synthetic (the review rev93a r2 probe s4); quant-ph0101015 (rspublic.cls: the continuation it must keep)
+% oracle:  pdflatex 0 errors (with raw_store_affiliation.cls beside it): "Ann Able∗ , Bob Baker† and Cat Cole†" over
+%   "∗Department A, City A / †Laboratory B, City B / All authors: Some Network"
+% engines: rust 93a r2/r3: "All authors: Some Network" Bob Baker's and Cat Cole's, not Ann Able's
+% expect:  0 errors, 0 warnings; "All authors: Some Network" every author's
+% status:  RED (deferred: needs a reading of the line's text, not its place; no guard)
+% preload: ar5iv.sty
+\documentclass{raw_store_affiliation}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{*}$, Bob Baker$^{\dagger}$ and Cat Cole$^{\dagger}$}
+\affiliation{$*$Department A, City A \\ $\dagger$Laboratory B, City B \\ All authors: Some Network}
+\maketitle
+Text.
+\end{document}

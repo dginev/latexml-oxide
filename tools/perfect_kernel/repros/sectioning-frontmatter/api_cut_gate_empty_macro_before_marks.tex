@@ -1,0 +1,19 @@
+% mechanism: the API Cut's cost gate (`may_open_with_mark`) reads a list's first token through parameterless macros'
+%   bodies and on past a body printing nothing: `\affilfont{}` then `$^{1}$Univ A\\ $^{2}$Univ B` may open with a mark,
+%   so the list is rehearsed and cut at its marks (revP4b2 S1, m1; an empty body is no expansion, which P4b2's gate
+%   rehearsed as it rehearses any macro it cannot read)
+% witness: synthetic (P4b2b; reviewer revP4b2 m1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE1 AND BOB BAKER2", "1 Univ A, Town A, 2 Univ B, Town B"
+% engines: P4b2 and P4b2b: the creators below, the list cut once
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 2 "2 Univ B, Town B"; one cut
+% status:  GREEN (guard perfect_kernel_batchc1::api_cut_gate_reads_past_empty_bodies)
+\documentclass{amsart}
+\newcommand\affilfont{}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\address{\affilfont $^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,30 @@
+% A store with no name to read: `\expandafter\gdef\csname aff\theaffn\endcsname`, `\@namedef{naf\theaffn}`,
+% etoolbox's `\csgdef{cs\theaffn}`, whose every call the class prints; and `\gappto`, a known store appended to. A
+% `\csname` store never replaces, and a reader of it cannot be told, so its words go to the Info; `\gappto`'s are counted.
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "firstaff secondaff firstnamed secondnamed firstcs secondcs
+%          firstgap secondgap"
+% engines: rust int139c = 0 errors, 0 warnings; rust 108b = 0 warnings, the Info names only "secondaff"; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store) "firstgap secondgap"; the Info names "firstaff secondaff
+%          firstnamed secondnamed firstcs secondcs"
+% status:  RED (108b) -> GREEN (108b2)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstorecsnamecocls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\RequirePackage{etoolbox}
+\newcounter{affn}\def\viacs#1{\stepcounter{affn}\expandafter\gdef\csname aff\theaffn\endcsname{#1}}
+\newcounter{nafn}\def\vianamed#1{\stepcounter{nafn}\@namedef{naf\thenafn}{#1}}
+\newcounter{csn}\def\viacsgdef#1{\stepcounter{csn}\csgdef{cs\thecsn}{#1}}
+\def\agap{}\def\viagappto#1{\gappto\agap{#1\par}}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}{\csname aff1\endcsname\par\csname aff2\endcsname\par\@nameuse{naf1}\par\@nameuse{naf2}\par\csuse{cs1}\par\csuse{cs2}\par\agap}\fi}
+\end{filecontents*}
+\documentclass{checkstorecsnamecocls}
+\title{A Title}\author{Ann Able}
+\viacs{Firstaff}\viacs{Secondaff}
+\vianamed{Firstnamed}\vianamed{Secondnamed}
+\viacsgdef{Firstcs}\viacsgdef{Secondcs}
+\viagappto{Firstgap}\viagappto{Secondgap}
+\begin{document}\maketitle
+Body text.
+\end{document}

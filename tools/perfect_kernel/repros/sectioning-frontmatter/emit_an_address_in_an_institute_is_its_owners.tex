@@ -1,0 +1,19 @@
+% mechanism: an address inside an entry's text is its owner's e-mail at `=2` as off: the reading's take-out
+%   (`Resolver::take_out_entry_addresses`) is written cut from the entry's tokens at the positions its inks print at, each address the e-mail of the owner
+%   the reading gives it, in the font it prints in (`Event::ink_at`, `emitter::address_cut`; OD #980 P1b); `=2` only
+% witness: svmult/llncs `\institute{… \texttt{a@x} \and …}` (astro-ph0610446, cond-mat0610708, physics0603032, 1604.05586)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker1, and Cy Cole2"; "1 Univ A, Street 1, City, Country ann.able@a.org", "2 Univ B,
+%   Road 2, Town, Country cy.cole@b.org"
+% engines: rust LO4 `=2`: each institute an affiliation with its address in it, Bob Baker's too; off: the entry without them, each address its owner's e-mail
+% expect:  0 errors, 0 warnings; `=2` creators' XML as with the switch off
+% status:  RED (LO4) -> GREEN (perfect_kernel_batchp1e::an_address_in_an_api_entry_is_its_owners_email)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{Addresses in an institute}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cy Cole\inst{2}}
+\institute{Univ A, Street 1, City, Country \texttt{ann.able@a.org}
+\and Univ B, Road 2, Town, Country \texttt{cy.cole@b.org}}
+\maketitle
+Text.
+\end{document}

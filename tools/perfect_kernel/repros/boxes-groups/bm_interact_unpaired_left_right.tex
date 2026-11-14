@@ -1,0 +1,15 @@
+% witness: synthetic (65j round 2; interact.cls's own `\bm`, interact_cls.rs: interact.cls:134-138
+%          `\def\bm#1{\mathchoice{\mbox{\boldmath$\displaystyle#1$}}…}`; class witnesses 2310.17051, 1803.04839)
+% oracle:  pdflatex with interact.cls (from 2310.17051) 8 errors: 4 "Missing \right. inserted" and 4 "Extra \right.";
+%          PDF "First y, group (a), pair ⟨ x and z." (⟩ lost)
+% engines: rust 65a = 0 errors, the pair unparsed, ⟩ lost; 65bundle and 65j round 1 = 1 error ("\bm Attempt to close
+%          a group that switched to mode math") + "Missing \right. inserted", ⟩ lost
+% expect:  0 errors; 2 warnings (the unpaired \left and \right); bold ⟨ x ⟩ fenced in one formula; the paired
+%          \bm{\left( a \right)} one bounded bold group as before
+% status:  RED (65bundle, 65j r1) -> GREEN (65j r2)
+% preload: ar5iv.sty
+\documentclass{interact}
+\newcommand*\lin[1]{\bm{\left\langle} #1 \bm{\right\rangle}}
+\begin{document}
+First $\bm{y}$, group $\bm{\left( a \right)}$, pair $\lin{x}$ and $\bm{z}$.
+\end{document}

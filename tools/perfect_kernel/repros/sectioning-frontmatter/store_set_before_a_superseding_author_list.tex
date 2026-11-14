@@ -1,0 +1,23 @@
+% witness: review of 63x (finding 6): the two-author form of store_set_before_a_superseding_author
+% oracle:  pdflatex 0 errors: the second title block prints "Alice A, Bob B", "Shared", "alice@a.org" (once)
+% engines: rust 63x7 = the email twice: handed to the new authors by the store, and its queued copy placed as a shared
+%          orphan in a nameless creator of its own
+% expect:  0 errors, 0 warnings; two creators, the stores held once
+% status:  RED (63x7) -> GREEN (63x)
+\begin{filecontents*}[overwrite]{lxaddr.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxaddr}
+\LoadClass{article}
+\def\address#1{\gdef\@address{#1}}
+\def\email#1{\gdef\@email{#1}}
+\let\@address\@empty
+\renewcommand\maketitle{\par{\centering\@title\par\@author\par\@address\par\@email\par}}
+\end{filecontents*}
+\documentclass{lxaddr}
+\address{Shared}
+\begin{document}
+\title{T0}\author{Max M}\email{max@m.org}\maketitle
+Text.
+\email{alice@a.org}\title{T}\author{Alice A, Bob B}\maketitle
+Body.
+\end{document}

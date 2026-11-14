@@ -1,0 +1,15 @@
+% witness: 77a r3 review probe e3
+% oracle:  pdflatex + biber: 0 errors (the books carrying the errors are never typeset); References [3] lamport
+%          [4] mittelbach; "Also [3, 2, 1, 4]."
+% engines: rust 77a r3 2 errors; Perl ar5iv binding ignores the filter (KNOWN_PERL_ERRORS #983)
+% expect:  errors 2: the hidden (ltx_nodisplay) list builds the two books so their citations resolve, and their
+%          titles' \PackageError are raised there (OXIDIZED_DESIGN_DIVERGENCES #762); the oracle's list
+% status:  GREEN (pinned; the hidden list's digestion is the binding's, pdflatex never typesets those entries)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Also \cite{lamport,knuth,goossens,mittelbach}.
+\printbibliography[nottype=book]
+\end{document}

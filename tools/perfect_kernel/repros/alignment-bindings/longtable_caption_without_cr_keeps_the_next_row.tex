@@ -1,0 +1,28 @@
+% witness: none in the corpus (the shape of pasj00's in-table caption, astro-ph0701701, 1108.4491, 0704.1713,
+%          astro-ph0407419, under longtable.sty instead of the class's own {longtable})
+% oracle:  longtable.sty's caption is one row, `\LT@mcol\LT@cols c{…}` (longtable.sty:476, `\multicolumn` across every
+%          column), ended by the author's `\\`; without it pdflatex gives 3 errors (`Misplaced \noalign` for the
+%          `\hline`, `Misplaced \omit`, `Extra alignment tab has been changed to \cr` at the `&`) and still prints
+%          "Table 1: Cap / Head1 Head2 / a 1"
+% engines: rust 64ze/65f/65h r1 = 1 error, the head row "Head1 Head2" lost: the caption's row (OD #103 drops it, its
+%          text being the <caption>) ran on to the next `\\`
+% expect:  1 error (the misplaced `\hline`); caption "Cap", head row Head1|Head2 (no rule: the `\hline` was
+%          misplaced), row a|1; the caption's row is kept because an `&` follows the caption in it
+% status:  RED (65h r1: the head row lost) -> CONTROL (65h r2: pdflatex errors too); guard
+%          perfect_kernel_batch65h::longtable_caption_row_without_its_cr_keeps_the_next_row
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\begin{longtable}{ll}
+\caption{Cap}\label{t}
+\hline
+Head1 & Head2 \\
+\hline
+\endfirsthead
+\hline
+Head1 & Head2 \\
+\endhead
+a & 1 \\
+\end{longtable}
+\end{document}

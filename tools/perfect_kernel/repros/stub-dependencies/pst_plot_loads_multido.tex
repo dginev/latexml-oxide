@@ -1,0 +1,17 @@
+% pst-plot.sty:29-31 loads pstricks, pst-xkey and multido; a paper's `\multido` loop over the plot's points needs no
+% `\usepackage{multido}` of its own.
+% witness: 0711.2399 (`Error:undefined:\multido The token T_CS[\multido] is not defined.`; Perl, reading pst-plot.sty
+%          raw, is clean); pst-plot.sty:29-31
+% oracle:  latex (DVI mode, as PSTricks needs) 0 errors; with `\usepackage{pstricks}` alone, `! Undefined control
+%          sequence. l.5 \multido`
+% engines: perl clean; rust int50a 1 error (`\multido` undefined: the pst-plot binding required pstricks only)
+% expect:  0 errors; three dots
+% status:  RED (int50a) -> GREEN (78m: pst_plot_sty.rs requires pst-xkey and multido)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{pst-plot}
+\begin{document}
+\begin{pspicture}(0,0)(3,1)
+\multido{\i=0+1}{3}{\psdot(\i,0)}
+\end{pspicture}
+\end{document}

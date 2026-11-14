@@ -1,0 +1,28 @@
+% An IEEEtran author's own block of link lines, `\IEEEauthorblockA{\href{mailto:ann@a.org}{ann@a.org}\\
+% \url{https://orcid.org/0000-0002-1825-0097}\\ \url{https://a.org/ann}}`: each line one link is its holder's URL
+% contact, the ORCID one an ORCID contact, never one affiliation of two links (OD #969's link line, an entry of link
+% lines: 107c).
+% witness: 2206.10577 (`\url{https://orcid.org/…}\\ \url{https://members.loria.fr/AClement}`)
+% oracle:  pdflatex 0 errors: "Ann Able∗", "ann@a.org", "https://orcid.org/0000-0002-1825-0097", "https://a.org/ann",
+%          "Bob Baker†", "bob@b.org", "∗Univ A", "†Univ B"
+% engines: rust int139a0 = the two links one affiliation of Ann Able
+% expect:  0 errors, 0 warnings; Able: e-mail, ORCID, URL, Univ A; Baker: e-mail, Univ B
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\href{mailto:ann@a.org}{ann@a.org}\\
+\url{https://orcid.org/0000-0002-1825-0097}\\
+\url{https://a.org/ann}}
+\and
+\IEEEauthorblockN{Bob Baker\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\href{mailto:bob@b.org}{bob@b.org}}
+\and
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B}}
+\maketitle
+Text.
+\end{document}

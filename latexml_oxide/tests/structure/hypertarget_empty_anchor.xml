@@ -6,7 +6,7 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <p><anchor xml:id="a">A visible target</anchor> in text.</p>
+    <p>A <anchor xml:id="a">visible target</anchor> in text.</p>
   </para>
   <para xml:id="p2">
     <p>Before <anchor xml:id="b"/>after empty target in text.</p>

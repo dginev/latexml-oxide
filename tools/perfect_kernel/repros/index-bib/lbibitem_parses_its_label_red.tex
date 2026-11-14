@@ -1,0 +1,23 @@
+% witness: synthetic (GA0 finding 7; the shape of 1003.3017's natbib_vw.sty: a natbib-style `\@lbibitem` whose label
+%          parser is a delimited `\citeauthoryear`, here under names of its own, no `\NAT@ifcmd`)
+% oracle:  pdflatex (2 passes) 0 errors: the entry prints no label (`\item[]`), "See [Smith 2001]."
+% engines: perl 0.8.8 = 2 Errors (Missing argument Until:(@)(@)\@nil, {}); rust GA5base (int166a) and GA5 = 6 Errors
+%          (\lx@tag@intags restricted_horizontal, \endgroup), 1 Warning, the entry's tag "[": sect11.rs takes the
+%          kernel label path (the label expanded where a `\cite` prints it) unless `\NAT@ifcmd` is defined
+% expect:  0 errors, 0 warnings; no label printed at the entry; the citation "Smith 2001"
+% status:  RED. "`\@lbibitem` not the kernel's" is no signal: acl2012.sty:268/acl2015.sty:268 redefine it keeping the
+%          kernel's `\bibcite{#2}{#1}` (GA5 A/B: 1610.02544 lost "Aho and Ullman", 1506.02004, astro-ph9701171 worse)
+% moves:   post-merge (a reading of whether `\@lbibitem` parses its label or writes it to `\bibcite`)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\@lbibitem[#1]#2{\item[]\XX@parse#1(@)(@)\@nil{#2}}
+\def\XX@parse{}
+\def\citeauthoryear#1#2#3(@)(@)\@nil#4{\global\@namedef{b@#4}{#1 #2}}
+\makeatother
+\begin{document}
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Smith}{2001}]{a} A paper.
+\end{thebibliography}
+See \cite{a}.
+\end{document}

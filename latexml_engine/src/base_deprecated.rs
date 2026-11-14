@@ -6,6 +6,8 @@
 //! macro is the live name).
 //!
 //! Order mirrors Perl `Base_Deprecated.pool.ltxml` L29-220 1:1.
+use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -105,8 +107,15 @@ LoadDefinitions!({
   DefMacro!("\\@ADDCLASS", "\\lx@add@cssclass");
 
   // Perl L161-180 — older deprecations (XMath wrappers)
-  DefMacro!("\\FCN{}", "\\lx@wrap[role=FUNCTION]{#1}");
-  DefMacro!("\\ROLE{}{}", "\\lx@wrap[role={#1}]{#2}");
+  // The letter-only names here and `\DUAL` below are LaTeXML's, not LaTeX's: as kernel stubs
+  // (`DefinitionOrigin::Stub`, like sect05.rs's `\equalcontrib`) a document's or a raw file's `\newcommand` defines them,
+  // as it does in LaTeX, where they do not exist. Perl ignores the redefinition (latex_constructs.pool.ltxml:2521),
+  // which left 1804.03034's `\newcommand{\DUAL}{{\PRIMAL}^{\sharp}}` as `\lx@dual` and its `{multline}` unclosed.
+  with_origin(DefinitionOrigin::Stub, || -> Result<()> {
+    DefMacro!("\\FCN{}", "\\lx@wrap[role=FUNCTION]{#1}");
+    DefMacro!("\\ROLE{}{}", "\\lx@wrap[role={#1}]{#2}");
+    Ok(())
+  })?;
   DefMacro!("\\@SYMBOL{}", "\\lx@wrap[role=ID]{#1}");
   DefMacro!("\\@CSYMBOL{}", "\\lx@symbol[meaning={#1}]{}");
   DefMacro!("\\@APPLY{}", "\\lx@apply[]{#1}{}");
@@ -118,7 +127,10 @@ LoadDefinitions!({
 
   // Perl L190-205 — XMath padded/dual/arg/ref + invisible operators
   DefMacro!("\\@PADDED", "\\lx@padded");
-  DefMacro!("\\DUAL", "\\lx@dual");
+  with_origin(DefinitionOrigin::Stub, || -> Result<()> {
+    DefMacro!("\\DUAL", "\\lx@dual");
+    Ok(())
+  })?;
   DefMacro!("\\@XMArg", "\\lx@xmarg");
   DefMacro!("\\@XMRef", "\\lx@xmref");
   DefMacro!("\\@APPLYFUNCTION", "\\lx@ApplyFunction");

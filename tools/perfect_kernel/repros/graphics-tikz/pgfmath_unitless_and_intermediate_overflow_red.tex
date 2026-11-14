@@ -1,0 +1,17 @@
+% mechanism: pgf scans every operand into `\pgfmath@x` (`#1pt`) and holds each binary operation's result there, so TeX's
+%   "Dimension too large" fires on a unitless operand past `\maxdimen` and on an intermediate sum; ours checks only a number WITH a
+%   unit (`scanned_dimension`, pgfmath_code_tex.rs:1618) and the final result — outside the fpu, unitless operands and `+ - * /`
+%   results pass silently with a wrong value (revDTL1h 1, 2). Also: pgf's sp truncation on `\maxdimen` arithmetic is one last
+%   digit off (`0.5\maxdimen*2` pdflatex 16383.99997, ours 16383.99998; revDTL1h 3). Fix: the same `exceeds_max_dimen` check on
+%   each unitless operand (keeping pgf's plain-number fast path for a lone number) and each operation's result, outside the fpu
+% witness: synthetic (revDTL1h)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 3 `!`: [8191.99998] [11383.99998] [0.0]
+% engines: rust int164a: [10000.0] [15000.0] [16383.99998] 1 E (Perl's false test); DTL1h: the same values, 0 E
+% expect:  3 errors; [8191.99998] [11383.99998] [0.0]
+% status:  RED (DTL1h, int164a) — moves: post-merge (DTLX)
+\documentclass{article}
+\usepackage{pgf}
+\def\t#1{\pgfmathparse{#1}[\pgfmathresult] }
+\begin{document}
+\t{20000*0.5}\t{10000+10000-5000}\t{16383.99999pt+16383.99999pt-16383.99999pt}
+\end{document}

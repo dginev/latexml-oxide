@@ -1,0 +1,25 @@
+% authblk's unlabelled legend, `\affil[ ]{Corresponding author: Ann Able (ann@a.edu)}` after `\affil[1]{Univ A, Town}`:
+% it prints no mark, so it stays the affiliation it was (a note shows its text only behind its mark: an empty `mark`
+% is unreachable on the rendered page, review rev103c B1, main-session ruling 2026-11-04); its address the e-mail of
+% the author it spells (`affiliations::legend_entry_call`, the Link step). Its carrier, the run's last author, is the
+% Link question (OD #961 "Not reached").
+% witness: 2412.14916, 2305.02090, 2609.07982 (authblk under article)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1", "1Univ A, Town", "Corresponding author: Ann Able
+%          (ann@a.edu)"
+% engines: rust int130a = "Corresponding author: Ann Able" an affiliation of Bob Baker, the e-mail Ann Able's;
+%          rust 103c r1 = Bob Baker's note with mark="" (invisible in the HTML)
+% expect:  0 errors, 0 warnings; Ann Able: Univ A and the e-mail ann@a.edu; Bob Baker: Univ A and the affiliation
+%          "Corresponding author: Ann Able" (the address and its brackets taken out as before), as int130a
+% status:  GREEN (int130a), RED (103c r1) -> GREEN (103c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Bob Baker}
+\affil[1]{Univ A, Town}
+\affil[ ]{Corresponding author: Ann Able (ann@a.edu)}
+\maketitle
+Text.
+\end{document}

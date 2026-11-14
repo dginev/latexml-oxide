@@ -1,0 +1,9 @@
+% witness: 1611.06929, 1711.09946, 2007.10842 (lmcs.cls:37-38 passes inline), 2408.04363, 2505.19937 (Interspeech), 2104.05980 (INTERSPEECH2021.sty), 2508.21277 (pnas-new), 2402.14602 (wlpeerj): {enumerate*} 28 papers
+% oracle:  pdflatex (with 1611.06929's lmcs.cls beside it) 0 errors; "Either (a) red, (b) green or none."
+% engines: rust 67int9 = undefined {enumerate*} (the class binding loaded enumitem without inline); perl = no lmcs binding
+% expect:  0 errors, 0 warnings; an inline-enumerate labeled (a), (b)
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::enumitem_inline_under_lmcs
+\documentclass{lmcs}
+\begin{document}
+Either \begin{enumerate*}[label=(\alph*)]\item red, \item green\end{enumerate*} or none.
+\end{document}

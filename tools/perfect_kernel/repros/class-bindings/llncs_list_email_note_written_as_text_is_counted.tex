@@ -1,0 +1,19 @@
+% mechanism: the emitter writes one address of an e-mail list no ink prints alone as text (`emit.rs` `one_address`);
+%   a list of plain characters and control symbols loses no markup, but the text written is tested too: one holding a
+%   control sequence's name lost what it printed, and a "markup lost" Warning counts each address.
+% witness: review revZ18c S3 (probe q4_tt_member); ERR2 counted both, Z18c none
+% oracle:  pdflatex 0 errors; "{ann.able, bob.baker}@a.edu" with footnote 1 "Both equal."
+% engines: rust ERR2 = 3 warnings (2 "markup lost", 1 content check); Z18c = 1 warning (the content check)
+% expect:  0 errors, 3 warnings: "markup lost" for ann.able@a.edu… and bob.baker@a.edu…, and the content check's excess
+% status:  RED (Z18c) -> GREEN (Z18d) for the Warnings; the note's name in the address text stays RED, see
+%   llncs_list_email_note_name_leaks_into_address.tex
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1}}
+\institute{Univ A, Town\\
+\email{\{ann.able, bob.baker\}@a.edu\footnote{Both equal.}}}
+\maketitle
+Body.
+\end{document}

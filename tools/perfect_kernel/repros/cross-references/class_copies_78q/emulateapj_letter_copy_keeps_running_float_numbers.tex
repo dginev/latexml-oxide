@@ -1,0 +1,30 @@
+% witness: arXiv 0709.1471, 0803.1491, astro-ph0508218, 1308.5760 (emulateapj copies of 11/26/03, 4/12/04 and 6/22/04
+%          whose appendix code has the float zeroing commented out: the letter before the running number)
+% oracle:  pdflatex 0 errors with 0709.1471's copy (6/22/04, :755-779); "See ??, 1, 1, 1, 2, 2.1, 2, 3, A, A1, A.1, A2, A2, B, B1, B3." (the first heading's
+%          label lost by the class, as with the 11/26/04 copy)
+% engines: rust (78q r1) = floats A1, A1, B1 (zeroed and reset, the 11/26/04 copies' numbering); int53a 2, 2, 3
+% expect:  0 errors; floats A2, A2, B3 (the paper's copy decides; emulateapj_letter.cls here a stub of its header and
+%          appendix code, read as emulateapj.cls)
+% status:  RED (78q r1, review finding 2) -> GREEN (78q r2)
+\documentclass{emulateapj}
+\usepackage{graphicx}
+\begin{document}
+\section{A}\label{sA}
+\begin{equation}a\label{e1}\end{equation}
+\begin{figure}[t]\caption{F1}\label{f1}\end{figure}
+\begin{table}[t]\caption{T1}\label{t1}\end{table}
+\section{B}\label{sB}
+\subsection{C}\label{sC}
+\begin{equation}b\label{e2}\end{equation}
+\begin{eqnarray}c&=&d\label{e3}\end{eqnarray}
+\appendix
+\section{D}\label{sD}
+\begin{equation}x\label{e4}\end{equation}
+\subsection{E}\label{sE}
+\begin{figure}[t]\caption{F2}\label{f2}\end{figure}
+\begin{table}[t]\caption{T2}\label{t2}\end{table}
+\section{G}\label{sG}
+\begin{equation}y\label{e5}\end{equation}
+\begin{figure}[t]\caption{F3}\label{f3}\end{figure}
+See \ref{sA}, \ref{e1}, \ref{f1}, \ref{t1}, \ref{sB}, \ref{sC}, \ref{e2}, \ref{e3}, \ref{sD}, \ref{e4}, \ref{sE}, \ref{f2}, \ref{t2}, \ref{sG}, \ref{e5}, \ref{f3}.
+\end{document}

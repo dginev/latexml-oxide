@@ -1,0 +1,12 @@
+% witness: 2604.10154, 1207.7025, 2004.14742 (`\usepackage{xypic}`, curved arrow `\ar@/^/[r]`; under pdflatex the
+%          pdf driver's frame support requires curve, xypdf-fr.tex:60, so `\crvi` (xycurve.tex:69) is defined)
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 = 1 error (`\crvi` undefined)
+% expect:  0 errors, 0 warnings; one xymatrix picture
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xypic}
+\begin{document}
+\[\xymatrix{A \ar@/^/[r] & B}\]
+\end{document}

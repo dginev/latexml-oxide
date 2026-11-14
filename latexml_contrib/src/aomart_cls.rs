@@ -3,7 +3,9 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // aomart.cls:75 `\LoadClass[11pt]{amsart}`: amsart hands its default `leqno`
+  // to amsmath (amsart.cls:159-162, 350), so tags go on the left (#336).
+  RequirePackage!("amsmath", options => vec!["leqno".to_string()]);
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   // Eager xcolor preload removed for Perl parity: it makes a later document
@@ -19,9 +21,13 @@ LoadDefinitions!({
   // Name parts emit inline.
   DefMacro!("\\givenname{}", "#1");
   DefMacro!("\\surname{}", "#1");
+  // aomart.cls:357-366 `\subject{primary|secondary}{scheme}{codes}`: the scheme (#2, "MSC2010") is printed only under the
+  // class's `printscheme` option, off by default (:64-66) — the binding's declared drop, which the title-page check
+  // wants none of (OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
   DefMacro!(
     "\\subject{}{}{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=#1]{#3}"
+    "\\@add@frontmatter{ltx:classification}[scheme=#1]{#3}",
+    drops => [2]
   );
   DefMacro!(
     "\\published{}",
@@ -77,4 +83,39 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=copyright]{#1}"
   );
   DefMacro!("\\formatdate{}", "#1");
+
+  // Manuscript-review surface (aomart.cls L712-744): outside manuscript
+  // mode the real class makes these no-ops or plain passthroughs —
+  // `\HSelect`/`\ECSelect` only `\gdef` under `\if@aom@manuscript@mode`,
+  // `\Highlight` falls through to its content. aomsample witnesses.
+  def_macro_noop("\\HSelect[]{}")?;
+  def_macro_noop("\\ECSelect[]{}")?;
+  DefMacro!("\\Highlight[]{}", "#2");
+  def_macro_noop("\\EditorialComment[]{}")?;
+  // Review-metadata gobbles (aomart.cls L430-433 `\let\proposed\@gobble` …).
+  def_macro_noop("\\proposed{}")?;
+  def_macro_noop("\\seconded{}")?;
+  def_macro_noop("\\corresponding{}")?;
+  // AMS-style contact fields (aomart.cls L306, L340).
+  DefMacro!(
+    "\\urladdr[]{}",
+    "\\@add@frontmatter{ltx:note}[role=urladdr]{#2}"
+  );
+  DefMacro!(
+    "\\contrib[]{}",
+    "\\@add@frontmatter{ltx:note}[role=contributor]{#2}"
+  );
+  // Cross-ref sugar (aomart.cls L745-750): `\fullref{Theorem}{lbl}` →
+  // "Theorem~\ref{lbl}" (hyperref'd in the class; \ref suffices here).
+  DefMacro!("\\fullref{}{}", "#1~\\ref{#2}");
+  DefMacro!("\\pfullref{}{}", "#1~(\\ref{#2})");
+  DefMacro!("\\bfullref{}{}", "#1~[\\ref{#2}]");
+  DefMacro!("\\eqfullref{}{}", "#1~\\ref{#2}");
+  DefMacro!("\\fullpageref[]{}", "#1~\\pageref{#2}");
+  // `\funding[text]{sponsor}{grantid}` (aomart.cls L778): records sponsor
+  // metadata; the optional is display text printed in place.
+  DefMacro!(
+    "\\funding[]{}{}",
+    "#1\\@add@frontmatter{ltx:note}[role=funding]{#2 #3}"
+  );
 });

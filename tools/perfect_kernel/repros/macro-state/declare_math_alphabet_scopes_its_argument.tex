@@ -1,0 +1,10 @@
+% witness: every document- or package-declared math alphabet (a paper's \DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}; mathpazo.sty:72 \mathbold; found by batch 68j on eulervm.sty:58)
+% oracle:  pdflatex 0 errors; a script x, then italic y and an italic c after \mathpzc{B} (latex.ltx:12903-12925 \select@group, :12641-12646 \use@mathgroup close the group after the argument)
+% engines: rust 2eb177d124 = y, B and c all font="script italic" (sect08.rs \DeclareMathAlphabet defines a parameterless font switch); perl = the same (KNOWN_PERL_ERRORS #823)
+% expect:  0 errors, 0 warnings; x and B script italic, y and c italic
+% status:  RED (68j, open: a fix must keep sect13.rs math_alphabet_font seeing the alphabet's font)
+\documentclass{article}
+\DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}
+\begin{document}
+$\mathpzc{x}+y$ and $a+\mathpzc{B}c$
+\end{document}

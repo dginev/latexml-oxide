@@ -1,0 +1,26 @@
+% witness: 1205.2794, 1801.00980, 2201.03882, 2601.00167 (~817 run-336 papers; the `\widebar` snippet copied from
+%          tex.stackexchange, driving amsmath's accent internals directly)
+% oracle:  pdflatex 0 errors: a wide bar over X, and over \mathcal{A} with subscript 1
+% engines: rust 64h4 = 3 Error:undefined (\macc@depth, \macc@set@skewchar, \macc@nested@a); Perl 0.8.8 the same 3
+% expect:  amsmath.sty:740, :800-802, :809, :832-891 (`\macc@*`, `\accentclass@`, `\acc@check`); the snippet's
+%          `\mathaccent` is an `\overline` of `\macc@nucleus`; `\skewchar\textfont\mathgroup` reads the family number
+%          (amsmath.sty:859), no `\char1` typeset
+% status:  RED (64h4) -> GREEN (64qb)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand*\rel@kern[1]{\kern#1\dimexpr\macc@kerna}
+\newcommand*\widebar[1]{\begingroup
+  \def\mathaccent##1##2{\rel@kern{0.8}%
+    \overline{\rel@kern{-0.8}\macc@nucleus\rel@kern{0.2}}\rel@kern{-0.2}}%
+  \macc@depth\@ne
+  \let\math@bgroup\@empty \let\math@egroup\macc@set@skewchar
+  \mathsurround\z@ \frozen@everymath{\mathgroup\macc@group\relax}%
+  \macc@set@skewchar\relax
+  \let\mathaccentV\macc@nested@a
+  \macc@nested@a\relax111{#1}\endgroup}
+\makeatother
+\begin{document}
+$\widebar{X}$ and $\widebar{\mathcal{A}}_1$.
+\end{document}

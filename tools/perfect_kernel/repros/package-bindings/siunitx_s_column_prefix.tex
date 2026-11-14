@@ -1,0 +1,21 @@
+% witness: 2504.01955 (`*{20}{>{\centering\arraybackslash}Z}`, `\newcolumntype{Z}{S[table-format=2.1]}`; brk86)
+% oracle:  pdflatex 0 errors: siunitx takes an `S` column's `>{…}` tokens as given, unexpanded, ahead of the cell
+%          (siunitx.sty:5625 `\__siunitx_table_collect_begin:w #1 \ignorespaces`); two rows, the rotated headers set
+% engines: rust int88e = 7 errors ("Missing { inserted" in every row, then the table never closes); `>{\centering}S`
+%          cells began with a stray line break
+% expect:  0 errors, 0 warnings; both rows' cells, no line break in an `S` cell
+% status:  RED (int88e) -> GREEN (79s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[table]{xcolor}
+\usepackage{graphicx,siunitx,array}
+\begin{document}
+\begin{tabular}{l *{2}{>{\centering\arraybackslash}S[table-format=2.1]}}
+Method & \cellcolor{red}\rotatebox{90}{\textcolor{white}{\textbf{Road}}} & \cellcolor{blue}\rotatebox{90}{Wall} \\
+Ours & 12.5 & 3.4 \\
+\end{tabular}
+
+\begin{tabular}{l >{\centering}S}
+A & 7.25 \\
+\end{tabular}
+\end{document}

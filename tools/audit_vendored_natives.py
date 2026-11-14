@@ -134,7 +134,7 @@ AUDITED = {
     # ---- Build-tooling and test fixtures: native files present, NOT linked into any
     # shipped binary, so no disclosure is owed. Each verdict verified by looking at the
     # file, not at the name. Recorded so the gate stays loud on substance and quiet here.
-    "cc": (("1.4.0", "1.4.2", "1.4.3", "1.4.4"),
+    "cc": (("1.4.0", "1.4.2", "1.4.3", "1.4.4", "1.8.0"),
         "src/detect_compiler_family.c -- a probe compiled to identify the host "
         "toolchain, never linked into our binary. The crate itself is pure Rust. "
         "Re-verified at 1.4.0: still the only non-Rust file in the crate, and still "
@@ -146,10 +146,20 @@ AUDITED = {
         "MIT OR Apache-2.0 unchanged. 1.4.3 -> 1.4.4 verified 2026-08-21: "
         "detect_compiler_family.c still the ONLY native file, sha256 unchanged "
         "(97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f), "
-        "license MIT OR Apache-2.0 unchanged.",
+        "license MIT OR Apache-2.0 unchanged. 1.4.4 -> 1.8.0 verified 2026-10-13: "
+        "detect_compiler_family.c byte-identical; one new native file, "
+        "src/detect_cpp_stdlib.cpp (tool.rs:452 include_bytes!), the same probe shape "
+        "for the C++ standard library: an #include <cstddef> and one #ifdef/#pragma "
+        "message, so diagnostics only, no object code, never linked; license MIT OR "
+        "Apache-2.0 unchanged.",
     ),
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
+    ),
+    "nix": ("0.31.3",
+        "test/test_kmod/hello_mod/hello.c -- a Linux kernel-module test fixture, not built; "
+        "zip 9 depends on nix only on macOS and the BSDs (zip-9.0.3 Cargo.toml:263, feature "
+        "\"fs\"), so no Linux build compiles nix at all; license MIT.",
     ),
     # Both versions audited: the same uncompiled reference/*.cpp shape.
     # (A tuple lists every audited version — needed because the lockfile is
@@ -180,9 +190,10 @@ AUDITED = {
         "links = \"rayon-core\": same version-lock trick. Its build.rs says so outright "
         "-- \"we're not *actually* linking\".",
     ),
-    "pericortex": ("0.2.8",
+    "pericortex": ("0.2.9",
         "Ours (dginev). The 'vendored archive' is 1508.01222.zip, an arXiv test paper "
-        "-- data, not code.",
+        "-- data, not code. 0.2.9 re-checked 2026-10-20: no build.rs, no native source, "
+        "the same zip byte for byte; the diff is Rust only (harness.rs fleet RSS helper).",
     ),
 
     # The dginev/marpa fork's sys crate, published to crates.io as
@@ -209,7 +220,7 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "libxml": ("0.3.21",
+    "libxml": (("0.3.21", "0.3.22", "0.3.23"),
         "Binds libxml2 -- (c) Daniel Veillard, MIT -- whom the crate's own 'MIT' "
         "field does not name as holder. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "
@@ -218,7 +229,13 @@ AUDITED = {
         "0.3.19 -> 0.3.21 diffed 2026-08-02 (crates.io tarballs): pure-Rust wrapper "
         "changes only (set_linked visibility, get_namespaces array free); build.rs "
         "still link-only, zero cc::Build, no native files, license field 'MIT' "
-        "unchanged."
+        "unchanged. 0.3.21 -> 0.3.22 diffed 2026-10-13 (registry sources): build.rs "
+        "and src/wrapper.h (the bindgen header) byte-identical, Rust-only changes "
+        "(the HTML well-formedness error handler removed from c_helpers.rs), license "
+        "field 'MIT' unchanged. 0.3.22 -> 0.3.23 diffed 2026-10-31 (git tags v0.3.22..v0.3.23 "
+        "of KWARC/rust-libxml, our release): build.rs and src/wrapper.h byte-identical, no C "
+        "source, Rust-only changes (xpath::Expression, Node::with_property, the wrapper's "
+        "stack name copies and in-place value reads), license field 'MIT' unchanged."
     ),
     "libxslt": ("0.1.5",
         "Binds libxslt/libexslt -- (c) Daniel Veillard, MIT -- same shape as libxml "
@@ -232,7 +249,7 @@ AUDITED = {
         "`bundled` sqlite it is not even consulted at build time. Flagged only for "
         "its test fixtures. No code enters the shipped binary; no notice owed."
     ),
-    "libsqlite3-sys": (("0.38.1", "0.38.2"),
+    "libsqlite3-sys": (("0.38.1", "0.38.2", "0.39.1"),
         "Bundles the SQLite amalgamation (sqlite3.c) behind rusqlite's `bundled` "
         "feature, compiled in for the ObjectDB --dbfile store. SQLite is PUBLIC "
         "DOMAIN by explicit dedication (the 'blessing' header in sqlite3.c) -- no "
@@ -240,7 +257,13 @@ AUDITED = {
         "bindings. Diffed 2026-08-03 at adoption. 0.38.1 -> 0.38.2 diffed "
         "2026-08-12: bundled sqlite3/sqlite3.c md5-identical (SQLite 3.53.2), "
         "license MIT unchanged; only build.rs (an MSRV cfg_select! macro + import "
-        "reorder) and metadata changed -- no native-code or link change."
+        "reorder) and metadata changed -- no native-code or link change. "
+        "0.38.2 -> 0.39.1 diffed 2026-11-09 (RUSTSEC-2026-0459, rusqlite 0.41.1): "
+        "bundled sqlite3.c SQLite 3.53.2 -> 3.54.1, the same public-domain blessing "
+        "header, the same sqlite3/ file set; license MIT unchanged; build.rs gains a "
+        "cfg_select! source-dir choice for the `bundled-sqlcipher` feature (not "
+        "enabled here) and rustfmt reflows -- the shipped closure is still SQLite "
+        "alone, public domain, no notice owed."
     ),
     "psm": (("0.1.31", "0.1.32"),
         "Compiles its own portable stack-manipulation asm shims, and ships a prebuilt "
@@ -291,6 +314,8 @@ FINGERPRINTS = {
     "cc": {
         "src/detect_compiler_family.c":
             "97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f",
+        "src/detect_cpp_stdlib.cpp":
+            "b2ef811b2eaec1bfa305241d3a2ba26ed4c9898dc3a5a076a4ec6fcab8410540",
     },
 }
 

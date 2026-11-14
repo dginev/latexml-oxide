@@ -1,0 +1,20 @@
+% mechanism: the elsarticle sibling of amsart_address_glued_email_label_names_its_contact.tex — an unlabelled
+%   `\address` (elsarticle_cls.rs, `\lx@add@contact[label={},role=address,_zone=names]`) whose line's label is glued to
+%   its address, `E-mail:zz@x.org`: the same Kind step line (`kind address: its address lines the entry's e-mails`), so
+%   the label "E-mail:" names the contact and the address is its content (catalog only: the amsart repro's path)
+% witness: none in the corpus (synthetic; the amsart and REVTeX 3 witnesses 2206.00543, hep-ph9606235)
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "Ann Able", "Univ A, Town", "E-mail:zz@x.org", "Text."
+% engines: rust int157a (d86f58e8e2) = <contact name="Email: " role="email">E-mail:zz@x.org</contact>
+% expect:  0 errors, 0 warnings; Ann Able: the address "Univ A, Town" and <contact name="E-mail: " role="email">
+%          zz@x.org</contact>
+% status:  RED (int157a) -> GREEN (GL1), catalog only
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able}
+\address{Univ A, Town\\ E-mail:zz@x.org}
+\end{frontmatter}
+Text.
+\end{document}

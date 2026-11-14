@@ -1,0 +1,15 @@
+% witness: polyglossia gloss-latin.ldf:41-50, babel-latin latin.ldf:110-123 (`\Declare*caseMapping[locale]{..}{..}`);
+%   repro babel-lang/poly_latin_luatex_GREEN and luatex-profile/sysengine_newXeTeXintercharclass_hang (GREEN by
+%   error count, failing their text: expectation check 2026-10-02)
+% oracle:  pdflatex + lualatex 0 errors, "Salve SALVE"; Perl 0.8.8 0 errors <p>Salve SALVE</p>
+% engines: rust 59s7 = 0 errors, "a-x-classic]‘uV a-x-classic]‘Vu a-x-classic]‘uV Salve SALVE": the native
+%   overrides (sect08.rs) took `{}{}` where the kernel takes `o m m` (latex.ltx:22402-22416) (RUST-ONLY)
+% expect:  0 errors; one <p> whose text is exactly "Salve SALVE"
+% status:  RED (59s7) -> GREEN (59t)
+\documentclass{article}
+\DeclareUppercaseMapping[la-x-classic]{`u}{V}
+\DeclareLowercaseMapping[la-x-classic]{`V}{u}
+\DeclareTitlecaseMapping[la-x-classic]{`u}{V}
+\begin{document}
+Salve \MakeUppercase{salve}
+\end{document}

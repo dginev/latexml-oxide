@@ -1,0 +1,7 @@
+# Curated golden references for s3_audit.sh (tab-separated): <bundle>/<name>  <reference>  <evidence>
+# reference: `pages F-L` (score against those golden pages only) or `oracle` (score against the doc's own clean
+# oracle render, oracle.sh's oracle_text/). Only verified mismatches: the golden typeset from another source.
+dinbrief/dinbrief	oracle	golden = dinbrief.dtx typeset (111 pp, implementation + index); dinbrief.tex = docstrip `documentation` extract of another revision (23 pp); vs oracle 99.3 % Rust = Perl (rc131 2026-09-30)
+geradwp/geradwp	oracle	golden = class manual typeset from source/latex/geradwp/geradwp.dtx (30 pp); geradwp.tex = docstrip `template` (4 pp); DIFFICULT_CASES.md "do not re-chase"; vs oracle 99.2 % (rc131 2026-09-30)
+jacow/JACoW_LaTeX_A4	pages 1-4	golden built with the three `%===` lines uncommented (annexes, pp 5-10); the shipped .tex typesets pp 1-4; 100 % against them (rc131 2026-09-30)
+jacow/JACoW_LaTeX_Letter	pages 1-4	as JACoW_LaTeX_A4 (rc131 2026-09-30)

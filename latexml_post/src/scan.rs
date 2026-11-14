@@ -9,7 +9,7 @@ use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
-  document::PostDocument,
+  document::{PostDocument, is_ltx},
   object_db::{ObjectDB, Value},
   processor::{ProcessResult, Processor},
 };
@@ -162,7 +162,7 @@ impl Scan {
   /// Build common properties for a scanned element WITHOUT mutating self.
   /// Labels and tag nodes are collected but not yet registered.
   fn collect_common(
-    &self,
+    &mut self,
     doc: &PostDocument,
     node: &Node,
     tag: &str,
@@ -208,8 +208,6 @@ impl Scan {
     }
 
     // tag nodes (refnum, typerefnum, etc.)
-    // Store as String (not Xml) to avoid dangling node references.
-    // Perl uses cloneNode(1) deep copy; our libxml bindings only do ref copies.
     let mut has_refnum = false;
     for tagnode in child_tag_nodes(node) {
       let key = if let Some(role) = tagnode.get_attribute("role") {
@@ -224,8 +222,17 @@ impl Scan {
       if key == "refnum" {
         has_refnum = true;
       }
-      let text = tagnode.get_content();
-      sp.push(&key, Value::from(text));
+      // Perl `Scan.pm` L269: the tag is stored as its `cleanNode` copy, which a reference deep-copies. A tag of text
+      // alone is stored as that text (the same content, no copy); one with markup as its copy, so that a reference
+      // prints a `\tag{$\mathrm{P_1}$}`'s math as math, "(P1)" where the flattened text read "( P 1 )" with the
+      // formula's whitespace (2609.28438, 1905.03839, 2510.06152). Guard
+      // `perfect_kernel_batch78j::cleveref_document_format_with_math_in_the_tag`.
+      let value = if has_markup(&tagnode) {
+        self.clean_node(doc, &tagnode)
+      } else {
+        Value::from(clean_text_content(&tagnode))
+      };
+      sp.push(&key, value);
     }
 
     // pdflatex parity (surpass-Perl): a `\label` placed at `\begin{eqnarray}` (or
@@ -321,6 +328,37 @@ impl Scan {
     self.scan_children(doc, node, effective_id);
   }
 
+  /// Port of Perl `Scan::cleanNode` (`Scan.pm` L206-214) for an object stored
+  /// as a node: copy `node` into the ObjectDB, then remove every
+  /// `.//ltx:indexmark` from the copy. An `\index` or `\glossary` mark is an
+  /// entry for its list, not text of the title that carries it; left in, its
+  /// phrase reaches the section's `title=` tooltip ("1 Title isec").
+  ///
+  /// `adopt_xml`, not a bare handle: the stored node must outlive this page's
+  /// DOM (freed per-page under streaming). A failed copy degrades to the
+  /// flattened text of `node`, which leaves the marks out too — a poorer TOC
+  /// entry, never a dangling one. Guard
+  /// `doc_changes_index::index_marks_stay_out_of_stored_titles_and_captions`.
+  fn clean_node(&mut self, doc: &PostDocument, node: &Node) -> Value {
+    // Most titles carry no mark: ask the source first, so their copies are
+    // not walked.
+    let has_marks = doc.findnode_at(".//ltx:indexmark", node).is_some();
+    match self.db.adopt_xml(node) {
+      Some(Value::Xml(copy)) => {
+        if has_marks {
+          let mut marks = Vec::new();
+          collect_indexmarks(&copy, &mut marks);
+          for mark in marks {
+            mark.free_subtree();
+          }
+        }
+        Value::Xml(copy)
+      },
+      Some(other) => other,
+      None => Value::from(title_text_content(doc, node).as_str()),
+    }
+  }
+
   fn section_handler(
     &mut self,
     doc: &PostDocument,
@@ -339,21 +377,15 @@ impl Scan {
       // title survives into the table of contents (issue #356). The string
       // form used for the page `<title>`/tooltip is derived on demand via
       // `title_text_content` in CrossRef::generate_title.
-      // `adopt_xml`, not a bare handle: the stored node must outlive this
-      // page's DOM (freed per-page under streaming). A failed copy degrades
-      // to the flattened text — a poorer TOC entry, never a dangling one.
+      // Both are cleaned first (Perl `cleanNode`, `Scan.pm` L290-291; see
+      // `clean_node`), so an `\index`/`\glossary` mark in the title stays out
+      // of the tooltip.
       if let Some(title_node) = doc.findnode_at("ltx:title", node) {
-        let value = self
-          .db
-          .adopt_xml(&title_node)
-          .unwrap_or_else(|| Value::from(title_text_content(doc, &title_node).as_str()));
+        let value = self.clean_node(doc, &title_node);
         sp.push("title", value);
       }
       if let Some(toctitle_node) = doc.findnode_at("ltx:toctitle", node) {
-        let value = self
-          .db
-          .adopt_xml(&toctitle_node)
-          .unwrap_or_else(|| Value::from(title_text_content(doc, &toctitle_node).as_str()));
+        let value = self.clean_node(doc, &toctitle_node);
         sp.push("toctitle", value);
       }
       if let Some(stub) = node.get_attribute("stub") {
@@ -415,14 +447,16 @@ impl Scan {
       let caption = doc
         .findnode_at("child::ltx:caption", node)
         .or_else(|| doc.findnode_at("descendant::ltx:caption", node));
+      // Perl `Scan.pm` L311-314 stores the `cleanNode` copies, so a mark in
+      // the caption stays out of the list-of-figures entry.
       if let Some(ref cap) = caption {
-        sp.push("caption", Value::from(cap.get_content()));
+        sp.push("caption", Value::from(clean_text_content(cap)));
       }
       let toccaption = doc
         .findnode_at("child::ltx:toccaption", node)
         .or_else(|| doc.findnode_at("descendant::ltx:toccaption", node));
       if let Some(ref tc) = toccaption {
-        sp.push("toccaption", Value::from(tc.get_content()));
+        sp.push("toccaption", Value::from(clean_text_content(tc)));
       }
       let key = format!("ID:{}", id_str);
       self.register_scanned(&key, sp);
@@ -463,7 +497,8 @@ impl Scan {
     let mut sp = self.collect_common(doc, node, tag, parent_id);
     let id = sp.id.clone();
     if let Some(ref id_str) = id {
-      sp.push("title", Value::from(node.get_content()));
+      // Perl `Scan.pm` L353: the title is the `cleanNode` copy of the anchor.
+      sp.push("title", Value::from(clean_text_content(node)));
       let key = format!("ID:{}", id_str);
       self.register_scanned(&key, sp);
       self.add_as_child(id_str, parent_id);
@@ -479,8 +514,18 @@ impl Scan {
       if let Some(role) = node.get_attribute("role") {
         sp.push("role", Value::from(role));
       }
-      // Store note text content, not XML node reference (avoids dangling refs)
-      sp.push("note", Value::from(node.get_content()));
+      // Store note text content, not XML node reference (avoids dangling refs).
+      // Perl `Scan.pm` L336-337: the `cleanNode` copy, less its `ltx:tags`
+      // (`removeChild`, so only a child `ltx:tags` goes).
+      let mut note = String::new();
+      let mut child = node.get_first_child();
+      while let Some(c) = child {
+        if !(is_ltx(&c) && c.get_name() == "tags") {
+          note.push_str(&clean_text_content(&c));
+        }
+        child = c.get_next_sibling();
+      }
+      sp.push("note", Value::from(note));
       let key = format!("ID:{}", id_str);
       self.register_scanned(&key, sp);
       self.add_as_child(id_str, parent_id);
@@ -579,6 +624,14 @@ impl Scan {
       )
       .is_empty();
     if !in_cited {
+      // A citation that prints its entry whole (show `FullEntry`, biblatex's `\fullcite`): MakeBibliography keeps a
+      // copy of every entry for it (`FULLENTRY` marks the document set, whatever page cites).
+      if node
+        .get_attribute("show")
+        .is_some_and(|show| show.to_ascii_lowercase().contains("fullentry"))
+      {
+        self.db.register("FULLENTRY", vec![]);
+      }
       if let Some(keys) = node.get_attribute("bibrefs") {
         let inlist = node.get_attribute("inlist").unwrap_or_default();
         let mut lists: Vec<&str> = inlist.split_whitespace().collect();
@@ -634,7 +687,6 @@ impl Scan {
       .iter()
       .filter_map(|p| p.get_attribute("key"))
       .collect();
-    let key = format!("INDEX:{}", key_parts.join(":"));
 
     let inlist = node.get_attribute("inlist").map(|listnames| {
       let mut h = HashMap::default();
@@ -643,8 +695,34 @@ impl Scan {
       }
       Value::Hash(h)
     });
+    // One entry per list the mark is in, as the `GLOSSARY:<list>:<key>`
+    // entries are: `\glossary`'s `glo` marks must neither merge into nor
+    // leak out of the `idx` index. Perl (Scan.pm:409-414) registers ONE
+    // `INDEX:<keys>` entry per phrase sequence and keeps the first mark's
+    // `inlist`, so a second list's mark with the same phrases joined the first.
+    let lists: Vec<String> = node
+      .get_attribute("inlist")
+      .map(|names| names.split_whitespace().map(str::to_string).collect())
+      .filter(|names: &Vec<String>| !names.is_empty())
+      .unwrap_or_else(|| vec![crate::make_index::DEFAULT_INDEX_LIST.to_string()]);
+    for list in &lists {
+      let key = crate::make_index::index_db_key(list, &key_parts);
+      self.register_indexmark(&key, &phrases, &see_also, inlist.clone(), node, parent_id);
+    }
+  }
 
-    let exists = self.db.lookup(&key).is_some();
+  /// Record one `ltx:indexmark` under its list's `INDEX` key: the phrases
+  /// on first sight, then either its see-also phrases or its referrer.
+  fn register_indexmark(
+    &mut self,
+    key: &str,
+    phrases: &[Node],
+    see_also: &[Node],
+    inlist: Option<Value>,
+    node: &Node,
+    parent_id: Option<&str>,
+  ) {
+    let exists = self.db.lookup(key).is_some();
     if !exists {
       // Perl registers `phrases => [@phrases]` — the ltx:indexphrase
       // NODES — so MakeIndex can key the tree off their `key`
@@ -666,7 +744,7 @@ impl Scan {
       if let Some(il) = inlist {
         props.push(("inlist", il));
       }
-      self.db.register(&key, props);
+      self.db.register(key, props);
     }
 
     if !see_also.is_empty() {
@@ -683,14 +761,14 @@ impl Scan {
             .unwrap_or_else(|| Value::from(n.get_content().as_str()))
         })
         .collect();
-      if let Some(entry) = self.db.lookup_mut(&key) {
+      if let Some(entry) = self.db.lookup_mut(key) {
         entry.push_new("see_also", nodes);
       }
     } else if let Some(pid) = parent_id {
       let style = node
         .get_attribute("style")
         .unwrap_or_else(|| "normal".to_string());
-      if let Some(entry) = self.db.lookup_mut(&key) {
+      if let Some(entry) = self.db.lookup_mut(key) {
         entry.note_association(&["referrers", pid, &style]);
       }
     }
@@ -722,13 +800,27 @@ impl Scan {
 
     for list in lists.split_whitespace() {
       let gkey = format!("GLOSSARY:{}:{}", list, key);
+      // Perl Scan.pm:442 stores each phrase NODE, so MakeIndex and CrossRef
+      // re-render it with its markup: a nomenclature symbol is math, and its
+      // flattened text content (the XMath token text) is not the symbol.
+      // Adopted before `register` borrows the entry (as the index phrases
+      // above); a failed copy degrades to the flattened text.
+      let values: Vec<(String, Value)> = phrases
+        .iter()
+        .map(|phrase| {
+          let role = phrase
+            .get_attribute("role")
+            .unwrap_or_else(|| "label".to_string());
+          let value = self
+            .db
+            .adopt_xml(phrase)
+            .unwrap_or_else(|| Value::from(phrase.get_content()));
+          (format!("phrase:{role}"), value)
+        })
+        .collect();
       let entry = self.db.register(&gkey, vec![]);
-      for phrase in &phrases {
-        let role = phrase
-          .get_attribute("role")
-          .unwrap_or_else(|| "label".to_string());
-        let prop_key = format!("phrase:{}", role);
-        entry.set_value(&prop_key, Value::from(phrase.get_content()));
+      for (prop_key, value) in values {
+        entry.set_value(&prop_key, value);
       }
       if let Some(ref id_str) = id {
         entry.set_value("id", Value::from(id_str.as_str()));
@@ -776,6 +868,8 @@ impl Scan {
     let decl_id = get_xml_id(node);
     let definiens = node.get_attribute("definiens");
 
+    // Perl `Scan.pm` L503-504: the term and the description are `cleanNode`
+    // copies, so the definiens search below skips a mark's tokens.
     let term = doc.findnode_at("child::ltx:tags/ltx:tag[@role='term']", node);
     let description = doc.findnode_at("child::ltx:text", node);
 
@@ -783,7 +877,11 @@ impl Scan {
       let mut def = definiens.clone();
       if def.is_none() {
         if let Some(ref term_node) = term {
-          let syms = doc.findnodes_at("descendant-or-self::ltx:XMTok[@meaning]", Some(term_node));
+          let syms: Vec<Node> = doc
+            .findnodes_at("descendant-or-self::ltx:XMTok[@meaning]", Some(term_node))
+            .into_iter()
+            .filter(|sym| !in_indexmark_below(sym, term_node))
+            .collect();
           let mut non_rel = Vec::new();
           let mut rel = Vec::new();
           for sym in &syms {
@@ -805,7 +903,7 @@ impl Scan {
         let dkey = format!("DECLARATION:global:{}", def_name);
         let mut sp = self.collect_common(doc, node, tag, parent_id);
         if let Some(ref desc) = description {
-          sp.push("description", Value::from(desc.get_content()));
+          sp.push("description", Value::from(clean_text_content(desc)));
         }
         self.register_scanned(&dkey, sp);
       }
@@ -817,7 +915,7 @@ impl Scan {
           let dkey = format!("DECLARATION:local:{}", did);
           let mut sp = self.collect_common(doc, node, tag, parent_id);
           if let Some(ref desc) = description {
-            sp.push("description", Value::from(desc.get_content()));
+            sp.push("description", Value::from(clean_text_content(desc)));
           }
           self.register_scanned(&dkey, sp);
         }
@@ -830,7 +928,7 @@ impl Scan {
       let mut sp = self.collect_common(doc, node, tag, parent_id);
       sp.push("sortkey", Value::from(sk.as_str()));
       if let Some(ref desc) = description {
-        sp.push("description", Value::from(desc.get_content()));
+        sp.push("description", Value::from(clean_text_content(desc)));
       }
       self.register_scanned(&nkey, sp);
     }
@@ -979,7 +1077,8 @@ fn collect_element_children(node: &Node) -> Vec<Node> {
 fn equation_refnum_text(node: &Node) -> Option<String> {
   for t in child_tag_nodes(node) {
     if t.get_attribute("role").as_deref() == Some("refnum") {
-      let txt = t.get_content();
+      // Cleaned, as the row's own refnum is (`collect_common`).
+      let txt = clean_text_content(&t);
       if !txt.trim().is_empty() {
         return Some(txt);
       }
@@ -1040,6 +1139,81 @@ fn child_tag_nodes(node: &Node) -> Vec<Node> {
   result
 }
 
+/// Is `node` an `ltx:indexmark` — what Perl `Scan::cleanNode` removes?
+fn is_indexmark(node: &Node) -> bool {
+  node.get_type() == Some(NodeType::ElementNode) && node.get_name() == "indexmark" && is_ltx(node)
+}
+
+/// Every `ltx:indexmark` below `node`, outermost first; a mark nested in a
+/// mark goes with it.
+fn collect_indexmarks(node: &Node, marks: &mut Vec<Node>) {
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    if is_indexmark(&c) {
+      marks.push(c.clone());
+    } else {
+      collect_indexmarks(&c, marks);
+    }
+    child = c.get_next_sibling();
+  }
+}
+
+/// Does `node` lie inside an `ltx:indexmark` below `top` — would Perl's
+/// `cleanNode` copy of `top` have lost it?
+fn in_indexmark_below(node: &Node, top: &Node) -> bool {
+  let mut current = (node != top).then(|| node.get_parent()).flatten();
+  while let Some(n) = current {
+    if n == *top {
+      return false;
+    }
+    if is_indexmark(&n) {
+      return true;
+    }
+    current = n.get_parent();
+  }
+  false
+}
+
+/// The text content of Perl `Scan::cleanNode`'s copy of `node` (`Scan.pm`
+/// L206-214): `node`'s text with every `ltx:indexmark` subtree left out. The
+/// entries this port stores as strings (captions, tags, notes, anchor titles)
+/// take it where Perl stores the cleaned node, so `\caption{Cap\index{i}}`
+/// gives the list-of-figures entry "1Cap", not "1Cap i". Text, CDATA and
+/// entity-reference nodes count, as in libxml2's `xmlNodeGetContent`; nothing
+/// is copied. Guard
+/// `doc_changes_index::index_marks_stay_out_of_stored_titles_and_captions`.
+fn clean_text_content(node: &Node) -> String {
+  let mut text = String::new();
+  push_clean_text(node, &mut text);
+  text
+}
+
+/// Whether `node` holds markup: an element child with text, other than an `ltx:indexmark` (which a stored copy leaves
+/// out). An empty one (a name's `<ltx:text/>` from a group that typeset nothing) adds nothing to the text.
+fn has_markup(node: &Node) -> bool {
+  std::iter::successors(node.get_first_child(), |child| child.get_next_sibling()).any(|child| {
+    child.get_type() == Some(NodeType::ElementNode)
+      && !is_indexmark(&child)
+      && !clean_text_content(&child).trim().is_empty()
+  })
+}
+
+fn push_clean_text(node: &Node, text: &mut String) {
+  match node.get_type() {
+    Some(NodeType::TextNode) | Some(NodeType::CDataSectionNode) | Some(NodeType::EntityRefNode) => {
+      text.push_str(&node.get_content());
+    },
+    Some(NodeType::ElementNode) if !is_indexmark(node) => {
+      let mut child = node.get_first_child();
+      while let Some(c) = child {
+        push_clean_text(&c, text);
+        child = c.get_next_sibling();
+      }
+    },
+    _ => {},
+  }
+}
+
 /// Get xml:id from a node, trying both attribute forms.
 fn get_xml_id(node: &Node) -> Option<String> {
   node
@@ -1069,36 +1243,41 @@ pub(crate) fn title_text_content(doc: &PostDocument, node: &Node) -> String {
   let mut result = String::new();
   let mut child = node.get_first_child();
   while let Some(c) = child {
-    match c.get_type() {
-      Some(NodeType::TextNode) => {
-        result.push_str(&c.get_content());
-      },
-      Some(NodeType::ElementNode) => {
-        let name = c.get_name();
-        if name == "tag" {
-          // Honor open/close attributes on <ltx:tag>
-          if let Some(open) = c.get_attribute("open") {
-            result.push_str(&open);
-          }
-          result.push_str(&title_text_content(doc, &c));
-          if let Some(close) = c.get_attribute("close") {
-            result.push_str(&close);
-          }
-        } else if name == "Math" {
-          // Perl `CrossRef.pm` L872-873: `return unicodemath($doc, $node)` — the
-          // presentation branch of the math, in reading order. Without this a
-          // math title flattened to its XMApp/XMDual content tree (operator
-          // first: `= sin x x`) with every inter-token newline preserved.
-          result.push_str(&crate::unicode_math::unicodemath(doc, &c));
-        } else {
-          result.push_str(&title_text_content(doc, &c));
-        }
-      },
-      _ => {},
-    }
+    result.push_str(&title_node_text(doc, &c));
     child = c.get_next_sibling();
   }
   result
+}
+
+/// The text one node of a title contributes to [`title_text_content`].
+pub(crate) fn title_node_text(doc: &PostDocument, c: &Node) -> String {
+  match c.get_type() {
+    Some(NodeType::TextNode) => c.get_content(),
+    // A mark adds no text: stored titles are `cleanNode` copies already,
+    // and `Scan::clean_node`'s fallback reads the live title.
+    Some(NodeType::ElementNode) if is_indexmark(c) => String::new(),
+    Some(NodeType::ElementNode) => {
+      let name = c.get_name();
+      if name == "tag" {
+        // Honor open/close attributes on <ltx:tag>
+        let mut result = c.get_attribute("open").unwrap_or_default();
+        result.push_str(&title_text_content(doc, c));
+        if let Some(close) = c.get_attribute("close") {
+          result.push_str(&close);
+        }
+        result
+      } else if name == "Math" {
+        // Perl `CrossRef.pm` L872-873: `return unicodemath($doc, $node)` — the
+        // presentation branch of the math, in reading order. Without this a
+        // math title flattened to its XMApp/XMDual content tree (operator
+        // first: `= sin x x`) with every inter-token newline preserved.
+        crate::unicode_math::unicodemath(doc, c)
+      } else {
+        title_text_content(doc, c)
+      }
+    },
+    _ => String::new(),
+  }
 }
 
 // NOTE: Perl uses cloneNode(1) for deep DOM copies. Every node stored in the

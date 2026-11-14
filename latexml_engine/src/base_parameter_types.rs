@@ -4,6 +4,17 @@
 
 use crate::prelude::*;
 
+/// The group a style parameter (`DisplayStyle` … `InFractionStyle`) opens to digest its argument carries a group code
+/// (K9, `lx@group@code` = the command whose argument it is): its closer is the parameter's own, never a `}` from the
+/// argument — an author's `}` an inserted one already replaced meets it as a group `}` cannot close and is deleted
+/// (stomach.rs `delete_extra_brace`; `\frac{\left( {a \right)}}{b}`, where LaTeX's `\frac` has `\begingroup`).
+/// OXIDIZED_DESIGN #530.
+fn mark_argument_group() {
+  if let Some(cs) = get_current_token() {
+    assign_frame_value("lx@group@code", Stored::Token(cs));
+  }
+}
+
 /// Shared reader body of the `Optional` / `OptionalAngled` parameter types:
 /// fold a (possibly absent) delimited `value` into the default / `inner`-reparse
 /// contract. The delimiters themselves are the caller's business — see
@@ -51,12 +62,143 @@ fn optional_arg_reversion(
   Ok(Tokens::new(read_tokens))
 }
 
+/// `tokens` as a TeX decimal constant (tex.web §441, `<optional signs>` and
+/// digits with a `.` or `,`), when they are nothing else but spaces around it.
+fn plain_decimal(tokens: &[Token]) -> Option<f64> {
+  let is_space = |t: &&Token| t.get_catcode() == Catcode::SPACE;
+  let start = tokens.iter().position(|t| !is_space(&t))?;
+  let end = tokens.len() - tokens.iter().rev().position(|t| !is_space(&t))?;
+  let mut negative = false;
+  let mut digits = String::new();
+  for token in &tokens[start..end] {
+    if token.get_catcode() != Catcode::OTHER {
+      return None;
+    }
+    match token.with_str(|s| s.chars().next())? {
+      '-' if digits.is_empty() => negative = !negative,
+      '+' if digits.is_empty() => {},
+      c @ '0'..='9' => digits.push(c),
+      '.' | ',' if !digits.contains('.') => digits.push('.'),
+      _ => return None,
+    }
+  }
+  let value: f64 = digits.parse().ok()?;
+  Some(if negative { -value } else { value })
+}
+
+/// The file a `TeXFileName` argument names, and whether it was braced. TeX Live's `scan_file_name` reads a braced
+/// name's group as the name — `\input{name}`, `\openin\r{name}` — without the braces; the reader keeps them on the
+/// argument because `\input` loads LaTeX.pool for a braced (LaTeX-style) name (TeX_FileIO.pool.ltxml:164-169).
+/// A `"` quotes spaces and is not part of the name (tex.ch `more_name`). One reading for `\input`, `\openin`,
+/// `\openout` and `\font`: an `\openin` of a braced name kept the braces and found no file (pgfmanual's
+/// `\openin\examplesource\expandafter{\codeexamplesource}`, pgf-pie-manual).
+pub fn tex_file_name(name: &[Token]) -> (String, bool) {
+  let (inner, braced) = match name {
+    [open, inner @ .., close]
+      if open.get_catcode() == Catcode::BEGIN && close.get_catcode() == Catcode::END =>
+    {
+      (inner, true)
+    },
+    _ => (name, false),
+  };
+  (
+    Tokens::new(inner.to_vec()).to_string().replace('"', ""),
+    braced,
+  )
+}
+
 // ======================================================================
 // Define parsers for standard parameter types.
+/// Run `body` under LaTeX's `\protected@edef` regime: `\protect` `\let` to
+/// `\@unexpandable@protect` (latex.ltx:1384) for the duration, restored after.
+/// A no-op outside LaTeX, where `\@unexpandable@protect` has no meaning.
+pub fn with_unexpandable_protect<R>(body: impl FnOnce() -> Result<R>) -> Result<R> {
+  let regime = T_CS!("\\@unexpandable@protect");
+  if lookup_meaning(&regime).is_some() {
+    with_let(&T_CS!("\\protect"), &regime, body)
+  } else {
+    body()
+  }
+}
+
+/// The `.idx` re-read of a `SanitizedVerbatim` argument, and the control words it formed from characters.
+pub(crate) fn reread_sanitized_entry(arg: &Tokens) -> (Tokens, Vec<Token>) {
+  // Now that we have the semiverbatim tokens, retokenize.
+  // This may seem like wasted work, but it avoids very unfortunate error
+  // propagation in cases where the \index argument was malformed for one
+  // reason or another. The strangeness comes from the original TeX
+  // workflow requiring multiple conversion calls, alongside a call to the
+  // `makeidx` binary, which we don't do in latexml. This parameter type
+  // emulates one important aspect implied by those steps.
+  // The string is what `\@wrindex`'s `\write` would put in the `.idx`
+  // file (tex.web §262 print_cs: a space after every control word), so
+  // an argument assembled by a macro — `\index{packages!#1@\texttt{#1}}`
+  // with `#1` = `\TIKZ` (pgfornament usefulcommands.tex:93) — re-reads as
+  // `\TIKZ` + `@`, not the undefined `\TIKZ@`. Perl re-tokenizes its
+  // UnTeX string, which glues a control word to a following non-letter
+  // (KNOWN_PERL_ERRORS #140). Style catcodes (`@` a letter) here: the
+  // entry is EXPANDED first (`\protected@write`, process_index_phrases),
+  // and a package-built entry is made of `@` names — tcolorbox's
+  // `\kvtcb@doc@sortindex\idx@actual…`; the `.ind` re-read with `@`
+  // OTHER is applied to what survives that expansion, in
+  // process_index_phrases.
+  // A control sequence the argument already holds as ONE token, whose
+  // written name would not re-read as itself (`\bool_if:nT`, `_`/`:`
+  // not letters here), is kept whole: TeX expands it in the
+  // `\protected@write`, before any re-read — genealogy-profiles.sty:536
+  // `\index[#1]{#2 \bool_if:nT {…} {| \tl_use:N …}}`, re-read first, gave
+  // `\bool` + `Script _` per entry. Guard:
+  // `perfect_kernel_batch61::index_entry_keeps_expl3_names_whole`.
+  let reread = |run: Vec<Token>| {
+    mouth::tokenize_internal(TeXString::assembled(writable_tokens(&Tokens::new(run)))).unlist()
+  };
+  let held: Vec<Token> = arg
+    .unlist_ref()
+    .iter()
+    .filter(|t| t.get_catcode() == Catcode::CS)
+    .copied()
+    .collect();
+  // A name of letters (or `@`), or of one character, re-reads as itself; only the others need the test.
+  let plain_name = |t: &Token| {
+    t.with_str(|s| {
+      let name = s.strip_prefix('\\').unwrap_or(s);
+      name.chars().count() <= 1 || name.chars().all(|c| c.is_ascii_alphabetic() || c == '@')
+    })
+  };
+  let mut out: Vec<Token> = Vec::new();
+  let mut run: Vec<Token> = Vec::new();
+  for t in arg.unlist_ref().iter().copied() {
+    if t.get_catcode() == Catcode::CS && !plain_name(&t) && reread(vec![t]) != [t] {
+      out.extend(reread(std::mem::take(&mut run)));
+      out.push(t);
+    } else {
+      run.push(t);
+    }
+  }
+  out.extend(reread(run));
+  // A control word formed here from characters was typed after `\@sanitize`
+  // made `\` other (imakeidx.sty:164-168, latex.ltx `\index`): it is written
+  // to the `.idx` verbatim, never expanded — `\printindex` runs it. Only a
+  // control sequence that was a token before (a macro-built entry) is
+  // expanded by the `\protected@write` (process_index_phrases). egpeirce-doc's
+  // visual index `\index[visual]{i@\ontop{…}\shk{1}…}` ran its pstricks
+  // graphs inside the write expansion (timeout; pdflatex prints them in the
+  // index). Guard: `perfect_kernel_batch61::index_entry_typed_in_source_is_written_verbatim`.
+  // A typed `\protect` is not frozen: `process_index_phrases` lets it be `\@unexpandable@protect` for the write, and
+  // the shipout `\write` drops it.
+  let formed: Vec<Token> = out
+    .iter()
+    .filter(|t| t.get_catcode() == Catcode::CS && !held.contains(t) && **t != T_CS!("\\protect"))
+    .copied()
+    .collect();
+  (Tokens::new(out), formed)
+}
+
 LoadDefinitions!({
   DefParameterType!(Plain, sub[inner, _extra] {
     let mut value = ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?);
-    if let Some(inner_ps) = inner {
+    // An argument that ran off a file's end is dropped with its call: no re-parse.
+    if let Some(inner_ps) = inner.filter(|_| !argument_runaway()) {
       // TODO: How many arguments can we expect back? One? Many?
       //       Currently only passing through the first
       value = inner_ps.reparse_argument(value)?.remove(0);
@@ -76,7 +218,17 @@ LoadDefinitions!({
   });
 
   DefParameterType!(DefPlain, sub[inner, _extra] {
-    let mut value = ArgWrap::Tokens(read_balanced(ExpansionLevel::Off, true, true)?);
+    // OXIDIZED_DESIGN #161 (surpass-Perl, approved 2026-08-31): skip blanks
+    // before the required `{`. Real TeX skips blank space tokens when
+    // grabbing an undelimited argument (tex.web `macro_call`), and LaTeXML's
+    // own `{}` reader (`readArg` → `readNonSpace`) does too — Perl 0.8.8's
+    // bare `readBalanced(0,1,1)` alone errors "Expected opening '{'" when a
+    // `\lstnewenvironment{x}[1][]` body sits on the NEXT line (the standard
+    // doc style; ~148 TL-doc manuals). `\def`/`\gdef` reach here after
+    // `UntilBrace`, where the skip is a no-op.
+    // A `\def` body, read at tex.web's `defining` status (`read_definition_body`).
+    skip_spaces()?;
+    let mut value = ArgWrap::Tokens(read_definition_body(ExpansionLevel::Off)?);
     if let Some(inner_ps) = inner {
       value = inner_ps.reparse_argument( value)?.remove(0);
     }
@@ -102,6 +254,32 @@ LoadDefinitions!({
     optional_arg_reversion(arg, inner, T_OTHER!("["), T_OTHER!("]"))
   });
 
+  // Rust-only: a position or alignment keyword LaTeX only tests and never typesets — the `[t]` of
+  // `\begin{tabular}[t]`, `\parbox[t]`, `{minipage}[t][h][s]` (latex.ltx:16565-16566 `\@array[#1]` `\if #1t\vtop…`,
+  // `\@iiiparbox` :16258-16259), the `[l]` of `\makebox[w][l]` and `\shortstack[l]`, wrapfig's `{r}` placement. Read,
+  // digested and reverted exactly as `Optional` (`[]`) and `Plain` (`{}`) are, so the whatsit holds the letter for
+  // `translate_attachment` and the reversions; only its type says it is no text on the page (base_utilities.rs
+  // `shown_arguments`, as it says a `KeyVals` or a verbatim key is not): a class's emptied `\@maketitle` deposit that
+  // holds only `\begin{tabular}[t]{l}\bf\rule{\z@}{24pt}\@author\end{tabular}` prints nothing (iclr*_conference.sty:83-93,
+  // arxiv.sty, colm, corl, nips; HF14, 2610.20409, 2310.10873, 2209.14855). Not `OptionalSemiverbatim`: its catcode
+  // change moved 2212.05358's `\captionof` (babel) into its `\quad~\begin{minipage}[b]`.
+  DefParameterType!(OptionalPosition, sub[inner, default] {
+    optional_arg_value(read_optional(None)?, inner, default)?
+  },
+  optional => true,
+  reversion => sub[arg, inner, _extra] {
+    optional_arg_reversion(arg, inner, T_OTHER!("["), T_OTHER!("]"))
+  });
+  DefParameterType!(Position, sub[_inner, _extra] {
+    ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?)
+  },
+  reversion => sub[arg, _inner, _extra] {
+    let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+    read_tokens.extend(arg.iter().map(|t| t.revert()));
+    read_tokens.push(T_END!());
+    Ok(Tokens::new(read_tokens))
+  });
+
   // The angle-bracket twin of `Optional`, mirroring Perl beamer.cls.ltxml
   // L46-57 (`OptionalBeamerAngled` / `readBeamerAngled`). Not beamer-specific:
   // apacite spells its citation pre-note this way — `\cite<see>[p.5]{key}`,
@@ -124,20 +302,76 @@ LoadDefinitions!({
   //   <general text> = <filler>{<balanced text><right brace>
   // however, <filler> does get expanded while searching for the initial {
   // which IS required in contrast to a general argument; ie a single token is not correct.
+  // Read at tex.web's `absorbing` status (`scan_toks(false, _)`): a file that
+  // ends inside the text ends it there with a `}` (§339; `read_balanced_text`).
   DefParameterType!(GeneralText, sub[_inner, _extra] {
     skip_filler()?;
-    read_balanced(ExpansionLevel::Off,false,true)
+    read_balanced_text(ExpansionLevel::Off, true)
   });
 
   // This is like GeneralText, but it Partially expands the argument (not `\protected`, nor `\the`)
   DefParameterType!(XGeneralText, sub[_inner, _extra] {
     skip_filler()?;
-    read_balanced(ExpansionLevel::Partial,false,true)
+    read_balanced_text(ExpansionLevel::Partial, true)
   });
 
   DefParameterType!(Until, sub[_inner, until_extra] {
-    // TODO: how many tokens are in extra?
-    read_until(&until_extra[0])
+    // A ran-out scan (read_until → None) delivers an EMPTY argument, not a
+    // missing one: many of our mouth ends are ARTIFICIAL (isolated
+    // constructor-arg mouths) where real TeX would find the delimiter in
+    // the enclosing stream — l3tl replace sentinels (spath3/litetable/
+    // zref-check) mis-looped on a None arg, and a per-iteration Error
+    // regressed 63 corpus docs (sweep 23). Zero-progress delimited-scan
+    // loops terminate via the stomach cycle guard.
+    //
+    // EXCEPT at the TRUE end of all input (`gullet::at_end_of_all_input`:
+    // no mouth beneath, no `reading_from_mouth` open): that miss IS tex.web
+    // §338's "File ended while scanning use of" runaway argument and is
+    // reported like Perl (Parameter.pm L93-97). Without it a per-line
+    // `\write` loop such as fancyvrb `\FV@Scan` over a `{VerbatimOut}` left
+    // open at end of file makes progress forever — each empty read still
+    // writes a line — which no zero-progress guard sees; Perl's 100 `Missing
+    // argument` errors → `too_many_errors` Fatal is the parity outcome
+    // (witness: fancyvrb/fancyvrb-doc cut mid-`{SideBySideExample}`,
+    // batch-48 guard `until_miss_at_true_eof_errors_like_perl`).
+    //
+    // The report is followed by a FATAL, not by the empty argument: tex.web
+    // §338 abandons the macro call after the runaway report and, the input
+    // being exhausted, §360 ends the job (`*** (job aborted, no legal \end
+    // found)`) — pdflatex stops at the first miss. Perl delivers the empty
+    // argument and re-runs the caller, so a self-recursive scanner such as
+    // l3prg `\prg_map_break:Nn` (expl3-code.tex:2452-2458, reached when
+    // `\prop_map_inline:cn` names an undefined prop — stex/stex-doc, 513
+    // errors under the tikz-raised `MAX_ERRORS`, Perl 100 → too_many_errors)
+    // re-misses until the error cap; same Fatal outcome, one report instead
+    // of hundreds. Guard: `perfect_kernel_batch52::until_miss_at_eof_is_fatal_once`.
+    match read_until(&until_extra[0])? {
+      Some(tokens) => {
+        // A delimiter ending in `{` comes only from a parameter text's closing `#{`, whose brace TeX also appends to
+        // the replacement text (tex.web §476, `parse_def_parameters`): it goes back to the input, after the call.
+        let last = until_extra[0].unlist_ref().last();
+        if let Some(brace) = last.filter(|t| t.get_catcode() == Catcode::BEGIN) {
+          unread_one(*brace);
+        }
+        Ok(ArgWrap::Tokens(tokens))
+      },
+      None => {
+        if at_end_of_all_input() {
+          let caller = get_current_token()
+            .map(|t| t.to_string())
+            .unwrap_or_default();
+          Error!(
+            "expected",
+            "Until:",
+            s!("Missing argument Until:{} at end of input", until_extra[0]),
+            s!("while reading the arguments of {caller}")
+          );
+          latch_too_many_errors();
+          Fatal!(Mouth, EoF, s!("File ended while scanning use of a Until:{} argument (job aborted, no legal \\end found)", until_extra[0]));
+        }
+        Ok(ArgWrap::Tokens(Tokens::default()))
+      },
+    }
   },
   reversion => sub[arg, _inner, until] {
     let mut rev = Vec::new();
@@ -171,7 +405,50 @@ LoadDefinitions!({
     // "Error:expected:argument: try_to_token: empty Tokens" at the
     // primitive's arg-coerce step (witness: 0910.2125 sub/superscript
     // cascade where 13 errors match Perl + 1 extra Rust empty-Tokens).
-    match read_token()? {
+    //
+    // A primitive's token (`\afterassignment`, `\aftergroup`, `\futurelet`
+    // …) is its `get_token`, which at `normal` scanner status crosses the end
+    // of an input level (tex.web §362): `read_primitive_token`. A macro's
+    // `Token` argument, read at `matching`, stops at the file's end and the
+    // macro gets `\relax`.
+    match read_primitive_token()? {
+      Some(t) => Ok(ArgWrap::Token(t)),
+      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
+    }
+  });
+
+  // A `\left`/`\middle`/`\right` delimiter (Perl `TeXDelimiter`, TeX_Math.pool.ltxml:712-724): scanned by tex.web
+  // §1160 `scan_delimiter` (`tex_math::scan_delimiter`: `get_x_token` past blanks and `\relax`, matched by meaning,
+  // "Missing delimiter (. inserted)" otherwise) and digested as a delimiter (`stomach::digest_as_delimiter`) — a
+  // character by its `\delcode`, so a math-active `(` is the parenthesis, not its active meaning. Perl's `TeXDelimiter`
+  // invokes the token, active meaning and all, and recurses when that meaning is `\left(` (KNOWN_PERL_ERRORS #494,
+  // 2609.40266). The `\big` family keeps its own `TeXDelimiter` reader below. OXIDIZED_DESIGN #530.
+  DefParameterType!(DelimiterToken, sub[_inner, _extra] {
+    Ok(ArgWrap::Token(crate::tex_math::scan_delimiter()?))
+  }, predigest => sub[arg] {
+    Ok(Some(digest_as_delimiter(|| arg.be_digested())?))
+  });
+
+  // A token read at `normal` scanner status whatever the enclosing scan:
+  // tex.web §507 saves the status and sets `normal` for `\ifx`'s two
+  // `get_next`s (eTeX's `\ifdefined` likewise), so they cross the end of an
+  // input level even inside a definition (`\edef\y{\ifx\foo` as a file's
+  // last line compares `\foo` with the next file's first token, pdflatex).
+  // Guard: `token_kernel_gaps::ifx_reads_at_normal_status_in_a_definition`.
+  DefParameterType!(NormalToken, sub[_inner, _extra] {
+    match read_token_across_input_ends()? {
+      Some(t) => Ok(ArgWrap::Token(t)),
+      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
+    }
+  });
+
+  // The name a definition gives: tex.web §1215 `get_r_token`, the next
+  // non-space token, crossing the end of an input level as `Token` does
+  // (`read_redefinable_token`). `\def`, `\let`, `\futurelet`, `\chardef`, the
+  // `\countdef` family, `\read … to`, `\font`; a bare `\def` as a file's last
+  // token names the first non-space token after the file.
+  DefParameterType!(RedefinableToken, sub[_inner, _extra] {
+    match read_redefinable_token()? {
       Some(t) => Ok(ArgWrap::Token(t)),
       None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
     }
@@ -213,6 +490,40 @@ LoadDefinitions!({
     read_float()?
   });
 
+  // A picture-mode length: latex.ltx:16766-16767 `\@defaultunitsset#1#2#3{%
+  // \@defaultunits#1\dimexpr#2#3\relax\relax\@nnil}` with `#3` = `\unitlength`
+  // (`\line`, `\vector`, `\dashbox`, `\circle`: :16828, :16884, :16938, :17059;
+  // pict2e's `\oval[<radius>]`, pict2e.sty:529-530). The argument is a number
+  // of `\unitlength`s or a length of its own (`\circle{1cm}`,
+  // `\line(1,0){.5\linewidth}`), scanned as ONE `\dimexpr`, and `\@defaultunits`
+  // (`\afterassignment\remove@to@nnil`, :10537) discards what the scan left —
+  // unlike a `{Dimension}`'s, this argument's rest never re-enters the input.
+  // Perl reads a `{Float}` (latex_constructs.pool.ltxml:4992-5076), which took
+  // `1cm` for one unit. The value is the Float count of `\unitlength`s the
+  // picture bindings scale by. As a braced or bracketed argument's type
+  // (`{DefaultUnits}`, `[DefaultUnits]`) it reads the rest of that argument; bare,
+  // an argument of its own. OXIDIZED_DESIGN #317.
+  DefParameterType!(DefaultUnits, sub[_inner, _extra] {
+    let argument = if in_braced_read() {
+      take_rest_of_mouth()
+    } else {
+      read_arg(ExpansionLevel::Off)?.unlist()
+    };
+    // A number as written: TeX's `<factor>` keeps 16 bits of it (0.15 → 0.14999),
+    // a sub-`sp` difference that would only change the digits the picture
+    // bindings revert.
+    if let Some(units) = plain_decimal(&argument) {
+      return Ok(ArgWrap::Float(Float(units)));
+    }
+    let mut expression = vec![T_CS!("\\dimexpr")];
+    expression.extend(argument);
+    expression.extend([T_CS!("\\unitlength"), T_CS!("\\relax"), T_CS!("\\relax")]);
+    // In a mouth of its own; the rest is `\remove@to@nnil`'s.
+    let (length, _rest) = read_braced(Tokens::new(expression), read_dimension)?;
+    let unit = unitlength_sp()?;
+    Float(if unit == 0 { 0.0 } else { length.value_of() as f64 / unit as f64 })
+  });
+
   // ??? DG: is this needed?
   // sub ReadFloat {
   //   my ($gullet) = @_;
@@ -224,6 +535,24 @@ LoadDefinitions!({
     read_dimension()? });
   // Read a Glue (aka skip)
   DefParameterType!(Glue, sub[_inner, _extra] { read_glue()? });
+  // A length latex.ltx hands to `\setlength` (`\@hspace` 9425, `\@imakebox`
+  // 16101, `\@iframebox` 16199, `\@iiiparbox` 16252, `\@iiiminipage` 16308,
+  // `\@rule` 16363-16365, `\@irsbox`/`\@iirsbox` 16380-16390): read as a
+  // `Dimension`/`Glue`, and braced, through a package's or the document's own
+  // `\setlength` when one is in force (`read_through_redefined_setlength`,
+  // parameter.rs; OXIDIZED_DESIGN #325). A binding's plain `Dimension` stands for
+  // no `\setlength`: pgf's `\pgfsetlinewidth` reads through pgfmath, and inside
+  // a nested `\pgfpicture` `\setlength` is `\pgf@setlength` calling itself.
+  DefParameterType!(SetlengthDimension, sub[_inner, _extra] { read_dimension()? });
+  DefParameterType!(SetlengthGlue, sub[_inner, _extra] { read_glue()? });
+  // A box command's size argument, which latex.ltx evaluates after setting the
+  // box (`\@begin@tempboxa`, 16085-16094: `\@imakebox`, `\@iframebox`,
+  // `\@iiiparbox`'s height, `\@irsbox`/`\@iirsbox`): read as a
+  // `SetlengthDimension` once the box is digested, with `\width`/`\height`/
+  // `\depth`/`\totalheight` measuring it (`after_box`,
+  // `Parameters::read_arguments_and_digest`). Only a constructor whose last
+  // argument is the box honours it; a macro reads it at once.
+  DefParameterType!(TempboxaDimension, sub[_inner, _extra] { read_dimension()? }, after_box => true);
   // Read a MuDimension (math)
   DefParameterType!(MuDimension, sub[_inner, _extra] {
     read_mu_dimension()? });
@@ -261,6 +590,32 @@ LoadDefinitions!({
       read_float()
     }
     let _ = skip_spaces();
+    // Kernel picture trampoline (latex.ltx L16768): `\long\def\picture#1
+    // {\pictur@#1}` strips ONE brace group before the `(`-scan, so the
+    // braced form `\begin{axopicture}{(90,140)(-10,0)}` (axodraw2-man,
+    // 101 errs) works exactly like the plain form. Mirror it here: a BEGIN
+    // group ahead of a Pair is unwrapped and its content re-scanned. Perl's
+    // ReadPair lacks this (shared failure with the braced form).
+    // A group that is no pair (`\diaghead{$V_i$}{a}{b}`, makecell's `OptionalPair` with no slope) is put back whole: its
+    // braces are the next argument's (2111.10338).
+    if if_next(T_BEGIN!())? {
+      read_token()?; // consume {  (counted; the group read below balances)
+      let group = read_balanced(ExpansionLevel::Off, false, false)?;
+      let pair = group
+        .unlist_ref()
+        .iter()
+        .find(|t| t.get_catcode() != Catcode::SPACE)
+        .is_some_and(|t| *t == T_OTHER!("("));
+      if pair {
+        unread(group);
+        let _ = skip_spaces();
+      } else {
+        let mut whole = vec![T_BEGIN!()];
+        whole.extend(group.unlist());
+        whole.push(T_END!());
+        unread(Tokens::new(whole));
+      }
+    }
     if if_next(T_OTHER!("("))? {
       read_token()?; // consume (
       let _ = skip_spaces();
@@ -300,7 +655,7 @@ LoadDefinitions!({
     read_token()?.inspect(|&tok| {
       unread_one(tok);
       if tok.get_catcode() != Catcode::BEGIN {
-        let err = || {Error!("expected","{","Expected a {{ here."); Ok(())};
+        let err = || {Error!("expected","{","Expected a { here."); Ok(())};
         err().ok();
       }
     })
@@ -317,38 +672,164 @@ LoadDefinitions!({
       return Ok(ArgWrap::Tokens(Tokens!()));
     };
     let until : Token = until_tks.into();
-    let mut tokens : Vec<Token> = Vec::new();
-    while let Some(token) = read_x_token(Some(false), false, None)? {
-      if token == until {
-        break;
-      } else if token.get_catcode() == Catcode::BEGIN {
-        tokens.push(token);
-        tokens.extend(read_balanced(ExpansionLevel::Off,false,false)?.unlist());
-        tokens.push(T_END!());
-      } else {
-        // Perl PR #2767 ("ParameterType XUntil should only expand, not
-        // digest") removed the LookupDefinition → Invocation(readArguments)
-        // clause that used to live here: "This clause tends to digest, not
-        // only expand; Why was it felt needed???". We follow: with the
-        // clause gone, a bare token push is all that remains.
-        //
-        // NOTE: the witnessed Rust workaround family that lived here
-        // (astro-ph9903386 \hspace over-read; math0610119 \sb; 1902.01143
-        // \href hang; 0805.1712 \def\@date; 2403.14274 \edef; 2103.11356
-        // \let) was removed with the clause. Witnesses #1/#2 are FIXED by
-        // pure-expand. #3-#6 still route through XUntil — elsart
-        // `\@keyword XUntil:\@keyword@cut` and amsppt `\@bibfield
-        // XUntil:\@end@bibfield` are unchanged by the PR (only the base
-        // engine's abstract/keywords environments moved to
-        // digestNextBody) — and are NOT yet re-verified. Tracked in
-        // docs/SYNC_STATUS.md "XUntil witness gate"; re-verify in the
-        // next sandbox sweep covering elsart papers, fixing any re-break
-        // at its root cause (href self-marker, \edef/\let reversion)
-        // rather than re-adding branches here (plan Appendix A.4).
-        tokens.push(token);
-      }
+    // Perl PR #2767 ("ParameterType XUntil should only expand, not
+    // digest") removed the LookupDefinition → Invocation(readArguments)
+    // clause that used to live here: "This clause tends to digest, not
+    // only expand; Why was it felt needed???". We follow: with the
+    // clause gone, a bare token push is all that remains
+    // (`gullet::read_x_until`).
+    //
+    // NOTE: the witnessed Rust workaround family that lived here
+    // (astro-ph9903386 \hspace over-read; math0610119 \sb; 1902.01143
+    // \href hang; 0805.1712 \def\@date; 2403.14274 \edef; 2103.11356
+    // \let) was removed with the clause. Witnesses #1/#2 are FIXED by
+    // pure-expand. #3-#6 still route through XUntil — elsart
+    // `\@keyword XUntil:\@keyword@cut` and amsppt `\@bibfield
+    // XUntil:\@end@bibfield` are unchanged by the PR (only the base
+    // engine's abstract/keywords environments moved to
+    // digestNextBody) — and are NOT yet re-verified. Tracked in
+    // docs/SYNC_STATUS.md "XUntil witness gate"; re-verify in the
+    // next sandbox sweep covering elsart papers, fixing any re-break
+    // at its root cause (href self-marker, \edef/\let reversion)
+    // rather than re-adding branches here (plan Appendix A.4).
+    Ok(read_x_until(&until)?)
+  });
+
+  // LaTeX's `\protected@edef` context (latex.ltx:1442-1454): `\protect` is
+  // `\@unexpandable@protect` (:1384 `\noexpand\protect\noexpand`) for the
+  // expanding read, so a raw `\DeclareRobustCommand` survives as
+  // `\protect\cs ` instead of expanding — a size command otherwise re-expands
+  // `\@setfontsize` (:14103, `\ifx\protect\@typeset@protect` true branch) →
+  // `\@currsize` → `\normalsize` → itself, the overflow pdflatex's
+  // `\edef\x{\small}` shows. `\noexpand`'d tokens collapse back to their
+  // plain identity when stored (tex.web §1149, as `read_balanced` does).
+  // Outside LaTeX (`\@unexpandable@protect` undefined) the read is plain.
+  // Rust-only parameter types, OXIDIZED_DESIGN #191. Witness zugferd-invoice
+  // (siunitx `S` cell opening with an unbraced `\small` under scrartcl,
+  // `PushbackLimit`). Guard: `perfect_kernel_batch54::
+  // s_column_unbraced_size_command_is_scoped`.
+  DefParameterType!(ProtectedXUntil, sub[_inner, untils] {
+    let Some(until_tks) = untils.first() else {
+      Warn!("expected", "token", "ProtectedXUntil parameter missing delimiter token");
+      return Ok(ArgWrap::Tokens(Tokens!()));
+    };
+    let until : Token = until_tks.into();
+    Ok(ArgWrap::Tokens(with_unexpandable_protect(|| read_x_until(&until))?))
+  },
+  reversion => sub[arg, _inner, until] {
+    let mut rev = Vec::new();
+    for t in arg {
+      rev.push(t.revert());
     }
-    Ok(Tokens::new(tokens))
+    for ts in until {
+      rev.extend(ts.clone().revert());
+    }
+    Ok(Tokens::new(rev))
+  });
+
+  // `\protected@edef`'s braced form: `Expanded` with `\the` once and
+  // e-TeX `\protected` deferred (as `\edef`), under the `\protect` regime.
+  DefParameterType!(ProtectedExpanded, sub[_inner, _untils] {
+    Ok(ArgWrap::Tokens(with_unexpandable_protect(|| read_arg(ExpansionLevel::Partial))?))
+  },
+  reversion => sub[arg, _inner, _extra] {
+    let mut tks = vec![T_BEGIN!()];
+    tks.extend(arg.into_iter().map(Token::revert));
+    tks.push(T_END!());
+    Ok(Tokens::new(tks))
+  });
+
+  // xparse's `o` / `O{}` optional argument: `[`…`]` NEST (l3 `\peek_charcode`
+  // + `\__cmd_grab_optional` balance brackets), unlike LaTeX's `\@ifnextchar[`
+  // read to the first `]` (`Optional`). Packages built on xparse take nested
+  // bracket values — nicematrix.tex:1364 `[rules/color=[gray]{0.9},…]` cut at
+  // the inner `]` spilled `{0.9},…]` into the table body, and the next
+  // `\hline` fell mid-row (16 "Extra alignment tab" cascades). Rust-only
+  // parameter type (OXIDIZED_DESIGN #191 family). Guard:
+  // `perfect_kernel_batch54::optional_balanced_nests_brackets`.
+  DefParameterType!(OptionalBalanced, sub[_inner, _extra] {
+    let open = T_OTHER!("[");
+    let close = T_OTHER!("]");
+    match read_non_space()? {
+      None => Ok(ArgWrap::None),
+      Some(t) if t == open => {
+        let mut depth = 0i32;
+        let mut toks: Vec<Token> = Vec::new();
+        while let Some(tok) = read_token()? {
+          if tok == close {
+            if depth == 0 {
+              break;
+            }
+            depth -= 1;
+          } else if tok == open {
+            depth += 1;
+          } else if tok.get_catcode() == Catcode::BEGIN {
+            toks.push(tok);
+            toks.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+            toks.push(T_END!());
+            continue;
+          }
+          toks.push(tok);
+        }
+        Ok(ArgWrap::Tokens(Tokens::new(toks)))
+      },
+      Some(t) => {
+        unread_one(t);
+        Ok(ArgWrap::None)
+      },
+    }
+  },
+  optional => true,
+  reversion => sub[arg, _inner, _extra] {
+    let mut tks = vec![T_OTHER!("[")];
+    tks.extend(arg.into_iter().map(Token::revert));
+    tks.push(T_OTHER!("]"));
+    Ok(Tokens::new(tks))
+  });
+
+  // xparse's `!O{}`: the optional argument only when its `[` is the very next token — no space skipped (ltcmd's `!`
+  // prefix). Peeked (`peek_token`), not read, as ltcmd's expl3 peek runs inside `\group_align_safe_begin:`
+  // (expl3-code.tex:9730), so a row's leading `&` after a newline stays the matrix's own and never ends the enclosing
+  // alignment's cell: nicematrix.sty:1953 `\NewDocumentEnvironment{NiceArrayWithDelims}{m m O{} m !O{} …}`,
+  // :3715/:3729 the NiceMatrix family's `!O{}`, :3747-3801 NiceTabular's. `OptionalBalanced` skips spaces and reads
+  // the next token: a `\begin{pNiceMatrix}` with no options + newline + `& x \\` inside `align` gave the `&` to the
+  // align (11 errors, the matrix lost; pdflatex 0). Guard
+  // `perfect_kernel_batch79o::a_matrix_row_that_starts_with_a_tab_is_the_matrixs`.
+  DefParameterType!(OptionalBalancedNoSkip, sub[_inner, _extra] {
+    let open = T_OTHER!("[");
+    match ::latexml_core::gullet::peek_token()? {
+      Some(t) if t == open => {
+        let _ = read_token()?;
+        let close = T_OTHER!("]");
+        let mut depth = 0i32;
+        let mut toks: Vec<Token> = Vec::new();
+        while let Some(tok) = read_token()? {
+          if tok == close {
+            if depth == 0 {
+              break;
+            }
+            depth -= 1;
+          } else if tok == open {
+            depth += 1;
+          } else if tok.get_catcode() == Catcode::BEGIN {
+            toks.push(tok);
+            toks.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+            toks.push(T_END!());
+            continue;
+          }
+          toks.push(tok);
+        }
+        Ok(ArgWrap::Tokens(Tokens::new(toks)))
+      },
+      _ => Ok(ArgWrap::None),
+    }
+  },
+  optional => true,
+  reversion => sub[arg, _inner, _extra] {
+    let mut tks = vec![T_OTHER!("[")];
+    tks.extend(arg.into_iter().map(Token::revert));
+    tks.push(T_OTHER!("]"));
+    Ok(Tokens::new(tks))
   });
 
   //  This reads a braced tokens list, expanding as it goes,
@@ -383,8 +864,18 @@ LoadDefinitions!({
   // a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once,
   // and also packing # parameters
+  // No assignment ends while an `\edef` reads its body, and in TeX none can begin: a binding's macro that assigns as it
+  // expands (a math dual's id counter, `\ket{x}`) would take a pending `\afterassignment`, the `\restore@protect` of
+  // `\protected@edef` written into the body and `\protect` stuck for the rest of the document (yquant-doc's
+  // `\protected@csxappto` of a node `$\ket\psi$`; Perl's the same). Guard
+  // `perfect_kernel_batchm3::a_binding_macro_in_an_edef_leaves_afterassignment_pending`.
   DefParameterType!(DefExpanded, sub[_inner, _extra] {
-      read_balanced(ExpansionLevel::Partial, true, true)
+      let held = remove_value("afterAssignment");
+      let body = read_definition_body(ExpansionLevel::Partial);
+      if let Some(after) = held {
+        assign_value("afterAssignment", after, Some(Scope::Global));
+      }
+      body
     },
     reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) }
@@ -434,6 +925,137 @@ LoadDefinitions!({
       Ok(Tokens::new(read_tokens))
     },
     semiverbatim => Some(Vec::new()));
+
+  // Rust-only: a Semiverbatim whose `%` is other too, for an address a class reads under its own sanitizer —
+  // revtex4.cls:4476-4490 `\begingroup\sanitize@url\@email{#1}` (`\@makeother\%`, `\~`, `\_`): an
+  // `\homepage{http://x.org/%7Ea}` is that address, where Semiverbatim's SPECIALS (no `%`) made the `%` a comment
+  // that took the line's `}` and the argument ran on through the document (KNOWN_PERL_ERRORS #1149; 0712.3811).
+  DefParameterType!(UrlSemiverbatim,
+    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    reversion => sub[arg, _inner, _extra] {
+      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+      read_tokens.extend(arg.iter().map(|t| t.revert()));
+      read_tokens.push(T_END!());
+      Ok(Tokens::new(read_tokens))
+    },
+    semiverbatim => Some(vec!['%']));
+
+  // Rust-only: a Semiverbatim whose argument is not expanded before it is digested (Parameter.pm:124-132's pre-expansion
+  // left out, `Parameter::digest`): its tokens neutralized as read and digested in order, as a class's own macro reads its
+  // `#1`. For the frontmatter rehearsal's reading of a class's own e-mail command (`\lx@fm@obs@email@own`): sig-alternate.cls:462
+  // `\def\email#1{{{\eaddfnt{\par #1}}}}` on `\email{\fontsize{11pt}{12pt}\selectfont …}` — the kernel `\fontsize`'s
+  // `\@defaultunits` (`\afterassignment\remove@to@nnil`, latex.ltx:10537, :12678) expanded ahead of its assignment missed
+  // its `\@nnil` delimiter and `\@nil` ran undefined, an Error pdflatex never raises (1802.01191).
+  DefParameterType!(UnexpandedSemiverbatim,
+    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    reversion => sub[arg, _inner, _extra] {
+      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+      read_tokens.extend(arg.iter().map(|t| t.revert()));
+      read_tokens.push(T_END!());
+      Ok(Tokens::new(read_tokens))
+    },
+    semiverbatim => Some(Vec::new()));
+
+  // Semiverbatim variant for FILE-NAME arguments that may arrive as
+  // expandable tokens: tokenize PLAIN at the CURRENT catcodes (so an expl3
+  // `\l_..._tl` class name stays ONE control sequence — the real kernel's
+  // `\LoadClass` grabs a plain `{}` arg; Semiverbatim-at-tokenize split it
+  // into `\l`+`_my`+… and einfart-family classes fell to OmniBus with a
+  // garbage name, losing the expl3 regime; Perl's SPECIALS include `_` so
+  // Perl shares the failure), THEN expand fully and re-emit the string as
+  // all-OTHER character tokens so digestion stays as neutral as
+  // Semiverbatim's.
+  DefParameterType!(ExpandedSemiverbatim,
+  sub[_inner, _extra] {
+    let tks = read_arg(ExpansionLevel::Off)?;
+    // Expand ONLY when the argument contains a control sequence (the expl3
+    // `\l_..._tl` class-name case). A plain name like `neurips_2026` must
+    // NOT pass through do_expand: at document catcodes its `_` is the
+    // math-active SUB token whose EXPANSION is the subscript machinery —
+    // the name came back with a display glyph and the binding lookup
+    // missed (neurips guard).
+    let has_cs = tks
+      .unlist_ref()
+      .iter()
+      .any(|t| t.get_catcode() == Catcode::CS);
+    let expanded = if has_cs { do_expand(tks)? } else { tks };
+    // Build the name from RAW token characters — `to_string` renders by
+    // catcode (a document-catcode SUB `_` in `neurips_2026` became its
+    // display glyph and the binding lookup missed).
+    let mut name = String::new();
+    for t in expanded.unlist() {
+      if t.get_catcode() == Catcode::CS {
+        // A fully-expanded file name should not contain CS tokens; keep
+        // the printable form so an error names something greppable.
+        name.push_str(&t.to_string());
+      } else {
+        with(t.get_sym(), |c| name.push_str(c));
+      }
+    }
+    Ok(ArgWrap::Tokens(Tokens::new(Explode!(name.trim()))))
+  },
+  reversion => sub[arg, inner, _extra] {
+    let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+    read_tokens.extend(if let Some(inner_ps) = inner {
+      inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
+    } else {
+      arg.iter().map(|t| t.revert()).collect()
+    });
+    read_tokens.push(T_END!());
+    Ok(Tokens::new(read_tokens))
+  },
+  semiverbatim => Some(Vec::new()));
+
+  // The option list of `\documentclass`/`\usepackage`/`\RequirePackage`/
+  // `\LoadClass` (latex.ltx:18509 `\@fileswith@pti@ns`): `OptionalSemiverbatim`
+  // that is NEVER digested — the kernel stores the argument TOKENS
+  // (`\@pass@ptions`, `\protected@xdef`) and typesets nothing. Digesting
+  // them ran whatever an option's tokens expand to: under the byte mouth
+  // the CJK byte in `\usepackage[piecechar={C}{炮}]{chinesechess}` reached
+  // ctex's `\CTEX@char@nnn` and CJKspace.sty:46's `\futurelet\CJK@next@token`
+  // at the end of the argument's mouth, with nothing to peek (chinesechess,
+  // sweep 70: `undefined \CJK@next@token` + a runaway text node). The
+  // constructors expand the list `\protected@xdef`-wise themselves
+  // (`sect05::protected_xdef_options`). Guard:
+  // `perfect_kernel_batch56::package_options_are_stored_by_protected_xdef`.
+  // The semiverbatim catcodes are set up by the reader itself, so that the
+  // `semiverbatim` digest pass (Parameter::digest: a TOPLEVEL `read_x_token`
+  // expand-and-neutralize, Perl Parameter.pm:124-132) never runs on the list.
+  DefParameterType!(PackageOptions,
+    sub[_inner, _extra] {
+      // (a letter stays a letter: latex.ltx reads the list with the catcodes in force, so under `\ExplSyntaxOn` a
+      // class's `\LoadClass [ twoside, \g__fcs_article_fontsize_tl ] { article }` names its token list, fcs.cls:150;
+      // 2308.11432): every special whose catcode is LETTER keeps it. Guard
+      // `perfect_kernel_batch72a::package_options_keep_expl_letters`.
+      let letters: Vec<char> = match lookup_value("SPECIALS") {
+        Some(Stored::Chars(specials)) => specials
+          .iter()
+          .copied()
+          .filter(|c| lookup_catcode(*c) == Some(Catcode::LETTER))
+          .collect(),
+        _ => Vec::new(),
+      };
+      begin_semiverbatim(None);
+      for letter in letters {
+        assign_catcode(letter, Catcode::LETTER, Some(Scope::Local));
+      }
+      let opts = read_optional(None);
+      end_semiverbatim()?;
+      opts
+    },
+    optional => true,
+    predigest => sub[arg]{ Ok(arg.undigested()) }
+    reversion => sub[arg, _inner, _extra] {
+    if !arg.is_empty() {
+      let mut read_tokens = vec![T_OTHER!(s!("["))];
+      read_tokens.extend(arg.into_iter().map(Token::revert));
+      read_tokens.push(T_OTHER!(s!("]")));
+      Ok(Tokens::new(read_tokens))
+    } else {
+      Ok(Tokens!())
+    }
+    }
+  );
 
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   DefParameterType!(OptionalSemiverbatim,
@@ -488,22 +1110,21 @@ LoadDefinitions!({
   // Read verbatim, as if with LaTeX's \@sanitize; useful for \index (maybe others?)
   // Perl: latex_constructs.pool.ltxml L4433-4451
   DefParameterType!(SanitizedVerbatim, sub[_inner, _extra] {
-      read_until(&Tokens!(T_BEGIN!()))?;
-      // Deactivate the backslash to avoid activating command sequences.
-      // Chars switched to CC_OTHER by \@sanitize: ' ', '\\', '$', '&', '#',
-      // '^', '_', '%', '~'. Some are already in state's SPECIALS, so only
-      // adding the rest:
+      // latex.ltx `\index` = `\@bsphack\begingroup\@sanitize\@wrindex`: the
+      // catcodes change FIRST (`\@sanitize` makes ` `, `\`, `$`, `&`, `#`,
+      // `^`, `_`, `%`, `~` other), THEN `\@wrindex#1` reads ONE undelimited
+      // argument — the kernel's own reader (`read_arg`, tex.web §392: a brace
+      // group, or the single next token). Perl (latex_constructs.pool.ltxml
+      // :4376-4383) scanned forward to the next `{` wherever it was, so a bare
+      // `\index` in prose (varindex.dtx:1497 "the \index command") swallowed
+      // everything up to `\end{abstract}`'s brace and the abstract ran to the
+      // end of the document (KNOWN_PERL_ERRORS #216). Batches 56ba/56bc.
+      // Chars already in the state's SPECIALS are not repeated here:
       begin_semiverbatim(Some(&[' ', '\\', '%']));
-      let arg = read_balanced(ExpansionLevel::Off, false, false)?;
+      let arg = read_arg(ExpansionLevel::Off)?;
       end_semiverbatim()?;
-      // Now that we have the semiverbatim tokens, retokenize.
-      // This may seem like wasted work, but it avoids very unfortunate error
-      // propagation in cases where the \index argument was malformed for one
-      // reason or another. The strangeness comes from the original TeX
-      // workflow requiring multiple conversion calls, alongside a call to the
-      // `makeidx` binary, which we don't do in latexml. This parameter type
-      // emulates one important aspect implied by those steps.
-      Ok(mouth::tokenize_internal(arg.untex_string()))
+      // The `.idx` re-read is the consumer's: `reread_sanitized_entry`.
+      Ok(arg)
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
@@ -599,9 +1220,76 @@ LoadDefinitions!({
     read_arg(ExpansionLevel::Off)?.pack_parameters() },
   predigest => sub[arg]{ Ok(arg.undigested()) });
 
+  // The token `\newcommand` defines: DefToken, and when its
+  // braces held more after the token (`\newcommand{\two[5]}{…}`), latex.ltx:1156 `\new@command#1{\@testopt
+  // {\@newcommand#1}0}` hands that rest to `\@newcommand` and `\@testopt` (:1735, `\kernel@ifnextchar[`) inserts
+  // `[{0}]` unless a `[` follows the braces — so `[5]` then `[0]` read as five arguments, the first optional with default
+  // 0, which the author's body takes as `#2`-`#5` (1312.5793's `\smalltwomatrix`: 90 errors, the error-limit Fatal).
+  // Not `\renewcommand`/`\providecommand`: `\renew@command#1` and `\provide@command#1` hand `\new@command` their
+  // argument unbraced, so it takes the command alone and `\@testopt` meets the `[n]` — plain arguments, as DefToken
+  // reads them (pdflatex: `\providecommand{\com[2]}{[#1: #2]}` then `\com{RJ}{x}` prints "[RJ: x]", 1504.03761).
+  DefParameterType!(LaTeXDefToken, sub[_inner, _extra] {
+    let mut token_opt = read_token()?;
+    while let Some(token) = token_opt
+      && token.get_catcode() == Catcode::SPACE
+    {
+      token_opt = read_token()?;
+    }
+    // (brace layers stripped one by one, as DefToken does — `\newcommand{{\datanum}}{…}`, 2407.13761 — the
+    // `\@testopt` step on the outermost layer's rest only)
+    let mut outermost = true;
+    while let Some(token) = token_opt {
+      if token.get_catcode() != Catcode::BEGIN {
+        break;
+      }
+      let mut toks: Vec<Token> = read_balanced(ExpansionLevel::Off, false, false)?
+        .unlist()
+        .into_iter()
+        .filter(|t| !matches!(t.get_catcode(), Catcode::SPACE | Catcode::COMMENT))
+        .collect();
+      if toks.is_empty() {
+        token_opt = None;
+        break;
+      }
+      let head = toks.remove(0);
+      if !toks.is_empty() {
+        let bracket = |t: &Token| t.get_catcode() == Catcode::OTHER && t.to_string() == "[";
+        if outermost && toks.first().is_some_and(bracket) {
+          skip_spaces()?;
+          let follows_bracket = peek_token()?.as_ref().is_some_and(bracket);
+          if !follows_bracket {
+            toks.extend([T_OTHER!("["), T_BEGIN!(), T_OTHER!("0"), T_END!(), T_OTHER!("]")]);
+          }
+        }
+        unread_vec(toks);
+      }
+      outermost = false;
+      token_opt = Some(head);
+    }
+    match token_opt {
+      Some(t) => Ok(ArgWrap::Token(t)),
+      None => {
+        Error!("expected", "DefToken", "Expected a DefToken parameter, found nothing.");
+        Ok(ArgWrap::None)
+      }
+    }
+  });
+
   // Read a token as used when defining it, ie. it may be enclosed in braces.
+  // tex.web §1215 `get_r_token` skips blanks before the token being defined
+  // (Perl's `DefToken`, Base_ParameterTypes.pool.ltxml:255, does not — a
+  // shared gap): `\lstMakeShortInline [opts]\n{"}` (install-latex-guide-zh-cn
+  // :111, the option list wrapped over two lines) read the SPACE after `]`,
+  // made the space active and every title/body space ran `\lstinline` — an
+  // unbounded `\bgroup` recursion at `\maketitle`. Guard:
+  // `perfect_kernel_batch56::deftoken_skips_a_leading_space`.
   DefParameterType!(DefToken, sub[_inner, _extra] {
     let mut token_opt = read_token()?;
+    while let Some(token) = token_opt
+      && token.get_catcode() == Catcode::SPACE
+    {
+      token_opt = read_token()?;
+    }
     while let Some(token) = token_opt {
       if token.get_catcode() != Catcode::BEGIN { break; }
       let mut toks : Vec<Token> = read_balanced(ExpansionLevel::Off,false,false)?
@@ -633,8 +1321,45 @@ LoadDefinitions!({
   DefRegister!("\\lx@DUMMY@REGISTER", Tokens!());
 
   // Read a variable, ie. a token (after expansion) that is a writable register.
+  // tex.web §1211 `prefixed_command`: after a `\global`/`\long`/`\outer` prefix TeX
+  // skips spaces and `\relax` (§404) before the command; a register command itself
+  // (`\advance`, `\multiply`, `\divide`, §1236-1237) reads its variable with one
+  // `get_x_token`, and a `\relax` there is an error, not skipped (57ce; `\divide\relax by 2`
+  // typesets "by 2", as pdflatex; KNOWN_PERL_ERRORS #390). A braced `{Variable}` is code TeX
+  // executes (`\setlength#1#2{#1 #2\relax}`, latex.ltx; calc's `#3\calc@B`), so a leading
+  // `\relax` there does nothing: `\setlength{\relax\mylen}{5pt}` sets it, as pdflatex (57ce
+  // review). Spaces are skipped either way; TeX errs on one after an unbraced register command
+  // (`\def\sp{ }\advance\sp\count1 by 5`), a leniency kept, as the prefixes are there.
+  // A braced `{Variable}` (`\setlength`, `\addtolength`) hands the reader its
+  // first token, so `\setlength { \paperwidth }{…}` (a0poster.cls.ltxml:41-77
+  // — modernposter ×10) and xtab.sty:146/150 `\setlength{\global\ST@toadd}
+  // {#1}` (every `xtabular` `\\[<len>]`: rec-thy ×20, altverse) erred
+  // "A <variable> was supposed to be here" in both engines (Perl
+  // Base_ParameterTypes.pool.ltxml:271 reads one token too). Guard:
+  // `perfect_kernel_batch54::variable_reader_skips_spaces_and_takes_prefixes`.
   DefParameterType!(Variable, sub[_inner, _extra] {
-    let token_opt = read_x_token(None, false, None)?;
+    let mut token_opt = read_x_token(None, false, None)?;
+    let mut after_prefix = false;
+    while let Some(token) = token_opt {
+      if token.get_catcode() == Catcode::SPACE
+        || (after_prefix || in_braced_read()) && token == T_CS!("\\relax")
+      {
+        token_opt = read_x_token(None, false, None)?;
+        continue;
+      }
+      if token.get_catcode().is_active_or_cs()
+        && let Some(defn) = lookup_definition(&token)?
+        && defn.is_prefix()
+      {
+        // `\global` etc.: run the prefix primitive itself (it records the
+        // prefix for the assignment that follows), then read on.
+        digest(Tokens!(token))?;
+        after_prefix = true;
+        token_opt = read_x_token(None, false, None)?;
+        continue;
+      }
+      break;
+    }
     let defn_opt = match token_opt {
       Some(ref token) => lookup_register_definition(token),
       None => None
@@ -668,7 +1393,43 @@ LoadDefinitions!({
     use Catcode::*;
     skip_spaces()?;
     let mut tokens = Vec::new();
-    while let Some(token) = read_x_token(Some(false), false, None)? {
+    // Fully expanded (`Some(true)`): tex.web §526 `scan_file_name` reads the
+    // name with `get_x_token`, so a `\protected` macro in an `\openout`/`\input`
+    // filename expands (proof-at-the-end.sty:112/127
+    // `\pratendGeneratePrefixFile`); Perl's `readXToken(0)` leaves it
+    // unexpanded. OXIDIZED_DESIGN_DIVERGENCES #197.
+    let mut next = read_x_token(Some(false), false, Some(true))?;
+    // TeX Live's braced file name (`\input{name}`, `\tex_input:D {name}`):
+    // the group up to its matching `}` IS the name, spaces included, and the
+    // scan stops there. It read on past the `}` until a space or control
+    // sequence, expanding the next macro before the file was read:
+    // texnegar-luatex.sty:17 `\tex_input:D { texnegar-ini.tex }` followed by
+    // `\bool_if:NT …` (texnegar-luatex ×3; Perl Base_ParameterTypes.pool
+    // .ltxml:296-307 alike, KNOWN_PERL_ERRORS #256). The braces stay on the
+    // name, as before: `\input` strips them and auto-loads LaTeX.pool from them
+    // (TeX_FileIO.pool.ltxml:164-169). The group expands as `\edef` does (a
+    // `\protected` macro is kept), as TeX Live's braced scan does. An unclosed `{`
+    // runs to the end of the input, as it does in pdflatex. Guard:
+    // `perfect_kernel_batch56::braced_file_name_stops_at_its_brace`.
+    if let Some(open) = next.take_if(|t| t.get_catcode() == BEGIN) {
+      tokens.push(open);
+      let mut depth = 1usize;
+      while let Some(token) = read_x_token(Some(false), false, None)? {
+        match token.get_catcode() {
+          BEGIN => depth += 1,
+          END => {
+            depth -= 1;
+            if depth == 0 {
+              tokens.push(token);
+              break;
+            }
+          },
+          _ => {},
+        }
+        tokens.push(token);
+      }
+    }
+    while let Some(token) = next {
       let cc = token.get_catcode();
       if matches!(cc, SPACE | EOL | COMMENT | CS) {
         if matches!(cc, CS) {
@@ -677,6 +1438,7 @@ LoadDefinitions!({
         break
       }
       tokens.push(token);
+      next = read_x_token(Some(false), false, Some(true))?;
     }
     // Strip outer "" ???
     let quote = T_OTHER!("\"");
@@ -706,8 +1468,9 @@ LoadDefinitions!({
   //     LaTeXML::Core::Array->new(...);  };
   //
   // Accepts both `\graphicspath{dir}` and `\graphicspath{{dir1}{dir2}}`.
-  // Rust output: emit `{dir1}{dir2}...` so the `\graphicspath`
-  // constructor can split on `}` to recover individual entries.
+  // Rust output: the directories joined by `,`, which no directory holds (the split above): the argument reaches the
+  // `\graphicspath` constructor digested, where the braces of `{dir1}{dir2}` are gone and the entries ran together
+  // (`{nonexist/}{figs/}` read as one "nonexist/figs/", 2608.21961).
   // Semiverbatim catcodes prevent `_`, `/`, `#` in path names from
   // tokenizing as SUB/ACTIVE.
   DefParameterType!(DirectoryList, sub[_inner, _extra] {
@@ -743,14 +1506,15 @@ LoadDefinitions!({
         dirs.push(dir);
       }
     }
-    // Emit `{dir1}{dir2}...` as Tokens (consumed by \graphicspath).
+    // Emit `dir1,dir2,...` as Tokens (consumed by \graphicspath).
     let mut collected: Vec<Token> = Vec::new();
-    for d in dirs {
-      collected.push(T_BEGIN!());
+    for (k, d) in dirs.iter().enumerate() {
+      if k > 0 {
+        collected.push(T_OTHER!(","));
+      }
       for c in d.chars() {
         collected.push(T_OTHER!(&c.to_string()));
       }
-      collected.push(T_END!());
     }
     Tokens::new(collected)
   },
@@ -855,8 +1619,8 @@ LoadDefinitions!({
       // `\box`/`\copy`/`\lastbox` yields a VOID box — a perfectly valid box
       // operand for `\raise`/`\lower` (TeXbook p.388: a void box register is
       // still a box). The LaTeX kernel exploits this: `\raise1pt\copy\strutbox`
-      // is standard, and LaTeXML never `\setbox`es the visual `\strutbox`, so
-      // `\copy\strutbox` legitimately yields void. Only ERROR when the operand
+      // is standard, and a box register can be void when it is copied (a class's
+      // own strut box before its first `\setbox`). Only ERROR when the operand
       // was NOT a box producer at all (e.g. `\raise1pt X`). Otherwise substitute
       // a void box silently — matching real TeX, and crucially avoiding a
       // per-cell `expected:<box>` cascade when such an op sits in a `\halign`
@@ -864,8 +1628,15 @@ LoadDefinitions!({
       // \lower1pt\copy\strutbox...}` × ~50 rows → 100+ errors → FATAL_3 abort,
       // where Perl completes; both engines share the spurious error, real TeX
       // emits none — see docs/parity/KNOWN_PERL_ERRORS.md).
+      // By MEANING, not spelling (tex.web §1084 box specs `\box`, `\copy`,
+      // `\lastbox`, `\vsplit`): expl3's `\box_use:N` is `\cs_new_eq:NN` to
+      // `\tex_copy:D` = `\copy` (expl3-code.tex:30507), and l3coffins raises
+      // it over a void coffin box (`\box_move_up:nn`, :34575 — asmejour.cls
+      // :1388-1404's author block, deposited by 56gj).
       let is_box_register_op = token.get_catcode() == Catcode::CS
-        && token.with_str(|s| matches!(s, "\\box" | "\\copy" | "\\lastbox"));
+        && ["\\box", "\\copy", "\\lastbox", "\\vsplit"]
+          .iter()
+          .any(|op| x_equals(&token, &T_CS!(*op)));
       if !is_box_register_op {
         let message = s!("A <box> was supposed to be here.\nGot none.");
         Error!("expected","<box>", message);
@@ -906,25 +1677,24 @@ LoadDefinitions!({
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
 
-  // Perl PR#2596: TeXDelimiter parameter type for \left, \right, \big, \bigl, etc.
+  // Perl PR#2596: TeXDelimiter parameter type for \big, \bigl, etc. (Perl's serves \left/\right too).
   // Reads a balanced {}-arg via read_arg, reverts WITHOUT braces.
   //
-  // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/parity/WISDOM.md #41
-  // for the full enhancement plan. Current impl works for
-  // \big/\Big/\bigg/\Bigg (math_common.rs:962-964) but \left/\lx@right
-  // plus revsymb's \biglb family fall back to DefMacro workarounds.
+  // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/parity/WISDOM.md #41. Current impl works for
+  // \big/\Big/\bigg/\Bigg (math_common.rs) and, since 57j, revsymb's \biglb family (revsymb_sty.rs). The size \langle
+  // and \{ lost after \big was not this reader: they were DefMath constructors reading their font at construction,
+  // boxes since 57n (`MathPrimitiveOptions::has_complex_option`).
   //
-  // Gap has two dimensions:
+  // \left/\middle/\right no longer use it (65d, OXIDIZED_DESIGN #530): `DelimiterToken` above scans as tex.web §1160
+  // does, which closes both gaps for them — the single-X-token read is §1160's `get_x_token` loop, and `\delimiter`'s
+  // number is scanned at the token level (`delim_num`), so Perl's `undigested => 1` invoke is not needed (witness
+  // tests/parse/parens.tex:43 `\left\delimiter"426830A`, byte-identical). For this reader the gaps remain:
   //   - Reader shape (2 branches missing): single-X-token read instead of read_arg,
   //     and BEGIN-unwrap-and-re-read. (The third, `.`/undef → \lx@delimiterdot,
   //     IS implemented below — the None / END / "." arms — plus an END-peek
-  //     fallback Perl does not have. Corrected 2026-07-20; the doc said 3 too.)
+  //     fallback Perl does not have, witness arXiv:1207.4709. Corrected 2026-07-20.)
   //   - Architectural `undigested=>1`: ArgWrap has no Digested variant and Parameter has no
-  //     `undigested: bool` flag; closing this needs latexml_core changes. Required for
-  //     \left\delimiter<num>.
-  //
-  // Reader-only partial port closes ZERO DP audit entries because the
-  // call-site migrations need BOTH dimensions — don't commit half.
+  //     `undigested: bool` flag; closing this needs latexml_core changes.
   DefParameterType!(TeXDelimiter, sub[_inner, _extra] {
     skip_filler()?;
     // Peek at the next token. If it's END (catcode 2) or EOF,
@@ -954,6 +1724,22 @@ LoadDefinitions!({
         read_arg(ExpansionLevel::Partial)
       },
     }
+  },
+  // A one-token delimiter is a delimiter (`\big#1` is `\left#1`, tex.web §1160 — `stomach::digest_as_delimiter`): a
+  // math-active `(` is the parenthesis, not its active meaning, which in the auto-sized-parentheses idiom is `\left(`
+  // and lost the `)` of `\bigl( x \bigr)` (2609.40266's preamble). A longer group digests as written.
+  predigest => sub[arg] {
+    let one_token = match &arg {
+      ArgWrap::Token(_) => true,
+      ArgWrap::Tokens(tokens) => tokens.unlist_ref().len() == 1,
+      _ => false,
+    };
+    let digested = if one_token {
+      digest_as_delimiter(|| arg.be_digested())?
+    } else {
+      arg.be_digested()?
+    };
+    Ok(Some(digested))
   },
   digested_reversion => sub[arg] {
     // Revert without adding braces (unlike {} parameter)
@@ -1287,6 +2073,7 @@ LoadDefinitions!({
   DefParameterType!(DisplayStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(mathstyle => "display");
   },
   after_digest => { egroup()?; },
@@ -1296,6 +2083,7 @@ LoadDefinitions!({
   DefParameterType!(TextStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(mathstyle => "text");
   },
   after_digest => { egroup()?; },
@@ -1305,6 +2093,7 @@ LoadDefinitions!({
   DefParameterType!(ScriptStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(mathstyle => "script");
   },
   after_digest => { egroup()?; },
@@ -1316,6 +2105,7 @@ LoadDefinitions!({
     sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(mathstyle => "scriptscript");
   },
   after_digest => { egroup()?; },
@@ -1328,6 +2118,7 @@ LoadDefinitions!({
     read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(scripted => true);
   },
   after_digest => { egroup()?; },
@@ -1342,6 +2133,7 @@ LoadDefinitions!({
   },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(scripted => true);
   },
   after_digest => {
@@ -1362,6 +2154,7 @@ LoadDefinitions!({
   },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(fraction => true);
   },
   after_digest => {

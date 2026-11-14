@@ -77,6 +77,7 @@ pub fn convert_to_xml(tex: &str) -> Result<String, String> {
   on_worker(move || {
     let opts = library_config(OutputFormat::XML);
     let mut converter = Converter::from_config(opts.clone());
+    converter.note_main_source(&format!("literal:{tex}"));
     converter
       .prepare_session(&opts)
       .map_err(|e| format!("could not prepare session: {e}"))?;
@@ -94,11 +95,44 @@ pub fn convert_to_xml(tex: &str) -> Result<String, String> {
 /// Figures are left as raw `<ltx:graphics>` references — image conversion
 /// writes files next to a destination, and this string-returning API has none;
 /// use [`crate::post`] with a `destination` when you need converted images.
+///
+/// The page links the bundled CSS/JS, and with no destination those files are
+/// copied into the working directory; [`convert_to_html_with`] and
+/// [`HtmlOptions`] choose otherwise.
 pub fn convert_to_html(tex: &str) -> Result<String, String> {
+  convert_to_html_with(tex, &HtmlOptions::default())
+}
+
+/// The settings [`convert_to_html_with`] takes. [`Default`] is what
+/// [`convert_to_html`] does. Construct with `..Default::default()`, so that a
+/// setting added later leaves existing callers compiling:
+///
+/// ```no_run
+/// use latexml::api::{HtmlOptions, convert_to_html_with};
+/// let options = HtmlOptions { default_resources: false, ..Default::default() };
+/// let html = convert_to_html_with(r"\documentclass{article}\begin{document}Hi\end{document}", &options)?;
+/// # Ok::<(), String>(())
+/// ```
+#[derive(Clone, Debug)]
+pub struct HtmlOptions {
+  /// Link and copy the bundled CSS/JS (`true`, Perl `defaultresources`). With no
+  /// destination the files land in the working directory; `false` is the
+  /// `--nodefaultresources` equivalent: no links to them, nothing written.
+  pub default_resources: bool,
+}
+
+impl Default for HtmlOptions {
+  fn default() -> Self { HtmlOptions { default_resources: true } }
+}
+
+/// [`convert_to_html`] with the given [`HtmlOptions`].
+pub fn convert_to_html_with(tex: &str, options: &HtmlOptions) -> Result<String, String> {
   let tex = tex.to_string();
+  let options = options.clone();
   on_worker(move || {
     let opts = library_config(OutputFormat::HTML5);
     let mut converter = Converter::from_config(opts.clone());
+    converter.note_main_source(&format!("literal:{tex}"));
     converter
       .prepare_session(&opts)
       .map_err(|e| format!("could not prepare session: {e}"))?;
@@ -107,39 +141,55 @@ pub fn convert_to_html(tex: &str) -> Result<String, String> {
       .result
       .ok_or_else(|| "conversion failed before post-processing".to_string())?;
 
-    let post_opts = post::PostOptions {
-      pmml:                      true,
-      cmml:                      false,
-      keep_xmath:                false,
-      // Same per-format sheet the CLI uses (shared source of truth).
-      stylesheet:                post::default_stylesheet(Some("html5")),
-      destination:               None,
-      source_directory:          None,
-      site_directory:            None,
-      search_paths:              &[],
-      nodefaultresources:        false,
-      css_files:                 &[],
-      js_files:                  &[],
-      noinvisibletimes:          false,
-      plane1:                    true,
-      hackplane1:                false,
-      mathtex:                   false,
-      url_style:                 latexml_post::crossref::UrlStyle::File,
-      navigationtoc:             None,
-      schemadocs:                false,
-      split:                     false,
-      split_xpath:               None,
-      split_naming:              None,
-      xslt_parameters:           &[],
-      graphics_svg_threshold_kb: 0,
-      // No destination to write images to; keep the raw graphics references.
-      graphicimages:             false,
-      timestamp:                 None,
-      icon:                      None,
-      whatsout:                  latexml_post::extract::Whatsout::Document,
-    };
-    Ok(post::run_post_processing(&xml, &post_opts))
+    let post_opts = html_post_options(options.default_resources);
+    post_result(post::run_post_processing_logged(&xml, &post_opts))
   })
+}
+
+/// The post-processing [`convert_to_html_with`] runs: the CLI's `html5` defaults, no destination.
+fn html_post_options(default_resources: bool) -> post::PostOptions<'static> {
+  post::PostOptions {
+    pmml: true,
+    cmml: false,
+    keep_xmath: false,
+    // Same per-format sheet the CLI uses (shared source of truth).
+    stylesheet: post::default_stylesheet(Some("html5")),
+    destination: None,
+    source_directory: None,
+    site_directory: None,
+    search_paths: &[],
+    default_resources,
+    css_files: &[],
+    js_files: &[],
+    noinvisibletimes: false,
+    plane1: true,
+    hackplane1: false,
+    mathtex: false,
+    url_style: latexml_post::crossref::UrlStyle::File,
+    navigationtoc: None,
+    schemadocs: false,
+    split: false,
+    split_xpath: None,
+    split_naming: None,
+    xslt_parameters: &[],
+    graphics_svg_threshold_kb: 0,
+    // No destination to write images to; keep the raw graphics references.
+    graphicimages: false,
+    timestamp: None,
+    icon: None,
+    whatsout: latexml_post::extract::Whatsout::Document,
+  }
+}
+
+/// The HTML, or post's log when post-processing died (`Fatal:post:convert`, #782) and left no
+/// document, the CLI's test. The status also counts core's: a core Fatal's rescued document is
+/// post-processed and returned, as in Perl's convert (LaTeXML.pm L277-337).
+fn post_result(post: post::PostOutcome) -> Result<String, String> {
+  if post.html.is_empty() && post.status_code >= 3 {
+    Err(format!("post-processing failed:\n{}", post.log))
+  } else {
+    Ok(post.html)
+  }
 }
 
 #[cfg(test)]
@@ -161,9 +211,71 @@ mod tests {
     );
   }
 
+  /// #782: a post Fatal (here a sheet that terminates) is an `Err` carrying the log, not `Ok("")`.
+  #[test]
+  fn a_post_fatal_is_an_err() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = dir.path().join("terminate.xsl");
+    std::fs::write(
+      &xsl,
+      "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\
+       <xsl:template match=\"/\"><xsl:message terminate=\"yes\">STOP</xsl:message></xsl:template>\
+       </xsl:stylesheet>",
+    )
+    .unwrap();
+    let xsl = xsl.to_string_lossy().into_owned();
+    let xml = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><para><p>Hi</p></para></document>";
+    let result = on_worker(move || {
+      post_result(post::run_post_processing_logged(xml, &post::PostOptions {
+        stylesheet: Some(&xsl),
+        ..html_post_options(false)
+      }))
+    });
+    let log = result.expect_err("a post Fatal is an Err");
+    assert_eq!(log.matches("Fatal:post:convert").count(), 1, "{log}");
+  }
+
+  /// A core Fatal that keeps its partial document (too many errors) is still post-processed and
+  /// returned, as Perl's convert and the CLI do (LaTeXML.pm L277-337); the Fatal is in the core log.
+  #[test]
+  fn a_core_fatal_keeps_its_rescued_document() {
+    let tex = format!(
+      "\\documentclass{{article}}\\begin{{document}}Kept text.\n\n{}\\end{{document}}",
+      (0..101u8)
+        .map(|i| format!(
+          "\\nosuch{}{} ",
+          (b'a' + i / 26) as char,
+          (b'a' + i % 26) as char
+        ))
+        .collect::<String>()
+    );
+    let (core_log, result) = on_worker(move || {
+      let opts = library_config(OutputFormat::HTML5);
+      let mut converter = Converter::from_config(opts.clone());
+      converter.prepare_session(&opts).expect("session");
+      let response = converter.convert(format!("literal:{tex}"));
+      let xml = response.result.expect("the rescued document");
+      let post = post_result(post::run_post_processing_logged(
+        &xml,
+        &html_post_options(false),
+      ));
+      ((response.status_code, response.log), post)
+    });
+    assert_eq!(core_log.0, 3, "{}", core_log.1);
+    assert!(
+      core_log.1.contains("101 errors; 1 fatal error;"),
+      "{}",
+      core_log.1
+    );
+    let html = result.expect("a core Fatal's rescued document is Ok");
+    assert!(html.contains("Kept text."), "{html}");
+  }
+
   #[test]
   fn html_conversion_returns_page() {
-    let html = convert_to_html(DOC).expect("convert_to_html");
+    let html = convert_to_html_with(DOC, &HtmlOptions { default_resources: false })
+      .expect("convert_to_html_with");
     assert!(html.contains("Hello"), "HTML should contain the body text");
     assert!(
       html.contains("<math") || html.contains("ltx_Math"),

@@ -1,0 +1,14 @@
+% witness: 0911.1421 (emlines2 -> emlines fallback, pl.pic:11), cond-mat0106468 (review.tex:3697), 0707.2749, 0906.2921
+% oracle: pdflatex 0 errors with the paper's own EMLINES2.sty (\emline = two \put + \special, balanced)
+% expect: 0 Errors; "After." outside the picture
+% mechanism: latexml_contrib/src/emlines_sty.rs:6-7 expansion ends "\special{em:line #3,#6}}}" -- two stray } per \emline
+% status: GREEN (66r: latexml_contrib emlines_sty.rs body balanced)
+\documentclass{article}
+\usepackage{emlines}
+\begin{document}
+\unitlength=1mm
+\begin{picture}(50,50)
+\emline{12.67}{13.33}{1}{6.00}{6.33}{2}
+\end{picture}
+After.
+\end{document}

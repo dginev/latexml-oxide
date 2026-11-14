@@ -1,0 +1,18 @@
+% A minipage's stacked lines take the `\lineskip` in force inside it (tex.web §679; `\@parboxrestore` restores it),
+% but its body was measured after its group closed, against the values in force there: under `\lineskip=0pt`, and in
+% every table cell since 60l zeroes them there, the two 55pt rules lost their 1pt gap (arXiv 2605.19065's tcolorbox
+% cells, tcolorbox.sty:1094 `\minipage`; review of 60l's A/B). Now a captured vertical body records the values while
+% its group is open (constructor.rs) and the whatsit's sizing passes them (whatsit.rs), as the box reader does.
+% status:  GREEN 60l; guard perfect_kernel_batch60::minipage_in_a_cell_keeps_its_lineskip
+% oracle:  pdflatex 0 errors: "plain 58.0pt+53.0pt; lineskip0 58.0pt+53.0pt; cell 58.0pt+53.0pt."
+% engines: rust 60m: lineskip0 57.5pt+52.5pt; 60l3: cell 57.5pt+52.5pt too
+% expect:  0 errors; the pdflatex sizes
+\documentclass[10pt]{article}
+\begin{document}
+\newcommand\mpx{\begin{minipage}{55pt}\noindent\rule{55pt}{55pt}\par\noindent\rule{55pt}{55pt}\end{minipage}}
+\setbox0\hbox{\mpx}\edef\plain{\the\ht0+\the\dp0}
+{\lineskip=0pt \setbox0\hbox{\mpx}\xdef\lszero{\the\ht0+\the\dp0}}
+\begin{tabular}{c}\setbox0\hbox{\mpx}\xdef\cell{\the\ht0+\the\dp0}\end{tabular}
+
+\noindent plain \plain; lineskip0 \lszero; cell \cell.
+\end{document}

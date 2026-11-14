@@ -1,0 +1,14 @@
+% witness: 2312.13002, 2111.12004 (jfm copies with their own `\@makecaption`, documents loading floatrow and subfigure)
+% oracle:  pdflatex 0 errors; "Figure 1. Schematic." and "Table 1 Values." with the labels in small caps (CMCSC10):
+%          floatrow.sty:39 loads caption's kernel (`caption3`), not caption, and keeps the class's `\@makecaption`
+% engines: rust 78a r2 before `\lx@caption@kernel@only` = "Figure 1:" upright (caption3's stand-in, the caption binding,
+%          read as caption loaded); 78a r1 = the class's format
+% expect:  0 errors, 0 warnings; <tag close=". "> with the label in small caps; after `\removefullpoint` close=" "
+% status:  GREEN (78a r2)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\usepackage{floatrow}
+\begin{document}
+\begin{figure}\caption{Schematic.}\end{figure}
+\begin{table}\removefullpoint\caption{Values.}\end{table}
+\end{document}

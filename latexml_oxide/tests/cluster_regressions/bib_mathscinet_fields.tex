@@ -1,0 +1,8 @@
+% Driver for `bib_mathscinet_fields.bib`: MathSciNet's `\cprime`/`\cftil` in a cited entry's fields, with no
+% `@preamble` and no package defining them; outside the bibliography they stay undefined.
+\documentclass{article}
+\begin{document}
+See \cite{arsenev,second}. \ifdefined\cprime CPRIME-DEFINED\else CPRIME-UNDEFINED\fi.
+\bibliographystyle{plain}
+\bibliography{bib_mathscinet_fields}
+\end{document}

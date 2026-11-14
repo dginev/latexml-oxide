@@ -1,0 +1,21 @@
+% witness: none (control for the 59i phantom: a listing box's `label=`/`step=` run inside its listing)
+% oracle:  pdflatex 0 errors; `\ref` to each box resolves to it; `step=section` steps the section counter
+% engines: rust (59h) loses the labels; run before the listing they named the element before it
+% expect:  0 errors; each label on its own listing's first line; section 1
+% status:  GREEN (59i, perfect_kernel_batch59::tcb_listing_label_names_its_listing)
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\newtcblisting[auto counter]{ex}[1][]{listing only,label={#1}}
+\NewTCBListing[auto counter]{exx}{ O{} }{listing only,#1}
+\begin{document}
+\begin{ex}[first]
+a b
+\end{ex}
+\begin{exx}[label=second]
+c d
+\end{exx}
+\begin{exx}[step=section]
+e f
+\end{exx}
+See \ref{first}, \ref{second}; section \thesection.
+\end{document}

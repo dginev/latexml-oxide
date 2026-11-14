@@ -1,0 +1,12 @@
+% witness: 63e review r3 finding 1 (revtex: 269 of 5,317 sampled \author bodies hold a comma; "A, B, and C")
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, and Cat Cole" over "Department of Physics, University X"
+% engines: rust (63e r4) = Bob Baker with the affiliation twice (the empty piece of ", and" took a copy)
+% expect:  3 creators, each with the affiliation once; 0 errors
+% status:  RED (63e r4) -> GREEN (63e)
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker, and Cat Cole}
+\affiliation{Department of Physics, University X}
+\maketitle
+\end{document}

@@ -1,0 +1,27 @@
+% A style of the document's own (check_document_style_words_are_counted.sty, beside it) sets the class store the
+% unclaimed-text net cannot name (as check_class_store_the_net_misses_is_counted.tex): `\AtBeginDocument{\corr{…}}`.
+% The address is the author's text though no content file writes it: the title-page check reads each file of the
+% document's directory read as definitions (`binding::content::raw_read_paths`), its definitions' replacement texts
+% out — the style's `\corrlabel` and the class's "Corresponding" are no document word —, and counts the address, one
+% Warning. Review rev106s S4a (probe p7_sty): 106s r1 read only the content files, an Info.
+% witness: none (synthetic; review rev106s probe p7_sty); the class store of cup-journal 2302.11911
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able1", "Text.", and the page foot's
+%          "1 Corresponding author: ann.able@lunar.org"
+% engines: rust 106s r1 = 0 errors, 0 warnings (Info frontmatter:class_text "corresponding lunar org")
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "lunar org"), the Info "corresponding"
+% status:  RED (106s r1) -> GREEN (106s r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netcsname.cls}
+\ProvidesClass{netcsname}\LoadClass{article}
+\newcommand\corr[1]{\expandafter\gdef\csname nc@corr\endcsname{#1}}
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\thanks{Corresponding author: \csname nc@corr\endcsname}\par}\@thanks\endgroup}
+\end{filecontents*}
+\documentclass{netcsname}
+\usepackage{check_document_style_words_are_counted}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+Text.
+\end{document}

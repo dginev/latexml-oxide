@@ -1,0 +1,16 @@
+% mechanism: the list cutter (`notes::lead_declarations`): a kernel command printing a glyph before the first mark
+%   (`\ldots`) is no declaration a cut piece carries (`fonts::sets_font`, by its meaning)
+% witness: synthetic (revP4b4a2 B1 probe d10)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "... 1Univ A, 2Univ B", the ellipsis once
+% engines: rust P4b4abase, P4b4a: 0 errors, 0 warnings, "…" once, on Ann Able; P4b4a3: Bob Baker's entry "… 2 Univ B"
+% expect:  0 errors, 0 warnings; Ann Able "… 1 Univ A", Bob Baker "2 Univ B"
+% status:  RED (P4b4a3) -> GREEN (P4b4a4), guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{\ldots $^{1}$Univ A, $^{2}$Univ B}
+\maketitle
+Body.
+\end{document}

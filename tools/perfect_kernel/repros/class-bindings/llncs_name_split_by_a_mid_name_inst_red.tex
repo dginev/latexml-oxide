@@ -1,0 +1,17 @@
+% mechanism: an `\inst` between a first and a last name in llncs's `\author` cuts the name (the reading takes the mark
+%   as a name's end; BT1c report SYNC note)
+% witness: synthetic (BT1c report; no census paper puts an `\inst` between the parts of a name)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann1 Able2 and Bob Baker2", "1 Univ A", "2 Univ B"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creators "Ann" (Univ A), "Able" (Univ B), "Bob
+%   Baker" (Univ B): one creator invented, no Warning; perl not run
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A, Univ B), Bob Baker (Univ B)
+% status:  RED (int158a; RR1 gap 2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann\inst{1} Able\inst{2} \and Bob Baker\inst{2}}
+\institute{Univ A \and Univ B}
+\maketitle
+Text.
+\end{document}

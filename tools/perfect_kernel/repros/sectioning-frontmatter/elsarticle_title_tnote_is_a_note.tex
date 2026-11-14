@@ -1,0 +1,25 @@
+% witness: elsarticle `\title{..\tnoteref{t1}}` + `\tnotetext[t1]{..}` (the Elsevier template's own title note; 63g review)
+% oracle:  pdflatex (elsarticle.cls, preprint) 0 errors: "My Title^⋆"; footnotes "⋆ Funded by grant XYZ.",
+%          "∗ Corresponding author.", "1 Visiting from Z."
+% engines: rust 63g = the title note an <ltx:contact role="note"> inside <ltx:title> (schema-invalid); Perl same
+% expect:  the title holds the note as a frontmatter thanks note; the authors keep their e-mail, correspondence note,
+%          fntext note and affiliation; 0 errors
+% status:  RED (63g) -> GREEN (63h)
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{My Title\tnoteref{t1}}
+\tnotetext[t1]{Funded by grant XYZ.}
+\author[a]{Ann Able\corref{c1}}
+\ead{ann@a.org}
+\cortext[c1]{Corresponding author.}
+\author[b]{Bob Baker\fnref{f1}}
+\fntext[f1]{Visiting from Z.}
+\affiliation[a]{organization={Univ A}}
+\affiliation[b]{organization={Univ B}}
+\begin{abstract}
+Abs.
+\end{abstract}
+\end{frontmatter}
+Text.
+\end{document}

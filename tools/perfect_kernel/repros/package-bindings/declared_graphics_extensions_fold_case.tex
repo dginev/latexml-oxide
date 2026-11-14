@@ -1,0 +1,23 @@
+% mechanism: graphicx's candidates (latexml_core util/image.rs `in_graphics_type_order`, `declared_rank`) follow
+%   `\Gin@extensions` as kpathsea finds each entry: the name as written, then in another case (TL's
+%   `texmf_casefold_search=1`). After `\DeclareGraphicsExtensions{.pdf,.jpeg,.png}` an extensionless
+%   `\includegraphics{q}` beside `q.PNG` (200 x 100 px) and `q.eps` (BoundingBox 40 x 20 bp) is `q.PNG`, found by the
+%   `.png` entry before the `.eps` pdftex.def appends at `\begin{document}`; the second document,
+%   `\RemoveGraphicsExtensions{.png}` beside `q.png`, finds it by pdftex.def's `.PNG` entry. 79a r2 matched the
+%   extensions in their case only and took the eps (review rev79a2 finding 2, probe gc).
+% files:   q.PNG = graphics-tikz/trimquad.png, q.eps = package-bindings/eps_as_pdf_two.eps (the second document:
+%          q.png = trimquad.png)
+% witness: 1608.05172 (`\DeclareGraphicsExtensions{.pdf,.jpeg,.png}`, img/nsfnet.PNG beside img/nsfnet.eps; its
+%          pdflatex log reads `<./img/nsfnet.PNG>`)
+% oracle:  pdflatex: 0 errors; "q 200.7495pt." (both documents)
+% engines: rust int68a: candidates "q.PNG,q.eps"; 79a r2: "q.eps,q.PNG", "q 40.15pt."
+% expect:  0 errors, 0 warnings; candidates "q.PNG,q.eps", "q 144.54pt." (Perl's 100 DPI, OD #337), no cssstyle
+% status:  RED (79a r2) -> GREEN (79a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+\begin{document}
+\sbox0{\includegraphics{q}}q \the\wd0.
+\includegraphics{q}
+\end{document}

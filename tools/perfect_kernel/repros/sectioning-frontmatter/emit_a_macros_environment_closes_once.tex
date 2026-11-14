@@ -1,0 +1,19 @@
+% mechanism: a macro's `\begin{tikzpicture}…\end{tikzpicture}`, its tokens all at its call's position, is one environment step each way (`field_notes::note_environment`: a position whose `\begin` or `\end` was heard says what changed there), so a run holding it is balanced; a contact a mark's formula holds is written by its text (`emit::item_call`)
+% witness: 2210.03748, 2206.03602, 2409.13798
+% oracle:  pdflatex 0 errors; "Ann Able", "Bob Bell", "Univ A" with its logo, "Univ B"
+% engines: rust before: two closes for each macro's one open, so a run holding it unbalanced (an ORCID's: `span letters differ`, its text); the ORCID in a mark's formula a contact holding the formula and its mark; perl: no ORCID contact, no cut
+% expect:  0 errors, 0 warnings; Univ A keeps its picture; each ORCID a contact of its id
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{hyperref}
+\newcommand\orcidicon[1]{\href{https://orcid.org/#1}{\mbox{\begin{tikzpicture}\draw (0,0) circle (1pt);\end{tikzpicture}}}}
+\newcommand\logo{\begin{tikzpicture}\draw (0,0) rectangle (2pt,2pt);\end{tikzpicture}}
+\title{T}
+\author{Ann Able$^{1\,\orcidicon{0000-0001-8855-3635}}$, Bob Bell$^{2\,\orcidicon{0000-0003-4102-380X}}$\\
+$^{1}$Univ A \logo\\ $^{2}$Univ B}
+\begin{document}
+\maketitle
+x
+\end{document}

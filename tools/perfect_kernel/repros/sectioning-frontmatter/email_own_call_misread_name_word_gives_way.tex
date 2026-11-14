@@ -1,0 +1,14 @@
+% GREEN (brief 107g, mechanism 1): the holder's key a word of the address loses to a longer spelling. `\author{Filippo Neri,
+%   DIETI, University of Naples, Italy. email: filippo.neri.email@…}` makes a creator "Italy. email", whose "email" is a
+%   whole word of the local part; Filippo Neri spells it better.
+% witness: 2107.06981 (`filippo.neri.email@`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int138a: on Filippo Neri; int139a: on "Italy. email"
+% expect:  0 errors; the address on Filippo Neri
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Filippo Neri, DIETI, University of Naples, Italy. email: filippo.neri.email@gmail.com}
+\maketitle
+Body.
+\end{document}

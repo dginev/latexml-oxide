@@ -1,0 +1,12 @@
+% witness: 1902.03035, 2010.02010, 2107.03212 (jmlr.cls:153-154 `\PassOptionsToPackage{x11names}{xcolor}`
+%          `\RequirePackage{xcolor}`; the paper's `\textcolor`)
+% oracle:  pdflatex 0 errors ("A red word.")
+% engines: rust 67o1 = 1 error (`\textcolor` undefined: jmlr_cls.rs left xcolor out); Perl: no binding, OmniBus scans
+%          the class and loads xcolor
+% expect:  0 errors, 0 warnings; the word coloured #FF0000
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{jmlr}
+\begin{document}
+A \textcolor{red}{red} word.
+\end{document}

@@ -29,7 +29,7 @@
 //!
 //! # Resource limits
 //!
-//! [`Watchdog::with_limits`](crate::watchdog::Watchdog::with_limits) guards
+//! [`Watchdog::with_limits`] guards
 //! **both** a wall-clock deadline and a
 //! resident-memory ceiling — the two defenses any executable that converts
 //! arbitrary input needs. It is the shared guard reused by both
@@ -43,13 +43,13 @@
 //!
 //! The wall-clock guard is portable (`std::thread` + `Instant`).
 //!
-//! **Portable:** [`total_memory_bytes`](crate::watchdog::total_memory_bytes) and [`available_disk_bytes`](crate::watchdog::available_disk_bytes) answer on
+//! **Portable:** [`total_memory_bytes`] and [`available_disk_bytes`] answer on
 //! Linux, macOS and Windows — `sysconf(_SC_PHYS_PAGES)`/`statvfs` are POSIX, and
 //! Windows uses `GlobalMemoryStatusEx`/`GetDiskFreeSpaceExW`. They back the
-//! machine-derived default ceiling ([`default_ceiling_mib`](crate::watchdog::default_ceiling_mib)) and the
+//! machine-derived default ceiling ([`default_ceiling_mib`]) and the
 //! spill-headroom check, so those behave identically on every supported OS.
 //!
-//! **Enforcement, also portable:** [`process_rss_kb`](crate::watchdog::process_rss_kb) — the half that actually
+//! **Enforcement, also portable:** [`process_rss_kb`] — the half that actually
 //! checks live usage against the ceiling — answers on all three: Linux samples
 //! `/proc/self/status`, macOS asks libproc (`proc_pidinfo`), and Windows uses
 //! `GetProcessMemoryInfo`. So the memory ceiling is both computed *and* checked
@@ -58,7 +58,7 @@
 use std::{
   sync::{
     Arc,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering},
   },
   thread,
   time::{Duration, Instant},
@@ -85,7 +85,7 @@ pub fn process_rss_kb() -> Option<u64> {
 #[cfg(target_os = "macos")]
 pub fn process_rss_kb() -> Option<u64> {
   let mut info: libc::proc_taskinfo = unsafe { std::mem::zeroed() };
-  let size = std::mem::size_of::<libc::proc_taskinfo>() as libc::c_int;
+  let size = size_of::<libc::proc_taskinfo>() as libc::c_int;
   // SAFETY: proc_pidinfo fills at most `size` bytes of the zeroed struct we
   // own; a short or negative return is handled below.
   let got = unsafe {
@@ -187,6 +187,14 @@ static MEMORY_FATAL_SEEN: AtomicBool = AtomicBool::new(false);
 /// Record that a memory-budget Fatal fired, so the end-of-run report knows
 /// memory was actually the problem.
 pub fn note_memory_fatal() { MEMORY_FATAL_SEEN.store(true, Ordering::Relaxed); }
+
+/// Did a memory-budget Fatal fire since the last `reset_memory_fatal`?
+pub fn memory_fatal_seen() -> bool { MEMORY_FATAL_SEEN.load(Ordering::Relaxed) }
+
+/// Forget a memory-budget Fatal: the CLI restarts a fused EAGER conversion
+/// under `--streaming`, and the end-of-run report must describe the attempt
+/// that produced the output.
+pub fn reset_memory_fatal() { MEMORY_FATAL_SEEN.store(false, Ordering::Relaxed); }
 
 /// The end-of-run memory report — emitted ONLY when a memory-budget Fatal
 /// fired during the run (user directive 2026-08-03: alert when needed, stay
@@ -351,10 +359,11 @@ pub fn available_memory_bytes() -> Option<u64> {
     // SAFETY: `stats` is a correctly sized, zeroed struct and `count` names
     // its capacity in `integer_t` units, exactly as the API requires;
     // `mach_host_self` returns a send right that need not be deallocated for
-    // a one-shot query in a short-lived process.
+    // a one-shot query in a short-lived process. (`mach2`, not libc's deprecated
+    // `mach_host_self`: libc points Mach APIs to that crate.)
     let kr = unsafe {
       libc::host_statistics64(
-        libc::mach_host_self(),
+        mach2::mach_init::mach_host_self(),
         libc::HOST_VM_INFO64,
         (&raw mut stats).cast::<libc::integer_t>(),
         &mut count,
@@ -504,14 +513,16 @@ pub const EXIT_OOM: i32 = 137;
 /// `Watchdog::new(0)` is a no-op — produces a handle that does nothing. This
 /// lets call-sites set a watchdog conditionally without special-casing the
 /// "no timeout" branch.
-/// Optional hook to run from the watchdog thread immediately before
-/// `exit(124)`. Used by `cortex_worker --standalone` to write a
+/// Optional hook to run from the watchdog thread immediately before its
+/// exit, called with the exit code it is about to take ([`EXIT_TIMEOUT`] or
+/// [`EXIT_OOM`]). Used by `cortex_worker --standalone` to write a
 /// structured `Status:conversion:3` placeholder to `--output` so the
-/// timeout produces a usable failure artifact instead of a missing
-/// file. Set once at startup via `set_pre_exit_hook`; the hook is
+/// exit produces a usable failure artifact instead of a missing
+/// file, and by a `cortex_worker` harness child to record the cause of its
+/// exit for the harness. Set once at startup via `set_pre_exit_hook`; the hook is
 /// invoked exactly once. Zero overhead on the happy path — only the
 /// watchdog firing reads it.
-type PreExitHook = Box<dyn FnOnce() + Send + 'static>;
+type PreExitHook = Box<dyn FnOnce(i32) + Send + 'static>;
 
 static PRE_EXIT_HOOK: std::sync::OnceLock<std::sync::Mutex<Option<PreExitHook>>> =
   std::sync::OnceLock::new();
@@ -523,12 +534,174 @@ pub fn set_pre_exit_hook(hook: PreExitHook) {
   }
 }
 
-fn run_pre_exit_hook() {
+fn run_pre_exit_hook(code: i32) {
   if let Some(cell) = PRE_EXIT_HOOK.get()
     && let Ok(mut guard) = cell.lock()
     && let Some(hook) = guard.take()
   {
-    hook();
+    hook(code);
+  }
+}
+
+/// Paths a run created that an exit skipping destructors would leave behind — an unpacked archive (a `TempDir`), the
+/// destination, the post page-spill directory: the watchdog's `exit(124)`/`exit(EXIT_OOM)` and the binaries'
+/// allocation-failure hooks call [`remove_registered_paths`] first. On the normal path a path's owner removes it, and
+/// its [`RemoveOnExit`] guard unregisters it. (A `panic = "abort"` build still leaves them on a panic.)
+static REMOVE_ON_EXIT: std::sync::Mutex<Vec<(u64, std::path::PathBuf)>> =
+  std::sync::Mutex::new(Vec::new());
+static NEXT_REMOVE_ON_EXIT: AtomicU64 = AtomicU64::new(0);
+
+/// Keeps a path registered with [`remove_registered_paths`]; unregisters it when dropped.
+#[must_use = "the path is unregistered when this guard is dropped"]
+pub struct RemoveOnExit(u64);
+
+impl Drop for RemoveOnExit {
+  fn drop(&mut self) { registry().retain(|(id, _)| *id != self.0); }
+}
+
+/// The registry, its lock poison-tolerant: no critical section can leave it inconsistent.
+fn registry() -> std::sync::MutexGuard<'static, Vec<(u64, std::path::PathBuf)>> {
+  REMOVE_ON_EXIT
+    .lock()
+    .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Registers `path` for removal by [`remove_registered_paths`] while the returned guard lives.
+pub fn remove_on_exit(path: &std::path::Path) -> RemoveOnExit {
+  let id = NEXT_REMOVE_ON_EXIT.fetch_add(1, Ordering::Relaxed);
+  registry().push((id, path.to_path_buf()));
+  RemoveOnExit(id)
+}
+
+/// Removes every registered path, directories with their contents: for the exits that skip destructors.
+pub fn remove_registered_paths() { remove_paths(std::mem::take(&mut *registry())); }
+
+/// [`remove_registered_paths`] for an allocation-failure hook, which may have interrupted the registry's holder: it
+/// gives up rather than wait for the lock. It claims the exit first, as the watchdog does: in a worker pool the sweep
+/// takes every job's trees, and the other threads must not hand on results built over them.
+pub fn try_remove_registered_paths() {
+  claim_exit(EXIT_OOM);
+  let paths = match REMOVE_ON_EXIT.try_lock() {
+    Ok(mut paths) => std::mem::take(&mut *paths),
+    Err(_) => return,
+  };
+  remove_paths(paths);
+}
+
+fn remove_paths(paths: Vec<(u64, std::path::PathBuf)>) {
+  for (_, path) in paths {
+    let _ = if path.is_dir() {
+      std::fs::remove_dir_all(&path)
+    } else {
+      std::fs::remove_file(&path)
+    };
+  }
+}
+
+/// Set by the first allocation failure that reaches a binary's allocation-failure hook.
+static ALLOC_FAILURE: AtomicBool = AtomicBool::new(false);
+
+std::thread_local! {
+  /// Whether this thread is inside the allocation-failure hook (const-initialized, no destructor:
+  /// reading it allocates nothing).
+  static IN_ALLOC_FAILURE_HOOK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// The first call of a binary's allocation-failure hook. The hook then runs alone and without
+/// allocating: it writes its line ([`write_stderr_unlocked`]), sweeps the run's trees
+/// ([`try_remove_registered_paths`]) and ends the process ([`exit_now`]).
+///
+/// When memory is spent, anything the hook allocates fails as well and calls the hook again, on the
+/// same thread. Run again, it would allocate again: a fleet child printed 6,048 nested
+/// `Fatal:oom:alloc_failed` lines in a millisecond (each re-entry failing at reading
+/// `RUST_BACKTRACE`, 1 byte). Or it would wait forever. The old hook formatted a backtrace while
+/// holding the standard library's backtrace lock and the stderr lock. Symbolizing the backtrace
+/// allocated, the re-entered hook waited on the backtrace lock, and the watchdog's own
+/// `Fatal:timeout` waited on stderr. The child stayed parked until the harness killed it as
+/// unresponsive and re-leased its paper (run 351, 2026-10-14; 1804.07640 among the papers). So a
+/// re-entry on the same thread ends the process at once. An allocation failure on another thread
+/// meanwhile waits for the first thread's exit, and exits itself if that has not come in ten seconds.
+pub fn enter_alloc_failure_hook() {
+  if IN_ALLOC_FAILURE_HOOK
+    .try_with(|inside| inside.replace(true))
+    .unwrap_or(true)
+  {
+    exit_now(EXIT_OOM);
+  }
+  if ALLOC_FAILURE.swap(true, Ordering::AcqRel) {
+    for _ in 0..10 {
+      thread::sleep(Duration::from_secs(1));
+    }
+    exit_now(EXIT_OOM);
+  }
+}
+
+/// Ends the process now with `code`: `_exit`, without the atexit handlers, destructors and stream
+/// flushes of [`std::process::exit`], any of which can allocate or wait on a lock held by a thread
+/// that will never release it.
+pub fn exit_now(code: i32) -> ! {
+  #[cfg(unix)]
+  // SAFETY: `_exit` takes no pointers and does not return.
+  unsafe {
+    libc::_exit(code)
+  }
+  #[cfg(not(unix))]
+  std::process::exit(code)
+}
+
+/// Writes `args` to standard error in one `write(2)`, formatted into a stack buffer (cut at 1 KiB).
+/// Unlike `eprintln!` it neither allocates nor takes the standard library's stderr lock. That makes
+/// it safe in an allocation-failure hook, and for the watchdog when a stuck thread holds that lock.
+pub fn write_stderr_unlocked(args: std::fmt::Arguments) {
+  struct StackLine {
+    bytes: [u8; 1024],
+    len:   usize,
+  }
+  impl std::fmt::Write for StackLine {
+    fn write_str(&mut self, text: &str) -> std::fmt::Result {
+      let take = text.len().min(self.bytes.len() - self.len);
+      self.bytes[self.len..self.len + take].copy_from_slice(&text.as_bytes()[..take]);
+      self.len += take;
+      Ok(())
+    }
+  }
+  let mut line = StackLine { bytes: [0; 1024], len: 0 };
+  let _ = std::fmt::write(&mut line, args);
+  #[cfg(unix)]
+  // SAFETY: a write of `len` initialized bytes from a stack buffer to the standard error descriptor.
+  unsafe {
+    libc::write(2, line.bytes.as_ptr().cast(), line.len);
+  }
+  #[cfg(not(unix))]
+  {
+    use std::io::Write;
+    let _ = std::io::stderr().write_all(&line.bytes[..line.len]);
+  }
+}
+
+/// The exit code claimed when the watchdog (or an allocation-failure hook) begins to exit, 0 while none is. Its sweep
+/// deletes the run's trees while the other threads still run, and one finishing in that window must neither exit first
+/// with its own code (the first `exit` wins) nor hand on output built over the deleted trees: [`park_if_exiting`] holds
+/// it until the claimed exit ends the process.
+static EXITING: AtomicI32 = AtomicI32::new(0);
+
+/// Claims the exit with `code` (the first claim stands).
+fn claim_exit(code: i32) {
+  let _ = EXITING.compare_exchange(0, code, Ordering::AcqRel, Ordering::Acquire);
+}
+
+/// Parks the calling thread once the watchdog has begun to exit, until that exit ends the process. Called before every
+/// exit and result hand-off a timed-out run could race (the binaries' final exits, cortex_worker's results). Bounded: if
+/// the exit has not come within a minute (a pre-exit hook that blocked, or a sweep slower than that, which it then cuts
+/// short) the thread exits itself, with the claimed code.
+pub fn park_if_exiting() {
+  let code = EXITING.load(Ordering::Acquire);
+  if code != 0 {
+    let deadline = Instant::now() + Duration::from_secs(60);
+    while let Some(left) = deadline.checked_duration_since(Instant::now()) {
+      thread::park_timeout(left);
+    }
+    std::process::exit(code);
   }
 }
 
@@ -574,13 +747,16 @@ impl Watchdog {
         if cancelled.load(Ordering::Relaxed) {
           return;
         }
-        eprintln!(
-          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process"
-        );
+        // Unlocked: a thread stuck while holding the stderr lock must not hold up the exit.
+        write_stderr_unlocked(format_args!(
+          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process\n"
+        ));
         // Run the optional pre-exit hook (e.g. cortex_worker writing a
         // structured Status:conversion:3 placeholder to its --output path)
         // BEFORE exiting. The hook is invoked at most once per process.
-        run_pre_exit_hook();
+        claim_exit(EXIT_TIMEOUT);
+        run_pre_exit_hook(EXIT_TIMEOUT);
+        remove_registered_paths();
         // `std::process::exit(124)` instead of `abort()`: the watchdog must
         // terminate the whole process (the worker thread is presumed wedged
         // in a tight loop that won't observe a cooperative cancel), but
@@ -601,14 +777,16 @@ impl Watchdog {
         if cancelled.load(Ordering::Relaxed) {
           return;
         }
-        eprintln!(
+        write_stderr_unlocked(format_args!(
           "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting \
            process. This document needs a larger ceiling: rerun with a higher --max-memory on a \
-           machine with enough free RAM.",
+           machine with enough free RAM.\n",
           rss / 1024,
           max_rss_kb / 1024
-        );
-        run_pre_exit_hook();
+        ));
+        claim_exit(EXIT_OOM);
+        run_pre_exit_hook(EXIT_OOM);
+        remove_registered_paths();
         std::process::exit(EXIT_OOM);
       }
       thread::sleep(poll_interval);
@@ -626,6 +804,27 @@ impl Drop for Watchdog {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// A registered path is removed by the sweep an exit runs; one whose guard was dropped (its owner removed it, or
+  /// keeps it) is not.
+  #[test]
+  fn registered_paths_are_removed_before_an_exit() {
+    let base = std::env::temp_dir().join(format!("lx-remove-on-exit-{}", std::process::id()));
+    let (kept, swept) = (base.join("kept"), base.join("swept"));
+    std::fs::create_dir_all(&kept).unwrap();
+    std::fs::create_dir_all(swept.join("inner")).unwrap();
+    std::fs::write(swept.join("inner").join("file.tex"), "x").unwrap();
+    drop(remove_on_exit(&kept));
+    let guard = remove_on_exit(&swept);
+    remove_registered_paths();
+    assert!(kept.is_dir(), "an unregistered path stays");
+    assert!(
+      !swept.exists(),
+      "a registered path is removed with its contents"
+    );
+    drop(guard);
+    std::fs::remove_dir_all(&base).unwrap();
+  }
 
   /// The cgroup limit decides the ceiling in a container, so each way of
   /// spelling "unlimited" has to be recognised — otherwise a sentinel is

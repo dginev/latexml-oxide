@@ -1,0 +1,24 @@
+% witness: 0809.3275 Figs 2-6 (four `\subfigure[]{\fbox{\label{…}\includegraphics[width=0.23\textwidth]{…}}}` in a
+%          REVTeX column, `\fboxsep` 0.3mm: 2+2 in the PDF); review rev78x's probe `p1/o1.tex`; 0907.1044, 1601.02116
+% oracle:  pdflatex 0 errors (`\showbox` of the float box: \hsize 246pt, one line of two 119.8pt boxes, then two)
+% engines: rust int71a = one panel per row (each `\fbox` 2.5pt wider than its graphic plus its `\lx@label`'s key text,
+%          past half the 246pt column); Perl 0.8.8 = 2+2 (its 345pt line)
+% expect:  0 errors, 0 warnings; Figure 1 two rows of two (one `ltx:break`), every panel 0.488 of the column
+% status:  RED (int71a) -> GREEN (79c: a `\label` makes no box, `sizer => 0`; KNOWN_PERL_ERRORS #1144)
+% preload: ar5iv.sty
+\documentclass[aps,pre,twocolumn]{revtex4}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\setlength{\fboxsep}{0.3mm}
+\begin{document}
+\title{Panels}\maketitle
+Some text.
+
+\begin{figure}
+	\subfigure[]{\fbox{\label{fig:110raw-base}\includegraphics[width=0.23\textwidth]{example-image}}}
+	\subfigure[]{\fbox{\label{fig:110mi1-pos}\includegraphics[width=0.23\textwidth]{example-image}}}
+	\subfigure[]{\fbox{\label{fig:110teComp1-1}\includegraphics[width=0.23\textwidth]{example-image}}}
+	\subfigure[]{\fbox{\label{fig:110teApp1-1-pos}\includegraphics[width=0.23\textwidth]{example-image}}}
+	\caption{\label{fig:mutualK1}Panels \subref{fig:110raw-base} and \subref{fig:110teApp1-1-pos}.}
+\end{figure}
+\end{document}

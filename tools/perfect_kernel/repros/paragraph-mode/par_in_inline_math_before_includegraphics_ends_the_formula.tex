@@ -1,0 +1,19 @@
+% witness: 66w review finding 1 (p_incl): an optional key-value argument before a file name with an underscore
+% oracle:  pdflatex 1 error ("Missing $ inserted" at the \par; with a fig_1.png present), pdftotext "We have a = b / See
+%          [image] and x here."; Perl 3 errors, the formula runs on to the next `$`
+%          (Math "a=b\par See\includegraphics[width=28.45274pt]{fig_1}and")
+% engines: rust 66v1: as pdflatex; 66w: 1 error, the graphic inside the formula, "x here." flipped
+% expect:  1 error "Missing $ inserted"; Math "a=b" ends at the \par; "See", the graphic and the formula x in paragraph 2
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w r1):
+%          a `[…]` after a command is its argument as a `{…}` is, and neither is looked into
+%          (stomach.rs `par_lookahead_verdict` / `lookahead_command`), so no math-only token precedes the `$` and
+%          tex.web §1047 ends the formula at the \par (`insert_dollar_sign`)
+% preload: ar5iv.sty
+% status:  GREEN (66w r1; guard perfect_kernel_batch66w::par_before_includegraphics_ends_the_formula)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+We have $a = b
+
+See \includegraphics[width=1cm]{fig_1} and $x$ here.
+\end{document}

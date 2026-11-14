@@ -1,0 +1,29 @@
+% witness: 1307.3388 Fig 3 (`\subfigure[]{⏎\hspace{-0.4cm}⏎\includegraphics[scale=0.305]{…}}` pairs after a centred
+%          `\\\hspace{0.2cm}`: 2+2 in the PDF, 2+1+1 once 78x r4 kept the row's leading glue, the bodies' `\hspace`
+%          left out of their widths); review rev78x3 A/B
+% oracle:  pdflatex 0 errors, 0 overfull (\textwidth 345pt): Figure 1 one row (2 x (175pt - 0.4cm) + 0.2cm = 333.2pt),
+%          Figure 2 two rows (2 x 175pt + 0.2cm = 355.7pt)
+% engines: rust int69b = two rows each (a sub-float body's glue left out, OD #876); 78x r4 before the fix the same;
+%          Perl 0.8.8 = one row, two rows (it measures the whole box)
+% expect:  0 errors, 0 warnings; Figure 1 no `ltx:break`, Figure 2 one; two panels each
+% status:  RED (int69b, 78x r4 draft) -> GREEN (78x r4: a sub-float body's stated glue adds its natural width, its
+%          spaces still count 0)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\begin{document}
+Text.
+\begin{figure}
+\centering
+\subfigure[]{\hspace{-0.4cm}\includegraphics[width=175pt]{example-image}}\hspace{0.2cm}%
+\subfigure[]{\hspace{-0.4cm}\includegraphics[width=175pt]{example-image}}
+\caption{Sub-figure bodies that state a negative hspace.}
+\end{figure}
+\begin{figure}
+\centering
+\subfigure[]{\includegraphics[width=175pt]{example-image}}\hspace{0.2cm}%
+\subfigure[]{\includegraphics[width=175pt]{example-image}}
+\caption{The same without it.}
+\end{figure}
+\end{document}

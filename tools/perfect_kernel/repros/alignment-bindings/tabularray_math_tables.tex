@@ -1,0 +1,34 @@
+% A tabularray table in math is a math `array` (tabularray.sty:3490-3492) with as many columns as its
+% widest row: tabularray reads the body whole (`+b`) and tolerates a row wider than the colspec; a math
+% alignment is never column-pruned, so the width comes from the body, not a fixed margin (16 empty
+% cells a row, or 32 columns for a colspec-less table, before). A tall table in math prints its caption
+% around the math cells. The body read ahead ends at the first `\end{…}` that closes no `\begin{…}` of the
+% body — the end of an environment wrapping the table — so it never tokenizes the rest of the document
+% ahead of a verbatim (review 3: the read ran to the end of the file, losing `% not a comment` and "done.").
+% A row is counted in the table's own cells, not in an environment's in a cell (`\begin{array}{ccc} a & b & c
+% \end{array}`, unbraced, which tabularray accepts).
+% witness: 57cp review 2 (math.tex, math3.tex, rag.tex), review 3 (pre2.tex, pre4.tex), review 4 (pmat.tex). Guard: perfect_kernel_batch57::tabularray_math_tables.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors.
+% engines: rust 57cpe: "Extra alignment tab" for the ragged row, 32 columns, an XMArray error for the tall table;
+%          57cp3: the verbatim and `\verb` after the wrapped table corrupted.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{tabularray}
+\newenvironment{mymat}{\begin{tblr}{cc}}{\end{tblr}}
+\begin{document}
+$\begin{tblr}{cc} 1 & 2 & 3 \\ 4 & 5 \\ \end{tblr}$
+
+$\begin{tblr}{hlines} 6 & 7 \\ 8 & 9 \\ \end{tblr}$
+
+$x = \begin{talltblr}[caption={Math tall}]{cc} 1 & 2 \\ \end{talltblr}$
+
+$M = \begin{mymat} a & b \\ c & d \\ \end{mymat}$ and $\begin{tblr}{} x & y & z \\ \begin{tblr}{} p \\ \end{tblr} & q \\ \end{tblr}$ here.
+
+$\begin{tblr}{cc} \begin{array}{ccc} a & b & c \end{array} & d \\ e & f \\ \end{tblr}$
+
+\begin{verbatim}
+  x_1 & y ~ % not a comment \end{tblr}
+\end{verbatim}
+Inline \verb|a%b#c| done.
+\end{document}

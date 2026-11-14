@@ -1,0 +1,16 @@
+% witness: uwthesis/uwthesis (uwthesis.cls:610 \def\titlepage, used uwthesis.tex:95-102)
+% oracle:  pdflatex 0 errors (class \def\titlepage wins; {...} closes normally)
+% engines: rust=1 (2026-09-03)
+% expect:  0 errors; body 'After.' present, no dangling <ltx:titlepage>
+% status:  GREEN (b54x, batch 54q)
+% mechanism: LaTeXML {titlepage} DefEnvironment is locked=>true (latex_constructs.rs:5928),
+%   so a class \def\titlepage is refused; the locked internal_vertical env-begin runs inside
+%   a plain {...} group and never closes => '}' hits the mode-switch frame.
+\documentclass{report}
+\makeatletter
+\def\titlepage{\par TITLE STUFF\par}
+\makeatother
+\begin{document}
+{\titlepage}
+After.
+\end{document}

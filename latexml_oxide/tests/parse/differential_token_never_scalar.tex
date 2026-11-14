@@ -1,0 +1,11 @@
+% A document whose upright `d` is never a scalar reads a lone upright `d<var>` as a differential (user ruling
+% 2026-10-01e: token identity), while its italic `d`, a dimension elsewhere, stays a letter.
+% witness: 2605.18213 (`0=\mathrm{d}L+\tfrac12[L,L]`), 2605.25107 (`\rho_t\,\mathrm dt`)
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; the upright `d`s differentials, `\leq Cdh^3` letters
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$0=\mathrm{d}L+\tfrac12[L,L]$ $\rho_t\,\mathrm{d}t$ $\int_\Omega f\,\mathrm{d}x$
+$x\in\mathbb{R}^d$ $\|u-u_h\|\leq Cdh^3$
+\end{document}

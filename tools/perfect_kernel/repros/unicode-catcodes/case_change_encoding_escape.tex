@@ -1,0 +1,20 @@
+% mechanism: l3text's `\__text_expand_encoding:N` (expl3-code.tex:36330-36338): an
+%   encoding-dispatched text command expands one step to `\@current@cmd` or `\@changed@cmd`
+%   (latex.ltx:9865/9871) followed by the command and its encoding-specific name;
+%   `\__text_expand_encoding_escape:NN` keeps the command under `\exp_not:n` and drops the name.
+%   The case changer expanded `\@changed@cmd` itself, into `\@use@text@encoding`'s
+%   `\edef\f@encoding{…}` (latex.ltx:9975) and a font-info message.
+% witness: batch 56jw (the l3text step the case changer lacked; latex.ltx:10005 `\@tabacckludge`)
+% oracle:  pdflatex 0 errors: "A É Ç B"
+% engines: rust (56js) = 1 error "\endgroup Attempt to close non-boxing group",
+%          "A (FONT) LATEX FONT INFO: É C B"
+% expect:  0 errors, 0 warnings; <p>A É Ç B</p>
+% status:  RED (56jw) -> GREEN (56jw)
+\documentclass{article}
+\makeatletter
+\def\x{\@changed@cmd\'\relax}
+\def\y{\@current@cmd\c\relax}
+\makeatother
+\begin{document}
+A \MakeUppercase{\x e \y c} B
+\end{document}

@@ -1,0 +1,17 @@
+% witness: uantwerpendocs/uantwerpenletter-example (uantwerpenletter.cls:285-292: the subject in a `tikzpicture`
+%   whose `\path` exists only inside the picture)
+% oracle:  pdflatex 0 errors; "CONFIDENTIAL AND PROPRIETARY.", "Subject line", "Body."
+% engines: rust 59o = the whole class `\maketitle` body lost: the replay gate saw `\path` undefined
+% expect:  0 errors; both lines
+% status:  RED (59o) -> GREEN (59p: a `tikzpicture` — marked `replay_gate_scoped_vocabulary:` by the tikz binding — is one
+%   unit to the gate)
+\documentclass{article}
+\usepackage{tikz}
+\renewcommand\maketitle{%
+  CONFIDENTIAL AND PROPRIETARY.
+  \begin{tikzpicture}\path (0,0) node {Subject line};\end{tikzpicture}}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

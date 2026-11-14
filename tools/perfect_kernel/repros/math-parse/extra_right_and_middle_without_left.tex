@@ -1,0 +1,12 @@
+% witness: C5 G2 test 3; tex.web §1191-1192 "Extra \right." / "Extra \middle." at the formula's own group
+% oracle:  pdflatex 2 errors ("! Extra \right.", "! Extra \middle."), the delimiters dropped
+% engines: rust 65a: 1 error ("Unbalanced \right, no balancing \left."), `)` and `|` kept, `\middle` unchecked;
+%          65d: pdflatex's 2 errors, the delimiters kept (user ruling 2026-10-12: author content; Perl keeps them)
+% expect:  2 errors (unexpected:\right "Extra \right.", unexpected:\middle "Extra \middle."); Math tex "a\right)" and
+%          "b\middle|c"
+% preload: ar5iv.sty
+% status:  CONTROL
+\documentclass{article}
+\begin{document}
+$a\right)$ and $b\middle|c$
+\end{document}

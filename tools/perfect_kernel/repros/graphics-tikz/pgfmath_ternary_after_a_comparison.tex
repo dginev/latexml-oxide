@@ -1,0 +1,18 @@
+% pgfmath's `?:` binds looser than the comparisons and `&&`/`||` (pgfmathparser.code.tex:898-916),
+% so `\WCmidangle<180?1:-1` is 1 or -1, never the comparison: wheelchart's `arc data dir`
+% (wheelchart.tex:714) was 0, its arc of length 0, and `text along path` walked it forever.
+% witness: wheelchart manual (210 s, box-list runaway Fatal).
+% status:  GREEN (59b)
+% Chained ternaries group to the left (`(a?b:c)?d:e`), and `ifthenelse` returns its chosen
+% argument as it is, so an integer result still ends an `\ifnum`.
+% oracle:  lualatex 0 errors: "[-1.0][7][0][5.0]", "[4]A[1]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{230.5<180?1:-1}[\pgfmathresult]\pgfmathparse{1>0?7:5}[\pgfmathresult]%
+\pgfmathparse{1<2&&3<2?1:0}[\pgfmathresult]\pgfmathparse{1>0?2+3:5}[\pgfmathresult]
+
+\pgfmathparse{1?2:3?4:5}[\pgfmathresult]\def\i{3}\pgfmathsetmacro{\n}{ifthenelse(\i>2,1,0)}%
+\ifnum\n=1 A\else B\fi[\n]
+\end{document}

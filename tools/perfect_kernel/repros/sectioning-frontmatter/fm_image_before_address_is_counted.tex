@@ -1,0 +1,16 @@
+% witness: the address sibling of 2503.08161's image before a URL (review revCR8b finding 1): an image leading a run
+%          printing an address, which the reading writes as an e-mail by its text
+% oracle:  pdflatex 0 errors: "Ann Able", "Zebra University", "[image] ann@x.org"
+% engines: rust int157a2 = the image joined into the address run, written by the e-mail's text: dropped, 0 warnings
+% expect:  0 errors, 1 warning (the emitter's reading holds no place for 1 picture); Ann Able, her affiliation, her
+%          typewriter e-mail; the image lost, counted (`events::place_pictures` joins no address run)
+% status:  RED (int157a2: silent) -> GREEN (IMG1: counted)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}\usepackage{url}\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Zebra University \\ \includegraphics[width=0.36cm]{example-image} \texttt{ann@x.org}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

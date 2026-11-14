@@ -1,0 +1,13 @@
+% witness: 1309.4864 (`\doiurl`), 1309.5877 (`\arxivurl`), 1309.1380 (`\surl`), 1107.3284 (`\setattribute`),
+%   1107.4192 (`\tsup`); run 340 ~740 arximspdf papers
+% oracle:  pdflatex with arximspdf.cls: 0 errors; the three links, ABC, x^2
+% engines: rust 65v = errors (each undefined in the arximspdf binding)
+% expect:  0 errors; hrefs to http://dx.doi.org/10.1214/x, http://arxiv.org/abs/math/0601001, http://www.example.org
+% status:  RED (65v) -> GREEN (65w)
+\documentclass[aos]{arximspdf}
+\setattribute{journal}{name}{ABC}
+\begin{document}
+\doiurl{10.1214/x} \arxivurl{math/0601001} \surl{www.example.org}
+\getattribute{journal}{name} x\tsup{2}
+\OrigBibText ignored\endOrigBibText
+\end{document}

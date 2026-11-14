@@ -1,4 +1,7 @@
 #![feature(alloc_error_hook)]
+// clap's `derive(Parser)` builds the whole CLI (~150 options) in one generated function: one large frame at opt-level 0,
+// once per process. A lint attribute on `Cli` does not reach the derived impl, hence the crate level.
+#![allow(clippy::large_unopt_stack_frames)]
 
 use std::{
   alloc::{Layout, set_alloc_error_hook},
@@ -11,7 +14,10 @@ use std::{
 };
 
 use clap::Parser;
-use latexml::converter::Converter;
+use latexml::{
+  converter::Converter,
+  streaming_restart::{release_before_rerun, resolve_streaming, restart_budget, restart_watermark},
+};
 use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat, error::emit_info};
 
 /// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
@@ -26,9 +32,19 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: dhat::Alloc = dhat::Alloc;
 
+/// `--xsltparameter` is checked as it is read, as bin/latexmlpost L354-356 fails on a malformed one (#803).
+fn xslt_parameter_arg(param: &str) -> Result<String, String> {
+  match latexml::post::parse_xslt_parameter(param) {
+    Some(_) => Ok(param.to_string()),
+    None => Err("not in recognized format: 'name:value' (or 'name=value')".to_string()),
+  }
+}
+
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
-#[command(name = "latexml_oxide", version, about)]
+// `args_override_self`: an option given twice keeps its last value, as GetOpt::Long does (#530).
+#[command(name = "latexml_oxide", version = latexml::identity::VERSION_WITH_REVISION, about)]
+#[command(args_override_self = true)]
 struct Cli {
   /// The TeX/LaTeX source file(s) to convert (overridden by --source). A `.bib`,
   /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected. Several files
@@ -287,7 +303,14 @@ struct Cli {
   /// bounded fragments, closed subtrees spill to disk beside the source, and
   /// a second, streaming pass finishes them — so peak memory is bounded by
   /// fragment size instead of document size. Output is byte-identical to the
-  /// normal path (guarded by the 114_streaming_* sweep). Off by default;
+  /// normal path (guarded by the 114_streaming_* sweep), save three documented
+  /// cases: a heading unit with prose before the bibliography after it keeps
+  /// its own heading (OXIDIZED_DESIGN_DIVERGENCES #456); an `\index` /
+  /// `\nomenclature` / `\glossary` entry of a list the document never prints
+  /// is typeset at a fragment yield where the normal path typesets nothing
+  /// (OXIDIZED_DESIGN_DIVERGENCES #738); and a late abstract whose cover has a
+  /// root child spilled at a small fragment budget keeps its slot, ahead of
+  /// that cover (OXIDIZED_DESIGN_DIVERGENCES #903). Off by default;
   /// also AUTO-activates when the projected memory need of a large source
   /// exceeds the --max-memory ceiling, i.e. only where the normal path is
   /// certain to exhaust memory anyway.
@@ -299,7 +322,7 @@ struct Cli {
   streaming: Option<bool>,
 
   /// Abort after processing this many tokens — guards against runaway macro
-  /// expansion (default: 400M; env `LATEXML_TOKEN_LIMIT`, 0 disables).
+  /// expansion (default: 1G; env `LATEXML_TOKEN_LIMIT`, 0 disables).
   #[arg(long, value_name = "N")]
   token_limit: Option<usize>,
 
@@ -394,7 +417,7 @@ struct Cli {
   quiet: bool,
 
   /// Enable a named debug feature, e.g. --debug frontmatter (repeatable).
-  /// Implies debug-level logging.
+  /// Prints that feature's debugging output only (--verbose prints the rest).
   #[arg(long = "debug", value_name = "FEATURE")]
   debug: Vec<String>,
 
@@ -412,8 +435,8 @@ struct Cli {
   #[arg(long, value_name = "DIR")]
   sourcedirectory: Option<String>,
 
-  /// Additional XSLT parameters (repeatable, key=value)
-  #[arg(long = "xsltparameter", value_name = "KEY=VALUE")]
+  /// Additional XSLT parameters (repeatable; Perl's name:value, or name=value)
+  #[arg(long = "xsltparameter", value_name = "NAME:VALUE", value_parser = xslt_parameter_arg)]
   xslt_parameters: Vec<String>,
 
   // === Dev/internal flags ===
@@ -445,16 +468,30 @@ struct Cli {
 /// Allocation-failure hook — emits a `Fatal:` line in the project's
 /// logging convention so aggregation tooling records the failure, then
 /// exits with code 137. See `cortex_worker.rs::custom_alloc_error_hook`
-/// for full rationale + witness paper.
+/// for full rationale + witness paper; like it, it allocates nothing, takes no lock and ends at
+/// once on a re-entry (`watchdog::enter_alloc_failure_hook`).
 fn custom_alloc_error_hook(layout: Layout) {
-  eprintln!(
-    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; \
-     likely runaway macro expansion (gullet pushback Vec growth past \
-     worker memory budget). Exiting with code 137.",
+  latexml_core::watchdog::enter_alloc_failure_hook();
+  // Attribute by alignment: the gullet pushback is a Vec<Token> (4-byte
+  // items); any other alignment is a DIFFERENT runaway (align 8 = Vec of
+  // boxes/pointers — e.g. nested-pgfmatrix churn; align 1 = a string
+  // buffer). Blaming pushback unconditionally cost real triage time
+  // (quiver/eledform, perfect-kernel sweep 16).
+  let site = if layout.align() == 4 {
+    "likely runaway macro expansion (gullet pushback Vec<Token> growth)"
+  } else {
+    "allocation site unknown for this alignment — break on `__rust_alloc_error_handler` in a \
+     debugger to find it"
+  };
+  latexml_core::watchdog::write_stderr_unlocked(format_args!(
+    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; {}. \
+     Exiting with code 137.\n",
     layout.size(),
-    layout.align()
-  );
-  process::exit(137);
+    layout.align(),
+    site
+  ));
+  latexml_core::watchdog::try_remove_registered_paths();
+  latexml_core::watchdog::exit_now(137);
 }
 
 /// Read back which side of a `--opt`/`--noopt` boolean pair clap kept, or `None`
@@ -498,25 +535,25 @@ fn chosen_by_clap(pos: bool, neg: bool) -> Option<bool> {
 /// `_prepare_options`. Every other pair has a static default and is fully resolved.
 struct ResolvedOptions {
   /// Core tri-states (`None` ⇒ leave the engine/state default untouched).
-  include_comments:   Option<bool>,
-  nomathparse:        Option<bool>,
-  number_sections:    Option<bool>,
+  include_comments:  Option<bool>,
+  nomathparse:       Option<bool>,
+  number_sections:   Option<bool>,
   /// Whether output splitting is enabled (Perl `split!` + `split*`-implies rule).
-  split_enabled:      bool,
+  split_enabled:     bool,
   /// User's explicit `--post`/`--nopost` choice; format-dependent default applied
   /// at the post-processing site.
-  post:               Option<bool>,
+  post:              Option<bool>,
   /// User's explicit `--pmml`/`--nopmml` choice; format-dependent default applied
   /// at the post-processing site.
-  pmml:               Option<bool>,
+  pmml:              Option<bool>,
   /// Post reps/flags with static defaults, fully resolved.
-  cmml:               bool,
-  keep_xmath:         bool,
-  mathtex:            bool,
-  noinvisibletimes:   bool,
-  plane1:             bool,
-  nodefaultresources: bool,
-  graphicimages:      bool,
+  cmml:              bool,
+  keep_xmath:        bool,
+  mathtex:           bool,
+  noinvisibletimes:  bool,
+  plane1:            bool,
+  default_resources: bool,
+  graphicimages:     bool,
 }
 
 impl ResolvedOptions {
@@ -527,29 +564,28 @@ impl ResolvedOptions {
       // Perl Core.pm L45 `comments!`; `noparse`/`parse` (mathparse); `numbersections!`
       // (default on). `None` leaves the setting unset (Rust comments default OFF —
       // OXIDIZED_DESIGN #2).
-      include_comments:   chosen_by_clap(cli.comments, cli.nocomments),
-      nomathparse:        chosen_by_clap(cli.nomathparse, cli.mathparse),
-      number_sections:    chosen_by_clap(cli.numbersections, cli.nonumbersections),
+      include_comments:  chosen_by_clap(cli.comments, cli.nocomments),
+      nomathparse:       chosen_by_clap(cli.nomathparse, cli.mathparse),
+      number_sections:   chosen_by_clap(cli.numbersections, cli.nonumbersections),
       // Perl `Common/Config.pm` L124-130: `split!` is last-wins; the value options
       // `--splitat`/`--splitpath`/`--splitnaming` do `split = 1 unless defined split`,
       // i.e. they enable splitting ONLY when neither `--split` nor `--nosplit`
       // decided it (a split! always overwrites; a split* never overwrites a decided
       // value, so only the split! pair's order — which clap resolves — matters).
-      split_enabled:      chosen_by_clap(cli.split, cli.nosplit)
+      split_enabled:     chosen_by_clap(cli.split, cli.nosplit)
         .unwrap_or(cli.splitat.is_some() || cli.splitnaming.is_some() || cli.splitpath.is_some()),
-      post:               chosen_by_clap(cli.post, cli.nopost),
-      pmml:               chosen_by_clap(cli.pmml, cli.nopmml),
-      cmml:               chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
-      keep_xmath:         chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
-      mathtex:            chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
-      noinvisibletimes:   chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
+      post:              chosen_by_clap(cli.post, cli.nopost),
+      pmml:              chosen_by_clap(cli.pmml, cli.nopmml),
+      cmml:              chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
+      keep_xmath:        chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
+      mathtex:           chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
+      noinvisibletimes:  chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
       // Perl `MathML.pm` L70: `--hackplane1` forces plane1 on; otherwise the
       // pair is last-wins over a default-on.
-      plane1:             cli.hackplane1
-        || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
-      nodefaultresources: chosen_by_clap(cli.nodefaultresources, cli.defaultresources)
-        .unwrap_or(false),
-      graphicimages:      chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
+      plane1:            cli.hackplane1 || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
+      default_resources: chosen_by_clap(cli.defaultresources, cli.nodefaultresources)
+        .unwrap_or(true),
+      graphicimages:     chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
     }
   }
 }
@@ -597,7 +633,7 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
 /// Forced by `--streaming`; otherwise auto-enabled only when the PROJECTED
 /// peak of the eager path exceeds the memory ceiling — measured ~1.84 GB of
 /// peak RSS per MB of math-heavy source on the 131 MB witness
-/// (`docs/performance/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
+/// (`docs/archive/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
 /// documents that today would die at the ceiling with certainty. An explicit
 /// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH — the
 /// escape hatch for a caller who would rather have the eager path's Fatal
@@ -611,119 +647,45 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
 /// per-run bookkeeping (FragmentIndex, spine) creeps monotonically — on the
 /// 131 MB witness at a 48 GB ceiling, a quarter-bite steadied at ~33 GB and
 /// the ~5 GB creep then walked it into the 37.7 GB fuse.
-fn resolve_streaming(requested: Option<bool>, max_memory_mib: u64, source: &str) -> Option<usize> {
-  const PEAK_BYTES_PER_SOURCE_BYTE: u64 = 1900; // ~1.84 GB/MB, measured
-  const BYTES_PER_BOX: u64 = 2416; // stomach::BYTES_PER_LIGHT_BOX's basis
-  // `--max-memory=0` disables the death ceiling, but the machine is still
-  // finite and such a document may still need to spill. Judge — and size
-  // fragments — against the ceiling we WOULD have derived. Without this the
-  // arithmetic degenerated: `projected > 0` always fired, and
-  // `0 / 8 / 2416 -> max(1)` gave a ONE-BOX budget, i.e. a yield after every
-  // box.
-  let yardstick_mib = if max_memory_mib == 0 {
-    latexml_core::watchdog::default_ceiling_mib()
-  } else {
-    max_memory_mib
-  };
-  // Compare against the cooperative FUSE, not the ceiling: death happens at
-  // 75% of the ceiling, so comparing against the ceiling left a band
-  // (0.75-1.0x) that was judged "fits", took the eager path, and was then
-  // killed by the fuse — 8.1-10.8 MB of source on a 16 GB laptop.
-  let fuse_mib = latexml_core::stomach::soft_cap_from_ceiling(yardstick_mib) / (1024 * 1024);
-  let auto = || {
-    let projected_mib =
-      projected_source_bytes(source).saturating_mul(PEAK_BYTES_PER_SOURCE_BYTE) / (1024 * 1024);
-    (projected_mib > fuse_mib).then_some(())
-  };
-  match requested {
-    // Explicit opt-out: never stream, not even when projected to die.
-    Some(false) => return None,
-    Some(true) => {},
-    None if auto().is_none() => return None,
-    None => {},
+/// Perl Core.pm L48: DOCUMENTID value. Applied to a fresh session (the first
+/// one and a streaming restart's).
+fn apply_document_id(docid: Option<&str>) {
+  if let Some(docid) = docid {
+    latexml_core::state::assign_value(
+      "DOCUMENTID",
+      latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(docid)),
+      Some(latexml_core::state::Scope::Global),
+    );
   }
-  // The eighth is MEASURED, not guessed, and shrinking it buys nothing: on the
-  // 19.8 MB witness at an 8192 MiB ceiling, divisors 8/16/32 peak at
-  // 4747/4719/4714 MB with an invariant ramp (3788/3784/3787 MB at fragment 2)
-  // and byte-identical output. Peak there is a STARTUP TRANSIENT that this knob
-  // does not size — see task #158.
-  let budget_boxes = (yardstick_mib.saturating_mul(1024 * 1024) / 8 / BYTES_PER_BOX) as usize;
-  Some(budget_boxes.max(1))
 }
 
-/// The byte size the memory projection must reason from: the DOCUMENT, not the
-/// main file.
-///
-/// A 2 KB `index.tex` that `\input`s a thousand chapters is a half-gigabyte
-/// document, but `metadata(main).len()` projects it at 2 KB — "fits easily" —
-/// and the eager path then dies on it. When the main file actually names an
-/// inclusion command, sum the source tree (`.tex`/`.ltx`/`.bbl`) instead.
-///
-/// Gated on the command being present so a SELF-CONTAINED paper sitting in a
-/// directory of unused alternates (a common arXiv bundle shape) still projects
-/// as itself and keeps the eager path.
-///
-/// Known limitation: an inclusion assembled by macro expansion
-/// (`\myinput{ch1}`) names no literal command and is not detected; such a
-/// document needs an explicit `--streaming`.
-fn projected_source_bytes(source: &str) -> u64 {
-  /// Enough of the main file to see its inclusion commands without reading a
-  /// 131 MB self-contained source in full (whose own size already dominates).
-  const SCAN_BYTES: u64 = 4 * 1024 * 1024;
-  /// Backstop against a pathological tree (a home directory as source dir).
-  const WALK_ENTRIES: usize = 50_000;
-  const INCLUSION_COMMANDS: [&str; 6] = [
-    "\\input",
-    "\\include",
-    "\\import",
-    "\\subimport",
-    "\\subfile",
-    "\\includeonly",
-  ];
+/// `--token-limit`: 0 disables (as documented), matching the LATEXML_TOKEN_LIMIT
+/// env convention (`Some(0) => None` at the gullet initializer); passing a
+/// literal `Some(0)` would instead fatal on the first token. A fresh session's
+/// gullet starts from the default, so a streaming restart re-applies it.
+fn apply_token_limit(limit: Option<usize>) {
+  if let Some(limit) = limit {
+    latexml_core::gullet::set_token_limit((limit != 0).then_some(limit));
+  }
+}
 
-  let own = std::fs::metadata(source).map(|m| m.len()).unwrap_or(0);
-  let Some(dir) = Path::new(source).parent() else {
-    return own;
-  };
-  let mut head = Vec::new();
-  if File::open(source)
-    .map(|f| f.take(SCAN_BYTES).read_to_end(&mut head))
-    .is_err()
-  {
-    return own;
+/// May this EAGER run be rerun under `--streaming`? Not opted out
+/// (`--streaming=false`), a DOM output (TeX/Box outputs never build a document),
+/// and not already streaming.
+fn streaming_restart_eligible(cli: &Cli, opts: &Config) -> bool {
+  opts.streaming.is_none()
+    && cli.streaming != Some(false)
+    && !matches!(opts.format, OutputFormat::TeX | OutputFormat::Box)
+}
+
+/// After an EAGER conversion, the fragment budget to restart under when the
+/// run stopped for memory — at the watermark or at the fuse — and streaming
+/// is still available. `None` = keep the eager result.
+fn streaming_restart_budget(cli: &Cli, opts: &Config, source: &str) -> Option<usize> {
+  if !streaming_restart_eligible(cli, opts) {
+    return None;
   }
-  let head = String::from_utf8_lossy(&head);
-  if !INCLUSION_COMMANDS.iter().any(|cmd| head.contains(cmd)) {
-    return own;
-  }
-  let mut total = 0u64;
-  let mut seen = 0usize;
-  let mut stack = vec![dir.to_path_buf()];
-  while let Some(d) = stack.pop() {
-    let Ok(entries) = std::fs::read_dir(&d) else {
-      continue;
-    };
-    for entry in entries.flatten() {
-      seen += 1;
-      if seen > WALK_ENTRIES {
-        return total.max(own);
-      }
-      match entry.file_type() {
-        Ok(t) if t.is_dir() => stack.push(entry.path()),
-        Ok(t) if t.is_file() => {
-          let path = entry.path();
-          if matches!(
-            path.extension().and_then(|e| e.to_str()),
-            Some("tex" | "ltx" | "bbl")
-          ) {
-            total = total.saturating_add(entry.metadata().map(|m| m.len()).unwrap_or(0));
-          }
-        },
-        _ => {},
-      }
-    }
-  }
-  total.max(own)
+  restart_budget(resolve_max_memory(cli.max_memory), source)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -742,13 +704,59 @@ fn main() -> Result<(), Box<dyn Error>> {
   // nested math trees don't overflow the OS-default 8 MB main-thread
   // stack during finalize/post-processing. See cortex_worker.rs for
   // full rationale (sandbox 0711.4787 et al, #17).
-  std::thread::Builder::new()
+  let joined = std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
-    .spawn(|| real_main().map_err(|e| e.to_string()))
+    .spawn(|| {
+      // Default pushback cap ON THE WORKER THREAD (the gullet is
+      // thread-local — setting it before spawn lands on the wrong
+      // thread's gullet). Converts unbounded pushback growth (4 of the
+      // 6 sweep-16 oracle-clean OOM deaths: titlecaps, msc,
+      // spath3/knots, srdp-mathematik) into a recoverable
+      // Fatal:Timeout:PushbackLimit that still writes the document.
+      // ~50× above the healthy peak (<100k, see cortex_worker), 20 MB
+      // at trip. Escape hatch mirrors the token limit's.
+      if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
+        latexml_core::gullet::set_pushback_limit(Some(5_000_000));
+      }
+      real_main().map_err(|e| e.to_string())
+    })
     .expect("spawn worker thread")
-    .join()
-    .expect("worker thread panicked")
-    .map_err(|s| s.into())
+    .join();
+  // A run the watchdog is ending returns no result of its own (its exit code wins).
+  latexml_core::watchdog::park_if_exiting();
+  match joined {
+    Ok(result) => result.map_err(|s| s.into()),
+    Err(payload) => {
+      // A panic on the worker thread is a Fatal like any other: it gets its
+      // `Fatal:` line, its count and the end-of-run verdict, so a log grep
+      // and the status agree (the s107 texproposal run ended in a bare
+      // `worker thread panicked` abort — no `Fatal:` line, no summary — and
+      // was visible only through the exit code). Same target as
+      // cortex_worker's `Fatal:panic:caught`. The worker's own REPORT and
+      // log buffer died with its thread, so this is the main thread's
+      // verdict: fatal, with the panic message as the reason.
+      let reason = payload
+        .downcast_ref::<&str>()
+        .map(|s| (*s).to_string())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| String::from("non-string panic payload"));
+      // The logger is initialised inside `real_main`; a panic before that
+      // point (or on a thread that never reached it) must still print.
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+      latexml_core::common::error::emit_fatal(
+        "panic",
+        "caught",
+        &format!("worker thread panicked: {reason}"),
+      );
+      eprintln!(
+        "{}",
+        latexml_core::common::error::conversion_verdict(
+          latexml_core::common::error::get_status_code().max(3)
+        )
+      );
+      process::exit(1);
+    },
+  }
 }
 
 fn real_main() -> Result<(), Box<dyn Error>> {
@@ -760,6 +768,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   #[cfg(feature = "dhat-heap")]
   let mut _dhat = Some(dhat::Profiler::new_heap());
 
+  // Guard hook for the worker-panic verdict path (`cluster_cli`): a panic
+  // injected here must surface as `Fatal:panic:caught` + the final verdict.
+  if std::env::var_os("LATEXML_INJECT_PANIC").is_some() {
+    panic!("LATEXML_INJECT_PANIC");
+  }
   let wall_start = std::time::Instant::now();
   // Set when the post-processing phase runs; drives the end-of-run combined
   // verdict (see the exit guard at the bottom of `main`).
@@ -776,6 +789,33 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // rightmost-wins value once, up front. The rest of `real_main` reads `resolved`
   // rather than re-deciding at each site.
   let resolved = ResolvedOptions::from_cli(&cli);
+
+  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
+  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
+  // → plain_constructs and the latex equivalent) reads
+  // `LATEXML_INI_MODE` to decide whether to fully load the format
+  // or stop after the bootstrap pool. If it's not set yet,
+  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
+  // pollutes the snapshot taken later in `ini_tex::dump_format` and
+  // silences the diff for everything raw plain.tex / latex.ltx defines
+  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
+  // problem from 2026-04-26).
+  //
+  // It must also be set before the kpathsea-prewarm thread below exists. Set
+  // after it, glibc's `setenv` reallocates `environ` while that thread's
+  // `kpathsea_init_format` walks it in `getenv`: `--init` segfaulted in
+  // `getenv("TEXMF_kpsewhich")` in ~3.5% of runs (7/200, Linux aarch64,
+  // TL2023), failing `tools/make_formats.sh` and `dump_gate_init`. The same
+  // use-after-free as the `init_kpathsea` ordering below.
+  if cli.init.is_some() {
+    // SAFETY: no other thread reads the environment yet: the only other
+    // thread, `main`, is blocked joining this one, and the prewarm thread is
+    // spawned below. `prepare_session` and `ini_tex::dump_format` read the var
+    // but never mutate the environment.
+    unsafe {
+      std::env::set_var("LATEXML_INI_MODE", "1");
+    }
+  }
 
   // Kick off kpathsea pre-init in a background thread. Force-runs
   // `kpathsea_init_db` + per-format `kpathsea_init_format` so the
@@ -794,10 +834,21 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // both this binary and the library (`latexml::api`, tests) funnel through, so
   // the library can no longer drift from the binaries the way it did (the flaky
   // spurious "1 warning" root-caused 2026-07-16).
+  //
+  // The handle itself is constructed HERE, on this thread, before the prewarm
+  // thread exists: construction `putenv`s (`kpathsea_set_program_name`), and a
+  // `putenv` racing this thread's `getenv`s (option parsing, chrono `TZ`, the
+  // logger's `NO_COLOR`) is a use-after-free of `environ` — sweep #35's
+  // pstool general-protection fault in `getenv`. See `init_kpathsea`.
+  latexml_core::util::pathname::init_kpathsea();
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
-    Some(std::thread::spawn(
+    // Degrade instead of panicking if the OS refuses the thread (EAGAIN under
+    // fleet thread exhaustion): the prewarm is best-effort, kpathsea resolves
+    // lazily without it.
+    latexml_core::util::thread::try_spawn_or_degrade(
+      "kpathsea-prewarm",
       latexml_core::util::pathname::prewarm_kpathsea,
-    ))
+    )
   } else {
     None
   };
@@ -810,19 +861,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   } else {
     0
   };
-  let log_level = if !cli.debug.is_empty() {
-    // --debug NAME implies debug-level logging (Perl: Debug() output is
-    // emitted whenever the feature flag is set).
-    log::LevelFilter::Debug
-  } else {
-    match verbosity {
-      v if v < 0 => log::LevelFilter::Warn,
-      0 => log::LevelFilter::Info,
-      _ => log::LevelFilter::Debug,
-    }
+  let log_level = match verbosity {
+    v if v < 0 => log::LevelFilter::Warn,
+    0 => log::LevelFilter::Info,
+    _ => log::LevelFilter::Debug,
   };
   latexml_core::util::logger::init(log_level).ok();
-  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites.
+  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites only.
   for feature in &cli.debug {
     latexml_core::common::error::enable_debug_feature(feature);
   }
@@ -881,6 +926,24 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   };
   let target = cli.dest.clone();
 
+  // Named from the source ARGUMENT (bin/latexmlc:107-117 `pathname_split($source)`), before an archive or a
+  // directory resolves it to its main file, so a run that fails to open its input and one that converts write the
+  // same `<stem>.latexml.log`.
+  // Perl latexmlc parity (bin/latexmlc L103-120): ALWAYS write a conversion
+  // log — `--log` names it, otherwise `<jobname>.latexml.log` in the current
+  // directory (literal/anonymous sources fall back to plain `latexml.log`),
+  // and a pre-existing file is removed up front so the log is always this
+  // run's. The archive output packs its log into the zip instead, exactly as
+  // before. Reported missing on the 0.7.5-rc5 witness UAT (2026-08-03): a
+  // fatal scrolled away with nothing on disk to consult.
+  let cli_log: Option<String> = cli.log.clone().or_else(|| {
+    // Dump-building (`--init`) is not a conversion; no default log there.
+    if cli.init.is_some() {
+      return None;
+    }
+    Some(default_log_name(&source))
+  });
+
   // Resolve `--whatsout <mode>` (Perl Pack.pm `whatsout` option +
   // Config.pm L421-439). Explicit `--whatsout` wins; otherwise a `.zip`
   // destination extension implies `archive` (Config.pm L421-426).
@@ -901,26 +964,35 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
   // --whatsin=archive: extract archive to temp directory, find main .tex file
   let mut path_flags = cli.search_paths.clone();
-  let _archive_tempdir; // hold tempdir alive for the duration of processing
+  // The unpacked archive, held for the duration of processing; every later exit goes through `exit_removing`, and
+  // the watchdog's and the allocation hook's exits remove it through its registration.
+  let mut archive_tempdir: Option<tempfile::TempDir> = None;
+  let mut _archive_on_exit = None;
   let is_archive_mode = cli.whatsin.as_deref() == Some("archive")
     || source.ends_with(".tar.gz")
     || source.ends_with(".tgz")
     || source.ends_with(".zip")
     || source.ends_with(".tar");
+  // The source's date (`latexml::source_date`): ar5iv's archival clock for `\today`.
+  let mut source_date_epoch = None;
   let source = if is_archive_mode {
     let (tempdir, main_tex) = match unpack_archive(&source) {
       Ok(r) => r,
-      Err(e) => {
-        eprintln!("Failed to unpack archive '{}': {}", source, e);
-        process::exit(1);
-      },
+      Err(failure) => fatal_before_conversion(cli_log.as_deref(), &failure, &mut archive_tempdir),
     };
+    // Read from the archive's entries: the extracted files carry the extraction's clock.
+    let main_in_archive = Path::new(&main_tex)
+      .strip_prefix(tempdir.path())
+      .ok()
+      .map(|p| p.to_string_lossy().into_owned());
+    source_date_epoch =
+      latexml::source_date::of_archive(Path::new(&source), main_in_archive.as_deref());
     let dir_str = tempdir.path().to_string_lossy().to_string();
     path_flags.push(dir_str);
-    _archive_tempdir = Some(tempdir);
+    _archive_on_exit = Some(latexml_core::watchdog::remove_on_exit(tempdir.path()));
+    archive_tempdir = Some(tempdir);
     main_tex
   } else {
-    _archive_tempdir = None;
     source
   };
 
@@ -937,43 +1009,27 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // Supplementary-Material documents (joined onto the output below).
     match latexml::main_tex::find_top_level_texs(dir_path) {
       Ok(mut tops) => {
+        source_date_epoch = latexml::source_date::of_directory(dir_path, Some(&tops[0]));
         let main_tex = tops.remove(0).to_string_lossy().to_string();
         for supp in tops {
           supplement_sources.push(supp.to_string_lossy().to_string());
         }
         main_tex
       },
-      Err(e) => {
-        eprintln!("Failed to find main .tex file in '{}': {}", source, e);
-        process::exit(1);
-      },
+      Err(e) => fatal_before_conversion(
+        cli_log.as_deref(),
+        &InputFailure::no_main_tex(&source, &e),
+        &mut archive_tempdir,
+      ),
     }
   } else {
     source
   };
+  // A single-file input dates by its own modification time; an archive's extracted main file never does.
+  if !is_archive_mode && !is_directory_mode && Path::new(&source).is_file() {
+    source_date_epoch = latexml::source_date::of_file(Path::new(&source));
+  }
 
-  // Perl latexmlc parity (bin/latexmlc L103-120): ALWAYS write a conversion
-  // log — `--log` names it, otherwise `<jobname>.latexml.log` in the current
-  // directory (literal/anonymous sources fall back to plain `latexml.log`),
-  // and a pre-existing file is removed up front so the log is always this
-  // run's. The archive output packs its log into the zip instead, exactly as
-  // before. Reported missing on the 0.7.5-rc5 witness UAT (2026-08-03): a
-  // fatal scrolled away with nothing on disk to consult.
-  let cli_log: Option<String> = cli.log.clone().or_else(|| {
-    // Dump-building (`--init`) is not a conversion; no default log there.
-    if cli.init.is_some() {
-      return None;
-    }
-    let name = if source.starts_with("literal:") {
-      "latexml.log".to_string()
-    } else {
-      match Path::new(&source).file_stem().and_then(|s| s.to_str()) {
-        Some(stem) => format!("{stem}.latexml.log"),
-        None => "latexml.log".to_string(),
-      }
-    };
-    Some(name)
-  });
   if let Some(ref lp) = cli_log
     && Path::new(lp).is_file()
   {
@@ -985,11 +1041,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // with a single Fatal; without this guard the binary catcode-tokenizes
   // the PDF stream and emits ~100 Error:undefined / Error:unexpected lines.
   if Path::new(&source).is_file() && latexml::main_tex::is_pdf_magic(Path::new(&source)) {
-    eprintln!(
-      "Fatal:invalid:not_tex_source PDF magic detected in source file '{}'",
-      source
-    );
-    process::exit(1);
+    let failure = InputFailure {
+      category: "invalid".into(),
+      object:   "not_tex_source".into(),
+      message:  format!("PDF magic detected in source file '{source}'"),
+    };
+    fatal_before_conversion(cli_log.as_deref(), &failure, &mut archive_tempdir);
   }
 
   // Stash a copy of the resolved main-tex path for end-of-run telemetry,
@@ -1068,25 +1125,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // (default utf-8 when unset).
     inputencoding: cli.inputencoding.clone(),
     streaming: resolve_streaming(cli.streaming, resolve_max_memory(cli.max_memory), &source),
+    source_date_epoch,
   };
-  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
-  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
-  // → plain_constructs and the latex equivalent) reads
-  // `LATEXML_INI_MODE` to decide whether to fully load the format
-  // or stop after the bootstrap pool. If it's not set yet,
-  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
-  // pollutes the snapshot taken later in `ini_tex::dump_format` and
-  // silences the diff for everything raw plain.tex / latex.ltx defines
-  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
-  // problem from 2026-04-26).
-  if cli.init.is_some() {
-    // SAFETY: setting the var before any thread is spawned. `prepare_session`
-    // and `ini_tex::dump_format` both read it but neither mutates env.
-    unsafe {
-      std::env::set_var("LATEXML_INI_MODE", "1");
-    }
-  }
-
   let mut converter = Converter::from_config(opts.clone());
   // `--whatsin=xml` forces the already-converted-XML input path regardless of the
   // file's extension (Perl-style: the input analog of `--format` for output),
@@ -1096,11 +1136,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // libxml2 and never touches the TeX engine or its dump, so loading
   // TeX.pool/latex + the format dump (~85–160 ms and a chunk of RSS) is wasted
   // work. Init mode (`--init`) and every real TeX conversion still need it.
+  // A format build (`--init`) reads no document: its dump must not depend on the working directory.
+  if cli.init.is_none() {
+    converter.note_main_source(&source);
+  }
   if (cli.init.is_some() || !xml_input)
     && let Err(e) = converter.prepare_session(&opts)
   {
     eprintln!("Could not prepare converter session: {}", e);
-    process::exit(1);
+    exit_removing(&mut archive_tempdir, 1);
   }
 
   // Per-document state a fresh converter session resets — factored so the main
@@ -1129,14 +1173,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
   }
   apply_document_state(cli.nobibtex, resolved.number_sections);
-  // Perl Core.pm L48: DOCUMENTID value
-  if let Some(ref docid) = cli.documentid {
-    latexml_core::state::assign_value(
-      "DOCUMENTID",
-      latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(docid)),
-      Some(latexml_core::state::Scope::Global),
-    );
-  }
+  apply_document_id(cli.documentid.as_deref());
 
   if cli.init.is_some() {
     // Init mode: process file and dump state
@@ -1144,7 +1181,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       Ok(count) => eprintln!("Format dump complete: {} entries written", count),
       Err(e) => {
         eprintln!("Format dump failed: {}", e);
-        process::exit(1);
+        exit_removing(&mut archive_tempdir, 1);
       },
     }
   } else {
@@ -1184,12 +1221,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     if cli.timeout > 0 {
       latexml_core::stomach::set_timeout(cli.timeout);
     }
-    if let Some(limit) = cli.token_limit {
-      // 0 disables (as documented), matching the LATEXML_TOKEN_LIMIT env
-      // convention (`Some(0) => None` at the gullet initializer). Passing a
-      // literal `Some(0)` would instead fatal on the first token.
-      latexml_core::gullet::set_token_limit((limit != 0).then_some(limit));
-    }
+    apply_token_limit(cli.token_limit);
 
     let source_for_post = source.clone();
     // XML-input mode: when the source is already-converted LaTeXML XML
@@ -1212,7 +1244,64 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         status_code: 0,
       }
     } else if supplement_sources.is_empty() {
-      converter.convert(source)
+      if streaming_restart_eligible(&cli, &opts) {
+        latexml_core::stomach::set_streaming_restart_watermark(restart_watermark());
+      }
+      let response = converter.convert(source.clone());
+      match streaming_restart_budget(&cli, &opts, &source) {
+        // The eager attempt tripped the memory fuse; streaming bounds what
+        // eager could not, and the auto-projection only sees source bytes
+        // (30 KB of pgf can need 25 GB eager). Same fresh-session pattern as
+        // a joined supplement below.
+        Some(budget) => {
+          // The fused attempt's boxes still sit in the stomach's lists and its
+          // freed pages in mimalloc's heap: the rerun's first fuse check would
+          // read the OLD peak and fuse again (measured: 807 MB against an 805 MB
+          // cap half a second in). Drain and return the memory first, and only
+          // rerun when it actually came back below the fuse.
+          let (rss_mb, cap_mb) = release_before_rerun();
+          if cap_mb > 0 && rss_mb >= cap_mb {
+            // A watermark stop abandoned the eager attempt WITHOUT a Fatal:
+            // failing to rerun it must not read as a clean, empty document.
+            latexml_core::common::error::emit_error(
+              "streaming",
+              "restart",
+              &format!(
+                "the eager conversion stopped for memory and {rss_mb} MB stay resident after \
+                 releasing it (cap {cap_mb} MB): not restarting under --streaming"
+              ),
+            );
+            response
+          } else {
+            let mut streaming_opts = opts.clone();
+            streaming_opts.streaming = Some(budget);
+            latexml_core::watchdog::reset_memory_fatal();
+            latexml_core::stomach::set_streaming_restart_watermark(None);
+            let mut restarted = Converter::from_config(streaming_opts.clone());
+            restarted.note_main_source(&source);
+            if let Err(e) = restarted.prepare_session(&streaming_opts) {
+              eprintln!("Could not prepare the streaming restart session: {}", e);
+              exit_removing(&mut archive_tempdir, 1);
+            }
+            // The fresh session starts from an empty State: re-apply every
+            // per-document knob the first session received.
+            apply_document_state(cli.nobibtex, resolved.number_sections);
+            apply_document_id(cli.documentid.as_deref());
+            apply_token_limit(cli.token_limit);
+            emit_info(
+              "streaming",
+              "restart",
+              &format!(
+                "the eager conversion stopped for memory (at the restart watermark or the fuse); \
+                 restarting under --streaming (fragment budget {budget} boxes, {rss_mb} MB \
+                 resident after release) on the remaining wall-clock allowance"
+              ),
+            );
+            restarted.convert(source)
+          }
+        },
+        None => response,
+      }
     } else {
       // Multi-document submission (directory with detected supplements, or
       // several files given on the CLI): convert the main, then each supplement
@@ -1227,6 +1316,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           let mut status_max = main_resp.status_code;
           for supp in &supplement_sources {
             let mut sconv = Converter::from_config(opts.clone());
+            sconv.note_main_source(supp);
             if sconv.prepare_session(&opts).is_err() {
               eprintln!(
                 "Warning: could not prepare a session for supplement '{}'; skipping",
@@ -1255,7 +1345,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
               status_code: status_max,
             },
             Err(e) => {
-              eprintln!("Warning: multi-document join failed: {e}; rendering main only");
+              latexml_core::common::error::emit_warn(
+                "multidoc",
+                "join",
+                &format!("multi-document join failed: {e}; rendering main only"),
+              );
               main_resp
             },
           }
@@ -1401,6 +1495,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         } else {
           None
         };
+        let _resources_on_exit = resource_tempdir
+          .as_ref()
+          .map(|t| latexml_core::watchdog::remove_on_exit(t.path()));
         let dest_for_post: Option<String> = if let Some(tmp) = resource_tempdir.as_ref() {
           // Use a stable HTML filename derived from the zip stem so the
           // Graphics processor's relative paths resolve naturally.
@@ -1441,7 +1538,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           // destination's directory (document.rs / Perl Config.pm L466-469).
           site_directory: cli.sitedirectory.as_deref(),
           search_paths: &cli.search_paths,
-          nodefaultresources: resolved.nodefaultresources,
+          default_resources: resolved.default_resources,
           css_files: &cli.css_files,
           js_files: &cli.js_files,
           noinvisibletimes: resolved.noinvisibletimes,
@@ -1535,7 +1632,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             source_date_epoch,
           })?;
           eprintln!("Output written to {}", zip_dest);
-        } else {
+        } else if !(output.is_empty() && post.status_code >= 3) {
+          // A post-processing Fatal leaves no output, and nothing is written (#782).
           latexml_post::writer::write_output(&output, target.as_deref())?;
         }
         // resource_tempdir is dropped here (after pack_archive has copied
@@ -1612,6 +1710,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   if let Some(body) = latexml_core::watchdog::peak_memory_report() {
     emit_info("memory", "peak", &body);
   }
+  // Perl bin/latexml L148, bin/latexmlpost L216: name an undeclared `--debug` feature; the verdict below stays the last line.
+  latexml_core::common::error::check_debuggable();
   // The end-of-run verdict: the LAST line of a conversion names the COMBINED
   // core+post outcome. The core prints its own verdict when it finishes, but
   // on a post-processing run thousands of per-page lines follow it — a
@@ -1636,7 +1736,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     );
     #[cfg(feature = "dhat-heap")]
     drop(_dhat.take());
-    process::exit(1);
+    exit_removing(&mut archive_tempdir, 1);
   }
   write_telemetry_record(
     cli.telemetry_out.as_deref(),
@@ -1647,7 +1747,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   );
   #[cfg(feature = "dhat-heap")]
   drop(_dhat.take());
-  process::exit(0);
+  exit_removing(&mut archive_tempdir, 0);
 }
 
 /// Emit a single-line JSON telemetry record. No-op when neither
@@ -1823,7 +1923,122 @@ fn is_xml_input(source: &str) -> bool {
     })
 }
 
-fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box<dyn Error>> {
+/// `process::exit` skips destructors, so an archive's unpacked sources (`--whatsin=archive`, a `TempDir`) are removed
+/// first: each conversion of an arXiv zip left its whole source tree in the temp directory, which filled a per-user
+/// `/tmp` quota over an A/B run. The exits this function does not see — the watchdog's timeout and memory
+/// ceiling, the allocation-failure hook — remove it through its `remove_on_exit` registration.
+fn exit_removing(archive_tempdir: &mut Option<tempfile::TempDir>, code: i32) -> ! {
+  latexml_core::watchdog::park_if_exiting();
+  drop(archive_tempdir.take());
+  process::exit(code)
+}
+
+/// Perl latexmlc's default log (bin/latexmlc L103-120): `<name>.latexml.log` in the
+/// working directory, plain `latexml.log` for a literal source, `<name>` the source
+/// argument's with its LAST extension stripped (Util/Pathname.pm:101 `pathname_split`:
+/// `paper.tar.gz` gives `paper.tar.latexml.log`).
+fn default_log_name(source: &str) -> String {
+  if source.starts_with("literal:") {
+    return "latexml.log".to_string();
+  }
+  match Path::new(source.trim_end_matches('/'))
+    .file_stem()
+    .and_then(|s| s.to_str())
+  {
+    Some(stem) => format!("{stem}.latexml.log"),
+    None => "latexml.log".to_string(),
+  }
+}
+
+/// Why an input could not even be opened as a conversion: the `category:object`
+/// of its Fatal and the message.
+struct InputFailure {
+  category: String,
+  object:   String,
+  message:  String,
+}
+
+impl InputFailure {
+  /// An archive that cannot be read: Perl's `Fatal('I/O', 'Archive', …, "Can't read in
+  /// source archive")` (Util/Pack/Zip.pm:37-38).
+  fn unreadable(archive: &str, error: &dyn std::fmt::Display) -> Self {
+    InputFailure {
+      category: "I/O".into(),
+      object:   "Archive".into(),
+      message:  format!("Can't read in source archive '{archive}': {error}"),
+    }
+  }
+
+  /// Sources with no convertible main `.tex`, in the categories cortex_worker records for
+  /// the same failures (`find_main_tex`: `invalid:not_tex_source` for a PDF named `.tex`,
+  /// `invalid:no_tex_source`, `invalid:no_viable_tex`); Perl reaches them as
+  /// `Fatal('invalid', 'empty_input', …)` (Core.pm:136) once `detect_source` finds no main
+  /// file (Util/Pack.pm:220). `reason` is `main_tex::find_main_tex`'s message, which spells
+  /// out its own `Fatal:<category>:<object>` for the PDF case.
+  fn no_main_tex(source: &str, reason: &str) -> Self {
+    let (category, object, message) = if let Some(rest) = reason.strip_prefix("Fatal:")
+      && let Some((category, rest)) = rest.split_once(':')
+      && let Some((object, message)) = rest.split_once(' ')
+    {
+      (category, object, message)
+    } else if reason.starts_with("No .tex files") {
+      ("invalid", "no_tex_source", reason)
+    } else {
+      ("invalid", "no_viable_tex", reason)
+    };
+    InputFailure {
+      category: category.into(),
+      object:   object.into(),
+      message:  format!("{message} ('{source}')"),
+    }
+  }
+}
+
+/// End a run whose input could not be opened as a conversion, as a Fatal conversion
+/// ends: the `Fatal:` line, the verdict and `Status:conversion:3` (Perl latexmlc's
+/// last lines), the log at `log_path` (`--log`, or the default `<stem>.latexml.log`), and
+/// the Fatal exit code. A failed
+/// unpack once printed a bare message and exited 1 with no Fatal, no status line and
+/// no log (astro-ph9407095, astro-ph9409032, cs9610101: PostScript sources), where
+/// cortex_worker and Perl both record a Fatal.
+fn fatal_before_conversion(
+  log_path: Option<&str>,
+  failure: &InputFailure,
+  archive_tempdir: &mut Option<tempfile::TempDir>,
+) -> ! {
+  // No `check_debuggable` here: Base never loaded, so every `--debug` feature would read undeclared.
+  latexml_core::common::error::emit_fatal(&failure.category, &failure.object, &failure.message);
+  let code = latexml_core::common::error::get_status_code().max(3);
+  let verdict = latexml_core::common::error::conversion_verdict(code);
+  let status = latexml_core::common::error::conversion_status_line(code);
+  if let Some(log_path) = log_path {
+    let log = format!(
+      "Fatal:{}:{} {}\n{verdict}\n{status}\n",
+      failure.category, failure.object, failure.message
+    );
+    if let Err(e) = std::fs::write(log_path, log) {
+      eprintln!("Failed to write log '{log_path}': {e}");
+    }
+  }
+  eprintln!("{verdict}");
+  eprintln!("{status}");
+  exit_removing(archive_tempdir, 1)
+}
+
+fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), InputFailure> {
+  let unreadable = |e: &dyn std::fmt::Display| InputFailure::unreadable(archive_path, e);
+  let (tempdir, dest) = unpack_archive_files(archive_path).map_err(|e| unreadable(&e))?;
+  // Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
+  // or one containing \documentclass)
+  let main_tex = latexml::main_tex::find_main_tex(&dest)
+    .map_err(|e| InputFailure::no_main_tex(archive_path, &e))?;
+  Ok((tempdir, main_tex.to_string_lossy().to_string()))
+}
+
+/// Extract `archive_path` into a fresh temporary directory, returned with its path.
+fn unpack_archive_files(
+  archive_path: &str,
+) -> Result<(tempfile::TempDir, std::path::PathBuf), Box<dyn Error>> {
   let tempdir = tempfile::tempdir()?;
   let dest = tempdir.path();
 
@@ -1833,7 +2048,7 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
     let mut archive = zip::ZipArchive::new(file)?;
     for i in 0..archive.len() {
       let mut entry = archive.by_index(i)?;
-      let outpath = dest.join(entry.mangled_name());
+      let outpath = dest.join(entry.mangled_name()?);
       if entry.is_dir() {
         std::fs::create_dir_all(&outpath)?;
       } else {
@@ -1856,12 +2071,8 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
   } else {
     return Err(format!("Unsupported archive format: {}", archive_path).into());
   }
-
-  // Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
-  // or one containing \documentclass)
-  let main_tex =
-    latexml::main_tex::find_main_tex(dest).map_err(|e| -> Box<dyn Error> { e.into() })?;
-  Ok((tempdir, main_tex.to_string_lossy().to_string()))
+  let dest = dest.to_path_buf();
+  Ok((tempdir, dest))
 }
 
 // Output-zip packing moved to `latexml_post::pack::pack_archive`
@@ -1872,8 +2083,45 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
 // Perl `LaTeXML::Post::Pack`.
 
 #[cfg(test)]
+mod input_failure_tests {
+  use super::*;
+
+  /// `InputFailure::no_main_tex` classifies `find_main_tex`'s messages by their text:
+  /// each one the finder actually returns lands in cortex_worker's category.
+  #[test]
+  fn find_main_tex_messages_have_their_categories() {
+    let category = |files: &[(&str, &[u8])]| {
+      let dir = tempfile::tempdir().expect("tempdir");
+      for (name, bytes) in files {
+        std::fs::write(dir.path().join(name), bytes).expect("write fixture");
+      }
+      let reason = latexml::main_tex::find_main_tex(dir.path()).expect_err("no main file");
+      let failure = InputFailure::no_main_tex("src.zip", &reason);
+      (failure.category, failure.object)
+    };
+    assert_eq!(
+      category(&[("paper.tex", b"%PDF-1.4\n%%EOF\n")]),
+      ("invalid".to_string(), "not_tex_source".to_string())
+    );
+    assert_eq!(
+      category(&[("fig.eps", b"%!PS\n")]),
+      ("invalid".to_string(), "no_tex_source".to_string())
+    );
+    assert_eq!(
+      category(&[(
+        "paper.tex",
+        b"%!PS-Adobe-2.0\n%%Creator: dvips\n/TeXDict 250 dict def\n"
+      )]),
+      ("invalid".to_string(), "no_viable_tex".to_string())
+    );
+  }
+}
+
+#[cfg(test)]
 mod streaming_activation_tests {
   use std::io::Write;
+
+  use latexml::streaming_restart::projected_source_bytes;
 
   use super::*;
 
@@ -1934,6 +2182,85 @@ mod streaming_activation_tests {
       budget > 10_000,
       "a no-ceiling run must size fragments from the derived ceiling, got {budget} boxes"
     );
+  }
+
+  /// A fused EAGER conversion restarts under streaming only when the fuse
+  /// really fired, streaming was not opted out, the run was not already
+  /// streaming, and the output builds a document.
+  #[test]
+  fn fused_eager_run_restarts_under_streaming() {
+    use latexml_core::stomach::RestartSignal;
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let main = write(tmp.path(), "src.tex", 1024);
+    let src = main.to_str().unwrap();
+    let cli = |flags: &[&str]| {
+      let mut argv = vec!["latexml_oxide"];
+      argv.extend_from_slice(flags);
+      argv.push(src);
+      Cli::parse_from(argv)
+    };
+    let eager = Config {
+      streaming: None,
+      ..Config::default()
+    };
+    assert_eq!(
+      streaming_restart_budget(&cli(&[]), &eager, src),
+      None,
+      "no memory stop, no restart"
+    );
+    for signal in [RestartSignal::Fuse, RestartSignal::Watermark] {
+      latexml::streaming_restart::note_restart_signal(signal);
+      let budget = streaming_restart_budget(&cli(&[]), &eager, src)
+        .expect("a memory stop restarts with a fragment budget");
+      assert!(
+        budget > 10_000,
+        "the restart budget derives from the ceiling, got {budget}"
+      );
+      assert_eq!(
+        streaming_restart_budget(&cli(&[]), &eager, src),
+        None,
+        "the signal is taken by the decision"
+      );
+    }
+    latexml::streaming_restart::note_restart_signal(RestartSignal::Fuse);
+    assert_eq!(
+      streaming_restart_budget(&cli(&["--streaming=false"]), &eager, src),
+      None,
+      "the explicit opt-out wins"
+    );
+    let already = Config {
+      streaming: Some(1),
+      ..Config::default()
+    };
+    assert_eq!(
+      streaming_restart_budget(&cli(&[]), &already, src),
+      None,
+      "a streaming run that fused does not restart again"
+    );
+    let tex = Config {
+      streaming: None,
+      format: OutputFormat::TeX,
+      ..Config::default()
+    };
+    assert_eq!(
+      streaming_restart_budget(&cli(&[]), &tex, src),
+      None,
+      "TeX output never builds a document"
+    );
+    latexml_core::stomach::take_streaming_restart_signal();
+    // The watermark is nine tenths of the fuse in force; none without a fuse.
+    latexml_core::stomach::set_memory_cap(Some(latexml_core::stomach::soft_cap_from_ceiling(1024)));
+    assert_eq!(
+      restart_watermark(),
+      Some(1024 * 1024 * 1024 * 3 / 4 * 9 / 10)
+    );
+    latexml_core::stomach::set_memory_cap(Some(0));
+    assert_eq!(
+      restart_watermark(),
+      None,
+      "memory limiting disabled entirely means no watermark"
+    );
+    latexml_core::stomach::set_memory_cap(None);
   }
 
   /// The explicit opt-out wins over auto-activation, however doomed the
@@ -2057,8 +2384,8 @@ mod boolean_flag_last_wins_tests {
 
     let c = cli(&["--defaultresources", "--nodefaultresources"]);
     assert_eq!(
-      chosen_by_clap(c.nodefaultresources, c.defaultresources),
-      Some(true)
+      chosen_by_clap(c.defaultresources, c.nodefaultresources),
+      Some(false)
     );
 
     let c = cli(&["--comments", "--nocomments"]);
@@ -2099,7 +2426,7 @@ mod boolean_flag_last_wins_tests {
     assert!(!r.keep_xmath);
     assert!(!r.mathtex);
     assert!(!r.noinvisibletimes);
-    assert!(!r.nodefaultresources);
+    assert!(r.default_resources, "default_resources defaults ON");
     assert!(!r.split_enabled);
     assert_eq!(r.post, None);
     assert_eq!(r.pmml, None);
@@ -2120,5 +2447,53 @@ mod boolean_flag_last_wins_tests {
 
     // --hackplane1 forces plane1 on even against a later --noplane1 (Perl MathML.pm L70).
     assert!(ResolvedOptions::from_cli(&cli(&["--noplane1", "--hackplane1"])).plane1);
+  }
+
+  /// #530: a value option or flag given twice keeps its last value (GetOpt::Long), and is not a
+  /// usage error; a repeatable option still accumulates.
+  #[test]
+  fn repeated_options_are_last_wins() {
+    let c = cli(&["--urlstyle=file", "--urlstyle=server"]);
+    assert_eq!(c.urlstyle.as_deref(), Some("server"));
+    let c = cli(&["--dest", "a.html", "--dest=b.html", "--split", "--split"]);
+    assert_eq!(c.dest.as_deref(), Some("b.html"));
+    assert!(c.split);
+    let c = cli(&["--css", "a.css", "--css", "b.css"]);
+    assert_eq!(c.css_files, ["a.css", "b.css"]);
+  }
+}
+
+#[cfg(test)]
+mod xsltparameter_tests {
+  use super::*;
+
+  fn params(flags: &[&str]) -> Result<Vec<String>, clap::Error> {
+    let mut argv = vec!["latexml_oxide"];
+    argv.extend_from_slice(flags);
+    argv.push("src.tex");
+    Cli::try_parse_from(argv).map(|c| c.xslt_parameters)
+  }
+
+  /// #803: Perl's `--xsltparameter=name:value` (LaTeXML.pm L574-578) and our `KEY=VALUE` both
+  /// pass a parameter; a value with neither separator is a usage error, not a silent no-op.
+  #[test]
+  fn xsltparameter_accepts_perls_form_and_rejects_a_malformed_one() {
+    use latexml::post::parse_xslt_parameter as parse;
+    let pair = |k: &str, v: &str| Some((k.to_string(), v.to_string()));
+    assert_eq!(parse("FOO:bar"), pair("FOO", "bar"));
+    assert_eq!(parse(" FOO : bar baz"), pair("FOO", "bar baz"));
+    assert_eq!(
+      parse("URL:http://x.org/?a=b"),
+      pair("URL", "http://x.org/?a=b")
+    );
+    assert_eq!(parse("FOO=bar"), pair("FOO", "bar"));
+    assert_eq!(parse("FOO=a:b"), pair("FOO", "a:b"));
+    assert_eq!(parse("{http://x.org}p=v"), pair("{http://x.org}p", "v"));
+    assert_eq!(parse("FOO"), None);
+    assert_eq!(parse("=bar"), None);
+    assert_eq!(parse(":bar"), None);
+    assert!(params(&["--xsltparameter=FOO:bar", "--xsltparameter", "X=y"]).is_ok());
+    let err = params(&["--xsltparameter=FOO"]).expect_err("malformed");
+    assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation);
   }
 }

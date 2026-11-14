@@ -1,0 +1,9 @@
+% witness: ejpecp/sample (sample.tex:128, 171)
+% oracle:  pdflatex 0 errors
+% engines: rust=8 perl=8 (2026-09-06)
+% expect:  0 errors; Math contains LaTeXe logo without malformed close
+% status:  GREEN (batch 56x scoped closes; no class binding change — the round-5 mbox wrapping was dropped at merge)
+\documentclass{ejpecp}
+\begin{document}
+$\LaTeXe$
+\end{document}

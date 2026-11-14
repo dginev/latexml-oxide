@@ -1,0 +1,18 @@
+% mechanism: beamer's `\institute` (`\lx@add@affiliations`, the cutter `affiliation_calls`) holding the kernel's `\and`
+%   written inside balanced parentheses: the list's lines are not cut there (`classify::affiliation_lines`, the
+%   parentheses rule of the spelled split, OXIDIZED_DESIGN_DIVERGENCES #36), so no word moves to the next author
+% witness: synthetic (revP6f S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 Bob Baker2 / 1 Univ A (North / South) / 2 Univ B"
+% engines: P6fbase: as expected; P6f: Ann Able "Univ A (North", Bob Baker "South)" and "Univ B", 0 warnings (a contact
+%   moved to another owner)
+% expect:  0 errors, 1 warning; Ann Able "Univ A (North and South)", Bob Baker "Univ B" (the "and" for the column break
+%   pdflatex prints as a line break is counted by the content check's Warning; post-merge)
+% status:  GREEN (guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+% preload: ar5iv.sty
+\documentclass{beamer}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{\inst{1}Univ A (North \and South) \and \inst{2}Univ B}
+\begin{document}
+\frame{\titlepage}
+\end{document}

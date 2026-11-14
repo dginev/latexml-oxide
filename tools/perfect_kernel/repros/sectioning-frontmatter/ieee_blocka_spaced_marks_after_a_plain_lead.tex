@@ -1,0 +1,20 @@
+% mechanism: the shared reader of a mark spelled otherwise (`relocate::spaced_marks_written`, OXIDIZED_DESIGN_DIVERGENCES
+%   #964) reads one on a spacing nucleus, `$\quad ^2$`, in a list a plain `$^1$` leads too, and the author blocks'
+%   cutter (`affiliations::entry_calls`) reads its list through it: each entry its mark's names'
+% witness: 2106.01286 (`\IEEEauthorblockA{$^1$CITI Laboratory, INRIA,   $\quad ^2$LTCI, Télécom Paris, IP Paris,
+%   $\quad ^3$Technion \\ …}`, census129 cluster 4)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cat Cole3 , Dan Dorn1 / 1 Univ A, Town, 2 Univ B, City,
+%   3 Univ C / {aable, ddorn}@a.edu, …"
+% engines: rust int131a0: Ann and Dan "Univ A, Town, 2Univ B, City, 3Univ C", Bob and Cat none; perl: one contact
+% expect:  0 errors, 0 warnings; Ann and Dan "Univ A, Town", Bob "Univ B, City", Cat "Univ C", each their e-mail
+% status:  RED (int131a0) -> GREEN (104c) — perfect_kernel_batch104c::a_spaced_mark_after_a_plain_lead_parts_entries
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{1}$, Bob Baker$^2$, Cat Cole$^3$, Dan Dorn$^1$}
+\IEEEauthorblockA{$^1$Univ A, Town,   $\quad ^2$Univ B, City,  $\quad ^3$Univ C \\
+\{aable, ddorn\}@a.edu, bbaker@b.edu, ccole@c.edu}}
+\maketitle
+Text.
+\end{document}

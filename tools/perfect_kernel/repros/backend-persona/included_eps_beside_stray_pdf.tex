@@ -1,0 +1,14 @@
+% witness: 1012.0815 (all figures figs/*.eps; IEEEtran/IEEEtran_HOWTO.pdf in the tree turned PDF mode on, and the
+%          source's unclosed \ifCLASSINFOpdf swallowed the whole text: Fatal:Document:Malformed)
+% oracle:  arXiv AutoTeX built it with latex+dvips: "Mode: DVI." (latex 0 errors, side files figs/a.eps, doc/manual.pdf)
+% engines: rust 65a = "Mode: PDF." (any PDF in the tree chose PDF output, OXIDIZED_DESIGN_DIVERGENCES #285)
+% expect:  0 errors; "Mode: DVI." — the figure the source includes decides, not a file it never includes
+% status:  RED (65a) -> GREEN (65f)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{ifpdf}
+\begin{document}
+Mode: \ifpdf PDF\else DVI\fi.
+
+\includegraphics[width=1cm]{figs/a}
+\end{document}

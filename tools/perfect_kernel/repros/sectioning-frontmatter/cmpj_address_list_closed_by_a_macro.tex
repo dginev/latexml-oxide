@@ -1,0 +1,17 @@
+% witness: synthetic (1212.6367's address list as cmpj's `\address`, its `\end{enumerate}` inside a macro of the paper's)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. One1 , B. Two2"; "1. First Institute, Lviv, Ukraine", "2. Second
+%          Institute, Kyiv, Ukraine"
+% engines: CMPJ1: the whole list on both names, 1 Warning ("places an entry holding 2 label targets (la, lb) whole")
+% expect:  0 errors, 0 warnings; each item on its name, a one-item list keeping its number and `labels=`: the list's close
+%          read from the digestion's frames, whatever spells it (`emit::list_item_tokens`)
+% status:  GREEN (CMPJ2: perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run)
+\documentclass{article}
+\usepackage[cm]{cmpj2}
+\newcommand\closelist{\end{enumerate}}
+\title{A title}
+\author{A. One\refaddr{la}, B. Two\refaddr{lb}}
+\address{\begin{enumerate}\addr{la} First Institute, Lviv, Ukraine \addr{lb} Second Institute, Kyiv, Ukraine\closelist}
+\begin{document}
+\maketitle
+Text.
+\end{document}

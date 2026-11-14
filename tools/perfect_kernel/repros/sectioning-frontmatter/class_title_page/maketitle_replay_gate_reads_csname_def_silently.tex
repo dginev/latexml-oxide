@@ -1,0 +1,17 @@
+% The replay gate reads a refused class setter's body without running it, and without a diagnostic: a `\def` whose
+% name is made by `\csname` from the setter's argument and whose parameter text holds that argument (`#1`) and its
+% own `##1` is read in place (sect05.rs `expandafter_definee`, `gate_parameters`), never handed to the definition
+% parser, whose ParamSpec Fatal is sticky (75a review finding 1).
+% oracle:  pdflatex (tpcsname.cls beside it) 0 errors: "Authors: A / Body text."
+% engines: rust 67int28 = 0 errors, "Authors:" (the class's record of the author read as the frontmatter's); rust 75a
+%          (0161205af8) = the same plus Fatal:ParamSpec "Parameters for \csname not in order" (status 3); perl
+%          (OmniBus, the class is not read) = 0 errors, no "Authors:" line
+% expect:  0 errors, 0 warnings, no Fatal; the creator "A" once
+% status:  RED (75a r1) -> GREEN (75a r2)
+% preload: ar5iv.sty
+\documentclass{tpcsname}
+\begin{document}
+\title{On Widgets}\author{A}
+\maketitle
+Body text.
+\end{document}

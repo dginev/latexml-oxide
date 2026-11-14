@@ -1,0 +1,21 @@
+% mechanism: acmart's `\maketitle` never runs `\@maketitle` (acmart.cls:2226-2379), so a `\@maketitle` the document defines prints
+%   nowhere and is not the title page in force: the title-page reading's run stands article.cls's page in for the class's,
+%   and the binding's declaration answers (`TitlePageDecl::maketitle_runs`, false for acmart.cls; its `AuthorPage::Own`):
+%   the appended "Bob B" prints nowhere, no creator, the check's "bob" an Info (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953)
+% witness: synthetic (review revTP1 B1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title / ALICE A …", no "Bob B"
+% engines: int160a0 (`latexml_oxide.int160a0-rel`): 0 errors, 1 warning "… bob" (an over-count); Alice A. TP1: 0 errors,
+%   0 warnings; Alice A, Bob B (an invented creator). TP1b: 0 errors, 0 warnings, Info "The title page annotates 1
+%   word(s) that its output does not hold: bob"; Alice A; perl not run
+% expect:  0 errors, 0 warnings; one creator Alice A; the check's "bob" an Info (annotated)
+% status:  GREEN (TP1b; guard perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read)
+% preload: ar5iv.sty
+\documentclass{acmart}
+\makeatletter\def\@maketitle{\begin{center}{\Large\@title}\par\@author\end{center}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

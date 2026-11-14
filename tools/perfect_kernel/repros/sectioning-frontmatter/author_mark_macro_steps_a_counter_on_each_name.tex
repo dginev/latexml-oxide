@@ -1,0 +1,13 @@
+% mechanism: the safe side of author_note_macro_defines_what_a_later_author_reads: a mark macro stepping a counter and
+%   printing it (`\stepcounter{aff}$^{\theaff}$`) is kept on each name, so the call is written where the block has it
+%   and digested in order: no decline
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One1", "Bob Two2", "Cy Three3"
+% engines: rust e6a6c93a18 0 errors, 0 warnings, as expected
+% expect:  0 errors, 0 warnings; Ann One 1, Bob Two 2, Cy Three 3
+% status:  GREEN (e6a6c93a18; perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcounter{aff}
+\newcommand\affmark{\stepcounter{aff}$^{\theaff}$}
+\title{T}\author{Ann One\affmark \and Bob Two\affmark \and Cy Three\affmark}
+\begin{document}\maketitle Body.\end{document}

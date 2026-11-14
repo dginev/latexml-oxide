@@ -1,0 +1,16 @@
+% witness: pst-3dplot.tex:245  SegmentColor={[cmyk]{0.2,0.6,1,0}}
+%          (key at :197 runs \pst@getcolor{#1}; pstricks.sty:155 \let\pst@getcolor\XC@getcolor)
+% oracle:  lualatex exit 1 (neoschool/neoschool-fr)
+% engines: preload [rawstyles,rawclasses]latexml.sty
+% expect:  0 errors; \psk@x set to an \xcolor@{}{}{cmyk}{0.2,0.6,1,0} token
+% status:  GREEN (batch 56al, 2026-09-07: \XC@getcolor branches on a leading `[` like xcolor.sty:1373-1390; guard xcolor_getcolor_parses_a_model_prefixed_spec)
+% mechanism: \XC@getcolor must branch on a leading '[' and parse [model]{spec}
+%            directly (xcolor.sty:1373-1390 \ifx#1[ ...\@undeclaredcolor), NOT
+%            hand the whole [model]{spec} to \extractcolorspec as a color NAME.
+\documentclass{article}
+\usepackage{xcolor}
+\makeatletter
+\let\pst@getcolor\XC@getcolor
+\pst@getcolor{[cmyk]{0.2,0.6,1,0}}\psk@x
+\makeatother
+\begin{document}ok\end{document}

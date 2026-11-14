@@ -1,0 +1,36 @@
+% witness: yquant/yquant-doc (:3608, a `\protected@edef` of a box text `$\begin{pmatrix}…`)
+% oracle:  pdflatex (TL 2025) 0 errors: X, Y, Z keep `\begin` and `\protect\end ` (latex.ltx:15346, :15365-15380); the elements as asserted, a table cell's head stopping at `\begin`.
+% engines: int141a: 3 errors: `\matrix@check` at edef time, "Old form". Perl's `\begin` is not protected (KPE #1211).
+% expect:  0 errors; the `\meaning`s and the elements whole
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsmath}
+\newenvironment{myenv}{[open:}{:close]}
+\newcommand\wrote[1]{}
+\makeatletter
+\protected@edef\x{\begin{myenv}a\end{myenv}}
+\typeout{X=\meaning\x}
+\protected@edef\y{\begin{center}b\end{center}}
+\typeout{Y=\meaning\y}
+\protected@edef\z{$\begin{pmatrix} a & b\end{pmatrix}$}
+\typeout{Z=\meaning\z}
+\makeatother
+\begin{document}
+\x
+\y
+\z
+\begin{tabular}{l}
+\begin{myenv}c\end{myenv}\\
+\begin{tabular}{l}d\end{tabular}\\
+\end{tabular}
+
+\begin{tabular}{lp{2cm}}
+\multicolumn{2}{c}{\begin{myenv}e\end{myenv}}\\
+\begin{minipage}{1cm}f\end{minipage} & \begin{myenv}g\end{myenv}\\
+\end{tabular}
+\section{Head \begin{myenv}h\end{myenv}}
+\begin{figure}\caption{Cap \begin{myenv}i\end{myenv}}\end{figure}
+\makeatletter
+\protected@write\@auxout{}{\string\wrote{\begin{myenv}j\end{myenv}}}
+\makeatother
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: an alignment environment after the names that ends the block is lines under them, each line its own
+%            (`fallback::trailing_alignment_environment_as_lines` on the reading: `resolver::trailing_alignment_as_lines`)
+% witness: 2609.17357 (IEEEtran, `\author{… and … \begin{center}Department …\\ University of Tennessee\\ Knoxville, TN
+%          37996\\ …\end{center}}`), 2609.01563, 2609.33831
+% oracle:  pdflatex: 0 errors; "Ann Able and Bob Baker", centred under them three lines
+% engines: rust MV1 `=2`: a third creator "Astronomy" (the "and" inside the centre read as a separator), "Bob Baker
+%          Department of Physics"; with a Break alone, the three lines one affiliation (one print unit)
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker, each the three affiliations, as off
+% status:  RED (MV1 =2) -> GREEN (FB2a)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker
+\begin{center}
+Department of Physics and Astronomy\\ University of X\\ City
+\end{center}}
+\maketitle
+Text.
+\end{document}

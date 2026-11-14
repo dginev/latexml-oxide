@@ -1,0 +1,27 @@
+% witness: arXiv 2609.30392 (figures 19, 20 where the PDF prints B1, C1)
+% oracle:  pdflatex 0 errors with emulateapj.cls (TL 2025, :128-131, :744-797); "See 1, 1, 1, 1, 2, 2.1, 2, 3, A, A1, A.1, A1, A1, B, B1, B1."
+% engines: rust (int53a) = "See 1, 1, 1, 1, 2, 2.1, 2, 3, A, A1, A.1, 2, 2, B, B1, 3."; Perl 0.8.8 the same (its binding sets none of these counters)
+% expect:  0 errors; with [appendixfloats], figures and tables A1/B1 reset per appendix
+% status:  RED (int53a) -> GREEN (78q, KNOWN_PERL_ERRORS #1098)
+\documentclass[appendixfloats]{emulateapj}
+\usepackage{graphicx}
+\begin{document}
+\section{A}\label{sA}
+\begin{equation}a\label{e1}\end{equation}
+\begin{figure}[t]\caption{F1}\label{f1}\end{figure}
+\begin{table}[t]\caption{T1}\label{t1}\end{table}
+\section{B}\label{sB}
+\subsection{C}\label{sC}
+\begin{equation}b\label{e2}\end{equation}
+\begin{eqnarray}c&=&d\label{e3}\end{eqnarray}
+\appendix
+\section{D}\label{sD}
+\begin{equation}x\label{e4}\end{equation}
+\subsection{E}\label{sE}
+\begin{figure}[t]\caption{F2}\label{f2}\end{figure}
+\begin{table}[t]\caption{T2}\label{t2}\end{table}
+\section{G}\label{sG}
+\begin{equation}y\label{e5}\end{equation}
+\begin{figure}[t]\caption{F3}\label{f3}\end{figure}
+See \ref{sA}, \ref{e1}, \ref{f1}, \ref{t1}, \ref{sB}, \ref{sC}, \ref{e2}, \ref{e3}, \ref{sD}, \ref{e4}, \ref{sE}, \ref{f2}, \ref{t2}, \ref{sG}, \ref{e5}, \ref{f3}.
+\end{document}

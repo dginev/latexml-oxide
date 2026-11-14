@@ -1,0 +1,14 @@
+% witness: K13 stage-2 audit row placeins `\FloatBarrier` (57h; 393 A/B papers load it, 148 use it, about 1
+%          mid-paragraph); `\FloatBarrier` begins with `\par` (placeins.sty:30); the binding (Perl
+%          placeins.sty.ltxml:24) made it a no-op, so the text around it was one paragraph
+% oracle:  pdflatex 0 errors, two paragraphs
+% engines: perl = rust 57ag, 0 errors, one <para>
+% expect:  0 errors, 0 warnings; two <para>
+% status:  RED (57ag) -> GREEN (57ah: `\FloatBarrier` is `\par`, placeins_sty.rs)
+\documentclass{article}
+\usepackage{placeins}
+\begin{document}
+First paragraph text.
+\FloatBarrier
+Second paragraph text.
+\end{document}

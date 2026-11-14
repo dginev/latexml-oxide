@@ -1,0 +1,24 @@
+% mechanism: `\IEEEmembership{…}` the author filled with a grade, the next name and its grade
+%   (`\IEEEmembership{Member,~IEEE, Cat~Cole, Member,~IEEE}`) parts as before OXIDIZED_DESIGN_DIVERGENCES #967: the
+%   observer's reading gives the grades back to their names where today's holds no contact of them (writer/mod.rs
+%   `give_back_grades`), so the writer's re-part still finds Cat Cole a name of her own and the `*` notes their names'.
+%   Without it the re-part declined (two authors' "Member, IEEE", today's none) and "Bob Baker*Member, IEEE, Cat Cole,
+%   Member, IEEE" was one creator, Ann Able's `*` note lost.
+% witness: 2507.19818 (IEEEtran journal, `Longchao~Da*\footnote,~\IEEEmembership{Member,~IEEE, Hua~Wei, Member,~IEEE}`);
+%   bundle A/B int136a vs int135e
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able*, Bob Baker* Member, IEEE, Cat Cole, Member, IEEE"
+% engines: rust int135e: three creators "Ann Able", "Bob Baker*Member, IEEE", "Cat Cole, Member, IEEE"; 106c r1: two,
+%   "Bob Baker*Member, IEEE, Cat Cole, Member, IEEE" one
+% expect:  0 errors, 0 warnings; three creators, as int135e
+% status:  RED (106c r1) -> GREEN (106c r2)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able*,
+        Bob~Baker*\footnote,~\IEEEmembership{Member,~IEEE, Cat~Cole, Member,~IEEE}
+\thanks{Funded.}
+\thanks{$^*$Equal contribution.}}
+\maketitle
+Text.
+\end{document}

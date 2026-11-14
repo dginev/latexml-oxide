@@ -1,0 +1,31 @@
+% witness: rulercompass/rulercompass_doc (102s, 81KB, 0.8 KB/s — worst rate in the
+%          cluster), spath3/{spath3,knots}, tkz-grapheur/*.
+% oracle:  pdflatex computes each path intersection in ms.
+% engines: pdflatex (fast) / Perl LaTeXML: TIMES OUT >300s + fatal / Rust 105s.
+% expect:  a straight-edge/compass doc is intrinsically intersection-heavy.
+% status:  PERF — SHARED (Rust already FASTER than Perl, which cannot finish).
+%          NOT a Rust bug: faithful pgf recursive Bezier subdivision.
+% mechanism: pgf `name intersections` (\pgfintersectionofpaths, generic/pgf/
+%   modules/pgfmoduledecorations + libraryintersections) recursively subdivides
+%   the two soft paths to tolerance — thousands of pgfmath ops per intersection.
+%   rulercompass \point (38x) each triggers one such solve.
+% MEASURED (release sweep42, N circle-circle intersections in one picture):
+%   N=10 -> 27.3s | N=20 -> 36.3s | N=40 -> 55.2s  => LINEAR ~0.9s/intersection,
+%   intercept ~18s (15s of which is the fixed tikz load). NO intra-picture O(n^2):
+%   circles WITHOUT intersection (name path only) N=20/40 = 15.5s (flat = load).
+%   Raw pgfmath is only ~1ms/parse (linear); a raw \pgfmathparse is NOT the cost —
+%   the recursive subdivision is (each solve ~= hundreds of parses).
+% lever: none that is Rust-only — Perl is slower and times out. The low output
+%   rate is inherent to faithful pgf intersection emulation. Out of scope unless a
+%   beyond-Perl reimplementation of \pgfintersectionofpaths is undertaken.
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{intersections}
+\begin{document}
+\begin{tikzpicture}
+\path[name path=A] (0,0) circle (2);   \path[name path=B] (1,1) circle (2);
+\draw[name intersections={of=A and B, by={p}}] (p) circle (1pt);
+\path[name path=C] (2,0) circle (2);   \path[name path=D] (3,1) circle (2);
+\draw[name intersections={of=C and D, by={q}}] (q) circle (1pt);
+\end{tikzpicture}
+\end{document}

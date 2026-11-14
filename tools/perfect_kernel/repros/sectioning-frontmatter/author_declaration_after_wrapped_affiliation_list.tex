@@ -1,0 +1,14 @@
+% witness: 64d review r5 (synthetic) — a declaration between a wrapped affiliation list and the next mark scopes over
+%          what follows it
+% oracle:  pdflatex 0 errors: "3Univ C" in blue
+% engines: rust 64d = Cat gets Univ C without the color (64f3 kept the color but gave Univ C to Bob)
+% expect:  0 errors; Ann (Univ A), Bob (Univ B), Cat (Univ C, blue)
+% status:  RED (64d)
+\documentclass{article}
+\usepackage{xcolor}
+\title{T}
+\author{Ann$^{1}$, Bob$^{2}$ and Cat$^{3}$ \\ {\small $^1$Univ A, $^2$Univ B} \color{blue} $^3$Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

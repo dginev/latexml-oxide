@@ -1,0 +1,20 @@
+% witness: xskak/xskak_and_beamer (xskak_and_beamer.tex:56  { \color<\arabic{chessmoves}>{blue}%})
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-03); real doc rust=34
+% expect:  0 errors; "Hello" is in an <ltx:text> carrying color="#FF0000"
+% status:  GREEN (b54w, batch 54p)
+% mechanism: beamer makes \color overlay-aware — beamerbaseoverlay.sty:597
+%   \renewcommand<>{\color}{\alt#1{\beameroriginal{\color}}{\beamer@gobbleoptionalinsp}} — so
+%   \color<2>{red} reads and drops the <overlay> spec, then runs the original \color{red}.
+%   Perl faithfully mirrors this: beamer.cls.ltxml:1345-1358 %BEAMER_WRAPPED includes '\color'
+%   => AddBeamerWrapper builds the \renewcommand<> wrapper. Rust's beamer binding
+%   (latexml_package/src/package/beamer_cls.rs) gives \only/\uncover an `OptionalAngled` reader
+%   (beamer_cls.rs:241,255) but NEVER wraps \color, so \color reads '<' as the color spec
+%   (DefPrimitive "\color[]{}" color_sty.rs:352) -> "Can't find color named '<'; assuming Black".
+% classification: RUST-ONLY (Perl clean).
+\documentclass{beamer}
+\begin{document}
+\begin{frame}
+{\color<2>{red}Hello} world
+\end{frame}
+\end{document}

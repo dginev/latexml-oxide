@@ -1,0 +1,18 @@
+% witness: 2606.26479 (its author block, shortened); the r5 re-review of batch 77p (finding 2, probes u32, u35)
+% oracle:  pdflatex 0 errors: the four names, "LaunchSafe Research" in bold (a link), "{praneeth, …}@launchsafe.com"
+% engines: rust 77p r8 = 0 errors; "LaunchSafe Research" a URL contact of the nameless shared creator, no author with
+%          the institution; int34a gave it to all four
+% expect:  0 errors, 0 warnings; "LaunchSafe Research" an affiliation of all four names, the link inside it; each
+%          address the e-mail of the name it spells
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Praneeth Narisetty, Shiva Kore,\\[2pt]
+Uday Kattamanchi, Jayaram Kumarapu\\[3pt]
+\href{https://launchsafe.com}{\textbf{LaunchSafe Research}}\\[2pt]
+\{praneeth, shiva, uday, jayaram\}@launchsafe.com}
+\begin{document}
+\maketitle
+Text.
+\end{document}

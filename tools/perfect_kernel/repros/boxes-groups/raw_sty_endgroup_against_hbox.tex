@@ -1,0 +1,16 @@
+% mechanism: a raw-loaded file's `\endgroup` that meets an `\hbox` frame is Perl's Error at that line ("Attempt to
+%   close a group that switched to mode restricted_horizontal", Stomach.pm:363-372), the frame kept, so the file's own
+%   `\egroup` and `\endgroup` close what they opened. Was: a band-aid for raw loads (stomach.rs `endgroup`,
+%   INTERPRETING_DEFINITIONS) popped the frame silently, and the mismatch surfaced as 3 Errors at the file's end.
+%   Both `--init`s log zero errors without it, and give the same dumps.
+% witness: diagnostics audit 2026-10-11 D (probe code/bandaid)
+% oracle:  pdflatex 3 errors ("Missing } inserted", "Too many }'s", "Extra \endgroup"), "Hello" typeset
+% engines: rust 64zd = 3 errors, at raw_sty_endgroup_against_hbox.sty:2 and :5 (the end); 64zf = 1 error at :2;
+%          Perl = 1 error at :2
+% expect:  1 error; "Hello"
+% status:  RED (64zd) -> GREEN (64zf)
+\documentclass{article}
+\usepackage{raw_sty_endgroup_against_hbox}
+\begin{document}
+\hello
+\end{document}

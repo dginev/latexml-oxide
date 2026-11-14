@@ -1,0 +1,17 @@
+% witness: chessboard/chessboard_and_beamer (skak.sty:1367 \errmessage{mainline: black, not white, to move (#1)})
+% oracle:  pdflatex 0 errors (with overlay evaluation per frame)
+% engines: rust=Fatal:Error:latex:\errmessage mainline: black, not white, to move (e4) perl=n/a (2026-09-06)
+% expect:  0 errors; frame 1 shows 1.e4, frame 2 shows 1...e5
+% status:  KNOWN_PARITY_GAP (Plan P72 beamer overlay-merge policy, batch 56x, 2026-09-06)
+% mechanism: latexml-oxide evaluates \only<1> and \only<2> in a single sequential pass without
+%   re-initializing the frame state, causing skak move-tracking state to desync when 1.e4 is
+%   re-executed on move 2 where it is Black's turn to move.
+\documentclass{beamer}
+\usepackage[skaknew]{chessboard, skak}
+\begin{document}
+\begin{frame}
+\newgame
+\only<1>{\mainline{1.e4}}
+\only<2>{\hidemoves{1.e4}\mainline{1... e5}}
+\end{frame}
+\end{document}

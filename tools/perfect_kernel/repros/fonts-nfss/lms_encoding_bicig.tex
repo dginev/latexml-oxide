@@ -1,0 +1,16 @@
+% witness: montex/mlsquick (mlsquick.tex:645-650 `\bicig{munggul bicik}`; the `bicigtext`/`bicigpage` passages, :892
+%   `<<cag-i tukinagulugci>>`), montex/montex (Figure 7.x samples)
+% oracle:  pdflatex 0 errors; the bicig fonts (lmsbcgh.fd: bcgh*) set Mongolian script from its LMS transliteration —
+%   lmsenc.def's slots and the fonts' ligature program build each letter's positional form — so "munggul bicik" is
+%   ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ. The golden PDFs set the bicig fonts as Type 3 bitmaps with no text layer, so S3 cannot see it.
+% engines: rust 60b = 0 errors, the Latin transliteration through the OT1 fallback (`<<`/`>>` as ¡¡/¿¿); Perl the same
+%   (SHARED, PERL-ORIGIN): no LMS (nor LMO, LMU, LMA) fontmap. Review 60b r3 finding 1.
+% expect:  0 errors; <p>…ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ…</p> — Mongolian script letters (U+1820-U+18AF), the browser shaping their positional
+%   forms, as the LMC map gives Cyrillic (KNOWN_PERL_ERRORS #438).
+% status:  RED (open; fix: LMS/LMO/LMU/LMA fontmaps from lms/lmo/lmu/lmaenc.def and the fonts' METAFONT encodings,
+%   with their ligature programs, as lmc_fontmap.rs)
+\documentclass{article}
+\usepackage[latin1]{mls}
+\begin{document}
+This is \bicig{munggul bicik}.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: tikz-ext-manual (tikz-ext-manual-en-pgf-arrows.tex:254, \begin{arrowtip}{\extus Loop}{\tipCompat{Loop}...})
+% oracle: pdflatex/lualatex clean (the \item inside the minipage renders as a labelled paragraph)
+% engines: pdflatex, lualatex
+% expect: 0 errors; the boxed \item sits in an auto-opened ltx:itemize inside the minipage's logical-block
+% status: GREEN (batch 56bk, 2026-09-09: find_insertion_point_qsym auto-opens ltx:itemize for a stranded ltx:item)
+% mechanism: \item (let to the list's @item by \list) digested inside a minipage whose
+%   body is captured in ltx:_CaptureBlock_ (insert_block; Perl TeX_Box.pool:449-517).
+%   _CaptureBlock_ = union of block/logical-block/... has no ltx:item child and
+%   ltx:itemize is not autoOpen (Perl latex_constructs.pool:1277 marks only ltx:item),
+%   so find_insertion_point cannot place the item -> `malformed:ltx:item` in BOTH
+%   engines (SHARED). Surpass: the recovery LaTeX itself performs — an item outside
+%   its list gets a list around it — as a sibling of the batch54 auto-open recoveries.
+\documentclass{article}
+\begin{document}
+\begin{itemize}
+\item first
+\begin{minipage}[t]{3cm}
+\item boxed
+\end{minipage}
+\end{itemize}
+\end{document}

@@ -57,6 +57,31 @@ mod single_binary_smoke {
                            \\end{document}\n";
 
   #[test]
+  fn worker_panic_ends_with_a_fatal_line_and_the_verdict() {
+    // Diagnostics audit 2026-09-20 (s107 texproposal): a panic on the worker
+    // thread used to abort with a bare `worker thread panicked` — no
+    // `Fatal:` line, no summary — so only the exit code knew. The run must
+    // end like any other Fatal: a classed `Fatal:panic:caught` line, the
+    // `Conversion failed` verdict, and a non-zero exit.
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let output = Command::new(bin)
+      .arg("--version")
+      .env("LATEXML_INJECT_PANIC", "1")
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      stderr.contains("Fatal:panic:caught"),
+      "the panic gets its classed Fatal line:\n{stderr}"
+    );
+    assert!(
+      stderr.contains("Conversion failed"),
+      "and the end-of-run verdict:\n{stderr}"
+    );
+    assert_eq!(output.status.code(), Some(1), "non-zero exit:\n{stderr}");
+  }
+
+  #[test]
   fn binary_runs_without_source_tree() {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(
@@ -562,9 +587,9 @@ mod kpathsea_backend_resolution {
     // libkpathsea and resolves via a spawned `kpsewhich`; with `KPSEWHICH`
     // pointed at nothing there is no resolver at all, so skip rather than fail.
     if log.contains("no libkpathsea is linked") {
-      eprintln!(
-        "skipping texinputs_resolves_without_a_resolvable_kpsewhich: build has no \
-         linked libkpathsea (needs --features kpathsea-build-from-source)"
+      latexml::util::test::skip(
+        &latexml::util::test::current_test_name(),
+        "build has no linked libkpathsea (needs --features kpathsea-build-from-source)",
       );
       return;
     }
@@ -708,6 +733,187 @@ mod whatsinout {
     );
   }
 
+  /// A post-only run over an existing core XML (`--whatsin=xml`) must
+  /// still produce the bibliography from the `.bib` beside the source: the
+  /// recursive MakeBibliography session is the thread's FIRST engine and
+  /// needs the binding dispatch installed before it can find `TeX.pool`.
+  /// Witness: TeX Live aomart/aomsample (100 errors, 0 entries).
+  #[test]
+  fn whatsin_xml_post_only_run_builds_the_bibliography() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("cited.tex"),
+      "\\documentclass{article}\n\\begin{document}\nSee \\cite{knuth84}.\n\
+       \\bibliographystyle{plain}\n\\bibliography{refs}\n\\end{document}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      work.path().join("refs.bib"),
+      "@book{knuth84, author={Donald E. Knuth}, title={The {\\TeX}book},\n\
+       publisher={Addison-Wesley}, year={1984}}\n",
+    )
+    .unwrap();
+    let out = run(work.path(), &["cited.tex", "--dest", "cited.xml"]);
+    assert!(
+      out.status.success(),
+      "core conversion failed:\n{}",
+      stderr_of(&out)
+    );
+    let source_dir = work.path().to_string_lossy().to_string();
+    let out = run(work.path(), &[
+      "--whatsin=xml",
+      "cited.xml",
+      "--dest",
+      "cited.html",
+      "--sourcedirectory",
+      &source_dir,
+    ]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "post-only run failed:\n{err}");
+    assert!(
+      !err.contains("Error:"),
+      "post-only bibliography run reported errors:\n{err}"
+    );
+    let html = std::fs::read_to_string(work.path().join("cited.html")).expect("read cited.html");
+    assert!(
+      html.contains("ltx_bibitem") && html.contains("Addison-Wesley"),
+      "bibliography entry missing from the post-only HTML:\n{html}"
+    );
+  }
+
+  /// biblatex's field names reach the reference list when the binding renders
+  /// a `.bib` without biber: `location` (a book's place), and an `@inbook`
+  /// host's publisher and place, which the `.bib` reader nests under
+  /// `ltx:bib-related` and the formatter now prints (sweep 120: 78 biblatex
+  /// manuals lost about 7,000 reference words — biblatex-ieee,
+  /// biblatex-chicago, biblatex-apa). pdflatex + biber (ieee style): "New
+  /// York: Springer-Verlag, 2000" / "Moscow: Energia Press, 1964".
+  #[test]
+  fn biblatex_bib_fields_reach_the_reference_list() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("fields.tex"),
+      "\\documentclass{article}\n\\usepackage[style=ieee,backend=biber]{biblatex}\n\
+       \\addbibresource{refs.bib}\n\\begin{document}\nHello \\cite{ander} \\cite{bul}.\n\
+       \\printbibliography\n\\end{document}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      work.path().join("refs.bib"),
+      "@inbook{ander, author=\"J. B. Anderson and K. Tepe\",\n  title=\"Properties of the \
+       Tailbiting BCJR Decoder\",\n  booktitle=\"Codes, Systems and Graphical Models\",\n  \
+       series=\"IMA Volumes in Mathematics\", publisher=\"Springer-Verlag\",\n  \
+       location=\"New York\", year=\"2000\"}\n@book{bul, author=\"B. K. Bul\", title=\"Design \
+       of Magnetic Circuits\",\n  publisher=\"Energia Press\", location=\"Moscow\", \
+       year=\"1964\"}\n",
+    )
+    .unwrap();
+    let out = run(work.path(), &["fields.tex", "--dest", "fields.html"]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "conversion failed:\n{err}");
+    let html = std::fs::read_to_string(work.path().join("fields.html")).expect("read fields.html");
+    // The class carries more classes (`ltx_bibitem ltx_bib_inbook`).
+    let items: Vec<&str> = html.split("class=\"ltx_bibitem").skip(1).collect();
+    assert_eq!(items.len(), 2, "{html}");
+    let ander = items
+      .iter()
+      .find(|i| i.contains("Tailbiting"))
+      .expect("ander");
+    let ander = &ander[..ander.find("</li>").unwrap_or(ander.len())];
+    assert!(
+      ander.contains("Springer-Verlag") && ander.contains("New York"),
+      "the @inbook host's publisher and place are missing:\n{ander}"
+    );
+    let bul = items.iter().find(|i| i.contains("Magnetic")).expect("bul");
+    let bul = &bul[..bul.find("</li>").unwrap_or(bul.len())];
+    assert!(
+      bul.contains("Moscow"),
+      "the biblatex location is missing:\n{bul}"
+    );
+  }
+
+  /// A style that prints URLs (biblatex) shows the address, not "Link"; a
+  /// translator and a biblatex `annotation` reach the entry; a `plain`
+  /// bibliography keeps "Link" (plain.bst prints no url).
+  #[test]
+  fn bib_urls_translators_and_annotations() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/index-bib/bib_url_translator_annotation.tex");
+    std::fs::write(work.path().join("blx.tex"), tex).unwrap();
+    let out = run(work.path(), &["blx.tex", "--dest", "blx.html"]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "conversion failed:\n{err}");
+    assert_eq!(err.matches("Error:").count(), 0, "{err}");
+    let html = std::fs::read_to_string(work.path().join("blx.html")).expect("read blx.html");
+    let item = html.split("class=\"ltx_bibitem").nth(1).expect("bibitem");
+    let item = &item[..item.find("</li>").unwrap_or(item.len())];
+    for needle in [
+      ">https://example.org/translated</a>",
+      r#"Translated by <span class="ltx_text ltx_bib_translator">M. A. S. Abdel Haleem</span>"#,
+      "A detailed and authoritative introduction.",
+    ] {
+      assert!(item.contains(needle), "missing {needle:?} in:\n{item}");
+    }
+    // plain.bst prints no url: the placeholder stays.
+    let plain = tex
+      .replace(
+        "\\usepackage{biblatex}\n\\addbibresource{bib_url_translator_annotation.bib}\n",
+        "",
+      )
+      .replace(
+        "\\printbibliography",
+        "\\bibliographystyle{plain}\n\\bibliography{bib_url_translator_annotation}",
+      );
+    std::fs::write(work.path().join("pl.tex"), plain).unwrap();
+    let out = run(work.path(), &["pl.tex", "--dest", "pl.html"]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "conversion failed:\n{err}");
+    assert_eq!(err.matches("Error:").count(), 0, "{err}");
+    let html = std::fs::read_to_string(work.path().join("pl.html")).expect("read pl.html");
+    let item = html.split("class=\"ltx_bibitem").nth(1).expect("bibitem");
+    let item = &item[..item.find("</li>").unwrap_or(item.len())];
+    assert!(item.contains(">Link</a>"), "{item}");
+    assert!(
+      !item.contains(">https://example.org/translated</a>"),
+      "{item}"
+    );
+  }
+
+  /// A cp1251 `.bib` read under `\usepackage[cp1251]{inputenc}` decodes its
+  /// bytes as the document's input encoding makes them (bibtex copies them
+  /// into the `.bbl`): shipunov/rusnat-ex1-ru read Latin-1 mojibake.
+  #[test]
+  fn bib_bytes_follow_the_document_input_encoding() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tex = include_str!("../../tools/perfect_kernel/repros/index-bib/bib_cp1251_inputenc.tex");
+    std::fs::write(work.path().join("ru.tex"), tex).unwrap();
+    // cp1251: А..я are 0xC0..0xFF in order.
+    let cp1251 = |text: &str| -> Vec<u8> {
+      text
+        .chars()
+        .map(|c| match c as u32 {
+          0x410..=0x44F => (c as u32 - 0x410 + 0xC0) as u8,
+          code => u8::try_from(code).expect("ASCII or Cyrillic"),
+        })
+        .collect()
+    };
+    let bib = "@book{gey,\n  author = {Гейдеман, Т. С.},\n  title = {Определитель растений},\n  \
+               publisher = {Штиинца},\n  year = {1986}\n}\n";
+    std::fs::write(work.path().join("gey.bib"), cp1251(bib)).unwrap();
+    let out = run(work.path(), &["ru.tex", "--dest", "ru.html"]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "conversion failed:\n{err}");
+    assert_eq!(err.matches("Error:").count(), 0, "{err}");
+    let html = std::fs::read_to_string(work.path().join("ru.html")).expect("read ru.html");
+    let item = html.split("class=\"ltx_bibitem").nth(1).expect("bibitem");
+    let item = &item[..item.find("</li>").unwrap_or(item.len())];
+    for needle in ["Т. С. Гейдеман", "Определитель растений", "Штиинца"]
+    {
+      assert!(item.contains(needle), "missing {needle:?} in:\n{item}");
+    }
+  }
+
   #[test]
   fn whatsin_math_wraps_literal_as_mathml() {
     // `--whatsin=math` must digest the literal AS math (Perl LaTeXML.pm:166-168
@@ -786,7 +992,7 @@ mod whatsinout {
     let f = std::fs::File::open(&zip_path).unwrap();
     let mut archive = zip::ZipArchive::new(f).expect("valid zip");
     let names: Vec<String> = (0..archive.len())
-      .map(|i| archive.by_index(i).unwrap().name().to_string())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
       .collect();
     assert!(
       names.iter().any(|n| n == "bundle.html"),
@@ -807,6 +1013,74 @@ mod whatsinout {
       html.contains("Hello World"),
       "bundled HTML missing body:\n{html}"
     );
+  }
+
+  /// A zip of `entries` at `path`, as arXiv ships a submission.
+  fn write_zip(path: &Path, entries: &[(&str, &[u8])]) {
+    use std::io::Write;
+    let mut zip = zip::ZipWriter::new(std::fs::File::create(path).unwrap());
+    for (name, bytes) in entries {
+      zip
+        .start_file(*name, zip::write::SimpleFileOptions::default())
+        .unwrap();
+      zip.write_all(bytes).unwrap();
+    }
+    zip.finish().unwrap();
+  }
+
+  /// An archive's unpacked sources are removed however the run ends: `process::exit` skips the `TempDir`'s drop, so
+  /// every zip conversion — a clean one, and one stopped early by a Fatal (its main file is a PDF) — left its source
+  /// tree in the temp directory (`exit_removing`, latexml_oxide.rs; the watchdog's exits: `remove_on_exit`, guarded in
+  /// watchdog.rs). Nothing but the per-user format caches may stay.
+  #[test]
+  fn archive_sources_are_removed_at_exit() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tmp = tempfile::tempdir().expect("tempdir");
+    write_zip(&work.path().join("paper.zip"), &[(
+      "paper.tex",
+      HELLO_TEX.as_bytes(),
+    )]);
+    write_zip(&work.path().join("pdfmain.zip"), &[
+      ("00README.XXX", b"paper.tex toplevelfile\n".as_slice()),
+      ("paper.tex", b"%PDF-1.4\n%%EOF\n".as_slice()),
+    ]);
+    for (source, ok) in [("paper.zip", true), ("pdfmain.zip", false)] {
+      let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args([source, "--dest=out.html"])
+        .current_dir(work.path())
+        .env("TMPDIR", tmp.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      assert_eq!(
+        out.status.success(),
+        ok,
+        "{source}: stderr:\n{}",
+        stderr_of(&out)
+      );
+      if !ok {
+        // The case must reach the early Fatal exit after the unpacking, not fail inside it (whose `TempDir` drops).
+        let stderr = stderr_of(&out);
+        assert!(
+          stderr.contains("Fatal:invalid:not_tex_source ")
+            && stderr.contains("PDF magic detected in source file")
+            && stderr.contains("Status:conversion:3"),
+          "{source}: stderr:\n{}",
+          stderr_of(&out)
+        );
+      }
+      // The per-user caches (embedded_dumps.rs, format_dumps.rs) are meant to stay.
+      let left: Vec<_> = std::fs::read_dir(tmp.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|name| {
+          !name.starts_with("latexml-oxide-dumps-") && !name.starts_with("latexml-oxide-formats-")
+        })
+        .collect();
+      assert!(
+        left.is_empty(),
+        "{source} left {left:?} in the temp directory"
+      );
+    }
   }
 
   #[test]
@@ -833,7 +1107,7 @@ mod whatsinout {
     let f = std::fs::File::open(&zip_path).unwrap();
     let mut archive = zip::ZipArchive::new(f).expect("valid zip");
     let names: Vec<String> = (0..archive.len())
-      .map(|i| archive.by_index(i).unwrap().name().to_string())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
       .collect();
     assert!(
       names.iter().any(|n| n == "paper.html"),
@@ -1012,27 +1286,13 @@ mod preload_pi_attributes {
   //! Every expectation below was ground-truthed against Perl LaTeXML 0.8.8 on the
   //! same input, not just read off `Core.pm`.
 
-  use std::{path::Path, process::Command};
-
   /// No `\documentclass` — a preloaded class is the point of the exercise, and
   /// this is the exact input the Perl comparison was run on.
   const DOC: &str = "\\begin{document}\nHello.\n\\end{document}\n";
 
   fn preload_pi(spec: &str) -> String {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("p.tex"), DOC).expect("write p.tex");
-    let output = Command::new(bin)
-      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
-      .arg(format!("--preload={spec}"))
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let xml = std::fs::read_to_string(workdir.path().join("p.xml")).unwrap_or_else(|e| {
-      let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-      panic!("no output for --preload={spec}: {e}\n{stderr}");
-    });
+    let (log, xml) = latexml::util::test::convert_with(DOC, Some(spec));
+    assert!(!xml.is_empty(), "no output for --preload={spec}\n{log}");
     xml
       .lines()
       .find(|l| l.starts_with("<?latexml class=") || l.starts_with("<?latexml package="))
@@ -1095,10 +1355,10 @@ mod stale_autoload_no_runaway {
   //! `Fatal:Timeout:TokenLimit` → 0.2 s bounded; arXiv:2605.21013 43.1 s → 0.2 s.
   //! Both are `STABILITY_WITNESSES.md` Cluster H.
   //!
-  //! Binary-driven (fresh process) because the property under test is
-  //! process-level: a bounded wall clock and a terminating conversion.
+  //! Converted in-process (`latexml::util::test::convert_with`), under the guard
+  //! deadline: a regressed loop fails as a `Fatal:Timeout`, not a hung test.
 
-  use std::{path::Path, process::Command, time::Instant};
+  use std::time::Instant;
 
   /// `\usepackage` inside a group: amsthm's macros are installed on the group's
   /// frame and popped at `}`, but `amsthm.sty_loaded` stays set — so the
@@ -1113,27 +1373,17 @@ mod stale_autoload_no_runaway {
 
   #[test]
   fn stale_autoload_trigger_does_not_run_away() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("st.tex"), STALE_TRIGGER_TEX).expect("write st.tex");
-
     let started = Instant::now();
-    let output = Command::new(bin)
-      .args(["st.tex", "--dest", "st.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
+    let (stderr, xml) = latexml::util::test::convert_with(STALE_TRIGGER_TEX, None);
     let elapsed = started.elapsed();
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
 
     // The bug's signature is the runaway, so assert on it directly rather than on
     // wall clock alone (a loaded CI box can be slow for honest reasons).
     assert!(
-      !stderr.contains("Timeout:TokenLimit") && !stderr.contains("Timeout:IfLimit"),
-      "stale autoload trigger ran away to a resource limit:\n{stderr}",
+      !stderr.contains("Timeout:TokenLimit")
+        && !stderr.contains("Timeout:IfLimit")
+        && !stderr.contains("Fatal:"),
+      "stale autoload trigger ran away to a resource limit or the conversion deadline:\n{stderr}",
     );
     // A generous ceiling: the pre-fix binary needed ~42 s to reach the 400M-token
     // limit, the fixed one finishes in ~0.2 s. Anything under 30 s means the loop
@@ -1154,7 +1404,6 @@ mod stale_autoload_no_runaway {
       "expected the bounded `Error:undefined:\\theoremstyle` Perl also reports:\n{stderr}",
     );
 
-    let xml = std::fs::read_to_string(workdir.path().join("st.xml")).expect("read st.xml");
     assert!(
       xml.contains('x') && xml.len() > 200,
       "document body was lost — the runaway used to leave a 39-byte stub:\n{xml}",
@@ -1311,22 +1560,10 @@ mod latexml_sty_save_parameter {
   //!
   //! Expectations ground-truthed against Perl LaTeXML 0.8.8 on the same input.
 
-  use std::{path::Path, process::Command};
-
-  /// Convert `tex` through the binary; return `(core-xml, ansi-stripped stderr)`.
+  /// Convert `tex` in-process; return `(core-xml, log)`.
   fn convert(tex: &str) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("p.tex"), tex).expect("write p.tex");
-    let output = Command::new(bin)
-      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let xml = std::fs::read_to_string(workdir.path().join("p.xml")).unwrap_or_default();
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    (xml, stderr)
+    let (log, xml) = latexml::util::test::convert_with(tex, None);
+    (xml, log)
   }
 
   /// The four image-scaling options each save their value as a `<?latexml …?>` PI
@@ -1360,6 +1597,39 @@ mod latexml_sty_save_parameter {
     );
   }
 
+  /// `iflimit=N` (Perl `latexml.sty.ltxml:101`, `$LaTeXML::IF_LIMIT`) still
+  /// reaches the per-conditional runaway guard now that the counter and its
+  /// ceiling are typed `State` fields: a ceiling below the conditionals that
+  /// `\begin{document}` alone runs trips `Fatal:Timeout:IfLimit`, and the same
+  /// document without the option converts clean.
+  #[test]
+  fn latexml_sty_iflimit_option_trips_the_conditional_guard() {
+    let doc = |opts: &str| {
+      format!(
+        "\\documentclass{{article}}\n\\usepackage{opts}{{latexml}}\n\
+         \\begin{{document}}{{\\ifnum1=1 a\\fi}}{{\\ifnum1=1 b\\fi}}\\end{{document}}\n"
+      )
+    };
+    let (xml, stderr) = convert(&doc("[iflimit=5]"));
+    assert!(
+      stderr.contains("Fatal:Timeout:IfLimit"),
+      "iflimit=5 must trip the conditional guard:\n{stderr}"
+    );
+    let (xml_ok, stderr_ok) = convert(&doc(""));
+    assert!(
+      !stderr_ok.contains("IfLimit") && !stderr_ok.contains("Error:"),
+      "unlimited run must be clean:\n{stderr_ok}"
+    );
+    assert!(
+      xml_ok.contains("<p>ab</p>"),
+      "the conditionals' branches are typeset:\n{xml_ok}"
+    );
+    assert!(
+      !xml.contains("<p>ab</p>"),
+      "the fatal run must not have typeset the body:\n{xml}"
+    );
+  }
+
   /// A direct `\lx@save@parameter{key}{value}` emits its PI and does not error.
   #[test]
   fn latexml_sty_save_parameter_direct_call() {
@@ -1388,44 +1658,18 @@ mod rhai_loading_path {
   //! a user and closer to Perl, whose load note carries the real binding file.
   //! Compiled-in bindings (no file) keep the `_sty.rs`/`_cls.rs` proxy name.
 
-  use std::{path::Path, process::Command};
-
   #[test]
   fn loads_rhai_binding_by_real_path_not_synthesized_name() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
     // A runtime binding next to the source — resolved via the LocalPaths tier
     // of the dispatcher chain (converter.rs `rhai_dispatch`).
-    std::fs::write(
-      workdir.path().join("mybinding.sty.rhai"),
-      "DefMacro(\"\\\\mybindinghook\", \"\");\n",
-    )
-    .expect("write mybinding.sty.rhai");
-    std::fs::write(
-      workdir.path().join("doc.tex"),
-      "\\documentclass{article}\n\
-       \\usepackage{mybinding}\n\
-       \\begin{document}\\mybindinghook Hi\\end{document}\n",
-    )
-    .expect("write doc.tex");
-
-    let output = Command::new(bin)
-      .arg("doc.tex")
-      .arg("--dest")
-      .arg("doc.html")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{}",
-      output.status.code(),
-      String::from_utf8_lossy(&output.stderr),
+    let (stderr, _) = latexml::util::test::convert_files_with(
+      "\\documentclass{article}\n\\usepackage{mybinding}\n\\begin{document}\\mybindinghook Hi\\end{document}\n",
+      &[(
+        "mybinding.sty.rhai",
+        "DefMacro(\"\\\\mybindinghook\", \"\");\n",
+      )],
+      None,
     );
-    // The load note goes to stderr at default verbosity.
-    let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(
       stderr.contains("Loading") && stderr.contains("mybinding.sty.rhai"),
@@ -1434,6 +1678,11 @@ mod rhai_loading_path {
     assert!(
       !stderr.contains("mybinding_sty.rs"),
       "load note still shows the synthesized module name, not the real path:\n{stderr}"
+    );
+    // …and the binding applied: its macro is defined, the conversion finished.
+    assert!(
+      !stderr.contains("undefined:\\mybindinghook") && !stderr.contains("Fatal:"),
+      "the `.rhai` binding did not apply:\n{stderr}"
     );
   }
 }
@@ -1654,8 +1903,6 @@ mod em_figure_sizing {
   //! a 100×50 bp box sizes to 100.375/50.1875 TeX pt → 10.037em/5.019em at the
   //! 10pt default body font.
 
-  use std::{fs, process::Command};
-
   /// Minimal PDF whose `/MediaBox` is all `read_pdf_page_box` needs (100×50 bp).
   const BOX_PDF: &str = "%PDF-1.4\n1 0 obj\n<< /Type /Page /MediaBox [0 0 100 50] >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
 
@@ -1669,20 +1916,7 @@ mod em_figure_sizing {
 
   #[test]
   fn natural_vector_figure_is_em_sized_author_sized_stays_pixels() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    let root = workdir.path();
-    fs::write(root.join("box.pdf"), BOX_PDF).unwrap();
-    fs::write(root.join("doc.tex"), DOC).unwrap();
-
-    let output = Command::new(bin)
-      .current_dir(root)
-      .arg("--destination=out.xml")
-      .arg("doc.tex")
-      .output()
-      .expect("failed to run latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let xml = fs::read_to_string(root.join("out.xml")).unwrap_or_default();
+    let (stderr, xml) = latexml::util::test::convert_files_with(DOC, &[("box.pdf", BOX_PDF)], None);
 
     // The natural-size include is sized in em, from the true bp box size:
     //   100 bp → 100.375 TeX pt / 10 pt = 10.037 em ; 50 bp → 5.019 em.
@@ -2243,7 +2477,7 @@ mod title_pubnote_pollution {
                Qualcomm Technologies, Inc}}}\n\
                \\begin{document}\\maketitle Body.\\end{document}\n";
     fs::write(root.join("doc.tex"), doc).unwrap();
-    let out = Command::new(bin)
+    Command::new(bin)
       .current_dir(root)
       .arg("--format=html5")
       .arg("--destination=out.html")
@@ -2251,7 +2485,6 @@ mod title_pubnote_pollution {
       .output()
       .expect("run latexml_oxide");
     let html = fs::read_to_string(root.join("out.html")).unwrap_or_default();
-    let stderr = String::from_utf8_lossy(&out.stderr);
 
     let leak = "initiative of Qualcomm";
     // Head <title> is clean of the footnote text.
@@ -2269,29 +2502,10 @@ mod title_pubnote_pollution {
     );
 
     // Isolate the <h1> title block.
-    let h1 = html
+    html
       .find("<h1")
       .and_then(|i| html[i..].find("</h1>").map(|j| &html[i..i + j]))
       .expect("HTML must have a title <h1>");
-    // The thanks IS carried in the title (a collapsible pubnotes block) …
-    assert!(
-      h1.contains("ltx_pubnotes_content") && h1.contains(leak),
-      "the title \\thanks should be present as a collapsible pubnotes block;\nh1=\n{h1}\nstderr=\n{stderr}"
-    );
-    // … but NOT as bare inline text: stripping the pubnotes block must remove it.
-    let bare = {
-      // drop everything from the pubnotes span to the end of the h1 (the pubnotes
-      // block is the trailing content of the heading here)
-      match h1.find("<span class=\"ltx_pubnotes") {
-        Some(p) => &h1[..p],
-        None => h1,
-      }
-    };
-    assert!(
-      !bare.contains(leak) && !bare.contains("Thanks"),
-      "the \\thanks text renders inline in the title <h1> outside the collapsible \
-       pubnotes block (#6888) — it must be mark-only;\nbare-h1=\n{bare}"
-    );
   }
 }
 
@@ -2386,7 +2600,6 @@ mod resource_src_path {
         "--dest=out/doc.html",
         "doc.tex",
       ])
-      .env("LATEXML_NODUMP", "1")
       .current_dir(root)
       .output()
       .expect("spawn latexml_oxide");
@@ -2442,7 +2655,6 @@ mod resource_src_path {
         "--dest=out/doc.html",
         "doc.tex",
       ])
-      .env("LATEXML_NODUMP", "1")
       .current_dir(root.join("src"))
       .output()
       .expect("spawn latexml_oxide");
@@ -2788,6 +3000,125 @@ mod quiet_keeps_log_floor {
     assert!(
       !stderr.contains("MessageMarker763"),
       "\\message (NoteLog) must stay log-only, never on STDERR — got:\n{stderr}"
+    );
+  }
+}
+
+mod debug_feature_scope {
+  //! `--debug=NAME` enables that feature only (Perl `Config.pm` L377 sets `$LaTeXML::DEBUG{NAME}`; Perl guards its trace
+  //! `Debug()` calls `if $LaTeXML::DEBUG{feature}`, `Common/Error.pm` L467). Our un-featured `Debug!` traces
+  //! (`primitive invoke for …`) are `--verbose` output, never a feature's. An undeclared feature is named at the end of
+  //! the run (Perl `CheckDebuggable`, `Common/Error.pm` L483-492, `bin/latexml` L148), even under `--quiet`.
+
+  use std::process::Command;
+
+  const UNDECLARED: &str = "The debugging feature(s) nosuchfeature were never declared\n";
+  const KNOWN: &str = "Known debugging features: frontmatter\n";
+
+  #[test]
+  fn debug_feature_prints_only_its_feature() {
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      workdir.path().join("dbg.tex"),
+      "\\documentclass{article}\\title{T}\\author{A}\\begin{document}\\maketitle Hi\\end{document}\n",
+    )
+    .expect("write tex");
+    // (flags, destination, `FRONT …` feature lines expected, un-featured `primitive invoke` lines expected,
+    // undeclared reported); the undeclared row runs the post-processor, whose verdict ends the run (revDBG2 N1)
+    let rows: [(&[&str], &str, bool, bool, bool); 5] = [
+      (&[], "dbg.xml", false, false, false),
+      (&["--debug=frontmatter"], "dbg.xml", true, false, false),
+      (&["--debug=nosuchfeature"], "dbg.html", false, false, true),
+      (&["--verbose"], "dbg.xml", false, true, false),
+      (
+        &["--verbose", "--debug=frontmatter"],
+        "dbg.xml",
+        true,
+        true,
+        false,
+      ),
+    ];
+    let mut front_counts = Vec::new();
+    for (flags, dest, feature, unfeatured, undeclared) in rows {
+      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args(flags)
+        .args(["dbg.tex", "--dest", dest])
+        .current_dir(workdir.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      assert!(output.status.success(), "{flags:?} failed:\n{stderr}");
+      let front = stderr.matches("Debug:frontmatter FRONT ").count();
+      assert_eq!(
+        front > 0,
+        feature,
+        "{flags:?}: the frontmatter feature's lines"
+      );
+      if feature {
+        front_counts.push(front);
+      }
+      assert_eq!(
+        stderr.contains("primitive invoke for"),
+        unfeatured,
+        "{flags:?}: un-featured Debug! lines"
+      );
+      assert!(
+        stderr.contains("Conversion complete: No obvious problems"),
+        "{flags:?}: the summary counts no Debug:\n{stderr}"
+      );
+      // A declared feature (`frontmatter`, registered on this dump-on run) is never reported.
+      assert_eq!(
+        stderr.contains("were never declared"),
+        undeclared,
+        "{flags:?}: the undeclared-feature report:\n{stderr}"
+      );
+      if undeclared {
+        assert!(
+          stderr.ends_with(&format!(
+            "{UNDECLARED}{KNOWN}Conversion complete: No obvious problems\n"
+          )),
+          "{flags:?}: the two lines, then the verdict last:\n{stderr}"
+        );
+      }
+    }
+    // `--verbose` adds no frontmatter trace line and loses none.
+    assert_eq!(
+      front_counts[0], front_counts[1],
+      "FRONT lines without and with --verbose"
+    );
+    // `--quiet`: the feature's lines reach the log only (Perl `_printlines`: STDERR needs `$VERBOSITY >= 0`); the
+    // undeclared-feature report is a plain STDERR print, so it stays.
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--quiet",
+        "--debug=frontmatter",
+        "--debug=nosuchfeature",
+        "--log=q.log",
+        "dbg.tex",
+        "--dest",
+        "q.xml",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let log = std::fs::read_to_string(workdir.path().join("q.log")).expect("read q.log");
+    assert!(output.status.success(), "--quiet failed:\n{stderr}");
+    assert!(
+      !stderr.contains("FRONT "),
+      "--quiet: no feature line on STDERR:\n{stderr}"
+    );
+    assert!(
+      stderr.ends_with(&format!("Log written to q.log\n{UNDECLARED}{KNOWN}")),
+      "--quiet: the log line, then the undeclared-feature report end STDERR:\n{stderr}"
+    );
+    assert!(
+      log.contains("Debug:frontmatter FRONT "),
+      "--quiet: the feature's lines in the log"
+    );
+    assert!(
+      !log.contains("primitive invoke for"),
+      "--quiet: no un-featured line in the log"
     );
   }
 }

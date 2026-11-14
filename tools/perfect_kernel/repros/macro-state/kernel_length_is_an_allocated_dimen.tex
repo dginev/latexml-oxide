@@ -1,0 +1,14 @@
+% witness: TL class census 2026-09-24 — tudscrartcl, tudscrbook, tudscrposter, tudscrreprt
+%          (tudscrbase: "`\columnsep' is not a defined length")
+% oracle:  pdflatex: \meaning\columnsep = \dimen124; etoolbox \ifdefdimen true
+% engines: rust (56hw) = \meaning\columnsep = \columnsep, so \ifdefdimen says no (the tudscr error)
+% expect:  0 errors; "\dimen… yes yes 345.0pt"
+% status:  RED (56hw) -> GREEN (56hx, OXIDIZED_DESIGN #284)
+% mechanism: the dump records latex.ltx's \newdimen\columnsep as \dimen124, but the post-dump
+%   pools re-DefRegister! ~54 kernel lengths and def_register renamed each register to its CS
+%   name. A bare re-definition now keeps the allocation, and name-keyed readers resolve it.
+\documentclass{article}
+\usepackage{etoolbox}
+\begin{document}
+\meaning\columnsep{} \ifdefdimen\columnsep{yes}{no} \ifdefdimen\textwidth{yes}{no} \the\textwidth
+\end{document}

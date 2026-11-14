@@ -1,0 +1,14 @@
+% witness: 77a r2 review probe p5
+% oracle:  pdflatex + biber 0 errors: no bibliography (category 'books' has no keys), LaTeX Warning: Empty bibliography
+% engines: rust 77a r1 printed nothing, silently; before 77a one list of both entries
+% expect:  0 errors, 1 warning (Empty bibliography); no bibliography
+% status:  GREEN (77a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{books}
+\begin{document}
+X \nocite{knuth,lamport}.
+\bibbycategory
+\end{document}

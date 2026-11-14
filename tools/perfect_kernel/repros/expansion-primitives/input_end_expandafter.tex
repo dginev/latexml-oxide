@@ -1,0 +1,20 @@
+% mechanism: tex.web §368 \expandafter reads its two tokens with get_token at the scanner status
+%   in force; at `normal` status the end of an \input file is no runaway (§362 end_file_reading,
+%   §336 check_outer_validity passes), so a file ending in `\expandafter\x` expands the first
+%   token after the file. Rust read them as a macro's `Token Token` arguments, which stop at the
+%   file's end (and yielded \relax).
+% witness: SYNC_STATUS "Other `get_token` reads do not cross an input end either"
+% oracle:  pdflatex 0 errors, "A [F]OO"
+% engines: rust=0 errors, "A []FOO" (56jg-rel, 2026-09-25)
+% expect:  0 errors, "A [F]OO"
+% status:  GREEN (56jj: gullet.rs read_primitive_token; guard
+%          token_kernel_gaps::expandafter_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_expandafter_in.tex}
+\expandafter\x
+\end{filecontents*}
+\def\x#1{[#1]}\def\foo{FOO}
+\makeatletter
+\begin{document}
+A \@@input input_end_expandafter_in.tex \foo
+\end{document}

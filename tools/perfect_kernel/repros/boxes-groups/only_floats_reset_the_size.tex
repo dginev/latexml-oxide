@@ -1,0 +1,22 @@
+% latex.ltx `\@floatboxreset` (`\reset@font\normalsize`, run by `\@xfloat`) resets a floating environment's text to the
+% body font, size and leading; sub-floats (subfig's `\subfloat`), wrapfig, supertabular and algorithm2e's `[H]` (a
+% minipage, algorithm2e.sty:2661-2666) reset nothing. Resetting at every float begin lost the surrounding size there
+% (2605.12017 S4.F3.sf1: `\footnotesize\subfloat{tabular}` cells lost 80%; 2605.21625 supertabular: 1,359 sizes).
+% witness: 2605.12017, 2605.21625, 2605.18633 (setspace float).
+% Guard: perfect_kernel_batch58::only_floats_reset_the_size.
+% status:  GREEN (58c)
+% oracle:  pdflatex 0 errors; "[F 12.0pt]", "[SF 11.0pt]", "[W 11.0pt]", "[A 12.0pt]", "[H 11.0pt]", "[ST 9]", "[G 12.0pt]" (the cell's font size: LaTeX zeroes `\baselineskip` in a tabular row).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{subfig,wrapfig,algorithm2e,supertabular}
+\begin{document}
+{\small
+\begin{figure}{[F \the\baselineskip]}\end{figure}
+\begin{figure}\small\subfloat{[SF \the\baselineskip]}\end{figure}
+\begin{wrapfigure}{r}{3cm}{[W \the\baselineskip]}\end{wrapfigure} Text.
+\begin{algorithm}[h]{[A \the\baselineskip]}\;\caption{y}\end{algorithm}
+\begin{algorithm}[H]{[H \the\baselineskip]}\;\caption{x}\end{algorithm}
+\makeatletter\begin{supertabular}{l}[ST \f@size]\\\end{supertabular}
+\begin{figure}{[G \the\baselineskip]}\end{figure}
+}
+\end{document}

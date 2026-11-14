@@ -1,0 +1,19 @@
+% mechanism: as revtex_ordinal_number_line_is_entry_text, in a list number marks lead (`$1$ Univ A`): `$2$nd Floor` is
+%   the entry's text, `$2$ Univ B` the mark 2 (OXIDIZED_DESIGN_DIVERGENCES #964, review rev104c S1)
+% witness: none (review rev104c probe p9; the reading's witness 0708.2552)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1 Univ A, Town / 2nd Floor, Bldg C / 2 Univ B, City" (REVTeX's own
+%   number before the block)
+% engines: rust int131a0: both authors the whole block; 104c r1: Ann "Univ A, Town", Bob "nd Floor, Bldg C Univ B,
+%   City", the "2" lost
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town 2nd Floor, Bldg C", Bob "Univ B, City"
+% status:  RED (104c r1) -> GREEN (104c r2) — perfect_kernel_batch104c::an_ordinal_number_is_no_mark
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+\affiliation{$1$ Univ A, Town\\ $2$nd Floor, Bldg C\\ $2$ Univ B, City}
+\maketitle
+Text.
+\end{document}

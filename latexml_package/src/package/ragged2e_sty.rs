@@ -2,10 +2,36 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Just copy the basic defns from LaTeX
-  Let!("\\Centering",   "\\centering");
-  Let!("\\RaggedRight", "\\raggedright");
-  Let!("\\RaggedLeft",  "\\raggedleft");
+  // ragged2e.sty:48-54: `newcommands` clears `\if@raggedtwoe@originalcommands`, which is the default (:119).
+  Digest!("\\newif\\if@raggedtwoe@originalcommands\\@raggedtwoe@originalcommandstrue")?;
+  DeclareOption!("OriginalCommands", "\\@raggedtwoe@originalcommandstrue");
+  DeclareOption!("originalcommands", "\\@raggedtwoe@originalcommandstrue");
+  DeclareOption!("NewCommands",      "\\@raggedtwoe@originalcommandsfalse");
+  DeclareOption!("newcommands",      "\\@raggedtwoe@originalcommandsfalse");
+  // ragged2e.sty:93-110.
+  for option in ["newparameters", "NewParameters", "originalparameters", "OriginalParameters", "raggedrightboxes",
+    "footnotes", "document"] {
+    DeclareOption!(option, None);
+  }
+  ProcessOptions!();
+  // Under `newcommands` ragged2e.sty:298-311 saves LaTeX's own commands as `\LaTeXcentering` & co. before pointing the
+  // lowercase names at its own; a class that loads it so restores them (sbc20.cls:518, 523 `\let\centering
+  // \LaTeXcentering`). Here the lowercase commands stay LaTeX's, so the saves are those (2205.12270; Perl lacks them,
+  // KPE #481).
+  Digest!("\\if@raggedtwoe@originalcommands\\else
+    \\let\\LaTeXcentering\\centering \\let\\LaTeXraggedleft\\raggedleft \\let\\LaTeXraggedright\\raggedright
+    \\let\\LaTeXcenter\\center \\let\\endLaTeXcenter\\endcenter
+    \\let\\LaTeXflushleft\\flushleft \\let\\endLaTeXflushleft\\endflushleft
+    \\let\\LaTeXflushright\\flushright \\let\\endLaTeXflushright\\endflushright
+  \\fi")?;
+  // The kernel's commands, but `\\` is made the newline only where it is still the one ragged2e saved when it loaded
+  // (ragged2e.sty:189 `\let\@raggedtwoe@savedcr\\`, :216-218 `\ifx\\\@raggedtwoe@savedcr\let\\…\fi`): in a
+  // tabular cell (`>{\RaggedRight}p{…}` ending a row, 1606.01980) `\\` stays the row end, where the kernel's
+  // `\raggedright` makes it a line break (sect06.rs; pdflatex errs there).
+  RawTeX!(r"\let\@raggedtwoe@savedcr\\
+\def\Centering{\ifx\\\@raggedtwoe@savedcr\let\\\@normalcr\fi\lx@do@centering}
+\def\RaggedRight{\ifx\\\@raggedtwoe@savedcr\let\\\@normalcr\fi\lx@do@raggedright}
+\def\RaggedLeft{\ifx\\\@raggedtwoe@savedcr\let\\\@normalcr\fi\lx@do@raggedleft}");
   Let!("\\Center",      "\\center");
   Let!("\\endCenter",   "\\endcenter");
   Let!("\\FlushLeft",   "\\flushleft");
@@ -27,10 +53,12 @@ LoadDefinitions!({
   DefRegister!("\\RaggedRightParindent",   Dimension(0));
   DefRegister!("\\JustifyingParindent",    Dimension(0));
 
-  // ragged2e L292: \newenvironment{justify}{...}{...}
-  // Witness 2406.15288.
-  DefMacro!(T_CS!("\\begin{justify}"), None, "");
-  DefMacro!(T_CS!("\\end{justify}"),   None, "");
+  // ragged2e.sty:292-297 `\newenvironment{justify}{\trivlist\justifying\item\relax}{\endtrivlist}`: its text is a
+  // paragraph of its own, and `\begin`/`\end` group it (a `\begin{justify}` no-op ran it into the text before,
+  // "text.More", and let its font changes leak out; witness 2406.15288). Papers also call `\justify` bare as a switch
+  // (2204.13885, 1903.04078, 1909.10090's sigchi-ext.cls; "undefined \justify" in 16 papers of run 329).
+  DefMacro!("\\justify",    "\\par");
+  DefMacro!("\\endjustify", "\\par");
   // ragged2e's CapitalCase env variants must alias the lowercase
   // LaTeX *envs* (which carry the correct `internal_vertical` mode
   // via DefEnvironment), NOT the bare command forms. Mapping to the

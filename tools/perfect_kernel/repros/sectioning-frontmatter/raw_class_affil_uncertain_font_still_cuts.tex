@@ -1,0 +1,33 @@
+% witness: 1602.05576, 2405.08158 (ar-1col.cls:341 `\def\affil#1{\par…{\reset@font\affilfont#1\par}…}`, called inside
+%          `\author{}`); review rev94b r4 B1 (its probes `p/f` od4, mac7, mac4, od1)
+% oracle:  pdflatex 0 errors: "A Title", the eight names with their marks, then each affiliation's two lines: "Univ A",
+%          "Univ B" (bold), "Lab C, Town" (Town italic), "Lab D, City" (Lab D bold), "Inst E, Town", "Inst F, City"
+%          (Inst F italic), "Dept G, Town", "Dept H, City" (italic, Dept G bold), "Body."
+% engines: rust 94b r4 = 0 errors, 0 warnings: the font the reading could not tell where the second entry's cut starts
+%          (a command before it: `\textbf{Univ A}\\`, `\textit{Town}\\`, `Town~\\`; a switch before the first entry:
+%          `\itshape $^1$\textbf{…}`) undid the cut — each affiliation one contact on the first name (Ann Able "Univ A
+%          Univ B", Bob Baker nothing; Cy Cole, Eve Ern, Gil Gray the same); 94a r7 (base) cut each
+% expect:  0 errors, 0 warnings; a font the boxes cannot tell never undoes a cut: the entry is cut as before fonts were
+%          read (the switches opening the group it sits in), and a line break's own box tells the font in effect where
+%          the next entry starts (`events::entry_font`): every name its own line, each in the font pdflatex prints
+%          (Gil Gray's Dept G bold italic, Hal Hart's Dept H italic); eager and --streaming the same
+% status:  RED (94b r4) -> GREEN (94b r5)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker,$^2$ Cy Cole,$^3$ Dan Doe,$^4$ Eve Ern,$^5$ Fay Fox,$^6$ Gil Gray,$^7$ Hal Hart$^8$
+\affil{$^1$\textbf{Univ A}\\ $^2$\textbf{Univ B}}
+\affil{$^3$Lab C, \textit{Town}\\ $^4$\textbf{Lab D}, City}
+\affil{$^5$Inst E, Town~\\ $^6$\textit{Inst F}, City}
+\affil{\itshape $^7$\textbf{Dept G}, Town\\ $^8$Dept H, City}}
+\maketitle
+Body.
+\end{document}

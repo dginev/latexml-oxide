@@ -1,0 +1,27 @@
+% mechanism: a key cited in the document but absent from a bibliography's files is
+%   missing there (Perl MakeBibliography.pm:342-343), also when another list holds
+%   its item. MakeBibliography built a pseudo-item for it from that item's ObjectDB
+%   record: "[2]" with no content in the .bib list, which took over the citation's
+%   link ("Supplement [2]" -> the empty item).
+% witness: arXiv 2605.06049 (five pseudo-items, for the keys of its supplement's
+%   {thebibliography})
+% oracle:  pdflatex+bibtex 0 errors, bibtex 'I didn't find a database entry for "supp"';
+%          "Main [1]" and "Supplement [1]", each list one item
+% engines: rust=0 errors, 0 warnings, the pseudo-item bib.bib2 (base 0d10215663, 2026-09-26)
+% expect:  0 errors; exactly the warning "Missing bibkeys: supp" (the faithful diagnostic,
+%          as bibtex's); the supplement's citation links to its own list
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\begin{filecontents*}[overwrite]{bib_other_list_item.bib}
+@book{knuth, author={Donald Knuth}, title={Computers and Typesetting}, publisher={Addison-Wesley}, year={1986}}
+\end{filecontents*}
+\begin{document}
+Main \cite{knuth}.
+\bibliographystyle{plain}
+\bibliography{bib_other_list_item}
+\section*{Supplement}
+Supplement \cite{supp}.
+\begin{thebibliography}{9}
+\bibitem{supp} S. Upplement. Supplementary work. 2020.
+\end{thebibliography}
+\end{document}

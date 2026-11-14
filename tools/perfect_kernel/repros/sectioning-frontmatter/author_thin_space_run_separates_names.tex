@@ -1,0 +1,14 @@
+% witness: HF14 M2(a) — names parted by a run of spacing commands (`\;\;`), an ICLR author block (2610.20409); the
+%          same shape with `\ \ \ \ ` (2310.10873), 1702.05821, 1508.00093, 2009.12421
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 / 1Univ A 2Univ B"
+% engines: rust int33a = one creator "Ann Able  Bob Baker" holding both affiliations; Perl the same
+% expect:  0 errors, 0 warnings; creators "Ann Able" (Univ A) and "Bob Baker" (Univ B)
+% status:  RED (int33a) -> GREEN (77p)
+\documentclass{article}
+\title{T}
+\author{\textbf{Ann Able}\textsuperscript{1}\;\;\textbf{Bob Baker}\textsuperscript{2}\\
+\textsuperscript{1}Univ A\; \textsuperscript{2}Univ B}
+\begin{document}
+\maketitle
+Body.
+\end{document}

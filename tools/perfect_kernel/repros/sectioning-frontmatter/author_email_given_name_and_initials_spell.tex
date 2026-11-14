@@ -1,0 +1,14 @@
+% witness: 2604.01354 (its author block, shortened); batch 77p r10 A/B (user ruling R10 sends an address no name
+%          spells to the block, so these spellings decide)
+% oracle:  pdflatex 0 errors: four names, the institution, "{diwu, kwchang}@cs.ucla.edu"
+% engines: rust 77p r10 w2 = 0 errors; both addresses on the shared creator (no name spelled "diwu" or "kwchang")
+% expect:  0 errors, 0 warnings; diwu@ the e-mail of Di Wu (the given name and the surname whole), kwchang@ of
+%          Kai-Wei Chang (the initials before the surname), not of Ya-Liang Chang
+% status:  RED (77p r10 w2) -> GREEN (77p r10)
+\documentclass{article}
+\title{T}
+\author{Di Wu, Siyue Liu, Ya-Liang Chang, Kai-Wei Chang \\ Univ A \\ \texttt{\{diwu, kwchang\}@cs.ucla.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

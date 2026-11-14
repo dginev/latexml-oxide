@@ -1,0 +1,33 @@
+% The addresses an entry's line prints, written out one e-mail each, keep the font the line printed them in: a group's
+% declaration (`{\tt \{able, baker\}@x.org}`), a wrapper round each group of a line (`\texttt{\{cole, dorn\}@y.org},
+% \texttt{eden@z.org}`) and a declaration repeated before the next address (`{\tt\small fay@w.org, \tt\small
+% \{gil, hal\}@v.org}`) and a font inside a whole-line wrapper (`\small{\texttt{\{ivy, jon\}@u.org}}`), each address
+% `<text font="typewriter">` (`email_lines::in_line_font`). Review rev100b2 #2 (the reviewer's p15).
+% witness: 1804.05417, 2410.24095, 2311.01166, 2311.04698, 2002.07720
+% oracle:  pdflatex 0 errors: "Univ X, Town", "{able, baker}@x.org", "{cole, dorn}@y.org, eden@z.org",
+%          "fay@w.org, {gil, hal}@v.org", "{ivy, jon}@u.org" in typewriter
+% engines: rust int127a = 0 errors, every address typewriter; 100b r2 = plain text; perl = not run
+% expect:  0 errors, 0 warnings; each author their address, in `<text font="typewriter">`
+% status:  RED (100b r2) -> GREEN (100b r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Bob Baker}
+\author[2]{Cat Cole}
+\author[2]{Dan Dorn}
+\author[2]{Eve Eden}
+\author[3]{Fay Fox}
+\author[3]{Gil Gray}
+\author[3]{Hal Hill}
+\author[4]{Ivy Ink}
+\author[4]{Jon Jay}
+\affil[1]{Univ X, Town \\ {\tt \{able, baker\}@x.org}}
+\affil[2]{Univ Y, City \\ \texttt{\{cole, dorn\}@y.org}, \texttt{eden@z.org}}
+\affil[3]{Univ Z, Port \\ {\tt\small fay@w.org, \tt\small \{gil, hal\}@v.org}}
+\affil[4]{Univ W, Bay \\ \small{\texttt{\{ivy, jon\}@u.org}}}
+\maketitle
+Body.
+\end{document}

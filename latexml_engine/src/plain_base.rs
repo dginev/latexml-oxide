@@ -102,7 +102,7 @@ LoadDefinitions!({
   // Special Characters.
   // Try to give them some sense in math...
   //
-  // \#, \&, \%, \$, \_ math/text dispatch family moved to
+  // \#, \&, \%, \_ math/text dispatch family moved to
   // plain_constructs.rs (which runs in BOTH NODUMP and DUMP paths).
   // The DefPrimitive closures here would have been dump-skipped, leaving
   // them undefined on the dump path; the dispatch macros call into them.
@@ -112,6 +112,21 @@ LoadDefinitions!({
   // Mirror Perl `plain_base.pool.ltxml:L70-77` semantically (Perl uses
   // single Box-dispatch DefPrimitives — Rust's explicit math/text split
   // is the WISDOM #44 documented divergence).
+  //
+  // `\$` stays here, before the format (Perl plain_base.pool.ltxml:76-77): on the dump path the
+  // format's own replaces it — latex.ltx's robust `\$` (`\mathdollar` in math, a role-less `$`,
+  // latex_constructs.pool.ltxml:5421), plain.tex's `\chardef\$`; on the NODUMP path (Perl
+  // Package.pm:2762-2766, no raw latex.ltx) it stays, as in Perl. Defined after the dump, the
+  // OPERATOR stayed and nested over the next `\$` (2605.19762; golden
+  // tests/parse/math_lexemes.tex#escaped_dollar_is_not_an_operator).
+  DefPrimitive!("\\$", {
+    let target = if lookup_bool_sym(pin!("IN_MATH")) {
+      T_CS!("\\lx@math@dollar")
+    } else {
+      T_CS!("\\lx@text@dollar")
+    };
+    digest(Tokens!(target))?
+  });
 
   // Discretionary times; just treat as invisible ?
   // INVISIBLE TIMES (or MULTIPLICATION SIGN = 00D7)
@@ -164,8 +179,11 @@ LoadDefinitions!({
   //======================================================================
   // Low-level bits that appear within alignments or \halign
 
-  // "Initialized" alignment; presets spacing, but since we're ignoring it anyway...
-  Let!("\\ialign", "\\halign");
+  // "Initialized" alignment: plain.tex `\def\ialign{\everycr{}\tabskip\z@skip\halign}`. Perl's
+  // `Let('\ialign','\halign')` (plain_base.pool.ltxml:118) matched it only while `\halign` inserted no `\everycr`
+  // (KNOWN_PERL_ERRORS #1019); the dump branch reads plain.tex's own (repro
+  // kernel-alignment/ialign_clears_everycr_nodump, the rev78b review's finding 3)
+  DefMacro!("\\ialign", r"\everycr{}\tabskip\z@skip\halign");
   // Overlapping alignments.
   // Perl: plain_base.pool.ltxml L121-137
   DefMacro!(
@@ -471,8 +489,10 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\enskip")),
+      // plain.tex:535-537: `\enskip`, `\quad`, `\qquad` are `\hskip` glue; `\enspace`, `\thinspace`,
+      // `\negthinspace` are kerns (plain.tex:532-534).
       stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
-      "isSpace"=>true),
+      "isSpace"=>true, "isSkip" => true),
     )
   });
 
@@ -483,7 +503,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\enspace")),
       stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isKern" => true),
     )
   });
 
@@ -494,7 +514,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\quad")),
       stored_map!("name" => "quad", "width" => Dimension::from_str("1em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isSkip" => true),
     )
   });
 
@@ -506,7 +526,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\qquad")),
       stored_map!("name" => "qquad", "width" => Dimension::from_str("2em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isSkip" => true),
     )
   });
 
@@ -517,7 +537,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\thinspace")),
       stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isKern" => true),
     )
   });
 
@@ -528,7 +548,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\negthinspace")),
       stored_map!("name" => "negthinspace", "width" => Dimension::from_str("-0.16667em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isKern" => true),
     )
   });
 
@@ -543,7 +563,7 @@ LoadDefinitions!({
     if s.is_empty() { return Ok(Vec::new()); }
     Tbox::new(pin(&s), None, None,
       Invocation!(T_CS!("\\hglue"), vec![length.revert()?]),
-      stored_map!("name" => "hglue", "width" => length, "isSpace" => true))
+      stored_map!("name" => "hglue", "width" => length, "isSpace" => true, "isSkip" => true))
   });
   def_primitive_noop("\\vglue Glue")?;
   def_primitive_noop("\\topglue")?;
@@ -600,9 +620,15 @@ LoadDefinitions!({
   // kernel. Faithful literal port. \z@/\m@th/\nulldelimiterspace all exist.
   DefMacro!("\\n@space", r"\nulldelimiterspace\z@ \m@th");
 
-  // \strutbox
+  // \strutbox — plain.tex:587-588 sets the box at format time (latex.ltx
+  // rebuilds it from `\baselineskip` in `\set@fontsize`, :12596-12599, see
+  // `\@setfontsize`). Left void it made every `\strut`-based height 0:
+  // fillwith's `\fillwithnolines` (fillwith.sty:319) stacked ~200 line
+  // coffins instead of ~50 to reach the page goal and l3coffins' quadratic
+  // corner-name growth ran to the TokenLimit (fillwith manual). `\strut`
+  // itself stays inert in text.
   def_macro_noop("\\strut")?;
-  TeX!("\\newbox\\strutbox");
+  TeX!("\\newbox\\strutbox\\setbox\\strutbox=\\hbox{\\vrule height8.5pt depth3.5pt width\\z@}");
   //======================================================================
   // TeX Book, Appendix B. p. 354
 
@@ -664,14 +690,16 @@ LoadDefinitions!({
   Let!("\\sb", T_SUB!());
   Let!("\\:", "\\>");
   // Earlier (L423) `\<TAB>` was Let to `\<CR>`; this overrides it with a
-  // 1em-wide NBSP Box. Perl: DefPrimitiveI("\\\t", undef, sub { Box(UTF(0xA0), ...) });
+  // NBSP Box. Perl: DefPrimitiveI("\\\t", undef, sub { Box(UTF(0xA0), ...) });
+  // `\<TAB>` is `\ ` (plain.tex:506, latex.ltx:559), the font's interword glue, not Perl's fixed 1em
+  // (DIVERGENCES #422).
   DefPrimitive!("\\\t", {
     Tbox::new(
       pin!("\u{00A0}"),
       None,
       None,
       Tokens!(T_CS!("\\\t")),
-      stored_map!("isSpace" => true, "width" => Dimension::from_str("1em")?),
+      stored_map!("isSpace" => true, "isSkip" => true, "width" => crate::tex_character::control_space_width()?),
     )
   });
 
@@ -745,7 +773,13 @@ LoadDefinitions!({
     let font = LookupFont!().unwrap();
     let shape = font.get_shape().unwrap_or(&Cow::Borrowed(""));
     let shapevariant = if shape == "italic" { "normal" } else { "italic" };
-    AssignValue!("font", font.merge(fontmap!(shape => shapevariant)), Some(Scope::Local));
+    // Perl assigns the merged font directly (plain_base.pool.ltxml:604-609);
+    // `MergeFont` is that same local merge, and also keeps `\f@shape` naming
+    // it, as LaTeX's `\em` does through `\itshape`/`\eminnershape`
+    // (latex.ltx:14048-14058) — else a later size switch re-selected the
+    // stale shape and `{\em\small x}` came out upright (content.rs
+    // `merge_font_ref`).
+    MergeFont!(shape => shapevariant);
   });
 
   // Change math font while still in text!
@@ -766,4 +800,4 @@ LoadDefinitions!({
     },
     forbid_math => true);
 });
-// non_typewriter/non_typewriter_t1 moved to tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L338-344)
+// non_typewriter and the encodings' ligature tests live in tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L338-344)

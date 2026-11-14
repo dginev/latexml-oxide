@@ -1,0 +1,29 @@
+% witness: 57l review: setspace's four environments, begun mid-paragraph and in vertical mode —
+%          `{doublespace}`/`{onehalfspace}` begin with `\begingroup` alone (setspace.sty:534-548) and go on
+%          in the paragraph before them, `{singlespace}` begins with `\vskip` (:489-495); all end with
+%          `\par` (`\restore@spacing` :516-523). No corpus witness in the 3,003-paper A/B.
+% oracle:  pdflatex 0 errors: "Before Inner2." | "After2." | "Own para." | "Second." | "Tail. Mid" | "Single." | "End."
+% engines: rust 57k=0 but the text after each environment merged into its last paragraph
+% expect:  0 errors, 0 warnings; the pdflatex paragraphs
+% status:  RED (57k) -> GREEN (57l)
+\documentclass{article}
+\usepackage{setspace}
+\begin{document}
+Before
+\begin{doublespace}
+Inner2.
+\end{doublespace}
+After2.
+
+\begin{onehalfspace}
+Own para.
+
+Second.
+\end{onehalfspace}
+Tail.
+Mid
+\begin{singlespace}
+Single.
+\end{singlespace}
+End.
+\end{document}

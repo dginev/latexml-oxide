@@ -1,0 +1,35 @@
+% elsarticle prints its title page from `\end{frontmatter}` (elsarticle.cls:1303 `\newenvironment{frontmatter}{}
+% {\maketitle}`), with no `\maketitle` in the document. The binding's `{frontmatter}` is no environment of its own (an
+% empty primitive pair, Perl PR #2767), so no deposit runs and the title-page check had no print to read: a word the
+% document's own macro adds to `\@title` after `\title` — 2312.03765's `\subjclass`, `\gdef\@title{\@oldtitle
+% \footnotetext{…}}` — was lost silently. The binding's `\end{frontmatter}` notes the print there
+% (`\lx@note@title@page`, when no `\maketitle` noted one), and the check names the lost words.
+% witness: elsarticle 2312.03765 (`\subjclass` printed in the title's footnote)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Linear extensions", "Waldemar Sieg", "Kazimierz Wielki
+%          University, Bydgoszcz, Poland", "Abstract", "Let X be a space.", the page foot's "2010 Mathematics subject
+%          classification. Primary: 26A15; Secondary: 26A21.", "1. Intro", "Text."
+% engines: rust int139a1 = 0 errors, 0 warnings, the classification lost silently; perl = 0 errors, the classification
+%          lost
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "2010 mathematics subject classification primary secondary"
+%          and the codes' pieces); the frontmatter unchanged
+% status:  RED (int139a1) -> GREEN (107d)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\makeatletter
+\newcommand{\subjclass}[2][2010]{%
+  \let\@oldtitle\@title
+  \gdef\@title{\@oldtitle\footnotetext{#1 \emph{Mathematics subject classification.} #2}}}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{Linear extensions}
+\author{Waldemar Sieg}
+\address{Kazimierz Wielki University, Bydgoszcz, Poland}
+\begin{abstract}
+Let X be a space.
+\end{abstract}
+\subjclass{Primary: 26A15; Secondary: 26A21.}
+\end{frontmatter}
+\section{Intro}
+Text.
+\end{document}

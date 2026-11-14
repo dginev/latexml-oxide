@@ -1,0 +1,31 @@
+% witness: none in the corpus (review probes rev78g eq.tex `gather*`, rev78g2 al.tex/al2.tex align family + `multline*`, nest.tex z5 minipage; amsmath.sty:1230-1252 `\label@in@display`/`\make@display@tag`, :1621-1627 `\math@cr@@@gather`, :1833-1843 `\math@cr@@@align`, :1237-1238 `\@arrayparboxrestore`)
+% oracle:  pdflatex 0 errors; "See 2, 42, 21 and 44." (newlabel g:a {2}: the label is made in the row's tag cell, after the cell group restored `\@currentlabel`; g:b {42}, the step before the display; g:c {21} the row's number; e:a {44}); "Also 22, 23, ??, 47 and 48." (a:a, a:b an untagged align/alignat row's label carried to the next tagged row; m:a a `multline*` makes none; e:b {47} an `aligned` in `equation*`; z:a {48} a minipage label made at once)
+% engines: rust (int47a) = "See 2, 2, 21 and 2." "Also 22, 23, 2, 2 and 2."; 78g r1 "See 41, 42, 21 and 44."; 78g r2 "Also 45, 46, 47, 47 and 47." (the step held at the display start); Perl 0.8.8 the section's for g:a, g:b, e:a
+% expect:  0 errors; g:a the section's "2"; g:b the step's "42"; g:c the row's "21"; e:a (an `equation*`, whose label is made in the display) the step's "44"; a:a "22", a:b "23"; m:a the section's "2" (pdflatex `??`, kept as before); e:b "47"; z:a "48"
+% status:  GREEN (78g r3)
+\documentclass{article}
+\usepackage{amsmath}
+\newcounter{foo}\setcounter{foo}{40}
+\newenvironment{problem}{\par\refstepcounter{foo}\noindent Problem \thefoo.}{\par}
+\begin{document}
+\section{One}
+\section{Two}
+\setcounter{equation}{20}
+\begin{gather*} u=v \refstepcounter{foo}\label{g:a} \\ w=x \end{gather*}
+\refstepcounter{foo}
+\begin{gather*} u=v \label{g:b} \end{gather*}
+\begin{gather} u=v \refstepcounter{foo}\label{g:c} \\ w=x \notag \end{gather}
+\begin{equation*} c=d \refstepcounter{foo}\label{e:a} \end{equation*}
+See \ref{g:a}, \ref{g:b}, \ref{g:c} and \ref{e:a}.
+\begin{problem}
+\begin{align} a&=b \label{a:a}\notag \\ c&=d \end{align}
+\end{problem}
+\begin{problem}
+\begin{alignat}{2} a&=b \notag\label{a:b} \\ c&=d \end{alignat}
+\end{problem}
+\refstepcounter{foo}
+\begin{multline*} a\\ b \label{m:a}\end{multline*}
+\begin{equation*}\begin{aligned} a&=b \label{e:b}\end{aligned}\end{equation*}
+\begin{gather*} a=b \refstepcounter{foo}\text{\begin{minipage}{2cm}\label{z:a}x\end{minipage}}\end{gather*}
+Also \ref{a:a}, \ref{a:b}, \ref{m:a}, \ref{e:b} and \ref{z:a}.
+\end{document}

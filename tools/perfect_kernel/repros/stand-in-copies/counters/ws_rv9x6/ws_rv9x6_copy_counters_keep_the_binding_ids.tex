@@ -1,0 +1,18 @@
+% witness: 2301.03442, 1602.07982 (ws-rv9x6.cls copies: `\newcounter{chapter}`, `\newcounter{section}[chapter]`,
+%          :397-399); 72a review r7 SHOULD 2
+% oracle:  pdflatex with 2301.03442's whole copy (the reduced one here is no complete class): 0 errors, 0 warnings:
+%          "Chapter 1", "Intro", "1. Sec", "1.1. Sub"
+% engines: rust 72a r6-r10 = counter-named ids (`chapter1`, sections `S1` not nested); 67int21 `id1.1` / `Ch0.S1`;
+%          int23 (72b r3's binding chapter counter, which the copy's `\newcounter` keeps) `Ch1`, `Ch1.S1`
+% expect:  0 errors, 0 warnings; ids Ch1, Ch1.S1, Ch1.S1.SS1; "Chapter 1" (LaTeXML's chapter heading), section "1"
+%          (the class's `\thesection` without `addchapnum`)
+% status:  GREEN (int23)
+% preload: ar5iv.sty
+\documentclass{ws-rv9x6}
+\begin{document}
+\chapter{Intro}
+\section{Sec}
+Text.
+\subsection{Sub}
+More.
+\end{document}

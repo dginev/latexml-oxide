@@ -1,0 +1,10 @@
+% witness: 2008.00463 (`\llbracket`), 2508.01413 (`\widearc`), 1708.05248 (`\VERT`); run 340: 163 papers' first error in fourier's math symbols
+% oracle:  pdflatex with fourier.sty (:139-169, 215-227, 271-274, 304-319): 0 errors
+% engines: rust 65x = error (`\llbracket`, `\widearc`, `\VERT`, `\parallelslant` undefined)
+% expect:  0 errors; ⟦ ⟧, ⩽, ⏜ over AB, ⦀, ⫽, ∯ (the `\VERT x \VERT` fence pair: math-parse/fourier_vert_fences.tex)
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage{fourier}
+\begin{document}
+$\llbracket a \rrbracket$, $a \leqslant b$, $\widearc{AB}$, $\VERT$, $a \parallelslant b$, $\oiint f$.
+\end{document}

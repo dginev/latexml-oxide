@@ -2,6 +2,14 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // mathtools.sty:1897-1907 `\xmathstrut{<depth>}` / `\xmathstrut[<dp>]{<ht>}`:
+  // `\vphantom{\mathpalette\xmathstrut@do{#2}}` — a math strut whose box is
+  // scaled by the arguments; here the strut's semantic content is the
+  // `\vphantom` of the height factor (the `\@dblarg` default makes the
+  // optional the same argument). numerica.tex:3431 in `\eval{\[ \frac … \]}`.
+  // Guard: `perfect_kernel_batch54::xmathstrut_is_a_vphantom`.
+  DefMacro!("\\xmathstrut[]{}", "\\vphantom{#2}");
+
   // Perl: mathtools.sty.ltxml
   // Options: fixamsmath, donotfixamsmathbugs, allowspaces, disallowspaces — all ignored
   for option in ["fixamsmath", "donotfixamsmathbugs", "allowspaces", "disallowspaces"].iter() {
@@ -15,8 +23,10 @@ LoadDefinitions!({
 
   RequirePackage!("keyval");
   RequirePackage!("calc");
-  // TODO: add support for mhsetup
-  // RequirePackage!("mhsetup");
+  // mathtools.sty:37 `\RequirePackage{mhsetup}`: its `\MHInternalSyntaxOn`/`Off`, which papers call to write
+  // mathtools-style internals themselves (Perl's binding leaves it a TODO, KNOWN_PERL_ERRORS #693; witnesses 1202.0045,
+  // 1611.02845, 1903.08038). The mhsetup binding raw-loads the file and restores the `:`/`_` catcodes after it.
+  RequirePackage!("mhsetup");
   // Perl L43: RequirePackage('amsmath', withoptions => 1)
   require_package_with_options("amsmath")?;
   // Perl L44-45: AtBeginDocument(sub { RequirePackage('graphicx'); }).
@@ -52,6 +62,7 @@ LoadDefinitions!({
     "shortvdotsadjustabove", "shortvdotsadjustbelow",
     "firstline-afterskip", "lastline-preskip",
     "centered-mhchem-above-below",
+    "original-intertext", "original-shortintertext",
   ] {
     DefKeyVal!("mt", key, "");
   }
@@ -71,6 +82,99 @@ LoadDefinitions!({
       let cs_name = s!("\\@mt@mathtoolsset@{}", key);
       def_macro(T_CS!(&cs_name), None, Tokenize!(val_tex), None)?;
     }
+  });
+
+  // mathtools.sty:88 names its keyval family; classes set mathtools keys
+  // through it (nwejmart.cls:2283 `\setkeys{\MT_options_name:}{original-intertext=false,
+  // original-shortintertext=false}`; TeX Live class census 2026-09-24). The two
+  // keys (:1458, :1533) choose mathtools' or amsmath's `\intertext`/
+  // `\shortintertext`; ours are native, so both values keep them.
+  RawTeX!(r"\expandafter\def\csname MT_options_name:\endcsname{mathtools}
+\define@key{mathtools}{original-intertext}[true]{}
+\define@key{mathtools}{original-shortintertext}[true]{}");
+
+  // mathtools.sty's internals that documents and packages call themselves after `\MHInternalSyntaxOn` (the mhsetup
+  // syntax, :36), as mathtools.sty defines them. The `show_only_refs`/`show_manual_tags` booleans (:252-253) and the
+  // `\MT_showonlyrefs_true:`/`false:` switches (:261-291), which witharrows.sty:1119-1124, :1266-1267 tests and calls
+  // when mathtools is loaded (an undefined boolean left its `\MH_else:`/`\MH_fi:` outside a conditional, 2 Errors per
+  // `{DispWithArrows}`: 2012.15617, 2206.15309, 2309.00504, 2507.07065); the binding does not suppress unreferenced tags,
+  // so a switch sets the boolean only. The paired-delimiter wrappers (:829-841 `\MT_delim_default_inner_wrappers:n`)
+  // a document's own delimiter machinery builds on (xfunctions.sty `\DeclareNameWithDelimiters`: 1704.08847, 1609.02993,
+  // 2310.09182). The matrix begin and end code (:1039-1043; mymatrix.sty's `{bsmallmatrix}`: 1905.08664, 2307.06921).
+  // The short-intertext separations (:1483-1484; 2109.05369's own `\shortintertext`). The cases end code (:1009-1013
+  // `\MH_end_cases:`, which a copied `\newcases` body ends with, `{\MH_end_cases:\right#6}`, :1018): the end of the
+  // binding's `\lx@ams@cases` that `\MT_start_cases:nnnn` opens; the `\right` closing its `\left` is the cases' own
+  // fence there: a null `\right.` goes, the delimiter of an environment `\MT_start_cases:nnnn` read as its right fence
+  // goes with it (`\lx@mt@cases@fenced@`), and any other stays, unfenced, after the cases.
+  RawTeX!(r"\MHInternalSyntaxOn
+\MH_new_boolean:n {show_only_refs}
+\MH_new_boolean:n {show_manual_tags}
+\def\MT_showonlyrefs_true:{\MH_set_boolean_T:n {show_only_refs}}
+\def\MT_showonlyrefs_false:{\MH_set_boolean_F:n {show_only_refs}}
+\newcommand\MT_delim_default_inner_wrappers:n [1]{
+   \@namedef{MT_delim_\MH_cs_to_str:N #1 _star_wrapper:nnn}##1##2##3{
+      \mathopen{}\mathclose\bgroup ##1 ##2 \aftergroup\egroup ##3
+    }
+    \@namedef{MT_delim_\MH_cs_to_str:N #1 _nostarscaled_wrapper:nnn}##1##2##3{
+      \mathopen{##1}##2\mathclose{##3}
+    }
+    \@namedef{MT_delim_\MH_cs_to_str:N #1 _nostarnonscaled_wrapper:nnn}##1##2##3{
+      \ifx.##1\else\mathopen##1\fi##2\ifx.##3\else\mathclose##3\fi
+    }
+  }
+\def\MT_matrix_begin:N #1{%
+  \hskip -\arraycolsep
+  \MH_let:NwN \@ifnextchar \MH_nospace_ifnextchar:Nnn
+  \array{*\c@MaxMatrixCols #1}}
+\def\MT_matrix_end:{\endarray \hskip -\arraycolsep}
+\def\MH_end_cases:{\lx@end@ams@cases\lx@mt@cases@right}
+\def\lx@mt@cases@right{\@ifnextchar\right\lx@mt@cases@right@{}}
+\def\lx@mt@cases@glyph@\right#1{\ifx.#1\else#1\fi}
+\def\lx@mt@cases@fenced@\right#1{}
+\let\lx@mt@cases@right@\lx@mt@cases@glyph@
+\newdimen\l_MT_above_shortintertext_sep
+\newdimen\l_MT_below_shortintertext_sep
+\MHInternalSyntaxOff");
+  // mathtools.sty:995-1008 `\MT_start_cases:nnnn{sep}{lpreamble}{rpreamble}{delim}`, the begin code `\newcases` gives
+  // a cases environment, which documents call to redefine one (`\renewcommand{\dcases}{\MT_start_cases:nnnn{\quad}
+  // {$\m@th\displaystyle##$\hfil}{$\m@th\displaystyle##$\hfil}{\lbrace}}`: 1906.10268, 2011.05472, 2310.19169,
+  // 2409.19509, 1601.02188): the binding's `\lx@ams@cases` opened as `\newcases` opens it ([`mathtools_newcases`]),
+  // for the environment it begins (`\@currenvir`), its end the environment's own. An end that is `\newcases`'s own,
+  // `\MH_end_cases:\right<d>` (:1018; a copied `{rcases}` ends `\right\}`, a bracket one `\right]`), closes the
+  // `\left` with `<d>`: that is the cases' right fence (review 68x r2 mt1: an unfenced CLOSE glyph and an unparsed
+  // formula before).
+  DefMacro!(T_CS!("\\MT_start_cases:nnnn"), "{}{}{}{}", sub[(_sep, lpre, rpre, ldelim)] {
+    use latexml_core::definition::ExpansionBody;
+    let (lpre, rpre, ldelim) = (Tokens::from(lpre), Tokens::from(rpre), Tokens::from(ldelim));
+    let name = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
+    let name = name.trim();
+    let rdelim = match lookup_meaning(&T_CS!(&format!("\\end{name}"))) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => {
+          let mut end = body.unlist_ref().iter().filter(|t| t.get_catcode() != Catcode::SPACE);
+          match (end.next(), end.next(), end.next()) {
+            (Some(e), Some(r), Some(d))
+              if *e == T_CS!("\\MH_end_cases:") && *r == T_CS!("\\right") && *d != T_OTHER!(".") =>
+            {
+              Some(*d)
+            },
+            _ => None,
+          }
+        },
+        _ => None,
+      },
+      _ => None,
+    };
+    let mut toks = vec![
+      T_CS!("\\let"),
+      T_CS!("\\lx@mt@cases@right@"),
+      T_CS!(if rdelim.is_some() { "\\lx@mt@cases@fenced@" } else { "\\lx@mt@cases@glyph@" }),
+      T_CS!("\\lx@ams@cases"),
+      T_BEGIN!(),
+    ];
+    toks.extend(cases_keys(name, &lpre, &rpre, ldelim, Tokens::new(vec![rdelim.unwrap_or(T_OTHER!("."))])));
+    toks.push(T_END!());
+    Ok(Tokens::new(toks))
   });
 
   // Lookup function for mathtoolsset
@@ -118,8 +222,24 @@ LoadDefinitions!({
       whatsit.set_width(Stored::String(pin!("0pt")));
     });
 
-  DefConstructor!("\\clap{}", "#1");
-  DefConstructor!("\\mathmakebox[][]{}", "#3");
+  // latex.ltx:16409 `\DeclareRobustCommand\clap[1]{\hb@xt@\z@{\hss#1\hss}}`, which mathtools.sty:1539
+  // `\providecommand*\clap[1]{\hb@xt@\z@{\hss#1\hss}}` keeps (and gives an older kernel, as here): a box of its own,
+  // as plain_base.rs's `\rlap`/`\llap`, so a `$…$` in it is a formula there, also when `\clap` is used in math. Perl's mathtools.sty.ltxml:98 `DefConstructor('\clap {}', "#1")`
+  // digested the argument in the current mode, where its `$` ended the enclosing formula (KNOWN_PERL_ERRORS #909):
+  // 2305.03559's `\fillwidthof` = `\mathchoice{…\clap{$\m@th{\displaystyle #3}$}…}` in an `align*` cell, which 68z's
+  // §785 cell-head stop (KPE #880) now expands inside the cell's math, as TeX does. Guard
+  // `perfect_kernel_batch69c::clap_is_a_box_in_math`.
+  if lookup_definition(&T_CS!("\\clap"))?.is_none() {
+    DefMacro!("\\clap{}", r"\hbox to 0pt{\hss#1\hss}");
+  }
+  // mathtools.sty:1576 reads the width with `\setlength\@tempdima{#1}`, i.e. as
+  // a <dimen>: `\widthof{$…$}` (calc) is MEASURED, never typeset. Reading it
+  // as content digested the inner `$…$` inline in the ambient math, ending
+  // math from inside the width's brace group (optidef.sty:106-144
+  // `\bodySubjectTo` = `\mathmakebox[\widthof{$\underset…$}]…` in `align*`:
+  // 58 mode errors; Perl mathtools.sty.ltxml:99 shares the `[]` reader).
+  // Guard: `perfect_kernel_batch54::mathmakebox_width_is_measured_not_typeset`.
+  DefConstructor!("\\mathmakebox[Dimension][]{}", "#3");
   // Ignoring cramped, for now
   DefConstructor!("\\cramped[]{}", "#2");
 
@@ -166,7 +286,7 @@ LoadDefinitions!({
     // Perl L231-234: skip redefinition with Error('ignore', ...).
     let mtstag_cs = T_CS!(&s!("\\@MTStag@{}", name));
     if !is_definable(&mtstag_cs) {
-      Error!("ignore", mtstag_cs, "Ignoring redefinition (\\newtagform) of '{}'", name);
+      Error!("ignore", mtstag_cs, &s!("Ignoring redefinition (\\newtagform) of '{}'", name));
     } else {
     // Perl: $open->unlist, $close->unlist, $style->unlist — preserve CS tokens
     let open_toks: Vec<Token> = open_arg.unlist();
@@ -540,29 +660,34 @@ LoadDefinitions!({
 
   // Perl L502-538: Starred small matrices — \@smallmatrix@star@tmp reads alignment
   // from optional arg or falls back to mathtoolsset smallmatrix-align option.
-  // We use \ifx/#1/ pattern to only pass alignment when explicitly given.
+  // `\lx@mt@smallmatrix{spec}{align}` passes `alignment=` only when the
+  // optional argument was given. The choice is made OUTSIDE the key list:
+  // keyval keys are read unexpanded (keyval.sty `\KV@do`, keyvals.rs
+  // read_keyword_from), so a `\ifx…\fi` in key position would be the key.
+  DefMacro!("\\lx@mt@smallmatrix{}{}",
+    "\\ifx/#2/\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{\\lx@ams@matrix{#1}}{\\lx@ams@matrix{#1,alignment=#2}}");
   DefMacro!("\\csname smallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=matrix,datameaning=matrix,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=matrix,datameaning=matrix,style=\\scriptsize}{#1}");
   DefMacro!("\\csname endsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname psmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right),style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right),style=\\scriptsize}{#1}");
   DefMacro!("\\csname endpsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname bsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right],style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right],style=\\scriptsize}{#1}");
   DefMacro!("\\csname endbsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname Bsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\},style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\},style=\\scriptsize}{#1}");
   DefMacro!("\\csname endBsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname vsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|,style=\\scriptsize}{#1}");
   DefMacro!("\\csname endvsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname Vsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|,style=\\scriptsize}{#1}");
   DefMacro!("\\csname endVsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   // Non-starred small matrices
@@ -618,8 +743,19 @@ LoadDefinitions!({
   );
   // Perl: \multlined[][] → \@multlined@tmp{name=multlined,...}\@@multlined\lx@begin@alignment
   // The \ifx/#1/ pattern: if #1 is empty, /==/ is true and vattach is omitted.
+  // The key list is assembled by `\edef` BEFORE the keyval read (keys are read
+  // unexpanded, keyvals.rs read_keyword_from), so the conditionals never sit
+  // in key position.
+  // mathtools.sty:677-688, 795-812 (`\MT_test_for_tcb_other:nnnnn`): each of the two optionals is
+  // the position when it is `t`, `c` or `b` (after expansion, as `\MH_if:w t#1` expands it: a
+  // macro holding `t` is the position) and the width otherwise, in either order; Perl's
+  // `[][]` (mathtools.sty.ltxml:581-585) took the first as the position (`[4cm][b]` → vattach "4cm").
+  RawTeX!(r"\def\lx@mt@multlined@pos@t{}\def\lx@mt@multlined@pos@c{}\def\lx@mt@multlined@pos@b{}
+\def\lx@mt@multlined@opt#1{\ifx/#1/\else
+  \ifcsname lx@mt@multlined@pos@\expandafter\detokenize\expandafter{\romannumeral-`\0#1}\endcsname
+    vattach=#1,\else width=#1,\fi\fi}");
   DefMacro!("\\multlined[][]",
-    "\\@ams@multirow@bindings{name=multlined,\\ifx/#1/\\else vattach=#1,\\fi\\ifx/#2/\\else width=#2,\\fi}\\@@multlined\\lx@begin@alignment");
+    "\\edef\\lx@mt@multlined@keys{name=multlined,\\lx@mt@multlined@opt{#1}\\lx@mt@multlined@opt{#2}}\\expandafter\\@ams@multirow@bindings\\expandafter{\\lx@mt@multlined@keys}\\@@multlined\\lx@begin@alignment");
   DefMacro!("\\endmultlined", "\\lx@end@alignment\\@end@multlined");
   DefPrimitive!("\\@end@multlined", { egroup()?; });
 
@@ -664,6 +800,15 @@ LoadDefinitions!({
     "\\lx@ams@cases{name=cases*,meaning=cases,left=\\lx@left\\{,style=\\textstyle,conditionmode=text}");
   DefMacro!("\\csname endcases*\\endcsname", "\\lx@end@ams@cases");
 
+  // mathtools.sty:1015-1024: `\newcases{name}{sep}{lpreamble}{rpreamble}{ldelim}{rdelim}` (and `\renewcases`) defines
+  // a cases environment of the predefined ones' shape, which the bindings above are as `\lx@ams@cases`: its
+  // delimiters, `\displaystyle` when the left preamble sets it, and math conditions when the right preamble is a
+  // `$…$` cell. `\newcases` was the first error of 93 run-340 papers (witnesses 2604.21785, 2103.12049).
+  DefMacro!("\\newcases{}{}{}{}{}{}", sub[(name, _sep, lpre, rpre, ldelim, rdelim)] {
+    Ok(mathtools_newcases(name, &lpre, &rpre, ldelim, rdelim))
+  });
+  Let!("\\renewcases", "\\newcases");
+
   // Perl mathtools.sty.ltxml L638 defines \MoveEqLeft as bare T_ALIGN —
   // i.e. the tokenizer-level `&` alignment tab. The string `"&"` below
   // tokenizes to the same alignment tab under the math catcode regime
@@ -676,17 +821,29 @@ LoadDefinitions!({
   // — any improvement belongs upstream (layout/frame rendering).
   DefMacro!("\\Aboxed{}", "#1");
 
-  // Perl mathtools.sty.ltxml L644-645 defines both `\ArrowBetweenLines` and
-  // its star form as empty tokens. The Rust `None` gives the same empty
-  // expansion. Upstream Perl also flags the "make it do something" TODO.
-  DefMacro!("\\ArrowBetweenLines[]", None);
-  DefMacro!("\\csname ArrowBetweenLines*\\endcsname[]", None);
+  // mathtools.sty:1299-1322: `\ArrowBetweenLines*[\Updownarrow]` first ends an empty row (`\\`,
+  // its height cancelled by a negative `\noalign` skip), then sets the arrow in a row of its own —
+  // `&&\quad<arrow>` starred, `<arrow>\quad` otherwise. Both rows are `\notag`ged unless
+  // `\in@{\@currenvir}{alignedat,aligned,gathered}` holds (:1307-1316); that is a substring test, so it
+  // also holds in `align` and `gather`, where pdflatex numbers both rows (a=b (1), arrow (3), empty
+  // (2)); in `alignat` neither. The empty row's number is used up but not shown: the ams row
+  // rearrangement drops an empty row, as Perl amsmath.sty.ltxml:400-415 does, so the XML reads (1),
+  // (3). Repro alignment-bindings/arrow_rows_in_align_are_numbered.
+  // Perl's empty expansions (mathtools.sty.ltxml:644-654) dropped the arrow and left the starred
+  // `*[\Downarrow]` as cell text (a `\csname …*\endcsname` the source cannot reach). The branch is chosen
+  // before its tabs are read (`\@firstoftwo`/`\@secondoftwo`): a tab in the skipped branch of a conditional
+  // would end the cell (tex.web §342, KNOWN_PERL_ERRORS #1183), where mathtools passes it braced (`{&}`).
+  RawTeX!(r"\def\lx@mt@notag@unless@inner{\expandafter\in@\expandafter{\@currenvir}{alignedat,aligned,gathered}%
+  \ifin@\else\notag\fi}");
+  DefMacro!("\\ArrowBetweenLines OptionalMatch:* [Default:\\Updownarrow]",
+    "\\lx@mt@notag@unless@inner\\\\\\lx@mt@notag@unless@inner\\ifx.#1.\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{#2\\quad}{&&\\quad#2}\\\\");
   DefMacro!("\\vdotswithin{}",
     "\\mathmakebox[\\widthof{\\ensuremath{{}#1{}}}][c]{\\vdots}");
-  DefMacro!("\\shortvdotswithin{}",
-    "\\MTFlushSpaceAbove & \\vdotswithin{#1} \\MTFlushSpaceBelow");
-  DefMacro!("\\csname shortvdotswithin*\\endcsname{}",
-    "\\MTFlushSpaceAbove \\vdotswithin{#1} & \\MTFlushSpaceBelow");
+  // mathtools.sty:1338-1344 `\shortvdotswithin` is `\@ifstar`: starred `\vdotswithin{#2}&`, else
+  // `&\vdotswithin{#2}`; Perl's `\csname shortvdotswithin*\endcsname` (mathtools.sty.ltxml:650-654)
+  // is unreachable from the source, which read `*` as the argument.
+  DefMacro!("\\shortvdotswithin OptionalMatch:* {}",
+    "\\MTFlushSpaceAbove\\ifx.#1.\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{&\\vdotswithin{#2}}{\\vdotswithin{#2}&}\\MTFlushSpaceBelow");
   DefMacro!("\\MTFlushSpaceAbove", None);
   DefMacro!("\\MTFlushSpaceBelow", "\\\\");
 
@@ -737,18 +894,25 @@ LoadDefinitions!({
     def_macro(T_CS!(&star_cs_name),
       parse_parameters("{}", &T_CS!(&star_cs_name), true)?,
       ExpansionBody::Tokens(Tokens::new(star_body_toks)), None)?;
-    // Nostar variant: @nostar@wrapper{#1 ldel}{#2}{#1 rdel}
+    // Nostar variant: @nostar@wrapper{\<size>l ldel}{#2}{\<size>r rdel} — mathtools.sty:899-902
+    // `\@nameuse{\MH_cs_to_str:N ##1 l}`: a size `[\big]` is `\bigl`/`\bigr`, an undefined one `\relax`; Perl puts the
+    // size itself before the delimiter. With no size this binding builds `\csname\endcsname` (`\relax`) where mathtools
+    // takes its unscaled branch (:886-892) — the same delimiters, a shortcut.
     let nostar_cs_name = s!("\\MT@delim@{}@nostar", cmd_name);
+    let sized = |suffix: Token| -> Vec<Token> {
+      vec![T_CS!("\\csname"), T_CS!("\\expandafter"), T_CS!("\\@gobble"), T_CS!("\\string"), T_PARAM!(),
+        T_OTHER!("1"), suffix, T_CS!("\\endcsname")]
+    };
     let mut nostar_body_toks: Vec<Token> = vec![T_CS!(&nostar_wrapper_cs)];
     nostar_body_toks.push(T_BEGIN!());
-    nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("1"));
+    nostar_body_toks.extend(sized(T_LETTER!("l")));
     nostar_body_toks.extend(ldel_toks.iter().cloned());
     nostar_body_toks.push(T_END!());
     nostar_body_toks.push(T_BEGIN!());
     nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("2"));
     nostar_body_toks.push(T_END!());
     nostar_body_toks.push(T_BEGIN!());
-    nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("1"));
+    nostar_body_toks.extend(sized(T_LETTER!("r")));
     nostar_body_toks.extend(rdel_toks.iter().cloned());
     nostar_body_toks.push(T_END!());
     def_macro(T_CS!(&nostar_cs_name),
@@ -763,139 +927,78 @@ LoadDefinitions!({
     def_macro(cs, None, dispatch_toks, None)?;
   });
 
-  // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body}
-  // Perl: creates \cmd@inner with n args expanding to body + \cmd@after,
-  // then \cmd with OptionalMatch:* [] dispatching to construct:
-  //   star:  \left ldel \def\delimsize{\middle} \def\cmd@after{\right rdel} \cmd@inner
-  //   [opt]: opt ldel \def\delimsize{opt} \def\cmd@after{opt rdel} \cmd@inner
-  //   plain: ldel \def\delimsize{} \def\cmd@after{rdel} \cmd@inner
+  // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body} and the XPP form with pre- and postcode, as mathtools.sty
+  // :924-990 (`\DeclarePairedDelimiterXPP`, `\MT_delim_inner_generator:nnnnnnn`): in a group, `\delimsize` is the optional
+  // size (`\middle` starred, empty by default), then the precode, the left delimiter, the body, the right delimiter, the
+  // postcode. A starred delimiter is `\left`/`\right`; a sized one takes `\<size>l`/`\<size>r` before it
+  // (`\csname\MH_cs_to_str:N\delimsize l\endcsname`, `\relax` when undefined), and the delimiters themselves may use
+  // `\delimsize`. Perl (mathtools.sty.ltxml:677-692) puts the size itself before the delimiter and defines
+  // `\delimsize` outside any group: with `\delimsize` in the delimiters (`[\cbig]` where `\cbig#1` is
+  // `\mathopen{\hbox{$\big#1$}}`) the size read the delimiter's `\delimsize` as its argument and the closing `$` of
+  // its box was swallowed — 2609.17447, 100 such pairs, Fatal TooManyErrors.
+  fn declare_paired_delimiter_x(cs: Token, n: usize, pre: Vec<Token>, ldel: Vec<Token>, rdel: Vec<Token>,
+    post: Vec<Token>, body: Vec<Token>) -> Result<()> {
+    use latexml_core::definition::ExpansionBody;
+    let cmd = cs.to_string();
+    let inner_cs_name = s!("{}@inner", cmd);
+    let lsize_cs_name = s!("{}@lsize", cmd);
+    let rsize_cs_name = s!("{}@rsize", cmd);
+    let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
+    // The precode, the delimiters and the postcode are in the command the arguments are read by, as mathtools.sty:953-988
+    // generates it, so they may use them (`\DeclarePairedDelimiterXPP\expect[2]{\mathbb{E}_{#1}}[]{}{#2}`, 2310.04475;
+    // Perl's mathtools.sty.ltxml:702-708 puts them before the arguments: the `#` reached the stomach); the dispatcher
+    // gives each call its sizes.
+    let mut inner_body_toks = pre;
+    inner_body_toks.push(T_CS!(&lsize_cs_name));
+    inner_body_toks.extend(ldel);
+    inner_body_toks.extend(body);
+    inner_body_toks.push(T_CS!(&rsize_cs_name));
+    inner_body_toks.extend(rdel);
+    inner_body_toks.extend(post);
+    inner_body_toks.push(T_CS!("\\endgroup"));
+    def_macro(T_CS!(&inner_cs_name),
+      parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
+      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
+    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
+      Some(ExpansionBody::Closure(Rc::new(move |args| {
+        let is_star = !args[0].is_empty();
+        let size: Vec<Token> = if is_star { vec![T_CS!("\\middle")] } else { args[1].unlist_cow().to_vec() };
+        let size_cs = size.iter().find(|t| t.get_catcode() != Catcode::SPACE).copied();
+        // One side's sizing: `\left`/`\right`, or `\csname<size name><l|r>\endcsname` (`\MH_cs_to_str:N` is
+        // `\string` without its first character), or nothing.
+        let side = |left: bool| -> Vec<Token> {
+          if is_star {
+            vec![T_CS!(if left { "\\left" } else { "\\right" })]
+          } else if let Some(first) = size_cs {
+            let name = first.to_string();
+            let mut toks = vec![T_CS!("\\csname")];
+            toks.extend(name.chars().skip(1).chain([if left { 'l' } else { 'r' }]).map(|c| CharToken!(c)));
+            toks.push(T_CS!("\\endcsname"));
+            toks
+          } else {
+            vec![]
+          }
+        };
+        let mut toks: Vec<Token> = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\delimsize"), T_BEGIN!()];
+        toks.extend(size.iter().copied());
+        toks.push(T_END!());
+        toks.extend([T_CS!("\\def"), T_CS!(&lsize_cs_name), T_BEGIN!()]);
+        toks.extend(side(true));
+        toks.extend([T_END!(), T_CS!("\\def"), T_CS!(&rsize_cs_name), T_BEGIN!()]);
+        toks.extend(side(false));
+        toks.push(T_END!());
+        toks.push(T_CS!(&inner_cs_name));
+        Ok(Tokens::new(toks))
+      }))), None)?;
+    Ok(())
+  }
   DefPrimitive!("\\DeclarePairedDelimiterX DefToken [Number] {} {} {}", sub[(cs, nargs, ldel, rdel, body)] {
-    use latexml_core::definition::ExpansionBody;
-    let cmd = cs.to_string();
-    let n = nargs.value_of() as usize;
-    let ldel_toks: Vec<Token> = ldel.unlist();
-    let rdel_toks: Vec<Token> = rdel.unlist();
-    let body_toks: Vec<Token> = body.unlist();
-    // Create \cmd@inner: n args, body = user_body + \cmd@after
-    let inner_cs_name = s!("{}@inner", cmd);
-    let after_cs_name = s!("{}@after", cmd);
-    let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    let mut inner_body_toks = body_toks;
-    inner_body_toks.push(T_CS!(&after_cs_name));
-    def_macro(T_CS!(&inner_cs_name),
-      parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
-      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
-    // Create main \cmd with OptionalMatch:* [] expansion closure.
-    // Move inner_cs_name / after_cs_name / ldel_toks / rdel_toks
-    // directly into the closure capture — none are used after this
-    // point, so four setup-time clones are avoided.
-    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
-      Some(ExpansionBody::Closure(Rc::new(move |args| {
-        let star = &args[0]; // OptionalMatch:*
-        let opt = &args[1];  // []
-        let is_star = !star.is_empty();
-        let has_opt = !opt.is_empty();
-        let mut toks: Vec<Token> = vec![];
-        // Prefix: \left (star), opt tokens (sized), or nothing (plain)
-        if is_star {
-          toks.push(T_CS!("\\left"));
-        } else if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        }
-        // Left delimiter
-        toks.extend(ldel_toks.iter().cloned());
-        // \def\delimsize{...}
-        toks.push(T_CS!("\\def"));
-        toks.push(T_CS!("\\delimsize"));
-        toks.push(T_BEGIN!());
-        if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        } else if is_star {
-          toks.push(T_CS!("\\middle"));
-        }
-        toks.push(T_END!());
-        // \def\cmd@after{... rdel}
-        toks.push(T_CS!("\\def"));
-        toks.push(T_CS!(&after_cs_name));
-        toks.push(T_BEGIN!());
-        if is_star {
-          toks.push(T_CS!("\\right"));
-        } else if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        }
-        toks.extend(rdel_toks.iter().cloned());
-        toks.push(T_END!());
-        // \cmd@inner
-        toks.push(T_CS!(&inner_cs_name));
-        Ok(Tokens::new(toks))
-      }))), None)?;
+    declare_paired_delimiter_x(cs, nargs.value_of() as usize, Vec::new(), ldel.unlist(), rdel.unlist(), Vec::new(),
+      body.unlist())?;
   });
-
-  // \DeclarePairedDelimiterXPP — most general form (with pre/post code)
-  // Perl: same as X but with precode before delimiters and postcode after.
   DefPrimitive!("\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}", sub[(cs, nargs, pre, ldel, rdel, post, body)] {
-    use latexml_core::definition::ExpansionBody;
-    let cmd = cs.to_string();
-    let n = nargs.value_of() as usize;
-    let ldel_toks: Vec<Token> = ldel.unlist();
-    let rdel_toks: Vec<Token> = rdel.unlist();
-    let body_toks: Vec<Token> = body.unlist();
-    let pre_toks: Vec<Token> = pre.unlist();
-    let post_toks: Vec<Token> = post.unlist();
-    // Create \cmd@inner: n args, body = user_body + \cmd@after + postcode
-    let inner_cs_name = s!("{}@inner", cmd);
-    let after_cs_name = s!("{}@after", cmd);
-    let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    let mut inner_body_toks = body_toks;
-    inner_body_toks.push(T_CS!(&after_cs_name));
-    inner_body_toks.extend(post_toks.iter().cloned());
-    def_macro(T_CS!(&inner_cs_name),
-      parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
-      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
-    // Create main \cmd with OptionalMatch:* [] expansion closure.
-    // Move the captured Vecs/Strings directly — no setup-time clones.
-    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
-      Some(ExpansionBody::Closure(Rc::new(move |args| {
-        let star = &args[0];
-        let opt = &args[1];
-        let is_star = !star.is_empty();
-        let has_opt = !opt.is_empty();
-        let mut toks: Vec<Token> = vec![];
-        // Precode
-        toks.extend(pre_toks.iter().cloned());
-        // Prefix
-        if is_star {
-          toks.push(T_CS!("\\left"));
-        } else if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        }
-        // Left delimiter
-        toks.extend(ldel_toks.iter().cloned());
-        // \def\delimsize{...}
-        toks.push(T_CS!("\\def"));
-        toks.push(T_CS!("\\delimsize"));
-        toks.push(T_BEGIN!());
-        if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        } else if is_star {
-          toks.push(T_CS!("\\middle"));
-        }
-        toks.push(T_END!());
-        // \def\cmd@after{... rdel}
-        toks.push(T_CS!("\\def"));
-        toks.push(T_CS!(&after_cs_name));
-        toks.push(T_BEGIN!());
-        if is_star {
-          toks.push(T_CS!("\\right"));
-        } else if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        }
-        toks.extend(rdel_toks.iter().cloned());
-        toks.push(T_END!());
-        // \cmd@inner
-        toks.push(T_CS!(&inner_cs_name));
-        Ok(Tokens::new(toks))
-      }))), None)?;
+    declare_paired_delimiter_x(cs, nargs.value_of() as usize, pre.unlist(), ldel.unlist(), rdel.unlist(),
+      post.unlist(), body.unlist())?;
   });
 
   // \reDeclarePairedDelimiterInnerWrapper\cmd{star|nostar}{body}
@@ -1069,3 +1172,85 @@ LoadDefinitions!({
   DefMacro!("\\splitdfrac{}{}",
     "\\displaystyle\\@ams@multirow@bindings{name=splitdfrac}\\@@multlined\\lx@begin@alignment #1 \\\\\\\\ #2 \\lx@end@alignment\\@end@multline");
 });
+
+/// The `\lx@ams@cases` keys of a cases environment `name` whose preambles and delimiters are those `\newcases` and
+/// `\MT_start_cases:nnnn` take (mathtools.sty:995-1019): its delimiters (a `.` or empty one is none), `\displaystyle`
+/// when the left preamble sets it, and math conditions when the right preamble is a `$…$` cell.
+fn cases_keys(
+  name: &str,
+  lpre: &Tokens,
+  rpre: &Tokens,
+  ldelim: Tokens,
+  rdelim: Tokens,
+) -> Vec<Token> {
+  let display = lpre
+    .unlist_ref()
+    .iter()
+    .any(|t| *t == T_CS!("\\displaystyle"));
+  let math_conditions = rpre
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::MATH);
+  let mut keys: Vec<Token> = ExplodeText!(&format!("name={name},meaning=cases,"));
+  for (key, delimiter, cs) in [
+    ("left", ldelim, "\\lx@left"),
+    ("right", rdelim, "\\lx@right"),
+  ] {
+    let text = delimiter.clone().untex();
+    if !matches!(text.trim(), "" | ".") {
+      keys.extend(ExplodeText!(&format!("{key}=")));
+      keys.push(T_CS!(cs));
+      keys.extend(delimiter.unlist());
+      keys.extend(ExplodeText!(","));
+    }
+  }
+  keys.extend(ExplodeText!("style="));
+  keys.push(T_CS!(if display {
+    "\\displaystyle"
+  } else {
+    "\\textstyle"
+  }));
+  keys.extend(ExplodeText!(&format!(
+    ",conditionmode={}",
+    if math_conditions { "math" } else { "text" }
+  )));
+  keys
+}
+
+/// The definitions `\newcases` makes (mathtools.sty:1015-1019): `\<name>` opens `\lx@ams@cases` with the keys its
+/// arguments decide ([`cases_keys`]), `\end<name>` closes it.
+fn mathtools_newcases(
+  name: Tokens,
+  lpre: &Tokens,
+  rpre: &Tokens,
+  ldelim: Tokens,
+  rdelim: Tokens,
+) -> Tokens {
+  let name = name.untex();
+  let name = name.trim();
+  let keys = cases_keys(name, lpre, rpre, ldelim, rdelim);
+  let mut toks = vec![T_CS!("\\expandafter"), T_CS!("\\def"), T_CS!("\\csname")];
+  toks.extend(ExplodeText!(name));
+  toks.extend([
+    T_CS!("\\endcsname"),
+    T_BEGIN!(),
+    T_CS!("\\lx@ams@cases"),
+    T_BEGIN!(),
+  ]);
+  toks.extend(keys);
+  toks.extend([
+    T_END!(),
+    T_END!(),
+    T_CS!("\\expandafter"),
+    T_CS!("\\def"),
+    T_CS!("\\csname"),
+  ]);
+  toks.extend(ExplodeText!(&format!("end{name}")));
+  toks.extend([
+    T_CS!("\\endcsname"),
+    T_BEGIN!(),
+    T_CS!("\\lx@end@ams@cases"),
+    T_END!(),
+  ]);
+  Tokens::new(toks)
+}

@@ -8,9 +8,17 @@
 //! and is left to OmniBus/the kernel.
 use latexml_package::prelude::*;
 
+use crate::and_by_meaning::and_runs;
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // ecai.cls loads no amsmath (67 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them unloaded,
+  // its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   // Eager xcolor preload removed for Perl parity: it makes a later document
   // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
@@ -31,10 +39,32 @@ LoadDefinitions!({
   // "First Last" ends up with exactly affiliations A and D — not all of them piled
   // onto the last author, which is what the generic OmniBus `\author`/`\address`
   // produced. Witness 2501.13598 (html_feedback#6571: "Broken Affiliations"-class).
-  DefMacro!(
-    "\\author OptionalSemiverbatim {}",
-    "\\lx@add@creator[role=author,annotations={#1}]{#2}"
-  );
+  // The class's earlier versions (ecai.cls 2020) take every name in one `\author`, parted by `\and` (:889
+  // `\def\and{{\enspace \rm and \enspace}}`), each name's affiliation its `\institute{…}` (below):
+  // `\author{Kenneth Skiba\institute{…} \and Matthias Thimm$^1$}`
+  // (2008.02735). So a block parted by a top-level `\and`, or the current class's `\author[A,D]{…}`, is read as a
+  // per-author class's is (`\lx@add@authors@append`); any other block is one `\author` as written, as Perl adds it:
+  // names parted only by `\ ` with a `\\` line of more names (`\author{Martin C. Cooper \ Andreas Herzig \ Faustine
+  // Maffre \\ Fr\'{e}d\'{e}ric Maris \ Pierre R\'{e}gnier\institute{IRIT, …}}`, 1606.03244) read the second line as an
+  // affiliation when split, two authors lost to it.
+  DefMacro!("\\author OptionalSemiverbatim {}", sub[(addresses, names)] {
+    // (an `\and` written, as before, or held in a macro of the document's, which the separator query reads as the
+    // kernel's: `and_by_meaning`, Option C P2-5)
+    let ands = and_runs(names.unlist_ref(), &[T_CS!("\\and")])?;
+    let and_list = !ands.top_level(names.unlist_ref()).is_empty() || ands.inked > 0;
+    let addresses = addresses.unwrap_or_default();
+    Ok(if and_list || !addresses.is_empty() {
+      Invocation!("\\lx@add@authors@append[annotations={#1}]{#2}", vec![Some(addresses), Some(names)])
+    } else {
+      Invocation!("\\lx@add@creator[role=author,annotations={#1}]{#2}", vec![Some(addresses), Some(names)])
+    })
+  });
+  // `\institute{…}` inside `\author` (ecai.cls 2020:450, a `\thanks` printing the institute as the author's
+  // footnote): the affiliation of the author it follows, as the institute it names (1606.03244's "IRIT, University of
+  // Toulouse III, …", 2008.02735). Defined for every class version, as one binding serves them all: the current
+  // ecai.cls comments it out (:559), and its documents do not use it. OmniBus's llncs-style `\institute`, a list of
+  // affiliations numbered for `\inst`, is no ecai command (inside a split author block it left a nameless creator).
+  DefMacro!("\\institute{}", "\\lx@add@affiliation{#1}");
   DefMacro!(
     "\\address OptionalSemiverbatim {}",
     "\\lx@add@contact[label={#1},role=affiliation]{#2}"

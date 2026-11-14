@@ -1,0 +1,28 @@
+% caption continues a float for its first caption step only: the step sets the caption flag, and the next step finds
+% it set and clears the flags (`\caption@ifcounter`, caption.sty:590-599), so a second caption, or a `\caption` after
+% a `\phantomcaption`, in a continued float steps the counter. A first 58h cut kept the continuation until the next
+% float began: the second caption repeated the number and every later float of the type was one short. This copy runs
+% `\refstepcounter` with its kernel meaning.
+% witness: none (synthesized; the 58h review).
+% Guard: perfect_kernel_batch58::continued_float_continues_one_step.
+% status:  GREEN (58h)
+% oracle:  pdflatex 0 errors; captions Figure 1, 1, 2, 3, 4 (a, b), 5 (a), 6, 7 — as here; "Refs: 1 1 2 3; 4 4a 4 4b 5 5a
+%          5 6 7", where the `\ref`s of b, f and h differ here (a label after a continued float's first caption or
+%          `\phantomcaption` names the float's last step: RED `captions-floats/label_after_a_continued_caption`).
+% engines: rust 58h first cut: 1 1 1 2; the later floats one short.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\begin{document}
+\begin{figure}\caption{A}\label{a}\end{figure}
+\begin{figure}\ContinuedFloat\caption{B}\label{b}\caption{C}\label{c}\end{figure}
+\begin{figure}\caption{D}\label{d}\end{figure}
+\begin{figure}\begin{subfigure}{.3\linewidth}X\caption{sa}\label{sa}\end{subfigure}\caption{E}\label{e}\end{figure}
+\begin{figure}\ContinuedFloat\begin{subfigure}{.3\linewidth}Y\caption{sb}\label{sb}\end{subfigure}\phantomcaption\label{f}\end{figure}
+\begin{figure}\begin{subfigure}{.3\linewidth}Z\caption{sc}\label{sc}\end{subfigure}\caption{G}\label{g}\end{figure}
+\begin{figure}\ContinuedFloat\phantomcaption\label{h}\caption{H}\label{hh}\end{figure}
+\begin{figure}\caption{I}\label{i}\end{figure}
+Refs: \ref{a} \ref{b} \ref{c} \ref{d}; \ref{e} \ref{sa} \ref{f} \ref{sb} \ref{g} \ref{sc} \ref{h} \ref{hh} \ref{i}.
+\end{document}

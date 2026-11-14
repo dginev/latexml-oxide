@@ -1,0 +1,20 @@
+% mechanism: a printing call read later (`\footremember{c}{…}` … `\footrecall{c}`) on a marked names line whose Perl
+%   split would state a false owner (an address line made a creator): the decline would write the block whole (CR7d),
+%   so where only the printing call drives it the replay is kept (`emit::declaration_reads_past`)
+% witness: synthetic (review revFNR1 u01 with a recall)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able1 , Bob Baker2∗ , and Carl Cole1∗", "1 Univ X", "2 Univ Y"
+% engines: rust e6a6c93a18 three creators, 3 warnings (Carl Cole's mark given its number, the note's plain text, the
+%   content check "1 2"); FNR1 one creator of the whole block
+% expect:  0 errors, 3 warnings; the base's three creators
+% status:  RED (FNR1) -> GREEN (perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand{\footremember}[2]{%
+    \footnote{#2}
+    \newcounter{#1}
+    \setcounter{#1}{\value{footnote}}
+}
+\newcommand{\footrecall}[1]{\footnotemark[\value{#1}]}
+\newcommand\affil[1]{${}^{#1}$}
+\title{T}
+\author{Ann Able\affil{1}, Bob Baker\affil{2}\footremember{c}{Corresponding author.}, and Carl Cole\affil{1}\footrecall{c}\\ \affil{1} Univ X\\ \affil{2} Univ Y}
+\begin{document}\maketitle Body.\end{document}

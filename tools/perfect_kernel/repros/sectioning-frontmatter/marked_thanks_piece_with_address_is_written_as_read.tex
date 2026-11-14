@@ -1,0 +1,15 @@
+% mechanism: as `marked_thanks_piece_is_written_as_read`, the last piece holding an address: the piece's own tokens
+%   (`\lx@affiliation@withsup`), whose inner `$^{*}$` legend and address go to the name showing `*`
+% witness: review revG5 finding 1 (synthetic, the `: a@x.org` sibling)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗ and Bob Baker2∗", the footnote "∗1 Univ A; 2 Univ B. ∗ Corresponding author: a@x.org"
+% engines: off = Ann: Univ A, the `*` note "Corresponding author", email a@x.org; Bob: Univ B.; `=2` (KEY1b) = the note
+%   and the address lost, 2 Warnings
+% expect:  0 errors 0 warnings; `=2` as off
+% status:  RED (KEY1b `=2`) -> GREEN (KEY1c)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,*}$ and Bob Baker$^{2}$\thanks{$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author: a@x.org}}
+\maketitle
+Text.
+\end{document}

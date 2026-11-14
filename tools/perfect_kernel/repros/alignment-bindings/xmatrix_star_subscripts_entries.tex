@@ -1,0 +1,12 @@
+% witness: K13 stage-2 audit (57h): physics.sty:636 `\DeclareDocumentCommand\xmatrix{ s m m m }`;
+%          Perl physics.sty.ltxml:600-615 reads the star and subscripts each entry; the port dropped it
+% oracle:  pdflatex 0 errors; a_{11} a_{12} / a_{21} a_{22}, b_1 b_2 b_3, c / c, x (1×1: no index,
+%          physics.sty:647; Perl x_1, KPE #314)
+% engines: rust 57h=0 but the star read as the item (`*&*\\&*{2}`, the entries lost); perl: subscripted
+% expect:  0 errors; tex `\begin{pmatrix}a_{11}&a_{12}\\ a_{21}&a_{22}\end{pmatrix}…`
+% status:  RED (57h) -> GREEN (57i)
+\documentclass{article}
+\usepackage{amsmath,physics}
+\begin{document}
+\[\begin{pmatrix}\xmatrix*{a}{2}{2}\end{pmatrix} \quad \begin{pmatrix}\xmatrix*{b}{1}{3}\end{pmatrix} \quad \begin{pmatrix}\xmatrix{c}{2}{1}\end{pmatrix} \quad \begin{pmatrix}\xmatrix*{x}{1}{1}\end{pmatrix}\]
+\end{document}

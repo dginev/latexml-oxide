@@ -1,0 +1,14 @@
+% witness: 1708.01427 shape (`\author{Klemens Fellner and Bao Quoc Tang}` with one `\address`); 63e review r7 finding 4
+% oracle:  pdflatex 0 errors: "KLEMENS FELLNER AND BAO QUOC TANG", the address "Graz" under both
+% engines: rust (63e r12) = 2 authors, Graz only with Tang (0 errors, silent); Perl one author holding Graz
+%          (amsart.cls.ltxml `\address` → `\lx@add@address`)
+% expect:  2 creators, each with the address Graz; 0 errors
+% status:  RED (open; OD #459 residual: `annotate=new` here would break the up-front idiom
+%          `\author{A}\author{B}\address{X}\address{Y}` that distribute_upfront_contacts deals out, 2308.06214)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Klemens Fellner and Bao Quoc Tang}
+\address{Graz}
+\maketitle
+\end{document}

@@ -1,0 +1,12 @@
+% witness: sapthesis 2503.03277, 2403.20315 (sapthesis.cls `\ProcessOptionsX[sap]<>`, raw-loaded under the
+%          rawclasses lever); side file xkvemptyfam.cls
+% oracle:  pdflatex 0 errors, "Lang: english; side: one; binding: 0.6cm; key: found."
+% engines: rust 67o1 = 4 errors (`Option 'english'`/`'binding=0.6cm' is not valid`, `\SAPlang`/`\SAPbinding`
+%          undefined; `<>` read as the default family `xkvemptyfam.cls`); perl (rawclasses) = 3 errors (KeyVals drops
+%          the empty family, KNOWN_PERL_ERRORS #212) and "key: missing"
+% expect:  0 errors; the paragraph reads "Lang: english; side: one; binding: 0.6cm; key: found."
+% status:  RED (67o1) -> GREEN (67p)
+\documentclass[english,oneside,binding=0.6cm]{xkvemptyfam}
+\begin{document}
+Lang: \SAPlang; side: \SAPside; binding: \SAPbinding; key: \SAPkey.
+\end{document}

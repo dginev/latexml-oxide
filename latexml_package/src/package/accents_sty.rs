@@ -33,10 +33,13 @@ LoadDefinitions!({
     }
   });
 
-  // Perl: \underaccent{acc}{base} — checks if acc is an accent command
+  // Perl: \underaccent{acc}{base} — checks if acc is an accent command. A non-accent is set as accents.sty:206-213
+  // `\cc@uaccentset` does, `\hbox{$…\scriptscriptstyle#1$}`: math in a box of its own, where an author's `$` is text
+  // (`\underaccent{$\text{.}$}{x}`, the rc_struct3 E1 sample; KNOWN_PERL_ERRORS #907) — tex_math.rs
+  // `\lx@math@in@hbox@group`. Guard `perfect_kernel_batch69c::dollar_in_proof_and_accents_hbox_math_is_text`.
   DefMacro!(
     "\\underaccent{}{}",
-    "\\lx@if@isaccent{#1}{\\lx@converttounder{#1}{#2}{#1{#2}}}{\\lx@underaccentset{#1}{#2}}"
+    "\\lx@if@isaccent{#1}{\\lx@converttounder{#1}{#2}{#1{#2}}}{\\lx@underaccentset{\\lx@math@in@hbox@group{#1}}{#2}}"
   );
 
   DefConstructor!("\\lx@underaccentset ScriptStyle {}",
@@ -72,4 +75,20 @@ LoadDefinitions!({
   });
 
   DefMath!("\\undertilde{}", "\u{007E}", operator_role => "UNDERACCENT");
+
+  // accents.sty's internals that documents reach. :40-47 `\cc@accent{<mathchar>}{<nucleus>}`, which
+  // accents.sty:82-92 make `\hat`, `\bar`, … (`\protect\cc@accent{"705E\relax}`), so a `\hat` written
+  // out to a file comes back as `\cc@accent {"705E}{p}` (revtex's bibliography notes in the .bbl,
+  // witnesses 2508.19844, 1904.08011, 1109.4509; run 340: 56 first errors): the math accent of that
+  // math character (`\mathaccent`, as the `single` option's `\cc@accent`, :26), its code read into
+  // `\cc@code` (:41) so a trailing `\relax` in the argument ends it. :60/:111 `\cc@style`, the math
+  // style an `\accentset` sets its accent in, which the widely copied
+  // `\def\widebar{\accentset{{\cc@style\underline{\mskip10mu}}}}` uses (witnesses 2103.15271,
+  // 1309.5701, 2407.19269; run 340: 98 first errors): our `\accentset` sets the accent in its own
+  // style, so it changes nothing.
+  RawTeX!(
+    r"\newcount\cc@code
+\def\cc@accent#1#2{\cc@code=#1\relax\mathaccent\cc@code{#2}}
+\let\cc@style\relax"
+  );
 });

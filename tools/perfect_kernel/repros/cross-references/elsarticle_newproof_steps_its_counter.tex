@@ -1,0 +1,18 @@
+% witness: arXiv 1304.5109 (12 proofs), 2606.18393; the review's probe el1
+% oracle:  pdflatex 0 errors; "Theorem 1. T.", "Proof. P one.", "Proof of Theorem 1. P two.", "Claim. C.", "Theorem 3. U.", "Refs 1, 2." (elsarticle.cls:1209-1226: \@prf \refstepcounter's the proof's counter, \@oprf the one it shares)
+% engines: rust (78n r1) = "Refs Proof, Claim." (unnumbered proofs), "Theorem 2"; int51a "Refs 1, 2." with numbered bold heads "Proof 1."; Perl 0.8.8 the same as int51a
+% expect:  0 errors; the proofs numbered (refnums 1; the claim 2, on thm's counter), heads "Proof." in small caps, the next theorem 3
+% status:  RED (78n r1) -> GREEN (78n r2, KNOWN_PERL_ERRORS #1080)
+\documentclass{elsarticle}
+\newtheorem{thm}{Theorem}
+\newproof{pf}{Proof}
+\newproof{pot}{Proof of Theorem \ref{t1}}
+\newproof{clm}[thm]{Claim}
+\begin{document}
+\begin{thm}\label{t1} T. \end{thm}
+\begin{pf}\label{p1} P one. \end{pf}
+\begin{pot} P two. \end{pot}
+\begin{clm}\label{c1} C. \end{clm}
+\begin{thm} U. \end{thm}
+Refs \ref{p1}, \ref{c1}.
+\end{document}

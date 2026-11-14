@@ -1,0 +1,15 @@
+% A longtable writes its List of Tables line through its `\caption` (longtable.sty `\LT@c@ption`); one with
+% no caption is not listed, though it steps the table counter. Ours (and Perl's longtable.sty.ltxml:36,
+% `inlist='lot'` on every longtable) lists it, as a line with a number and no text.
+% witness: 57cp round 6 (kcoll.tex, ltlot.tex).
+% status:  RED (Perl alike)
+% oracle:  pdflatex 0 errors; List of Tables: "2 Listed" only.
+% engines: rust 57cp6: S0.T1 inlist="lot".
+% expect:  0 errors, 0 warnings; the caption-less table without inlist.
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\listoftables
+\begin{longtable}{cc} a & b \\ \end{longtable}
+\begin{longtable}{cc} \caption{Listed}\\ c & d \\ \end{longtable}
+\end{document}

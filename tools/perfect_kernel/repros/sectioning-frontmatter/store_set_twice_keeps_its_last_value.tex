@@ -1,0 +1,25 @@
+% A raw class's store set twice keeps its last value, and one set empty keeps none, as the class's
+% `\@maketitle` would print them: the store is read once, at `\maketitle`, as the class reads it
+% (its affiliation is no longer queued at each setting).
+% witness: none (synthetic; the K11 store reroute, frontmatter_stores.rs).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: the title page prints "Second" and no department.
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rctwice.cls}
+\ProvidesClass{rctwice}
+\LoadClass{article}
+\newcommand*\institution[1]{\def\@institution{#1}}
+\newcommand*\department[1]{\def\@department{#1}}
+\institution{}\department{}
+\def\@maketitle{\@title\par\@author\par\@institution\par\@department}
+\end{filecontents*}
+\documentclass{rctwice}
+\title{T}\author{Anton Muster}
+\institution{First}
+\department{Lost Department}
+\institution{Second}
+\department{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

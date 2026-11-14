@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="\frac{d}{dt}u=0" text="(d / differential-d@(t)) * u = 0" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                <XMApp>
+                  <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+            </XMApp>
+            <XMTok meaning="0" role="NUMBER">0</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\frac{d|\psi\rangle}{dt}" text="(d * ket@(psi)) / differential-d@(t)" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="ket"/>
+                  <XMRef idref="p1.m2.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok fontsize="70%" role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" fontsize="70%" name="psi" role="UNKNOWN" xml:id="p1.m2.1">ψ</XMTok>
+                  <XMTok fontsize="70%" name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+            <XMApp>
+              <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\tau_{1}\in ds" text="tau _ 1 element-of differential-d@(s)" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" name="tau" role="UNKNOWN">τ</XMTok>
+              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">s</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

@@ -1,0 +1,17 @@
+% witness: 2508.14310, 2103.17124 (`\labelindent=10pt`), 2406.17390, 2407.18801 (`\enit@format`),
+%   2411.02902, 2303.05561 (`\enit@type` in an `\inlineitem`); run 340: 51 + 55 + 28 first errors
+% oracle:  pdflatex 0 errors; "1. One" then an inline item "2. Two"
+% engines: rust 65int7 = errors (`\labelindent`, `\enit@format`, `\enit@type` undefined)
+% expect:  0 errors; the enumerate's item text One and the inline item's label 2
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{enumitem}
+\labelindent=10pt
+\makeatletter
+\newcommand{\inlineitem}{\ifnum\enit@type=\z@\refstepcounter{\@listctr}\fi\enit@format{\theenumi.}~}
+\makeatother
+\begin{document}
+\begin{enumerate}
+\item One \inlineitem Two
+\end{enumerate}
+\end{document}

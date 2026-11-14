@@ -509,18 +509,42 @@ impl BoxOps for Whatsit {
             && let Stored::Digested(ref body) = *body_stored
           {
             // Perl: computeBoxesSize reads mode/vattach/width from $boxes before unlisting
-            for key in &["mode", "vattach", "width"] {
+            for key in &["mode", "vattach"] {
               if options.get(key).is_none()
                 && let Some(prop) = body.get_property(key)
               {
                 options.insert(key, (*prop).clone());
               }
             }
+            // A vertical body's interline values, recorded while its group was open (constructor.rs
+            // `capture_body`), as `List::compute_size` passes its own (tex.web §679).
+            if options.get("baseline").is_none()
+              && let Some(prop) = body.get_property("baseline")
+            {
+              options.insert("baseline", (*prop).clone());
+            }
+            for key in ["lineskip", "lineskiplimit"] {
+              if let Some(prop) = body.get_property(key) {
+                options.insert(key, (*prop).clone());
+              }
+            }
+            // The body's own width, never the whatsit's requested one (Font.pm:683;
+            // see `List::compute_size`).
+            match body.get_property("width") {
+              Some(prop) => {
+                options.insert("width", (*prop).clone());
+              },
+              None => {
+                options.remove("width");
+              },
+            }
             let unlist_boxes = body.unlist();
             boxes.extend(unlist_boxes);
           }
           if boxes.is_empty() {
-            // no body
+            // no body: Perl sizes the arguments as a bare List (Whatsit.pm:253-265),
+            // with no width of its own.
+            options.remove("width");
             for arg in self.args.iter().flatten() {
               boxes.extend(arg.unlist());
             }

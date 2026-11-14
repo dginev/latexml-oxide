@@ -1,0 +1,25 @@
+% mechanism: an IEEEtran name list whose names a literal `*` leads (`*Ann Able\IEEEauthorrefmark{2},`), two single-entry
+%   marked blocks after it: the entries go to a nameless fourth creator, no author holding its mark's entry
+% witness: 2609.16600
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "*Ann Able† , *Bob Baker‡ , Cy Cole†", "† Univ A (A*STAR), Town A", "‡ Univ B, Town B", "*equally contributed"
+% engines: P4cbase, and P4c3 with each mark shown: Ann, Bob, Cy no affiliation; "† Univ A (A*STAR), Town A" and "‡ Univ B, Town B" a
+%          nameless creator's (0 W)
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole "† Univ A (A*STAR), Town A", Bob Baker "‡ Univ B, Town B"
+% status:  RED (P4cbase 9d38af1d10, P4c3; pinned as today in perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares) —
+%          moves: post-merge
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{
+*Ann Able\IEEEauthorrefmark{2},
+*Bob Baker\IEEEauthorrefmark{3},
+Cy Cole\IEEEauthorrefmark{2}
+}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ A (A*STAR), Town A}
+\IEEEauthorblockA{\IEEEauthorrefmark{3}Univ B, Town B}
+*equally contributed
+}
+\maketitle
+Text.
+\end{document}

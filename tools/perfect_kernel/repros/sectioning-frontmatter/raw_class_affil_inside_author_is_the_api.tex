@@ -1,0 +1,28 @@
+% witness: 1602.05576, 2405.08158 (ar-1col.cls:341 `\def\affil#1{\par…{\reset@font\affilfont#1\par}…}`, called inside
+%          `\author{}`, which its `\@maketitle`, :304-312, prints)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able,1 Bob Baker,1,2 and Cy Cole1", then the lines "1Univ A, Town,
+%          Country; email: ann@a.edu", "2Univ B, City, Country", "Body."
+% engines: rust 94a = 0 errors, 0 warnings: the two lines glued into Cy Cole's personname, no contact on any creator;
+%          perl (OmniBus: `\affil` = `\lx@add@affiliation`) = the affiliations on the creators, names merged
+% expect:  0 errors, 0 warnings; Ann Able Univ A, Bob Baker Univ A and Univ B, Cy Cole Univ A (by their marks, each
+%          entry labelled by its leading mark); eager and --streaming the same
+% status:  RED (94a) -> GREEN (94b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\YES{yes}
+\def\chk@key{no}
+\def\affilfont{\small\leftskip2em\rightskip0pt plus1fil}
+\def\affil#1{\par\ifx\chk@key\YES\else\vskip6\p@\fi{\reset@font\affilfont#1\par}\def\chk@key{yes}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker,$^{1,2}$ and Cy Cole$^1$
+\affil{$^1$Univ A, Town, Country; email: ann@a.edu}
+\affil{$^2$Univ B, City, Country}}
+\maketitle
+Body.
+\end{document}

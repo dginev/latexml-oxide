@@ -1,0 +1,25 @@
+% mechanism: a `\footnotemark` after a name's mark, beside a class's in-place labelled `\affil[2]{…}` (OD #928 round 9,
+%   Known residual P6): the name's `\textsuperscript{2}` is replaced by an invented `<sup>∗</sup>` after the
+%   footnote — the 2 lost, a ∗ nothing prints. Siblings: `\affil{Univ B}` unlabelled (review x13, `<sup>2,∗</sup>`),
+%   `\footnotemark[3]` (x14, `<sup>‡</sup>`).
+% witness: review rev94a r8 x/x02, x/x13, x/x14
+% oracle:  pdflatex 0 errors: "ANN ABLE1, 1 Univ A / BOB BAKER21, 2 Univ B / 1 Corresponding author."
+% engines: rust 94a r8, r9: BOB BAKER the footnote then `<sup>∗</sup>`, Univ B; perl: not run
+% expect:  0 errors, 0 warnings; ANN ABLE Univ A; BOB BAKER Univ B and the footnote, no invented mark
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilopt.cls}
+\ProvidesClass{affilopt}
+\LoadClass{article}
+\def\author#1{\gdef\@author{#1}}
+\newcommand\affil[2][]{{\reset@font\small\unskip,\ \textsuperscript{#1}#2\endgraf}}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilopt}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE\textsuperscript{1} \affil[1]{Univ A} BOB BAKER\textsuperscript{2}\footnotemark \affil[2]{Univ B}}
+\maketitle
+\footnotetext{Corresponding author.}
+Body.
+\end{document}

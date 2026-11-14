@@ -1,0 +1,38 @@
+% A subfigure grid: rows of four 0.24\textwidth panels, each row followed by a caption line of two
+% 0.49\textwidth \makebox'es. The caption line is a standalone panel (ltx:p): arrange_panels
+% (Perl latex_constructs.pool.ltxml:3331-3343) ends its row with a break, then sets the next row's
+% running width to 0 and adds the caption line's width to it, so the next row starts full. Once the
+% line's box has its whole width (W12's node boxes, as Perl's), the next four panels split 1 | 3.
+% witness: 2605.02317 (content/7_appendix.tex:221-280), 2605.02364, 2605.03152, 2605.03497
+% oracle:  pdflatex sets four panels per row
+% engines: perl = 1 | 3 (KNOWN_PERL_ERRORS #274); rust 56jk = 2 | 2 (the line measured narrower),
+%          56jo = 1 | 3
+% expect:  0 errors; each row of four panels unbroken
+% status:  GREEN (56jq, W12 fixup; guard node_box_append::a_standalone_panel_row_starts_the_next_row_empty)
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+  \centering
+  \begin{subfigure}[b]{0.24\textwidth}P\end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.24\textwidth}P\end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.24\textwidth}P\end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.24\textwidth}P\end{subfigure}
+
+  {\small \makebox[0.49\textwidth]{Left} \hfill \makebox[0.49\textwidth]{Right}}
+
+  \begin{subfigure}[b]{0.24\textwidth}P\end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.24\textwidth}P\end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.24\textwidth}P\end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.24\textwidth}P\end{subfigure}
+
+  {\small \makebox[0.49\textwidth]{Left} \hfill \makebox[0.49\textwidth]{Right}}
+  \caption{C}
+\end{figure}
+\end{document}

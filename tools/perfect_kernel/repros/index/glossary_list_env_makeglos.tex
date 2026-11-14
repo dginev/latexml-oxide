@@ -1,0 +1,15 @@
+% witness: makeglos/makeglos (makeglos.sty:10-12 theglossary = \section* + description)
+% oracle:  pdflatex + xindy -M makeglos, 0 errors: "Glossary glossary A list of words with
+%          explanations"
+% engines: rust (56js before the fix) = Error:malformed:ltx:index isn't allowed in <ltx:description>
+% expect:  0 errors, 0 warnings
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: the .gls stand-in runs the package's theglossary and puts the list after it.
+%   Residual: xindy's `:` level separator (makeglos.xdy) is read as text.
+\documentclass{article}
+\usepackage{makeglos}
+\makeglossary
+\begin{document}
+\printglossary
+A glossary\glossary{glossary:A list of words with explanations} term.
+\end{document}

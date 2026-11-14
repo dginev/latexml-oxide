@@ -1,0 +1,1236 @@
+//! `latex_constructs` section 7: C.7 Mathematical Formulas
+//!
+//! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
+//! definitions run in the original order from `super::load_definitions`.
+
+use super::*;
+
+/// Runs `\lx@mathdisplay@hook` (latex_constructs_rust_only.rs) where a LaTeX display environment begins.
+fn mathdisplay_hook() -> Result<()> {
+  digest(Tokens!(T_CS!("\\lx@mathdisplay@hook")))?;
+  Ok(())
+}
+
+/// Runs `\lx@equation@hook` (latex_constructs_rust_only.rs) where `{equation}` begins: the display hook, unless a
+/// class sets `{equation}` apart from `\[` (fleqn.clo, fleqn_sty.rs `math_displays_in_hbox`).
+fn equation_hook() -> Result<()> {
+  digest(Tokens!(T_CS!("\\lx@equation@hook")))?;
+  Ok(())
+}
+
+/// The `EQUATION_NUMBERING` key of LaTeX's own `{equation}` (latex.ltx:15737-15739 `\def\endequation{\eqno
+/// \hbox{\@eqnnum}…}`): its number is printed whatever a `\nonumber` in it said — `\nonumber` (:15775
+/// `\global\@eqnswfalse`) is eqnarray's switch, which the next `\eqnarray` sets again. Perl lets `\nonumber` remove the
+/// number of any `{equation}` (latex_constructs.pool.ltxml:1915-1916, "even though stock LaTeX provides no means to
+/// override them"), which is amsmath's `\nonumber` (amsmath.sty:1268-1269) and so stays where amsmath is loaded
+/// ([`amsmath_nonumber`]). hep-ph9710521 (`\nl` in `\beq`) printed every number from (3.22) on one behind its PDF;
+/// nucl-th0404042's `j-sum1` and `l-sum1` (PDF 20, 23) were unnumbered. REVTeX 3's aps.sty:401-450 and iopart.cls:771-776
+/// print the number as LaTeX does. OXIDIZED_DESIGN_DIVERGENCES #865.
+pub(crate) const LATEX_EQNNUM: &str = "latex_eqnnum";
+
+/// Whether amsmath is loaded, as `\@ifpackageloaded{amsmath}` asks (`\ver@amsmath.sty`) — its binding or the real
+/// file; not a binding's load beyond its original (`amsmath_loaded_beyond_original`, the old aa.cls's), which counts as
+/// not loaded — so that its `\nonumber` (amsmath.sty:1268-1269) removes an `{equation}`'s number ([`LATEX_EQNNUM`]).
+/// (`state::package_loaded`: aa.cls's binding clears amsmath's load record after today's aa.cls loads it, `aa_cls.rs`,
+/// Perl aa.cls.ltxml:57; 1712.01010, 1812.04463, 2501.07980 ship that aa.cls.) Or its definitions read here
+/// (`load_recorded`): a document's `\let\ver@amsmath.sty\relax` takes back the mark, not amsmath's `\nonumber`.
+fn amsmath_nonumber() -> bool { package_loaded("amsmath") || load_recorded("amsmath.sty") }
+
+/// The `EQUATION_NUMBERING` key of amsmath's `{equation}` (amsmath.sty:2913-2932, where amsmath is loaded:
+/// [`amsmath_nonumber`]), whose `\nonumber` leaves its labels the number it stepped. `\incr@eqnum` is
+/// `\refstepcounter{equation}` at the start, which sets `\@currentlabel`; `\nonumber` (amsmath.sty:1269-1275) only
+/// steps the counter back, and the display's `\label` is made at its end (`\endmathdisplay@a`, :2821-2830), so it names
+/// the stepped number — the next equation's, which no equation of the two prints. Perl retracts the number and the
+/// label names the enclosing unit; so did this port (1306.2116's `eq:covariate`: PDF 17, ours "3.1"). The equation
+/// keeps the number's reference forms (`eqnarray_next_number_tags`, no printed tag, the eqnarray form of
+/// OXIDIZED_DESIGN_DIVERGENCES #847) when it holds a label ([`NEXT_NUMBER_EQUATION`]). OXIDIZED_DESIGN_DIVERGENCES #875,
+/// KNOWN_PERL_ERRORS #1128. Guard `perfect_kernel_batch78t::ams_equation_nonumber_label_names_the_stepped_number`.
+const AMS_EQUATION: &str = "ams_equation";
+
+/// The whatsit property of an amsmath `{equation}` whose `\nonumber` left it the stepped number's reference forms
+/// ([`AMS_EQUATION`]): the `ltx:equation` drops them when it closes without a label.
+const NEXT_NUMBER_EQUATION: &str = "next_number_equation";
+
+/// The numbering of LaTeX's `{equation}`, for its own binding and for a class's `{equation}` that sets it as LaTeX
+/// does (mn2e/mnras's and old aa's, which only let a `$` in it, mn2e_support_sty.rs and aa_support_sty.rs): numbered and
+/// preset, and its number kept whatever a `\nonumber` said unless amsmath is loaded (`LATEX_EQNNUM`,
+/// `amsmath_nonumber`).
+pub fn prepare_latex_equation_counter() {
+  if amsmath_nonumber() {
+    prepare_equation_counter(
+      stored_map!("numbered" => true, "preset" => true, AMS_EQUATION => true),
+    );
+  } else {
+    prepare_equation_counter(
+      stored_map!("numbered" => true, "preset" => true, LATEX_EQNNUM => true),
+    );
+  }
+}
+
+/// Whether the current equation row will be left unnumbered at its end (`after_equation`'s retraction): its own
+/// `retract` (a deferred `\nonumber`, `\IEEEnonumber`) or the numbering's (`retract=1`: eqnarray*'s, IEEEeqnarray*'s)
+/// on a preset number, unless the row says `noretract` (`\IEEEyesnumber`).
+fn equation_row_retracts() -> bool {
+  with_value("EQUATION_NUMBERING", |v| {
+    let Some(Stored::HashStored(numbering)) = v else {
+      return false;
+    };
+    with_value("EQUATIONROW_TAGS", |t| {
+      let Some(Stored::HashStored(tags)) = t else {
+        return false;
+      };
+      let set = |m: &SymHashMap<Stored>, key: &str| matches!(m.get(key), Some(&Stored::Bool(true)));
+      !set(tags, "noretract")
+        && (set(tags, "retract")
+          || (set(numbering, "retract") && set(numbering, "preset") && set(tags, "preset")))
+    })
+  })
+}
+
+/// Whether a `\label` in a row its numbering leaves unnumbered names the next printed number (the numbering key
+/// `labelnext=1`; implied by `eqncr=1`): IEEEtrantools.sty's `\@IEEEeqnarray` and `\@@IEEEeqnarraycr` (:1986-1991,
+/// :2072-2117) pre-advance the equation counter and set `\@currentlabel` to it for the next row, and `\IEEEnonumber`
+/// (:1405, `\global\@eqnswfalse`) prints no number and steps nothing, so as in latex.ltx's eqnarray
+/// ([`eqnarray_eqncr_numbering`]) the label names the number the next numbered row prints, or the counter's next
+/// value (rolled back at the end, :2022-2023) when none does.
+fn eqnarray_label_names_next_number() -> bool {
+  eqnarray_eqncr_numbering()
+    || with_value(
+      "EQUATION_NUMBERING",
+      |v| matches!(v, Some(Stored::HashStored(n)) if matches!(n.get("labelnext"), Some(&Stored::Bool(true)))),
+    )
+}
+
+/// Whether the current equation numbering numbers IEEEtrantools' sub-equations (the numbering key `subnumbers=1`,
+/// IEEEeqnarray's): its rows record [`SUBEQUATION_ROLLBACK`].
+fn eqnarray_subnumbers() -> bool {
+  with_value(
+    "EQUATION_NUMBERING",
+    |v| matches!(v, Some(Stored::HashStored(n)) if matches!(n.get("subnumbers"), Some(&Stored::Bool(true)))),
+  )
+}
+
+/// Whether the current equation numbering presets its rows with `counter` (`\IEEEyessubnumber*`'s `subequation`).
+fn equation_numbering_counts(counter: &str) -> bool {
+  with_value(
+    "EQUATION_NUMBERING",
+    |v| matches!(v, Some(Stored::HashStored(n)) if n.get("counter").is_some_and(|c| c.to_string() == counter)),
+  )
+}
+
+#[rustfmt::skip]
+pub(crate) fn load() -> Result<()> {
+  // ======================================================================
+  // C.7 Mathematical Formulas
+  // ======================================================================
+
+  DefMacro!("\\@eqnnum", "(\\theequation)", locked => true);
+  DefMacro!("\\fnum@equation", "\\@eqnnum");
+
+  // Redefined from TeX.pool, since with LaTeX we presumably have a more complete numbering system.
+  // Perl latex_constructs.pool.ltxml L1933-1944 — DefConstructorI with no params,
+  // reversion = T_MATH T_MATH ($$), beforeDigest = beginMode('display_math'),
+  // properties = RefStepID('equation'), captureBody = 1.
+  DefConstructor!("\\lx@begin@display@math",
+    "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    reversion    => Tokens!(T_MATH!(), T_MATH!()),
+    before_digest => {
+      let in_alignment = lookup_alignment().is_some();
+      // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
+      begin_mode("display_math")?;
+      // (the display a math shift ends through the groups opened in it, outside alignments: tex_math.rs
+      // `DISPLAY_FORMULA`)
+      if !in_alignment {
+        assign_frame_value(DISPLAY_FORMULA, true);
+      }
+    },
+    properties   => { ref_step_id("equation") },
+    capture_body => true);
+
+  // Perl: latex_constructs.pool.ltxml lines 2011-2023
+  // Save display math delimiters for use within equation environments
+  Let!("\\lx@saved@begin@display@math", "\\lx@begin@display@math");
+  Let!("\\lx@saved@end@display@math", "\\lx@end@display@math");
+
+  // Within an equation, \[ restores saved display math and re-enters
+  DefMacro!(
+    "\\lx@bDM@in@equation",
+    "\\lx@saved@begin@display@math\\let\\lx@end@display@math\\lx@saved@end@display@math"
+  );
+  // Within an equation, \] or $$ triggers "cheap intertext":
+  // retract the equation number, end equation, insert text, re-begin equation
+  DefMacro!(
+    "\\lx@eDM@in@equation",
+    "\\lx@retract@eqnno\\lx@begin@fake@intertext\\let\\lx@saved@begin@display@math\\lx@begin@display@math\\let\\lx@saved@bdm\\[\\let\\lx@begin@display@math\\lx@end@fake@intertext\\let\\[\\lx@end@fake@intertext"
+  );
+  DefMacro!("\\lx@begin@fake@intertext", "\\end{equation}");
+  DefMacro!(
+    "\\lx@end@fake@intertext",
+    "\\let\\lx@begin@display@math\\lx@saved@begin@display@math\\let\\[\\lx@saved@bdm\\begin{equation}"
+  );
+  DefPrimitive!("\\lx@retract@eqnno", {
+    retract_equation();
+  });
+
+  // `{displaymath}`, `{equation}` and `{equation*}` run `\lx@mathdisplay@hook` where they begin, inside the display's
+  // group (latex_constructs_rust_only.rs, which also has `\[` run it).
+  DefEnvironment!("{displaymath}",
+  "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+  mode       => "display_math",
+  before_digest => { mathdisplay_hook()?; },
+  properties   => { ref_step_id("equation") },
+  locked     => true);
+  DefEnvironment!("{math}",
+    "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
+    mode => "math"
+  );
+  // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly
+  // ways... So...?
+  DefEnvironment!(
+    "{equation}",
+    "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    mode => "display_math",
+    before_digest => {
+      // latex.ltx:15737-15739: `{equation}` always prints `\@eqnnum`, and `\nonumber` (:15775, `\global\@eqnswfalse`)
+      // is eqnarray's; amsmath's `\nonumber` (amsmath.sty:1268-1269) is what removes the number of an `{equation}`
+      // (`LATEX_EQNNUM`; witnesses hep-ph9710521, nucl-th0404042).
+      prepare_latex_equation_counter();
+      before_equation()?;
+      equation_hook()?;
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(Some(whatsit))?;
+    },
+    locked => true);
+
+  // Perl: latex_constructs.pool.ltxml lines 2109-2125
+  // Note: In ams, this DOES get a number if \tag is used!
+  DefEnvironment!(
+    "{equation*}",
+    "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!("preset" => true));
+      before_equation()?;
+      mathdisplay_hook()?;
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(Some(whatsit))?;
+    },
+    locked => true);
+
+  // Perl: latex_constructs.pool.ltxml lines 2039-2057
+  DefMacro!("\\nonumber", "\\lx@equation@nonumber");
+  DefPrimitive!("\\lx@equation@nonumber", {
+    let (in_equation, defer_retract, eqnnum, ams_equation) = with_value("EQUATION_NUMBERING", |v| match v {
+      Some(Stored::HashStored(n)) => (
+        matches!(n.get("in_equation"), Some(&Stored::Bool(true))),
+        matches!(n.get("deferretract"), Some(&Stored::Bool(true))),
+        matches!(n.get(LATEX_EQNNUM), Some(&Stored::Bool(true))),
+        matches!(n.get(AMS_EQUATION), Some(&Stored::Bool(true))),
+      ),
+      _ => (false, false, false, false),
+    });
+    // (the number this `\nonumber` takes back is still the one it stepped: amsmath's `\if@eqnsw`)
+    let stepped = with_value("EQUATIONROW_TAGS", |v| {
+      matches!(v, Some(Stored::HashStored(t)) if matches!(t.get("preset"), Some(&Stored::Bool(true))))
+    });
+    if eqnarray_eqncr_numbering() {
+      // latex.ltx:15775 `\global\@eqnswfalse`: the next `\@@eqncr` prints no number (`eqnarray_eqncr_numbering`).
+      assign_value(EQNARRAY_EQNSW, Stored::Bool(false), Some(Scope::Global));
+    } else if in_equation && eqnnum {
+      // LaTeX's `{equation}` prints its number whatever `\nonumber` said (`LATEX_EQNNUM`): the switch it clears is
+      // eqnarray's, which `\eqnarray` sets again.
+    } else if in_equation && ams_equation {
+      // amsmath's `{equation}`: the number goes, its labels keep naming it (`AMS_EQUATION`). Once it is gone — a
+      // second `\nonumber`, or one after a `\tag`, which took the number back itself (`\tag@in@display`) — the
+      // switch is already off and amsmath's `\nonumber` changes nothing: the tag stays (`\tag{X}\nonumber`, pdflatex
+      // "(X)"; this port dropped it).
+      if stepped {
+        let next_number = eqnarray_next_number_tags()?;
+        retract_equation();
+        with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+          if let Some(Stored::HashStored(tags)) = tags_opt {
+            tags.insert("tags", Stored::Digested(next_number));
+            tags.insert(NEXT_NUMBER_EQUATION, true.into());
+          }
+        });
+      }
+    } else if in_equation {
+      if defer_retract {
+        // (in an IEEEeqnarray's row, `\global\@eqnswfalse` whatever an `\IEEEyesnumber` or `\IEEEyessubnumber` before
+        // it said, as `\IEEEnonumber` there, ieeetrantools_sty.rs: the last one wins; witness 2012.02697 `lcmpc.tex:123-136`,
+        // `eq:fpar`/`eq:par` 14a/14b as the `.aux`)
+        let ieee_row = eqnarray_subnumbers() && stepped;
+        with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+          if let Some(Stored::HashStored(tags)) = tags_opt {
+            tags.insert("retract", true.into());
+            if ieee_row {
+              tags.remove("noretract");
+            }
+          }
+        });
+      } else {
+        retract_equation();
+      }
+    }
+  });
+
+  // Perl: latex_constructs.pool.ltxml line 2051-2057
+  DefMacro!(
+    "\\lx@equation@settag",
+    "\\lx@equation@retract\\lx@equation@settag@"
+  );
+  DefPrimitive!("\\lx@equation@retract", {
+    retract_equation();
+  });
+  DefPrimitive!(
+    "\\lx@equation@settag@ {}",
+    sub[(content)] {
+      // Perl uses Digested parameter type; we manually digest here
+      let digested = digest(content)?;
+      with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+        if let Some(Stored::HashStored(tags)) = tags_opt {
+          tags.insert("tags", Stored::Digested(digested));
+        }
+      });
+      Ok(Vec::new())
+    },
+    mode => "restricted_horizontal"
+  );
+
+  // Perl latex_constructs.pool.ltxml:2070, followed by the display hook (latex_constructs_rust_only.rs; amsmath's
+  // `\if@fleqn` form, amsmath_sty.rs). Guard `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
+  DefMacro!("\\[", "\\lx@begin@display@math\\lx@mathdisplay@hook");
+  DefMacro!("\\]", "\\lx@end@display@math");
+  DefMacro!("\\(", "\\lx@begin@inline@math");
+  DefMacro!("\\)", "\\lx@end@inline@math");
+
+  // Keep from expanding too early, if in alignments, or such.
+  DefMacro!(
+    T_CS!("\\ensuremath"),
+    None,
+    Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath"))
+  );
+  // \@ensuremath inner helper lives in `latex_constructs_rust_only.rs`
+  // (Rust split of Perl's unified \ensuremath; not separately defined in
+  // any Perl latex_*.pool.ltxml).
+
+  // Perl: latex_constructs.pool.ltxml lines 2237-2239
+  // \@equationgroup@numbering{numbered=1,postset=1,...}
+  DefPrimitive!("\\@equationgroup@numbering{}", sub[(kv_arg)] {
+    let kv_str = kv_arg.to_string();
+    let mut options = SymHashMap::default();
+    for part in kv_str.split(',') {
+      let part = part.trim();
+      if let Some((key, value)) = part.split_once('=') {
+        let key = key.trim();
+        let value = value.trim();
+        if value == "1" {
+          options.insert(key, Stored::Bool(true));
+        } else if value == "0" {
+          options.insert(key, Stored::Bool(false));
+        } else {
+          options.insert(key, Stored::from(value.to_string()));
+        }
+      }
+    }
+    prepare_equation_counter(options);
+    remove_value(EQUATIONROW_CARRY);
+    // latex.ltx:15754 `\global\@eqnswtrue` (eqnarray_eqncr_numbering; equations.sty's `\if@defeqnsw`).
+    assign_value(EQNARRAY_EQNSW, Stored::Bool(eqnarray_default_eqnsw()), Some(Scope::Global));
+    assign_value(EQNARRAY_EQNNUM, Stored::Bool(false), Some(Scope::Global));
+    assign_value(EQNARRAY_ROW_LABELLED, Stored::Bool(false), Some(Scope::Global));
+    Ok(())
+  });
+
+  // Perl: latex_constructs.pool.ltxml lines 2282-2285
+  // Under `subnumbers=1` (IEEEeqnarray) a row whose number is a pre-advance of `equation` records the sub-equation
+  // number that step reset, IEEEtrantools' `\@IEEEsubeqnnumrollback` (:1985, :2094, :2109), for `\IEEEyessubnumber`
+  // to back out to (ieeetrantools_sty.rs) and for the row's retraction to restore (below).
+  // A row after a retracted row that held its counters (`EQUATIONROW_CARRY`) prints their value, stepping nothing, as
+  // IEEEtrantools pre-advances only after a printed number (:2086-2112; witnesses 2012.02697, 1610.06458 `eq:inq3` 36c).
+  DefPrimitive!("\\eqnarray@row@before@", {
+    let carry = if eqnarray_subnumbers() {
+      match remove_value(EQUATIONROW_CARRY) {
+        Some(Stored::String(counter)) => Some(counter),
+        _ => None,
+      }
+    } else {
+      None
+    };
+    let rollback = if carry.is_none() && eqnarray_subnumbers() && !equation_numbering_counts("subequation") {
+      Some(counter_value("subequation")?.value_of())
+    } else {
+      None
+    };
+    if let Some(counter) = carry {
+      // (the preset steps the carried counter back to the value it holds; `equation` only when no sub-equation number
+      // is set, so its step resets nothing that was not zero. The ids are the number's: `\@equation@ID` is set again
+      // from the counter, as the retraction's unnumbered id had replaced it)
+      add_to_counter("equation", Number::new(0))?;
+      add_to_counter(&to_string(counter), Number::new(-1))?;
+      let numbering_counter = with_value_mut("EQUATION_NUMBERING", |v| match v {
+        Some(Stored::HashStored(n)) => {
+          let previous = n.get("counter").cloned();
+          n.insert("counter", Stored::String(counter));
+          previous
+        },
+        _ => None,
+      });
+      before_equation()?;
+      with_value_mut("EQUATION_NUMBERING", |v| {
+        if let Some(Stored::HashStored(n)) = v {
+          if let Some(previous) = numbering_counter {
+            n.insert("counter", previous);
+          } else {
+            n.remove("counter");
+          }
+        }
+      });
+      with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+        if let Some(Stored::HashStored(tags)) = tags_opt
+          && matches!(tags.get("preset"), Some(&Stored::Bool(true)))
+        {
+          tags.insert("counter", Stored::String(counter));
+          tags.insert(EQUATIONROW_HOLDS, Stored::Bool(true));
+        }
+      });
+    } else {
+      before_equation()?;
+    }
+    if let Some(rollback) = rollback {
+      with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+        if let Some(Stored::HashStored(tags)) = tags_opt
+          && matches!(tags.get("preset"), Some(&Stored::Bool(true)))
+        {
+          tags.insert(SUBEQUATION_ROLLBACK, Stored::Int(rollback));
+        }
+      });
+    }
+  });
+  // An eqnarray row is numbered as `\@@eqncr`'s state says (`eqnarray_eqncr_numbering`): unnumbered rows retract the
+  // number `\eqnarray@row@before@` preset, and are marked for `rearrange_eqnarray` (their labels name the next
+  // printed number, `UNNUMBERED_EQNCR_ROW_ATTRIBUTE`; a number printed on an empty row joins the unnumbered equation
+  // above, `NUMBER_ROW_PROPERTY`). Only for the environments that opt in with `eqncr=1` (latex.ltx's eqnarray and
+  // eqnarray*; plain-style `\eqnalign` rows all end in `\cr`). Witnesses 1011.0523, nucl-th9903062, 0708.0012,
+  // nucl-th9807024, 2112.13115, 1206.6051; Rust-only (OXIDIZED_DESIGN_DIVERGENCES #847).
+  DefPrimitive!("\\eqnarray@row@after@", {
+    let eqncr = eqnarray_eqncr_numbering();
+    let label_next = eqnarray_label_names_next_number();
+    let numbered = !eqncr || matches!(remove_value(EQNARRAY_EQNNUM), Some(Stored::Bool(true)));
+    // A labelled row: should it be left unnumbered (by `\@@eqncr`, a `\nonumber`/`\IEEEnonumber`, or a starred
+    // environment's retraction), its label names the counter's next value, its preset number until `after_equation`
+    // retracts it (`eqnarray_next_number_tags`).
+    let labelled = matches!(remove_value(EQNARRAY_ROW_LABELLED), Some(Stored::Bool(true)));
+    let next_number_tags = if label_next && labelled && (!numbered || equation_row_retracts()) {
+      Some(eqnarray_next_number_tags()?)
+    } else {
+      None
+    };
+    if !numbered {
+      with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+        if let Some(Stored::HashStored(tags)) = tags_opt {
+          tags.insert("retract", true.into());
+        }
+      });
+    }
+    // (a retracted pre-advance of `equation` gives back the sub-equation number its step reset, `retract_equation`)
+    after_equation(None)?;
+    if label_next
+      && let Some(alignment_digested) = lookup_alignment()
+      && let Some(alignment_cell) = alignment_digested.alignment_cell()
+    {
+      let mut alignment = alignment_cell.borrow_mut();
+      let rows = alignment.rows();
+      let previous_numbered = rows
+        .iter()
+        .take(rows.len().saturating_sub(1))
+        .rev()
+        .find(|row| !row.is_pseudo())
+        .map(|row| row.properties.contains_key("tags"));
+      if let Some(row) = alignment.current_row_mut() {
+        if !row.properties.contains_key("tags") {
+          row
+            .properties
+            .insert(UNNUMBERED_EQNCR_ROW_ATTRIBUTE.to_string(), Stored::from("true"));
+          if let Some(tags) = next_number_tags {
+            row
+              .properties
+              .insert(NEXT_NUMBER_TAGS_PROPERTY.to_string(), Stored::Digested(tags));
+          }
+        } else if eqncr && previous_numbered == Some(false) {
+          row
+            .properties
+            .insert(NUMBER_ROW_PROPERTY.to_string(), Stored::from("true"));
+        }
+      }
+    }
+  });
+  DefMacro!(
+    "\\eqnarray@row@before",
+    "\\lx@hidden@noalign{\\eqnarray@row@before@}"
+  );
+  DefMacro!(
+    "\\eqnarray@row@after",
+    "\\lx@hidden@noalign{\\eqnarray@row@after@}"
+  );
+
+  // Perl: latex_constructs.pool.ltxml lines 2323-2329
+  // \lx@eqnarray@label wraps the label in \lx@hidden@noalign so it's processed
+  // at the row level, not inside a cell. This is critical because in align-like
+  // environments, a cell containing only \label is skippable (its content is not
+  // absorbed during beAbsorbed), so the \label constructor would never run.
+  // By routing through noalign, the \label constructor runs at the equation level
+  // where float_to_label can find the ltx:equation parent.
+  //
+  // Accept an optional `[type]` arg to mirror cleveref's `\label[type]{key}` form
+  // inside `amsmath` align/eqnarray environments. cleveref's own
+  // `\label@in@display@optarg` discards the type and just forwards `{key}` to
+  // `\cref@old@label@in@display`, so we do the same: read & drop the optional
+  // type token, then process the mandatory Semiverbatim key. Without this the
+  // un-consumed `[type]{key}` reaches math digestion as text/subscript tokens
+  // and an `eq:foo_bar_baz`-style key fires "double subscript" errors.
+  // Witness 2311.02006.
+  DefMacro!(
+    "\\lx@eqnarray@label [OptionalSemiverbatim] Semiverbatim",
+    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#2}\\lx@eqnarray@row@labelled}"
+  );
+
+  // (the row holds a label: `\eqnarray@row@after@` gives an unnumbered one the next number's reference forms)
+  DefPrimitive!("\\lx@eqnarray@row@labelled", {
+    assign_value(EQNARRAY_ROW_LABELLED, Stored::Bool(true), Some(Scope::Global));
+  });
+
+  // Perl: latex_constructs.pool.ltxml lines 2262-2335
+  // eqnarray and eqnarray* — alignment-based environments
+  DefPrimitive!("\\@eqnarray@bindings", {
+    eqnarray_bindings()?;
+  });
+
+  DefMacro!("\\eqnarray",
+    "\\@eqnarray@bindings\\@@eqnarray\
+     \\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1,eqncr=1}\
+     \\lx@begin@alignment",
+    locked => true);
+  DefMacro!("\\endeqnarray",
+    "\\lx@eqnarray@number@check\\cr\\lx@end@alignment\\end@eqnarray",
+    locked => true);
+  DefMacro!("\\csname eqnarray*\\endcsname",
+    "\\@eqnarray@bindings\\@@eqnarray\
+     \\@equationgroup@numbering{numbered=1,preset=1,retract=1,grouped=1,aligned=1,eqncr=1}\
+     \\lx@begin@alignment",
+    locked => true);
+  DefMacro!("\\csname endeqnarray*\\endcsname",
+    "\\lx@eqnarray@number@check\\lx@end@alignment\\end@eqnarray",
+    locked => true);
+  // latex.ltx:15789-15795 `\@@eqncr`, run by the eqnarray's `\\` and its end: a row that reached the fourth column,
+  // the equation number's (:15764), has too many columns, and the number goes after what it holds. Only a row ended
+  // by `\cr` may fill that column (1804.05059). Read in the look-ahead before a cell, the current column is the one
+  // before (as `\if@in@firstcolumn`), so `&\\` counts the cell it opens, as TeX's u-part does. Rust-only (Perl's
+  // template has three columns, and the fourth cell's `&` overflows it: OXIDIZED_DESIGN_DIVERGENCES #557).
+  DefMacro!("\\lx@eqnarray@number@check", {
+    // latex.ltx:15795 `\if@eqnsw\@eqnnum\stepcounter{equation}\fi \global\@eqnswtrue`: the row this `\@@eqncr` ends
+    // is numbered unless a `\nonumber` came since the last one (`eqnarray_eqncr_numbering`).
+    let eqnsw = !matches!(lookup_value(EQNARRAY_EQNSW), Some(Stored::Bool(false)));
+    assign_value(EQNARRAY_EQNNUM, Stored::Bool(eqnsw), Some(Scope::Global));
+    assign_value(EQNARRAY_EQNSW, Stored::Bool(eqnarray_default_eqnsw()), Some(Scope::Global));
+    if let Some(alignment_digested) = lookup_alignment()
+      && let Some(alignment_cell) = alignment_digested.alignment_cell()
+    {
+      let alignment = alignment_cell.borrow();
+      let equation_columns = match alignment.get_property("eqnarray_columns").as_deref() {
+        Some(Stored::Number(n)) => n.0,
+        _ => i64::MAX,
+      };
+      let column = if alignment.is_in_column() {
+        alignment.current_column_number()
+      } else if alignment.is_in_row() {
+        alignment.current_column_number() + 1
+      } else {
+        0
+      };
+      if column as i64 > equation_columns {
+        Error!(
+          "unexpected",
+          "eqnarray",
+          "Too many columns in eqnarray environment"
+        );
+      }
+    }
+    Tokens!()
+  });
+  DefMacro!("\\lx@eqnarray@newline", "\\lx@eqnarray@number@check\\lx@alignment@newline");
+
+  DefConstructor!("\\@@eqnarray SkipSpaces DigestedBody",
+    "#1",
+    before_digest => {
+      bgroup();
+    },
+    after_construct => sub[document, _whatsit] {
+      if let Some(mut last) = document.get_node().get_last_child() {
+        rearrange_eqnarray(document, &mut last)?;
+      }
+    },
+    mode => "restricted_horizontal",
+    enter_horizontal => true);
+  DefPrimitive!("\\end@eqnarray", {
+    egroup()?;
+  });
+
+  // Perl: latex_constructs.pool.ltxml lines 2243-2247 (2186-2190 in 0.8.8). It is read in the look-ahead before a
+  // cell starts, where the current column is the one before: the first column follows column 0. Perl's `< 2` also
+  // took a `&\lefteqn{…}` for the first column, and its `\multicolumn{3}` from the second column overran the eqnarray
+  // template (2205.04522, 2411.04274; KNOWN_PERL_ERRORS #547).
+  DefConditional!("\\if@in@firstcolumn", { in_first_column() });
+
+  // Perl: latex_constructs.pool.ltxml lines 2251-2254 (2194-2197 in 0.8.8). latex.ltx:15800 is
+  // `\rlap{$\displaystyle #1$}`: in the first column the `\lefteqn` is one cell, and the author's `&` after it
+  // (`\lefteqn{lhs}&&\nonumber\\`) fill the next columns. Perl's `\multicolumn{3}` made them overflow (run 340's `&`
+  // cluster R1, about 2,050 papers: 0707.3929, 0801.4655, 1209.6494, 1409.4633's `array{ll}`, nucl-th9512020;
+  // KNOWN_PERL_ERRORS #624). The cell overprints, as the `\rlap` does: at normalization it spans the empty cells after
+  // it, so the HTML keeps Perl's one cell over an empty row, and a cell with content keeps its column
+  // (`\lx@alignment@cell@overprint`, OXIDIZED_DESIGN_DIVERGENCES #556). Elsewhere, an `\rlap` in its column (2205.04522,
+  // 2411.04274; KNOWN_PERL_ERRORS #547).
+  // A first-column `\lefteqn` followed by more of its cell (`\lefteqn{\widehat G}\hphantom{G}^{(r)} &=&`, 2411.17699)
+  // is latex.ltx:15800 as written, `\rlap{$\displaystyle #1$}` inside the cell's math, overprinting: the `\multicolumn`
+  // cell of a text alignment (`eqnarray`, whose `$` is its template's) is text, so a script after it erred ("Script ^
+  // can only appear in math mode"). The look-ahead passes spaces and spacing commands and compares the next token by
+  // meaning (`LefteqnLookAhead`): a tab, a row end, `\nonumber`/`\notag`/`\label`, the environment's `\end`, or a
+  // macro that starts with one (`\def\nn{\nonumber}`, the review of 68z) leave the `\lefteqn` the whole cell
+  // (OXIDIZED_DESIGN_DIVERGENCES #556). Guards `perfect_kernel_batch68z::{a_first_column_lefteqn_keeps_the_rest_of_its_
+  // cell_in_math, a_lefteqn_before_a_row_end_macro_is_the_whole_cell}`.
+  DefMacro!("\\lefteqn{}", sub[(arg)] {
+    let arg = arg.unlist();
+    if arg.is_empty() {
+      return Ok(Tokens!());
+    }
+    let math = |out: &mut Vec<Token>| {
+      out.extend([T_CS!("\\lx@begin@inline@math"), T_CS!("\\displaystyle")]);
+      out.extend(arg.iter().copied());
+      out.push(T_CS!("\\lx@end@inline@math"));
+    };
+    let mut out = Vec::new();
+    if !in_first_column() {
+      out.extend([T_CS!("\\rlap"), T_BEGIN!()]);
+      math(&mut out);
+      out.push(T_END!());
+      return Ok(Tokens::new(out));
+    }
+    // What follows the `\lefteqn` in its cell, as TeX would read it (`LefteqnLookAhead`): spaces, braces, spacing
+    // commands and invisible struts print nothing the cell's math would hold (`\lefteqn{…}\hspace{1cm}\\`,
+    // 2210.09695; `\lefteqn{X}\quad y^2` goes on to the `y`); the token after them is compared by meaning, through the
+    // macros it starts (`\def\nn{\nonumber}`, `\def\eeq{\end{eqnarray}}`, `\def\eq{&=&}`, a robust
+    // `\DeclareRobustCommand\nn{\nonumber}`: hep idioms, reviews of 68z; hep-ph0607130).
+    let mut look = LefteqnLookAhead::default();
+    let ends_cell = look.ends_cell()?;
+    unread_vec(look.seen);
+    // Only where the first column's math is its template's `$` (eqnarray's `\hfil$\displaystyle##$`) does the
+    // `\multicolumn` leave the rest of the cell in text: an `array`'s span re-inserts its `$` and an amsmath cell boxes
+    // only the span's body (1409.4633's `array{ll}` keeps the span).
+    let template_dollar = lookup_alignment()
+      .and_then(|alignment| {
+        alignment.alignment_cell().map(|cell| {
+          cell.borrow().get_template().get_columns().first().is_some_and(|column| {
+            column
+              .before
+              .as_ref()
+              .is_some_and(|before| before.unlist_ref().iter().any(|t| t.get_catcode() == Catcode::MATH))
+          })
+        })
+      })
+      .unwrap_or(false);
+    let whole_cell = !template_dollar || ends_cell;
+    if whole_cell {
+      out.extend(TokenizeInternal!(r"\multicolumn{1}{l}{\lx@alignment@cell@overprint{ltx_eqn_lefteqn}").unlist());
+      math(&mut out);
+      out.extend(TokenizeInternal!(r"\mbox{}}").unlist());
+    } else {
+      out.extend(TokenizeInternal!(r"\lx@alignment@cell@overprint{ltx_eqn_lefteqn}\rlap{").unlist());
+      math(&mut out);
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
+  });
+
+  // Perl: latex_constructs.pool.ltxml lines 2258-2259
+  Let!("\\displ@y", "\\displaystyle");
+  DefMacro!("\\@lign", None, None);
+
+  Tag!("ltx:equationgroup", auto_close => true);
+
+  // Prune spurious empty equations at construction end. A well-formed
+  // `<ltx:equation>` always carries an `<ltx:Math>` child; a math-less one is
+  // spurious markup that serialises as a childless `<equation/>` and renders as a
+  // tall EMPTY display block. Raw-loaded `algpseudocodex` (TikZ code-boxes +
+  // `\savebox{$\m@th…$}` + `\tabto`) opens and closes such empty equations — TWO per
+  // `\State $math$ \Comment{…}` line — blowing out the vertical spacing of a whole
+  // algorithm (witness arXiv 2511.21969, html_feedback). GENUINE-RUST-ONLY: same-host
+  // Perl's box handling never creates them (emits ZERO). We reach parity by dropping
+  // any equation left with no Math. Perl has the afterClose-on-equation precedent
+  // (`amsmath.sty.ltxml:638 rearrangeLoneAMSAligned`). KNOWN_PERL_ERRORS #108.
+  //
+  // `after_close_late` (not `after_close`): it runs AFTER every other equation-close
+  // handler (e.g. amsmath's `rearrangeLoneAMSAligned`), so the prune sees the FINAL
+  // content and never races a handler that legitimately populates the equation at close
+  // time. The predicate is deliberately CONSERVATIVE — TRULY empty (no child nodes at
+  // all, i.e. the self-closing `<equation/>` the algpseudocodex boxes leave behind). A
+  // `<Math>`-presence test is too strict: a pure-text display equation
+  // (`\[\text{…}\]`) legitimately carries no `<ltx:Math>` child yet must be kept
+  // (cluster_cli::display_math_renders_on_one_line_without_clipping).
+  // An amsmath `{equation}` its `\nonumber` left the stepped number's reference forms (`AMS_EQUATION`) keeps them only
+  // for its labels.
+  Tag!("ltx:equation", after_close => sub[document, node, whatsit] {
+    if whatsit.is_some_and(|w| w.get_property_bool(NEXT_NUMBER_EQUATION)) && !node.has_attribute("labels") {
+      for tags in node.get_child_elements() {
+        if document::get_node_qname(&tags) == pin!("ltx:tags") {
+          document.remove_node(tags);
+        }
+      }
+    }
+  });
+  Tag!("ltx:equation", after_close_late => sub[document, node] {
+    if node.get_first_child().is_none() {
+      document.remove_node(node.clone());
+    }
+  });
+
+  // Perl: latex_constructs.pool.ltxml L1971-1973
+  NewCounter!("subequation", "equation", idprefix => "E", idwithin => "equation");
+  DefMacro!("\\thesubequation", "\\theequation\\alph{subequation}");
+  DefMacro!("\\fnum@subequation", "(\\thesubequation)");
+
+  // Perl: latex_constructs.pool.ltxml L2174-2191
+  // \lx@equationgroup@subnumbering@begin/end — subequation numbering
+  DefConstructor!("\\lx@equationgroup@subnumbering@begin",
+  "<ltx:equationgroup xml:id='#id'>#tags",
+  after_digest => sub[whatsit] {
+    use latexml_core::binding::counter::dialect::reset_counter;
+    use latexml_core::mouth;
+    // Step the equation counter and get properties (id, refnum, tags)
+    let eqn_props = ref_step_counter_by_meaning("equation")?;
+    // Expand \theequation to get the parent equation number tokens.
+    // Keep the TOKEN list — do NOT round-trip through `.to_string()` +
+    // re-tokenize: a `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`
+    // expands to `{ \rm S } <n>`, and serializing that drops the space
+    // between the control word `\rm` and the letter `S`, so re-tokenizing
+    // "{\rmS}<n>" yields the undefined CS `\rmS`. Perl fixates the parent
+    // via `\protected@edef\theparentequation{\theequation}` (amsmath.sty
+    // L1134) — token-level, no string round-trip. Witness 2005.06712
+    // (subequation tags `(S15a)` → `(\rmS15a)`).
+    // `\protected@edef`'s REGIME, not a full expansion: robust commands in
+    // the number (`\DeclareRobustCommand`, e.g. hep-paper's oldstyle `\tstyle`
+    // → nfssext-cfr-nnfss.sty:391 `\exfs@unmerge@families`, a `\loop` whose
+    // scratch macros are set by local `\edef`) stay tokens and run at
+    // digestion, where their assignments execute; gullet-expanding them
+    // skipped the `\edef`s and the loop fell off its `\ifexfs@take`
+    // (hep-math-documentation 39 errors; Perl's `Expand` at
+    // latex_constructs.pool.ltxml:2123 fails the same way — SHARED).
+    // Guard: `perfect_kernel_batch56::subequations_keep_robust_number_commands`.
+    let eqnum_toks = with_unexpandable_protect(|| do_expand_partially(T_CS!("\\theequation")))?;
+    // Save current equation counter value
+    let saved = lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
+      match rv {
+        RegisterValue::Number(n) => n.0,
+        _ => 0,
+      }
+    });
+    assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
+    // Set properties on the whatsit
+    for (k, v) in eqn_props {
+      with(k, |ks| whatsit.set_property(ks, v));
+    }
+    // Reset equation counter to 0
+    reset_counter(&T_OTHER!("equation"))?;
+    // amsmath.sty L1134: `\protected@edef\theparentequation{\theequation}`
+    // — fixates the parent equation's expansion before the local
+    // \theequation is redefined. Papers commonly do
+    // `\renewcommand{\theequation}{\theparentequation\alph{equation}}`
+    // inside subequations, expecting \theparentequation to resolve.
+    // Witness 2402.03202.
+    def_macro(T_CS!("\\theparentequation"), None,
+      eqnum_toks.clone(), None)?;
+    // Redefine \theequation to parent_number + \alph{equation} — append
+    // the `\alph{equation}` tokens to the parent tokens directly (again
+    // no string round-trip, to preserve `\rm S` etc.).
+    let mut new_theequation = eqnum_toks.unlist();
+    new_theequation.extend(mouth::tokenize_internal("\\alph{equation}").unlist());
+    def_macro(T_CS!("\\theequation"), None, Tokens::new(new_theequation), None)?;
+    // Redefine \theequation@ID for xml:id generation
+    if let Some(id_val) = whatsit.get_property("id") {
+      let id_str = match &*id_val {
+        Stored::String(s) => to_string(*s),
+        other => other.to_string(),
+      };
+      let new_id_macro = format!("{}.\\@equation@ID", id_str);
+      def_macro(T_CS!("\\theequation@ID"), None,
+        mouth::tokenize_internal(TeXString::assembled(new_id_macro)), None)?;
+    }
+  });
+  Tag!("ltx:equationgroup", auto_close => true);
+  DefConstructor!("\\lx@equationgroup@subnumbering@end",
+  sub[document, _args, _props] {
+    document.maybe_close_element("ltx:equationgroup")?;
+  },
+  after_digest => {
+    // Restore the saved equation counter
+    if let Some(saved) = lookup_value("SAVED_EQUATION_NUMBER") {
+      let n = match saved {
+        Stored::Number(n) => n.0,
+        _ => 0,
+      };
+      assign_register(
+        "\\c@equation",
+        Number::new(n).into(),
+        Some(Scope::Global),
+        Vec::new(),
+      )?;
+    }
+  });
+
+  // Perl: latex_constructs.pool.ltxml L2085-2107 — automath wrapping.
+  // The pair brackets a fragment (used by `--whatsin=math`, i.e. the
+  // `latexmlmath`-style CLI mode, and by alt/label math): if the content
+  // isn't ALREADY explicit math, `\ensuremathfollows` opens `\(` and
+  // `\ensuremathpreceeds` closes `\)`. Perl `$MATHENVS`:
+  //   displaymath|equation*?|eqnarray*?
+  DefMacro!("\\ensuremathfollows", {
+    // The preamble mouth (`literal:\begin{document}\ensuremathfollows`) is
+    // exhausted at this point; cross into the mouth holding the actual
+    // fragment so `read_token` peeks the real content. Perl:
+    // `$gullet->closeMouth unless ($gullet->getMouth->hasMoreInput)`.
+    if !has_more_input() {
+      close_mouth(false)?;
+    }
+    let mut expansion = Tokens!();
+    if let Some(tok) = read_token()? {
+      // Perl `$tok->getCSName`: the CS name for a control sequence, else undef.
+      let mut csname = if tok.get_catcode() == Catcode::CS {
+        Some(tok.with_str(|s| s.to_string()))
+      } else {
+        None
+      };
+      if csname.as_deref() == Some("\\begin") {
+        // Peek the environment name to test against the math envs, then put
+        // the `{env}` group back exactly as read. Perl:
+        // `unread(T_BEGIN, $arg->unlist, T_END)`.
+        let arg = read_arg(ExpansionLevel::Off)?;
+        csname = Some(arg.to_string());
+        let mut group = vec![T_BEGIN!()];
+        group.extend(arg.unlist());
+        group.push(T_END!());
+        unread(Tokens::new(group));
+      }
+      unread_one(tok);
+      // Perl: `$csname !~ /^Math|\(|\[|(?:$MATHENVS)/` — already-explicit math.
+      // undef csname (a non-CS first token) is a non-match, so it DOES wrap.
+      let already_math = csname
+        .as_deref()
+        .is_some_and(|c| AUTOMATH_ALREADY_MATH.is_match(c));
+      if !already_math {
+        assign_value("automath_triggered", true, Some(Scope::Global));
+        expansion = Tokens!(T_CS!("\\("));
+      }
+    }
+    Ok(expansion)
+  });
+
+  DefMacro!("\\ensuremathpreceeds", {
+    let triggered = matches!(lookup_value("automath_triggered"), Some(Stored::Bool(true)));
+    Ok(if triggered {
+      Tokens!(T_CS!("\\)"))
+    } else {
+      Tokens!()
+    })
+  });
+
+  // Perl: latex_constructs.pool.ltxml L2166
+  // Since the arXMLiv folks keep wanting ids on all math, let's try this!
+  Tag!("ltx:Math", after_open => sub[document, node] {
+    document.generate_id(node, "m")?;
+  });
+
+  // \stackrel{over}{base}: places "over" as a superscript over "base" relation
+  DefMacro!("\\stackrel{}{}", r"\lx@stackrel{{\scriptstyle #1}}{{#2}}");
+  DefConstructor!("\\lx@stackrel{}{}",
+    "<ltx:XMApp role='RELOP'>\
+      <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/>\
+      <ltx:XMArg>#2</ltx:XMArg>\
+      <ltx:XMArg>#1</ltx:XMArg>\
+    </ltx:XMApp>",
+    reversion => "\\stackrel{#1}{#2}",
+    properties => { stored_map!("scriptpos" => s!("mid{}", get_script_level())) }
+  );
+
+  //======================================================================
+  // C.7.7 Spacing
+  // Perl latex_constructs.pool.ltxml L2498-2525.
+  // some of this is already in TeX.pool. the rest was in amsmath, but is
+  // now native to LaTeX. Each constructor uses `?#isMath(...)(...)`: an
+  // XMHint (with width property) in math mode, the corresponding
+  // unicode space (or nothing) otherwise. In text each is a kern (latex.ltx:15669-15681 `\tmspace`, of which
+  // `\thinspace`, `\negthinspace`, `\medspace` and `\thickspace` are `\let` copies): `\unkern` removes it and
+  // `\lastkern` reads its em width. `\medspace` is `\:` (latex.ltx:15676), so in text it is U+2005 as `\:` is;
+  // Perl wrote nothing, joining the words either side.
+  DefConstructor!("\\thinspace",
+    "?#isMath(<ltx:XMHint name='thinspace' width='#width'/>)(\u{2009})",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thinmuskip", false, "0.16667em")?)) },
+    enter_horizontal => true);
+  DefConstructor!("\\negthinspace",
+    "?#isMath(<ltx:XMHint name='negthinspace' width='#width'/>)()",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thinmuskip", true, "0.16667em")?)) },
+    enter_horizontal => true);
+  DefConstructor!("\\medspace",
+    "?#isMath(<ltx:XMHint name='medspace' width='#width'/>)(\u{2005})",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\medmuskip", false, "0.2222em")?)) },
+    enter_horizontal => true);
+  DefConstructor!("\\thickspace",
+    "?#isMath(<ltx:XMHint name='thickspace' width='#width'/>)(\u{2004})",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thickmuskip", false, "0.2777em")?)) },
+    enter_horizontal => true);
+  define_negative_tmspaces()?;
+
+  DefConstructor!(
+    "\\frac InFractionStyle InFractionStyle",
+    "<ltx:XMApp>\
+      <ltx:XMTok meaning='divide' role='FRACOP' mathstyle='#mathstyle'/>\
+      <ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg>\
+      </ltx:XMApp>",
+    properties => {
+      let ms = lookup_font()
+        .and_then(|f| f.get_mathstyle().map(|s| s.to_string()));
+      match ms {
+        Some(s) => Ok(stored_map!("mathstyle" => s)),
+        None => Ok(stored_map!()),
+      }
+    }
+  );
+
+  DefConstructor!("\\mathrm{}", "#1", bounded => true, require_math => true,
+    locked => true,
+    font => {family => "serif", series => "medium", shape => "upright"});
+  DefConstructor!("\\mathit{}", "#1", bounded => true, require_math => true,
+    locked => true,
+    font => {shape => "italic", family => "serif", series => "medium"});
+  DefConstructor!("\\mathbf{}", "#1", bounded => true, require_math => true,
+    locked => true,
+    font => {series => "bold", family => "serif", shape => "upright"});
+  DefConstructor!("\\mathsf{}", "#1", bounded => true, require_math => true,
+    locked => true,
+    font => {family => "sansserif", series => "medium", shape => "upright"});
+  DefConstructor!("\\mathtt{}", "#1", bounded => true, require_math => true,
+    locked => true,
+    font => {family => "typewriter", series => "medium", shape => "upright"});
+  DefConstructor!("\\mathcal{}", "#1", bounded => true, require_math => true,
+    locked => true,
+    font => {family => "caligraphic", series => "medium", shape => "upright"});
+  DefConstructor!("\\mathscr{}", "#1", bounded => true, require_math => true,
+    locked => true,
+    font => {family => "script", series => "medium", shape => "upright"});
+  DefConstructor!("\\mathnormal{}", "#1", bounded => true, require_math => true,
+    locked => true,
+    font => {family => "math", shape => "italic", series => "medium"});
+
+  DefMacro!("\\fontsubfuzz", ".4pt");
+  def_macro_noop("\\oldstylenums")?;
+
+  DefPrimitive!("\\operator@font", None,
+    font => {family => "serif", series => "medium", shape => "upright"});
+
+  Ok(())
+}
+
+/// `\negmedspace` and `\negthickspace` (Perl latex_constructs.pool.ltxml L2457-2467), which amsmath.sty:155-175 also
+/// declares again (`define_amsmath_tmspace_commands`).
+#[rustfmt::skip]
+pub(super) fn define_negative_tmspaces() -> Result<()> {
+  DefConstructor!("\\negmedspace",
+    "?#isMath(<ltx:XMHint name='negmedspace' width='#width'/>)()",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\medmuskip", true, "0.2222em")?)) },
+    enter_horizontal => true);
+  DefConstructor!("\\negthickspace",
+    "?#isMath(<ltx:XMHint name='negthickspace' width='#width'/>)(\u{2004})",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thickmuskip", true, "0.2777em")?)) },
+    enter_horizontal => true);
+  Ok(())
+}
+
+/// `\if@in@firstcolumn`: read in the look-ahead before a cell starts, where the current column is the one before.
+fn in_first_column() -> bool {
+  match lookup_alignment() {
+    Some(alignment_digested) => {
+      if let Some(alignment_cell) = alignment_digested.alignment_cell() {
+        let alignment = alignment_cell.borrow();
+        !alignment.is_in_row()
+          || (!alignment.is_in_column() && alignment.current_column_number() < 1)
+      } else {
+        false
+      }
+    },
+    _ => false,
+  }
+}
+
+/// A spacing command a first-column `\lefteqn`'s look-ahead passes over: it prints nothing the cell's math would hold.
+/// `\hspace` (its argument), `\hskip` (its glue) and `\kern` (its dimension) are read by `LefteqnLookAhead`.
+fn lefteqn_spacing(t: &Token) -> bool {
+  [
+    "\\quad",
+    "\\qquad",
+    "\\,",
+    r"\;",
+    "\\:",
+    "\\!",
+    "\\ ",
+    "\\enspace",
+    "\\hfill",
+    "\\hfil",
+    "\\relax",
+    "\\protect",
+    "\\strut",
+    "\\mathstrut",
+  ]
+  .iter()
+  .any(|name| *t == T_CS!(*name))
+}
+
+/// Whether `t` ends a first-column `\lefteqn`'s cell: a tab or row end, or by meaning `\\`, `\nonumber`, `\notag`,
+/// `\label`, the environment's `\end`, `\tabularnewline`. A command that is undefined or `\relax` matches only itself
+/// (`\notag` without amsmath; latex.ltx's top-level `\tabularnewline`, which `\protect` would equal).
+fn lefteqn_ends(t: &Token) -> bool {
+  const ENDS: [&str; 7] = [
+    "\\\\",
+    "\\nonumber",
+    "\\notag",
+    "\\label",
+    "\\end",
+    "\\tabularnewline",
+    "\\cr",
+  ];
+  is_column_end(t).is_some()
+    || ENDS.iter().any(|name| {
+      let end = T_CS!(*name);
+      *t == end
+        || (lookup_meaning(&end).is_some()
+          && !x_equals(&end, &T_CS!("\\relax"))
+          && x_equals(t, &end))
+    })
+}
+
+/// The look-ahead after a first-column `\lefteqn`: whether the rest of its cell holds nothing the cell's math would
+/// (`ends_cell`), read as TeX reads it, through the macros it starts. The input it reads is kept in `seen`, to be put
+/// back; the bodies of the macros it follows are on `bodies`; `back` holds tokens a keyword test read and put back.
+/// Passed over: spaces, braces (`{}`, `{\nonumber}`), the spacing of `lefteqn_spacing` (`\relax`, `\protect`
+/// before a robust command's inner macro, `\strut`, `\mathstrut`), `\hspace`/`\vphantom` with their argument,
+/// `\hskip` with its glue, `\kern` with its dimension. A macro is followed through 8 expansions (OXIDIZED_DESIGN_
+/// DIVERGENCES #556 lists the limits).
+#[derive(Default)]
+struct LefteqnLookAhead {
+  seen:   Vec<Token>,
+  bodies: Vec<(Vec<Token>, usize)>,
+  back:   Vec<Token>,
+}
+
+impl LefteqnLookAhead {
+  fn next(&mut self) -> Result<Option<Token>> {
+    if let Some(t) = self.back.pop() {
+      return Ok(Some(t));
+    }
+    while let Some((body, at)) = self.bodies.last_mut() {
+      if let Some(t) = body.get(*at).copied() {
+        *at += 1;
+        return Ok(Some(t));
+      }
+      self.bodies.pop();
+    }
+    let t = read_token()?;
+    if let Some(t) = t {
+      self.seen.push(t);
+    }
+    Ok(t)
+  }
+
+  /// The next token that is not a space (read).
+  fn next_non_space(&mut self) -> Result<Option<Token>> {
+    loop {
+      match self.next()? {
+        Some(t) if t.get_catcode() == Catcode::SPACE => {},
+        other => return Ok(other),
+      }
+    }
+  }
+
+  /// Reads the letters of `keyword` (any case, after spaces), or reads nothing.
+  fn keyword(&mut self, keyword: &str) -> Result<bool> {
+    let mut read = Vec::new();
+    let first = self.next_non_space()?;
+    let mut t = first;
+    for c in keyword.chars() {
+      match t {
+        Some(tok)
+          if tok.get_catcode() == Catcode::LETTER
+            && tok.with_str(|s| s.eq_ignore_ascii_case(&c.to_string())) =>
+        {
+          read.push(tok);
+          t = if read.len() < keyword.len() {
+            self.next()?
+          } else {
+            None
+          };
+        },
+        _ => {
+          if let Some(tok) = t {
+            self.back.push(tok);
+          }
+          self.back.extend(read.into_iter().rev());
+          return Ok(false);
+        },
+      }
+    }
+    Ok(true)
+  }
+
+  /// A macro argument: a balanced group (after spaces and, for `\hspace`, a `*`), or one token.
+  fn argument(&mut self, star: bool) -> Result<()> {
+    let mut t = self.next_non_space()?;
+    if star && t == Some(T_OTHER!("*")) {
+      t = self.next_non_space()?;
+    }
+    if t.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
+      let mut depth = 1usize;
+      while depth > 0 {
+        match self.next()? {
+          Some(t) if t.get_catcode() == Catcode::BEGIN => depth += 1,
+          Some(t) if t.get_catcode() == Catcode::END => depth -= 1,
+          Some(_) => {},
+          None => break,
+        }
+      }
+    }
+    Ok(())
+  }
+
+  /// A dimension (tex.web §448): signs, then a register, or a factor and a unit (`true`, and `fil`/`fill`/`filll` in
+  /// a glue's stretch or shrink).
+  fn dimension(&mut self, fil: bool) -> Result<()> {
+    let mut t = self.next_non_space()?;
+    while t.is_some_and(|t| t == T_OTHER!("+") || t == T_OTHER!("-")) {
+      t = self.next_non_space()?;
+    }
+    let factor = |t: &Token| {
+      t.get_catcode() == Catcode::OTHER
+        && t.with_str(|s| {
+          s.chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == ',')
+        })
+    };
+    match t {
+      Some(t) if matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) => return Ok(()),
+      Some(t) if factor(&t) => {},
+      Some(t) => {
+        self.back.push(t);
+        return Ok(());
+      },
+      None => return Ok(()),
+    }
+    loop {
+      match self.next()? {
+        Some(t) if factor(&t) => {},
+        Some(t) => {
+          self.back.push(t);
+          break;
+        },
+        None => break,
+      }
+    }
+    // a register after the factor (`2\arraycolsep`)
+    match self.next_non_space()? {
+      Some(t) if matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) => return Ok(()),
+      Some(t) => self.back.push(t),
+      None => return Ok(()),
+    }
+    if fil && self.keyword("fil")? {
+      while self.keyword("l")? {}
+      return Ok(());
+    }
+    self.keyword("true")?;
+    for unit in [
+      "pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "em", "ex", "mu", "px",
+    ] {
+      if self.keyword(unit)? {
+        break;
+      }
+    }
+    Ok(())
+  }
+
+  /// A glue (tex.web §461): a dimension, then `plus` and `minus` ones.
+  fn glue(&mut self) -> Result<()> {
+    self.dimension(false)?;
+    if self.keyword("plus")? {
+      self.dimension(true)?;
+    }
+    if self.keyword("minus")? {
+      self.dimension(true)?;
+    }
+    Ok(())
+  }
+
+  fn ends_cell(&mut self) -> Result<bool> {
+    let mut expansions = 0;
+    for _ in 0..256 {
+      let Some(t) = self.next()? else {
+        return Ok(true);
+      };
+      if matches!(
+        t.get_catcode(),
+        Catcode::SPACE | Catcode::BEGIN | Catcode::END
+      ) {
+        continue;
+      }
+      if lefteqn_ends(&t) {
+        return Ok(true);
+      }
+      if lefteqn_spacing(&t) {
+        continue;
+      }
+      if t == T_CS!("\\hspace") || t == T_CS!("\\vphantom") {
+        self.argument(t == T_CS!("\\hspace"))?;
+        continue;
+      }
+      if t == T_CS!("\\hskip") {
+        self.glue()?;
+        continue;
+      }
+      if t == T_CS!("\\kern") {
+        self.dimension(false)?;
+        continue;
+      }
+      let body = match lookup_meaning(&t) {
+        Some(Stored::Expandable(defn))
+          if matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) =>
+        {
+          match defn.get_expansion() {
+            Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().clone()),
+            _ => None,
+          }
+        },
+        _ => None,
+      };
+      match body {
+        Some(body) if expansions < 8 => {
+          expansions += 1;
+          self.bodies.push((body, 0));
+        },
+        _ => return Ok(false),
+      }
+    }
+    Ok(false)
+  }
+}

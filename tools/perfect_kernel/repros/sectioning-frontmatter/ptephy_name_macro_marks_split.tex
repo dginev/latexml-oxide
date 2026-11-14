@@ -1,0 +1,19 @@
+% witness: 2209.07273, 2101.03480, 2404.08725 (ptephy_v1, `\name{H.~Sekiya}{\AFFicrr,\AFFipmu}` with
+%          `\newcommand{\AFFicrr}{1}`)
+% oracle:  pdflatex (1412.6580's ptephy.cls and a stand-in for its logo graphic `newlogo`, TL 2025) 0 errors:
+%          "Ann Able^{1,2}, Bob Baker^2 and Cy Coe^{1,†}" over "^1 Univ A / ^2 Lab B", footnote "† Now at Lab C"
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; three creators, Ann with Univ A and Lab B, Bob with Lab B, Cy with Univ A and the thanks note
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\newcommand{\AFa}{1}\newcommand{\AFb}{2}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{\AFa,\AFb}, \name{Bob Baker}{\AFb} and \name{Cy Coe}{\AFa,}\thanks{Now at Lab C}}
+\address{\affil{1}{Univ A}
+\affil{2}{Lab B}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 66w review finding 1 (p_citep): natbib's two optional arguments, the second empty
+% oracle:  pdflatex 1 error ("Missing $ inserted" at the \par), pdftotext "We have a = b / See (e.g. ?) and x here. /
+%          References"; Perl 28 errors, the formula runs on through the citation and the next one through the
+%          bibliography (KNOWN_PERL_ERRORS #679)
+% engines: rust 66v1: as pdflatex; 66w: 3 errors, the citation and the bibliography inside formulas
+% expect:  1 error "Missing $ inserted"; Math "a=b" ends at the \par; "See", the citation and the formula x in paragraph 2;
+%          the bibliography outside any formula
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w r1):
+%          every `[…]` and `{…}` in a row after a command is its argument, and none is looked into
+%          (stomach.rs `par_lookahead_verdict` / `lookahead_command`), so no math-only token precedes the `$` and
+%          tex.web §1047 ends the formula at the \par (`insert_dollar_sign`)
+% preload: ar5iv.sty
+% status:  GREEN (66w r1; guard perfect_kernel_batch66w::par_before_citep_with_two_notes_ends_the_formula)
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+We have $a = b
+
+See \citep[e.g.][]{a_b} and $x$ here.
+\begin{thebibliography}{9}\bibitem[A(2001)]{a_b} S.\end{thebibliography}
+\end{document}

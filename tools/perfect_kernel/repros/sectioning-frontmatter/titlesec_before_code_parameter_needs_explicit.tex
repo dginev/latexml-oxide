@@ -1,0 +1,20 @@
+% mechanism: without titlesec's `explicit` option a title format's before-code holds no `#1`
+%   (titlesec.sty:714-719 define `\ttlf@<sec>` without a parameter): TeX stops with "Illegal
+%   parameter number in definition of \ttlf@section". 57q's composer applies the before-code to
+%   the title, `#4{#8}`, so a `#1` there referred to the title and printed it twice, silently.
+%   The error is raised and the author's `#1` is the title (as under `explicit`, which a class
+%   loading titlesec first can leave unset).
+% witness: 57q review (probe t2)
+% oracle:  pdflatex 2 errors ("Illegal parameter number…", "You can't use macro parameter…"), then
+%          "1 1Intro": TeX's recovery drops the `#` and keeps the digit; the title printed once is
+%          the author's intent, which we keep after the same error
+% engines: rust 57q first cut: 0 errors, "1 IntroIntro"; 57p and perl: "1 Intro" (before-code ignored)
+% expect:  1 error (Error:misdefined); the title printed once
+% status:  GREEN (57q)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}{\bfseries}{\thesection}{1em}{#1}
+\begin{document}
+\section{Intro}
+Text.
+\end{document}

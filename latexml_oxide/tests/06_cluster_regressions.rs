@@ -84,14 +84,13 @@ fn cluster_subfigure_panels_share_a_row_6903() {
      break count, so the reflow is either not firing or too eager:\n{xml}"
   );
 }
-/// brucemiller/LaTeXML#2563: loading `svg` (which does `RequirePackage('subfig')`)
-/// after `subcaption` must not break subfig's `\subfloat`. Perl 0.8.8 gates
-/// subfig's `\lx@subfloat@figure` behind `\@ifundefined{c@subfigure}{\newsubfloat
-/// {figure}}{}` (subfig.sty.ltxml:114) — a guard on the COUNTER, which subcaption
-/// already defined. So Perl skips the definition and `\subfloat` leaks its args as
-/// literal text: `<p>[This is a caption.]This is a figure.</p>`. Rust's
-/// `subfig_sty.rs` defines the subfloat macros unconditionally (NewCounter is
-/// idempotent), so the panel + its subcaption survive. Guards that surpass-Perl win.
+/// brucemiller/LaTeXML#2563: loading `svg` after `subcaption` must not break
+/// `\subfloat`. Perl's svg.sty.ltxml:19 does `RequirePackage('subfig')`, whose
+/// `\lx@subfloat@figure` sits behind a guard on the COUNTER subcaption already
+/// defined (subfig.sty.ltxml:114), so Perl 0.8.8 leaks the args as literal text:
+/// `<p>[This is a caption.]This is a figure.</p>`. The real svg.sty loads no subfig
+/// (KPE #322), so here subcaption's own `\subfloat` reads the panel, and — as
+/// subcaption.sty:282-285 does — takes a lone optional as the caption.
 #[test]
 fn cluster_svg_subfloat_survives_subcaption_2563() {
   let xml = convert_to_xml("tests/cluster_regressions/svg_subfloat_2563.tex");
@@ -102,10 +101,16 @@ fn cluster_svg_subfloat_survives_subcaption_2563() {
      (#2563 Perl breakage). Expected a figure panel, not a raw `[...]`:\n{xml}"
   );
   // The subcaption must render as an actual caption, and the body as the panel.
+  // subfloat subcaption lost: the WHOLE first <caption> element is pinned.
+  latexml::util::test::assert_element(
+    &xml,
+    "caption",
+    &[],
+    r##"<caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">This is a caption.</text></caption>"##,
+  );
   assert!(
-    xml.contains("<caption") && xml.contains("This is a caption."),
-    "\\subfloat's subcaption was lost — expected a <caption> carrying \
-     'This is a caption.':\n{xml}"
+    xml.contains("This is a caption."),
+    "subfloat subcaption lost:\n{xml}"
   );
   assert!(
     xml.contains("This is a figure."),
@@ -154,6 +159,9 @@ fn cluster_pandoc_calc_colwidth_6909() {
 /// (only the 2nd+ paragraphs carry the class, since `\par` records it for the
 /// NEXT paragraph and the first has no prior `\par`); Rust surpasses by also
 /// stamping the first paragraph from the live `\parindent`. OXIDIZED_DESIGN #143.
+/// The no-dump path is guarded by
+/// `cluster_package_guards::dump_gate_init::nodump_latex_branch_converts_healthily`,
+/// which shares one raw kernel load across the NODUMP guards.
 #[test]
 fn cluster_first_para_noindent_719() {
   let xml = convert_to_xml("tests/cluster_regressions/first_para_noindent_719.tex");
@@ -174,36 +182,6 @@ fn cluster_first_para_noindent_719() {
     !def.contains("ltx_noindent"),
     "a paragraph was wrongly marked ltx_noindent under the DEFAULT \\parindent \
      (#719 over-application):\n{def}"
-  );
-}
-/// Issue #719, no-dump path. The first landing keyed the first-paragraph stamp on
-/// a `seen_first_para` state one-shot, which a begin-document `\par` consumed
-/// before the first content paragraph under the no-dump sequence — so the fix
-/// silently reverted there (and in CI, whose freshly-generated dump takes the same
-/// path). The stamp is now structural (first `ltx:para` of its parent), robust to
-/// stray `\par` timing. This subprocess drives the binary with `LATEXML_NODUMP=1`
-/// (env-isolated to dodge the shared-env race) to guard exactly that path.
-#[test]
-fn cluster_first_para_noindent_nodump_719() {
-  use std::process::Command;
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  let dir = tempfile::tempdir().expect("tempdir");
-  std::fs::write(
-    dir.path().join("m.tex"),
-    "\\documentclass[12pt]{article}\n\\setlength{\\parindent}{0pt}\n\
-     \\begin{document}\nFirst line\n\nsecond lines\n\\end{document}\n",
-  )
-  .expect("write m.tex");
-  let status = Command::new(bin)
-    .args(["m.tex", "--dest", "m.xml", "--nocomments"])
-    .env("LATEXML_NODUMP", "1")
-    .current_dir(dir.path())
-    .output()
-    .expect("spawn latexml_oxide");
-  let xml = std::fs::read_to_string(dir.path().join("m.xml")).unwrap_or_default();
-  assert!(
-    status.status.success() && xml.contains(r#"<para class="ltx_noindent" xml:id="p1">"#),
-    "no-dump first paragraph is not marked ltx_noindent despite \\parindent=0pt (#719):\n{xml}"
   );
 }
 /// Issue #722: the optional `[dimen]` of `\\[20pt]` (extra vertical space at a
@@ -477,32 +455,21 @@ fn cluster_newtcblisting_leading_optarg() {
 /// `MergeFont(encoding => "ASCII")`, mirroring `Semiverbatim`), so a verbatim/URL
 /// argument stays ASCII while normal T1 text still follows Bruce's mapping.
 /// Surpasses Perl (which loses ASCII the same way). OXIDIZED_DESIGN #144.
-/// Driven by the binary so the runtime Rhai binding loads (the reported path).
+/// The runtime Rhai binding beside the document loads in-process (the reported path).
 #[test]
 fn cluster_t1_hyperverbatim_ascii_723() {
-  use std::process::Command;
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  let dir = tempfile::tempdir().expect("tempdir");
-  std::fs::write(
-    dir.path().join("myhyper.sty.rhai"),
-    "DefConstructor(\"\\\\myhyper HyperVerbatim\", \"<ltx:ref class=\\\"myhyper\\\" href=\\\"#1\\\">#1</ltx:ref>\");\n",
-  )
-  .expect("write rhai");
-  std::fs::write(
-    dir.path().join("m.tex"),
+  let (log, xml) = latexml::util::test::convert_files_with(
     "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage{myhyper}\n\
      \\begin{document}\n\\myhyper{http://x/a~b^c}\n\\end{document}\n",
-  )
-  .expect("write m.tex");
-  let out = Command::new(bin)
-    .args(["m.tex", "--dest", "m.xml", "--nocomments"])
-    .current_dir(dir.path())
-    .output()
-    .expect("spawn latexml_oxide");
-  let xml = std::fs::read_to_string(dir.path().join("m.xml")).unwrap_or_default();
+    &[(
+      "myhyper.sty.rhai",
+      "DefConstructor(\"\\\\myhyper HyperVerbatim\", \"<ltx:ref class=\\\"myhyper\\\" href=\\\"#1\\\">#1</ltx:ref>\");\n",
+    )],
+    None,
+  );
   // Canary: the HyperVerbatim `~`/`^` (href AND text) must be ASCII, not U+02DC/U+02C6.
   assert!(
-    out.status.success()
+    !log.contains("Fatal:")
       && xml.contains("http://x/a~b^c")
       && !xml.contains('\u{02DC}')
       && !xml.contains('\u{02C6}'),
@@ -515,7 +482,7 @@ fn cluster_t1_hyperverbatim_ascii_723() {
 /// DISPLAYED text, not Bruce's accent glyphs. `\url`/`\path` were missed by the
 /// first pass (#727): their display is `\UrlFont`-wrapped (a plain, non-verbatim
 /// arg), so the reader's ASCII fontmap didn't reach it — `\UrlFont` now selects
-/// `\fontencoding{ASCII}`, matching pdflatex (Perl shows the accents there).
+/// `\lx@fontencoding{ASCII}`, matching pdflatex (Perl shows the accents there).
 /// OXIDIZED_DESIGN #144.
 #[test]
 fn cluster_t1_verbatim_ascii_723() {
@@ -701,6 +668,9 @@ fn cluster_pair_tolerant_trailing() {
 /// arXiv:physics/9710028 (10 errors → 0 with this fix).
 #[test]
 fn cluster_newpsobject_forward() {
+  if !latexml::util::test::check_requirements(latexml::util::test::loads::PSTRICKS) {
+    return;
+  }
   convert_clean("tests/cluster_regressions/newpsobject_forward.tex");
 }
 /// JHEP.cls override of `\href` must use `Semiverbatim Semiverbatim`
@@ -712,6 +682,17 @@ fn cluster_newpsobject_forward() {
 #[test]
 fn cluster_jhep_href_semiverbatim() {
   convert_clean("tests/cluster_regressions/jhep_href_semiverbatim.tex");
+  // JHEP's `\am{}{}{}` takes `\mgr`, `M` and `^`; the `^` stays text in its `\href`'s Semiverbatim body.
+  let (_log, xml) = latexml::util::test::convert_with(
+    include_str!("cluster_regressions/jhep_href_semiverbatim.tex"),
+    None,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[],
+    r#"<Math mode="inline" tex="\lambda\href{http://www-spires.slac.stanford.edu/spires/find/hep/www?j=ANMAA\%2C$m_{3/2}$\%2C^}{{\it Ann.\ Math.\ }{\bf$m_{3/2}$} (M) ^}2S," text="lambda * [Ann. Math. $m_3/2$ (M) ^] * 2 * S" xml:id="p1.m1"><XMath><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMApp xml:id="p1.m1.1"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="lambda" role="UNKNOWN">λ</XMTok><XMText><ref font="italic" href="http://www-spires.slac.stanford.edu/spires/find/hep/www?j=ANMAA%2C$m_3/2$%2C^">Ann. Math. <text font="bold upright">$m_3/2$</text> (M) ^</ref></XMText><XMTok meaning="2" role="NUMBER">2</XMTok><XMTok font="italic" role="UNKNOWN">S</XMTok></XMApp><XMTok role="PUNCT">,</XMTok></XMWrap></XMDual></XMath></Math>"#,
+  );
 }
 /// An eqnarray reading a `\def`-ized `\arraycolsep` (a plain macro, not a length
 /// register) must NOT emit the Rust-only `expected:register` warning — Perl's
@@ -786,10 +767,11 @@ fn cluster_floatflt_pctwidth() {
 /// survived and `\affiliation`/`\emailAdd`/`\keywords` were undefined. Routing
 /// jcappub to the jheppub binding accumulates every author. SHARED gap with Perl
 /// (also truncates + `missing file[jcappub.sty]`); surpass-Perl. html_feedback
-/// #6884, witness arXiv 2404.03569 (63 authors rendered, previously 1).
+/// #6884, witness arXiv 2404.03569 (63 authors rendered, previously 1). The binding is a contrib one (78e: Perl has no
+/// jcappub.sty.ltxml), so the conversion dispatches the contrib bindings, with the zero-error gate.
 #[test]
 fn cluster_jcappub_accumulates_authors() {
-  let xml = convert_to_xml("tests/cluster_regressions/jcappub_authors.tex");
+  let xml = convert_to_xml_contrib_clean("tests/cluster_regressions/jcappub_authors.tex");
   assert_eq!(
     xml.matches(r#"role="author""#).count(),
     3,
@@ -841,18 +823,17 @@ fn cluster_arximspdf_imsart() {
     "structured \\b* bibliography content missing"
   );
 }
-/// A plain DefMath symbol (`\rightarrowfill`, a DefMath ARROW) used in TEXT mode
-/// must NOT emit the Rust-only `unexpected:mode` "should only appear in math mode"
-/// warning. Perl (Package.pm:1304) adds the requireMath beforeDigest only for
-/// `requireMath => 1` bindings; Rust's `transfer_common_constructor_options` added
-/// it unconditionally for every DefMath (broad over-emission; 0802.3360 Rust 3 /
-/// Perl 0). See docs/SYNC_STATUS.md.
+/// A plain DefMath symbol (`\rightarrowfill`, a DefMath ARROW with `stretchy`) used in
+/// TEXT mode does not warn "should only appear in math mode": its options are all
+/// simple (Perl `$simpletoken_options`, Package.pm:1603-1607), so it is a box
+/// (Package.pm:1665), which carries no `requireMath`; every DefMath constructor
+/// does warn (Package.pm:1706; 57n). Witness 0802.3360 (Perl 0 such warnings).
 #[test]
 fn cluster_defmath_textmode_no_mode_warning() {
   let log = convert_log("tests/cluster_regressions/defmath_textmode_no_mode_warning.tex");
   assert!(
     !log.contains("should only appear in math mode"),
-    "spurious unexpected:mode warning for a DefMath symbol in text mode (requireMath over-applied):\n{log}"
+    "spurious requireMath warning (`unexpected:\\rightarrowfill`) for a DefMath box in text mode:\n{log}"
   );
 }
 /// A `feynmp` (Feynman-diagram, MetaPost) document must convert with 0 errors —
@@ -1003,7 +984,7 @@ fn cluster_theindex_nested_autoclose() {
   convert_clean("tests/cluster_regressions/theindex_nested_autoclose.tex");
 }
 /// `\verb` inside `\index{…}` must render its body as typewriter verbatim, not
-/// vanish. `\index` reads its argument `SanitizedVerbatim`, which re-tokenizes it —
+/// vanish. `\index` reads its argument `SanitizedVerbatim` and re-reads it (`reread_sanitized_entry`) —
 /// collapsing `\verb`'s raw body back into control sequences and leaving `\verb`
 /// with no mouth to scan a delimiter from. In BOTH engines this produced an empty
 /// `<verbatim/>` with the body leaking out mis-tokenized (`\delta` → math-italic δ),
@@ -1016,8 +997,15 @@ fn cluster_theindex_nested_autoclose() {
 #[test]
 fn cluster_verb_in_index_renders_typewriter() {
   // convert_to_xml gates on 0 errors — the `|` form used to emit
-  // `Error:expected:delimiter Verbatim argument lost`.
-  let xml = convert_to_xml("tests/cluster_regressions/verb_in_index.tex");
+  // `Error:expected:delimiter Verbatim argument lost`. The entries are typeset
+  // only where the index is printed (OXIDIZED_DESIGN_DIVERGENCES #738): the
+  // fixture, which the streaming sweep keeps as is (its documented exception),
+  // is converted here with a `\printindex`.
+  let fixture = std::fs::read_to_string("tests/cluster_regressions/verb_in_index.tex")
+    .expect("read verb_in_index.tex");
+  let printed = fixture.replace("\\end{document}", "\\printindex\n\\end{document}");
+  assert_ne!(printed, fixture);
+  let xml = convert_to_xml(&format!("literal:{printed}"));
   // Four `\verb` bodies (`\verb+..+`, `\verb|..|`, `\verb*|..|`, and the
   // `\verb|sub|` subentry), each a typewriter verbatim; `\index{plain}` and the
   // `grp` head are plain phrases.
@@ -1158,8 +1146,15 @@ fn subcaption_does_not_clobber_subfigure_macro() {
     "subcaption clobbered subfigure.sty's \\subfigure; content after the figure was lost:\n{x}"
   );
   // The bibliography (document tail) is present => no truncation.
+  // bibliography lost — the subfigure/subcaption clash leaked a group and truncated the document: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="ref-a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> A. Author, A representative title, 2021.</bibblock></bibitem>"##,
+  );
   assert!(
-    x.contains("<bibitem") && x.contains("representative title"),
+    x.contains("representative title"),
     "bibliography lost — the subfigure/subcaption clash leaked a group and truncated the document:\n{x}"
   );
 }
@@ -1180,8 +1175,15 @@ fn hphantom_braceless_minipage_does_not_swallow_endminipage() {
     "brace-less \\hphantom swallowed \\endminipage; content after the minipage was lost:\n{x}"
   );
   // The bibliography (last thing in the document) is present => no truncation.
+  // bibliography lost — the minipage leaked and truncated the document: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="ref-a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> A. Author, A representative title, 2020.</bibblock></bibitem>"##,
+  );
   assert!(
-    x.contains("<bibitem") && x.contains("representative title"),
+    x.contains("representative title"),
     "bibliography lost — the minipage leaked and truncated the document:\n{x}"
   );
 }
@@ -1581,8 +1583,15 @@ fn derivative_package_defines_its_operators() {
     );
   }
   // The operators produced real math structure rather than nothing.
+  // derivative operators produced no math content: the WHOLE first <XMApp> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "XMApp",
+    &[],
+    r##"<XMApp><XMTok meaning="fragments"/><XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/></XMApp>"##,
+  );
   assert!(
-    x.contains("<XMApp") && x.contains("<Math"),
+    x.contains("<Math"),
     "derivative operators produced no math content:\n{x}"
   );
 }
@@ -1590,13 +1599,14 @@ fn derivative_package_defines_its_operators() {
 /// arXiv/html_feedback#6876: `\cref` inside math `\text{}` reverted its
 /// inter-word tie to the internal `\lx@tilde` CS in the `tex=` attribute, where
 /// Perl reverts a plain `~`. The `show=` attribute was already `creftype~refnum`
-/// in both engines; only the Semiverbatim `tex=` reversion leaked the CS. Now
-/// byte-matches Perl (`cleveref_sty.rs` emits a catcode-OTHER `~`).
+/// in both engines (`creftype~creflabel` since 78j, the number in cleveref's label
+/// format: OXIDIZED_DESIGN_DIVERGENCES #845); only the Semiverbatim `tex=` reversion
+/// leaked the CS. Now byte-matches Perl (`cleveref_sty.rs` emits a catcode-OTHER `~`).
 #[test]
 fn cleveref_cref_in_math_reverts_tie_as_plain_tilde() {
   let x = convert_to_xml("tests/cluster_regressions/cref_in_math_tilde.tex");
   assert!(
-    x.contains("creftype~refnum"),
+    x.contains("creftype~creflabel"),
     "the cref show/reversion tie is missing:\n{x}"
   );
   assert!(
@@ -1846,6 +1856,106 @@ fn cluster_algorithm2e_for_body_indentation() {
   );
 }
 
+/// Schema-validity guard (batch 56eh): a NUMBERED, indented algorithm2e body
+/// line must carry its line-number `<ltx:tags>` as the listingline's FIRST
+/// child, with the indentation `<ltx:rule>` AFTER it. The listingline model is
+/// `tags?, (text | Inline.class | Misc.class | …)*` (LaTeXML-block.rnc:189), so
+/// a `<rule>` before the `<tags>` is schema-invalid. `\lx@prepend@indentation@`
+/// prepends the indentation at endline — AFTER `\algocf@printnl@i` placed the
+/// tags at content-start — and now re-attaches a leading `<tags>` first instead
+/// of burying it behind the rule. Perl emits the valid order; RUST-ONLY parity
+/// fix (algorithm2e manual: 221 → 20 jing lines). Every body line here is
+/// numbered, so none may legitimately open with a bare `<rule>`.
+#[test]
+fn cluster_algorithm2e_tags_precede_indentation_rule() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_numbered_indent.tex");
+  // For every listingline that carries BOTH a line-number <tags> and an
+  // indentation <rule>, the <tags> must appear FIRST. Compare element positions
+  // (not exact spacing) so the guard survives incidental whitespace changes.
+  let mut paired = 0;
+  for seg in xml.split("<listingline").skip(1) {
+    let inner = seg.split_once("</listingline>").map_or("", |(i, _)| i);
+    if let (Some(t), Some(r)) = (inner.find("<tags"), inner.find("<rule")) {
+      assert!(
+        t < r,
+        "algorithm2e listingline emitted <rule> (at {r}) before <tags> (at {t}) — \
+         schema-invalid, the listingline model requires tags first:\n{inner}"
+      );
+      paired += 1;
+    }
+  }
+  // The fixture's indented, numbered body lines exercise the tags+rule pairing —
+  // guard that we actually tested it (and did not silently stop emitting one).
+  assert!(
+    paired >= 1,
+    "expected >=1 numbered, indented listingline carrying both <tags> and <rule>; \
+     the fixture may have changed:\n{xml}"
+  );
+}
+
+/// Schema-validity guard (batch 56ei): with algorithm2e block markers
+/// (`\SetAlgoBlockMarkers`), a numbered line whose first content is the
+/// block-close `}` marker must still carry its line-number `<ltx:tags>` FIRST.
+/// `\algocf@printnl@i` now does Perl's true prepend (detach/re-append,
+/// algorithm2e.sty.ltxml:210-221) so the tags precede a leading `}` marker
+/// instead of landing after it (listingline model requires tags first,
+/// LaTeXML-block.rnc:189). RUST-ONLY parity fix — Perl emits tags-first here.
+#[test]
+fn cluster_algorithm2e_tags_first_after_block_marker() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_block_markers.tex");
+  // Every listingline that carries a <tags> must have it as the FIRST child
+  // element — no `}` marker, rule, or other element may open before it. Compare
+  // positions (not exact spacing) so the guard survives whitespace changes.
+  let mut checked = 0;
+  for seg in xml.split("<listingline").skip(1) {
+    let inner = seg.split_once("</listingline>").map_or("", |(i, _)| i);
+    if let Some(tags) = inner.find("<tags") {
+      let first_elt = inner.find('<').unwrap_or(tags);
+      assert!(
+        first_elt == tags,
+        "a numbered listingline opened an element before its <tags> \
+         (schema-invalid; tags must be first):\n{inner}"
+      );
+      checked += 1;
+    }
+  }
+  assert!(
+    checked >= 1,
+    "expected >=1 numbered listingline carrying <tags>; the fixture may have changed:\n{xml}"
+  );
+}
+
+/// Schema-validity guard (batch 56eo): a line that fires numbering more than
+/// once — `\LinesNumbered` (auto `\nl`) PLUS an explicit `\nl` — must collapse
+/// to a SINGLE line-number `<ltx:tags>`, kept as the FIRST child. The listingline
+/// model allows one (`tags?`, LaTeXML-block.rnc:189); real algorithm2e overprints
+/// the numbers (`\rlap`/`\llap`) so only one is visible. `renumber_algo_lines`
+/// keeps the first per line and removes the rest, post-construct. RUST-surpass
+/// (Perl keeps them all, invalid). OXIDIZED_DESIGN #241.
+#[test]
+fn cluster_algorithm2e_double_nl_collapses_to_one_leading_tag() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_double_nl.tex");
+  // Every listingline has at most ONE <tags>, and it is the first element child.
+  let mut numbered = 0;
+  for seg in xml.split("<listingline").skip(1) {
+    let inner = seg.split_once("</listingline>").map_or("", |(i, _)| i);
+    let tags_count = inner.matches("<tags").count();
+    assert!(
+      tags_count <= 1,
+      "a double-\\nl listingline kept {tags_count} <tags> (schema allows one):\n{inner}"
+    );
+    if let Some(tags) = inner.find("<tags") {
+      let first_elt = inner.find('<').unwrap_or(tags);
+      assert_eq!(
+        first_elt, tags,
+        "the surviving <tags> must be the first child (not after a rule/content):\n{inner}"
+      );
+      numbered += 1;
+    }
+  }
+  assert!(numbered >= 1, "expected numbered listinglines:\n{xml}");
+}
+
 /// GREEN guard: a `.bbl` preamble (macro defs + a blank line before the first
 /// `\bibitem`, ACM-Reference-Format style) must NOT emit a spurious empty keyless
 /// "(N)" bibitem before the real references. The blank line makes
@@ -1881,14 +1991,15 @@ fn cluster_bib_preamble_no_phantom_entry() {
   );
 }
 
-/// GREEN guard: replaceable frontmatter tags (title/subtitle/date/abstract/keywords)
-/// keep only ONE entry — a later one REPLACES the earlier — while non-replaceable
-/// creators accumulate. Ports upstream `%ReplaceableFrontmatterTags`
-/// (`base_utilities.rs` `REPLACEABLE_FRONTMATTER_TAGS`); the vendored Perl pushed
-/// unconditionally, so a re-added title/abstract kept BOTH → duplicated frontmatter.
-/// Surpass over the vendored Perl (forward-port of the upstream fix); OXIDIZED_DESIGN
-/// #154. Witnesses arXiv 2002.09766 (appendix `\icmltitle` duplicated `<title>`) and
-/// 2511.21969 (nested `{abstract}` duplicated the abstract heading).
+/// GREEN guard: replaceable frontmatter tags (title/subtitle/toctitle/date) keep only
+/// ONE entry — a later one REPLACES the earlier — while creators accumulate, and so do
+/// abstracts: a second `{abstract}` digested in place is printed where it stands, so
+/// both are kept (pdflatex prints both; the vendored Perl, upstream HEAD after #2767
+/// removed `%ReplaceableFrontmatterTags`, keeps both). `base_utilities.rs`
+/// `REPLACEABLE_FRONTMATTER_TAGS` / `PRINTED_WHERE_THEY_STAND`; OXIDIZED_DESIGN #154.
+/// Witnesses arXiv 2002.09766 (appendix `\icmltitle` duplicated `<title>`), 2511.21969
+/// (nested `{abstract}` duplicated the abstract heading), 1006.5288 (the abstract count
+/// was pinned at 1 here, the defect: the second replaced the first).
 #[test]
 fn cluster_frontmatter_replaceable_dedup() {
   let xml = convert_to_xml("tests/cluster_regressions/frontmatter_replaceable_dedup.tex");
@@ -1915,9 +2026,14 @@ fn cluster_frontmatter_replaceable_dedup() {
   );
   assert_eq!(
     count("<abstract"),
-    1,
-    "replaceable <abstract> not deduplicated:\n{head}"
+    2,
+    "both printed abstracts are kept, in source order:\n{head}"
   );
+  let (first, second) = (
+    head.find("First abstract.").expect("first abstract"),
+    head.find("Second abstract.").expect("second abstract"),
+  );
+  assert!(first < second, "abstracts out of source order:\n{head}");
 }
 
 /// Guard: the `algpseudocodex` package (raw-loaded under `--includestyles`/ar5iv

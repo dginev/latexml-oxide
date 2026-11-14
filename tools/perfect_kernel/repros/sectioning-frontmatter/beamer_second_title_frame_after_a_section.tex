@@ -1,0 +1,17 @@
+% witness: 64d review r2 finding 4 (synthetic) — a beamer deck with a second title frame after a section
+% oracle:  pdflatex 0 errors: page 1 "Part One / Ann"; a later page "Part Two / Bob"
+% engines: rust 64f3 = title "Part Two", creators Ann and Bob (a mixed head); 64d = title "Part One", Ann (sealed: the
+%          later title frame is a later part's, as page 1 of the PDF shows the first)
+% expect:  0 errors; root title "Part One", one creator Ann (OXIDIZED_DESIGN_DIVERGENCES #154)
+% status:  GUARD (64d)
+\documentclass{beamer}
+\title{Part One}\author{Ann}
+\begin{document}
+\frame{\titlepage}
+\section{Intro}
+\begin{frame}{F}Body.\end{frame}
+\title{Part Two}\author{Bob}
+\frame{\titlepage}
+\section{More}
+\begin{frame}{G}More.\end{frame}
+\end{document}

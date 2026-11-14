@@ -1,0 +1,40 @@
+% witness: 2002.09876, 2409.14881 (`\begin{example}[label=ex:running_ex_2d]`, `[continues=…]`); ~260 papers of run 336's
+%          first-error unexpected:_ cluster write thmtools keys in a theorem's optional argument
+% oracle:  pdflatex 0 errors: Example 1. A. | Theorem 1 (Main result). Claim. | Theorem 2 (Smith, 2001). Classic. |
+%          Example 2. B. | Example 1 (Running example, continuing from p. 1). A again. | Example 1 (continuing from
+%          p. 1). Once more. | Example 3. C. | See Example 1 and Theorem 1.
+% engines: rust 67int15 = 4 Error:unexpected:_ (the labels' `_` typeset), titles "(label=ex:a_1)"; Perl 0.8.8 the same
+%          (KNOWN_PERL_ERRORS #857)
+% expect:  0 errors; the labels on their theorems (labels="LABEL:…"), no key text in a title; the continued example
+%          numbered by a reference to the one it continues, its counter not stepped (the next example is 3)
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thmtools}
+\newtheorem{example}{Example}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\begin{example}[label=ex:a_1]
+A.
+\end{example}
+\begin{theorem}[name=Main result, label=thm:main_1]
+Claim.
+\end{theorem}
+\begin{theorem}[Smith, 2001]
+Classic.
+\end{theorem}
+\begin{example}
+B.
+\end{example}
+\begin{example}[name={[Short]Running example}, continues=ex:a_1]
+A again.
+\end{example}
+\begin{example}[continues=ex:a_1]
+Once more.
+\end{example}
+\begin{example}
+C.
+\end{example}
+See Example~\ref{ex:a_1} and Theorem~\ref{thm:main_1}.
+\end{document}

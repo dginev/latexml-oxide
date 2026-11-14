@@ -1,0 +1,22 @@
+% witness: 57f review, SYNC_STATUS K13 "{framed} runs in restricted horizontal mode"; arXiv 2605.16567
+%          (`$$…$$` in {framed}, 4 errors). framed.sty:113-114 `{framed}` is `\MakeFramed`, which ends
+%          the paragraph and sets the body as paragraphs in a `\vbox` (framed.sty:289, 326); Perl's
+%          binding (framed.sty.ltxml:21-29) declares no mode, so DefEnvironment digests the body in
+%          restricted horizontal mode (Package.pm:1902): `$$` opens no display, a minipage starts no
+%          paragraph (it folds into a <p> of its own and stacks)
+% oracle:  pdflatex 0 errors; x² displayed; the minipage in a paragraph of the frame
+% engines: rust 57k=1 perl=1 (2026-09-27): "Script ^ can only appear in math mode";
+%          `<p>First paragraph x^2 and more.</p><p class="ltx_minipage" …>Boxed text.</p>`
+% expect:  0 errors; the frame holds an <equation> and the minipage as an <inline-block> in a <p>
+% status:  RED (SHARED; fixing it goes beyond Perl) -> GREEN (57o)
+\documentclass{article}
+\usepackage{framed}
+\begin{document}
+Before the frame.
+\begin{framed}
+First paragraph $$x^2$$ and more.
+
+\begin{minipage}{0.4\textwidth}Boxed text.\end{minipage}
+\end{framed}
+After the frame.
+\end{document}

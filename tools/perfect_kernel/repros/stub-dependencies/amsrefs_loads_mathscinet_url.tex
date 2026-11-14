@@ -1,0 +1,16 @@
+% witness: 1907.08888, 2602.02342, math0410226, 1503.01599, 1102.5022 (`\cprime`, `\germ`, `\url` in amsrefs `\bib`
+%          entries; amsrefs.sty:45-46 loads url, :213 rkeyval, :216-217 textcmds and mathscinet)
+% oracle:  pdflatex 0 errors; the entry reads "I. Gel′fand, On g, J (1950), http://x.org"
+% engines: rust 65int2 = 3 errors (`\cprime`, `\germ`, `\url` undefined); Perl's amsrefs binding loads nothing
+%          (KNOWN_PERL_ERRORS #627)
+% expect:  0 errors, 0 warnings; the author surname "Gelʹfand", the title's `\mathfrak{g}`, the note's URL link
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{amsrefs}
+\begin{document}
+Cite \cite{G}.
+\begin{bibdiv}\begin{biblist}
+\bib{G}{article}{author={Gel\cprime fand, I.}, title={On ${\germ g}$}, note={\url{http://x.org}}, journal={J}, year={1950}}
+\end{biblist}\end{bibdiv}
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 64b review r2 finding 1 (a separator macro rewritten everywhere in the author block, its spacing invented:
+%          "AT & T", "NSF, NIH")
+% oracle:  pdflatex 0 errors: "Ann Able* & Bob Baker / AT&T Labs", footnote "Supported by NSF,NIH."
+% engines: rust 64b6 = the `\amp` in the affiliation and the `\comma` in the note spaced ("AT & T Labs", "NSF, NIH");
+%          64b3 = one creator "Ann Able & Bob Baker" (the macro unread); Perl the same as 64b3 (its splits hold no `\&`,
+%          Base_Utility.pool.ltxml:682-683)
+% expect:  0 errors; two creators sharing "AT&T Labs"; Ann Able's note "Supported by NSF,NIH."
+% status:  RED (64b6) -> GREEN (64b)
+\documentclass{article}
+\newcommand{\amp}{\&}
+\newcommand{\comma}{,}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Supported by NSF\comma NIH.} \amp{} Bob Baker\\ AT\amp T Labs}
+\maketitle
+\end{document}

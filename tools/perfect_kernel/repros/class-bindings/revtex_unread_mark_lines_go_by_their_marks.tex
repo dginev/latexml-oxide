@@ -1,0 +1,19 @@
+% mechanism: REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`): a line led by a mark in
+%   `\( … \)` is read by the shared reader of a line's leading label (`relocate::spaced_mark_at`, used by
+%   `notes::leads_with_mark` and `leading_line_label`), each author its line, as a `$^{1}$` block's lines are.
+% witness: review rev98e N1 (us1); the coordinator's directive of 2026-11-01 (one reader of the leading label)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust 98a, 98e: each author its line, the mark kept in its text ("1Univ A, Town": the observer's cut of the
+%   `_unsplit` block, 98e)
+% expect:  0 errors, 0 warnings; each author its line, the mark off it (as `$^{1}$` lines)
+% status:  GREEN (98e r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{\( ^{1} \)Univ A, Town\\ \( ^{2} \)Univ B, City}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,23 @@
+% A class `\let\thanks\@gobble` and a `\maketitle` running `\thanks{Corresponding author: …}\@thanks`: pdflatex prints
+% no address (the class's \thanks gobbles it), yet the title-page check counts "lunar org" as lost — it takes the
+% class's \thanks only when it is a macro the class itself defined (sect05.rs, review rev106s2 S1).
+% witness: synthetic (rev106s2 q10); TL 2025 has the `\let` at top level only in talk.cls:413 (`\footnote`, sibling below)
+% oracle:  pdflatex 0 errors: "A Title / Ann Able / Text." — no address printed
+% engines: rust 106s r2: 1 Warning:frontmatter:unclaimed "lunar org" (a false alarm)
+% expect:  0 errors, 0 warnings
+% status: RED (106s residual — compare the meaning of \thanks, not its origin, or record a \let as \lx@dropped@thanks)
+\begin{filecontents*}[overwrite]{letgob.cls}
+\ProvidesClass{letgob}\LoadClass{article}
+\newcommand\corr[1]{\expandafter\gdef\csname nc@corr\endcsname{#1}}
+\let\thanks\@gobble
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\thanks{Corresponding author: \csname nc@corr\endcsname}\par}\@thanks\endgroup}
+\end{filecontents*}
+\documentclass{letgob}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\corr{ann.able@lunar.org}
+\maketitle
+Text.
+\end{document}

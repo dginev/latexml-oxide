@@ -1,0 +1,15 @@
+% witness: 2603.21740 (headers.tex:74 `\newcommand{\inst}{\mathcal I}`; Paper.tex:182 `$\inst$, …`)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; `$\inst$` is the document's `\mathcal I`; "AFTERWORDS survive."
+% mechanism: cas-sc.cls and cas-common.sty define no `\inst`, so the document's `\newcommand` stands. The cas binding
+%   loads OmniBus, whose required inst_support was a binding (not a fallback guess), so the `\newcommand` was ignored
+%   and inst_support's `\inst{}` took the closing `$`. Fixed: a binding a fallback class requires stays part of its
+%   guess (content.rs `input_definitions`, dispatch origin `Fallback`; OXIDIZED_DESIGN_DIVERGENCES #408).
+% status:  GREEN
+\documentclass{cas-sc}
+\newcommand{\inst}{\mathcal I}
+\begin{document}
+From the instance $\inst$, each of them parsing the sequence $Y_1,\ldots,Y_n$ sequentially.
+
+Next paragraph, AFTERWORDS survive.
+\end{document}

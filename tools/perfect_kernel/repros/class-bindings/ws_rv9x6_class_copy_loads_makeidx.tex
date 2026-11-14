@@ -1,0 +1,20 @@
+% witness: 0706.1148, 0810.2192, 0901.1361 (ws-rv9x6.cls:1527 `\usepackage{makeidx}`; the chapter ends with
+%          `\printindex`)
+% oracle:  pdflatex (clean) with this cut of the class ("Text.")
+% engines: rust 67o1 = 1 error (`\printindex` undefined: ws_procs_cls.rs loaded no makeidx); Perl: no binding, OmniBus
+%          scans the class and loads makeidx
+% expect:  0 errors, 0 warnings
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ws-rv9x6.cls}
+\ProvidesClass{ws-rv9x6}
+\LoadClass{book}
+\usepackage{makeidx}
+\usepackage{url}
+\end{filecontents*}
+\documentclass{ws-rv9x6}
+\makeindex
+\begin{document}
+Text.\index{text}
+\printindex
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: latex.ltx `\trivlist` clears `\@itemlabel` (`\let\@itemlabel\@empty`) and `\item` prints `\@itemlabel`
+%   (latex.ltx:15966), so a document's copy of `\trivlist`, and a `\list{}` quote, label nothing; a labelled list
+%   around them keeps its own label (OD #180, ML1).
+% witness: synthetic (revML1 finding 2a).
+% oracle:  pdflatex 0 errors: "r1", "W r2", "r3", "• r4", "r5", "• r6", "V r7", "r8", "V r9".
+% engines: rust int160b: "•" on r1, "–" (bold) on r5 and r8 (invented); Perl 0.8.8: 3 errors, seven items, "•" on
+%          r2, r3 and r4.
+% expect:  0 errors, 0 warnings; the labels as in the PDF, no label on r1, r3, r5, r8.
+% Guard: perfect_kernel_batch56::list_labels_come_from_itemlabel.
+% status:  RED (int160b) -> GREEN (ML1)
+\documentclass{article}
+\makeatletter
+\def\trivlist{\parsep\parskip\@nmbrlistfalse\@trivlist\labelwidth\z@\leftmargin\z@\itemindent\z@\let\@itemlabel\@empty\def\makelabel##1{##1}}
+\newenvironment{mytl}{\trivlist}{\endtrivlist}
+\newenvironment{myq}{\list{}{\rightmargin\leftmargin}\item\relax}{\endlist}
+\makeatother
+\begin{document}
+\begin{mytl}\item r1 \item[W] r2\end{mytl}
+\begin{myq}r3\end{myq}
+\begin{itemize}\item r4 \begin{mytl}\item r5\end{mytl}\item r6\end{itemize}
+\begin{list}{V}{}\item r7 \begin{mytl}\item r8\end{mytl}\item r9\end{list}
+\end{document}

@@ -28,21 +28,38 @@
 /// Largest cycle period (in items) we look for.
 pub const MAX_WINDOW: usize = 10;
 /// How many consecutive repetitions of a window constitute "infinite".
+///
+/// Stays at 100 (not thousands): the gullet fingerprints only a
+/// `CYCLE_GUARD_DUTY_ON` = 2 048-token window per duty period, so
+/// `MAX_WINDOW * REPEAT` must fit inside it. Finite constructs that emit a
+/// short window thousands of times (`\prg_replicate:nn {10000} {…}`,
+/// maze manual) are told apart by the backlog gate in [`CycleGuard::push`],
+/// not by a larger count.
 pub const REPEAT: usize = 100;
 /// Ring-buffer capacity: enough to hold `MAX_WINDOW` repeated `REPEAT` times.
 const CAP: usize = MAX_WINDOW * REPEAT;
 /// Run the (cheap but non-trivial) periodicity scan only this often.
 const CHECK_EVERY: usize = 256;
 
+/// Number of check points (every [`CHECK_EVERY`] pushes) whose backlog
+/// samples are kept — enough to cover the largest window
+/// (`MAX_WINDOW * REPEAT` items) plus one.
+const BACKLOG_SAMPLES: usize = CAP / CHECK_EVERY + 2;
+/// Sentinel for a backlog sample not yet taken since the last reset.
+const UNFILLED: usize = usize::MAX;
+
 /// A windowed cycle detector over a stream of `u64` fingerprints.
 pub struct CycleGuard {
-  buf:   Box<[u64; CAP]>,
+  /// Backlog sampled at the last `BACKLOG_SAMPLES` checks (newest last).
+  backlog:      [usize; BACKLOG_SAMPLES],
+  backlog_head: usize,
+  buf:          Box<[u64; CAP]>,
   /// next write position (ring)
-  head:  usize,
+  head:         usize,
   /// number of valid entries (saturates at CAP)
-  len:   usize,
+  len:          usize,
   /// throttle counter
-  since: usize,
+  since:        usize,
 }
 
 impl Default for CycleGuard {
@@ -62,10 +79,12 @@ impl std::fmt::Debug for CycleGuard {
 impl CycleGuard {
   pub fn new() -> Self {
     CycleGuard {
-      buf:   Box::new([0u64; CAP]),
-      head:  0,
-      len:   0,
-      since: 0,
+      buf:          Box::new([0u64; CAP]),
+      head:         0,
+      len:          0,
+      since:        0,
+      backlog:      [UNFILLED; BACKLOG_SAMPLES],
+      backlog_head: 0,
     }
   }
 
@@ -74,12 +93,26 @@ impl CycleGuard {
     self.head = 0;
     self.len = 0;
     self.since = 0;
+    self.backlog = [UNFILLED; BACKLOG_SAMPLES];
+    self.backlog_head = 0;
   }
 
   /// Record one fingerprint. Returns `Some(period)` if the recent stream is a
   /// window of `period` items repeated at least [`REPEAT`] times.
+  ///
+  /// `backlog` is the caller's pending-input measure at this push — the
+  /// gullet passes its pushback length, sampled only at check points. A
+  /// detected period is reported only when the backlog did NOT shrink
+  /// across the repeated span: a genuine cycle re-expands every period, so
+  /// its backlog holds level or grows (`\def\x{a\x}`, `\def\x{\x\x}`),
+  /// while a periodic stream whose backlog drains is pre-built data being
+  /// consumed — `\prg_replicate:nn {10000} {<body>}` unpacking l3intarray's
+  /// `\intarray_gzero:N` body into the pushback and then executing it entry
+  /// by entry (maze manual, a cycle-guard Fatal on a finite construct).
+  /// Callers without a backlog notion (the stomach's box stream) pass a
+  /// constant, which never gates.
   #[inline]
-  pub fn push(&mut self, fp: u64) -> Option<usize> {
+  pub fn push(&mut self, fp: u64, backlog: usize) -> Option<usize> {
     self.buf[self.head] = fp;
     self.head = if self.head + 1 == CAP {
       0
@@ -88,13 +121,40 @@ impl CycleGuard {
     };
     if self.len < CAP {
       self.len += 1;
+      if self.len == 1 {
+        // First push after a reset: a baseline sample, so the first check
+        // (which may already see a `REPEAT`-fold window) can judge the trend.
+        self.backlog[self.backlog_head] = backlog;
+        self.backlog_head = (self.backlog_head + 1) % BACKLOG_SAMPLES;
+      }
     }
     self.since += 1;
     if self.since >= CHECK_EVERY {
       self.since = 0;
-      return self.detect();
+      self.backlog[self.backlog_head] = backlog;
+      self.backlog_head = (self.backlog_head + 1) % BACKLOG_SAMPLES;
+      return self.detect().filter(|_| !self.backlog_drained());
     }
     None
+  }
+
+  /// True when the backlog is falling: the newest sample sits more than
+  /// `MAX_WINDOW` below the previous one (a cycle's backlog oscillates by at
+  /// most its period between samples; consumed data drops by `CHECK_EVERY`).
+  /// The previous sample is the last check point, or the post-reset baseline
+  /// when this is the first check.
+  fn backlog_drained(&self) -> bool {
+    let newest = self.backlog[(self.backlog_head + BACKLOG_SAMPLES - 1) % BACKLOG_SAMPLES];
+    let prev = self.backlog[(self.backlog_head + BACKLOG_SAMPLES - 2) % BACKLOG_SAMPLES];
+    prev != UNFILLED && newest + MAX_WINDOW < prev
+  }
+
+  /// The backlog samples, oldest first (for the `LATEXML_DEBUG_FATAL` trace).
+  pub fn backlog_trace(&self) -> Vec<usize> {
+    (0..BACKLOG_SAMPLES)
+      .map(|k| self.backlog[(self.backlog_head + k) % BACKLOG_SAMPLES])
+      .filter(|&b| b != UNFILLED)
+      .collect()
   }
 
   /// The `k`-th most recently pushed item (`k = 0` is newest).
@@ -144,20 +204,149 @@ impl CycleGuard {
   }
 }
 
+/// How many recent token spans [`SpanHistory`] keeps.
+const SPAN_CAP: usize = 1024;
+/// The largest input period, in boxes, [`SpanHistory::input_period`] looks for:
+/// eight repetitions fill the ring.
+pub const MAX_SPAN_PERIOD: usize = SPAN_CAP / 8;
+
+/// The recent token spans behind the stomach's boxes: how many tokens the
+/// gullet read for each box the stomach's [`CycleGuard`] records. A box period
+/// alone cannot tell a loop from a long run over data: every point of a pgf
+/// `plot[smooth]` digests the same content-free boxes (tkz-grapheur's
+/// 11,000-point plot read as a 6-box cycle). A loop repeats the same boxes from
+/// the same input; a run over data repeats them from input of varying length.
+/// So a detected box period is a loop only when the spans repeat too, with a
+/// period that is a multiple of the box period ([`Self::input_period`]).
+pub struct SpanHistory {
+  buf:  Box<[u32; SPAN_CAP]>,
+  head: usize,
+  len:  usize,
+}
+
+impl Default for SpanHistory {
+  fn default() -> Self {
+    SpanHistory {
+      buf:  Box::new([0; SPAN_CAP]),
+      head: 0,
+      len:  0,
+    }
+  }
+}
+
+impl SpanHistory {
+  /// Forget every recorded span.
+  pub fn reset(&mut self) {
+    self.head = 0;
+    self.len = 0;
+  }
+
+  /// Record the span of the newest box.
+  #[inline]
+  pub fn push(&mut self, span: usize) {
+    self.buf[self.head] = u32::try_from(span).unwrap_or(u32::MAX);
+    self.head = (self.head + 1) % SPAN_CAP;
+    self.len = (self.len + 1).min(SPAN_CAP);
+  }
+
+  /// The `k`-th most recent span (`k = 0` is newest).
+  #[inline]
+  fn at_from_end(&self, k: usize) -> u32 { self.buf[(self.head + SPAN_CAP - 1 - k) % SPAN_CAP] }
+
+  /// The smallest period, a multiple of `box_period` up to
+  /// [`MAX_SPAN_PERIOD`], with which the recorded spans repeat over the whole
+  /// history (at least eight repetitions of it); `None` when they do not.
+  pub fn input_period(&self, box_period: usize) -> Option<usize> {
+    let n = self.len;
+    (box_period..=MAX_SPAN_PERIOD)
+      .step_by(box_period.max(1))
+      .filter(|&p| n >= 8 * p)
+      .find(|&p| (0..n - p).all(|k| self.at_from_end(k) == self.at_from_end(k + p)))
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
 
+  fn spans(stream: impl IntoIterator<Item = usize>) -> SpanHistory {
+    let mut h = SpanHistory::default();
+    for s in stream {
+      h.push(s);
+    }
+    h
+  }
+
+  #[test]
+  fn constant_spans_repeat_with_any_box_period() {
+    let h = spans(std::iter::repeat_n(4, 1500));
+    assert_eq!(h.input_period(1), Some(1));
+    assert_eq!(h.input_period(6), Some(6));
+  }
+
+  #[test]
+  fn spans_repeating_at_a_multiple_of_the_box_period_repeat() {
+    // A 2-box window whose input alternates over 12 boxes (two macros).
+    let pattern = [3, 1, 3, 1, 3, 1, 4, 1, 4, 1, 4, 2];
+    let h = spans((0..1500).map(|i| pattern[i % pattern.len()]));
+    assert_eq!(h.input_period(2), Some(12));
+    assert_eq!(h.input_period(4), Some(12));
+    // A counter wrapping every 33 iterations of a 2-box loop: input period 66.
+    let h = spans((0..1500).map(|i| if i % 66 == 65 { 9 } else { 3 }));
+    assert_eq!(h.input_period(2), Some(66));
+  }
+
+  #[test]
+  fn varying_spans_do_not_repeat() {
+    // Coordinates of different lengths behind the same boxes (a smooth plot):
+    // xorshift output, with no short period.
+    let mut x: u32 = 0x9E37_79B9;
+    let h = spans((0..1500).map(|_| {
+      x ^= x << 13;
+      x ^= x >> 17;
+      x ^= x << 5;
+      5 + (x % 7) as usize
+    }));
+    assert_eq!(h.input_period(6), None);
+    assert_eq!(h.input_period(1), None);
+  }
+
+  #[test]
+  fn an_input_period_past_the_ring_is_not_seen() {
+    // Eight repetitions must fit the ring: period 160 over 1024 spans is not.
+    let h = spans((0..2000).map(|i| if i % 160 == 0 { 9 } else { 3 }));
+    assert_eq!(h.input_period(2), None);
+  }
+
   fn run(stream: &[u64]) -> Option<usize> {
     let mut g = CycleGuard::new();
     let mut hit = None;
+    // A level backlog: the guard's core periodicity contract.
     for &x in stream {
-      if let Some(p) = g.push(x) {
+      if let Some(p) = g.push(x, 0) {
         hit = Some(p);
         break;
       }
     }
     hit
+  }
+
+  #[test]
+  fn periodic_stream_with_draining_backlog_is_data() {
+    // A perfect period-2 stream consumed while the backlog falls is
+    // pre-built data (`\prg_replicate` output), not a loop.
+    let mut g = CycleGuard::new();
+    let n = 9 * REPEAT;
+    let hit = (0..n).find_map(|i| g.push((i % 2) as u64, n - i));
+    assert_eq!(hit, None);
+  }
+
+  #[test]
+  fn periodic_stream_with_growing_backlog_fires() {
+    // `\def\x{\x\x}`-style growth: the backlog rises, the cycle is real.
+    let mut g = CycleGuard::new();
+    let hit = (0..9 * REPEAT).find_map(|i| g.push((i % 2) as u64, i));
+    assert_eq!(hit, Some(2));
   }
 
   #[test]
@@ -168,7 +357,7 @@ mod tests {
     // tokens (`\def\x{a\x}` → a, \x, a, \x …), and a pure single-token
     // self-expansion is caught by the Expandable self-recursion error
     // before any guard. PR #249 review P1-3.
-    let s: Vec<u64> = std::iter::repeat_n(7, 2000).collect();
+    let s: Vec<u64> = std::iter::repeat_n(7, 20 * REPEAT).collect();
     assert_eq!(run(&s), None);
   }
 
@@ -176,41 +365,41 @@ mod tests {
   fn alternating_pair_still_fires() {
     // `\def\x{a\x}` shape: two distinct fingerprints alternating — the
     // canonical real loop must still be detected (as period 2).
-    let s: Vec<u64> = (0..900).map(|i| (i % 2) as u64).collect();
+    let s: Vec<u64> = (0..9 * REPEAT).map(|i| (i % 2) as u64).collect();
     assert_eq!(run(&s), Some(2));
   }
 
   #[test]
   fn detects_period_three() {
     // Stream must outlast the first throttled scan that sees >= 3*REPEAT items.
-    let s: Vec<u64> = (0..900).map(|i| (i % 3) as u64).collect();
+    let s: Vec<u64> = (0..9 * REPEAT).map(|i| (i % 3) as u64).collect();
     assert_eq!(run(&s), Some(3));
   }
 
   #[test]
   fn detects_period_ten() {
-    let s: Vec<u64> = (0..2000).map(|i| (i % 10) as u64).collect();
+    let s: Vec<u64> = (0..20 * REPEAT).map(|i| (i % 10) as u64).collect();
     assert_eq!(run(&s), Some(10));
   }
 
   #[test]
   fn ignores_non_cycle() {
     // Strictly increasing — never periodic.
-    let s: Vec<u64> = (0..5000).collect();
+    let s: Vec<u64> = (0..(50 * REPEAT) as u64).collect();
     assert_eq!(run(&s), None);
   }
 
   #[test]
   fn ignores_short_repeat() {
     // A window repeated only 50 times (< REPEAT) must NOT fire.
-    let s: Vec<u64> = (0..50 * 4).map(|i| (i % 4) as u64).collect();
+    let s: Vec<u64> = (0..REPEAT / 2 * 4).map(|i| (i % 4) as u64).collect();
     assert_eq!(run(&s), None);
   }
 
   #[test]
   fn ignores_period_over_max_window() {
     // Period 11 (> MAX_WINDOW) repeated many times must NOT fire.
-    let s: Vec<u64> = (0..11 * 300).map(|i| (i % 11) as u64).collect();
+    let s: Vec<u64> = (0..11 * 3 * REPEAT).map(|i| (i % 11) as u64).collect();
     assert_eq!(run(&s), None);
   }
 
@@ -218,13 +407,13 @@ mod tests {
   fn reset_clears_history() {
     let mut g = CycleGuard::new();
     for _ in 0..150 {
-      g.push(1);
+      g.push(1, 0);
     }
     g.reset();
     // After reset, a fresh non-cyclic stream must not immediately fire.
     let mut hit = None;
     for i in 0..50 {
-      if let Some(p) = g.push(i) {
+      if let Some(p) = g.push(i, 0) {
         hit = Some(p);
       }
     }

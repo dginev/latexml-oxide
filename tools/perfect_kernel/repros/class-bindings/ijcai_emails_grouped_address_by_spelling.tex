@@ -1,0 +1,31 @@
+% witness: 2105.02711, 1905.13566, 2308.08563 (ijcai19.sty, a raw IJCAI style; the stand-in below is its `\maketitle`,
+%          ijcai19.sty:101-130); 2401.03955 (ttm.sty, `\{creddy,wmgifford,jayant\}@us.ibm.com`)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 and Cid Cole1 / 1 Univ X / 2 Univ Y /
+%          {aable, ccole}@x.edu, bob.baker@y.org" — one line under the affiliations, attributing none
+% engines: rust int117a = 0 errors; Able `{aable`, Baker `ccole}@x.edu`, Cole `bob.baker@y.org` (the n-th piece of the
+%          comma split on the n-th author, Perl ijcai.sty.ltxml:50-53, KNOWN_PERL_ERRORS #1200); Perl: the same split
+% expect:  0 errors, 0 warnings; aable@x.edu on Ann Able, bob.baker@y.org on Bob Baker, ccole@x.edu on Cid Cole (each
+%          by its spelling, the grouped address written out, OD #908); eager and --streaming the same
+% status:  RED (int117a) -> GREEN (88b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lxijcai.sty}
+\ProvidesPackage{lxijcai}
+\def\maketitle{\par\begingroup\@maketitle\endgroup
+  \let\maketitle\relax \let\@maketitle\relax
+  \gdef\@author{}\gdef\@title{}}
+\def\@maketitle{\vbox{\centering{\LARGE\bf \@title \par}\vskip 0.2in
+  {\def\and{\unskip\thinspace{\rm ,}\enspace}%
+   \def\And{\unskip\enspace{\rm and}\enspace}%
+   \def\affiliations{\egroup\par\bgroup\rm}%
+   \def\emails{\egroup\par\bgroup\rm}%
+   \bgroup\bf\@author\egroup}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{lxijcai}
+\title{T}
+\author{Ann Able$^1$\and Bob Baker$^2$\And Cid Cole$^1$
+\affiliations $^1$Univ X\\ $^2$Univ Y\\
+\emails \{aable, ccole\}@x.edu, bob.baker@y.org}
+\begin{document}
+\maketitle
+\end{document}

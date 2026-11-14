@@ -1,0 +1,20 @@
+% mechanism: reading.rs `unfold_held_names` (OD #1018): a document macro holding names, a `\thanks` and font commands:
+%   its Name and Note events share the macro's one position, so the block is read with the expansion in its place; the
+%   note is written from its argument (`\texttt` kept, no "note no argument") and `\emph{Baker}` kept in the name, as
+%   the inline twin writes them
+% witness: synthetic (AUT0 a2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ Bob Baker", "∗Univ A, ann@a.edu"
+% engines: Perl 0.8.8: one creator (its split is by spelling); int167a: 0 errors, 3 warnings (the names and the note by
+%   their text), the `\texttt` and `\emph` lost
+% expect:  0 errors, 0 warnings; creators Ann Able (note "Univ A, ann@a.edu", the address in typewriter), Bob
+%   *Baker* — the inline twin's elements
+% status:  RED (int167a) -> GREEN (AUT1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\aut{\textbf{Ann Able}\thanks{Univ A, \texttt{ann@a.edu}} \and Bob \emph{Baker}}
+\begin{document}
+\title{T}
+\author{\aut}
+\maketitle
+Text.
+\end{document}

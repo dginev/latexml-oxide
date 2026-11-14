@@ -1,0 +1,20 @@
+% mechanism: an `\IEEEauthorrefmark`-led address line of a marked block is its marks' addresses (`leading_line_label` reads
+%   every mark command, `is_mark_command`, as `\textsuperscript`): read literally, the line stayed an affiliation of
+%   every mark-1 author
+% witness: 2301.03018, 2510.06608
+% oracle:  pdflatex 0 errors: "Ann Able*, Bob Baker*, Dan Dove*, Cy Cole† / *Univ X, City / †Univ Y, Town / *{ms1801, bob}@x.edu,
+%   †cy@y.edu"
+% engines: rust int131a: "{ms1801, bob}@x.edu" an affiliation of Ann, Bob and Dan
+% expect:  0 errors, 0 warnings; no affiliation holds an @; bob@x.edu Bob's e-mail, cy@y.edu Cy's; ms1801@x.edu, which no name
+%   spells, the block's (the Kind step's "else the block")
+% status:  RED (int131a) -> GREEN (104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{1}, Dan Dove\IEEEauthorrefmark{1}, Cy Cole\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X, City\\ \IEEEauthorrefmark{2}Univ Y, Town\\
+\IEEEauthorrefmark{1}\{ms1801, bob\}@x.edu, \IEEEauthorrefmark{2}cy@y.edu}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: a mark a macro prints, its span the call alone, is written on its name as the call with its arguments
+%   (`emit.rs` `block_names`, `content::arguments_end`); a run a call in which reads past (an argument missing at the
+%   run's end, a verbatim group or an option among its parameters) is no run (`content.rs` `reads_past`)
+% witness: 1505.07844, 1411.3642, 1602.00849 (aiaa-tc `\thanksibid{2}` under calc: `\let` invalid in calc);
+%   2503.21719, 2407.13730, 2606.19583 (apa6, a preamble's `\footrecall{uva}`: `\@undefined`); brief NE6
+% oracle:  pdflatex 0 errors; "T", "Ann Able*, Bob Baker†, and Carl Cole†", "Princeton University"
+% engines: rust off: 0 errors; rust =2 (NE4): Error:unexpected:T_CS[\let] (calc), the name written `Carl Cole\thanksibid`
+% expect:  =2 as off: 0 errors, 0 warnings, Carl Cole's footnote mark kept
+% status:  RED (NE4) -> GREEN (perfect_kernel_batchne6::a_mark_macro_is_written_with_its_arguments)
+% preload: ar5iv.sty
+\documentclass{aiaa-tc}
+\usepackage{calc}
+\title{T}
+\author{Ann Able\thanks{Univ A.} \ , Bob Baker\thanks{Univ B.} \ , and Carl Cole\thanksibid{2}\\ {\normalsize\itshape Princeton University}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

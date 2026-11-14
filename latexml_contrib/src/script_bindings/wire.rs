@@ -1210,7 +1210,10 @@ fn parse_rewrite_options(kind: &str, opts: Map) -> latexml_core::rewrite::Rewrit
           dynamic_to_string(val),
         )))
       },
-      "scope" => o.scope = scope_of(&dynamic_to_string(val)),
+      // A rewrite's scope is a Perl scope pattern (`label:…`, `id:…`, or one Perl reports as
+      // unrecognized), never an assignment scope: `scope_of` kept only `local`/`global` and
+      // dropped `label:…`, so the rule applied document-wide (57as review).
+      "scope" => o.scope = Some(Scope::Named(arena::pin(dynamic_to_string(val)))),
       _ => {},
     }
   }

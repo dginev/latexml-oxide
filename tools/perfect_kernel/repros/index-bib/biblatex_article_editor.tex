@@ -1,0 +1,14 @@
+% witness: biblatex-chicago/cms-notes-sample, cms-dates-sample, cms-trad-sample ("Ed. by …" on articles)
+% oracle:  pdflatex+biber: "“Letters”. In: Chronicle 12.3. Ed. by Clare Naudziunas, pp. 12–14."
+% engines: rust=0 errors (56kb): the article's editor is not printed
+% expect:  0 errors; "Chronicle 12 (3). Edited by Clare Naudziunas, pp. 12–14."
+% status:  RED (56kb) -> GREEN (56kc)
+% biblatex's article driver prints `byeditor+others` after the journal and before `note+pages`
+% (standard.bbx:46-48); the article format had no editor row. A .bst article prints none (plain.bst).
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{biblatex_article_editor.bib}
+\begin{document}
+\cite{ed}
+\printbibliography
+\end{document}

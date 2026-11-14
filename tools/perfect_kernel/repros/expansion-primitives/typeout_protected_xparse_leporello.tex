@@ -1,0 +1,15 @@
+% witness: leporello/leporello-doc (74), jsonparse/jsonparse-doc (60), euclideangeometry-man (~93) — expl3
+%   expandable errors (`\??? Match:?` under the strict delimiter check, 56gn) from \protected xparse
+%   commands run in expansion-only contexts; this repro is the \typeout slice
+% oracle:  pdflatex 0 errors, prints `[\foo ]`; Perl 0 errors, prints `[\foo]`
+% engines: rust (s116) = Warning:recovery … Infinite expansion loop (the grabber spinning); silent
+%   cmd/if-boolean error under the lax check
+% expect:  0 errors, 0 warnings; the log line `[\foo]`
+% status:  GREEN (batch 56gv) for \typeout; the pgfkeys key-expansion slice (leporello/jsonparse) open
+% mechanism: sect11.rs \typeout used Expand! (ExpansionLevel::Full, runs \protected); Perl reads
+%   `\typeout ExpandedPartially` (latex_constructs.pool.ltxml:4538).
+\documentclass{article}
+\NewDocumentCommand{\foo}{s}{[\IfBooleanTF{#1}{STAR}{NOSTAR}]}
+\begin{document}
+\typeout{[\foo]}
+\end{document}

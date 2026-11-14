@@ -1,0 +1,14 @@
+% witness: 1606.07128 (copernicus.cls:1894 \st@rredfalse), 2004.13893, 2210.05620 (\intkern@)
+% oracle:  pdflatex 0 errors
+% engines: rust 67int6 = 4 undefined
+% expect:  0 errors, 0 warnings; two integral signs
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::amsmath_switches_and_intkern
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\st@rredfalse \inalign@true \ingather@false
+\newcommand{\twoint}{\DOTSI\intop\intkern@\intop\ilimits@}
+\makeatother
+\begin{document}
+$\twoint f$
+\end{document}

@@ -1,0 +1,17 @@
+% witness: sweep 120 — zugferd/DEMO-rechnung-zugferd, DEMO-rechnung-zugferd-Kleinunternemen
+%          (zugferd.sty:101 \IfPackageAtLeastTF{pdfmanagement-testphase}{2024/09/13}{}{…too old})
+% oracle:  pdflatex 0 errors; [ok] (documentmetadata-support.ltx:39 loads pdfmanagement-testphase)
+% engines: rust (56ia) = [old]: our \DocumentMetadata never loaded it, so its \ver@ was undefined
+%          once 56ia made the date test real; Perl lacks \DocumentMetadata
+% mechanism: the PDF-management layer stays absorbed (the stubbed l3pdf API); \DocumentMetadata
+%   records its \ver@ from the installed file's \ProvidesExplPackage (2025-11-12 v0.96x …).
+% expect:  0 errors; <p>[ok]</p>
+% status:  RED (56ia) -> GREEN (56ic)
+\DocumentMetadata{}
+\documentclass{article}
+\makeatletter
+\edef\x{\IfPackageAtLeastTF{pdfmanagement-testphase}{2024/09/13}{ok}{old}}
+\makeatother
+\begin{document}
+[\x]
+\end{document}

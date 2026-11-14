@@ -1,0 +1,24 @@
+% witness: 77a r2 review probe p1; arXiv 2406.00136 (category lists of 2405/2406)
+% oracle:  pdflatex + biber 0 errors: Selected {web, goossens} (the \addtocategory after the list counts: biblatex
+%          files categories through the .aux, biblatex.sty:11226-11242), All, OldBooks {knuth}, Mag {mittelbach},
+%          NotMag {goossens, knuth, lamport}, All2
+% engines: rust 77a r1 printed no Selected list (category read when the list was digested); before 77a every list
+%          printed all 5 entries; Perl ar5iv binding ignores the optional argument (KNOWN_PERL_ERRORS #983)
+% expect:  clean (0 errors, 0 warnings); six bibliographies with the oracle's keys
+% status:  GREEN (77a r2: category membership decided when the bibliography is built)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{selected}
+\begin{document}
+\section{One}
+Text \cite{knuth,lamport,goossens,mittelbach,web}.
+\printbibliography[category=selected,title={Selected}]
+\printbibliography[title={All}]
+\printbibliography[type=book,keyword=old,title={OldBooks}]
+\printbibliography[subtype=magazine,title={Mag}]
+\printbibliography[notsubtype=magazine,nottype=online,title={NotMag}]
+\printbibliography[title={All2}]
+\addtocategory{selected}{web,goossens}
+\end{document}

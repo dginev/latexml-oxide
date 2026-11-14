@@ -1,0 +1,27 @@
+% witness: oz.sty:44/:250 and zed-csp.sty:60/:192 `\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}`,
+%          `\DeclareMathSymbol\Cap{\mathbin}{AMSa}{"65}` (`\Cup` "64 the line before); amssymb.sty:144/146 `\Cup` "64, `\Cap` "65, :164 `\backsimeq` "77,
+%          :225-226 `\ntriangleleft`/`\ntriangleright` "36/"37; fontmath.ltx:280 `\uplus` symbols "5D, :217 `\jmath`
+%          letters "7C
+% oracle:  pdflatex: "A⋒B⋓C x⋍y N⋪G⋫H a⊎b ȷ"; 0 errors (msam10/msbm10/cmsy10/cmmi10 slots rendered and checked
+%          visually)
+% engines: rust 89a r1 / int117a = 0 errors, A⋓B⋒C x≌y N⋫G⋪H a⊌b j — the fontmaps' Perl-origin slot errors
+%          (amsa.fontmap.ltxml:31,33, amsb.fontmap.ltxml:25, TeX_Fonts.pool.ltxml:272,297; KNOWN_PERL_ERRORS #1202);
+%          perl 0.8.8 = 0 errors, the U/msa and U/msb symbols dropped (no U map), ⊌ and j (with the font named
+%          AMSa/AMSb its maps give ⋓ ≌ ⋫ too: KNOWN_PERL_ERRORS #1202's trigger)
+% expect:  0 errors, 0 warnings; each slot decoded to the glyph msam, msbm, cmsy and cmmi draw there; the names are
+%          no reference names, so the class gives the role (OXIDIZED_DESIGN_DIVERGENCES #910 is not involved)
+% status:  RED (int117a, 89a r1) -> GREEN (89a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareSymbolFont{ozsym}{U}{msa}{m}{n}
+\DeclareSymbolFont{ozsymb}{U}{msb}{m}{n}
+\DeclareMathSymbol{\oCap}{\mathbin}{ozsym}{"65}
+\DeclareMathSymbol{\oCup}{\mathbin}{ozsym}{"64}
+\DeclareMathSymbol{\obacksimeq}{\mathrel}{ozsym}{"77}
+\DeclareMathSymbol{\ontl}{\mathrel}{ozsymb}{"36}
+\DeclareMathSymbol{\ontr}{\mathrel}{ozsymb}{"37}
+\DeclareMathSymbol{\ouplus}{\mathbin}{symbols}{"5D}
+\DeclareMathSymbol{\ojmath}{\mathord}{letters}{"7C}
+\begin{document}
+$A\oCap B\oCup C$ $x\obacksimeq y$ $N\ontl G\ontr H$ $a\ouplus b$ $\ojmath$
+\end{document}

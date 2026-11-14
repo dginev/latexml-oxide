@@ -1,0 +1,16 @@
+% witness: cond-mat0202518, hep-ex9806021 (rc_struct6 row 2, agent_reports/2026-10-17_rc_struct6.md); shape
+%   `\begin{equation} … \rangle$ for $t > 1/\omega_c \ . \end{equation}` under `\documentclass[fleqn]{article}`
+% oracle:  pdflatex 0 errors: fleqn.clo:92-103 sets `{equation}` as `\hb@xt@\linewidth\bgroup $\m@th\displaystyle
+%   \hskip\mathindent`, so the author's `$` ends that math, "for" is text in the box and the next `$` begins math
+%   again (tex.web §1193, §1138)
+% engines: rust 67int23b = 2 ("Missing $ closing display math"), perl = 2 (KNOWN_PERL_ERRORS #907)
+% expect:  0 errors; one Math whose XMath holds an XMText "for"
+% status:  RED (67int23b) -> GREEN (73b: fleqn_sty.rs `math_displays_in_hbox`, `{equation}`'s `\lx@equation@hook`)
+\documentclass[fleqn]{article}
+\begin{document}
+A power-law decay
+\begin{equation}
+\langle\sigma_+(t)\rangle = (\omega_c t)^{-2\alpha}
+\langle\sigma_+(0)\rangle$ for $t > 1/\omega_c \ .
+\end{equation}
+\end{document}

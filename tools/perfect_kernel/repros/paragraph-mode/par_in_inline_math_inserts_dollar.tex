@@ -1,0 +1,20 @@
+% witness: 65d review r5 probes f4, a18, a19, reduced to the tex.web §1046-1047 core (no `}`): an inline formula missing
+%          its closing `$` at a paragraph end
+% oracle:  pdflatex 1 error ("Missing $ inserted" at the \par), the formula closed there; pdftotext "Before x after one. /
+%          Second para. / Third y para."
+% engines: rust 65a and 65d (round 6): no error; the formula runs on through the paragraphs to the next `$`
+%          (Math tex "xafterone.\par Secondpara.\par Third", then "para.\par" as a second formula); only a Warning at
+%          \end{document} for the open group
+% expect:  1 error; the formula closed at the \par ("x after one." as pdflatex), "Second para." text, "Third $y$ para."
+%          with one formula y
+% preload: ar5iv.sty
+% status:  GREEN (65n: tex.web §1046-1047 `insert_dollar_sign` at `mmode+par_end` — stomach.rs `insert_dollar_sign`
+%          from `\lx@normal@par`; OXIDIZED_DESIGN #553; guard perfect_kernel_batch65n::par_in_inline_math_ends_the_formula)
+\documentclass{article}
+\begin{document}
+Before $x after one.
+
+Second para.
+
+Third $y$ para.
+\end{document}

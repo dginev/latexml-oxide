@@ -1,0 +1,28 @@
+% witness: 1907.11468, 2210.16458 (sn-jnl.cls:1571-1575 of 1907.11468's copy, in all 138 copies of the run-353 sn-jnl
+%          papers: `\AtBeginDocument{… \DeclareMathSymbol{\opensquare}{\mathord}{AMSa}{"03}\def\qedsymbol
+%          {\opensquare} …}` over program.sty:971-973's `\let\qedsymbol=\blacksquare`)
+% oracle:  pdflatex 0 errors ("Proof Trivial. □"; the copy without the three lines: "Proof Trivial. ■")
+% engines: rust 67u r1 = 0 errors, the mark ■ (`\blacksquare`: sn_jnl_cls.rs did not run the class's begin-document
+%          code); 67s1 = ∎ (program not loaded); Perl: no binding, OmniBus scans the class, program has no binding
+% expect:  0 errors, 0 warnings; the proof ends with the formula `\opensquare` (□)
+% status:  RED (67u r1) -> GREEN (67u r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sn-jnl.cls}
+\ProvidesClass{sn-jnl}
+\LoadClass{article}
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{amsthm}%
+\usepackage{program}%
+\AtBeginDocument{%
+\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}%
+\DeclareMathSymbol{\opensquare}{\mathord}{AMSa}{"03}%
+\def\qedsymbol{\opensquare}%
+\newenvironment{spiproof}[1][\proofname]{\par\removelastskip
+  \pushQED{\qed}\small\normalfont\trivlist
+  \item[\hskip\labelsep\itshape#1\@addpunct{}]\ignorespaces}{\popQED\endtrivlist\@endpefalse}%
+\let\proof\spiproof\let\endproof\endspiproof}
+\end{filecontents*}
+\documentclass{sn-jnl}
+\begin{document}
+\begin{proof}Trivial.\end{proof}
+\end{document}

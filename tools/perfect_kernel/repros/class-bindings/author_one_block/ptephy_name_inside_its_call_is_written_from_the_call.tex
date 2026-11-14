@@ -1,0 +1,24 @@
+% mechanism: emit.rs `block_names`/`event_run_at`: a name a ptephy `\name{…}{marks}` call prints is written as the call
+%   whole, which digests to the name and its marks as the block did — never by text, nor from inside the call with
+%   the marks argument as the name's text. The first call's cover is the call (a mark its expansion prints after
+%   the name has the call's position, read as printed after it by digestion order); the last call's name cover
+%   stops short of the call (its arguments the field's last tokens), so the call's mark, whose cover holds the
+%   name's, grows the run to the call (Option C P3, OD #993)
+% witness: synthetic (the main session's P3 probe; 1304.2086's `\fname`/`\surname` shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Yoshiharu Kawamura1,∗ and Bob Baker2", "1 Univ A, Town", "2 Univ B, City"
+% engines: int159a: 0 errors, 1 warning ("Yoshiharu Kawamura" written as its plain text: "a name its events don't
+%   spell"); personnames "Yoshiharu Kawamura" (the ∗ lost) and "Bob Baker2" (the marks argument as text). P3: 0
+%   errors, 0 warnings; perl not run
+% expect:  0 errors, 0 warnings; personnames `Yoshiharu Kawamura<sup>∗</sup>` (the symbol mark kept, as every ptephy
+%   name's) and `Bob Baker`; affiliations 1 Univ A, Town and 2 Univ B, City
+% status:  GREEN (P3; guard perfect_kernel_batchp3)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{\fname{Yoshiharu} \surname{Kawamura}}{1,\ast} and \name{\fname{Bob} \surname{Baker}}{2}}
+\address{$^1$Univ A, Town\\ $^2$Univ B, City}
+\maketitle
+Text.
+\end{document}

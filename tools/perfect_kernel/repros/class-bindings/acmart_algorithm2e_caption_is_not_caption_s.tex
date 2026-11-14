@@ -1,0 +1,16 @@
+% mechanism: algorithm2e makes its captions itself (`\algocf@makecaption`, algorithm2e.sty:2287-2318), not through
+%   `\@makecaption`, so the caption settings acmart.cls:952-984 issues reach its figures and not its algorithms.
+% witness: 1908.06049 (sigconf), 2205.14076 (manuscript), 2205.01906 (acmtog), 2004.00833 (acmsmall)
+% oracle:  pdflatex 0 errors; "Algorithm 1: Alg one." (bold label, roman text), "Fig. 1. Fig one." (small sans serif)
+% engines: perl 0.8.8: caption settings not applied (KNOWN_PERL_ERRORS #795); rust int65a: "Algorithm 1" closed by " ",
+%   "Figure 1. "; 78y before this guard: the algorithm's label and text in small sans serif
+% expect:  0 errors, 0 warnings; the algorithm's caption as algorithm2e makes it ("Algorithm 1" closed by ": ",
+%   :2285-2289, since 78y r2; " " in Perl and 78y r1), the figure's in acmart's journal format, no class caption fonts
+% status:  GREEN (78y; the fonts behind the knob since 78y r2)
+\documentclass[manuscript,nonacm]{acmart}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\title{T}\author{A}\maketitle
+\begin{algorithm}[h]x\;\caption{Alg one.}\end{algorithm}
+\begin{figure}[h]X\caption{Fig one.}\end{figure}
+\end{document}

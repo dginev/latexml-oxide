@@ -1,0 +1,20 @@
+% mechanism: elsarticle sets an `\ead` address in typewriter type (elsarticle.cls:215-219 `{\ttfamily …\meaning…}`,
+%   :232-235 a `[url]` one); the binding set it in the roman font. Its `_` read '_' already (the binding loads T1).
+% witness: (construct) 20 of 26 run-336 elsarticle papers with a `_` in an `\ead`, 7 sampled months
+% oracle:  pdflatex 0 errors; "Email address: ann_able@a.edu (Ann Able)", "URL: http://a.edu/~ann_able (Ann Able)"
+%   in SFTT0800
+% engines: rust 64u: "ann_able@a.edu" in roman (the T1 font); perl: "ann˙able@a.edu", "http://a.edu/˜ann˙able" (OT1)
+% expect:  the addresses as typed, in typewriter type
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{Title}
+\author{Ann Able}
+\ead{ann_able@a.edu}
+\ead[url]{http://a.edu/~ann_able}
+\address{University of A}
+\end{frontmatter}
+Text.
+\end{document}

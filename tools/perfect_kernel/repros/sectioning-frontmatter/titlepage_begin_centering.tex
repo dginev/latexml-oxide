@@ -1,0 +1,15 @@
+% witness: hep-th9703192, cond-mat9607110, hep-lat0402021 (run 336 `{centering}` cluster, ~1,078 papers, first error)
+% oracle:  pdflatex 0 errors: the titlepage prints "Hello" centred
+% engines: rust 64s = 1 Error:undefined:{centering}; Perl 0.8.8 the same (PERL-ORIGIN: {titlepage} lets
+%          \centering to \relax, latex_constructs.pool.ltxml:1168, which \begin takes for undefined, :193-207)
+% expect:  0 errors; <titlepage> holds <p>Hello</p> (the titlepage neutralizes \centering as a no-op macro)
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{titlepage}
+\begin{centering}
+Hello
+\end{centering}
+\end{titlepage}
+\end{document}

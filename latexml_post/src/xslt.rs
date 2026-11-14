@@ -30,40 +30,12 @@ fn set_xslt_max_depth() {
   static SET_MAX_DEPTH: std::sync::Once = std::sync::Once::new();
   SET_MAX_DEPTH.call_once(|| {
     // SAFETY: `xsltMaxDepth` is libxslt's process-global recursion cap
-    // (a plain C `int`). The libxslt crate exposes no safe setter. `Once`
-    // guarantees a single writer; libxslt only ever READS this value (when
-    // creating each transform context), so there is no data race with
-    // concurrent transforms.
-    //
-    // PORTABILITY: resolved via `dlsym` rather than the crate's
-    // `libxslt::bindings::xsltMaxDepth` extern static. Those pregenerated
-    // (bindgen-on-Linux) bindings pin the raw ELF symbol name with
-    // `#[link_name = "\u{1}xsltMaxDepth"]`, which fails to LINK on Mach-O
-    // where the C symbol is `_xsltMaxDepth` (macOS probe 2026-06-07 — the
-    // sole undefined symbol in the whole workspace link; see
-    // docs/PORTABILITY_MACOS_PROBE_2026-06-07.md). `dlsym` applies the
-    // platform's own C-symbol decoration, so it works on ELF and Mach-O
-    // alike. If the symbol is ever absent (NULL), we skip the write:
-    // libxslt's built-in default cap of 3000 still bounds recursion.
-    #[cfg(unix)]
+    // (a plain C `int`, declared below with its C type). The libxslt crate
+    // exposes no safe setter. `Once` guarantees a single writer; libxslt only
+    // ever READS this value (when creating each transform context), so there
+    // is no data race with concurrent transforms.
+    #[cfg(any(unix, windows))]
     unsafe {
-      let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
-      if !sym.is_null() {
-        *(sym as *mut std::os::raw::c_int) = 1000;
-      }
-    }
-    // Windows (MSVC): no dlsym/RTLD_DEFAULT, and `libc` is a cfg(unix)-only
-    // dependency of this crate — but none of that machinery is needed. The
-    // vcpkg-static libxslt is linked into this very image, and x64 COFF C
-    // symbols carry no decoration, so a direct extern declaration links
-    // (GetProcAddress would NOT work here: it only sees DLL exports, not
-    // statically linked globals). See WINDOWS_COMPATIBILITY_PLAN Phase 2.3.
-    #[cfg(windows)]
-    unsafe {
-      #[allow(non_upper_case_globals)]
-      unsafe extern "C" {
-        static mut xsltMaxDepth: std::os::raw::c_int;
-      }
       xsltMaxDepth = 1000;
     }
     // Any other platform: skip the write; libxslt's built-in default cap
@@ -71,47 +43,274 @@ fn set_xslt_max_depth() {
   });
 }
 
-/// Windows twin of the unix dlsym read-back below: the write must land in
-/// the linked-in libxslt's global. Reads the same extern static the setter
-/// writes — both resolve to the one `xsltMaxDepth` in the image.
-#[cfg(all(test, windows))]
+// libxslt's recursion cap (`XSLTPUBVAR int xsltMaxDepth`), declared here rather
+// than taken from the crate's `libxslt::bindings::xsltMaxDepth`. Those
+// pregenerated (bindgen-on-Linux) bindings pin the raw ELF symbol name with
+// `#[link_name = "\u{1}xsltMaxDepth"]`, which fails to LINK on Mach-O where the
+// C symbol is `_xsltMaxDepth` (macOS probe 2026-06-07 — the sole undefined
+// symbol in the whole workspace link; see
+// docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md, WISDOM #56). A plain
+// declaration gets the platform's own C-symbol decoration from rustc on ELF and
+// Mach-O, dynamic or static, and on x64 COFF for the static vcpkg libxslt we
+// link there (a DLL's data would need a `dllimport`, `#[link(kind = "dylib")]`);
+// the libxslt crate's build script already puts the library on the link line.
+//
+// The reference is resolved at LINK time. The runtime lookup it replaces on
+// unix, `dlsym(RTLD_DEFAULT, "xsltMaxDepth")`, only searches DYNAMIC symbol
+// tables, so it silently skipped the write — leaving libxslt's 3000 — whenever
+// the symbol was not in one: libxslt linked statically (the `LIBXSLT_STATIC`
+// release binary, where the executable does not export the global), or not
+// loaded at all (the `latexml_post` unit-test binary with dependencies at
+// opt-level 1, whose live code has no other libxslt reference, so the linker's
+// `--as-needed` dropped the library). A static libxslt 1.1.42 (the release
+// build's, tools/build_static_libxml.sh) linked into a C program: `dlsym` NULL,
+// the linked global 3000. `GetProcAddress` fails on Windows' static vcpkg
+// libxslt for the same reason (WINDOWS_COMPATIBILITY_PLAN Phase 2.3).
+#[cfg(any(unix, windows))]
+#[allow(non_upper_case_globals)]
+unsafe extern "C" {
+  static mut xsltMaxDepth: std::os::raw::c_int;
+}
+
+#[cfg(all(test, any(unix, windows)))]
 mod max_depth_tests {
+  use crate::{
+    document::{PostDocument, PostDocumentOptions},
+    processor::Processor,
+  };
+
+  /// The write lands in the global libxslt reads: after `set_xslt_max_depth`
+  /// it holds Perl's value (1000), not libxslt's compiled-in 3000.
   #[test]
   fn extern_static_sets_perl_parity_cap() {
     super::set_xslt_max_depth();
-    // SAFETY: single-threaded read of the process-global int after the
-    // Once-guarded write; the extern declaration matches libxslt's C type.
-    let val = unsafe {
-      #[allow(non_upper_case_globals)]
-      unsafe extern "C" {
-        static xsltMaxDepth: std::os::raw::c_int;
-      }
-      xsltMaxDepth
-    };
+    // SAFETY: a by-value read of the process-global int after the Once-guarded
+    // write; the declaration matches libxslt's C type.
+    let val = unsafe { super::xsltMaxDepth };
     assert_eq!(val, 1000);
   }
+
+  /// A named template that calls itself `$n` times, applied through the
+  /// production `XSLT::process` path (which sets the cap under `XSLT_LOCK`).
+  /// libxslt spends two depth units per level of this template (measured:
+  /// `xsltproc --maxdepth 1000` aborts from n = 499, the default 3000 from
+  /// n = 1499).
+  fn apply_recursion(n: u32) -> bool {
+    const RECURSION_XSL: &str = r#"<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:param name="n" select="0"/>
+  <xsl:template match="/">
+    <out><xsl:call-template name="down"><xsl:with-param name="k" select="$n"/></xsl:call-template></out>
+  </xsl:template>
+  <xsl:template name="down">
+    <xsl:param name="k"/>
+    <xsl:if test="$k &gt; 0">
+      <xsl:call-template name="down"><xsl:with-param name="k" select="$k - 1"/></xsl:call-template>
+    </xsl:if>
+  </xsl:template>
+</xsl:stylesheet>
+"#;
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = dir.path().join("recursion.xsl");
+    std::fs::write(&xsl, RECURSION_XSL).expect("write recursion.xsl");
+    let mut params = rustc_hash::FxHashMap::default();
+    params.insert("n".to_string(), n.to_string());
+    let mut xslt =
+      super::XSLT::new(xsl.to_str().unwrap(), params, true, None, vec![]).expect("XSLT processor");
+    let doc =
+      PostDocument::new_from_string("<a/>", PostDocumentOptions::default()).expect("parse <a/>");
+    xslt.process(doc, vec![]).is_ok()
+  }
+
+  /// End to end: a transform recursing past Perl's cap but within libxslt's
+  /// default aborts, so the cap is the one libxslt applies; a shallower one
+  /// completes, so the abort is the cap and not the stylesheet.
+  #[test]
+  fn transform_aborts_past_perls_recursion_depth() {
+    assert!(
+      apply_recursion(400),
+      "a 400-level recursion (800 of 1000 depth units) must transform"
+    );
+    let (completed, libxslt_says) = with_fd2_captured(|| apply_recursion(700));
+    assert!(
+      !completed,
+      "a 700-level recursion (1400 depth units) must abort at Perl's cap of 1000, \
+       not run on to libxslt's default of 3000"
+    );
+    if let Some(said) = libxslt_says {
+      assert!(
+        said.contains("potential infinite template recursion"),
+        "{said}"
+      );
+    }
+  }
+
+  /// Run `f` with file descriptor 2 pointed at a temporary file, and return what
+  /// was written there: libxslt reports the aborted recursion (and its template
+  /// stack) with C `fprintf(stderr, …)`, below any Rust output capture, so without
+  /// this the report would reach the terminal of whoever runs the suite.
+  #[cfg(unix)]
+  fn with_fd2_captured<T>(f: impl FnOnce() -> T) -> (T, Option<String>) {
+    use std::{
+      io::{Read, Seek},
+      os::fd::AsRawFd,
+    };
+    /// Points fd 2 back at its saved copy when dropped — on a panic in `f` too.
+    struct Restore(std::ffi::c_int);
+    impl Drop for Restore {
+      fn drop(&mut self) {
+        // SAFETY: `self.0` is the `dup(2)` taken below, still open.
+        unsafe {
+          libc::dup2(self.0, 2);
+          libc::close(self.0);
+        }
+      }
+    }
+    let mut sink = tempfile::tempfile().expect("tempfile");
+    // SAFETY: plain descriptor calls on fd 2 and descriptors this function owns.
+    let saved = unsafe { libc::dup(2) };
+    assert!(saved >= 0, "dup(2)");
+    let restore = Restore(saved);
+    assert!(
+      unsafe { libc::dup2(sink.as_raw_fd(), 2) } >= 0,
+      "dup2 onto fd 2"
+    );
+    let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+    drop(restore);
+    let mut text = String::new();
+    sink.rewind().expect("rewind");
+    sink.read_to_string(&mut text).expect("read captured fd 2");
+    match out {
+      Ok(out) => (out, Some(text)),
+      Err(panic) => {
+        // The panic message went to the captured fd 2: show it before unwinding on.
+        eprint!("{text}");
+        std::panic::resume_unwind(panic)
+      },
+    }
+  }
+  #[cfg(not(unix))]
+  fn with_fd2_captured<T>(f: impl FnOnce() -> T) -> (T, Option<String>) { (f(), None) }
 }
 
-#[cfg(all(test, unix))]
-mod max_depth_tests {
-  /// The dlsym write must actually land: after `set_xslt_max_depth`,
-  /// reading the global back through the same runtime resolution path
-  /// must yield Perl's value (1000). Guards both the symbol lookup
-  /// (platform decoration) and the write.
+#[cfg(test)]
+mod local_stylesheet_tests {
+  use crate::{
+    document::{PostDocument, PostDocumentOptions},
+    processor::Processor,
+  };
+
+  fn marker_xsl(marker: &str) -> String {
+    format!(
+      r#"<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:template match="/"><out>{marker}</out></xsl:template>
+</xsl:stylesheet>
+"#
+    )
+  }
+
+  fn apply(xsl: &std::path::Path) -> String {
+    let mut xslt = super::XSLT::new(
+      xsl.to_str().unwrap(),
+      Default::default(),
+      true,
+      None,
+      vec![],
+    )
+    .expect("XSLT");
+    let doc = PostDocument::new_from_string("<a/>", PostDocumentOptions::default()).expect("<a/>");
+    let out = xslt.process(doc, vec![]).expect("transform");
+    out[0].to_xml_string()
+  }
+
+  /// #806: a `--stylesheet` path naming a file on disk is that file, even when its basename is
+  /// one of the embedded engine sheets; so is an engine-named sibling a user sheet imports.
   #[test]
-  fn dlsym_sets_perl_parity_cap() {
-    super::set_xslt_max_depth();
-    // SAFETY: `dlsym(RTLD_DEFAULT, "xsltMaxDepth")` returns the address of
-    // libxslt's process-global `int` recursion cap, valid for the lifetime of
-    // the loaded libxslt (linked into this test binary). We assert non-null
-    // before dereferencing, and the `*const c_int` cast matches the symbol's C
-    // type; the read is on a single thread (`set_xslt_max_depth` already ran).
-    let val = unsafe {
-      let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
-      assert!(!sym.is_null(), "xsltMaxDepth not resolvable via dlsym");
-      *(sym as *const std::os::raw::c_int)
-    };
-    assert_eq!(val, 1000);
+  fn a_stylesheet_on_disk_wins_over_the_embedded_copy() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let html5 = dir.path().join("LaTeXML-html5.xsl");
+    std::fs::write(&html5, marker_xsl("LOCAL-HTML5")).unwrap();
+    assert!(apply(&html5).contains("<out>LOCAL-HTML5</out>"));
+
+    let common = dir.path().join("LaTeXML-common.xsl");
+    std::fs::write(&common, marker_xsl("LOCAL-COMMON")).unwrap();
+    let mine = dir.path().join("mine.xsl");
+    std::fs::write(
+      &mine,
+      r#"<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:import href="LaTeXML-common.xsl"/>
+</xsl:stylesheet>
+"#,
+    )
+    .unwrap();
+    assert!(apply(&mine).contains("<out>LOCAL-COMMON</out>"));
+  }
+
+  /// #806: a user's sheet in a directory whose name needs escaping still imports its sibling from
+  /// disk; an absolute or `file:` URL names the file, a relative or bare engine name never does
+  /// (the default stylesheet's imports cannot be replaced by a copy in the cwd).
+  #[test]
+  fn only_a_named_file_is_read_from_disk() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let spaced = dir.path().join("a b");
+    std::fs::create_dir(&spaced).unwrap();
+    let common = spaced.join("LaTeXML-common.xsl");
+    std::fs::write(&common, marker_xsl("SPACED-COMMON")).unwrap();
+    let mine = spaced.join("mine.xsl");
+    std::fs::write(
+      &mine,
+      r#"<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:import href="LaTeXML-common.xsl"/>
+</xsl:stylesheet>
+"#,
+    )
+    .unwrap();
+    assert!(apply(&mine).contains("<out>SPACED-COMMON</out>"));
+
+    let abs = common.to_str().unwrap();
+    let escaped = abs.replace(' ', "%20");
+    for url in [
+      abs.to_string(),
+      format!("file://{escaped}"),
+      format!("file://localhost{escaped}"),
+      format!("file:{escaped}"),
+    ] {
+      assert!(super::embedded_xslt::resolve(&url).is_none(), "{url}");
+    }
+    // A literal `%` in a plain path is not an escape: the user's engine-named sheet and its sibling.
+    for name in ["100%", "%41"] {
+      let pct = dir.path().join(name);
+      std::fs::create_dir(&pct).unwrap();
+      let html5 = pct.join("LaTeXML-html5.xsl");
+      std::fs::write(&html5, marker_xsl("PCT-HTML5")).unwrap();
+      assert!(apply(&html5).contains("<out>PCT-HTML5</out>"), "{name}");
+      std::fs::write(pct.join("LaTeXML-common.xsl"), marker_xsl("PCT-COMMON")).unwrap();
+      std::fs::copy(&mine, pct.join("mine.xsl")).unwrap();
+      assert!(
+        apply(&pct.join("mine.xsl")).contains("<out>PCT-COMMON</out>"),
+        "{name}"
+      );
+      // In a `file:` URL the `%` is escaped.
+      let url = format!("file://{}", html5.to_str().unwrap().replace('%', "%25"));
+      assert_eq!(super::embedded_xslt::disk_path(&url), Some(html5), "{url}");
+    }
+    // A host other than localhost is a UNC share, which only Windows paths can name.
+    let unc = format!(
+      "file://server{}",
+      common.to_str().unwrap().replace(' ', "%20")
+    );
+    assert_eq!(
+      super::embedded_xslt::disk_path(&unc).is_some(),
+      cfg!(windows),
+      "{unc}"
+    );
+    // Relative to this crate's directory, where the engine's own sources sit.
+    for url in [
+      "resources/XSLT/LaTeXML-all-xhtml.xsl",
+      "embed:///LaTeXML-html5.xsl",
+      "urn:x-LaTeXML:XSLT:LaTeXML-html5.xsl",
+    ] {
+      assert!(super::embedded_xslt::resolve(url).is_some(), "{url}");
+    }
   }
 }
 
@@ -181,7 +380,12 @@ impl XSLT {
     };
 
     Ok(XSLT {
-      name: format!("XSLT[using {}]", stylesheet),
+      name: format!(
+        "XSLT[using {}]",
+        stylesheet
+          .strip_prefix(embedded_xslt::URL_PREFIX)
+          .unwrap_or(stylesheet)
+      ),
       stylesheet_path: Some(stylesheet_path),
       parameters,
       no_resources,
@@ -976,9 +1180,61 @@ mod embedded_xslt {
   /// `urn:x-LaTeXML:XSLT:X`, `urn:X`, and bare `X` uniformly. Only our
   /// distinctive `LaTeXML-*.xsl` names are in [`FILES`], so a user's own
   /// relative import (a different basename) still loads from disk.
+  ///
+  /// An absolute path or `file:` URL naming a file on disk is that file (#806): only a stylesheet
+  /// the user named is made absolute (`find_stylesheet`), so it and an engine-named sibling it
+  /// imports load from disk as in Perl, while a relative or bare engine name never reads the cwd.
   pub fn resolve(url: &str) -> Option<&'static [u8]> {
+    if disk_path(url).is_some() {
+      return None;
+    }
     let name = url.rsplit(['/', ':']).next().unwrap_or(url);
     lookup(name)
+  }
+
+  /// The file an absolute path or a `file:` URL (`file:///p`, `file://localhost/p`, `file:/p`,
+  /// percent-encoded; `file://server/share/p` on Windows) names, when it exists. A plain path is
+  /// taken as written: its `%` is a character, not an escape (`/w/100%/LaTeXML-html5.xsl`).
+  pub fn disk_path(url: &str) -> Option<std::path::PathBuf> {
+    let path = match url.strip_prefix("file:") {
+      None => url.to_string(),
+      Some(rest) => {
+        let path = match rest.strip_prefix("//") {
+          Some(auth) => match auth.strip_prefix("localhost").unwrap_or(auth) {
+            local if local.starts_with('/') => local,
+            // `file://server/share/p` is the UNC path `//server/share/p`.
+            _ if cfg!(windows) => rest,
+            _ => return None,
+          },
+          None => rest,
+        };
+        let path = percent_decode(path)?;
+        // `file:///C:/x` names `C:/x`.
+        match path.strip_prefix('/') {
+          Some(rest) if cfg!(windows) && rest.as_bytes().get(1) == Some(&b':') => rest.to_string(),
+          _ => path,
+        }
+      },
+    };
+    let path = std::path::PathBuf::from(path);
+    (path.is_absolute() && path.is_file()).then_some(path)
+  }
+
+  fn percent_decode(s: &str) -> Option<String> {
+    if !s.contains('%') {
+      return Some(s.to_string());
+    }
+    let mut bytes = Vec::with_capacity(s.len());
+    let mut it = s.bytes();
+    while let Some(b) = it.next() {
+      if b == b'%' {
+        let hex = [it.next()?, it.next()?];
+        bytes.push(u8::from_str_radix(std::str::from_utf8(&hex).ok()?, 16).ok()?);
+      } else {
+        bytes.push(b);
+      }
+    }
+    String::from_utf8(bytes).ok()
   }
 
   /// Install the libxml2 input callback that serves `embed:///`
@@ -995,8 +1251,8 @@ mod embedded_xslt {
         // Serve any URL whose basename is one of our embedded engine files —
         // `embed:///X`, a user stylesheet's `urn:x-LaTeXML:XSLT:X`, and the
         // relative child imports libxml2 composes from it (`urn:X` on Linux, a
-        // bare `X` on macOS). A non-engine basename resolves to None, so the
-        // callback declines it and libxml2 loads it from disk as before (#292).
+        // bare `X` on macOS). A non-engine basename, or a user-named file on disk (#806),
+        // resolves to None, so the callback declines it and libxml2 loads it from disk (#292).
         |url| resolve(url).is_some(),
         |url| resolve(url).map(|s| s.to_vec()),
       );
@@ -1096,16 +1352,25 @@ mod embedded_resources {
 // ======================================================================
 // File search helpers
 
+/// The stylesheet a name resolves to: an `embed:///` name (the default for a format) is served from
+/// the binary; a file the user named, found as given or under a search path, is made absolute, the
+/// form [`embedded_xslt::resolve`] reads from disk with its imports (#806).
 fn find_stylesheet(stylesheet: &str, searchpaths: &[String]) -> Result<String, PostError> {
-  // 1. Check if the stylesheet exists as an absolute/relative path
-  if Path::new(stylesheet).is_file() {
+  if let Some(name) = stylesheet.strip_prefix(embedded_xslt::URL_PREFIX)
+    && embedded_xslt::lookup(name).is_some()
+  {
+    embedded_xslt::install_callback_once();
     return Ok(stylesheet.to_string());
   }
-  // 2. Check each search path
-  for sp in searchpaths {
-    let p = format!("{}/{}", sp, stylesheet);
-    if Path::new(&p).is_file() {
-      return Ok(p);
+  if let Some(path) = embedded_xslt::disk_path(stylesheet) {
+    return Ok(path.to_string_lossy().into_owned());
+  }
+  let candidates = std::iter::once(PathBuf::from(stylesheet))
+    .chain(searchpaths.iter().map(|sp| Path::new(sp).join(stylesheet)));
+  for candidate in candidates {
+    if candidate.is_file() {
+      let path = std::path::absolute(&candidate).unwrap_or(candidate);
+      return Ok(path.to_string_lossy().into_owned());
     }
   }
   // 3. Fallback: serve from the embedded table via the libxml2 input callback. We return an

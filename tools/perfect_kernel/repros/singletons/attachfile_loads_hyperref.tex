@@ -1,0 +1,13 @@
+% witness: K13 stage-2 audit rows attachfile `\Ref`, `\footref`, `\pdfcatalog` (57h; 1 A/B paper loads it);
+%          attachfile.sty:40 runs `\RequirePackageWithOptions{hyperref}` unconditionally, the binding
+%          (Perl attachfile.sty.ltxml:19-22) requires only keyval, ifpdf, calc and color
+% oracle:  pdflatex 0 errors: "See section 1 and the site."
+% engines: perl = rust 57ag, 2 errors: `Error:undefined:\autoref`, `Error:undefined:\href`
+% expect:  0 errors, 0 warnings; one ref to sec:a, one ref to the url
+% status:  RED (57ag) -> GREEN (57ah: attachfile requires hyperref with its options, attachfile_sty.rs)
+\documentclass{article}
+\usepackage{attachfile}
+\begin{document}
+\section{Intro}\label{sec:a}
+See \autoref{sec:a} and \href{https://example.org}{the site}.
+\end{document}

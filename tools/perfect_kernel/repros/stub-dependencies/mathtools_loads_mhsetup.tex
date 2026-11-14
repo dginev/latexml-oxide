@@ -1,0 +1,17 @@
+% witness: 1202.0045, 1611.02845, 1903.08038 (`\MHInternalSyntaxOn` … `\MHInternalSyntaxOff` around the paper's own
+%          mathtools-style definitions; mathtools.sty:37 `\RequirePackage{mhsetup}`)
+% oracle:  pdflatex 0 errors ("x = 1")
+% engines: rust 67o1 = 5+ errors (`\MHInternalSyntaxOn`, `\MH`, `\myone`, `\MHInternalSyntaxOff` undefined, a stray `_`:
+%          the mathtools binding left mhsetup a TODO); Perl's mathtools.sty.ltxml the same TODO (KNOWN_PERL_ERRORS #693)
+% expect:  0 errors, 0 warnings; the paper's `\MH_let:NwN` copy works and `_` is a subscript again after the block
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathtools}
+\MHInternalSyntaxOn
+\MH_let:NwN \myone \relax
+\def\mytwo{1}
+\MHInternalSyntaxOff
+\begin{document}
+$x_1 = \mytwo$
+\end{document}

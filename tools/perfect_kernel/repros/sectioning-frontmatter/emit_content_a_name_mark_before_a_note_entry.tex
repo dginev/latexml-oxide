@@ -1,0 +1,18 @@
+% mechanism: the other direction of CT1ar's count: a name's mark glued to the name (`Ann Able$^{1}$\thanks{$^1$…}`) just
+%   before an entry of label 1 the note holds, while `$^1$Univ X` leads a line, is no entry's text: the content check counts
+%   nothing (`resolver::placed::retold_words` reads a mark glued to another entry's text only)
+% witness: synthetic (CT1ar review-style sibling: a mark in a note body)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1∗, Bob Baker2 / 1Univ X, Town / 2Univ Y, City", the footnote
+%   "∗ 1Center for Astro (CAP1), Univ Z"
+% engines: rust CT1arbase and CT1ar: 0 warnings; Ann "Center for Astro (CAP1), Univ Z" (the note's text, written as an
+%   affiliation of label 1) and "Univ X, Town"; Bob "Univ Y, City"
+% expect:  0 errors, 0 warnings; every word placed
+% status:  GREEN (perfect_kernel_batchn2::a_clean_block_counts_nothing)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\thanks{$^1$Center for Astro (CAP$^1$), Univ Z}, Bob Baker$^{2}$ \\ $^1$Univ X, Town \\ $^2$Univ Y, City}
+\maketitle
+Text.
+\end{document}

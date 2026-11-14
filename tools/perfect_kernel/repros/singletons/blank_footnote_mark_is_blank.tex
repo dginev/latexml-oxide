@@ -1,0 +1,19 @@
+% The blank-footnote idiom \gdef\@thefnmark{}\@footnotetext{...} prints a note with no mark: latex.ltx's
+% \@footnotetext typesets \@thefnmark as the note's mark. The kernel's \@footnotetext is
+% \lx@notetext{footnote} (Perl latex_constructs.pool.ltxml:490, Rust sect03.rs:303), which ignores
+% \@thefnmark: the note is marked with the footnote counter, and after a pending \footnotemark it
+% fills that mark's note, whose \footnotetext then becomes a stray note (KNOWN_PERL_ERRORS #394).
+% witness: 57cn.1 re-review (bl.tex; footnotehyper's saved table note attaches to the table's
+%   \footnotemark). Guard: none (RED).
+% status:  RED
+% oracle:  pdflatex 0 errors: "Cell1 then and more.", footnotes: a mark-less "Blank note.", then "1 The text.".
+% engines: rust 57co2 and perl: footnote 1 reads "Blank note.", "The text." a second note.
+% expect:  0 errors; footnote 1 is "The text."; "Blank note." a note without a mark.
+\documentclass{article}
+\makeatletter
+\def\blfootnote{\gdef\@thefnmark{}\@footnotetext}
+\makeatother
+\begin{document}
+Cell\footnotemark{} then\blfootnote{Blank note.} and more.
+\footnotetext{The text.}
+\end{document}

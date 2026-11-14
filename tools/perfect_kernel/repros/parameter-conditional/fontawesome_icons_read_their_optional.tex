@@ -1,0 +1,11 @@
+% witness: K13 stage-2 audit (57h): fontawesome.sty:67-70 `\faHourglass[1][]`, `\faBattery[1][4]`;
+%          the binding read no optional
+% oracle:  pdflatex 0 errors; four icons: battery-2, battery-4, hourglass-half, hourglass
+% engines: rust 57h=0: `[2]` and `[half]` left as text after fa-battery / fa-hourglass
+% expect:  0 errors; classes fa-battery-2, fa-battery-4, fa-hourglass-half, fa-hourglass, no leaked text
+% status:  RED (57h) -> GREEN (57i)
+\documentclass{article}
+\usepackage{fontawesome}
+\begin{document}
+Charge \faBattery[2] and \faBattery{} full, \faHourglass[half] and \faHourglass{} now.
+\end{document}

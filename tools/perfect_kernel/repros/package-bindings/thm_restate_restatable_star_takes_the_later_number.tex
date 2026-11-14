@@ -1,0 +1,29 @@
+% witness: 1702.04225 (the introduction's previews "Theorem 6.21", "Proposition 6.13"), 1407.7827, 2402.00791
+% oracle:  pdflatex 0 errors (second run): § 1 "Theorem 2.2. Main statement.", "See 2.2.", `\main*` "Theorem 2.2.
+%          Main statement." again; § 2 "Theorem 2.1. Other.", "Theorem 2.2. Main statement.", "Theorem 2.3. Last."
+%          (thm-restate.sty:207-213 `\thmt@thisistheonefalse`: no counter step, labels gobbled, the later `\main`'s number)
+% engines: rust 78i r1: the preview and `\main*` "Theorem 1.1" (the preview a numbered theorem of § 1), `thm:main`
+%          set twice; perl (thm-restate.sty.ltxml:17-28 defines no `{restatable*}`): Error:undefined:{restatable*} and
+%          Error:undefined:\main, "Last." numbered 2.2 (KNOWN_PERL_ERRORS #1052)
+% expect:  clean (0 errors, 0 warnings); the preview and `\main*` tagged 2.2 by reference, unlabelled; `\main` the
+%          labelled 2.2; "See 2.2."
+% status:  RED (78i r1) -> GREEN (78i r2)
+\documentclass{article}
+\usepackage{amsthm,thmtools,thm-restate}
+\declaretheorem[name=Theorem,numberwithin=section]{theorem}
+\begin{document}
+\section{Intro}
+\begin{restatable*}{theorem}{main}\label{thm:main}
+Main statement.
+\end{restatable*}
+See \ref{thm:main}.
+\main*
+\section{Body}
+\begin{theorem}
+Other.
+\end{theorem}
+\main
+\begin{theorem}
+Last.
+\end{theorem}
+\end{document}

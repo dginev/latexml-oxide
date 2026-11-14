@@ -7,9 +7,11 @@
 mod cluster;
 use cluster::{
   convert_and_post, convert_and_post_clean, convert_and_post_contrib_clean,
-  convert_and_post_logging, convert_to_xml, convert_to_xml_ar5iv, convert_to_xml_contrib,
-  convert_to_xml_contrib_clean,
+  convert_and_post_contrib_expecting, convert_and_post_contrib_logging, convert_and_post_logging,
+  convert_to_xml, convert_to_xml_ar5iv, convert_to_xml_contrib, convert_to_xml_contrib_clean,
+  convert_to_xml_contrib_clean_logging, post_with,
 };
+use latexml::util::test::check_requirements;
 
 /// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
 /// decision seam behind `\bibliography`. The clauses are arbitrary tokens, so
@@ -126,13 +128,22 @@ fn bib_nocite_star_includes_the_whole_library() {
 /// semantics and dropping only the author's bespoke label format.
 #[test]
 fn biblatex_declarecitecommand_defines_its_command() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/declarecite.tex");
+  // The `.bbl`'s entries are formatted in post, as a `.bib`'s are
+  // (biblatex_sty.rs `bbl_flush`); the rendered bibitem is pinned.
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/declarecite.tex");
   assert!(
     !x.contains("ERROR"),
     "the declared cite command stayed undefined:\n{x}"
   );
+  // citations made with the declared command did not select any entry: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="smith2020" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Smith</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">A study of things</tag><tag class="ltx_bib_author-year" role="refnum">Smith (2020)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Smith</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A study of things</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text> <text class="ltx_bib_volume">12</text>, <text class="ltx_bib_pages">pp. 1–20</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
   assert!(
-    x.contains("<bibitem") && x.contains("Smith"),
+    x.contains("Smith"),
     "citations made with the declared command did not select any entry:\n{x}"
   );
 }
@@ -296,9 +307,12 @@ fn bib_raw_cite_redefinition_is_ignored() {
     !x.contains("CLOBBERED"),
     "a raw \\def\\cite displaced the binding:\n{x}"
   );
-  assert!(
-    x.contains("<bibitem") || x.contains("bibitem"),
-    "the bibliography did not survive the clobber attempt:\n{x}"
+  // the bibliography did not survive the clobber attempt: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="knuth" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> D. Knuth. </bibblock><bibblock>The TeXbook. </bibblock><bibblock>1984.</bibblock></bibitem>"##,
   );
 }
 
@@ -457,10 +471,13 @@ fn biblatex_declaresourcemap_does_not_leak_the_preamble() {
 /// entries), 2606.02676 (0 -> 93), 2605.27263 (0 -> 58). Audit family F4(a)/(b).
 #[test]
 fn biblatex_refcontext_block_keeps_its_printbibliography() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/refctx.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "refcontext swallowed \\printbibliography — no bibliography at all:\n{x}"
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/refctx.tex");
+  // refcontext swallowed \\printbibliography — no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="smith2020" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Smith</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">A study of things</tag><tag class="ltx_bib_author-year" role="refnum">Smith (2020)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Smith</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A study of things</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text> <text class="ltx_bib_volume">12</text>, <text class="ltx_bib_pages">pp. 1–20</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   assert!(
     x.contains("Smith"),
@@ -518,42 +535,50 @@ fn bib_missing_file_is_an_error_not_just_an_info() {
     log.contains("no_such_bibliography_file"),
     "the raise must name the unresolved bibliography, log was:\n{log}"
   );
+  assert_eq!(latexml::util::test::error_count(&log), 1, "{log}");
+  assert!(!log.contains("Fatal:"), "{log}");
 }
 
 /// A biber `.bbl` with more than one `\datalist` (biblatex's apa style asks for
 /// two sorting schemes, so the same references are emitted twice) used to hang
-/// the engine: each `\enddatalist` expands to a bare
+/// the engine: each `\enddatalist` expanded to a bare
 /// `\thebibliography…\endthebibliography`, neither of which opens a group, so
 /// the second one re-entered `setupPseudoBibitem` while the first arming was
 /// live and captured `\save@bibitem` ← `\restoring@bibitem` — a self-referential
 /// `\let` that expands forever (`Fatal:Timeout:TokenLimit`, 1e9 tokens).
-/// The blank line after `\printbibliography` covers the second half of the fix:
-/// `\endthebibliography` now disarms the redirection, so that `\par` no longer
-/// expands to `\par@in@bibliography` and deposits a stray empty bibitem outside
-/// the biblist. Witness: arXiv 2605.17646 (Perl converts it — its biblatex
-/// binding never defines `\printbibliography`, so upstream never reaches this —
-/// but Perl hangs identically on the bare-CS form; KNOWN_PERL_ERRORS #57).
+/// The blank line after `\printbibliography` covers the second half: a `\par`
+/// there must not deposit a stray empty bibitem outside the biblist. Witness:
+/// arXiv 2605.17646 (Perl converts it — its biblatex binding never defines
+/// `\printbibliography`, so upstream never reaches this — but Perl hangs
+/// identically on the bare-CS form; KNOWN_PERL_ERRORS #57).
+///
+/// `\printbibliography` prints ONE of the datalists, the default refcontext's
+/// (`nyt/global//global/global/global`; biblatex-apa's `nyt/apasortcite//…`
+/// sorts citations), as biblatex does — each of its entries once, as an
+/// `ltx:bibentry` MakeBibliography formats (biblatex_sty.rs `bbl_flush`); no
+/// `\bibitem` machinery is involved.
 #[test]
 fn cluster_biblatex_two_datalists() {
   let x =
     convert_to_xml_contrib_clean("tests/cluster_regressions/biblatex_two_datalists/twolists.tex");
-  // One bibliography per \datalist, each holding its own biblist.
+  // One bibliography, of the default refcontext's datalist.
   assert_eq!(
     x.matches("<bibliography").count(),
-    2,
-    "expected one <bibliography> per \\datalist:\n{x}"
+    1,
+    "expected the one <bibliography> \\printbibliography prints:\n{x}"
   );
   assert_eq!(
     x.matches("<biblist>").count(),
-    2,
-    "expected one <biblist> per \\datalist:\n{x}"
+    1,
+    "expected one <biblist>:\n{x}"
   );
-  // 2 entries × 2 datalists, and NOT a 5th stray from the trailing blank line.
+  // Its 2 entries, once each, and NOT a stray bibitem from the trailing blank line.
   assert_eq!(
-    x.matches("<bibitem").count(),
-    4,
-    "expected exactly 4 bibitems (2 entries x 2 datalists, no stray):\n{x}"
+    x.matches("<bibentry ").count(),
+    2,
+    "expected exactly the 2 entries of the printed datalist:\n{x}"
   );
+  assert_eq!(x.matches("<bibitem").count(), 0, "a stray bibitem:\n{x}");
 }
 /// biblatex must NOT globally define `\type` (nor `\subtype`). Real biblatex
 /// defines `\def\type#1{type=#1}` only inside a `\begingroup` bibliography-filter
@@ -600,10 +625,14 @@ fn cluster_bib_long_author_list_refnum() {
   // The refnum tag of the <bibitem> that carries a given entry's title. NOTE
   // the refnum is pushed LAST within <tags>, so it follows the title — scope to
   // the enclosing bibitem rather than searching backwards from the title.
+  // Search the bibliography only: every citation link carries its entry's
+  // title as `title=` (Perl CrossRef.pm:555-557), ahead of the list.
+  let bib = x.find("<bibliography").expect("a bibliography");
   let refnum = |title: &str| -> String {
-    let i = x
-      .find(title)
-      .unwrap_or_else(|| panic!("no entry titled {title} in:\n{x}"));
+    let i = bib
+      + x[bib..]
+        .find(title)
+        .unwrap_or_else(|| panic!("no entry titled {title} in:\n{x}"));
     let start = x[..i].rfind("<bibitem").unwrap_or(0);
     let end = x[start..]
       .find("</bibitem>")
@@ -671,7 +700,7 @@ fn cluster_bib_long_author_list_refnum() {
   // as the `<tags>` metadata year (CrossRef reads it, and the numeric style
   // emits it too), in `key="Collab2025"`, and as this entry's journal VOLUME.
   let first_block = {
-    let i = x.find("science goals and forecasts").expect("entry");
+    let i = bib + x[bib..].find("science goals and forecasts").expect("entry");
     let start = x[..i].rfind("<bibitem").expect("bibitem start");
     let b = start + x[start..].find("<bibblock").expect("first bibblock");
     let e = b + x[b..].find("</bibblock>").expect("bibblock end");
@@ -687,44 +716,51 @@ fn cluster_bib_long_author_list_refnum() {
   );
 }
 /// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
-/// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
+/// 0911aec): style=apa documents with a biber .bbl get "Surname (Year)"
 /// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the
 /// three citation families; style=numeric documents keep sequential
 /// labels, core [ ] brackets, and plain-\cite fallbacks (multicite keys
-/// comma-joined).
+/// comma-joined). The `.bbl`'s entries are formatted in post by
+/// MakeBibliography's author-year path, as a `.bib`'s are (biblatex_sty.rs
+/// `bbl_flush`), so the tags are those of the formatted bibitems.
 #[test]
 fn cluster_biblatex_authoryear() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/ay.tex");
-  // Structured tags with author/year roles (single-author, 2-author "&",
+  let p = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/ay.tex");
+  // Structured tags with author/year roles (single-author, 2-author "and",
   // 3+-author "et al." short form vs full list, prefix-name surname).
-  assert!(
-    x.contains(r#"<tag role="year">2020</tag>"#),
-    "year tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Smith</tag>"#),
-    "authors tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="refnum">Smith (2020)</tag>"#),
-    "refnum tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Jones &amp; Brown</tag>"#),
-    "2-author tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Adams et al.</tag>"#),
-    "et-al short form missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="fullauthors">Adams, Baker &amp; Clark</tag>"#),
-    "fullauthors missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Berg</tag>"#),
-    "prefix-name surname missing:\n{x}"
-  );
+  for (tag, what) in [
+    (
+      r#"<tag class="ltx_bib_year" role="year">2020</tag>"#,
+      "year tag",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="authors">Smith</tag>"#,
+      "authors tag",
+    ),
+    (
+      r#"<tag class="ltx_bib_author-year" role="refnum">Smith (2020)</tag>"#,
+      "refnum tag",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="authors">Jones and Brown</tag>"#,
+      "2-author tag",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="authors">Adams<text class="ltx_bib_etal"> et al.</text></tag>"#,
+      "et-al short form",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="fullauthors">Adams, Baker and Clark</tag>"#,
+      "fullauthors",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="authors">van den Berg</tag>"#,
+      "prefix-name surname",
+    ),
+  ] {
+    assert!(p.contains(tag), "{what} missing:\n{p}");
+  }
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/ay.tex");
   // Citation families: parenthetical vs textual vs bare, with show= specs.
   assert!(
     x.contains("citemacro_citep"),
@@ -774,9 +810,16 @@ fn cluster_biblatex_authoryear() {
     !x.contains("Smith, 2020"),
     "numeric doc must not get author-year labels:\n{x}"
   );
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/num.tex");
+  // (Its bibitems carry `authors`/`fullauthors` tags, as every formatted entry
+  // does — MakeBibliography.pm:431-448 — but its labels are numbers.)
   assert!(
-    !x.contains(r#"role="fullauthors""#),
-    "numeric doc must not get author-year tags:\n{x}"
+    !x.contains("ltx_bib_author-year"),
+    "numeric doc must not get author-year labels:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag>"#),
+    "numeric doc must get sequential labels:\n{x}"
   );
 }
 
@@ -800,7 +843,7 @@ fn cluster_bib_biblatex_variant_loads_and_renders() {
     "preamble \\DeclareFieldFormat leaked raw / errored (biblatex-chicago did not load biblatex):\n{x}"
   );
   assert!(
-    x.contains(r#"<bibitem key="smith2020""#),
+    x.contains(r#"<bibentry key="smith2020""#),
     "biblatex-chicago produced no References (biber .bbl guard emptied the list):\n{x}"
   );
   assert!(
@@ -893,13 +936,20 @@ fn sn_jnl_natbib_two_optional_cite_keeps_its_keys() {
 fn amsrefs_inline_bibliography_is_not_dropped() {
   let x = convert_and_post("tests/cluster_regressions/amsrefs_inline_bibliography.tex");
   // The inline entries became real bibitems (post ran and collected them).
-  assert!(
-    x.contains("<bibitem"),
-    "amsrefs inline bibliography was dropped whole — no bibitem survived:\n{x}"
+  // amsrefs inline bibliography was dropped whole — no bibitem survived: the WHOLE first <bibitem> element is pinned.
+  // Its id is its own (`bib.bib1`, with the `fragid` that gives the HTML list
+  // item its id): the inline entry releases its id before formatting
+  // (make_bibliography.rs `process`); it had been renamed `bib.bib3a` on a clash
+  // with the entry, and every citation link to it dangled.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="Bartnik" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Bartnik</tag><tag class="ltx_bib_year" role="year">1986</tag><tag class="ltx_bib_title" role="title">The mass of an asymptotically flat manifold</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">R. Bartnik</text><text class="ltx_bib_year"> (1986)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">The mass of an asymptotically flat manifold</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Comm. Pure Appl. Math.</text>, <text class="ltx_bib_pages">pp. 661–693</text>.</bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="ltx_bib_external" href="https://doi.org/10.1002/cpa.3160390505">Link</ref>,<text class=" ltx_bib_external">Review <ref class="ltx_mathreviews" href="http://www.ams.org/mathscinet-getitem?mr=849427">MathReviews</ref></text></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
-  // Both entries, with their content, are present. NB amsrefs sentence-cases
-  // titles ("On Examples" -> "On examples"), as `amsrefs_basic.xml` records.
-  for needle in ["Beilinson", "Height pairing", "On examples", "Smith"] {
+  // Both entries, with their content, are present. amsrefs titles keep their
+  // case ("On Examples"; OXIDIZED_DESIGN #201 — Perl sentence-cased them).
+  for needle in ["Beilinson", "Height pairing", "On Examples", "Smith"] {
     assert!(
       x.contains(needle),
       "amsrefs entry content `{needle}` missing from the References:\n{x}"
@@ -930,6 +980,114 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
   );
 }
 
+/// The keys of each bibliography's items, in order (one list per `<bibliography>`).
+fn bibliography_keys(x: &str) -> Vec<Vec<String>> {
+  x.split("<bibliography")
+    .skip(1)
+    .map(|bib| {
+      bib
+        .match_indices("<bibitem ")
+        .filter_map(|(at, _)| {
+          let tag = &bib[at..at + bib[at..].find('>')?];
+          let key = tag.split(" key=\"").nth(1)?;
+          key.split('"').next().map(str::to_string)
+        })
+        .collect()
+    })
+    .collect()
+}
+
+/// An amsrefs `biblist` typesets every `\bib` in it, cited or not (1012.2719: 34 entries, 29 cited, the PDF lists 34):
+/// the document's own inline entries are its References, not a library to select the cited ones from (63g). Repro
+/// index-bib/amsrefs_uncited_entries_kept.
+#[test]
+fn amsrefs_uncited_entries_kept() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_uncited_entries_kept.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(bibliography_keys(&x), [["Able", "Baker", "Cole"]], "{x}");
+}
+
+/// 65r: amsrefs.sty:1291-1340 `\bibselect{db}` reads the `\bib` records of `db.ltb` and prints the cited ones, as a
+/// library (witness 1904.05225, `CF.ltb`). Repro index-bib/amsrefs_bibselect_database.
+#[test]
+fn amsrefs_bibselect_database() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_bibselect_database.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(bibliography_keys(&x), [["A"]], "{x}");
+}
+
+/// 65r: `\bibselect*` keeps every record of the database (amsrefs.sty:1291-1296 `\copy@bibdef`). Repro
+/// index-bib/amsrefs_bibselect_star_database.
+#[test]
+fn amsrefs_bibselect_star_database() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_bibselect_star_database.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(bibliography_keys(&x), [["A", "B"]], "{x}");
+}
+
+/// 63g: each amsrefs bibliography prints its own entries — two `bibdiv`s, two lists — not every inline entry of the
+/// document. Repro index-bib/amsrefs_two_bibdivs_each_their_own.
+#[test]
+fn amsrefs_two_bibdivs_each_their_own() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_two_bibdivs_each_their_own.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(
+    bibliography_keys(&x),
+    [["Able", "Baker"], ["Cole", "Dunn"]],
+    "{x}"
+  );
+}
+
+/// 63g: a citation whose key differs from its `\bib` only in case (`\cite{able}`, `\bib{Able}`) is that entry, printed
+/// once (under the key as cited, as any cited entry is) and reported missing by no one. Repro
+/// index-bib/amsrefs_case_variant_cite.
+#[test]
+fn amsrefs_case_variant_cite() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_case_variant_cite.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(bibliography_keys(&x), [["able", "Baker"]], "{x}");
+}
+
 /// amsrefs papers commonly open their references with `\begin{bibsection}`
 /// rather than `\begin{bibdiv}` — in real `amsrefs.sty` (L1251/L1265) `bibdiv`
 /// IS `bibsection` in article mode, the section-heading wrapper around
@@ -943,9 +1101,12 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
 #[test]
 fn amsrefs_bibsection_environment_renders() {
   let x = convert_and_post("tests/cluster_regressions/amsrefs_bibsection.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "\\begin{{bibsection}} produced no References (environment undefined?):\n{x}"
+  // \\begin{{bibsection}} produced no References (environment undefined?): the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="CG" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Chakerian</tag><tag class="ltx_bib_year" role="year">1983</tag><tag class="ltx_bib_title" role="title">Convex bodies of constant width</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">G. D. Chakerian</text><text class="ltx_bib_year"> (1983)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Convex bodies of constant width</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Math</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   assert!(
     !x.contains("<bibentry"),
@@ -1001,9 +1162,12 @@ fn cluster_apacite_old_bbl_format_renders() {
 /// `\APACrefYearMonthDay`, `\APACjournalVolNumPages`, `\PrintBackRefs`, …)
 /// undefined — an `Error:undefined:` flood, References as raw macro names.
 /// Now `sn_jnl_cls`'s `DeclareOption("sn-apa", RequirePackage("apacite"))`
-/// loads the (already-complete) apacite binding. The `_clean` helper gates on
+/// loads the apacite binding. The `_clean` helper gates on
 /// 0 errors — the red→green signal. Perl ships no sn-jnl/apacite binding →
-/// Rust surpasses. arXiv/html_feedback#1261, witness 2404.15224.
+/// Rust surpasses. arXiv/html_feedback#1261, witness 2404.15224. Since 57m the
+/// entry prints apacite.sty's own text: the label year `\APACyear{2018}` is
+/// "2018" (:1498), `\BDBL` is ", … " (:2136), the journal is `\Bem` italic and
+/// the empty-pages field `{,}` prints after ", " (`\APACjournalVolNumPages`, :1275-1289).
 #[test]
 fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
   let x = convert_to_xml_contrib_clean("tests/cluster_regressions/sn_jnl_apacite_bbl.tex");
@@ -1029,32 +1193,128 @@ fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
     );
   }
   // And it is a structured bibitem, not leaked body text.
-  assert!(
-    x.contains("<bibitem"),
-    "sn-jnl/apacite bibliography did not produce a <bibitem>:\n{x}"
+  // sn-jnl/apacite bibliography did not produce a <bibitem>: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="survey2018" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2018</tag><tag role="authors">Ahmed et al.</tag><tag role="fullauthors">Ahmed et al.</tag><tag role="refnum">Ahmed et al. (2018)</tag><tag role="key">survey2018</tag></tags><bibblock>Ahmed, E., Saint, A., … Ottersten, B. </bibblock><bibblock>(2018).</bibblock><bibblock>A survey on deep learning.</bibblock><bibblock><emph font="italic">arXiv preprint arXiv:1808.01462</emph>, ,</bibblock><bibblock></bibblock></bibitem>"##,
   );
 }
 /// Loading `bibunits` — even without ever opening a `bibunit` environment —
-/// made EVERY citation dangle. `\cite` runs bibunits' `\lx@bibunits@resetglobal`,
-/// stamping `CITE_UNIT=bu0`, so the bibref asks for `BIBLABEL:bu0:<key>`; the
-/// document's one `\bibliography` registers its bibitems under the default
-/// `bibliography` list, and CrossRef searched the unit list ONLY. Witness
-/// 2303.06077 (revtex4-2 + bibunits): 93 bibitems rendered, 93 keys dangling,
-/// 0 links. Deleting the single `\usepackage{bibunits}` line resolves the cite,
-/// which is the whole defect in one bisect.
+/// made EVERY citation dangle: `\cite` stamped `CITE_UNIT=bu0` and CrossRef
+/// searched the unit list only (OD #59, KNOWN_PERL_ERRORS #50; witness
+/// 2303.06077: 93 bibitems, 93 keys dangling, 0 links). Outside every unit
+/// `\cite` is the kernel's (bibunits.sty: only `\bibunit` lets it to
+/// `\bu@cite`, globally), so its bibref carries no `inlist` (KNOWN_PERL_ERRORS
+/// #1223, BM Q2.7); inside a unit it keeps `bu1`, `\cite*` adds the main list.
+/// Rows: no unit; a `{bibunit}` with cites before and after it;
+/// `\bibliographyunit[\section]` ended by an argless call (the
+/// `\lx@startbibunit` path); a section unit opened inside a group; a
+/// `{bibunit}` in a chapterbib chapter. Each row: the core's bibrefs in order,
+/// then each cite's link after post.
 #[test]
 fn bibunits_cite_resolves_against_the_main_bibliography() {
-  let x = convert_and_post("tests/cluster_regressions/bibunits_cite.tex");
-  // The entry reaches the References either way — the defect is the LINK.
-  assert!(
-    x.contains("<bibitem"),
-    "bibunits: the bibliography itself is missing:\n{x}"
-  );
-  assert!(
-    !x.contains("ltx_missing_citation"),
-    "bibunits: \\cite{{Smith2020}} dangles — CrossRef only searched the `bu0` \
-     unit list and never fell back to the main `bibliography` list:\n{x}"
-  );
+  const FREE: &str = r#"separator="," yyseparator=",""#;
+  let rows: [(&str, Vec<String>, &[&str]); 5] = [
+    (
+      "tests/cluster_regressions/bibunits_cite.tex",
+      vec![format!(r#"<bibref bibrefs="Smith2020" {FREE}/>"#)],
+      &["bib.bib1"],
+    ),
+    (
+      "tests/cluster_regressions/bibunits_unit_twin.tex",
+      vec![
+        format!(r#"<bibref bibrefs="Smith2020" {FREE}/>"#),
+        // (no `ltx_cite_sort`: the unit's `plain` orders its list, not a citation, and no cite.sty or natbib `sort`
+        // is loaded; the class came from reading the style's CITE_SORT as theirs, GA3)
+        format!(r#"<bibref bibrefs="zeta" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="alpha" inlist="bibliography bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="mid" {FREE}/>"#),
+      ],
+      // `bib` is the unit's (Abel, Zimmer), `biba` the main one; its Zimmer (biba.bib2) is
+      // `bibunits_main_list_holds_unit_cites_red.tex`.
+      &["biba.bib1", "bib.bib1", "biba.bib3", "biba.bib4"],
+    ),
+    (
+      "tests/cluster_regressions/bibunits_sectionunit.tex",
+      vec![
+        format!(r#"<bibref bibrefs="Smith2020" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="mid" {FREE}/>"#),
+      ],
+      &["biba.bib1", "bib.bib1", "biba.bib3"],
+    ),
+    (
+      // The unit opened inside `{multicols}` still holds the cite after it: a unit is open globally.
+      "tests/cluster_regressions/bibunits_sectionunit_group.tex",
+      vec![
+        format!(r#"<bibref bibrefs="alpha" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" inlist="bu1" {FREE}/>"#),
+      ],
+      // The ids follow the `.bib`'s order (zeta first); the References print Abel [1], as plain does.
+      &["bib.bib2", "bib.bib1"],
+    ),
+    (
+      // `\end{bibunit}` gives the cite back to the list it had before the unit: chapterbib's.
+      "tests/cluster_regressions/bibunits_chapterbib/bibunits_chapterbib.tex",
+      vec![
+        format!(r#"<bibref bibrefs="alpha" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" inlist="bibunits_chapterbib_chapter" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="mid" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="Smith2020" inlist="bibunits_chapterbib_chapter" {FREE}/>"#),
+      ],
+      // The unit's (`bib`), the chapter's (`biba`: Smith, Zimmer), the main one (`bibb`).
+      &["bibb.bib3", "biba.bib2", "bib.bib1", "biba.bib1"],
+    ),
+  ];
+  let attr = |el: &str, name: &str| -> Option<String> {
+    let at = el.find(&format!(" {name}=\""))? + name.len() + 3;
+    Some(el[at..at + el[at..].find('"')?].to_string())
+  };
+  for (src, bibrefs, links) in rows {
+    let (core, log) = convert_to_xml_contrib_clean_logging(src);
+    assert_eq!(
+      latexml::util::test::warning_count(&log),
+      0,
+      "{src}: warnings\n{log}"
+    );
+    let got: Vec<&str> = core
+      .match_indices("<bibref ")
+      .map(|(i, _)| &core[i..i + core[i..].find("/>").unwrap() + 2])
+      .collect();
+    assert_eq!(got, bibrefs, "{src}: the bibrefs' unit lists");
+    latexml_core::util::logger::bind_log();
+    let x = post_with(&core, None);
+    let post_log = latexml_core::util::logger::flush_log();
+    assert_eq!(
+      (
+        latexml::util::test::error_count(&post_log),
+        latexml::util::test::warning_count(&post_log)
+      ),
+      (0, 0),
+      "{src}: post E/W\n{post_log}"
+    );
+    let cites: Vec<String> = x
+      .split("<cite ")
+      .skip(1)
+      .filter_map(|c| attr(&c[..c.find("</cite>").unwrap()], "idref"))
+      .collect();
+    assert_eq!(cites, links, "{src}: each cite's bibitem\n{x}");
+    assert!(
+      !x.contains("ltx_missing_citation"),
+      "{src}: a cite dangles:\n{x}"
+    );
+    if src.ends_with("bibunits_cite.tex") {
+      // The entry reaches the References either way — the defect was the LINK.
+      latexml::util::test::assert_element(
+        &x,
+        "bibitem",
+        &[],
+        r##"<bibitem class="ltx_bib_article" key="Smith2020" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Smith</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">On examples</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Smith</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On examples</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Repro</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+      );
+    }
+  }
 }
 /// Witness 2605.00490: a JabRef `.bib` self-declaring `% Encoding: Cp1252`.
 /// MakeBibliography read it with `read_to_string`, which hard-errors on the
@@ -1069,14 +1329,17 @@ fn bibunits_cite_resolves_against_the_main_bibliography() {
 #[test]
 fn non_utf8_bib_file_still_yields_a_bibliography() {
   let x = convert_and_post("tests/cluster_regressions/cp1252_bib.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "cp1252 .bib: the whole bibliography was dropped on a non-UTF-8 byte:\n{x}"
+  // cp1252 .bib: the whole bibliography was dropped on a non-UTF-8 byte: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="Cafe2020" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Café</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">On legacy encodings</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">André Café</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On legacy encodings</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Bytes</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // The Latin-1 fallback is lossless byte -> char, so the accent survives to
   // the rendered entry rather than collapsing to U+FFFD. Only the SURNAME is
   // asserted: the fixture's `author = {Café, André}` is BibTeX's `Last, First`
-  // form, so the style abbreviates the given name to `A.` ("A. Café").
+  // form, and plain.bst:191 `{ff~}` spells the given name out ("André Café").
   assert!(
     x.contains("Café"),
     "cp1252 .bib: the accented surname did not survive the decode:\n{x}"
@@ -1118,9 +1381,12 @@ fn non_utf8_bib_file_still_yields_a_bibliography() {
 #[test]
 fn bib_field_bbl_fallbacks_render_without_a_url_package() {
   let x = convert_and_post("tests/cluster_regressions/bib_field_no_url_package.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "bbl fallbacks: no bibliography at all:\n{x}"
+  // bbl fallbacks: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_misc" key="urlnopkg" type="misc" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Doe</tag><tag class="ltx_bib_year" role="year">2026</tag><tag class="ltx_bib_title" role="title">A web thing</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2026)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A web thing</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note"><ref href="https://example.org/nopkg" font="typewriter" class="ltx_nolink ltx_url">https://example.org/nopkg</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // The recovered content must be THERE ...
   assert!(
@@ -1149,9 +1415,12 @@ fn bib_field_bbl_fallbacks_render_without_a_url_package() {
 #[test]
 fn bib_field_markup_survives_into_the_bibliography() {
   let x = convert_and_post("tests/cluster_regressions/bib_field_markup.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "bib markup: no bibliography at all:\n{x}"
+  // bib markup: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="urlnote2020" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Doe</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">A plain title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A plain title</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Things</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note"><ref class="ltx_url" href="https://example.org/a" font="typewriter">https://example.org/a</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // The whole point: no TeX source may leak into the rendered entries.
   for leak in ["\\urlhttps", "\\url{", "\\href", "\\emph"] {
@@ -1247,9 +1516,12 @@ fn bib_field_markup_survives_into_the_bibliography() {
 #[test]
 fn bib_abstract_percent_does_not_sink_the_entry() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_abstract_percent.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "abstract percent: no bibliography at all:\n{x}"
+  // abstract percent: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="emptyabstract" type="article" xml:id="bib.bib4" fragid="bib.bib4"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Chen</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">An entry whose abstract field is empty</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Wei Chen</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">An entry whose abstract field is empty</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Bibliographies</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Containment is the whole point: the entry AFTER the runaway must survive.
   // Before the fix every one of these was gone together.
@@ -1428,9 +1700,12 @@ fn bib_bare_ampersand_leaves_live_markup_alone() {
 #[test]
 fn bib_unmatched_dollar_does_not_leak_math() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_unmatched_dollar.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "unmatched $: no bibliography at all:\n{x}"
+  // unmatched $: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="straynodigit" type="article" xml:id="bib.bib3" fragid="bib.bib3"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Diallo</tag><tag class="ltx_bib_year" role="year">2021</tag><tag class="ltx_bib_title" role="title">A stray $ shift with no amount after it</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">C. Diallo</text><text class="ltx_bib_year"> (2021)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A stray $ shift with no amount after it</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Typesetting Notes</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Every entry survives — `aftermath` sits after all three stray-`$` entries.
   for needle in [
@@ -1484,9 +1759,12 @@ fn bib_unmatched_dollar_does_not_leak_math() {
 #[test]
 fn bib_field_specials_are_data_not_tex() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_field_specials.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "bib specials: no bibliography at all:\n{x}"
+  // bib specials: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="preescaped" type="article" xml:id="bib.bib6" fragid="bib.bib6"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Bergström</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">AT&amp;T dataset at1g01010_v2 at 95% with #3 replicates ^ caret</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Nils Bergström</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">AT&amp;T dataset at1g01010_v2 at 95% with #3 replicates ^ caret</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Bibliographies</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // All ten entries arrive — `Gilakjani` is the containment canary.
   for needle in [
@@ -1617,9 +1895,12 @@ fn bib_field_specials_are_data_not_tex() {
 #[test]
 fn bib_name_space_form_accent_survives_reversion() {
   let x = convert_and_post("tests/cluster_regressions/bib_accent_space_form.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "accent fixture: no bibliography at all:\n{x}"
+  // accent fixture: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="cedilla" type="article" xml:id="bib.bib2" fragid="bib.bib2"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Gonçalves</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">Cedilla, space form</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ana Gonçalves</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Cedilla, space form</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Accents</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // The accents must have COMPOSED, not merely survived as source.
   for (name, ch) in [
@@ -1681,9 +1962,12 @@ fn bib_name_space_form_accent_survives_reversion() {
 #[test]
 fn bib_field_blank_line_does_not_inject_a_bibitem() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_field_blank_line.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "blank line: no bibliography at all:\n{x}"
+  // blank line: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_misc" key="BertiRingdown" type="misc" xml:id="bib.bib4" fragid="bib.bib4"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve">Note: <text class="ltx_bib_note"><ref href="https://pages.jh.edu/eberti2/ringdown" class="ltx_nolink ltx_url" font="typewriter">https://pages.jh.edu/eberti2/ringdown</ref> <break/><ref font="typewriter" href="https://centra.tecnico.ulisboa.pt/network/grit/files/ringdown" class="ltx_nolink ltx_url">https://centra.tecnico.ulisboa.pt/network/grit/files/ringdown</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Every entry must arrive, including the canary AFTER the injected item.
   for needle in ["Tao", "Santos", "Girolami", "Fixture"] {
@@ -1767,9 +2051,12 @@ fn bib_field_blank_line_does_not_inject_a_bibitem() {
 #[test]
 fn active_at_catcode_does_not_corrupt_bibtex_wrapper() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_active_at_catcode.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "active-@: bibliography destroyed by a leaked active `@`:\n{x}"
+  // active-@: bibliography destroyed by a leaked active `@`: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="alpha" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Anderson</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">Alpha title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Anderson</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Alpha title</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal One</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Both entries must arrive — the `@` in `\begin{bibtex@bibliography}` no longer
   // eats the wrapper. Titles are recased (MakeBibliography lowercases all but the
@@ -1932,9 +2219,12 @@ fn bib_mathscinet_package_supplies_its_transliteration_glyphs() {
       "mathscinet: `\\{leaked}` leaked into the output as source:\n{x}"
     );
   }
-  assert!(
-    x.contains("<bibitem"),
-    "mathscinet: no bibliography at all:\n{x}"
+  // mathscinet: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="dbarrev" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">A mathscinet glyph macro in a reviewer name</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">E. Author</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A mathscinet glyph macro in a reviewer name</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Reviews</text>.</bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="mr ltx_bib_external" href="https://www.ams.org/mathscinet-getitem?mr=MR4567890">MathReview (Dragomir Ž. Đoković)</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
 }
 
@@ -1972,9 +2262,12 @@ fn bib_mathscinet_macro_yields_to_the_authors_own_definition() {
      never loads the package:\n{x}"
   );
   // …and the bibliography still renders, so the guard cannot pass by losing it.
-  assert!(
-    x.contains("<bibitem"),
-    "author `\\Dbar`: no bibliography at all:\n{x}"
+  // author `\\Dbar`: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="plainref" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">An entry with nothing special in it</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">F. Author</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">An entry with nothing special in it</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Reviews</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
 }
 
@@ -2037,7 +2330,7 @@ fn bib_preamble_defines_macros_for_the_whole_bibliography() {
     "@preamble: a preamble macro leaked into the output as source:\n{x}"
   );
 }
-/// The secondary `MakeBibliography` parity gaps of SYNC_STATUS R5 item 2, on one
+/// The secondary `MakeBibliography` parity gaps (docs/parity/BIBLIOGRAPHY_WORKLIST.md, item 2), on one
 /// alpha-styled document: the swapped `citestyle` mapping, the disambiguation
 /// key read off the wrong name string, collating `unisort`, format-order
 /// numbering — and the fourth audit item that turned out NOT to be a gap. See
@@ -2109,10 +2402,14 @@ fn cluster_bib_alpha_style_labels() {
   // so the letter never reaches the entry body; same-host Perl 0.8.8 prints
   // ` (1999)` here, and `alpha.bst` agrees. Pinned so a future reader of
   // L613-615 does not "fix" it back.
+  // Search the bibliography only: every citation link carries its entry's
+  // title as `title=` (Perl CrossRef.pm:555-557), ahead of the list.
+  let bib = x.find("<bibliography").expect("a bibliography");
   for needle in ["An alpha study", "A beta study"] {
-    let i = x
-      .find(needle)
-      .unwrap_or_else(|| panic!("no entry titled {needle} in:\n{x}"));
+    let i = bib
+      + x[bib..]
+        .find(needle)
+        .unwrap_or_else(|| panic!("no entry titled {needle} in:\n{x}"));
     let start = x[..i].rfind("<bibitem").expect("bibitem start");
     let end = x[start..]
       .find("</bibitem>")
@@ -2181,25 +2478,16 @@ fn bib_xpatch_does_not_truncate_the_document() {
 ///
 /// RED before the fix: 0 `<bibitem>` and "After the comment block" absent.
 #[test]
-fn comment_midline_end_keeps_bibliography() {
-  let x = convert_and_post_clean("tests/cluster_regressions/comment_midline_end.tex");
-  let n = x.matches("<bibitem").count();
-  assert_eq!(
-    n, 2,
-    "comment overran and swallowed the bibliography, got {n}\n{x}"
-  );
-  assert!(
-    x.contains("After the comment block"),
-    "comment overran past its mid-line \\end{{comment}}:\n{x}"
-  );
-  for needle in ["First entry", "Second entry"] {
-    assert!(x.contains(needle), "comment: {needle:?} lost:\n{x}");
-  }
-  // The comment body itself must NOT leak into the output.
-  assert!(
-    !x.contains("commented reasoning"),
-    "the comment body leaked into the output:\n{x}"
-  );
+fn comment_midline_end_runs_to_eof_like_pdflatex() {
+  // comment.sty ends a comment only on a whole `\end{comment}` line; a
+  // mid-line `…text.\end{comment}` is not an end, the comment runs to EOF and
+  // pdflatex aborts ("File ended while scanning use of \next", no PDF —
+  // verified 2026-09-05, which retracted OXIDIZED_DESIGN #133). We report
+  // TeX's error and, like TeX, keep nothing after the open comment.
+  // exactly one core error: TeX's "File ended while scanning use of \next"
+  let x = cluster::convert_expecting_errors("tests/cluster_regressions/comment_midline_end.tex", 1);
+  assert_eq!(x.matches("<bibitem").count(), 0, "{x}");
+  assert!(!x.contains("commented reasoning"), "{x}");
 }
 
 /// A physics.sty `\qty(...)` whose argument holds a `(` inside a `{…}` group
@@ -2218,9 +2506,12 @@ fn comment_midline_end_keeps_bibliography() {
 #[test]
 fn physics_qty_braced_paren_does_not_run_away() {
   let x = convert_and_post_clean("tests/cluster_regressions/physics_qty_braced_paren.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "physics \\qty ran away and swallowed the bibliography:\n{x}"
+  // physics \\qty ran away and swallowed the bibliography: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="a" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> First entry.</bibblock></bibitem>"##,
   );
   assert!(
     x.contains("First entry"),
@@ -2265,13 +2556,14 @@ fn alignment_fenced_amp_does_not_split_a_row() {
 }
 
 /// A `\columncolor` in a p/m column, followed by a cell whose content starts with
-/// `\lbrack` (a CS `\let` to `[`), made colortbl's overhang-arg gobble run forward
+/// `\lbrack` (then a CS `\let` to `[`), made colortbl's overhang-arg gobble run forward
 /// past the row's `\\`, cascading the paragraph-column mode
 /// (`\@end@tabular … internal_vertical`) — truncating the document and dropping the
 /// bibliography below. `\toprule[1pt]` (a booktabs rule with an optional-width arg)
 /// completes the trigger. Reading the overhang args with LaTeXML's optional reader
 /// (literal `[` only, never a `\lbrack` CS) keeps the cell content, as pdflatex
-/// renders it. Rust-only; witness arXiv:2606.02077 (0 -> 15 bibitems, matching Perl).
+/// renders it. Rust-only; witness arXiv:2606.02077 (0 -> 15 bibitems, matching Perl). Since batch 66d `\lbrack` is a
+/// macro (latex.ltx:562), so `\@ifnextchar[` no longer matches it at all; the test keeps the witness's outcome.
 #[test]
 fn columncolor_lbrack_cell_does_not_cascade_the_column_mode() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_columncolor_lbrack_overhang.tex");
@@ -2629,10 +2921,11 @@ fn cluster_cite_numeric_inline_matches_reference_label() {
 #[test]
 fn cluster_biblatex_authoryear_inline_matches_reference_label() {
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/ay.tex");
-  // biblatex's `.bbl`-formatted list carries author-year refnum labels (not the
-  // MakeBibliography `ltx_bib_author-year` class, which this path skips).
+  // The `.bbl`'s entries are formatted by MakeBibliography's author-year path,
+  // as a `.bib`'s are (biblatex_sty.rs `bbl_flush`): "Jones and Brown (2019)"
+  // where biblatex-apa prints "Jones & Brown, 2019".
   assert!(
-    x.contains("Smith (2020)") && x.contains("Jones &amp; Brown (2019)"),
+    x.contains("Smith (2020)") && x.contains("Jones and Brown (2019)"),
     "expected author-year labels in the biblatex References list:\n{x}"
   );
   let cites = inline_cite_texts(&x);
@@ -2871,27 +3164,133 @@ fn cluster_bib_unsrt_citation_order() {
 }
 
 /// The engine half of the fix: `\bibliographystyle{IEEEtran}` (and `{unsrt}`)
-/// reach the core `<ltx:bibliography>` as `bibstyle="…"` + `citestyle="numbers"`
-/// — the signals the post-processor keys on. `IEEEtran` in particular must be
-/// KNOWN (it maps to numeric+unsorted); before the fix it was an "unknown
-/// bibstyle". Core output carries no `sort` attribute (byte-identical to Perl,
-/// which never emits it on the main node — the post derives order from bibstyle).
+/// reach the core `<ltx:bibliography>` as `bibstyle="…"`, `citestyle="numbers"`
+/// and the style's order, `sort` (the engine's CITE_SORT, the one fact post
+/// numbers by; GA3, OXIDIZED_DESIGN_DIVERGENCES #116). `IEEEtran` in particular
+/// must be KNOWN (it maps to numeric+unsorted); before the fix it was an "unknown
+/// bibstyle".
 #[test]
 fn cluster_bib_bibstyle_is_known_numeric() {
-  for (tex, bibstyle) in [
-    ("cite_order_unsrt.tex", "unsrt"),
-    ("cite_order_ieeetran.tex", "IEEEtran"),
-    ("cite_order_plain.tex", "plain"),
+  for (tex, bibstyle, sort) in [
+    ("cite_order_unsrt.tex", "unsrt", "false"),
+    ("cite_order_ieeetran.tex", "IEEEtran", "false"),
+    ("cite_order_plain.tex", "plain", "true"),
   ] {
     let core = convert_to_xml(&format!("tests/cluster_regressions/{tex}"));
+    assert_bibliography_attributes(tex, &core, &[
+      &format!(r#" bibstyle="{bibstyle}""#),
+      r#" citestyle="numbers""#,
+      &format!(r#" sort="{sort}""#),
+    ]);
+  }
+}
+
+/// Every one of `attributes` on the document's (first) `<bibliography>` tag.
+fn assert_bibliography_attributes(tex: &str, xml: &str, attributes: &[&str]) {
+  let tag = xml
+    .find("<bibliography ")
+    .map(|i| &xml[i..i + xml[i..].find('>').unwrap_or(0)])
+    .unwrap_or_default();
+  for attribute in attributes {
     assert!(
-      core.contains(&format!(r#"bibstyle="{bibstyle}""#)),
-      "{tex}: expected bibstyle=\"{bibstyle}\" on ltx:bibliography:\n{core}"
+      tag.contains(attribute),
+      "{tex}: expected{attribute} on ltx:bibliography, got {tag}\n{xml}"
     );
-    assert!(
-      core.contains(r#"citestyle="numbers""#),
-      "{tex}: expected citestyle=\"numbers\":\n{core}"
+  }
+}
+
+/// The style's order is one fact, `sort` on `ltx:bibliography`, and a citation's own sorting another (`CITE_SORTCITES`,
+/// natbib's `sort` and cite.sty's): a style named in the preamble sorts no citation (`plain` once printed "[1, 3]" for
+/// pdflatex's "[3, 1]"), natbib's `sort` still does, and a bibunit's style reaches its own list. Rows: fixture, the
+/// tag's style attributes, the citations, the list's keys in order (pdflatex+bibtex, each fixture's header).
+#[test]
+fn cluster_bib_order_is_the_styles_sort_fact() {
+  type Row<'a> = (&'a str, [&'a str; 3], [&'a str; 2], [&'a str; 3]);
+  let rows: [Row; 4] = [
+    (
+      "cite_order_plain_preamble",
+      [
+        r#" bibstyle="plain""#,
+        r#" citestyle="numbers""#,
+        r#" sort="true""#,
+      ],
+      ["[3, 1]", "[2]"],
+      ["alpha", "beta", "gamma"],
+    ),
+    (
+      "natbib_plainnat_preamble",
+      [
+        r#" bibstyle="plainnat""#,
+        r#" citestyle="numbers""#,
+        r#" sort="true""#,
+      ],
+      ["[3, 1]", "[2]"],
+      ["alpha", "beta", "gamma"],
+    ),
+    (
+      "natbib_sort_unsrtnat_preamble",
+      [
+        r#" bibstyle="unsrtnat""#,
+        r#" citestyle="numbers""#,
+        r#" sort="false""#,
+      ],
+      ["[1, 2]", "[3]"],
+      ["gamma", "alpha", "beta"],
+    ),
+    (
+      "bibunits_unsrt_order",
+      [
+        r#" bibstyle="unsrt""#,
+        r#" citestyle="numbers""#,
+        r#" sort="false""#,
+      ],
+      ["[1, 2]", "[3]"],
+      ["gamma", "alpha", "beta"],
+    ),
+  ];
+  for (tex, attributes, cites, keys) in rows {
+    let x = convert_and_post_clean(&format!("tests/cluster_regressions/{tex}.tex"));
+    assert_bibliography_attributes(tex, &x, &attributes);
+    assert_eq!(inline_cite_texts(&x), cites, "{tex}: the citations\n{x}");
+    assert_eq!(
+      reference_list_keys(&x),
+      keys,
+      "{tex}: the list's order\n{x}"
     );
+  }
+  // multibib's lists after natbib took `\bibstyle` (`\lx@mb@open`, multibib_sty.rs; revGA3): each list's style
+  // attributes, then its keys in order among those pdflatex prints in it (every list holds every cited entry, MBAL).
+  type ListRow<'a> = (&'a str, [([&'a str; 2], &'a [&'a str]); 2]);
+  let multibib: [ListRow; 2] = [
+    ("multibib_natbib_list_unsrtnat", [
+      ([r#" bibstyle="plainnat""#, r#" sort="true""#], &["d"]),
+      ([r#" bibstyle="unsrtnat""#, r#" sort="false""#], &[
+        "c", "a", "b",
+      ]),
+    ]),
+    ("multibib_natbib_list_plainnat", [
+      ([r#" bibstyle="unsrtnat""#, r#" sort="false""#], &["d"]),
+      ([r#" bibstyle="plainnat""#, r#" sort="true""#], &[
+        "a", "b", "c",
+      ]),
+    ]),
+  ];
+  for (tex, expected) in multibib {
+    let x = convert_and_post_contrib_clean(&format!("tests/cluster_regressions/{tex}.tex"));
+    let bibs: Vec<String> = x
+      .split("<bibliography ")
+      .skip(1)
+      .map(|b| format!("<bibliography {b}"))
+      .collect();
+    assert_eq!(bibs.len(), 2, "{tex}: two lists\n{x}");
+    for (bib, (attributes, keys)) in bibs.iter().zip(expected) {
+      assert_bibliography_attributes(tex, bib, &attributes);
+      let listed: Vec<String> = reference_list_keys(bib)
+        .into_iter()
+        .filter(|k| keys.contains(&k.as_str()))
+        .collect();
+      assert_eq!(listed, keys, "{tex}: a list's order\n{x}");
+    }
   }
 }
 
@@ -3007,5 +3406,2079 @@ fn cluster_bib_natbib_authoryear_stays_alphabetical() {
     reference_list_keys(&x),
     vec!["alpha", "beta", "gamma"],
     "author-year natbib must stay alphabetical, not citation-ordered\n{x}"
+  );
+}
+
+/// biblatex's public formatting family (`\mkbibemph`, `\mkbibbold`, …) and its
+/// punctuation-buffer no-ops (`\nopunct`, `\isdot`, `\newunit`) are defined by the
+/// binding (biblatex.sty:13084-13093 `\newrobustcmd`; `\blx@regimcs` :1137 is
+/// stubbed, so the names must exist directly). biblatex-chicago's dates-test.bib
+/// uses them inside `title`/`note` fields; the undefined `\mkbibemph` leaked its
+/// argument unemphasized in 7 corpus manuals and `\nopunct` errored in 4. The
+/// whole first `<bibitem>` is pinned: the emphasis and bold reach the title, the
+/// note ends cleanly.
+#[test]
+fn biblatex_formatting_family_renders_in_bib_fields() {
+  let x =
+    convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_formatting_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"marlin\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="marlin" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">Review of The Last Marlin and Others</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ann Author</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Review of <emph font="italic">The Last Marlin</emph> and <text font="bold">Others</text></text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note">from a broadcast on</text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
+
+/// A biblatex document reads titles AS ENTERED (`BibTeX_title_case` = `asis`,
+/// like amsrefs): biber never runs BibTeX's `change.case$`, whose "t" mode
+/// lowercases unbraced control sequences too (`\H`→`\h`, `\TeX`→`\tex`) —
+/// that breakage is real and SHARED for classic `\bibliography` documents, but
+/// a biblatex+biber PDF renders `Erdős` and `TeX`. Witnesses biblatex2bibitem
+/// (`\h` ×3), aomsample/abntexto-style `\TeX` titles under biblatex.
+#[test]
+fn biblatex_title_case_is_as_entered() {
+  let x =
+    convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_formatting_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"erdos\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib2" key="erdos" type="article" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Writer</tag><tag class="ltx_bib_year" role="year">2021</tag><tag class="ltx_bib_title" role="title">On a Question of Erdős and Ulam About TeX</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bob Writer</text><text class="ltx_bib_year"> (2021)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On a Question of Erdős and Ulam About <text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text cssstyle="font-variant:small-caps;font-size:120%;" yoffset="-0.2ex">e</text>X</text></text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
+
+/// Batch 56cd: a `.bib` field's marked-up content is deep-cloned into the
+/// rendered entry (`clone_subtree`, latexml_post/src/document.rs), and that
+/// clone used to copy attributes out of a HashMap — so `note={\url{…}}`'s
+/// `<ref class="ltx_url" href=… font=…>` came out in a different attribute
+/// order on every run (all six permutations observed while pinning the
+/// snapshots above; the core XML and a body `\url` were stable). Perl's
+/// `Post.pm:1259` `cloneNode(1)` keeps the source order, which the core
+/// builder emits sorted; the clone now sorts too. Four runs must agree
+/// byte-for-byte on the whole start tag.
+#[test]
+fn cloned_bib_field_markup_has_deterministic_attribute_order() {
+  let mut tags = Vec::new();
+  for _ in 0..4 {
+    let x = convert_and_post("tests/cluster_regressions/bib_field_markup.tex");
+    let r = latexml::util::test::xml_element(&x, "ref", &["ltx_url", "https://example.org/a"])
+      .unwrap_or_default();
+    let start = r[..r.find('>').map_or(r.len(), |i| i + 1)].to_string();
+    tags.push(start);
+  }
+  assert!(
+    tags.iter().all(|t| t == &tags[0]),
+    "attribute order varied across runs: {tags:?}"
+  );
+  assert_eq!(
+    tags[0], "<ref class=\"ltx_url\" font=\"typewriter\" href=\"https://example.org/a\">",
+    "{tags:?}"
+  );
+}
+
+/// Batch 56ce: the recursive `.bib` digestion runs in the DOCUMENT's default
+/// font. The monolithic pipeline reuses the live State (so preamble macros
+/// reach the fields), and a body that leaves `\ttfamily` in force — abntexto's
+/// doc-point macro through an unbounded `\hyperlink` — made every field a
+/// `<text font="typewriter">` wrapper that broke the `<bibentry>` nesting
+/// (99 `#PCDATA isn't allowed in <ltx:bibentry>`; Perl's fresh per-`.bib`
+/// state starts at the default font, 0 errors). `\normalfont` before the
+/// entries; the whole first `<bibitem>` is pinned, note nested, no font wrapper.
+#[test]
+fn bib_entries_digest_in_the_default_font() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_font_state.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2000</tag><tag class="ltx_bib_title" role="title">First title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Alpha Author</text><text class="ltx_bib_year"> (2000)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">First title</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note">visible, nested</text></bibblock></bibitem>"##,
+  );
+  assert!(x.contains("key=\"b\""), "second entry lost:\n{x}");
+}
+
+/// The `.bib` session digests its entries in the font the document's `\normalfont` selects where `\bibliography`
+/// stands (sect11.rs `\lx@bibliography` records it; OXIDIZED_DESIGN_DIVERGENCES #779): a
+/// `\renewcommand\familydefault{\sfdefault}` document's entries are sans (pdflatex CMSS10), while one that switches
+/// to sans only after its bibliography keeps them serif (pdflatex CMR10; cmpj3.sty's `\ukrainianpart`, 2603.23615),
+/// where the session, run after the document in its live state, read the defaults of the document's end.
+#[test]
+fn bib_entries_take_the_defaults_where_the_bibliography_stands() {
+  let after = convert_and_post_clean(
+    "tests/cluster_regressions/bib_font_defaults_after_the_bibliography.tex",
+  );
+  latexml::util::test::assert_element(
+    &after,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Serif title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Alpha Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Serif title</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  // The sans document's title and publisher are sans, as the PDF. Its author names and year, which the post stage
+  // builds (`ltx_bib_author`, `ltx_bib_year`), are not yet: SYNC_STATUS "Font-Selection Chain Residuals" 5, left out
+  // here rather than pinned wrong.
+  let sans =
+    convert_and_post_clean("tests/cluster_regressions/bib_font_defaults_sans_document.tex");
+  latexml::util::test::assert_element(
+    &sans,
+    "text",
+    &["class=\"ltx_bib_title\""],
+    r##"<text class="ltx_bib_title"><text font="sansserif">Sans title</text></text>"##,
+  );
+  latexml::util::test::assert_element(
+    &sans,
+    "text",
+    &["class=\"ltx_bib_publisher\""],
+    r##"<text class="ltx_bib_publisher"><text font="sansserif">P</text></text>"##,
+  );
+}
+
+/// Surpass #229: a `.bib` field value ending in an escaped space keeps it.
+/// `type={Memo No.\ }` trimmed to a lone `\` welded with the splice's closing
+/// brace and swallowed the next entries (asmejour, 23 malformed; real bibtex
+/// misbehaves the same way). Both entries are pinned whole.
+#[test]
+fn bib_field_trailing_control_space_survives_trimming() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_trailing_space.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_report" fragid="bib.bib1" key="a" type="report" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">1958</tag><tag class="ltx_bib_type" role="bibtype">Memo No. </tag><tag class="ltx_bib_title" role="title">Report title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">X Author</text><text class="ltx_bib_year"> (1958)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Report title</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_type">Memo No. </text></bibblock><bibblock xml:space="preserve">Technical Report <text class="ltx_bib_number">5</text>,  <text class="ltx_bib_publisher">Inst</text>,  <text class="ltx_bib_place">City</text>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"b\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib2" key="b" type="book" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Writer</tag><tag class="ltx_bib_year" role="year">2000</tag><tag class="ltx_bib_title" role="title">Book title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Y Writer</text><text class="ltx_bib_year"> (2000)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Book title</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Pub</text>.</bibblock></bibitem>"##,
+  );
+}
+
+/// Surpass #231: a `.bib` written by `filecontents` lives only in the session's
+/// virtual file store; MakeBibliography served it from there (Perl's
+/// `pathname_find` misses it, MakeBibliography.pm:92-93 — docsurvey, chet,
+/// xreview, koma-moderncvclassic, rub-kunstgeschichte, chemplants).
+#[test]
+fn filecontents_bib_feeds_the_bibliography() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_from_filecontents.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Written inline</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Alpha Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Written inline</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock></bibitem>"##,
+  );
+}
+
+/// A `.bib` named with a directory that does not exist beside the document
+/// (`\addbibresource{../bibtex/bib/x.bib}`: biblatex-apa-test.tex:69 mirrors
+/// the TeX Live source tree while the file ships next to the `.tex`) is found
+/// by its basename once the exact path misses (make_bibliography.rs; Perl's
+/// `pathname_find` misses the same way). The whole `<bibitem>` is pinned.
+#[test]
+fn pathful_bib_resource_falls_back_to_its_basename() {
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_pathful_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"pathful\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="pathful" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">A Pathful Resource</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ann Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A Pathful Resource</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Paths</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
+
+/// `\begin{refsection}[resources]` registers its resources
+/// (biblatex.sty:10757 `\blx@refsection` records them; biblatex-apa6-test:444
+/// declares its only `.bib` this way): the entry cited inside resolves.
+#[test]
+fn refsection_optional_argument_registers_its_resources() {
+  let x =
+    convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_refsection_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"sectioned\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="sectioned" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Writer</tag><tag class="ltx_bib_year" role="year">2002</tag><tag class="ltx_bib_title" role="title">Sectioned Reading</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Wil Writer</text><text class="ltx_bib_year"> (2002)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Sectioned Reading</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Press</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
+
+/// abntex2cite.sty:375 redefines `\bibliography` to `\@input@{\jobname.bbl}`,
+/// a file only a bibtex run produces, so the reference list vanished at 0
+/// errors (its manual is half bibliography; Perl has no binding and loses it
+/// too). The contrib binding repoints `\bibliography` at the native
+/// `\lx@ifusebbl` route, as Perl does for bibunits (#87). Whole `<bibitem>`.
+#[test]
+fn abntex2cite_bibliography_runs_the_bib_session() {
+  if !check_requirements(&["abntex2cite.sty"]) {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"abnt1\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="abnt1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A numbered reference</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2003)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A numbered reference</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Standards</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &[],
+    r##"<para fragid="p1" xml:id="p1"><p>Text <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="A numbered reference">1</ref>]</cite>.</p></para>"##,
+  );
+}
+
+/// abntex2cite's own `.bib` fields reach the reference list as its `.bst`s print
+/// them (abntex2-num.bst:26-49, :597-605, :993-1001): `furtherresp` and `abnt-note` as notes, an
+/// empty `illustrated` as "il.", `dimensions`, `urlaccessdate` as the access date, the `url`
+/// shown; the style is recorded, so `abntex2-num` numbers by first citation (its `presort`
+/// drops the sort key, :2021-2022 — Faria, cited first, is [1] though Central sorts first) and
+/// abbreviates given names (`#0 'abnt.full.initials`, :2045). `\citeyear`/`\citeauthoronline`
+/// read values only a real BibTeX run leaves in the `.aux` (:927, :1019) and printed "??"; they
+/// are the kernel's bibrefs. pdflatex+bibtex: "Veja (1) e (2): em 1994, Faria." / "1 FARIA, J.
+/// E. Direitos humanos. São Paulo: Malheiros, 1994." / "2 CENTRAL do Brasil. Roteiro de Marcos
+/// Bernstein. Riofilme, 1998. il., 21 cm. Disponível em: …". Pinned residuals: the kernel's
+/// "[1]" brackets, the title's case, the upper-case author. Witness: the abntex2cite manual
+/// (recall 80.5 → 87.9 %). Whole `<bibitem>`s and `<para>`.
+#[test]
+fn abntex2cite_prints_its_fields_and_year_citations() {
+  if !check_requirements(&["abntex2cite.sty"]) {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_fields.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"alpha1994\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib2" key="alpha1994" type="book" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Faria</tag><tag class="ltx_bib_year" role="year">1994</tag><tag class="ltx_bib_title" role="title">Direitos humanos</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. E. Faria</text><text class="ltx_bib_year"> (1994)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Direitos humanos</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Malheiros</text>, <text class="ltx_bib_place">São Paulo</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"zeta1998\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="zeta1998" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_year" role="year">1998</tag><tag class="ltx_bib_title" role="title">Central do brasil</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_year"> (1998)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Central do brasil</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Riofilme</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note">Roteiro de Marcos Bernstein. il. 21 cm. Filme premiado em Berlim</text></bibblock><bibblock xml:space="preserve">Accessed: <text class="ltx_bib_accessed">10 mar. 2002</text></bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="ltx_bib_external" href="http://www.example.org/filme">http://www.example.org/filme</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &[],
+    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1</ref>]</cite> e <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Central do brasil">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">Faria</ref></cite>.</p></para>"##,
+  );
+}
+
+/// The same citations with the `.bbl` BibTeX wrote (abntex2-num.bst over abntex2cite_fields.bib; no
+/// `.bib` beside it, so no `.bib` session): each entry's author and year come from its
+/// `\abntrefinfo{EXPL}{IMPL}{YEAR}` (abntex2-num.bst:1375), which tags the bibitem, so
+/// `\citeyear`/`\citeauthoronline` print them — the 57cm binary printed the refnum ("em 2, 2.")
+/// and `Error:undefined:\abntnextkey`. pdflatex: "Veja (1) e (2): em 1994, Faria." Whole
+/// `<bibitem>`s and `<para>`.
+#[test]
+fn abntex2cite_bbl_carries_author_and_year() {
+  if !check_requirements(&["abntex2cite.sty"]) {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_bbl.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"alpha1994\""],
+    r##"<bibitem fragid="bib.bib2" key="alpha1994" xml:id="bib.bib2"><tags><tag>2  </tag><tag role="refnum">2</tag><tag role="authors">Faria</tag><tag role="year">1994</tag></tags><bibblock>FARIA, J. E. <emph font="italic">Direitos humanos</emph>. São Paulo: Malheiros, 1994.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"zeta1998\""],
+    r##"<bibitem fragid="bib.bib1" key="zeta1998" xml:id="bib.bib1"><tags><tag>1  </tag><tag role="refnum">1</tag><tag role="authors">Central…</tag><tag role="year">1998</tag></tags><bibblock>CENTRAL do Brasil. Roteiro de Marcos Bernstein. Riofilme, 1998. il., 21 cm. Disponível em: <ref class="ltx_nolink ltx_url" font="typewriter" href="http://www.example.org/filme">&lt;http://www.example.org/filme&gt;</ref>. Acesso em: 10 mar. 2002.<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Filme premiado em Berlim</note></bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &[],
+    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_cite">[<ref idref="bib.bib1">1</ref>]</cite> e <cite class="ltx_citemacro_cite">[<ref idref="bib.bib2">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref idref="bib.bib2">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref idref="bib.bib2">Faria</ref></cite>.</p></para>"##,
+  );
+}
+
+/// abntex2cite's author-date system (`alf`, abntex2cite.sty:600): `\cite` is parenthetical,
+/// several works separated by ";" (:453, :637), and `\citeonline`/`\citen` textual (:722-723),
+/// with the page after the year — pdflatex+bibtex "Veja (FARIA, 1994, p. 5); Faria (1994, p. 7):
+/// em 1994, FARIA. Ambos (FARIA, 1994; SILVA; SOUZA, 2000); Silva e Souza (2000)." Pinned
+/// residuals: the upper-case parenthetical author, "and" for "e". Whole `<para>`.
+#[test]
+fn abntex2cite_alf_cites_author_and_year() {
+  if !check_requirements(&["abntex2cite.sty"]) {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_alf_fields.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &[],
+    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_citep">(Faria, <ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref>, p. 5)</cite>; <cite class="ltx_citemacro_citet">Faria (<ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref>, p. 7)</cite>: em <cite class="ltx_citemacro_citeyear"><ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">Faria</ref></cite>. Ambos <cite class="ltx_citemacro_citep">(Faria, <ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref>; Silva and Souza, <ref href="#bib.bib2" idref="bib.bib2" title="Cidades">2000</ref>)</cite>; <cite class="ltx_citemacro_citet">Silva and Souza (<ref href="#bib.bib2" idref="bib.bib2" title="Cidades">2000</ref>)</cite>.</p></para>"##,
+  );
+}
+
+/// directory.sty:235 `\directory[ext]{bibs}` inputs a `.bbl` only bibtex
+/// produces and the `.bib` list lives nowhere else; the contrib binding runs
+/// the kernel `\lx@bibliography` over every entry (a directory is the whole
+/// address list, directory.sty:321 `\nodir{*}`). Whole `<bibitem>`.
+#[test]
+fn directory_lists_every_entry_from_its_bib() {
+  if !check_requirements(&["directory.sty"]) {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/directory_family.tex");
+  latexml::util::test::assert_element(&x, "bibitem", &["key=\"dir1\""], ALL_ENTRIES_BIBITEM);
+  assert_nocite_star_leaves_no_trace(&x);
+}
+
+/// figbib.sty:330 `\fbList{bibs}` inputs `\jobname.figbib.bbl` (:122), a
+/// bibtex product listing the figures cited through the private `.aux`
+/// stream (:271); the contrib binding cites each figure's key where the figure
+/// command stands and runs the kernel `\lx@bibliography` over them (60h). Whole
+/// `<bibitem>` of the `@fig` entry, "Cited by" the figure's paragraph. (The figure's
+/// "Figure `dir1' … undefined" warning, from its next-run `.aux` data, is figbib's own.)
+#[test]
+fn figbib_lists_the_cited_figure_sources_from_its_bib() {
+  if !check_requirements(&["figbib.sty"]) {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/figbib_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"dir1\""],
+    r##"<bibitem class="ltx_bib_misc" fragid="bib.bib1" key="dir1" type="misc" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_title" role="title">A listed entry</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_title">A listed entry</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  assert_nocite_star_leaves_no_trace(&x);
+}
+
+/// mciteplus: a starred key joins the previous entry's group — written to the aux in its place, so bibtex lists it,
+/// but left out of the citation the text prints (mciteplus.sty:567-568, :757-764). pdflatex + bibtex: "Combined [1, 3].
+/// Later [5]." over Alpha, Bravo, Charlie, Delta, Echo; the binding passed `*b` through as a key ("Missing bibkeys:
+/// *b", Bravo dropped). Whole `<bibitem>` of a starred entry (number 2) and the citations' paragraph. (The binding's
+/// "minimally stubbed" warning is its own notice.) Repro index-bib/mciteplus_starred_keys.
+#[test]
+fn mciteplus_starred_keys_join_the_bibliography() {
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/mciteplus_starred_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"b\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib2" key="b" type="article" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Bravo</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Starred tail entry</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bob Bravo</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Starred tail entry</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para fragid="p1" xml:id="p1"><p>Combined <cite class="ltx_citemacro_cite">[<cite/><ref href="#bib.bib1" idref="bib.bib1" title="Head entry">1</ref>, <ref href="#bib.bib3" idref="bib.bib3" title="Third entry">3</ref>]</cite>. Later <cite class="ltx_citemacro_cite">[<ref href="#bib.bib5" idref="bib.bib5" title="Later entry">5</ref>]</cite>.</p></para>"##,
+  );
+}
+
+/// 60n: a `\nocite` an `\AtEndDocument` hook runs (wsemclassic's `\makebib`) cites its keys where it stands, once
+/// `\end{document}` has read the end-document list; pushed onto it, the keys were never cited and the bibliography
+/// was empty. KNOWN_PERL_ERRORS #447. Repro index-bib/nocite_in_atenddocument_cites.
+#[test]
+fn nocite_in_atenddocument_cites() {
+  let x = convert_and_post_clean("tests/cluster_regressions/nocite_atenddocument_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"sloman\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="sloman" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Sloman</tag><tag class="ltx_bib_year" role="year">1999</tag><tag class="ltx_bib_title" role="title">Review of affective computing</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Aaron Sloman</text><text class="ltx_bib_year"> (1999)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Review of affective computing</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">AI Magazine</text>.</bibblock></bibitem>"##,
+  );
+}
+
+/// An unsorted style lists the entries no citation places in database order (bibtex: `\nocite{*}` takes the `.bib`
+/// order after the citations before it): `\cite{d5}` then `\nocite{*}` under `unsrt` is d5, d1, d2, d3, d4 — the
+/// titles sort d4, d3, d2, d1, the order Perl and earlier Rust gave (DIVERGENCES #116).
+#[test]
+fn unsrt_nocite_star_lists_the_rest_in_database_order() {
+  let x = convert_and_post_clean("tests/cluster_regressions/unsrt_nocite_star_family.tex");
+  let order: Vec<usize> = ["d5", "d1", "d2", "d3", "d4"]
+    .iter()
+    .map(|key| {
+      x.find(&format!("key=\"{key}\""))
+        .unwrap_or_else(|| panic!("{key} not listed:\n{x}"))
+    })
+    .collect();
+  assert!(
+    order.windows(2).all(|w| w[0] < w[1]),
+    "not d5, d1, d2, d3, d4:\n{x}"
+  );
+}
+
+/// Perl CrossRef.pm:507-508 replaces a `\nocite` bibref (`show='nothing'`) by
+/// nothing; the Rust fill-in printed its keys — a visible `*` marked as a
+/// missing citation. One `<bibliography>`, the `<cite>` emptied, no `*`.
+fn assert_nocite_star_leaves_no_trace(x: &str) {
+  assert_eq!(
+    x.matches("<bibliography").count(),
+    1,
+    "one reference list:\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_missing_citation") && !x.contains(">*<"),
+    "the \\nocite{{*}} marker leaked into the rendering:\n{x}"
+  );
+  latexml::util::test::assert_element(x, "cite", &[], r##"<cite/>"##);
+}
+
+/// The `\nocite{*}` + `\lx@bibliography` rendering of the one-entry family
+/// `.bib` shared by the directory and figbib fixtures (numeric labels, no
+/// citation, so no "Cited by" block).
+const ALL_ENTRIES_BIBITEM: &str = r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="dir1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A listed entry</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2003)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A listed entry</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Directories</text>.</bibblock></bibitem>"##;
+
+/// nmbib.sty:72 `\multibibliography{bibs}` only records the list into per-view
+/// `.aux` files and each `\printbibliography{type}` (:383) inputs a bibtex
+/// `.bbl`; the contrib binding saves the list at package-load timing and runs
+/// the kernel `\lx@bibliography` once, at the first `\printbibliography`, with
+/// natbib's citations selecting the entries and the kernel `\@biblabel`
+/// restored over nmbib.sty:92's `\NAT@biblabel` alias. Whole `<bibitem>`, and
+/// exactly one bibliography for the two `\printbibliography` calls.
+#[test]
+fn nmbib_prints_the_saved_bib_list_once() {
+  if !check_requirements(&["nmbib.sty"]) {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/nmbib_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"dir1\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="dir1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A listed entry</tag><tag class="ltx_bib_author-year" role="refnum">Author (2003)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A listed entry</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Directories</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  assert_eq!(
+    x.matches("<bibliography").count(),
+    1,
+    "the two \\printbibliography views must render one list:\n{x}"
+  );
+}
+
+/// A class's raw `\def\bibliography#1{…\@input{\jobname.bbl}}` (paper.cls:933
+/// for sfee, ltugboat.cls:1683, abntex2cite.sty:375) inputs a file only a
+/// bibtex run produces, and the `.bib` list lives nowhere else — the native
+/// `\bibliography` is locked against it (#236), so the `.bib` session runs.
+/// Whole `<bibitem>`.
+#[test]
+fn raw_bibliography_override_cannot_lose_the_bib_session() {
+  let x = convert_and_post_contrib_clean(
+    "tests/cluster_regressions/bibliography_raw_override_family.tex",
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"abnt1\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="abnt1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A numbered reference</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ann Author</text><text class="ltx_bib_year"> (2003)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A numbered reference</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Standards</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
+
+/// The `Warning:` lines of a log.
+fn warnings(log: &str) -> usize {
+  log
+    .lines()
+    .filter(|line| line.starts_with("Warning:"))
+    .count()
+}
+
+/// 60p: biblatex's `\fullcite` typesets the entry where it is cited (biblatex.def:2481-2495), the notes around it and
+/// no brackets — the binding set a bare citation (`[1]`; "Missing Entry" with no `\printbibliography`, KNOWN_PERL_ERRORS
+/// #448). `\footfullcite`/`\footcite` set their citation in a footnote (`\mkbibfootnote`), `\footcitetext` in the
+/// marked one; a numeric `\footcite` is the bare label (numeric.cbx:77, no `\mkbibbrackets`). pdflatex + biber: "See see
+/// Bettina Just. Quantum Computing Compact. Berlin: Springer, 2022, p. 3.", two keys joined by ", ", the crossref'd
+/// parent of an `@incollection` named in it, three footnotes, no bibliography. Pinned here: the entries
+/// (MakeBibliography's formatting, ruling 7b), from a bibliography the document never prints — one, `ltx_nodisplay`,
+/// out of the TOC; the copied entry's own citation (the crossref) filled; the `\footcite` label "4" where pdflatex
+/// prints 3 (biber's `mincrossrefs=2` leaves the parent `coll` out of the list, MakeBibliography lists it; KNOWN_PERL_ERRORS
+/// #448 residual). Repro index-bib/biblatex_fullcite_prints_the_entry.
+#[test]
+fn biblatex_fullcite_prints_the_entry() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_fullcite_family.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  let para = r##"<para fragid="S1.p1" xml:id="S1.p1"><p>See <cite class="ltx_citemacro_fullcite">see <text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>, p.~3</cite>. Also<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text> <text class="ltx_bib_title">On Things</text>. <text class="ltx_bib_journal">J. Stuff</text> <text class="ltx_bib_volume">3</text></cite></note> and<note fragid="footnote2" mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">4</ref></cite></note>. Both <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>, <text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text> <text class="ltx_bib_title">On Things</text>. <text class="ltx_bib_journal">J. Stuff</text> <text class="ltx_bib_volume">3</text></cite>. Part <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Art Hor</text><text class="ltx_bib_year"> (2019)</text> <text class="ltx_bib_title">A Part</text>. See <text class="ltx_bib_crossref"><cite><ref href="#bib.bib3" idref="bib.bib3" title="Big Collection">Big Collection, Itor</ref></cite></text>, <text class="ltx_bib_pages">pp.~1–9</text></cite>. Marked<note fragid="footnote3" mark="3" role="footnote" xml:id="footnote3"><tags><tag>3</tag><tag role="refnum">3</tag><tag role="typerefnum">footnote 3</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="On Things">1</ref></cite></note>.</p></para>"##
+    .replace('~', "\u{a0}");
+  latexml::util::test::assert_element(&x, "para", &["xml:id=\"S1.p1\""], &para);
+  latexml::util::test::assert_element(
+    &x,
+    "TOC",
+    &[],
+    r##"<TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title><toclist><tocentry class="ltx_tocentry_section"><ref idref="S1" show="toctitle"><text class="ltx_ref_title"><tag close=" ">1</tag>One</text></ref></tocentry></toclist></TOC>"##,
+  );
+  assert_eq!(x.matches("<bibliography").count(), 1, "{x}");
+  let open = x
+    .find("<bibliography ")
+    .map(|at| &x[at..at + x[at..].find('>').unwrap() + 1]);
+  assert_eq!(
+    open,
+    Some(
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" class="ltx_nodisplay" files="biblatex_fullcite_family.bib" xml:id="bib" fragid="bib">"#
+    ),
+    "{x}"
+  );
+}
+
+/// 60p: a `\printbibliography` the document's own `\AtEndDocument` runs counts as printed — the hidden bibliography's
+/// check runs after every end-document hook (prelude.rs `after_end_document_hooks`): one bibliography, in the TOC.
+#[test]
+fn biblatex_fullcite_with_a_printed_bibliography() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_fullcite_printed_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(x.matches("<bibliography").count(), 1, "{x}");
+  let open = x
+    .find("<bibliography ")
+    .map(|at| &x[at..at + x[at..].find('>').unwrap() + 1]);
+  assert_eq!(
+    open,
+    Some(
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="biblatex_fullcite_family.bib" inlist="toc" xml:id="bib" fragid="bib">"#
+    ),
+    "{x}"
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "cite",
+    &["class=\"ltx_citemacro_fullcite\""],
+    r##"<cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text></cite>"##,
+  );
+}
+
+/// 60p: under an author-year style the bibliography's first block leaves the year to the label; the full citation puts
+/// it back (pdflatex + biber: "See Bettina Just (2022). Quantum Computing Compact. Berlin: Springer."), and an undated
+/// entry gets none (biber's "Ann Undated (n.d.)": the style's own words, ruling 7b). An entry with no author or editor
+/// is labelled by key, its year kept in its first block where MakeBibliography sets it: "(2021) Anonymous Piece"
+/// (pdflatex "Anonymous Piece (2021)"; the formatter's order, ruling 7b).
+#[test]
+fn biblatex_fullcite_keeps_the_author_year_year() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_fullcite_authoryear_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para fragid="p1" xml:id="p1"><p>See <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text></cite>. Undated <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Ann Undated</text> <text class="ltx_bib_title">Timeless Notes</text></cite>. Anonymous <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_year"> (2021)</text> <text class="ltx_bib_title">Anonymous Piece</text></cite>.</p></para>"##,
+  );
+}
+
+/// 60p: a note citation in a footnote's text is set in parentheses with biblatex's "Nested notes" warning
+/// (biblatex.sty:13227-13238 `\blx@mkbibfootnote`, the `blx@footnote` toggle a note's text sets): pdflatex + biber
+/// "See (1)." in footnote 1, no note within the note. (The doubled space is the binding's `\addspace` = `\space` after the
+/// source's own; biblatex's `\unspace` would remove it. HTML collapses it.)
+#[test]
+fn biblatex_footcite_in_a_footnote_is_parenthesized() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_footcite_nested_family.tex",
+  );
+  assert_eq!(warnings(&log), 1, "{log}");
+  assert!(
+    log.contains("Package biblatex Warning: Nested notes"),
+    "{log}"
+  );
+  assert_eq!(x.matches("<note ").count(), 1, "{x}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>See  (<cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref></cite>).</note>"##.replace('~', "\u{a0}");
+  latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
+}
+
+/// 60p: an author-title or notes style's note citation is no bare label (`blx_is_labelstyle`): verbose.cbx sets the
+/// entry's author and title in the note (pdflatex + biber: "Bettina Just. Quantum Computing Compact. Berlin: Springer,
+/// 2022."), which the binding does not render — the note holds the bracketed citation (KNOWN_PERL_ERRORS #448 residual).
+#[test]
+fn biblatex_footcite_in_a_notes_style_keeps_its_brackets() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_footcite_verbose_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref>]</cite></note>"##.replace('~', "\u{a0}");
+  latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
+}
+
+/// 60p: a style built on numeric is a label style through its `\RequireCitationStyle` chain (ieee.cbx:13
+/// `numeric-verb`, a numeric style): its `\footcite` is the bare label (pdflatex + biber: footnote "1."). The chain
+/// lookup itself is pinned by `biblatex_footcite_style_chain_decides_the_label` (hermetic styles).
+#[test]
+fn biblatex_footcite_in_a_numeric_based_style_is_the_bare_label() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_footcite_ieee_family.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref></cite></note>"##.replace('~', "\u{a0}");
+  latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
+}
+
+/// 60p: the label-style lookup (`blx_cite_style_labels`) reads the citation style's `.cbx` — here written by
+/// `filecontents`, so the answer cannot come from the not-found default (numeric): `xnotes` inherits verbose (a notes
+/// style; pdflatex + biber footnote "Bettina Just. Quantum Computing Compact. Berlin: Springer, 2022."), `xbare` has no
+/// parent and a bare `\cite` (footnote "Just, Quantum Computing Compact."). Neither note is a bare label: both hold the
+/// bracketed citation (the style's own rendering is ruling 7b).
+#[test]
+fn biblatex_footcite_style_chain_decides_the_label() {
+  for fixture in [
+    "tests/cluster_regressions/biblatex_footcite_style_chain_family.tex",
+    "tests/cluster_regressions/biblatex_footcite_style_chain_bare_family.tex",
+  ] {
+    let (x, log) = convert_and_post_contrib_logging(fixture);
+    assert_eq!(warnings(&log), 0, "{fixture}: {log}");
+    let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref>]</cite></note>"##.replace('~', "\u{a0}");
+    latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
+  }
+}
+
+/// 60q: `\printbibliography[title=…, prenote=…]` (biblatex.sty:9688-9716): the heading is the `title=` text and the
+/// `\defbibnote` named by `prenote=` is an unindented paragraph between it and the list (biblatex.sty:10050-10058),
+/// as pdflatex + biber print it ("Primary Sources" / "Works consulted, with one entry." / the entry). The `.bib`
+/// route: MakeBibliography appends the list after the note. Repro index-bib/biblatex_printbibliography_title_prenote.
+#[test]
+fn biblatex_printbibliography_title_and_prenote() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_printbibliography_title_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "bibliography",
+    &[],
+    r#"<bibliography bibstyle="biblatex" citestyle="authoryear" files="biblatex_fullcite_family.bib" fragid="bib" inlist="toc" xml:id="bib"><title>Primary Sources</title><para class="ltx_noindent" fragid="bib.p1" xml:id="bib.p1"><p>Works consulted, with <emph font="italic">one</emph> entry.</p></para><biblist fragid="bib.L1" xml:id="bib.L1"><bibitem class="ltx_bib_book" fragid="bib.bib1" key="just22" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Just</tag><tag class="ltx_bib_year" role="year">2022</tag><tag class="ltx_bib_title" role="title">Quantum Computing Compact</tag><tag class="ltx_bib_author-year" role="refnum">Just (2022)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bettina Just</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Quantum Computing Compact</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem></biblist></bibliography>"#,
+  );
+}
+
+/// 60q: the same options when a biber `.bbl` is read (`\biblatex@bbl@thebibliography`, its `#preamble` slot).
+#[test]
+fn biblatex_bbl_printbibliography_title_and_prenote() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_printbibliography_title_bbl_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "bibliography",
+    &[],
+    r#"<bibliography bibstyle="biblatex" citestyle="authoryear" fragid="bib" inlist="toc" sort="false" xml:id="bib"><title>Primary Sources</title><para class="ltx_noindent" fragid="bib.p1" xml:id="bib.p1"><p>Works consulted, with <emph font="italic">one</emph> entry.</p></para><biblist fragid="bib.L1" xml:id="bib.L1"><bibitem class="ltx_bib_book" fragid="bib.bib1" key="just22" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Just</tag><tag class="ltx_bib_year" role="year">2022</tag><tag class="ltx_bib_title" role="title">Quantum Computing Compact</tag><tag class="ltx_bib_author-year" role="refnum">Just (2022)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bettina Just</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Quantum Computing Compact</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem></biblist></bibliography>"#,
+  );
+}
+
+/// The `.bib` beside the 60q in-process guards.
+const BIB_K: (&str, &str) = (
+  "x.bib",
+  "@book{k, author={Alpha Writer}, title={Zebra Book}, year={2001}}\n",
+);
+
+/// A document of class `class` citing `k` and printing `\printbibliography<opts>`, converted in-process with
+/// [`BIB_K`]; asserts no warning and `errors` errors, and returns (log, XML).
+fn printbibliography(class: &str, opts: &str, errors: usize) -> (String, String) {
+  let tex = format!(
+    "\\documentclass{{{class}}}\n\\usepackage{{biblatex}}\n\\addbibresource{{x.bib}}\n\\defbibnote{{empty}}{{}}\n\\begin{{document}}\nText \\cite{{k}}.\n\\printbibliography{opts}\n\\end{{document}}\n"
+  );
+  let (log, xml) = latexml::util::test::convert_files_with(&tex, &[BIB_K], None);
+  assert_eq!(
+    latexml::util::test::error_count(&log),
+    errors,
+    "{class} {opts}: {log}"
+  );
+  assert_eq!(
+    latexml::util::test::warning_count(&log),
+    0,
+    "{class} {opts}: {log}"
+  );
+  (log, xml)
+}
+
+/// 60q: a `title=` that names the default title — `title={\refname}` (MIT-Thesis.tex:379) — is that name: biblatex
+/// keeps the title in `\blx@thetitle` (biblatex.sty:9694) and its language strings define `\refname` and `\bibname`
+/// in any class (:5781-5789), so a report says "References". Redefining `\refname` to the title looped. With no
+/// `title=` the class's default stands (a book's `\bibname`, biblatex.def:2239).
+#[test]
+fn biblatex_printbibliography_title_names_the_default() {
+  for (class, opts, expected) in [
+    (
+      "report",
+      "[title={\\refname},heading=bibintoc]",
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"#,
+    ),
+    (
+      "book",
+      "[title={\\bibname}]",
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>Bibliography</title></bibliography>"#,
+    ),
+    (
+      "book",
+      "",
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>Bibliography</title></bibliography>"#,
+    ),
+    (
+      "article",
+      "[title={\\refname{} (primary)}]",
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>References (primary)</title></bibliography>"#,
+    ),
+  ] {
+    let (_, xml) = printbibliography(class, opts, 0);
+    latexml::util::test::assert_element(&xml, "bibliography", &[], expected);
+  }
+}
+
+/// 60q: a `prenote=` naming no `\defbibnote` is biblatex's error (biblatex.sty:9703-9709 `\blx@key@bibnote`), once;
+/// the bibliography keeps its heading, without a note.
+#[test]
+fn biblatex_printbibliography_undefined_prenote_is_an_error() {
+  let (log, xml) = printbibliography("article", "[prenote=missing]", 1);
+  assert!(
+    log.contains("Package biblatex Error: Note 'missing' not found"),
+    "{log}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"#,
+  );
+}
+
+/// 60q: an empty note prints nothing (`\blx@bibnote`'s `\ifdefempty`, biblatex.sty:10051), and the empty name is
+/// biblatex's predefined empty note (:9702) — no error, no paragraph.
+#[test]
+fn biblatex_printbibliography_empty_prenote_prints_nothing() {
+  for opts in ["[prenote=empty]", "[prenote={}]"] {
+    let (_, xml) = printbibliography("article", opts, 0);
+    latexml::util::test::assert_element(
+      &xml,
+      "bibliography",
+      &[],
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"#,
+    );
+  }
+}
+
+/// 60q: natbib's `\bibpreamble` (natbib.sty:1063-1066) is typeset after the heading of a bibliography read from its
+/// `.bib` too — the `.bbl` it becomes is a `thebibliography` (OXIDIZED_DESIGN #429; KNOWN_PERL_ERRORS #325). The tag
+/// carries plainnat's order, `sort="true"` (GA3, OXIDIZED_DESIGN_DIVERGENCES #116; one entry, no order to differ).
+#[test]
+fn natbib_bib_bibliography_prints_its_bibpreamble() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{article}\n\\usepackage{natbib}\n\\renewcommand\\bibpreamble{Preamble prose here.}\n\\begin{document}\nText \\citet{k}.\n\\bibliographystyle{plainnat}\n\\bibliography{x}\n\\end{document}\n",
+    &[BIB_K],
+    None,
+  );
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    r#"<bibliography bibstyle="plainnat" citestyle="authoryear" files="x" inlist="toc" sort="true" xml:id="bib"><title>References</title><para xml:id="bib.p1"><p>Preamble prose here.</p></para></bibliography>"#,
+  );
+}
+
+/// 61b: jurabib's citations are bibrefs (jurabib_sty.rs): its `\@citex` reads `\b@<key>` records only jurabib.bst's
+/// `.aux` holds, so every citation printed `?, .` and selected no entry (Perl alike). pdflatex after bibtex: "Brox Rn.
+/// 78." / "Soergel/Leptien § 167, Rn. 38." in footnotes, both entries listed. Witness jbtest (recall 10 → 81 %).
+/// `~` in the expected markup stands for the tie's U+00A0.
+#[test]
+fn jurabib_citations_are_bibrefs() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/jurabib_citations_family.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote1""#],
+    &r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Allgemeiner Teil des Bürgerlichen Gesetzbuches">Brox</ref> Rn.~78</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote2""#],
+    &r##"<note fragid="footnote2" mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="Kommentar zum Bürgerlichen Gesetzbuch">Soergel</ref>/Leptien §~167, Rn.~38</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+  // `\footcite*` is `\jbfootcitenotitle` (jurabib.sty:3881); a postnote's own period is followed by the footnote's
+  // `\unskip.` (:5704): pdflatex "4 Soergel." / "5 Brox Rn. 5..".
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote4""#],
+    r##"<note fragid="footnote4" mark="4" role="footnote" xml:id="footnote4"><tags><tag>4</tag><tag role="refnum">4</tag><tag role="typerefnum">footnote 4</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="Kommentar zum Bürgerlichen Gesetzbuch">Soergel</ref></cite>.</note>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote5""#],
+    &r##"<note fragid="footnote5" mark="5" role="footnote" xml:id="footnote5"><tags><tag>5</tag><tag role="refnum">5</tag><tag role="typerefnum">footnote 5</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Allgemeiner Teil des Bürgerlichen Gesetzbuches">Brox</ref> Rn.~5.</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+  assert_eq!(x.matches("<bibitem ").count(), 2, "{x}");
+  assert!(
+    x.contains(r#"key="broxbgb""#) && x.contains(r#"key="soergel""#),
+    "{x}"
+  );
+}
+
+/// 61b: `jurabiborder` swaps annotator and postnote only when both optionals are given; a lone optional stays the
+/// postnote (jurabib.sty `\@citex`, :5719-5752). pdflatex: "1 Brox S. 5." / "2 Soergel/Leptien S. 7.".
+#[test]
+fn jurabib_order_swaps_two_optionals_only() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/jurabib_citations_order.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote1""#],
+    &r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Allgemeiner Teil des Bürgerlichen Gesetzbuches">Brox</ref> S.~5</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote2""#],
+    &r##"<note fragid="footnote2" mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="Kommentar zum Bürgerlichen Gesetzbuch">Soergel</ref>/Leptien S.~7</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+}
+
+/// 61m: `\printbiblist[title=,prenote=]{shorthand}` prints its heading and prenote (biblatex.sty:10258-10327,
+/// `heading=biblist`; `heading=none` prints none); it was a no-op (cms-legal-sample's "Legal Authority Shorthands" and its note lost). The
+/// shorthand list's entries are not printed (residual). pdflatex + biber: "Legal Authority Shorthands / Shorthands
+/// are used unless noted. / [FB] Ann Alpha. First Book. 2001."
+#[test]
+fn biblatex_printbiblist_prints_its_heading_and_prenote() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_printbiblist.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "section",
+    &[r#"xml:id="Sx1""#],
+    r#"<section fragid="Sx1" xml:id="Sx1"><title>Legal Authority Shorthands</title><para class="ltx_noindent" fragid="Sx1.p1" xml:id="Sx1.p1"><p>Shorthands are used unless noted.</p></para></section>"#,
+  );
+  assert!(!x.contains("Untitled List"), "{x}");
+}
+
+/// 61o: every `\printbibliography` prints its list; on the `.bib` route a later call in the same refsection prints from
+/// the first one's resources, where an `ltx:bibliography` can stand. A filtered call (`type=book`) is not repeated:
+/// the binding applies no filter. pdflatex + biber: "Primary List", "Second List", "Sub List" (one book; residual).
+/// Witness xurl. Repro index-bib/second_printbibliography_reaches_the_html.
+#[test]
+fn biblatex_second_printbibliography_prints_its_list() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_second_printbibliography.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  for (id, title) in [("bib", "Primary List"), ("biba", "Second List")] {
+    assert!(
+      x.contains(&format!(
+        r#"xml:id="{id}" fragid="{id}">
+    <title>{title}</title>"#
+      )),
+      "{id}: {title}\n{x}"
+    );
+  }
+  assert!(!x.contains("<title>Sub List</title>"), "{x}");
+  latexml::util::test::assert_element(
+    &x,
+    "bibliography",
+    &[r#"xml:id="biba""#],
+    r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="biblatex_second_printbibliography.bib" fragid="biba" inlist="toc" xml:id="biba"><title>Second List</title><biblist fragid="biba.L1" xml:id="biba.L1"><bibitem class="ltx_bib_book" fragid="biba.bib1" key="k1" type="book" xml:id="biba.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Alpha</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">First Book</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ann Alpha</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">First Book</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Pub</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem><bibitem class="ltx_bib_article" fragid="biba.bib2" key="k2" type="article" xml:id="biba.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Beta</tag><tag class="ltx_bib_year" role="year">2002</tag><tag class="ltx_bib_title" role="title">Second Paper</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bob Beta</text><text class="ltx_bib_year"> (2002)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Second Paper</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Jour</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem></biblist></bibliography>"#,
+  );
+}
+
+/// 61o: a repeated list is printed only where an `ltx:bibliography` can stand: not in a list item (`ltx:itemize` does
+/// not close on its own) nor in a box (`ltx:inline-block`); each such call leaves an Info. (biblatex-cv's lists in
+/// `itemize` items, biblatex-ext's in tcolorbox examples raised `isn't allowed` errors unguarded.)
+#[test]
+fn biblatex_repeated_bibliography_only_where_it_can_stand() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_repeat_placement.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(x.matches("<bibliography ").count(), 1, "{x}");
+  assert!(x.contains("<title>Primary List</title>"), "{x}");
+  assert_eq!(
+    log.matches("Info:ignore:\\printbibliography").count(),
+    2,
+    "{log}"
+  );
+  for kept in ["In a list:", "more."] {
+    assert!(x.contains(kept), "{kept}\n{x}");
+  }
+}
+
+/// 61o: `refsection=chapter` opens a refsection at each `\chapter` (biblatex.sty:16172-16181): each list is that
+/// chapter's, so none repeats the previous one (which would print the whole bibliography again).
+#[test]
+fn biblatex_refsection_option_does_not_repeat() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_refsection_option.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(x.matches("<bibliography ").count(), 1, "{x}");
+  // The list is chapter One's: it comes before chapter Two.
+  let list = x.find("<bibliography ").unwrap_or(usize::MAX);
+  let two = x.find(">Two</title>").unwrap_or(0);
+  assert!(list < two, "{x}");
+}
+
+/// MathSciNet's `\cprime` and `\cftil` in a cited entry's FJOURNAL/MRREVIEWER fields, the `.bib` carrying no
+/// `@preamble` for them, are provided while the bibliography's entries are digested (bibtex.rs
+/// `provide_mathscinet_export_macros`; user ruling 2026-10-06; witnesses 2609.00627, 2609.11266), and only there.
+#[test]
+fn bib_mathscinet_fields_without_preamble() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_mathscinet_fields.tex");
+  // Before the bibliography: not always-on (the retracted stub); the environment's group ends the provision.
+  assert!(
+    x.contains("CPRIME-UNDEFINED"),
+    "\\cprime is defined outside the bibliography:\n{x}"
+  );
+  // The reviewer shows in the review line MRNUMBER brings; FJOURNAL is digested, not shown.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"arsenev\""],
+    r#"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="arsenev" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Ivanov</tag><tag class="ltx_bib_year" role="year">1990</tag><tag class="ltx_bib_title" role="title">On a boundary problem</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ivan Ivanov</text><text class="ltx_bib_year"> (1990)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On a boundary problem</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Differ. Uravn.</text></bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="mr ltx_bib_external" href="https://www.ams.org/mathscinet-getitem?mr=1234567">MathReview (Nguyễn Quôc Tháng)</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"#,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"second\""],
+    r#"<bibitem class="ltx_bib_article" fragid="bib.bib2" key="second" type="article" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Petrov</tag><tag class="ltx_bib_year" role="year">1991</tag><tag class="ltx_bib_title" role="title">Another problem</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Petr Petrov</text><text class="ltx_bib_year"> (1991)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Another problem</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Mat. Sb.</text></bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="mr ltx_bib_external" href="https://www.ams.org/mathscinet-getitem?mr=7654321">MathReview (A. A. Arsenʹev)</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"#,
+  );
+}
+
+/// A `doi` field's TeX escapes and grouping braces are not part of the identifier: MathSciNet's `…3\{_}10`,
+/// `{\_}` and `\_` all give the DOI with `_`, and the entry after them is intact (bibtex.rs `identifier_data`;
+/// witnesses 2601.01900, 2511.01040, 2601.01772).
+#[test]
+fn bib_doi_with_escaped_brace() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_doi_escaped_brace.tex");
+  for (doi, href) in [
+    (
+      "10.1007/978-3-642-29849-3_10",
+      "https://dx.doi.org/10.1007/978-3-642-29849-3%5F10",
+    ),
+    ("10.1000/a_b", "https://dx.doi.org/10.1000/a%5Fb"),
+    ("10.1000/c_d", "https://dx.doi.org/10.1000/c%5Fd"),
+  ] {
+    assert!(x.contains(&format!("href=\"{href}\"")), "{doi}: {x}");
+  }
+  assert_eq!(x.matches("<bibitem").count(), 4, "{x}");
+  assert!(x.contains("The entry after the identifiers"), "{x}");
+}
+
+/// The bibliographies a document shows, each as its title and the keys of its items, in order — not a hidden
+/// (`ltx_nodisplay`) one ([`hidden_bib_items`]).
+fn bib_lists(x: &str) -> Vec<(String, Vec<String>)> {
+  x.split("<bibliography ")
+    .skip(1)
+    .filter(|list| {
+      !list
+        .split('>')
+        .next()
+        .unwrap_or_default()
+        .contains("ltx_nodisplay")
+    })
+    .map(|list| {
+      let list = list.split("</bibliography>").next().unwrap_or_default();
+      let title = list
+        .split("<title")
+        .nth(1)
+        .and_then(|t| t.split('>').nth(1))
+        .and_then(|t| t.split("</title").next())
+        .unwrap_or_default()
+        .to_string();
+      let keys = list
+        .split("<bibitem ")
+        .skip(1)
+        .filter_map(|item| item.split("key=\"").nth(1)?.split('"').next())
+        .map(str::to_string)
+        .collect();
+      (title, keys)
+    })
+    .collect()
+}
+
+/// `expected` as [`bib_lists`] returns it.
+fn lists_of(expected: &[(&str, &[&str])]) -> Vec<(String, Vec<String>)> {
+  expected
+    .iter()
+    .map(|(title, keys)| {
+      (
+        title.to_string(),
+        keys.iter().map(|key| key.to_string()).collect(),
+      )
+    })
+    .collect()
+}
+
+/// The log lines starting with `prefix` that contain `text`.
+fn lines_with(log: &str, prefix: &str, text: &str) -> usize {
+  log
+    .lines()
+    .filter(|line| line.starts_with(prefix) && line.contains(text))
+    .count()
+}
+
+/// 77a (silent-loss #21): `\printbibliography`'s entry filters select from the `.bbl`'s datalist as biblatex does
+/// (biblatex.sty:9526-9615 `\blx@key@type` … `\blx@key@notcategory`, ANDed, datalist order): `type=book` keeps the
+/// books, `nottype=book` the rest, `keyword=primary` the `\keyw{primary}` entries, `category=selected` the keys
+/// `\addtocategory` filed (an unknown `notkeyword=` value is a no-op), and `type=online`, which no entry has, prints
+/// no bibliography and biblatex's two Warnings ("Type 'online' not found", "Empty bibliography"). Before, every list
+/// printed all four entries. pdflatex + biber: Books {goossens, knuth}, Articles {lamport, mittelbach}, Primary
+/// {knuth, mittelbach}, Selected {knuth, lamport}. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_printbibliography_filters.tex`; witness arXiv 2406.00136.
+#[test]
+fn biblatex_printbibliography_filters_select_entries() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_printbibliography_filters.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert!(!log.contains("Fatal:"), "{log}");
+  assert_eq!(warnings(&log), 2, "{log}");
+  assert_eq!(
+    lines_with(&log, "Warning:", "Type 'online' not found"),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    lines_with(&log, "Warning:", "Empty bibliography"),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("Books", &["goossens", "knuth"]),
+      ("Articles", &["lamport", "mittelbach"]),
+      ("Primary", &["knuth", "mittelbach"]),
+      ("Selected", &["knuth", "lamport"]),
+    ]),
+    "{x}"
+  );
+  assert!(!x.contains("<title>Online</title>"), "{x}");
+  // 77a r3: one entry has one label in every list — its place in the refsection's datalist, as biblatex numbers with
+  // `defernumbers=false` (biblatex.sty:8891-8923) — so the citations are pdflatex's "[2, 3, 1, 4]"; r2 restarted at
+  // [1] in every list ("[1, 2, 1, 2]"). No entry is left out of every list, so nothing is hidden.
+  assert_eq!(cites(&x), vec!["2,3,1,4"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Books", &[("1", "goossens"), ("2", "knuth")]),
+      ("Articles", &[("3", "lamport"), ("4", "mittelbach")]),
+      ("Primary", &[("2", "knuth"), ("4", "mittelbach")]),
+      ("Selected", &[("2", "knuth"), ("3", "lamport")]),
+    ]),
+    "{x}"
+  );
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+  // Each key is listed once per list that selects it, and nowhere else.
+  for (key, n) in [
+    ("goossens", 1),
+    ("knuth", 3),
+    ("lamport", 2),
+    ("mittelbach", 2),
+  ] {
+    assert_eq!(
+      x.matches(&format!("key=\"{key}\"")).count(),
+      n,
+      "{key}\n{x}"
+    );
+  }
+}
+
+/// 77a r2: a category's keys are the whole document's — biblatex files them through the `.aux`, so pdflatex prints
+/// `category=selected` with the keys an `\addtocategory` after the list filed (biblatex.sty:11226-11242); the binding
+/// decides category membership once the document is digested (r4: each entry deferred to the end, `\biblatex@select`;
+/// r2-r3 when the bibliography was built). `subtype=`/`notsubtype=`
+/// select on `entrysubtype`. pdflatex + biber: Selected {web, goossens}, All, OldBooks {knuth}, Mag {mittelbach},
+/// NotMag {goossens, knuth, lamport}, All2. Round 1 printed no Selected list. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_category_filter_timing.tex`; witness arXiv 2406.00136.
+#[test]
+fn biblatex_category_filled_after_the_list_counts() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_category_filter_timing.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  let all: &[&str] = &["web", "goossens", "knuth", "lamport", "mittelbach"];
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("Selected", &["web", "goossens"]),
+      ("All", all),
+      ("OldBooks", &["knuth"]),
+      ("Mag", &["mittelbach"]),
+      ("NotMag", &["goossens", "knuth", "lamport"]),
+      ("All2", all),
+    ]),
+    "{x}"
+  );
+}
+
+/// 77a r2: `\bibbycategory` prints one list per declared category under the heading named after it — the title of
+/// the author's `\defbibheading` (biblatex.sty:9983 `\blx@key@heading{…}{#1}`) — and skips a category with no keys
+/// silently (:9984); a repeated `notcategory=` ANDs (:9608-9615). pdflatex + biber: My Books {goossens, knuth}, My
+/// Papers {lamport, mittelbach}, Other {web}. Round 1 titled both lists References and applied only the last
+/// `notcategory`. Repro `tools/perfect_kernel/repros/index-bib/biblatex_bibbycategory_headings.tex`.
+#[test]
+fn biblatex_bibbycategory_prints_each_category_under_its_heading() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_bibbycategory_headings.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("My Books", &["goossens", "knuth"]),
+      ("My Papers", &["lamport", "mittelbach"]),
+      ("Other", &["web"]),
+    ]),
+    "{x}"
+  );
+}
+
+/// 77a r2: categories an `\addtocategory` in a hook the binding never runs fills (`\AtEveryCitekey`, as
+/// hagenberg-thesis hgbbib.sty:113 does for its default `\MakeBibliography`) cannot be known: `\bibbycategory` prints
+/// the one unfiltered list it printed before categories were modelled, with an Info naming them — never an empty
+/// result pdflatex would fill (Literature {knuth, lamport}, Online {web}). Round 1 printed no bibliography. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_category_hook_filled.tex`.
+#[test]
+fn biblatex_category_filled_by_a_hook_prints_unfiltered() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_category_hook_filled.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Info:",
+      "categories 'literature', 'online' are filled by a hook"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[("References", &["web", "knuth", "lamport"])]),
+    "{x}"
+  );
+}
+
+/// 77a r2: declaring a category twice and filing in an undeclared one are biblatex's two errors
+/// (biblatex.sty:11207-11222), raised by the primitives; the bibliography is unaffected. pdflatex + biber: the same two
+/// errors, References {knuth}. Repro `tools/perfect_kernel/repros/index-bib/biblatex_category_errors.tex`.
+#[test]
+fn biblatex_category_declaration_errors() {
+  let (x, log) =
+    convert_and_post_contrib_expecting("tests/cluster_regressions/biblatex_category_errors.tex", 2);
+  assert_eq!(latexml::util::test::error_count(&log), 2, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Error:",
+      "Package biblatex Error: Category 'a' already declared"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    lines_with(
+      &log,
+      "Error:",
+      "Package biblatex Error: Category 'b' not declared"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[("References", &["knuth"])]),
+    "{x}"
+  );
+}
+
+/// 77a r2: a repeated filter key filters again (biblatex.sty:9580-9615: `keyword=old,keyword=primary` ANDs,
+/// `notkeyword` twice drops both), but `type` and `subtype` share one toggle (:9532-9566 `blx@tempb`): the second of
+/// them is biblatex's error "'…' used multiple times" and an empty list ("Empty bibliography"). pdflatex + biber:
+/// OldPrimary {knuth}, Neither {web, goossens}, PlainArticles {lamport}, the two errors and two warnings. Round 1
+/// applied only a key's last value. Repro `tools/perfect_kernel/repros/index-bib/biblatex_filter_repeated_keys.tex`;
+/// witness arXiv 2406.11014.
+#[test]
+fn biblatex_repeated_filter_keys_and() {
+  let (x, log) = convert_and_post_contrib_expecting(
+    "tests/cluster_regressions/biblatex_filter_repeated_keys.tex",
+    2,
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 2, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Error:",
+      "Package biblatex Error: 'type' used multiple times"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    lines_with(
+      &log,
+      "Error:",
+      "Package biblatex Error: 'subtype' used multiple times"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(warnings(&log), 2, "{log}");
+  assert_eq!(
+    lines_with(&log, "Warning:", "Empty bibliography"),
+    2,
+    "{log}"
+  );
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("OldPrimary", &["knuth"]),
+      ("Neither", &["web", "goossens"]),
+      ("PlainArticles", &["lamport"]),
+    ]),
+    "{x}"
+  );
+}
+
+/// 77a r2: `\bibbycategory` whose one category has no keys prints no bibliography and biblatex's "Empty bibliography"
+/// (biblatex.sty:9997-9998), as pdflatex + biber do. Round 1 printed nothing, silently. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_bibbycategory_empty.tex`.
+#[test]
+fn biblatex_bibbycategory_without_keys_is_empty() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_bibbycategory_empty.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 1, "{log}");
+  assert_eq!(
+    lines_with(&log, "Warning:", "Empty bibliography"),
+    1,
+    "{log}"
+  );
+  assert!(bib_lists(&x).is_empty(), "{x}");
+}
+
+/// 77a r2: with no `.bbl` the binding reads the `.bib` and applies no filter: `\bibbycategory` prints the one list it
+/// printed before 77a (the later category lists are filtered, so none repeats it). Round 1 printed nothing, as no
+/// category had keys. Repro `tools/perfect_kernel/repros/index-bib/biblatex_bibbycategory_no_bbl.tex`.
+#[test]
+fn biblatex_bibbycategory_without_a_bbl_prints_the_bib() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_bibbycategory_no_bbl.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[("References", &["knuth", "lamport"])]),
+    "{x}"
+  );
+}
+
+/// 77a r2: each `\printbibliography` prints its own refsection's list (biblatex.sty:9827 `\blx@tempe`, the refsection
+/// numbered as biblatex numbers them, :10776-10778), so a filter never runs, nor warns, on another refsection's
+/// entries. pdflatex + biber: S1Books {knuth}, S1Rest {lamport}, S2All {web, mittelbach}, S2Magazine {mittelbach}.
+/// Round 1 printed both refsections under every list and warned "Type 'book' not found" / "Subtype 'magazine' not
+/// found". Repro `tools/perfect_kernel/repros/index-bib/biblatex_filter_refsections.tex`.
+#[test]
+fn biblatex_filters_print_their_own_refsection() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_filter_refsections.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("S1Books", &["knuth"]),
+      ("S1Rest", &["lamport"]),
+      ("S2All", &["web", "mittelbach"]),
+      ("S2Magazine", &["mittelbach"]),
+    ]),
+    "{x}"
+  );
+}
+
+/// The citations of the body (before the first bibliography), each as its reference labels joined by "," — or, for a
+/// citation with no reference (a `\fullcite`), its text.
+fn cites(x: &str) -> Vec<String> {
+  let body = x.split("<bibliography ").next().unwrap_or_default();
+  body
+    .split("<cite ")
+    .skip(1)
+    .map(|cite| {
+      let cite = cite.split("</cite>").next().unwrap_or_default();
+      let cite = cite.split_once('>').map_or("", |(_, rest)| rest);
+      let refs: Vec<String> = cite
+        .split("<ref ")
+        .skip(1)
+        .filter_map(|r| Some(r.split_once('>')?.1.split("</ref>").next()?.to_string()))
+        .collect();
+      if refs.is_empty() {
+        strip_tags(cite)
+      } else {
+        refs.join(",")
+      }
+    })
+    .collect()
+}
+
+/// `text` without its markup.
+fn strip_tags(text: &str) -> String {
+  let mut out = String::new();
+  let mut in_tag = false;
+  for c in text.chars() {
+    match c {
+      '<' => in_tag = true,
+      '>' => in_tag = false,
+      c if !in_tag => out.push(c),
+      _ => {},
+    }
+  }
+  out
+}
+
+/// One bibliography's items, each as its refnum label and key.
+fn items(list: &str) -> Vec<(String, String)> {
+  list
+    .split("<bibitem ")
+    .skip(1)
+    .filter_map(|item| {
+      let key = item.split("key=\"").nth(1)?.split('"').next()?;
+      let refnum = item
+        .split("role=\"refnum\">")
+        .nth(1)?
+        .split("</tag>")
+        .next()?;
+      Some((refnum.to_string(), key.to_string()))
+    })
+    .collect()
+}
+
+/// [`bib_lists`] with each item's refnum label.
+fn bib_items(x: &str) -> Vec<(String, Vec<(String, String)>)> {
+  x.split("<bibliography ")
+    .skip(1)
+    .filter(|list| {
+      !list
+        .split('>')
+        .next()
+        .unwrap_or_default()
+        .contains("ltx_nodisplay")
+    })
+    .map(|list| {
+      let list = list.split("</bibliography>").next().unwrap_or_default();
+      let title = list
+        .split("<title")
+        .nth(1)
+        .and_then(|t| t.split('>').nth(1))
+        .and_then(|t| t.split("</title").next())
+        .unwrap_or_default()
+        .to_string();
+      (title, items(list))
+    })
+    .collect()
+}
+
+/// The items of the hidden (`ltx_nodisplay`) bibliographies, each as its refnum label and key.
+fn hidden_bib_items(x: &str) -> Vec<(String, String)> {
+  x.split("<bibliography ")
+    .skip(1)
+    .filter(|list| {
+      list
+        .split('>')
+        .next()
+        .unwrap_or_default()
+        .contains("ltx_nodisplay")
+    })
+    .flat_map(|list| items(list.split("</bibliography>").next().unwrap_or_default()))
+    .collect()
+}
+
+/// The expected [`bib_items`].
+fn items_of(expected: &[(&str, &[(&str, &str)])]) -> Vec<(String, Vec<(String, String)>)> {
+  expected
+    .iter()
+    .map(|(title, items)| {
+      (
+        title.to_string(),
+        items
+          .iter()
+          .map(|(label, key)| (label.to_string(), key.to_string()))
+          .collect(),
+      )
+    })
+    .collect()
+}
+
+/// 77a r3: an entry every list leaves out keeps its label and its `\fullcite`: biblatex reads the whole `.bbl` at
+/// `\begin{document}` and numbers each refsection's datalist once, so pdflatex prints "See Donald Knuth. The TeXbook.
+/// AW, 1984. Also [3, 2, 1, 4]." under `\printbibliography[notcategory=self]` — cs-techrep's design (arXiv 2405.19762,
+/// `notcategory=selfref` and "Please cite as: \fullcite{selfref}"). The binding builds the entries no list printed in
+/// a hidden (`ltx_nodisplay`) list at the end. r2 gave "See knuth." and "[2, knuth, 1, 3]". Repros
+/// `tools/perfect_kernel/repros/index-bib/biblatex_filtered_out_{fullcite,type_fullcite}.tex` (review probes 1, 2).
+#[test]
+fn biblatex_entry_left_out_of_every_list_is_built_hidden() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_filtered_out_fullcite.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert!(
+    x.contains(r##"<p>See <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Donald Knuth</text><text class="ltx_bib_year"> (1984)</text> <text class="ltx_bib_title">The TeXbook</text>.  <text class="ltx_bib_publisher">AW</text></cite>. Also <cite class="ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="LaTeX paper">3</ref>, <ref href="#biba.bib1" idref="biba.bib1" title="The TeXbook">2</ref>, <ref href="#bib.bib1" idref="bib.bib1" title="The LaTeX Companion">1</ref>, <ref href="#bib.bib3" idref="bib.bib3" title="Mittelbach paper">4</ref>]</cite>.</p>"##),
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("1", "goossens"),
+      ("3", "lamport"),
+      ("4", "mittelbach")
+    ])]),
+    "{x}"
+  );
+  assert_eq!(
+    hidden_bib_items(&x),
+    vec![("2".to_string(), "knuth".to_string())],
+    "{x}"
+  );
+
+  // `nottype=book` leaves out both books: the full citation and the labels are pdflatex's ("See Michel Goossens. The
+  // LaTeX Companion. AW, 1994. Also [3, 2, 1, 4].").
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_filtered_out_type_fullcite.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cites(&x),
+    vec!["Michel Goossens (1994) The LaTeX Companion.  AW", "3,2,1,4"],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[("3", "lamport"), ("4", "mittelbach")])]),
+    "{x}"
+  );
+  assert_eq!(
+    hidden_bib_items(&x),
+    vec![
+      ("1".to_string(), "goossens".to_string()),
+      ("2".to_string(), "knuth".to_string())
+    ],
+    "{x}"
+  );
+}
+
+/// 77a r3: with `defernumbers=true` biblatex numbers the entries as the lists print them, continuing across the lists of
+/// a refsection, and an entry keeps the number it got first (biblatex.sty:9216-9283 `\blx@addlabelnumber`);
+/// `resetnumbers=true` restarts at 1 and `resetnumbers=<n>` at n, for entries not yet numbered (:9759-9765); an entry no
+/// list printed is labelled 0 (:8898-8909). pdflatex + biber: "[4, 1, 3, 2]" with Articles [1][2], Books [3][4],
+/// Primary [4][2]; with `resetnumbers` "[2, 1, 1, 2]"; `notcategory=self` "[2, 0, 1, 3]". Witnesses arXiv 2405.09412,
+/// 2405.11316, 2406.11014 (style=ieee, defernumbers=true), 2406.15218 (resetnumbers=true). Repros
+/// `tools/perfect_kernel/repros/index-bib/biblatex_defernumbers{,_resetnumbers,_unprinted}.tex`.
+#[test]
+fn biblatex_defernumbers_numbers_in_print_order() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_defernumbers.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["4,1,3,2"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Articles", &[("1", "lamport"), ("2", "mittelbach")]),
+      ("Books", &[("3", "goossens"), ("4", "knuth")]),
+      ("Primary", &[("4", "knuth"), ("2", "mittelbach")]),
+    ]),
+    "{x}"
+  );
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_defernumbers_resetnumbers.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["2,1,1,2"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Articles", &[("1", "lamport"), ("2", "mittelbach")]),
+      ("Books", &[("1", "goossens"), ("2", "knuth")]),
+      ("Primary", &[("2", "knuth"), ("2", "mittelbach")]),
+    ]),
+    "{x}"
+  );
+
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_defernumbers_unprinted.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cites(&x),
+    vec!["Donald Knuth (1984) The TeXbook.  AW", "2,0,1,3"],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("1", "goossens"),
+      ("2", "lamport"),
+      ("3", "mittelbach")
+    ])]),
+    "{x}"
+  );
+  assert_eq!(
+    hidden_bib_items(&x),
+    vec![("0".to_string(), "knuth".to_string())],
+    "{x}"
+  );
+}
+
+/// 77a r3: `resetnumbers` without `defernumbers=true` is biblatex's Warning, and ignored (biblatex.sty:9766-9768), for
+/// any value — `resetnumbers=false` too (r4; r3 returned before the check); pdflatex + biber: two Warnings, "[2, 3, 1,
+/// 4]", Articles [3][4], Books [1][2], All [1]-[4]. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_resetnumbers_needs_defernumbers.tex`.
+#[test]
+fn biblatex_resetnumbers_needs_defernumbers() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_resetnumbers_needs_defernumbers.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 2, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Warning:",
+      "Option 'resetnumbers' requires 'defernumbers=true'. Ignoring 'resetnumbers=true'"
+    ),
+    2,
+    "{log}"
+  );
+  assert_eq!(cites(&x), vec!["2,3,1,4"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Articles", &[("3", "lamport"), ("4", "mittelbach")]),
+      ("Books", &[("1", "goossens"), ("2", "knuth")]),
+      ("All", &[
+        ("1", "goossens"),
+        ("2", "knuth"),
+        ("3", "lamport"),
+        ("4", "mittelbach")
+      ]),
+    ]),
+    "{x}"
+  );
+}
+
+/// 77a r3: an `\addtocategory` in a declaration whose code the binding never runs — `\DeclareBibliographyDriver`
+/// (historian.bbx, publist.bbx), `\DeclareCiteCommand`'s loop code (musuos.cbx), `\DeclareFieldFormat`,
+/// `\DeclareIndexNameFormat`, `\defbibcheck` — or one whose category is a macro parameter (`\addtocategory{#1}{…}`)
+/// leaves that category's filter unapplied, with an Info: the list prints unfiltered (fail-safe), where r2 applied the
+/// filter to the empty category and printed nothing — every citation "Missing Entry" (review probe 6). pdflatex
+/// prints probe 6's list empty (the driver files the keys while the list prints) and the parameter case's {knuth,
+/// lamport}. Repros `tools/perfect_kernel/repros/index-bib/biblatex_category_{unrun_declarations,hook_parameter}.tex`.
+#[test]
+fn biblatex_category_filled_by_unrun_code_prints_unfiltered() {
+  for (fixture, title, keys) in [
+    (
+      "biblatex_category_unrun_declarations",
+      "Sel",
+      &["goossens", "knuth", "lamport", "mittelbach"][..],
+    ),
+    (
+      "biblatex_category_hook_parameter",
+      "Cited",
+      &["goossens", "knuth", "lamport"][..],
+    ),
+  ] {
+    let (x, log) =
+      convert_and_post_contrib_logging(&format!("tests/cluster_regressions/{fixture}.tex"));
+    assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+    assert_eq!(warnings(&log), 0, "{fixture}\n{log}");
+    assert_eq!(
+      lines_with(
+        &log,
+        "Info:",
+        "is filled by a hook the binding does not run"
+      ),
+      1,
+      "{fixture}\n{log}"
+    );
+    assert_eq!(bib_lists(&x), lists_of(&[(title, keys)]), "{fixture}\n{x}");
+    assert!(!x.contains("Missing Entry"), "{fixture}\n{x}");
+  }
+}
+
+/// 77a r3: `\ifentrycategory{<entrykey>}{<category>}{<true>}{<false>}` (biblatex.sty:2895-2902) takes four arguments
+/// and asks the categories filed so far; read as three it printed both branches. pdflatex + biber: "A IN B OUT C [1,
+/// 2].". Repro `tools/perfect_kernel/repros/index-bib/biblatex_ifentrycategory.tex`.
+#[test]
+fn biblatex_ifentrycategory_takes_one_branch() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_ifentrycategory.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert!(x.contains("<p>A IN B OUT C <cite"), "{x}");
+  assert_eq!(cites(&x), vec!["1,2"], "{x}");
+}
+
+/// 77a r3: a biblatex entry with a `shorthand` is labelled by it and takes no label number (biblatex.sty:8897-8923;
+/// make_bibliography.rs `given_label`), the others numbered in datalist order without it. pdflatex + biber: "[TB, 2,
+/// 1, 3]", Books [1] goossens [TB] knuth, Articles [2] lamport [3] mittelbach. Witness arXiv 2406.00136 ([HTT] [HA]
+/// [SAG] [Ker], then [1]-[17]). Repro `tools/perfect_kernel/repros/index-bib/biblatex_shorthand_label.tex`.
+#[test]
+fn biblatex_shorthand_is_the_label() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_shorthand_label.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["TB,2,1,3"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Books", &[("1", "goossens"), ("TB", "knuth")]),
+      ("Articles", &[("2", "lamport"), ("3", "mittelbach")]),
+    ]),
+    "{x}"
+  );
+}
+
+/// Every citation of the document outside its bibliographies, as its refnums and the bibitems they link to.
+fn cite_links(x: &str) -> Vec<(String, Vec<String>)> {
+  let mut body = String::new();
+  for (n, part) in x.split("<bibliography ").enumerate() {
+    let part = if n == 0 {
+      part
+    } else {
+      part
+        .split_once("</bibliography>")
+        .map_or("", |(_, rest)| rest)
+    };
+    body.push_str(part);
+  }
+  body
+    .split("<cite ")
+    .skip(1)
+    .map(|cite| {
+      let cite = cite.split("</cite>").next().unwrap_or_default();
+      let refs: Vec<(String, String)> = cite
+        .split("<ref ")
+        .skip(1)
+        .filter_map(|r| {
+          let idref = r.split("idref=\"").nth(1)?.split('"').next()?.to_string();
+          let text = r.split_once('>')?.1.split("</ref>").next()?.to_string();
+          Some((text, idref))
+        })
+        .collect();
+      (
+        refs
+          .iter()
+          .map(|(text, _)| text.as_str())
+          .collect::<Vec<_>>()
+          .join(","),
+        refs.into_iter().map(|(_, idref)| idref).collect(),
+      )
+    })
+    .collect()
+}
+
+/// 77a r4: each refsection numbers its own list (biblatex.sty:8891-8923, per `\c@refsection`), and a `\cite` refers
+/// to its own refsection's entry. MakeBibliography formats a key two lists print from the list's own `ltx:bibentry`
+/// (r3 took the document's last copy: refsection 1 read [3] Knuth with refsection 2's number), and a refsection's
+/// citations name its list (`inlist`/`lists` `refsection<n>`; before 77a the citation of a key both refsections print
+/// linked to refsection 2's). pdflatex + biber: "A [1, 2]." S1 [1] knuth [2] lamport; "B [2, 1, 3]." S2 [1] web [2]
+/// mittelbach [3] knuth. Witnesses arXiv 2308.00515 (12 chapter refsections: 10 lists out of sequence in r3),
+/// 2507.16315. Repro `tools/perfect_kernel/repros/index-bib/biblatex_refsection_own_numbers.tex`.
+#[test]
+fn biblatex_refsection_lists_number_and_cite_their_own() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_refsection_own_numbers.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("S1", &[("1", "knuth"), ("2", "lamport")]),
+      ("S2", &[("1", "web"), ("2", "mittelbach"), ("3", "knuth")]),
+    ]),
+    "{x}"
+  );
+  let link = |text: &str, ids: &[&str]| {
+    (
+      text.to_string(),
+      ids.iter().map(|id| id.to_string()).collect(),
+    )
+  };
+  assert_eq!(
+    cite_links(&x),
+    vec![
+      link("1,2", &["bib.bib1", "bib.bib2"]),
+      link("2,1,3", &["biba.bib2", "biba.bib1", "biba.bib3"]),
+    ],
+    "{x}"
+  );
+  assert_eq!(x.matches("lists=\"refsection1\"").count(), 1, "{x}");
+  assert_eq!(x.matches("lists=\"refsection2\"").count(), 1, "{x}");
+}
+
+/// 77a r4: an entry is digested once per list that prints it. The hidden (`ltx_nodisplay`) list holds only the entries
+/// no list printed (r3 rebuilt every entry and dropped the printed ones when the bibliography was built, raising their
+/// errors twice). The `.bbl` titles of the two books carry a `\PackageError` on purpose. pdflatex + biber: `type=book`
+/// 2 errors, References [1] goossens [2] knuth; `nottype=book` 0 errors, References [3] lamport [4] mittelbach.
+/// Pinned residual: under `nottype=book` the hidden list builds the two books, so their citations resolve, and raises
+/// their 2 errors (pdflatex never typesets them). Review probes e1 (r3: 4 errors), e3. Repros
+/// `tools/perfect_kernel/repros/index-bib/biblatex_filtered_{entries_digested_once,out_entries_errors}.tex`.
+#[test]
+fn biblatex_hidden_list_holds_only_unprinted_entries() {
+  for (fixture, printed, hidden) in [
+    (
+      "biblatex_filtered_entries_digested_once",
+      [("1", "goossens"), ("2", "knuth")],
+      [("3", "lamport"), ("4", "mittelbach")],
+    ),
+    (
+      "biblatex_filtered_out_entries_errors",
+      [("3", "lamport"), ("4", "mittelbach")],
+      [("1", "goossens"), ("2", "knuth")],
+    ),
+  ] {
+    let (x, log) =
+      convert_and_post_contrib_expecting(&format!("tests/cluster_regressions/{fixture}.tex"), 2);
+    assert_eq!(
+      latexml::util::test::error_count(&log),
+      2,
+      "{fixture}\n{log}"
+    );
+    assert_eq!(
+      lines_with(&log, "Error:", "Package xx Error: boomA"),
+      1,
+      "{fixture}\n{log}"
+    );
+    assert_eq!(
+      lines_with(&log, "Error:", "Package xx Error: boomB"),
+      1,
+      "{fixture}\n{log}"
+    );
+    assert_eq!(warnings(&log), 0, "{fixture}\n{log}");
+    assert_eq!(cites(&x), vec!["3,2,1,4"], "{fixture}\n{x}");
+    assert_eq!(
+      bib_items(&x),
+      items_of(&[("References", &printed[..])]),
+      "{fixture}\n{x}"
+    );
+    let hidden: Vec<(String, String)> = hidden
+      .iter()
+      .map(|(n, key)| (n.to_string(), key.to_string()))
+      .collect();
+    assert_eq!(hidden_bib_items(&x), hidden, "{fixture}\n{x}");
+  }
+}
+
+/// 77a r4: a list filtered by categories digests only the entries it keeps. Its entries wait for the end of the document,
+/// when every `\addtocategory` is filed (biblatex files them through the `.aux`), and are built in place if they pass
+/// (latexml_core `defer_print`, list `biblatex@category`); r3 digested every entry and decided when the bibliography
+/// was built (6 errors: four in `Sel`, none kept, two more in the hidden list). pdflatex + biber: 3 errors (boomB in
+/// Sel, boomA and boomB in All), Sel [2] knuth, All [1]-[4]. Witnesses arXiv 2405.19762, 2406.00136. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_category_list_digests_selected.tex`.
+#[test]
+fn biblatex_category_list_builds_only_selected_entries() {
+  let (x, log) = convert_and_post_contrib_expecting(
+    "tests/cluster_regressions/biblatex_category_list_digests_selected.tex",
+    3,
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 3, "{log}");
+  assert_eq!(
+    lines_with(&log, "Error:", "Package xx Error: boomA"),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    lines_with(&log, "Error:", "Package xx Error: boomB"),
+    2,
+    "{log}"
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["3,2,1,4"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Sel", &[("2", "knuth")]),
+      ("All", &[
+        ("1", "goossens"),
+        ("2", "knuth"),
+        ("3", "lamport"),
+        ("4", "mittelbach")
+      ]),
+    ]),
+    "{x}"
+  );
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+}
+
+/// 77a r4: a `.bib` field `labelnumber` is no label outside biblatex (make_bibliography.rs `given_number` reads it only
+/// in a biblatex bibliography); r3 printed lamport's `labelnumber={9}` as [9] under natbib/plainnat. pdflatex + bibtex:
+/// "Text [2, 3, 1]." [1] goossens [2] knuth [3] lamport. Review probe nonblx/n1. Repro
+/// `tools/perfect_kernel/repros/index-bib/natbib_labelnumber_field_is_no_label.tex`.
+#[test]
+fn natbib_labelnumber_field_is_no_label() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/natbib_labelnumber_field_is_no_label.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["2,3,1"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("1", "goossens"),
+      ("2", "knuth"),
+      ("3", "lamport")
+    ])]),
+    "{x}"
+  );
+}
+
+/// 77a r5: a `.bib` field `shorthand` is data outside biblatex. biblatex's label fields (`shorthand`, `labelalpha`)
+/// are digested by handlers the biblatex binding defines (biblatex_sty.rs, with the BibTeX pool's loading); r4 defined
+/// `\bib@field@default@shorthand` in the pool for every route, so natbib + plainnat digested
+/// `shorthand={\undefinedmacro TB}` and raised `Error:undefined:\undefinedmacro`. As in Perl (BibTeX.pool
+/// `\bib@field@default@default`) the field is raw `bib-data`. pdflatex + bibtex 0 errors: "X [Knuth, 1984]." Review
+/// probe n5. Repro `tools/perfect_kernel/repros/index-bib/natbib_shorthand_field_is_raw_data.tex`.
+#[test]
+fn natbib_shorthand_field_is_raw_data() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/natbib_shorthand_field_is_raw_data.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cite_links(&x),
+    vec![("1984".to_string(), vec!["bib.bib1".to_string()])],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[("Knuth (1984)", "knuth")])]),
+    "{x}"
+  );
+  // The BibTeX reader without biblatex (the `.bib` converted on its own): the field is the bare `bib-data` of its
+  // source text, at 0 errors.
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::copy(
+    "tests/cluster_regressions/natbib_shorthand_field_is_raw_data.bib",
+    workdir.path().join("t.bib"),
+  )
+  .expect("copy the .bib");
+  let output = std::process::Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    .args(["t.bib", "--dest", "t.xml", "--nocomments", "--timeout=110"])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  assert_eq!(latexml::util::test::error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warnings(&stderr), 0, "{stderr}");
+  let bib = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+  assert_eq!(
+    bib
+      .matches(r#"<bib-data role="shorthand">\undefinedmacro TB</bib-data>"#)
+      .count(),
+    1,
+    "{bib}"
+  );
+}
+
+/// 77a r5: a `.bib` field `labelalpha` is no label outside biblatex (make_bibliography.rs `given_label` reads
+/// `labelalpha`/`extraalpha`/`shorthand` only in a biblatex bibliography, as `given_number` reads `labelnumber`). r4
+/// printed natbib's [1] Goossens [Knu84] Knuth and cited "[, 1]". pdflatex + bibtex: "X [2, 1]." [1] goossens
+/// [2] knuth. Review probe n6. Repro `tools/perfect_kernel/repros/index-bib/natbib_labelalpha_field_is_no_label.tex`.
+#[test]
+fn natbib_labelalpha_field_is_no_label() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/natbib_labelalpha_field_is_no_label.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cite_links(&x),
+    vec![("2,1".to_string(), vec![
+      "bib.bib1".to_string(),
+      "bib.bib2".to_string()
+    ])],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[("1", "goossens"), ("2", "knuth")])]),
+    "{x}"
+  );
+}
+
+/// 77a r5: a citation after `\end{refsection}` is refsection 0's and links to the default list, and the `refsegment`
+/// environment opens a segment and prints nothing (biblatex.sty:10902-10918; `\refsegment` is a no-op as
+/// `\newrefsegment` is — r4 had no `\refsegment`: `Error:undefined:{refsegment}`). pdflatex + biber 0 errors:
+/// "One [2, 3]. Seg [1]." S1 [1] goossens [2] knuth [3] lamport; "Zero [1]." S0 [1] lamport. Review probe q5. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_refsection_zero_after_refsection.tex`.
+#[test]
+fn biblatex_refsection_zero_after_refsection() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_refsection_zero_after_refsection.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("S1", &[("1", "goossens"), ("2", "knuth"), ("3", "lamport")]),
+      ("S0", &[("1", "lamport")]),
+    ]),
+    "{x}"
+  );
+  let link = |text: &str, ids: &[&str]| {
+    (
+      text.to_string(),
+      ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+    )
+  };
+  assert_eq!(
+    cite_links(&x),
+    vec![
+      link("2,3", &["bib.bib2", "bib.bib3"]),
+      link("1", &["bib.bib1"]),
+      link("1", &["biba.bib1"]),
+    ],
+    "{x}"
+  );
+}
+
+/// 77a r5: category lists inside `\newrefsection`. Each refsection numbers its datalist once, and each list prints the
+/// entries of its own refsection the (whole-document) category selects: knuth, filed in refsection 2, is Cat1's too.
+/// pdflatex + biber 0 errors: "One [1, 2]." Cat1 [1] knuth, Rest1 [2] lamport; "Two [1, 3, 2]." Cat2 [3] knuth,
+/// Rest2 [1] web [2] goossens. Review probe q4. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_category_lists_in_newrefsection.tex`.
+#[test]
+fn biblatex_category_lists_in_newrefsection() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_category_lists_in_newrefsection.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Cat1", &[("1", "knuth")]),
+      ("Rest1", &[("2", "lamport")]),
+      ("Cat2", &[("3", "knuth")]),
+      ("Rest2", &[("1", "web"), ("2", "goossens")]),
+    ]),
+    "{x}"
+  );
+  let link = |text: &str, ids: &[&str]| {
+    (
+      text.to_string(),
+      ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+    )
+  };
+  assert_eq!(
+    cite_links(&x),
+    vec![
+      link("1,2", &["bib.bib1", "biba.bib1"]),
+      link("1,3,2", &["bibc.bib1", "bibb.bib1", "bibc.bib2"]),
+    ],
+    "{x}"
+  );
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+}
+
+/// 77a r6: biblatex's `\bibliographystyle` is ignored, its error reported as a Warning (blx-compat.def:13-17; 64zf;
+/// biblatex_sty.rs). The
+/// kernel's, left after `\printbibliography` by a natbib template, rewrote the bibliography's `bibstyle` to `plain`,
+/// so the list was no longer a biblatex one and lost its alphabetic labels and shorthand (r5: [1]-[5], cited
+/// "[5, 2, 1, 3, 4]", 0 errors). pdflatex + biber 1 error: "X [Knu84; Böt01; Balbes & Dwinger; Goo94a; Goo94b]."
+/// (`,` here where biblatex prints `;`, an existing gap). Review probe bs/a_alphabetic. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_bibliographystyle_ignored.tex`.
+#[test]
+fn biblatex_bibliographystyle_is_ignored_with_a_warning() {
+  let (x, log) = convert_and_post_contrib_expecting(
+    "tests/cluster_regressions/biblatex_bibliographystyle_ignored.tex",
+    0,
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Warning:",
+      "Package biblatex Warning: '\\bibliographystyle' invalid for 'biblatex'"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(warnings(&log), 1, "{log}");
+  assert_eq!(
+    cite_links(&x),
+    vec![(
+      "Knu84,Böt01,Balbes &amp; Dwinger,Goo94a,Goo94b".to_string(),
+      ["bib.bib5", "bib.bib2", "bib.bib1", "bib.bib3", "bib.bib4"]
+        .iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<_>>()
+    )],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("Balbes &amp; Dwinger", "balbes"),
+      ("Böt01", "boet"),
+      ("Goo94a", "goossens"),
+      ("Goo94b", "goossens2"),
+      ("Knu84", "knuth"),
+    ])]),
+    "{x}"
+  );
+  assert!(x.contains(r#"bibstyle="biblatex"#), "{x}");
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+}
+
+/// 77a r6: on the `.bib` route (biblatex without a `.bbl`, the BibTeX reader's entries) an entry with a `shorthand`
+/// takes no number, as on the `.bbl` route: the list numbers only the entries that print one
+/// (make_bibliography.rs `number_entry`); the ids are the entries' own (`bib.bib<n>`, in citation order). r5 printed
+/// `[Balbes & Dwinger] [2] [3] [4] [5]`, cited "[5, 2, Balbes & Dwinger, 3, 4]". pdflatex + biber 0 errors:
+/// "X [4, 1, Balbes & Dwinger, 2, 3]."; [Balbes & Dwinger] balbes [1] boet [2] goossens [3] goossens2 [4] knuth.
+/// Review probe bibroute/b_numeric. Repro `tools/perfect_kernel/repros/index-bib/biblatex_bib_route_shorthand_unnumbered.tex`.
+#[test]
+fn biblatex_bib_route_shorthand_takes_no_number() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_bib_route_shorthand_unnumbered.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cite_links(&x),
+    vec![(
+      "4,1,Balbes &amp; Dwinger,2,3".to_string(),
+      ["bib.bib1", "bib.bib2", "bib.bib3", "bib.bib4", "bib.bib5"]
+        .iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<_>>()
+    )],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("Balbes &amp; Dwinger", "balbes"),
+      ("1", "boet"),
+      ("2", "goossens"),
+      ("3", "goossens2"),
+      ("4", "knuth"),
+    ])]),
+    "{x}"
   );
 }

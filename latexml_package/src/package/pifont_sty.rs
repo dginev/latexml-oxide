@@ -80,9 +80,14 @@ LoadDefinitions!({
   DefMacro!("\\Piautolist{}{}", "\\lx@defpiautolabel{#1}{#2}\\enumerate");
   DefMacro!("\\endPiautolist", "\\endenumerate");
 
-  // Don't know what to do with these.
-  def_primitive_noop("\\Piline{}{Number}")?;
-  def_primitive_noop("\\Pifill{}{Number}")?;
+  // pifont.sty:30-34: `\Pifill` fills the line with the symbol (`\leaders`), `\Piline` sets such a
+  // fill as a paragraph of its own. Perl's no-ops (pifont.sty.ltxml:49-50) dropped the symbols and
+  // the paragraph breaks.
+  RawTeX!(r"\newcommand{\Pifill}[2]{\leavevmode
+  \leaders\hbox{\makebox[0.2in]{\Pisymbol{#1}{#2}}}\hfill
+  \kern\z@}
+\newcommand{\Piline}[2]{\par\noindent\hspace{0.5in}\Pifill{#1}{#2}%
+   \hspace{0.5in}\kern\z@\par}");
 
   // Dingbats shortcuts using pzd encoding
   DefMacro!("\\ding{}", "\\Pisymbol{pzd}{#1}");
@@ -92,7 +97,7 @@ LoadDefinitions!({
   DefMacro!("\\dingautolist", "\\Piautolist{pzd}");
   DefMacro!("\\enddingautolist", "\\endPiautolist");
 
-  // Don't know what to do with these.
-  def_primitive_noop("\\dingline{Number}")?;
-  def_primitive_noop("\\dingfill{Number}")?;
+  // pifont.sty:57-58.
+  RawTeX!(r"\def\dingfill#1{\Pifill{pzd}{#1}}
+\def\dingline#1{\Piline{pzd}{#1}}");
 });

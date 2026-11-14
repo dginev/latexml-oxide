@@ -1,0 +1,17 @@
+% witness: 2608.14133 (1,890 letters upright), 2608.31026, 2605.03549, 2604.00146, 2607.19982, 2606.05381 (theorem
+%          bodies), 2604.16675; rev77u finding 1 (repros msf4/msf5)
+% oracle:  pdflatex 0 errors; every math letter CMMI10 (y, alpha, c italic), \mathsf CMSS10 in \emph, \textbf,
+%          \textit and the theorem alike; the text CMSS10/CMSSI10/CMSSBX10
+% engines: rust 77u r2 `<mi mathvariant="normal">` for y, alpha, H, G in the italic/bold text (each token's font was
+%          written relative to the enclosing `sansserif italic` text: "serif"); perl n/a (no `\familydefault`)
+% expect:  0 errors, 0 warnings; y, alpha a plain `<mi>`, \mathsf letters sans-serif (U+1D5A0 block), `\mathrm{c}`
+%          `mathvariant="normal"`, wherever the formula stands
+% status:  RED (77u r2) -> GREEN (77u r3: math token fonts relative to the math default, document.rs finalize;
+%          the MathML context font stops at the Math, presentation.rs)
+\documentclass{article}
+\renewcommand{\familydefault}{\sfdefault}
+\newtheorem{thm}{Theorem}
+\begin{document}
+A \emph{x $y+\alpha$}. B \textbf{y $\alpha+\mathsf{H}$}. C \textit{z $\mathsf{G}$}. D $y+\mathsf{K}$.
+\begin{thm} In theorem $y+\mathrm{c}$. \end{thm}
+\end{document}

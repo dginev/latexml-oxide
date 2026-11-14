@@ -154,6 +154,8 @@
   <xsl:template match="ltx:glossarydefinition"/>
 
   <xsl:preserve-space elements="ltx:glossaryref"/>
+  <!-- A location-only reference (glossaries' \glsadd) prints nothing. -->
+  <xsl:template match="ltx:glossaryref[@show='none']" priority="2"/>
   <xsl:template match="ltx:glossaryref[@href]">
     <xsl:param name="context"/>
     <xsl:element name="a" namespace="{$html_ns}">

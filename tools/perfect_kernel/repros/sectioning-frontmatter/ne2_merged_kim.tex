@@ -1,0 +1,17 @@
+% mechanism: the reading's surname-first rule (`resolver/lines.rs`, `Santucho, V.`) joins initials after a comma to the
+%   name before only where they end their piece: a name a gap or a layout joins to them (`next_name_joins`) makes them a
+%   name of its own
+% witness: cond-mat9905290 (=2: "Yongmin Kim * , F. M. Munteanu" one creator, merged_creators)
+% oracle:  pdflatex 0 errors; "Yongmin Kim∗ , F. M. Munteanu∗,† , C. H. Perry∗,† , D. G. Rickel∗"
+% engines: rust =2 (int152c): 1 error, 3 creators; rust off (int152c): 5 creators, the † affiliation on a nameless one
+% expect:  0 errors, 0 warnings, 4 creators, each with the affiliations its marks request, off and =2
+% status:  RED (int152c) -> GREEN (perfect_kernel_batchne2::initials_a_thin_space_joins_are_a_name_of_their_own)
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Yongmin\, Kim$^*$, F. M.\, Munteanu$^{*,\dag}$, C. H.\, Perry$^{*,\dag}$, D. G.\, Rickel$^*$}
+\affiliation{$^*$Lab A, Los Alamos\\ $^{\dag}$Dept B, Boston}
+\maketitle
+Text.
+\end{document}

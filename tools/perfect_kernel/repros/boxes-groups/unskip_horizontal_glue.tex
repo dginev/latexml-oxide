@@ -1,0 +1,62 @@
+% TeX's `\unskip` removes the last node of the current list when it is glue (tex.web §1105-1106 `delete_last`), and
+% `\lastskip` reads it (§424). In horizontal mode an interword space is glue (§1041), as are `\ `, `\quad`/`\qquad`/
+% `\enskip`, `\hskip`, `\hfil`/`\hfill`, `~` (a penalty, then glue) and `\hspace`; `\kern`, `\,`, `\thinspace`,
+% `\enspace` and `\/` are kerns. Perl's (and Rust's before 59z) `\unskip` removed only `isSkip` items, which only
+% `\hskip`/`\vskip` were, so `a \unskip,` kept the space before the comma (KNOWN_PERL_ERRORS #436): elsarticle's
+% `\sep` keywords "alpha , beta", `\def\and{\unskip{}, \ignorespaces}` author lists "Alice , Bob", amsmath `\tag{A }`.
+% Design agent_reports/2026-10-02_unskip_glue_design.md. Guard box_primitives::unskip_horizontal_glue.
+% oracle:  pdflatex 0 errors: [a,] for 01-06, 10-12, 14, 18, 20-22; 07 [a 1.66672pt]; 08 [a 2.0pt]; 09 [f0.77779pt];
+%   13 [13]; 15 [a 3.33333pt plus 1.66666pt minus 1.11111pt]; 16 [a 10.00002pt]; 17 [a10000]; 19 [a 3.0pt];
+%   23 [a 5.0pt]; 24 [a 0.0pt plus 1.0fill]; 25 [a,]; 26 [a 1.66672pt]; 27 [a-1.66672pt]; 28-29 [a 2.22198pt];
+%   30 [a 2.77695pt]; 31 [a-1.66672pt]; 32 [a b]; 33-34, 36 [a 3.33333pt]; 35 [a 3.91663pt]
+% rows:    01-08, 10-14, 16, 18, 22-23 GREEN 59z (glue marked `isSkip` where it is made, kerns `isKern`)
+%          25-31 GREEN 59z (LaTeX's `\thinspace` family and text `\:` `\;` `\!` are `\tmspace` kerns of em widths,
+%            latex.ltx:15669-15681); 32 GREEN 59z (`\medspace` is `\:`, U+2005: Perl wrote nothing, joining a and b)
+%          33-35 GREEN 59z (`\ ` and `\<TAB>` are the font's interword glue, not Perl's fixed 0.5em and 1em)
+%          09 RED (`\/`'s width, the italic correction, is not computed: 0.0pt)
+%          15, 24 RED (`\lastskip` is a dimension here: no stretch or shrink)
+%          17 RED (a horizontal penalty leaves no item: `\lastpenalty` 0; KNOWN_PERL_ERRORS #419 residual)
+%          19 RED (`\hspace*` ends with `\z@skip`, which `\unskip` takes, leaving the 3pt glue for `\lastskip`)
+%          20-21 RED (a group's list, `{a }` or `\textbf{a }`, ends in a list or a body here, not on the paragraph's
+%            list: `\unskip` does not reach its space — TeX's groups add no list level)
+% status:  GREEN rows asserted; RED rows wait for their roots
+\documentclass{article}
+\begin{document}
+\noindent 01[a \unskip,]\par
+\noindent 02[a\ \unskip,]\par
+\noindent 03[a\quad\unskip,]\par
+\noindent 04[a\hskip3pt\unskip,]\par
+\noindent 05[a\hfil\unskip,]\par
+\noindent 06[a~\unskip,]\par
+\noindent 07[a\,\unskip\the\lastkern]\par
+\noindent 08[a\kern2pt\unskip\the\lastkern]\par
+\noindent 09[f\/\unskip\the\lastkern]\par
+\noindent 10[\mbox{a} \unskip,]\par
+\noindent 11[$a$ \unskip,]\par
+\noindent 12[a %
+\unskip,]\par
+\unskip[13]\par
+\noindent 14[a \hskip3pt\unskip\unskip,]\par
+\noindent 15[a \the\lastskip]\par
+\noindent 16[a\quad\the\lastskip]\par
+\noindent 17[a~\unskip\the\lastpenalty]\par
+\noindent 18[a\hspace{3pt}\unskip,]\par
+\noindent 19[a\hspace*{3pt}\unskip\the\lastskip]\par
+\noindent 20[{a }\unskip,]\par
+\noindent 21[\textbf{a }\unskip,]\par
+\noindent 22[a\enskip\unskip,]\par
+\noindent 23[a\enspace\unskip\the\lastkern]\par
+\noindent 24[a\hfill\the\lastskip]\par
+\noindent 25[a\thinspace\unkern,]\par
+\noindent 26[a\thinspace\the\lastkern]\par
+\noindent 27[a\negthinspace\the\lastkern]\par
+\noindent 28[a\medspace\the\lastkern]\par
+\noindent 29[a\:\the\lastkern]\par
+\noindent 30[a\;\the\lastkern]\par
+\noindent 31[a\!\the\lastkern]\par
+\noindent 32[a\medspace b]\par
+\noindent 33[a\ \dimen0=\lastskip\the\dimen0]\par
+\noindent 34[a\	\dimen0=\lastskip\the\dimen0]\par
+\noindent 35[{\large a\ \dimen0=\lastskip\the\dimen0}]\par
+\noindent 36[a \dimen0=\lastskip\the\dimen0]\par
+\end{document}

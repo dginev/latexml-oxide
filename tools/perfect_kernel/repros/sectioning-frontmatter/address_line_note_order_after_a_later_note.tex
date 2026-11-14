@@ -1,0 +1,16 @@
+% RED (review rev101b finding 1, synthetic; introduced by 101b, no corpus witness in its 1,520-paper A/B): an address
+% line's notes are made the document's pubnotes after the block's calls (`dispatch.rs:1844`, `affiliations.rs:200`
+% `calls.extend(address_notes)`), while a note on a LATER affiliation line is added in place, so it comes first.
+% fix:     add the address line's notes where the line is placed (the group's `after_bodies`; next to the run in
+%          `entry_calls`), so the block's notes keep print order.
+% oracle:  pdflatex 0 errors; footnotes print ∗ First note., † Second note.
+% engines: rust int129a (101b) = <pubnote>Second note.</pubnote><pubnote>First note.</pubnote>; base (int128b) First, Second
+% expect:  0 errors, 0 warnings; ann@x.org on Ann Able, bob@y.org on Bob Baker; pubnotes First note. then Second note.
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker\\ ann@x.org, bob@y.org\thanks{First note.}\\ Univ X, City\thanks{Second note.}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% Shape E in llncs's one shared `\institute` (no `\inst` marks, the shared row, `shared_row::row_email_calls`): the
+% address reader writes the list out, each address the author it spells (`email_addresses`, `write_out_unspaced_lists`).
+% witness: 2112.00969 (the list's shape)
+% oracle:  pdflatex 0 errors: "ann@a.edu; dzyang,ashishbshah@fb.com"
+% engines: rust int130a = 0 errors; the whole line one address of a nameless creator
+% expect:  0 errors, 0 warnings; each author: Meta AI + the address they spell; no nameless creator
+% status:  RED (int130a) -> GREEN (103a)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Dan Yang \and Ash Shah}
+\institute{Meta AI\\
+\email{ann@a.edu; dzyang,ashishbshah@fb.com}}
+\maketitle
+Text.
+\end{document}

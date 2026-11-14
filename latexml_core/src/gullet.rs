@@ -4,7 +4,6 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
-use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
 
 // use std::mem;
@@ -22,7 +21,7 @@ use crate::{
     mudimension::MuDimension,
     muglue::MuGlue,
     number::Number,
-    numeric_ops::{NumericOps, UNITY, fixpoint, fixpoint_unit},
+    numeric_ops::{MAX_DIMEN, MAX_INTEGER, NumericOps, UNITY, fixpoint, fixpoint_unit_checked},
     object::Object,
     store::Stored,
   },
@@ -37,9 +36,13 @@ use crate::{
   tokens::Tokens,
 };
 
-static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
-static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
-static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
+/// The digit classes of tex.web §444-445 (Perl `readDigits`' `[0-9]`,
+/// `[0-7]`, `[0-9A-F]` ranges). Plain predicates, not regexes: every digit of
+/// every number scan passes through `read_digits`, and a regex match there
+/// was ~11% of a pgfmath-heavy run (pgf-interference-en, 2026-09-23 profile).
+fn is_decimal_digit(c: char) -> bool { c.is_ascii_digit() }
+fn is_octal_digit(c: char) -> bool { ('0'..='7').contains(&c) }
+fn is_hex_digit(c: char) -> bool { c.is_ascii_digit() || ('A'..='F').contains(&c) }
 
 /// Cached snapshot of `LXML_TRACE_GROUP_END` env var, sampled exactly
 /// once per process. Inlining `std::env::var(...)` on the hot
@@ -51,6 +54,28 @@ static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 /// static-init time; subsequent checks are a free atomic load.
 pub static TRACE_GROUP_END: Lazy<bool> =
   Lazy::new(|| std::env::var("LXML_TRACE_GROUP_END").is_ok());
+
+/// Cached `LATEXML_CSNAME_TRACE` flag + the shared lookahead dump used by
+/// both csname-assembly error sites: reads up to 40 tokens, prints them,
+/// and puts them back (a counted-read/retracting-unread round trip — align
+/// ledger symmetric).
+pub static CSNAME_TRACE: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_CSNAME_TRACE").is_ok());
+
+fn csname_trace_lookahead(tag: &str, cs: &str, bad: &Token) -> Result<()> {
+  let mut ahead = Vec::new();
+  for _ in 0..40 {
+    match read_token()? {
+      Some(t) => ahead.push(t),
+      None => break,
+    }
+  }
+  eprintln!(
+    "CSNAME-TRACE({tag}) partial={cs:?} bad={bad} ahead={}",
+    Tokens::new(ahead.clone())
+  );
+  unread_vec(ahead);
+  Ok(())
+}
 
 // `\noexpand`'d tokens are represented per-token by the `\special_relax` family
 // (`Token::is_noexpand_family` / `token::noexpand_family`): the shadowed token's
@@ -110,17 +135,140 @@ pub enum BalancedBoundary {
   Transparent,
   /// The mouth is a self-contained input. A balanced read stops at its end, as
   /// Perl always does — an unbalanced argument loses the rest of *this* mouth
-  /// and nothing more.
+  /// and nothing more. An Opaque mouth that is also a file level (catchfile's
+  /// opener) gets TeX's file-end recovery, like any file
+  /// ([`recover_at_file_end`]).
   Opaque,
+}
+
+/// What the scanner is reading, for the recovery TeX makes when a file ends in
+/// the middle of it: tex.web §305 `scanner_status` (with `warning_index`, the
+/// command it names). A scan that owns a status sets it for its duration with
+/// [`set_scanner_status`] and restores the enclosing one after, as tex.web
+/// saves and restores it (§389 `macro_call`, §473 `scan_toks`); every nested
+/// read that sets none inherits it. [`recover_at_file_end`] consults it.
+///
+/// tex.web's `skipping` (conditional text) is not modelled: a skip that runs
+/// off an input level stops there, as Perl's does (`read_next_conditional`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ScannerStatus {
+  /// Not inside any of the scans below: a file's end is not a runaway.
+  #[default]
+  Normal,
+  /// `defining`: a definition body, `\def`/`\edef` (§473 `scan_toks(true, _)`).
+  Defining,
+  /// `matching`: a macro's arguments (§389-391 `macro_call`).
+  Matching,
+  /// `aligning`: an alignment preamble (§777 `init_align`).
+  Aligning,
+  /// `absorbing`: a balanced text, `\message`, `\write`, `\toks=`,
+  /// `\detokenize` … (§473 `scan_toks(false, _)`, eTeX `scan_general_text`).
+  Absorbing,
+}
+
+impl ScannerStatus {
+  /// The word tex.web §339 prints after "while scanning".
+  fn scanning_what(self) -> &'static str {
+    match self {
+      ScannerStatus::Normal => "input",
+      ScannerStatus::Defining => "definition",
+      ScannerStatus::Matching => "use",
+      ScannerStatus::Aligning => "preamble",
+      ScannerStatus::Absorbing => "text",
+    }
+  }
+}
+
+/// Why a macro call's arguments are abandoned ([`argument_runaway`]).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Runaway {
+  /// An argument ran off the end of a file (tex.web §338-339; §392 with `long_state=outer_call`): the tokens it had
+  /// read, for [`abandon_runaway_call`].
+  FileEnd(Vec<Token>),
+  /// A non-`\long` macro met `\par` in its argument (§392, §399 with `long_state=call`): the `\par` as read.
+  Paragraph(Token),
+}
+
+/// Restores the enclosing [`ScannerStatus`] (and `warning_index`) when it
+/// drops, on every exit path of the scan that set it, `?` included.
+/// The runaway argument ([`argument_runaway`]) is scoped the same way: a scan
+/// starts without one, and the enclosing scan's comes back when it ends.
+#[must_use = "the scanner status is restored when this guard drops"]
+pub struct ScannerStatusGuard {
+  status:            ScannerStatus,
+  warning_index:     Option<Token>,
+  runaway_argument:  Option<Runaway>,
+  par_ends_argument: bool,
+  ended:             bool,
+}
+
+impl ScannerStatusGuard {
+  /// End the scan now and hand back the macro argument that ran off a file
+  /// inside it, if one did ([`argument_runaway`]): the tokens it had read,
+  /// for [`abandon_runaway_call`]. A `macro_call` abandons itself then
+  /// (tex.web §392; `Expandable::read_call_arguments`).
+  pub fn end_taking_runaway_argument(mut self) -> Option<Runaway> {
+    let mut gullet = GULLET.borrow_mut();
+    gullet.scanner_status = self.status;
+    gullet.warning_index = self.warning_index.take();
+    PAR_ENDS_ARGUMENT.with(|c| c.set(self.par_ends_argument));
+    self.ended = true;
+    std::mem::replace(&mut gullet.runaway_argument, self.runaway_argument.take())
+  }
+}
+
+impl Drop for ScannerStatusGuard {
+  fn drop(&mut self) {
+    if self.ended {
+      return;
+    }
+    // `try_`: a guard dropped while unwinding from a panic that holds the
+    // gullet must not panic again; `initialize_gullet` resets the status.
+    if let Ok(mut gullet) = GULLET.try_borrow_mut() {
+      gullet.scanner_status = self.status;
+      gullet.warning_index = self.warning_index.take();
+      gullet.runaway_argument = self.runaway_argument.take();
+    }
+    PAR_ENDS_ARGUMENT.with(|c| c.set(self.par_ends_argument));
+  }
+}
+
+/// What [`recover_at_file_end`] did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FileEndRecovery {
+  /// Not a runaway: the scan is at [`ScannerStatus::Normal`], or the input
+  /// level that ended is not a file with an enclosing input. The caller keeps
+  /// its own end-of-input behaviour.
+  NotARunaway,
+  /// The file is closed and TeX's recovery tokens are the next input: a `}`
+  /// for a definition or a text, `\cr}` for a preamble. Read on.
+  Inserted,
+  /// A macro argument ran off: the call is abandoned, so the reader stops and
+  /// returns what it has, which the call discards.
+  Abandoned,
 }
 
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
-  pub autoclose: bool,
-  pub mouth:     Mouth,
+  pub autoclose:       bool,
+  pub mouth:           Mouth,
+  /// eTeX `\everyeof`: when this mouth (an `\input` file or a `\scantokens`
+  /// pseudo-file) is exhausted, the CURRENT `\everyeof` register tokens are inserted as
+  /// TOKENS (not retokenized text — l3tl's rescan quarks and xint's
+  /// captures depend on their token identity). Read at CLOSE time, per
+  /// eTeX's file-end evaluation.
+  pub insert_everyeof: bool,
+  /// eTeX's `eof_seen[index]` (tex.web §362 as changed by etex.ch): the
+  /// `\everyeof` payload is inserted ONCE, at this mouth's own level, the
+  /// first time it runs dry — the mouth stays current until the payload is
+  /// read, so a delimited scan inside the pseudo-file sees the payload as
+  /// the file's last tokens and never crosses into the parent stream.
+  /// `\endinput` sets it too (eTeX's `force_eof` ends the file without the
+  /// payload, §362).
+  pub eof_seen:        bool,
   /// See [`BalancedBoundary`]. Only consulted when `autoclose` is set and the
   /// mouth is not a file.
-  pub boundary:  BalancedBoundary,
+  pub boundary:        BalancedBoundary,
   /// Pushback LIFO stack: the "next to read" token is at `pushback.last()`.
   /// Invariant: reading pops from the back; `unread_one` pushes to the back;
   /// `unread_vec` iterates its input in reverse and pushes each — so the
@@ -131,7 +279,89 @@ pub struct MouthRuntime {
   /// hot-path is pure LIFO and VecDeque's push_front/pop_front machinery
   /// (head-pointer + wrap arithmetic) showed up at ~3.3% of total Ir in
   /// callgrind on siunitx-heavy fixtures.
-  pub pushback:  Vec<Token>,
+  pub pushback:        Vec<Token>,
+  /// How short the pushback has been since each input mark taken on this mouth ([`input_mark`]): every shortening of
+  /// it tells the watch ([`PushbackWatch::note_len`]).
+  watch:               PushbackWatch,
+}
+
+/// The input marks' watch on one mouth's pushback ([`input_mark`], [`input_unread_since`]): for each mark taken on the
+/// mouth, the shortest the pushback has been since — no token below a mark's length was read while that is no less
+/// than the length. Kept as runs: the marks from a run's serial up to the next run's share its shortest length, the
+/// serials increasing and the lengths never decreasing towards the top, so a mark costs at most one run and a
+/// shortening of the pushback one comparison, with the top run's length ([`floor`](Self::floor)); no token is copied.
+/// A run whose every mark is read — the pushback more than [`MARK_HELD`] shorter than its shortest mark — is dropped:
+/// its marks answer from the run below, no longer, or from none (read), and the reads below it are fast again.
+#[derive(PartialEq, Debug, Default)]
+struct PushbackWatch {
+  runs:  Vec<WatchRun>,
+  /// the top run's length, 0 when there is none: only a pushback shorter than it changes a run, so the fast read
+  /// (`read_internal_token_checked`) pops only above it and every other shortening tells [`note_len`](Self::note_len)
+  floor: usize,
+}
+
+/// A run of input marks on a [`PushbackWatch`].
+#[derive(PartialEq, Debug, Clone, Copy)]
+struct WatchRun {
+  /// the serial of its first mark
+  serial: u64,
+  /// the shortest the pushback has been since that mark
+  low:    usize,
+  /// the shortest of its marks' lengths: the run is live while the pushback has been at most [`MARK_HELD`] shorter
+  least:  usize,
+}
+
+impl WatchRun {
+  fn live(&self) -> bool { self.low + MARK_HELD >= self.least }
+}
+
+impl PushbackWatch {
+  /// The pushback is `len` tokens long now, shorter than it was.
+  #[inline(always)]
+  fn note_len(&mut self, len: usize) {
+    if len < self.floor {
+      self.lower(len);
+    }
+  }
+
+  /// [`note_len`](Self::note_len) below the floor: the runs longer than `len` become one at `len` (joined to the run
+  /// below when that is at `len` already), dropped when every mark of it is read.
+  #[cold]
+  #[inline(never)]
+  fn lower(&mut self, len: usize) {
+    let keep = self.runs.partition_point(|run| run.low <= len);
+    let mut lowered = self.runs.drain(keep..).reduce(|first, run| WatchRun {
+      least: first.least.min(run.least),
+      ..first
+    });
+    if let Some(run) = lowered.as_mut() {
+      run.low = len;
+    }
+    if let Some(run) = lowered.filter(WatchRun::live) {
+      match self.runs.last_mut() {
+        Some(below) if below.low == len => below.least = below.least.min(run.least),
+        _ => self.runs.push(run),
+      }
+    }
+    self.floor = self.runs.last().map_or(0, |run| run.low);
+  }
+
+  /// A mark `serial` taken with the pushback `len` tokens long: it joins the top run when that run is at `len` (the
+  /// top run is never longer than the pushback).
+  fn mark(&mut self, serial: u64, len: usize) {
+    match self.runs.last_mut() {
+      Some(top) if top.low == len => top.least = len,
+      _ => self.runs.push(WatchRun { serial, low: len, least: len }),
+    }
+    self.floor = len;
+  }
+
+  /// No longer than the shortest the pushback has been since the mark `serial` — that, while the mark's run is live —,
+  /// if a run of this mouth's holds a mark at or before it.
+  fn shortest_since(&self, serial: u64) -> Option<usize> {
+    let after = self.runs.partition_point(|run| run.serial <= serial);
+    after.checked_sub(1).map(|run| self.runs[run].low)
+  }
 }
 
 #[derive(Debug, Default)]
@@ -140,13 +370,24 @@ pub struct Gullet {
   pub mouthstack:           VecDeque<MouthRuntime>,
   pub pending_comments:     VecDeque<Token>,
   pub token_limit:          Option<usize>,
+  /// Bytes of every source file opened so far this conversion — the basis
+  /// of [`scale_token_limit_to_source`].
+  pub source_bytes_total:   usize,
   pub pushback_limit:       Option<usize>,
   pub progress:             usize,
+  /// The value of [`progress`](Self::progress) at which [`read_internal_token_checked`] next has more to do than
+  /// take a token off the pushback: the token limit, the deadline's period, the cycle guard's window. 0 asks for it
+  /// to be worked out on the next read ([`Gullet::next_full_read`]), and a write to any of those fields sets it so.
+  full_read_at:             usize,
+  /// The value of [`progress`](Self::progress) past which a read fails, a budgeted run's ([`read_budget`]).
+  read_budget_at:           Option<usize>,
+  /// A read failed for [`read_budget_at`](Self::read_budget_at).
+  read_budget_spent:        bool,
   /// Token-progress floor above which [`cycle_guard`](Self::cycle_guard)
   /// engages. Defaults to `CYCLE_GUARD_ACTIVATE` (20M). Graphics packages
   /// whose healthy expansion legitimately runs to 100M+ tokens (pgf/tikz/xy)
   /// raise it via [`raise_cycle_guard_activate`] so their streams stay out of
-  /// the per-token fingerprint regime; the 400M `token_limit` remains the hard
+  /// the per-token fingerprint regime; the 1G `token_limit` remains the hard
   /// backstop. `#[derive(Default)]` would zero this (guard-always-on), so it is
   /// set explicitly in the constructor and the per-conversion reset.
   pub cycle_guard_activate: usize,
@@ -170,6 +411,15 @@ pub struct Gullet {
   pub ctx_serial:           u64,
   ctx_next:                 u64,
   ctx_stack:                Vec<u64>,
+  /// The last input mark's serial ([`input_mark`]), never reset: a mark is told from those of another mouth.
+  mark_serial:              u64,
+  /// tex.web `scanner_status` (see [`ScannerStatus`]).
+  scanner_status:           ScannerStatus,
+  /// tex.web `warning_index`: the command a runaway report names.
+  warning_index:            Option<Token>,
+  /// The tokens of a macro argument that ran off the end of a file, as read
+  /// (see [`argument_runaway`]).
+  runaway_argument:         Option<Runaway>,
 }
 
 thread_local! {
@@ -179,7 +429,56 @@ thread_local! {
   /// false-positive was diagnosed).
   static DEBUG_RECENT_TOKENS: RefCell<VecDeque<String>> =
     RefCell::new(VecDeque::with_capacity(512));
+  /// Depth of number/dimension/glue scans in progress (`read_number` & co.).
+  /// tex.web §440ff `scan_int`'s digit/unit/keyword lookahead is pure
+  /// expansion: an alignment tab or row end met there is an UNEXPANDABLE
+  /// token that ends the scan and is re-read by the main loop. Our alignment
+  /// actions live in `read_x_token` (`handle_template`), so without this gate
+  /// `\ifnum1<\nb\\…\fi` inside a p/m tabular cell (tabularcalc.sty:428, a
+  /// macro operand forcing the lookahead) broke the row mid-scan, and the
+  /// false-branch skip then desynchronized the cell ("\noalign cannot be used
+  /// here", then every group close of the table; tabularcalc ×3, floatrow-rus,
+  /// fepslatex ≈ 200 errors; Perl clean). Batch 56bi. The same scan ends
+  /// at a macro that peeks by `\futurelet` (`scan_stops_at_futurelet_peek`).
+  static NUMBER_SCAN_DEPTH: Cell<u32> = const { Cell::new(0) };
+  /// tex.web §389 `long_state=call`: the macro whose arguments are being read is not `\long` and its long-ness is
+  /// TeX's ([`crate::definition::expandable::Expandable::checks_par`]), so a `\par` token in them ends the call
+  /// (§392, §399; [`is_par_ending_argument`]). Set for the argument scan by [`set_scanner_status_checking_par`] and
+  /// restored with the enclosing scan's, so a nested scan has its own.
+  static PAR_ENDS_ARGUMENT: Cell<bool> = const { Cell::new(false) };
 }
+
+/// RAII marker for a number/dimension/glue scan (see `NUMBER_SCAN_DEPTH`).
+/// Every `?`-return and every unwind past a reader runs the drop, so the
+/// depth is back to what it was the moment the scan ends. The eTeX expression
+/// evaluator (`etex.rs`) takes one too, for its own inter-operand reads
+/// (etex.ch `scan_expr` treats a tab/row end the same).
+pub struct NumberScan;
+impl NumberScan {
+  pub fn begin() -> Self {
+    NUMBER_SCAN_DEPTH.with(|c| c.set(c.get() + 1));
+    NumberScan
+  }
+
+  /// TeX never digests inside `scan_int`, but a binding can: calc's
+  /// `\widthof` measures its box while `\makebox[…]`'s width is being
+  /// scanned. The digestion is no part of the scan, so its own reads are at
+  /// depth 0 (its alignment tabs act, its peeking macros peek) until the
+  /// returned guard drops and gives the scan its depth back. Taken by the
+  /// stomach's digestion entries (`stomach::digest`, `digest_next_body`).
+  pub fn suspend() -> NumberScanSuspended {
+    NumberScanSuspended(NUMBER_SCAN_DEPTH.with(|c| c.replace(0)))
+  }
+}
+impl Drop for NumberScan {
+  fn drop(&mut self) { NUMBER_SCAN_DEPTH.with(|c| c.set(c.get().saturating_sub(1))); }
+}
+/// The guard [`NumberScan::suspend`] returns: restores the suspended depth.
+pub struct NumberScanSuspended(u32);
+impl Drop for NumberScanSuspended {
+  fn drop(&mut self) { NUMBER_SCAN_DEPTH.with(|c| c.set(self.0)); }
+}
+fn in_number_scan() -> bool { NUMBER_SCAN_DEPTH.with(|c| c.get() > 0) }
 
 /// Hoisted env probe for the LATEXML_DEBUG_FATAL diagnostics (shared seam in
 /// `common::error`; read once so the per-token hot path pays one bool test).
@@ -221,27 +520,156 @@ macro_rules! gullet_mut {
     (*GULLET).borrow_mut()
   };
 }
+
+/// Enter a scan at `status`, naming `warning_index` (the command TeX's runaway
+/// message names: the macro whose arguments are read, the primitive whose text
+/// is absorbed). tex.web saves and restores the status around such a scan;
+/// the returned guard does the restoring.
+pub fn set_scanner_status(
+  status: ScannerStatus,
+  warning_index: Option<Token>,
+) -> ScannerStatusGuard {
+  set_scanner_status_checking_par(status, warning_index, false)
+}
+
+/// [`set_scanner_status`] for a macro call's arguments, with `checks_par` its macro's
+/// [`crate::definition::expandable::Expandable::checks_par`] (tex.web §389 `long_state`).
+pub fn set_scanner_status_checking_par(
+  status: ScannerStatus,
+  warning_index: Option<Token>,
+  checks_par: bool,
+) -> ScannerStatusGuard {
+  let mut gullet = gullet_mut!();
+  ScannerStatusGuard {
+    status:            std::mem::replace(&mut gullet.scanner_status, status),
+    warning_index:     std::mem::replace(&mut gullet.warning_index, warning_index),
+    runaway_argument:  gullet.runaway_argument.take(),
+    par_ends_argument: PAR_ENDS_ARGUMENT.with(|c| c.replace(checks_par)),
+    ended:             false,
+  }
+}
+
+/// The current [`ScannerStatus`].
+pub fn scanner_status() -> ScannerStatus { gullet!().scanner_status }
+
+/// Whether a macro argument has run off the end of a file and the call is to
+/// be abandoned (see [`FileEndRecovery::Abandoned`]); readers stop at once.
+pub fn argument_runaway() -> bool { gullet!().runaway_argument.is_some() }
+
+/// A reader stopping at a runaway argument puts in front of the runaway
+/// tokens the ones it had read itself, so that [`abandon_runaway_call`] sees
+/// the argument as it was read: a delimited reader's text before a brace group
+/// that ran off, then the group's own.
+pub fn note_runaway_tokens(mut read: Vec<Token>) {
+  if let Some(Runaway::FileEnd(ref mut runaway)) = gullet_mut!().runaway_argument {
+    read.append(runaway);
+    *runaway = read;
+  }
+}
+
+/// Whether `token`, read into a macro argument, ends the call: tex.web §392/§399 `cur_tok=par_token` — the control
+/// sequence named `par`, whatever it means (a `\noexpand`ed one too) — while a non-`\long` macro's arguments are read.
+pub fn is_par_ending_argument(token: &Token) -> bool {
+  PAR_ENDS_ARGUMENT.with(Cell::get) && token.noexpand_shadowed().unwrap_or(*token) == T_CS!("\\par")
+}
+
+/// Abandon the call at the `\par` just read into its argument ([`is_par_ending_argument`]): the readers stop, and
+/// [`abandon_runaway_call`] reports it and puts the `\par` back (tex.web §396).
+pub fn abandon_argument_at_par(par: Token) {
+  gullet_mut!().runaway_argument = Some(Runaway::Paragraph(par));
+}
+
 /// Set the token limit and reset progress. Returns previous (limit, progress) for restoration.
 pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
   let mut g = gullet_mut!();
   let prev = (g.token_limit, g.progress);
   g.token_limit = limit;
   g.progress = 0;
+  g.full_read_at = 0;
   prev
 }
 
 /// Set the pushback limit (maximum pushback stack size before fatal error).
 pub fn set_pushback_limit(limit: Option<usize>) { gullet_mut!().pushback_limit = limit; }
 
-/// The conversion's final token-read progress (for end-of-run telemetry —
-/// the calibration basis for `token_limit` / `CYCLE_GUARD_ACTIVATE`).
-pub fn final_progress() -> usize { gullet!().progress }
+/// How many tokens the gullet has read so far: at the end of a run, the
+/// telemetry basis for `token_limit` / `CYCLE_GUARD_ACTIVATE`; during one, the
+/// input a stretch of digestion consumed, for the stomach's box-cycle guard
+/// (`stomach.rs` `cycle_guard_record`).
+pub fn token_progress() -> usize { gullet!().progress }
+
+/// Count `reads` tokens as read, where a run's reading is known without making it (the frontmatter's rehearsal of a
+/// text it rehearsed before): [`progress`](Gullet::progress) stands where the run would leave it, its limits read again.
+pub fn count_reads(reads: usize) {
+  let mut g = gullet_mut!();
+  g.progress = g.progress.saturating_add(reads);
+  g.full_read_at = 0;
+}
+
+/// A run of digestion's limit on the tokens it reads, until [`ReadBudget::end`]: the read past it fails, and so does
+/// each one after, with an [`ErrorCategory::ReadBudget`](crate::common::error::ErrorCategory) error that is logged
+/// nowhere and latches nothing, so whoever made the run ends it and the document goes on. The title-page check's runs
+/// (latexml_engine sect05.rs `speculative_run_read`): a run's cost is bounded whatever the document's text does. The count is
+/// the one [`progress`](Gullet::progress) keeps; the token limit, the deadline and the cycle guard read theirs as before.
+#[must_use]
+pub fn read_budget(reads: usize) -> ReadBudget {
+  let mut g = gullet_mut!();
+  let start = g.progress;
+  g.read_budget_at = Some(start.saturating_add(reads));
+  g.read_budget_spent = false;
+  g.full_read_at = 0;
+  ReadBudget { start, reads }
+}
+
+/// What [`read_budget`] began; the budget is off once this is ended or dropped.
+pub struct ReadBudget {
+  start: usize,
+  reads: usize,
+}
+
+impl ReadBudget {
+  /// The run is over: how many tokens it read, and whether it read all it may. A run the budget ended counts as read
+  /// what it read, as a run that finished does: the failed reads, and an inner [`reading_from_mouth`]'s reset of the
+  /// count on the way out, leave no mark on [`progress`](Gullet::progress). A run that ended otherwise keeps the count
+  /// as it found it. (A failed run's reset is that path's own.)
+  pub fn end(self) -> ReadBudgetEnd {
+    let mut g = gullet_mut!();
+    let at = g.read_budget_at.unwrap_or(usize::MAX);
+    let left = at.saturating_sub(g.progress);
+    let reads = self.reads.saturating_sub(left);
+    let over = g.read_budget_spent;
+    if over {
+      g.progress = self.start.saturating_add(reads);
+    }
+    drop(g);
+    ReadBudgetEnd { reads, over }
+  }
+}
+
+impl Drop for ReadBudget {
+  fn drop(&mut self) {
+    let mut g = gullet_mut!();
+    g.read_budget_at = None;
+    g.read_budget_spent = false;
+    g.full_read_at = 0;
+  }
+}
+
+/// What [`ReadBudget::end`] tells.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReadBudgetEnd {
+  /// the tokens the run read
+  pub reads: usize,
+  /// it read all it may, and a read failed
+  pub over:  bool,
+}
 
 /// Restore the token limit and progress from a previous set_token_limit call.
 pub fn restore_token_limit(saved: (Option<usize>, usize)) {
   let mut g = gullet_mut!();
   g.token_limit = saved.0;
   g.progress = saved.1;
+  g.full_read_at = 0;
 }
 
 macro_rules! runtime {
@@ -250,15 +678,35 @@ macro_rules! runtime {
   };
 }
 
-/// Initialize (or reset, if reentrant) a Gullet to its default empty state
 /// The runaway-token BACKSTOP's baseline: real runaways are cut far earlier
 /// by the cycle guards / pushback limit / byte budget, so erring high costs
-/// no detection latency. 400M = 5× the heaviest measured legit arXiv paper
-/// (math0402448, amsart + xy-pic, 80.2M end-of-run progress under the
+/// no detection latency. The heaviest measured legit arXiv paper is
+/// math0402448 (amsart + xy-pic, 80.2M end-of-run progress under the
 /// 2026-06-10 all-three-reader-loop accounting; the old "80M" figure
-/// predated that multi-counting). `LATEXML_TOKEN_LIMIT` overrides
-/// (0 disables). Book-scale sources raise it proportionally per conversion
-/// — see [`scale_token_limit_to_source`].
+/// predated that multi-counting) and the former 400M ceiling was 5× that —
+/// but the TeX Live doc corpus goes higher with NO loop: tikzlings-doc
+/// (scrartcl, ~250 raw-pgf animal pictures through tcolorbox listings,
+/// each box typeset twice) completes at a measured 444.5M
+/// (`Debug:gullet:progress`, 2026-09-01, 30 KB main source so the
+/// per-byte scaling never engaged), and finite O(n²) macro work goes
+/// further still: circularglyphs-sample (xstring `\StrSubstitute` ×34 over
+/// 600-char phrases, ~2.5G) and source2e (l3doc crossrefs over 46k
+/// codelines, ~2G) both COMPLETE under `LATEXML_TOKEN_LIMIT=0` within the
+/// 300 s budget where Perl times out, yet died at the former 1G with a
+/// false "infinite loop?". 4G; raised, never lowered (a genuine loop is
+/// still bounded — by this ceiling, by the `--timeout` wall clock, by the
+/// cycle guards, and by the RSS cap). `LATEXML_TOKEN_LIMIT` overrides
+/// (0 disables). Book-scale sources raise it proportionally per
+/// conversion — see [`scale_token_limit_to_source`].
+/// 20e9 = the 300 s sweep wall at the measured 65 M tok/s ceiling: at 4e9
+/// the backstop fired at 61 s on lie-hasse's legitimate E8 poset figure
+/// (completes at ~8e9 in 124 s with a 304 KB picture; pdflatex 83 s) and
+/// mislabelled it "infinite loop" with a 39-byte XML. True loops are still
+/// bounded by the wall clock, the cycle guards and the RSS cap.
+pub const DEFAULT_TOKEN_LIMIT: usize = 20_000_000_000;
+
+/// Initialize the runaway-token backstop from the environment, falling back to
+/// [`DEFAULT_TOKEN_LIMIT`].
 fn default_token_limit() -> Option<usize> {
   match std::env::var("LATEXML_TOKEN_LIMIT")
     .ok()
@@ -266,38 +714,63 @@ fn default_token_limit() -> Option<usize> {
   {
     Some(0) => None,
     Some(n) => Some(n),
-    None => Some(400_000_000),
+    None => Some(DEFAULT_TOKEN_LIMIT),
   }
 }
 
-/// Scale the runaway-token backstop to the SOURCE size. The 400M baseline is
+/// Scale the runaway-token backstop to the SOURCE size — cumulatively, over
+/// every file the conversion opens. The [`DEFAULT_TOKEN_LIMIT`] baseline is
 /// sized for arXiv-scale inputs; a book-scale source legitimately expands
-/// past it (witness: a 131 MB flat-index compilation died at 400M
-/// mid-digestion with no loop in sight, at a measured ~3+ tokens/byte and
-/// paper-class documents measured up to ~160 tokens/byte). ×200/byte keeps
-/// the ceiling finite — a true infinite loop still trips — while never
-/// LOWERING the baseline for small documents. An explicit
-/// `LATEXML_TOKEN_LIMIT` wins unchanged (including 0 = disabled).
+/// past it (witness: a 131 MB flat-index compilation died at the then-400M
+/// ceiling mid-digestion with no loop in sight, at a measured ~3+
+/// tokens/byte and paper-class documents measured up to ~160 tokens/byte;
+/// l3doc's crossref pass over source2e's `.dtx`s ~1000/byte). ×1000/byte
+/// keeps the ceiling finite — a true infinite loop still trips, and opens
+/// no new files while it spins — while never LOWERING the baseline for
+/// small documents. The bytes are summed over the main source AND
+/// everything it `\input`s/`\DocInclude`s (every `Mouth::open_file`):
+/// source2e.tex is a 15 KB driver over ~40 `.dtx` files (~2 MB), so the
+/// driver-only sizing never engaged. An explicit `LATEXML_TOKEN_LIMIT`
+/// wins unchanged (including 0 = disabled).
 pub fn scale_token_limit_to_source(source_bytes: usize) {
   if std::env::var_os("LATEXML_TOKEN_LIMIT").is_some() {
     return;
   }
-  let scaled = source_bytes.saturating_mul(200).max(400_000_000);
   let mut gullet = gullet_mut!();
+  gullet.source_bytes_total = gullet.source_bytes_total.saturating_add(source_bytes);
+  let scaled = gullet
+    .source_bytes_total
+    .saturating_mul(1000)
+    .max(DEFAULT_TOKEN_LIMIT);
   if let Some(limit) = gullet.token_limit.as_mut() {
     *limit = (*limit).max(scaled);
   }
+  gullet.full_read_at = 0;
 }
 
+/// Tell the setter watches whether the current mouth reads the document's own text
+/// (`definition::origin::note_document_mouth`), after the mouth changed.
+fn note_current_mouth(gullet: &Gullet) {
+  crate::definition::origin::note_document_mouth(
+    gullet
+      .runtime
+      .as_ref()
+      .is_some_and(|rt| rt.mouth.is_document_text()),
+  );
+}
+
+/// Initialize (or reset, if reentrant) a Gullet to its default empty state.
 pub fn initialize_gullet() {
   let mut gullet = gullet_mut!();
   gullet.runtime = None;
+  crate::definition::origin::note_document_mouth(false);
   gullet.mouthstack = VecDeque::new();
   gullet.pending_comments = VecDeque::new();
   // Fresh per-conversion backstop: a prior book-scale conversion in this
   // reused thread-local engine must not leak its scaled token limit into
   // the next document.
   gullet.token_limit = default_token_limit();
+  gullet.source_bytes_total = 0;
   // Fresh per-conversion progress + cycle-guard history (the engine is a
   // thread-local singleton reused across conversions in the test harness).
   gullet.progress = 0;
@@ -308,9 +781,16 @@ pub fn initialize_gullet() {
   // Restore the default activation floor: a prior tikz/xy conversion in this
   // reused thread-local engine must not leak its raised floor into the next doc.
   gullet.cycle_guard_activate = CYCLE_GUARD_ACTIVATE;
+  gullet.full_read_at = 0;
+  gullet.read_budget_at = None;
+  gullet.read_budget_spent = false;
   gullet.ctx_serial = 0;
   gullet.ctx_next = 0;
   gullet.ctx_stack.clear();
+  gullet.scanner_status = ScannerStatus::Normal;
+  gullet.warning_index = None;
+  gullet.runaway_argument = None;
+  PAR_ENDS_ARGUMENT.with(|c| c.set(false));
 }
 
 /// Get the current location of input getting read
@@ -357,6 +837,23 @@ pub fn get_locator_from_start() -> Locator {
   }
 }
 
+/// The location of the innermost mouth that reads a source (not a token string,
+/// `Anonymous String`): where in the document a construct digested from a token
+/// list stands — `\footnote{…}`'s or `\section{…}`'s line, rather than nowhere.
+pub fn get_source_location() -> Option<String> {
+  let gullet = gullet!();
+  gullet
+    .runtime
+    .iter()
+    .chain(gullet.mouthstack.iter())
+    .find(|runtime| {
+      let source = runtime.mouth.get_source();
+      !source.is_empty() && source != "Anonymous String"
+    })
+    .and_then(|runtime| runtime.mouth.get_locator())
+    .map(|locator| s!("at {}", locator))
+}
+
 /// Comment-oriented location string, based on `get_locator`
 pub fn get_location() -> String {
   let loc = get_locator();
@@ -378,17 +875,6 @@ pub fn mouth_is_open(mouth: &Mouth) -> bool {
 
 /// Push the `tokens` back into the input stream to be re-read.
 pub fn unread(tokens: Tokens) { unread_vec(tokens.unlist()); }
-/// Variant of `unread`, but drains the contents of `tokens` without taking ownership.
-pub fn unread_mut(tokens: &mut Tokens) {
-  if let Some(ref mut runtime) = gullet_mut!().runtime {
-    // Iterate in reverse and push to the stack top — the first element
-    // of `tokens` ends up on top (= next to read). Same semantics as
-    // the old VecDeque push_front pattern.
-    for token in tokens.unlist_mut().drain(..).rev() {
-      runtime.pushback.push(token);
-    }
-  };
-}
 /// Unreads a single `Token` to the start of the token stream.
 /// Perl: unread() always adjusts $ALIGN_STATE when unreading { or } tokens.
 pub fn unread_one(token: Token) {
@@ -401,8 +887,108 @@ pub fn unread_one(token: Token) {
     runtime.pushback.push(token);
   };
 }
+/// Push EXPANSION OUTPUT (macro bodies, conditional-branch replays, `\the`
+/// results) to the start of the token stream WITHOUT touching the alignment
+/// brace ledger.
+///
+/// tex.web distinguishes two insertion flavors: `back_input` (§325) RETRACTS
+/// `align_state` for a brace token because that token was already counted
+/// when scanned (`get_next` §342-344 counts every scanned brace, token lists
+/// included §357); `begin_token_list` — how an expansion enters the input —
+/// adjusts NOTHING, because expansion output was never scanned and its braces
+/// will be counted when they are. Retracting never-scanned braces here is not
+/// merely a transient skew: expl3 brace-tricks (`\if… { \else: } \fi:` under
+/// `\exp_after:wN`, the l3tl replace machinery) legitimately push UNBALANCED
+/// fragments whose skipped half was counted by the conditional skipper — the
+/// Perl-style retract-everything protocol (Gullet.pm L343-358, which Perl
+/// LaTeXML still has) then drifts `ALIGN_STATE` permanently negative and every
+/// later `&` in the alignment goes stray (l3doc `{function}` manuals; repro:
+/// `\tl_greplace_all:Nnn` + a protected macro emitting `&` inside a tabular
+/// cell). See `cluster_package_guards::alignment_ledger_expansion_pushback`.
+pub fn unread_expansion(tokens: Tokens) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    let tokens = tokens.unlist();
+    runtime.pushback.reserve(tokens.len());
+    for token in tokens.into_iter().rev() {
+      runtime.pushback.push(token);
+    }
+  }
+}
+
+/// [`unread_substituted`] of arguments all read as tokens, each found where it is.
+pub fn unread_substituted_args(
+  body: &[Token],
+  plan: &[crate::tokens::BodyPiece],
+  args: &[crate::definition::argument::ArgWrap],
+) {
+  use crate::{definition::argument::ArgWrap, tokens::BodyPiece};
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    let pushback = &mut runtime.pushback;
+    for piece in plan.iter().rev() {
+      match *piece {
+        BodyPiece::Run(start, end) => {
+          pushback.extend(body[start as usize..end as usize].iter().rev().copied());
+        },
+        BodyPiece::Parameter(n) => {
+          if let Some(ArgWrap::Tokens(arg)) = n.checked_sub(1).and_then(|i| args.get(i)) {
+            pushback.extend(arg.unlist_ref().iter().rev().copied());
+          }
+        },
+      }
+    }
+  }
+}
+
+/// [`unread_expansion`] of a macro body with its parameters substituted (`Tokens::substitute_parameters`),
+/// without building the list first: tex.web `macro_call` (§390) puts the body on the input as stored and the
+/// arguments where its `out_param`s are. The pieces go onto the pushback stack last first, each reversed;
+/// `args[n - 1]` is parameter `#n`'s argument. The brace ledger is not touched, as for any expansion output.
+pub fn unread_substituted(body: &[Token], plan: &[crate::tokens::BodyPiece], args: &[&[Token]]) {
+  use crate::tokens::BodyPiece;
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    let pushback = &mut runtime.pushback;
+    for piece in plan.iter().rev() {
+      match *piece {
+        BodyPiece::Run(start, end) => {
+          pushback.extend(body[start as usize..end as usize].iter().rev().copied());
+        },
+        BodyPiece::Parameter(n) => {
+          if let Some(arg) = n.checked_sub(1).and_then(|i| args.get(i)) {
+            pushback.extend(arg.iter().rev().copied());
+          }
+        },
+      }
+    }
+  }
+}
+
+/// `back_input`-style ledger retraction WITHOUT pushing anything: apply to
+/// tokens that were READ through a counting reader and are about to be
+/// RE-EMITTED as part of an expansion result (so they will be counted again
+/// when rescanned). tex.web §368: `\expandafter` saves its first token and
+/// `back_input`s it (§325 retracts a scanned brace) around the one-step
+/// expansion, which enters as an unadjusted token list. A closure-style
+/// expandable that returns previously-read tokens inside its expansion must
+/// call this on that re-emitted portion, or every `{`/`}` passed through it
+/// is double-counted (l3's `\exp_after:wN {` idiom drove the alignment
+/// ledger positive and `&` went stray — see [`unread_expansion`]).
+pub fn retract_scanned_brace(token: &Token) { retract_scanned_braces(std::slice::from_ref(token)); }
+
+pub fn retract_scanned_braces(tokens: &[Token]) {
+  for token in tokens {
+    match token.get_catcode() {
+      Catcode::BEGIN => decrement_align_group_count(),
+      Catcode::END => increment_align_group_count(),
+      _ => {},
+    }
+  }
+}
+
 /// Unreads a `Vec<Token>` to the start of the token stream
-/// Perl: also adjusts ALIGN_STATE by retracting scanned braces (Gullet.pm lines 343-358)
+/// Perl: also adjusts ALIGN_STATE by retracting scanned braces (Gullet.pm lines 343-358).
+/// Correct ONLY for tokens that were previously READ (and hence counted) —
+/// for expansion output use [`unread_expansion`] (tex.web `begin_token_list`
+/// flavor, which adjusts nothing).
 pub fn unread_vec(tokens: Vec<Token>) {
   let mut level: i64 = 0;
   if let Some(ref mut runtime) = gullet_mut!().runtime {
@@ -449,8 +1035,43 @@ pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary
     mouth,
     autoclose,
     boundary,
+    insert_everyeof: false,
+    eof_seen: false,
     pushback: Vec::with_capacity(128),
+    watch: PushbackWatch::default(),
   });
+  note_current_mouth(&gullet);
+}
+
+/// Mark the CURRENT mouth as an eTeX file level whose end inserts the
+/// `\everyeof` token list (see [`MouthRuntime::insert_everyeof`]). Every
+/// `\input` file mouth is marked (`content.rs::load_tex_content`), and so is
+/// the `\scantokens` pseudo-file (`etex.rs`).
+///
+/// The mark also makes the mouth a TeX file level, of which at most [`MAX_IN_OPEN`] may be open at once: one more is
+/// TeX's "TeX capacity exceeded, sorry [text input levels=15]" (tex.web §328), a Fatal. A macro that `\input`s the
+/// file it is read from (`\def\x{\input loopf }\x`, loopf.tex holding `\x`) otherwise nested files without end.
+pub fn mark_everyeof_mouth() -> Result<()> {
+  let levels = {
+    let mut gullet = gullet_mut!();
+    if let Some(ref mut runtime) = gullet.runtime {
+      runtime.insert_everyeof = true;
+    }
+    gullet
+      .runtime
+      .iter()
+      .chain(gullet.mouthstack.iter())
+      .filter(|r| r.insert_everyeof)
+      .count()
+  };
+  if levels > MAX_IN_OPEN {
+    Fatal!(
+      Mouth,
+      Recursion,
+      s!("TeX capacity exceeded, sorry [text input levels={MAX_IN_OPEN}]")
+    );
+  }
+  Ok(())
 }
 
 pub fn close_mouth(forced: bool) -> Result<()> {
@@ -470,16 +1091,210 @@ pub fn close_mouth(forced: bool) -> Result<()> {
     let message = s!("Closing mouth with input remaining '{}'", next);
     Error!("unexpected", next, message);
   }
-  let mut gullet = gullet_mut!();
-  if let Some(ref mut runtime) = gullet.runtime {
-    runtime.mouth.finish();
-    shift_from_mouthstack = true;
+  let mut wants_everyeof = false;
+  {
+    let mut gullet = gullet_mut!();
+    if let Some(ref mut runtime) = gullet.runtime {
+      runtime.mouth.finish();
+      // A FORCED close is error-recovery/cleanup (`reading_from_mouth`
+      // teardown) — never a file end, so it must not inject the payload
+      // into a recovery stream.
+      wants_everyeof = runtime.insert_everyeof && !forced && !runtime.eof_seen;
+      shift_from_mouthstack = true;
+    }
+    if shift_from_mouthstack {
+      gullet.runtime = gullet.mouthstack.pop_front();
+      note_current_mouth(&gullet);
+    }
   }
-  if shift_from_mouthstack {
-    gullet.runtime = gullet.mouthstack.pop_front();
+  // Insurance for a marked mouth closed before it ever ran dry (a forced
+  // teardown is excluded above, and `\endinput` sets `eof_seen`): insert the
+  // payload where reading continues. Token-identity preserved — expansion
+  // flavor push.
+  if wants_everyeof
+    && let Ok(Some(RegisterValue::Tokens(eof_toks))) = lookup_register("\\everyeof", Vec::new())
+    && !eof_toks.is_empty()
+  {
+    unread_expansion(eof_toks);
   }
   Ok(())
 }
+/// A file has just ended under the current read: tex.web §362 closes it and
+/// calls §336 `check_outer_validity`, which, when the [`ScannerStatus`] is not
+/// normal, reports the runaway (§338 "File ended while scanning definition /
+/// use / preamble / text of \cs") and inserts the tokens that should lead to
+/// recovery (§339).
+///
+/// Only an autoclose file level with an enclosing input ends like this: an
+/// `\input` file, a file held in memory (filecontents, an `\openout` file),
+/// catchfile's opener ([`crate::mouth::Mouth::is_file_level`]). A package or
+/// class read through `reading_from_mouth` (not autoclose) and the main
+/// document keep Perl's stop at their end; string mouths (`\scantokens`,
+/// RawTeX) are no file levels (`read_balanced` crosses them).
+///
+/// - `defining`, `absorbing`: a `}` — the definition or text ends at the
+///   file's end and the enclosing input goes on;
+/// - `aligning`: `\cr` and `}` — the preamble, and with it the alignment, ends;
+/// - `matching`: TeX inserts `\par` with `long_state:=outer_call`, and
+///   `macro_call` abandons the call and drops its arguments on reading it
+///   (§392 "Report a runaway argument and abort", which consumes the `\par`).
+///   Modelled without the token: [`FileEndRecovery::Abandoned`] marks
+///   [`argument_runaway`] and the reader stops; the report and the file's
+///   close wait for the call ([`abandon_runaway_call`]), which alone knows
+///   whether TeX would have stopped earlier, at a `\par`. Until then the ended
+///   file stays current, so a reader loop that does not look at the mark meets
+///   the same end again rather than reading on into the enclosing input.
+///
+/// The inserted tokens enter as `ins_list` inserts them, as input never
+/// scanned (`unread_expansion`): the brace ledger counts the `}` when it is
+/// read, which balances the definition's opening `{`.
+pub fn recover_at_file_end() -> Result<FileEndRecovery> {
+  let (status, warning_index, file_end, runaway) = {
+    let gullet = gullet!();
+    let file_end = !gullet.mouthstack.is_empty()
+      && gullet
+        .runtime
+        .as_ref()
+        .is_some_and(|r| r.autoclose && r.mouth.is_file_level());
+    (
+      gullet.scanner_status,
+      gullet.warning_index,
+      file_end,
+      gullet.runaway_argument.is_some(),
+    )
+  };
+  if status == ScannerStatus::Normal || !file_end {
+    return Ok(FileEndRecovery::NotARunaway);
+  }
+  if status == ScannerStatus::Matching {
+    // Met again by a reader that went on, the same end is the same runaway.
+    if !runaway {
+      gullet_mut!().runaway_argument = Some(Runaway::FileEnd(Vec::new()));
+    }
+    return Ok(FileEndRecovery::Abandoned);
+  }
+  let of = warning_index.map(|cs| s!(" of {cs}")).unwrap_or_default();
+  let message = s!("File ended while scanning {}{of}", status.scanning_what());
+  Error!("expected", "}", message);
+  close_mouth(false)?;
+  unread_expansion(if status == ScannerStatus::Aligning {
+    // TeX inserts `frozen_cr` (§339), the primitive whatever `\cr` means now:
+    // the engine's `\lx@frozen@cr`, a `\let` copy of the primitive taken when
+    // `\cr` is defined (tex_tables.rs), so an author's `\def\cr` does not run
+    // here (`is_column_end` takes the copy for `\cr`). Guard:
+    // `perfect_kernel_batch65::file_end_in_a_preamble_inserts_the_frozen_cr`.
+    let frozen_cr = T_CS!("\\lx@frozen@cr");
+    let cr = if with_meaning(&frozen_cr, |defn| defn.is_some()) {
+      frozen_cr
+    } else {
+      T_CS!("\\cr")
+    };
+    Tokens!(cr, T_END!())
+  } else {
+    Tokens!(T_END!())
+  });
+  Ok(FileEndRecovery::Inserted)
+}
+
+/// [`recover_at_file_end`] for a reader of macro arguments only (a single
+/// token, a delimited argument; tex.web §392): whether the call is abandoned.
+/// At any other status such a reader keeps its own end-of-input behaviour.
+pub fn argument_ran_off_a_file() -> Result<bool> {
+  Ok(
+    scanner_status() == ScannerStatus::Matching
+      && recover_at_file_end()? == FileEndRecovery::Abandoned,
+  )
+}
+
+/// Abandon the call of `cs` whose argument ran off the end of a file, given
+/// the `runaway` tokens it had read ([`ScannerStatusGuard::end_taking_runaway_argument`]).
+///
+/// TeX checks every token of a non-`\long` macro's argument for `\par`
+/// (tex.web §392, §399) and at the first one abandons the call, "Paragraph
+/// ended before \cs was complete", putting the `\par` back (§396
+/// `back_error`): the call and its argument up to there are dropped, and the
+/// rest is read again. The readers make that check while they read for a
+/// macro whose long-ness is TeX's ([`Runaway::Paragraph`]); for LaTeXML's own
+/// macros (Perl's `isLong` is stored, Expandable.pm:46, and never read) it is
+/// made here, on the runaway only: the argument ran to the file's end, past
+/// the `\par` where TeX stopped, and without the check the call would drop
+/// everything after it too. The tokens from that `\par` on go back into the
+/// file, which then ends later, under the enclosing scan.
+///
+/// Otherwise (a `\long` macro, or no `\par`) it is the file's end: "File ended
+/// while scanning use of \cs" (§338-339), and the file is closed now, as
+/// tex.web §362 closes it (`end_file_reading`) before recovering, so the next
+/// read is from the enclosing input (`\expandafter\a\foo{…` gives `\a` the
+/// next token after `\input`).
+pub fn abandon_runaway_call(
+  cs: Token,
+  is_long: bool,
+  checks_par: bool,
+  runaway: Runaway,
+) -> Result<()> {
+  let runaway = match runaway {
+    // The reader stopped at the `\par` (tex.web §392, §399): report it and put back only the `\par` (§396
+    // `back_error`); the arguments read so far are dropped with the call.
+    // The token goes back as TeX's `cur_tok`: a `\noexpand`ed `\par` without its mark (§358).
+    Runaway::Paragraph(par) => {
+      Error!(
+        "unexpected",
+        "\\par",
+        s!("Paragraph ended before {cs} was complete")
+      );
+      let par = if par.noexpand_shadowed().is_some() {
+        T_CS!("\\par")
+      } else {
+        par
+      };
+      unread_expansion(Tokens!(par));
+      return Ok(());
+    },
+    Runaway::FileEnd(tokens) => tokens,
+  };
+  let par = T_CS!("\\par");
+  // A macro that checks while it reads met no `\par` it should stop at (only one a delimiter accepted): the
+  // file's end. The others are checked here, on the runaway only.
+  match runaway
+    .iter()
+    .position(|t| !is_long && !checks_par && *t == par)
+  {
+    Some(at) => {
+      Error!(
+        "unexpected",
+        "\\par",
+        s!("Paragraph ended before {cs} was complete")
+      );
+      // Never scanned, as far as the brace ledger knows: the readers
+      // retracted the argument's braces when they stopped.
+      unread_expansion(Tokens::new(runaway[at..].to_vec()));
+    },
+    None => {
+      Error!(
+        "expected",
+        "\\par",
+        s!("File ended while scanning use of {cs}")
+      );
+      // Only the file that ended: still current, nothing left in it.
+      let ended_file = {
+        let mut gullet = gullet_mut!();
+        let has_parent = !gullet.mouthstack.is_empty();
+        gullet.runtime.as_mut().is_some_and(|r| {
+          has_parent
+            && r.autoclose
+            && r.mouth.is_file_level()
+            && r.pushback.is_empty()
+            && !r.mouth.has_more_input()
+        })
+      };
+      if ended_file {
+        close_mouth(false)?;
+      }
+    },
+  }
+  Ok(())
+}
+
 /// This flushes a mouth so that it will be automatically closed, next time it's read
 /// Corresponds to TeX's \endinput
 pub fn flush_mouth() {
@@ -488,20 +1303,37 @@ pub fn flush_mouth() {
     // then splice them into the stack's BOTTOM in reverse order so
     // that after the stack's existing top is popped, the mouth tokens
     // come out in the original mouth order (t1 first, then t2, …).
+    // Only the current line's: a comment ends it, and with source comments off (OD #2) the Mouth reads past a `%` to
+    // the next line, whose tokens TeX never reads (tex.web §362). atbegshi.sty:557's
+    // `\AtBegShi@AbortIfUndefined{AtBeginDocument}%`, whose `\endinput` comes from the macro's expansion, read on
+    // into line 558 under the restored `@` catcode (`\AtBegShi` undefined, the file's definitions unbalanced: math0305287, a
+    // plain TeX paper loading pstricks through pgfutil-plain.def; guard
+    // `perfect_kernel_batch65f::endinput_from_a_macro_ends_the_file_at_the_line`).
+    let line = runtime.mouth.line_number();
     let mut trailer: Vec<Token> = Vec::new();
     while !runtime.mouth.is_eol() {
       if let Some(token) = runtime.mouth.read_token() {
+        if runtime.mouth.line_number() != line {
+          break;
+        }
         trailer.push(token);
       }
     }
     if !trailer.is_empty() {
       trailer.reverse();
+      // (every token the pushback held moves up a slot: as if read, for the input marks)
+      runtime.watch.note_len(0);
       runtime.pushback.splice(0..0, trailer);
     }
     // Stop reading (clear buffers, close file) but do NOT restore catcodes.
     // Catcodes are restored by close_mouth → finish() when the mouth is
     // properly popped from the stack.
     runtime.mouth.stop_reading();
+    // eTeX inserts `\everyeof` only when a file really ends: `\endinput` sets
+    // `force_eof`, and §362 then ends the file without the list (pdflatex
+    // `[X]` for `X\endinput`; the payload came out as `[X[EOF]]`). Guard:
+    // `noexpand_input_ends::endinput_does_not_insert_everyeof`.
+    runtime.eof_seen = true;
   }
 }
 
@@ -586,7 +1418,7 @@ enum CheckedRead {
 /// [`CYCLE_GUARD_DUTY_PERIOD`] tokens. A genuine infinite expansion loop is
 /// *persistent*, so scanning periodic windows still detects it — worst case
 /// one duty period plus a ring fill later (~17k tokens), four orders of
-/// magnitude before the 400M `token_limit` backstop — while a legitimately
+/// magnitude before the 1G `token_limit` backstop — while a legitimately
 /// huge healthy stream (pgfplots data plots routinely read 200M+ tokens, past
 /// even the raised graphics floor) stops paying a per-token fingerprint tax
 /// for the whole remainder of the run (`cycle_guard_checkpoint` was 6.07% of
@@ -629,14 +1461,45 @@ const CYCLE_GUARD_DUTY_ON: usize = 2_048;
 /// `\dont_expand` special-casing), so the guard sees the same stream
 /// regardless of which loop reads it. The reading-context serial is mixed
 /// into the fingerprint (see `Gullet::ctx_serial`) so windows never match
-/// across `reading_from_mouth` contexts. Activation is gated on
+/// across `reading_from_mouth` contexts; a token read from the Mouth (input,
+/// not expansion output) also carries its source position. Activation is gated on
 /// `progress > cycle_guard_activate` AND the duty window above.
 #[inline]
-fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
+fn read_internal_token_checked(sink: CommentSink) -> Result<CheckedRead> {
+  {
+    let mut borrow = gullet_mut!();
+    let g: &mut Gullet = &mut borrow;
+    // The usual read: nothing is due at this count (`full_read_at`), and the token on top of the pushback is an
+    // ordinary one. It does exactly what the full read does in that case, without testing each thing that isn't due.
+    // (The input marks' floor, `PushbackWatch`, is its emptiness test: 0 with no live mark; a read at or below it is
+    // the full read's, which tells the watch.)
+    if g.progress + 1 < g.full_read_at
+      && (matches!(sink, CommentSink::Pending) || g.pending_comments.is_empty())
+      && let Some(rt) = g.runtime.as_mut()
+      && g
+        .pushback_limit
+        .is_none_or(|limit| rt.pushback.len() <= limit)
+      && rt.pushback.len() > rt.watch.floor
+      && let Some(&token) = rt.pushback.last()
+      && !matches!(token.get_catcode(), Catcode::COMMENT | Catcode::MARKER)
+    {
+      rt.pushback.pop();
+      g.progress += 1;
+      return Ok(CheckedRead::Tok(token));
+    }
+  }
+  read_internal_token_full(sink)
+}
+
+/// [`read_internal_token_checked`] in full, whatever is due: see that function's documentation above.
+#[inline(never)]
+fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
   enum Breach {
     TokenLimit(usize),
     PushbackLimit(usize),
     Cycle(usize, Token),
+    Deadline,
+    ReadBudget,
   }
   let mut breach: Option<Breach> = None;
   let mut outcome = CheckedRead::Exhausted;
@@ -647,6 +1510,11 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
       return Ok(CheckedRead::NoRuntime);
     }
     g.progress += 1;
+    if g.progress >= g.full_read_at {
+      g.full_read_at = g.next_full_read();
+    }
+    // (`next_due_read` stands in for these tests on the fast path, and `token_limit_tests::is_due` spells them: change
+    // all three together.)
     let rt = g.runtime.as_mut().unwrap();
     if let Some(limit) = g.token_limit
       && g.progress > limit
@@ -656,6 +1524,15 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
       && rt.pushback.len() > limit
     {
       breach = Some(Breach::PushbackLimit(limit));
+    } else if g.progress & DEADLINE_CHECK_MASK == 0 && crate::stomach::conversion_deadline_passed()
+    {
+      // The cooperative conversion deadline (`stomach::set_timeout`), checked here too: an expansion that never
+      // returns to a digestion loop never met it, and only a process watchdog, where one is armed, ended the run
+      // (OD #538).
+      breach = Some(Breach::Deadline);
+    } else if g.read_budget_at.is_some_and(|at| g.progress > at) {
+      g.read_budget_spent = true;
+      breach = Some(Breach::ReadBudget);
     } else {
       // Duty-cycled guard activation, computed BEFORE the read: the phase —
       // and the ON-window-start ring reset — depends only on `progress`,
@@ -709,12 +1586,39 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
           break;
         }
       }
+      rt.watch.note_len(rt.pushback.len());
+      // Whether the token is expansion output (the pushback, `\everyeof`'s tokens included) rather than the current
+      // Mouth's own input, for the cycle guard below.
+      let mut expanded = next_token.is_some();
       if next_token.is_none() {
         while let Some(t) = rt.mouth.read_token() {
           if let Some(t) = route(t) {
             next_token = Some(t);
             break;
           }
+        }
+      }
+      // eTeX file end (tex.web §362 + etex.ch `every_eof`): the first time a
+      // marked mouth runs dry, its `\everyeof` tokens are read AS THE FILE'S
+      // LAST TOKENS — pushed at this level, before the mouth closes. Token
+      // identity preserved (l3tl's rescan quarks, xint's captures). spreadtab
+      // 's `\ST_scan_func_arg` (spreadtab.sty:1493-1504) ends its `\scantokens`
+      // scan on `\everyeof{\ST_nil}`; a parent-level insertion after the close
+      // (the earlier designs) reached a nested scan in the enclosing stream.
+      if next_token.is_none() && rt.insert_everyeof && !rt.eof_seen {
+        rt.eof_seen = true;
+        if let Ok(Some(RegisterValue::Tokens(eof_toks))) = lookup_register("\\everyeof", Vec::new())
+          && !eof_toks.is_empty()
+        {
+          rt.pushback.extend(eof_toks.unlist().into_iter().rev());
+          while let Some(t) = rt.pushback.pop() {
+            if let Some(t) = route(t) {
+              next_token = Some(t);
+              expanded = true;
+              break;
+            }
+          }
+          rt.watch.note_len(rt.pushback.len());
         }
       }
       if let Some(token) = next_token {
@@ -741,8 +1645,20 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
           // without destroying the outer context's history. The multiplier
           // spreads the serial across the hash bits (splitmix64's odd
           // constant).
-          let fp = token.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-          if let Some(period) = g.cycle_guard.push(fp) {
+          //
+          // A token read from the Mouth is input, which advances: its fingerprint also carries where it starts in
+          // the file (line, column), so a file's repeated text is no period. Fingerprinted by meaning alone, it was a
+          // loop once the activation floor was passed: 1009.1698's gnuplot label file, 626 lines of
+          // `\color{black}%` read as one argument with the pushback empty, a window of 8 tokens "repeated 100+ times"
+          // (repro expansion-primitives/cycle_guard_repeated_file_input.tex). A loop that re-reads the same text
+          // through a new Mouth reads it at the same places every period, and is still one (a nesting one, as
+          // `\def\x{\scantokens{\x}}`, stops first at TeX's input-level limit, `mark_everyeof_mouth`).
+          let mut fp = token.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+          if !expanded {
+            let (line, column) = rt.mouth.last_token_start();
+            fp ^= (((line as u64) << 32) ^ column as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+          }
+          if let Some(period) = g.cycle_guard.push(fp, rt.pushback.len()) {
             breach = Some(Breach::Cycle(period, token));
           }
         }
@@ -758,8 +1674,62 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
     Some(Breach::TokenLimit(limit)) => token_limit_fatal(limit),
     Some(Breach::PushbackLimit(limit)) => pushback_limit_fatal(limit),
     Some(Breach::Cycle(period, token)) => cycle_trip_fatal(period, &token),
+    Some(Breach::Deadline) => fatal!(Timeout, Convert, "Conversion timed out!"),
+    Some(Breach::ReadBudget) => read_budget_error(),
   }
 }
+
+/// The read [`read_budget`] refuses: an error for the run to end on, no Fatal (nothing logged, nothing latched).
+#[cold]
+#[inline(never)]
+fn read_budget_error() -> Result<CheckedRead> {
+  Err(Error::from(ErrorData {
+    target:   ErrorTarget::Timeout,
+    category: ErrorCategory::ReadBudget,
+    message:  "A budgeted run read all it may".to_string(),
+  }))
+}
+
+impl Gullet {
+  /// The next value of `progress` at which a read has anything to do but pop a token: [`next_due_read`], or 0 under
+  /// `LATEXML_DEBUG_FATAL`, whose ring records every token.
+  fn next_full_read(&self) -> usize {
+    if *DEBUG_FATAL {
+      return 0;
+    }
+    let due = next_due_read(self.progress, self.token_limit, self.cycle_guard_activate);
+    // (and the read past a budget, and each one after it: [`read_budget`])
+    self.read_budget_at.map_or(due, |at| {
+      due.min(at.saturating_add(1).max(self.progress.saturating_add(1)))
+    })
+  }
+}
+
+/// The first count past `read` at which [`read_internal_token_full`]'s tests have something to do, by the count alone:
+/// past the token `limit`, a multiple of the deadline's period, or in one of the cycle guard's windows, phases
+/// 1..=`CYCLE_GUARD_DUTY_ON` of a period past its `floor`.
+fn next_due_read(read: usize, limit: Option<usize>, floor: usize) -> usize {
+  let deadline = (read | DEADLINE_CHECK_MASK) + 1;
+  let limit = limit.map_or(usize::MAX, |limit| limit.saturating_add(1));
+  let guard = match read.checked_sub(floor) {
+    None => floor + 1,
+    Some(past) => {
+      let phase = past & (CYCLE_GUARD_DUTY_PERIOD - 1);
+      if phase < CYCLE_GUARD_DUTY_ON {
+        read + 1
+      } else {
+        read + (CYCLE_GUARD_DUTY_PERIOD - phase) + 1
+      }
+    },
+  };
+  deadline.min(limit).min(guard)
+}
+
+const DEADLINE_CHECK_MASK: usize = (1 << 16) - 1;
+
+/// TeX's limit on simultaneously open input files (`\input` files and `\scantokens` pseudo-files): `max_in_open`,
+/// texmf.cnf:868 (TL 2025; tex.web §328 `begin_file_reading` checks `in_open = max_in_open` before opening another).
+pub const MAX_IN_OPEN: usize = 15;
 
 /// Token-limit breach ([`read_internal_token_checked`]). The cycle guard
 /// already dumps its window when it trips, but a runaway that reaches THIS
@@ -820,6 +1790,14 @@ fn cycle_trip_fatal(period: usize, nextt: &Token) -> Result<CheckedRead> {
   );
   if *DEBUG_FATAL {
     eprintln!("[debug-fatal] gullet cycle guard tripping on token {nextt:?}: {msg}");
+    {
+      let g = GULLET.borrow();
+      eprintln!(
+        "[debug-fatal] pushback backlog samples (oldest first): {:?}; pushback now {}",
+        g.cycle_guard.backlog_trace(),
+        g.runtime.as_ref().map_or(0, |rt| rt.pushback.len())
+      );
+    }
     DEBUG_RECENT_TOKENS.with(|ring| {
       let ring = ring.borrow();
       let recent: Vec<&str> = ring.iter().map(String::as_str).collect();
@@ -827,6 +1805,132 @@ fn cycle_trip_fatal(period: usize, nextt: &Token) -> Result<CheckedRead> {
     });
   }
   Fatal!(Timeout, Recursion, msg);
+}
+
+/// Read a token as tex.web §367 `\noexpand` does: `get_token` under
+/// `scanner_status := normal`, so an input level that ends here closes
+/// without a runaway (§362 `end_file_reading`, §336 passes) and the read goes
+/// on in the enclosing level. Crosses exactly what `read_x_token` drains:
+/// autoclose mouths with a parent (`\input` files, `\scantokens`
+/// pseudo-files, line remainders), never a `reading_from_mouth` context. A
+/// definition, text, preamble or macro argument that runs off a file's end is
+/// still a §338 runaway: [`read_token`] stops there, and the scan recovers by
+/// its [`ScannerStatus`] ([`recover_at_file_end`]).
+/// This is what `\everyeof{\noexpand}` relies on
+/// (catchfile.sty:251-261, morewrites.sty:465, l3build regression-test.tex:101).
+/// Guards: `noexpand_input_ends::*`.
+pub fn read_token_across_input_ends() -> Result<Option<Token>> {
+  loop {
+    if let Some(token) = read_token()? {
+      return Ok(Some(token));
+    }
+    let crossable = {
+      let gullet = gullet!();
+      gullet.runtime.as_ref().is_some_and(|r| r.autoclose) && !gullet.mouthstack.is_empty()
+    };
+    if !crossable {
+      return Ok(None);
+    }
+    close_mouth(false)?;
+  }
+}
+
+/// Read a token as a primitive reads one: tex.web §365 `get_token` under the
+/// current [`ScannerStatus`] (`\let`, `\futurelet`, `\afterassignment`,
+/// `\aftergroup`, `\expandafter`, a `Token` parameter). An input level
+/// that ends here closes (§362 `end_file_reading`) and §336
+/// `check_outer_validity` looks at the status:
+/// - `normal`: no runaway; the read goes on in the enclosing input, as
+///   [`read_token_across_input_ends`] reads, so a primitive that is the last
+///   token of an `\input` file takes its token from the input that follows;
+/// - `defining`, `absorbing`, `aligning`: the scan in progress ran off the file,
+///   and the primitive's read meets it: the runaway is reported there and
+///   TeX's recovery tokens are read ([`recover_at_file_end`]), so an
+///   `\edef\x{\expandafter` at a file's end reads the inserted `}` and
+///   `\x` is empty, as in pdflatex;
+/// - `matching`: TeX reads a macro's arguments without expanding, so it gives
+///   no primitive's read this status, but Rust does: an expandable primitive
+///   with typed parameters (`\csname CSName`, `\number Number`, `\readline …
+///   Token`) reads them at `matching`, set by `Expandable::read_call_arguments`.
+///   The read stops at the file's end (a residual: `\csname a\expandafter` as
+///   a file's last tokens does not cross), and so does a macro's `Token`
+///   argument (the macro gets `\relax`, the `Token` parameter's end value).
+///
+/// `\ifx` and `\ifdefined` read at `normal` whatever the status (§507), with
+/// [`read_token_across_input_ends`]. The status is consulted only once the
+/// current input has run out.
+///
+/// Guards: `token_kernel_gaps::*`.
+pub fn read_primitive_token() -> Result<Option<Token>> {
+  if let Some(token) = read_token()? {
+    return Ok(Some(token));
+  }
+  match scanner_status() {
+    ScannerStatus::Normal => read_token_across_input_ends(),
+    ScannerStatus::Matching => Ok(None),
+    _ => loop {
+      if let Some(token) = read_token()? {
+        return Ok(Some(token));
+      }
+      if recover_at_file_end()? != FileEndRecovery::Inserted {
+        return Ok(None);
+      }
+    },
+  }
+}
+
+/// The control sequence a definition names: tex.web §1215 `get_r_token`,
+/// `repeat get_token until cur_tok<>space_token` (`\def`, `\let`, `\futurelet`,
+/// `\chardef`, `\countdef` …). Each read is [`read_primitive_token`], so a
+/// bare `\let` or `\def` as a file's last token takes its name from the input
+/// after the file, skipping the spaces there.
+///
+/// A name that is neither a control sequence nor an active character
+/// (`cur_cs=0`) is "Missing control sequence inserted": the token is read
+/// again (`back_input`) and the frozen `\inaccessible` (§222
+/// `frozen_protection`) is named instead, so `\gdef{}X{Y}` defines it and
+/// typesets `X{Y}`. yquant-doc.tex:3832's `\gdef{…` (an `\edef`-expanded
+/// `\pgfsyssoftpath@flushbuffers`) had installed a macro on the Begin catcode,
+/// and every later `{` read a delimited argument: 1001 errors and a Fatal.
+/// Perl reads the name as a `Token` (TeX_Macro.pool.ltxml:174-177) and shares
+/// that. A frozen control sequence as the name (`cur_cs>frozen_control_sequence`,
+/// dropped with the same error) is not modelled: Rust has none.
+///
+/// A `\noexpand`ed name is the control sequence it marks: §358 `get_next`
+/// sets `cur_cs` to the shadowed token, so `\expandafter\def\noexpand\foo`
+/// defines `\foo`. Rust's marker is a `\special_relax` family token, which
+/// had defined the family's shared `\relax` meaning instead.
+///
+/// Guards: `rtoken_patchcmd::def_of_a_non_cs_defines_inaccessible`,
+/// `rtoken_patchcmd::let_family_of_a_non_cs_reads_the_token_again`,
+/// `rtoken_patchcmd::noexpand_marked_name_is_its_control_sequence`.
+pub fn read_redefinable_token() -> Result<Option<Token>> {
+  loop {
+    match read_primitive_token()? {
+      Some(token) if token.get_catcode() == Catcode::SPACE => {},
+      Some(token) if token.is_noexpand_family() => {
+        return Ok(Some(token.noexpand_shadowed().unwrap_or(token)));
+      },
+      Some(token) if !token.get_catcode().is_active_or_cs() => {
+        Error!(
+          "expected",
+          "<cs>",
+          "Missing control sequence inserted",
+          s!("{} cannot be a definition's name", token.stringify()),
+          "Please don't say `\\def cs{...}', say `\\def\\cs{...}'.\n\tI've inserted an \
+           inaccessible control sequence so that your definition will be completed without \
+           mixing me up too badly."
+        );
+        unread_one(token);
+        // `\inaccessible ` is how TeX prints it (§262 `print_cs`); the
+        // trailing space keeps it apart from a document's `\inaccessible`
+        // (not from `\csname inaccessible\space\endcsname`, nor from a
+        // `\DeclareRobustCommand\inaccessible`'s inner macro).
+        return Ok(Some(T_CS!("\\inaccessible ")));
+      },
+      other => return Ok(other),
+    }
+  }
 }
 
 /// Read a token that the calling macro/primitive REQUIRES, holding the
@@ -853,12 +1957,46 @@ pub fn read_token_required(what: &str) -> Result<Option<Token>> {
   Ok(tok)
 }
 
+/// Gullet.pm `readToken` (L300-324); its loop is in `read_token_after`.
 pub fn read_token() -> Result<Option<Token>> {
+  let first = read_internal_token_checked(CommentSink::Pending)?;
+  // The usual token: no alignment is being read, so it ends no column, and it is no `\dont_expand`.
+  if let CheckedRead::Tok(token) = first
+    && !has_reading_alignment()
+    && !(token.code == Catcode::CS && token.text == pin!("\\dont_expand"))
+  {
+    match token.get_catcode() {
+      Catcode::BEGIN => increment_align_group_count(),
+      Catcode::END => decrement_align_group_count(),
+      _ => {},
+    }
+    return Ok(Some(token));
+  }
+  read_token_after(first)
+}
+
+/// [`read_token`] given what its first read found, in full: the alignment and `\dont_expand` cases.
+#[inline(never)]
+fn read_token_after(first: CheckedRead) -> Result<Option<Token>> {
   let mut next_token: Option<Token>;
+  let mut read = Some(first);
   loop {
     // Combined checkpoint + raw read + cycle fingerprint, one borrow.
-    next_token = match read_internal_token_checked(CommentSink::Pending)? {
+    let this_read = match read.take() {
+      Some(this_read) => this_read,
+      None => read_internal_token_checked(CommentSink::Pending)?,
+    };
+    next_token = match this_read {
       CheckedRead::NoRuntime => return Ok(None),
+      // A marked eTeX pseudo-file (`\scantokens`) end is NOT crossed here:
+      // its `\everyeof` payload was already read at the file's own level
+      // (`read_internal_token_checked`, `eof_seen`), so this is the true end
+      // — a delimited scan whose marker misses must not escape into the
+      // enclosing LIVE stream (inside an alignment cell it swallowed the
+      // column-after program as data and poisoned l3tl rescan results: l3doc
+      // `\tl_replace_all` 5-token loop, witnesses spath3/litetable-zh/
+      // zref-check; settled dead-end, tried 3× 2026-09-01). Plain execution
+      // crosses via read_x_token's autoclose drain.
       CheckedRead::Exhausted => None,
       CheckedRead::Tok(t) => Some(t),
     };
@@ -871,11 +2009,16 @@ pub fn read_token() -> Result<Option<Token>> {
     if let Some(ref nextt) = next_token {
       if (align_group_count() == 0)
         && has_reading_alignment()
-        && let Some((atoken, atype, ahidden)) = is_column_end(nextt)
+        && let Some((_atoken, atype, ahidden)) = is_column_end(nextt)
       {
         let reading_alignment = get_reading_alignment().unwrap();
         if let DigestedData::Alignment(data) = reading_alignment.data() {
-          handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
+          // The token as read goes back after the v-part, not its canonical `\cr`/`&` (Perl Gullet.pm:310 passes
+          // `$token`): TeX drops the token and keeps its meaning (tex.web §789), so a `\let\crnorm=\cr` is no name a
+          // v-part's keyword scan can expand — with `\cr` itself redefined (`\def\cr{&\crnorm}`, Cowan's tables.tex)
+          // a `\vrule` before it read the macro's `&` (hep-ph9612244, hep-ph9711334). Guard
+          // `perfect_kernel_batch68z::a_let_cr_ends_the_row_as_itself`.
+          handle_template(data.borrow_mut(), *nextt, atype, ahidden)?;
         } else {
           return Err("reading_alignment should always contain DigestedData::Alignment".into());
         }
@@ -913,19 +2056,19 @@ pub fn read_token() -> Result<Option<Token>> {
 /// Engage the expansion-stream cycle guard only after this many tokens — above
 /// the ordinary range (measured known-good papers 0.6–7.5M under the 2026-06-10
 /// all-three-loop accounting; 20M keeps them fingerprint-free with ~2.7×
-/// headroom), so only a runaway (heading for the 400M `token_limit` / RSS cap)
+/// headroom), so only a runaway (heading for the 1G `token_limit` / RSS cap)
 /// records fingerprints, cut off in O(window) tokens (false positives guarded by
 /// the period-`REPEAT` requirement, not this bound). DEFAULT floor; graphics-heavy
 /// packages legitimately reach ~100–155M (math0402448 xy-pic, 1805.03265 tikz-cd)
 /// and raise it to [`CYCLE_GUARD_ACTIVATE_GRAPHICS`] at load via
-/// [`raise_cycle_guard_activate`], the 400M `token_limit` staying the backstop.
+/// [`raise_cycle_guard_activate`], the 1G `token_limit` staying the backstop.
 const CYCLE_GUARD_ACTIVATE: usize = 20_000_000;
 
 /// Cycle-guard activation floor for graphics-heavy bindings (pgf/tikz/xy).
 /// These packages legitimately expand 100M+ tokens; this floor sits above the
 /// heaviest measured healthy graphics doc (1805.03265 tikz-cd ~155M) so they
 /// stay out of the per-token fingerprint regime, while remaining far below the
-/// 400M `token_limit` backstop. Raised — never lowered — per [`raise_cycle_guard_activate`].
+/// 1G `token_limit` backstop. Raised — never lowered — per [`raise_cycle_guard_activate`].
 pub const CYCLE_GUARD_ACTIVATE_GRAPHICS: usize = 150_000_000;
 
 /// Raise the cycle-guard activation floor for the current (thread-local) gullet,
@@ -938,6 +2081,7 @@ pub fn raise_cycle_guard_activate(floor: usize) {
   let mut g = gullet_mut!();
   if floor > g.cycle_guard_activate {
     g.cycle_guard_activate = floor;
+    g.full_read_at = 0;
     // The duty-window phase is derived from `progress - cycle_guard_activate`
     // (see `read_internal_token_checked`); raising the floor while the guard
     // is already active shifts that phase, which could splice a previous
@@ -979,19 +2123,414 @@ impl ExpandDepthGuard {
     EXPAND_DEPTH.set(d);
     let limit = EXPAND_DEPTH_LIMIT.get();
     if limit != 0 && d > limit {
-      EXPAND_DEPTH.set(d - 1); // Drop won't run — decrement here.
-      Fatal!(
-        Timeout,
-        Recursion,
-        format!("Excessive expansion recursion (depth {d} > {limit}); infinite macro loop?")
-      );
+      return Self::too_deep(d, limit);
     }
     Ok(ExpandDepthGuard)
+  }
+
+  /// The Fatal of [`Self::enter`], out of line: its message formatting kept `enter` itself from being
+  /// inlined into every `read_x_token` (a 152-byte frame per read).
+  #[cold]
+  #[inline(never)]
+  fn too_deep(d: usize, limit: usize) -> Result<ExpandDepthGuard> {
+    EXPAND_DEPTH.set(d - 1); // Drop won't run — decrement here.
+    Fatal!(
+      Timeout,
+      Recursion,
+      format!("Excessive expansion recursion (depth {d} > {limit}); infinite macro loop?")
+    );
   }
 }
 impl Drop for ExpandDepthGuard {
   #[inline]
   fn drop(&mut self) { EXPAND_DEPTH.set(EXPAND_DEPTH.get().saturating_sub(1)); }
+}
+
+/// Real LaTeX defines every optional-argument `\newcommand` through
+/// `\@protected@testopt`: under a non-typesetting `\protect` regime
+/// (`\protected@edef`/`\protected@write`) the command emits
+/// `\protect\cs` UNEXPANDED. Our binding-level `\newcommand` builds a
+/// bare `Optional` parameter with no such indirection, so a recursive
+/// optional-arg macro (titlecaps' `\textnc` → `\titlecap[s]{…}` chain)
+/// expanded forever under `\protected@edef` — 2 GB pushback OOM
+/// (perfect-kernel sweep 16; real LaTeX and Perl-with-real-latex.ltx are
+/// clean). Treat a leading-Optional definition as protected exactly when
+/// `\protect` is not `\@typeset@protect` — literally
+/// `\@protected@testopt`'s test. Cheap: the parameter check is a slice
+/// peek; the state lookups run only for leading-Optional definitions
+/// under partial expansion. A first parameter flagged
+/// [`Parameter::testopt`](crate::parameter::Parameter::testopt) is a protected command
+/// too: xargs's `\newcommandx` with any optional argument
+/// (`\@protected@testopt@xargs`, xargs.sty:20-25, 205-212), whose first
+/// argument may be a plain one.
+fn optional_arg_protected(defn: &std::rc::Rc<dyn Definition>) -> bool {
+  match defn.get_parameters() {
+    Some(params) => match params.get_parameters().first() {
+      Some(p) => {
+        (p.name == crate::pin!("Optional") || p.testopt)
+          && !super::definition::expandable::protect_is_typeset()
+      },
+      None => false,
+    },
+    None => false,
+  }
+}
+
+/// TeX's number scan stops at the unexpandable head of a peeking macro.
+/// latex.ltx's `\@ifnextchar` (1756-1760), and with it `\@ifstar`,
+/// `\@testopt` and every `\newcommand` optional argument, opens with `\let`
+/// and peeks by `\futurelet`; the digits of a number scan end at the first
+/// unexpandable token (tex.web §445), so the peek happens only where the
+/// macro is executed. Our peeking macros are closures that peek as they
+/// expand: in a scan they stay unexpanded, the scan ends at them, and the
+/// next reader outside the scan (the main loop, an alignment's cell-head
+/// peek) expands them. Expanding them in the scan read the chosen branch
+/// into the number (`\count@=1\@ifstar{7}{5}*` assigned 17), or its
+/// conditionals into a false branch's skip: egpeirce.sty:184-189 `\ifodd
+/// \the\value{cutdepth}%` + `\psset` → `\XKV@ifstar` exposed
+/// `\let\ifXKV@st\iffalse` and the skip ran off the end of the document
+/// (egpeirce-doc, 51 errors; Perl shares the bug). Guards:
+/// `cluster_package_guards::ifnextchar_scans`.
+#[inline]
+pub fn scan_stops_at_futurelet_peek(defn: &std::rc::Rc<dyn Definition>) -> bool {
+  in_number_scan() && defn.peeks_by_futurelet()
+}
+
+/// Whether `defn` expands when met by a reader that `fully_expand`s or not:
+/// the gate `read_x_token` applies (protected macros, and binding-defined
+/// optional-argument macros outside typesetting, wait unless fully
+/// expanding; see [`optional_arg_protected`]; a number scan ends at a
+/// peeking macro, [`scan_stops_at_futurelet_peek`]).
+#[inline]
+fn expands_now(defn: &std::rc::Rc<dyn Definition>, fully_expand: bool) -> bool {
+  defn.is_expandable()
+    && (fully_expand || (!defn.is_protected() && !optional_arg_protected(defn)))
+    && !scan_stops_at_futurelet_peek(defn)
+}
+
+/// A place in the input ([`input_mark`]): how many mouths enclose it, the current mouth's read position, its
+/// pushback's length then, the mark's serial on the mouth's watch (`PushbackWatch`), and the pushback's last
+/// `MARK_HELD` tokens, the next to read last. `Copy`: a mark holds nothing on the heap, so the marks a ledger keeps (an
+/// author block's each) cost what their number does, whatever the pushback holds (revRC1: a copy of the pushback per
+/// mark made 3,000 macro-held authors take 3.7 GB).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InputMark {
+  depth:  usize,
+  mouth:  (usize, usize, usize, usize),
+  len:    usize,
+  serial: u64,
+  held:   [Option<Token>; MARK_HELD],
+}
+
+/// How many of the pushback's tokens an [`InputMark`] keeps: read below its length and put back, as many as these
+/// leave the input unread (a peek, a `\futurelet`).
+const MARK_HELD: usize = 4;
+
+/// Whether `a` and `b` are the very same token: their text, catcode and provenance, field by field (`PartialEq` on
+/// `Token` compares a meaning, not a token: any two spaces are equal, the provenance is not compared).
+fn same_token(a: &Token, b: &Token) -> bool {
+  #[cfg(feature = "token-locators")]
+  if a.loc != b.loc {
+    return false;
+  }
+  a.text == b.text && a.code == b.code && a.prov == b.prov
+}
+
+/// Is the next token read straight from the document's own text — nothing pushed back, the mouth a content file's
+/// ([`Mouth::is_document_text`])? A macro called now reads its arguments from what the document wrote
+/// (`state::note_document_call`).
+pub fn reading_document_text() -> bool {
+  gullet!()
+    .runtime
+    .as_ref()
+    .is_some_and(|rt| rt.pushback.is_empty() && rt.mouth.is_document_text())
+}
+
+/// Mark the input as it stands: everything still to be read now ([`input_unread_since`]). What is pushed back after
+/// the mark (a macro's expansion, unread on top of the pushback) is read before anything the mark holds.
+pub fn input_mark() -> InputMark {
+  let mut gullet = gullet_mut!();
+  let depth = gullet.mouthstack.len();
+  gullet.mark_serial += 1;
+  let serial = gullet.mark_serial;
+  let mut mark = InputMark {
+    depth,
+    mouth: (0, 0, 0, 0),
+    len: 0,
+    serial,
+    held: [None; MARK_HELD],
+  };
+  if let Some(rt) = gullet.runtime.as_mut() {
+    mark.len = rt.pushback.len();
+    mark.mouth = rt.mouth.read_position();
+    rt.watch.mark(serial, mark.len);
+    let top = &rt.pushback[mark.len.saturating_sub(MARK_HELD)..];
+    for (slot, token) in mark.held.iter_mut().zip(top) {
+      *slot = Some(*token);
+    }
+  }
+  mark
+}
+
+/// Whether none of the input `mark` held has been read since it was taken ([`input_mark`]): its mouth is still open,
+/// has read no further, and its pushback still holds every token it held then (only what was pushed after the mark
+/// was read, or what a mouth opened since holds). Read-only, for an observer telling apart what a call's expansion
+/// did from what the input after the call did (the frontmatter observer's ledger, the title-page check's document
+/// calls). The mouth's watch tells how short its pushback has been since the mark (`PushbackWatch`): no shorter
+/// than the mark's length, nothing it held was read; shorter by at most `MARK_HELD` tokens, those read were put
+/// back if the slots hold the very tokens they held (`same_token`: a peek leaves the input unread); shorter still,
+/// it was read. Tokens read below the mark and others pushed in their place read as read, though the token now at
+/// the mark's last slot equals the one it held — IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`, whose
+/// line-end space was read with `\IEEEauthorblockA` and its argument and whose expansion, longer, put another space
+/// there: its affiliation calls read as the author block's own and were lost by the frontmatter emitter (2401.11731,
+/// 1801.03314). No token is copied but the held ones: a mark costs at most one run of the watch, a test a binary
+/// search of its runs.
+pub fn input_unread_since(mark: &InputMark) -> bool {
+  let gullet = gullet!();
+  let depth = gullet.mouthstack.len();
+  if depth < mark.depth {
+    return false;
+  }
+  let runtime = if depth == mark.depth {
+    gullet.runtime.as_ref()
+  } else {
+    gullet.mouthstack.get(depth - mark.depth - 1)
+  };
+  let Some(rt) = runtime else {
+    return mark.len == 0 && mark.mouth == (0, 0, 0, 0);
+  };
+  if rt.mouth.read_position() != mark.mouth || rt.pushback.len() < mark.len {
+    return false;
+  }
+  let Some(shortest) = rt.watch.shortest_since(mark.serial) else {
+    return false;
+  };
+  let held_from = mark.len.saturating_sub(MARK_HELD);
+  shortest >= mark.len
+    || (shortest >= held_from
+      && rt.pushback[shortest..mark.len]
+        .iter()
+        .zip(&mark.held[shortest - held_from..])
+        .all(|(now, then)| then.is_some_and(|then| same_token(now, &then))))
+}
+
+/// What the invocation of a token with field provenance `prov` ([`Token::prov`]) consumed of its field's stored
+/// value, now that it read what it reads: its own position up to the next token of that value still to be read, if
+/// the pushback holds one (a primitive's or a macro's arguments: `\hspace{1em}`, `\\[2pt]`, `$x$`), else its own
+/// position alone. The pushback only: a field's stored tokens are read from it (an expansion, a digested argument),
+/// never from a mouth, so nothing is read or tokenized. OXIDIZED_DESIGN #715.
+pub fn field_cover_of(prov: u16) -> crate::token::FieldCover {
+  use crate::token::{field_prov_field, field_prov_pos};
+  let (field, pos) = (field_prov_field(prov), field_prov_pos(prov));
+  let next = {
+    let gullet = gullet!();
+    gullet
+      .runtime
+      .as_ref()
+      .and_then(|rt| rt.pushback.last().map(|t| t.prov))
+      .unwrap_or(0)
+  };
+  let end = if next != 0 && field_prov_field(next) == field && field_prov_pos(next) > pos {
+    field_prov_pos(next)
+  } else {
+    pos + 1
+  };
+  crate::token::FieldCover { field, start: pos, end }
+}
+
+/// The expansion of a field token, its tokens about to go on the input: what it read is pending for the next box
+/// ([`field_cover_of`]), and a rehearsal's notes hear of it (`token::FieldNotesHook`). Out of line: no token of a paper's
+/// body is a field's.
+#[cold]
+#[inline(never)]
+fn note_field_expansion(token: &Token, expansion: &Tokens) {
+  let cover = field_cover_of(token.prov);
+  crate::token::field_cover_set_pending(cover);
+  if let Some(notes) = crate::token::field_notes_hook() {
+    notes(
+      token,
+      cover,
+      crate::token::FieldInvocation::Expanded(expansion),
+    );
+  }
+}
+
+/// A look at the input's pushback as it stands, the next token to read last; nothing is read, so nothing is tokenized
+/// or counted. For a native reader of what a macro's own expansion put there ([`crate::definition::expandable::NativeCall`]).
+pub fn with_pushback<R>(look: impl FnOnce(&[Token]) -> R) -> Option<R> {
+  gullet!().runtime.as_ref().map(|rt| look(&rt.pushback))
+}
+
+/// Consume the pushback down to its first `len` tokens, as a native reader's answer does ([`with_pushback`]); braces
+/// among them must balance, since the brace ledger counts none of them, read or not.
+pub fn consume_pushback_to(len: usize) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    runtime.pushback.truncate(len);
+    runtime.watch.note_len(runtime.pushback.len());
+  }
+}
+
+/// How many more levels of expansion recursion the guard of `read_x_token` allows, `usize::MAX` if it is off.
+pub fn expand_depth_left() -> usize {
+  match EXPAND_DEPTH_LIMIT.get() {
+    0 => usize::MAX,
+    limit => limit.saturating_sub(EXPAND_DEPTH.get()),
+  }
+}
+
+/// Whether the input's pushback is empty: no token of a field's stored value is left to read ([`field_cover_of`]).
+pub fn pushback_is_empty() -> bool {
+  gullet!()
+    .runtime
+    .as_ref()
+    .is_none_or(|rt| rt.pushback.is_empty())
+}
+
+/// How many tokens the input's pushback holds ([`with_pushback`]): a macro's expansion is being read while it holds more
+/// than it did before the expansion (a rehearsal's notes, `token::FieldNotesHook`).
+pub fn pushback_len() -> usize { gullet!().runtime.as_ref().map_or(0, |rt| rt.pushback.len()) }
+
+/// Expand `token` (defined as `defn`) ONE level and push the expansion back
+/// onto the input, as `read_x_token` does for each expandable token it meets.
+#[inline]
+fn invoke_expansion(token: Token, defn: &std::rc::Rc<dyn Definition>) -> Result<()> {
+  local_current_token(token);
+  // Grow the native stack ahead of deep expansion recursion (xint
+  // `\XINT_…` number-arg chains nest tens of thousands deep) so
+  // finite-deep recursion completes instead of overflowing the conversion
+  // thread's 256 MB stack → SIGABRT (Perl degrades via `$MAXSTACK`). This
+  // only grows the stack; the depth CAP is `ExpandDepthGuard` at the top
+  // of `read_x_token` / `expand_once_partial`. Same idiom as the recursive walks in `document.rs`
+  // / the math parser; params in `crate::stack_guard`.
+  // The expansion goes straight onto the input (`Definition::invoke_onto_input`, tex.web §390) unless it is
+  // inspected on the way: token-locators fill its origins, `TRACE_GROUP_END` counts its groups.
+  // A token of a frontmatter field's stored value passes its provenance to its expansion (`Token::prov`).
+  if cfg!(not(feature = "token-locators")) && !*TRACE_GROUP_END && token.prov == 0 {
+    crate::stack_guard::maybe_grow(|| defn.invoke_onto_input(false))?;
+    expire_current_token();
+    return Ok(());
+  }
+  let mut invoked = crate::stack_guard::maybe_grow(|| match defn.native_expansion()? {
+    Some(expansion) => Ok(expansion),
+    None => defn.invoke(false),
+  })?;
+  if token.prov != 0 {
+    // the macro's position and its arguments are covered by the boxes its expansion digests to (or by the next ones,
+    // when it expands to nothing): a field's print is whole with them (OXIDIZED_DESIGN #715)
+    note_field_expansion(&token, &invoked);
+    crate::token::inherit_field_prov(token.prov, &mut invoked);
+  }
+  // token-locators: fill-only origin inheritance. A macro that
+  // expands into synthesized tokens with no origin — e.g.
+  // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —
+  // would leave its output unlocatable. Attribute such tokens to
+  // the invocation site so the rendered text is source-mapped.
+  // The inherited handle is flagged `inherited` (one push per
+  // expansion, shared by every result token), so `child_span`'s
+  // genuine-origin-first scan never lets a macro's structural body
+  // literals widen its arguments' content-exact span. We also never
+  // overwrite a token that already carries an origin. See
+  // SOURCE_PROVENANCE.md §3.1.3.
+  #[cfg(feature = "token-locators")]
+  {
+    let inv_loc = token.loc;
+    if inv_loc != 0 {
+      let mut inherited = 0u32;
+      for t in invoked.unlist_mut() {
+        if t.loc == 0 {
+          if inherited == 0 {
+            inherited = crate::token::push_inherited_origin(inv_loc);
+          }
+          t.loc = inherited;
+        }
+      }
+    }
+  }
+  if *TRACE_GROUP_END {
+    // Print per-event {macro, delta} so post-processing can sum
+    // by-macro to find which expandable CS contributes net +/- 1
+    // imbalance across the run. Format: TRACE_GE delta CS
+    let (mut begs, mut ends) = (0, 0);
+    for t in invoked.unlist_ref() {
+      if *t == T_CS!("\\group_begin:") || *t == T_CS!("\\begingroup") {
+        begs += 1;
+      } else if *t == T_CS!("\\group_end:") || *t == T_CS!("\\endgroup") {
+        ends += 1;
+      }
+    }
+    if begs > 0 || ends > 0 {
+      eprintln!(
+        "TRACE_GE delta={} begs={} ends={} cs={}",
+        begs - ends,
+        begs,
+        ends,
+        token
+      );
+    }
+  }
+  unread_expansion(invoked);
+  expire_current_token();
+  Ok(())
+}
+
+/// Expand `token`, just read, ONE level if `read_x_token(Some(false), ..)`
+/// would expand it, pushing the expansion back onto the input, and report
+/// whether it did. A reader that must look at every token an expansion yields
+/// before expanding it further (the case changer's l3text checks) steps with
+/// this; a token it leaves alone is still the caller's to handle (unread it
+/// for `read_x_token` to return, stub or resolve).
+pub fn expand_once_partial(token: Token) -> Result<bool> {
+  let _depth_guard = ExpandDepthGuard::enter()?;
+  let defn = with_meaning(&token, |defn_opt| match defn_opt {
+    Some(Stored::Token(_)) | Some(Stored::None) | None => None,
+    Some(other) => other.to_definition(),
+  });
+  match defn {
+    Some(defn) if expands_now(&defn, false) => {
+      invoke_expansion(token, &defn)?;
+      Ok(true)
+    },
+    _ => Ok(false),
+  }
+}
+
+/// The alignment's cell-head peek, tex.web §785 `align_peek` and §791 (e-TeX `get_x_or_protected`): expand until
+/// the first token that is not expandable — or protected, as `read_x_token(Some(true), false, Some(false))` stops —
+/// and stop as well at a macro whose optional argument is a `\newcommand` one ([`Parameter::testopt`]): LaTeX's
+/// `\newcommand\dg[3][]` is `\@protected@testopt\dg\\dg{}`, whose expansion reaches the unexpandable `\let` of
+/// `\kernel@ifnextchar` before it reads an argument (latex.ltx:1249-1261), so TeX starts the cell there and the
+/// arguments are read inside it. Our macro reads its arguments as it expands; expanded in the peek it read the
+/// cell's `&` before the cell existed (diagbox.sty:212 `\newcommand\diagbox[3][]`, 2406.11917). The token is
+/// returned unexpanded: the cell's own reader expands it. The binding closures that peek by `\futurelet`
+/// ([`Definition::peeks_by_futurelet`], the kernel's `\@ifnextchar` family) still expand here: several stand for a
+/// TeX macro whose head is not the peek (booktabs' `\cmidrule` is `\noalign{…\@ifnextchar[…}`, booktabs.sty:166).
+///
+/// [`Parameter::testopt`]: crate::parameter::Parameter::testopt
+pub fn read_x_token_cell_head() -> Result<Option<Token>> {
+  loop {
+    let Some(token) = read_token()? else {
+      return read_x_token(Some(true), false, Some(false));
+    };
+    if token.get_catcode().is_active_or_cs()
+      && with_meaning(&token, |defn| {
+        defn.and_then(Stored::to_definition).is_some_and(|defn| {
+          defn.is_expandable()
+            && defn.get_parameters().is_some_and(|params| {
+              params
+                .get_parameters()
+                .first()
+                .is_some_and(|param| param.testopt)
+            })
+        })
+      })
+    {
+      return Ok(Some(token));
+    }
+    if !expand_once_partial(token)? {
+      unread_one(token);
+      return read_x_token(Some(true), false, Some(false));
+    }
+  }
 }
 
 /// Read the next non-expandable token, expanding until one appears. Hot path —
@@ -1026,74 +2565,25 @@ pub fn read_x_token(
       CheckedRead::Tok(t) => Some(t),
     };
     //ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
-    if next_token.is_none() {
-      {
-        let gullet = gullet!();
-        let current_is_autoclose = gullet
-          .runtime
-          .as_ref()
-          .map(|r| r.autoclose)
-          .unwrap_or(false);
-        // Drain a *transparent autoclose injection* (\scantokens, raw_tex) and
-        // resume the enclosing mouth even for a BOUNDED reader (toplevel==false,
-        // e.g. the InputDefinitions file loop) — these are part of the current
-        // logical stream. Faithful to tex.web `get_next` §362-365 (exhausting any
-        // input level resumes the enclosing one; \scantokens is a pseudo-file
-        // level). DIVERGES from Perl `Gullet.pm` readXToken, which gates on
-        // `autoclose = toplevel` and so returns at the first exhausted mouth —
-        // truncating a `.sty` whenever `\scantokens` runs mid-load (witness
-        // 1906.03240: real babel.sty `\selectlanguage` dropped every later def →
-        // undefined-CS cascade; Perl's hand-written babel.ltxml dodges it).
-        // A non-autoclose boundary is left to its owner (return None).
-        if !current_is_autoclose || gullet.mouthstack.is_empty() {
-          return Ok(None);
-        }
+    let Some(token) = next_token else {
+      if read_x_token_crosses_input_end()? {
+        continue;
       }
-      close_mouth(false)?; // Drain the autoclose injection; resume the parent.
-      continue;
-    }
-    // we got a token
-    let token = next_token.unwrap();
+      return Ok(None);
+    };
     if token.get_catcode() == Catcode::CS && token.text == pin!("\\dont_expand") {
-      let unexpanded = match read_token()? {
-        Some(t) => t,
-        None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
-      };
-      if for_conditional && unexpanded.code == Catcode::ACTIVE {
-        return Ok(Some(unexpanded));
-      } else {
-        // `\noexpand <tok>`: per-token `\special_relax` family encoding <tok>'s
-        // identity in the name — faithful to TeX's `no_expand_flag`, which keeps
-        // `cur_cs` while giving relax meaning for this one access. (Perl
-        // readXToken returns a bare `\special_relax`, dropping the identity;
-        // recovering it is a deliberate, SURPASS-PERL fidelity fix so a
-        // `\noexpand`'d delimiter — e.g. xint's `\XINTfstop`, witness
-        // 1804.01117 — survives a number/macro scan for the surrounding parser.)
-        return Ok(Some(crate::token::noexpand_family(&unexpanded)));
-      }
+      return read_x_token_dont_expand(for_conditional);
     }
     // Wow!!!!! See TeX the Program \S 309
     // SHOULD count nesting of { }!!! when SCANNED (not digested)
-    let check_alignment_data = {
-      if has_reading_alignment() && align_group_count() == 0 {
-        if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
-          let reading_alignment = get_reading_alignment().unwrap();
-          Some((reading_alignment, atype, ahidden))
-        } else {
-          None
-        }
-      } else {
-        None
+    if has_reading_alignment() {
+      match read_x_token_column_end(token)? {
+        ColumnEndRead::Worked => continue,
+        ColumnEndRead::EndsNumberScan => return Ok(Some(token)),
+        ColumnEndRead::NotOne => {},
       }
-    };
-    if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
-      if let DigestedData::Alignment(data) = reading_alignment.data() {
-        handle_template(data.borrow_mut(), token, atype, ahidden)?;
-      } else {
-        panic!("malformed alignmed was stored?");
-      }
-      // And *then* continue the main loop checks
-    } else if token.get_catcode().is_active_or_cs() {
+    }
+    if token.get_catcode().is_active_or_cs() {
       // Read the meaning via closure so we can branch on the borrowed
       // Stored without cloning (Stored::clone was ~1% of total on
       // siunitx-heavy profiles; this site fires on every CS/ACTIVE
@@ -1109,10 +2599,10 @@ pub fn read_x_token(
         Some(Stored::None) | None => Outcome::Undefined,
         Some(other) => match other.to_definition() {
           Some(defn) => {
-            if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
-              Outcome::NonExpandable
-            } else {
+            if expands_now(&defn, fully_expand) {
               Outcome::Invoke(defn)
+            } else {
+              Outcome::NonExpandable
             }
           },
           None => Outcome::Undefined,
@@ -1122,86 +2612,15 @@ pub fn read_x_token(
         Outcome::LetTo(let_token) => {
           return Ok(Some(if for_conditional { let_token } else { token }));
         },
-        Outcome::Undefined => {
-          if token.get_catcode() == Catcode::CS {
-            // The LaTeX format may not be loaded yet (a document may use a
-            // kernel CS before `\documentclass` — real LaTeX has no "before
-            // the kernel"). If this is a kernel CS, pull the format in and
-            // re-resolve rather than stubbing it as `<ltx:ERROR/>`. Fires at
-            // most once per session; see `binding::kernel_autoload`.
-            if crate::binding::kernel_autoload::try_autoload(&token) {
-              unread_one(token); // Retry, now that the kernel is in state.
-              continue;
-            }
-            return Ok(Some(generate_error_stub(&token)?));
-          } else {
-            return Ok(Some(token));
-          }
+        Outcome::Undefined => match read_x_token_undefined(token)? {
+          Some(result) => return Ok(Some(result)),
+          None => continue,
         },
         Outcome::NonExpandable => {
           return Ok(Some(token));
         },
         Outcome::Invoke(defn) => {
-          local_current_token(token);
-          // Grow the native stack ahead of deep expansion recursion (xint
-          // `\XINT_…` number-arg chains nest tens of thousands deep) so
-          // finite-deep recursion completes instead of overflowing the conversion
-          // thread's 256 MB stack → SIGABRT (Perl degrades via `$MAXSTACK`). This
-          // only grows the stack; the depth CAP is `ExpandDepthGuard` at the top
-          // of `read_x_token`. Same idiom as the recursive walks in `document.rs`
-          // / the math parser; params in `crate::stack_guard`.
-          #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
-          let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
-          // token-locators: fill-only origin inheritance. A macro that
-          // expands into synthesized tokens with no origin — e.g.
-          // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —
-          // would leave its output unlocatable. Attribute such tokens to
-          // the invocation site so the rendered text is source-mapped.
-          // The inherited handle is flagged `inherited` (one push per
-          // expansion, shared by every result token), so `child_span`'s
-          // genuine-origin-first scan never lets a macro's structural body
-          // literals widen its arguments' content-exact span. We also never
-          // overwrite a token that already carries an origin. See
-          // SOURCE_PROVENANCE.md §3.1.3.
-          #[cfg(feature = "token-locators")]
-          {
-            let inv_loc = token.loc;
-            if inv_loc != 0 {
-              let mut inherited = 0u32;
-              for t in invoked.unlist_mut() {
-                if t.loc == 0 {
-                  if inherited == 0 {
-                    inherited = crate::token::push_inherited_origin(inv_loc);
-                  }
-                  t.loc = inherited;
-                }
-              }
-            }
-          }
-          if *TRACE_GROUP_END {
-            // Print per-event {macro, delta} so post-processing can sum
-            // by-macro to find which expandable CS contributes net +/- 1
-            // imbalance across the run. Format: TRACE_GE delta CS
-            let (mut begs, mut ends) = (0, 0);
-            for t in invoked.unlist_ref() {
-              if *t == T_CS!("\\group_begin:") || *t == T_CS!("\\begingroup") {
-                begs += 1;
-              } else if *t == T_CS!("\\group_end:") || *t == T_CS!("\\endgroup") {
-                ends += 1;
-              }
-            }
-            if begs > 0 || ends > 0 {
-              eprintln!(
-                "TRACE_GE delta={} begs={} ends={} cs={}",
-                begs - ends,
-                begs,
-                ends,
-                token
-              );
-            }
-          }
-          unread(invoked);
-          expire_current_token();
+          invoke_expansion(token, &defn)?;
           continue;
         },
       }
@@ -1217,8 +2636,199 @@ pub fn read_x_token(
   }
 }
 
+/// [`read_x_token`] at the end of its input: whether a transparent injection closed and reading goes on.
+#[cold]
+#[inline(never)]
+fn read_x_token_crosses_input_end() -> Result<bool> {
+  {
+    let gullet = gullet!();
+    let current_is_autoclose = gullet
+      .runtime
+      .as_ref()
+      .map(|r| r.autoclose)
+      .unwrap_or(false);
+    // Drain a *transparent autoclose injection* (\scantokens, raw_tex) and
+    // resume the enclosing mouth even for a BOUNDED reader (toplevel==false,
+    // e.g. the InputDefinitions file loop) — these are part of the current
+    // logical stream. Faithful to tex.web `get_next` §362-365 (exhausting any
+    // input level resumes the enclosing one; \scantokens is a pseudo-file
+    // level). DIVERGES from Perl `Gullet.pm` readXToken, which gates on
+    // `autoclose = toplevel` and so returns at the first exhausted mouth —
+    // truncating a `.sty` whenever `\scantokens` runs mid-load (witness
+    // 1906.03240: real babel.sty `\selectlanguage` dropped every later def →
+    // undefined-CS cascade; Perl's hand-written babel.ltxml dodges it).
+    // A non-autoclose boundary is left to its owner (return None).
+    if !current_is_autoclose || gullet.mouthstack.is_empty() {
+      return Ok(false);
+    }
+  }
+  close_mouth(false)?; // Drain the autoclose injection; resume the parent.
+  Ok(true)
+}
+
+/// [`read_x_token`] of `\dont_expand`.
+#[cold]
+#[inline(never)]
+fn read_x_token_dont_expand(for_conditional: bool) -> Result<Option<Token>> {
+  let unexpanded = match read_token()? {
+    Some(t) => t,
+    None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
+  };
+  if for_conditional && unexpanded.code == Catcode::ACTIVE {
+    Ok(Some(unexpanded))
+  } else {
+    // `\noexpand <tok>`: per-token `\special_relax` family encoding <tok>'s
+    // identity in the name — faithful to TeX's `no_expand_flag`, which keeps
+    // `cur_cs` while giving relax meaning for this one access. (Perl
+    // readXToken returns a bare `\special_relax`, dropping the identity;
+    // recovering it is a deliberate, SURPASS-PERL fidelity fix so a
+    // `\noexpand`'d delimiter — e.g. xint's `\XINTfstop`, witness
+    // 1804.01117 — reaches the surrounding parser as itself. The marker
+    // lasts for this one read: a scanner that puts the token back puts
+    // back its plain self (`unread_scanned`, KNOWN_PERL_ERRORS #255).)
+    Ok(Some(crate::token::noexpand_family(&unexpanded)))
+  }
+}
+
+/// What [`read_x_token`] does with a token while an alignment is being read.
+enum ColumnEndRead {
+  Worked,
+  EndsNumberScan,
+  NotOne,
+}
+
+/// [`read_x_token`] while an alignment is being read: "Wow!!!!! See TeX the Program \S 309"
+/// SHOULD count nesting of { }!!! when SCANNED (not digested)
+#[inline(never)]
+fn read_x_token_column_end(token: Token) -> Result<ColumnEndRead> {
+  if align_group_count() != 0 {
+    return Ok(ColumnEndRead::NotOne);
+  }
+  let Some((_atoken, atype, ahidden)) = is_column_end(&token) else {
+    return Ok(ColumnEndRead::NotOne);
+  };
+  if in_number_scan() {
+    // tex.web §440: a tab/row end is unexpandable inside a number
+    // scan — it ends the scan and is re-read (and then acted on) by
+    // the main loop. Batch 56bi.
+    return Ok(ColumnEndRead::EndsNumberScan);
+  }
+  let reading_alignment = get_reading_alignment().unwrap();
+  if let DigestedData::Alignment(data) = reading_alignment.data() {
+    handle_template(data.borrow_mut(), token, atype, ahidden)?;
+  } else {
+    panic!("malformed alignmed was stored?");
+  }
+  // And *then* continue the main loop checks
+  Ok(ColumnEndRead::Worked)
+}
+
+/// [`read_x_token`] of a token with no meaning: what it returns, or `None` to read again.
+#[cold]
+#[inline(never)]
+fn read_x_token_undefined(token: Token) -> Result<Option<Token>> {
+  if token.get_catcode() == Catcode::CS {
+    // The LaTeX format may not be loaded yet (a document may use a
+    // kernel CS before `\documentclass` — real LaTeX has no "before
+    // the kernel"). If this is a kernel CS, pull the format in and
+    // re-resolve rather than stubbing it as `<ltx:ERROR/>`. Fires at
+    // most once per session; see `binding::kernel_autoload`.
+    if crate::binding::kernel_autoload::try_autoload(&token) {
+      unread_one(token); // Retry, now that the kernel is in state.
+      return Ok(None);
+    }
+    // a command a refused class environment defines for its body (`kernel_autoload`)
+    if crate::binding::kernel_autoload::try_refused_environment_definition(&token) {
+      unread_one(token);
+      return Ok(None);
+    }
+    // a stand-in named for the undefined name (`\chapter` in a class without chapters, OXIDIZED_DESIGN #734)
+    if let Some(stand_in) = crate::binding::kernel_autoload::undefined_fallback(&token) {
+      unread_one(stand_in);
+      return Ok(None);
+    }
+    Ok(Some(generate_error_stub(&token)?))
+  } else {
+    Ok(Some(token))
+  }
+}
+
 /// Read the next raw line (string);
 /// primarily to read from the Mouth, but keep any unread input!
+/// Whether the gullet's unread (pushed-back) tokens include a non-space token.
+///
+/// Raw-line readers need this to interpret their FIRST [`read_raw_line`]
+/// call. A `read_non_space` argument probe that found no `[` has crossed the
+/// newline after `\begin{env}` and unread the BODY's first non-space
+/// character — the "first raw line" is then real content, not the leftover of
+/// the `\begin` line. A benign probe (`if_next` via `read_token`) unreads at
+/// most the end-of-line SPACE token, so space-only pushback still means "the
+/// first raw line is `\begin`-line leftover, discard it". See
+/// `listings_sty::listings_read_raw_lines` (OXIDIZED_DESIGN #162).
+pub fn pushback_holds_nonspace() -> bool {
+  let gullet = gullet!();
+  match gullet.runtime {
+    Some(ref runtime) => runtime
+      .pushback
+      .iter()
+      .any(|t| t.get_catcode() != Catcode::SPACE),
+    None => false,
+  }
+}
+
+/// The pending pushback as text, next-to-read first, left in place: what a raw
+/// line reader would take before the mouth's line (see [`read_raw_line`]).
+pub fn pushback_text() -> String {
+  let gullet = gullet!();
+  match gullet.runtime {
+    Some(ref runtime) => Tokens::new(runtime.pushback.iter().rev().cloned().collect()).to_string(),
+    None => String::new(),
+  }
+}
+
+/// The current mouth line as raw text from column 0, DROPPING the pushback:
+/// for a reader that knows the pushback holds tokens probed off this very
+/// line (`pushback_holds_nonspace`), so the line comes back whole — with its
+/// indentation and any catcode-9 characters the probe's tokenization lost.
+pub fn read_raw_current_line_from_start() -> Option<String> {
+  let mut gullet = gullet_mut!();
+  match gullet.runtime {
+    Some(ref mut runtime) => {
+      runtime.pushback.clear();
+      runtime.watch.note_len(0);
+      runtime.mouth.read_raw_line_from_start()
+    },
+    None => None,
+  }
+}
+
+/// [`read_raw_line`] from the current mouth with its input bytes decoded
+/// through the declared input encoding (`Mouth::read_raw_line_decoded`); the
+/// `.bib` reader's and `{verbatim}`'s line source. Pending pushback is taken
+/// as `read_raw_line` takes it, and decoded with the rest of the line: a
+/// pushed-back active byte prints as its Latin-1 character (a `{verbatim}`
+/// wrapper whose optional-argument check peeked the body's first character
+/// left a cp1251 first line as mojibake).
+pub fn read_raw_line_decoded() -> Option<String> {
+  let has_pushback = gullet!()
+    .runtime
+    .as_ref()
+    .is_some_and(|runtime| !runtime.pushback.is_empty());
+  if has_pushback {
+    let line = read_raw_line()?;
+    let gullet = gullet!();
+    return Some(match gullet.runtime.as_ref() {
+      Some(runtime) => runtime.mouth.decode_eight_bit(line),
+      None => line,
+    });
+  }
+  let mut gullet = gullet_mut!();
+  gullet
+    .runtime
+    .as_mut()
+    .and_then(|runtime| runtime.mouth.read_raw_line_decoded(false))
+}
+
 pub fn read_raw_line() -> Option<String> {
   // If we've got unread tokens, they presumably should come before the Mouth's raw data
   // but we'll convert them back to string.
@@ -1228,6 +2838,7 @@ pub fn read_raw_line() -> Option<String> {
     // "next to read" first — reverse the drained order to match the
     // old VecDeque drain(..) which was front-to-back (= next-to-read).
     let tokens: Vec<Token> = runtime.pushback.drain(..).rev().collect();
+    runtime.watch.note_len(0);
 
     // TODO
     // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() ==
@@ -1247,6 +2858,21 @@ pub fn read_raw_line() -> Option<String> {
     }
   } else {
     None
+  }
+}
+
+/// Give back the rest of the line a raw reader just read, as the current line of the input it came from, so the next
+/// token or raw line is read from it and then from the lines after — one TeX input line (`\end{lstlisting} x
+/// \begin{lstlisting}`: the second listing's raw reader reads its body from the following lines, 2408.11865). False
+/// when tokens wait in front of it, which the line would then follow.
+pub fn restore_raw_line_rest(rest: &str) -> bool {
+  let mut gullet = gullet_mut!();
+  match gullet.runtime.as_mut() {
+    Some(runtime) if runtime.pushback.is_empty() => {
+      runtime.mouth.restore_line_rest(rest);
+      true
+    },
+    _ => false,
   }
 }
 
@@ -1299,26 +2925,85 @@ pub enum ExpansionLevel {
 /// and only optionally requires the openning "{".
 ///
 /// It may return comments in the token lists.
-/// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
+/// `pack_parameters` packs the `#` parameters of a macro body (Perl's
+/// `$macrodef`, `Tokens::pack_parameters`). What happens when a file ends
+/// inside the read is the [`ScannerStatus`]'s business, not this flag's: see
+/// [`read_definition_body`] and [`read_balanced_text`] for the scans that set
+/// one, and [`recover_at_file_end`].
 /// If `require_open` is true, the opening T_BEGIN has not yet been read, and is required.
 ///
 /// If `toplevel` is true, it will automatically close empty mouths as it reads,
 /// and will also fully expand macros (unless overridden by `expansion_level` being explicitly Off).
 pub fn read_balanced(
   expansion_level: ExpansionLevel,
-  is_macrodef: bool,
+  pack_parameters: bool,
   require_open: bool,
 ) -> Result<Tokens> {
+  Ok(read_balanced_with_close(expansion_level, pack_parameters, require_open)?.0)
+}
+
+/// A definition body: tex.web §473 `scan_toks(true, xpand)`, read at
+/// `defining` status with its `#` parameters packed (`\def`, `\edef`, via the
+/// `DefPlain`/`DefExpanded` parameter types). A file that ends inside it ends
+/// the definition there (§339). TeX names the macro being defined; the body
+/// reader does not know it, so the report says "definition" alone.
+pub fn read_definition_body(expansion_level: ExpansionLevel) -> Result<Tokens> {
+  let _status = set_scanner_status(ScannerStatus::Defining, None);
+  read_balanced(expansion_level, true, true)
+}
+
+/// A balanced text: tex.web §473 `scan_toks(false, xpand)` (eTeX
+/// `scan_general_text`), read at `absorbing` status for the command being
+/// executed (`\write`, `\uppercase`, `\detokenize`, `\toks=`, the pdfTeX
+/// texts …). A file that ends inside it ends the text there (§339).
+pub fn read_balanced_text(expansion_level: ExpansionLevel, require_open: bool) -> Result<Tokens> {
+  let _status = set_scanner_status(ScannerStatus::Absorbing, get_current_token());
+  read_balanced(expansion_level, false, require_open)
+}
+
+/// [`read_balanced`] that also hands back the CLOSE token that ended the
+/// group (`None` when the read ran out or found no opening brace). A
+/// delimited reader stores a matched group verbatim (tex.web §392-398
+/// `macro_call`'s `store_new_token(cur_tok)` — the argument keeps the braces
+/// it was scanned with; the single-group outer-brace strip is §399-400, by
+/// catcode). Diverges from Perl's canonical `T_END` (Gullet.pm:661/674),
+/// OXIDIZED_DESIGN_DIVERGENCES #224. chemfig scans `(…)`
+/// submols with `(`/`)` given catcodes 1/2 (chemfig.tex:1315-1324) and a
+/// canonical `}` in their place re-tokenized as a real end-brace in the next
+/// `\scantokens`, unbalancing it (chemexec/chemnum, sweep 74).
+pub fn read_balanced_with_close(
+  expansion_level: ExpansionLevel,
+  pack_parameters: bool,
+  require_open: bool,
+) -> Result<(Tokens, Option<Token>)> {
   use ExpansionLevel::*;
-  if !require_open {
-    decrement_align_group_count();
-  }
-  local_align_group_count(1000000);
+  let mut close: Option<Token> = None;
+  // NOTE: no align-ledger localization and no entry compensator here.
+  // tex.web's `scan_toks` (§473-482) does NOT touch `align_state`: every
+  // scanned brace counts on the live ledger, and the opening `{` of the
+  // balanced text (counted by the caller for `require_open=false`, or by
+  // the read below) is itself what keeps the ledger ≥1 inside, so `&`
+  // cannot fire the alignment interrupt mid-argument. Perl instead
+  // localizes ALIGN_STATE to 1000000 with an entry `--` compensator
+  // (Gullet.pm readBalanced); that ERASES the interior net effect, so
+  // expl3 brace-tricks (`\if_true: { \else: } \fi:` pairs whose halves
+  // travel through different reads) drift the ledger permanently and a
+  // later cell-top `&` goes stray (Perl shares that failure; l3doc
+  // `{function}` repro). See [`unread_expansion`] for the pushback half
+  // of the same protocol.
   // let startloc = if lookup_verbosity() > 0 { Some(get_locator()) } else { None };
   // Do we need to expand to get the { ???
   if require_open {
     let token_opt = if expansion_level != Off {
-      read_x_token(Some(false), false, None)?
+      // TeX's scan_left_brace uses plain get_x_token: \protected macros
+      // EXPAND while hunting the required `{` — protection inhibits
+      // expansion only during body absorption (live-probed pdflatex
+      // 2026-08-31: `\protected\def\pp{{abc}}\expanded\pp` typesets abc).
+      // With the default (toplevel) expansion this errored on every
+      // `\xinttheexpr` (`\expanded\csname XINTexprprint…` is \protected) —
+      // the ~16-doc `expected:{` xint cluster. #161-family fidelity fix.
+      // Guard: cluster_package_guards::expanded_protected_brace_hunt.
+      read_x_token(Some(false), false, Some(true))?
     } else {
       read_token()?
     };
@@ -1343,7 +3028,7 @@ pub fn read_balanced(
         unread_one(t);
       }
       Error!("expected", "{", s!("Expected opening '{{'"));
-      return Ok(Tokens!());
+      return Ok((Tokens!(), None));
     }
   }
   // Pre-size the token accumulator: most balanced reads are short
@@ -1395,37 +3080,85 @@ pub fn read_balanced(
       // the whole bibliography while reporting a single error. Perl keeps all
       // the other entries. Such a mouth declares itself
       // [`BalancedBoundary::Opaque`].
+      //
+      // What counts as a file is the input LEVEL, not how it is read: a file
+      // held in memory (filecontents, an `\openout` file) is read from a
+      // string but ends like any file ([`crate::mouth::Mouth::is_file_level`]).
+      // At a file's end TeX closes the file and recovers by the scanner status
+      // (tex.web §362 `check_outer_validity`, §338-339; [`recover_at_file_end`]):
+      // a definition or a text gets a `}` and the enclosing input goes on, so
+      // the rest of the document is kept; a macro argument abandons its call.
+      // At normal status the read keeps the stop and the error below.
+      // Guards: `vfs_file_end::*`, `scanner_status::*`.
       None => {
-        let cross = {
+        let (autoclosed, file_level, transparent) = {
           let gullet = gullet!();
-          gullet
-            .runtime
-            .as_ref()
-            .map(|r| {
-              r.autoclose
-                && r.boundary == BalancedBoundary::Transparent
-                && r.mouth.foodtype() != crate::mouth::FoodType::File
-            })
-            .unwrap_or(false)
-            && !gullet.mouthstack.is_empty()
+          let has_parent = !gullet.mouthstack.is_empty();
+          gullet.runtime.as_ref().map_or((false, false, false), |r| {
+            (
+              r.autoclose && has_parent,
+              r.mouth.is_file_level(),
+              r.boundary == BalancedBoundary::Transparent,
+            )
+          })
         };
-        if cross {
+        if autoclosed && transparent && !file_level {
           close_mouth(false)?;
           continue;
         }
-        break;
+        match recover_at_file_end()? {
+          FileEndRecovery::Inserted => continue,
+          FileEndRecovery::Abandoned => {
+            // The call drops this argument; retract its unmatched braces from
+            // the alignment ledger as §392 does (`align_state-unbalance`).
+            set_align_group_count(align_group_count() - level);
+            note_runaway_tokens(tokens);
+            return Ok((Tokens!(), None));
+          },
+          FileEndRecovery::NotARunaway => break,
+        }
+      },
+      // A `\par` in a non-`\long` macro's braced argument ends the call (tex.web §399): drop the group, retracting
+      // its unmatched braces as §396 does (`align_state-unbalance`).
+      Some(token) if is_par_ending_argument(&token) => {
+        set_align_group_count(align_group_count() - level);
+        abandon_argument_at_par(token);
+        return Ok((Tokens!(), None));
       },
       Some(token) => match token.get_catcode() {
         Catcode::CS if token.text == pin!("\\dont_expand") => {
           if let Some(next_t) = read_token()? {
+            if is_par_ending_argument(&next_t) {
+              set_align_group_count(align_group_count() - level);
+              abandon_argument_at_par(next_t);
+              return Ok((Tokens!(), None));
+            }
             tokens.push(next_t); // Pass on NEXT token, unchanged.
           }
+        },
+        // The v-part's `}` of a template that braces its cells (latex.ltx:15760-15763 `{eqnarray}`'s
+        // `$\displaystyle{##}$`, amsmath's templates), carried as latexml_engine tex_box.rs `\lx@template@egroup`:
+        // an argument read when a column end fires at alignment count 0 meets it (the cell's `}` closed the
+        // template's `{`, so the argument's `{` holds the count at 0, tex.web §342), and as the explicit `}` it is in
+        // TeX it closes the argument (§392). `a^{b}_c} - \frac{x}{y_{d}&=& 0.` in an eqnarray: `\frac`'s second
+        // argument is `y_{d}`, as in pdflatex (0 errors); before, the argument ran past the template to the end of the
+        // document (0902.2869, from line 409). The count is left as the primitive leaves it: the template's braces
+        // are invisible to it (§324 resets it after the u-part). Guard
+        // `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
+        Catcode::CS if token.text == pin!("\\lx@template@egroup") => {
+          level -= 1;
+          if level <= 0 {
+            close = Some(T_END!());
+            break;
+          }
+          tokens.push(T_END!());
         },
         Catcode::END => {
           // Perl Gullet.pm L476: track ALIGN_STATE for } inside readBalanced
           decrement_align_group_count();
           level -= 1;
           if level <= 0 {
+            close = Some(token);
             break;
           }
           tokens.push(token);
@@ -1464,9 +3197,13 @@ pub fn read_balanced(
             let (has_meaning, defn_opt) =
               with_meaning(&token, |m| (m.is_some(), m.and_then(|s| s.to_definition())));
             if let Some(defn) = defn_opt {
-              if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full) {
+              if defn.is_expandable()
+                && (!defn.is_protected() || expansion_level == Full)
+                && (expansion_level == Full || !optional_arg_protected(&defn))
+              {
                 local_current_token(token);
-                let expansion = defn.invoke(false)?;
+                let mut expansion = defn.invoke(false)?;
+                crate::token::inherit_field_prov(token.prov, &mut expansion);
                 if expansion.is_empty() {
                   expire_current_token();
                   continue;
@@ -1474,14 +3211,14 @@ pub fn read_balanced(
                 // If a special \the type command, push the expansion directly into the result
                 // Well, almost directly: handle any MARKER tokens now, and possibly un-pack T_PARAM
                 //
-                // Perl `Gullet.pm:505` checks `$$defn{cs}[0]` — but in Perl the Lt-aliases
-                // (e.g. `Lt('\\exp_not:n','\\unexpanded')`) share the SAME Definition, so its
-                // cs field IS `\unexpanded`. In Rust the dump-writer emits `\exp_not:n` as a
-                // separate Expandable with alias=`\unexpanded`; check the alias too so the
-                // DEFERRED_COMMANDS gate fires for `\exp_not:n {…}` inside `\edef` bodies.
-                // Without this, expl3's `\seq_gpush:Nn` (which uses `\exp_not:n` to wrap
-                // `\__seq_item:n {…}`) loses its item — the item gets re-expanded into the
-                // expandable-error trap, leaving the seq stack empty and triggering
+                // Perl `Gullet.pm:505` checks `$$defn{cs}[0]` — the Lt-aliases (e.g.
+                // `Lt('\\exp_not:n','\\unexpanded')`) share the SAME Definition, so its cs
+                // field IS `\unexpanded`. The dump now writes such a copy as `PA` (the same
+                // definition too); the alias check remains for a by-value copy that carries
+                // alias=`\unexpanded` (`dump_reader`), so the DEFERRED_COMMANDS gate still fires
+                // for it inside `\edef` bodies. Without that gate, expl3's `\seq_gpush:Nn`
+                // (`\exp_not:n` wrapping `\__seq_item:n {…}`) loses its item — re-expanded into
+                // the expandable-error trap, leaving the seq stack empty and triggering
                 // `extra-pop-label`/`\q_no_value`-recursion cascades during `\@pushfilename`.
                 let cs_matches = DEFERRED_COMMANDS.contains(&defn.get_cs().text);
                 let alias_matches = defn
@@ -1492,7 +3229,7 @@ pub fn read_balanced(
                   for t in expansion.unlist() {
                     match t.get_catcode() {
                       Catcode::MARKER => handle_marker(t),
-                      Catcode::PARAM if is_macrodef => {
+                      Catcode::PARAM if pack_parameters => {
                         // "unpack" to cover the packParameters at end!
                         tokens.push(t);
                         tokens.push(t);
@@ -1502,7 +3239,7 @@ pub fn read_balanced(
                   }
                 } else {
                   // otherwise, prepend to pushback to be expanded further.
-                  unread(expansion);
+                  unread_expansion(expansion);
                 }
                 expire_current_token();
                 continue;
@@ -1543,15 +3280,17 @@ pub fn read_balanced(
       "Gullet->readBalanced ran out of input in an unbalanced state"
     );
   }
-  expire_align_group_count();
   if tokens.is_empty() {
-    Ok(Tokens!())
+    Ok((Tokens!(), close))
   } else {
-    Ok(if is_macrodef {
-      Tokens::new(tokens).pack_parameters()?
-    } else {
-      Tokens::new(tokens)
-    })
+    Ok((
+      if pack_parameters {
+        Tokens::new(tokens).pack_parameters()?
+      } else {
+        Tokens::new(tokens)
+      },
+      close,
+    ))
   }
 }
 
@@ -1595,6 +3334,13 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
     if ok {
       return Ok(Some(keyword.to_string()));
     } else {
+      // scan_keyword backs up the plain tokens it read (tex.web §407): a
+      // `\noexpand`'d one goes back as its plain self (see `unread_scanned`).
+      for token in &mut matched {
+        if let Some(plain) = token.noexpand_shadowed() {
+          *token = plain;
+        }
+      }
       unread(matched.into());
     }
   }
@@ -1606,7 +3352,43 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
 /// Note that Braces on input hides the contents from matching,
 /// so this assumes there wont be braces in $delim!
 /// But, see readUntilBrace for that case.
-pub fn read_until(delim: &Tokens) -> Result<Tokens> {
+/// Reads until the delimiter tokens match. Returns `None` when input RAN OUT
+/// before the delimiter appeared (everything consumed is unread first) —
+/// mirroring Perl `Gullet::readUntil`'s undef (Gullet.pm L683-685), so an
+/// `Until:` parameter can raise the Perl-faithful per-iteration "Missing
+/// argument" Error instead of silently yielding empty. The silent empty made
+/// zero-progress delimited-scan loops (fancyvrb `\FancyVerbGetLine#1^^M`
+/// rescanning a replayed tail after an error stub swallowed its sentinel —
+/// willowtreebook) spin to the 50k-box Stomach:Recursion fatal; with the
+/// distinguishable EOF the TooManyErrors latch ends them like Perl's
+/// MAX_ERRORS does, naming the looping macro. A MATCHED delimiter with empty
+/// content stays `Some(empty)` — legitimate `\def\foo#1;{…}\foo;` args.
+/// Is the gullet at the TRUE end of all input — no mouth left beneath the
+/// current one and no `reading_from_mouth` context open? A delimited read
+/// that misses its delimiter here has really run off the end of the
+/// document (tex.web §338 "File ended while scanning use of"), as opposed
+/// to the artificial end of an isolated reading context, where the
+/// enclosing stream would still hold the delimiter.
+pub fn at_end_of_all_input() -> bool {
+  let g = gullet!();
+  g.mouthstack.is_empty() && g.ctx_stack.is_empty()
+}
+
+/// Whether a `\par` read after the tokens in `ring` continues a partial match of the delimiter `want`: some prefix
+/// of `want` ends in `\par` and the ring's last tokens are the rest of that prefix (tex.web §397's partial match).
+fn continues_partial_match(ring: &VecDeque<Token>, want: &[Token]) -> bool {
+  let par = T_CS!("\\par");
+  (1..=want.len()).any(|k| {
+    want[k - 1] == par
+      && k - 1 <= ring.len()
+      && ring
+        .iter()
+        .skip(ring.len() + 1 - k)
+        .eq(want[..k - 1].iter())
+  })
+}
+
+pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
   // Pre-size like `read_balanced`: the accumulator is grown one token at a time
   // in the loops below, so an unsized `Vec::new()` pays the 0→1→2→4→8 doubling
   // reallocations on every call. 16 covers the common short delimited read in a
@@ -1623,14 +3405,28 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
       let token = match read_token()? {
         Some(t) => t,
         None => {
-          // Ran out!
+          // A delimited macro argument that runs off a file's end abandons
+          // its call (`recover_at_file_end`), which drops the argument.
+          if argument_ran_off_a_file()? {
+            note_runaway_tokens(tokens);
+            return Ok(Some(Tokens!()));
+          }
+          // Ran out! Unread and report the distinguishable EOF. A marked
+          // `\scantokens` mouth has already delivered its `\everyeof`
+          // payload as its last tokens (`eof_seen`), so this is the true end.
           unread(Tokens::new(tokens));
-          return Ok(Tokens!()); // Not more correct, but maybe less confusing?
+          return Ok(None);
         },
       };
       // Perl: check direct match OR \special_relax smuggling (Gullet.pm line 662)
       if token == *want || special_relax_matches(&token, want) {
         break;
+      }
+      // After the delimiter test, as tex.web §392 orders them: a `\par` delimiter is matched, any other `\par`
+      // ends a non-`\long` macro's call.
+      if is_par_ending_argument(&token) {
+        abandon_argument_at_par(token);
+        return Ok(Some(Tokens!()));
       }
       match token.get_catcode() {
         Catcode::MARKER => {
@@ -1641,11 +3437,16 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
           // And if it's a BEGIN, copy till balanced END
           nbraces += 1;
           tokens.push(token);
-          let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
+          let (balanced_arg, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
+          if argument_runaway() {
+            note_runaway_tokens(tokens);
+            return Ok(Some(Tokens!()));
+          }
           if !balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
-          tokens.push(T_END!());
+          // The group's OWN close (tex.web §392), not a canonical `}`.
+          tokens.push(close.unwrap_or_else(|| T_END!()));
         },
         _ => {
           tokens.push(token);
@@ -1660,25 +3461,53 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
         let token = match read_token()? {
           Some(t) => t,
           None => {
-            // Ran out!
+            if argument_ran_off_a_file()? {
+              tokens.extend(ring);
+              note_runaway_tokens(tokens);
+              return Ok(Some(Tokens!()));
+            }
+            // Ran out! Unread and report the distinguishable EOF.
+            // The partial ring is DROPPED, not unread — replaying a
+            // half-matched delimiter prefix into the stream re-tokenizes
+            // it under current catcodes (l3doc `_`-laden names became
+            // double-subscript cascades: spath3 1→1001, 2026-09-01).
             unread(Tokens::new(tokens));
-            return Ok(Tokens!()); // Not more correct, but maybe less confusing?
+            return Ok(None);
           },
         };
-        // Perl: $$token[1] == CC_BEGIN — direct catcode check
-        if token.get_catcode() == Catcode::BEGIN {
+        // A `\par` that continues a partial match of the delimiter is accepted quietly (tex.web §397); any other
+        // ends a non-`\long` macro's call (§392).
+        if is_par_ending_argument(&token) && !continues_partial_match(&ring, want) {
+          abandon_argument_at_par(token);
+          return Ok(Some(Tokens!()));
+        }
+        // Perl: $$token[1] == CC_BEGIN — direct catcode check. A `{` that completes the delimiter (one ending in `{`,
+        // from a parameter text's closing `#{`) is its last token: tex.web §392 compares the token with the delimiter
+        // before it takes a `{` as a group.
+        if token.get_catcode() == Catcode::BEGIN
+          && !(ring.len() + 1 == ntomatch
+            && token == want[ntomatch - 1]
+            && ring
+              .iter()
+              .zip(want.iter())
+              .all(|(have, wanted)| have == wanted))
+        {
           // read balanced, and refill ring.
           nbraces += 1;
-          for r_token in ring {
+          // the ring empties into the tokens: the scan retries with a fresh one
+          for r_token in std::mem::take(&mut ring) {
             tokens.push(r_token);
           }
           tokens.push(token);
-          let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
+          let (balanced_arg, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
+          if argument_runaway() {
+            note_runaway_tokens(tokens);
+            return Ok(Some(Tokens!()));
+          }
           if !balanced_arg.is_empty() {
             tokens.append(&mut balanced_arg.unlist());
           }
-          tokens.push(T_END!()); // Copy directly to result
-          ring = VecDeque::new(); // and retry
+          tokens.push(close.unwrap_or_else(|| T_END!())); // the group's own close
         } else {
           ring.push_back(token);
         }
@@ -1702,22 +3531,73 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
     tokens.remove(0);
     tokens.pop();
   }
-  Ok(Tokens::new(tokens))
+  Ok(Some(Tokens::new(tokens)))
 }
 
-/// Convenience method wrapping around `read_until`
-/// TODO: This seems to be the wrong Rust type interface, we need to rework...
-pub fn read_until_token(t: Token) -> Result<Tokens> { read_until(&Tokens!(t)) }
+/// Convenience method wrapping around `read_until` — EOF degrades to empty
+/// (callers that need to distinguish use `read_until` directly).
+/// Expanding delimited scan: read tokens with full expansion up to (and
+/// consuming) `until`, copying brace groups unexpanded once opened. The
+/// `XUntil:` parameter type's reader (Perl `Parameters.pm` `XUntil`, after
+/// PR #2767 "should only expand, not digest": a bare token push is all that
+/// remains). A `\noexpand`'d token collected here reverts to its plain
+/// shadowed identity, as in `read_balanced`: TeX's no_expand_flag is
+/// transient (tex.web §1149-1153), so a `\protect\cs ` pair produced under
+/// `\@unexpandable@protect` is stored as the plain pair, not relax markers.
+pub fn read_x_until(until: &Token) -> Result<Tokens> {
+  Ok(read_x_until_any(std::slice::from_ref(until))?.0)
+}
+
+/// [`read_x_until`] up to the first of `untils`, returned with the text (`None` when the input ran out).
+pub fn read_x_until_any(untils: &[Token]) -> Result<(Tokens, Option<Token>)> {
+  let mut tokens: Vec<Token> = Vec::new();
+  while let Some(token) = read_x_token(Some(false), false, None)? {
+    if untils.contains(&token) {
+      return Ok((Tokens::new(tokens), Some(token)));
+    } else if token.get_catcode() == Catcode::BEGIN {
+      tokens.push(token);
+      tokens.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+      if argument_runaway() {
+        // The group ran off a file's end: the call is abandoned (§392).
+        note_runaway_tokens(tokens);
+        return Ok((Tokens!(), None));
+      }
+      tokens.push(T_END!());
+    } else if token.get_catcode().is_active_or_cs() {
+      tokens.push(token.noexpand_shadowed().unwrap_or(token));
+    } else {
+      tokens.push(token);
+    }
+  }
+  Ok((Tokens::new(tokens), None))
+}
+
+pub fn read_until_token(t: Token) -> Result<Tokens> {
+  Ok(read_until(&Tokens!(t))?.unwrap_or_default())
+}
 /// reads until it encounters a Catcode::BEGIN token
 /// Note: Perl uses `$$token[1] == CC_BEGIN` (catcode check, not defined_as)
 pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
-  while let Some(token) = read_token()? {
-    if token.get_catcode() == Catcode::BEGIN {
-      unread_one(token); // Unread with proper agc adjustment
-      break;
-    } else {
-      tokens.push(token);
+  loop {
+    match read_token()? {
+      Some(token) if token.get_catcode() == Catcode::BEGIN => {
+        unread_one(token); // Unread with proper agc adjustment
+        break;
+      },
+      Some(token) if is_par_ending_argument(&token) => {
+        abandon_argument_at_par(token);
+        return Ok(None);
+      },
+      Some(token) => tokens.push(token),
+      None => {
+        // A `#{`-delimited macro argument that runs off a file's end: the
+        // call is abandoned (tex.web §392).
+        if argument_ran_off_a_file()? {
+          note_runaway_tokens(std::mem::take(&mut tokens));
+        }
+        break;
+      },
     }
   }
   if tokens.is_empty() {
@@ -1735,7 +3615,34 @@ pub fn read_cs_name() -> Result<Token> { read_cs_name_inner(false) }
 /// without emitting errors (unlike \csname which DOES emit errors).
 pub fn read_cs_name_quiet() -> Result<Token> { read_cs_name_inner(true) }
 
+/// e-TeX `\ifincsname` (etex.ch "Implement \ifincsname"): depth of the
+/// `\csname…\endcsname` scans in progress. utf8.def:55-90's octet handlers
+/// test it to keep a non-ASCII character LITERAL in a name instead of
+/// expanding to its LICR (clefval's `\csname V@a§b\endcsname`). Nest-safe
+/// via `CsnameScope`'s `Drop`, so an early error return still unwinds it.
+#[thread_local]
+static CSNAME_DEPTH: Cell<u32> = Cell::new(0);
+struct CsnameScope;
+impl Drop for CsnameScope {
+  fn drop(&mut self) { CSNAME_DEPTH.set(CSNAME_DEPTH.get().saturating_sub(1)); }
+}
+/// True while a `\csname…\endcsname` name is being scanned.
+pub fn in_csname() -> bool { CSNAME_DEPTH.get() > 0 }
+
+/// Fully expand `tokens` as the name inside a `\csname…\endcsname`
+/// (`\ifincsname` true), the way LaTeX reads a file name: `\set@curr@file`
+/// (latex.ltx) expands `\input`'s argument within `\csname`, so an active
+/// character guarded by `\ifincsname` keeps its literal form there
+/// (underscore-ltx.sty's `_`, utf8.def's octets).
+pub fn expand_as_csname_text<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
+  CSNAME_DEPTH.set(CSNAME_DEPTH.get() + 1);
+  let _csname_scope = CsnameScope;
+  do_expand(tokens)
+}
+
 fn read_cs_name_inner(quiet: bool) -> Result<Token> {
+  CSNAME_DEPTH.set(CSNAME_DEPTH.get() + 1);
+  let _csname_scope = CsnameScope;
   // TeX does NOT store the csname with the leading `\`, BUT stores active chars with a flag
   // However, so long as the Mouth's CS and \string properly respect \escapechar, all's well!
 
@@ -1751,6 +3658,18 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   while let Some(token) = read_x_token(Some(true), false, None)? {
     if token.defined_as(&TOKEN_ENDCSNAME) {
       break;
+    }
+    // tex.web §370: an undefined control sequence inside `\csname…\endcsname`
+    // is reported by `expand` and DISCARDED — the name scan continues. The
+    // `read_x_token` above just stubbed it (`generate_error_stub`, error
+    // emitted), so without this check it read as a defined non-expandable
+    // token and took the §373 `back_error` path, ending the name early and
+    // leaving the real `\endcsname` stray ("Extra \endcsname" ×1693 lines /
+    // 65 manuals: babel's `\csname l@\beamer@torinoth@language\endcsname`
+    // in beamer2thesis, gckanbun's pgf arrow declarations …). Perl consumes
+    // the `\endcsname` but also emits a second error; pdflatex emits one.
+    if token.get_catcode() == Catcode::CS && is_error_stub(&token) {
+      continue;
     }
     if cs.len() > MAX_CS_NAME_BYTES {
       Error!(
@@ -1872,17 +3791,30 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
                   letted.with_str(|s| cs.push_str(s));
                 }
               } else if !quiet {
+                if *CSNAME_TRACE {
+                  csname_trace_lookahead("let", &cs, &token)?;
+                }
                 let message = s!(
                   "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
                   token,
                   cs
                 );
                 Error!("unexpected", token, message);
+                // tex.web §373 `back_error`: "Missing \endcsname inserted" —
+                // the csname ENDS here and the offending token is re-read
+                // AFTER the constructed CS. Swallowing it instead lost every
+                // token up to the real `\endcsname` (tikzpingus-doc:
+                // `\csname foo\relax bar\endcsname` must typeset "bar").
+                unread_one(token);
+                break;
               }
             },
             _ => {
               if !quiet {
                 if lookup_definition(&token)?.is_some() {
+                  if *CSNAME_TRACE {
+                    csname_trace_lookahead("def", &cs, &token)?;
+                  }
                   let message = s!(
                     "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
                     token,
@@ -1893,6 +3825,9 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
                   let message = s!("The token {:?} is not defined", token);
                   Error!("undefined", token, message);
                 }
+                // §373 back_error recovery, as above.
+                unread_one(token);
+                break;
               }
             },
           }
@@ -1905,21 +3840,29 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
       },
     };
   }
+  // K10: under the pdfTeX byte mouth a name has two spellings — the bytes
+  // (`\csname\string\color@#1\endcsname` from a detokenized key, tikz's
+  // colour probe) and the characters the octet readers emit (the binding's
+  // `\definecolor` name) — which pdfTeX never distinguishes. One spelling
+  // per name: the decoded one (`mouth::decode_byte_mouth_runs`).
+  let cs = match crate::mouth::decode_byte_mouth_runs(&cs) {
+    std::borrow::Cow::Borrowed(_) => cs,
+    std::borrow::Cow::Owned(decoded) => decoded,
+  };
   Ok(T_CS!(cs))
 }
 
 /// reads and discards tokens, until it encounters a conditional, if any.
 /// Perl: skipConditionalBody inner loop (Conditional.pm L127-133) reads tokens directly
 /// from pushback/mouth (NOT through readToken) and manually tracks
-/// `$LaTeXML::ALIGN_STATE` for `{` and `}`. Critically, this bypasses the
-/// "alignment-template trigger" check that fires `handleTemplate` on `&`/`\cr`
-/// when align_group_count==0 — that check belongs to digestion, not to
-/// `\else`-skip. Rust's `read_token` includes the trigger; calling it from
-/// here would let pmatrix's `&` get treated as the OUTER alignment's
+/// `$LaTeXML::ALIGN_STATE` for `{` and `}`. This loop does not call `read_token` either:
+/// its expansion and comment handling belong to digestion, and calling it from
+/// here once let pmatrix's `&` get treated as the OUTER alignment's
 /// column-end during `\ifx.#1.\else…\fi` skip when `#1` contains
 /// `\begin{pmatrix}…&…\end{pmatrix}`. (REG-2 / math-ph0501074: the 9-line
-/// `\nonumber+\lefteqn+\pmatrix` repro.) Use `read_internal_token` instead
-/// and track BEGIN/END manually, matching Perl byte-for-byte.
+/// `\nonumber+\lefteqn+\pmatrix` repro.) It does take a column end at a zero count
+/// for the cell's end, as tex.web's `pass_text` does through `get_next` (§342) and
+/// Perl does not (KNOWN_PERL_ERRORS #1183).
 pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
   loop {
     // The FOURTH reader loop over the combined checked read (the `\else`/`\fi`
@@ -1939,6 +3882,24 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
           Catcode::END => decrement_align_group_count(),
           _ => {},
         }
+        // tex.web §342: `pass_text` reads through `get_next`, so a tab or `\cr` met at align_state 0 while a false
+        // branch is skipped ends the cell all the same: the column's v-part goes in ahead of it (§789,
+        // `handle_template` raises the count to 1000000) and the skip reads on through it, where its `\fi` can end
+        // the skip — the hide-column template `>{\iffalse}c<{\fi}` (witness 1504.08100). A column end inside a brace
+        // group of the skipped text is at a nonzero count and is skipped, as the pmatrix `&` above is. The hidden
+        // ends (`\lx@hidden@cr`, `\lx@hidden@align`) stand for LaTeX's `\\` and amsmath's tabs, whose `\cr` or `&`
+        // TeX reaches only by expansion, behind `\relax\iffalse{\fi` (latex.ltx `\@arraycr`), so a skip passes
+        // them (`\ifnum1<\nb\\\hline\fi`, tabularcalc.sty:428). Guard
+        // `perfect_kernel_batch80a::a_false_conditional_in_a_template_ends_at_its_v_part`.
+        if align_group_count() == 0
+          && has_reading_alignment()
+          && let Some((_, atype, false)) = is_column_end(&token)
+          && let Some(reading_alignment) = get_reading_alignment()
+          && let DigestedData::Alignment(data) = reading_alignment.data()
+        {
+          handle_template(data.borrow_mut(), token, atype, false)?;
+          continue;
+        }
         if cc.is_active_or_cs()
           && let Some(cond_type) = lookup_conditional(&token)
         {
@@ -1946,22 +3907,16 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
         }
       },
       CheckedRead::Exhausted => {
-        // Current mouth exhausted. Try closing if autoclosable and there are
-        // more mouths on the stack (TeX continues reading across input boundaries).
-        let (autoclose, stack_len) = {
-          let gullet = gullet!();
-          let ac = gullet
-            .runtime
-            .as_ref()
-            .map(|r| r.autoclose)
-            .unwrap_or(false);
-          let sl = gullet.mouthstack.len();
-          (ac, sl)
-        };
-        if autoclose && stack_len > 0 {
-          close_mouth(false)?;
-          continue;
-        }
+        // The current mouth is exhausted: the skip ENDS here, like Perl's
+        // `skipConditionalBody` (Core/Definition/Conditional.pm:127), which
+        // reads `$$gullet{mouth}->readToken()` — the current mouth only —
+        // and reports "conditional fell off end". Only `read_x_token`'s
+        // normal reading crosses an input boundary (Perl `readXToken`,
+        // Gullet.pm:393); `read_token` (above) does not either. Crossing here
+        // let an `\ifX` left open by an `\input`ed preamble file devour the
+        // PARENT file's `\begin{document}` through EOF — a 39-byte output
+        // with no root (thesis-sample; RUST-ONLY, Perl keeps the body). Guard
+        // `conditional_skip_stops_at_the_input_file_boundary`.
         return Ok(None);
       },
     }
@@ -1983,7 +3938,17 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
 ///  it will **not** read any macro arguments from the following input!
 pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
   match read_non_space()? {
-    None => Ok(Tokens!()),
+    None => {
+      // `\foo` as a file's last token, `\foo` taking an argument: a runaway
+      // argument (tex.web §392), which abandons the call.
+      argument_ran_off_a_file()?;
+      Ok(Tokens!())
+    },
+    // An undelimited argument that is `\par` ends a non-`\long` macro's call (tex.web §392).
+    Some(token) if is_par_ending_argument(&token) => {
+      abandon_argument_at_par(token);
+      Ok(Tokens!())
+    },
     Some(token) => {
       // Perl: $$token[1] == CC_BEGIN — checks actual catcode, NOT defined_as.
       // \bgroup (catcode CS) does NOT match here; only literal { does.
@@ -2055,7 +4020,9 @@ fn read_optional_delimited(
     // the delimiters need.
     Some(t) => {
       if t == open {
-        Ok(Some(read_until(&Tokens!(close))?))
+        // Optional-content EOF degrades to empty (prior behavior): the
+        // Missing-argument discipline belongs to REQUIRED Until params.
+        Ok(Some(read_until(&Tokens!(close))?.unwrap_or_default()))
       } else {
         unread_one(t);
         Ok(default)
@@ -2161,14 +4128,94 @@ pub fn set_internal_dimension_fn(f: InternalDimensionFn) {
   INTERNAL_DIMENSION_FN.with(|c| *c.borrow_mut() = Some(f));
 }
 
-/// Consult the installed resolver for `tok`. `Ok(None)` when none is installed
-/// or it declines; `tok` is left for the caller to un-read in that case.
+/// Consult the installed resolver for `tok`. `Ok(None)` when none is installed,
+/// the document has not loaded calc ([`calc_expressions_active`]), or it
+/// declines; `tok` is left for the caller to un-read in that case.
 fn resolve_internal_dimension(tok: &Token) -> Result<Option<RegisterValue>> {
+  if !calc_expressions_active() {
+    return Ok(None);
+  }
   let f = INTERNAL_DIMENSION_FN.with(|c| c.borrow().clone());
   match f {
     Some(f) => f(tok),
     None => Ok(None),
   }
+}
+
+/// A package-installed evaluator for a braced LENGTH argument — calc.sty's
+/// expression scanner. latex.ltx hands every user length to `\setlength`
+/// (`\@hspace`, `\@imakebox`, `\@rule`, `\@iiiparbox`, `\@iiiminipage`, array's
+/// `\@startpbox`: latex.ltx:9425, 16099-16102, 16360-16366, 16249, 16305), and
+/// calc redefines `\setlength` to evaluate its whole argument as an expression
+/// (calc.sty:86, `\calc@assign@skip` → `\calc@open(#4!`, :51-53). A binding's
+/// `{Dimension}`/`{Glue}` argument is that `\setlength` operand, so with calc
+/// loaded [`crate::parameter::Parameters::reparse_argument`] evaluates it here:
+/// `\makebox[\widthof{ab}+\widthof{cd}]` gets the sum, not the first term. The
+/// evaluator reads from the argument's own mouth, leaving unread whatever calc
+/// could not parse (after reporting it, as calc.sty:281-284 does).
+pub type BracedLengthFn = std::rc::Rc<dyn Fn(RegisterType) -> Result<RegisterValue>>;
+
+thread_local! {
+  static BRACED_LENGTH_FN: RefCell<Option<BracedLengthFn>> = const { RefCell::new(None) };
+}
+
+/// The State flag calc's binding sets when it loads. The resolvers above are
+/// thread-local closures that outlive a document; this per-document flag keeps
+/// them from reaching a later document on the same thread that never loaded calc.
+const CALC_EXPRESSIONS: &str = "calc_expressions";
+
+/// Install the braced-length evaluator and switch the calc seams on for the
+/// current document (calc.sty at load time).
+pub fn set_braced_length_fn(f: BracedLengthFn) {
+  BRACED_LENGTH_FN.with(|c| *c.borrow_mut() = Some(f));
+  assign_value(CALC_EXPRESSIONS, true, Some(Scope::Global));
+}
+
+/// Whether the current document loaded calc, whose seams
+/// ([`set_internal_dimension_fn`], [`set_braced_length_fn`]) are then in force.
+pub fn calc_expressions_active() -> bool { lookup_bool(CALC_EXPRESSIONS) }
+
+/// The braced-length evaluator, when the current document loaded calc.
+pub fn braced_length_evaluator() -> Option<BracedLengthFn> {
+  if calc_expressions_active() {
+    BRACED_LENGTH_FN.with(|c| c.borrow().clone())
+  } else {
+    None
+  }
+}
+
+/// Take everything still unread in the CURRENT mouth — its pushback, then the
+/// rest of its source — as raw tokens, leaving it exhausted. The enclosing
+/// input is untouched. This is how a braced argument hands back what followed
+/// the quantity scanned from it ([`crate::parameter::Parameters::reparse_argument`]):
+/// TeX leaves that tail in the input (`\setlength#1#2{#1 #2\relax}`,
+/// latex.ltx:10253). The tokens count as READ for the alignment brace ledger
+/// (as [`read_token`] counts them), so a caller that puts them back uses
+/// [`unread_vec`], which retracts them again.
+pub fn take_rest_of_mouth() -> Vec<Token> {
+  let rest = {
+    let mut g = gullet_mut!();
+    let Some(runtime) = g.runtime.as_mut() else {
+      return Vec::new();
+    };
+    // The pushback is a stack whose LAST element is read next.
+    let mut rest: Vec<Token> = runtime.pushback.drain(..).rev().collect();
+    runtime.watch.note_len(0);
+    rest.extend(runtime.mouth.read_tokens().unlist());
+    rest
+  };
+  let level: i32 = rest
+    .iter()
+    .map(|token| match token.get_catcode() {
+      Catcode::BEGIN => 1,
+      Catcode::END => -1,
+      _ => 0,
+    })
+    .sum();
+  if level != 0 {
+    set_align_group_count(align_group_count() + level);
+  }
+  rest
 }
 
 pub fn read_register_value(value_type: RegisterType) -> Result<Option<RegisterValue>> {
@@ -2187,50 +4234,68 @@ pub fn read_register_value_coerce(
 ) -> Result<Option<RegisterValue>> {
   match read_x_token(None, false, None)? {
     None => Ok(None),
-    Some(token) => {
-      let _is_fontdimen = token.with_str(|s| s == "\\fontdimen");
-      match lookup_register_definition(&token) {
-        Some(defn) => {
-          if let Some(mut register_type) = defn.register_type() {
-            if register_type == RegisterType::CharDef {
-              // CharDefs treated as numbers here
-              register_type = RegisterType::Number;
-            }
-            if register_type == value_type {
-              let args = defn.read_arguments()?;
-              Ok(defn.value_of(args))
-            } else if coerce {
-              // Try type coercion per Perl's %RegisterCoercionTypes
-              if let Some(coerced) = coerce_register(value_type, register_type, &defn)? {
-                Ok(Some(coerced))
-              } else {
-                unread_one(token);
-                Ok(None)
-              }
-            } else {
-              unread_one(token); // Unread
-              Ok(None)
-            }
-          } else {
-            unread_one(token); // Unread
-            Ok(None)
-          }
-        },
-        _ => {
-          // calc.sty seam: `\widthof{box}` &friends yield an internal dimension
-          // by reading their own argument. Only in dimension-like contexts
-          // (calc errors "not expected here" for a Number). On decline the
-          // resolver leaves the stream untouched, so we un-read the token.
-          // OXIDIZED_DESIGN #115.
-          if value_type != RegisterType::Number
-            && let Some(rv) = resolve_internal_dimension(&token)?
-          {
-            return Ok(Some(rv));
-          }
-          unread_one(token); // Unread
-          Ok(None)
-        },
+    Some(token) => match register_value_from(token, value_type, coerce)? {
+      Scanned::Value(value) => Ok(value),
+      Scanned::Declined(token) => {
+        unread_one(token); // Unread
+        Ok(None)
+      },
+    },
+  }
+}
+
+/// What a token in hand introduces where a quantity is scanned.
+enum Scanned<T> {
+  /// A quantity of the kind (its tokens read): its value, if it has one.
+  Value(Option<T>),
+  /// No quantity of the kind: the token, not consumed.
+  Declined(Token),
+}
+
+/// The register value of `value_type` that `token` (already read with expansion, TeX's
+/// `cur_tok`) introduces, or the token back when it introduces none: `scan_int` and
+/// `scan_dimen` test the token in hand for each kind of quantity in turn (tex.web §413, §440,
+/// §448) instead of putting it back between the tests.
+fn register_value_from(
+  token: Token,
+  value_type: RegisterType,
+  coerce: bool,
+) -> Result<Scanned<RegisterValue>> {
+  match lookup_register_definition(&token) {
+    Some(defn) => {
+      if let Some(mut register_type) = defn.register_type() {
+        if register_type == RegisterType::CharDef {
+          // CharDefs treated as numbers here
+          register_type = RegisterType::Number;
+        }
+        if register_type == value_type {
+          let args = defn.read_arguments()?;
+          Ok(Scanned::Value(defn.value_of(args)))
+        } else if coerce {
+          // Try type coercion per Perl's %RegisterCoercionTypes
+          Ok(match coerce_register(value_type, register_type, &defn)? {
+            Some(coerced) => Scanned::Value(Some(coerced)),
+            None => Scanned::Declined(token),
+          })
+        } else {
+          Ok(Scanned::Declined(token))
+        }
+      } else {
+        Ok(Scanned::Declined(token))
       }
+    },
+    _ => {
+      // calc.sty seam: `\widthof{box}` &friends yield an internal dimension
+      // by reading their own argument. Only in dimension-like contexts
+      // (calc errors "not expected here" for a Number). On decline the
+      // resolver leaves the stream untouched, so the token is handed back.
+      // OXIDIZED_DESIGN #115.
+      if value_type != RegisterType::Number
+        && let Some(rv) = resolve_internal_dimension(&token)?
+      {
+        return Ok(Scanned::Value(Some(rv)));
+      }
+      Ok(Scanned::Declined(token))
     },
   }
 }
@@ -2293,7 +4358,6 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
       match read_token()? {
         None => break,
         Some(token) => {
-          let cc = token.get_catcode();
           // Perl: also check smuggled \special_relax token (Gullet.pm line 612)
           let was_last_match = if let Some(&&want) = to_match.last() {
             token == want || special_relax_matches(&token, &want)
@@ -2306,19 +4370,12 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
           } else {
             break;
           }
-
-          if cc == Catcode::SPACE {
-            // If this was space, SKIP any following!!!
-            while let Some(space_token) = read_token()? {
-              if space_token.get_catcode() != Catcode::SPACE {
-                // Unread non-space and end — use unread_one for proper agc adjustment
-                unread_one(space_token);
-                break;
-              } else {
-                matched.push(space_token);
-              }
-            }
-          }
+          // A space in the delimiter matches exactly one space token (tex.web §392:
+          // the delimiter tokens are matched one for one). Perl then skips every
+          // following space (Gullet.pm:614-617, KNOWN_PERL_ERRORS #222), which eats the
+          // space xint's `\XINT_zapsp_b`-style macros leave for the next call: a `\def`
+          // prefix delimiter `\B<space>` met by `\B<space><space>X` must leave
+          // `<space>X` (pdflatex `| X|`, Perl `|X|`).
         },
       }
     }
@@ -2341,16 +4398,47 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
 // <coerced integer> = <internal dimen> | <internal glue>
 // ```
 pub fn read_number() -> Result<Number> {
-  let is_negative = read_optional_signs()?;
+  let _scan = NumberScan::begin();
+  // tex.web §440 scan_int: the signs, then the token after them (cur_tok) is tested in hand for
+  // each kind of number, never put back between the tests. A register read without a value
+  // consumed its tokens, so the next kind is tried on a fresh token (as Perl's chain of reads).
+  let (is_negative, mut hand) = scan_optional_signs()?;
   let s = if is_negative { -1 } else { 1 };
-  if let Some(n) = read_normal_integer()? {
-    if is_negative { Ok(n.negate()) } else { Ok(n) }
-  } else if let Some(n) = read_internal_dimension()? {
-    Ok(Number::new(s * n.value_of()))
-  } else if let Some(n) = read_internal_glue()? {
-    Ok(Number::new(s * n.value_of()))
-  } else {
-    let next = read_token()?;
+  for attempt in 0..2 {
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match normal_integer_from(token)? {
+        Scanned::Value(Some(n)) => return Ok(if is_negative { n.negate() } else { n }),
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match register_value_from(token, RegisterType::Dimension, false)? {
+        Scanned::Value(Some(n)) => return Ok(Number::new(s * Dimension::from(n).value_of())),
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match register_value_from(token, RegisterType::Glue, false)? {
+        Scanned::Value(Some(n)) => return Ok(Number::new(s * Glue::from(n).value_of())),
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    match hand.take() {
+      Some(token) if attempt == 0 && became_expandable(&token)? => unread_one(token),
+      other => {
+        hand = other;
+        break;
+      },
+    }
+  }
+  {
+    let next = match hand {
+      Some(token) => Some(token),
+      None => read_token()?,
+    };
     // Perl Gullet.pm:904-905: the primary message is just "Missing number,
     // treated as zero"; the processing context and the unexpected-token
     // (showUnexpected) are SEPARATE Error details rendered on their own
@@ -2385,67 +4473,174 @@ pub fn read_number() -> Result<Number> {
 pub fn read_normal_integer() -> Result<Option<Number>> {
   match read_x_token(None, false, None)? {
     None => Ok(None),
-    Some(token) => {
-      let cc = token.get_catcode();
-      let mut text = token.to_string();
-      if cc == Catcode::OTHER && text.chars().all(|c| c.is_ascii_digit()) {
-        // Read decimal literal. Overflow is rare but possible on weird
-        // input (digit runs wider than i64::MAX); Perl's TeX silently
-        // truncates such values, so we fall back to i64::MAX / MIN on
-        // parse failure rather than panicking with .expect().
-        text.push_str(&read_digits(&DIGIT_RE, true)?);
-        let n = text.parse::<i64>().unwrap_or_else(|_| {
-          if text.starts_with('-') {
-            i64::MIN
-          } else {
-            i64::MAX
-          }
-        });
-        Ok(Some(Number::new(n)))
-      } else if token == T_OTHER!("'") {
-        // Read Octal literal. Perl: `Number(oct(readDigits(...)))`, and
-        // Perl's `oct("")` is 0 — so a `'` with no octal digit following
-        // yields 0 (TeX's "Missing number, treated as zero"), NOT a fatal
-        // error. Mirror that, and clamp overflow to i64::MAX like the
-        // decimal arm rather than propagating a ParseIntError.
-        let digits = read_digits(&OCT_RE, true)?;
-        let decimal = if digits.is_empty() {
-          0
-        } else {
-          i64::from_str_radix(&digits, 8).unwrap_or(i64::MAX)
-        };
-        Ok(Some(Number::new(decimal)))
-      } else if token == T_OTHER!("\"") {
-        //  Read Hex literal. Perl: `Number(hex(readDigits(...)))`, and
-        // Perl's `hex("")` is 0 — so a `"` with no hex digit following
-        // yields 0, NOT a fatal error. (Witness 2008.10843: mdwmath.sty
-        // raw-load reads a bare `"` with no hex digit → previously a
-        // `Fatal:Document:Generic(ParseIntError)` aborting the run.)
-        let digits = read_digits(&HEX_RE, true)?;
-        let decimal = if digits.is_empty() {
-          0
-        } else {
-          i64::from_str_radix(&digits, 16).unwrap_or(i64::MAX)
-        };
-        Ok(Some(Number::new(decimal)))
-      } else if token == T_OTHER!("`") {
-        //  Read Charcode: `<character token><one optional space>
-        let mut s = match read_token()? {
-          None => String::new(),
-          Some(next) => next.to_string(),
-        };
-        if s.starts_with('\\') {
-          s.remove(0);
-        }
-        let s_char = s.chars().next().unwrap_or('\0');
-        // Perl: skip1Space($self, 1); — expanded space-skip after charcode
-        skip_one_space(true)?;
-        Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
-      } else {
+    Some(token) => match normal_integer_from(token)? {
+      Scanned::Value(value) => Ok(value),
+      Scanned::Declined(token) => {
         unread_one(token); // Unread
-        read_internal_integer()
-      }
+        Ok(None)
+      },
     },
+  }
+}
+
+/// tex.web §445: an integer constant (decimal, octal or hexadecimal) of 2^31 or
+/// more is "Number too big", and its value is `infinity` = 2^31 − 1. An Error,
+/// as TeX's: the recovered value is not the author's (OXIDIZED_DESIGN #519).
+fn number_too_big(n: i64) -> Result<i64> {
+  if n > MAX_INTEGER {
+    Error!(
+      "expected",
+      "<number>",
+      "Number too big.",
+      s!("{n} clamped to {MAX_INTEGER} (tex.web §445)")
+    );
+    Ok(MAX_INTEGER)
+  } else {
+    Ok(n)
+  }
+}
+
+/// tex.web §460 `attach_sign`: a scanned dimension whose magnitude reaches
+/// 2^30 sp (`arith_error`, or `abs(cur_val) >= @'10000000000`) is "Dimension
+/// too large", and its value is `max_dimen` (16383.99998pt), negated only for
+/// the scan's own `<optional signs>` (`negative`) — a negative internal unit
+/// (`2000000000\dimen0` with `\dimen0` < 0) gives +max_dimen, as pdfTeX
+/// prints it. `scaled` is the fixed-point product, `Err(_)` when it left the
+/// i64 range. An Error, as for [`number_too_big`], a Warning in a box measured by our approximation
+/// ([`approximated_measure`]).
+fn dimension_too_large(scaled: std::result::Result<i64, i64>, negative: bool) -> Result<i64> {
+  match scaled {
+    Ok(v) if v.abs() <= MAX_DIMEN => Ok(v),
+    _ => {
+      let detail = "clamped to max_dimen (tex.web §460)";
+      match approximated_measure() {
+        Some((ours, true)) => Warn!("expected", "<dimen>", "Dimension too large.", detail, ours),
+        Some((ours, false)) => Info!("expected", "<dimen>", "Dimension too large.", detail, ours),
+        None => Error!("expected", "<dimen>", "Dimension too large.", detail),
+      }
+      Ok(if negative { -MAX_DIMEN } else { MAX_DIMEN })
+    },
+  }
+}
+
+/// <normal integer> from the token in hand (TeX's `cur_tok`, read with expansion), or the token
+/// back when it starts none.
+fn normal_integer_from(token: Token) -> Result<Scanned<Number>> {
+  let cc = token.get_catcode();
+  // tex.web §440-448 `scan_int` inspects the token's command/char codes
+  // and never stringifies it; the decimal arm is the only one that needs
+  // the text, so the common internal-quantity case (`\pgf@x`, a count
+  // register) pays no String — this ran once per number read.
+  let is_decimal_start = cc == Catcode::OTHER
+    && token.with_str(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()));
+  if is_decimal_start {
+    // Read decimal literal, accumulating the digits as tex.web §444-445
+    // does (no string). The accumulation saturates at i64::MAX; the
+    // constant is then held to TeX's `infinity` (`number_too_big`).
+    let mut n = token.with_str(|s| s.parse::<i64>().unwrap_or(i64::MAX));
+    let end = loop {
+      let Some(next) = read_x_token(None, false, None)? else {
+        break None;
+      };
+      let digit = next.with_str(|s| {
+        let mut chars = s.chars();
+        match (chars.next(), chars.next()) {
+          (Some(c), None) => c.to_digit(10),
+          _ => None,
+        }
+      });
+      match digit {
+        Some(d) => {
+          n = n
+            .checked_mul(10)
+            .and_then(|v| v.checked_add(i64::from(d)))
+            .unwrap_or(i64::MAX)
+        },
+        None => break Some(next),
+      }
+    };
+    // <one optional space> (`read_digits`' skip).
+    if let Some(end) = end
+      && !is_space_or_implicit_space(&end)
+    {
+      unread_scanned(end);
+    }
+    Ok(Scanned::Value(Some(Number::new(number_too_big(n)?))))
+  } else if token == T_OTHER!("'") {
+    // Read Octal literal. Perl: `Number(oct(readDigits(...)))`, and
+    // Perl's `oct("")` is 0 — so a `'` with no octal digit following
+    // yields 0 (TeX's "Missing number, treated as zero"), NOT a fatal
+    // error. Mirror that, and clamp overflow to i64::MAX like the
+    // decimal arm rather than propagating a ParseIntError.
+    let digits = read_digits(is_octal_digit, true)?;
+    let decimal = if digits.is_empty() {
+      0
+    } else {
+      i64::from_str_radix(&digits, 8).unwrap_or(i64::MAX)
+    };
+    Ok(Scanned::Value(Some(Number::new(number_too_big(decimal)?))))
+  } else if token == T_OTHER!("\"") {
+    //  Read Hex literal. Perl: `Number(hex(readDigits(...)))`, and
+    // Perl's `hex("")` is 0 — so a `"` with no hex digit following
+    // yields 0, NOT a fatal error. (Witness 2008.10843: mdwmath.sty
+    // raw-load reads a bare `"` with no hex digit → previously a
+    // `Fatal:Document:Generic(ParseIntError)` aborting the run.)
+    let digits = read_digits(is_hex_digit, true)?;
+    let decimal = if digits.is_empty() {
+      0
+    } else {
+      i64::from_str_radix(&digits, 16).unwrap_or(i64::MAX)
+    };
+    Ok(Scanned::Value(Some(Number::new(number_too_big(decimal)?))))
+  } else if token == T_OTHER!("`") {
+    //  Read Charcode: `<character token><one optional space>
+    // The leading `\` is stripped only from a control-sequence token
+    // (`\a` → 'a', `\\` → '\'). Perl (Gullet.pm L926 `s/^\\//`) strips
+    // it from a catcode-12 backslash *character* too, so `` `\ `` after
+    // `\detokenize`/`\string` reads as 0 instead of TeX's 92 — see
+    // KNOWN_PERL_ERRORS "backquote charcode of a detokenized backslash"
+    // (witness bibleref-parse.sty L481-486 `\brp@ifcs`).
+    let (mut s, is_cs) = match read_token()? {
+      None => (String::new(), false),
+      Some(next) => {
+        // tex.web §442: a brace read as a character constant is NOT a
+        // group for ALIGN_STATE — `get_token` counted it, so undo that.
+        // This is what makes the `\iffalse{\fi\ifnum0=`}\fi` idiom
+        // (expl3 `\group_align_safe_begin:`, amsmath) leave align_state
+        // +1 with no group open, so an alignment-catcode token inside
+        // a delimited-macro definition in a tabular cell (l3tl
+        // `\tl_replace_all` with a rescanned `_`(4), l3doc `\marg` in
+        // `syntax`) is not mistaken for the cell end. Perl Gullet.pm:926
+        // omits the undo (SHARED).
+        match next.get_catcode() {
+          Catcode::BEGIN => decrement_align_group_count(),
+          Catcode::END => increment_align_group_count(),
+          _ => {},
+        }
+        // A space token's character code is 32 whatever its text
+        // (tex.web §289; an end-of-line space carries "\n" — batch 56gc,
+        // the same normalization as `Token::get_charcode`).
+        if next.get_catcode() == Catcode::SPACE {
+          (" ".to_string(), false)
+        } else {
+          (next.to_string(), next.get_catcode() == Catcode::CS)
+        }
+      },
+    };
+    if is_cs && s.starts_with('\\') {
+      s.remove(0);
+    }
+    let s_char = s.chars().next().unwrap_or('\0');
+    // Perl: skip1Space($self, 1); — expanded space-skip after charcode
+    skip_one_space(true)?;
+    Ok(Scanned::Value(Some(Number::new(s_char as i64)))) //  Only a character token!!! NOT expanded!!!!
+  } else {
+    Ok(
+      match register_value_from(token, RegisterType::Number, false)? {
+        Scanned::Value(value) => Scanned::Value(value.map(Number::from)),
+        Scanned::Declined(token) => Scanned::Declined(token),
+      },
+    )
   }
 }
 
@@ -2454,12 +4649,13 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
 /// Similar to factor, but does NOT accept comma!
 /// This is NOT part of TeX, but is convenient.
 pub fn read_float() -> Result<Float> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   let s = if is_negative { -1.0 } else { 1.0 };
-  let mut string = read_digits(&DIGIT_RE, true)?;
+  let mut string = read_digits(is_decimal_digit, true)?;
   let mut token = read_x_token(None, false, None)?;
   if token.is_some() && token.as_ref().unwrap().get_sym() == pin!(".") {
-    string = s!("{string}.{}", read_digits(&DIGIT_RE, true)?);
+    string = s!("{string}.{}", read_digits(is_decimal_digit, true)?);
     token = read_x_token(None, false, None)?;
   }
   let n_opt: Option<f64> = if !string.is_empty() {
@@ -2514,16 +4710,47 @@ fn read_internal_glue() -> Result<Option<Glue>> {
 // <coerced dimen> = <internal glue>
 // ```
 pub fn read_dimension() -> Result<Dimension> {
-  let is_negative = read_optional_signs()?;
-  if let Some(d) = read_internal_dimension()? {
-    Ok(if is_negative { d.negate() } else { d })
-  } else if let Some(d) = read_internal_glue()? {
-    Ok(Dimension::new(if is_negative {
-      d.negate().value_of()
-    } else {
-      d.value_of()
-    }))
-  } else if let Some(d) = read_factor()? {
+  let _scan = NumberScan::begin();
+  // tex.web §448 scan_dimen: the token after the signs is tested in hand for an internal
+  // dimension, then glue (as `read_number`), and put back once for the factor.
+  let (is_negative, mut hand) = scan_optional_signs()?;
+  for attempt in 0..2 {
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match register_value_from(token, RegisterType::Dimension, false)? {
+        Scanned::Value(Some(d)) => {
+          let d = Dimension::from(d);
+          return Ok(if is_negative { d.negate() } else { d });
+        },
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match register_value_from(token, RegisterType::Glue, false)? {
+        Scanned::Value(Some(d)) => {
+          let d = Glue::from(d);
+          return Ok(Dimension::new(if is_negative {
+            d.negate().value_of()
+          } else {
+            d.value_of()
+          }));
+        },
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    match hand.take() {
+      Some(token) if attempt == 0 && became_expandable(&token)? => unread_one(token),
+      other => {
+        hand = other;
+        break;
+      },
+    }
+  }
+  if let Some(token) = hand {
+    unread_one(token);
+  }
+  if let Some(d) = read_factor()? {
     let (num, den) = match read_unit()? {
       Some(ratio) => ratio,
       None => {
@@ -2536,7 +4763,13 @@ pub fn read_dimension() -> Result<Dimension> {
       },
     };
     let d_signed = if is_negative { -d } else { d };
-    Ok(Dimension::new(fixpoint_unit(d_signed, num, den)))
+    // tex.web §460 attach_sign: "Dimension too large" at 2^30 sp, the value
+    // clamped to max_dimen (the i128 product once wrapped to garbage past the
+    // i64 range: `200000000000\dimen0`, chinesechess.sty:2016-2020).
+    Ok(Dimension::new(dimension_too_large(
+      fixpoint_unit_checked(d_signed, num, den),
+      is_negative,
+    )?))
   } else {
     // Perl Gullet.pm:972: the type is named in the primary message
     // ("(Dimension)") and "while processing X" is a separate detail
@@ -2567,7 +4800,7 @@ pub fn read_dimension() -> Result<Dimension> {
 /// (`\wd0`, `\dimen`, glue) yield `(value_sp, 65536)` — the `floor(fix·v/65536)`
 /// path of tex.web §8983, exact in integer arithmetic.
 pub fn read_unit() -> Result<Option<(i64, i64)>> {
-  let unit_opt = if let Some(u) = read_keyword(&["ex", "em"])? {
+  let unit_opt = if let Some(u) = read_keyword(&["ex", "em", "zw", "zh"])? {
     skip_one_space(true)?;
     Some(convert_unit_ratio(&u))
   } else if let Some(u) = read_internal_integer()? {
@@ -2595,6 +4828,7 @@ pub fn read_unit() -> Result<Option<(i64, i64)>> {
 // <stretch> = plus <dimen> | plus <fil dimen> | <optional spaces>
 // <shrink>  = minus <dimen> | minus <fil dimen> | <optional spaces>
 pub fn read_glue() -> Result<Glue> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   if let Some(n) = read_internal_glue()? {
     if is_negative { Ok(n.negate()) } else { Ok(n) }
@@ -2663,8 +4897,9 @@ pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
           }
         };
         let val = s as f64 * f;
+        // The <dimen> of a glue component is `scan_dimen`'s (§460).
         let sp = match ratio {
-          Some((num, den)) => fixpoint_unit(val, num, den),
+          Some((num, den)) => dimension_too_large(fixpoint_unit_checked(val, num, den), s < 0)?,
           None => fixpoint(val, None),
         };
         Ok((Some(sp), None))
@@ -2680,6 +4915,7 @@ pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
 // <mustretch> = plus <mudimen> | plus <fil dimen> | <optional spaces>
 // <mushrink> = minus <mudimen> | minus <fil dimen> | <optional spaces>
 pub fn read_mu_glue() -> Result<MuGlue> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   if let Some(n) = read_internal_mu_glue()? {
     Ok(if is_negative { n.negate() } else { n })
@@ -2711,6 +4947,7 @@ pub fn read_mu_glue() -> Result<MuGlue> {
 // <mu unit> = <optional spaces><internal muglue> | mu <one optional space>
 // <coerced mudimen> = <internal muglue>
 pub fn read_mu_dimension() -> Result<MuDimension> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   if let Some(mut m) = read_factor()? {
     let munit = read_mu_unit()?;
@@ -2724,8 +4961,9 @@ pub fn read_mu_dimension() -> Result<MuDimension> {
     if is_negative {
       m *= -1.0;
     }
+    // `scan_dimen` with `mu` (§456) ends in the same `attach_sign` (§460).
     let sp = match munit {
-      Some((num, den)) => fixpoint_unit(m, num, den),
+      Some((num, den)) => dimension_too_large(fixpoint_unit_checked(m, num, den), is_negative)?,
       None => fixpoint(m, None),
     };
     Ok(MuDimension::new(sp))
@@ -2756,53 +4994,99 @@ fn read_internal_mu_glue() -> Result<Option<MuGlue>> {
   }
 }
 
-/// Apparent behaviour of a token value (ie `\toks#=<arg>`)
+/// The right-hand side of a token-list assignment, `\toks<n>=…`, `\everypar=…`
+/// (tex.web §1226-1227), after its optional `=`: the next non-blank
+/// non-`\relax` token, expanding (§404, `get_x_token`, which at a file's end
+/// goes on in the enclosing input). A left brace, explicit or implicit
+/// (`\toks0=\bgroup abc}`), opens the balanced text, read at `absorbing`
+/// status (`scan_toks(false, false)`, [`read_balanced_text`]); a token-list
+/// register or parameter gives its value. Any other token is the value
+/// itself, as in Perl (Gullet.pm:824-842 `readTokensValue`), after TeX's
+/// error, "Missing { inserted" (§403 `scan_left_brace`; TeX then absorbs up to
+/// the next `}`).
+/// Perl reads the token unexpanded and recurses on an expandable one, so a
+/// `\relax`, an implicit brace or a file end before the text lost it:
+/// Paul Taylor's diagrams.sty:15 `\toks0=\bgroup}` stored `\bgroup`, and its
+/// `}` closed a group (arXiv 2605.02221, 2605.25087).
+/// Guards: `token_kernel_gaps::*`.
 pub fn read_tokens_value() -> Result<Tokens> {
-  match read_non_space()? {
-    None => Ok(Tokens!()),
-    Some(token) => {
-      // Perl: $$token[1] == CC_BEGIN — direct catcode check
-      if token.get_catcode() == Catcode::BEGIN {
-        Ok(read_balanced(ExpansionLevel::Off, false, false)?)
-      } else {
-        match lookup_register_definition(&token) {
-          Some(defn) => {
-            match defn.register_type() {
-              Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
-                // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for
-                // value_of feels incorrect       but in which direction should it be
-                // resolved?
-                let args = defn.read_arguments()?;
-                match defn.value_of(args) {
-                  None => Ok(Tokens!()),
-                  Some(v) => Ok(v.into()),
-                }
-              },
-              _ => Ok(Tokens!(token)),
-            }
-          },
-          _ => {
-            match lookup_definition(&token)? {
-              Some(defn) => {
-                // TODO: we are doing two lookups to avoid the type restriction of .read_arguments,
-                // any way to circumvent? Is it slow in the first place?
-                if defn.is_expandable() {
-                  let x = defn.invoke(false)?;
-                  if !x.is_empty() {
-                    unread(x);
-                  }
-                  read_tokens_value()
-                } else {
-                  Ok(Tokens!(token))
-                }
-              },
-              _ => Ok(Tokens!(token)),
-            }
-          },
-        }
+  let Some(token) = read_non_blank_non_relax()? else {
+    return Ok(Tokens!());
+  };
+  if is_left_brace(&token) {
+    return read_balanced_text(ExpansionLevel::Off, false);
+  }
+  match lookup_register_definition(&token) {
+    Some(defn)
+      if matches!(
+        defn.register_type(),
+        Some(RegisterType::Tokens) | Some(RegisterType::Token)
+      ) =>
+    {
+      let args = defn.read_arguments()?;
+      Ok(defn.value_of(args).map(Into::into).unwrap_or_default())
+    },
+    _ => {
+      Error!("expected", "{", "Missing { inserted");
+      Ok(Tokens!(token))
+    },
+  }
+}
+
+/// tex.web §404 "Get the next non-blank non-relax non-call token": expanded (a `\protected` macro too, as
+/// `get_x_token` expands it), past spaces and implicit spaces, `\relax` and `\noexpand`ed tokens (`relax`, §358);
+/// an undefined control sequence is reported by `expand` and discarded (§370), as the csname reader does — the scan
+/// goes on, so `\hbox\undefined{…}` is still the box of `{…}`.
+pub fn read_non_blank_non_relax() -> Result<Option<Token>> {
+  loop {
+    match read_x_token(Some(false), false, Some(true))? {
+      Some(t)
+        if is_space_or_implicit_space(&t)
+          || t.defined_as(&TOKEN_RELAX)
+          || t.is_noexpand_family()
+          || (t.get_catcode() == Catcode::CS && is_error_stub(&t)) => {},
+      other => return Ok(other),
+    }
+  }
+}
+
+/// tex.web §403 `scan_left_brace`: the next non-blank non-relax token ([`read_non_blank_non_relax`]) is a `{`
+/// ([`is_left_brace`]); any other is put back with "Missing { inserted", and the group is taken as begun.
+pub fn scan_left_brace() -> Result<()> {
+  match read_non_blank_non_relax()? {
+    Some(t) if is_left_brace(&t) => {},
+    other => {
+      Error!("expected", "{", "Missing { inserted");
+      if let Some(t) = other {
+        unread_one(t);
       }
     },
   }
+  Ok(())
+}
+
+/// tex.web's `cur_cmd=left_brace`: a character of catcode 1, or a control
+/// sequence or active character `\let` to one (`\bgroup`).
+pub fn is_left_brace(token: &Token) -> bool {
+  token.get_catcode() == Catcode::BEGIN
+    || (token.get_catcode().is_active_or_cs()
+      && with_meaning(
+        token,
+        |m| matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::BEGIN),
+      ))
+}
+
+/// tex.web's `cur_cmd=right_brace` (§1068 `handle_right_brace`): a character of catcode 2, or a control
+/// sequence or active character `\let` to one (`\egroup`). The closer that matches [`is_left_brace`]'s opener:
+/// under `\catcode`\<=1 \catcode`\>=2`, `\hbox<…>` is a box (2606.11726's plain-TeX macros), where Perl's
+/// `defined_as(T_END)` knew only `}`.
+pub fn is_right_brace(token: &Token) -> bool {
+  token.get_catcode() == Catcode::END
+    || (token.get_catcode().is_active_or_cs()
+      && with_meaning(
+        token,
+        |m| matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::END),
+      ))
 }
 
 /// Discard any run of spaces at the head of the input — Perl
@@ -2821,7 +5105,8 @@ pub fn skip_spaces() -> Result<()> {
 /// Check if a token is a space token (catcode SPACE) or an "implicit space"
 /// (a CS or ACTIVE token `\let` to a space token).
 /// See TeXbook p269: `<one optional space>` absorbs both explicit and implicit spaces.
-fn is_space_or_implicit_space(token: &Token) -> bool {
+/// (tex.web's `cur_cmd=spacer`.)
+pub fn is_space_or_implicit_space(token: &Token) -> bool {
   if token.get_catcode() == Catcode::SPACE {
     return true;
   }
@@ -2835,6 +5120,18 @@ fn is_space_or_implicit_space(token: &Token) -> bool {
   false
 }
 
+/// Put back a token an EXPANDING scan read but does not use (TeX's
+/// `back_input` of `cur_tok`). A `\noexpand`'d token goes back as its plain
+/// self: `\noexpand` suppresses expansion only for the read that met it
+/// (tex.web:7509-7514); get_x_token leaves the plain control sequence in
+/// `cur_tok` (:7837-7838), and the optional-space check just calls `back_input`
+/// (:8755-8757). The marker survived instead, and a later `\csname` met
+/// `\special_relax\foo`: trimspaces' `\trim@spaces` on an argument starting with
+/// a macro (`\romannumeral-`\q\noexpand\foo`), yquant-doc's 501-error runaway.
+/// Perl alike (KNOWN_PERL_ERRORS #255). Guard:
+/// `perfect_kernel_batch56::noexpand_marker_does_not_survive_a_scan`.
+fn unread_scanned(token: Token) { unread_one(token.noexpand_shadowed().unwrap_or(token)); }
+
 /// Skip one optional space.
 /// If `expanded` is true, acts like `<one optional space>` and expands tokens (readXToken).
 /// Perl: skip1Space($self, $expanded)
@@ -2847,7 +5144,11 @@ pub fn skip_one_space(expanded: bool) -> Result<()> {
   if let Some(t) = token
     && !is_space_or_implicit_space(&t)
   {
-    unread_one(t);
+    if expanded {
+      unread_scanned(t);
+    } else {
+      unread_one(t);
+    }
   }
   Ok(())
 }
@@ -2858,39 +5159,75 @@ pub fn skip_one_space(expanded: bool) -> Result<()> {
 // <optional signs> = <optional spaces> | <optional signs><plus or minus><optional spaces>
 // returns false if None, or positive, true if negative
 pub fn read_optional_signs() -> Result<bool> {
+  let (sign, next) = scan_optional_signs()?;
+  if let Some(t) = next {
+    unread_one(t); // Unread and end
+  }
+  Ok(sign)
+}
+
+/// <optional signs>, returning whether they are negative and the token after them (TeX's
+/// `cur_tok`, read with expansion and not put back).
+fn scan_optional_signs() -> Result<(bool, Option<Token>)> {
   let mut sign = false;
   while let Some(t) = read_x_token(None, false, None)? {
     let sym = t.get_sym();
     if sym == pin!("-") {
       sign = !sign;
     } else if (sym != pin!("+")) && !is_space_or_implicit_space(&t) {
-      unread_one(t); // Unread and end
-      break;
+      return Ok((sign, Some(t)));
     }
   }
-  Ok(sign)
+  Ok((sign, None))
 }
 
-fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
+/// Whether a token in hand that every kind of quantity declined is now expandable: an
+/// undefined control sequence's own read installs its error stub (`\iffoo` `\let` to
+/// `\iffalse`, State.pm:537-545), which Perl's chain of reads expands on its next read. The
+/// scan puts it back once, so it is read (and expanded) again.
+fn became_expandable(token: &Token) -> Result<bool> {
+  Ok(
+    matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && lookup_definition(token)?.is_some_and(|defn| defn.is_expandable()),
+  )
+}
+
+/// The token in hand, or the next one read with expansion.
+fn in_hand_or_read(hand: Option<Token>) -> Result<Option<Token>> {
+  match hand {
+    Some(token) => Ok(Some(token)),
+    None => read_x_token(None, false, None),
+  }
+}
+
+/// Scan digits with expansion, returning them with the token that ended them
+/// (TeX's `cur_tok`), which is NOT put back.
+fn scan_digits(is_digit: fn(char) -> bool) -> Result<(String, Option<Token>)> {
   let mut result = String::new();
   while let Some(token) = read_x_token(None, false, None)? {
     let digit_opt = token.with_str(|s| {
-      if s.len() == 1 && range_regex.is_match(s) {
-        s.chars().next()
-      } else {
-        None
+      let mut chars = s.chars();
+      match (chars.next(), chars.next()) {
+        (Some(c), None) if is_digit(c) => Some(c),
+        _ => None,
       }
     });
-    if let Some(digit) = digit_opt {
-      result.push(digit);
-    } else {
-      if !(skip && is_space_or_implicit_space(&token)) {
-        unread_one(token);
-      }
-      break;
+    match digit_opt {
+      Some(digit) => result.push(digit),
+      None => return Ok((result, Some(token))),
     }
   }
-  Ok(result)
+  Ok((result, None))
+}
+
+fn read_digits(is_digit: fn(char) -> bool, skip: bool) -> Result<String> {
+  let (digits, end) = scan_digits(is_digit)?;
+  if let Some(token) = end
+    && !(skip && is_space_or_implicit_space(&token))
+  {
+    unread_scanned(token);
+  }
+  Ok(digits)
 }
 
 // ```
@@ -2899,28 +5236,52 @@ fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
 // ```
 /// Return a number (Rust f64 number)
 pub fn read_factor() -> Result<Option<f64>> {
-  let mut factor = read_digits(&DIGIT_RE, false)?;
-  let mut token_opt = read_x_token(None, false, None)?;
+  // scan_dimen tests the token that ended the digits (`cur_tok`) for the
+  // decimal point without reading it again (tex.web §448, §452), then puts it
+  // back once, a `\noexpand`'d token as its plain self (`unread_scanned`).
+  // An undefined control sequence ending the digits installed its error stub on that read;
+  // Perl's `readFactor` reads the end token again (Gullet.pm:876-880), which expands it.
+  let reread_stub = |token_opt: Option<Token>| -> Result<Option<Token>> {
+    match token_opt {
+      Some(token) if became_expandable(&token)? => {
+        unread_one(token);
+        read_x_token(None, false, None)
+      },
+      other => Ok(other),
+    }
+  };
+  let (mut factor, token_opt) = scan_digits(is_decimal_digit)?;
+  let mut token_opt = reread_stub(token_opt)?;
   if let Some(ref token) = token_opt {
     let sym = token.get_sym();
     if sym == pin!(".") || sym == pin!(",") {
-      factor = s!("{}.{}", factor, read_digits(&DIGIT_RE, false)?);
-      token_opt = read_x_token(None, false, None)?;
+      let (fraction, end) = scan_digits(is_decimal_digit)?;
+      factor = s!("{factor}.{fraction}");
+      token_opt = reread_stub(end)?;
     }
   }
 
   // Note: zero is an edge case with the unwrap_or fallback, handle it
   if !factor.is_empty() {
+    // The integer part is `scan_int`'s (§448), held to `infinity` (§445).
+    let (whole, fraction) = factor.split_once('.').unwrap_or((factor.as_str(), ""));
+    let value = whole
+      .parse::<i64>()
+      .unwrap_or(if whole.is_empty() { 0 } else { i64::MAX });
+    if number_too_big(value)? != value {
+      factor = s!("{MAX_INTEGER}.{fraction}");
+    }
     let factor_f64: f64 = factor.parse::<f64>().unwrap_or(0.0);
     if let Some(token) = token_opt
       && token.get_catcode() != Catcode::SPACE
     {
-      unread_one(token);
+      unread_scanned(token);
     }
     Ok(Some(factor_f64))
   } else {
+    // No digits: back_input, and scan_int reads the token again (§448).
     if let Some(token) = token_opt {
-      unread_one(token);
+      unread_scanned(token);
     }
     match read_normal_integer()? {
       None => Ok(None),
@@ -2967,27 +5328,38 @@ pub fn do_expand_partially<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   })
 }
 
+/// Is `token` an alignment column end — a tab or a row end — and which one: the `COLUMN_ENDS` entry (the token
+/// to act on, its keyword, whether it is hidden), or `(token, "align", false)` for a tab.
+///
+/// tex.web §342/§789 insert the v-template when `get_next` yields `cur_cmd` ∈ {`tab_mark`, `car_ret`}: a column
+/// end is recognized by its COMMAND CODE, which `\let` copies and `\def` replaces. So `\let\myspan\span` ends a
+/// cell, while after `\def\span{\mathrm{span}}` a `\span` is a macro call — expanded, never a column end. A
+/// LaTeXML primitive's command code is its defining cs: `\let` copies the `Primitive`/`Constructor` with that cs
+/// (and the format dump restores such copies as aliases of the cs), while `\def`/`\newcommand` make an
+/// `Expandable`. So a binding that re-`DefPrimitive`s/`DefConstructor`s `\cr`, `\crcr` or `\span` under that name
+/// makes a column end too; the frozen copies `\lx@span`/`\lx@frozen@cr` (tex_tables.rs) are column ends for the
+/// same reason. Perl `Gullet.pm` L266-277 compares the token's meaning with the CURRENT meaning of each
+/// end instead, so a redefined `\span` (or `\cr`) still matched itself and ended the cell (math0004102:
+/// `\def\span{{\mathrm{span}}}` in an `eqnarray` cell split the cell at the `\span` and ran `^` out of math).
+/// Guard: `perfect_kernel_batch65::redefined_span_is_a_macro_not_a_column_end`.
 pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
   match token.get_catcode() {
     Catcode::ALIGN => Some((*token, "align", false)),
-    Catcode::CS | Catcode::ACTIVE => {
-      // Embedded version of Equals, knowing both are tokens
-      let defn = lookup_meaning(token).unwrap_or_else(|| Stored::Token(*token));
-      // Perl Gullet.pm L273: if meaning is a Token with CC_ALIGN, treat as alignment tab
-      if let Stored::Token(t) = &defn
-        && t.get_catcode() == Catcode::ALIGN
-      {
-        return Some((*token, "align", false));
-      }
-      for end in *COLUMN_ENDS {
-        let e = &end.0;
-        // Would be nice to cache the defns, but don't know when they're present & constant!
-        if defn == lookup_meaning(e).unwrap_or_else(|| Stored::Token(*e)) {
-          return Some(end);
-        }
-      }
-      None
-    },
+    Catcode::CS | Catcode::ACTIVE => with_meaning(token, |defn| {
+      let primitive_cs = match defn? {
+        // Perl Gullet.pm L273: if meaning is a Token with CC_ALIGN, treat as alignment tab
+        Stored::Token(t) if t.get_catcode() == Catcode::ALIGN => {
+          return Some((*token, "align", false));
+        },
+        Stored::Primitive(p) => p.cs,
+        Stored::Constructor(c) => c.cs,
+        _ => return None,
+      };
+      COLUMN_ENDS
+        .iter()
+        .find(|end| end.0 == primitive_cs)
+        .copied()
+    }),
     _ => None,
   }
 }
@@ -3006,6 +5378,22 @@ fn handle_marker(marker_token: Token) {
   });
 }
 
+/// The mouths open: the one in reading ([`Gullet::runtime`]) and those under it. [`open_mouth`] pushes nothing on the stack
+/// when none is in reading, so the stack alone doesn't count them.
+fn mouth_depth() -> usize {
+  let g = gullet!();
+  g.mouthstack.len() + usize::from(g.runtime.is_some())
+}
+
+thread_local! {
+  /// The conversion's "Mouth is unexpectedly already closed" errors ([`reading_from_mouth`]'s budget).
+  static MOUTH_CLOSED_ERRORS: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Forgets the mouth-closed errors counted: a predecessor that spent the budget (0906.1883) silenced the next paper's
+/// first ten and made its first a Fatal.
+pub fn reset_mouth_closed_errors() { MOUTH_CLOSED_ERRORS.with(|c| c.set(0)); }
+
 /// Do something, while reading tokens from a specific Mouth.
 ///
 /// This reads ONLY from that mouth (or any mouth openned by code in that source),
@@ -3013,6 +5401,7 @@ fn handle_marker(marker_token: Token) {
 pub fn reading_from_mouth<R, FnR>(mouth: Mouth, reader: FnR) -> Result<R>
 where FnR: FnOnce() -> Result<R> {
   let context_mouth_source = arena::pin(mouth.get_source());
+  let outer_mouths = mouth_depth();
   // A cycle is only a cycle WITHIN one expansion context. Rather than
   // resetting the guard history here (an earlier fix that also BLINDED the
   // guard to outer loops whose body calls `do_expand` each iteration), give
@@ -3043,23 +5432,20 @@ where FnR: FnOnce() -> Result<R> {
   let results: R = match reader_result {
     Ok(v) => v,
     Err(e) => {
-      // Force-close our mouth and any autoclosable mouths above it
-      loop {
-        let current = gullet!()
-          .runtime
-          .as_ref()
-          .map(|r| arena::pin(r.mouth.get_source()));
-        if current == Some(context_mouth_source) {
-          close_mouth(true).ok();
-          break;
-        } else if gullet!().mouthstack.is_empty() {
-          break; // Our mouth was already consumed
-        } else {
-          close_mouth(true).ok(); // Close stale mouth above ours
-        }
+      // Force-close our mouth and any mouth above it, by depth: another of the same name above ours (an "Anonymous
+      // String", a `\scantokens`'s in a discarded run) is not ours, and stopping at it left ours open and took the
+      // document's text next (`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`).
+      while mouth_depth() > outer_mouths {
+        close_mouth(true).ok();
       }
       // Reset progress counter so subsequent processing isn't immediately killed
-      gullet_mut!().progress = 0;
+      let mut g = gullet_mut!();
+      // (what a budgeted run has left stays what it has left: [`read_budget`])
+      let progress = g.progress;
+      g.read_budget_at = g.read_budget_at.map(|at| at.saturating_sub(progress));
+      g.progress = 0;
+      g.full_read_at = 0;
+      drop(g);
       return Err(e);
     },
   };
@@ -3070,9 +5456,6 @@ where FnR: FnOnce() -> Result<R> {
   // (birkmult + local .cls) can trigger 10K+ such firings, one per stack frame.
   // Fatal out after 50 repeat firings so the process surfaces a clear "we lost
   // the mouth stack" signal instead of filling the log with identical messages.
-  thread_local! {
-    static MOUTH_CLOSED_ERRORS: Cell<usize> = const { Cell::new(0) };
-  }
   fn record_mouth_closed_error() { MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(1))); }
   fn should_emit_mouth_closed() -> bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() < 10) }
   fn mouth_closed_budget_exhausted() -> bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() >= 50) }
@@ -3147,6 +5530,77 @@ where FnR: FnOnce() -> Result<R> {
   Ok(results)
 }
 
+/// The reading context tokens are read in now, as `(serial, depth)`: the serial [`reading_from_mouth`] gives each
+/// isolated context (a constructor's argument digested on its own; 0 for the document's own input, `\input` files
+/// included), and how many such contexts are open. A `\left` records it (stomach.rs `record_left_group_input`), so that
+/// only the end of the input it was read in closes its group (OXIDIZED_DESIGN #530).
+pub fn reading_context() -> (u64, usize) {
+  let g = gullet!();
+  (g.ctx_serial, g.ctx_stack.len())
+}
+
+/// Whether the token just read ends an isolated reading context ([`reading_from_mouth`]: a token list digested on its
+/// own, such as a constructor's argument `{$x}`, which may come wrapped in a further brace pair): only `}`s left in
+/// its pushback and its mouth exhausted. A `}` read here is the argument's own closing brace, which TeX strips with the
+/// argument — one end of a construct digested as a unit (stomach.rs `formula_ends_with_its_unit`, OXIDIZED_DESIGN
+/// #553). `false` whenever a mouth of its own is still open in the context.
+pub fn isolated_input_ends_here() -> bool {
+  let mut g = gullet_mut!();
+  if g.ctx_stack.is_empty() {
+    return false;
+  }
+  match g.runtime.as_mut() {
+    Some(runtime) => {
+      !runtime.autoclose
+        && runtime
+          .pushback
+          .iter()
+          .all(|t| t.get_catcode() == Catcode::END)
+        && !runtime.mouth.has_more_input()
+    },
+    None => false,
+  }
+}
+
+/// The tokens the current input holds next, without reading them: the pushback, next-read first, then the current
+/// mouth's next `max_lines` source lines (at most `max_chars` characters of them, [`Mouth::peek_text`]) tokenized by
+/// a scratch mouth under the current catcodes as the iterator is drawn on, `max_tokens` in all. Nothing is read,
+/// expanded or moved, so a catcode change the look-ahead runs past still applies to the text when it is really read.
+/// Only the current mouth: the input levels outside it are not reached. The cost is bounded by the limits, not by the
+/// length of the line or of the pending expansion. A look-ahead for a decision about what follows (stomach.rs
+/// `formula_continues_past_par`, OXIDIZED_DESIGN #553).
+pub fn peek_upcoming_tokens(
+  max_lines: usize,
+  max_chars: usize,
+  max_tokens: usize,
+) -> impl Iterator<Item = Token> {
+  let (pending, text) = {
+    let gullet = gullet!();
+    match gullet.runtime.as_ref() {
+      Some(runtime) => (
+        runtime
+          .pushback
+          .iter()
+          .rev()
+          .take(max_tokens)
+          .copied()
+          .collect::<Vec<Token>>(),
+        runtime.mouth.peek_text(max_lines, max_chars),
+      ),
+      None => (Vec::new(), String::new()),
+    }
+  };
+  let mut scratch = if pending.len() < max_tokens && !text.is_empty() {
+    Mouth::new(&text, None).ok()
+  } else {
+    None
+  };
+  pending
+    .into_iter()
+    .chain(std::iter::from_fn(move || scratch.as_mut()?.read_token()))
+    .take(max_tokens)
+}
+
 /// Check if there is more input to be read from the current mouth
 pub fn has_more_input() -> bool {
   match runtime!() {
@@ -3155,9 +5609,41 @@ pub fn has_more_input() -> bool {
   }
 }
 
+thread_local! {
+  /// How many speculative digestions are running ([`speculative_digestion`]).
+  static SPECULATIVE_DIGESTIONS: Cell<usize> = const { Cell::new(0) };
+}
+
+/// A speculative digestion runs while this lives ([`speculative_digestion`]).
+pub struct SpeculativeDigestion;
+
+impl Drop for SpeculativeDigestion {
+  fn drop(&mut self) { SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() - 1)); }
+}
+
+/// A run of digestion whose output and assignments are all discarded starts (latexml_engine sect05.rs `speculative_run_read`,
+/// the observer's rehearsal, `queue_digest::speculative_label_ink`), until the guard drops: the document does not end
+/// in it. A `\end{document}`, `\enddocument`, `\@@end` or `\bye` it reads does nothing ([`flush`], the kernel's document
+/// end), whatever text brought it there: a stored argument, `\closing{\end{document}}`, ended the real document with the
+/// run otherwise, and took the whole body with it.
+#[must_use]
+pub fn speculative_digestion() -> SpeculativeDigestion {
+  SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() + 1));
+  SpeculativeDigestion
+}
+
+/// Is a speculative digestion running ([`speculative_digestion`])?
+pub fn in_speculative_digestion() -> bool { SPECULATIVE_DIGESTIONS.with(|runs| runs.get() != 0) }
+
 /// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
 /// Flush all sources (close all pending mouth's)
+///
+/// In a speculative digestion ([`speculative_digestion`]) it does nothing: what a discarded run reads is not the end of
+/// the document's input.
 pub fn flush() {
+  if in_speculative_digestion() {
+    return;
+  }
   let mut g = gullet_mut!();
   if let Some(ref mut runtime) = g.runtime {
     runtime.mouth.finish();
@@ -3168,12 +5654,16 @@ pub fn flush() {
     }
   }
   g.runtime = Some(MouthRuntime {
-    mouth:     Mouth::default(),
-    pushback:  Vec::with_capacity(128),
-    autoclose: true,
-    boundary:  BalancedBoundary::Transparent,
+    mouth:           Mouth::default(),
+    pushback:        Vec::with_capacity(128),
+    autoclose:       true,
+    boundary:        BalancedBoundary::Transparent,
+    insert_everyeof: false,
+    eof_seen:        false,
+    watch:           PushbackWatch::default(),
   });
   g.mouthstack = VecDeque::new();
+  note_current_mouth(&g);
 }
 
 /// Execute a function with a mutable reference to the current mouth
@@ -3185,4 +5675,361 @@ where FnR: FnOnce(Option<&mut Mouth>) -> R {
     Some(ref mut runtime) => Some(&mut runtime.mouth),
   };
   caller(mouth_opt)
+}
+
+#[cfg(test)]
+mod token_limit_tests {
+  use super::*;
+
+  /// A budget refuses the read past it and each one after, leaves the count as the reads made it, and leaves no due count
+  /// on the fast path once it is off; a failed inner reading context keeps what is left of it.
+  #[test]
+  fn a_read_budget_ends_at_its_read_and_counts_what_was_read() {
+    let tokens = || Tokens::new(vec![T_LETTER!("a"); 10]);
+    reading_from_mouth(Mouth::default(), || {
+      unread(tokens());
+      let start = token_progress();
+      let budget = read_budget(3);
+      for _ in 0..3 {
+        assert!(read_token()?.is_some());
+      }
+      for _ in 0..2 {
+        let failed = read_token().unwrap_err();
+        assert!(matches!(failed.category, ErrorCategory::ReadBudget));
+      }
+      assert_eq!(budget.end(), ReadBudgetEnd { reads: 3, over: true });
+      assert_eq!(token_progress(), start + 3);
+      assert!(read_token()?.is_some());
+      assert_eq!(token_progress(), start + 4);
+
+      // An inner context's failure resets the count, and takes nothing off what the budget has left.
+      let start = token_progress();
+      let budget = read_budget(4);
+      assert!(read_token()?.is_some());
+      let inner: Result<()> = reading_from_mouth(Mouth::default(), || {
+        unread(tokens());
+        assert!(read_token()?.is_some());
+        fatal_free_failure()
+      });
+      assert!(inner.is_err());
+      assert_eq!(token_progress(), 0);
+      assert!(read_token()?.is_some());
+      assert!(read_token()?.is_some());
+      assert!(read_token().is_err());
+      assert_eq!(budget.end(), ReadBudgetEnd { reads: 4, over: true });
+      assert_eq!(token_progress(), start + 4);
+
+      // A run the budget did not end leaves the count alone, whatever is left.
+      let start = token_progress();
+      let budget = read_budget(100);
+      assert!(read_token()?.is_some());
+      assert_eq!(budget.end(), ReadBudgetEnd { reads: 1, over: false });
+      assert_eq!(token_progress(), start + 1);
+      Ok(())
+    })
+    .unwrap();
+  }
+
+  /// An input mark reads "unread" until a token it held is read, though the tokens pushed in their place put an equal
+  /// token at its last slot (a space, IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`: 2401.11731, 1801.03314);
+  /// a peek, a token read and put back, and tokens pushed on top leave it unread.
+  #[test]
+  fn an_input_mark_tells_a_refilled_slot_from_a_peek() {
+    reading_from_mouth(Mouth::default(), || {
+      unread(Tokens::new(vec![T_SPACE!(), T_CS!("\\next")]));
+      let mark = input_mark();
+      assert!(input_unread_since(&mark));
+      // (a peek, and an expansion pushed on top)
+      let peeked = read_token()?.unwrap();
+      unread_one(peeked);
+      assert!(input_unread_since(&mark));
+      unread(Tokens::new(vec![T_LETTER!("a"), T_SPACE!()]));
+      assert!(input_unread_since(&mark));
+      assert_eq!(read_token()?, Some(T_LETTER!("a")));
+      assert_eq!(read_token()?, Some(T_SPACE!()));
+      assert!(input_unread_since(&mark));
+      // (both tokens read, a longer list pushed whose token at the mark's last slot is a space again)
+      assert_eq!(read_token()?, Some(T_SPACE!()));
+      assert_eq!(read_token()?, Some(T_CS!("\\next")));
+      unread(Tokens::new(vec![
+        T_LETTER!("a"),
+        T_SPACE!(),
+        T_LETTER!("b"),
+      ]));
+      assert!(!input_unread_since(&mark));
+      Ok(())
+    })
+    .unwrap();
+  }
+
+  /// Marks nest, each answering for its own length: a mark on top of another reads as read once what was pushed
+  /// between them is read, the one below it still unread; a `\futurelet`'s two tokens read and put back leave the input
+  /// unread, more than [`MARK_HELD`] read and put back read as read (the stricter answer), and a native reader's
+  /// consumption (`consume_pushback_to`) as any read. A mark of a mouth since closed reads as read. A list read down
+  /// while a mark is taken at each step (an author list a macro holds, `\authorlist` of 3,000 `\author`/`\affiliation`
+  /// pairs: revRC1's memory probe) keeps one run on the watch, no copy of the pushback (`InputMark` holds no heap).
+  #[test]
+  fn input_marks_nest_and_keep_no_copy_of_the_pushback() {
+    reading_from_mouth(Mouth::default(), || {
+      let letters = |n: usize| Tokens::new((0..n).map(|_| T_LETTER!("x")).collect());
+      unread(letters(8));
+      let outer = input_mark();
+      unread(letters(2));
+      let inner = input_mark();
+      unread(letters(1));
+      assert_eq!(read_token()?, Some(T_LETTER!("x")));
+      assert!(input_unread_since(&inner) && input_unread_since(&outer));
+      read_token()?;
+      assert!(!input_unread_since(&inner));
+      assert!(input_unread_since(&outer));
+      // (a `\futurelet` below the outer mark: two tokens read, put back)
+      read_token()?;
+      let (a, b) = (read_token()?.unwrap(), read_token()?.unwrap());
+      unread(Tokens::new(vec![a, b]));
+      assert!(input_unread_since(&outer));
+      // (five read and put back)
+      let five: Vec<Token> = (0..5).map(|_| read_token().unwrap().unwrap()).collect();
+      unread(Tokens::new(five));
+      assert!(!input_unread_since(&outer));
+      let mark = input_mark();
+      consume_pushback_to(pushback_len() - 1);
+      assert!(!input_unread_since(&mark));
+      // (a mark of a mouth since closed)
+      let closed = reading_from_mouth(Mouth::default(), || {
+        unread(letters(1));
+        Ok(input_mark())
+      })?;
+      assert!(!input_unread_since(&closed));
+      // (a list read down, a mark at each step)
+      while read_token()?.is_some() {}
+      unread(letters(12_000));
+      let mut marks = Vec::new();
+      for _ in 0..3_000 {
+        marks.push(input_mark());
+        for _ in 0..4 {
+          read_token()?;
+        }
+      }
+      assert!(marks.iter().all(|mark| !input_unread_since(mark)));
+      assert!(
+        gullet!()
+          .runtime
+          .as_ref()
+          .is_some_and(|rt| rt.watch.runs.len() <= 1)
+      );
+      fn copy<T: Copy>() {}
+      copy::<InputMark>();
+      Ok(())
+    })
+    .unwrap();
+  }
+
+  /// An error that is no Fatal, for an inner context to fail with.
+  fn fatal_free_failure() -> Result<()> { read_budget_error().map(|_| ()) }
+
+  /// The "Mouth is unexpectedly already closed" budget is the conversion's: after a predecessor on the thread spent it
+  /// (0906.1883: 10K+), the next conversion's first such error is logged, not a Fatal (`reset_conversion_state`, revST3b).
+  #[test]
+  fn the_mouth_closed_budget_is_each_conversions() {
+    let closing_its_own_mouth = || reading_from_mouth(Mouth::default(), || close_mouth(true));
+    let counts = || {
+      let c = snapshot_report_counts();
+      (c.error, get_status_code())
+    };
+    initialize_report();
+    let failed: Vec<usize> = (0..50)
+      .filter(|_| closing_its_own_mouth().is_err())
+      .collect();
+    assert_eq!(failed, [49], "the 50th is the Fatal");
+    assert_eq!(counts(), (10, 3));
+    initialize_report();
+    assert!(closing_its_own_mouth().is_ok());
+    assert_eq!(counts(), (1, 2));
+  }
+
+  /// A failed reading context closes its own mouth and those above it, by depth: another of the same name above it (two
+  /// `Mouth::default()`, a `\scantokens`'s in a discarded run) is not its own, and the mouth under it stays open. A run
+  /// that stopped inside one left its own mouth open, and the next close took the document's.
+  #[test]
+  fn a_failed_context_closes_its_own_mouths_by_depth() {
+    reading_from_mouth(Mouth::default(), || {
+      unread(Tokens::new(vec![T_LETTER!("o")]));
+      let failed: Result<()> = reading_from_mouth(Mouth::default(), || {
+        open_mouth(Mouth::default(), false);
+        open_mouth(Mouth::default(), false);
+        fatal_free_failure()
+      });
+      assert!(failed.is_err());
+      assert_eq!(read_token()?, Some(T_LETTER!("o")));
+      Ok(())
+    })
+    .unwrap();
+  }
+
+  /// The count of open mouths holds the one in reading: with none open on entry, [`open_mouth`] pushes nothing on the stack
+  /// and a count of the stack alone left the reader's own mouth open (and everything opened above it down to it). A failed
+  /// context leaves as many open as it found: none, or one, or one and a stack.
+  #[test]
+  fn a_failed_context_leaves_as_many_mouths_as_it_found() {
+    let close_all = || {
+      while mouth_depth() > 0 {
+        close_mouth(true).unwrap();
+      }
+    };
+    close_all();
+    for found in 0..3 {
+      for opened_above in 0..3 {
+        for _ in 0..found {
+          open_mouth(Mouth::default(), false);
+        }
+        assert_eq!(mouth_depth(), found);
+        let failed: Result<()> = reading_from_mouth(Mouth::default(), || {
+          for _ in 0..opened_above {
+            open_mouth(Mouth::default(), false);
+          }
+          fatal_free_failure()
+        });
+        assert!(failed.is_err());
+        assert_eq!(
+          mouth_depth(),
+          found,
+          "found {found}, opened {opened_above} above"
+        );
+        assert_eq!(gullet!().runtime.is_none(), found == 0);
+        close_all();
+      }
+    }
+  }
+
+  /// What [`read_internal_token_full`] tests per count, spelled as it spells them.
+  fn is_due(count: usize, limit: Option<usize>, floor: usize) -> bool {
+    limit.is_some_and(|limit| count > limit)
+      || count & DEADLINE_CHECK_MASK == 0
+      || (count > floor
+        && (1..=CYCLE_GUARD_DUTY_ON).contains(&((count - floor) & (CYCLE_GUARD_DUTY_PERIOD - 1))))
+  }
+
+  /// Runs `reads` counts from `start` as the read does, and fails if a due count takes the fast path. `change` is what
+  /// a writer of the limit or floor does at one count: sets them and resets `full_read_at`.
+  fn no_due_count_takes_the_fast_path(
+    start: usize,
+    reads: usize,
+    (mut limit, mut floor): (Option<usize>, usize),
+    change: Option<(usize, Option<usize>, usize)>,
+  ) {
+    let mut full_read_at = 0;
+    for count in start + 1..=start + reads {
+      if let Some((at, new_limit, new_floor)) = change
+        && count == at
+      {
+        (limit, floor, full_read_at) = (new_limit, new_floor, 0);
+      }
+      if count < full_read_at {
+        assert!(
+          !is_due(count, limit, floor),
+          "count {count} is due and took the fast path (start {start}, limit {limit:?}, floor {floor})"
+        );
+      } else {
+        full_read_at = next_due_read(count, limit, floor);
+      }
+    }
+  }
+
+  /// Around the limit, each multiple of the deadline's period and each window's edges.
+  #[test]
+  fn a_token_read_skips_only_what_is_not_due() {
+    let limits = [
+      None,
+      Some(0),
+      Some(5),
+      Some(65_535),
+      Some(65_536),
+      Some(65_537),
+      Some(70_000),
+    ];
+    let floors = [0, 1, 16_383, 16_384, 65_536, 100_000];
+    for start in [0, 16_380, 65_530, 65_535, 131_070] {
+      for limit in limits {
+        for floor in floors {
+          no_due_count_takes_the_fast_path(start, 140_000, (limit, floor), None);
+        }
+      }
+    }
+  }
+
+  /// A limit or floor changed mid-run: `set_token_limit`, `scale_token_limit_to_source`, `raise_cycle_guard_activate`.
+  #[test]
+  fn a_token_read_follows_a_limit_or_floor_changed_mid_run() {
+    for at in [1, 2_047, 2_048, 16_385, 65_536, 65_537] {
+      for (from, to) in [
+        ((Some(1_000_000), 100_000), (Some(70_000), 100_000)),
+        ((Some(70_000), 0), (None, 90_000)),
+        ((None, 200_000), (Some(at + 3), 200_000)),
+        ((None, 200_000), (None, at)),
+      ] {
+        no_due_count_takes_the_fast_path(0, 140_000, from, Some((at, to.0, to.1)));
+      }
+    }
+  }
+
+  /// The runaway backstop grows with the bytes of EVERY opened source, not
+  /// just the driver (source2e.tex: 15 KB over ~2 MB of `.dtx`).
+  /// tex.web §444 `scan_int`: a decimal run, `'` octal, `"` hex, and a
+  /// first token that is no numeric constant falls through to the internal-
+  /// quantity path (§444's "Missing number, treated as zero" when nothing
+  /// there is a number either). The decimal test is a non-allocating digit
+  /// peek on the token's text (lever E), so the empty-text OTHER token —
+  /// which the old vacuous `all(is_ascii_digit)` mis-read as a decimal and
+  /// parsed to `i64::MAX` — now takes the missing-number route.
+  #[test]
+  fn read_normal_integer_arms_follow_scan_int() {
+    reset_thread_state();
+    initialize_gullet();
+    let read = |tokens: Vec<Token>| -> Option<i64> {
+      reading_from_mouth(Mouth::default(), || {
+        unread_vec(tokens);
+        let n = read_normal_integer()?.map(|n| n.value_of());
+        // Drain whatever the reader left (an unread non-digit).
+        while read_token()?.is_some() {}
+        Ok(n)
+      })
+      .expect("no fatal")
+    };
+    let other = |s: &str| Token::new(s, Catcode::OTHER);
+    assert_eq!(read(vec![other("1"), other("2"), T_SPACE!()]), Some(12));
+    assert_eq!(read(vec![other("12"), other("3"), T_SPACE!()]), Some(123));
+    assert_eq!(
+      read(vec![other("'"), other("1"), other("7"), T_SPACE!()]),
+      Some(15)
+    );
+    assert_eq!(
+      read(vec![other("\""), other("F"), other("F"), T_SPACE!()]),
+      Some(255)
+    );
+    assert_eq!(read(vec![other("`"), T_CS!("\\a"), T_SPACE!()]), Some(97));
+    let dot = read(vec![other("."), T_SPACE!()]);
+    let empty = read(vec![other(""), T_SPACE!()]);
+    assert_eq!(
+      dot, empty,
+      "an empty-text OTHER token is no more a number than `.`"
+    );
+    assert_ne!(empty, Some(i64::MAX), "never the old fabricated i64::MAX");
+  }
+
+  #[test]
+  fn token_limit_scales_with_cumulative_source_bytes() {
+    if std::env::var_os("LATEXML_TOKEN_LIMIT").is_some() {
+      return;
+    }
+    initialize_gullet();
+    scale_token_limit_to_source(15_000);
+    assert_eq!(GULLET.borrow().token_limit, Some(DEFAULT_TOKEN_LIMIT));
+    for _ in 0..40 {
+      scale_token_limit_to_source(500_000);
+    }
+    assert_eq!(GULLET.borrow().token_limit, Some(20_015_000 * 1000));
+    // A fresh conversion starts over.
+    initialize_gullet();
+    assert_eq!(GULLET.borrow().token_limit, Some(DEFAULT_TOKEN_LIMIT));
+  }
 }

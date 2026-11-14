@@ -1,0 +1,17 @@
+% witness: 63g review (a citation whose key differs from its `\bib` only in case)
+% oracle:  pdflatex 0 errors: References Able, Baker; but "Citation `able' undefined" — amsrefs keys are
+%          case-sensitive, so the PDF prints [?]. Rust resolves `able` to Able as Perl's MakeBibliography (`lc`) does
+% engines: rust (63g r1) = "Missing bibkeys: able" though the entry is printed; HEAD no warning
+% expect:  2 bibitems — Able, Baker; 0 errors, 0 warnings
+% status:  RED (63g r1) -> GREEN (63g)
+\documentclass{amsart}
+\usepackage{amsrefs}
+\begin{document}
+Text \cite{able}.
+\begin{bibdiv}
+\begin{biblist}
+\bib{Able}{article}{author={Able, Ann}, title={First}, journal={J. One}, year={2001}}
+\bib{Baker}{article}{author={Baker, Bob}, title={Second}, journal={J. Two}, year={2002}}
+\end{biblist}
+\end{bibdiv}
+\end{document}

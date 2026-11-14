@@ -6,7 +6,11 @@
 //!
 //! Section numbering in comments below references that manual.
 
-use latexml_core::common::glue::FillCode;
+use latexml_core::common::{
+  error::approximated_measure,
+  glue::FillCode,
+  numeric_ops::{MAX_DIMEN, MAX_INTEGER},
+};
 
 use crate::prelude::*;
 
@@ -32,6 +36,31 @@ fn fontchar_lookup_font(font_tok: &Token) -> Option<Rc<Font>> {
   .or_else(lookup_font)
 }
 
+/// The glyph coverage of the font a `\iffontchar` font token names, when
+/// its file can be resolved: the current font (`\font`) selected by
+/// fontspec carries `FONTSPEC_FONTFILE` (locally scoped by
+/// `\lx@fontspec@usefile`), any `\font`-declared font carries its TFM name.
+fn fontchar_coverage(
+  font_tok: &Token,
+) -> Option<Rc<::latexml_core::common::font::coverage::GlyphCoverage>> {
+  use ::latexml_core::common::font::coverage::{coverage_for_file, font_file_path};
+  // `\font` itself, or a `\let` alias of it (`\tex_font:D`).
+  let is_current_font = font_tok.defined_as(&T_CS!("\\font"));
+  if is_current_font {
+    let file = lookup_string("FONTSPEC_FONTFILE");
+    if !file.is_empty() {
+      return coverage_for_file(&file);
+    }
+  }
+  let font = fontchar_lookup_font(font_tok)?;
+  let name = font.name.as_deref()?.trim().to_string();
+  if name.is_empty() || name.contains('/') {
+    return None;
+  }
+  let tfm = font_file_path(&format!("{name}.tfm"))?;
+  coverage_for_file(&tfm)
+}
+
 LoadDefinitions!({
   // Helpers used by definitions below. Defined first so all defs can refer.
 
@@ -48,6 +77,9 @@ LoadDefinitions!({
   }
 
   fn etex_readexpr(rtype: RegisterType) -> Result<RegisterValue> {
+    // etex.ch `scan_expr`: an alignment tab/row end met between operands is
+    // unexpandable (batch 56bi, `gullet::NumberScan`).
+    let _scan = NumberScan::begin();
     let value = etex_readexpr_i(rtype, 0)?;
     if let Some(token) = read_token()? {
       // Skip \relax or token with \relax meaning (\__int_eval_end: etc.)
@@ -60,7 +92,27 @@ LoadDefinitions!({
     // recovery / LHS-typed arithmetic can return a mismatched variant (e.g.
     // Number(0) for \dimexpr), which then panics the register getter's
     // expect_dimension(). Coerce to the declared type so the getter stays total.
-    Ok(value.coerce_to(rtype))
+    let value = value.coerce_to(rtype);
+    // etex.ch `scan_expr`: a result past `infinity` (2^31 − 1, an integer) or
+    // `max_dimen` (any other type) is "Arithmetic overflow", and the
+    // expression's value is zero (pdfTeX: `\dimexpr-16383pt*3\relax` = 0.0pt).
+    // An Error, as TeX's: the zero is not the author's value (OXIDIZED_DESIGN #519); a Warning in a box measured by
+    // our approximation (`approximated_measure`).
+    let ceiling = if matches!(rtype, RegisterType::Number) {
+      MAX_INTEGER
+    } else {
+      MAX_DIMEN
+    };
+    if value.clone().value_of().abs() > ceiling {
+      let detail = "the expression's value is out of range, so it is zero (etex.ch scan_expr)";
+      match approximated_measure() {
+        Some((ours, true)) => Warn!("expected", "<number>", "Arithmetic overflow.", detail, ours),
+        Some((ours, false)) => Info!("expected", "<number>", "Arithmetic overflow.", detail, ours),
+        None => Error!("expected", "<number>", "Arithmetic overflow.", detail),
+      }
+      return Ok(RegisterValue::default().coerce_to(rtype));
+    }
+    Ok(value)
   }
 
   fn etex_readexpr_i(rtype: RegisterType, prec: usize) -> Result<RegisterValue> {
@@ -80,6 +132,17 @@ LoadDefinitions!({
       }
       i_value
     } else {
+      // etex.ch `scan_expr` ("Scan a factor f of type o or start a
+      // subexpression"): the `(` probe is `get_x_token` + `back_input`, and
+      // `back_input` re-inserts `cur_tok = cs_token_flag + cur_cs` — the PLAIN
+      // control sequence (tex.web §358 keeps `cur_cs` under `no_expand_flag`).
+      // So a `\noexpand`'d macro heading a factor loses its protection and the
+      // following `scan_int` expands it: `\edef…{\the\numexpr\noexpand\@nameuse
+      // {sectiontocdepth}+\@ne\relax}` (tocbasic.sty:2688) yields 2, not
+      // "Missing number" (pdfTeX-probed). Strip the `\special_relax` family
+      // back to the shadowed token before unreading. Guard:
+      // `perfect_kernel_batch53::numexpr_factor_reexpands_noexpanded_macro`.
+      let token = token.noexpand_shadowed().unwrap_or(token);
       unread_one(token);
       read_value(rtype)?
     };
@@ -185,8 +248,10 @@ LoadDefinitions!({
   DefRegister!("\\lastnodetype", Number::new(0));
 
   // \fontcharht / \fontcharwd / \fontchardp / \fontcharic — Perl L86-113
+  // tex.web §577 `scan_font_ident`: read with expansion, skipping blanks, as
+  // `FontToken` (tex_fonts.rs) does.
   DefParameterType!(FontDef, sub[_inner, _extra] {
-    read_token()?.unwrap_or_else(|| T_CS!("\\relax"))
+    read_x_non_space()?.unwrap_or_else(|| T_CS!("\\relax"))
   });
   DefRegister!("\\fontcharht FontDef Number", Dimension::new(0),
   readonly => true,
@@ -397,7 +462,9 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.6 Additional Registers and Marks — Perl L221-226
-  def_primitive_noop("\\marks Number GeneralText")?;
+  // Its text is eTeX's `scan_toks(false, true)`, as `\mark`'s (Perl reads a
+  // `GeneralText`, eTeX.pool.ltxml:221).
+  def_primitive_noop("\\marks Number XGeneralText")?;
   def_macro_noop("\\topmarks Number")?;
   def_macro_noop("\\firstmarks Number")?;
   def_macro_noop("\\botmarks Number")?;
@@ -406,13 +473,15 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.7 Input Handling — Perl L233-258
-  DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[(port, token)] {
-    let file_key = format!("input_file:{port}");
-    let mouth_opt = with_value(&file_key, |v| match v {
-      Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),
-      _ => None,
-    });
-    if let Some(mouth) = mouth_opt {
+  // e-TeX's `\readline` is an unexpandable assignment of `\read`'s class
+  // (etex.ch `read_to_cs`; `\read` is `tex_file_io.rs`'s primitive). Perl's
+  // `DefMacro` (eTeX.pool.ltxml:233) read the line as it expanded, inside a
+  // number scan's look-ahead: `{\endlinechar=-1%` + a newline + `\readline\f to
+  // \x` (latexgit.sty:53-54, shdoc.sty:210-211) read it before `\endlinechar`
+  // was set, with a trailing `^^M` (KNOWN_PERL_ERRORS #286). Guard:
+  // `sweep125_roots::readline_is_an_assignment`.
+  DefPrimitive!("\\readline Number SkipKeyword:to RedefinableToken", sub[(port, token)] {
+    if let Some(mouth) = input_stream_to_change(&format!("input_file:{port}")) {
       let mut raw_line = mouth.borrow_mut().read_raw_line(false).unwrap_or_default();
       match lookup_definition(&T_CS!("\\endlinechar"))? { Some(eol) => {
         let eolv   = eol.value_of(Vec::new()).unwrap_or_default().value_of();
@@ -427,8 +496,22 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\scantokens GeneralText", sub[(tokens)] {
-    open_mouth(
-      Mouth::new(&writable_tokens(&tokens), None)?, true);
+    // eTeX: when the pseudo-file ends, the `\everyeof` token list is read AS
+    // THE FILE'S LAST TOKENS (tex.web §362 + etex.ch `every_eof`/`eof_seen`:
+    // the list is begun above the still-open file level, once). The mouth is
+    // marked and `read_internal_token_checked` inserts the payload at the
+    // mouth's own level the first time it runs dry — so a delimited scan
+    // started inside the pseudo-file sees its terminator (spreadtab.sty:1493
+    // `\ST_scan_func_arg` ends on `\everyeof{\ST_nil}`; 420 s runaways
+    // without it) and never crosses into the enclosing stream. Settled
+    // dead-ends (2026-09-01, ×3): inserting the payload into the PARENT
+    // after the close, unbounded or payload-bounded in the delimited
+    // readers — both let a nested scan inside the pseudo-file consume the
+    // enclosing rescan's close + payload (l3doc `\tl_replace_all` 5-token
+    // loop, witnesses spath3/litetable-zh/zref-check), which the file-level
+    // insertion cannot do.
+    open_mouth(Mouth::new(&writable_tokens(&tokens), None)?, true);
+    mark_everyeof_mouth()?;
     Tokens!()
   });
 
@@ -460,9 +543,25 @@ LoadDefinitions!({
   // / middle rules can pair it without ambiguity. We also stamp
   // `role_side="middle"` on the emitted XMTok — symmetry with
   // \left's `role_side="left"` and \right's `role_side="right"` set
-  // in tex_math.rs:\@left and :\@right, giving a uniform 3-way side
+  // in tex_math.rs:\lx@delim@left and :\lx@delim@right, giving a uniform 3-way side
   // discriminator on side-aware fence-pair delimiters. Task #263.
-  DefConstructor!("\\middle Token", "#1",
+  //
+  // `\middle` is TeX's `left_right` command (tex.web §1188), unexpandable; §1191-1192 require the `math_left_group` a
+  // `\left` opened, and without one ("Extra \middle.") the delimiter is still typeset
+  // (`tex_math::left_right_group`). Perl's `\middle` is the constructor itself (`DefConstructor('\middle Token')`,
+  // eTeX.pool.ltxml:306); here it dispatches to `\lx@delim@middle`, which reverts as `\middle`, as `\right` dispatches
+  // to `\lx@right` (TeX_Math.pool.ltxml:782-791), so that a `\middle` retried after an inserted closer (§1064
+  // `off_save`) is typeset once. OXIDIZED_DESIGN #530. Guard
+  // `perfect_kernel_batch65d::extra_right_and_middle_without_left`.
+  DefPrimitive!("\\middle", sub[_args] {
+    use crate::tex_math::LeftRightGroup;
+    // An "Extra \middle." keeps its delimiter too, as `\right`'s does (user ruling 2026-10-12).
+    if !matches!(crate::tex_math::left_right_group("middle")?, LeftRightGroup::Retried) {
+      unread(Tokens!(T_CS!("\\lx@delim@middle")));
+    }
+  });
+  DefConstructor!("\\lx@delim@middle DelimiterToken", "#1",
+  alias => "\\middle",
   after_construct => sub[document, _whatsit] {
     let current = document.get_node().clone();
     let delim_opt = current.get_child_nodes()
@@ -487,9 +586,15 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.12 Expandable Commands — Perl L330-357
-  DefConditional!("\\ifdefined Token", sub[(t)] {
+  DefConditional!("\\ifdefined NormalToken", sub[(t)] {
     has_meaning(&t)
   });
+  // The kernel's own `\ifdefined`, for the tests LaTeXML's macros make (`\lx@latin@name`, the frontmatter stores'
+  // nulls, `\makeindex`, `\makeglossary`): a document may redefine `\ifdefined` (amams.sty:1099
+  // `\def\ifdefined#1#2#3`, a three-argument test), which left those tests reading `\latinencoding` as its argument and
+  // their `\else`, `\fi` extra. `\loggingall` and `\tracingnone` keep the public `\ifdefined`, as latex.ltx:662/:679
+  // and Perl plain_base.pool.ltxml:40/:56 do. Witness math0402285.
+  Let!("\\lx@ifdefined", "\\ifdefined");
 
   // \ifcsname stuff \endcsname.
   // Uses CSNameQuiet — unlike \csname, \ifcsname does NOT emit errors
@@ -498,13 +603,38 @@ LoadDefinitions!({
     has_meaning(&t)
   });
 
-  // \ifincsname — eTeX (TeX §506-507): true when expansion is happening
-  // inside a `\csname...\endcsname` construction. LaTeXML does not have
-  // a separate "inside csname" mode (it expands eagerly), so this is
-  // always false — matching Perl LaTeXML's same shortcut. Rust extra
-  // (Perl LaTeXML does not define this), placed near the other
-  // expandable-conditional primitives.
-  DefConditional!("\\ifincsname", { false });
+  // \iffontchar <font><charcode> — eTeX (etex_man §3.7): true iff the
+  // font has a character in that slot. Perl eTeX.pool.ltxml L335 leaves it a
+  // COMMENT (undefined) and every kernel consumer desyncs (the dump's
+  // `\tex_iffontchar:D` LETs to it). The answer is the font FILE's coverage
+  // (`latexml_core::common::font::coverage`): a TFM's populated `char_info`
+  // slots for a `\font`-declared font, an OpenType `cmap` for a fontspec-
+  // selected font (`FONTSPEC_FONTFILE`, fontspec_sty.rs). A constant TRUE
+  // made unicodefonttable's `\displayfonttable` emit one cell per code
+  // point of the requested range instead of one per covered glyph —
+  // 262k cells, `Fatal:Timeout:MemoryBudget` (unicodefonttable-samples);
+  // a constant FALSE would skip every row. Fonts whose file cannot be
+  // resolved (NFSS families without a recorded file) keep TRUE, the old
+  // behaviour. Guards: `perfect_kernel_batch56::iffontchar_reads_tfm_coverage`,
+  // `iffontchar_bounds_unicodefonttable_to_font_coverage`.
+  DefConditional!("\\iffontchar Token Number", sub[(font, code)] {
+    let code = code.value_of();
+    if code < 0 {
+      return Ok(false);
+    }
+    match fontchar_coverage(&font) {
+      Some(cov) => cov.contains(code as u32),
+      None => true,
+    }
+  });
+
+  // \ifincsname — eTeX: true while a `\csname…\endcsname` name is being
+  // scanned (`gullet::in_csname`). Perl LaTeXML leaves it constantly false,
+  // so utf8.def's `\ifincsname` guard never kept a non-ASCII character
+  // literal in a name (clefval `\TheValue{a§b}`: "`\textsection` should not
+  // appear between \csname and \endcsname"; pdflatex clean). Guard:
+  // `perfect_kernel_batch54::ifincsname_keeps_utf8_chars_literal_in_names`.
+  DefConditional!("\\ifincsname", { ::latexml_core::gullet::in_csname() });
 
   DefConditional!("\\unless Token", sub[(if_token)] {
     if let Some(Stored::Conditional(defn)) = lookup_definition_stored(&if_token)?
@@ -549,31 +679,14 @@ LoadDefinitions!({
   DefRegister!("\\synctex", Number::new(0));
   def_macro_noop("\\reserveinserts{}")?;
 
-  //======================================================================
-  // etex.sty register-allocator macros (etex.sty L332-348). Real defs
-  // use `\et@xglob`/`\et@xloc` to allocate from extended register
-  // pools (Numbers 256+ for count/dimen/etc.). For our purposes the
-  // semantic is "allocate a new register"; forward to LaTeX's
-  // `\newcount`/`\newdimen`/etc. which already exist.
-  //
-  // Glob* variants allocate globally; loc* variants locally.
-  // In LaTeXML's flat-state model these are effectively equivalent.
-  //
-  // Witness: arXiv:2506.16610 / .16657 / .20642 (papers via etex.sty
-  // raw-load + linegoal.sty / etextools / similar). Rust 2 → 0
-  // expected, beating Perl=3.
-  DefMacro!("\\globcount", "\\newcount");
-  DefMacro!("\\loccount", "\\newcount");
-  DefMacro!("\\globdimen", "\\newdimen");
-  DefMacro!("\\locdimen", "\\newdimen");
-  DefMacro!("\\globskip", "\\newskip");
-  DefMacro!("\\locskip", "\\newskip");
-  DefMacro!("\\globmuskip", "\\newmuskip");
-  DefMacro!("\\locmuskip", "\\newmuskip");
-  DefMacro!("\\globbox", "\\newbox");
-  DefMacro!("\\locbox", "\\newbox");
-  DefMacro!("\\globtoks", "\\newtoks");
-  DefMacro!("\\loctoks", "\\newtoks");
-  DefMacro!("\\globmarks", "\\newmarks");
-  DefMacro!("\\locmarks", "\\newmarks");
+  // The etex.sty register-allocator macros (`\globcount` … `\loctoks` …)
+  // live in `etex_sty.rs`: they are PACKAGE macros (etex.sty:332-348), not
+  // eTeX-format primitives, and Perl's eTeX.pool.ltxml defines none of them.
+  // Defining them in the always-on pool made expl3's l3sort freeze the
+  // `\cs_if_exist:NT \loctoks` branch of `\__sort_compute_range:`
+  // (expl3-code.tex:23356-23364, `\count265`/`\count275` bounds) into the
+  // dump instead of the base `\count15` branch (Perl latex_dump.pool:8589),
+  // and once a package load left `\count265` > 0 every `\seq_sort`/`\clist_sort`
+  // ran an inverted range to the TokenLimit (spath3, tabularray, testidx,
+  // randintlist-l3, cistercian, circularglyphs … manuals).
 });

@@ -1,0 +1,10 @@
+% Minimal reproducer for LuaTeX catcode ranges and listings aspects loading
+% (witnessed in lltjp-listings.sty / codebox-doc-en.tex).
+\documentclass{article}
+\usepackage{luatexbase}
+\usepackage{listings}
+\begin{document}
+\SetCatcodeRange{"FF61}{"FF9F}{13}
+\lstloadaspects{escape}
+Aspects and catcodes loaded.
+\end{document}

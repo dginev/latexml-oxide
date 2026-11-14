@@ -1,0 +1,17 @@
+% witness: 2511.21509 (sections/show-case.tex:24-26 `\lstinputlisting[…]{⏎ examples/simple-correct.c⏎ }`; brk89)
+% oracle:  pdflatex 0 errors: TeX's file name skips the blanks before it and ends at the first one after (tex.web
+%          §526), so listings reads listing_file/add.c
+% engines: rust int90a = 1 error ("Can't read listings file '⏎ listing_file/add.c⏎ '"), the listing empty; Perl the
+%          same (listings.sty.ltxml:324 `ToString(Expand($file))`)
+% expect:  0 errors, 0 warnings; the listing holds the file's line
+% status:  RED (int90a) -> GREEN (79u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\lstinputlisting[language=C]
+  {
+    listing_file/add.c
+  }
+Done.
+\end{document}

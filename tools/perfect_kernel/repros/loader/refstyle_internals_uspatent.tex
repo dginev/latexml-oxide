@@ -1,0 +1,19 @@
+% witness: uspatent/PatentApplicationGuide (PatentApplicationGuide.tex:46, LyX preamble)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-23, before 56gd)
+% expect:  0 errors; <title> first in <document>, no <ERROR>
+% status:  GREEN (56gd 2026-09-23; was RED)
+% mechanism: the refstyle_sty.rs stub shadowed the on-disk refstyle.sty even under
+%   [rawstyles] (bindings outrank raw) and lacked \RS@ifundefined
+%   (refstyle.sty:51-57); the binding now inputs the real file with its options.
+\documentclass{article}
+\usepackage{amsmath,refstyle}
+\makeatletter
+\RS@ifundefined{subref}{\newref{sub}{name=section~}}{}
+\makeatother
+\title{T}
+\begin{document}
+\maketitle
+\section{A}\label{sec:a}
+See \secref{a}.
+\end{document}

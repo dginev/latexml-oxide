@@ -1,0 +1,16 @@
+% amsart's `\enddoc@text` sets `\addresses` after the body (`\@setaddresses`, amsart.cls:524-549), which a class or
+% document can fill itself (smfart.cls:420-422, imsproc.cls:448-451 `\g@addto@macro\addresses{…}`); the binding's
+% `\address` goes to the frontmatter instead. The 60m r1 hook called `\@setaddresses`, which no binding defined
+% ("Error:undefined:\@setaddresses", review 60m r1 finding 3); it is now amsart's, ported raw.
+% status:  GREEN 60m; guard perfect_kernel_batch60::amsart_raw_addresses_are_set
+% oracle:  pdflatex 0 errors: "ANN ALPHA" / "Body text." / "First University" / "Raw Appended Institute"
+% engines: rust 60m r1: Error:undefined:\@setaddresses
+% expect:  0 errors; the frontmatter address "First University"; after "Body text.", "Raw Appended Institute" in small
+%          caps
+\documentclass{amsart}
+\title{T}\author{Ann Alpha}\address{First University}
+\makeatletter\g@addto@macro\addresses{\address{}{Raw Appended Institute}}\makeatother
+\begin{document}
+\maketitle
+Body text.
+\end{document}

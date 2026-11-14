@@ -1,0 +1,21 @@
+% mechanism: as amsaddr_article_keeps_the_kernel_caption_format, without caption: the kernel's `\@makecaption` "Figure
+%   1: " for the figure and the newfloat type, float.sty's plain style its own ": ".
+% witness: review rev78y finding 1 (probe2/addrnocap.tex)
+% oracle:  pdflatex 0 errors; "Figure 1: Fig one.", "Listing 1: Code one.", "Program 1: Prog one."
+% engines: perl 0.8.8: "Figure 1. " (KNOWN_PERL_ERRORS #1140); rust int65a: "Figure 1. "; 78y r1: "Figure 1. ", "Listing 1. "
+% expect:  0 errors, 0 warnings; every label closed by ": " (float.sty's text after its stray space, Perl's float.sty.ltxml:52)
+% status:  RED (78y r1) -> GREEN (78y r2)
+\documentclass{article}
+\providecommand{\email}{}% (amsaddr.sty:44 `\renewcommand{\email}`, which article does not define)
+\usepackage{amsaddr}
+\usepackage{float}
+\floatstyle{plain}
+\newfloat{program}{tbp}{lop}
+\floatname{program}{Program}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[name=Listing]{listing}
+\begin{document}
+\begin{figure}[h]X\caption{Fig one.}\end{figure}
+\begin{listing}[h]Z\caption{Code one.}\end{listing}
+\begin{program}[h]W\caption{Prog one.}\end{program}
+\end{document}

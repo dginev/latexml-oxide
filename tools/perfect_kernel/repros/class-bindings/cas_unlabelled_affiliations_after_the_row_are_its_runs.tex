@@ -1,0 +1,25 @@
+% mechanism: two unlabelled cas `\affiliation`s after the whole row of authors, no marks (`Ann; Bob; Univ A; Univ B`):
+%   both are the one run's, the authors since the entry before them, so each author holds both — elsarticle's run
+%   reading of consecutive unlabelled `\address`es (`annotate=run`), which `shared_row::share_row_contacts` gives a
+%   group of two or more entries (OXIDIZED_DESIGN_DIVERGENCES #901, brief 104d r2 B1). The class prints "Ann Able,
+%   Bob Baker" over the two lines and cannot pair them; base's positional pairing (Ann Univ A, Bob Univ B) read an order
+%   the PDF does not print (main-session decision; review rev104d2 finding 1, probe cas9)
+% witness: none (synthetic; review rev104d2 probe cas9)
+% oracle:  pdflatex (TL 2025 cas-dc.cls) 0 errors: "Ann Able, Bob Baker" / "Univ A, Town, Land" / "Univ B, City, Land"
+% engines: rust int130a: Ann Univ A, Bob Univ B (by position); 104d r2: each author both
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each hold Univ A and Univ B
+% status:  GREEN (104d r2) — the decision pinned, perfect_kernel_batch104d::cas_unlabelled_affiliations_are_their_runs
+% preload: ar5iv.sty
+\documentclass{cas-dc}
+\begin{document}
+\shorttitle{T}
+\shortauthors{A. Able et al.}
+\title[mode=title]{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{organization={Univ A}, city={Town}, country={Land}}
+\affiliation{organization={Univ B}, city={City}, country={Land}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

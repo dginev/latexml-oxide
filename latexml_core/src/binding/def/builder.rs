@@ -198,6 +198,15 @@ fn apply_scalar_option(
     "enterHorizontal" => options.enter_horizontal = value.into_bool()?,
     "leaveHorizontal" => options.leave_horizontal = value.into_bool()?,
     "captureBody" => options.capture_body = value.into_bool()?,
+    "texGroup" => {
+      let name = value.into_string()?;
+      options.tex_group =
+        crate::definition::constructor::TexGroup::from_name(&name).ok_or_else(|| {
+          Error::from(format!(
+            "texGroup must be none, semi_simple or box: {name:?}"
+          ))
+        })?
+    },
     "alias" => options.alias = Some(value.into_string()?),
     _ => log::debug!("binding builder: ignoring unknown scalar option '{key}'"),
   }

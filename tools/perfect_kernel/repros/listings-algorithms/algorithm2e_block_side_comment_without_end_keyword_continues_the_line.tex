@@ -1,0 +1,16 @@
+% witness: none (review probe of 78k; algorithm2e.sty:1868 `\algocf@@@block[3]`)
+% oracle:  pdflatex 0 errors: "loop i do / a; / // after b;" — with an empty end keyword the side comment is
+%          ` #3\relax` with no `\strut\par`, so the next statement continues its line
+% engines: rust 78k r1 = 0 errors, "// after" and "b;" on two lines (the line always ended); perl = no side comment
+% expect:  0 errors, 0 warnings; three listing lines, the last "// after b;"
+% status:  RED (78k r1) -> GREEN (78k r2: the line ends only after an end keyword)
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\SetKwFor{Loop}{loop}{do}{}
+\begin{document}
+\begin{algorithm}
+\Loop{$i$}{a\;}(\tcp*[h]{after})
+b\;
+\caption{A}
+\end{algorithm}
+\end{document}

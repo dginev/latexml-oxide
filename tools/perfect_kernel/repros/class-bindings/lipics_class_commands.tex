@@ -1,0 +1,23 @@
+% witness: 2508.16319 (`{claimproof}`), 2508.09892 (`{remark*}`), 2008.01422 (`\lipicsEnd`), 2103.15659
+%   (`\proofsubparagraph`), 1904.11668 (`{romanenumerate}`), 2103.15651 (`\serieslogo`); run 340 ~1,100 papers
+% oracle:  pdflatex with lipics-v2021.cls: 0 errors; the claim's proof ends ◁, the example ends ⌟, items (i), (ii)
+% engines: rust 65v = errors (each undefined); no Perl binding for lipics
+% expect:  0 errors; a proof for the claim ending ◁, a remark*, (i)/(ii) and (a) labels, ⌟, the event note, the DOI
+%   pubnote (lipics.cls 2016: 1507.03682's :391-393)
+% status:  RED (65v) -> GREEN (65w)
+\documentclass{lipics-v2021}
+\serieslogo{}
+\EventShortName{SAMPLE}
+\volumeinfo{Editors}{2}{A Conference}{1}{1}{1}
+\DOI{10.4230/LIPIcs.SAMPLE.2016.1}
+\begin{document}
+\maketitle
+\begin{claim}A claim.\end{claim}
+\begin{claimproof}It holds.\end{claimproof}
+\begin{claimproof}Outer.\begin{proof}Inner.\end{proof}\end{claimproof}
+\begin{remark*}A remark.\end{remark*}
+\begin{romanenumerate}\item one\item two\end{romanenumerate}
+\begin{alphaenumerate}\item alpha\end{alphaenumerate}
+\proofsubparagraph{Case 1}Text.
+An example.\lipicsEnd
+\end{document}

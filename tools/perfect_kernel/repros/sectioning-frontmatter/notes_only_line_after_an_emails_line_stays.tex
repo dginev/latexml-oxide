@@ -1,0 +1,20 @@
+% mechanism: control for notes_only_line_after_the_names_is_theirs.tex: a line of marked notes after an `Emails: …` line
+%   (no names line) stays a line. Joined, the note made the address list no list (`line_is_email_list`), so it was
+%   welded into the affiliation above and every address lost its author (1911.03356, found by the 100c A/B).
+%   `notes_line_joins_names` joins only after a names line: its group's first, or one whose marks follow its text.
+% witness: 1911.03356
+% oracle:  pdflatex 0 errors; "Ann Able1,∗ and Bob Baker2,∗" / "1 Univ A" / "2 Univ B" / "Emails: ann@a.edu, bob@b.edu"
+% engines: rust int127a and 100c: Ann (Univ A, ann@a.edu), Bob (Univ B, bob@b.edu), the note a document pubnote
+% expect:  0 errors; each e-mail its author's
+% status:  GREEN (control)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1,*}$ and Bob Baker$^{2,*}$\\
+$^{1}$Univ A\\
+$^{2}$Univ B\\
+Emails: ann@a.edu, bob@b.edu\\
+\thanks{$^{*}$Equal contribution.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

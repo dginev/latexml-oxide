@@ -1,0 +1,12 @@
+% witness: lazylist/lazylist, parnotes/parnotes (ltugboat.cls:1214 \aftergroup\@afterheading in \@maketitle)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-03, after batch 54l)
+% expect:  0 errors; <section inlist="toc" xml:id="S1"> with <tag>1</tag>
+% status:  GREEN
+% guard:   perfect_kernel_batch54::everypar_does_not_fire_inside_a_constructor_argument
+\documentclass{article}
+\begin{document}
+A\everypar{{\setbox0\lastbox}}
+\section{Why lists?}
+Text.
+\end{document}

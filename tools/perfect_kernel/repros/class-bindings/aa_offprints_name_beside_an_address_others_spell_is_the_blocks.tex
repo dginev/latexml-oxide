@@ -1,0 +1,20 @@
+% witness: review revNL1r2 finding 1 (the document-note arm of the several-spellers owner rule); the old reader's
+%          `author_block/email_block_calls.rs` `spelled` / `owners.marked`: a lone address spelling several names is
+%          the marked author's only if among them
+% oracle:  pdflatex with 1707.06238's aa.cls: "Send offprint requests to: Z. Li, e-mail: wang@x.org"
+% engines: rust NL1r2 = 0 errors, the shadow gives wang@x.org to Z. Li (owner:corresponding api:note-name), the
+%          address spelling X. Wang and Y. Wang
+% expect:  0 errors, 0 warnings; the note names Z. Li, but the address spells two other authors: the block's
+%          (api:document-note owner:block)
+% status:  RED (NL1r2) -> GREEN (NL1d)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{X. Wang\inst{1} \and Y. Wang\inst{1} \and Z. Li\inst{2}}
+\offprints{Z. Li, \email{wang@x.org}}
+\institute{Univ X \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

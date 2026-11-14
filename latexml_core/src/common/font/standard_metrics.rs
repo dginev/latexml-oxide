@@ -21,6 +21,10 @@ pub struct MetricData {
   pub parameters:   &'static [f64],
 }
 
+/// Builds one font's entry in its own frame (see `STDMETRICS`).
+#[inline(never)]
+fn metric(build: impl FnOnce() -> MetricData) -> MetricData { build() }
+
 impl Default for MetricData {
   fn default() -> Self {
     MetricData {
@@ -46,10 +50,18 @@ impl Default for MetricData {
 // TFM font dimensions (in 12.20 fixed-point f64). A handful exceed
 // rustfmt's 100-char width; rustfmt::skip preserves them as one row
 // per font, matching the original `.tfm` table layout.
+//
+// A metric is keyed by the glyph the font draws at its slot, as the fontmaps decode it (KNOWN_PERL_ERRORS #1202):
+// cmsy/cmbsy "5D ⊎ U+228E (Perl's ⊌ U+228C), msam "77 ⋍ U+22CD (Perl's ≌ U+224C), cmmi "7C ȷ U+0237 (Perl's map put
+// `j` there, so the slot had no metric of its own; values and the skew-char kern from cmmi*.tfm), cmex "55 ⨄ U+2A04
+// (a key left from an older OMX map). msam "64/"65 (⋓/⋒) and msbm "36/"37 (⋪/⋫), swapped in Perl's maps, carry equal
+// metrics in every size, so their entries are right either way.
 #[rustfmt::skip]
+// Each font's `MetricData` is built in its own frame (`metric`), so the table's initializer keeps a small stack frame: inline,
+// the 84 entries shared one 1.7 MB frame (clippy::large_stack_frames), paid by whichever thread first reads the table.
 pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
   raw_map!(
-  "amsa" => MetricData {
+  "amsa" => metric(|| MetricData {
     quad: 65536.18,
     encoding: "AMSa",
     file: "/usr/local/texlive/2022/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm",
@@ -94,7 +106,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{25BC}" => (47331.68, 36035.62, 0.0, 0.0, ),
           "\u{2AC5}" => (50972.62, 49534.31, 16766.31, 0.0, ),
           "\u{229B}" => (50972.62, 38140.5, 5372.5, 0.0, ),
-          "\u{224C}" => (50972.62, 30409.81, -2358.18, 0.0, ),
+          "\u{22CD}" => (50972.62, 30409.81, -2358.18, 0.0, ),
           "\u{227C}" => (50972.62, 41724.5, 8956.5, 0.0, ),
           "\u{2A96}" => (50972.62, 41724.5, 8956.5, 0.0, ),
           "\u{21C4}" => (65536.18, 44236.81, 11849.0, 0.0, ),
@@ -192,9 +204,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{21C9}" => (65536.18, 44236.81, 11849.0, 0.0, )
     ),
     emwidth: 65536.18,
-    ..MetricData::default()},
+    ..MetricData::default()}),
   // cmbx10 TFM metrics (Computer Modern Bold Extended)
-  "cmbx" => MetricData {
+  "cmbx" => metric(|| MetricData {
     quad: 75366.00,
     space: 25122.00,
     encoding: "OT1",
@@ -497,9 +509,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "\u{FB00}\u{005D}" => 7145.1875,
       "\u{FB00}\u{2019}" => 7145.1875
     ),
-    ..MetricData::default()},
+    ..MetricData::default()}),
   // cmbx8 TFM metrics (Computer Modern Bold Extended, 8pt design size)
-  "cmbx8" => MetricData {
+  "cmbx8" => metric(|| MetricData {
     quad: 80282.25,
     space: 26760.75,
     encoding: "OT1",
@@ -605,9 +617,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "}" => (40141.1, 45511.1, 0.0, 0.0, ),
       "~" => (40141.1, 45511.1, 0.0, 0.0, )
     ),
-    ..MetricData::default()},
+    parameters: &[0.0, 26760.75, 13380.375, 8920.25, 29127.125, 80282.25, 8920.25],
+    ..MetricData::default()}),
   // cmr8 TFM metrics (Computer Modern Roman, 8pt design size)
-  "cmr8" => MetricData {
+  "cmr8" => metric(|| MetricData {
     quad: 69633.00,
     space: 23211.00,
     encoding: "OT1",
@@ -713,8 +726,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "}" => (34816.5, 45511.1, 0.0, 0.0, ),
       "~" => (34816.5, 43950.8, 0.0, 0.0, )
     ),
-    ..MetricData::default()},
-  "cmr" => MetricData {
+    parameters: &[0.0, 23211.0, 11605.5, 7737.0, 28216.875, 69633.0, 7737.0],
+    ..MetricData::default()}),
+  "cmr" => metric(|| MetricData {
     quad: 65536.18,
     space: 21845.37,
     encoding: "OT1",
@@ -1060,8 +1074,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{0057}\u{006F}" => -5461.37,
           "\u{0057}\u{0051}" => -1820.5
     ),
-    ..MetricData::default()},
-  "cmm" => MetricData {
+    ..MetricData::default()}),
+  "cmm" => metric(|| MetricData {
     emwidth: 65536.18,
     sizes: raw_map!(
           "\u{0030}" => (32768.12, 28216.87, 0.0, 0.0, ),
@@ -1180,6 +1194,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{0394}" => (54613.5, 44782.87, 0.0, 0.0, ),
           "\u{0048}" => (54476.87, 44782.87, 0.0, 5324.68, ),
           "\u{0131}" => (21132.5, 28216.87, 0.0, 0.0, ),
+          "\u{0237}" => (25167.81, 28216.87, 12743.12, 0.0, ),
           "\u{0035}" => (32768.12, 28216.87, 12743.12, 0.0, ),
           "\u{2113}" => (27306.87, 45511.12, 0.0, 0.0, ),
           "\u{0020}" => (0.0, 0.0, 0.0, 0.0, ),
@@ -1225,6 +1240,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{0054}\u{002C}" => -3640.87,
           "\u{0054}\u{00A0}\u{0311}" => 5461.5,
           "\u{0131}\u{00A0}\u{0311}" => 1820.5,
+          "\u{0237}\u{00A0}\u{0311}" => 5461.5,
           "\u{002F}\u{005A}" => -3640.87,
           "\u{004D}\u{002E}" => -3640.87,
           "\u{004B}\u{002E}" => -3640.87,
@@ -1374,8 +1390,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     slant: 16384.0,
     parameters: &[],
     quad: 65536.18,
-    ..MetricData::default()},
-  "cmm7" => MetricData {
+    ..MetricData::default()}),
+  "cmm7" => metric(|| MetricData {
     emwidth: 76719.12,
     sizes: raw_map!(
           "\u{000A}" => (0.00, 0.00, 0.00, 0.00, ),
@@ -1450,6 +1466,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{00A0}" => (0.00, 0.00, 0.00, 0.00, ),
           "\u{00A0}\u{0361}" => (22235.56, 45511.12, 0.00, 30301.31, ),
           "\u{0131}" => (26125.88, 28216.88, 0.00, 0.00, ),
+          "\u{0237}" => (28965.00, 28216.88, 12743.12, 0.00, ),
           "\u{0393}" => (45465.88, 44783.00, 0.00, 10077.56, ),
           "\u{0394}" => (62545.56, 44783.00, 0.00, 0.00, ),
           "\u{0398}" => (56946.12, 44783.00, 0.00, 2015.56, ),
@@ -1625,6 +1642,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{0079}\u{00A0}\u{0361}" => 4031.12,
           "\u{007A}\u{00A0}\u{0361}" => 4031.12,
           "\u{0131}\u{00A0}\u{0361}" => 2015.56,
+          "\u{0237}\u{00A0}\u{0361}" => 6046.69,
           "\u{0393}\u{002C}" => -8062.00,
           "\u{0393}\u{002E}" => -8062.00,
           "\u{0393}\u{002F}" => -4031.00,
@@ -1688,8 +1706,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     slant: 16384.0,
     parameters: &[],
     quad: 76719.12,
-    ..MetricData::default()},
-  "cmm5" => MetricData {
+    ..MetricData::default()}),
+  "cmm5" => metric(|| MetricData {
     emwidth: 96484.81,
     sizes: raw_map!(
           "\u{000A}" => (0.00, 0.00, 0.00, 0.00, ),
@@ -1764,6 +1782,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{00A0}" => (0.00, 0.00, 0.00, 0.00, ),
           "\u{00A0}\u{0361}" => (30037.62, 45511.19, 0.00, 38103.19, ),
           "\u{0131}" => (34968.19, 28216.81, 0.00, 0.00, ),
+          "\u{0237}" => (36272.62, 28216.81, 12743.19, 0.00, ),
           "\u{0393}" => (54568.38, 44783.00, 0.00, 11378.00, ),
           "\u{0394}" => (75549.62, 44783.00, 0.00, 0.00, ),
           "\u{0398}" => (68649.81, 44783.00, 0.00, 2275.62, ),
@@ -1939,6 +1958,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{0079}\u{00A0}\u{0361}" => 4551.19,
           "\u{007A}\u{00A0}\u{0361}" => 4551.19,
           "\u{0131}\u{00A0}\u{0361}" => 2275.62,
+          "\u{0237}\u{00A0}\u{0361}" => 6826.81,
           "\u{0393}\u{002C}" => -9102.38,
           "\u{0393}\u{002E}" => -9102.38,
           "\u{0393}\u{002F}" => -4551.19,
@@ -2002,8 +2022,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     slant: 16384.0,
     parameters: &[],
     quad: 96484.81,
-    ..MetricData::default()},
-  "cmsy" => MetricData {
+    ..MetricData::default()}),
+  "cmsy" => metric(|| MetricData {
     quad: 65536.18,
     slant: 16384.0,
     // cmsy10 TFM font dimension parameters (1-indexed in TeX)
@@ -2118,7 +2138,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{2298}" => (50972.62, 38229.37, 5461.37, 0.0, ),
           "\u{2009}" => (10922.69, 0.0, 0.0, 0.0, ),
           "\u{223C}" => (50972.62, 24043.5, -8724.5, 0.0, ),
-          "\u{228C}" => (43690.81, 36409.0, 0.0, 0.0, ),
+          "\u{228E}" => (43690.81, 36409.0, 0.0, 0.0, ),
           "\u{2264}" => (50972.62, 41679.0, 8911.0, 0.0, ),
           "\u{224D}" => (50972.62, 30392.18, -2375.81, 0.0, ),
           "\u{2219}" => (32768.12, 29127.18, -3640.81, 0.0, ),
@@ -2182,8 +2202,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{1D4A6}\u{2032}" => 3641.0
     ),
     emwidth: 65536.18,
-    ..MetricData::default()},
-  "amsb" => MetricData {
+    ..MetricData::default()}),
+  "amsb" => metric(|| MetricData {
     extraspace: 6554.0,
     exheight: 30340.81,
     emwidth: 65536.0,
@@ -2319,8 +2339,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     quad: 65536.0,
     space: 19661.0,
     encoding: "AMSb",
-    ..MetricData::default()},
-  "cmex" => MetricData {
+    ..MetricData::default()}),
+  "cmex" => metric(|| MetricData {
     encoding: "OMX",
     quad: 65536.18,
     file: "/usr/local/texlive/2022/texmf-dist/fonts/tfm/public/cm/cmex10.tfm",
@@ -2380,7 +2400,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
           "\u{2009}" => (10922.69, 0.0, 0.0, 0.0, ),
           "\u{2210}" => (61895.31, 0.0, 65536.87, 0.0, ),
           "\u{23AD}" => (58254.37, 0.0, 58983.0, 0.0, ),
-          "\u{228C}" => (54613.5, 0.0, 65536.87, 0.0, ),
+          "\u{2A04}" => (54613.5, 0.0, 65536.87, 0.0, ),
           "\u{23D0}" => (43690.81, 0.0, 39322.0, 0.0, ),
           "\u{007D}" => (38229.5, 2621.37, 76022.62, 0.0, ),
           "\u{22C2}" => (54613.5, 0.0, 65536.87, 0.0, ),
@@ -2395,10 +2415,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     emwidth: 65536.18,
     exheight: 28216.87,
-    ..MetricData::default()},
+    ..MetricData::default()}),
 
   // cmbsy10 TFM metrics
-  "cmbsy10" => MetricData {
+  "cmbsy10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbsy10.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -2409,7 +2429,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 75366.0, 0.0, 48936.5, 27782.875,
+      31059.6875, 49555.375, 24578.8125, 27059.3125, 23782.5, 18932.625, 9830.375, 20265.0,
+      25304.0, 3276.8125, 156631.0, 66191.375, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (58618.0000, 41506.0000, 8738.0000, 0.0000),
@@ -2499,7 +2521,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (58618.0000, 38375.0000, 5607.0000, 0.0000),
       "⊆" => (58618.0000, 45656.8125, 12888.8125, 0.0000),
       "⊇" => (58618.0000, 45656.8125, 12888.8125, 0.0000),
-      "⊌" => (50244.0000, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (50244.0000, 36409.0000, 0.0000, 0.0000),
       "⊑" => (58618.0000, 45656.8125, 12888.8125, 0.0000),
       "⊒" => (58618.0000, 45656.8125, 12888.8125, 0.0000),
       "⊓" => (50244.0000, 36409.0000, 0.0000, 0.0000),
@@ -2553,10 +2575,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy5 TFM metrics
-  "cmbsy5" => MetricData {
+  "cmbsy5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy5.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -2567,7 +2589,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1875,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.1875, 103764.0, 0.0, 60636.625, 25392.8125,
+      33038.8125, 67190.1875, 34859.1875, 33001.0, 26447.375, 19296.8125, 13107.1875, 26214.375,
+      32404.0, 6553.625, 129761.1875, 93061.1875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (78278.0000, 48059.1875, 15291.1875, 0.0000),
@@ -2657,7 +2681,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (78278.0000, 42868.0000, 10100.0000, 0.0000),
       "⊆" => (78278.0000, 51606.1875, 18838.1875, 0.0000),
       "⊇" => (78278.0000, 51606.1875, 18838.1875, 0.0000),
-      "⊌" => (67719.6250, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (67719.6250, 36409.0000, 0.0000, 0.0000),
       "⊑" => (78278.0000, 51606.1875, 18838.1875, 0.0000),
       "⊒" => (78278.0000, 51606.1875, 18838.1875, 0.0000),
       "⊓" => (67719.6250, 36409.0000, 0.0000, 0.0000),
@@ -2711,10 +2735,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy6 TFM metrics
-  "cmbsy6" => MetricData {
+  "cmbsy6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy6.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -2725,7 +2749,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1875,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.1875, 93327.6875, 0.0, 53261.0, 25711.8125,
+      31780.0, 56598.3125, 28138.8125, 32962.5, 27501.1875, 18811.3125, 10922.6875, 21845.3125,
+      27003.0, 5461.3125, 129979.6875, 88473.6875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (71239.6875, 45875.0000, 13107.0000, 0.0000),
@@ -2815,7 +2841,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (71239.6875, 41888.5000, 9120.5000, 0.0000),
       "⊆" => (71239.6875, 50335.5000, 17567.5000, 0.0000),
       "⊇" => (71239.6875, 50335.5000, 17567.5000, 0.0000),
-      "⊌" => (61409.3125, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (61409.3125, 36409.0000, 0.0000, 0.0000),
       "⊑" => (71239.6875, 50335.5000, 17567.5000, 0.0000),
       "⊒" => (71239.6875, 50335.5000, 17567.5000, 0.0000),
       "⊓" => (61409.3125, 36409.0000, 0.0000, 0.0000),
@@ -2869,10 +2895,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy7 TFM metrics
-  "cmbsy7" => MetricData {
+  "cmbsy7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy7.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -2883,7 +2909,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 85873.125, 0.0, 47992.875, 25159.4375,
+      30880.875, 49292.875, 22558.4375, 32934.6875, 28253.5625, 18724.5625, 9362.3125,
+      18724.5625, 23145.4375, 4681.125, 111411.125, 75834.5625, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (66212.3125, 44314.8750, 11546.8750, 0.0000),
@@ -2973,7 +3001,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (66212.3125, 40980.8750, 8212.8750, 0.0000),
       "⊆" => (66212.3125, 49136.5625, 16368.5625, 0.0000),
       "⊇" => (66212.3125, 49136.5625, 16368.5625, 0.0000),
-      "⊌" => (56902.0000, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (56902.0000, 36409.0000, 0.0000, 0.0000),
       "⊑" => (66212.3125, 49136.5625, 16368.5625, 0.0000),
       "⊒" => (66212.3125, 49136.5625, 16368.5625, 0.0000),
       "⊓" => (56902.0000, 36409.0000, 0.0000, 0.0000),
@@ -3027,10 +3055,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy8 TFM metrics
-  "cmbsy8" => MetricData {
+  "cmbsy8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy8.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -3041,7 +3069,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 80282.25, 0.0, 45634.75, 26793.25, 29979.0,
+      49093.625, 25701.0, 27224.75, 23128.75, 18659.5, 8192.0, 16384.0, 25941.375, 4096.0,
+      97484.75, 74547.25, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (62441.7500, 43144.7500, 10376.7500, 0.0000),
@@ -3131,7 +3161,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (62441.7500, 40077.1250, 7309.1250, 0.0000),
       "⊆" => (62441.7500, 47941.5000, 15173.5000, 0.0000),
       "⊇" => (62441.7500, 47941.5000, 15173.5000, 0.0000),
-      "⊌" => (53521.5000, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (53521.5000, 36409.0000, 0.0000, 0.0000),
       "⊑" => (62441.7500, 47941.5000, 15173.5000, 0.0000),
       "⊒" => (62441.7500, 47941.5000, 15173.5000, 0.0000),
       "⊓" => (53521.5000, 36409.0000, 0.0000, 0.0000),
@@ -3185,10 +3215,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbsy9 TFM metrics
-  "cmbsy9" => MetricData {
+  "cmbsy9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy9.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -3199,7 +3229,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 77550.0, 0.0, 42384.6875, 26850.25,
+      29479.75, 44448.0, 22238.6875, 31481.3125, 27840.4375, 18811.25, 7281.75, 11529.875,
+      23059.25, 3640.875, 174034.4375, 66264.25, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (60316.6875, 42234.0000, 9466.0000, 0.0000),
@@ -3289,7 +3321,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (60316.6875, 39212.4375, 6444.4375, 0.0000),
       "⊆" => (60316.6875, 46785.4375, 14017.4375, 0.0000),
       "⊇" => (60316.6875, 46785.4375, 14017.4375, 0.0000),
-      "⊌" => (51700.0000, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (51700.0000, 36409.0000, 0.0000, 0.0000),
       "⊑" => (60316.6875, 46785.4375, 14017.4375, 0.0000),
       "⊒" => (60316.6875, 46785.4375, 14017.4375, 0.0000),
       "⊓" => (51700.0000, 36409.0000, 0.0000, 0.0000),
@@ -3343,10 +3375,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx10 TFM metrics
-  "cmbx10" => MetricData {
+  "cmbx10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm",
     encoding: "OT1",
     space: 25122.0000,
@@ -3357,7 +3389,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8374.0000,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 25122.0, 12561.0, 8374.0, 29127.125, 75366.0, 8374.0],
     sizes: raw_map!(
       " " => (25122.0000, 0.0000, 0.0000, 0.0000),
       "!" => (22937.5000, 45511.1250, 0.0000, 0.0000),
@@ -3672,10 +3704,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx12 TFM metrics
-  "cmbx12" => MetricData {
+  "cmbx12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx12.tfm",
     encoding: "OT1",
     space: 24576.0000,
@@ -3686,7 +3718,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8192.0000,
     exheight: 29127.0625,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 24576.0, 12288.0, 8192.0, 29127.0625, 73728.0, 8192.0],
     sizes: raw_map!(
       " " => (24576.0000, 0.0000, 0.0000, 0.0000),
       "!" => (22452.1875, 45511.0625, 0.0000, 0.0000),
@@ -4001,10 +4033,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx5 TFM metrics
-  "cmbx5" => MetricData {
+  "cmbx5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx5.tfm",
     encoding: "OT1",
     space: 33859.6250,
@@ -4015,7 +4047,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 10558.3750,
     exheight: 29127.1875,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 33859.625, 15837.625, 10558.375, 29127.1875, 99394.375, 10558.375],
     sizes: raw_map!(
       " " => (33859.6250, 0.0000, 0.0000, 0.0000),
       "!" => (31129.0000, 45511.1875, 0.0000, 0.0000),
@@ -4330,10 +4362,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx6 TFM metrics
-  "cmbx6" => MetricData {
+  "cmbx6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx6.tfm",
     encoding: "OT1",
     space: 30704.6875,
@@ -4344,7 +4376,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 9830.3125,
     exheight: 29127.1875,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 30704.6875, 14745.5, 9830.3125, 29127.1875, 90900.3125, 9830.3125],
     sizes: raw_map!(
       " " => (30704.6875, 0.0000, 0.0000, 0.0000),
       "!" => (28156.0000, 45511.1875, 0.0000, 0.0000),
@@ -4659,10 +4691,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx7 TFM metrics
-  "cmbx7" => MetricData {
+  "cmbx7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx7.tfm",
     encoding: "OT1",
     space: 28450.8750,
@@ -4673,7 +4705,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 9310.3125,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 28450.875, 13965.4375, 9310.3125, 29127.125, 84832.5625, 9310.3125],
     sizes: raw_map!(
       " " => (28450.8750, 0.0000, 0.0000, 0.0000),
       "!" => (26032.3125, 45511.1250, 0.0000, 0.0000),
@@ -4988,10 +5020,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmbx9 TFM metrics
-  "cmbx9" => MetricData {
+  "cmbx9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx9.tfm",
     encoding: "OT1",
     space: 25850.0000,
@@ -5002,7 +5034,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8616.6875,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 25850.0, 12925.0, 8616.6875, 29127.125, 77550.0, 8616.6875],
     sizes: raw_map!(
       " " => (25850.0000, 0.0000, 0.0000, 0.0000),
       "!" => (23604.8750, 45511.1250, 0.0000, 0.0000),
@@ -5317,10 +5349,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmcsc10 TFM metrics
-  "cmcsc10" => MetricData {
+  "cmcsc10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmcsc10.tfm",
     encoding: "OT1",
     space: 24757.8125,
@@ -5331,7 +5363,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7645.8125,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 24757.8125, 11468.6875, 7645.8125, 28216.875, 72453.0, 7645.8125],
     sizes: raw_map!(
       " " => (24757.8125, 0.0000, 0.0000, 0.0000),
       "!" => (20934.8750, 45511.1250, 0.0000, 0.0000),
@@ -5651,10 +5683,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmex10 TFM metrics
-  "cmex10" => MetricData {
+  "cmex10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmex10.tfm",
     encoding: "OMX",
     space: 0.0000,
@@ -5665,7 +5697,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 65536.1875, 0.0, 2621.375, 7281.8125,
+      10922.6875, 13107.1875, 39321.625, 6553.625],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "(" => (30037.5000, 2621.3750, 76022.6250, 0.0000),
@@ -5738,10 +5771,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi10 TFM metrics
-  "cmmi10" => MetricData {
+  "cmmi10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -5752,7 +5785,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.875, 65536.1875],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (18204.5000, 6917.6875, 12743.1250, 0.0000),
@@ -5825,6 +5858,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " ͡" => (18204.5000, 45511.1250, 0.0000, 26179.1250),
       "ı" => (21132.5000, 28216.8750, 0.0000, 0.0000),
+      "ȷ" => (25167.8125, 28216.8750, 12743.1250, 0.0000),
       "Γ" => (40322.8750, 44782.8750, 0.0000, 9102.3125),
       "Δ" => (54613.5000, 44782.8750, 0.0000, 0.0000),
       "Θ" => (49989.3125, 44782.8750, 0.0000, 1820.5000),
@@ -5958,10 +5992,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi12 TFM metrics
-  "cmmi12" => MetricData {
+  "cmmi12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi12.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -5972,7 +6006,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.9375,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.9375, 64170.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (17825.0000, 6371.5625, 12743.0625, 0.0000),
@@ -6045,6 +6079,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " ͡" => (17825.0000, 45511.0625, 0.0000, 25738.9375),
       "ı" => (20479.7500, 28216.9375, 0.0000, 0.0000),
+      "ȷ" => (24765.5000, 28216.9375, 12743.0625, 0.0000),
       "Γ" => (39757.5000, 44782.9375, 0.0000, 8912.5000),
       "Δ" => (53475.0000, 44782.9375, 0.0000, 0.0000),
       "Θ" => (49040.7500, 44782.9375, 0.0000, 1782.5000),
@@ -6178,10 +6213,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi5 TFM metrics
-  "cmmi5" => MetricData {
+  "cmmi5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi5.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -6192,7 +6227,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.8125, 96484.8125],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (30037.6250, 8010.0000, 12743.1875, 0.0000),
@@ -6265,6 +6300,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " ͡" => (30037.6250, 45511.1875, 0.0000, 38103.1875),
       "ı" => (34968.1875, 28216.8125, 0.0000, 0.0000),
+      "ȷ" => (36272.6250, 28216.8125, 12743.1875, 0.0000),
       "Γ" => (54568.3750, 44783.0000, 0.0000, 11378.0000),
       "Δ" => (75549.6250, 44783.0000, 0.0000, 0.0000),
       "Θ" => (68649.8125, 44783.0000, 0.0000, 2275.6250),
@@ -6398,10 +6434,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi6 TFM metrics
-  "cmmi6" => MetricData {
+  "cmmi6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi6.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -6412,7 +6448,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.8125, 83740.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (24879.3125, 7888.6875, 12743.1875, 0.0000),
@@ -6485,6 +6521,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " ͡" => (24879.3125, 45511.1875, 0.0000, 32945.0000),
       "ı" => (29203.0000, 28216.8125, 0.0000, 0.0000),
+      "ȷ" => (31402.6875, 28216.8125, 12743.1875, 0.0000),
       "Γ" => (48666.3125, 44783.0000, 0.0000, 10619.1875),
       "Δ" => (67356.0000, 44783.0000, 0.0000, 0.0000),
       "Θ" => (61215.0000, 44783.0000, 0.0000, 2123.8125),
@@ -6618,10 +6655,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi7 TFM metrics
-  "cmmi7" => MetricData {
+  "cmmi7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi7.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -6632,7 +6669,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.875, 76719.125],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (22235.5625, 7541.8750, 12743.1250, 0.0000),
@@ -6705,6 +6742,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " ͡" => (22235.5625, 45511.1250, 0.0000, 30301.3125),
       "ı" => (26125.8750, 28216.8750, 0.0000, 0.0000),
+      "ȷ" => (28965.0000, 28216.8750, 12743.1250, 0.0000),
       "Γ" => (45465.8750, 44783.0000, 0.0000, 10077.5625),
       "Δ" => (62545.5625, 44783.0000, 0.0000, 0.0000),
       "Θ" => (56946.1250, 44783.0000, 0.0000, 2015.5625),
@@ -6838,10 +6876,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi8 TFM metrics
-  "cmmi8" => MetricData {
+  "cmmi8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi8.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -6852,7 +6890,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.875, 69633.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (19342.5000, 7281.7500, 12743.1250, 0.0000),
@@ -6925,6 +6963,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " ͡" => (19342.5000, 45511.1250, 0.0000, 27408.0000),
       "ı" => (22907.5000, 28216.8750, 0.0000, 0.0000),
+      "ȷ" => (26226.0000, 28216.8750, 12743.1250, 0.0000),
       "Γ" => (42132.3750, 44782.8750, 0.0000, 9671.2500),
       "Δ" => (58027.5000, 44782.8750, 0.0000, 0.0000),
       "Θ" => (52834.5000, 44782.8750, 0.0000, 1934.2500),
@@ -7058,10 +7097,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmi9 TFM metrics
-  "cmmi9" => MetricData {
+  "cmmi9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi9.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -7072,7 +7111,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.875, 67356.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (18710.0000, 7079.5625, 12743.1250, 0.0000),
@@ -7145,6 +7184,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " ͡" => (18710.0000, 45511.1250, 0.0000, 26725.0000),
       "ı" => (21921.1250, 28216.8750, 0.0000, 0.0000),
+      "ȷ" => (25663.1250, 28216.8750, 12743.1250, 0.0000),
       "Γ" => (41136.7500, 44782.8750, 0.0000, 9355.0000),
       "Δ" => (56130.0000, 44782.8750, 0.0000, 0.0000),
       "Θ" => (51253.2500, 44782.8750, 0.0000, 1871.0000),
@@ -7278,10 +7318,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmmib10 TFM metrics
-  "cmmib10" => MetricData {
+  "cmmib10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmib10.tfm",
     encoding: "OML",
     space: 0.0000,
@@ -7292,7 +7332,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 75366.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (20935.0000, 10194.5000, 12743.1250, 0.0000),
@@ -7365,6 +7405,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " ͡" => (20935.0000, 45511.1250, 0.0000, 29491.1250),
       "ı" => (25789.6250, 29127.1250, 0.0000, 0.0000),
+      "ȷ" => (28763.0000, 29127.1250, 12743.1250, 0.0000),
       "Γ" => (43053.3125, 44965.0000, 0.0000, 10467.5000),
       "Δ" => (62805.0000, 44965.0000, 0.0000, 0.0000),
       "Θ" => (56834.0000, 44965.0000, 0.0000, 2093.5000),
@@ -7498,10 +7539,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr10 TFM metrics
-  "cmr10" => MetricData {
+  "cmr10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr10.tfm",
     encoding: "OT1",
     space: 21845.3750,
@@ -7512,7 +7553,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 21845.375, 10922.6875, 7281.8125, 28216.875, 65536.1875, 7281.8125],
     sizes: raw_map!(
       " " => (21845.3750, 0.0000, 0.0000, 0.0000),
       "!" => (18204.5000, 45511.1250, 0.0000, 0.0000),
@@ -7827,10 +7868,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr12 TFM metrics
-  "cmr12" => MetricData {
+  "cmr12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr12.tfm",
     encoding: "OT1",
     space: 21390.0000,
@@ -7841,7 +7882,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7130.0000,
     exheight: 28216.9375,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 21390.0, 10695.0, 7130.0, 28216.9375, 64170.0, 7130.0],
     sizes: raw_map!(
       " " => (21390.0000, 0.0000, 0.0000, 0.0000),
       "!" => (17825.0000, 45511.0625, 0.0000, 0.0000),
@@ -8156,10 +8197,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr17 TFM metrics
-  "cmr17" => MetricData {
+  "cmr17" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr17.tfm",
     encoding: "OT1",
     space: 19784.5000,
@@ -8170,7 +8211,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6847.6875,
     exheight: 28212.6875,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 19784.5, 10271.5, 6847.6875, 28212.6875, 60112.0625, 6847.6875],
     sizes: raw_map!(
       " " => (19784.5000, 0.0000, 0.0000, 0.0000),
       "!" => (16360.6250, 45511.1250, 0.0000, 0.0000),
@@ -8485,10 +8526,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr5 TFM metrics
-  "cmr5" => MetricData {
+  "cmr5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr5.tfm",
     encoding: "OT1",
     space: 30948.0000,
@@ -8499,7 +8540,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 9102.3750,
     exheight: 28216.8125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 30948.0, 13653.625, 9102.375, 28216.8125, 89203.1875, 9102.375],
     sizes: raw_map!(
       " " => (30948.0000, 0.0000, 0.0000, 0.0000),
       "!" => (26396.8125, 45511.1875, 0.0000, 0.0000),
@@ -8810,10 +8851,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr6 TFM metrics
-  "cmr6" => MetricData {
+  "cmr6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr6.tfm",
     encoding: "OT1",
     space: 27306.3125,
@@ -8824,7 +8865,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8495.3125,
     exheight: 28216.8125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 27306.3125, 12743.0, 8495.3125, 28216.8125, 80098.6875, 8495.3125],
     sizes: raw_map!(
       " " => (27306.3125, 0.0000, 0.0000, 0.0000),
       "!" => (23058.6875, 45511.1875, 0.0000, 0.0000),
@@ -9139,10 +9180,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr7 TFM metrics
-  "cmr7" => MetricData {
+  "cmr7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr7.tfm",
     encoding: "OT1",
     space: 25226.3125,
@@ -9153,7 +9194,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8062.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 25226.3125, 12093.0, 8062.0, 28216.875, 74638.5625, 8062.0],
     sizes: raw_map!(
       " " => (25226.3125, 0.0000, 0.0000, 0.0000),
       "!" => (21195.3125, 45511.1250, 0.0000, 0.0000),
@@ -9468,10 +9509,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmr9 TFM metrics
-  "cmr9" => MetricData {
+  "cmr9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr9.tfm",
     encoding: "OT1",
     space: 22452.0000,
@@ -9482,7 +9523,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7484.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 22452.0, 11226.0, 7484.0, 28216.875, 67356.0, 7484.0],
     sizes: raw_map!(
       " " => (22452.0000, 0.0000, 0.0000, 0.0000),
       "!" => (18710.0000, 45511.1250, 0.0000, 0.0000),
@@ -9797,10 +9838,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsl10 TFM metrics
-  "cmsl10" => MetricData {
+  "cmsl10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsl10.tfm",
     encoding: "OT1",
     space: 21845.3750,
@@ -9811,7 +9852,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 28216.8750,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 21845.375, 10922.6875, 7281.8125, 28216.875, 65536.1875, 7281.8125],
     sizes: raw_map!(
       " " => (21845.3750, 0.0000, 0.0000, 0.0000),
       "!" => (18204.5000, 45511.1250, 0.0000, 3762.5000),
@@ -10126,10 +10167,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsl12 TFM metrics
-  "cmsl12" => MetricData {
+  "cmsl12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsl12.tfm",
     encoding: "OT1",
     space: 21390.0000,
@@ -10140,7 +10181,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7130.0000,
     exheight: 28216.9375,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 21390.0, 10695.0, 7130.0, 28216.9375, 64170.0, 7130.0],
     sizes: raw_map!(
       " " => (21390.0000, 0.0000, 0.0000, 0.0000),
       "!" => (17825.0000, 45511.0625, 0.0000, 3641.2500),
@@ -10455,10 +10496,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsl8 TFM metrics
-  "cmsl8" => MetricData {
+  "cmsl8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsl8.tfm",
     encoding: "OT1",
     space: 23211.0000,
@@ -10469,7 +10510,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7737.0000,
     exheight: 28216.8750,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 23211.0, 11605.5, 7737.0, 28216.875, 69633.0, 7737.0],
     sizes: raw_map!(
       " " => (23211.0000, 0.0000, 0.0000, 0.0000),
       "!" => (19342.5000, 45511.1250, 0.0000, 3489.2500),
@@ -10784,10 +10825,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsl9 TFM metrics
-  "cmsl9" => MetricData {
+  "cmsl9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsl9.tfm",
     encoding: "OT1",
     space: 22452.0000,
@@ -10798,7 +10839,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7484.0000,
     exheight: 28216.8750,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 22452.0, 11226.0, 7484.0, 28216.875, 67356.0, 7484.0],
     sizes: raw_map!(
       " " => (22452.0000, 0.0000, 0.0000, 0.0000),
       "!" => (18710.0000, 45511.1250, 0.0000, 3641.2500),
@@ -11113,10 +11154,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsltt10 TFM metrics
-  "cmsltt10" => MetricData {
+  "cmsltt10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsltt10.tfm",
     encoding: "OT1",
     space: 34406.1250,
@@ -11127,7 +11168,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 34406.1250,
     exheight: 28216.8750,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 34406.125, 0.0, 0.0, 28216.875, 68812.1875, 34406.125],
     sizes: raw_map!(
       " " => (34406.1250, 0.0000, 0.0000, 0.0000),
       "!" => (34406.1250, 40049.8125, 0.0000, 7585.3750),
@@ -11271,10 +11312,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss10 TFM metrics
-  "cmss10" => MetricData {
+  "cmss10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss10.tfm",
     encoding: "OT1",
     space: 21845.3750,
@@ -11285,7 +11326,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 21845.375, 10922.6875, 7281.8125, 29127.125, 65536.1875, 7281.8125],
     sizes: raw_map!(
       " " => (21845.3750, 0.0000, 0.0000, 0.0000),
       "!" => (20935.1875, 45511.1250, 0.0000, 0.0000),
@@ -11562,10 +11603,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss12 TFM metrics
-  "cmss12" => MetricData {
+  "cmss12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss12.tfm",
     encoding: "OT1",
     space: 21390.0000,
@@ -11576,7 +11617,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7130.0000,
     exheight: 29127.0625,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 21390.0, 10695.0, 7130.0, 29127.0625, 64170.0, 7130.0],
     sizes: raw_map!(
       " " => (21390.0000, 0.0000, 0.0000, 0.0000),
       "!" => (20404.0000, 45511.0625, 0.0000, 0.0000),
@@ -11853,10 +11894,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss17 TFM metrics
-  "cmss17" => MetricData {
+  "cmss17" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss17.tfm",
     encoding: "OT1",
     space: 20543.0625,
@@ -11867,7 +11908,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6847.6875,
     exheight: 28212.6875,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 20543.0625, 10271.5, 6847.6875, 28212.6875, 61629.1875, 6847.6875],
     sizes: raw_map!(
       " " => (20543.0625, 0.0000, 0.0000, 0.0000),
       "!" => (19647.6250, 45511.1250, 0.0000, 0.0000),
@@ -12144,10 +12185,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss8 TFM metrics
-  "cmss8" => MetricData {
+  "cmss8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss8.tfm",
     encoding: "OT1",
     space: 23211.0000,
@@ -12158,7 +12199,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7737.0000,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 23211.0, 11605.5, 7737.0, 29127.125, 69633.0, 7737.0],
     sizes: raw_map!(
       " " => (23211.0000, 0.0000, 0.0000, 0.0000),
       "!" => (22073.1250, 45511.1250, 0.0000, 0.0000),
@@ -12435,10 +12476,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmss9 TFM metrics
-  "cmss9" => MetricData {
+  "cmss9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss9.tfm",
     encoding: "OT1",
     space: 22452.0000,
@@ -12449,7 +12490,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7484.0000,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 22452.0, 11226.0, 7484.0, 29127.125, 67356.0, 7484.0],
     sizes: raw_map!(
       " " => (22452.0000, 0.0000, 0.0000, 0.0000),
       "!" => (21339.5625, 45511.1250, 0.0000, 0.0000),
@@ -12726,10 +12767,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssbx10 TFM metrics
-  "cmssbx10" => MetricData {
+  "cmssbx10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssbx10.tfm",
     encoding: "OT1",
     space: 24030.0000,
@@ -12740,7 +12781,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8010.0000,
     exheight: 30037.3125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 24030.0, 12015.0, 8010.0, 30037.3125, 72090.0, 8010.0],
     sizes: raw_map!(
       " " => (24030.0000, 0.0000, 0.0000, 0.0000),
       "!" => (24030.0000, 45511.1250, 0.0000, 0.0000),
@@ -13017,10 +13058,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi10 TFM metrics
-  "cmssi10" => MetricData {
+  "cmssi10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi10.tfm",
     encoding: "OT1",
     space: 21845.3750,
@@ -13031,7 +13072,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 29127.1250,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 21845.375, 10922.6875, 7281.8125, 29127.125, 65536.1875, 7281.8125],
     sizes: raw_map!(
       " " => (21845.3750, 0.0000, 0.0000, 0.0000),
       "!" => (20935.1875, 45511.1250, 0.0000, 3757.1250),
@@ -13308,10 +13349,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi12 TFM metrics
-  "cmssi12" => MetricData {
+  "cmssi12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi12.tfm",
     encoding: "OT1",
     space: 21390.0000,
@@ -13322,7 +13363,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7130.0000,
     exheight: 29127.0625,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 21390.0, 10695.0, 7130.0, 29127.0625, 64170.0, 7130.0],
     sizes: raw_map!(
       " " => (21390.0000, 0.0000, 0.0000, 0.0000),
       "!" => (20404.0000, 45511.0625, 0.0000, 3908.9375),
@@ -13599,10 +13640,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi17 TFM metrics
-  "cmssi17" => MetricData {
+  "cmssi17" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi17.tfm",
     encoding: "OT1",
     space: 20543.0625,
@@ -13613,7 +13654,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6847.6875,
     exheight: 28212.6875,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 20543.0625, 10271.5, 6847.6875, 28212.6875, 61629.1875, 6847.6875],
     sizes: raw_map!(
       " " => (20543.0625, 0.0000, 0.0000, 0.0000),
       "!" => (19647.6250, 45511.1250, 0.0000, 4195.4375),
@@ -13890,10 +13931,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi8 TFM metrics
-  "cmssi8" => MetricData {
+  "cmssi8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi8.tfm",
     encoding: "OT1",
     space: 23211.0000,
@@ -13904,7 +13945,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7737.0000,
     exheight: 29127.1250,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 23211.0, 11605.5, 7737.0, 29127.125, 69633.0, 7737.0],
     sizes: raw_map!(
       " " => (23211.0000, 0.0000, 0.0000, 0.0000),
       "!" => (22073.1250, 45511.1250, 0.0000, 3529.5000),
@@ -14181,10 +14222,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmssi9 TFM metrics
-  "cmssi9" => MetricData {
+  "cmssi9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmssi9.tfm",
     encoding: "OT1",
     space: 22452.0000,
@@ -14195,7 +14236,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7484.0000,
     exheight: 29127.1250,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 22452.0, 11226.0, 7484.0, 29127.125, 67356.0, 7484.0],
     sizes: raw_map!(
       " " => (22452.0000, 0.0000, 0.0000, 0.0000),
       "!" => (21339.5625, 45511.1250, 0.0000, 3706.6875),
@@ -14472,10 +14513,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy10 TFM metrics
-  "cmsy10" => MetricData {
+  "cmsy10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -14579,7 +14620,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (50972.6250, 35330.3125, 2562.3125, 0.0000),
       "⊆" => (50972.6250, 41679.0000, 8911.0000, 0.0000),
       "⊇" => (50972.6250, 41679.0000, 8911.0000, 0.0000),
-      "⊌" => (43690.8125, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (43690.8125, 36409.0000, 0.0000, 0.0000),
       "⊑" => (50972.6250, 41679.0000, 8911.0000, 0.0000),
       "⊒" => (50972.6250, 41679.0000, 8911.0000, 0.0000),
       "⊓" => (43690.8125, 36409.0000, 0.0000, 0.0000),
@@ -14633,10 +14674,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy5 TFM metrics
-  "cmsy5" => MetricData {
+  "cmsy5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy5.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -14647,7 +14688,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.8125, 96484.8125, 0.0, 60636.625, 25392.8125,
+      33038.8125, 67190.1875, 34859.1875, 33001.0, 26447.375, 19296.8125, 13107.1875, 26214.375,
+      32404.0, 6553.625, 129761.1875, 93061.1875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (70998.3750, 43691.1875, 10923.1875, 0.0000),
@@ -14737,7 +14780,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (70998.3750, 39381.6250, 6613.6250, 0.0000),
       "⊆" => (70998.3750, 47141.3750, 14373.3750, 0.0000),
       "⊇" => (70998.3750, 47141.3750, 14373.3750, 0.0000),
-      "⊌" => (61896.0000, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (61896.0000, 36409.0000, 0.0000, 0.0000),
       "⊑" => (70998.3750, 47141.3750, 14373.3750, 0.0000),
       "⊒" => (70998.3750, 47141.3750, 14373.3750, 0.0000),
       "⊓" => (61896.0000, 36409.0000, 0.0000, 0.0000),
@@ -14791,10 +14834,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy6 TFM metrics
-  "cmsy6" => MetricData {
+  "cmsy6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy6.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -14896,7 +14939,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (63108.3125, 38534.3125, 5766.3125, 0.0000),
       "⊆" => (63108.3125, 46011.8125, 13243.8125, 0.0000),
       "⊇" => (63108.3125, 46011.8125, 13243.8125, 0.0000),
-      "⊌" => (54613.0000, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (54613.0000, 36409.0000, 0.0000, 0.0000),
       "⊑" => (63108.3125, 46011.8125, 13243.8125, 0.0000),
       "⊒" => (63108.3125, 46011.8125, 13243.8125, 0.0000),
       "⊓" => (54613.0000, 36409.0000, 0.0000, 0.0000),
@@ -14950,10 +14993,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy7 TFM metrics
-  "cmsy7" => MetricData {
+  "cmsy7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy7.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -15055,7 +15098,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (58514.5625, 37727.4375, 4959.4375, 0.0000),
       "⊆" => (58514.5625, 44922.8750, 12154.8750, 0.0000),
       "⊇" => (58514.5625, 44922.8750, 12154.8750, 0.0000),
-      "⊌" => (50452.5625, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (50452.5625, 36409.0000, 0.0000, 0.0000),
       "⊑" => (58514.5625, 44922.8750, 12154.8750, 0.0000),
       "⊒" => (58514.5625, 44922.8750, 12154.8750, 0.0000),
       "⊓" => (50452.5625, 36409.0000, 0.0000, 0.0000),
@@ -15109,10 +15152,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy8 TFM metrics
-  "cmsy8" => MetricData {
+  "cmsy8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy8.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -15214,7 +15257,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (54159.0000, 36905.0000, 4137.0000, 0.0000),
       "⊆" => (54159.0000, 43818.1250, 11050.1250, 0.0000),
       "⊇" => (54159.0000, 43818.1250, 11050.1250, 0.0000),
-      "⊌" => (46422.0000, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (46422.0000, 36409.0000, 0.0000, 0.0000),
       "⊑" => (54159.0000, 43818.1250, 11050.1250, 0.0000),
       "⊒" => (54159.0000, 43818.1250, 11050.1250, 0.0000),
       "⊓" => (46422.0000, 36409.0000, 0.0000, 0.0000),
@@ -15268,10 +15311,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmsy9 TFM metrics
-  "cmsy9" => MetricData {
+  "cmsy9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy9.tfm",
     encoding: "OMS",
     space: 0.0000,
@@ -15373,7 +15416,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "⊃" => (52388.0000, 36108.5625, 3340.5625, 0.0000),
       "⊆" => (52388.0000, 42739.4375, 9971.4375, 0.0000),
       "⊇" => (52388.0000, 42739.4375, 9971.4375, 0.0000),
-      "⊌" => (44904.0000, 36409.0000, 0.0000, 0.0000),
+      "⊎" => (44904.0000, 36409.0000, 0.0000, 0.0000),
       "⊑" => (52388.0000, 42739.4375, 9971.4375, 0.0000),
       "⊒" => (52388.0000, 42739.4375, 9971.4375, 0.0000),
       "⊓" => (44904.0000, 36409.0000, 0.0000, 0.0000),
@@ -15427,10 +15470,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti10 TFM metrics
-  "cmti10" => MetricData {
+  "cmti10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti10.tfm",
     encoding: "OT1",
     space: 23447.1875,
@@ -15441,7 +15484,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6699.1875,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 23447.1875, 10048.8125, 6699.1875, 28216.875, 66992.0, 6699.1875],
     sizes: raw_map!(
       " " => (23447.1875, 0.0000, 0.0000, 0.0000),
       "!" => (20097.6250, 45511.1250, 0.0000, 8137.5000),
@@ -15754,10 +15797,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti12 TFM metrics
-  "cmti12" => MetricData {
+  "cmti12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti12.tfm",
     encoding: "OT1",
     space: 22937.8125,
@@ -15768,7 +15811,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6553.6875,
     exheight: 28216.9375,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 22937.8125, 9830.5, 6553.6875, 28216.9375, 65536.6875, 6553.6875],
     sizes: raw_map!(
       " " => (22937.8125, 0.0000, 0.0000, 0.0000),
       "!" => (19661.0000, 45511.0625, 0.0000, 8009.9375),
@@ -16081,10 +16124,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti7 TFM metrics
-  "cmti7" => MetricData {
+  "cmti7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti7.tfm",
     encoding: "OT1",
     space: 27983.1250,
@@ -16095,7 +16138,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7698.0000,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 27983.125, 11547.0, 7698.0, 28216.875, 79060.3125, 7698.0],
     sizes: raw_map!(
       " " => (27983.1250, 0.0000, 0.0000, 0.0000),
       "!" => (24134.1250, 45511.1250, 0.0000, 7450.8750),
@@ -16408,10 +16451,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti8 TFM metrics
-  "cmti8" => MetricData {
+  "cmti8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti8.tfm",
     encoding: "OT1",
     space: 25167.7500,
@@ -16422,7 +16465,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7190.7500,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 25167.75, 10786.125, 7190.75, 28216.875, 71907.75, 7190.75],
     sizes: raw_map!(
       " " => (25167.7500, 0.0000, 0.0000, 0.0000),
       "!" => (21572.3750, 45511.1250, 0.0000, 7827.8750),
@@ -16735,10 +16778,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmti9 TFM metrics
-  "cmti9" => MetricData {
+  "cmti9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti9.tfm",
     encoding: "OT1",
     space: 24070.6875,
@@ -16749,7 +16792,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6877.3125,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 24070.6875, 10316.0, 6877.3125, 28216.875, 68773.3125, 6877.3125],
     sizes: raw_map!(
       " " => (24070.6875, 0.0000, 0.0000, 0.0000),
       "!" => (20632.0000, 45511.1250, 0.0000, 8040.2500),
@@ -17062,10 +17105,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmtt10 TFM metrics
-  "cmtt10" => MetricData {
+  "cmtt10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt10.tfm",
     encoding: "OT1",
     space: 34406.1250,
@@ -17076,7 +17119,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 34406.1250,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 34406.125, 0.0, 0.0, 28216.875, 68812.1875, 34406.125],
     sizes: raw_map!(
       " " => (34406.1250, 0.0000, 0.0000, 0.0000),
       "!" => (34406.1250, 40049.8125, 0.0000, 0.0000),
@@ -17220,10 +17263,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmtt12 TFM metrics
-  "cmtt12" => MetricData {
+  "cmtt12" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt12.tfm",
     encoding: "OT1",
     space: 33723.7500,
@@ -17234,7 +17277,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 33723.7500,
     exheight: 28216.9375,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 33723.75, 0.0, 0.0, 28216.9375, 67447.5, 33723.75],
     sizes: raw_map!(
       " " => (33723.7500, 0.0000, 0.0000, 0.0000),
       "!" => (33723.7500, 40049.7500, 0.0000, 0.0000),
@@ -17378,10 +17421,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmtt8 TFM metrics
-  "cmtt8" => MetricData {
+  "cmtt8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt8.tfm",
     encoding: "OT1",
     space: 34816.5000,
@@ -17392,7 +17435,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 34816.5000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 34816.5, 0.0, 0.0, 28216.875, 69633.0, 34816.5],
     sizes: raw_map!(
       " " => (34816.5000, 0.0000, 0.0000, 0.0000),
       "!" => (34816.5000, 40049.7500, 0.0000, 0.0000),
@@ -17536,10 +17579,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmtt9 TFM metrics
-  "cmtt9" => MetricData {
+  "cmtt9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt9.tfm",
     encoding: "OT1",
     space: 34406.0000,
@@ -17550,7 +17593,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 34406.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 34406.0, 0.0, 0.0, 28216.875, 68812.0, 34406.0],
     sizes: raw_map!(
       " " => (34406.0000, 0.0000, 0.0000, 0.0000),
       "!" => (34406.0000, 40049.7500, 0.0000, 0.0000),
@@ -17694,10 +17737,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // cmu10 TFM metrics
-  "cmu10" => MetricData {
+  "cmu10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmu10.tfm",
     encoding: "OT1",
     space: 25486.1875,
@@ -17708,7 +17751,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 25486.1875, 10922.6875, 7281.8125, 28216.875, 72817.8125, 7281.8125],
     sizes: raw_map!(
       " " => (25486.1875, 0.0000, 0.0000, 0.0000),
       "!" => (21845.3125, 45511.1250, 0.0000, 0.0000),
@@ -18021,10 +18064,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam10 TFM metrics
-  "msam10" => MetricData {
+  "msam10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18035,7 +18078,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 65536.1875, 0.0, 44335.625, 25803.625,
+      29080.375, 44954.5, 22599.5, 27059.3125, 23782.5, 18932.625, 9830.375, 16201.625, 25304.0,
+      3276.8125, 156631.0, 66191.375, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18085,7 +18130,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "∴" => (43690.8125, 45366.6875, 0.0000, 0.0000),
       "∵" => (43690.8125, 45366.6875, 0.0000, 0.0000),
       "∽" => (50972.6250, 24764.8750, -8724.5000, 0.0000),
-      "≌" => (50972.6250, 30409.8125, -2358.1875, 0.0000),
+      "⋍" => (50972.6250, 30409.8125, -2358.1875, 0.0000),
       "≎" => (50972.6250, 36035.6250, 3973.0000, 0.0000),
       "≏" => (50972.6250, 36035.6250, 3973.0000, 0.0000),
       "≑" => (50972.6250, 38140.5000, 5372.5000, 0.0000),
@@ -18176,10 +18221,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam5 TFM metrics
-  "msam5" => MetricData {
+  "msam5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam5.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18190,7 +18235,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.8125, 96484.8125, 0.0, 60636.625, 25392.8125,
+      33038.8125, 67190.1875, 34859.1875, 33001.0, 26447.375, 19296.8125, 13107.1875, 26214.375,
+      32404.0, 6553.625, 129761.1875, 93061.1875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18240,7 +18287,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "∴" => (61896.0000, 44601.1875, 0.0000, 0.0000),
       "∵" => (61896.0000, 44601.1875, 0.0000, 0.0000),
       "∽" => (70998.3750, 25978.8125, -6789.1875, 0.0000),
-      "≌" => (70998.3750, 32898.3750, 1070.3750, 0.0000),
+      "⋍" => (70998.3750, 32898.3750, 1070.3750, 0.0000),
       "≎" => (70998.3750, 42415.6250, 8916.1875, 0.0000),
       "≏" => (70998.3750, 42415.6250, 8916.1875, 0.0000),
       "≑" => (70998.3750, 44601.1875, 10744.1875, 0.0000),
@@ -18331,10 +18378,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam6 TFM metrics
-  "msam6" => MetricData {
+  "msam6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam6.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18345,7 +18392,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.8125, 83740.0, 0.0, 53261.0, 25711.8125, 31780.0,
+      56598.3125, 28138.8125, 32962.5, 27501.1875, 18811.3125, 10922.6875, 21845.3125, 27003.0,
+      5461.3125, 129979.6875, 88473.6875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18395,7 +18444,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "∴" => (54613.0000, 44860.5000, 0.0000, 0.0000),
       "∵" => (54613.0000, 44860.5000, 0.0000, 0.0000),
       "∽" => (63108.3125, 25554.5000, -7213.5000, 0.0000),
-      "≌" => (63108.3125, 32899.8125, 131.8125, 0.0000),
+      "⋍" => (63108.3125, 32899.8125, 131.8125, 0.0000),
       "≎" => (63108.3125, 41356.0000, 8118.3125, 0.0000),
       "≏" => (63108.3125, 41356.0000, 8118.3125, 0.0000),
       "≑" => (63108.3125, 41356.0000, 9268.1875, 0.0000),
@@ -18486,10 +18535,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam7 TFM metrics
-  "msam7" => MetricData {
+  "msam7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam7.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18500,7 +18549,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 76719.125, 0.0, 47992.875, 25159.4375,
+      30880.875, 49292.875, 22558.4375, 32934.6875, 28253.5625, 18724.5625, 9362.3125,
+      18724.5625, 23145.4375, 4681.125, 111411.125, 75834.5625, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18550,7 +18601,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "∴" => (50452.5625, 45147.0000, 0.0000, 0.0000),
       "∵" => (50452.5625, 45147.0000, 0.0000, 0.0000),
       "∽" => (58514.5625, 25171.0000, -7597.0000, 0.0000),
-      "≌" => (58514.5625, 32149.1250, -618.8750, 0.0000),
+      "⋍" => (58514.5625, 32149.1250, -618.8750, 0.0000),
       "≎" => (58514.5625, 40065.8750, 6793.6875, 0.0000),
       "≏" => (58514.5625, 40065.8750, 6793.6875, 0.0000),
       "≑" => (58514.5625, 40065.8750, 8093.5625, 0.0000),
@@ -18641,10 +18692,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam8 TFM metrics
-  "msam8" => MetricData {
+  "msam8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam8.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18655,7 +18706,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 69633.0, 0.0, 45634.75, 26793.25, 29979.0,
+      49093.625, 25701.0, 27224.75, 23128.75, 18659.5, 8192.0, 16384.0, 25941.375, 4096.0,
+      97484.75, 74547.25, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18705,7 +18758,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "∴" => (46422.0000, 45147.0000, 0.0000, 0.0000),
       "∵" => (46422.0000, 45147.0000, 0.0000, 0.0000),
       "∽" => (54159.0000, 24771.7500, -7996.2500, 0.0000),
-      "≌" => (54159.0000, 31495.1250, -1272.8750, 0.0000),
+      "⋍" => (54159.0000, 31495.1250, -1272.8750, 0.0000),
       "≎" => (54159.0000, 39335.2500, 5830.0000, 0.0000),
       "≏" => (54159.0000, 39335.2500, 5830.0000, 0.0000),
       "≑" => (54159.0000, 39335.2500, 7065.7500, 0.0000),
@@ -18796,10 +18849,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msam9 TFM metrics
-  "msam9" => MetricData {
+  "msam9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam9.tfm",
     encoding: "AMSa",
     space: 0.0000,
@@ -18810,7 +18863,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 67356.0, 0.0, 42384.6875, 26850.25, 29479.75,
+      44448.0, 22238.6875, 31481.3125, 27840.4375, 18811.25, 7281.75, 11529.875, 23059.25,
+      3640.875, 174034.4375, 66264.25, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18860,7 +18915,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "∴" => (44904.0000, 45427.1250, 0.0000, 0.0000),
       "∵" => (44904.0000, 45427.1250, 0.0000, 0.0000),
       "∽" => (52388.0000, 24398.5625, -8369.4375, 0.0000),
-      "≌" => (52388.0000, 30923.4375, -1844.5625, 0.0000),
+      "⋍" => (52388.0000, 30923.4375, -1844.5625, 0.0000),
       "≎" => (52388.0000, 38352.2500, 4892.4375, 0.0000),
       "≏" => (52388.0000, 38352.2500, 4892.4375, 0.0000),
       "≑" => (52388.0000, 38352.2500, 6172.0000, 0.0000),
@@ -18951,10 +19006,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm10 TFM metrics
-  "msbm10" => MetricData {
+  "msbm10" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -18965,7 +19020,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.8125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.8125, 65536.0, 6554.0, 44335.625,
+      25803.625, 29080.375, 44954.5, 22599.5, 27059.3125, 23782.5, 18932.625, 9830.375,
+      16201.625, 25304.0, 3276.8125, 156631.0, 66191.375, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (123790.6250, 54067.5000, 0.0000, 0.0000),
@@ -19093,10 +19150,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm5 TFM metrics
-  "msbm5" => MetricData {
+  "msbm5" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19107,7 +19164,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.0000,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.0, 65536.0, 6554.0, 60636.625,
+      25392.8125, 33038.8125, 67190.1875, 34859.1875, 33001.0, 26447.375, 19296.8125, 13107.1875,
+      26214.375, 32404.0, 6553.625, 129761.1875, 93061.1875, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (162022.3750, 54342.8125, 0.0000, 0.0000),
@@ -19235,10 +19294,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm6 TFM metrics
-  "msbm6" => MetricData {
+  "msbm6" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm6.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19249,7 +19308,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.3125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.3125, 65536.0, 6554.0, 53261.0,
+      25711.8125, 31780.0, 56598.3125, 28138.8125, 32962.5, 27501.1875, 18811.3125, 10922.6875,
+      21845.3125, 27003.0, 5461.3125, 129979.6875, 88473.6875, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (148061.6875, 53679.5000, 0.0000, 0.0000),
@@ -19377,10 +19438,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm7 TFM metrics
-  "msbm7" => MetricData {
+  "msbm7" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19391,7 +19452,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.4375,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.4375, 65536.0, 6554.0, 47992.875,
+      25159.4375, 30880.875, 49292.875, 22558.4375, 32934.6875, 28253.5625, 18724.5625,
+      9362.3125, 18724.5625, 23145.4375, 4681.125, 111411.125, 75834.5625, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (139134.5625, 54049.5625, 0.0000, 0.0000),
@@ -19519,10 +19582,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm8 TFM metrics
-  "msbm8" => MetricData {
+  "msbm8" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm8.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19533,7 +19596,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.6250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.625, 65536.0, 6554.0, 45634.75,
+      26793.25, 29979.0, 49093.625, 25701.0, 27224.75, 23128.75, 18659.5, 8192.0, 16384.0,
+      25941.375, 4096.0, 97484.75, 74547.25, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (131529.0000, 54277.2500, 0.0000, 0.0000),
@@ -19661,10 +19726,10 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  },
+  }),
 
   // msbm9 TFM metrics
-  "msbm9" => MetricData {
+  "msbm9" => metric(|| MetricData {
     file: "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm9.tfm",
     encoding: "AMSb",
     space: 19661.0000,
@@ -19675,7 +19740,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.7500,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.75, 65536.0, 6554.0, 42384.6875,
+      26850.25, 29479.75, 44448.0, 22238.6875, 31481.3125, 27840.4375, 18811.25, 7281.75,
+      11529.875, 23059.25, 3640.875, 174034.4375, 66264.25, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (127228.0000, 54016.4375, 0.0000, 0.0000),
@@ -19803,7 +19870,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     ligatures: raw_map!(
     ),
-  }
+  })
 
   )
 });

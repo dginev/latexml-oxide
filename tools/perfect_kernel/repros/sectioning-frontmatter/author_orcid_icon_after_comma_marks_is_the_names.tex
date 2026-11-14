@@ -1,0 +1,27 @@
+% mechanism: an ORCID icon link glued after the marks and notes that follow a name's comma is that name's, as the marks
+%   are (`marks_before_glued_commas`, `leading_orcid_icon_end`): it moves before the comma with them, so the split
+%   gives each name its own icon, which `\lx@author@href` makes its ORCID contact (OXIDIZED_DESIGN_DIVERGENCES #960)
+% witness: 2605.03577 (mnras, `Ashley Hai Tung Tan,$^{1}$\thanks{E-mail: …}\orcidAT⏎Christian Wolf,$^{1,2}$
+%   \orcidChrisW⏎…`, `\orcidAT` = `\href{https://orcid.org/…}{\orcidicon}`); review rev103b B1 probes o4 (mnras), o6
+%   (article); sibling class-bindings/mnras_orcid_icon_after_comma_marks_is_the_names
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able,1∗ Bob Baker,2 and Carl Cole1", each icon after its name's marks and note
+% engines: rust 103b: Ann Able no ORCID, Bob Baker hers and his own, Carl Cole his own; int130a: Ann's and Bob's icons
+%   ink in Bob Baker's personname; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able (her note, her iD 0000-0002-1825-0097, Univ A), Bob Baker (0000-0001-5109-3700,
+%   Univ B), Carl Cole (0000-0002-1694-233X, Univ A), each personname the name alone
+% status:  RED (103b) -> GREEN (103b r2) — perfect_kernel_batch103b::an_orcid_icon_after_a_names_comma_is_its_own
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx,hyperref}
+\newcommand{\orcidA}{\href{https://orcid.org/0000-0002-1825-0097}{\includegraphics[width=1em]{example-image}}}
+\newcommand{\orcidB}{\href{https://orcid.org/0000-0001-5109-3700}{\includegraphics[width=1em]{example-image}}}
+\newcommand{\orcidC}{\href{https://orcid.org/0000-0002-1694-233X}{\includegraphics[width=1em]{example-image}}}
+\begin{document}
+\title{T}
+\author{Ann Able,$^{1}$\thanks{E-mail: ann@a.edu}\orcidA
+Bob Baker,$^{2}$\orcidB
+and Carl Cole$^{1}$\orcidC
+\\ $^{1}$Univ A, Town\\ $^{2}$Univ B, City}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% memoir's lists under a package that replaces `\@starttoc` (notoccite.sty:2-13): the list stands at its heading
+% (`\@<ext>maketitle`, defined by memoir's `\newlistof`), whatever `\@starttoc` is.
+% witness: 2209.14824 (memoir + notoccite; an intermediate MEM1 build that emitted the list at memoir's `\@starttoc` lost
+%          its "Contents" heading and list)
+% oracle:  pdflatex 0 `!`: "Contents" listing "1 Intro", "List of Figures" listing "1.1 A figure".
+% engines: rust int170a E=0 W=1, no `<TOC>`, two styled paragraphs "Contents"/"List of Figures".
+% expect:  `<TOC lists="toc">` titled "Contents", `<TOC lists="lof">` titled "List of Figures"; W=1 the raw load's
+%          `misdefined:\@iffirstamp`.
+% status:  RED (int170a) -> GREEN (MEM1)
+\documentclass{memoir}
+\usepackage{notoccite}
+\begin{document}
+\tableofcontents*
+\listoffigures*
+\chapter{Intro}
+Text.
+\begin{figure}\caption{A figure}\end{figure}
+\end{document}

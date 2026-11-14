@@ -1,0 +1,13 @@
+% witness: liftarm/liftarm, polyomino/polyomino (both under the [luatex] profile)
+% oracle:  pdflatex 0 errors; "ok"
+% engines: rust (56jh) = "undefined:\AtEndPreamble": the parskip binding loaded neither
+%          kvoptions (parskip.sty:44) nor etoolbox (parskip.sty:59); under pdfTeX etoolbox
+%          came only by accident through babel. perl=2 (parskip.sty.ltxml is an empty stub)
+% expect:  0 errors, 0 warnings; <p>ok</p>
+% status:  GREEN (56jk; was RED 56jh)
+\documentclass{article}
+\usepackage{parskip}
+\AtEndPreamble{\def\x{ok}}
+\begin{document}
+\x
+\end{document}

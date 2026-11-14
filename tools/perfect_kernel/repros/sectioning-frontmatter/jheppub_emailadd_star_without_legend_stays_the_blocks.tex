@@ -1,0 +1,26 @@
+% mechanism: a `*` an author carries with no legend anywhere (no `\affiliation[*]`, no `\note[*]`) says nothing of
+%   correspondence: the one `\emailAdd` address left over, spelling no one, stays the author block's
+%   (`marked_corresponding_author`; user ruling 2026-10-21: only a "Corresponding author" note, or a mark whose legend
+%   says so, marks the corresponding author)
+% witness: 2111.00753 (iopart, two legend-less `$^{*}$`); 2602.07867 (`\author[a,c,d,e,*]{Kun Zhang}`, no legend:
+%          kunzhang@ his by its spelling); rev78f2 probe s1
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,a Bob
+%          Bakera and Cat Colea,∗", "a Univ A", "E-mail: zq77@x.org", no legend for the `*`
+% engines: rust 78f r2 = zq77@ Cat Cole's (a bare `*` read as a corresponding mark); int47a and perl: Ann Able's (the
+%          n-th rule)
+% expect:  0 errors, 0 warnings; zq77@ the author block's
+% status:  RED (78f r2) -> GREEN (78f r3)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able,}
+\author[a]{Bob Baker}
+\author[a,*]{and Cat Cole}
+\affiliation[a]{Univ A}
+\emailAdd{zq77@x.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

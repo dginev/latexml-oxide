@@ -1,0 +1,18 @@
+% witness: 2503.16707 (cvpr supplement `{abstract}`), 2405.10566 (elsarticle supplement), HF10 F6
+% oracle:  pdflatex 0 errors: page 1 "Main Paper Title / A. Author / Abstract Main abstract text. / 1 Intro"; the
+%          supplement's "Abstract Supplement abstract text." after "Supplementary Material", before "2 More"
+% engines: rust 64f3 = the root `<abstract>` holds "Supplement abstract text."; "Main abstract text." lost
+% expect:  0 errors; the root `<abstract>` holds "Main abstract text."; "Supplement abstract text." a body paragraph after
+%          "Supplementary Material" (user ruling 2026-10-09: keep the main paper's frontmatter)
+% status:  RED (64f3) -> GREEN (64d)
+\documentclass{article}
+\title{Main Paper Title}\author{A. Author}
+\begin{document}
+\maketitle
+\begin{abstract}Main abstract text.\end{abstract}
+\section{Intro} Body.
+\clearpage
+\begin{center}\Large Supplementary Material\end{center}
+\begin{abstract}Supplement abstract text.\end{abstract}
+\section{More} Extra.
+\end{document}

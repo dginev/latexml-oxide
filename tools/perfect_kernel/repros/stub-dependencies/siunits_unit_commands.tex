@@ -1,0 +1,13 @@
+% witness: 0709.1649 (`\addunit`), 2103.01586 (`\usk`), 1904.06264 (`\reciprocal`), 2407.13230 (`\degreecelsius`); run 340: 440 papers' first error in SIunits' own commands
+% oracle:  pdflatex with SIunits.sty: 0 errors; Pa, m·s⁻¹, m², s⁻¹, s⁻², 20 °C
+% engines: rust 65x = error (`\addunit`, `\usk`, `\reciprocal`, `\degreecelsius`, `\upmu` undefined)
+% expect:  0 errors; the units as upright math (SIunits' own unit names outside \si as well: 2103.01586's
+%          `$221\usk\meter$` keeps its metre), °C as ℃, ° as a glyph, \upmu as an upright μ
+% status:  RED (65x) -> GREEN (65y; units outside \si from 65y r3)
+\documentclass{article}
+\usepackage{SIunits}
+\addunit{\mypa}{Pa}
+\begin{document}
+Pressure $3\,\mypa$; speed $5\,\power{m}{2}\usk\reciprocal{s}$; also \rpsquare{s} and $20\degreecelsius$ at $\upmu$m.
+Length $221\usk\meter$, rate \unit{5}{\metre\usk\reciprocal\second}, angle $90\degree$, mass $\kilo\gram$.
+\end{document}

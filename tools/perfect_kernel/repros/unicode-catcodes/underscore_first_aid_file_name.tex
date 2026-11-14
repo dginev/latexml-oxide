@@ -1,0 +1,17 @@
+% witness: arXiv 2606.31852 (cortex run 322, PDF output by default ran its `\ifpdf\usepackage{underscore}`):
+%          `\input{sections/logic_T}`
+% oracle:  pdflatex 0 errors; the file is read (the kernel's first aid, latex2e-first-aid-for-external-
+%          files.ltx:176-177, loads underscore-ltx.sty: `_` is \protected and literal inside a \csname,
+%          where \set@curr@file expands the file name)
+% engines: rust (56ig) = "Can't find TeX file sections/logic\textunderscoreT"; Perl's underscore binding
+%          (underscore.sty.ltxml:20) makes the same `_`
+% expect:  0 errors; <p>Included text.</p> plus a_b in text and x_1 in math as before (sidecar file
+%          sections/logic_T.tex holds "Included text.")
+% status:  RED (56ig) -> GREEN (56ij)
+\documentclass{article}
+\usepackage{underscore}
+\begin{document}
+\input{sections/logic_T}
+
+Text a_b and $x_1$.
+\end{document}

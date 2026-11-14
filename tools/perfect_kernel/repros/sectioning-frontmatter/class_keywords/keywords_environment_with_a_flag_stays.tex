@@ -1,0 +1,19 @@
+% CONTROL: a `{keywords}` whose begin code also sets a flag (kwflag.cls, tADR2e.cls:450 `\global\keywordstrue`) is not
+% label-only: it stays the class's environment, its text in place.
+% witness: 1911.00238 (tADR2e.cls)
+% oracle:  pdflatex (kwflag.cls beside it) 0 errors: "Keywords: alpha, beta Body."
+% expect:  0 errors, 0 warnings; no <keywords>; "alpha, beta" in the body
+% status:  CONTROL
+% preload: ar5iv.sty
+\documentclass{kwflag}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{keywords}
+alpha, beta
+\end{keywords}
+%
+%
+%
+Body.
+\end{document}

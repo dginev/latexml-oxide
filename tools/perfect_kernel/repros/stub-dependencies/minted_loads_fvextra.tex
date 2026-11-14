@@ -1,0 +1,14 @@
+% witness: 2512.12360 (`Verbatim` with breaklines/breakanywhere under minted); minted.sty:32 \RequirePackage{fvextra}
+% oracle:  pdflatex 0 errors; "some long verbatim line"
+% engines: Perl (ar5iv-bindings minted.sty.ltxml:24 fvextra commented out) and rust 67int18b = 2 errors
+%          (fancyvrb's keys `breaklines`, `breakanywhere` undefined)
+% expect:  0 errors; the verbatim line kept
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{minted}
+\begin{document}
+\begin{Verbatim}[fontsize=\footnotesize, breaklines=true, breakanywhere=true]
+some long verbatim line
+\end{Verbatim}
+\end{document}

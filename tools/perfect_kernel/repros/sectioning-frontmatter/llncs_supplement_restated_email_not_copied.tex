@@ -1,0 +1,29 @@
+% A supplement's `\author`/`\institute` written again after `\maketitle` (llncs) restates the frontmatter: its copy of
+% the institute's unlabelled second `\email` (after a `\\`), placed beside the first on the last author, is no part of
+% an upfront pile of contacts — the two had read as a grid of one address per author (`distribute_upfront_contacts`),
+% handing the first to Lv Tang, who prints none; the copy is dropped as a restatement (OD #969). Census138 EMAILSPELL
+% (brief 107f B).
+% witness: 2009.10916 (`\institute{… \and Youtu Lab, Tencent, Shanghai, China \\ \email{luckybird1994@…}\\
+%   \email{libraboli@tencent.com}}` written again for its supplementary materials)
+% oracle:  pdflatex 0 errors: two title blocks, each "Lv Tang1 and Bo Li2⋆", "1 Univ X, Town", "2 Univ Y, City
+%   luckybird1994@gmail.com libraboli@tencent.com"
+% engines: rust int139a3 = libraboli@tencent.com on Lv Tang too (the grid)
+% expect:  0 errors, 0 warnings; Lv Tang: Univ X, Town only; Bo Li: the note and Univ Y, City; both e-mails the
+%   block's, each once (since Z18c: the two unspelled addresses under Bo Li's one entry are no one name's, FIDELITY_CHARTER
+%   §4; 107f-ERR2 had them on Bo Li, libraboli@ on the block too)
+% status:  RED (int139a3) -> GREEN (107f; perfect_kernel_batchbc1::the_blocks_creator_is_no_parent_by_place)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Lv Tang\inst{1} \and Bo Li\thanks{Correspondence should be addressed to Bo Li.}\inst{2}}
+\institute{Univ X, Town \and Univ Y, City \\ \email{luckybird1994@gmail.com}\\ \email{libraboli@tencent.com}}
+\maketitle
+Text.
+\clearpage
+\title{Supplement}
+\author{Lv Tang\inst{1} \and Bo Li\thanks{Correspondence should be addressed to Bo Li.}\inst{2}}
+\institute{Univ X, Town \and Univ Y, City \\ \email{luckybird1994@gmail.com}\\ \email{libraboli@tencent.com}}
+\maketitle
+More.
+\end{document}

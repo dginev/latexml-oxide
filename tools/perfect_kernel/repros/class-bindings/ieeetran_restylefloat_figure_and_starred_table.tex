@@ -1,0 +1,18 @@
+% mechanism: float.sty's `\restylefloat{figure}` (float.sty:37-52) makes the figure's captions float.sty's
+%   `\float@caption`, "Fig. 1: text" (`\fs@plain`), not IEEEtran's "Fig. 1. text"; `\restylefloat*{table}`
+%   (float.sty:38-39) keeps LaTeX's `\@caption`, so the table's caption stays the class's "TABLE I" over its text
+%   (caption_sty.rs `class_makecaption`, `\lx@class@floatsty@kept`; float_sty.rs `record_float_style`). The sibling of
+%   ieeetran_restylefloat_table_keeps_float_sty_format. Review rev78y2 finding 2.
+% witness: 2006.08364 (`\restylefloat{table}`, the sibling's)
+% oracle:  pdflatex (TL 2025) 0 errors; "Fig. 1: Fig one.", "TABLE I" over "TAB ONE ."
+% engines: rust int67a the same (guarded since 78z)
+% expect:  0 errors, 0 warnings; the figure "Fig. 1" closed by ": ", the table "TABLE I" over its text
+% status:  GREEN (78z guard)
+\documentclass[journal]{IEEEtran}
+\usepackage{float}
+\restylefloat{figure}
+\restylefloat*{table}
+\begin{document}
+\begin{figure}[H]X\caption{Fig one.}\end{figure}
+\begin{table}[H]\caption{Tab one.}\centering\begin{tabular}{c}Y\end{tabular}\end{table}
+\end{document}

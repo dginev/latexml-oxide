@@ -1,0 +1,13 @@
+% witness: review of batch 56kn
+% oracle:  pdflatex: "Package graphics Error: Division by 0." and ratio 1 (graphics.sty `\Gscale@div`)
+% engines: rust 56kn and Perl: `xscale="6553600"` (and heights of 28217136pt for `\makebox[0pt]{xyz}`): the
+%          scale divides by a 0 width
+% expect:  graphics' error and scale 1, not an unbounded scale
+% status:  RED (Perl-origin)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\resizebox{100pt}{!}{\begin{picture}(0,0)\put(0,0){x}\end{picture}}
+
+\resizebox{100pt}{!}{\makebox[0pt]{xyz}}
+\end{document}

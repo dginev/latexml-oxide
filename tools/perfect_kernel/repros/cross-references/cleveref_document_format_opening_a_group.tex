@@ -1,0 +1,19 @@
+% witness: rev78j2 col2/col6 (2008.12750, 2604.24399 `\crefformat{figure}{#2\color{blue}Fig.~#1#3}`)
+% oracle:  pdflatex 0 errors: "A Fig. 1. B theorem 1. C Eq. 1." (each format typeset at the \cref)
+% engines: rust 78j r2 = "Attempt to close non-boxing group" + "Attempt to end mode internal_vertical", the figure
+%          unended and the reference "id1": the derived \Cref variant `\MakeUppercase#2\color{blue}...` left a group open
+% expect:  0 errors; the formats as set; an unbalanced form gives none (OXIDIZED_DESIGN_DIVERGENCES #845)
+% status:  RED (78j r2) -> GREEN (78j r3)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{cleveref}
+\newtheorem{theorem}{Theorem}
+\crefformat{figure}{#2\color{blue}Fig.~#1#3}
+\crefformat{theorem}{\normalfont\sffamily\bfseries\color{blue}#2theorem~#1#3}
+\crefformat{equation}{#2\color{blue}Eq.~#1#3}
+\begin{document}
+\begin{figure}x\caption{c}\label{f1}\end{figure}
+\begin{theorem}\label{t1}x\end{theorem}
+\begin{equation}a\label{e1}\end{equation}
+A \cref{f1}. B \cref{t1}. C \cref{e1}.
+\end{document}

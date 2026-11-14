@@ -1,0 +1,21 @@
+% witness: 2509.08607, 2511.17720 (a modified aero.cls whose `\maketitle` prints `\@title`/`\@author`; the papers use
+%          `\title`/`\author` and never call `\ADsetup`)
+% oracle:  pdflatex 0 errors: the title "MasconCube Gravity", "Pietro Fanti1, Dario Izzo1 (✉)", then the e-mail and the
+%          address the paper sets in its body
+% engines: rust 77p r2 = 0 errors; the class's `initial:n` placeholders in place of the paper's: title "Paper title:
+%          Preparation of papers for Astrodynamics", creators "First A. Author", "Second B. Author", "Third C.
+%          Author", a nameless creator with the e-mail "Corresponding author's name and email address"; int34a = the
+%          paper's title and authors (no aero binding); Perl the same (no binding)
+% expect:  0 errors, 0 warnings; ltx:title "MasconCube Gravity", creators "Pietro Fanti" and "Dario Izzo", no
+%          placeholder text anywhere
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{aero}
+\begin{document}
+\title{MasconCube Gravity}
+\author{Pietro Fanti$^{1}$, Dario Izzo$^{1}$\cor{}}
+\maketitle
+\noindent\cor{} dario.izzo@esa.int \\
+\noindent\textit{1. Advanced Concepts Team, ESTEC, Noordwijk, The Netherlands.}
+\section{Intro}
+Body.
+\end{document}

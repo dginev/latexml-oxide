@@ -1,0 +1,16 @@
+% witness: 2210.02246, 2303.09770 (cmfne.cls:1772-1778 cite.sty's \cite, \@citex and \citen, then \usepackage{cite})
+% oracle:  pdflatex 0 errors ("See [1]." with a bibliography; here the key is undefined: "See [?].")
+% engines: rust 65int8 = Fatal:Stomach:Recursion (the class's \cite<space> calls \citen, which our cite binding lets to \cite)
+% expect:  0 errors; one citation of key a
+% status:  GREEN (66b)
+\begin{filecontents*}[overwrite]{citeinner.sty}
+\ProvidesPackage{citeinner}
+\@namedef{cite }{\@ifnextchar [{\@tempswatrue\@citex}{\@tempswafalse\@citex[]}}
+\def\@citex[#1]#2{\@cite{\citen{#2}}{#1}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{citeinner}
+\usepackage{cite}
+\begin{document}
+See \cite{a}.
+\end{document}

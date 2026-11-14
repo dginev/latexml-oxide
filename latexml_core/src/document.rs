@@ -22,6 +22,7 @@ use crate::{
     font::{FONT_TEXT_DEFAULT, Font},
     locator::Locator,
     model,
+    numeric_ops::NumericOps,
     object::Object,
     store::Stored,
     xml::{self, XML_NS, XPath},
@@ -83,74 +84,113 @@ pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 pub static MATH_HINT_NAME: &str = "ltx:XMHint";
 
+/// How [`Document::close_element`] and its variants treat open descendants that do not
+/// auto-close.
+#[derive(Clone, Copy)]
+enum CloseDescendants {
+  /// An Error (`malformed`).
+  Strict,
+  /// An Info line: the source groups were abandoned and reported already.
+  Abandoned,
+}
+
 pub struct Document {
-  pub document:                XmlDoc,
-  pub pending:                 Vec<Node>,
-  context:                     Option<XPath>,
-  pub node:                    Node,
-  pub node_boxes:              HashMap<usize, Digested>, // used to be _box attribute
-  pub node_fonts:              HashMap<u64, Font>,       // used to be _font attribute
-  pub idstore:                 HashMap<String, Node>,
+  pub document:                  XmlDoc,
+  pub pending:                   Vec<Node>,
+  context:                       Option<XPath>,
+  pub node:                      Node,
+  pub node_boxes:                HashMap<usize, Digested>, // used to be _box attribute
+  pub node_fonts:                HashMap<u64, Font>,       // used to be _font attribute
+  pub idstore:                   HashMap<String, Node>,
   /// Streaming pass 1: every `xml:id` moved out of `idstore` by a spill.
   /// The GLOBAL half of id-collision dedup — a later build-time minting of
   /// the same id must rename exactly as eager would have (witness: the
   /// 131 MB book restarts chapter numbering per part, and the second `Ch1`
   /// collided only with a SPILLED chapter).
-  pub spilled_ids:             rustc_hash::FxHashSet<String>,
+  pub spilled_ids:               rustc_hash::FxHashSet<String>,
+  /// Streaming pass 1: the ids spilled runs mint their top nodes' ids under (`SegmentMeta::anchor`) while those
+  /// elements stay resident; once one spills too, its `_ID_counter_*` attributes move to `spilled_anchor_counters`.
+  spill_anchors:                 rustc_hash::FxHashSet<String>,
+  spilled_anchor_counters:       rustc_hash::FxHashMap<String, Vec<(String, String)>>,
+  /// Streaming pass 2: the segment's `SegmentMeta::anchor`. `generate_id` mints under it what eager mints under that
+  /// element, the parse wrapper holding its counters.
+  pub fragment_anchor_id:        Option<String>,
+  /// Every SVG `id` (the svg schema's ID attribute, not `xml:id`) handed out
+  /// (`record_svg_ids`). Ids only, no nodes or addresses: whether an element was already walked
+  /// travels on the element itself (its `_svgid` mark), so a removed picture leaves nothing
+  /// dangling, and an id stays taken once given.
+  pub svg_ids:                   rustc_hash::FxHashSet<String>,
+  /// The next suffix to try per SVG id base (`record_svg_ids`), so the n-th copy of a picture
+  /// does not re-probe the n-1 suffixes before it.
+  pub svg_id_suffixes:           rustc_hash::FxHashMap<String, i64>,
+  /// Streaming pass 1: every namespace PREFIX (`xlink`, `svg`, …) an element
+  /// or attribute of a spilled subtree used. `apply_document_namespace_
+  /// declarations` declares a prefix on the root only when it is used
+  /// (Perl behaviour) and scans the RESIDENT DOM; a prefix used solely inside
+  /// spilled segments (`xlink:href` on `svg:pattern`/`svg:use`) was serialized
+  /// unbound — six TikZ manuals flipped schema-invalid at the transition
+  /// watermark (atableau, circuitikzmanual, tikzlings-doc, tkz-grapheur-doc-en/
+  /// -fr, tzplot-doc; batch 56fr). Guard
+  /// `streaming_declares_namespaces_used_only_in_spilled_segments`.
+  pub spilled_ns_prefixes:       rustc_hash::FxHashSet<String>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
-  pub rewrite_labels:          HashMap<String, String>,
-  /// Document-wide labels SHARED by every streaming pass-2 fragment, consulted
-  /// only when `rewrite_labels` misses. Pass 2 used to copy the whole spilled
-  /// index into each fragment's own map, which is quadratic in document size:
+  pub rewrite_labels:            HashMap<String, String>,
+  /// Document-wide labels SHARED by every streaming pass-2 fragment and the
+  /// spine, consulted only when `rewrite_labels` misses: the spilled content's
+  /// and the spine's id-bearing ones, built once before pass 2. Copying the
+  /// spilled index into each fragment's own map was quadratic in document size:
   /// 28,068 labels × 459,579 segments on the 131 MB witness = 12.9 billion
-  /// String allocations. Frag-local labels still win, preserving exactly the
-  /// `entry().or_insert_with()` precedence that copy had.
-  pub rewrite_labels_shared:   Option<Rc<HashMap<String, String>>>,
+  /// String allocations. Frag-local labels still win.
+  pub rewrite_labels_shared:     Option<Rc<HashMap<String, String>>>,
   // the following are internal "local"-based declarations in Perl
-  localized_constructed_nodes: Vec<Vec<Node>>,
-  constructed_nodes:           Vec<Node>,
+  localized_constructed_nodes:   Vec<Vec<Node>>,
+  constructed_nodes:             Vec<Node>,
   /// Free-list of emptied `Vec<Node>` buffers, reused across `init_constructed_nodes`
   /// / `close_constructed_nodes` cycles. The per-body constructed-nodes frame pushes
   /// here after its elements are drained so the next `init_constructed_nodes` can pop
   /// a buffer with pre-existing capacity instead of heap-allocating a fresh one.
   /// Cuts the `Vec<Node>::from_iter` hotspot that dominated absorb profiles.
-  reusable_node_buffers:       Vec<Vec<Node>>,
-  localized_boxes:             Vec<Option<Digested>>,
-  box_to_absorb:               Option<Digested>, // local $LaTeXML::BOX;
+  reusable_node_buffers:         Vec<Vec<Node>>,
+  localized_boxes:               Vec<(Option<Digested>, bool)>,
+  /// Whether `box_to_absorb` never ended ([`crate::stomach::UNENDED`]), read when it was set: an
+  /// alignment is absorbed while mutably borrowed.
+  box_unended:                   bool,
+  box_to_absorb:                 Option<Digested>, // local $LaTeXML::BOX;
   /// Transient handoff from `open_text`'s verbatim-space exception to
   /// `open_text_internal`: whitespace-only TYPEWRITER text (verbatim
   /// indentation / space-only verbatim lines) must be INSERTED even where
   /// the current node needs an auto-open to reach a `#PCDATA` context —
   /// both whitespace gates would otherwise drop it. Consumed (reset) by
   /// `open_text_internal`.
-  verbatim_space_pending:      bool,
+  verbatim_space_pending:        bool,
+  /// The font the open text node's runs were inserted with ([`Self::open_text`]), for the ligature test
+  /// when it closes. A run whose font changes only what the XML does not show — its encoding — opens no
+  /// element and would merge into a text node of another encoding: a Latin `\textLR{``q''}` run inside an
+  /// Arabic (LAE) paragraph took the paragraph's font, failed the OT1/T1 quote ligatures and kept its
+  /// grave/acute quote pairs (59r). Perl tests the parent's font (Document.pm `closeText_internal`); the
+  /// difference shows only where an encoding switch opens no element. The `usize` is the byte where the current run
+  /// starts in the node: `apply_text_ligatures` ligates from there, so a run's ligatures never reach an earlier run.
+  text_run_font:                 Option<(Node, Font, usize)>,
+  /// The text node `close_text_internal` last ligated and how many bytes of it: a return to that node (`set_node`
+  /// back after a `\label`'s float, which closed it) ligates only what is inserted after, as an open run would.
+  ligated_text:                  Option<(Node, usize)>,
   /// Source-map (`--source-map`) cache: the current `box_to_absorb`'s
   /// source range, captured as a plain `Copy` `Locator` at set time so
   /// stamping never re-borrows the box's `RefCell` mid-absorb (which
   /// panics for the mutably-borrowed `Alignment` path). Mirrors the
   /// `box_to_absorb` save stack; `None` when source-map is off.
-  current_box_locator:         Option<Locator>,
-  localized_box_locators:      Vec<Option<Locator>>,
-  localized_fonts:             Vec<Rc<Font>>,
+  current_box_locator:           Option<Locator>,
+  localized_box_locators:        Vec<Option<Locator>>,
+  localized_fonts:               Vec<Rc<Font>>,
   /// Streaming mode only: the store holding processed spilled segments. Set
   /// by the streaming driver after pass 2; `serialize_into` then splices each
   /// segment's text where its `<_spilled_ ref="N"/>` placeholder sits. `None`
   /// on the eager path and on fragment documents.
-  spill_store:                 Option<crate::sxml::SegmentStore>,
+  spill_store:                   Option<crate::sxml::SegmentStore>,
   /// Streaming only: RDFa prefixes USED inside spilled (freed) content,
   /// recorded at spill time — `set_rdfa_prefixes` scans the live DOM, and
   /// spilled usages would otherwise vanish from the root's `prefix=`.
-  extra_rdfa_prefixes:         Vec<String>,
-  /// Streaming only: an UNRESOLVED `label:`/`id:` rewrite scope makes the
-  /// rule INERT instead of continuing unscoped. Perl (and the eager path)
-  /// continue with the remaining clauses on the same tree when a scope fails
-  /// to resolve — harmless there, because in a whole document a
-  /// `scope=section` id always resolves. In a fragment (or on the spine,
-  /// where sections are spilled placeholders) "not here" usually means "in
-  /// another fragment", and continuing unscoped applies the rule to
-  /// EVERYTHING — sweep witness tests/math/declare.tex, where section-7
-  /// declarations stamped section-1 math.
-  pub scoped_rules_strict:     bool,
+  extra_rdfa_prefixes:           Vec<String>,
   /// Streaming: serialize spill placeholders LITERALLY (`<_spilled_ ref=…/>`)
   /// instead of splicing the segment text. True during pass 1 (a spilling
   /// ancestor must keep its children's placeholders — inlining them rebuilt
@@ -158,7 +198,11 @@ pub struct Document {
   /// and pass 2 died re-parsing them) and on pass-2 fragment docs (which
   /// re-emit the placeholders they contain). False only at final assembly,
   /// where the splice resolves placeholders RECURSIVELY.
-  pub literal_placeholders:    bool,
+  pub literal_placeholders:      bool,
+  /// Streaming: called on each subtree as it spills, while it is still in the live DOM, so a document-wide fact that
+  /// pass 2 needs before processing any segment can be gathered from content pass 1 no longer holds (the math
+  /// parser's `d`-token evidence, `latexml_math_parser::read_differential_evidence`).
+  pub spill_observer:            Option<fn(&Document, &Node)>,
   /// Serialize spill segments FLAT — no indentation, no decorative newlines.
   ///
   /// A spilled segment's text is an intermediate: pass 2 re-parses it,
@@ -177,18 +221,24 @@ pub struct Document {
   ///
   /// Set for pass 1 only. Fragment documents in pass 2 are separate `Document`s
   /// and default to `false`, so the OUTPUT keeps its formatting exactly.
-  pub spill_flat:              bool,
+  pub spill_flat:                bool,
   /// Streaming pass 2 only: the fragment's ancestor `xml:id`s at spill time
   /// (SegmentMeta::ancestors). A `label:`/`id:`-scoped rewrite whose scope
   /// resolves to one of these covers the WHOLE fragment.
-  pub fragment_ancestor_ids:   rustc_hash::FxHashSet<String>,
+  pub fragment_ancestor_ids:     rustc_hash::FxHashSet<String>,
+  /// The object that printed a raw counter step's number itself, by the step's serial
+  /// ([`note_raw_refstep_object`](Self::note_raw_refstep_object)): an algorithm2e line. A label after the step names
+  /// it wherever the label stands ([`float_to_label_scoped`](Self::float_to_label_scoped)).
+  raw_refstep_objects:           HashMap<i64, Node>,
+  /// The keys a `\label` has placed ([`release_earlier_label_holders`](Self::release_earlier_label_holders)).
+  placed_labels:                 rustc_hash::FxHashSet<String>,
   /// Streaming pass 2 only: the recorded qname of the fragment's REAL parent
   /// (SegmentMeta::parent). `finalize_rec` substitutes it for the
   /// `ltx:_lxfragment` parse wrapper in schema decisions, so top-level
   /// fragment content is judged against the element it will splice back
   /// under (e.g. the empty-`ltx:text` collapse needs
   /// `can_contain(parent, grandchild)`).
-  pub fragment_parent_qname:   Option<SymStr>,
+  pub fragment_parent_qname:     Option<SymStr>,
   /// Streaming pass 1 only: suppress the ROOT element's `after_open` hook
   /// dispatch. Eager semantics guarantee every hook runs with digestion
   /// COMPLETE (build starts after digestion ends); interleaving would fire
@@ -198,7 +248,28 @@ pub struct Document {
   /// against still-EMPTY frontmatter state and mark it done, discarding the
   /// document's abstract when the real content arrived. The streaming driver
   /// dispatches the root's hooks exactly once, after digestion finishes.
-  defer_root_after_open:       bool,
+  defer_root_after_open:         bool,
+  /// Size of `node_boxes` after the last sweep (lowered when a spill purges
+  /// below it); the streaming sweep gate measures growth from it.
+  pub last_swept_node_boxes_len: usize,
+  /// The open run of field ink (`FieldRun`): what is being absorbed was digested from a frontmatter field's stored
+  /// tokens (their out-of-band provenance, [`Token::prov`](crate::token::Token)).
+  field_run:                     Option<FieldRun>,
+  /// The serial of the last field-ink run opened (each run's two marks carry it).
+  field_run_serial:              u32,
+  /// The nesting of [`Document::absorb`] calls while field ink is being marked (a run closes at the level it opened).
+  absorb_level:                  u32,
+  /// How many field-ink whatsits are being absorbed around the current point: what they absorb is their ink.
+  field_inherit:                 u32,
+  /// Set once the frontmatter placement settled the field ink (latexml_engine `lift_marked_field_ink`): no more
+  /// field marks after it.
+  pub field_ink_settled:         bool,
+  /// A TeX box's constructor is being absorbed and has opened no element yet ([`FIELD_BOX_PROPERTY`]): the next
+  /// [`Document::open_element`] is its own and is marked; any absorb or text before it disarms the mark.
+  field_box_pending:             bool,
+  /// The construction-time position marks made in this document ([`Document::insert_mark`]), by qualified name, each
+  /// once.
+  marks_made:                    Vec<String>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -216,10 +287,257 @@ pub fn spilled_segment_count() -> usize { SPILLED_SEGMENTS.get() }
 /// start; eager conversions never touch it).
 pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
 
+/// The bookkeeping attribute (dropped at the end, as every `_` attribute) on an object a raw counter step numbered:
+/// the step's serial ([`Document::take_raw_refstep_number`], OXIDIZED_DESIGN_DIVERGENCES #813).
+pub const RAW_REFSTEP_MARK: &str = "_raw_refstep";
+
+/// Whether `node` stands inside an `ltx:Math` (a box in an `ltx:XMText`: `\text{\begin{tcolorbox}…}`): math is
+/// rendered as one formula, so an id there names no object the HTML keeps and a label there would dangle
+/// ([`Document::float_to_label_for`]; review probes rev78g3 tbx.tex, tbx3.tex; repro
+/// `cross-references/math_box_label_climbs_to_the_display.tex`).
+fn within_math(node: &Node) -> bool {
+  let mut parent = node.get_parent();
+  while let Some(current) = parent {
+    if current.get_type() != Some(NodeType::ElementNode) {
+      return false;
+    }
+    if get_node_qname(&current) == pin!("ltx:Math") {
+      return true;
+    }
+    parent = current.get_parent();
+  }
+  false
+}
+
+/// The target of the processing instructions marking a run of a frontmatter field's ink (`FieldRun`):
+/// construction-time scaffolding, never in the output (the engine's frontmatter placement removes them; the finalize
+/// drops a stray one).
+pub const FIELD_MARK_TARGET: &str = "ltx-field-mark";
+
+/// Has this conversion stamped any token with a field provenance (latexml_engine `\lx@field@mark`)? Only a gate:
+/// while false, [`Document::absorb`] does no field-ink work at all. Cleared at every conversion's start
+/// ([`reset_field_provenance`]).
+#[thread_local]
+static FIELD_PROV_STAMPED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+/// Note that a field's stored tokens now carry their provenance (`FIELD_PROV_STAMPED`).
+pub fn note_field_prov_stamped() { FIELD_PROV_STAMPED.set(true); }
+/// The `FIELD_PROV_STAMPED` gate as it stands (to put it back after a rehearsal the document never keeps,
+/// [`FieldLedgerScope`](crate::token::FieldLedgerScope)).
+pub fn field_prov_stamped() -> bool { FIELD_PROV_STAMPED.get() }
+/// Put the `FIELD_PROV_STAMPED` gate back as [`field_prov_stamped`] read it.
+pub fn restore_field_prov_stamped(stamped: bool) { FIELD_PROV_STAMPED.set(stamped); }
+/// Clear the `FIELD_PROV_STAMPED` gate (conversion start).
+pub fn reset_field_prov_stamped() { FIELD_PROV_STAMPED.set(false); }
+/// Reset every piece of a conversion's field-provenance thread state (OXIDIZED_DESIGN #715): the stamped gate, the
+/// field ledger and its settled flag, the pending cover. Run at the start of every conversion (the converter's
+/// `reset_conversion_state`, at `initialize_report`), whatever the thread converted before: a persistent `cortex_worker` thread, a streaming restart
+/// and the CLI's supplements convert on one thread without an engine reset, and a ledger settled by the previous
+/// document recorded nothing for the next one, which then lifted no print at all (review r4 finding 1).
+pub fn reset_field_provenance() {
+  reset_field_prov_stamped();
+  crate::token::reset_field_cover_pending();
+}
+
+/// The box property holding the field provenance of the token a box or whatsit was digested from (the stomach sets
+/// it, `invoke_token`; [`Token::prov`](crate::token::Token)).
+pub const FIELD_PROV_PROPERTY: &str = "fieldProv";
+/// The box property holding the serial of the box's cover in the field ledger
+/// ([`field_ledger_push`](crate::token::field_ledger_push): its own position, the arguments its invocation consumed, a
+/// boxless font switch before it).
+pub const FIELD_SERIAL_PROPERTY: &str = "fieldSerial";
+/// A formula's first position in a field, under a rehearsal's notes only (the engine's `field_notes`): the opening shift's, its
+/// box stamped by the closing one, whose invocation built it.
+pub const FIELD_FORMULA_START_PROPERTY: &str = "fieldFormulaStart";
+
+/// The whatsit property of a TeX box's constructor (OXIDIZED_DESIGN #715), set where it is digested while field ink
+/// is recorded ([`field_box_whatsit`]): a constructor whose declared mode is `restricted_horizontal` outside math
+/// (`\hbox`, `\mbox`, `\makebox`, `\raisebox`, `\fcolorbox`, `\scalebox`/`\resizebox`/`\rotatebox`/`\reflectbox`,
+/// core `Constructor::digest_to_whatsit`), `\framebox`/`\fbox` (its text branch), an environment whose begin code
+/// opens a box group (a minipage, `dialect::def_environment`). [`Document::absorb`] marks the first element its
+/// constructor opens ([`FIELD_BOX_ATTRIBUTE`]), before it absorbs anything; one that opens none marks nothing.
+pub const FIELD_BOX_PROPERTY: &str = "fieldBox";
+/// The bookkeeping attribute (stripped at finalize, as every `_` attribute) of the element a TeX box's constructor
+/// opened for its material ([`Document::mark_field_box`]).
+pub const FIELD_BOX_ATTRIBUTE: &str = "_fieldbox";
+
+/// The box property of a Warning that belongs to the box's print, not to its digestion ([`absorb_warning`]): raised
+/// when [`Document::absorb`] takes the box (a [`Tbox`] or a whatsit) into the document, once per key. A box digested and
+/// never absorbed — measured (`\settowidth`), saved and never used (`\sbox`), made by a rehearsal or a speculative
+/// digestion, or under a [`DiagnosticsHold`](crate::util::logger::DiagnosticsHold) it discards — raises nothing and
+/// leaves no key set, so the box the document prints still raises it. An undecodable math glyph's once-per-font
+/// Warning (latexml_engine sect08.rs `undecodable_math_slot`, OXIDIZED_DESIGN_DIVERGENCES #27).
+pub const ABSORB_WARNING_PROPERTY: &str = "absorbWarning";
+// `pin!` takes a literal: [`raise_absorb_warning`]'s lookup spells the name, tied to the constant here.
+const _: () = assert!(matches!(
+  ABSORB_WARNING_PROPERTY.as_bytes(),
+  b"absorbWarning"
+));
+/// The source position, recorded at digestion, at which a constructor's [`ABSORB_WARNING_PROPERTY`] Warning is raised:
+/// the gullet's as the constructor's arguments are read (core `dialect::transfer_common_constructor_options`), the
+/// position a [`Tbox`] carries as its locator. A whatsit's own locator is set only under `--source-map`.
+pub const ABSORB_WARNING_LOCATOR_PROPERTY: &str = "absorbWarningLocator";
+const _: () = assert!(matches!(
+  ABSORB_WARNING_LOCATOR_PROPERTY.as_bytes(),
+  b"absorbWarningLocator"
+));
+
+/// The [`ABSORB_WARNING_PROPERTY`] value of `Warning:<category>:<object> <message>`, raised once per `once_key`: the
+/// first absorbed box carrying the key raises it, the key is then set (a global state value, as the text side's once
+/// keys are), and every later one is silent.
+pub fn absorb_warning(once_key: &str, category: &str, object: &str, message: &str) -> Stored {
+  Stored::Strings(Rc::from([
+    arena::pin(once_key),
+    arena::pin(category),
+    arena::pin(object),
+    arena::pin(message),
+  ]))
+}
+
+/// Raise the [`ABSORB_WARNING_PROPERTY`] Warning `object` carries, if its key is not yet set; the one place the key is
+/// set. Looked up by its cached symbol and without a copy of the map: this runs for every box absorbed.
+fn raise_absorb_warning(object: &Digested) {
+  let Some((warning, recorded)) =
+    object.with_properties(|props| match props.get_sym(pin!("absorbWarning")) {
+      Some(Stored::Strings(warning)) => Some((
+        Rc::clone(warning),
+        match props.get_sym(pin!("absorbWarningLocator")) {
+          Some(Stored::Locator(locator)) => Some(**locator),
+          _ => None,
+        },
+      )),
+      _ => None,
+    })
+  else {
+    return;
+  };
+  let [key, category, name, message] = *warning else {
+    return;
+  };
+  if state::lookup_bool_sym(key) {
+    return;
+  }
+  state::assign_value(&arena::to_string(key), true, Some(state::Scope::Global));
+  // At the box's source position, where it was digested: a constructor's recorded one
+  // ([`ABSORB_WARNING_LOCATOR_PROPERTY`]), else the box's locator (a Tbox's). The gullet's, at build time, is the
+  // document's end.
+  let location = recorded
+    .or_else(|| object.get_locator())
+    .map_or_else(crate::gullet::get_location, |locator| s!("at {locator}"));
+  emit_warn(
+    &arena::to_string(category),
+    &arena::to_string(name),
+    &s!(
+      "{}\n\t{location}\n\tIn {}:{}:{}\n",
+      arena::to_string(message),
+      file!(),
+      line!(),
+      column!()
+    ),
+  );
+}
+
+/// Can a box digested now still matter to a frontmatter field's print (the field ledger not settled)? The gate of
+/// every digest-time field-box mark, checked before anything else is looked up. It does not wait for a field to be
+/// stamped: a header box may be digested before the document declares its `\title` (fms1 round-6 review finding 1);
+/// [`Document::mark_field_box`] applies the stamp at absorb time.
+#[inline]
+pub fn field_box_marks_live() -> bool { crate::token::field_ledger_live() }
+
+/// Mark `whatsit` as a TeX box's constructor ([`FIELD_BOX_PROPERTY`]), while a field's print can still be lifted.
+pub fn field_box_whatsit(whatsit: &mut crate::whatsit::Whatsit) {
+  if field_box_marks_live() {
+    whatsit.set_property(FIELD_BOX_PROPERTY, true);
+  }
+}
+
+/// The box property of an alignment's whatsit holding the field-ledger serials of the row-end markers its body
+/// consumed (a field value's `\\`, [`field_ink_taken_serials`]): taken when the document absorbs the whatsit.
+pub const FIELD_TAKEN_PROPERTY: &str = "fieldTaken";
+
+/// The field-ledger serials of the boxes in `digested` (an alignment's row-end marker, a value's `\\`, latexml_engine
+/// `digest_alignment_body`), pushed onto `serials`: the structure the print is set in consumes them, never absorbed.
+/// The alignment keeps them on its whatsit ([`FIELD_TAKEN_PROPERTY`]), and they are noted taken
+/// ([`field_ledger_take`](crate::token::field_ledger_take)) only when [`Document::absorb`] absorbs that whatsit, so
+/// the run of ink the row ends may cover them and no other run does; an alignment never shown (in an unused
+/// `\setbox`, `\sbox`, `{lrbox}`) takes nothing (OXIDIZED_DESIGN #715; review r4 finding 2, probes s25, s27, s28).
+pub fn field_ink_taken_serials(digested: &Digested, serials: &mut Vec<u32>) {
+  if !FIELD_PROV_STAMPED.get() || !crate::token::field_ledger_live() {
+    return;
+  }
+  for item in digested.unlist() {
+    if matches!(item.data(), DigestedData::List(_)) {
+      field_ink_taken_serials(&item, serials);
+    } else if let Some(serial) =
+      item.with_properties(|props| match props.get_sym(pin!("fieldSerial")) {
+        Some(Stored::Int(serial)) => u32::try_from(*serial).ok(),
+        _ => None,
+      })
+    {
+      serials.push(serial);
+    }
+  }
+}
+
+/// A run of one frontmatter field's ink being absorbed: boxes digested from that field's stored tokens, one after the
+/// other at one absorb level, in the order of the value (a box whose cover ends at or before the start of a box the run
+/// holds reads the value again and begins a new print: `\StrLeft{\@title}{3}\@title` is two runs). It opens with `<?ltx-field-mark begin <field> <id>?>`
+/// where its first box goes and closes with `<?ltx-field-mark end <field> <id> <serials>?>` after its last (`<serials>`:
+/// the field-ledger serials of the boxes it absorbed, `first:last` intervals joined by `,`,
+/// [`field_ledger_cover`](crate::token::field_ledger_cover), so the engine can tell a whole print from a fragment by
+/// every position of the value its own boxes consumed, its structure's tokens too). The two marks of a run carry its
+/// id: they pair by construction, never with another print's (OXIDIZED_DESIGN #715).
+#[derive(Debug, Clone)]
+struct FieldRun {
+  field:     u16,
+  id:        u32,
+  level:     u32,
+  /// the serials of the boxes absorbed, as inclusive intervals in absorption order
+  serials:   Vec<(u32, u32)>,
+  /// the highest position a box of the run starts at
+  max_start: u16,
+}
+
+impl FieldRun {
+  /// Note that the run absorbed the box recorded with `serial` (a box used twice is in each run that absorbs it).
+  fn take(&mut self, serial: u32) {
+    match self.serials.last_mut() {
+      Some((first, last)) if *first <= serial && serial <= *last + 1 => *last = (*last).max(serial),
+      _ => self.serials.push((serial, serial)),
+    }
+  }
+}
+
 /// Element names whose closed instances may be spilled from ROOT level.
 /// Leading non-sectional root children (title, creators, abstract, resources)
 /// must stay live: the frontmatter fallback and `maybe_promote_leading_title`
 /// operate on them at end-of-build (`base_utilities.rs`).
+/// Root-level children the frontmatter machinery keeps MUTATING after they
+/// close — the schema's `SectionalFrontMatter.class`/`FrontMatter.class`
+/// (LaTeXML-structure.rnc:666-672) plus the resource/RDF/capture nodes: a later
+/// `\maketitle` or `\lx@frontmatter@fallback` re-inserts, merges and retypes
+/// them (`insert_frontmatter`, the `_Capture_` wrapper, contact→note). Their
+/// content is never spilled, even the parts holding no prose (a `personname`
+/// spilled from under a resident `creator` left `\thanks` marks absorbing into
+/// a placeholder: sweep witnesses tests/cluster_regressions/frontmatter_spconf_name,
+/// tests/structure/amsarticle). Body wrappers (`ltx:para`, `ltx:quote`,
+/// `ltx:figure`, …) are closed for good and take `spill_prose_free_children`.
+const ROOT_FRONTMATTER: &[&str] = &[
+  "title",
+  "toctitle",
+  "subtitle",
+  "tags",
+  "creator",
+  "date",
+  "abstract",
+  "keywords",
+  "classification",
+  "pubnote",
+  "acknowledgements",
+  "resource",
+  "rdf",
+  "_Capture_",
+];
+
 const ROOT_SPILLABLE: &[&str] = &[
   "section",
   "chapter",
@@ -252,6 +570,64 @@ enum Placement_ {
   PrevSibling,
 }
 
+/// Whether `node`'s subtree (itself included) holds a paragraph with visible
+/// text outside any picture: `descendant-or-self::ltx:p[not(ancestor::ltx:picture)]
+/// [.//text()[normalize-space()][not(ancestor::ltx:picture)]]`, walked with an
+/// early exit instead of collecting every match. The streaming spill asks it for
+/// every resident root child on every yield (roadmap stream C, 2026-09-25).
+fn subtree_holds_prose(node: &Node) -> bool {
+  fn is_ltx(node: &Node, local: &str) -> bool {
+    node.get_type() == Some(NodeType::ElementNode)
+      && node.get_name() == local
+      && node
+        .get_namespace()
+        .is_some_and(|ns| ns.get_href() == model::LTX_NAMESPACE)
+  }
+  fn text_outside_pictures(node: &Node) -> bool {
+    let mut child = node.get_first_child();
+    while let Some(c) = child {
+      let holds = match c.get_type() {
+        // `normalize-space()` strips XML whitespace only (#x20 #x9 #xD #xA),
+        // so a no-break space is visible text.
+        Some(NodeType::TextNode | NodeType::CDataSectionNode) => c
+          .get_content()
+          .contains(|ch: char| !matches!(ch, ' ' | '\t' | '\r' | '\n')),
+        Some(NodeType::ElementNode) => !is_ltx(&c, "picture") && text_outside_pictures(&c),
+        _ => false,
+      };
+      if holds {
+        return true;
+      }
+      child = c.get_next_sibling();
+    }
+    false
+  }
+  fn walk(node: &Node) -> bool {
+    if node.get_type() != Some(NodeType::ElementNode) || is_ltx(node, "picture") {
+      return false;
+    }
+    if is_ltx(node, "p") && text_outside_pictures(node) {
+      return true;
+    }
+    let mut child = node.get_first_child();
+    while let Some(c) = child {
+      if walk(&c) {
+        return true;
+      }
+      child = c.get_next_sibling();
+    }
+    false
+  }
+  let mut up = node.get_parent();
+  while let Some(a) = up {
+    if is_ltx(&a, "picture") {
+      return false;
+    }
+    up = a.get_parent();
+  }
+  walk(node)
+}
+
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
@@ -273,6 +649,12 @@ impl Document {
       node_fonts:                  HashMap::default(),
       idstore:                     HashMap::default(),
       spilled_ids:                 rustc_hash::FxHashSet::default(),
+      spill_anchors:               rustc_hash::FxHashSet::default(),
+      spilled_anchor_counters:     rustc_hash::FxHashMap::default(),
+      fragment_anchor_id:          None,
+      svg_ids:                     rustc_hash::FxHashSet::default(),
+      svg_id_suffixes:             rustc_hash::FxHashMap::default(),
+      spilled_ns_prefixes:         rustc_hash::FxHashSet::default(),
       rewrite_labels:              HashMap::default(),
       rewrite_labels_shared:       None,
       pending:                     Vec::new(),
@@ -281,19 +663,32 @@ impl Document {
       reusable_node_buffers:       Vec::new(),
       box_to_absorb:               None,
       verbatim_space_pending:      false,
+      text_run_font:               None,
+      ligated_text:                None,
       current_box_locator:         None,
       localized_box_locators:      Vec::new(),
       context:                     None,
       localized_boxes:             Vec::new(),
+      box_unended:                 false,
       localized_fonts:             Vec::new(),
       spill_store:                 None,
       extra_rdfa_prefixes:         Vec::new(),
-      scoped_rules_strict:         false,
       literal_placeholders:        false,
+      spill_observer:              None,
       spill_flat:                  false,
       fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
+      raw_refstep_objects:         HashMap::default(),
+      placed_labels:               rustc_hash::FxHashSet::default(),
       fragment_parent_qname:       None,
       defer_root_after_open:       false,
+      last_swept_node_boxes_len:   0,
+      field_run:                   None,
+      field_run_serial:            0,
+      absorb_level:                0,
+      field_inherit:               0,
+      field_ink_settled:           false,
+      field_box_pending:           false,
+      marks_made:                  Vec::new(),
     }
   }
 
@@ -467,7 +862,13 @@ impl Document {
   /// (`wrapper_children 1 -> 0`, `parent = None`), so it serializes to nothing.
   /// Starting the recursion AT the wrapper keeps it addressable.
   pub fn finalize_subtree(&mut self, node: &mut Node) -> Result<()> {
-    self.set_local_font(Rc::new(Font::text_default()));
+    self.finalize_subtree_in(node, Font::text_default())
+  }
+
+  /// [`finalize_subtree`](Self::finalize_subtree) under `context`, the font declared around the subtree (a streamed
+  /// segment's [`SegmentMeta::font`](crate::sxml::SegmentMeta)).
+  pub fn finalize_subtree_in(&mut self, node: &mut Node, context: Font) -> Result<()> {
+    self.set_local_font(Rc::new(context));
     let result = self.finalize_rec(node);
     self.expire_local_font();
     result
@@ -482,57 +883,33 @@ impl Document {
     // Collect which prefixes are actually used in the document
     let nsnodes = root.get_namespace_declarations();
     let existing_prefixes: Vec<String> = nsnodes.iter().map(|ns| ns.get_prefix()).collect();
-    for (prefix, ns_uri) in prefixes {
-      // Skip internal/default namespaces
-      if prefix.is_empty() || prefix == "ltx" || prefix == "xml" {
+    // Skip internal/default namespaces, namespaces containing "DEFAULT#" (internal model
+    // entries), and prefixes already declared on root.
+    let wanted = |prefix: &str, ns_uri: &str| {
+      !(prefix.is_empty() || prefix == "ltx" || prefix == "xml")
+        && !ns_uri.contains("DEFAULT#")
+        && !existing_prefixes.iter().any(|p| p == prefix)
+    };
+    // Whether a descendant uses the prefix — on the resident DOM, or inside a subtree that
+    // streaming pass 1 spilled to disk before this pass ran (`spilled_ns_prefixes`). One walk
+    // answers for every prefix the spill does not.
+    let to_find: Vec<&str> = prefixes
+      .iter()
+      .filter(|(prefix, ns_uri)| {
+        wanted(prefix, ns_uri) && !self.spilled_ns_prefixes.contains(prefix)
+      })
+      .map(|(prefix, _)| prefix.as_str())
+      .collect();
+    let in_use = namespace_prefixes_in_use(root, &to_find);
+    for (prefix, ns_uri) in &prefixes {
+      if !wanted(prefix, ns_uri) {
         continue;
       }
-      // Skip namespaces containing "DEFAULT#" (internal model entries)
-      if ns_uri.contains("DEFAULT#") {
-        continue;
-      }
-      // Only add if this prefix appears as a namespace declaration on some child node
-      // (meaning it's actually used in the document)
-      if existing_prefixes.contains(&prefix) {
-        continue; // already declared on root
-      }
-      // Check if any descendant element uses this namespace prefix
-      // by looking for namespace declarations on descendant elements
-      let has_usage = self.has_namespace_usage(root, &prefix);
-      if has_usage {
+      if self.spilled_ns_prefixes.contains(prefix) || in_use.contains(prefix.as_str()) {
         let attr_name = format!("xmlns:{prefix}");
-        root.set_attribute(&attr_name, &ns_uri).ok();
+        root.set_attribute(&attr_name, ns_uri).ok();
       }
     }
-  }
-
-  /// Check if any descendant of node uses the given namespace prefix.
-  fn has_namespace_usage(&self, node: &Node, prefix: &str) -> bool {
-    // Check attributes of this node for prefix: usage. The
-    // allocation-free check `starts_with(prefix) + byte-at-prefix.len()`
-    // replaces `format!("{prefix}:")` which would heap-allocate per node
-    // visited during the recursive descent.
-    let plen = prefix.len();
-    for (key, _) in node.get_attributes() {
-      if key.len() > plen && key.starts_with(prefix) && key.as_bytes()[plen] == b':' {
-        return true;
-      }
-    }
-    // Check children recursively
-    for child in node.get_child_nodes() {
-      if child.get_type() == Some(NodeType::ElementNode) {
-        // Check if element itself is in this namespace
-        for ns in child.get_namespace_declarations() {
-          if ns.get_prefix() == prefix {
-            return true;
-          }
-        }
-        if self.has_namespace_usage(&child, prefix) {
-          return true;
-        }
-      }
-    }
-    false
   }
 
   /// Remove xml:ids from XMTok elements that aren't referenced by any idref.
@@ -594,6 +971,9 @@ impl Document {
     // of ancestor nodes. By collecting collapses and running them after
     // the entire traversal completes, we avoid accessing corrupted state.
     let mut deferred_collapses: Vec<(Node, SymStr)> = Vec::new();
+    // The text font declared around each open `ltx:Math`, innermost last: an `XMText` in it is text, set in that font
+    // (see the reset at `ltx:Math` below).
+    let mut math_outer_fonts: Vec<Rc<Font>> = Vec::new();
     stack.push(Work::Enter(node.clone()));
 
     while let Some(work) = stack.pop() {
@@ -614,6 +994,17 @@ impl Document {
           } else {
             Cow::Borrowed(&*local_font)
           };
+          // An `XMText` (`\text`, `\mbox` in a formula) is set in the text font around the formula (amstext's `\text`
+          // takes `\f@family`, `\f@series`, `\f@shape`), so its content is written against that, as Perl writes it.
+          if qname == pin!("ltx:XMText")
+            && let Some(outer) = math_outer_fonts.last()
+          {
+            let mut text_context = declared_font.into_owned();
+            text_context.family.clone_from(&outer.family);
+            text_context.series.clone_from(&outer.series);
+            text_context.shape.clone_from(&outer.shape);
+            declared_font = Cow::Owned(text_context);
+          }
 
           // TODO: _pre_comment / _comment insertion requires create_comment support in libxml
           // wrapper Perl: parent.insertBefore(XML::LibXML::Comment.new(comment), node)
@@ -678,6 +1069,36 @@ impl Document {
           {
             self.generate_id(&mut current, "")?;
           }
+          // A measured foreignObject declares its font size: its style's `font-size` anchor (tex_box.rs), carried in
+          // `_font_anchor`, so its content's `fontsize` is relative to that, not to the size declared around the
+          // picture — a `\footnotesize` figure's node text was shrunk twice (KNOWN_PERL_ERRORS #439; witness
+          // tests/tikz/consort-flowchart).
+          if let Some(anchor) = current.get_attribute("_font_anchor") {
+            let size = anchor.parse::<f64>().unwrap_or(10.0);
+            declared_font = Cow::Owned(declared_font.merge_ref(&Font {
+              size: Some(size),
+              ..Font::default()
+            }));
+            pending_declaration.remove("fontsize");
+          }
+          // A formula's fonts are the math fonts (fontmath.ltx's math versions), never the text family, series or
+          // shape around it: `$y$` in `\emph` of a sans document is CMMI10, `\mathsf{G}` in `\textit` CMSS10. So its
+          // tokens are written relative to the text default's family, series and shape (size and colour do reach
+          // math), not to the enclosing text element as Perl's finalize_rec does (Document.pm:385-410) — against
+          // a `sansserif italic` `\emph` the italic `y` was written `font="serif"`, which MathML reads whole
+          // (MathML.pm:677) as upright: 2608.14133 (1,890 letters), 2608.31026, 2605.03549, 2604.00146,
+          // 2607.19982, 2606.05381, 2604.16675; `\textsf{\emph{$y$}}` in Perl too (KNOWN_PERL_ERRORS #1002). The
+          // MathML side reads the context font from inside the formula only (`math_context_font`). An `XMText` in it
+          // returns to the text font (above). OXIDIZED_DESIGN_DIVERGENCES #780; guards
+          // `perfect_kernel_batch77u::math_fonts_*`.
+          if qname == pin!("ltx:Math") {
+            math_outer_fonts.push(Rc::new(declared_font.clone().into_owned()));
+            let mut math_context = declared_font.into_owned();
+            math_context.family.clone_from(&FONT_TEXT_DEFAULT.family);
+            math_context.series.clone_from(&FONT_TEXT_DEFAULT.series);
+            math_context.shape.clone_from(&FONT_TEXT_DEFAULT.shape);
+            declared_font = Cow::Owned(math_context);
+          }
           self.set_local_font(Rc::new(declared_font.into_owned()));
 
           // Process children using the snapshot from get_child_nodes().
@@ -693,6 +1114,41 @@ impl Document {
           // never read.
           stack.push(Work::PostWork { node: current.clone() });
 
+          // Leftover `*_Capture_` wrappers/markers (`ltx:_Capture_`, the frontmatter
+          // position marker `ltx:_Frontmatter_Capture_`) are construction-time
+          // scaffolding that a document ending abnormally (a Fatal, `\end{document}`
+          // swallowed by an unbalanced conditional, a streaming spill) can strand in
+          // the tree; the schema admits them nowhere ("not allowed anywhere"). Unwrap
+          // the ones with content, drop the empty ones, then snapshot the children.
+          // ONE pass over the direct children only — no re-scan after an unwrap and
+          // no `_CaptureBlock_`: under streaming a fragment is finalized MID-BUILD
+          // (spill threshold 3 in `114_streaming_*`), when an `insert_frontmatter`
+          // `_Capture_` wrapper or an `insert_block` box capture can be legitimately
+          // live; chasing wrappers exposed by an unwrap re-ordered faketitlepage's
+          // abstract above its titlepage. One `ends_with` per child on the common
+          // no-scrap path (this is the streaming hot path — see the
+          // `get_attributes` note above). `_lxfragment` is not one.
+          // The engine's field marks (processing instructions, [`FIELD_MARK_TARGET`]) are scaffolding too.
+          let scraps: Vec<Node> = current
+            .get_child_nodes()
+            .into_iter()
+            .filter(|c| match c.get_type() {
+              Some(NodeType::ElementNode) => c.get_name().ends_with("_Capture_"),
+              Some(NodeType::PiNode) => c.get_name() == FIELD_MARK_TARGET,
+              _ => false,
+            })
+            .collect();
+          for scrap in scraps {
+            if scrap.get_type() == Some(NodeType::PiNode) {
+              self.remove_node(scrap);
+            } else if scrap.get_first_element_child().is_some()
+              || !scrap.get_content().trim().is_empty()
+            {
+              self.unwrap_nodes(scrap)?;
+            } else {
+              self.remove_node(scrap);
+            }
+          }
           let children = current.get_child_nodes();
           // Collect work items forward, then push in reverse for left-to-right processing
           let mut child_work: Vec<Work> = Vec::new();
@@ -793,6 +1249,9 @@ impl Document {
               empty_attr_nodes.insert(node.to_hashable());
             }
           }
+          if get_node_qname(&node) == pin!("ltx:Math") {
+            math_outer_fonts.pop();
+          }
           self.expire_local_font();
         },
       }
@@ -836,6 +1295,214 @@ impl Document {
   /// which will be inserted according to whatever
   /// font, mode, etc, are in %props.
   pub fn absorb(&mut self, object: &Digested, props_opt: Option<SymHashMap<Stored>>) -> Result<()> {
+    // a box's constructor absorbing material before it opened an element of its own: none is its own
+    self.field_box_pending = false;
+    if !self.field_marking_live() {
+      return self.absorb_boxes(object, props_opt);
+    }
+    self.absorb_level += 1;
+    let result = self.absorb_boxes(object, props_opt);
+    // a run of field ink ends with the absorb that opened it (a table cell's, an environment body's)
+    if result.is_ok()
+      && self.field_inherit == 0
+      && self
+        .field_run
+        .as_ref()
+        .is_some_and(|r| r.level >= self.absorb_level)
+    {
+      self.close_field_run()?;
+    }
+    self.absorb_level -= 1;
+    result
+  }
+
+  /// Is field ink being marked (`FieldRun`)? Not once the frontmatter placement settled it, not in a conversion
+  /// that stamped no field.
+  #[inline]
+  fn field_marking_live(&self) -> bool { FIELD_PROV_STAMPED.get() && !self.field_ink_settled }
+
+  /// Mark `element`, opened by a TeX box's constructor for its material (an `\hbox`'s `ltx:text`, a
+  /// `\vbox`/`\parbox`/minipage capture, an alignment's container), with [`FIELD_BOX_ATTRIBUTE`]: the text a box
+  /// sets is no body text of the page for a field's print outside it (latexml_engine `field_runs_after_body_text`,
+  /// OXIDIZED_DESIGN #715). Only the element the box's own constructor opened, at the point it opens it: material a
+  /// box absorbs straight into its context (a `\vbox` in a `\vbox`, a capture unwrapped) marks nothing (review r5
+  /// finding 1).
+  pub fn mark_field_box(&mut self, element: &mut Node) {
+    if self.field_marking_live() && element.get_type() == Some(NodeType::ElementNode) {
+      let _ = element.set_attribute(FIELD_BOX_ATTRIBUTE, "true");
+    }
+  }
+
+  /// Arm [`Self::mark_field_box`] for the next element opened ([`Self::open_element`]), when it is the caller's own
+  /// (an alignment's `open_container`); [`Self::disarm_field_box`] after it.
+  pub fn arm_field_box(&mut self) { self.field_box_pending = self.field_marking_live(); }
+  /// Disarm [`Self::arm_field_box`].
+  pub fn disarm_field_box(&mut self) { self.field_box_pending = false; }
+
+  /// Before absorbing `object`: open, continue or close the run of field ink (`FieldRun`) by the field provenance
+  /// the box was digested with ([`FIELD_PROV_PROPERTY`]). Returns whether `object` is a field-ink whatsit whose own
+  /// absorption is its ink (the caller counts it in `field_inherit` meanwhile). Nothing in math: a formula is one box of
+  /// the text around it, and what it holds (an `\mbox` of the field) is no print of the field.
+  fn field_ink_before(&mut self, object: &Digested) -> Result<bool> {
+    if !self.field_marking_live() {
+      return Ok(false);
+    }
+    // an alignment shown: the row-end markers its body consumed are taken now ([`FIELD_TAKEN_PROPERTY`]); a TeX box's
+    // constructor ([`FIELD_BOX_PROPERTY`]): the first element it opens is marked
+    if matches!(object.data(), DigestedData::Whatsit(_)) {
+      self.field_box_pending = object.with_properties(|props| {
+        if let Some(Stored::VecDequeStored(serials)) = props.get_sym(pin!("fieldTaken")) {
+          for serial in serials {
+            if let Stored::Int(serial) = serial
+              && let Ok(serial) = u32::try_from(*serial)
+            {
+              crate::token::field_ledger_take(serial);
+            }
+          }
+        }
+        props.get_sym(pin!("fieldBox")).is_some()
+      });
+    }
+    // `fieldProv` ([`FIELD_PROV_PROPERTY`]), by its cached symbol and without a copy: this runs for every box
+    let (prov, serial) = object.with_properties(|props| match props.get_sym(pin!("fieldProv")) {
+      Some(Stored::Int(p)) => (*p as u16, match props.get_sym(pin!("fieldSerial")) {
+        Some(Stored::Int(s)) => u32::try_from(*s).ok(),
+        _ => None,
+      }),
+      _ => (0, None),
+    });
+    let field = crate::token::field_prov_field(prov);
+    if self.field_inherit > 0 {
+      // inside a field-ink whatsit: its ink, whatever provenance its parts have (a formula's characters count for the
+      // run's extent: `Szabo$^3$` ends with the `3`)
+      if prov != 0
+        && let Some(run) = self.field_run.as_mut()
+        && run.field == field
+        && let Some(serial) = serial
+      {
+        run.take(serial);
+      }
+      return Ok(false);
+    }
+    // (the common case first: a box of no field, no run open — nothing to do)
+    if prov == 0 {
+      if self.field_run.is_some() && !self.in_math_node() {
+        self.close_field_run()?;
+      }
+      return Ok(false);
+    }
+    if self.in_math_node() {
+      return Ok(false);
+    }
+    let Some(serial) = serial else {
+      // a box the full ledger holds no cover of: no whole print
+      if self.field_run.is_some() {
+        self.close_field_run()?;
+      }
+      return Ok(false);
+    };
+    let cover = crate::token::field_ledger_entry(serial).map_or_else(Default::default, |e| e.cover);
+    match self.field_run.as_mut() {
+      // the value read on in its order (the boxes of one macro's expansion all start at the macro's position; a
+      // construct's own box, absorbed around what its argument made, covers it: `\textsc{One}`'s whatsit after `One`)
+      Some(run) if run.field == field && cover.end > run.max_start => {
+        run.take(serial);
+        run.max_start = run.max_start.max(cover.start);
+      },
+      // another field's ink, or the value read again from before a position the run reached (`\StrLeft{\@title}{3}
+      // \@title`: the second print's `T`): a print of its own
+      _ => {
+        if self.field_run.is_some() {
+          self.close_field_run()?;
+        }
+        self.open_field_run(field, serial, cover.start)?;
+      },
+    }
+    Ok(!matches!(object.data(), DigestedData::TBox(_)))
+  }
+
+  /// Is the insertion point in math (inside an `ltx:Math`: a formula's tokens, an `\mbox` in it)?
+  fn in_math_node(&self) -> bool {
+    let mut node = if self.node.get_type() == Some(NodeType::ElementNode) {
+      Some(self.node.clone())
+    } else {
+      self.node.get_parent()
+    };
+    while let Some(element) = node {
+      if element.get_type() != Some(NodeType::ElementNode) {
+        return false;
+      }
+      if arena::with(get_node_qname(&element), |q| {
+        q.starts_with("ltx:XM") || q == "ltx:Math"
+      }) {
+        return true;
+      }
+      node = element.get_parent();
+    }
+    false
+  }
+
+  /// Append a field mark (a [`FIELD_MARK_TARGET`] processing instruction) at the insertion point, the open text node
+  /// closed first, so the ink on each side of it is in its own node. Returns false where no element takes it.
+  fn append_field_mark(&mut self, content: &str) -> Result<bool> {
+    let mut element = self.close_text_internal()?;
+    if element.get_type() != Some(NodeType::ElementNode) {
+      return Ok(false);
+    }
+    let Ok(mut mark) = self
+      .document
+      .create_processing_instruction(FIELD_MARK_TARGET, content)
+    else {
+      return Ok(false);
+    };
+    element.add_child(&mut mark)?;
+    Ok(true)
+  }
+
+  fn open_field_run(&mut self, field: u16, serial: u32, start: u16) -> Result<()> {
+    let id = self.field_run_serial + 1;
+    if self.append_field_mark(&s!("begin {field} {id}"))? {
+      self.field_run_serial = id;
+      self.field_run = Some(FieldRun {
+        field,
+        id,
+        level: self.absorb_level,
+        serials: vec![(serial, serial)],
+        max_start: start,
+      });
+    }
+    Ok(())
+  }
+
+  fn close_field_run(&mut self) -> Result<()> {
+    if let Some(run) = self.field_run.take() {
+      let serials = run
+        .serials
+        .iter()
+        .map(|(first, last)| s!("{first}:{last}"))
+        .collect::<Vec<_>>()
+        .join(",");
+      self.append_field_mark(&s!("end {} {} {serials}", run.field, run.id))?;
+    }
+    Ok(())
+  }
+
+  /// Close the open run of field ink, if any, and mark no more (`FieldRun`): the frontmatter placement settled it.
+  /// The field ledger records no more either ([`field_ledger_settle`](crate::token::field_ledger_settle)).
+  pub fn settle_field_ink(&mut self) -> Result<()> {
+    if self.field_run.is_some() {
+      self.close_field_run()?;
+    }
+    self.field_ink_settled = true;
+    crate::token::field_ledger_settle();
+    Ok(())
+  }
+
+  fn absorb_boxes(
+    &mut self,
+    object: &Digested,
+    props_opt: Option<SymHashMap<Stored>>,
+  ) -> Result<()> {
     use DigestedData::*;
     let props = props_opt.unwrap_or_default();
     let mut boxes = vec![Cow::Borrowed(object)];
@@ -864,6 +1531,8 @@ impl Document {
         },
         // A Proper Box or Whatsit? Absorb it.
         TBox(digested) => {
+          raise_absorb_warning(&front_box);
+          self.field_ink_before(&front_box)?;
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           digested.borrow().be_absorbed(self)?;
@@ -872,9 +1541,15 @@ impl Document {
           self.expire_box_to_absorb();
         },
         Whatsit(digested) => {
+          raise_absorb_warning(&front_box);
+          let field_ink = self.field_ink_before(&front_box)?;
+          self.field_inherit += u32::from(field_ink);
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          digested.borrow().be_absorbed(self)?;
+          let absorbed = digested.borrow().be_absorbed(self);
+          self.field_box_pending = false;
+          self.field_inherit -= u32::from(field_ink);
+          absorbed?;
           self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
@@ -972,6 +1647,8 @@ impl Document {
     object: &str,
     props: &SymHashMap<Stored>,
   ) -> Result<Option<Node>> {
+    // a box's constructor setting text before it opened an element of its own: none is its own
+    self.field_box_pending = false;
     // Else, plain string in text mode.
     let ismath: bool = match props.get("isMath") {
       Some(v) => v.into(),
@@ -1049,6 +1726,31 @@ impl Document {
     Ok(new_node)
   }
 
+  /// Insert a construction-time position mark: an empty internal element (`*_Capture_`-suffixed, admitted anywhere by
+  /// the model, never in the output) at the current point, as [`Document::insert_element`] does, its name recorded
+  /// first. A mark of a name a pass gates on with [`Document::made_mark`] (`_Frontmatter_Capture_`,
+  /// `_CoverTitleBegin_Capture_`, `_CoverTitleEnd_Capture_`) must be made only here (or copied from one made here), so a
+  /// pass looking for marks of a name none was made of has none to find and skips its scan of the document; other marks
+  /// (`insert_element`) are not recorded.
+  pub fn insert_mark(
+    &mut self,
+    qname: &str,
+    attrib: Option<HashMap<String, String>>,
+  ) -> Result<Node> {
+    if !self.made_mark(qname) {
+      self.marks_made.push(qname.to_string());
+    }
+    self.insert_element(qname, Vec::new(), attrib)
+  }
+
+  /// Was a position mark named `qname` ever made in this document ([`Document::insert_mark`])? False: none is in it.
+  pub fn made_mark(&self, qname: &str) -> bool { self.marks_made.iter().any(|made| made == qname) }
+
+  /// Was a field mark ([`FIELD_MARK_TARGET`]) ever made in this document? False: none is in it — a field mark is made
+  /// only where a run of field ink opens or closes, and a run's end mark only after its begin mark (a copy is copied
+  /// from one).
+  pub fn made_field_marks(&self) -> bool { self.field_run_serial > 0 }
+
   /// Shorthand for open,absorb,close, but returns the new node.
   pub fn insert_element(
     &mut self,
@@ -1101,25 +1803,11 @@ impl Document {
     op: &str,
     attributes_opt: Option<HashMap<String, String>>,
   ) -> Result<()> {
-    let mut attr_data = Vec::new();
-    if let Some(attributes) = attributes_opt {
-      let mut keys = vec!["class", "package", "options"];
-      let other_keys = attributes
-        .keys()
-        .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
-        .map(String::as_str)
-        .collect::<Vec<_>>();
-      keys.extend(other_keys);
-      for key in keys {
-        if let Some(value) = attributes.get(key) {
-          attr_data.push(s!("{}=\"{}\"", key, value));
-        }
-      }
-    }
+    let data = attributes_opt.as_ref().map(pi_data).unwrap_or_default();
     // self.close_text_internal();  // Close any open text node
     let mut pi_node = self
       .document
-      .create_processing_instruction(op, &attr_data.join(" "))
+      .create_processing_instruction(op, &data)
       .unwrap();
     // Perl (Core/Document.pm insertPI): a PI always lands before the root
     // element. When the root already exists — a mid-body or document-final PI
@@ -1162,16 +1850,44 @@ impl Document {
     //   qname,
     //   self.with_node_qname(&self.node))
     // );
+    // a TeX box's constructor opening its own element ([`FIELD_BOX_PROPERTY`]); not one auto-opened on the way
+    let field_box = std::mem::take(&mut self.field_box_pending);
     let mut point = self.find_insertion_point(qname, None)?;
-    let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned())?;
+    // Perl Document.pm:792 `$attributes{_box} = $LaTeXML::BOX unless
+    // $attributes{_box}`: an element opened at the insertion point is recorded
+    // with the box being absorbed, ahead of the insertion point's own box
+    // (which is what a bare `openElementAt` falls back to). Underscore
+    // attributes such as `_box` and `_font` are bookkept in `node_boxes` /
+    // `node_fonts` rather than as libxml attributes.
+    let requested_box = self.box_to_absorb.clone();
+    let mut newnode = self.open_element_at_with_box(
+      &mut point,
+      qname,
+      attributes,
+      font_opt.cloned(),
+      requested_box,
+    )?;
+    // An element of a construct that never ended (its group abandoned, `stomach::UNENDED`)
+    // auto-closes: Perl's per-node `_autoclose` (Document.pm `canAutoClose`). OXIDIZED_DESIGN #542.
+    // So does an element auto-opened inside such an element (an implicit wrapper its parent's
+    // close would close).
+    let unended = self.absorbing_unended_box()
+      || (newnode.has_attribute("_autoopened")
+        && newnode
+          .get_parent()
+          .is_some_and(|parent| parent.has_attribute(UNENDED_ATTRIBUTE)));
+    // `_noautoclose` (an `\fbox`'s `ltx:text`, 1210.0368) holds against font switches in a box
+    // that ends; this one does not.
+    if unended {
+      let _ = newnode.remove_attribute("_noautoclose");
+      let _ = newnode.set_attribute("_autoclose", "true");
+      // Its closer finds it closed already when the structure after it closed it.
+      let _ = newnode.set_attribute(UNENDED_ATTRIBUTE, "true");
+    }
+    if field_box {
+      self.mark_field_box(&mut newnode);
+    }
     self.set_node(&newnode);
-    // Underscore attributes such as _box and _font from LaTeXML-proper are now
-    // bookkept in special substructs of Document Connected to the node hash.
-    // Ideally should be as quick to recompute natively as it would be to set/get
-    // attributes externally via libxml.
-    //
-    // TODO: also accept a _box argument eventually? Or store differently?
-    // attributes.entry("_box").or_insert(state_mut!().locals.box);
 
     Ok(newnode)
   }
@@ -1252,7 +1968,138 @@ impl Document {
   /// Since this is an "explicit request", we're currently skipping over those nodes,
   /// ie. we're automatically closing them, even if they're the same type as we're asking to
   /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
+  /// `close_element`, but a no-op when no `qname` element is open on the
+  /// current ancestor chain: the strict close (auto-closing or force-closing
+  /// the intervening descendants) whenever the element is still open, and
+  /// silence only when content that the element could not hold auto-closed
+  /// it already. Used for a replacement's closing tag of an element the same
+  /// replacement opened (OXIDIZED_DESIGN_DIVERGENCES #202).
+  pub fn close_element_if_open(&mut self, qname: &str) -> Result<Option<Node>> {
+    if self.is_open_on_chain(qname) {
+      self.close_element(qname)
+    } else {
+      Debug!(
+        "document",
+        "close_element",
+        s!("Element {:?} already closed by its content", qname)
+      );
+      Ok(None)
+    }
+  }
+
+  /// Close the `{quote}`, `{quotation}` or `{verse}` (`ltx:quote`, which does not auto-close) standing between the
+  /// current point and a place that can hold one of `qsyms` — a display sectioning unit `\part`..`\subsubsection`
+  /// (`find_insertion_point_qsym`; a run-in `\paragraph`/`\subparagraph` stays in the quote, `is_quote_closing_unit`)
+  /// or a bibliography and the unit it stands as (latex_constructs `adjust_backmatter_element`). Each of these environments
+  /// is LaTeX's unlabelled list `\list{}{…}\item\relax` (article.cls:389-408), a margin, no structure: the heading and
+  /// what follows it are the document's own unit, typeset within the margin (latex.ltx `\@startsection`;
+  /// `thebibliography` = `\section*` + `\list`, article.cls:565-584). The quotes in the way, from the innermost, are
+  /// closed only when that alone (with the auto-closing elements between) makes the place reachable — a quote in a list
+  /// item, or outside the `minipage` the point is in, stays open (probes b_qiq, b_qmq) and the caller reports as before — and each one left empty
+  /// is dropped. The environment's end then finds its quote closed (`latex_constructs` sect06 `quote_environment`).
+  /// Returns whether it closed any. User rulings 2026-10-16 (D1, bibliography) and 2026-10-17 (D5, sectioning units: as
+  /// the item bridge's margin-list exemption), OXIDIZED_DESIGN_DIVERGENCES #677, #678; witnesses 2203.09193 1904.12066
+  /// 1610.09996 2109.09861 2403.09260 1609.06434 astro-ph0410583 1504.06728 (bibliography), 0712.1985 (a title page in
+  /// `{quotation}`). Guards `perfect_kernel_batch69a::{bibliography_in_a_quote_closes_the_quote,
+  /// section_in_a_quotation_closes_it}`.
+  pub fn close_quotes_blocking(&mut self, qsyms: &[SymStr]) -> Result<bool> {
+    let mut node = if self.node.get_type() == Some(NodeType::TextNode) {
+      self.node.get_parent()
+    } else {
+      Some(self.node.clone())
+    };
+    let mut quotes: Vec<Node> = Vec::new();
+    // Whether the walk has left a box's capture (a `minipage`, a `\parbox`): it takes any content by the model, but a
+    // bibliography in it is placed outside the box (`adjust_backmatter_element`), so the walk looks further up — and a
+    // quote outside the box is not closed from within it (probe b_qmq; b_quote_in_minipage's own quote is closed).
+    let mut left_box = false;
+    loop {
+      let Some(current) = node else {
+        return Ok(false);
+      };
+      if current.get_type() != Some(NodeType::ElementNode) {
+        return Ok(false);
+      }
+      if is_capture_block(&current) {
+        left_box = true;
+        node = current.get_parent();
+        continue;
+      }
+      let current_qname = get_node_qname(&current);
+      if qsyms.iter().any(|q| {
+        sym_can_contain_somehow(current_qname, *q).is_some() && holds_in_quote_block(&current, *q)
+      }) {
+        break;
+      }
+      if current_qname == pin!("ltx:quote") && !can_auto_close(&current) && !left_box {
+        quotes.push(current.clone());
+      } else if !can_auto_close(&current) {
+        return Ok(false);
+      }
+      node = current.get_parent();
+    }
+    let Some(outermost) = quotes.last().cloned() else {
+      return Ok(false);
+    };
+    self.close_node_internal(&outermost)?;
+    for quote in quotes {
+      let empty = quote.get_child_nodes().iter().all(|child| {
+        child.get_type() == Some(NodeType::TextNode) && child.get_content().trim().is_empty()
+      });
+      if empty {
+        self.remove_node(quote);
+      }
+    }
+    Ok(true)
+  }
+
+  /// Whether a `qname` element is open on the current ancestor chain (a font-switch `ltx:text`
+  /// does not count as an open `ltx:text`).
+  fn is_open_on_chain(&self, qname: &str) -> bool {
+    let qsym = arena::pin(qname);
+    let mut node = if self.node.get_type() == Some(NodeType::TextNode) {
+      self.node.get_parent()
+    } else {
+      Some(self.node.clone())
+    };
+    while let Some(n) = node {
+      if n.get_type() != Some(NodeType::ElementNode) {
+        break;
+      }
+      if get_node_qname(&n) == qsym && !(qsym == pin!("ltx:text") && n.has_attribute("_fontswitch"))
+      {
+        return true;
+      }
+      node = n.get_parent();
+    }
+    false
+  }
+
+  /// Closes a still-open `qname` element whose source groups were ABANDONED (tex.web §1335: the
+  /// groups open at `\end` are reported once, then dropped): every descendant still open closes
+  /// with it — running each one's close-time hooks: the bare-`\bibitem` bibliography's heading
+  /// absorption (repros boxes-groups/abandoned_document_close_runs_bibliography_hooks,
+  /// …_invents_no_bibliography_title), the empty-para prune (jpnedumathsymbols-doc), the `ltx:p`
+  /// whitespace trim (tikz-optics). The descendants that do not auto-close are listed in an Info
+  /// line (biblatex-ms: `itemize`), not a Warning: the abandonment was reported already. A no-op
+  /// when no `qname` element is open.
+  pub fn close_abandoned_element(&mut self, qname: &str) -> Result<Option<Node>> {
+    if self.is_open_on_chain(qname) {
+      self.close_element_impl(qname, CloseDescendants::Abandoned)
+    } else {
+      Ok(None)
+    }
+  }
+
   pub fn close_element(&mut self, qname: &str) -> Result<Option<Node>> {
+    self.close_element_impl(qname, CloseDescendants::Strict)
+  }
+
+  fn close_element_impl(
+    &mut self,
+    qname: &str,
+    descendants: CloseDescendants,
+  ) -> Result<Option<Node>> {
     Debug!(
       "document",
       "close_element",
@@ -1270,7 +2117,10 @@ impl Document {
       let t = get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
-      if t == qsym && !(t == pin!("ltx:text") && node.has_attribute("_fontswitch")) {
+      if t == qsym
+        && !(t == pin!("ltx:text") && node.has_attribute("_fontswitch"))
+        && !is_trivlist(&node)
+      {
         break;
       }
       if !can_auto_close(&node) {
@@ -1285,7 +2135,11 @@ impl Document {
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {
-      // Didn't find $qname at all!!
+      // Didn't find $qname at all!! Unless the construct closing it never ended: its element
+      // auto-closed already, when the structure after it arrived (OXIDIZED_DESIGN #542).
+      if self.absorbing_unended_box() {
+        return Ok(None);
+      }
       let qname_msg: String = match qname {
         "#PCDATA" => qname.to_owned(),
         _ => s!("</{qname}>"),
@@ -1310,7 +2164,16 @@ impl Document {
             .collect::<Vec<String>>()
             .join(",")
         );
-        Error!("malformed", qname, message);
+        match descendants {
+          CloseDescendants::Strict => Error!("malformed", qname, message),
+          CloseDescendants::Abandoned => {
+            Info!(
+              "malformed",
+              qname,
+              s!("{message} (their groups were abandoned)")
+            )
+          },
+        }
       }
       // So, now close up to the desired node.
       self.close_node_internal(&node)?;
@@ -1358,7 +2221,7 @@ impl Document {
           return None;
         }
         let this_qname = get_node_qname(node);
-        if this_qname == qname {
+        if this_qname == qname && !is_trivlist(node) {
           break 'inner;
         }
         if !can_auto_close(node) {
@@ -1418,10 +2281,22 @@ impl Document {
         },
       }
     }
+    // A `ltx:_CaptureBlock_` is a completed BOX (`\parbox`/minipage/`\vbox`
+    // capture, `insert_block`): tex.web's box completeness — nothing stays
+    // open across a finished box — so its non-auto-closeable descendants are
+    // closed BY the box, not reported (the close already happened below; the
+    // Error was a spurious diagnostic over an identical tree, Perl the same:
+    // testnumberedblock `numVblock` around `verbatim`, algpseudocodex and
+    // coloredtheorem `algorithmic` lines in a minipage). Guard:
+    // `perfect_kernel_batch54::capture_box_closes_its_descendants`.
+    if is_capture_block(node) {
+      cant_close.clear();
+    }
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
-      // Perl: suppress error when $ifopen is true
-      if !ifopen {
+      // Perl: suppress error when $ifopen is true. Nor when the node's construct never ended:
+      // it auto-closed already (OXIDIZED_DESIGN #542).
+      if !ifopen && !node.has_attribute(UNENDED_ATTRIBUTE) {
         let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
         arena::with(get_node_qname(node), |qname_str| {
           {
@@ -1487,9 +2362,13 @@ impl Document {
       }
     }
 
+    if is_capture_block(node) {
+      cant_close.clear(); // box completeness, see `close_to_node`
+    }
     if t == Some(NodeType::DocumentNode) || t.is_none() {
-      // Didn't find $qname at all!!
-      if strict {
+      // Didn't find $qname at all!! (A node whose construct never ended auto-closed already,
+      // OXIDIZED_DESIGN #542.)
+      if strict && !node.has_attribute(UNENDED_ATTRIBUTE) {
         let qname = get_node_qname(node);
         arena::with(qname, |qname_str| {
           let message = s!(
@@ -1954,7 +2833,13 @@ impl Document {
   /// children is an error (reported, not fatal — see the body comment on why
   /// this returns `()`).
   pub fn set_node(&mut self, node: &Node) {
-    // Perl Document.pm:setNode L74-87: if the candidate is a
+    // Perl Document.pm:setNode L74-76: close any open text node first, so its ligatures run — moving the insertion
+    // point (a `^` float such as a footnote's `<ltx:note>` lifting to the paragraph) abandoned it unligated, and a
+    // paragraph's text before a `\footnote` kept `‘‘a’’ b--c` (Perl and pdflatex “a” b–c). The error is libxml's
+    // `set_content` on a live text node, as in every other close. Guard
+    // `perfect_kernel_batch60::text_before_a_footnote_is_ligatured`.
+    let _ = self.close_text_internal();
+    // Perl Document.pm:setNode L77-87: if the candidate is a
     // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
     // descend to that child. The original Rust port had this check
     // commented-out with a wrong-node-type marker (`DocumentNode`
@@ -2082,6 +2967,7 @@ impl Document {
     attributes.remove("cached_width");
     attributes.remove("cached_height");
     attributes.remove("cached_depth");
+    attributes.remove(ABSORB_WARNING_PROPERTY);
     // attributes.remove("stretchy");
 
     let is_space = attributes.contains_key("isSpace");
@@ -2234,14 +3120,21 @@ impl Document {
   //  I don't like having "text" built in here!
   //  AND, we've assumed that "font" names the relevant attribute!!!]
 
+  /// Perl `openText`'s whitespace rule (Document.pm:747-749): whitespace is dropped at the document
+  /// start and in an element that cannot hold text.
+  pub fn drops_whitespace_here(&self) -> bool {
+    match self.node.get_type() {
+      Some(NodeType::DocumentNode) => true,
+      Some(NodeType::ElementNode) => !can_contain(&self.node, "#PCDATA"),
+      _ => false,
+    }
+  }
+
   pub fn open_text(&mut self, text: &str, font: &Font) -> Result<Option<Node>> {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
-      if (text.is_empty() || ONLY_SPACE_RE.is_match(text))
-        && (node_type == Some(NodeType::DocumentNode)
-          || (node_type == Some(NodeType::ElementNode) && !can_contain(&self.node, "#PCDATA")))
-      {
+      if (text.is_empty() || ONLY_SPACE_RE.is_match(text)) && self.drops_whitespace_here() {
         // ...EXCEPT whitespace that is verbatim CONTENT rather than ignorable
         // lexical padding: (a) TYPEWRITER-font spaces — fancyvrb/fvextra map
         // every verbatim space to a digested space box (`\FV@Space` →
@@ -2258,13 +3151,28 @@ impl Document {
         // fvextra+breaklines exceeds 7 min on a 6-line file) — surpass-Perl
         // scope, not a parity break. Fall through: the normal insertion
         // machinery auto-opens the paragraph and keeps the spaces as text.
+        // Not inside SVG, where Perl's rule stands (DIVERGENCES #47): pgf pads
+        // every protocol literal with a `\space` (pgfsysprotocol.code.tex:33),
+        // which `\pgfsys@invoke` hands on to digestion (Perl's constructor
+        // absorbs it the same way, pgfsys-latexml.def.ltxml:832-836), and
+        // under `\ttfamily` each one opened a whitespace-only
+        // `svg:foreignObject` — 185 in 2605.01517, 2605.07323, 2605.27124;
+        // Perl none. A node text's leading `\ ` is dropped there too, as Perl
+        // drops it; the rendered node is the same. Nor where no auto-opened element reaches text (Perl's rule there
+        // too): an `{algorithmic}` set in `\ttfamily` (WileyNJDv5.cls:6953 `\algrenewcommand\ALG@beginalgorithmic
+        // {\ttfamily}`) put the space before its first `\item` straight into the `ltx:listing`, whose model is
+        // `listingline*` (2608.15322, 2602.03247, 2607.19926: schema-invalid).
         let explicit_space = node_type == Some(NodeType::ElementNode)
           && !text.is_empty()
+          && can_contain_node_somehow(&self.node, "#PCDATA").is_some()
           && (font.family.as_deref() == Some("typewriter")
             || self.box_to_absorb.as_ref().is_some_and(|b| {
               b.get_property("name")
                 .is_some_and(|n| n.to_string() == "space")
-            }));
+            }))
+          && !arena::with(get_node_qname(&self.node), |qname| {
+            qname.starts_with("svg:")
+          });
         if !explicit_space {
           return Ok(None);
         }
@@ -2363,36 +3271,110 @@ impl Document {
       }
     }
 
-    // Finally, insert the darned text.
+    // Finally, insert the darned text. Before a run in another encoding or family, the open text node's
+    // ligatures are applied under its own runs' font (`text_run_font`); the node stays open — closing it would
+    // let libxml merge the next text node into it, out of reach of the ligatures. Each run's ligatures reach only
+    // that run, from its start in the node: TeX ligates only characters of one font, and a later run's (LMC's
+    // `”о` → ө) took the closing quote of an earlier one (`a''{\mnr o}`, KNOWN_PERL_ERRORS #438; witness
+    // montex/montex).
+    let previous = self.node.clone();
+    let ligated = self.ligated_text.take();
+    let ligated_len = |node: &Node| match &ligated {
+      Some((ligated_node, len)) if ligated_node == node => *len,
+      _ => 0,
+    };
+    let mut run_start = ligated_len(&previous);
+    if previous.get_type() == Some(NodeType::TextNode)
+      && let Some((run_node, run_font, start)) = self.text_run_font.take()
+      && run_node == previous
+    {
+      if run_font.get_encoding() != font.get_encoding()
+        || run_font.get_family() != font.get_family()
+      {
+        self.apply_text_ligatures(&run_font, start)?;
+        run_start = self.node.get_content().len();
+      } else {
+        run_start = start;
+      }
+    }
     let outnode = self.open_text_internal(text)?;
+    if outnode.get_type() == Some(NodeType::TextNode) {
+      // A closed text node the insertion re-entered (`swap_comment_text_if_needed` sets the node back on it) was
+      // ligated up to where `close_text_internal` left it; a text sibling libxml merged the insertion into
+      // (`open_text_internal`) holds this run at its end.
+      let start = if outnode == previous {
+        run_start
+      } else {
+        match &ligated {
+          Some((ligated_node, len)) if *ligated_node == outnode => *len,
+          _ => outnode.get_content().len().saturating_sub(text.len()),
+        }
+      };
+      self.text_run_font = Some((outnode.clone(), font.clone(), start));
+    }
     self.record_constructed_node(&outnode);
     Ok(Some(outnode))
   }
 
-  pub fn close_text_internal(&mut self) -> Result<Node> {
-    if self.node.get_type() == Some(NodeType::TextNode) {
-      // Current node is text?
-      let parent = self.node.get_parent().unwrap();
-      let font = self.get_node_font(&parent);
-      let ocontent = self.node.get_content();
-      let mut content = Cow::Borrowed(&ocontent);
-      state::with_value("TEXT_LIGATURES", |value_opt| {
-        if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
-          for stored_ligature in ligatures.iter() {
-            if let Stored::Ligature(ligature) = stored_ligature {
-              if let Some(ref font_test) = ligature.font_test
-                && !(font_test)(font)
-              {
-                continue; // if the font test fails, skip the ligature
-              }
-              content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
+  /// The text ligatures (`TEXT_LIGATURES`) whose font test accepts `font`, applied to the open text node from byte
+  /// `start`, where the run set in `font` begins.
+  fn apply_text_ligatures(&mut self, font: &Font, start: usize) -> Result<()> {
+    // Characters set one per box form no ligature: a listing's code (listings' fixed columns, `_noligatures` on its
+    // lines and inline listings, listings_sty.rs).
+    let mut ancestor = self.node.get_parent();
+    while let Some(element) = ancestor {
+      if element.has_attribute("_noligatures") {
+        return Ok(());
+      }
+      ancestor = element.get_parent();
+    }
+    let whole = self.node.get_content();
+    // A start no longer in the node (its content rewritten before the run) falls back to the whole node.
+    let start = if whole.is_char_boundary(start) {
+      start
+    } else {
+      0
+    };
+    let mut head = whole;
+    let ocontent = head.split_off(start);
+    let mut content = Cow::Borrowed(&ocontent);
+    state::with_value("TEXT_LIGATURES", |value_opt| {
+      if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
+        for stored_ligature in ligatures.iter() {
+          if let Stored::Ligature(ligature) = stored_ligature {
+            if let Some(ref font_test) = ligature.font_test
+              && !(font_test)(font)
+            {
+              continue; // if the font test fails, skip the ligature
             }
+            content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
           }
         }
-      });
-      if *content != ocontent {
-        self.node.set_content(&content)?;
       }
+    });
+    if *content != ocontent {
+      self.node.set_content(&format!("{head}{content}"))?;
+    }
+    Ok(())
+  }
+
+  pub fn close_text_internal(&mut self) -> Result<Node> {
+    if self.node.get_type() == Some(NodeType::TextNode) {
+      // Current node is text? A detached one (a rename's reinsert, a rescue moving away from a dead point) has
+      // nothing to close into.
+      let Some(parent) = self.node.get_parent() else {
+        return Ok(self.node.clone());
+      };
+      // The font its runs were inserted with (the last run's), else its parent's, as Perl
+      // (Document.pm `closeText_internal`).
+      // Only this node's run entry: a text node opened and closed while another is open (for example a rename's
+      // reinsert) leaves the outer node's in place.
+      let (font, start) = match self.text_run_font.take_if(|(node, ..)| *node == self.node) {
+        Some((_, font, start)) => (font, start),
+        _ => (self.get_node_font(&parent).clone(), 0),
+      };
+      self.apply_text_ligatures(&font, start)?;
+      self.ligated_text = Some((self.node.clone(), self.node.get_content().len()));
       self.node = parent.clone(); // Effectively closed (->setNode, but don't recurse)
       Ok(parent)
     } else {
@@ -2471,6 +3453,11 @@ impl Document {
         self.record_node_ids(node)?;
         // Merge the attributes from the child onto $node
         self.merge_attributes(&c_first, node, None)?;
+        // a TeX box's element merged up (an `\mbox` alone in its paragraph): all `node` holds is that box's material
+        // (OXIDIZED_DESIGN #715; merge_attributes skips bookkeeping)
+        if c_first.has_attribute(FIELD_BOX_ATTRIBUTE) {
+          let _ = node.set_attribute(FIELD_BOX_ATTRIBUTE, "true");
+        }
         self.remove_node(c_first);
       }
     }
@@ -2483,7 +3470,10 @@ impl Document {
     to: &mut Node,
     force: Option<&HashSet<&'static str>>,
   ) -> Result<()> {
-    for (key, val) in from.get_attributes().iter() {
+    // Key order, so the attributes merged onto `to` land deterministically.
+    let mut attrs: Vec<(String, String)> = from.get_attributes().into_iter().collect();
+    attrs.sort();
+    for (key, val) in attrs.iter() {
       // Skip internal attributes
       if key.starts_with('_') {
         continue;
@@ -2571,7 +3561,32 @@ impl Document {
         let bta = self.box_to_absorb.clone().unwrap();
         self.append_node_box(&parent, &bta);
       }
-      self.node.append_text(text)?;
+      // K10: under the byte mouth every character reaches the document as
+      // single-byte boxes (tex.web §1034: one char node per byte; pdfTeX's
+      // subfont encoding turns the run back into a glyph). The text node is
+      // that run: reassemble it here, once the new byte is on — the font
+      // decoding step of a byte-mouth run.
+      if state::lookup_bool("PDFTEX_BYTE_MOUTH")
+        && text.chars().any(|c| ('\u{80}'..='\u{FF}').contains(&c))
+      {
+        // Only the pending tail (an incomplete sequence's bytes) plus the new
+        // piece is decoded — re-decoding the whole node per byte was O(n²)
+        // and, given a runaway feeding one node, a 2^32-byte String
+        // (chinesechess, sweep 70).
+        let content = self.node.get_content();
+        let split = crate::mouth::byte_mouth_pending_tail(&content);
+        let tail = s!("{}{}", &content[split..], text);
+        let decoded = crate::mouth::decode_byte_mouth_runs(&tail);
+        if split == content.len() {
+          self.node.append_text(&decoded)?;
+        } else {
+          self
+            .node
+            .set_content(&s!("{}{}", &content[..split], decoded))?;
+        }
+      } else {
+        self.node.append_text(text)?;
+      }
     }
     // Perl lines 1139-1144: if lastChild is a comment node and its previous sibling is
     // a text node, swap them to avoid splitting text runs, then recurse.
@@ -2621,9 +3636,17 @@ impl Document {
       if point.get_last_child().as_ref() == Some(&node) {
         // `node` was appended (not merged) — it is live and current.
         self.set_node(&node);
+      } else if let Some(merged) = point.get_last_child()
+        && merged.get_type() == Some(NodeType::TextNode)
+      {
+        // `node` was merged into a text sibling and freed: that sibling holds the text now and is the current
+        // node, as the appended node would be (Perl `setNode($node)`, Document.pm openText_internal), so its
+        // close ligates what was inserted. Leaving the parent current kept the rest of the run out of every
+        // ligature: text after a formula `cleanup_math` turns into spaces (`500$\,$hPa 1989--2008`) merges into
+        // the spaces' text node (witnesses nucl-ex0511052, 2208.08472; guard
+        // `perfect_kernel_batch78a::text_after_a_space_only_formula_is_ligatured`).
+        self.set_node(&merged);
       } else {
-        // `node` was merged into a text sibling and freed — fall back to the
-        // parent insertion point (matches the prior merged-case behavior).
         self.set_node(&point);
       }
     }
@@ -2664,65 +3687,93 @@ impl Document {
     Ok(false)
   }
 
-  /// Perl: appendNodeBox — when material is added to an autoopened element,
-  /// accumulate the record of boxes that created the node.
-  /// Propagates up through autoopened ancestors.
+  /// Perl `appendNodeBox` (Core/Document.pm:1685-1700): record `thisbox` as
+  /// (part of) the box that created `node`, then do the same for each
+  /// auto-opened ancestor in turn — an auto-opened node's box is the record of
+  /// everything opened or written inside it, which is what an auto-opened
+  /// `ltx:picture` or `svg:foreignObject` measures when it closes. Nothing is
+  /// added where the box is already the node's, or the last of its
+  /// `unlist` (Perl `eq`).
+  ///
+  /// Perl combines with `List($origbox, $box, mode => $origbox->getProperty
+  /// ('mode'))` (List.pm:31-55): in horizontal mode one flat list, the boxes
+  /// of any horizontal list among the two taken in its place; in any other
+  /// mode a nested pair. A flat list this makes is the node's own
+  /// (`node_box` property): while no one else holds it, the next box is pushed
+  /// onto it in place (Perl builds a new list each time, O(n²) in a
+  /// paragraph); while it is shared, a new one is built, as Perl does.
+  /// OXIDIZED_DESIGN_DIVERGENCES #319.
   fn append_node_box(&mut self, node: &Node, thisbox: &Digested) {
     let mut node = node.clone();
     loop {
-      let origbox = self.get_node_box(&node);
-      if let Some(ref orig) = origbox {
-        // Perl: ($box eq $origbox) || ($box eq ($origbox->unlist)[-1]) → skip (dedup)
-        // Use pointer identity on the Rc-wrapped DigestedData
-        let same_as_orig = std::ptr::eq(
-          thisbox.data() as *const DigestedData,
-          orig.data() as *const DigestedData,
-        );
-        let same_as_last = if !same_as_orig {
-          if let DigestedData::List(list) = orig.data() {
-            list
-              .borrow()
-              .boxes
-              .last()
-              .map(|b| {
-                std::ptr::eq(
-                  thisbox.data() as *const DigestedData,
-                  b.data() as *const DigestedData,
-                )
-              })
-              .unwrap_or(false)
-          } else {
-            false
-          }
-        } else {
-          false
-        };
-        if !same_as_orig && !same_as_last {
-          // Perl: List($origbox, $box, mode => $origbox->getProperty('mode'))
-          let mode = orig.get_property("mode").and_then(|m| {
-            if let Stored::String(s) = m.as_ref() {
-              Some(*s)
-            } else {
-              None
-            }
-          });
-          let mut new_list = List::new(vec![orig.clone(), thisbox.clone()]);
-          if let Some(mode_str) = mode {
-            new_list.properties.insert("mode", Stored::String(mode_str));
-          }
-          self.set_node_box(&node, new_list.into());
-        }
-      } else {
-        self.set_node_box(&node, thisbox.clone());
-      }
-      // Propagate to autoopened ancestors
-      match node.get_parent() {
-        Some(parent)
-          if parent.get_type() == Some(NodeType::ElementNode)
-            && parent.get_attribute("_autoopened").is_some() =>
-        {
-          node = parent;
+      let key = node.to_hashable();
+      // Whether the node's box is held only here, read before our own clone.
+      let (orig, owned) = match self.node_boxes.get(&key) {
+        None => {
+          self.node_boxes.insert(key, thisbox.clone());
+          (None, false)
         },
+        Some(orig) => {
+          let owned = orig.strong_count() == 1;
+          (Some(orig.clone()), owned)
+        },
+      };
+      if let Some(orig) = orig {
+        let already_there = same_box(thisbox, &orig)
+          || unlist_last(&orig).is_some_and(|last| same_box(thisbox, &last));
+        if !already_there {
+          let mode = box_mode(&orig);
+          if flattens(mode) {
+            if !(owned && push_onto_node_box(&orig, thisbox)) {
+              let mut boxes = flatten_horizontal(&orig);
+              boxes.extend(flatten_horizontal(thisbox));
+              self.node_boxes.insert(key, node_box_list(boxes, mode));
+            }
+          } else {
+            let list = node_box_list(vec![orig, thisbox.clone()], mode);
+            self.node_boxes.insert(key, list);
+          }
+        }
+      }
+      match node.get_parent() {
+        Some(parent) if is_autoopened_element(&parent) => node = parent,
+        _ => break,
+      }
+    }
+  }
+
+  /// Perl `removeNodeBox` (Core/Document.pm:1704-1723): `thisbox`, the box of
+  /// a node being removed from `node`, leaves the box of `node` and of each
+  /// auto-opened ancestor in turn — the whole box if it is `thisbox`, else
+  /// `thisbox` is dropped from its `unlist` (one level: a box nested deeper
+  /// is not seen, as Perl notes).
+  fn remove_node_box(&mut self, node: &Node, thisbox: &Digested) {
+    let mut node = node.clone();
+    loop {
+      let key = node.to_hashable();
+      if let Some(orig) = self.node_boxes.get(&key).cloned() {
+        if same_box(&orig, thisbox) {
+          self.node_boxes.remove(&key);
+        } else {
+          let members = unlist(&orig);
+          if members.iter().any(|b| same_box(b, thisbox)) {
+            let mode = box_mode(&orig);
+            let rest: Vec<Digested> = members
+              .into_iter()
+              .filter(|b| !same_box(b, thisbox))
+              .collect();
+            // Perl `List(@rest, mode => $mode)`: one box of that mode is itself.
+            let list = if rest.len() == 1 && mode.is_none_or(|m| box_mode(&rest[0]) == Some(m)) {
+              rest.into_iter().next().unwrap()
+            } else {
+              node_box_list(rest, mode)
+            };
+            self.node_boxes.insert(key, list);
+          }
+        }
+      }
+      match node.get_parent() {
+        Some(parent) if is_autoopened_element(&parent) => node = parent,
         _ => break,
       }
     }
@@ -2763,7 +3814,7 @@ impl Document {
           let ligature_stored = ligatures.pop_front().unwrap();
           if let Stored::Ligature(ligature) = ligature_stored {
             if self.apply_math_ligature(node, ligature)? {
-              next_ligatures.extend(ligatures.drain(..));
+              next_ligatures.append(&mut ligatures);
               matched = true;
               break;
             }
@@ -2795,11 +3846,14 @@ impl Document {
       // `nmatched - 1` (usize) underflows to usize::MAX if a matcher returns a
       // zero-length match, spinning `get_prev_sibling().unwrap()` until it
       // panics. Saturate: a 0/1-length match removes no prior siblings.
+      // Perl Document.pm:1194-1199: a comment the matcher stepped over (and counted) stays.
+      // Guard: `perfect_kernel_batch56::letters_ligature_joins_across_a_comment`.
+      let mut prev = node.clone();
       for _idx in 0..nmatched.saturating_sub(1) {
         // The matcher can OVER-report nmatched past the actual sibling count
         // (the mirror of the zero-length underflow above) — stop instead of
         // panicking on the unwrap (PR_READINESS must-fix 5).
-        let Some(remove) = node.get_prev_sibling() else {
+        let Some(remove) = prev.get_prev_sibling() else {
           Error!(
             "unexpected",
             "ligature",
@@ -2810,7 +3864,19 @@ impl Document {
         if let Some(b) = self.get_node_box(&remove) {
           boxes.push_front(b);
         }
-        self.remove_node(remove);
+        // The merged token's box is taken out of no enclosing box: it lives on
+        // in `node`'s composite box below. Perl's `removeNode` here
+        // (Document.pm:1199) runs `removeNodeBox` on the token's parent, which
+        // takes the `2` and `.` of a `2.414` out of an aligned cell's box
+        // list, whose reversion is the cell Math's `tex` (Perl:
+        // `tex="\displaystyle=414\times 0^{-3}"`; KNOWN_PERL_ERRORS #272).
+        // Witnesses 2605.02288, 2605.00812; guard
+        // `node_box_append::math_ligatures_keep_their_boxes`.
+        if remove.get_type() == Some(NodeType::CommentNode) {
+          prev = remove;
+        } else {
+          self.remove_node_keeping_box(remove);
+        }
       }
       // This fragment replaces the node's box by the composite boxes it replaces
       // HOWEVER, this gets things out of sync because parent lists of boxes still
@@ -2977,8 +4043,9 @@ impl Document {
   ) -> Result<Node> {
     self.close_text_internal()?; // Close any current text node.
     let cur_qname = get_node_qname(&self.node);
-    // If `qname` is allowed at the current point, we're done.
-    if can_contain_qsym(cur_qname, qsym) {
+    // If `qname` is allowed at the current point, we're done (a display unit at a quote's run-in block goes on to
+    // close the quote, `holds_in_quote_block`).
+    if can_contain_qsym(cur_qname, qsym) && holds_in_quote_block(&self.node, qsym) {
       return Ok(self.node.clone());
     // Else, if we can create an intermediate node that accepts $qname, we'll do
     // that.
@@ -3022,7 +4089,23 @@ impl Document {
           None => pin!(""),
           Some(ref p) => get_node_qname(p),
         };
-        if sym_can_contain_somehow(parent_name, qsym).is_some() {
+        if sym_can_contain_somehow(parent_name, qsym).is_some()
+          && parent_opt
+            .as_ref()
+            .is_none_or(|p| holds_in_quote_block(p, qsym))
+        {
+          close_to = Some(node);
+          break;
+        }
+        // A sectioning unit nested in an unlabelled list item (a margin list's `\item[]`, which opens no inline
+        // sectional block; an error below) is CLOSED by the next sectioning unit, which becomes its sibling inside the
+        // item — latex.ltx's `\@startsection` ends the previous heading's scope but not the list (2201.06926; Perl
+        // nests Y inside X with a second error). OD #189. Guard
+        // `perfect_kernel_batch64::section_in_margin_list_keeps_bibliography`.
+        if is_lenient_sectioning_unit(qsym)
+          && is_lenient_sectioning_unit(get_node_qname(&node))
+          && parent_name == pin!("ltx:item")
+        {
           close_to = Some(node);
           break;
         }
@@ -3034,6 +4117,9 @@ impl Document {
       if let Some(close_to_node) = close_to {
         self.close_node_internal(&close_to_node)?; // Close the auto closeable nodes.
         self.find_insertion_point_qsym(qsym, None) // Then retry, possibly w/auto open's
+      } else if is_quote_closing_unit(qsym) && self.close_quotes_blocking(&[qsym])? {
+        // A display sectioning unit in a `{quote}`, `{quotation}` or `{verse}` closed it (`close_quotes_blocking`).
+        self.find_insertion_point_qsym(qsym, None)
       } else {
         // Cascading-rejection suppression (2026-05-01): when a math leaf
         // element (`<ltx:XMTok>`) tries to insert into a text-mode
@@ -3070,7 +4156,9 @@ impl Document {
         // build-leniency for the narrow sectioning-into-frontmatter case so
         // we don't out-strict Perl. Same `return self.node` "insert anyway"
         // mechanism as the math-leaf cascade above.
-        let is_sectioning_unit = qsym_str == "ltx:paragraph" || qsym_str == "ltx:subparagraph";
+        // A sectioning unit inside a list item or a float body is not lenient here: it opens an
+        // `ltx:inline-sectional-block` (the bridges below; rulings 2026-10-06, 2026-10-09; OD #189).
+        let is_sectioning_unit = is_lenient_sectioning_unit(qsym);
         // Container is either a frontmatter block (abstract/acknowledgements,
         // Block.model — no sectioning units) OR another sectioning unit that
         // can't hold it (a 2nd `\paragraph` nests inside the 1st when the
@@ -3083,6 +4171,225 @@ impl Document {
           || cur_str == "ltx:subparagraph";
         if is_sectioning_unit && is_lenient_container {
           return Ok(self.node.clone());
+        }
+        // Auto-open bridges — ONE rule, tex.web has none: when a child cannot
+        // go here, cannot be reached by any autoOpen path of the model
+        // (Perl Document.pm:974-1010 `computeIndirectModel`) and the current
+        // element cannot autoClose, open the container chain that the model
+        // says would hold it, marked `_autoopened`/`_autoclose` so it closes
+        // with what it wraps. Perl shares every one of these errors (its only
+        // autoOpen tags are the model's); the bridges are the documented
+        // surpasses, one table row each, in precedence order:
+        //
+        //   Math: a math node arriving in an INLINE-model element opened
+        //   while in math mode — `\hyperref[l]{b}`/`\glsdisp{k}{k}` whose
+        //   content is math (glosmathtools.sty:74 `\ensuremath{\glsdisp…}`;
+        //   `<ltx:XMTok> isn't allowed in <ltx:glossaryref>`,
+        //   sample_glosmathtools ×2 53 errors; Perl TeX_Math.pool:42 autoOpens
+        //   only XMText). Wrapper = inline `ltx:Math`/`ltx:XMath`, the shape
+        //   `\text{$k$}` already has. Guard:
+        //   `perfect_kernel_batch54::math_content_in_a_ref_gets_an_inline_math`.
+        //
+        //   inline-block: block content in an inline container that cannot
+        //   auto-close — a `{lstlisting}` in an `l`/`c`/`r` tabular cell or a
+        //   `{tabbing}` field (engtlc, lexref, expex-glossonly: `<ltx:listing>
+        //   isn't allowed in <ltx:td>`) — takes the shape the `p{}` column
+        //   already gives cell blocks (`insert_block`). Only when every direct,
+        //   auto-open and auto-close route above is exhausted, so a display
+        //   equation in a paragraph still closes the `ltx:p` (Document.pm:1008;
+        //   making `inline-block` an autoOpen tag globally would wrap
+        //   equations instead of closing paragraphs). PLANS P37. Guard:
+        //   `perfect_kernel_batch54::listing_in_a_tabular_cell_gets_an_inline_block`.
+        //
+        //   foreignObject: block content inside an SVG group — a TikZ node
+        //   whose text holds a `\verb` or a paragraph (makeshape 22, optikz
+        //   46: `<ltx:p> isn't allowed in <svg:g>`) — takes `svg:foreignObject`,
+        //   whose model is Flow (LaTeXML-misc.rnc `SVG.foreignObject.content`),
+        //   the same shape `\lxSVG@includegraphics` uses for non-SVG content
+        //   (pgfsys-latexml.def.ltxml:202 absorbs the node box into the group
+        //   directly). OXIDIZED_DESIGN #186, PLANS P37 (svg half). Guard:
+        //   `perfect_kernel_batch54::verbatim_in_a_tikz_node_gets_a_foreign_object`.
+        //
+        //   itemize: a list item stranded outside its list — `\item` digested
+        //   inside a box whose body `insert_block` captures (`\parbox`/
+        //   `minipage`/`\vbox` inside a list item: tikz-ext-manual's
+        //   `{arrowtip}` puts `\tipCompat`'s `\item` in a `minipage` inside a
+        //   `\pgfmanualentryheadline` item; `<ltx:item> isn't allowed in
+        //   <ltx:_CaptureBlock_>`). The item is still the enclosing list's
+        //   `\@item` (latex.ltx's `\@parboxrestore` resets no list bindings),
+        //   and pdflatex typesets it as a labelled paragraph inside the box;
+        //   only `ltx:item` is autoOpen (latex_constructs.pool.ltxml:1277), so
+        //   `computeIndirectModel` has no `_CaptureBlock_`→`item` route.
+        //   Wrapper = the shape LaTeX gives an item outside its list, an
+        //   `ltx:itemize`; an item in an inline `\fbox` still reports. Guard:
+        //   `perfect_kernel_batch56::item_in_a_captured_box_gets_an_itemize`.
+        //
+        // A row applies when its own predicate holds, the current element can
+        // hold the chain's first wrapper and the chain's last wrapper can hold
+        // the child (both by the model, never by name).
+        struct AutoOpenBridge {
+          /// The wrapper chain, outermost first.
+          chain:    &'static [&'static str],
+          /// The row's own predicate on (current element, arriving child).
+          applies:  fn(cur: &str, qsym: &str) -> bool,
+          /// Extra attributes on the outermost wrapper.
+          attrs:    &'static [(&'static str, &'static str)],
+          /// The row's predicate on the current node itself.
+          holder:   fn(node: &Node) -> bool,
+          /// Whether the auto-closable elements around the current point close first, up to the outermost one whose
+          /// parent holds the wrapper (the paragraph a `\trivlist` ends, latex.ltx `\@trivlist`'s `\par`).
+          close_up: bool,
+        }
+        const AUTO_OPEN_BRIDGES: &[AutoOpenBridge] = &[
+          AutoOpenBridge {
+            chain:    &["ltx:Math", "ltx:XMath"],
+            applies:  |_cur, qsym| qsym.starts_with("ltx:XM"),
+            attrs:    &[("mode", "inline")],
+            holder:   |_| true,
+            close_up: false,
+          },
+          AutoOpenBridge {
+            chain:    &["ltx:inline-block"],
+            applies:  |_cur, qsym| qsym != "ltx:inline-block",
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
+          },
+          AutoOpenBridge {
+            chain:    &["svg:foreignObject"],
+            applies:  |cur, qsym| cur.starts_with("svg:") && qsym != "svg:foreignObject",
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
+          },
+          AutoOpenBridge {
+            chain:    &["ltx:itemize"],
+            applies:  |_cur, qsym| qsym == "ltx:item",
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
+          },
+          // A sectioning unit in a float body (`\section` in a `figure`, `\subsection` in a `table`; 38 2609 papers,
+          // 117 errors) opens an `ltx:inline-sectional-block` there: the heading keeps its number in the sequence,
+          // its id and its labels, as the PDF prints it, and the float stays whole (user ruling 2026-10-06,
+          // OXIDIZED_DESIGN_DIVERGENCES #189). The float's own id is fixed before the unit steps the counters it is
+          // made within (`pin_float_id_before_its_sectioning`).
+          AutoOpenBridge {
+            chain:    &["ltx:inline-sectional-block"],
+            applies:  |cur, qsym| {
+              matches!(cur, "ltx:figure" | "ltx:table" | "ltx:float")
+                && is_sectioning_unit_name(qsym)
+            },
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
+          },
+          // …and in a list item (an itemize, enumerate or description item, nested or not; 2304.10050, 2312.11556,
+          // 2406.02069, 2411.15124, 2412.04099, 2501.07868, 2501.07938, 2511.00839; the TeX Live manuals ddphonism,
+          // phonrule, prerex, pdfmarginpar) the same block, in a paragraph of the
+          // item, since an item holds paragraphs only (LaTeXML-block.rnc:257 `item_model = tags?, Para.model`): the
+          // list stays one list, a later `\item` or the list's end closes the block, and a second heading in the item
+          // is the first's sibling in it (user ruling 2026-10-09, OXIDIZED_DESIGN_DIVERGENCES #189). Only a labelled
+          // item: an unlabelled `\item[]` is a margin list's (`changemargin`, `\list{}{…}\item[]`, a whole paper in it:
+          // 2201.06926, 2505.05767), no list but a margin, whose sections nest as Perl's do, its back matter in the last
+          // of them — the block would leave the appendix, acknowledgements and bibliography no place. An item's id is
+          // made when it is digested, before the heading steps any counter. Guards
+          // `perfect_kernel_batch54::{sectioning_unit_inside_item_or_figure_opens_a_block,
+          // next_sectioning_unit_in_an_item_is_a_sibling}`.
+          AutoOpenBridge {
+            chain:    &["ltx:para", "ltx:inline-sectional-block"],
+            applies:  |cur, qsym| cur == "ltx:item" && is_sectioning_unit_name(qsym),
+            attrs:    &[],
+            holder:   item_has_label,
+            close_up: false,
+          },
+          // …and a run-in `\paragraph` or `\subparagraph` in a `{quote}`, `{quotation}` or `{verse}`: pdflatex sets
+          // the heading and the text after it, up to the environment's end, inside the quote's `\list` margins
+          // (article.cls:389-408, `quote` = `\list{}{\rightmargin\leftmargin}\item\relax`), and the quote holds the
+          // block directly (LaTeXML-block.rnc `quote_model` takes `Misc.class`); the quote's end closes it, and a later
+          // display unit in the same quote closes the quote (`close_quotes_blocking` above). The display units
+          // `\part`..`\subsubsection` open no block (`is_quote_closing_unit`; `\begin{quotation}\section*{}` around a
+          // title page's abstract, 0712.1985). Main-session ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #678;
+          // witnesses 2607.27159 2505.18677 2305.11603 1809.03802 2208.14587. Guards `perfect_kernel_batch69a::{
+          // paragraph_in_a_quote_stays_in_it, section_after_a_paragraph_in_a_quote_closes_it}`.
+          AutoOpenBridge {
+            chain:    &["ltx:inline-sectional-block"],
+            applies:  |cur, qsym| cur == "ltx:quote" && is_run_in_unit_name(qsym),
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
+          },
+          AutoOpenBridge {
+            chain:    &["ltx:item", "ltx:para"],
+            applies:  |cur, qsym| cur == qsym,
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
+          },
+          // A theorem, a proof or a table of contents written inside a container whose model holds no Para.class (a
+          // `{quote}`, a `\footnote`'s `ltx:note`, a `{wrapfigure}`, a font or color group's `ltx:text`, a tabular
+          // cell): pdflatex sets it there, inside the container's own box, so it opens an `ltx:inline-logical-block`
+          // (Misc.class, model Para.model: LaTeXML-para.rnc:77-90), the wrapper `\marginpar` already gives its note
+          // body (sect09.rs `\lx@marginpar`) — the content stays in place and the schema is unchanged (main-session
+          // ruling P1 2026-10-17; OXIDIZED_DESIGN #271 keeps the quote model as it is). The `\trivlist` that starts a
+          // theorem ends the paragraph it meets (latex.ltx `\@trivlist`'s `\par`), so the auto-closable elements around
+          // the point (the `ltx:p`, a font switch's `ltx:text`) close first, up to the outermost whose parent holds
+          // the wrapper; a container that cannot auto-close (the note, a constructor's `ltx:text`) keeps it inside.
+          // Perl shares every one of these errors (same schema, no such autoOpen). Not inside a frontmatter
+          // container (`ltx:abstract`, `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:creator`, or
+          // anything in one): there the "isn't allowed" Error stands, as in Perl, until the frontmatter study is ruled
+          // on (main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`); a
+          // kernel table of contents there goes after the container instead (`float_out_of_frontmatter`, OD #753).
+          // Witnesses 2406.11811, 2103.03402, 0806.0214, 2602.15784, 2301.10544, 1410.7242 (theorem in a quote),
+          // 1412.2039, math0603642 (TOC in a quote), 2507.09788, 2307.10959, 2308.06338, 2410.15097, 0804.3724,
+          // math0612590 (theorem in a footnote), 1310.0491 (an ltx:text). Guards
+          // `perfect_kernel_batch69c::{para_level_block_in_quote_opens_an_inline_logical_block,
+          // para_level_block_in_note_and_wrapfigure_opens_an_inline_logical_block}`; OXIDIZED_DESIGN_DIVERGENCES #689.
+          AutoOpenBridge {
+            chain:    &["ltx:inline-logical-block"],
+            applies:  |_cur, qsym| matches!(qsym, "ltx:theorem" | "ltx:proof" | "ltx:TOC"),
+            attrs:    &[],
+            holder:   outside_frontmatter_container,
+            close_up: true,
+          },
+        ];
+        for bridge in AUTO_OPEN_BRIDGES {
+          let first = arena::pin(bridge.chain[0]);
+          let last = arena::pin(bridge.chain[bridge.chain.len() - 1]);
+          let applies = arena::with2(cur_qname, qsym, |cur, q| (bridge.applies)(cur, q))
+            && (bridge.holder)(&self.node);
+          if applies && bridge.close_up && can_contain_qsym(last, qsym) {
+            let mut node = self.node.clone();
+            let mut close_to = None;
+            while node.get_type() == Some(NodeType::ElementNode) && can_auto_close(&node) {
+              let Some(parent) = node.get_parent() else {
+                break;
+              };
+              if parent.get_type() == Some(NodeType::ElementNode)
+                && can_contain_qsym(get_node_qname(&parent), first)
+              {
+                close_to = Some(node);
+              }
+              node = parent;
+            }
+            if let Some(close_to_node) = close_to {
+              self.close_node_internal(&close_to_node)?;
+            }
+          }
+          let cur_qname = get_node_qname(&self.node);
+          if applies && can_contain_qsym(cur_qname, first) && can_contain_qsym(last, qsym) {
+            let node_font = self.get_node_font(&self.node).clone();
+            for (i, wrapper) in bridge.chain.iter().enumerate() {
+              let mut attrs = string_map!("_autoopened" => "true", "_autoclose" => "true");
+              if i == 0 {
+                for (k, v) in bridge.attrs {
+                  attrs.insert((*k).to_string(), (*v).to_string());
+                }
+              }
+              self.open_element(wrapper, Some(attrs), Some(&node_font))?;
+            }
+            return self.find_insertion_point_qsym(qsym, Some(last));
+          }
         }
         // Didn't find a legit place.
         // Perl Document.pm:1008-1010: "<qname> isn't allowed in <cur_qname>"
@@ -3239,6 +4546,21 @@ impl Document {
     // (`open_text_internal`/`open_math_text_internal`) already stripped NUL;
     // this attribute sink did not. PR #249 review P0-1.
     let value_sanitized = xml_sanitize(value);
+    // `class` is a list of NMTOKENs (LaTeXML-common.rng:94) and `xml:id` an
+    // XML Name (:120); the ONE emitter every writer funnels through
+    // (`add_ss_values` too) makes them so — user ruling 2026-09-18, beyond
+    // Perl, which emits listings' `ltx_lst_language_{TeX}_LaTeX` / `C++` /
+    // an unexpanded `\lexer@cs`, raw `\lx@add@class` `@` names, fontawesome's
+    // `fa-*`, and csvsimple-legacy's `\par` leaking into a class and an id
+    // (33 manuals, 3,488 jing lines; 2 manuals, 1,231). A value that is
+    // already valid is untouched.
+    let value_sanitized: Cow<'_, str> = match key {
+      "class" => Cow::Owned(nmtokens_clean(&value_sanitized)),
+      "xml:id" if !is_xml_name(&value_sanitized) => {
+        Cow::Owned(crate::common::cleaners::clean_id(&value_sanitized))
+      },
+      _ => value_sanitized,
+    };
     let value: &str = &value_sanitized;
     if value.is_empty() {
       return Ok(()); // skip if empty
@@ -3578,6 +4900,112 @@ impl Document {
     Ok(())
   }
 
+  /// Makes the SVG ids under `root` unique in the document, as the svg schema types them
+  /// (svg-core-attrib.rng:26-28). A picture TeX copies — `\copy`, `\usebox`, expl3's `\box_use:N`
+  /// (tex.web:20952 copies a node list with its whatsits verbatim) — writes the ids the pgf driver
+  /// fixed at digestion (pgfsys-latexml.def.ltxml:346-352, :678-714) once per copy; PDF has no ids,
+  /// XML must not repeat them (suanpan-l3: 9,480 jing lines; thuaslogos: copies nested in one
+  /// picture). Walks `root` in document order: an SVG element's `id` already handed out (or held by
+  /// an `xml:id`) is renamed with the next free suffix, and every reference — `url(#X)` in any
+  /// attribute, `href`/`xlink:href` `#X` — binds to the latest preceding definition of X under
+  /// `root`; a reference to a definition elsewhere is left alone.
+  ///
+  /// A walked element is marked (`_svgid`, a bookkeeping attribute finalize strips): the math
+  /// parser re-creates a picture where it moves it (`append_tree`), each re-creation closing a new
+  /// `svg:svg` — the mark travels with the copied attributes, so a moved picture keeps its ids and
+  /// references, where an unmarked one is a new copy. `append_clone` (the alignment split's MathFork,
+  /// the frontmatter writer's contacts and notes) instead makes a second copy beside the original: it
+  /// copies the svg `id` as Perl does and drops the mark, so the copy's own walk renames the ids it
+  /// repeats (guard `perfect_kernel_batchne7::tikz_badges_in_frontmatter_contacts_keep_svg_ids`). A picture keeps Perl's
+  /// ids unless an earlier element already holds them (a relocated footnote copy can). Perl writes
+  /// the duplicates (KNOWN_PERL_ERRORS #391); the id map follows its `appendClone`
+  /// (Document.pm:1920-1956). Guards: `perfect_kernel_batch57::copied_pictures_keep_unique_svg_ids`,
+  /// `perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids`.
+  pub fn record_svg_ids(&mut self, root: &Node) -> Result<()> {
+    use rustc_hash::FxHashMap;
+    if root.get_attribute("_svgid").is_some() {
+      return Ok(());
+    }
+    let mut in_effect: FxHashMap<String, String> = FxHashMap::default();
+    for mut node in self.findnodes("descendant-or-self::*", Some(root)) {
+      let is_svg = with_node_qname(&node, |qname| qname.starts_with("svg:"));
+      if !is_svg {
+        continue;
+      }
+      let walked = node.get_attribute("_svgid").is_some();
+      if !walked {
+        node.set_attribute("_svgid", "1")?;
+      }
+      if let Some(id) = node.get_attribute_no_ns("id") {
+        let taken = !walked
+          && (self.svg_ids.contains(&id)
+            || self.idstore.contains_key(&id)
+            || self.spilled_ids.contains(&id));
+        let effective = if taken {
+          let candidate = self.next_svg_id(&id);
+          node.set_attribute("id", &candidate)?;
+          candidate
+        } else {
+          id.clone()
+        };
+        self.svg_ids.insert(effective.clone());
+        in_effect.insert(id, effective);
+      }
+      if in_effect.is_empty() {
+        continue;
+      }
+      // `xlink:href` is set as a literal prefixed name until finalize declares the namespace
+      // (`Document::set_attribute`), so the local name is the part after the prefix.
+      for ((name, ns), value) in node.get_properties_ns() {
+        let rebound = if value.contains("url(#") {
+          let mut out = String::with_capacity(value.len());
+          let mut rest = value.as_str();
+          while let Some(at) = rest.find("url(#") {
+            out.push_str(&rest[..at + 5]);
+            rest = &rest[at + 5..];
+            let end = rest.find(')').unwrap_or(rest.len());
+            let target = &rest[..end];
+            out.push_str(in_effect.get(target).map_or(target, String::as_str));
+            rest = &rest[end..];
+          }
+          out.push_str(rest);
+          out
+        } else if name.rsplit(':').next() == Some("href")
+          && let Some(target) = value.strip_prefix('#')
+          && let Some(new) = in_effect.get(target)
+        {
+          s!("#{}", new)
+        } else {
+          continue;
+        };
+        if rebound != value {
+          match ns {
+            Some(ns) => node.set_attribute_ns(&name, &rebound, &ns)?,
+            None => node.set_attribute(&name, &rebound)?,
+          }
+        }
+      }
+    }
+    Ok(())
+  }
+
+  /// The next free SVG id for a repeat of `id`: `id` with a `radix_alpha` suffix, as `modify_id`
+  /// makes them, free of every SVG id, `xml:id` and spilled id.
+  fn next_svg_id(&mut self, id: &str) -> String {
+    let mut n = self.svg_id_suffixes.get(id).copied().unwrap_or(1);
+    loop {
+      let candidate = s!("{}{}", id, radix_alpha(n));
+      n += 1;
+      if !self.svg_ids.contains(&candidate)
+        && !self.idstore.contains_key(&candidate)
+        && !self.spilled_ids.contains(&candidate)
+      {
+        self.svg_id_suffixes.insert(id.to_string(), n);
+        return candidate;
+      }
+    }
+  }
+
   pub fn unrecord_node_ids(&mut self, node: &Node) {
     for idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node)) {
       if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
@@ -3609,8 +5037,9 @@ impl Document {
   /// * ROOT-level children spill only when sectional (`ROOT_SPILLABLE`):
   ///   the frontmatter fallback and `maybe_promote_leading_title` operate on
   ///   the leading non-sectional root children at end-of-build.
-  /// * Children of the insertion element itself never spill: in-flight
-  ///   construction state may still reference recently built nodes.
+  /// * An open element's heading parts (`ltx:tags`, `ltx:title`, `ltx:toctitle`) never spill: its close-time
+  ///   hooks read them (a bibliography taking the place of the unit that heads it, latexml_engine sect11.rs
+  ///   `absorb_bibliography_heading`). One title per open element, so the memory cost is negligible.
   ///
   /// Returns the number of runs spilled.
   pub fn spill_closed_subtrees(&mut self, index: &mut crate::sxml::FragmentIndex) -> Result<usize> {
@@ -3655,6 +5084,7 @@ impl Document {
       .iter()
       .map(|ns| (ns.get_prefix(), ns.get_href()))
       .collect();
+    let aligning = Self::pending_aligning_context();
 
     let mut runs_spilled = 0usize;
     // Every spine level INCLUDING the insertion element itself: at a legal
@@ -3667,14 +5097,6 @@ impl Document {
     for level in 0..spine.len() {
       let parent = spine[level].clone();
       let barrier = spine.get(level + 1).cloned();
-      // The ambient SECTION for scope-gated processing (`\lxDeclare`):
-      // nearest section at or above this spill parent, mirroring the
-      // ancestor walk `apply_lx_declarations` performs.
-      let section_id = spine[..=level]
-        .iter()
-        .rev()
-        .find(|n| n.get_name() == "section")
-        .and_then(|n| n.get_attribute_ns("id", XML_NS));
       // The serializer's recursion contract for children of `parent`
       // (`serialize_into`: depth+1, parent's schema-driven noindent).
       let noindent = {
@@ -3704,12 +5126,20 @@ impl Document {
         elem_kids.len() == 1 && get_node_qname(&elem_kids[0]) == pin!("ltx:text")
       };
       let mut run: Vec<Node> = Vec::new();
+      let pending_from = Self::pending_alignment_from(&parent, &aligning);
+      let mut pending = matches!(pending_from, Some(None));
       for child in parent.get_child_nodes() {
         if Some(&child) == barrier.as_ref() {
           break;
         }
+        // `prev` itself predates the declaration and may spill; its
+        // followers may not.
+        let is_pending_anchor = pending_from
+          .as_ref()
+          .is_some_and(|prev| prev.as_ref() == Some(&child));
         let eligible = child.get_type() == Some(NodeType::ElementNode)
           && child.get_name() != SPILL_PLACEHOLDER
+          && !pending
           && !parent_is_collapse_frame
           && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()))
           // A bibliography pins its subtree in RAM: a LATER `\bibstyle`
@@ -3717,37 +5147,200 @@ impl Document {
           // witness tests/structure/bibsect.tex). Rare and small.
           && self
             .findnodes("descendant-or-self::ltx:bibliography", Some(&child))
-            .is_empty();
+            .is_empty()
+          // (`parent` is open: its heading stays until it closes)
+          && !matches!(
+            get_node_qname(&child),
+            q if q == pin!("ltx:tags") || q == pin!("ltx:title") || q == pin!("ltx:toctitle")
+          )
+          // The unit right before the bibliography still open (the barrier) stays too: closing, the
+          // bibliography may take its place (latexml_engine sect11.rs `absorb_bibliography_heading`).
+          && !barrier.as_ref().is_some_and(|open| {
+            get_node_qname(open) == pin!("ltx:bibliography")
+              && child.get_next_element_sibling().as_ref() == Some(open)
+          });
         if eligible {
           run.push(child);
-        } else if !run.is_empty() {
-          // A non-eligible node interrupts the run: flush what precedes it so
-          // each placeholder replaces exactly the contiguous nodes it stands
-          // for, and document order is preserved around the interloper.
-          runs_spilled += self.spill_run(
-            &mut run,
-            level + 1,
-            noindent,
-            &namespaces,
-            &section_id,
-            index,
-          )?;
         } else {
-          run.clear();
+          if !run.is_empty() {
+            // A non-eligible node interrupts the run: flush what precedes it so
+            // each placeholder replaces exactly the contiguous nodes it stands
+            // for, and document order is preserved around the interloper.
+            runs_spilled += self.spill_run(&mut run, level + 1, noindent, &namespaces, index)?;
+          }
+          // A closed NON-sectional root child stays resident for the
+          // frontmatter heuristics, but only its prose is read: spill the
+          // rest of it (`spill_prose_free_children`).
+          let resident_root_child = level == 0
+            && child.get_type() == Some(NodeType::ElementNode)
+            && child.get_name() != SPILL_PLACEHOLDER
+            && !ROOT_SPILLABLE.contains(&child.get_name().as_str())
+            && !ROOT_FRONTMATTER.contains(&child.get_name().as_str());
+          if resident_root_child {
+            runs_spilled +=
+              self.spill_prose_free_children(&child, level + 2, &namespaces, &aligning, index)?;
+          }
+        }
+        if is_pending_anchor {
+          pending = true;
         }
       }
       if !run.is_empty() {
-        runs_spilled += self.spill_run(
-          &mut run,
-          level + 1,
-          noindent,
-          &namespaces,
-          &section_id,
-          index,
-        )?;
+        runs_spilled += self.spill_run(&mut run, level + 1, noindent, &namespaces, index)?;
       }
     }
     Ok(runs_spilled)
+  }
+
+  /// `ROOT_SPILLABLE` keeps a non-sectional root-level child resident for the
+  /// end-of-build frontmatter heuristics (`maybe_promote_leading_title`,
+  /// `maybe_dedup_leading_title_ink` in `base_utilities.rs`), which read the
+  /// text and font of the leading `ltx:p` paragraphs and nothing else. So its
+  /// closed element children that hold no prose paragraph spill like any other
+  /// closed subtree — a paragraph inside drawn content (an `svg:foreignObject`
+  /// label under `ltx:picture`) is not document prose. A child that does hold
+  /// prose stays resident and is walked the same way, so a wrapper
+  /// (`ltx:quote`, `ltx:logical-block`) keeps its paragraphs and sheds its
+  /// pictures, tables and equations; an `ltx:p` itself is kept whole.
+  ///
+  /// Witness: pgf-PeriodicTable's eight sectionless `\pgfPT` tables (one
+  /// `ltx:para > ltx:picture` each) climbed ~106 MB per table under
+  /// `--streaming` with every picture-end seam honored, because nothing under
+  /// a root-level `ltx:para` ever spilled and the sweep of `node_boxes` found
+  /// every table's boxes still live.
+  fn spill_prose_free_children(
+    &mut self,
+    parent: &Node,
+    depth: usize,
+    namespaces: &[(String, String)],
+    aligning: &Option<(Node, Option<Node>)>,
+    index: &mut crate::sxml::FragmentIndex,
+  ) -> Result<usize> {
+    let noindent = model::can_contain_sym(get_node_qname(parent), pin!("#PCDATA"));
+    let mut runs_spilled = 0usize;
+    let mut run: Vec<Node> = Vec::new();
+    let mut resident: Vec<Node> = Vec::new();
+    let pending_from = Self::pending_alignment_from(parent, aligning);
+    let mut pending = matches!(pending_from, Some(None));
+    for child in parent.get_child_nodes() {
+      if pending_from
+        .as_ref()
+        .is_some_and(|prev| prev.as_ref() == Some(&child))
+      {
+        // `prev` itself predates the declaration and may spill; its followers
+        // may not.
+        pending = true;
+      }
+      // Only content the schema admits directly in a paragraph block
+      // (`ltx:para` = Block/Misc/Meta: pictures, tabulars, equations, nested
+      // blocks) may become a segment root: pass 2 re-parses a segment under
+      // the `_lxfragment` wrapper, whose schema decisions cannot host inline
+      // content (a spilled `ltx:sup` from a root-level `ltx:note` failed
+      // there: tests/cluster_regressions/frontmatter_spconf_name).
+      let is_element = child.get_type() == Some(NodeType::ElementNode)
+        && child.get_name() != SPILL_PLACEHOLDER
+        && model::can_contain_sym(pin!("ltx:para"), get_node_qname(&child));
+      // Prose = an `ltx:p` outside any picture that holds non-space text
+      // outside any picture. A text-less `ltx:p` — an inline centered picture
+      // closing under `ltx:para > ltx:p > ltx:text > ltx:picture` (no `\par`
+      // inside the paragraph; pgf-spectra LSE emits 141 spectra that way) —
+      // is never a leading-title candidate (`maybe_dedup_leading_title_ink`
+      // needs alphabetic text) and spills whole like a bare picture would.
+      // Matching the `ltx:p` itself kept every such paragraph resident and
+      // pinned its digested boxes in `node_boxes` (163,636 entries, ~4.4 GB
+      // of the 4.8 GB fuse on LSE); guard
+      // `inline_pictures_in_paragraphs_stay_memory_bounded`.
+      let holds_prose = is_element && subtree_holds_prose(&child);
+      let eligible = is_element
+        && !holds_prose
+        && !pending
+        && self
+          .findnodes("descendant-or-self::ltx:bibliography", Some(&child))
+          .is_empty();
+      if eligible {
+        if std::env::var_os("LXML_TRACE_NODE_BOXES").is_some() {
+          eprintln!(
+            "streaming: prose-free spill of {} under {}",
+            child.get_name(),
+            parent.get_name()
+          );
+        }
+        run.push(child);
+        continue;
+      }
+      if !run.is_empty() {
+        runs_spilled += self.spill_run(&mut run, depth, noindent, namespaces, index)?;
+      }
+      if holds_prose && !pending && get_node_qname(&child) != pin!("ltx:p") {
+        resident.push(child);
+      }
+    }
+    if !run.is_empty() {
+      runs_spilled += self.spill_run(&mut run, depth, noindent, namespaces, index)?;
+    }
+    for wrapper in resident {
+      runs_spilled +=
+        self.spill_prose_free_children(&wrapper, depth + 1, namespaces, aligning, index)?;
+    }
+    if runs_spilled > 0 {
+      self.release_wrapper_boxes(parent);
+    }
+    Ok(runs_spilled)
+  }
+
+  /// The pending aligning context, if any: `\centering`/`\raggedright`/
+  /// `\raggedleft` record the current element and its last child
+  /// (`setup_aligning_context`, latex_constructs/mod.rs) and stamp the class
+  /// on that element's LATER children when the group ends
+  /// (`apply_aligning_context`). Those children are not closed yet.
+  fn pending_aligning_context() -> Option<(Node, Option<Node>)> {
+    let node = state::with_value("ALIGNING_NODE", |v| match v {
+      Some(Stored::Node(n)) => Some(n.clone()),
+      _ => None,
+    })?;
+    let prev = state::with_value("ALIGNING_PREV_CHILD", |v| match v {
+      Some(Stored::Node(p)) => Some(p.clone()),
+      _ => None,
+    });
+    Some((node, prev))
+  }
+
+  /// For `parent` under a pending aligning context: `Some(prev)` when the
+  /// context's children after `prev` (all of them for `Some(None)`) are still
+  /// to be stamped and must stay resident. Spilling them frees the anchor, and
+  /// a later node allocated at the same address matched it instead
+  /// (tikz-network under tufte-book: `ltx_align_left` moved from the title
+  /// block and the first chapter to a later chapter and an appendix).
+  fn pending_alignment_from(
+    parent: &Node,
+    aligning: &Option<(Node, Option<Node>)>,
+  ) -> Option<Option<Node>> {
+    aligning
+      .as_ref()
+      .filter(|(node, _)| node == parent)
+      .map(|(_, prev)| prev.clone())
+  }
+
+  /// A resident wrapper's recorded box owns what was just spilled beneath it:
+  /// every element a constructor opens records the SAME whatsit
+  /// (`set_node_box` on `ltx:para`, `ltx:p`, `ltx:picture`, `svg:svg` alike),
+  /// so dropping the spilled nodes' entries frees nothing while the wrapper's
+  /// entry still holds the picture whatsit and, through it, the whole box tree
+  /// (the n8 witness kept every table alive this way: the sweep found the
+  /// wrappers live, and their box was the table). Drop the entries of the
+  /// wrapper and its ancestors below the root; the root's own box (the
+  /// `\begin{document}` whatsit) owns no body content. A wrapper's box is
+  /// consulted only while it is the insertion point's ancestor, which a closed
+  /// root-level child never is again.
+  fn release_wrapper_boxes(&mut self, wrapper: &Node) {
+    let mut cursor = Some(wrapper.clone());
+    while let Some(n) = cursor {
+      if n.get_type() != Some(NodeType::ElementNode) || get_node_qname(&n) == pin!("ltx:document") {
+        break;
+      }
+      self.node_boxes.remove(&n.to_hashable());
+      cursor = n.get_parent();
+    }
   }
 
   /// Spill one contiguous run of closed sibling elements as a single segment.
@@ -3807,7 +5400,6 @@ impl Document {
     depth: usize,
     noindent: bool,
     namespaces: &[(String, String)],
-    section_id: &Option<String>,
     index: &mut crate::sxml::FragmentIndex,
   ) -> Result<usize> {
     use crate::sxml::SegmentMeta;
@@ -3836,6 +5428,11 @@ impl Document {
     for node in run.iter() {
       mark_empty_text_elements(node);
     }
+    if let Some(observe) = self.spill_observer {
+      for node in run.iter() {
+        observe(self, node);
+      }
+    }
     // Stamp the DIGESTED BOX's math-font verdict on XMArg elements before
     // their boxes are purged: the FLOATSUPERSCRIPT rewrite (tex_math.rs)
     // decides `<text font="italic">` wrapping from the box font's family,
@@ -3856,6 +5453,19 @@ impl Document {
       }
     }
 
+    // What eager finalize reads above the run, for pass 2: the font it declares there, and the element it mints the
+    // run's id-less top nodes under (2507.13358).
+    let spill_parent = run.first().and_then(|n| n.get_parent());
+    let context_font = spill_parent.as_ref().map(|parent| {
+      let font = self.finalize_context_font(parent);
+      let key = font.to_hashable();
+      self.node_fonts.entry(key).or_insert(font);
+      key.to_string()
+    });
+    let anchor = spill_parent.as_ref().and_then(Self::spill_anchor);
+    if let Some(anchor) = &anchor {
+      self.spill_anchors.insert(anchor.clone());
+    }
     // Chunk the run so each segment stays under `segment_chunk_bytes()` of
     // serialized text; every chunk gets its own segment + placeholder, so
     // document order is preserved chunk-by-chunk.
@@ -3884,9 +5494,9 @@ impl Document {
         let meta = SegmentMeta {
           depth,
           noindent,
-          font: None,
+          font: context_font.clone(),
+          anchor: anchor.clone(),
           namespaces: namespaces.to_vec(),
-          section_id: section_id.clone(),
           parent: chunk
             .first()
             .and_then(|n| n.get_parent())
@@ -3920,10 +5530,12 @@ impl Document {
         for node in chunk.iter() {
           self.index_and_purge_spilled(node, seg, index);
         }
-        let spill_error = |details: String| Error {
-          target:   ErrorTarget::Document,
-          category: ErrorCategory::Libxml,
-          message:  s!("segment staging: {}", details),
+        let spill_error = |details: String| {
+          Error::from(ErrorData {
+            target:   ErrorTarget::Document,
+            category: ErrorCategory::Libxml,
+            message:  s!("segment staging: {}", details),
+          })
         };
         let mut placeholder = Node::new(SPILL_PLACEHOLDER, None, &self.document)
           .map_err(|()| spill_error(s!("cannot create the placeholder node")))?;
@@ -3958,6 +5570,77 @@ impl Document {
       }
     }
     Ok(runs_spilled)
+  }
+
+  /// The nearest `xml:id` on `node` or an ancestor below the root ([`SegmentMeta::anchor`](crate::sxml::SegmentMeta)).
+  fn spill_anchor(node: &Node) -> Option<String> {
+    let mut cur = Some(node.clone());
+    while let Some(n) = cur {
+      let parent = n
+        .get_parent()
+        .filter(|p| p.get_type() == Some(NodeType::ElementNode));
+      parent.as_ref()?;
+      if let Some(id) = Self::node_xml_id_any_form(&n) {
+        return Some(id);
+      }
+      cur = parent;
+    }
+    None
+  }
+
+  /// The font `finalize_rec` declares for `parent`'s children: from the text default, each ancestor's font
+  /// attributes its element can carry, root first ([`SegmentMeta::font`](crate::sxml::SegmentMeta)).
+  fn finalize_context_font(&self, parent: &Node) -> Font {
+    let mut chain = Vec::new();
+    let mut cur = Some(parent.clone());
+    while let Some(n) = cur.filter(|n| n.get_type() == Some(NodeType::ElementNode)) {
+      cur = n.get_parent();
+      chain.push(n);
+    }
+    let mut declared = Font::text_default();
+    for node in chain.iter().rev() {
+      if node.has_attribute("_standalone_font") {
+        declared = Font::text_default();
+      }
+      if self.has_node_font(node) {
+        let qname = get_node_qname(node);
+        for (key, (_, properties)) in self.get_node_font(node).relative_to(&declared) {
+          if model::can_have_attribute(qname, arena::pin(&key)) {
+            declared = declared.merge_ref(&properties);
+          }
+        }
+      }
+      if let Some(anchor) = node.get_attribute("_font_anchor") {
+        declared = declared.merge_ref(&Font {
+          size: Some(anchor.parse::<f64>().unwrap_or(10.0)),
+          ..Font::default()
+        });
+      }
+    }
+    declared
+  }
+
+  /// Streaming, after pass 1: every spill anchor's `_ID_counter_*` attributes as construction left them — recorded
+  /// when it spilled, else read from the spine. Pass 2 continues them; [`Self::set_id_counters`] hands them back.
+  pub fn take_spill_anchor_counters(
+    &mut self,
+  ) -> rustc_hash::FxHashMap<String, Vec<(String, String)>> {
+    let mut counters = std::mem::take(&mut self.spilled_anchor_counters);
+    for id in std::mem::take(&mut self.spill_anchors) {
+      if let Some(node) = self.lookup_id(&id) {
+        counters.insert(id, id_counters(node));
+      }
+    }
+    counters
+  }
+
+  /// Set the `_ID_counter_*` attributes of the element `id` names, if it is in this document.
+  pub fn set_id_counters(&mut self, id: &str, counters: &[(String, String)]) {
+    if let Some(node) = self.idstore.get_mut(id) {
+      for (key, value) in counters {
+        let _ = node.set_attribute(key, value);
+      }
+    }
   }
 
   /// A node's `xml:id`, namespace-aware with a defensive plain-name fallback.
@@ -3995,6 +5678,22 @@ impl Document {
     if node.get_type() != Some(NodeType::ElementNode) {
       return;
     }
+    // Namespace prefixes this subtree uses leave the resident DOM with it;
+    // the root declaration pass consults `spilled_ns_prefixes` for them.
+    if let Some(ns) = node.get_namespace() {
+      let prefix = ns.get_prefix();
+      if !prefix.is_empty() {
+        self.spilled_ns_prefixes.insert(prefix);
+      }
+    }
+    for (key, _) in node.get_attributes() {
+      if let Some(colon) = key.find(':') {
+        let prefix = &key[..colon];
+        if !self.spilled_ns_prefixes.contains(prefix) {
+          self.spilled_ns_prefixes.insert(prefix.to_string());
+        }
+      }
+    }
     for attr in [
       "about", "resource", "property", "typeof", "rel", "rev", "datatype",
     ] {
@@ -4011,6 +5710,11 @@ impl Document {
       index.record_id(id, seg);
       self.unrecord_id(id);
       self.spilled_ids.insert(id.clone());
+      if self.spill_anchors.remove(id) {
+        self
+          .spilled_anchor_counters
+          .insert(id.clone(), id_counters(node));
+      }
       if let Some(labels) = node.get_attribute("labels") {
         for label in labels.split_whitespace() {
           index.record_label(label, id);
@@ -4072,6 +5776,9 @@ impl Document {
   /// * no live handle into the subtree is used afterwards.
   pub fn discard_subtree(&mut self, node: Node) {
     self.purge_node_boxes_rec(&node);
+    // The last ligated text node may be in the freed subtree, and libxml may hand its address to the next node
+    // created: forget it (the next close then ligates from the start, as Perl's).
+    self.ligated_text = None;
     node.free_subtree();
   }
 
@@ -4084,9 +5791,10 @@ impl Document {
   /// Measured: ~518k stale entries before the FIRST spill, growing past
   /// 1.75M — the dominant residual pass-1 creep after the C-side frees.
   /// A mark-and-retain against the live tree is immune to every such path,
-  /// including future ones. Runs when the map is large; the post-spill
-  /// spine is small, so the mark phase is cheap.
+  /// including future ones. The mark phase walks the whole live DOM, so the
+  /// streaming driver gates it on `node_boxes` growth (core_interface.rs).
   pub fn sweep_stale_node_boxes(&mut self) {
+    let t_start = std::time::Instant::now();
     fn mark(node: &Node, live: &mut rustc_hash::FxHashSet<usize>) {
       live.insert(node.to_hashable());
       if node.get_type() == Some(NodeType::ElementNode) {
@@ -4099,7 +5807,21 @@ impl Document {
     if let Some(root) = self.document.get_root_element() {
       mark(&root, &mut live);
     }
+    let t_mark = t_start.elapsed();
+    let before = self.node_boxes.len();
+    let t_retain_start = std::time::Instant::now();
     self.node_boxes.retain(|k, _| live.contains(k));
+    let t_retain = t_retain_start.elapsed();
+    let after = self.node_boxes.len();
+    self.last_swept_node_boxes_len = after;
+    let total = t_start.elapsed();
+    if std::env::var_os("LXML_TRACE_NODE_BOXES").is_some() {
+      eprintln!(
+        "streaming: node_boxes sweep {before} -> {after} (live: {}, dropped: {}) | mark: {t_mark:?}, retain: {t_retain:?}, total: {total:?}",
+        live.len(),
+        before - after
+      );
+    }
   }
 
   /// Attach the processed-segment store for serialization: from here on,
@@ -4497,7 +6219,6 @@ impl Document {
       .into_iter()
       .rev()
     {
-      self.document.node_to_string(&dual);
       let mut dual_children = xml::element_nodes(&dual);
       // Defensive: an XMDual should always have presentation +
       // content children, but a malformed math parse (post-ambiguity
@@ -4736,17 +6457,16 @@ impl Document {
 
   pub fn get_node_font(&self, node: &Node) -> &Font {
     if let Some(element) = xml::closest_element(node) {
-      // Use the closest element (for text nodes, this is the parent element)
-      if let Some(fontid) = element.get_attribute("_font") {
-        // Tolerate non-numeric `_font` attributes — they can occur when
-        // a corrupted property propagates across reversion (driver:
-        // 2304.07380 panicked at parse::<u64>().unwrap()). Fall through
-        // to the default font instead of aborting the run.
-        if let Ok(id) = fontid.parse::<u64>()
-          && let Some(fnt) = self.node_fonts.get(&id)
-        {
-          return fnt;
-        }
+      // Use the closest element (for text nodes, this is the parent element); the id is read in place, not copied
+      // (`_font` is read on every text chunk: docs/performance/PERFORMANCE.md P11).
+      // Tolerate non-numeric `_font` attributes — they can occur when
+      // a corrupted property propagates across reversion (driver:
+      // 2304.07380 panicked at parse::<u64>().unwrap()). Fall through
+      // to the default font instead of aborting the run.
+      if let Some(Ok(id)) = element.with_attribute(c"_font", str::parse::<u64>)
+        && let Some(fnt) = self.node_fonts.get(&id)
+      {
+        return fnt;
       }
     }
     &FONT_TEXT_DEFAULT
@@ -4785,11 +6505,8 @@ impl Document {
       // not the original node — use `node_ref`, not `node`. Be robust against a
       // missing/foreign _font property (Perl PR #2767): never panic on a
       // non-numeric font id.
-      if let Some(fontid) = node_ref.get_attribute("_font")
-        && let Some(font) = fontid
-          .parse::<u64>()
-          .ok()
-          .and_then(|id| self.node_fonts.get(&id))
+      if let Some(Ok(id)) = node_ref.with_attribute(c"_font", str::parse::<u64>)
+        && let Some(font) = self.node_fonts.get(&id)
         && let Some(lang) = font.get_language()
       {
         return lang.to_string();
@@ -4818,12 +6535,41 @@ impl Document {
   /// dangling reference is left behind; and if the insertion point was inside
   /// what is being removed, it is rescued up to the parent — otherwise the
   /// document would go on building into a detached subtree.
-  pub fn remove_node(&mut self, mut node: Node) {
+  ///
+  /// The node's box leaves the boxes of its parent and of the parent's
+  /// auto-opened ancestors (Perl `removeNode` → `removeNodeBox`,
+  /// Document.pm:1788-1789): what the node contributed to them is gone.
+  pub fn remove_node(&mut self, node: Node) {
+    self.remove_node_with_box_action(node, NodeBoxAction::Unlink)
+  }
+
+  /// [`remove_node`](Self::remove_node) for a node whose content lives on in
+  /// another node, so its box stays in the boxes it is part of: a copy
+  /// (`append_tree`; Perl's `appendChild` moves the node itself — `\sideset`'s
+  /// nucleus, amsmath), a renamed node, a token a math ligature merged, a node
+  /// its replacements stand for (Perl's `replaceChild` has moved it into a
+  /// document fragment, where `removeNodeBox` finds no element to update).
+  /// Unlinking these boxes took pieces out of the reversions that `tex=` is
+  /// read from (KNOWN_PERL_ERRORS #272).
+  pub fn remove_node_keeping_box(&mut self, node: Node) {
+    self.remove_node_with_box_action(node, NodeBoxAction::Keep)
+  }
+
+  /// The shared body of [`remove_node`](Self::remove_node) and
+  /// [`remove_node_keeping_box`](Self::remove_node_keeping_box): `box_action`
+  /// says whether the node's box is unlinked from its enclosing boxes.
+  fn remove_node_with_box_action(&mut self, node: Node, box_action: NodeBoxAction) {
     let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
       if let Some(id) = node.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
+      }
+      if box_action == NodeBoxAction::Unlink
+        && let Some(nodebox) = self.get_node_box(&node)
+        && let Some(parent) = node.get_parent()
+      {
+        self.remove_node_box(&parent, &nodebox);
       }
       for child in node.get_child_nodes() {
         chopped = chopped || self.remove_node_aux(child);
@@ -4834,7 +6580,17 @@ impl Document {
         // Don't remove insertion point!
         self.set_node(&parent);
       }
-      node.unlink();
+      // Perl's `removeChild` hands the node to XML::LibXML's proxy GC, which
+      // frees it with the last reference. Here an unlinked node whose
+      // `node->doc` is still set is freed by NOBODY (the fork's `Drop` frees
+      // only doc-less nodes, and `xmlFreeDoc` never reaches an orphan), so a
+      // bare `unlink` leaked every removed subtree for the process lifetime:
+      // ~5-6 MB per tikz picture of pgfsys transient `svg:g` groups dropped
+      // by `collapse_svg_group`, eager and streaming alike (pgf-PeriodicTable
+      // n8: the glibc heap climbed 11 → 47 MB across eight spilled tables and
+      // the manual reached 742 MB of orphans by fragment 256). The ids are
+      // unrecorded above, so `discard_subtree`'s contract holds.
+      self.discard_subtree(node);
     }
   }
 
@@ -4881,7 +6637,21 @@ impl Document {
     point: &mut Node,
     qname: &str,
     attributes: Option<HashMap<String, String>>,
+    font_opt: Option<Font>,
+  ) -> Result<Node> {
+    self.open_element_at_with_box(point, qname, attributes, font_opt, None)
+  }
+
+  /// [`open_element_at`](Self::open_element_at) with Perl's `_box` attribute:
+  /// `requested_box` is the box the new node records, ahead of the insertion
+  /// point's box and the box being absorbed (Document.pm:1861).
+  fn open_element_at_with_box(
+    &mut self,
+    point: &mut Node,
+    qname: &str,
+    attributes: Option<HashMap<String, String>>,
     mut font_opt: Option<Font>,
+    requested_box: Option<Digested>,
   ) -> Result<Node> {
     // Font resolution priority (matching Perl's openElement/openElementAt):
     // 1. Explicit font_opt parameter
@@ -4975,16 +6745,28 @@ impl Document {
       self.set_node_font(&mut newnode, &font)?;
     }
 
-    // TODO [new]: Ever more certain there is a refactor waiting to happen with box_to_absorb
-    //             holding a Rc<Digested> for easy cloning and management.
-    //             Though the question remains how to maintain that, without cloning the box to
-    // **make** the Rc<> Old note:
-    // The .clone on boxes is potentially *VERY SLOW* and a code smell.
-    // It can be eventually avoided by using a "memory arena" for all intermediate
-    // objects - tokens, boxes, etc. and a well-designed referncing scheme into
-    // the driver structs, such as Gullet, Stomach and Document
-    if let Some(ref digested) = self.box_to_absorb {
-      self.set_node_box(&newnode, digested.clone());
+    // Perl Document.pm:1861-1862: the new node's box is the requested `_box`
+    // (`openElement` passes `$LaTeXML::BOX`), else the insertion point's box,
+    // else `$LaTeXML::BOX`; and `appendNodeBox` records it on the new node AND
+    // extends the box of every auto-opened ancestor with it, so an auto-opened
+    // `ltx:picture` or `svg:foreignObject` measures everything opened inside it,
+    // not just the box that opened it (batch 56iy's residual). Guard:
+    // `node_box_append::*`. (A `Digested` clone is an `Rc` clone.)
+    let node_box = requested_box
+      .or_else(|| self.get_node_box(point))
+      .or_else(|| self.box_to_absorb.clone());
+    // A fresh node holds only this box (its pointer key may be a freed node's
+    // stale entry, which must not combine with it); the walk then goes on
+    // from the parent, as Perl's `appendNodeBox` finds the new node holding it.
+    if let Some(node_box) = node_box {
+      self
+        .node_boxes
+        .insert(newnode.to_hashable(), node_box.clone());
+      if let Some(parent) = newnode.get_parent()
+        && is_autoopened_element(&parent)
+      {
+        self.append_node_box(&parent, &node_box);
+      }
     }
 
     // Debug!(
@@ -5173,7 +6955,11 @@ impl Document {
     for action in self.get_tag_action_list(node_qname, TagOptionName::AfterClose) {
       action(self, node, box_opt.as_ref())?;
     }
-    self.set_node(&savenode);
+    // (unless a hook removed the node it stood on — algorithm2e's listing drops an empty line the close walk began
+    // in — where `remove_node` already moved the point)
+    if !savenode.is_null() {
+      self.set_node(&savenode);
+    }
     Ok(())
   }
 
@@ -5252,8 +7038,30 @@ impl Document {
             child.get_namespace().map(|ns| ns.get_href()),
             &child.get_name(),
           )?;
-          for (key, val) in child.get_attributes() {
+          // Key order: `get_attributes` is a HashMap, libxml appends on set —
+          // sort so a cloned subtree serializes deterministically
+          // (`open_element_at` emits sorted; Perl's native clone keeps it).
+          let mut attrs: Vec<(String, String)> = child.get_attributes().into_iter().collect();
+          attrs.sort();
+          // `get_attributes` names both an `xml:id` and an SVG element's plain `id` (the svg
+          // schema's ID attribute) "id". Perl remaps only `xml:id` and copies every other
+          // attribute as it is (Document.pm:1943-1954), so an SVG element's own `id` is copied
+          // verbatim: remapped into an `xml:id`, the copy was schema-invalid (tikz-shields-doc,
+          // a TikZ badge in a frontmatter contact). Only on SVG elements: elsewhere a bare `id`
+          // stays the `xml:id` whose namespace a cloneNode stripped (1410.8508, below).
+          let svg_id = if with_node_qname(&child, |qname| qname.starts_with("svg:")) {
+            child.get_attribute_no_ns("id")
+          } else {
+            None
+          };
+          for (key, val) in attrs {
             match key.as_str() {
+              // The walked mark of `record_svg_ids` stays on the original: the clone is a second
+              // copy, so its own `svg:svg` close renames the ids it repeats, with their references.
+              "_svgid" => {},
+              "xml:id" | "id" if svg_id.is_some() => {
+                new.set_attribute("id", svg_id.as_deref().unwrap_or_default())?;
+              },
               "xml:id" | "id" => {
                 // Use the replacement id. The pre-walk
                 // (findvalues/collect_xml_ids_from) normally populates
@@ -5364,6 +7172,18 @@ impl Document {
   /// change how the enclosed material renders. [`unwrap_nodes`](Self::unwrap_nodes)
   /// is the inverse.
   pub fn wrap_nodes(&mut self, qname: &str, nodes: Vec<Node>) -> Result<Option<Node>> {
+    self.wrap_nodes_as(qname, nodes, &[])
+  }
+
+  /// [`wrap_nodes`](Self::wrap_nodes), the wrapper carrying `attributes` from its opening, so its
+  /// `after_open`/`after_close` hooks see them: an `xml:id` given here is the one `generate_id`
+  /// keeps.
+  pub fn wrap_nodes_as(
+    &mut self,
+    qname: &str,
+    nodes: Vec<Node>,
+    attributes: &[(String, String)],
+  ) -> Result<Option<Node>> {
     if nodes.is_empty() {
       return Ok(None);
     }
@@ -5375,6 +7195,9 @@ impl Document {
     };
     let (ns, tag) = model::decode_qname(qname)?;
     let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
+    for (name, value) in attributes {
+      self.set_attribute(&mut new, name, value)?;
+    }
     self.after_open(&mut new)?;
     parent.replace_child_node(new.clone(), first_node.clone())?;
 
@@ -5400,8 +7223,18 @@ impl Document {
   /// Replace `node` by `nodes` (presumably descendants of some kind?)
   // DG: Don't return the replaced `node`, as it is groudns for memory management trouble
   //     with the low-level libxml layer. I've encountered segfaults here.
+  ///
+  /// No box changes hands (Perl Document.pm:2011-2025): Perl's first
+  /// `replaceChild` moves `node` into a document fragment, so its `removeNode`
+  /// finds no parent element whose box to update, and its closing
+  /// `appendNodeBox` map runs over the `@nodes` its `while (shift)` loop has
+  /// emptied. Only a `node` replaced by nothing leaves its parent's box, as
+  /// `removeNode` does. The `\@framebox` unwrap inside an auto-opened picture
+  /// keeps the frame's size (`x \put(0,0){A} \fbox{…} y`). Guard:
+  /// `node_box_append::replacing_a_node_keeps_the_boxes`.
   pub fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<()> {
-    if let Some(_parent) = node.get_parent() {
+    if node.get_parent().is_some() {
+      let replaced = !with.is_empty();
       // libxml2's xmlAddNextSibling merges consecutive text nodes: when both
       // the reference sibling and the new node are TextNode, it appends the
       // new node's content to the reference node and frees the new node. The
@@ -5421,7 +7254,9 @@ impl Document {
             let existing = c0.get_content();
             let added = with_node.get_content();
             c0.set_content(&format!("{existing}{added}"))?;
-            // with_node is still a standalone (unlinked) text node; drop it.
+            // with_node is a standalone (unlinked) text node whose content
+            // now lives in c0: free it (see `remove_node`).
+            self.discard_subtree(with_node);
             c0_opt = Some(c0);
             continue;
           }
@@ -5432,7 +7267,66 @@ impl Document {
         }
         c0_opt = Some(with_node);
       }
+      if replaced {
+        self.remove_node_keeping_box(node);
+      } else {
+        self.remove_node(node);
+      }
+    }
+    Ok(())
+  }
+
+  /// Replace `node` by `with` as Perl's `replaceTree` (Document.pm:2079-2091)
+  /// does with their boxes: `node`'s box leaves its parent's (`removeNode`
+  /// while `node` is still in place), then each element of `with` is recorded
+  /// as `appendTree` → `openElementAt` records a node it re-creates — its own
+  /// box, else the parent's, else the box being absorbed — which extends an
+  /// auto-opened parent's box (`appendNodeBox`). `cleanup_math` unwraps a
+  /// Math that holds only text this way (TeX_Math.pool.ltxml:219): the
+  /// auto-opened `svg:foreignObject` around an `\hbox` in an xymatrix cell
+  /// measures the `\hbox` in place of the Math (tests/graphics/xytest).
+  pub fn replace_node_as_tree(&mut self, node: Node, with: Vec<Node>) -> Result<()> {
+    let Some(parent) = node.get_parent() else {
+      return Ok(());
+    };
+    if with.is_empty() {
       self.remove_node(node);
+      return Ok(());
+    }
+    if let Some(nodebox) = self.get_node_box(&node) {
+      self.remove_node_box(&parent, &nodebox);
+    }
+    let elements: Vec<Node> = with
+      .iter()
+      .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+      .cloned()
+      .collect();
+    let has_text = elements.len() < with.len();
+    self.replace_node(node, with)?;
+    for element in elements {
+      let element_box = self
+        .get_node_box(&element)
+        .or_else(|| self.get_node_box(&parent))
+        .or_else(|| self.box_to_absorb.clone());
+      if let Some(element_box) = element_box {
+        self.append_node_box(&element, &element_box);
+      }
+    }
+    // Text pieces (an `XMHint`'s spaces) Perl's `appendTree` adds raw, with no
+    // box. An auto-opened `svg:foreignObject` left with no box at all (the
+    // `$\phantom{H}$` of a quantikz cell) Perl then turns into `svg:text`
+    // (TeX_Box.pool.ltxml:386-389), which needs no size; the Rust
+    // foreignObject stays and must be sized, so it records the box being
+    // absorbed, as text arriving at an auto-opened node does
+    // (`openText_internal`, Document.pm:1149-1150). OXIDIZED_DESIGN_DIVERGENCES
+    // #319; guard `cluster_schema::empty_node_foreign_object_is_sized`.
+    if has_text
+      && is_autoopened_element(&parent)
+      && get_node_qname(&parent) == pin!("svg:foreignObject")
+      && self.get_node_box(&parent).is_none()
+      && let Some(absorbed) = self.box_to_absorb.clone()
+    {
+      self.append_node_box(&parent, &absorbed);
     }
     Ok(())
   }
@@ -5472,9 +7366,13 @@ impl Document {
     let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
     // Move to the position AFTER node
     node.add_next_sibling(&mut new)?;
-    // Copy ALL attributes from `node` to `newnode`
+    // Copy ALL attributes from `node` to `newnode`, in key order (HashMap
+    // iteration would serialize the renamed element's attributes in a
+    // per-process random order; the original was emitted sorted).
     let mut id = None;
-    for (key, value) in node.get_attributes() {
+    let mut attrs: Vec<(String, String)> = node.get_attributes().into_iter().collect();
+    attrs.sort();
+    for (key, value) in attrs {
       // `get_attributes()` returns the `xml:id` attribute under its LOCAL name
       // `"id"` (it lives in the XML namespace), NOT the prefixed `"xml:id"`.
       // Capture it here so it can be re-registered on `new` AFTER `remove_node`
@@ -5485,7 +7383,7 @@ impl Document {
       // registration). Missing this stranded the equation refnum id across
       // `rearrange_lone_ams_aligned`'s equation→equationgroup rename, leaving
       // the group with a generic paragraph id and dangling intra-math XMRefs
-      // (witness 2311.01600; see docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md).
+      // (witness 2311.01600; see docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md).
       if key == "xml:id" || key == "id" {
         id = Some(value);
         continue;
@@ -5535,8 +7433,13 @@ impl Document {
     //   but how can we know if we're duplicated auto-added stuff?
     self.after_open(&mut new)?;
     self.after_close(&mut new)?;
-    // Finally, remove the old node
-    self.remove_node(node);
+    // Finally, remove the old node — its box stays where it is: `new` holds it
+    // and lives on in its place. Perl's `removeNode` here (Document.pm:2064)
+    // takes the box out of the parent's, so an XMText renamed to XMWrap by
+    // `cleanup_XMText` drops a `\mbox`/`\raisebox`/`\hbox`/`\resizebox` from an
+    // aligned cell's `tex` (KNOWN_PERL_ERRORS #272; witnesses 2605.07372,
+    // 2605.17816, 2605.23113; guard `node_box_append::aligned_cells_keep_their_boxed_pieces`).
+    self.remove_node_keeping_box(node);
 
     // and FINALLY, we can register the new node under the id.
     // `Document::set_attribute("xml:id", …)` routes through
@@ -5598,7 +7501,17 @@ impl Document {
   }
 
   fn trim_node_left_whitespace(&self, node: &Node) -> Result<()> {
-    if let Some(mut first_child) = node.get_first_child() {
+    // An empty construction-time marker (`*_Capture_`: the frontmatter position mark, the cover-title marks) is no
+    // content: the trim reaches past it, as it would were the marker not there.
+    let mut candidate = node.get_first_child();
+    while let Some(ref child) = candidate {
+      if is_empty_capture_mark(child) {
+        candidate = child.get_next_sibling();
+      } else {
+        break;
+      }
+    }
+    if let Some(mut first_child) = candidate {
       match first_child.get_type() {
         Some(NodeType::TextNode) => {
           let content = first_child.get_content();
@@ -5617,15 +7530,17 @@ impl Document {
     Ok(())
   }
 
-  fn trim_node_right_whitespace(&self, node: &Node) -> Result<()> {
+  fn trim_node_right_whitespace(&mut self, node: &Node) -> Result<()> {
     // Skip trailing empty <text> font wrapper elements to find the real last content.
     // These are artifacts of font change tracking during alignment absorption.
     let mut candidate = node.get_last_child();
     while let Some(ref child) = candidate {
-      if child.get_type() == Some(NodeType::ElementNode)
+      if (child.get_type() == Some(NodeType::ElementNode)
         && child.get_name() == "text"
         && child.get_first_child().is_none()
-        && child.has_attribute("_noautoclose")
+        && child.has_attribute("_noautoclose"))
+        // …and an empty construction-time marker (`trim_node_left_whitespace`)
+        || is_empty_capture_mark(child)
       {
         candidate = child.get_prev_sibling();
       } else {
@@ -5636,16 +7551,21 @@ impl Document {
       match last_child.get_type() {
         Some(NodeType::TextNode) => {
           let content = last_child.get_content();
-          // Perl: s/\s+$// — but we can't trim all Unicode whitespace because some
-          // tests have significant thin spaces (U+2009) from DimensionToSpaces.
-          // Trim: ASCII whitespace, nbsp (U+00A0), em-space (U+2003), en-space (U+2002).
-          let trimmed_content = content.trim_end_matches(|c: char| {
-            c.is_ascii_whitespace() || c == '\u{00A0}' || c == '\u{2003}' || c == '\u{2002}'
-          });
+          // Perl: s/\s+$// (TeX_Paragraph.pool.ltxml:190), all Unicode
+          // whitespace: a U+2009 after text (babel french), the U+2002 U+200A
+          // a classed column rule leaves at a cell's end (arydshln `:`/`;`,
+          // repro kernel-alignment/cell_trim_unicode_space.tex). Like Perl's,
+          // the trim reaches only the last text node, and the two engines
+          // split text into nodes differently (SYNC_STATUS "A paragraph's
+          // trailing whitespace").
+          let trimmed_content = content.trim_end_matches(char::is_whitespace);
           if !content.is_empty() && (trimmed_content != content) {
             if trimmed_content.is_empty() {
-              // Remove the entirely-whitespace text node
-              last_child.unlink();
+              // Remove AND free the entirely-whitespace text node (see
+              // `remove_node`: a bare unlink leaks it), purging its
+              // `node_boxes` entry so a later node at the same address cannot
+              // inherit the phantom box.
+              self.discard_subtree(last_child);
             } else {
               last_child.set_content(trimmed_content)?;
             }
@@ -5720,6 +7640,31 @@ impl Document {
   //   document.set_node(savenode)
   // to reset the insertion point to where it had been.
 
+  /// Whether `node` is the insertion point's element or one of its ancestors.
+  fn is_open_node(&self, node: &Node) -> bool {
+    let mut current = Some(self.node.clone());
+    while let Some(n) = current {
+      if &n == node {
+        return true;
+      }
+      current = n.get_parent();
+    }
+    false
+  }
+
+  /// [`Self::float_to_element`] (closing form) for an element a frontmatter container (`ltx:abstract`…) refuses,
+  /// when the insertion point is inside one: the element goes to the nearest open ancestor that admits it, as Perl's
+  /// `floatToElement` places one (Document.pm:1052-1077), and the insertion point comes back (the saved node is
+  /// returned for the caller to restore), so what follows stays in the container. Elsewhere `None`: the element is
+  /// inserted where it stands, by [`Self::find_insertion_point`]'s rules. A `\tableofcontents` inside an abstract
+  /// (1011.3976, 1602.08755, 2007.03709; OXIDIZED_DESIGN_DIVERGENCES #753).
+  pub fn float_out_of_frontmatter(&mut self, qname: &str) -> Result<Option<Node>> {
+    if outside_frontmatter_container(&self.node) {
+      return Ok(None);
+    }
+    self.float_to_element(qname, true)
+  }
+
   /// Find a node in the document that can contain an element `qname`
   pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool) -> Result<Option<Node>> {
     let mut candidates: VecDeque<Node> = VecDeque::from(self.get_insertion_candidates(&self.node));
@@ -5733,9 +7678,24 @@ impl Document {
       }
       return Ok(candidates.pop_front());
     }
-    while !candidates.is_empty() && !can_contain(&candidates[0], qname) {
+    // The closing form (`^^`) reaches a container by closing up to it, which only an OPEN node — the insertion
+    // point's element or one of its ancestors — can be (Perl `closeToNode`, Document.pm:869, walks ancestors). The
+    // candidates also hold a text node's previous siblings (Perl `getInsertionCandidates`, Document.pm:1020-1032,
+    // there for the non-closing form to enter), so while the walk can still close they are passed over: neither chosen
+    // nor counted towards `closeable`. Closing to one reported "Attempt to close … which isn't open" over an unchanged
+    // tree (a minipage that already holds a float, then `\caption` after its `\end{minipage}` line: 2609.15558, 33998);
+    // and a sibling that cannot auto-close (a Math, a rule) between two such minipages must not stop the closing walk
+    // and send the float into the earlier box (OXIDIZED_DESIGN_DIVERGENCES #455).
+    while let Some(candidate) = candidates.front() {
+      if closeifpossible && closeable && !self.is_open_node(candidate) {
+        candidates.pop_front();
+        continue;
+      }
+      if can_contain(candidate, qname) {
+        break;
+      }
       if closeable {
-        closeable = can_auto_close(&candidates[0]);
+        closeable = can_auto_close(candidate);
       }
       candidates.pop_front();
     }
@@ -5768,10 +7728,77 @@ impl Document {
   // find a node that can accept a label.
   // A bit more than just whether the element can have the attribute, but
   // whether it has an id (and ideally either a refnum or title)
-  pub fn float_to_label(&mut self) -> Option<Node> {
+  pub fn float_to_label(&mut self) -> Option<Node> { self.float_to_label_for(None) }
+
+  /// [`float_to_label`](Self::float_to_label) for a label that names a counter step no element took (`raw_step`, the
+  /// step's serial: a raw `\refstepcounter`, `binding::counter::current_raw_refstep`), which a picture may carry: a box
+  /// drawn as a picture frame is the object such a step numbers (tcolorbox's `\refstepcounter` in its phantom code,
+  /// tcolorbox.sty:2311 and :1154-1161, placed in the frame at :1925; a `\put` in a `picture`), as LaTeX's `\label`
+  /// after the step names the step's anchor (latex.ltx:14963-14967 `\@currentlabel`). An object another raw step
+  /// numbered ([`take_raw_refstep_number`](Self::take_raw_refstep_number)) is not this step's: the label climbs past it,
+  /// as Perl's does (a second `\put` step in one `picture`; pdflatex prints each step's number, an object this port
+  /// cannot give, OXIDIZED_DESIGN_DIVERGENCES #813). Any other label climbs past a picture, and past an object a raw
+  /// step numbered (whose number its `\@currentlabel` is not: a `{gather*}` row's `\label` after the `\labelrel` idiom's
+  /// immediate one, 2310.19138), to the object its step numbered, as Perl's does (Document.pm:1098-1127; the picture
+  /// carries no `labels` there). Witnesses: 2506.01072
+  /// (`\newtcbtheorem`), 2505.20088 (`[auto counter]`), 2402.06608 (`[blend into=figures]`), 2609.20563
+  /// (`\newtcblisting`). An object inside `ltx:Math` (the box of a `\text{\begin{tcolorbox}…}` in a display) is not
+  /// the step's either: its id does not survive the math's rendering, so the label climbs out of the math to where
+  /// Perl's lands: a display, which takes the step's number when it has none
+  /// ([`take_raw_refstep_number`](Self::take_raw_refstep_number): a `{gather*}` row, `\[…\]`) and keeps its own
+  /// otherwise (a numbered `{equation}`), or past an inline formula the enclosing unit, whose number `\ref` prints
+  /// (OXIDIZED_DESIGN_DIVERGENCES #813). Repro `cross-references/math_box_label_climbs_to_the_display.tex`.
+  pub fn float_to_label_for(&mut self, raw_step: Option<i64>) -> Option<Node> {
+    self.float_to_label_scoped(raw_step, false)
+  }
+
+  /// [`float_to_label_for`](Self::float_to_label_for) for a label that follows a counter step a group has since
+  /// undone (`after_undone_step`, `binding::counter::label_follows_an_undone_step`): it names the step still in scope,
+  /// not the object just closed beside it (Perl's last-child start, Document.pm:1103-1104), so the climb starts at the
+  /// current node. Where no ancestor takes it, Perl's fallback (:1113-1119, the last child, else the root) stays: a
+  /// label at the document's own level (lastpage's `\AtEndDocument{\label{lastpage}}`) keeps its old place, where the
+  /// root taking it gave the root an id and renumbered every generated one. Witness math0107195: a `\label` after an
+  /// inner `equation`, still inside a theorem, names the theorem ("Theorem 5.3"; Perl and int52a the equation's 16,
+  /// KNOWN_PERL_ERRORS #1092; OXIDIZED_DESIGN_DIVERGENCES #856). Repro
+  /// `cross-references/label_after_an_inner_equation_names_the_theorem.tex`.
+  pub fn float_to_label_scoped(
+    &mut self,
+    raw_step: Option<i64>,
+    after_undone_step: bool,
+  ) -> Option<Node> {
     let key = "labels";
+    // The object that printed the step's number itself (an algorithm2e line, `note_raw_refstep_object`) takes the
+    // label wherever it stands, as `\@currentlabel` is that number until the next step: in the line, or after it, at
+    // the start of the next line or of a block (`stmt\; \label{x}`, `\While{c}{\label{x} …}`: pdflatex the line's
+    // number). Its id is made only later (the `\lx@label` hook, sect11.rs). Witnesses 2406.05437 (`step1`, `step2`:
+    // PDF 14, 17), 1602.05866 (`algline:mainloop`, PDF 8); OXIDIZED_DESIGN_DIVERGENCES #877.
+    if let Some(object) = raw_step
+      .and_then(|serial| self.raw_refstep_objects.get(&serial))
+      .filter(|object| object.get_parent().is_some())
+      .cloned()
+    {
+      let savenode = self.node.clone();
+      self.set_node(&object);
+      return Some(savenode);
+    }
+    let may_label = |node: &Node| {
+      can_node_have_attribute(node, key)
+        && node.has_attribute_ns("id", XML_NS)
+        && match raw_step {
+          Some(serial) => {
+            node
+              .get_attribute(RAW_REFSTEP_MARK)
+              .is_none_or(|numbered| numbered == serial.to_string())
+              && !within_math(node)
+          },
+          None => {
+            get_node_qname(node) != pin!("ltx:picture")
+              && node.get_attribute(RAW_REFSTEP_MARK).is_none()
+          },
+        }
+    };
     // Perl: start from lastChild of current node if it's an element
-    let start = if self.node.get_type() == Some(NodeType::ElementNode) {
+    let start = if self.node.get_type() == Some(NodeType::ElementNode) && !after_undone_step {
       self
         .node
         .get_last_child()
@@ -5788,7 +7815,7 @@ impl Document {
     // Should we only accept a node that already has an id, or should we create an id?
     let mut node_opt: Option<Cow<Node>> = None;
     while let Some(candidate) = candidates.pop_front() {
-      if can_node_have_attribute(candidate, key) && candidate.has_attribute_ns("id", XML_NS) {
+      if may_label(candidate) {
         node_opt = Some(Cow::Borrowed(candidate));
         break;
       }
@@ -5801,7 +7828,7 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if can_node_have_attribute(&sibling, key) && sibling.has_attribute_ns("id", XML_NS) {
+        if may_label(&sibling) {
           node_opt = Some(Cow::Owned(sibling));
         } else if !ancestors.is_empty() {
           // just take root element?
@@ -5824,8 +7851,208 @@ impl Document {
     }
   }
 
+  /// The object a label after a raw counter step names (the node [`float_to_label_for`](Self::float_to_label_for)
+  /// found, current) takes the step's number: the `tags` LaTeXML makes for every step
+  /// (`binding::counter::dialect::label_stepped_counter`), whose `refnum` is what `\ref` prints, as LaTeX's `\ref`
+  /// prints the step's `\@currentlabel` (latex.ltx:14963-14967). Only an object with no number of its own (no
+  /// `ltx:tags`: a box drawn as a picture, a listing's line) that may hold one and is not a unit numbered by its heading
+  /// (an `ltx:title` holder: an unnumbered `\section*` or theorem stays unnumbered). The tag without a role, the number
+  /// as the object prints it, is not kept: the box printed its number itself (tcolorbox's title "Theorem 1: …"). The
+  /// object is marked with the step's `serial` (`_raw_refstep`, a bookkeeping attribute), so another step's label does
+  /// not take it. Perl leaves the label on the enclosing section, whose number `\ref` prints (KNOWN_PERL_ERRORS
+  /// #1038). Witnesses: 2506.01072 (`\newtcbtheorem`), 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608,
+  /// 2609.20563 (`\newtcblisting`); guards `perfect_kernel_batch78g`.
+  pub fn take_raw_refstep_number(&mut self, tags: &Digested, serial: i64) -> Result<()> {
+    let mut target = self.node.clone();
+    let qname = get_node_qname(&target);
+    let own_tags = target
+      .get_child_elements()
+      .into_iter()
+      .find(|child| get_node_qname(child) == pin!("ltx:tags"));
+    if let Some(own_tags) = own_tags {
+      // An object that printed the step's number itself and gives no reference form (an algorithm2e line's tag:
+      // `\nl`'s `\refstepcounter{AlgoLine}` then `\algocf@printnl`, algorithm2e.sty:1662-1667) takes the step's
+      // reference forms into its tags, after the printed one: `\ref` prints `\theAlgoLine` (pdflatex 14 for
+      // 2406.05437's `step1`, which named the algorithm, 1; OXIDIZED_DESIGN_DIVERGENCES #877).
+      let numbered_here = target.get_attribute(RAW_REFSTEP_MARK) == Some(serial.to_string());
+      let has_forms = own_tags
+        .get_child_elements()
+        .iter()
+        .any(|tag| tag.has_attribute("role"));
+      if numbered_here && !has_forms {
+        self.add_reference_forms(&target, own_tags, tags)?;
+      }
+      return Ok(());
+    }
+    if !can_contain_qsym(qname, pin!("ltx:tags")) || can_contain_qsym(qname, pin!("ltx:title")) {
+      return Ok(());
+    }
+    let before = target.get_child_nodes();
+    self.absorb(tags, None)?;
+    let _ = target.set_attribute(RAW_REFSTEP_MARK, &serial.to_string());
+    let first = before.first().cloned();
+    for mut new in target.get_child_nodes() {
+      if before.contains(&new) {
+        continue;
+      }
+      for tag in new.get_child_elements() {
+        if get_node_qname(&tag) == pin!("ltx:tag") && !tag.has_attribute("role") {
+          self.remove_node(tag);
+        }
+      }
+      // The number first, where an object's `ltx:tags` stands.
+      if let Some(mut first) = first.clone() {
+        new.unlink_node();
+        first.add_prev_sibling(&mut new).ok();
+      }
+    }
+    Ok(())
+  }
+
+  /// Records `object` as the one that printed the number of the raw counter step `serial` itself (an algorithm2e line:
+  /// `\nl`'s `\refstepcounter{AlgoLine}` then `\algocf@printnl`), marking it (`RAW_REFSTEP_MARK`): a label after the
+  /// step names it ([`float_to_label_scoped`](Self::float_to_label_scoped)) and takes its reference forms
+  /// ([`take_raw_refstep_number`](Self::take_raw_refstep_number)).
+  pub fn note_raw_refstep_object(&mut self, serial: i64, object: &Node) {
+    let mut object = object.clone();
+    let _ = object.set_attribute(RAW_REFSTEP_MARK, &serial.to_string());
+    self.raw_refstep_objects.insert(serial, object);
+  }
+
+  /// A `\label{key}` placed on `holder` takes `key` from the elements holding it before that contain `holder` or that it
+  /// contains: LaTeX's last `\newlabel` wins (latex.ltx `\@newl@bel`: `\global\@namedef{r@key}`, "Label multiply
+  /// defined"), where the post scan registers in document order, the outer element first (Perl Scan.pm:196-203, ours
+  /// `latexml_post/src/scan.rs` `register_scanned`), so an earlier label on an element inside a later one won: 2001.00288's
+  /// `\label{algo2}` after `\KwOut` (its line) and again after `\caption` (the algorithm) printed "Algorithm 1" for
+  /// pdflatex's "Algorithm 2" (KNOWN_PERL_ERRORS #1131, OXIDIZED_DESIGN_DIVERGENCES #877). Holders apart from each other
+  /// keep the key: pdflatex's last `\newlabel` is the last written, the later in the document but for a float LaTeX
+  /// defers past a later label of the key (not modelled: `[p]` figure then `\section{Two}\label{k}`, pdflatex the
+  /// figure), and the scan already takes the later; an element
+  /// the streaming build spilled may be one (spills are closed top-level elements, never `holder`'s ancestors or, below
+  /// the document root, its descendants), so streaming and eager builds agree. Searched only for a key placed before.
+  /// Guard `perfect_kernel_batch78t::the_later_label_wins`.
+  pub fn release_earlier_label_holders(&mut self, key: &str, holder: &Node) {
+    if self.placed_labels.insert(key.to_string()) {
+      return;
+    }
+    // The document root holds what no element took; its descendants may have been spilled.
+    let Some(parent) = holder
+      .get_parent()
+      .filter(|p| p.get_type() == Some(NodeType::ElementNode))
+    else {
+      return;
+    };
+    let mut nested = self.findnodes("descendant::*[@labels]", Some(holder));
+    let mut ancestor = Some(parent);
+    while let Some(node) = ancestor {
+      ancestor = node
+        .get_parent()
+        .filter(|p| p.get_type() == Some(NodeType::ElementNode));
+      nested.push(node);
+    }
+    for mut node in nested {
+      let Some(labels) = node.get_attribute("labels") else {
+        continue;
+      };
+      if !labels.split_whitespace().any(|label| label == key) {
+        continue;
+      }
+      let rest: Vec<&str> = labels
+        .split_whitespace()
+        .filter(|label| *label != key)
+        .collect();
+      if rest.is_empty() {
+        let _ = node.remove_attribute("labels");
+      } else {
+        let _ = node.set_attribute("labels", &rest.join(" "));
+      }
+    }
+  }
+
+  /// The reference forms of `tags` (its tags with a role: refnum, typerefnum, …) appended to `own_tags`, an `ltx:tags`
+  /// of `target` ([`take_raw_refstep_number`](Self::take_raw_refstep_number)).
+  fn add_reference_forms(
+    &mut self,
+    target: &Node,
+    mut own_tags: Node,
+    tags: &Digested,
+  ) -> Result<()> {
+    let before = target.get_child_nodes();
+    let savenode = self.node.clone();
+    self.set_node(target);
+    self.absorb(tags, None)?;
+    self.set_node(&savenode);
+    for new in target.get_child_nodes() {
+      if before.contains(&new) {
+        continue;
+      }
+      for mut tag in new.get_child_elements() {
+        if get_node_qname(&tag) == pin!("ltx:tag") && tag.has_attribute("role") {
+          tag.unlink_node();
+          own_tags.add_child(&mut tag).ok();
+        }
+      }
+      self.remove_node(new);
+    }
+    Ok(())
+  }
+
+  /// One `ltx:tags` for an object a raw step numbered ([`take_raw_refstep_number`](Self::take_raw_refstep_number))
+  /// that a later construct tags as well (`\eqno`'s, made after the label in `$$ \refstepcounter{foo}\label{x2} c=d
+  /// \eqno(B) $$`): the later tags' tags join the step's `ltx:tags`, before its `refnum`, so the object shows "(B)" and
+  /// `\ref` prints the step's number (pdflatex 42; the `\@currentlabel` `\eqno` leaves alone). The nearest open
+  /// element holding an `ltx:tags`, from the current node. Repro
+  /// `cross-references/unnumbered_display_label_takes_the_step_number.tex`.
+  pub fn merge_raw_refstep_tags(&mut self) {
+    let mut node = Some(self.node.clone());
+    while let Some(current) = node {
+      let tags: Vec<Node> = current
+        .get_child_elements()
+        .into_iter()
+        .filter(|child| get_node_qname(child) == pin!("ltx:tags"))
+        .collect();
+      if !tags.is_empty() {
+        if tags.len() > 1 && current.get_attribute(RAW_REFSTEP_MARK).is_some() {
+          let mut first = tags[0].clone();
+          let anchor = first.get_first_child();
+          for mut later in tags.into_iter().skip(1) {
+            for mut tag in later.get_child_nodes() {
+              tag.unlink_node();
+              match &anchor {
+                Some(anchor) => {
+                  let mut anchor = anchor.clone();
+                  anchor.add_prev_sibling(&mut tag).ok();
+                },
+                None => {
+                  first.add_child(&mut tag).ok();
+                },
+              }
+            }
+            later.unlink_node();
+          }
+        }
+        return;
+      }
+      node = current
+        .get_parent()
+        .filter(|p| p.get_type() == Some(NodeType::ElementNode));
+    }
+  }
+
   pub fn set_box_to_absorb(&mut self, arg: Option<Digested>) {
-    self.localized_boxes.push(self.box_to_absorb.take());
+    self
+      .localized_boxes
+      .push((self.box_to_absorb.take(), self.box_unended));
+    // A whatsit the document ended inside of never ended (OXIDIZED_DESIGN #542). Any other box
+    // shares the state of the one absorbing it: an alignment is its `\lx@begin@alignment`
+    // whatsit's property, a cell's content opens the cell's `ltx:XMArg` (nucl-th0401019).
+    self.box_unended = match arg {
+      Some(ref tbox) if matches!(tbox.data(), DigestedData::Whatsit(_)) => {
+        tbox.get_property_bool(crate::stomach::UNENDED)
+      },
+      Some(_) => self.box_unended,
+      None => false,
+    };
     self
       .localized_box_locators
       .push(self.current_box_locator.take());
@@ -5839,8 +8066,12 @@ impl Document {
       None
     };
   }
+  /// Whether the box being absorbed never ended ([`crate::stomach::UNENDED`]): the elements it
+  /// opens auto-close ([`UNENDED_ATTRIBUTE`]).
+  fn absorbing_unended_box(&self) -> bool { self.box_unended }
+
   pub fn expire_box_to_absorb(&mut self) {
-    self.box_to_absorb = self.localized_boxes.pop().unwrap();
+    (self.box_to_absorb, self.box_unended) = self.localized_boxes.pop().unwrap();
     self.current_box_locator = self.localized_box_locators.pop().unwrap_or(None);
   }
 
@@ -5877,16 +8108,16 @@ impl Document {
     for mut node in self.findnodes("//*[@labels]", None) {
       if let Some(labels) = node.get_attribute("labels") {
         // A labelled node MUST carry an xml:id so `\ref` can resolve to it.
-        // Normally the `Tag('ltx:*', afterClose:late)` GenerateID hook
-        // (latex_constructs.rs) stamps one, but it does not reach every node
-        // — notably the <ltx:document> root, which receives a label when a
-        // bare `\label{…}` appears with no enclosing id'd sectioning (e.g.
+        // The `Tag('ltx:*', afterClose:late)` GenerateID hook
+        // (latex_constructs/sect11.rs) stamps one when the node closes — the
+        // <ltx:document> root too, which receives a label when a bare
+        // `\label{…}` appears with no enclosing id'd sectioning (e.g.
         // `\input{abs}` then `\label{sec:intro}` before any \section; witness
-        // 1703.09326). Perl handles this by giving the root an xml:id — its
-        // output is `<document … labels="LABEL:sec:intro" xml:id="id1">` —
-        // NOT by erroring. Match Perl: generate an id here when one is
-        // missing, exactly as Perl's GenerateID does (an id-less root yields
-        // "id1" from `generate_id`'s empty-prefix→"id", no-ancestor path).
+        // 1703.09326; Perl's output is `<document … labels="LABEL:sec:intro"
+        // xml:id="id1">`). This is the safety net for a labelled node still
+        // without one: generate it here, exactly as Perl's GenerateID does (an
+        // id-less root yields "id1" from `generate_id`'s empty-prefix→"id",
+        // no-ancestor path), never an error.
         let id = match node.get_attribute("id") {
           Some(id) => Some(id),
           None => {
@@ -5931,20 +8162,23 @@ impl Document {
       // walk, equivalent to the previous `ancestor::*[@xml:id][1]` findnode
       // but without a per-call XPath parse+eval (generate_id runs once per
       // id-lacking node during finalize; 2026-08-23 audit R5).
-      let mut ancestor = {
-        let mut cur = node.get_parent();
-        let mut found = None;
-        while let Some(p) = cur {
-          if p.get_type() == Some(NodeType::ElementNode) && p.has_attribute_ns("id", XML_NS) {
-            found = Some(p);
-            break;
-          }
-          cur = p.get_parent();
+      let mut found = None;
+      let mut cur = node.get_parent();
+      while let Some(p) = cur {
+        if p.get_type() == Some(NodeType::ElementNode) && p.has_attribute_ns("id", XML_NS) {
+          found = Some(p);
+          break;
         }
-        found.unwrap_or_else(|| self.get_document().get_root_element().unwrap())
-      };
+        cur = p.get_parent();
+      }
+      // A streamed segment's top nodes are minted under the spine element it splices back under (pass 2).
+      let anchor = found
+        .is_none()
+        .then(|| self.fragment_anchor_id.clone())
+        .flatten();
+      let mut ancestor = found.unwrap_or_else(|| self.get_document().get_root_element().unwrap());
       //// Old versions don't like ancestor.getAttribute('xml:id');
-      let ancestor_id = ancestor.get_attribute_ns("id", XML_NS);
+      let ancestor_id = ancestor.get_attribute_ns("id", XML_NS).or(anchor);
       // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
       // or ancestor IS the root element (but without an id);
       // If we also have no prefix, we'll end up with an illegal id (just digits)!!!
@@ -5987,7 +8221,15 @@ impl Document {
   // THESE SHOULD BE PART OF A COMMON BASE CLASS; DUPLICATED IN Post::Document
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  pub fn replace_tree(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
+  /// `replace_tree`, minus the free: the detached original stays alive and
+  /// the CALLER owns it. The math parser needs this — parsing one formula
+  /// rebuilds its tree while later formulae, queued up front, may sit inside
+  /// the replaced subtree (a `\text{…$x$…}` inside math), so it defers every
+  /// free to the end of the parse (`replace_tree_deferred` /
+  /// `data::defer_discard`); freeing here handed those formulae to the parser
+  /// detached and lost whole documents (sweep 102: glosmathtools, prftree,
+  /// t-angles).
+  pub fn replace_tree_detach(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
     match old.get_parent() {
       Some(mut parent) => {
         let mut following = VecDeque::new(); // Collect the matching and following nodes
@@ -6021,6 +8263,8 @@ impl Document {
           }
           cursor = cur.get_parent();
         }
+        // Detach `old` (the original of the copy `append_tree` just
+        // inserted); `replace_tree` frees it, the parser defers that.
         {
           let mut old = old;
           old.unlink();
@@ -6034,32 +8278,14 @@ impl Document {
     }
   }
 
-  /// `replace_tree` for a caller that owns BOTH trees as garbage-after-copy
-  /// (the math parser's rebuild sites): the replacement is copied into
-  /// place exactly as `replace_tree` does (Perl appendTree parity —
-  /// elements are re-created, sources abandoned), and then the sources are
-  /// FREED: `old`'s subtree, plus `new`'s detached root when `new` is a
-  /// standalone built tree rather than a node inside `old`. Without the
-  /// frees every replaced formula leaks its pre-parse tree AND the built
-  /// parse tree (see `discard_subtree`).
-  ///
-  /// On the `None` return (old had no parent) nothing was copied and
-  /// NOTHING is freed — the caller keeps using `new` as-is.
-  pub fn replace_tree_free(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
-    // Resolve new's root BEFORE any freeing (walking afterwards would read
-    // freed memory). A chain ending at a Document node means `new` is
-    // inside a live tree — either inside `old` (freed below with it) or
-    // elsewhere (not ours to free).
-    let new_root = xml::detached_root(&new);
-    let inserted = self.replace_tree(new, old.clone())?;
+  /// Replace `old` by `new` (copied into place) and FREE the original: its
+  /// ids were unrecorded before the copy and no handle into it is used
+  /// afterwards (see `remove_node` for why a bare unlink leaks). Callers that
+  /// must keep the original alive use `replace_tree_detach`.
+  pub fn replace_tree(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
+    let inserted = self.replace_tree_detach(new, old.clone())?;
     if inserted.is_some() {
       self.discard_subtree(old);
-      if let Some(root) = new_root {
-        // Standalone source tree; disjoint from old's subtree by
-        // construction (a detached root has no parent, every node inside
-        // old's subtree has one).
-        self.discard_subtree(root);
-      }
     }
     Ok(inserted)
   }
@@ -6087,7 +8313,13 @@ impl Document {
           // that shape possible, and only here do we pay to resolve it.
           let tag_sym = model::get_foreign_node_qname(&child);
           let tag = arena::to_string(tag_sym);
-          let mut new = self.open_element_at(node, &tag, Some(attributes), None)?;
+          // Perl copies every attribute, `_box` included (Document.pm:2110-2116),
+          // so the new node keeps the copied node's box rather than taking its
+          // new parent's: a foreignObject re-created by the math parser is
+          // sized from its own box again (tests/graphics/xytest).
+          let child_box = self.get_node_box(&child);
+          let mut new =
+            self.open_element_at_with_box(node, &tag, Some(attributes), None, child_box)?;
           self.append_tree(&mut new, child.get_child_nodes())?;
           self.close_element_at(&mut new)?;
         },
@@ -6318,6 +8550,96 @@ pub fn sym_can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
 //  You can generically allow an element to autoClose using Tag.
 // OR you can indicate a specific node can autoClose, or forbid it, using
 // the _autoclose or _noautoclose attributes!
+/// The sectioning units `\section`…`\subparagraph` open, which a frontmatter block takes without an error, as Perl's
+/// builder does (the leniency in `find_insertion_point_qsym`).
+fn is_lenient_sectioning_unit(qsym: SymStr) -> bool {
+  qsym == pin!("ltx:section")
+    || qsym == pin!("ltx:subsection")
+    || qsym == pin!("ltx:subsubsection")
+    || qsym == pin!("ltx:paragraph")
+    || qsym == pin!("ltx:subparagraph")
+}
+
+/// Whether a list item carries its label (`ltx:tags`: a bullet, a number, a description term); a margin list's
+/// `\item[]` has none.
+fn item_has_label(node: &Node) -> bool {
+  node
+    .get_child_elements()
+    .iter()
+    .any(|child| get_node_qname(child) == pin!("ltx:tags"))
+}
+
+/// Whether neither `node` nor any of its ancestors is a frontmatter container (`ltx:abstract`, `ltx:acknowledgements`,
+/// `ltx:keywords`, `ltx:classification`, `ltx:creator`), which the theorem/proof/TOC bridge leaves alone
+/// (OXIDIZED_DESIGN_DIVERGENCES #689).
+fn outside_frontmatter_container(node: &Node) -> bool {
+  let mut cur = Some(node.clone());
+  while let Some(n) = cur {
+    if n.get_type() == Some(NodeType::ElementNode)
+      && with_node_qname(&n, |q| {
+        matches!(
+          q,
+          "ltx:abstract"
+            | "ltx:acknowledgements"
+            | "ltx:keywords"
+            | "ltx:classification"
+            | "ltx:creator"
+        )
+      })
+    {
+      return false;
+    }
+    cur = n.get_parent();
+  }
+  true
+}
+
+/// Whether `qname` is one of the sectioning units `\section`…`\subparagraph` open, by name (the auto-open bridges'
+/// predicates see names).
+fn is_sectioning_unit_name(qname: &str) -> bool {
+  matches!(
+    qname,
+    "ltx:section" | "ltx:subsection" | "ltx:subsubsection" | "ltx:paragraph" | "ltx:subparagraph"
+  )
+}
+
+/// The sectioning units that close a quote they arrive in (`Document::close_quotes_blocking`): the display units
+/// `\part` to `\subsubsection`, starred or not (an `\appendix`'s units are these too). The run-in `\paragraph` and
+/// `\subparagraph` (latex.ltx `\@startsection` with a negative after-skip, article.cls:314-321) are not: pdflatex sets
+/// the heading and the text after it inside the quote's margins, so they open an `ltx:inline-sectional-block` in the
+/// quote (`AUTO_OPEN_BRIDGES`; main-session ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #678; 2607.27159
+/// 2505.18677 2305.11603 1809.03802 2208.14587).
+fn is_quote_closing_unit(qsym: SymStr) -> bool {
+  qsym == pin!("ltx:part")
+    || qsym == pin!("ltx:chapter")
+    || qsym == pin!("ltx:section")
+    || qsym == pin!("ltx:subsection")
+    || qsym == pin!("ltx:subsubsection")
+}
+
+/// Whether `node` may hold a `qsym` it can contain by the model: false only for a display unit
+/// (`is_quote_closing_unit`) at the `ltx:inline-sectional-block` a run-in `\paragraph`/`\subparagraph` opened in a
+/// quote (`AUTO_OPEN_BRIDGES`) — a later `\section` in the same quote closes the quote, as one before the run-in heading does
+/// (2110.03376, 1905.08876; guard `perfect_kernel_batch69a::section_after_a_paragraph_in_a_quote_closes_it`).
+fn holds_in_quote_block(node: &Node, qsym: SymStr) -> bool {
+  !(is_quote_closing_unit(qsym)
+    && get_node_qname(node) == pin!("ltx:inline-sectional-block")
+    && node
+      .get_parent()
+      .is_some_and(|parent| get_node_qname(&parent) == pin!("ltx:quote")))
+}
+
+/// Whether `qname` is a run-in sectioning unit, `\paragraph` or `\subparagraph`, by name.
+fn is_run_in_unit_name(qname: &str) -> bool {
+  matches!(qname, "ltx:paragraph" | "ltx:subparagraph")
+}
+
+/// A `\trivlist`'s list (`_trivlist`, latex_constructs sect06.rs): ended by its `\endtrivlist` or at its group's
+/// end, never the target of a close by name, which closes through it (it auto-closes) to the enclosing element of that
+/// name, as a font switch's `ltx:text` — a `\trivlist` left open in an `{itemize}` ends with it (KNOWN_PERL_ERRORS
+/// #456).
+fn is_trivlist(node: &Node) -> bool { node.has_attribute("_trivlist") }
+
 pub fn can_auto_close(node: &Node) -> bool {
   // text or comments auto close
   // otherwise must be element
@@ -6347,8 +8669,373 @@ pub fn can_auto_close(node: &Node) -> bool {
 /// Ie. using the registered prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
 /// NOTE: Should Deprecate! (use model)
+/// The internal attribute of an element opened by a construct the document ended inside of
+/// ([`crate::stomach::UNENDED`]), set with `_autoclose`: closing it once it auto-closed is no
+/// error. OXIDIZED_DESIGN #542.
+const UNENDED_ATTRIBUTE: &str = "_unended";
+
+/// The transient box-capture element of `insert_block` (`ltx:_CaptureBlock_`):
+/// a completed box, whose close force-closes its descendants.
+pub fn is_capture_block(node: &Node) -> bool {
+  arena::with(get_node_qname(node), |q| q == "ltx:_CaptureBlock_")
+}
+
 pub fn get_node_qname(node: &Node) -> SymStr { model::get_node_qname(node) }
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   model::with_node_qname(node, caller)
+}
+
+/// `class` as a list of NMTOKENs: every whitespace-separated token keeps its
+/// NameChars (letters, digits, `.`, `-`, `_`, `:`) and loses the rest
+/// (`\\ { } @ * +` from listings language literals, raw `@` names, `fa-*`);
+/// emptied tokens drop, and a token the cleaning made a duplicate of an
+/// earlier one drops too (`C++`, `C+` and `C` all clean to `C`). Idempotent on
+/// a valid list.
+fn nmtokens_clean(value: &str) -> String {
+  let mut out = String::with_capacity(value.len());
+  let mut seen: Vec<String> = Vec::new();
+  for token in value.split_whitespace() {
+    let cleaned: String = token.chars().filter(|c| is_name_char(*c)).collect();
+    if cleaned.is_empty() || seen.contains(&cleaned) {
+      continue;
+    }
+    if !out.is_empty() {
+      out.push(' ');
+    }
+    out.push_str(&cleaned);
+    seen.push(cleaned);
+  }
+  out
+}
+
+/// XML `NameChar` (letters, digits, `.`, `-`, `_`, `:`, and the non-ASCII
+/// name ranges, approximated by `is_alphanumeric`).
+fn is_name_char(c: char) -> bool { c.is_alphanumeric() || matches!(c, '.' | '-' | '_' | ':') }
+
+/// XML `Name` without a colon (an `xml:id`): starts with a letter or `_`, then
+/// NameChars only.
+fn is_xml_name(value: &str) -> bool {
+  let mut chars = value.chars();
+  match chars.next() {
+    Some(c) if c.is_alphabetic() || c == '_' => {},
+    _ => return false,
+  }
+  chars.all(|c| is_name_char(c) && c != ':')
+}
+
+/// Perl `eq` on two boxes: the same box object.
+fn same_box(a: &Digested, b: &Digested) -> bool { a.as_ptr() == b.as_ptr() }
+
+/// A box's `mode` property (Perl `$box->getProperty('mode')`).
+fn box_mode(bx: &Digested) -> Option<SymStr> {
+  bx.get_property("mode").and_then(|m| match m.as_ref() {
+    Stored::String(s) => Some(*s),
+    _ => None,
+  })
+}
+
+fn is_autoopened_element(node: &Node) -> bool {
+  node.get_type() == Some(NodeType::ElementNode) && node.has_attribute("_autoopened")
+}
+
+/// Whether Perl's `List(…, mode => $mode)` flattens horizontal lists in this
+/// mode: `horizontal` (List.pm:45-48). A box with no `mode` counts as
+/// horizontal: a Rust `Tbox` carries none, where Perl's `Box()` records the
+/// `MODE` it was made in (Package.pm, `mode => $state->lookupValue('MODE')`),
+/// `horizontal` for paragraph text.
+fn flattens(mode: Option<SymStr>) -> bool { mode.is_none_or(|m| m == pin!("horizontal")) }
+
+/// Perl `$box->unlist`: a list's boxes, else the box itself.
+/// What [`Document::remove_node_with_box_action`] does with the removed node's
+/// box in the boxes of its parent and of the parent's auto-opened ancestors:
+/// [`Document::remove_node`] unlinks it, [`Document::remove_node_keeping_box`]
+/// keeps it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum NodeBoxAction {
+  /// The box leaves them: the node's content is gone.
+  Unlink,
+  /// The box stays: the node's content lives on in another node.
+  Keep,
+}
+
+fn unlist(bx: &Digested) -> Vec<Digested> {
+  match bx.data() {
+    DigestedData::List(cell) => match cell.try_borrow() {
+      Ok(list) => list.boxes.clone(),
+      Err(_) => vec![bx.clone()],
+    },
+    _ => vec![bx.clone()],
+  }
+}
+
+/// `($box->unlist)[-1]`, without copying the list.
+fn unlist_last(bx: &Digested) -> Option<Digested> {
+  match bx.data() {
+    DigestedData::List(cell) => cell
+      .try_borrow()
+      .ok()
+      .and_then(|list| list.boxes.last().cloned()),
+    _ => Some(bx.clone()),
+  }
+}
+
+/// What a horizontal `List()` puts in place of `bx` (List.pm:45-48): the boxes
+/// of a horizontal list, else `bx`.
+fn flatten_horizontal(bx: &Digested) -> Vec<Digested> {
+  if matches!(bx.data(), DigestedData::List(_)) && flattens(box_mode(bx)) {
+    unlist(bx)
+  } else {
+    vec![bx.clone()]
+  }
+}
+
+/// Push `thisbox` (flattened, as a horizontal `List()` would) onto `list`, the
+/// node's own flat box list; false when `list` is not one (a list someone else
+/// built, or one being read). Its cached size is dropped: the list grew.
+fn push_onto_node_box(list: &Digested, thisbox: &Digested) -> bool {
+  let own = list.as_ptr();
+  let DigestedData::List(cell) = list.data() else {
+    return false;
+  };
+  let Ok(mut list) = cell.try_borrow_mut() else {
+    return false;
+  };
+  let pushed = flatten_horizontal(thisbox);
+  // Pushing the list into itself would make it contain itself.
+  if !list.properties.contains_key_sym(&pin!("node_box"))
+    || pushed.iter().any(|b| b.as_ptr() == own)
+  {
+    return false;
+  }
+  list.push_boxes(pushed);
+  for cached in [
+    pin!("cached_width"),
+    pin!("cached_height"),
+    pin!("cached_depth"),
+  ] {
+    list.properties.remove_sym(cached);
+  }
+  true
+}
+
+/// Perl `List(@boxes, mode => $mode)` (List.pm:31-55) for a node's box, of two
+/// or more boxes: a list of that mode, with `\\baselineskip` as its baseline
+/// when vertical. A horizontal one is marked `node_box`, the node's own flat
+/// list ([`push_onto_node_box`]).
+fn node_box_list(boxes: Vec<Digested>, mode: Option<SymStr>) -> Digested {
+  let nonempty = !boxes.is_empty();
+  let mut list = List::new(boxes);
+  if flattens(mode) {
+    list
+      .properties
+      .insert_sym(pin!("node_box"), Stored::Bool(true));
+  }
+  if let Some(mode) = mode {
+    list.properties.insert("mode", Stored::String(mode));
+    if nonempty
+      && arena::with(mode, |m| m.ends_with("vertical"))
+      && let Some(baseline) = state::lookup_dimension("\\baselineskip")
+    {
+      list
+        .properties
+        .insert("baseline", Stored::Dimension(baseline));
+      // With the rest of the interline parameters (tex.web §679), as a box's list records them — read when the node
+      // is built, the parameters in force then.
+      for (key, register) in [
+        ("lineskip", "\\lineskip"),
+        ("lineskiplimit", "\\lineskiplimit"),
+      ] {
+        if let Some(value) = state::lookup_register_quiet(register) {
+          list
+            .properties
+            .insert(key, Stored::Dimension(crate::Dimension(value.value_of())));
+        }
+      }
+    }
+  }
+  list.into()
+}
+
+/// The `prefixes` that some node of `root`'s subtree uses: an attribute of `root` or of a
+/// descendant element whose name is `prefix:…`, or a namespace declaration of `prefix` on a
+/// descendant element. One preorder walk that stops once every prefix is found — it was a
+/// recursion per prefix, each building a child `Vec` at every node (about 4–5 % of an ordinary
+/// paper's core time, the 2026-10-16 study's 80-paper gdb sample).
+fn namespace_prefixes_in_use<'p>(root: &Node, prefixes: &[&'p str]) -> HashSet<&'p str> {
+  let mut found = HashSet::default();
+  if prefixes.is_empty() {
+    return found;
+  }
+  let note_attributes = |node: &Node, found: &mut HashSet<&'p str>| {
+    for key in node.get_attributes().into_keys() {
+      for &prefix in prefixes {
+        let plen = prefix.len();
+        if key.len() > plen && key.starts_with(prefix) && key.as_bytes()[plen] == b':' {
+          found.insert(prefix);
+        }
+      }
+    }
+  };
+  note_attributes(root, &mut found);
+  let mut cur = root.get_first_child();
+  while let Some(node) = cur {
+    if found.len() == prefixes.len() {
+      break;
+    }
+    let mut descend = None;
+    if node.get_type() == Some(NodeType::ElementNode) {
+      for ns in node.get_namespace_declarations() {
+        let ns_prefix = ns.get_prefix();
+        if let Some(&prefix) = prefixes.iter().find(|&&p| p == ns_prefix) {
+          found.insert(prefix);
+        }
+      }
+      note_attributes(&node, &mut found);
+      descend = node.get_first_child();
+    }
+    cur = descend.or_else(|| {
+      let mut up = node;
+      loop {
+        if let Some(next) = up.get_next_sibling() {
+          return Some(next);
+        }
+        match up.get_parent() {
+          Some(parent) if parent != *root => up = parent,
+          _ => return None,
+        }
+      }
+    });
+  }
+  found
+}
+
+/// An empty construction-time marker element (`*_Capture_`: `ltx:_Frontmatter_Capture_`, the cover-title marks), which
+/// never reaches the output.
+fn is_empty_capture_mark(node: &Node) -> bool {
+  node.get_type() == Some(NodeType::ElementNode)
+    && node.get_first_child().is_none()
+    && node.get_name().ends_with("_Capture_")
+}
+
+/// A processing instruction's data, `key="value"` pairs (Perl Document.pm:707-709 `insertPI`): the main "operator"
+/// first (`class`, `package`, `options`), each only when its value is true to Perl (`$attrib{$_} ? ($_) : ()`: not
+/// empty, not `0`), then the other keys sorted (`sort keys %attrib`), so the order is the keys' and not the hash
+/// table's (det354 C3). An operator key with a false value is left out altogether, as Perl's second list excludes the
+/// three names (review rev78w finding 6).
+fn pi_data(attributes: &HashMap<String, String>) -> String {
+  let mut other_keys: Vec<&str> = attributes
+    .keys()
+    .map(String::as_str)
+    .filter(|k| !matches!(*k, "class" | "package" | "options"))
+    .collect();
+  other_keys.sort_unstable();
+  let operator_keys = ["class", "package", "options"].into_iter().filter(|key| {
+    attributes
+      .get(*key)
+      .is_some_and(|value| !value.is_empty() && value != "0")
+  });
+  operator_keys
+    .chain(other_keys)
+    .filter_map(|key| attributes.get(key).map(|value| s!("{}=\"{}\"", key, value)))
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+/// An element's `_ID_counter_*` attributes, the counters `generate_id` keeps for the ids minted under it.
+pub fn id_counters(node: &Node) -> Vec<(String, String)> {
+  node
+    .get_attributes()
+    .into_iter()
+    .filter(|(key, _)| key.starts_with("_ID_counter"))
+    .collect()
+}
+
+#[cfg(test)]
+mod pi_data_order {
+  use super::{HashMap, pi_data};
+
+  /// Perl Document.pm:707-708: `class`/`package`/`options` first, then the rest in key order, whatever order the map
+  /// holds them in (det354 C3).
+  #[test]
+  fn a_pi_lists_its_operator_then_its_keys_sorted() {
+    for listed in [["zeta", "alpha", "mid"], ["mid", "zeta", "alpha"], [
+      "alpha", "mid", "zeta",
+    ]] {
+      let mut attributes: HashMap<String, String> = HashMap::default();
+      for key in listed {
+        attributes.insert(key.to_string(), format!("{key}-v"));
+      }
+      attributes.insert("package".to_string(), "p".to_string());
+      assert_eq!(
+        pi_data(&attributes),
+        r#"package="p" alpha="alpha-v" mid="mid-v" zeta="zeta-v""#
+      );
+    }
+  }
+
+  /// Perl Document.pm:707 keeps `class`/`package`/`options` only when the value is true (`$attrib{$_} ? ($_) : ()`):
+  /// an empty or `0` one is left out, where it printed as `options=""` (review rev78w finding 6); another key with an
+  /// empty value stays, as Perl's `sort keys` list takes every other key.
+  #[test]
+  fn a_pi_drops_an_operator_key_perl_reads_as_false() {
+    let mut attributes: HashMap<String, String> = HashMap::default();
+    attributes.insert("class".to_string(), "article".to_string());
+    attributes.insert("options".to_string(), String::new());
+    attributes.insert("package".to_string(), "0".to_string());
+    attributes.insert("dpi".to_string(), String::new());
+    assert_eq!(pi_data(&attributes), r#"class="article" dpi="""#);
+    attributes.insert("options".to_string(), "11pt".to_string());
+    assert_eq!(
+      pi_data(&attributes),
+      r#"class="article" options="11pt" dpi="""#
+    );
+  }
+}
+
+#[cfg(test)]
+mod attribute_cleaners {
+  use super::{is_xml_name, nmtokens_clean};
+
+  /// The emitter's `class` cleaner: listings' brace/plus/backslash language
+  /// literals, raw `@` names and a leaked `\par` become NMTOKENs; a valid
+  /// list is untouched.
+  #[test]
+  fn class_values_become_nmtokens() {
+    assert_eq!(
+      nmtokens_clean("ltx_lst_language_{TeX}_LaTeX"),
+      "ltx_lst_language_TeX_LaTeX"
+    );
+    assert_eq!(nmtokens_clean("ltx_lst_language_C++"), "ltx_lst_language_C");
+    assert_eq!(
+      nmtokens_clean("ltx_lst_language_C++ ltx_lst_language_C+ ltx_lst_language_C ltx_lstlisting"),
+      "ltx_lst_language_C ltx_lstlisting"
+    );
+    assert_eq!(
+      nmtokens_clean("ltx_lstlisting \\par\\par ltx_lst_language_\\lexer@cs"),
+      "ltx_lstlisting parpar ltx_lst_language_lexercs"
+    );
+    assert_eq!(nmtokens_clean("fas fa-*"), "fas fa-");
+    assert_eq!(
+      nmtokens_clean("ltx_font_bold ltx_align_center"),
+      "ltx_font_bold ltx_align_center"
+    );
+    assert_eq!(nmtokens_clean("{}"), "");
+  }
+
+  /// `xml:id` values: a valid Name is left alone; the rest go through
+  /// `clean_id` (a leading `.` gets the `X` prefix, a `\par` leak is dropped).
+  #[test]
+  fn ids_are_xml_names() {
+    assert!(is_xml_name("S2.I10.i1"));
+    assert!(is_xml_name("_x-1"));
+    assert!(!is_xml_name(".1"));
+    assert!(!is_xml_name("S2.I10.i1\\par"));
+    assert!(!is_xml_name("a:b"));
+    assert_eq!(crate::common::cleaners::clean_id(".1"), "X.1");
+    assert_eq!(
+      crate::common::cleaners::clean_id("S2.I10.i1\\par"),
+      "S2.I10.i1par"
+    );
+  }
 }

@@ -1,0 +1,21 @@
+% witness: 2103.10260 (`\ifCUPmtlplainloaded` in the template preamble), 2508.02297 (`\Rey`), 2604.04559 (`\mathsfbi`),
+%   1309.5858 (`\ns`), 2103.09196 (`\p`), 2406.15733 (`\captionsetup`); run 340 ~1,800 jfm papers' first error
+% oracle:  pdflatex with a paper's jfm.cls: 0 errors; the font checks find eurm10 and msam10; "Re", "Pr", ∂, π
+% engines: rust 65int5 = errors (the template's `\ifCUPmtlplainloaded … \else … \fi` undefined, then each convenience);
+%   Perl's jfm binding lacks them too
+% expect:  0 errors; NOCUP and FOUND printed; Re, Pr, Ra, ∂ and π in the formula, `\le` the slanted ⩽ (jfm.cls:1361);
+%   `\captionsetup` accepted
+% status:  RED (65int5) -> GREEN (65v)
+\documentclass{jfm}
+\begin{document}
+\title{Title}
+\author{Author}
+\ifCUPmtlplainloaded CUP\else NOCUP\fi
+\checkfont{eurm10}\iffontfound FOUND\fi
+\captionsetup[figure]{justification=justified}
+A\ls B\ns C, \eg{} things \etc
+\begin{equation}
+\Rey + \Pran + \Ray + \p_x u + \bnabla\bcdot\boldsymbol{u} + \upi + \mathsfbi{Q} + \sumjm \le b
+\end{equation}
+\begin{figure}\caption{Flow.}\end{figure}
+\end{document}

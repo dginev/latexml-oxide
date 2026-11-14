@@ -1,0 +1,23 @@
+% mechanism: a line under one name speaking for a collaboration (`on behalf of the … team`) is that name's
+%   collaboration contact, no part of the name (row C5, the old reader's `collaboration_line_before`; FIDELITY_CHARTER §4,
+%   OXIDIZED_DESIGN_DIVERGENCES #946); the reading joined it to the name with the name's mark (rev94a S6)
+% witness: 1310.6507 (`… \and Carolyn Brown$^1$\\ on behalf of the Bcool project team\\ $^1$…`), 1502.03246
+%   (`{\footnotesize for the Hall A DVCS collaboration}`: the contact sourced at the line's ink, in its size — review
+%   revNL1 S3)
+% oracle:  pdflatex 0 errors: "Ann Able,1 Bob Baker1", "Carolyn Brown1", "on behalf of the Bcool project team" (small),
+%   "1Univ A"
+% engines: rust MV1, the switch on: personname "Carolyn Brown 1 on behalf of the Bcool project team"; NL1: the
+%   contact's text plain, a Warning; off: her collaboration contact in its size
+% expect:  0 errors, 0 warnings; three creators both ways, Carolyn Brown's collaboration contact `<text
+%   fontsize="80%">on behalf of the Bcool project team</text>`
+% status:  RED (MV1, the switch on) -> GREEN
+%   (perfect_kernel_batchnl1::a_collaboration_remark_is_the_names_contact)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able,$^1$ Bob Baker$^1$ \and Carolyn Brown$^1$\\
+{\footnotesize on behalf of the Bcool project team}\\ $^1$Univ A}
+\maketitle
+x
+\end{document}

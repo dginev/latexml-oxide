@@ -1,0 +1,21 @@
+% mechanism: acmart's `\author{\textsc{Ann Able \and Bob Baker} Jr.}`: the `\and`'s group is `\textsc`'s argument and
+%   "Jr." follows it. Each piece's run is no plain name (the font), so the cut's token path and its by-text path both
+%   wrapped the piece in the tokens after the group, printing "Jr." once a piece ("Ann Able Jr.", "Bob Baker Jr. Jr.").
+%   The cut (`emit::creator_call_cut`) keeps the call whole unless every Name, Mark, Contact and Note event's span lies
+%   inside the `\and`'s group; this call stays one creator, its merge counted, as on the base. The ink-before sibling:
+%   `acmart_author_and_in_a_group_with_ink_before_stays_whole.tex`
+% witness: review revOC1c B1 (`scratch_revOC1c/src/p3_textbf.tex`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE BOB BAKER JR.", "Author's Contact Information: Ann
+%   Able; Bob Baker Jr."
+% engines: Perl 0.8.8: one creator (acmart.cls.ltxml:89; not run); int156a (OC1b-rel): one creator "Ann Able and Bob Baker
+%   Jr.", 1 error (`merged_creators`), 0 warnings; OC1c (round 0): "Ann Able Jr.", "Bob Baker Jr. Jr.", 0 errors,
+%   3 warnings
+% expect:  1 error (`merged_creators`), 0 warnings; one creator "Ann Able and Bob Baker Jr."
+% status:  RED (OC1c round 0) -> GREEN (OC1c2; guard perfect_kernel_batchoc1c::an_api_creator_call_with_ink_outside_its_group_stays_whole)
+\documentclass{acmart}
+\title{T}
+\author{\textsc{Ann Able \and Bob Baker} Jr.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

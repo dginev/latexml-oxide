@@ -1,0 +1,19 @@
+% witness: 0710.5369, hep-ex0605103 (svjour, `\author{(BES Collaboration)\\ \\ M.~Ablikim\inst{1} \and …}`), 1805.08173
+%          (svjour, `\author{{{The WASA-at-COSY Collaboration}\\[2ex]P.~Adlarson\inst{1}}\and …}`); 1702.03664 (webofc,
+%          `\author{Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS}`) the remark's sibling
+% oracle:  pdflatex (TL 2025, 0710.5369's svjour.cls and svepj.clo): "(XYZ Collaboration)" over "Ann Able1 and Bob
+%          Baker2", then "1 Univ A, Town A", "2 Univ B, Town B"
+% engines: rust 97c = "(XYZ Collaboration) Ann Able" one creator (the heading in her name); 97e r1 = the heading a
+%          creator of its own, re-parted from her name
+% expect:  0 errors, 0 warnings; the writer declines the re-part (a name naming no person), today's kept; the faithful
+%          collaboration contact (OD #946) is 97d's, not the observer writer's
+% status:  RED (97e r1) -> GREEN (97e r2) — perfect_kernel_batch97e::a_collaboration_heading_is_no_creator
+% preload: ar5iv.sty
+\documentclass[epj]{svjour}
+\begin{document}
+\title{T}
+\author{(XYZ Collaboration)\\ \\ Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A, Town A \and Univ B, Town B}
+\maketitle
+Body.
+\end{document}

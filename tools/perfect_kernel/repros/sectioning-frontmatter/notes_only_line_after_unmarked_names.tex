@@ -1,0 +1,16 @@
+% mechanism: control for notes_only_line_after_the_names_is_theirs.tex: an UNMARKED block's line of unmarked notes after
+%   `\\` stays a line, its notes the document's — no author's by position (batch 86d's reading, ieeetran_cls.rs
+%   `without_stop_after_grade`: 2112.14209, 2409.11755, 2510.15773, 2605.22853). `notes_line_joins_names` takes out
+%   only a break whose notes carry a mark in a block whose names do (OD #957).
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" + footnote ∗ "Both authors are with Univ A, Town."
+% engines: rust int127a and 100c: two bare creators, a document pubnote; perl the same (Bob an empty affiliation)
+% expect:  0 errors; two bare creators; the note a document pubnote
+% status:  GREEN (control)
+\documentclass{article}
+\title{T}
+\author{Ann Able and Bob Baker\\
+\thanks{Both authors are with Univ A, Town.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

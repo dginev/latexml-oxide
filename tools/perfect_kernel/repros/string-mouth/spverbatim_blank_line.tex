@@ -1,0 +1,17 @@
+% witness: 107 of run 336's papers (spverbatim with a blank line), e.g. 2608.30983, 2608.26131
+% oracle:  pdflatex 0 errors
+% engines: rust 64g = Error "Paragraph ended before \@xverbatim was complete" (the `\@verbatim` stand-in lacked
+%          latex.ltx:15455's `\obeylines`); Perl different errors
+% expect:  0 errors; the verbatim keeps its line ends and the blank line
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{article}
+\usepackage{spverbatim}
+\begin{document}
+Text.
+\begin{spverbatim}
+a_b {x} \foo
+
+second para
+\end{spverbatim}
+After.
+\end{document}

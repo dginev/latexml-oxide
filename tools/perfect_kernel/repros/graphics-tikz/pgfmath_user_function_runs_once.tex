@@ -1,0 +1,14 @@
+% A user-declared pgfmath function whose result is not a number runs its body once and is reported
+% (Perl pgfmath.code.tex.ltxml:457-459 reports an unusable operator); its side effects happen once.
+% witness: none (probe; review of 59b).
+% status:  GREEN (59b)
+% oracle:  lualatex 0 errors: "[1]" (pgf keeps the string result; LaTeXML's evaluator is numeric:
+%          1 error, the counter stepped once).
+% expect:  1 error, 0 warnings.
+\documentclass{article}
+\usepackage{pgf}
+\newcount\cc
+\pgfmathdeclarefunction{bmp}{1}{\global\advance\cc1 \def\pgfmathresult{abc}}
+\begin{document}
+\pgfmathparse{bmp(1)}[\the\cc]
+\end{document}

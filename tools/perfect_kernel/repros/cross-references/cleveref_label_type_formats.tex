@@ -1,0 +1,19 @@
+% witness: rev78j r2 (\label[type] with the document's and cleveref's formats of the label type)
+% oracle:  pdflatex 0 errors: "A Lem. 1. B app. eq. [2]. C eq. (3). D 1. E [2]." (cleveref.sty:82-96: \label[type]
+%          changes the label's type, not its number)
+% engines: rust 78j r1 = "A lemma 1. B app. eq. 2. C eq. (3). D (1). E 2."
+% expect:  0 errors; the label type's formats with the equation's own number
+% status:  RED (78j r1) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{cleveref}
+\newtheorem{lemma}{Lemma}
+\crefformat{lemma}{Lem.~#2#1#3}
+\creflabelformat{appendixeq}{[#2#1#3]}
+\crefname{appendixeq}{app.~eq.}{app.~eqs.}
+\begin{document}
+\begin{equation}a=b\label[lemma]{e1}\end{equation}
+\begin{equation}a=b\label[appendixeq]{e2}\end{equation}
+\begin{equation}a=b\label{e3}\end{equation}
+A \cref{e1}. B \cref{e2}. C \cref{e3}. D \labelcref{e1}. E \labelcref{e2}.
+\end{document}

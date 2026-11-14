@@ -1,0 +1,29 @@
+% elsarticle's `\cortext[cor1]{Corresponding Authors:\\ Ann Able (zx81@x.org) and Cat Cole (qq7@y.org)}` on both
+%   `\corref{cor1}` holders: each address, printed in brackets after its owner's name, is that author's e-mail; the
+%   note's other words, "Corresponding Authors:", stay its carriers' (`distribute_address_lists`, OD #972; census138
+%   ADDR-b).
+% witness: 2507.07920 (`\cortext[cor1]{ Corresponding Authors: \\ Abrar Faiyaz (abrar\_faiyaz@…)  and Md Nasir Uddin
+%   (nasir\_uddin@…)}`)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗, Bob Baker1, Cat Cole2,∗", "∗ Corresponding Authors: Ann Able (zx81@x.org)
+%   and Cat Cole (qq7@y.org)"
+% engines: rust int139a3 = the whole note, addresses and names, copied to Ann Able and Cat Cole
+% expect:  0 errors, 0 warnings; Ann Able: "Corresponding Authors:", zx81@x.org, Univ X; Bob Baker: Univ X; Cat Cole:
+%   "Corresponding Authors:", qq7@y.org, Univ Y
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[1]{Ann Able\corref{cor1}}
+\cortext[cor1]{Corresponding Authors:\\ Ann Able (zx81@x.org) and Cat Cole (qq7@y.org)}
+\author[1]{Bob Baker}
+\author[2]{Cat Cole\corref{cor1}}
+\address[1]{Univ X, Town}
+\address[2]{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Text.
+\end{document}

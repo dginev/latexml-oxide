@@ -1,0 +1,241 @@
+//! K11's table of title-page setters (`latexml_engine/src/frontmatter_stores.rs` reroutes a raw
+//! class's — or package's — stores through it), and which of them a binding defined: a setter whose definition
+//! changed while a binding loaded is the binding's own (acmart.cls's `\copyrightyear`, ported as the
+//! class's store), never a raw class's store, though a raw class that loads the binding
+//! (`\LoadClass[nonacm]{acmart}` in a wrapper class) ends with it defined. `input_definitions`
+//! snapshots the setters around each binding load; the snapshot is a Rust local, so nested loads
+//! pair by the call stack and nothing transient enters the State (or a format dump). So: raw TeX a
+//! binding loads itself (`noltxml`) counts as the binding's, a raw class a binding loads still
+//! reroutes at its own end, and a raw class's later redefinition of a binding's setter is the raw
+//! class's. Only loads through `input_definitions` are tracked (a plain-TeX `.tex` binding loaded
+//! by `load_binding` directly is not).
+use std::{cell::Cell, rc::Rc};
+
+use crate::{
+  common::{error::Result, store::Stored},
+  state::{Scope, assign_value, lookup_definition, lookup_definition_stored, lookup_value},
+};
+
+/// Setter name (no backslash) → the frontmatter API body for its kind, with
+/// `#1` the setter's argument (an `[optional]{mandatory}` setter's `#2`). Kinds and roles follow OmniBus.cls.ltxml and
+/// the kernel (`\lx@add@date[role=…]`, latex_constructs.pool.ltxml:1066).
+pub const STORE_SETTERS: &[(&str, &str)] = &[
+  ("subtitle", "\\lx@add@subtitle{#1}"),
+  ("shorttitle", "\\lx@add@toctitle{#1}"),
+  ("toctitle", "\\lx@add@toctitle{#1}"),
+  ("titlerunning", "\\lx@add@toctitle{#1}"),
+  ("email", "\\lx@add@email{#1}"),
+  ("emailaddr", "\\lx@add@email{#1}"),
+  ("ead", "\\lx@add@email{#1}"),
+  ("address", "\\lx@add@address{#1}"),
+  ("affaddr", "\\lx@add@address{#1}"),
+  ("affil", "\\lx@add@store@affiliations{affil}{#1}"),
+  (
+    "affiliation",
+    "\\lx@add@store@affiliations{affiliation}{#1}",
+  ),
+  ("inst", "\\lx@add@store@affiliations{inst}{#1}"),
+  ("department", "\\lx@add@store@affiliations{department}{#1}"),
+  ("institute", "\\lx@add@store@affiliations{institute}{#1}"),
+  (
+    "institution",
+    "\\lx@add@store@affiliations{institution}{#1}",
+  ),
+  ("keywords", "\\lx@add@keywords{#1}"),
+  ("keyword", "\\lx@add@keywords{#1}"),
+  ("kword", "\\lx@add@keywords{#1}"),
+  ("kwd", "\\lx@add@keywords{#1}"),
+  ("terms", "\\lx@add@keywords{#1}"),
+  ("pacs", "\\lx@add@classification[scheme=pacs]{#1}"),
+  ("abst", "\\lx@add@abstract{#1}"),
+  ("resumen", "\\lx@add@abstract{#1}"),
+  ("received", "\\lx@add@date[role=received]{#1}"),
+  ("recdate", "\\lx@add@date[role=received]{#1}"),
+  ("revised", "\\lx@add@date[role=revised]{#1}"),
+  // medima.sty:300-312 (and the other Elsevier journal styles papers ship under elsarticle: jcomp, prletters, ycviu,
+  // yjvci, cag, jasr) keeps a five-line "Article history" — received, received in final form, accepted, available
+  // online, communicated —, in the roles revtex4_support and aipproc give those dates (2307.16262).
+  ("finalform", "\\lx@add@date[role=revised]{#1}"),
+  ("accepted", "\\lx@add@date[role=accepted]{#1}"),
+  ("availableonline", "\\lx@add@date[role=published]{#1}"),
+  ("pubyear", "\\lx@add@date[role=publication]{#1}"),
+  ("copyrightyear", "\\lx@add@copyrightyear{#1}"),
+  ("communicated", "\\lx@add@date[role=communicated]{#1}"),
+  ("presented", "\\lx@add@date[role=presented]{#1}"),
+  ("preprint", "\\lx@add@pubnote[role=preprint]{#1}"),
+  ("journal", "\\lx@add@pubnote[role=journal]{#1}"),
+  ("jname", "\\lx@add@pubnote[role=journal]{#1}"),
+  ("volume", "\\lx@add@pubnote[role=volume]{#1}"),
+  ("issue", "\\lx@add@pubnote[role=issue]{#1}"),
+  ("pubinfo", "\\lx@add@pubnote{#1}"),
+  ("origin", "\\lx@add@pubnote{#1}"),
+  // A DOI is a string, as the classes print it (sig-alternate-05-2015.cls:1639-1641 `\def\doi#1{\def\@doi{#1}}`,
+  // `\printdoi` = `\url`): its `_` was digested as a subscript in the pubnote (1610.03579, 1710.01977; OXIDIZED_DESIGN
+  // #551). It is set as ASCII text, as `\lx@address@textfont` sets an address. Guard
+  // `perfect_kernel_batch65m::raw_class_doi_is_a_string`.
+  (
+    "doi",
+    "\\lx@add@pubnote[role=doi]{\\lx@address@textfont{\\detokenize{#1}}}",
+  ),
+  ("conferenceinfo", "\\lx@add@pubnote[role=conference]{#1}"),
+  ("articletype", "\\lx@add@pubnote[role=type]{#1}"),
+  // wiley-article.cls:213-214 (nbdt-article.cls too): the article type and the journal section its `\maketitle`
+  // (:420-466) prints above the title (1911.06213 "Research article", 1808.01384 "Original Article", 2012.13110).
+  ("papertype", "\\lx@add@pubnote[role=type]{#1}"),
+  ("paperfield", "\\lx@add@pubnote{#1}"),
+  ("orcid", "\\lx@add@orcid{#1}"),
+  ("orcidID", "\\lx@add@orcid{#1}"),
+  ("editor", "\\lx@add@editor{#1}"),
+  ("editors", "\\lx@add@editor{#1}"),
+  ("speaker", "\\lx@add@creator[role=speaker]{#1}"),
+  // The correspondence block, e-mail and funding line wiley-article.cls:206-209 stores (nbdt-article.cls too), which
+  // only its own abstract environment prints (`\wiley@affilmetadata`, :416-433, in the margin beside the abstract,
+  // :470): the kernel's locked `{abstract}` refuses that environment, so they were lost (1808.01384
+  // "pantelis@ucdavis.edu" and its funding line, 1911.06213; 13 papers of the 3,000-paper sample). The e-mail is the
+  // correspondence block's, not a named author's: a note, as OmniBus's `\printead` makes it.
+  (
+    "corraddress",
+    "\\lx@add@frontmatter{ltx:note}[role=correspondence]{#1}",
+  ),
+  (
+    "corremail",
+    "\\lx@add@frontmatter{ltx:note}[role=email]{#1}",
+  ),
+  (
+    "fundinginfo",
+    "\\lx@add@frontmatter{ltx:note}[role=funding]{#1}",
+  ),
+  // CSML.cls:227-229 `\def\ACMCCS#1{\def\@ACMCCS{#1}}`, "2012 ACM CCS", printed by its `\@setACMCCS` (:285-286) at
+  // the title page's foot (LMCS: 1608.04592 "Theory of computation", 1602.00476).
+  ("ACMCCS", "\\lx@add@classification[scheme=ACMCCS]{#1}"),
+  // The author note a title page prints under its heading (apa6.cls:779 `\authornote` → `\@acks`, printed by its
+  // `\maketitle` only; 68 of 188 apa/apa6 papers), as apa7's binding makes it (apa7_cls.rs).
+  (
+    "authornote",
+    "\\lx@add@frontmatter{ltx:note}[role=authornote]{#1}",
+  ),
+  // The corresponding-author note a class keeps in a token register (`\newtoks\correspondingauthor`) and prints only in
+  // its title page's footer (googlecloud.cls:80/:110-114, 2607.06973; cmu.cls, 2608.26053; deepseek.cls, 2401.14196;
+  // K11's toks stores, `frontmatter_stores.rs` `toks_store`), or in a macro store its title page prints.
+  (
+    "correspondingauthor",
+    "\\lx@add@frontmatter{ltx:note}[role=corresponding]{#1}",
+  ),
+];
+
+/// The setter `\name`'s current definition, as stored; none when it is undefined, `\let` to an
+/// undefined control sequence, or `\let` to a character (for which `lookup_definition_stored`
+/// makes a new definition on each call).
+fn setter_definition(name: &str) -> Result<Option<Stored>> {
+  let cs = T_CS!(&s!("\\{name}"));
+  if lookup_definition(&cs)?.is_none() {
+    return Ok(None);
+  }
+  lookup_definition_stored(&cs)
+}
+
+/// Whether two stored definitions are the same definition (not merely equal ones).
+fn same_definition(a: &Stored, b: &Stored) -> bool {
+  match (a, b) {
+    (Stored::Expandable(a), Stored::Expandable(b)) => Rc::ptr_eq(a, b),
+    (Stored::Primitive(a), Stored::Primitive(b)) => Rc::ptr_eq(a, b),
+    (Stored::Constructor(a), Stored::Constructor(b)) => Rc::ptr_eq(a, b),
+    (Stored::MathPrimitive(a), Stored::MathPrimitive(b)) => Rc::ptr_eq(a, b),
+    (Stored::Conditional(a), Stored::Conditional(b)) => Rc::ptr_eq(a, b),
+    (Stored::Register(a), Stored::Register(b)) => Rc::ptr_eq(a, b),
+    _ => false,
+  }
+}
+
+/// Each table setter's definition before a binding loads.
+pub fn snapshot() -> Result<Vec<Option<Stored>>> {
+  STORE_SETTERS
+    .iter()
+    .map(|(name, _)| setter_definition(name))
+    .collect()
+}
+
+/// The table setters whose definition changed since `before`, with their new definitions.
+fn changed_since(before: &[Option<Stored>]) -> Result<Vec<(&'static str, Stored)>> {
+  let mut changed = Vec::new();
+  for ((name, _), before) in STORE_SETTERS.iter().zip(before) {
+    let Some(after) = setter_definition(name)? else {
+      continue;
+    };
+    if !before
+      .as_ref()
+      .is_some_and(|before| same_definition(before, &after))
+    {
+      changed.push((*name, after));
+    }
+  }
+  Ok(changed)
+}
+
+/// After a binding loaded: mark each table setter whose definition changed since `before` as the
+/// binding's — unless a raw file read during the load defined it ([`mark_raw`]): bfhlayout_sty.rs
+/// reads bfhlayout.sty, whose `\institution`/`\department`/`\institute` stay the raw stores the
+/// class's title page reads (DEMO-BFHThesis lost its affiliations).
+pub fn mark_bound(before: &[Option<Stored>]) -> Result<()> {
+  for (name, after) in changed_since(before)? {
+    let raw =
+      lookup_value(&s!("lx_raw_setter_{name}")).is_some_and(|raw| same_definition(&raw, &after));
+    if !raw {
+      assign_value(&s!("lx_bound_setter_{name}"), after, Some(Scope::Global));
+    }
+  }
+  Ok(())
+}
+
+/// After a raw file was read: record each table setter it defined as the raw file's.
+pub fn mark_raw(before: &[Option<Stored>]) -> Result<()> {
+  for (name, after) in changed_since(before)? {
+    assign_value(&s!("lx_raw_setter_{name}"), after, Some(Scope::Global));
+  }
+  Ok(())
+}
+
+/// Whether the setter's current definition is the one a raw file made ([`mark_raw`]): not a binding's, nor the K11
+/// reroute's of a raw file's store.
+pub fn defined_by_a_raw_file(name: &str) -> Result<bool> {
+  let Some(current) = setter_definition(name)? else {
+    return Ok(false);
+  };
+  Ok(lookup_value(&s!("lx_raw_setter_{name}")).is_some_and(|raw| same_definition(&raw, &current)))
+}
+
+/// Whether the setter's current definition is one a binding made.
+pub fn defined_by_a_binding(name: &str) -> Result<bool> {
+  let Some(current) = setter_definition(name)? else {
+    return Ok(false);
+  };
+  Ok(
+    lookup_value(&s!("lx_bound_setter_{name}"))
+      .is_some_and(|bound| same_definition(&bound, &current)),
+  )
+}
+
+thread_local! {
+  /// The raw class reads in progress (`content.rs`, around a `.cls` read raw).
+  static RAW_CLASS_READS: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Counts a raw class read while it lasts ([`in_a_raw_class_read`]).
+pub struct RawClassRead;
+
+impl RawClassRead {
+  /// Enter a raw class read.
+  #[must_use]
+  pub fn begin() -> Self {
+    RAW_CLASS_READS.with(|n| n.set(n.get() + 1));
+    RawClassRead
+  }
+}
+
+impl Drop for RawClassRead {
+  fn drop(&mut self) { RAW_CLASS_READS.with(|n| n.set(n.get().saturating_sub(1))); }
+}
+
+/// Is a raw class being read? A raw package it loads is then the class's: its table setters are rerouted at the
+/// class's end, where its title page is known (`latexml_engine/src/frontmatter_stores.rs` `reroute_raw_package_stores`).
+pub fn in_a_raw_class_read() -> bool { RAW_CLASS_READS.with(Cell::get) > 0 }

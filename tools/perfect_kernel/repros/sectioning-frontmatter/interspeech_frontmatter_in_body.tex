@@ -1,0 +1,16 @@
+% witness: review of 63w (the class decides at `\maketitle`, `\anonname`/`\anonaddress`/`\anonemail` in `\@maketitle`,
+%          2025 :235-258): the camera-ready switch and the frontmatter given after `\begin{document}`
+% oracle:  pdflatex 0 errors (2409.08589's Interspeech.cls): "Ada Byron 1", "1 University A, City A", "ada@x.org"
+% engines: rust 63w1 = "Anonymous submission to Interspeech" and no author (decided at `\begin{document}`)
+% expect:  0 errors, 0 warnings; the author with the affiliation and the email, no anonymous note
+% status:  RED (63w1) -> GREEN (63w)
+\documentclass{Interspeech}
+\title{T}
+\begin{document}
+\interspeechcameraready
+\author[affiliation={1}]{Ada}{Byron}
+\affiliation{}{University A}{City A}
+\email{ada@x.org}
+\maketitle
+Text.
+\end{document}

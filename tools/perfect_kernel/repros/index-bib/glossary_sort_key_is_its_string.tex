@@ -1,0 +1,25 @@
+% glossaries sanitizes an entry's sort key to a string of characters (`\@gls@defsort`), which makeindex compares:
+% `$\alpha $` and `$x$` sort as symbols before letters, `\` before `x`. The binding recorded the sort phrase digested,
+% so under OT1 the sanitized `\` and `"` were set as the font's `“` and `”` (`$”“alpha $`), which sort after every
+% letter, and from `\@glo@sort` after glossaries had rewritten it with makeindex's quote character (`q""x`). The
+% glossary listed x before α (review 60i r2 finding 1); with the escapes, `a"|d` sorted before `a+e`. Now the sort and
+% parent phrases are their source strings, the sort key from `\glo@<label>@sort`.
+% status:  GREEN 60i; guard glossary_refs_post::glossary_sort_key_is_its_string
+% oracle:  pdflatex → makeglossaries → pdflatex, 0 errors: "α angle" / "x position" / "ape plus" / "apd bar" /
+%          "b breadth" / "q”x quoted"
+% engines: rust 60i r1: x, α, b, q
+% expect:  0 errors, 0 warnings; alpha, x, ape, apd, b, q in that order; sort phrases `$\alpha $`, `$x$`, `a+e`,
+%          `a|d`, `b`, `q"x`
+\documentclass{article}
+\usepackage{glossaries}
+\makeglossaries
+\newglossaryentry{x}{name={$x$},description={position}}
+\newglossaryentry{alpha}{name={$\alpha$},description={angle}}
+\newglossaryentry{q}{name={q"x},description={quoted}}
+\newglossaryentry{b}{name={b},description={breadth}}
+\newglossaryentry{apd}{name={apd},sort={a|d},description={bar}}
+\newglossaryentry{ape}{name={ape},sort={a+e},description={plus}}
+\begin{document}
+Symbols \gls{x}, \gls{alpha}, \gls{q}, \gls{b}, \gls{apd} and \gls{ape}.
+\printglossary
+\end{document}

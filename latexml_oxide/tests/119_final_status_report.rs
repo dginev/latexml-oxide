@@ -283,3 +283,64 @@ fn default_latexml_log_is_written_like_perl() {
     "default log ends with the status line"
   );
 }
+
+/// An input that cannot be opened as a conversion ends as a Fatal conversion does: the `Fatal:` line, the verdict,
+/// `Status:conversion:3` as the last line of stderr and of the `--log` file, exit 1 (Perl latexmlc: `Fatal:I/O:Archive`
+/// for an unreadable zip, Util/Pack/Zip.pm:37-38; `Fatal:invalid:empty_input` when no main file is found, Core.pm:136).
+/// The CLI once printed a bare "Failed to unpack archive" and exited 1 with no Fatal, no status line and no log
+/// (astro-ph9407095, astro-ph9409032, cs9610101: PostScript sources; cortex_worker records `Fatal:invalid:no_viable_tex`).
+#[test]
+fn unusable_archive_is_a_fatal_conversion() {
+  let workdir = tempfile::tempdir().expect("tempdir");
+  // A zip whose only `.tex` is PostScript, and bytes that are no zip at all.
+  let postscript = workdir.path().join("ps.zip");
+  {
+    let file = std::fs::File::create(&postscript).expect("create ps.zip");
+    let mut zip = zip::ZipWriter::new(file);
+    zip
+      .start_file("paper.tex", zip::write::SimpleFileOptions::default())
+      .expect("zip entry");
+    std::io::Write::write_all(
+      &mut zip,
+      b"%!PS-Adobe-2.0\n%%Creator: dvips\n/TeXDict 250 dict def\n",
+    )
+    .expect("zip body");
+    zip.finish().expect("zip finished");
+  }
+  std::fs::write(
+    workdir.path().join("garbage.zip"),
+    b"this is not a zip archive at all",
+  )
+  .expect("write garbage.zip");
+  for (zip, fatal) in [
+    ("ps.zip", "Fatal:invalid:no_viable_tex "),
+    ("garbage.zip", "Fatal:I/O:Archive "),
+  ] {
+    let log_name = format!("{zip}.log");
+    let (stderr, code) = run(
+      &[zip, "--dest=out.xml", &format!("--log={log_name}")],
+      workdir.path(),
+    );
+    assert_eq!(code, 1, "{stderr}");
+    assert_eq!(
+      stderr.lines().filter(|l| l.contains(fatal)).count(),
+      1,
+      "{stderr}"
+    );
+    let lines: Vec<&str> = stderr.lines().filter(|l| !l.trim().is_empty()).collect();
+    assert_eq!(
+      lines[lines.len() - 2..],
+      ["Conversion failed: 1 fatal error", "Status:conversion:3"],
+      "{stderr}"
+    );
+    let log = std::fs::read_to_string(workdir.path().join(&log_name)).expect("the --log file");
+    assert!(log.starts_with(fatal), "{log}");
+    assert_eq!(log.lines().last(), Some("Status:conversion:3"), "{log}");
+  }
+  // With no `--log`, the default `<stem>.latexml.log`, as for any other run.
+  let (_, code) = run(&["garbage.zip", "--dest=out.xml"], workdir.path());
+  assert_eq!(code, 1);
+  let log = std::fs::read_to_string(workdir.path().join("garbage.latexml.log"))
+    .expect("the default log of the archive");
+  assert!(log.starts_with("Fatal:I/O:Archive "), "{log}");
+}

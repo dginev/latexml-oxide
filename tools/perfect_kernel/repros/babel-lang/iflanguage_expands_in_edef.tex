@@ -1,0 +1,17 @@
+% mechanism: babel_support's `\iflanguage` (Perl babel_support.sty.ltxml:158-167, "pretend we've got hyphenation
+%   patterns for ANY language") ran `\expandafter\edef\expandafter\@@@@lang…`, so it was not expandable: inside an
+%   `\edef` (cjs-rcs-article.cls:368 `\edef\CJS@runningauthor@and{\iflanguage{french}{ et }{ and }}`) `\@@@@lang` was
+%   undefined, an Error. A language the format has patterns for is now tested by expansion only, as babel.sty:562-568
+%   does; only an unknown one is allocated (`\newlanguage`).
+% witness: 2608.13762 (cjs-rcs-article `\surname`)
+% oracle:  pdflatex: 0 errors; "Ann and Bob. Ann et Bob."
+% engines: rust 67int16: 1 Error (\@@@@lang), "Ann  and Bob."; perl: the same Error (KNOWN_PERL_ERRORS #861)
+% expect:  0 errors; "Ann and Bob." then the French "Ann et Bob."
+% status:  RED (67int16) -> GREEN (68x)
+\documentclass{article}
+\usepackage[french,english]{babel}
+\edef\conj{\iflanguage{french}{ et }{ and }}
+\begin{document}
+Ann\conj Bob.
+\selectlanguage{french}\edef\conj{\iflanguage{french}{ et }{ and }}Ann\conj Bob.
+\end{document}

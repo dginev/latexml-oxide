@@ -1,0 +1,19 @@
+% `\captionsetup{type=table}` in a minipage makes the minipage's `\caption` a table caption (caption.sty's
+% `type` key sets `\@captype`), inside a `figure` too: pdflatex prints "Table 1: F" and the next figure is
+% Figure 1. The caption is numbered as the enclosing figure's, and later figures shift by one.
+% witness: 57cp review 5 (capset.tex).
+% status:  RED (Perl alike: Figure 1, Figure 2)
+% oracle:  pdflatex 0 errors; "Table 1: F", "Figure 1: K", "Refs F=1 K=1".
+% engines: rust 57cp5: Figure 1: F, Figure 2: K.
+% expect:  0 errors, 0 warnings; the pdflatex numbers.
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\begin{figure}[h]
+\begin{minipage}{.5\linewidth}\captionsetup{type=table}\centering f\caption{F}\label{F}\end{minipage}
+\end{figure}
+\begin{figure}[h]
+\centering k\caption{K}\label{K}
+\end{figure}
+Refs F=\ref{F} K=\ref{K}
+\end{document}

@@ -1,0 +1,31 @@
+% witness: 2303.16316 (jheppubmodnew.sty: `\renewcommand{\author}[2][]`, `\newcommand{\affiliation}[2][]{…\affil@toks=
+%          \expandafter{\the\affil@toks{\item[$^{#1}$]#2}}}`, the paper's `\author[a,b]{Joydeep Chakravarty,}` and
+%          `\affiliation[b]{Department of Physics, McGill University,…}`; Perl jheppub.sty.ltxml:35-37 `\author[]{}` →
+%          `annotations={#1}`, `\affiliation[]{}` → `label={#1}`); review rev94b r1-r2 B2 (a caption written for every
+%          optional argument wrote the key "a" as a contact's name)
+% oracle:  pdflatex 0 errors: "A Title", "Bob Baker", the list "a Univ A, Town", "b Lab B, City", "Body."
+% engines: rust 94b r2 = 0 errors, 0 warnings: the key dropped, both affiliations on both names (`annotate=run`: the
+%          second the same run's as the first)
+% expect:  0 errors, 0 warnings; a key an `\author[key]` gave its authors labels the line for each of them (`author:N`):
+%          Ann Able "Univ A, Town", Bob Baker "Univ A, Town" and "Lab B, City", no caption; eager and --streaming the
+%          same
+% status:  RED (94b r2) -> GREEN (94b r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{jhepkey.sty}
+\ProvidesPackage{jhepkey}
+\newtoks\affil@toks
+\renewcommand{\author}[2][]{\gdef\@author{#2}}
+\newcommand{\affiliation}[2][]{\affil@toks=\expandafter{\the\affil@toks{\item[$^{#1}$]#2}}}
+\def\@maketitle{{\Large\@title\par}\@author\par\begin{list}{}{}\the\affil@toks\end{list}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{jhepkey}
+\begin{document}
+\title{A Title}
+\author[a]{Ann Able,}
+\author[a,b]{Bob Baker}
+\affiliation[a]{Univ A, Town}
+\affiliation[b]{Lab B, City}
+\maketitle
+Body.
+\end{document}

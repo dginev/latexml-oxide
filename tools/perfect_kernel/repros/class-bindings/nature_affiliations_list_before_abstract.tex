@@ -1,0 +1,57 @@
+% witness: 2608.12563 (nature-pre: `\item{…}` braced institutions and `\item[*] email:` after `\maketitle`, then the
+%          abstract), 1702.00936, 1408.2522, 2412.11966 (nature_mod: the same list, plain `\item`s); nature-pre.cls:67-81
+%          = TL nature.cls:67-81 = nature_mod.cls:74-88 (the class's `{affiliations}`, cut here with its `\@maketitle`)
+% oracle:  pdflatex 0 errors: "Talc Title", "Ann Author1", the slanted list "1Department of Physics, Budapest",
+%          "2Institute of Chemistry, Szeged", "*email: ann@example.org" (the numbers raised), then the abstract
+% engines: rust 92a = 0 errors, 0 warnings: the binding emptied `{affiliations}`, so title, creator, abstract, then
+%          the items as unlabelled body paragraphs; perl (no binding, the copy read with --includestyles) = the list
+%          with its labels, the abstract before it
+% expect:  0 errors, 0 warnings; title, creator, a continued titlepage holding the itemize (tags 1, 2, *, the bodies
+%          slanted), then the abstract; the same without the copy (the binding alone)
+% status:  RED (92a) -> GREEN (92f)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{nature-pre.cls}
+\ProvidesClass{nature}[24/2/2004 v1.0]
+\LoadClass[12pt]{article}
+\def\@maketitle{%
+  \newpage\setlength{\parskip}{12pt}%
+    {\Large\bfseries\noindent\sloppy \textsf{\@title} \par}%
+    {\noindent\sloppy \@author}%
+}
+\newenvironment{affiliations}{%
+    \setcounter{enumi}{1}%
+    \setlength{\parindent}{0in}%
+    \slshape\sloppy%
+    \begin{list}{\upshape$^{\arabic{enumi}}$}{%
+        \usecounter{enumi}%
+        \setlength{\leftmargin}{0in}%
+        \setlength{\topsep}{0in}%
+        \setlength{\labelsep}{0in}%
+        \setlength{\labelwidth}{0in}%
+        \setlength{\listparindent}{0in}%
+        \setlength{\itemsep}{0ex}%
+        \setlength{\parsep}{0in}%
+        }
+    }{\end{list}\par\vspace{12pt}}
+\renewenvironment{abstract}{%
+    \setlength{\parindent}{0in}%
+    \setlength{\parskip}{0in}%
+    \bfseries%
+    }{\par\vspace{-6pt}}
+\end{filecontents*}
+\documentclass{nature-pre}
+\begin{document}
+\title{Talc Title}
+\author{Ann Author$^{1}$}
+\maketitle
+\begin{affiliations}
+\item{Department of Physics, Budapest}
+\item Institute of Chemistry, Szeged
+\item[*] email: ann@example.org
+\end{affiliations}
+\begin{abstract}
+Abstract text here.
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: 2403.09168 (`\caption{…}\Description{…}\label{fig:system_interface_1}`: 10 labels on the hidden description
+%          notes, so `\ref` points at a note); acmart.cls:895 `\Description` typesets nothing
+% oracle:  pdflatex 0 errors: "See Table 1."
+% engines: rust 63m = `labels="LABEL:tab:x"` on `<note class="ltx_acm_description …">`, none on the table; Perl 0.8.8
+%          the same (`\label` takes the nearest element with an id from the current node's last child, Document.pm
+%          floatToLabel; the note moves into the caption only when the float closes)
+% expect:  0 errors, 0 warnings; the table carries the label, the description note none
+% status:  RED (63m) -> GREEN (63n)
+\documentclass[nonacm]{acmart}
+\begin{document}
+\title{T}
+\maketitle
+\begin{table}
+  \caption{First caption.}
+  \Description{Hidden description.}
+  \label{tab:x}
+  \begin{tabular}{c}a\end{tabular}
+\end{table}
+See Table~\ref{tab:x}.
+\end{document}

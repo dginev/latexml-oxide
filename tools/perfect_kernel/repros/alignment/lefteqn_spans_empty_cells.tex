@@ -1,0 +1,15 @@
+% witness: 0707.3929, 0801.4655, 1209.6494 (run 340's `&` cluster, R1: about 2,050 papers): the canonical
+%          `\lefteqn{lhs}&&\nonumber\\` row. `\lefteqn` is `\rlap{$\displaystyle #1$}` (latex.ltx:15800), a zero-width box
+%          in the first column, so the `&&` fill the second and third
+% oracle:  pdflatex 0 errors; pdftotext `a+b+c+d` above ` =  e + f.  (1)`
+% engines: rust 65int2 and Perl 0.8.8 = 2 x `Error:unexpected:&` (the `\multicolumn{3}`, latex_constructs.pool.ltxml:2194-2197)
+% expect:  0 errors, 0 warnings; the `\lefteqn` row one cell spanning the three columns (its empty cells), the row
+%          classed `ltx_eqn_lefteqn`
+% status:  RED (65int2) -> GREEN (65o)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{a+b+c+d}&&\nonumber\\
+&=& e+f.
+\end{eqnarray}
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: a `\~` inside a hyperref `\url` in an author's note: pdflatex prints "~alice" in the URL and the output's
+%   `ltx:ref` holds href "http://math.example.edu/~alice", but the title-page check's print reads it as the accent's
+%   macro name ("http://math.example.edu/\lxaccenttildealice", an Info `class_text` "lxaccenttildealice") and the
+%   emitter's content check as an accented word ("ãlice", a false Warning "missing", and a second one, "Alice" placed
+%   more often than printed). Neither check reads the URL's `~` as the character the PDF and the output hold
+% witness: 1409.7028 (`\url{http://math.iit.edu/\~bielecki}`: Info `class_text` "lxaccenttildebielecki
+%   lxaccenttildeigor" on int159a0 and FX25b; FX25's cut print lacked it); found in FX25b's A/B, not its mechanism
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Alice Able*", the foot "* URL:
+%   http://math.example.edu/~alice"
+% engines: int159a0, FX25b: 0 errors, 2 warnings (both the emitter's content check: "ãlice" missing, "Alice" more
+%   often); the check's print "…URL: ||||–||˝||http://math.example.edu/\lxaccenttildealice||||", Info `class_text`
+%   "lxaccenttildealice"; perl not run
+% expect:  0 errors, 0 warnings; no Info `class_text`; the print holds "http://math.example.edu/~alice"
+% status:  RED (int159a0, FX25b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{A Title}
+\author{Alice Able\thanks{URL: \url{http://math.example.edu/\~alice}}}
+\maketitle
+Body.
+\end{document}

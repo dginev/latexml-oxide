@@ -1,0 +1,21 @@
+% mechanism: control for deposit_position_keyword_prints_nothing: a class's `\@maketitle` whose `[t]` table and
+%   `\parbox[t]` hold text the class itself prints (a notice) still prints something, so its deposit is kept.
+% witness: review 77o (negative guard)
+% oracle:  pdflatex 0 errors; "A Title / Ann Able / Preprint. Under review. / Draft notice"
+% engines: rust 77o: 0 errors, the notice table and parbox kept
+% expect:  0 errors; the deposit keeps "Preprint. Under review." and "Draft notice"
+% status:  CONTROL (77o)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\vbox{\hsize\textwidth{\LARGE \@title\par}%
+  \begin{tabular}[t]{l}\bf\rule{\z@}{24pt}\@author\end{tabular}\par
+  \begin{tabular}[t]{l}Preprint. Under review.\end{tabular}\par
+  \parbox[t]{5cm}{Draft notice}\vskip 0.3in}}
+\makeatother
+\title{A Title}
+\author{Ann Able}
+\begin{document}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

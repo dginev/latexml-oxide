@@ -1,0 +1,29 @@
+% mechanism: a primitive inside a definition body reads at `defining` status (tex.web §473
+%   scan_toks), so a file that ends under \expandafter's get_token (§368) is the definition's
+%   runaway, reported there (§338 "File ended while scanning definition of \x"); TeX's
+%   inserted `}` (§339) is \expandafter's first token and ends the body, so \x is empty and
+%   the parent's \foo is expanded after it. \string instead reads at `normal` status (§471
+%   `scanner_status:=normal`), crossing the file end without a runaway: \y strings the
+%   parent's \foo and the body goes on to the parent's `}`.
+% witness: batch 56jj review (the non-normal statuses of read_primitive_token)
+% oracle:  pdflatex 1 error ("File ended while scanning definition of \x"),
+%          "A FOO[macro:->]", "B [macro:->\foo]"
+% engines: rust=3 errors (the runaway twice, then "Attempt to close a group"),
+%          "A FOO[macro:->\relax \relax ]", "B FOO [macro:->\relax]" (56jg-rel, 2026-09-25)
+% expect:  1 error "File ended while scanning definition", pdflatex's text
+% status:  GREEN (56jj: read_primitive_token recovers at defining/absorbing/aligning; guard
+%          token_kernel_gaps::an_edef_body_primitive_at_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_edef_expandafter_in.tex}
+\edef\x{\expandafter
+\end{filecontents*}
+\begin{filecontents*}{input_end_edef_string_in.tex}
+\edef\y{\string
+\end{filecontents*}
+\def\foo{FOO}
+\makeatletter
+\begin{document}
+A \@@input input_end_edef_expandafter_in.tex \foo [\meaning\x]
+
+B \@@input input_end_edef_string_in.tex \foo} [\meaning\y]
+\end{document}

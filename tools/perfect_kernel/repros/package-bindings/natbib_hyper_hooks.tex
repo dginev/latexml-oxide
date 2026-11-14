@@ -1,0 +1,17 @@
+% witness: 2508.13812, 2508.10710, 2103.13674 (kotexutf.sty:233-234 extends natbib's `\hyper@natlinkend`;
+%   run 340: 176 first errors)
+% oracle:  pdflatex 0 errors; "See Knuth (1984)."
+% engines: rust 65int7 = 1 error (`\hyper@natlinkend` undefined)
+% expect:  0 errors; the citation
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{natbib}
+\makeatletter
+\expandafter\def\expandafter\hyper@natlinkend\expandafter{\hyper@natlinkend\relax}
+\makeatother
+\begin{document}
+See \citet{k}.
+\begin{thebibliography}{1}
+\bibitem[Knuth(1984)]{k} D. Knuth. The TeXbook. 1984.
+\end{thebibliography}
+\end{document}

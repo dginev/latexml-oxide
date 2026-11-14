@@ -1,0 +1,20 @@
+% A `\tag` in amsmath's `{multline*}` gives the unnumbered equation that tag (amsmath.sty `\tag@in@align`,
+% `\make@df@tag`), as in `{equation*}`; Rust's `{multline*}` had no tag slot and dropped it without a diagnostic.
+% witness: review of batch 77v (probe rev77v/ml1.tex)
+% oracle:  pdflatex "(Z)" on the first, none on the second, "(1)" on the equation after
+% engines: rust (77v-rel) no tag, none, "(1)"; perl the same (amsmath.sty.ltxml:258)
+% expect:  tags "(Z)", none, "(1)"; 0 errors
+% status:  RED -> GREEN (77v r2; guard perfect_kernel_batch77v::multline_star_tag_is_kept)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{multline*}
+a + b \\ + c \tag{Z}
+\end{multline*}
+\begin{multline*}
+d + e \\ + f
+\end{multline*}
+\begin{equation}
+g
+\end{equation}
+\end{document}

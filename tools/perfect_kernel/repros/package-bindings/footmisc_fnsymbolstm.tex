@@ -1,0 +1,12 @@
+% witness: 1904.04281, 1904.11899, 1107.5789 (`\DefineFNsymbolsTM`; run 340: 127 first errors)
+% oracle:  pdflatex 0 errors
+% engines: rust 65int7 = 1 error (`\DefineFNsymbolsTM` undefined)
+% expect:  0 errors; the footnote's text "Note."
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage[symbol*]{footmisc}
+\DefineFNsymbolsTM{myfnsymbols}{\textasteriskcentered *\textdagger\dagger}
+\setfnsymbol{myfnsymbols}
+\begin{document}
+Text\footnote{Note.}.
+\end{document}

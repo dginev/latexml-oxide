@@ -1,0 +1,15 @@
+% witness: 78k twin of listings-algorithms/algorithm2e_block_end_is_a_bold_short_keyword (option longend)
+% oracle:  pdflatex 0 errors: the end lines are a bold "end if" and "end for" (algorithm2e.sty:1442 longend,
+%          :1885-1888 `\SetAlgoLongEnd` prints the whole keyword)
+% engines: rust int49a = 0 errors, plain "end if", "end for"; perl = the same (algorithm2e.sty.ltxml:153, two args)
+% expect:  0 errors, 0 warnings; the end lines are `<text font="bold">end if</text>`, `…end for…`
+% status:  RED (int49a) -> GREEN (78k: algorithm2e_sty.rs `\algocf@@@block{}{}{}` as :1868)
+\documentclass{article}
+\usepackage[ruled,longend]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+\eIf{$x$}{a\;}{b\;}
+\For{$i$}{c\;}
+\caption{A}
+\end{algorithm}
+\end{document}

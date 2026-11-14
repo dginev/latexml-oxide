@@ -1,0 +1,22 @@
+% A `\multicolumn` declaring no parameters may read any number (`another_interface`'s `count > 0`, state.rs), so the lock
+% refuses it: here `\mymc` is latex.ltx:16603's three-argument command again (agupp.sty:599's copy behind one more name), whose
+% `\@mkpream` cannot run against an alignment model with no preamble (KNOWN_PERL_ERRORS #205; OD #209).
+% witness: the review of M2 (the arity lock); aguplus/aguplus is this copy with its parameters on `\multicolumn`.
+% oracle:  pdflatex (TL 2025) 0 errors: a b / Span.
+% engines: int140a, M2 0 errors, the cell kept. With `count > 0` removed, the copy stands and errs.
+% expect:  0 errors, 0 warnings; `<td align="center" colspan="2">Span</td>`.
+\documentclass{article}
+\begin{document}
+\makeatletter
+\long\def\mymc#1#2#3{\multispan{#1}\begingroup
+  \@mkpream{#2}%
+  \def\@sharp{#3}\set@typeset@protect
+  \let\@startpbox\@@startpbox\let\@endpbox\@@endpbox
+  \@arstrut \@preamble\hbox{}\endgroup\ignorespaces}
+\renewcommand{\multicolumn}{\mymc}
+\makeatother
+\begin{tabular}{ll}
+a & b \\
+\multicolumn{2}{c}{Span} \\
+\end{tabular}
+\end{document}

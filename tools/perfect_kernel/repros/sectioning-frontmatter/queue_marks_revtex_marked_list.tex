@@ -1,0 +1,19 @@
+% mechanism: the queue's marks query (Option C F0/P4a, `queue_reading.rs` `author_marks`, `observer/argument_marks.rs`):
+%   a queued author's name requests the labels its digested marks print; a REVTeX marked `\affiliation` list after
+%   marked names is cut by the binding (`affiliation_is_marked`, token reading until P4c), each entry to its author
+% witness: study P4S repro rev_marked (synthetic)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1Univ A, Town A / 2Univ B, Town B"
+% engines: int160c and F0: Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B" (the printed marks dropped by the
+%   binding cut: P4c shows them, FIDELITY_CHARTER §2); perl: not compared
+% expect:  0 errors, 0 warnings; the creators above
+% status:  GREEN (int160c's output, kept; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

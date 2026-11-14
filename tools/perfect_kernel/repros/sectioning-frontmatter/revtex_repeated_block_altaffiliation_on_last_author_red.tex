@@ -1,0 +1,30 @@
+% RED (RB1d, pre-existing): a block repeated after `\maketitle` switches `\author`, `\affiliation`, `\email` and
+%   `\thanks` off (revtex4_cls.rs `switch_off_author_block_after_maketitle`), but its `\altaffiliation` stays live and
+%   lands on the last author of the first block (`\homepage`, `\collaboration` likely too). pdflatex prints none of the
+%   repeat: its `\altaffiliation` reaches `\@AF@join`, which `\frontmatter@maketitle` lets to `\@AF@join@error`, a
+%   class warning "appears in wrong context" (revtex4-2.cls:2393-2398, 2420-2422, 2670-2684).
+% witness: synthetic (review revRB1c P1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able* / Univ X, Town / Bob Baker / Univ Z, Village /
+%   Text. / 2 / More."
+% engines: rust RB1c, RB1d: Bob Baker holds a second "Also at Lab Y, City"
+% expect:  Ann Able alone holds "Also at Lab Y, City"; Bob Baker holds Univ Z, Village only
+% status:  RED
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\altaffiliation{Also at Lab Y, City}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\affiliation{Univ Z, Village}
+\maketitle
+Text.
+\clearpage
+\author{Ann Able}
+\altaffiliation{Also at Lab Y, City}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\affiliation{Univ Z, Village}
+\maketitle
+More.
+\end{document}

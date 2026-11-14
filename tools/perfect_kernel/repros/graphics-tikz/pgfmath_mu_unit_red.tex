@@ -1,0 +1,14 @@
+% mechanism: pgf reads `mu` as a math unit: the number as pt, both units flags set (pgfmathparser.code.tex:497-506),
+%   so `\pgfmathsetlength` assigns `<n>mu`. Our grammar has no `mu` (PGF_UNITS): it stops before it, prints [2]
+%   and leaves `\ifpgfmathmathunitsdeclared` false (revDTL1f P3, pH line 4).
+% witness: synthetic
+% oracle:  pdflatex 0 `!`, [Y][2.0][Y][2.0]
+% engines: rust DTL1f, DTL1g: [N][2][N][2], 0 errors, 0 warnings
+% expect:  [Y][2.0][Y][2.0], 0 errors 0 warnings
+% status:  RED (DTL1f, DTL1g)
+% moves:   a later pgfmath batch (units) makes it a row of perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows.
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathsetmacro\w{2mu}[\ifpgfmathmathunitsdeclared Y\else N\fi][\w]\pgfmathparse{2mu}[\ifpgfmathmathunitsdeclared Y\else N\fi][\pgfmathresult]
+\end{document}

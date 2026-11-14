@@ -15,14 +15,38 @@ LoadDefinitions!({
   AssignValue!("MAX_ERRORS" => Stored::Int(1000));
   // TikZ healthily expands to 100M+ tokens (measured: 1805.03265 tikz-cd ~155M),
   // far above the default 20M cycle-guard floor — lift it so the healthy stream
-  // skips the per-token loop-fingerprint cost. 400M token_limit stays the hard
+  // skips the per-token loop-fingerprint cost. 1G token_limit stays the hard
   // backstop; reset per-conversion in initialize_gullet. (tikz also loads pgf,
   // which raises the same floor — the setter only ever raises, so this is idempotent.)
   raise_cycle_guard_activate(CYCLE_GUARD_ACTIVATE_GRAPHICS);
 
   DefMacro!("\\pgfmathresult", "0.0");
   DefMacro!("\\tikz@align@temp", "\\pgfmathresult");
+  // tikz.code.tex:1412-1414 initializes \tikzparentanchor and \tikzchildanchor to
+  // \pgfutil@empty, while \tikzparentnode and \tikzchildnode are set dynamically in
+  // \tikz@children@collected (tikz.code.tex:4591) and \tikz@childnode (tikz.code.tex:4664).
+  // Provide fallback definitions so keys or styles evaluated outside an active child scope
+  // do not trigger undefined CS errors.
+  DefMacro!("\\tikzparentnode", "tikzparentnode");
+  DefMacro!("\\tikzchildnode", "tikzchildnode");
   InputDefinitions!("tikz", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // `\path`, `\node`, `\draw`, … exist only inside a `tikzpicture` (tikz.code.tex:1730 `\tikz@installcommands`): the
+  // `\maketitle` replay gate reads a `tikzpicture` in a class's title body as one unit
+  // (sect05.rs `defined_environment_span`; uantwerpenletter.cls:285-292).
+  AssignValue!("replay_gate_scoped_vocabulary:tikzpicture" => true, Some(Scope::Global));
+  // latex-lab-testphase-tikz.sty:228-260 (loaded by every `\DocumentMetadata`
+  // through latex-lab-testphase-latest.sty:39-58) adds the accessibility keys
+  // `alt`, `actualtext`, `artifact`, `tagging-setup` to `/tikz` from the
+  // `package/tikz/after` hook. Their socket plugs write PDF structure (a
+  // Figure/Span with the purified text); the XML has no slot for it yet, so
+  // the values are only recorded (`\lx@tikz@alt`/`\lx@tikz@actualtext`).
+  // Witness: tagpdf manual (`\begin{tikzpicture}[alt={…}]` ×9 "I do not know
+  // the key '/tikz/alt'"). Gated like the real chain on `\DocumentMetadata`.
+  RawTeX!(r"\IfDocumentMetadataTF{\tikzset{
+    alt/.code={\def\lx@tikz@alt{#1}},
+    actualtext/.code={\def\lx@tikz@actualtext{#1}},
+    artifact/.code={},
+    tagging-setup/.code={}}}{}");
   // Perl L35-52: \use@@tikzlibrary — loads tikz/pgf library files
   // Makes sure libraries are loaded as definitions (InputDefinitions) rather than
   // content, with catcode management for | character.

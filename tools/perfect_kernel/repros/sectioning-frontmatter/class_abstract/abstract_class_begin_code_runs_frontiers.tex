@@ -1,0 +1,25 @@
+% A raw class's `{abstract}`, refused by the kernel's lock (`\lx@dropped@abstract`), still runs its begin code for its
+% effects: its `\let\section\absection` holds in the abstract's group, so `\section{…}` there is a run-in bold label,
+% and after the abstract `\section` is the kernel's again.
+% witness: 1508.06756 (frontiersFPHY.cls:516-524), 1406.7114 (bioinfo.cls:495-500), 1404.0027 (4arXiv), 1805.07007
+% oracle:  pdflatex (absfront.cls beside it) 0 errors: "ABSTRACT / Motivation: First part. Results: Second part.
+%          Keywords: alpha -- beta", then "1 Introduction"
+% engines: rust 67int23b = 2 Errors (malformed:ltx:section in ltx:section), the labels sections inside the abstract
+% expect:  0 errors, 0 warnings; the abstract holds three paragraphs led by bold "Motivation:", "Results:", "Keywords:";
+%          one ltx:section ("Introduction")
+% status:  RED (67int23b) -> GREEN (74a)
+% preload: ar5iv.sty
+\documentclass{absfront}
+\def\keyFont{\fontsize{8}{11}\bfseries}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+\section{Motivation:} First part.
+\section{Results:} Second part.
+
+\keyFont{\section{Keywords:} alpha -- beta}
+\end{abstract}
+\section{Introduction}
+Body.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: isolation (rc_groups dead end "\begin{center}\thm...\end{center} clean": error-free but misnested)
+% oracle:  pdflatex 0 errors; \thm opens no group, \end{center}'s \endgroup closes \begin{center}'s group
+% engines: rust 0 Error + 1 Warning (open environment center at \end{document}), 'After.' centered inside the center
+%          logical-block (64ra and 64y); Perl 3 Error, 'After.' inside the theorem
+% expect:  0 errors 0 warnings; theorem inside the center block, 'After.' a paragraph after the block
+% status:  RED (64y side finding, not fixed): \end{center}'s endMode pops the bare \thm frame on top instead of the
+%          center frame. Same family as 64y's group-closer recovery (an enclosing closer meets a bare \X frame), but the
+%          closer is a DefEnvironment's \end{X} constructor, not a plain } or \endgroup.
+% preload: ar5iv.sty
+\documentclass{article}
+\newtheorem{thm}{Theorem}
+\begin{document}
+Intro text.
+
+\begin{center}
+\thm A statement closed by the environment's endgroup.
+\end{center}
+
+After.
+\end{document}

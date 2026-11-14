@@ -1,0 +1,15 @@
+% witness: review revIMG1 finding 1 (probe r4_mid_no_comma_url): the sibling of
+%          fm_image_inside_affiliation_before_url_is_kept with no separator between the text and the image
+% oracle:  pdflatex 0 errors: "Ann Able", "Zebra University [image] https://example.org/x" on one line
+% engines: rust int157a2 = the image kept in the affiliation, 0 warnings; IMG1 = the same XML, 1 false loss warning
+% expect:  0 errors, 0 warnings; Ann Able, one affiliation holding the text, the image and the link
+% status:  RED (IMG1: a false loss Warning) -> GREEN (IMG1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}\usepackage{url}\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Zebra University \includegraphics[width=0.3cm]{example-image} \url{https://example.org/x}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

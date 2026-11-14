@@ -1,0 +1,28 @@
+% witness: 0906.4121 (envcountsect); 2412.05162 (`[envcountsect,envcountsame]`, `\spnewtheorem{case}[theorem]` after
+%          `\let\c@case\relax`); the 68g review probe sect2 (a shared base other than `theorem`; all 27 shared-counter
+%          declarations of 19 sampled envcountsect papers use `[theorem]`)
+% oracle:  pdflatex with TL 2025 llncs.cls v2.26 (v2.24+: `\if@envcntsect\@addtoreset{#1}{section}\fi` in `\@spothm`
+%          resets the base through the alias): Lemma 0.1 | 1 Hypothesis 1, Conj 2, Lemma 1.1 | 2 Hypothesis 1, Conj 2,
+%          Theorem 2.1; 0 errors
+% engines: rust 68g r1 = section 2 "Hypothesis 3, Conj 4" (no reset; OXIDIZED_DESIGN_DIVERGENCES #614 as first
+%          written); rust 67int9 = Lemma 1 | 1 Hypothesis 1, Conj 2, Lemma 2 | 2 Hypothesis 3, Conj 4, Theorem 2.1
+% expect:  0 errors, 0 warnings; the oracle's tags and refs
+% status:  RED (68g r1) -> GREEN (68g r2)
+% preload: ar5iv.sty
+\documentclass[envcountsect,envcountsame]{llncs}
+\makeatletter
+\spnewtheorem{hyp}{Hypothesis}{\bfseries}{\itshape}
+\@spothm{conj2}[hyp]{Conj}{\bfseries}{\itshape}
+\makeatother
+\begin{document}
+\begin{lemma}z\end{lemma}
+\section{A}
+\begin{hyp}a\end{hyp}
+\begin{conj2}b\end{conj2}
+\begin{lemma}\label{l}x\end{lemma}
+\section{B}
+\begin{hyp}c\end{hyp}
+\begin{conj2}\label{c}d\end{conj2}
+\begin{theorem}e\end{theorem}
+See \ref{l}, \ref{c}.
+\end{document}

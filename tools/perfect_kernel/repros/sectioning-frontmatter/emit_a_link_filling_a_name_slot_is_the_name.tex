@@ -1,0 +1,19 @@
+% mechanism: a link that prints other text than its own target and fills a name slot (the only ink between its names line's
+%   separators but for the marks and notes a name carries) is that name, its span the link's call (`resolver::lines::name_slots`,
+%   `link_names`); "a mark follows" was its proxy, so a `\thanks` after the link or no mark at all left a url contact
+% witness: 2602.22747 (devh10k, authblk `\author[1,2]{\href{kaizheng.wang@ntu.edu.sg}{Kaizheng Wang}\thanks{…}}`), 1812.07638;
+%   the call's shape: `emit_a_link_filling_a_call_is_the_name`
+% oracle:  pdflatex 0 errors; "Ann Able*, Bob Baker, Cy Cole2"; 2 Univ B, City; * Supported by X.
+% engines: rust int146a `=2`: one creator, Cy Cole, holding Ann Able's and Bob Baker's links as url contacts and Ann's thanks
+% expect:  0 errors, 0 warnings; `=2` creators as with the switch off, Ann Able (her thanks), Bob Baker, Cy Cole (Univ B)
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchlo1::a_link_filling_a_name_slot_is_the_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{Links filling name slots}
+\author{\href{http://ann.org}{Ann Able}\thanks{Supported by X.}, \href{http://bob.org/home}{Bob Baker}, Cy Cole$^{2}$\\
+$^{2}$Univ B, City}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,12 @@
+% witness: 1303.1693, 1206.2108, astro-ph0412052, hep-lat9812022 (~845 run-340 papers: `\caption[short_x]{…}`)
+% oracle:  pdflatex 0 errors: latex.ltx:17403-17404 writes the short form to the .lof only (`\addcontentsline`); a
+%          heading's `[short]` goes to the .toc the same way (latex.ltx `\@sect`), and none of these has a list
+% engines: rust 65i = 2 Error:unexpected:_ (toccaption, toctitle); Perl 0.8.8 the same (pool:3189/3370)
+% expect:  0 errors; <toccaption>…fig_a</toccaption> and the section's <toctitle> keep their text
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section[sec_a]{A section}
+\begin{figure}\centering A\caption[fig_a]{A figure.}\end{figure}
+\end{document}

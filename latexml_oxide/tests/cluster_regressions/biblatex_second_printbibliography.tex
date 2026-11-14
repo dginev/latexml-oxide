@@ -1,0 +1,10 @@
+% witness: xurl (counter-witness biblatex-apa-test: refsections, not repeated); repro tools/perfect_kernel/repros/index-bib/second_printbibliography_reaches_the_html.tex
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_second_printbibliography.bib}
+\begin{document}
+Text \cite{k1} and \cite{k2}.
+\printbibliography[title=Primary List]
+\printbibliography[title=Second List]
+\printbibliography[heading=subbibliography,title=Sub List,type=book]
+\end{document}

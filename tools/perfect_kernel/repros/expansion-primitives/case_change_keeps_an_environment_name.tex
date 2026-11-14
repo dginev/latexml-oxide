@@ -1,0 +1,18 @@
+% witness: review of M3's `\protected` `\begin` (expl3-code.tex:36005 `\l_text_case_exclude_arg_tl` holds `\begin`, `\end`)
+% oracle:  pdflatex (TL 2025) 0 errors: [open:ABC:close], [open:abc:close], [open:Abc def:close], X IN Y, the title's [open:HEAD:close].
+% engines: M3: 6 errors, `<ERROR>{MYENV}` and the text ABC:CLOSE]. int141a: as pdflatex.
+% expect:  0 errors; the document's text whole
+% status:  GREEN
+\documentclass{article}
+\newenvironment{myenv}{[open:}{:close]}
+\begin{document}
+\MakeUppercase{\begin{myenv}abc\end{myenv}}
+
+\MakeLowercase{\begin{myenv}ABC\end{myenv}}
+
+\MakeTitlecase{\begin{myenv}abc def\end{myenv}}
+
+\MakeUppercase{x\begin{center}in\end{center}y}
+
+\section{\MakeUppercase{\begin{myenv}head\end{myenv}}}
+\end{document}

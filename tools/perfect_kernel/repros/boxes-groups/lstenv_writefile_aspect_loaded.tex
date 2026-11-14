@@ -1,0 +1,24 @@
+% mechanism: listings' `writefile` aspect defines `\lst@BeginWriteFile`/`\lst@EndWriteFile` when it is required
+%   (lstmisc.sty:30-74; `\lstloadaspects`, listings.sty:289-291, or a package option, :2294-2309), as showexpl.sty:41
+%   requires it for pst-exa-doc. Twin of lstenv_writefile_hbox_pst-exa-doc, where no aspect is loaded and both are
+%   undefined.
+% witness: pst-exa/pst-exa-doc (pst-exa-doc.tex:277,286 \begin{PSTexample}, the aspect via showexpl)
+% oracle:  pdflatex 0 errors, RESULTMARK typeset
+% engines: rust 64zd = 0 errors (the commands always defined); 64zf = 0 errors
+% expect:  0 errors; body marker RESULTMARK present (proves end code ran)
+% status:  GREEN (64zf)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+\documentclass{article}
+\usepackage{listings}
+\lstloadaspects{writefile}
+\makeatletter
+\def\SX@put@code@result{RESULTMARK}
+\lstnewenvironment{myex}[1][]
+ {\setbox\@tempboxa=\hbox\bgroup\lst@BeginWriteFile{\jobname.swpl}}
+ {\lst@EndWriteFile\egroup\SX@put@code@result}
+\makeatother
+\begin{document}
+\begin{myex}[pos=t]
+hello world
+\end{myex}
+\end{document}

@@ -1,0 +1,19 @@
+% witness: aguplus/aguplus (aguplus.tex:633; aguplus.cls:305,314 planotable)
+% oracle:  pdflatex 0 errors
+% engines: rust=6 perl=8 (2026-09-06)
+% expect:  0 errors; //ltx:tabular//ltx:td//ltx:Math contains the 45 cell
+% status:  GREEN (batch 56z, 2026-09-06)
+% mechanism: \@tabarray forces MATH alignment bindings ignoring \@classz=\@tabclassz
+%   (latex.ltx:16645 vs 16652); cell $ becomes \lx@dollar@in@mathmode so $45^\circ$
+%   switches the cell to text and ^ errors. Fix: honor \@classz in \@array@bindings.
+\documentclass{article}
+\makeatletter
+\begin{document}
+% \@tabular's own let-sequence (latex.ltx:16556-16562) => TEXT cells,
+% here inside a balanced \hbox{$ ... $}. $45^\circ$ = inline math. pdflatex clean.
+\let\@halignto\@empty
+\hbox{$\let\@acol\@tabacol\let\@classz\@tabclassz
+  \let\@classiv\@tabclassiv\let\\\@tabularcr
+  \@tabarray{lcc}A & $45^\circ$ & b\\ C & $90^\circ$ & d\endarray$}
+\makeatother
+\end{document}

@@ -1,0 +1,19 @@
+% witness: 1810.08035 (IEEEtran journal: `\IEEEauthorblockN{Osama M. Bushnaq, {\em Student Member, IEEE}, …,\\
+%          Mohamed-Slim Alouini, {\em Fellow, IEEE}, and Tareq Y. Al-Naffouri, {\em Senior Member, IEEE}.}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Cy Coe, and Dee Dale, Member, IEEE." and "Eve Eads, Fellow,
+%          IEEE."
+% engines: rust int154q = two creators, "Cy Coe, and Dee Dale, Member, IEEE ." both's affiliation, 0 warnings (the
+%          stop after an italic grade was read as a word, so the line after the `\\` was no names); Perl 0.8.8 = 0
+%          errors, one creator holding every name
+% expect:  0 errors, 0 warnings; five creators, Dee Dale's and Eve Eads's grades their membership contacts (`{\em …}`,
+%          `\textit{…}`); the stop after an italic non-grade stays (CR10a's sib_em_affil_stop, base reading)
+% status:  RED (int154q) -> GREEN (CR10a) — perfect_kernel_batchcr10a::italic_grade_before_stop_ends_the_names
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker,\\ Cy Coe, and Dee Dale, {\em Member, IEEE}.}
+\IEEEauthorblockN{Eve Eads, \textit{Fellow, IEEE}.}}
+\begin{document}
+\maketitle
+x
+\end{document}

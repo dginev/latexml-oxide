@@ -1,0 +1,22 @@
+% witness: 0705.3628, 0706.0314, 0711.1671 (`\EmailDD`, `\URLaddressDD`); 1301.4541, 1404.0720, 1601.01181
+%          (`{theorem*}`); 0708.0957 (`\tsep`/`\bsep`)
+% oracle:  pdflatex with 1404.0720's sigma.cls (v1.7): the e-mail and URL lines, Theorem 1, the unnumbered Theorem and
+%          Remark; 3 errors, all the class's own `\ifpdf` under TL 2025 (sigma.cls:29)
+% engines: rust 68d2 = 7 errors (undefined `\EmailDD`, `\URLaddressDD`, `\URLaddressMarked`, `{theorem*}`, `{remark*}`,
+%          `\tsep`, `\bsep`)
+% expect:  0 errors, 0 warnings; the e-mail and URL notes, an unnumbered Theorem and Remark
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass{sigma}
+\begin{document}
+\ArticleName{A Title}
+\Author{Ann Author}
+\Address{Some University}
+\EmailDD{ann@example.org}
+\URLaddressDD{https://example.org}
+\URLaddressMarked{}
+\begin{theorem}Numbered.\end{theorem}
+\begin{theorem*}Every star is unnumbered.\end{theorem*}
+\begin{remark*}So is this.\end{remark*}
+\begin{tabular}{c}\hline\tsep{2pt}A\bsep{2pt}\\\hline\end{tabular}
+\end{document}

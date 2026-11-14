@@ -1,0 +1,19 @@
+% witness: 65d review r5 probe a9 (pre-existing in 65a and 65d)
+% oracle:  pdflatex 3 errors ("Extra }, or forgotten $", "Missing $ inserted", "Missing } inserted"): the `}` is deleted,
+%          so the box swallows "after one." (as math) and "Second para." (TeX ignores the \par inside the box);
+%          pdftotext "Before xafterone.Second para."
+% engines: rust 65a and 65d: 1 error ("Missing $ inserted": the box's `}` ends the math first, stomach.rs
+%          digest_next_body), "after one." and "Second para." kept as text after the box
+% expect:  1 error ("Extra }, or forgotten $", TeX's message for a `}` meeting the math shift group); the formula "x"
+%          ends at the `}`, which closes the box body — a construct digested as a unit the formula cannot escape — and
+%          then ends the box; "after one." and "Second para." text: the content-first divergence from pdflatex's shape
+%          (main session decision 2026-10-12)
+% preload: ar5iv.sty
+% status:  GREEN (65n: stomach.rs `digest_next_body` / `formula_ends_with_its_unit`; OXIDIZED_DESIGN #553; guard
+%          perfect_kernel_batch65n::stray_brace_ending_a_unit_construct_ends_the_formula)
+\documentclass{article}
+\begin{document}
+Before \mbox{$x} after one.
+
+Second para.
+\end{document}

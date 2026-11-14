@@ -1,0 +1,14 @@
+% witness: 63e review r8 (residual): names marked before them, then an affiliation line whose mark no author requests
+%          and whose words read as a name
+% oracle:  pdflatex 0 errors: "^1Ann Able, ^2Bob Baker" / "^3Google DeepMind" / "^1Univ A" / "^2Univ B"
+% engines: rust (63e r14) = a third author "Google DeepMind" (0 errors, silent); HEAD an affiliation; Perl no creator
+%          at all (Base_Utility.pool.ltxml:708)
+% expect:  Ann (Univ A) and Bob (Univ B); "Google DeepMind" an affiliation, which no author's mark requests, kept in
+%          a creator of its own (OD #159); 0 errors
+% status:  RED (63e r14) -> GREEN (63e: nothing below answers its mark)
+\documentclass{article}
+\author{$^{1}$Ann Able, $^{2}$Bob Baker\\ $^{3}$Google DeepMind\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

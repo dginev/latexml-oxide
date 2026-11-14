@@ -1,0 +1,23 @@
+% mechanism: a block line's e-mail entry under a mark several names carry (`$^\dagger$\texttt{\{ann, cat\}@x.org}`)
+%   is one print of its addresses: each placed among the mark's carriers by FIDELITY_CHARTER §4's chain, the carrier it
+%   spells first (`Resolver::print_address_owners`) — not copied onto every carrier. The kernel family written (93a,
+%   OD #925) had printed both addresses on both names.
+% witness: 2409.11430 (`$^\ddagger$\texttt{\{pmacielx,ilealdef,dbernaln\}@purdue.edu}`, a § group), 2506.19548
+%   (`$^\dagger$\texttt{\{devesh, minesh\}@wadhwaniai.org}`), 2410.18711 (`$^{*}$Email: jtliu@…; wuxin\_1134@…;
+%   wuzhenhua@…`), 2510.10618
+% oracle:  pdflatex 0 errors: "Ann Able1† , Bob Baker2 , Cat Cole1†" over "1 Univ A, City, 2 Univ B, Town" and
+%   "† {ann, cat}@x.org"
+% engines: rust 93a: Ann Able and Cat Cole each ann@x.org and cat@x.org; rust 92c (the old reader): each the one
+%   spelling the name
+% expect:  0 errors, 0 warnings; Ann Able ann@x.org, Cat Cole cat@x.org, Bob Baker none
+% status:  GREEN (93a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1\dagger}$, Bob Baker$^2$, Cat Cole$^{1\dagger}$ \\
+$^1$Univ A, City, $^2$Univ B, Town \\
+$^\dagger$\texttt{\{ann, cat\}@x.org}}
+\maketitle
+Text.
+\end{document}

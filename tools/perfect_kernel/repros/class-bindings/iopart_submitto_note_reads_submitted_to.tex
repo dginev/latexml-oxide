@@ -1,0 +1,18 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4, "A frontmatter note reads as the class prints it"), the
+%          92e audit of the notes a binding labels by its role: iopart's `\submitto` (216 census papers with `\submitto` or `\submitted`)
+% oracle:  pdflatex with quant-ph0512134's iopart.cls (:271-272): 0 errors; "Submitted to: J. Phys. A: Math. Gen." under the authors
+% engines: rust b4c8392 = the pubnote named "Journal: " (the role default, `\lx@pubnote@journal@name`); Perl the same
+%          (iopart_support.sty.ltxml, role=journal, no name)
+% expect:  0 errors, 0 warnings; the pubnote named "Submitted to: ", role journal, holding "J. Phys. A: Math. Gen."
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{A. Able}
+\address{Univ A}
+\submitto{J. Phys. A: Math. Gen.}
+\maketitle
+\section{S}
+Text.
+\end{document}

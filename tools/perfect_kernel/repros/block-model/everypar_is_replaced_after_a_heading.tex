@@ -1,0 +1,19 @@
+% A sectioning heading ends with `\@afterheading` (latex.ltx:17317-17329), which REPLACES `\everypar`: the first
+% paragraph after the heading runs its `\@nobreak` branch, the second empties `\everypar`, so a document's own
+% `\everypar` text stops at the heading. Rust runs `\everypar` (stomach.rs `fire_everypar`, tex.web §1091) but its
+% sectioning binding never calls `\@afterheading`, so the document's `\everypar` survives every heading. RUST-ONLY
+% (Perl runs no `\everypar` text); review 60e r2 finding 3: since 60e a `\vadjust` paragraph after a heading
+% shows the `[ep]` too.
+% status:  RED (open)
+% oracle:  pdflatex 0 errors: "[ep]Alpha." / heading "[ep]1 Bravo" / "Charlie." / "Delta."
+% engines: rust 60e: "[ep]Alpha." / title "1 [ep]Bravo" / "Charlie." / "[ep]Delta."; Perl 0.8.8: "Alpha." / "Bravo" /
+%          "Charlie." / "Delta."
+% expect:  0 errors; no "[ep]" in "Charlie." or "Delta."
+\documentclass{article}
+\begin{document}
+\everypar{[ep]}
+Alpha.\par
+\section{Bravo}
+Charlie.\par
+Delta.\par
+\end{document}

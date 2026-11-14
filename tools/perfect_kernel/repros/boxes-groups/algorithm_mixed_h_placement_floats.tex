@@ -1,0 +1,16 @@
+% algorithm2e.sty opens its non-floating minipage (`algocf@Here`) only for a placement that is exactly `H`; any other
+% placement, `[!H]` and `[tbH]` included, goes to `\@float` and resets the size through `\@floatboxreset`
+% (`reset_float_box`), so `{\small` does not reach the algorithm's text.
+% Guard: perfect_kernel_batch58::algorithm_mixed_h_placement_floats.
+% status:  GREEN (58c) for the size. pdflatex also reports each mixed `H` (`\@xfloat`'s placement check); Rust,
+%          like Perl, does not check float placements (SYNC_STATUS 58c residuals).
+% oracle:  pdflatex 2 errors ("Unknown float option `H'", once per algorithm), recovered; "[X 12.0pt]", "[Y 12.0pt]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{algorithm2e}
+\begin{document}
+{\small
+\begin{algorithm}[!H]{[X \the\baselineskip]}\;\caption{z}\end{algorithm}
+\begin{algorithm}[tbH]{[Y \the\baselineskip]}\;\caption{w}\end{algorithm}
+}
+\end{document}

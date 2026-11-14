@@ -1,0 +1,18 @@
+% witness: ddphonism/ddphonism (same-line \verb|\dmatrix{...}| inside a list -> subsection-in-item malform, 6-9 errs)
+% oracle:  pdflatex 0 errors (\verb body is verbatim; \foo never executes)
+% engines: rust=1 err (\foo executed+undefined) perl~= same (2026-09-03, b54t) -> SHARED / PERL-ORIGIN
+% expect:  0 errors; <ltx:verbatim> contains "\foo{a}" as text; two <ltx:item>; a following <ltx:section>
+% status:  GREEN (b54w, batch 54p)
+% mechanism: same root as verb_on_endverbatim_line_ddphonism.tex; here the leak breaks the enclosing
+%   itemize + sectioning -> the ltx:subsection/subsection-not-allowed-in-item family ddphonism shows.
+\documentclass{article}\begin{document}
+\begin{itemize}
+\item A
+\begin{verbatim}
+code
+\end{verbatim} then \verb|\foo{a}| here.
+\item B
+\end{itemize}
+\section{Sec}
+Text.
+\end{document}

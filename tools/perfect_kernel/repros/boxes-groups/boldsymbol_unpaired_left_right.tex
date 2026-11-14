@@ -1,0 +1,17 @@
+% witness: synthetic (65j round 2; amsbsy's `\boldsymbol`, amsbsy.sty:28-37 `\mathchoice{\hbox{$…#1$}}`, and `\pmb`,
+%          Let to it by Perl amsbsy.sty.ltxml:28); corpus witnesses in the 65j report
+% oracle:  pdflatex 26 errors: 6 "Missing \right. inserted", 12 "Extra \right.", 4 "Extra }, or forgotten $." and 4
+%          "Missing } inserted" (\pmb's \mathpalette box); PDF "First y, group (a), pair ⟨ x and z ." (⟩ lost)
+% engines: rust 65a = 0 errors, the pair unparsed, ⟩ lost; 65bundle and 65j round 1 = 1 error ("\boldsymbol Attempt
+%          to close a group that switched to mode math") + "Missing \right. inserted", ⟩ lost; Perl 0.8.8 bounded
+%          \boldsymbol
+% expect:  0 errors; 2 warnings (the unpaired \left and \right); bold ⟨ x ⟩ fenced in one formula; the paired
+%          \boldsymbol{\left( a \right)} one bounded bold group as before
+% status:  RED (65bundle, 65j r1) -> GREEN (65j r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\newcommand*\lin[1]{\boldsymbol{\left\langle} #1 \pmb{\right\rangle}}
+\begin{document}
+First $\boldsymbol{y}$, group $\boldsymbol{\left( a \right)}$, pair $\lin{x}$ and $\pmb{z}$.
+\end{document}

@@ -1,0 +1,14 @@
+% witness: the r8 re-review of batch 77p (finding 1, probe w2)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡; "†Univ A ‡Univ B"; after \\[1em] Cat Cole§, Dan Dorn§; then
+%          "§Univ C"
+% engines: rust int38 (77p r11) = 0 errors; "Cat Cole§" an affiliation of Bob Baker, Ann Able with none, "§Univ C" on
+%          Dan Dorn alone
+% expect:  0 errors, 0 warnings; four authors: Univ A on Ann Able, Univ B on Bob Baker, Univ C on Cat Cole and Dan Dorn
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\[1em] Cat Cole$^{\S}$ \quad Dan Dorn$^{\S}$ \\ $^{\S}$Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,42 @@
+% mechanism: a shipped style that declares itself `\ProvidesFile{imsart.sty}` under another name (stylefile.sty, loaded
+%   by a renamed imsart.cls, or beside `\documentclass{article}`) is routed by its declaration to the imsart.sty binding
+%   (latexml_contrib imsart_sty.rs, `content.rs` `provided_binding`) and read after it as the stand-in's copy: `\ead`
+%   inside `\author` is the author's e-mail, `\fnms`/`\snm` print the name, `\address[A]` goes to the authors marked A
+%   and `\affiliation` to the run of new authors. OXIDIZED_DESIGN_DIVERGENCES #986
+% witness: 1905.11425, 2101.10506 (stylefile.cls `\ProvidesClass{stylefile}` + stylefile.sty `\ProvidesFile{imsart.sty}`),
+%          math0608476 (imsart_mod.sty), 1301.1466 (imsart.sty under its own name beside article, `\affiliation`); here
+%          as a minimal stand-in of the shipped file (a shortened, modified excerpt of imsart.sty's author code)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" / "Univ A, (e1)" / "Univ B, (e2)" / "Zebra Institute" (the stand-in
+%          prints no e-mail; the real imsart.sty prints `\printead`'s addresses after the address)
+% engines: int154x: 0 errors; the names and the affiliation kept, both e-mails and both addresses lost (read raw);
+%          on 1905.11425 the old driver glued "label=e1" into the name. CR3: each author's e-mail and address as
+%          contacts, the affiliation both authors'
+% expect:  0 errors, 0 warnings; Ann Able: email ann@x.edu, address "Univ A,", affiliation "Zebra Institute"; Bob Baker:
+%          email bob@y.org, address "Univ B,", affiliation "Zebra Institute"
+% status:  RED (int154x) -> GREEN (CR3; guard perfect_kernel_batchcr3::imsart_renamed_sty_copy_reads_through_its_binding)
+\begin{filecontents*}{stylefile.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesFile{imsart.sty}[2020/08/23 IMS article style, shortened and modified]
+\DeclareRobustCommand\ead[2][label= ,email]{}
+\def\printead#1{(#1)}
+\newenvironment{aug}{}{\par}
+\def\and{\unskip~and~}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\bgroup\def\fnms##1{##1}\def\snm##1{##1}\noindent#2\egroup}
+\def\address{\@ifnextchar[{\address@fmt}{\address@fmt[]}}
+\def\address@fmt[#1]#2{\par\noindent#2\par}
+\def\affiliation#1{\par\noindent#1\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{stylefile}
+\begin{document}
+\title{A Title}
+\begin{aug}
+\author[A]{\fnms{Ann} \snm{Able}\ead[label=e1,mark]{ann@x.edu}}
+\and
+\author[B]{\fnms{Bob} \snm{Baker}\ead[label=e2]{bob@y.org}}
+\address[A]{Univ A, \printead{e1}}
+\address[B]{Univ B, \printead{e2}}
+\affiliation{Zebra Institute}
+\end{aug}
+Body.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: review of 64ze round 3 (/tmp/rev64ze3/sv/h3.tex)
+% oracle:  pdflatex 0 errors (svmult.cls v5.5): svmult's `\@chapter` steps the chapter counter whenever `\if@chapnum`
+%          (svmult.cls:592-594), front matter or not — "Chapter 1 Foreword" in `\frontmatter`, then "Chapter 2 Long
+%          Title" (and its section "1 First", svmult.cls's `\thesection` without the chapter)
+% engines: rust 64ze = 0 errors, but the front-matter chapter unnumbered (book.cls's `\frontmatter`) and the main
+%          chapters 1 and 2, the section 1.1
+% expect:  0 errors; Foreword "Chapter 1", Long Title "Chapter 2", Third "Chapter 3"
+% status:  RED (64ze)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\frontmatter
+\chapter{Foreword}
+Foreword TEXT.
+\mainmatter
+\chapter{Long Title}
+\section{First}
+First TEXT.
+\chapter{Third}
+Third TEXT.
+\end{document}

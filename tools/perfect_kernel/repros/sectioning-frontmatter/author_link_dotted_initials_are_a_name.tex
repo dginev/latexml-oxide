@@ -1,0 +1,17 @@
+% witness: 2601.06085; the r7 re-review of batch 77p (finding 2)
+% oracle:  pdflatex 0 errors: two \and columns, each opened by a name linked by \href ("Edward A.G. Schuur", compact
+%          dotted initials)
+% engines: rust 77p r10 = 0 errors; "Edward A.G. Schuur" read as a web address: no author, six creators named by the
+%          pieces of his institution, each with
+%          the link as a URL contact
+% expect:  0 errors, 0 warnings; two authors, Ann Able (Univ A) and Edward A.G. Schuur (his institution, one
+%          affiliation)
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{\href{https://orcid.org/0000-0001}{\hspace{1mm}Ann Able} \\ Univ A \and \href{}{\hspace{1mm}Edward A.G. Schuur} \\ Center for Ecosystem Science and Society, Northern Arizona University, Flagstaff, Arizona, USA}
+\begin{document}
+\maketitle
+Text.
+\end{document}

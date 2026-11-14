@@ -832,12 +832,12 @@ adaptations for missing Rust ParameterTypes, not parity bugs.
 | CS | Perl | Rust | Root cause |
 |----|------|------|------------|
 | `\mathchar` | `DefPrimitive('\mathchar Number', …decodeMathChar…Box)` | `DefConstructor("\\mathchar Number", "<ltx:XMTok …>", after_digest => …)` | Rust emits `<ltx:XMTok>` directly; Perl emits a Box the post-processor promotes. Rust is the more precise shape — kind-flip would regress output. |
-| `\left` / `\lx@right` | `DefConstructor('\left TeXDelimiter', "#1", …)` | `DefMacro!("\\left XToken", sub { …manual \delimiter<Number> handling… })` | Rust's `TeXDelimiter` ParameterType is incomplete — see detailed plan below. Current DefMacro workaround at `tex_math.rs:836` peels `\delimiter` + reads number + decodes glyph manually. |
+| `\left` / `\lx@right` | `DefConstructor('\left TeXDelimiter', "#1", …)` | **CLOSED 65d** (was `DefMacro!("\\left XToken", …)`): `DefConstructor!("\\left DelimiterToken", …)`, `\lx@right` a `\let` of `\lx@delim@right` | The delimiter is read by tex.web §1160 `scan_delimiter` (`tex_math::scan_delimiter`) — see the closed plan below. Witnesses `tests/parse/parens.tex`:43 (`\left\delimiter"426830A`, byte-identical), 1207.4709, run 336's X1 xymatrix IfLimit Fatals. OXIDIZED_DESIGN #530. |
 | picture primitives (`\line`/`\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier`) | `DefPrimitive('\\line Pair:Number {Float}', …)` | `DefMacro!` unpacking `Match:( Until:, Until:) {Float}` into 3 args + forwarding to `\lx@pic@XXX{}{}{}` DefConstructor | Rust lacks `Pair:Number` as a ParameterType. Same functional parity, different factoring. |
 | amsmath `\aligned` / `\alignedat` | `DefConstructor('\aligned alignsafeOptional {}', …)` | `DefPrimitive!` with explicit `local_align_group_count(1000000)` + manual `gullet::read_optional` + unread | Rust lacks `alignsafeOptional`. Plain `[]` would trip handle_template's `&`-interception inside nested alignments. See `amsmath_sty.rs:1168`. |
 
-**Wisdom:** do NOT flip these to Perl-matching kinds naively. Each is
-load-bearing. The proper path to parity for any of them goes through
+**Wisdom:** do NOT flip these to Perl-matching kinds naively. Each was
+load-bearing (the `\left` row until its reader was ported, 65d). The proper path to parity for any of them goes through
 porting the missing ParameterType first, then migrating the call sites.
 
 ### ParameterType port candidates (ROI-ordered)
@@ -846,8 +846,8 @@ Engine/ alone has **23 call sites** using these three ParameterTypes
 (grep `Pair:Number|PairList|TeXDelimiter|alignsafeOptional`). Package
 bindings add more.
 
-- **TeXDelimiter** — 10+ entries (tex_math `\left`/`\lx@right` 2,
-  revsymb `\biglb`/`\bigrb`/`\Biglb`/… 8, plus others). Highest ROI.
+- **TeXDelimiter** — 10+ entries (tex_math `\left`/`\lx@right` 2, plus others; revsymb's
+  8 `\biglb` … `\Biggrb` moved to it in 57j). Highest ROI.
   Already partially exists at `base_parameter_types.rs:693` (per Perl
   PR#2596) — enhancement needed, not new port. Plan below.
 - **Pair:Number** (+ `PairList`) — 5-10 entries (picture primitives
@@ -856,13 +856,36 @@ bindings add more.
   Lowest ROI but simplest port (reads `[…]` with alignment-safe
   wrapping).
 
-### TeXDelimiter enhancement plan (current truth, cycle 64 verified)
+### TeXDelimiter enhancement plan — CLOSED for `\left`/`\middle`/`\right` by 65d
+
+**How 65d closed it (OXIDIZED_DESIGN #530).** Not by porting Perl's reader: by porting TeX's. The `\left`/`\middle`/
+`\right` delimiter is the `DelimiterToken` parameter, whose reader is tex.web §1160 `scan_delimiter`
+(`tex_math::scan_delimiter`): `get_x_token` past blanks and `\relax`, then by meaning — a letter/other character by its
+`\delcode` (or the delimiter map), a `delim_num` command (`\delimiter`, `\Udelimiter`, or a `\let` copy of either) whose
+code is scanned right there and turned into its glyph's character token, a LaTeXML math symbol (`DefMath`, a
+parameterless primitive/constructor), and anything else "Missing delimiter (. inserted)" with the token put back.
+- **Dimension 1 (reader shape):** the single-X-token read is §1160's `get_x_token` loop. The BEGIN-unwrap is not
+  taken: a `{`/`}` met as the delimiter is "Missing delimiter (. inserted)" and read again, as in TeX (Perl's
+  `readBalanced` unwrap of the typo `\left{ x \right}` reads `x\right` as the content; reading the brace as `\{` cannot
+  tell the typo from a brace-bodied macro such as LaTeX's `\dag`; corpus: 16 of 3,194 sampled papers hold
+  `\left{`/`\right}`, nearly all macro definitions like `\newcommand{\lt}{\left}`). 1207.4709 converts byte-identically,
+  and `\big`'s braced `TeXDelimiter` reader keeps its END-peek (that witness) unchanged.
+- **Dimension 2 (`undigested => 1`):** not needed. Perl invokes the token so that `\delimiter` consumes its number;
+  §1160 scans the number at the token level instead (`delim_num`), so no `ArgWrap::Digested` variant and no
+  `Parameter.undigested` flag were added. The argument is a token, digested by the existing `predigest`
+  (`digest_as_delimiter`).
+
+The `\big` family keeps the braced `TeXDelimiter` reader described below (open: Perl's reader there).
+
+### TeXDelimiter enhancement plan (historical, cycle 64)
 
 **Rust already has `TeXDelimiter`** at `base_parameter_types.rs:693`
 and it's used successfully by `\big`/`\Big`/`\bigg`/`\Bigg` at
 `math_common.rs:962-964`. The current implementation uses
 `gullet::read_arg(ExpansionLevel::Partial)` (braced arg). The `\left` /
-`\lx@right` / revsymb `\biglb` family bypass it via DefMacro because
+`\lx@right` bypass it via DefMacro (revsymb's `\biglb` family uses it from 57j; the size
+`\langle`/`\{` lost after `\big` was not the reader but DefMath constructors reading their
+font at construction — boxes since 57n, Perl `$simpletoken_options` Package.pm:1603-1607) because
 the reader differs from Perl's in two dimensions:
 
 **Dimension 1 — reader shape (3 branches missing vs Perl
@@ -920,9 +943,8 @@ still breaks without the digested path. Cycle 64 verified this.
 - `tex_math.rs:836` `\left` — replace DefMacro+manual peel with
   `DefConstructor!("\\left TeXDelimiter", "#1", …)`.
 - `tex_math.rs:1192` `\lx@right` — same.
-- `revsymb_sty.rs:14-21` 8 `\biglb`/`\bigrb`/`\Biglb`/`\Bigrb`/
-  `\bigglb`/`\biggrb`/`\Bigglb`/`\Biggrb` — each becomes
-  `DefConstructor('\X TeXDelimiter', '#1', …)`.
+- revsymb's 8 `\biglb` … `\Biggrb` — DONE (57j): `DefConstructor!("\\X TeXDelimiter", "#1", …)`
+  as Perl revsymb.sty.ltxml:31-54.
 
 **Expected outcome:** 1097/0/0 tests green, DP audit shows 10+ entries
 cleared, `tex_math.rs:836` workaround removed, revsymb `\biglb` family
@@ -1454,21 +1476,28 @@ slot — **~4 MB / ~40% of `latex.YYYY.dump.txt`**. The PERL_LOADFORMAT
 audit had originally measured 3094 such records; the actual count had
 grown ~30× by 2026-05-15 (one paragraph in the audit was stale).
 
-**The fix (commit `81176ba689`, 2026-05-15).** `dump_writer` now
-groups V entries by `(font, size)` prefix and emits a single `IA`
-record per dense intarray: `IA\t<prefix>\t<len>\t<rle>` where
-`<rle>` is a comma-list of `v` or `vxn` runs. `dump_reader` parses
-`IA`, RLE-decodes, and emits the same per-slot V assignments at
-indices 1..=len — runtime state post-replay is identical.
-**Backward compatible**: dump_reader still loads existing
-V-record-only dumps via the unchanged `V` arm. Non-dense intarrays
-fall back to individual V records (the dump-build log warns).
+**The fix: one array per font (batch 56kp, 2026-09-27).** The state keeps
+each font's parameters as ONE array, `Stored::FontDimens` under
+`fontdimen_<font shared key>` — Perl's `$$fontinfo{data}`
+(TeX_Fonts.pool.ltxml:131-146) — written in place (a `\fontdimen`
+assignment is always global, tex.web §1253), filled at `\font` from the
+font's TFM parameters scaled to the size it is loaded at (batch 56kr; Perl
+TeX_Fonts.pool.ltxml:108-117, whose `at` scale truncates, KPE #303) — a
+font with no metric of its own takes its family's at 10pt, else cmr10's (Perl
+`getMetricForName`, Common/Font.pm:551-562) and grown with zeros (§580), capped at TeX's
+`font_mem_size` (8,000,000). The dump writes every array, dense or sparse,
+as one `IA\t<key>\t<len>\t<rle>` record (`<rle>` a comma-list of `v` or
+`vxn` runs) and the reader loads it as the whole array; a legacy per-slot
+`V` record is routed into the array. The dump-diff snapshot deep-copies
+the arrays: an in-place write would otherwise alias the snapshot and drop
+out of the diff. Measured on 24 median arXiv papers: −3.6 % instructions
+and −67 MB peak RSS per paper, output byte-identical.
 
-**Measured TL2025 impact:** 89,294 V → 15 IA + 63 V fallbacks. Dump
-size 7.4 MB → 3.7 MB (-49%). Entry count 110,691 → 21,475 (-81%).
-`cargo test --tests`: 1196/0/0 → 1220/0/0 (after 25 new unit tests
-covering RLE round-trip, IA load semantics, and V-record backward
-compat).
+**The first fix (commit `81176ba689`, 2026-05-15)** regrouped the per-slot
+state values into IA records at dump-write time and expanded them back at
+load: 89,294 V → 15 IA + 63 V fallbacks for the sparse intarrays, dump
+7.4 MB → 3.7 MB (−49 %), entries 110,691 → 21,475 (−81 %). It shrank the
+file, not the per-conversion state.
 
 **Perl's framing.** Perl LaTeXML's `latex_dump.pool.ltxml` uses
 `Im(<cs>, FD(<real_cs>, 'fontinfo_cmr10 at 0.0003pt'))` + an
@@ -1476,11 +1505,12 @@ RLE-array Hash inside a `V('fontinfo_...', {'data'=>[(15)x32,...]})`
 record. Same compactness, different syntax. Our `IA` schema is the
 adaptation to our tab-separated text format.
 
-**When the IA path doesn't apply.** Non-dense intarrays (indices not
-1..N) skip the IA emit and fall back to individual V records. We saw
-exactly one in TL2025 — `fontdimen_fontinfo_cmr10 at 14sp` with 9
-sparse slots. If a future expl3 release adds more sparse intarrays,
-the fallback handles it; the only cost is a few extra V records.
+**Sparse intarrays.** `\intarray_new:Nn` writes entries 1-8 and the last
+(l3intarray.dtx:654-674) and relies on TeX zero-filling the rest; l3regex's
+seven 65,536-entry arrays are such. Since 56kr a font's array starts with its
+TFM's parameters (cmr10: seven), so every unset entry reads 0, as in TeX and
+Perl; before, a stand-in table read entries 9-12 and 22 nonzero, where
+l3regex keeps its NFA's active steps (guard `an_unset_intarray_item_is_zero`).
 
 ## #55 `OmniBus` is a LAST-RESORT fallback for *unknown* classes — never a dependency
 
@@ -1663,15 +1693,32 @@ name and bypasses Mach-O's `_` prefix. Functions get no `link_name`
 (bindgen trusts the platform C ABI for them), so only *statics* break,
 and only at final-binary link time, and only on non-ELF targets.
 
-**Fixes:** (a) consumer-side — resolve the global at runtime with
-`libc::dlsym(RTLD_DEFAULT, c"name")`, which applies the platform's own
-decoration (this is what `latexml_post::xslt::set_xslt_max_depth` does
-now; works identically on ELF and Mach-O); (b) upstream — drop the
-`link_name` attribute from statics (plain `extern "C"` statics get
-per-platform decoration), or generate bindings at build time.
+**Fixes:** (a) consumer-side — declare the static yourself, as a plain
+`unsafe extern "C" { static mut name: c_int; }` with no `link_name`:
+rustc applies the platform's decoration (ELF, Mach-O; COFF only for a
+statically linked library — a DLL's data needs `dllimport`), and the
+`-sys` crate's build script already puts the library on the link line
+(this is what `latexml_post::xslt::set_xslt_max_depth` does); (b)
+upstream — drop the `link_name` attribute from statics, or generate
+bindings at build time.
+
+**Settled dead end: `dlsym(RTLD_DEFAULT, c"name")`.** It was fix (a)
+first, and it links everywhere, but it only searches DYNAMIC symbol
+tables, so it returns NULL — and a "skip if absent" guard silently skips
+the write — whenever the library is linked statically (the
+`LIBXSLT_STATIC` release binary: an executable does not export the
+global; a C program over the release build's static libxslt 1.1.42 gets
+`dlsym` NULL beside a linked value of 3000) or not loaded at all (a binary whose live code has no other
+reference to the library, which the linker's `--as-needed` drops: the
+`latexml_post` unit-test binary once its dependencies built at
+opt-level 1). A link-time reference has neither failure mode.
+Guards: `xslt::max_depth_tests::extern_static_sets_perl_parity_cap`,
+`transform_aborts_past_perls_recursion_depth` (a 700-level recursion
+aborts at Perl's 1000 depth units, not libxslt's 3000).
 
 **Audit state:** `libxslt` 0.1.3 has 12 such statics (we referenced
-only `xsltMaxDepth`). `libxml` 0.3.12 has them only on glibc-internal
+only `xsltMaxDepth`); 0.1.5 still has them (`bindings.rs:14`), and we
+now reference none. `libxml` 0.3.12 has them only on glibc-internal
 `__isoc99_*scanf` symbols in its *fallback* `default_bindings.rs`; its
 build.rs regenerates real bindings per-platform, so it does not bite.
 `kpathsea_sys` bindings: statics-free in the referenced surface.
@@ -1775,7 +1822,7 @@ or `//` are unaffected.
 **Witness:** PR-2767 port, `\lx@frontmatter@fallback` — frontmatter
 (title/creator) landed at the *end* of `<ltx:document>` instead of
 after the `ltx:resource` block; caught by `the `20_digestion` `rebox` fixture (`tests/digestion/rebox.{tex,xml}`)`.
-Fixed in `base_utilities.rs` by using
+Fixed in `base_utilities/frontmatter/titlepage_layout.rs` by using
 `/ltx:document/ltx:resource[last()]`.
 
 ## #60 libxml string accessors silently fail on namespaced `xml:id`/`xml:lang` — and a *masked* broken accessor is not automatically a bug
@@ -1881,7 +1928,7 @@ emulateapj).
 
 ## 41. Frontmatter fallback DOM surgery: three construction-time traps
 
-Context: `base_utilities.rs` `\lx@frontmatter@fallback` + `maybe_promote_leading_title`
+Context: `base_utilities/defs/author_macros.rs` `\lx@frontmatter@fallback` + `maybe_promote_leading_title` (`base_utilities/frontmatter/titlepage_layout.rs`)
 (the beyond-Perl "keep abstract below a hand-formatted title block" ordering fix
 and the "promote a leading centered display block to `<ltx:title>`" heuristic for
 `\title`-less papers, e.g. arXiv 1609.07638). Three traps bite any code that
@@ -2173,7 +2220,7 @@ Result: 0 errors / 1.9 s / 985 formulae, vs Perl's 3 errors / 52.7 s — same 98
 Neutrality argument worth reusing: the change is observable **only** by documents
 that name `\@arraycr` (no Rust binding and no `.ltxml` references it) — measured
 at **6 of 6,000** 2605 papers, three via the direct `\let`. See
-`docs/known_crashes/kbordermatrix_halign_math/`.
+`docs/archive/known_crashes/kbordermatrix_halign_math/`.
 
 ## 48. Patching an EXISTING definition in place → `Scope::InPlace`, never `Scope::Global`
 
@@ -2247,7 +2294,8 @@ duplicated class-copy block. Guard: `13_split_css_links`.
 
 **When:** code must ask *"am I inside a bracket LaTeXML itself opened?"* — the
 `standalone` child preamble (`standalone_sty.rs`, after its `bgroup()`),
-`import.sty`'s `\lx@activate@subfile@scope` `{…}` — so a package loaded there
+and, until batch 56hu removed that group (OXIDIZED_DESIGN #280), `import.sty`'s
+`\lx@activate@subfile@scope` `{…}` — so a package loaded there
 survives the pop (OXIDIZED_DESIGN #65, KNOWN_PERL_ERRORS #55, issue #311).
 
 **Mechanic:** `activate_scope(subfile_scope_here())` marks `StashActive`
@@ -2546,7 +2594,7 @@ same shape threatens any `\c…`/`\v…`/`\u…`-prefixed expl3 name.
 `:`/`_` catcodes, sets LETTER, and restores on both the success and error paths.
 Do NOT hardcode the restore to OTHER/SUB: the caller may itself be an expl3
 package (that mistake is the older half of this family, in
-`docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`).
+`docs/archive/EXPL3_CATCODE_GAP_2026-06-08.md`).
 
 **The cheaper escape.** `T_CS!`, `Let!` and `parse_prototype`
 (`def_macro_noop`, `def_macro_identity`, `def_primitive_noop`, …) build the CS
@@ -2691,7 +2739,7 @@ it agrees with the bug. Compare glyphs against Perl, or read the rendered page.
 Witness 2503.04421. Guards: `latexml_oxide/tests/fonts/bbding.{tex,xml}` and
 `tests/116_bbding_family_fontmap.rs`. The same primitive also lacked Perl's
 `reported_unrecognized_font_*` report-once guards (`already_reported` in
-`latexml_engine/src/base_utilities.rs`), which had turned one unrecognized
+`latexml_engine/src/base_utilities/util_text.rs`), which had turned one unrecognized
 family into 28 identical `Info` lines.
 
 Settled dead end: Perl's `DeclareFontMap` `(uppercase|lowercase|digit)_mathstyle`
@@ -2814,3 +2862,315 @@ standalone `svg.rs` post-processor would only produce divergent, unverified outp
 else absent (mathimages/dvipng pipeline, jats/html4/tex/box outputs, crossref/
 bibliography/index cluster, DTD-gated `--omitdoctype`, daemon mode) is a feature
 gap kept as a hard error, revisited per-flag as the feature lands.
+
+## 84. Keyval keys are read unexpanded; a binding assembles conditional key lists OUTSIDE the read
+
+keyval.sty reads each `key=value` item as a delimited macro argument (`\KV@do#1,`),
+so the KEY is never expanded and a `{…}` inside it is opaque. Perl
+`KeyVals.pm:273-286` (and this port until batch 54h) expanded while scanning and
+cut the key at the first `}`/`,`/`=` — enumitem's shortlabel `\setlist[test]
+{\@risp,…}` with `\@risp` = `\fbox{\parbox…}` was unfolded into box code and cut
+at an inner brace (verifica ×5). `read_keyword_from` (keyvals.rs) now uses
+`read_token()` with a brace-depth counter; only a key that STARTS with
+`\savevalue`/`\gsavevalue` (xkeyval.tex:140-146 `\XKV@ifcmd`) is expanded.
+
+**Method for bindings**: a key list must not carry `\ifx…\fi` in key position
+(mathtools' `\lx@mt@smallmatrix`, `\multlined`): decide before the read —
+`\ifx/#2/\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{…}{…}` or an
+`\edef` of the whole list handed over with `\expandafter{…}`.
+
+Sibling rule: a leftover-key store (`\XKV@rm`) is fetched ONE STEP
+(`lookup_expandable(cs)?.invoke(true)`, xkeyval.tex:497/618), never
+`do_expand` — a value may name a macro defined only when its key code finally
+runs (chessboard.sty:1439 `trimarea=\board`, `\board` \edef'd at :1087).
+Guards: `perfect_kernel_batch54::{keyval_key_is_brace_aware,
+setrmkeys_keeps_leftover_values_unexpanded, xkeyval_usevalue_*}`.
+
+## 85. Read a conversion log by its counters, and match diagnostics anywhere in the line
+
+A conversion's own summary (`Conversion failed: N warnings; M errors; K fatal
+error; L undefined macros[…]`) and `Status:conversion:N` are computed from the
+same `REPORT` counters `emit_record` increments, so the check for a lossy
+pipeline is mechanical: `#Warning:` lines must equal N, `#Error:` lines M, and
+K≥1 must have a `Fatal:` line — per pass (a `--streaming` retry concatenates two
+passes, each internally consistent). Match with `(Warning|Error|Fatal):[A-Za-z_]+:`
+**anywhere** in the line: progress markers (`(Loading …)`, `(Finalizing… )`)
+prefix diagnostics on the same line, so a `^Error:` anchor under-counts — that
+anchor once made 8 muted `undefined` names look like a parser gap (asternote,
+2026-09-20). Two shapes to recognise: a name in `undefined macros[…]` with no
+`Error:undefined:` line means digestion went on past a Fatal with the Error
+mute latched (now impossible — `hard_yank_processing` stops the input at the
+Fatal, DIVERGENCES #251); a `Fatal:` count with no line was the sink-only
+`Fatal!` logging (now logged at the raise). Scripts: the s107 cross-check
+lives at `~/data/pk_agents/w56/s107_diag_audit/{audit,agg}.py` (per-doc JSON cache).
+Guards: DIVERGENCES #251's list.
+
+## 86. The arena is append-only: never re-intern a growing value, never size a vector by a symbol
+
+Every `pin(s)` keeps `s` for the rest of the conversion. `cortex_worker` never resets the arena, so there it is the
+worker's lifetime. A state value rebuilt by concatenation and stored as `Stored::String(pin(&combined))` therefore keeps
+every prefix it ever had: memory is quadratic in the value's length. pgfsys-latexml's SVG path did this per segment
+(`add_to_svg_path`): 9000 curveto segments reached 4.1 GB with no output, where Perl's string concatenation stays
+linear. The fix shape is to `push_value` the segments and join them when the value is read (`svg_path()`, batch 56kg).
+The same accumulator shape exists, still short in practice, in xcolor's `\blendcolors*` (xcolor_sty.rs) and
+algpseudocodex's `\BeginBox` queue.
+
+The second half of the lesson: `SymStr::to_usize()` is the BufferBackend's *byte offset* into the arena buffer, not a
+dense index. A `Vec` indexed by it grows with every byte interned, not with the number of symbols.
+`NOEXPAND_FAMILY_MEMO` did this, and one byte per arena byte made it 1.5 GB after the path's prefixes. It now covers
+the first `NOEXPAND_MEMO_SPAN` (64 MiB) and checks later symbols directly. A map keyed by symbol also bounds it, but
+cost +0.5 % instructions on the 24-paper C2 set; the bounded vector costs +0.05 %. Related probes: #9 (`arena::with`),
+and the `:locked` probe twins and `SymHashMap` negative probes, the same class.
+
+Guards: `perfect_kernel_batch56::pgf_path_keeps_no_prefix_of_itself` (a prefix is checked to be absent from the live
+arena), `token::tests::noexpand_memo_stays_within_its_span`.
+
+## 87. A runaway guard must judge progress, not shape — and must not fold progress into shape
+
+The box-cycle guard (stomach.rs) failed on tkz-grapheur's finite 11,000-point plot. It judged the *shape* of what accumulated: five or six content-free boxes per plot point, repeating. It never asked whether the input advanced. A loop and a long computation can look the same by shape. What separates them is the input behind the output:
+- a loop repeats the same boxes from the same input;
+- a run over data repeats them from input of varying length.
+
+The fix keeps the shape detector exactly as it was, uniform-run exemption included. A detected box period is confirmed only when the tokens read per box also repeat, with a period that is a multiple of the box period (`SpanHistory`, batch 56kh; DIVERGENCES #326).
+
+The first cut folded the span into the box fingerprint instead, and the review caught two failures:
+- **A false positive.** A finite `\loop` printing one letter through alternating `\ifodd` branches stopped being a "uniform run" and became a Fatal.
+- **Missed runaways.** Box period × span period overflowed the 10-item window, so some runaways fell to the count cap.
+
+Excluding boxes blinds the guard to real runaways, and so does hashing token *content* (a counter makes the cloud loop in 2508.07407 look aperiodic).
+
+The pushback limit is the same kind of shape proxy. It counts a flat copy of expansion bodies where TeX pushes pointers (tex.web §323), so the ar5iv profile's value rides the binary's 5,000,000 (user ruling 2026-09-26: the ar5iv limits are pragmatic heuristics).
+
+Probe any guard with `--max-memory=8192`. Without it, the ceilings derive from host RAM and the backstops look absent.
+
+## 88. A dangling or keyless content XMRef is a symptom: find the argument that failed to parse
+
+ASF `into_xmath` rebuilds non-leaf nodes fresh (only `XM::Lexeme` reuses the input node), so a dual argument that fails to
+parse is swallowed by its ancestor's `parse_single` reparse and its content ref strands (2311.01600 `\Pr(s_A,s_B|\Omega)`).
+Bisect the argument shape (`\Pr(a,b|c)` dangled; `\Pr(a|b)`, `\Pr(a,b)` did not) and fix parse coverage (grammar/builder.rs:486).
+Dead ends: dropping the ref (content loss; guard `cluster_xmref_pr_arg_not_dropped`), re-pointing it into the presentation
+arm (`compact_xmdual` merges the dual), move-not-clone, `XM::Arg` id capture, `_xmkey` remap (the parser regenerates keys).
+Record: `docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
+
+## 89. The dbfile's changed-only `finish()` relies on serde_json's sorted maps — do not enable `preserve_order`
+
+ObjectDB (`latexml_post/src/object_db.rs`) writes back only entries whose encoding differs from the stored row (Perl
+ObjectDB.pm `finish`: `next if compare_hash`). serde_json without `preserve_order` encodes maps as a `BTreeMap`,
+deterministically; a dependency that unifies `preserve_order` on makes the encoding order-sensitive and the delta compare can
+silently rewrite unchanged entries. Check `cargo tree -e features -i serde_json` when adding a dependency. Source:
+`docs/archive/CODE_REVIEW_2026-08-03.md`.
+
+## 90. A block-level hole in an inline constructor template closes the inline element early — and a test sees it only once the logger is up
+
+`<ltx:text>#tags #1</ltx:text>`: `#tags` is an `ltx:tags` block, so the Document validly auto-closes `ltx:text`→`ltx:p`→
+`ltx:para` to host it and the template's `</ltx:text>` becomes a logged, output-neutral `malformed` close. Put block holes in
+block contexts or render a string property (`#refnum`). `Error!` prints only after `logger::init`, so a test that does not
+bind its own log (`logger::init` + `bind_log`) passes alone and fails after an earlier test initialized the logger. Guard
+`30_script_bindings.rs:231/:387`; record `docs/archive/MALFORMED_CLOSE_NUMBERED_2026-06-10.md`.
+
+## 91. A diagnostic's message is not a format string unless the macro says so — build it first
+
+latexml_core's `Error!`/`Warn!`/`Info!` are `(category, object, message, details…)`: `generate_message!` never formats the
+message, and every argument after it is printed as a detail line, so `Error!("undefined", f, "Undefined label format
+`{}'", f)` logs "Undefined label format `{}'" and a named hole (`'{cs}'`) prints as written. latexml_post's `diag.rs`
+macros format with four or more arguments but print a three-argument message as is (`{target}` stayed literal). Build
+the message with `&s!(…)` / `&format!(…)`. Batch 57q fixed 8 sites (subcaption, xargs, mathtools, etoolbox, sect01 ×2,
+tokens, post `mathml/presentation.rs`); the scan is a regex over `(Error|Warn|Info|Fatal)!(…, "…{…}…"…)`.
+
+## 92. Removing a duplicate derivation reorders the tree iterator — rank bar pairings the way Perl does, not by luck
+
+The hybrid route's tree iterator stops at ten unique readings (`max_unique`), in libmarpa's order. While a bar pair after
+a function had two derivations, one pruned, the iterator walked past hundreds of pruned trees and happened to reach Perl's
+pairing of `\log|a|+\log|b|+\log|c|+\log|d|`; with one derivation (57am round 6) its first ten trees were all semantic and
+all paired `|c|+\log|d|` around `c·|+\log|·d`. A reading that depends on enumeration order is not a ranking. Perl's is
+iterative deepening: `absExpression` nests no bar fence deeper than `MAX_ABS_DEPTH`, 1 first, 2 and 3 only after a parse
+that failed having tried deeper (MathGrammar:410-412, MathParser.pm:813-836) — ported as a prune at the fence
+(`semantics::mark_bar_fence`, `Meta::abs_depth`) and a retry (`MathParser::parse_lexemes`), which also closed a golden residual
+(the kerned triple norm) and made the second chance's worst bar-heavy formulas that parse cheap (10,000+ → 674
+alternatives); one that never parses pays a tree sample per depth attempt, the second chance one budget shared across
+them (`MathParser::second_chance_budget`). When a
+grammar cleanup changes readings, look for the Perl mechanism that orders them before adding a pragma. Guards
+`perfect_kernel_batch57::{bar_pairs_nest_as_shallow_as_they_can, opfunction_chain_parses_past_the_tree_sampler}`.
+
+## 93. A sample the tree iterator cut short is not the reading set — ranking over it picks among the wrong ten
+
+The hybrid route samples a bocage past 500 AND-nodes and stops at `max_unique` (10) distinct readings. The iterator varies
+the leftmost choice fastest, so where each big operator chooses its operand's extent independently the ten readings differ
+only in the first operators, and the one every ranking wants — all operands wide, Perl's greedy `addOpArgs`
+(MathGrammar:603-617) — can be the eleventh (`\int dt\,a/t=\int dt\,b/t`, 16 readings) or absent from a 144-reading
+split (2605.19037 S4.E47). A soft prune (`BigopPreferWiderAbsorption`) over such a sample falls back to the first
+reading. Raising `max_unique` or the AND-node limit only moves the cliff; the principled fix is to treat a cut sample as
+incomplete and read the bocage whole when a bounded ASF pass can (57ao: the second chance runs for a cut sample too).
+The complete readings must *join* the sample, after its own, not replace it (57at): where no pragma separates the
+readings the first is taken, and ASF's order is not the iterator's — replacing moved ≈2,550 formulas by order alone
+(the train A/B's 2,840 changed readings in 631 papers, less the 288 left with 57at) (`(f(X)-f(X'))(h(X)-h(X'))` f@(X) → f·X, 2605.18798; theme 12, K19). Check a sampled formula by comparing
+the tree route (`set_hybrid_and_node_limit_override(Some(Some(500)))`) with pure ASF (`Some(None)`): they read alike where
+the second chance completes (a bocage of at most 20,000 AND-nodes whose traversal stays within `ASF_SECOND_CHANCE_*`)
+*and* the ranking separates the readings; where it does not, the route's order decides. A sample stopped by
+`max_since_unique` (256 trees, no new reading) is a part too and is not yet routed. Guard
+`perfect_kernel_batch57::sampled_readings_match_asf`; golden `tests/parse/sampled_readings.tex`.
+
+## 94. A presentation branch holds the source's tokens — never rebuild it from the content
+
+A semantic action that rebuilds a Dual's presentation from its content items has to invent the tokens between them,
+and whatever it invents is what the reader sees. The paren branch of `fenced` (semantics.rs) kept only a list's items
+and joined them with commas of its own, so every `;` in a parenthesized list rendered `,` — `p(x;\theta)` as `p(x,θ)`,
+`I(X;F')` as `I(X,F')` (57ba; at most 1,157 of the 3,003 A/B papers: those with a formula holding a `;` anywhere and a `vector`
+reading; 2605.00042, 2605.00130) — and a siunitx list lost its ` and ` (`tests/complex/si.xml`). Perl's `Fence` passes `open, items and
+separators as written, close` to `InterpretDelimited`, and names the list from the same tokens: the delimiters and
+the FIRST separator key its enclose tables (MathParser.pm:1368-1377, 1405-1409), which hold comma lists only. Take
+the presentation Wrap as it is (a bare list's `[item, separator, item, …]`, `presents_its_items_alone`) and read the
+name off it. Audit: `grep -n 'content: Some(Cow::Borrowed(' latexml_math_parser/src` — an invisible operator
+(U+2062-2064) is fine; a visible character built in an action replaces a source token (`vertbar_modifier`'s
+`|` did, until 57bc: it now annotates the source bar as Perl's `Annotate` does, MathGrammar:263).
+Golden `tests/parse/fenced_lists.tex` ("named by its first separator").
+
+## 95. A parser action reads a token's font from `_font` — the `font` attribute does not exist yet
+
+During the parse a math token carries only `_font`, a hash into the document's font table; the `font` attribute
+(`italic`, `bold`, `caligraphic`, …) is written from it after the parse, relative to the default math font. An action
+that asks `node.get_attribute("font")` gets `None` for every token and misreads it: 57bq's first cut of the trig
+type-evidence cue took every single Latin letter as upright, so `\cos\omega T` split after ω and
+`\sin u\mathcal S` did not split (the plan it followed was written against the finished XML). Decode it:
+`document.decode_font(&node.get_attribute("_font")?)` gives the `Font` (`get_family`, `get_series`, `get_shape`) —
+`token_font_mark` (semantics.rs); the same holds for any attribute the post-parse finalizer writes. Check a cue on
+the live DOM (`--verbose`, whose `close_element` lines show the XMath as the parser sees it), not on any
+finished output — `--nomathparse` output is finalized too and carries `font=`. Golden `tests/parse/rust_parse_additions.tex` ("A symbol of another type ends a trig function's bare
+argument").
+
+## 96. A speculative typesetting is safe to keep or throw away only with its stubs undone and a structural keep test
+
+The engine typesets some material on its own initiative (`\lx@deposit@maketitle`'s replay of a class's title body, an
+eso-pic one-shot overlay) and keeps it or not by its outcome. `DiagnosticsHold` holds the diagnostics; discarding them
+alone leaks the `<ERROR>` stubs installed globally for the undefined commands it met, and a later genuine use of the
+command becomes an uncounted ERROR: discard takes them back (`note_held_stub` → `state::remove_error_stub`). The groups
+an error leaves open are NOT closed: oegatb.cls:160-176 leaves `spacing` open on purpose for `\AtEndDocument`, and
+closing it (tried in 59p) cost 2 errors and the body's `\footnotesize` (dead end; RED
+`discarded_maketitle_replay_leaves_its_groups_open`). Keep only what shows: a whatsit's string is its reversion
+(Whatsit.pm `toString`), so `!digested.to_string().trim().is_empty()` keeps `\noindent\par\null` — walk the boxes
+(`base_utilities::typesets_content`: a non-space character or an image through lists, whatsit arguments and bodies,
+alignment cells). Then sweep every class the mechanism reaches (59p: the 299 TL classes renewing `\maketitle`, one
+minimal document each, before/after) and look at the result rendered: 59p's overlay passed every XML check and rendered
+upside-down (a picture nested in a picture, OXIDIZED_DESIGN_DIVERGENCES #414). Guards
+`perfect_kernel_batch59::{discarded_replay_takes_back_its_stubs, maketitle_replay_adds_nothing_the_frontmatter_has}`.
+
+## 97. A TeX recovery keyed on "the formula's math shift" must know whose `$` opened the formula
+
+LaTeXML's alignment templates carry real `$` tokens (amsmath `align*` cells are `\hfil$\displaystyle…$`, `\array`
+rebinds `$`), so a frame that switched to math is not always a formula the author opened. tex.web's recoveries at the
+math shift group (§1193 `off_save` at `$`, §1047 `insert_dollar_sign`, §1069 `extra_right_brace`) are faithful for an
+author's `$…$`, but applied to a template's `$` they close the author's groups at row ends: math9805003's undefined
+`{Sb}` in an `align*` lost the whole alignment when the row's template `$` closed its `\begingroup` (65n). Mark the
+author's formula where it opens (`stomach::INLINE_FORMULA`, set by `\lx@begin@inline@math` only with no alignment
+current) and gate every such recovery on it and on a frame walk of off_save-closable groups only
+(`stomach::inline_formula_reachable`), so the inserted `$` is guaranteed to reach the formula (no re-read loop). Probe
+each change on a math alignment holding an author group as well as on plain paragraphs. A `}` at the math shift
+group ends the formula only when it closes a construct digested as a unit (a box body: the mode frame just outside the
+formula; an argument digested on its own: gullet.rs `isolated_input_ends_here` — `stomach::formula_ends_with_its_unit`),
+which the formula cannot escape; any other `}` is deleted as TeX deletes it. Asking instead whether the `}` has a `{`
+partner outside the formula (a plain `{…}` group included) looks more general but guesses "forgotten `$`" wrongly
+wherever the author's `$` follows (`{\bf $x} y$ after.` — "after." became math); the frame stack cannot tell a
+forgotten `$` from a stray `}` inside a plain group, only `$`-parity in the rest of the paragraph could. OXIDIZED_DESIGN
+#553.
+
+## 98. A parked fleet child is read with gdb and the shipped binary's exact twin, built with symbols
+
+The fleet's `maxperf-cortex` worker is stripped, so a stuck child's `thread apply all bt` is a column of `?? ()`. Rebuild
+the deployed commit in a separate worktree and target directory with `CARGO_PROFILE_MAXPERF_CORTEX_STRIP=none`, after
+copying the main checkout's `resources/dumps/` into it: latexml_engine's build.rs generates code for the embedded dumps,
+so a worktree without them builds a `.text` 17 KB off (with them, 192 bytes, from the paths' lengths). Then map each
+frame by its call site, not by a fixed shift: take the 20 bytes before the return address in the fleet binary's
+`.text` (`objcopy -O binary --only-section=.text`), find them near the same offset in the twin's, and name the twin's
+function there (`nm -C`, sorted). Frames inside the standard library whose call bytes hold a relocated address do not
+match; a naive shift names those. Two process facts make a parked child stand out: all of its threads sleep in a futex
+(`/proc/<pid>/task/*/wchan`), and its CPU time stops growing between two `ps -o times` samples while its age runs past
+the timeout (a harness child converts many papers, so its age alone means nothing). This found the 67m
+allocation-failure-hook deadlock (SYNC_STATUS 67m).
+
+## 99. A binding that reads a file raw is a `RawRead` declaration, not a hand-rolled load
+
+A class or package binding that reads the TeX Live file, or the copy an author's class the paper ships, raw and then
+adjusts it declares a `latexml_package::shipped_class::RawRead` and calls `read_raw`, which owns the order and the
+no-copy path: the paper's copy for a `shipped` class (`requested_shipped_class`, a renamed or path-prefixed request
+included), else OmniBus with the loader's missing-file Warning (`omnibus_without_copy`, silent when the prefix
+fallback already warned); `held` definitions locked against the file's own while it is read and restored after
+(pasa.cls's era `\@popfilename`); `restored` meanings the file overrides with an older kernel's copy, restored after
+(pasa.cls's `\@pushfilename`); `setters` — a store the file defines turned into a frontmatter API body with `#1` its
+argument, the grammar of K11's `STORE_SETTERS`, only when the file defines it (an.cls `\aaabstract`, cclayout's
+`\for@cc@subject`, asmejour's `\keywords`); then `after` TeX. `read_raw` returns `false` when the class fell to
+OmniBus, so version-dependent Rust (an.cls v1.03's labelled store, a family's "only named like it" checks) runs only
+after a real read. Hand-rolled copies of this sequence drifted before it existed: some no-copy branches warned and
+some did not, and a forgotten `AUTHOR_FILE_STAND_INS` entry failed the gates (deepseek, pasa). A new author-file
+binding still needs its name in `AUTHOR_FILE_STAND_INS`; `perfect_kernel_batch68d::every_binding_outside_tex_live_is_listed`
+names any it misses.
+
+## 100. The schema model is not loaded at digest time — decide model questions in a constructor
+
+`document::can_contain_qname` at digest time returns false for every pair but the `_Capture_`/`#Comment`/`_WildCard_` fast paths (latexml_core/src/common/model.rs): the model is loaded with the document head
+(latexml_oxide `core_interface.rs` `build_document_head`, as Perl's `convertDocument` loads it after digestion, since
+a binding may still change the schema while digesting). A digest-time rule keyed on "can this element hold X" silently
+never fires. Record what the rule needs on the whatsit at digest (an `after_digest` property, e.g. the frontmatter
+field the `\par` was digested in) and ask the model in the constructor (`frontmatter_paragraph_break`, OD #766).
+
+---
+
+## 101. A recovered Fatal must reset every stack the unwinding left — a stale entry turns the next digestion into a ghost Fatal
+
+`invoke_token` (latexml_core/src/stomach.rs) pushes each invoked token onto `token_stack` and pops it only on a normal
+exit; every `?` between push and pop leaves its entry. A `Stomach:Recursion` Fatal leaves the whole `MAXSTACK`. The
+recovery arms that keep the document (`core_interface.rs` `digest_step_guarded`'s Err arm, the streaming loop's
+resource stop, `streaming_restart::release_before_rerun`) reset the box lists (`salvage_pending_box_lists`) but kept the
+stack, so the first digestion after them — the build's own (a frontmatter name read at insert time,
+`get_frontmatter_name`) — failed its first push with a second Fatal naming the same stack, and the build stopped early
+(2410.07647 kept 96 of int130a's 886 words in the Bundle 1 A/B; 2105.02599 0 words). Perl's `hardYankProcessing` (Common/Error.pm:329) empties
+`token_stack` for every Fatal; `stomach::clear_token_stack` now does in each arm. **Method:** a second Fatal whose
+message repeats the first one's stack is a stale-state ghost, not a new failure — list what the failing frame pushes
+(token stack, boxing, frames, mode, `CURRENT_TOKEN`) and check that each recovery arm resets it, against
+`hardYankProcessing`'s list. Guard `perfect_kernel_batch131fix::a_recovered_fatal_leaves_no_token_stack_behind`. Open:
+an RAII pop in `invoke_token` (as `local_current_token_guard`) would cover a caught error that never reaches a recovery
+arm (SYNC "token-stack RAII" row). **A speculative run is such a catcher**, and its stale state need not be an error's:
+the frontmatter's title-page runs, rehearsals and label reads discard their output and undo their assignments (the
+journal), but the token stack and the conditional stack are no assignments. 2502.10606: a run's discarded
+`Stomach:Recursion` left `MAXSTACK` tokens and the real `\maketitle` died of the ghost; 2003.03814: a run that ended
+*normally* had closed, with a `\fi` of its own, a conditional the document opened before it (CUP-JNL-DCE.cls:505
+`\keywords` leaves its `\ifx` open), and the document's own `\fi` then had none. `stomach::StomachMark` (the token-stack
+depth and every conditional frame with its state) is taken before each such run and put back on every exit, `Ok` too
+— around the whole sequence where runs read one text in pieces: the observer rehearses an author list block by block,
+and a conditional opened in one block's run is closed in the next's (2606.17718), as TeX reads the list in one pass.
+The mark restores on drop as well: a run's propagated Fatal (`?`) must not skip it.
+Guards `perfect_kernel_batch106s::{a_runaway_run_leaves_no_ghost_fatal, a_run_keeps_the_documents_open_conditional}`.
+
+
+## 102. An environment's mode frame under plain groups ends by frame surgery, not by popping
+
+LaTeXML's environment frame is TeX's `\begin` group and LaTeXML's mode frame at once; TeX's groups are untyped, so
+`\begin{X}\begingroup … \end{X}\endgroup` (raa.cls:322-349) is legal and Perl's `endMode` errs on it (KNOWN_PERL_ERRORS
+#1207). To end X without breaking the group count: pop only the innermost group (the one `\end`'s `\endgroup` closes),
+then unbind X's mode keys in X's own frame wherever it sits (`state.rs` `unbind_value_in_frame`: a frame's values sit
+in the key's value stack after the counts the frames above it made — Perl State.pm:280-286 `valueInFrame`'s offset),
+flip its `groupNonBoxing` in place (`replace_value_in_frame`) and drop its boxing level. Popping all the inner groups at
+once (the obvious reading) is wrong past one group: pdflatex's `\begin{center}\begingroup\begingroup … \end{center}
+\endgroup\endgroup` keeps the outer inner group's values after `\end{center}` (`Kept [yes][yes][no]`), until the next
+`\endgroup`. Guard
+`perfect_kernel_batch98d::end_over_begingroups_keeps_tex_scoping`; OXIDIZED_DESIGN_DIVERGENCES #965.
+
+
+## 103. A name's spelling by an address is decided where the name's text is read, not by folding its text afterwards
+
+An address spells a name by its base letters (`Martínez` "martinez") and by the conventional transliteration of its
+letters (`Schäffler` "schaeffler": ä ae, ö oe, ü ue, ß ss, å aa, ø oe, æ ae, œ oe). Both are folds of the letter as it
+prints, so both must be taken from that letter: two readings lose it first. The author block's text reader
+(`visible_name_text`) drops an accent command and keeps its base letter (`Sch\"affler` "Schaffler", `{\ss}` "s"), and
+the frontmatter observer's callers folded the digested name with `base_letters` before building its keys — after
+either, "schaeffler" is unrecoverable, and the two readers disagreed (`\"a` in the source vs `ä` in the digested
+name). The fix is one reader of the printed letter (`spelling_name_text`: an accent or letter command whose letter has
+a transliteration read as that letter) and one place that folds it both ways (`NameKeys::of` over
+`resolver::base_letters` and `resolver::transliterated`), every caller passing the name unfolded. Whom an author's own
+e-mail moves to is the name as printed or transliterated, never base-folded (`NameKeys::as_printed`; user ruling
+2026-11-05, FIDELITY_CHARTER §4 #420). A second
+spelling is a second chance to match, so it must not also change the rules a match is judged by: the transliteration
+lengthens words ("lu" "lue"), so every length threshold reads the base spelling (`SpelledWord`); and a match through
+it weighs the same as a literal one — an address carries no umlaut, so `mueller@` beside Hans Mueller and Jörg Müller
+is a genuine tie (user ruling 2026-11-05). Guards
+`base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_its_transliteration`,
+`perfect_kernel_batch107a`; OXIDIZED_DESIGN_DIVERGENCES #970.

@@ -1,0 +1,29 @@
+% A `\vadjust`'s material is appended after the line it sits in, so it stays with that line, in the list the line is
+% set in (tex.web §889; §655 migrates it only out of a paragraph's lines, alignment cells §796, a vertical-mode
+% `\hbox` §1085/§1076 and a display §1199): a parbox, footnote, minipage or p{} cell keeps it below its own line, and
+% a quote or an item sets it right after its line. The queue (KNOWN_PERL_ERRORS #441) is one list replayed at the
+% next `\par` that is digested, so the material of a list whose paragraph ends without one (a box's end, an
+% environment's end) leaves the list and follows the next paragraph, and an outer paragraph's material is taken by
+% the first `\par` inside a later box (review 60e r1 finding 4, r2 finding 2).
+% status:  RED (open; Perl-shared)
+% oracle:  pdflatex 0 errors: parbox "Echo Golf." + "Foxtrot" / footnote "Juliet Lima." + "Kilo" / minipage
+%          "November Papa." + "Oscar" / cell "Romeo Tango." + "Sierra" / "Tango [parbox Uniform / Victor] Whiskey."
+%          + "Xray" / quote "Alpha Charlie." + "Bravo" / "Delta." / item "India Kilo." + "Juliet" / "Lima."
+% engines: rust 60e: "Foxtrot", "Kilo", "Oscar", "Sierra" each a paragraph after the outer one, "Xray" inside the
+%          parbox between "Uniform" and "Victor", "Bravo" after "Delta.", "Juliet" after "Lima."; Perl 0.8.8 alike,
+%          run into the next paragraph ("FoxtrotIndia", "SierraTango", "XrayVictor")
+% expect:  0 errors; each material inside its box, quote or item, right after its line
+\documentclass{article}
+\begin{document}
+\noindent Delta \parbox{3cm}{\noindent Echo\vadjust{\noindent Foxtrot} Golf.} Hotel.\par
+\noindent India\footnote{Juliet\vadjust{\noindent Kilo} Lima.} Mike.\par
+\begin{minipage}{4cm}\noindent November\vadjust{\noindent Oscar} Papa.\end{minipage} Quebec.\par
+\noindent\begin{tabular}{p{3cm}}Romeo\vadjust{\noindent Sierra} Tango.\end{tabular} Uniform.\par
+\noindent Tango\vadjust{\noindent Xray} \parbox{3cm}{\noindent Uniform\par\noindent Victor} Whiskey.\par
+\begin{quote}
+\noindent Alpha\vadjust{\noindent Bravo} Charlie.
+\end{quote}
+\noindent Delta.\par
+\begin{itemize}\item India\vadjust{\noindent Juliet} Kilo.\end{itemize}
+\noindent Lima.\par
+\end{document}

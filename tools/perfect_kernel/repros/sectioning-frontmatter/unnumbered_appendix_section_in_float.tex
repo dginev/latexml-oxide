@@ -1,0 +1,21 @@
+% witness: 2605.02378, 2605.25534 (Iterative_Prompt_Optimization_Templates.tex:23-24)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the figure holds a section of class ltx_appendix titled "Strategy A"
+% mechanism: after \appendix a \section* in a float body built ltx:appendix, which an inline sectional block cannot
+%   hold (Error:malformed:ltx:appendix); OD #189's rename to ltx:section class=ltx_appendix existed only in
+%   \@@numbered@section. Fixed: sect04.rs \@@unnumbered@section mirrors it.
+% status:  GREEN
+\documentclass{article}
+\begin{document}
+\section{Intro}
+Text.
+\appendix
+\section{First}
+\begin{figure}
+\begin{minipage}[t]{0.45\textwidth}
+\section*{Strategy A}
+Some text.
+\end{minipage}
+\caption{Templates.}
+\end{figure}
+\end{document}

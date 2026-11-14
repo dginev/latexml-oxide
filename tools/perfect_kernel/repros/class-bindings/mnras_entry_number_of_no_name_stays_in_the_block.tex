@@ -1,0 +1,21 @@
+% witness: 2207.06713 (mnras: `$^{15}$The Inter-University Institute for Data Intensive Astronomy (IDIA), …` under
+%          names marked 1-18, none marked 15)
+% oracle:  pdflatex (TL 2025): "Ann Able,1 Bob Baker,5 Cid Cole10", "1University One, Town", "5University Five, Town",
+%          "10University Ten, Town", "15University Fifteen, Town"
+% engines: rust int124b = right (the MNRAS family unwritten: entry 15 on a nameless creator, the block);
+%          rust 95b = wrong: `15` parted into `1` and `5`, University Fifteen given to Ann Able and Bob Baker
+% expect:  0 errors, 0 warnings; Ann Able University One, Bob Baker University Five, Cid Cole University Ten, entry 15
+%          in the block (an entry's number is parted into digits only under single-digit numbering, brief 95b r2)
+% status:  RED (95b) -> GREEN (95b r2) — perfect_kernel_batch95b::an_entry_number_no_name_shows_stays_in_the_block
+% preload: ar5iv.sty
+\documentclass{mnras}
+\title{A title}
+\author[A. Able et al.]{Ann Able,$^{1}$ Bob Baker,$^{5}$ Cid Cole$^{10}$\\
+$^{1}$University One, Town\\
+$^{5}$University Five, Town\\
+$^{10}$University Ten, Town\\
+$^{15}$University Fifteen, Town}
+\begin{document}
+\maketitle
+Text.
+\end{document}

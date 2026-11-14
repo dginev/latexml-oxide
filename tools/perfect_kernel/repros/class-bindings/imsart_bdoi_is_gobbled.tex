@@ -1,0 +1,14 @@
+% witness: 1405.0671, 1511.07613, 2110.07639 (~634 run-340 papers: imsart .bbl `\bdoi{10.1007/…_1}`)
+% oracle:  pdflatex 0 errors: imsart.sty:2583 (:4151 in later copies) `\def\bdoi#1{\ignorespaces}` gobbles the DOI
+% engines: rust 65i = 1 Error:unexpected:_ (imsart_cls.rs printed it); Perl 0.8.8 = 2 (no binding)
+% expect:  0 errors, 1 Warning (imsart.sty is not in TeX Live); the entry reads "A. Author. Title." without the DOI
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass[bj]{imsart}
+\begin{document}
+\begin{frontmatter}\title{T}\end{frontmatter}
+Text \cite{a}.
+\begin{thebibliography}{1}
+\bibitem{a} A. Author. \bdoi{10.1007/978-1-4612-0099-4_1} Title.
+\end{thebibliography}
+\end{document}

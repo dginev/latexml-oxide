@@ -1,0 +1,10 @@
+% witness: sel78c item 8 (KPE #1018 residual; math-ph0607013 ships amstex.tex); amstex.tex:173-190 \atdef@" spaces
+%          the nested quotes after `@"`
+% oracle:  pdftex 0 errors: He said "'Hi'" twice. (kerns between the double and single marks)
+% engines: rust int43a = Error:undefined:@" twice
+% expect:  0 errors; the paragraph "He said “ ‘Hi’ ” twice." (the kerns a six-per-em space)
+% status:  RED (int43a) -> GREEN (78c)
+\input amstex
+\catcode`\@=\active
+He said ``@"`Hi'@"'' twice.
+\bye

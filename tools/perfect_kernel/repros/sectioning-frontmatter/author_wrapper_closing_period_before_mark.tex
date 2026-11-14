@@ -1,0 +1,11 @@
+% witness: 2201.07394 (ieeeaccess `\uppercase{…, and C}.\authorrefmark{2}`)
+% oracle:  pdflatex 0 errors: "ANN ABLE1, BOB BAKER2, AND CAT COLE.2" over the affiliations
+% engines: rust 64b3 = "BOB BAKER, AND CAT COLE" one creator + Error:frontmatter:merged_creators (the closing period before the mark); Perl the same (SplitTokens passes over groups, Base_Utility.pool.ltxml:152-165)
+% expect:  0 errors; 3 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\uppercase{Ann Able$^{1}$}, \uppercase{Bob Baker$^{2}$, and Cat Cole}.$^{2}$ \\ $^1$Univ A \\ $^2$Univ B}
+\maketitle
+\end{document}

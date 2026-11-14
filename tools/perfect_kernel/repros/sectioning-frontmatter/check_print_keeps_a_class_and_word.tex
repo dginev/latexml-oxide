@@ -1,0 +1,24 @@
+% mechanism: a document's or class's `\and` printing a word (`\def\and{\unskip\ und\ \ignorespaces}`) under article's
+%   title page: the title-page check's run (sect05.rs `title_page_print_tokens`, its stand-in for article.cls's
+%   `\@maketitle`) let `\and` to `\relax`, so its print (`ink_word_text`) lacked the "und" pdflatex prints (in one column:
+%   a `\and` so defined ends none), and ran the words beside it into one ("Inst XBob"). The stand-in now runs `\@author` with `\and` as the
+%   document has it: "Inst X und Bob B". The output holds no "und" (the frontmatter reads `\and` as the separator of
+%   two creators), and the check counts no separator word ("und" is a stopword of `net_content_words`). RR1 gap 25
+%   (class_and_printing_a_word_warns_falsely_red.tex, the emitter's count of an `\address`'s "und") is another
+%   mechanism, left RED
+% witness: synthetic (FX25); by shape 2506.20056, 2509.05738, 2510.17333 define `\and` as " und " under ngerman
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: one column "Alice A", "Inst X und Bob B", "Inst Y"
+% engines: int159a0 (`ce9a5dc6b6`): 0 errors, 0 warnings; the check's print (`--debug=frontmatter`) "A Title Alice A
+%   Inst XBob B Inst Y", no "und"; creators Alice A (Inst X), Bob B (Inst Y); perl not run
+% expect:  0 errors, 0 warnings; the print "A Title ||||||Alice A||Inst X und Bob B||Inst Y||||" (`|` a seam, FX25b's
+%   tabular adding the cells' seams); creators Alice A (Inst X), Bob B (Inst Y)
+% status:  GREEN (FX25)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\and{\unskip\ und\ \ignorespaces}
+\begin{document}
+\title{A Title}
+\author{Alice A\\Inst X\and Bob B\\Inst Y}
+\maketitle
+Body.
+\end{document}

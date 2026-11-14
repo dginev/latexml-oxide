@@ -1,0 +1,19 @@
+% witness: main-session ruling 2026-10-16 (amsguide.tex:547 "Each author is tagged separately, followed by address(es) … associated with that author"); 68r review's per-block shape
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; "Bob Two and Cid Three" under the title (amsppt 2.2's `\author` replaces the box, :322-326: the earlier block's name is kept here as author content); after the body: Univ X, Univ Y, E-mail address: y@y.edu, Univ Z
+% engines: rust 68r round 1 = Univ X to Ann One, Univ Y and Univ Z on the shared creator (counts compared across the paper); rust 67int12 one creator "Bob Two and Cid Three" (merged_creators)
+% expect:  0 errors; Univ X to Ann One, Univ Y to Bob Two, Univ Z to Cid Three; a block whose address count differs from its names keeps its addresses shared
+% status:  GREEN (68r round 2)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author Ann One\endauthor
+\address Univ X\endaddress
+\author Bob Two and Cid Three\endauthor
+\address Univ Y\endaddress
+\email y\@y.edu\endemail
+\address Univ Z\endaddress
+\endtopmatter
+\document
+Body text.
+\enddocument

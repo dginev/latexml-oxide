@@ -1,0 +1,22 @@
+% witness: none (bound of the 65h cascade rule; astro-ph0701701's `\caption{…}\hline\hline` without `\\` in each of
+%          its 14 longtables: one Error per table)
+% oracle:  pdflatex 9 errors, `Misplaced \noalign` each (1 in the preamble, 3 in the braced groups, 2 in the
+%          \begingroup, 2 in {center}, 1 at top level); "one two three four five six seven eight nine ten" typeset
+% engines: rust 64ze = 1 error (Perl's `\let`s from the preamble on); 65f = 9 errors; 65h r1 = 1 error + 8 warnings
+%          (the preamble's cascade ran through the body)
+% expect:  6 errors (the first misplaced command of each group: the preamble, `{…}`, `{…}`, `\begingroup…\endgroup`,
+%          {center}, and the body's top level, the preamble's cascade ended at \begin{document}), 3 warnings (the second
+%          in the first braced group, in the \begingroup and in {center})
+% status:  CONTROL; guard perfect_kernel_batch65h::misplaced_alignment_cascade_ends_with_its_group
+% preload: ar5iv.sty
+\documentclass{article}
+\noalign{}
+\begin{document}
+{one \hline two \hline} {three \hline four}
+
+\begingroup five \hline six \hline\endgroup
+
+\begin{center} seven \hline eight \hline\end{center}
+
+nine \hline ten
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 2410.09116 (packages.tex loads siunitx, then cellspace; cellspace.sty:174-177 \newcolumntype{S})
+% oracle:  pdflatex 0 errors (siunitx.sty:9348-9373 re-declares S at begin-document, warning
+%          'Tabular column type "S" overwritten with siunitx definition'); renders "A 62.0 / B 1.5"
+% engines: rust 67int4 = 3 errors (Error:expected:S Missing argument of the column type 'S'; 2x Extra alignment
+%          tab); Perl 0 errors (cellspace not loaded)
+% expect:  0 errors, 1 warning (siunitx's overwrite warning); each row's second cell holds the number
+% status:  RED (67int4) -> GREEN (68f)
+\documentclass{article}
+\usepackage{siunitx}
+\usepackage{cellspace}
+\begin{document}
+\begin{tabular}{lS}
+A & \num{62.0} \\
+B & 1.5 \\
+\end{tabular}
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: AASTeX 6's `\correspondingauthor{Ann Able}\email{…}` AFTER every `\author`: the address is the author the
+%   label names whole, as the PDF prints it ("Corresponding author: Ann Able / xq1@a.edu"); the 6.x reading gives it the
+%   author before it (aas_support_sty.rs `\lx@add@aas@email`, the `authored` test). Fix sketch: take the label when it
+%   matches an author's name whole (SYNC row 104d, P1)
+% witness: review rev104d P1 (probe aas/a6); synthetic
+% oracle:  pdflatex with review rev104d's aastex631.cls copy: 0 errors; "Ann Able", "Bob Baker" / "Corresponding author: Ann Able" /
+%   "xq1@a.edu"
+% engines: rust int130a, 104d: the correspondent contact on Ann Able, xq1@a.edu on Bob Baker
+% expect:  0 errors, 0 warnings; xq1@a.edu on Ann Able beside her correspondent contact
+% status:  RED (104d)
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\author{Ann Able}\affiliation{Univ A}\author{Bob Baker}\affiliation{Univ B}\correspondingauthor{Ann Able}\email{xq1@a.edu}
+\begin{abstract}Abs.\end{abstract}
+Text.
+\end{document}

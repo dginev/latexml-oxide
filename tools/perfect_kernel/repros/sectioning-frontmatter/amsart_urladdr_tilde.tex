@@ -1,0 +1,15 @@
+% witness: review of 63t: amsart.cls:542-547 sets `\urladdr`'s address in `\ttfamily` with `\def~{\char`\~}`, a
+%          tilde (pdflatex prints "https://x.org/~ab"); the binding digests it as text, where `~` comes out `˜`, and
+%          the HTML link is broken (`href="https://x.org/%CB%9Cab"`)
+% oracle:  pdflatex 0 errors: "https://x.org/~ab"
+% engines: rust 63t6 and Perl 0.8.8 = `<contact name="URL: " role="url">https://x.org/˜ab`
+% expect:  0 errors; the url contact `https://x.org/~ab`, its HTML link the same
+% status:  RED (63t6)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{A. B}
+\urladdr{https://x.org/~ab}
+\maketitle
+Body.
+\end{document}

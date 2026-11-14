@@ -1,0 +1,21 @@
+% witness: 2307.05988 (acmart `\received` history: received, then template revised/accepted dates); run-336 fidelity
+%          audit follow-up
+% oracle:  pdflatex 0 errors: "Received 20 February 2007; revised 12 March 2009; revised 3 May 2009; accepted 5 June
+%          2009" (acmart.cls:1859-1872: the first unlabelled \received is "Received", a later one "revised", a labelled
+%          one its label)
+% engines: rust (63e) = "Received 5 June 2009" only; Perl the same (acmart.cls.ltxml:58 `\lx@add@date[role=received]`,
+%          whose \lx@clear@frontmatter drops the earlier ones, Base_Utility.pool.ltxml:595-597)
+% expect:  4 dates — Received 20 February 2007, revised 12 March 2009, revised 3 May 2009, accepted 5 June 2009;
+%          0 errors
+% status:  RED (63e) -> GREEN (63f)
+\documentclass[acmsmall]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\received{20 February 2007}
+\received{12 March 2009}
+\received{3 May 2009}
+\received[accepted]{5 June 2009}
+\maketitle
+Text.
+\end{document}

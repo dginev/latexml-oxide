@@ -1,0 +1,16 @@
+% witness: 2412.09857 (`Dazhi Hou$^{\ICQD,\Phys\ast}$`, `\newcommand{\Phys}{4}`: the number a macro prints with a symbol
+%          glued to it, printed "1,4∗")
+% oracle:  pdflatex: "Ann Able1∗, Bob Baker1" / 1 Univ A
+% engines: perl 0.8.8 = 0 errors, Univ A Bob Baker's only; rust 92a the same (the ∗ shown on Ann Able); 92b's printed label before
+%          this row: "1∗" one label, which no line answers (Ann Able lost Univ A)
+% expect:  0 errors, 0 warnings; Univ A Ann Able's and Bob Baker's, the ∗ shown on Ann Able
+% status:  RED (92a) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\UA}{1}
+\title{T}
+\author{Ann Able$^{\UA\ast}$, Bob Baker$^{1}$ \\ $^{1}$Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

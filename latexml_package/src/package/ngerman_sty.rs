@@ -32,9 +32,38 @@ LoadDefinitions!({
     \def\tablename{Tabelle}\def\partname{Teil}%
     \def\pagename{Seite}\def\seename{siehe}%
     \def\alsoname{siehe auch}\def\proofname{Beweis}}");
-  RawTeX!(r"\providecommand\datengerman{}");
+  // ngermanb.ldf:107-113: the German date (an empty stub left `\today` in English).
+  // Guard: `perfect_kernel_batch58::today_follows_the_babel_language`.
+  RawTeX!(r#"\providecommand\month@ngerman{\ifcase\month\or
+    Januar\or Februar\or M\"arz\or April\or Mai\or Juni\or
+    Juli\or August\or September\or Oktober\or November\or Dezember\fi}"#);
+  RawTeX!(r"\providecommand\datengerman{\def\today{\number\day.~\month@ngerman\space\number\year}}");
+  // ngermanb.ldf:123-127,196: the babel language hooks. Left undefined, a
+  // later `\addto\extrasngerman{…}` / cleveref's `\cref@addto` (cleveref.sty
+  // :3832-3852, `\edef#1{\the\toks@…}` on a `\relax` target) made the hook
+  // expand into itself at `\begin{document}`: "Token \extrasngerman expands
+  // into itself!" (homework-demo-de, jwjournal-demo-de). Guard:
+  // `perfect_kernel_batch54::babel_extras_hooks_are_defined`.
+  RawTeX!(r#"\providecommand\extrasngerman{\@ifundefined{languageshorthands}{}{\languageshorthands{ngerman}\bbl@activate{"}}}"#);
+  RawTeX!(r#"\providecommand\noextrasngerman{\@ifundefined{bbl@deactivate}{}{\bbl@deactivate{"}}}"#);
   // ngermanb.ldf: `\def\dq{"}` — `\dq` yields a literal double-quote (see the
   // matching note in german_sty.rs). [ngerman,english] babel loads this path
   // (not german_sty.rs), so define it here too. Witness 1804.06196.
   RawTeX!(r"\providecommand\dq{\textquotedbl}");
+  // ngerman.sty:314-319, 662-671 (see german_sty.rs): `\ngermanTeX` is run by
+  // the kernel first aid (latex2e-first-aid-for-external-files.ltx:168-174)
+  // after the load, and by documents written for ngerman.sty (bibarts,
+  // flacards, gu, labbook, mceinleger). The `"` shorthands come from babel's
+  // ngerman here, so `\mdqon`/`\mdqoff` are its shorthand switches.
+  RawTeX!(r#"\providecommand\mdqon{\shorthandon{"}}\providecommand\mdqoff{\shorthandoff{"}}"#);
+  RawTeX!(r"\providecommand\umlautlow{}\providecommand\umlauthigh{}");
+  RawTeX!(r"\providecommand\ngermanTeX{\mdqon\selectlanguage{ngerman}}");
+  // german.sty:373-377 `\def@dqmacro{c}{text}{math}` / `\let@dqmacro` — the
+  // `"c` shorthand installers a derivative patches (germkorr.sty:141-144);
+  // recorded under german's own `\@grmn@@<c>dq` name.
+  RawTeX!(
+    r"\def\grmn@dq@macro#1#2{\expandafter#1\csname @grmn@@\string #2dq\endcsname}
+\def\def@dqmacro#1#2#3{\grmn@dq@macro\def{#1}{{#2}{#3}}}
+\def\let@dqmacro#1#2{\begingroup\edef\x{\endgroup\let\grmn@dq@macro\noexpand{#1}\grmn@dq@macro\noexpand{#2}}\x}"
+  );
 });

@@ -1,0 +1,20 @@
+% A caption steps its float counter with `\refstepcounter\@captype` (latex.ltx:17391-17399; caption.sty:200-205,
+% :551-569), so a local rebinding of `\refstepcounter` applies: floatrow measures every floatbox by typesetting it
+% under `\FR@loc@` (floatrow.sty:543-556), whose `\refstepcounter` is a local `\advance`, undone with the box. The
+% caption's step went straight to the counter (`step_float_counter`; Perl's `RefStepCounter`,
+% latex_constructs.pool.ltxml:3193-3196), so each measuring pass stepped it for good.
+% witness: kaytannollista-latexia (Taulukko 2.3, 2.6, 2.9 for the PDF's 2.1, 2.2, 2.3).
+% Guard: perfect_kernel_batch58::caption_steps_through_refstepcounter.
+% status:  GREEN (58h)
+% oracle:  pdflatex 0 errors; "Table 1: One", "After: 1.".
+% engines: rust 58g and Perl: "Table 2", "After: 2.".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\makeatletter
+\begin{document}
+\begin{table}
+\setbox0\vbox{\def\refstepcounter#1{\advance\csname c@#1\endcsname\@ne}\caption{Measure}}
+\caption{One}
+\end{table}
+After: \the\value{table}.
+\end{document}

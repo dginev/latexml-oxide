@@ -1,0 +1,22 @@
+% mechanism: a tail appended to `\@author` printed by the document's `\@maketitle` through a `\let` copy of `\@author` taken after
+%   the tail: `title_page_prints_author` (frontmatter_stores.rs) matches `\@author` by name, so the tail is not read
+% witness: synthetic (review revFX24b)
+% expect:  0 errors; Bob B (Inst Y) kept as a creator, as pdflatex prints him
+% preload: ar5iv.sty
+% status: RED (synthetic; review revFX24b). pdflatex prints "T / Alice A Inst X / Bob B Inst Y" (one tabular).
+% counted: 1 Warning "bob" since FX25's stand-in; a Warning still under FX27 (LaTeX's `\author`: the stand-in is
+%   LaTeX's page); guard perfect_kernel_batchfx24::an_author_tail_printed_but_not_read_is_counted
+% head (FX24b, as int158a): 1 creator, Alice A (Inst X); Bob B only as body text "Inst XBob B" in the printed tabular.
+% Cause: title_page_prints_author matches \@author by name; \myauthors is a \let copy of \@author taken after the
+% append (the same meaning). A copy taken BEFORE the append (pdflatex then prints no Bob) must stay Alice alone.
+% expected: creators Alice A (Inst X), Bob B (Inst Y); E=0.
+\documentclass{article}
+\title{T}
+\author{Alice A \\ Inst X}
+\makeatletter\g@addto@macro\@author{\and Bob B \\ Inst Y}
+\let\myauthors\@author
+\renewcommand\@maketitle{\begin{center}\LARGE\@title\par\large\begin{tabular}{c}\myauthors\end{tabular}\end{center}}\makeatother
+\begin{document}
+\maketitle
+Text.
+\end{document}

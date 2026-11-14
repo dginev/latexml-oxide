@@ -1,0 +1,27 @@
+% witness: hep-ph9404329 (ships the 1991 epsf.sty, local reset :161; `\setlength{\epsfxsize}{0.45\hsize}` then two
+%          `\subfigure{\epsfbox{…}}`: latex logs Fig1b.ps width=198.45662pt, Fig5b/Fig7b 191.10214pt)
+% oracle:  pdflatex 0 errors; "a.eps: width=100.0pt", "b.eps: width=100.0pt" (subfigure.sty:74 boxes #2, so the
+%          local reset inside it is lost and the size survives for the second sub-figure)
+% engines: rust (78s r1) = 0 errors, b.eps at its natural size (the reset global, as TL's epsf.sty:505-506);
+%          rust (int57a) = both 100pt (no reset); perl = both 100pt (no reset)
+% expect:  0 errors; both graphics options="width=100.0pt"
+% mechanism: the paper's copy resets `\epsfxsize=0pt\epsfysize=0pt` without `\global`; epsf_sty.rs reads the copy
+%   TeX would load and resets locally then, globally otherwise (epsf_sty.rs `epsf_resets_globally`). KPE #1117.
+% status:  GREEN (78s r2)
+\begin{filecontents*}[overwrite]{epsf.sty}
+% A 1991 epsf.sty, reduced: its \epsfbox resets the size locally.
+\newdimen\epsfxsize \newdimen\epsfysize
+\epsfxsize=0pt \epsfysize=0pt
+\def\epsfbox#1{\message{#1: width=\the\epsfxsize}\hbox to\epsfxsize{\hfil}%
+\epsfxsize=0pt\epsfysize=0pt}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{epsf,subfigure}
+\begin{document}
+\begin{figure}
+\setlength{\epsfxsize}{100pt}
+\subfigure[One]{\epsfbox{a.eps}}
+\subfigure[Two]{\epsfbox{b.eps}}
+\caption{C.}
+\end{figure}
+\end{document}

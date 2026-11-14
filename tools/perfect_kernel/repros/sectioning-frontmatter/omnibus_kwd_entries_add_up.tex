@@ -1,0 +1,17 @@
+% mechanism: OmniBus's `\kwd[<sep>]{<entry>}` adds its entry to the ones before it; Perl's re-added the keywords with
+%   only its own (`\lx@add@keywords`, which clears them first: Base_Utility.pool.ltxml:613-615), so only the last entry
+%   was kept (KNOWN_PERL_ERRORS #1196).
+% witness: 1401.3408 (myimsart, before the VTeX markup reached imsart's copies); no live corpus paper reaches OmniBus's
+%          `\kwd` now (the 86a A/B: no paper outside imsart's changed)
+% oracle:  none in pdflatex (OmniBus is LaTeXML's catch-all class, no .cls); the classes defining `\kwd` print every
+%          entry (imsart.sty:1566, bmcart.cls:1560: "alpha, beta, L2 spaces")
+% engines: rust 85a = <keywords name="Keywords: ">L2 spaces, </keywords>; perl the same (one entry)
+% expect:  0 errors, 0 warnings; <keywords name="Keywords: "> with the three entries in order, the math kept
+% status:  RED (85a) -> GREEN (86a)
+% preload: ar5iv.sty
+\documentclass{OmniBus}
+\begin{document}
+\title{T}
+\begin{keyword}\kwd{alpha}\kwd[; ]{beta}\kwd{$L^2$ spaces}\end{keyword}
+Body.
+\end{document}

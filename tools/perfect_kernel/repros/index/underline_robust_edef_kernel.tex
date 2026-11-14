@@ -1,0 +1,23 @@
+% witness: bibarts/ba-short, bibarts/bibarts (bibarts.sty:2231 \@initaddtovli
+%   \edef\@tempa{\write\@auxout{...\literentry{...#4...}}}, #4 carries \underline)
+% oracle:  pdflatex 0 errors (verified 2026-09-03; real \underline is \DeclareRobustCommand)
+% engines: rust=3 perl=fails-same (2026-09-03) — SHARED (Perl TeX_Math.pool.ltxml:991
+%   same non-robust \protect\ifmmode body; comment 987-988 admits "Really shouldn't use \protect")
+% expect:  0 errors; <ltx:text class="ltx_underline"> containing Publ.
+% status:  GREEN (batch 54m, 2026-09-03)
+% guard:   perfect_kernel_batch54::underline_is_robust_in_an_edef_write
+% mechanism: \underline (tex_math.rs:1283) = \protect\ifmmode\lx@math@underline{#1}
+%   \else\lx@text@underline{#1}\fi. In an \edef with \protect=\@unexpandable@protect
+%   (=\noexpand\protect\noexpand) the \protect freezes ONLY the next token \ifmmode;
+%   the \else..\fi tail stays exposed to the \edef and orphans (no open conditional).
+%   Real latex.ltx:16369 \DeclareRobustCommand freezes the whole \ifmmode..\fi body
+%   as one token (\protect\underline<space>). Fix: mark \underline/\overline
+%   protected => true (eTeX-robust; expandable.rs:349) so they don't expand in \edef.
+\documentclass{article}
+\makeatletter
+\begin{document}
+\let\protect\@unexpandable@protect
+\edef\x{\underline{Publ.}}
+\let\protect\relax
+\x
+\end{document}

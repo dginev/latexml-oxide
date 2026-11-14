@@ -1,0 +1,24 @@
+% mechanism: an entry whose cut would strand a phrase is given back whole at `=2` only where its holders are
+%   exactly its address's owners (`emitter::address_cut::held_by_its_owners`, OD #980 KB2): a block's last line
+%   "Correspondence to: a@x" read onto an entry another author holds keeps its cut, the address its speller's e-mail; `=2` only
+% witness: 2004.11812 (neurips_2020: `\textsuperscript{2} …Aalto University, Finland \\ Correspondence to:
+%   \texttt{pascal.klink@tu-darmstadt.de}`, the Aalto entry Pajarinen's alone)
+% oracle:  pdflatex 0 errors; "Pascal Klink1, Joni Pajarinen1,2"; "2 Aalto University, Finland"; "Correspondence to:
+%   pascal.klink@tu-darmstadt.de"
+% engines: rust KB2 `=2`: Klink no e-mail, "…Finland Correspondence to: pascal.klink@tu-darmstadt.de" in Pajarinen's
+%   affiliation; KB2base `=2`: Klink's e-mail his, "…Finland Correspondence to" stranded in Pajarinen's; off: the cut
+% expect:  0 errors, 0 warnings; `=2` Klink's e-mail his, no address in Pajarinen's affiliation
+% status:  RED (KB2) -> GREEN (perfect_kernel_batchkb2::a_whole_entry_gives_its_address_to_no_other_author)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{%
+  Pascal Klink\textsuperscript{1}, Joni Pajarinen\textsuperscript{1,2}\\
+  \textsuperscript{1} Technische Universit\"at Darmstadt, Germany \\
+  \textsuperscript{2} Aalto University, Finland \\
+  Correspondence to: \texttt{pascal.klink@tu-darmstadt.de}
+}
+\title{T}
+\begin{document}
+\maketitle
+Text.
+\end{document}

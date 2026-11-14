@@ -1,0 +1,23 @@
+% mechanism: authblk's second gate (`authblk_sty.rs` `lines_of_names_before_affil`, Option C P2-7): lines under the names
+%   that read as names, an `\affil` next, are names only in an argument no kernel `\and` parts — by meaning now
+%   (`separated_by_and`, the separator query), so `\aut\\ Cy Cole`, `\aut` holding `Ann Able \and Bob Baker`, reads as
+%   the written `Ann Able \and Bob Baker\\ Cy Cole` does: two columns, the line under the second its line. The spelling
+%   test saw no `\and`; int158a gives the same creators (the macro's names written by their text, two counted Warnings
+%   either way). Pins today's output on both binaries
+% witness: P27 probe s6m (scratch_P27/probes)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able", "Bob Baker", "Cy Cole", "Univ X" (Cy Cole under Bob
+%   Baker, in his column)
+% engines: Perl 0.8.8 (authblk.sty.ltxml:52-55, read, not run): one creator; int158a: Ann Able (Univ X), Bob Baker (Cy
+%   Cole, Univ X), 0 errors, 2 warnings
+% expect:  0 errors, 2 warnings (each name written by its text); Ann Able (Univ X), Bob Baker (Cy Cole, Univ X)
+% status:  GREEN (int158a and P27; guard perfect_kernel_batchp27::authblk_and_gates_read_the_separator_by_meaning)
+\documentclass{article}
+\usepackage{authblk}
+\newcommand\aut{Ann Able \and Bob Baker}
+\title{T}
+\author{\aut\\ Cy Cole}
+\affil{Univ X}
+\begin{document}
+\maketitle
+Text.
+\end{document}

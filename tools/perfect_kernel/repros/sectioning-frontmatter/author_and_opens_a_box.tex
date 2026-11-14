@@ -1,0 +1,16 @@
+% witness: 77n S4 — the separator "and" written inside the box of the last name: mdpi's `{Xiaofeng} Yang $^{1,2}$
+%          \mbox{and {Thomas~P.} Krichbaum $^{5}$}` (2108.09054)
+% oracle:  pdflatex 0 errors: "Ann Able 1, Bob Baker 1,2 and Cat C. Cole 2"
+% engines: rust int31a = "Ann Able" and one creator "Bob Baker and Cat C. Cole" (+1 Error:frontmatter:merged_creators);
+%          Perl merges alike
+% expect:  0 errors, 0 warnings; 3 creators, each with the affiliations its marks name
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{{Ann} Able $^{1}$, {Bob} Baker $^{1,2}$ \mbox{and {Cat~C.} Cole $^{2}$}\\
+$^1$ Univ A, City\\ $^2$ Univ B, Town}
+\maketitle
+x
+\end{document}

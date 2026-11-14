@@ -1,0 +1,18 @@
+% witness: 2605.21750 (Fatal:Timeout:PushbackLimit until 56hs), C5 G2 test 2; the mathtools documentation's idiom
+% oracle:  pdflatex 0 errors
+% engines: rust 65a 0 errors (56hs renamed the trampoline's target); 65d 0 errors, XML identical to 65a
+% expect:  0 errors, 0 fatals; three Math elements
+% preload: ar5iv.sty
+% status:  GREEN (65d: `\@left` is a copy of the `\left` constructor, no trampoline to re-enter)
+% `\let\@left\left \def\left{\mathopen{}\mathclose\bgroup\@left}` and the `\right` twin: the copies keep TeX's
+% unexpandable `\left`/`\right`; the redefinitions call them inside a `\mathclose` group.
+\documentclass{article}
+\makeatletter
+\let\@left\left
+\def\left{\mathopen{}\mathclose\bgroup\@left}
+\let\@right\right
+\def\right{\aftergroup\egroup\@right}
+\makeatother
+\begin{document}
+$f\left(x\right)$ and $\left[a+b\right]^2$ and $\left\{ y \middle| y>0 \right\}$
+\end{document}

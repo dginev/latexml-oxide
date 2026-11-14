@@ -1,6 +1,21 @@
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// report: its title page (`titlepage`, its default) prints the notes in the body's arabic numbers; without one
+/// (`notitlepage`) the kernel declares the title hook (`declare_fnsymbol_title_block`), which wins
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "report",
+  binding: "report.cls",
+  title_marks: FmTitleMarks::Body,
+  // (the kernel family's reading of its `\author`, written: OD #925 — each declaration states its own `written`)
+  cite: "report.cls:211 (OD #851, `declare_fnsymbol_title_block`)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   LoadPool!("LaTeX");
   //**********************************************************************
   // Option handling
@@ -17,12 +32,6 @@ LoadDefinitions!({
     "landscape",
     "final",
     "draft",
-    "oneside",
-    "twoside",
-    "openright",
-    "openany",
-    "notitlepage",
-    "titlepage",
   ] {
     DeclareOption!(option, None);
   }
@@ -43,9 +52,41 @@ LoadDefinitions!({
     });
   });
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
-  DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  // `\input{fleqn.clo}` (fleqn_sty.rs `fleqn_clo`).
+  DeclareOption!("fleqn", sub { fleqn_sty::fleqn_clo()?; });
 
+  // Kernel contract (report.cls L52/L98-99/L117): `\newif\if@openright`,
+  // default FALSE (\ExecuteOptions{...,openany}). Same cluster + precedent
+  // as book_cls.rs.
+  RawTeX!(r"\newif\if@openright");
+  DeclareOption!("openright", r"\@openrighttrue");
+  DeclareOption!("openany", r"\@openrightfalse");
+
+  // report.cls:85-87: two-sided only by option (the kernel's `\@twosidefalse` is the default;
+  // KNOWN_PERL_ERRORS #469: Perl's options are no-ops, as book's were for hep-ph0207204).
+  DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
+  DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
+  // report.cls:50-51, :92-94: `\if@titlepage`, true unless `notitlepage` (Perl's binding sets it false, its options no-ops), which a
+  // class or document may test and which decides its `\maketitle` (report.cls:175-225: `declare_fnsymbol_title_block`, the
+  // kernel's `MaketitleRuns::WithoutTitlepage`, TP1c). Declared before ProcessOptions, so the options run.
+  RawTeX!(r"\newif\if@titlepage \@titlepagetrue");
+  DeclareOption!("titlepage", r"\@titlepagetrue");
+  DeclareOption!("notitlepage", r"\@titlepagefalse");
   ProcessOptions!();
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): report.cls's in two
+  // columns, as its size file sets it for the paper and size options (`standard_class_twocolumn_page`: 229.5pt
+  // columns of a 469pt text on letter paper, 221/452pt on A4), when report is the document's class (review rev79c2
+  // finding 1: a `figure*` stated 2 columns where the PDF gives 2.044). One column is the registers' page.
+  declare_standard_class_page("report")?;
+  // report.cls L318-327: \@endpart, called by \@part/\@spart — raw classes built on
+  // this class invoke it directly (toptesi.sty L448; witness toptesi-example
+  // L265 \part). The two-sided blank verso is page furniture: it counts a page,
+  // without the `\null` box's empty paragraph (as book_cls.rs).
+  RawTeX!(
+    r"\def\@endpart{\vfil\newpage
+  \if@twoside\if@openright\thispagestyle{empty}\newpage\fi\fi
+  \if@tempswa\twocolumn\fi}"
+  );
 
   //**********************************************************************
   // Document structure.
@@ -54,9 +95,17 @@ LoadDefinitions!({
 
   // This makes the authors appear on 1 line;
   // for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
-  AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
+  AddToMacro!("\\lx@maketitle@body", "\\ltx@authors@oneline");
+  // report.cls's title block: `\@fnsymbol` marks only under `notitlepage` (`titlepage` is the default), the footnote
+  // counter reset after it, when report is the document's class.
+  engine::latex_constructs::declare_fnsymbol_title_block("report", Some(true))?;
 
-  DefMacro!("\\@ptsize", "0"); // should depend on options...
+  def_macro(
+    T_CS!("\\@ptsize"),
+    None,
+    Tokens::new(ExplodeText!(standard_class_ptsize("report").to_string())),
+    None,
+  )?;
   DefMacro!("\\@pnumwidth", "1.55em");
   DefMacro!("\\@tocrmarg", "2.55em");
   DefMacro!("\\@dotsep", "4.5");
@@ -66,9 +115,7 @@ LoadDefinitions!({
 
   TeX!(
     r"
-\newif\if@restonecol
-\newif\if@titlepage
-\@titlepagefalse"
+\newif\if@restonecol"
   );
 
   //**********************************************************************
@@ -96,6 +143,17 @@ LoadDefinitions!({
   DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
 
   def_macro_noop("\\chaptermark{}")?;
+  // `\@makeschapterhead{title}` typesets an unnumbered chapter head (report.cls:369-378);
+  // classes and packages call it directly for their own starred heads — a
+  // renewed `theindex` (ryethesis.cls:481-490 `\begin{multicols}{2}[\@makeschapterhead
+  // {\indexname}…]`), toc/lof renewals, apacite, sectsty. It is `\@schapter`'s
+  // dispatch (latex_constructs_rust_only.rs), as the class's `\@schapter` is this
+  // head plus `\@afterheading`; article.cls has none (texilikechaps.sty:89 tests
+  // `\@ifundefined{@makeschapterhead}` to detect a chapter class).
+  DefMacro!(
+    "\\@makeschapterhead{}",
+    "\\@startsection{chapter}{0}{}{}{}{}*{#1}"
+  );
 
   NewCounter!("equation",       "chapter",  idprefix => "E");
   NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
@@ -113,6 +171,15 @@ LoadDefinitions!({
     "\\thetable",
     r"\ifnum\c@chapter>\z@\thechapter.\fi \arabic{table}"
   );
+  // article.cls:457/469 (report.cls, book.cls alike) define `\fnum@figure`/`\fnum@table`; letter.cls, without floats,
+  // has none, but a letter document gets these through the OmniBus fallback (OD #579). Perl's classes define neither
+  // and compose the tag in `\lx@@fnum@@`. Code that takes their current body needs one: babel's ini caption templates
+  // (babel.sty:2959-2965, `\gdef\fnum@table{…{\[fnum@table]}…}`) captured the undefined token itself, so the new
+  // `\fnum@table` called itself and the caption's `\refstepcounter` looped (2605.29738, Lithuanian on demand; Perl
+  // loops too, KNOWN_PERL_ERRORS #654). Each is the tag LaTeXML composes, so a caption reads as before
+  // (OXIDIZED_DESIGN_DIVERGENCES #579).
+  DefMacro!("\\fnum@figure", "\\lx@@fnum@@{figure}");
+  DefMacro!("\\fnum@table", "\\lx@@fnum@@{table}");
   SetCounter!("tocdepth" => Number::new(2));
 
   DefMacro!("\\theenumi", "\\arabic{enumi}");
@@ -120,15 +187,34 @@ LoadDefinitions!({
   DefMacro!("\\theenumiii", "\\roman{enumiii}");
   DefMacro!("\\theenumiv", "\\Alph{enumiv}");
 
+  // The class's names (report.cls:712-722), in its own load as the real class has them, with the values LaTeXML's
+  // kernel predefines (Perl assigns only report.cls.ltxml:100 `\bibname` here, the rest in
+  // latex_constructs.pool.ltxml:719-722, "these actually should be in article/report/book"): a stand-in's copy that
+  // `\LoadClass`es report finds them defined, so its `\newcommand` of one is LaTeX's "already defined"
+  // (`state::ClassLoadFrame`, OXIDIZED_DESIGN_DIVERGENCES #732).
+  DefMacro!("\\contentsname", "Contents");
+  DefMacro!("\\listfigurename", "List of Figures");
+  DefMacro!("\\listtablename", "List of Tables");
   DefMacro!("\\bibname", "Bibliography");
+  DefMacro!("\\indexname", "Index");
+  DefMacro!("\\figurename", "Figure");
+  DefMacro!("\\tablename", "Table");
+  DefMacro!("\\partname", "Part");
+  DefMacro!("\\chaptername", "Chapter");
+  DefMacro!("\\appendixname", "Appendix");
+  DefMacro!("\\abstractname", "Abstract");
 
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:chapter");
 
   Tag!("ltx:appendix", auto_close => true);
-  DefMacro!("\\appendix", "\\@appendix");
+  DefMacro!("\\appendix", "\\@appendix\\gdef\\@chapapp{\\appendixname}");
   DefPrimitive!("\\@appendix", {
     start_appendices("chapter");
   });
+  // report.cls:277 `\newcommand\@chapapp{\chaptername}` (`\appendix` re-points it to
+  // `\appendixname`): classes built on this one print it in their headings
+  // (utexasthesis; class census 2026-09-24).
+  DefMacro!("\\@chapapp", "\\chaptername");
 
   //======================================================================
   DefPrimitive!("\\tiny",         None, font => {size => 5 });
@@ -141,4 +227,14 @@ LoadDefinitions!({
   DefPrimitive!("\\LARGE",        None, font => {size => 17.28 });
   DefPrimitive!("\\huge",         None, font => {size => 20.74 });
   DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
+  // size10.clo:54 (every `size*.clo`): `\normalsize` is EXECUTED right after
+  // the size commands are defined, which is what sets `\@currsize` to the size
+  // command itself (latex.ltx:14107 `\let\@currsize#1` via `\@setfontsize`;
+  // our size switch lets it in dialect.rs). `\ifx\@currsize\normalsize` then
+  // holds from the start (ltugboat's `\SMC` cascade, latex-doc-ptr; Gemini L5).
+  Digest!("\\normalsize")?;
+  // report.cls `\let\@openbib@code\@empty` (article.cls:585) — the default
+  // the `openbib` option overrides; a copied `thebibliography` body reads it
+  // (mciteplus_doc; Perl's class binding lacks the default too).
+  RawTeX!(r"\let\@openbib@code\@empty");
 });

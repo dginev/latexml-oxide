@@ -1,0 +1,20 @@
+% mechanism: (with calc loaded) an undefined control sequence met while a braced length is scanned is reported and
+%   stubbed (`generate_error_stub`); TeX discards it (tex.web §370). With the argument's rest now
+%   handed back (OXIDIZED_DESIGN #317) the stub came back at every use: as `<ERROR>` text without
+%   calc, and as "`\x' invalid at this point" with calc (loaded by ~78% of arXiv papers).
+% witness: 2605.25073 (USG.cls not loaded, `\@p@t` undefined in `\hspace{6\@p@t}`, `\raisebox`,
+%   `\rule`: 10 -> 242 errors in the first cut), 2605.08378 (`\setlength{\itemsep}{\bibitemsep}`)
+% oracle:  pdflatex 6 errors (Undefined control sequence, Missing number, Illegal unit, per use):
+%          "CD", "EF[0.0pt]"
+% engines: rust (56jm) = "CD", "EF[0.0pt]"; the first 56jr cut 3 errors (2 "`\undefinedlen' invalid at
+%          this point")
+% expect:  1 error (the undefined token, once), 2 "Missing number" warnings
+% status:  GREEN (56jr)
+\documentclass{article}
+\usepackage{calc}
+\newlength\x
+\begin{document}
+C\hspace{\undefinedlen}D
+
+E\setlength{\x}{\undefinedlen}F[\the\x]
+\end{document}

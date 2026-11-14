@@ -1,0 +1,17 @@
+% witness: 2302.00492 (ws-procs9x6-cpt22, 26 names, `\address{$^1$…\\ $^2$…}`), 1607.07434, 1603.06146, 0809.4766
+%          (inst_support, the fallback family of the ws-procs/ws-ijmp classes); census repro devaff/rep/fin/u1.tex (its
+%          `\maketitle` dropped: the class defines none, `\bodymatter` ends the title)
+% oracle:  pdflatex (TL 2025, 0903.4972's ws-procs9x6.cls): "Ann Able,1 Bob Baker,1,2 and Cy Cole2", "1 Univ A,
+%          Town A", "2 Univ B, Town B"
+% engines: rust 97c = the reading right, not written (inst_support's `written: false`): both lines Cy Cole's address
+% expect:  0 errors, 0 warnings; inst_support written (brief 97e): each line its marked names' address
+% status:  RED (97c) -> GREEN (97e) — perfect_kernel_batch97e::inst_support_is_written
+% preload: ar5iv.sty
+\documentclass{ws-procs9x6}
+\begin{document}
+\title{T}
+\author{Ann Able,$^1$ Bob Baker,$^{1,2}$ and Cy Cole$^2$}
+\address{$^1$Univ A, Town A\\ $^2$Univ B, Town B}
+\bodymatter
+Body.
+\end{document}

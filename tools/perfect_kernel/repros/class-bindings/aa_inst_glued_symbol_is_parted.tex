@@ -1,0 +1,17 @@
+% witness: 2506.20360 (`\inst{1*}` on its two corresponding authors, institute 1 theirs too); the fm scorer's aa row
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1 , Bob Baker1∗ , and Cid Cole∗2", then "1 Univ X", "2 Univ Y"
+% engines: perl 0.8.8 = 0 errors, Bob Baker Univ Y, Cid Cole none; rust int122w (92b) = the shadow right, untagged;
+%          the XML Bob Baker and Cid Cole with no institute (`1*`, `*2` matched no entry), Univ Y on a nameless creator
+% expect:  0 errors, 0 warnings; a label glued to a footnote symbol in one written piece is the two marks it prints
+%          (ruling 1, `ruling1:parted`): Bob Baker Univ X, Cid Cole Univ Y, written (aa is written, OD #922-#923)
+% status:  RED (92b) -> GREEN (92c) — perfect_kernel_batch92c::a_label_glued_to_a_symbol_is_parted_and_written
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1*} \and Cid Cole\inst{*2}}
+\institute{Univ X \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

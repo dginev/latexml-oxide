@@ -1,0 +1,31 @@
+% witness: ae100prg.cls:185-188 (1303.3004: `\address` an `{indented}` list where it is called, `\email` an `\address`
+%          line); review rev94b r3 placements (its probes `p/n3` mpar, mpar2, flt, cap)
+% oracle:  pdflatex 0 errors: "Univ A, Town", "Text here." with the margin notes "E-mail: m@x.org", "E-mail: n@x.org",
+%          the float "Lab F, Place", the figure "X" captioned "Figure 1: Lab G, Place", then "A Title", "Ann Able and Bob
+%          Baker", "Body."
+% engines: rust 94b r3 = 0 errors, 0 warnings (kept by B3's placement rule, no guard)
+% expect:  0 errors, 0 warnings; a call inside a `\marginpar`, a float or a `\caption` is the class's line where it
+%          stands: both authors `address=Univ A, Town` only, the notes, the float and the caption keep their lines;
+%          eager and --streaming the same
+% status:  GREEN (94b r3, guarded 94b r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{inplacetext.cls}
+\ProvidesClass{inplacetext}
+\LoadClass{article}
+\newenvironment{indented}{\begin{list}{}{\leftmargin=2em\itemsep=0pt}}{\end{list}}
+\newcommand{\address}[1]{\begin{indented}\item[]\normalsize #1\end{indented}}
+\def\email#1{\vspace*{5pt}\address{E-mail: #1}}
+\def\affiliation#1{\par{\small #1\par}}
+\end{filecontents*}
+\documentclass{inplacetext}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+\address{Univ A, Town}
+Text\marginpar{\email{m@x.org}} here.
+\marginpar{\email{n@x.org}}
+\begin{figure}\address{Lab F, Place}\end{figure}
+\begin{figure}X\caption{\affiliation{Lab G, Place}}\end{figure}
+\maketitle
+Body.
+\end{document}

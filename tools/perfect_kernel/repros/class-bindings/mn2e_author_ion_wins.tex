@@ -1,0 +1,12 @@
+% witness: 0908.0351, 1112.1796, astro-ph0501147, 0909.3906, 1206.2419 (mn2e.cls v2.2 defines no `\ion`; the author's
+%          `\newcommand{\ion}` is the document's); 13 papers of the int19 census (rc_struct5 T1)
+% oracle:  pdflatex (TL doc/latex/mnras/LEGACY/mn2e.cls) 0 errors: "the prominent He I lines."
+% engines: rust 67int19b = 1 Error:undefined:\text (the binding's mnras `\ion`); Perl 0.8.8 the same (KNOWN_PERL_ERRORS #940)
+% expect:  0 errors; "He" then a small-caps "I"
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass[useAMS,usenatbib]{mn2e}
+\newcommand{\ion}[2]{#1\,{\sc #2}}
+\begin{document}
+the prominent \ion{He}{I} lines.
+\end{document}

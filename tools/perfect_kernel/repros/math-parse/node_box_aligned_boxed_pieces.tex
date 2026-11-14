@@ -1,0 +1,34 @@
+% An aligned cell Math takes its tex= from the cell's box list. Two removals took boxes out of it
+% while the content lived on (batch 56jo): renaming an XMText to XMWrap (cleanup_XMText,
+% TeX_Math.pool.ltxml:259-263; Perl renameNode runs removeNode, Document.pm:2064) dropped a
+% \resizebox/\scalebox, \mbox, \raisebox or \hbox; \sideset's copy-then-remove (amsmath_sty.rs;
+% Perl moves the node, amsmath.sty.ltxml:1242) dropped the \sideset. Both now leave the box in place.
+% witness: 2605.07372, 2605.17816, 2605.23113 (W12 fixup review probes al, sc3)
+% oracle:  56jk (pre-56jo): every tex= complete; pdflatex typesets every piece
+% engines: perl = drops \mbox/\raisebox/\hbox (KNOWN_PERL_ERRORS #272), keeps \resizebox and
+%          \sideset; rust 56jo = drops all five
+% expect:  0 errors; every tex= as 56jk's
+% status:  GREEN (56jq, W12 fixup; guard node_box_append::aligned_cells_keep_their_boxed_pieces)
+\documentclass{article}
+\usepackage{amsmath,amssymb,graphicx,cancel}
+\begin{document}
+\[\begin{aligned}
+a &= \sideset{_a}{^b}\sum_i x_i\\
+h &= \mbox{$x$} + \text{\textbf{ab}} + \textbf{c}\\
+i &= \resizebox{2cm}{!}{$x+y$} + \raisebox{1pt}{$z$}\\
+l &= \hbox{$x$} + \vcenter{\hbox{$y$}} + \phantom{x} + \smash{y}
+\end{aligned}\]
+\begin{align}
+h &= \scalebox{0.95}{$x+y$}
+\end{align}
+\begin{equation}
+\begin{aligned}
+h &= \scalebox{0.95}{$x$}
+\end{aligned}
+\end{equation}
+\[
+\begin{aligned}
+h &= \scalebox{0.95}{$x+y$}
+\end{aligned}
+\]
+\end{document}

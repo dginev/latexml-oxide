@@ -1,0 +1,26 @@
+% A minipage holding a block that cannot be demoted to `ltx:block` (a theorem, a float, a sectioning
+% unit) inside a scaled box (`\resizebox`, `\scalebox`, `\rotatebox`: an `ltx:inline-block`) is the
+% first inline container the box holds that holds all its content (`inline-logical-block` holds floats
+% and theorems, `inline-sectional-block` sections): the box holds no block container, and the in-place
+% rename Perl makes (TeX_Box.pool.ltxml:502-513, `ltx:logical-block`) was schema-invalid
+% (`inline-block > logical-block`). A minipage of text or of demotable blocks keeps its shape.
+% witness: 57cp review 2 (rs2.tex case B; tabularray's tall table in \resizebox), review 3 kern.tex.
+% Guard: perfect_kernel_batch57::minipage_blocks_in_a_scaled_box_are_inline.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors.
+% engines: rust 57cpe: jing "element logical-block not allowed" in inline-block (A, B, C).
+% expect:  0 errors, 0 warnings; schema-valid (divergence #385).
+\documentclass{article}
+\usepackage{graphicx,amsthm,float}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+A: \resizebox{\linewidth}{!}{\begin{minipage}{.5\linewidth}\begin{theorem}Scaled theorem.\end{theorem}\end{minipage}}
+
+B: \scalebox{0.9}{\begin{minipage}{.5\linewidth}\begin{table}[H]\centering\begin{tabular}{l}k\end{tabular}\caption{H table}\end{table}\end{minipage}}
+
+C: \rotatebox{90}{\begin{minipage}{3cm}\section*{Rotated section}Body.\end{minipage}}
+
+D: \resizebox{\linewidth}{!}{\begin{minipage}{\linewidth}plain text\end{minipage}}
+
+E: \resizebox{\linewidth}{!}{\begin{minipage}{\linewidth}\begin{tabular}{l}k\end{tabular}\par\noindent more\end{minipage}}
+\end{document}

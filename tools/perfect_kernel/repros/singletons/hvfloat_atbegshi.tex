@@ -1,0 +1,13 @@
+% witness: hvfloat/fullpage1s1c, hvfloat/fullpage1s2c (\AtBeginShipoutNext)
+% oracle:  lualatex 0 errors (hvfloat.sty:45 \RequirePackage{atbegshi})
+% engines: rust=1 (56ir-rel2, 2026-09-25)
+% expect:  0 errors; \AtBeginShipoutNext is defined by atbegshi
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: the hvfloat binding (latexml_contrib/src/hvfloat_sty.rs) omits
+%   hvfloat.sty:45 `\RequirePackage{atbegshi}`, so atbegshi's user command
+%   \AtBeginShipoutNext is undefined unless the document loads it itself.
+\documentclass{article}
+\usepackage{hvfloat}
+\begin{document}
+Text\AtBeginShipoutNext{\thispagestyle{empty}}more.
+\end{document}

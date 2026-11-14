@@ -6,7 +6,8 @@ use crate::{
   Digested,
   common::{arena::SymHashMap, error::*, object::Object, store::Stored},
   definition::{
-    BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
+    ArgWrap, BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody,
+    Reversion,
   },
   document::Document,
   parameter::Parameters,
@@ -62,10 +63,16 @@ pub struct Primitive {
   /// font_id + the dumped `Stored::Font` value at that key let the reader
   /// rebuild an equivalent merge-font Primitive.
   pub font_id:       Option<crate::common::arena::data::SymStr>,
+  pub origin:        crate::definition::origin::DefinitionOrigin,
+  /// The mode options `def_primitive` compiled into `before_digest` (K13).
+  pub declared_mode: Option<crate::definition::DeclaredMode>,
+  /// The `font` option `def_primitive` compiled into `before_digest` ([`Definition::declared_font`]).
+  pub font:          Option<FontDirective>,
 }
 impl Default for Primitive {
   fn default() -> Self {
     Primitive {
+      origin:        crate::definition::origin::current_origin(),
       cs:            T_CS!("Primitive"),
       paramlist:     None,
       replacement:   None,
@@ -76,6 +83,8 @@ impl Default for Primitive {
       reversion:     None,
       is_prefix:     false,
       font_id:       None,
+      declared_mode: None,
+      font:          None,
     }
   }
 }
@@ -88,10 +97,39 @@ impl PartialEq for Primitive {
 //     todo!();
 //   }
 // }
+impl Primitive {
+  /// Perl Primitive.pm:75 `Tokens($self->getCSorAlias, $parms->revertArguments(@args))`: the
+  /// box's reversion, each argument as its parameter reverts it (braces, optional brackets; an
+  /// absent optional reverts to nothing).
+  fn box_reversion(&self, args: &[ArgWrap]) -> Result<Tokens> {
+    let cs_token = self
+      .alias
+      .as_ref()
+      .map(|alias| Token::from(alias.as_str()))
+      .unwrap_or(self.cs);
+    let mut box_tokens = vec![cs_token];
+    if let Some(ref params) = self.paramlist {
+      let reverted = args
+        .iter()
+        .map(|arg| {
+          if arg.is_none() {
+            Ok(None)
+          } else {
+            arg.revert().map(Some)
+          }
+        })
+        .collect::<Result<Vec<_>>>()?;
+      box_tokens.extend(params.revert_arguments(reverted)?);
+    }
+    Ok(Tokens::new(box_tokens))
+  }
+}
 impl Object for Primitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Primitive") }
 }
 impl Definition for Primitive {
+  fn declared_mode(&self) -> Option<crate::definition::DeclaredMode> { self.declared_mode }
+  fn declared_font(&self) -> Option<&FontDirective> { self.font.as_ref() }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn is_prefix(&self) -> bool { self.is_prefix }
@@ -109,48 +147,26 @@ impl Definition for Primitive {
     match self.replacement {
       Some(PrimitiveBody::Closure(ref closure)) => invoked_boxes.extend(closure(args)?),
       Some(PrimitiveBody::String(symbol)) => {
-        // Perl L67: $stomach->enterHorizontal if defined $replacement
+        // Perl L73: $stomach->enterHorizontal if defined $replacement (def_primitive also puts it
+        // in the prologue, ahead of a bounded group; here it finds horizontal mode already)
         crate::stomach::enter_horizontal();
-        let cs_token = self
-          .alias
-          .as_ref()
-          .map(|alias| Token::from(alias.as_str()))
-          .unwrap_or(self.cs);
-        let mut box_tokens = vec![cs_token];
-        // Perl L69: append revertArguments for parameterized string primitives
-        if let Some(ref params) = self.paramlist {
-          for arg in &args {
-            box_tokens.extend(arg.revert()?.unlist());
-          }
-          let _ = params; // acknowledge usage
-        }
+        let box_tokens = self.box_reversion(&args)?;
         let box_props = SymHashMap::default();
         invoked_boxes.push(Digested::from(Tbox::new(
-          symbol,
-          None,
-          None,
-          Tokens::new(box_tokens),
-          box_props,
+          symbol, None, None, box_tokens, box_props,
         )));
       },
       None => {
-        // Perl: Box(undef, undef, undef, Tokens($self->getCSorAlias, ...), isEmpty => 1)
-        // Even with no replacement, Perl creates a Box with the CS as reversion and isEmpty flag.
-        // This is essential for font switches (\rm, \it, etc.) to appear in tex attributes.
-        let cs_token = self
-          .alias
-          .as_ref()
-          .map(|alias| Token::from(alias.as_str()))
-          .unwrap_or(self.cs);
-        let box_tokens = vec![cs_token];
-        // TODO: add revert_arguments for ArgWrap type when needed
+        // Perl L74-76: an undef replacement is an empty box (`isEmpty`) reverting as a string's
+        // does, so a font switch (`\rm`) shows in `tex=` and `\mark{x}` keeps its argument.
+        let box_tokens = self.box_reversion(&args)?;
         let mut box_props = SymHashMap::default();
         box_props.insert("isEmpty", Stored::Bool(true));
         invoked_boxes.push(Digested::from(Tbox::new(
           pin!(""),
           None,
           None,
-          Tokens::new(box_tokens),
+          box_tokens,
           box_props,
         )));
       },

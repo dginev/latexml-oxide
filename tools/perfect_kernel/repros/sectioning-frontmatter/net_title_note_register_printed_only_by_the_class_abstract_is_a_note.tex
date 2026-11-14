@@ -1,0 +1,31 @@
+% A raw class's title note kept in a token register that only its own refused `{abstract}` begin code prints, in an
+% `\insert\footins` (sig-alternate.cls:728-790, :1374-1398 `\titlenote` → `\tntoks`); the kernel's `{abstract}` runs
+% that begin code with its output discarded, so the note was lost with 0 errors. The unclaimed-text net
+% (frontmatter_stores.rs `net_candidates`, `net_begin_code_tokens`, `sentinel_definitions` `\tntoks={…}`) runs the
+% refused begin code speculatively after the title page, finds the register printed and typeset by no kept run, and
+% writes it as a note of the author block, with one Warning.
+% witness: 1206.6940 (sig-alternate `\tntoks`, `\tntokstwo`), cs0405006 (sig-alt-full); 2606.24738 (aaskaiid.sty
+%          `\email@toks`, printed by its refused `\maketitle`)
+% oracle:  pdflatex 0 errors: "A Title*", "Ann Able", footnote "* Supported by the Danish Council for Independent
+%          Research.", "Abstract", "An abstract."
+% engines: rust 98c0 = 0 errors, 0 warnings, the note lost (a bare * after the title); perl = 0 errors, the note kept as <pubnote role="note"> (OmniBus \titlenote, OmniBus.cls.ltxml:245; rev98c B1)
+% expect:  0 errors, 1 warning (frontmatter:unclaimed, \tntoks); the sole author's <ltx:creator> holding
+%          <ltx:note role="note">Supported by the Danish Council for Independent Research.</ltx:note>
+% status:  RED (98c0) -> GREEN (98c)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{nettn.cls}
+\ProvidesClass{nettn}\LoadClass{article}
+\newtoks\tntoks
+\def\titlenote#1{$^{\ast}$\global\tntoks={#1}}
+\renewenvironment{abstract}{\insert\footins{\footnotesize$^{\ast}$\the\tntoks\par}\section*{Abstract}}{\par}
+\end{filecontents*}
+\documentclass{nettn}
+\begin{document}
+\title{A Title\titlenote{Supported by the Danish Council for Independent Research.}}
+\author{Ann Able}
+\maketitle
+\begin{abstract}
+An abstract.
+\end{abstract}
+Text.
+\end{document}

@@ -1,0 +1,29 @@
+% witness: 2307.11194, 1705.09704 (lhs2TeX code blocks on polytable.sty; brk86)
+% oracle:  pdflatex 0 errors: polytable.sty:557/:588 build a one-column preamble with array.sty's `\@mkpream`
+%          and split it at `\@sharp` (:591-607); the three code lines print, "Figure 1" resolves
+% engines: rust int87b = Fatal (EoF scanning an Until:\@sharp argument), "undefined \@classiv"/"\@classz",
+%          "Illegal character in array arg", polytable's "Illegal preamble (no columns)"; the figure lost
+% expect:  0 errors, 0 warnings; the three code lines, the reference resolved
+% status:  RED (int87b) -> GREEN (79p)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{polytable}
+\let\hspre\empty
+\let\hspost\empty
+\newenvironment{plainhscode}{\par\(\pboxed}{\endpboxed\)\par}
+\begin{document}
+\begin{figure}
+\begin{plainhscode}
+\column{B}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{3}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{E}{@{}>{\hspre}l<{\hspost}@{}}%
+\>[B]{}\mathbf{data}\;Greet\mathrel{=}Hi{}\<[E]%
+\\
+\>[B]{}\mathbf{instance}\;Exception\;Greet{}\<[E]%
+\\
+\>[3]{}\mathbf{where}{}\<[E]%
+\end{plainhscode}
+\caption{Instances.}\label{fig:greet}
+\end{figure}
+See Figure~\ref{fig:greet}.
+\end{document}

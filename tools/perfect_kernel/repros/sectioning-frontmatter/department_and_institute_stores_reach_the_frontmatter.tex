@@ -1,0 +1,30 @@
+% A raw class's `\department{…}` store and its `[optional]{mandatory}` `\institute` store reach the
+% frontmatter as affiliations, like its one-argument `\institution` (bfhlayout.sty:735 `\department`,
+% :738 `\providecommand*{\institute}[2][]{\def\@institute{#2}}`); the class prints them only in its
+% title-page footer (:744-754, a scrlayer layer), which LaTeXML never typesets. All three are read at
+% `\maketitle`. Perl (raw class loading) reroutes none of them.
+% witness: bfh-ci DEMO-BFHThesis (recall 83.0 → 92.5 %).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors (this minimal class's footer is overridden by article's `\thispagestyle{plain}`);
+%          the bfh-ci manuals' PDFs print department and institute in the title-page footer.
+% engines: rust 58k3: only "Bern University" kept; Perl: none.
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcdept.cls}
+\ProvidesClass{rcdept}
+\LoadClass{article}
+\newcommand*\institution[1]{\def\@institution{#1}}
+\newcommand*\department[1]{\def\@department{#1}}
+\newcommand*\institute[2][]{\def\@institute{#2}}
+\department{}\institute{}\institution{}
+\def\ps@title{\def\@oddfoot{\@department\quad\@institute}}
+\def\@maketitle{\thispagestyle{title}\@title\par\@author}
+\end{filecontents*}
+\documentclass{rcdept}
+\title{T}\author{Anton Muster}
+\institution{Bern University}
+\department{Technik und Informatik}
+\institute[MMT]{Mikro- und Medizintechnik}
+\begin{document}
+\maketitle
+Text.
+\end{document}

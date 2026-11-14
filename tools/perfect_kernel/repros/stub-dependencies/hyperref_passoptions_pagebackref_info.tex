@@ -1,0 +1,13 @@
+% witness: hyperref.sty:2791-2810, 4587-4589 (`\PassOptionsToPackage{pagebackref}{hyperref}` loads backref, and
+%          `\ifHy@backref` is true, :2801); reviewer probe 65k c13; backref.sty:88-92 (`hyperpageref`: `\backref` empty)
+% oracle:  pdflatex 0 errors, prints "backref, on, []"
+% engines: rust 65k round 1 = 1 Warning (backref missing_file), `\ifHy@backref` false
+% expect:  0 errors, 0 warnings, 1 Info (backref missing_file); paragraph "backref, on, []"
+% status:  RED (65k round 1) -> GREEN (65k round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\PassOptionsToPackage{pagebackref}{hyperref}
+\usepackage{hyperref}
+\begin{document}
+\makeatletter\@ifpackageloaded{backref}{backref}{no backref}, \ifHy@backref on\else off\fi, [\backref]\makeatother
+\end{document}

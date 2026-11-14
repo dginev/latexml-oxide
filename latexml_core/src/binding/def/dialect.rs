@@ -10,14 +10,16 @@ use crate::{
   BoxOps, Digested,
   binding::{counter::dialect::step_counter, def::traits::IntoDigestedResult},
   common::{
-    arena, arena::SymHashMap, error::*, font::Font, number::Number, numeric_ops::NumericOps,
+    arena, arena::SymHashMap, def_parser::parse_parameters, error::*, font::Font, number::Number,
+    numeric_ops::NumericOps, object::Object,
   },
   definition::{
-    BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
-    ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion, SizingClosure,
+    BeforeDigestClosure, ConditionalClosure, ConstructionClosure, DeclaredMode, Definition,
+    DigestionClosure, ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion,
+    SizingClosure,
     argument::ArgWrap,
     conditional::{Conditional, ConditionalOptions, ConditionalType},
-    constructor::{Constructor, ConstructorOptions},
+    constructor::{Constructor, ConstructorOptions, TexGroup},
     expandable::{Expandable, ExpandableOptions},
     math_primitive::{MathPrimitive, MathPrimitiveOptions},
     primitive::{Primitive, PrimitiveOptions},
@@ -132,6 +134,9 @@ pub fn def_conditional(
   test: Option<ConditionalClosure>,
   options: ConditionalOptions,
 ) -> Result<()> {
+  if provide_only_declines(&cs) {
+    return Ok(());
+  }
   let locked_key_opt = if let Some(true) = options.locked {
     Some(arena::with(cs.get_sym(), |cs_name| s!("{cs_name}:locked")))
   } else {
@@ -140,6 +145,7 @@ pub fn def_conditional(
   if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or" | "\\unless")) {
     install_definition(
       Conditional {
+        origin: crate::definition::origin::current_origin(),
         cs,
         paramlist,
         test,
@@ -179,7 +185,15 @@ pub fn def_conditional(
       Warn!("misdefined", cs, message);
     }
     if let Some(name) = name_opt {
-      if !name.is_empty() && name != "case" && test.is_none() {
+      // Perl Package.pm:1220 `(defined $name) && ($name ne 'case') &&
+      // (!defined $test)`: an EMPTY name is defined too — `\newif\if西暦`
+      // (jsarticle.cls:1927; the kanji is catcode OTHER in both engines, so
+      // the DefToken argument is the bare `\if`) lets `\if` to `\iffalse`, a
+      // well-formed conditional; rejecting the empty name installed a
+      // test-less `Conditional` that errored on every later `\if`, and the
+      // tikz→pgf→pgfkeys load that follows is `\if`-heavy (jsarticle + tikz:
+      // 544 errors, Perl 28 — the pTeX residual).
+      if name != "case" && test.is_none() {
         // user-defined conditional, like with \newif
         // Note: setting up these macros is compile-time expensive, maybe there is some way to
         // avoid...
@@ -204,6 +218,7 @@ pub fn def_conditional(
         //  For \ifcase, the parameter list better be a single Number !!
         install_definition(
           Conditional {
+            origin: crate::definition::origin::current_origin(),
             cs,
             paramlist,
             test,
@@ -239,10 +254,13 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   expansion: T,
   options_opt: Option<ExpandableOptions>,
 ) -> Result<()> {
+  let mut options = options_opt.unwrap_or_default();
+  if !options.extends && provide_only_declines(&cs) {
+    return Ok(());
+  }
   let expansion_opt: Option<ExpansionBody> = expansion.into();
   // TODO: The None case could be refactored to feel much cleaner.
   // For now it's equivalent to Tokens!()
-  let mut options = options_opt.unwrap_or_default();
   let scope = options.scope.take();
   if options.mathactive && cs.with_str(|s| s.len()) == 1 {
     assign_mathcode(
@@ -256,8 +274,15 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   } else {
     None
   };
-  let defcs = if options.robust {
-    def_robust_cs(cs, options.locked, options.scope)?
+  // A robust macro's body goes under `\cs␣` FIRST, its `\protect \cs␣` wrapper after — the reverse of Perl's
+  // DefMacroI (Package.pm:1166 calls `defRobustCS`, :1143-1149, before installing the body), unobservable otherwise:
+  // nothing reads the inner in between, and the wrapper's install can then judge what it wraps, so a document's
+  // `\DeclareRobustCommand\mathit[1]{…}` of a locked binding defines a command, not a value
+  // (`state::install_definition`; 2306.10719). The wrapper takes the definition's scope, as `defRobustCS` does
+  // (Package.pm:1148).
+  let (robust, locked) = (options.robust, options.locked);
+  let defcs = if robust {
+    T_CS!(cs.with_str(|cstr| format!("{cstr} ")))
   } else {
     cs
   };
@@ -265,8 +290,20 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     Expandable::new(defcs, paramlist, expansion_opt, Some(options))?,
     scope,
   );
+  if robust {
+    def_robust_cs(cs, locked, scope)?;
+  }
   if let Some(locked_key) = locked_key_opt {
     assign_value(&locked_key, true, Some(Scope::Global));
+    // A locked robust binding keeps its inner `\cs␣` against the class and package files (`:locked@files`): the
+    // wrapper calls that name, so a class's `\@namedef{cite }{…}` (cmfne.cls:1774, cite.sty's code copied) took over
+    // every `\cite`, and its `\@citex` reached our cite binding's `\citen` = `\cite` again (Fatal
+    // `Stomach:Recursion`, 2210.02246, 2303.09770). Perl locks the wrapper only (Package.pm DefMacroI), and the
+    // document's own definition of the inner (a `\DeclareRobustCommand\cite`) stays its own, as there.
+    // OXIDIZED_DESIGN #568; guard `perfect_kernel_batch66b::locked_robust_cite_keeps_its_inner_definition`.
+    if robust {
+      assign_value(&format!("{defcs}:locked@files"), true, Some(Scope::Global));
+    }
   }
   Ok(())
 }
@@ -284,6 +321,9 @@ pub struct RegisterOptions {
   pub address:  Option<String>,
   /// an optional allocation for the register (default: None)
   pub allocate: Option<String>,
+  /// install the control sequence in the current group, as a TeX shorthand definition does (tex.web §1224
+  /// `define`: `\countdef` & co. are local unless `\global`); default: global, as a binding's register
+  pub local:    bool,
 }
 
 /// Defines a register with an initial value.
@@ -299,6 +339,9 @@ pub fn def_register<T: Into<RegisterValue>>(
   value: T,
   options: Option<RegisterOptions>,
 ) -> Result<()> {
+  if provide_only_declines(&cs) {
+    return Ok(());
+  }
   let mut options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
   let has_address_option = options.address.is_some();
@@ -309,6 +352,19 @@ pub fn def_register<T: Into<RegisterValue>>(
       None => String::new(),
     },
   };
+  // A bare re-definition of a register that is already allocated keeps its
+  // allocation: latex.ltx's `\newdimen\columnsep` is `\dimen124` (tex.web §1224),
+  // which the format dump records, and the post-dump pools re-`DefRegister!`
+  // ~54 kernel lengths only to give them their default values. Renamed to their
+  // own CS names, `\meaning\columnsep` printed `\columnsep`, so etoolbox's
+  // `\ifdefdimen` (a `\meaning` test, etoolbox.sty:443-456) said "not a length"
+  // (tudscrbase: tudscrartcl, tudscrbook, tudscrposter, tudscrreprt).
+  if address.is_empty()
+    && let Some(existing) = lookup_register_definition(&cs)
+    && is_allocated_register_address(&existing.address)
+  {
+    address = existing.address.to_string();
+  }
   // by adding this check here, we no longer need to use Register::new in the Rust version
   if address.is_empty() {
     address = cs.to_string();
@@ -333,9 +389,45 @@ pub fn def_register<T: Into<RegisterValue>>(
       locator: gullet::get_locator(),
       ..Register::default()
     },
-    Some(Scope::Global),
+    if options.local {
+      None
+    } else {
+      Some(Scope::Global)
+    },
   );
   Ok(())
+}
+
+/// The prologue a primitive's or constructor's mode options compile to (Perl `DefPrimitiveI`
+/// Package.pm:1294-1309, `DefConstructorI` :1456-1471): `mode => 'text'` is
+/// `restricted_horizontal` entered from horizontal mode, and `bounded` opens a group only when
+/// no mode is given. Returns the mode to begin, and the record the definer builds its prologue
+/// closures from.
+fn command_declared_mode(
+  mode: Option<String>,
+  enter_horizontal: bool,
+  leave_horizontal: bool,
+  bounded: bool,
+  require_math: bool,
+  forbid_math: bool,
+) -> (Option<String>, DeclaredMode) {
+  let text = mode.as_deref() == Some("text");
+  let restricted_box = mode.as_deref() == Some("restricted_horizontal");
+  let mode = if text {
+    Some("restricted_horizontal".to_string())
+  } else {
+    mode
+  };
+  let declared_mode = DeclaredMode {
+    mode: mode.as_deref().map(arena::pin),
+    enter_horizontal: enter_horizontal || text,
+    leave_horizontal,
+    bounded: mode.is_none() && bounded,
+    require_math,
+    forbid_math,
+    restricted_box,
+  };
+  (mode, declared_mode)
 }
 
 /// Defines a primitive control sequence
@@ -352,37 +444,46 @@ pub fn def_primitive(
   compiled_replacement: Option<PrimitiveBody>,
   options: PrimitiveOptions,
 ) -> Result<()> {
+  if provide_only_declines(&cs) {
+    return Ok(());
+  }
   let options_locked = options.locked;
   let scope = options.scope;
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   let cs_name = cs.with_cs_name(ToString::to_string);
 
-  // Perl: mode => 'text' becomes restricted_horizontal + enterHorizontal
-  let mut needs_enter_horizontal = options.enter_horizontal;
-  let mode = if options.mode.as_deref() == Some("text") {
-    needs_enter_horizontal = true;
-    Some("restricted_horizontal".to_string())
-  } else {
-    options.mode
-  };
+  // A string body enters horizontal mode (Primitive.pm:73 `enterHorizontal if defined
+  // $replacement`) — as the prologue, before a `bounded` group and its `font`, where LaTeX's
+  // `\UseTextSymbol` starts the paragraph (`\hmode@start@before@group`, latex.ltx:9967): the
+  // `\everypar` it fires (OXIDIZED_DESIGN #267) must not run inside the glyph's font and group.
+  let string_body = matches!(compiled_replacement, Some(PrimitiveBody::String(_)));
+  let enters_horizontal = options.enter_horizontal || (string_body && options.mode.is_none());
+  let (mode, declared_mode) = command_declared_mode(
+    options.mode,
+    enters_horizontal,
+    options.leave_horizontal,
+    options.bounded,
+    options.require_math,
+    options.forbid_math,
+  );
 
-  if options.require_math {
+  if declared_mode.require_math {
     let cs_name_cloned = cs_name.clone();
     let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
     before_digest_env.push(require_math_closure);
   }
 
-  if options.forbid_math {
+  if declared_mode.forbid_math {
     let cs_name_cloned = cs_name.clone();
     let forbid_math_closure = before_digest_simple!({ forbidMath!(cs_name_cloned) });
     before_digest_env.push(forbid_math_closure);
   }
-  if needs_enter_horizontal {
+  if declared_mode.enter_horizontal {
     before_digest_env.push(before_digest_simple!({
       enter_horizontal();
     }));
   }
-  if options.leave_horizontal {
+  if declared_mode.leave_horizontal {
     before_digest_env.push(before_digest_simple!({
       leave_horizontal()?;
     }));
@@ -393,18 +494,92 @@ pub fn def_primitive(
       begin_mode(&mode_clone)?;
     });
     before_digest_env.push(begin_mode_closure);
-  } else if options.bounded {
+  } else if declared_mode.bounded {
     let bgroup_closure = before_digest_simple!({
       bgroup();
+      // tex.web §274 `new_save_level(c)`: the OPENER writes the group code
+      // on the save-stack level; the closer checks it (§1068 `cur_group`).
+      // The code here is this primitive's cs (`groupInitiator` is the
+      // INVOKING token, which an alias or `\csname` form can differ from).
+      assign_frame_value("lx@group@code", Stored::Token(cs));
     });
     before_digest_env.push(bgroup_closure);
   }
+  // A parameterless pure size switch expands, as size10.clo's do (`\DeclareRobustCommand`s, and
+  // `\normalsize` made robust by `\MakeRobust`): `\small` is a macro for the primitive `\lx@size@small`, so the idiom that
+  // appends to it, `\expandafter\def\expandafter\normalsize\expandafter{\normalsize …}` (or etoolbox's
+  // `\appto`), keeps the switch rather than calling itself (witnesses 2605.03010, 2605.19623,
+  // 2605.30610: "\normalsize expands into itself" at `\begin{document}`'s `\normalsize`). No
+  // `\protect` (the primitive is unexpandable, safe in an `\edef`); the primitive reverts as `\small`.
+  // Perl's size primitives are unexpandable. Guard
+  // `perfect_kernel_batch58::size_commands_can_be_appended_to`.
+  let size_switch = paramlist.is_none()
+    && matches!(&options.font, Some(FontDirective::Asset(font))
+      if font.size.is_some() && font.family.is_none() && font.series.is_none() && font.shape.is_none());
+  let declared_font = options.font.clone();
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
+      // A pure size switch (`\small` … `\Huge`, `font => {size => N}` in the
+      // class bindings) is LaTeX's `\@setfontsize` (latex.ltx:14103), whose
+      // first act is `\let\@currsize#1`: the size command's identity is
+      // TeX-visible state that packages test with `\ifx\@currsize\small`
+      // (ltugboat's `\SMC` cascade in latex-doc-ptr.sty:203-215, otherwise
+      // falling through to `\TBWarning`; `\@currsize` restores in many
+      // others). With the primitive alone `\@currsize` stayed the kernel's
+      // `\normalsize` macro (OXIDIZED_DESIGN #165) and never `\ifx`-matched
+      // any size. Guard: `perfect_kernel_batch54::size_switch_lets_currsize`.
+      let is_size_switch = chosen_font.size.is_some()
+        && chosen_font.family.is_none()
+        && chosen_font.series.is_none()
+        && chosen_font.shape.is_none();
       // Perf: capture Rc<Font> directly; closure borrows through it.
       // Previously: `(*chosen_font).clone()` cloned the Font per invocation.
+      // `\@setfontsize` goes on to `\fontsize{#2}{#3}\selectfont`. The merge
+      // records the size in `\f@size` (latex.ltx:12587; content.rs
+      // `merge_font_ref`), so a later `\fontsize{\f@size}{…}\selectfont`
+      // (line spacing) keeps the switched size (OXIDIZED_DESIGN_DIVERGENCES
+      // #288). The `\selectfont` puts the pending family, series and shape in
+      // force: doc.sty's `\MacroFont` (doc.sty:149-153) is `\fontfamily
+      // \ttdefault` … `\small` with no `\selectfont` of its own, so its
+      // macrocode came out roman (moloch, frankenstein, ftnxtra; Perl
+      // article.cls.ltxml:111 the same). It is read next, in this group, as
+      // whatever `\selectfont` means there — inside a pgf picture that is
+      // `\pgf@selectfont`, which returns to `\nullfont`
+      // (pgfcorescopes.code.tex:243, 309). In math the font in force is the
+      // math font, which `\selectfont` does not choose (`\@nomath` only
+      // warns there): math keeps it.
+      // A switch with parameters reads them after this step, so it would take
+      // the `\selectfont` as its argument; only the parameterless one reads it.
+      let ends_in_selectfont = is_size_switch && paramlist.is_none();
       let merge_font_closure = before_digest_simple!({
         merge_font_ref(&chosen_font);
+        if is_size_switch {
+          let_i(&T_CS!("\\@currsize"), &cs, None);
+        }
+        if ends_in_selectfont && !lookup_bool_sym(pin!("IN_MATH")) {
+          let selectfont = T_CS!("\\selectfont");
+          if lookup_definition(&selectfont)?.is_some() {
+            gullet::unread_one(selectfont);
+            // `\@setfontsize#1#2#3` is `\fontsize{#2}{#3}\selectfont`: the switch sets the leading
+            // too, `\baselineskip` = #3 × `\baselinestretch` (the kernel's `\size@update`). The
+            // bindings' size switches are size10.clo's, so its leading: a preamble
+            // `\setlength{\baselineskip}{1.5cm}` otherwise stood for every size, and a tikz
+            // node's `\small` lines stacked 2.5× too far apart (witness 2605.29990 S4.F7.pic1).
+            // Guard `perfect_kernel_batch58::size_switches_set_the_leading`.
+            let fontsize = T_CS!("\\fontsize");
+            if let Some(size) = chosen_font.size
+              && lookup_definition(&fontsize)?.is_some()
+            {
+              let leading = size10_leading(size);
+              let mut tokens = vec![fontsize, T_BEGIN!()];
+              tokens.extend(Explode!(s!("{size}")));
+              tokens.extend([T_END!(), T_BEGIN!()]);
+              tokens.extend(Explode!(s!("{leading}")));
+              tokens.push(T_END!());
+              gullet::unread(Tokens::new(tokens));
+            }
+          }
+        }
       });
       before_digest_env.push(merge_font_closure);
     },
@@ -425,31 +600,53 @@ pub fn def_primitive(
       end_mode(&mode_clone)?;
     });
     after_digest_env.push(end_mode_closure);
-  } else if options.bounded {
+  } else if declared_mode.bounded {
     let egroup_closure: DigestionClosure = after_digest_simple!(_whatsit, {
-      egroup()?;
+      // tex.web closes a group only through a closer whose handler finds the
+      // matching group code on top of the save stack (§1068 `cur_group`);
+      // `lx@group@code`, written by the opener above, is that code. If the top frame was
+      // not opened by this primitive — `\end{document}` inside the body
+      // abandoned it (§1335; an unbalanced `\abstract{…`, screenplay-pkg.tex:
+      // 67) — there is nothing of ours to close; closing the document frame
+      // instead was the "Attempt to close a group that switched to mode
+      // internal_vertical" error. Nested invocations of one primitive close
+      // innermost-first, as group codes need not be unique in TeX either.
+      let mine = is_value_bound("lx@group@code", Some(0))
+        && lookup_token("lx@group@code").is_some_and(|t| t == cs);
+      if mine {
+        egroup()?;
+      }
     });
     after_digest_env.push(egroup_closure);
   }
   //  Not sure robust entirely makes sense for Primitives, other than LaTeXML vs LaTeX mismatch
+  let mut alias = options.alias;
   let defcs = if options.robust {
     def_robust_cs(cs, options.locked, scope)?
+  } else if size_switch {
+    if alias.is_none() {
+      alias = Some(cs_name.clone());
+    }
+    def_switch_alias(cs, options.locked, scope)?
   } else {
     cs
   };
 
   install_definition(
     Primitive {
+      origin: crate::definition::origin::current_origin(),
       cs: defcs,
       paramlist,
       replacement: compiled_replacement,
       before_digest: before_digest_env,
       after_digest: after_digest_env,
-      alias: options.alias,
+      alias,
       nargs: options.nargs,
       is_prefix: options.is_prefix,
       reversion: options.reversion,
       font_id: options.font_id,
+      declared_mode: Some(declared_mode),
+      font: declared_font,
     },
     scope,
   );
@@ -627,6 +824,95 @@ pub fn def_math_dual(
   Ok(())
 }
 
+/// Perl `defmath_wrapped` (Package.pm:1786-1813): no arguments, but a presentation naming control
+/// sequences. `\cs` expands to `\cs@wrapper{\cs@presentation}`, the presentation macro holds the
+/// tokens as given, and the wrapper constructor puts their digested form in an `XMWrap` carrying the
+/// DefMath's attributes (name, meaning, role, scriptpos, stretchy, …), which the math parser moves
+/// onto the parsed content (MathParser.pm:333-360, `parser.rs`). It reverts as its argument, or as
+/// `\cs` in a dual's content branch.
+pub fn def_math_wrapped(
+  cs: Token,
+  presentation: Tokens,
+  options: MathPrimitiveOptions,
+) -> Result<()> {
+  let (wrap_cs_str, pres_cs_str) =
+    cs.with_str(|csname| (s!("{csname}@wrapper"), s!("{csname}@presentation")));
+  let wrap_cs = T_CS!(wrap_cs_str);
+  let pres_cs = T_CS!(pres_cs_str);
+  let defcs = if options.robust {
+    def_robust_cs(cs, options.locked, options.scope)?
+  } else {
+    cs
+  };
+  install_definition(
+    Expandable::new(
+      defcs,
+      None,
+      Some(ExpansionBody::Tokens(Tokens::new(vec![
+        wrap_cs,
+        T_BEGIN!(),
+        pres_cs,
+        T_END!(),
+      ]))),
+      Some(ExpandableOptions {
+        protected: options.protected,
+        ..ExpandableOptions::default()
+      }),
+    )?,
+    options.scope,
+  );
+  install_definition(
+    Expandable::new(
+      pres_cs,
+      None,
+      Some(ExpansionBody::Tokens(presentation.clone())),
+      Some(ExpandableOptions {
+        protected: options.protected,
+        ..ExpandableOptions::default()
+      }),
+    )?,
+    options.scope,
+  );
+  let replacement: ReplacementClosure = Rc::new(|document, args, props| {
+    let mut attrs = HashMap::default();
+    for key in ["role", "scriptpos", "stretchy"] {
+      if let Some(v) = props.get(key) {
+        attrs.insert(key.to_owned(), v.to_string());
+      }
+    }
+    for key in MATH_CONSTRUCTOR_ATTRIBUTES {
+      if let Some(v) = props.get(key) {
+        attrs.insert(key.to_string(), v.to_string());
+      }
+    }
+    document.open_element("ltx:XMWrap", Some(attrs), None)?;
+    for arg in args.iter().flatten() {
+      document.absorb(arg, None)?;
+    }
+    document.close_element("ltx:XMWrap")?;
+    Ok(())
+  });
+  let mut wrapper = Constructor {
+    cs: wrap_cs,
+    paramlist: parse_parameters("{}", &wrap_cs, true)?,
+    replacement: Some(replacement),
+    ..Constructor::default()
+  };
+  let scope = options.scope;
+  transfer_common_constructor_options(&cs, &presentation.to_string(), options, &mut wrapper);
+  wrapper.reversion = Some(Reversion::Closure(Rc::new(move |_whatsit, args| {
+    if get_dual_branch() == Some("content") {
+      return Ok(Tokens::new(vec![cs]));
+    }
+    match args.first().and_then(Option::as_ref) {
+      Some(arg) => arg.revert(),
+      None => Ok(Tokens::new(Vec::new())),
+    }
+  })));
+  install_definition(wrapper, scope);
+  Ok(())
+}
+
 /// EXPERIMENT: Introduce an intermediate case for simple symbols
 /// Define a primitive that will create a Tbox with the appropriate set of XMTok attributes.
 pub fn def_math_primitive(
@@ -642,8 +928,12 @@ pub fn def_math_primitive(
   // DefMath invocation (e.g. 1000 math tokens = 1000 full clones). Now the closure
   // reads fields through the Rc and applies overrides via a dedicated method.
   let shared_options = Rc::new(options.clone());
-  let dynamic_mathstyle = shared_options.dynamic_mathstyle;
+  let variablesize_op = shared_options.variablesize_op;
   let dynamic_scriptpos = shared_options.dynamic_scriptpos;
+  let letters_class = shared_options.letters_class;
+  // Perl defmath_prim (Package.pm:1831): the box reverts to the alias when there is one
+  // (`\{` is `\lx@math@lbrace` with alias `\{`).
+  let reversion_cs = options.alias.as_deref().map_or(cs, Token::from);
 
   install_definition(
     MathPrimitive {
@@ -668,7 +958,7 @@ pub fn def_math_primitive(
         };
         let state_font = lookup_font().unwrap();
         // Dynamic mathstyle: doVariablesizeOp — "display" in display, "text" otherwise
-        let mathstyle_override: Option<&'static str> = if dynamic_mathstyle {
+        let mathstyle_override: Option<&'static str> = if variablesize_op {
           let is_display = state_font
             .get_mathstyle()
             .is_some_and(|s| s.as_ref() == "display");
@@ -685,18 +975,21 @@ pub fn def_math_primitive(
         } else {
           None
         };
+        // A glyph declared from the `letters` symbol font takes its class's shape (`Font::specialize_letters`).
+        let specialize = |font: &Font| match letters_class {
+          Some(class) => font.specialize_letters(&presentation, class),
+          None => font.specialize(&presentation),
+        };
         let font = Rc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None)?;
-          state_font
-            .merge_ref(&this_reqfont)
-            .specialize(&presentation)
+          specialize(&state_font.merge_ref(&this_reqfont))
         } else {
-          state_font.specialize(&presentation)
+          specialize(&state_font)
         });
 
         Ok(vec![Digested::from(Tbox {
           text: arena::pin(&presentation),
-          tokens: Tokens!(cs),
+          tokens: Tokens!(reversion_cs),
           font,
           properties: shared_options.to_hash_stored_with_overrides(
             Some(mode_static),
@@ -704,6 +997,7 @@ pub fn def_math_primitive(
             scriptpos_override,
           ),
           locator: Some(locator),
+          empty_marker: false,
         })])
       })),
       options,
@@ -762,26 +1056,6 @@ pub fn def_math_constructor(
   }
   let presentation_for_sizer = presentation.clone();
   let presentation_for_replacement = presentation.clone();
-  let is_mathstyle = options.mathstyle.is_some();
-  let mathstyle_for_font = options.mathstyle.clone();
-  let presentation_for_font = presentation.clone();
-  options.font = Some(FontDirective::Closure(if is_mathstyle {
-    Rc::new(move |_whatsit| {
-      Ok(
-        lookup_font()
-          .unwrap()
-          .merge(Font {
-            mathstyle: mathstyle_for_font
-              .as_ref()
-              .map(|ms| Cow::Owned(ms.to_owned())),
-            ..Font::default()
-          })
-          .specialize(&presentation_for_font),
-      )
-    })
-  } else {
-    Rc::new(move |_whatsit| Ok(lookup_font().unwrap().specialize(&presentation_for_font)))
-  }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // Perl defmath_cons (Package.pm L1841-1844):
     //   $nargs == 0
@@ -945,6 +1219,23 @@ fn infer_sizer(
   sizer.map(Rc::clone)
 }
 
+/// `\cs` as a macro for the primitive `\lx@size@cs` (a size switch, `def_primitive`); returns it.
+/// Not `\cs␣`: that is the name `\DeclareRobustCommand\cs` writes to, so a document copying the
+/// size command (`\NewCommandCopy\oldsmall\small`) and redefining it robustly
+/// (`\DeclareRobustCommand\small{\oldsmall\itshape}`) overwrote the primitive with a call to itself.
+fn def_switch_alias(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token> {
+  let inner = T_CS!(cs.with_str(|name| format!("\\lx@size@{}", name.trim_start_matches('\\'))));
+  let options = ExpandableOptions {
+    locked,
+    ..ExpandableOptions::default()
+  };
+  install_definition(
+    Expandable::new(cs, None, Tokens!(inner).into(), Some(options))?,
+    scope,
+  );
+  Ok(inner)
+}
+
 fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token> {
   let cs_str = cs.with_str(|cstr| format!("{cstr} "));
   let defcs = T_CS!(cs_str);
@@ -977,6 +1268,9 @@ pub fn def_constructor(
   compiled_replacement: Option<ReplacementClosure>,
   mut options: ConstructorOptions,
 ) {
+  if provide_only_declines(&cs) {
+    return;
+  }
   // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*latexml_codegen::constructable::NARGS = $paramlist.get_num_args();
   let scope = options.scope;
@@ -1022,31 +1316,37 @@ pub fn def_constructor(
 
   let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
 
-  // Perl: mode => 'text' becomes restricted_horizontal + enterHorizontal
-  let mut needs_enter_horizontal = options.enter_horizontal;
-  let mode = if options.mode.as_deref() == Some("text") {
-    needs_enter_horizontal = true;
-    Some("restricted_horizontal".to_string())
-  } else {
-    options.mode
-  };
+  let (mode, declared_mode) = command_declared_mode(
+    options.mode,
+    options.enter_horizontal,
+    options.leave_horizontal,
+    options.bounded,
+    options.require_math,
+    options.forbid_math,
+  );
 
-  if options.require_math {
-    let cs_name_cloned = cs_name.clone();
+  if declared_mode.require_math {
+    // (named as the command it reverts as, its `alias`, where it stands in for one: the Springer classes' `\vec` is
+    // `\lx@sv@vec@boldmath`, and pdflatex's "Missing $ inserted" is the author's `\vec`'s; probe rev79b/ltext)
+    let cs_name_cloned = options
+      .alias
+      .clone()
+      .filter(|alias| alias.starts_with('\\') && alias.len() > 1)
+      .unwrap_or_else(|| cs_name.clone());
     let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
     before_digest_closures.push(require_math_closure);
   }
-  if options.forbid_math {
+  if declared_mode.forbid_math {
     let cs_name_cloned = cs_name;
     let forbid_math_closure = before_digest_simple!({ forbidMath!(cs_name_cloned) });
     before_digest_closures.push(forbid_math_closure);
   }
-  if needs_enter_horizontal {
+  if declared_mode.enter_horizontal {
     before_digest_closures.push(before_digest_simple!({
       enter_horizontal();
     }));
   }
-  if options.leave_horizontal {
+  if declared_mode.leave_horizontal {
     before_digest_closures.push(before_digest_simple!({
       leave_horizontal()?;
     }));
@@ -1057,7 +1357,7 @@ pub fn def_constructor(
       begin_mode(&mode_clone)?;
     });
     before_digest_closures.push(begin_mode_closure);
-  } else if options.bounded {
+  } else if declared_mode.bounded {
     let bgroup_closure = before_digest_simple!({
       bgroup();
     });
@@ -1067,6 +1367,7 @@ pub fn def_constructor(
   //  LaTeXML seems to currently rely on both the top-level "font" option but *also*
   //  has code checking for a second-tier "properties => { font => VALUE}" option
   //  Can we consolidate into a single, top-level, font handler?
+  let declared_font = options.font.clone();
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
       let merge_font_closure = before_digest_simple!({
@@ -1091,7 +1392,7 @@ pub fn def_constructor(
       end_mode(&mode_clone)?;
     });
     after_digest_closures.push(end_mode_closure);
-  } else if options.bounded {
+  } else if declared_mode.bounded {
     let egroup_closure: DigestionClosure = after_digest_simple!(_whatsit, {
       egroup()?;
     });
@@ -1112,6 +1413,10 @@ pub fn def_constructor(
     reversion: options.reversion,
     capture_body: options.capture_body,
     properties: options.properties,
+    declared_mode: Some(declared_mode),
+    font: declared_font,
+    halign_primitive: options.halign_primitive,
+    template: options.template,
     // outer
     // long
     ..Constructor::default()
@@ -1121,6 +1426,54 @@ pub fn def_constructor(
   if let Some(locked_key) = locked_key_opt {
     assign_value(&locked_key, true, Some(Scope::Global));
   }
+}
+
+/// `\UseHook{env/<name>/<point>}` as tokens, or `None` when `\UseHook` is not
+/// defined (plain format): the LaTeX kernel fires these around every
+/// environment (latex.ltx:15347/15362/15388/15391), from the lthooks store.
+fn env_hook_invocation(name: &str, point: &str) -> Option<Tokens> {
+  let use_hook = T_CS!("\\UseHook");
+  lookup_meaning(&use_hook)?;
+  let mut toks = vec![use_hook, T_BEGIN!()];
+  toks.extend(ExplodeText!(format!("env/{name}/{point}")));
+  toks.push(T_END!());
+  Some(Tokens::new(toks))
+}
+
+/// latex.ltx:15386 fires `env/#1/end` only `\IfHookEmptyTF`-guarded (an empty
+/// hook must contribute nothing inside an alignment's last cell): ask the
+/// kernel's own predicate — `\IfHookEmptyTF{env/<name>/<point>}{0}{1}` expands
+/// to `1` when there is code (the no-op format's stub answers `#3` = `1`, and
+/// its `\UseHook` then digests nothing).
+pub fn env_hook_has_code(name: &str, point: &str) -> bool {
+  // No L3 hook system (the plain/no-op format) → no hook code anywhere.
+  if lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_none() {
+    return false;
+  }
+  let mut toks = vec![T_CS!("\\IfHookEmptyTF"), T_BEGIN!()];
+  toks.extend(ExplodeText!(format!("env/{name}/{point}")));
+  toks.push(T_END!());
+  toks.extend([
+    T_BEGIN!(),
+    T_OTHER!("0"),
+    T_END!(),
+    T_BEGIN!(),
+    T_OTHER!("1"),
+    T_END!(),
+  ]);
+  match gullet::do_expand(Tokens::new(toks)) {
+    Ok(expanded) => expanded.to_string().trim() == "1",
+    Err(_) => false,
+  }
+}
+/// The TeX group an environment's begin code leaves open: its definition's
+/// `tex_group`, unless a binding set `\begin{X}:tex_group` (a
+/// [`TexGroup::as_str`] name) for the begin code a class or package gives it.
+fn environment_tex_group(key: &str, declared: TexGroup) -> TexGroup {
+  if lookup_value(key).is_none() {
+    return declared;
+  }
+  TexGroup::from_name(&lookup_string(key)).unwrap_or(declared)
 }
 
 /// Defines an Environment that generates a specific XML fragment.
@@ -1139,51 +1492,92 @@ pub fn def_environment(
   name: String,
   paramlist: Option<Parameters>,
   compiled_replacement: Option<ReplacementClosure>,
-  options: ConstructorOptions,
+  mut options: ConstructorOptions,
 ) {
+  // One environment, all or none of its names (`\begin{X}`, `\end{X}`, `\X`, `\endX`).
+  if provide_only_declines(&T_CS!(s!("\\begin{{{name}}}"))) {
+    return;
+  }
   // This is for the common case where the environment is opened by \begin{env}
   let begin_name = s!("\\begin{{{name}}}");
   let end_name = s!("\\end{{{name}}}");
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
 
-  // Perl Package.pm line 1885: $mode = 'restricted_horizontal' if !$mode || ($mode eq 'text');
+  // Perl Package.pm:1902: $mode = 'restricted_horizontal' if !$mode || ($mode eq 'text');
   // Environments ALWAYS have a mode — defaults to restricted_horizontal.
   // This means \end{env} always calls endMode(), never egroup().
   let mode = match options.mode.as_deref() {
     None | Some("text") => Some("restricted_horizontal".to_string()),
     _ => options.mode,
   };
+  let declared_mode = DeclaredMode {
+    mode:             mode.as_deref().map(arena::pin),
+    enter_horizontal: options.enter_horizontal,
+    leave_horizontal: options.leave_horizontal,
+    bounded:          false,
+    require_math:     options.require_math,
+    forbid_math:      options.forbid_math,
+    // an environment is a box by its begin code's group (`TexGroup::Box`, below), not by its mode
+    restricted_box:   false,
+  };
 
-  if options.require_math {
+  if declared_mode.require_math {
     let require_name = begin_name.clone();
     let require_math_closure = before_digest_simple!({ requireMath!(require_name) });
     before_digest_env.push(require_math_closure);
   }
-  if options.forbid_math {
+  if declared_mode.forbid_math {
     let forbid_name = begin_name.clone();
     let forbid_math_closure = before_digest_simple!({ forbidMath!(forbid_name) });
     before_digest_env.push(forbid_math_closure);
   }
+  let begin_frame_end = T_CS!(end_name.as_str());
+  let tex_group = options.tex_group;
+  // A binding whose class or package redefines the environment's begin code
+  // overrides the kind at run time (REVTeX 3's `figure` without `floats`).
+  let tex_group_key = s!("\\begin{{{name}}}:tex_group");
+  let begin_tex_group_key = tex_group_key.clone();
   let bgroup_closure = before_digest_simple!({
     bgroup();
+    // This frame stands for the `\begingroup` of LaTeX's `\begin`
+    // (latex.ltx:15355); a plain `\endgroup` meeting it ends the environment
+    // by its `\end{X}` (stomach.rs `close_environment_frame`). Marked here,
+    // before an `@atbegin` hook can open a group of its own above it: marked
+    // after the hook, 2001.02707's `\AtBeginEnvironment{defn}{\begin{samepage}}`
+    // put the marker on samepage's group and its errors rose 27 -> 77.
+    assign_frame_value_sym(crate::pin!("lx@env@begin@end"), begin_frame_end);
+    let kind = environment_tex_group(&begin_tex_group_key, tex_group);
+    if kind != TexGroup::None {
+      assign_frame_value_sym(crate::pin!("lx@env@tex@group"), kind.as_str());
+    }
   });
   before_digest_env.push(bgroup_closure);
   let atbegin_key = s!("@environment@{name}@atbegin");
+  // latex.ltx:15362 `\UseHook{env/#1/begin}` inside the group (the
+  // kernel's lthooks store); the `@environment@…` PushValue store is
+  // etoolbox's. `\UseHook` exists only under the LaTeX format.
+  let begin_hook_tokens = env_hook_invocation(&name, "begin");
+  let begin_hook_name = name.clone();
   let atbegin_hook_closure = before_digest_simple!({
+    let mut boxes = Vec::new();
     if let Some(b) = lookup_tokens(&atbegin_key) {
-      vec![digest(b.unlist())?]
-    } else {
-      Vec::new()
+      boxes.push(digest(b.unlist())?);
     }
+    if let Some(hook) = begin_hook_tokens.clone()
+      && env_hook_has_code(&begin_hook_name, "begin")
+    {
+      boxes.push(digest(hook.unlist())?);
+    }
+    boxes
   });
 
   before_digest_env.push(atbegin_hook_closure);
-  if options.enter_horizontal {
+  if declared_mode.enter_horizontal {
     before_digest_env.push(before_digest_simple!({
       enter_horizontal();
     }));
   }
-  if options.leave_horizontal {
+  if declared_mode.leave_horizontal {
     before_digest_env.push(before_digest_simple!({
       leave_horizontal()?;
     }));
@@ -1200,11 +1594,17 @@ pub fn def_environment(
   let env_name = name.clone();
   let current_environment_closure = before_digest_simple!({
     assign_value_sym(crate::pin!("current_environment"), env_name.clone(), None);
-    let body = T_LETTER!(env_name.clone());
+    // Perl Package.pm:1927 `DefMacroI('\@currenvir', undef, $name)` — the
+    // string body is TokenizeInternal'd into CHARACTER tokens (= latex.ltx:15350
+    // `\def\@currenvir{#1}`), so `\ifx\reserved@a\@currenvir` comparisons
+    // (`\@checkend` latex.ltx:15394, collectbox:208, storebox:36, nag:258,
+    // powerdot:529 …) see the same token list as a `\def\reserved@a{center}`.
+    // A single multi-char T_LETTER stringified right but never `\ifx`-matched.
+    let body = mouth::tokenize_internal(TeXString::assembled(env_name.clone()));
     def_macro(
       T_CS!("\\@currenvir"),
       None,
-      Some(ExpansionBody::Tokens(Tokens!(body))),
+      Some(ExpansionBody::Tokens(body)),
       None,
     )?;
   });
@@ -1241,6 +1641,23 @@ pub fn def_environment(
   // Clone fields needed for the bare \name constructor (Perl Package.pm lines 1949-1969)
   // before they are moved into the \begin{name} constructor below.
   let bare_after_digest_begin = options.after_digest_begin.clone();
+  // An environment whose begin code opens a box group (`\setbox\@tempboxa\vbox\bgroup`, a minipage) is a TeX box: the
+  // first element its constructor opens is marked for a frontmatter field's print (`document::FIELD_BOX_PROPERTY`,
+  // OXIDIZED_DESIGN #715), unless the binding's run-time kind says otherwise. The field-ink gate first: the kind is a
+  // State lookup, for every such body (review r5 finding 3).
+  if tex_group == TexGroup::Box {
+    let box_key = tex_group_key.clone();
+    options.after_digest_body.insert(
+      0,
+      after_digest_simple!(whatsit, {
+        if crate::document::field_box_marks_live()
+          && environment_tex_group(&box_key, TexGroup::Box) == TexGroup::Box
+        {
+          crate::document::field_box_whatsit(whatsit);
+        }
+      }),
+    );
+  }
   let bare_after_digest_body = options.after_digest_body.clone();
   let bare_before_construct = options.before_construct.clone();
   let bare_after_construct = options.after_construct.clone();
@@ -1263,7 +1680,7 @@ pub fn def_environment(
   });
   after_construct_with_frame.push(pop_frame_closure);
 
-  // Perl Package.pm L1891-1895: "in pure LaTeX would usually have expanded to \env
+  // Perl Package.pm L1908-1912: "in pure LaTeX would usually have expanded to \env
   // and would have skipped spaces before parsing args, if any."
   // Prepend SkipSpaces parameter when the environment has arguments.
   let paramlist_skips = match paramlist {
@@ -1286,6 +1703,7 @@ pub fn def_environment(
   };
 
   let begin_name_constructor = Rc::new(Constructor {
+    origin:            crate::definition::origin::current_origin(),
     cs:                T_CS!(begin_name),
     paramlist:         paramlist_skips,
     replacement:       compiled_replacement.clone(),
@@ -1304,6 +1722,10 @@ pub fn def_environment(
     sizer:             infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
     reversion:         options.reversion,
     alias:             options.alias,
+    declared_mode:     Some(declared_mode),
+    font:              None,
+    halign_primitive:  false,
+    template:          None,
   });
   install_definition(begin_name_constructor, options.scope);
 
@@ -1333,8 +1755,15 @@ pub fn def_environment(
   match mode {
     Some(ref emode) => {
       let emode = emode.clone();
+      let own_end = T_CS!(end_name.as_str());
+      let own_name = name.clone();
       let emode_closure = Rc::new(move |_whatsit: &mut Whatsit| {
-        // Perl Package.pm L1944-1945:
+        // `\end{X}` over a `\begingroup` the class opened inside X (raa.cls:322-349): it closes that group and X,
+        // and X's group stays for the class's `\endgroup` (stomach.rs `end_environment_over_plain_groups`).
+        if end_environment_over_plain_groups(&own_name, own_end)? {
+          return Ok(Vec::new());
+        }
+        // Perl Package.pm L1961-1962:
         //   # Switch mode (w/stack frame pop), OR egroup
         //   ($mode ? (sub { $_[0]->endMode($mode) }) : sub { $_[0]->egroup; }),
         // endMode(mode) with no second arg defaults to noframe=0 — it DOES
@@ -1361,12 +1790,25 @@ pub fn def_environment(
     (options.before_digest_end, cloned)
   };
   let atend_key = s!("@environment@{name}@atend");
+  // latex.ltx:15386-15388 `\UseHook{env/#1/end}` inside the group before
+  // `\end#1`.
+  let end_hook_tokens = env_hook_invocation(&name, "end");
+  let end_hook_name = name.clone();
   let atend_hook_closure = before_digest_simple!({
-    if let Some(e) = lookup_tokens(&atend_key) {
-      vec![digest(e.unlist())?]
-    } else {
-      Vec::new()
+    let mut boxes = Vec::new();
+    // `\end`'s hooks (latex.ltx:15386-15393) never run when a plain
+    // `\endgroup` closed `\begin`'s group (stomach.rs `close_environment_frame`).
+    if !environment_ended_by_group() {
+      if let Some(e) = lookup_tokens(&atend_key) {
+        boxes.push(digest(e.unlist())?);
+      }
+      if let Some(hook) = end_hook_tokens.clone()
+        && env_hook_has_code(&end_hook_name, "end")
+      {
+        boxes.push(digest(hook.unlist())?);
+      }
     }
+    boxes
   });
   before_digest_for_endenv.push(atend_hook_closure);
 
@@ -1383,15 +1825,25 @@ pub fn def_environment(
   // For the uncommon case opened by \csname env\endcsname
   // Perl Package.pm lines 1949-1969: \FOO gets the same hook pipeline as \begin{FOO}
   let mut before_digest_bare: Vec<BeforeDigestClosure> = Vec::new();
+  // The bare `\X` opens no TeX group (latex.ltx:15346-15355: only `\begin`
+  // does), so this frame is LaTeXML's alone; a `}` or `\endgroup` of an
+  // enclosing group meeting it ends the environment by its `\endX` first
+  // (stomach.rs `close_environment_frame`).
+  let bare_frame_end = T_CS!(s!("\\end{}", &name));
   before_digest_bare.push(before_digest_simple!({
     bgroup();
+    assign_frame_value_sym(crate::pin!("lx@env@bare@end"), bare_frame_end);
+    let kind = environment_tex_group(&tex_group_key, tex_group);
+    if kind != TexGroup::None {
+      assign_frame_value_sym(crate::pin!("lx@env@tex@group"), kind.as_str());
+    }
   }));
-  if options.enter_horizontal {
+  if declared_mode.enter_horizontal {
     before_digest_bare.push(before_digest_simple!({
       enter_horizontal();
     }));
   }
-  if options.leave_horizontal {
+  if declared_mode.leave_horizontal {
     before_digest_bare.push(before_digest_simple!({
       leave_horizontal()?;
     }));
@@ -1422,6 +1874,7 @@ pub fn def_environment(
   let mut after_construct_bare: Vec<ConstructionClosure> = bare_after_construct;
   after_construct_bare.push(pop_frame_bare);
   let name_constructor = Rc::new(Constructor {
+    origin: crate::definition::origin::current_origin(),
     cs: T_CS!(s!("\\{}", &name)),
     paramlist,
     replacement: compiled_replacement,
@@ -1436,6 +1889,10 @@ pub fn def_environment(
     sizer: infer_sizer(bare_sizer.as_ref(), bare_reversion.as_ref()),
     reversion: bare_reversion,
     alias: bare_alias,
+    declared_mode: Some(declared_mode),
+    font: None,
+    halign_primitive: false,
+    template: None,
   });
   install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);
@@ -1444,8 +1901,34 @@ pub fn def_environment(
   match mode {
     Some(ref emode) => {
       let emode = emode.clone();
+      // The frames a bare `\endFOO` may end are environments' frames: a bare `\X`'s (marked `lx@env@bare@end`), a
+      // `\begin{X}`'s (`lx@env@begin@end`), or one a group's end handed back (`lx@env@ended@by@group`, stomach.rs
+      // `close_environment_frame`) — any environment's, not only FOO's: amsmath ends a `\equation*` display with
+      // `\endequation` (tcolorbox's `ams equation*`, tcbtheorems.code.tex:301; 2211.17024), and `end_mode` still checks the
+      // mode. A frame no environment opened is left alone, with one Warning: LaTeX's `\endquotation` is
+      // `\endlist`/`\endtrivlist` (latex.ltx), no group work, so an IEEE Open Journal `\IEEEkeywords` box's
+      // `\vbox\bgroup … \par\endquotation\egroup` (ieeetmlcn.cls:3711-3715) must not lose the box's frame — ending the
+      // mode there made the box reader read the whole body into the box (2301.00752, 2602.19492; 54 papers). Perl ends
+      // the mode there too (an Error, content kept; KNOWN_PERL_ERRORS #674, OD #584). Guard:
+      // `perfect_kernel_batch66t::bare_end_without_its_begin_keeps_the_box`.
+      let own_end = end_name.clone();
       after_digest_end.push(Rc::new(move |_whatsit: &mut Whatsit| {
-        end_mode(&emode)?;
+        let owns_top_frame = [
+          "lx@env@ended@by@group",
+          "lx@env@bare@end",
+          "lx@env@begin@end",
+        ]
+        .iter()
+        .any(|key| is_value_bound(key, Some(0)));
+        if owns_top_frame {
+          end_mode(&emode)?;
+        } else {
+          Warn!(
+            "unexpected",
+            T_CS!(own_end.as_str()),
+            s!("{own_end} without an environment open: no environment frame to end")
+          );
+        }
         Ok(Vec::new())
       }));
     },
@@ -1588,6 +2071,23 @@ pub fn dualize_arglist(
   Ok((cargs, pargs))
 }
 
+/// A DefMath presentation, Perl `DefMathI`'s `$presentation`: TeX source text, tokenized at
+/// definition, or the tokens a binding built (amsopn's `Invocation(T_CS('\operatorname'), $star,
+/// $text)`), which keep their catcodes and are dispatched on them (Package.pm:1650-1661).
+pub enum MathPresentation {
+  Text(String),
+  Tokens(Tokens),
+}
+impl From<String> for MathPresentation {
+  fn from(text: String) -> Self { MathPresentation::Text(text) }
+}
+impl From<&str> for MathPresentation {
+  fn from(text: &str) -> Self { MathPresentation::Text(text.to_string()) }
+}
+impl From<Tokens> for MathPresentation {
+  fn from(tokens: Tokens) -> Self { MathPresentation::Tokens(tokens) }
+}
+
 /// Define a Mathematical symbol or function.
 ///
 /// There are two sets of cases:
@@ -1606,9 +2106,19 @@ pub fn dualize_arglist(
 pub fn def_math(
   cs: Token,
   paramlist: Option<Parameters>,
-  presentation: String,
+  presentation: impl Into<MathPresentation>,
   mut options: MathPrimitiveOptions,
 ) -> Result<()> {
+  if provide_only_declines(&cs) {
+    return Ok(());
+  }
+  let presentation_in = presentation.into();
+  // Perl compares the name with the presentation as a string (`$name eq $presentation`, a Tokens
+  // presentation stringified).
+  let presentation = match &presentation_in {
+    MathPresentation::Text(text) => text.clone(),
+    MathPresentation::Tokens(tokens) => tokens.to_string(),
+  };
   // Can't defer parsing parameters since we need to know number of args!
   // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
 
@@ -1635,7 +2145,11 @@ pub fn def_math(
       .meaning
       .as_ref()
       .map_or_else(|| Cow::Owned(String::new()), Cow::Borrowed);
-    if (*name == presentation) || (name.is_empty()) || *name == *meaning_check {
+    // Perl `$name eq $presentation`: a Tokens presentation stringifies to its object address,
+    // so only a text presentation can equal the name (Package.pm:1628-1632).
+    let same_as_presentation =
+      matches!(&presentation_in, MathPresentation::Text(text) if *text == *name);
+    if same_as_presentation || (name.is_empty()) || *name == *meaning_check {
       None
     } else {
       Some(name.into_owned())
@@ -1675,13 +2189,27 @@ pub fn def_math(
   }
   // If the macro involves arguments,
   // we will create an XMDual to separate simple content application
-  // from the (likely) convoluted presentation.
-  else if HAS_ARG_OR_CS.is_match(&presentation) {
-    // TODO: Are the code variants still applicable in Rust?
-    //((ref presentation eq "CODE")
-    // || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
-    // || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist)))
+  // from the (likely) convoluted presentation. Perl Package.pm:1650-1653: a string presentation
+  // naming an argument or a control sequence, or tokens holding an argument or `#`.
+  else if match &presentation_in {
+    MathPresentation::Text(text) => HAS_ARG_OR_CS.is_match(text),
+    MathPresentation::Tokens(tokens) => tokens
+      .unlist_ref()
+      .iter()
+      .any(|t| matches!(t.get_catcode(), Catcode::ARG | Catcode::PARAM)),
+  } {
+    let presentation = match presentation_in {
+      MathPresentation::Tokens(tokens) => tokens.untex(),
+      MathPresentation::Text(text) => text,
+    };
     def_math_dual(cs, paramlist, presentation, options)?;
+  }
+  // Perl Package.pm:1656-1660: no arguments, but tokens naming control sequences (presumably with
+  // internal structure) — the presentation is wrapped to carry the semantic attributes.
+  else if let MathPresentation::Tokens(tokens) = &presentation_in
+    && tokens.unlist_ref().iter().any(Token::is_executable)
+  {
+    def_math_wrapped(cs, tokens.clone(), options)?;
   }
   // EXPERIMENT: Introduce an intermediate case for simple symbols
   // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
@@ -1705,6 +2233,15 @@ fn transfer_common_constructor_options(
 ) {
   let cs_str = cs.with_str(ToString::to_string);
   let mut properties = options.to_hash_stored();
+  // (an accent's glyph, `accent`, which its token prints over or under its base: Rust only, for the readers of what a
+  // digested mark prints — `\bar{\dag}` is no `\dag`, the frontmatter label keys, latexml_engine
+  // `util_text::accent_combining_form`)
+  if matches!(
+    options.operator_role.as_deref(),
+    Some("OVERACCENT" | "UNDERACCENT")
+  ) {
+    properties.insert("accent", Stored::from(presentation.to_string()));
+  }
   cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.clone()));
   if let Some(sizer) = infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()) {
     cons.sizer = Some(sizer);
@@ -1715,28 +2252,45 @@ fn transfer_common_constructor_options(
   //
   // before_digest
   //
-  // Perl (Package.pm:1304): the `requireMath` beforeDigest is added ONLY when the
-  // binding passes `requireMath => 1` (`$options{requireMath} ? (sub {...}) : ()`),
-  // NOT for every DefMath. A plain math symbol (e.g. `\rightarrowfill`, a DefMath
-  // ARROW) used in TEXT mode must not warn "should only appear in math mode" — Perl
-  // auto-enters math for it; only explicit requireMath constructs (`\bm`, …) warn.
-  // (Was unconditional → a broad Rust-only `unexpected:mode` over-emission.)
-  let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
-  if options.require_math {
-    before_digest_closures.push(before_digest_simple!({
-      requireMath!(cs_str);
-    }));
-  }
-  if !options.nogroup {
+  // Perl's DefMath constructors all begin with `requireMath($cs)` (Package.pm:1706), which warns
+  // `unexpected:<cs>` outside math (Package.pm:1069-1073). The symbols safe in text are boxes, not
+  // constructors (Package.pm:1665; `MathPrimitiveOptions::has_complex_option`): a gate on
+  // `require_math` here hid every DefMath warning, while the over-emission it was added for
+  // (witness 0802.3360, `\hbox to 40pt{\rightarrowfill}`) came from `\rightarrowfill`, which has
+  // `stretchy`, wrongly being a constructor.
+  let declared_mode = DeclaredMode {
+    bounded: !options.nogroup,
+    require_math: true,
+    ..DeclaredMode::default()
+  };
+  cons.declared_mode = Some(declared_mode);
+  let mut before_digest_closures: Vec<BeforeDigestClosure> = vec![before_digest_simple!({
+    requireMath!(cs_str);
+  })];
+  if declared_mode.bounded {
     before_digest_closures.push(before_digest_simple!({
       bgroup();
     }));
   }
+  // A Warning raised where the box is printed (`absorb_warning`, an undecodable glyph's): its position is the
+  // gullet's here, as the arguments are about to be read (the one a simple symbol's Tbox carries as its locator),
+  // recorded in the constructor's group and moved onto the whatsit after digestion, for the document to raise it at
+  // (core `document::ABSORB_WARNING_LOCATOR_PROPERTY`). Not the whatsit's own locator: that is `--source-map`'s.
+  // Witness 1902.03183 (newtxsf's `\bar`, `\dot`).
+  let records_absorb_locator = options.absorb_warning.is_some();
+  if records_absorb_locator {
+    before_digest_closures.push(before_digest_simple!({
+      assign_value(
+        crate::document::ABSORB_WARNING_LOCATOR_PROPERTY,
+        Stored::from(gullet::get_locator()),
+        Some(Scope::Local),
+      );
+    }));
+  }
+  // Perl Package.pm:1708: `MergeFont(%{ $options{font} })` inside the group just opened.
   if let Some(font) = options.font {
     before_digest_closures.push(before_digest_simple!({
-      if let FontDirective::Asset(ref chosen_font) = font {
-        merge_font((**chosen_font).clone());
-      }
+      merge_font((*font.get_font(None)?).clone());
     }));
   }
   before_digest_closures.extend(options.before_digest);
@@ -1746,7 +2300,7 @@ fn transfer_common_constructor_options(
   //
   let mut after_digest_closures = options.after_digest;
   // Perl: mathstyle => \&doVariablesizeOp — compute mathstyle at digest time
-  if options.dynamic_mathstyle {
+  if options.variablesize_op {
     after_digest_closures.push(after_digest_simple!(_args, {
       let state_font = lookup_font().unwrap();
       let is_display = state_font
@@ -1756,7 +2310,14 @@ fn transfer_common_constructor_options(
       _args.set_property("mathstyle", Stored::from(mathstyle.to_string()));
     }));
   }
-  if !options.nogroup {
+  if records_absorb_locator {
+    after_digest_closures.push(after_digest_simple!(_args, {
+      if let Some(locator) = lookup_value(crate::document::ABSORB_WARNING_LOCATOR_PROPERTY) {
+        _args.set_property(crate::document::ABSORB_WARNING_LOCATOR_PROPERTY, locator);
+      }
+    }));
+  }
+  if declared_mode.bounded {
     after_digest_closures.push(after_digest_simple!(_args, {
       egroup()?;
     }));
@@ -1764,29 +2325,41 @@ fn transfer_common_constructor_options(
   cons.after_digest = after_digest_closures;
   cons.before_construct = options.before_construct;
   cons.after_construct = options.after_construct;
+  // Perl Package.pm:1726-1728: the `font` property is code, run as the whatsit's properties are
+  // computed (Constructor.pm:97-104) — at digestion, inside the constructor's group, after its own
+  // font merged — so the token takes the font in force there (`\boldsymbol`'s bold, the
+  // operator's upright), not the state at construction. Golden
+  // tests/parse/math_lexemes.tex#defmath_accent_takes_the_digestion_font.
   let presentation_for_font = presentation.to_owned();
-  properties.insert(
-    "font",
-    Stored::FontDirective(FontDirective::Closure(
-      if let Some(mathstyle) = options.mathstyle {
-        Rc::new(move |_whatsit| {
-          Ok(
-            lookup_font()
-              .unwrap()
-              .merge(Font {
-                mathstyle: Some(Cow::Owned(mathstyle.clone())),
-                ..Font::default()
-              })
-              .specialize(&presentation_for_font),
-          )
-        })
-      } else {
-        Rc::new(move |_whatsit| Ok(lookup_font().unwrap().specialize(&presentation_for_font)))
-      },
-    )),
-  );
-
-  cons.properties = Rc::new(move |_args| Ok(properties.clone()));
+  let mathstyle_for_font = options.mathstyle;
+  let letters_class = options.letters_class;
+  // Perl `scriptpos => \&doScriptpos` (TeX_Math.pool.ltxml:350): `mid` in display, else `post`,
+  // read with the other code properties — a starred `\DeclareMathOperator` puts its limits
+  // below in display (amsopn.sty.ltxml:26).
+  let dynamic_scriptpos = options.dynamic_scriptpos;
+  cons.properties = Rc::new(move |_args| {
+    let mut font = lookup_font().unwrap();
+    let mut properties = properties.clone();
+    if dynamic_scriptpos {
+      let display = font
+        .get_mathstyle()
+        .is_some_and(|s| s.as_ref() == "display");
+      let scriptpos = if display { "mid" } else { "post" };
+      properties.insert("scriptpos", Stored::from(scriptpos.to_string()));
+    }
+    if let Some(ref mathstyle) = mathstyle_for_font {
+      font = Rc::new(font.merge(Font {
+        mathstyle: Some(Cow::Owned(mathstyle.clone())),
+        ..Font::default()
+      }));
+    }
+    let font = match letters_class {
+      Some(class) => font.specialize_letters(&presentation_for_font, class),
+      None => font.specialize(&presentation_for_font),
+    };
+    properties.insert("font", Stored::Font(Rc::new(font)));
+    Ok(properties)
+  });
 }
 
 //======================================================================
@@ -1833,4 +2406,26 @@ pub fn allocate_register(rtype: &str, cs: &str) -> Result<Option<String>> {
     );
     Ok(None)
   }
+}
+
+/// The leading size10.clo gives each of its sizes (`\@setfontsize\small\@ixpt{11}` …), which the
+/// class bindings' size switches use (`font => {size => …}`); 1.2 × the size otherwise.
+fn size10_leading(size: f64) -> f64 {
+  const LEADING: [(f64, f64); 11] = [
+    (5.0, 6.0),
+    (7.0, 8.0),
+    (8.0, 9.5),
+    (9.0, 11.0),
+    (10.0, 12.0),
+    (12.0, 14.0),
+    (14.4, 18.0),
+    (17.28, 22.0),
+    (20.74, 25.0),
+    (24.88, 30.0),
+    (29.8, 30.0), // the article/report/book bindings' `\Huge` (Perl's 29.8; size10.clo's 24.88)
+  ];
+  LEADING
+    .iter()
+    .find(|(at, _)| (at - size).abs() < 0.01)
+    .map_or(size * 1.2, |(_, leading)| *leading)
 }

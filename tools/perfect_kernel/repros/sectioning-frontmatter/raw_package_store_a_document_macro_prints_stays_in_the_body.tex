@@ -1,0 +1,25 @@
+% A raw package's table setter stores its own `\@keywords` (`\def\keywords#1{\gdef\@keywords{#1}}`), which no title page
+% reads: a macro of the package's the document calls prints it (`\printkeywords`). K11 reroutes a store, the setter's
+% own too, only when the title page alone reads it (frontmatter_stores.rs `store_setter_body`,
+% `read_only_by_the_title_page`): this one stays the package's, printed once, where the document prints it. A store no
+% printed code reads is no frontmatter item either: rlj.sty:73's `\@keywords`, read only by the `\makeCover` the paper
+% comments out (2605.31044; pdflatex prints no keywords).
+% witness: 2605.31044 (rlj.sty under article; review rev95d B1, probe p5)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Abstract", "Abs.", "Keywords: alpha, beta", "Text."
+% engines: rust int124a = 0 errors, "Keywords: alpha, beta" one body paragraph; rust 95d = 0 errors, a
+%          <ltx:keywords> and the body paragraph (printed twice); perl = 0 errors, the body paragraph
+% expect:  0 errors, 0 warnings; no <ltx:keywords>; "Keywords: alpha, beta" one body paragraph
+% status:  RED (95d) -> GREEN (95d-r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{kwprint.sty}
+\def\keywords#1{\gdef\@keywords{#1}}
+\def\printkeywords{\par\noindent\textbf{Keywords:} \@keywords\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{kwprint}
+\title{T}\author{Ann Able}\keywords{alpha, beta}
+\begin{document}\maketitle
+\begin{abstract}Abs.\end{abstract}
+\printkeywords
+Text.
+\end{document}

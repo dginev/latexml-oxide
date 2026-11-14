@@ -1,0 +1,37 @@
+% witness: 1610.06458 (`paper.tex:1260-1266`: an `IEEEeqnarray*` `\nonumber` row before an `\IEEEyessubnumber` row;
+%          `eq:inq3` 36c in the PDF and `.aux`, 79d r2 36a printed twice); review rev79d2 finding 2 (probe rev79d2/eq/s.tex)
+% oracle:  pdflatex 0 errors; prints (0a) ... (0i); "See s 0a, 0b, 0c; t 0d, 0e, 0f; u 0g, 0h, 0i." (IEEEtrantools.sty
+%          :1985-1987 pre-advances `equation` and keeps the sub-equation number it resets in `\@IEEEsubeqnnumrollback`;
+%          a row left unnumbered steps nothing, so `\IEEEyessubnumber` on the next row backs out to it, :1410-1414)
+% engines: rust 79d r2 "See s 0a, 0b, 0c; t 0d, 0e, 0a; u 0b, 0c, 0d." (the starred environment's `\nonumber`
+%          retracted the row at once and dropped the number to give back); Perl 0.8.8 has no IEEEtrantools binding
+% expect:  0 errors, 0 warnings; the equations' tags and labels as pdflatex's
+% status:  RED (79d r2) -> GREEN (79d r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \IEEEyessubnumber\label{s1}\\
+c &=& d \IEEEyessubnumber\label{s2}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray*}{rCl}
+e &=& f \IEEEyessubnumber\label{s3}
+\end{IEEEeqnarray*}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \IEEEyessubnumber\label{t1}\\
+c &=& d \IEEEyessubnumber\label{t2}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray*}{rCl}
+e &=& f \nonumber\\
+g &=& h \IEEEyessubnumber\label{t3}
+\end{IEEEeqnarray*}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \IEEEyessubnumber\label{u1}\\
+c &=& d \IEEEyessubnumber\label{u2}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+e &=& f \IEEEyessubnumber\label{u3}
+\end{IEEEeqnarray}
+See s \ref{s1}, \ref{s2}, \ref{s3}; t \ref{t1}, \ref{t2}, \ref{t3}; u \ref{u1}, \ref{u2}, \ref{u3}.
+\end{document}

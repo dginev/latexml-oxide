@@ -1,0 +1,32 @@
+% The BESIII template without its `center`: `\begin{small}` around the names, the collaboration line and an `{\it …}`
+% group of marked affiliation lines — each wrapper's lines the block's lines, a wrapper inside one unwrapped too.
+% witness: 1202.2048 (elsarticle, 327 names: `\author{\begin{small} M.~Ablikim$^{1}$, … \\ \vspace{0.2cm} (BESIII
+%          Collaboration)\\ \vspace{0.2cm} {\it $^{1}$ Institute … \\ … \vspace{7cm} } \end{small}}`)
+% oracle:  pdflatex 0 errors: "A. Able1 , B. C. Baker2 , C. Cole1", "(XYZ Collaboration)", "1 University of Alpha,
+%          Alphaville", "2 University of Beta, Betatown"
+% engines: rust int138a = one creator holding every name and affiliation line, 0 errors (silent); Perl the same
+% expect:  0 errors, 0 warnings; three creators, each with the collaboration and the affiliation its mark names
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass[preprint,11pt]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{
+\begin{small}
+A.~Able$^{1}$, B.~C.~Baker$^{2}$, C.~Cole$^{1}$
+\\
+\vspace{0.2cm}
+(XYZ Collaboration)\\
+\vspace{0.2cm} {\it
+$^{1}$ University of Alpha, Alphaville\\
+$^{2}$ University of Beta, Betatown\\
+\vspace{7cm}
+}
+\end{small}
+}
+\begin{abstract}
+Text.
+\end{abstract}
+\end{frontmatter}
+\end{document}

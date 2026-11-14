@@ -1,0 +1,21 @@
+% witness: sel78d item 4, quality ledger 132: a \documentclass{mdpi} without a shipped copy (the binding stands in for
+%          the class); mdpi.cls:1362-1373 \captionsetup[figure|table|...]{labelfont={bf,small,...}, labelsep=period,
+%          textfont={small,...}}; a shipped copy is read after the binding and sets them itself; no Perl binding
+% oracle:  pdflatex with 2302.03012's Definitions/mdpi.cls: 0 errors, "Figure 1. Fig cap.", "Table 1. Tab cap.", the
+%          labels bold, label and text at 9pt
+% engines: rust int45b = "Figure 1: Fig cap.", "Table 1: Tab cap." at the normal size, the labels not bold
+% expect:  0 errors, 0 warnings; each caption's tag closed by ". ", bold and 90 % as its text
+% status:  RED (int45b) -> GREEN (78d)
+\documentclass[journal,article,submit,pdftex,moreauthors]{mdpi}
+\pubvolume{1}\issuenum{1}\articlenumber{0}\pubyear{2023}\copyrightyear{2023}
+\datereceived{}\daterevised{}\dateaccepted{}\datepublished{}\hreflink{https://doi.org/}
+\Title{Title}
+\Author{Author One}
+\AuthorNames{Author One}
+\address{Place}
+\abstract{Summary.}
+\begin{document}
+\section{Intro}
+\begin{figure}\centering X\caption{Fig cap.}\end{figure}
+\begin{table}\caption{Tab cap.}\centering Y\end{table}
+\end{document}

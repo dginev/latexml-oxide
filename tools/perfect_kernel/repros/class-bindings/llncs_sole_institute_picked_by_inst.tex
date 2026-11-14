@@ -1,0 +1,15 @@
+% witness: 2608.11332 (llncs shape (b): one `\institute`, the authors' `\inst{1}` pick it); the negative of class S
+% oracle:  pdflatex: "Ann Able1 and Bob Baker" / Univ X / ann.able@x.org
+% engines: perl 0.8.8 = 0 errors, Univ X and the address on Ann Able; rust 92a the same, XML and shadow
+% expect:  0 errors, 0 warnings; Univ X Ann Able's only, its address hers (the entry's only carrier and the author it
+%          spells), in the XML and in the shadow reading: the class's `\inst{1}` picks the institute
+% status:  GREEN (92a) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker}
+\institute{Univ X\\ \email{ann.able@x.org}}
+\maketitle
+Text.
+\end{document}

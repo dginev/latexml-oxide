@@ -270,10 +270,14 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
 }}
 
 fn resolve_dump_path(prefer: Option<u32>) -> Option<(std::path::PathBuf, u32)> {{
+  // 0. A dump rebuilt for this TeX tree (`latexml::format_dumps`).
+  if let Some(found) = crate::dump_paths::rebuilt_dump("latex") {{
+    return Some(found);
+  }}
   // 1. Explicit full path override (year inferred from filename if possible).
   if let Ok(p) = std::env::var("LATEXML_DUMP_PATH") {{
     let pb = std::path::PathBuf::from(&p);
-    if pb.is_file() {{
+    if pb.is_file() && crate::dump_paths::dump_file_matches_tree(&pb, "latex") {{
       let year = pb.file_name().and_then(|n| n.to_str())
         .and_then(|n| crate::dump_paths::parse_year_from_dump_filename(n, "latex"))
         .unwrap_or(0);
@@ -285,6 +289,9 @@ fn resolve_dump_path(prefer: Option<u32>) -> Option<(std::path::PathBuf, u32)> {
     if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(
       std::path::Path::new(&dir), "latex", prefer
     ) {{ return Some(found); }}
+  }}
+  if crate::dump_paths::dump_dir_only() {{
+    return None;
   }}
   // 3. Installed layout: <exe_dir>/../resources/dumps/latex.YYYY.dump.txt.
   if let Ok(exe) = std::env::current_exe() {{

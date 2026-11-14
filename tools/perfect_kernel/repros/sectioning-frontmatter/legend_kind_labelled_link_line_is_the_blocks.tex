@@ -1,0 +1,27 @@
+% A labelled link line set as an IEEEtran author block's own `\IEEEauthorblockA{Project website:
+% {\small\href{https://x.org/p}{\textcolor{red}{https://x.org/p}}}}` after the marked entries, which every author holds:
+% the block's URL contact, once, on the block creator (OD #159), its label the contact's name as printed (OD #969's link
+% line with a label: 107c), never an affiliation copied to every author.
+% witness: 2609.03591 (`\IEEEauthorblockA{Project website: {\small\href{…}{\textcolor{linkpink}{…}}}}`, 10 authors),
+%          2502.19820 (`\textbf{Website: } \textbf{\textcolor{magenta}{\href{…}{…}}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A", "2Univ B.", "Project website: https://x.org/p"
+% engines: rust int139a0 = "Project website: https://x.org/p" an affiliation of both authors
+% expect:  0 errors, 0 warnings; Able Univ A, Baker Univ B., the block creator a url contact named "Project website: "
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2}}
+\IEEEauthorblockA{\textsuperscript{1}Univ A\\
+\textsuperscript{2}Univ B.
+\vspace{2pt}
+}
+\IEEEauthorblockA{
+Project website: {\small\href{https://x.org/p}{\textcolor{red}{https://x.org/p}}}
+}}
+\maketitle
+Text.
+\end{document}

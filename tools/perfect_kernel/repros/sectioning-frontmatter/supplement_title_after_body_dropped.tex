@@ -1,0 +1,19 @@
+% witness: 2510.20036 (acl: appendix `\title{Appendix}\maketitle` under a self-disabling `\maketitle`), 2002.09766
+% oracle:  pdflatex 0 errors: "Main Paper Title" only; "Appendix" printed nowhere
+% engines: rust 64f3 = root `<title>Appendix</title>`
+% expect:  0 errors; root `<title>Main Paper Title</title>`; no "Appendix" title
+% status:  RED (64f3) -> GREEN (64d)
+\documentclass{article}
+\makeatletter
+\AtBeginDocument{\def\maketitle{\par\begingroup\centering{\Large\@title\par}\endgroup
+  \let\maketitle\relax\gdef\@title{}}}
+\makeatother
+\title{Main Paper Title}\author{A. Author}
+\begin{document}
+\maketitle
+\begin{abstract}Main abstract text.\end{abstract}
+\section{Intro} Body.
+\title{Appendix}
+\maketitle
+\section{More} Extra.
+\end{document}

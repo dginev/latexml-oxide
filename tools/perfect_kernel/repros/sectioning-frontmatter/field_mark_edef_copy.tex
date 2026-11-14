@@ -1,0 +1,18 @@
+% An `\edef`/`\protected@edef` copy of `\@title` (6 TL files: aguplus, mucproc) carries the stored tokens'
+% field provenance (OXIDIZED_DESIGN #715): the copy printed as a title line is the field's ink and is lifted; the copy in prose is a mention and
+% stays.
+% status:  GREEN at 67int19b by the text-matching dedup (Info `title_ink_dedup`) → GREEN (fms1) by the provenance (Info
+%          `field_ink`, no `title_ink_dedup`).
+% oracle:  pdflatex 0 errors: "Edef Title", "In prose: Edef Title.", "1 Intro Text."
+% expect:  0 errors, 0 warnings; the centered copy gone, "In prose: Edef Title." kept.
+\documentclass{article}
+\makeatletter
+\title{Edef Title}
+\begin{document}
+\edef\copytitle{\@title}
+\protected@edef\pcopytitle{\@title}
+\begin{center}{\Large \copytitle\par}\end{center}
+In prose: \pcopytitle.
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,22 @@
+% witness: review rev79c2 finding 1 (article[twocolumn]: 21 papers / 84 floats of popint70a against the 345pt line)
+% oracle:  pdflatex 0 errors, 0 overfull (\columnwidth 229.5pt, \textwidth 469pt): Figure 1 two rows (2 x 120pt and
+%          4pt of glue over the column), Figure 2 one row (2 x 200pt)
+% engines: rust int75a = one row each (the registers' 345pt line as the column, twice it as the text); Perl 0.8.8 =
+%          Figure 1 one row, Figure 2 two rows (every width against its 345pt `\hsize`)
+% expect:  0 errors, 0 warnings; one `ltx:break` in Figure 1, none in Figure 2; Figure 2 `panelline` 2.044
+% status:  RED (int75a) -> GREEN (79f: article.cls's two-column page, `standard_class_twocolumn_page`)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\begin{document}
+Text.
+\begin{figure}
+\centering
+\rule{120pt}{1cm}\hspace{4pt}\rule{120pt}{1cm}
+\caption{Two 120pt panels in a column.}
+\end{figure}
+\begin{figure*}
+\centering
+\rule{200pt}{1cm}\hspace{4pt}\rule{200pt}{1cm}
+\caption{Two 200pt panels across the page.}
+\end{figure*}
+\end{document}

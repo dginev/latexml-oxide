@@ -1,0 +1,13 @@
+% witness: review 64y round 2 (n6: rotating sideways was unmarked)
+% oracle:  pdflatex 1 error (\color@hbox group of rotating.sty:72)
+% engines: rust 64w 1E+1W -> 64y r2 0E (Info) -> 64y 1E 0W; Perl 3E
+% expect:  1 Error
+% status:  GREEN (64y r3); guard perfect_kernel_batch64y::sideways_closed_by_endgroup_is_an_error
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{rotating}
+\begin{document}
+Intro.
+\begingroup \sideways rotated text\endgroup
+After.
+\end{document}

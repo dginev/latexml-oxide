@@ -1,0 +1,30 @@
+% RED (review rev103a; hep-ph9905377's shape): `Name\rlap{,}{$^{2}$}` splits each name from its mark, so a nameless
+% `$^{2}$` creator stands after Gondolo; `place_address_runs`' one-requester step (the mark's one carrier) runs before
+% the spelled step, so `gondolo@` goes to the `$^{2}$` creator, not Gondolo who spells it (103a; base kept it on
+% Gondolo by call placement). Reordering the steps (spelling before the one requester) runs against
+% FIDELITY_CHARTER §4's placement order (marks before spelling): needs a user ruling.
+% fix:     the name split first (a `\rlap{,}` + mark after a name is the name's mark); or a ruling on the step order.
+% witness: hep-ph9905377
+% oracle:  pdflatex 0 errors: "Graciela Gelmini,1 Paolo Gondolo,2 Gabriele Varieschi1"
+% engines: rust int130a = entry 1 and both addresses on the `$^1$` creator, gondolo@ on Gondolo; rust 103a = entries
+%          on Gelmini, Gondolo, Varieschi, gelmini@/variesch@ on their authors, gondolo@ on the `$^2$` creator
+% expect:  0 errors, 0 warnings; three creators, each with their entry and their own address
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Graciela Gelmini\rlap{,}{$^{1}$} Paolo Gondolo\rlap{,}{$^{2}$}
+Gabriele Varieschi$^{1}$}
+\address{
+${}^{1}$ Dept. of Physics, UCLA\\
+Los Angeles CA 90095, USA\\
+{\rm gelmini,variesch@physics.ucla.edu}
+\\~\\
+${}^{2}$ Max-Planck-Institut f\"ur Physik\\
+M\"unchen, Germany\\
+{\rm gondolo@mppmu.mpg.de}
+}
+\maketitle
+Text.
+\end{document}

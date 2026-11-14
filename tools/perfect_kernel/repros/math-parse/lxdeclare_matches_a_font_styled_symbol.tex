@@ -1,0 +1,12 @@
+% witness: 57ai review side finding: `\lxDeclare[role=OPERATOR]{$\mathcal{D}$}` has no effect, where the same
+%          declaration of a plain `D` does; Perl matches the declared pattern with its font (`D@(u)`)
+% oracle:  Perl 0 errors: `D@(u)` for `$\mathcal{D} u$` (and `D@(u)` for `$D u$`)
+% engines: rust 57ah2 `D * u` for `$\mathcal{D} u$`, `D@(u)` for `$D u$`; RUST-ONLY
+% expect:  0 errors; `\mathcal{D} u` applies the declared operator
+% status:  RED (57ai)
+\documentclass{article}
+\usepackage{latexml}
+\begin{document}
+\lxDeclare[role=OPERATOR]{$\mathcal{D}$}\lxDeclare[role=OPERATOR]{$D$}
+$\mathcal{D} u$ $D u$
+\end{document}

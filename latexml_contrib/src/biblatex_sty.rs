@@ -1,126 +1,1134 @@
+use latexml_engine::bibtex::{BibEntry, register_entry, resolve_entry_type};
 use latexml_package::prelude::*;
 
-// === biblatex .bbl entry-pipeline helpers ===
-// Mirror Perl ar5iv-bindings/biblatex.sty.ltxml entry/endentry/name/list/field
-// closures (L127-340). The .bbl file emits \entry{key}{type}{} … \endentry per
-// reference; between them \field/\strng/\list/\name records metadata into the
-// `biblatex_entry` HashStored, and \endentry flushes a `\bibitem[label]{key}
-// authors. \newblock title. \newblock In: journal. year, pages.` token stream
-// onto `rebuilt_bibtex_variant`. The list-end macros (\enddatalist etc.) wrap
-// the accumulated variant in `\thebibliography{count}…\endthebibliography`.
+// === biblatex .bbl reader ===
+// biber writes each entry of a `.bbl` as `\entry{key}{type}{options}` …
+// `\endentry`, its data in `\field`/`\list`/`\name`/`\verb`/`\keyw` records
+// and its truncated name lists as `\true{more<list>}` (biblatex.sty:7862-8360
+// the record definitions, :8681 `\blx@bbl@entry`). The records are read back
+// into the BibTeX entry they came from ([`BblEntry`]): the fields of
+// biblatex's data model (blx-dm.def:473-634) under their own names, the date
+// parts rejoined into the dates, the name and literal lists into BibTeX's
+// "and" lists. Each entry is then digested by the BibTeX reader
+// (`\ProcessBibTeXEntry`, bibtex.rs), so a `.bbl` yields the same
+// `ltx:bibentry` as the `.bib` it was made from, and MakeBibliography formats
+// the two alike. What biber adds is kept where biblatex prints it: the list
+// order (biber applied the style's sorting, `sort='false'` on the
+// bibliography) and the alphabetic label (`labelalpha`, `extraalpha`;
+// alphabetic.bbx:22-25). The rest of biber's records — hashes, sort keys,
+// `extra*` counters, `\range` — only drive biblatex's typesetting and are
+// dropped. Beyond Perl: the ar5iv binding (biblatex.sty.ltxml:495-690
+// `\entry`/`\endentry`, :705 `\name`, :821-842 `\verb`) rebuilds a
+// `\bibitem` per entry from a dozen fields, dropping the rest, and suffixes
+// colliding labels itself where biber's `extraalpha` now does (its
+// z-wraparound, arXiv 1212.4446). Witnesses arXiv 2605.08378, 2605.10053,
+// 2605.11417, 2605.14864, 2605.18215, 2605.21199, 2605.28832.
 
-fn bib_entry_get() -> SymHashMap<Stored> {
-  match lookup_value("biblatex_entry") {
-    Some(Stored::HashStored(map)) => map,
-    _ => SymHashMap::default(),
+/// One `.bbl` entry being read, between `\entry` and `\endentry`.
+#[derive(Clone)]
+struct BblEntry {
+  key:        String,
+  entry_type: String,
+  /// Whether the bibliography lists it: not when its options say `skipbib`
+  /// or `dataonly` (biblatex.sty:8715-8717; biber's clones of related
+  /// entries are `dataonly`).
+  listed:     bool,
+  /// Whether it takes a label number: not when its options say `skiplab` or
+  /// `dataonly` (biblatex.sty:8725 `blx@skiplab`, :16266).
+  labelled:   bool,
+  /// BibTeX fields in record order: `(name, BibTeX source)`.
+  fields:     Vec<(String, String)>,
+  /// The date parts (`year`, `urlmonth`, `eventendday`, …), rejoined into
+  /// the dates at `\endentry` ([`bbl_date`]).
+  date_parts: Vec<(String, String)>,
+  /// The lists biber marks as cut short (`\true{moreauthor}`): they end in
+  /// BibTeX's "and others".
+  more:       Vec<String>,
+}
+
+/// The datalists of the refsection being read (biblatex.sty:9280-9287
+/// `\blx@bbl@dlist[type]{name}`) and the entries it prints.
+#[derive(Clone, Default)]
+struct BblDatalists {
+  /// The datalist being read: its type (`entry`; `list` for a biblist, the
+  /// shorthands of `\printshorthands`) and its name.
+  kind:       String,
+  name:       String,
+  /// Its entries, as each `\endentry` is read.
+  keys:       Vec<String>,
+  /// Its entries that take a label number, in order ([`BblList::numbered`]).
+  numbered:   Vec<String>,
+  /// The datalist the refsection prints ([`bbl_end_datalist`]).
+  print:      Option<BblList>,
+  /// What `\printbibliography`'s entry filters select on ([`bbl_filter`]), for
+  /// each entry of an entry datalist: biblatex's per-refsection type, subtype
+  /// and keyword lists (biblatex.sty:8707-8711 `blx@type@`/`blx@subt@`, only
+  /// for `entry` datalists; :8385-8390 `blx@keyw@`).
+  meta:       std::collections::HashMap<String, BblMeta>,
+  /// The refsection being read (`\refsection{<n>}`, biblatex.sty:8634-8636);
+  /// none outside one (an old `.bbl`).
+  refsection: Option<i64>,
+}
+
+/// The datalist a refsection prints ([`bbl_end_datalist`]).
+#[derive(Clone, Default)]
+struct BblList {
+  /// The entries it lists, in its order.
+  keys:       Vec<String>,
+  /// The entries that take a label number, in its order: biblatex numbers
+  /// each entry of a datalist as it reads the `.bbl` (biblatex.sty:8891-8923
+  /// `\blx@bbl@labelnumber`, a per-refsection counter reset at each datalist's
+  /// end, :9285-9287) — every entry but a `skiplab`/`dataonly` one or one with
+  /// a `shorthand`, a `skipbib` entry included — so with
+  /// `defernumbers=false` an entry has one number in every list
+  /// ([`bbl_print`]).
+  numbered:   Vec<String>,
+  /// Whether it is the default refcontext's.
+  is_default: bool,
+}
+
+/// One `.bbl` read by a `\printbibliography` ([`bbl_flush`]): the lists of
+/// the refsections it does not print, kept in case the `.bbl` holds none of
+/// its own, and whether it held its own.
+#[derive(Clone, Default)]
+struct BblRead {
+  foreign: Vec<Token>,
+  own:     bool,
+}
+
+/// One entry's entry type, `entrysubtype` and keywords (`\keyw`, split on
+/// commas and trimmed as `\forcsvlist` does).
+#[derive(Clone)]
+struct BblMeta {
+  entry_type: String,
+  subtype:    Option<String>,
+  keywords:   Vec<String>,
+}
+
+// (biblatex's own are global macros and lists; bound as they are, a rollback puts these back: `DocumentState`)
+/// The entry the `.bbl` is reading; replaced at every `\entry`, taken at its `\endentry`.
+static BBL_ENTRY: DocumentState<Option<BblEntry>> = DocumentState::new("biblatex_bbl_entry");
+/// The refsection's datalists; emptied by [`bbl_flush`] and at package load.
+static BBL_DATALISTS: DocumentState<BblDatalists> = DocumentState::new("biblatex_bbl_datalists");
+/// The `.bbl` read of the current `\printbibliography`; emptied by the last flush of the read and at package load.
+static BBL_READ: DocumentState<BblRead> = DocumentState::new("biblatex_bbl_read");
+/// biblatex's document-wide bibliography state; emptied at package load.
+static BLX: DocumentState<BlxState> = DocumentState::new("biblatex_state");
+
+/// What the binding keeps of biblatex's document-wide state for
+/// `\printbibliography`'s category filters and headings.
+#[derive(Clone, Default)]
+struct BlxState {
+  /// The bibliography categories in declaration order and the keys filed in
+  /// each (biblatex.sty:11207-11244: the global `\blx@categories` and
+  /// `blx@catg@<category>` lists).
+  categories: Vec<(String, Vec<String>)>,
+  /// What the hooks and bibmacros the binding never runs were given
+  /// ([`def_discarded_hook`]): an `\addtocategory` there files keys the
+  /// binding cannot know ([`blx_unmodelled_categories`]).
+  hooks:      Vec<Tokens>,
+  /// `\defbibheading{<name>}[<title>]{<code>}` (biblatex.sty:9362-9368): the
+  /// heading's default title and its code ([`blx_heading_title`]).
+  headings:   std::collections::HashMap<String, (Tokens, Tokens)>,
+  /// Whether a list left out an entry of its datalist (a filter dropped it, or
+  /// a category decides it at the end of the document): the refsections'
+  /// entries no list printed are then built hidden at the end
+  /// ([`blx_unprinted_bibliography`]).
+  filtered:   bool,
+  /// The categories whose unapplied filter was reported (once each).
+  reported:   std::collections::HashSet<String>,
+  /// The entries each refsection's lists printed, as the lists are digested
+  /// (`\biblatex@printed`, `\biblatex@select`): the hidden list holds the
+  /// others ([`bbl_print`]).
+  printed:    std::collections::HashSet<(i64, String)>,
+  /// The data the `.bbl` gave each entry of a list filtered by categories, by
+  /// refsection: the entry is built at the end ([`bbl_print`]), when a later
+  /// refsection's read may have replaced the key's data.
+  snapshots:  std::collections::HashMap<(i64, String), BibEntry>,
+  /// Where each deferred entry of such a list stands (`\biblatex@defer@entry`): its bibliography's id
+  /// (`\the@lx@bibliography@ID`, the prefix of the entry's `xml:id`) and the font, restored when it is built at the end
+  /// (`\biblatex@entry@context`); and the bibliography whose entries are being built there.
+  contexts:   Vec<(String, Option<Stored>)>,
+  context:    Option<String>,
+  /// `defernumbers=true`: each refsection's last label number and the number
+  /// each entry got, assigned as the bibliography is built, in print order
+  /// (biblatex.sty:9216-9283 `\blx@addlabelnumber`).
+  deferred:   std::collections::HashMap<i64, (u32, std::collections::HashMap<String, u32>)>,
+}
+
+/// The fields of biblatex's default data model (blx-dm.def:473-634) that a
+/// `.bbl` carries as `\field` and `\verb` records — every field and verbatim
+/// field, less the `skipout` ones biber never writes. The `date` fields come as
+/// parts ([`BBL_DATES`]). `labelalpha` and `extraalpha` are biber's own: the
+/// label an alphabetic style prints (alphabetic.bbx:22-25), which
+/// MakeBibliography prints too.
+const BBL_FIELDS: &[&str] = &[
+  "sortyear",
+  "volume",
+  "volumes",
+  "abstract",
+  "addendum",
+  "annotation",
+  "booksubtitle",
+  "booktitle",
+  "booktitleaddon",
+  "chapter",
+  "edition",
+  "eid",
+  "entrysubtype",
+  "eprintclass",
+  "eprinttype",
+  "eventtitle",
+  "eventtitleaddon",
+  "gender",
+  "howpublished",
+  "indexsorttitle",
+  "indextitle",
+  "isan",
+  "isbn",
+  "ismn",
+  "isrn",
+  "issn",
+  "issue",
+  "issuesubtitle",
+  "issuetitle",
+  "issuetitleaddon",
+  "iswc",
+  "journalsubtitle",
+  "journaltitle",
+  "journaltitleaddon",
+  "label",
+  "langid",
+  "langidopts",
+  "library",
+  "mainsubtitle",
+  "maintitle",
+  "maintitleaddon",
+  "nameaddon",
+  "note",
+  "number",
+  "origtitle",
+  "pagetotal",
+  "part",
+  "relatedstring",
+  "relatedtype",
+  "reprinttitle",
+  "series",
+  "shorthandintro",
+  "subtitle",
+  "title",
+  "titleaddon",
+  "usera",
+  "userb",
+  "userc",
+  "userd",
+  "usere",
+  "userf",
+  "venue",
+  "version",
+  "shorthand",
+  "shortjournal",
+  "shortseries",
+  "shorttitle",
+  "authortype",
+  "editoratype",
+  "editorbtype",
+  "editorctype",
+  "editortype",
+  "bookpagination",
+  "nameatype",
+  "namebtype",
+  "namectype",
+  "pagination",
+  "pubstate",
+  "type",
+  "crossref",
+  "xref",
+  "related",
+  "keywords",
+  "pages",
+  "execute",
+  "doi",
+  "eprint",
+  "file",
+  "verba",
+  "verbb",
+  "verbc",
+  "url",
+  "labelalpha",
+  "extraalpha",
+];
+
+/// The literal lists of the data model (blx-dm.def:552-564, :604).
+const BBL_LISTS: &[&str] = &[
+  "institution",
+  "lista",
+  "listb",
+  "listc",
+  "listd",
+  "liste",
+  "listf",
+  "location",
+  "organization",
+  "origlocation",
+  "origpublisher",
+  "publisher",
+  "language",
+  "origlanguage",
+];
+
+/// The name lists of the data model (blx-dm.def:566-586).
+const BBL_NAMES: &[&str] = &[
+  "afterword",
+  "annotator",
+  "author",
+  "bookauthor",
+  "commentator",
+  "editor",
+  "editora",
+  "editorb",
+  "editorc",
+  "foreword",
+  "holder",
+  "introduction",
+  "namea",
+  "nameb",
+  "namec",
+  "translator",
+  "shortauthor",
+  "shorteditor",
+];
+
+/// The date fields of the data model (blx-dm.def:610-614) by the prefix of
+/// the parts biber writes for them: `year`/`month`/`day` and their `end*`
+/// forms (`urlyear`, `eventendday`, …).
+const BBL_DATES: &[(&str, &str)] = &[
+  ("", "date"),
+  ("event", "eventdate"),
+  ("orig", "origdate"),
+  ("url", "urldate"),
+];
+
+/// Run `f` on the entry being read, if any.
+fn with_bbl_entry(f: impl FnOnce(&mut BblEntry)) {
+  BBL_ENTRY.update(|slot| {
+    if let Some(entry) = slot.as_mut() {
+      f(entry);
+    }
+  });
+}
+
+/// The BibTeX source of a `.bbl` value: its tokens as TeX, with biber's range
+/// markup read back — `\bibrangedash` is the `--` and `\bibrangessep` the
+/// ", " of a `pages` range list (biber writes "1\bibrangedash 10\bibrangessep
+/// 15" for "1--10, 15").
+fn bbl_source(value: Tokens) -> String {
+  bbl_replace_macros(&value.untex(), &[
+    ("bibrangedash", "--"),
+    ("bibrangessep", ", "),
+  ])
+}
+
+/// Replace the named control words of `text` (with the space that ends one).
+fn bbl_replace_macros(text: &str, macros: &[(&str, &str)]) -> String {
+  let mut out = String::with_capacity(text.len());
+  let mut rest = text;
+  while let Some(at) = rest.find('\\') {
+    out.push_str(&rest[..at]);
+    let tail = &rest[at + 1..];
+    let len = tail
+      .find(|c: char| !c.is_ascii_alphabetic())
+      .unwrap_or(tail.len());
+    match macros.iter().find(|(name, _)| *name == &tail[..len]) {
+      Some((_, replacement)) if len > 0 => {
+        out.push_str(replacement);
+        rest = &tail[len..];
+        rest = rest.strip_prefix(' ').unwrap_or(rest);
+      },
+      _ => {
+        out.push('\\');
+        rest = tail;
+      },
+    }
+  }
+  out.push_str(rest);
+  out
+}
+
+/// A part of a name as BibTeX source: biblatex's delimiters (biblatex.def
+/// `\bibnamedelima`-`d`, `\bibnamedelimi`, `\bibinitdelim`) are the spaces the
+/// `.bib` had.
+fn bbl_name_part(part: &str) -> String {
+  let text = bbl_replace_macros(part, &[
+    ("bibnamedelima", " "),
+    ("bibnamedelimb", " "),
+    ("bibnamedelimc", " "),
+    ("bibnamedelimd", " "),
+    ("bibnamedelimi", " "),
+    ("bibinitdelim", " "),
+    ("bibinithyphendelim", "-"),
+    ("bibinitperiod", "."),
+  ]);
+  text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// One name as BibTeX writes it, "von Last, Jr, First": the comma forms keep
+/// a many-word family name one last name. A name with no given part is
+/// braced when it has several words, so none of them reads as a first name.
+fn bbl_bibtex_name(given: &str, prefix: &str, family: &str, suffix: &str) -> String {
+  let family =
+    if given.is_empty() && suffix.is_empty() && family.contains(' ') && !family.starts_with('{') {
+      format!("{{{family}}}")
+    } else {
+      family.to_string()
+    };
+  let last = if prefix.is_empty() {
+    family
+  } else {
+    format!("{prefix} {family}")
+  };
+  match (suffix.is_empty(), given.is_empty()) {
+    (true, true) => last,
+    (true, false) => format!("{last}, {given}"),
+    (false, _) => format!("{last}, {suffix}, {given}"),
   }
 }
 
-fn bib_entry_save(map: SymHashMap<Stored>) {
-  assign_value(
-    "biblatex_entry",
-    Stored::HashStored(map),
-    Some(Scope::Global),
-  );
+/// The top-level `{…}` groups of `tokens`, spaces between them skipped.
+fn bbl_groups(tokens: &[Token]) -> Vec<Vec<Token>> {
+  let mut groups = Vec::new();
+  let mut i = 0usize;
+  while i < tokens.len() {
+    if tokens[i].code != Catcode::BEGIN {
+      i += 1;
+      continue;
+    }
+    i += 1;
+    let mut depth = 1usize;
+    let mut group = Vec::new();
+    while i < tokens.len() {
+      match tokens[i].code {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            break;
+          }
+        },
+        _ => {},
+      }
+      group.push(tokens[i]);
+      i += 1;
+    }
+    i += 1;
+    groups.push(group);
+  }
+  groups
 }
 
-fn bib_entry_set_tokens(name: &str, val: Tokens) {
-  let mut entry = bib_entry_get();
-  entry.insert(name, Stored::Tokens(val));
-  bib_entry_save(entry);
+/// A `.bbl` date, rejoined from biber's parts as biblatex's ISO form
+/// "YYYY-MM-DD", a range "…/…" (an empty end year is an open range).
+fn bbl_date(parts: &[(String, String)], prefix: &str) -> Option<String> {
+  let get = |part: &str| {
+    let name = format!("{prefix}{part}");
+    parts
+      .iter()
+      .find(|(key, _)| *key == name)
+      .map(|(_, value)| value.as_str())
+  };
+  let one = |year: &str, month: Option<&str>, day: Option<&str>| {
+    let mut date = year.to_string();
+    if let Some(month) = month.filter(|m| !m.is_empty()) {
+      date.push_str(&format!("-{month:0>2}"));
+      if let Some(day) = day.filter(|d| !d.is_empty()) {
+        date.push_str(&format!("-{day:0>2}"));
+      }
+    }
+    date
+  };
+  let mut date = one(get("year")?, get("month"), get("day"));
+  if let Some(end) = get("endyear") {
+    date.push('/');
+    if !end.is_empty() {
+      date.push_str(&one(end, get("endmonth"), get("endday")));
+    }
+  }
+  Some(date)
 }
 
-fn bib_entry_get_tokens(map: &SymHashMap<Stored>, name: &str) -> Option<Tokens> {
-  map.get(name).and_then(|s| match s {
-    Stored::Tokens(t) => Some(t.clone()),
-    _ => None,
+/// Whether a datalist is the one `\printbibliography` prints: the default
+/// refcontext's, `<sorting>/global//global/global[/global]` — every template
+/// after the sorting scheme `global`, no label prefix. biber writes another
+/// for each further refcontext (biblatex-apa's `nyt/apasortcite//…` sorts
+/// citations).
+fn bbl_default_datalist(name: &str) -> bool {
+  name
+    .split('/')
+    .skip(1)
+    .all(|part| part.is_empty() || part == "global")
+}
+
+/// End of a datalist: its entries are the ones the refsection prints if it is
+/// the first entry datalist, or the first of the default refcontext
+/// ([`bbl_default_datalist`]). A biblist (`[list]`) or an empty list is not.
+fn bbl_end_datalist() {
+  BBL_DATALISTS.update(|lists| {
+    let keys = std::mem::take(&mut lists.keys);
+    let numbered = std::mem::take(&mut lists.numbered);
+    let kind = std::mem::take(&mut lists.kind);
+    let is_default = bbl_default_datalist(&std::mem::take(&mut lists.name));
+    if kind == "list" || keys.is_empty() {
+      return;
+    }
+    let list = BblList { keys, numbered, is_default };
+    match &lists.print {
+      None => lists.print = Some(list),
+      Some(BblList { is_default: false, .. }) if is_default => lists.print = Some(list),
+      Some(_) => {},
+    }
+  });
+}
+
+/// The bibliography of the refsection read so far: a `ltx:bibliography` of
+/// the chosen datalist's entries ([`bbl_end_datalist`]; entries outside any
+/// datalist, in an old `.bbl`, are one list), each digested by the BibTeX
+/// reader, narrowed by the `\printbibliography`'s filters ([`bbl_print`]).
+/// Resets the refsection's state.
+///
+/// biblatex prints the list of one refsection, the current one or `section=`'s
+/// (biblatex.sty:9827 `\blx@tempe`, :9494): a `.bbl` refsection of another
+/// number is kept back, and printed only if the read (`last`, the flush after
+/// the `.bbl`) found none of its own — a numbering the binding does not model
+/// (refsections opened at headings, [`blx_target_refsection`]) prints them
+/// all, as every refsection's list printed before.
+fn bbl_flush(last: bool) -> Tokens {
+  bbl_end_datalist();
+  BBL_ENTRY.update(|entry| *entry = None);
+  let lists = BBL_DATALISTS.update(std::mem::take);
+  let own = match (lists.refsection, blx_target_refsection()) {
+    (Some(read), Some(target)) => read == target,
+    _ => true,
+  };
+  let printed = lists.refsection.is_some() || lists.print.is_some();
+  let tokens = match lists.print {
+    Some(list) => bbl_print(list, &lists.meta, lists.refsection.unwrap_or(0)),
+    None => Vec::new(),
+  };
+  BBL_READ.update(|read| {
+    let mut out = Vec::new();
+    // The hidden list of the entries no list printed ([`blx_unprinted_bibliography`]) holds every refsection's.
+    if own || lookup_bool("biblatex_unprinted_mode") {
+      read.own |= printed;
+      out = tokens;
+    } else {
+      read.foreign.extend(tokens);
+    }
+    if last {
+      let read = std::mem::take(read);
+      if !read.own {
+        out.extend(read.foreign);
+      }
+    }
+    Tokens::new(out)
   })
 }
 
-fn bib_state_int(key: &str) -> i64 {
-  match lookup_value(key) {
-    Some(Stored::Int(n)) => n,
-    _ => 0,
+/// One refsection's list as `\printbibliography` prints it: the entries its
+/// filters keep ([`bbl_filter`]), after biblatex's messages. An empty list is
+/// biblatex's "Empty bibliography" and no `ltx:bibliography`, not even its
+/// heading (biblatex.sty:9866-9868). Its `lists` is its refsection's
+/// ([`blx_refsection_list`]), which its citations name.
+///
+/// No entry is digested that the list does not keep. A list filtered by
+/// categories, which the whole document fills ([`blx_selected`]), defers each
+/// entry until the document is digested (`\biblatex@defer@entry`, the
+/// deferred-print list `biblatex@category`, resolved at the end by
+/// `\biblatex@resolve@categories`): `\biblatex@select` then builds it in its
+/// place if it passes, from the data the `.bbl` gave it here
+/// ([`BlxState::snapshots`]), with its bibliography's id prefix and font
+/// ([`BlxState::contexts`]); the list is `\biblatex@if@selected[list]`, built
+/// if one of its entries passes.
+///
+/// Each entry carries its label number (`\biblatex@bbl@number`, the
+/// `labelnumber` field MakeBibliography numbers it by): its place among the
+/// datalist's numbered entries ([`BblList::numbered`]), the same in every list
+/// of the refsection, as biblatex numbers with `defernumbers=false` — or, with
+/// `defernumbers=true`, the next number of the refsection when it is first
+/// built, which `resetnumbers=` resets (biblatex.sty:9759-9765). An author-year
+/// style numbers nothing. A list that leaves out an entry of the datalist marks
+/// the document [`BlxState::filtered`]. The entries a list prints are recorded
+/// as it is digested (`\biblatex@printed`, `\biblatex@select`).
+///
+/// The hidden list of the entries no list printed (`biblatex_unprinted_mode`,
+/// [`blx_unprinted_bibliography`]), read after every list, applies no filter
+/// and holds the refsection's entries no list printed ([`BlxState::printed`]),
+/// numbered as the refsection's — or 0, an entry `defernumbers=true` never
+/// numbered (:8898-8909).
+fn bbl_print(
+  list: BblList,
+  meta: &std::collections::HashMap<String, BblMeta>,
+  refsection: i64,
+) -> Vec<Token> {
+  let unprinted = lookup_bool("biblatex_unprinted_mode");
+  let numbers: std::collections::HashMap<String, usize> = list
+    .numbered
+    .into_iter()
+    .enumerate()
+    .map(|(n, key)| (key, n + 1))
+    .collect();
+  let mut keys = list.keys;
+  let (mut tokens, categories) = if unprinted {
+    BLX.read(|blx| {
+      keys.retain(|key| !blx.printed.contains(&(refsection, key.clone())));
+    });
+    (Vec::new(), Vec::new())
+  } else {
+    let datalist = keys.len();
+    let filtered = bbl_filter(&mut keys, meta);
+    if keys.len() < datalist || !filtered.1.is_empty() {
+      BLX.update(|blx| blx.filtered = true);
+    }
+    filtered
+  };
+  if keys.is_empty() {
+    if !unprinted {
+      tokens.extend(TokenizeInternal!(r"\@latex@warning{Empty bibliography}").unlist());
+    }
+    return tokens;
   }
-}
-
-fn bib_state_set_int(key: &str, value: i64) {
-  assign_value(key, Stored::Int(value), Some(Scope::Global));
-}
-
-fn bib_variant_push(toks: Vec<Token>) {
-  let mut acc: Vec<Token> = match lookup_value("rebuilt_bibtex_variant") {
-    Some(Stored::Tokens(t)) => t.unlist(),
-    _ => Vec::new(),
-  };
-  acc.extend(toks);
-  assign_value(
-    "rebuilt_bibtex_variant",
-    Stored::Tokens(Tokens::new(acc)),
-    Some(Scope::Global),
-  );
-}
-
-fn bib_as_thebibliography() -> Tokens {
-  let variant: Vec<Token> = match lookup_value("rebuilt_bibtex_variant") {
-    Some(Stored::Tokens(t)) => t.unlist(),
-    _ => return Tokens::default(),
-  };
-  if variant.is_empty() {
-    return Tokens::default();
+  assign_value("BIBSTYLE", pin(blx_bibstyle()), Some(Scope::Global));
+  let selected = !categories.is_empty();
+  if selected {
+    assign_value(
+      "biblatex_selected_by",
+      Stored::Strings(categories.iter().map(pin).collect()),
+      None,
+    );
   }
-  // Reset variant and entry-count so re-invocation is idempotent (matches
-  // Perl L113-115).
-  assign_value(
-    "rebuilt_bibtex_variant",
-    Stored::Tokens(Tokens::default()),
-    Some(Scope::Global),
-  );
-  let count = bib_state_int("biblatex_entry_count");
-  bib_state_set_int("biblatex_entry_count", 0);
-  let preamble: Vec<Token> = match lookup_value("biblatex_preamble") {
-    Some(Stored::Tokens(t)) => t.unlist(),
-    _ => Vec::new(),
+  let deferred = lookup_bool("biblatex_defernumbers");
+  let number = |key: &str| -> String {
+    let n = if blx_is_authoryear() {
+      None
+    } else if deferred {
+      Some("defer".to_string())
+    } else {
+      numbers.get(key).map(usize::to_string)
+    };
+    s!(
+      "{}:{refsection}{}",
+      n.as_deref().unwrap_or("none"),
+      if unprinted { ":hidden" } else { "" }
+    )
   };
-  let mut result: Vec<Token> = Vec::with_capacity(variant.len() + 16);
-  result.push(T_CS!("\\thebibliography"));
-  result.push(T_BEGIN!());
-  result.extend(preamble);
-  result.extend(ExplodeText!(&count.to_string()));
-  result.push(T_END!());
-  result.extend(variant);
-  result.push(T_CS!("\\endthebibliography"));
-  Tokens::new(result)
-}
-
-/// Perl `$fullname =~ s/\\\w+|[}{]//g` (ar5iv biblatex.sty.ltxml L324):
-/// strip leftover control sequences (`\bibinitperiod`, …) and braces from a
-/// name fragment, then trim. `\w` is Perl-ASCII (`[A-Za-z0-9_]`) — a backslash
-/// NOT followed by a word char (e.g. the `\"` of an accent) is preserved, as
-/// in Perl.
-fn bib_clean_name(s: &str) -> String {
-  let mut out = String::with_capacity(s.len());
-  let mut chars = s.chars().peekable();
-  while let Some(ch) = chars.next() {
-    if ch == '\\' {
-      if chars
-        .peek()
-        .is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_')
-      {
-        while chars
-          .peek()
-          .is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_')
-        {
-          chars.next();
-        }
-      } else {
-        out.push(ch);
+  let group = |tokens: &mut Vec<Token>, text: &str| {
+    tokens.push(T_BEGIN!());
+    tokens.extend(Explode!(text));
+    tokens.push(T_END!());
+  };
+  let mut list = Vec::new();
+  if !selected && !unprinted {
+    list.push(T_CS!("\\biblatex@printed"));
+    group(&mut list, &refsection.to_string());
+    group(&mut list, &keys.join(","));
+  }
+  list.push(T_CS!("\\biblatex@bbl@thebibliography"));
+  group(
+    &mut list,
+    &blx_refsection_list(refsection).unwrap_or_default(),
+  );
+  if deferred
+    && !unprinted
+    && let Some(reset) = lookup_value("biblatex_print_reset")
+  {
+    list.push(T_CS!("\\biblatex@reset@numbers"));
+    group(&mut list, &refsection.to_string());
+    group(&mut list, &reset.to_string());
+  }
+  let by = categories.join(",");
+  for key in &keys {
+    let mut entry = vec![T_CS!("\\ProcessBibTeXEntry")];
+    group(&mut entry, key);
+    entry.push(T_CS!("\\biblatex@bbl@number"));
+    group(&mut entry, key);
+    group(&mut entry, &number(key));
+    if selected {
+      if let Some(data) = latexml_engine::bibtex::lookup_entry(key) {
+        let data = data.borrow().clone();
+        BLX.update(|blx| blx.snapshots.insert((refsection, key.clone()), data));
       }
-    } else if ch != '{' && ch != '}' {
-      out.push(ch);
+      // Deferred as the list is digested (`\biblatex@defer@entry`): a list of another refsection the read keeps back
+      // ([`bbl_flush`]) defers nothing unless it is printed.
+      list.push(T_CS!("\\biblatex@defer@entry"));
+      group(&mut list, &by);
+      group(&mut list, &refsection.to_string());
+      group(&mut list, key);
+      list.push(T_BEGIN!());
+      list.extend(entry);
+      list.push(T_END!());
+    } else {
+      list.extend(entry);
     }
   }
-  out.trim().to_string()
+  list.push(T_CS!("\\endthebibliography"));
+  if selected {
+    tokens.push(T_CS!("\\biblatex@if@selected"));
+    tokens.extend(Explode!("[list]"));
+    group(&mut tokens, &keys.join(","));
+    tokens.push(T_BEGIN!());
+    tokens.extend(list);
+    tokens.push(T_END!());
+  } else {
+    tokens.extend(list);
+  }
+  tokens
+}
+
+/// The `lists` of a refsection's bibliography and the `inlist` of its citations (`CITE_UNIT`): `refsection<n>`, so a
+/// citation resolves to its own refsection's entry, where another refsection lists the key too (biblatex: a
+/// `\cite` in refsection <n> refers to that refsection's entry, numbered in its list; probe r1, arXiv 2308.00515).
+/// None for refsection 0, the default list, which a citation falls back to (CrossRef), and where refsections open at
+/// headings (`refsection=chapter`, [`blx_record_refsection`]), whose numbers the binding does not count: there every
+/// list and citation is the default one's (arXiv 2406.01695).
+fn blx_refsection_list(refsection: i64) -> Option<String> {
+  (refsection > 0 && !lookup_bool("biblatex_auto_refsections"))
+    .then(|| s!("refsection{refsection}"))
+}
+
+/// A `\printbibliography` entry filter (biblatex.sty:9526-9615): what it
+/// selects on, whether it is the `not…` form, and its value.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BlxField {
+  Type,
+  Subtype,
+  Keyword,
+  Category,
+}
+
+impl BlxField {
+  /// The field and negation a filter key names (`notkeyword`).
+  fn of(key: &str) -> Option<(Self, bool)> {
+    let (negated, name) = key
+      .strip_prefix("not")
+      .map_or((false, key), |name| (true, name));
+    let field = match name {
+      "type" => Self::Type,
+      "subtype" => Self::Subtype,
+      "keyword" => Self::Keyword,
+      "category" => Self::Category,
+      _ => return None,
+    };
+    Some((field, negated))
+  }
+
+  fn key(self) -> &'static str {
+    match self {
+      Self::Type => "type",
+      Self::Subtype => "subtype",
+      Self::Keyword => "keyword",
+      Self::Category => "category",
+    }
+  }
+
+  /// The word biblatex's "… not found" warning names it by.
+  fn label(self) -> &'static str {
+    match self {
+      Self::Type => "Type",
+      Self::Subtype => "Subtype",
+      Self::Keyword => "Keyword",
+      Self::Category => "Category",
+    }
+  }
+}
+
+/// `\printbibliography`'s entry filters (biblatex.sty:9526-9615), stored in
+/// its group by `\biblatex@print@filter` in the order given — a key given
+/// twice is two filters — narrow the list in place, each in turn (AND),
+/// keeping its order. `type`/`subtype`/`keyword`/`category` keep the entries
+/// that have the value; a value no entry has (a category never declared) is
+/// biblatex's warning and empties the list. `nottype`/… drop them; an unknown
+/// value drops nothing. `type` and `subtype` share one toggle (`blx@tempb`,
+/// :9532-9541, :9557-9566): the second of them is biblatex's error "'…' used
+/// multiple times" and empties the list. Witness arXiv 2406.00136
+/// (`keyword=alph` / `notkeyword=alph`), 2406.11014 (`keyword=author,
+/// keyword=latent`).
+///
+/// A category's keys are the document's: biblatex files them through the
+/// `.aux`, so pdflatex prints each list with the categories as the whole
+/// previous run left them (:11226-11242). Category filters are returned to be
+/// decided once the whole document is digested ([`blx_selected`], each entry
+/// deferred by [`bbl_print`]); one a hook the binding never runs fills
+/// ([`blx_unmodelled_categories`]) is not applied (an Info names it). Returns
+/// biblatex's messages and the category filters (`+name`, `-name`).
+fn bbl_filter(
+  keys: &mut Vec<String>,
+  meta: &std::collections::HashMap<String, BblMeta>,
+) -> (Vec<Token>, Vec<String>) {
+  let mut messages = Vec::new();
+  let mut categories = Vec::new();
+  let mut typed = false;
+  // Scanned only for a category filter, once per list.
+  let mut unmodelled: Option<BlxUnmodelled> = None;
+  for (field, negated, value) in blx_filters() {
+    let have: Option<std::collections::HashSet<&str>> = match field {
+      BlxField::Category => {
+        if !blx_category_declared(&value) {
+          None
+        } else if unmodelled
+          .get_or_insert_with(blx_unmodelled_categories)
+          .covers(&value)
+        {
+          if BLX.update(|blx| blx.reported.insert(value.clone())) {
+            Info!(
+              "ignore",
+              "\\printbibliography",
+              s!(
+                "category '{value}' is filled by a hook the binding does not run: its filter is not applied"
+              )
+            );
+          }
+          continue;
+        } else {
+          categories.push(s!("{}{value}", if negated { '-' } else { '+' }));
+          continue;
+        }
+      },
+      _ => {
+        let have: std::collections::HashSet<&str> = meta
+          .iter()
+          .filter(|(_, entry)| match field {
+            BlxField::Type => entry.entry_type == value,
+            BlxField::Subtype => entry.subtype.as_deref() == Some(value.as_str()),
+            _ => entry.keywords.contains(&value),
+          })
+          .map(|(key, _)| key.as_str())
+          .collect();
+        (!have.is_empty()).then_some(have)
+      },
+    };
+    match have {
+      None if negated => {},
+      None => {
+        messages.extend(blx_warning_tokens(&s!(
+          "{} '{value}' not found",
+          field.label()
+        )));
+        keys.clear();
+      },
+      Some(have) if negated => keys.retain(|key| !have.contains(key.as_str())),
+      Some(_) if matches!(field, BlxField::Type | BlxField::Subtype) && typed => {
+        messages.extend(blx_error_tokens(
+          &s!("'{}' used multiple times", field.key()),
+          "When passing multiple filter options, each entry\\MessageBreak must satisfy all conditions (AND \
+           conjunction),\\MessageBreak hence some options may not be used twice.\\MessageBreak Use 'filter' and \
+           '\\string\\defbibfilter' with OR conjunctions",
+        ));
+        keys.clear();
+      },
+      Some(have) => {
+        typed |= matches!(field, BlxField::Type | BlxField::Subtype);
+        keys.retain(|key| have.contains(key.as_str()));
+      },
+    }
+  }
+  (messages, categories)
+}
+
+/// The filters this `\printbibliography` stored (`\biblatex@print@filter`), in order.
+fn blx_filters() -> Vec<(BlxField, bool, String)> {
+  let Some(Stored::Strings(stored)) = lookup_value("biblatex_filters") else {
+    return Vec::new();
+  };
+  stored
+    .chunks(2)
+    .filter_map(|pair| {
+      let (field, negated) = BlxField::of(&sym_string(*pair.first()?))?;
+      Some((field, negated, sym_string(*pair.get(1)?)))
+    })
+    .collect()
+}
+
+/// An interned string as text.
+fn sym_string(sym: SymStr) -> String { to_string(sym) }
+
+/// biblatex's `\blx@warning{<message>}` (biblatex.sty:135-155).
+fn blx_warning_tokens(message: &str) -> Vec<Token> {
+  let mut tokens = vec![T_CS!("\\blx@warning"), T_BEGIN!()];
+  tokens.extend(Explode!(message));
+  tokens.push(T_END!());
+  tokens
+}
+
+/// biblatex's `\blx@error{<message>}{<help>}` (biblatex.sty:135-155); the help is TeX.
+fn blx_error_tokens(message: &str, help: &str) -> Vec<Token> {
+  let mut tokens = vec![T_CS!("\\blx@error"), T_BEGIN!()];
+  tokens.extend(Explode!(message));
+  tokens.extend([T_END!(), T_BEGIN!()]);
+  tokens.extend(TokenizeInternal!(TeXString::assembled(help.to_string())).unlist());
+  tokens.push(T_END!());
+  tokens
+}
+
+/// The refsection whose list a `\printbibliography` prints: `section=`'s, else
+/// the current one (biblatex.sty:9827, :9494). None when refsections open at
+/// headings (`refsection=section`, [`blx_record_refsection`]), whose numbers
+/// the binding does not count.
+fn blx_target_refsection() -> Option<i64> {
+  if lookup_bool("biblatex_auto_refsections") {
+    return None;
+  }
+  if let Some(section) = lookup_value("biblatex_print_section") {
+    return section.to_string().trim().parse().ok();
+  }
+  Some(match lookup_value("biblatex_refsection") {
+    Some(Stored::Int(n)) => n,
+    _ => 0,
+  })
+}
+
+/// Whether `\DeclareBibliographyCategory` declared `name`.
+fn blx_category_declared(name: &str) -> bool {
+  BLX.read(|blx| blx.categories.iter().any(|(category, _)| category == name))
+}
+
+/// Whether `key` passes the category filters `by` (`+name` keeps the keys
+/// filed in `name`, `-name` drops them), with the categories as the document
+/// filed them — asked once the whole document is digested: by each deferred
+/// entry (`\biblatex@select`) and when the list is built (`\biblatex@if@selected`).
+fn blx_selected(by: &[SymStr], key: &str) -> bool {
+  BLX.read(|blx| {
+    by.iter().all(|filter| {
+      let filter = sym_string(*filter);
+      let (keep, name) = filter.split_at(1);
+      let filed = blx
+        .categories
+        .iter()
+        .find(|(category, _)| category == name)
+        .is_some_and(|(_, filed)| filed.iter().any(|filed| filed == key));
+      filed == (keep == "+")
+    })
+  })
+}
+
+/// Whether the categories the filters `by` keep (`+name`) have no keys filed.
+fn blx_categories_void(by: &[SymStr]) -> bool {
+  BLX.read(|blx| {
+    by.iter().all(|filter| {
+      let filter = sym_string(*filter);
+      filter.strip_prefix('+').is_none_or(|name| {
+        blx
+          .categories
+          .iter()
+          .all(|(category, filed)| category != name || filed.is_empty())
+      })
+    })
+  })
+}
+
+/// The categories an `\addtocategory` in a hook the binding never runs may
+/// fill ([`def_discarded_hook`]: `\AtEveryCitekey`, `\AtDataInput`, a
+/// `\newbibmacro` body, …), found in what those hooks were given and the
+/// macros they call (hgbbib.sty:94-113 `\@AssignToBibCategory`). A name that
+/// is not literal text covers every category.
+#[derive(Default)]
+struct BlxUnmodelled {
+  names: std::collections::HashSet<String>,
+  all:   bool,
+}
+
+impl BlxUnmodelled {
+  fn covers(&self, name: &str) -> bool { self.all || self.names.contains(name) }
+}
+
+fn blx_unmodelled_categories() -> BlxUnmodelled {
+  fn scan(
+    tokens: &[Token],
+    depth: usize,
+    seen: &mut std::collections::HashSet<String>,
+    found: &mut BlxUnmodelled,
+  ) {
+    let mut i = 0;
+    while i < tokens.len() {
+      let token = tokens[i];
+      i += 1;
+      if token.code != Catcode::CS {
+        continue;
+      }
+      if token.with_str(|name| name == "\\addtocategory") {
+        while i < tokens.len() && matches!(tokens[i].code, Catcode::SPACE | Catcode::EOL) {
+          i += 1;
+        }
+        match bbl_groups(&tokens[i..]).into_iter().next() {
+          // A name that is not literal text — a control sequence, or a macro parameter (`\addtocategory{#1}{…}`, a
+          // parameter token in a hook, an argument in a macro body) —
+          // may be any category.
+          Some(name)
+            if tokens[i].code == Catcode::BEGIN
+              && name
+                .iter()
+                .all(|t| !matches!(t.code, Catcode::CS | Catcode::PARAM | Catcode::ARG)) =>
+          {
+            found
+              .names
+              .insert(Tokens::new(name).to_string().trim().to_string());
+          },
+          _ => found.all = true,
+        }
+        continue;
+      }
+      if depth < 6
+        && seen.insert(token.to_string())
+        && let Ok(Some(defn)) = lookup_definition(&token)
+        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      {
+        scan(&body.clone().unlist(), depth + 1, seen, found);
+      }
+    }
+  }
+  let hooks = BLX.read(|blx| blx.hooks.clone());
+  let mut found = BlxUnmodelled::default();
+  let mut seen = std::collections::HashSet::new();
+  for hook in hooks {
+    scan(&hook.unlist(), 0, &mut seen, &mut found);
+  }
+  found
+}
+
+/// biblatex's `\blx@error{<message>}{<help>}` (biblatex.sty:135-155) raised by a
+/// primitive: the `\PackageError{biblatex}{…}{….}` message, as the kernel's
+/// `\GenericError` makes it.
+fn blx_error(message: &str, help: &str) -> Result<()> {
+  make_generic_message(
+    "\\GenericError",
+    vec![
+      TokenizeInternal!(r"(biblatex)\@spaces\@spaces\@spaces\@spaces"),
+      Explode!(&s!("Package biblatex Error: {message}")).into(),
+      Explode!("See the biblatex package documentation for explanation.").into(),
+      TokenizeInternal!(TeXString::assembled(s!("{help}."))),
+    ],
+    "error",
+  )
+}
+
+/// biblatex's `\blx@warn@bibempty` (biblatex.sty:1511-1512, `\@latex@warning{Empty bibliography}`) for a list found
+/// empty when the bibliography is built (`\biblatex@if@selected`), in the shape the digested one has.
+fn blx_empty_bibliography() {
+  Warn!(
+    "latex",
+    "\\GenericWarning",
+    "LaTeX Warning: Empty bibliography"
+  );
+}
+
+/// The title a `\printbibliography[heading=<name>]` prints under an author's
+/// `\defbibheading{<name>}[<title>]{<code>}` (biblatex.sty:9362-9368: the code
+/// is a one-argument command whose optional argument defaults to the
+/// heading's title, else `\bibname`; :9988 `\blx@bibheading` passes `title=`):
+/// the argument of the code's sectioning command, `#1` replaced by the
+/// title. None for a heading the author did not define (biblatex.def's own,
+/// whose title is the bibliography's default) or whose code sets no
+/// sectioning command.
+fn blx_heading_title(name: &str, title: Option<&Tokens>) -> Option<Tokens> {
+  const UNITS: &[&str] = &[
+    "\\part",
+    "\\chapter",
+    "\\section",
+    "\\subsection",
+    "\\subsubsection",
+    "\\paragraph",
+    "\\subparagraph",
+    "\\addpart",
+    "\\addchap",
+    "\\addsec",
+  ];
+  let (default, code) = BLX.read(|blx| blx.headings.get(name).cloned())?;
+  let title = title.cloned().unwrap_or(default).unlist();
+  let code = code.unlist();
+  let unit = code
+    .iter()
+    .position(|token| token.code == Catcode::CS && token.with_str(|cs| UNITS.contains(&cs)))?;
+  let mut rest = &code[unit + 1..];
+  while let Some(first) = rest.first()
+    && (matches!(first.code, Catcode::SPACE | Catcode::EOL) || first.with_str(|text| text == "*"))
+  {
+    rest = &rest[1..];
+  }
+  if rest
+    .first()
+    .is_some_and(|first| first.code == Catcode::OTHER && first.with_str(|text| text == "["))
+  {
+    let close = rest
+      .iter()
+      .position(|token| token.code == Catcode::OTHER && token.with_str(|text| text == "]"))?;
+    rest = &rest[close + 1..];
+  }
+  if rest.first()?.code != Catcode::BEGIN {
+    return None;
+  }
+  let argument = bbl_groups(rest).into_iter().next()?;
+  let mut out = Vec::new();
+  let mut i = 0;
+  while i < argument.len() {
+    if argument[i].code == Catcode::PARAM
+      && argument
+        .get(i + 1)
+        .is_some_and(|next| next.with_str(|text| text == "1"))
+    {
+      out.extend(title.iter().copied());
+      i += 2;
+    } else {
+      out.push(argument[i]);
+      i += 1;
+    }
+  }
+  Some(Tokens::new(out))
+}
+
+/// Defines a hook or bibmacro declaration the binding does not run (its
+/// material only drives biblatex's own typesetting) to keep what it was given
+/// ([`BlxState::hooks`]), where an `\addtocategory` files keys the binding
+/// cannot know ([`blx_unmodelled_categories`]).
+fn def_discarded_hook(proto: &str) -> Result<()> {
+  let (cs, params) = parse_prototype(proto, true)?;
+  let arity = params
+    .as_ref()
+    .map_or(0, |params| params.get_parameters().len());
+  let args: String = (1..=arity).map(|n| s!("#{n}")).collect();
+  let body = mouth::tokenize_internal(TeXString::assembled(s!(
+    "\\biblatex@discarded@hook{{{args}}}"
+  )));
+  def_macro(cs, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+/// A datalist starts (`\datalist[type]{name}`, `\sortlist` in a format-2
+/// `.bbl`); an absent type is an entry list.
+fn bbl_start_datalist(kind: Option<Tokens>, name: Tokens) {
+  BBL_DATALISTS.update(|lists| {
+    lists.kind = kind
+      .map(|kind| kind.to_string().trim().to_string())
+      .unwrap_or_default();
+    lists.name = name.to_string().trim().to_string();
+    lists.keys.clear();
+  });
+}
+
+/// Whether an `\entry`'s options (`skipbib`, `dataonly=true`, …) keep it out
+/// of the bibliography (biblatex.sty:8715-8717 `blx@skipbib`; `dataonly` sets
+/// it too).
+fn bbl_skips_bib(options: &str) -> bool {
+  options.split(',').any(|option| {
+    let (name, value) = option.split_once('=').unwrap_or((option, "true"));
+    matches!(name.trim(), "skipbib" | "dataonly") && value.trim() != "false"
+  })
+}
+
+/// Whether an `\entry`'s options keep it from a label number: `skiplab`, or
+/// `dataonly`, which sets it (biblatex.sty:8725, :16266).
+fn bbl_skips_label(options: &str) -> bool {
+  options.split(',').any(|option| {
+    let (name, value) = option.split_once('=').unwrap_or((option, "true"));
+    matches!(name.trim(), "skiplab" | "dataonly") && value.trim() != "false"
+  })
 }
 
 /// Parse a biblatex keyval name block — the inner sub-group of a modern
@@ -170,35 +1178,6 @@ fn parse_name_keyvals(s: &str) -> Vec<(String, String)> {
   pairs
 }
 
-/// Perl L232-237 / L253-258: strip leading SPACE/`{` and trailing SPACE/`}`
-/// tokens from a captured DOI/eprint field value before splicing it into an
-/// `\href{…}` target, so a `\field{doi}{ {10.x/y} }`-style value yields a
-/// clean URI.
-fn bib_trim_url_tokens(toks: Tokens) -> Vec<Token> {
-  let mut v = toks.unlist();
-  let mut start = 0usize;
-  while start < v.len() {
-    let t = &v[start];
-    if t.code == Catcode::SPACE || t.with_str(|s| s == "{") {
-      start += 1;
-    } else {
-      break;
-    }
-  }
-  let mut end = v.len();
-  while end > start {
-    let t = &v[end - 1];
-    if t.code == Catcode::SPACE || t.with_str(|s| s == "}") {
-      end -= 1;
-    } else {
-      break;
-    }
-  }
-  v.truncate(end);
-  v.drain(..start);
-  v
-}
-
 // === biblatex author-year citation machinery ===
 // Mirror of ar5iv-bindings biblatex.sty.ltxml after PRs #20/#21 + the
 // 0911aec repair pass: three citation families (parenthetical / textual /
@@ -209,6 +1188,13 @@ fn bib_trim_url_tokens(toks: Tokens) -> Vec<Token> {
 /// Perl `_is_authoryear` — the style handler below is the only writer of
 /// CITE_STYLE in a biblatex session.
 fn blx_is_authoryear() -> bool { lookup_string("CITE_STYLE") == "authoryear" }
+
+/// Whether the citation style labels its entries — numeric, alphabetic and the styles built on them, biblatex's default
+/// (biblatex.sty:16387 `style=numeric`) — so a note citation is the bare label (numeric.cbx:77, alphabetic.cbx:78);
+/// set at the style's load ([`blx_cite_style_labels`]). Author-year styles have their own citation; author-title and
+/// notes styles print the entry's author and title in the note, which the binding does not render: they keep the
+/// bracketed citation.
+fn blx_is_labelstyle() -> bool { !lookup_bool("biblatex@nonlabelstyle") }
 
 /// Perl `_set_biblatex_style`: detect author-year styles (apa, authoryear,
 /// authoryear-comp, ...) and only then activate the author-year citation
@@ -325,7 +1311,7 @@ fn blx_cite_parenthetical(
     body.extend(p.unlist());
   }
   body.extend(blx_close().unlist());
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("citep")),
     Tokens::new(body)
   ]))
@@ -340,10 +1326,35 @@ fn blx_cite_textual(
   keys: Tokens,
 ) -> Result<Tokens> {
   let (pre, post) = blx_swap_pre_post(pre, post);
-  if !blx_is_authoryear() {
-    return Ok(blx_cite_fallback(post, keys));
-  }
   let author = if star { "FullAuthors" } else { "Authors" };
+  if !blx_is_authoryear() {
+    // The name, then the bracketed label: numeric.cbx:23-41 `textcite` prints `labelname` before
+    // `\bibopenbracket` (alphabetic.cbx the same), as natbib's numbers mode (Perl natbib.sty.ltxml:161-171). The
+    // fallback to the plain `\cite` printed only "[1]" (OXIDIZED_DESIGN_DIVERGENCES #786; witnesses 2402.17192,
+    // 2410.22329; guard `perfect_kernel_batch78a::biblatex_citeauthor_and_textcite_print_the_name_in_a_numeric_style`).
+    let mut p1 = blx_open().unlist();
+    if let Some(p) = pre {
+      p1.extend(p.unlist());
+      p1.push(T_SPACE!());
+    }
+    let mut p2 = Vec::new();
+    if let Some(p) = post {
+      p2.extend(blx_ns().unlist());
+      p2.push(T_SPACE!());
+      p2.extend(p.unlist());
+    }
+    p2.extend(blx_close().unlist());
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!(s!("{author} Phrase1NumberPhrase2"))),
+      keys,
+      Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p1)]),
+      Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p2)])
+    ]);
+    return Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+      Tokens::new(Explode!("citet")),
+      bibref
+    ]));
+  }
   let mut p1 = blx_open().unlist();
   if let Some(p) = pre {
     p1.extend(p.unlist());
@@ -364,7 +1375,7 @@ fn blx_cite_textual(
     phrase1,
     phrase2
   ]);
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("citet")),
     bibref
   ]))
@@ -404,16 +1415,130 @@ fn blx_cite_bare(
       body.push(T_SPACE!());
       body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
       Tokens::new(Explode!("cite")),
       Tokens::new(body)
     ]))
   } else {
-    Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
       Tokens::new(Explode!("cite")),
       bibref
     ]))
   }
+}
+
+/// One citation group's label, unbracketed: `[pre ]\@@bibref{}{keys}{}{}[, post]` — the `cite` bibmacro of a label
+/// style (numeric.cbx, alphabetic.cbx), the label field alone; the brackets are `\cite`'s own wrapper
+/// (numeric.cbx:63 `\DeclareCiteCommand{\cite}[\mkbibbrackets]`).
+fn blx_label_group(pre: Option<Tokens>, post: Option<Tokens>, keys: Tokens) -> Result<Vec<Token>> {
+  let mut toks = Vec::new();
+  if let Some(p) = pre {
+    toks.extend(p.unlist());
+    toks.push(T_SPACE!());
+  }
+  toks.extend(
+    Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens!(),
+      keys,
+      Tokens!(),
+      Tokens!()
+    ])
+    .unlist(),
+  );
+  if let Some(p) = post {
+    toks.extend(blx_ns().unlist());
+    toks.push(T_SPACE!());
+    toks.extend(p.unlist());
+  }
+  Ok(toks)
+}
+
+/// The citation a note command sets in its note (`\footcite`, `\footcitetext`; numeric.cbx:77-89, authoryear.cbx:106-118):
+/// the author-year citation, a label style's bare label — "4" where `\cite` prints "[4]" — else (an author-title or
+/// notes style, [`blx_is_labelstyle`]) the bracketed one.
+fn blx_cite_note(
+  star: bool,
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Tokens,
+) -> Result<Tokens> {
+  if blx_is_authoryear() {
+    return blx_cite_bare(star, pre, post, keys);
+  }
+  let (pre, post) = blx_swap_pre_post(pre, post);
+  if !blx_is_labelstyle() {
+    return Ok(blx_cite_fallback(post, keys));
+  }
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+    Tokens::new(Explode!("cite")),
+    Tokens::new(blx_label_group(pre, post, keys)?)
+  ]))
+}
+
+/// biblatex.def:2481-2488 `\fullcite`: the entry itself, typeset where it is cited by the bibliography driver —
+/// no brackets, whatever the style; the prenote before it, the postnote after `\addcomma\space` (biblatex.def:110
+/// `\postnotedelim`). Post's `FullEntry` copies the entry's bibblocks. A full citation needs the bibliography
+/// even when the document never prints one; it is recorded for [`blx_unprinted_bibliography`].
+fn blx_cite_full(pre: Option<Tokens>, post: Option<Tokens>, keys: Tokens) -> Result<Tokens> {
+  let (pre, post) = blx_swap_pre_post(pre, post);
+  AssignValue!("biblatex@fullcite@ran" => true, Some(Scope::Global));
+  let mut body = Vec::new();
+  if let Some(p) = pre {
+    body.extend(p.unlist());
+    body.push(T_SPACE!());
+  }
+  // Several keys' entries are joined as other citations' (pdflatex prints biblatex.def:2486's `\multicitedelim` after
+  // `\usedriver`'s pending unit as ", ": "Berlin: Springer, 2022, Jane Doe").
+  body.extend(
+    Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!("FullEntry")),
+      keys,
+      Tokens!(),
+      Tokens!()
+    ])
+    .unlist(),
+  );
+  if let Some(p) = post {
+    body.push(T_OTHER!(","));
+    body.push(T_SPACE!());
+    body.extend(p.unlist());
+  }
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+    Tokens::new(Explode!("fullcite")),
+    Tokens::new(body)
+  ]))
+}
+
+/// `\DeclareCiteCommand{\footcite}[\mkbibfootnote]` (authoryear.cbx:106, numeric.cbx:77, biblatex.def:2489
+/// `\footfullcite`): the wrapper takes the whole citation as its argument. No citation (a multicite command that read
+/// no group) makes no note.
+fn blx_wrap(wrapper: &str, cite: Tokens) -> Tokens {
+  if cite.is_empty() {
+    return cite;
+  }
+  Tokens!(T_CS!(wrapper), T_BEGIN!(), cite, T_END!())
+}
+
+/// The hidden bibliography a full citation needs when the document prints none (`\biblatex@unprinted@bibliography`,
+/// after every end-document hook): the binding's own `\printbibliography` (`\biblatex@sty@printbibliography`, not a
+/// document's redefinition) with `lx@bibliography@class` = `ltx_nodisplay`, in a group.
+///
+/// A document whose lists left entries out ([`BlxState::filtered`]) gets the entries no list printed the same way,
+/// one hidden list per refsection (`\biblatex@unprinted@mode`, [`bbl_print`]): biblatex reads the whole `.bbl` at
+/// `\begin{document}`, so pdflatex labels their citations and prints their `\fullcite` (2405.19762's
+/// `notcategory=selfref` with "Please cite as: \fullcite{selfref}").
+fn blx_unprinted_bibliography() -> Tokens {
+  if lookup_bool("biblatex@fullcite@ran") && !lookup_bool("biblatex@bibliography@printed") {
+    return TokenizeInternal!(
+      r"\begingroup\biblatex@hide@bibliography\biblatex@sty@printbibliography\endgroup"
+    );
+  }
+  if BLX.read(|blx| blx.filtered) {
+    return TokenizeInternal!(
+      r"\biblatex@resolve@categories\begingroup\biblatex@hide@bibliography\biblatex@unprinted@mode\biblatex@sty@printbibliography\endgroup"
+    );
+  }
+  Tokens::default()
 }
 
 /// One `[pre][post]{keys}` group of a biblatex multicite command.
@@ -520,7 +1645,7 @@ fn blx_multicite_parenthetical(star: bool) -> Result<Tokens> {
   let mut body = blx_open().unlist();
   body.extend(blx_join_groups(parts));
   body.extend(blx_close().unlist());
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("citep")),
     Tokens::new(body)
   ]))
@@ -562,7 +1687,7 @@ fn blx_multicite_textual(star: bool) -> Result<Tokens> {
     ]);
     parts.push(bibref.unlist());
   }
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("citet")),
     Tokens::new(blx_join_groups(parts))
   ]))
@@ -570,12 +1695,28 @@ fn blx_multicite_textual(star: bool) -> Result<Tokens> {
 
 /// Perl `_multicite_bare`: \cites — "pre Author, Year, post" per group,
 /// joined with "; ", no parens.
-fn blx_multicite_bare(star: bool) -> Result<Tokens> {
+fn blx_multicite_bare(star: bool) -> Result<Tokens> { blx_multicite(star, false) }
+
+/// `\footcites` (biblatex.def:2650): [`blx_multicite_bare`]'s groups, a label style's labels unbracketed as in
+/// [`blx_cite_note`].
+fn blx_multicite_note(star: bool) -> Result<Tokens> { blx_multicite(star, true) }
+
+fn blx_multicite(star: bool, note: bool) -> Result<Tokens> {
   let groups = blx_read_multicite_groups()?;
   if groups.is_empty() {
     return Ok(Tokens::default());
   }
   if !blx_is_authoryear() {
+    if note && blx_is_labelstyle() {
+      let parts = groups
+        .into_iter()
+        .map(|(pre, post, keys)| blx_label_group(pre, post, keys))
+        .collect::<Result<Vec<_>>>()?;
+      return Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+        Tokens::new(Explode!("cite")),
+        Tokens::new(blx_join_groups(parts))
+      ]));
+    }
     let keys = blx_joined_keys(&groups);
     return Ok(blx_cite_fallback(None, keys));
   }
@@ -604,7 +1745,7 @@ fn blx_multicite_bare(star: bool) -> Result<Tokens> {
     }
     parts.push(toks);
   }
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("cite")),
     Tokens::new(blx_join_groups(parts))
   ]))
@@ -621,76 +1762,159 @@ fn blx_cite_args(args: Vec<ArgWrap>) -> (bool, Option<Tokens>, Option<Tokens>, T
   (blx_nonempty(&star), pre, post, keys)
 }
 
-/// Perl label split `/^(.+),\s*(\d{4}\w*)$/` — greedy `.+` means the LAST
-/// comma whose tail is a 4-digit year plus an optional disambiguation
-/// suffix wins. Returns (author_part, year_with_suffix).
-fn blx_split_ay_label(label: &str) -> Option<(String, String)> {
-  for (idx, _) in label.char_indices().rev().filter(|(_, c)| *c == ',') {
-    if idx == 0 {
-      continue;
-    }
-    let tail = label[idx + 1..].trim_start();
-    if tail.len() >= 4
-      && tail.chars().take(4).all(|c| c.is_ascii_digit())
-      && tail
-        .chars()
-        .skip(4)
-        .all(|c| c.is_ascii_alphanumeric() || c == '_')
-    {
-      return Some((label[..idx].to_string(), tail.to_string()));
-    }
-  }
-  None
+/// One `key=value` package option, split at the first `=` with both sides
+/// trimmed and the value's outer braces removed — biblatex manuals write
+/// `\usepackage[style = abnt, ...]{biblatex}` with spaces around `=`
+/// (biblatex-abnt.tex:52), which a prefix match on `style=` never saw, so
+/// `abnt.cbx` was never loaded (`\apud` undefined).
+fn blx_opt_kv(opt: &str) -> Option<(String, String)> {
+  let (k, v) = opt.split_once('=')?;
+  let v = v.trim();
+  let v = v
+    .strip_prefix('{')
+    .and_then(|v| v.strip_suffix('}'))
+    .unwrap_or(v);
+  Some((k.trim().to_string(), v.trim().to_string()))
 }
 
 #[rustfmt::skip]
+/// The `.bbl` command set (biblatex.sty:8995-9024 `\\blx@bblstart`): saved
+/// and rebound around the `.bbl` input, restored after it.
+const BBL_START: &str = "\\let\\biblatex@saved@verb\\verb\\let\\verb\\biblatex@bbl@verb\\let\\biblatex@saved@endverb\\endverb\\let\\endverb\\biblatex@bbl@endverb\\let\\biblatex@saved@datalist\\datalist\\let\\datalist\\biblatex@bbl@datalist\\let\\biblatex@saved@enddatalist\\enddatalist\\let\\enddatalist\\biblatex@bbl@enddatalist\\let\\biblatex@saved@entry\\entry\\let\\entry\\biblatex@bbl@entry\\let\\biblatex@saved@endentry\\endentry\\let\\endentry\\biblatex@bbl@endentry\\let\\biblatex@saved@name\\name\\let\\name\\biblatex@bbl@name\\let\\biblatex@saved@list\\list\\let\\list\\biblatex@bbl@list\\let\\biblatex@saved@field\\field\\let\\field\\biblatex@bbl@field\\let\\biblatex@saved@strng\\strng\\let\\strng\\biblatex@bbl@strng\\let\\biblatex@saved@keyw\\keyw\\let\\keyw\\biblatex@bbl@keyw\\let\\biblatex@saved@range\\range\\let\\range\\biblatex@bbl@range\\let\\biblatex@saved@preamble\\preamble\\let\\preamble\\biblatex@bbl@preamble\\let\\biblatex@saved@warn\\warn\\let\\warn\\biblatex@bbl@warn\\let\\biblatex@saved@xref\\xref\\let\\xref\\biblatex@bbl@xref\\let\\biblatex@saved@fakeset\\fakeset\\let\\fakeset\\biblatex@bbl@fakeset\\let\\biblatex@saved@set\\set\\let\\set\\biblatex@bbl@set\\let\\biblatex@saved@inset\\inset\\let\\inset\\biblatex@bbl@inset\\let\\biblatex@saved@annotation\\annotation\\let\\annotation\\biblatex@bbl@annotation\\let\\biblatex@saved@refsection\\refsection\\let\\refsection\\biblatex@bbl@refsection\\let\\biblatex@saved@endrefsection\\endrefsection\\let\\endrefsection\\biblatex@bbl@endrefsection";
+const BBL_END: &str = "\\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb\\let\\datalist\\biblatex@saved@datalist\\let\\enddatalist\\biblatex@saved@enddatalist\\let\\entry\\biblatex@saved@entry\\let\\endentry\\biblatex@saved@endentry\\let\\name\\biblatex@saved@name\\let\\list\\biblatex@saved@list\\let\\field\\biblatex@saved@field\\let\\strng\\biblatex@saved@strng\\let\\keyw\\biblatex@saved@keyw\\let\\range\\biblatex@saved@range\\let\\preamble\\biblatex@saved@preamble\\let\\warn\\biblatex@saved@warn\\let\\xref\\biblatex@saved@xref\\let\\fakeset\\biblatex@saved@fakeset\\let\\set\\biblatex@saved@set\\let\\inset\\biblatex@saved@inset\\let\\annotation\\biblatex@saved@annotation\\let\\refsection\\biblatex@saved@refsection\\let\\endrefsection\\biblatex@saved@endrefsection";
+
+/// standard.bbx:740-752's `\DeclareBibliographyAlias` list, in its order (an
+/// alias of an alias, `mvreference` → `reference`, resolves at declaration).
+const STANDARD_BBX_ALIASES: [(&str, &str); 13] = [
+  ("mvbook", "book"),
+  ("bookinbook", "inbook"),
+  ("suppbook", "inbook"),
+  ("mvcollection", "collection"),
+  ("suppcollection", "incollection"),
+  ("mvproceedings", "proceedings"),
+  ("reference", "collection"),
+  ("mvreference", "reference"),
+  ("inreference", "incollection"),
+  ("suppperiodical", "article"),
+  ("review", "article"),
+  ("software", "misc"),
+  ("*", "misc"),
+];
+
+/// biblatex's data-model entry types (blx-dm.def:419-471): the targets an alias
+/// may give the BibTeX reader.
+const BLX_ENTRY_TYPES: [&str; 51] = [
+  "article",
+  "artwork",
+  "audio",
+  "bibnote",
+  "book",
+  "bookinbook",
+  "booklet",
+  "collection",
+  "commentary",
+  "customa",
+  "customb",
+  "customc",
+  "customd",
+  "custome",
+  "customf",
+  "dataset",
+  "inbook",
+  "incollection",
+  "inproceedings",
+  "inreference",
+  "image",
+  "jurisdiction",
+  "legal",
+  "legislation",
+  "letter",
+  "manual",
+  "misc",
+  "movie",
+  "music",
+  "mvcollection",
+  "mvreference",
+  "mvproceedings",
+  "mvbook",
+  "online",
+  "patent",
+  "performance",
+  "periodical",
+  "proceedings",
+  "reference",
+  "report",
+  "review",
+  "set",
+  "software",
+  "standard",
+  "suppbook",
+  "suppcollection",
+  "suppperiodical",
+  "thesis",
+  "unpublished",
+  "video",
+  "xdata",
+];
+
+/// `\DeclareBibliographyAlias{alias}{entrytype}`: define the BibTeX reader's
+/// `\bib@entry@<alias>@alias` as `entrytype`, itself resolved through its own
+/// alias. Only an entry type reaches the reader: a raw-loaded style may alias to
+/// one of its drivers instead (chicago-notes.bbx:2261-2265 `cite:legal`, where
+/// the type would become `cite:legal`), and the catch-all `*` is no type name (an
+/// unknown type already takes misc's format, `format_type`'s fallback).
+fn declare_bibliography_alias(alias: &str, entrytype: &str) -> Result<()> {
+  if alias == "*" || !BLX_ENTRY_TYPES.contains(&entrytype) {
+    return Ok(());
+  }
+  let target = resolve_entry_type(entrytype)?;
+  def_macro(
+    T_CS!(s!("\\bib@entry@{alias}@alias").as_str()),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(target)),
+    None,
+  )
+}
+
+/// The `\printbibliography` options that select entries (biblatex.sty:9446-9456 `blx@bib1`, :9494 `section`,
+/// :9516-9638 `blx@bib2`). The first eight — `type`, `subtype`, `keyword`, `category` and their `not*` forms — narrow
+/// a `.bbl`'s list ([`bbl_filter`]; beyond Perl, whose ar5iv binding ignores the optional argument; witness arXiv
+/// 2406.00136), and `section=` names the `.bbl` refsection printed ([`blx_target_refsection`]). `filter=`
+/// (`\defbibfilter`), `check=` (`\defbibcheck`) and `segment=` are not applied, nor is any filter on the `.bib` route
+/// (no `.bbl`): those lists print every entry. Any of the twelve stops a later list repeating this one
+/// (`\biblatex@filtered@list`).
+const BIBLIOGRAPHY_FILTERS: [&str; 12] = [
+  "type",
+  "nottype",
+  "subtype",
+  "notsubtype",
+  "keyword",
+  "notkeyword",
+  "category",
+  "notcategory",
+  "filter",
+  "check",
+  "section",
+  "segment",
+];
+
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
-  // (803 lines). All macro definitions, conditionals, registers, the
-  // trailing RawTeX toggle block, AND the deep-closure bibliography
-  // rebuilder (Perl L110-263 \entry/\endentry, L270-340 \name,
-  // L367-397 \verb) are now ported — the `.bbl` is assembled into a
-  // real `\thebibliography`.
+  // (803 lines): its macro definitions, conditionals, registers, the
+  // trailing RawTeX toggle block, the author-year citation commands
+  // (\parencite/\textcite/\cite families as \@@cite/\@@bibref closures,
+  // `blx_cite_*`, greedy multicite readers, \citeauthor/\citetitle/
+  // \citeyear/\citeyearpar — gated on style=/citestyle= author-year
+  // detection, with a saved-core-\cite fallback), `\addbibresource` and
+  // `\printbibliography` (biber's `.bbl` when present, the resources through
+  // `\bibliography` otherwise; `&` catcode guard).
   //
-  // Audit cycle 2: caught Rust-only bugs vs Perl source
-  //   * duplicate `\providetoggle{blx@citation}` (etoolbox toggle redef)
-  //   * missing 38 of 60 toggles in trailing RawTeX
-  //   * missing `\addbibresource` / `\printbibliography` /
-  //     `Let \bibliography → \addbibresource` chain
-  //   * 60+ DefMacro/DefRegister/DefConditional declarations missing
-  //
-  // Audit cycle 3 (full Perl-parity pass of the rebuilder closures):
-  //   * \name: ported the keyval-name branch (Perl L301-306) gated on
-  //     `biblatex_with_keyvals`. Modern biber .bbl (format ≥ 3.x) encodes
-  //     authors as `{{meta,hash}{family={…},given={…}}}`; the old port only
-  //     handled the positional form and leaked the whole keyval blob as the
-  //     "family" string (`family=…,familyi=…,given=…`) into the HTML.
-  //   * \endentry: ported the label collision-suffixing (L148-162) and the
-  //     previously-dropped fields — series (L220-222), howpublished (L227),
-  //     organization (L230), eprintclass (L248), the DOI/eprint leading-{/
-  //     trailing-} URI trim (L232-237/L253-258), and the url-branch
-  //     eprinttype label (L240-244).
-  //   * \bibrangedash: restored the Perl/real-biblatex en-dash (a late
-  //     redefinition had clobbered it to a hyphen).
-  //   KNOWN LIMITATION: the 3-arg `\name` variant is not auto-detected
-  //   (we declare the 4-arg modern shape).
-  //
-  // Audit cycle 4 (2026-07-03, ar5iv-bindings PRs #20/#21 + repair 0911aec):
-  //   * author-year citation commands: \parencite/\textcite/\cite families
-  //     as \@@cite/\@@bibref closures (blx_cite_*), greedy multicite
-  //     readers (\cites/\parencites/\textcites + capitalized forms), and
-  //     \citeauthor/\citetitle/\citeyear/\citeyearpar — all gated on
-  //     style=/citestyle= author-year detection, with a saved-core-\cite
-  //     fallback so numeric documents are unchanged.
-  //   * author-year "Surname, Year" labels for label-less biber .bbl
-  //     entries, emitted as \blx@lbibitem + a single role-tagged \bbl@tags
-  //     (schema-valid, natbib \NAT@@wrout shape) so Post::CrossRef renders
-  //     "(Smith, 2020)" / "Jones & Brown (2019)".
-  //   * \name: prefix/suffix name parts; surnames recorded for labels.
-  //   * \printbibliography[]: biber .bbl is ground truth when present,
-  //     resource-based \bibliography fallback otherwise; & catcode guard.
-  //   * maxbibnames= package option now wired (opt@ scan), closing the
-  //     earlier limitation.
+  // Beyond the ar5iv binding: its `\entry`/`\endentry` rebuilder
+  // (biblatex.sty.ltxml:495-690, `\name` :705, `\verb` :821-842), which typeset a
+  // `\bibitem` from a dozen fields, is replaced by the `.bbl` reader at the
+  // top of this file: a `.bbl`'s entries become the `ltx:bibentry`s their
+  // `.bib` gives, formatted by MakeBibliography with biber's labels and order
+  // (round 12, W6-B).
 
   // ar5iv-bindings biblatex.sty.ltxml L14-15 opens with
   //   Warn('missing_file', 'biblatex.sty',
@@ -702,9 +1926,9 @@ LoadDefinitions!({
   //     warning made biblatex.sty the #1 `missing_file` "what" in the corpus
   //     (1,167 papers across sandboxes 2605+2606, second only to arydshln),
   //     drowning genuinely missing files in bibliography surveys.
-  //   * "only minimally stubbed" stopped being true across audit cycles 1-4
-  //     above: author-year cite families, biber .bbl as ground truth,
-  //     \printbibliography, maxbibnames, structured \name parts.
+  //   * "only minimally stubbed" stopped being true long ago (above):
+  //     author-year cite families, biber .bbl as ground truth,
+  //     \printbibliography, a `.bbl` read into BibTeX entries.
   // It also fires UNCONDITIONALLY at load, so it says nothing about the paper
   // in hand — no diagnostic value, yet it downgraded every biblatex paper from
   // `no_problem` to `warning`.
@@ -716,8 +1940,24 @@ LoadDefinitions!({
   // OXIDIZED_DESIGN #62 — which also records the measurement trap: retiring this
   // moves ~1,167 papers out of `warning` for a LOGGING reason, so any corpus
   // `no_problem` delta straddling this commit is confounded.
-  Info!("bibliography", "biblatex",
-    "biblatex.sty is provided by a native binding, not interpreted raw.");
+  Info!(
+    "bibliography",
+    "biblatex",
+    "biblatex.sty is provided by a native binding, not interpreted raw."
+  );
+
+  // biblatex.sty:135-155, 1353-1370: its message commands, which the style files a paper ships (.cbx/.bbx, biblatex-acm's
+  // acmauthoryear.cbx) call; undefined, each call was an error (2609.32652; 58 papers in 2609 ship such files;
+  // KNOWN_PERL_ERRORS #508). The `\AtEndOfPackage` switch of `\blx@warning`/`\blx@info` from the no-line forms to the
+  // line forms (:147-152, 1364-1369) is taken here at once: the binding prints both alike.
+  RawTeX!(
+    r"\protected\def\blx@error#1#2{\begingroup\blx@safe@actives\PackageError{biblatex}{#1}{#2.}\endgroup}
+\protected\def\blx@warning@noline#1{\begingroup\blx@safe@actives\PackageWarningNoLine{biblatex}{#1}\endgroup}
+\protected\def\blx@warning#1{\begingroup\blx@safe@actives\PackageWarning{biblatex}{#1}\endgroup}
+\protected\def\blx@warning@entry#1{\ifdef\abx@field@entrykey{\blx@warning{#1\MessageBreak at entry '\abx@field@entrykey'}}{\blx@warning{#1}}}
+\protected\def\blx@info@noline#1{\begingroup\blx@safe@actives\PackageInfo{biblatex}{#1\@gobble}\endgroup}
+\protected\def\blx@info#1{\begingroup\blx@safe@actives\PackageInfo{biblatex}{#1}\endgroup}"
+  );
 
   // Mark biblatex as provided, exactly as the real biblatex.sty's
   // `\ProvidesPackage{biblatex}[…]` does (latex_constructs `\ProvidesPackage`
@@ -732,10 +1972,13 @@ LoadDefinitions!({
   // set `\ver@biblatex-chicago.sty`, leaving the guard's `\ver@biblatex.sty`
   // undefined. Setting it in the binding itself covers every load path.
   // Witness arXiv 2605.11180 (html_feedback #6601): biber `.bbl` format 3.3,
-  // empty References before this marker.
+  // empty References before this marker. The string is biblatex.sty:34-35's
+  // (`\abx@date\space v\abx@version\space programmable bibliographies`, the
+  // version the `\abx@*` strings below carry); `\@ifpackagelater{biblatex}`
+  // compares its date since batch 56ia.
   {
     let ver_cs = T_CS!("\\ver@biblatex.sty");
-    DefMacro!(ver_cs, None, "2023/03/05 v3.19 Sophisticated Bibliographies (PK/MW)",
+    DefMacro!(ver_cs, None, "2025/07/10 v3.21 programmable bibliographies (PK/MW)",
       scope => Some(Scope::Global));
   }
 
@@ -750,25 +1993,76 @@ LoadDefinitions!({
   // Perl `DeclareOption(undef, sub { })` — ignore unknown options.
   DeclareOption!(None, {});
   ProcessOptions!();
+  // biblatex-chicago.sty:24-29 (`\DeclareVoidOption{authordate}` …) selects
+  // `style=chicago-authordate` / `chicago-notes`; when routed here as the
+  // variant, the options sit under `opt@biblatex-chicago.sty`. The
+  // author-date family is our authoryear rendering (cms-dates-intro,
+  // cms-dates-sample; lualatex clean).
+  // Guard: `perfect_kernel_batch56::biblatex_chicago_authordate_has_gentextcite`.
+  if let Some(opts) = lookup_vecdeque("opt@biblatex-chicago.sty") {
+    for opt in opts.iter() {
+      let opt_str = opt.to_string();
+      if opt_str.trim().starts_with("authordate") {
+        blx_set_style("authoryear");
+      }
+      if let Some((key, value)) = blx_opt_kv(&opt_str)
+        && key == "refsection"
+      {
+        blx_record_refsection(&value);
+      }
+    }
+  }
   if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
     for opt in opts.iter() {
       let opt_str = opt.to_string();
-      let opt_str = opt_str.trim();
-      if let Some(v) = opt_str.strip_prefix("style=")
-        .or_else(|| opt_str.strip_prefix("citestyle=")) {
-        blx_set_style(v.trim().trim_start_matches('{').trim_end_matches('}'));
-      } else if let Some(v) = opt_str.strip_prefix("maxbibnames=")
-        && let Ok(n) = v.trim().trim_start_matches('{').trim_end_matches('}').parse::<i64>() {
-          bib_state_set_int("biblatex_maxbibnames", n);
-        }
+      let Some((k, v)) = blx_opt_kv(&opt_str) else {
+        continue;
+      };
+      match k.as_str() {
+        "style" | "citestyle" => blx_set_style(&v),
+        "refsection" => blx_record_refsection(&v),
+        _ => {},
+      }
     }
   }
 
-  // Perl L24-30: dependencies. (`#RequirePackage('natbib')` etc commented out in Perl.)
-  RequirePackage!("hyperref");
-  RequirePackage!("ifthen");
+  // biblatex.sty:38-44 `\RequirePackage`s pdftexcmds, etoolbox, keyval, kvoptions, logreq, ifthen and url — never
+  // hyperref. The Perl binding's `RequirePackage('hyperref')` "for url and href" (ar5iv-bindings
+  // biblatex.sty.ltxml:45, KNOWN_PERL_ERRORS #915) loaded it behind the author's back: a cleveref loaded before
+  // biblatex then failed its own begin-document check (cleveref.sty:2370-2376 "cleveref must be loaded after
+  // hyperref"; 2108.12939, 2403.13692, 2501.07466, 2401.13438, 2211.04287, 2307.04997, 2210.03396, 2112.07048,
+  // 2508.02914, 2112.15046, 2106.15390, 1811.07125). The binding's own links need no hyperref: citations are the
+  // kernel's `ltx:cite`/`ltx:bibref`, and a bibliography entry's url/doi/eprint the BibTeX pool's `ltx:bib-url`/
+  // `ltx:bib-identifier` constructors (bibtex.rs `\bib@field@default@url`/`@doi`); a raw-loaded style asks
+  // `\ifhyperref`, answered from the loaded package below. logreq is not loaded (its `.run.xml` request file is
+  // for biber; Perl comments it out too). Guard: `perfect_kernel_batch70a::biblatex_loads_url_not_hyperref`.
+  RequirePackage!("pdftexcmds");
   RequirePackage!("etoolbox");
+  RequirePackage!("keyval");
+  RequirePackage!("kvoptions");
+  RequirePackage!("ifthen");
+  RequirePackage!("url");
+  // Perl L24-30 (`#RequirePackage('natbib')` etc commented out in Perl).
   RequirePackage!("babel_support");
+  // biblatex.sty:16305-16339: under the default UTF-8 input encoding,
+  // `casechanger=auto` selects the expl3 case changer, whose
+  // blx-case-expl3.sty:2 loads xparse. Classes rely on it: nwejmart.cls:462
+  // `\NewDocumentCommand … { o u\q__nwejm }` needs xparse's `u` argument type
+  // (TeX Live class census 2026-09-24).
+  RequirePackage!("xparse");
+  // biblatex.sty:15-21: the version strings every biblatex style file echoes in
+  // its `\ProvidesFile` (dtk.cbx:12 `\ProvidesFile{dtk.cbx}[\abx@cbxid]`, a
+  // third-party style the binding raw-loads below; dtk, TeX Live class census
+  // 2026-09-24).
+  RawTeX!(
+    r"\def\abx@date{2025/07/10}
+\def\abx@version{3.21}
+\def\abx@bbxid{\abx@date\space v\abx@version\space biblatex bibliography style (PK/MW)}
+\def\abx@cbxid{\abx@date\space v\abx@version\space biblatex citation style (PK/MW)}
+\def\abx@lbxid{\abx@date\space v\abx@version\space biblatex localization (PK/MW)}
+\def\abx@cptid{\abx@date\space v\abx@version\space biblatex compatibility (PK/MW)}
+\def\abx@dmid{\abx@date\space v\abx@version\space biblatex datamodel (PK/MW)}"
+  );
 
   // Cite commands — the three-family architecture from ar5iv-bindings
   // PRs #20/#21 (+ 0911aec repairs). Every command is a code closure over
@@ -841,20 +2135,28 @@ LoadDefinitions!({
     let (star, pre, post, keys) = blx_cite_args(args);
     blx_cite_bare(star, pre, post, keys)
   }, locked => true);
+  // biblatex.def:2481 `\fullcite` prints the entry (Perl `_cite_bare`, a bare `[key]` label, KNOWN_PERL_ERRORS
+  // #448). Witness quantumcubemodel. Guard: `06_cluster_bibliography::biblatex_fullcite_prints_the_entry`.
   DefMacro!("\\fullcite OptionalMatch:* [][] Semiverbatim", sub[args] {
-    let (star, pre, post, keys) = blx_cite_args(args);
-    blx_cite_bare(star, pre, post, keys)
+    let (_star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_full(pre, post, keys)
   }, locked => true);
-  // TODO: \footcite should render inside a footnote, \footcitetext
-  // likewise; \supercite as a superscript number. Stubbed as bare inline
-  // citations (same as the Perl binding).
+  // The footnote cite commands set their citation in a footnote (`\mkbibfootnote`, authoryear.cbx:106-118,
+  // numeric.cbx:77-89, biblatex.def:2489 `\footfullcite`); `\footcitetext` in the text of a footnote marked by
+  // hand (`\mkbibfootnotetext`). Perl sets them inline (KNOWN_PERL_ERRORS #448). Guards
+  // `06_cluster_bibliography::{biblatex_fullcite_prints_the_entry, biblatex_footcite_in_a_footnote_is_parenthesized}`.
+  // TODO: `\supercite` as a superscript number (numeric.cbx:98 `[\mkbibsuperscript]`); bare inline as Perl.
   DefMacro!("\\footcite OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
-    blx_cite_bare(star, pre, post, keys)
+    Ok(blx_wrap("\\mkbibfootnote", blx_cite_note(star, pre, post, keys)?))
+  }, locked => true);
+  DefMacro!("\\footfullcite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (_star, pre, post, keys) = blx_cite_args(args);
+    Ok(blx_wrap("\\mkbibfootnote", blx_cite_full(pre, post, keys)?))
   }, locked => true);
   DefMacro!("\\footcitetext OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
-    blx_cite_bare(star, pre, post, keys)
+    Ok(blx_wrap("\\mkbibfootnotetext", blx_cite_note(star, pre, post, keys)?))
   }, locked => true);
   DefMacro!("\\smartcite OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
@@ -878,9 +2180,8 @@ LoadDefinitions!({
   DefMacro!("\\citeauthor OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
     let (pre, post) = blx_swap_pre_post(pre, post);
-    if !blx_is_authoryear() {
-      return Ok(blx_cite_fallback(post, keys));
-    }
+    // biblatex.def:2497-2506 prints `labelname` in every style, a numeric one too: no fallback to the plain `\cite`
+    // ("[1] showed it"; witnesses 2402.17192, 2410.22329).
     let author = if star { "FullAuthors" } else { "Authors" };
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!(author)), keys, Tokens!(), Tokens!()]);
@@ -890,7 +2191,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeauthor")), Tokens::new(body)]))
   }, locked => true);
   DefMacro!("\\citetitle OptionalMatch:* [][] Semiverbatim", sub[args] {
@@ -907,9 +2208,11 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citetitle")), Tokens::new(body)]))
   }, locked => true);
+  // biblatex.sty:12726 `\Citetitle` — the capitalised form (cms-notes-sample).
+  Let!("\\Citetitle", "\\citetitle");
   DefMacro!("\\citeyear OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (_star, pre, post, keys) = blx_cite_args(args);
     let (pre, post) = blx_swap_pre_post(pre, post);
@@ -924,7 +2227,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeyear")), Tokens::new(body)]))
   }, locked => true);
   DefMacro!("\\citeyearpar OptionalMatch:* [][] Semiverbatim", sub[args] {
@@ -942,9 +2245,81 @@ LoadDefinitions!({
       body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(blx_close().unlist());
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeyearpar")), Tokens::new(body)]))
   }, locked => true);
+  // biblatex.sty:12862 `\citefield` / :12802 `\citename` —
+  // `[pre][post]{keys}[format]{field | namelist}`: the field-cite family.
+  // The bibref model carries authors, title and year, so those fields map
+  // to its `show` keys; any other field, and every non-authoryear style,
+  // takes the plain-cite fallback `\citetitle` already uses. Style docs
+  // exercise them at top level (oxref manuals ×4, biblatex-german-legal).
+  // Guard: `perfect_kernel_batch56::biblatex_field_cites_and_page_strings`.
+  for (cs, is_name) in [("\\citefield", false), ("\\citename", true)] {
+    let spec = s!("{cs} OptionalMatch:* [][] Semiverbatim [] {{}}");
+    DefMacro!(&spec, sub[args] {
+      let mut it = args.into_iter();
+      let star: Option<Tokens> = it.next().unwrap().into();
+      let pre: Option<Tokens> = it.next().unwrap().into();
+      let post: Option<Tokens> = it.next().unwrap().into();
+      let keys: Tokens = it.next().unwrap().into();
+      let _format: Option<Tokens> = it.next().unwrap().into();
+      let field: Tokens = it.next().unwrap().into();
+      let star = blx_nonempty(&star);
+      let (pre, post) = blx_swap_pre_post(pre, post);
+      let field = field.to_string().trim().to_ascii_lowercase();
+      let show = match field.as_str() {
+        "author" | "editor" | "translator" | "bookauthor" | "labelname" | "sortname" =>
+          Some(if star { "FullAuthors" } else { "Authors" }),
+        "title" | "shorttitle" | "maintitle" | "booktitle" | "labeltitle" => Some("Title"),
+        "year" | "date" | "labelyear" => Some("Year"),
+        _ => None,
+      };
+      let Some(show) = show.filter(|_| blx_is_authoryear()) else {
+        return Ok(blx_cite_fallback(post, keys));
+      };
+      let bibref = Invocation!(T_CS!("\\@@bibref"),
+        vec![Tokens::new(Explode!(show)), keys, Tokens!(), Tokens!()]);
+      let mut body = Vec::new();
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      body.extend(bibref.unlist());
+      if let Some(p) = post {
+        body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
+      }
+      let class = if is_name { "citename" } else { "citefield" };
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
+        vec![Tokens::new(Explode!(class)), Tokens::new(body)]))
+    }, locked => true);
+  }
+  // biblatex.sty:3649 `\mkcomprange*[postpro]{string}` and :3505
+  // `\mknormrange` compress or normalise a page-range string item by item;
+  // the string itself is the rendering, with the postprocessor applied to it
+  // when given. :3863 `\mkfirstpage*[postpro]{string}` keeps the first page
+  // of the (first) range.
+  RawTeX!(
+    r"\def\lx@blx@rangeaux{\@ifnextchar[{\lx@blx@range@i}{\lx@blx@range@i[]}}
+\def\lx@blx@range@i[#1]#2{\ifx\\#1\\#2\else#1{#2}\fi}
+\def\mkcomprange{\@ifstar\lx@blx@rangeaux\lx@blx@rangeaux}
+\def\mknormrange{\@ifstar\lx@blx@rangeaux\lx@blx@rangeaux}
+\def\lx@blx@firstaux{\@ifnextchar[{\lx@blx@first@i}{\lx@blx@first@i[]}}
+\def\lx@blx@first@i[#1]#2{\lx@blx@range@i[#1]{\lx@blx@firstpage#2-\@nil}}
+\def\lx@blx@firstpage#1-#2\@nil{#1}
+\def\mkfirstpage{\@ifstar\lx@blx@firstaux\lx@blx@firstaux}"
+  );
+  // biblatex.sty:4371-4377 (`\blx@blxinit`): the page-string family used
+  // inside cite postnotes — `\pno`/`\ppno` are the localised page strings,
+  // `\psq`/`\psqq` "sequens"/"sequentes", `\nopp` suppresses the prefix,
+  // `\pnfmt` formats a postnote. Real biblatex hardens them to `\ERROR`
+  // outside a citation context (:4382-4389); the manuals use them at top
+  // level only inside `\cite[...]`, which this binding renders verbatim.
+  RawTeX!(
+    r"\protected\def\pnfmt#1{#1}
+\protected\def\pno{\bibstring{page}}
+\protected\def\ppno{\bibstring{pages}}
+\let\nopp\relax
+\protected\def\psq{\sqspace\bibstring{sequens}}
+\protected\def\psqq{\sqspace\bibstring{sequentes}}"
+  );
 
   // -- Multicite commands: repeated [pre][post]{keys} groups -------------
   // Greedy gullet reading (blx_read_multicite_groups); groups joined "; ".
@@ -966,6 +2341,12 @@ LoadDefinitions!({
   DefMacro!("\\Autocites OptionalMatch:*", sub[(star)] {
     blx_multicite_parenthetical(blx_nonempty(&star))
   }, locked => true);
+  // chicago-dates-common.cbx:2966 `\gentextcite` (genitive text cite) and
+  // its `s`/`G` forms: the case is prose-only, so they render as `\textcite`.
+  DefMacro!("\\gentextcite", "\\textcite");
+  DefMacro!("\\gentextcites", "\\textcites");
+  DefMacro!("\\Gentextcite", "\\textcite");
+  DefMacro!("\\Gentextcites", "\\textcites");
   DefMacro!("\\textcites OptionalMatch:*", sub[(star)] {
     blx_multicite_textual(blx_nonempty(&star))
   }, locked => true);
@@ -973,12 +2354,13 @@ LoadDefinitions!({
     blx_multicite_textual(blx_nonempty(&star))
   }, locked => true);
   // Rust extras beyond the Perl binding (kept from the earlier stub set):
-  // footnote/superscript multicites degrade to bare; \citetexts to textual.
+  // superscript multicites degrade to bare; \citetexts to textual; `\footcites` sets its citations in one
+  // footnote (biblatex.def:2650 `\DeclareMultiCiteCommand{\footcites}[\mkbibfootnote]`).
   DefMacro!("\\smartcites OptionalMatch:*", sub[(star)] {
     blx_multicite_bare(blx_nonempty(&star))
   }, locked => true);
   DefMacro!("\\footcites OptionalMatch:*", sub[(star)] {
-    blx_multicite_bare(blx_nonempty(&star))
+    Ok(blx_wrap("\\mkbibfootnote", blx_multicite_note(blx_nonempty(&star))?))
   }, locked => true);
   DefMacro!("\\supercites OptionalMatch:*", sub[(star)] {
     blx_multicite_bare(blx_nonempty(&star))
@@ -993,13 +2375,239 @@ LoadDefinitions!({
   DefMacro!("\\citelist{}", "#1");
 
   // \DeclareLabeldate — biblatex datacommands declaration. No-op stub.
-  def_macro_noop("\\DeclareLabeldate {}")?;
+  // biblatex.sty:15020 `\newrobustcmd*{\DeclareLabeldate}[2][]` — the optional
+  // entrytype list (apa.bbx:337 `\DeclareLabeldate[constitution]{\field{date}}`).
+  def_macro_noop("\\DeclareLabeldate []{}")?;
+  // biblatex.sty:14952 `\DeclareExtradate{\scope{\field{…}}}` — the extradate
+  // (year-suffix) scoping; chicago-authordate.bbx declares one at load.
+  def_macro_noop("\\DeclareExtradate{}")?;
+  // biblatex.sty:15093 `\DeclareLabeltitle[types]{spec}` and :14853
+  // `\DeclareLabelalphaTemplate[types]{spec}` (biblatex-apa.bbx, ext-*.bbx).
+  def_macro_noop("\\DeclareLabeltitle []{}")?;
+  def_macro_noop("\\DeclareLabelalphaTemplate []{}")?;
+  // biblatex.sty:13988 `\DeclareNolabel{\nolabel{\regexp{…}}}` and the `\DeclareNoinit{\noinit{…}}` sibling: what
+  // biber strips from names before building labels and initials (22 and 2 papers; 1707.02797, 2012.04591).
+  def_macro_noop("\\DeclareNolabel{}")?;
+  def_macro_noop("\\DeclareNoinit{}")?;
+  // biblatex.sty:2694-2705 `\uspunctuation`/`\stdpunctuation` toggle the
+  // punctuation-inside-quotes tracker; no quote tracker here → no-ops.
+  def_macro_noop("\\uspunctuation")?;
+  def_macro_noop("\\stdpunctuation")?;
+  // biblatex.sty:5541 `\letbibmacro*{new}{old}` — the macro bank is not
+  // modelled (`\newbibmacro` is a declaration no-op), so aliasing is too.
+  def_macro_noop("\\letbibmacro OptionalMatch:* {}{}")?;
+
+  // Datamodel-declaration family (biblatex.sty L16639-16642 renews these to
+  // warn-only outside the datamodel read; no XML consequence) plus internals
+  // that raw-loaded style files reach for (witness biblatex-abnt abnt.bbx:
+  // abntexto-exemplo). \abx@classtype is read as `\ifcase\abx@classtype`
+  // (abnt.bbx L1264), so it must be a number source, not a macro noop.
+  def_macro_noop("\\DeclareDatamodelFields[]{}")?;
+  // biblatex.sty:16643 `\DeclareDatamodelConstraints[types]{\constraint…}`
+  // (biblatex-cv.dbx:23/37): validation-only, its body (`\constraintfield`,
+  // `\regexp{^…$}`) must never run in text.
+  def_macro_noop("\\DeclareDatamodelConstraints[]{}")?;
+  def_macro_noop("\\DeclareDatamodelEntryfields[]{}")?;
+  def_macro_noop("\\DeclareDatamodelEntrytypes[]{}")?;
+  def_macro_noop("\\DeclareDatamodelConstant[]{}{}")?;
+  // \DeclareBibliographyAlias{alias}{entrytype} (biblatex.sty:2297): an entry of
+  // type `alias` is typeset by `entrytype`'s driver. The BibTeX reader processes a
+  // type as its `\bib@entry@<type>@alias` (bibtex.rs `resolve_entry_type`, Perl
+  // BibTeX.pool.ltxml:67-68, 121-123), so the declaration defines that macro.
+  DefPrimitive!("\\DeclareBibliographyAlias{}{}", sub[args] {
+    declare_bibliography_alias(&args[0].to_string(), &args[1].to_string())?;
+    Ok(Vec::new())
+  });
+  // biblatex.def:2624-2625 `\newrobustcmd*{\Citeauthor}{\@ifstar{\bibsentence\citeauthor*}{\bibsentence\citeauthor}}`:
+  // `\citeauthor`, its `\bibsentence` capitalization dropped as for `\Citetitle` (2410.22329; undefined, its key then
+  // read as text).
+  Let!("\\Citeauthor", "\\citeauthor");
+  // The aliases every standard style inherits from standard.bbx:740-752 (a native
+  // style's `.bbx` is not read; a raw-loaded one's own `\DeclareBibliographyAlias`
+  // calls reach the primitive above, e.g. mla-strict.bbx:355-370's retyping to
+  // `article`). Unaliased, `@review` was formatted as a book (its journal and pages
+  // dropped) and `@bookinbook`'s `booktitle` found no handler (biblatex-chicago
+  // cms-*-sample, biblatex-apa-test; arXiv 2605.16053's `@software`).
+  for (alias, entrytype) in STANDARD_BBX_ALIASES {
+    declare_bibliography_alias(alias, entrytype)?;
+  }
+  def_macro_noop("\\DeclareNumChars OptionalMatch:* {}")?;
+  // Declaration-only biber/data-model and setup hooks reached by raw-loaded
+  // style chains (oxref.bbx, biblatex-sbl.def, chicago): they shape biber's
+  // data model or the number checks, which our config-driven bibliography
+  // never executes, so each swallows its body (biblatex.sty:14519
+  // `\DeclareDataInheritance[opt]{src}{tgt}{rules}` — `\inherit`/`\noinherit`
+  // live only inside its body; :3348 `\DeclareRangeChars*{}`; :3420
+  // `\NumCheckSetup{}`; :14571 `\DeclareBiblistFilter{}{}` with
+  // `\filter`/`\filteror` inside; :9379
+  // `\defbibfilter{}{}` whose `\type`/`\keyword`/`\and`… are local to the
+  // body). `\ifbibmacroundef` (:2412) is `\ifcsundef{abx@macro@#1}` and our
+  // `\newbibmacro` records nothing, so the undefined branch is faithful.
+  // Witnesses: biblatex-oxref oxnum/oxalph/oxyear/oxnotes-doc, biblatex-cse-doc,
+  // biblatex-musuos. Guard: `perfect_kernel_batch54::biblatex_loads_bbx_before_cbx`.
+  def_macro_noop("\\DeclareDataInheritance[]{}{}{}")?;
+  def_macro_noop("\\DeclareRangeChars OptionalMatch:* {}")?;
+  def_macro_noop("\\NumCheckSetup{}")?;
+  def_macro_noop("\\NumsCheckSetup{}")?;
+  // The biblatex.sty internal/public surface that raw STYLE files reach at
+  // cite/bibliography time (the binding stands in for biblatex.sty; Perl
+  // raw-loads it and never gets this far — it fails at biblatex.sty:7113
+  // `\ProcessLocalKeyvalOptions` on every biblatex document). Inventory by
+  // static breadth across the biblatex-* bundles (wave-15 index-bib agent):
+  // biber/data-model declarations are faithful-signature gobbles —
+  // `\clearfield` (:2538, 35 bundles), `\DeclareCitePunctuationPosition`
+  // (:12771), `\DeclareAutoPunctuation` (:12754), `\ResetDataInheritance`
+  // (:14566), `\DefaultInheritance[]{}` (:14474, whose optional carries
+  // `\except{}{}{}`, :14485), `\AtDataInput[][*]{}` (:8985, `.bbl` item
+  // hooks our `.bbl` reader does not run), `\OnManualCitation{}` (:11442),
+  // `\abx@missing@entry{}` (:11661), `\blx@nocite@do{}` (:12337, the kernel
+  // `\nocite` records keys); control flow keeps its real shape —
+  // `\blx@blxinit` (:1105, one-shot init → `\relax`), `\blx@safe@actives`/
+  // `\blx@rest@actives` (:127), `\blx@ifdata{key}{t}{f}` (:8439
+  // `\ifcsdef{blx@data@#1}`: no biber data in our model → false branch),
+  // `\blx@xsanitizeafter{cmd}{text}` (:1216: `cmd{<detokenized text>}`).
+  // `\DeclareMultiCiteCommand{\cites}[wrap]{\cite}{sep}` (:12500) defines a
+  // NEW multicite name as its underlying cite command, as
+  // `\DeclareCiteCommand` above does (windycity.cbx:179 `\idemcites`).
+  // Witnesses: windycity, biblatex-sbl (`\citeshorthand`), biblatex-juradiss.
+  // Guard: `perfect_kernel_batch54::biblatex_style_internal_surface`.
+  def_macro_noop("\\clearfield{}")?;
+  def_macro_noop("\\DeclareCitePunctuationPosition{}{}")?;
+  def_macro_noop("\\DeclareAutoPunctuation{}")?;
+  def_macro_noop("\\ResetDataInheritance")?;
+  def_macro_noop("\\DefaultInheritance[]{}")?;
+  def_macro_noop("\\except{}{}{}")?;
+  def_discarded_hook("\\AtDataInput[] OptionalMatch:* {}")?;
+  def_macro_noop("\\OnManualCitation{}")?;
+  def_macro_noop("\\abx@missing@entry{}")?;
+  def_macro_noop("\\blx@nocite@do{}")?;
+  DefMacro!("\\blx@blxinit", "\\relax");
+  def_macro_noop("\\blx@safe@actives")?;
+  def_macro_noop("\\blx@rest@actives")?;
+  DefMacro!("\\blx@ifdata{}{}{}", "#3");
+  DefMacro!(
+    "\\blx@xsanitizeafter{}{}",
+    "\\begingroup\\def\\blx@tempa{\\endgroup#1}\\edef\\blx@tempb{#2}\\expandafter\\blx@tempa\\expandafter{\\detokenize\\expandafter{\\blx@tempb}}"
+  );
+  def_macro_noop("\\DeclareBiblistFilter{}{}")?;
+  def_macro_noop("\\defbibfilter{}{}")?;
+  DefMacro!("\\ifbibmacroundef{}{}{}", "#2");
+  // \blx@regimcs{\csa\csb…} registers "imc" wrappers (biblatex.sty L1137).
+  def_macro_noop("\\blx@regimcs{}")?;
+  RawTeX!(r"\chardef\abx@classtype=0 ");
+  // nameref internal the abnt style patches into sectioning.
+  def_macro_noop("\\NR@gettitle{}")?;
 
   // Perl L64-67: passthroughs
   DefMacro!("\\unspace", "\\relax");
   DefMacro!("\\blx@imc@resetpunctfont", "\\relax");
   DefMacro!("\\blx@postpunct", "\\@empty");
-  DefRegister!("\\c@highnamepenalty" => Number(0));
+  // biblatex.sty:809-870/3488-3492 + biblatex.def:160-168/267-271/2175 declare
+  // the counters with `\newcounter`, so `\defcounter`/`\setcounter`/`\value`
+  // on them resolve (fiwi.bbx:59 `\defcounter{lownamepenalty}{0}` — "No
+  // counter defined", biblatex-fiwi ×3; the biburl*/maxnames "not a register"
+  // warnings on every biblatex doc). Defaults from :16390 `maxnames=3,
+  // minnames=1` and :862-868 (penalties 0). `\the<counter>` is the arabic value.
+  for name in [
+    "tabx@nest",
+    "listtotal",
+    "listcount",
+    "liststart",
+    "liststop",
+    "citecount",
+    "citetotal",
+    "multicitecount",
+    "multicitetotal",
+    "instcount",
+    "maxnames",
+    "minnames",
+    "maxitems",
+    "minitems",
+    "citecounter",
+    "maxcitecounter",
+    "savedcitecounter",
+    "uniquelist",
+    "uniquename",
+    "refsection",
+    "refsegment",
+    "maxextratitle",
+    "maxextratitleyear",
+    "maxextraname",
+    "maxextradate",
+    "maxextraalpha",
+    "abbrvpenalty",
+    "highnamepenalty",
+    "lownamepenalty",
+    "maxparens",
+    "parenlevel",
+    "mincomprange",
+    "maxcomprange",
+    "mincompwidth",
+    "textcitecount",
+    "textcitetotal",
+    "textcitemaxnames",
+    "biburlbigbreakpenalty",
+    "biburlbreakpenalty",
+    "biburlnumpenalty",
+    "biburlucpenalty",
+    "biburllcpenalty",
+    "smartand",
+  ] {
+    NewCounter!(name);
+  }
+  SetCounter!("maxnames", Number::new(3));
+  SetCounter!("minnames", Number::new(1));
+  SetCounter!("maxitems", Number::new(3));
+  SetCounter!("minitems", Number::new(1));
+  SetCounter!("maxparens", Number::new(3));
+  SetCounter!("smartand", Number::new(1));
+  // biblatex.sty:7660-7680: every name list (`\abx@donames`, blx-dm.def:566-588; `\abx@dornames`, `labelname`, :992) and
+  // literal list (`\abx@dolists`, blx-dm.def:552-563 and `pageref`) is a bare counter, `\newcounter{<f>}` and
+  // `\newcounter{saved<f>}`; the `\the<f>` there was before (memoir's, titling's, KOMA's `\theauthor`) comes back at the
+  // end of the package. A document's own `\stepcounter{author}` then counts, as in pdflatex (2606.16762, 2606.26281:
+  // `\c@author` undefined, 1,000 errors and a Fatal; the 2606 sandbox rerun).
+  for name in [
+    "afterword",
+    "annotator",
+    "author",
+    "bookauthor",
+    "commentator",
+    "editor",
+    "editora",
+    "editorb",
+    "editorc",
+    "foreword",
+    "holder",
+    "introduction",
+    "namea",
+    "nameb",
+    "namec",
+    "translator",
+    "shortauthor",
+    "shorteditor",
+    "sortname",
+    "labelname",
+    "institution",
+    "lista",
+    "listb",
+    "listc",
+    "listd",
+    "liste",
+    "listf",
+    "location",
+    "organization",
+    "origlocation",
+    "origpublisher",
+    "publisher",
+    "pageref",
+  ] {
+    let the = T_CS!(s!("\\the{name}"));
+    let compat = T_CS!(s!("\\blx@compat@the{name}"));
+    let_i(&compat, &the, None);
+    NewCounter!(name);
+    NewCounter!(&s!("saved{name}"));
+    let_i(&the, &compat, None);
+  }
 
   // Perl L69-72
   DefMacro!("\\addslash", "/\\hskip\\z@skip");
@@ -1008,50 +2616,62 @@ LoadDefinitions!({
   DefMacro!("\\autocap{}", "#1");
 
   // Perl L75-85
-  DefMacro!("\\addspace",        "\\space");
-  DefMacro!("\\addnbspace",      "\\space");
-  DefMacro!("\\addthinspace",    "\\space");
-  DefMacro!("\\addnbthinspace",  "\\space");
-  DefMacro!("\\addlowpenspace",  "\\space");
+  DefMacro!("\\addspace", "\\space");
+  DefMacro!("\\addnbspace", "\\space");
+  DefMacro!("\\addthinspace", "\\space");
+  DefMacro!("\\addnbthinspace", "\\space");
+  DefMacro!("\\addlowpenspace", "\\space");
   DefMacro!("\\addhighpenspace", "\\space");
-  DefMacro!("\\addlpthinspace",  "\\space");
-  DefMacro!("\\addhpthinspace",  "\\space");
-  DefMacro!("\\addabbrvspace",   "\\space");
-  DefMacro!("\\addabthinspace",  "\\space");
-  DefMacro!("\\adddotspace",     "\\unspace\\adddot\\space");
+  DefMacro!("\\addlpthinspace", "\\space");
+  DefMacro!("\\addhpthinspace", "\\space");
+  DefMacro!("\\addabbrvspace", "\\space");
+  DefMacro!("\\addabthinspace", "\\space");
+  DefMacro!("\\adddotspace", "\\unspace\\adddot\\space");
 
   // Perl L87-91
-  DefMacro!("\\noligature",   "\\nobreak\\hskip\\z@skip");
-  DefMacro!("\\hyphen",       "\\nobreak-\\nobreak\\hskip\\z@skip");
-  DefMacro!("\\nbhyphen",     "\\nobreak\\mbox{-}\\nobreak\\hskip\\z@skip");
-  DefMacro!("\\hyphenate",    "\\nobreak\\-\\nobreak\\hskip\\z@skip");
+  DefMacro!("\\noligature", "\\nobreak\\hskip\\z@skip");
+  DefMacro!("\\hyphen", "\\nobreak-\\nobreak\\hskip\\z@skip");
+  DefMacro!("\\nbhyphen", "\\nobreak\\mbox{-}\\nobreak\\hskip\\z@skip");
+  DefMacro!("\\hyphenate", "\\nobreak\\-\\nobreak\\hskip\\z@skip");
   DefMacro!("\\allowhyphens", "\\nobreak\\hskip\\z@skip");
 
   // Perl L93-99
-  DefMacro!("\\bibinitperiod",      "\\adddot");
+  DefMacro!("\\bibinitperiod", "\\adddot");
   DefMacro!("\\bibinithyphendelim", ".\\mbox{-}");
-  DefMacro!("\\bibnamedelima",      "\\addhighpenspace");
-  DefMacro!("\\bibnamedelimb",      "\\addlowpenspace");
-  DefMacro!("\\bibnamedelimc",      "\\addhighpenspace");
-  DefMacro!("\\bibnamedelimd",      "\\addlowpenspace");
-  DefMacro!("\\bibnamedelimi",      "\\addnbspace");
+  DefMacro!("\\bibnamedelima", "\\addhighpenspace");
+  DefMacro!("\\bibnamedelimb", "\\addlowpenspace");
+  DefMacro!("\\bibnamedelimc", "\\addhighpenspace");
+  DefMacro!("\\bibnamedelimd", "\\addlowpenspace");
+  DefMacro!("\\bibnamedelimi", "\\addnbspace");
 
-  // Perl L101-106: \datalist / \sortlist set the `biblatex_with_keyvals`
-  // flag globally — Perl's `\name` closure (Cycle 9) reads it to choose
-  // 3-arg vs 4-arg / keyval-vs-positional dispatch.
-  DefMacro!("\\datalist[]{}", sub[_args] {
-    assign_value("biblatex_with_keyvals", Stored::from(1),
-      Some(Scope::Global));
-    Ok(Tokens::new(vec![]))
+  // biblatex.sty:9280-9283 `\blx@bbl@dlist[type]{name}` (a format-2
+  // `.bbl`'s `\sortlist`): a datalist starts; its name says which refcontext
+  // it is for ([`bbl_default_datalist`]), its type whether it is the
+  // bibliography's (`entry`) or a biblist's (`list`). (The ar5iv binding,
+  // biblatex.sty.ltxml:428-434, set a keyval flag for its `\name`; the reader
+  // tells the name forms apart by their content.)
+  DefMacro!("\\biblatex@bbl@datalist[]{}", sub[(kind, name)] {
+    bbl_start_datalist(kind, name);
+    Ok(Tokens::default())
   });
-  DefMacro!("\\sortlist[]{}", sub[_args] {
-    assign_value("biblatex_with_keyvals", Stored::from(1),
-      Some(Scope::Global));
-    Ok(Tokens::new(vec![]))
+  DefMacro!("\\sortlist[]{}", sub[(kind, name)] {
+    bbl_start_datalist(kind, name);
+    Ok(Tokens::default())
   });
-  // Perl L107-108: \lossort / \refsection — empty stubs.
+  // Perl L107-108: \lossort / \refsection — empty stubs there; `\refsection`
+  // records its resources here (below).
   DefMacro!("\\lossort", "", locked => true);
-  DefMacro!("\\refsection{}", "", locked => true);
+  // biblatex.sty:10757-10769 `\newrobustcmd*{\refsection}{…\@ifnextchar[{\blx@refsection}
+  // {\blx@refsection[]}}`: an OPTIONAL resource list only — a mandatory `{}` here
+  // swallowed the `\begin` of the next environment inside `\begin{refsection}[…]`
+  // (biblatex-apa-test:1203-1208; batch 56ai).
+  // biblatex.sty:10757 `\blx@refsection[resources]` records the section's
+  // resources: biblatex-apa6-test.tex:444 declares its only `.bib` as
+  // `\begin{refsection}[../bibtex/bib/…-references]` (dropped, every
+  // citation was "Missing Entry"). The list goes to
+  // `\biblatex@section@resources` (below), behind the global resources; one
+  // resource list serves all sections here.
+  DefMacro!("\\refsection[]", "\\biblatex@section@resources{#1}", locked => true);
 
   // biblatex `.bbl` files emitted by biber include `\true{moreauthor}` /
   // `\true{morelabelname}` / `\false{...}` flags on multi-author entries.
@@ -1063,7 +2683,15 @@ LoadDefinitions!({
   // `Error:undefined:\true` on every multi-author bibitem (witness:
   // arXiv:2509.15629 / 2509.21728 — biblatex `.bbl` v3.3 format with
   // multi-author entries).
-  DefMacro!("\\blx@bbl@booltrue{}", "", locked => true);
+  // biblatex.sty:8316 `\blx@bbl@booltrue`: `\true{more<list>}` marks a name or
+  // literal list the `.bib` ended with "and others" ([`BblEntry::more`]).
+  DefMacro!("\\blx@bbl@booltrue{}", sub[(flag)] {
+    if let Some(list) = flag.to_string().trim().strip_prefix("more") {
+      let list = list.to_string();
+      with_bbl_entry(|entry| entry.more.push(list));
+    }
+    Ok(Tokens::default())
+  }, locked => true);
   DefMacro!("\\blx@bbl@boolfalse{}", "", locked => true);
   Let!("\\true", "\\blx@bbl@booltrue");
   Let!("\\false", "\\blx@bbl@boolfalse");
@@ -1099,6 +2727,10 @@ LoadDefinitions!({
   // "Rust-grade author errors"). Witness: arXiv 2605.17646, whose `.bbl`
   // ends in `\missing{Cowen2021}` for a `\cite{Cowen2021}` with no entry.
   DefMacro!("\\blx@bbl@missing{}", sub[(key)] {
+    // The hidden list's read of the `.bbl` ([`blx_unprinted_bibliography`]) reports nothing again.
+    if lookup_bool("biblatex_unprinted_mode") {
+      return Ok(Tokens::default());
+    }
     Warn!("missing_entry", "biblatex",
       format!("the entry '{}' could not be found in the database; \
                \\cite of it will not resolve. Please verify the spelling \
@@ -1106,573 +2738,259 @@ LoadDefinitions!({
     Ok(Tokens::default())
   }, locked => true);
   Let!("\\missing", "\\blx@bbl@missing");
-  // Perl L122-125: \enddatalist / \endsortlist / \endlossort / \endrefsection
-  // → biblatex_as_thebibliography rebuilder. Wraps the accumulated bibitems
-  // emitted by repeated \endentry calls in `\thebibliography{count}…
-  // \endthebibliography`.
-  DefMacro!("\\enddatalist", sub[_args] {
-    Ok(bib_as_thebibliography())
+  // biblatex.sty:9285-9287: a datalist (`\sortlist` in a format-2 `.bbl`)
+  // ends; the refsection prints one of them ([`bbl_end_datalist`]), and prints
+  // it at its end ([`bbl_flush`]). `\lossort` lists shorthands, not entries.
+  DefMacro!("\\biblatex@bbl@enddatalist", sub[_args] {
+    bbl_end_datalist();
+    Ok(Tokens::default())
   }, locked => true);
   DefMacro!("\\endsortlist", sub[_args] {
-    Ok(bib_as_thebibliography())
+    bbl_end_datalist();
+    Ok(Tokens::default())
   }, locked => true);
-  DefMacro!("\\endlossort", sub[_args] {
-    Ok(bib_as_thebibliography())
-  }, locked => true);
+  def_macro_noop("\\endlossort")?;
+  // The document's `\end{refsection}` prints what a `.bbl` read inside it left, and returns to refsection 0
+  // (biblatex.sty:10874 `\global\c@refsection\z@`).
   DefMacro!("\\endrefsection", sub[_args] {
-    Ok(bib_as_thebibliography())
+    remove_value("biblatex_printed_resources");
+    let tokens = bbl_flush(true);
+    assign_value("biblatex_refsection", Stored::Int(0), Some(Scope::Global));
+    assign_value("CITE_UNIT", Stored::None, Some(Scope::Global));
+    Ok(tokens)
   }, locked => true);
-
-  // Author-year bibitem support, mirroring natbib's \@@lbibitem +
-  // \NAT@@wrout: \blx@lbibitem opens the <ltx:bibitem> (no tags, no
-  // bibblock — ltx:bibblock is autoOpen, so the following entry text opens
-  // one), and \bbl@tags emits the bibitem's single <ltx:tags> with the
-  // role="authors"/"year"/... tags that Post::CrossRef uses to build
-  // author-year citations with phrase support. The schema model is
-  // bibitem = (tags?, bibblock*): one tags element, first.
-  DefConstructor!("\\blx@lbibitem Semiverbatim",
-    "<ltx:bibitem key='#key' xml:id='#id'>",
-    after_digest => sub[whatsit] {
-      let key = whatsit.get_arg(1)
-        .map(|a| clean_bib_key(&a.to_string()))
-        .unwrap_or_default();
-      let mut properties = RefStepID!("@bibitem")?;
-      properties.insert("key", key.into());
-      whatsit.set_properties(properties);
-    });
-  // Perl `bounded => 1` + `beforeDigest => Let(T_ALIGN, '\&')`; like the
-  // Rust NAT@@wrout port, the bgroup/soft-egroup pair replaces `bounded`
-  // (whose egroup mode-frame check trips on inner mode switches) while
-  // still scope-isolating the T_ALIGN Let to argument digestion.
-  DefConstructor!("\\bbl@tags{}{}{}{}",
-    "<ltx:tags>\
-      ?#1(<ltx:tag role='year'>#1</ltx:tag>)\
-      ?#2(<ltx:tag role='authors'>#2</ltx:tag>)\
-      ?#3(<ltx:tag role='fullauthors'>#3</ltx:tag>)\
-      ?#4(<ltx:tag role='refnum'>#4</ltx:tag>)\
-    </ltx:tags>",
-    before_digest => {
-      bgroup();
-      Let!(T_ALIGN!(), T_CS!("\\&"));
-    },
-    after_digest => sub[_whatsit] {
-      pop_stack_frame(false)?;
-      Ok(Vec::new())
-    });
-
-  // Perl L127-130: \entry{key}{type}{} initializes the entry hash so that the
-  // following \field/\strng/\name/\list directives have a place to record
-  // metadata. The 3rd arg is options (Perl ignores it).
-  DefMacro!("\\entry{}{}{}", sub[(key, ty, _opts)] {
-    let mut entry: SymHashMap<Stored> = SymHashMap::default();
-    entry.insert("key", Stored::Tokens(key));
-    entry.insert("type", Stored::Tokens(ty));
-    bib_entry_save(entry);
+  // A `.bbl` refsection ends (`\biblatex@bbl@endrefsection`); the `.bbl` read ends (`@last`).
+  DefMacro!("\\biblatex@bbl@flush", sub[_args] {
+    Ok(bbl_flush(false))
+  }, locked => true);
+  DefMacro!("\\biblatex@bbl@flush@last", sub[_args] {
+    Ok(bbl_flush(true))
+  }, locked => true);
+  // biblatex.sty:8634-8636 `\refsection{<n>}` in the `.bbl`: the refsection read ([`bbl_flush`]).
+  DefMacro!("\\biblatex@bbl@section{}", sub[(number)] {
+    let number = number.to_string().trim().parse().ok();
+    BBL_DATALISTS.update(|lists| lists.refsection = number);
     Ok(Tokens::default())
   }, locked => true);
 
-  // Perl L132-263: \endentry — flush the accumulated entry hash as a
-  // `\bibitem[label]{key} authors. \newblock title. \newblock In: journal.
-  // year, pages.` token stream onto rebuilt_bibtex_variant.
-  // Simplified port: handles label-or-auto-label, key, authors (if collected
-  // by \name as plain "fullname" tokens), title, journal/booktitle, year,
-  // pages, doi/url/eprint. Pre-typeset name strings (the `{names}` array
-  // form) are emitted comma-joined.
-  DefMacro!("\\endentry", sub[_args] {
-    let entry = bib_entry_get();
-    assign_value("biblatex_entry", Stored::None, Some(Scope::Global));
+  // The bibliography a `.bbl` prints ([`bbl_flush`]): `\thebibliography`'s
+  // element and placement, with the `bibstyle`/`citestyle` a `.bib`'s
+  // `\bibliography` records, and `sort='false'` — biber sorted the list, so
+  // MakeBibliography keeps its order. Its entries are `ltx:bibentry`, which
+  // MakeBibliography formats; no `\bibitem`, so `\thebibliography`'s
+  // pseudo-`\bibitem` rescue is not armed (as for `{bibtex@bibliography}`,
+  // OXIDIZED_DESIGN #75). `\endthebibliography` closes it.
+  // `class` and `#preamble` as `\lx@bibliography`'s (`lx@bibliography@class`, [`blx_unprinted_bibliography`];
+  // `\lx@bibliography@preamble`, a `prenote=`).
+  // `lists` is the refsection's (`\biblatex@bbl@thebibliography{<lists>}`, [`blx_refsection_list`]).
+  DefConstructor!("\\biblatex@bbl@thebibliography Semiverbatim",
+  "<ltx:bibliography xml:id='#id' class='#bibclass' bibstyle='#bibstyle' citestyle='#citestyle' sort='false' lists='#1'>\
+   <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#preamble<ltx:biblist>",
+  properties => sub[_args] {
+    let mut props = stored_map!();
+    if let Some(class) = lookup_value("lx@bibliography@class") {
+      props.insert("bibclass", class);
+    }
+    Ok(props)
+  },
+  before_digest => {
+    latexml_engine::latex_constructs::before_digest_bibliography()?;
+  },
+  after_digest => sub[whatsit] {
+    latexml_engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+    latexml_engine::latex_constructs::digest_bibliography_preamble(whatsit)?;
+  },
+  before_construct => sub[doc, whatsit] {
+    latexml_engine::latex_constructs::adjust_backmatter_element(doc, whatsit)?;
+  });
 
-    // label: labelalpha if present, else label; strip CSes + braces.
-    // For author-year styles (apa, nyt, ...) biber emits NO labelalpha —
-    // construct a "Surname, Year" label from the recorded name/year data
-    // (ar5iv-bindings PR #21 + 0911aec). Gated on the detected style:
-    // numeric documents keep their sequential [1],[2],... labels.
-    // If still empty, fall back to an incrementing counter; else ensure
-    // uniqueness with a/b/.../z suffixing.
-    let mut ay_label = false;
-    let year_str = bib_entry_get_tokens(&entry, "year")
-      .map(|t| bib_clean_name(&t.to_string()))
-      .unwrap_or_default();
-    let surnames: Vec<String> = match entry.get("authors_surnames") {
-      Some(Stored::String(s)) => to_string(*s)
-        .split('\u{1f}').filter(|p| !p.is_empty()).map(String::from).collect(),
-      _ => Vec::new(),
+  // biblatex.sty:8681 `\blx@bbl@entry{key}{type}{options}`: an entry starts.
+  DefMacro!("\\biblatex@bbl@entry{}{}{}", sub[(key, ty, options)] {
+    BBL_ENTRY.update(|slot| {
+      *slot = Some(BblEntry {
+        key: key.to_string().trim().to_string(),
+        entry_type: ty.to_string().trim().to_string(),
+        listed: !bbl_skips_bib(&options.to_string()),
+        labelled: !bbl_skips_label(&options.to_string()),
+        fields: Vec::new(),
+        date_parts: Vec::new(),
+        more: Vec::new(),
+      });
+    });
+    Ok(Tokens::default())
+  }, locked => true);
+
+  // The entry ends: its dates are rejoined and its cut-short name lists end
+  // in "and others", and it is registered for the BibTeX reader under its key
+  // and listed in its datalist — only now, so an entry with no `\endentry`
+  // is never printed from an earlier registration.
+  DefMacro!("\\biblatex@bbl@endentry", sub[_args] {
+    let Some(mut bbl) = BBL_ENTRY.update(Option::take) else {
+      return Ok(Tokens::default());
     };
-    let label_str: String = {
-      let mut cleaned = bib_entry_get_tokens(&entry, "labelalpha")
-        .or_else(|| bib_entry_get_tokens(&entry, "label"))
-        .map(|t| bib_clean_name(&t.to_string()))
-        .filter(|s| !s.is_empty());
-      if cleaned.is_none() && blx_is_authoryear() && !surnames.is_empty() && !year_str.is_empty() {
-        let author_part = match surnames.len() {
-          1 => surnames[0].clone(),
-          2 => format!("{} & {}", surnames[0], surnames[1]),
-          _ => format!("{} et al.", surnames[0]),
+    for &(prefix, date) in BBL_DATES {
+      if let Some(value) = bbl_date(&bbl.date_parts, prefix) {
+        bbl.fields.push((date.to_string(), value));
+      }
+    }
+    // biblatex.sty:8707-8711: an entry datalist files the entry under its type and subtype; :8385-8390 its keywords.
+    BBL_DATALISTS.update(|lists| {
+      if lists.kind != "list" {
+        let field = |name: &str| bbl.fields.iter().find(|(field, _)| field == name).map(|(_, value)| value.trim());
+        let meta = BblMeta {
+          entry_type: bbl.entry_type.clone(),
+          subtype:    field("entrysubtype").map(str::to_string),
+          keywords:   field("keywords")
+            .map(|keywords| {
+              keywords.split(',').map(str::trim).filter(|keyword| !keyword.is_empty()).map(str::to_string).collect()
+            })
+            .unwrap_or_default(),
         };
-        cleaned = Some(format!("{author_part}, {year_str}"));
-        ay_label = true;
+        lists.meta.insert(bbl.key.clone(), meta);
       }
-      match cleaned {
-        Some(label) => {
-          // Perl L148-162: collision-avoidance suffixing, tracked globally in
-          // `biblatex_author_labels`. The `z`-wraparound (append another base
-          // 'a' and restart) is faithfully ported — see arXiv:1212.4446.
-          let mut labels: SymHashMap<Stored> = match lookup_value("biblatex_author_labels") {
-            Some(Stored::HashStored(m)) => m,
-            _ => SymHashMap::default(),
-          };
-          let final_label = if labels.contains_key(&label) {
-            let mut base = label;
-            let mut suffix = b'a';
-            while labels.contains_key(&format!("{base}{}", suffix as char)) {
-              if suffix == b'z' { base.push('a'); suffix = b'a'; }
-              else { suffix += 1; }
-            }
-            format!("{base}{}", suffix as char)
-          } else {
-            label
-          };
-          labels.insert(&final_label, Stored::from(1));
-          assign_value("biblatex_author_labels",
-            Stored::HashStored(labels), Some(Scope::Global));
-          final_label
-        },
-        None => {
-          // Perl L144-147: no usable label → simple incrementing counter.
-          let n = bib_state_int("biblatex_auto_label") + 1;
-          bib_state_set_int("biblatex_auto_label", n);
-          n.to_string()
-        },
+    });
+    // biblatex.sty:8897 `\ifundef\abx@field@shorthand`: an entry with a shorthand is labelled by it, not numbered.
+    let shorthand = bbl.fields.iter().any(|(field, _)| field == "shorthand");
+    let mut entry = BibEntry::new(bbl.key.clone(), bbl.entry_type);
+    for (name, mut value) in bbl.fields {
+      if bbl.more.contains(&name) {
+        value.push_str(" and others");
       }
-    };
-
-    // Bump entry count for thebibliography wrapper.
-    bib_state_set_int("biblatex_entry_count", bib_state_int("biblatex_entry_count") + 1);
-
-    let mut variant: Vec<Token> = Vec::with_capacity(64);
-    let key_toks = bib_entry_get_tokens(&entry, "key").unwrap_or_default();
-    if ay_label {
-      // Author-year entry: open the bibitem via \blx@lbibitem (no tags, no
-      // bibblock — ltx:bibblock is autoOpen) and emit the single
-      // structured <ltx:tags> with the role="authors"/"year"/... tags that
-      // Post::CrossRef needs to resolve \textcite / \parencite with phrase
-      // support. Mirrors natbib's \@@lbibitem + \NAT@@wrout; keeps the
-      // schema model bibitem = (tags?, bibblock*) valid.
-      let (author_part, ay_year) = blx_split_ay_label(&label_str)
-        .unwrap_or_else(|| (label_str.clone(), year_str.clone()));
-      // The year part carries any disambiguation suffix (2020a, ...) so
-      // same-author-same-year entries stay distinct.
-      let refnum_str = if author_part == label_str {
-        label_str
-      } else {
-        format!("{author_part} ({ay_year})")
-      };
-      let full_author_part = match surnames.len() {
-        0 => author_part.clone(),
-        1 | 2 => surnames.join(" & "),
-        _ => format!("{} & {}",
-          surnames[..surnames.len() - 1].join(", "),
-          surnames[surnames.len() - 1]),
-      };
-      variant.push(T_CS!("\\blx@lbibitem"));
-      variant.push(T_BEGIN!());
-      variant.extend(key_toks.unlist());
-      variant.push(T_END!());
-      variant.push(T_CS!("\\bbl@tags"));
-      for tag in [&ay_year, &author_part, &full_author_part, &refnum_str] {
-        variant.push(T_BEGIN!());
-        variant.extend(ExplodeText!(tag));
-        variant.push(T_END!());
-      }
-    } else {
-      // Numeric / alphabetic / sequential-fallback entry: plain \bibitem,
-      // exactly as before author-year support was added.
-      variant.push(T_CS!("\\bibitem"));
-      variant.push(T_OTHER!("["));
-      variant.extend(ExplodeText!(&label_str));
-      variant.push(T_OTHER!("]"));
-      variant.push(T_BEGIN!());
-      variant.extend(key_toks.unlist());
-      variant.push(T_END!());
+      entry.add_raw_field(name, value);
     }
-
-    // Authors: if \name stashed a comma-joined string under "authors_str",
-    // emit it. Defer the et-al / per-author re-tokenization for now — most
-    // .bbl files give us pre-formatted author tokens.
-    let authors_toks = bib_entry_get_tokens(&entry, "authors_str");
-    let mut have_authors = false;
-    if let Some(toks) = authors_toks
-      && !toks.is_empty() {
-        variant.extend(toks.unlist());
-        have_authors = true;
+    register_entry(&bbl.key, entry);
+    BBL_DATALISTS.update(|lists| {
+      if lists.kind != "list" && bbl.labelled && !shorthand {
+        lists.numbered.push(bbl.key.clone());
       }
-
-    // Title
-    if let Some(title) = bib_entry_get_tokens(&entry, "title")
-      && !title.is_empty() {
-        if have_authors {
-          variant.push(T_CS!("\\newblock"));
-        }
-        variant.push(T_OTHER!("`"));
-        variant.push(T_OTHER!("`"));
-        variant.extend(title.unlist());
-        variant.push(T_OTHER!("'"));
-        variant.push(T_OTHER!("'"));
+      if bbl.listed {
+        lists.keys.push(bbl.key);
       }
-    // Note
-    if let Some(note) = bib_entry_get_tokens(&entry, "note")
-      && !note.is_empty() {
-        variant.push(T_SPACE!());
-        variant.extend(note.unlist());
-      }
-    // Journal / booktitle
-    let journal = bib_entry_get_tokens(&entry, "booktitle")
-      .or_else(|| bib_entry_get_tokens(&entry, "journaltitle"))
-      .or_else(|| bib_entry_get_tokens(&entry, "journal"));
-    if let Some(j) = journal.as_ref()
-      && !j.is_empty() {
-        variant.push(T_CS!("\\newblock"));
-        variant.extend(ExplodeText!("In "));
-        variant.push(T_CS!("\\emph"));
-        variant.push(T_BEGIN!());
-        variant.extend(j.clone().unlist());
-        variant.push(T_END!());
-      }
-    // Volume + (number) — Perl L217-219: gated on a booktitle/journaltitle/series.
-    let series = bib_entry_get_tokens(&entry, "series");
-    let has_volume = bib_entry_get_tokens(&entry, "volume")
-      .map(|v| !v.is_empty()).unwrap_or(false);
-    if let Some(volume) = bib_entry_get_tokens(&entry, "volume")
-      && !volume.is_empty() && (journal.is_some() || series.is_some()) {
-        variant.push(T_SPACE!());
-        variant.push(T_CS!("\\textbf"));
-        variant.push(T_BEGIN!());
-        variant.extend(volume.unlist());
-        if let Some(num) = bib_entry_get_tokens(&entry, "number")
-          && !num.is_empty() {
-            variant.push(T_OTHER!("."));
-            variant.extend(num.unlist());
-          }
-        variant.push(T_END!());
-      }
-    // Series — Perl L220-222. Trailing number only when there is no volume.
-    if let Some(series) = series.as_ref()
-      && !series.is_empty() {
-        variant.push(T_OTHER!(","));
-        variant.push(T_SPACE!());
-        variant.extend(series.clone().unlist());
-        if !has_volume
-          && let Some(num) = bib_entry_get_tokens(&entry, "number")
-            && !num.is_empty() {
-              variant.push(T_SPACE!());
-              variant.extend(num.unlist());
-            }
-      }
-    // Publisher / location
-    if let Some(publisher) = bib_entry_get_tokens(&entry, "publisher")
-      && !publisher.is_empty() {
-        variant.push(T_CS!("\\newblock"));
-        if let Some(loc) = bib_entry_get_tokens(&entry, "location")
-          && !loc.is_empty() {
-            variant.extend(loc.unlist());
-            variant.push(T_OTHER!(":"));
-            variant.push(T_SPACE!());
-          }
-        variant.extend(publisher.unlist());
-      }
-    // howpublished — Perl L227.
-    if let Some(howpub) = bib_entry_get_tokens(&entry, "howpublished")
-      && !howpub.is_empty() {
-        variant.push(T_OTHER!(","));
-        variant.push(T_SPACE!());
-        variant.extend(howpub.unlist());
-      }
-    // Year
-    if let Some(year) = bib_entry_get_tokens(&entry, "year")
-      && !year.is_empty() {
-        variant.push(T_OTHER!(","));
-        variant.push(T_SPACE!());
-        variant.extend(year.unlist());
-      }
-    // Pages
-    if let Some(pages) = bib_entry_get_tokens(&entry, "pages")
-      && !pages.is_empty() {
-        variant.push(T_OTHER!(","));
-        variant.push(T_SPACE!());
-        variant.extend(ExplodeText!("pp. "));
-        variant.extend(pages.unlist());
-      }
-    // organization — Perl L230.
-    if let Some(org) = bib_entry_get_tokens(&entry, "organization")
-      && !org.is_empty() {
-        variant.push(T_CS!("\\newblock"));
-        variant.extend(org.unlist());
-      }
-    // DOI / URL / eprint — Perl L231-260.
-    if let Some(doi) = bib_entry_get_tokens(&entry, "doi").filter(|t| !t.is_empty()) {
-      // Perl L232-237: trim leading/trailing space + braces for a clean URI.
-      let doi_toks = bib_trim_url_tokens(doi);
-      variant.push(T_CS!("\\newblock"));
-      variant.extend(ExplodeText!("DOI: "));
-      variant.push(T_CS!("\\href"));
-      variant.push(T_BEGIN!());
-      variant.extend(ExplodeText!("https://dx.doi.org/"));
-      variant.extend(doi_toks.clone());
-      variant.push(T_END!());
-      variant.push(T_BEGIN!());
-      variant.extend(doi_toks);
-      variant.push(T_END!());
-    } else if let Some(url) = bib_entry_get_tokens(&entry, "url").filter(|t| !t.is_empty()) {
-      // Perl L240-244: label from eprinttype (uppercased), default URL, arXiv if ARXIV.
-      let etype = bib_entry_get_tokens(&entry, "eprinttype")
-        .map(|t| t.to_string().to_uppercase()).unwrap_or_default();
-      let etype = if etype.is_empty() { "URL".to_string() }
-        else if etype == "ARXIV" { "arXiv".to_string() }
-        else { etype };
-      variant.push(T_CS!("\\newblock"));
-      variant.extend(ExplodeText!(&format!("{etype}: ")));
-      variant.push(T_CS!("\\url"));
-      variant.push(T_BEGIN!());
-      variant.extend(url.unlist());
-      variant.push(T_END!());
-    } else if let Some(eprint) = bib_entry_get_tokens(&entry, "eprint").filter(|t| !t.is_empty()) {
-      // Perl L245-260.
-      let etype = bib_entry_get_tokens(&entry, "eprinttype")
-        .map(|t| t.to_string().to_uppercase()).unwrap_or_default();
-      let is_arxiv = etype == "ARXIV";
-      let etype = if etype.is_empty() { "eprint".to_string() }
-        else if is_arxiv { "arXiv".to_string() }
-        else { etype };
-      let eprint_class = bib_entry_get_tokens(&entry, "eprintclass").filter(|t| !t.is_empty());
-      variant.push(T_CS!("\\newblock"));
-      // Perl L260: no space between the "type:" label and the target.
-      variant.extend(ExplodeText!(&format!("{etype}:")));
-      if is_arxiv {
-        let eprint_toks = bib_trim_url_tokens(eprint);
-        variant.push(T_CS!("\\href"));
-        variant.push(T_BEGIN!());
-        variant.extend(ExplodeText!("https://arxiv.org/abs/"));
-        variant.extend(eprint_toks.clone());
-        variant.push(T_END!());
-        variant.push(T_BEGIN!());
-        variant.extend(eprint_toks);
-        // Perl L248: eprintclass → " [class]" suffix, inside the link text.
-        if let Some(cls) = eprint_class {
-          variant.push(T_SPACE!());
-          variant.push(T_OTHER!("["));
-          variant.extend(cls.unlist());
-          variant.push(T_OTHER!("]"));
-        }
-        variant.push(T_END!());
-      } else {
-        variant.extend(eprint.unlist());
-      }
-    }
-
-    bib_variant_push(variant);
+    });
     Ok(Tokens::default())
   }, locked => true);
 
   // BiblatexAuthor keyvals — extended (PR #21) with prefix/suffix/…-un
   // name parts so "van der Berg" / "King Jr." names parse correctly.
-  DefKeyVal!("BiblatexAuthor", "given",    "");
-  DefKeyVal!("BiblatexAuthor", "giveni",   "");
-  DefKeyVal!("BiblatexAuthor", "givenun",  "");
-  DefKeyVal!("BiblatexAuthor", "family",   "");
-  DefKeyVal!("BiblatexAuthor", "familyi",  "");
+  DefKeyVal!("BiblatexAuthor", "given", "");
+  DefKeyVal!("BiblatexAuthor", "giveni", "");
+  DefKeyVal!("BiblatexAuthor", "givenun", "");
+  DefKeyVal!("BiblatexAuthor", "family", "");
+  DefKeyVal!("BiblatexAuthor", "familyi", "");
   DefKeyVal!("BiblatexAuthor", "familyun", "");
-  DefKeyVal!("BiblatexAuthor", "prefix",   "");
-  DefKeyVal!("BiblatexAuthor", "prefixi",  "");
+  DefKeyVal!("BiblatexAuthor", "prefix", "");
+  DefKeyVal!("BiblatexAuthor", "prefixi", "");
   DefKeyVal!("BiblatexAuthor", "prefixun", "");
-  DefKeyVal!("BiblatexAuthor", "suffix",   "");
-  DefKeyVal!("BiblatexAuthor", "suffixi",  "");
-  DefKeyVal!("BiblatexAuthor", "nameun",   "");
+  DefKeyVal!("BiblatexAuthor", "suffix", "");
+  DefKeyVal!("BiblatexAuthor", "suffixi", "");
+  DefKeyVal!("BiblatexAuthor", "nameun", "");
 
-  // Perl L270-346: \name{type}{count}{maybe-content} — biblatex's author
-  // record. The TeX-2.5+ .bbl shape is `\name{author}{N}{}{ {{}{Family}…} }`
-  // where the 3rd arg is empty and the 4th is the author body. Older variants
-  // pass 3 args. Simplified port: declare 4 mandatory args; the 4th-arg
-  // capture covers the modern shape used by the vast majority of arxiv .bbl
-  // files. The body holds N inner-author groups, each of the form
-  // `{hash}{family}{familyi}{given}{giveni}{}{}{}{}` — we extract family +
-  // given pairs into "Given Family" strings (no Perl-faithful keyval/hash
-  // ordering yet) and stash them comma-joined under `authors_str` /
-  // `editors_str` in the entry hash for `\endentry` to emit verbatim.
-  DefMacro!("\\name{}{}{}{}", sub[(ty, _count, _maybe, body)] {
-    let type_str = ty.to_string();
-    // The body's tokens start with `{` `{}` (empty hash) or `{hash=…}` then
-    // `{family}{familyi}{given}{giveni}{}{}{}{}` repeated, separated by
-    // optional whitespace. Walk top-level groups.
-    let body_toks: Vec<Token> = body.unlist();
-    // Helper: scan one balanced {...} group, advancing index.
-    fn read_group(tokens: &[Token], i: &mut usize) -> Option<Vec<Token>> {
-      while *i < tokens.len() {
-        let cc = tokens[*i].code;
-        if cc == Catcode::SPACE { *i += 1; continue; }
-        if cc == Catcode::BEGIN { break; }
-        return None; // not a group
-      }
-      if *i >= tokens.len() { return None; }
-      *i += 1; // consume BEGIN
-      let mut depth = 1usize;
-      let mut out = Vec::new();
-      while *i < tokens.len() {
-        let cc = tokens[*i].code;
-        if cc == Catcode::BEGIN {
-          depth += 1;
-          out.push(tokens[*i]);
-        } else if cc == Catcode::END {
-          depth -= 1;
-          if depth == 0 { *i += 1; return Some(out); }
-          out.push(tokens[*i]);
-        } else {
-          out.push(tokens[*i]);
-        }
-        *i += 1;
-      }
-      Some(out) // unterminated: best effort
+  // biblatex.sty:8339 `\blx@bbl@namedef{list}{count}{options}{names}`: a name
+  // list, one `{{<meta>}{<parts>}}` group per name. A format-3 `.bbl` (a
+  // `\datalist` one) gives the parts as keys, `family={…},given={…},
+  // prefix={…},suffix={…}` and their `…i` initials; an older one gives them in
+  // place, `{family}{familyi}{given}{giveni}{prefix}{prefixi}{suffix}{suffixi}`.
+  // The full parts are read back into BibTeX's "von Last, Jr, First" form
+  // ([`bbl_bibtex_name`]) and the names joined with "and".
+  DefMacro!("\\biblatex@bbl@name{}{}{}{}", sub[(role, _count, _options, body)] {
+    let role = role.to_string().trim().to_string();
+    if !BBL_NAMES.contains(&role.as_str()) {
+      return Ok(Tokens::default());
     }
-    // Perl L286: `$keyvals_flag = LookupValue('biblatex_with_keyvals')`, set
-    // by \datalist / \sortlist. Modern biber .bbl (format ≥ 3.x) encodes each
-    // author as `{{meta,hash}{family={…},given={…},…}}` (keyval block); older
-    // .bbl uses positional `{{hash}{family}{familyi}{given}{giveni}…}`. Without
-    // this dispatch the keyval block was grabbed wholesale as "family" and
-    // leaked verbatim into the bibliography (`family=…,familyi=…,given=…`).
-    let keyvals_flag = bib_state_int("biblatex_with_keyvals") != 0;
     let mut names: Vec<String> = Vec::new();
-    // Family name parts recorded alongside the full names, for author-year
-    // label construction (\endentry): "van der Berg, Pieter" must label as
-    // "Berg, YEAR", and "Martin Luther King Jr." as "King", not "Jr.".
-    let mut surnames: Vec<String> = Vec::new();
-    let mut idx = 0usize;
-    while idx < body_toks.len() {
-      // Skip space tokens between author groups.
-      while idx < body_toks.len() &&
-            body_toks[idx].code == Catcode::SPACE {
-        idx += 1;
-      }
-      if idx >= body_toks.len() { break; }
-      // Read the per-author group.
-      let author_grp = match read_group(&body_toks, &mut idx) {
-        Some(g) => g,
-        None => break,
-      };
-      // First sub-group is always the per-author metadata/hash block
-      // (`{hash=…}` or `{un=0,uniquepart=base,hash=…}`); skip it (Perl L294).
-      let mut j = 0usize;
-      let _meta = read_group(&author_grp, &mut j);
-      let (given, prefix, family, suffix) = if keyvals_flag {
-        // Keyval form: the next sub-group is the keyval block. Prefer the
-        // full name parts over the `i`-initial forms; prefix/suffix are
-        // optional (PR #21).
-        let kv_str = read_group(&author_grp, &mut j)
-          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-        let kvs = parse_name_keyvals(&kv_str);
-        let get = |k: &str| kvs.iter().find(|(kk, _)| kk == k).map(|(_, v)| v.clone());
-        let given = get("given").or_else(|| get("giveni")).unwrap_or_default();
-        let prefix = get("prefix").or_else(|| get("prefixi")).unwrap_or_default();
-        let family = get("family").or_else(|| get("familyi")).unwrap_or_default();
-        let suffix = get("suffix").or_else(|| get("suffixi")).unwrap_or_default();
-        (given, prefix, family, suffix)
-      } else {
-        // Positional form (Perl L308-321): {family}{familyi}{given}{giveni}…
-        let family = read_group(&author_grp, &mut j)
-          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-        let _familyi = read_group(&author_grp, &mut j);
-        let given = read_group(&author_grp, &mut j)
-          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-        (given, String::new(), family, String::new())
-      };
-      // Perl L324: strip leftover CSes/braces, then trim.
-      let family = bib_clean_name(family.trim());
-      let given = bib_clean_name(given.trim());
-      let prefix = bib_clean_name(prefix.trim());
-      let suffix = bib_clean_name(suffix.trim());
-      // Perl: join(' ', grep { $_ ne '' } (given, prefix, family, suffix)).
-      let fullname = [given, prefix, family.clone(), suffix]
+    for name in bbl_groups(&body.unlist()) {
+      // The first group is the name's metadata (`hash=…`, `un=0,…`).
+      let parts: Vec<String> = bbl_groups(&name)
         .into_iter()
-        .filter(|p| !p.is_empty())
-        .collect::<Vec<_>>()
-        .join(" ");
-      if fullname.is_empty() {
-        continue;
-      }
-      // Surname for label construction: the family part; fall back to the
-      // last word of the full name (pre-typeset corporate authors etc.).
-      let surname = if family.is_empty() {
-        fullname.split_whitespace().last().unwrap_or_default().to_string()
+        .skip(1)
+        .map(|part| Tokens::new(part).untex())
+        .collect();
+      let keyvals = parts.first().is_some_and(|p| p.contains("family=") || p.contains("given="));
+      let (given, prefix, family, suffix) = if keyvals {
+        let kvs = parts.first().map(|kv| parse_name_keyvals(kv)).unwrap_or_default();
+        let get = |k: &str| {
+          kvs.iter().find(|(key, _)| key == k).map(|(_, v)| bbl_name_part(v)).unwrap_or_default()
+        };
+        (get("given"), get("prefix"), get("family"), get("suffix"))
       } else {
-        family
+        let get = |i: usize| parts.get(i).map(|p| bbl_name_part(p)).unwrap_or_default();
+        (get(2), get(4), get(0), get(6))
       };
-      surnames.push(surname);
-      names.push(fullname);
-    }
-    // Format with et-al limit (default 4 per Perl L192).
-    let etal_limit = bib_state_int("biblatex_maxbibnames");
-    let etal_limit = if etal_limit > 0 { etal_limit as usize } else { 4 };
-    let joined = if names.len() > etal_limit {
-      format!("{} et al.", names[0])
-    } else {
-      let mut acc = String::new();
-      let n = names.len();
-      for (k, name) in names.iter().enumerate() {
-        if k > 0 {
-          if k + 1 == n {
-            acc.push_str(" and ");
-          } else {
-            acc.push_str(", ");
-          }
-        }
-        acc.push_str(name);
+      if !(family.is_empty() && given.is_empty()) {
+        names.push(bbl_bibtex_name(&given, &prefix, &family, &suffix));
       }
-      acc
-    };
-    // Stash under "authors_str" or "editors_str" depending on type.
-    let is_editor = type_str.trim() == "editor";
-    let key = if is_editor { "editors_str" } else { "authors_str" };
-    if !joined.is_empty() {
-      let toks = Tokens::new(ExplodeText!(&joined));
-      bib_entry_set_tokens(key, toks);
     }
-    // Record the author surnames (US-separated) for the author-year label
-    // construction in \endentry.
-    if !is_editor && !surnames.is_empty() {
-      let mut entry = bib_entry_get();
-      entry.insert("authors_surnames",
-        Stored::String(pin(surnames.join("\u{1f}"))));
-      bib_entry_save(entry);
+    if !names.is_empty() {
+      with_bbl_entry(|entry| entry.fields.push((role, names.join(" and "))));
     }
     Ok(Tokens::default())
   }, locked => true);
 
-  // Perl L342-346: \list{name}{count}{value} — record value under `name` in
-  // the entry hash. Perl ignores `count` for count==1 and notes "more
-  // support needed" for >1. Same here.
-  DefMacro!("\\list{}{}{}", sub[(name, _count, val)] {
-    let name_s = name.to_string();
-    bib_entry_set_tokens(name_s.trim(), val);
+  // biblatex.sty:8325 `\blx@bbl@listdef{list}{count}{items}`: a literal list,
+  // one `{…}` group per item, joined with "and" as the `.bib` wrote it; an item
+  // holding an "and" of its own is braced (biber's `{Smith and Sons}`).
+  DefMacro!("\\biblatex@bbl@list{}{}{}", sub[(name, _count, items)] {
+    let name = name.to_string().trim().to_string();
+    if !BBL_LISTS.contains(&name.as_str()) {
+      return Ok(Tokens::default());
+    }
+    let items: Vec<String> = bbl_groups(&items.unlist())
+      .into_iter()
+      .map(|item| {
+        let item = bbl_source(Tokens::new(item));
+        if item.split_whitespace().any(|word| word.eq_ignore_ascii_case("and")) {
+          format!("{{{item}}}")
+        } else {
+          item
+        }
+      })
+      .filter(|item| !item.is_empty())
+      .collect();
+    if !items.is_empty() {
+      with_bbl_entry(|entry| entry.fields.push((name, items.join(" and "))));
+    }
     Ok(Tokens::default())
   }, locked => true);
 
-  // Perl L355-363: \field{name}{value} / \strng{name}{value} — record value
-  // under `name` in the entry hash. Perl uses DefPrimitive (immediate
-  // side-effect, no expansion). DefMacro with sub gives equivalent behavior
-  // at digestion time since the body is empty.
-  DefMacro!("\\field{}{}", sub[(name, val)] {
-    let name_s = name.to_string();
-    bib_entry_set_tokens(name_s.trim(), val);
+  // biblatex.sty:7871 `\blx@bbl@fielddef{field}{value}`: a data-model field
+  // ([`BBL_FIELDS`]) or a date part ([`BBL_DATES`]); biber's own fields
+  // (sort keys, `extra*` counters, `label*source`) are dropped.
+  DefMacro!("\\biblatex@bbl@field{}{}", sub[(name, value)] {
+    let name = name.to_string().trim().to_string();
+    let is_date_part = BBL_DATES.iter().any(|(prefix, _)| {
+      name.strip_prefix(prefix).is_some_and(|part| {
+        matches!(part, "year" | "month" | "day" | "endyear" | "endmonth" | "endday")
+      })
+    });
+    if is_date_part {
+      let value = value.to_string().trim().to_string();
+      with_bbl_entry(|entry| entry.date_parts.push((name, value)));
+    } else if BBL_FIELDS.contains(&name.as_str()) {
+      // (`labelalpha` is TeX, digested by the BibTeX reader: `\bib@field@default@labelalpha`, defined with the
+      // pool's loading below.)
+      let value = bbl_source(value);
+      with_bbl_entry(|entry| entry.fields.push((name, value)));
+    }
     Ok(Tokens::default())
   }, locked => true);
-  DefMacro!("\\strng{}{}", sub[(name, val)] {
-    let name_s = name.to_string();
-    bib_entry_set_tokens(name_s.trim(), val);
-    Ok(Tokens::default())
-  }, locked => true);
+  // Name-list hashes and the like: nothing biblatex prints.
+  def_macro_noop("\\biblatex@bbl@strng{}{}")?;
 
+  // What a hook or bibmacro the binding does not run was given ([`def_discarded_hook`]): kept, so that a category it
+  // fills is known not to be the binding's (hgbbib.sty:113 `\AtEveryCitekey`; [`blx_unmodelled_categories`]).
+  DefMacro!("\\biblatex@discarded@hook{}", sub[(material)] {
+    BLX.update(|blx| blx.hooks.push(material));
+    Ok(Tokens::default())
+  });
   // Perl L348-354
-  def_macro_noop("\\AtEveryBibitem{}")?;
-  def_macro_noop("\\AtEveryCitekey{}")?;
-  def_macro_noop("\\keyw{}")?;
+  def_discarded_hook("\\AtEveryBibitem{}")?;
+  def_discarded_hook("\\AtEveryCitekey{}")?;
+  // biblatex.sty:8385 `\blx@bbl@keyw{keywords}`: the entry's `keywords` field.
+  DefMacro!("\\biblatex@bbl@keyw{}", sub[(keywords)] {
+    let keywords = bbl_source(keywords);
+    with_bbl_entry(|entry| entry.fields.push(("keywords".to_string(), keywords)));
+    Ok(Tokens::default())
+  }, locked => true);
   def_macro_noop("\\bibinitdelim")?;
   // biblatex.def L219 defines `\bibsetup` as a no-arg user-overridable
   // hook for low-level bibliography layout (interlinepenalty,
@@ -1686,19 +3004,15 @@ LoadDefinitions!({
   // (overrides the L94 definition; Perl runs them in order).
   DefMacro!("\\bibinithyphendelim", "-");
   DefMacro!("\\bibrangedash", "\u{2013}");
-  DefMacro!("\\bibnamedelimi", " ");
+  // (a space; a `" "` string body would tokenize as an empty line, `\par`: KNOWN_PERL_ERRORS #984)
+  DefMacro!(T_CS!("\\bibnamedelimi"), None, Tokens!(T_SPACE!()));
 
   // Perl L364
-  def_macro_noop("\\range{}{}")?;
+  def_macro_noop("\\biblatex@bbl@range{}{}")?;
 
-  // Perl L367-369: \preamble{...} stashes the arg into biblatex_preamble
-  // for the rebuilder (Cycle 7) and *also* re-emits the arg (Perl returns
-  // $_[1]) so the preamble is digested in the current context too.
-  DefMacro!("\\preamble{}", sub[(arg)] {
-    assign_value("biblatex_preamble",
-      Stored::Tokens(arg.clone()), Some(Scope::Global));
-    Ok(arg)
-  });
+  // ar5iv biblatex.sty.ltxml:814: \preamble{...} is digested where it stands
+  // (the ar5iv binding also stashed it for the `\thebibliography` it rebuilt).
+  DefMacro!("\\biblatex@bbl@preamble{}", "#1");
 
   // Perl L371-397: \biblatex@verb{key}…\endverb captures a verbatim field
   // that biblatex's .bbl emits in the form
@@ -1745,11 +3059,9 @@ LoadDefinitions!({
     }
     // Sanitize: biblatex `\verb` is a verbatim primitive — its body is a
     // literal string. The mouth tokenized chars with their normal catcodes
-    // (so `_` is SUB, `^` is SUPER, `#` is PARAM, etc.). When `\endentry`
-    // later splices these tokens into `\href{URL}{text}` the SUB chars
-    // trigger `Script _ can only appear in math mode` during horizontal
-    // digestion. Reset structural catcodes to OTHER so the captured string
-    // round-trips through the bibitem variant safely.
+    // (so `_` is SUB, `^` is SUPER, `#` is PARAM, etc.). Reset structural
+    // catcodes to OTHER so the captured string is the field's text, which the
+    // BibTeX reader reads verbatim (`doi`, `url`, `eprint`).
     //
     // Also detokenize CS tokens (e.g. `\href`, an inner `\verb`) and
     // brace tokens to literal OTHER characters: biblatex .bbl files
@@ -1779,18 +3091,17 @@ LoadDefinitions!({
         Catcode::BEGIN | Catcode::END |
         Catcode::SUB | Catcode::SUPER | Catcode::PARAM |
         Catcode::ALIGN | Catcode::MATH | Catcode::ACTIVE => {
-          value_vec.push(Token {
-            text: tok.text,
-            code: Catcode::OTHER,
-            #[cfg(feature = "token-locators")]
-            loc: 0,
-          });
+          value_vec.push(tok.as_other());
         },
         _ => value_vec.push(*tok),
       }
     }
     let value = Tokens::new(value_vec);
-    bib_entry_set_tokens(key_str.trim(), value);
+    let name = key_str.trim().to_string();
+    if BBL_FIELDS.contains(&name.as_str()) {
+      let value = value.to_string();
+      with_bbl_entry(|entry| entry.fields.push((name, value)));
+    }
     Ok(Tokens::default())
   }, locked => true);
   // \biblatex@endverb is consumed by the Until: delimiter on \biblatex@verb,
@@ -1812,7 +3123,15 @@ LoadDefinitions!({
   // the bibliography then resolved to nothing. Its keys (`location`, `label`,
   // `datatype`) are biber-side, so consuming and ignoring them is right here.
   // Witness 2605.27263; audit family F4(b).
-  DefPrimitive!("\\addbibresource[]{}", sub[(_opts, file_list_arg)] {
+  // The resource argument is EXPANDED: biblatex.sty:1216-1222 (`\blx@addbib`)
+  // `\edef`s it and `\detokenize`s the result, so `\addbibresource
+  // {\jobname.bib}` — the idiom of every manual that ships its `.bib` through
+  // `filecontents` (biblatex-nejm/-spbasic/-juradiss/-license, cleanthesis's
+  // `\cthesis@bibfile`, gitlog's `\gitLog@bibfile`, shtthesis's
+  // `\sht@bib@resource`; 16 corpus docs) — records `<jobname>.bib`, not the
+  // literal control sequence that no bibliography stage can open. Guard:
+  // `cluster_package_guards::biblatex_addbibresource_expands_its_argument`.
+  DefPrimitive!("\\addbibresource[] Expanded", sub[(_opts, file_list_arg)] {
     // Perl: split(/\s*,\s*/, ToString($_[1])) — split on commas and
     // strip surrounding whitespace.
     let raw = file_list_arg.to_string();
@@ -1823,10 +3142,77 @@ LoadDefinitions!({
       }
     }
   });
+  // biblatex.sty:11277-11283 `\addglobalbib`/`\addsectionbib` = `\blx@addbib`
+  // with the global / per-refsection register; one resource list here
+  // (shtthesis.cls, biblatex-apa-test `\addglobalbib`). A global resource also
+  // joins `\blx@bibfiles@global` (:11348-11350), which a refsection naming its
+  // own resources starts from (:10797-10801, `\biblatex@section@resources`).
+  DefPrimitive!("\\addglobalbib[] Expanded", sub[(_opts, file_list_arg)] {
+    let raw = file_list_arg.to_string();
+    for part in raw.split(',') {
+      let file = part.trim();
+      if !file.is_empty() {
+        push_value("biblatex_resources", Stored::String(pin(file)))?;
+        push_value("biblatex_global_resources", Stored::String(pin(file)))?;
+      }
+    }
+  });
+  Let!("\\addsectionbib", "\\addbibresource");
+  // A refsection's resources (`\refsection[…]`, `\newrefsection[…]`):
+  // biblatex.sty:10797-10801 starts the section's list from the global
+  // resources ("globals should be first") and adds the named ones; a
+  // refsection naming none keeps the default list. The global resources
+  // are pushed again ahead of the section's, and `\biblatex@printbibliography`
+  // drops the repeats. Without them biblatex-apa-test's refsection on
+  // `…-misc.bib` read only that file, not its `\addglobalbib` references
+  // (its bibliography reads its own files since batch 56jt, MakeBibliography).
+  DefPrimitive!("\\biblatex@section@resources Expanded", sub[(file_list_arg)] {
+    // A new refsection: a later `\printbibliography` prints this section's citations, not the last list's. It is
+    // numbered on from the last one (biblatex.sty:10776-10778 `blx@maxsection`, global), the `.bbl` refsection whose
+    // list it prints ([`bbl_flush`]).
+    remove_value("biblatex_printed_resources");
+    let number = match lookup_value("biblatex_maxsection") {
+      Some(Stored::Int(n)) => n + 1,
+      _ => 1,
+    };
+    assign_value("biblatex_maxsection", Stored::Int(number), Some(Scope::Global));
+    assign_value("biblatex_refsection", Stored::Int(number), Some(Scope::Global));
+    // Its citations name its list ([`blx_refsection_list`]).
+    if let Some(list) = blx_refsection_list(number) {
+      assign_value("CITE_UNIT", Stored::String(pin(&list)), Some(Scope::Global));
+    }
+    let raw = file_list_arg.to_string();
+    if raw.split(',').all(|part| part.trim().is_empty()) {
+      return Ok(Vec::new());
+    }
+    if let Some(Stored::VecDequeStored(globals)) = lookup_value("biblatex_global_resources") {
+      for global in globals {
+        push_value("biblatex_resources", global)?;
+      }
+    }
+    for part in raw.split(',') {
+      let file = part.trim();
+      if !file.is_empty() {
+        push_value("biblatex_resources", Stored::String(pin(file)))?;
+      }
+    }
+    Ok(Vec::new())
+  });
   // Idempotent for the same double-init reason as \blx@saved@cite above: a bare
   // \let on a 2nd init would save the already-rebound \bibliography (=\addbibresource).
-  RawTeX!(r"\@ifundefined{biblatex@saved@bibliography}{\let\biblatex@saved@bibliography\bibliography}{}");
-  Let!("\\bibliography",                "\\addbibresource");
+  RawTeX!(
+    r"\@ifundefined{biblatex@saved@bibliography}{\let\biblatex@saved@bibliography\bibliography}{}"
+  );
+  Let!("\\bibliography", "\\addbibresource");
+  // blx-compat.def:13-17, which biblatex.sty:16416 loads: `\bibliographystyle` is ignored — the style is the package's
+  // `style=` option; pdflatex stops with an error there, reported as a Warning because ignoring it gives the PDF's
+  // labels (the diagnostics-honesty rule of 64zf: a TeX-only error whose recovery keeps the markup is a Warning). The
+  // kernel's, still called after `\printbibliography` (a leftover from a natbib template), rewrote the bibliography's `bibstyle` to the `.bst`'s name, so the list stopped being a biblatex one and
+  // lost its alphabetic labels and shorthands (`[Knu84; Böt01; Balbes & Dwinger]` printed `[5, 2, 1]`). Guard
+  // `06_cluster_bibliography::biblatex_bibliographystyle_is_ignored_with_a_warning`.
+  RawTeX!(
+    r"\protected\def\bibliographystyle#1{\blx@warning{'\string\bibliographystyle' invalid for 'biblatex'.\MessageBreak Use the package option 'style' instead.\MessageBreak I'm ignoring this command}}"
+  );
 
   // \printbibliography: biber's \jobname.bbl is ground truth when present
   // (read it directly through the \entry/\endentry rebuilder above);
@@ -1834,13 +3220,485 @@ LoadDefinitions!({
   // \addbibresource declarations through LaTeXML's \bibliography
   // machinery. The `&` catcode change lets literal ampersands in .bbl
   // author/publisher names through (restored to alignment after).
-  // The optional argument ([heading=bibintoc] etc.) is consumed+ignored.
-  DefMacro!("\\printbibliography[]",
-    "\\let\\verb\\biblatex@verb\\let\\endverb\\biblatex@endverb\
+  // The optional argument is read below.
+  //
+  // The `\verb`/`\endverb` rebinding is for the `.bbl` only and must NOT
+  // outlive it: Perl (ar5iv-bindings biblatex.sty.ltxml:410) `\let`s them
+  // unscoped, so every later `\verb+.dtx+` in the body became
+  // `\biblatex@verb{} Until:\endverb` and swallowed the rest of the document
+  // (docsurvey.tex:2876-2898 — 7 `\verb` after the bibliographies, ~500 lines
+  // of content lost; rub-kunstgeschichte-example likewise; sweep 28).
+  // KNOWN_PERL_ERRORS #114. Restore the saved meanings after the input — the
+  // restores sit after `\InputIfFileExists` in the expansion, so they run once
+  // the `.bbl` mouth is exhausted, like the `&` catcode restore already does.
+  // Guard: `perfect_kernel_batch51::verb_survives_printbibliography`.
+  //
+  // The same scoping covers EVERY `.bbl` command: biblatex.sty:8995-9024
+  // `\blx@bblstart` `\let`s `\entry`, `\name`, `\list`, `\field`, `\strng`,
+  // `\range`, `\keyw`, `\preamble`, `\warn`, `\xref`, `\fakeset`,
+  // `\datalist`… to their `\blx@bbl@…` bodies only for the `.bbl` read. A
+  // document-wide `\list{}{}{}` (the ar5iv binding's shape, KNOWN_PERL_ERRORS
+  // #133) swallows LaTeX's `\list{label}{setup}` — every `\list`-built
+  // environment in a biblatex document (cnltx-doc `commands` under
+  // `add-bib`) then ended with `\endlx@list` "Attempt to end mode". The
+  // bodies live under `\biblatex@bbl@<name>` and `\biblatex@bblstart` /
+  // `\biblatex@bblend` bracket the input. Guard:
+  // `perfect_kernel_batch54::biblatex_bbl_commands_do_not_shadow_list`.
+  //
+  // The options are read as biblatex reads them (biblatex.sty:9688-9716), in a group (the real
+  // `\printbibliography` is a `\begingroup`…`\endgroup`, :9811-9832): `title=` replaces the heading's default
+  // title (`\defbibheading{bibliography}[\refname]`, biblatex.def:2212; `[\bibname]` in a book, :2239) through the
+  // kernel's `\lx@bibliography@title` (sect11.rs) — biblatex keeps it in `\blx@thetitle` and never redefines
+  // `\refname`, so `title={\refname}` (MIT-Thesis.tex:379) is the name, not a loop; `prenote=<name>` names a
+  // `\defbibnote` typeset after the heading (`\biblatex@prenote`, :10002). The keyset is biblatex's `blx@bib2`
+  // (:9835-9855, `prefixnumbers` from blx-compat.def:177), where a style's own `\blx@kv@defkey{blx@bib2}` keys
+  // land too (philosophy-standard.bbx:101 `annotation`); the others (heading, section, type, keyword, check, …)
+  // select or style entries the config-driven bibliography does not filter, and `postnote=` (typeset after the
+  // list, :10026) has no place yet: MakeBibliography appends the list after everything the bibliography holds.
+  // Witnesses biblatex-apa-test, xurl, MIT-Thesis. Guards: `06_cluster_bibliography::{
+  // biblatex_printbibliography_title_and_prenote, biblatex_bbl_printbibliography_title_and_prenote,
+  // biblatex_printbibliography_title_names_the_default, biblatex_printbibliography_undefined_prenote_is_an_error,
+  // biblatex_printbibliography_empty_prenote_prints_nothing}`.
+  for key in [
+    "block",
+    "category",
+    "check",
+    "env",
+    "filter",
+    "heading",
+    "keyword",
+    "label",
+    "locallabelwidth",
+    "notcategory",
+    "notkeyword",
+    "notsubtype",
+    "nottype",
+    "omitnumbers",
+    "postnote",
+    "prefixnumbers",
+    "prenote",
+    "resetnumbers",
+    "section",
+    "segment",
+    "sorting",
+    "subtype",
+    "title",
+    "type",
+  ] {
+    DefKeyVal!("blx@bib2", key, "");
+  }
+  DefMacro!("\\printbibliography OptionalKeyVals:blx@bib2", sub[(kv)] {
+    let mut tokens = vec![T_CS!("\\begingroup")];
+    if let Some(kv) = kv.as_ref() {
+      if BIBLIOGRAPHY_FILTERS.iter().any(|key| kv.get_value(key).is_some()) {
+        tokens.push(T_CS!("\\biblatex@filtered@list"));
+      }
+      // The filters the binding applies ([`BIBLIOGRAPHY_FILTERS`]) and `section=`, in the order given: biblatex
+      // applies each key as it comes, a repeated one again (biblatex.sty:9526-9615).
+      for (key, value) in kv.get_pairs() {
+        if key == "section" || BlxField::of(key).is_some() {
+          tokens.push(T_CS!("\\biblatex@print@filter"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(Explode!(key));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.extend(value.revert()?.unlist());
+          tokens.push(T_END!());
+        }
+      }
+      // `title=` is the heading's `#1` (biblatex.sty:9988 `\blx@bibheading`): a `heading=` an author's
+      // `\defbibheading` defined titles the list as its code does ([`blx_heading_title`]).
+      let title = match kv.get_value("title") {
+        Some(title) => Some(title.revert()?),
+        None => None,
+      };
+      let heading = match kv.get_value("heading") {
+        Some(heading) => blx_heading_title(heading.to_string().trim(), title.as_ref()),
+        None => None,
+      };
+      if let Some(title) = heading.or(title) {
+        tokens.extend([
+          T_CS!("\\biblatex@strings"),
+          T_CS!("\\def"),
+          T_CS!("\\lx@bibliography@title"),
+          T_BEGIN!(),
+        ]);
+        tokens.extend(title.unlist());
+        tokens.push(T_END!());
+      }
+      if let Some(reset) = kv.get_value("resetnumbers") {
+        tokens.extend([T_CS!("\\biblatex@print@reset"), T_BEGIN!()]);
+        tokens.extend(reset.revert()?.unlist());
+        tokens.push(T_END!());
+      }
+      if let Some(note) = kv.get_value("prenote") {
+        tokens.extend([T_CS!("\\biblatex@prenote"), T_BEGIN!()]);
+        tokens.extend(note.revert()?.unlist());
+        tokens.push(T_END!());
+      }
+    }
+    tokens.extend([T_CS!("\\biblatex@printbibliography@body"), T_CS!("\\endgroup")]);
+    Ok(Tokens::new(tokens))
+  });
+  // A filtered list (`type=`, `keyword=`, …) is never printed again from a previous list's resources
+  // (`\biblatex@printbibliography`): with no `.bbl` its filter is not applied.
+  DefPrimitive!("\\biblatex@filtered@list", {
+    assign_value("biblatex_print_filtered", true, None);
+  });
+  // `\biblatex@print@filter{type}{book}`: an entry filter of this `\printbibliography` (its group), appended to the
+  // ones before it, which the `.bbl`'s list is narrowed by ([`bbl_filter`]; witness arXiv 2406.00136); `section=`
+  // names the refsection it prints ([`blx_target_refsection`]). The value is a string, as biblatex compares it
+  // (`\detokenize`).
+  DefPrimitive!("\\biblatex@print@filter{}{}", sub[(key, value)] {
+    let key = key.to_string().trim().to_string();
+    let value = value.to_string().trim().to_string();
+    if key == "section" {
+      assign_value("biblatex_print_section", value, None);
+      return Ok(Vec::new());
+    }
+    let mut filters: Vec<SymStr> = match lookup_value("biblatex_filters") {
+      Some(Stored::Strings(filters)) => filters.to_vec(),
+      _ => Vec::new(),
+    };
+    filters.extend([pin(&key), pin(&value)]);
+    assign_value("biblatex_filters", Stored::Strings(filters.into()), None);
+    Ok(Vec::new())
+  });
+  // The `.bbl` is read: a `\bibbycategory` with no category filled says so (`\biblatex@bycategory@end`).
+  DefPrimitive!("\\biblatex@bbl@found", {
+    assign_value("biblatex_bbl_found", true, Some(Scope::Global));
+  });
+  // `\biblatex@if@selected[list]{<keys>}{<material>}`: a list filtered by categories, built if one of its keys passes
+  // the filters when the bibliography is built ([`blx_selected`], the categories the whole document filed;
+  // [`bbl_print`]), as its entries are (`\biblatex@select`): a list none of whose keys passes is biblatex's "Empty
+  // bibliography" — unless it is a `\bibbycategory` list of a category with no keys, which biblatex skips
+  // (biblatex.sty:9984-9985). Its material holds the list's heading and its entries' anchors, no entry. Witness arXiv
+  // 2406.00136 (`category=` lists of 2405/2406).
+  DefConstructor!("\\biblatex@if@selected[] Semiverbatim {}", sub[document, args, props] {
+    let by: Vec<SymStr> = match props.get("by") {
+      Some(Stored::Strings(by)) => by.to_vec(),
+      _ => Vec::new(),
+    };
+    let keys = props.get("keys").map(|keys| keys.to_string()).unwrap_or_default();
+    if keys.split(',').any(|key| blx_selected(&by, key.trim())) {
+      if let Some(Some(material)) = args.get(2) {
+        document.absorb(material, None)?;
+      }
+    } else if matches!(args.first(), Some(Some(_)))
+      && !(matches!(props.get("bycategory"), Some(Stored::Bool(true))) && blx_categories_void(&by))
+    {
+      blx_empty_bibliography();
+    }
+  },
+  // The keys are read Semiverbatim: their characters, never a font's ligature (`a--b`).
+  properties => sub[args] {
+    let mut props = stored_map!();
+    if let Some(Some(keys)) = args.get(1) {
+      props.insert("keys", Stored::String(pin(keys.to_string())));
+    }
+    if let Some(by) = lookup_value("biblatex_selected_by") {
+      props.insert("by", by);
+    }
+    props.insert("bycategory", Stored::Bool(lookup_bool("biblatex_bycategory")));
+    Ok(props)
+  });
+  // `\biblatex@select{<by>}{<refsection>}{<key>}{<entry>}`: an entry of a list filtered by categories, deferred to the
+  // end of the document ([`bbl_print`]) and digested there by `\biblatex@resolve@categories`, once every
+  // `\addtocategory` is filed — the entry if it passes the filters `by` ([`blx_selected`]; biblatex files the
+  // categories through the `.aux`, so pdflatex prints each list with the whole previous run's, :11226-11242), from
+  // the data the `.bbl` gave it in its refsection, and printed there ([`BlxState::printed`]); nothing, never
+  // digested, if it does not. Under `--streaming` an entry is decided when its fragment is built, with the categories
+  // filed by then.
+  DefMacro!("\\biblatex@select Semiverbatim Semiverbatim Semiverbatim {}", sub[(by, refsection, key, entry)] {
+    let by: Vec<SymStr> = by
+      .to_string()
+      .split(',')
+      .map(str::trim)
+      .filter(|f| !f.is_empty())
+      .map(pin)
+      .collect();
+    let refsection: i64 = refsection.to_string().trim().parse().unwrap_or(0);
+    let key = key.to_string().trim().to_string();
+    if !blx_selected(&by, &key) {
+      return Ok(Tokens::default());
+    }
+    let data = BLX.update(|blx| {
+      blx.printed.insert((refsection, key.clone()));
+      blx.snapshots.get(&(refsection, key.clone())).cloned()
+    });
+    if let Some(data) = data {
+      register_entry(&key, data);
+    }
+    Ok(entry)
+  });
+  // `\biblatex@defer@entry{<by>}{<refsection>}{<key>}{<entry>}`, in a list filtered by categories ([`bbl_print`]):
+  // the entry's `\biblatex@select`, kept for the end of the document (latexml_core `defer_print`) with where it stands
+  // ([`BlxState::contexts`]), in a group; its anchor marks its place in the list.
+  DefMacro!("\\biblatex@defer@entry{}{}{}{}", sub[(by, refsection, key, entry)] {
+    let id = Expand!(T_CS!("\\the@lx@bibliography@ID")).to_string();
+    let font = lookup_value("font");
+    let index = BLX.update(|blx| {
+      blx.contexts.push((id, font));
+      blx.contexts.len() - 1
+    });
+    let mut tokens = vec![T_CS!("\\begingroup"), T_CS!("\\biblatex@entry@context"), T_BEGIN!()];
+    tokens.extend(Explode!(&index.to_string()));
+    tokens.extend([T_END!(), T_CS!("\\biblatex@select")]);
+    for arg in [by, refsection, key, entry] {
+      tokens.push(T_BEGIN!());
+      tokens.extend(arg.unlist());
+      tokens.push(T_END!());
+    }
+    tokens.push(T_CS!("\\endgroup"));
+    Ok(latexml_engine::latex_constructs::deferred_print_tokens("biblatex@category", Tokens::new(tokens)))
+  });
+  // `\biblatex@entry@context{<n>}`: a deferred entry is built where it stood ([`BlxState::contexts`]): its bibliography's
+  // id is the prefix of its `xml:id` (`\the@lx@bibliography@ID`), numbered on from that bibliography's last entry built
+  // here (`@bibitem`, reset at each bibliography's first), in its font.
+  DefPrimitive!("\\biblatex@entry@context{}", sub[(index)] {
+    let index: usize = index.to_string().trim().parse().unwrap_or(usize::MAX);
+    let Some((id, font)) = BLX.read(|blx| blx.contexts.get(index).cloned()) else {
+      return Ok(Vec::new());
+    };
+    let first = BLX.update(|blx| {
+      let first = blx.context.as_deref() != Some(id.as_str());
+      blx.context = Some(id.clone());
+      first
+    });
+    if first {
+      ResetCounter!("@bibitem");
+    }
+    let body: Tokens = Explode!(&id).into();
+    def_macro(T_CS!("\\the@lx@bibliography@ID"), None, body, None)?;
+    if let Some(font) = font {
+      assign_value("font", font, None);
+    }
+  });
+  // The entries of the lists filtered by categories are built ([`bbl_print`]), before the hidden list
+  // ([`blx_unprinted_bibliography`]) asks which were printed.
+  DefPrimitive!("\\biblatex@resolve@categories", {
+    resolve_deferred_prints(Some("biblatex@category"))?;
+  });
+  // `\biblatex@printed{<refsection>}{<keys>}`: a list of the refsection, not filtered by categories, prints these
+  // entries ([`bbl_print`]), recorded as it is digested; the hidden list holds the others. pdflatex resolves the
+  // citation and the `\fullcite` of an entry every list leaves out (cs-techrep's `notcategory=selfref` and "Please
+  // cite as: \fullcite{selfref}", 2405.19762).
+  DefPrimitive!("\\biblatex@printed Semiverbatim Semiverbatim", sub[(refsection, keys)] {
+    let refsection: i64 = refsection.to_string().trim().parse().unwrap_or(0);
+    let keys = keys.to_string();
+    BLX.update(|blx| {
+      for key in keys.split(',').map(str::trim).filter(|key| !key.is_empty()) {
+        blx.printed.insert((refsection, key.to_string()));
+      }
+    });
+  });
+  // `\biblatex@bbl@number{<key>}{<number>:<refsection>[:hidden]}`, after the entry a list prints ([`bbl_print`]), as
+  // the list is built: its label number is MakeBibliography's (an `ltx:bib-data` `labelnumber` in the `ltx:bibentry` just built,
+  // make_bibliography.rs `given_number`) — the datalist's, or with `defernumbers=true` the one it got when first
+  // built (biblatex.sty:9216-9283 `\blx@addlabelnumber`), 0 in the hidden list (:8898-8909). `none`: no number, an
+  // author-year style's.
+  DefConstructor!("\\biblatex@bbl@number Semiverbatim Semiverbatim", sub[document, _args, props] {
+    let key = props.get("key").map(|key| key.to_string()).unwrap_or_default();
+    let value = props.get("value").map(|value| value.to_string()).unwrap_or_default();
+    let mut parts = value.split(':');
+    let mode = parts.next().unwrap_or_default().to_string();
+    let refsection: i64 = parts.next().and_then(|n| n.parse().ok()).unwrap_or(0);
+    let hidden = parts.next() == Some("hidden");
+    let number = BLX.update(|blx| {
+      match mode.as_str() {
+        "none" => None,
+        "defer" if hidden => Some(0),
+        "defer" => {
+          let (last, assigned) = blx.deferred.entry(refsection).or_default();
+          Some(*assigned.entry(key.clone()).or_insert_with(|| {
+            *last += 1;
+            *last
+          }))
+        },
+        number => number.parse::<u32>().ok(),
+      }
+    });
+    let Some(number) = number else {
+      return Ok(());
+    };
+    let entry = document.get_node().get_child_nodes().into_iter().rev().find(|child| {
+      child.get_type() == Some(NodeType::ElementNode)
+        && child.get_name() == "bibentry"
+        && child.get_attribute("key").as_deref() == Some(key.as_str())
+    });
+    if let Some(mut entry) = entry {
+      let mut attributes = HashMap::default();
+      attributes.insert("role".to_string(), "labelnumber".to_string());
+      let mut node = document.open_element_at(&mut entry, "ltx:bib-data", Some(attributes), None)?;
+      node.append_text(&number.to_string())?;
+      document.close_element_at(&mut node)?;
+    }
+  },
+  properties => sub[args] {
+    let mut props = stored_map!();
+    if let Some(Some(key)) = args.first() {
+      props.insert("key", Stored::String(pin(key.to_string().trim())));
+    }
+    if let Some(Some(value)) = args.get(1) {
+      props.insert("value", Stored::String(pin(value.to_string().trim())));
+    }
+    Ok(props)
+  });
+  // `resetnumbers=` with `defernumbers=true` (biblatex.sty:9759-9765): the list's first new number is 1 (`true`) or
+  // the one given, as the list is built.
+  DefConstructor!("\\biblatex@reset@numbers{}{}", sub[_document, _args, props] {
+    let refsection: i64 = props.get("refsection").and_then(|n| n.to_string().trim().parse().ok()).unwrap_or(0);
+    let value = props.get("value").map(|value| value.to_string()).unwrap_or_default();
+    let last = match value.trim() {
+      "" | "true" => Some(0),
+      start => start.parse::<u32>().ok().map(|start| start.saturating_sub(1)),
+    };
+    if let Some(last) = last {
+      BLX.update(|blx| blx.deferred.entry(refsection).or_default().0 = last);
+    }
+  },
+  properties => sub[args] {
+    let mut props = stored_map!();
+    if let Some(Some(refsection)) = args.first() {
+      props.insert("refsection", Stored::String(pin(refsection.to_string())));
+    }
+    if let Some(Some(value)) = args.get(1) {
+      props.insert("value", Stored::String(pin(value.to_string())));
+    }
+    Ok(props)
+  });
+  // `\printbibliography[resetnumbers=…]` (biblatex.sty:9759-9768), in its group: applied to the list with
+  // `defernumbers=true` ([`bbl_print`]); without it biblatex's warning for any value, `false` too, and ignored. `false`
+  // resets nothing.
+  DefMacro!("\\biblatex@print@reset{}", sub[(value)] {
+    let value = value.to_string().trim().to_string();
+    if !lookup_bool("biblatex_defernumbers") {
+      return Ok(Tokens::new(blx_warning_tokens(
+        "Option 'resetnumbers' requires 'defernumbers=true'. Ignoring 'resetnumbers=true'",
+      )));
+    }
+    if value == "false" {
+      return Ok(Tokens::default());
+    }
+    assign_value("biblatex_print_reset", value, None);
+    Ok(Tokens::default())
+  });
+  // The hidden list's `\printbibliography` ([`blx_unprinted_bibliography`]), in its group.
+  DefPrimitive!("\\biblatex@unprinted@mode", {
+    assign_value("biblatex_unprinted_mode", true, None);
+  });
+  // biblatex's language strings define both names whatever the class does: `\bibname` and `\refname` are its
+  // `bibliography`/`references` strings (biblatex.sty:5781-5789; english.lbx:112-113), so a report's
+  // `\printbibliography[title={\refname}]` (MIT-Thesis.tex:379) says "References". The binding keeps no string
+  // tables: a `title=` gets the english strings where neither the class nor babel defined the name, in
+  // `\printbibliography`'s group — the default title stays the class's (biblatex.def:2184-2194 `\abx@classtype`).
+  DefMacro!(
+    "\\biblatex@strings",
+    "\\providecommand*\\refname{References}\\providecommand*\\bibname{Bibliography}"
+  );
+  // `\defbibnote{name}{text}` (biblatex.sty:9372-9376 `\long\csdef{blx@note@#1}{#2}`).
+  DefMacro!(
+    "\\defbibnote{}{}",
+    "\\long\\expandafter\\def\\csname blx@note@#1\\endcsname{#2}"
+  );
+  // `prenote=<name>` (biblatex.sty:9703-9709 `\blx@key@bibnote`): a name no `\defbibnote` defined is biblatex's
+  // error; the empty name is its predefined empty note (:9702). A note is the bibliography's preamble, typeset as
+  // `\blx@bibnote` does (:10050-10058): nothing when it is empty (`\ifdefempty`), else an unindented paragraph.
+  DefMacro!("\\biblatex@prenote{}", sub[(name)] {
+    let name = name.to_string().trim().to_string();
+    if name.is_empty() {
+      return Ok(Tokens::default());
+    }
+    let note = T_CS!(&format!("\\blx@note@{name}"));
+    let Some(defn) = lookup_definition(&note)? else {
+      return Ok(TokenizeInternal!(TeXString::assembled(format!(
+        "\\PackageError{{biblatex}}{{Note '{name}' not found}}{{The note '{name}' could not be found. Use \\string\\defbibnote\\space to define it}}"
+      ))));
+    };
+    // Empty as `\ifdefempty` reads it: no replacement text (a `\let` to a primitive typesets nothing either).
+    if !matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()) {
+      return Ok(Tokens::default());
+    }
+    Ok(Tokens!(
+      T_CS!("\\def"),
+      T_CS!("\\lx@bibliography@preamble"),
+      T_BEGIN!(),
+      T_CS!("\\begingroup"),
+      T_CS!("\\noindent"),
+      note,
+      T_CS!("\\par"),
+      T_CS!("\\endgroup"),
+      T_END!()
+    ))
+  });
+  DefMacro!(
+    "\\biblatex@printbibliography@body",
+    "\\biblatex@bibliography@printed\
+     \\biblatex@bblstart\
      \\catcode`\\&=12\\relax\
-     \\InputIfFileExists{\\jobname.bbl}{}{\\biblatex@printbibliography}\
-     \\catcode`\\&=4\\relax");
+     \\InputIfFileExists{\\jobname.bbl}{\\biblatex@bbl@found}{\\biblatex@printbibliography}\
+     \\biblatex@bbl@flush@last\
+     \\catcode`\\&=4\\relax\
+     \\biblatex@bblend"
+  );
+  // A raw style `.def` can REPLACE `\printbibliography` with a copy of
+  // biblatex's real one — biblatex-sbl.def:663 `\renewrobustcmd*
+  // {\printbibliography}{\begingroup\blx@key@bibcheck{bibliography}…
+  // \@ifnextchar[{\blx@printbibliography}{\blx@printbibliography[]}}` — which
+  // reaches two biblatex.sty internals: the `check=` handler
+  // `\blx@key@bibcheck` (biblatex.sty:9643) and the render worker
+  // `\blx@printbibliography[#1]` (:9820, ends with the matching `\endgroup`).
+  // Perl raw-loads biblatex.sty and has both; the binding stands in for the
+  // package (RUST-ONLY), so it defines them: the check handler `\let`s
+  // `\blx@bibcheck` to a defined `\blx@bibcheck@<name>` (`\defbibcheck` is a
+  // no-op here, so the miss branch is silent), and the worker routes to the
+  // binding's own `\printbibliography` body then closes the style's group.
+  // Witness biblatex-sbl/sbl-paper (`\printbibliography[heading=bibintoc]`,
+  // 2 errors; also biblatex-sbl.tex, biblatex-sbl-ibid). Guard:
+  // `perfect_kernel_batch54::style_def_printbibliography_override_routes_to_binding`.
+  // A `\fullcite` typesets its entry from the bibliography (post's `FullEntry`), which biblatex reads at
+  // `\begin{document}` (biblatex.sty:16617-16623, the `.bbl`) whether or not it is printed; the binding builds
+  // it in `\printbibliography`. A document that full-cites and never prints a bibliography gets it at the end,
+  // `ltx_nodisplay` (the class acmart.cls.ltxml:78 gives `\Description`'s note) — no PDF bibliography to show.
+  // The check runs after every end-document hook, so a document's own `\AtEndDocument{\printbibliography}` counts
+  // as printed; it calls the binding's `\printbibliography`, not a document's redefinition. Witnesses
+  // quantumcubemodel, sidenotesplus. Guards: `06_cluster_bibliography::{biblatex_fullcite_prints_the_entry,
+  // biblatex_fullcite_with_a_printed_bibliography}`.
+  DefPrimitive!("\\biblatex@bibliography@printed", sub[_args] {
+    AssignValue!("biblatex@bibliography@printed" => true, Some(Scope::Global));
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\biblatex@hide@bibliography", sub[_args] {
+    assign_value("lx@bibliography@class", pin("ltx_nodisplay"), None);
+    Ok(Vec::new())
+  });
+  DefMacro!("\\biblatex@unprinted@bibliography", sub[_args] { Ok(blx_unprinted_bibliography()) });
+  after_end_document_hooks(TokenizeInternal!(r"\biblatex@unprinted@bibliography"))?;
+  DefMacro!(
+    "\\blx@key@bibcheck{}",
+    "\\@ifundefined{blx@bibcheck@#1}{}{\\expandafter\\let\\expandafter\\blx@bibcheck\\csname blx@bibcheck@#1\\endcsname}"
+  );
+  DefMacro!(
+    "\\blx@printbibliography[]",
+    "\\biblatex@sty@printbibliography[#1]\\endgroup"
+  );
+  Let!("\\biblatex@sty@printbibliography", "\\printbibliography");
+  Let!("\\biblatex@bbl@verb", "\\biblatex@verb");
+  Let!("\\biblatex@bbl@endverb", "\\biblatex@endverb");
+  def_macro(
+    T_CS!("\\biblatex@bblstart"),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(BBL_START.to_string())),
+    None,
+  )?;
+  def_macro(
+    T_CS!("\\biblatex@bblend"),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(BBL_END.to_string())),
+    None,
+  )?;
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
+    assign_value("BIBSTYLE", pin(blx_bibstyle()), Some(Scope::Global));
     // DEDUPLICATE. The same `.bib` can be registered twice — a document that
     // declares `\addbibresource{refs.bib}` while its shipped `.cls` declares
     // the same file, for instance — and naming it twice makes
@@ -1861,19 +3719,105 @@ LoadDefinitions!({
       }
       resources.push(T_OTHER!(name));
     }
-    Ok(Tokens!(
-      T_CS!("\\biblatex@saved@bibliography"),
-      T_BEGIN!(),
-      Tokens::new(resources),
-      T_END!()
-    ))
+    // Every `\printbibliography` prints its list (biblatex.sty:9812-9890, filtered by its options): a later one in
+    // the same refsection, whose resources the first consumed, prints from the same ones — unless it filters
+    // (`type=`, `keyword=`, …, which the `.bib` route does not apply) or refsections open at headings (`refsection=`)
+    // — where an `ltx:bibliography` can stand
+    // (`\biblatex@repeated@bibliography`). xurl.tex:150's second list; biblatex-cv's lists in `itemize` items stay
+    // unprinted; a refsection's list (biblatex-apa-test) is not the previous section's (residual: its own list).
+    // Guards `06_cluster_bibliography::{biblatex_second_printbibliography_prints_its_list,
+    // biblatex_repeated_bibliography_only_where_it_can_stand, biblatex_refsection_option_does_not_repeat}`.
+    let repeated = resources.is_empty();
+    if repeated {
+      if let Some(Stored::Tokens(previous)) = lookup_value("biblatex_printed_resources")
+        && !lookup_bool("biblatex_print_filtered")
+        && !lookup_bool("biblatex_auto_refsections")
+      {
+        resources = previous.unlist();
+      }
+    } else {
+      assign_value("biblatex_printed_resources", Stored::Tokens(Tokens::new(resources.clone())), Some(Scope::Global));
+    }
+    let mut out = vec![T_CS!("\\biblatex@saved@bibliography"), T_BEGIN!()];
+    out.extend(resources.iter().cloned());
+    out.push(T_END!());
+    if repeated && !resources.is_empty() {
+      out.insert(0, T_BEGIN!());
+      out.insert(0, T_CS!("\\biblatex@repeated@bibliography"));
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
   }, locked => true);
+  // A repeated list is built only where an `ltx:bibliography` can stand: from the insertion point up through what
+  // closes on its own (a paragraph), a node that admits it, directly or by opening others; a list item, or a box's
+  // capture block (an `svg:foreignObject`'s), admits none (biblatex-cv's `\printbibliography` in `itemize` items,
+  // biblatex-ext's in tcolorbox examples).
+  DefConstructor!("\\biblatex@repeated@bibliography{}", sub[document, args, _props] {
+    use latexml_core::document::{
+      can_auto_close, can_contain_node_somehow, get_node_qname, is_capture_block,
+    };
+    let mut node = Some(document.get_node().clone());
+    let mut stands = false;
+    while let Some(n) = node {
+      // A capture element admits anything for now and becomes the box's `ltx:block` (an `svg:foreignObject`'s) or an
+      // alignment cell's content.
+      if is_capture_block(&n) || get_node_qname(&n) == pin_static("ltx:_Capture_") {
+        break;
+      }
+      if n.is_element_node() && can_contain_node_somehow(&n, "ltx:bibliography").is_some() {
+        stands = true;
+        break;
+      }
+      if !can_auto_close(&n) {
+        break;
+      }
+      node = n.get_parent();
+    }
+    if !stands {
+      Info!(
+        "ignore",
+        "\\printbibliography",
+        "a repeated bibliography list was not printed: no ltx:bibliography can stand here"
+      );
+    } else if let Some(Some(list)) = args.first() {
+      document.absorb(list, None)?;
+    }
+  });
 
   // Perl L420-424. Round-34 surpass: \xref{key} is a cross-reference,
   // route to \ref so it resolves. \warn / \fakeset are internal.
-  def_macro_noop("\\warn{}")?;
-  DefMacro!("\\xref{}", "\\ref{#1}");
-  def_macro_noop("\\fakeset{}")?;
+  def_macro_noop("\\biblatex@bbl@warn{}")?;
+  DefMacro!("\\biblatex@bbl@xref{}", "\\ref{#1}");
+  def_macro_noop("\\biblatex@bbl@fakeset{}")?;
+  // biblatex.sty:8360-8378 `\set{<members>}` (a set entry's members) and `\inset{<set>}` (a member's set), the entry
+  // sets biber writes (18 and 14 papers; 1110.6541, 1403.7606): grouping members under their set is not modelled,
+  // so each member prints as its own entry, and the set entry too, as one more `<bibentry type="set">` with its own
+  // fields (`\entry{s}{set}{}` … `\field{title}{The set}` prints "The set"), where biblatex prints the members inside
+  // the set's item. :7943 `\annotation`, biber's data annotations (`highlight`,
+  // `corresponding` on a name or field, 36 papers; 2001.10285), which styles may print as marks: dropped. Its
+  // arity follows the biber version, five arguments (`\annotation{item}{author}{1}{}{highlight}`) or seven
+  // (biblatex.sty :7943 `#1…#7`); the trailing two are read when present.
+  def_macro_noop("\\biblatex@bbl@set{}")?;
+  def_macro_noop("\\biblatex@bbl@inset{}")?;
+  RawTeX!(
+    r"\def\biblatex@bbl@annotation#1#2#3#4#5{\@ifnextchar\bgroup\biblatex@bbl@annotation@x{}}
+\def\biblatex@bbl@annotation@x#1{\@ifnextchar\bgroup\@gobble{}}"
+  );
+  // biblatex.sty:8634-8641 + 8999-9000: while the `.bbl` is read, `\refsection`
+  // is the bbl variant taking a MANDATORY section number (`\refsection{0}` opens
+  // every biber .bbl) and `\endrefsection` closes its group; the document-level
+  // `\refsection[]` (optional resource list only) must not see that `{0}`.
+  DefMacro!(
+    "\\biblatex@bbl@refsection{}",
+    "\\begingroup\\biblatex@bbl@section{#1}\\c@refsection#1\\relax"
+  );
+  // (biblatex.sty:8638-8642 also flushes `blx@addset` cross-reference sets
+  // here; the binding models no `\set`/`\inset`.) The refsection's
+  // bibliography is printed as it ends ([`bbl_flush`]).
+  DefMacro!(
+    "\\biblatex@bbl@endrefsection",
+    "\\biblatex@bbl@flush\\endgroup"
+  );
 
   // biblatex source-mapping API (a biber pre-processing stage LaTeXML does not
   // run): gobble the whole rule argument WITHOUT expanding it, so the nested
@@ -1884,6 +3828,12 @@ LoadDefinitions!({
   // style-file sibling.
   def_macro_noop("\\DeclareSourcemap{}")?;
   def_macro_noop("\\DeclareStyleSourcemap{}")?;
+  // biblatex.sty:14133 `\newrobustcmd*{\DeclareDriverSourcemap}[2][]` — the
+  // driver-level sibling; cnltx.bbx:210 `\DeclareDriverSourcemap[datatype=bibtex]
+  // {\map{\step[…]}}`. Undefined, the `\map`/`\step` body leaked into the
+  // document (witnesses cnltx_en, endiagram_en, chemformula-manual). Guard:
+  // `perfect_kernel_batch54::bbx_declaration_bodies_are_absorbed`.
+  def_macro_noop("\\DeclareDriverSourcemap[]{}")?;
 
   // Perl L429-434: language API (no-ops)
   def_macro_noop("\\DeclareLanguageMapping{}{}")?;
@@ -1893,21 +3843,45 @@ LoadDefinitions!({
   def_macro_noop("\\UndefineBibliographyExtras{}{}")?;
   def_macro_noop("\\DefineBibliographyStrings{}{}")?;
 
-  // Perl L436-438
-  def_macro_noop("\\DeclareNameFormat OptionalMatch:* []{}{}")?;
+  // Perl L436-438. A name format is also recorded for the given-name form
+  // ([`blx_record_name_format`]); `[<entrytype>]` formats are not modelled.
+  DefPrimitive!("\\DeclareNameFormat OptionalMatch:* []{}{}", sub[(_star, types, name, code)] {
+    if blx_untyped(types.as_ref()) {
+      blx_record_name_format(&name.to_string(), blx_name_format_given_form(&code.to_string()));
+    }
+  });
   def_macro_noop("\\DeclareListFormat OptionalMatch:* []{}{}")?;
-  def_macro_noop("\\DeclareFieldFormat OptionalMatch:* []{}{}")?;
+  def_discarded_hook("\\DeclareFieldFormat OptionalMatch:* []{}{}")?;
+  // biblatex.sty:4407-4425: the `\DeclareIndex{Name,List,Field}Format` forms
+  // share `\blx@defformat` (and thus the exact signature) with their
+  // non-Index siblings above. cnltx.bbx:131-163 declares six index field
+  // formats and one index name format whose `#1` bodies, left unabsorbed,
+  // reached the Stomach (`misdefined:#`) and fired `\nameparts`/`\usebibmacro`
+  // /`\actualoperator` as undefined (witnesses cnltx_en, endiagram_en,
+  // chemformula-manual). Guard: `perfect_kernel_batch54::bbx_declaration_bodies_are_absorbed`.
+  def_discarded_hook("\\DeclareIndexNameFormat OptionalMatch:* []{}{}")?;
+  def_discarded_hook("\\DeclareIndexListFormat OptionalMatch:* []{}{}")?;
+  def_discarded_hook("\\DeclareIndexFieldFormat OptionalMatch:* []{}{}")?;
 
   // Perl L440-458
   def_macro_noop("\\DeclareNameInputHandler{}{}")?;
   def_macro_noop("\\DeclareListInputHandler{}{}")?;
   def_macro_noop("\\DeclareFieldInputHandler{}{}")?;
-  def_macro_noop("\\DeclareSortingScheme[]{}")?;
-  def_macro_noop("\\DeclareSortingTemplate[]{}")?;
+  // `\DeclareSortingTemplate[<locale>]{<name>}{<spec>}` (biblatex.sty:14796 `[3][]`; blx-compat.def:320-324's
+  // deprecated `\DeclareSortingScheme` is the same): the `{<spec>}` read too, which the global `\sort` stub used to
+  // swallow (Perl L440-458 reads `[]{}`).
+  def_macro_noop("\\DeclareSortingScheme[]{}{}")?;
+  def_macro_noop("\\DeclareSortingTemplate[]{}{}")?;
   def_macro_noop("\\DeclareSortingNamekeyScheme[]{}")?;
   def_macro_noop("\\namepart[]{}")?;
   def_macro_noop("\\DeclareLabelalphaNameTemplate[]{}")?;
-  def_macro_noop("\\DeclareNameAlias{}{}")?;
+  // `\DeclareNameAlias[<entrytype>]{<alias>}[<entrytype>]{<format>}`
+  // (biblatex.sty:4494-4505, :4545), recorded like a name format.
+  DefPrimitive!("\\DeclareNameAlias[]{}[]{}", sub[(types, alias, _format_types, format)] {
+    if blx_untyped(types.as_ref()) {
+      blx_record_name_alias(&alias.to_string(), &format.to_string());
+    }
+  });
   def_macro_noop("\\DeclareIndexNameAlias{}{}")?;
   def_macro_noop("\\DeclareListAlias{}{}")?;
   def_macro_noop("\\DeclareIndexListAlias{}{}")?;
@@ -1936,8 +3910,18 @@ LoadDefinitions!({
   // existing command (`\DeclareCiteCommand{\cite}{…}`, restyling) aliases it
   // to itself and is harmless.
   DefMacro!("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}",
-  sub[(_star, target, _wrapper, _precode, _loopcode, _sepcode, _postcode)] {
-    if let Some(tok) = target.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) {
+  sub[(_star, target, _wrapper, precode, loopcode, sepcode, postcode)] {
+    // The citation's code is not run: an `\addtocategory` in it files keys the binding cannot know
+    // ([`blx_unmodelled_categories`]; musuos.cbx).
+    BLX.update(|blx| blx.hooks.extend([precode, loopcode, sepcode, postcode]));
+    if let Some(tok) = target.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS)
+      // Only give a NEW command the \cite fallback. A redeclaration of an
+      // EXISTING command is a restyling — keep our native pipeline's version
+      // (a raw .cbx's `\DeclareCiteCommand{\parencite}…` was aliasing
+      // \parencite to plain \cite, dropping the parentheses; guard
+      // `cluster_biblatex_authoryear*`).
+      && lookup_meaning(&tok).is_none()
+    {
       Let!(tok, T_CS!("\\cite"));
     }
     Ok(Tokens!())
@@ -1946,15 +3930,25 @@ LoadDefinitions!({
   // Perl L460-481
   def_macro_noop("\\DeclareBibliographyExtras{}")?;
   def_macro_noop("\\DeclareBibliographyStrings{}")?;
-  def_macro_noop("\\DeclareBibliographyDriver{}{}")?;
+  def_discarded_hook("\\DeclareBibliographyDriver{}{}")?;
   def_macro_noop("\\DeclareHyphenationExceptions{}")?;
   def_macro_noop("\\InheritBibliographyExtras{}")?;
   def_macro_noop("\\InheritBibliographyStrings{}")?;
   def_macro_noop("\\UndeclareBibliographyExtras{}")?;
   DefMacro!("\\NewCount", "\\newcount");
-  def_macro_noop("\\ExecuteBibliographyOptions[]{}")?;
-  def_macro_noop("\\AtBeginBibliography{}")?;
-  def_macro_noop("\\AtEveryEntrykey{}{}{}")?;
+  // `\ExecuteBibliographyOptions{<options>}` (biblatex.sty:15080) sets the
+  // global defaults, from a style's `.bbx` (phys.bbx:49, lncs.bbx:5,
+  // chem-acs.bbx:51) or the preamble. Only `giveninits` reaches the native
+  // bibliography ([`blx_record_giveninits`]); a per-type list (`[misc]{…}`,
+  // fiwi.bbx:328) is scoped to those entry types and not modelled (no TL
+  // style sets `giveninits` per type).
+  DefPrimitive!("\\ExecuteBibliographyOptions[]{}", sub[(types, options)] {
+    if blx_options_untyped(types.as_ref().map(|t| t.to_string()).as_deref()) {
+      blx_execute_options(&options.to_string());
+    }
+  });
+  def_discarded_hook("\\AtBeginBibliography{}")?;
+  def_discarded_hook("\\AtEveryEntrykey{}{}{}")?;
   def_macro_noop("\\UseBibitemHook")?;
   def_macro_noop("\\UseUsedriverHook")?;
   def_macro_noop("\\UseEveryCiteHook")?;
@@ -1967,12 +3961,41 @@ LoadDefinitions!({
   def_macro_noop("\\DeferNextCitekeyHook")?;
 
   // Perl L483-491: bibmacro/heading/environment helpers
-  def_macro_noop("\\providebibmacro OptionalMatch:* {}[][]{}")?;
-  def_macro_noop("\\renewbibmacro OptionalMatch:* {}[][]{}")?;
-  def_macro_noop("\\newbibmacro OptionalMatch:* {}[][]{}")?;
+  def_discarded_hook("\\providebibmacro OptionalMatch:* {}[][]{}")?;
+  def_discarded_hook("\\renewbibmacro OptionalMatch:* {}[][]{}")?;
+  def_discarded_hook("\\newbibmacro OptionalMatch:* {}[][]{}")?;
   def_macro_noop("\\restorebibmacro OptionalMatch:* {}")?;
   def_macro_noop("\\savebibmacro OptionalMatch:* {}")?;
-  def_macro_noop("\\defbibheading OptionalMatch:* {}[]{}")?;
+  // biblatex.sty:2393 `\newrobustcmd*{\usebibmacro}` (`\@ifstar`, one
+  // mandatory arg). The binding never runs the bibmacros it stores as no-ops
+  // (the bibliography is rendered from the model), so a use is a no-op too;
+  // undefined, it fired inside every `.bbx` format body that reached the
+  // document (cnltx.bbx:164; rub-kunstgeschichte example). Guard:
+  // `perfect_kernel_batch54::bbx_declaration_bodies_are_absorbed`.
+  def_macro_noop("\\usebibmacro OptionalMatch:* {}")?;
+  // biblatex.sty:9436 `\newrobustcmd*{\defbibcheck}[2]` and :7029
+  // `\newrobustcmd*{\DeclareRedundantLanguages}[2]`: arthistory-bonn.bbx:159/199.
+  // Undefined `\defbibcheck` leaked its check body, whose `\ifcsdef{\strfield…}`
+  // mis-nested into a live `\iffalse` that scanned to the .bbx EOF (witness
+  // rub-kunstgeschichte-example: 3 undefined → 4 errors). :9784
+  // `\printbibheading` takes one `\@ifnextchar[` optional (the standalone
+  // heading; `\printbibliography` renders the list natively). Guard:
+  // `perfect_kernel_batch54::biblatex_check_and_heading_commands_absorb_args`.
+  def_discarded_hook("\\defbibcheck{}{}")?;
+  def_macro_noop("\\DeclareRedundantLanguages{}{}")?;
+  def_macro_noop("\\printbibheading[]")?;
+  // biblatex.sty:9362-9368 `\defbibheading{<name>}[<title>]{<code>}`: kept for `heading=<name>`
+  // ([`blx_heading_title`]; `\bibbycategory`'s headings), the title `\bibname` when none is given.
+  DefMacro!("\\defbibheading OptionalMatch:* {}[]{}", sub[(_star, name, title, code)] {
+    let name = name.to_string().trim().to_string();
+    let title = title.unwrap_or_else(|| Tokens!(T_CS!("\\bibname")));
+    BLX.update(|blx| blx.headings.insert(name, (title, code)));
+    Ok(Tokens::default())
+  });
+  // biblatex.sty:9780 `\DeclarePrintbibliographyDefaults{<options>}` sets the
+  // default `\printbibliography` options (njuthesis, omgtudoc-asoiu; class census
+  // 2026-09-24); the options are presentational here.
+  def_macro_noop("\\DeclarePrintbibliographyDefaults{}")?;
   def_macro_noop("\\defbibenvironment OptionalMatch:* {}{}{}{}")?;
   def_macro_noop("\\restorecommand OptionalMatch:* {}")?;
   def_macro_noop("\\savecommand OptionalMatch:* {}")?;
@@ -1997,59 +4020,116 @@ LoadDefinitions!({
   // (`\usepackage[notes,backend=biber]{biblatex-chicago}`).
   DefRegister!("\\lositemsep" => Glue!("0pt"));
 
-  // Perl L553-604: 50 conditionals
-  DefConditional!("\\ifandothers");
-  DefConditional!("\\ifbibindex");
-  DefConditional!("\\ifbibliography");
-  DefConditional!("\\ifbibstring");
-  DefConditional!("\\ifcapital");
-  DefConditional!("\\ifcategory");
-  DefConditional!("\\ifcitation");
-  DefConditional!("\\ifciteibid");
-  DefConditional!("\\ifciteidem");
-  DefConditional!("\\ifciteindex");
-  DefConditional!("\\ifciteseen");
-  DefConditional!("\\ifcurrentfield");
-  DefConditional!("\\ifcurrentlist");
-  DefConditional!("\\ifcurrentname");
-  DefConditional!("\\ifentrycategory");
-  DefConditional!("\\ifentrykeyword");
-  DefConditional!("\\ifentryseen");
-  DefConditional!("\\ifentrytype");
-  DefConditional!("\\iffieldbibstring");
-  DefConditional!("\\iffieldequalcs");
-  DefConditional!("\\iffieldequals");
-  DefConditional!("\\iffieldequalstr");
-  DefConditional!("\\iffieldint");
-  DefConditional!("\\iffieldnum");
-  DefConditional!("\\iffieldnums");
-  DefConditional!("\\iffieldpages");
-  DefConditional!("\\iffieldsequal");
-  DefConditional!("\\iffieldundef");
-  DefConditional!("\\iffirstinits");
-  DefConditional!("\\iffirstonpage");
-  DefConditional!("\\iffootnote");
-  DefConditional!("\\ifhyperref");
-  DefConditional!("\\ifinteger");
-  DefConditional!("\\ifkeyword");
-  DefConditional!("\\ifloccit");
-  DefConditional!("\\ifmoreitems");
-  DefConditional!("\\ifmorenames");
-  DefConditional!("\\ifnameequalcs");
-  DefConditional!("\\ifnameequals");
-  DefConditional!("\\ifnamesequal");
-  DefConditional!("\\ifnameundef");
-  DefConditional!("\\ifnatbibmode");
-  DefConditional!("\\ifnumeral");
-  DefConditional!("\\ifnumerals");
-  DefConditional!("\\ifopcit");
-  DefConditional!("\\ifpages");
-  DefConditional!("\\ifsamepage");
-  DefConditional!("\\ifsingletitle");
-  DefConditional!("\\ifuseauthor");
-  DefConditional!("\\ifuseeditor");
-  DefConditional!("\\ifuseprefix");
-  DefConditional!("\\ifusetranslator");
+  // \MakeCapital{text} capitalizes the FIRST character only
+  // (blx-case-latex2e.sty `\newrobustcmd{\MakeCapital}[1]{…\blx@mkcp@parse…}`):
+  // "ibidem" → "Ibidem", never "IBIDEM".
+  DefMacro!("\\MakeCapital{}", sub[(arg)] {
+    let mut toks = arg.unlist();
+    if let Some(first) = toks.first_mut()
+      && matches!(first.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+    {
+      let up = first.to_string().to_uppercase();
+      *first = Token!(&up, first.code);
+    }
+    Ok(Tokens::new(toks))
+  });
+  // \blx@err@patch{pkg} — error reporter if patching a package fails (biblatex.sty:154).
+  DefMacro!("\\blx@err@patch{}", "");
+
+  // \NewBibliographyString{key,key,…} — declares localization-string KEYS
+  // (biblatex.sty; real def registers each key in the lbx string bank and
+  // makes \bibstring{key} legal). This binding models no localization bank —
+  // strings render through the rebuilt \thebibliography — so registering is
+  // a declaration-only noop; the argument carries key names, not content.
+  // Style packages call it at load (hep-bibliography.sty L116).
+  def_macro_noop("\\NewBibliographyString{}")?;
+
+  // Perl L553-604 declares these 50 as `\newif`-style TeX conditionals, but
+  // biblatex.sty defines every one as a BRANCH-SELECTING MACRO —
+  // `\iffieldundef{field}{true}{false}` (biblatex.sty:6205), `\ifcitation
+  // {true}{false}` (:6003) — so a style/document calling them left the branch
+  // groups in the stream and swallowed text to a stray `\fi` (biblatex
+  // manuals: "Extra \fi", `\else` cascades). This binding models no data
+  // fields, so the *undef* tests take their true branch and every other
+  // predicate its false branch, except the `use<name>` toggles (default true,
+  // biblatex.sty:8931) and `\ifhyperref`, answered from the loaded package.
+  // Round 3 of the biblatex root-causing; guard:
+  // `perfect_kernel_batch54::biblatex_tests_are_branch_macros`.
+  {
+    // (name, number of test arguments, take-the-true-branch?)
+    let tests: &[(&str, usize, bool)] = &[
+      ("andothers", 1, false),
+      ("bibindex", 0, false),
+      ("bibliography", 0, false),
+      ("bibstring", 1, false),
+      ("capital", 0, false),
+      ("category", 1, false),
+      ("citation", 0, false),
+      ("citeibid", 0, false),
+      ("citeidem", 0, false),
+      ("citeindex", 0, false),
+      ("citeseen", 0, false),
+      ("currentfield", 1, false),
+      ("currentlist", 1, false),
+      ("currentname", 1, false),
+      ("entrycategory", 2, false),
+      ("entrykeyword", 2, false),
+      ("entryseen", 1, false),
+      ("entrytype", 1, false),
+      ("fieldbibstring", 1, false),
+      ("fieldequalcs", 2, false),
+      ("fieldequals", 2, false),
+      ("fieldequalstr", 2, false),
+      ("fieldint", 1, false),
+      ("fieldnum", 1, false),
+      ("fieldnums", 1, false),
+      ("fieldpages", 1, false),
+      ("fieldsequal", 2, false),
+      ("fieldundef", 1, true),
+      ("firstinits", 0, false),
+      ("firstonpage", 0, false),
+      ("footnote", 0, false),
+      ("integer", 1, false),
+      ("keyword", 1, false),
+      ("loccit", 0, false),
+      ("moreitems", 0, false),
+      ("morenames", 0, false),
+      ("nameequalcs", 2, false),
+      ("nameequals", 2, false),
+      ("namesequal", 2, false),
+      ("nameundef", 1, true),
+      ("natbibmode", 0, false),
+      ("numeral", 1, false),
+      ("numerals", 1, false),
+      ("opcit", 0, false),
+      ("pages", 1, false),
+      ("samepage", 2, false),
+      ("singletitle", 0, false),
+      ("useauthor", 0, true),
+      ("useeditor", 0, true),
+      ("useprefix", 0, false),
+      ("usetranslator", 0, true),
+    ];
+    for (name, nargs, take_true) in tests {
+      let proto = format!("\\if{name}{}{{}}{{}}", "{}".repeat(*nargs));
+      let body = format!("#{}", nargs + if *take_true { 1 } else { 2 });
+      let (cs_tok, params) = parse_prototype(&proto, true)?;
+      def_macro(
+        cs_tok,
+        params,
+        ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(body))),
+        None,
+      )?;
+    }
+    DefMacro!("\\ifhyperref{}{}", "\\@ifpackageloaded{hyperref}{#1}{#2}");
+  }
+  // biblatex.sty:15506-15520 `\BiblatexManualHyperrefOn`/`Off` run
+  // `\blx@mkhyperref`/`\blx@mknohyperref` once under `hyperref=manual`
+  // (`\blx@hyperref`=3). Our citation/bibliography constructors link
+  // unconditionally, so the manual switch has nothing to do here
+  // (shtthesis.cls:330; Perl has no biblatex binding).
+  def_macro_noop("\\BiblatexManualHyperrefOn")?;
+  def_macro_noop("\\BiblatexManualHyperrefOff")?;
 
   // Perl L608-610 gobbles \key / \keyword silently. Round-34
   // surpass-Perl: preserve as classification tags so author keywords
@@ -2057,8 +4137,10 @@ LoadDefinitions!({
   // leave that gobbled.
   def_macro_noop("\\key{}")?;
   // \keyw is already defined L348 (DefMacro empty, see above).
-  DefMacro!("\\keyword{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!(
+    "\\keyword{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
+  );
 
   // Perl L632-635
   DefMacro!("\\ppspace", "\\addnbspace");
@@ -2066,13 +4148,12 @@ LoadDefinitions!({
   DefMacro!("\\labelalphaothers", "+");
   DefMacro!("\\sortalphaothers", "\\labelalphaothers");
 
-  // Perl L638
-  def_macro_noop("\\sort[]{}")?;
+  // The ar5iv binding defines `\sort[]{}` globally (biblatex.sty.ltxml:1088); biblatex.sty:14810 defines it only
+  // inside `\DeclareSortingTemplate`'s group, whose body this binding discards, so the global stub only refused a
+  // paper's own `\newcommand{\sort}` (2609.39511: `e^{\sort}`, 97 errors; KNOWN_PERL_ERRORS #505).
 
   // Perl L641-645: bool stubs + AtBeginDocument-guarded \true/\false bind.
   // documents such as 1811.01740 conflict with unconditional binding.
-  DefMacro!("\\blx@bbl@booltrue{}",  "\\relax", locked => true);
-  DefMacro!("\\blx@bbl@boolfalse{}", "\\relax", locked => true);
   at_begin_document(TokenizeInternal!(
     r"\@ifundefined{true}{\let\true\blx@bbl@booltrue}{}\@ifundefined{false}{\let\false\blx@bbl@boolfalse}{}"
   ))?;
@@ -2092,32 +4173,8 @@ LoadDefinitions!({
   // itself uses `\type`; our binding doesn't process filter bodies, so nothing
   // here needs the global stub.)
   //
-  // Perl L648-671: \the* counter-readouts (all empty, argument-less — safe to
-  // keep global).
-  def_macro_noop("\\theparenlevel")?;
-  def_macro_noop("\\therefsection")?;
-  def_macro_noop("\\therefsegment")?;
-  def_macro_noop("\\theuniquelist")?;
-  def_macro_noop("\\theuniquename")?;
-  def_macro_noop("\\themulticitecount")?;
-  def_macro_noop("\\themulticitetotal")?;
-  def_macro_noop("\\thelownamepenalty")?;
-  def_macro_noop("\\themaxextraalpha")?;
-  def_macro_noop("\\themaxextrayear")?;
-  def_macro_noop("\\themaxitems")?;
-  def_macro_noop("\\themaxnames")?;
-  def_macro_noop("\\themaxparens")?;
-  def_macro_noop("\\theminitems")?;
-  def_macro_noop("\\theminnames")?;
-  def_macro_noop("\\theabbrvpenalty")?;
-  def_macro_noop("\\thecitecount")?;
-  def_macro_noop("\\thecitetotal")?;
-  def_macro_noop("\\thehighnamepenalty")?;
-  def_macro_noop("\\theinstcount")?;
-  def_macro_noop("\\thelistcount")?;
-  def_macro_noop("\\theliststart")?;
-  def_macro_noop("\\theliststop")?;
-  def_macro_noop("\\thelisttotal")?;
+  // Perl L648-671 made every `\the<counter>` empty; the counters above
+  // (`NewCounter!`) give them their arabic value, as biblatex.sty:812-868 does.
 
   // Perl L673-688: print*/index*/entry* (all empty)
   def_macro_noop("\\printtext[]{}")?;
@@ -2127,6 +4184,13 @@ LoadDefinitions!({
   def_macro_noop("\\printtime")?;
   def_macro_noop("\\printdate")?;
   def_macro_noop("\\printdateextra")?;
+  // biblatex generates a `\print<type>date[extra]` for every date field
+  // (origdate/eventdate/urldate/labeldate; chicago-dates-common.cbx:1872
+  // `\printorigdate`, cms-notes-sample).
+  for d in ["orig", "event", "url"] {
+    def_macro_noop(&s!("\\print{d}date"))?;
+    def_macro_noop(&s!("\\print{d}dateextra"))?;
+  }
   def_macro_noop("\\printlabeldate")?;
   def_macro_noop("\\printlabeldateextra")?;
   def_macro_noop("\\printfile[]{}")?;
@@ -2140,9 +4204,22 @@ LoadDefinitions!({
   // Perl L690-705
   def_macro_noop("\\mkbibendnote{}")?;
   def_macro_noop("\\mkbibendnotetext{}")?;
-  DefMacro!("\\mkbibfootnote", "\\footnote");
-  DefMacro!("\\mkbibfootnotetext", "\\footnotetext");
-  DefMacro!("\\mkbibbrackets{}", "\\begingroup\\bibopenbracket#1\\bibclosebracket\\endgroup");
+  // biblatex.sty:13225-13238 `\blx@mkbibfootnote`: in a note's text (the `blx@footnote` toggle, which biblatex.sty:356-445
+  // set by patching every `\@footnotetext`; a note's text here begins with `\lx@note@reset`) a note citation is set in
+  // parentheses with a "Nested notes" warning, not as a note within the note. Guard
+  // `06_cluster_bibliography::biblatex_footcite_in_a_footnote_is_parenthesized`.
+  DefMacro!(
+    "\\mkbibfootnote{}",
+    "\\iftoggle{blx@footnote}{\\PackageWarning{biblatex}{Nested notes}\\addspace\\mkbibparens{#1}}{\\unspace\\footnote{#1}}"
+  );
+  DefMacro!(
+    "\\mkbibfootnotetext{}",
+    "\\iftoggle{blx@footnote}{\\PackageWarning{biblatex}{Nested notes}\\addspace\\mkbibparens{#1}}{\\unspace\\footnotetext{#1}}"
+  );
+  DefMacro!(
+    "\\mkbibbrackets{}",
+    "\\begingroup\\bibopenbracket#1\\bibclosebracket\\endgroup"
+  );
   DefMacro!("\\bibopenparen", "\\bibleftparen");
   DefMacro!("\\bibcloseparen", "\\bibrightparen");
   DefMacro!("\\bibopenbracket", "\\bibleftbracket");
@@ -2157,10 +4234,14 @@ LoadDefinitions!({
 
   // Perl L707-708 gobble; surpass by preserving as endnote-style.
   // \pagenote{text} is author-typed marginal note.
-  DefMacro!("\\pagenote{}",
-    "\\@add@frontmatter{ltx:note}[role=pagenote]{#1}");
-  DefMacro!("\\pagenotetext{}",
-    "\\@add@frontmatter{ltx:note}[role=pagenote-text]{#1}");
+  DefMacro!(
+    "\\pagenote{}",
+    "\\@add@frontmatter{ltx:note}[role=pagenote]{#1}"
+  );
+  DefMacro!(
+    "\\pagenotetext{}",
+    "\\@add@frontmatter{ltx:note}[role=pagenote-text]{#1}"
+  );
 
   // Perl L710-721
   DefMacro!("\\blx@uniquename", "false");
@@ -2212,7 +4293,8 @@ LoadDefinitions!({
   // stays faithful (Perl's `\newtoggle` never re-enters because Perl
   // can't find the bundled wrapper). Witness 2007.06815
   // (`\usepackage{mybiblatex}` → 55 toggle errors → 0).
-  RawTeX!(r#"
+  RawTeX!(
+    r#"
 \newbool{refcontextdefaults}
 \booltrue{refcontextdefaults}%
 \newbool{sourcemap}
@@ -2277,14 +4359,36 @@ LoadDefinitions!({
 \providetoggle{blx@uniqueprimaryauthor}
 \providetoggle{blx@uniquetitle}
 \providetoggle{blx@uniquework}
-"#);
+"#
+  );
+  // biblatex.sty:356-445: a footnote's text sets `blx@footnote` (the patched `\@footnotetext`); a note's text here
+  // begins with `\lx@note@reset` (sect03.rs), inside the note's group. Read by `\mkbibfootnote`.
+  RawTeX!(r"\g@addto@macro\lx@note@reset{\toggletrue{blx@footnote}}");
+
+  // biblatex.sty:7649-7654 registers, for every name-list field of the data
+  // model, the use-toggle `blx@use<name>` (default true) and the test
+  // `\ifuse<name>` = `\iftoggle{blx@use<name>}` (styles test them:
+  // standard-dw.bbx:1878 `\iftoggle{blx@useeditor}`, authortitle-dw.bbx:690
+  // `\ifuseeditor`; biblatex-juradiss). The standard data model's name fields
+  // (blx-dm.def) are registered here; `\providetoggle` keeps re-entry safe.
+  RawTeX!(
+    r"\def\lx@blx@regnameuse#1{\providetoggle{blx@use#1}\toggletrue{blx@use#1}\expandafter\def\csname ifuse#1\endcsname{\iftoggle{blx@use#1}}}
+\lx@blx@regnameuse{author}\lx@blx@regnameuse{editor}\lx@blx@regnameuse{translator}
+\lx@blx@regnameuse{annotator}\lx@blx@regnameuse{commentator}\lx@blx@regnameuse{introduction}
+\lx@blx@regnameuse{foreword}\lx@blx@regnameuse{afterword}\lx@blx@regnameuse{holder}
+\lx@blx@regnameuse{bookauthor}\lx@blx@regnameuse{editora}\lx@blx@regnameuse{editorb}
+\lx@blx@regnameuse{editorc}\lx@blx@regnameuse{namea}\lx@blx@regnameuse{nameb}
+\lx@blx@regnameuse{namec}\lx@blx@regnameuse{shortauthor}\lx@blx@regnameuse{shorteditor}"
+  );
 
   // biblatex internals commonly invoked by user preamble. Witnesses
   // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
-  def_macro_noop("\\newrefsection[]")?;
+  // `\newrefsection[resources]` (biblatex.sty:10771) records resources as
+  // `\refsection` does (defined above).
+  DefMacro!("\\newrefsection[]", "\\biblatex@section@resources{#1}", locked => true);
   def_macro_noop("\\endrefcontext")?;
-  def_macro_noop("\\refsection[]{}")?;
-  def_macro_noop("\\endrefsection")?;
+  // `\refsection[]` / `\endrefsection` are defined above (batch 56ai/56cs);
+  // the no-ops that stood here overrode them.
 
   // `\refcontext`/`\newrefcontext` take an optional `[...]` and then a
   // mandatory group ONLY IF one actually follows: `\refcontext@i` guards it
@@ -2302,9 +4406,36 @@ LoadDefinitions!({
   // family F4(a). (`\begin{refcontext}` routes through `\refcontext` and
   // `\end{refcontext}` through `\endrefcontext`, so the environment form is
   // covered by these two.)
-  DefMacro!("\\lx@biblatex@refcontext[]", "\\@ifnextchar\\bgroup{\\@gobble}{}");
+  DefMacro!(
+    "\\lx@biblatex@refcontext[]",
+    "\\@ifnextchar\\bgroup{\\@gobble}{}"
+  );
   Let!("\\refcontext", "\\lx@biblatex@refcontext");
   Let!("\\newrefcontext", "\\lx@biblatex@refcontext");
+  // biblatex.sty:10428 `\DeclareRefcontext{<name>}{<options>}`: a named context's options, which the contexts above
+  // do not apply (2406.05146, 2408.05177, 2411.16770).
+  def_macro_noop("\\DeclareRefcontext{}{}")?;
+  // biblatex.sty:3948-3960: Roman numerals, `\RN` upper case and `\Rn` lower case (`\romannumeral`), a document
+  // command (24 and 6 papers; 2011.12274, 2101.02945).
+  RawTeX!(
+    r"\DeclareRobustCommand*{\RN}[1]{%
+  \begingroup
+  \expandafter\RNfont
+  \expandafter{\romannumeral#1}%
+  \endgroup}
+\DeclareRobustCommand*{\Rn}[1]{%
+  \begingroup
+  \expandafter\Rnfont
+  \expandafter{\romannumeral#1}%
+  \endgroup}
+\newcommand*{\RNfont}{\uppercase}
+\newcommand*{\Rnfont}{}"
+  );
+  // biblatex.sty:16652-16653: silences the `defernumbers` warning of a split bibliography (7 papers; 2207.06399).
+  RawTeX!(
+    r"\def\BiblatexSplitbibDefernumbersWarningOff{%
+  \global\let\blx@printbibchecks@suppresswarn\@empty}"
+  );
 
   // biblatex L3408+ bibliography range separators. Define defensively.
   // NB: do NOT redefine \bibrangedash here — Perl L353 sets it to an en-dash
@@ -2313,4 +4444,1173 @@ LoadDefinitions!({
   def_macro_noop("\\bibrangessep")?;
   DefMacro!("\\bibdaterangesep", "\u{2013}");
   DefMacro!("\\bibtimerangesep", "\u{2013}");
+
+  //
+  // .bbx / .cbx style-file loading (biblatex.sty L2256-2258 / L11428-11435).
+  //
+  // The binding replaces biblatex.sty, so a `style=`/`bibstyle=`/`citestyle=`
+  // option previously only picked author-year-vs-numeric — the style FILES
+  // never loaded, and every toggle/macro they allocate stayed undefined
+  // (windycity.bbx L51-129 `\providetoggle{short}…`, ext-standard.bbx L15-18,
+  // fiwi.cbx L57-63, sbl.bbx→biblatex-sbl.def L205; 77 errors over 4 bundles;
+  // Perl has no biblatex binding and raw-loads the whole chain). Declaration
+  // surface first (argument gobblers — without them a raw .bbx errors on
+  // every `\Declare*Option`), then the guarded raw load.
+  //
+  // {<scopes>}[<datatype>]{<key>}[<default>]{<code>} — biblatex.sty L7241.
+  def_macro_noop("\\DeclareBiblatexOption{}[]{}[]{}")?;
+  // biblatex's keyval-layer aliases (biblatex.sty L76-90): loaded .bbx/.cbx
+  // styles call them directly (philosophy-standard.bbx; sidenotes chain).
+  RawTeX!(
+    r"\providecommand*{\blx@kv@defkey}{\define@key}
+\providecommand*{\blx@kv@setkeys}{\setkeys}"
+  );
+  def_macro_noop("\\blx@kv@gdefkey{}{}[]{}")?;
+  // Style-author API used by complex third-party styles (apa.bbx/cbx was the
+  // regression witness — 27 undefined-CS errors when the raw style loaded):
+  // declaration bodies must be SWALLOWED (their `\keypart`/`\regexp`/`\A`
+  // sub-language is biber sorting spec, not TeX to execute), hooks are
+  // presentational noops, punctuation gets its literal.
+  def_macro_noop("\\DeclareDelimFormat OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareDelimAlias OptionalMatch:* {}[]{}")?;
+  def_macro_noop("\\DeclareLabelname OptionalMatch:* []{}")?;
+  def_macro_noop("\\DeclareNosort{}")?;
+  def_macro_noop("\\DeclareSortExclusion{}{}")?;
+  def_macro_noop("\\DeclareSortInclusion{}{}")?;
+  def_macro_noop("\\DeclareSortingNamekeyTemplate[]{}")?;
+  def_macro_noop("\\DeclareUniquenameTemplate[]{}")?;
+  DefMacro!("\\DeclareMultiCiteCommand{}[]{}{}", sub[(target, _wrapper, cite, _sep)] {
+    if let Some(tok) = target.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS)
+      && lookup_meaning(&tok).is_none()
+    {
+      let underlying = cite
+        .unlist()
+        .into_iter()
+        .find(|t| t.get_catcode() == Catcode::CS)
+        .unwrap_or_else(|| T_CS!("\\cite"));
+      Let!(tok, underlying);
+    }
+    Ok(Tokens!())
+  });
+  def_macro_noop("\\DeclareBibliographyExtras{}")?;
+  def_macro_noop("\\GenRefcontextData{}{}")?;
+  def_discarded_hook("\\AtEveryCite{}")?;
+  def_discarded_hook("\\AtBeginRefsection{}")?;
+  // biblatex.sty:4124 `\AtUsedriver*{code}` (appends to the usedriver hook),
+  // :4110 `\delimcontext{name}`, :12700 `\DeclareAutoCiteCommand{name}[pos]
+  // {cite}{cites}` — biblatex-gost's bbx/cbx reach these three.
+  def_discarded_hook("\\AtUsedriver OptionalMatch:* {}")?;
+  def_macro_noop("\\delimcontext{}")?;
+  def_macro_noop("\\DeclareAutoCiteCommand OptionalMatch:* {}[]{}{}")?;
+  // The rest of the hook family (biblatex.sty:10188/10381-10382/10741/11380-
+  // 11397; blx-compat.def:155-156 `\AtBeginShorthands`/`\AtEveryLositem`),
+  // reached by raw styles (philosophy-*.bbx:159/213, windycity.bbx;
+  // arsclassica, sidenotes caesar_example). `\AtBeginBiblist`/
+  // `\AtEveryBiblistitem` take the list name AND the body.
+  def_discarded_hook("\\AtBeginShorthands{}")?;
+  def_discarded_hook("\\AtEveryLositem{}")?;
+  def_discarded_hook("\\AtBeginBiblist{}{}")?;
+  def_discarded_hook("\\AtEveryBiblistitem{}{}")?;
+  def_discarded_hook("\\AtNextBibliography{}")?;
+  def_discarded_hook("\\AtEveryMultiCite{}")?;
+  def_discarded_hook("\\AtEachCitekey{}")?;
+  def_discarded_hook("\\AtNextCite{}")?;
+  def_discarded_hook("\\AtNextRefsection{}")?;
+  def_macro_noop("\\RequireBiber[]")?;
+  def_macro_noop("\\localrefcontext[]{}")?;
+  DefMacro!("\\addsemicolon", ";");
+  DefMacro!("\\addcolon", ":");
+  DefMacro!("\\newunitpunct", ". ");
+  // `\bibstring{key}` — the localisation bank is not modelled (strings render
+  // through the rebuilt \thebibliography), but the keys a document reaches
+  // directly through the page-string family and the common cite-context
+  // strings get their english.lbx short forms (english.lbx:365-455,
+  // `abbreviate=true` default); an unknown key stays the key.
+  DefMacro!("\\bibstring{}", sub[(key)] {
+    let key = key.to_string();
+    let key = key.trim();
+    let text = match key {
+      "page" => "p.", "pages" => "pp.", "sequens" => "sq.", "sequentes" => "sqq.",
+      "and" => "and", "andothers" => "et al.", "andmore" => "et al.",
+      "editor" => "ed.", "editors" => "eds.", "byeditor" => "ed. by",
+      "translator" => "trans.", "translators" => "trans.", "bytranslator" => "trans. by",
+      "volume" => "vol.", "volumes" => "vols.", "number" => "no.", "edition" => "ed.",
+      "chapter" => "chap.", "section" => "\u{a7}", "paragraph" => "par.",
+      "column" => "col.", "columns" => "cols.", "line" => "l.", "lines" => "ll.",
+      "verse" => "v.", "verses" => "vv.", "in" => "in", "idem" => "idem",
+      "ibidem" => "ibid.", "opcit" => "op. cit.", "loccit" => "loc. cit.",
+      "seenote" => "see n.", "quotedin" => "qtd. in", "citedas" => "henceforth cited as",
+      "nodate" => "n.d.", "urlseen" => "visited on", "version" => "version",
+      "phdthesis" => "PhD thesis", "mathesis" => "MA thesis",
+      other => other,
+    };
+    Ok(Tokens::new(Explode!(text)))
+  });
+  // [<datatype>]{<key>}[<default>]{<code>} — biblatex.sty L7226-7228.
+  // biblatex.sty:4430/4435 `\DeclareNameWrapperFormat`/`\DeclareListWrapperFormat`
+  // (`[<entrytype>]{<format>}{<code>}`): render-side wrappers around name and
+  // list formats — declaration-only here (biblatex-cv.sty:641-651 declares
+  // them for every name field at load).
+  def_macro_noop("\\DeclareNameWrapperFormat OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareListWrapperFormat OptionalMatch:* []{}{}")?;
+  // Internals styles and documents reach directly: biblatex.sty:15791
+  // `\blx@opt@loccittracker@<mode>` (loccit tracking modes; biblatex-sbl-ibid
+  // .tex:200 calls `\blx@opt@loccittracker@false`) and :11077
+  // `\blx@refpatch@sect{level}{code}{n}` / `@part` / `@chapter` (refsection
+  // patches of sectioning commands; cmsendnotes.sty:121). Neither tracking
+  // nor refsection boundaries are modelled — consume.
+  for mode in ["true", "false", "context", "strict", "constrict"] {
+    def_macro_noop(&s!("\\blx@opt@loccittracker@{mode}"))?;
+  }
+  def_macro_noop("\\blx@refpatch@sect{}{}{}")?;
+  def_macro_noop("\\blx@refpatch@part{}")?;
+  def_macro_noop("\\blx@refpatch@chapter{}")?;
+  def_macro_noop("\\DeclareBibliographyOption[]{}[]{}")?;
+  def_macro_noop("\\DeclareTypeOption[]{}[]{}")?;
+  def_macro_noop("\\DeclareEntryOption[]{}[]{}")?;
+  // Hook appenders (biblatex.sty L2265/L11437) — presentational init code.
+  def_macro_noop("\\InitializeBibliographyStyle{}")?;
+  def_macro_noop("\\InitializeCitationStyle{}")?;
+  // Per-citation hooks and reset commands the style-driven docs use
+  // (windycity manual). Real `\AtNextCitekey` defers its code to the next
+  // citation; our cite pipeline is native, so run the code in place — the
+  // idiomatic use (`\AtNextCitekey{\toggletrue{short}}\cite{x}`) sets the
+  // toggle just before the citation either way.
+  DefMacro!("\\AtNextCitekey{}", "#1");
+  DefMacro!("\\AtNextMultiCite{}", "#1");
+  def_macro_noop("\\citereset")?;
+  // Reference segments (biblatex.sty:10895-10918): `\newrefsegment` and the `refsegment` environment
+  // (`\refsegment` … `\endrefsegment`) open a new segment, which only `\printbibliography[segment=…]` reads — not
+  // modelled (OD #762), so all three are no-ops. Without `\refsegment`, `\begin{refsegment}` was
+  // `Error:undefined:{refsegment}` (pdflatex 0). Guard
+  // `06_cluster_bibliography::biblatex_refsection_zero_after_refsection`.
+  def_macro_noop("\\newrefsegment")?;
+  def_macro_noop("\\refsegment")?;
+  def_macro_noop("\\endrefsegment")?;
+  // `\printbiblist[options]{list}` (biblatex.sty:10258-10327) prints its heading — `heading=biblist` by default, titled
+  // `title=` or `\biblistname` (english.lbx "Abbreviations"): `\chapter*` where the class has chapters, else `\section*`
+  // (biblatex.def:2242-2255, :2279-2290); `…numbered` unstarred, `sub…` one level down, `none` nothing — and its
+  // `prenote=`, then the list's entries (a shorthand list: the cited entries that have the field, labelled by it). The
+  // heading and the note are printed (cms-legal-sample's "Legal Authority Shorthands" and its `\defbibnote{legal}`);
+  // the entries, which the `.bib` route knows only at post, are not, and an empty list keeps its heading where
+  // biblatex prints only a warning (:10325-10327) — residuals. User ruling 2026-10-03: not a 7b residual.
+  // `\printshorthands` is `\printbiblist{shorthand}` (biblatex.sty:16006; cms-legal-sample, cms-notes-sample).
+  // Guard `06_cluster_bibliography::biblatex_printbiblist_prints_its_heading_and_prenote`.
+  RawTeX!(r"\providecommand\biblistname{Abbreviations}");
+  DefMacro!("\\printbiblist OptionalKeyVals:blx@bib2 {}", sub[(kv, _list)] {
+    let mut tokens = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\lx@bibliography@preamble"), T_BEGIN!(), T_END!()];
+    let mut title = Tokens!(T_CS!("\\biblistname"));
+    let mut heading = String::from("biblist");
+    if let Some(kv) = kv.as_ref() {
+      if let Some(given) = kv.get_value("title") {
+        title = given.revert()?;
+      }
+      if let Some(given) = kv.get_value("heading") {
+        heading = given.to_string().trim().to_string();
+      }
+      if let Some(note) = kv.get_value("prenote") {
+        tokens.extend([T_CS!("\\biblatex@prenote"), T_BEGIN!()]);
+        tokens.extend(note.revert()?.unlist());
+        tokens.push(T_END!());
+      }
+    }
+    if heading != "none" {
+      let level = if heading.starts_with("sub") {
+        r"\@ifundefined{chapter}{\subsection}{\section}"
+      } else {
+        r"\@ifundefined{chapter}{\section}{\chapter}"
+      };
+      let star = if heading.ends_with("numbered") { "" } else { "*" };
+      tokens.extend(TokenizeInternal!(TeXString::assembled(s!("{level}{star}"))).unlist());
+      tokens.push(T_BEGIN!());
+      tokens.extend(title.unlist());
+      tokens.push(T_END!());
+    }
+    tokens.extend([T_CS!("\\lx@bibliography@preamble"), T_CS!("\\endgroup")]);
+    Ok(Tokens::new(tokens))
+  });
+  DefMacro!("\\printshorthands OptionalKeyVals:blx@bib2", sub[(kv)] {
+    let mut tokens = vec![T_CS!("\\printbiblist")];
+    if let Some(kv) = kv.as_ref() {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(kv.revert()?.unlist());
+      tokens.push(T_OTHER!("]"));
+    }
+    tokens.extend([T_BEGIN!()]);
+    tokens.extend(ExplodeText!("shorthand"));
+    tokens.push(T_END!());
+    Ok(Tokens::new(tokens))
+  });
+  // Bibliography categories (biblatex.sty:11203-11244): `\DeclareBibliographyCategory{name}` declares a global list
+  // (preamble only), `\addtocategory{name}{key,…}` files the keys — expanded, as `\blx@xsanitizeafter` reads them —
+  // and `\printbibliography[category=name]` prints the filed keys ([`bbl_filter`]). biblatex files them through the
+  // `.aux`, so its lists are the whole previous run's: here every key filed anywhere in the document counts, the lists
+  // deciding once the document is digested (`\biblatex@select`, `\biblatex@if@selected`). Declaring a category twice and filing in an
+  // undeclared one are biblatex's errors. 6-bundle cluster (biblatex-abnt/-juradiss …); witness arXiv 2406.00136.
+  DefPrimitive!("\\DeclareBibliographyCategory{}", sub[(name)] {
+    let name = name.to_string().trim().to_string();
+    let declared = BLX.update(|blx| {
+      let categories = &mut blx.categories;
+      let declared = categories.iter().any(|(category, _)| *category == name);
+      if !declared {
+        categories.push((name.clone(), Vec::new()));
+      }
+      declared
+    });
+    if declared {
+      blx_error(
+        &s!("Category '{name}' already declared"),
+        &s!("The bibliography category '{name}'\\MessageBreak has already been declared"),
+      )?;
+    }
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\addtocategory{} Expanded", sub[(name, keys)] {
+    let name = name.to_string().trim().to_string();
+    let keys = keys.to_string();
+    let declared = BLX.update(|blx| {
+      let category = blx.categories.iter_mut().find(|(category, _)| *category == name);
+      let Some((_, filed)) = category else {
+        return false;
+      };
+      for key in keys.split(',').map(str::trim).filter(|key| !key.is_empty()) {
+        if !filed.iter().any(|filed| filed == key) {
+          filed.push(key.to_string());
+        }
+      }
+      true
+    });
+    if !declared {
+      blx_error(
+        &s!("Category '{name}' not declared"),
+        "Use \\string\\DeclareBibliographyCategory\\space to declare",
+      )?;
+    }
+    Ok(Vec::new())
+  });
+  // biblatex.sty:9955-9998 `\bibbycategory[<options>]` prints one bibliography per declared category in declaration
+  // order, under the heading named after it (`\blx@key@heading{…}{#1}`, an author's `\defbibheading`,
+  // [`blx_heading_title`]): `\printbibliography[<options>,category=<name>,heading=<name>]`, which skips a category
+  // with no keys when the bibliography is built (`\biblatex@if@selected`); none declared is biblatex's "No categories
+  // found", none with keys its "Empty bibliography" (`\biblatex@bycategory@end`). A category a hook the binding never
+  // runs fills ([`blx_unmodelled_categories`]; hgbbib.sty:113 `\AtEveryCitekey`) prints the one unfiltered list, as
+  // before categories were modelled. gztarticle.cls:2580-2581 saves and renews it (TeX Live class census
+  // 2026-09-24). Each call filters, so none repeats the previous list (`\biblatex@filtered@list`).
+  DefMacro!("\\bibbycategory[]", sub[(options)] {
+    let categories: Vec<String> =
+      BLX.read(|blx| blx.categories.iter().map(|(name, _)| name.clone()).collect());
+    let options = options.map(|options| options.unlist()).unwrap_or_default();
+    let mut tokens = Vec::new();
+    if categories.is_empty() {
+      tokens.extend(blx_warning_tokens("No categories found"));
+      tokens.extend(TokenizeInternal!(r"\@latex@warning{Empty bibliography}").unlist());
+      return Ok(Tokens::new(tokens));
+    }
+    let unmodelled = blx_unmodelled_categories();
+    let hooked: Vec<&String> = categories.iter().filter(|name| unmodelled.covers(name)).collect();
+    if !hooked.is_empty() {
+      Info!(
+        "ignore",
+        "\\bibbycategory",
+        s!(
+          "categories {} are filled by a hook the binding does not run: one unfiltered list is printed",
+          hooked.iter().map(|category| s!("'{category}'")).collect::<Vec<_>>().join(", ")
+        )
+      );
+      tokens.extend([T_CS!("\\printbibliography"), T_OTHER!("[")]);
+      tokens.extend(options);
+      tokens.push(T_OTHER!("]"));
+      return Ok(Tokens::new(tokens));
+    }
+    tokens.extend([T_CS!("\\begingroup"), T_CS!("\\biblatex@bycategory")]);
+    for category in &categories {
+      tokens.extend([T_CS!("\\printbibliography"), T_OTHER!("[")]);
+      if !options.is_empty() {
+        tokens.extend(options.iter().copied());
+        tokens.push(T_OTHER!(","));
+      }
+      tokens.extend(Explode!(&s!("category={category},heading={category}")));
+      tokens.push(T_OTHER!("]"));
+    }
+    tokens.extend([T_CS!("\\biblatex@bycategory@end"), T_CS!("\\endgroup")]);
+    Ok(Tokens::new(tokens))
+  });
+  DefPrimitive!("\\biblatex@bycategory", {
+    assign_value("biblatex_bycategory", true, None);
+  });
+  // biblatex.sty:9997-9998 `\blx@endbibcategory`: no category had keys — known when the bibliography is built — is
+  // "Empty bibliography". With no `.bbl` the lists print the `.bib`'s entries unfiltered.
+  DefConstructor!("\\biblatex@bycategory@end", sub[_document, _args, props] {
+    if matches!(props.get("bbl"), Some(Stored::Bool(true)))
+      && BLX.read(|blx| blx.categories.iter().all(|(_, filed)| filed.is_empty()))
+    {
+      blx_empty_bibliography();
+    }
+  },
+  properties => sub[_args] {
+    let mut props = stored_map!();
+    props.insert("bbl", Stored::Bool(lookup_bool("biblatex_bbl_found")));
+    Ok(props)
+  });
+  // `\ifcategory{<category>}{<true>}{<false>}` (biblatex.sty:2889-2893) tests the entry being typeset — meaningful only
+  // in per-entry code (drivers, formats, bibmacros), which the binding never runs — so it always takes the false
+  // branch. `\ifentrycategory{<entrykey>}{<category>}{<true>}{<false>}` (:2895-2902) names the entry: true if the
+  // category has it filed so far (biblatex reads the previous run's, so an `\addtocategory` after the test is not seen
+  // here). Read with three arguments, as before, it printed both branches.
+  DefMacro!("\\ifcategory{}{}{}", "#3");
+  DefMacro!("\\ifentrycategory{}{}{}{}", sub[(key, category, yes, no)] {
+    let filter = [pin(s!("+{}", category.to_string().trim()))];
+    Ok(if blx_selected(&filter, key.to_string().trim()) { yes } else { no })
+  });
+  // biber never sentence-cases a title at the `.bib` layer (BibTeX's
+  // `change.case$` "t" does, and lowercases unbraced control sequences with
+  // it — `\H`→`\h`, `\TeX`→`\tex` — which is why the classic path keeps
+  // `capitalize1` and its SHARED breakage); a biblatex style that wants
+  // sentence case applies `\MakeSentenceCase*` at print time, protecting
+  // control sequences. So a biblatex document reads titles as entered, like
+  // amsrefs (`amsrefs_sty.rs`): `Erd\H{o}s` stays `Erd\H{o}s` (biblatex2bibitem,
+  // shortmathj), `The \TeX book` keeps its `\TeX`. Guard:
+  // `06_cluster_bibliography::biblatex_title_case_is_as_entered`.
+  AssignValue!("BibTeX_title_case" => "asis");
+  // The BibTeX reader digests the entries of a `.bbl` ([`bbl_flush`]), as it
+  // does amsrefs' `\bib` entries (amsrefs_sty.rs). The reader's per-thread
+  // state starts empty in every document.
+  LoadPool!("BibTeX");
+  // The labels biblatex gives an entry, read by both of its routes (a `.bbl`'s entries, a `.bib` read without one):
+  // biber's alphabetic label and the entry's `shorthand`, which MakeBibliography prints as the entry's refnum in a
+  // biblatex bibliography (`given_label`; biblatex.sty:8920 `\let\abx@field@labelnumber\abx@field@shorthand`). They
+  // are TeX like a title — `B{\"o}t01`, `{\v C}re+05` (arXiv 1212.4446), `AAP\textsuperscript {+}96` (arXiv
+  // 1512.08147), `Balbes \& Dwinger` (arXiv 2406.15218) — so they are digested, not kept as raw `bib-data` text.
+  // Defined here, not in the BibTeX pool: under natbib/BibTeX such a field is data no `.bst` prints, and stays
+  // `\bib@field@default@default`'s raw `bib-data` as in Perl (a `shorthand={\undefinedmacro TB}` raised
+  // `Error:undefined`, pdflatex 0). Guard `06_cluster_bibliography::natbib_shorthand_field_is_raw_data`.
+  DefMacro!(
+    "\\bib@field@default@labelalpha",
+    "\\bib@@field{ltx:bib-data}[role=labelalpha]"
+  );
+  DefMacro!(
+    "\\bib@field@default@shorthand",
+    "\\bib@@field{ltx:bib-data}[role=shorthand]"
+  );
+  // biblatex's own field names, on both of its routes (`define_biblatex_fields`, the BibTeX pool; a `.bst` that
+  // declares one of them has it read on the BibTeX route too).
+  latexml_engine::bibtex::define_biblatex_fields(None)?;
+  BBL_ENTRY.update(|entry| *entry = None);
+  BBL_DATALISTS.update(|lists| *lists = BblDatalists::default());
+  BLX.update(|blx| *blx = BlxState::default());
+  BBL_READ.update(|read| *read = BblRead::default());
+  DefMacro!("\\mkbibquote{}", "\u{201C}#1\u{201D}");
+  DefMacro!("\\mkbibparens{}", "(#1)");
+  DefMacro!("\\mkbibbrackets{}", "[#1]");
+  // The rest of biblatex's public formatting family. Real biblatex registers
+  // each as an "internal macro command" (`\blx@regimcs`, biblatex.sty:1137,
+  // activated by `\blx@blxinit` inside the bibliography) AND as an always
+  // available `\newrobustcmd` (biblatex.sty:13084-13093, :13217) — both are
+  // stubbed here, so the names must be defined directly. `.bib` fields use
+  // them freely (`title = {Review of \mkbibemph{The Last Marlin}}`,
+  // `note = {… on\nopunct}` in biblatex-chicago's dates-test.bib; the
+  // undefined name leaked its argument unemphasized: 7 + 4 corpus docs).
+  // `\nopunct`/`\isdot`/`\newunit` act on biblatex's punctuation buffer
+  // (biblatex.sty:2092-2106, :4207), which this pipeline has no analogue of
+  // → no-ops; `\addperiod` is the period itself. `\lbx@initnamehook` /
+  // `\lbx@inittitlehook` (biblatex.def:2121-2122) are the empty one-argument
+  // hooks that the style name macros call (`name:hook`, biblatex.def:1135;
+  // biblatex-chicago's raw .lbx). Guard:
+  // `06_cluster_bibliography::biblatex_formatting_family_renders_in_bib_fields`.
+  DefMacro!("\\mkbibemph{}", "\\emph{#1}");
+  DefMacro!("\\mkbibbold{}", "\\textbf{#1}");
+  DefMacro!("\\mkbibitalic{}", "\\textit{#1}");
+  DefMacro!("\\mkbibsuperscript{}", "\\textsuperscript{#1}");
+  // biblatex.def:401-404 — acronyms in small caps when the current font has a
+  // small-caps shape. Documents use it outside any bibliography
+  // (socialscienceshuberlin.tex:441 `\mkbibacro{CTAN}`). Guard:
+  // `binding_singletons_56::biblatex_mkbibacro_and_standard_toggles`.
+  RawTeX!(
+    r"\newcommand*{\mkbibacro}[1]{\ifcsundef{\f@encoding/\f@family/\f@series/sc}{#1}{\textsc{\MakeLowercase{#1}}}}"
+  );
+  def_macro_noop("\\nopunct")?;
+  def_macro_noop("\\isdot")?;
+  def_macro_noop("\\newunit")?;
+  DefMacro!("\\addperiod", ".");
+  def_macro_noop("\\lbx@initnamehook{}")?;
+  def_macro_noop("\\lbx@inittitlehook{}")?;
+  // `\blx@inputonce{file}` — biblatex's guarded input; style .def files
+  // call it directly (sbl.bbx L1 → biblatex-sbl.def; biblatex-software).
+  DefPrimitive!("\\blx@inputonce{}", sub[(file)] {
+    let f = do_expand(file)?.to_string();
+    let f = f.trim();
+    let (stem, ext) = f.rsplit_once('.').unwrap_or((f, "def"));
+    let guard = s!("blx@inputonce@{f}");
+    if lookup_value(&guard).is_none() {
+      assign_value(&guard, Stored::from(true), Some(Scope::Global));
+      let _ = input_definitions(stem, InputDefinitionOptions {
+        extension: Some(Cow::Owned(ext.to_string())),
+        noltxml: true,
+        noerror: true,
+        ..InputDefinitionOptions::default()
+      });
+    }
+  });
+  // \RequireBibliographyStyle / \RequireCitationStyle — raw-load the file
+  // once (mirrors \blx@inputonce).
+  DefPrimitive!("\\RequireBibliographyStyle{}", sub[(style)] {
+    blx_load_style_file(&do_expand(style)?.to_string(), "bbx");
+  });
+  DefPrimitive!("\\RequireCitationStyle{}", sub[(style)] {
+    blx_load_style_file(&do_expand(style)?.to_string(), "cbx");
+  });
+  // Drive the load from the package options, like real biblatex's end-of-
+  // package style load: `style=<s>` sets both; `bibstyle=`/`citestyle=`
+  // individually. bbx FIRST, then cbx — biblatex.sty:16439-16440
+  // `\RequireBibliographyStyle{\blx@bbxfile}\RequireCitationStyle{\blx@cbxfile}`.
+  // The oxref bundle depends on it: oxref.bbx:489-490 `\newtoggle`s
+  // `blx@ox@autoanon`/`abbranon` and every oxref cbx `\providetoggle`s them
+  // (oxnum.cbx:26); loading the cbx first made the bbx's `\newtoggle`
+  // "already defined" (biblatex-oxref ×4). Guard:
+  // `perfect_kernel_batch54::biblatex_loads_bbx_before_cbx`.
+  let mut bibstyle: Option<String> = None;
+  let mut citestyle_name: Option<String> = None;
+  if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
+    for opt in opts.iter() {
+      let opt_str = opt.to_string();
+      let Some((k, v)) = blx_opt_kv(&opt_str) else {
+        continue;
+      };
+      match k.as_str() {
+        "style" => {
+          bibstyle = Some(v.clone());
+          citestyle_name = Some(v);
+        },
+        "bibstyle" => bibstyle = Some(v),
+        "citestyle" => citestyle_name = Some(v),
+        _ => {},
+      }
+    }
+  }
+  // biblatex-chicago.sty:24-31 selects the style by keyword (`notes` is the
+  // default, :32 `\setkeys{cms@ldt}{notes}`) and loads `chicago-<style>`
+  // through `\RequirePackage[style=…]{biblatex}` (:143); routed here as the
+  // variant, the keyword sits under `opt@biblatex-chicago.sty`. The
+  // chicago-notes bbx/cbx raw-load cleanly and declare the user cite commands
+  // (`\runcite` chicago-notes.cbx:3164, `\headlessfullcite` :2919;
+  // cms-legal-sample, cms-notes-sample). Raw-overlaying biblatex-chicago.sty
+  // itself is not an option: it owns kvoptions declarations and `\patchcmd`s
+  // of biblatex internals the binding does not have.
+  // Guard: `perfect_kernel_batch56::biblatex_chicago_notes_loads_its_cbx`.
+  if lookup_value("opt@biblatex-chicago.sty").is_some() || blx_variant_requested("biblatex-chicago")
+  {
+    RequirePackage!("xstring");
+    let mut style = "chicago-notes";
+    if let Some(opts) = lookup_vecdeque("opt@biblatex-chicago.sty") {
+      for opt in opts.iter() {
+        let opt_str = opt.to_string();
+        style = match opt_str.trim() {
+          "authordate" => "chicago-authordate",
+          "authordate-trad" => "chicago-authordate-trad",
+          "authordate16" => "chicago-authordate16",
+          "authordate-trad16" => "chicago-authordate-trad16",
+          "notes16" => "chicago-notes16",
+          "notes" => "chicago-notes",
+          _ => style,
+        };
+      }
+    }
+    if bibstyle.is_none() {
+      bibstyle = Some(style.to_string());
+    }
+    if citestyle_name.is_none() {
+      citestyle_name = Some(style.to_string());
+    }
+  }
+  // biblatex.def's name formats (the binding stands in for the file): the
+  // `author` list falls back to `default`, the `given-family` format
+  // (biblatex.def:953/991), which, like `family-given` and
+  // `family-given/given-family` (:878-935), follows `giveninits`; `initsonly`
+  // (:944-950) always abbreviates. A style's declarations override these.
+  for (alias, format) in [
+    ("default", "given-family"),
+    ("sortname", "family-given/given-family"),
+    ("author", "default"),
+    ("editor", "default"),
+  ] {
+    blx_record_name_alias(alias, format);
+  }
+  blx_record_name_format("initsonly", "initials");
+  // biblatex.sty:16387 `\blx@kv@setkeys{blx@opt@ldt}{style=numeric}`: the
+  // default style, whose numeric.bbx chains standard.bbx (its toggles, below).
+  let bibstyle = bibstyle.or_else(|| Some("numeric".to_string()));
+  if let Some(s) = &bibstyle {
+    blx_load_style_file(s, "bbx");
+  }
+  if let Some(s) = &citestyle_name {
+    blx_load_style_file(s, "cbx");
+    AssignValue!("biblatex@nonlabelstyle" => !blx_cite_style_labels(s), Some(Scope::Global));
+  }
+  // The package options apply AFTER the style's `\ExecuteBibliographyOptions`
+  // defaults (biblatex.sty:16439-16446: `\RequireBibliographyStyle`, then
+  // `\blx@processoptions`), so `[style=phys,giveninits=false]` spells names out.
+  if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
+    for opt in opts.iter() {
+      blx_record_giveninits(&opt.to_string());
+      blx_record_defernumbers(&opt.to_string());
+    }
+  }
 });
+
+/// Whether a format's optional `[<entrytype>]` argument is absent or biblatex's
+/// `*`, every type (biblatex.sty:4442-4445 `\blx@defformat`). A blank `[]`
+/// names no type, so it defines nothing (:4447-4462 `\forcsvlist`).
+fn blx_untyped(types: Option<&Tokens>) -> bool { types.is_none_or(|t| t.to_string().trim() == "*") }
+
+/// Whether `\ExecuteBibliographyOptions`'s `[<entrytype>]` is absent or blank:
+/// biblatex.sty:15081-15084 tests `\ifblank` only, so `*` names a type there.
+fn blx_options_untyped(types: Option<&str>) -> bool { types.is_none_or(|t| t.trim().is_empty()) }
+
+/// `\ExecuteBibliographyOptions{<key=value,...>}` without an entry type.
+fn blx_execute_options(options: &str) {
+  for opt in options.split(',') {
+    blx_record_giveninits(opt);
+    blx_record_defernumbers(opt);
+    if let Some((key, value)) = blx_opt_kv(opt)
+      && key == "refsection"
+    {
+      blx_record_refsection(&value);
+    }
+  }
+}
+
+/// `defernumbers[=true|false]` (biblatex.sty:16159, a bare key is true; the last setting wins): label numbers
+/// in print order ([`bbl_print`]).
+fn blx_record_defernumbers(opt: &str) {
+  let opt = opt.trim();
+  let (key, value) = blx_opt_kv(opt).unwrap_or_else(|| (opt.to_string(), "true".to_string()));
+  if key == "defernumbers" {
+    assign_value(
+      "biblatex_defernumbers",
+      value != "false",
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// `refsection=part|chapter|section|subsection[+]` (biblatex.sty:16172-16181) opens a refsection at every such
+/// heading (`\blx@refpatch@sect`), which the binding does not model: each `\printbibliography` there prints that
+/// section's citations, so none may repeat the previous list (`\biblatex@printbibliography`).
+fn blx_record_refsection(value: &str) {
+  assign_value(
+    "biblatex_auto_refsections",
+    value.trim() != "none",
+    Some(Scope::Global),
+  );
+}
+
+/// Record the name format `name`, printing given names as `form`
+/// ([`blx_name_format_given_form`]). biblatex keeps formats and aliases in one
+/// namespace (`\abx@nfd@*@<name>`, biblatex.sty:4462-4463 and :4502-4505), so
+/// the later declaration of a name wins either way.
+fn blx_record_name_format(name: &str, form: &str) {
+  assign_value(
+    &s!("blx@nfd@{}", name.trim()),
+    Stored::from(s!("format:{form}")),
+    Some(Scope::Global),
+  );
+}
+
+/// Record `\DeclareNameAlias{alias}{format}` (see [`blx_record_name_format`]).
+fn blx_record_name_alias(alias: &str, format: &str) {
+  assign_value(
+    &s!("blx@nfd@{}", alias.trim()),
+    Stored::from(s!("alias:{}", format.trim())),
+    Some(Scope::Global),
+  );
+}
+
+/// How a name format's code prints given names: `switch` when it tests
+/// `\ifgiveninits` (or the legacy `\iffirstinits`, blx-compat.def:217-222), as
+/// biblatex.def's own formats do (:878-935); else `initials` when it prints the
+/// given-name initials `\namepartgiveni` (apa.bbx:613-631, whose
+/// `name:apa:family-given` prints the full name only to disambiguate,
+/// :1034-1044; lncs.bbx:173); else `full` when it prints `\namepartgiven`
+/// (biblatex-cse.bbx:61-68, although the style sets `giveninits`); else
+/// `switch`, a format that prints no given name or leaves it to a bibmacro.
+/// (A style-private switch between the two, geschichtsfrkl.bbx:105
+/// `\ifbool{bbx:nurinit}`, reads as `initials`.)
+fn blx_name_format_given_form(code: &str) -> &'static str {
+  // `\<cs>` in `code`, not as the prefix of a longer name.
+  let names_cs = |cs: &str| {
+    code.match_indices(cs).any(|(at, _)| {
+      !code[at + cs.len()..].starts_with(|c: char| c.is_ascii_alphabetic() || c == '@')
+    })
+  };
+  if names_cs("\\ifgiveninits") || names_cs("\\iffirstinits") {
+    "switch"
+  } else if names_cs("\\namepartgiveni") {
+    "initials"
+  } else if names_cs("\\namepartgiven") {
+    "full"
+  } else {
+    "switch"
+  }
+}
+
+/// The style the bibliography formatter keys on (`bibstyle`), for a `.bib`
+/// and a `.bbl` alike: biblatex's standard styles print URLs, which the `.bst`
+/// path's "Link" does not (make_bibliography.rs `style_prints_urls`;
+/// OXIDIZED_DESIGN_DIVERGENCES #289), spell given names out unless the style's
+/// name format or `giveninits` asks for initials ([`blx_prints_given_initials`];
+/// make_bibliography.rs `style_given_name_form`), and follow biblatex's
+/// punctuation tracker (make_bibliography.rs `PeriodRule`).
+fn blx_bibstyle() -> &'static str {
+  if blx_prints_given_initials() {
+    "biblatex-giveninits"
+  } else {
+    "biblatex"
+  }
+}
+
+/// Whether the bibliography prints given names as initials. biblatex prints an
+/// entry's `author` list in the name format of that name (`\printnames{author}`,
+/// standard.bbx; `\blx@getformat`, biblatex.sty:4509-4522), found through the
+/// recorded aliases; a format that follows `\ifgiveninits` leaves it to the
+/// `giveninits` option ([`blx_record_giveninits`]).
+fn blx_prints_given_initials() -> bool {
+  let mut name = String::from("author");
+  // An alias cycle is an error in biblatex too; stop rather than loop.
+  for _ in 0..32 {
+    let declared = lookup_string(&s!("blx@nfd@{name}"));
+    if let Some(target) = declared.strip_prefix("alias:") {
+      name = target.to_string();
+      continue;
+    }
+    match declared.as_str() {
+      "format:initials" => return true,
+      "format:full" => return false,
+      _ => break,
+    }
+  }
+  lookup_bool("biblatex_giveninits")
+}
+
+/// Record one biblatex `key[=value]` option if it is `giveninits` or its legacy
+/// alias `firstinits` (blx-compat.def:224-229): print given names as initials.
+/// biblatex's default is false; a bare key means true, and the last setting wins
+/// (biblatex.def:878 `\ifgiveninits` reads the one switch). The bibliography
+/// formatter learns it through the `bibstyle` marker set by
+/// `\biblatex@printbibliography`.
+fn blx_record_giveninits(opt: &str) {
+  let (key, value) = blx_opt_kv(opt).unwrap_or_else(|| (opt.trim().to_string(), "true".into()));
+  if matches!(key.as_str(), "giveninits" | "firstinits") {
+    assign_value(
+      "biblatex_giveninits",
+      Stored::Bool(value == "true"),
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// `biblatex-<x>.sty` routed to this binding (`latexml_contrib::dispatch`):
+/// the binding stands in for the `\RequirePackage{biblatex}` the variant
+/// would do, then — for the variants in [`BIBLATEX_VARIANT_OVERLAYS`] — the
+/// variant's own `.sty` is raw-input on top, so its user macros exist
+/// (`\highlightname` biblatex-cv.sty:565). A variant is listed only when
+/// its `.sty` is a bare `\RequirePackage{biblatex}` plus declarations the
+/// binding's surface accepts; biblatex-chicago is NOT (kvoptions
+/// declarations, `\patchcmd`s of biblatex internals, option clash) — its
+/// style selection is mapped in `load_definitions` instead.
+/// Guard: `perfect_kernel_batch56::biblatex_cv_variant_overlay`.
+///
+/// biblatex-ext's add-on packages, loaded after biblatex (biblatex-ext.tex:55 tabular bibliographies,
+/// :56 open access, :60/:64/:68 the open-access symbol packages), are overlays too: re-running the
+/// binding in their place left `\defbibtabular`/`\printbibtabular` undefined
+/// (biblatex-ext-tabular.sty:268, :55), the example's `longtable` opened inside a stray group, and
+/// the manual lost its last two sections (lines 3362-4383). Unlike biblatex-cv they never load
+/// biblatex: tabular and oa test `\@ifpackageloaded{biblatex}` (passing on the binding's
+/// `\ver@biblatex.sty`), the symbol packages also work alone (biblatex-ext.tex:3927), so the binding
+/// loads for an overlay only when it [stands for biblatex](BiblatexOverlay::stands_for_biblatex).
+/// `after` is TeX run after the overlay: the tabular worker filters the entries with biblatex
+/// internals the binding stands in for (biblatex-ext-tabular.sty:71-148), so it is the binding's
+/// render worker, `\blx@printbibliography`, which prints the binding's bibliography and closes the
+/// group `\printbibtabular` opened (:56). biblatex-ext-oa's `\apptocmd` patches of the `begentry`
+/// and `doi+eprint+url` bibmacros (biblatex-ext-oa.sty:401, :429) find no bibmacro — the binding's
+/// `\newbibmacro` stores none — so its "Failed to patch" warning stays: no open-access mark prints.
+/// Raw-loading every `biblatex-*` add-on is not the rule: biblatex-ms is biblatex itself;
+/// opcit-booktitle, true-citepages-omit, archaeology raise errors raw; biblatex-ext-oa-doiapi
+/// (biblatex-ext-oa.sty:334, `doiapi=true`) is a LuaLaTeX-only package left to the binding.
+/// Guards: `perfect_kernel_batch59::{biblatex_ext_addons_load, biblatex_ext_oa_patches_warn,
+/// biblatex_ext_symbol_package_alone_keeps_the_bibliography}`.
+pub struct BiblatexOverlay {
+  /// The `biblatex-<x>` package name.
+  pub name:                &'static str,
+  /// The package loads biblatex itself (biblatex-cv.sty:12-17), so the binding loads in its place
+  /// when the raw `.sty` did not reach it.
+  pub stands_for_biblatex: bool,
+  /// TeX digested after the overlay.
+  pub after:               &'static str,
+}
+
+pub const BIBLATEX_VARIANT_OVERLAYS: &[BiblatexOverlay] = &[
+  BiblatexOverlay {
+    name:                "biblatex-cv",
+    stands_for_biblatex: true,
+    after:               "",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-tabular",
+    stands_for_biblatex: false,
+    after:               r"\let\extblxtab@printbibtabular\blx@printbibliography",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-oa",
+    stands_for_biblatex: false,
+    after:               "",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-oasymb-tikz",
+    stands_for_biblatex: false,
+    after:               "",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-oasymb-l3draw",
+    stands_for_biblatex: false,
+    after:               "",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-oasymb-pict2e",
+    stands_for_biblatex: false,
+    after:               "",
+  },
+];
+
+pub fn load_variant(variant: &str) -> Result<()> {
+  assign_value(
+    "blx@variant",
+    Stored::from(variant.to_string()),
+    Some(Scope::Global),
+  );
+  if let Some(overlay) = BIBLATEX_VARIANT_OVERLAYS
+    .iter()
+    .find(|overlay| overlay.name == variant)
+  {
+    // The variant's own `\PassOptionsToPackage{style=…}{biblatex}` +
+    // `\RequirePackage{biblatex}` (biblatex-cv.sty:12-17) reach this binding
+    // through the package machinery with the style options intact, so the
+    // variant runs first and the binding loads from inside it.
+    let _ = input_definitions(variant, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("sty")),
+      noltxml: true,
+      noerror: true,
+      ..InputDefinitionOptions::default()
+    });
+    if overlay.stands_for_biblatex && !package_loaded("biblatex") {
+      load_definitions()?;
+    }
+    if !overlay.after.is_empty() {
+      RawTeX!(overlay.after);
+    }
+    return Ok(());
+  }
+  load_definitions()
+}
+
+/// Is the biblatex binding being loaded on behalf of `biblatex-<x>.sty`
+/// (the `latexml_contrib::dispatch` variant route, recorded by [`load_variant`])?
+fn blx_variant_requested(variant: &str) -> bool { lookup_string("blx@variant") == variant }
+
+/// The source of a style file `name.ext` — a `.bbx`/`.cbx` written by `filecontents` lives in the virtual file store.
+fn blx_style_file_text(name: &str, ext: &'static str) -> Option<String> {
+  let path = find_file(
+    name,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Borrowed(ext)),
+      ..Default::default()
+    }),
+  )?;
+  vfs_read(&path).or_else(|| {
+    std::fs::read(&path)
+      .ok()
+      .map(|b| String::from_utf8_lossy(&b).into_owned())
+  })
+}
+
+/// Whether a citation style labels its entries ([`blx_is_labelstyle`]). Its `\RequireCitationStyle` chain leads to a
+/// standard style: numeric and alphabetic label (ieee.cbx:13 `numeric-verb`, phys and nature `numeric-comp`, lncs
+/// `numeric`); authoryear, authortitle, verbose (oscola via `verbose-inote`), reading, draft, debug do not. A style
+/// with no parent (sbl, chicago-notes) labels when its own `\cite` prints brackets (`\mkbibbrackets`,
+/// `\bibopenbracket`). A style whose `.cbx` is not found counts as biblatex's default, numeric.
+fn blx_cite_style_labels(style: &str) -> bool {
+  let mut name = style.trim().to_string();
+  for _ in 0..8 {
+    if name.starts_with("numeric") || name.starts_with("alphabetic") {
+      return true;
+    }
+    if [
+      "authoryear",
+      "authortitle",
+      "verbose",
+      "reading",
+      "draft",
+      "debug",
+    ]
+    .iter()
+    .any(|base| name.starts_with(base))
+    {
+      return false;
+    }
+    let Some(text) = blx_style_file_text(&name, "cbx") else {
+      return true;
+    };
+    if let Some((_, _, parent)) = toplevel_calls(&text, &["RequireCitationStyle"])
+      .into_iter()
+      .next()
+    {
+      name = parent.trim().to_string();
+      continue;
+    }
+    let code = tex_code_without_comments(&text);
+    const CITE: &str = "\\DeclareCiteCommand{\\cite}";
+    return code.find(CITE).is_some_and(|at| {
+      let rest = &code[at + CITE.len()..];
+      let declaration = &rest[..rest.find("\\Declare").unwrap_or(rest.len())];
+      declaration.contains("\\mkbibbrackets") || declaration.contains("\\bibopenbracket")
+    });
+  }
+  true
+}
+
+/// A native style's `.bbx` is not loaded ([`blx_load_style_file`]), but the
+/// option defaults it sets still apply: ieee.bbx:26-34 `\ExecuteBibliographyOptions
+/// {giveninits, …}`, which pdflatex + biber print as "A.-T. Castro". Read the
+/// file's top-level `\ExecuteBibliographyOptions` and `\RequireBibliographyStyle`
+/// in file order (ieee-alphabetic.bbx:13 requires ieee before its own options),
+/// as loading it would run them. A call nested in a group (ieee.bbx:21, the
+/// body of `\DeclareBibliographyOption{dashed}`) runs only with that code.
+fn blx_read_native_style_options(name: &str) {
+  let Some(text) = blx_style_file_text(name, "bbx") else {
+    return;
+  };
+  for (cs, types, arg) in toplevel_calls(&text, &[
+    "ExecuteBibliographyOptions",
+    "RequireBibliographyStyle",
+  ]) {
+    if cs == "RequireBibliographyStyle" {
+      blx_load_style_file(&arg, "bbx");
+    } else if blx_options_untyped(types.as_deref()) {
+      blx_execute_options(&arg);
+    }
+  }
+}
+
+/// The calls of the control sequences `names` at brace depth 0 of the TeX
+/// source `text`, in order: (name, optional `[…]` argument, `{…}` argument).
+/// `%` starts a comment; `\{`, `\}` and `\%` are escapes.
+/// TeX source without its comments: `%` to the end of the line, not an escaped `\%`.
+fn tex_code_without_comments(text: &str) -> String {
+  text
+    .lines()
+    .map(|line| {
+      let mut end = line.len();
+      let mut chars = line.char_indices();
+      while let Some((i, c)) = chars.next() {
+        match c {
+          '\\' => {
+            chars.next();
+          },
+          '%' => {
+            end = i;
+            break;
+          },
+          _ => {},
+        }
+      }
+      &line[..end]
+    })
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
+fn toplevel_calls(text: &str, names: &[&str]) -> Vec<(String, Option<String>, String)> {
+  let code = tex_code_without_comments(text);
+  let chars: Vec<char> = code.chars().collect();
+  // The balanced group opening at `chars[at]`, and the index after it.
+  let group = |at: usize| -> (String, usize) {
+    let mut depth = 0usize;
+    let mut i = at;
+    while i < chars.len() {
+      match chars[i] {
+        '\\' => i += 1,
+        '{' => depth += 1,
+        '}' => {
+          depth -= 1;
+          if depth == 0 {
+            return (chars[at + 1..i].iter().collect(), i + 1);
+          }
+        },
+        _ => {},
+      }
+      i += 1;
+    }
+    (chars[at + 1..].iter().collect(), chars.len())
+  };
+  let skip_space = |mut i: usize| {
+    while chars.get(i).is_some_and(|c| c.is_whitespace()) {
+      i += 1;
+    }
+    i
+  };
+  let mut calls = Vec::new();
+  let mut depth = 0usize;
+  let mut i = 0;
+  while i < chars.len() {
+    match chars[i] {
+      '\\' => {
+        let start = i + 1;
+        let mut end = start;
+        while chars
+          .get(end)
+          .is_some_and(|c| c.is_ascii_alphabetic() || *c == '@')
+        {
+          end += 1;
+        }
+        let name: String = chars[start..end].iter().collect();
+        i = end.max(start + 1);
+        if depth > 0 || !names.contains(&name.as_str()) {
+          continue;
+        }
+        let mut at = skip_space(i);
+        let mut types = None;
+        if chars.get(at) == Some(&'[') {
+          let close = chars[at..]
+            .iter()
+            .position(|c| *c == ']')
+            .map_or(chars.len(), |p| at + p);
+          types = Some(chars[at + 1..close.min(chars.len())].iter().collect());
+          at = skip_space(close + 1);
+        }
+        if chars.get(at) == Some(&'{') {
+          let (arg, next) = group(at);
+          calls.push((name, types, arg));
+          i = next;
+        }
+        continue;
+      },
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    i += 1;
+  }
+  calls
+}
+
+/// standard.bbx:4-8 allocates the toggles every standard-derived style tests
+/// (`\iftoggle{bbx:doi}`, 20 + 9 errors in biblatex-ext's ext-*.bbx), and :21
+/// `\ExecuteBibliographyOptions{isbn,url,doi,eprint,related}` sets them true
+/// (each option's `[true]` default, :10-19); a load-time `<key>=false`
+/// clears one. The native pipeline skips standard.bbx, so the skip allocates
+/// them, once: the mark stands in for the file's own once-mark, which
+/// biblatex.sty:1260-1274 `\blx@inputonce` sets globally
+/// (`\global\cslet{blx@file@#1}\@empty`); the toggles are made as the file
+/// makes them (etoolbox.sty:1169-1181). Guard:
+/// `binding_singletons_56::biblatex_mkbibacro_and_standard_toggles`.
+fn blx_standard_bbx_toggles() {
+  const TOGGLES: [&str; 5] = ["isbn", "url", "doi", "eprint", "related"];
+  if lookup_value("blx@standardtoggles").is_some() {
+    return;
+  }
+  assign_value(
+    "blx@standardtoggles",
+    Stored::from(true),
+    Some(Scope::Global),
+  );
+  let mut values = TOGGLES.map(|key| (key, true));
+  if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
+    for opt in opts.iter() {
+      if let Some((k, v)) = blx_opt_kv(&opt.to_string())
+        && let Some(entry) = values.iter_mut().find(|(key, _)| *key == k)
+      {
+        entry.1 = v != "false";
+      }
+    }
+  }
+  let mut tex = String::new();
+  for (key, on) in values {
+    tex.push_str(&s!(
+      "\\providetoggle{{bbx:{key}}}\\settoggle{{bbx:{key}}}{{{on}}}"
+    ));
+  }
+  let _ = raw_tex(&tex);
+}
+
+/// Raw-load `<name>.bbx` / `<name>.cbx` once (biblatex.sty `\blx@inputonce`,
+/// L2256-2258 / L11428-11435). Style files chain (`sbl.bbx` L1 inputs
+/// `biblatex-sbl.def`; ext-*.bbx `\RequireBibliographyStyle{standard}`), so
+/// the once-guard is essential. Missing file → silent (noerror), matching the
+/// binding's defensive posture; the built-in styles that our native pipeline
+/// already models (numeric*, alphabetic*, authoryear*, authortitle*, verbose*,
+/// draft, debug, reading) are SKIPPED — their raw internals would fight the
+/// native cite/bibliography closures for no gain.
+fn blx_load_style_file(name: &str, ext: &str) {
+  const NATIVE_STYLES: &[&str] = &[
+    "numeric",
+    "numeric-comp",
+    "numeric-verb",
+    "alphabetic",
+    "alphabetic-verb",
+    "authoryear",
+    "authoryear-comp",
+    "authoryear-ibid",
+    "authoryear-icomp",
+    "authortitle",
+    "authortitle-comp",
+    "authortitle-ibid",
+    "authortitle-icomp",
+    "authortitle-terse",
+    "authortitle-tcomp",
+    "authortitle-ticomp",
+    "verbose",
+    "verbose-ibid",
+    "verbose-note",
+    "verbose-inote",
+    "verbose-trad1",
+    "verbose-trad2",
+    "verbose-trad3",
+    "draft",
+    "debug",
+    "reading",
+    "standard",
+    // IEEE styles (biblatex-ieee): ieee.cbx/ieee-comp.cbx are numeric-comp
+    // derivatives our native numeric pipeline already renders. Raw-loading
+    // them ran `\patchcmd{\abx@macro@cite:comp:*}` against bibmacros our
+    // `\newbibmacro` noop never defines, so biblatex-ieee raised its own
+    // "Failed to update citation style" (~53 sandbox papers, error not
+    // warning). Skip like the other native styles; the bibliography is
+    // unchanged.
+    // Only ieee-comp raised the error; ieee/ieee-alphabetic just
+    // `\RequireCitationStyle{numeric-verb|alphabetic}` (already native), added
+    // for consistency.
+    "ieee",
+    "ieee-comp",
+    "ieee-alphabetic",
+  ];
+  let name = name.trim();
+  if name.is_empty() {
+    return;
+  }
+  let guard = s!("blx@styleloaded@{name}.{ext}");
+  if lookup_value(&guard).is_some() {
+    return;
+  }
+  assign_value(&guard, Stored::from(true), Some(Scope::Global));
+  if NATIVE_STYLES.contains(&name) {
+    if ext == "bbx" {
+      blx_read_native_style_options(name);
+      // Every built-in bibliography style but debug.bbx chains standard.bbx
+      // (`\RequireBibliographyStyle{standard}`: numeric/alphabetic/authoryear/
+      // authortitle/reading/draft.bbx:4; the others through those), and so do
+      // third-party ones (ext-standard.bbx), so skipping it must still allocate
+      // its toggles.
+      if name != "debug" {
+        blx_standard_bbx_toggles();
+      }
+    }
+    return;
+  }
+  let _ = input_definitions(name, InputDefinitionOptions {
+    extension: Some(Cow::Owned(ext.to_string())),
+    noltxml: true,
+    noerror: true,
+    ..InputDefinitionOptions::default()
+  });
+  // biblatex.sty:7118-7128 (`\blx@inputonce{<style>.dbx}`): a bibliography
+  // style's data model `<style>.dbx` loads with the bbx when it exists (biblatex-cv.dbx:11-30
+  // `\newtoggle`s the `cv@blx:*` switches biblatex-cv.sty:27-35 then set).
+  if ext == "bbx" {
+    let _ = input_definitions(name, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("dbx")),
+      noltxml: true,
+      noerror: true,
+      ..InputDefinitionOptions::default()
+    });
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn bbl_dates_rejoin_bibers_parts() {
+    let parts = |list: &[(&str, &str)]| -> Vec<(String, String)> {
+      list
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect()
+    };
+    let date = parts(&[
+      ("year", "2001"),
+      ("month", "5"),
+      ("day", "6"),
+      ("endyear", "2001"),
+      ("endmonth", "5"),
+      ("endday", "8"),
+      ("urlyear", "2020"),
+      ("urlmonth", "3"),
+      ("urlday", "4"),
+    ]);
+    assert_eq!(
+      bbl_date(&date, "").as_deref(),
+      Some("2001-05-06/2001-05-08")
+    );
+    assert_eq!(bbl_date(&date, "url").as_deref(), Some("2020-03-04"));
+    assert_eq!(bbl_date(&date, "event"), None);
+    // An empty end year is an open range.
+    let open = parts(&[("year", "1990"), ("endyear", "")]);
+    assert_eq!(bbl_date(&open, "").as_deref(), Some("1990/"));
+  }
+
+  #[test]
+  fn bbl_names_read_back_as_bibtex() {
+    assert_eq!(
+      bbl_name_part(r"Martin\bibnamedelima Luther"),
+      "Martin Luther"
+    );
+    assert_eq!(bbl_name_part(r"van\bibnamedelima der"), "van der");
+    assert_eq!(
+      bbl_bibtex_name("Pieter", "van der", "Berg", ""),
+      "van der Berg, Pieter"
+    );
+    assert_eq!(
+      bbl_bibtex_name("Martin Luther", "", "King", "Jr."),
+      "King, Jr., Martin Luther"
+    );
+    assert_eq!(
+      bbl_bibtex_name("", "", "{World Health Organization}", ""),
+      "{World Health Organization}"
+    );
+    assert_eq!(
+      bbl_bibtex_name("", "", "García Márquez", ""),
+      "{García Márquez}"
+    );
+  }
+
+  #[test]
+  fn bbl_ranges_and_default_datalist() {
+    assert_eq!(
+      bbl_replace_macros(r"1\bibrangedash 10\bibrangessep 15", &[
+        ("bibrangedash", "--"),
+        ("bibrangessep", ", ")
+      ]),
+      "1--10, 15"
+    );
+    // Other control words are kept, and a longer name is not a prefix match.
+    assert_eq!(
+      bbl_replace_macros(r"\bibrangedashes x \emph{y}", &[("bibrangedash", "--")]),
+      r"\bibrangedashes x \emph{y}"
+    );
+    assert!(bbl_default_datalist("nyt/global//global/global/global"));
+    assert!(bbl_default_datalist("anyt/global//global/global"));
+    assert!(!bbl_default_datalist(
+      "nyt/apasortcite//global/global/global"
+    ));
+  }
+}

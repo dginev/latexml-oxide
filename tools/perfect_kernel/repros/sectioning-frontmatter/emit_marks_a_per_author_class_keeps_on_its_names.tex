@@ -1,0 +1,15 @@
+% mechanism: a per-author class's names keep their marks printed, as Perl's `\\lx@add@author` leaves them: the emitter takes the name's tokens with its marks where no line of the block answers them (`emit::per_author_marks`)
+% witness: 0705.3952, 0806.3558
+% oracle:  pdflatex 0 errors; "Ann Able1 , Bob Baker2", "1 Univ A", "2 Univ B"
+% engines: rust S0: the marks gone from the names; perl: no such step
+% expect:  0 errors, 0 warnings; each name with its sup, each its affiliation
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+Body.
+\end{document}

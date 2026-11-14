@@ -1,0 +1,22 @@
+% mechanism: the list cutter (`classify::entry_starts` `line_at_starts`, `box_body`): the box's alignment
+%   (`\centering`) is on no cut piece, the first included; its size (`\scriptsize`) on every one
+% witness: 2608.21425 (`\institute{\parbox{0.98\textwidth}{\centering\scriptsize\setlength…\affmark{1} …}}`;
+%   revP4b4a2 B2 probe e1_parbox_centering)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1 Univ A  2 Univ B" over "3 Univ C", small, centered,
+%   each mark on its entry's line
+% engines: rust P4b4abase: 0 errors, the body on a nameless creator; P4b4a: each its entry, the first's mark
+%   `<sup class="ltx_centering">` (display:block, the mark on a line of its own); P4b4a3: the first of each line too
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B", Cy Cole "3 Univ C", each small, none aligned
+% status:  RED (P4b4a, P4b4a3) -> GREEN (P4b4a4), guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2} \and Cy Cole\affmark{3}}
+\institute{\parbox{\linewidth}{\centering\scriptsize
+\affmark{1} Univ A \quad \affmark{2} Univ B\\
+\affmark{3} Univ C}}
+\maketitle
+Body.
+\end{document}

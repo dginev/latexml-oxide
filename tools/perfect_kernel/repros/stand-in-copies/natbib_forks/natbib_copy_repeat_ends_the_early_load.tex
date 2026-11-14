@@ -1,0 +1,20 @@
+% witness: the reviewer's probes neurips_rep (neurips_2024.sty:71 `\RequirePackage{natbib}`), icml_rep (icml2024.sty:95);
+%          2410.08709 (same shape); the copies that comment the load out, whose document options apply: 2506.00573,
+%          2506.01987, 2506.08967, 2506.17103, 2506.18071, 2506.22567
+% oracle:  pdflatex: "LaTeX Error: Option clash for package natbib." and author-year "(Smith, 2001; Jones et al.,
+%          2005)"; with the copy's load commented out 0 errors, "[1, 2]"; with the copy's `[square,numbers]` 0 errors,
+%          "[1, 2]"
+% engines: rust 72a r6 = the document's `numbers` applied after the binding's early load: "[1, 2]", 0 errors
+% expect:  1 error (Option clash for package natbib), 0 warnings; the author-year citation
+% status:  RED (72a r6) -> GREEN (72a r7)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{neurips_2024}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \citep{a,b}.
+\begin{thebibliography}{2}
+\bibitem[Smith(2001)]{a} J. Smith. A paper. 2001.
+\bibitem[Jones et~al.(2005)]{b} K. Jones, L. Doe and M. Roe. Another. 2005.
+\end{thebibliography}
+\end{document}

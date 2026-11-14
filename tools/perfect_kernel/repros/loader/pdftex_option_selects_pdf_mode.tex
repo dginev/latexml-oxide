@@ -1,0 +1,11 @@
+% witness: 2210.04612's MDPI template class option (the K6 cue; its PNG figures select PDF output on their own)
+% oracle:  pdflatex "Mode: PDF." — the option names the pdfTeX driver (the mirror of the `dvips` option cue, OD #285);
+%          without it, PostScript-only figures are AutoTeX's latex+dvips cue: "Mode: DVI."
+% engines: rust 64g = "Mode: DVI." (any shipped .eps chose DVI output); Perl `\ifpdf` false
+% expect:  "Mode: PDF." beside an EPS-only figure set (the guard writes logo.eps)
+% status:  RED (64g) -> GREEN (64h)
+\documentclass[pdftex]{article}
+\usepackage{ifpdf}
+\begin{document}
+Mode: \ifpdf PDF\else DVI\fi.
+\end{document}

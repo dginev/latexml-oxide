@@ -1,0 +1,20 @@
+% witness: 2207.12381 (`\author[1,2]{…}`, `\author[3]{…}` under `\address[a]{…}\address[b]{…}\address[c]{…}`);
+%          cas-common.sty:288-296 `\processAffNum` prints an author's number N as the N-th letter, :1230-1236 a
+%          letter-labelled entry steps the counter whose letter it prints
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^a,b , Bob Baker^c / a Univ X / b Univ Y / c Univ Z"
+% engines: rust int117a = 0 errors, all three addresses on Bob Baker (OmniBus's `\address[]{}` dropped the labels);
+%          Perl: the same
+% expect:  0 errors, 0 warnings; Univ X and Univ Y on Ann Able, Univ Z on Bob Baker (each label read as the letter cas
+%          prints, OD #908)
+% status:  RED (int117a) -> GREEN (88b)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[1,2]{Ann Able}
+\author[3]{Bob Baker}
+\address[a]{Univ X}
+\address[b]{Univ Y}
+\address[c]{Univ Z}
+\maketitle
+\end{document}

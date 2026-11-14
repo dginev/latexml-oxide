@@ -1,0 +1,18 @@
+% A URL line a mark labels is its owners' URL contact: each author marked 1 holds it, none of it goes to the block
+% (106b r1 moved every URL held by two creators to a nameless block creator; review rev106b S1, probe a2).
+% witness: 2511.18438 (the unlabelled line every author holds, which is the block's)
+% oracle:  pdflatex 0 errors: "Ann Able∗ , Bob Bell† , Cat Cole∗", "∗ https://a.edu", "† Univ B"
+% engines: rust int134b = 0 errors, the URL an affiliation of Ann and Cat; 106b r1 = the URL on a nameless block creator
+% expect:  0 errors, 0 warnings; Ann and Cat each a URL contact, Bob Univ B
+% status:  RED (106b r1) -> GREEN (106b r2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{url}
+\begin{document}
+\title{Link lines}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Bell\IEEEauthorrefmark{2}, Cat Cole\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}\url{https://a.edu}}\\
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B}}
+\maketitle
+Text.
+\end{document}

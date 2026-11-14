@@ -107,20 +107,34 @@ LC|UC|SC|C|MC|DC\t<key>\t…               # Code tables
 …
 ```
 
+`PA` is Perl's `Lt(<key>, <target>)` (TeX_Job.pool.ltxml:185-197): a `\let` copy — a meaning whose
+own cs is not its key — that is still the very definition of its cs, in the bootstrap snapshot
+(written early) or at the end of the load (written late), is re-`\let` when the dump loads, so it
+takes the cs's definition in the run it is loaded into; any other copy is written by value. Closure
+bodies and primitives always took this form; since batch 57aa (2026-09-28) a token body does too
+(1,480 latex-dump rows), so expl3's `\tex_jobname:D` follows the conversion's `\jobname` instead
+of freezing the dump run's empty placeholder. A preload (`ar5iv.sty`, `latexml.sty`) loads the dump
+before the job's `\jobname` exists; the install re-points the copies still holding the placeholder
+(`core_interface::install_jobname`). Guards `perfect_kernel_batch56::tex_jobname_is_the_jobname`
+(and `…_under_a_preload`), `dump_writer::tests::let_copies_are_written_as_lt_aliases`,
+`state::let_copy_tests::let_copies_follow_a_late_definition`.
+
 Reader / writer share `parse_token` / `parse_token_list` so catcoded
 delimiter tokens round-trip cleanly. Parameter sub-lines (indented
 with `\t`) carry structured `(name, spec, extra)` triples — see
 [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](../archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) for
 the v3 design and Perl correspondence.
 
-`IA` records (commit `81176ba689`, 2026-05-15) collapse expl3's
-per-slot `\fontdimen<idx>\<font>` intarray storage into one record
-per `(font, size)` group. `<rle>` is a comma-list of `v` (one entry)
-or `vxn` (n consecutive copies of v). `dump_reader` expands each IA
-record into per-slot V Dimension assignments at load time, so the
-in-memory state post-replay is identical to a pre-IA, V-record-only
-dump. Backward compatible: existing V-record dumps still load via
-the unchanged V arm. See WISDOM #53 for the mechanism.
+`IA` records hold a font's parameter array (`\fontdimen`; expl3 keeps its
+intarrays there): one record per font, dense or sparse, keyed
+`fontdimen_<font shared key>`. `<rle>` is a comma-list of `v` (one entry)
+or `vxn` (n consecutive copies of v). Since batch 56kp (2026-09-27) the
+state keeps each font's parameters as ONE array (`Stored::FontDimens`,
+Perl's `$$fontinfo{data}`), and `dump_reader` loads an IA record as that
+whole array; a legacy per-slot `V fontdimen_fontinfo_<font>_<p> D <sp>`
+record (a dump written before 56kp) is routed into the same array. The
+first IA form (commit `81176ba689`, 2026-05-15) regrouped per-slot state
+values at write time and expanded them back at load. See WISDOM #53.
 
 ## LoadFormat split (strict-Perl semantics)
 
@@ -164,7 +178,8 @@ Versioned filenames + a `build.rs`-generated manifest:
   (sorted descending). The manifest entries are populated via
   `include_str!`, so all bundled dumps live in the binary's `.rodata`.
 * `latexml_engine::dump_paths::detect_ambient_texlive_year()` reads
-  `kpsewhich -var-value=SELFAUTOPARENT` (last path component →
+  `kpsewhich -var-value=SELFAUTOPARENT` (last path component, leading-digit
+  parse so MacTeX's `2026basic` resolves to 2026; `pdflatex --version` is the fallback →
   4-digit year), with `pdflatex --version` as fallback.
 * Resolution chain (per `latex_dump.rs` and `plain_dump.rs`):
     1. `$LATEXML_NODUMP=1` → skip (Perl `LoadFormat` parity).
@@ -253,6 +268,60 @@ host still passes the stamp check. The cross-TL discriminator is the
 `kpsewhich -var-value=SELFAUTOPARENT`) picks the right dump by
 filename match. The stamp check remains useful for the in-year case
 (e.g. a kpathsea upgrade within TL2025).
+
+## Tree match (source stamps)
+
+A dump is the format, and the format must come from the TeX tree packages are read from: `expl3.sty`
+refuses a format whose L3 kernel date differs from its own (expl3.sty:64-78, "Mismatched LaTeX support
+files"), and the 2609 release lost 12,144 papers to a dump built from `/usr/local/texlive/2025` read with
+`/usr/share/texlive`'s packages (SYNC 62u). The year in the filename cannot tell two trees of one year apart.
+OXIDIZED_DESIGN_DIVERGENCES #449.
+
+* **Record.** `--init` writes `# source\t<name>\t<bytes>\t<crc32>\t<path>` header lines for the format's
+  files — `latex.ltx` and `expl3-code.tex`, or `plain.tex` — as the building tree resolves them
+  (`ini_tex.rs`, `dump_paths::SourceStamp`). They are looked up by tree subpath (`base/latex.ltx`,
+  `l3kernel/expl3-code.tex`, `plain/base/plain.tex`): kpathsea searches `.` first, and the subpath keeps a
+  document's own copy from standing for the tree's. A process sums its tree's files once (CRC-32 over ~2 MB,
+  after the kpathsea prewarm it waits for anyway): measured on a one-line article through the release CLI,
+  705.3M → 705.9M instructions and 78.2 → 78.9 ms (±0.6 ms), against +7.9M for an earlier byte-wise FNV-1a;
+  `cortex_worker` pays it once per child, not per paper.
+* **Check.** Every loader passes over a dump whose recorded files differ from what this process's kpathsea
+  resolves (`dump_paths::dump_matches_tree`, same name/size/checksum; the path is informative): the
+  versioned directories (`resolve_versioned_in_dir`), `LATEXML_DUMP_PATH`, the embedded dumps. Each passed-over
+  dump is noted once on stderr (`Info:dump:other_tree`, naming the files that differ; format loading precedes a
+  conversion's log). A dump that records no sources cannot show it matches; with no TeX tree there is nothing
+  to disagree with.
+* **Build.** When no dump found matches, `latexml::format_dumps::ensure_format_dumps` (from
+  `Converter::initialize_session`, once per process, before the format loads) builds it as `--init` does, on
+  a thread of its own (fresh engine state, released after; `dump_paths::set_building_format` stands in for
+  `LATEXML_INI_MODE`) and with the cache directory as working directory (like fmtutil, a directory with no TeX
+  files; the working directory is the process's, so this comes before any conversion), into
+  `$LATEXML_FORMAT_CACHE`, else an absolute `$XDG_CACHE_HOME`/`~/.cache` `latexml-oxide/formats/`, else
+  `$TMPDIR/latexml-oxide-formats-<uid>/` — one `<version>-<executable size/mtime>-<tree checksums>/` directory,
+  private to the user, built under a `.lock` so one process builds and the others wait (up to 300 s). The build
+  counts every error, as `tools/make_formats.sh` does under `LATEXML_INIT_DEBUG=1`, and a dump whose build logged
+  one is not kept. A dump on disk (`LATEXML_DUMP_PATH` / `LATEXML_PLAIN_DUMP_PATH`, `LATEXML_DUMP_DIR`, installed,
+  beside the executable, the source tree) is used before the cache's, the embedded one after it (reading it back costs a process a 4 MB
+  dump); the loaders take the cache's per format, only a dump file and directory this user owns and no one else
+  can write (`latexml_core::util::private_files`). ~11 s (release) for the LaTeX format, once per tree and build.
+  Per format, builds that have not succeeded are counted in `.attempts.<kind>` (written before each build, so one
+  that dies with its process — killed, or aborted by a panic — counts too); after two in a row the format is
+  marked `.failed.<kind>` and not built again for a day, so one passing failure is retried and a lasting one is
+  not tried by every process. A process that waited for the lock while another's build failed does not retry
+  it at once. The format then loads from the base branch (Perl's branch for a missing dump), said once on stderr
+  and as a counted `Warning:dump:build_failed` in each conversion's log (`converter::note_format_build_failure`,
+  wherever a conversion binds its log; for either format's failure, whichever the document loads). The mark
+  replaces the count, so removing it retries the build at once.
+* **Embedded dumps.** A release binary's bundled dumps serve only a tree whose format files are byte-identical
+  to the container's; any other tree (a tlmgr-updated l3kernel, a distribution's TeX Live) builds its format on
+  the first conversion. Their decompressed copies are cached per user (`$TMPDIR/latexml-oxide-dumps-<hash>-<uid>/`)
+  and read back only when this user wrote them. The year check (`dump_year_mismatch_warning`, issue #299) rarely fires now.
+* **`LATEXML_DUMP_DIR_ONLY`.** Dumps are looked for only in `LATEXML_DUMP_PATH`/`LATEXML_DUMP_DIR` and the
+  cache — not beside the executable, in the source tree, or embedded (read once; for operators and tests).
+* **Operations.** Regenerate dumps in the environment that converts (`tools/make_formats.sh`) — dev dumps
+  written before stamps existed are now passed over and must be regenerated; never copy a dump built under
+  another tree's environment into a worker's `LATEXML_DUMP_DIR`; under a running fleet, stop the workers or
+  write the new dumps beside the old and rename them in, as a worker child loads the format when it starts.
 
 ## See also
 

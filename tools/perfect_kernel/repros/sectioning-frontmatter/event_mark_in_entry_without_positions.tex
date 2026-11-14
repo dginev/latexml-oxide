@@ -1,0 +1,20 @@
+% witness: brief Z1 gaps 1, 2: 2105.07958's and 0804.4669's `\affiliation{$^{1}$…}` calls, a font-switched and a spaced mark;
+%          its twin an isotope in the entry
+% oracle:  pdflatex 0 errors: both entries with their marks printed
+% engines: Perl has no events; ours before Z1 lumps every superscript
+% expect:  0 errors; an API call's content has no positions: each Mark floating or posted, whether a letter or digit prints
+%          after it, no span (perfect_kernel_batchz1::a_call_marks_say_their_base_without_positions)
+% status:  GREEN (Z1)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\affiliation{$\rm ^{1}$Univ X}
+\affiliation{$\,^{2}$Univ Y, $^{3}\mathrm{He}$ Lab}
+\begin{abstract}
+Text.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

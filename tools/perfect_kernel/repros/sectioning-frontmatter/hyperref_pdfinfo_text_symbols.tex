@@ -1,0 +1,17 @@
+% witness: none in the A/B (review probes g2, g3 of rev78i2); the PDF strings' puenc.def text symbols and hyperref's
+%          dash ligatures (hyperref.sty:620-621 `\HyPsd@Subst{---}\textemdash`, `{--}\textendash`)
+% oracle:  pdflatex 0 errors; pdfinfo: Author "A–B, §2, †, ©, £, …, ®, «x», ’, œuvre, ĳ, þ, ŋ", Title
+%          "Pre–post—end ``quoted'' and — x … y", Subject "¶ ‡ ™ ° • ‘a’ “b” ‹c› ¡d ¿e"
+% engines: rust 78i r2: Author "AB, 2, , , , , , x, , œuvre, ĳ, þ, ŋ", Title "Pre--post---end ``quoted'' and x y"
+%          (the symbols dropped as unexpandable control sequences, the ligatures kept as hyphens); perl (hyperref.sty.ltxml
+%          :133 ToString): the source text
+% expect:  clean (0 errors, 0 warnings); the dcterms:creator, dcterms:title and dcterms:subject values as pdfinfo
+% status:  RED (78i r2) -> GREEN (78i r3)
+\documentclass{article}
+\usepackage{hyperref}
+\hypersetup{pdfauthor={A\textendash B, \S 2, \dag, \copyright, \pounds, \ldots, \textregistered, \guillemotleft x\guillemotright, \textquoteright, \oe uvre, \ij, \th, \ng},
+  pdftitle={Pre--post---end ``quoted'' and \textemdash{} x \dots{} y},
+  pdfsubject={\P{} \ddag{} \texttrademark{} \textdegree{} \textbullet{} \textquoteleft a\textquoteright{} \textquotedblleft b\textquotedblright{} \guilsinglleft c\guilsinglright{} !`d ?`e}}
+\begin{document}
+Text.
+\end{document}

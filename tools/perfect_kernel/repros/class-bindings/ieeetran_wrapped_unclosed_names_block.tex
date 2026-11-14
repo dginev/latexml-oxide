@@ -1,0 +1,11 @@
+% RED (synthetic, revCR10c finding 2; pre-existing, int154o and CR10c byte-identical)
+% oracle:  pdflatex 0 errors: two stacked authors, "Ann Able" over "Zebra University", "Bob Baker" over "Yak Institute"
+% engines: rust CR10c = 1 creator, "Bob Baker" and Yak Institute Ann Able's affiliations, 0 warnings: the inner
+%          branch of `affiliation_before_names` splices without the test, so the hoist reaches one level only
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{\IEEEauthorblockN{Ann Able\\ \IEEEauthorblockA{Zebra University}\\ \IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Yak Institute}}}}
+\maketitle
+Body.
+\end{document}

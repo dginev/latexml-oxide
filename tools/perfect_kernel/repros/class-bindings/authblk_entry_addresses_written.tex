@@ -1,0 +1,22 @@
+% witness: 2511.07020 (`\affil[1]{… Croatia. Emails: deanc@math.uniri.hr; asvob@math.uniri.hr}`), 2008.07734,
+%          2110.01283, 2008.13643; the fm scorer's authblk rows (5 creators)
+% oracle:  pdflatex (TL 2025): "Ann Able1, Bob Baker2, and Cid Cole1", "1Univ X, Croatia. Emails: ann@x.org;
+%          cole@x.org", "2Univ Y. Email: bob@y.org"
+% engines: rust int124a = the shadow right (each address its speller's, entries cut), not written (authblk's
+%          `written: false`): Ann Able and Cid Cole each held both addresses inside Univ X
+% expect:  0 errors, 0 warnings; authblk is written (brief 95b, OD #942): Ann Able "Univ X, Croatia." ann@x.org, Bob
+%          Baker "Univ Y." bob@y.org, Cid Cole "Univ X, Croatia." cole@x.org
+% status:  RED (int124a) -> GREEN (95b) — perfect_kernel_batch95b::authblk_is_written
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\author[1]{Cid Cole}
+\affil[1]{Univ X, Croatia. Emails: ann@x.org; cole@x.org}
+\affil[2]{Univ Y. Email: bob@y.org}
+\maketitle
+Text.
+\end{document}

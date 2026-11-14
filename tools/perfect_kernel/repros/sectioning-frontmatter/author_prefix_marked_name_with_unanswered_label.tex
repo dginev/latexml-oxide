@@ -1,0 +1,13 @@
+% witness: 63e review r10 finding 3 (r11: a name marked before it whose label no affiliation answers)
+% oracle:  pdflatex 0 errors: "^1Ann Able" / "^2Bob Baker" / "^1Univ A"
+% engines: rust (63d, 63e) = Bob Baker an affiliation in a creator with no name (0 errors, silent); Perl no creator
+%          at all (Base_Utility.pool.ltxml:708 `$p < 8`: every line an affiliation)
+% expect:  2 creators — Ann (Univ A), Bob; 0 errors
+% status:  RED (open; OD #459: a name marked before it on a line of its own is read as one when its mark is new
+%          and an affiliation below answers it; so is `\\ $^{1}$Google` below a shared mark, which has no institution word)
+\documentclass{article}
+\author{$^{1}$Ann Able\\ $^{2}$Bob Baker\\ $^{1}$Univ A}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

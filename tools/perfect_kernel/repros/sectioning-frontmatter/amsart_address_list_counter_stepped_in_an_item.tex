@@ -1,0 +1,16 @@
+% witness: synthetic (revCMPJ p13: amsart's `\address` holding a `\ref`-keyed enumerate whose first item steps the
+%          counter, `\stepcounter{enumi}`; the shape of 1212.6367's cmpj list)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "Text, see 1, 3, 4."; the address "(1) First Institute, Lviv
+%          (3) Second Institute, Kyiv (4) Third, Odesa"
+% engines: int165a: one contact, (1)(3)(4); CMPJ2: each item cut, numbered (1)(2)(3) — the items before it counted,
+%          not the counter's value — and the text's `\ref`s "1, 2, 3"
+% expect:  0 errors, 0 warnings; A. One holds each item, (1), (3), (4), labels xa, xb, xc; the text "see 1, 3, 4"
+% status:  GREEN (CMPJ3: perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run)
+\documentclass{amsart}
+\begin{document}
+\title{A title}
+\author{A. One}
+\address{\begin{enumerate}\item\label{xa} First Institute, Lviv\stepcounter{enumi} \item\label{xb} Second Institute, Kyiv \item\label{xc} Third, Odesa\end{enumerate}}
+\maketitle
+Text, see \ref{xa}, \ref{xb}, \ref{xc}.
+\end{document}

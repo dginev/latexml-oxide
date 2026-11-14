@@ -18,4 +18,22 @@ LoadDefinitions!({
   // the real cls: an unnumbered "Acknowledgments" section (the `\addcontents
   // line` is TOC-only, moot in HTML). Witness 1610.07252. RUST 1 → 0.
   DefMacro!("\\acknowledgments", "\\section*{Acknowledgments}");
+  // The current class (2026 template) spells it `\acknowledgements` (IEEEAerospaceCLS.cls:267-272) and opens the
+  // biographies the same way, `\thebiography` (:403-408); each biography is `{biography}{<name>}` (a framed photo
+  // placeholder, :528-536), `{biographywithpic}{<name>}{<file>}` (:541-549, the name bold italic, :549
+  // `\textit{\textbf{#1}}`) or `{biographywithjpg}{<name>}{<file>}` (:554-562, its file name as the class writes it,
+  // `{\fighome #2}` :556, `\fighome` the document's to define): the IEEEtran biography, photo and bold name before the
+  // text. Witnesses 2601.06000, 2601.00238, 2603.17229.
+  DefMacro!("\\acknowledgements", "\\section*{Acknowledgements}");
+  DefMacro!("\\thebiography", "\\section*{Biography}");
+  DefMacro!(
+    "\\biographywithpic{}{}",
+    "\\IEEEbiography[{\\includegraphics[width=25mm,height=32mm]{#2}}]{\\textit{#1}}"
+  );
+  Let!("\\endbiographywithpic", "\\endIEEEbiography");
+  DefMacro!(
+    "\\biographywithjpg{}{}",
+    "\\IEEEbiography[{\\includegraphics[height=32mm]{\\fighome #2}}]{#1}"
+  );
+  Let!("\\endbiographywithjpg", "\\endIEEEbiography");
 });

@@ -1,0 +1,15 @@
+% A \line outside any picture auto-opens an ltx:picture, whose tag afterClose sizes it from its node's
+% box (latex_constructs.pool.ltxml:4943-4950). Perl's \line takes box-free arguments
+% (`\line Pair:Number {Float}`, :4992), so its whatsit measures nothing (Whatsit.pm:253-255) and the
+% picture is the size of the " y" written into it. The Rust port digested (1,0){250} as text
+% (\lx@pic@line{}{}{}) and measured the digits "1", "0", "250".
+% witness: SYNC_STATUS "Auto-opened picture sizes differ from Perl's" (batch 56iy residual);
+%   eepic-doc / egameps auto-opened pictures; W12 2026-09-25
+% oracle:  same-host Perl latexmlc: <picture height="8.65" width="11.92">
+% engines: rust (56je) = height="11.61" width="57.27"
+% expect:  0 errors; <picture height="8.65" width="11.92" xml:id="p1.pic1">
+% status:  GREEN (56jo, W12; guard node_box_append::line_takes_box_free_arguments)
+\documentclass{article}
+\begin{document}
+x \line(1,0){250} y
+\end{document}

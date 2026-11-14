@@ -1,0 +1,22 @@
+% mechanism: AASTeX's obsolete `\authoremail{…}` (aaspp4.sty:129, aas2pp4.sty:136 `\let\authoremail=\@gobble`: the
+%   address unprinted; Perl aas_support.sty.ltxml:134 `\email`). Given before any `\author`, `\email` opened a creator
+%   of its own, holding only the address. It is now the email of the author its address spells
+%   (`\lx@add@contact@placed`), waiting for the first `\author` when given before one.
+% witness: astro-ph9803018 (`\authoremail{ecford@astro.uva.nl}\author{Eric C. Ford…}`: 4 creators, one email-only)
+% oracle:  pdflatex with a shipped aas2pp4.sty: 0 errors; "Ann Able, Bob Baker" over "Univ X, City"; the email unprinted
+% engines: rust 64zd r6 (before this fix): a third creator holding only the email; perl: two creators, the email lost.
+%   After an `\author`, `\authoremail` stays `\email` (the last author's; astro-ph9612041, astro-ph9608195)
+% expect:  0 errors; Ann Able and Bob Baker with the affiliation, Bob Baker with the email
+% status:  RED (64zd r6) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aas2pp4]{article}
+\begin{document}
+\title{T}
+\authoremail{bbaker@univ.edu}
+\author{Ann Able, Bob Baker}
+\affil{Univ X, City}
+\begin{abstract}
+A.
+\end{abstract}
+Text.
+\end{document}

@@ -1,6 +1,302 @@
 //! tcolorbox.sty — colored and framed text boxes
 //! Perl: tcolorbox.sty.ltxml
-use crate::prelude::*;
+use latexml_core::keyval::split_keyval_source;
+
+use crate::{
+  package::{
+    listings_sty::{listings_read_raw_lines, lst_process_display, lst_run_body_via_input},
+    pgfkeys_code_tex::newif_true,
+  },
+  prelude::*,
+};
+
+/// Resolve a tcolorbox listing environment's MODE from its per-use option
+/// text (see the primitive below). Re-run by listings' raw body reader once a
+/// `!`-leading optional has been grabbed from the begin line.
+pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
+  // Whether the body is EXECUTED is tcolorbox's own resolved state, not the
+  // option text: tcblistingscore.code.tex:195-224 makes every mode a style
+  // that `\let`s `\tcb@listing@process` / `\tcb@inputlisting` /
+  // `\tcb@use@listing@other`, and the text part runs only when the process
+  // reaches `\tcb@use@listing@other` = `\tcbuselistingtext` (:24-35, :429
+  // default `listing and text`). A key-name scan of the options missed a
+  // mode hidden in a user `.style` (tutodoc.cls:1208 `listing only` inside
+  // `tutodoc-full-listing-style`, a Perl program then ran as LaTeX) and a
+  // mode set by the ENCLOSING environment (codebox.sty:268 `\tcbset{listing
+  // only}` before its `\DeclareTCBListing` box: `#include` lines reached the
+  // stomach). So: set the per-use options through `\tcbset` in a group —
+  // exactly what the box does — and read the three macros back. Without the
+  // library (no `\tcb@listing@process`), keep the literal scan.
+  // Guards: `perfect_kernel_batch56::{tcb_listing_mode_hidden_in_a_style_is_honoured,
+  // tcb_listing_mode_set_by_the_enclosing_environment_is_honoured}`.
+  const NO_TEXT_MODES: &[&str] = &[
+    "listing only",
+    "comment only",
+    "listing and comment",
+    "comment and listing",
+    "comment side listing",
+    "listing side comment",
+    "comment above listing",
+    "comment above* listing",
+    "listing above comment",
+    "listing above* comment",
+    "comment outside listing",
+    "listing outside comment",
+  ];
+  // The option tokens carry substituted environment arguments (`before lower={…#3\par}` with
+  // `#3` = `\dots ii (Brussels…)`, oxnotes-doc.tex:216/1652): `\tcbset` reads them as tokens, and
+  // the key scan without the library reads their `untex()` text, not `to_string()`, where a
+  // separator-less concatenation re-tokenizes `\dots ii` as `\dotsii`.
+  // Guard: `perfect_kernel_batch56::tcb_listing_option_tokens_keep_cs_boundaries`.
+  // A grabbed `!`-leading optional stands in the options as the token
+  // `\lxtcbbangopt` (`tcb_grab_begin_line`); splice its `\def` body in here so the
+  // key list carries the bracket text, not a macro name pgfkeys would
+  // report as an unknown key.
+  // (and so does every other delimited argument of the begin line, `\lxtcbopt<slot>`:
+  // `\NewTCBListing{macrodef}{ s o }{…IfValueT={#2}{hypertarget=#2}}`, jsonparse-doc; and an
+  // absent leading optional's default, `\lxtcbleadopt`, `tcb_xparse_listing`)
+  let opts = {
+    let stands_in = |t: &Token| {
+      t.get_catcode() == Catcode::CS
+        && t.with_str(|name| {
+          name == "\\lxtcbbangopt" || name == "\\lxtcbleadopt" || name.starts_with("\\lxtcbopt")
+        })
+    };
+    if opts.unlist_ref().iter().any(stands_in) {
+      let mut out = Vec::new();
+      for t in opts.unlist_ref().iter() {
+        // (an absent `O{}` is `\def<slot>{}`, a macro with no expansion: it splices to nothing, as
+        // xparse passes the empty default — neoschool.cls:5168-5214 `\ifx\relax#3\relax` titled
+        // every `{code}` box "Listing N —" with the stand-in left in place)
+        let body = if stands_in(t)
+          && let Ok(Some(defn)) = lookup_definition(t)
+        {
+          match defn.get_expansion() {
+            Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+            None if defn.is_expandable() => Some(Tokens::new(Vec::new())),
+            _ => None,
+          }
+        } else {
+          None
+        };
+        match body {
+          Some(body) => out.extend(body.unlist_ref().iter().copied()),
+          None => out.push(*t),
+        }
+      }
+      Tokens::new(out)
+    } else {
+      opts
+    }
+  };
+  let text = opts.clone().untex();
+  if lookup_meaning(&T_CS!("\\tcb@listing@process")).is_some() {
+    // The executed part is the box's LOWER part (tcblistingscore.code.tex:30-34
+    // `\tcb@listing@listingAndOther` = listing, `\tcblower`, then the text),
+    // so it runs inside the box's resolved `before lower*`/`after lower*`
+    // wrapper: `tikz lower` (tcolorbox.sty:712) = `\begin{tikzpicture}[…]` …
+    // `\end{tikzpicture}`. Captured here for `\lx@lstenv@body` (tikz2d-fr,
+    // OutilsGeomTikz: `\draw`/`{scope}` undefined outside a picture).
+    // Guard: `perfect_kernel_batch56::tcblisting_tikz_lower_wraps_the_executed_body`.
+    // (`\tcbset` reads the option tokens themselves, catcodes and all: xparse's no-value marker,
+    // `\c_novalue_tl`, is `-NoValue-` with a letter `-`, expl3-code.tex:3562-3564, which a
+    // text round-trip makes a value — `hypertarget=-NoValue-`, leporello-doc)
+    let mut set = tcb_options_in_a_group(&opts);
+    let src: &'static str = "\\ifdefined\\kvtcb@before@lower\\global\\let\\lx@tcb@execbefore\\kvtcb@before@lower\
+         \\else\\global\\let\\lx@tcb@execbefore\\@empty\\fi\
+       \\ifdefined\\kvtcb@after@lower\\global\\let\\lx@tcb@execafter\\kvtcb@after@lower\
+         \\else\\global\\let\\lx@tcb@execafter\\@empty\\fi\
+       \\ifx\\tcb@use@listing@other\\tcbuselistingtext \
+         \\ifx\\tcb@inputlisting\\tcb@inputlisting@inside \
+           \\ifx\\tcb@listing@process\\tcb@listing@listing \\lxtcbexec0 \\else\\lxtcbexec1 \\fi\
+         \\else\\lxtcbexec1 \\fi\
+       \\else\\lxtcbexec0 \\fi\
+       \\ifdefined\\kvtcb@phantom\\global\\let\\lx@tcb@phantom\\kvtcb@phantom\
+         \\else\\global\\let\\lx@tcb@phantom\\@empty\\fi\
+       \\gdef\\lx@tcb@layout{LO}\
+       \\ifx\\tcb@inputlisting\\tcb@inputlisting@inside \
+         \\ifx\\tcb@listing@process\\tcb@listing@listing \\gdef\\lx@tcb@layout{L}\\fi\
+         \\ifx\\tcb@listing@process\\tcb@listing@otherAndListing \\gdef\\lx@tcb@layout{OL}\\fi\
+         \\ifx\\tcb@listing@process\\tcbuselistingtext \\gdef\\lx@tcb@layout{O}\\fi\
+         \\ifx\\tcb@listing@process\\tcbuselistingcomment \\gdef\\lx@tcb@layout{O}\\fi\
+       \\else\
+         \\ifx\\tcb@inputlisting\\tcb@inputlisting@out@otherAboveListing \\gdef\\lx@tcb@layout{OL}\\fi\
+         \\ifx\\tcb@inputlisting\\tcb@inputlisting@out@otherAboveListing@Decoupled \\gdef\\lx@tcb@layout{OL}\\fi\
+         \\ifx\\tcb@inputlisting\\tcb@inputlisting@out@otherAndListing \\gdef\\lx@tcb@layout{OL}\\fi\
+       \\fi\
+       \\endgroup";
+    set.extend(mouth::tokenize_internal(TeXString::from(src)).unlist());
+    let _ = digest(Tokens::new(set));
+    // The box's phantom code (tcolorbox.sty:844-855 `phantom`, and through it `hypertarget`,
+    // `step`, `label`, `index`, `add to list`) runs inside the box at its start
+    // (`\tcb@set@@phantom`, :1154-1161, placed by the frame at :1925); a listing box is the
+    // listing listings typesets, so the code waits for it (`tcb_pending_phantom`, run at the start
+    // of the listing's first line, `listings_sty::with_tcb_phantom`; dropped by the environment's
+    // end otherwise). jsonparse-doc's
+    // `\NewTCBListing{macrodef}{…hypertarget=#2}` boxes were the targets of its
+    // `\hyperlink{key:storein}` links (7 dangling).
+    // Guard: `perfect_kernel_batch59::tcb_listing_keeps_its_hypertarget`.
+    let phantom = match lookup_definition(&T_CS!("\\lx@tcb@phantom")) {
+      Ok(Some(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) if !body.is_empty() => Stored::Tokens(body.clone()),
+        _ => Stored::None,
+      },
+      _ => Stored::None,
+    };
+    AssignValue!("tcb_pending_phantom" => phantom, Scope::Global);
+    // Where the box puts its listing and its other part (the text or the comment), read off the
+    // resolved process macros (tcblistingscore.code.tex:195-220): `L` listing only, `O` the other part
+    // only (`text only`, `comment only`), `LO` listing first (`listing and text`, the default, and
+    // the `listing above …`/`… outside` forms), `OL` the other part first. Only `\newtcbinputlisting`
+    // honours it (`tcb_pending_layout`); the listing environments keep their display.
+    let layout = match lookup_definition(&T_CS!("\\lx@tcb@layout")) {
+      Ok(Some(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        _ => String::from("LO"),
+      },
+      _ => String::from("LO"),
+    };
+    AssignValue!("tcb_pending_layout" => Stored::String(pin(&layout)), Scope::Global);
+    tcb_store_pending_title();
+  } else {
+    let execute = !split_keyval_source(&text)
+      .iter()
+      .any(|(key, _)| NO_TEXT_MODES.contains(&key.trim()));
+    AssignValue!("LISTINGS_EXECUTE_BODY" => execute, Scope::Global);
+    AssignValue!("tcb_pending_layout" => Stored::String(pin("LO")), Scope::Global);
+  }
+  Ok(Vec::new())
+}
+
+/// A box on a layer above the first starts from `reset` (tcolorbox.sty:1393/1405-1407 `every box on
+/// layer N` = `reset,every box` for N > 1, applied by `\tcb@layer@inc`, :1411-1426), so inside another
+/// box the enclosing box's `title` is not the listing box's. Run before the options' `\tcbset`.
+const TCB_TITLE_NESTED_RESET: &str = "\\ifnum\\c@tcblayer>\\z@ \\let\\kvtcb@title\\@empty\\fi";
+/// The resolved `title` of the box (tcolorbox.sty:214 `title/.store in=\kvtcb@title`; a `detach title`
+/// box keeps it in `\tcbtitletext` instead, :165-172, and draws no title bar), and whether the box removes
+/// listings' own caption (tcblistings.code.tex:69-72 `listing remove caption`, on by default through
+/// `reset@listings`, :88-93: `\lst@MakeCaption` gobbled — no listings caption, title or `lol` entry), read back
+/// after the options' `\tcbset` for [`tcb_store_pending_title`].
+const TCB_TITLE_CAPTURE: &str = "\\ifdefined\\kvtcb@title\\global\\let\\lx@tcb@title\\kvtcb@title\\else\\global\\let\\lx@tcb@title\\@empty\\fi\
+  \\gdef\\lx@tcb@nocaption{0}\\ifdefined\\tcb@listing@set@MakeCaption\\ifx\\tcb@listing@set@MakeCaption\\tcb@listing@set@MakeCaption@empty\
+  \\gdef\\lx@tcb@nocaption{1}\\fi\\fi";
+
+/// `\begingroup` and a listing box's options set as the box sets them (`\tcbset{opts}`, after
+/// [`TCB_TITLE_NESTED_RESET`]), then its title read back ([`TCB_TITLE_CAPTURE`]); the caller reads
+/// what else it needs and closes the group.
+fn tcb_options_in_a_group(opts: &Tokens) -> Vec<Token> {
+  let mut set = vec![T_CS!("\\begingroup")];
+  set.extend(mouth::tokenize_internal(TeXString::from(TCB_TITLE_NESTED_RESET)).unlist());
+  set.extend([T_CS!("\\tcbset"), T_BEGIN!()]);
+  set.extend(opts.unlist_ref().iter().copied());
+  set.push(T_END!());
+  set.extend(mouth::tokenize_internal(TeXString::from(TCB_TITLE_CAPTURE)).unlist());
+  set
+}
+
+/// Park the box title [`TCB_TITLE_CAPTURE`] read for the listing the box typesets
+/// (`tcb_pending_title`, taken by `listings_sty::lst_process_display_with`, which sets it as the
+/// listing's title — listings' own `title=` path, `\lstlisting@maketitle`). tcolorbox prints it in the
+/// box's title bar (tcolorbox.sty:162-163 `\tcbtitle`); the binding's listing environments
+/// (`\newtcblisting`, the `\NewTCBListing` family, `\newtcbinputlisting`) are listings
+/// environments without that box, and dropped it: `\newtcblisting[use
+/// counter=example]{example}[2][]{title={Example~\thetcbcounter: #2},#1}` (2405.01480, 1912.06298,
+/// 2105.06630, 2301.07825, 2302.14514, 2410.04867) lost every "Example N: …" with no diagnostic.
+/// Guards: `perfect_kernel_batch77m::{newtcblisting_keeps_its_counted_title,
+/// new_tcb_listing_keeps_its_title, newtcbinputlisting_keeps_its_title}`.
+fn tcb_store_pending_title() {
+  let title = match lookup_definition(&T_CS!("\\lx@tcb@title")) {
+    Ok(Some(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) if !body.is_empty() => Stored::Tokens(body.clone()),
+      _ => Stored::None,
+    },
+    _ => Stored::None,
+  };
+  AssignValue!("tcb_pending_title" => title, Scope::Global);
+  let remove_caption = matches!(
+    lookup_definition(&T_CS!("\\lx@tcb@nocaption")),
+    Ok(Some(defn)) if matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body)) if body.to_string() == "1")
+  );
+  AssignValue!("tcb_pending_remove_caption" => remove_caption, Scope::Global);
+}
+
+/// Read a tcolorbox listing environment's delimited begin-line arguments from the rest of its
+/// `\begin` line (`rest`), which listings' raw reader alone sees: in the signature's order
+/// (`tcb_begin_specs:<env>`, recorded by `tcb_xparse_listing`), a star or a `t<c>` token sets its
+/// boolean stand-in, a bracket, parenthesis, angle or brace group defines its argument's stand-in
+/// (`\lxtcbopt<slot>`, `\lxtcbbangopt`) — xparse skipping spaces before each but a `!` one. True
+/// when one was read: the options are then resolved again (`tcb_resolve_listing_mode`).
+/// jsonparse-doc's `{ s o }` `macrodef` read `[key:storein]` here for its `hypertarget=#2`.
+pub(crate) fn tcb_grab_begin_line(environment: &str, mut rest: &str) -> bool {
+  let specs = lookup_string(&format!("tcb_begin_specs:{environment}"));
+  if specs.is_empty() {
+    return false;
+  }
+  let mut grabbed = false;
+  for spec in specs.split('\u{1}') {
+    let mut chars = spec.chars();
+    let (Some(kind), Some(open), Some(close), Some(bang)) =
+      (chars.next(), chars.next(), chars.next(), chars.next())
+    else {
+      continue;
+    };
+    let slot: String = chars.collect();
+    if bang != '!' {
+      rest = rest.trim_start();
+    }
+    if !rest.starts_with(open) {
+      continue;
+    }
+    if matches!(kind, 's' | 't') {
+      rest = &rest[open.len_utf8()..];
+      let _ = digest(mouth::tokenize_internal(TeXString::assembled(format!(
+        "\\let{slot}\\BooleanTrue"
+      ))));
+      grabbed = true;
+      continue;
+    }
+    // the group's balanced close, as xparse reads it: nested delimiter pairs balance, a brace
+    // group hides a delimiter (`[{a]b}]`), and a control symbol (`\]`, `\{`) is no delimiter
+    let (mut depth, mut braces, mut escaped) = (0usize, 0usize, false);
+    let Some(close_at) = rest.char_indices().find_map(|(at, ch)| {
+      if escaped {
+        escaped = false;
+      } else if ch == '\\' {
+        escaped = true;
+      } else if open != '{' && ch == '{' {
+        braces += 1;
+      } else if open != '{' && ch == '}' {
+        braces = braces.saturating_sub(1);
+      } else if braces == 0 && ch == open {
+        depth += 1;
+      } else if braces == 0 && ch == close {
+        depth = depth.saturating_sub(1);
+        if depth == 0 {
+          return Some(at);
+        }
+      }
+      None
+    }) else {
+      // xparse reads on past the line end; the listing's lines are read already
+      Warn!(
+        "unexpected",
+        "tcolorbox",
+        &format!(
+          "The argument of {{{environment}}} continues past its \\begin line; it is read as listing text"
+        )
+      );
+      break;
+    };
+    let inner = rest[open.len_utf8()..close_at].to_string();
+    let _ = (|| -> Result<()> {
+      DefMacro!(T_CS!(&slot), None, Tokenize!(TeXString::assembled(inner)));
+      Ok(())
+    })();
+    rest = &rest[close_at + close.len_utf8()..];
+    grabbed = true;
+  }
+  grabbed
+}
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -20,6 +316,24 @@ LoadDefinitions!({
   RequirePackage!("xparse");
 
   InputDefinitions!("tcolorbox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // A box whose own flag is breakable (tcolorbox.sty:1479 `\iftcb@isbreakable`) is set as one box (above), so the size
+  // its drawing measures (:2006) is ours: an overflow there is a Warning naming the box (`APPROXIMATED_MEASURE`, DG
+  // 2026-11-13: 2605.05949 2605.19136 2605.24941 2605.28003 2605.30434 2606.07718); elsewhere TeX's Error. Cleared
+  // at the measure's end: the command form `\tcolorbox…\endtcolorbox` (tcolorbox.sty:1150) opens no group.
+  // A tcolorbox before 3.x has no such flag (2.80, shipped by 1606.02242): its boxes are not breakable.
+  Let!("\\lx@tcb@draw@color@box", "\\tcb@draw@color@box");
+  DefMacro!("\\tcb@draw@color@box", "\\lx@tcb@measure@ours\\lx@tcb@draw@color@box\\lx@tcb@measure@done");
+  DefPrimitive!("\\lx@tcb@measure@ours", {
+    if newif_true("\\iftcb@isbreakable") {
+      let env = Expand!(T_CS!("\\@currenvir")).to_string();
+      let number = Expand!(T_CS!("\\thetcolorboxnumber")).to_string();
+      let name = Stored::from(s!("the breakable box {{{env}}} (box {number})"));
+      assign_value(APPROXIMATED_MEASURE, name, Some(Scope::Local));
+    }
+  });
+  DefPrimitive!("\\lx@tcb@measure@done", {
+    assign_value(APPROXIMATED_MEASURE, Stored::None, Some(Scope::Local));
+  });
 
   // Suppress tcolorbox's library version check. The Rust kpathsea binding
   // may resolve a different tcolorbox.sty version than the library files,
@@ -28,15 +342,16 @@ LoadDefinitions!({
   DefMacro!("\\tcb@check@library@version", "", locked => true);
 
   // \newtcblisting[init-options]{name}[N][default]{tcb-options} (tcolorbox
-  // `listings`/`minted` library) — a code-listing box. Its box styling is purely
-  // visual; what matters for the logical output is the code BODY, which must be
-  // captured verbatim and CLOSED at \end{name}. The raw library's body capture
-  // does not integrate with LaTeXML's verbatim reader, so the listing runs past
-  // its \end{name} and swallows following content (sections leak into
+  // `listings`/`minted` library) — a code-listing box. What matters for the logical
+  // output is the code BODY, which must be captured verbatim and CLOSED at
+  // \end{name}, and the box's title. The raw library's body capture once ran past
+  // its \end{name} and swallowed following content (sections leaked into
   // <ltx:verbatim>). Delegate to listings' \lstnewenvironment (same
-  // name/[N][default] shape; the leading [init-options] and trailing tcb options
-  // are dropped), whose verbatim reader terminates correctly. `locked` so a later
-  // raw `\tcbuselibrary{listings}` can't clobber it.
+  // name/[N][default] shape; of the leading [init-options] and trailing tcb options,
+  // the counter, the mode, the listing file, the phantom code and the title are
+  // honoured — `tcb_listing_startend`, `tcb_resolve_listing_mode`), whose verbatim
+  // reader terminates correctly; why not tcolorbox's own definition: OD #768.
+  // `locked` so a later raw `\tcbuselibrary{listings}` can't clobber it.
   //
   // The signature MUST include the leading `[init-options]` optional (real
   // tcolorbox `\NewDocumentCommand \__tcobox_new_tcolorbox:w { m +O{} m o +o +m }`,
@@ -47,9 +362,579 @@ LoadDefinitions!({
   // "Script can only appear in math mode" (Perl raw-loads the real macro and is
   // clean). Witness: 2606.00555 (leading init-options). Prior witnesses use no
   // leading optional and are unaffected: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
-  DefMacro!(
-    "\\newtcblisting[]{}[][]{}",
-    "\\lstnewenvironment{#2}[#3][#4]{}{}",
-    locked => true
-  );
+  DefPrimitive!("\\lxtcblistingmode{}", sub[(opts)] {
+    // The begin line's arguments are read LATER, by listings' raw body reader
+    // (the only reader that sees the begin line; a TeX-level peek in the
+    // start code sees the start code). Park the option tokens so the reader
+    // can re-resolve with the values it reads.
+    if opts.unlist_ref().iter().any(|t| {
+      t.get_catcode() == Catcode::CS
+        && t.with_str(|name| {
+          name == "\\lxtcbbangopt" || name.starts_with("\\lxtcbopt") || name.starts_with("\\lxtcbbool")
+        })
+    }) {
+      AssignValue!("tcb_pending_mode_opts" => Stored::Tokens(opts.clone()));
+    } else {
+      AssignValue!("tcb_pending_mode_opts" => Stored::None);
+    }
+    tcb_resolve_listing_mode(opts)
+  });
+  // xparse's no-value marker, the stand-in of an absent `o`/`d`/`g` argument (`tcb_xparse_listing`;
+  // no `@`: emitted through `Tokenize!`). The start code once peeked the begin line with
+  // `\@ifnextchar` eaters, which saw the start code itself: `[opts]` never reached the options,
+  // read as `/tcb/\par` (keytheorems-doc, wordle ×2, simplebnf-doc flipped dirty in sweep 46);
+  // listings' raw reader reads the begin line instead (`tcb_grab_begin_line`).
+  // Guard: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
+  RawTeX!(r"\expandafter\let\expandafter\lxtcbnovalue\csname c_novalue_tl\endcsname");
+  DefPrimitive!("\\lxtcbdropphantom", {
+    AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
+    AssignValue!("tcb_pending_title" => Stored::None, Scope::Global);
+    AssignValue!("tcb_pending_remove_caption" => false, Scope::Global);
+    Ok(Vec::new())
+  });
+  DefMacro!("\\lx@tcb@execbefore", "");
+  DefMacro!("\\lx@tcb@execafter", "");
+  DefPrimitive!("\\lxtcbexec Number", sub[(n)] {
+    AssignValue!("LISTINGS_EXECUTE_BODY" => n.value_of() != 0, Scope::Global);
+    Ok(Vec::new())
+  });
+  // `\newtcblisting`, the `\NewTCBListing` family and `\newtcbinputlisting` are
+  // installed by the `tcblistingscore.code.tex` binding (tcblistingscore_code_tex.rs)
+  // AFTER the raw library loads — see there.
+
+  // tcolorbox `documentation` library (tcbdocumentation.code.tex L242-255):
+  // {dispExample} routes its body through `\tcbwritetemp` (verbatim write to
+  // \jobname.tcbtemp, re-input as listing + executed). Our engine cannot
+  // close that raw verbatim capture, so the environment leaked an OPEN
+  // <ltx:verbatim> that swallowed the rest of the document (assoccnt manual:
+  // 28 malformed-in-verbatim errors; perfect-kernel "malformed ltx:* in
+  // verbatim" cluster). Reproduce the semantic directly, showexpl-style
+  // (showexpl_sty.rs precedent): capture raw, emit the code listing, then
+  // re-tokenize the body so it EXECUTES as the preview. `locked` so the raw
+  // library load cannot restore the \tcbwritetemp path.
+  DefPrimitive!(T_CS!("\\dispExample"), None, {
+    bgroup();
+    let text = listings_read_raw_lines("dispExample");
+    unread(Tokenize!(TeXString::assembled("\\end{dispExample}".to_string())));
+    // `\tcbusetemp` = `\input` of the temp file (tcolorbox.sty:2820). Guard:
+    // `perfect_kernel_batch56::dispexample_body_runs_with_live_catcodes`.
+    unread(lst_run_body_via_input("dispExample", &text)?);
+    unread(Tokens::new(lst_process_display(None, &text)));
+  }, locked => true);
+  // The raw library redefines the END macros too (\enddispExample =
+  // \endtcbwritetemp\endgroup…, tcbdocumentation.code.tex L244-251) — every
+  // piece of the family must be locked or the raw load re-wires it back into
+  // the write-temp machinery (witnessed as `t.tcbtemp` missing-file +
+  // \endgroup mode errors).
+  DefMacro!("\\enddispExample", "", locked => true);
+  // {dispExample*}{options} — same, options are presentational.
+  DefPrimitive!("\\lx@dispExampleStar{}", sub[(_opts)] {
+    bgroup();
+    let text = listings_read_raw_lines("dispExample*");
+    unread(Tokenize!(TeXString::assembled("\\end{dispExample*}".to_string())));
+    unread(lst_run_body_via_input("dispExampleStar", &text)?);
+    unread(Tokens::new(lst_process_display(None, &text)));
+  });
+  DefMacro!(T_CS!("\\dispExample*"), None, "\\lx@dispExampleStar", locked => true);
+  DefMacro!(T_CS!("\\enddispExample*"), None, "", locked => true);
+  // {dispListing} — listing only, no preview.
+  // Bare `\tcbwritetemp` … `\endtcbwritetemp` — tcolorbox's verbatim
+  // record-to-\jobname.tcbtemp, invoked from OTHER environments' begin/end
+  // hooks (keytheorems-doc L157-162 `{codepreamble}` = `\tcbset{mark
+  // preamble}\tcbwritetemp` … `\endtcbwritetemp`). The real scanner reads
+  // until the SURROUNDING environment's \end line; capture the same way,
+  // store for `\tcbusetemplisting`, write the file for `\input`-back
+  // consumers, and re-emit the `\end{env}` so the wrapper closes normally.
+  DefPrimitive!(T_CS!("\\tcbwritetemp"), None, {
+    let env = match lookup_value("current_environment") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+      _ => String::from("tcbwritetemp"),
+    };
+    let text = listings_read_raw_lines(&env);
+    assign_value("TCB@templisting", Stored::String(pin(&text)), Some(Scope::Global));
+    let jobname = do_expand(Tokens!(T_CS!("\\jobname")))
+      .map(|t| t.to_string())
+      .unwrap_or_else(|_| String::from("texput"));
+    // Virtual store only — the `\input`-back consumer resolves it via the
+    // VFS (find_file consults it first); a disk write here would land in
+    // the process CWD, not the destination directory (a stray
+    // `<jobname>.tcbtemp` once leaked into the repo root from a test run).
+    vfs_store(&format!("{}.tcbtemp", jobname.trim()), &text);
+    unread(Tokenize!(TeXString::assembled(format!("\\end{{{env}}}"))));
+  }, locked => true);
+  DefMacro!(T_CS!("\\endtcbwritetemp"), None, "", locked => true);
+  // `\begin{tcbverbatimwrite}{file}` (tcolorbox.sty:2726-2735): verbatim-write
+  // the body to <file>. Raw, it ran through our `\verbatim@`, which — like
+  // Perl's verbatim.sty.ltxml:76-104 — keeps the `\begin`-line remainder as
+  // an EMPTY first line (real verbatim.sty:107-112 `\verbatim@start` swallows
+  // that `^^M`), so csvsimple read a blank header ("File 'grade.csv' starts
+  // with an empty line!" and a 900-line cascade once the reading examples
+  // executed; csvsimple-legacy, SHARED, pdflatex clean). Capture like
+  // `\tcbwritetemp` (the listings reader drops the remainder) and re-emit
+  // `\end{env}` so the environment closes.
+  // Guard: `perfect_kernel_batch56::tcbverbatimwrite_has_no_leading_blank_line`.
+  DefPrimitive!("\\tcbverbatimwrite{}", sub[(file)] {
+    let env = match lookup_value("current_environment") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+      _ => String::from("tcbverbatimwrite"),
+    };
+    let text = listings_read_raw_lines(&env);
+    // The raw `{tcblisting}` environment (tcblistingscore.code.tex:275-283)
+    // passes `\kvtcb@listingfile` = `\jobname.listing`, which the later
+    // `\tcbinputlisting@core` reads back EXPANDED: store under the expanded
+    // name (sweep #40 regressed 25 manuals with `missing_file:<job>.listing`).
+    // Guard: `perfect_kernel_batch56::raw_tcblisting_environment_round_trips_its_listing_file`.
+    // `\tcb@iow@open` is expl3's `\iow_open:Nn`, an `\openout`: an
+    // extension-less name is written as `<name>.tex` (`output_file_name`).
+    let name = output_file_name(Expand!(file).to_string().trim());
+    vfs_store(&name, &text);
+    unread(Tokenize!(TeXString::assembled(format!("\\end{{{env}}}"))));
+    Ok(Vec::new())
+  }, locked => true);
+  DefMacro!(T_CS!("\\endtcbverbatimwrite"), None, "", locked => true);
+  // Emit the recorded text as a listing (tcolorbox `\tcbusetemplisting`).
+  DefPrimitive!(T_CS!("\\tcbusetemplisting"), None, {
+    let text = match lookup_value("TCB@templisting") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+      _ => String::new(),
+    };
+    if !text.is_empty() {
+      unread(Tokens::new(lst_process_display(None, &text)));
+    }
+  }, locked => true);
+
+
+
+  DefPrimitive!(T_CS!("\\dispListing"), None, {
+    bgroup();
+    let text = listings_read_raw_lines("dispListing");
+    // Like \tcbwritetemp, dispListing RECORDS the example: consumers follow
+    // it with `\tcbusetemp` (= `\input{\jobname.tcbtemp}`, raw tcolorbox) to
+    // execute the source just displayed — witness incgraph.tex L722.
+    assign_value("TCB@templisting", Stored::String(pin(&text)), Some(Scope::Global));
+    let jobname = do_expand(Tokens!(T_CS!("\\jobname")))
+      .map(|t| t.to_string())
+      .unwrap_or_else(|_| String::from("texput"));
+    vfs_store(&format!("{}.tcbtemp", jobname.trim()), &text);
+    unread(Tokenize!(TeXString::assembled("\\end{dispListing}".to_string())));
+    unread(Tokens::new(lst_process_display(None, &text)));
+  }, locked => true);
+  DefMacro!("\\enddispListing", "", locked => true);
 });
+
+/// Delegate an xparse-signature TCB listing declaration to
+/// `\lstnewenvironment{name}[n][]{start}{end}`.
+///
+/// Only the MANDATORY specifiers (`m`/`r`/`R`) count as `\lstnewenvironment`
+/// mandatory arguments, plus one optional slot when the signature LEADS with
+/// an optional (`O`/`o`/`D`/`d`, after any `!`/`+` prefix). Counting every
+/// specifier as mandatory turned neoschool.cls:5168
+/// `\NewTCBListing{code}{ O{} m !O{} !O{..} !O{..} }` into
+/// `\lstnewenvironment{code}[5][]`, so a bare `\begin{code}{latex}` grabbed
+/// three body tokens including its own `\end`, the verbatim scan ran on to
+/// the NEXT `\end{code}` and swallowed the `\begin{sidebyside}` in between —
+/// tcolorbox's global `\c@tcblayer` (tcolorbox.sty:1411/1491 `\tcb@layer@inc`
+/// only at the swallowed begin, `\tcb@layer@dec` at the surviving end) went
+/// negative and every later box errored `every box on layer 0/-N` (251 of
+/// neoschool's 273 errors; Perl 0). Trailing optionals are box styling
+/// (tcbxparse absorbs them only when a `[` is present) and are dropped.
+/// Guard: `perfect_kernel_batch53::tcb_listing_trailing_optionals_not_mandatory`.
+pub(crate) fn tcb_xparse_listing(
+  name: Tokens,
+  sig: Tokens,
+  init: Option<&Tokens>,
+  opts: &Tokens,
+) -> Result<Tokens> {
+  let sig_str = sig.to_string();
+  let specs_defaults = xparse_signature_specs_defaults(&sig_str);
+  let specs: Vec<(char, String, bool)> = specs_defaults
+    .iter()
+    .map(|(c, d, _, bang)| (*c, d.clone(), *bang))
+    .collect();
+  let mandatory = specs
+    .iter()
+    .filter(|(c, ..)| matches!(c, 'm' | 'r' | 'R'))
+    .count();
+  // The `[n][]` arity can express one LEADING bracket optional; every other
+  // specifier the arity cannot express — `s`, `t<c>`, `d`/`D` with non-`[]`
+  // delimiters, `G`/`g`, trailing `O`/`o`, or any `!`-modified optional
+  // (which forbids skipping leading whitespace/newlines, unlike LaTeX's
+  // `\@ifnextchar[` in `\lstnewenvironment`) — is read off the begin line by
+  // listings' raw reader (`tcb_grab_begin_line`, xparse's peek-then-consume,
+  // ltcmd `\__cmd_grab_D:w`/`_G:w`/`_t:w`), which drops the rest of the line.
+  // Left unconsumed, `\begin{tdoclatex}<opts>` / `\begin{example}*` /
+  // `\begin{doccode}{opts}` (tutodoc.cls:1024, simplebnf-doc.tex:58,
+  // istgame-doc.tex:129) leaked into the captured body and re-entered the
+  // environment on `\input`-back (MemoryBudget fatal ×4, sweep #41).
+  // Guard: `perfect_kernel_batch56::tcb_listing_unmapped_begin_line_args_are_absorbed`.
+  // A `!`-modified LEADING optional (xparse: no leading-space skip) cannot
+  // be the `[n][]` parameter — the kernel `[]` reader skips newlines, and
+  // `\begin{docplain}` + a `[`-line inside the body (istgame-doc) must stay
+  // content. The raw reader reads it without skipping spaces, and GRABS it, not
+  // drops it: the bracket text lands in `\lxtcbbangopt`, which stands in for
+  // its `#n` in the options and is spliced back by `\lxtcblistingmode`
+  // (`\NewTCBListing{keythmscode}{ !O{} }{…,#1}` + `[withpreamble]`,
+  // keytheorems-doc; the round-3 dropping eater lost the value and changed
+  // the arity, and the box read a stray `\par` — `/tcb/\par`: keytheorems-doc,
+  // wordle ×2, simplebnf-doc flipped dirty in sweep 46).
+  // Guard: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
+  let leading_optional = specs.first().is_some_and(|(c, d, bang)| {
+    !bang && (matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]"))
+  });
+  let bang_leading = specs.first().is_some_and(|(c, d, bang)| {
+    *bang && (matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]"))
+  });
+  // Known gap: a `!`-leading optional FOLLOWED by a mandatory (`{ !O{} m }`)
+  // is not expressible in the `[n][]` arity — the `[` is consumed as the
+  // mandatory argument (silent, wrong options); pure `!O{}` is correct.
+  // An absorbed boolean (`s`, `t<c>`) is `\BooleanTrue`/`\BooleanFalse` to the
+  // options, never empty: a per-slot stand-in is `\let` (`\BooleanFalse` in
+  // the start code, `\BooleanTrue` when the raw reader reads the `*`), and
+  // `\IfBooleanTF` (latex.ltx:4945-4961) tests the stand-in's MEANING against
+  // `\c_true_bool`/`\c_false_bool` (a `\def` would fail that test). The empty
+  // default this slot had made `IfBooleanT={#1}` run `\IfBooleanT{}` — l3's
+  // `cmd/if-boolean` expandable error (`\???`) at every `\begin{macrodef}`
+  // (leporello-doc ×74, jsonparse-doc ×60) and a star that never reached the
+  // box. Guard: `perfect_kernel_batch56::tcb_listing_star_is_a_boolean`.
+  let bool_slot = |i: usize| format!("\\lxtcbbool{}", char::from(b'a' + (i as u8 % 26)));
+  let opt_slot = |i: usize| format!("\\lxtcbopt{}", char::from(b'a' + (i as u8 % 26)));
+  // (an absent argument: its default when the specifier has one, else xparse's no-value marker)
+  let absent = |i: usize, slot: &str| {
+    let (c, _, default, _) = &specs_defaults[i];
+    if matches!(c, 'O' | 'D' | 'G') {
+      format!("\\def{slot}{{{default}}}")
+    } else {
+      format!("\\let{slot}\\lxtcbnovalue")
+    }
+  };
+  // Every begin-line argument starts absent: a boolean `\\BooleanFalse`, a delimited argument its
+  // default (`O{…}`, `D…{…}`, `G{…}`) or `\\c_novalue_tl` (`o`, `d`, `g`), as xparse passes it, so
+  // `\\IfValueT` tests it; listings' raw reader then reads the ones the begin line gives into the
+  // same stand-ins (`tcb_grab_begin_line`) — a peek in the start code would see the start code
+  // itself (jsonparse-doc's `{ s o }` `macrodef`: the bracket was lost, its `hypertarget=#2` empty).
+  // Guards: `perfect_kernel_batch59::tcb_listing_keeps_its_hypertarget`,
+  // `perfect_kernel_batch59::tcb_listing_begin_line_edge_cases`.
+  // A LEADING optional is the `[n][default]` parameter of `\lstnewenvironment`, whose default is the
+  // slot's stand-in, absent like the others: `O{Default}` its default, `o`/`d[]` xparse's no-value
+  // marker — `\IfNoValueTF{#1}` tests the tokens `-NoValue-` (expl3-code.tex:4130-4143), which only
+  // the stand-in's splice delivers with their catcodes (`\lxtcbleadopt`: no begin-line argument for
+  // listings' raw reader to re-read, so not one that parks the options, `tcb_pending_mode_opts`, and
+  // turns off its "Text dropped" warning). The arity's empty default once made
+  // `\NewTCBListing{codeo}{ o }{title={\IfNoValueTF{#1}{Code}{Code: #1}}}` "Code: " and
+  // `{ O{Default} }{title={T: #1}}` "T:" (pdflatex: "Code", "T: Default").
+  // Guards: `perfect_kernel_batch77m::{new_tcb_listing_leading_o_absent_is_no_value,
+  // new_tcb_listing_leading_optional_keeps_its_default}`.
+  let mut absent_values = String::new();
+  for (i, (c, d, _)) in specs.iter().enumerate() {
+    if i == 0 && leading_optional {
+      absent_values.push_str(&absent(i, "\\lxtcbleadopt"));
+      continue;
+    }
+    match c {
+      's' | 't' => absent_values.push_str(&format!("\\let{}\\BooleanFalse", bool_slot(i))),
+      _ if i == 0 && bang_leading => absent_values.push_str(&absent(i, "\\lxtcbbangopt")),
+      'G' | 'g' | 'O' | 'o' => absent_values.push_str(&absent(i, &opt_slot(i))),
+      'D' | 'd' if matches!(d.as_str(), "[]" | "()" | "<>") => {
+        absent_values.push_str(&absent(i, &opt_slot(i)))
+      },
+      _ => {},
+    }
+  }
+  // The options body numbers its `#n` by POSITION in the full signature.
+  // An absorbed specifier still owns its slot: its `#n` becomes the
+  // specifier's stand-in (a delimited argument's `\lxtcbopt<slot>`, its value or
+  // default spliced in by `\lxtcblistingmode`; a boolean's `\lxtcbbool<slot>`),
+  // and the mandatory (and the mapped leading optional) slots are renumbered
+  // to the `\lstnewenvironment` arity — `\NewTCBListing{egcite}{D(){ok} o m !o}
+  // {colframe=#1,…}` (oxyear-doc.tex:216) otherwise fed the citation text to
+  // `colframe` once the leading `D()` was eaten (sweep #42 regression).
+  // Guard: `perfect_kernel_batch56::tcb_listing_absorbed_specifiers_keep_positional_numbers`.
+  let mut slots: Vec<Option<String>> = Vec::new(); // Some(text) = substitute, None = keep `#k`
+  let mut next = 0usize;
+  let mut renumber: Vec<usize> = Vec::new();
+  for (i, (c, d, default, _bang)) in specs_defaults.iter().enumerate() {
+    let mapped = (i == 0 && leading_optional) || matches!(c, 'm' | 'r' | 'R');
+    if mapped {
+      next += 1;
+      renumber.push(next);
+      slots.push(None);
+    } else if i == 0 && bang_leading {
+      renumber.push(0);
+      slots.push(Some("\\lxtcbbangopt".to_string()));
+    } else if matches!(c, 's' | 't') {
+      renumber.push(0);
+      slots.push(Some(bool_slot(i)));
+    } else if matches!(c, 'O' | 'o' | 'D' | 'd' | 'G' | 'g')
+      && (!c.eq_ignore_ascii_case(&'d') || matches!(d.as_str(), "[]" | "()" | "<>"))
+    {
+      renumber.push(0);
+      slots.push(Some(opt_slot(i)));
+    } else {
+      renumber.push(0);
+      slots.push(Some(default.clone()));
+    }
+  }
+  let opts_renumbered = renumber_param_tokens(opts, &slots, &renumber);
+  let name_str = name.to_string().trim().to_string();
+  // The begin line's delimited arguments, in order, for listings' raw reader, which alone sees
+  // them (`tcb_grab_begin_line`).
+  let begin_specs: Vec<String> = specs_defaults
+    .iter()
+    .enumerate()
+    .filter(|(i, (c, ..))| !(*i == 0 && leading_optional) && !matches!(c, 'm' | 'r' | 'R'))
+    .filter_map(|(i, (c, d, _, bang))| {
+      let slot = if i == 0 && bang_leading {
+        "\\lxtcbbangopt".to_string()
+      } else if matches!(c, 's' | 't') {
+        bool_slot(i)
+      } else {
+        opt_slot(i)
+      };
+      let (open, close) = match c {
+        's' => ('*', '*'),
+        // (a `t\cs` token is no character the line can be matched against: left absent)
+        't' if d.chars().count() == 1 => (d.chars().next()?, ' '),
+        'O' | 'o' => ('[', ']'),
+        'G' | 'g' => ('{', '}'),
+        'D' | 'd' if matches!(d.as_str(), "[]" | "()" | "<>") => {
+          (d.chars().next()?, d.chars().nth(1)?)
+        },
+        _ => return None,
+      };
+      Some(format!(
+        "{c}{open}{close}{}{slot}",
+        if *bang { '!' } else { ' ' }
+      ))
+    })
+    .collect();
+  assign_value(
+    &format!("tcb_begin_specs:{name_str}"),
+    Stored::String(pin(begin_specs.join("\u{1}"))),
+    Some(Scope::Global),
+  );
+  let (start, end) = tcb_listing_startend(&name_str, init, &opts_renumbered);
+  let start = format!("{absent_values}{start}");
+  let arity = if leading_optional {
+    format!("[{}][\\lxtcbleadopt]", mandatory + 1)
+  } else {
+    format!("[{}]", mandatory)
+  };
+  Ok(Tokenize!(TeXString::assembled(format!(
+    "\\lstnewenvironment{{{}}}{}{{{}}}{{{}}}",
+    name_str, arity, start, end
+  ))))
+}
+
+/// Rewrite the `#k` parameter references of a tcb options body per
+/// [`tcb_xparse_listing`]'s slot map: a substituted slot becomes its default
+/// text (tokenized at the current catcodes), a mapped slot its new number.
+fn renumber_param_tokens(opts: &Tokens, slots: &[Option<String>], renumber: &[usize]) -> Tokens {
+  let toks = opts.unlist_ref();
+  let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+  let mut i = 0;
+  while i < toks.len() {
+    let t = &toks[i];
+    if t.get_catcode() == Catcode::PARAM
+      && let Some(next) = toks.get(i + 1)
+      && let Some(k) = next.to_string().chars().next().and_then(|c| c.to_digit(10))
+      && next.get_catcode() != Catcode::PARAM
+    {
+      let idx = (k as usize).saturating_sub(1);
+      match slots.get(idx) {
+        Some(Some(text)) => {
+          out.extend(Tokenize!(TeXString::assembled(text.clone())).unlist());
+        },
+        Some(None) => {
+          out.push(*t);
+          out.push(T_OTHER!(&renumber[idx].to_string()));
+        },
+        None => {
+          out.push(*t);
+          out.push(*next);
+        },
+      }
+      i += 2;
+      continue;
+    }
+    out.push(*t);
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
+/// The specifiers of an xparse argument signature, in order: the letter, its
+/// delimiter pair when it has one (`d<>`/`D<>{…}` → `"<>"`, `t*` → `"*"`) and its
+/// `{default}` text (`O`, `D`, `G`; empty otherwise). `!`/`+` prefixes are skipped.
+fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String, bool)> {
+  let chars: Vec<char> = sig.chars().collect();
+  let mut out = Vec::new();
+  let mut i = 0;
+  let mut has_bang = false;
+  let take_group = |i: &mut usize| -> String {
+    let mut text = String::new();
+    if *i < chars.len() && chars[*i] == '{' {
+      let mut depth = 0;
+      while *i < chars.len() {
+        match chars[*i] {
+          '{' => {
+            depth += 1;
+            if depth > 1 {
+              text.push('{');
+            }
+          },
+          '}' => {
+            depth -= 1;
+            if depth == 0 {
+              *i += 1;
+              break;
+            }
+            text.push('}');
+          },
+          c => text.push(c),
+        }
+        *i += 1;
+      }
+    }
+    text
+  };
+  while i < chars.len() {
+    let c = chars[i];
+    i += 1;
+    if c == '!' {
+      has_bang = true;
+      continue;
+    }
+    match c {
+      'm' | 'o' | 's' | 'g' | 'v' | 'b' | 'l' | 'u' | 'e' | 'E' => {
+        out.push((c, String::new(), String::new(), has_bang));
+        has_bang = false;
+      },
+      'O' | 'G' => {
+        while i < chars.len() && chars[i] == ' ' {
+          i += 1;
+        }
+        let d = take_group(&mut i);
+        out.push((c, String::new(), d, has_bang));
+        has_bang = false;
+      },
+      't' => {
+        while i < chars.len() && chars[i] == ' ' {
+          i += 1;
+        }
+        let d = chars.get(i).map(|c| c.to_string()).unwrap_or_default();
+        i += 1;
+        out.push((c, d, String::new(), has_bang));
+        has_bang = false;
+      },
+      'd' | 'D' | 'r' | 'R' => {
+        while i < chars.len() && chars[i] == ' ' {
+          i += 1;
+        }
+        let d: String = chars.iter().skip(i).take(2).collect();
+        i += 2;
+        let mut default = String::new();
+        if matches!(c, 'D' | 'R') {
+          while i < chars.len() && chars[i] == ' ' {
+            i += 1;
+          }
+          default = take_group(&mut i);
+        }
+        out.push((c, d, default, has_bang));
+        has_bang = false;
+      },
+      _ => {}, // `+`, `>`, spaces, unknown
+    }
+  }
+  out
+}
+
+/// A tcb listing box's per-use counter code, as `\tcb@proc@counter@autoanduse` / `…@from` / `…@no` append it
+/// to the box options (tcolorbox.sty:2297-2331): with a counter recorded for `name` by tcolorbox's init processor
+/// (`\tcb@cnt@<name>`), step it and expose `\thetcbcounter`; without one, `\tcbcounter` and `\thetcbcounter` are
+/// empty. Read at the user's catcodes (no `@` letters outside the `\csname` texts).
+pub(crate) fn tcb_counter_step_code(name: &str) -> String {
+  format!(
+    "\\ifcsdef{{tcb@cnt@{name}}}{{\\letcs\\tcbcounter{{tcb@cnt@{name}}}\
+     \\letcs\\thetcbcounter{{thetcb@cnt@{name}}}\\refstepcounter{{\\tcbcounter}}}}\
+     {{\\let\\tcbcounter\\empty\\let\\thetcbcounter\\empty}}"
+  )
+}
+
+/// Distill the per-use side effects a tcb listing environment owes from its
+/// `[init-options]` + `{options}` — the pieces of the tcolorbox option
+/// machinery with document-visible consequences. Currently honored:
+/// `use counter=N` (each use steps N and exposes `\thetcbcounter`,
+/// tcbcounter.code.tex) and `listing file=F` (each use records the raw body
+/// to F for `\input`-back, tcblistingscore `listing file`; F is expanded at
+/// USE time so `\jobname.\thetcbcounter.listing` names follow the counter —
+/// witness incgraph.tex L857 `\inputlisting{\n}` reading 12 such files).
+/// The mode, the phantom code and the title are resolved per use from the start
+/// code's `\lxtcblistingmode` (`tcb_resolve_listing_mode`); the rest is
+/// presentation only and is dropped.
+pub(crate) fn tcb_listing_startend(
+  env_name: &str,
+  init: Option<&Tokens>,
+  opts: &Tokens,
+) -> (String, String) {
+  let mut start = String::new();
+  let mut end = String::new();
+  let source = format!(
+    "{},{}",
+    init.map(|t| t.to_string()).unwrap_or_default(),
+    opts
+  );
+  // The counter keys run through tcolorbox's OWN init processor
+  // (tcolorbox.sty:2339 `\tcb@proc@options@init{init}{env}` → `auto counter`
+  // / `use counter` / `use counter from` / `number within` …, :2254-2262 and
+  // :2297-2333), so `\tcb@cnt@<env>` and `\thetcb@cnt@<env>` exist for a
+  // later `\newtcolorbox[use counter from=<env>]` (tcolorbox manual's
+  // preamble D: `texexptitledspec` from `texexptitled` — "Extra \endcsname"
+  // + `\the\tcb@cnt@texexptitled` undefined when the native listing env
+  // dropped its init). Each use then steps the recorded counter the way
+  // `\tcb@new@colopt`'s `code=` does (:2311).
+  if init.is_some_and(|t| !t.to_string().trim().is_empty()) {
+    let init_src = init.map(|t| t.to_string()).unwrap_or_default();
+    let _ = digest(mouth::tokenize_internal(TeXString::assembled(format!(
+      "\\tcb@proc@options@init{{{init_src}}}{{{env_name}}}"
+    ))));
+  }
+  // A box without a counter has an empty `\thetcbcounter` (`no counter`, the `reset@new` default,
+  // tcolorbox.sty:2335-2337 `\tcb@proc@counter@no` `\let\thetcbcounter=\@empty`, key `no counter` :2258): 2605.21082's `title={\textbf{code~\thetcbcounter}:
+  // #2}` with no counter prints "code : …" (it was undefined:\thetcbcounter once the title was typeset).
+  start.insert_str(0, &tcb_counter_step_code(env_name));
+  // The listing MODE (tcblistingscore.code.tex:200-215: `listing and text`
+  // default, `listing only`, `text only`, the `*comment*` forms) decides
+  // whether the body is also executed; the per-use `#1` is only known at use
+  // time, so the resolved option text is handed to `\lxtcblistingmode` in
+  // the start code and read back by `\lx@lstenv@body`.
+  // Only the box options: the `[init]` keys live in `/tcb/new/` and are not
+  // `\tcbset`-able.
+  start.push_str(&format!("\\lxtcblistingmode{{{opts}}}"));
+  // (a box whose listing is not typeset, `text only`, leaves its phantom code to no listing)
+  end.push_str("\\lxtcbdropphantom");
+  for (key, val) in split_keyval_source(&source) {
+    let val = val.trim().trim_matches(['{', '}']).trim();
+    match key.trim() {
+      "use counter" | "auto counter" => {
+        // Record which LaTeX counter this env drives so
+        // `use counter from=<env>` (\newtcbinputlisting) can share it.
+        let counter = if key.trim() == "auto counter" || val.is_empty() {
+          format!("tcb@cnt@{env_name}")
+        } else {
+          val.to_string()
+        };
+        assign_value(
+          &format!("tcb_env_counter_{env_name}"),
+          Stored::String(pin(&counter)),
+          Some(Scope::Global),
+        );
+      },
+      "listing file" if !val.is_empty() => {
+        start.push_str(&format!("\\lxlstbeginwritefile{{{val}}}"));
+        end.push_str("\\lxlstendwritefile");
+      },
+      _ => {},
+    }
+  }
+  (start, end)
+}

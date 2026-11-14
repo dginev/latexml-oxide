@@ -6,6 +6,75 @@
 // It ends by loading math_common (common math definitions).
 use crate::{prelude::*, tex_paragraph::align_line};
 
+/// The width of a `\tmspace` (latex.ltx:15669-15670 `\ifmmode\mskip#1#2\else\kern#1#3\fi`): in math the
+/// muskip, as Perl stores it; in text the kern `text_width`, which `\lastkern` reads. Guard
+/// `box_primitives::unskip_horizontal_glue`.
+pub(crate) fn tmspace_width(muskip: &str, negative: bool, text_width: &str) -> Result<Stored> {
+  if lookup_bool_sym(pin!("IN_MATH")) {
+    if negative {
+      Ok(lookup_dimension(muskip).unwrap_or_default().negate().into())
+    } else {
+      Ok(lookup_register(muskip, Vec::new())?.into())
+    }
+  } else {
+    let width = Dimension::from_str(text_width)?;
+    Ok(if negative { width.negate() } else { width }.into())
+  }
+}
+
+/// The medium space `\>` (plain.tex), which `\:` is: U+2005 in text, the `\medmuskip` in math.
+fn medspace() -> Result<Tbox> {
+  Ok(Tbox::new(
+    pin!("\u{2005}"),
+    None,
+    None,
+    Tokens!(T_CS!("\\>")),
+    stored_map!("name"  => "medspace", "isSpace" => true,
+    "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+    "width" => tmspace_width("\\medmuskip", false, "0.2222em")?),
+  ))
+}
+
+/// plain.tex's `\,` `\!` `\:` `\;` (Perl plain_constructs.pool.ltxml L190-212; the kernel then lets `\:` be `\>`).
+/// amsmath.sty:155-175 declares them again (`\let\!\@undefined` …), and so does its binding
+/// ([`crate::latex_constructs::define_amsmath_tmspace_commands`]): tipa.sty:429-458 makes `\!` `\;` `\:` T3 text
+/// accents, and amsmath loaded after it makes them the spacing commands again (witnesses 2603.03017, 2605.00529,
+/// 2608.02769).
+#[rustfmt::skip]
+pub(crate) fn define_tmspace_commands() -> Result<()> {
+  DefMacro!(
+    "\\,",
+    r"\ifmmode\lx@thinmuskip\else\lx@thinspace\fi",
+    protected => true
+  );
+
+  DefPrimitive!("\\!", {
+    Tbox::new(
+      pin!("\u{200B}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\!")), // zero width space
+      // A kern in text (latex.ltx:15673-15681), math glue in math.
+      stored_map!("name"  => "negthinspace", "isSpace" => true,
+      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thinmuskip", true, "0.16667em")?),
+    )
+  });
+  DefPrimitive!("\\:", { medspace()? });
+  DefPrimitive!("\\;", {
+    Tbox::new(
+      pin!("\u{2004}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\;")),
+      stored_map!("name"  => "thickspace", "isSpace" => true,
+      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thickmuskip", false, "0.2777em")?),
+    )
+  });
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: plain_constructs.pool.ltxml L18
@@ -43,32 +112,25 @@ LoadDefinitions!({
   // Routes by IN_MATH to the existing math/text helpers at digest time,
   // preserving rendering (and avoiding the dump CharDef's dropped-`#` in math).
   // Witness 1811.00200 (llncs + algochl.sty). WISDOM #44.
-  DefPrimitive!("\\#", {
-    let target = if lookup_bool_sym(pin!("IN_MATH")) {
-      T_CS!("\\lx@math@hash") } else { T_CS!("\\lx@text@hash") };
-    digest(Tokens!(target))?
-  });
-  // Same single-primitive treatment for the rest of the family (see `\#` above):
-  // non-expandable + `\ifx`-stable, dispatching to the existing math/text
-  // helpers by IN_MATH at digest time. (The math helpers carry the proper
-  // role/meaning, so math-mode `$\&\&$` still routes through `\lx@math@amp`
-  // rather than injecting a catcode-4 `&` — the breakage the prior override
-  // guarded against.)
-  DefPrimitive!("\\&", {
-    let target = if lookup_bool_sym(pin!("IN_MATH")) {
-      T_CS!("\\lx@math@amp") } else { T_CS!("\\lx@text@amp") };
-    digest(Tokens!(target))?
-  });
-  DefPrimitive!("\\%", {
-    let target = if lookup_bool_sym(pin!("IN_MATH")) {
-      T_CS!("\\lx@math@percent") } else { T_CS!("\\lx@text@percent") };
-    digest(Tokens!(target))?
-  });
-  DefPrimitive!("\\$", {
-    let target = if lookup_bool_sym(pin!("IN_MATH")) {
-      T_CS!("\\lx@math@dollar") } else { T_CS!("\\lx@text@dollar") };
-    digest(Tokens!(target))?
-  });
+  // `\#`, `\&`, `\%` are latex.ltx L626-628 CHARDEFS. The former
+  // IN_MATH-dispatching DefPrimitives preserved rendering but destroyed the
+  // numeric \chardef value: `\catcode\#14` read 0 and silently failed, so
+  // varindex.dtx's `#`-as-comment doc block leaked PARAM tokens to the
+  // stomach (62 misdefined:# — Rust-only; Perl keeps the dump CharDef and
+  // its CharDef.pm invoke is mode-aware). The Rust CharDef invoke is now
+  // mode-aware too (register.rs: text \chardef IN math attaches unicode
+  // math properties — the `$\&\&$` alignment-leak the old override guarded
+  // against), so install the faithful CharDefs. Non-expandable → the
+  // harvmac `\write` round-trip (at_in_cs_round_trip golden) and algochl's
+  // `\ifx`-sentinel stability (1811.00200) hold as before.
+  for (cs, code) in [("\\#", 35i64), ("\\&", 38), ("\\%", 37)] {
+    let mut reg =
+      Register::new_chardef(T_CS!(cs), Some(Number::new(code).into()), None, None);
+    // Engine-installed: no source locator, so the CharDef reverts as its CS
+    // (`tex="\&"`), not `\char 38\relax` (Perl CharDef.pm L52-55 "local").
+    reg.locator = Locator::default();
+    install_definition(reg, None);
+  }
   DefPrimitive!("\\_", {
     let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@underscore") } else { T_CS!("\\lx@text@underscore") };
@@ -263,7 +325,7 @@ LoadDefinitions!({
     let n = span.value_of();
     let mut tks = vec![T_CS!("\\omit")];
     for _ in 1..n {
-      tks.push(T_CS!("\\span"));
+      tks.push(crate::tex_tables::frozen_span()); // the frozen `\span` (user ruling 2026-10-11)
       tks.push(T_CS!("\\omit"));
     }
     Ok(Tokens::new(tks))
@@ -303,6 +365,7 @@ LoadDefinitions!({
   DefConstructor!("\\footnote{}{}",
     "^<ltx:note role='footnote' ?#mark(mark='#mark')()>?#prenote(#prenote )()#2</ltx:note>",
     mode => "internal_vertical",
+    sizer => sub[whatsit] { note_size_in_line(whatsit) },
     before_digest => sub { neutralize_font(); },
     after_digest => sub[whatsit] {
       let mark_clone = whatsit.get_arg(1).cloned();
@@ -372,26 +435,12 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\,")),
+      // In text `\,` is a kern (latex.ltx:15669-15671 `\tmspace`): `\unskip` leaves it, `\lastkern` reads it.
       stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em")?,
-       "isSpace" => true),
+       "isSpace" => true, "isKern" => true),
     )
   });
-  DefMacro!(
-    "\\,",
-    r"\ifmmode\lx@thinmuskip\else\lx@thinspace\fi",
-    protected => true
-  );
-
-  DefPrimitive!("\\!", {
-    Tbox::new(
-      pin!("\u{200B}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\!")), // zero width space
-      stored_map!("name"  => "negthinspace", "isSpace" => true,
-      "width" => lookup_dimension("\\thinmuskip").unwrap().negate()),
-    )
-  });
+  define_tmspace_commands()?;
   // Perl plain_constructs.pool.ltxml L203-211: the box content is the actual
   // space glyph — U+2005 FOUR-PER-EM (medspace) for `\>`, U+2004 THREE-PER-EM
   // (thickspace) for `\;` — NOT a plain ASCII space. The earlier Rust port used
@@ -399,27 +448,7 @@ LoadDefinitions!({
   // the wider Unicode space (matching `\,`→U+2009 and `\!`→U+200B above). In
   // MATH mode the content is irrelevant (isSpace+width → XMHint), so this only
   // corrects text-mode rendering.
-  DefPrimitive!("\\>", {
-    Tbox::new(
-      pin!("\u{2005}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\>")),
-      stored_map!("name"  => "medspace", "isSpace" => true,
-      "width" => lookup_register("\\medmuskip", Vec::new())?),
-    )
-  });
-  DefPrimitive!("\\;", {
-    Tbox::new(
-      pin!("\u{2004}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\;")),
-      stored_map!("name"  => "thickspace", "isSpace" => true,
-      "width" => lookup_register("\\thickmuskip", Vec::new())?),
-    )
-  });
-
+  DefPrimitive!("\\>", { medspace()? });
   Let!("\\:", "\\>");
 
 

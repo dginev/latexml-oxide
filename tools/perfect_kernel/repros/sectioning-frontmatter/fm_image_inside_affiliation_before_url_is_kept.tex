@@ -1,0 +1,18 @@
+% witness: review revIMG1 finding 1 (probes q5_mid_line, r2_mid_quad_url, r4_mid_no_comma_url): an image after a run of
+%          text and before a URL on one later line, the line read as one affiliation holding both
+% oracle:  pdflatex 0 errors: "Ann Able", "Zebra University, [image] https://example.org/x" on one line
+% engines: rust int157a2 = the image kept in the affiliation, 0 warnings; IMG1 = the same XML, 1 warning ("holds no place
+%          for 1 picture(s) ... they are lost": the check read the affiliation's source span, narrower than the entry it
+%          writes)
+% expect:  0 errors, 0 warnings; Ann Able, one affiliation "Zebra University, [image] https://example.org/x" holding the
+%          image and the link (the check reads each item's written span, `resolver::words::entry_span_in`)
+% status:  RED (IMG1: a false loss Warning) -> GREEN (IMG1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}\usepackage{url}\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Zebra University, \includegraphics[width=0.3cm]{example-image} \url{https://example.org/x}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

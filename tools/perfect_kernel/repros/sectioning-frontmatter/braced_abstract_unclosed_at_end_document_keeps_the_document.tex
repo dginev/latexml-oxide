@@ -1,0 +1,14 @@
+% An unbalanced `\abstract{` left open at `\end{document}` ends there and keeps its text (sect02.rs
+% `\lx@end@open@frontmatter`; its open group reported, as pdflatex reports the group open at the end).
+% witness: the silent-loss inventory (agent_reports/2026-10-18_silent_loss_inventory.md #1)
+% oracle:  pdflatex 0 errors ("\end occurred inside a group at level 1"): "Abstract / Abstract only text. / More abstract text."
+% engines: rust 67int26 = 0 errors, 2 warnings, an empty <document/>
+% expect:  0 errors, 1 warning (the open group); one ltx:abstract holding both paragraphs
+% status:  RED (67int26) -> GREEN (int26)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\abstract{Abstract only text.
+
+More abstract text.
+\end{document}

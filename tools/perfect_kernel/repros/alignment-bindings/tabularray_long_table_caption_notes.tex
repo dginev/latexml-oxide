@@ -1,0 +1,55 @@
+% A long or tall tabularray table prints its outer spec's caption, notes and remarks (tabularray.sty:
+% 6384-6474, templates :5895-6240): the label entry steps the table counter, labels it and lists it
+% (`entry=` the short form); `label=none` drops all three and the caption's tag; a theme that
+% empties the head (`\SetTblrTemplate{head}{empty}`) prints no caption but still steps the counter; a
+% talltblr in a `table` float captions that float; a plain `tblr` has no caption. The long and tall
+% environments are long and tall by their outer defaults (\SetTblrOuter, :3472-3477). 57cp review: a
+% table in a box stays there, its caption and notes with it (a float opened in the \fbox left it
+% empty); an empty caption-tag prints the caption text alone; a note's `#` is text, not a parameter.
+% witness: 57cp (rc132 tabularray root-cause): 16 captions, notes and remarks lost in the manuals
+%   (tabularray, easybook, simplebnf, tabularray-abnt, csvsimple-l3). Guard:
+%   perfect_kernel_batch57::tabularray_long_table_caption_notes.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors: "Table 1: Cap A", a First note., Source: Somewhere, "Untagged",
+%          "Table 3: Tall in float", "See Table 1", "Table 3", a framed "Table 4: Boxed" with its note,
+%          "Untagged too" without a tag, a note ending "x.org/#1x".
+% engines: rust 57co2: the outer spec was ignored — no caption, note or remark text, \ref to ??.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{url,tabularray}
+\NewTblrTheme{naked}{\DefTblrTemplate{head}{empty}{}\SetTblrTemplate{head}{empty}}
+\begin{document}
+See Table~\ref{tab:a}.
+\begin{longtblr}[caption={Cap A}, entry={Short A}, label={tab:a}, note{a}={First note.},
+  remark{Source}={Somewhere}]{colspec={XX}}
+ Alpha & Beta\TblrNote{a} \\
+\end{longtblr}
+\begin{longtblr}[label=none,caption={}]{colspec={ll}}
+ Plain & One \\
+\end{longtblr}
+\begin{longtblr}[label=none,caption={Untagged}]{colspec={ll}}
+ Plain & Two \\
+\end{longtblr}
+\begin{longtblr}[theme=naked]{colspec={ll}}
+ Naked & Three \\
+\end{longtblr}
+\begin{table}
+\centering
+\begin{talltblr}[caption={Tall in float}, label={tab:t}]{colspec={ll}}
+ Tall & Four \\
+\end{talltblr}
+\end{table}
+\begin{tblr}[caption={Ignored}]{colspec={ll}}
+ Short & Five \\
+\end{tblr}
+Table~\ref{tab:t}.
+
+\fbox{\begin{talltblr}[caption={Boxed}, note{b}={Boxed note.}]{colspec={ll}}
+ Box & Six \\
+\end{talltblr}}
+
+{\SetTblrTemplate{caption-tag}{empty}\SetTblrTemplate{caption-sep}{empty}%
+\begin{longtblr}[caption={Untagged too}, note{c}={At \url{http://x.org/#1x}}]{colspec={ll}}
+ Hash & Seven \\
+\end{longtblr}}
+\end{document}

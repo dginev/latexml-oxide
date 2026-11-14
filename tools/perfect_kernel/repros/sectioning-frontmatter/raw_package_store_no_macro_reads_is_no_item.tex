@@ -1,0 +1,25 @@
+% A raw package's table setters store their own `\@keywords` and `\@received`, which no macro reads: pdflatex prints
+% neither. K11 still reroutes them (frontmatter_stores.rs `ClassReaders::read_where_nothing_runs` takes a store no
+% macro reads as one printed by code the file ran as it was read, astlb.cls:361-372's `\@shorttitle` set by a running
+% head at its top level, 1202.2889), so the keywords and the date are invented items.
+% witness: none (synthetic, review rev95d-r2 finding 2, probe qn; a static scan of the 712-paper package population found
+%          no real paper)
+% oracle:  pdflatex 0 errors: "T", "A. Author", today's date, "Body text."; no keywords, no received date
+% engines: rust 95d-r2, 95d-r3 = 0 errors, <ltx:date role="received">1 May 2021</ltx:date> and
+%          <ltx:keywords name="Keywords: ">alpha, beta</ltx:keywords>
+% expect:  0 errors, 0 warnings; no <ltx:keywords>, no <ltx:date role="received">
+% status:  RED (95d-r2, 95d-r3): a store no macro reads is rerouted
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{deadstores.sty}
+\def\keywords#1{\gdef\@keywords{#1}}
+\def\received#1{\gdef\@received{#1}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{deadstores}
+\begin{document}
+\title{T}\author{A. Author}
+\keywords{alpha, beta}
+\received{1 May 2021}
+\maketitle
+Body text.
+\end{document}

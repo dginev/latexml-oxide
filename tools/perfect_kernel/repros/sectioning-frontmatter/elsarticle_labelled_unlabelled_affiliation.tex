@@ -1,0 +1,16 @@
+% witness: 2609.07780: labelled elsarticle authors and an unlabelled `\affiliation{corresponding author={…}}` after them
+% oracle:  pdflatex 0 errors: "Ann Able a, Bob Baker a" over "a Univ A" and the unmarked line "Corresponding: Ann Able"
+% engines: rust 63y2 (`annotate=new` regardless of labels) = the unlabelled line on both authors
+% expect:  0 errors; the labelled affiliation on both, the unlabelled line the last author's only (as Perl places it)
+% status:  RED (63y2) -> GREEN (63y)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[a]{Ann Able}
+\author[a]{Bob Baker}
+\affiliation[a]{organization={Univ A}}
+\affiliation{organization={Corresponding: Ann Able}}
+\end{frontmatter}
+Text.
+\end{document}

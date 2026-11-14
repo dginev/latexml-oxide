@@ -10,16 +10,40 @@
 
 use std::path::Path;
 
+use latexml_core::common::xml::compiled_xpath;
 use libxml::{
   parser::Parser as XmlParser,
   tree::{Document, Namespace, Node, NodeType},
-  xpath::Context as XPathContext,
+  xpath::{Context as XPathContext, Expression, XPathError},
 };
-use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::radix::radix_alpha;
+
+/// libxml2's `XML_ERR_NO_MEMORY` (`xmlParserErrors`).
+const XML_ERR_NO_MEMORY: i32 = 2;
+
+/// Whether an XPath evaluation failed because libxml2 could not allocate: `XML_ERR_NO_MEMORY` with no message, where a
+/// malformed expression always carries one ("Invalid expression", code 1207). It is glibc's malloc spent in a reused
+/// cortex child whose Rust heap still serves (libxml2 2.9.14 and 2.15 alike; 68m step 1,
+/// `scratch_356a0c47/68m_step1/RESULTS.md`).
+fn is_libxml_oom(e: &XPathError) -> bool { e.message.is_none() && e.code == XML_ERR_NO_MEMORY }
+
+/// An XPath evaluation libxml2 could not allocate for ([`is_libxml_oom`]) is the process's allocation failure, not a
+/// failure of this node's lookup: it ends through the binary's allocation-failure hook — one `Fatal:oom`, the child
+/// recycled and the paper retried (ruling 2026-10-15) — where an Error per node ran on to `TooManyErrors` (runs
+/// 362/363: 87-501 per paper; 1008.4986, 1712.03782, 1910.13564, 2101.04438, 2208.07188, 2305.17269, 2401.10096,
+/// 2609.06115). The context line goes out allocation-free before the hook's own.
+fn end_on_libxml_oom(xpath: &str, e: &XPathError) {
+  if is_libxml_oom(e) {
+    latexml_core::watchdog::write_stderr_unlocked(format_args!(
+      "Warning:post:xpath libxml2 could not allocate evaluating `{xpath}` (XML_ERR_NO_MEMORY): ending as an \
+       allocation failure\n"
+    ));
+    std::alloc::handle_alloc_error(std::alloc::Layout::new::<u8>());
+  }
+}
 
 const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 
@@ -434,6 +458,10 @@ pub struct PostDocument {
   /// children, which is what `//ltx:navigation/ltx:ref` selects given the single
   /// navigation element Perl's own `findnode` assumes.
   nav_memo:                    Option<NavigationMemo>,
+  /// Each XPath expression compiled once, for every evaluation of this document's queries — compiled expressions
+  /// hold no context, so the per-call contexts share them (`latexml_core::common::xml::compiled_xpath`;
+  /// docs/performance/PERFORMANCE.md P10).
+  compiled_xpath:              std::cell::RefCell<HashMap<Box<str>, Expression>>,
 }
 
 /// Memoized navigation state for one document — see [`PostDocument::nav_memo`].
@@ -545,6 +573,7 @@ impl PostDocument {
       nocache: options.nocache,
       pending_xmath_unlinks: Vec::new(),
       nav_memo: None,
+      compiled_xpath: std::cell::RefCell::default(),
     }
   }
 
@@ -581,7 +610,10 @@ impl PostDocument {
     }
 
     // Extract search paths from PIs
-    let sp_re = Regex::new(r#"^\s*searchpaths\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
+    static SP_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+      regex::Regex::new(r#"^\s*searchpaths\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap()
+    });
+    let sp_re = &*SP_RE;
     let mut paths = self.searchpaths.clone();
     for pi_text in &self.processing_instructions {
       if let Some(cap) = sp_re.captures(pi_text) {
@@ -719,11 +751,16 @@ impl PostDocument {
     // Copy processing instructions (Perl Post.pm L766-767).
     // ABSOLUTE `//…`: `findnodes` with no context node can't evaluate a relative
     // axis (see `findnodes_at`) — a `.//processing-instruction(...)` here matched
-    // nothing and split children lost the `<?latexml …?>` PIs (#341).
-    for mut pi in self.findnodes("//processing-instruction('latexml')") {
-      if let Ok(mut pi_clone) = subdoc.document.import_node(&mut pi) {
-        if let Some(mut doc_node) = subdoc.document.get_root_element() {
-          doc_node.add_prev_sibling(&mut pi_clone).ok();
+    // nothing and split children lost the `<?latexml …?>` PIs (#341). Made afresh, not
+    // `import_node`d: that refuses a linked node, so every page lost them again (#795).
+    // Before the root, as on the main page; Perl appends them after it (`appendChild`).
+    if let Some(mut root) = subdoc.document.get_root_element() {
+      for pi in self.findnodes("//processing-instruction('latexml')") {
+        if let Ok(mut copy) = subdoc
+          .document
+          .create_processing_instruction(&pi.get_name(), &pi.get_content())
+        {
+          root.add_prev_sibling(&mut copy).ok();
         }
       }
     }
@@ -922,32 +959,45 @@ impl PostDocument {
       return out;
     }
 
-    let result = if let Some(node) = context_node {
-      ctx.node_evaluate_checked(xpath, node)
-    } else {
-      // Perl `$doc->findnodes($xpath)` (no ref node) evaluates from the DOCUMENT
-      // NODE, so RELATIVE location paths (`descendant::…`, `.//…`, `child::…`)
-      // resolve against the whole tree. rust-libxml's bare `evaluate_checked`
-      // leaves the XPath context node UNSET, so relative axes silently matched
-      // NOTHING (only absolute `//…`/`/…` worked) — which broke, among others,
-      // `new_document`'s split-page resource/PI copy (#341), `Split`'s
-      // `descendant::ltx:navigation`, and CrossRef's `descendant::ltx:glossaryref`.
-      // We cannot bind the document node itself: rust-libxml's `node_evaluate`
-      // SIGSEGVs on a document-node context (an unguarded FFI path in the fork).
-      // The root ELEMENT is a safe context and makes relative axes resolve for
-      // everything inside the tree. NOTE: nodes OUTSIDE the root element — i.e.
-      // `<?latexml …?>` PIs that precede it — are not descendants of the root, so
-      // a relative PI query still needs the absolute `//processing-instruction()`
-      // form; absolute paths are unaffected by the context node either way.
-      match self.document.get_root_element() {
-        Some(root) => ctx.node_evaluate_checked(xpath, &root),
-        None => ctx.evaluate_checked(xpath),
+    // (the borrow of the compiled table ends with the evaluation, before any diagnostic below)
+    let result = {
+      let mut compiled = self.compiled_xpath.borrow_mut();
+      let expression = compiled_xpath(&mut compiled, xpath);
+      let at_node = |node: &Node| match expression {
+        Some(expression) => ctx.node_evaluate_compiled(expression, node),
+        None => ctx.node_evaluate_checked(xpath, node),
+      };
+      if let Some(node) = context_node {
+        at_node(node)
+      } else {
+        // Perl `$doc->findnodes($xpath)` (no ref node) evaluates from the DOCUMENT
+        // NODE, so RELATIVE location paths (`descendant::…`, `.//…`, `child::…`)
+        // resolve against the whole tree. rust-libxml's bare `evaluate_checked`
+        // leaves the XPath context node UNSET, so relative axes silently matched
+        // NOTHING (only absolute `//…`/`/…` worked) — which broke, among others,
+        // `new_document`'s split-page resource/PI copy (#341), `Split`'s
+        // `descendant::ltx:navigation`, and CrossRef's `descendant::ltx:glossaryref`.
+        // We cannot bind the document node itself: rust-libxml's `node_evaluate`
+        // SIGSEGVs on a document-node context (an unguarded FFI path in the fork).
+        // The root ELEMENT is a safe context and makes relative axes resolve for
+        // everything inside the tree. NOTE: nodes OUTSIDE the root element — i.e.
+        // `<?latexml …?>` PIs that precede it — are not descendants of the root, so
+        // a relative PI query still needs the absolute `//processing-instruction()`
+        // form; absolute paths are unaffected by the context node either way.
+        match self.document.get_root_element() {
+          Some(root) => at_node(&root),
+          None => match expression {
+            Some(expression) => ctx.evaluate_compiled(expression),
+            None => ctx.evaluate_checked(xpath),
+          },
+        }
       }
     };
 
     match result {
       Ok(obj) => obj.get_nodes_as_vec(),
       Err(e) => {
+        end_on_libxml_oom(xpath, &e);
         // NOT a warning, and NOT "no matches": an evaluation that could not be
         // answered is a failure to know, and downstream passes that treat it as
         // an empty set silently drop content (CLAUDE.md: fail toward flagging
@@ -1005,155 +1055,42 @@ impl PostDocument {
     for (prefix, uri) in &self.namespaces {
       let _ = ctx.register_namespace(prefix, uri);
     }
-    ctx.evaluate(xpath).ok().map(|obj| obj.to_string())
+    let mut compiled = self.compiled_xpath.borrow_mut();
+    match compiled_xpath(&mut compiled, xpath) {
+      Some(expression) => ctx.evaluate_compiled(expression).ok(),
+      None => ctx.evaluate(xpath).ok(),
+    }
+    .map(|obj| obj.to_string())
   }
 
-  /// XPath query on an arbitrary node, even if from a different document.
-  /// Creates a temporary XPath context on the node's own document.
+  /// XPath query relative to a node of any document — Perl's
+  /// `$XPATH->findnodes($path, $node)` (Post.pm:1019-1021), with the `ltx`
+  /// prefix bound. Like [`Self::findnodes_at`], it evaluates in the node's own
+  /// document (a bibentry of a loaded `.bib.xml`), so every XPath form
+  /// applies, including MakeBibliography's
+  /// `ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]` fields
+  /// (MakeBibliography.pm:732) and `.//ltx:ERROR[@class='sort']`. An
+  /// evaluation that fails is an Error, not an empty match.
   pub fn findnodes_foreign(xpath: &str, node: &Node) -> Vec<Node> {
-    // Navigate up to find the document root, then create context
-    let mut current = node.clone();
-    while let Some(parent) = current.get_parent() {
-      current = parent;
+    let ctx = match XPathContext::from_node(node) {
+      Ok(c) => c,
+      Err(_) => return vec![],
+    };
+    let _ = ctx.register_namespace("ltx", LTX_NSURI);
+    match ctx.node_evaluate_checked(xpath, node) {
+      Ok(obj) => obj.get_nodes_as_vec(),
+      Err(e) => {
+        end_on_libxml_oom(xpath, &e);
+        Error!(
+          "post",
+          "xpath",
+          "XPath evaluation failed for `{}`: {} — results are INCOMPLETE for this pass",
+          xpath,
+          e
+        );
+        vec![]
+      },
     }
-    // current is the document root (or the node itself if detached)
-    // Get the document for this node tree
-    if let Some(doc) = current.get_parent() {
-      // Has a parent = we're at root element, doc is parent
-      let _ = doc; // can't use this easily
-    }
-    // Fallback: use libxml's node_evaluate with a fresh context
-    // We need to use the internal document. libxml2 nodes know their document.
-    #[allow(unused_imports)]
-    use libxml::xpath::Context as XPathContext;
-    // Create context from the document that owns this node
-    // node._node_ptr -> xmlNodePtr -> doc field
-    // Unfortunately, libxml2-rs doesn't expose a way to get the document from a node.
-    // Workaround: build a new document wrapping this subtree.
-    // Simpler workaround: just traverse children manually for common patterns.
-    Self::findnodes_by_traversal(xpath, node)
-  }
-
-  /// Manual node traversal for common XPath patterns used in bibliography formatting.
-  /// Handles: "ltx:bib-name[@role='author']", "ltx:bib-title", "ltx:bib-date[@role='publication']",
-  /// "ltx:bib-related/ltx:bib-title", "ltx:bib-part[@role='volume']", etc.
-  fn findnodes_by_traversal(xpath: &str, parent: &Node) -> Vec<Node> {
-    let xpath = xpath.trim_start_matches('!').trim();
-    let mut results = Vec::new();
-
-    // Parse simple patterns: "ltx:elem" or "ltx:elem[@attr='val']" or "ltx:elem/ltx:child".
-    // Split on '/' only at bracket depth 0, so a '/' inside a predicate (e.g. the
-    // `../` in `[not(../ltx:bib-related[@bibrefs])]`) does not fragment the step.
-    let parts: Vec<&str> = split_steps(xpath);
-    if parts.is_empty() {
-      return results;
-    }
-
-    // Split a path into steps on '/' at bracket depth 0.
-    fn split_steps(xpath: &str) -> Vec<&str> {
-      let mut steps = Vec::new();
-      let mut depth = 0i32;
-      let mut start = 0;
-      for (i, b) in xpath.bytes().enumerate() {
-        match b {
-          b'[' => depth += 1,
-          b']' => depth -= 1,
-          b'/' if depth == 0 => {
-            steps.push(&xpath[start..i]);
-            start = i + 1;
-          },
-          _ => {},
-        }
-      }
-      steps.push(&xpath[start..]);
-      steps
-    }
-
-    // Extract the top-level `[...]` predicate bodies from a step, respecting
-    // nested brackets: `[@type][not(../ltx:bib-related[@bibrefs])]`
-    // → ["@type", "not(../ltx:bib-related[@bibrefs])"].
-    fn extract_predicates(s: &str) -> Vec<&str> {
-      let mut preds = Vec::new();
-      let mut depth = 0i32;
-      let mut start = 0;
-      for (i, b) in s.bytes().enumerate() {
-        match b {
-          b'[' => {
-            if depth == 0 {
-              start = i + 1;
-            }
-            depth += 1;
-          },
-          b']' => {
-            depth -= 1;
-            if depth == 0 {
-              preds.push(&s[start..i]);
-            }
-          },
-          _ => {},
-        }
-      }
-      preds
-    }
-
-    fn match_element(node: &Node, pattern: &str) -> bool {
-      let pattern = pattern.trim().trim_start_matches("ltx:");
-      let bracket_pos = match pattern.find('[') {
-        None => return node.get_name() == pattern,
-        Some(p) => p,
-      };
-      let elem_name = &pattern[..bracket_pos];
-      if node.get_name() != elem_name {
-        return false;
-      }
-      // Every top-level predicate must hold. Supported forms: `@attr` (the
-      // attribute must exist) and `@attr='value'` (equality). Function
-      // predicates such as `not(../ltx:bib-related[@bibrefs])` are beyond this
-      // lightweight matcher and are treated as satisfied (best-effort).
-      for pred in extract_predicates(&pattern[bracket_pos..]) {
-        let pred = pred.trim();
-        if pred.contains('(') {
-          continue;
-        }
-        if let Some(attr) = pred.strip_prefix('@') {
-          if let Some(eq) = attr.find('=') {
-            let name = attr[..eq].trim();
-            let val = attr[eq + 1..].trim().trim_matches('\'').trim_matches('"');
-            if node.get_attribute(name).as_deref() != Some(val) {
-              return false;
-            }
-          } else if node.get_attribute(attr.trim()).is_none() {
-            return false;
-          }
-        }
-      }
-      true
-    }
-
-    fn collect_matching(node: &Node, parts: &[&str], results: &mut Vec<Node>) {
-      if parts.is_empty() {
-        return;
-      }
-      let pattern = parts[0];
-      // Handle "A | B" alternatives
-      let alternatives: Vec<&str> = pattern.split('|').map(|s| s.trim()).collect();
-      let mut child = node.get_first_child();
-      while let Some(c) = child {
-        for alt in &alternatives {
-          if match_element(&c, alt) {
-            if parts.len() == 1 {
-              results.push(c.clone());
-            } else {
-              collect_matching(&c, &parts[1..], results);
-            }
-          }
-        }
-        child = c.get_next_sibling();
-      }
-    }
-
-    collect_matching(parent, &parts, &mut results);
-    results
   }
 
   // ======================================================================
@@ -1268,6 +1205,15 @@ impl PostDocument {
     self.idcache.insert(id.to_string(), node);
     self.idcache_reserve.remove(id);
     self.idcache_reusable.remove(id);
+  }
+
+  /// Take `node`'s `xml:id` off it and out of the idcache, freeing the id for
+  /// another element. Returns the id it had.
+  pub fn release_id(&mut self, node: &mut Node) -> Option<String> {
+    let id = get_xml_id(node)?;
+    self.idcache.remove(&id);
+    let _ = node.remove_attribute_ns("id", "http://www.w3.org/XML/1998/namespace");
+    Some(id)
   }
 
   /// Find a node by its xml:id.
@@ -1588,13 +1534,30 @@ impl PostDocument {
         };
 
         // Copy the remaining attributes verbatim; the xml:id and fragid are set
-        // explicitly (above/below) from their remapped values.
-        for (key, value) in &source.get_properties() {
+        // explicitly (above/below) from their remapped values. In KEY ORDER:
+        // `get_properties` hands back a HashMap, and libxml appends each
+        // `set_attribute` at the end, so iterating it serialized a cloned
+        // `.bib` field's `<ref class= href= font=>` in a different order on
+        // every run (all six permutations seen). Perl's `Post.pm:1259`
+        // `cloneNode(1)` keeps the source DOM order, which the core builder had
+        // emitted sorted (`open_element_at`), so sorted = Perl's order.
+        let mut props: Vec<(String, String)> = source.get_properties().into_iter().collect();
+        props.sort();
+        for (key, value) in &props {
           if key.starts_with('_') || key == "fragid" {
             continue;
           }
           let is_xmlid = key == "xml:id" || (key == "id" && src_xmlid.as_deref() == Some(value));
           if is_xmlid {
+            continue;
+          }
+          // `get_properties` names an `xml:` attribute bare: the copy of a `\foreignlanguage` title in a TOC entry
+          // came out `lang="de"`, which the schema refuses (63k review).
+          if source
+            .get_attribute_ns(key, latexml_core::common::xml::XML_NS)
+            .is_some()
+          {
+            new_node.set_attribute(&format!("xml:{key}"), value).ok();
             continue;
           }
           new_node.set_attribute(key, value).ok();
@@ -1763,6 +1726,19 @@ impl PostDocument {
         parent.add_child(&mut s).ok();
       }
     }
+  }
+
+  /// Replace `node` by its children, which keep their ids (moved, not copied), and remove it as [`remove_nodes`]
+  /// does.
+  ///
+  /// [`remove_nodes`]: Self::remove_nodes
+  pub fn unwrap_node(&mut self, node: &Node) {
+    let mut wrapper = node.clone();
+    for mut child in wrapper.get_child_nodes() {
+      child.unlink_node();
+      wrapper.add_prev_sibling(&mut child).ok();
+    }
+    self.remove_nodes(&[wrapper]);
   }
 
   /// Prepend `nodes` as the first children of `parent`.
@@ -2183,7 +2159,10 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::validate`.
   pub fn validate(&self) -> Result<(), String> {
-    let rng_re = Regex::new(r#"^\s*RelaxNGSchema\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
+    static RNG_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+      regex::Regex::new(r#"^\s*RelaxNGSchema\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap()
+    });
+    let rng_re = &*RNG_RE;
     for pi_text in &self.processing_instructions {
       if let Some(cap) = rng_re.captures(pi_text) {
         let schema = &cap[1];
@@ -2224,12 +2203,15 @@ impl PostDocument {
       }
     }
 
+    // The cached ids the document lacks, sorted: Perl Post.pm:1006-1014 lists them in hash `keys` order, random
+    // from run to run (det354 C4).
     let mut missing = Vec::new();
     for id in self.idcache.keys() {
       if !doc_ids.contains_key(id) {
         missing.push(id.clone());
       }
     }
+    missing.sort_unstable();
 
     if !dups.is_empty() {
       Warn!(
@@ -2643,6 +2625,30 @@ mod tests {
     assert_eq!(sections.len(), 2);
   }
 
+  /// SYNC row XP: a detail-less `XML_ERR_NO_MEMORY` is libxml2's allocation failure; a failure with a message (a
+  /// malformed expression) or another code is not.
+  #[test]
+  fn libxml_oom_is_told_from_an_xpath_error() {
+    let oom = XPathError {
+      message: None,
+      code:    2,
+      domain:  12,
+    };
+    let syntax = XPathError {
+      message: Some("Invalid expression".into()),
+      code:    1207,
+      domain:  12,
+    };
+    let unknown = XPathError {
+      message: None,
+      code:    0,
+      domain:  0,
+    };
+    assert!(is_libxml_oom(&oom));
+    assert!(!is_libxml_oom(&syntax));
+    assert!(!is_libxml_oom(&unknown));
+  }
+
   /// `findnodes` with no context node must resolve RELATIVE location paths
   /// (`descendant::…`, `.//…`) against the tree — matching XML::LibXML's
   /// `$doc->findnodes` (which evaluates from the document node) — not silently
@@ -2749,6 +2755,29 @@ mod tests {
       );
     }
     assert!(doc.find_node_by_id("nope").is_none());
+  }
+
+  /// #795: every split page carries the parent's `<?latexml …?>` PIs (Perl Post.pm L766-767),
+  /// before its root, as the main page does, so a custom XSLT sees them on each page.
+  #[test]
+  fn split_pages_carry_the_document_pis() {
+    let doc = make_test_doc(
+      "<?latexml class=\"article\"?><?latexml RelaxNGSchema=\"LaTeXML\"?>\
+       <document xmlns='http://dlmf.nist.gov/LaTeXML'><section xml:id='S1'/><section xml:id='S2'/></document>",
+    );
+    for id in ["S1", "S2"] {
+      let page = doc.new_document(
+        doc.find_node_by_id(id).unwrap().clone(),
+        &format!("{id}.html"),
+      );
+      let xml = page.to_xml_string();
+      assert!(
+        xml.contains(
+          "<?latexml class=\"article\"?>\n<?latexml RelaxNGSchema=\"LaTeXML\"?>\n<section"
+        ),
+        "{xml}"
+      );
+    }
   }
 
   /// A document-level `<?latexml searchpaths=…?>` PI (a sibling of the root

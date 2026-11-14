@@ -277,9 +277,14 @@ fn author_written_group_around_usepackage_still_loses_the_package() {
     "tests/cluster_regressions/subimport/index_author_group_in_child.tex",
   );
   assert!(
-    log_in_child.contains("iflx@demo@flag"),
+    log_in_child.contains("Error:undefined:\\iflx@demo@flag"),
     "#311: an author's group nested inside a subfile preamble must keep real \
      LaTeX's verdict — the package is lost, as in pdflatex and Perl:\n{log_in_child}"
+  );
+  assert_eq!(
+    latexml::util::test::error_count(&log_in_child),
+    1,
+    "{log_in_child}"
   );
 
   let log = convert_log("tests/cluster_regressions/subimport/index_author_group.tex");
@@ -288,6 +293,8 @@ fn author_written_group_around_usepackage_still_loses_the_package() {
     "#311: the hoist must not reach a group the author wrote — Perl and \
      pdflatex both leave \\theoremstyle undefined here:\n{log}"
   );
+  assert_eq!(latexml::util::test::error_count(&log), 1, "{log}");
+  assert!(!log.contains("Fatal:"), "{log}");
 }
 /// KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take a directory AND
 /// a file name, but Perl's prototypes declare only one argument while their

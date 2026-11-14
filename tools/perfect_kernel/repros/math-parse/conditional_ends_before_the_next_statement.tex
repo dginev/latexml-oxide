@@ -1,0 +1,23 @@
+% witness: 2605.05396 S3.E13X.m1 `y_{i}|\theta_{i}\sim\text{Poisson}(\theta_{i}),\ i=1,\cdots,n`, 2605.13128 S3.Ex7,
+%          2605.19519 S4.E22, 2605.03152 S2.E4 (57bv A/B rescued classifier)
+% oracle:  pdflatex 0 errors; Perl `formulae@(conditional@(y _ i, theta _ i) similar-to P, i = list@(1, ldots, n))`
+%          (its conditional is a factor continuation, `Factor evalAtOp ExpressionsNoBars`, MathGrammar:258-268, so
+%          `\sim` ends the condition)
+% engines: rust 57bv: conditional@(y _ i, formulae@(theta _ i similar-to P, i = list@(1, ldots, n))) — the
+%          statement-level bar (`statement vertbar statements`, builder.rs) took the whole list; 57bv.1 refuses a
+%          condition that is a list of statements (two relations then an index range, or a `\quad`), so these are
+%          ltx_math_unparsed again, as before 57bv (an elided run of relations `X_n=i,\ldots,X_0=i_0` and one
+%          relation's range `\sum_{j|j=1,\ldots,n}` stay conditions)
+% cause:   the bare `a|b` conditional is no factor-level continuation a relation can extend (builder.rs: "the bare
+%          a|b conditional isn't an `expression`")
+% expect:  0 errors; Perl's reading (the second row `list@(conditional@(pi _ i, alpha) similar-to Cat@(alpha), i = 1, 2)`:
+%          `i=1,2` is a plain list, #37 keeps it as items); `P(A|B=b,C=c)` stays a condition; one `ambiguous_math`
+%          warning on the second and third rows (14 and 11 raw trees: the statement-level bar enumerates its refused
+%          condition spans; residual in SYNC_STATUS "Enumeration residuals")
+% status:  RED -> GREEN (57cc: the factor-level `conditional_head`/`conditional_formula`, an event stays in the
+%          condition, any other relation relates the conditional, `is_event_relation`, builder.rs/semantics.rs; guard
+%          perfect_kernel_batch57::conditional_ends_before_the_next_statement; divergence #377)
+\documentclass{article}
+\begin{document}
+$y_i|\theta_i\sim P,\quad i=1,\ldots,n$ $\pi_i\mid\alpha\sim\mathrm{Cat}(\alpha),\quad i=1,2$ $y_i|\theta_i\sim P,\ i=1,\ldots,n$
+\end{document}

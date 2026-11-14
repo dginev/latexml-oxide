@@ -1,0 +1,28 @@
+% witness: 1811.02197 (aa.cls v9.1, three `\longtab{\begin{landscape}…\begin{longtable}…\caption{\label{table2} …}}`
+%          tables lost, their \refs dangling)
+% oracle:  aa.cls v9.1 (2016) :1280-1286 `\newcommand\longtab[2][]{… \aalongfloat …{#2}}`: `[opt]{body}`, the body set
+%          at the document's end; older aa.cls `\longtab{N}{body}`, the first argument the table's number
+% engines: rust int100c = aa_support_sty.rs `\longtab` gobbled its first argument, the v9.1 body: the table and its
+%          label lost (Perl's `\longtab{}` alike)
+% expect:  0 errors, 0 warnings; both tables kept with their labels (tab:new, tab:old) and cells a b c d
+% status:  RED (int100c) -> GREEN (80l: a digits-only first argument is the number, any other the body)
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{longtable}
+\begin{document}
+\title{T}\author{A}\institute{I}
+\maketitle
+See Tables~\ref{tab:new} and~\ref{tab:old}.
+\longtab{
+\begin{longtable}{ll}
+\caption{\label{tab:new} New form}\\
+a & b \\
+\end{longtable}
+}
+\longtab{2}{
+\begin{longtable}{ll}
+\caption{\label{tab:old} Old form}\\
+c & d \\
+\end{longtable}
+}
+\end{document}

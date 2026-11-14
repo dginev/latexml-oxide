@@ -1,0 +1,20 @@
+% An abstract given after \maketitle follows the title-page lines printed between them: a centred
+% affiliation and a \noindent keywords line are its cover (<titlepage>), and the abstract comes after it,
+% in print order (OXIDIZED_DESIGN_DIVERGENCES #903). Hand-typeset shape of 1302.5352, 1702.07128,
+% 2309.14687. Guard: perfect_kernel_batch86g::late_abstract_follows_the_hand_typeset_cover.
+% oracle:  pdflatex 0 errors: "Repro Title / Ann Author / Department of Repro, University of Witness /
+%          Keywords: order, print / Abstract / Abstract words here. / 1 Intro".
+%          perl: title, creator, date, abstract, para (affiliation), para (keywords), section (SHARED order).
+% engines: rust 86a: title, creator, abstract, para, para, section. 86g: title, creator,
+%          titlepage[block, block], abstract, section.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\title{Repro Title}\author{Ann Author}\date{}
+\begin{document}
+\maketitle
+\begin{center}Department of Repro, University of Witness\end{center}
+\noindent\textbf{Keywords:} order, print
+
+\begin{abstract}Abstract words here.\end{abstract}
+\section{Intro}Body text.
+\end{document}

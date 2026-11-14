@@ -1,0 +1,15 @@
+% mechanism: a macro-held `\and` (`\newcommand\sep{\and}`) at interact_cls.rs `\author`: an `\and` in a `\name` prints the class word "and " (interact.cls:266): found by the separator query (Option C P2-5, `and_by_meaning`)
+% witness: P2P plan step P2-5 (no census paper holds a macro-held or `\let` separator)
+% oracle:  pdflatex with 1603.08785's interact.cls (TL 2025, -no-shell-escape): "Ann Able and Bob Baker" over "Univ A" (1 `!` line on every row, the literal one too: the copy's, not the shape's)
+% engines: perl not run; int158a: RED (the spelling missed it), see the guard's doc for its output
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ A)
+% status:  RED on int158a, GREEN on P25 (guard perfect_kernel_batchp25)
+% preload: ar5iv.sty
+\documentclass{interact}
+\newcommand\sep{\and}
+\title{T}
+\author{\name{Ann Able \sep Bob Baker}\affil{Univ A}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

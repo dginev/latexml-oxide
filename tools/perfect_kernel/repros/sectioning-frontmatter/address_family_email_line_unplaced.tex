@@ -1,0 +1,16 @@
+% An "Email:" line under a marked `\affil` entry whose addresses fit no order (shape E; ruling E, main session
+% 2026-11-02): the spelled one its author's, the others once at the block, none left in the entry.
+% witness: astro-ph0512555
+% oracle:  pdflatex 0 errors: "$^1$Univ A, Town; Email: aable@a.edu", "$^2$Univ B, City;", "Email: zbb@b.edu, ccole@b.edu, ddq@b.edu"
+% engines: rust int127a = 0 errors; the e-mail line welded into entry 2 on all four; perl = one welded affiliation
+% expect:  0 errors, 0 warnings; Univ B, City on all four; aable@ on Ann, ccole@ on Cat; zbb@ and ddq@ once at the block
+% status:  RED (int127a) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$, Bob Baker$^{2}$, Cat Cole$^{2}$, Dan Dee$^{2}$}
+\affil{$^1$Univ A, Town; Email: aable@a.edu \\ $^2$Univ B, City; \\ Email: zbb@b.edu, ccole@b.edu, ddq@b.edu}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: a legend line labelled by a range is read as no one's (OD #928 round 7, Known residual): `$^{1-3}$Univ X`
+%   under three marked names stays the block's affiliation — 93a and 94a r1-r7 alike, no content lost (the text kept
+%   on a nameless creator). The fix would read a range label as the marks it spans (`repart::item_labels` spells
+%   ranges out for an item's labels already; the reading's label keys do not).
+% witness: review rev94a r6 l/l13_range (g10_range of r5)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2, Cid Cole3 / 1-3Univ X"
+% engines: rust 93a, 94a r6, 94a r7: the three names no affiliation, Univ X on a nameless creator; perl: not run
+% expect:  0 errors, 0 warnings; Univ X every name's
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cid Cole$^{3}$\\ $^{1-3}$Univ X}
+\maketitle
+Body.
+\end{document}

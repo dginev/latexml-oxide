@@ -1,0 +1,26 @@
+% mciteplus sends every citation through `\mciteCiteA` (mciteplus.sty:1020; natbib's commands :1079-1084): a key with a
+% leading `*` (`\@mciteCheckKey`, :757-762) joins the previous entry's group, written to the aux as a `\citation`
+% (:764), so bibtex lists it, but left out of the citation the text prints (:567-568). The binding stubs the cite path
+% (latexml_contrib mciteplus_sty.rs), so `bibrefs="a,*b"` reached the bibliography as a key `*b`: "Missing bibkeys:
+% *b" and the entry dropped (G3 slice 4 R1: achemso-demo 89.0 %). SHARED (Perl alike, no mciteplus binding). Now every
+% key, the `*` stripped, is cited in its place for the bibliography and the citation prints the unstarred ones (two
+% groups in one citation: review 60m r1 finding 1).
+% status:  GREEN 60m; guard 06_cluster_bibliography::mciteplus_starred_keys_join_the_bibliography
+% oracle:  pdflatex + bibtex, 0 errors: "Combined [1, 3]. Later [5]." / [1] Alpha / [2] Bravo / [3] Charlie / [4] Delta /
+%          [5] Echo
+% engines: rust 60j4: "Missing bibkeys: *b, *d", Bravo and Delta dropped; 60m r1: "Combined [1, 2]"
+% expect:  0 errors; "Combined [1, 3]. Later [5]."; bibliography Alpha, Bravo, Charlie, Delta, Echo in that order
+\documentclass{article}
+\usepackage{mciteplus}
+\begin{filecontents*}[overwrite]{\jobname.bib}
+@article{a, author={Ann Alpha}, title={Head entry}, journal={J}, year={2000}}
+@article{b, author={Bob Bravo}, title={Starred tail entry}, journal={J}, year={2001}}
+@article{c, author={Cy Charlie}, title={Third entry}, journal={J}, year={2002}}
+@article{d, author={Di Delta}, title={Starred fourth entry}, journal={J}, year={2003}}
+@article{e, author={Ed Echo}, title={Later entry}, journal={J}, year={2004}}
+\end{filecontents*}
+\begin{document}
+Combined \cite{a,*b,c,*d}. Later \cite{e}.
+\bibliographystyle{unsrt}
+\bibliography{\jobname}
+\end{document}

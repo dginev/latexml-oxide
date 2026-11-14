@@ -1,0 +1,21 @@
+% witness: 2210.02246 (cmfne.cls:462-483 \renewcommand{\author}[2][] then \edef\author{\@dblarg\csname\string\author\endcsname}; \enddoc@text prints \firstshortauthor)
+% oracle:  pdflatex 0 errors: "A title / Text. / Valeriy V. Katrakhov (1949–2010)"
+% engines: rust 66c r3 = the refused \renewcommand defines no \\author, so the replayed setter is skipped and the name line is lost; perl 2026-10-13 = OmniBus (no cmfx binding), creator "[Valeriy V. Katrakhov (1949–2010)]V. V. Katrakhov", no end line
+% expect:  0 errors; the class's end-of-document line "Valeriy V. Katrakhov (1949–2010)" once, after the body
+% status:  GREEN (66d)
+\begin{filecontents*}[overwrite]{cmfx.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{cmfx}
+\LoadClass{article}
+\renewcommand{\author}[2][]{\gdef\firstshortauthor{#1}\gdef\authors{#2}}
+\edef\author{\noexpand\@dblarg\expandafter\noexpand\csname\string\author\endcsname}
+\let\firstshortauthor\@empty
+\AtEndDocument{\par\firstshortauthor\par}
+\end{filecontents*}
+\documentclass{cmfx}
+\title{A title}
+\author[Valeriy V. Katrakhov (1949--2010)]{V.~V.~Katrakhov}
+\begin{document}
+\maketitle
+Text.
+\end{document}

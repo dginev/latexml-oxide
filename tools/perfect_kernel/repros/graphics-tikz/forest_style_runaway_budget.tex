@@ -1,0 +1,19 @@
+% witness: none (review of P6: `MAX_KEY_DEPTH` bounds nesting, not total work)
+% oracle:  pdflatex FATAL "TeX capacity exceeded, sorry [input stack size=10000]" — the style
+%          invokes itself without end
+% engines: rust tip 56ir: 0 errors (styles ignored); P6 (9e77ecafe7): ~2^64 style expansions,
+%          --timeout=180 hit (exit 124)
+% expect:  1 error (Error:misdefined:a, "nests more than 64 styles deep"), finishes at once; the
+%          tree is still emitted with its node x
+% status:  GREEN
+% mechanism: a pgfkeys `.style` is the code `\pgfkeysalso{<body>}` (pgfkeys.code.tex:826), so
+%   `a/.style={a,a}` recurses twice per level. Its first branch nests without end, so the
+%   64-level nesting bound stops it after ~64 expansions, and no style expands after that in
+%   the tree (the work budget, which catches fan-out, growing values and growing styles, is
+%   not reached: see forest_style_{value_growth,fanout,append}_budget.tex).
+\documentclass{article}
+\usepackage{forest}
+\forestset{a/.style={a,a}}
+\begin{document}
+\begin{forest}[x, a]\end{forest}
+\end{document}

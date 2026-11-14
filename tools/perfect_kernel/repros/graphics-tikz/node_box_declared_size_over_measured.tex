@@ -1,0 +1,25 @@
+% mechanism: a node box's declared size (`\wd`/`\ht`/`\dp`, `\makebox[w]`) before the size measured earlier; Perl's
+%          `\ht` setter writes `cheight` too (TeX_Box.pool.ltxml:620-628, Box.pm setHeight/getSize).
+% witness: synthetic (DTL1: fit's `.5\dp` read, tikzlibraryfit.code.tex:74, once pgfmath reads `\dp`)
+% oracle:  pdflatex 0 errors; the node text boxes: 1 56.9055pt x 20pt + 0pt, 2 56.9055pt x 6.94444pt + 5pt,
+%          3 2cm wide; 4-7 unchanged (4 is sized by its content in Perl and Rust: RED catalog
+%          node_inner_box_sizes_foreignobject_red)
+% engines: perl 0 errors: foreignObjects 1 78.74x27.67, 2 78.74x16.53, 3 78.74x9.61, 4 14.61x9.61,
+%          5 78.74x34.59, 6 78.74x10.43, 7 29.98x12.3; rust int160b: 1 78.73x9.61, 2 78.73x9.61, 3 14.61x9.61 (the
+%          measured size, read first by a `\wd`/`\dp` read's memo), 4-7 as perl
+% expect:  0 errors; the seven foreignObjects as perl (rows 1, 2, 5, 6 78.73 wide: pgfmath's 2cm, a pre-existing
+%          rounding difference)
+% status:  RED -> GREEN (DTL1a, guard perfect_kernel_batch56::a_node_takes_its_boxs_declared_size)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node[draw,text width=2cm,text height=20pt] at (0,0) {ab};
+\node[draw,text width=2cm,text depth=5pt] at (3,0) {ab};
+\node[draw] at (6,0) {\makebox[2cm]{ab}};
+\node[draw,text height=20pt] at (9,0) {ab};
+\node[draw,text width=2cm,text height=20pt,text depth=5pt] at (0,3) {ab};
+\node[draw,text width=2cm,text height=1.5ex,text depth=.25ex] at (3,3) {ab};
+\node[draw] at (6,3) {plain};
+\end{tikzpicture}
+\end{document}

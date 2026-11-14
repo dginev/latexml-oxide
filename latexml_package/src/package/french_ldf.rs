@@ -41,7 +41,22 @@ LoadDefinitions!({
     \def\tablename{Table}\def\partname{partie}%
     \def\pagename{page}\def\seename{voir}%
     \def\alsoname{voir aussi}\def\proofname{D\'emonstration}}");
-  RawTeX!(r"\providecommand\datefrench{}");
+  // french.ldf:332-345: the French date — babel's `\StartBabelCommands*{french}{date}` strings
+  // (`\SetStringLoop{month#1name}`, `\SetString\today`) and `\FB@date`/`\frenchdate` (an empty
+  // stub left `\today` in English). Guard: `perfect_kernel_batch58::today_follows_the_babel_language`.
+  RawTeX!(r"\providecommand*{\FB@date}[3]{%
+    {{\number#3}\ifnum1=#3{\ier}\fi\FBdatespace
+    \csname month\romannumeral#2name\endcsname
+    \ifx#1\@empty\else\FBdatespace\number#1\fi}}
+  \providecommand*{\FBdatebox}{\hbox}
+  \providecommand*{\FBdatespace}{\space}
+  \providecommand*{\frenchdate}{\FBdatebox\FB@date}
+  \providecommand\datefrench{%
+    \def\monthiname{janvier}\def\monthiiname{février}\def\monthiiiname{mars}%
+    \def\monthivname{avril}\def\monthvname{mai}\def\monthviname{juin}%
+    \def\monthviiname{juillet}\def\monthviiiname{août}\def\monthixname{septembre}%
+    \def\monthxname{octobre}\def\monthxiname{novembre}\def\monthxiiname{décembre}%
+    \def\today{\FB@date{\year}{\month}{\day}}}");
 
   // french.ldf L1169-1175: `\ifFB@mainlanguage@FR` — true iff French (or
   // its Acadian dialect) is babel's *main* language. The real french.ldf
@@ -244,22 +259,50 @@ LoadDefinitions!({
       .and_then(|f| f.get_language().map(|l| l.as_ref() == "fr" || l.as_ref() == "fr-CA"))
       .unwrap_or(false)
   }
+  // french3.ldf:277-318: each high-punctuation shorthand starts, in horizontal mode, with
+  // `\ifdim\lastskip>1sp \unskip\penalty\@M\FBthinspace` (`\FBcolonspace` for `:`) — the space
+  // typed before the character is replaced by babel's own: the kernel's `\unskip`, a typed space
+  // being glue (KNOWN_PERL_ERRORS #436). Without it "Mid \textbf{Bold} ;" kept U+0020 before the thin
+  // space (guard `perfect_kernel_gemini::french_high_punctuation_unskips_the_space`; witness
+  // matapli/matapli-doc).
+  fn unskip_before_high_punct() {
+    if !lookup_string_from_sym(pin!("MODE")).ends_with("horizontal") {
+      return;
+    }
+    // `\lastskip>1sp`: a 0pt glue (`\hfil`, `\hspace{0pt}`) stays.
+    let last_skip = lookup_register("\\lastskip", Vec::new()).ok().flatten().map_or(0, |skip| skip.value_of());
+    if last_skip > 1 && peek_own_box().is_some_and(|item| item.get_property_bool("isSkip")) {
+      pop_own_box();
+    }
+  }
   DefPrimitive!("\\lx@french@punct@colon", {
+    if in_french() {
+      unskip_before_high_punct();
+    }
     enter_horizontal();
     let s = if in_french() { " :" } else { ":" };
     Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@semi", {
+    if in_french() {
+      unskip_before_high_punct();
+    }
     enter_horizontal();
     let s = if in_french() { "\u{2006};" } else { ";" };
     Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@exclam", {
+    if in_french() {
+      unskip_before_high_punct();
+    }
     enter_horizontal();
     let s = if in_french() { "\u{2006}!" } else { "!" };
     Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@question", {
+    if in_french() {
+      unskip_before_high_punct();
+    }
     enter_horizontal();
     let s = if in_french() { "\u{2006}?" } else { "?" };
     Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
@@ -327,6 +370,11 @@ LoadDefinitions!({
     \fi
     \expandafter\let\csname captionsfrenchb\expandafter\endcsname
                     \csname captionsfrench\endcsname
+    % french.ldf language hooks: define the BASE hook before aliasing it, so
+    % a later \addto\extrasfrench{…} appends to a macro rather than to \relax
+    % (self-expanding hook; see ngerman_sty.rs). Witness homework-demo-fr.
+    \providecommand\extrasfrench{\@ifundefined{languageshorthands}{}{\languageshorthands{french}}}
+    \providecommand\noextrasfrench{}
     \expandafter\let\csname extrasfrenchb\expandafter\endcsname
                     \csname extrasfrench\endcsname
     \expandafter\let\csname noextrasfrenchb\expandafter\endcsname

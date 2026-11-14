@@ -1,0 +1,18 @@
+% witness: 1304.0533 (`\author{\name{\fname{Hiroshi} \surname{Suzuki}}{\ast}}`, `\address{Theoretical Research …
+%          \email{…}}`; its own ptephy.cls lacks `\fname`, ptephy_v1.cls:1400-1401 has `\def\fname#1{#1}`, `\surname`)
+% oracle:  pdflatex (1807.02967's ptephy_v1.cls and authblk-TI.sty, a stand-in for the logo `newlogo`, TL 2025) 0 errors:
+%          "Ann Able*" over "Univ A, Tokyo" and "*E-mail: ann@example.org"
+% engines: rust 64h4 = 3 errors (\name, \fname, \surname undefined); perl 0.8.8 = 3, the same
+% expect:  0 errors; one creator "Ann Able" with its `*` kept, the affiliation "Univ A, Tokyo" and the email
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy_v1}
+\begin{document}
+\title{A Title}
+\author{\name{\fname{Ann} \surname{Able}}{\ast}}
+\address{Univ A, Tokyo
+\email{ann@example.org}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

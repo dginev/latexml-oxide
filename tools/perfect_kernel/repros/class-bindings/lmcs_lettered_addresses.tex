@@ -1,0 +1,38 @@
+% mechanism: lmcs.cls (v0.92, 2306.08266's copy :391-450) prints `\author[short]{Name}[a,b]` with the letters raised
+%   after the name and the addresses as one list after all names, each led by the next letter; the letters are the
+%   link (`\inst` requests, an address labelled by its place), an `\lmcsorcid` in the name is the author's ORCID, an
+%   e-mail goes to the author it spells, else the one author its address's letter names; `\lmcsheading`'s submission and
+%   publication dates are the paper's (:499, seven arguments).
+% witness: 2306.08266 (eight authors, `[f,g]`, `\lmcsorcid`; "ORCID:0000-0002-2217-4752" in the name, every address on
+%   the last author, the letters a paragraph "[a] [b] … [f,g] [h]", the dates "Jun. 16, 2023Mar. 20, 2024" a paragraph),
+%   2402.09138 (`[b,a]`; one `\email` of three addresses for three authors)
+% oracle:  pdflatex with 2306.08266's lmcs.cls: 0 errors; "ANN ABLE^a, BOB BAKER^{b,a}, CARL COLE, AND DAN DORN^c";
+%   a Univ A with "e-mail address: ann.able@a.edu, bob@a.edu"; b Univ B; c Univ C with "e-mail address: zz9@c.org";
+%   "Submitted Jun. 16, 2023", "Published Mar. 20, 2024"
+% engines: rust int111d = names with "ORCID:…", every address on Dan Dorn, a paragraph "[a] [b,a] [c]"; perl has no
+%   lmcs binding (OmniBus)
+% expect:  0 errors, 0 warnings; Ann Able: ORCID 0000-0002-1825-0097, Univ A, ann.able@a.edu; Bob Baker: Univ A,
+%   bob@a.edu, Univ B; Carl Cole: nothing; Dan Dorn: Univ C, zz9@c.org; the two dates
+% status:  RED (int111d) -> GREEN (84c)
+% preload: ar5iv.sty
+\documentclass{lmcs}
+\lmcsdoi{20}{1}{22}
+\lmcsheading{}{1--10}{}{}{Jun.~16,~2023}{Mar.~20,~2024}{}
+\begin{document}
+\title{T}
+\author[A.~Able et al.]{Ann Able\lmcsorcid{0000-0002-1825-0097}}[a]
+\author[]{Bob Baker}[b,a]
+\author[]{Carl Cole}
+\author[]{Dan Dorn}[c]
+\address{Univ A}
+\email{ann.able@a.edu, bob@a.edu}
+\address{Univ B}
+\address{Univ C}
+\email{zz9@c.org}
+\begin{abstract}
+Abstract.
+\end{abstract}
+\maketitle
+\section{S}
+Text.
+\end{document}

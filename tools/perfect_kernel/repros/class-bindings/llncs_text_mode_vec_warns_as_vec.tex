@@ -1,0 +1,11 @@
+% witness: review rev79b finding 7 (probe rev79b/ltext; llncs.cls:393-397 `\vec` is a `\mathchoice` of `\mbox{\boldmath$…$}`)
+% oracle:  pdflatex 2 errors "! Missing $ inserted." at l.3 `Text \vec{w}` (the author's `\vec`)
+% engines: rust 79b = 1 warning "\lx@sv@vec@boldmath should only appear in math mode" (the binding's internal
+%          constructor); Perl 0.8.8: no warning (the kernel's arrow accent, KNOWN_PERL_ERRORS #1143)
+% expect:  0 errors, 1 warning "unexpected:\vec \vec should only appear in math mode"
+% status:  RED (79b) -> GREEN (79d)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+Text \vec{w} here.
+\end{document}

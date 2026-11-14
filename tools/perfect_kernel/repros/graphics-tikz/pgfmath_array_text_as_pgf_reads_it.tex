@@ -1,0 +1,69 @@
+% witness: review of M3's pgfmath arrays (findings 3, 4); the mechanisms are pgfmathparser.code.tex:139 (a whole formula's braces), :963, :984-1009 (`\pgfmath@bgroup@strip` in a list: its `#1#2#3` skips the spaces before the first two tokens), pgfmathfunctions.misc.code.tex:243-262 (a list of one indexes its value's tokens), :77-86 of the comparison file (`ifthenelse` returns its branch as it is), :205-234 (the sizers; circuitikz/circuitikzmanual, pgfcircvoltage.tex:192 `height{"Q"}`)
+% oracle:  pdflatex (TL 2025) 0 "!" lines; each value the guard lists, from pdflatex's log, but R15's last digits (29.45274, pgf's fixed point; ours 29.45276, as `{1cm,2cm}[0]+1pt`).
+% engines: M3: `ifthenelse(0,{"a","b"}[0],{"c","d"}[1])` 0.0 with 2 errors, `{"1","2"}[0]+1` 1.0 with 1 error, `{"a"}` {a}, `{"a b","c"}[0]` a b, `{"a ? b","c"}[0]` a ? b. Perl is wrong with `Error:pgfparse`.
+% expect:  0 errors; every value pdflatex's
+% status:  GREEN
+\documentclass{article}
+\usepackage{tikz}
+\def\foo{FOO}
+\def\strs{{"a b","c d"}}
+\begin{document}
+\pgfmathparse{ifthenelse(0,{"a","b"}[0],{"c","d"}[1])}\typeout{R0: \detokenize{ifthenelse(0,{"a","b"}[0],{"c","d"}[1])} = \pgfmathresult}
+\pgfmathparse{ifthenelse(1,{1,2}[1],{"c","d"}[1])}\typeout{R1: \detokenize{ifthenelse(1,{1,2}[1],{"c","d"}[1])} = \pgfmathresult}
+\pgfmathparse{ifthenelse(0,{1,2}[1],{"c","d"}[1])}\typeout{R2: \detokenize{ifthenelse(0,{1,2}[1],{"c","d"}[1])} = \pgfmathresult}
+\pgfmathparse{ifthenelse(1,{"a b","c"}[0],2)}\typeout{R3: \detokenize{ifthenelse(1,{"a b","c"}[0],2)} = \pgfmathresult}
+\pgfmathparse{ifthenelse(1,ifthenelse(0,1,{"x","y"}[1]),2)}\typeout{R4: \detokenize{ifthenelse(1,ifthenelse(0,1,{"x","y"}[1]),2)} = \pgfmathresult}
+\pgfmathparse{ifthenelse({"1","0"}[1],"s","t")}\typeout{R5: \detokenize{ifthenelse({"1","0"}[1],"s","t")} = \pgfmathresult}
+\pgfmathparse{{"1","2"}[0]+1}\typeout{R6: \detokenize{{"1","2"}[0]+1} = \pgfmathresult}
+\pgfmathparse{1+{"1","2"}[1]}\typeout{R7: \detokenize{1+{"1","2"}[1]} = \pgfmathresult}
+\pgfmathparse{{"1","2"}[0]*{"3","4"}[0]}\typeout{R8: \detokenize{{"1","2"}[0]*{"3","4"}[0]} = \pgfmathresult}
+\pgfmathparse{{"1.5","2"}[0]*2}\typeout{R9: \detokenize{{"1.5","2"}[0]*2} = \pgfmathresult}
+\pgfmathparse{{"-1","2"}[0]+1}\typeout{R10: \detokenize{{"-1","2"}[0]+1} = \pgfmathresult}
+\pgfmathparse{{"1","0"}[0]?5:6}\typeout{R11: \detokenize{{"1","0"}[0]?5:6} = \pgfmathresult}
+\pgfmathparse{{5,6}[{"1","0"}[0]]}\typeout{R12: \detokenize{{5,6}[{"1","0"}[0]]} = \pgfmathresult}
+\pgfmathparse{sin({"30","0"}[0])}\typeout{R13: \detokenize{sin({"30","0"}[0])} = \pgfmathresult}
+\pgfmathparse{{"1pt","2"}[0]+1}\typeout{R14: \detokenize{{"1pt","2"}[0]+1} = \pgfmathresult}
+\pgfmathparse{{"1cm","2"}[0]+1}\typeout{R15: \detokenize{{"1cm","2"}[0]+1} = \pgfmathresult}
+\pgfmathparse{{".5","2"}[0]+1}\typeout{R16: \detokenize{{".5","2"}[0]+1} = \pgfmathresult}
+\pgfmathparse{{"--1","2"}[0]+1}\typeout{R17: \detokenize{{"--1","2"}[0]+1} = \pgfmathresult}
+\pgfmathparse{{"a"}}\typeout{R18: \detokenize{{"a"}} = \pgfmathresult}
+\pgfmathparse{{"a b"}}\typeout{R19: \detokenize{{"a b"}} = \pgfmathresult}
+\pgfmathparse{{ "a" }}\typeout{R20: \detokenize{{ "a" }} = \pgfmathresult}
+\pgfmathparse{{" a"}}\typeout{R21: \detokenize{{" a"}} = \pgfmathresult}
+\pgfmathparse{{{"a"}}}\typeout{R22: \detokenize{{{"a"}}} = \pgfmathresult}
+\pgfmathparse{{{"a","b"}}}\typeout{R23: \detokenize{{{"a","b"}}} = \pgfmathresult}
+\pgfmathparse{{{{1,2}}}}\typeout{R24: \detokenize{{{{1,2}}}} = \pgfmathresult}
+\pgfmathparse{{"a b","c"}[0]}\typeout{R25: \detokenize{{"a b","c"}[0]} = \pgfmathresult}
+\pgfmathparse{{"c","a b"}[1]}\typeout{R26: \detokenize{{"c","a b"}[1]} = \pgfmathresult}
+\pgfmathparse{{" a","c"}[0]}\typeout{R27: \detokenize{{" a","c"}[0]} = \pgfmathresult}
+\pgfmathparse{{"a b c","d"}[0]}\typeout{R28: \detokenize{{"a b c","d"}[0]} = \pgfmathresult}
+\pgfmathparse{{"ab c","d"}[0]}\typeout{R29: \detokenize{{"ab c","d"}[0]} = \pgfmathresult}
+\pgfmathparse{{"a ? b","c"}[0]}\typeout{R30: \detokenize{{"a ? b","c"}[0]} = \pgfmathresult}
+\pgfmathparse{{"  a  b  c","d"}[0]}\typeout{R31: \detokenize{{"  a  b  c","d"}[0]} = \pgfmathresult}
+\pgfmathparse{{"\foo b","c"}[0]}\typeout{R32: \detokenize{{"\foo b","c"}[0]} = \pgfmathresult}
+\pgfmathparse{{{"a b","c"},"d"}[0][0]}\typeout{R33: \detokenize{{{"a b","c"},"d"}[0][0]} = \pgfmathresult}
+\pgfmathparse{{{"a b"},"d"}[0]}\typeout{R34: \detokenize{{{"a b"},"d"}[0]} = \pgfmathresult}
+\pgfmathparse{{"a b","c d"}}\typeout{R35: \detokenize{{"a b","c d"}} = \pgfmathresult}
+\pgfmathparse{array({"a b","c"},0)}\typeout{R36: \detokenize{array({"a b","c"},0)} = \pgfmathresult}
+\pgfmathparse{\strs[1]}\typeout{R37: \detokenize{\strs[1]} = \pgfmathresult}
+\pgfmathparse{"a b"}\typeout{R38: \detokenize{"a b"} = \pgfmathresult}
+\pgfmathparse{" a b"}\typeout{R39: \detokenize{" a b"} = \pgfmathresult}
+\pgfmathparse{{"a b"}[0]}\typeout{R40: \detokenize{{"a b"}[0]} = \pgfmathresult}
+\pgfmathparse{{"a b"}[1]}\typeout{R41: \detokenize{{"a b"}[1]} = \pgfmathresult}
+\pgfmathparse{{"abc"}[1]}\typeout{R42: \detokenize{{"abc"}[1]} = \pgfmathresult}
+\pgfmathparse{{12}[1]}\typeout{R43: \detokenize{{12}[1]} = \pgfmathresult}
+\pgfmathparse{{1cm}[0]}\typeout{R44: \detokenize{{1cm}[0]} = \pgfmathresult}
+\pgfmathparse{{1.5}[0]}\typeout{R45: \detokenize{{1.5}[0]} = \pgfmathresult}
+\pgfmathparse{{12}[1]+1}\typeout{R46: \detokenize{{12}[1]+1} = \pgfmathresult}
+\pgfmathparse{{"12"}[1]+1}\typeout{R47: \detokenize{{"12"}[1]+1} = \pgfmathresult}
+\pgfmathparse{array({"ab"},1)}\typeout{R48: \detokenize{array({"ab"},1)} = \pgfmathresult}
+\pgfmathparse{array({"ab"},0)}\typeout{R49: \detokenize{array({"ab"},0)} = \pgfmathresult}
+\pgfmathparse{array({12},1)}\typeout{R50: \detokenize{array({12},1)} = \pgfmathresult}
+\pgfmathparse{{{1}}[0]}\typeout{R51: \detokenize{{{1}}[0]} = \pgfmathresult}
+\pgfmathparse{{{"ab"}}[0]}\typeout{R52: \detokenize{{{"ab"}}[0]} = \pgfmathresult}
+\pgfmathparse{height{"Q"}}\typeout{R53: \detokenize{height{"Q"}} = \pgfmathresult}
+\pgfmathparse{width{"M"}}\typeout{R54: \detokenize{width{"M"}} = \pgfmathresult}
+\pgfmathparse{depth{"Q"}}\typeout{R55: \detokenize{depth{"Q"}} = \pgfmathresult}
+\pgfmathparse{height("Q")}\typeout{R56: \detokenize{height("Q")} = \pgfmathresult}
+\pgfmathparse{1pt+2*height{"Q"}}\typeout{R57: \detokenize{1pt+2*height{"Q"}} = \pgfmathresult}
+\end{document}

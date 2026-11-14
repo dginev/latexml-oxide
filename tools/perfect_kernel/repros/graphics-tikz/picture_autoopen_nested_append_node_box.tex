@@ -1,0 +1,22 @@
+% Perl's openElementAt records the new node's box AND appends it to every auto-opened ancestor
+% (appendNodeBox, Core/Document.pm:1685-1700, called at :1861-1862), so an auto-opened picture's
+% box holds everything opened inside it, down through auto-opened ltx:text and a nested auto-opened
+% picture. Rust's open_element_at only set the new node's own box: a second \put, or a picture
+% auto-opened inside the first one's auto-opened text, never reached the outer picture's size.
+% Paragraph 3 is a picture auto-opened inside the auto-opened ltx:p of a \parbox, with a nested
+% picture auto-opened in its auto-opened ltx:text.
+% witness: SYNC_STATUS "Auto-opened picture sizes differ from Perl's" (appendNodeBox residual of
+%   batch 56iy); W12 2026-09-25
+% oracle:  same-host Perl latexmlc (px, width x height): 79.99x12.3 | 43.24x12.3 inside it
+%          21.52x12.15 | 38.63x12.3 inside it 16.91x12.15
+% engines: rust (56je) = 43.05x12.3 | 32.48x9.61, 21.52x12.15 | 27.87x9.61, 16.91x12.15
+% expect:  0 errors; every picture sized as in Perl
+% status:  GREEN (56jo, W12; guard node_box_append::auto_opened_ancestors_measure_what_opens_inside)
+\documentclass{article}
+\begin{document}
+x \put(0,0){Hello}\put(10,0){World} y
+
+a \put(0,0){P} b \put(0,0){Q} c
+
+\parbox{4cm}{a \put(0,0){P} b \put(0,0){Q} c}
+\end{document}

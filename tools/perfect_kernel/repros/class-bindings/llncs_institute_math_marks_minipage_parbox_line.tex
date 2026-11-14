@@ -1,0 +1,20 @@
+% mechanism: the list cutter (`classify::entry_starts` `lines_starts`): an entry start inside an environment a
+%   line opens and closes (`\begin{minipage}…\parbox{…}{$^{1}$ Univ A\\ $^{2}$ Univ B}\end{minipage}`) cuts nothing,
+%   as no piece may hold half of the environment (revP4b4a B1)
+% witness: synthetic (revP4b4a probe b2_minipage_math)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1, Bob Baker2, and Cy Cole3" over "1 Univ A /
+%   2 Univ B" beside "3 Univ C"
+% engines: rust P4b4abase: 0 errors, 0 warnings, each name its line; P4b4a: 3 errors (`\egroup Attempt to close a group
+%   that switched to mode horizontal`, `Can't close environment minipage`, `\end{minipage} Attempt to end mode
+%   internal_vertical`)
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B", Cy Cole "3 Univ C"
+% status:  RED (P4b4a) -> GREEN (P4b4a3; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker$^{2}$ \and Cy Cole$^{3}$}
+\institute{\begin{minipage}{0.4\linewidth}\parbox{\linewidth}{$^{1}$ Univ A\\ $^{2}$ Univ B}\end{minipage}\\ $^{3}$ Univ C}
+\maketitle
+Body.
+\end{document}

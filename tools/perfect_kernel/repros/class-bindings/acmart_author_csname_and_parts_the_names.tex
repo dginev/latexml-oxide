@@ -1,0 +1,18 @@
+% mechanism: acmart's `\author` holding an `\and` spelled `\csname and\endcsname`: one API creator call, in a paper with
+%   no author block, cut at the call's own `Sep(And)` and written one call per piece, the tokens between the `\and`'s
+%   own tokens (`emit::creator_call_cut`), as the literal form (`acmart_author_and_parts_the_names.tex`, whose header
+%   names the path). A sibling on the same path: the `\and`'s own tokens differ
+% witness: revOC1 B1 (`scratch_OC1b/src/acm_csname.tex`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE BOB BAKER", "Author's Contact Information: Ann Able;
+%   Bob Baker."
+% engines: Perl 0.8.8: one creator (acmart.cls.ltxml:89); int156a (OC1b-rel): one creator "Ann Able and Bob Baker",
+%   1 error (`merged_creators`), 0 warnings
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker (a surpass over Perl, as OD #993)
+% status:  RED (int156a) -> GREEN (OC1c; guard perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and)
+\documentclass{acmart}
+\title{T}
+\author{Ann Able \csname and\endcsname\ Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

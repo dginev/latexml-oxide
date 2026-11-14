@@ -1,0 +1,17 @@
+% witness: kotex-doc (\usepackage[T1]{fontenc} after kotex: 30 "Keyboard character used is undefined", mojibake title)
+% oracle: pdflatex clean
+% engines: pdflatex
+% expect: 0 errors; title "한국어 텍", text "본문 café."
+% status: GREEN (batch 56bl, 2026-09-09)
+% mechanism: under the byte mouth the code point U+00ED IS the lead byte 0xED of 한;
+%   t1enc.dfu's \DeclareUnicodeCharacter{00ED}{\'\i} must define \u8:<C3><AD>
+%   (utf8.def:253-265), not the character U+00ED — our native-mouth branch
+%   (sect08.rs) redefined the active lead byte as \'\i.
+\documentclass{article}
+\usepackage{kotexutf}
+\usepackage[T1]{fontenc}
+\title{한국어 텍}
+\begin{document}
+\maketitle
+본문 café.
+\end{document}

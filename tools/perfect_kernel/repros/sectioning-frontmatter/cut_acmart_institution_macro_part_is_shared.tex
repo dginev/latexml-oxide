@@ -1,0 +1,17 @@
+% mechanism: an address part after the list's wrapper whose argument a macro prints is every entry's
+%   (`affiliations::shared_closing_parts`: a part is no entry's only when its argument is spacing alone)
+% witness: review rev99a2 S-a probe s3d
+% oracle:  pdflatex (TL 2025) 0 errors: "1Univ A 2Univ B / Germany, X"
+% engines: rust int126b: both authors the whole call; 99a r2: "Germany" dropped, no Warning
+% expect:  0 errors, 0 warnings; Ann "1 Univ A, Germany, X", Bob "2 Univ B, Germany, X"
+% status:  RED (99a r2) -> GREEN (99a r3) — perfect_kernel_batch99a::an_institution_is_cut_at_its_marks
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\newcommand{\cty}{Germany}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$}
+\affiliation{\institution{$^1$Univ A \quad $^2$Univ B}\city{\cty}\country{\textit{X}}}
+\maketitle
+Text.
+\end{document}

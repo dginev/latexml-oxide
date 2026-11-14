@@ -1,0 +1,20 @@
+% witness: review 64y round 1 (ntheorem [thmmarks])
+% oracle:  pdflatex 0 errors; no end mark after the bare proof (\endProof never runs), one after the delimited proof
+% engines: rust 64ra 1E+1W -> 64y r1 0E with the end mark emitted inside the bare proof -> 64y 0/0, no end mark; Perl 1E
+% expect:  0 errors; bare Proof has no ltx_align_floatright end mark, the delimited one has it
+% status:  GREEN (64y r2); guard perfect_kernel_batch64y::ntheorem_bare_proof_has_no_endmark
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amssymb}
+\usepackage[thmmarks]{ntheorem}
+\theoremstyle{nonumberplain}
+\theoremsymbol{\ensuremath{\blacksquare}}
+\newtheorem{Proof}{Proof}
+\begin{document}
+Intro.
+
+{\Proof Bare proof text.} After bare.
+
+\begin{Proof} Delimited proof text. \end{Proof}
+After delimited.
+\end{document}

@@ -1,0 +1,14 @@
+% The document's differential pairs come from every local evidence — an equation between differentials, a form, a
+% measure, a wedge, a Fréchet direction —, not only from integrands and Leibniz quotients, so a lone `\mathrm d<var>` of a
+% paper that also uses `\mathrm dt` as a time step reads as its pair does elsewhere (57cj.23.7; ruled step 5, 2026-10-01e).
+% witness: 2605.00250 (`\mathrm ds^2=\frac{\mathrm dt}{g^2}\|\mathrm d\bm f\|^2`, `\mathrm dg=\dot g\,\mathrm dt`)
+% expect:  0 errors; the lone `\mathrm df` and `(\mathrm dg)^2` differentials; `\sqrt{\mathrm dt}` letters
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\mathrm{d}s^2=\frac{\mathrm{d}t}{g^2}\|\mathrm{d}f\|^2$
+$\mathrm{d}g=\dot{g}\,\mathrm{d}t$
+$\mathrm{d}f$
+$V_g=\frac{2D}{g^2}(\mathrm{d}g)^2$
+$\sqrt{\mathrm{d}t}$
+\end{document}

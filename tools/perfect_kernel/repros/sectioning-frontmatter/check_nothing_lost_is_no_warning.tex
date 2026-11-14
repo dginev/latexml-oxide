@@ -1,0 +1,19 @@
+% LaTeX's title page with an author's note, two authors and a date, every word of which the output holds: the
+% title-page check (title_page_check.rs) counts nothing — the note's text is the creator's note, set apart from the
+% name (`Able\thanks{Lunar …}` is no word "AbleLunar"), the date the document's own. With no `\date` the class prints
+% `\today`, the conversion's date, which is no word of the document's.
+% witness: control (FIDELITY_CHARTER §4: a Warning names words really printed and really missing)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able*", "Bob Baker", "3 March 2021", "Text.", "* Lunar Institute, Mare
+%          Street 5"
+% engines: rust int133a = 0 errors, 0 warnings; perl = 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings, no frontmatter:class_text Info
+% status:  GREEN (negative)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able\thanks{Lunar Institute, Mare Street 5}\and Bob Baker}
+\date{3 March 2021}
+\maketitle
+Text.
+\end{document}

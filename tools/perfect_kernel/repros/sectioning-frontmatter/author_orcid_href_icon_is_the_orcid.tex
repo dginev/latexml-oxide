@@ -1,0 +1,26 @@
+% mechanism: an `\href` to an ORCID record in an author's name is the author's ORCID, the contact `\lx@add@orcid`
+%   makes, its ink no part of the name (`\lx@author@href`, in force for the name's content inside
+%   `\lx@author@withinst`; OXIDIZED_DESIGN_DIVERGENCES #960); a link to any other address in the name, and an ORCID
+%   link in the name's note, stay as they were.
+% witness: 2507.12319 (revtex4-2), 2406.08258 (revtex4-2), 2503.04867 (IEEEtran): the `\orcidicon` template,
+%   `\xdef\orcidA{\noexpand\href{https://orcid.org/\orcidauthorA}{\noexpand\orcidicon}}` with a TikZ "iD" icon,
+%   `\author{M. Ahumada \orcidA{}}`; census129 cluster 5 (O)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able ID", "Univ A, Town", "Bob Baker", "Univ B"
+% engines: rust int130a: personname "Ann Able <ref href="https://orcid.org/…"><picture>…ID…</picture></ref>"; perl:
+%   the link and its picture in the personname
+% expect:  0 errors, 0 warnings; personname "Ann Able" with an ORCID contact (ltx_orcid link to
+%   https://orcid.org/0000-0003-0320-5768) and her affiliation; Bob Baker's name keeps its link, his note its ORCID link
+% status:  RED (int130a) -> GREEN (103b)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\usepackage{tikz,hyperref}
+\newcommand{\orcidA}{\href{https://orcid.org/0000-0003-0320-5768}{\tikz\node{ID};}}
+\begin{document}
+\title{T}
+\author{Ann Able \orcidA{}}
+\affiliation{Univ A, Town}
+\author{\href{https://bob.example.org}{Bob Baker}\thanks{See \href{https://orcid.org/0000-0002-1825-0097}{his record}.}}
+\affiliation{Univ B}
+\maketitle
+Text.
+\end{document}

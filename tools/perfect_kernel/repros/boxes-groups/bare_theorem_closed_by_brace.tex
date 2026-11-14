@@ -1,0 +1,15 @@
+% witness: 1210.5866 1111.2539 2405.03639 1703.03321 2202.11643 0812.1147 1009.2722 1312.6689 1905.06220 2207.12734 2308.09714 2503.00772 1403.7312 2104.03038 ({\thm ...})
+% oracle:  pdflatex 0 errors; \showgroups inside {\thm ...} lists only the simple group of { (\thm opens no group)
+% engines: rust 1 Error:unexpected:} + 1 Warning (base 64ra) -> 0/0 (64y); Perl 1 Error + 2 Warning
+% expect:  0 errors; the bare theorem closes before 'After two.', which is a paragraph after it, as the \begin{thm}...\end{thm} control
+% status:  RED (base) -> GREEN (64y); guard perfect_kernel_batch64y::bare_theorem_closed_by_brace
+% preload: ar5iv.sty
+% mechanism: \thm (bare) = LaTeXML mode frame without a TeX group; the } of the enclosing group meets it ->
+%   stomach.rs close_environment_frame: back-input }, insert \endthm (tex.web 1064 off_save shape).
+\documentclass{article}
+\newtheorem{thm}{Theorem}
+\begin{document}
+{\begin{thm}Delimited theorem.\end{thm}} After one.
+
+{\thm Bare theorem.} After two.
+\end{document}

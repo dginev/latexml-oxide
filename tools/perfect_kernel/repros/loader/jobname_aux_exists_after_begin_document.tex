@@ -1,0 +1,19 @@
+% witness: 2605.24927, 2605.04825, 2605.28673 (jpsj3.cls:90-96), 2605.20125 (bio.cls),
+%   cond-mat9607109 (lamuphys.sty:1240-1247), astro-ph9805185 (caosp.sty:916)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; "aux present" printed; the \input of \jobname.aux reads it
+% mechanism: latex.ltx \document (:9491-9494) opens \@mainaux on \jobname.aux and writes \relax,
+%   so a class \enddocument that does `\input \jobname.aux` (jpsj3.cls:93) always finds it. The
+%   kernel's only open was latex_base's `\openout\@mainaux\jobname.aux` (latex_base.rs:743) at
+%   format load: under a dump that is the dump's build, under a preload (ar5iv.sty) it comes before
+%   the job's name, so no <jobname>.aux existed: Error:missing_file:<jobname>.aux. Fixed in
+%   \begin{document} (latex_constructs/sect02.rs).
+% status:  GREEN
+\documentclass{article}
+\begin{document}
+\makeatletter
+\IfFileExists{\jobname.aux}{aux present}{aux missing}.
+\input \jobname.aux
+\makeatother
+Text after.
+\end{document}

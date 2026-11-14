@@ -1,0 +1,20 @@
+% witness: 1802.10344, 1907.05950 (`amssymb` option, `\lesssim`), 1612.06828, 1701.03135 (`\newgeometry`),
+%          1910.03969 (`\captionof`): quantumarticle.cls:155-168, 1416-1424 (the AMS options), 282-284 (geometry),
+%          1508-1512 (caption at the end of the preamble)
+% oracle:  pdflatex 0 errors ("a ≲ b" … "Figure 1: Boxed")
+% engines: rust 67o1 = 3 errors (`\lesssim`, `\newgeometry`, `\captionof` undefined); Perl's quantumarticle.cls.ltxml
+%          loads none of them (KNOWN_PERL_ERRORS #698)
+% expect:  0 errors, 0 warnings; the relation and the caption kept
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\pdfoutput=1
+\documentclass[a4paper,amsmath,amssymb,onecolumn,unpublished]{quantumarticle}
+\begin{document}
+$a \lesssim b$
+\newgeometry{margin=1in}
+\begin{center}
+\rule{1cm}{1cm}
+\captionof{figure}{Boxed}
+\end{center}
+\restoregeometry
+\end{document}

@@ -1,0 +1,25 @@
+% witness: int78a gates (`perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`: a deluxetable's
+%          `\parbox` note `panelwidth` 1.407 once emulateapj declared its page)
+% oracle:  pdflatex 0 errors: `\linewidth` = `\columnwidth` = 229.5pt in each one-column table (letter `twocolumn`,
+%          size10.clo), the note a whole column; `0.5\columnwidth` = 114.75pt, half of it
+% engines: rust int78a = `panelwidth` 1.503 and 0.752 (the `\parbox` macro read its width as a value, the 345pt of
+%          Perl's registers, so no stated tokens reached `\lx@parbox` to be read at the declared page); Perl 0.8.8 = no
+%          grid markup
+% expect:  0 errors, 0 warnings; each table an `ltx_panels_gallery` of two rows, its note `panelwidth` 1 and 0.5
+% status:  RED (int78a) -> GREEN (int78b: `\lx@parbox` reads the width the source states, latex.ltx:16252)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\begin{document}
+\begin{table}
+\caption{A}
+\begin{tabular}{ll}a&b\\\end{tabular}
+
+\parbox{\linewidth}{A note across the column.}
+\end{table}
+\begin{table}
+\caption{B}
+\begin{tabular}{ll}a&b\\\end{tabular}
+
+\parbox{0.5\columnwidth}{Half.}
+\end{table}
+\end{document}

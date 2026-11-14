@@ -1,0 +1,32 @@
+% witness: 2302.00928, 2406.05750, 2207.07825 (a nicematrix first row that starts with `&` inside `align`; brk86)
+% oracle:  pdflatex 0 errors: nicematrix.sty:1953 `t \CodeBefore` and the `!O{}` options are ltcmd's expl3 peeks,
+%          run inside `\group_align_safe_begin:` (expl3-code.tex:9730), so the `&` is the matrix's; three matrices
+%          of two rows each, "After the display." printed
+% engines: rust int86b = 34 errors ("\end@amsalign Attempt to close a group that switched to mode
+%          restricted_horizontal"), the matrices lost
+% expect:  0 errors, 0 warnings; three inner matrices, each first row an empty cell then its entry
+% status:  RED (int86b) -> GREEN (79o)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,nicematrix}
+\begin{document}
+\begin{align}
+\begin{pNiceArray}{cc}[first-row]
+ & \text{first} \\
+ a & b
+\end{pNiceArray}
+\end{align}
+\begin{align}
+\begin{pNiceMatrix}
+ & second \\
+ c & d
+\end{pNiceMatrix}
+\end{align}
+\begin{align}
+\begin{bNiceMatrix}[r]
+ & third \\
+ e & f
+\end{bNiceMatrix}
+\end{align}
+After the display.
+\end{document}

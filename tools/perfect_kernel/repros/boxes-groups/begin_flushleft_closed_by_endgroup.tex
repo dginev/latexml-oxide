@@ -1,0 +1,12 @@
+% witness: 1702.01612 1909.03158 (ALICE author block: \begin{flushleft} ... \endgroup)
+% oracle:  pdflatex 0 errors; \showgroups inside the environment shows the semi simple group of \begin; \endgroup returns to bottom level
+% engines: rust 1 Error:unexpected:\endgroup + 1 Warning (64ra) -> 0/0 (64y); Perl 3 Error
+% expect:  0 errors; 'Left words.' in the flushleft paragraph, 'Following words.' a paragraph after it, not left-aligned
+% status:  RED (base) -> GREEN (64y); guard perfect_kernel_batch64y::begin_flushleft_closed_by_endgroup
+% preload: ar5iv.sty
+% mechanism: the \endgroup IS the environment's group closer (tex.web 1063 end_group vs semi_simple_group: unsave):
+%   stomach.rs close_environment_frame consumes it and inserts \end{flushleft}.
+\documentclass{article}
+\begin{document}
+\begin{flushleft} Left words. \endgroup Following words.
+\end{document}

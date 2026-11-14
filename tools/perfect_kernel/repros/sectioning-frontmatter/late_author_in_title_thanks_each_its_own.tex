@@ -1,0 +1,12 @@
+% witness: hep-th0111116 (`\title{… \author{A\thanks{…} \and B\thanks{…}}}`)
+% oracle:  pdflatex 0 errors: Ann Able*, Bob Baker†, the notes * Univ A, † Univ B
+% engines: Perl and off: 2 creators, each its own thanks; ours =2 before TA1: the merged creator beside the 2 split ones
+% expect:  0 errors; at =2 exactly 2 creators, Ann/thanks Univ A, Bob/thanks Univ B (perfect_kernel_batchTA1::a_late_author_block_is_read_at_its_own_flush)
+% status:  GREEN (TA1)
+\documentclass{article}
+\begin{document}
+\title{A Title
+\author{Ann Able\thanks{Univ A} \and Bob Baker\thanks{Univ B}}}
+\maketitle
+x
+\end{document}

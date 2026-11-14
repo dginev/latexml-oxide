@@ -1,0 +1,20 @@
+% mechanism: a document contact command reading more required arguments than the rehearsal's binding keeps its meaning
+%   (`rehearsal.rs` `install_event_bindings`, `binding_required_arguments`): pnastwo's `\affil#1#2` (number, text) was
+%   bound to the one-argument affiliation, and the emitter's item `\affil{1}` read its second argument past the item's
+%   end, `\gdef`ing `\affil1` to `\let`, which ate the title-page deposit's closing braces under `\@maketitle`
+% witness: 1312.3323 (the body's three footnotes lost at =2), 1404.2960, 0903.4054, 0907.3600 (the same open group)
+% oracle:  pdflatex 0 errors; "Ann Able *", "* Univ X", "Submitted to the Proceedings", Body note 1; GROUPLEVEL=1
+% engines: rust off: as pdflatex, the title page deposited; rust =2 (int153y): GROUPLEVEL=2, the body note a pubnote,
+%   the deposit dropped, "open groups" Warning, "∗" an affiliation
+% expect:  0 errors; off 0 warnings, =2 1 (the counter-move decline, the block written whole); GROUPLEVEL=1; the body
+%   footnote in the body; the deposit (affiliation, contributor) kept
+% status:  RED (int153y) -> GREEN (perfect_kernel_batchcl6::a_two_argument_affil_keeps_its_meaning_and_closes_its_groups)
+% preload: ar5iv.sty
+\documentclass{cl6_pnas_affil}
+\begin{document}
+\title{T}
+\author{Ann Able\affil{1}{Univ X}}
+\maketitle
+\makeatletter\typeout{GROUPLEVEL=\the\currentgrouplevel}\makeatother
+Body\footnote{BODYNOTE alpha.} text.
+\end{document}

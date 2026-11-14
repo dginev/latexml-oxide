@@ -1,0 +1,32 @@
+% A raw package's table store printed as `Correspondence: \href{mailto:\@corremail}{\@corremail}` in the `\else`
+% branch of its emptiness test (acl2023.sty:157, :184-187, the copy 2506.10896 ships): K11 hands the store on as an
+% e-mail note (`corremail`, store_setters.rs), the deposit reads it as empty, so the test leaves the title page and
+% "Correspondence:" was printed nowhere. The label is read before the store's printed occurrence — the link's text,
+% not its target, which TeX does not typeset (frontmatter_stores.rs `in_unprinted_argument`, `argument_of`), and through
+% the commands that print the store alone (`\href`'s text, `\textcolor`'s) — and leads the note's text, as a token
+% register's note's label does (the schema's ltx:note has no `name`).
+% witness: 2506.10896 (`\href{mailto:\@corremail}{\textcolor{black}{\@corremail}}`)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Correspondence: ann@x.org", "Text."
+% engines: rust int123a = the title page's parbox kept in the body ("Correspondence: ann@x.org"); rust int125b =
+%          <note role="email">ann@x.org</note>, "Correspondence" nowhere
+% expect:  0 errors, 0 warnings; <note role="email">Correspondence: ann@x.org</note>, no title-page leftover; the same
+%          with `\textcolor{black}{…}` round the link's text, and with the store printed bare
+% status:  RED (int125b) -> GREEN (97b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{corrmail.sty}
+\newcommand{\corremail}[1]{\gdef\@corremail{#1}}
+\gdef\@corremail{}
+\def\@maketitle{{\Large\bfseries \@title\par}\vskip 1em {\large\@author\par}
+  \ifx\@corremail\empty\else
+    \vskip 1em \parbox{\textwidth}{\centering \itshape Correspondence: \href{mailto:\@corremail}{\@corremail}}
+  \fi\vskip 1em}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{corrmail}
+\title{T}\author{Ann Able}\corremail{ann@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

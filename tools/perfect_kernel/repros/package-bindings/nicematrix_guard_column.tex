@@ -1,0 +1,17 @@
+% mechanism: with no width, nicematrix's preamble ends in a guard column `>{\__nicematrix_err_too_much_cols:} l`
+%   (nicematrix.sty:2236-2243), whose template errs only when a cell runs it: a `\multicolumn` spanning into it is
+%   silent in TeX; the binding's `\tabular` had no such column (Extra alignment tab)
+% witness: 2505.05139
+% oracle:  pdflatex 0 errors: "A" then "B" spanning the rest of the row; "a b c"
+% engines: rust 67int17b = Error:unexpected:& (Extra alignment tab); Perl: no binding
+% expect:  0 errors; the B cell spans the two last columns
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{p{2cm}p{2cm}p{2cm}}[hvlines]
+A & \multicolumn{3}{|c|}{B} \\
+a & b & c \\
+\end{NiceTabular}
+\end{document}

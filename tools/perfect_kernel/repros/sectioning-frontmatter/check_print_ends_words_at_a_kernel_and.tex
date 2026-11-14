@@ -1,0 +1,29 @@
+% mechanism: the title-page check's run of article.cls's title page (sect05.rs `title_page_print_tokens`, its
+%   stand-in for article.cls's `\@maketitle`, TL 2025 article.cls:236-251, when no raw file defined one) let `\and` to
+%   `\relax`, which leaves no material, so the words on either side of an `\and` written with no space before it ran
+%   into one in the print it reads (`ink_word_text`): "Inst XBob". In pdflatex the kernel's `\and` (latex.ltx
+%   `\end{tabular}\hskip 1em \@plus.17fil\begin{tabular}[t]{c}`) ends a column. The stand-in now runs `\@author`
+%   inside article.cls:246-248's `\begin{tabular}[t]{c}…\end{tabular}` (FX25b), with `\and` as the document has it;
+%   the kernel's (sect05.rs `\and`, Perl latex_constructs.pool.ltxml:1071 `DefConstructorI('\and', undef, " and ")`)
+%   is a whatsit printing no word, a word end for the reader, as its `\let` copies (`\And`, a class's `\coand`)
+%   already were; a footnote mark beside it is one too
+% witness: synthetic (FX25; RR1 gap 24's check side, article_coauthor_appended_to_author_is_kept.tex (was `…_is_lost_silently_red`),
+%   witness 2511.15315)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: five columns "Alice A | Bob B | Carol C | Dan D* | Eve E"
+%   over "Inst X | Inst Y | Inst Z | | Inst V", the foot "* Inst W"
+% engines: int159a0 (`ce9a5dc6b6`): 0 errors, 0 warnings; the check's print (`--debug=frontmatter`) "… Alice A Inst
+%   XBob B Inst Y …"; perl not run
+% expect:  0 errors, 0 warnings; the print "A Title ||||||Alice A||Inst X Bob B||Inst Y Carol C||Inst Z Dan D  Eve
+%   E||Inst V||||  ||||Inst W||" (every column's words apart; `|` a seam, FX25b's tabular adding the cells' seams);
+%   creators Alice A (Inst X), Bob B (Inst Y), Carol C (Inst Z), Dan D (its note "Inst W"), Eve E (Inst V)
+% status:  GREEN (FX25)
+% preload: ar5iv.sty
+\documentclass{article}
+\let\And\and
+\let\coand\and
+\begin{document}
+\title{A Title}
+\author{Alice A\\Inst X\and Bob B\\Inst Y\And Carol C\\Inst Z\coand Dan D\thanks{Inst W}\and Eve E\\Inst V}
+\maketitle
+Body.
+\end{document}

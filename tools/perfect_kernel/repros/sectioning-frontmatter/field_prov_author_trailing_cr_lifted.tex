@@ -1,0 +1,21 @@
+% An `\@author` print in a `tabular` whose value ends with a space and `\\` (1605.00182's `\author{Daniel Krefl
+% \\[0.2cm] \it Theoretical Physics Department, … \\ }` in its own `\@makepapertitle`): the closing `\\`'s row-end
+% marker is taken by the alignment, and the space before it, which the cell drops, is never absorbed; the run's cover
+% goes on over what the alignment took past an entry that covers no position of the field's extent, so the print is
+% whole and lifted (fms1 round 4: the first round-4 candidate stopped at the dropped space and kept the author block).
+% status:  RED (fms1 round-4 candidate) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "Tab Title", "Daniel Krefl / Theoretical Physics Department, CERN", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; no body copy of the title or the author.
+\documentclass{article}
+\makeatletter
+\title{Tab Title}
+\author{
+Daniel Krefl \\[0.2cm]
+\it Theoretical Physics Department, CERN \\
+}
+\begin{document}
+\begin{center}{\Large\bf \@title}\vskip 2em
+{\normalsize \lineskip .5em \begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}
+\section{Intro}
+Text.
+\end{document}

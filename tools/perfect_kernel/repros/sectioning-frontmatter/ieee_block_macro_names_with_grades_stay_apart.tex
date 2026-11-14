@@ -1,0 +1,26 @@
+% mechanism: an IEEE name block whose names a macro prints each with its written membership grade
+%   (`\IEEEauthorblockN{\AuthorOne,~\AuthorTwo,~\AuthorThree~and~\AuthorFour\thanks{…}}`, each `\AuthorN` "Name,
+%   {\em{Grade Member, IEEE}}") is four creators, each grade in its name as before OXIDIZED_DESIGN_DIVERGENCES #967:
+%   `\lx@add@author` reads no grade out of a macro's text, so the observer's reading gives each grade back to its name
+%   where today's holds no contact of it (writer/mod.rs `give_back_grades`). Without it the reading's grades had nothing
+%   to be written from (and two authors' alike, "Senior Member, IEEE"), the re-part declined, and the line stayed ONE
+%   creator.
+% witness: 1510.03162 (IEEEtran, `\newcommand{\AuthorOne}{Jing~Guo, {\em{Student Member, IEEE}}}`, …); bundle A/B
+%   int136a vs int135e
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able, Student Member, IEEE, Bob Baker, Senior Member, IEEE, Cat Cole,
+%   Member, IEEE and Dan Dee, Senior Member, IEEE"
+% engines: rust int135e: four creators "Name, Grade"; 106c r1: one creator holding the four names and grades
+% expect:  0 errors, 0 warnings; four creators, as int135e, the note on the last
+% status:  RED (106c r1) -> GREEN (106c r2)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\newcommand{\AuthorOne}{Ann~Able, {\em{Student Member, IEEE}}}
+\newcommand{\AuthorTwo}{Bob~Baker, {\em{Senior Member, IEEE}}}
+\newcommand{\AuthorThree}{Cat~Cole, {\em{Member, IEEE}}}
+\newcommand{\AuthorFour}{Dan~Dee, {\em{Senior Member, IEEE}}}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{\AuthorOne,~\AuthorTwo,~\AuthorThree~and~\AuthorFour\thanks{Funded.}}}
+\maketitle
+Text.
+\end{document}

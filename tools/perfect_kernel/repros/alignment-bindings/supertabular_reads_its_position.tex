@@ -1,0 +1,18 @@
+% witness: K13 stage-2 audit row supertabular (57h; 39 A/B papers load it, none writes the position); every
+%          variant reads a `[pos]` it does not use (supertabular.sty:352-400); the binding (Perl
+%          supertabular.sty.ltxml:24, :40, :60, :70) read none, so `[t]` became the column template
+% oracle:  pdflatex 0 errors: one row "a b", twice
+% engines: perl = rust 57ag, 4 errors: `Error:unexpected:& Extra alignment tab '&'`, two per table
+% expect:  0 errors, 0 warnings; two two-column tabulars
+% status:  RED (57ag) -> GREEN (57ah: `[]` read and dropped, supertabular_sty.rs)
+\documentclass{article}
+\usepackage{supertabular}
+\begin{document}
+\begin{supertabular}[t]{ll}
+a & b \\
+\end{supertabular}
+
+\begin{supertabular*}{5cm}[b]{ll}
+a & b \\
+\end{supertabular*}
+\end{document}

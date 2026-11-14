@@ -1,0 +1,10 @@
+% A Leibniz quotient's lone `d` is its operator, not a number of the document: `\frac{d}{dt}u` beside `\tau_1\in ds`
+% leaves the infinitesimal set a differential (the 57cj.23.6 review).
+% witness: none (review probes F, F2).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; `dt`, `ds` differentials
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\frac{d}{dt}u=0$ $\frac{d|\psi\rangle}{dt}$ $\tau_1\in ds$
+\end{document}

@@ -20,6 +20,8 @@ use crate::prelude::*;
 // implement `\xkvview` as a constructor that emits the table. This is the
 // version that matches the `keyval/xkeyvalview` regression fixture.
 LoadDefinitions!({
+  // xkvview.sty:45 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Load xkeyval first (provides key definition infrastructure)
   RequirePackage!("xkeyval");
   // Note: we do NOT load the raw xkvview.sty — its TeX macros require
@@ -141,7 +143,7 @@ LoadDefinitions!({
     // Mirrors Perl: the raw TeX xkvview.sty wraps content in a longtable
     // environment which implicitly steps the table counter via \caption.
     opts.after_digest.push(Rc::new(|whatsit: &mut Whatsit| {
-      let counter_props = ref_step_counter("table", false)?;
+      let counter_props = ref_step_counter_by_meaning("table")?;
       if let Some(tags) = counter_props.get("tags") {
         whatsit.set_property("tags", tags.clone());
       }

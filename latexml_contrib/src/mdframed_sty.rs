@@ -1,20 +1,128 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // mdframed.sty:382 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   Warn!(
     "missing_file",
     "mdframed.sty",
     "mdframed.sty is only minimally stubbed and will not be interpreted raw."
   );
+  // mdframed.sty:154-169 `\define@key{mdf}{framemethod}`: the method, lowercased, picks the package to load.
+  DefMacro!("\\lx@mdf@framemethod{}", sub[(method)] {
+    let given = method.to_string();
+    let (name, package) = match given.trim().to_lowercase().as_str() {
+      "default" | "tex" | "latex" | "none" | "0" => (Some("default"), None),
+      "pgf" | "tikz" | "1" => (Some("tikz"), Some("tikz".to_string())),
+      "pstricks" | "ps" | "2" | "postscript" => (Some("pstricks"), Some("pst-node".to_string())),
+      _ => (None, Some(given.trim().to_string())),
+    };
+    let mut code = String::new();
+    if let Some(name) = name {
+      code.push_str(&format!("\\def\\mdf@@framemethod{{{name}}}"));
+    }
+    // In the body (`\newmdenv[framemethod=…]`, `\mdfsetup` after `\begin{document}`) the load is mdframed's
+    // `\RequirePackage`, `\@onlypreamble`: pdflatex reports "Can be used only in preamble" and goes on with the
+    // packages it has, and so does the binding, with an Info (the frame is ours whatever the method, so nothing the
+    // author wrote is lost).
+    if let Some(package) = package {
+      if lookup_bool_sym(pin!("inPreamble")) {
+        code.push_str(&format!("\\mdf@LoadFile@IfExist{{{package}}}"));
+      } else {
+        Info!(
+          "unexpected",
+          "framemethod",
+          s!("mdframed's framemethod={given} cannot load {package} after the preamble (LaTeX: Can be used only in preamble); the frame is drawn either way")
+        );
+      }
+    }
+    Ok(TokenizeInternal!(TeXString::assembled(code)))
+  });
+  // mdframed.sty:72-77 loads kvoptions, xparse, etoolbox, zref-abspage, needspace and color, and so does the
+  // binding: a document or class that uses `\needspace`, zref or `\ifpdf` (iftex, under zref-base's pdftexcmds)
+  // without loading them itself relies on these.
   RequirePackage!("kvoptions");
   RequirePackage!("xparse");
   RequirePackage!("etoolbox");
-  RequirePackage!("xcolor");
-  def_macro_noop("\\newmdtheoremenv[]{}{}[]")?;
+  // zref-abspage has no binding: it is read raw, so only where raw loading is on (as `--preload=ar5iv.sty` has it);
+  // otherwise its load would only add a missing-file warning.
+  if lookup_bool("INCLUDE_STYLES") {
+    RequirePackage!("zref-abspage");
+  }
+  RequirePackage!("needspace");
+  RequirePackage!("color");
+  // mdframed.sty:150-190 the frame method: `framemethod=tikz` (or `pgf`, `1`, the void options `tikz`/`TikZ`) loads
+  // tikz, `framemethod=pstricks` (`ps`, `postscript`, `2`, the void options `ps`/`pstricks`/`PSTricks`) loads
+  // pst-node, any other value but the default ones loads the package of that name if it exists
+  // (`\mdf@LoadFile@IfExist`); the `xcolor` key loads xcolor (mdframed.sty:369-380, whose option list is never
+  // passed on). Documents and classes draw with the tikz the option loaded (witness 2101.02817:
+  // `[framemethod=TikZ]{mdframed}`, then `{tikzpicture}`). The frame drawing itself stays ours, so the other
+  // keys (mdframed.sty defines them in family `mdf`) are accepted and dropped, here and in `\mdfsetup` — but for the
+  // frame title's (mdframed.sty:234-256 `frametitle`, `firstframetitle`, `frametitlefont` = `\normalfont\bfseries`,
+  // `frametitlealignment`), which `\lx@mdf@frametitle` sets as the frame's first paragraph.
+  RawTeX!(
+    r"\def\mdf@LoadFile@IfExist#1{\IfFileExists{#1.sty}{\RequirePackage{#1}}{\PackageWarning{mdframed}{The file #1
+ does not exist\MessageBreak but needed by mdframed}}}
+\SetupKeyvalOptions{family=mdf,prefix=mdf@}
+\def\mdf@@framemethod{default}
+\define@key{mdf}{framemethod}[default]{\lx@mdf@framemethod{#1}}
+\DeclareVoidOption{tikz}{\setkeys{mdf}{framemethod=tikz}}
+\DeclareVoidOption{TikZ}{\setkeys{mdf}{framemethod=tikz}}
+\DeclareVoidOption{ps}{\setkeys{mdf}{framemethod=pstricks}}
+\DeclareVoidOption{pstricks}{\setkeys{mdf}{framemethod=pstricks}}
+\DeclareVoidOption{PSTricks}{\setkeys{mdf}{framemethod=pstricks}}
+\define@key{mdf}{xcolor}[]{\RequirePackage{xcolor}}
+\def\mdf@frametitle{}\def\mdf@firstframetitle{}\def\mdf@frametitlefont{\normalfont\bfseries}\def\mdf@frametitlealignment{}
+\define@key{mdf}{frametitle}{\def\mdf@frametitle{#1}}
+\define@key{mdf}{firstframetitle}{\def\mdf@firstframetitle{#1}}
+\define@key{mdf}{frametitlefont}{\def\mdf@frametitlefont{#1}}
+\define@key{mdf}{frametitlealignment}{\def\mdf@frametitlealignment{#1}}
+\kv@set@family@handler{mdf}{}
+\DeclareDefaultOption{}
+\ProcessKeyvalOptions*\relax"
+  );
+  // mdframed.sty:591 `\newmdtheoremenv[mdframed-opts]{env}[numbered like]
+  // {caption}[within]` = `\newtheorem` inside a frame (presentational);
+  // the no-op it replaced left every such theorem environment undefined
+  // (beautynote: theorem, lemma, definition, proposition, problem).
+  // Guard: `perfect_kernel_batch56::mdframed_theorem_environments_are_theorems`.
+  DefMacro!("\\newmdtheoremenv [] {} [] {} []", sub[(_opts, env, like, caption, within)] {
+    let mut toks = vec![T_CS!("\\newtheorem"), T_BEGIN!()];
+    toks.extend(env.unlist());
+    toks.push(T_END!());
+    if let Some(like) = like {
+      toks.push(T_OTHER!("["));
+      toks.extend(like.unlist());
+      toks.push(T_OTHER!("]"));
+    }
+    toks.push(T_BEGIN!());
+    toks.extend(caption.unlist());
+    toks.push(T_END!());
+    if let Some(within) = within {
+      toks.push(T_OTHER!("["));
+      toks.extend(within.unlist());
+      toks.push(T_OTHER!("]"));
+    }
+    Ok(Tokens::new(toks))
+  });
+  // mdframed.sty:616-660 `\mdtheorem[opts]{env}[like]{caption}[within]` defines
+  // the numbered `env` and the unnumbered `env*` (rbt-mathnotes.sty:766-795 builds
+  // its thm/lem/cor/prop/defn with it; class census 2026-09-24).
+  DefMacro!("\\mdtheorem [] {} [] {} []", sub[(opts, env, like, caption, within)] {
+    let mut toks =
+      Invocation!(T_CS!("\\newmdtheoremenv"), vec![opts, Some(env.clone()), like, Some(caption.clone()), within])
+        .unlist();
+    toks.extend([T_CS!("\\newtheorem"), T_OTHER!("*"), T_BEGIN!()]);
+    toks.extend(env.unlist());
+    toks.extend([T_OTHER!("*"), T_END!(), T_BEGIN!()]);
+    toks.extend(caption.unlist());
+    toks.push(T_END!());
+    Ok(Tokens::new(toks))
+  });
   // `\newmdenv[opts]{name}` defines a new environment `name` that wraps
   // `mdframed` (mdframed.sty L578-585:
   //   \newenvironment{#2}{\mdfsetup{#1}\begin{mdframed}}{\end{mdframed}}).
-  // `\mdfsetup` is our no-op, so the body reduces to a mdframed wrapper.
+  // `\mdfsetup` only reads the keys, so the body reduces to a mdframed wrapper.
   // Surpass-Perl: ar5iv-bindings/mdframed.sty.ltxml L22 also no-ops this,
   // leaving the user's custom env undefined (Perl then errors with
   // `{name} is not defined`). Faithfully porting the real definer makes
@@ -29,56 +137,68 @@ LoadDefinitions!({
     "\\renewenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}"
   );
   def_macro_noop("\\surroundwithmdframed[]{}")?;
-  def_macro_noop("\\mdfsubtitle[]{}")?;
+  // mdframed.sty:1312-1347 `\mdfsubtitle[opts]{text}`: its own paragraph
+  // (`\par\addvspace…\par`) in `\mdf@subtitlefont` (default `\bfseries`,
+  // the `subtitlefont` key); the frame rules/skips are presentation. The
+  // former no-op dropped the subtitle text (batch 56aj).
+  RawTeX!(
+    r"\providecommand\mdf@subtitlefont{\normalfont\bfseries}
+\providecommand\mdf@subsubtitlefont{\normalfont}
+\newcommand\mdfsubtitle[2][]{\par\noindent{\mdf@subtitlefont #2}\par}
+\newcommand\mdfsubsubtitle[2][]{\par\noindent{\mdf@subsubtitlefont #2}\par}
+\def\lx@mdf@frametitle{\ifdefempty{\mdf@firstframetitle}{}{\let\mdf@frametitle\mdf@firstframetitle}%
+  \ifdefempty{\mdf@frametitle}{}{{\mdf@frametitlealignment\leavevmode\normalfont\mdf@frametitlefont{\mdf@frametitle}\par}}}"
+  );
   def_macro_noop("\\mdfapptodefinestyle{}{}")?;
-  def_macro_noop("\\mdfsetup{}")?;
+  // mdframed.sty:386 `\mdfsetup` = `\kvsetkeys{mdf}`: a `framemethod` set there loads its package too.
+  DefMacro!("\\mdfsetup{}", "\\kvsetkeys{mdf}{#1}");
   def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // Wrap body in `inline-logical-block` (Misc.class container with Para.model body).
-  //
-  // The schema offers three framed-box elements, each satisfying only TWO of
-  // the three placements an `mdframed` must support (verified against
-  // resources/RelaxNG: float_model ⊇ Block.model = Block.class|Misc.class|
-  // Meta.class; Para.model = Para.class|Meta.class):
-  //   * `inline-block`        (Misc.class, body=Block.model): in-float ✓, nests ✓ (Block.model ⊇
-  //     Misc.class), theorem ✗ (Block.model ⊉ Para.class). This is what Perl
-  //     ar5iv-bindings/mdframed.sty.ltxml L31-34 uses, so Perl ITSELF errors
-  //     `malformed:ltx:theorem` on a theorem-in-mdframed.
-  //   * `inline-logical-block`(Misc.class, body=Para.model): in-float ✓ (Misc.class ⊂ Block.model ⊂
-  //     float_model), theorem ✓ (Para.model ⊇ Para.class), nests ✗ — a directly-nested inner
-  //     `inline-logical-block` (Misc.class) isn't in the outer's Para.model.
-  //   * `logical-block`       (Para.class, body=Para.model): theorem ✓, nests ✓ (Para.class ∈
-  //     Para.model), in-float ✗ — Para.class ⊄ float_model.
-  //
-  // No single element does all three, and the missing auto-open bridge
-  // (inline-logical-block → para → inline-logical-block, which para_model =
-  // Block.model WOULD admit) is intentionally suppressed by the `($tag ne $kid)`
-  // self-nesting guard in BOTH Perl `Document::computeIndirectModel` (L207) and
-  // our `state::compute_indirect_model` — so adding it would diverge from Perl's
-  // document model. We therefore pick the element that fails the RAREST case:
-  //
-  // History: this was `logical-block` (theorem ✓ + nests ✓) until a fresh sweep
-  // surfaced arXiv:1907.05772 — an `mdframed` inside a `\begin{algorithm}`
-  // float, where Perl is clean (0 err, its `inline-block` is Misc.class) but
-  // `logical-block` (Para.class) tripped `"logical-block" isn't allowed in
-  // <float>` ×3 (Rust-only, Perl=0). mdframed-in-float (framed algorithm/figure
-  // boxes) is far more common than nested frames, so `inline-logical-block`
-  // strictly dominates `logical-block`: it FIXES the float regression and keeps
-  // the theorem-in-mdframed surpass (arXiv:2506.03074, 2402.07712 — beyond Perl,
-  // which errors there). The residual cost is the rare directly-nested-frame
-  // case (1712.00062): inner frame as the FIRST child of an outer frame errors
-  // `"inline-logical-block" isn't allowed in <inline-logical-block>` (any leading
-  // text auto-opens a `para` that then admits the inner frame, so only the
-  // bare-first-child variant is affected). Net: trades a moderate Rust-only
-  // regression (float) for a rare one (bare-nested-frame), maximizing error-free
-  // conversions.
-  //
-  // The template emits `framecolor=` only when the #framecolor property is
-  // set (via the `?#framecolor(...)` guard), so an unset color correctly
-  // omits the attribute rather than emitting `framecolor=''`.
+  // The frame is inserted through `insert_block` (Perl TeX_Box.pool.ltxml:449
+  // `insertBlock`, the shape `framed.sty.ltxml:21-26` and our `framed_sty.rs`
+  // use): the body is built inside `ltx:_CaptureBlock_` and the container is
+  // then chosen from content AND context — `logical-block` in flow (theorems,
+  // nested frames: arXiv 2506.03074, 2402.07712, 1712.00062), the inline
+  // variant inside a float (arXiv 1907.05772), a block child auto-closing
+  // when backmatter follows (biblatex-juradiss `\printbibliography`). A
+  // hand-rolled `open_element`/`absorb`/`maybe_close_element` with
+  // `_autoclose` (the round-2 rewrite) let a box's stray nested-list state
+  // leak into a low-level `\begin{list}` item and closed the OUTER list after
+  // its first item (cnltx-example's `{example}` frames its output in
+  // `\mdframed`; schulmathematik 1→40 errors, sweep 45; pdflatex clean,
+  // RUST-ONLY). The capture-and-rename isolates that state.
+  // Guards: `perfect_kernel_batch56::mdframed_inside_low_level_list_keeps_items`,
+  // `perfect_kernel_gemini::{mdframed_block_bibliography_juradiss, mdframed_in_float_and_nested}`.
+  // The options are keys (mdframed.sty:835-837 `\newenvironment{mdframed}[1][]{…
+  // \mdfsetup{userdefinedwidth=\linewidth,#1}`), read undigested: digested as text, a colour named `chinese_red` erred
+  // (2408.09945). They run as mdframed runs them, `\mdfsetup` in the frame's group, so a key the binding defines takes
+  // effect there and in frames nested inside (an inner frame shows the outer `frametitle`, as pdflatex does); the others
+  // are dropped by the family's handler. Then the title, which mdframed sets in its own box on top of the frame
+  // (`\mdfframedtitleenv`, mdframed.sty:702-711, :858-859: `\mdf@frametitlealignment`, `\normalfont\mdf@frametitlefont`),
+  // is the body's first paragraph; it was lost with 0 errors (silent-loss inventory #15). Guards:
+  // `perfect_kernel_batch73a::mdframed_options_are_not_typeset`, `perfect_kernel_batch74b::mdframed_frametitle_is_kept`.
   DefEnvironment!(
-    "{mdframed}[]",
-    "<ltx:inline-logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-logical-block>",
+    "{mdframed} OptionalUndigested",
+    sub[document, _args, props] {
+      document.maybe_close_element("ltx:p")?;
+      if let Some(Stored::Digested(body)) = props.get("body") {
+        let mut attrs: HashMap<String, String> = HashMap::default();
+        attrs.insert("framed".to_string(), "rectangle".to_string());
+        if let Some(Stored::String(framecolor)) = props.get("framecolor") {
+          attrs.insert("framecolor".to_string(), to_string(*framecolor));
+        }
+        insert_block(document, body, attrs)?;
+      }
+      Ok(())
+    },
+    after_digest_begin => sub[whatsit] {
+      let mut toks = vec![T_CS!("\\mdfsetup"), T_BEGIN!()];
+      if let Some(options) = whatsit.get_arg(1) {
+        toks.extend(options.revert()?.unlist());
+      }
+      toks.extend([T_END!(), T_CS!("\\lx@mdf@frametitle")]);
+      unread(Tokens::new(toks));
+    },
     properties => sub[_args] {
       let mut props = SymHashMap::default();
       if let Some(font) = lookup_font()
@@ -95,5 +215,6 @@ LoadDefinitions!({
     // open + immediate close, leaving body content in text mode and
     // cascading "Script _/^ can only appear in math mode" on subscripts.
     // Witness 2402.07712 (eqnarray + multiple `$$..$$` in mdframed).
-    mode => "internal_vertical");
+    mode => "internal_vertical"
+  );
 });

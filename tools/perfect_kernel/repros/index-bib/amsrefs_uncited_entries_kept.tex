@@ -1,0 +1,20 @@
+% witness: 1012.2719 (amsrefs `biblist` of 34 entries, 29 cited: the PDF lists all 34, the HTML 29); run-336 fidelity
+%          audit
+% oracle:  pdflatex 0 errors: References lists A, B and C, though only A is cited (amsrefs typesets every \bib of a
+%          biblist)
+% engines: rust (63f) = only A (the post-processor's bibliography keeps the cited entries of a library); Perl drops the
+%          inline bibliography whole (KNOWN_PERL_ERRORS #49)
+% expect:  3 bibitems — Able, Baker, Cole; 0 errors
+% status:  RED (63f) -> GREEN (63g)
+\documentclass{amsart}
+\usepackage{amsrefs}
+\begin{document}
+Text \cite{Able}.
+\begin{bibdiv}
+\begin{biblist}
+\bib{Able}{article}{author={Able, Ann}, title={First paper}, journal={J. One}, year={2001}}
+\bib{Baker}{article}{author={Baker, Bob}, title={Second paper}, journal={J. Two}, year={2002}}
+\bib{Cole}{book}{author={Cole, Cat}, title={Third book}, publisher={P}, year={2003}}
+\end{biblist}
+\end{bibdiv}
+\end{document}

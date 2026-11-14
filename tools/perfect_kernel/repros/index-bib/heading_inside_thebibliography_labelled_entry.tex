@@ -1,0 +1,17 @@
+% witness: review probe c1_labeled (68w r2 re-review 3); shape of hep-th0109182 with author labels
+% oracle:  pdflatex 0 errors: one list, "[S01] A. Author", the heading "More references", "[T02]", "[U03]"
+% engines: rust 68w r2 = the entries after the heading `bib.bibx2`/`bib.bibx3` in `biba` (`@bibitem` never stepped by a
+%          labelled entry, so the first bibliography was taken as empty); Perl 0.8.8 errs on every later entry (KPE #855)
+% expect:  0 errors; `bib` holds S01, `biba` (titled "More references") T02 and U03 with ids `biba.bibxN`
+% status:  FIXED (68w r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{a,b,c}.
+\begin{thebibliography}{9}
+\bibitem[S01]{a} A. Author, J. 1.
+\section*{More references}
+\bibitem[T02]{b} B. Author, J. 2.
+\bibitem[U03]{c} C. Author, J. 3.
+\end{thebibliography}
+\end{document}

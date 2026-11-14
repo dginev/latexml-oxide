@@ -1,0 +1,18 @@
+% mechanism: a raw `\@trivlist` inside `thebibliography` (no `\list`, no `\trivlist`) inherits the bibliography's
+%   `\@listctr` = enumiv; TeX's `\item` steps it under `\@nmbrlisttrue` (latex.ltx:16024), continuing the entries' count.
+%   Our `\bibitem` steps no enumiv (bibitem_steps_the_list_counter_red), so GA1d's `\@nmbrlisttrue` in the bibliography
+%   numbered the raw items from 0: hidden refnums "0A", "0B". The bibliography names `\@listctr` only (GA1e): the items
+%   stay unnumbered, as int163a; the `\trivlist` before them and the environments after are untouched.
+% witness: synthetic (revGA1d finding 1; amsrefs `biblist` and natbib's `thebibliography` take the same setup path)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [1] First. tr1 tr2 [2] raw1 [3] raw2 [4] Second.
+% engines: rust int163a 0 errors, 0 warnings, raw items unnumbered; GA1d 0 errors, 0 warnings, refnums "0A", "0B";
+%   GA1e as int163a
+% expect:  0 errors, 0 warnings; no refnum on raw1, raw2 (pdflatex's [2], [3] wait for bibitem_steps_the_list_counter_red)
+% status:  RED (GA1d) -> GREEN (GA1e) for the invented numbers
+\documentclass{article}
+\begin{document}\cite{a}
+\begin{thebibliography}{9}\bibitem{a} First.
+\begin{trivlist}\item tr1\item tr2\end{trivlist}
+\makeatletter\begingroup\@trivlist\item raw1\item raw2\endtrivlist\endgroup\makeatother
+\bibitem{b} Second.\end{thebibliography}
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: LaTeX's `\label` names `\@currentlabel` (latex.ltx:14963-14967), which reverts when the group of the
+%   step that set it closes; LaTeXML attaches a label to the element just closed before it (Document.pm:1103-1104),
+%   so a label after `\end{equation}`, still inside the theorem, named the equation
+%   (`label_follows_an_undone_step`, `Document::float_to_label_scoped`; OXIDIZED_DESIGN_DIVERGENCES #856)
+% witness: math0107195 ("Theorem 5.3" in the PDF; int52a printed the equation's 16)
+% oracle:  pdflatex 0 errors: "See Theorem 1 and (1)."
+% engines: rust int52a = labels "LABEL:eq LABEL:thm" on the equation; Perl 0.8.8 the same (KNOWN_PERL_ERRORS #1092)
+% expect:  0 errors; the theorem labels LABEL:thm, the equation LABEL:eq alone
+% status:  RED (int52a) -> GREEN (78p)
+\documentclass{article}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\begin{theorem}
+It holds
+\begin{equation}
+a=b \label{eq}
+\end{equation}
+\label{thm}
+\end{theorem}
+See Theorem~\ref{thm} and (\ref{eq}).
+\end{document}

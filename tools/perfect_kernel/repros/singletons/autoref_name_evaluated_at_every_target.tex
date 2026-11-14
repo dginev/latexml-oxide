@@ -1,0 +1,20 @@
+% Every numbered item gets an `autoref` tag (`\lx@make@tags`, base_utilities.rs; Perl Base_Utility.pool.ltxml:975)
+% whose name 59t binds at the target (user ruling 2026-10-02 (A)): `\lx@autorefnum@@` (hyperref_sty.rs) expands the
+% counter's `\<type>autorefname` at each `\refstepcounter`. hyperref's Russian block names a section
+% `\cyr\cyrr\cyra\cyrz\cyrd.` (hyperref.sty:2952), defined only under T2A; under lualatex russianb.ldf picks TU, so
+% every section raises 4 `Error:undefined:\cyrX` — where pdflatex/lualatex expand the name only at an `\autoref` (this
+% document has none: 0 errors; with one, lualatex errors too). RUST-ONLY timing (Perl applies only `\HyLang@english`).
+% Witness: biblatex-gost/biblatex-gost-examples (0 → 4 errors at 59t2; sweep #136).
+% oracle:  lualatex 0 errors.
+% engines: rust 59t-60b (luatex profile) = 4 `Error:undefined:\cyr…`.
+% expect:  0 errors (a name's diagnostics where TeX raises them: at an `\autoref` to the target).
+% status:  RED (ruling 7e 2026-10-03: bind at the target, raise the name's diagnostics only where an `\autoref`
+%   prints it) -> GREEN 60o (`\lx@tag@intags@held`, logger.rs `DeferredDiagnostics`); guard
+%   perfect_kernel_batch60::autoref_name_diagnostics_wait_for_an_autoref
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage[english,russian]{babel}
+\usepackage{hyperref}
+\begin{document}
+\section{A}Text.
+\end{document}

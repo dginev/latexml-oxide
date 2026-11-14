@@ -1,0 +1,17 @@
+% witness: run 340 IEEEtran papers shipping IEEEtran.cls (`{LaTeXdescription}` 9 of 58, `\IEEEstrut` 5,
+%   `\IEEEsettopmargin` 4, `\yesnumber` 2, `\IEEEeqnarraystrutmode` 2)
+% oracle:  pdflatex with TL 2025 IEEEtran.cls (:1394, :2226-2229, :3068, :3585-3613): 0 errors
+% engines: rust 65w = errors (each undefined)
+% expect:  0 errors; the description items; the eqnarray* row numbered by \yesnumber
+% status:  RED (65w) -> GREEN (65x)
+\documentclass{IEEEtran}
+\IEEEsettopmargin{t}{58pt}
+\begin{document}
+\begin{LaTeXdescription}
+\item[Term] Its meaning.
+\end{LaTeXdescription}
+A\IEEEstrut[2ex][1ex]{} strut. \IEEEeqnarraystrutmode
+\begin{eqnarray*}
+a &=& b \yesnumber
+\end{eqnarray*}
+\end{document}

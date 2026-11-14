@@ -1,0 +1,22 @@
+% A store the class reads only in the first page's foot (`\ps@firstp`'s `\@oddfoot`), which pdflatex prints: a
+% corresponding-author line, which FIDELITY_CHARTER §2 keeps when a footer prints it. The reader rule (title_page_check.rs
+% `is_page_furniture`, `StoreReaders`) reads page furniture as a journal's running text, so it reaches only the Info. On 42
+% real Info papers the words checked were running furniture (one date line, 1406.6413).
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Corresponding author Lunar Institute" at the page foot
+% engines: rust 108b2 = 0 errors, 0 warnings, the Info names "corresponding lunar institute"; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store) naming "corresponding lunar institute"
+% status:  RED (108b2): open, no guard, its false alarms on real journals' furniture outnumber it
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstorereadonlycls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\corresp#1{\gdef\@corresp{#1}}\def\ps@firstp{\def\@oddfoot{\@corresp\hfil}\let\@evenfoot\@oddfoot\def\@oddhead{}}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}{\thispagestyle{firstp}}\fi}
+\end{filecontents*}
+\documentclass{checkstorereadonlycls}
+\title{A Title}\author{Ann Able}
+\corresp{Corresponding author Lunar Institute}
+\begin{document}\maketitle
+Body text.
+\end{document}

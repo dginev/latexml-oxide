@@ -1,0 +1,33 @@
+% mechanism: a refsection naming its own resources starts its list from the
+%   \addglobalbib ones (biblatex.sty:10797-10801, :11348-11350); the binding's
+%   \refsection[...] recorded only the named file, so once each bibliography
+%   reads its own files the second one lost the global entry.
+% witness: biblatex-apa/biblatex-apa-test (\addglobalbib references +
+%   \begin{refsection}[...-misc.bib], biblatex-apa-test.tex:69, :1203)
+% oracle:  pdflatex+biber 0 errors; the second list prints Globalentry and Secondentry
+% engines: rust=0 errors; the second list reads sec1+global (the first's files),
+%   Secondentry missing; perl identical (base 0d10215663, 2026-09-26)
+% expect:  0 errors, 0 warnings; the second bibliography holds both g and b. Each section
+%          \nocite{*}s its files, so the shared citation list (SYNC_STATUS) warns of no
+%          key missing from the other list.
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\usepackage{biblatex}
+\begin{filecontents*}[overwrite]{rsglob.bib}
+@book{g, author={Gamma Global}, title={Globalentry}, publisher={Pub}, year={2001}}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{rssec1.bib}
+@book{a, author={Alpha First}, title={Firstentry}, publisher={Pub}, year={2002}}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{rssec2.bib}
+@book{b, author={Bravo Second}, title={Secondentry}, publisher={Pub}, year={2003}}
+\end{filecontents*}
+\addglobalbib{rsglob.bib}
+\begin{document}
+\begin{refsection}[rssec1.bib]
+\nocite{*}One. \printbibliography
+\end{refsection}
+\begin{refsection}[rssec2.bib]
+\nocite{*}Two. \printbibliography
+\end{refsection}
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: aa_cls.rs `\institute` → `\lx@aa@institute@dispatch`: the pieces counted at the written top-level `\and`s
+%   (aa.cls:745-757 `\aa@cntinstitutes`) and at each cut by meaning alone made (`split_at_kernel_separators`;
+%   Option C P2-2, P22b, P22c, OD #995), the list cut first at the kernel's `\and` by meaning, then by spelling at `\and`/`\And`, each a `labelseq=affiliation` contact call —
+%   a document macro holding only `\and` after a piece holding an `\email` line: two pieces, not the sole institute
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape, aa.cls of 2405.18257) 0 errors: "Univ A, Town / e-mail: ann@a.org" unnumbered,
+%   then "2 Univ B, City" (aa.cls counts the written `\and`s only; its title-time `\and`, :866, numbers the typeset one)
+% engines: Perl 0.8.8 splits by spelling (inst_support.sty.ltxml:36-38, which aa_support.sty.ltxml:47 loads) and misses it;
+%   int158a (2ff10b7ff9): the sole institute, written whole for both authors ("Univ A, Town and Univ B, City"), 0 errors,
+%   1 warning
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, Town, e-mail ann@a.org; Bob Baker: Univ B, City
+% status:  GREEN (P22b; guard perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning)
+% preload: ar5iv.sty
+\documentclass{aa}
+\newcommand\sep{\and}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A, Town\\ \email{ann@a.org} \sep Univ B, City}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}

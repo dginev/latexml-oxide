@@ -1,0 +1,21 @@
+% witness: 2305.05902 (`\institute{\begin{itemize}\item[\textsuperscript{\Letter}] {Shiqiang~Du } \\ \email{…} \at
+%          \item[\textsuperscript{1}] Key Laboratory … \end{itemize}}`), 2306.07927, 2605.09054 (the same template:
+%          `\item[] Wensheng Luo \at …`); the rev98b review's probe pe1
+% oracle:  pdflatex (TL 2025, 2007.09912's svjour3.cls) 0 errors: "Ann Able1 · Bob Baker1,2", and in the institute
+%          footnote "∗ Bob Baker", "1 University of X", "2 University of Y"
+% engines: rust int126a = the list on Bob Baker, its `\begin{itemize}` lost (3 Errors: the label's digestion opened
+%          the list, an `\end{itemize}` with none open, `<ltx:item>` in a contact); rust 98b = the line "∗ Bob Baker"
+%          kept for the word "itemize" (1 Error, 1 Warning); Perl 0.8.8 = the text before `\at` only the owner label
+% expect:  0 errors, 0 warnings; Bob Baker (the name before `\at`) holding the list, its two items, no "Bob Baker"
+%          line: the environment's name and an item's label are no word of the line (sv_support_sty.rs
+%          `list_structure`), the list's `\begin` kept as the address closes it
+% status:  RED (int126a, 98b) -> GREEN (98b r2) — perfect_kernel_batch98b::svjour3_list_before_at_is_structure
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{1,2}$}
+\institute{\begin{itemize}\item[$\ast$] Bob Baker \at \item[1] University of X \item[2] University of Y \end{itemize}}
+\maketitle
+Text.
+\end{document}

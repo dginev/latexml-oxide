@@ -1,0 +1,21 @@
+% witness: arXiv 2605.20924 (+2605.19649, .23281, .13873, .31401: `ș`/`ț` in natbib labels under
+%          [T1]{fontenc}); 2605.08338, 2605.21804 (explicit `\textcommabelow` in the label)
+% oracle:  pdflatex 0 errors; Perl: `ș` is "the character ș", "Roșca" plain text
+% engines: rust (56ih) = `ș` an active `\textcommabelow s` (fontenc re-input t1enc.def/.dfu), "Roșca" a
+%          two-row tabular, each label a PushbackLimit Fatal (natbib's full label expansion cut the
+%          kernel's `\ooalign{…\selectfont,}` at the comma); Perl = 5 errors + author `MariΩ` on k2
+% expect:  0 errors, 0 warnings;
+%          <p>M[the character ș] Roșca, Ștefan and Țurcanu.</p>
+%          <tag role="authors">Roșca et al.</tag> <tag role="fullauthors">Roșca and Li</tag>
+%          <tag role="authors">Mariș et al.</tag> <tag role="fullauthors">Mariș, Li, and Wu</tag>
+% status:  RED (56ih) -> GREEN (56il)
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{natbib}
+\begin{document}
+M[\meaning ș] Roșca, \textcommabelow{S}tefan and Țurcanu.
+\begin{thebibliography}{99}
+\bibitem[{Roșca et~al.(2024)Roșca and Li}]{k1} First.
+\bibitem[{Mari\textcommabelow{s} et~al.(2020)Mari\textcommabelow{s}, Li, and Wu}]{k2} Second.
+\end{thebibliography}
+\end{document}

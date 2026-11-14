@@ -14,9 +14,14 @@ LoadDefinitions!({
   DeclareOption!("usenatbib", {
     AssignValue!("@usenatbib" => 1i64);
   });
-  DeclareOption!("usedcolum", {
-    AssignValue!("@usedcolum" => 1i64);
-  });
+  // mnras.cls:72-75 (and mn2e) `\ds@usedcolumn`, which mn2e_support reads as `@usedcolumn`; Perl mn.cls.ltxml:23
+  // declares `usedcolum` and sets `@usedcolum`, so the option never loaded dcolumn (KNOWN_PERL_ERRORS #500). The
+  // misspelling is kept as an alias.
+  for option in ["usedcolumn", "usedcolum"] {
+    DeclareOption!(option, {
+      AssignValue!("@usedcolumn" => 1i64);
+    });
+  }
   DeclareOption!("usegraphicx", {
     AssignValue!("@usegraphicx" => 1i64);
   });
@@ -27,8 +32,10 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RequirePackage!("mn2e_support");
+  // mn.sty's page, mn2e's (`declare_mn_page`).
+  mn2e_cls::declare_mn_page();
 
   // And some stuff not in the later version...
   def_macro_noop("\\NewSymbolFont{}{}")?;

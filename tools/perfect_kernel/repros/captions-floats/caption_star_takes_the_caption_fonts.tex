@@ -1,0 +1,16 @@
+% caption.sty:210-227: `\caption*` is made by the full `\caption@make` with `\ifcaption@star` true, which leaves out
+% the label and separator but sets the text in the caption's fonts (`font=`, `textfont=`) and text format
+% (caption3.sty:1686-1715). The binding's `\@scaption` passed the text bare: the starred caption was upright and
+% normal size beside an italic, small unstarred one. Now `\lx@format@scaption@@` (caption_sty.rs
+% `caption_star_format_tokens`); longtable's `\caption*` takes it too (caption.sty:1167).
+% witness: probe capstar.tex (sel78k); 40 of the 30k sample use \caption* with caption font options
+% oracle:  pdflatex 0 errors; "Starred caption" italic and small with no label, "Figure 1: Normal caption"
+% engines: rust int49a = 0 errors, <caption>Starred caption</caption> with no font; perl the same
+% expect:  0 errors; the starred caption font="italic" fontsize="90%", no tag
+% status:  RED (int49a) -> GREEN (78l)
+\documentclass{article}
+\usepackage[font=small,labelfont=bf,textfont=it]{caption}
+\begin{document}
+\begin{figure}\caption*{Starred caption}\end{figure}
+\begin{figure}\caption{Normal caption}\end{figure}
+\end{document}

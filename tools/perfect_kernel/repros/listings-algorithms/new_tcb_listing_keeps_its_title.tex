@@ -1,0 +1,17 @@
+% witness: silent-loss row #16; 2508.16690 (`\NewTCBListing{framedlisting}{O{}}`), 2405.07395 (`\DeclareTCBListing`)
+% oracle:  pdflatex 0 errors: the title bars print "Example 1: First" and "Example 2: Second", the boxes hold "a = 1" and "b = 2"
+% engines: rust 77j3 = 0 errors, both titles lost (`tcb_xparse_listing` → `tcb_listing_startend`); perl: raw tcblistings, the listing is not read back
+% expect:  0 errors, 0 warnings; each listing's caption is its title, above its code
+% status:  RED (77j3) -> GREEN (77m: tcolorbox_sty.rs `tcb_store_pending_title`)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\tcbuselibrary{xparse}
+\NewTCBListing[auto counter]{exl}{ O{} m }{title={Example \thetcbcounter: #2},listing only,#1}
+\begin{document}
+\begin{exl}{First}
+a = 1
+\end{exl}
+\begin{exl}[colback=white]{Second}
+b = 2
+\end{exl}
+\end{document}

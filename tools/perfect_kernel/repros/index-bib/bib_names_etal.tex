@@ -1,0 +1,16 @@
+% A name list ending in "others" prints "A, B, et al.": Perl's do_names (MakeBibliography.pm:
+% 568-584) takes the separator from the list's length before the "others" is popped, so two
+% names and "others" join with ", ". The guard also runs \bibliographystyle{plain}.
+% witness: none (the separator was Rust-only until P2 folded the renderers into do_names)
+% oracle:  perl latexml: "A. Castro, T. Morrison, et al."; pdflatex + bibtex (abbrv):
+%          "A.-T. Castro, T. Morrison, et al."
+% engines: rust (56ir) = "A. Castro T. Morrison et al."
+% expect:  0 errors; "A. Castro, T. Morrison, et al." (abbrv), "Adam-Troy Castro, Toni
+%          Morrison, et al." (plain) (HTML)
+% status:  RED (56ir) -> GREEN (P2)
+\documentclass{article}
+\begin{document}
+\nocite{*}
+\bibliographystyle{abbrv}
+\bibliography{bib_names_etal}
+\end{document}

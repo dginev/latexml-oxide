@@ -1,0 +1,21 @@
+% A \refname that switches the font unbraced (`\renewcommand{\refname}{\bfseries\Large References}`, a class's or the
+% document's restyle) set every bibliography entry in that font too: the bibliography title was digested bare (Perl
+% latex_constructs.pool.ltxml:3885 `DigestIf`, shared). Heading names are now digested in a group of their own
+% (content.rs digest_in_group: \contentsname, \listfigurename, \listtablename, \refname, \bibname, \indexname,
+% \acknowledgmentsname, \ackname, \acknowlname, \notesname, \nomname, \listtheoremname, \lstlistlistingname).
+% witness: 65a review probe refname.tex (the RecipeBook.cls:207-209 \contentsname leak's sibling).
+% oracle:  pdflatex 0 errors: "1 Intro / Text [1]. / References / [1] A. Author, Some title." (only the heading bold).
+% engines: rust 64ze: <bibblock> inherits bold 144 %; rust 65a: only the title is bold 144 %; perl: leaks (SHARED).
+% expect:  0 errors; <title font="bold" fontsize="144%">References</title>, the bibblock in the normal font.
+% status:  RED (base) -> GREEN (65a)
+% preload: ar5iv.sty
+% Guard: perfect_kernel_batch65a::contents_name_font_stays_in_the_toc_title.
+\documentclass{article}
+\renewcommand{\refname}{\bfseries\Large References}
+\begin{document}
+\section{Intro}
+Text \cite{a}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Some title.
+\end{thebibliography}
+\end{document}

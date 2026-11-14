@@ -1,0 +1,18 @@
+% witness: 1308.5288, 1409.5169, 2112.11386 (\dayofweekname, 26 papers), 1005.0302, 1203.1927 (\pdfdate, 17), 1601.00929 (\ordinaldate), 2209.06700 (\showdowfalse)
+% oracle:  pdflatex 0 errors; "A: Friday 16th October, 2026. B: Friday, 16th October, 2026. C: 20261016123400. D: 16 October 2026. E: 3rd February, 2001; Sat. F: 2026/10/16; 16/10/26; October 16, 2026."
+% engines: rust 67int9 = undefined \dayofweekname, \ordinaldate, \pdfdate, \showdowfalse, \shortdayofweekname, \yyyymmdddate output "16/10/2026"...; perl = no datetime binding (KNOWN_PERL_ERRORS #802)
+% expect:  0 errors, 1 warning (the binding's partial-port notice); the pdflatex text, the ordinal suffixes as superscripts;
+%          A is the source date's long date, empty for an undated source (ar5iv's \today, ruling 64s)
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::datetime_names_and_pdfdate
+\documentclass{article}
+\day=16 \month=10 \year=2026 \time=754
+\usepackage{datetime}
+\newdateformat{mydate}{\THEDAY~\monthname[\THEMONTH]~\THEYEAR}
+\begin{document}
+A: \today.
+B: \dayofweekname{\day}{\month}{\year}, \ordinaldate{\day} \monthname, \the\year.
+C: \pdfdate.
+D: {\mydate\formatdate{\day}{\month}{\year}}.
+E: \newdate{d1}{3}{2}{2001}{\showdowfalse\displaydate{d1}}; \shortdayofweekname{1}{1}{2000}.
+F: \yyyymmdddate\formatdate{16}{10}{2026}; \ddmmyydate\formatdate{16}{10}{2026}; \usdate\formatdate{16}{10}{2026}.
+\end{document}

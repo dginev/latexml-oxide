@@ -1,0 +1,16 @@
+% witness: 2301.03442 (the document's \usepackage{ws-rv-har}; ws-rv-har.sty:16 `\ProvidesPackage{ws-rv-har}`,
+%          "derived from natbib.sty"), 1602.07982 (ships it, loads ws-rv-van)
+% oracle:  2301.03442's PDF: "(Mayor et al. 2011)", a "References" heading (pdflatex on this fake copy, which has no
+%          natbib code: "EXTRA [?]")
+% engines: rust 72a r4 = the fork read raw: 2301.03442's 28 citations "(?)", "Bibliography"
+% expect:  0 errors, 0 warnings; natbib's author-year citation "(An, 2021)"; "References"; the copy's extra
+% status:  RED (72a r4) -> GREEN (72a r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{ws-rv-har}
+\begin{document}
+\wsextra{} \citep{a}
+\begin{thebibliography}{1}
+\bibitem[An(2021)]{a} X.~An. A title. 2021.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 2402.02746 (`\texttt{\{u1502956, haitao.wang\}@utah.edu, \texttt{\{jeffp, zhe\}@cs.utah.edu}}`: the line
+%          read as an affiliation of every name), 2410.19160 (`{sjacobchacko, sbiswas, cislam, fliza}@fsu.edu,
+%          liux@cs.fsu.edu`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Cat Cole, Dan Doe" / "Dept. of CS" /
+%          "{able, baker}@a.edu, {cole, dan.doe}@b.edu"
+% engines: rust 63m3 = the address line an affiliation of all four; Perl splits every comma of the block into
+%          "authors"
+% expect:  0 errors; 4 authors, each with "Dept. of CS" and the one address that spells the name: able@a.edu,
+%          baker@a.edu, cole@b.edu, dan.doe@b.edu
+% status:  RED (63m3) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker, Cat Cole, Dan Doe\\ Dept.\ of CS\\
+  \texttt{\{able, baker\}@a.edu, \texttt{\{cole, dan.doe\}@b.edu}}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

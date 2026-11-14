@@ -1,0 +1,17 @@
+% witness: biblatex-chicago/cms-notes-sample, cms-dates-sample (vocalist, libretto, lyrics, dir.); biblatex-caspervector (译注)
+% oracle:  pdflatex+biber: "A Fool to Want You. vocalist Billie Holiday."; an author-less entry keeps its editor as label
+% engines: rust=0 errors (56kc): "Joel Herron, Billie Holiday (Ed.)" — every editor is "(Ed.)"
+% expect:  0 errors; the editor's role is its editortype, and the author-year label still uses the editor
+% status:  RED (56kc)
+% biblatex's editortype is the editor list's role (biblatex.def:2875-2892 `editorstrg`). A first attempt
+% (56kc review) gave the role in the BibTeX reader and broke three things: an author-less entry's label
+% fell back to the key ("(Hitchcock, 2000)" -> "(52)", cms-dates-sample), .bst bibliographies changed, and
+% a Chinese editortype came out undecoded under ctex. The role belongs in the biblatex binding, keeping the
+% editor for the label, sort and head position, from the decoded field value.
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{biblatex_editortype_role.bib}
+\begin{document}
+\cite{fool} \cite{comp}
+\printbibliography
+\end{document}

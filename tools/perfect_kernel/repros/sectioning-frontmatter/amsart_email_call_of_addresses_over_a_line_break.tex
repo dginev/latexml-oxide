@@ -1,0 +1,23 @@
+% mechanism: one `\email` printing two addresses over a line break (`\email{ann@x.org;\\ bob@x.org}`) is decided
+%   address by address (G3, OD #938): the writer's write-out reads today's contact across its line break, so it writes
+%   each address its speller's instead of declining the paper — the decline had dropped the rest of the writer's work
+%   (2212.08940: Mohammed Mouniane's `$^{*1}$` address, which int123a's writer gave him; brief 95c r3).
+% witness: 2212.08940 (`\email{mhamed.ghiati@uit.ac.ma;\\ mohammed.mouniane@uit.ac.ma}` after the first `\author`)
+% oracle:  pdflatex 0 errors: "Email address: ann@x.org;, bob@x.org" under Univ X (amsart joins the lines)
+% engines: rust 95c-r2: the writer declined ("a difference no operation explains"), the call one contact of Ann
+%   Able's; rust int123a: the same contact; perl: not run
+% expect:  0 errors, 0 warnings; ann@x.org on Ann Able, bob@x.org on Bob Baker (before his address, as the e-mail
+%   prints before it)
+% status:  RED (95c-r2) -> GREEN (95c-r3)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ X}
+\email{ann@x.org;\\ bob@x.org}
+\author{Bob Baker}
+\address{Univ Y}
+\maketitle
+Text.
+\end{document}

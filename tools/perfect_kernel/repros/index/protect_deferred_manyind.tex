@@ -1,0 +1,13 @@
+% witness: manyind/mindsample (manyind.sty:119/124 \protect\nxtletre, \protect\def\protect\nwletre)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-03, after batch 54l)
+% expect:  0 errors; <indexphrase key="key"/>
+% status:  GREEN
+% guard:   perfect_kernel_batch54::index_entry_defers_protected_macros
+\documentclass{article}
+\usepackage{makeidx}\makeindex
+\long\def\ltest#1{\ifx#1\ltest\else X\fi}
+\newcommand\nxt{\def\item{\ltest}}
+\begin{document}
+A\index{key@\protect\nxt}
+\end{document}

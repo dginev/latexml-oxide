@@ -1,0 +1,14 @@
+% witness: review 64y round 1 (m9_foot)
+% oracle:  pdflatex 0 errors
+% engines: rust 64ra 0E+1W and 64y 0E+1W ('\end occurred inside a group at level 1', group opened by \lx@note); XML correct; Perl 0E
+% expect:  0 errors 0 warnings
+% status:  RED (64y side finding): the footnote body ends by a programmatic egroup() against the bare \quote frame, which close_environment_frame leaves alone by design (only the closer token itself is re-read)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Intro.
+
+C\footnote{\quote Foot quote} after foot.
+
+Next para.
+\end{document}

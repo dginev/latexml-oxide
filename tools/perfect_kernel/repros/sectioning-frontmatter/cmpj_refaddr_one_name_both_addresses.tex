@@ -1,0 +1,19 @@
+% witness: 1212.6137 (J. Kaupužs\refaddr{label1,label2} under three addresses; here the one name holding the list)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. One1,2", "1 First Institute, Lviv, Ukraine", "2 Second
+%          Institute, Kyiv, Ukraine"
+% engines: int164a: "?,?" on the name, 4 Warnings, the list on a nameless creator
+% expect:  0 errors, 0 warnings: the one name requests every label of the list, which it holds whole as pdflatex
+%          prints it (the count of a list placed whole fires only where a name requests some of its labels)
+% status:  GREEN (CMPJ1: perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run)
+\documentclass{article}
+\usepackage{cmpj}
+\title{A title}
+\author{A. One\refaddr{la,lb}}
+\addresses{
+\addr{la} First Institute, Lviv, Ukraine
+\addr{lb} Second Institute, Kyiv, Ukraine
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

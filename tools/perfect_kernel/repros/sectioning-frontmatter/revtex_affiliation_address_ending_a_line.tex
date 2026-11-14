@@ -1,0 +1,25 @@
+% mechanism: an address ending a line of an affiliation (the line's break after it) is at a list boundary in the
+%   reading and the writer alike — the reading reads the entry's lines (`events_lined_text`), the writer a line break
+%   as a line's end — and its cut takes the separators before it on its line, the break kept (brief 95c r2 B2, N2).
+% witness: cond-mat0607219 (`…\\ Ph: 951-827-2122; FAX: 951-827-2425; email: rlake@ee.ucr.edu\\ Jan. 4, 2005\\ …`)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" over "Dept X, Univ Y", "Ph: 1; FAX: 2; email: aable@y.edu",
+%   "Jan. 4, 2005"
+% engines: rust 95c: "FAX: 2; <break/>" (a separator left before the break); rust int123a: the address inside the
+%   affiliation; perl: the same
+% expect:  0 errors, 0 warnings; both "Dept X, Univ Y<break/>Ph: 1; FAX: 2<break/>Jan. 4, 2005", Ann Able aable@y.edu
+% status:  RED (95c) -> GREEN (95c-r2)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Dept X, Univ Y\\
+Ph: 1; FAX: 2; email: aable@y.edu\\
+Jan. 4, 2005}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

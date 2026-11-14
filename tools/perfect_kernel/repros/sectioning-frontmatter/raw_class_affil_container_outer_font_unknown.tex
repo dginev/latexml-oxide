@@ -1,0 +1,35 @@
+% witness: ar-1col.cls's `\affil` inside `\author{}` (1602.05576, 2405.08158); review rev94b r5 BL3 (its probes `p/x`
+%          itemph, nest2, smemph, nest: fc.cls)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able,1 Bob Baker,2 … Hal Hart8", the upright "1Univ A, Town" /
+%          "2Univ B, City" (`\emph` inside `\itshape`), the red emphasized "3Lab C, Place" / "4Lab D, Place", the small
+%          emphasized "5Inst E, Town" / "6Inst F, City", the emphasized underlined "7Dept G, Town" / "8Dept H, City",
+%          "Body."
+% engines: rust 94b r5 = 0 errors, 0 warnings: each entry of the first three wrapped in `\emph` without the font where
+%          it starts (italic where pdflatex prints upright; red and the size lost); the nested `\emph{\underline{…}}`
+%          cut plain (the inner container read as a switch); 94a r8 (base) = the first three cut, the last one not
+% expect:  0 errors, 0 warnings; a container whose start's font the boxes cannot tell gives its entries neither font
+%          nor wrap — the base's cut (`plan::entry_forms`); nested containers wrap each entry in both
+%          (`plan::container_wrap`): Dept G and Dept H emphasized and underlined; each name its own line; eager and
+%          --streaming the same
+% status:  RED (94b r5) -> GREEN (94b r6)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\RequirePackage{xcolor}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\address#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker,$^2$ Cy Cole,$^3$ Dan Doe,$^4$ Eve Ern,$^5$ Fay Fox,$^6$ Gil Gray,$^7$ Hal Hart$^8$
+\affil{\itshape\emph{$^1$Univ A, Town\\ $^2$Univ B, City}}
+\affil{\textcolor{red}{\emph{$^3$Lab C, Place\\ $^4$Lab D, Place}}}
+\affil{\small\emph{$^5$Inst E, Town\\ $^6$Inst F, City}}
+\affil{\emph{\underline{$^7$Dept G, Town\\ $^8$Dept H, City}}}}
+\maketitle
+Body.
+\end{document}

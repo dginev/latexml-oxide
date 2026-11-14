@@ -1,0 +1,13 @@
+% witness: 1409.4633 (run 340's `&` cluster, R1): `\lefteqn` in a two-column `array{ll}`; its `\multicolumn{3}`
+%          overran the template before the row's own `&`
+% oracle:  pdflatex 0 errors; pdftotext `a+b+c` above `<= d`
+% engines: rust 65int2 = 2 errors, Perl 0.8.8 = 1
+% expect:  0 errors, 0 warnings; the first row one cell over both columns, classed `ltx_eqn_lefteqn`
+% status:  RED (65int2) -> GREEN (65o)
+\documentclass{article}
+\begin{document}
+\begin{equation}
+\begin{array}{ll}\lefteqn{a+b+c}\hspace{1cm}&\\& \le d
+\end{array}
+\end{equation}
+\end{document}

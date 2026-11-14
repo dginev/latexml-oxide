@@ -1,0 +1,17 @@
+% The same idiom under acmart, whose `\title` is ams_support's (`\lx@titlepage@class@call`), not the kernel's: the
+% refused document `\title` replays there too.
+% witness: 2506.01799 (main.tex:27-28, acmart)
+% oracle:  pdflatex not run (acmart fonts); the idiom is the cvpr one above
+% engines: rust 67int26 = 1 Error (undefined:\thetitle)
+% expect:  0 errors; one ltx:title "Universal Widgets"; the body paragraph "Body Universal Widgets."
+% status:  RED (67int26) -> GREEN (int26)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\let\titleold\title
+\renewcommand{\title}[1]{\titleold{#1}\newcommand{\thetitle}{#1}}
+\title{Universal Widgets}
+\author{A. Author}
+\begin{document}
+\maketitle
+Body \thetitle.
+\end{document}

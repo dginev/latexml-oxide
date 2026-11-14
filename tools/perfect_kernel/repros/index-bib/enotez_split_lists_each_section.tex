@@ -1,0 +1,25 @@
+% enotez's `split=section` lists the notes of each section under its own title, and `reset=true`
+% restarts the numbering: enotez advances the split by prepending to `\section` (enotez.sty:884-905),
+% which LaTeXML keeps locked, so the binding compares what the headings changed at each note: a
+% starred section and an appendix's section A after section 1 start their own splits.
+% witness: none (synthetic; enotez_en.tex split option).
+% status:  GREEN (58l)
+% oracle:  pdflatex (2 runs) 0 errors: Notes, "Notes for section 1": 1. *. ; "Notes for section 2": 1. ;
+%          "Notes for section 2" (the starred one): 1. ; "Notes for section A": 1.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{enotez}
+\setenotez{split=section,reset=true}
+\usepackage{hyperref}
+\begin{document}
+\section{Intro}
+Alpha\endnote{First note text.} and beta\endnote[*]{Starred note text.}
+\section{Two}
+Delta\endnote{Fourth note.}
+\section*{Thanks}
+Epsilon\endnote{Fifth note.}
+\appendix
+\section{Extra}
+Zeta\endnote{Sixth note.}
+\printendnotes
+\end{document}

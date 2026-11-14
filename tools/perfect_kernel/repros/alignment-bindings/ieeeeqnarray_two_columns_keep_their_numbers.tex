@@ -1,0 +1,15 @@
+% witness: review of 64ra (`{rl}` IEEEeqnarray, two numbered rows)
+% oracle:  pdflatex 0 errors, "(1)" and "(2)"
+% engines: rust 64h4 = 0 errors, (1) and (2); 64ra v1 = row 2 joined to row 1 as a continuation, "(1)" lost (its
+%          second column read as the last, `r`); Perl 3 errors, 1 warning
+% expect:  0 errors, 0 warnings; two equations tagged (1) and (2)
+% status:  RED (64ra v1) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rl}
+a &= b+c\\
+&= d
+\end{IEEEeqnarray}
+\end{document}

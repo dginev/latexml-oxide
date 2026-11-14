@@ -1,0 +1,20 @@
+% A `\tableofcontents` after a brace-less `\abstract` (never closed): the TOC is `\section*{\contentsname}` in
+% article.cls, so it ends the abstract as a `\section` does (the sectioning hook's `\maybe@end@abstract`); the text
+% after it is the document's.
+% witness: 2007.03709, 2202.05904, 2512.04732, 2602.15970, hep-lat9910044 (report)
+% oracle:  pdflatex 0 errors: "Abstract First text. Contents 1 Intro After the contents.", then "1 Intro Body."
+% engines: rust 67int23b = 1 Error (malformed:ltx:TOC in ltx:p)
+% expect:  0 errors, 0 warnings; ltx:abstract = one p "First text."; then ltx:TOC, a para "After the contents.", the
+%          section, all children of ltx:document
+% status:  RED (67int23b) -> GREEN (74a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract
+First text.
+\tableofcontents
+After the contents.
+\section{Intro}
+Body.
+\end{document}

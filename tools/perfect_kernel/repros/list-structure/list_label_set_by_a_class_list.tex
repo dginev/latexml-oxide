@@ -1,0 +1,35 @@
+% mechanism: latex.ltx:15858 `\list` keeps its label in `\@itemlabel` and `\item` prints `\@itemlabel`
+%   (latex.ltx:15966); memoir.cls:4580 (= revtex4.cls:1768, aastex701.cls:1754, any copied `\list`) replaces our `\list`,
+%   so its labels reach the items only if the shared `\@trivlist` reads `\@itemlabel`.
+% witness: synthetic (QA45, revQA finding 1: BM Q3.2's example under memoir).
+% oracle:  pdflatex 0 errors: "– one", "* inner", "– two", "x three", "• four", "(a) five", "1. six", "seven".
+% engines: rust int160a: " •", " –" (bold), " •", " x", "•", " 1.", "1." (the default labels; the class's lost);
+%          Perl 0.8.8 (memoir unbound: OmniBus, its own `\list`): the PDF's labels but "four" bold "–", 2 E
+%          (`\memfontenc`, `{adjustwidth}` undefined).
+% expect:  0 errors, 1 warning (memoir.cls:5454 `\@iffirstamp`, at load); the tags as in the PDF, except " x"
+%          (repro class_mklab_is_a_space_in_the_tag_red).
+% Guard: perfect_kernel_batch56::list_labels_come_from_itemlabel.
+% status:  RED (int160a) -> GREEN (ML1)
+\documentclass{memoir}
+\begin{document}
+\begin{list}{--}{}
+\item one
+\begin{list}{*}{}
+\item inner
+\end{list}
+\item two
+\item[x] three
+\begin{itemize}
+\item four
+\end{itemize}
+\end{list}
+\begin{list}{(\alph{enumi})}{\usecounter{enumi}}
+\item five
+\end{list}
+\begin{enumerate}
+\item six
+\end{enumerate}
+\begin{adjustwidth}{1cm}{1cm}
+seven
+\end{adjustwidth}
+\end{document}

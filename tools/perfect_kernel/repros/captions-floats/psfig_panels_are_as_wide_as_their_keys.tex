@@ -1,0 +1,31 @@
+% witness: hep-ex0703011 (`\mbox{\subfigure[...]{\epsfig{file=...,width=2.8in}} \quad ...}` pairs: 2x2 in the PDF; 78t
+%          r2 one row of four, 43 of its sub-figures without `ltx_figure_panel`); cond-mat9707225; 1610.06413 Figs 2, 4
+%          (two panels, neither marked, so no flex row); nlin0606018; review rev78t2 probe bd1 Figure 6
+% oracle:  latex + dvips 0 errors (with a panel.eps present); Figure 1 "(a) One" and "(b) Two" on a row, "(c) Three"
+%          under them; Figure 2 one row (epsfig.sty.ltxml:37 `sizer => \&image_graphicx_sizer`: the box is the file's
+%          size under the `width`/`height` keys)
+% engines: rust 78t r2 = Figure 1 one row of three (a `\psfig` box of 0 width), int60a one panel per row, Figure 2's
+%          panels unmarked (0 wide); Perl 0.8.8 Figure 1 one panel per row (the captioned box), Figure 2 no sub-figures
+%          (KNOWN_PERL_ERRORS #1125)
+% expect:  0 errors, 0 warnings (the file is missing: its keys size it); Figure 1 one `ltx:break`, before "(c)"; all
+%          five sub-figures `ltx_figure_panel`
+% status:  RED (int60a, 78t r2) -> GREEN (78t r3, OXIDIZED_DESIGN_DIVERGENCES #876)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{epsfig}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\centering
+\subfigure[One]{\psfig{file=panel,width=0.4\textwidth}}
+\subfigure[Two]{\psfig{file=panel,width=0.4\textwidth}}
+\subfigure[Three]{\psfig{file=panel,width=0.4\textwidth}}
+\caption{Three psfig panels.}\label{f1}
+\end{figure}
+\begin{figure}
+\centering
+\subfigure{\epsfig{file=panel,width=0.4\textwidth}}
+\subfigure{\epsfig{file=panel,width=0.4\textwidth}}
+\caption{Two uncaptioned epsfig panels.}\label{f2}
+\end{figure}
+\end{document}

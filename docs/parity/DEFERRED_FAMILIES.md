@@ -4,6 +4,127 @@
 > items, each needing a dedicated session. Parked deliberately: read the entry
 > before starting, several carry explicit "do NOT start" directives.
 
+## Deferred by the difficulty rule (user 2026-10-28)
+
+The user's rule for questions that waited on a ruling: easy, pragmatic improvements are in scope; high-difficulty
+recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named below says so in its status.
+
+- **Hand-typeset title pages with no `\author`** — the frontmatter scorer's largest bucket: 178 of 2,578 sample
+  papers (6.9 %; `article` 119 of 842) print their authors in a `center`/`titlepage` block or a macro of their own,
+  so no creator is made (Perl the same). Needs a new capability — recognising a typeset title block, best from TeX's
+  own output (OPEN_ROWS design row "title-page line membership from the speculative title-page run", task #367).
+  Witnesses 1705.02941, 1010.5721, 1707.06242 (a paper's own `\authors{…}`), 1103.2069, 1710.03652, 1105.3169,
+  1803.08128, 1109.1681.
+- **Names stacked under names with no line between** (85a residual, OD #900): `Ann Able \\ Bob Baker \\ Univ X`
+  stays lines of the first author, as Perl reads it. Nothing in the text tells a stacked run of names from a name over
+  a name-shaped institution, so it needs the labelling study (`../archive/AUTHOR_BLOCK_LABELING_DESIGN_2026-10-28.md`, not built). Witness
+  1702.07694 (Peter I. Frazier, Shane G. Henderson); RED `author_block_stacked_names_each_a_creator`.
+- **adassconf's typesetting `\author`** called once per author keeps only the last call (astro-ph0101447); the class
+  prints each name at its call, so recovery needs the calls collected in order rather than the kernel store.
+- **An abstract set before `\maketitle` whose class prints title-page pieces above it** (17 sample papers, the
+  frontmatter scorer's out-of-order class; `agent_reports/2026-10-28_rc_order.md` G-B): the abstract's source position
+  is before the deposit, but the class's `\@maketitle` prints address, then abstract (sibgrapi.sty:65-81,
+  w-art.cls:711-764, ifacconf.cls:983-1059), so placement alone cannot recover the order — it needs the class's own
+  print point for the abstract (the deposit expanding the nulled abstract store into a marker), K11 on raw `.sty`
+  loads (cesj `\institute`, sibgrapi) and accumulating stores (w-art's `\g@addto@macro` `\address`). Witnesses
+  0710.1854 (sibgrapi), 0910.5837, quant-ph0606237 (w-art), 1310.6133 (icrc2013), 1602.05576, 2508.18432 (ar-1col),
+  2109.10941, 2406.03764 (putex), 2303.16316 (jheppubmodnew), 2406.16374 (lrec-coling2024), 2501.06929 (SCITEPRESS),
+  2509.01217 (melba), 2603.12634 (tea), math0408149 (gtart_h), physics0510010 (cesj), 1309.1610, 2104.15006
+  (ifacconf), 0806.3855 (an: `\@maketitle` prints `\@keywords` before `{\@abstract}`, an.cls:717-721; Perl drops
+  both), astro-ph0607079 (SolarPhysics: the `{opening}` abstract is a store, printed after `\@title`
+  `\@authorsandinstitutes` `\@date`, SolarPhysics.cls:901-908, :949-952; Perl drops the title page; root-cause
+  `agent_reports/2026-10-30_rc_abs5.md`). Nothing is lost; the pieces are body text after the abstract. Witness TODO (user 2026-10-28: deferred,
+  kept tracked): 2403.15998 (ifacconf, a late abstract) — `\open@fm` (ifacconf.cls:984-1070) sets the title-page
+  deposit, the abstract's marker and the keywords in one block, so 86g's cover rule fails safe and leaves it as is; an
+  ifacconf binding (24 of 30k papers) would fix it and 1309.1610, 2104.15006 together.
+- **Abstracts a class stores or queues** (86i residuals; OD #154, #903). Since 86i every abstract printed where it
+  stands is kept, as the vendored Perl keeps it; three shapes remain where the class does not print where it stands,
+  and four of the late placement (d)-(g):
+  - (a) **Stored abstracts: one extra, unprinted.** A class whose `{abstract}` stores its text for `\maketitle` or
+    `\end{frontmatter}` prints only the last; we keep each (Perl too). Witnesses 2108.09753, 2412.03249 (elsarticle
+    `\absbox`; 2108.09753's extra one shows its acronyms empty, "controlled by a ()", as they are defined after it),
+    2406.04383 (ceurart writes `{abstract}` to a file with `\verbatimwrite`); two `{abstract}`s before `\maketitle` in
+    amsart or revtex (`rc_abstract2` probes `p01_amsart2`, `p06_revtex`: pdflatex prints "B" only, we give A and B).
+    The converse, q02: article's `\abstract{A}` then `{abstract}B` gives B only, where pdflatex prints both (the
+    command-form dequeue cannot tell it from sn-jnl's store, 2305.00493). The same family: an abstract a binding adds
+    after `\maketitle` with `\lx@add@frontmatter{ltx:abstract}` and no marker (rmaa's hand-off, oup's
+    `\otherabstract`, which those classes print only inside `\maketitle`) has no source position, so no late marker
+    places it: it stays right after the late abstract before it, carried along when that one moves (86i r3 review
+    probe q9, r3 probe m4: behind the second's cover line, where pdflatex prints it after the next line or the body),
+    or with the first in the head run, ahead of the cover lines (repro `late_empty_abstract_then_markerless_abstract`);
+    late abstracts keep their source order either way (OD #903). Proposed fix: a per-binding
+    `FmConventions` field, "stores its abstract until `\maketitle`/`\end{frontmatter}`", under which a later one
+    replaces the stored one; it needs a class-by-class audit.
+  - (b) **P1: a repeated queued `\lx@add@abstract` after `\maketitle` loses the printed ones before it.** A class whose
+    `\abstract{…}` (`\renewcommand{\abstract}[1]{\begin{quote}…#1\end{quote}}`) prints in place keeps only the last of
+    several after `\maketitle` (Perl, the base and 86i alike): `\lx@clear@frontmatter{ltx:abstract}` is Perl's
+    dequeue, which empties the queue filled after `\maketitle`'s flush and ignores the name (`queue.rs`
+    `dequeue_front_matter`). Review probes o7, o8 (86i r2). Differently named entries collide too, CONFIRMED: a
+    queued `\lx@add@frontmatter{ltx:abstract}[name=Other]` after `\maketitle` is lost at the next `{abstract}` (86i r3
+    probes m1, m2; Perl the same). The reverse shape: a queued `\lx@add@abstract` between two `{abstract}`s is
+    removed by the later one's `\lx@clear@frontmatter` (86i r4 writer probe x2: `{abstract}` Env first, Cover two,
+    `\lx@add@abstract{Queued second}`, Cover three, `{abstract}` Env third — pdflatex prints all three, we lose the
+    queued one; int117a also loses Env first). No corpus witness.
+  - (c) **P2: an empty `{abstract}` loses its printed heading.** pdflatex prints "Abstract" over nothing; we add no
+    element (the base too; Perl keeps an empty one). Review probes o1, o4, q09 (86i). No content lost.
+  - (d) **Keywords given after any late abstract but the last follow the last, and a carry can take them past later
+    cover lines.** The frontmatter orders all keywords after every abstract in the head, so they ride with the run of
+    whichever late abstract moves last. IEEEtran, after `\maketitle`: `Cover one`, `{abstract}First`,
+    `{IEEEkeywords}kwone`, `Cover two`, `{abstract}Second`, `Cover three`, `{abstract}Third` — pdflatex prints "Index
+    Terms—kwone" after the first; we give it after the third (repro
+    `late_abstracts_keywords_after_the_first_follow_the_last`, 86i r4 review probe n2; o2g, keywords after the
+    second, the same). With a refused move, `{abstract}`+`{IEEEkeywords}kwone`, `Cover two`, `{abstract}Second`, body
+    prose, `{abstract}Third`+`{IEEEkeywords}kwthree`: Second's move carries Third and both keywords, so kwone lands
+    past "Cover two" (repro `late_abstracts_keywords_carried_past_a_cover_line`, probe n10; 86i r3 put kwthree on
+    the wrong side of the same line instead). 86i r2-r4 alike; int117a lost the earlier abstracts. Not a regression,
+    no corpus witness. Fix direction: place keywords in the head by their source position relative to the late
+    abstracts, so each late abstract's run holds only its own; the carry is not the problem.
+  - (e) **A late abstract after a `{titlepage}` environment lands ahead of it** (readability: visible content
+    reordered). article, after `\maketitle`: `{titlepage}` holding Cover one, `{abstract}First`, Cover two,
+    `{abstract}Second`; then Cover three, `{abstract}Third` — we give Third, the titlepage, Cover three; pdflatex
+    prints Third after Cover three. Repro `late_abstract_after_a_titlepage_environment_lands_ahead_of_it` (86i r4
+    review probe n3); int117a, 86i r3 and r4 alike. No corpus witness.
+  - (f) **An `{abstract}` inside a section or an appendix becomes a plain paragraph** with no "Abstract" heading;
+    pdflatex prints the heading. The text is kept. Repro `abstract_inside_an_appendix_section_loses_its_heading` (86i
+    r4 review probes n1, n6 — the latter after three carried late abstracts); int117a, 86i r3 and r4 alike. No corpus
+    witness.
+  - (g) **amsart keywords and subjclass given before `\maketitle` come out after the last late abstract**, where
+    pdflatex prints them in the first page's footnote (`\@adminfootnotes`, amsart.cls:655-658). Repro
+    `amsart_keywords_before_maketitle_set_after_late_abstracts` (86i r4 review probe n9); int117a, 86i r3 and r4
+    alike. No content lost; no corpus witness.
+- **Pathological authoring** (user 2026-11-01: "pathologically bad authoring markup, where recovery is impossible
+  without breaking the more frequent cases … catalog such pathological cases and defer them"). Each case is the
+  markup, why recovering it would break the frequent well-formed case, and its witness. No recovery is added. Each
+  gets a RED repro once one is written. The frontmatter scorer excludes a witness here only for its lost-words shapes;
+  every other violation still counts.
+  - Prose typed in math: `\author{Shaomin Chen\\ $On~behalf~of~E949~Collaboration$}`. The remark prints as math
+    italic letters. Reading math letters as words or a collaboration remark would re-read every formula in a title or
+    a name line. The XML keeps the math, so the text is not lost. Witness hep-ex0409064.
+  - A circled letter as an at-sign: `ajentzen\textcircled{\texttt{a}}cuhk.edu.cn`. Taking `\textcircled{a}` for `@`
+    would turn every circled-letter mark into an e-mail separator. The text is kept as printed. Witness 2302.03286.
+  - An accent command plus a combining accent on one letter: `Alle\'́e`, a source typo printing a doubled acute.
+    Witness 1908.06645.
+  - An unbalanced `\hspace{` in the author line swallows the next author. Perl reads it the same way; reported by the
+    dev lost-words census and not yet reproduced. Witness 1605.04229.
+  - Marks inside an e-mail template's domain: `$\{$name.surname$\}$ @ $^1$polytechnique.edu, $^2$inria.fr`. Reading
+    a mark after an `@` as the domain's label would cut every address whose domain a footnote mark follows. The line is
+    kept as printed. Witness 2009.04283; RED `sectioning-frontmatter/cut_acmart_template_address_line_red` (batch 100b).
+- **FM-14** a class setter that builds the kernel's `\@author` from its stores (jfpc.cls:188-191; 1503.05530).
+- **FM-15** vmsta 2018+ `\author@optarg` names made by `\csname`; a replayed `\maketitle` prints the author line
+  and the e-mail line twice (1806.03850, 1810.09667, 2012.03249).
+- **BIB-5** citation commands a paper redefines through `\@citex`/`\@lbibitem` against the locked `\cite` (6 papers);
+  front-matter fields a class never typesets (revtex `\thanks` in `\author`, aastex running heads).
+- **BIB-9** MathSciNet `MRREVIEWER` macros and Perl's MathReview synthesis (6 papers).
+- **KRN-7** eqnarray REDs (`alignment/eqnarray_cr_row_column_count`, `lefteqn_overprint_keeps_template_material`,
+  `eqnarray_side_content_only_cell`); the proposed rule — size never decides dropping content, only
+  `Digested::is_skippable` — stands as the direction.
+- **KRN-15** `\item[]` excluded from the OD #189 item bridge (2606.00118).
+- **KRN-17** `\unvbox`/`\lastbox` residuals of OD #637 (awaiting R6; `boxes-groups/unvbox_lastbox_peel_loop`;
+  math0301370's `diagrams` loops).
+- **KRN-40** K9 Stage 1 frame ownership and Stage 2 (L 126, B 38 papers), and the study's six questions.
+- **REF-6** cleveref formats that compute or make an object at the reference (typesetting them needs post to run
+  TeX), range compression and late format settings.
+
 ## Deep deferred families (parked — large or shared; dedicated sessions)
 
 - **Native `.bst` interpretation — DEFERRED (pending plan, ~a few months out; do NOT
@@ -40,7 +161,8 @@
   deleted 2026-07-26 when a raw `.bib` became a recursive engine conversion
   ([`BIBLIOGRAPHY_WORKLIST.md`](BIBLIOGRAPHY_WORKLIST.md) re-port item 1), so
   name splitting is now `bibtex.rs`'s port of `BibTeX.pool`. `findnodes_by_traversal`
-  is unaffected. **No named guard survives for the corporate-author half**
+  was replaced by real XPath in batch 56jd (`findnodes_foreign`, DIVERGENCES #307);
+  this witness's bibliography is unchanged by it (13 items identical, without the `.bbl`). **No named guard survives for the corporate-author half**
   (`grep` for "corporate" / "W3C Math Working Group" across the tests returns
   nothing), so re-verify it on this witness before relying on it.
 
@@ -120,7 +242,7 @@
   use verbose Perl).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
-  `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`. **★ CANONICAL WITNESS FIXED AT THE ROOT
+  `../archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`. **★ CANONICAL WITNESS FIXED AT THE ROOT
   (2026-06-26q, LANDED on `class-b-xmref`):** the grammar rule `statements punct
   statement vertbar statements => vertbar_modifier_listlhs` makes a comma-list left
   of a conditional bar parse (`a,b|c` → `list@(a, conditional@(b,c))`, Perl-exact),
@@ -194,7 +316,7 @@
   parse-coverage (make the in-context arg parse; relates to the open VERTBAR/comma-list
   asides); (B) failure-robust id preservation via reused-leaf correspondence
   (`record_replacement(oldXMArgId, newTopId)` re-point, content-preserving). Precise
-  repro + ruled-out approaches in `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`
+  repro + ruled-out approaches in `../archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`
   (2026-06-26a–o). The dedicated session = fix axis A or B + full math-fixture/corpus
   validation. **PARTIAL FIX LANDED (2026-06-26o, `class-b-xmref`):** an
   operand-protection guard in `prune_dangling_split_xmrefs` stops the broad `^S\d+`
@@ -217,6 +339,18 @@
   nonterminal (≥1 comma, not subsumed by `statements`) so the rule fires only on
   genuine lists, OR a pruning tweak — dedicated math-parser session. Axis A produces
   the genuinely-correct tree; preferred over the deep rearrange materialization.
+  **Residual (re-verified 2026-09-27; record `../archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`):** keyless
+  `Missing idref` on `0803.3810` (51, cortex 2026-08-25 — not the distribute-extend root) and `0707.1339` (2;
+  `\[{}^{++}_{bkg}\]` → 2 bare `<XMRef/>`, Perl 0). Fenced `P(a,b|c)` diverges (Rust `conditional@(open-interval(a,b),c)`,
+  Perl `open-interval(a,conditional(b,c))`). No longer warning (0 dangling-ref lines, cortex 2026-08-25): `2207.08945`,
+  `2306.04445`, `2307.02913`; `2311.01600` S7.E46 is a deep mis-parse (`XMWrap rule="Anything,"`, archived §3b), not a ref gap.
+  Deep half: rearrange clones + no `.mf` suffix (amsmath_sty.rs:2052-2067); broad sweep (document.rs:5080) deletable once refs resolve.
+- **expl3 `\ExplSyntaxOff` catcode restore (latent, no live witness)** — xparse_sty.rs:22-23, expl3_sty.rs:242-243,
+  l3keys2e_sty.rs:12-13, mhsetup_sty.rs:33-34 hardcode a global `:`→OTHER/`_`→SUB after their raw loads — wrong when the
+  caller is itself expl3 (spath3 via `\usetikzlibrary{knots}`: 0 `unexpected:_` today). Real fix = complete
+  `\ExplSyntaxOff` restore + complete expl3-code.tex codepoint load (L33074-33245 dangles a `\group_begin:`; NODUMP masks it
+  via `IgnoreDiagnosticsScope`, #651). Dead ends (each broke `glossary_test` 108→1 lines or 2203.05327 78→459): per-package
+  `_`/`:` save/restore, force-LETTER, skipping the codepoint data files. Record `../archive/EXPL3_CATCODE_GAP_2026-06-08.md`.
 - **xy-pic `svg:path` / curve cluster** (1501.03690) — shifted-arrows `svg:path`
   in `ltx:text`; mode-frame cascade root.
 

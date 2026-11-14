@@ -1,0 +1,18 @@
+% mechanism: `$\rm ^{3}$He` ends its formula with its script, so the structural reader (90a) reads it as a mark; no
+%   name requests it, so a cut at it would send "3He Lab" to no one while the line's other pieces go to names: the
+%   line must stay whole (88c's mixed-owner fail-safe, refactor stage 3). Today the cut declines (no balanced run)
+% witness: 2105.07958 (`$\rm ^a$`); review 88c r2 probe q17
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ X, 3 He Lab", "2 Univ Y"
+% engines: rust int118a, 90a: Ann "Univ X, 3He Lab", Bob "Univ Y" (writer `declined: Affiliation helab: reading
+%   [Block]`); 88c r1/r2 (not merged): "3He Lab" a nameless creator's
+% expect:  0 errors, 0 warnings; writer `declined`; Able: Univ X, ³He Lab; Baker: Univ Y
+% status:  GREEN (int118a, 90a; catalog, no guard: stage 3's cut must keep it)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X, $\rm ^{3}$He Lab\\ $^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

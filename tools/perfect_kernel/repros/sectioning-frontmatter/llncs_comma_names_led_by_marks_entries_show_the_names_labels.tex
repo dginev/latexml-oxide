@@ -1,0 +1,21 @@
+% mechanism: the labels the names show are the marks their written runs print (`emitter::marks_in`,
+%   `NAMES_SHOWN_LABELS`, OD #1009): of `$^1$Ann Able, $^2$Bob Baker, $^1$Cy Cole` in one llncs `\author` only the
+%   first name keeps its mark, so only entry 1 shows its mark — each label shown on both sides or on neither
+% witness: 1804.00518 (`$^1$Dawei Du, $^2$Yuankai Qi, …`: review revP4f B1's sibling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1Ann Able, 2Bob Baker, 1Cy Cole", "1Univ A, Town A",
+%   "2Univ B, Town B", "ann@a.edu"
+% engines: P4f: every entry's mark shown (the block's marks read, not the names'); int164a: every entry's hidden
+% expect:  0 errors, 0 warnings; 1 Ann Able "1 Univ A, Town A", ann@a.edu; Bob Baker "Univ B, Town B"; Cy Cole
+%   "1 Univ A, Town A" (the later names' marks lost: llncs_comma_names_led_by_marks_later_marks_lost_red)
+% status:  RED (P4f) -> GREEN (P4fb; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able, $^2$Bob Baker, $^1$Cy Cole}
+\institute{$^1$Univ A, Town A\\
+  $^2$Univ B, Town B\\
+  \email{ann@a.edu}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,26 @@
+% witness: 1903.10014 (AASTeX 5.2: `\caption{Observing Log and Summary of Results}\label{tab:main}\\`
+%          `\tablecaption{Summary of targets}` in one longtable); review 73a r2 probe lt2
+% oracle:  pdflatex with 1903.10014's aastex.cls (5.2), clean: Table 1 "Printed caption." only — aastex.cls:1280
+%          `\gdef\pt@caption` stores the `\tablecaption`, which only a deluxetable prints (:1507); the second
+%          longtable's `\tablecaption` alone is never printed (the longtable numbered, Table 2)
+% engines: rust 67int22 = 1 error and both captions; 73a r1/r2 = 0 errors, "Printed caption." replaced by the stored
+%          one; Perl = the `\caption` twice (deluxetable.sty.ltxml:77)
+% expect:  0 errors, 0 warnings; Table 1 captioned "Printed caption." alone; Table 2 keeps its `\tablecaption`,
+%          unnumbered (OXIDIZED_DESIGN_DIVERGENCES #739/#740: no class prints it there)
+% status:  RED (73a r2) -> GREEN (73a r3)
+% preload: ar5iv.sty
+\documentclass{aastex}
+\usepackage{longtable}
+\begin{document}
+\begin{longtable}{cc}
+\caption{Printed caption.} \label{tab:main}\\
+\tablecaption{Stored never printed}
+\tablewidth{\textwidth} \\
+A & B \\
+1 & 2 \\
+\end{longtable}
+\begin{longtable}{cc}
+\tablecaption{Only a table caption.}\\
+C & D \\
+\end{longtable}
+\end{document}

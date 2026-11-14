@@ -1,0 +1,17 @@
+% mechanism: a class's own e-mail command (`EmailMeaning::Own`) is rehearsed as `\lx@fm@obs@email@own`, whose address
+%   argument is read as the class's macro reads its `#1` — `UnexpandedSemiverbatim`, neutralized and digested in order,
+%   never expanded first: Semiverbatim's pre-expansion (Parameter.pm:124-132) ran the kernel `\fontsize`'s
+%   `\@defaultunits` (`\afterassignment\remove@to@nnil`, latex.ltx:10537) ahead of its assignment, its `\@nnil`
+%   delimiter missed, and `\@nil` ran undefined — held, then raised by the flush's net. OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: 1802.01191 (sig-alternate.cls:462 `\def\email#1{{{\eaddfnt{\par #1}}}}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able / ann@x.org"
+% engines: Perl 0.8.8: 0 Errors (its `\fontsize` is a primitive); int155a2: 1 Error (`\@nil` undefined), 1 Warning
+% expect:  0 Errors, 0 Warnings; Ann Able with the e-mail contact ann@x.org
+\documentclass{article}
+\def\email#1{{\par #1}}
+\begin{document}
+\title{T}
+\author{Ann Able\\ \email{\fontsize{11pt}{12pt}\selectfont ann@x.org}}
+\maketitle
+Text.
+\end{document}

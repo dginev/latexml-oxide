@@ -68,7 +68,18 @@ impl KeyVal {
 // semi-internals
 pub(crate) fn keyval_qname(prefix: &str, keyset: &str, key: &str) -> String {
   let prefix = if prefix.is_empty() { "KV" } else { prefix };
-  s!("{prefix}@{keyset}@{key}")
+  // xkeyval.tex:83-88 `\XKV@makehd`: header = `<prefix>@` followed by
+  // `<family>@` ONLY when the family is non-empty, so an empty-family key
+  // (`\define@key[psset]{}{precode}`, pstricks.tex:808) is `\psset@precode`,
+  // never `\psset@@precode`. Perl KeyVal.pm:60-62 always doubles the `@`,
+  // which is why its `KeyVals->new` had to drop the empty family (KNOWN_PERL_ERRORS
+  // #212, DIVERGENCES #219); with the real rule the `@@` names stay free for
+  // pstricks' delimited helpers (`\psset@@dash`, `\psset@@ArrowInside`).
+  if keyset.is_empty() {
+    s!("{prefix}@{key}")
+  } else {
+    s!("{prefix}@{keyset}@{key}")
+  }
 }
 
 pub(crate) fn keyval_get(qname: &str, prop: &str) -> Option<Stored> {
@@ -114,6 +125,13 @@ pub struct KeyvalConfig<'a> {
   pub key:         &'a str,
   pub vtype:       &'a str,
   pub default:     Option<&'a str>,
+  /// Token-form default, preferred over `default` when set: real xkeyval
+  /// stores the default's raw TOKENS (`\XKV@define@default`), while the
+  /// string path below re-tokenizes under the STANDARD cattable, splitting
+  /// internal names (`[\xskak@val@defaultid]` → `\xskak` + `@val@defaultid`
+  /// — xskak-keys.sty L25, the xskak/chessboard manuals' 1000-error csname
+  /// cascade). Perl shares the stringify bug (Package.pm DefKeyVal ToString).
+  pub default_tks: Option<Tokens>,
   pub kind:        Option<&'a str>,
   pub code:        Option<ExpansionBody>,
   pub macroprefix: Option<&'a str>,
@@ -240,6 +258,7 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
     key,
     vtype,
     default,
+    default_tks,
     kind,
     code,
     macroprefix,
@@ -315,8 +334,9 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   };
   // set the default
   // Question: Why was $default converted ToString ???
-  if let Some(default_str) = default {
-    let default_tks = tokenize(TeXString::assembled(default_str.to_string()));
+  let default_tokens = default_tks
+    .or_else(|| default.map(|default_str| tokenize(TeXString::assembled(default_str.to_string()))));
+  if let Some(default_tks) = default_tokens {
     keyval_set(&qname, "default", Stored::Tokens(default_tks.clone()));
     def_macro(
       T_CS!(s!("\\{qname}@default")),
@@ -399,7 +419,13 @@ fn define_command(qname: &str, code: Option<ExpansionBody>, macroname: &str) -> 
           .unwrap_or_default()
       })
       .collect();
-    // $value !?!??! Is it a number 1--9 ???)
+    // Perl KeyVal.pm L131 emits `T_PARAM, $value` here (with the author's own
+    // "!?!??!" comment), so the key code's argument arrives as `#<value>` and
+    // the stray PARAM token reaches the stomach: `Error:misdefined:#` on every
+    // \define@cmdkey use, and `#1` in the code body never sees the value.
+    // Real xkeyval (xkeyval.tex `\XKV@define@cmdkey`) runs the code with `#1`
+    // = the bare value — KNOWN_PERL_ERRORS #80; witness
+    // doc/latex/xkeymask/xkeymask.tex. Emit the bare value.
     Ok(Tokens!(
       T_CS!("\\def"),
       T_CS!(&macroname_cs),
@@ -408,7 +434,6 @@ fn define_command(qname: &str, code: Option<ExpansionBody>, macroname: &str) -> 
       T_END!(),
       T_CS!(&orig),
       T_BEGIN!(),
-      T_PARAM!(),
       value_tks,
       T_END!()
     ))
@@ -448,12 +473,18 @@ fn define_choice(
       nvalue = nvalue.to_lowercase();
     }
     if let Some(varmacro) = varmacro_opt {
-      def_macro(
-        varmacro,
-        None,
-        ExpansionBody::Tokens(Tokens::new(Explode!(nvalue))),
-        None,
-      )?;
+      // xkeyval.tex `\XKV@checkchoice` leaves the chosen value in the bin
+      // macro with its ORIGINAL catcodes (`\lowercase` for the `*` form keeps
+      // them): letters stay catcode 11, so a later `\ifx`/`\in@` against a
+      // catcode-11 list matches (powerdot.cls:353-387 `\pd@pdifs@tup` on
+      // `\pd@cursetup`). `Explode!` made every letter catcode 12 — Perl
+      // KeyVal.pm:143 shares that (KNOWN_PERL_ERRORS #215, batch 56ar).
+      let body = if normalize {
+        Tokens::new(ExplodeText!(nvalue))
+      } else {
+        value.clone()
+      };
+      def_macro(varmacro, None, ExpansionBody::Tokens(body), None)?;
     }
     // iterate over the possible choices and store them
     let mut valid = false;
@@ -610,6 +641,9 @@ mod tests {
     // Empty prefix is substituted with "KV".
     assert_eq!(keyval_qname("", "set", "k"), "KV@set@k");
     assert_eq!(keyval_qname("P", "set", "k"), "P@set@k");
+    // The empty family takes xkeyval's `\XKV@makehd` shape (no doubled `@`).
+    assert_eq!(keyval_qname("psset", "", "precode"), "psset@precode");
+    assert_eq!(keyval_qname("", "", "k"), "KV@k");
   }
 }
 

@@ -16,11 +16,12 @@
   to a paren comma-list now flattens: `\max(a,b)`→`maximum@(a,b)` (was
   `maximum@(vector@(a,b))`), matching Perl `ApplyDelimited`/`extract_separators`.
   Implementation was simpler than the planned grammar-rule approach: a post-parse
-  spread in the `prefix_apply` ACTION (`semantics.rs`, helper `vector_tuple_items`)
+  spread in the `prefix_apply` ACTION (`semantics.rs`, helper `fenced_tuple_items`)
   — when a function-role op (FUNCTION/OPFUNCTION/TRIGFUNCTION) applies to a
-  `Dual` whose content is `Apply(vector, [refs])`, spread the items as direct
-  operands instead of wrapping. No grammar/pruning change → NOT pruning-sensitive,
-  zero fixture regressions. Scoped to known function roles, so unknown-`f` apply
+  `Dual` whose content is `Apply(vector, [refs])`, or a fenced `list` (57ba:
+  `\max(a;b)`, `\max[a;b]`), spread the items as direct operands instead of
+  wrapping. No grammar/pruning change → NOT pruning-sensitive, zero fixture
+  regressions. Scoped to known function roles, so unknown-`f` apply
   (`f(a,b)`→`f@(vector@(a,b))`) is untouched — the intentional divergence #18.
   Verified Perl-identical: `\max(a,b)`/`\gcd(a,b)`/`\min(x,y,z)`/`g(a,b,c)` +
   nesting/`\frac`/trailing-ops; suite 1466/0; regression test in
@@ -82,7 +83,7 @@
   `\quad` (≥10pt) becomes a virtual PUNCT through `formulae_apply`, producing an
   XMDual whose content-arm XMRef siblings emit one slot off from Perl. Same
   MathFork/split content-arm xml:id family as the `expected:id` tail
-  (`EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`). NOT the rpadding path (thin spaces
+  (`../archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`). NOT the rpadding path (thin spaces
   `\,` are Perl-faithful incl. NewScript transfer, `005716ff66`).
 - **`\DeclareMathOperator` cluster — INVESTIGATED 2026-06-22, LOW-VALUE metadata,
   deprioritized** (`text=` and cMML already match): (a) Perl splits Math attrs

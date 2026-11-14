@@ -1,0 +1,17 @@
+% witness: none in TeX Live or on arXiv found (the reviewer's p14 shape)
+% oracle:  pdflatex 0 errors, "Proof. Body fourteen." (the package's trivlist head)
+% engines: rust a03442572a = <proof> "Proof."; rust e6b39e586b = an itemize "Proof." (the robust wrapper
+%          `\protect\proof␣` takes no parameters, so it passed the copy rule); perl = the itemize (no lock)
+% expect:  0 errors, 0 warnings; one <proof> titled "Proof.", no trivlist
+% status:  RED (e6b39e586b) -> GREEN (67ps r4); guard perfect_kernel_batch67ps::proof_lock_holds_against_a_robust_copy
+\begin{filecontents*}[overwrite]{robproofpkg.sty}
+\ProvidesPackage{robproofpkg}
+\DeclareRobustCommand\proof[1][\proofname]{\par\trivlist\item[\hskip\labelsep\bfseries #1.]}
+\def\endproof{\endtrivlist}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{robproofpkg}
+\begin{document}
+\begin{proof}Body fourteen.\end{proof}
+\end{document}

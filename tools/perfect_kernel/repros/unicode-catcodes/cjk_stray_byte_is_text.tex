@@ -1,0 +1,12 @@
+% witness: 2605.05335 (also 1503.05450, 2605.01303, 1612.08365; 746 of run 336's papers): CJK loaded, stray GBK
+%          punctuation outside any CJK environment (non-UTF-8 bytes, kept as bytes in this file)
+% oracle:  pdflatex of the papers' era (TL < 2018) 0 errors, the bytes typeset; TL 2025 one "Invalid UTF-8 byte" error
+%          per byte, the byte dropped (`\everyjob` restores utf8.def:113's error, latex.ltx:22237) â€” OD #481
+% engines: rust 64g = Error:undefined:\@inpenc@undefined per byte (inputenc_sty.rs); Perl (ar5iv bindings) 0 errors
+% expect:  0 errors; the bytes are text (Latin-1 mojibake, as without CJK)
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{article}
+\usepackage{CJK}
+\begin{document}
+A ¡°twisted¡± state.
+\end{document}

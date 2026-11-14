@@ -9,6 +9,8 @@ LoadDefinitions!({
 
   // Integer Registers
   DefRegister!("\\pdfoutput"                => Number::new(0));
+  // pdfTeX 1.40.19+ `\pdfmajorversion` (the PDF major version, 1).
+  DefRegister!("\\pdfmajorversion"          => Number::new(1));
   DefRegister!("\\pdfminorversion"          => Number::new(4));
   DefRegister!("\\pdfoptionpdfminorversion" => Number::new(4)); // obsolete name
   DefRegister!("\\pdfcompresslevel"         => Number::new(9));
@@ -75,6 +77,81 @@ LoadDefinitions!({
   DefRegister!("\\pdfpageresources" => Tokens!());
   DefRegister!("\\pdfpkmode"        => Tokens!());
 
+  // \lx@directlua — the LuaTeX escape, evaluated in a persistent external
+  // `texlua` (see `lua_bridge.rs`; user directive 2026-08-31: a Lua
+  // interpreter may be assumed wherever TeX Live is installed). LuaTeX
+  // manual §2.1/§10.3 semantics: the general text is EXPANDED, executed as
+  // one chunk in the job-persistent Lua state, and whatever it
+  // `tex.print`/`tex.sprint`s is inserted back into the input and read with
+  // CURRENT catcodes. A Lua error, or a host without texlua, degrades to an
+  // empty expansion with an Info — the content-carrying uses (compute +
+  // print) work; node/callback-layer uses are out of scope (bridge docs).
+  // Deliberately NOT exposed as `\directlua`: that name's mere EXISTENCE is
+  // the LuaTeX-detection probe for babel and friends (`\ifx\directlua
+  // \@undefined`), and defining it flipped 26 suite tests onto luatex code
+  // paths. Consumers (luacode.sty binding, future opt-ins) use the `\lx@`
+  // name; the engine keeps its pdfTeX-model identity.
+  DefMacro!("\\lx@directlua XGeneralText", sub[(body)] {
+    // XGeneralText already performed the \edef-like PARTIAL expansion while
+    // scanning, honoring \noexpand — a second Expand! here re-expanded the
+    // no-longer-protected \csname in babel's `[[\noexpand\csname
+    // bbl@error\endcsname{]]` idiom, and the resulting macro call ate the
+    // Lua text mid-chunk ("unfinished long string", luababel.def L204).
+    // Real-engine ground truth (luatex 1.22 probe, 2026-08-31): a \par
+    // token in the body (e.g. a blank line inside the chunk) contributes
+    // NOTHING to the string Lua receives — `\directlua{ local x = 1 \par
+    // @@@ }` errors near '@', not near '\' — while other unexpandable CSes
+    // keep their backslash form (`\relax` errors near '\').
+    let par = T_CS!("\\par");
+    let kept: Vec<Token> = body
+      .unlist()
+      .into_iter()
+      .filter(|t| t != &par)
+      .collect();
+    let chunk = Tokens::new(kept).to_string();
+    match crate::lua_bridge::lua_exec(&chunk) {
+      Ok(out) if out.is_empty() => Tokens!(),
+      Ok(out) => Tokenize!(TeXString::assembled(out)),
+      Err(msg) => {
+        // Include the (expanded) chunk head: "not evaluated" without the
+        // text we actually sent is undiagnosable — Lua's own [string "…"]
+        // excerpt shows the SOURCE author's text, not our expansion of it.
+        let head: String = chunk.chars().take(160).collect();
+        Info!(
+          "lua",
+          "directlua",
+          s!("\\directlua chunk not evaluated: {msg} | chunk head: {head}")
+        );
+        Tokens!()
+      },
+    }
+  });
+  // \luaescapestring <general text> — escape the text for inclusion inside a
+  // Lua string literal (LuaTeX manual: precedes \ " ' and newline with \).
+  // XGeneralText already performed the partial expansion while scanning. A second
+  // Expand! here over-expanded unexpanded/robust macros inside arguments (e.g.
+  // luwa-ul's \unexpanded\expandafter{\underLineKK@test@contents}).
+  DefMacro!("\\lx@luaescapestring XGeneralText", sub[(body)] {
+    let s = writable_tokens(&body);
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+      match c {
+        '\\' | '"' | '\'' => {
+          out.push('\\');
+          out.push(c);
+        },
+        '\n' => out.push_str("\\n"),
+        _ => out.push(c),
+      }
+    }
+    Tokens!(ExplodeChars!(out))
+  });
+  // `\primitive` and `\Uchar` are NOT pdfTeX primitives (pdfTeX has only
+  // `\pdfprimitive`); `\ifdefined\Uchar` is a Unicode-engine detection probe
+  // (ucharcat.sty, math-operator.sty), so both live in the `luatex` profile of
+  // latexml.sty. `\Ucharcat` below is the one deliberate exception (expl3's
+  // `\char_generate` path, see its note). Guard:
+  // `perfect_kernel_batch56::unicode_engine_primitives_stay_undefined_under_pdftex`.
   // \Ucharcat <charcode> <catcode> — XeTeX/LuaTeX Unicode-engine primitive that
   // builds a single char token of the given Unicode scalar + catcode. LaTeXML is
   // Unicode-native, so we provide it (real pdfTeX lacks it). Defining it flips
@@ -86,6 +163,7 @@ LoadDefinitions!({
   // for combining marks like U+0300) — to the direct charcode+catcode path.
   // Blast radius is tiny: `\Ucharcat` appears only in `\char_generate` across all
   // of expl3 (3 mentions, all there).
+
   DefMacro!(T_CS!("\\Ucharcat"), None, {
     let charcode = read_number()?.value_of();
     let catcode = read_number()?.value_of();
@@ -97,8 +175,33 @@ LoadDefinitions!({
 
   // Expandable Commands
   DefMacro!("\\pdftexrevision", "19");
-  def_macro_noop("\\pdftexbanner")?;
-  def_macro_noop("\\pdfcreationdate")?;
+  // pdfTeX's banner, of the runtime tree's TeX Live year (Perl's is empty, pdfTeX.pool.ltxml:93): documents parse it
+  // for that year — 2309.17381's `\def\gettexliveversion#1(#2 #3 #4#5#6#7#8)#9\relax{#4#5#6#7}` chose a command's
+  // arity by it, and an empty banner ran its argument off the paragraph (the error-limit Fatal). The pdfTeX and kpathsea
+  // versions are each year's TeX Live release's.
+  DefMacro!("\\pdftexbanner", sub[_args] {
+    let year = crate::dump_paths::detect_ambient_texlive_year().unwrap_or(2025);
+    let (revision, kpathsea) = match year {
+      ..=2018 => ("19", "6.3.0"),
+      2019 => ("20", "6.3.1"),
+      2020 => ("21", "6.3.2"),
+      2021 => ("22", "6.3.3"),
+      2022 => ("24", "6.3.4"),
+      2023 => ("25", "6.3.5"),
+      2024 => ("26", "6.4.0"),
+      _ => ("28", "6.4.1"),
+    };
+    ExplodeText!(s!(
+      "This is pdfTeX, Version 3.141592653-2.6-1.40.{revision} (TeX Live {year}) kpathsea version {kpathsea}"
+    ))
+  });
+  // pdfTeX manual §8.11: `\pdfcreationdate` expands to the PDF date string
+  // `D:YYYYMMDDhhmmss±hh'mm'` of the job start. datetime2.sty:46-48 seeds
+  // `\dtm@pdfcreationdate` from it and its `\@dtm@parsepdfdate` splits the
+  // fixed-width fields (L1500+); an empty expansion (the old no-op) left
+  // `\@dtm@currentminute`… undefined and `\DTMnow` erroring (chemformula /
+  // cnltx manuals). Same clock as `\year`/`\time` (SOURCE_DATE_EPOCH honored).
+  DefMacro!("\\pdfcreationdate", sub[_args] { pdf_creation_date() });
   def_macro_noop("\\pdfpageref Number")?;
   def_macro_noop("\\pdfxformname Number")?;
   def_macro_noop("\\pdffontname Token")?;
@@ -107,40 +210,161 @@ LoadDefinitions!({
   def_macro_noop("\\pdfincludechars Token {}")?;
   def_macro_noop("\\leftmarginkern Number")?;
   def_macro_noop("\\rightmarginkern Number")?;
-  def_macro_noop("\\pdfescapestring {}")?;
-  def_macro_noop("\\pdfescapename {}")?;
-  def_macro_noop("\\pdfescapehex {}")?;
-  def_macro_noop("\\pdfunescapehex {}")?;
+  // pdfTeX escape primitives — real implementations, output format verified
+  // against live pdfTeX (TL2025, 2026-08-31):
+  //   \pdfescapehex{Hello z}   → 48656C6C6F207A        (UPPERCASE hex)
+  //   \pdfunescapehex{48656C6C6F} → Hello
+  //   \pdfescapestring{a(b)c\ d} → a\(b\)c\\\040d      ((, ), \ backslashed;
+  //                                 bytes <33 or >126 as \nnn octal)
+  //   \pdfescapename{a b/c#d}  → a#20b#2Fc#23d         (#XX uppercase hex for
+  //                                 bytes outside !..~ and PDF delimiters)
+  // pdfTeX reads the text of these, `\pdfmdfivesum`, `\pdffilesize`,
+  // `\pdffilemoddate` and `\pdffiledump` with `scan_pdf_ext_toks` (tex.web
+  // §473 `scan_toks(false, true)` at `absorbing` status), hence `GeneralText`
+  // (Perl's pdfTeX.pool:100-124 reads them as `{}`, which a file's end would
+  // make a macro argument's "use of", batch W9).
+  DefMacro!("\\pdfescapehex GeneralText", sub[(arg)] {
+    let s = Expand!(arg).to_string();
+    let mut out = String::with_capacity(s.len() * 2);
+    for b in s.bytes() {
+      out.push_str(&format!("{b:02X}"));
+    }
+    Tokens!(Explode!(out))
+  });
+  DefMacro!("\\pdfunescapehex GeneralText", sub[(arg)] {
+    let s = Expand!(arg).to_string();
+    let hex: Vec<u8> = s.bytes().filter(u8::is_ascii_hexdigit).collect();
+    let mut out = String::with_capacity(hex.len() / 2);
+    for pair in hex.chunks(2) {
+      // pdfTeX pads a trailing lone digit with 0 (low nibble).
+      let hi = (pair[0] as char).to_digit(16).unwrap_or(0);
+      let lo = if pair.len() > 1 {
+        (pair[1] as char).to_digit(16).unwrap_or(0)
+      } else {
+        0
+      };
+      out.push(char::from((hi * 16 + lo) as u8));
+    }
+    Tokens!(Explode!(out))
+  });
+  DefMacro!("\\pdfescapestring GeneralText", sub[(arg)] {
+    let s = Expand!(arg).to_string();
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+      match b {
+        b'(' | b')' | b'\\' => {
+          out.push('\\');
+          out.push(char::from(b));
+        },
+        33..=126 => out.push(char::from(b)),
+        _ => out.push_str(&format!("\\{b:03o}")),
+      }
+    }
+    Tokens!(Explode!(out))
+  });
+  DefMacro!("\\pdfescapename GeneralText", sub[(arg)] {
+    let s = Expand!(arg).to_string();
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+      let is_delim = matches!(
+        b,
+        b'#' | b'/' | b'%' | b'(' | b')' | b'<' | b'>' | b'[' | b']' | b'{' | b'}'
+      );
+      if (33..=126).contains(&b) && !is_delim {
+        out.push(char::from(b));
+      } else {
+        out.push_str(&format!("#{b:02X}"));
+      }
+    }
+    Tokens!(Explode!(out))
+  });
   // DefMacro!("\\ifpdfprimitive {}",None);
   // DefMacro!("\\ifpdfabsnum Number"",None);
   // DefMacro!("\\ifpdfabsdim Dimension"",None);
-  def_macro_noop("\\pdfuniformdeviate Number Token")?;
-  def_macro_noop("\\pdfnormaldeviate Token")?;
+  // pdfTeX §"random numbers": `\pdfuniformdeviate <number>` expands to a
+  // pseudo-random integer in [0, number) (negative bounds mirror), and
+  // `\pdfnormaldeviate` to a normal deviate scaled by 2^16, both from a
+  // generator seeded by `\pdfsetrandomseed`/`\pdfrandomseed`. Perl
+  // (pdfTeX.pool:110-111) makes them empty macros that also EAT the next
+  // token — expl3's `\int_rand:nn` (`\tex_uniformdeviate:D 268435456
+  // \__fp_sep:`, expl3-code.tex:21876) lost its `\__fp_sep:` and every random
+  // integer collapsed to the midpoint, so rejection-sampling loops ("draw
+  // until distinct": randintlist-l3 manual, `\randintlist`) never terminate
+  // (TokenLimit). A deterministic generator (fixed seed unless the document
+  // sets one) keeps conversions reproducible while giving real distributions.
+  DefMacro!("\\pdfuniformdeviate Number", sub[(n)] {
+    let n = n.value_of();
+    let r = pdftex_random_next();
+    let v = if n == 0 { 0 } else { (r % n.unsigned_abs()) as i64 * n.signum() };
+    Tokens!(Explode!(v.to_string()))
+  });
+  DefMacro!("\\pdfnormaldeviate", sub[_args] {
+    // Box-Muller on two uniforms, scaled like pdfTeX (mean 0, sd 65536).
+    let u1 = (pdftex_random_next() % 1_000_000 + 1) as f64 / 1_000_001.0;
+    let u2 = (pdftex_random_next() % 1_000_000) as f64 / 1_000_000.0;
+    let z = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
+    Tokens!(Explode!(((z * 65536.0) as i64).to_string()))
+  });
   // pdfTeX \pdfmdfivesum syntax:
   //   \pdfmdfivesum <general text>      (MD5 of literal string)
   //   \pdfmdfivesum file <general text> (MD5 of file contents)
-  // The Perl port's `Number {}` signature was wrong — there is NO
-  // leading number argument. Use `OptionalMatch:file` instead so the
-  // optional `file` keyword is consumed properly and the brace arg
-  // works in both forms. We are not producing PDF/X output, so the
-  // gobbled-and-discarded behaviour is acceptable downstream.
-  // Witness 2407.02288 (pdfx.sty's `\edef\xmp@docid{\pdfx@mdfivesum
-  // {\jobname}}` raw-load cascade).
-  def_macro_noop("\\pdfmdfivesum OptionalMatch:file {}")?;
-  def_macro_noop("\\pdf@mdfivesum OptionalMatch:file {}")?;
-  def_macro_noop("\\pdf@filemdfivesum {}")?;
-  DefMacro!("\\pdffilesize{}", sub[(file)] {
+  // (The Perl port's `Number {}` signature was wrong — there is NO leading
+  // number argument.) REAL implementation (inline RFC 1321, unit-tested
+  // against the standard vectors): live pdfTeX prints the digest as
+  // UPPERCASE hex (`\pdfmdfivesum{abc}` → 900150983CD24FB0D6963F7D28E17F72,
+  // verified TL2025 2026-08-31). Witness 2407.02288 (pdfx.sty's
+  // `\edef\xmp@docid{\pdfx@mdfivesum{\jobname}}`).
+  DefMacro!("\\pdfmdfivesum OptionalMatch:file GeneralText", sub[(file_kw, arg)] {
+    let text = Expand!(arg).to_string();
+    let digest = if file_kw.is_some() {
+      match find_file(&text, None).and_then(|p| std::fs::read(&p).ok()) {
+        Some(bytes) => md5_hex_upper(&bytes),
+        // pdfTeX yields the empty string for an unreadable file.
+        None => String::new(),
+      }
+    } else {
+      md5_hex_upper(text.as_bytes())
+    };
+    Tokens!(Explode!(digest))
+  });
+  DefMacro!("\\pdffilesize GeneralText", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
     if let Some(path) = find_file(&filepath, None) {
-      match std::fs::metadata(&path) {
-        Ok(meta) => Explode!(meta.len()),
-        Err(_) => Vec::new(),
+      // A `filecontents`-written file is VIRTUAL here (pdfTeX sees a real
+      // one): expl3's `\file_full_name:n` existence test is this size, so an
+      // `\ior_open:Nn` of such a file found nothing. Guard:
+      // `perfect_kernel_batch54::read_consumes_the_physical_line_across_catcode_regimes`.
+      if let Some(content) = ::latexml_core::binding::virtual_files::vfs_read(&path) {
+        Explode!(content.len())
+      } else {
+        match std::fs::metadata(&path) {
+          Ok(meta) => Explode!(meta.len()),
+          Err(_) => Vec::new(),
+        }
       }
     } else {
       Vec::new() } });
-  def_macro_noop("\\pdffilemoddate {}")?;
-  def_macro_noop("\\pdffiledump {}")?;
+  // `D:YYYYMMDDhhmmss±hh'mm'` in LOCAL time — verified against live pdfTeX
+  // (TL2025 2026-08-31: `D:20260831120047-04'00'`). Empty expansion for a
+  // file that does not resolve, matching pdfTeX.
+  DefMacro!("\\pdffilemoddate GeneralText", sub[(file)] {
+    use chrono::{DateTime, Local};
+    let filepath = Expand!(file).to_string();
+    let formatted = find_file(&filepath, None)
+      .and_then(|p| std::fs::metadata(&p).ok())
+      .and_then(|m| m.modified().ok())
+      .map(|t| {
+        let dt: DateTime<Local> = t.into();
+        // %z gives ±hhmm; pdfTeX writes ±hh'mm'
+        let z = dt.format("%z").to_string();
+        let (zh, zm) = z.split_at(3);
+        format!("{}{}'{}'", dt.format("D:%Y%m%d%H%M%S"), zh, zm)
+      })
+      .unwrap_or_default();
+    Tokens!(Explode!(formatted))
+  });
+  def_macro_noop("\\pdffiledump GeneralText")?;
   // DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
@@ -160,11 +384,16 @@ LoadDefinitions!({
   DefRegister!("\\pdflastximagecolordepth" => Number::new(0));
   DefRegister!("\\pdfretval"               => Number::new(0));
 
-  // \pdfximage [ image attr spec ] general text (h, v, m)
-  // Real pdfTeX reads optional `[image attr spec]` then a balanced text
-  // (the file path). Stub: drop a leading `[...]` if present, then
-  // consume one balanced general-text arg. No PDF emission. Driver:
-  // 2406.14142 (`\pdfximage{...}` in graphics-bbox-precompute path).
+  // \pdfximage [rule spec] [attr spec] [page spec] [colorspace spec] [pdf box spec] general text (h, v, m)
+  // (pdfTeX manual, `\pdfximage`): `width`/`height`/`depth` <dimen> in any order, `attr` <general text>,
+  // `page` <number> or `named` <general text>, `colorspace` <number>, one of `mediabox` `cropbox` `bleedbox`
+  // `trimbox` `artbox`, then the file name. It registers the image and sets `\pdflastximage` (its object number)
+  // and `\pdflastximagepages` (a PDF's page count, 1 for bitmaps — pdfTeX manual §8.9). No PDF emission here, but
+  // the two registers are real (batch 56ap): pdfpages' `\AM@getpagecount` (pppdftex.def:79-82), the l3 backend's
+  // page count in the DVI persona (latexml.sty hook) and any document testing `\pdflastximagepages` read them; and
+  // `\pdfximagebbox` reports the image's box. Drivers: 2406.14142 (`\pdfximage{...}` in a graphics-bbox-precompute
+  // path), notebeamer-demo; pinlabel.sty:588-592 (`\pdfximage cropbox {<fig>.pdf}`, then `\pdfximagebbox`:
+  // 1310.1838, 1904.09721). A leading `[...]` is skipped, as before.
   DefPrimitive!("\\pdfximage", sub[_args] {
     skip_spaces()?;
     if if_next(T_OTHER!("["))? {
@@ -175,9 +404,55 @@ LoadDefinitions!({
         }
       }
     }
+    while read_keyword(&["width", "height", "depth"])?.is_some() {
+      read_dimension()?;
+    }
+    if read_keyword(&["attr"])?.is_some() {
+      read_balanced_text(ExpansionLevel::Off, true)?;
+    }
+    if read_keyword(&["named"])?.is_some() {
+      read_balanced_text(ExpansionLevel::Off, true)?;
+    } else if read_keyword(&["page"])?.is_some() {
+      read_number()?;
+    }
+    if read_keyword(&["colorspace"])?.is_some() {
+      read_number()?;
+    }
+    // The box keyword is read but not honoured: the box reported is the page's CropBox, else its MediaBox (a
+    // CropBox defaults to the MediaBox), which is pdfTeX's default box and pinlabel's `cropbox`.
+    read_keyword(&["mediabox", "cropbox", "bleedbox", "trimbox", "artbox"])?;
     skip_spaces()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    // pdfTeX reads every `<general text>` with `scan_pdf_ext_toks`, i.e.
+    // tex.web's `scan_toks(false, true)` at `absorbing` status — expanded, as an
+    // `\edef` is: pinlabel.sty:588 names the file `{\@filestem.pdf}`, which read
+    // unexpanded found nothing and gave the figure a 0pt box (1904.09721).
+    let file = read_balanced_text(ExpansionLevel::Partial, true)?.to_string();
+    let name = file.trim().trim_matches(|c| c == '{' || c == '}').trim().to_string();
+    let found = find_file(&name, None).or_else(|| {
+      // pdfTeX's default extension search order for `\pdfximage`
+      [".pdf", ".png", ".jpg", ".jpeg", ".PDF", ".PNG", ".JPG"]
+        .iter()
+        .find_map(|ext| find_file(&format!("{name}{ext}"), None))
+    });
+    let (pages, bbox) = found
+      .map_or((0, None), |found| ximage_pages_and_box(&std::path::PathBuf::from(found)));
+    let next = match lookup_register("\\pdflastximage", Vec::new())? {
+      Some(RegisterValue::Number(n)) => n.0 + 1,
+      _ => 1,
+    };
+    assign_register("\\pdflastximage", RegisterValue::Number(Number::new(next)), Some(Scope::Global), Vec::new())?;
+    assign_register("\\pdflastximagepages", RegisterValue::Number(Number::new(i64::from(pages))), Some(Scope::Global), Vec::new())?;
+    let [llx, lly, urx, ury] = bbox.unwrap_or([0.0; 4]);
+    assign_value(&format!("pdf_ximage_bbox_{next}"), Stored::String(pin(format!("{llx} {lly} {urx} {ury}"))), Some(Scope::Global));
     Ok(vec![])
+  });
+  // \pdfximagebbox <image number> <1-4> (expandable): the image's box corner llx, lly, urx or ury, as pdfTeX prints
+  // it: the bp value in scaled points, printed in pt as catcode-12 characters, `pt` included (pdftex.web
+  // `pdf_ximage_bbox_code` through `conv_toks`). An unknown image, or a corner outside 1-4, gives 0.0pt.
+  DefMacro!("\\pdfximagebbox Number Number", sub[(image, corner)] {
+    let bp = ximage_bbox_corner_bp(image.value_of(), corner.value_of());
+    let sp = (bp * 65_781.76).round() as i64;
+    Ok(Tokens::new(Explode!(&Dimension::new(sp).to_string())))
   });
   // \pdfrefximage object number (h, v, m) — discard the object number
   def_primitive_noop("\\pdfrefximage Number")?;
@@ -186,14 +461,101 @@ LoadDefinitions!({
   // packages that declare-then-reference pdf objects (e.g. zref-savepos
   // path on certain papers). Witness cluster: arXiv:2506.21632 / .08091.
   def_primitive_noop("\\pdfrefobj Number")?;
-  def_primitive_noop("\\pdfrefxform Number")?;
+  // \pdfrefxform <form number> places the form XObject `\pdfxform` made of a box (pdfTeX manual §`\pdfrefxform`), as
+  // often as it is referenced: here the box `\pdfxform` kept, as `\copy` sets one. xsavebox's `\xsbox`/`\xusebox`
+  // (xsavebox.sty:120-122, :298, :325, through pdfbase's `\pbs_pdfxform:nnnnn`/`\pbs_pdfrefxform:n`) saved a box this way
+  // and printed an empty one of its size (biblatex-ext's open-access symbols, biblatex-ext.tex:3938-4022). Perl defines
+  // neither (pdfTeX.pool.ltxml:96 `\pdfxformname` only; OXIDIZED_DESIGN_DIVERGENCES #788). Guard `perfect_kernel_batch78a::xsavebox_saved_box_prints_its_content`.
+  DefPrimitive!("\\pdfrefxform Number", sub[(number)] {
+    match lookup_value(&s!("pdfxform@{}", number.value_of())) {
+      Some(Stored::Digested(form)) => Ok(vec![form]),
+      _ => Ok(Vec::new()),
+    }
+  });
+  // \pdfxform [attr <general text>] [resources <general text>] <box number>
+  // makes a form XObject of the box and numbers it in `\pdflastxform`. Nothing
+  // is written here; the number is what the caller keeps (media9's pdfbase
+  // `\pbs_pdfxform:nnnnn`, pdfbase.sty:426, in PDF output: arXiv 2605.10543).
+  // The box is made void, "as `\box` does" (pdftex manual §`\pdfxform`); its content is the form's, which
+  // `\pdfrefxform` places.
+  DefPrimitive!("\\pdfxform", sub[_args] {
+    for keyword in ["attr", "resources"] {
+      if read_keyword(&[keyword])?.is_some() {
+        skip_filler()?;
+        let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+      }
+    }
+    let number = read_number()?;
+    let form = remove_value(&format!("box{}", number.value_of()));
+    let next = match lookup_register("\\pdflastxform", Vec::new())? {
+      Some(RegisterValue::Number(n)) => n.0 + 1,
+      _ => 1,
+    };
+    if let Some(form @ Stored::Digested(_)) = form {
+      assign_value(&s!("pdfxform@{next}"), form, Some(Scope::Global));
+    }
+    assign_register("\\pdflastxform", RegisterValue::Number(Number::new(next)), Some(Scope::Global), Vec::new())?;
+  });
   // \pdfannot annot type spec (h, v, m)
-  // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
-  def_primitive_noop("\\pdfstartlink")?;
   // \pdfendlink (h, m)
   def_primitive_noop("\\pdfendlink")?;
-  // \pdfoutline outline spec (h, v, m)
-  // \pdfdest dest spec (h, v, m)
+  // \pdfoutline outline spec (h, v, m) — `[attr spec] action spec [count
+  // number] general text` (pdfTeX manual §8.13); `\pdfdest dest spec` is
+  // `name/num <spec> <dest kind>` (§8.14; kinds `xyz [zoom N]`, `fit`,
+  // `fith`, `fitv`, `fitb`, `fitbh`, `fitbv`, `fitr <rule spec>`). Both
+  // produce PDF navigation only, but the spec MUST be consumed — a bare
+  // no-op leaked `attr`/`user` into the text (tools-overview.tex:93
+  // `\pdfoutline attr {…} user {…} {[#1]}`; Perl pdfTeX.pool:179-180 only
+  // comments them, KPE #162). Guards:
+  // `perfect_kernel_batch54::pdfoutline_and_pdfdest_consume_their_specs`.
+  DefParameterType!(OutlineSpecification, reader => reader!(_args, _extra, {
+    if read_keyword(&["attr"])?.is_some() {
+      skip_spaces()?;
+      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    }
+    read_action_spec()?;
+    if read_keyword(&["count"])?.is_some() {
+      let _ = read_number()?;
+    }
+    skip_spaces()?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  }), optional => true);
+  def_primitive_noop("\\pdfoutline OutlineSpecification")?;
+  DefParameterType!(DestSpecification, reader => reader!(_args, _extra, {
+    if read_keyword(&["num"])?.is_some() {
+      let _ = read_number()?;
+    } else if read_keyword(&["name"])?.is_some() {
+      skip_spaces()?;
+      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    }
+    if read_keyword(&["xyz"])?.is_some() {
+      if read_keyword(&["zoom"])?.is_some() {
+        let _ = read_number()?;
+      }
+    } else if read_keyword(&["fitr"])?.is_some() {
+      while read_keyword(&["width", "height", "depth"])?.is_some() {
+        let _ = read_dimension()?;
+      }
+    } else {
+      let _ = read_keyword(&["fitbh", "fitbv", "fitb", "fith", "fitv", "fit"])?;
+    }
+  }), optional => true);
+  def_primitive_noop("\\pdfdest DestSpecification")?;
+  // \pdfstartlink [rule spec] [attr spec] action spec (h, m), pdfTeX manual §8.12, the rule spec any of
+  // `width`/`height`/`depth <dimen>`. The link is PDF navigation, but the spec must be consumed: as a bare no-op
+  // (Perl pdfTeX.pool:176) `attr {…} goto name {…}` fell into the text — AAAI papers, which may not load hyperref,
+  // write their links so (2609.00161: a label's `_` in `goto name {impact.eq:iws_objective}`).
+  DefParameterType!(LinkSpecification, reader => reader!(_args, _extra, {
+    while read_keyword(&["width", "height", "depth"])?.is_some() {
+      let _ = read_dimension()?;
+    }
+    if read_keyword(&["attr"])?.is_some() {
+      skip_filler()?;
+      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    }
+    read_action_spec()?;
+  }), optional => true);
+  def_primitive_noop("\\pdfstartlink LinkSpecification")?;
   // \pdfthread thread spec (h, v, m)
   // \pdfstartthread thread spec (v, m)
   // \pdfendthread (v, m)
@@ -210,21 +572,39 @@ LoadDefinitions!({
       } }), optional => true);
 
   // Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
-  // Reads and discards the pdfTeX annotation-spec prefix:
-  //   reserveobjnum  | useobjnum <n>  | stream [attr <text>]
-  // then consumes the trailing general-text spec.
+  // Reads and discards pdfTeX's object/annotation type spec (pdftex manual
+  // syntax, pdftex.tex:4224-4246):
+  //   reserveobjnum | [useobjnum <n>] [stream [attr <text>]] [file] <text>
+  // The keywords follow one another: l3backend-pdftex.def:274-302 writes
+  // `\pdfobj useobjnum <n> stream attr {…} file {…}` for pdfmanagement's
+  // PDF/A colour profile, which met `stream` where it wanted `{` when the
+  // reader took `useobjnum` and `stream` as alternatives and knew no `file`
+  // (tuda-ci DEMOs ×4, sweep #121, once PDF output was the default; Perl's
+  // reader, pdfTeX.pool:156-171, has the same `elsif`). Then
+  // the `annot type spec`'s optional `rule spec` — `(width|height|depth)
+  // dimension [rule spec]`, the same loop as `RuleSpecification` (tex_box.rs)
+  // — which Perl pdfTeX.pool:156-171 omits: pdfmarginpar.sty:142
+  // `\expandafter\pdfannot\pdfmarginpar@rulespec{…}` with a `width=`/`height=`
+  // key passes `width 4cm height 0.5cm {…}` and the reader met `w` where it
+  // wanted `{` ("Expected opening '{'", pdfmarginpar doc; KNOWN_PERL_ERRORS
+  // #151). Then consumes the trailing general-text spec.
   DefParameterType!(OpenAnnotSpecification, reader => reader!(_args, _extra, {
     if read_keyword(&["reserveobjnum"])?.is_some() {
       return Ok(ArgWrap::None);
-    } else if read_keyword(&["useobjnum"])?.is_some() {
+    }
+    if read_keyword(&["useobjnum"])?.is_some() {
       let _ = read_number()?;
-    } else if read_keyword(&["stream"])?.is_some()
-      && read_keyword(&["attr"])?.is_some() {
-        skip_spaces()?;
-        let _ = read_balanced(ExpansionLevel::Off, false, true)?;
-      }
-    skip_spaces()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    }
+    if read_keyword(&["stream"])?.is_some() && read_keyword(&["attr"])?.is_some() {
+      skip_filler()?;
+      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    }
+    let _ = read_keyword(&["file"])?;
+    while read_keyword(&["width", "height", "depth"])?.is_some() {
+      let _ = read_dimension()?;
+    }
+    skip_filler()?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
   }), optional => true);
 
   // \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
@@ -246,17 +626,31 @@ LoadDefinitions!({
   // \pdffontexpand font expand spec
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
   def_macro_noop("\\quitvmode")?;
-  // \pdfliteral [ pdfliteral spec ] general text (h, v, m)
-  DefPrimitive!(
-    "\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText",
-    None
-  );
+  // \pdfliteral [ pdfliteral spec ] general text (h, v, m). The spec keyword
+  // is scanned with expansion, as pdfTeX's `scan_keyword` does: accsupp's
+  // pdftex driver writes `\pdfliteral\ACCSUPP@pdfliteral{…}` with the keyword
+  // `page` behind a macro (accsupp.sty:193, accsupp-pdftex.def), which the
+  // unexpanded match missed, leaving the `{` unread ("Expected opening '{'",
+  // 480× in arXiv 2605.21262 once PDF output became the default; Perl's
+  // binding, pdfTeX.pool.ltxml:199, is the same unexpanded match).
+  // `shipout` (pdfTeX 1.40.25) precedes the spec (pdftex manual §`\pdfliteral`);
+  // the general text's `<filler>` is skipped as for the GeneralText parameter.
+  DefPrimitive!("\\pdfliteral", sub[_args] {
+    let _ = read_keyword(&["shipout"])?;
+    let _ = read_keyword(&["direct", "page"])?;
+    skip_filler()?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  });
   // \special pdfspecial spec
   // \pdfresettimer
   def_primitive_noop("\\pdfresettimer")?;
   def_primitive_noop("\\pdfresettimerresettimer")?;
   // \pdfsetrandomseed number
-  def_primitive_noop("\\pdfsetrandomseed Number")?;
+  DefPrimitive!("\\pdfsetrandomseed Number", sub[(seed)] {
+    let seed = seed.value_of();
+    assign_register("\\pdfrandomseed", RegisterValue::Number(Number::new(seed)), Some(Scope::Global), Vec::new())?;
+    pdftex_random_seed(seed);
+  });
   // \pdfnoligatures font (really a Token, but at this stub level we
   // just need to consume a single token argument)
   def_primitive_noop("\\pdfnoligatures Token")?;
@@ -274,6 +668,12 @@ LoadDefinitions!({
   // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
   def_primitive_noop("\\pdfstartthread")?;
   def_primitive_noop("\\pdfendthread")?;
+  // \pdfinterwordspaceon / \pdfinterwordspaceoff / \pdffakespace (pdfTeX 1.40.15): fake interword spaces in the PDF's
+  // text layer, for copy and paste; nothing to do in XML. dgruyter.sty:1226 `\pdfinterwordspaceon` (2205.10368; Perl's
+  // pdfTeX.pool has none either).
+  def_primitive_noop("\\pdfinterwordspaceon")?;
+  def_primitive_noop("\\pdfinterwordspaceoff")?;
+  def_primitive_noop("\\pdffakespace")?;
   // Per-font extension codes (match \lpcode / \rpcode pattern)
   DefRegister!("\\lpfcode Token Number", Number::new(0));
   DefRegister!("\\rpfcode Token Number", Number::new(0));
@@ -298,11 +698,36 @@ LoadDefinitions!({
       // Otherwise read and discard the general-text argument.
       if pop.is_none() {
         skip_spaces()?;
-        let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+        let _ = read_balanced_text(ExpansionLevel::Off, true)?;
       }
     }
   );
-  def_macro_noop("\\pdfsetmatrix")?;
+  // pdfTeX manual §8.13 `\pdfcolorstackinit [page] [direct] {<general text>}`
+  // expands to the number of a new colour stack (0 is the default page stack).
+  // No PDF colour operators are written here, but expl3's pdftex backend keeps
+  // the number (l3backend-pdftex.def `\__kernel_color_backend_stack_init:Nnn`
+  // `\int_const:Nn #1 {\tex_pdfcolorstackinit:D …}`), and its alias exists only
+  // when the primitive does at format time (expl3-code.tex:675). With PDF
+  // output the default (the K6 ruling, 2026-09-24) that backend is the one
+  // expl3 loads.
+  DefMacro!("\\pdfcolorstackinit", sub[_args] {
+    let _ = read_keyword(&["page"])?;
+    let _ = read_keyword(&["direct"])?;
+    skip_spaces()?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    let stack = lookup_int("pdfcolorstack_count") + 1;
+    assign_value("pdfcolorstack_count", stack, Some(Scope::Global));
+    Ok(Tokens::new(Explode!(stack.to_string())))
+  });
+  // `\pdfrunninglinkoff`/`\pdfrunninglinkon` suspend and resume a link across
+  // page breaks; links are not paginated here.
+  def_primitive_noop("\\pdfrunninglinkoff")?;
+  def_primitive_noop("\\pdfrunninglinkon")?;
+  // pdfTeX manual (pdftex.tex:3253-3264) `\pdfsetmatrix {<matrix>}`: an unexpandable command that
+  // reads its matrix as a general text (Perl pdfTeX.pool:223 reads nothing and the
+  // matrix printed: synthslant-gauge "1 0 .05 1" in each table cell; pm-isomath,
+  // bxtexlogo, unravel). Guard: `perfect_kernel_batch61::pdfsetmatrix_reads_its_matrix`.
+  def_primitive_noop("\\pdfsetmatrix GeneralText")?;
   def_macro_noop("\\pdfsave")?;
   def_macro_noop("\\pdfrestore")?;
 
@@ -356,12 +781,322 @@ LoadDefinitions!({
 
   DefMacro!("\\expanded XGeneralText", "#1");
 
+  // pdftex.web `compare_strings`: each text is fully expanded and made a string by `tokens_to_string`, i.e. by
+  // `show_token_list` (tex.web §292): a control word is written with `\escapechar` and a trailing space (§262
+  // print_cs), a parameter character doubled. With the plain token text, `\relax` and `\string\relax\space` differed,
+  // so expl3's `\str_if_eq:nn` failed l3regex's test for a compiled regex variable (`\__regex_compile_use_aux:w`
+  // compares its meaning with `macro:->\__regex_branch:n`), and `\regex_replace_case_once:nN { \c_..._regex {…} }`
+  // compiled the variable's name as a pattern ("Invalid character '_' following '\c' escape": datatool's numeric
+  // parser, 2006.14937). Perl compares `ToString` (pdfTeX.pool.ltxml:277; KNOWN_PERL_ERRORS #1178).
   DefMacro!("\\pdfstrcmp XGeneralText XGeneralText", sub[(first,second)] {
-    match first.to_string().cmp(&second.to_string()) {
+    match writable_tokens(&first).cmp(&writable_tokens(&second)) {
      Ordering::Greater => Tokens!(T_OTHER!("1")),
      Ordering::Equal => Tokens!(T_OTHER!("0")),
      Ordering::Less => Tokens!(T_OTHER!("-"), T_OTHER!("1"))
     }
   });
   def_macro_noop("\\pdfglyphtounicode{}{}")?;
+
+  // pdfTeX manual §8.14: `\pdfmatch [icase] [subcount <integer>] <general
+  // text> <general text>` matches the POSIX extended regex (first text)
+  // against the string (second text) and expands to `-1` (bad pattern), `0`
+  // (no match) or `1`; `\pdflastmatch <integer>` expands to `<pos>-><text>`
+  // for capture N of the last match (`-1->` when unset). Neither Perl nor
+  // Rust defined them, so dataref.sty:374 `\let\dref@strmatch\pdfmatch` fed
+  // `\ifnum` a bare CS (dataref-doc, chordbox; SHARED, pdflatex clean).
+  // Guard: `perfect_kernel_batch56::pdfmatch_expands_to_a_match_flag`.
+  DefMacro!("\\pdfmatch", sub[()] {
+    let icase = read_keyword(&["icase"])?.is_some();
+    let subcount: i64 = if read_keyword(&["subcount"])?.is_some() {
+      read_number()?.value_of()
+    } else {
+      -1
+    };
+    skip_filler()?;
+    let pattern = read_balanced_text(ExpansionLevel::Partial, true)?.to_string();
+    skip_filler()?;
+    let subject = read_balanced_text(ExpansionLevel::Partial, true)?.to_string();
+    let pattern = if icase { format!("(?i){pattern}") } else { pattern };
+    let mut groups: Vec<String> = Vec::new();
+    let flag = match Regex::new(&pattern) {
+      Err(_) => "-1",
+      Ok(re) => match re.captures(&subject) {
+        None => "0",
+        Some(caps) => {
+          let limit = if subcount < 0 { caps.len() } else { subcount as usize };
+          for i in 0..caps.len().min(limit.max(1)) {
+            groups.push(match caps.get(i) {
+              Some(m) => format!("{}->{}", m.start(), m.as_str()),
+              None => String::from("-1->"),
+            });
+          }
+          "1"
+        },
+      },
+    };
+    AssignValue!("pdfTeX:lastmatch" => groups.join("\u{1}"), Scope::Global);
+    Ok(Tokens!(Explode!(flag)))
+  });
+  DefMacro!("\\pdflastmatch Number", sub[(n)] {
+    let stored = match lookup_value("pdfTeX:lastmatch") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+      _ => String::new(),
+    };
+    let n = n.value_of();
+    let entry = if n < 0 {
+      None
+    } else {
+      stored.split('\u{1}').nth(n as usize).map(|s| s.to_string())
+    };
+    Ok(Tokens!(Explode!(entry.unwrap_or_else(|| String::from("-1->")))))
+  });
+
+  // LuaTeX integer parameter (LuaTeX manual §2.5: hyphenation behaviour for
+  // words with explicit hyphens/automatic discretionaries; a line-breaking
+  // knob with no XML-content meaning). LuaLaTeX-authored manuals set it in
+  // their preamble (nicematrix.tex L303).
+  DefRegister!("\\automatichyphenmode" => Number::new(0));
 });
+
+/// MD5 (RFC 1321), digest as UPPERCASE hex — the format pdfTeX's
+/// `\pdfmdfivesum` prints (verified against live pdfTeX TL2025). Inline
+/// implementation: 64-entry sine table generated exactly as the RFC defines
+/// it (`floor(2^32 · |sin(i+1)|)`), guarded below by the RFC's own test
+/// vectors.
+/// Consume a pdfTeX `action spec` (pdfTeX manual §8.11, and the grammar
+/// quoted above): `user <general text>` | `goto <goto-action spec>` |
+/// `thread <thread-action spec>`. The goto form is `[file <text>] num N` |
+/// `[file <text>] name <text> [newwindow|nonewwindow]` | `[file <text>]
+/// [page N] <general text> [newwindow|nonewwindow]`. Nothing is kept — the
+/// actions are PDF navigation — but every token of the spec must be eaten
+/// so it does not fall into the text. Shared by `\pdfoutline` and
+/// `\pdfstartlink`-style readers.
+fn read_action_spec() -> Result<()> {
+  let Some(kind) = read_keyword(&["user", "goto", "thread"])? else {
+    return Ok(());
+  };
+  skip_spaces()?;
+  if kind == "user" {
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    return Ok(());
+  }
+  if read_keyword(&["file"])?.is_some() {
+    skip_spaces()?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  }
+  if read_keyword(&["num"])?.is_some() {
+    let _ = read_number()?;
+  } else if read_keyword(&["name"])?.is_some() {
+    skip_spaces()?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  } else if kind == "goto" {
+    if read_keyword(&["page"])?.is_some() {
+      let _ = read_number()?;
+    }
+    skip_spaces()?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  }
+  let _ = read_keyword(&["newwindow", "nonewwindow"])?;
+  Ok(())
+}
+
+fn md5_hex_upper(data: &[u8]) -> String {
+  const S: [u32; 64] = [
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, //
+    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, //
+    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, //
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+  ];
+  let mut k = [0u32; 64];
+  for (i, ki) in k.iter_mut().enumerate() {
+    *ki = (((i as f64) + 1.0).sin().abs() * 4294967296.0) as u32;
+  }
+  let (mut a0, mut b0, mut c0, mut d0) =
+    (0x67452301u32, 0xefcdab89u32, 0x98badcfeu32, 0x10325476u32);
+  let mut m = data.to_vec();
+  let bitlen = (data.len() as u64).wrapping_mul(8);
+  m.push(0x80);
+  while m.len() % 64 != 56 {
+    m.push(0);
+  }
+  m.extend_from_slice(&bitlen.to_le_bytes());
+  for chunk in m.as_chunks::<64>().0 {
+    let mut w = [0u32; 16];
+    for (j, wj) in w.iter_mut().enumerate() {
+      *wj = u32::from_le_bytes(chunk[4 * j..4 * j + 4].try_into().unwrap());
+    }
+    let (mut a, mut b, mut c, mut d) = (a0, b0, c0, d0);
+    for i in 0..64 {
+      let (f, g) = match i / 16 {
+        0 => ((b & c) | (!b & d), i),
+        1 => ((d & b) | (!d & c), (5 * i + 1) % 16),
+        2 => (b ^ c ^ d, (3 * i + 5) % 16),
+        _ => (c ^ (b | !d), (7 * i) % 16),
+      };
+      let tmp = d;
+      d = c;
+      c = b;
+      b = b.wrapping_add(
+        a.wrapping_add(f)
+          .wrapping_add(k[i])
+          .wrapping_add(w[g])
+          .rotate_left(S[i]),
+      );
+      a = tmp;
+    }
+    a0 = a0.wrapping_add(a);
+    b0 = b0.wrapping_add(b);
+    c0 = c0.wrapping_add(c);
+    d0 = d0.wrapping_add(d);
+  }
+  let mut out = String::with_capacity(32);
+  for word in [a0, b0, c0, d0] {
+    for byte in word.to_le_bytes() {
+      out.push_str(&format!("{byte:02X}"));
+    }
+  }
+  out
+}
+
+#[cfg(test)]
+mod md5_tests {
+  use super::md5_hex_upper;
+
+  /// RFC 1321 appendix A.5 test vectors (uppercased to pdfTeX's format).
+  #[test]
+  fn rfc1321_vectors() {
+    assert_eq!(md5_hex_upper(b""), "D41D8CD98F00B204E9800998ECF8427E");
+    assert_eq!(md5_hex_upper(b"abc"), "900150983CD24FB0D6963F7D28E17F72");
+    assert_eq!(
+      md5_hex_upper(b"message digest"),
+      "F96B697D7CB7938D525A2F31AAF161D0"
+    );
+    // A >64-byte message exercises the multi-chunk path.
+    assert_eq!(
+      md5_hex_upper(
+        b"12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+      ),
+      "57EDF4A22BE3C955AC49DA2E2107B67A"
+    );
+  }
+}
+
+thread_local! {
+  /// pdfTeX random-number state (xorshift64*), reset per conversion ([`reset_pdftex_random`]).
+  static PDFTEX_RANDOM: std::cell::Cell<u64> =
+    const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
+  /// The generator of a speculative digestion (`gullet::speculative_digestion`), whose draws and seeds the document's never see:
+  /// it draws what it may loop on, and the document's next draw is the one it would have been with no run before it.
+  static PDFTEX_RANDOM_SPECULATIVE: std::cell::Cell<u64> =
+    const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
+}
+
+/// A conversion's start: both generators at the default fixed seed, so a document converts as it does alone on a thread that
+/// converted another. A rehearsal's draw decides what a block reads (`\ifnum\pdfuniformdeviate 2=0 Ann\else Bob\fi`).
+pub fn reset_pdftex_random() {
+  PDFTEX_RANDOM.with(|c| c.set(0x9E37_79B9_7F4A_7C15));
+  PDFTEX_RANDOM_SPECULATIVE.with(|c| c.set(0x9E37_79B9_7F4A_7C15));
+}
+
+/// The generator in use ([`PDFTEX_RANDOM_SPECULATIVE`]).
+fn with_pdftex_random<R>(use_it: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
+  if in_speculative_digestion() {
+    PDFTEX_RANDOM_SPECULATIVE.with(use_it)
+  } else {
+    PDFTEX_RANDOM.with(use_it)
+  }
+}
+
+/// Re-seed the pdfTeX generator (`\pdfsetrandomseed`; 0 selects the default
+/// fixed seed so an unseeded document converts reproducibly).
+pub fn pdftex_random_seed(seed: i64) {
+  let s = if seed == 0 {
+    0x9E37_79B9_7F4A_7C15
+  } else {
+    (seed as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1
+  };
+  with_pdftex_random(|c| c.set(s));
+}
+
+/// Next 63-bit pseudo-random value (xorshift64*).
+fn pdftex_random_next() -> u64 {
+  with_pdftex_random(|c| {
+    let mut x = c.get();
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    c.set(x);
+    x.wrapping_mul(0x2545_F491_4F6C_DD1D) >> 1
+  })
+}
+
+/// pdfTeX manual §8.11 `\pdfcreationdate` (and LuaTeX's `\pdffeedback
+/// creationdate`): the PDF date string `D:YYYYMMDDhhmmssZ` of the job start, on
+/// the clock `\year`/`\month`/`\day`/`\time` keep (SOURCE_DATE_EPOCH honored).
+/// tex.web §464 `str_toks`: a conversion's characters are catcode 12, so the `D:`
+/// is not letters. pdfx.sty-style parsers delimit with a catcode-12 `D:`
+/// (novel-pdfx.sty:298 `\gdef\pdfx@getYear D:#1#2#3#4` under `\catcode`\D=12`);
+/// letter tokens missed it and the date parse ran away (novel, class census
+/// 2026-09-24).
+pub fn pdf_creation_date() -> Result<Tokens> {
+  let register = |name: &str| -> Result<i64> {
+    Ok(lookup_register(name, Vec::new())?.map_or(0, |v| Number::from(&v).value_of()))
+  };
+  let (year, month, day, time) = (
+    register("\\year")?,
+    register("\\month")?,
+    register("\\day")?,
+    register("\\time")?,
+  );
+  let (hh, mm) = (time / 60, time % 60);
+  let stamp = s!("D:{year:04}{month:02}{day:02}{hh:02}{mm:02}00Z");
+  Ok(Tokens::new(Explode!(&stamp)))
+}
+
+/// A `\pdfximage` file's page count and page box corners `[llx, lly, urx, ury]` in bp: a PDF's
+/// `/Count` and CropBox (else MediaBox); a bitmap is one page whose box is its pixel size at its
+/// resolution (72 dpi when it records none).
+fn ximage_pages_and_box(path: &std::path::Path) -> (u32, Option<[f64; 4]>) {
+  let is_pdf = path
+    .extension()
+    .is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
+    || std::fs::File::open(path)
+      .ok()
+      .and_then(|mut f| {
+        let mut h = [0u8; 5];
+        std::io::Read::read_exact(&mut f, &mut h)
+          .ok()
+          .map(|_| &h == b"%PDF-")
+      })
+      .unwrap_or(false);
+  if is_pdf {
+    return (
+      util::image::read_pdf_page_count(path).unwrap_or(0),
+      util::image::read_pdf_page_box_corners(path),
+    );
+  }
+  let bbox = util::image::read_image_dimensions(path).map(|(w, h)| {
+    let (xdpi, ydpi) =
+      util::image::raster_resolution_dpi(&path.to_string_lossy()).unwrap_or((72.0, 72.0));
+    [
+      0.0,
+      0.0,
+      f64::from(w) * 72.0 / xdpi,
+      f64::from(h) * 72.0 / ydpi,
+    ]
+  });
+  (1, bbox)
+}
+
+/// Corner `corner` (1 llx, 2 lly, 3 urx, 4 ury) of `\pdfximage` number `image`'s box in bp; 0 when
+/// the image or the corner is unknown.
+fn ximage_bbox_corner_bp(image: i64, corner: i64) -> f64 {
+  let Ok(index) = usize::try_from(corner - 1) else {
+    return 0.0;
+  };
+  lookup_string(&format!("pdf_ximage_bbox_{image}"))
+    .split_whitespace()
+    .nth(index)
+    .and_then(|value| value.parse::<f64>().ok())
+    .unwrap_or(0.0)
+}

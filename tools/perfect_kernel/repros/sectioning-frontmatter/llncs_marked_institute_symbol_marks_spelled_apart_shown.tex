@@ -1,0 +1,19 @@
+% mechanism: an entry's mark is shown where the names show the label `\lx@sup@setlabel@affiliation` sets for it, read
+%   from what the mark prints (OD #919, #1009): names marked `$^\dagger$`, `$^{\ddagger}$` show the entries'
+%   `$^\dag$`, `$^{\ddag}$`, the same labels spelled apart
+% witness: 1501.04948 (`Cis{\l}ak$^\dag$ … \institute{$^\dag$ Warsaw …}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able† and Bob Baker‡", "†Univ A, Town A",
+%   "‡Univ B, Town B"
+% engines: P4f: as expected; int164a: the entries' marks hidden
+% expect:  0 errors, 0 warnings; Ann Able † "† Univ A, Town A"; Bob Baker ‡ "‡ Univ B, Town B"
+% status:  GREEN (P4f, P4fb; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^\dagger$ \and Bob Baker$^{\ddagger}$}
+\institute{$^\dag$ Univ A, Town A \\
+$^{\ddag}$ Univ B, Town B}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: `content::tail_call` (emitter/content.rs:185-205) follows a parameterless macro's expansion to its LAST token and uses
+%   that command's parameters — also when the last token is an operand, not a call (`\let\next\mk`): `arguments_end` then takes the
+%   next non-space input token ("a" of "and") as the mark's argument; Cy Dee's mark lost. Counted (the content check; a plain-text
+%   name). Fix: follow the tail only in call position (by meaning, not spellings), or extend the span only over brace-group
+%   arguments (revPMK1 1). Siblings: the last token an operand of `\def`, `\noexpand`, `\string`, `\expandafter`
+% witness: synthetic (revPMK1 q12); none in PMK1's 725-paper A/B
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Lee∗ , Bob Ray∗ and Cy Dee†"
+% engines: rust int164a: W 0, the three names right; PMK1: W 3, "Bob Ray ∗ a", Cy Dee without †
+% expect:  0 errors, 0 warnings; Ann Lee ∗, Bob Ray ∗, Cy Dee †
+% status:  RED (PMK1) — moves: post-merge
+\documentclass{article}
+\usepackage{authblk}
+\DeclareRobustCommand*{\mk}[1]{\raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{\ifcase#1\or *\or \dagger\else c\fi}}}} \protected\def\ma{\mk{1}\let\next\mk}\protected\def\mb{\mk{2}\let\next\mk}
+\begin{document}
+\title{T}
+\author{Ann Lee\ma, Bob Ray\ma and Cy Dee\mb}
+\affil{\mk{1}Univ of X}
+\affil{\mk{2}Univ of Y}
+\maketitle
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: a collaboration in brackets right after a name is that name's remark, no part of it, and covers the names
+%   of the line before it back to the line's last collaboration — as aastex's `\collaboration` covers the authors
+%   before it that carry none (Perl `annotate=new`, aas_support.sty.ltxml:126) — not the names after it
+%   (`name_and_remark`, `Collaborations`, author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946).
+% witness: 0910.4381 (emulateapj: `… R.~Zanin$^{14}$, J.~Zapatero$^{5}$ (The MAGIC Collaboration), A.~Falcone$^{30}$
+%   L.~Vetere$^{30}$ …`: 144 MAGIC names, then six of other teams; 97b one creator of 149 names and the merge Error;
+%   97d 144 creators with the MAGIC contact, the six, unseparated in the source, one reported merge). OPEN_ROWS.md
+%   design row on group-level labels.
+% oracle:  pdflatex (TL 2025) 0 errors: "A. Able1 , B. Baker2 , C. Cole1 (The XYZ Collaboration), D. Dorn3" over the
+%   three institutes
+% engines: rust 97b: three creators, the third "C. Cole (The XYZ Collaboration)"; perl: not run
+% expect:  0 errors, 0 warnings; four creators, each with the institute its mark names; A. Able, B. Baker and C. Cole
+%   each with `<contact role="collaboration">(The XYZ Collaboration)</contact>`, D. Dorn with none
+% status:  RED (97b) -> GREEN (97d)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A.~Able$^{1}$, B.~Baker$^{2}$, C.~Cole$^{1}$ (The XYZ Collaboration), D.~Dorn$^{3}$\\
+$^{1}$Univ A\\ $^{2}$Univ B\\ $^{3}$Univ C}
+\maketitle
+Body.
+\end{document}

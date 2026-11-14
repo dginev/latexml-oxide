@@ -1,0 +1,22 @@
+% Two title blocks under a class whose `\maketitle` leaves `\author` live: the second replaces the
+% first (latest `\maketitle` wins), and its affiliation and emails, numbered `author:1`, `author:2`
+% by `labelseq`, go to its own authors. A first cut kept the first batch's pending stubs and contact
+% counts: Alice got "max@m.org", and her own email went to a nameless creator.
+% witness: none (review of 59e, probe b1).
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors (this class's `\maketitle` typesets nothing); semantic target: the second
+%          block's authors, each with "Inst A" and their own email.
+% expect:  0 errors, 0 warnings; two creators.
+\begin{filecontents*}[overwrite]{lxmaketitle.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxmaketitle}
+\LoadClass{article}
+% (a class's own `\maketitle`, as KOMA's: the binding's stays, and leaves the setters live)
+\renewcommand\maketitle{\par}
+\end{filecontents*}
+\documentclass{lxmaketitle}
+\begin{document}
+\title{T0}\author{Max M$^{1}$ \and Bob B$^{1}$\\ $^{1}$Inst M\\ max@m.org, bob@m.org}\maketitle
+\title{T}\author{Alice A$^{1}$ \and Carol C$^{1}$\\ $^{1}$Inst A\\ alice@a.org, carol@a.org}\maketitle
+Body.
+\end{document}

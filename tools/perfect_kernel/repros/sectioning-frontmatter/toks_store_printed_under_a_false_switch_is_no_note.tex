@@ -1,0 +1,21 @@
+% A raw class's token register printed in its title page's fancyhdr foot only under a switch the class leaves false
+% (`\ifshowca … \the\correspondingauthor\fi` with `\showcafalse`): pdflatex prints no note. K11's toks store
+% (frontmatter_stores.rs `ClassReaders::printed_register`) knows only the `\if\relax\the\X\relax` test as a register
+% that is not printed, so it still makes the corresponding note.
+% witness: none (synthetic, review rev95d S4, probe p1); the shape of 2607.06973's googlecloud.cls footer
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Text."; no footer text
+% engines: rust int124a = 0 errors, no note; rust 95d = 0 errors, <ltx:note role="corresponding">Corresponding
+%          author(s): ann@x.org</ltx:note>; perl = 1 error (undefined \correspondingauthor)
+% expect:  0 errors, 0 warnings; no <ltx:note>
+% status:  RED (95d, 95d-r2): the register's printing branch is not read as live or dead
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{swtoks.cls}
+\LoadClass{article}\RequirePackage{fancyhdr}
+\newtoks\correspondingauthor
+\newif\ifshowca \showcafalse
+\fancypagestyle{firststyle}{\fancyfoot[L]{\ifshowca Corresponding author(s): \the\correspondingauthor\fi}}
+\renewcommand{\maketitle}{{\@title\par\@author\par}\thispagestyle{firststyle}}
+\end{filecontents*}
+\documentclass{swtoks}
+\title{T}\author{Ann Able}\correspondingauthor{ann@x.org}
+\begin{document}\maketitle Text.\end{document}

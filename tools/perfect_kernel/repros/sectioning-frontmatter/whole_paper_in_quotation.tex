@@ -1,0 +1,14 @@
+% mechanism: a whole paper inside `{quotation}` (LaTeX's unlabelled list `\list{}{…}\item\relax`, article.cls:389-408):
+%   the first `\section` closes the quotation (dropped, empty) and every unit is the document's own; the bibliography
+%   is back matter (main-session ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #678; as the item bridge's margin-list
+%   exemption)
+% witness: review probe s_whole (69a round 1: every section in one inline sectional block in a paragraph)
+% oracle:  pdflatex 0 errors: "1 Intro", "Intro text.", "2 Body", "Body text [1].", References "[1] Alpha entry one."
+%   "[2] Beta entry two.", all indented
+% engines: rust 67int17b = Error:malformed:ltx:section (in <ltx:quote>, then in <ltx:section>); Perl errs the same way
+% expect:  0 errors, 0 warnings; sections S1 (label s:i) and S2 at the top level; the bibliography after them
+% status:  RED (67int17b) -> GREEN (69a r2)
+% preload: ar5iv.sty
+\documentclass{article}\begin{document}\begin{quotation}\section{Intro}\label{s:i}Intro text.\section{Body}Body text \cite{a}.
+\begin{thebibliography}{9}\bibitem{a} {\em Alpha} entry one.\bibitem{b} Beta entry two.\end{thebibliography}
+\end{quotation}\end{document}

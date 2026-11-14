@@ -1,0 +1,25 @@
+% witness: 2508.10437, 2406.09241 (`\subcaptionsetup`), 2604.10403, 2103.15767 (`\captionlistentry`),
+%   2407.10358, 2409.07679 (`\captiontext*`); run 340: 148 + 207 + 10 first errors
+% oracle:  pdflatex 0 errors; "Figure 1 shows (a) ... see 1a and 2"; the panel label "(a)" over the graphic
+% engines: rust 65int7 = 3 errors (`\subcaptionsetup`, `\captionlistentry`, `\captiontext` undefined)
+% expect:  0 errors; the figure tags 1 and 2 (the second labelled fig:entry), the panel's label (a) in the first;
+%          the third figure's \captiontext{Text only} as "Figure 2: Text only" (label, separator, text; no counter step)
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{subcaption}
+\subcaptionsetup[figure]{labelfont=bf}
+\begin{document}
+\begin{figure}
+\begin{subcaptiongroup}
+\phantomcaption\label{fig:a}\captiontext*{}
+\end{subcaptiongroup}
+\caption{Main.}\label{fig:main}
+\end{figure}
+\begin{figure}
+\captionlistentry{Entry only}\label{fig:entry}
+\end{figure}
+\begin{figure}
+\captiontext{Text only}
+\end{figure}
+See \ref{fig:a} and \ref{fig:entry}.
+\end{document}

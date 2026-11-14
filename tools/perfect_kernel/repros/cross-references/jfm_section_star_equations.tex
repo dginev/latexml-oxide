@@ -1,0 +1,22 @@
+% witness: review 78q finding 4 (jfm.cls:299-306: \section zeroes the equation counter, starred calls too); 2608.04345;
+%          review rev78q2 finding 1 (the appendices' \section* too, jfm.cls:303: e6 "A 1" — RESIDUAL, ours "A 2")
+% oracle:  pdflatex 0 errors with jfm.cls v1.27 (2608.04345's copy); "See 1, 1.1, 1.2, 2.1, 2.1, A, A 1, A 1."
+% engines: rust (78q r1) = e4 "2.3"; (78q r2, int55) e6 "A 2" (the locked \section ignores the appendix re-wrap) (the section counter's reset, numbered sections only); int53a "4"
+% expect:  0 errors; the equation after \section* restarts at 2.1
+% status:  RED (78q r1) -> GREEN (78q r2) for e4; e6 pinned at the residual "A 2"
+\documentclass{jfm}
+\begin{document}
+\section{A}\label{sA}
+\begin{equation}a\label{e1}\end{equation}
+\begin{equation}b\label{e2}\end{equation}
+\section{B}\label{sB}
+\begin{equation}c\label{e3}\end{equation}
+\section*{Star}
+\begin{equation}d\label{e4}\end{equation}
+\appendix
+\section{C}\label{sC}
+\begin{equation}e\label{e5}\end{equation}
+\section*{Star2}
+\begin{equation}f\label{e6}\end{equation}
+See \ref{sA}, \ref{e1}, \ref{e2}, \ref{e3}, \ref{e4}, \ref{sC}, \ref{e5}, \ref{e6}.
+\end{document}

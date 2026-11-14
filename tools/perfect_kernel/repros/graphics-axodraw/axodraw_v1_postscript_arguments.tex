@@ -1,0 +1,19 @@
+% witness: 1701.01554 (`\special{! /Ldensity {0.25} def}`, `\Photon(…){1}{6.283 15 mul 360 div … Ldensity mul}`),
+%          0901.1195 (`Tdensity`): v1 splices its arguments into PostScript, so an argument may be a PostScript
+%          expression over a constant a dvips header defined — the witnesses' spaced `{0.5} def` and a synthetic
+%          compact `{3}def` (no witness uses it)
+% oracle:  latex + dvips with the v1 axodraw.sty hep-ph9702393 ships: 0 errors; a photon of amplitude 1 and 10
+%          wiggles (20 half wiggles); pdflatex: 0 errors, nothing drawn
+% engines: rust 64qb = Error:undefined:\Photon; rust 64w r1 = Warning "Cannot draw axodraw 'photon'", nothing
+%          drawn; Perl = undefined (no axodraw binding)
+% expect:  0 errors, 0 warnings; 20 `ltx:bezier` half wiggles of amplitude 4/3 (1.85px)
+% status:  RED (64w r1) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\special{! /Tdensity {0.5} def /Tamp {3}def}
+\begin{document}
+\begin{picture}(100,20)(0,-10)
+\Photon(0,0)(100,0){Tamp 2 sub}{20 Tdensity mul}
+\end{picture}
+\end{document}

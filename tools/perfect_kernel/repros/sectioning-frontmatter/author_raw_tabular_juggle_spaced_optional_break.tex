@@ -1,0 +1,20 @@
+% mechanism: a juggle with `\\ [2mm]` between (`\end{tabular}\\ [2mm]\begin{tabular}{c}`): `\\` reads its
+%            `[…]` past spaces (`\@ifnextchar`: latex.ltx `\@normalcr`/`\@xnewline`,
+%            `\@tabularcr`/`\@xtabularcr`), so the reading's scan does too (its `*` only right after it, as the
+%            binding's `OptionalMatch:*` reads it, review revI1 finding 2) (`rehearsal::inline_juggles_as_columns`); the
+%            row break stands, the lines after it the author's, as `\\[2mm]`'s
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH4 h3g
+% oracle:  pdflatex: 0 errors; "A One", "Univ A", "Bob Two", "Univ B" printed
+% engines: rust FB2b5 `=2`: Univ B kept; FB2b6 `=2`: E=0, W=0, "Univ B" lost silently (the space stopped the scan);
+%          int151a `=2`: the same reading, W=1 (FS1 counts the loss)
+% expect:  0 errors, 0 warnings at `=2`; creator A One with affiliations Univ A, Bob Two, Univ B
+% status:  RED (FB2b6) -> GREEN at `=2` (FB2b8,
+%          perfect_kernel_batchfb2a::a_juggle_judges_the_command_between_by_what_it_prints, `\\ [2mm]`)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One \\ Univ A \end{tabular}\\ [2mm]\begin{tabular}{c} Bob Two \\ Univ B}
+\maketitle
+Text.
+\end{document}

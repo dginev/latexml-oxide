@@ -1,0 +1,18 @@
+% mechanism: a script character the block's rehearsal read outside math (an error held there) is written into a piece
+%   as the character it printed, `\lx@fm@script@char`, a counted Warning (`emitter::content::Field::content_cut`)
+% witness: 2204.01080 (=2: 6 x "Script ^ can only appear in math mode" from `\textbf{Ningkai Mo} ^1` re-digested)
+% oracle:  pdflatex INVALID on purpose: 9 errors (Missing $ at each text-mode `^`, the paper's own error)
+% engines: rust =2 (int153x): 3 errors; rust off: 0 (the old reader reads the marks)
+% expect:  =2: 0 errors, 3 warnings (one per script character), names "Ann Able ^1 …", "Bob Baker ^1 ^2"; off unchanged
+% status:  RED (int153x) -> GREEN (perfect_kernel_batchne3::a_text_mode_script_is_written_as_its_character)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able} ^1\footnotemark[1]
+\and
+\textbf{Bob Baker} ^1 ^2\\
+$^1$Univ A, City A\\
+$^2$Univ B, City B}
+\maketitle
+Text.
+\end{document}

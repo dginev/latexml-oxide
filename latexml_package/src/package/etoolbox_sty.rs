@@ -1,5 +1,47 @@
 use crate::prelude::*;
 
+/// A token list as etoolbox's `\patchcmd` writes it out (etoolbox.sty:1358-1371): a macro's body as `\meaning`
+/// prints it (`params_doubled`: a nested parameter `##`), the search and replacement texts as `\detokenize` prints
+/// them with `#` an other character (:1355). A control sequence whose name is a word (or a letter or `@`, which the
+/// rescan under `\makeatletter`, :1376-1382, reads as letters) is followed by a space (tex.web §262 `print_cs`), so the text
+/// rescans to the same tokens whatever follows it.
+fn etb_patch_text(tokens: &Tokens, params_doubled: bool) -> String {
+  let mut out = String::new();
+  for t in tokens.unlist_ref() {
+    match t.get_catcode() {
+      Catcode::COMMENT => {},
+      Catcode::CS => t.with_str(|text| {
+        let name = text.strip_prefix('\\').unwrap_or(text);
+        out.push('\\');
+        out.push_str(name);
+        let mut chars = name.chars();
+        let word = match (chars.next(), chars.next()) {
+          (Some(_), Some(_)) => true,
+          (Some(c), None) => c.is_alphabetic() || c == '@',
+          _ => false,
+        };
+        if word {
+          out.push(' ');
+        }
+      }),
+      Catcode::PARAM => t.with_str(|text| {
+        out.push_str(text);
+        if params_doubled {
+          out.push_str(text);
+        }
+      }),
+      // A space token is one space in `\meaning`, whatever its source text (a line end keeps `\n`): review rev78p.
+      Catcode::SPACE => out.push(' '),
+      Catcode::ARG => {
+        out.push('#');
+        t.with_str(|text| out.push_str(text));
+      },
+      _ => t.with_str(|text| out.push_str(text)),
+    }
+  }
+  out
+}
+
 LoadDefinitions!({
   // RawTeX! (not TeX!) because \etb@catcodes etc. need @ as letter at runtime.
   // TeX! tokenizes at compile time with @ = OTHER, breaking \etb@catcodes into \etb + @catcodes.
@@ -26,39 +68,55 @@ LoadDefinitions!({
 "
   );
 
+  // etoolbox.sty:57-58, 85, 96: `\protected\def\newrobustcmd{\@star@or@long
+  // \etb@new@command}` (and `\renewrobustcmd`/`\providerobustcmd` through
+  // `\newrobustcmd*`) peek for the star by `\futurelet` (`\@star@or@long` →
+  // `\@ifstar`), so a number scan ends at them and the definition waits until
+  // the command is executed. These closures define as they expand: synthslant.sty:277
+  // `\ifnum\synthslant@engine=4%` + a newline + `\newrobustcmd` defined in the
+  // scan's look-ahead, before the `\ifnum` chose its branch (synthslant-gauge;
+  // Perl etoolbox.sty.ltxml:39-50 shares it). `peeks_by_futurelet` has the scan
+  // end at them (56jm, sect13.rs `\@ifstar`), and `protected` is the real
+  // definitions' `\protected` (an `\edef` keeps them). KNOWN_PERL_ERRORS #286.
+  // Guard: `sweep125_roots::newrobustcmd_waits_for_a_number_scan`.
   DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   if !is_definable(&cs) {
     if !lookup_bool(&s!("{cs}:locked")) {
       Info!("ignore", cs,
-        "Ignoring redefinition (\\newcommand) of '{cs}'"); }
+        &s!("Ignoring redefinition (\\newcommand) of '{cs}'")); }
   } else {
     let args = convert_latex_args(nargs.value_of() as usize, opt)?;
     DefMacro!(cs, args, body, protected => true, long => true);
   }
-  Tokens!() });
+  Tokens!() }, peeks_by_futurelet => true, protected => true);
 
   DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   let args = convert_latex_args(nargs.value_of() as usize, opt)?;
   DefMacro!(cs, args, body, protected => true, long => true);
-  Tokens!() });
+  Tokens!() }, peeks_by_futurelet => true, protected => true);
 
   DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   if is_definable(&cs) {
     let args = convert_latex_args(nargs.value_of() as usize, opt)?;
     DefMacro!(cs, args, body, protected => true, long => true); }
-  Tokens!() });
+  Tokens!() }, peeks_by_futurelet => true, protected => true);
 
   // \csdef/\csedef/\csgdef/\csxdef — TL etoolbox.sty L849-852 defines
   // these as `\newrobustcmd*{\csXXX}[1]{\expandafter\Xdef\csname#1\endcsname}`.
   // Perl loads the raw .sty after .ltxml so it picks them up; Rust's
   // .rs binding skips the raw .sty so they're undefined. Driver:
   // 2205.03932 (`\csdef` Real Regression P=0 vs R=1 → 0).
-  // Direct DefMacro! since the TeX! block running \newrobustcmd has
-  // ordering issues with our bootstrap.
-  DefMacro!("\\csdef{}", "\\expandafter\\def\\csname #1\\endcsname");
-  DefMacro!("\\csedef{}", "\\expandafter\\edef\\csname #1\\endcsname");
-  DefMacro!("\\csgdef{}", "\\expandafter\\gdef\\csname #1\\endcsname");
-  DefMacro!("\\csxdef{}", "\\expandafter\\xdef\\csname #1\\endcsname");
+  // `\newrobustcmd*` = `\protected\def`: these must NOT expand inside an
+  // `\edef`/`\xdef` — a plain `DefMacro!` did, so `\edef\t{\csgdef{a}{b}}`
+  // expanded `\csname a\endcsname` (the `\a` accent!) into the body, and
+  // yquantlanguage-groups.sty:241-245's `\edef{…\csgdef{import@\noexpand
+  // \the\numexpr…}…}` reached the `\csname` builder with the `\noexpand`
+  // shadow still live (real TeX stores the deferred `\csgdef` call verbatim).
+  // Batch 56bd; Perl picks the robust definitions up from the raw .sty.
+  RawTeX!(r"\protected\def\csdef#1{\expandafter\def\csname#1\endcsname}");
+  RawTeX!(r"\protected\def\csedef#1{\expandafter\edef\csname#1\endcsname}");
+  RawTeX!(r"\protected\def\csgdef#1{\expandafter\gdef\csname#1\endcsname}");
+  RawTeX!(r"\protected\def\csxdef#1{\expandafter\xdef\csname#1\endcsname}");
 
   // `\lx@etb@unlock` / `\lx@etb@relock` — a matched push/pop of the
   // "assign through the CS lock" flag (`state_is_unlocked()`, consumed by
@@ -922,6 +980,9 @@ LoadDefinitions!({
 
 \newrobustcmd*{\csundef}[1]{\cslet{#1}\etb@undefined}
 \newrobustcmd*{\csgundef}[1]{\global\cslet{#1}\etb@undefined}
+% etoolbox.sty:931 — omitted by the Perl binding (etoolbox.sty.ltxml:867-872,
+% KNOWN_PERL_ERRORS #217); yquantlanguage-groups.sty:185 relies on it.
+\newrobustcmd{\gundef}[1]{\global\let#1\etb@undefined}
 
 % {<cstoken>}{<code>}
 
@@ -1337,48 +1398,228 @@ LoadDefinitions!({
         {\etb@dbg@fail{mac}\@secondoftwo}}}"
   );
 
+  // latex.ltx's output routine (ltoutput.dtx) and the float-placement setters it calls
+  // (ltfloat.dtx `\@floatplacement`, `\@dblfloatplacement`), which LaTeXML never runs (see
+  // `\patchcmd` below).
+  const OUTPUT_ROUTINE_INTERNALS: [&str; 24] = [
+    "\\@outputpage",
+    "\\@makecol",
+    "\\@make@normalcolbox",
+    "\\@opcol",
+    "\\@outputdblcol",
+    "\\@combinefloats",
+    "\\@outputbox@attachfloats",
+    "\\@combinedblfloats",
+    "\\@cflt",
+    "\\@cflb",
+    "\\@startcolumn",
+    "\\@startdblcolumn",
+    "\\@doclearpage",
+    "\\@specialoutput",
+    "\\@floatplacement",
+    "\\@dblfloatplacement",
+    "\\@addtocurcol",
+    "\\@addtonextcol",
+    "\\@addtodblcol",
+    "\\@addmarginpar",
+    "\\@tryfcolumn",
+    "\\@makefcolumn",
+    "\\@vtryfc",
+    "\\@emptycol",
+  ];
   // Need to be able to examine a Macro's replacement for a match (and then replace)
-  // we can only do this for token expansions, and should return failure for all else.
-  DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[(_prefix,cs,search,replace,success,failure)] {
+  // we can only do this for token expansions, and should return failure for all else (success
+  // for an output-routine internal, see below).
+  DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[(prefix,cs,search,replace,success,failure)] {
+  // LaTeXML has no output routine: a patch to one of its internals has no effect on the
+  // document, and one written against an older latex.ltx (acl2019.sty:455
+  // `\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{\errmessage{patch failed}}`,
+  // ACL/EMNLP 2019-2020) misses the 2025 body, or LaTeXML's empty stub (`\@startcolumn`). Every
+  // way it can miss succeeds without patching (user ruling 2026-10-04;
+  // OXIDIZED_DESIGN_DIVERGENCES #441; pdflatex 2025 takes the failure branch).
+  // Witnesses 1811.00207, 1907.04380, 1909.00156, 2004.13897.
+  let missed = if cs.with_cs_name(|name| OUTPUT_ROUTINE_INTERNALS.contains(&name)) {
+    success.clone()
+  } else {
+    failure
+  };
   let definition = lookup_definition(&cs)?;
   if definition.is_some() && definition.as_ref().unwrap().is_expandable() {
     let expansion = definition.as_ref().unwrap().get_expansion();
     if matches!(expansion,Some(ExpansionBody::Closure(_))) {
       Info!("unexpected", "patchcmd", format!("Patchcmd is not supported on LaTeXML-native definitions, will not patch {}", cs));
-      return Ok(failure)
+      return Ok(missed)
     }
     let Some(expansion) = expansion else {
       // Expandable but no expansion body — e.g. a Let-only alias or
       // \def\foo{} with empty body. Treat as patch-failure (driver:
       // 2105.06894 panic at unwrap).
-      return Ok(failure);
+      return Ok(missed);
     };
     let expansion_tokens = match expansion {
       ExpansionBody::Tokens(t) => t.clone(),
       _ => unreachable!(),
     };
-    let string        = expansion_tokens.untex();
-    let search_string = search.untex();
-    // All characters are meant to be matched as literal, avoid regex interpretation
-    // search_string = quotemeta(search_string);
-    // let search_regex = qr/$search_string/;
+    // etoolbox.sty:1358-1371 patches text: the macro's `\meaning` and the search and replacement texts
+    // `\detokenize`d (with `#` made other, :1355 `\@makeother\#`), then rescans the result. In that text a control
+    // word is always followed by a space (tex.web §262 `print_cs`), so `\patchcmd{\x}{|}{\mid}` on `o|s` rescans
+    // `o\mid s` and keeps `\mid` (`etb_patch_text`); `untex`'s text, which spaces a control word only before a letter
+    // already beside it, welded the replacement into `\mids` (2011.13897; Perl shares it, KNOWN_PERL_ERRORS #1091).
+    // A stored body keeps a nested macro's parameter (`##1` of an inner `\def`)
+    // as one PARAM token: written as `##`, as `\meaning` writes it (`#1` the
+    // macro's parameter, `##1` a nested one), the round trip is exact —
+    // pgfornament.sty:47-51's `\def\m ##1 ##2 {…}` in the patched
+    // `\pgf@@ornamenthan` had become `\def\m #1 #2` (KNOWN_PERL_ERRORS #221).
+    let string = etb_patch_text(&expansion_tokens, true);
+    let search_string = etb_patch_text(&search, false);
     if string.contains(&search_string) {
       // Should the token substitution happen on the actual data structure?
       // string replacement is a quick&dirty way out...
-      let replace_string = replace.untex();
-      let patched = string.replace(&search_string, &replace_string);
+      let replace_string = etb_patch_text(&replace, false);
+      // Once: etoolbox's `\etb@resrvdb` is delimited by the FIRST occurrence
+      // of the search text (etoolbox.sty:1365-1366), and Perl's `s///`
+      // (etoolbox.sty.ltxml:1308) has no `/g`.
+      let patched = string.replacen(&search_string, &replace_string, 1);
+      // etoolbox.sty:1358-1371 rebuilds the macro from its `\meaning`, whose
+      // `\protected\long\outer` prefix it keeps; `[<prefix>]` replaces that
+      // prefix (`[]` strips it). Perl (etoolbox.sty.ltxml:1310) installs a
+      // plain macro: yquant-config.tex:594-596 patches a copy of
+      // yquant-shapes.tex:26's `\protected\def\pgfshapeclippath`, which
+      // yquant-draw.tex:201-211 leaves unexpanded in an `\edef` — expanded
+      // there, yquant-doc ran into 1001 errors and a Fatal.
+      // The rebuilt macro is `\def`ined, so its arguments end at a `\par` as the original's did (tex.web §392,
+      // `Expandable::checks_par`), and always under an explicit prefix without `\long`.
+      let (protected, long, outer, tex_declared) = match prefix {
+        Some(prefix) => {
+          let has = |primitive: &str| {
+            let primitive = T_CS!(primitive);
+            prefix.unlist_ref().iter().any(|t| x_equals(t, &primitive))
+          };
+          (has("\\protected"), has("\\long"), has("\\outer"), true)
+        },
+        None => match lookup_definition_stored(&cs)? {
+          Some(Stored::Expandable(original)) =>
+            (original.is_protected, original.is_long, original.is_outer, original.checks_par),
+          _ => (false, false, false, false),
+        },
+      };
+      let options = ExpandableOptions { protected, long, outer, tex_declared, ..Default::default() };
       // New definition in local scope
       install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(),
-          Some(patched.into()), None)?, None);
+          Some(patched.into()), Some(options))?, None);
       Ok(success)
     } else {
-      Ok(failure)
+      Ok(missed)
     }
   } else {
     Info!("unexpected", "patchcmd", s!("Patchcmd is not supported on non-expandable definitions, will not patch {cs}"));
-    Ok(failure)
+    Ok(missed)
   }
-}, protected => true);
+}, protected => true, peeks_by_futurelet => true);
+
+  // L3: \apptocmd / \pretocmd support for constructor-backed environments (\X or \end<X>).
+  // For an environment whose begin/end is a constructor, the faithful equivalent is the
+  // env hook: \apptocmd\endX{code} ≡ \AddToHook{env/X/end}{code}, \pretocmd\endX{code}
+  // ≡ \AddToHook{env/X/end}[..]{code}\DeclareHookRule{env/X/end}{..}{before}{.}.
+  DefMacro!(
+    "\\lx@etb@hooktocmd@nonmacro {}{}{}{}{}",
+    sub[(op, cs_toks, code, success, failure)] {
+      let cs_token = cs_toks.unlist().into_iter().find(|t| t.get_catcode().is_active_or_cs());
+      let Some(cs) = cs_token else {
+        return Ok(failure);
+      };
+      let cs_str = cs.to_string();
+      let cs_name = cs_str.strip_prefix('\\').unwrap_or(&cs_str);
+
+      let (env_name, hook_point) = if let Some(end_env) = cs_name.strip_prefix("end") {
+        if !end_env.is_empty() {
+          (end_env, "end")
+        } else {
+          (cs_name, "begin")
+        }
+      } else {
+        (cs_name, "begin")
+      };
+
+      // Check whether env_name is a known constructor-backed environment
+      let is_env = lookup_definition(&T_CS!(format!("\\begin{{{env_name}}}")))?.is_some()
+        || lookup_definition(&T_CS!(format!("\\end{{{env_name}}}")))?.is_some();
+
+      if !is_env {
+        return Ok(failure);
+      }
+
+      let is_prepend = op.to_string().contains("prepend");
+
+      if lookup_meaning(&T_CS!("\\AddToHook")).is_some() {
+        if env_name.starts_with("verbatim") {
+          let key = format!("@environment@{env_name}@at{hook_point}");
+          if is_prepend {
+            let mut new_tokens = code.clone().unlist();
+            if let Some(existing) = lookup_tokens(&key) {
+              new_tokens.extend(existing.unlist());
+            }
+            assign_value(&key, Tokens::new(new_tokens), Scope::Global);
+          } else {
+            push_value(&key, code.clone().unlist())?;
+          }
+        }
+
+        let mut tokens = Vec::new();
+        if is_prepend {
+          tokens.push(T_CS!("\\AddToHook"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(ExplodeText!(format!("env/{env_name}/{hook_point}")));
+          tokens.push(T_END!());
+          tokens.push(T_OTHER!("["));
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_OTHER!("]"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(code.unlist());
+          tokens.push(T_END!());
+
+          tokens.push(T_CS!("\\DeclareHookRule"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(ExplodeText!(format!("env/{env_name}/{hook_point}")));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.extend(ExplodeText!("before"));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_END!());
+        } else {
+          tokens.push(T_CS!("\\AddToHook"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(ExplodeText!(format!("env/{env_name}/{hook_point}")));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.extend(code.unlist());
+          tokens.push(T_END!());
+        }
+
+        tokens.extend(success.unlist());
+        Ok(Tokens::new(tokens))
+      } else {
+        let key = format!("@environment@{env_name}@at{hook_point}");
+        if is_prepend {
+          let mut new_tokens = code.unlist();
+          if let Some(existing) = lookup_tokens(&key) {
+            new_tokens.extend(existing.unlist());
+          }
+          assign_value(&key, Tokens::new(new_tokens), Scope::Global);
+        } else {
+          push_value(&key, code.unlist())?;
+        }
+        Ok(success)
+      }
+    }
+  );
 
   // RawTeX! (not TeX!): the DeclareListParser bodies (line `\etb@lst@...&`)
   // use `&` as a delimiter sentinel. Perl's etoolbox.sty.ltxml sets
@@ -1459,7 +1700,7 @@ LoadDefinitions!({
             \edef#2{#1{\expandonce#2}{\unexpanded{#3}}}%
             \lx@etb@relock
             \@firstoftwo}}
-        {\etb@dbg@fail{mac}\@secondoftwo}}}
+        {\lx@etb@hooktocmd@nonmacro{#1}{#2}{#3}}}}
 
 \long\def\etb@hooktocmd@i#1#2#3{%
   \begingroup
@@ -1785,32 +2026,148 @@ LoadDefinitions!({
   // \AtEndPreamble
   // \AfterEndPreamble
   // \AfterEndDocument
-  DefMacro!("\\AfterPreamble{}", sub[(arg)] {
+  // Under a 2020-10+ format these are `\AddToHook{begindocument/before}` etc.
+  // (etoolbox.sty:1740-1746), so they accept the hook system's optional
+  // `[label]` — tcbdocumentation.code.tex:69 `\AtEndPreamble[tcolorbox]{…}`
+  // defines `\meta`; without the `[]` the label was read as the code and the
+  // real code executed at once (witness: xassoccnt_doc `undefined:\meta`).
+  // Same treatment as `\AtBeginDocument[]{}` (Perl 93f875a6). They are
+  // `\newrobustcmd*`s (etoolbox.sty:1744-1746; `\AfterPreamble` is
+  // `\AtBeginDocument`), which a number scan does not run: see `\newrobustcmd`
+  // above.
+  DefMacro!("\\AfterPreamble[]{}", sub[(_label, arg)] {
   if lookup_bool_sym(pin!("inPreamble")) {
     push_value("@at@begin@document", arg.unlist())?;
     Tokens!()
   } else {
     arg
-  }});
-  DefMacro!("\\AtEndPreamble{}", sub[(arg)] {
-  push_value("@document@preamble@atend", arg.unlist())?; });
-  DefMacro!("\\AfterEndPreamble{}", sub[(arg)] {
-  push_value("@document@preamble@afterend", arg.unlist())?; });
-  DefMacro!("\\AfterEndDocument{}", sub[(arg)] {
-  push_value("@after@end@document", arg.unlist())?; });
+  }}, protected => true, peeks_by_futurelet => true);
+  // `\AtEndPreamble` is literally `\AddToHook{begindocument/before}`
+  // (etoolbox.sty:1743), so its code runs IN ORDER with the other
+  // `begindocument/before` chunks: doc.sty:907-910 loads hypdoc (→ hyperref)
+  // from that hook, and liftarm.tex:39 / wheelchart.tex:128 `\AtEndPreamble
+  // {\hypersetup{…}}` under ltxdoc rely on being queued after it. The
+  // private `@document@preamble@atend` list fires BEFORE the L3 hook
+  // (latex_constructs.rs `\document`), so `\hypersetup` was still undefined.
+  // etoolbox.sty:1743 `\newrobustcmd*{\AtEndPreamble}{\AddToHook{begindocument/before}}`.
+  DefMacro!("\\AtEndPreamble", r"\AddToHook{begindocument/before}", protected => true);
+  // etoolbox.sty:1745 `\AfterEndPreamble` is `\AddToHook{begindocument/end}` on a 2020+ format:
+  // a one-time hook, so code added once it has run executes at once (Perl etoolbox.sty.ltxml:1718
+  // queues it on a list nothing reads again, dropping it).
+  // (a stand-in's copy registers no document-time code: `state::copy_provides_defers`; mdpi.cls:1089)
+  DefMacro!("\\AfterEndPreamble[]{}", sub[(_label, arg)] {
+  if copy_provides_defers("\\AfterEndPreamble") {
+    Tokens!()
+  } else if lookup_bool("@document@preamble@afterend@done") {
+    arg
+  } else {
+    push_value("@document@preamble@afterend", arg.unlist())?;
+    Tokens!()
+  }},
+  protected => true, peeks_by_futurelet => true);
+  DefMacro!("\\AfterEndDocument[]{}", sub[(_label, arg)] {
+  if !copy_provides_defers("\\AfterEndDocument") {
+    push_value("@after@end@document", arg.unlist())?;
+  } },
+  protected => true, peeks_by_futurelet => true);
 
-  at_end_document(TokenizeInternal!(r"\let\AfterEndPreamble\@gobble"))?;
+  // Perl's `\AtEndDocument{\let\AfterEndPreamble\@gobble}` (etoolbox.sty.ltxml:1724) is
+  // etoolbox.sty:1781, after the `\endinput` a 2020+ format takes at :1746: there the hook runs
+  // code added at the document's end too (and `\@gobble` took a `[label]`'s `[`).
   //======================================================================
   // 2.6 Environment Hooks
 
-  DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; });
-  DefMacro!("\\AtEndEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; });
-  DefMacro!("\\BeforeBeginEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
-  DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
+  if lookup_meaning(&T_CS!("\\AddToHook")).is_some() {
+    DefMacro!(
+      "\\AtBeginEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env.clone()).to_string();
+        if env_str.starts_with("verbatim") {
+          push_value(&format!("@environment@{env_str}@atbegin"), code.clone().unlist())?;
+        }
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/begin")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      },
+      protected => true, peeks_by_futurelet => true
+    );
+    DefMacro!(
+      "\\AtEndEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env.clone()).to_string();
+        if env_str.starts_with("verbatim") {
+          push_value(&format!("@environment@{env_str}@atend"), code.clone().unlist())?;
+        }
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/end")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      },
+      protected => true, peeks_by_futurelet => true
+    );
+    DefMacro!(
+      "\\BeforeBeginEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env).to_string();
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/before")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      },
+      // etoolbox.sty:1853/1874 `\newrobustcmd`, as its siblings above.
+      protected => true, peeks_by_futurelet => true
+    );
+    DefMacro!(
+      "\\AfterEndEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env).to_string();
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/after")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      },
+      // etoolbox.sty:1853/1874 `\newrobustcmd`, as its siblings above.
+      protected => true, peeks_by_futurelet => true
+    );
+  } else {
+    DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; },
+      protected => true, peeks_by_futurelet => true);
+    DefMacro!("\\AtEndEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; },
+      protected => true, peeks_by_futurelet => true);
+    DefMacro!("\\BeforeBeginEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; },
+      protected => true, peeks_by_futurelet => true);
+    DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; },
+      protected => true, peeks_by_futurelet => true);
+  }
 
   // \PatchFailed — used as the failure-callback in
   // `\apptocmd{cs}{add}{success}{\PatchFailed}` invocations
@@ -1822,15 +2179,27 @@ LoadDefinitions!({
 
   // LaTeXML-only: \robustify must NO-OP on a NATIVE (closure-bodied) binding.
   // Many LaTeXML commands (e.g. natbib's \cite) are realized as Rust closures,
-  // whose \meaning renders as "...->CODE(0x...)". etoolbox's \robustify
+  // whose \meaning renders as "...->CODE(<name>)" (Perl's "CODE(0x...)", QA89). etoolbox's \robustify
   // reconstructs a macro from its \meaning via \scantokens; for a native binding
-  // that yields a broken text-bodied "CODE(0x...)" macro that grabs the wrong
+  // that yields a broken text-bodied "CODE(<name>)" macro that grabs the wrong
   // number of args (Perl has the SAME bug — it silently emits the pointer text;
   // we surfaced it as errors when the mangled \cite swallowed a following
   // \begin{equation}, witness 2110.11931, mnras templates ship \robustify{\cite}).
   // Native bindings are already robust, so the faithful behavior is to leave them
   // untouched. `\lx@ifnativecmd` mirrors etoolbox's own \ifdefmacro \meaning-split
-  // idiom, using "CODE(" as the sentinel.
+  // idiom, using "CODE(" as the sentinel. `\lx@ifnativecmdb` adds a second
+  // sentinel "Stored[" — DefMath/constructor natives render that way (e.g.
+  // \bmod = DefMath in math_common.rs, whose real latex.ltx L15556 body IS a
+  // robust macro, so real \robustify succeeds; ours must no-op, not error
+  // "not a macro". Witness yquant-doc.tex L244 `\robustify\bmod`). A
+  // LaTeX-robust command (`\DeclareRobustCommand`, meaning `\protect \cite  `)
+  // is a macro whose body is not native: \robustify then works on its inner
+  // `\cite ` (`\ifdefltxprotect`, etoolbox.sty:1271-1273), which is — the
+  // kernel's `\cite` binding — so the test is made on that inner command too;
+  // without it the rebuilt `\cite` set the literal text "CODE(…)" in place of
+  // the citation and swallowed its key and the next token (arXiv 2210.15126,
+  // wiley-article.cls:774 `\robustify{\cite}`; Perl the same, KNOWN_PERL_ERRORS
+  // #902). Guard: `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.
   RawTeX!(
     r"
 \newcommand{\lx@ifnativecmd}{}
@@ -1840,8 +2209,21 @@ LoadDefinitions!({
 \edef\lx@etb@ifnativecmd{%
   \def\noexpand\lx@etb@ifnativecmd##1\detokenize{CODE(}##2&}
 \lx@etb@ifnativecmd{\notblank{#2}}
+\newcommand{\lx@ifnativecmdb}{}
+\long\edef\lx@ifnativecmdb#1{%
+  \noexpand\expandafter\noexpand\lx@etb@ifnativecmdb
+  \noexpand\meaning#1\detokenize{Stored[}&}
+\edef\lx@etb@ifnativecmdb{%
+  \def\noexpand\lx@etb@ifnativecmdb##1\detokenize{Stored[}##2&}
+\lx@etb@ifnativecmdb{\notblank{#2}}
 \let\lx@saved@robustify\robustify
-\protected\def\robustify#1{\lx@ifnativecmd{#1}{}{\lx@saved@robustify{#1}}}
+\protected\def\robustify#1{%
+  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{%
+    \ifdefltxprotect{#1}%
+      {\expandafter\lx@robustify@ltxprotect\csname\expandafter\@gobble\string#1 \endcsname#1}%
+      {\lx@saved@robustify{#1}}}}}
+\def\lx@robustify@ltxprotect#1#2{%
+  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{\lx@saved@robustify{#2}}}}
 "
   );
 });

@@ -1,0 +1,17 @@
+% witness: prerex/prerex (prerex.tex:70 \paragraph{Notes} inside \begin{figure} at :31) — Root C figure variant
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03) — SHARED (both build the nested node AND emit the error)
+% expect:  0 errors; <ltx:paragraph> nested inside <ltx:figure> (Perl's exact structure), no error line
+% status:  GREEN (b54t, batch 54o)
+% mechanism: same as section_inside_item_ddphonism but the container is <ltx:figure>. A sectioning
+%   unit opened inside a container the RelaxNG model forbids. Both engines already INSERT the node
+%   anyway after logging the error (document.rs:3149-3152 mirrors Perl Document.pm openElement),
+%   so the STRUCTURE is already right; only the diagnostic differs. Extend the existing
+%   sectioning-in-frontmatter leniency (document.rs:3073/3080) to cover ltx:figure + ltx:item.
+\documentclass{article}
+\begin{document}
+\begin{figure}
+Figure body text.
+\paragraph{Notes} inside the figure.
+\end{figure}
+\end{document}

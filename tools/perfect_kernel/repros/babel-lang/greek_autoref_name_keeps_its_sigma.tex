@@ -1,0 +1,14 @@
+% witness: review r1 of 59t (L_greek.tex, GS2.tex; ~/data/rev59t/)
+% oracle:  pdflatex 0 errors; "Εξίσωση 1."
+% engines: rust 59t = "Εξίsωsη῀1" (U+1FC0 for the `~`, as before 59t: "Equation῀1"): `\textsigma` (LGR `s\noboundary`) loses the LGR fontmap on the autoref-tag
+%   path only (a section title keeps σ); under greek a figure gets no autoref tag and `~` prints "῀" (59s printed
+%   "Equation 1": 59t's babel names expose it)
+% expect:  0 errors; the equation's autoref tag reads "Εξίσωση" U+00A0 "1"
+% status:  RED (open)
+\documentclass{article}
+\usepackage[greek]{babel}
+\usepackage{hyperref}
+\begin{document}
+\begin{equation}a\label{e}\end{equation}
+\autoref{e}.
+\end{document}

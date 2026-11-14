@@ -1,0 +1,19 @@
+% witness: 2201.11056 (sn-jnl-setup.sty:5-9,25-31 suppresses sn-jnl.cls:311's \usepackage{program} via
+%          \AddToHook{class/sn-jnl/before}; latex.ltx:18750 \@onefilewithoptions -> \@ifl@aded skips it)
+% oracle:  pdflatex 0 errors; "Bar: the character |"; program.sty not loaded
+% engines: rust 67int4 = 30 errors (the sn-jnl binding's dependency scan loaded program.sty: active |,
+%          pgfmathparser.code.tex:912 \pgfmathdeclareoperator{||} breaks); Perl 0 errors
+% expect:  0 errors, 0 warnings; "the character |"; program.sty not loaded
+% status:  RED (67int4) -> GREEN (68f)
+\begin{filecontents*}[overwrite]{sn-jnl.cls}
+\ProvidesClass{sn-jnl}
+\LoadClass{article}
+\usepackage{program}
+\end{filecontents*}
+\AddToHook{class/sn-jnl/before}{\expandafter\gdef\csname ver@program.sty\endcsname{9999/12/31}}
+\AddToHook{class/sn-jnl/after}{\expandafter\global\expandafter\let\csname ver@program.sty\endcsname\relax}
+\documentclass{sn-jnl}
+\usepackage{tikz}
+\begin{document}
+Bar: \texttt{\meaning|}.
+\end{document}

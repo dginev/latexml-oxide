@@ -1,0 +1,21 @@
+% mechanism: the emitter's reading of the ledger and its checks are the ledger's (`Ledger::analysis`, made at its generation,
+%   `Ledger::generation`), dropped with it at each conversion's start (`reset_ledger`); the emitted fact is the State value
+%   `lx_fm_emitted` (the generation emitted), undone with State: no reading, no token or font of one, outlives its conversion
+% witness: review revN1r2's probe `q1/` (CLI multi-file, one process: `a.tex a.tex`, `a.tex b.tex`); a thread-local kept
+%   the last paper's reading into the next in a persistent `cortex_worker` (`cortex_worker.rs:969-977`)
+% oracle:  pdflatex 0 errors; "Paper A"; "Ann Able", "Bob Baker", "Univ. B", "bob@b.org"; the note "Dept. of Physics, Univ. A,
+%   ann@a.org"
+% engines: rust N1r2, the switch on: the same output, its reading a thread-local no conversion's start cleared (harmless
+%   here only as its key compared every input the reading reads)
+% expect:  0 errors; each conversion in turn (this file twice, a copy titled "Paper B", this file)
+%   writes and traces its frontmatter as its solo conversion does
+% status:  GREEN (perfect_kernel_batchn1::no_reading_outlives_its_conversion), the invariant's guard (N1r2 passes it too)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Paper A}
+\author{Ann Able\thanks{Dept.\ of Physics, Univ.\ A, ann@a.org}\and Bob Baker\\ Univ.\ B\\ bob@b.org}
+\begin{document}
+\maketitle
+\section{One} Text.
+\section{Two} Text.
+\end{document}

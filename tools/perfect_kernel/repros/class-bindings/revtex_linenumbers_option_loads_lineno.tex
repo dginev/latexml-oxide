@@ -1,0 +1,15 @@
+% witness: 2003.07846, 2010.12920 (revtex4-2), 1010.3732, 1209.2541 (revtex4-1): `\documentclass[…,linenumbers]` and
+%          `\nolinenumbers`; revtex4-2.cls:6207-6214 (revtex4-1.cls:6186-6193) `\DeclareOption{linenumbers}{…
+%          \RequirePackage{lineno}…}` at the document's start
+% oracle:  pdflatex 0 errors ("Text. More.")
+% engines: rust 67o1 = 1 error (`\nolinenumbers` undefined: the option went to article); Perl's revtex4-1.cls.ltxml
+%          the same (KNOWN_PERL_ERRORS #697)
+% expect:  0 errors, 0 warnings
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass[aps,prl,linenumbers]{revtex4-2}
+\begin{document}
+Text.
+\nolinenumbers
+More.
+\end{document}

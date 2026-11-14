@@ -1,0 +1,19 @@
+% enotez's `\endnotemark`/`\endnotetext` pair into one note, with or without an optional mark; a
+% second `\printendnotes` lists only the notes made after the first (enotez_en.tex:167-170) and
+% `\printendnotes*` lists them all.
+% witness: none (synthetic; enotez_en.tex:167-170).
+% status:  GREEN (58l)
+% oracle:  pdflatex (2 runs) 0 errors: "Alpha1 beta†" / Notes: 1. First. †. Dagger. / "Gamma2" /
+%          Notes: 2. Second. / Notes: 1. †. 2.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{enotez}
+\begin{document}
+Alpha\endnotemark\endnotetext{First.} beta\endnotemark[\dag]\endnotetext[\dag]{Dagger.}
+\printendnotes
+
+Gamma\endnote{Second.}
+\printendnotes
+
+\printendnotes*
+\end{document}

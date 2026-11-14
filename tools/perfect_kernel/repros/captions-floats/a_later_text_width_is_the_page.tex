@@ -1,0 +1,18 @@
+% witness: 1704.03351 Figs 16, 35, 36 (elsarticle `1p` loads geometry, `\Gm@tw` 384pt; the paper then sets
+%          `\textwidth` to 15cm); review rev78x finding 2
+% oracle:  pdflatex 0 errors, 0 overfull; one row of two
+% engines: rust int67a = one row; 78x r1 = two rows (the stale `\Gm@tw` taken for the line); Perl 0.8.8 one row
+% expect:  0 errors, 0 warnings; no `ltx:break`
+% status:  RED (78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: `\Gm@tw` only while `\textwidth` is
+%          `\Gm@doctw`)
+% preload: ar5iv.sty
+\documentclass[final,1p,11pt]{elsarticle}
+\setlength{\textwidth}{15.0cm}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+\includegraphics[width=7cm]{example-image}
+\includegraphics[width=7cm]{example-image}
+\caption{Two seven-centimetre panels.}
+\end{figure}
+\end{document}

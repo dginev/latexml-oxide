@@ -1,0 +1,17 @@
+% witness: review of batch 57d (first cut): the DIVERGENCES #250 witnesses with a `\parbox`
+%          (aguplus, unamth-template/tesis, …)
+% oracle:  pdflatex 0 errors; "Skills" is a real (unnumbered) section heading inside the box
+% engines: rust=0 (57c, 57d final): the `\section*` floats out of the box as
+%          <section class="ltx_parbox"> (#250); perl=0 (2026-09-27): <sectional-block> in the
+%          enclosing section (SHARED schema bug #250 surpasses). The first 57d cut opened the
+%          parbox's paragraph first, so the section stayed in <p><inline-sectional-block>
+% expect:  0 errors; <section class="ltx_parbox"> with title "Skills", not inside a <p>
+% status:  GREEN (57d: the paragraph is decided after the #250 float-out, insert_block_as)
+\documentclass{article}
+\begin{document}
+Before.
+
+\parbox{\textwidth}{\section*{Skills} text}
+
+After.
+\end{document}

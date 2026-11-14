@@ -1,0 +1,19 @@
+% mechanism: a one-argument line wrapper is a line in AASTeX's `\affiliation` too (aas_support_sty.rs, before its own
+%   line reading; `relocate::wrapped_lines_as_lines`): `\centerline{$^{1}$Uni One}\centerline{$^{2}$Uni Two}` is two
+%   lines, each to the names its mark names.
+% witness: the AASTeX sibling of hep-ex0409040's `\centerline` address lines (review revab126); synthetic
+% oracle:  pdflatex with 2403.06760's aastex631.cls 0 errors: "Ann Able1 1 and Bob Baker2 1 / 1 Uni One / 2 Uni Two"
+%   (the class numbers the group; the hand-typed marks name each line's authors)
+% engines: rust 98a: each author "1Uni One2Uni Two" as one affiliation; perl: Bob Baker both lines
+% expect:  0 errors, 0 warnings; Ann Able Uni One, Bob Baker Uni Two
+% status:  RED (98a) -> GREEN (98e)
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\affiliation{\centerline{$^{1}$Uni One}\centerline{$^{2}$Uni Two}}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,11 @@
+% witness: control: the stays-an-error shape of M1
+% oracle:  pdflatex 1 error (! Extra }, or forgotten \endgroup. -- tex.web 1068-1069 extra_right_brace deletes the brace)
+% engines: rust 1 Error:unexpected:} (64ra and 64y); Perl 1 Error
+% expect:  1 error, the brace dropped; 'After.' outside the center block
+% status:  GREEN (unchanged by 64y); guard perfect_kernel_batch64y::begin_center_closed_by_brace_stays_an_error
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{center} Centered } words. \end{center}
+After.
+\end{document}

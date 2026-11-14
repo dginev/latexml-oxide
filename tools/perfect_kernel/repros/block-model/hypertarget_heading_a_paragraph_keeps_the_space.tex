@@ -1,0 +1,15 @@
+% witness: Gemini round 13, Q5 side finding (probe; no corpus witness)
+% mechanism: `\hypertarget`/`\hyperdef` are constructors that do not enter horizontal mode (the
+%   Pandoc `\hypertarget{n}{\section{T}}` idiom needs that), so heading a paragraph the whatsit is
+%   built in vertical mode and the space after its `}` is a vertical-mode space, dropped; in
+%   pdflatex the text has started the paragraph and the space is kept.
+% oracle:  pdflatex 0 errors, "Head rest. end."
+% engines: rust 57bn + round-13 Q5: <p><anchor xml:id="h">Head</anchor>rest.<anchor xml:id="e"/> end.</p>;
+%          perl (same host): <p><anchor xml:id="h">Head</anchor><anchor xml:id="e">rest.</anchor> end.</p>; SHARED
+% expect:  0 errors; <p><anchor xml:id="h">Head</anchor> rest.<anchor xml:id="e"/> end.</p>
+% status:  RED (Gemini round 13, Q5 side finding)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\hypertarget{h}{Head} rest.\hypertarget{e}{} end.
+\end{document}

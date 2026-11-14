@@ -1,0 +1,15 @@
+% \frame{X} is \pic@makebox@{\framebox}{framed=true}(0,0)[bl]{X} (latex_constructs.pool.ltxml:5078);
+% Perl's \pic@makebox@ gives its whatsit the content's width/height/depth as properties (:5039-5072),
+% a completely specified size that getSize returns as is (Box.pm:232-296), so the auto-opened
+% picture around it is X plus " y". The Rust port named them innerwidth/innerheight/innerdepth, so
+% the whatsit summed its arguments, "framed=true", "bl" and X, and the picture used compute_size,
+% which ignores requested sizes.
+% witness: SYNC_STATUS "Auto-opened picture sizes differ from Perl's"; W12 2026-09-25
+% oracle:  same-host Perl latexmlc: height="12.15" width="22.29"
+% engines: rust (56je) = height="12.3" width="111.16"
+% expect:  0 errors; <picture height="12.15" width="22.29" xml:id="p1.pic1">
+% status:  GREEN (56jo, W12; guard node_box_append::frame_is_sized_as_its_content)
+\documentclass{article}
+\begin{document}
+x \frame{X} y
+\end{document}

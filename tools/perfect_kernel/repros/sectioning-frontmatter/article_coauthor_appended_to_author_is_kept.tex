@@ -1,0 +1,28 @@
+% mechanism: a macro appending `\and <name>` to `\@author` without `\author` (`\g@addto@macro\@author`): the tail after
+%   what `\author` stored is read at `\maketitle` (frontmatter_stores.rs `author_tail_calls`): before its first
+%   top-level `\and` rows of the call's creators, after it one more author block (`\lx@add@authors@append`). Before
+%   FX24 a tail holding `\and` was dropped whole, and the title-page check glued the words on either side of `\and`
+%   into one (title_page_check.rs:1756, an Info `class_text` "xbob"; FX25), so the loss was counted by nothing (P26
+%   report, revP26)
+% witness: 2511.15315 (procdoc2/authblk: `\g@addto@macro\@author{\\[0.5em]\small\texttt{…}, …}` appends three e-mails;
+%   int158a holds none, the check counts 2 words "ucl uk"; FX24 keeps the line); classes defining such an appender: jaa.cls,
+%   pramana.cls `\addauthor` (1812.09143, 2409.20452 ship it, unused)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two columns "Alice A | Bob B" over "Inst X | Inst Y"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; one creator Alice A (Inst X): "Bob B" and
+%   "Inst Y" lost, uncounted; FX25 (before FX24): the same creator, the loss counted by 1 warning ("…its output does not
+%   hold: bob", guard perfect_kernel_batchfx25::a_loss_beside_an_appended_and_is_held_or_counted). FX24: 0 errors, 0 warnings; Alice A (Inst X), Bob B (Inst Y); perl not run (by its source the
+%   tail is lost: latex_constructs.pool.ltxml:1076-1079, Perl's `\author` reads only its argument)
+% expect:  0 errors, 0 warnings; creators Alice A (Inst X), Bob B (Inst Y)
+% status:  RED (int158a; RR1 gap 24) -> GREEN (FX24; guard perfect_kernel_batchfx24::a_coauthor_appended_to_author_is_kept)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newcommand\coauthor[1]{\g@addto@macro\@author{\and #1}}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A\\Inst X}
+\coauthor{Bob B\\Inst Y}
+\maketitle
+Body.
+\end{document}

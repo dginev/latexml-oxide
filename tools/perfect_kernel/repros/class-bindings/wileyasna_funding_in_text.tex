@@ -1,0 +1,27 @@
+% witness: 1806.06754, 1810.06326, 1812.03179 (`\fundingAgency`/`\fundingNumber` in running text,
+%          WileyASNA-v1.cls:1300-1301); 1909.01905, 2303.03859 (`\aaa`, :2722); 1804.11014's copy (:1195
+%          `\presentaddress`, :269 `{boxtext}`, :1271 `\abstract[Abstract]`)
+% oracle:  pdflatex with 1804.11014's WileyASNA-v1.cls: 2 errors (its \zz option parser, a TL 2025 harness
+%          limit); "Abstract Present Address Elsewhere 2 … An abstract. INTRO We acknowledge the Czech Science
+%          Foundation Grant No. 16-03564Y. See A&A and ApJ. BOX TITLE Boxed. After."
+% engines: rust 67int3 = 5 errors (undefined \presentaddress, \fundingAgency, \fundingNumber, \aaa, {boxtext})
+% expect:  0 errors, 0 warnings; the agency bold and the number italic in the sentence; "A&A"
+% status:  RED (67int3) -> GREEN (67w)
+% preload: ar5iv.sty
+\documentclass[STIX1COL]{WileyASNA-v1}
+\begin{document}
+\title{An AN paper}
+\author[1]{Ann Author}
+\address[1]{\orgname{Univ}}
+\presentaddress{Elsewhere 2}
+\abstract[Abstract]{An abstract.}
+\maketitle
+\section{Intro}
+We acknowledge the \fundingAgency{Czech Science Foundation} Grant No. \fundingNumber{16-03564Y}.
+See \aaa{} and \apj.
+\begin{boxtext}
+\section*{Box title}
+Boxed.
+\end{boxtext}
+After.
+\end{document}

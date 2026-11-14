@@ -1,0 +1,19 @@
+% witness: review of 77q (no arXiv witness; run-367 C2's 1010.0429, 1209.4365, 1308.4325, 1806.09142, 1904.01263
+%          redefine `\atop` after amsmath)
+% oracle:  pdflatex 1 error, "Unable to properly define \@@atop; primitive \atop no longer primitive" (amsgen.sty:27-38
+%          `\@saveprimitive`), the binomials intact (amsmath.sty:239-241 `\genfrac`)
+% engines: rust 77q r1 = 0 errors, `\binom` on the saved document macro (`n ⁢ (FRACOP k absent)`); perl = 0 errors,
+%          the binomials wrong (KNOWN_PERL_ERRORS #994)
+% expect:  0 errors (amsgen's check stays Perl's `\let`, amsgen_sty.rs: `\eqno`/`\leqno` are no primitives here, SYNC
+%          77q); binomial@(n, k), binomial@(a, b), binomial@(c, d)
+% status:  RED (77q r1) -> GREEN (77q r2: amsmath_sty.rs `\binom` on the kernel `\atop` body)
+% preload: ar5iv.sty
+\documentclass{article}
+\renewcommand{\atop}[2]{\genfrac{}{}{0pt}{}{#1}{#2}}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation}
+q=\binom{n}{k}+\tbinom{a}{b}+\dbinom{c}{d}
+\end{equation}
+After.
+\end{document}

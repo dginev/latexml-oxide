@@ -1,0 +1,25 @@
+% mechanism: an entry whose run is the whole group of names printed since the role's last call is no stopgap
+%   (`Resolver::print_group`), so it carries no `_stopgap` to the flush: the address the Kind step takes out of
+%   `\affil{Univ C; zz@x.org}` after Bob Baker's own `\author` call and `\affil` stays his, as its only carrier
+%   (`insert::link_entry_addresses`, OXIDIZED_DESIGN_DIVERGENCES #992)
+% witness: none in the corpus (synthetic; Z18o2, the flush path's sibling of review revZ18o R-A)
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Bob Baker2 / 2 Univ B and / Univ C; zz@x.org", in Bob Baker's own
+%          block
+% engines: rust int156a0 (Z18o) = Bob Baker's affiliation "Univ C" and e-mail zz@x.org
+% expect:  0 errors, 0 warnings; Ann Able: 1 Univ A; Bob Baker: 2 Univ B, Univ C, the e-mail zz@x.org
+% status:  GREEN (int156a0, Z18o2)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\affil{$^1$Univ A}
+\author{Bob Baker$^{2}$}
+\affil{$^2$Univ B}
+\affil{Univ C; zz@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

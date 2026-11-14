@@ -1,0 +1,19 @@
+% witness: 2511.03250 (ptephy_v2, six `\author[1]{R.~Miyata}` … calls: ptephy_v2.cls:485 loads authblk-TI, whose
+%          `\author` stacks, authblk-TI.sty:70; review rev92b_r1 S1)
+% oracle:  pdflatex (2511.03250's ptephy_v2.cls and authblk-TI.sty, TL 2025) 0 errors: "Ann Able1 and Bob Baker2" /
+%          1 Univ A / 2 Univ B
+% engines: rust 92b0: Ann Able with Univ A, Bob Baker with Univ B; 92b r1: Bob Baker only, with both (the binding's
+%          `\@currname` test read ptephy_v2 as ptephy, whose `\author` replaces)
+% expect:  0 errors, 0 warnings; Ann Able with Univ A, Bob Baker with Univ B
+% status:  RED (92b r1) -> GREEN (92b r2)
+% preload: ar5iv.sty
+\documentclass{ptephy_v2}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Univ A}
+\affil[2]{Univ B}
+\maketitle
+Text.
+\end{document}

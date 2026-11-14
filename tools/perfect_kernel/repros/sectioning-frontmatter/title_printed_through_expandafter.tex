@@ -1,0 +1,18 @@
+% mechanism: the field-ink provenance a raw `\@title` print is told by passes through `\expandafter`: the expansion comes
+%   back to `invoke_expansion` as a list, which `inherit_field_prov` stamps. A lever that expanded straight onto the input
+%   left it nothing to stamp, so the printed title stayed in the body beside `<title>`.
+% witness: review revP1, no arXiv paper yet
+% oracle:  pdflatex: 0 errors; prints "Hello World" once, then "Body text."
+% engines: rust int141a: lifted, once; P1b: twice, with no Error or Warning
+% expect:  0 errors; `<title font="italic"><emph xml:id="id1">Hello World</emph></title>` and no paragraph repeating it
+% status:  GREEN (pins int141a's behaviour)
+\documentclass{article}
+\def\foo{Hello World}
+\title{\expandafter\emph\expandafter{\foo}}
+\author{A. Author}
+\begin{document}
+\makeatletter
+{\Large\bf \@title\par}
+\makeatother
+Body text.
+\end{document}

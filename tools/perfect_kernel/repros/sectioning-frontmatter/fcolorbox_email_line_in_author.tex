@@ -1,0 +1,17 @@
+% witness: 2211.07344, 2305.15057 (acl: the e-mail line boxed by `\fcolorbox{white}{white}{…}`)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker" / "{ann, bob}@zebra.edu" in a white frame; Perl keeps
+%          "{ann, bob}@zebra.edu"
+% engines: rust (PBb) no e-mail, 0 Warnings (`\fcolorbox` keeps its text in its `text` property, which no text walker read)
+% expect:  0 errors; Ann's e-mail ann@zebra.edu, Bob's bob@zebra.edu
+% status:  RED (PBb) -> GREEN (CR10b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \qquad Bob Baker \\
+\fcolorbox{white}{white}{$\{$\texttt{\href{mailto:ann@zebra.edu}{ann}, }\texttt{\href{mailto:bob@zebra.edu}{bob}}$\}$\texttt{@zebra.edu}}}
+\begin{document}
+\maketitle
+x
+\end{document}

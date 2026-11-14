@@ -1,0 +1,17 @@
+% witness: nag.sty:82-168, 265-334, 534 (the rule-declaring commands; `\ObsoleteClass[reason]{..}{..}` takes the
+%          optional reason as its siblings do)
+% oracle:  pdflatex 0 errors
+% engines: rust 65bundle = 3 errors (`\ObsoleteEnv`, `\SuggestedPackage`, `\NagDeclareFloat` undefined) and the
+%          `\ObsoleteClass` reason "[old]" left as text
+% expect:  0 errors; text "Body." only
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nag}
+\ObsoleteClass[old]{article2}{use article}
+\ObsoleteEnv{eqnarray}{use align}
+\SuggestedPackage{microtype}
+\NagDeclareFloat{figure}
+\begin{document}
+Body.
+\end{document}

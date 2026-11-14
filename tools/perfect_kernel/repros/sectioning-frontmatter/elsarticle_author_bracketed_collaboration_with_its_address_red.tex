@@ -1,0 +1,25 @@
+% mechanism: an elsarticle author call printing a bracketed collaboration, then an `\address` of its own, after a named
+%   author and their address: the reading makes the call the names' collaboration (P5b's framed call), so Ann Able gains
+%   "Univ B" too. elsarticle prints the call as an author block of its own, its address under it. Expected: a creator
+%   "(ATLAS Collaboration)" holding "Univ B", as the base. The "for the" form (`\author{for the ATLAS Collaboration}`)
+%   is pre-existing on P5bbase (Ann Able holds both addresses). Post-merge, P5BA (review revP5b; synthetic).
+% witness: synthetic
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able", "CERN", "(ATLAS Collaboration)", "Univ B", each
+%   author's address under it
+% engines: rust P5bbase (green): Ann Able (CERN), (ATLAS Collaboration) (Univ B); P5b and P5bb: one creator Ann Able with CERN, the
+%   collaboration and Univ B; perl: not run
+% expect:  0 errors, 0 warnings; two creators: Ann Able with "CERN", "(ATLAS Collaboration)" with "Univ B"
+% status:  RED (P5b, P5bb)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able}
+\address{CERN}
+\author{(ATLAS Collaboration)}
+\address{Univ B}
+\end{frontmatter}
+Text.
+\end{document}

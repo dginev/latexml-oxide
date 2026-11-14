@@ -1,0 +1,16 @@
+% mechanism: beamer's `\institute` (the cutter `affiliation_calls`) holding the kernel's `\and` as `\csname
+%   and\endcsname`: cut by meaning (`classify::affiliation_lines`, P6f) as the spelled `\and`, the line after it an
+%   entry of its own
+% witness: synthetic (P6f)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 Bob Baker / 1 Univ Alpha / Univ Beta"
+% engines: P6fbase (int169a): Ann Able "Univ Alpha and Univ Beta", Bob Baker none, 1 warning (the "and" placed twice)
+% expect:  0 errors, 0 warnings; Ann Able "Univ Alpha", Bob Baker "Univ Beta" (as `\and` spelled)
+% status:  GREEN (guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+% preload: ar5iv.sty
+\documentclass{beamer}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker}
+\institute{\inst{1}Univ Alpha \csname and\endcsname Univ Beta}
+\begin{document}
+\frame{\titlepage}
+\end{document}

@@ -164,6 +164,18 @@ pub fn dump_format(
   // This digests the file through the engine, creating definitions.
   let (_, name, ext) = split_path(init_file);
   eprintln!("[ini_tex] Loading {} (ext: {})", name, ext);
+  // Use the full filename with extension for proper file resolution
+  let load_name = if ext.is_empty() {
+    name.clone()
+  } else {
+    format!("{}.{}", name, ext)
+  };
+  // Perl `DumpFile` (TeX_Job.pool.ltxml:141-144): no file, no dump —
+  // `Fatal('expected', $file, "Couldn't find definitions file $file")`. The load
+  // below only warns `missing_file`, and the dump would carry the braces at 12.
+  if latexml_core::binding::content::find_file(&load_name, None).is_none() {
+    return Err(format!("Couldn't find definitions file {init_file}"));
+  }
 
   // Lift the token limit for format dumps — expl3-code.tex alone uses ~5M tokens.
   let saved_limit = latexml_core::gullet::set_token_limit(None);
@@ -177,9 +189,12 @@ pub fn dump_format(
   let init_debug = *INIT_DEBUG;
   let prev_suppress = latexml_core::common::error::set_suppress_log_output(!init_debug);
 
-  // Suppress known expl3 loading errors at the state level too
-  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", !init_debug, None);
-  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", !init_debug, None);
+  // Suppress known expl3 loading errors at the state level too — except in a build for this
+  // tree at run time (`latexml::format_dumps`), which counts every error as
+  // `tools/make_formats.sh` does under LATEXML_INIT_DEBUG=1, and keeps no dump that had one.
+  let count_all = init_debug || latexml_engine::dump_paths::building_format();
+  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", !count_all, None);
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", !count_all, None);
 
   // Lift the MAX_ERRORS cap during dump-build. Raw latex.ltx contains
   // many CSes our engine reports as errors (forward references in
@@ -190,12 +205,22 @@ pub fn dump_format(
   // regardless of error count.
   state::assign_value("MAX_ERRORS", 1_000_000_i64, None);
 
-  // Use the full filename with extension for proper file resolution
-  let load_name = if ext.is_empty() {
-    name.clone()
-  } else {
-    format!("{}.{}", name, ext)
-  };
+  // Read the format file with the braces as initex has them: initex starts with
+  // every character but `\`, `%`, space, the letters, `^^M`, `^^@` and `^^?` at
+  // catcode 12 (tex.web §232), and latex.ltx:98-101 (ltdirchk.dtx) refuses a
+  // preloaded format by `\ifnum\catcode`\{=1 \errmessage{LaTeX must be made
+  // using an initex with no format preloaded}\fi`, then sets `{`/`}` to 1/2
+  // itself (latex.ltx:102-103; plain.tex:11-12 likewise). The State starts from
+  // the standard table (state.rs `State::new`, as Perl State.pm:105-112), which
+  // Base.pool and the bootstrap need — so the two braces go to 12 only here,
+  // after the snapshot (Perl `DumpFile`, TeX_Job.pool.ltxml:132-138) and before
+  // the file is read (:141-144). The file restores both before the snapshot
+  // diff, so the dump is unchanged. Perl reads the file with `{` at 1 and logs
+  // the `\errmessage` as a Note (TeX_Debugging.pool.ltxml:71-74). Guard:
+  // `dump_gate_init::latex_ltx_init_has_zero_errors`.
+  state::assign_catcode('{', latexml_core::token::Catcode::OTHER, None);
+  state::assign_catcode('}', latexml_core::token::Catcode::OTHER, None);
+
   let result = input_definitions(&load_name, InputDefinitionOptions {
     noltxml: true,
     ..InputDefinitionOptions::default()
@@ -244,11 +269,20 @@ pub fn dump_format(
     },
   };
 
+  // The format files this dump was built from, as the TeX tree that built it resolves them: a loader
+  // uses the dump only with a tree that has the same files (`dump_paths::dump_matches_tree`).
+  let sources: Vec<String> = latexml_engine::dump_paths::runtime_source_stamps(kind)
+    .unwrap_or_default()
+    .iter()
+    .map(latexml_engine::dump_paths::SourceStamp::header_line)
+    .collect();
   if is_text_dump {
     // Write text format (loaded at runtime via dump_reader::load_from_str)
-    let write_count = latexml_core::dump_writer::write_dump(Path::new(&dest), &diff)?;
-    // Save versioned TeX Live stamp for staleness detection.
-    if let Some(year) = ambient_year {
+    let write_count = latexml_core::dump_writer::write_dump(Path::new(&dest), &diff, &sources)?;
+    // Save versioned TeX Live stamp for staleness detection, beside the dumps a release builds.
+    if destination.is_none()
+      && let Some(year) = ambient_year
+    {
       save_texlive_version(year);
     }
     eprintln!("[ini_tex] Wrote {} text entries to {}", write_count, dest);
@@ -257,7 +291,7 @@ pub fn dump_format(
   } else {
     // Write compiled Rust source (legacy format)
     let tmp = format!("{}.tmp", dest);
-    let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
+    let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff, &sources)?;
     let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(&dest))?;
     let _ = std::fs::remove_file(&tmp);
     eprintln!(

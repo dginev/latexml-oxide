@@ -1,0 +1,28 @@
+% witness: 1511.05496 (int24 population A/B: 0 -> 12 Errors; `\multicolumn{12}{c}{\centering …} \\[-22pt]`)
+% oracle:  pdflatex 0 errors: latex.ltx:16603-16607 sets a \multicolumn cell in \begingroup…\endgroup, so the
+%          cell's \centering (`\let\\\@centercr`, latex.ltx:15402) ends before the row's \\
+% engines: rust 67int23b 0; 67int24 (73b's \centering \\) 4 "Extra alignment tab"
+% expect:  0 errors; every spanned cell keeps its alignment (center; center, center, left, right)
+% status:  RED (67int24) -> GREEN (int24 fix: tex_tables.rs `\lx@alignment@multicolumn` saves and restores \\)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{booktabs}
+\begin{document}
+\begin{tabular}{cclll}
+\toprule
+\multicolumn{2}{p{4cm}}{\centering Volume ratios (\%)} &
+ \multicolumn{3}{c}{\centering Percentage contribution} \\[-22pt]
+ & & a & b & c \\
+\midrule
+x & y & 1 & 2 & 3 \\
+\bottomrule
+\end{tabular}
+
+\begin{tabular}{clll}
+\multicolumn{3}{c}{Plain} & x \\
+\multicolumn{3}{c}{\centering Cent} & x \\
+\multicolumn{3}{l}{Left} & x \\
+\multicolumn{3}{r}{Right} & x \\
+a & b & c & d \\
+\end{tabular}
+\end{document}

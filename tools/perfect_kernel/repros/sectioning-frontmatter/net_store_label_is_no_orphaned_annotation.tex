@@ -1,0 +1,29 @@
+% A `\label` inside a store the net hands on as a note asked for a frontmatter annotation no entry answers
+% ("Warning:unexpected:annotation Orphaned frontmatter annotation couldn't find target for label=LABEL:aff2"). A label in
+% a title-page store names nothing of ours (a replayed class setter gobbles it, `\lx@replay@inert`): the note's value
+% is handed on without its `\label`s (frontmatter_stores.rs `without_labels`, review rev98c S3); the displaced setters'
+% entries the same.
+% witness: 0712.1312 (copernicus; the shape of the note)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 ,", "1 Institute of Risk and Disaster Reduction, University
+%          College London∗", "2 Department of Statistical Science, Imperial College†", two footnotes
+% engines: rust 98c = 0 errors, 2 warnings (frontmatter:unclaimed; unexpected:annotation LABEL:aff2); perl = OmniBus
+% expect:  0 errors, 1 warning (frontmatter:unclaimed, \AB@affillist); the block's note holds both affiliations
+% status:  RED (98c) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netab.cls}
+\ProvidesClass{netab}\LoadClass{article}
+\def\AB@names{}\def\AB@affillist{}
+\renewcommand\author[2][]{\g@addto@macro\AB@names{#2$^{#1}$, }}
+\newcommand\affil[2][]{\g@addto@macro\AB@affillist{\\$^{#1}$#2}}
+\renewcommand\@author{\AB@names\AB@affillist}
+\end{filecontents*}
+\documentclass{netab}
+\begin{document}
+\title{A Title}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Institute of Risk and Disaster Reduction, University College London\thanks{Visiting the Lunar Geology Institute in Tycho.}}
+\affil[2]{Department of Statistical Science, Imperial College\label{aff2}\footnote{Formerly at Oxford Brookes Polytechnic.}}
+\maketitle
+Text.
+\end{document}

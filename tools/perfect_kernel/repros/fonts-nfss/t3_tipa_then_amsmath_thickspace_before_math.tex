@@ -1,0 +1,13 @@
+% witness: 2608.02769 (`,\;` followed by `$…$`; amsmath loaded after tipa)
+% oracle:  pdflatex 0 errors; after amsmath.sty:155-175 `\;` is the thick space, and `\textipa{\;E}` sets the space and
+%          an E: tipa's `\;` small-capital composites are gone once amsmath re-declares `\;`
+% engines: rust int36a = 0 errors; 77x r1 = 1 Error (`\;` read the `$` as an accent argument); Perl 1 Error
+%          (`\@defaultenc` undefined in its fontenc binding)
+% expect:  0 errors, 0 warnings; "Values a,  x and b."
+% status:  GREEN (77x r2, amsmath_sty.rs re-asserts the kernel spacing commands)
+\documentclass{article}
+\usepackage{tipa}
+\usepackage{amsmath}
+\begin{document}
+Values a,\;$x$ and b.
+\end{document}

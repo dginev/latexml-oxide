@@ -1,0 +1,14 @@
+% witness: 1607.06796 (CMSLATEX.CLS:736), 2412.10948 (siuro210301.cls), 1504.01662 and 1009.5642 (jasatex.cls),
+%          math-ph0209020 (myajour.cls): a shipped class with no binding, read raw, redefines \label to write the .aux
+% oracle:  pdflatex 0 errors, "See Section 1 and Equation (1)." on its second run (the .aux written by the first)
+% engines: rust int82a = both references `ltx_missing_label`: the raw class's \label (a write to the .aux) replaced
+%          LaTeXML's \lx@label, so no label was recorded
+% expect:  0 errors, 0 warnings; the section and the equation carry their labels, both references resolve
+% status:  RED (int82a) -> GREEN (79j)
+% preload: ar5iv.sty
+\documentclass{rawlabelclass}
+\begin{document}
+\section{Introduction}\label{sec:intro}
+\begin{equation}x=1\label{eq:one}\end{equation}
+See Section~\ref{sec:intro} and Equation~(\ref{eq:one}).
+\end{document}

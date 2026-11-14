@@ -1,0 +1,27 @@
+% A \caption closing a \parbox in a \rotatebox in a figure: heria.cls:737-745's SidewaysFigure,
+% `\begin{figure}[p]...\rotatebox{90}{\parbox[c][\textwidth][c]{\textheight}{\BODY}}\end{figure}`.
+% The box's content [p, toccaption, caption] fits only an ltx:figure, which the rotated ltx:inline-block holds not
+% (LaTeXML-misc.rnc:28, Block content): figure > inline-block > figure.ltx_parbox, schema-invalid. insert_block keeps
+% Perl's container order (TeX_Box.pool.ltxml:507-509: fits all and allowed, else fits all), and when that container
+% is one the context does not hold, a candidate the context holds for the leading content is the box if the rest
+% CLOSES the box and has a home after it (base_utilities.rs tail_home): the caption goes to the figure, read in the
+% same order, which keeps the number and the label. A box that opens with its caption keeps Perl's choice
+% (guard caption_first_box_in_a_transform_keeps_its_content).
+% witness: heria/heria-proposal (sweep 149: 1 jing error, G2).
+% oracle:  pdflatex 0 errors: "See Figure 1. ... The impact tableau. / Figure 1: Impact summary tableau".
+% engines: rust s149/64ze: <figure placement="p"><inline-block angle="90"><figure class="ltx_parbox" ...> (invalid);
+%          rust 65a: <figure labels="LABEL:fig:impact" placement="p"><inline-block angle="90"><p class="ltx_parbox">
+%          ... </inline-block><toccaption/><caption/></figure> (valid); perl: the figure in the inline-block (invalid).
+% expect:  0 errors; one figure, numbered 1, holding the label, the rotated box and the caption; schema-valid.
+% status:  RED (base) -> GREEN (65a)
+% preload: ar5iv.sty
+% Guard: perfect_kernel_batch65a::caption_in_a_rotated_parbox_stays_with_its_figure.
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+See Figure~\ref{fig:impact}.
+\begin{figure}[p]
+\rotatebox{90}{\parbox[c][\textwidth][c]{\textheight}{The impact tableau.
+\caption{Impact summary tableau}\label{fig:impact}}}
+\end{figure}
+\end{document}

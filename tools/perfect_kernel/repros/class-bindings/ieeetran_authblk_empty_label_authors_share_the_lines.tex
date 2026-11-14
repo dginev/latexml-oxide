@@ -1,0 +1,19 @@
+% witness: 2005.04149, 2105.12254, 2312.15778 (IEEEtran + authblk: `\author[]{Wei Xiong}` … `\affil[]{Department of …,
+%          \\ \textit{\{wxiong, kdoke, pbogdanov, mzheleva\}@albany.edu}}`): authblk's `\author` with an empty label
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Bell", "Department of Physics, University of X,", "{aable, bbell}@x.edu"
+% engines: rust int126a = each author the affiliation and the address it spells; rust 98b's first A/B build = the
+%          brace list welded into every author's affiliation (the grade-reading `\author` handed authblk's no `[]`, so
+%          the names took authblk's unlabelled path)
+% expect:  0 errors, 0 warnings; each author the affiliation and the address it spells, as int126a
+% status:  RED (98b first build) -> GREEN (98b) — perfect_kernel_batch98b::authblk_labelled_author_reads_its_grade
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[]{Ann Able}
+\author[]{Bob Bell}
+\affil[]{Department of Physics, University of X, \\ \textit{\{aable, bbell\}@x.edu}}
+\maketitle
+Text.
+\end{document}

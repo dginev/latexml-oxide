@@ -1,0 +1,26 @@
+\documentclass{article}
+% Two citation styles written here, each read by the binding's style-chain lookup: `xnotes` inherits verbose (a notes
+% style), `xbare` has no parent and declares a bare `\cite` (author and title, no brackets).
+\begin{filecontents}[overwrite]{xnotes.cbx}
+\ProvidesFile{xnotes.cbx}
+\RequireCitationStyle{verbose}
+\end{filecontents}
+\begin{filecontents}[overwrite]{xbare.cbx}
+\ProvidesFile{xbare.cbx}
+\DeclareCiteCommand{\cite}
+  {\usebibmacro{prenote}}
+  {\printnames{labelname}\setunit{\addcomma\space}\printfield{title}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+\DeclareCiteCommand{\footcite}[\mkbibfootnote]
+  {\usebibmacro{prenote}}
+  {\printnames{labelname}\setunit{\addcomma\space}\printfield{title}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+\end{filecontents}
+\usepackage[bibstyle=numeric,citestyle=xnotes]{biblatex}
+\addbibresource{biblatex_fullcite_family.bib}
+\begin{document}
+Text\footcite{just22} and more.
+\printbibliography
+\end{document}

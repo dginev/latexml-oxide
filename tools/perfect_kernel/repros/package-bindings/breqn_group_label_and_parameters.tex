@@ -1,0 +1,28 @@
+% witness: breqn's group options and display parameters (68b r2, binding gaps G3): `\begin{dgroup}[label=…]`
+%          2607.02409 (four labelled groups); the parameter registers of breqn.sty:179-198
+% oracle:  pdflatex 0 errors: "[2] [C] [10000] [15.0mu minus -3.0mu] [2.0mu] [] [5]", the group (1a), the
+%          equations (2) and (3), "See 1, 2 and 3." (the group's label, a `labelprefix` taken once)
+% engines: perl 0.8.8 = no binding (`missing_file`); rust 68b r1 = 6 Errors (`\eqbinoffset`, `\eqdelimoffset`,
+%          `\eqstyle` undefined), 2 Warnings ("Missing number", "Illegal unit"), "[0.00494pt] []", the group
+%          unlabelled ("Missing Target for Label: LABEL:grp"), `labelprefix` ignored (LABEL:one)
+% expect:  0 errors, 1 warning (the stub's own notice); "[2] [C] [10000] [15.0mu minus -3.0mu] [2.0mu] [] [5]";
+%          the equation group labelled grp, the equations eq:one and two
+% status:  GREEN
+\documentclass{article}
+\usepackage{breqn}
+\begin{document}
+[\the\eqbreakdepth] [\eqindent] [\the\eqinterlinepenalty] [\the\eqbinoffset] [\the\eqdelimoffset] [\the\eqstyle]
+\eqbreakdepth=5 [\the\eqbreakdepth]
+\begin{dgroup}[label={grp}]
+\begin{dmath}
+z = 1
+\end{dmath}
+\end{dgroup}
+\begin{dmath}[labelprefix={eq:},label={one}]
+x = 1
+\end{dmath}
+\begin{dmath}[label={two}]
+y = 2
+\end{dmath}
+See \ref{grp}, \ref{eq:one} and \ref{two}.
+\end{document}

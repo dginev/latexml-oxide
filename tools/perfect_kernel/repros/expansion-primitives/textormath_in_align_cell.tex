@@ -1,0 +1,16 @@
+% witness: 2311.14468: latex.ltx:10243-10248 `\TextOrMath{t}{m}` expands to a `\protected` `\TextOrMath␣{t}{m}`, which
+%          TeX's lookahead at an alignment cell's start stops at, so it chooses in the cell's math; Perl's one-stage
+%          `\ifmmode` (latex_constructs.pool.ltxml:5864) chose the text branch there
+% oracle:  pdflatex 0 errors: "Text Lc here." and (1) Lc = xi
+% engines: rust 63s4 and Perl 0.8.8 = `Error:unexpected:_` (the text branch's `$L_c$` in the align cell)
+% expect:  0 errors, 0 warnings; the equation `L_{c}=x_{i}`
+% status:  RED (63s4) -> GREEN (63t)
+\documentclass{article}
+\usepackage{amsmath,xspace}
+\newcommand{\lossce}{\TextOrMath{$L_c$\xspace}{L_c}}
+\begin{document}
+Text \lossce{} here.
+\begin{align}
+\lossce = x_i
+\end{align}
+\end{document}

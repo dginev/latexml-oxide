@@ -12,6 +12,10 @@ pub struct Cell {
   pub empty:               bool,
   pub skippable:           bool,
   pub omitted:             bool,
+  /// An `\omit`ted cell of an alignment whose math is its template's (amsmath's, `template_math`): TeX sets it in
+  /// restricted horizontal mode (tex.web §789), so its material is boxed as text ([`crate::alignment::Alignment::
+  /// get_column_before`]).
+  pub omit_text_box:       bool,
   pub skipped:             bool,
   pub thead_in_row:        bool,
   pub thead_in_column:     bool,
@@ -27,6 +31,10 @@ pub struct Cell {
   pub colspan:             Option<usize>,
   pub colspanned:          Option<usize>,
   pub rowspan:             Option<usize>,
+  /// The rows a negative `\multirow{-n}` spans, this one and the n-1 above it (multirow.sty:172 raises the box over
+  /// them): `normalize_upward_spans` moves the content to the top row with that `rowspan` when the cells above are
+  /// empty.
+  pub rowspan_up:          Option<usize>,
   pub rowspanned:          Option<usize>,
   pub boxes:               Option<Digested>,
   pub cell_type:           Option<char>,
@@ -63,8 +71,28 @@ pub struct Cell {
   pub has_intercol_after:  bool,
   /// Background color from \columncolor/\cellcolor (set during digestion by \@setcellcolor)
   pub backgroundcolor:     Option<String>,
+  /// Where the column's array.sty `>{…}` tokens begin in `before` (`Template::add_column`): right after the column
+  /// type's own before tokens (a paragraph column's box opening), ahead of the `>{…}` declarations and `\ignorespaces`.
+  pub prefix_at:           Option<usize>,
+  /// The cell's content overprints the cells to its right, as an `\rlap` does (`\lefteqn`, latex.ltx:15800): the
+  /// empty cells that follow it join its span (`normalize_overprint_spans`). Set by `\lx@alignment@cell@overprint`.
+  pub overprint:           bool,
 }
 impl Cell {
+  /// Marks the column padded on its right when its after tokens hold an intercolumn macro (`\lx@intercol`, or a
+  /// binding's `…intercol` one), for the nopad heuristic: a column built outside `Template::add_column`'s own marking
+  /// (`tabular_bindings`, blkarray's block columns).
+  pub fn mark_intercol_after(&mut self) {
+    if self.after.as_ref().is_some_and(|after| {
+      after
+        .unlist_ref()
+        .iter()
+        .any(|t| t.with_str(|s| s.contains("intercol")))
+    }) {
+      self.has_intercol_after = true;
+    }
+  }
+
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {
     match side {
       BorderSpec::Left => self.border_left,
@@ -90,6 +118,7 @@ mod tests {
     assert!(!c.thead_in_column);
     assert!(!c.has_intercol_before);
     assert!(!c.has_intercol_after);
+    assert!(!c.overprint);
   }
 
   #[test]

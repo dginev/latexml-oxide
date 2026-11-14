@@ -1,0 +1,15 @@
+% witness: 2608.21961 (`\graphicspath{{figures_exp01/}{figures/}}`, 7 of 8 graphics lost); also 2403.18830 (110
+%          graphics), 2409.13454, 2310.19546, 2405.10566, 2410.07029, 2501.17085, 2606.10097
+% oracle:  pdflatex 0 errors: the graphic from figs/a.eps; `\Ginput@path` = `{nonexist/}{figs/}`
+% engines: rust 64b3 = the two entries merged into one "nonexist/figs/" (the DirectoryList's braces lost in the
+%          digested argument): no candidates, `\Ginput@path` = "nonexist/figs/"; Perl figs/a.eps (graphics.sty.ltxml:248-260
+%          iterates the DirectoryList's values)
+% expect:  0 errors; <graphics candidates="figs/a.eps">; the meaning `macro:->{nonexist/}{figs/}`
+% status:  RED (64b3) -> GREEN (64c)
+\documentclass{article}
+\usepackage{graphicx}
+\graphicspath{{nonexist/}{figs/}}
+\begin{document}
+\includegraphics[width=3cm]{a}
+\makeatletter\texttt{\meaning\Ginput@path}\makeatother
+\end{document}

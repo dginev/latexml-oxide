@@ -1,0 +1,14 @@
+% witness: jfm.cls:84-89 `\AtBeginDocument` `\let\subequations\CUPsubequations` (cond-mat0701539; census 2026-10-17)
+% oracle:  pdflatex 0 errors (the copy's "[" … "]" subequations, JFM-EXTRA)
+% engines: rust 67int20b = 1 error (\jfmextra undefined: the copy is not read)
+% expect:  0 errors, 0 warnings; JFM-EXTRA; {subequations} the binding's (amsmath's numbering 1a, 1b)
+% status:  RED (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\begin{document}
+\jfmextra
+\begin{subequations}
+\begin{equation}a=1\end{equation}
+\begin{equation}b=2\end{equation}
+\end{subequations}
+\end{document}

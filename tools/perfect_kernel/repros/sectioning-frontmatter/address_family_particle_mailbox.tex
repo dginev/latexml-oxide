@@ -1,0 +1,18 @@
+% A name particle is no two-letter surname (`NameKeys::short_surnames`): `de@x.org` spells no one under Ana de Souza,
+% and the Link chain gives it to the block. Review rev100b S3.
+% witness: (synthetic)
+% oracle:  pdflatex 0 errors: "Univ X, Town", "de@x.org"
+% engines: rust int127a = 0 errors, the address in the entry text of both; 100b r1 = de@ to Ana de Souza; perl = not run
+% expect:  0 errors, 0 warnings; Ana de Souza, Bob Baker: Univ X, Town; the block: de@x.org
+% status:  RED (100b r1) -> GREEN (100b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ana de Souza}
+\author[1]{Bob Baker}
+\affil[1]{Univ X, Town \\ de@x.org}
+\maketitle
+Body.
+\end{document}

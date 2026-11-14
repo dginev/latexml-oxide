@@ -1,0 +1,12 @@
+% witness: 2601.19932, 2602.10003 (tone.sty `\tone`); tone.sty:13-14 levels 1-5
+% oracle:  pdflatex 0 errors; `\tone{6}` raises a segment above the stave tone.sty draws (no tone letter)
+% engines: rust int36a = both empty boxes; 77x r1 = "˥˩" and nothing, silently (tone.sty's boxes of tone-letter parts
+%          with no character); Perl 2 Errors (`\tone` undefined)
+% expect:  0 errors, 1 warning (the level 6 has no tone letter); "Tones ˥˩ and ."
+% status:  GREEN for the diagnostic (77x r2, tone_sty.rs); RESIDUAL: no Unicode letter for a level outside 1-5
+\documentclass{article}
+\usepackage{tipa}
+\usepackage{tone}
+\begin{document}
+Tones \tone{51} and \tone{6}.
+\end{document}

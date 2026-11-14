@@ -27,6 +27,10 @@ LoadDefinitions!({
   DefMacro!("\\NextTabStop", "\\linewidth");
   // Remaining tabto API a document may touch — harmless no-ops / stubs.
   def_macro_noop("\\TabPositions{}")?;
-  def_macro_noop("\\NumTabs OptionalMatch:* {}{}")?;
+  // tabto.sty:183 `\newcommand\NumTabs[1]`: ONE argument, no star. The former
+  // `OptionalMatch:* {}{}` signature swallowed the token after `\NumTabs{5}` —
+  // latex-via-exemplos.tex:6690's `\begin{enumerate*}` lost its `\begin`, so
+  // the environment never opened and its `\end` errored (2 errors).
+  def_macro_noop("\\NumTabs {}")?;
   def_macro_noop("\\TabsBadStop")?;
 });

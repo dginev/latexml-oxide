@@ -1,0 +1,17 @@
+% witness: 2409.11413 (setup.tex:86 `\lstset{captionpos=b}`, 13 boxes), 2402.13846 (headers/lqa/listing.tex:35); 2508.16690, 2301.07825 set `captionpos=b` for plain listings only (unchanged)
+% oracle:  pdflatex 0 errors: the box's title bar "Box: Top" over "a = 1"; the plain listing's own "Own title" below its code (`captionpos=b`)
+% engines: rust 77m r1 = 0 errors, the box title below the code (it followed listings' `captionpos`); perl: raw tcblistings
+% expect:  0 errors, 0 warnings; caption "Box: Top" before the box's listing, "Own title" after the plain one
+% status:  RED (77m r1) -> GREEN (77m r2: listings_sty.rs `lst_process_display_with` puts a tcb title first)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\lstset{captionpos=b}
+\newtcblisting{codebox}[1]{listing only,title={Box: #1}}
+\begin{document}
+\begin{codebox}{Top}
+a = 1
+\end{codebox}
+\begin{lstlisting}[title={Own title}]
+b = 2
+\end{lstlisting}
+\end{document}

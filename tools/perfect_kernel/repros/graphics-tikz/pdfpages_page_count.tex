@@ -1,0 +1,13 @@
+\documentclass{article}
+% WITNESS: notebeamer, pdfpages/beamer; ORACLE: pdflatex outputs 1, err 0
+% MECH: \pdfximage + \pdflastximagepages report the real PDF page count (batch 56ap: image.rs read_pdf_page_count; KPE #214).
+% Under the DVI persona, \pdflastximagepages is stubbed to 0 in pdftex.rs.
+% status:  GREEN
+\begin{document}
+\pdfximage{example-image-a4.pdf}
+\ifnum\pdflastximagepages=1
+  OK: 1 page
+\else
+  \errmessage{FAIL: expected 1 page, got \the\pdflastximagepages}
+\fi
+\end{document}

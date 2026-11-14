@@ -1,0 +1,16 @@
+% witness: 2110.08325 (tikz/input.tex `\edef\path{\currfiledir}` then `\input{\path/settings}`; brk89)
+% oracle:  pdflatex 0 errors: latex.ltx's `\InputIfFileExists` (:19646-19673) sets `\CurrentFile`/`\CurrentFilePath`
+%          and runs `file/before` (filehook-2020.sty:280-285 → currfile's push and `\currfile@set`) for every `\input`
+%          file: "Part says dir [currfiledir/] name [part.tex]", the sibling file found, "Back in [...] dir []"
+% engines: rust int91b = 1 error ("Can't find TeX file other"; `\currfiledir` empty and `\currfilename` the main
+%          file's inside the part); Perl fires no file hooks either
+% expect:  0 errors, 0 warnings; the part's directory and name, the sibling's text, the main file's again after
+% status:  RED (int91b) -> GREEN (79v)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{currfile}
+\begin{document}
+Main is [\currfilename].
+\input{currfiledir/part}
+Back in [\currfilename] dir [\currfiledir].
+\end{document}

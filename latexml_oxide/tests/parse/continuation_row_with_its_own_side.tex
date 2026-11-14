@@ -1,0 +1,28 @@
+% A continuation row continues the integral of the row before it only when it IS a continuation — its first cell
+% empty, or opening with a sign or a MulOp —: a row with its own left side after an integral with no differential keeps
+% its letters, and a gather's rows are formulas of their own (the 57cj.23 merge review). Its own document: the omnibus
+% integrates over `dk` elsewhere, which the document evidence would read into these rows (user ruling 2026-10-01e); the
+% italic `d` is a scalar here (`\mathbb R^d`), so only the continuation rule decides. A cell row's column pair continues
+% its own column pair's integral: `+ b(t)\,dt` the open one's differential, `+ e\,dy` after a closed one a letter (the
+% omnibus integrates over `dy` elsewhere).
+% witness: the merge review of 57cj.23 (moved from integrals_and_differentials.tex in 57cj.23.6)
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; every `dk` a letter; `b(t)\,dt` a differential, `e\,dy` a letter
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$x\in\mathbb{R}^d$
+\begin{align}
+\|u\|^2 &= \int_\Omega |u|^2 \\
+dk &\le n \\
+2dk &\le n
+\end{align}
+\begin{gather}
+\int_0^1 f = 1\\
+dk+1 = n
+\end{gather}
+\begin{align*}
+F &= \int_0^T a(t) & b &= \int_0^1 c\,dx\\
+  &\quad+ b(t)\,dt & & + e\,dy
+\end{align*}
+\end{document}

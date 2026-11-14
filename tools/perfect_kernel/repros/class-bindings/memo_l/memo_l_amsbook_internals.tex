@@ -1,0 +1,20 @@
+% witness: 2412.15928, 2511.16188, 1512.07128 (memo-l.cls: `\LoadClass{amsbook}`, its `\tableofcontents` tests
+%          `\ifvoid\abstractbox`, its abstract-page notes read `\@dateposted`/`\@PII`)
+% oracle:  pdflatex with memomini.cls (beside): "A Memoir A. Author Abstract. The abstract. Contents CHAPTER 1 One Text."; 0 errors
+% engines: rust 67int15 = 3 errors (undefined `\abstractbox`, `\@dateposted`, `\@PII`: amsbook's binding lacked
+%          amsbook.cls:113-114, :616, :638-649)
+% expect:  0 errors, 0 warnings; the abstract the frontmatter's
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{memomini}
+\begin{document}
+\title{A Memoir}
+\author{A. Author}
+\maketitle
+\begin{abstract}
+The abstract.
+\end{abstract}
+\tableofcontents
+\chapter{One}
+Text.
+\end{document}

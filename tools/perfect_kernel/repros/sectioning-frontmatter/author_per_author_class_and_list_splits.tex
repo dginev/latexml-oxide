@@ -1,0 +1,12 @@
+% witness: 1708.01427 (amsart; also 1012.2719 comma list — run-336 fidelity audit)
+% oracle:  pdflatex 0 errors: "KLEMENS FELLNER AND BAO QUOC TANG"
+% engines: rust (63d) = ONE personname "Klemens Fellner and Bao Quoc Tang", 0 errors (silent); Perl alike (ams_support.sty.ltxml:99)
+% expect:  2 creators, Fellner and Tang; the \address attaches to the last; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{amsart}
+\author{Klemens Fellner and Bao Quoc Tang}
+\address{Institute of Mathematics, University of Graz}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

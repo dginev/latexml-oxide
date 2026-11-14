@@ -46,7 +46,7 @@ changes suite-green (**1503/0**), clippy + fmt clean, `--release` re-validated.
   downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when the formula has no `INTOP` (same
   predicate + node list `diffop_apply` uses → **byte-identical output**), killing the
   over-parse on every non-integral `d` (high volume — differentials are everywhere).
-  Full ranked lever list in `docs/math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md` (which also
+  Full ranked lever list in `docs/archive/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md` (which also
   corrects stale `MATH_AMBIGUITY_AUDIT` claims: `\Pi^N(p,q,r)` and simple `|x|≤|y|`
   are now unambiguous).
 - **Stability — process-crash surface hardening (defensive, output-neutral).**

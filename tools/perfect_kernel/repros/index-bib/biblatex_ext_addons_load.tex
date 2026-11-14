@@ -1,0 +1,25 @@
+% witness: biblatex-ext (biblatex-ext.tex:55 loads biblatex-ext-tabular, :56 -oa, :60/:64/:68 the three -oasymb add-ons
+%   after biblatex; :3348-3361 the `\defbibtabular` example; 9 of its 10 errors, sections 7-8 lost)
+% oracle:  pdflatex + biber 0 errors; a tabular bibliography printed
+% engines: rust (59k) = every unbound `biblatex-*.sty` re-ran the biblatex binding (latexml_contrib dispatch ->
+%   biblatex_sty::load_variant), so `\defbibtabular`/`\printbibtabular` stayed undefined: 6 errors (`\defbibtabular`,
+%   `\anchorlang`, `\driver`, `\printbibtabular` undefined, a stray `&`, an unbalanced `\endgroup`)
+% expect:  0 errors; the bibliography printed (as the binding's list: its rows are biblatex's internal filters)
+% status:  RED (59k) -> GREEN (59l)
+% mechanism: biblatex_sty.rs BIBLATEX_VARIANT_OVERLAYS: the add-ons are raw-loaded over the binding, the tabular
+%   worker `\extblxtab@printbibtabular` routed to the binding's `\printbibliography`
+\documentclass{article}
+\usepackage{longtable}
+\usepackage[style=authoryear,backend=biber]{biblatex}
+\usepackage{biblatex-ext-tabular}
+\usepackage{biblatex-ext-oasymb-pict2e}
+\addbibresource{biblatex-examples.bib}
+\defbibtabular{bibtabular}
+  {\begin{longtable}{ll}}
+  {\end{longtable}}
+  {\anchorlang{\usebibmacro{tabular:sortname}} &
+   \driver{\usebibmacro{tabular:omitsortname}} \\}
+\begin{document}
+Text \cite{sigfridsson}. Symbol: \ifdefined\oasymbol defined\else undefined\fi.
+\printbibtabular
+\end{document}

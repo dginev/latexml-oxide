@@ -1,0 +1,30 @@
+% cleanup_math unwraps a Math holding only text (Perl replaceTree, TeX_Math.pool.ltxml:219): the
+% Math's box leaves its auto-opened parent, and each piece is recorded as Perl's appendTree records
+% it — an element with its own box, a text wrapper with the parent's, an XMHint's spaces raw, with
+% none. W12 (1b7df49e8e) put the Math's box back into any auto-opened parent that got a text piece,
+% so the Math was counted twice; only an svg:foreignObject left with no box gets it (Perl renames
+% that one to svg:text, TeX_Box.pool.ltxml:386-389, which Rust does not; SYNC_STATUS).
+% witness: W12 re-review probe t6 (orchestrator, 2026-09-25)
+% oracle:  same-host Perl latexmlc (px widths): 36.9, 36.9, 22.29, 50.74, fo 14.61, fo 14.61;
+%          the $\quad$ node is an svg:text in Perl, a 13.84-wide foreignObject in Rust
+% engines: rust (W12 1b7df49e8e) = 36.9, 65.34, 36.13, 106.85, fo 14.61, fo 43.05
+% expect:  0 errors; the sizes above
+% status:  GREEN (56jo, W12; guard node_box_append::math_text_pieces_are_counted_once)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{tikz}
+\begin{document}
+x \put(0,0){A} $\text{ab}$ y
+
+x \put(0,0){A} $\text{ab}\quad$ y
+
+x \put(0,0){A} $\quad$ y
+
+x \put(0,0){A} $\quad\text{ab}\quad\text{cd}$ y
+
+\begin{tikzpicture}\node {$\text{ab}$};\end{tikzpicture}
+
+\begin{tikzpicture}\node {$\text{ab}\quad$};\end{tikzpicture}
+
+\begin{tikzpicture}\node {$\quad$};\end{tikzpicture}
+\end{document}

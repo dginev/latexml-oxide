@@ -1,0 +1,25 @@
+% witness: webquiz/webquiz (minipage+\tableofcontents in quote → logical-block), aguplus/aguplus
+%   (minipage+\section* in quote → sectional-block); tagpair/sample (\noindent para in quote)
+% oracle:  pdflatex 0 errors; each quote holds the box / the noindent paragraph
+% engines: rust (s117) = 0 errors, schema-invalid (quote_model = Block.model); perl = same tree,
+%   same schema (LaTeXML-block.rnc quote_model)
+% expect:  0 errors; jing-valid; <quote><para class="ltx_noindent">, <quote><logical-block>,
+%   <quote><sectional-block>
+% status:  GREEN (batch 56gw, user ruling 2026-09-23: quote_model widened, OXIDIZED_DESIGN #271)
+\documentclass{article}
+\begin{document}
+\begin{quote}
+\noindent Quoted.
+\end{quote}
+\begin{quote}
+\begin{minipage}{0.8\linewidth}
+\tableofcontents
+\end{minipage}
+\end{quote}
+\begin{quote}
+\begin{minipage}{\linewidth}
+\section*{Notation}
+Body.
+\end{minipage}
+\end{quote}
+\end{document}

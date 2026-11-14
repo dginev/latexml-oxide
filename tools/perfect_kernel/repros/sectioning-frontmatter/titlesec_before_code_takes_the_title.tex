@@ -1,0 +1,18 @@
+% mechanism: titlesec hands the title to the before-code, `#4{#8}` (titlesec.sty:773 hang,
+%   :792 runin); a run-in title's after-code follows it in the same box (:792 `#4{#8}#5\unskip`).
+%   Perl's binding (titlesec.sty.ltxml:42-57) ignores both, and so did the port.
+% witness: sample scan (57q): 46 of 3,003 papers use \titleformat, 118 before-codes set text
+% oracle:  pdflatex 0 errors; "1 INTRO", then the run-in "Para." before "Text." (numbered, label empty;
+%          an unnumbered title skips the titlesec format, SYNC_STATUS K13 (5))
+% engines: rust 57p: "1 Intro", run-in "Para"; perl the same
+% expect:  0 errors; the section title uppercased, the run-in title ending in its after-code "."
+% status:  GREEN (57q)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}{\bfseries}{\thesection}{1em}{\MakeUppercase}
+\setcounter{secnumdepth}{4}
+\titleformat{\paragraph}[runin]{\bfseries}{}{0pt}{}[.]
+\begin{document}
+\section{Intro}
+\paragraph{Para} Text.
+\end{document}

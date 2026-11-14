@@ -1,0 +1,12 @@
+% witness: 2310.04475 (header.sty: `\DeclarePairedDelimiterXPP\expect[2]{\mathbb{E}_{#1}}[]{}{#2}`)
+% oracle:  pdflatex 0 errors: E_s[x] twice
+% engines: rust 63z8 = 2x `Error:misdefined:# The token "#" (catcode PARAM) should never reach Stomach!`;
+%          Perl the same 2 errors (mathtools.sty.ltxml:702-708 splices the pre-code into a macro body)
+% expect:  0 errors; both expectations with their subscript and bracketed argument
+% status:  RED (63z8) -> GREEN (64a)
+\documentclass{article}
+\usepackage{mathtools,amssymb}
+\DeclarePairedDelimiterXPP\expect[2]{\mathbb{E}_{#1}}[]{}{#2}
+\begin{document}
+$\expect*{s}{x}$ $\expect{s}{x}$
+\end{document}

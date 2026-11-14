@@ -1,0 +1,14 @@
+% witness: 2111.06645 (rc_struct6 row 2, non-sole); sigma.cls:20-21 `\LoadClass[fleqn,11pt,twoside]{article}`,
+%   `\PassOptionsToPackage{fleqn}{amsmath}`, then amsmath: its displays under `\if@fleqn` (amsmath.sty:2794-2812)
+% oracle:  pdflatex (with 2111.06645's sigma.cls) 4 errors, all from the class under TL 2025 (`\ifpdf` undefined,
+%   hyperref option clash), none in the displays: each `$ … $` in them is text in the box
+% engines: rust 67int23b = 4 ("Missing $ closing display math", the binding loaded amsmath without `fleqn`), perl = 4
+% expect:  0 errors; each display one Math whose XMath holds an XMText
+% status:  RED (67int23b) -> GREEN (73b: sigma_cls.rs `fleqn_clo` + amsmath `[fleqn]`)
+\documentclass{sigma}
+\begin{document}
+\begin{equation}
+f(s) = 0 $ for all $ s > 0.
+\end{equation}
+\begin{equation*} g $ and $ h \end{equation*}
+\end{document}

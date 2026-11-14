@@ -1,0 +1,20 @@
+% mechanism: a name's printed mark whose two symbols come before its number (`$^{ \dagger * 1}$`): the names' marks
+%   written as digested (`per_author_marks`, P4b2b) put the symbols in a superscript of their own after the number
+%   (`\lx@frontmatter@keepsup`), "1 †∗" where pdflatex prints "†∗1" (one symbol, `$^{\dagger 1}$`, keeps its place);
+%   the keep path's own order, now reached by the list's names
+% witness: 2404.15649 (`Jeremias Knoblauch$^{ \dagger * 2}$`: "2 †∗" for "†∗2")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able†∗1 and Bob Baker1", "1Univ A, Town A"
+% engines: P4b2: Ann Able †,∗ (the answered 1 hidden), Bob Baker; P4b2b: Ann Able 1 †∗, Bob Baker 1
+% expect:  0 errors, 0 warnings; Ann Able †∗1, Bob Baker 1, each "1 Univ A, Town A"
+% status:  RED (P4b2b)
+% moves:   post-merge (the keep path's symbol order)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able$^{ \dagger * 1}$ and Bob Baker$^{1}$}
+\affil{$^{1}$Univ A, Town A}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

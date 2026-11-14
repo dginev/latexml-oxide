@@ -1,0 +1,32 @@
+% mechanism: the control of revtex_centerline_address_lines_go_by_their_marks: the `\address` block written with `\\`
+%   (`\lx@add@affiliation@marked`, `affiliation_calls`), each line by its leading label.
+% witness: review revab126 (q2), the D0 shape of hep-ex0409040 with `\\` lines
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "A. One,1 B. Two,2 and C. Three3 / (X Collaboration) / 1 Alpha
+%   University, Beijing / 2 Beta Institute, Rome / 3 Gamma Lab, Paris"
+% engines: rust 97b and 98a: each author its own line; perl: C. Three alone
+% expect:  0 errors, 0 warnings; A. One Alpha University, B. Two Beta Institute, C. Three Gamma Lab, each the
+%   collaboration
+% status:  GREEN (97b)
+% preload: ar5iv.sty
+\documentclass[aps,prl,groupedaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+A.~One,$^{1}$
+B.~Two,$^{2}$
+and~C.~Three$^{3}$
+\\
+\vskip 0.30cm
+\centerline{(X Collaboration)}
+\vskip 0.30cm
+}
+\address{
+$^{1}$Alpha University, Beijing\\
+$^{2}$Beta Institute,
+Rome\\
+$^{3}$Gamma Lab, Paris\\
+}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

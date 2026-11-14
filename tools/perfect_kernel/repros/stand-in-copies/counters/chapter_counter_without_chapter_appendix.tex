@@ -1,0 +1,16 @@
+% witness: 2211.16474 (WileyNJD-v2.cls:2410 `\newcounter {chapter}[part]% for bookmarks`, no `\chapter`; its
+%          appendices "Appendix A"), 2609.08425, 2602.03829, 2408.07575 (WileyNJDv5.cls:5728), 2506.14995 (MRM.cls:2160)
+% oracle:  pdflatex: "Appendix A" (article's `\appendix`: `\thesection` is `\@Alph\c@section`)
+% engines: rust 72a r6 (before this guard) = "Appendix 0.A": the kernel's \appendix numbered within chapters by the
+%          chapter counter alone, once a stand-in copy's counter was declared for real
+% expect:  0 errors, 0 warnings; the appendix numbered "A"
+% status:  RED (72a r6 draft) -> GREEN (72a r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcounter{chapter}
+\begin{document}
+\section{One}
+\appendix
+\section{Extra}
+Text.
+\end{document}

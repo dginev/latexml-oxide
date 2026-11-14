@@ -1,0 +1,20 @@
+% mechanism: bibunits `\endbibunit` lets `\cite` back to `\std@cite`, which writes the CURRENT `\@auxout`; chapterbib's
+%   `\include` changes `\@auxout`, so a unit that closes after an included chapter sends later cites to the main aux. Ours
+%   restores the list saved when the unit opened (bibunits_sty.rs end_bibunit), here the included chapter's.
+% witness: synthetic (revBU1b S1, probe a); chapterbib beside bibunits is rare (reach not measured)
+% oracle:  pdflatex: 0 errors; the main .aux holds gamma, cbch.aux alpha; the chapter's Bibliography prints only "[1] A. Alpha",
+%   the main one Alpha and Gamma (zeta goes to the closed bu1.aux and prints [?], as TeX does)
+% engines: rust int160c: gamma in bu1's list (bib.bib3); BU1b: gamma in the chapter's list (ltx_list_cbch)
+% expect:  gamma in the main References only
+% status:  RED (int160c, BU1b)
+\documentclass{report}
+\usepackage{chapterbib}
+\usepackage{bibunits}
+\begin{document}
+\include{cbch}
+Main \cite{zeta}.
+{\bibliographyunit}
+After \cite{gamma}.
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}

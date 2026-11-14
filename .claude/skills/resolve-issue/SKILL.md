@@ -86,11 +86,13 @@ first-correct output is whatever the fixed binary emits.)
 - Strip intentional-divergence artifacts from any golden (`--nocomments`, no
   `%&#10;` — CLAUDE.md "Intentional divergences").
 
-## Step 4 — Plan → `TICKET_APPROACH.md`
+## Step 4 — Record the approach (`TICKET_APPROACH.md`, when it earns its place)
 
-Write a scratch working doc at the **repo root** named `TICKET_APPROACH.md`
-(gitignored — dev scratch, **never committed**; delete or leave in scratch when
-done). It is your thinking made durable across the implement loop. Include:
+For a feature ticket, or a bug whose fix spans sessions or touches shared
+machinery, write a scratch working doc at the **repo root** named
+`TICKET_APPROACH.md` (gitignored — dev scratch, **never committed**). For a
+contained bug fix, the red test plus the PR body's Diagnostic/Approach lines are
+the record — skip the file. When you do write it, include:
 
 1. **Issue + type**: number, one-line restatement, classification, GENUINE-RUST-ONLY verdict.
 2. **Reproducer + canary**: the `.tex`, the exact failing line/assertion, which layer.
@@ -126,7 +128,7 @@ half — the fix repaired both, and both now have guards.)
 
 ## Step 7 — Validate & ship
 
-- `cargo test --tests --no-fail-fast` green (new pair ⇒ `cargo clean` first).
+- `cargo nextest run --workspace` green (new pair ⇒ `cargo clean` first).
 - `cargo +nightly clippy --workspace --all-targets -- -D warnings` and
   `cargo +nightly fmt --all` (the pre-push hook enforces both, not tests).
 - Perl parity re-confirmed on the witness (verbose, same host).
@@ -139,8 +141,10 @@ half — the fix repaired both, and both now have guards.)
 
 ## Step 8 — Review round (adversarial, before the PR)
 
-Stop and review your own change against three questions — this catches the
-"looked done but wasn't" failures. Answer each concretely; a gap loops you back.
+First get a reviewer that has not seen your reasoning: run `/code-review` on the
+branch diff and act on what it finds. Then review the change yourself against
+three questions — this catches the "looked done but wasn't" failures. Answer each
+concretely; a gap loops you back.
 
 1. **Full scope — no leftovers.** Re-read the issue. Enumerate *every* case it
    describes (explicit + implicit), not just the headline MWE, and check the fix
@@ -161,17 +165,17 @@ Stop and review your own change against three questions — this catches the
    (Diagnostic/Approach/Validation) needs a run you actually executed behind it:
    the guard test, full-suite N/0, Perl parity on the witness, CI. Don't write
    "matches Perl" / "handles all X" / "fixes the class of…" without the evidence.
-   *(Witness this session: "#292 may need the libxslt fork" and "1582/0 ⇒ done"
+   *(Witness: on #292, "may need the libxslt fork" and "full suite green ⇒ done"
    were both wrong until checked.)* Unverified claim ⇒ verify it or drop/soften
    it ("verified on the MWE + 2 variants" beats "fixes all edge cases").
 
 ## Step 9 — Open the pull request
 
 Only once Steps 7–8 pass and you are confident the issue is resolved. **Hard
-gate: the FULL suite must pass first** — run `cargo test --tests --no-fail-fast`
-to completion on this branch and confirm **N/0** (capture the full output, not a
-`tail` — the exit of a piped `| tail` is tail's, not cargo's; tally every `test
-result:` line). A green targeted test is not enough; the whole suite gates the PR.
+gate: the FULL suite must pass first** — run `cargo nextest run --workspace` to
+completion on this branch and read its final summary line and exit code directly
+(not through `| tail`, whose exit status is tail's). A green targeted test is not
+enough; the whole suite gates the PR.
 **Then do the due diligence**: enumerate side-effects, connected/adjacent
 behavior, commit scope (stage specific files, not `-a`),
 repo-config side-effects, parity re-checks. Then push the ticket branch (never fast-forward
@@ -195,7 +199,11 @@ EOF
 ```
 
 - Title states the **outcome**, references the issue. `Closes #N` (or `Fixes #N`)
-  so the merge auto-closes the tracker.
+  so the merge auto-closes the tracker — for the ticket only. GitHub fires
+  close/fix/resolve + `#M` anywhere in merged text (commit messages, PR body,
+  docs, even inside quotes), so any *other* issue you mention gets its number
+  without the hash (`issue 386`). After merge, `gh issue view N --json state`
+  to confirm exactly one issue closed.
 - Name the guard test(s) by function name — a reviewer can run them.
 - One clause for connected behavior only if it changes review; otherwise omit.
 - Commits carry the `Co-Authored-By` trailer; the PR body ends with the Claude

@@ -1,0 +1,19 @@
+% witness: 0903.2259 (a deluxetable begun inside another's group after an author's runaway argument)
+% oracle:  pdflatex errs on the nesting ("Extra }") and terminates; Perl 0 errors
+% engines: rust 67int23b 0 errors; 67int24b: Fatal infinite expansion (`\lx@deluxe@stored@caption` wrapped the already
+%          wrapped `\caption`, which then called itself)
+% expect:  0 errors, no Fatal; the inner table captioned "Inner"
+% status:  RED (67int24b) -> GREEN (int25: deluxetable_sty.rs `\lx@deluxe@caption@mark`, wrapped once)
+% preload: ar5iv.sty
+\documentclass[12pt,preprint]{aastex}
+\begin{document}
+\begin{deluxetable}{ll}
+\tablecaption{Outer}
+\begin{deluxetable}{ll}
+\tablecaption{Inner}
+\startdata
+a & b \\
+\enddata
+\end{deluxetable}
+\end{deluxetable}
+\end{document}

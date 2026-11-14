@@ -1,0 +1,21 @@
+% mechanism: IEEEtran's `\maketitle` runs `\@maketitle` (IEEEtran.cls:4753-4775), so a `\@maketitle` the document
+%   defines is the title page in force (`TitlePageDecl::maketitle_runs`, true for IEEEtran.cls): the title-page
+%   reading's run runs it and sees the appended tail print, so the frontmatter reads it (TP1, TP1b,
+%   OXIDIZED_DESIGN_DIVERGENCES #953)
+% witness: synthetic (review revTP1 B1, the declared side)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title / Alice ABob B / Body." (IEEEtran's `\and` prints no
+%   space in a centered line)
+% engines: int160a0 (`latexml_oxide.int160a0-rel`): 0 errors, 1 warning "… bob"; Alice A. TP1, TP1b: 0 errors,
+%   0 warnings; Alice A, Bob B; perl not run
+% expect:  0 errors, 0 warnings; creators Alice A, Bob B
+% status:  GREEN (TP1b; guard perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\makeatletter\def\@maketitle{\begin{center}{\Large\@title}\par\@author\end{center}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

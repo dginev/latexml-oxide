@@ -1,0 +1,24 @@
+% mechanism: an OSA `\address` line naming an email address (`$^*$Corresponding author: x@y`) was an affiliation of
+%   the author carrying the mark; it is that author's email, its label the contact's name (osa_journal_sty.rs
+%   `email_line`). Unmarked address lines stay affiliations of the author group before them.
+% witness: 0705.1274, 1006.2188, 1011.1336 (20 of 80 OSA witnesses)
+% oracle:  pdflatex (with osajnl2.sty v2.1 from 0901.2793) 0 errors; "A. Able1,∗ and B. Baker2", the two addresses,
+%   "∗Corresponding author: able@x.edu"
+% engines: rust 64u round 1: the email line a `<contact role="affiliation">` of Able; base: \address undefined
+% expect:  0 errors; Able with Univ A and the email "able@x.edu" named "Corresponding author:"; Baker with Univ B
+% status:  RED (64u round 1) -> GREEN (64u)
+% preload: ar5iv.sty
+\documentclass[12pt]{article}
+\usepackage{osajnl2}
+\begin{document}
+\title{Lasers}
+\author{A. Able$^{1,*}$ and B. Baker$^2$}
+\address{$^1$Univ A, City A\\
+$^2$Univ B, City B\\
+$^*$Corresponding author: able@x.edu}
+\begin{abstract}
+We study lasers.
+\end{abstract}
+\ocis{140.3460.}
+Text.
+\end{document}

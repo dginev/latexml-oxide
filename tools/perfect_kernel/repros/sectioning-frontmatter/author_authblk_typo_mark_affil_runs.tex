@@ -1,0 +1,19 @@
+% witness: 77n r3 — authblk `\affil{$^3$Z}` whose mark no author carries (a typo) after a mark-picked one (the r2 review
+%          probe b5)
+% oracle:  pdflatex 0 errors: "Ann1 and Bob2 / 1X / 3Z"
+% engines: rust int32a = one creator "Ann and Bob" with X and Z; 77n r2 = Ann X, Bob nothing, Z on a creator without a
+%          name
+% expect:  0 errors, 0 warnings; 2 creators, Ann with X and Z, Bob with Z (an unrequested mark keeps authblk's run: Z
+%          under both); no nameless creator
+% status:  RED (77n r2) -> GREEN (77n r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^1$ and Bob$^2$}
+\affil{$^1$X}
+\affil{$^3$Z}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,11 @@
+% witness: 2605.03843 (`\documentclass[lineno]{jfm}` with its v1.25 jfm.cls, no lineno-FLM.sty): the `lineno` option,
+%          which loads lineno-FLM.sty at the start of the document, is the newer copies' (2604.22963's jfm.cls:172,
+%          :186, :2239); an older copy has none, and `[lineno]` is an unused global option
+% oracle:  pdflatex 0 errors: "Text no-lineno-FLM." (LaTeX Warning: Unused global option(s): [lineno])
+% engines: rust 67int1 = `Warning:missing_file:lineno-FLM` (the binding's `\AtBeginDocument{\usepackage{lineno-FLM}}`)
+% expect:  0 errors, 0 warnings; "Text no-lineno-FLM."
+% status:  RED (67int1) -> GREEN (68d)
+\documentclass[lineno]{jfm}
+\begin{document}
+Text \ifdefined\flmmark\flmmark\else no-lineno-FLM\fi.
+\end{document}

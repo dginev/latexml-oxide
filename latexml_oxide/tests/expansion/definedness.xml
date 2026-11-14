@@ -39,10 +39,10 @@ it is NOT relax,
 and it is NOT @defined.</p>
   </para>
   <para xml:id="p7">
-    <p>After the @ifundefined, however: “relax.
-IS defined,
-it IS cs-defined,
-it IS relax,
+    <p>After the @ifundefined, however: undefined.
+is NOT defined,
+it is NOT cs-defined,
+it is NOT relax,
 but it is still NOT @defined.</p>
   </para>
   <para xml:id="p8">

@@ -1,0 +1,18 @@
+% witness: 2408.06999 (epsfig, standalone, tikzscale; `\includegraphics[width=0.95\linewidth]{f3.tex}`), 2511.17298,
+%          2305.16841, 2410.05869 (standalone + tikzscale), 2305.04329 (standalone); standalone.sty:1012-1013 loads
+%          gincltex, tikzscale.sty:173-188 passes a non-TikZ file to the saved `\includegraphics` as
+%          `{\tikzscale@fileName}`, epsfig.sty defines no `\DeclareGraphicsRule`
+% oracle:  pdflatex 0 errors; the TikZ line with "A", 3cm wide
+% engines: rust 67int18b = 1 error (HTML: gincltex_tz.tex handed to the image converter, "failed to convert")
+% expect:  0 errors; the figure holds the TikZ picture, scaled; no ltx:graphics
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{standalone}
+\usepackage{tikzscale}
+\begin{document}
+\begin{figure}\includegraphics[width=3cm]{gincltex_tz.tex}\caption{C}\end{figure}
+\end{document}

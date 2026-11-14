@@ -1,0 +1,20 @@
+% mechanism: FNR1c's read scan (`emitter/content.rs:116-130` `reads_definition`) counts ANY later braced group spelling a counter's
+%   name as a read of that counter — `\textsuperscript{a}`, `$^{1}$`, `\label{a}` — whoever takes it, so a `\footremember` nobody recalls
+%   still declines the block (the Perl split): Ann loses "Dept of Physics", Bob's name becomes "Bob Baker Dept of Physics a". Fix: a
+%   `{key}` reads the counter only where it flows into a counter reader (`\value`, `\arabic`/`\alph`/…, `\c@`), directly or through
+%   the document macro's `#n` one level down (revFNR1c S1; sibling `\label{key}`, and key `1` with a later `$^{1}$`)
+% witness: synthetic (revFNR1c r2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able∗ , Bob Bakera / Dept of Physics"
+% engines: rust FNR1base: Ann {note, Dept of Physics}, Bob "Bob Baker a" {Dept of Physics}; FNR1c: the block declined as above
+% expect:  0 errors; FNR1base's owners (the replay kept)
+% status:  RED (FNR1c) — moves: post-merge (FNRR)
+\documentclass{article}
+\newcommand{\footremember}[2]{%
+    \footnote{#2}
+    \newcounter{#1}
+    \setcounter{#1}{\value{footnote}}
+}
+\newcommand{\footrecall}[1]{\footnotemark[\value{#1}]}
+\title{T}
+\author{Ann Able\footremember{a}{Univ X.}, Bob Baker\textsuperscript{a}\\ Dept of Physics}
+\begin{document}\maketitle Body.\end{document}

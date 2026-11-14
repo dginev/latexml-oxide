@@ -1,0 +1,28 @@
+% mechanism: aa's class-numbered institutes (`affiliations::class_numbered_institutes`, the `\and` entries of the
+%   `\institute` store numbered as llncs.cls:870-885 `\institutename` numbers them): an `\and` inside a document macro's
+%   group, `\rev{\and B \and C}`, is no `\and` of the store's top level, so entries 2.. are not numbered and the first
+%   entry holds them all
+% witness: 2407.09799 (census129 cluster 4: `\institute{GEPI, Observatoire de Paris, …\\\email{…} \rev{ \and
+%   Leibniz-Institut … \and Institute for Computational Cosmology … \and …}}`, `\newcommand{\rev}[1]{#1}`)
+% oracle:  pdflatex (aa.cls of 2407.09799) 0 errors: "Ann Able1 , Bob Baker2 , and Cat Cole3 / Univ A, Town / e-mail:
+%   ann@a.edu / 2 Univ B, City / 3 Univ C, Village"
+% engines: rust int131a0 and 104c: Ann "Univ A, Town and Univ B, City and Univ C, Village", Bob and Cat none
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town", Bob "Univ B, City", Cat "Univ C, Village"
+% status:  RED (104c) — reading a macro's argument as the store's top level is outside the Cut's reading, one paper,
+%   deferred (SYNC_STATUS row 104c); no guard
+% preload: ar5iv.sty
+\documentclass{aa}
+\newcommand{\rev}[1]{#1}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\and Bob Baker\inst{2}\and Cat Cole\inst{3}}
+\institute{Univ A, Town\\\email{ann@a.edu}
+\rev{
+\and Univ B, City
+\and Univ C, Village
+}
+}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}

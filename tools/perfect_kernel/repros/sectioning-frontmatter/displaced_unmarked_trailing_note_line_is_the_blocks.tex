@@ -1,0 +1,29 @@
+% A displaced store (`\def\affiliation#1{\gdef\@affil{\it #1}}`) whose marked lines end with a line no mark leads that
+% reads as a note (`Both authors contributed equally.`, `classify_thanks`: a contribution): pdflatex prints it below
+% the institutes, for both authors. Batch 99a's Cut lets a line after `\\` that no mark leads continue the last entry,
+% so it is the text of Bob Baker's affiliation.
+% witness: review rev100a probe c/c4 (synthetic; hep-ex0106079's trailing note lines, the same Cut continuation)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A, Town", "2Univ B, City", "Both authors contributed
+%          equally."
+% engines: rust int127a and 100a r2 = Bob Baker's affiliation "2Univ B, CityBoth authors contributed equally."; perl =
+%          no raw class load
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town", Bob Baker "2Univ B, City"; the contribution line once,
+%          at the block (or a note of both authors), never inside an affiliation
+% status:  RED (100a r2). Tentative ruling (main session 2026-11-02): a trailing line no mark leads and no name requests
+%          continues the last entry only if it reads as an address part; one `classify_thanks` reads as a note goes once
+%          to the block. Deferred with hep-ex0106079's notes (SYNC row "100a").
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dstrail.cls}
+\ProvidesClass{dstrail}\LoadClass{article}
+\def\affiliation#1{\gdef\@affil{\it #1}}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\@affil\par}\vskip1em}
+\end{filecontents*}
+\documentclass{dstrail}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\affiliation{$^1$Univ A, Town\\ $^2$Univ B, City\\ Both authors contributed equally.}
+\maketitle
+Text.
+\end{document}

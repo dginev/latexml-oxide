@@ -1,0 +1,12 @@
+% mechanism: a paper macro printing a mark and defining (`\mk{Uni}`: ` $^\dagger$\gdef\lbl{#1} `) on one author, read
+%   by the next (`\lbl`). Read as a mark the names request, its call is no name's run, so its definition took no effect
+%   and its argument went to the next name: the block is written as Perl's `\lx@add@authors` splits it, in order
+% witness: synthetic (the mark sibling of author_note_macro_defines_what_a_later_author_reads)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One †", "Bob Two Uni"
+% engines: rust e6a6c93a18 0 errors, 1 warning (the content check: "and"), a creator "Uni and Bob Two"
+% expect:  0 errors, 1 warning (the decline); Ann One †, Bob Two Uni
+% status:  RED (e6a6c93a18) -> GREEN (perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand\mk[1]{ $^\dagger$\gdef\lbl{#1} }
+\title{T}\author{Ann One\mk{Uni} \and Bob Two \lbl}
+\begin{document}\maketitle Body.\end{document}

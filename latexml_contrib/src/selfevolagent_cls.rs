@@ -12,6 +12,7 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // selfevolagent.cls loads amsmath through nicematrix (:38, 2606.11926's copy).
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");

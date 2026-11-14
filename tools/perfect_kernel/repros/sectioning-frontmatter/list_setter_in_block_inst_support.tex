@@ -1,0 +1,12 @@
+% witness: the cond-mat0605195 shape under inst_support (svproc: OmniBus's inst_support `\institute`, svproc_cls.rs)
+% oracle:  pdflatex: svproc.cls is not in TL 2025 (invalid input for the oracle); inst_support.sty.ltxml:36-38 numbers the pieces
+% engines: rust base (=2) = the emitter stays out, whole blocks plus the S2b writer; DEL3 = the emitter
+% expect:  Ann Able holds Univ X, Town; Bob Baker holds Lab Y, City; 0 errors, 0 warnings
+% status:  RED (base: the emitter's Warning) -> GREEN (DEL3)
+\documentclass{svproc}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and {Bob Baker\inst{2}\institute{Univ X, Town \and Lab Y, City}}}
+\maketitle
+Text.
+\end{document}

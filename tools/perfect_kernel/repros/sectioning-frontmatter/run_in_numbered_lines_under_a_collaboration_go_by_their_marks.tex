@@ -1,0 +1,37 @@
+% A raw class's run-in `\affil` lines (OD #955) under numbered names the frontmatter observer declines to re-part — one
+% creator holds two names (`Bob Baker$^2$\orcid{…} Dan Dole$^{2}$`, a comma missing) and "the XY team$^{4}$" is a
+% collaboration —: each line led by a mark a name requests is that mark's (`contact_line_call`), so Cy Cole (mark 3)
+% holds line 3 alone, not lines 1 and 2 too; the line whose mark only the collaboration shows stays the class's text
+% (`leads_with_unrequested_mark`), as before (review rev99b B1).
+% witness: 2609.15125 (iopjournal; the legend line it also has: run_in_legend_line_is_a_note_of_its_carrier)
+% oracle:  pdflatex 0 errors: "Ann Able1, (iD), Bob Baker2 (iD) Dan Dole2 (iD), Cy Cole3 and the XY team4", "1Univ A, Town",
+%          "2Univ B, City", "3Univ C, Place", "4See the author list of the XY team"
+% engines: rust 99b0 = 0 errors, 0 warnings, the four lines body paragraphs; rust 99b r1 = every author holds lines 1-3;
+%          perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town", the Bob Baker/Dan Dole creator "2Univ B, City", Cy Cole
+%          "3Univ C, Place"; line 4 a body paragraph
+% status:  RED (99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipcol.cls}
+\ProvidesClass{ipcol}\LoadClass{article}
+\RequirePackage{hyperref}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\newcommand{\orcid}[1]{\href{https://orcid.org/#1}{(iD)}}
+\end{filecontents*}
+\documentclass{ipcol}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,*}$\orcid{0000-0000-0000-0000}, Bob Baker$^2$\orcid{0000-0000-0000-0000} Dan Dole$^{2}$\orcid{0000-0000-0000-0000}, Cy Cole$^{3}$ and the XY team$^{4}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^3$Univ C, Place}
+
+\affil{$^4$See the author list of the XY team}
+
+\maketitle
+Text.
+\end{document}

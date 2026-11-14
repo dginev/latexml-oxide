@@ -28,20 +28,20 @@ is already at `0.7.5-rc1`, and rule 0 below still binds: **never publish an
 8 crates publish **bottom-up**. Publishing `latexml` drags all 7 siblings onto
 crates.io permanently — **their names must be available too** (reserve them).
 
-| # | crate (dir) | version | crates.io deps it needs first |
-|---|-------------|---------|-------------------------------|
-| 1 | `latexml_core` | 0.4.0 | — |
-| 2 | `latexml_codegen` | 0.4.0 | core |
-| 3 | `latexml_math_parser` | 0.3.0 | core |
-| 4 | `latexml_engine` | 0.5.0 | codegen, core |
-| 5 | `latexml_package` | 0.5.0 | codegen, core, engine |
-| 6 | `latexml_post` | 0.3.0 | core, engine |
-| 7 | `latexml_contrib` | 0.3.0 | core, codegen, engine, package |
-| 8 | `latexml` (`latexml_oxide`) | published 0.7.4 | all 7 + `pericortex` |
+| # | crate (dir) | version (0.7.6 line) | crates.io deps it needs first |
+|---|-------------|----------------------|-------------------------------|
+| 1 | `latexml_core` | 0.6.0 | — |
+| 2 | `latexml_codegen` | 0.4.2 | core |
+| 3 | `latexml_math_parser` | 0.4.1 | core |
+| 4 | `latexml_engine` | 0.7.0 | codegen, core |
+| 5 | `latexml_package` | 0.7.0 | codegen, core, engine |
+| 6 | `latexml_post` | 0.5.0 | core, engine |
+| 7 | `latexml_contrib` | 0.5.0 | core, codegen, engine, package |
+| 8 | `latexml` (`latexml_oxide`) | 0.7.6 | all 7 + `pericortex` |
 
 **Published prerequisites (all on crates.io, deps repointed off git — ✅ DONE):**
-`libmarpa-asf-sys` 0.3.0 → `marpa-asf` 0.3.0 (the dginev/marpa fork; consumed by
-`latexml_core`/`latexml_math_parser` via `marpa = { package = "marpa-asf" }`),
+`libmarpa-asf-sys` 0.3.0 → `marpa-asf` 0.4.0 (the dginev/marpa fork; consumed by
+`latexml_math_parser` via `marpa = { package = "marpa-asf" }`),
 and `pericortex` 0.2.8 (behind the optional `cortex` feature). crates.io rejects
 git deps, so these were hard blockers — see B2.
 
@@ -65,10 +65,13 @@ crates.io **rejects git deps even when optional**, and the workspace had two:
 
 **Resolution (done 2026-07-16):** both forks published under crates.io-free
 names, then the deps repointed:
-* dginev/marpa fork → **`libmarpa-asf-sys` 0.3.0** + **`marpa-asf` 0.3.0**
+* dginev/marpa fork → **`libmarpa-asf-sys` 0.3.0** + **`marpa-asf` 0.3.0** at the rename
   (upstream `marpa`/`libmarpa-sys` names are taken). Consumers use the cargo
   `package` alias so `marpa::` / `libmarpa_sys::` code is unchanged:
-  `marpa = { package = "marpa-asf", version = "0.3.0" }`.
+  `marpa = { package = "marpa-asf", version = "0.4.0" }`. `marpa-asf` 0.4.0 (2026-10-07)
+  compiles a byte class (`byte_set`, `byte_range`, `inverse_byte_set`) to one terminal, so a
+  token glade's symbol is the class and its byte is `token_value() - 1`: a breaking change
+  for an ASF consumer, and `latexml_math_parser` requires 0.4.0.
 * cortex-peripherals → **`pericortex` 0.2.8**;
   `pericortex = { version = "0.2.8", optional = true }`.
 

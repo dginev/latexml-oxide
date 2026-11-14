@@ -1,0 +1,16 @@
+% witness: synthetic (amsart's `\address` holding a `\ref`-keyed enumerate, its first `\item` right after
+%          `\begin{enumerate}`; the shape of 1212.6367's cmpj list under another class)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "Text, see 1 and 2."; the address "(1) First Institute, Lviv (2) Second
+%          Institute, Kyiv"
+% engines: CMPJ1: one contact holding the list, its items without `labels=`, the text's `\ref`s without a target;
+%          CMPJ2 before the list's opening was read: the second item cut without `\begin{enumerate}`, 2 Errors
+% expect:  0 errors, 0 warnings; A. One holds each item, a one-item list keeping its number and `labels=` (xa, xb)
+% status:  GREEN (CMPJ2: perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run)
+\documentclass{amsart}
+\begin{document}
+\title{A title}
+\author{A. One}
+\address{\begin{enumerate}\item\label{xa} First Institute, Lviv \item\label{xb} Second Institute, Kyiv\end{enumerate}}
+\maketitle
+Text, see \ref{xa} and \ref{xb}.
+\end{document}

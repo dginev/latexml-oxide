@@ -1,0 +1,19 @@
+% witness: review of M3's F9 (finding 8): `\NewColumnType`'s body keeps its commands (a_column_type_body_keeps_its_commands); the inline keys under `\ExplSyntaxOn` do not
+% oracle:  pdflatex (TL 2025) 0 errors: [a], [b], [c], [d], pree.
+% engines: M3r2, M3: each inline key's `\my_later:n` read as `\my` and `_`, errors. int141a the same.
+% expect:  0 errors; pdflatex's cells
+% status:  RED
+\documentclass{article}
+\usepackage{tabularray}
+\ExplSyntaxOn
+\cs_new_protected:Npn \my_later:n #1 { [#1] }
+\cs_new_protected:Npn \my_pre: { pre }
+\NewColumnType{P}{ Q[l,preto=\my_pre:] }
+\begin{document}
+\begin{tblr}{Q[l,cmd=\my_later:n]} a \\ \end{tblr}
+\begin{tblr}{colspec={l},cell{1}{1}={cmd=\my_later:n}} b \\ \end{tblr}
+\begin{tblr}{colspec={l},column{1}={cmd=\my_later:n}} c \\ \end{tblr}
+\begin{tblr}{colspec={l},row{1}={cmd=\my_later:n}} d \\ \end{tblr}
+\begin{tblr}{P} e \\ \end{tblr}
+\ExplSyntaxOff
+\end{document}

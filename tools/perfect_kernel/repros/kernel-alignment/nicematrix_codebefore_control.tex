@@ -1,0 +1,16 @@
+% witness: nicematrix.tex \CodeBefore...\Body genuine grabber path (color recording)
+% oracle:  pdflatex clean
+% engines: rust=0 (2026-09-03, b55e) — grabber fires correctly, records background color.
+% class:   CONTROL (proves the fix must NOT break the genuine \CodeBefore grab)
+% expect:  0 errors; <ltx:XMArray> with a background="#...D9D9..." (blue!15) cell.
+% status:  GREEN
+% mechanism: \@ifnextchar\CodeBefore matches the LITERAL \CodeBefore -> \lx@nice@grabcode
+%   grabs "\CodeBefore \rowcolor{blue!15}{1}" up to \Body; \lx@nice@codebefore records the rect.
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+$\begin{pNiceMatrix}
+\CodeBefore \rowcolor{blue!15}{1} \Body
+1 & 2 \\ 3 & 4
+\end{pNiceMatrix}$
+\end{document}

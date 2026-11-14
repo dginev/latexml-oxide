@@ -1,0 +1,18 @@
+% witness: 2101.06297, 2211.16474 (NJDnatbib.sty md5 2fa96b7a), 2411.11493, 2206.08798 (6838c57e), 2506.14995
+%          (MRM.cls's, 4b333a37): NJDnatbib.sty:1052 `\section*{\refname…}` where v5 (2609.08425) has
+%          `\bmsection*{…REFERENCES…}`; :366-368 the superscript's postnote inside it
+% oracle:  pdflatex on the real v2 fork (the reviewer's probe njd_direct_v2, 2211.16474's copy): "Text 1 and 2, p. 5",
+%          both raised, and a "References" heading; on this fake copy (v2/NJDnatbib.sty) the heading is the same
+% engines: rust 72a r4 = "REFERENCES" (v5's heading on every version), `<sup>2</sup> p. 5`
+% expect:  0 errors, 0 warnings; "References"; the postnote inside the superscript; bib.bib1; the copy's extra
+% status:  RED (72a r4) -> GREEN (72a r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers,super]{NJDnatbib}
+\begin{document}
+\njdforkextra{} \cite{a} and \cite[p.~5]{b}.
+\begin{thebibliography}{2}
+\bibitem{a} X.~An. A title. 2021.
+\bibitem{b} Y.~Be. B title. 2022.
+\end{thebibliography}
+\end{document}

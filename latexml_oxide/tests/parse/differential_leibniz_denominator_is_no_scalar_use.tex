@@ -1,0 +1,12 @@
+% A Leibniz quotient's `d<var>` in a scalar container is no scalar use of its `d` token in the document: the paper's
+% other upright `d<var>` keep their differential reading (57cj.23.7; user ruling 2026-10-01e, token identity).
+% witness: 2605.29065 (`\frac{1}{\mathrm d\tilde\lambda/\mathrm d\lambda}` made `\mathrm du^\alpha_K` and `\langle\mathrm
+%          dg^i\rangle` letters)
+% expect:  0 errors; `\mathrm{d}u_K` and `\mathrm{d}g^i` differentials
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\frac{1}{\mathrm{d}s/\mathrm{d}\lambda}$
+$\hat{\mathrm{d}}g^i=\sum_K\frac{\partial g^i}{\partial u_K}\,\mathrm{d}u_K$
+$N^\ast_VC=\left<\mathrm{d}g^i|i=1,\dots,m\right>$
+\end{document}

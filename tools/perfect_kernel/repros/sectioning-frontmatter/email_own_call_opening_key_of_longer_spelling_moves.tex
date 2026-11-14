@@ -1,0 +1,23 @@
+% GREEN (brief 107g; rev107f2 finding 1, synthetic; INTRODUCED by 107f r2's own-call rule): `email_owners.rs` `own_call_keeps` rejected
+%   the tail of a longer spelling but accepted the head of one, so `angela.rossi@` set by \email after \author{Lay Kee
+%   Ang} stayed on Ang because "ang" opens "angela", against FIDELITY_CHARTER #420 ("an address that spells another author
+%   as printed does move"); the base moved it to Angela Rossi. No changed paper of the A/B shows it. Fixed by one
+%   predicate, "an own call moves only if another name's full-strength score is strictly higher".
+% witness: none (synthetic) — rev107f2 probe p_own_head3 (twin below: bennett@ on Ben Smith beside Joe Bennett)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: rust 107f r2 (f0d0f30551): angela.rossi@y.edu on Lay Kee Ang; int139a4: on Angela Rossi
+% expect:  0 errors; angela.rossi@y.edu on Angela Rossi; Lay Kee Ang holds no e-mail
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Angela Rossi}
+\affiliation{Univ X, Town}
+\author{Lay Kee Ang}
+\email{angela.rossi@y.edu}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 2607.14806 (Table I: a `\multicolumn{..}{p{..}}` cell holding a nested multi-row tabular)
+% oracle:  pdflatex 0 errors; pdftotext shows x y / z w on two lines inside the merged cell
+% engines: rust base=1 (65int2), rust 65p=0, perl=0 (2026-10-12)
+% expect:  0 errors; the inner //ltx:tabular has 2 tr of 2 td (x y, z w)
+% status:  GREEN (batch 65p, 2026-10-12)
+% mechanism: \lx@alignment@multicolumn rewrote every brace-depth-0 `\\` of the body to \lx@newline;
+%   an environment is no brace group, so the nested tabular's row ends became line breaks and its
+%   second `&` overflowed. Now `\let\\\lx@newline` inside the cell box; the nested tabular rebinds `\\`.
+\documentclass{article}
+\begin{document}
+\begin{tabular}{ll}
+a & b \\
+\multicolumn{2}{p{4cm}}{\begin{tabular}{ll} x & y \\ z & w \end{tabular}} \\
+\end{tabular}
+\end{document}

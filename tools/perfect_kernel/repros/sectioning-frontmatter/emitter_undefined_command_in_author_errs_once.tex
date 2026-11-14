@@ -1,0 +1,19 @@
+% mechanism: an author block's undefined commands, whose Errors the observer's rehearsal holds and discards with their
+%   stubs (observer/rehearsal.rs), are raised again by the emitter's digestion of the piece holding them, in place:
+%   one printing nothing right after a name is the name's (`content::Field::past_held_undefined`); one with ink of the
+%   same word on both sides before its `@` glues them ("Bob|b@x.org"), which no reading of addresses takes
+%   (`events::Event::glued_undef`); what no piece
+%   holds is raised once at the flush's end (`reading::HeldUndefined`). OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: SYNC row 0b item 39; ERR1's synthetic; 2607.29185, 2508.21091, 1101.4098 (the flip A/B's 19 papers)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 2 "Undefined control sequence": "Ann Able" and "Bobb@x.org"
+% engines: Perl 0.8.8: 2 Errors, creators Ann Able<ERROR>\undefinedprobecs</ERROR> and Bob<ERROR>\email</ERROR>b@x.org;
+%   DEL5 (=2): 0 Errors, one creator Ann Able with the e-mail "Bobb@x.org", a Warning for the lost "Bob"
+% expect:  2 Errors (`\undefinedprobecs`, `\email`), 0 Warnings; the creators Ann Able<ERROR>\undefinedprobecs</ERROR>
+%   and Bob<ERROR>\email</ERROR>b@x.org, no contact
+% status:  RED (DEL5) -> GREEN (ERR2)
+\documentclass{article}
+\author{Ann Able\undefinedprobecs \and Bob\email{b@x.org}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

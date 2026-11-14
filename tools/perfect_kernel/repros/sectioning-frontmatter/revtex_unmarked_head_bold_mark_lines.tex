@@ -1,0 +1,21 @@
+% mechanism: REVTeX's group rule reads the marks an affiliation block prints as digested (`relocate::requested_marks`,
+%   `marks_as_printed`, Option C P4b3): a mark set in `\textbf` opens its line (a font group is no box beside words);
+%   the token readers counted it held but leading no line, so the block went once to a nameless creator
+% witness: synthetic (P4b3 brief: a mark in `\textbf`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1,2 , Bob Baker2,3 , and Cy Cole / Univ A, Town A /
+%          2Univ B, Town B / 3Univ C, Town C"
+% engines: P4b3base: a nameless fourth creator holding the whole block; P4b3: as expected
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", "2 Univ B, Town B"; Bob Baker "2 Univ B, Town B",
+%          "3 Univ C, Town C"; Cy Cole none; three creators
+% status:  RED (P4b3base) -> GREEN (P4b3; guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2,3}$}
+\author{Cy Cole}
+\affiliation{Univ A, Town A\\ \textbf{$^{2}$}Univ B, Town B\\ \textbf{$^{3}$}Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

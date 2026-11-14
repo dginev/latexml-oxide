@@ -1,0 +1,15 @@
+% witness: 2103.12231, 1310.8585 (`\bstctlcite`), 1310.1135 (`\IEEEstrut`), 2008.05838, 2004.10847 (`\yesnumber`),
+%   2211.06691, 2310.15756 (`\IEEEsettextheight`); run 340: 88 + 37 + 26 + 7 first errors
+% oracle:  pdflatex 0 errors; equation (1) numbered by \yesnumber in IEEEeqnarray*
+% engines: rust 65int7 = 4 errors (`\bstctlcite`, `\IEEEsettextheight`, `\IEEEstrut`, `\yesnumber` undefined)
+% expect:  0 errors; one equation tagged (1)
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\IEEEsettextheight{0.75in}{0.75in}
+\begin{document}
+\bstctlcite{IEEEexample:BSTcontrol}
+\begin{IEEEeqnarray*}{rCl}
+a & = & b\IEEEstrut \yesnumber
+\end{IEEEeqnarray*}
+\end{document}

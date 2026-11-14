@@ -1,0 +1,17 @@
+% mechanism: svjour3 sets `\email` in the current roman font (svjour3.cls:303 `\emailname: #1`); on an `\institute`
+%   line the author block makes the contact of the call, set as the class command sets it (`email_command_address`):
+%   roman, the `_` kept (user ruling 2026-10-11).
+% witness: 2101.02062, 1601.00705
+% oracle:  pdflatex (svjour3.cls, svglov3.clo from 2101.00058) 0 errors; "E-mail: ann˙able@a.edu" in CMR8
+% engines: rust 64u: "ann˙able@a.edu"; perl: the same
+% expect:  "ann_able@a.edu" in roman
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{Title}
+\author{Ann Able \and Bob Bee}
+\institute{Ann Able \at University of A \\ \email{ann\string_able@a.edu} \and Bob Bee \at University of B}
+\maketitle
+Text.
+\end{document}

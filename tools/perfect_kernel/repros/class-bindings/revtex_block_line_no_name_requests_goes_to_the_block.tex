@@ -1,0 +1,38 @@
+% mechanism: the kernel's marked reader over a `{\it …}` group's lines (separators.rs `wrapper_over_lines_as_lines`,
+%   107b): each line goes by its marks, and a line whose label no name requests (`$^{b}$`) is the block's shared
+%   orphan, its words once on the block's creator, its mark not shown — only the marks a name requests matter to the
+%   frontmatter (user ruling 2026-11-05). Before 107b the writer's cut placed it (emitter/plan.rs `cut_block_lines`).
+% witness: SYNTHETIC — a fail-safe for a legend line whose requester was removed. Its source, 2007.02542 (revtex4-1,
+%   BESIII), has no orphan line: its labels 23, 24, 51, 63 are requested through sub-lettered marks (`$^{23A}$`,
+%   `$^{24A}$`, `$^{51B}$`, `$^{63A,63C}$`) and every letter legend is requested too; the real shape is
+%   `revtex_sub_lettered_mark_goes_by_its_number`. Review revab126 (p3).
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "A. One1 , B. Two2,a , C. Three3 / (X Collaboration) / 1 Alpha
+%   University, Beijing / 2 Beta Institute, Rome / 3 Gamma Lab, Paris / a Also at Delta College, Oslo / b Also at Eps
+%   College, Bergen"
+% engines: rust 98a: A. One "Alpha … 2 Beta … 3 Gamma …" as one affiliation, B. Two "Also at Delta … b Also at Eps …",
+%   C. Three none; 98e: the block "b Also at Eps College, Bergen" (the writer's cut); 107b: the block "Also at Eps
+%   College, Bergen" (the kernel's reader); perl: one creator
+% expect:  0 errors, 0 warnings; each author the lines its marks name, B. Two Delta College too; the block (a nameless
+%   creator) "Also at Eps College, Bergen" once, on no author, its `b` not shown
+% status:  RED (98a) -> GREEN (98e) -> GREEN (107b, the kernel's reader)
+% preload: ar5iv.sty
+\documentclass[aps,prd,superscriptaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+		\begin{center}
+	A.~One$^{1}$, B.~Two$^{2,a}$, C.~Three$^{3}$
+	\\
+		\vspace{0.2cm}
+		(X Collaboration)\\
+		\vspace{0.2cm} {\it
+	$^{1}$ Alpha University, Beijing\\$^{2}$ Beta Institute, Rome\\$^{3}$ Gamma Lab, Paris\\
+		\vspace{0.2cm}
+		$^{a}$ Also at Delta College, Oslo\\$^{b}$ Also at Eps College, Bergen\\
+		}\end{center}
+		\vspace{0.4cm}
+}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

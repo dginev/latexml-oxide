@@ -1,0 +1,14 @@
+% witness: the r7 re-review of batch 77p (finding 4, probes n3, n4)
+% oracle:  pdflatex 0 errors: three \and columns: the linked names "Lucy Page" and "Mark Link" (with Univ A), Bob Baker
+%          (Univ B)
+% engines: rust 77p r10 = 0 errors; Lucy Page and Mark Link read as link lines: no authors, a creator named "Univ A"
+% expect:  0 errors, 0 warnings; three authors: Lucy Page, Mark Link (Univ A), Bob Baker (Univ B)
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{\href{https://x.org/lp}{Lucy Page} \and \href{https://orcid.org/0000-0001}{Mark Link}\\ Univ A \and Bob Baker \\ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,32 @@
+% witness: 2604.25507 (`\upmodels`); review of 65l round 1 (footline glyphs reversed, `\gtr` an HTML entity, a name
+%          declared with MnSymbol's own `\Decl@Mn@Char`/`\Decl@Mn@Open` got U+FFFD / the cmex glyph of its slot)
+% oracle:  pdflatex 0 errors; MnSymbol.pdf p. 3-4 draws `\rightfootline` as —| and `\upmodels` as a base with two
+%          stems; MnSymbol.sty:89-107 `\Decl@Mn@Sym` → `\DeclareMathSymbol` at the running `\Set@Mn@Sym` slot,
+%          :1663 `\lsem` at `largesymbols` '102, :1590-1591 `\Decl@Mn@Op` → `\DOTSB#3\slimits@` (amsmath's
+%          `\displaylimits`)
+% engines: rust 65l round 1 = ⟝ for `\rightfootline`, ⫨ for `\upmodels`, U+FFFD for `\mygtr`, ⎜ for `\mylsem`,
+%          limits post in display for `\mybigop`
+% expect:  0 errors, 0 warnings; ⟞ ⟝ ⟙ ⟘, ⫫ ⫪; `\mygtr` > (MnSyD slot 65), `\mylsem` ⟦ (`\myrsem` ⟧); `\mybigop` limits under in
+%          display; an Info for the unmapped slot of `\myord`
+% status:  RED (65l round 1) -> GREEN (65l round 2); guard perfect_kernel_batch65l::mnsymbol_declarators_take_slot_glyphs
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{MnSymbol}
+\makeatletter
+\DeclareSymbolFont{MnSyQ}{U}{MnSymbolA}{m}{n}
+\Set@Mn@Sym{65}
+\Decl@Mn@Char\mygtr{MnSyD}{\mathrel}
+\Set@Mn@Sym{12}
+\Decl@Mn@Char\myord{MnSyQ}{\mathord}
+\Decl@Mn@Op\mybigop\dsum\tsum
+\Decl@Mn@Open{\mylsem}{largesymbols}{'102}
+\Decl@Mn@Close{\myrsem}{largesymbols}{'107}
+\makeatother
+\begin{document}
+$a \rightfootline b \leftfootline c \upfootline d \downfootline e$
+
+$a \upmodels b \downmodels c$
+
+$a \mygtr b$ and $\left\mylsem x\right\myrsem$ and $\myord$
+\[ \mybigop_{i} x \]
+\end{document}

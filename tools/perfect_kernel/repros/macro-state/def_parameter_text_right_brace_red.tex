@@ -1,0 +1,10 @@
+% witness: floatrow/floatrow-rus (:5146, the cascade after `\Describe@Macro`, which doc.sty v3 no longer has: `Expandable[\the Match:}]`, then a loop only the deadline stops)
+% oracle:  pdflatex (TL 2025): "! Missing { inserted", `\def\a}` read as `\def\a{}` (tex.web §474-476); [macro:->].
+% engines: int141a, M3: 0 errors: `}` is the parameter text, read up to the next `{` (gullet.rs `read_until_brace`; Perl's readUntilBrace, Gullet.pm:692, the same).
+% expect:  1 error; [macro:->]
+% status:  RED
+\documentclass{article}
+\begin{document}
+{\def\a}\typeout{[\meaning\a]}
+Word.
+\end{document}

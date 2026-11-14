@@ -1,0 +1,15 @@
+% The control of the ijsra binding: under any other class `\abstract` stays locked (OD #500: absolutely locked; Perl pool:1136),
+% so a document's `\def\abstract{text}` is refused and a bare `\abstract` opens the frontmatter capture, as on base.
+% witness: ijsra/ijsra's shape, reduced (`\list` in a document's own environment).
+% oracle:  pdflatex (TL 2025) 0 errors: "This is the abstract text." in the list; Body.
+% engines: perl 3 errors, the text lost. int140a: 1 error "\endlx@list Attempt to end mode internal_vertical", no text.
+% expect:  1 error, unchanged; the known limit of the lock, fixed for ijsra by its binding only.
+\documentclass{article}
+\def\abstract{This is the abstract text.}
+\newenvironment{IJSRAabstract}{\list{}{\rightmargin\leftmargin}\item \textbf{Keywords}: kk\\ \itshape\noindent\item\relax}{\endlist}
+\begin{document}
+\begin{IJSRAabstract}
+\abstract
+\end{IJSRAabstract}
+Body.
+\end{document}

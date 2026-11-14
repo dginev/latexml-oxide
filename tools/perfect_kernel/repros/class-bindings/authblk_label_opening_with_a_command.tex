@@ -1,0 +1,23 @@
+% witness: none (synthetic; review rev95b's untested edge, the sibling of 2405.16051's `\author[3\authfn{2}]`)
+% oracle:  pdflatex (TL 2025): "Ann Able†1 and Bob Baker2", "1University One, Town", "2University Two, Town",
+%          "†Equal contribution" — Ann Able carries both the dagger and entry 1 (a bare `\dag1` label is no valid
+%          input: authblk's label is expanded, the dagger leaks to the page top and Ann Able prints "1" alone)
+% engines: rust int124b, 95b, 95b r2 = wrong, all three alike: the label is read to what it spells before its first
+%          command (`labels::parted_label`), nothing — Ann Able holds no affiliation, University One and Equal
+%          contribution stay in the block (`$^{\dagger}$1` alike). `\author[1$\dagger$]`: int124b nothing, 95b on
+%          University One hers, the dagger's entry in the block; `\author[$\dagger$,1]`: both hers from 95b on
+% expect:  0 errors, 0 warnings; Ann Able University One and Equal contribution, Bob Baker University Two
+% status:  RED (catalog, no guard; SYNC row "authblk: a label holding a command")
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{A title}
+\author[$\dagger$1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{University One, Town}
+\affil[2]{University Two, Town}
+\affil[$\dagger$]{Equal contribution}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,28 @@
+% witness: jsonparse-doc (`\NewTCBListing{macrodef}{ s o }{…IfValueT={#2}{hypertarget=#2}…}`; 7 dangling `\hyperlink`s)
+% oracle:  pdflatex 0 errors; every `\hyperlink` resolves
+% engines: rust=0 errors, `boxb`/`boxc` targets lost (59h; the plain box keeps `boxa`)
+% cause:   the begin line's `*[boxb]` is read by listings' raw reader only (the start code's eaters peek the start code),
+%          which grabbed a `!`-leading optional alone, so `#2` was empty; and tcolorbox.sty:844-855 `phantom` code
+%          (`hypertarget`, `label`, `step`) runs inside the box at its start (`\tcb@set@@phantom`, :1154-1161), which the
+%          listing path never ran
+% expect:  0 errors; anchors `boxb` and `boxc` at the start of their listings' first lines; none for the box without
+%          an optional (`\IfValueT` of xparse's no-value marker is false)
+% status:  GREEN (59i, perfect_kernel_batch59::tcb_listing_keeps_its_hypertarget)
+\documentclass{article}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\tcbuselibrary{skins,listings}
+\NewTCBListing{macrodef}{ s o }{listing only, enhanced, IfValueT={#2}{hypertarget=#2}}
+\begin{document}
+\begin{tcolorbox}[hypertarget=boxa]Plain box.\end{tcolorbox}
+\begin{macrodef}*[boxb]
+|store in|={<tl>}
+\end{macrodef}
+\begin{macrodef}[boxc]
+|global|
+\end{macrodef}
+\begin{macrodef}
+|none|
+\end{macrodef}
+Links: \hyperlink{boxa}{A}, \hyperlink{boxb}{B}, \hyperlink{boxc}{C}.
+\end{document}

@@ -1,0 +1,26 @@
+% A `filecontents*` file written under a directory (`n/c/z.tex`) is not found by a nested `\import{c/}{z}` through the
+% enclosing import's search entry `n/`, where pdflatex (`\input@path` = {c/}{n/}) reads `n/c/z.tex`; the same files on
+% disk are found. The in-memory file is looked up by its exact name only (found during review revW2 of issue #772).
+% witness: synthetic
+% oracle:  pdflatex 0 errors (directories n/c created first): [][n/][c/] [] [] twice
+% engines: rust=2 (head 5149a37793: Error:missing_file:c/z twice)
+% expect:  0 errors; the paths as pdflatex prints them
+% status:  RED
+% moves:   post-merge
+\begin{filecontents*}{n/x.tex}
+[\import@path]\import{c/}{z}[\import@path]
+\end{filecontents*}
+\begin{filecontents*}{n/y.tex}
+[\import@path]\inputfrom{c/}{z}[\import@path]
+\end{filecontents*}
+\begin{filecontents*}{n/c/z.tex}
+[\import@path]
+\end{filecontents*}
+\documentclass{article}
+\usepackage{import}
+\begin{document}
+\makeatletter
+[\import@path]\import{n/}{x}[\import@path]
+
+[\import@path]\subimport{n/}{y}[\import@path]
+\end{document}

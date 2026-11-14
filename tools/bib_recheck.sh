@@ -137,7 +137,7 @@ recheck_one() {
   now=$(grep -ac 'ltx_bibitem' "$dir/out.html" 2>/dev/null); now=${now:-0}
   status=$(unzip -p "$out" status 2>/dev/null | grep -oE '[0-9]+$' | head -1)
   [[ -n "$status" ]] || status='-'
-  nerr=$(grep -acE '^(Error|Fatal):' "$log" 2>/dev/null); nerr=${nerr:-0}
+  nerr=$(grep -acE '(Error|Fatal):[A-Za-z_]+:' "$log" 2>/dev/null); nerr=${nerr:-0}
   # Unresolved citations are what a reader sees as "[?]", and they are the
   # honest "is this bibliography complete" signal — `want` is only a crude
   # source-side estimate (it counts cite keys that may not exist in the .bib
@@ -147,7 +147,7 @@ recheck_one() {
   cited=$(grep -aoE 'MakeBibliography: [0-9]+ bibentries, [0-9]+ cited' "$log" 2>/dev/null |
     tail -1 | grep -oE '[0-9]+ cited' | grep -oE '[0-9]+')
   [[ -n "$cited" ]] || cited='-'
-  first=$(grep -m1 -aE '^(Error|Fatal):' "$log" 2>/dev/null | cut -c1-140)
+  first=$(grep -m1 -aE '(Error|Fatal):[A-Za-z_]+:' "$log" 2>/dev/null | cut -c1-140)
   [[ -n "$first" ]] || first='-'
 
   local verdict

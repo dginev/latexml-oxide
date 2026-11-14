@@ -1,0 +1,14 @@
+% mechanism: a math list's measured width under-counts a leading `-` (unary: an Ord-like minus, tex.web §728-§729):
+%          `$-5$` measures 10.55551pt where TeX's box is 12.77782pt (minus 7.77779pt + `5` 5pt).
+% witness: 2010.12371 (pgfplots-style tick nodes `\makebox[0pt][l]{$5$}\phantom{$-5$}`, Figures/Methodology/M4.tex:53;
+%          the node's foreignObject is the phantom's width since DTL1a)
+% oracle:  pdflatex 0 errors: [12.77782pt] [12.77782pt] [5.00002pt]
+% engines: rust int160b, DTL1a: [10.55551pt] [10.55551pt] [5.00002pt]; perl [8.33334pt] [8.33334pt] [5.00002pt]
+% expect:  0 errors; pdflatex's three widths
+% status:  RED
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{$-5$}[\the\wd0]
+\setbox0\hbox{\phantom{$-5$}}[\the\wd0]
+\setbox0\hbox{$5$}[\the\wd0]
+\end{document}

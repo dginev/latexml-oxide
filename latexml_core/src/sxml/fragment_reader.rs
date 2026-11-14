@@ -82,11 +82,11 @@ impl FragmentReader {
 }
 
 fn reader_error(details: String) -> Error {
-  Error {
+  Error::from(crate::common::error::ErrorData {
     target:   ErrorTarget::Internal,
     category: ErrorCategory::Libxml,
     message:  format!("fragment-reader: {details}"),
-  }
+  })
 }
 
 #[cfg(test)]
@@ -177,9 +177,9 @@ mod tests {
     let meta = SegmentMeta {
       depth:      1,
       noindent:   false,
-      section_id: None,
       parent:     None,
       ancestors:  vec![],
+      anchor:     None,
       font:       None,
       namespaces: vec![(
         String::from("ltx"),

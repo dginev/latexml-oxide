@@ -1,0 +1,18 @@
+% acmart reads its `nonacm` key from the class's own options as xkeyval does (acmart.cls:111): options
+% given by `\PassOptionsToClass` count, a braced value is unwrapped, key names are case-sensitive and the
+% last setting wins. With `nonacm` set no copyright statement is printed (acmart.cls:2265-2269).
+% witness: 2605.30212 (`authorversion,nonacm`), 2406.04861 (`[authorversion, acmsmall]`).
+% status:  GREEN (58q)
+% oracle:  pdflatex 0 errors: no copyright or permission text ("Using nonacm mode").
+% expect:  0 errors, 0 warnings.
+\PassOptionsToClass{nonacm}{acmart}
+\documentclass[sigconf]{acmart}
+\setcopyright{rightsretained}
+\copyrightyear{2020}
+\begin{document}
+\title{T}
+\author{A. Author}
+\affiliation{\institution{U}\country{X}}
+\maketitle
+Text.
+\end{document}

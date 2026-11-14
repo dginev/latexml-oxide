@@ -1,0 +1,18 @@
+% The document's own print of `\@author` the way article's `\@maketitle` sets it — in a `tabular`, `\and` closing one
+% and opening the next, affiliation marks in math — is one print of the field: its ink is split by the cells and
+% tables it is set in (one run per absorb level), and runs that go on with the field's later tokens with no ink
+% between them are one run (`field_ink_runs`), whose extent reaches the stored value's last character (the `2` of
+% `$^2$`). 1605.00182 (its own `\@makepapertitle`), 0706.0979 and 1004.2125 (`\textsc` names, `$^1$` marks).
+% status:  RED (fms1 round 2 before the merge: one run per cell, none whole, the author tables kept) → GREEN.
+% oracle:  pdflatex 0 errors: "Tab Title", "Ann One^1 Bob Two^2", "First University Second University", "1 Intro Text."
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; no body copy of the title or the authors.
+\documentclass{article}
+\makeatletter
+\title{Tab Title}
+\author{Ann \textsc{One}$^1$\\ First University \and Bob \textsc{Two}$^2$\\ Second University}
+\begin{document}
+\begin{center}{\LARGE \@title\par}\vskip 1em
+{\large \lineskip .5em \begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}
+\section{Intro}
+Text.
+\end{document}

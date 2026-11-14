@@ -1,0 +1,18 @@
+% mechanism: a collaboration piece of a names line carrying a mark of its own (`… and the ABC Team$^{2}$`) labels a line
+%   no author requests: that line stays the block's (the shared nameless creator, OD #159), as any line no name's mark
+%   answers. The collaboration's own address has no place of its own (a contact cannot hold one). Review rev97cd D6
+%   (synthetic part), a residual (SYNC row "97d").
+% witness: none real (the reviewer's probe p08)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker1 and the ABC Team2", "1 Univ X", "2 Lab Y"
+% engines: rust 97d r2: Ann Able and Bob Baker with the ABC Team and Univ X; a nameless creator with Lab Y; perl: one
+%   creator holding the names
+% expect:  open — Lab Y read as the ABC Team's address (no target shape ruled)
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$ and the ABC Team$^{2}$ \\ $^{1}$Univ X \\ $^{2}$Lab Y}
+\maketitle
+Body.
+\end{document}

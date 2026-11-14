@@ -1,0 +1,14 @@
+% witness: synthetic (66g control: a `\left` read inside the binding's argument, beside the one outside it)
+% oracle:  pdflatex 3 errors ("Extra }, or forgotten \right.", "Missing \right. inserted.", "Missing } inserted."): physics sets
+%          `\left({\left[ a}\right)`; pdftotext "cosh([a) after."
+% engines: rust 66e1 and 66g = 0 errors, 1 warning: the argument's end closes the `\left[` read in it ("Missing \right. inserted", 65d's
+%          recovery, OXIDIZED_DESIGN_DIVERGENCES #530), the binding's `\right)` closes its own `\left(`
+% mechanism: stomach.rs `close_left_group_at_input_end`: a `\left` read in the input that ran out is closed there; one read outside it is not
+% expect:  0 errors, 1 warning ("Missing \right. inserted"); the cosh's argument is `[a` closed by a null delimiter, inside `(`…`)`
+% preload: ar5iv.sty
+% status:  CONTROL
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+$\cosh(\left[ a)$ after.
+\end{document}

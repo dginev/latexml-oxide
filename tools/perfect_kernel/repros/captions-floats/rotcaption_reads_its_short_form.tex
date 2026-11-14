@@ -1,0 +1,12 @@
+% witness: 57l root-cause: rotating.sty:260-270 `\rotcaption` reads `[short]{long}` (`\@dblarg`); the
+%          binding read `{}` only (Perl rotating.sty.ltxml:164), so `[Short]` became the caption and the
+%          long text a stray panel
+% oracle:  pdflatex 0 errors; "Figure 1: Side caption" turned, "Short" in the list of figures
+% engines: rust 57k=0 but the caption "[" and a panel "Short]Side caption"
+% expect:  0 errors, 0 warnings; toccaption "Short", caption "Side caption" turned 90°
+% status:  RED (57k) -> GREEN (57l)
+\documentclass{article}
+\usepackage{rotating}
+\begin{document}
+\begin{figure}\rule{1cm}{2cm}\rotcaption[Short]{Side caption}\end{figure}
+\end{document}

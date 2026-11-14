@@ -1,0 +1,25 @@
+% witness: review of 65o round 1 (probes p3, p5). Each `&` opens the next preamble column whatever the cell before
+%          holds (tex.web §791 `fin_col`), so content after an empty cell stays in its own column. 65o round 1
+%          dropped every empty cell past eqnarray's third column, so `k &=& l & & EXTRA` moved `EXTRA` from the fifth
+%          `td` to the fourth; and it ran for `\IEEEeqnarray` too, through the shared `rearrange_eqnarray`
+% oracle:  pdflatex: 3 "Extra alignment tab" (eqnarray's fifth `&`, IEEEeqnarray's fourth and fifth; tex.web §792
+%          makes each a `\cr`, so TeX sets `EXTRA` in a row of its own), 1 "Too many columns in eqnarray environment",
+%          2 "Too many columns within the IEEEeqnarray"
+% engines: rust 65o round 1 = `EXTRA` in the fourth `td`, IEEEeqnarray's empty cells dropped; 65int2 = fifth `td`
+%          (5 "Extra alignment tab"); 65o = 4 "Extra alignment tab" and 1 "Too many columns in eqnarray environment"
+%          (the overflow cell placement, an extra `&`'s cell in the row, is Perl's and unchanged)
+% expect:  `EXTRA` in the fifth `td` of both rows; IEEEeqnarray's row as 65int2 writes it (its empty fourth and
+%          trailing cells kept)
+% status:  RED (65o r1) -> GREEN (65o r2)
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{eqnarray}
+k &=& l & & EXTRA\\
+m &=& n
+\end{eqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b & & EXTRA\\
+c &=& d &
+\end{IEEEeqnarray}
+\end{document}

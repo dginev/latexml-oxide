@@ -1,0 +1,22 @@
+% witness: none — the shapes 78h r2's safety check let through (review probe 6): `\abstractname` through a robust
+%          command (`\DeclareRobustCommand\myhead{\par\noindent HEADX}`) wrote `name="\par\noindentHEADX"`, and `\pra`,
+%          `\begin{center}…\end{center}`, split the paragraph; 1402.7103 (proto.cls, `\ProvidesClass{aastex}`) is the
+%          route's witness; aasrobust.cls is written from scratch
+% oracle:  pdflatex 0 errors (the "provides aastex" LaTeX Warning): "[new paragraph] HEADX Abs. 1 One J: [display]
+%          PRAX [new paragraph]; PRBX; PRCX; [new paragraph] PRDX."
+% engines: rust 78h r2 (6566b80f1d) = `<abstract name="\par\noindentHEADX">`, a centered "PRAX" block in the paragraph,
+%          "PRBX", "PRCX", "Phys. Rev. D" (`\prd` declined, its Info logged three times); Perl: no binding for
+%          aasrobust, read raw only under --includestyles
+% expect:  0 errors, 0 warnings; the check fails closed: `\abstractname`, `\pra`, `\prb` and `\prd` keep the
+%          bindings' "Abstract", "Phys. Rev. A", "Phys. Rev. B", "Phys. Rev. D" (one Info each, naming `\par`, `\begin`,
+%          `\csname`, `\par`); `\prc`, text, stands ("PRCX")
+% status:  RED (6566b80f1d, 78h r2) -> GREEN (78h r3: the copy-body check fails closed)
+% preload: ar5iv.sty
+\documentclass{aasrobust}
+\begin{document}
+\begin{abstract}
+Abs.
+\end{abstract}
+\section{One}
+J: \pra; \prb; \prc; \prd.
+\end{document}

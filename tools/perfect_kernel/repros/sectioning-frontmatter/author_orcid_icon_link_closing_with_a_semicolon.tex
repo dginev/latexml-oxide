@@ -1,0 +1,19 @@
+% mechanism: the fail-safe of author_orcid_icon_link_closing_with_the_comma: a separator the line split does not move
+%   out of the link (`;`, which `hoist_wrapped_separators` leaves) stays where the link prints it, as `\lx@author@href`
+%   makes the link the name's ORCID contact (OXIDIZED_DESIGN_DIVERGENCES #960); 103b r2 dropped it with the ink
+% witness: 2110.07418 (the comma's shape; this the sibling separator)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able [icon]; Bob Baker"
+% engines: rust int131a: one creator "Ann AbleBob Baker" holding the iD; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able (0000-0002-1825-0097), Bob Baker
+% status:  RED (int131a) -> GREEN (131fix) —
+%   perfect_kernel_batch131fix::orcid_icon_link_closing_with_the_comma_parts_the_names
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx,hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able\href{https://orcid.org/0000-0002-1825-0097}{\includegraphics[scale=0.05]{example-image}; }%
+Bob Baker}
+\maketitle
+Text.
+\end{document}

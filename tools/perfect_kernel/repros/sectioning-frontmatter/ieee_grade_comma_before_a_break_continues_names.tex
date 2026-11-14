@@ -1,0 +1,22 @@
+% witness: 2408.02464 (IEEEtran journal compsoc: `Nuno Vasconcelos,~\IEEEmembership{Fellow,~IEEE,}\\ Vicente
+%          Ordonez,~\IEEEmembership{Member,~IEEE,} and~Vishnu Naresh Boddeti~\IEEEmembership{Member,~IEEE}%`)
+% oracle:  pdflatex 0 errors: "Gus Gray*, Hal Hill, Ida Ivy, Fellow, IEEE," over "Jon Jay, Member, IEEE, and Kim Key
+%          Member, IEEE"
+% engines: rust 63m1 = 3 authors, "Jon Jay, and Kim Key" an affiliation of each; Perl one author holding both lines
+% expect:  0 errors; 5 authors, the grades membership contacts of Ida Ivy, Jon Jay and Kim Key
+% status:  RED (63m1) -> GREEN (63m)
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+\begin{document}
+\title{T}
+\author{
+Gus Gray\IEEEauthorrefmark{1},
+Hal Hill,
+Ida Ivy,~\IEEEmembership{Fellow,~IEEE,}\\
+Jon Jay,~\IEEEmembership{Member,~IEEE,}
+and~Kim Key~\IEEEmembership{Member,~IEEE}%
+\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem G. Gray and K. Key are with Univ C.}
+}
+\IEEEtitleabstractindextext{\begin{abstract}The abstract.\end{abstract}}
+\maketitle
+Body.
+\end{document}

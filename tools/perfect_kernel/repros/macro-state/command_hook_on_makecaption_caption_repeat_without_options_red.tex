@@ -1,0 +1,20 @@
+% mechanism: `\usepackage{caption}` with no options after caption's kernel alone (floatrow's caption3) is caption's
+%   first full load in TeX, but here a repeat load without options, which runs no setter (content.rs
+%   `apply_repeat_options`): `\lx@caption@kernel@only` stays, so `\@makecaption` stays the kernel's (and the class's
+%   caption format, `\lx@makecaption`, is kept where caption replaces it).
+% witness: synthetic (CAP1)
+% oracle:  pdflatex 0 `!`, "Figura 1: Una figura."; Perl 0 errors (`\AddToHook` a no-op).
+% engines: rust int163a: 1 Error "Generic hooks cannot be added to '\@makecaption'"; CAP1: 1 Error (unchanged).
+% expect:  0 errors, 0 warnings; caption "Figura 1: " + "Una figura."
+% status:  RED
+\documentclass{article}
+\usepackage[spanish]{babel}
+\usepackage{floatrow}
+\usepackage{caption}
+\AddToHook{cmd/@makecaption/before}{\small}
+\begin{document}
+\begin{figure}
+\centering X
+\caption{Una figura.}
+\end{figure}
+\end{document}

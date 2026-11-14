@@ -1,0 +1,18 @@
+% witness: kotex-utf-doc (27 josa errors), kotex-doc, cjk-ko-doc (cjkutf8-josa.sty:176)
+% oracle: pdflatex clean (josa 은/를 chosen by the preceding syllable's jongseong)
+% engines: pdflatex
+% expect: 0 errors; text "한글은 문서를 café 만든다."
+% status: GREEN (batch 56bl, 2026-09-09: K10 pdfTeX byte mouth, package-scoped)
+% mechanism: pdfTeX reads bytes (tex.web §30-31, §341-356) against a 256-entry
+%   \catcode table; kotexutf's josa commands are control symbols over the UTF-8
+%   lead byte reading the next two bytes (\DeclareRobustCommand*\^^ec[2]), and
+%   kotexutf-core.tex:100-136 makes every lead byte an octet reader. A code-point
+%   mouth lexes \은 as one control symbol nobody defines (SHARED with Perl, which
+%   has no kotex binding). The kotexutf/dhucs/CJK bindings switch the mouth to
+%   bytes (inputenc_sty::enable_pdftex_byte_mouth) and bind the packages' own
+%   funnels (\unihangulchar, \CJK@XXX) to emit the character.
+\documentclass{article}
+\usepackage{kotexutf}
+\begin{document}
+한글\은 문서\를 café 만든다.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 2606.11542 (`\textipa{!}` the alveolar click, "!Xoon"), 2601.02906, 2609.04232 (`\textcorner` unreleased)
+% oracle:  pdflatex 0 errors; tipaman2.tex:1105 slot 33 is the (post)alveolar click, :1461 `\textsubbar` "retracted";
+%          tipauni.sty: `!` ǃ U+01C3, `&` ɞ U+025E, `\textcorner` U+031A, `\textsubbar` U+0320 (user ruling 2026-10-20:
+%          the IPA meaning); the corner and the hooks attach to the letter before them; `\textopencorner` has no IPA
+%          mapping and stays the spacing ˹ (so a `\textopencorner x\textcorner` bracket pair, 2604.00122, is ˹x̚);
+%          the tie bars typed `<` `>` (slots 60, 62) join the letters either side
+% engines: rust int36a = "!a, &; k and t t; a; x", 4 Warnings; 77x r1 = "ǃ" as "!", ̴ for `\&`, "k˺", the hooks on
+%          a no-break space, a̱, the ties on a no-break space; Perl 2 Errors (`\textipa` undefined)
+% expect:  0 errors, 0 warnings; "Click ǃa, ɞ; k̚ and t̢ t̡; a̠; ˹x̚; t͜s and t͡s."
+% status:  GREEN (77x r2, t3_fontmap.rs)
+\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+Click \textipa{!a}, \textipa{\&}; \textipa{k\textcorner} and \textipa{t\textrthook} t\textpalhook;
+\textsubbar{a}; \textopencorner x\textcorner; \textipa{t<s} and \textipa{t>s}.
+\end{document}

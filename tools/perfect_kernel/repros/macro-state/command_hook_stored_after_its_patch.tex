@@ -1,0 +1,24 @@
+% mechanism: code stored into a `cmd/<name>` hook after a binding declined its patch: the hook is already usable, so
+%   the kernel never patches again (latex.ltx:5458-5466) and each store is decided by its owner at lthooks' store steps
+%   (`\__hook_hook_gput_code_do:nnn`, latex.ltx:5355ff; `\__hook_gput_next_do:nn`, :6332): the package's (added from
+%   `begindocument/end`) an Info, the document's body `\AddToHook` and `\AddToHookNext` a Warning each.
+% witness: synthetic (revKOMA1 p1); the base reported the document's "Y" with only the package's Info
+% oracle:  pdflatex (TL 2025) 0 `!`; "AYZ1 c." ("Y", "Z" the document's words on the bound `\footnote`, lost and
+%   counted); Perl: `\AddToHook` a no-op, 0 errors 0 warnings.
+% engines: rust KOMA1: 0 errors, 0 warnings, `Info:hook:cmd/footnote/before`.
+% expect:  0 errors, 2 warnings (`cmd/footnote/before`, Y and Z); Info:hook `cmd/footnote/before` (the package's).
+% status:  RED (KOMA1) -> GREEN (KOMA1F)
+\begin{filecontents*}[overwrite]{qahooklate.sty}
+\ProvidesPackage{qahooklate}
+\ExplSyntaxOn
+\hook_gput_code:nnn {begindocument/end} {qahooklate}
+  { \hook_gput_code:nnn {cmd/footnote/before} {qahooklate} {\relax} }
+\ExplSyntaxOff
+\end{filecontents*}
+\documentclass{article}
+\usepackage{qahooklate}
+\begin{document}
+\AddToHook{cmd/footnote/before}{Y}
+\AddToHookNext{cmd/footnote/before}{Z}
+A\footnote{N} c.
+\end{document}

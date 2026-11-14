@@ -1,0 +1,23 @@
+% witness: TL class census 2026-09-24 — mynsfc, qyxf-book, bjfuthesis (ctex-heading-article.def:
+%          490-528 reads \ttls@<section> after titlesec loads: \__ctex_titlesec_spacing:nnnnnn takes its
+%          five groups plus the name; ctex-heading-book.def:669 resets \ttl@chapterout)
+% oracle:  pdflatex 0 errors
+% engines: rust (56hy) and Perl 0.8.8 = \ttls@section undefined (the binding kept no record); under
+%          ctex the six-argument grab ran away into "\cs_set_nopar:Npx … between \csname and
+%          \endcsname (partial cs so far: \CTEX@)"
+% expect:  0 errors; <p>[5][5][5][5][5][ok]</p>
+% status:  RED (56hy) -> GREEN (56ia)
+% mechanism: titlesec.sty:640-658 \ttls@<section> = {left}{right}{before}{after}{afterindent},
+%   filled at load (:1579-1628; the non-\@startsection fallback :1587-1590); :402 \ttl@chapterout.
+\documentclass{article}
+\usepackage{titlesec}
+\makeatletter
+\def\count@groups#1{\count@\z@\expandafter\count@@groups#1\relax}
+\def\count@@groups#1{\ifx\relax#1\else\advance\count@\@ne\expandafter\count@@groups\fi}
+\def\show@ttls#1{\@ifundefined{ttls@#1}{[undefined]}{\expandafter\count@groups\csname ttls@#1\endcsname[\the\count@]}}
+\makeatother
+\begin{document}
+\makeatletter
+\show@ttls{section}\show@ttls{subsection}\show@ttls{subsubsection}\show@ttls{paragraph}\show@ttls{subparagraph}\@ifundefined{ttl@chapterout}{[missing]}{[ok]}
+\makeatother
+\end{document}

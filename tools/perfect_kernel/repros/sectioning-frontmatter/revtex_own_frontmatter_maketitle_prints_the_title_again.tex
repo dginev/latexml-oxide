@@ -1,0 +1,30 @@
+% mechanism: a document that defines its own `\frontmatter@maketitle` (REVTeX 4.1/4.2's `\maketitle` body,
+%   revtex4-2.cls:2670-2684, which `\maketitle` takes back from hyperref at :2703-2708) without the class's `\let`
+%   lines prints a later title block again, so the switch REVTeX's own body makes (revtex4_cls.rs
+%   `switch_off_author_block_after_maketitle`) yields to it — no binding defines `\frontmatter@maketitle` — and the
+%   second title stays in the text, where the kernel puts it
+% witness: 2111.12484 (its `\frontmatter@maketitle` with those lines commented out; the PDF prints "Supplemental
+%   Material: Eigenstate Thermalization …" and the authors again; RB1's first cut dropped the title)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / A. / Text. / Supplement /
+%   Ann Able / Univ X, Town / More."
+% engines: rust int159a, RB1: 0 errors; Ann Able (Univ X, Town); the body paragraph "Text. Supplement More."
+% expect:  0 errors, 0 warnings; Ann Able (Univ X, Town); the body text "Text. Supplement More."
+% status:  GREEN
+\documentclass[aps,prl]{revtex4-2}
+\usepackage{hyperref}
+\makeatletter
+\def\frontmatter@maketitle{\@author@finish\title@column\titleblock@produce\suppressfloats[t]}
+\makeatother
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\title{Supplement}
+\maketitle
+More.
+\end{document}

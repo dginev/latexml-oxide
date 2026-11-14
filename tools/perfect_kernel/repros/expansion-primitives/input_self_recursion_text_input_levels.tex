@@ -1,0 +1,8 @@
+% witness: review probe (65f round 2): a macro that \input's the file it is read from
+% oracle:  pdftex: "! TeX capacity exceeded, sorry [text input levels=15]." (texmf.cnf:868 max_in_open)
+% engines: rust 65a and 65f r1 = nested files until the watchdog ended the run at --timeout (Fatal:timeout:wallclock,
+%          exit 124, no output; ~0.75 MB of log a second)
+% expect:  1 Fatal "TeX capacity exceeded, sorry [text input levels=15]", within seconds (side file loopf.tex holds `\x`)
+% status:  RED (65f r1) -> GREEN (65f r2)
+\def\x{\input loopf }\x
+\bye

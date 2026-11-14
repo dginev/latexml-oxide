@@ -1,0 +1,18 @@
+% witness: astro-ph9601169 (crckapb.sty:665-760: `\@citex`, `\citeyear` over `\@citedata`, `\citeauthoryear`)
+% oracle:  pdflatex 0 errors, the copy prefixed with `\input{book.cls}\newenvironment{opening}{}{}` (the real
+%          one is a whole class): "A RAWCITEX B RAWYEAR C RAWCITEX", the copy's TeX (the paper's years come from its aux file)
+% engines: rust 67int20b = `\citeyear` undefined (Error); 72a r1 = "RAWYEAR" ("?" in the paper: no aux here);
+%          Perl: natbib's `\citeyear` through OmniBus when a `\documentstyle` option is unknown
+% expect:  0 errors, 0 warnings; every citation an <ltx:cite> with its bibref
+% status:  RED (72a r1) -> GREEN (72a r2)
+% preload: ar5iv.sty
+\documentstyle{crckapb}
+\begin{opening}
+\title{T}
+\end{opening}
+\begin{document}
+A \cite{k1} B \citeyear{k1} C \shortcite{k1}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Doe}{1990}]{k1} Doe, 1990.
+\end{thebibliography}
+\end{document}

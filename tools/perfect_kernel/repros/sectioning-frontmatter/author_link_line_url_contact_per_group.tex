@@ -1,0 +1,17 @@
+% witness: the user ruling of 2026-10-20 on 77p r6's question 3 (a link line in an author block is a URL contact);
+%          the `\and` columns of an unmarked block (2606.00315's group rule)
+% oracle:  pdflatex 0 errors: three columns, each its names, institution and link
+% engines: rust 77p r6 = 0 errors; each link an affiliation ("Affiliation: https://…"), the second given to both names
+%          of its column
+% expect:  0 errors, 0 warnings; each link a URL contact of its column's names ("Code:" kept as its text): Ann Able's
+%          own, Bob Baker's and Cat Cole's both
+% status:  RED (77p r6) -> GREEN (77p r7)
+\documentclass{article}
+\usepackage{url}
+\title{T}
+\author{Ann Able \\ Univ A \\ \url{https://ann.example.org} \and Bob Baker, Cat Cole \\ Univ B \\
+Code:~\url{https://lab-b.example.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: authblk's name list prints the marks its names print (`per_author_marks`, P4b2b): a mark no entry answers
+%   and no request could show (`$^{a-b}$`) is printed on the name as digested, nothing lost
+% witness: rev108a B2's shape (the repro author_unanswered_mark_lost_is_counted before P4b2b)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Ablea−b and Bob Baker"
+% engines: 108a r2 to P4b2: Ann Able (the mark lost, 1 Warning unanswered_mark_lost); P4b2b: Ann Able a-b, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able a-b (the mark as digested, `-` for pdflatex's −), Bob Baker
+% status:  GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a-b}$ and Bob Baker}
+\maketitle
+Text.
+\end{document}

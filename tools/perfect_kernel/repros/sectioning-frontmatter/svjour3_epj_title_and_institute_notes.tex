@@ -1,0 +1,20 @@
+% witness: 63g review (svjour3 epjc3: a title `\thanksref` — the EPJ template's own title note — and an institute's
+%          own `\thanksref`, its note cited by no author)
+% oracle:  pdflatex (with the paper's svjour3.cls + svepjc3.clo) 0 errors: "My Title^a"; "Ann Able^1, Bob Baker^1";
+%          "1 Univ A ^b"; footnotes "a Grant note XYZ.", "b Visiting from Z."
+% engines: rust (63g r1) = the title note a <contact> in <title> (schema-invalid), Univ A relabelled by its own
+%          \thanksref and orphaned, its note dropped; HEAD the keys printed as marks
+% expect:  title "My Title" with the thanks note; Ann and Bob each Univ A; the institute's note kept (a creator of
+%          its own, as an orphaned shared annotation); 0 errors
+% status:  RED (63g r1) -> GREEN (63g)
+\documentclass[twocolumn,epjc3]{svjour3}
+\begin{document}
+\title{My Title\thanksref{t1}}
+\thankstext{t1}{Grant note XYZ.}
+\author{Ann Able\thanksref{addr1} \and Bob Baker\thanksref{addr1}}
+\institute{Univ A \label{addr1}\thanksref{e2}}
+\thankstext{e2}{Visiting from Z.}
+\date{}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% What raw code stores as `\xcolor@{}{<literal>}{<model>}{<spec>}` is read safely whatever the model names: `named` once
+% came back to the same lookup, and a model no code defined once raised an Error pdflatex doesn't.
+% witness: the review of M2 r2 (`rawstore`, `rawstore2`).
+% oracle:  pdflatex (TL 2025) 0 errors.
+% engines: int140a E=0. M2 r2 aborts on `x` (stack overflow); without it, E=1 on `y`.
+% expect:  0 errors, 0 warnings, every word kept.
+\documentclass{article}
+\usepackage{xcolor}
+\makeatletter
+\expandafter\def\csname\string\color@x\endcsname{\xcolor@{}{}{named}{x}}
+\expandafter\def\csname\string\color@y\endcsname{\xcolor@{}{0 1 0 rg 0 1 0 RG}{foo}{1}}
+\expandafter\def\csname\string\color@z\endcsname{\xcolor@{}{0 1 0 rg 0 1 0 RG}{HTML}{00FF00}}
+\makeatother
+\begin{document}
+A \textcolor{y}{word} \textcolor{z}{zed} B.
+\textcolor{x}{ex}.
+\end{document}
