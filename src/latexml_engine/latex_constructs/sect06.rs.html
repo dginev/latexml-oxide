@@ -1028,14 +1028,14 @@
 <a href=#1028 id=1028 data-nosnippet>1028</a>  // and also the usual environment capture.
 <a href=#1029 id=1029 data-nosnippet>1029</a>  </span><span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{verbatim}"</span>), <span class="prelude-val">None</span>,
 <a href=#1030 id=1030 data-nosnippet>1030</a>    <span class="string">"&lt;ltx:verbatim font='#font'&gt;#body&lt;/ltx:verbatim&gt;"</span>,
-<a href=#1031 id=1031 data-nosnippet>1031</a>    before_digest =&gt; { before_digest_verbatim() }
+<a href=#1031 id=1031 data-nosnippet>1031</a>    before_digest =&gt; { before_digest_verbatim(<span class="bool-val">false</span>) }
 <a href=#1032 id=1032 data-nosnippet>1032</a>    after_digest =&gt; sub[whatsit] { after_digest_verbatim(<span class="bool-val">false</span>, whatsit)<span class="question-mark">?</span>; },
 <a href=#1033 id=1033 data-nosnippet>1033</a>    before_construct =&gt; sub[document, _whatsit] {
 <a href=#1034 id=1034 data-nosnippet>1034</a>      document.maybe_close_element(<span class="string">"ltx:p"</span>)<span class="question-mark">?</span>; }
 <a href=#1035 id=1035 data-nosnippet>1035</a>  );
 <a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{verbatim*}"</span>), <span class="prelude-val">None</span>,
 <a href=#1037 id=1037 data-nosnippet>1037</a>    <span class="string">"&lt;ltx:verbatim font='#font'&gt;#body&lt;/ltx:verbatim&gt;"</span>,
-<a href=#1038 id=1038 data-nosnippet>1038</a>    before_digest =&gt; { before_digest_verbatim() }
+<a href=#1038 id=1038 data-nosnippet>1038</a>    before_digest =&gt; { before_digest_verbatim(<span class="bool-val">true</span>) }
 <a href=#1039 id=1039 data-nosnippet>1039</a>    after_digest =&gt; sub[whatsit] { after_digest_verbatim(<span class="bool-val">true</span>, whatsit)<span class="question-mark">?</span>; },
 <a href=#1040 id=1040 data-nosnippet>1040</a>    before_construct =&gt; sub[document, _whatsit] {
 <a href=#1041 id=1041 data-nosnippet>1041</a>      document.maybe_close_element(<span class="string">"ltx:p"</span>)<span class="question-mark">?</span>; }
