@@ -1,0 +1,16 @@
+% latex.ltx:15275 `enddocument/info` (atveryend's `\AtEndAfterFileList`) holds the kernel's file list, rerun and
+%   font-substitution warnings, which do not apply to LaTeXML's run, so the end-document code does not run it; a
+%   user's code there is lost uncounted.
+% witness: QA47B census (9 sources with `\AtEndAfterFileList`); synthetic.
+% status:  RED
+% moves:   post-merge
+% oracle:  pdflatex 0 errors; "Text."; two "Package qab Warning"s (info, info2).
+% engines: rust QA47B: "Text.", 0 warnings; Perl: as ours.
+% expect:  0 errors, 2 warnings; <p>Text.</p>
+\documentclass{article}
+\usepackage{atveryend}
+\AtEndAfterFileList{\PackageWarningNoLine{qab}{info}}
+\AddToHook{enddocument/info}{\PackageWarningNoLine{qab}{info2}}
+\begin{document}
+Text.
+\end{document}

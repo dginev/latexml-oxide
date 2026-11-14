@@ -1,0 +1,27 @@
+% latex.ltx:9610-9617 `\@include` runs `include/before`, `include/<name>/before`, the file, `include/<name>/end`,
+%   `include/end`, `include/<name>/after`, `include/after`; a file `\includeonly` leaves out runs :9626-9627
+%   `include/excluded`, `include/<name>/excluded`. (pdflatex writes qabincchap.tex beside this file.)
+% witness: QATRI (BM Q3.3, QA47B); synthetic.
+% status:  GREEN (QA47B; RED before: every hook's text lost)
+% oracle:  pdflatex 0 errors; "Text. [EX][OX] [IB][ICB]Chapter text. [ICE][IE] [ICA][IA] More." (pages apart).
+% engines: rust I824base: "Text. Chapter text. More."; QA47B: the hooks' text in pdflatex's order; Perl: no hooks.
+% expect:  0 errors, 0 warnings; <p>Text.\n[EX][OX]\n[IB][ICB]Chapter text.\n[ICE][IE][ICA][IA]\nMore.</p>
+\documentclass{article}
+\begin{filecontents*}[overwrite]{qabincchap.tex}
+Chapter text.
+\end{filecontents*}
+\includeonly{qabincchap}
+\AddToHook{include/before}{[IB]}
+\AddToHook{include/qabincchap/before}{[ICB]}
+\AddToHook{include/qabincchap/end}{[ICE]}
+\AddToHook{include/end}{[IE]}
+\AddToHook{include/qabincchap/after}{[ICA]}
+\AddToHook{include/after}{[IA]}
+\AddToHook{include/excluded}{[EX]}
+\AddToHook{include/qabincother/excluded}{[OX]}
+\begin{document}
+Text.
+\include{qabincother}
+\include{qabincchap}
+More.
+\end{document}

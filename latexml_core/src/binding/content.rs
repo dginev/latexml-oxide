@@ -2332,13 +2332,10 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
 /// filehook's `file/before` code never ran and currfile's `\currfiledir` stayed the main file's inside an `\input`
 /// file: 2110.08325's `\edef\path{\currfiledir}` + `\input{\path/settings}` read `/settings` (missing; its TikZ
 /// figures undefined).
-fn input_content_with_file_hooks(request: &str, path: &str, options: InputOptions) -> Result<()> {
-  let assign = T_CS!("\\@expl@@@filehook@file@pop@assign@@nnnn");
-  if !options.file_hooks || !load_hooks_active(request)? || lookup_definition(&assign)?.is_none() {
-    return load_tex_content(path, options);
-  }
-  // `\__filehook_file_parse_full_name:nN`: the directory without its last `/`, the name with `.tex` when the request
-  // has no extension
+/// The assignment of a file's names (`\CurrentFile`, `\CurrentFilePath` and their `Used` twins) for `request`, and its
+/// name: `\__filehook_file_parse_full_name:nN`, the directory without its last `/`, the name with `.tex` when the
+/// request has no extension.
+pub fn file_hook_names(request: &str) -> (String, String) {
   let (dir, base) = match request.rsplit_once('/') {
     Some((dir, base)) => (dir, base),
     None => ("", request),
@@ -2348,7 +2345,18 @@ fn input_content_with_file_hooks(request: &str, path: &str, options: InputOption
   } else {
     s!("{base}.tex")
   };
-  let set = s!("\\@expl@@@filehook@file@pop@assign@@nnnn{{{dir}}}{{{name}}}{{{dir}}}{{{name}}}");
+  (
+    s!("\\@expl@@@filehook@file@pop@assign@@nnnn{{{dir}}}{{{name}}}{{{dir}}}{{{name}}}"),
+    name,
+  )
+}
+
+fn input_content_with_file_hooks(request: &str, path: &str, options: InputOptions) -> Result<()> {
+  let assign = T_CS!("\\@expl@@@filehook@file@pop@assign@@nnnn");
+  if !options.file_hooks || !load_hooks_active(request)? || lookup_definition(&assign)?.is_none() {
+    return load_tex_content(path, options);
+  }
+  let (set, name) = file_hook_names(request);
   let pop = lookup_definition(&T_CS!("\\@expl@@@filehook@file@pop@@"))?.is_some();
   let push = lookup_definition(&T_CS!("\\@expl@@@filehook@file@push@@"))?.is_some() && pop;
   let after = s!(

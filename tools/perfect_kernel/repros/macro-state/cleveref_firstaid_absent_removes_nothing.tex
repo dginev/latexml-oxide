@@ -1,0 +1,16 @@
+% cleveref's binding removes the kernel's first aid for cleveref.sty (`package/cleveref/after`, label `firstaid`) only
+%   where it is registered: the chunk dates from 2024-03-22 (firstaid changes.txt), and lthooks' `\RemoveFromHook` of a
+%   missing chunk warns "Cannot remove chunk" (latex.ltx:5530-5547). Here the document removes it first, as an older
+%   kernel lacks it.
+% witness: revQAB1 finding 4 (a TL 2023 or older first aid); synthetic.
+% status:  GREEN (QAB1c; RED before: 1 warning, "LaTeX hooks Warning: Cannot remove chunk 'firstaid'")
+% oracle:  pdflatex 0 errors, 0 warnings; "See section 1."
+% engines: rust QAB1b: 1 warning; QAB1c: 0; Perl: `\RemoveFromHook` a no-op.
+% expect:  0 errors, 0 warnings; <p>See <ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>
+\documentclass{article}
+\RemoveFromHook{package/cleveref/after}[firstaid]
+\usepackage{cleveref}
+\begin{document}
+\section{One}\label{s:a}
+See \cref{s:a}.
+\end{document}

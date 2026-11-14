@@ -1,0 +1,36 @@
+% latex.ltx:15350-15352 `\begin` defines `\@currenvir` before `\UseHook{env/<name>/begin}` (etoolbox's
+%   `\AtBeginEnvironment` adds to that hook); a DefEnvironment runs the hooks before its `\@currenvir` (Perl
+%   Package.pm:1920-1927 digests `@atbegin` first), so they read the enclosing environment's name. A `\newenvironment`
+%   (the by-macro path) reads its own. Not a one-line move: with `\@currenvir` first, 2001.02707's
+%   `\AtBeginEnvironment{defn}{\begin{samepage}}` rose 29 -> 54 errors ("Can't close environment defn; Current are:
+%   samepage, defn"): the end side's frames assume the begin order, so both ends move together.
+% witness: QAB1c sibling of revQAB1's p/vb.tex; 2001.02707 (the end-side coupling); synthetic.
+% status:  RED
+% moves:   post-merge
+% oracle:  pdflatex 0 errors; "[[quote](quote)+itemize+[foo]]."
+% engines: rust QAB1b, QAB1c: "[[center](quote)+center+[foo]]."; Perl: `\AddToHook` a no-op.
+% expect:  0 errors, 0 warnings; <p>[[quote](quote)+itemize+[foo]].</p>
+\documentclass{article}
+\usepackage{etoolbox}
+\makeatletter
+\newcommand\hits{}
+\AddToHook{env/quote/begin}{\xdef\hits{\hits[\@currenvir]}}
+\AddToHook{env/quote/end}{\xdef\hits{\hits(\@currenvir)}}
+\AtBeginEnvironment{itemize}{\xdef\hits{\hits+\@currenvir+}}
+\newenvironment{foo}{}{}
+\AddToHook{env/foo/begin}{\xdef\hits{\hits[\@currenvir]}}
+\makeatother
+\begin{document}
+\begin{center}
+\begin{quote}
+Q
+\end{quote}
+\begin{itemize}
+\item I
+\end{itemize}
+\begin{foo}
+F
+\end{foo}
+\end{center}
+[\hits].
+\end{document}

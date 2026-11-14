@@ -1,0 +1,20 @@
+% The package commands onto the end-document hooks: etoolbox.sty:1746 `\AfterEndDocument` = `enddocument/end`,
+%   atveryend.sty v1.12 `\AfterLastShipout`/`\AtVeryEndDocument`/`\AtVeryVeryEnd`/`\BeforeClearDocument` =
+%   `enddocument/afterlastpage`/`/afteraux`/`/end`/`enddocument`. Perl's bindings drop the code (no-ops, a list
+%   nothing reads).
+% witness: QA47B census (85 sources with `\AfterEndDocument`, 23 `\AtVeryEndDocument`); synthetic.
+% status:  GREEN (QA47B; RED before: "[BCD]" lost, 0 warnings)
+% oracle:  pdflatex 0 errors; "Text. [BCD]"; four "Package qab Warning"s.
+% engines: rust I824base: "Text.", 0 warnings; QA47B: "Text. [BCD]", 4 warnings; Perl: as I824base.
+% expect:  0 errors, 4 warnings; <p>Text.\n[BCD]</p>
+\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{atveryend}
+\BeforeClearDocument{[BCD]}
+\AfterLastShipout{\PackageWarningNoLine{qab}{AfterLastShipout}}
+\AtVeryEndDocument{\PackageWarningNoLine{qab}{AtVeryEndDocument}}
+\AtVeryVeryEnd{\PackageWarningNoLine{qab}{AtVeryVeryEnd}}
+\AfterEndDocument{\PackageWarningNoLine{qab}{AfterEndDocument}}
+\begin{document}
+Text.
+\end{document}
