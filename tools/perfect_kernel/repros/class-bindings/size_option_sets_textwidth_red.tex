@@ -1,0 +1,12 @@
+% The standard classes' size option sets the page: size11.clo/size12.clo give a letter page's `\textwidth` 360pt and
+% 390pt (10pt: 345pt). Ours keeps 345pt at every size, so `width=.3\textwidth` is too narrow (issue 778's MWE,
+% `book[12pt]`: 117pt in the PDF, 103.5pt ours).
+% status:  RED (open; moves: post-merge)
+% witness: issue 778 (book[12pt])
+% oracle:  pdflatex 0 errors: "T 390.0pt"
+% engines: rust I778: T 345.0pt
+% expect:  0 errors; the pdflatex width
+\documentclass[12pt]{article}
+\begin{document}
+T \the\textwidth
+\end{document}
