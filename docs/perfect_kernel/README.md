@@ -1,5 +1,9 @@
 # Perfect Kernel — raw-interpretation conversion of the TeX Live doc corpus
 
+> **The program is COMPLETE** (goal met 2026-11-13, merged into main as `6df4632fb1`; close status in
+> [`../archive/PERFECT_KERNEL_2026-11-13.md`](../archive/PERFECT_KERNEL_2026-11-13.md)). Its open rows continue in
+> [`../SYNC_STATUS.md`](../SYNC_STATUS.md) row R; the docs here stay as their live detail.
+
 **Mission** (from `docs/archive/PERFECT_KERNEL_2026-11-13.md`): iteratively test, audit and develop
 latexml-oxide **kernel** support until package-documentation manuals shipped with
 TeX Live convert to high-quality core XML — schema-healthy markup, all content
