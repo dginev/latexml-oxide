@@ -254,6 +254,10 @@ cache, which is slow.
 [`cargo-nextest`](https://nexte.st) (`cargo install cargo-nextest`) runs the same suite
 several times faster: `cargo nextest run --workspace`.
 
+With [EPUBCheck](https://www.w3.org/publishing/epubcheck/) installed (`apt install epubcheck`), the EPUB tests
+also validate the `.epub` they write; without it they print `SKIP epubcheck …`, and
+`LATEXML_EPUBCHECK_TESTS=1` turns that skip into a failure.
+
 ### Build profiles
 
 `Cargo.toml` defines named profiles for day-to-day development (`test`), the
