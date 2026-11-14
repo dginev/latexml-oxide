@@ -39,7 +39,7 @@ sets each call beside its Perl spelling and its compile-time macro.
 
 Called at the top level of a binding file, or from inside any body.
 
-226 functions, 550 calls.
+226 functions, 551 calls.
 
 | call | documentation |
 |---|---|
@@ -141,7 +141,7 @@ Called at the top level of a binding file, or from inside any body.
 | `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `defined(v)`. |
 | `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
 | `Glue(int) -> Glue`<br>`Glue(int, int, ?, int, ?) -> Glue`<br>`Glue(string) -> Glue` | Perl's `Glue(spec)`: `"1pt plus 2fil minus 1pt"`, an int of sp, or `Glue(sp, plus, pfill, minus, mfill)` with fill orders as names or 0-3; an unreadable spec is an Error and 0. |
-| `IfCondition(string\|Token) -> bool?` | The truth of a conditional (`\iffoo` after `\newif`, `\iftrue`); `()` with an Error for a control sequence that is not one. ([`if_condition`](latexml_core::binding::content::if_condition)) |
+| `IfCondition(string\|Token) -> bool?`<br>`IfCondition(string\|Token, array) -> bool?` | The truth of a conditional (`\iffoo` after `\newif`, `\iftrue`) on the arguments given as an array (`IfCondition("\\ifnum", [1, T_OTHER("<"), 2])`; Perl's `IfCondition($if, @args)`), never read from the input, one not given being `()`; `()` with an Error for a control sequence that is not one. ([`if_condition_args`](latexml_core::binding::content::if_condition_args)) |
 | `Info(string, string, ?, ?)`<br>`Info(string, string, ?, ?, ?)`<br>`Info(string, string, ?, ?, ?, ?)`<br>`Info(string, string, string)` | Log an `Info:` line, plus optional details. |
 | `Input(string)` | Input a TeX file (`\input`'s core). ([`input`](latexml_core::binding::content::input)) |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | Find and load the definitions for a package or class. ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
@@ -163,7 +163,7 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupMapping(string, string) -> ?` | Read one key out of a named mapping, with the type it was stored as; `()` when absent. ([`lookup_mapping`](latexml_core::state::lookup_mapping)) |
 | `LookupMappingKeys(string) -> array` | The keys of a named mapping, sorted. ([`with_mapping_keys`](latexml_core::state::with_mapping_keys)) |
 | `LookupMathcode(string) -> ?` | A character's math code; `()` when the table holds none. ([`lookup_mathcode`](latexml_core::state::lookup_mathcode)) |
-| `LookupMeaning(string\|Token) -> Definition\|Token?` | What a token means right now: its definition (a `Definition` handle, for `AssignMeaning`) or a Token, `()` when undefined; in a string, Perl's `ToString` (the CS and its parameters). **Deprecated** (Warns once per binding load): compared with a string, as the string it returned before. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
+| `LookupMeaning(string\|Token) -> Definition\|Token?` | What a token means right now: its definition (a `Definition` handle, for `AssignMeaning`) or a Token, `()` when undefined; in a string, Perl's `ToString` (the CS and its parameters). **Deprecated** (Warns once per binding load): compared with a string, or its `is_empty`/`len`, as the string it returned before. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
 | `LookupNumber(string) -> int` | Read a value as a number. ([`lookup_number`](latexml_core::state::lookup_number)) |
 | `LookupRegister(string\|Token) -> ?`<br>`LookupRegister(string\|Token, array) -> ?` | Perl's `LookupRegister(cs[, params])`: the register's typed value (Number, Dimension, Glue, MuGlue, Tokens); `()` with a Warning when `cs` is no register, undefined included. ([`lookup_register_definition`](latexml_core::state::lookup_register_definition)) |
 | `LookupRegisterOrDefault(string\|Token) -> ?` | A register's typed value (as `LookupRegister`), a Number 0 when `cs` is no register, without a Warning. |
@@ -353,10 +353,12 @@ The whatsit a hook receives positionally, as Perl passes `$whatsit` (Whatsit.pm)
 
 An already-installed definition, for pushing hooks onto it.
 
-12 functions, 12 calls.
+14 functions, 14 calls.
 
 | call | documentation |
 |---|---|
+| `is_empty() -> bool` | **Deprecated** (Warns once per binding load): `LookupMeaning`'s value as the string it returned before; use `!defined(value)`, or `ToString(value).is_empty()`. |
+| `len() -> int` | **Deprecated** (Warns once per binding load): the length of the string `LookupMeaning` returned before; use `ToString(value).len()`. |
 | `pushAfterConstruct(Fn)` | Append a hook to that definition's `afterConstruct` list. |
 | `pushAfterDigest(Fn)` | Append a hook to that definition's `afterDigest` list. |
 | `pushAfterDigestBody(Fn)` | Append a hook to that definition's `afterDigestBody` list. |

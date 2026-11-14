@@ -111,7 +111,7 @@ pub(super) fn make_engine() -> Engine {
         return Err(
           format!(
             "DefPrimitiveI: the replacement is a closure or (), got {}",
-            body.type_name()
+            type_label(&body)
           )
           .into(),
         );
@@ -152,15 +152,20 @@ pub(super) fn make_engine() -> Engine {
     move |cs: Dynamic, params: Dynamic, repl: Dynamic| constructor_i(cs, params, repl, Map::new()),
   );
   engine.register_fn("DefConstructorI", constructor_i);
-  // Perl's `IfCondition($if)` (Package.pm:1238): the conditional's truth, `()` (with its Error) when not one.
-  engine.register_fn("IfCondition", |cs: Dynamic| -> RhaiResult<Dynamic> {
+  // Perl's `IfCondition($if, @args)` (Package.pm:1238): the conditional's truth on the given arguments (an array, Rhai
+  // having no variadics), never reading the input; `()` (with its Error) when not one.
+  let if_condition = |cs: Dynamic, args: rhai::Array| -> RhaiResult<Dynamic> {
     let cs = coerce_cs("IfCondition", cs)?;
     Ok(
-      latexml_core::binding::content::if_condition(&cs)
+      latexml_core::binding::content::if_condition_args(&cs, values::parameter_args(args))
         .map_err(rhai_err)?
         .map_or(Dynamic::UNIT, Dynamic::from),
     )
+  };
+  engine.register_fn("IfCondition", move |cs: Dynamic| {
+    if_condition(cs, rhai::Array::new())
   });
+  engine.register_fn("IfCondition", if_condition);
   // Class/package option. Mirrors the `DeclareOption!` macro's lowering
   // (setup_binding_language.rs): push the name onto `@declaredoptions` and
   // define a `\ds@<opt>` primitive carrying the body. Installed immediately,
@@ -252,7 +257,8 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("to_debug", |t: &mut Token| Tokens::new(vec![*t]).untex());
   engine.register_fn("to_debug", |t: &mut Tokens| t.clone().untex());
   // Token.pm's and Tokens.pm's accessors: `unlist` the list's tokens (a Token's is itself), `getString` the text,
-  // `getCSName` the name a definition is stored under (`{` of any spelling is `{`), `getCatcode` the catcode's int.
+  // `getCSName` the name a definition is stored under (a `{` of any spelling is `Begin`, Token.pm:206 and :227),
+  // `getCatcode` the catcode's int.
   engine.register_fn("unlist", |t: &mut Tokens| -> rhai::Array {
     t.clone().unlist().into_iter().map(Dynamic::from).collect()
   });
@@ -767,6 +773,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("!=", move |_: (), s: &str| !unit_test(s));
   engine.register_fn("==", move |s: &str, _: ()| unit_test(s));
   engine.register_fn("!=", move |s: &str, _: ()| !unit_test(s));
+  // LookupMeaning's value read as the string it was before (`.is_empty()`, `.len()`): its `ToString`, Warned (ruling 9).
+  register_string_length::<Token>(&mut engine);
+  register_string_length::<DefinitionProxy>(&mut engine);
+  register_string_length::<()>(&mut engine);
   // Perl's `defined($v)`: every value but `()`.
   engine.register_fn("defined", |v: Dynamic| !v.is_unit());
   engine.register_fn("ToString", |_w: WhatsitProxy| whatsit_string());
@@ -2537,7 +2547,7 @@ pub(super) fn make_engine() -> Engine {
     |_d: &mut DocProxy, nodes: rhai::Array| -> std::result::Result<(), Box<EvalAltResult>> {
       let mut owned = Vec::with_capacity(nodes.len());
       for (i, entry) in nodes.into_iter().enumerate() {
-        let kind = entry.type_name();
+        let kind = type_label(&entry);
         owned.push(entry.try_cast::<NodeProxy>().ok_or_else(|| {
           Box::<EvalAltResult>::from(format!(
             "insertXML: entry {i} of the array is a {kind}, not a Node (from ParseXML)"
@@ -2819,7 +2829,7 @@ fn tokens_of(items: rhai::Array) -> std::result::Result<Tokens, Box<EvalAltResul
       return Err(
         format!(
           "Tokens: expected a Token or Tokens, got {}",
-          item.type_name()
+          type_label(&item)
         )
         .into(),
       );
@@ -2837,7 +2847,7 @@ fn text_box(s: &str, font: Dynamic, tokens: Dynamic, props: Map) -> RhaiResult<D
   let font = match font.clone().try_cast::<latexml_core::common::font::Font>() {
     Some(f) => Some(Rc::new(f)),
     None if font.is_unit() => None,
-    None => return Err(format!("Box: the font is a Font or (), got {}", font.type_name()).into()),
+    None => return Err(format!("Box: the font is a Font or (), got {}", type_label(&font)).into()),
   };
   let tokens = if tokens.is_unit() {
     Tokens::default()
@@ -2862,7 +2872,7 @@ fn list_of(boxes: rhai::Array, reqmode: Option<String>) -> RhaiResult<Digested> 
   for b in boxes.into_iter().filter(|b| !b.is_unit()) {
     match b.clone().try_cast::<Digested>() {
       Some(d) => items.push(d),
-      None => return Err(format!("List: expected boxes, got {}", b.type_name()).into()),
+      None => return Err(format!("List: expected boxes, got {}", type_label(&b)).into()),
     }
   }
   if items.len() == 1
@@ -3459,4 +3469,24 @@ pub(super) fn register_string_tests<T: Clone + 'static>(engine: &mut Engine, old
   engine.register_fn("!=", move |v: T, s: &str| !same(v, s));
   engine.register_fn("==", move |s: &str, v: T| same(v, s));
   engine.register_fn("!=", move |s: &str, v: T| !same(v, s));
+}
+
+/// `is_empty` and `len` of a value as its string (`ToString`, `()` as ""), each deprecated once per binding load.
+fn register_string_length<T: Clone + 'static>(engine: &mut Engine) {
+  let string = |v: &mut T| {
+    let v = Dynamic::from(v.clone());
+    if v.is_unit() {
+      String::new()
+    } else {
+      dynamic_to_string(v)
+    }
+  };
+  engine.register_fn("is_empty", move |v: &mut T| {
+    warn_deprecated("value.is_empty()");
+    string(v).is_empty()
+  });
+  engine.register_fn("len", move |v: &mut T| {
+    warn_deprecated("value.len()");
+    string(v).chars().count() as i64
+  });
 }

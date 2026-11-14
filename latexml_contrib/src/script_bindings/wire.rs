@@ -100,29 +100,26 @@ fn macro_closure(
   })
 }
 
-/// Perl's `coerceCS` (Package.pm:160): a Token as is; a string names a control sequence, `\csname X\endcsname`
-/// as `\X`, and a single character is TokenizeInternal'd (an active character).
+/// Perl's `coerceCS` (Package.pm:160): a Token as is; any other value as its string (Tokens' text, Perl's `ToString`),
+/// which names a control sequence, `\csname X\endcsname` (a space after `\csname`) as `\X`, a single character
+/// TokenizeInternal'd (an active character).
 pub(super) fn coerce_cs(call: &str, v: Dynamic) -> std::result::Result<Token, Box<EvalAltResult>> {
   if let Some(t) = v.clone().try_cast::<Token>() {
     return Ok(t);
   }
-  let Some(s) = v.clone().into_string().ok() else {
-    return Err(
-      format!(
-        "{call}: expected a control-sequence name or a Token, got {}",
-        v.type_name()
-      )
-      .into(),
-    );
-  };
+  if v.is_unit() {
+    return Err(format!("{call}: expected a control-sequence name or a Token, got ()").into());
+  }
+  let s = dynamic_to_string(v);
   if let Some(name) = s
     .strip_prefix("\\csname")
+    .filter(|r| r.starts_with(char::is_whitespace))
     .and_then(|r| r.trim_start().strip_suffix("\\endcsname"))
   {
     Ok(latexml_core::T_CS!(format!("\\{name}").as_str()))
   } else if s.chars().count() == 1 {
-    let mut tokens = mouth::tokenize_internal(TeXString::assembled(s)).unlist();
-    Ok(tokens.remove(0))
+    let tokens = mouth::tokenize_internal(TeXString::assembled(s.clone())).unlist();
+    (tokens.into_iter().next()).ok_or_else(|| format!("{call}: '{s}' reads as no token").into())
   } else {
     Ok(latexml_core::T_CS!(s.as_str()))
   }
@@ -141,7 +138,7 @@ pub(super) fn i_form_params(
   } else {
     Err(Error::from(format!(
       "{call}: the parameter list is a string or (), got {}",
-      spec.type_name()
+      type_label(&spec)
     )))
   }
 }
@@ -172,7 +169,7 @@ pub(super) fn wire_macro_i(
   } else {
     return Err(Error::from(format!(
       "DefMacroI ({cs_name}): the expansion is a closure, a string, Tokens, a Token or (), got {}",
-      body.type_name()
+      type_label(&body)
     )));
   };
   let options = opts
@@ -335,7 +332,7 @@ pub(super) fn wire_constructor_i(
   } else {
     return Err(Error::from(format!(
       "DefConstructorI ({name}): the replacement is a template string, a closure or (), got {}",
-      repl.type_name()
+      type_label(&repl)
     )));
   };
   let builder = ConstructorBuilder::from_cs(cs, paramlist);
@@ -569,7 +566,7 @@ pub(super) fn apply_opts<B: BindingBuilder>(
           builder = builder.font(FontDirective::Asset(Rc::new(font)));
         } else if matches!(key.as_str(), "sizer" | "properties" | "font") {
           // A string sizer (Perl's `sizer => '#1'`) or a non-map font/properties.
-          unsupported_option(operation, &format!("{key} as a {}", val.type_name()));
+          unsupported_option(operation, &format!("{key} as a {}", type_label(&val)));
         } else if let Some(ov) = dynamic_to_option_value(&val) {
           // Scalar option → the builder's generic, single-source `set_option`.
           builder = builder.set_option(key.as_str(), ov)?;
@@ -1046,10 +1043,12 @@ pub(super) fn wire_conditional(
   let cs_name = cs.to_string();
   let engine = engine.clone();
   let ast = ast.clone();
+  let nargs = paramlist.as_ref().map_or(0, |p| p.get_num_args());
   let closure = test.map(|test| -> ConditionalClosure {
-    Rc::new(move |args: Vec<ArgWrap>| -> Result<bool> {
+    Rc::new(move |mut args: Vec<ArgWrap>| -> Result<bool> {
       // Perl's `&$test($gullet, @args)` (Conditional.pm) when the test declares the gullet; else the arguments alone.
-      let nargs = args.len();
+      // An argument `IfCondition` was not given is Perl's undef, `()`.
+      args.resize_with(nargs, ArgWrap::default);
       let mut dyn_args: Vec<Dynamic> = Vec::with_capacity(nargs + 1);
       if declares_lead(&ast, &test, nargs) {
         dyn_args.push(Dynamic::from(GulletHandle));

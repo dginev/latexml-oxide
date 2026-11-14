@@ -342,10 +342,14 @@ macro_rules! TypedConditional {
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     let closure : ConditionalClosure =  Rc::new(
     move |args: Vec<ArgWrap>| {
-      let [$($var),*] : [_; $crate::count!($($var)*)] = args.try_into().unwrap();
+      // `IfCondition($if, @args)` (Package.pm:1238) may pass fewer: the rest is Perl's undef, a silent default.
+      let mut args = args.into_iter();
+      let [$($var),*] : [(ArgWrap, bool); $crate::count!($($var)*)] =
+        std::array::from_fn(|_| args.next().map_or((ArgWrap::None, true), |a| (a, false)));
       $(
-          let $var: parameter_rust_type!($ptype) = match $var.try_into() {
+          let $var: parameter_rust_type!($ptype) = match $var.0.try_into() {
             Ok(v) => v,
+            Err(_) if $var.1 => <parameter_rust_type!($ptype)>::default(),
             Err(e) => {
               Error!("expected", "argument", e);
               <parameter_rust_type!($ptype)>::default()

@@ -651,9 +651,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "IfCondition",
     Mirror("IfCondition", ""),
     Doc::Rust(
-      "The truth of a conditional (`\\iffoo` after `\\newif`, `\\iftrue`); `()` with an Error for a control \
-       sequence that is not one.",
-      "latexml_core::binding::content::if_condition",
+      "The truth of a conditional (`\\iffoo` after `\\newif`, `\\iftrue`) on the arguments given as an array \
+       (`IfCondition(\"\\\\ifnum\", [1, T_OTHER(\"<\"), 2])`; Perl's `IfCondition($if, @args)`), never read from the \
+       input, one not given being `()`; `()` with an Error for a control sequence that is not one.",
+      "latexml_core::binding::content::if_condition_args",
     ),
   ),
   (
@@ -1055,7 +1056,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     Doc::Rust(
       "What a token means right now: its definition (a `Definition` handle, for `AssignMeaning`) or a Token, `()` \
        when undefined; in a string, Perl's `ToString` (the CS and its parameters). **Deprecated** (Warns once per \
-       binding load): compared with a string, as the string it returned before.",
+       binding load): compared with a string, or its `is_empty`/`len`, as the string it returned before.",
       "latexml_core::state::lookup_meaning",
     ),
   ),
@@ -2355,6 +2356,12 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
 ];
 
+/// `LookupMeaning`'s value read as the string it returned before (ruling 9), deprecated on each handle it returns.
+const MEANING_IS_EMPTY: &str = "**Deprecated** (Warns once per binding load): `LookupMeaning`'s value as the string it \
+                                returned before; use `!defined(value)`, or `ToString(value).is_empty()`.";
+const MEANING_LEN: &str = "**Deprecated** (Warns once per binding load): the length of the string `LookupMeaning` \
+                           returned before; use `ToString(value).len()`.";
+
 /// Calls whose meaning depends on the HANDLE they are called on. One name
 /// registered on two receivers is two different functions, and a single
 /// name-keyed [`DOCS`] entry would document one of them wrongly:
@@ -2365,6 +2372,27 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
 /// [`ambiguous_names`] enforces the rule: a name that appears under more than
 /// one handle must have an entry here for EACH of them.
 const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
+  (
+    "()",
+    "is_empty",
+    Mirror("", ""),
+    Doc::Note(MEANING_IS_EMPTY),
+  ),
+  ("()", "len", Mirror("", ""), Doc::Note(MEANING_LEN)),
+  (
+    "Definition",
+    "is_empty",
+    Mirror("", ""),
+    Doc::Note(MEANING_IS_EMPTY),
+  ),
+  ("Definition", "len", Mirror("", ""), Doc::Note(MEANING_LEN)),
+  (
+    "Token",
+    "is_empty",
+    Mirror("", ""),
+    Doc::Note(MEANING_IS_EMPTY),
+  ),
+  ("Token", "len", Mirror("", ""), Doc::Note(MEANING_LEN)),
   (
     "Digested",
     "getFont",

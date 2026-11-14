@@ -162,7 +162,7 @@ fn def_register(proto: &str, value: Dynamic, opts: Map) -> RhaiResult<()> {
     dynamic_to_register_value(&value).ok_or_else(|| {
       Box::<EvalAltResult>::from(format!(
         "{operation}: the value is a {}, not a Number, Dimension, Glue, MuGlue, Tokens or Token",
-        value.type_name().rsplit("::").next().unwrap_or_default()
+        type_label(&value)
       ))
     })?
   };
@@ -221,7 +221,7 @@ fn register_getter(
     if value.is_none() && !ret.is_unit() {
       let msg = format!(
         "{what} returned a {}, not a register value",
-        ret.type_name()
+        type_label(&ret)
       );
       let _ = engine::script_error("unexpected", &what, &msg, None);
     }
@@ -254,8 +254,9 @@ fn register_setter(
   )
 }
 
-/// A register's parameters (`LookupRegister("\\count", 5)`), as the arguments its prototype reads.
-fn register_args(args: rhai::Array) -> Vec<ArgWrap> {
+/// A definition's arguments given by the caller (`LookupRegister("\\count", 5)`, `IfCondition("\\ifnum", [1, "<", 2])`),
+/// as its prototype would read them.
+pub(super) fn parameter_args(args: rhai::Array) -> Vec<ArgWrap> {
   args
     .into_iter()
     .map(|a| match dynamic_to_register_value(&a) {
@@ -276,7 +277,7 @@ fn lookup_register(cs: Dynamic, args: rhai::Array) -> RhaiResult<Dynamic> {
     return Ok(Dynamic::UNIT);
   };
   Ok(
-    latexml_core::definition::Definition::value_of(&*defn, register_args(args))
+    latexml_core::definition::Definition::value_of(&*defn, parameter_args(args))
       .map_or(Dynamic::UNIT, register_value_to_dynamic),
   )
 }
@@ -294,7 +295,7 @@ fn assign_register(cs: Dynamic, value: Dynamic, scope: &str, args: rhai::Array) 
       ))
     })?
   };
-  latexml_core::state::assign_register_token(&cs, value, scope_of(scope), register_args(args))
+  latexml_core::state::assign_register_token(&cs, value, scope_of(scope), parameter_args(args))
     .map_err(rhai_err)
 }
 

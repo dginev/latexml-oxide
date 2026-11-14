@@ -270,3 +270,37 @@ fn rhai_values_print_as_perl() {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
   }
 }
+
+/// revRHAIH's rows (repro `rhai-bindings/ifcondition_args_and_coerce_cs`), red on 396ffa641ea (the binding load failed
+/// on `DefMacroI(Tokenize(…))`, 4 Errors, `IfCondition("\\ifx")` read the document). Perl's twin: these paragraphs and
+/// the two SetCondition Errors; ours adds ruling 9's two deprecation Warnings.
+const LXH: &str = include_str!("../../../tools/perfect_kernel/repros/rhai-bindings/lxh.sty.rhai");
+
+const LXH_TEX: &str = include_str!(
+  "../../../tools/perfect_kernel/repros/rhai-bindings/ifcondition_args_and_coerce_cs.tex"
+);
+
+#[test]
+fn rhai_review_rows_round_h() {
+  let (log, xml) = convert_files_with(LXH_TEX, &[("lxh.sty.rhai", LXH)], None);
+  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(warning_count(&log), 2, "{log}");
+  for line in [
+    "Error:expected:conditional Expected a conditional defined by \\newif, got '\\relax'",
+    "Error:expected:conditional Expected a conditional defined by \\newif, got '\\nosuch'",
+    "Warning:deprecated:value.is_empty()",
+    "Warning:deprecated:value.len()",
+  ] {
+    assert!(log.contains(line), "{line}\n{log}");
+  }
+  for (id, para) in [
+    ("p1", r#"<para xml:id="p1"><p>ME</p></para>"#),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>T T F T T F D U E 6 1</p></para>"#,
+    ),
+    ("p3", r#"<para xml:id="p3"><p>X</p></para>"#),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+}
