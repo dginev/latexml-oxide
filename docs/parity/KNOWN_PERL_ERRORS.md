@@ -9,7 +9,7 @@ For Rust-specific error bookkeeping, see `docs/SYNC_STATUS.md`.
 > the second from `\define@cmdkey` (#80) to `\maketitle` inside box captures (#86). Code comments citing #80, #82
 > and #83 (keyval, the locked `\newtheorem`, the `\index` phrase splitter) mean the second series. Cite these by
 > number *and* title. New entries take the next free number from
-> `tools/perfect_kernel/next_entry_numbers.sh`, allocated at integration.
+> `tools/perfect_kernel/next_entry_numbers.sh` (it counts open PR heads too), allocated at integration.
 
 ---
 
