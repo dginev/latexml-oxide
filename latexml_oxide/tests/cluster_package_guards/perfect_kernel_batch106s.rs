@@ -150,6 +150,7 @@ fn a_runaway_run_leaves_no_ghost_fatal() {
 /// Distinct path: a run's `\fi` matching a conditional opened before it.
 #[test]
 fn a_run_keeps_the_documents_open_conditional() {
+  // (QAB8: the class's `\bigskip`s between the paragraphs are kept on the next, `--ltx-skip-before`, OD #1050)
   let tex = repro!("check_run_keeps_the_documents_open_conditional");
   let cls = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/check_dangling_keywords.cls"
@@ -162,7 +163,7 @@ fn a_run_keeps_the_documents_open_conditional() {
   assert!(!log.contains("deposit was dropped"), "{log}");
   assert_eq!(
     xml,
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <pagination role="newpage"/> <para xml:id="p1"> <p xml:id="p1.1"><text xml:id="p1.1.1"/></p> </para> <para xml:id="p2"> <p xml:id="p2.1"><text font="bold" xml:id="p2.1.1">Keywords: inverse problems; tomography</text></p> </para> <para xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <pagination role="newpage"/> <para xml:id="p1"> <p xml:id="p1.1"><text xml:id="p1.1.1"/></p> </para> <para cssstyle="--ltx-skip-before:12.0pt" xml:id="p2"> <p xml:id="p2.1"><text font="bold" xml:id="p2.1.1">Keywords: inverse problems; tomography</text></p> </para> <para cssstyle="--ltx-skip-before:12.0pt" xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
   );
 }
 
