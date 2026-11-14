@@ -3,10 +3,14 @@
 % the German and French `.ldf` files for bindings whose `\date<lang>` was an empty stub (babel's own
 % `locale/invalid/babel-ngerman.tex` lookup is not the cause: pdflatex reads it too). The bindings
 % now define the dates as germanb.ldf:124-130, ngermanb.ldf:107-113 and french.ldf:332-345 do.
-% status:  GREEN (58p)
-% oracle:  pdflatex 0 errors: "1. Oktober 2026" / "1. Oktober 2026" / "1er octobre 2026".
+% status:  GREEN (58p); `\mainlocalename` RED (f2a0ab76509) -> GREEN (WIN1a)
+% oracle:  pdflatex 0 errors: "1. Oktober 2026" / "1. Oktober 2026" / "1er octobre 2026" / "ngerman"
+%   (babel.sty `\main@language` :1190 `\let\mainlocalename`: the main language, not the current one).
+% engines: rust f2a0ab76509: `undefined:\mainlocalename` (our `.ldf` bindings never run `\main@language`;
+%   on TL 2026 babel 26.16's begindocument info (babel.sty:4492) reads it in every babel document).
 % engines: rust 58k3: "October 1, 2026" for all three.
-% expect:  0 errors, 1 warning (babel's "The name 'german' … old 1901 variant", pdflatex too).
+% expect:  0 errors, 1 warning (babel's "The name 'german' … old 1901 variant", pdflatex too) on babel
+%   25.x (TL 2025 babel-german.tex:12-17); 0 warnings on babel 26.16 (TL 2026 r81049), which dropped it.
 \documentclass{article}
 \usepackage[french,german,ngerman]{babel}
 \day=1 \month=10 \year=2026
@@ -16,4 +20,6 @@
 \selectlanguage{german}\today
 
 \selectlanguage{french}\today
+
+\mainlocalename
 \end{document}

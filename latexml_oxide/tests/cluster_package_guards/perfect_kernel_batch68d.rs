@@ -173,9 +173,13 @@ fn in_tex_live(file: &str) -> bool {
   })
 }
 
+/// The stand-ins a TeX Live after 2025 distributes: TL 2026's rasti.cls (rasti-journal).
+const ADDED_AFTER_2025: &[&str] = &["rasti.cls"];
+
 /// Every stand-in for an author's file, every former TeX Live file and every LaTeXML-own file
 /// (`latexml_core::binding::author_files`) is a registered binding TeX Live 2025 does not distribute (kpathsea finds
-/// none of them in its trees; it finds `article.cls`, so it is there to ask), and no name is on two lists.
+/// none of them in its trees; it finds `article.cls`, so it is there to ask), and no name is on two lists. A later tree
+/// may distribute a stand-in (`ADDED_AFTER_2025`); it still stands in, for the paper's copy (batch72a's tree_file row).
 #[test]
 fn author_file_stand_ins_are_bindings_outside_tex_live() {
   use latexml_core::binding::author_files::{AUTHOR_FILE_STAND_INS, FORMER_TEX_LIVE, LATEXML_OWN};
@@ -199,7 +203,15 @@ fn author_file_stand_ins_are_bindings_outside_tex_live() {
         registered.iter().any(|r| r == file),
         "{list}: {file} is no registered binding"
       );
-      assert!(!in_tex_live(file), "{list}: {file} is a TeX Live file");
+      assert!(
+        !in_tex_live(file) || (*list == "AUTHOR_FILE_STAND_INS" && ADDED_AFTER_2025.contains(file)),
+        "{list}: {file} is a TeX Live file"
+      );
+      assert!(
+        *list != "AUTHOR_FILE_STAND_INS"
+          || latexml_core::binding::author_files::stands_in_for_an_author_file(file),
+        "{file} does not stand in"
+      );
       if let Some(other) = seen.insert(file.to_string(), *list) {
         panic!("{file} is on both {other} and {list}");
       }
@@ -272,7 +284,23 @@ fn tex_live_runfiles() -> Option<std::collections::HashSet<String>> {
     .output()
     .ok()?;
   let root = String::from_utf8_lossy(&root.stdout).trim().to_string();
-  let db = std::fs::read_to_string(std::path::Path::new(&root).join("tlpkg/texlive.tlpdb")).ok()?;
+  let tlpkg = std::path::Path::new(&root).join("tlpkg");
+  // The installed `texlive.tlpdb` lists only what is INSTALLED: on a partial tree (CI's Windows `scheme-medium`)
+  // pstricks or vntex would read as outside TeX Live. tlmgr's cached copy of the repository's catalog
+  // (`texlive.tlpdb.main.<hash>`) lists all of it; the installed one does only on a `scheme-full` install.
+  let catalog = std::fs::read_dir(&tlpkg).ok()?.flatten().find_map(|entry| {
+    let name = entry.file_name();
+    name
+      .to_str()?
+      .starts_with("texlive.tlpdb.main.")
+      .then(|| std::fs::read_to_string(entry.path()).ok())?
+  });
+  let db = match catalog {
+    Some(catalog) => catalog,
+    None => std::fs::read_to_string(tlpkg.join("texlive.tlpdb"))
+      .ok()
+      .filter(|db| db.lines().any(|line| line == "name scheme-full"))?,
+  };
   let mut in_runfiles = false;
   let mut runfiles = std::collections::HashSet::new();
   for line in db.lines() {

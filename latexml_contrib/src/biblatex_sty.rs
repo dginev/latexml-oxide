@@ -2446,6 +2446,10 @@ LoadDefinitions!({
   // Witnesses: biblatex-oxref oxnum/oxalph/oxyear/oxnotes-doc, biblatex-cse-doc,
   // biblatex-musuos. Guard: `perfect_kernel_batch54::biblatex_loads_bbx_before_cbx`.
   def_macro_noop("\\DeclareDataInheritance[]{}{}{}")?;
+  // biblatex.sty:14093 `\DeclareDatafieldSet{name}{\member[…]…}` (a set for biber's maps) and :3398
+  // `\DeclarePageCommands*{\cs…}` (the page-number checks), both used by biblatex-sbl.def:551/:1384 (TL 2026).
+  def_macro_noop("\\DeclareDatafieldSet{}{}")?;
+  def_macro_noop("\\DeclarePageCommands OptionalMatch:* {}")?;
   def_macro_noop("\\DeclareRangeChars OptionalMatch:* {}")?;
   def_macro_noop("\\NumCheckSetup{}")?;
   def_macro_noop("\\NumsCheckSetup{}")?;
@@ -4361,6 +4365,9 @@ LoadDefinitions!({
 \providetoggle{blx@uniquework}
 "#
   );
+  // biblatex.sty:15846/:15582 the `trackfloats`/`backreffloats` option toggles, false by default: biblatex-sbl.def:178
+  // (TL 2026) tests the first at `\AtEndPreamble`.
+  RawTeX!(r"\providetoggle{blx@trackfloats}\providetoggle{blx@backreffloats}");
   // biblatex.sty:356-445: a footnote's text sets `blx@footnote` (the patched `\@footnotetext`); a note's text here
   // begins with `\lx@note@reset` (sect03.rs), inside the note's group. Read by `\mkbibfootnote`.
   RawTeX!(r"\g@addto@macro\lx@note@reset{\toggletrue{blx@footnote}}");

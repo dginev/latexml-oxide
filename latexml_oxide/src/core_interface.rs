@@ -1224,7 +1224,7 @@ impl DigestionAPI for Core {
     let canonical_request = if pathname::is_literaldata(&request) || pathname::is_url(&request) {
       request.clone()
     } else {
-      std::fs::canonicalize(&request)
+      pathname::canonicalize(&request)
         .ok()
         .and_then(|p| p.to_str().map(String::from))
         .unwrap_or_else(|| request.clone())

@@ -333,7 +333,9 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
 ];
 
 /// Is `file` (`arxiv.sty`) the name of a binding that stands in for an author's file? Matched without regard to
-/// case, as the binding registry matches a request (`jhep.cls` → `JHEP.cls`).
+/// case, as the binding registry matches a request (`jhep.cls` → `JHEP.cls`). It stands in on every tree: a paper's copy
+/// is read after it (TeX reads the document's directory first), and where the paper ships none, a later tree's own file
+/// (TL 2026's `rasti.cls`) answers `\IfFileExists` by the disk search made before the binding is asked.
 pub fn stands_in_for_an_author_file(file: &str) -> bool {
   AUTHOR_FILE_STAND_INS
     .iter()

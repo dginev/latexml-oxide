@@ -1,0 +1,12 @@
+% witness: synthetic (revWIN1gh: fancyvrb 4.8's line box `\hbox to\linewidth{...\hfil}`, fancyvrb.sty:707, where 4.6
+%          had `\hss`; WIN1g's binding swaps the token back, `substitute_in_macro`)
+% oracle:  pdflatex 0 `!`: "[AB] [AB] [AB] [AB]" (glue prints nothing)
+% engines: rust WIN1ghF (TL 2025) 0 errors: [AB ] [AB] [AB ] [AB] — `\hfil` is a space box (isFill); Perl the same
+%          (TeX_Glue.pool.ltxml:128 `Box(' ', ..., isSpace => 1, isFill => 1)`)
+% expect:  0 errors; no text from the glue at a box's end: [AB] [AB] [AB] [AB]
+% status:  RED (WIN1ghF)
+% moves:   post-merge
+\documentclass{article}
+\begin{document}
+[\hbox to 3cm{AB\hfil}] [\hbox to 3cm{AB\hss}] [\hbox{AB\hfil}] [\makebox[3cm][l]{AB}]
+\end{document}

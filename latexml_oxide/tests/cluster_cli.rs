@@ -448,6 +448,76 @@ mod cli_css_resource_copy {
       "remote @import should be left untouched, not copied locally",
     );
   }
+
+  /// Issue 807: every page links where `copyResource` put each resource, relative to that page (Perl
+  /// XSLT.pm:71-125) — an absolute `--css`/`--javascript` outside the source at the top level, a contained relative
+  /// one at its own path, `../` once from a split sub-page; the bundled `<ltx:resource>` CSS likewise.
+  #[test]
+  fn cli_resources_link_their_copies_from_every_page() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let work = tempfile::tempdir().expect("create tempdir");
+    let styles = work.path().join("styles");
+    std::fs::create_dir_all(styles.join("sub")).unwrap();
+    std::fs::write(styles.join("main.css"), "@import url(\"sub/x.css\");\n").unwrap();
+    std::fs::write(styles.join("sub/x.css"), "p { margin: 0; }\n").unwrap();
+    std::fs::write(styles.join("app.js"), "console.log(1);\n").unwrap();
+    let doc = work.path().join("doc");
+    std::fs::create_dir_all(doc.join("theme")).unwrap();
+    std::fs::write(doc.join("theme/rel.css"), "body { color: navy; }\n").unwrap();
+    std::fs::write(
+      doc.join("d.tex"),
+      "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{one}\nHello.\n\
+       \\subsection{Two}\\label{two}\nWorld.\n\\end{document}\n",
+    )
+    .unwrap();
+    let output = Command::new(bin)
+      .arg(format!("--css={}", styles.join("main.css").display()))
+      .arg("--css=theme/rel.css")
+      .arg(format!("--javascript={}", styles.join("app.js").display()))
+      .args([
+        "--split",
+        "--splitat=subsection",
+        "--splitnaming=labelrelative",
+        "--dest=h/d.html",
+        "d.tex",
+      ])
+      .current_dir(&doc)
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "stderr:\n{stderr}");
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    for copy in ["main.css", "sub/x.css", "theme/rel.css", "app.js"] {
+      assert!(doc.join("h").join(copy).is_file(), "{copy} not copied");
+    }
+    for (page, up) in [
+      ("d.html", ""),
+      ("one/index.html", "../"),
+      ("one/two.html", "../"),
+    ] {
+      let html = std::fs::read_to_string(doc.join("h").join(page)).unwrap();
+      let tags: Vec<&str> = ["<link", "<script"]
+        .iter()
+        .flat_map(|open| html.match_indices(open))
+        .map(|(at, _)| &html[at..at + html[at..].find('>').unwrap() + 1])
+        .filter(|tag| tag.contains("stylesheet") || tag.starts_with("<script"))
+        .collect();
+      let expected: Vec<String> = [
+        "LaTeXML.css",
+        "ltx-article.css",
+        "main.css",
+        "theme/rel.css",
+      ]
+      .iter()
+      .map(|css| format!("<link rel=\"stylesheet\" href=\"{up}{css}\" type=\"text/css\">"))
+      .chain([format!("<script src=\"{up}app.js\">")])
+      .collect();
+      assert_eq!(tags, expected, "{page}");
+    }
+  }
 }
 
 mod dest_htm_infers_html5 {
@@ -711,6 +781,61 @@ mod whatsinout {
 
   fn stderr_of(out: &std::process::Output) -> String {
     String::from_utf8_lossy(&out.stderr).to_string()
+  }
+
+  /// EPUBCheck (`apt install epubcheck`) finds nothing in `epub` but its known false reports. Absent, a visible
+  /// SKIP; with `LATEXML_EPUBCHECK_TESTS` set, absent is a failure.
+  fn assert_epubcheck_clean(epub: &Path) {
+    if Command::new("epubcheck").arg("--version").output().is_err() {
+      assert!(
+        std::env::var("LATEXML_EPUBCHECK_TESTS").is_err(),
+        "LATEXML_EPUBCHECK_TESTS is set but epubcheck is not on PATH"
+      );
+      eprintln!(
+        "SKIP epubcheck on {}: not on PATH (`apt install epubcheck`; LATEXML_EPUBCHECK_TESTS requires it)",
+        epub.display()
+      );
+      return;
+    }
+    let json = epub.with_extension("epubcheck.json");
+    let check = Command::new("epubcheck")
+      .arg(epub)
+      .arg("--json")
+      .arg(&json)
+      .output()
+      .expect("spawn epubcheck");
+    let report: serde_json::Value = serde_json::from_str(
+      &std::fs::read_to_string(&json).unwrap_or_default(),
+    )
+    .unwrap_or_else(|e| {
+      panic!(
+        "no epubcheck JSON ({e}):\n{}{}",
+        String::from_utf8_lossy(&check.stdout),
+        String::from_utf8_lossy(&check.stderr)
+      )
+    });
+    let messages: Vec<String> = report["messages"]
+      .as_array()
+      .expect("epubcheck's messages")
+      .iter()
+      .filter(|m| {
+        let (id, text) = (
+          m["ID"].as_str().unwrap_or(""),
+          m["message"].as_str().unwrap_or(""),
+        );
+        // EPUBCheck 4.2.6's CSS parser rejects Selectors-4 `:has(> …)`/`:is()` (LaTeXML.css, ar5iv.css): valid CSS.
+        // It validates MathML against MathML 3 (EPUB 3.3); `intent` is MathML 4, kept for screen readers (DG
+        // 2026-11-14).
+        id != "CSS-008" && !(id == "RSC-005" && text.contains("attribute \"intent\""))
+      })
+      .map(|m| {
+        format!(
+          "{} {} {} at {}",
+          m["severity"], m["ID"], m["message"], m["locations"]
+        )
+      })
+      .collect();
+    assert!(messages.is_empty(), "epubcheck:\n{}", messages.join("\n"));
   }
 
   #[test]
@@ -1013,6 +1138,239 @@ mod whatsinout {
       html.contains("Hello World"),
       "bundled HTML missing body:\n{html}"
     );
+  }
+
+  /// Issue 807: `--format=epub` writes the EPUB 3 container Perl `latexmlc --dest=x.epub` does (Manifest::Epub,
+  /// Pack/Zip.pm), not one bare XHTML file — `mimetype` first and STORED, the content and its CSS under `OPS/`.
+  #[test]
+  fn format_epub_writes_an_epub3_container() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\section{Intro}\nHello $E = mc^2$.\n\\end{document}\n";
+    std::fs::write(work.path().join("min.tex"), tex).unwrap();
+    let out = run(work.path(), &[
+      "--format=epub",
+      "--dest=out.epub",
+      "min.tex",
+    ]);
+    let stderr = stderr_of(&out);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    let epub = work.path().join("out.epub");
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(&epub).unwrap()).expect("a zip container");
+    let names: Vec<String> = (0..archive.len())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
+      .collect();
+    assert_eq!(names, [
+      "mimetype",
+      "META-INF/",
+      "META-INF/container.xml",
+      "OPS/",
+      "OPS/LaTeXML.css",
+      "OPS/content.opf",
+      "OPS/ltx-article.css",
+      "OPS/out.xhtml",
+    ]);
+    let mut mimetype = archive.by_index(0).unwrap();
+    assert_eq!(mimetype.compression(), zip::CompressionMethod::Stored);
+    let mut text = String::new();
+    mimetype.read_to_string(&mut text).unwrap();
+    assert_eq!(text, "application/epub+zip");
+    drop(mimetype);
+    let member = |archive: &mut zip::ZipArchive<std::fs::File>, name: &str| {
+      let mut text = String::new();
+      archive
+        .by_name(name)
+        .unwrap()
+        .read_to_string(&mut text)
+        .unwrap();
+      text
+    };
+    let opf = member(&mut archive, "OPS/content.opf");
+    let manifest = &opf[opf.find("<manifest>").expect("a manifest")..];
+    assert!(
+      manifest.starts_with(
+        "<manifest><item id=\"_out.xhtml\" href=\"out.xhtml\" media-type=\"application/xhtml+xml\" \
+         properties=\"mathml nav\"/><item id=\"_LaTeXML.css\" href=\"LaTeXML.css\" media-type=\"text/css\"/>\
+         <item id=\"_ltx-article.css\" href=\"ltx-article.css\" media-type=\"text/css\"/></manifest>\
+         <spine><itemref idref=\"_out.xhtml\"/></spine></package>"
+      ),
+      "{opf}"
+    );
+    assert!(
+      opf.contains("<dc:title>No Title</dc:title><dc:language>en</dc:language>"),
+      "{opf}"
+    );
+    // LaTeXML.pm check_TOC: the navigation document is the content's own undisplayed TOC.
+    let xhtml = member(&mut archive, "OPS/out.xhtml");
+    let nav = &xhtml[xhtml.find("<nav").expect("a nav")..xhtml.find("</nav>").expect("a nav") + 6];
+    assert_eq!(
+      nav,
+      "<nav xmlns:epub=\"http://www.idpf.org/2007/ops\" epub:type=\"toc\" \
+       class=\"ltx_TOC ltx_nodisplay ltx_list_toc ltx_toc_toc\">\n<ol class=\"ltx_toclist\">\n\
+       <li class=\"ltx_tocentry ltx_tocentry_section\"><a href=\"#S1\" title=\"\" class=\"ltx_ref\">\
+       <span class=\"ltx_text ltx_ref_title\"><span class=\"ltx_tag ltx_tag_ref\">1 </span>Intro</span></a></li>\n\
+       </ol></nav>"
+    );
+    assert!(!work.path().join("out.epub.zip").exists());
+    assert_epubcheck_clean(&epub);
+  }
+
+  /// Issue 807, `--split`: the manifest and spine list every page post wrote, subdirectories included, in Split's
+  /// order (the root, then each page before its children), as Perl's `@docs` reaches `Manifest::Epub::process`;
+  /// `S10` follows `S9`, not `S1`. Spine and manifest as Perl latexmlc writes them (review revI807).
+  #[test]
+  fn format_epub_split_pages_follow_splits_order() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("k.tex"),
+      include_str!("../../tools/perfect_kernel/repros/epub/split_pages_spine_reading_order.tex"),
+    )
+    .unwrap();
+    let out = run(work.path(), &[
+      "--split",
+      "--splitat=subsection",
+      "--splitnaming=labelrelative",
+      "--dest=k.epub",
+      "k.tex",
+    ]);
+    let stderr = stderr_of(&out);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(work.path().join("k.epub")).unwrap())
+        .expect("a zip container");
+    let mut pages: Vec<String> = (0..archive.len())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
+      .filter(|name| name.ends_with(".xhtml"))
+      .collect();
+    pages.sort();
+    let sections: Vec<String> = (2..=11).map(|n| format!("S{n}/index.xhtml")).collect();
+    let mut expected: Vec<String> = ["k.xhtml", "sec_a/index.xhtml", "sec_a/sub_aa.xhtml"]
+      .iter()
+      .map(|page| page.to_string())
+      .chain(sections)
+      .collect();
+    let mut zipped: Vec<String> = expected.iter().map(|page| format!("OPS/{page}")).collect();
+    zipped.sort();
+    assert_eq!(pages, zipped);
+    let mut opf = String::new();
+    archive
+      .by_name("OPS/content.opf")
+      .unwrap()
+      .read_to_string(&mut opf)
+      .unwrap();
+    let id = |page: &str| format!("_{}", page.replace('/', "_x2F_"));
+    let items: String = expected
+      .iter()
+      .map(|page| {
+        let nav = if page == "k.xhtml" {
+          " properties=\"nav\""
+        } else {
+          ""
+        };
+        format!(
+          "<item id=\"{}\" href=\"{page}\" media-type=\"application/xhtml+xml\"{nav}/>",
+          id(page)
+        )
+      })
+      .collect();
+    let itemrefs: String = expected
+      .drain(..)
+      .map(|page| format!("<itemref idref=\"{}\"/>", id(&page)))
+      .collect();
+    let manifest = opf[opf.find("<manifest>").expect("a manifest")..].trim_end();
+    assert_eq!(
+      manifest,
+      format!(
+        "<manifest>{items}<item id=\"_LaTeXML.css\" href=\"LaTeXML.css\" media-type=\"text/css\"/>\
+         <item id=\"_ltx-article.css\" href=\"ltx-article.css\" media-type=\"text/css\"/></manifest>\
+         <spine>{itemrefs}</spine></package>"
+      )
+    );
+    assert_epubcheck_clean(&work.path().join("k.epub"));
+  }
+
+  /// Issue 807, DG's scenario: `--preload=ar5iv.sty` drops the default resources, so `--css` brings the stylesheet;
+  /// the EPUB carries it and its `@import`, and the page links the copy (Perl XSLT.pm:71-78), not the absolute path.
+  #[test]
+  fn format_epub_ar5iv_preload_carries_the_css_param() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let styles = work.path().join("styles");
+    std::fs::create_dir_all(styles.join("sub")).unwrap();
+    std::fs::write(
+      styles.join("main.css"),
+      "@import url(\"sub/x.css\");\nbody { color: navy; }\n",
+    )
+    .unwrap();
+    std::fs::write(styles.join("sub/x.css"), "p { margin: 0; }\n").unwrap();
+    let doc = work.path().join("doc");
+    std::fs::create_dir(&doc).unwrap();
+    // A section: without one there is no nav document (no_sections_no_nav_red.tex, shared with Perl).
+    let tex =
+      "\\documentclass{article}\n\\begin{document}\n\\section{One}\nHello.\n\\end{document}\n";
+    std::fs::write(doc.join("d.tex"), tex).unwrap();
+    let css = format!("--css={}", styles.join("main.css").display());
+    let out = run(&doc, &[
+      "--preload=ar5iv.sty",
+      &css,
+      "--dest=d.epub",
+      "d.tex",
+    ]);
+    let stderr = stderr_of(&out);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    let epub = doc.join("d.epub");
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(&epub).unwrap()).expect("a zip container");
+    let mut member = |name: &str| {
+      let mut text = String::new();
+      archive
+        .by_name(name)
+        .unwrap()
+        .read_to_string(&mut text)
+        .unwrap();
+      text
+    };
+    let opf = member("OPS/content.opf");
+    assert_eq!(
+      opf
+        [opf.find("<manifest>").expect("a manifest")..opf.find("</manifest>").expect("a manifest")]
+        .to_string(),
+      "<manifest><item id=\"_d.xhtml\" href=\"d.xhtml\" media-type=\"application/xhtml+xml\" \
+       properties=\"nav\"/><item id=\"_main.css\" href=\"main.css\" media-type=\"text/css\"/>\
+       <item id=\"_sub_x2F_x.css\" href=\"sub/x.css\" media-type=\"text/css\"/>"
+    );
+    let xhtml = member("OPS/d.xhtml");
+    let links: Vec<&str> = xhtml
+      .match_indices("<link")
+      .map(|(at, _)| &xhtml[at..at + xhtml[at..].find('>').unwrap() + 1])
+      .collect();
+    assert_eq!(links, [
+      "<link rel=\"stylesheet\" href=\"main.css\" type=\"text/css\"/>"
+    ]);
+    assert_epubcheck_clean(&epub);
   }
 
   /// A zip of `entries` at `path`, as arXiv ships a submission.
