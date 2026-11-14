@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["FillCode"],"fn":["glue_string","new_setup","spec_setup"],"struct":["Glue"]};
+window.SIDEBAR_ITEMS = {"enum":["FillCode"],"fn":["glue_string","is_glue_spec","new_setup","spec_setup"],"struct":["Glue"]};

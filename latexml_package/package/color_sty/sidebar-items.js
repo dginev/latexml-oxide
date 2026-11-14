@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["color_key","load_definitions","lookup_color","lookup_color_obj","parse_color"]};
+window.SIDEBAR_ITEMS = {"fn":["color_key","load_definitions","lookup_color","lookup_color_obj","lookup_font_color","parse_color"]};

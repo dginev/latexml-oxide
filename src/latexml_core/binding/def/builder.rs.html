@@ -183,8 +183,8 @@
 <a href=#183 id=183 data-nosnippet>183</a><span class="doccomment">/// Apply a **scalar** option by name onto `ConstructorOptions`. THE single
 <a href=#184 id=184 data-nosnippet>184</a>/// source of truth for the option-name → field mapping — both builders (and so
 <a href=#185 id=185 data-nosnippet>185</a>/// both front-ends) route scalar options through here, so a new scalar option is
-<a href=#186 id=186 data-nosnippet>186</a>/// added in exactly one place. Unknown keys are ignored (runtime-forgiving,
-<a href=#187 id=187 data-nosnippet>187</a>/// matching Perl `%options`).
+<a href=#186 id=186 data-nosnippet>186</a>/// added in exactly one place. The caller checks the keys against Perl's table
+<a href=#187 id=187 data-nosnippet>187</a>/// (`options::CONSTRUCTOR_OPTIONS` / `ENVIRONMENT_OPTIONS`) first.
 <a href=#188 id=188 data-nosnippet>188</a></span><span class="kw">fn </span>apply_scalar_option(
 <a href=#189 id=189 data-nosnippet>189</a>  options: <span class="kw-2">&amp;mut </span>ConstructorOptions,
 <a href=#190 id=190 data-nosnippet>190</a>  key: <span class="kw-2">&amp;</span>str,
@@ -198,17 +198,17 @@
 <a href=#198 id=198 data-nosnippet>198</a>    <span class="string">"enterHorizontal" </span>=&gt; options.enter_horizontal = value.into_bool()<span class="question-mark">?</span>,
 <a href=#199 id=199 data-nosnippet>199</a>    <span class="string">"leaveHorizontal" </span>=&gt; options.leave_horizontal = value.into_bool()<span class="question-mark">?</span>,
 <a href=#200 id=200 data-nosnippet>200</a>    <span class="string">"captureBody" </span>=&gt; options.capture_body = value.into_bool()<span class="question-mark">?</span>,
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">"texGroup" </span>=&gt; {
-<a href=#202 id=202 data-nosnippet>202</a>      <span class="kw">let </span>name = value.into_string()<span class="question-mark">?</span>;
-<a href=#203 id=203 data-nosnippet>203</a>      options.tex_group =
-<a href=#204 id=204 data-nosnippet>204</a>        <span class="kw">crate</span>::definition::constructor::TexGroup::from_name(<span class="kw-2">&amp;</span>name).ok_or_else(|| {
-<a href=#205 id=205 data-nosnippet>205</a>          Error::from(<span class="macro">format!</span>(
-<a href=#206 id=206 data-nosnippet>206</a>            <span class="string">"texGroup must be none, semi_simple or box: {name:?}"
-<a href=#207 id=207 data-nosnippet>207</a>          </span>))
-<a href=#208 id=208 data-nosnippet>208</a>        })<span class="question-mark">?
-<a href=#209 id=209 data-nosnippet>209</a>    </span>},
-<a href=#210 id=210 data-nosnippet>210</a>    <span class="string">"alias" </span>=&gt; options.alias = <span class="prelude-val">Some</span>(value.into_string()<span class="question-mark">?</span>),
-<a href=#211 id=211 data-nosnippet>211</a>    <span class="kw">_ </span>=&gt; <span class="macro">log::debug!</span>(<span class="string">"binding builder: ignoring unknown scalar option '{key}'"</span>),
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">"alias" </span>=&gt; options.alias = <span class="prelude-val">Some</span>(value.into_string()<span class="question-mark">?</span>),
+<a href=#202 id=202 data-nosnippet>202</a>    <span class="string">"locked" </span>=&gt; options.locked = value.into_bool()<span class="question-mark">?</span>,
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="string">"robust" </span>=&gt; options.robust = value.into_bool()<span class="question-mark">?</span>,
+<a href=#204 id=204 data-nosnippet>204</a>    <span class="comment">// "local"/"global" or a named scope (Perl's `scope =&gt; 'section:1'`), as the macro's option.
+<a href=#205 id=205 data-nosnippet>205</a>    </span><span class="string">"scope" </span>=&gt; options.scope = <span class="kw">super</span>::traits::IntoOption::into_option(value.into_string()<span class="question-mark">?</span>),
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="string">"nargs" </span>=&gt; <span class="kw">match </span>value {
+<a href=#207 id=207 data-nosnippet>207</a>      OptionValue::Int(n) =&gt; options.nargs = usize::try_from(n).ok(),
+<a href=#208 id=208 data-nosnippet>208</a>      <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::from(<span class="string">"nargs expects an integer"</span>)),
+<a href=#209 id=209 data-nosnippet>209</a>    },
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="comment">// A key outside Perl's table is refused (`options::check_options`) before it gets here.
+<a href=#211 id=211 data-nosnippet>211</a>    </span><span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::from(<span class="macro">format!</span>(<span class="string">"unknown constructor option {key}"</span>))),
 <a href=#212 id=212 data-nosnippet>212</a>  }
 <a href=#213 id=213 data-nosnippet>213</a>  <span class="prelude-val">Ok</span>(())
 <a href=#214 id=214 data-nosnippet>214</a>}

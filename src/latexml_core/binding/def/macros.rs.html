@@ -493,22 +493,7 @@
 <a href=#493 id=493 data-nosnippet>493</a>    <span class="macro">SetCounter!</span>(<span class="macro-nonterminal">$ctr</span>, <span class="macro-nonterminal">$value</span>)
 <a href=#494 id=494 data-nosnippet>494</a>  };
 <a href=#495 id=495 data-nosnippet>495</a>  (<span class="macro-nonterminal">$ctr</span>:expr_2021, <span class="macro-nonterminal">$value</span>:expr_2021) =&gt; {
-<a href=#496 id=496 data-nosnippet>496</a>    state::assign_register(
-<a href=#497 id=497 data-nosnippet>497</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{}"</span>, <span class="macro-nonterminal">$ctr</span>),
-<a href=#498 id=498 data-nosnippet>498</a>      <span class="macro-nonterminal">$value</span>.into(),
-<a href=#499 id=499 data-nosnippet>499</a>      <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#500 id=500 data-nosnippet>500</a>      Vec::new(),
-<a href=#501 id=501 data-nosnippet>501</a>    )<span class="question-mark">?</span>;
-<a href=#502 id=502 data-nosnippet>502</a>    after_assignment();
-<a href=#503 id=503 data-nosnippet>503</a>    def_macro(
-<a href=#504 id=504 data-nosnippet>504</a>      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{}@ID"</span>, <span class="macro-nonterminal">$ctr</span>)),
-<a href=#505 id=505 data-nosnippet>505</a>      <span class="prelude-val">None</span>,
-<a href=#506 id=506 data-nosnippet>506</a>      Tokens::new(<span class="macro">Explode!</span>(<span class="macro-nonterminal">$value</span>.value_of())),
-<a href=#507 id=507 data-nosnippet>507</a>      <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#508 id=508 data-nosnippet>508</a>        scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#509 id=509 data-nosnippet>509</a>        ..ExpandableOptions::default()
-<a href=#510 id=510 data-nosnippet>510</a>      }),
-<a href=#511 id=511 data-nosnippet>511</a>    )<span class="question-mark">?</span>;
-<a href=#512 id=512 data-nosnippet>512</a>  };
-<a href=#513 id=513 data-nosnippet>513</a>}
+<a href=#496 id=496 data-nosnippet>496</a>    <span class="macro-nonterminal">$crate::binding::counter::dialect::set_counter</span>(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$ctr</span>.to_string(), <span class="macro-nonterminal">$value</span>.into())<span class="question-mark">?</span>;
+<a href=#497 id=497 data-nosnippet>497</a>  };
+<a href=#498 id=498 data-nosnippet>498</a>}
 </code></pre></div></section></main></body></html>

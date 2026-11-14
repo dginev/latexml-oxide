@@ -269,417 +269,435 @@
 <a href=#269 id=269 data-nosnippet>269</a>      // wins. Witness 1705.06183 (revtex4-1 + hyperref + `\lstset{…\color{Blue}}`).
 <a href=#270 id=270 data-nosnippet>270</a>      // The `named`-model path (parse_color above) already does the analogous
 <a href=#271 id=271 data-nosnippet>271</a>      // lazy-load; this covers the plain `\color{Blue}` (no model) path.
-<a href=#272 id=272 data-nosnippet>272</a>      </span><span class="kw">if </span>!lookup_bool(<span class="string">"color_dvipsnam_lazy_loaded"</span>) {
-<a href=#273 id=273 data-nosnippet>273</a>        assign_value(<span class="string">"color_dvipsnam_lazy_loaded"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#274 id=274 data-nosnippet>274</a>        assign_value(<span class="string">"color_usenames_active"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#275 id=275 data-nosnippet>275</a>        <span class="comment">// Force the 68 dvips colors GLOBAL: we are inside a grouped digestion
-<a href=#276 id=276 data-nosnippet>276</a>        // (e.g. `\textcolor{Blue}{…}`), so without this they'd be local and
-<a href=#277 id=277 data-nosnippet>277</a>        // revert before the next color is looked up (see `def_color`).
-<a href=#278 id=278 data-nosnippet>278</a>        </span>assign_value(<span class="string">"color_force_global"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#279 id=279 data-nosnippet>279</a>        <span class="kw">let _ </span>= input_definitions(<span class="string">"dvipsnam"</span>, InputDefinitionOptions {
-<a href=#280 id=280 data-nosnippet>280</a>          extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"def"</span>)),
-<a href=#281 id=281 data-nosnippet>281</a>          noerror: <span class="bool-val">true</span>,
-<a href=#282 id=282 data-nosnippet>282</a>          ..InputDefinitionOptions::default()
-<a href=#283 id=283 data-nosnippet>283</a>        });
-<a href=#284 id=284 data-nosnippet>284</a>        assign_value(<span class="string">"color_force_global"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#285 id=285 data-nosnippet>285</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(sym)) = lookup_value(<span class="kw-2">&amp;</span>key) {
-<a href=#286 id=286 data-nosnippet>286</a>          <span class="kw">let </span>stored_str = with(sym, |s| s.to_string());
-<a href=#287 id=287 data-nosnippet>287</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = Color::from_stored(<span class="kw-2">&amp;</span>stored_str) {
-<a href=#288 id=288 data-nosnippet>288</a>            <span class="kw">return </span>c;
-<a href=#289 id=289 data-nosnippet>289</a>          }
-<a href=#290 id=290 data-nosnippet>290</a>        }
-<a href=#291 id=291 data-nosnippet>291</a>      }
-<a href=#292 id=292 data-nosnippet>292</a>      <span class="comment">// Raw-interop fallback: real xcolor stores colors as
-<a href=#293 id=293 data-nosnippet>293</a>      // `\csname\string\color@&lt;name&gt;\endcsname` → `\xcolor@{}{}{&lt;model&gt;}{&lt;spec&gt;}`,
-<a href=#294 id=294 data-nosnippet>294</a>      // and raw packages create colors by defining that macro DIRECTLY —
-<a href=#295 id=295 data-nosnippet>295</a>      // ydoc-desc.sty L22-24 defines `\color@none` = `\xcolor@{}{}{}{}` (an
-<a href=#296 id=296 data-nosnippet>296</a>      // intentionally EMPTY color, so `\colorlet{cls}{none}` "uncolors")
-<a href=#297 id=297 data-nosnippet>297</a>      // — the `wisdom_latexml_reimpl_internal_name_mismatch` shape. Read the
-<a href=#298 id=298 data-nosnippet>298</a>      // raw storage before assuming Black (5-bundle `'none'` cluster,
-<a href=#299 id=299 data-nosnippet>299</a>      // macros2e/ydoc family; real pdflatex is clean on these docs).
-<a href=#300 id=300 data-nosnippet>300</a>      </span><span class="kw">let </span>storage_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\\\color@{name}"</span>));
-<a href=#301 id=301 data-nosnippet>301</a>      <span class="comment">// The REPLACEMENT TEXT, not an expansion: `\xcolor@` is a real macro
-<a href=#302 id=302 data-nosnippet>302</a>      // (xcolor.sty:603 `\def\xcolor@#1#2#3#4{#2}`, the "type" slot), so
-<a href=#303 id=303 data-nosnippet>303</a>      // `do_expand` collapsed the payload to `#2` = "" and the textual guard
-<a href=#304 id=304 data-nosnippet>304</a>      // below fell through to "Can't find color named 'none'" (iodhbwm 147
-<a href=#305 id=305 data-nosnippet>305</a>      // errors, ydoc-desc.sty:22; Perl identical). Guard:
-<a href=#306 id=306 data-nosnippet>306</a>      // `perfect_kernel_batch54::xcolor_storage_macro_is_read_as_a_body`.
-<a href=#307 id=307 data-nosnippet>307</a>      </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(defn)) = lookup_definition(<span class="kw-2">&amp;</span>storage_cs)
-<a href=#308 id=308 data-nosnippet>308</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(ExpansionBody::Tokens(payload)) = defn.get_expansion()
-<a href=#309 id=309 data-nosnippet>309</a>      {
-<a href=#310 id=310 data-nosnippet>310</a>        <span class="comment">// Payload shape: `\xcolor@ {}{}{&lt;model&gt;}{&lt;spec&gt;}` — grab the last
-<a href=#311 id=311 data-nosnippet>311</a>        // two braced groups textually.
-<a href=#312 id=312 data-nosnippet>312</a>        </span><span class="kw">let </span>text = payload.to_string();
-<a href=#313 id=313 data-nosnippet>313</a>        <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = text.split(<span class="string">'{'</span>).collect();
-<a href=#314 id=314 data-nosnippet>314</a>        <span class="kw">if </span>parts.len() &gt;= <span class="number">5 </span>{
-<a href=#315 id=315 data-nosnippet>315</a>          <span class="kw">let </span>model = parts[parts.len() - <span class="number">2</span>].trim_end_matches(<span class="string">'}'</span>).trim();
-<a href=#316 id=316 data-nosnippet>316</a>          <span class="kw">let </span>spec = parts[parts.len() - <span class="number">1</span>].trim_end_matches(<span class="string">'}'</span>).trim();
-<a href=#317 id=317 data-nosnippet>317</a>          <span class="kw">if </span>model.is_empty() &amp;&amp; spec.is_empty() {
-<a href=#318 id=318 data-nosnippet>318</a>            <span class="comment">// Empty color = "no color": inherit (render as default ink),
-<a href=#319 id=319 data-nosnippet>319</a>            // silently — matching real xcolor's behavior for this storage.
-<a href=#320 id=320 data-nosnippet>320</a>            </span><span class="kw">return </span>color::BLACK;
-<a href=#321 id=321 data-nosnippet>321</a>          }
-<a href=#322 id=322 data-nosnippet>322</a>          <span class="comment">// A model raw code defined is read as any other: colorspace.sty:78's spot colours are stored
-<a href=#323 id=323 data-nosnippet>323</a>          // `\xcolor@{}{/&amp;&lt;name&gt; cs …}{&amp;spot}{1}` (a `\definespotcolor` in a group leaves only that behind), and
-<a href=#324 id=324 data-nosnippet>324</a>          // their colour is lost with a Warning, not silently (`report_unconverted_model`). Any other model keeps this
-<a href=#325 id=325 data-nosnippet>325</a>          // read: a payload saying `named` would come back here through `lookup_color_obj`, and one no code defined
-<a href=#326 id=326 data-nosnippet>326</a>          // (`{foo}{1}`) has its PDF literal for pdflatex and no Error (the review of M2 r2's `rawstore`).
-<a href=#327 id=327 data-nosnippet>327</a>          </span><span class="kw">return if </span>model != <span class="string">"named" </span>&amp;&amp; is_defined_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\XC@mod@{model}"</span>))) {
-<a href=#328 id=328 data-nosnippet>328</a>            xcolor_sty::parse_xcolor(<span class="prelude-val">Some</span>(model), spec, <span class="prelude-val">None</span>)
-<a href=#329 id=329 data-nosnippet>329</a>          } <span class="kw">else </span>{
-<a href=#330 id=330 data-nosnippet>330</a>            color_from_model_spec(model, spec)
-<a href=#331 id=331 data-nosnippet>331</a>          };
-<a href=#332 id=332 data-nosnippet>332</a>        }
-<a href=#333 id=333 data-nosnippet>333</a>      }
-<a href=#334 id=334 data-nosnippet>334</a>      <span class="comment">// Perl color.sty.ltxml L50-53:
-<a href=#335 id=335 data-nosnippet>335</a>      //   AssignValue('color_'.$spec =&gt; Black);
-<a href=#336 id=336 data-nosnippet>336</a>      //   Error('unexpected', $spec, $STATE-&gt;getStomach,
-<a href=#337 id=337 data-nosnippet>337</a>      //     "Can't find color named '$spec'; assuming Black");
-<a href=#338 id=338 data-nosnippet>338</a>      // Persist Black under this name so subsequent lookups resolve it
-<a href=#339 id=339 data-nosnippet>339</a>      // without repeating the diagnostic, then surface an Error-status
-<a href=#340 id=340 data-nosnippet>340</a>      // diagnostic. We inline the bookkeeping from the `Error!` macro
-<a href=#341 id=341 data-nosnippet>341</a>      // because that macro is return-based (`Fatal!` at threshold) and
-<a href=#342 id=342 data-nosnippet>342</a>      // `lookup_color_obj` returns `Color`, not `Result&lt;Color&gt;`.
-<a href=#343 id=343 data-nosnippet>343</a>      </span>assign_value(
-<a href=#344 id=344 data-nosnippet>344</a>        <span class="kw-2">&amp;</span>color_key(name),
-<a href=#345 id=345 data-nosnippet>345</a>        Stored::String(pin(color::BLACK.to_stored())),
-<a href=#346 id=346 data-nosnippet>346</a>        <span class="prelude-val">None</span>,
-<a href=#347 id=347 data-nosnippet>347</a>      );
-<a href=#348 id=348 data-nosnippet>348</a>      emit_error(
-<a href=#349 id=349 data-nosnippet>349</a>        <span class="string">"unexpected"</span>,
-<a href=#350 id=350 data-nosnippet>350</a>        name,
-<a href=#351 id=351 data-nosnippet>351</a>        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Can't find color named '{name}'; assuming Black"</span>),
-<a href=#352 id=352 data-nosnippet>352</a>      );
-<a href=#353 id=353 data-nosnippet>353</a>      color::BLACK
-<a href=#354 id=354 data-nosnippet>354</a>    },
-<a href=#355 id=355 data-nosnippet>355</a>  }
-<a href=#356 id=356 data-nosnippet>356</a>}
-<a href=#357 id=357 data-nosnippet>357</a>
-<a href=#358 id=358 data-nosnippet>358</a><span class="doccomment">/// Look up a named color from state. Returns hex string.
-<a href=#359 id=359 data-nosnippet>359</a>/// Perl: LookupColor($name) in Package.pm
-<a href=#360 id=360 data-nosnippet>360</a></span><span class="kw">pub fn </span>lookup_color(name: <span class="kw-2">&amp;</span>str) -&gt; String { lookup_color_obj(name).to_attribute() }
-<a href=#361 id=361 data-nosnippet>361</a>
-<a href=#362 id=362 data-nosnippet>362</a><span class="macro">LoadDefinitions!</span>({
-<a href=#363 id=363 data-nosnippet>363</a>  <span class="comment">// color.sty:26 `\newif\ifcolors@ \colors@true` (the `monochrome` option
-<a href=#364 id=364 data-nosnippet>364</a>  // clears it): raw packages test it (beamer themes under the luatex profile:
-<a href=#365 id=365 data-nosnippet>365</a>  // neoschool, beamerthemeCelestia). The binding stands in for color.sty.
-<a href=#366 id=366 data-nosnippet>366</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\ifcolors@ \colors@true"</span>);
-<a href=#367 id=367 data-nosnippet>367</a>
-<a href=#368 id=368 data-nosnippet>368</a>  <span class="comment">//======================================================================
-<a href=#369 id=369 data-nosnippet>369</a>  // Ignorable options (mostly drivers)
-<a href=#370 id=370 data-nosnippet>370</a>  </span><span class="kw">for </span>option <span class="kw">in </span><span class="kw-2">&amp;</span>[
-<a href=#371 id=371 data-nosnippet>371</a>    <span class="string">"monochrome"</span>,
-<a href=#372 id=372 data-nosnippet>372</a>    <span class="string">"debugshow"</span>,
-<a href=#373 id=373 data-nosnippet>373</a>    <span class="string">"dvipdf"</span>,
-<a href=#374 id=374 data-nosnippet>374</a>    <span class="string">"dvipdfm"</span>,
-<a href=#375 id=375 data-nosnippet>375</a>    <span class="string">"dvipdfmx"</span>,
-<a href=#376 id=376 data-nosnippet>376</a>    <span class="string">"pdftex"</span>,
-<a href=#377 id=377 data-nosnippet>377</a>    <span class="string">"xetex"</span>,
-<a href=#378 id=378 data-nosnippet>378</a>    <span class="string">"dvipsone"</span>,
-<a href=#379 id=379 data-nosnippet>379</a>    <span class="string">"dviwindo"</span>,
-<a href=#380 id=380 data-nosnippet>380</a>    <span class="string">"emtex"</span>,
-<a href=#381 id=381 data-nosnippet>381</a>    <span class="string">"dviwin"</span>,
-<a href=#382 id=382 data-nosnippet>382</a>    <span class="string">"textures"</span>,
-<a href=#383 id=383 data-nosnippet>383</a>    <span class="string">"pctexps"</span>,
-<a href=#384 id=384 data-nosnippet>384</a>    <span class="string">"pctexwin"</span>,
-<a href=#385 id=385 data-nosnippet>385</a>    <span class="string">"pctexhp"</span>,
-<a href=#386 id=386 data-nosnippet>386</a>    <span class="string">"pctex32"</span>,
-<a href=#387 id=387 data-nosnippet>387</a>    <span class="string">"truetex"</span>,
-<a href=#388 id=388 data-nosnippet>388</a>    <span class="string">"tcidvi"</span>,
-<a href=#389 id=389 data-nosnippet>389</a>    <span class="string">"vtex"</span>,
-<a href=#390 id=390 data-nosnippet>390</a>    <span class="string">"nodvipsnames"</span>,
-<a href=#391 id=391 data-nosnippet>391</a>  ] {
-<a href=#392 id=392 data-nosnippet>392</a>    <span class="macro">DeclareOption!</span>(option, <span class="prelude-val">None</span>);
-<a href=#393 id=393 data-nosnippet>393</a>  }
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="comment">// `usenames` makes `\DefineNamedColor` ALSO expose the color under
-<a href=#395 id=395 data-nosnippet>395</a>  // the plain name (no `named_` prefix), so `\color{Blue}` after
-<a href=#396 id=396 data-nosnippet>396</a>  // `\usepackage[usenames,dvipsnames]{color}` resolves to the
-<a href=#397 id=397 data-nosnippet>397</a>  // dvipsnam.def-loaded `Blue`. LaTeX color.sty L84-87 implements this
-<a href=#398 id=398 data-nosnippet>398</a>  // by redefining `\c@lor@usename` to actually register the lookup; we
-<a href=#399 id=399 data-nosnippet>399</a>  // emulate by setting a flag the `\DefineNamedColor` primitive
-<a href=#400 id=400 data-nosnippet>400</a>  // honors. Mirrors Perl `color.sty.ltxml` (which silently relied on
-<a href=#401 id=401 data-nosnippet>401</a>  // the listings.sty option-deferral path; this is the more direct
-<a href=#402 id=402 data-nosnippet>402</a>  // fix). Driver: 1205.2217 (`\lstset{keywordstyle=...\color{Blue}}`
-<a href=#403 id=403 data-nosnippet>403</a>  // 16 × `unexpected:Blue` → 0 errors).
-<a href=#404 id=404 data-nosnippet>404</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"usenames"</span>, {
-<a href=#405 id=405 data-nosnippet>405</a>    assign_value(<span class="string">"color_usenames_active"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#406 id=406 data-nosnippet>406</a>  });
-<a href=#407 id=407 data-nosnippet>407</a>  <span class="comment">// Options that want the dvipsnam definitions
-<a href=#408 id=408 data-nosnippet>408</a>  </span><span class="kw">for </span>option <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"dvips"</span>, <span class="string">"xdvi"</span>, <span class="string">"oztex"</span>, <span class="string">"dvipsnames"</span>] {
-<a href=#409 id=409 data-nosnippet>409</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>option, {
-<a href=#410 id=410 data-nosnippet>410</a>      <span class="comment">// Defer to xcolor when it is the driving package: xcolor requires us and
-<a href=#411 id=411 data-nosnippet>411</a>      // then loads dvipsnam.def into ITS color DB. Loading here first would win
-<a href=#412 id=412 data-nosnippet>412</a>      // the input_definitions load-dedup and leave xcolor's DB without the dvips
-<a href=#413 id=413 data-nosnippet>413</a>      // names (see xcolor_sty.rs `xcolor_driving`; witness 2405.04517). Stays
-<a href=#414 id=414 data-nosnippet>414</a>      // eager for a standalone `\usepackage[dvipsnames]{color}` (flag unset).
-<a href=#415 id=415 data-nosnippet>415</a>      </span><span class="kw">if </span>!lookup_bool(<span class="string">"xcolor_driving"</span>) {
-<a href=#416 id=416 data-nosnippet>416</a>        <span class="macro">InputDefinitions!</span>(<span class="string">"dvipsnam"</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"def"</span>)));
-<a href=#417 id=417 data-nosnippet>417</a>      }
-<a href=#418 id=418 data-nosnippet>418</a>    });
-<a href=#419 id=419 data-nosnippet>419</a>  }
-<a href=#420 id=420 data-nosnippet>420</a>
-<a href=#421 id=421 data-nosnippet>421</a>  <span class="comment">//======================================================================
-<a href=#422 id=422 data-nosnippet>422</a>  // \definecolor{name}{model}{spec}
-<a href=#423 id=423 data-nosnippet>423</a>  // Perl L59-63:
-<a href=#424 id=424 data-nosnippet>424</a>  //   ($name, $model, $spec) = map { $_ &amp;&amp; Expand($_) } $name, $model, $spec;
-<a href=#425 id=425 data-nosnippet>425</a>  //   DefColor(ToString($name), ParseColor($model, $spec));
-<a href=#426 id=426 data-nosnippet>426</a>  //   Box(undef, undef, undef,
-<a href=#427 id=427 data-nosnippet>427</a>  //       Invocation(T_CS('\definecolor'), $name, $model, $spec));
-<a href=#428 id=428 data-nosnippet>428</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\definecolor{}{}{}"</span>, sub[(name, model, spec)] {
-<a href=#429 id=429 data-nosnippet>429</a>    <span class="kw">let </span>name_expanded = do_expand(name)<span class="question-mark">?</span>;
-<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">let </span>model_expanded = do_expand(model)<span class="question-mark">?</span>;
-<a href=#431 id=431 data-nosnippet>431</a>    <span class="kw">let </span>spec_expanded = do_expand(spec)<span class="question-mark">?</span>;
-<a href=#432 id=432 data-nosnippet>432</a>    <span class="kw">let </span>name_str = name_expanded.to_string();
-<a href=#433 id=433 data-nosnippet>433</a>    <span class="kw">let </span>model_str = model_expanded.to_string();
-<a href=#434 id=434 data-nosnippet>434</a>    <span class="kw">let </span>spec_str = spec_expanded.to_string();
-<a href=#435 id=435 data-nosnippet>435</a>    <span class="comment">// color.sty:117-122 accepts any model whose driver macro `\color@&lt;model&gt;` exists, as a package defines one for its
-<a href=#436 id=436 data-nosnippet>436</a>    // own model (spotcolor.sty:71 `\color@spotcolor`): such a colour is the driver's, which LaTeXML does not render, so
-<a href=#437 id=437 data-nosnippet>437</a>    // the name keeps the colour it had (ieeeaccess.cls:131 `\definecolor{accessblue}{spotcolor}{PANTONE3015C,1.0}` after
-<a href=#438 id=438 data-nosnippet>438</a>    // the binding's CMYK `accessblue`; 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467). Perl
-<a href=#439 id=439 data-nosnippet>439</a>    // Color.pm:61 errs (KNOWN_PERL_ERRORS #958).
-<a href=#440 id=440 data-nosnippet>440</a>    </span><span class="kw">if </span>driver_color_model(<span class="kw-2">&amp;</span>model_str) {
-<a href=#441 id=441 data-nosnippet>441</a>      <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span>color_key(<span class="kw-2">&amp;</span>name_str)) {
-<a href=#442 id=442 data-nosnippet>442</a>        <span class="macro">Info!</span>(<span class="string">"color"</span>, model_str, <span class="macro">s!</span>(<span class="string">"Color {name_str} of the driver's model '{model_str}' is not rendered; its earlier definition stands"</span>));
-<a href=#443 id=443 data-nosnippet>443</a>      } <span class="kw">else </span>{
-<a href=#444 id=444 data-nosnippet>444</a>        <span class="comment">// (a name defined first here: the driver's alternate where its binding gives one, else black, which loses it)
-<a href=#445 id=445 data-nosnippet>445</a>        </span><span class="kw">let </span>color = <span class="kw">match </span>driver_alternate_color(<span class="kw-2">&amp;</span>model_str, <span class="kw-2">&amp;</span>spec_expanded)<span class="question-mark">? </span>{
-<a href=#446 id=446 data-nosnippet>446</a>          <span class="prelude-val">Some</span>((model, spec)) =&gt; {
-<a href=#447 id=447 data-nosnippet>447</a>            <span class="macro">Info!</span>(<span class="string">"color"</span>, model_str, <span class="macro">s!</span>(<span class="string">"Color {name_str} of the driver's model '{model_str}' is not rendered; defined as its alternate {model} {spec}"</span>));
-<a href=#448 id=448 data-nosnippet>448</a>            parse_color(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>model), <span class="kw-2">&amp;</span>spec)
-<a href=#449 id=449 data-nosnippet>449</a>          },
-<a href=#450 id=450 data-nosnippet>450</a>          <span class="prelude-val">None </span>=&gt; {
-<a href=#451 id=451 data-nosnippet>451</a>            report_unconverted_model(model_str.trim());
-<a href=#452 id=452 data-nosnippet>452</a>            color::BLACK
-<a href=#453 id=453 data-nosnippet>453</a>          },
-<a href=#454 id=454 data-nosnippet>454</a>        };
-<a href=#455 id=455 data-nosnippet>455</a>        def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#456 id=456 data-nosnippet>456</a>      }
-<a href=#457 id=457 data-nosnippet>457</a>      <span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\definecolor"</span>,
-<a href=#458 id=458 data-nosnippet>458</a>        <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(name_expanded), <span class="prelude-val">Some</span>(model_expanded), <span class="prelude-val">Some</span>(spec_expanded)]);
-<a href=#459 id=459 data-nosnippet>459</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-<a href=#460 id=460 data-nosnippet>460</a>        reversion_tokens, SymHashMap::default()))]);
-<a href=#461 id=461 data-nosnippet>461</a>    }
-<a href=#462 id=462 data-nosnippet>462</a>    <span class="comment">// Use parse_color to handle all models including "named" lookups
-<a href=#463 id=463 data-nosnippet>463</a>    </span><span class="kw">let </span>color = parse_color(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>model_str), <span class="kw-2">&amp;</span>spec_str);
-<a href=#464 id=464 data-nosnippet>464</a>    def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#465 id=465 data-nosnippet>465</a>    <span class="comment">// Perl L63: Box with reversion Invocation so \definecolor round-trips
-<a href=#466 id=466 data-nosnippet>466</a>    // into tex= attributes.
-<a href=#467 id=467 data-nosnippet>467</a>    </span><span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\definecolor"</span>,
-<a href=#468 id=468 data-nosnippet>468</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(name_expanded), <span class="prelude-val">Some</span>(model_expanded), <span class="prelude-val">Some</span>(spec_expanded)]);
-<a href=#469 id=469 data-nosnippet>469</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-<a href=#470 id=470 data-nosnippet>470</a>      reversion_tokens, SymHashMap::default()))])
-<a href=#471 id=471 data-nosnippet>471</a>  });
-<a href=#472 id=472 data-nosnippet>472</a>
-<a href=#473 id=473 data-nosnippet>473</a>  <span class="comment">// \DefineNamedColor{dmodel}{name}{model}{spec}
-<a href=#474 id=474 data-nosnippet>474</a>  // Perl L69-73:
-<a href=#475 id=475 data-nosnippet>475</a>  //   ($dmodel, $name, $model, $spec) = map { $_ &amp;&amp; Expand($_) } ...;
-<a href=#476 id=476 data-nosnippet>476</a>  //   DefColor('named_'.ToString($name), ParseColor($model, $spec));
-<a href=#477 id=477 data-nosnippet>477</a>  //   Box(undef, undef, undef,
-<a href=#478 id=478 data-nosnippet>478</a>  //       Invocation(T_CS('\DefineNamedColor'), $dmodel, $name, $model, $spec));
-<a href=#479 id=479 data-nosnippet>479</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DefineNamedColor{}{}{}{}"</span>, sub[(dmodel, name, model, spec)] {
-<a href=#480 id=480 data-nosnippet>480</a>    <span class="kw">let </span>dmodel_expanded = do_expand(dmodel)<span class="question-mark">?</span>;
-<a href=#481 id=481 data-nosnippet>481</a>    <span class="kw">let </span>name_expanded = do_expand(name)<span class="question-mark">?</span>;
-<a href=#482 id=482 data-nosnippet>482</a>    <span class="kw">let </span>model_expanded = do_expand(model)<span class="question-mark">?</span>;
-<a href=#483 id=483 data-nosnippet>483</a>    <span class="kw">let </span>spec_expanded = do_expand(spec)<span class="question-mark">?</span>;
-<a href=#484 id=484 data-nosnippet>484</a>    <span class="kw">let </span>name_str = name_expanded.to_string();
-<a href=#485 id=485 data-nosnippet>485</a>    <span class="kw">let </span>model_str = model_expanded.to_string();
-<a href=#486 id=486 data-nosnippet>486</a>    <span class="kw">let </span>spec_str = spec_expanded.to_string();
-<a href=#487 id=487 data-nosnippet>487</a>    <span class="kw">let </span>color = parse_color(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>model_str), <span class="kw-2">&amp;</span>spec_str);
-<a href=#488 id=488 data-nosnippet>488</a>    <span class="kw">let </span>named_key = <span class="macro">format!</span>(<span class="string">"named_{}"</span>, name_str);
-<a href=#489 id=489 data-nosnippet>489</a>    def_color(<span class="kw-2">&amp;</span>named_key, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#490 id=490 data-nosnippet>490</a>    <span class="comment">// Perl color.sty L84-87 + L133 `\c@lor@usename`: with the
-<a href=#491 id=491 data-nosnippet>491</a>    // `usenames` package option, ALSO expose the plain name so
-<a href=#492 id=492 data-nosnippet>492</a>    // `\color{Blue}` works after `\DefineNamedColor{named}{Blue}...`.
-<a href=#493 id=493 data-nosnippet>493</a>    // Driver: 1205.2217 dvipsnam.def's 68 named colors used directly.
-<a href=#494 id=494 data-nosnippet>494</a>    </span><span class="kw">if </span>lookup_bool(<span class="string">"color_usenames_active"</span>) {
-<a href=#495 id=495 data-nosnippet>495</a>      def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#496 id=496 data-nosnippet>496</a>    }
-<a href=#497 id=497 data-nosnippet>497</a>    <span class="comment">// Perl L73: Box with reversion Invocation preserving all four args.
-<a href=#498 id=498 data-nosnippet>498</a>    </span><span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\DefineNamedColor"</span>,
-<a href=#499 id=499 data-nosnippet>499</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(dmodel_expanded), <span class="prelude-val">Some</span>(name_expanded),
-<a href=#500 id=500 data-nosnippet>500</a>           <span class="prelude-val">Some</span>(model_expanded), <span class="prelude-val">Some</span>(spec_expanded)]);
-<a href=#501 id=501 data-nosnippet>501</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-<a href=#502 id=502 data-nosnippet>502</a>      reversion_tokens, SymHashMap::default()))])
-<a href=#503 id=503 data-nosnippet>503</a>  });
-<a href=#504 id=504 data-nosnippet>504</a>
-<a href=#505 id=505 data-nosnippet>505</a>  <span class="comment">// \color[model]{spec} or \color{name}
-<a href=#506 id=506 data-nosnippet>506</a>  // Perl: returns Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(components)))
-<a href=#507 id=507 data-nosnippet>507</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\color[]{}"</span>, sub[(model_opt, spec)] {
-<a href=#508 id=508 data-nosnippet>508</a>    <span class="kw">let </span>model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-<a href=#509 id=509 data-nosnippet>509</a>    <span class="kw">let </span>spec_str = do_expand(spec)<span class="question-mark">?</span>.to_string();
-<a href=#510 id=510 data-nosnippet>510</a>    <span class="kw">let </span>color = parse_color(model_str.as_deref(), <span class="kw-2">&amp;</span>spec_str);
-<a href=#511 id=511 data-nosnippet>511</a>
-<a href=#512 id=512 data-nosnippet>512</a>    <span class="comment">// If in preamble, store for \normalcolor
-<a href=#513 id=513 data-nosnippet>513</a>    </span><span class="kw">if </span>lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"inPreamble"</span>)) {
-<a href=#514 id=514 data-nosnippet>514</a>      assign_value(<span class="string">"preambleTextcolor"</span>, Stored::String(pin(color.to_stored())), <span class="prelude-val">None</span>);
-<a href=#515 id=515 data-nosnippet>515</a>    }
-<a href=#516 id=516 data-nosnippet>516</a>    merge_font(<span class="macro">fontmap!</span>(color =&gt; color));
-<a href=#517 id=517 data-nosnippet>517</a>
-<a href=#518 id=518 data-nosnippet>518</a>    <span class="comment">// Perl: Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
-<a href=#519 id=519 data-nosnippet>519</a>    // Return an empty Tbox whose reversion produces \color[rgb]{r,g,b} for the tex attribute.
-<a href=#520 id=520 data-nosnippet>520</a>    </span><span class="kw">let </span>rgb = color.to_rgb();
-<a href=#521 id=521 data-nosnippet>521</a>    <span class="kw">let </span>comps = rgb.components().iter()
-<a href=#522 id=522 data-nosnippet>522</a>      .map(|c| {
-<a href=#523 id=523 data-nosnippet>523</a>        <span class="kw">let </span>v = (<span class="kw-2">*</span>c * <span class="number">10000.0</span>).round() / <span class="number">10000.0</span>;
-<a href=#524 id=524 data-nosnippet>524</a>        <span class="kw">if </span>v == v.floor() { <span class="macro">format!</span>(<span class="string">"{}"</span>, v <span class="kw">as </span>i64) } <span class="kw">else </span>{ <span class="macro">format!</span>(<span class="string">"{v}"</span>) }
-<a href=#525 id=525 data-nosnippet>525</a>      })
-<a href=#526 id=526 data-nosnippet>526</a>      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">","</span>);
-<a href=#527 id=527 data-nosnippet>527</a>    <span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\color"</span>,
-<a href=#528 id=528 data-nosnippet>528</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="string">"rgb"</span>))),
-<a href=#529 id=529 data-nosnippet>529</a>           <span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;*</span>comps)))]);
-<a href=#530 id=530 data-nosnippet>530</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-<a href=#531 id=531 data-nosnippet>531</a>      reversion_tokens, SymHashMap::default()))])
-<a href=#532 id=532 data-nosnippet>532</a>  });
-<a href=#533 id=533 data-nosnippet>533</a>  <span class="comment">// xcolor.sty:762-763 `\color` = `\@ifnextchar[\@undeclaredcolor\@declaredcolor`:
-<a href=#534 id=534 data-nosnippet>534</a>  // the named-color branch `\@declaredcolor#1` (:792) and the modelled branch
-<a href=#535 id=535 data-nosnippet>535</a>  // `\@undeclaredcolor[#1]#2` (:764) are called DIRECTLY by fancyqr.sty:20-22
-<a href=#536 id=536 data-nosnippet>536</a>  // (`\@declaredcolor{tl!50!br}`); both engines bind `\color` monolithically
-<a href=#537 id=537 data-nosnippet>537</a>  // and lacked them (KPE #177). Guard:
-<a href=#538 id=538 data-nosnippet>538</a>  // `perfect_kernel_batch54::color_switch_branches_are_defined`.
-<a href=#539 id=539 data-nosnippet>539</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@declaredcolor{}"</span>, <span class="string">"\\color{#1}"</span>);
-<a href=#540 id=540 data-nosnippet>540</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@undeclaredcolor[]{}"</span>, <span class="string">"\\color[#1]{#2}"</span>);
-<a href=#541 id=541 data-nosnippet>541</a>
-<a href=#542 id=542 data-nosnippet>542</a>  <span class="comment">// \pagecolor[model]{spec}
-<a href=#543 id=543 data-nosnippet>543</a>  // Perl: returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
-<a href=#544 id=544 data-nosnippet>544</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pagecolor[]{}"</span>, sub[(model_opt, spec)] {
-<a href=#545 id=545 data-nosnippet>545</a>    <span class="kw">let </span>model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-<a href=#546 id=546 data-nosnippet>546</a>    <span class="kw">let </span>spec_str = do_expand(spec)<span class="question-mark">?</span>.to_string();
-<a href=#547 id=547 data-nosnippet>547</a>    <span class="kw">let </span>color = parse_color(model_str.as_deref(), <span class="kw-2">&amp;</span>spec_str);
-<a href=#548 id=548 data-nosnippet>548</a>    merge_font(<span class="macro">fontmap!</span>(bg =&gt; color));
-<a href=#549 id=549 data-nosnippet>549</a>
-<a href=#550 id=550 data-nosnippet>550</a>    <span class="comment">// Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
-<a href=#551 id=551 data-nosnippet>551</a>    </span><span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\pagecolor"</span>,
-<a href=#552 id=552 data-nosnippet>552</a>      <span class="macro">vec!</span>[model_str.as_deref().map(|s| Tokens::from(<span class="macro">T_OTHER!</span>(s))),
-<a href=#553 id=553 data-nosnippet>553</a>           <span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;*</span>spec_str)))]);
-<a href=#554 id=554 data-nosnippet>554</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-<a href=#555 id=555 data-nosnippet>555</a>      reversion_tokens, SymHashMap::default()))])
-<a href=#556 id=556 data-nosnippet>556</a>  });
-<a href=#557 id=557 data-nosnippet>557</a>
-<a href=#558 id=558 data-nosnippet>558</a>  <span class="comment">// color.sty:110-112 `\protected\def\nopagecolor{\@ifundefined{no@page@color}
-<a href=#559 id=559 data-nosnippet>559</a>  // {\PackageInfo{color}{nopagecolor not supported}}{\no@page@color}}` — a driver
-<a href=#560 id=560 data-nosnippet>560</a>  // capability (pdftex.def:141 `\no@page@color` = `\global\GPT@pagecolorfalse`):
-<a href=#561 id=561 data-nosnippet>561</a>  // page-level paint only, nothing to carry into the document. Perl has no binding
-<a href=#562 id=562 data-nosnippet>562</a>  // (color.sty.ltxml); xcolor inherits it. Witness: ffslides-doc.
-<a href=#563 id=563 data-nosnippet>563</a>  // Guard: `perfect_kernel_batch56::beamer_transitions_and_nopagecolor_are_noops`.
-<a href=#564 id=564 data-nosnippet>564</a>  </span>def_macro_noop(<span class="string">"\\nopagecolor"</span>)<span class="question-mark">?</span>;
-<a href=#565 id=565 data-nosnippet>565</a>
-<a href=#566 id=566 data-nosnippet>566</a>  <span class="comment">// \normalcolor — restores color from preamble
-<a href=#567 id=567 data-nosnippet>567</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\normalcolor"</span>, {
-<a href=#568 id=568 data-nosnippet>568</a>    <span class="kw">let </span>color = <span class="kw">match </span>lookup_value(<span class="string">"preambleTextcolor"</span>) {
-<a href=#569 id=569 data-nosnippet>569</a>      <span class="prelude-val">Some</span>(Stored::String(sym)) =&gt; {
-<a href=#570 id=570 data-nosnippet>570</a>        <span class="kw">let </span>stored_str = with(sym, |s| s.to_string());
-<a href=#571 id=571 data-nosnippet>571</a>        Color::from_stored(<span class="kw-2">&amp;</span>stored_str).unwrap_or(color::BLACK)
-<a href=#572 id=572 data-nosnippet>572</a>      },
-<a href=#573 id=573 data-nosnippet>573</a>      <span class="kw">_ </span>=&gt; color::BLACK,
-<a href=#574 id=574 data-nosnippet>574</a>    };
-<a href=#575 id=575 data-nosnippet>575</a>    merge_font(<span class="macro">fontmap!</span>(color =&gt; color));
-<a href=#576 id=576 data-nosnippet>576</a>  });
-<a href=#577 id=577 data-nosnippet>577</a>
-<a href=#578 id=578 data-nosnippet>578</a>  <span class="comment">// \textcolor[model]{spec}{text}; color.sty:104 `\@textcolor` is
-<a href=#579 id=579 data-nosnippet>579</a>  // `\protect\leavevmode{\color#1{#2}#3}`: the paragraph starts before the colour
-<a href=#580 id=580 data-nosnippet>580</a>  // group, so `\everypar` material stays uncoloured and a leading `\hbox` is in
-<a href=#581 id=581 data-nosnippet>581</a>  // horizontal mode (Perl color.sty.ltxml has no `\leavevmode`).
-<a href=#582 id=582 data-nosnippet>582</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#583 id=583 data-nosnippet>583</a>    <span class="string">"\\textcolor[]{}{}"</span>,
-<a href=#584 id=584 data-nosnippet>584</a>    <span class="string">"\\leavevmode{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}"
-<a href=#585 id=585 data-nosnippet>585</a>  </span>);
-<a href=#586 id=586 data-nosnippet>586</a>
-<a href=#587 id=587 data-nosnippet>587</a>  <span class="comment">// \colorbox[model]{spec}{text}; color.sty:163-164 `\color@b@x` opens with
-<a href=#588 id=588 data-nosnippet>588</a>  // `\leavevmode`, so the box starts the paragraph (Perl color.sty.ltxml:105 is the
-<a href=#589 id=589 data-nosnippet>589</a>  // bare `\hbox`, which does not, and the space after it was dropped; arXiv
-<a href=#590 id=590 data-nosnippet>590</a>  // 2605.21713 appendix_a.tex:186).
-<a href=#591 id=591 data-nosnippet>591</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#592 id=592 data-nosnippet>592</a>    <span class="string">"\\colorbox[]{}{}"</span>,
-<a href=#593 id=593 data-nosnippet>593</a>    <span class="string">"\\leavevmode\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
-<a href=#594 id=594 data-nosnippet>594</a>  </span>);
-<a href=#595 id=595 data-nosnippet>595</a>
-<a href=#596 id=596 data-nosnippet>596</a>  <span class="comment">// \fcolorbox[model]{framespec}{bgspec}{text} — the two color names are read
-<a href=#597 id=597 data-nosnippet>597</a>  // undigested and expanded to strings (batch 56at, the xcolor twin; Perl
-<a href=#598 id=598 data-nosnippet>598</a>  // color.sty.ltxml:108 digests them and errors on a `_` in a name). It starts the
-<a href=#599 id=599 data-nosnippet>599</a>  // paragraph as color.sty's `\color@b@x` does (163-164 `\leavevmode`), like the
-<a href=#600 id=600 data-nosnippet>600</a>  // xcolor twin, and its body is the `\hbox`'s: restricted horizontal, not Perl's
-<a href=#601 id=601 data-nosnippet>601</a>  // `internal_vertical`, which split the paragraph around it (KPE #336, #293).
-<a href=#602 id=602 data-nosnippet>602</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\fcolorbox[] Undigested Undigested Undigested"</span>,
-<a href=#603 id=603 data-nosnippet>603</a>    <span class="string">"&lt;ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'&gt;#text&lt;/ltx:text&gt;"</span>,
-<a href=#604 id=604 data-nosnippet>604</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#605 id=605 data-nosnippet>605</a>    after_digest =&gt; sub[whatsit] {
-<a href=#606 id=606 data-nosnippet>606</a>      <span class="kw">let </span>model_str = whatsit.get_arg(<span class="number">1</span>).map(|m| m.to_string());
-<a href=#607 id=607 data-nosnippet>607</a>      <span class="kw">let </span>fspec_str = <span class="kw">match </span>whatsit.get_arg(<span class="number">2</span>) {
-<a href=#608 id=608 data-nosnippet>608</a>        <span class="prelude-val">Some</span>(f) =&gt; do_expand(f.revert()<span class="question-mark">?</span>)<span class="question-mark">?</span>.to_string(),
-<a href=#609 id=609 data-nosnippet>609</a>        <span class="prelude-val">None </span>=&gt; String::new(),
-<a href=#610 id=610 data-nosnippet>610</a>      };
-<a href=#611 id=611 data-nosnippet>611</a>      <span class="kw">let </span>bspec_str = <span class="kw">match </span>whatsit.get_arg(<span class="number">3</span>) {
-<a href=#612 id=612 data-nosnippet>612</a>        <span class="prelude-val">Some</span>(b) =&gt; do_expand(b.revert()<span class="question-mark">?</span>)<span class="question-mark">?</span>.to_string(),
-<a href=#613 id=613 data-nosnippet>613</a>        <span class="prelude-val">None </span>=&gt; String::new(),
-<a href=#614 id=614 data-nosnippet>614</a>      };
-<a href=#615 id=615 data-nosnippet>615</a>      <span class="kw">let </span>text_tokens = whatsit.get_arg(<span class="number">4</span>).map(|t| t.revert()).transpose()<span class="question-mark">?</span>;
-<a href=#616 id=616 data-nosnippet>616</a>
-<a href=#617 id=617 data-nosnippet>617</a>      <span class="kw">let </span>framecolor = parse_color(model_str.as_deref(), <span class="kw-2">&amp;</span>fspec_str);
-<a href=#618 id=618 data-nosnippet>618</a>      whatsit.set_property(<span class="string">"framecolor"</span>, Stored::String(pin(framecolor.to_attribute())));
-<a href=#619 id=619 data-nosnippet>619</a>
-<a href=#620 id=620 data-nosnippet>620</a>      <span class="kw">let </span>bgcolor = parse_color(model_str.as_deref(), <span class="kw-2">&amp;</span>bspec_str);
-<a href=#621 id=621 data-nosnippet>621</a>      merge_font(<span class="macro">fontmap!</span>(bg =&gt; bgcolor));
+<a href=#272 id=272 data-nosnippet>272</a>      // dvipsnam.def is a list of `\DefineNamedColor`s: read it only once a colour package defined that.
+<a href=#273 id=273 data-nosnippet>273</a>      </span><span class="kw">if </span>!lookup_bool(<span class="string">"color_dvipsnam_lazy_loaded"</span>)
+<a href=#274 id=274 data-nosnippet>274</a>        &amp;&amp; is_defined_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\DefineNamedColor"</span>))
+<a href=#275 id=275 data-nosnippet>275</a>      {
+<a href=#276 id=276 data-nosnippet>276</a>        assign_value(<span class="string">"color_dvipsnam_lazy_loaded"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#277 id=277 data-nosnippet>277</a>        assign_value(<span class="string">"color_usenames_active"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#278 id=278 data-nosnippet>278</a>        <span class="comment">// Force the 68 dvips colors GLOBAL: we are inside a grouped digestion
+<a href=#279 id=279 data-nosnippet>279</a>        // (e.g. `\textcolor{Blue}{…}`), so without this they'd be local and
+<a href=#280 id=280 data-nosnippet>280</a>        // revert before the next color is looked up (see `def_color`).
+<a href=#281 id=281 data-nosnippet>281</a>        </span>assign_value(<span class="string">"color_force_global"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#282 id=282 data-nosnippet>282</a>        <span class="kw">let _ </span>= input_definitions(<span class="string">"dvipsnam"</span>, InputDefinitionOptions {
+<a href=#283 id=283 data-nosnippet>283</a>          extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"def"</span>)),
+<a href=#284 id=284 data-nosnippet>284</a>          noerror: <span class="bool-val">true</span>,
+<a href=#285 id=285 data-nosnippet>285</a>          ..InputDefinitionOptions::default()
+<a href=#286 id=286 data-nosnippet>286</a>        });
+<a href=#287 id=287 data-nosnippet>287</a>        assign_value(<span class="string">"color_force_global"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#288 id=288 data-nosnippet>288</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(sym)) = lookup_value(<span class="kw-2">&amp;</span>key) {
+<a href=#289 id=289 data-nosnippet>289</a>          <span class="kw">let </span>stored_str = with(sym, |s| s.to_string());
+<a href=#290 id=290 data-nosnippet>290</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = Color::from_stored(<span class="kw-2">&amp;</span>stored_str) {
+<a href=#291 id=291 data-nosnippet>291</a>            <span class="kw">return </span>c;
+<a href=#292 id=292 data-nosnippet>292</a>          }
+<a href=#293 id=293 data-nosnippet>293</a>        }
+<a href=#294 id=294 data-nosnippet>294</a>      }
+<a href=#295 id=295 data-nosnippet>295</a>      <span class="comment">// Raw-interop fallback: real xcolor stores colors as
+<a href=#296 id=296 data-nosnippet>296</a>      // `\csname\string\color@&lt;name&gt;\endcsname` → `\xcolor@{}{}{&lt;model&gt;}{&lt;spec&gt;}`,
+<a href=#297 id=297 data-nosnippet>297</a>      // and raw packages create colors by defining that macro DIRECTLY —
+<a href=#298 id=298 data-nosnippet>298</a>      // ydoc-desc.sty L22-24 defines `\color@none` = `\xcolor@{}{}{}{}` (an
+<a href=#299 id=299 data-nosnippet>299</a>      // intentionally EMPTY color, so `\colorlet{cls}{none}` "uncolors")
+<a href=#300 id=300 data-nosnippet>300</a>      // — the `wisdom_latexml_reimpl_internal_name_mismatch` shape. Read the
+<a href=#301 id=301 data-nosnippet>301</a>      // raw storage before assuming Black (5-bundle `'none'` cluster,
+<a href=#302 id=302 data-nosnippet>302</a>      // macros2e/ydoc family; real pdflatex is clean on these docs).
+<a href=#303 id=303 data-nosnippet>303</a>      </span><span class="kw">let </span>storage_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\\\color@{name}"</span>));
+<a href=#304 id=304 data-nosnippet>304</a>      <span class="comment">// The REPLACEMENT TEXT, not an expansion: `\xcolor@` is a real macro
+<a href=#305 id=305 data-nosnippet>305</a>      // (xcolor.sty:603 `\def\xcolor@#1#2#3#4{#2}`, the "type" slot), so
+<a href=#306 id=306 data-nosnippet>306</a>      // `do_expand` collapsed the payload to `#2` = "" and the textual guard
+<a href=#307 id=307 data-nosnippet>307</a>      // below fell through to "Can't find color named 'none'" (iodhbwm 147
+<a href=#308 id=308 data-nosnippet>308</a>      // errors, ydoc-desc.sty:22; Perl identical). Guard:
+<a href=#309 id=309 data-nosnippet>309</a>      // `perfect_kernel_batch54::xcolor_storage_macro_is_read_as_a_body`.
+<a href=#310 id=310 data-nosnippet>310</a>      </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(defn)) = lookup_definition(<span class="kw-2">&amp;</span>storage_cs)
+<a href=#311 id=311 data-nosnippet>311</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(ExpansionBody::Tokens(payload)) = defn.get_expansion()
+<a href=#312 id=312 data-nosnippet>312</a>      {
+<a href=#313 id=313 data-nosnippet>313</a>        <span class="comment">// Payload shape: `\xcolor@ {}{}{&lt;model&gt;}{&lt;spec&gt;}` — grab the last
+<a href=#314 id=314 data-nosnippet>314</a>        // two braced groups textually.
+<a href=#315 id=315 data-nosnippet>315</a>        </span><span class="kw">let </span>text = payload.to_string();
+<a href=#316 id=316 data-nosnippet>316</a>        <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = text.split(<span class="string">'{'</span>).collect();
+<a href=#317 id=317 data-nosnippet>317</a>        <span class="kw">if </span>parts.len() &gt;= <span class="number">5 </span>{
+<a href=#318 id=318 data-nosnippet>318</a>          <span class="kw">let </span>model = parts[parts.len() - <span class="number">2</span>].trim_end_matches(<span class="string">'}'</span>).trim();
+<a href=#319 id=319 data-nosnippet>319</a>          <span class="kw">let </span>spec = parts[parts.len() - <span class="number">1</span>].trim_end_matches(<span class="string">'}'</span>).trim();
+<a href=#320 id=320 data-nosnippet>320</a>          <span class="kw">if </span>model.is_empty() &amp;&amp; spec.is_empty() {
+<a href=#321 id=321 data-nosnippet>321</a>            <span class="comment">// Empty color = "no color": inherit (render as default ink),
+<a href=#322 id=322 data-nosnippet>322</a>            // silently — matching real xcolor's behavior for this storage.
+<a href=#323 id=323 data-nosnippet>323</a>            </span><span class="kw">return </span>color::BLACK;
+<a href=#324 id=324 data-nosnippet>324</a>          }
+<a href=#325 id=325 data-nosnippet>325</a>          <span class="comment">// A model raw code defined is read as any other: colorspace.sty:78's spot colours are stored
+<a href=#326 id=326 data-nosnippet>326</a>          // `\xcolor@{}{/&amp;&lt;name&gt; cs …}{&amp;spot}{1}` (a `\definespotcolor` in a group leaves only that behind), and
+<a href=#327 id=327 data-nosnippet>327</a>          // their colour is lost with a Warning, not silently (`report_unconverted_model`). Any other model keeps this
+<a href=#328 id=328 data-nosnippet>328</a>          // read: a payload saying `named` would come back here through `lookup_color_obj`, and one no code defined
+<a href=#329 id=329 data-nosnippet>329</a>          // (`{foo}{1}`) has its PDF literal for pdflatex and no Error (the review of M2 r2's `rawstore`).
+<a href=#330 id=330 data-nosnippet>330</a>          </span><span class="kw">return if </span>model != <span class="string">"named" </span>&amp;&amp; is_defined_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\XC@mod@{model}"</span>))) {
+<a href=#331 id=331 data-nosnippet>331</a>            xcolor_sty::parse_xcolor(<span class="prelude-val">Some</span>(model), spec, <span class="prelude-val">None</span>)
+<a href=#332 id=332 data-nosnippet>332</a>          } <span class="kw">else </span>{
+<a href=#333 id=333 data-nosnippet>333</a>            color_from_model_spec(model, spec)
+<a href=#334 id=334 data-nosnippet>334</a>          };
+<a href=#335 id=335 data-nosnippet>335</a>        }
+<a href=#336 id=336 data-nosnippet>336</a>      }
+<a href=#337 id=337 data-nosnippet>337</a>      <span class="comment">// Perl color.sty.ltxml L50-53:
+<a href=#338 id=338 data-nosnippet>338</a>      //   AssignValue('color_'.$spec =&gt; Black);
+<a href=#339 id=339 data-nosnippet>339</a>      //   Error('unexpected', $spec, $STATE-&gt;getStomach,
+<a href=#340 id=340 data-nosnippet>340</a>      //     "Can't find color named '$spec'; assuming Black");
+<a href=#341 id=341 data-nosnippet>341</a>      // Persist Black under this name so subsequent lookups resolve it
+<a href=#342 id=342 data-nosnippet>342</a>      // without repeating the diagnostic, then surface an Error-status
+<a href=#343 id=343 data-nosnippet>343</a>      // diagnostic. We inline the bookkeeping from the `Error!` macro
+<a href=#344 id=344 data-nosnippet>344</a>      // because that macro is return-based (`Fatal!` at threshold) and
+<a href=#345 id=345 data-nosnippet>345</a>      // `lookup_color_obj` returns `Color`, not `Result&lt;Color&gt;`.
+<a href=#346 id=346 data-nosnippet>346</a>      </span>assign_value(
+<a href=#347 id=347 data-nosnippet>347</a>        <span class="kw-2">&amp;</span>color_key(name),
+<a href=#348 id=348 data-nosnippet>348</a>        Stored::String(pin(color::BLACK.to_stored())),
+<a href=#349 id=349 data-nosnippet>349</a>        <span class="prelude-val">None</span>,
+<a href=#350 id=350 data-nosnippet>350</a>      );
+<a href=#351 id=351 data-nosnippet>351</a>      emit_error(
+<a href=#352 id=352 data-nosnippet>352</a>        <span class="string">"unexpected"</span>,
+<a href=#353 id=353 data-nosnippet>353</a>        name,
+<a href=#354 id=354 data-nosnippet>354</a>        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Can't find color named '{name}'; assuming Black"</span>),
+<a href=#355 id=355 data-nosnippet>355</a>      );
+<a href=#356 id=356 data-nosnippet>356</a>      color::BLACK
+<a href=#357 id=357 data-nosnippet>357</a>    },
+<a href=#358 id=358 data-nosnippet>358</a>  }
+<a href=#359 id=359 data-nosnippet>359</a>}
+<a href=#360 id=360 data-nosnippet>360</a>
+<a href=#361 id=361 data-nosnippet>361</a><span class="doccomment">/// Look up a named color from state. Returns hex string.
+<a href=#362 id=362 data-nosnippet>362</a>/// Perl: LookupColor($name) in Package.pm
+<a href=#363 id=363 data-nosnippet>363</a></span><span class="kw">pub fn </span>lookup_color(name: <span class="kw-2">&amp;</span>str) -&gt; String { lookup_color_obj(name).to_attribute() }
+<a href=#364 id=364 data-nosnippet>364</a>
+<a href=#365 id=365 data-nosnippet>365</a><span class="doccomment">/// color.sty's default colours (Perl color.sty.ltxml L136-145).
+<a href=#366 id=366 data-nosnippet>366</a></span><span class="kw">const </span>BASE_COLORS: [(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str); <span class="number">8</span>] = [
+<a href=#367 id=367 data-nosnippet>367</a>  (<span class="string">"black"</span>, <span class="string">"rgb"</span>, <span class="string">"0,0,0"</span>),
+<a href=#368 id=368 data-nosnippet>368</a>  (<span class="string">"white"</span>, <span class="string">"rgb"</span>, <span class="string">"1,1,1"</span>),
+<a href=#369 id=369 data-nosnippet>369</a>  (<span class="string">"red"</span>, <span class="string">"rgb"</span>, <span class="string">"1,0,0"</span>),
+<a href=#370 id=370 data-nosnippet>370</a>  (<span class="string">"green"</span>, <span class="string">"rgb"</span>, <span class="string">"0,1,0"</span>),
+<a href=#371 id=371 data-nosnippet>371</a>  (<span class="string">"blue"</span>, <span class="string">"rgb"</span>, <span class="string">"0,0,1"</span>),
+<a href=#372 id=372 data-nosnippet>372</a>  (<span class="string">"cyan"</span>, <span class="string">"cmyk"</span>, <span class="string">"1,0,0,0"</span>),
+<a href=#373 id=373 data-nosnippet>373</a>  (<span class="string">"magenta"</span>, <span class="string">"cmyk"</span>, <span class="string">"0,1,0,0"</span>),
+<a href=#374 id=374 data-nosnippet>374</a>  (<span class="string">"yellow"</span>, <span class="string">"cmyk"</span>, <span class="string">"0,0,1,0"</span>),
+<a href=#375 id=375 data-nosnippet>375</a>];
+<a href=#376 id=376 data-nosnippet>376</a>
+<a href=#377 id=377 data-nosnippet>377</a><span class="doccomment">/// A font's colour by name (Font.pm `merge`'s `color`/`background`, a binding's `MergeFont`): [`lookup_color_obj`],
+<a href=#378 id=378 data-nosnippet>378</a>/// and with no colour package loaded a base name is color.sty's colour of that name (Perl keeps the name, 0 E).
+<a href=#379 id=379 data-nosnippet>379</a></span><span class="kw">pub fn </span>lookup_font_color(name: <span class="kw-2">&amp;</span>str) -&gt; Color {
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="kw">let </span>base = BASE_COLORS.iter().find(|(base, ..)| <span class="kw-2">*</span>base == name.trim());
+<a href=#381 id=381 data-nosnippet>381</a>  <span class="kw">match </span>base {
+<a href=#382 id=382 data-nosnippet>382</a>    <span class="prelude-val">Some</span>((<span class="kw">_</span>, model, spec)) <span class="kw">if </span>lookup_value(<span class="kw-2">&amp;</span>color_key(name)).is_none() =&gt; {
+<a href=#383 id=383 data-nosnippet>383</a>      color_from_model_spec(model, spec)
+<a href=#384 id=384 data-nosnippet>384</a>    },
+<a href=#385 id=385 data-nosnippet>385</a>    <span class="kw">_ </span>=&gt; lookup_color_obj(name),
+<a href=#386 id=386 data-nosnippet>386</a>  }
+<a href=#387 id=387 data-nosnippet>387</a>}
+<a href=#388 id=388 data-nosnippet>388</a>
+<a href=#389 id=389 data-nosnippet>389</a><span class="macro">LoadDefinitions!</span>({
+<a href=#390 id=390 data-nosnippet>390</a>  <span class="comment">// color.sty:26 `\newif\ifcolors@ \colors@true` (the `monochrome` option
+<a href=#391 id=391 data-nosnippet>391</a>  // clears it): raw packages test it (beamer themes under the luatex profile:
+<a href=#392 id=392 data-nosnippet>392</a>  // neoschool, beamerthemeCelestia). The binding stands in for color.sty.
+<a href=#393 id=393 data-nosnippet>393</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\ifcolors@ \colors@true"</span>);
+<a href=#394 id=394 data-nosnippet>394</a>
+<a href=#395 id=395 data-nosnippet>395</a>  <span class="comment">//======================================================================
+<a href=#396 id=396 data-nosnippet>396</a>  // Ignorable options (mostly drivers)
+<a href=#397 id=397 data-nosnippet>397</a>  </span><span class="kw">for </span>option <span class="kw">in </span><span class="kw-2">&amp;</span>[
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="string">"monochrome"</span>,
+<a href=#399 id=399 data-nosnippet>399</a>    <span class="string">"debugshow"</span>,
+<a href=#400 id=400 data-nosnippet>400</a>    <span class="string">"dvipdf"</span>,
+<a href=#401 id=401 data-nosnippet>401</a>    <span class="string">"dvipdfm"</span>,
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="string">"dvipdfmx"</span>,
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="string">"pdftex"</span>,
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="string">"xetex"</span>,
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="string">"dvipsone"</span>,
+<a href=#406 id=406 data-nosnippet>406</a>    <span class="string">"dviwindo"</span>,
+<a href=#407 id=407 data-nosnippet>407</a>    <span class="string">"emtex"</span>,
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="string">"dviwin"</span>,
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="string">"textures"</span>,
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="string">"pctexps"</span>,
+<a href=#411 id=411 data-nosnippet>411</a>    <span class="string">"pctexwin"</span>,
+<a href=#412 id=412 data-nosnippet>412</a>    <span class="string">"pctexhp"</span>,
+<a href=#413 id=413 data-nosnippet>413</a>    <span class="string">"pctex32"</span>,
+<a href=#414 id=414 data-nosnippet>414</a>    <span class="string">"truetex"</span>,
+<a href=#415 id=415 data-nosnippet>415</a>    <span class="string">"tcidvi"</span>,
+<a href=#416 id=416 data-nosnippet>416</a>    <span class="string">"vtex"</span>,
+<a href=#417 id=417 data-nosnippet>417</a>    <span class="string">"nodvipsnames"</span>,
+<a href=#418 id=418 data-nosnippet>418</a>  ] {
+<a href=#419 id=419 data-nosnippet>419</a>    <span class="macro">DeclareOption!</span>(option, <span class="prelude-val">None</span>);
+<a href=#420 id=420 data-nosnippet>420</a>  }
+<a href=#421 id=421 data-nosnippet>421</a>  <span class="comment">// `usenames` makes `\DefineNamedColor` ALSO expose the color under
+<a href=#422 id=422 data-nosnippet>422</a>  // the plain name (no `named_` prefix), so `\color{Blue}` after
+<a href=#423 id=423 data-nosnippet>423</a>  // `\usepackage[usenames,dvipsnames]{color}` resolves to the
+<a href=#424 id=424 data-nosnippet>424</a>  // dvipsnam.def-loaded `Blue`. LaTeX color.sty L84-87 implements this
+<a href=#425 id=425 data-nosnippet>425</a>  // by redefining `\c@lor@usename` to actually register the lookup; we
+<a href=#426 id=426 data-nosnippet>426</a>  // emulate by setting a flag the `\DefineNamedColor` primitive
+<a href=#427 id=427 data-nosnippet>427</a>  // honors. Mirrors Perl `color.sty.ltxml` (which silently relied on
+<a href=#428 id=428 data-nosnippet>428</a>  // the listings.sty option-deferral path; this is the more direct
+<a href=#429 id=429 data-nosnippet>429</a>  // fix). Driver: 1205.2217 (`\lstset{keywordstyle=...\color{Blue}}`
+<a href=#430 id=430 data-nosnippet>430</a>  // 16 × `unexpected:Blue` → 0 errors).
+<a href=#431 id=431 data-nosnippet>431</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"usenames"</span>, {
+<a href=#432 id=432 data-nosnippet>432</a>    assign_value(<span class="string">"color_usenames_active"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#433 id=433 data-nosnippet>433</a>  });
+<a href=#434 id=434 data-nosnippet>434</a>  <span class="comment">// Options that want the dvipsnam definitions
+<a href=#435 id=435 data-nosnippet>435</a>  </span><span class="kw">for </span>option <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"dvips"</span>, <span class="string">"xdvi"</span>, <span class="string">"oztex"</span>, <span class="string">"dvipsnames"</span>] {
+<a href=#436 id=436 data-nosnippet>436</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>option, {
+<a href=#437 id=437 data-nosnippet>437</a>      <span class="comment">// Defer to xcolor when it is the driving package: xcolor requires us and
+<a href=#438 id=438 data-nosnippet>438</a>      // then loads dvipsnam.def into ITS color DB. Loading here first would win
+<a href=#439 id=439 data-nosnippet>439</a>      // the input_definitions load-dedup and leave xcolor's DB without the dvips
+<a href=#440 id=440 data-nosnippet>440</a>      // names (see xcolor_sty.rs `xcolor_driving`; witness 2405.04517). Stays
+<a href=#441 id=441 data-nosnippet>441</a>      // eager for a standalone `\usepackage[dvipsnames]{color}` (flag unset).
+<a href=#442 id=442 data-nosnippet>442</a>      </span><span class="kw">if </span>!lookup_bool(<span class="string">"xcolor_driving"</span>) {
+<a href=#443 id=443 data-nosnippet>443</a>        <span class="macro">InputDefinitions!</span>(<span class="string">"dvipsnam"</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"def"</span>)));
+<a href=#444 id=444 data-nosnippet>444</a>      }
+<a href=#445 id=445 data-nosnippet>445</a>    });
+<a href=#446 id=446 data-nosnippet>446</a>  }
+<a href=#447 id=447 data-nosnippet>447</a>
+<a href=#448 id=448 data-nosnippet>448</a>  <span class="comment">//======================================================================
+<a href=#449 id=449 data-nosnippet>449</a>  // \definecolor{name}{model}{spec}
+<a href=#450 id=450 data-nosnippet>450</a>  // Perl L59-63:
+<a href=#451 id=451 data-nosnippet>451</a>  //   ($name, $model, $spec) = map { $_ &amp;&amp; Expand($_) } $name, $model, $spec;
+<a href=#452 id=452 data-nosnippet>452</a>  //   DefColor(ToString($name), ParseColor($model, $spec));
+<a href=#453 id=453 data-nosnippet>453</a>  //   Box(undef, undef, undef,
+<a href=#454 id=454 data-nosnippet>454</a>  //       Invocation(T_CS('\definecolor'), $name, $model, $spec));
+<a href=#455 id=455 data-nosnippet>455</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\definecolor{}{}{}"</span>, sub[(name, model, spec)] {
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="kw">let </span>name_expanded = do_expand(name)<span class="question-mark">?</span>;
+<a href=#457 id=457 data-nosnippet>457</a>    <span class="kw">let </span>model_expanded = do_expand(model)<span class="question-mark">?</span>;
+<a href=#458 id=458 data-nosnippet>458</a>    <span class="kw">let </span>spec_expanded = do_expand(spec)<span class="question-mark">?</span>;
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">let </span>name_str = name_expanded.to_string();
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">let </span>model_str = model_expanded.to_string();
+<a href=#461 id=461 data-nosnippet>461</a>    <span class="kw">let </span>spec_str = spec_expanded.to_string();
+<a href=#462 id=462 data-nosnippet>462</a>    <span class="comment">// color.sty:117-122 accepts any model whose driver macro `\color@&lt;model&gt;` exists, as a package defines one for its
+<a href=#463 id=463 data-nosnippet>463</a>    // own model (spotcolor.sty:71 `\color@spotcolor`): such a colour is the driver's, which LaTeXML does not render, so
+<a href=#464 id=464 data-nosnippet>464</a>    // the name keeps the colour it had (ieeeaccess.cls:131 `\definecolor{accessblue}{spotcolor}{PANTONE3015C,1.0}` after
+<a href=#465 id=465 data-nosnippet>465</a>    // the binding's CMYK `accessblue`; 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467). Perl
+<a href=#466 id=466 data-nosnippet>466</a>    // Color.pm:61 errs (KNOWN_PERL_ERRORS #958).
+<a href=#467 id=467 data-nosnippet>467</a>    </span><span class="kw">if </span>driver_color_model(<span class="kw-2">&amp;</span>model_str) {
+<a href=#468 id=468 data-nosnippet>468</a>      <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span>color_key(<span class="kw-2">&amp;</span>name_str)) {
+<a href=#469 id=469 data-nosnippet>469</a>        <span class="macro">Info!</span>(<span class="string">"color"</span>, model_str, <span class="macro">s!</span>(<span class="string">"Color {name_str} of the driver's model '{model_str}' is not rendered; its earlier definition stands"</span>));
+<a href=#470 id=470 data-nosnippet>470</a>      } <span class="kw">else </span>{
+<a href=#471 id=471 data-nosnippet>471</a>        <span class="comment">// (a name defined first here: the driver's alternate where its binding gives one, else black, which loses it)
+<a href=#472 id=472 data-nosnippet>472</a>        </span><span class="kw">let </span>color = <span class="kw">match </span>driver_alternate_color(<span class="kw-2">&amp;</span>model_str, <span class="kw-2">&amp;</span>spec_expanded)<span class="question-mark">? </span>{
+<a href=#473 id=473 data-nosnippet>473</a>          <span class="prelude-val">Some</span>((model, spec)) =&gt; {
+<a href=#474 id=474 data-nosnippet>474</a>            <span class="macro">Info!</span>(<span class="string">"color"</span>, model_str, <span class="macro">s!</span>(<span class="string">"Color {name_str} of the driver's model '{model_str}' is not rendered; defined as its alternate {model} {spec}"</span>));
+<a href=#475 id=475 data-nosnippet>475</a>            parse_color(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>model), <span class="kw-2">&amp;</span>spec)
+<a href=#476 id=476 data-nosnippet>476</a>          },
+<a href=#477 id=477 data-nosnippet>477</a>          <span class="prelude-val">None </span>=&gt; {
+<a href=#478 id=478 data-nosnippet>478</a>            report_unconverted_model(model_str.trim());
+<a href=#479 id=479 data-nosnippet>479</a>            color::BLACK
+<a href=#480 id=480 data-nosnippet>480</a>          },
+<a href=#481 id=481 data-nosnippet>481</a>        };
+<a href=#482 id=482 data-nosnippet>482</a>        def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#483 id=483 data-nosnippet>483</a>      }
+<a href=#484 id=484 data-nosnippet>484</a>      <span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\definecolor"</span>,
+<a href=#485 id=485 data-nosnippet>485</a>        <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(name_expanded), <span class="prelude-val">Some</span>(model_expanded), <span class="prelude-val">Some</span>(spec_expanded)]);
+<a href=#486 id=486 data-nosnippet>486</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#487 id=487 data-nosnippet>487</a>        reversion_tokens, SymHashMap::default()))]);
+<a href=#488 id=488 data-nosnippet>488</a>    }
+<a href=#489 id=489 data-nosnippet>489</a>    <span class="comment">// Use parse_color to handle all models including "named" lookups
+<a href=#490 id=490 data-nosnippet>490</a>    </span><span class="kw">let </span>color = parse_color(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>model_str), <span class="kw-2">&amp;</span>spec_str);
+<a href=#491 id=491 data-nosnippet>491</a>    def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#492 id=492 data-nosnippet>492</a>    <span class="comment">// Perl L63: Box with reversion Invocation so \definecolor round-trips
+<a href=#493 id=493 data-nosnippet>493</a>    // into tex= attributes.
+<a href=#494 id=494 data-nosnippet>494</a>    </span><span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\definecolor"</span>,
+<a href=#495 id=495 data-nosnippet>495</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(name_expanded), <span class="prelude-val">Some</span>(model_expanded), <span class="prelude-val">Some</span>(spec_expanded)]);
+<a href=#496 id=496 data-nosnippet>496</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#497 id=497 data-nosnippet>497</a>      reversion_tokens, SymHashMap::default()))])
+<a href=#498 id=498 data-nosnippet>498</a>  });
+<a href=#499 id=499 data-nosnippet>499</a>
+<a href=#500 id=500 data-nosnippet>500</a>  <span class="comment">// \DefineNamedColor{dmodel}{name}{model}{spec}
+<a href=#501 id=501 data-nosnippet>501</a>  // Perl L69-73:
+<a href=#502 id=502 data-nosnippet>502</a>  //   ($dmodel, $name, $model, $spec) = map { $_ &amp;&amp; Expand($_) } ...;
+<a href=#503 id=503 data-nosnippet>503</a>  //   DefColor('named_'.ToString($name), ParseColor($model, $spec));
+<a href=#504 id=504 data-nosnippet>504</a>  //   Box(undef, undef, undef,
+<a href=#505 id=505 data-nosnippet>505</a>  //       Invocation(T_CS('\DefineNamedColor'), $dmodel, $name, $model, $spec));
+<a href=#506 id=506 data-nosnippet>506</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DefineNamedColor{}{}{}{}"</span>, sub[(dmodel, name, model, spec)] {
+<a href=#507 id=507 data-nosnippet>507</a>    <span class="kw">let </span>dmodel_expanded = do_expand(dmodel)<span class="question-mark">?</span>;
+<a href=#508 id=508 data-nosnippet>508</a>    <span class="kw">let </span>name_expanded = do_expand(name)<span class="question-mark">?</span>;
+<a href=#509 id=509 data-nosnippet>509</a>    <span class="kw">let </span>model_expanded = do_expand(model)<span class="question-mark">?</span>;
+<a href=#510 id=510 data-nosnippet>510</a>    <span class="kw">let </span>spec_expanded = do_expand(spec)<span class="question-mark">?</span>;
+<a href=#511 id=511 data-nosnippet>511</a>    <span class="kw">let </span>name_str = name_expanded.to_string();
+<a href=#512 id=512 data-nosnippet>512</a>    <span class="kw">let </span>model_str = model_expanded.to_string();
+<a href=#513 id=513 data-nosnippet>513</a>    <span class="kw">let </span>spec_str = spec_expanded.to_string();
+<a href=#514 id=514 data-nosnippet>514</a>    <span class="kw">let </span>color = parse_color(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>model_str), <span class="kw-2">&amp;</span>spec_str);
+<a href=#515 id=515 data-nosnippet>515</a>    <span class="kw">let </span>named_key = <span class="macro">format!</span>(<span class="string">"named_{}"</span>, name_str);
+<a href=#516 id=516 data-nosnippet>516</a>    def_color(<span class="kw-2">&amp;</span>named_key, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#517 id=517 data-nosnippet>517</a>    <span class="comment">// Perl color.sty L84-87 + L133 `\c@lor@usename`: with the
+<a href=#518 id=518 data-nosnippet>518</a>    // `usenames` package option, ALSO expose the plain name so
+<a href=#519 id=519 data-nosnippet>519</a>    // `\color{Blue}` works after `\DefineNamedColor{named}{Blue}...`.
+<a href=#520 id=520 data-nosnippet>520</a>    // Driver: 1205.2217 dvipsnam.def's 68 named colors used directly.
+<a href=#521 id=521 data-nosnippet>521</a>    </span><span class="kw">if </span>lookup_bool(<span class="string">"color_usenames_active"</span>) {
+<a href=#522 id=522 data-nosnippet>522</a>      def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#523 id=523 data-nosnippet>523</a>    }
+<a href=#524 id=524 data-nosnippet>524</a>    <span class="comment">// Perl L73: Box with reversion Invocation preserving all four args.
+<a href=#525 id=525 data-nosnippet>525</a>    </span><span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\DefineNamedColor"</span>,
+<a href=#526 id=526 data-nosnippet>526</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(dmodel_expanded), <span class="prelude-val">Some</span>(name_expanded),
+<a href=#527 id=527 data-nosnippet>527</a>           <span class="prelude-val">Some</span>(model_expanded), <span class="prelude-val">Some</span>(spec_expanded)]);
+<a href=#528 id=528 data-nosnippet>528</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#529 id=529 data-nosnippet>529</a>      reversion_tokens, SymHashMap::default()))])
+<a href=#530 id=530 data-nosnippet>530</a>  });
+<a href=#531 id=531 data-nosnippet>531</a>
+<a href=#532 id=532 data-nosnippet>532</a>  <span class="comment">// \color[model]{spec} or \color{name}
+<a href=#533 id=533 data-nosnippet>533</a>  // Perl: returns Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(components)))
+<a href=#534 id=534 data-nosnippet>534</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\color[]{}"</span>, sub[(model_opt, spec)] {
+<a href=#535 id=535 data-nosnippet>535</a>    <span class="kw">let </span>model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+<a href=#536 id=536 data-nosnippet>536</a>    <span class="kw">let </span>spec_str = do_expand(spec)<span class="question-mark">?</span>.to_string();
+<a href=#537 id=537 data-nosnippet>537</a>    <span class="kw">let </span>color = parse_color(model_str.as_deref(), <span class="kw-2">&amp;</span>spec_str);
+<a href=#538 id=538 data-nosnippet>538</a>
+<a href=#539 id=539 data-nosnippet>539</a>    <span class="comment">// If in preamble, store for \normalcolor
+<a href=#540 id=540 data-nosnippet>540</a>    </span><span class="kw">if </span>lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"inPreamble"</span>)) {
+<a href=#541 id=541 data-nosnippet>541</a>      assign_value(<span class="string">"preambleTextcolor"</span>, Stored::String(pin(color.to_stored())), <span class="prelude-val">None</span>);
+<a href=#542 id=542 data-nosnippet>542</a>    }
+<a href=#543 id=543 data-nosnippet>543</a>    merge_font(<span class="macro">fontmap!</span>(color =&gt; color));
+<a href=#544 id=544 data-nosnippet>544</a>
+<a href=#545 id=545 data-nosnippet>545</a>    <span class="comment">// Perl: Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
+<a href=#546 id=546 data-nosnippet>546</a>    // Return an empty Tbox whose reversion produces \color[rgb]{r,g,b} for the tex attribute.
+<a href=#547 id=547 data-nosnippet>547</a>    </span><span class="kw">let </span>rgb = color.to_rgb();
+<a href=#548 id=548 data-nosnippet>548</a>    <span class="kw">let </span>comps = rgb.components().iter()
+<a href=#549 id=549 data-nosnippet>549</a>      .map(|c| {
+<a href=#550 id=550 data-nosnippet>550</a>        <span class="kw">let </span>v = (<span class="kw-2">*</span>c * <span class="number">10000.0</span>).round() / <span class="number">10000.0</span>;
+<a href=#551 id=551 data-nosnippet>551</a>        <span class="kw">if </span>v == v.floor() { <span class="macro">format!</span>(<span class="string">"{}"</span>, v <span class="kw">as </span>i64) } <span class="kw">else </span>{ <span class="macro">format!</span>(<span class="string">"{v}"</span>) }
+<a href=#552 id=552 data-nosnippet>552</a>      })
+<a href=#553 id=553 data-nosnippet>553</a>      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">","</span>);
+<a href=#554 id=554 data-nosnippet>554</a>    <span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\color"</span>,
+<a href=#555 id=555 data-nosnippet>555</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="string">"rgb"</span>))),
+<a href=#556 id=556 data-nosnippet>556</a>           <span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;*</span>comps)))]);
+<a href=#557 id=557 data-nosnippet>557</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#558 id=558 data-nosnippet>558</a>      reversion_tokens, SymHashMap::default()))])
+<a href=#559 id=559 data-nosnippet>559</a>  });
+<a href=#560 id=560 data-nosnippet>560</a>  <span class="comment">// xcolor.sty:762-763 `\color` = `\@ifnextchar[\@undeclaredcolor\@declaredcolor`:
+<a href=#561 id=561 data-nosnippet>561</a>  // the named-color branch `\@declaredcolor#1` (:792) and the modelled branch
+<a href=#562 id=562 data-nosnippet>562</a>  // `\@undeclaredcolor[#1]#2` (:764) are called DIRECTLY by fancyqr.sty:20-22
+<a href=#563 id=563 data-nosnippet>563</a>  // (`\@declaredcolor{tl!50!br}`); both engines bind `\color` monolithically
+<a href=#564 id=564 data-nosnippet>564</a>  // and lacked them (KPE #177). Guard:
+<a href=#565 id=565 data-nosnippet>565</a>  // `perfect_kernel_batch54::color_switch_branches_are_defined`.
+<a href=#566 id=566 data-nosnippet>566</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@declaredcolor{}"</span>, <span class="string">"\\color{#1}"</span>);
+<a href=#567 id=567 data-nosnippet>567</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@undeclaredcolor[]{}"</span>, <span class="string">"\\color[#1]{#2}"</span>);
+<a href=#568 id=568 data-nosnippet>568</a>
+<a href=#569 id=569 data-nosnippet>569</a>  <span class="comment">// \pagecolor[model]{spec}
+<a href=#570 id=570 data-nosnippet>570</a>  // Perl: returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
+<a href=#571 id=571 data-nosnippet>571</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pagecolor[]{}"</span>, sub[(model_opt, spec)] {
+<a href=#572 id=572 data-nosnippet>572</a>    <span class="kw">let </span>model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+<a href=#573 id=573 data-nosnippet>573</a>    <span class="kw">let </span>spec_str = do_expand(spec)<span class="question-mark">?</span>.to_string();
+<a href=#574 id=574 data-nosnippet>574</a>    <span class="kw">let </span>color = parse_color(model_str.as_deref(), <span class="kw-2">&amp;</span>spec_str);
+<a href=#575 id=575 data-nosnippet>575</a>    merge_font(<span class="macro">fontmap!</span>(bg =&gt; color));
+<a href=#576 id=576 data-nosnippet>576</a>
+<a href=#577 id=577 data-nosnippet>577</a>    <span class="comment">// Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
+<a href=#578 id=578 data-nosnippet>578</a>    </span><span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\pagecolor"</span>,
+<a href=#579 id=579 data-nosnippet>579</a>      <span class="macro">vec!</span>[model_str.as_deref().map(|s| Tokens::from(<span class="macro">T_OTHER!</span>(s))),
+<a href=#580 id=580 data-nosnippet>580</a>           <span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;*</span>spec_str)))]);
+<a href=#581 id=581 data-nosnippet>581</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#582 id=582 data-nosnippet>582</a>      reversion_tokens, SymHashMap::default()))])
+<a href=#583 id=583 data-nosnippet>583</a>  });
+<a href=#584 id=584 data-nosnippet>584</a>
+<a href=#585 id=585 data-nosnippet>585</a>  <span class="comment">// color.sty:110-112 `\protected\def\nopagecolor{\@ifundefined{no@page@color}
+<a href=#586 id=586 data-nosnippet>586</a>  // {\PackageInfo{color}{nopagecolor not supported}}{\no@page@color}}` — a driver
+<a href=#587 id=587 data-nosnippet>587</a>  // capability (pdftex.def:141 `\no@page@color` = `\global\GPT@pagecolorfalse`):
+<a href=#588 id=588 data-nosnippet>588</a>  // page-level paint only, nothing to carry into the document. Perl has no binding
+<a href=#589 id=589 data-nosnippet>589</a>  // (color.sty.ltxml); xcolor inherits it. Witness: ffslides-doc.
+<a href=#590 id=590 data-nosnippet>590</a>  // Guard: `perfect_kernel_batch56::beamer_transitions_and_nopagecolor_are_noops`.
+<a href=#591 id=591 data-nosnippet>591</a>  </span>def_macro_noop(<span class="string">"\\nopagecolor"</span>)<span class="question-mark">?</span>;
+<a href=#592 id=592 data-nosnippet>592</a>
+<a href=#593 id=593 data-nosnippet>593</a>  <span class="comment">// \normalcolor — restores color from preamble
+<a href=#594 id=594 data-nosnippet>594</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\normalcolor"</span>, {
+<a href=#595 id=595 data-nosnippet>595</a>    <span class="kw">let </span>color = <span class="kw">match </span>lookup_value(<span class="string">"preambleTextcolor"</span>) {
+<a href=#596 id=596 data-nosnippet>596</a>      <span class="prelude-val">Some</span>(Stored::String(sym)) =&gt; {
+<a href=#597 id=597 data-nosnippet>597</a>        <span class="kw">let </span>stored_str = with(sym, |s| s.to_string());
+<a href=#598 id=598 data-nosnippet>598</a>        Color::from_stored(<span class="kw-2">&amp;</span>stored_str).unwrap_or(color::BLACK)
+<a href=#599 id=599 data-nosnippet>599</a>      },
+<a href=#600 id=600 data-nosnippet>600</a>      <span class="kw">_ </span>=&gt; color::BLACK,
+<a href=#601 id=601 data-nosnippet>601</a>    };
+<a href=#602 id=602 data-nosnippet>602</a>    merge_font(<span class="macro">fontmap!</span>(color =&gt; color));
+<a href=#603 id=603 data-nosnippet>603</a>  });
+<a href=#604 id=604 data-nosnippet>604</a>
+<a href=#605 id=605 data-nosnippet>605</a>  <span class="comment">// \textcolor[model]{spec}{text}; color.sty:104 `\@textcolor` is
+<a href=#606 id=606 data-nosnippet>606</a>  // `\protect\leavevmode{\color#1{#2}#3}`: the paragraph starts before the colour
+<a href=#607 id=607 data-nosnippet>607</a>  // group, so `\everypar` material stays uncoloured and a leading `\hbox` is in
+<a href=#608 id=608 data-nosnippet>608</a>  // horizontal mode (Perl color.sty.ltxml has no `\leavevmode`).
+<a href=#609 id=609 data-nosnippet>609</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#610 id=610 data-nosnippet>610</a>    <span class="string">"\\textcolor[]{}{}"</span>,
+<a href=#611 id=611 data-nosnippet>611</a>    <span class="string">"\\leavevmode{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}"
+<a href=#612 id=612 data-nosnippet>612</a>  </span>);
+<a href=#613 id=613 data-nosnippet>613</a>
+<a href=#614 id=614 data-nosnippet>614</a>  <span class="comment">// \colorbox[model]{spec}{text}; color.sty:163-164 `\color@b@x` opens with
+<a href=#615 id=615 data-nosnippet>615</a>  // `\leavevmode`, so the box starts the paragraph (Perl color.sty.ltxml:105 is the
+<a href=#616 id=616 data-nosnippet>616</a>  // bare `\hbox`, which does not, and the space after it was dropped; arXiv
+<a href=#617 id=617 data-nosnippet>617</a>  // 2605.21713 appendix_a.tex:186).
+<a href=#618 id=618 data-nosnippet>618</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#619 id=619 data-nosnippet>619</a>    <span class="string">"\\colorbox[]{}{}"</span>,
+<a href=#620 id=620 data-nosnippet>620</a>    <span class="string">"\\leavevmode\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
+<a href=#621 id=621 data-nosnippet>621</a>  </span>);
 <a href=#622 id=622 data-nosnippet>622</a>
-<a href=#623 id=623 data-nosnippet>623</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(tokens) = text_tokens {
-<a href=#624 id=624 data-nosnippet>624</a>        <span class="kw">let </span>digested = digest(tokens)<span class="question-mark">?</span>;
-<a href=#625 id=625 data-nosnippet>625</a>        whatsit.set_property(<span class="string">"text"</span>, Stored::Digested(digested));
-<a href=#626 id=626 data-nosnippet>626</a>      }
-<a href=#627 id=627 data-nosnippet>627</a>    }
-<a href=#628 id=628 data-nosnippet>628</a>  );
-<a href=#629 id=629 data-nosnippet>629</a>
-<a href=#630 id=630 data-nosnippet>630</a>  <span class="comment">// NOTE: Perl color.sty.ltxml does NOT define \ifglobalcolors — only
-<a href=#631 id=631 data-nosnippet>631</a>  // xcolor.sty does (Perl xcolor.sty.ltxml L29). `def_color` in
-<a href=#632 id=632 data-nosnippet>632</a>  // latexml_core::binding::content guards its ifglobalcolors check with
-<a href=#633 id=633 data-nosnippet>633</a>  // `lookup_definition(\ifglobalcolors).is_some()`, so leaving the CS
-<a href=#634 id=634 data-nosnippet>634</a>  // undefined here is the faithful behavior; the global-scope branch
-<a href=#635 id=635 data-nosnippet>635</a>  // short-circuits naturally.
-<a href=#636 id=636 data-nosnippet>636</a>
-<a href=#637 id=637 data-nosnippet>637</a>  //========================
-<a href=#638 id=638 data-nosnippet>638</a>  // Low-level stuff; redefined from LaTeX stubs (Perl color.sty.ltxml L122-132)
-<a href=#639 id=639 data-nosnippet>639</a>  // \current@color / \default@color hold the current/default color spec for the
-<a href=#640 id=640 data-nosnippet>640</a>  // DVI driver; \reset@color clears it. LaTeXML gives them safe defaults so that
-<a href=#641 id=641 data-nosnippet>641</a>  // packages using them (pgf/tikz color processing) don't error — the value must
-<a href=#642 id=642 data-nosnippet>642</a>  // NOT contain braces (it may appear inside \csname...\endcsname). Faithful to
-<a href=#643 id=643 data-nosnippet>643</a>  // Perl color.sty.ltxml (#2783, cb455179): DefMacroI(..., '0 0 0'/'0 0 0'/'').
-<a href=#644 id=644 data-nosnippet>644</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\current@color"</span>, <span class="string">"0 0 0"</span>);
-<a href=#645 id=645 data-nosnippet>645</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\default@color"</span>, <span class="string">"0 0 0"</span>);
-<a href=#646 id=646 data-nosnippet>646</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\reset@color"</span>, <span class="prelude-val">None</span>);
-<a href=#647 id=647 data-nosnippet>647</a>  <span class="comment">// Similarly, not sure what \set@color needs to do that isn't redundant.
-<a href=#648 id=648 data-nosnippet>648</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\set@color"</span>, <span class="prelude-val">None</span>);
-<a href=#649 id=649 data-nosnippet>649</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@begingroup"</span>, <span class="string">"\\begingroup"</span>);
-<a href=#650 id=650 data-nosnippet>650</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@endgroup"</span>, <span class="string">"\\endgroup"</span>);
-<a href=#651 id=651 data-nosnippet>651</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@setgroup"</span>, <span class="string">"\\begingroup\\set@color"</span>);
-<a href=#652 id=652 data-nosnippet>652</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@hbox"</span>, <span class="string">"\\hbox\\bgroup\\color@begingroup"</span>);
-<a href=#653 id=653 data-nosnippet>653</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@vbox"</span>, <span class="string">"\\vbox\\bgroup\\color@begingroup"</span>);
-<a href=#654 id=654 data-nosnippet>654</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@endbox"</span>, <span class="string">"\\color@endgroup\\egroup"</span>);
-<a href=#655 id=655 data-nosnippet>655</a>  <span class="comment">// color.sty:155-156 (xcolor.sty:886-887 the same): a block of the current colour the size of a box, set before
-<a href=#656 id=656 data-nosnippet>656</a>  // it — what `\colorbox` lays under its text, and what textpos.sty:328-331 lays under a coloured `{textblock}`
-<a href=#657 id=657 data-nosnippet>657</a>  // (`\textblockcolour`; 2305.15117, 2206.12186, 2407.11064, adsphd.cls). Perl's color.sty.ltxml lacks it
-<a href=#658 id=658 data-nosnippet>658</a>  // (KNOWN_PERL_ERRORS #849).
-<a href=#659 id=659 data-nosnippet>659</a>  </span><span class="macro">RawTeX!</span>(
-<a href=#660 id=660 data-nosnippet>660</a>    <span class="string">r"\def\color@block#1#2#3{{\set@color\rlap{\ifcolors@\vrule\@width#1\@height#2\@depth#3\fi}}}"
-<a href=#661 id=661 data-nosnippet>661</a>  </span>);
-<a href=#662 id=662 data-nosnippet>662</a>
-<a href=#663 id=663 data-nosnippet>663</a>  <span class="comment">//========================
-<a href=#664 id=664 data-nosnippet>664</a>  // Default defined colors — Perl L136-145 runs these through RawTeX as
-<a href=#665 id=665 data-nosnippet>665</a>  // ordinary `\definecolor` invocations with no explicit scope; they
-<a href=#666 id=666 data-nosnippet>666</a>  // inherit the scope active at RawTeX-expansion time (the package-load
-<a href=#667 id=667 data-nosnippet>667</a>  // group). Match that by passing `None` rather than forcing Global.
-<a href=#668 id=668 data-nosnippet>668</a>  </span><span class="kw">for </span>(name, model, spec) <span class="kw">in </span><span class="kw-2">&amp;</span>[
-<a href=#669 id=669 data-nosnippet>669</a>    (<span class="string">"black"</span>, <span class="string">"rgb"</span>, <span class="string">"0,0,0"</span>),
-<a href=#670 id=670 data-nosnippet>670</a>    (<span class="string">"white"</span>, <span class="string">"rgb"</span>, <span class="string">"1,1,1"</span>),
-<a href=#671 id=671 data-nosnippet>671</a>    (<span class="string">"red"</span>, <span class="string">"rgb"</span>, <span class="string">"1,0,0"</span>),
-<a href=#672 id=672 data-nosnippet>672</a>    (<span class="string">"green"</span>, <span class="string">"rgb"</span>, <span class="string">"0,1,0"</span>),
-<a href=#673 id=673 data-nosnippet>673</a>    (<span class="string">"blue"</span>, <span class="string">"rgb"</span>, <span class="string">"0,0,1"</span>),
-<a href=#674 id=674 data-nosnippet>674</a>    (<span class="string">"cyan"</span>, <span class="string">"cmyk"</span>, <span class="string">"1,0,0,0"</span>),
-<a href=#675 id=675 data-nosnippet>675</a>    (<span class="string">"magenta"</span>, <span class="string">"cmyk"</span>, <span class="string">"0,1,0,0"</span>),
-<a href=#676 id=676 data-nosnippet>676</a>    (<span class="string">"yellow"</span>, <span class="string">"cmyk"</span>, <span class="string">"0,0,1,0"</span>),
-<a href=#677 id=677 data-nosnippet>677</a>  ] {
-<a href=#678 id=678 data-nosnippet>678</a>    <span class="kw">let </span>c = color_from_model_spec(model, spec);
-<a href=#679 id=679 data-nosnippet>679</a>    def_color(name, <span class="kw-2">&amp;</span>c, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#680 id=680 data-nosnippet>680</a>  }
-<a href=#681 id=681 data-nosnippet>681</a>
-<a href=#682 id=682 data-nosnippet>682</a>  <span class="comment">//========================
-<a href=#683 id=683 data-nosnippet>683</a>  </span><span class="macro">ProcessOptions!</span>();
-<a href=#684 id=684 data-nosnippet>684</a>});
+<a href=#623 id=623 data-nosnippet>623</a>  <span class="comment">// \fcolorbox[model]{framespec}{bgspec}{text} — the two color names are read
+<a href=#624 id=624 data-nosnippet>624</a>  // undigested and expanded to strings (batch 56at, the xcolor twin; Perl
+<a href=#625 id=625 data-nosnippet>625</a>  // color.sty.ltxml:108 digests them and errors on a `_` in a name). It starts the
+<a href=#626 id=626 data-nosnippet>626</a>  // paragraph as color.sty's `\color@b@x` does (163-164 `\leavevmode`), like the
+<a href=#627 id=627 data-nosnippet>627</a>  // xcolor twin, and its body is the `\hbox`'s: restricted horizontal, not Perl's
+<a href=#628 id=628 data-nosnippet>628</a>  // `internal_vertical`, which split the paragraph around it (KPE #336, #293).
+<a href=#629 id=629 data-nosnippet>629</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\fcolorbox[] Undigested Undigested Undigested"</span>,
+<a href=#630 id=630 data-nosnippet>630</a>    <span class="string">"&lt;ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'&gt;#text&lt;/ltx:text&gt;"</span>,
+<a href=#631 id=631 data-nosnippet>631</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#632 id=632 data-nosnippet>632</a>    after_digest =&gt; sub[whatsit] {
+<a href=#633 id=633 data-nosnippet>633</a>      <span class="kw">let </span>model_str = whatsit.get_arg(<span class="number">1</span>).map(|m| m.to_string());
+<a href=#634 id=634 data-nosnippet>634</a>      <span class="kw">let </span>fspec_str = <span class="kw">match </span>whatsit.get_arg(<span class="number">2</span>) {
+<a href=#635 id=635 data-nosnippet>635</a>        <span class="prelude-val">Some</span>(f) =&gt; do_expand(f.revert()<span class="question-mark">?</span>)<span class="question-mark">?</span>.to_string(),
+<a href=#636 id=636 data-nosnippet>636</a>        <span class="prelude-val">None </span>=&gt; String::new(),
+<a href=#637 id=637 data-nosnippet>637</a>      };
+<a href=#638 id=638 data-nosnippet>638</a>      <span class="kw">let </span>bspec_str = <span class="kw">match </span>whatsit.get_arg(<span class="number">3</span>) {
+<a href=#639 id=639 data-nosnippet>639</a>        <span class="prelude-val">Some</span>(b) =&gt; do_expand(b.revert()<span class="question-mark">?</span>)<span class="question-mark">?</span>.to_string(),
+<a href=#640 id=640 data-nosnippet>640</a>        <span class="prelude-val">None </span>=&gt; String::new(),
+<a href=#641 id=641 data-nosnippet>641</a>      };
+<a href=#642 id=642 data-nosnippet>642</a>      <span class="kw">let </span>text_tokens = whatsit.get_arg(<span class="number">4</span>).map(|t| t.revert()).transpose()<span class="question-mark">?</span>;
+<a href=#643 id=643 data-nosnippet>643</a>
+<a href=#644 id=644 data-nosnippet>644</a>      <span class="kw">let </span>framecolor = parse_color(model_str.as_deref(), <span class="kw-2">&amp;</span>fspec_str);
+<a href=#645 id=645 data-nosnippet>645</a>      whatsit.set_property(<span class="string">"framecolor"</span>, Stored::String(pin(framecolor.to_attribute())));
+<a href=#646 id=646 data-nosnippet>646</a>
+<a href=#647 id=647 data-nosnippet>647</a>      <span class="kw">let </span>bgcolor = parse_color(model_str.as_deref(), <span class="kw-2">&amp;</span>bspec_str);
+<a href=#648 id=648 data-nosnippet>648</a>      merge_font(<span class="macro">fontmap!</span>(bg =&gt; bgcolor));
+<a href=#649 id=649 data-nosnippet>649</a>
+<a href=#650 id=650 data-nosnippet>650</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(tokens) = text_tokens {
+<a href=#651 id=651 data-nosnippet>651</a>        <span class="kw">let </span>digested = digest(tokens)<span class="question-mark">?</span>;
+<a href=#652 id=652 data-nosnippet>652</a>        whatsit.set_property(<span class="string">"text"</span>, Stored::Digested(digested));
+<a href=#653 id=653 data-nosnippet>653</a>      }
+<a href=#654 id=654 data-nosnippet>654</a>    }
+<a href=#655 id=655 data-nosnippet>655</a>  );
+<a href=#656 id=656 data-nosnippet>656</a>
+<a href=#657 id=657 data-nosnippet>657</a>  <span class="comment">// NOTE: Perl color.sty.ltxml does NOT define \ifglobalcolors — only
+<a href=#658 id=658 data-nosnippet>658</a>  // xcolor.sty does (Perl xcolor.sty.ltxml L29). `def_color` in
+<a href=#659 id=659 data-nosnippet>659</a>  // latexml_core::binding::content guards its ifglobalcolors check with
+<a href=#660 id=660 data-nosnippet>660</a>  // `lookup_definition(\ifglobalcolors).is_some()`, so leaving the CS
+<a href=#661 id=661 data-nosnippet>661</a>  // undefined here is the faithful behavior; the global-scope branch
+<a href=#662 id=662 data-nosnippet>662</a>  // short-circuits naturally.
+<a href=#663 id=663 data-nosnippet>663</a>
+<a href=#664 id=664 data-nosnippet>664</a>  //========================
+<a href=#665 id=665 data-nosnippet>665</a>  // Low-level stuff; redefined from LaTeX stubs (Perl color.sty.ltxml L122-132)
+<a href=#666 id=666 data-nosnippet>666</a>  // \current@color / \default@color hold the current/default color spec for the
+<a href=#667 id=667 data-nosnippet>667</a>  // DVI driver; \reset@color clears it. LaTeXML gives them safe defaults so that
+<a href=#668 id=668 data-nosnippet>668</a>  // packages using them (pgf/tikz color processing) don't error — the value must
+<a href=#669 id=669 data-nosnippet>669</a>  // NOT contain braces (it may appear inside \csname...\endcsname). Faithful to
+<a href=#670 id=670 data-nosnippet>670</a>  // Perl color.sty.ltxml (#2783, cb455179): DefMacroI(..., '0 0 0'/'0 0 0'/'').
+<a href=#671 id=671 data-nosnippet>671</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\current@color"</span>, <span class="string">"0 0 0"</span>);
+<a href=#672 id=672 data-nosnippet>672</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\default@color"</span>, <span class="string">"0 0 0"</span>);
+<a href=#673 id=673 data-nosnippet>673</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\reset@color"</span>, <span class="prelude-val">None</span>);
+<a href=#674 id=674 data-nosnippet>674</a>  <span class="comment">// Similarly, not sure what \set@color needs to do that isn't redundant.
+<a href=#675 id=675 data-nosnippet>675</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\set@color"</span>, <span class="prelude-val">None</span>);
+<a href=#676 id=676 data-nosnippet>676</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@begingroup"</span>, <span class="string">"\\begingroup"</span>);
+<a href=#677 id=677 data-nosnippet>677</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@endgroup"</span>, <span class="string">"\\endgroup"</span>);
+<a href=#678 id=678 data-nosnippet>678</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@setgroup"</span>, <span class="string">"\\begingroup\\set@color"</span>);
+<a href=#679 id=679 data-nosnippet>679</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@hbox"</span>, <span class="string">"\\hbox\\bgroup\\color@begingroup"</span>);
+<a href=#680 id=680 data-nosnippet>680</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@vbox"</span>, <span class="string">"\\vbox\\bgroup\\color@begingroup"</span>);
+<a href=#681 id=681 data-nosnippet>681</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\color@endbox"</span>, <span class="string">"\\color@endgroup\\egroup"</span>);
+<a href=#682 id=682 data-nosnippet>682</a>  <span class="comment">// color.sty:155-156 (xcolor.sty:886-887 the same): a block of the current colour the size of a box, set before
+<a href=#683 id=683 data-nosnippet>683</a>  // it — what `\colorbox` lays under its text, and what textpos.sty:328-331 lays under a coloured `{textblock}`
+<a href=#684 id=684 data-nosnippet>684</a>  // (`\textblockcolour`; 2305.15117, 2206.12186, 2407.11064, adsphd.cls). Perl's color.sty.ltxml lacks it
+<a href=#685 id=685 data-nosnippet>685</a>  // (KNOWN_PERL_ERRORS #849).
+<a href=#686 id=686 data-nosnippet>686</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#687 id=687 data-nosnippet>687</a>    <span class="string">r"\def\color@block#1#2#3{{\set@color\rlap{\ifcolors@\vrule\@width#1\@height#2\@depth#3\fi}}}"
+<a href=#688 id=688 data-nosnippet>688</a>  </span>);
+<a href=#689 id=689 data-nosnippet>689</a>
+<a href=#690 id=690 data-nosnippet>690</a>  <span class="comment">//========================
+<a href=#691 id=691 data-nosnippet>691</a>  // Default defined colors — Perl L136-145 runs these through RawTeX as
+<a href=#692 id=692 data-nosnippet>692</a>  // ordinary `\definecolor` invocations with no explicit scope; they
+<a href=#693 id=693 data-nosnippet>693</a>  // inherit the scope active at RawTeX-expansion time (the package-load
+<a href=#694 id=694 data-nosnippet>694</a>  // group). Match that by passing `None` rather than forcing Global.
+<a href=#695 id=695 data-nosnippet>695</a>  </span><span class="kw">for </span>(name, model, spec) <span class="kw">in </span><span class="kw-2">&amp;</span>BASE_COLORS {
+<a href=#696 id=696 data-nosnippet>696</a>    <span class="kw">let </span>c = color_from_model_spec(model, spec);
+<a href=#697 id=697 data-nosnippet>697</a>    def_color(name, <span class="kw-2">&amp;</span>c, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#698 id=698 data-nosnippet>698</a>  }
+<a href=#699 id=699 data-nosnippet>699</a>
+<a href=#700 id=700 data-nosnippet>700</a>  <span class="comment">//========================
+<a href=#701 id=701 data-nosnippet>701</a>  </span><span class="macro">ProcessOptions!</span>();
+<a href=#702 id=702 data-nosnippet>702</a>});
 </code></pre></div></section></main></body></html>
