@@ -36363,9 +36363,10 @@ holds: no frame. **Rust.** `lst_frame_sides` (listings_sty.rs) returns no frame 
 
 ### 1050. The glue between two paragraphs is `--ltx-skip-before` on the second (QAB8, QA26)
 
-**Principle:** Perl's own intent, TeX_Glue.pool.ltxml:89-90 ("We should be combining adjacent vskips (?) And then add
-appropriate class/css for spacing to preceding element"), with TeX's vertical list deciding what is between two
-paragraphs. Related: #142 (`\\[dimen]` as `--ltx-break-space`, the same carrier), #422 (glue items flagged `isSkip`).
+**Principle:** TeX's vertical list decides what lies between two paragraphs; Perl's own comment asks for it
+(TeX_Glue.pool.ltxml:89-90: "add appropriate class/css for spacing to preceding element"). It sits on the FOLLOWING paragraph
+by DG's design ruling (2026-11-14, design A of the QA26 study): one element carries one gap, the stylesheet decides how to
+show it, and nothing is added to or between the blocks. Related: #142 (`\\[dimen]` as `--ltx-break-space`, the same carrier), #422 (glue items flagged `isSkip`).
 **Perl.** `\vskip` only closes the open `ltx:p`/`ltx:para` and drops its amount, so a topic break by `\bigskip`,
 `\medskip` or `\vspace` leaves no trace (KNOWN_PERL_ERRORS #1246). **Rust.** A `\vskip` (its natural width) met
 while its parent's last child is an `ltx:para` is summed, in sp, on that parent (tex_glue.rs `note_skip_after_para`);

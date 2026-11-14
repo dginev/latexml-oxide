@@ -581,6 +581,8 @@ foreignObject {
    \medskip or \vspace puts between two paragraphs is --ltx-skip-before on the second; it adds to the 1em paragraph
    gap (the <p> margins collapse with this one). */
 .ltx_para[style*="--ltx-skip-before:"] { margin-top:calc(1em + var(--ltx-skip-before)); }
+/* An item's paragraphs have no margin of their own (above), so there the skip is the whole gap. */
+.ltx_item > .ltx_para[style*="--ltx-skip-before:"] { margin-top:var(--ltx-skip-before); }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #533): display
    math is a `.ltx_eqn_table { display:table; width:100% }` whose center-pad
    cells stretch it to full width. Inside a width-constrained box — a `p{}` cell

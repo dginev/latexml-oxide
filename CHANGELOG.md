@@ -5,8 +5,9 @@
   - **A `\bigskip`, `\medskip` or `\vspace` between two paragraphs keeps its gap** (QA26). The
     second paragraph carries `cssstyle="--ltx-skip-before:12.0pt"` (consecutive skips add up to their
     net, as in TeX), and LaTeXML.css adds it to the paragraph gap (ar5iv-css mirrors it); Perl drops
-    the amount. Not after a heading, across a heading, float or environment, in a title page, box or
-    float, or for a `\vspace` inside a paragraph.
+    the amount. Not after a heading, across a heading, a float or a sibling environment (theorem, proof), in a
+    title page, box or float, or for a `\vspace` inside a paragraph; a `quote`, `center` or list inside
+    the paragraph does not block it.
     OXIDIZED_DESIGN #1050. Guard `perfect_kernel_batchqab8::paragraph_skips_go_on_the_next_paragraph`.
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
     dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
