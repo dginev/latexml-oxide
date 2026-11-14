@@ -1213,6 +1213,10 @@ box reflect the box's text width, as in real LaTeX:
    itself) instead of Perl's empty/`\relax` stubs — relevant on the
    no-dump path; with a format dump the raw `latex.ltx` kernel versions
    are captured anyway.
+4. A `p`/`m`/`b` table cell (`\lx@tabular@p`; also `\multicolumn` over one, longtable) sets `\linewidth\hsize`, as TeX's
+   `\@startpbox` → `\@arrayparboxrestore` does (latex.ltx:16755, :16280); Perl (TeX_Tables.pool.ltxml:76) sets `\hsize` alone,
+   so `\includegraphics[width=\linewidth]` in a cell took the page width (issue 778). Guard
+   `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`; no golden moved.
 
 **Why:** Real LaTeX's `\@iiiminipage`/`\@iiiparbox` run `\@parboxrestore`,
 whose `\linewidth\hsize` is what raw-loaded packages read back. tcolorbox
