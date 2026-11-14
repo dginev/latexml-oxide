@@ -1,0 +1,13 @@
+% witness: synthetic (issue 824's sibling sweep)
+% oracle:  pdflatex 0 errors; a before log, then x
+% engines: Perl 0.8.8 = 0 errors, `(^ a logarithm)@(x)`;
+%          rust 85a1bd780e7 and after issue 824 = 0 errors, 1 Warning (`unparsed_math`): unparsed
+% expect:  `(^ a logarithm)@(x)`: a prescripted bare OPFUNCTION is still applied (Perl `preScripted['OPFUNCTION']
+%          addOpFunArgs`, MathGrammar:283); a post-scripted one is (`{}^a\log_2 x`, tests/parse/rust_parse_additions)
+% status:  RED
+% moves:   post-merge (the bare prescripted OPFUNCTION is a factor in our grammar, `scripted_factor_l11`)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+${}^a\log x$
+\end{document}

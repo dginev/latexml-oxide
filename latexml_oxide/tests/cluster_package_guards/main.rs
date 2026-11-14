@@ -28,6 +28,7 @@ mod bibliography_names_fields;
 mod bibref_show;
 mod binding_conformance;
 mod binding_singletons_56;
+mod bindings_batch2;
 mod box_primitives;
 mod braced_quantity_tail;
 mod case_change_equivalents;
@@ -126,6 +127,7 @@ mod vfs_file_end;
 mod xkeyval_internals;
 
 mod accent_composite_expansion;
+mod arrowfill_heads;
 mod beamer_includegraphics_overlay;
 /// Issues #772, #760, #801, #787, #773, #779: the bindings batch of 2026-11-13.
 mod bindings_batch1;

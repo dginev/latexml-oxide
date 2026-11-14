@@ -144,6 +144,12 @@ Rules that keep this file honest and mergeable:
   - AAGR — AAS1's guard: a repeated affiliation content that must NOT be reused (`\stepcounter`/`\footnotemark`, A A B A) (revAAS1 NIT); 1
   - LOOP2302 — 2302.07562 loops (`Fatal:Timeout:IfLimit` at 48M conditionals) on int169b and int170a alike; 3
   - CSSPORT — The ar5iv-css port (PR #54); 3
+  - MHCHEM — a semantic mhchem binding (DG 2026-11-13: deferred, planned; Perl ships none): option (a) of study `agent_reports/2026-11-13_MHCHEM0_report.md` —
+    a thin binding over mhchem's output layer (`\__mhchem_output_coreFive:nnnnnnn`, mhchem.sty:2774; amounts, `+`, arrows, bonds), keeping its parser:
+    element tokens (the run split on `[A-Z][a-z]*`, mhchem keeps "MoO" one slot), `mmultiscripts` for isotope/count/charge (charge lifted to the
+    formula, minus U+2212), arrows as relations, one `<math>` per `\ce`; ~0.9 % of arXiv (~13k papers; 6,268 calls in the 30k census: 53 % counted
+    formulas, 14 % isotope prescripts, 7 % charges); raw path costs ~0.22 s per `\ce` (148 → 34.8 s) — a perf item first; issue comments #824/#825
+    record the detail; 5
   - REL — A release; 3
   - G — Run 336's open residuals (the arXiv success-rate task); 5
   - G1 — Run 329's open residuals (PushbackLimit, TooManyErrors, the `handle_template` panic, …); 3

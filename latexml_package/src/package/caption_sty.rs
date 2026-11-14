@@ -161,7 +161,11 @@ LoadDefinitions!({
         // The value's tokens, and its text for the keyword values (`labelsep=period`, `font={small,it}`), read back
         // without welding (`untex`).
         let value_tokens = value.clone().owned_tokens().unwrap_or_default();
-        let text_value = caption_value(value_tokens.clone().untex_string().as_str());
+        let text_value = match value {
+          // A `Dimension` key's value (`skip=20pt`) is read already: its length (issue #787).
+          ArgWrap::Dimension(length) => length.to_attribute(),
+          _ => caption_value(value_tokens.clone().untex_string().as_str()),
+        };
         let prefix = s!("CAPTION_{type_prefix}{sub_prefix}");
         // caption3.sty:842-848: `font+=`/`labelfont+=`/`textfont+=` add to the font a `font=` sets anew.
         if let Some(base) = key.strip_suffix('+') {
@@ -181,6 +185,8 @@ LoadDefinitions!({
           "type*" if !typed => "type",
           // caption3.sty:774-775: `labelseparator` is `labelsep`.
           "labelseparator" => "labelsep",
+          // caption3.sty:674: `slc` is `singlelinecheck`.
+          "slc" => "singlelinecheck",
           other => other,
         };
         assign_value(&s!("{prefix}{key}"), Stored::String(pin(text_value.clone())), None);
@@ -417,13 +423,17 @@ LoadDefinitions!({
   RawTeX!(r"\def\DeclareCaptionJustification{\@ifnextchar[\lx@caption@decljust@opt{\lx@caption@decljust@opt[]}}");
   RawTeX!(r"\def\lx@caption@decljust@opt[#1]#2#3{\@namedef{caption@hj@#2}{#3}\@namedef{caption@justification@#2}{#3}}");
   // Seed the standard justifications caption3.sty declares at load time
-  // (L964-969) so they exist even when a paper never re-declares them.
+  // (L964-969, and ragged2e's L1361-1364) so they exist even when a paper never re-declares them.
   RawTeX!(r"\DeclareCaptionJustification{justified}{}%
 \DeclareCaptionJustification{centering}{\centering}%
 \DeclareCaptionJustification{centerfirst}{\centering}%
 \DeclareCaptionJustification{centerlast}{\centering}%
 \DeclareCaptionJustification{raggedleft}{\raggedleft}%
-\DeclareCaptionJustification{raggedright}{\raggedright}");
+\DeclareCaptionJustification{raggedright}{\raggedright}%
+\DeclareCaptionJustification[ragged2e]{Justified}{\justifying}%
+\DeclareCaptionJustification[ragged2e]{Centering}{\Centering}%
+\DeclareCaptionJustification[ragged2e]{RaggedLeft}{\RaggedLeft}%
+\DeclareCaptionJustification[ragged2e]{RaggedRight}{\RaggedRight}");
   // caption3.sty:221-236: \DeclareCaptionOption delegates to \define@key{caption}
   // bicaption.sty:71-76 uses \DeclareCaptionOption{bi-swap}[1]{\caption@set@bool\bicaption@ifswap{#1}}
   // The star only undefines the key at the end of the declaring package (`\caption@teststar
@@ -653,8 +663,9 @@ LoadDefinitions!({
   });
   // The kernel's `\@dblarg` (KNOWN_PERL_ERRORS #468; caption.sty's `\caption` keeps latex.ltx's): a
   // package's `\let\@caption` to a `#1[#2]#3` macro finds its `[` (cond-mat0307356).
+  // `\lx@caption@where`: where `position=auto` puts it (issue #787).
   DefMacro!("\\caption",
-    r"\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@dblarg\expandafter{\expandafter\@caption\expandafter{\@captype}}}}"
+    r"\lx@caption@where{}\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@dblarg\expandafter{\expandafter\@caption\expandafter{\@captype}}}}"
   );
   // caption.sty:213-235: the starred caption is made through `\caption@setfloatcapt` too, and by the full
   // `\caption@make` with the label suppressed (`\ifcaption@star`, caption3.sty:1686-1715): the caption's fonts and
@@ -680,6 +691,8 @@ LoadDefinitions!({
         return Ok(Tokens::new(out));
       }
     }
+    // The inline caption formats nothing: `\lx@caption@where`'s mark is dropped here, not left to the next caption.
+    take_caption_auto();
     Ok(Tokens!(T_CS!("\\@@generic@caption")))
   });
   // caption.sty:389-391: `\captionof` is `\caption@of`, `\setcaptiontype*{<type>}` then the
@@ -692,7 +705,7 @@ LoadDefinitions!({
   // 2605.20199; guard `perfect_kernel_gemini::captionof_in_a_float_keeps_the_float_type`). A typed
   // `\caption` (`\maybe@@generic@caption`) reaches `\@captionof` with the type
   // `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
-  DefMacro!("\\captionof", "\\@ifstar{\\lx@caption@of\\@scaptionof}{\\lx@caption@of\\@captionof}");
+  DefMacro!("\\captionof", "\\lx@caption@where{of}\\@ifstar{\\lx@caption@of\\@scaptionof}{\\lx@caption@of\\@captionof}");
   // The type is expanded once, as `\caption@@settype`'s `\edef` (caption.sty:309).
   // Outside a float the type stays set in the current group, as `\setcaptiontype*` leaves `\@captype` (caption.sty:391),
   // so a later bare `\caption` there is a caption of that type (`\captionof{figure}`, then a `\caption` in a minipage:
@@ -1076,6 +1089,77 @@ LoadDefinitions!({
   // #795), so `labelsep=period`, `name=Fig.`, `labelformat=parens`, `labelfont=bf` made no difference.
   DefMacro!("\\lx@format@caption@@{}{}", sub[(ty, text)] { caption_format_tokens(ty, text) });
   DefMacro!("\\lx@format@scaption@@{}{}", sub[(ty, text)] { caption_star_format_tokens(ty, text) });
+  // `\lx@caption@skip{above|below}{<position>}<glue>`: caption3.sty:987-993's `\abovecaptionskip` (`skip=`,
+  // `aboveskip=`) or `\belowcaptionskip` (`belowskip=`, 0pt unless set: a zero one adds nothing) as a margin of the
+  // `ltx:caption`, on the side caption.sty:251-258 puts it. Issue #787.
+  DefConstructor!("\\lx@caption@skip{}{} Glue", sub[document, args] {
+    let register = args[0].as_ref().map(ToString::to_string).unwrap_or_default();
+    let position = args[1].as_ref().map(ToString::to_string).unwrap_or_default();
+    let length: Dimension = match args[2].as_ref().map(|g| g.data()) {
+      Some(DigestedData::RegisterValue(v)) => v.into(),
+      _ => return Ok(()),
+    };
+    let Some(mut caption) = document.get_element() else { return Ok(()) };
+    if document::get_node_qname(&caption) != pin!("ltx:caption") || (register == "below" && length.value_of() == 0) {
+      return Ok(());
+    }
+    let top = match position.trim() {
+      "top" | "t" | "above" => true,
+      "bottom" | "b" | "below" => false,
+      // `auto` in vertical mode: top while the list holds no box (caption3.sty:1034-1045 `\prevdepth`; ltcaption's
+      // `\LT@rows`), past `\captionof`'s wrapper (`auto@outer`) to the list it stands in.
+      auto => {
+        let preceded = |node: &Node| {
+          std::iter::successors(node.get_prev_sibling(), Node::get_prev_sibling).any(|n| {
+            n.get_type() == Some(NodeType::ElementNode)
+              && !matches!(with(document::get_node_qname(&n), |q| q.to_string()).as_str(),
+                "ltx:tags" | "ltx:toccaption")
+          })
+        };
+        !(preceded(&caption)
+          || (auto == "auto@outer" && caption.get_parent().is_some_and(|wrapper| preceded(&wrapper))))
+      },
+    };
+    let side = if (register == "above") == top { "bottom" } else { "top" };
+    add_caption_style(document, &mut caption, &s!("margin-{side}:{}", length.to_attribute()))?;
+  }, sizer => 0, reversion => "");
+  // `\lx@caption@justify{<text-align>}{<singlelinecheck>}`: a set justification replaces the alignment class a
+  // `\centering` &c. of the caption's float gives it (`_justified`, the float's `after_close` below): TeX's caption box
+  // runs `\@parboxrestore`. Under `singlelinecheck` a caption that fits one line is centred (caption3.sty:1497, :1568
+  // `\caption@slc`): a fit-content box between auto margins.
+  DefConstructor!("\\lx@caption@justify{}{}", sub[document, args] {
+    let align = args[0].as_ref().map(ToString::to_string).unwrap_or_default();
+    let single_line = args[1].as_ref().is_some_and(|a| !a.to_string().is_empty());
+    let Some(mut caption) = document.get_element() else { return Ok(()) };
+    if document::get_node_qname(&caption) != pin!("ltx:caption") {
+      return Ok(());
+    }
+    document.remove_class(&mut caption, CAPTION_ALIGN_CLASSES);
+    document.set_attribute(&mut caption, "_justified", "true")?;
+    let fit = if single_line { ";width:fit-content;margin-left:auto;margin-right:auto" } else { "" };
+    add_caption_style(document, &mut caption, &s!("text-align:{align}{fit}"))?;
+  }, sizer => 0, reversion => "");
+  for float in ["ltx:figure", "ltx:table", "ltx:float"] {
+    Tag!(float, after_close => sub[document, node, _whatsit] {
+      for mut caption in document.findnodes(".//ltx:caption[@_justified]", Some(node)) {
+        document.remove_class(&mut caption, CAPTION_ALIGN_CLASSES);
+      }
+    });
+  }
+  // `\caption@autoposition`'s mode test, when the caption begins (caption3.sty:1034-1045): horizontal mode is
+  // `bottom`; in vertical mode `\lx@caption@skip` reads the list, past `\captionof`'s wrapper outside a float.
+  DefPrimitive!("\\lx@caption@where{}", sub[args] {
+    let of: Tokens = args.into_iter().next().unwrap().into();
+    let of = !of.is_empty();
+    let auto = if lookup_string_from_sym(pin!("MODE")).ends_with("horizontal") {
+      "bottom"
+    } else if of && !lookup_bool("lx@in@float") {
+      "auto@outer"
+    } else {
+      "auto"
+    };
+    assign_value("lx@caption@auto", Stored::String(pin(auto)), Some(Scope::Global));
+  });
   // caption3.sty:1468-1472 `\caption@fnum`: the label format's name argument is `\@nameuse{<type>name}`, empty when
   // the type has none; for a float.sty type without one, its `\floatname` (caption.sty:878-881
   // `\caption@float@setname`: `\<type>name` is `\fname@<type>` when it is undefined or `\relax`, `\expandafter\ifx
@@ -1276,11 +1360,18 @@ fn caption_setting(ty: &str, key: &str) -> Option<String> {
   let outer = (!outer.is_empty() && outer != ty).then(|| s!("CAPTION_{outer}_{key}"));
   let style = float_style(ty);
   let style_options = (!style.is_empty()).then(|| s!("CAPTION_{style}_{key}"));
-  let found = [Some(s!("CAPTION_{ty}_{key}")), outer, style_options]
-    .iter()
-    .flatten()
-    .map(|k| lookup_string(k))
-    .find(|v| !v.is_empty());
+  // ltcaption.sty's `\caption@LT@setup`: a longtable's caption takes `\captionsetup[longtable]` over its type's.
+  let longtable = lookup_bool("lx@caption@longtable").then(|| s!("CAPTION_longtable_{key}"));
+  let found = [
+    longtable,
+    Some(s!("CAPTION_{ty}_{key}")),
+    outer,
+    style_options,
+  ]
+  .iter()
+  .flatten()
+  .map(|k| lookup_string(k))
+  .find(|v| !v.is_empty());
   if found.is_some() {
     return found;
   }
@@ -1288,6 +1379,93 @@ fn caption_setting(ty: &str, key: &str) -> Option<String> {
     return reset;
   }
   Some(lookup_string(&s!("CAPTION_{key}"))).filter(|v| !v.is_empty())
+}
+
+/// The `position=auto` side `\lx@caption@where` marked at the caption's `\caption`/`\captionof` (longtable's at its
+/// caption), cleared as read: each caption formatted, or dropped, takes its own mark, so none reaches a caption
+/// formatted without one (listings' `\lx@format@caption@@{lstlisting}` after a sub-caption: review revCAP2 q5).
+fn take_caption_auto() -> String {
+  let auto = lookup_string("lx@caption@auto");
+  assign_value("lx@caption@auto", Stored::None, Some(Scope::Global));
+  auto
+}
+
+/// The alignment classes `\centering`, `\raggedright`, `\raggedleft` give a node (sect06.rs `\@add@centering` &c.).
+const CAPTION_ALIGN_CLASSES: &str = "ltx_centering ltx_align_left ltx_align_right ltx_align_center";
+
+/// Appends `style` to the caption's `cssstyle`.
+fn add_caption_style(document: &mut Document, caption: &mut Node, style: &str) -> Result<()> {
+  let style = match caption.get_attribute("cssstyle").filter(|s| !s.is_empty()) {
+    Some(previous) => s!("{previous};{style}"),
+    None => style.to_string(),
+  };
+  document.set_attribute(caption, "cssstyle", &style)
+}
+
+/// The caption's layout settings for float type `ty` as tokens on its `ltx:caption`: `justification=` as the
+/// `text-align` its body's last `\centering`/`\raggedright`/`\raggedleft` (or ragged2e's) sets, `justify` for an empty
+/// one (`\caption@hj@<name>`, caption3.sty:955-969, 1361-1364; `\lx@caption@justify`), and the skips
+/// (`\lx@caption@skip`); `auto` is the position `\lx@caption@where` marked for this caption ([`take_caption_auto`]).
+/// Beyond Perl, which ignores both (caption.sty.ltxml:30,52; OXIDIZED_DESIGN_DIVERGENCES #1024).
+fn caption_layout_tokens(ty: &str, auto: String) -> Vec<Token> {
+  let get = |key: &str| caption_setting(ty, key);
+  let braced = |tokens: &mut Vec<Token>, arg: &str| {
+    tokens.push(T_BEGIN!());
+    tokens.extend(ExplodeText!(arg));
+    tokens.push(T_END!());
+  };
+  let mut tokens = Vec::new();
+  let justification = get("justification").and_then(|name| {
+    let defn = lookup_definition(&T_CS!(s!("\\caption@hj@{name}")))
+      .ok()
+      .flatten()?;
+    // `justified`'s empty body has no expansion.
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      return defn.get_expansion().is_none().then_some("justify");
+    };
+    if body.unlist_ref().is_empty() {
+      return Some("justify");
+    }
+    // A body with no alignment command (`{\hyphenpenalty=10000}`) leaves `\@parboxrestore`'s justified text.
+    let last_align = body.unlist_ref().iter().rev().find_map(|t| {
+      t.with_cs_name(|cs| match cs {
+        "\\centering" | "\\Centering" | "\\centerlast" | "\\centerfirst" => Some("center"),
+        "\\raggedright" | "\\RaggedRight" | "\\flushleft" => Some("left"),
+        "\\raggedleft" | "\\RaggedLeft" | "\\flushright" => Some("right"),
+        "\\justifying" => Some("justify"),
+        _ => None,
+      })
+    });
+    last_align.or(Some("justify"))
+  });
+  if let Some(align) = justification {
+    tokens.push(T_CS!("\\lx@caption@justify"));
+    braced(&mut tokens, align);
+    // caption3.sty:131-139, :677: `singlelinecheck` is on unless set to `0`/`false`/`no`/`off`.
+    let single_line = !matches!(
+      get("singlelinecheck").as_deref(),
+      Some("0" | "false" | "no" | "off")
+    );
+    braced(&mut tokens, if single_line { "1" } else { "" });
+  }
+  // `position=auto` as `\caption@autoposition` read it when the caption began (`\lx@caption@where`).
+  let mut position = get("position").unwrap_or_default();
+  if matches!(position.as_str(), "" | "auto") && !auto.is_empty() {
+    position = auto;
+  }
+  for (register, value) in [
+    ("above", get("skip").or_else(|| get("aboveskip"))),
+    ("below", get("belowskip")),
+  ] {
+    if let Some(value) = value {
+      tokens.push(T_CS!("\\lx@caption@skip"));
+      braced(&mut tokens, register);
+      braced(&mut tokens, &position);
+      tokens.extend(tokenize(TeXString::assembled(value)).unlist());
+      tokens.push(T_CS!("\\relax"));
+    }
+  }
+  tokens
 }
 
 /// The float style of a float.sty type whose captions are float.sty's (`float_sty.rs` `record_float_style`, `\newfloat`
@@ -1507,6 +1685,7 @@ fn caption_text_is_empty(text: &Tokens) -> bool {
 /// floatrow, subfig's `caption=false`), which formats nothing. Sub-captions keep their packages' formats
 /// (subcaption_sty.rs, subfig_sty.rs).
 fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
+  let auto = take_caption_auto();
   let ty_name = ty.to_string().trim().to_string();
   let text_empty = caption_text_is_empty(&text);
   // A `\captionof` panel a binding hosts (`\lx@caption@hosted`, `\@captionof@`) is caption's `\caption` of that
@@ -1532,7 +1711,6 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   // caption3.sty:1680-1683: an empty text also takes the `simple` text format (`textformat=period` adds no ".").
   let text_format = get("textformat").filter(|f| f != "simple" && f != "default" && !text_empty);
   let name = lookup_tokens(&s!("CAPTION_{ty_name}_name@tokens"));
-  let mut tokens = Vec::new();
   let mut line_break: Vec<Token> = Vec::new();
   // No type (a caption whose type an argument scan lost) has nothing to format, nor a type whose package makes its
   // captions itself (`lx@caption@own@<type>`: algorithm2e's `algorithm`, algorithm2e_sty.rs) — unless float.sty made
@@ -1550,6 +1728,11 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
       && name.is_none()
       && !text_empty);
   let explode = |s: &str| ExplodeText!(s);
+  let mut tokens = if ty_name.is_empty() || (ty_name.starts_with("sub") && !hosted) {
+    Vec::new()
+  } else {
+    caption_layout_tokens(&ty_name, auto)
+  };
   let braced = |tokens: &mut Vec<Token>, inner: Vec<Token>| {
     tokens.push(T_BEGIN!());
     tokens.extend(inner);
@@ -1684,6 +1867,7 @@ fn caption_text_format(text: Tokens, text_format: Option<String>) -> Result<Toke
 /// in [`caption_format_tokens`]. Probe `capstar.tex` (sel78k, `[font=small,labelfont=bf,textfont=it]`: the starred
 /// caption italic and small, as pdflatex sets it); guard `perfect_kernel_batch78l::caption_star_takes_the_caption_fonts`.
 fn caption_star_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
+  let auto = take_caption_auto();
   let ty_name = ty.to_string().trim().to_string();
   let hosted = lookup_bool("lx@caption@hosted");
   if ty_name.is_empty() || (ty_name.starts_with("sub") && !hosted) {
@@ -1693,10 +1877,12 @@ fn caption_star_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   let (font, text_font) = (get("font"), get("textfont"));
   let text_format =
     get("textformat").filter(|f| f != "simple" && f != "default" && !caption_text_is_empty(&text));
+  let mut tokens = caption_layout_tokens(&ty_name, auto);
   if font.is_none() && text_font.is_none() && text_format.is_none() {
-    return Ok(text);
+    tokens.extend(text.unlist());
+    return Ok(Tokens::new(tokens));
   }
-  let mut tokens = vec![T_BEGIN!()];
+  tokens.push(T_BEGIN!());
   for spec in [font, text_font].iter().flatten() {
     tokens.extend(caption_font_tokens(spec)?);
   }

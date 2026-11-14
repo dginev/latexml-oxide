@@ -1,0 +1,16 @@
+% issue #787, review revCAP2 item 3 (the limit it notes): a declared justification whose alignment is reached through a
+% document macro (`\myalign` → `\raggedleft`) is read from the body's own tokens, which hold no alignment command, so
+% it reads as `justify`; TeX sets the caption flush right.
+% witness: synthetic
+% oracle:  pdflatex 0 errors; "Figure 1: Right by a macro." flush right
+% engines: perl=0 (no alignment); rust df5149f093=0, no text-align; rust 6d700e252c=0, `text-align:justify`
+% expect:  0 errors, 0 warnings; `<caption cssstyle="text-align:right">`
+% status:  RED (moves: post-merge — read the alignment from the digested body, not its spelling)
+\documentclass{article}
+\usepackage{caption}
+\newcommand\myalign{\raggedleft}
+\DeclareCaptionJustification{m}{\myalign}
+\captionsetup{justification=m,singlelinecheck=false}
+\begin{document}
+\begin{figure}X\caption{Right by a macro.}\end{figure}
+\end{document}

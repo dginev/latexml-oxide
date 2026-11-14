@@ -1,0 +1,13 @@
+% witness: issue 824 (arXiv 2611.12926: 96 `\lx@end@inline@math` errors -> TooManyErrors; not in the local /data copy)
+% oracle:  pdflatex 0 errors; 95 before MoO, 4 a subscript of MoO, 2- a superscript
+% engines: rust 0.7.6 = 6 errors per \ce (the issue's report, `Attempt to end mode math`; fixed by batch 50's calc
+%          `\widthof` box, perfect_kernel_batch50.rs); rust 85a1bd780e7 = 0 errors, but the 4 a
+%          pre-subscript (`_ [4] ^ [95] [MoO] ^ [2 – ]`); Perl 0.8.8 hangs on raw mhchem (no oracle)
+% expect:  0 errors; `^ [95] ([MoO] _ [4]) ^ [2 – ]`-shaped: the isotope prescript wraps the post-scripted MoO
+% status:  RED (85a1bd780e7) -> GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\ce{^{95}Mo} and \ce{^{95}MoO4^{2-}} and \(\ce{^{95}Mo}\)
+\end{document}

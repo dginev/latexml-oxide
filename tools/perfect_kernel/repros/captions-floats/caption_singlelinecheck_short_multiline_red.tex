@@ -1,0 +1,14 @@
+% issue #787, review revCAP3 item 1: under caption's default `singlelinecheck`, a caption that fits the line is set in the
+% single-line style (`\caption@slsty`, centring), so each line of a short caption broken by `\\` is centred. We read the
+% single-line style as a box position only: a centred fit-content box whose lines keep the set `text-align:left`.
+% witness: synthetic
+% oracle:  pdflatex 0 errors; "Figure 1: Short" and "two lines here" each centred
+% engines: perl=0, `<caption>` (no alignment); rust 639edab8d1=0, `text-align:left;width:fit-content;margin-left:auto;margin-right:auto`
+% expect:  0 errors, 0 warnings; the caption's lines centred (`text-align:center` inside the fit-content box)
+% status:  RED (moves: post-merge — the single-line style is an alignment, not only a box position)
+\documentclass{article}
+\usepackage{caption}
+\captionsetup{justification=raggedright}
+\begin{document}
+\begin{figure}X\caption{Short\\ two lines here}\end{figure}
+\end{document}
