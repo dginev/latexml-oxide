@@ -53,9 +53,16 @@ LoadDefinitions!({
 
   // activate a certain theorem style
   DefPrimitive!("\\theoremstyle{}", sub[(style_tok)] {
-    // `untex_string()` for the tokenizer, plain `to_string()` for the CS *name*
-    // below: only the former is re-read as TeX, and only it can weld a control
-    // word onto a following letter. See `TeXString`.
+    // The latex-lab block code's \theoremstyle (block.sty r80868:977) keeps the argument as
+    // given; keytheorems e-expands it into `thm-<style>-1`.
+    if is_defined("\\l__block_thmstyle_tl") {
+      def_macro(T_CS!("\\l__block_thmstyle_tl"), None,
+        ExpansionBody::Tokens(style_tok.clone()), None)?;
+    }
+    // amsthm.sty reads the name inside `\csname th@#1`, expanded (keytheorems' `style=` passes
+    // `\l__keythms_thm_style_tl`). `untex_string()` for the tokenizer, plain `to_string()` for the
+    // CS *name* below: only the former is re-read as TeX. See `TeXString`.
+    let style_tok = Expand!(style_tok);
     let style = style_tok.to_string();
     let style_tex = style_tok.untex_string();
     let style_cs = T_CS!(s!("\\th@{style}"));

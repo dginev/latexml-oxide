@@ -14,7 +14,13 @@ fn kernel_length_is_an_allocated_dimen() {
   let (stderr, xml) = convert_with(tex, None);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("dimen124 yes yes 345.0pt</p>"), "{xml}");
+  // The register number is the kernel's allocation order: pdflatex says `\dimen124` on the 2025 kernels,
+  // `\dimen126` on the November 2026 one. What is guarded is that it is an allocated `\dimen` at all.
+  let allocated = xml.split("dimen").skip(1).any(|rest| {
+    let digits = rest.chars().take_while(char::is_ascii_digit).count();
+    digits > 0 && rest[digits..].starts_with(" yes yes 345.0pt</p>")
+  });
+  assert!(allocated, "{xml}");
 }
 
 /// The `xetex` profile: iftex, l3sys and the XeTeX primitives read XeTeX, so

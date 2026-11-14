@@ -1777,17 +1777,22 @@ pub(crate) fn load() -> Result<()> {
     remove_from_counter_reset(&Expand!(ctr).to_string(), &Expand!(within).to_string())?;
   });
 
-  // Perl: latex_constructs.pool.ltxml \counterwithin
-  DefPrimitive!("\\counterwithin OptionalMatch:* {}{}", sub[(star, ctr, within)] {
+  // Perl: latex_constructs.pool.ltxml \counterwithin; the `[format]` (default `\arabic`) is latex.ltx's
+  // `\NewDocumentCommand \counterwithin {sO{\arabic}mm}` (tcolorbox 6.10's `number within`, tcolorbox.sty:2410).
+  DefPrimitive!("\\counterwithin OptionalMatch:* []{}{}", sub[(star, format, ctr, within)] {
     let ctr_str = Expand!(ctr).to_string();
     let within_str = Expand!(within).to_string();
     add_to_counter_reset(&ctr_str, &within_str)?;
     if star.is_none() {
       // Redefine \thectr to include \thewithin prefix
       let the_ctr = T_CS!(s!("\\the{}", ctr_str));
-      let expansion = s!("\\the{}.\\arabic{{{}}}", within_str, ctr_str);
+      let mut expansion = vec![T_CS!(s!("\\the{}", within_str)), T_OTHER!(".")];
+      expansion.extend(counter_format(format));
+      expansion.push(T_BEGIN!());
+      expansion.extend(ExplodeText!(ctr_str.as_str()));
+      expansion.push(T_END!());
       let _ = def_macro(the_ctr, None,
-        Some(ExpansionBody::from(expansion)),
+        Some(ExpansionBody::from(Tokens::new(expansion))),
         Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))));
       // defCounterID with within
       let prefix = lookup_string(&s!("@ID@prefix@{}", ctr_str));
@@ -1806,17 +1811,20 @@ pub(crate) fn load() -> Result<()> {
     }
   });
 
-  // Perl: latex_constructs.pool.ltxml \counterwithout
-  DefPrimitive!("\\counterwithout OptionalMatch:* {}{}", sub[(star, ctr, within)] {
+  // Perl: latex_constructs.pool.ltxml \counterwithout (latex.ltx `{sO{\arabic}mm}`, as \counterwithin)
+  DefPrimitive!("\\counterwithout OptionalMatch:* []{}{}", sub[(star, format, ctr, within)] {
     let ctr_str = Expand!(ctr).to_string();
     let within_str = Expand!(within).to_string();
     remove_from_counter_reset(&ctr_str, &within_str)?;
     if star.is_none() {
       // Redefine \thectr without prefix
       let the_ctr = T_CS!(s!("\\the{}", ctr_str));
-      let expansion = s!("\\arabic{{{}}}", ctr_str);
+      let mut expansion = counter_format(format);
+      expansion.push(T_BEGIN!());
+      expansion.extend(ExplodeText!(ctr_str.as_str()));
+      expansion.push(T_END!());
       let _ = def_macro(the_ctr, None,
-        Some(ExpansionBody::from(expansion)),
+        Some(ExpansionBody::from(Tokens::new(expansion))),
         Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))));
       // defCounterID without within — redefine \thectr@ID
       let prefix = lookup_string(&s!("@ID@prefix@{}", ctr_str));
@@ -1967,6 +1975,15 @@ pub(crate) fn load() -> Result<()> {
 /// recorded; a `\newcommand`/`\providecommand` of a defined name defines none, as LaTeX's.
 /// OXIDIZED_DESIGN #567; guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
 /// every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`.
+/// `\counterwithin`'s `[format]`, `\arabic` when absent (latex.ltx `O{\arabic}`); a wholly braced value
+/// loses its braces as ltcmd strips them (`[{\arabic}]`, tcolorbox 6.10's `\exp_args:NNo`).
+fn counter_format(format: Option<Tokens>) -> Vec<Token> {
+  match format {
+    Some(format) => format.strip_braces().unlist(),
+    None => vec![T_CS!("\\arabic")],
+  }
+}
+
 fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool) -> Result<()> {
   if cs.get_catcode() != Catcode::CS {
     return Ok(());

@@ -11017,8 +11017,8 @@ that only lualatex or xelatex can compile: `\char`\{` prints "–", a typed `<` 
 - A text symbol, accent or composite declared for TU at a slot above 255 is that code point
   (`decode_slot`; tuenc-greek.def:204 `\DeclareTextSymbol{\textalpha}\UnicodeEncodingName{"03B1}`),
   where the 8-bit rule gives no glyph.
-- The `xetex` profile installs the same format encoding, after `\XeTeXrevision` so that tuenc.def
-  takes its XeTeX branch.
+- The `xetex` profile installs the same format encoding, after `\XeTeXrevision`, `\XeTeXversion` and
+  `\tex_Umathcode:D` so that tuenc.def takes its XeTeX branch (v2.1d probes the first, v2.2a the other two).
 - The pdfTeX-model default keeps OT1, as pdflatex. The TU map is registered for every profile,
   though, so an explicit TU selection under it (`\fontencoding{TU}`, `\UseTextSymbol{TU}`,
   fontenc's `[TU]`, the fontspec binding's `\latinencoding`=TU reached through babel's
@@ -14777,8 +14777,8 @@ natbib_bib_bibliography_prints_its_bibpreamble}`, `perfect_kernel_gemini::bibpre
 **TeX**: fontspec makes the format's TU the text encoding (fontspec-xetex.sty:431-441); `\normalfont`/`\reset@font`
 select `\encodingdefault` (latex.ltx:14113-14122). **Perl** keeps OT1 in both places (KNOWN_PERL_ERRORS #450).
 **Rust** (60r): the fontspec binding selects the format's TU (the luatex/xetex profiles' installation); under the
-pdfTeX persona it installs it, inputting tuenc.def's XeTeX branch with `\XeTeXrevision` defined for the input only, so
-the engine probe stays undefined after;
+pdfTeX persona it installs it, inputting tuenc.def's XeTeX branch with the XeTeX identity it probes (`\XeTeXrevision`;
+v2.2a: `\tex_Umathcode:D`, `\XeTeXversion`) defined for the input only, so the engine probes stay undefined after;
 `neutralize_font` uses `\encodingdefault`, expanded, and tags babel's `\latinencoding` (`neutralize_font_latin`);
 identifiers digested after it come from their source tokens (`\lx@tag@intags OptionalUndigested`, `type_name`,
 `\lxDeclare` keys). Guards `perfect_kernel_batch60::{fontspec_text_is_tu_encoded,
@@ -22389,7 +22389,9 @@ listings (tcolorbox reads the body back `nolol`, KNOWN_PERL_ERRORS #988). The bo
 (2409.11413's `\lstset{title=\lstname}` had emptied all 13 "Listing N: …" titles; a raw box's read-back runs with
 `\lst@MakeCaption` = `\@gobble`, which `lst_process_display_with` reads as such). The box frame and colours are not
 drawn; a box with `detach title` (title not in the bar) keeps none. `\newtcbinputlisting`'s `[init]` options go through
-tcolorbox's own init processor under the command's name (`\tcb@proc@options@init`, tcblistingscore.code.tex:374-377), so
+tcolorbox's own init processor under the command's name (`\__tcobox_process_newtcolorbox:nn`, tcblistingscore.code.tex:359; a
+tcolorbox without it, `\tcb@proc@options@init`: `tcolorbox_sty::tcb_process_init`), and each use runs the counter `code=` it left
+in `\tcb@opt@<name>` (tcolorbox 6.10 moved it to expl3, tcolorbox.sty:2428-2444), so
 `use counter=` gives each use `\thetcbcounter`, and a box without a counter has an empty `\thetcbcounter`
 (tcolorbox.sty:2335-2337 `\tcb@proc@counter@no`, key `no counter` :2258; 2605.21082's `title={\textbf{code~\thetcbcounter}: #2}` prints "code : …",
 `tcolorbox_sty::tcb_counter_step_code`). `\newtcbinputlisting` also carries the box's phantom code (a per-use `label=` /
@@ -36164,3 +36166,83 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (`arrayrulecolor_bang_rule_own_colour_red.tex`). **Guards**: `perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it`
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
+
+### 1029. A file `\input` under a set `\everyeof` is read as a token list, never answered by a binding (WIN1, WIN1F)
+
+**TeX.** An `\input` made while `\everyeof` holds tokens feeds the reader that set them: the file's tokens, then the
+`\everyeof` list (etex.web §362), end a delimited scan opened across the `\input` — expl3's `\file_get:nnN`
+(`\__file_get_aux:nnN`: `\tex_everyeof:D` the marker, `\__file_get_do:Nw`, `\tex_input:D`). The LaTeX kernel of
+November 2026 reads `glyphtounicode.tex` this way while the format is built (latex.ltx:22952-22957). **Perl.** Such an
+`\input` met while definitions are read goes to `InputDefinitions` (Package.pm:2287-2288), its own loop; `\everyeof` is
+a bare register never inserted (eTeX.pool.ltxml:258); a binding answers where one exists. **Rust.** Under a set
+`\everyeof`, `content::input` reads the file on disk in both modes: during definitions `read_as_token_list` opens a mouth
+under the current catcodes ending with the `\everyeof` mark (no definitions loop, no loaded mark, no content-file
+entry); in a document the binding dispatch is skipped and the content path reads it. Before, `--init=latex.ltx` on that
+kernel raised 137 errors (the scan ran on through latex.ltx under `\ExplSyntaxOff`), and in a document
+`\file_get:nnN{ltluatex}` / `{pstricks}` / `{glyphtounicode}` / `{xspace.sty}` raised 7 / 16 / 7 / 7 Errors with `[read] [empty]` where
+pdflatex prints `[read][42]Tail.` (0 `!`). An ordinary `\input` keeps its binding: the empty `glyphtounicode.tex`
+binding answers `\input glyphtounicode` (`\pdfglyphtounicode` a no-op, the raw read's output the same, at fewer
+instructions). **Guards**: `perfect_kernel_batch51::file_get_reads_the_file_whole`, the format build's zero-error gate.
+
+### 1032. An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755)
+
+**Perl** and Rust emit `<mtd columnalign="right">` (`ltx_align_right` unless a border class replaces it, MathML.pm
+L456-473); MathML Core dropped `columnalign`, and Chrome set a `columnalign="right"` cell flush left (start; revMML2: 0 px left,
+12.3 px right; only a cell without the attribute is centred), so an `aligned`'s left column ended short of its relation,
+up to 21 px late (issue 809's repro, 16 px) (`text-align` on `.ltx_align_right` does not reach it). Firefox honours `columnalign`. **Rust.** LaTeXML.css adds
+`math mtd[columnalign="right"] { justify-items:end; }` and `…[columnalign="left"] { justify-items:start; }`, keyed on the
+attribute, which every cell keeps; the markup is unchanged. Offer upstream (LaTeXML.css). **Guards**:
+`cluster_cli::browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation` (Chrome,
+local only, repro `alignment/aligned_left_column_is_right_aligned.tex`),
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the rule
+ships).
+
+### 1033. A visible MathML Core category-K operator has no operator space: `/` is K, and an Ord (issue #789)
+
+**TeX.** `/` is an Ord (mathcode "013D), as is `\backslash` (`\delimiter"26E30F`, class 0): `\showbox` of `$a/b$` and
+`$a\backslash b$` has no glue. **Core** (TR 2025 and ED, Figure 25) puts infix `/`, `\`, `_`, U+2061-2064 and U+2206 in
+category K, zero lspace and rspace. **Perl.** OperatorDictionary.pm:185 lists `/` in B (0.222 em; KNOWN_PERL_ERRORS
+#1240), and the space walk (`adjust_pair`) types an operator by its role, so `/` (MULOP) is a Bin and `\backslash`
+(MULOP, math_common.pool.ltxml:97) gets `lspace`/`rspace` 0.222 em; `<mo>/</mo>` is bare, and Chrome 155 spaces it 0.222 em
+each side (Firefox none). **Rust.** The dictionary has `/` in K; `is_core_k_glyph`
+(presentation.rs) marks a visible infix `<mo>` of category K `lspace="0em" rspace="0em"`, as Perl does for the ZWSP of
+`--noinvisibletimes` (MathML.pm:773), and the walk types it Ord when its role is a Bin (MULOP). A class digestion
+keeps wins: `\mathrel{/}`, `\mathrel{\backslash}` (RELOP) get 0.278 em each side, `\mathpunct{/}`,
+`\mathpunct{\backslash}` (PUNCT) 0 em / 0.167 em, TeX's `\thickmuskip` and `\thinmuskip`. The invisible K operators stay
+bare (Format text, Perl L747; Chrome and Firefox give them no space). Residual: `\mathbin{/}` and `\bigm/` lose their
+Bin/Rel class at digestion and get zero space too (RED `math-parse/mathbin_slash_keeps_binary_space_red.tex`,
+post-merge). Offer upstream. **Guards**:
+`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
+`math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.
+
+### 1034. A small PDF figure is converted to SVG, raster-bearing ones too, unless it draws a raster enlarged (after PR 816)
+
+**Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
+**Rust.** Beyond Perl, a PDF at most 500 KiB (the auto default, `--graphics-svg-threshold-kb 0`; an explicit `N`
+bounds it at `N` KB) first tries the vector converters, `mutool convert -F svg`, then `pdftocairo -svg`
+(`Graphics::convert_image_svg`); every failure falls back to the PNG path: neither tool on PATH, a non-zero exit, the
+15 s timeout, an SVG over 8 MB, an SVG whose `trim`/`viewport` crop cannot be read. Labels, axes and curves stay
+vector, and an embedded raster keeps its own pixels (PERF816, 673 arXiv figures: mutool's SVG -8 ms CPU median per
+figure against the PNG, 70 vs 157 MB gzipped; 23 % of the PNGs lost raster resolution). Until PR 816 (amachino) an
+image XObject in the first 256 KB gated a PDF off the path; DG ruled on 2026-11-14 that size alone gates it (mutool
+first, pdftocairo the fallback; MuPDF, AGPL, only as an unmodified CLI subprocess).
+
+**Enlarged rasters take the PNG path** (DG 2026-11-14, "PNG for enlarged rasters"): an SVG that draws any raster larger
+than its own pixels is discarded and the figure takes main's PNG path, with an `Info`, no Warning and no error count;
+every other figure keeps the SVG. (A raster drawn at its pixel size or smaller inside the figure stays SVG even when the
+page then enlarges the whole figure, e.g. `width=\textwidth`; the browser smooths it then, as it smooths main's PNG of
+that figure.) Neither tool marks a raster's rendering, so a
+browser smooths an enlarged raster into a blur where the PDF (no `/Interpolate`, as pdflatex writes it) shows hard
+pixel blocks, and no static `image-rendering` suits every display size: `pixelated` aliases a raster the page or a phone
+shows smaller. `svg_enlarged_raster` reads every placement, inline, under nested `<g transform>`, through `<use>` and
+through a soft mask's `<mask>` (both tools draw an alpha channel there), and calls a raster enlarged when it is drawn at
+more than 1.01 SVG user units per pixel on either axis on any placement (user units are the PDF's bp, which both tools
+keep; 1.01 absorbs the tools' float rounding, pdftocairo drawing images about 2 % smaller than mutool). A 1×1 raster never counts, however it is drawn: a browser cannot blur a single pixel (DG 2026-11-14;
+10 of the 21 PNG fallbacks in the 60-paper sample were 1×1 rasters in 1503.05958). A placement it
+cannot read counts as enlarged: an image in a `<pattern>` or `<symbol>`, under a `skewX`/`skewY` or a nested `<svg>` viewBox (a shear written as `matrix()` is measured by its axis lengths), past
+8 nested `<use>`, or with a size or pixel count it cannot read. The decision runs on every render after the graphics
+cache, so a cached SVG is judged too (the cache stores the converter's output, not the decision). `/Interpolate true` no
+longer matters (the PNG path renders such a raster as main does). **Guards**:
+`graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged` (each converter present, then the pipeline:
+`native_raster_vector.tex`, a 64×64 PNG at 48 bp, stays SVG; `mixed_raster_vector.tex`, a 4×4 tile at 1 cm, takes the
+PNG path), `graphics::tests::svg_enlarged_raster_reads_every_placement`, `graphics::tests::should_try_svg_path_auto_detect`.

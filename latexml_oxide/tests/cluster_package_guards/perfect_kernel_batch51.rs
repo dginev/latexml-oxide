@@ -6,12 +6,48 @@
 
 use latexml::util::test::check_requirements;
 
-use super::perfect_kernel_batch46::{convert, error_count};
+use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
 /// Like [`convert`] (raw preload), but first drops extra `(name, content)`
 /// files into the tempdir so the snippet can `\input` them.
 pub(super) fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
   super::perfect_kernel_batch46::convert_files(tex, files)
+}
+
+/// expl3's `\file_get:nnN` reads the file, never its binding: OXIDIZED_DESIGN_DIVERGENCES #1029. pdflatex prints
+/// `[read][42]Tail.` (0 `!`); red without the gate (revWIN1): 7, 7, 16 and 7 Errors, `[read] [empty]`.
+#[test]
+fn file_get_reads_the_file_whole() {
+  for (file, needle) in [
+    ("glyphtounicode.tex", r"\pdfglyphtounicode"),
+    ("ltluatex.tex", "def"),
+    ("pstricks.tex", "def"),
+    // a binding extension takes the other dispatch branch
+    ("xspace.sty", r"\ProvidesPackage"),
+  ] {
+    if !check_requirements(&[file]) {
+      continue;
+    }
+    let tex = format!(
+      r"\documentclass{{article}}
+\begin{{document}}
+\ExplSyntaxOn
+\file_get:nnN {{ {file} }} {{ \ExplSyntaxOff }} \l_tmpa_tl
+\tl_if_in:NnTF \l_tmpa_tl {{ {needle} }} {{ [read] }} {{ [empty] }}
+~[\int_eval:n {{ 40 + 2 }}]
+\ExplSyntaxOff
+Tail.
+\end{{document}}
+"
+    );
+    let (stderr, xml) = convert(&tex, false);
+    assert_eq!(
+      (file, error_count(&stderr), warning_count(&stderr)),
+      (file, 0, 0),
+      "{stderr}"
+    );
+    assert!(xml.contains("<p>[read][42]Tail.</p>"), "{file}: {xml}");
+  }
 }
 
 /// P15 (file side): eTeX §362 begins the `\everyeof` token list at the end

@@ -1,0 +1,41 @@
+% mechanism: keytheorems on a LaTeX format of 2026-06-01 or later (keytheorems.sty:3828-3850) takes the redesigned
+%   latex-lab block code: `thmstyle` instances, `\l__block_thmstyle_tl` (set by `\theoremstyle`, block.sty r80868:977;
+%   keytheorems' `style=` passes `\l__keythms_thm_style_tl` unexpanded), the block instances `thm-<style>-1` and
+%   `std-list-1`. The block binding (latex_lab_testphase_block_sty.rs) declares what the installed block.sty declares;
+%   this file edits the November (latex-lab 2026-10-27) instance names, keytheorems_block_instances_are_the_files.tex
+%   the TL 2025 ones.
+% witness: synthetic (keytheorems/keytheorems-doc shape)
+% oracle:  pdflatex (TL 2026 r81108, latex-lab r80868) 0 `!`: "Theorem 1. There are infinitely many primes.", "Lemma 1.
+%          Every prime is odd or two." (upright), "Note 1. Two is even." (italic head); pdflatex (TL 2025) 17 `!`, one per
+%          instance or style its block code does not have ("The instance 'std-list-1' of type 'block' is unknown", ...)
+% engines: rust WIN1d (TL 2026) 8 template errors (`'plain' of type 'thmstyle' is unknown`, ...); WIN1i 0; TL 2025 the
+%          17 of pdflatex
+% expect:  0 errors on a TL whose block.sty declares `thmstyle`; the theorems hold their statements in their styles
+% preload: ar5iv.sty
+\DocumentMetadata{lang=en-US}
+\documentclass{article}
+\usepackage{keytheorems}
+\newkeytheorem{theorem}[leftmargin=1cm,rightmargin=1cm]
+\newkeytheorem{lemma}[style=definition,leftmargin=2em]
+\theoremstyle{remark}
+\newkeytheorem{note}[rightmargin=1em]
+\ExplSyntaxOn
+\clist_map_inline:nn
+  {
+    std-display-1, std-display-6, quote-1, quote-6, quotation-1, quotation-6, verbatim-1, verbatim-6,
+    std-list-1, std-list-6, thm-plain-1, thm-plain-2, thm-remark-1, thm-definition-2, thm-legacy2e-1, proof-1
+  }
+  { \EditInstance{block}{#1}{right-margin=0pt} }
+\EditInstance{thmstyle}{remark}{after-hspace = 5pt}
+\ExplSyntaxOff
+\begin{document}
+\begin{theorem}
+There are infinitely many primes.
+\end{theorem}
+\begin{lemma}
+Every prime is odd or two.
+\end{lemma}
+\begin{note}
+Two is even.
+\end{note}
+\end{document}

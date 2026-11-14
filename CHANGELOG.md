@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+  - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
+    dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
+    `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now
+    right- or left-aligns a cell by its `columnalign` (`justify-items`); the markup is
+    unchanged. Guard
+    `browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation`
+    (Chrome, local).
+  - **`/` has no operator space** (issue 789). TeX's `/` is an Ord, and MathML Core puts it in
+    category K (zero space), but our dictionary (Perl's) had it in B and Chrome spaces it
+    0.222 em each side. A visible Core-K operator (`/`, `\backslash`, `_`) is now
+    `<mo lspace="0em" rspace="0em">` and an Ord to the space walk, so `\backslash` loses its
+    0.222 em too; a kept `\mathrel{/}` or `\mathpunct{/}` keeps TeX's Rel or Punct space.
+    Guard `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space`.
+  - **Small PDF figures with a raster image keep their vector labels** (after PR 816 by
+    amachino — thank you). A PDF figure of at most 500 KiB that embeds a raster image
+    (a heatmap with axes and labels) was rasterized whole to PNG; it now goes to the
+    vector-SVG path like a vector-only PDF (mutool, then pdftocairo), keeping the text as
+    glyphs and the image at its own resolution, with the PNG path as the fallback. A
+    figure that draws a raster larger than its own pixels keeps the PNG path, where a
+    browser would blur it
+    (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
   - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
     number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
     `lstlisting` copies the code without its numbers; dark mode colours `body`, not
@@ -126,6 +147,42 @@
     directory. A `%` in a plain path is a character (`/w/100%/LaTeXML-html5.xsl`); only a
     `file:` URL is percent-decoded. Guards `xslt::local_stylesheet_tests`,
     `xslt_custom_stylesheet::stray_engine_sheets_do_not_replace_the_default`.
+  - **The format builds error-free on the LaTeX kernel of November 2026.** That
+    kernel reads `glyphtounicode.tex` with expl3's `\file_get:nnN` while the format
+    is made (latex.ltx:22952-22957). An `\input` met while definitions are read ran
+    the file in its own loop, so the reader that set `\everyeof` never got the
+    file's tokens: it scanned on through latex.ltx with expl3 syntax off, and
+    `--init=latex.ltx` raised 137 errors. Such an `\input` now joins the reader's
+    input stream with the `\everyeof` tokens at its end, as TeX's does, and in a
+    document no binding answers an `\input` under `\everyeof` either:
+    `\file_get:nnN{ltluatex}` and `{pstricks}` read the files (7 and 16 Errors
+    before). Guard `perfect_kernel_batch51::file_get_reads_the_file_whole`.
+  - **`tools/make_formats.ps1` gates the dumps as `make_formats.sh` does.** The
+    Windows mirror had drifted: it now fails on any `Error:`/`Fatal:` of an
+    `--init` run (`LATEXML_INIT_DEBUG=1`), pins `TEXMFROOT` to the detected TeX Live
+    (the dual-TL guard), and honours `CARGO_TARGET_DIR`. It used to keep a dump
+    built with errors without a word.
+  - **Windows uses the linked libkpathsea it was built with.** The check that the
+    linked library reads the same TeX Live as the `kpsewhich` on PATH compared
+    paths as strings: kpsewhich names the root `C:/texlive/2026`, the library its
+    files `c:/texlive/2026/…`, so every conversion fell back to the subprocess
+    backend (about 270 ms a file lookup). Paths now compare as Windows compares
+    them. Guard `path_is_under_compares_as_the_file_system_does`.
+  - **Windows diagnostics name their source file.** A location's source was taken
+    for a URL whenever it held a `:`, which every Windows path does, so messages
+    read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t.tex; line 3`. Perl's
+    rule is restored (`Locator.pm:55`: a protocol is more than one character).
+    Guard `a_windows_path_is_no_url`.
+  - **Windows keeps the input's directory in its plain form.** The input was
+    canonicalized to Windows' verbatim form (`\\?\C:\…`), which then reached
+    `\graphicspath` lookups (no file found), EPS candidates (listed twice) and
+    progress lines. New `pathname::canonicalize` drops the prefix where the plain
+    path names the same file.
+  - **`\directlua` output on Windows.** texlua writes its stdout in text mode
+    there, so each `\n` arrived as `\r\n`: the frames' byte counts no longer
+    matched, a `\r` ended every `tex.print` line, and the next frame could
+    desync. The bridge now counts the bytes that reach the pipe and drops the
+    added `\r`.
 
   - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
     chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and

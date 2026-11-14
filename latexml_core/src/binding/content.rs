@@ -2118,6 +2118,13 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
   if lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS")) {
+    // A reader that set `\everyeof` takes the file as a token list (eTeX §362; expl3's `\file_get:nnN`), not a
+    // definitions load: OXIDIZED_DESIGN_DIVERGENCES #1029 (the TL 2026 format build's glyphtounicode.tex).
+    if everyeof_is_set()
+      && let Some(path) = find_file(&clean_req, None)
+    {
+      return read_as_token_list(&path);
+    }
     // TeX's `\input` reads the file on every call; only `\usepackage` /
     // `\RequirePackage` load once (latex.ltx `\@ifl@aded`). Perl routes an
     // `\input` met while reading definitions to InputDefinitions
@@ -2192,7 +2199,8 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   // load it (matching `\input harvmac` → `harvmac.tex.ltxml` preference
   // over a local `harvmac.tex`). Skip when the request carries a directory
   // (explicit local path).
-  let binding_loaded = {
+  // Under `\everyeof` the file itself is read, never a binding (#1029; `\file_get:nnN{ltluatex}`, revWIN1).
+  let binding_loaded = !everyeof_is_set() && {
     let has_dir = clean_req.contains('/') || clean_req.contains('\\');
     // Perl Package.pm:2109-2113 + 2255-2270: when `\input{name}` or
     // `\input{name.<ext>}` resolves to a known binding extension AND a
@@ -3193,6 +3201,31 @@ fn note_content_file(path: &str) {
   }
   files.push_str(path);
   assign_value(CONTENT_FILES, files, Some(Scope::Global));
+}
+
+/// Whether `\everyeof` holds tokens: an `\input` under it feeds a reader of the file's tokens, so no binding answers
+/// it (see [`input`]).
+fn everyeof_is_set() -> bool {
+  matches!(
+    lookup_register("\\everyeof", Vec::new()),
+    Ok(Some(crate::definition::register::RegisterValue::Tokens(tokens))) if !tokens.is_empty()
+  )
+}
+
+/// TeX's `\input` of `path` while definitions are read and `\everyeof` is set: the file's text joins the input
+/// stream under the current catcodes and ends with the `\everyeof` tokens, for the reader that set them. Neither
+/// content of the document (no [`CONTENT_FILES`] entry, no binding) nor a definitions file (no loaded mark).
+fn read_as_token_list(path: &str) -> Result<()> {
+  let content = crate::binding::virtual_files::vfs_read(path);
+  gullet::open_mouth(
+    Mouth::create(path, MouthOptions {
+      notes: true,
+      content,
+      ..MouthOptions::default()
+    })?,
+    true,
+  );
+  gullet::mark_everyeof_mouth()
 }
 
 pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {

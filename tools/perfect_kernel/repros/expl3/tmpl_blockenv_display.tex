@@ -1,5 +1,6 @@
 % witness: tagpdf/tagpdf (sweep#40, tmpl=25 blockenv "template 'display' of type 'blockenv' is unknown", oracle-clean)
-% oracle: pdflatex clean (testphase-block declares blockenv type + display template/interface/code)
+% oracle: pdflatex clean (TL 2025: testphase-block declares blockenv type + display template/interface/code; the
+%   November 2026 block code names it `std` and tagpdfdocu-patches uses \SimpleBlockEnv, so this shape errs there)
 % expect: 0 Error lines
 % mechanism: \DocumentMetadata{tagging=on} must load latex-lab-testphase-block.sty
 %   (\NewTemplateType{blockenv}{..}, \DeclareTemplateCode{blockenv}{display}{..}).

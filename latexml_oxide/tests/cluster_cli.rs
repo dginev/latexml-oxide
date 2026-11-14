@@ -2613,6 +2613,35 @@ mod browser_render_aligned_math_spacing {
        (pre-fix ~10.8px; the relation space alone is ~4.4px): {stdout}"
     );
   }
+
+  /// #809 (inline `aligned`) and #755 (`gather*` around `aligned`): a left
+  /// column of unequal widths is right-aligned against the relation, so every
+  /// row's last-glyph→`=` gap is the relation's lspace alone (0.278 em; an
+  /// `mfrac` adds Chrome's 1px inline padding). Red before LaTeXML.css keyed
+  /// `justify-items` on `mtd[columnalign]`: 25.4/19.2/21.5/5.4 px at 16 px.
+  #[test]
+  fn aligned_left_column_is_right_aligned_against_the_relation() {
+    let doc = include_str!(
+      "../../tools/perfect_kernel/repros/alignment/aligned_left_column_is_right_aligned.tex"
+    );
+    if let Some(stdout) =
+      super::browser_harness::render_and_measure("#809", doc, "measure_align_mtd.js")
+    {
+      let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+      let rows = v["rowGaps"].as_array().expect("rowGaps array");
+      // Two `aligned` (inline, and in `gather*`) of 4 rows each.
+      assert_eq!(rows.len(), 8, "expected 8 aligned rows: {v}");
+      for (i, r) in rows.iter().enumerate() {
+        let gap = r["gap"].as_f64().expect("gap");
+        let want = 0.278 * r["fontPx"].as_f64().expect("fontPx");
+        assert!(
+          (gap - want).abs() <= 1.2,
+          "row {i}: left column→`=` gap {gap}px, want {want}px ± 1.2 — the left column \
+           is not right-aligned (LaTeXML.css `mtd[columnalign]`): {v}"
+        );
+      }
+    }
+  }
 }
 
 mod browser_render_verbatim_narrow {
@@ -2752,6 +2781,16 @@ mod aligned_mtable_columnspacing_zero {
     assert!(
       css.contains("mtable[columnspacing=\"0pt\"] mtd"),
       "LaTeXML.css is missing the native-MathML aligned mtd padding reset (#755)"
+    );
+    // #809: Core dropped `columnalign`; the left column is right-aligned only by the
+    // stylesheet rule keyed on it.
+    assert!(
+      html.contains("columnalign=\"right\""),
+      "aligned's left column lost columnalign=\"right\" (#809):\n{html}"
+    );
+    assert!(
+      css.contains("math mtd[columnalign=\"right\"]"),
+      "LaTeXML.css is missing the native-MathML mtd[columnalign] alignment (#809)"
     );
   }
 }

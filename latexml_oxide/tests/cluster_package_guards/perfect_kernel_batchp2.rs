@@ -3,6 +3,7 @@
 //! and Fatals, whatever it does, with the native path proven to have answered (`native_counts`: raw matches pdflatex too, so
 //! nothing else would tell); what the arithmetic must print is held against pdflatex's own answers (`kit/l3fp_oracle.sh` at
 //! 100,000 operations per family; a slice of it here).
+use latexml::util::test::kpse_text;
 use latexml_engine::l3fp_native::{native_counts, set_check_override, set_native_override};
 
 use super::{
@@ -359,6 +360,12 @@ fn the_doors_stay_the_formats_macros() {
     format!(r"\exp:w {tail}"),
     format!(r"\exp:w \group_align_safe_begin: \exp_after:wN \group_align_safe_end: {tail}"),
   ];
+  // l3kernel 2026-10 (TL 2026) spells `\exp_after:wN` as `\exp_after:w`, keeping the old name as one alias line
+  let ea = kpse_text("expl3-code.tex")
+    .filter(|code| code.matches(r"\exp_after:wN").count() > 1)
+    .map_or(r"\exp_after:w", |_| r"\exp_after:wN");
+  let spelled = |text: String| text.replace(r"\exp_after:wN", ea);
+  let doors = doors.map(spelled);
   assert!(doors.iter().any(|d| d == door), "{door}");
   let two = r"\s__fp \__fp_chk:w 10{1}{2000}{0000}{0000}{0000}\__fp_sep:";
   for row in [
@@ -374,6 +381,7 @@ fn the_doors_stay_the_formats_macros() {
     "Braces: 2; 1; 2; 12; 1; 2; 2;".to_string(),
     "Step: [1][2][3]; 3; 7".to_string(),
   ] {
+    let row = spelled(row);
     assert!(xml.contains(&row), "{row}\n{xml}");
   }
   // the mark in the argument, no `\s__fp_expr_stop` after it: no door of the macro's

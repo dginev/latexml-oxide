@@ -220,9 +220,10 @@ struct Cli {
   #[arg(long, overrides_with = "nonumbersections")]
   numbersections: bool,
 
-  /// Vector-SVG fast path for PDF graphics. `0` (default) auto-detects: vector
-  /// PDFs (no raster image, at most 500 KB) go through the SVG converters
-  /// (mutool → pdftocairo); raster-bearing PDFs stay on the gs/convert path.
+  /// Vector-SVG fast path for PDF graphics. `0` (default): PDFs at most
+  /// 500 KiB, raster-bearing ones included, go through the SVG converters
+  /// (mutool → pdftocairo), falling back to PNG on failure, oversized output or a
+  /// raster drawn larger than its pixels.
   /// `N > 0` forces the SVG path for any PDF at most N KB. Env
   /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` disables auto-detect.
   #[arg(
@@ -1032,7 +1033,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let is_directory_mode = cli.whatsin.as_deref() == Some("directory") || source.ends_with('/');
   let source = if is_directory_mode {
     let dir_path = Path::new(&source);
-    if let Ok(abs_source) = std::fs::canonicalize(dir_path) {
+    if let Ok(abs_source) = latexml_core::util::pathname::canonicalize(dir_path) {
       path_flags.push(abs_source.to_string_lossy().to_string());
     } else {
       path_flags.push(source.clone());
