@@ -179,6 +179,9 @@ pub struct PostOutcome {
   /// belt-and-suspenders guard for paths that force a fatal outside REPORT
   /// (e.g. a `catch_unwind`-trapped panic).
   pub status_code: usize,
+  /// The pages written, in the order the post pipeline produced them — Split's (the root, then each page
+  /// before its children), the order Perl's `@docs` reaches `Manifest::Epub::process` in for the EPUB spine.
+  pub pages:       Vec<String>,
 }
 
 /// Run post-processing while capturing its log into a fresh thread-local
@@ -203,10 +206,11 @@ pub fn run_post_processing_from_file_logged(path: &str, opts: &PostOptions) -> P
 
 fn run_post_processing_impl_logged(input: PostInput, opts: &PostOptions) -> PostOutcome {
   latexml_core::util::logger::bind_log();
-  let html = run_post_processing_impl(input, opts);
+  let mut pages = Vec::new();
+  let html = run_post_processing_impl(input, opts, &mut pages);
   let log = latexml_core::util::logger::flush_log();
   let status_code = latexml_core::common::error::get_status_code();
-  PostOutcome { html, log, status_code }
+  PostOutcome { html, log, status_code, pages }
 }
 
 /// Where the post-pipeline reads its already-converted LaTeXML XML from.
@@ -225,12 +229,12 @@ enum PostInput<'a> {
 ///
 /// Executes: Split → Scan → MakeBibliography → CrossRef → Graphics → MathML → XSLT → HTML5 fixups.
 pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
-  run_post_processing_impl(PostInput::Xml(xml), opts)
+  run_post_processing_impl(PostInput::Xml(xml), opts, &mut Vec::new())
 }
 
 /// File-input variant of [`run_post_processing`].
 pub fn run_post_processing_from_file(path: &str, opts: &PostOptions) -> String {
-  run_post_processing_impl(PostInput::File(path), opts)
+  run_post_processing_impl(PostInput::File(path), opts, &mut Vec::new())
 }
 
 /// The in-memory parse ceiling: libxml2's `xmlReadMemory` takes the buffer
@@ -489,7 +493,12 @@ fn spill_oversized_xml(xml: &str, opts: &PostOptions) -> std::io::Result<std::pa
   Ok(path)
 }
 
-fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
+/// `written` collects the pages written, in the pipeline's order (see [`PostOutcome::pages`]).
+fn run_post_processing_impl(
+  input: PostInput,
+  opts: &PostOptions,
+  written: &mut Vec<String>,
+) -> String {
   // Oversized in-memory handoff → spill + streaming file parse (see
   // `post_mem_parse_limit`). The temp file is removed on every exit path by
   // the guard; a spill failure falls through to the memory parse, whose own
@@ -536,14 +545,18 @@ fn run_post_processing_impl(input: PostInput, opts: &PostOptions) -> String {
     },
     other => other,
   };
-  let result = run_post_processing_inner(input, opts);
+  let result = run_post_processing_inner(input, opts, written);
   if let Some(path) = _spill_cleanup {
     let _ = std::fs::remove_file(path);
   }
   result
 }
 
-fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
+fn run_post_processing_inner(
+  input: PostInput,
+  opts: &PostOptions,
+  written: &mut Vec<String>,
+) -> String {
   let PostOptions {
     pmml,
     cmml,
@@ -1235,6 +1248,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       if result.discarded {
         return String::new();
       }
+      *written = result.written;
       return result.main_output.unwrap_or_else(fallback);
     }
     // Setup failed BEFORE any worker spawned (already reported): fall through
@@ -1258,7 +1272,6 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   let mut main_output: Option<String> = None;
   let t_pages = audit_start("render_pages");
   let mut pages_rendered = 0usize;
-  let mut written: Vec<String> = Vec::new();
   for SpilledPage {
     path,
     destination: dest,
@@ -1335,7 +1348,8 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     let outputs = match render_spilled_page(&path, &mut procs, &ctx, dest, dest_dir) {
       Ok(o) => o,
       Err(PageFailure::Fatal) => {
-        remove_pages(&written);
+        remove_pages(written);
+        written.clear();
         return String::new();
       },
       Err(PageFailure::Error) => return fallback(),

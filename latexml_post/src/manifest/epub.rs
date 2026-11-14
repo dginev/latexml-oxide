@@ -7,7 +7,10 @@
 //! - `OPS/content.opf` (spine + manifest)
 //! - Indexes all content files with correct media types
 
-use std::{fs, path::Path};
+use std::{
+  fs,
+  path::{Path, PathBuf},
+};
 
 /// The OPF package namespace (EPUB 3).
 const OPF_NS: &str = "http://www.idpf.org/2007/opf";
@@ -74,12 +77,7 @@ impl EpubManifest {
   /// Initialize the EPUB directory structure.
   ///
   /// Port of `Epub::initialize`.
-  pub fn initialize(
-    &mut self,
-    _title: &str,
-    _authors: &[String],
-    _language: &str,
-  ) -> Result<(), String> {
+  pub fn initialize(&mut self) -> Result<(), String> {
     let dir = &self.site_directory;
 
     // 1. Create mimetype file
@@ -103,21 +101,72 @@ impl EpubManifest {
     Ok(())
   }
 
-  /// Add a document to the EPUB spine.
+  /// Port of `Epub::process`: the package for the content documents `documents` (their destinations, in reading
+  /// order) under `OPS/`, every other file there a resource, `content.opf` written unless the user supplied one.
+  pub fn process(&mut self, documents: &[PathBuf], title: Option<&str>) -> Result<(), String> {
+    self.initialize()?;
+    let ops = Path::new(&self.site_directory).join("OPS");
+    let spine: Vec<SpineEntry> = documents
+      .iter()
+      .map(|doc| {
+        let (has_math, has_svg, has_nav) = content_properties(doc);
+        let relative = doc.strip_prefix(&ops).unwrap_or(doc);
+        self.add_document(&relative.to_string_lossy(), has_math, has_svg, has_nav)
+      })
+      .collect();
+    // Epub::finalize: every non-XHTML file under OPS/, in name order.
+    let mut files = Vec::new();
+    collect_files(&ops, &mut files);
+    files.sort();
+    let resources: Vec<ResourceEntry> = files
+      .iter()
+      .filter_map(|path| {
+        let href = path.strip_prefix(&ops).ok()?.to_string_lossy().into_owned();
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        if ext == "xhtml" || href == "content.opf" || path.ends_with("LaTeXML.cache") {
+          return None;
+        }
+        let media_type = core_media_type(ext);
+        if media_type == "application/octet-stream" {
+          crate::Info!(
+            "unexpected",
+            ext.to_lowercase(),
+            "resource '{}' is not of a core media type, assigning type application/octet-stream",
+            href
+          );
+        }
+        Some(ResourceEntry {
+          id: url_to_id(&href),
+          href,
+          media_type: media_type.to_string(),
+        })
+      })
+      .collect();
+    let content_path = ops.join("content.opf");
+    if content_path.is_file() {
+      crate::Info!(
+        "note",
+        "content.opf",
+        "using the manifest supplied by the user"
+      );
+      return Ok(());
+    }
+    // Perl reads the title from the ObjectDB's SITE_ROOT entry, which carries no authors or language.
+    let opf = self.generate_opf(title.unwrap_or("No Title"), &[], "en", &spine, &resources);
+    fs::write(&content_path, opf).map_err(|e| format!("Couldn't write content.opf: {e}"))
+  }
+
+  /// Add a document to the EPUB spine; `href` is its path relative to `OPS/`.
   ///
   /// Port of `Epub::process` per-document loop.
   pub fn add_document(
     &self,
-    destination: &str,
+    href: &str,
     has_math: bool,
     has_svg: bool,
     has_nav: bool,
   ) -> SpineEntry {
-    let path = Path::new(destination);
-    let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("doc");
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("xhtml");
-    let item_id = url_to_id(&format!("{}.{}", name, ext));
-
+    let href = href.replace(std::path::MAIN_SEPARATOR, "/");
     let mut properties = Vec::new();
     if has_math {
       properties.push("mathml");
@@ -130,8 +179,8 @@ impl EpubManifest {
     }
 
     SpineEntry {
-      id:         item_id,
-      href:       format!("{}.{}", name, ext),
+      id: url_to_id(&href),
+      href,
       media_type: "application/xhtml+xml".to_string(),
       properties: if properties.is_empty() {
         None
@@ -315,17 +364,170 @@ pub struct ResourceEntry {
 
 /// Convert a URL/filename to a valid NCName for use as an XML id.
 ///
-/// Port of `url_id`.
+/// Port of `url_id`: a character outside NCName becomes `_xN_` (N its uppercase hex codepoint), and an `_` that
+/// opens such a sequence is itself escaped first.
 fn url_to_id(name: &str) -> String {
+  let chars: Vec<char> = name.chars().collect();
   let mut result = String::from("_");
-  for ch in name.chars() {
-    if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' || ch == '.' {
+  for (i, &ch) in chars.iter().enumerate() {
+    if ch == '_' && opens_escape(&chars[i + 1..]) {
+      result.push_str("_x5F_");
+    } else if is_ncname_char(ch) {
       result.push(ch);
     } else {
       result.push_str(&format!("_x{:X}_", ch as u32));
     }
   }
   result
+}
+
+/// Whether `rest` (the text after an `_`) reads `x<HEX>+_`, Perl's `_(x[0-9A-F]+)(?=_)`.
+fn opens_escape(rest: &[char]) -> bool {
+  let hex = rest
+    .iter()
+    .skip(1)
+    .take_while(|c| matches!(c, '0'..='9' | 'A'..='F'))
+    .count();
+  rest.first() == Some(&'x') && hex > 0 && rest.get(1 + hex) == Some(&'_')
+}
+
+/// The NCName character class of Perl's `url_id`.
+fn is_ncname_char(ch: char) -> bool {
+  matches!(ch,
+    'A'..='Z' | '_' | 'a'..='z' | '-' | '.' | '0'..='9' | '\u{B7}'
+    | '\u{C0}'..='\u{D6}' | '\u{D8}'..='\u{F6}' | '\u{F8}'..='\u{2FF}' | '\u{300}'..='\u{36F}'
+    | '\u{370}'..='\u{37D}' | '\u{37F}'..='\u{1FFF}' | '\u{200C}'..='\u{200D}' | '\u{203F}'..='\u{2040}'
+    | '\u{2070}'..='\u{218F}' | '\u{2C00}'..='\u{2FEF}' | '\u{3001}'..='\u{D7FF}' | '\u{F900}'..='\u{FDCF}'
+    | '\u{FDF0}'..='\u{FFFD}' | '\u{10000}'..='\u{EFFFF}')
+}
+
+/// The OPF item properties of a content document: (MathML, SVG, the navigation TOC), Perl `Epub::process`.
+fn content_properties(path: &Path) -> (bool, bool, bool) {
+  let Ok(doc) = libxml::parser::Parser::default().parse_file(&path.to_string_lossy()) else {
+    return (false, false, false);
+  };
+  let Ok(mut xpath) = libxml::xpath::Context::new(&doc) else {
+    return (false, false, false);
+  };
+  let mut has = |query: &str| {
+    xpath
+      .findnodes(query, None)
+      .is_ok_and(|nodes| !nodes.is_empty())
+  };
+  (
+    has(r#"//*[local-name() = "math"]"#),
+    has(r#"//*[local-name() = "svg"]"#),
+    has(r#"//*[@class="ltx_toclist"]"#),
+  )
+}
+
+/// Every file under `dir`, recursively.
+fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
+  let Ok(entries) = fs::read_dir(dir) else {
+    return;
+  };
+  for entry in entries.flatten() {
+    let path = entry.path();
+    if path.is_dir() {
+      collect_files(&path, files);
+    } else if path.is_file() {
+      files.push(path);
+    }
+  }
+}
+
+/// The text content of `node` without its `ltx:indexmark`s (Perl Scan.pm `cleanNode`, then `textContent`); the
+/// serializer's indentation (blank text in element-only content) is not text.
+fn text_without_indexmarks(node: &libxml::tree::Node) -> String {
+  use libxml::tree::NodeType;
+  let is_text = |n: &libxml::tree::Node| {
+    matches!(
+      n.get_type(),
+      Some(NodeType::TextNode | NodeType::CDataSectionNode)
+    )
+  };
+  let mixed = node
+    .get_child_nodes()
+    .iter()
+    .any(|n| is_text(n) && !n.get_content().trim().is_empty());
+  let mut text = String::new();
+  let mut child = node.get_first_child();
+  while let Some(current) = child {
+    if is_text(&current) && !mixed {
+      child = current.get_next_sibling();
+      continue;
+    }
+    match current.get_type() {
+      Some(NodeType::ElementNode) if current.get_name() != "indexmark" => {
+        text.push_str(&text_without_indexmarks(&current));
+      },
+      Some(NodeType::TextNode | NodeType::CDataSectionNode) => {
+        text.push_str(&current.get_content());
+      },
+      _ => {},
+    }
+    child = current.get_next_sibling();
+  }
+  text
+}
+
+/// The parts of the core XML an EPUB needs before post-processing.
+pub struct EpubSource {
+  /// The core XML with a navigation TOC, when `check_toc` had to add one.
+  pub xml:   Option<String>,
+  /// The document's title text (Scan's `cleanNode`: its index marks removed).
+  pub title: Option<String>,
+}
+
+/// Port of `LaTeXML.pm` `check_TOC` (an EPUB requires a TOC: add a full, undisplayed one unless the document has
+/// one) together with the title the manifest reads from the document.
+pub fn prepare_source(core_xml: &str) -> Result<EpubSource, String> {
+  const LTX_NS: &str = "http://dlmf.nist.gov/LaTeXML";
+  let doc = libxml::parser::Parser::default()
+    .parse_string(core_xml)
+    .map_err(|e| format!("couldn't parse the document: {e:?}"))?;
+  let mut root = doc
+    .get_root_element()
+    .ok_or("the document has no root element")?;
+  let mut xpath =
+    libxml::xpath::Context::new(&doc).map_err(|_| "couldn't create an XPath context")?;
+  xpath
+    .register_namespace("ltx", LTX_NS)
+    .map_err(|_| "couldn't register the ltx namespace")?;
+  let title = xpath
+    .findnodes("/*/ltx:title", None)
+    .ok()
+    .and_then(|nodes| nodes.into_iter().next())
+    .map(|title| text_without_indexmarks(&title));
+  let has_toc = xpath
+    .findnodes(r#"//ltx:TOC[@lists="toc"]"#, None)
+    .is_ok_and(|nodes| !nodes.is_empty());
+  let xml = if has_toc {
+    None
+  } else {
+    let ns = root.get_namespace();
+    let mut toc = libxml::tree::Node::new("TOC", ns, &doc).map_err(ctx("<TOC>"))?;
+    for (name, value) in [
+      ("lists", "toc"),
+      ("scope", "global"),
+      (
+        "select",
+        "ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:paragraph | \
+         ltx:subparagraph | ltx:appendix | ltx:index | ltx:bibliography",
+      ),
+      ("class", "ltx_nodisplay"),
+    ] {
+      toc
+        .set_attribute(name, value)
+        .map_err(ctx("a TOC attribute"))?;
+    }
+    match root.get_first_child() {
+      Some(mut first) => first.add_prev_sibling(&mut toc).map_err(ctx("<TOC>"))?,
+      None => root.add_child(&mut toc).map(|_| ()).map_err(ctx("<TOC>"))?,
+    };
+    Some(doc.to_string())
+  };
+  Ok(EpubSource { xml, title })
 }
 
 /// Generate a UUID v4 string.
@@ -368,13 +570,18 @@ fn generate_uuid() -> String {
   )
 }
 
-/// Generate an ISO 8601 timestamp (CCYY-MM-DDThh:mm:ssZ).
+/// Generate an ISO 8601 timestamp (CCYY-MM-DDThh:mm:ssZ), at `SOURCE_DATE_EPOCH` when set (Perl Epub.pm).
 fn chrono_like_now() -> String {
   use std::time::{SystemTime, UNIX_EPOCH};
-  let secs = SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .unwrap_or_default()
-    .as_secs();
+  let secs = std::env::var("SOURCE_DATE_EPOCH")
+    .ok()
+    .and_then(|s| s.trim().parse::<u64>().ok())
+    .unwrap_or_else(|| {
+      SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+    });
   // Simple UTC timestamp computation (no chrono dependency)
   let days = secs / 86400;
   let time_of_day = secs % 86400;
@@ -487,6 +694,15 @@ mod tests {
     assert!(
       hrefs.iter().any(|i| i == "LaTeXML&core.css"),
       "a RESOURCE href is interpolated by the same code path and must be escaped too: {hrefs:?}"
+    );
+  }
+
+  /// Perl `url_id`: NCName letters beyond ASCII stay, an `_` opening an `_xN_` is escaped.
+  #[test]
+  fn url_id_follows_perl() {
+    assert_eq!(
+      url_to_id("Gödel_x41_ a.xhtml"),
+      "_Gödel_x5F_x41__x20_a.xhtml"
     );
   }
 

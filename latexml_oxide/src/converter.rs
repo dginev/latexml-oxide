@@ -726,6 +726,7 @@ impl Converter {
     //       $$opts{placeholder_destination} = 1;
     //       $$opts{destination}             = pathname_name($source) . ".zip"; } }
 
+    // 1.4's sandbox (and EPUB's OPS/) is the latexml_oxide binary's archive output (issue 807).
     //   // 1.4 Prepare for What's OUT (if we need a sandbox)
     //   if ($$opts{whatsout} =~ /^archive/) {
     //     $$opts{archive_sitedirectory} = $$opts{sitedirectory};

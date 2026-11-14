@@ -41,6 +41,29 @@
     a left/right pair is its composed arrow (↔, ⇔, ⟷, ⟺, ↦), and the named fills
     (`\rightarrowfill@` …) no longer leave their style argument behind. Witness 2405.01836. Guard
     `arrowfill_heads::arrowfill_keeps_its_heads` (repros `tools/perfect_kernel/repros/arrowfill/`).
+  - **`--format=epub` writes an EPUB 3 container** (issue 807). `--format=epub` or an `.epub`
+    destination selected the EPUB stylesheet but wrote one bare XHTML file. It now writes the zip
+    Perl `latexmlc --dest=x.epub` does: `mimetype` first and stored, `META-INF/container.xml`, and
+    under `OPS/` the content (`<name>.xhtml`), its CSS and images, and `content.opf` (manifest,
+    spine, `properties="mathml nav"`); a document without a TOC gets Perl's undisplayed
+    navigation TOC (`check_TOC`). The conversion log is written beside it, as for a single
+    document; without `--dest` the container is `<source>.epub`. With `--split`, every page post
+    wrote (subdirectories included) enters the manifest and spine in Split's order, the root
+    first and each page before its children, as Perl's `@docs`. Guards
+    `whatsinout::format_epub_writes_an_epub3_container`,
+    `whatsinout::format_epub_split_pages_follow_splits_order` (in `cluster_cli`) and
+    `manifest::epub::tests::url_id_follows_perl`.
+  - **`--css`, `--javascript` and the icon link the copy** (issue 807). Each page linked the
+    path as given, so an absolute `--css` linked the source file (the EPUB pointed outside
+    itself) and a relative one was copied to its basename but linked at its own path; the
+    bundled stylesheets linked `<dest dir>/LaTeXML.css` from a split sub-page. Every link is now
+    where Perl's `copyResource` puts the file, relative to the page (XSLT.pm:71-125): an
+    absolute or escaping path at the top level, a contained relative path at that path, `../`
+    from a sub-page; the `@import`ed files still follow. So `--preload=ar5iv.sty
+    --css=<path>/ar5iv.css` carries and links ar5iv.css in an EPUB. With `epubcheck` installed
+    the EPUB tests validate their output. Guards
+    `cli_css_resource_copy::cli_resources_link_their_copies_from_every_page` and
+    `whatsinout::format_epub_ar5iv_preload_carries_the_css_param` (in `cluster_cli`).
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads

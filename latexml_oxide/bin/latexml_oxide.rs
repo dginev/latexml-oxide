@@ -953,7 +953,39 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let dest_ext_is_zip = target
     .as_deref()
     .is_some_and(|t| t.to_ascii_lowercase().ends_with(".zip"));
+  // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
+  let dest_format: Option<String> = cli
+    .format
+    .clone()
+    // `--xml` is Perl's shortcut for `--format=xml` (Config.pm L59).
+    .or(if cli.xml {
+      Some("xml".to_string())
+    } else {
+      None
+    })
+    .or_else(|| {
+      target.as_ref().and_then(|dest| {
+        Path::new(dest)
+          .extension()
+          .and_then(|ext| ext.to_str())
+          .map(|ext| {
+            match ext.to_lowercase().as_str() {
+              "html" | "htm" => "html5".to_string(), // Perl L435: html → html5
+              "xhtml" => "xhtml".to_string(),
+              "xml" => "xml".to_string(),
+              "zip" => "html5".to_string(), // Perl L431: zip → html5
+              "epub" | "mobi" => "epub".to_string(),
+              other => other.to_string(),
+            }
+          })
+      })
+    });
+  // An EPUB is always an archive (Config.pm L439), the container Manifest::Epub lays out (issue 807).
+  let is_epub = dest_format
+    .as_deref()
+    .is_some_and(|f| f.eq_ignore_ascii_case("epub") || f.eq_ignore_ascii_case("epub3"));
   let whatsout_mode = match cli.whatsout.as_deref() {
+    _ if is_epub => latexml_post::extract::Whatsout::Archive,
     Some(s) => latexml_post::extract::Whatsout::from_cli(s).unwrap_or_default(),
     None if dest_ext_is_zip => latexml_post::extract::Whatsout::Archive,
     // `--embed` is Perl's shortcut for `--whatsout=fragment` (Config.pm L72).
@@ -1368,33 +1400,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // byte-identical to before.
     let mut post_log = String::new();
     if let Some(xml) = response.result {
-      // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
-      let inferred_format: Option<String> = cli
-        .format
+      let inferred_format: Option<String> = dest_format
         .clone()
-        // `--xml` is Perl's shortcut for `--format=xml` (Config.pm L59).
-        .or(if cli.xml {
-          Some("xml".to_string())
-        } else {
-          None
-        })
-        .or_else(|| {
-          target.as_ref().and_then(|dest| {
-            Path::new(dest)
-              .extension()
-              .and_then(|ext| ext.to_str())
-              .map(|ext| {
-                match ext.to_lowercase().as_str() {
-                  "html" | "htm" => "html5".to_string(), // Perl L435: html → html5
-                  "xhtml" => "xhtml".to_string(),
-                  "xml" => "xml".to_string(),
-                  "zip" => "html5".to_string(), // Perl L431: zip → html5
-                  "epub" | "mobi" => "epub".to_string(),
-                  other => other.to_string(),
-                }
-              })
-          })
-        })
         // `--whatsout=archive` with no `--dest`/`--format` still wants a
         // web bundle — default it to html5, matching the `--dest *.zip`
         // inference above (a `.zip` dest already maps to html5).
@@ -1467,6 +1474,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // job always lands a file rather than dumping HTML to stdout.
         let zip_dest: Option<String> = if is_archive_out {
           Some(match &target {
+            // Perl latexmlc writes the archive to the destination as named.
+            Some(t) if is_epub => t.clone(),
             Some(t) if t.to_ascii_lowercase().ends_with(".zip") => t.clone(),
             Some(t) => format!(
               "{}.zip",
@@ -1477,7 +1486,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("document");
-              format!("{stem}.zip")
+              format!("{stem}.{}", if is_epub { "epub" } else { "zip" })
             },
           })
         } else {
@@ -1506,13 +1515,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             .and_then(|z| Path::new(z).file_stem())
             .and_then(|s| s.to_str())
             .unwrap_or("document");
-          Some(
-            tmp
-              .path()
-              .join(format!("{stem}.html"))
-              .to_string_lossy()
-              .to_string(),
-          )
+          // An EPUB's content sits in OPS/ as `<name>.xhtml` (LaTeXML.pm:200-210).
+          let dest = if is_epub {
+            let ops = tmp.path().join("OPS");
+            std::fs::create_dir_all(&ops)?;
+            ops.join(format!("{stem}.xhtml"))
+          } else {
+            tmp.path().join(format!("{stem}.html"))
+          };
+          Some(dest.to_string_lossy().to_string())
         } else {
           target.clone()
         };
@@ -1573,7 +1584,28 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // XML-input mode parses the (possibly huge) source straight from disk
         // via the streaming file reader; TeX-conversion output is already in
         // memory as `xml`.
-        let post = if xml_input_mode {
+        // EPUB: LaTeXML.pm check_TOC, and the title Manifest::Epub reads.
+        let mut epub_title = None;
+        let mut epub_xml = None;
+        if is_epub {
+          let core = if xml_input_mode {
+            std::fs::read_to_string(&source_for_post)?
+          } else {
+            xml.clone()
+          };
+          match latexml_post::manifest::epub::prepare_source(&core) {
+            Ok(source) => {
+              epub_title = source.title;
+              epub_xml = Some(source.xml.unwrap_or(core));
+            },
+            Err(e) => {
+              latexml_post::Error!("epub", "TOC", "Couldn't add the EPUB navigation: {}", e)
+            },
+          }
+        }
+        let post = if let Some(core) = epub_xml.as_deref() {
+          latexml::post::run_post_processing_logged(core, &post_opts)
+        } else if xml_input_mode {
           latexml::post::run_post_processing_from_file_logged(&source_for_post, &post_opts)
         } else {
           latexml::post::run_post_processing_logged(&xml, &post_opts)
@@ -1593,7 +1625,23 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         let combined_status_line =
           latexml_core::common::error::conversion_status_line(combined_status_code);
         post_log = post.log;
-        if let Some(zip_dest) = zip_dest {
+        let post_pages = post.pages;
+        if let (Some(epub_dest), true) = (zip_dest.as_deref(), is_epub) {
+          latexml_post::writer::ensure_parent_dir(epub_dest)?;
+          if let (Some(site), Some(root)) = (resource_tempdir.as_ref(), dest_for_post.as_deref()) {
+            latexml_core::util::logger::bind_log();
+            let written = write_epub(
+              site.path(),
+              Path::new(root),
+              &post_pages,
+              epub_title.as_deref(),
+              epub_dest,
+            );
+            post_log.push_str(&latexml_core::util::logger::flush_log());
+            written?;
+            eprintln!("Output written to {}", epub_dest);
+          }
+        } else if let Some(zip_dest) = zip_dest {
           // whatsout=archive: pack the full document + resources into a ZIP.
           latexml_post::writer::ensure_parent_dir(&zip_dest)?;
           let resource_dir = resource_tempdir.as_ref().map(|t| t.path());
@@ -1646,7 +1694,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // --log: write conversion log to file (skip if already packed into
     // the ZIP by the archive output stage).
     if let Some(ref log_path) = cli_log
-      && !is_archive_out
+      && (is_epub || !is_archive_out)
     {
       // Write the core log and the post-phase log sequentially rather than
       // concatenating — both are already-allocated and large for real
@@ -1898,6 +1946,30 @@ fn make_splitpaths(splitat: &str) -> String {
     }
   }
   paths.join(" | ")
+}
+
+/// Lay out the EPUB container in `site` around the post-processed `root` (Manifest::Epub) and zip it to `epub_path`
+/// (Pack/Zip.pm `get_archive`). The spine is `pages`, the documents post wrote in Split's order (the root, then each
+/// page before its children), as Perl's `@docs` reaches `Manifest::Epub::process`.
+fn write_epub(
+  site: &Path,
+  root: &Path,
+  pages: &[String],
+  title: Option<&str>,
+  epub_path: &str,
+) -> std::io::Result<()> {
+  let mut documents: Vec<std::path::PathBuf> = pages.iter().map(std::path::PathBuf::from).collect();
+  if documents.is_empty() {
+    documents.push(root.to_path_buf());
+  }
+  let mut manifest = latexml_post::manifest::epub::EpubManifest::new(&site.to_string_lossy());
+  if let Err(e) = manifest.process(&documents, title) {
+    latexml_post::Error!("I/O", "epub", "{}", e);
+  }
+  let source_date_epoch = std::env::var("SOURCE_DATE_EPOCH")
+    .ok()
+    .and_then(|s| s.trim().parse::<u64>().ok());
+  latexml_post::pack::pack_directory(site, epub_path, source_date_epoch)
 }
 
 /// Unpack a ZIP (primary) or tar.gz archive into a temp directory.
