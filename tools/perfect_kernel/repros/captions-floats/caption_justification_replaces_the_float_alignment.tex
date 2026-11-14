@@ -1,0 +1,23 @@
+% issue #787, review revCAP B1: a set justification is the caption's own `text-align`, and it replaces the alignment
+% class a `\centering` (or `{center}`, or a minipage's `\centering`) of its float gives the caption: TeX's caption box
+% runs `\@parboxrestore` (latex.ltx `\@caption`), so only caption's justification aligns it. `justified` (an empty
+% body) and ragged2e's `Justified` are `justify`; a zero `belowskip=` (`\belowcaptionskip`'s default) adds no margin.
+% witness: synthetic (review revCAP p3)
+% oracle:  pdflatex 0 errors
+% engines: perl=0 (no alignment or spacing; the `\centering` class kept); rust bf059b707e=0, `class="ltx_align_left
+%          ltx_centering"` (both), a `margin-top:0.0pt`, the justified captions keeping `ltx_centering`
+% expect:  0 errors; text-align left ×4 (no class), justify ×2, center for the table with margins bottom 10pt, top 10pt
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage{ragged2e}
+\usepackage[justification=raggedright,skip=3pt]{caption}
+\captionsetup[table]{justification=centerlast,skip=10pt plus 2pt,belowskip=0pt}
+\begin{document}
+\begin{figure}\centering X\caption{Centred float.}\end{figure}
+\begin{figure}\begin{center}X\caption*{In center.}\end{center}\end{figure}
+\begin{figure}\begin{minipage}{.4\textwidth}\centering X\caption{In a minipage.}\end{minipage}\end{figure}
+\begin{table}\caption{Top table.}\centering\begin{tabular}{c}a\end{tabular}\end{table}
+\begin{table}\centering\begin{tabular}{c}a\end{tabular}\caption{Bottom table.}\end{table}
+\begin{figure}\captionsetup{justification=justified}\centering X\caption{Justified.}\end{figure}
+\begin{figure}\captionsetup{justification=Justified}\centering X\caption{Ragged2e justified.}\end{figure}
+\end{document}

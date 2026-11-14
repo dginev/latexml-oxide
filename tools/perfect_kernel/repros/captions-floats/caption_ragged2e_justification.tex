@@ -1,0 +1,20 @@
+% issue #787, review revCAP B3: ragged2e's justifications (caption3.sty:1361-1364, `RaggedRight` &c.) and a
+% document's `\DeclareCaptionJustification` whose body sets other parameters before `\raggedright` (its last alignment
+% command decides) are the caption's `text-align`; `position=below` puts `skip=` above the caption.
+% witness: synthetic (review revCAP p6)
+% oracle:  pdflatex 0 errors
+% engines: perl=0 (no alignment or spacing); rust bf059b707e=0, no alignment on any caption (`\caption@hj@RaggedRight`
+%          undefined; `myj`'s first command `\hyphenpenalty`)
+% expect:  0 errors; text-align left ×3, the table captions with margin-top 12pt
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage{ragged2e}
+\usepackage{caption}
+\DeclareCaptionJustification{myj}{\hyphenpenalty=10000\raggedright}
+\captionsetup[figure]{justification=RaggedRight}
+\captionsetup[table]{justification=myj,skip=\baselineskip,position=below}
+\begin{document}
+\begin{figure}X\caption{Fig cap.}\end{figure}
+\begin{table}\caption{Tab cap.}\centering\begin{tabular}{c}a\end{tabular}\end{table}
+\begin{figure}X\captionof{table}{Captionof in figure.}\end{figure}
+\end{document}

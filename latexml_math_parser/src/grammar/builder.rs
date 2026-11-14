@@ -1149,6 +1149,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | opfunction postsubarg => postfix_script
         | opfunction postsubarg postsuperarg => postfix_script
         | opfunction postsuperarg postsubarg => postfix_script;
+      // A prescript wraps the post-scripted function (`{}^a\log_2 x`), Perl `preScripted['OPFUNCTION']`.
+      scripted_opfunction += floatsuperarg scripted_opfunction => prefix_script
+        | floatsubarg scripted_opfunction => prefix_script;
       // A closed group holding only integrals is an integral operator (user ruling 2026-10-01; the lexer's
       // `INTOP_GROUP_OPEN`, `util::integral_operator_group`): applied to the integrand after it, as an INTOP is —
       // `\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,\mathrm d\theta` [∫_G+∑∫](f(θ)·dθ) (2605.15451),
@@ -1236,6 +1239,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | trigfunction postsubarg => postfix_script
         | trigfunction postsubarg postsuperarg => postfix_script
         | trigfunction postsuperarg postsubarg => postfix_script;
+      scripted_trigfunction += floatsuperarg scripted_trigfunction => prefix_script
+        | floatsubarg scripted_trigfunction => prefix_script;
       // (A scripted trig function takes the bare one's arguments, `trig_arg` and `trig_factor_arg`,
       // below: Perl `preScripted['TRIGFUNCTION'] addTrigFunArgs`, MathGrammar:284, :430-433, 57bo.)
 
@@ -1257,8 +1262,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       postsubarg += start_postsubscript lone_float_script end_postsubscript => faux_wrap;
       bigopsuparg += start_bigopsup lone_float_script end_bigopsup => faux_wrap;
       bigopsubarg += start_bigopsub lone_float_script end_bigopsub => faux_wrap;
-      // Scripted factors -- avoid adding ambiguity in the left-right order of collection
-      // first ALL left (=float), then right (=post).
+      // Scripted factors: the post-scripts bind first and the prescripts wrap them, as Perl's
+      // `preScripted` (`<matchrule> addScripts` inside, MathGrammar:430-439); one derivation each.
       scripted_factor_l11 = floatsuperarg factor_base => prefix_script
         | floatsuperarg opfunction => prefix_script;
       scripted_factor_l12 = floatsubarg factor_base => prefix_script
@@ -1284,12 +1289,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // (A scripted OPFUNCTION is `scripted_opfunction`, no scripted factor: as a factor it continued a
       // bare argument, `\log x\log_2 y`, 57cb.)
       scripted_factor_r11 = factor_base postsuperarg => postfix_script
-        | scripted_factor_l1 postsuperarg => postfix_script
-        | scripted_factor_l2 postsuperarg => postfix_script
         | fenced_factor postsuperarg => postfix_script;
       scripted_factor_r12 = factor_base postsubarg => postfix_script
-        | scripted_factor_l1 postsubarg => postfix_script
-        | scripted_factor_l2 postsubarg => postfix_script
         | fenced_factor postsubarg => postfix_script;
       scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
       // TWO OR MORE post-scripts, chained left-recursively. Perl's `addScripts`
@@ -1304,9 +1305,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       //
       // Left recursion keeps the derivation unique — each script attaches to
       // everything to its left, in order — so this adds no ambiguity for the
-      // grammar to prune. It also does not disturb the float-before-post
-      // collection order noted above, which is about `scripted_factor_l*` vs
-      // `_r*`, not about chain depth.
+      // grammar to prune.
       scripted_factor_r2 = scripted_factor_r1 postsuperarg => postfix_script
         | scripted_factor_r1 postsubarg => postfix_script
         | scripted_factor_r2 postsuperarg => postfix_script
@@ -1346,6 +1345,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
       // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
       // Must come after scripted_factor_r1/r2 are defined (forward reference not allowed).
+      // `{}^{95}\mathrm{MoO}_4` is ^95 (MoO _4), not a pre-subscript 4 (issue 824, arXiv 2611.12926).
+      scripted_factor_l11 += floatsuperarg scripted_factor_r1 => prefix_script
+        | floatsuperarg scripted_factor_r2 => prefix_script;
+      scripted_factor_l12 += floatsubarg scripted_factor_r1 => prefix_script
+        | floatsubarg scripted_factor_r2 => prefix_script;
       prescripted_factor_post_r += postsuperarg scripted_factor_r1 => prefix_script_pre
         | postsuperarg scripted_factor_r2 => prefix_script_pre;
       prescripted_factor_post_l += postsubarg scripted_factor_r1 => prefix_script_pre

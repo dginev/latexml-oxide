@@ -47,7 +47,10 @@ T8:\ifx\d\e yes\else no\fi
 /// `$` closed the ENCLOSING math frame. RED: 6× `Error:unexpected:
 /// \lx@end@inline@math Attempt to end mode math` (Perl 0). Witness: TL doc
 /// corpus mhchem/mhchem (67 → 13; the rest is the SHARED `\ce` in `align*`
-/// R3c family).
+/// R3c family). Issue 824 (arXiv 2611.12926): the isotope prescript wraps the
+/// post-scripted formula, `^ [95] ([MoO] _ [4]) ^ [2 – ]` as Perl's `preScripted`
+/// (MathGrammar:430-439); RED: the 4 a pre-subscript, `_ [4] ^ [95] [MoO] ^ [2 – ]`. `{HS}`: the
+/// charge's hair space (U+200A).
 #[test]
 fn calc_widthof_in_math_measures_own_box() {
   let (stderr, xml) = convert(
@@ -59,19 +62,42 @@ fn calc_widthof_in_math_measures_own_box() {
 \ce{^{227}Th}
 
 X $a\setlength{\mylen}{\widthof{$b$}}c$ Y
+
+\ce{^{95}MoO4^{2-}} and \(\ce{^{95}Mo}\)
 \end{document}
 ",
     true,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(stderr.matches("Warning:").count(), 0, "{stderr}");
   assert!(!stderr.contains("lx@end@inline@math"), "{stderr}");
+  let moo4 = r#"<Math mode="inline" tex="\hphantom{{}^{\text{95}}_{\text{}}}{\vphantom{\text{X}}}{}^{\mathchoice{\hbox to0.0pt{\hss$\displaystyle\vphantom{\smash[t]{\text{2}}}\text{95}$}}{\hbox to0.0pt{\hss$\textstyle\vphantom{\smash[t]{\text{2}}}\text{95}$}}{\hbox to0.0pt{\hss$\scriptstyle\vphantom{\smash[t]{\text{2}}}\text{95}$}}{\hbox to0.0pt{\hss$\scriptscriptstyle\vphantom{\smash[t]{\text{2}}}\text{95}$}}}\kern 0.0pt\text{MoO}{\vphantom{\text{X}}}_{\smash[t]{\text{4}}}{\vphantom{\text{X}}}^{\text{2\hskip 0.90417pt--\hskip 0.90417pt}}" text="^ [95] ([MoO] _ [4]) ^ [2{HS}–{HS}]" xml:id="p3.m1">
+        <XMath>
+          <XMApp lpadding="8.5pt">
+            <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMText>MoO</XMText>
+                <XMText><text fontsize="70%">4</text></XMText>
+              </XMApp>
+              <XMText><text fontsize="70%">2{HS}–{HS}</text></XMText>
+            </XMApp>
+            <XMText class="ltx_markedasmath" width="0.0pt"><text fontsize="49%">95</text></XMText>
+          </XMApp>
+        </XMath>
+      </Math>"#
+    .replace("{HS}", "\u{200a}");
+  assert!(xml.contains(&moo4), "{xml}");
   // Prescript stays inside ONE well-formed inline Math.
   assert!(
     xml.contains(r#"<XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>"#),
     "{xml}"
   );
   assert!(xml.contains("227"), "{xml}");
-  assert_eq!(xml.matches("<Math ").count(), 2, "{xml}");
+  // `\ce{^{227}Th}`, `$a…c$`, `\ce{^{95}MoO4^{2-}}`, `\(\ce{^{95}Mo}\)`: one Math each.
+  assert_eq!(xml.matches("<Math ").count(), 4, "{xml}");
   assert!(
     xml.contains("X <Math") && xml.contains("</Math> Y"),
     "{xml}"

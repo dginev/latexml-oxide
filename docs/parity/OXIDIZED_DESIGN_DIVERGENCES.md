@@ -1213,6 +1213,10 @@ box reflect the box's text width, as in real LaTeX:
    itself) instead of Perl's empty/`\relax` stubs — relevant on the
    no-dump path; with a format dump the raw `latex.ltx` kernel versions
    are captured anyway.
+4. A `p`/`m`/`b` table cell (`\lx@tabular@p`; also `\multicolumn` over one, longtable) sets `\linewidth\hsize`, as TeX's
+   `\@startpbox` → `\@arrayparboxrestore` does (latex.ltx:16755, :16280); Perl (TeX_Tables.pool.ltxml:76) sets `\hsize` alone,
+   so `\includegraphics[width=\linewidth]` in a cell took the page width (issue 778). Guard
+   `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`; no golden moved.
 
 **Why:** Real LaTeX's `\@iiiminipage`/`\@iiiparbox` run `\@parboxrestore`,
 whose `\linewidth\hsize` is what raw-loaded packages read back. tcolorbox
@@ -4079,9 +4083,14 @@ hand-rolled `\newcommand*{\xfoo}[2][]{\ext@arrow …}` — hits
 `Error:undefined:\ext@arrow` plus `Error:undefined:\arrowfill@`, and the arrow's
 own arguments then leak into the surrounding math as text.
 
-**We define both** (`latexml_package/src/package/amsmath_sty.rs`), passing through
-to `\to^{above}_{below}` and `\to` respectively — we do not model stretchy arrow
-rendering, but the arity is what the binding is for. Witnesses 2411.17873 and
+**We define both** (`latexml_package/src/package/amsmath_sty.rs`). `\arrowfill@#1#2#3#4` relates by the arrow's
+HEADS #1 and #3, as amsmath.sty:971-976 draws them (`#4#1 … \cleaders #2 … #3`): an end that is exactly `\relbar`/`\Relbar`
+(the fill) is dropped, two equal ends count once (`\xlongequal` gives one `=`), a head pair TeX composes becomes one token
+(↔ ⇔ ⟷ ⟺ ↦), and the style argument #4 is consumed; `\ext@arrow` relates by its fill `#5\displaystyle`, with the labels as
+scripts. Before, both passed through to `\to`, so mhchem's `\ce{A <=> B}` (mhchem.sty:1251-1254) read "→→" where pdflatex
+draws ⇀ over ↽ (witness 2405.01836). We do not model stretchy rendering; the arity and the heads are what the binding is for.
+Residual (post-merge): a pair outside the compose table, or a `\let` alias of a head, reads as `list@(…)`
+(`arrowfill/arrowfill_uncomposed_pair_red.tex`). Witnesses 2411.17873 and
 2412.00464 (amsmath's own `\ext@arrow 0359\rightarrowfill@…`), 1308.1071
 (`extpfeil`'s `\xmapsto`), 2606.01903 (`extpfeil`'s `\xtwoheadleftarrow`). On
 2606.01903 this is the whole difference between the two engines: same-host Perl
@@ -36062,3 +36071,35 @@ path argument is typeset ("X ZY", KNOWN_PERL_ERRORS #1239), and `\import@path` i
 carry no space; `\import@path` is defined and kept as import.sty keeps it, a nested `\import` restoring it to empty.
 **Guards**: `bindings_batch1::import_path_is_the_package_macro` (repros `package-bindings/import_path_is_the_package_macro.tex`,
 `import_nested_import_empties_the_path.tex`).
+
+### 1024. caption's `justification=` and skips are the caption's `text-align` and margins (W2b, issue #787)
+
+**Perl.** caption.sty.ltxml:30,52 declare `justification` and `skip` and `\captionsetup` stores them (`CAPTION_<key>`);
+nothing reads them, so the caption keeps the theme's alignment and spacing. **TeX.** caption3.sty:955-969, 1361-1364: a
+justification is a command run in the caption box (`\centering`, `\raggedright`, `\raggedleft`; ragged2e's
+`\Centering`/`\RaggedRight`/`\RaggedLeft`/`\justifying`; `justified` none), and the box runs `\@parboxrestore`, so a
+`\centering` in the float body does not align it; :987-993 `skip`/`aboveskip` set `\abovecaptionskip`, `belowskip`
+`\belowcaptionskip` (0pt by default); caption.sty:251-258 puts the above-skip between a top caption and the float's body
+and above a bottom one, the below-skip on the other side; `position=auto` (:1034-1045) is bottom in horizontal mode and
+in vertical mode once the list holds a box (`\prevdepth`), a longtable's bottom once it has a row (caption.sty:1169
+`\LT@rows`), and a longtable's caption takes `\captionsetup[longtable]` over its type's (ltcaption `\caption@LT@setup`).
+**Rust.** `caption_layout_tokens` (caption_sty.rs) puts on the caption, from its settings, `\lx@caption@justify`: the
+`text-align` in its `cssstyle` the justification's body sets (its last alignment command, so a `\DeclareCaptionJustification`
+of the document's counts; `justify` for a body with none, as `\@parboxrestore` leaves it — an alignment reached through a
+user macro reads as `justify` too: RED repro `captions-floats/caption_justification_through_a_macro_red`), under `singlelinecheck` (caption3.sty:677, on by default; `slc`) with
+`width:fit-content;margin-left:auto;margin-right:auto` beside it, the HTML reading of `\caption@slc` (:1497, :1568): a
+caption that fits one line sits centred, a longer one fills the line with the set alignment; this also removes the alignment class a `\centering` &c. of
+the float gives the caption (a `_justified` mark, the floats' `after_close`); and `\lx@caption@skip{above|below}
+{<position>}<glue>`, `margin-top`/`margin-bottom` in the same `cssstyle` (the schema's caption has no spacing
+attribute; `cssstyle` is Common, as framed.sty.ltxml:78 uses it), nothing for a zero below-skip. `\lx@caption@where`,
+at `\caption`/`\captionof`, records `auto` as bottom in horizontal mode; in vertical mode the constructor reads the
+list (an element other than `ltx:tags`/`ltx:toccaption` before the caption, or before a `\captionof`'s wrapper outside a
+float); longtable's caption records it by the table's rows. The mark is its caption's: the caption formatter reads and
+clears it before any early return (a sub-caption) and the inline caption of a `\caption` outside a float drops it, so a
+caption formatted without `\caption` (listings') never reads another's. Only a key the document or class sets emits anything. A
+`Dimension` key's value is stored as its length (`skip=20pt` was stored empty). Not done: `centerlast`/`centerfirst` read as centring,
+`margin=`/`width=`, subcaption's sub-captions (`\captionsetup[sub]`, subcaption.sty:220 `skip=6pt`; RED repro
+`captions-floats/subcaption_justification_and_skip_red`), and a skip in relative units (`\baselineskip`, `em`) is read
+at the caption, not at the `\captionsetup`.
+**Guards**: `bindings_batch2::caption_justification_and_skip`; `perfect_kernel_batch78d::mdpi_captions_end_the_label_with_a_period`
+(mdpi's `aboveskip=6pt`/`belowskip=-6pt`, `justification=justified`).
