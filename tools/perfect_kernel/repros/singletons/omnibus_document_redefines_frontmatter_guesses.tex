@@ -1,0 +1,22 @@
+% Under OmniBus (a class with no binding) the document's own `\newcommand`, `\providecommand`, `\def`,
+% `\DeclareRobustCommand` and `\newenvironment` of the frontmatter commands OmniBus guessed (and locked) win: the
+% document's text is printed, as the real class (which leaves them undefined) prints it (BM Q3.12; DG 2026-11-14).
+% witness: synthetic (probe p58 of the Bruce Q&A triage; 2605.08630's presentational `\newcommand{\orcid}`).
+% status:  GREEN (QAB57)
+% oracle:  pdflatex (with article for the unknown class) 0 errors: "X E:a@b K:k A:ad O:0 D:10 F:u. K:k."
+% Perl:    "Ignoring redefinition (\newcommand)" Infos; the e-mail, address and keywords become frontmatter.
+% ours:    before QAB57 the same: "Ignoring redefinition of \email", the document's text lost.
+% expect:  0 errors, 1 warning (the missing class); one paragraph with the document's text, no creator, no
+%          classification.
+\documentclass{nosuchclassqa}
+\newcommand\email[1]{E:#1}
+\newcommand\keywords[1]{K:#1}
+\newcommand\address[1]{A:#1}
+\providecommand\orcid[1]{O:#1}
+\def\doi#1{D:#1}
+\DeclareRobustCommand\affiliation[1]{F:#1}
+\newenvironment{keyword}{K:}{.}
+\begin{document}
+X \email{a@b} \keywords{k} \address{ad} \orcid{0} \doi{10} \affiliation{u}.
+\begin{keyword}k\end{keyword}
+\end{document}

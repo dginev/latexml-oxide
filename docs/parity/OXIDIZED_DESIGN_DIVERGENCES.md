@@ -14385,7 +14385,8 @@ locked. OmniBus's semantic frontmatter commands are locked (user ruling 2026-10-
 `\classification`, `\correspondingauthor`, `\subtitle`, `\titlenote`, `\dedicated` keep their markup against any
 later definition — a document's presentational `\newcommand{\orcid}` (2605.08630), `\providecommand{\keywords}`, a
 package's deferred `\providecommand{\doi}` (apacite), a raw `\def\doi` (imsart.sty), a document's
-`\renewcommand{\doi}` (unlike Perl, which lets those replace them); conveniences and aliases (`\abst`, `\etal`,
+`\renewcommand{\doi}` (unlike Perl, which lets those replace them; since QAB57 the document's own definitions win
+under the fallback, #1044); conveniences and aliases (`\abst`, `\etal`,
 `\corref`) and common words (`\volume`, `\issue`, `\journal`) yield. arXiv A/B (3,003 papers, 59f2 -> 59g4):
 2605.05619 errors 52 -> 0 and words 39,866 -> 53,885, 2605.13204 errors 6 -> 0 (its own `\corref`), 2605.13443 its own
 upright `\etal`. Open: a package the paper ships (`\usepackage{mymacros}`) is a raw File, not the document, so its
@@ -36341,3 +36342,24 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
+
+### 1044. Under OmniBus the document's own definitions win over its guesses, locked ones too (Perl: ignored as a redefinition)
+
+For a class with no binding OmniBus guesses the class's commands, and locks its semantic frontmatter ones (#408). A
+document that `\newcommand`s one of them shows its real class leaves it undefined, so pdflatex prints the
+document's version (probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b"). **Perl** ignores the redefinition
+(`isDefinableLaTeX`, latex_constructs.pool.ltxml:2512-2526, an Info) and makes a contact of it, as did we.
+
+**Rust** (QAB57; BM Q3.12 "OmniBus sets a flag letting `\newcommand` and its family redefine without complaint", DG
+2026-11-14 "the document wins"): OmniBus loaded as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition`
+does not refuse a definition of a name whose meaning is still OmniBus's guess (`fallback_meaning_origin` is
+`Fallback`) when the document's own text makes it (`DefinitionOrigin::Document`, the state not re-locked:
+`state::document_redefines_guess`) — `\newcommand`, `\renewcommand`, `\providecommand`, `\def`,
+`\DeclareRobustCommand`; `\newenvironment`/`\renewenvironment` also drop OmniBus's `\begin{name}` constructor, which
+`\begin` looks up first. The semantic markup the guess carried is lost with it: the e-mail, address, affiliation and
+ORCID are no longer the author's contacts, the keywords no classification, the DOI no link — the document's text is
+what the PDF prints. Unchanged: OmniBus provided over a named binding's base class (ceurart; #736) keeps its locks,
+and so does a package's or the document's begin-document hook code, run re-locked (apacite's
+`\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link). Perl patch prepared
+(`bruce_qa/patches/qa58.patch`: OmniBus's guesses definable for `isDefinableLaTeX`). Guard
+`perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
