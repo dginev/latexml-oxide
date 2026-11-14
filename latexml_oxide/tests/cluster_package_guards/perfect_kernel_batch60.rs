@@ -259,7 +259,8 @@ fn amsart_end_matter_is_set() {
       (
         "para",
         "p2",
-        r##"<para xml:id="p2"><p>Body text.</p></para>"##,
+        // (QAB8: the glue the class sets after its title block is kept on the body's first paragraph, OD #1044)
+        r##"<para cssstyle="--ltx-skip-before:22.0pt" xml:id="p2"><p>Body text.</p></para>"##,
       ),
       (
         "para",
@@ -269,7 +270,8 @@ fn amsart_end_matter_is_set() {
       (
         "para",
         "p4",
-        r##"<para xml:id="p4"><p><text fontsize="80%">Collected sentence alpha.</text></p></para>"##,
+        // (QAB8: the `{notes}` collection's skip after its heading paragraph is kept here, OD #1044)
+        r##"<para cssstyle="--ltx-skip-before:6.0pt" xml:id="p4"><p><text fontsize="80%">Collected sentence alpha.</text></p></para>"##,
       ),
     ],
   );

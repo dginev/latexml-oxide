@@ -39,11 +39,12 @@ fn an_unnumbered_and_list_stays_every_authors() {
 /// marked n. Read as "not numbered", every raa author held every institute (batch 104b's first A/B: 14 papers).
 #[test]
 fn a_numbered_and_list_the_run_does_not_print_keeps_its_numbers() {
+  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1044; pdflatex: a gap)
   assert_eq!(
     converted(
       repro!("raw_class_numbered_institutes_the_run_does_not_print_keep_their_numbers"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1"><sup xml:id="p2.1.1"><text font="italic" xml:id="p2.1.1.1">1</text></sup> Univ A, Town</p> </para> <para class="ltx_noindent" xml:id="p3"> <p xml:id="p3.1"><sup xml:id="p3.1.1"><text font="italic" xml:id="p3.1.1.1">2</text></sup> Univ B, City</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para> <para class="ltx_noindent" cssstyle="--ltx-skip-before:10.0pt" xml:id="p2"> <p xml:id="p2.1"><sup xml:id="p2.1.1"><text font="italic" xml:id="p2.1.1.1">1</text></sup> Univ A, Town</p> </para> <para class="ltx_noindent" xml:id="p3"> <p xml:id="p3.1"><sup xml:id="p3.1.1"><text font="italic" xml:id="p3.1.1.1">2</text></sup> Univ B, City</p> </para>"#
   );
 }

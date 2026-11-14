@@ -19,6 +19,7 @@ fn convert_clean(tex: &str) -> String {
 /// astro-ph9512088, astro-ph9909358). Repro sectioning-frontmatter/paspconf_revtex3_frontmatter.
 #[test]
 fn paspconf_revtex3_frontmatter() {
+  // (QAB8: the skip between the two discussion paragraphs is kept on the second, `--ltx-skip-before`, OD #1044)
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/paspconf_revtex3_frontmatter.tex"
   ));
@@ -45,7 +46,7 @@ fn paspconf_revtex3_frontmatter() {
     &xml,
     "section",
     &["xml:id=\"Sx1\""],
-    "<section xml:id=\"Sx1\"><title>Discussion</title><para class=\"ltx_noindent\" xml:id=\"Sx1.p1\"><p xml:id=\"Sx1.p1.1\"><text font=\"italic\" xml:id=\"Sx1.p1.1.1\">B. Asker</text>:Why?</p></para><para class=\"ltx_noindent\" xml:id=\"Sx1.p2\"><p xml:id=\"Sx1.p2.1\"><text font=\"italic\" xml:id=\"Sx1.p2.1.1\">A. Author</text>:Because.</p></para></section>",
+    "<section xml:id=\"Sx1\"><title>Discussion</title><para class=\"ltx_noindent\" xml:id=\"Sx1.p1\"><p xml:id=\"Sx1.p1.1\"><text font=\"italic\" xml:id=\"Sx1.p1.1.1\">B. Asker</text>:Why?</p></para><para class=\"ltx_noindent\" cssstyle=\"--ltx-skip-before:4.3pt\" xml:id=\"Sx1.p2\"><p xml:id=\"Sx1.p2.1\"><text font=\"italic\" xml:id=\"Sx1.p2.1.1\">A. Author</text>:Because.</p></para></section>",
   );
   assert_element(
     &xml,

@@ -198,7 +198,7 @@ LoadDefinitions!({
       // inside it (`\preitem@par`'s `\vskip\itemsep` between two items of a `\trivlist`; KNOWN_PERL_ERRORS #456).
       document.close_element("ltx:para")?;
     }
-    if pt > 0.0 && let Some(skip) = length.get_dimension() {
+    if pt != 0.0 && let Some(skip) = length.get_dimension() {
       note_skip_after_para(document, skip, prop_bool!(props, "in_paragraph"), prop_bool!(props, "vspace"),
         prop_bool!(props, "par_follows"))?;
     }},
@@ -337,8 +337,9 @@ LoadDefinitions!({
   });
 });
 
-/// Sum a positive `\vskip` that follows an `ltx:para` on that paragraph's parent, for the next paragraph to take
-/// (tex_paragraph.rs `apply_skip_before`). A `\vspace` read in a paragraph is TeX's `\vadjust` there (latex.ltx
+/// Sum a `\vskip` that follows an `ltx:para` on that paragraph's parent, for the next paragraph to take if the net is
+/// positive, as on TeX's vertical list (needspace's `\vskip\dimen@ … \vskip -\dimen@` nets 0; tex_paragraph.rs
+/// `apply_skip_before`). A `\vspace` read in a paragraph is TeX's `\vadjust` there (latex.ltx
 /// `\@vspace`), between paragraphs only when a `\par` follows it at once (`par_follows`, set by that `\par`).
 fn note_skip_after_para(
   document: &Document,

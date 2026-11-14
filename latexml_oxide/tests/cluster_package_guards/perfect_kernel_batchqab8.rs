@@ -10,7 +10,8 @@ use latexml::util::test::{convert_with, error_count, warning_count};
 /// skip_between_paragraphs_shapes: no skip kept after or before a heading, for a negative skip, in a figure (its
 /// panels are `ltx:p`), after a theorem, in a minipage, or for a `\vspace` inside a paragraph (`\vadjust`); kept
 /// for a `\medskip` read in a paragraph a `\par` ends at once, `\bigskip\medskip` summed, a `\smallskip`, a `\vskip`
-/// read in a paragraph (which ends it), and past an empty `\noindent` paragraph that is pruned.
+/// read in a paragraph (which ends it), and past an empty `\noindent` paragraph that is pruned; a net, as on TeX's
+/// vertical list (`\bigskip\vspace{-6pt}` 6pt, `\vskip 36pt\vskip -36pt` none: needspace's shape).
 /// skip_moved_into_a_title_page_is_dropped: cover paragraphs the frontmatter moves into a title page keep no skip.
 /// skip_in_a_minipage_is_dropped: nor do a box's paragraphs, built in `insert_block`'s capture (2512.08710).
 #[test]
@@ -52,6 +53,8 @@ fn paragraph_skips_go_on_the_next_paragraph() {
         r#"<para xml:id="S2.p7">"#,
         r#"<para cssstyle="--ltx-skip-before:28.5pt" xml:id="S2.p8">"#,
         r#"<para cssstyle="--ltx-skip-before:6.0pt" xml:id="S2.p9">"#,
+        r#"<para cssstyle="--ltx-skip-before:6.0pt" xml:id="S2.p10">"#,
+        r#"<para xml:id="S2.p11">"#,
       ],
     ),
     (

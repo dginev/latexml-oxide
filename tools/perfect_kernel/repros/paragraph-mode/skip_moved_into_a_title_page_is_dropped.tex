@@ -1,9 +1,10 @@
 % witness: 2007.05296 (the cover lines after `\maketitle`, `\vspace{10mm}` between them, before the abstract)
 % oracle:  pdflatex 0 errors; 10mm between the two cover lines
-% engines: rust QAB8 r1 A/B binary: `<block class="ltx_noindent" cssstyle="--ltx-skip-before:28.5pt" xml:id="p2">` (the
-%          paragraph took the skip at the root, then the frontmatter moved it into a continued title page); perl: no skip
+% engines: rust QAB8a (the first A/B binary):
+%          `<block class="ltx_noindent" cssstyle="--ltx-skip-before:28.5pt" xml:id="p2">` (the paragraph took the skip at
+%          the root, then the frontmatter moved it into a continued title page); perl: no skip
 % expect:  0 errors; the title page's blocks bare (title pages keep no skip, QA26 ruling); Ch1.p1 bare
-% status:  RED (QAB8 r1 A/B binary) -> GREEN (QAB8: titlepage_layout.rs drops it, `drop_skip_before`)
+% status:  RED (QAB8a) -> GREEN (QAB8: titlepage_layout.rs drops it, `drop_skip_before`)
 \documentclass{report}
 \title{A Thesis}\author{An Author}
 \begin{document}

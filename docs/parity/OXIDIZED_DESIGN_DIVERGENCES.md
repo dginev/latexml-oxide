@@ -36367,13 +36367,14 @@ holds: no frame. **Rust.** `lst_frame_sides` (listings_sty.rs) returns no frame 
 appropriate class/css for spacing to preceding element"), with TeX's vertical list deciding what is between two
 paragraphs. Related: #142 (`\\[dimen]` as `--ltx-break-space`, the same carrier), #422 (glue items flagged `isSkip`).
 **Perl.** `\vskip` only closes the open `ltx:p`/`ltx:para` and drops its amount, so a topic break by `\bigskip`,
-`\medskip` or `\vspace` leaves no trace (KNOWN_PERL_ERRORS #1246). **Rust.** A positive `\vskip` (its natural width)
-met while its parent's last child is an `ltx:para` is summed, in sp, on that parent (tex_glue.rs
-`note_skip_after_para`); the next `ltx:para` opened there takes it as `cssstyle="--ltx-skip-before:<pt>"`, appended to
-any `cssstyle`, when its previous sibling is that paragraph (tex_paragraph.rs `apply_skip_before`, streaming
+`\medskip` or `\vspace` leaves no trace (KNOWN_PERL_ERRORS #1246). **Rust.** A `\vskip` (its natural width) met
+while its parent's last child is an `ltx:para` is summed, in sp, on that parent (tex_glue.rs `note_skip_after_para`);
+the next `ltx:para` opened there takes a positive net as `cssstyle="--ltx-skip-before:<pt>"`, appended to any
+`cssstyle`, when its previous sibling is that paragraph (tex_paragraph.rs `apply_skip_before`, streaming
 placeholders included); any paragraph's start ends the wait, and an empty paragraph pruned at its close gives its skip
-back. So consecutive skips add (`\bigskip\medskip` 18pt); a heading, float, theorem or list between, a skip after a
-heading, a negative or zero amount carry nothing. By the QA26 ruling (DG 2026-11-14) neither do title pages, boxes
+back. So consecutive skips add as on TeX's vertical list (`\bigskip\medskip` 18pt, `\bigskip\vspace{-6pt}` 6pt;
+needspace's `\vskip\dimen@ … \vskip-\dimen@` nets 0, mdframed_loads_its_dependencies); a heading, float, theorem or
+list between, a skip after a heading, and a net that is not positive carry nothing. By the QA26 ruling (DG 2026-11-14) neither do title pages, boxes
 (`ltx:inline-block`, `ltx:inline-logical-block`: a minipage holding paragraphs, 2512.08710) and floats
 (`in_unspaced_container`), nor cover paragraphs the frontmatter later moves into a title page (`drop_skip_before` in
 titlepage_layout.rs, 2007.05296).

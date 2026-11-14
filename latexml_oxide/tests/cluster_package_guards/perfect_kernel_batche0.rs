@@ -1122,6 +1122,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _seqlabel base_utilities/defs/frontmatter_api.rs", 1),
+  // (QAB8, 0 -> 1 each, raised with its reason: DOM marks of the kernel's paragraph glue, no frontmatter key — the glue
+  // after a parent's last paragraph and the glue a paragraph took, OD #1044; the reader exempts only latex_constructs/
+  // and tex_box.rs as the kernel's own)
+  ("const _skip_after_para tex_paragraph.rs", 1),
+  ("const _skip_before_para tex_paragraph.rs", 1),
   ("const _source base_utilities/frontmatter/insert.rs", 1),
   // (Z18o2, raised with its reason: the reading's stopgap fact of an entry (`resolver::RUN_LEFTOVER`, an `annotate=new`
   // walk reaching only authors that held the role, no group in print of their own), on the entry the emitter writes, which

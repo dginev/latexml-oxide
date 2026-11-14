@@ -80,12 +80,13 @@ fn a_run_in_or_in_place_line_led_by_an_unrequested_symbol_stays_the_classs() {
 /// call the class's text where its title page prints it (`displaced_in_doubt`; review rev99b2 F2, probe q4d).
 #[test]
 fn a_displaced_line_led_by_an_unrequested_symbol_stays_the_classs() {
+  // (QAB8: the class's skip between the two paragraphs is kept on the second, `--ltx-skip-before`, OD #1044; pdflatex: a gap)
   assert_eq!(
     converted(
       repro!("displaced_line_led_by_an_unrequested_symbol_stays_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">2</sup></personname> </creator> <para xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">1</text></sup><text font="italic" fontsize="90%" xml:id="p1.1.2">Univ A, Town<break/><sup xml:id="p1.1.2.1">2</sup>Univ B, City<break/><sup xml:id="p1.1.2.2">†</sup>Deceased</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">2</sup></personname> </creator> <para xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">1</text></sup><text font="italic" fontsize="90%" xml:id="p1.1.2">Univ A, Town<break/><sup xml:id="p1.1.2.1">2</sup>Univ B, City<break/><sup xml:id="p1.1.2.2">†</sup>Deceased</text></p> </para> <para cssstyle="--ltx-skip-before:10.0pt" xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
   );
 }
 

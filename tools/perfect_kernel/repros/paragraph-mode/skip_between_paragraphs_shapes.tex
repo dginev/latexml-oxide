@@ -1,12 +1,14 @@
 % witness: synthetic (QA26 siblings; census scratch_QA26D: 1,378 positive skips between paragraphs in 258 of 2,000 papers)
 % oracle:  pdflatex 0 errors; section 1: no gap the rule keeps (after/before a heading, a negative skip, in a figure,
 %          after a theorem, in a minipage, a `\vspace` inside a paragraph: TeX's `\vadjust`, set after its line);
-%          section 2: a gap before S2.p3 (6pt), S2.p4 (18pt), S2.p6 (3pt), S2.p8 (1cm), S2.p9 (6pt)
+%          section 2: a gap before S2.p3 (6pt), S2.p4 (18pt), S2.p6 (3pt), S2.p8 (1cm), S2.p9 (6pt), S2.p10 (6pt), none
+%          before S2.p11 (+36pt -36pt: needspace's shape, mdframed_loads_its_dependencies)
 % engines: rust QAB8base: no cssstyle anywhere; perl: the same
 % expect:  0 errors; S1.* paragraphs bare; S2.p3 6.0pt (a `\medskip` read in the paragraph, a blank line after it),
 %          S2.p4 18.0pt (`\bigskip\medskip` add up), S2.p6 3.0pt, S2.p8 28.5pt (a `\vskip` read in a paragraph ends
-%          it: tex.web §1094), S2.p9 6.0pt (the empty `\noindent` paragraph between is pruned and gives its skip back)
-% status:  RED (QAB8base) -> GREEN (QAB8)
+%          it: tex.web §1094), S2.p9 6.0pt (the empty `\noindent` paragraph between is pruned and gives its skip back),
+%          S2.p10 6.0pt (12pt - 6pt: the net, as on TeX's vertical list), S2.p11 bare (a net of 0)
+% status:  RED (QAB8base) -> GREEN (QAB8; S2.p10-p11 RED on QAB8c, the third A/B binary, which dropped every negative skip)
 \documentclass{article}
 \newtheorem{theorem}{Theorem}
 \begin{document}
@@ -68,4 +70,10 @@ Plain glue \vskip 1cm ends the paragraph.
 \medskip\noindent
 
 After an empty paragraph.
+
+\bigskip\vspace{-6pt}
+After a skip partly taken back.
+
+\vskip 36pt\vskip -36pt
+After a skip wholly taken back.
 \end{document}
