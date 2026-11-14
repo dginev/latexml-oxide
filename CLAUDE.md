@@ -39,9 +39,10 @@ Two traps when reading a test run:
   streaming sweeps require every swept fixture to convert error-free. Judge a run by its `test result:` lines and exit
   code, **never** by grepping printed output for `Error:` — that heuristic belongs to
   *conversion* logs (below).
-- The three `latexml_post` vector-SVG tests are **`ignore`d** (shown as skipped) when
-  neither `mutool` nor `pdftocairo` spawned at build time (`latexml_post/build.rs`, cfg
-  `svg_converter_on_path`); CI's apt set installs neither, so there they show as skipped.
+- The `latexml_post` vector-SVG tests print a `SKIP …` line (seen only with nextest's
+  `--success-output` or `--nocapture`) and pass where `mutool`/`pdftocairo` is absent, so a
+  green local run does not by itself prove they ran. Linux CI installs both tools and sets
+  `LATEXML_SVG_TESTS=1`, under which a missing tool fails them.
 
 Conversion decisions (what to keep, how to number, who owns a frontmatter item, when a copy may override a
 binding) follow [`docs/parity/FIDELITY_CHARTER.md`](docs/parity/FIDELITY_CHARTER.md) — the user's rulings as standing

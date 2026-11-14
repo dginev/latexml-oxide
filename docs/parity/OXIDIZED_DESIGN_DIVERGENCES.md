@@ -36146,3 +36146,25 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (`arrayrulecolor_bang_rule_own_colour_red.tex`). **Guards**: `perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it`
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
+
+### 1026. A small PDF figure is converted to SVG, raster-bearing ones too; an upscaled raster in it renders pixelated (after PR 816)
+
+**Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
+**Rust.** Beyond Perl, a PDF at most 500 KiB (the auto default, `--graphics-svg-threshold-kb 0`; an explicit `N`
+bounds it at `N` KB) first tries the vector converters, `mutool convert -F svg`, then `pdftocairo -svg`
+(`Graphics::convert_image_svg`); every failure falls back to the PNG path: neither tool on PATH, a non-zero exit, the
+15 s timeout, an SVG over 8 MB, an SVG whose `trim`/`viewport` crop cannot be read. Labels, axes and curves stay
+vector, and an embedded raster keeps its own pixels (PERF816, 673 arXiv figures: mutool's SVG -8 ms CPU median per
+figure against the PNG, 70 vs 157 MB gzipped; 23 % of the PNGs lost raster resolution). Until PR 816 (amachino) an
+image XObject in the first 256 KB gated a PDF off the path; DG ruled on 2026-11-14 that size alone gates it (mutool
+first, pdftocairo the fallback; MuPDF, AGPL, only as an unmodified CLI subprocess). Neither tool marks a raster's
+rendering, so a browser smooths a 4-pixel tile drawn at 1 cm into a blur where the PDF (no `/Interpolate`, as
+pdflatex writes it) shows hard pixel blocks: `Graphics::mark_upscaled_images_inplace` gives each `<image>` drawn
+larger than its own pixels (below 72 dpi in the page's bp, every placement, directly or through a `<use>`)
+`image-rendering="pixelated"`. A downscaled raster keeps the default: in Chrome `pixelated` aliases it (1211.5349's
+750 px plots shown at 234 px lose their grid lines). Residual: `/Interpolate true` is not visible in either tool's
+SVG, so an upscaled raster that asks for smoothing is shown pixelated; an image drawn through a `<pattern>` or a
+`<symbol>`, or under a transform other than matrix/translate/scale/rotate, stays unmarked. **Guards**:
+`graphics::tests::mixed_raster_vector_pdf_renders_vector_labels_and_crisp_pixels` (each converter present, then the
+pipeline; fixture `latexml_post/tests/fixtures/mixed_raster_vector.tex`), `graphics::tests::svg_marks_only_upscaled_images_pixelated`,
+`graphics::tests::should_try_svg_path_auto_detect`.
