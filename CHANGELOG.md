@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+  - **LaTeX's kernel hooks run where LaTeX runs them** (QA47B). Code a document or package adds
+    with `\AddToHook` to the hooks of `\end{document}` (`env/document/end`, and the document's own
+    code in `enddocument/afterlastpage`, `/afteraux`, `/end`), of `verbatim`/`verbatim*`
+    (`env/verbatim/begin|end`), of `\label` (`label`) and of `\include` (`include/before`,
+    `include/<file>/before|end|after`, `include/excluded`) was dropped; it now runs there,
+    and so do etoolbox's `\AfterEndDocument` and atveryend's commands. A verbatim begin hook reads
+    `verbatim` in `\@currenvir`, as in LaTeX. The kernel's first aid for the raw cleveref.sty is
+    not registered under LaTeXML's cleveref binding, which replaces the code it repairs. Guard
+    `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048).
   - **The Rhai cheat sheet is a three-way API: Perl | Rust | Rhai, every Perl and Rust cell filled.**
     `CHEATSHEET.md`'s middle column, formerly the compile-time macro alone, names the Rust a compiled
     binding uses for each call: the macro where there is one, then the function, method, type, field or

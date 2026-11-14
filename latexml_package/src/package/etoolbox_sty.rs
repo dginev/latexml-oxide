@@ -42,6 +42,38 @@ fn etb_patch_text(tokens: &Tokens, params_doubled: bool) -> String {
   out
 }
 
+/// `\AddToHook{<hook>}[<label>]{<code>}`, the label `.` when none is given.
+fn add_to_hook_tokens(hook: &str, label: Option<Tokens>, code: Tokens) -> Tokens {
+  let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+  tokens.extend(ExplodeText!(hook));
+  tokens.push(T_END!());
+  tokens.push(T_OTHER!("["));
+  tokens.extend(
+    label
+      .unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")]))
+      .unlist(),
+  );
+  tokens.extend([T_OTHER!("]"), T_BEGIN!()]);
+  tokens.extend(code.unlist());
+  tokens.push(T_END!());
+  Tokens::new(tokens)
+}
+
+/// `\AddToHook{env/<env>/<point>}[<label>]{<code>}` (etoolbox.sty:1853-1874).
+fn add_to_env_hook(
+  point: &str,
+  label: Option<Tokens>,
+  env: Tokens,
+  code: Tokens,
+) -> Result<Tokens> {
+  let env_str = Expand!(env).to_string();
+  Ok(add_to_hook_tokens(
+    &format!("env/{env_str}/{point}"),
+    label,
+    code,
+  ))
+}
+
 LoadDefinitions!({
   // RawTeX! (not TeX!) because \etb@catcodes etc. need @ as letter at runtime.
   // TeX! tokenizes at compile time with @ = OTHER, breaking \etb@catcodes into \etb + @catcodes.
@@ -2065,9 +2097,16 @@ LoadDefinitions!({
     Tokens!()
   }},
   protected => true, peeks_by_futurelet => true);
-  DefMacro!("\\AfterEndDocument[]{}", sub[(_label, arg)] {
-  if !copy_provides_defers("\\AfterEndDocument") {
+  // etoolbox.sty:1746 `\AddToHook{enddocument/end}` on a 2020+ format; the end-document code runs it for its side
+  // effects (sect02.rs `\lx@enddocument@hooks`). Perl's `@after@end@document` list is read by nothing.
+  DefMacro!("\\AfterEndDocument[]{}", sub[(label, arg)] {
+  if copy_provides_defers("\\AfterEndDocument") {
+    Tokens!()
+  } else if lookup_meaning(&T_CS!("\\AddToHook")).is_some() {
+    add_to_hook_tokens("enddocument/end", label, arg)
+  } else {
     push_value("@after@end@document", arg.unlist())?;
+    Tokens!()
   } },
   protected => true, peeks_by_futurelet => true);
 
@@ -2078,82 +2117,16 @@ LoadDefinitions!({
   // 2.6 Environment Hooks
 
   if lookup_meaning(&T_CS!("\\AddToHook")).is_some() {
-    DefMacro!(
-      "\\AtBeginEnvironment [] {}{}",
-      sub[(label, env, code)] {
-        let env_str = Expand!(env.clone()).to_string();
-        if env_str.starts_with("verbatim") {
-          push_value(&format!("@environment@{env_str}@atbegin"), code.clone().unlist())?;
-        }
-        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
-        tokens.extend(ExplodeText!(format!("env/{env_str}/begin")));
-        tokens.push(T_END!());
-        tokens.push(T_OTHER!("["));
-        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
-        tokens.push(T_OTHER!("]"));
-        tokens.push(T_BEGIN!());
-        tokens.extend(code.unlist());
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
-      },
-      protected => true, peeks_by_futurelet => true
-    );
-    DefMacro!(
-      "\\AtEndEnvironment [] {}{}",
-      sub[(label, env, code)] {
-        let env_str = Expand!(env.clone()).to_string();
-        if env_str.starts_with("verbatim") {
-          push_value(&format!("@environment@{env_str}@atend"), code.clone().unlist())?;
-        }
-        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
-        tokens.extend(ExplodeText!(format!("env/{env_str}/end")));
-        tokens.push(T_END!());
-        tokens.push(T_OTHER!("["));
-        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
-        tokens.push(T_OTHER!("]"));
-        tokens.push(T_BEGIN!());
-        tokens.extend(code.unlist());
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
-      },
-      protected => true, peeks_by_futurelet => true
-    );
-    DefMacro!(
-      "\\BeforeBeginEnvironment [] {}{}",
-      sub[(label, env, code)] {
-        let env_str = Expand!(env).to_string();
-        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
-        tokens.extend(ExplodeText!(format!("env/{env_str}/before")));
-        tokens.push(T_END!());
-        tokens.push(T_OTHER!("["));
-        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
-        tokens.push(T_OTHER!("]"));
-        tokens.push(T_BEGIN!());
-        tokens.extend(code.unlist());
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
-      },
-      // etoolbox.sty:1853/1874 `\newrobustcmd`, as its siblings above.
-      protected => true, peeks_by_futurelet => true
-    );
-    DefMacro!(
-      "\\AfterEndEnvironment [] {}{}",
-      sub[(label, env, code)] {
-        let env_str = Expand!(env).to_string();
-        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
-        tokens.extend(ExplodeText!(format!("env/{env_str}/after")));
-        tokens.push(T_END!());
-        tokens.push(T_OTHER!("["));
-        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
-        tokens.push(T_OTHER!("]"));
-        tokens.push(T_BEGIN!());
-        tokens.extend(code.unlist());
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
-      },
-      // etoolbox.sty:1853/1874 `\newrobustcmd`, as its siblings above.
-      protected => true, peeks_by_futurelet => true
-    );
+    // etoolbox.sty:1853-1874 `\newrobustcmd`s onto the kernel's `env/<env>/<point>` hooks; verbatim fires its own
+    // (`before_digest_verbatim`), so no private store is kept for it (QA47B).
+    DefMacro!("\\AtBeginEnvironment [] {}{}", sub[(label, env, code)] { add_to_env_hook("begin", label, env, code) },
+      protected => true, peeks_by_futurelet => true);
+    DefMacro!("\\AtEndEnvironment [] {}{}", sub[(label, env, code)] { add_to_env_hook("end", label, env, code) },
+      protected => true, peeks_by_futurelet => true);
+    DefMacro!("\\BeforeBeginEnvironment [] {}{}", sub[(label, env, code)] { add_to_env_hook("before", label, env, code) },
+      protected => true, peeks_by_futurelet => true);
+    DefMacro!("\\AfterEndEnvironment [] {}{}", sub[(label, env, code)] { add_to_env_hook("after", label, env, code) },
+      protected => true, peeks_by_futurelet => true);
   } else {
     DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
       push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; },

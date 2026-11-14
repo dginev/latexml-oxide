@@ -1441,31 +1441,120 @@ fn env_hook_invocation(name: &str, point: &str) -> Option<Tokens> {
 }
 
 /// latex.ltx:15386 fires `env/#1/end` only `\IfHookEmptyTF`-guarded (an empty
-/// hook must contribute nothing inside an alignment's last cell): ask the
-/// kernel's own predicate — `\IfHookEmptyTF{env/<name>/<point>}{0}{1}` expands
-/// to `1` when there is code (the no-op format's stub answers `#3` = `1`, and
-/// its `\UseHook` then digests nothing).
+/// hook must contribute nothing inside an alignment's last cell): the kernel's
+/// own predicate, [`hook_has_code`].
 pub fn env_hook_has_code(name: &str, point: &str) -> bool {
-  // No L3 hook system (the plain/no-op format) → no hook code anywhere.
-  if lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_none() {
+  hook_has_code(&format!("env/{name}/{point}"))
+}
+
+/// Whether the kernel hook `hook` holds code: lthooks' `\hook_if_empty:nTF` (latex.ltx:6436-6448) read from its
+/// storage, no expansion: the labelled code (`\g__hook_<hook>_code_prop` not `\c_empty_prop`), the document's
+/// (`\__hook_toplevel <hook>`) and the next-use code (`\__hook_next <hook>`) — a slot holds code when it is a macro
+/// with a non-empty body (`\__hook_cs_if_empty:c`, :5688).
+pub fn hook_has_code(hook: &str) -> bool {
+  if !l3_hooks_loaded() {
     return false;
   }
-  let mut toks = vec![T_CS!("\\IfHookEmptyTF"), T_BEGIN!()];
-  toks.extend(ExplodeText!(format!("env/{name}/{point}")));
-  toks.push(T_END!());
-  toks.extend([
-    T_BEGIN!(),
-    T_OTHER!("0"),
-    T_END!(),
-    T_BEGIN!(),
-    T_OTHER!("1"),
-    T_END!(),
-  ]);
-  match gullet::do_expand(Tokens::new(toks)) {
-    Ok(expanded) => expanded.to_string().trim() == "1",
-    Err(_) => false,
+  let prop = macro_body(&T_CS!(s!("\\g__hook_{hook}_code_prop")));
+  // `\prop_if_empty:N` (expl3-code.tex:10450): a flat prop is empty when its meaning is `\c_empty_prop`'s
+  let prop_has_code = match &prop {
+    Some(Some(body)) => macro_body(&T_CS!("\\c_empty_prop")).flatten().as_ref() != Some(body),
+    Some(None) => true,
+    None => false,
+  };
+  prop_has_code
+    || hook_slot_has_code(&T_CS!(s!("\\__hook_toplevel {hook}")))
+    || hook_slot_has_code(&T_CS!(s!("\\__hook_next {hook}")))
+}
+
+/// Whether `hook` holds a chunk labelled `label`: lthooks keeps labelled code in a flat prop (`\prop_if_in:cnTF`,
+/// latex.ltx:5544), each entry `\__prop_pair:wn <label> \s__prop {<code>}` (expl3-code.tex:9873).
+pub fn hook_has_labelled_code(hook: &str, label: &str) -> bool {
+  if !l3_hooks_loaded() {
+    return false;
+  }
+  let Some(Some(prop)) = macro_body(&T_CS!(s!("\\g__hook_{hook}_code_prop"))) else {
+    return false;
+  };
+  let (pair, sep) = (T_CS!("\\__prop_pair:wn"), T_CS!("\\s__prop"));
+  let mut entries = prop.split(|t| *t == pair).skip(1);
+  entries.any(|entry| {
+    let key = entry
+      .iter()
+      .take_while(|t| **t != sep)
+      .map(|t| t.to_string())
+      .collect::<String>();
+    key == label
+  })
+}
+
+/// No L3 hook system (the plain/no-op format): no hook code anywhere.
+fn l3_hooks_loaded() -> bool { lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_some() }
+
+/// lthooks' `\__hook_cs_if_empty:cF` (latex.ltx:5688-5699): `cs` is a macro with a non-empty body.
+pub fn hook_slot_has_code(cs: &Token) -> bool {
+  match macro_body(cs) {
+    Some(Some(body)) => !body.is_empty(),
+    // a macro whose body is Rust: code, by the safe answer
+    Some(None) => true,
+    None => false,
   }
 }
+
+/// `Some(body)` for a macro (`Some(None)` when its body is a closure), `None` for anything else.
+fn macro_body(cs: &Token) -> Option<Option<Vec<Token>>> {
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(code)) => Some(match code.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().clone()),
+      Some(ExpansionBody::Closure(_)) => None,
+      None => Some(Vec::new()),
+    }),
+    _ => None,
+  }
+}
+
+/// The tokens running the kernel hook `hook` as `\UseHook` (or, `once`, `\UseOneTimeHook`) does, or none when it has
+/// no code: an empty `\UseHook` does nothing; an empty one-time hook only marks itself used (`\__hook_use_once_set:n`,
+/// latex.ltx:6399-6411, so later code runs at once), which an already used one needs not. Not kept: the clear code
+/// `\__hook_use_once:nn` leaves in an undeclared hook's next slot, which only `\IfHookEmptyTF` on it would see.
+pub fn hook_use_tokens(hook: &str, once: bool) -> Vec<Token> {
+  if !l3_hooks_loaded() {
+    return Vec::new();
+  }
+  let has_code = hook_has_code(hook);
+  // `\__hook_parse_label_default:nN` (:5174) rewrites a name with `./` or surrounding spaces: such a name takes
+  // lthooks' own path
+  let plain_name = !hook.contains("./") && hook != "." && hook.trim() == hook;
+  if !has_code && plain_name {
+    if !once || hook_used_once(hook) {
+      return Vec::new();
+    }
+    let mut toks = vec![T_CS!("\\__hook_use_once_set:n"), T_BEGIN!()];
+    toks.extend(ExplodeText!(hook));
+    toks.push(T_END!());
+    return toks;
+  }
+  let mut toks = vec![
+    T_CS!(if once {
+      "\\UseOneTimeHook"
+    } else {
+      "\\UseHook"
+    }),
+    T_BEGIN!(),
+  ];
+  toks.extend(ExplodeText!(hook));
+  toks.push(T_END!());
+  toks
+}
+
+/// `\__hook_if_execute_immediately:nTF` (latex.ltx:6421-6435): a one-time hook already used runs later code at once.
+fn hook_used_once(hook: &str) -> bool {
+  // (`\if:w I`: the slot's first token is the character `I`)
+  let used = [T_LETTER!("I"), T_OTHER!("I")];
+  matches!(macro_body(&T_CS!(s!("\\g__hook_{hook}_reversed_tl"))), Some(Some(body))
+    if body.first().is_some_and(|t| used.contains(t)))
+}
+
 /// The TeX group an environment's begin code leaves open: its definition's
 /// `tex_group`, unless a binding set `\begin{X}:tex_group` (a
 /// [`TexGroup::as_str`] name) for the begin code a class or package gives it.

@@ -470,9 +470,8 @@ pub(crate) fn load() -> Result<()> {
   // (cntperchap_example, runcode_troubleshoot: "Missing argument
   // Until:\@@end", sweep 54). Our `\@@end` is the job-end primitive
   // (tex_job.rs `\lx@end@document`: leave horizontal mode, flush).
-  // Never reaches the kernel's `enddocument/afterlastpage` hook or
-  // `\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20260, in the
-  // dump): that one does `\tex_shipout:D\vbox to\textheight{…}` with the
+  // Never reaches `\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20260, in the
+  // dump): it does `\tex_shipout:D\vbox to\textheight{…}` with the
   // "Temporary page!" text (latex.ltx:20261-20269), which the `\shipout`
   // primitive would now emit in place (DIVERGENCES #314).
   DefMacro!(T_CS!("\\end{document}"), None, "\\lx@end@open@frontmatter\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
@@ -539,6 +538,23 @@ pub(crate) fn load() -> Result<()> {
     // `after_end_document_hooks`; biblatex's hidden bibliography, built only when no hook printed one).
     if let Some(ops) = lookup_tokens("@after@enddocument@hooks") {
       toks.extend(ops.unlist());
+    }
+    // latex.ltx:15262-15277 `enddocument/afterlastpage`, `/afteraux`, `/end` run after the last page shipped: what they
+    // typeset goes nowhere (pdflatex), so the document's own code (lthooks' top-level slot) runs for its side effects in
+    // a box that is dropped. A package's code there keeps the `.aux` and the page model, which LaTeXML has not: acro's
+    // property lists (2502.06996, a Fatal), pageslts' numbering check (a false Warning); `enddocument/info` is the
+    // kernel's file list and rerun warnings.
+    let mut late = Vec::new();
+    for hook in ["enddocument/afterlastpage", "enddocument/afteraux", "enddocument/end"] {
+      let toplevel = T_CS!(s!("\\__hook_toplevel {hook}"));
+      if hook_slot_has_code(&toplevel) {
+        late.push(toplevel);
+      }
+    }
+    if !late.is_empty() {
+      toks.extend([T_CS!("\\setbox"), T_CS!("\\@tempboxa"), T_CS!("\\vbox"), T_BEGIN!()]);
+      toks.extend(late);
+      toks.push(T_END!());
     }
     unread(Tokens::new(toks));
     Ok(Vec::new())

@@ -1,0 +1,14 @@
+% The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-files.ltx:193-270, `package/cleveref/after`
+%   labelled `firstaid`) repairs the raw file's `\label`/`\cref` code, which LaTeXML's binding replaces: by DG's ruling
+%   (2026-11-14) it is not registered, so the `label` hook holds none of it; other label-hook code still runs.
+% witness: PERFQAB1 (TL 2025's first aid in every `\label` of a cleveref paper, ~3.5M instructions each); synthetic.
+% status:  GREEN (QAB1b; RED on QAB1: "[code]")
+% oracle:  pdflatex 0 errors; "1 A [code][L:s:a] See section 1." — the first aid registered (deliberately not ours)
+% engines: rust QAB1: "[code]"; QAB1b: "[mine]"; Perl: no hooks.
+% expect:  0 errors, 0 warnings; <p>[mine][L:s:a] See Section 1.</p>
+\documentclass{article}
+\usepackage{cleveref}
+\begin{document}
+\section{A}
+\IfHookEmptyTF{label}{[mine]}{[code]}\AddToHookWithArguments{label}{[L:#1]}\label{s:a} See \cref{s:a}.
+\end{document}

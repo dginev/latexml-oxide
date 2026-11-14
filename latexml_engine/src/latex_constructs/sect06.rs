@@ -1028,14 +1028,14 @@ pub(crate) fn load() -> Result<()> {
   // and also the usual environment capture.
   DefConstructor!(T_CS!("\\begin{verbatim}"), None,
     "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
-    before_digest => { before_digest_verbatim() }
+    before_digest => { before_digest_verbatim(false) }
     after_digest => sub[whatsit] { after_digest_verbatim(false, whatsit)?; },
     before_construct => sub[document, _whatsit] {
       document.maybe_close_element("ltx:p")?; }
   );
   DefConstructor!(T_CS!("\\begin{verbatim*}"), None,
     "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
-    before_digest => { before_digest_verbatim() }
+    before_digest => { before_digest_verbatim(true) }
     after_digest => sub[whatsit] { after_digest_verbatim(true, whatsit)?; },
     before_construct => sub[document, _whatsit] {
       document.maybe_close_element("ltx:p")?; }

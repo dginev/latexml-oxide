@@ -11404,9 +11404,9 @@ LaTeXML has no pages, puts the box where `\box` would put it in the current mode
 `\shipout` (latex.ltx:19911-19917, ltshipout) ends in `\tex_shipout:D \box_use:N \l_shipout_box`
 (latex.ltx:19986), the expl3-code.tex:531 copy of the primitive, so the kernel's shipout hooks run
 unchanged. LaTeXML never runs an output routine (`\clearpage` is `\lx@newpage`, `\output` never
-fires) and its `\end{document}` (sect02.rs) never reaches `enddocument/afterlastpage`, whose
-`\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20269, in the dump) ships a "Temporary
-page!" box — so only an explicit `\shipout` reaches the primitive, and a document without one is
+fires) and its `\end{document}` (sect02.rs) never reaches
+`\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20269, in the dump), which ships a "Temporary
+page!" box (the document's own `enddocument/afterlastpage` code runs, #1048) — so only an explicit `\shipout` reaches the primitive, and a document without one is
 unchanged. A void box gives LaTeX's "Ignoring void shipout box" warning (latex.ltx:19944).
 
 **Perl** defines no `\shipout` (TeX_FileIO.pool.ltxml:257 is a placeholder). With a braced operand
@@ -36536,3 +36536,44 @@ mirrors it as `padding-top` (40 px); the EPUB loads LaTeXML.css. `\addvspace` st
 `paragraph-mode/skip_between_paragraphs_goes_on_the_next.tex`, `skip_between_paragraphs_shapes.tex`,
 `skip_moved_into_a_title_page_is_dropped.tex`).
 
+### 1048. The kernel hooks run where latex.ltx runs them, where LaTeXML's bindings stand in for its macros (QA47B)
+
+**Principle** (real TeX). A binding that stands in for a latex.ltx macro runs that macro's hooks at latex.ltx's point,
+with the state latex.ltx has there; whether a hook holds code is lthooks' own storage (`\hook_if_empty:nTF`,
+latex.ltx:6436), read, not expanded. Related: #1008 (QA47A, the `cmd/<name>/<hook>` hooks: the same family), #217 (the
+document hooks inline in the galley), #314 (`\shipout` in place).
+**Perl.** `\AddToHook` is a no-op (latex_base.pool.ltxml), etoolbox's `\AfterEndDocument` queues code nothing reads and
+atveryend's commands are no-ops: every hook's code is dropped.
+**Rust.** With the kernel's hooks loaded: `\end{document}` runs `env/document/end` before `\enddocument` (:15386);
+`\begin{verbatim}`/`{verbatim*}` run `env/<name>/begin|end` (no DefEnvironment fires them; etoolbox's
+`\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
+`\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
+`include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
+`\begin` defines `\@currenvir` (`verbatim*` its own name) before `env/<name>/begin` (:15350-15352), so the verbatim
+constructor runs its begin hooks, the kernel's and etoolbox's `@atbegin` store, after it. `enddocument/afterlastpage`, `/afteraux` and
+`/end` (:15262-15277) follow the last page, where pdflatex prints nothing they typeset: the document's own code
+(lthooks' top-level slot) runs for its side effects in a dropped box, while a package's code there keeps the `.aux` and
+the page model LaTeXML has not (acro's property lists, 2502.06996: a Fatal IfLimit; pageslts' numbering check: a false
+Warning; pbalance) and does not run; `enddocument/info` (the kernel's file list and rerun warnings) does not run.
+etoolbox's `\AfterEndDocument` adds to `enddocument/end`, atveryend's commands to their hooks as atveryend.sty v1.12. A
+label hook's code that prints nothing leaves no box (2501.00173: `\label{…}` + `\ ` before a list opened an empty
+paragraph). The storage read (`hook_has_code`: the labelled-code prop, the top-level and next-use slots) replaces an
+expansion that cost 0.2-0.4M instructions at every `\label` and environment end; `\include`'s hooks pass over an empty
+hook (`\lx@usehook`, `\lx@useonetimehook`: a `\UseHook` cost 0.7M, a `\UseOneTimeHook` 3M here, as our document never
+runs `\@expl@@@initialize@all@@`), an empty one-time hook only marking itself used (`\__hook_use_once_set:n`; the clear
+code lthooks leaves in an undeclared hook's next slot is not kept, which only `\IfHookEmptyTF` on that used hook would
+see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-files.ltx:193-270, `package/cleveref/after`
+labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
+its `label` hook code cost 3.5M instructions a `\label`. It is removed only where the chunk is registered
+(`hook_has_labelled_code`; the chunk dates from 2024-03-22, firstaid changes.txt), as lthooks warns "Cannot remove
+chunk" for a missing one. **Open** (post-merge, catalog): `\label`'s hook runs after the label is recorded, where
+latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not reach `\ref`
+(`label_hook_sets_the_reference_text_red`); a DefEnvironment runs its begin hooks before its `\@currenvir` (Perl
+Package.pm:1920-1927; `environment_begin_hook_reads_its_environment_red`: moving it alone raised 2001.02707's
+`\AtBeginEnvironment{defn}{\begin{samepage}}` from 29 to 54 errors, so the end side moves with it); no `\begin` path
+sets `\@currenvline` (`currenvline_is_never_set_red`); a
+document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard**:
+`perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `enddocument_hooks_run`,
+`enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `verbatim_begin_hook_reads_its_environment`,
+`label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
+`cleveref_firstaid_absent_removes_nothing`).
